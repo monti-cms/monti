@@ -67,8 +67,8 @@ export const WithControl: Story = {
 export const WithDescription: Story = {
 	render: () => (
 		<RadioGroup defaultValue="document">
-			<RadioItem value="document" label="문서" description="게시글, 노트처럼 본문이 있어요" />
-			<RadioItem value="item" label="항목" description="카테고리, 태그처럼 짧아요" />
+			<RadioItem value="document" label="문서" description="게시글, 노트처럼 본문이 있는 글" />
+			<RadioItem value="item" label="항목" description="카테고리, 태그처럼 짧은 항목" />
 		</RadioGroup>
 	),
 };

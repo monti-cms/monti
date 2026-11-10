@@ -48,9 +48,10 @@ const ENGLISH = [
  * - `alone`: the Korean post, published, with no translation.
  * - `new`: an English translation just made: every block still in the Korean words.
  * - `changed`: the English translation after the source was published again.
+ * - `fieldsChanged`: the same, its title and summary the only things changed (T111).
  * - `all`: the Korean post with a translation in every other language.
  */
-type Kind = "alone" | "new" | "changed" | "all";
+type Kind = "alone" | "new" | "changed" | "fieldsChanged" | "all";
 
 async function run<Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) {
 	return (await monti.run(name, input, admin)) as Output;
@@ -126,7 +127,16 @@ async function entries(monti: Monti, kind: Kind, current: Schema): Promise<Recor
 			await run(monti, "translations.create", { source: korean, locale });
 		return { korean, english };
 	}
-	await run(monti, "entries.save", { id: korean, version: (await version(monti, korean)).version, doc: sourceLater() });
+	await run(monti, "entries.save", {
+		id: korean,
+		version: (await version(monti, korean)).version,
+		...(kind === "fieldsChanged"
+			? {
+					title: "첫 번째 글을 고치며",
+					values: { summary: "도구를 덜어낸 까닭.", subtitle: "도구보다 글", category: devCat.group },
+				}
+			: { doc: sourceLater() }),
+	});
 	await run(monti, "entries.publish", { ids: [korean] });
 	return { korean, english };
 }
@@ -195,13 +205,13 @@ export const PendingMenu: Story = {
 	},
 };
 
-/** The status bar's "원문 변경 3" open: each mark's block, and "모두 확인" (flow 3, step 09). */
+/** The to-do list open: what stops publishing, then the "원문 변경" group with each mark's block and its decision (flow 3, step 09). */
 export const ChangesList: Story = {
 	loaders: site("changed", "english"),
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
-		await userEvent.click(await page.findByRole("button", { name: "원문 변경 3" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: /^할 일/ }, wait));
 	},
 };
 
@@ -210,12 +220,50 @@ export const SourceChanged: Story = {
 	loaders: site("changed", "english"),
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
-		await page.findByText("원문이 변경됐어요", undefined, wait);
+		await page.findByText("원문 변경", undefined, wait);
 		await userEvent.click(page.getByRole("button", { name: "끔" }));
 	},
 };
 
-/** A changed block's card: the source before and after, and "확인" (flow 3, step 10). */
+/** The source's title and summary changed: the mark in the title's margin, and on the summary's label row (T111). */
+export const FieldsChanged: Story = {
+	loaders: site("fieldsChanged", "english"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
+		const panel = await page.findByRole("button", { name: "속성" }, wait);
+		if (panel.getAttribute("aria-pressed") !== "true") await userEvent.click(panel);
+		await page.findByRole("textbox", { name: "요약" }, wait);
+	},
+};
+
+/** The title's card: the source's title before and after, and "번역 유지" (T111). */
+export const TitleCard: Story = {
+	loaders: site("fieldsChanged", "english"),
+	play: async (context) => {
+		await FieldsChanged.play?.(context);
+		const { page } = await opened(context.canvasElement);
+		const mark = await waitFor(() => {
+			const found = context.canvasElement.querySelector<HTMLElement>("[data-field-mark=title]");
+			if (!found) throw new Error("no mark yet");
+			return found;
+		}, wait);
+		await userEvent.click(mark);
+		await page.findByRole("textbox", { name: "제목" }, wait);
+	},
+};
+
+/** The to-do list with only the source's changes: the fields by name (T111). */
+export const FieldsInTheList: Story = {
+	loaders: site("fieldsChanged", "english"),
+	play: async (context) => {
+		await FieldsChanged.play?.(context);
+		const { page } = await opened(context.canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: /^할 일/ }, wait));
+	},
+};
+
+/** A changed block's card: the source before and after, and "번역 유지" (flow 3, step 10). */
 export const ChangedCard: Story = {
 	loaders: site("changed", "english"),
 	play: async ({ canvasElement }) => {

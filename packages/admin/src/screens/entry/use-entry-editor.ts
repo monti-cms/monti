@@ -1,4 +1,5 @@
 import type { BodyOp, Doc, EntryState, PublishTask } from "@monti-cms/core";
+import { toast } from "@monti-cms/ui";
 import { useCallback, useMemo, useState } from "react";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
@@ -81,7 +82,7 @@ export function useEntryEditor(source: EditorSource) {
 	);
 	const saveOp = useOperation<{ output: { id: string; version: number } }>(isEntry ? "entries.save" : "templates.save");
 	const latestOp = useOperation<EntryRead | TemplateRead>(isEntry ? "entries.get" : "templates.get");
-	const { session } = useAdmin();
+	const { session, t } = useAdmin();
 	const signInAgain = useSignInAgain();
 	const loaded = source.id === null ? NEW_TEMPLATE : read.data;
 	const base = useMemo(() => (loaded ? basePaths(loaded) : null), [loaded]);
@@ -172,7 +173,11 @@ export function useEntryEditor(source: EditorSource) {
 							: latest.body.updatedAt
 						: undefined;
 					setConflict({ at: at ? new Date(at) : null });
-				}
+				} else if (answer.refusal.status !== 401)
+					// A check the save failed (a file the library does not have): the reason, or the save would just stay unsaved with no word.
+					toast.error(
+						t(answer.refusal.reason ?? { key: "errors.unexpected", values: { message: answer.refusal.error } }),
+					);
 				return null;
 			}
 			setConflict(null);
@@ -185,7 +190,7 @@ export function useEntryEditor(source: EditorSource) {
 			draft.saved();
 			return { id: answer.body.output.id };
 		},
-		[loaded, version, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload],
+		[loaded, version, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload, t],
 	);
 
 	return {

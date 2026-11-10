@@ -27,6 +27,7 @@ import {
 } from "./operation";
 import type { RecordKind } from "./records";
 import { relationOperations } from "./relations/operations";
+import { keepSeenTracked } from "./schema/apply";
 import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
 import { schemaOperations, schemaRecordKinds } from "./schema/operations";
@@ -182,7 +183,12 @@ function engineOperations(engine: Engine, all: () => AnyOperation[]): AnyOperati
 					blocked: plan.skip.map((ref) => ({ ref, reason: { key: "activity.changedSince" } })),
 				};
 			},
-			run: (input, ctx) => undo(engine, ctx.db, input.id),
+			async run(input, ctx) {
+				const output = await undo(engine, ctx.db, input.id);
+				// What an entry saw back then may be of a field that has since left the schema.
+				await keepSeenTracked(ctx.db, ctx.site.schema());
+				return output;
+			},
 			summary: (_input, output) => ({ key: "activity.undo", values: { count: output.restore.length } }),
 		}),
 	];

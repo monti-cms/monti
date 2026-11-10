@@ -2,6 +2,7 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import { type BlockKit, createBlockKit } from "../body/blocks";
 import type { Database } from "../db/schema";
 import { rewriteAllUses } from "../media/uses";
+import { trackedFields } from "../translations/fields";
 import { changeSource } from "../translations/source-change";
 import type { AdminValues } from "./admin-values";
 import type { Schema } from "./define";
@@ -86,6 +87,10 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 					sql`(values - ${step.from}::text) || jsonb_build_object(${step.to}::text, values->${step.from})`,
 					sql<boolean>`values ? ${step.from}`,
 				);
+			// What a translation saw of the field goes with its value: the new name, or nowhere when the field starts empty.
+			await sql`update entries set translation_seen = (translation_seen - ${step.from}::text)
+				|| ${step.values === "empty" ? sql`'{}'::jsonb` : sql`jsonb_build_object(${step.to}::text, translation_seen->${step.from})`}
+				where collection = ${step.collection} and translation_seen ? ${step.from}`.execute(db);
 			await followField(db, step.collection, step.from, step.to);
 			return;
 		case "removeField":
@@ -158,6 +163,7 @@ async function followChange(db: Db, change: ChangeFile, schema: Schema, kit: Blo
 /** Applies one change file and records the schema it leaves. Run inside the write's transaction, so a failed step leaves the database as it was. */
 export async function applyChange(db: Db, change: ChangeFile, schema: Schema, kit: BlockKit): Promise<void> {
 	await followChange(db, change, schema, kit);
+	await keepSeenTracked(db, schema);
 	await setSchemaState(db, schema, null);
 }
 
@@ -196,7 +202,24 @@ export async function migrateContent(
 	return db.transaction().execute(async (trx) => {
 		const pending = await pendingChanges(trx, changes);
 		for (const change of pending) await followChange(trx, change, schema, kit);
+		await keepSeenTracked(trx, schema);
 		await setSchemaState(trx, schema, null);
 		return pending.map((change) => change.id);
 	});
+}
+
+/**
+ * A field gone from the schema, or now the same in every language, has nothing for a translation to fall behind on: no mark can stay on it (doc 04, T111). The entry moves on a
+ * version with it, as with any other field step, so an undo made before this cannot bring the old value back. An undo of an entry not changed here runs this too.
+ */
+export async function keepSeenTracked(db: Db, schema: Schema) {
+	for (const collection of Object.keys(schema.collections)) {
+		const tracked = trackedFields(schema, collection);
+		const kept = tracked.length > 0 ? sql<boolean>`key in (${sql.join(tracked)})` : sql<boolean>`false`;
+		await sql`update entries set version = version + 1,
+				translation_seen = coalesce((select jsonb_object_agg(key, value) from jsonb_each(translation_seen) where ${kept}), '{}'::jsonb)
+			where collection = ${collection} and exists (select 1 from jsonb_each(translation_seen) where not ${kept})`.execute(
+			db,
+		);
+	}
 }

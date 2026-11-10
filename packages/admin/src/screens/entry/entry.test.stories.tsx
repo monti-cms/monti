@@ -87,8 +87,8 @@ export const SignedInAgain: Story = {
 		await userEvent.click(page.getByRole("button", { name: "로그인" }));
 		const title = await page.findByRole("textbox", { name: "제목" }, wait);
 		await waitFor(() => expect(title).toHaveValue("첫 번째 글 다시 쓰기"), wait);
-		await expect(page.queryByText("로그인이 풀렸어요")).toBeNull();
-		await expect(page.queryByText("이 브라우저에 저장하지 않은 편집이 있어요")).toBeNull();
+		await expect(page.queryByText("로그인이 풀렸습니다")).toBeNull();
+		await expect(page.queryByText("이 브라우저에 저장하지 않은 편집이 있습니다")).toBeNull();
 		await userEvent.click(page.getByRole("button", { name: "저장 전 변경사항" }));
 		await saveCell(page, "저장됨");
 	},

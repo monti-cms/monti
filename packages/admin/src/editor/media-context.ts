@@ -1,10 +1,11 @@
-import type { MediaItem } from "@monti-cms/core";
-import { altIsMissing } from "@monti-cms/core";
+import type { MediaItem, MediaQueryResult } from "@monti-cms/core";
+import { altIsMissing, MEDIA_QUERY_MOST } from "@monti-cms/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { NodeSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
-import { createContext } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { Upload } from "../media/upload-queue";
+import { useOperation } from "../operations/use-operation";
 import { caretPast, insertBlocks, inTableCell } from "./commands";
 import { nodeName } from "./schema";
 
@@ -19,9 +20,78 @@ export type EditorMediaValue = {
 	/** The block whose settings card is open. */
 	card: string | null;
 	setCard: (blockId: string | null) => void;
-};
+} & BodyFiles;
 
 export const EditorMedia = createContext<EditorMediaValue | null>(null);
+
+type BodyFiles = {
+	/** The library's files the body's blocks show, by id: null for one the library does not have. One not here yet is being read. */
+	files: ReadonlyMap<string, MediaItem | null>;
+	/** Asks for a file, read again if known; those asked in the same moment are read together. */
+	want: (id: string) => void;
+};
+
+/**
+ * The files a body's image and file blocks show, read together: the blocks that appear at once ask in the same moment, and one `media.query` reads them all,
+ * not a read for each block (T110). A block that comes back (undo, the same file picked again) reads its file again, as its own read did, and shows what it
+ * knew meanwhile.
+ */
+export function useBodyFiles(): BodyFiles {
+	const { run } = useOperation<MediaQueryResult>("media.query");
+	const [files, setFiles] = useState<ReadonlyMap<string, MediaItem | null>>(() => new Map());
+	const waiting = useRef(new Set<string>());
+	// Each id's latest read: an answer that comes back after a newer read of the same file has begun says nothing about it.
+	const latest = useRef(new Map<string, number>());
+	const reads = useRef(0);
+	const read = useCallback(
+		async (ids: string[]) => {
+			const call = ++reads.current;
+			for (const id of ids) latest.current.set(id, call);
+			const result = await run({ ids, pageSize: ids.length }).catch(() => null);
+			const found = result?.ok ? new Map(result.body.items.map((item) => [item.id, item])) : null;
+			const answered = ids.filter((id) => latest.current.get(id) === call);
+			setFiles(
+				(known) =>
+					new Map([
+						...known,
+						// Not read (refused, the network): a file already shown stays; one never shown says it is not there, as a block's own read did. The
+						// block reads again when it comes back.
+						...answered.flatMap((id) =>
+							found ? [[id, found.get(id) ?? null] as const] : known.has(id) ? [] : [[id, null] as const],
+						),
+					]),
+			);
+		},
+		[run],
+	);
+	const want = useCallback(
+		(id: string) => {
+			if (waiting.current.has(id)) return;
+			waiting.current.add(id);
+			if (waiting.current.size > 1) return;
+			// The blocks of an opened body mount one after another in the same task: the read waits for the last of them.
+			setTimeout(() => {
+				const ids = [...waiting.current];
+				waiting.current.clear();
+				for (let start = 0; start < ids.length; start += MEDIA_QUERY_MOST)
+					void read(ids.slice(start, start + MEDIA_QUERY_MOST));
+			});
+		},
+		[read],
+	);
+	return { files, want };
+}
+
+/** The library's file a body block shows: `item` once read, `missing` when the library does not have it. */
+export function useBodyFile(id: string | undefined): { item: MediaItem | null; missing: boolean } {
+	const media = useContext(EditorMedia);
+	const want = media?.want;
+	useEffect(() => {
+		if (id) want?.(id);
+	}, [id, want]);
+	const known = id ? media?.files.get(id) : undefined;
+	return { item: known ?? null, missing: known === null };
+}
 
 /** The block's attrs for a file the library has. Alt text and caption start empty: they are this entry's to write (doc 09). */
 export const fileBlock = (item: Pick<MediaItem, "id" | "kind" | "name">) =>

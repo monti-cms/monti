@@ -4,13 +4,14 @@ import {
 	type ImageRotate,
 	imageAlignOf,
 	imageFrame,
-	type MediaDetail,
 	type MediaItem,
 } from "@monti-cms/core";
 import {
 	BlockBarPlace,
 	BlockBox,
+	type BlockCorner,
 	Button,
+	type CropCorner,
 	type CropGrip,
 	type CropRect,
 	CropStage,
@@ -24,6 +25,7 @@ import {
 	FloatingBarButton,
 	FormField,
 	FormFieldLabel,
+	IconButton,
 	Image,
 	Inline,
 	Input,
@@ -31,15 +33,18 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 	ResizeCorner,
+	Segmented,
 	Separator,
 	Stack,
 	TextButton,
 	UploadingImage,
 } from "@monti-cms/ui";
 import {
-	Crop,
+	Edit,
 	Image as ImageIcon,
 	Reset,
+	RotateClockwise,
+	RotateCounterclockwise,
 	Settings,
 	TextAlignCenter,
 	TextAlignLeft,
@@ -51,9 +56,8 @@ import { type ComponentType, useContext, useEffect, useId, useRef, useState } fr
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
 import { RetryButton } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
-import { useRead } from "../operations/use-operation";
 import { AltFields } from "./alt-fields";
-import { EditorMedia, fileBlock, nextBlankImage, openImageCard } from "./media-context";
+import { EditorMedia, fileBlock, nextBlankImage, openImageCard, useBodyFile } from "./media-context";
 import { useComposedValue } from "./use-composed-value";
 
 type ImageData = {
@@ -76,7 +80,12 @@ const ALIGNS = [
 ] as const;
 /** The caption stands where its picture stands. */
 const CAPTION_ALIGN = { left: "start", center: "center", right: "end" } as const;
+/** The smallest a picture is pulled to, in pixels on the screen. */
 const MIN_WIDTH = 80;
+/** A picture's share of the body: the whole of it is no width at all (the body, as the site draws it too). */
+const shareOf = (percent: number) => (percent >= 100 ? null : percent);
+/** The smallest share a picture is pulled to in a body this wide. */
+const leastShare = (body: number) => Math.ceil((MIN_WIDTH / body) * 100);
 
 /**
  * A file on its way up, in its place in the text (flow 6·05): its bar while it goes, why it stays if it does not. A block can come back after its upload ended (undo, then
@@ -206,30 +215,101 @@ const KEY_MOVES: Partial<Record<string, readonly [number, number]>> = {
 	ArrowDown: [0, 1],
 };
 
-/** "Crop and turn" (screens/editor.md): a dialog, because it takes several inputs. It changes nothing of the file: the block keeps which part shows. */
-function CropDialog({
+/** The whole picture, as a crop: what the dialog starts from when nothing is cut away. */
+const WHOLE: CropRect = { x: 0, y: 0, width: 100, height: 100 };
+const isWhole = (part: CropRect) => part.x <= 0.01 && part.y <= 0.01 && part.width >= 99.99 && part.height >= 99.99;
+
+/** The shapes a crop can keep, width to height; "free" keeps none and "original" the picture's own. */
+const RATIOS = { free: null, original: null, "1:1": 1, "16:9": 16 / 9, "4:3": 4 / 3 } as const;
+type Ratio = keyof typeof RATIOS;
+const RATIO_ORDER: readonly Ratio[] = ["free", "original", "1:1", "16:9", "4:3"];
+
+/**
+ * A ratio as the crop's sides in % of the picture: width % over height %. The picture's own shape is 1 there; a pixel ratio is scaled by the picture's
+ * height over its width. `null` keeps none.
+ */
+function shareRatio(ratio: Ratio, picture: { width: number; height: number } | null): number | null {
+	if (ratio === "original") return 1;
+	const pixels = RATIOS[ratio];
+	return pixels === null || !picture ? null : (pixels * picture.height) / picture.width;
+}
+
+/** The largest crop of a ratio (in shares), in the middle of the picture. */
+function centeredCrop(share: number): CropRect {
+	const width = share >= 1 ? 100 : 100 * share;
+	const height = share >= 1 ? 100 / share : 100;
+	return { x: (100 - width) / 2, y: (100 - height) / 2, width, height };
+}
+
+/**
+ * A crop pulled by a corner, kept to a ratio (in shares): the opposite corner stays. The pull counts on whichever side it moved more (an arrow up moves the
+ * height), and the picture's edges win over the smallest size, so the crop never leaves the picture.
+ */
+function keptCrop(start: CropRect, pulled: CropRect, grip: CropCorner, share: number): CropRect {
+	const west = grip === "nw" || grip === "sw";
+	const north = grip === "nw" || grip === "ne";
+	const anchorX = west ? start.x + start.width : start.x;
+	const anchorY = north ? start.y + start.height : start.y;
+	const byWidth = Math.abs(pulled.width - start.width) >= Math.abs(pulled.height - start.height) * share;
+	const most = Math.min(west ? anchorX : 100 - anchorX, (north ? anchorY : 100 - anchorY) * share);
+	const least = Math.min(Math.max(5, 5 * share), most);
+	const width = Math.min(Math.max(byWidth ? pulled.width : pulled.height * share, least), most);
+	const height = width / share;
+	return { x: west ? anchorX - width : anchorX, y: north ? anchorY - height : anchorY, width, height };
+}
+
+/** The sizes "Edit" offers, as shares of the body; dragging a corner gives any other. */
+const SIZES = [25, 50, 75, 100] as const;
+
+/**
+ * "Edit" (screens/editor.md): how the picture looks, in a dialog because it takes several inputs; what the entry says of it is the settings card's (2026-11-10,
+ * owner). It changes nothing of the file: the block keeps which part shows, how it is turned and how much of the body it takes. The picture fills most of it;
+ * one line under it turns it a quarter (icons, their names on hover), keeps a shape (its height), sizes it, starts over, and cancels or applies. The crop
+ * starts as the whole picture, its corners there to take.
+ */
+function EditDialog({
 	src,
+	size: known,
 	crop,
 	rotate,
+	width,
 	onApply,
 	onClose,
 	returnTo,
 }: {
 	src: string;
+	/** The picture's size as the body frames it (`imageFrame`): a kept shape is measured on it, so the body shows that shape. */
+	size: { width: number; height: number } | null;
 	crop?: ImageCrop;
 	rotate: ImageRotate;
-	onApply: (crop: ImageCrop | undefined, rotate: ImageRotate) => void;
+	/** Its share of the body in percent; `null` fills it. */
+	width: number | null;
+	onApply: (edit: { crop: ImageCrop | undefined; rotate: ImageRotate; width: number | null }) => void;
 	onClose: () => void;
 	/** Where the focus goes when it closes: the text, not a caption field it was opened from, so ⌘Z takes back what it did. */
 	returnTo: () => HTMLElement;
 }) {
 	const { t } = useAdmin();
 	const [turn, setTurn] = useState<ImageRotate>(rotate);
-	const [part, setPart] = useState<CropRect | undefined>(
-		crop && { x: crop.x * 100, y: crop.y * 100, width: crop.width * 100, height: crop.height * 100 },
+	const [part, setPart] = useState<CropRect>(
+		crop ? { x: crop.x * 100, y: crop.y * 100, width: crop.width * 100, height: crop.height * 100 } : WHOLE,
 	);
+	const [ratio, setRatio] = useState<Ratio>("free");
+	const [bodyShare, setBodyShare] = useState(width ?? 100);
 	const [shown, setShown] = useState(src);
 	const stage = useRef<HTMLDivElement>(null);
+	// The picture's own size: the one the body frames it by, else read once from the file (the shown one is redrawn after each turn, so it can lag).
+	const [read, setRead] = useState<{ width: number; height: number } | null>(null);
+	useEffect(() => {
+		if (known) return;
+		const image = new window.Image();
+		image.onload = () => setRead({ width: image.naturalWidth, height: image.naturalHeight });
+		image.src = src;
+	}, [src, known]);
+	const upright = known ?? read;
+	/** The picture's size as it stands turned `at`: sideways, its sides swap. */
+	const size = (at: ImageRotate = turn) =>
+		upright && (at === 90 || at === 270 ? { width: upright.height, height: upright.width } : upright);
 	useEffect(() => {
 		let on = true;
 		void turnedPicture(src, turn)
@@ -253,14 +333,22 @@ function CropDialog({
 			x: ((x - box.left) / box.width) * 100,
 			y: ((y - box.top) / box.height) * 100,
 		});
-		const from = at(event.clientX, event.clientY);
-		const begun: CropRect =
-			grip === "stage"
-				? { x: from.x, y: from.y, width: 0, height: 0 }
-				: (part ?? { x: 0, y: 0, width: 100, height: 100 });
+		const share = shareRatio(ratio, size());
+		const pressedAt = at(event.clientX, event.clientY);
+		// A kept shape drawn from a point by the edge has no room to grow outward: the point stays at least the smallest crop inside.
+		const from = share ? { x: clamp(pressedAt.x, 5, 95), y: clamp(pressedAt.y, 5, 95) } : pressedAt;
 		const move = (next: PointerEvent) => {
 			const to = at(next.clientX, next.clientY);
-			setPart(grip === "stage" ? drawnCrop(from, to) : movedCrop(begun, grip, to.x - from.x, to.y - from.y));
+			if (grip === "stage") {
+				const drawn = drawnCrop(from, to);
+				// Drawn from the pressed point: that point is the corner that stays.
+				const corner: CropCorner = `${to.y < from.y ? "n" : "s"}${to.x < from.x ? "w" : "e"}` as const;
+				const begun = { x: from.x, y: from.y, width: 0, height: 0 };
+				setPart(share ? keptCrop(begun, drawn, corner, share) : drawn);
+				return;
+			}
+			const moved = movedCrop(part, grip, to.x - from.x, to.y - from.y);
+			setPart(share && grip !== "move" ? keptCrop(part, moved, grip, share) : moved);
 		};
 		const up = () => {
 			window.removeEventListener("pointermove", move);
@@ -271,64 +359,96 @@ function CropDialog({
 	};
 	const pressedKey = (event: React.KeyboardEvent, grip: CropGrip) => {
 		const move = KEY_MOVES[event.key];
-		if (!move || !part || grip === "stage") return;
+		if (!move || grip === "stage") return;
 		event.preventDefault();
 		const step = event.shiftKey ? 5 : 1;
-		setPart(movedCrop(part, grip, move[0] * step, move[1] * step));
+		const moved = movedCrop(part, grip, move[0] * step, move[1] * step);
+		const share = shareRatio(ratio, size());
+		setPart(share && grip !== "move" ? keptCrop(part, moved, grip, share) : moved);
 	};
 	const turnBy = (quarter: 90 | -90) => {
-		setPart((current) => current && turnedCrop(current, quarter));
+		// The chosen part turns with the picture: the same part of it. A square, or the picture's own shape, is still that shape; 16:9 turned is 9:16, no
+		// longer the shape picked, so the crop is free from then on.
+		setPart((current) => turnedCrop(current, quarter));
+		if (ratio === "16:9" || ratio === "4:3") setRatio("free");
 		setTurn((current) => ((current + quarter + 360) % 360) as ImageRotate);
 	};
+	const pick = (next: Ratio) => {
+		setRatio(next);
+		const share = shareRatio(next, size());
+		if (share) setPart(centeredCrop(share));
+	};
+	const changed = !isWhole(part) || turn !== 0 || bodyShare !== 100;
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent size="lg" finalFocus={returnTo}>
-				<DialogTitle>{t("editor.crop.title")}</DialogTitle>
-				<Stack gap={12}>
-					<CropStage
-						src={shown}
-						alt=""
-						crop={part}
-						stageRef={stage}
-						onGrip={pressed}
-						onGripKey={pressedKey}
-						moveLabel={t("editor.crop.move")}
-						cornerLabels={{
-							nw: t("editor.crop.nw"),
-							ne: t("editor.crop.ne"),
-							sw: t("editor.crop.sw"),
-							se: t("editor.crop.se"),
-						}}
-					/>
-					<Inline gap={12}>
-						<TextButton onClick={() => turnBy(-90)}>{t("editor.crop.turnLeft")}</TextButton>
-						<TextButton onClick={() => turnBy(90)}>{t("editor.crop.turnRight")}</TextButton>
-						{part ? (
-							<TextButton onClick={() => setPart(undefined)}>
+			<DialogContent size="xl" finalFocus={returnTo}>
+				<DialogTitle>{t("editor.edit.title")}</DialogTitle>
+				<CropStage
+					src={shown}
+					alt=""
+					crop={part}
+					stageRef={stage}
+					onGrip={pressed}
+					onGripKey={pressedKey}
+					moveLabel={t("editor.crop.move")}
+					cornerLabels={{
+						nw: t("editor.crop.nw"),
+						ne: t("editor.crop.ne"),
+						sw: t("editor.crop.sw"),
+						se: t("editor.crop.se"),
+					}}
+				/>
+				<DialogFooter>
+					<Inline gap={8} grow>
+						<IconButton label={t("editor.crop.turnLeft")} onClick={() => turnBy(-90)}>
+							<RotateCounterclockwise aria-hidden />
+						</IconButton>
+						<IconButton label={t("editor.crop.turnRight")} onClick={() => turnBy(90)}>
+							<RotateClockwise aria-hidden />
+						</IconButton>
+						<Segmented
+							aria-label={t("editor.crop.ratio")}
+							size="sm"
+							inline
+							value={ratio}
+							onValueChange={pick}
+							options={RATIO_ORDER.map((value) => ({
+								value,
+								label: value === "free" || value === "original" ? t(`editor.crop.${value}`) : value,
+							}))}
+						/>
+						<Segmented
+							aria-label={t("editor.edit.size")}
+							size="sm"
+							inline
+							value={String(bodyShare)}
+							onValueChange={(next) => setBodyShare(Number(next))}
+							options={SIZES.map((each) => ({ value: String(each), label: `${each}%` }))}
+						/>
+						{changed && (
+							<TextButton
+								onClick={() => {
+									setTurn(0);
+									setPart(WHOLE);
+									setRatio("free");
+									setBodyShare(100);
+								}}
+							>
 								<Reset aria-hidden />
-								{t("editor.crop.whole")}
-							</TextButton>
-						) : (
-							// The way into a crop without a pointer: then the box and its corners move with the arrows.
-							<TextButton onClick={() => setPart({ x: 10, y: 10, width: 80, height: 80 })}>
-								{t("editor.crop.start")}
+								{t("editor.crop.reset")}
 							</TextButton>
 						)}
 					</Inline>
-				</Stack>
-				<DialogFooter>
 					<DialogClose render={<Button variant="ghost" />}>{t("settings.cancel")}</DialogClose>
 					<Button
 						onClick={() =>
-							onApply(
-								part && {
-									x: part.x / 100,
-									y: part.y / 100,
-									width: part.width / 100,
-									height: part.height / 100,
-								},
-								turn,
-							)
+							onApply({
+								crop: isWhole(part)
+									? undefined
+									: { x: part.x / 100, y: part.y / 100, width: part.width / 100, height: part.height / 100 },
+								rotate: turn,
+								width: shareOf(bodyShare),
+							})
 						}
 					>
 						{t("editor.crop.apply")}
@@ -339,6 +459,16 @@ function CropDialog({
 	);
 }
 
+/**
+ * A selected picture's handles, by where it stands: each one moves the edge under it. A picture in the middle grows both ways, so it has all four; one held
+ * to a side cannot move that side, so it has the two on the other.
+ */
+const CORNERS: Record<"left" | "center" | "right", readonly BlockCorner[]> = {
+	left: ["ne", "se"],
+	center: ["nw", "ne", "sw", "se"],
+	right: ["nw", "sw"],
+};
+
 /** An image in the body (doc 09, screens/editor.md): the picture, its tool row while it is picked, its settings card and the caption under it. */
 function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: NodeViewProps) {
 	const { t } = useAdmin();
@@ -347,14 +477,15 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const blockId = String(node.attrs.blockId ?? "");
 	const uploading = typeof node.attrs.upload === "string" ? node.attrs.upload : null;
 	const stopped = uploading ? media?.uploads.find((each) => each.id === uploading)?.status === "failed" : false;
-	const file = useRead<MediaDetail>("media.get", { id: data.media ?? "" }, { skip: !data.media });
+	const file = useBodyFile(data.media || undefined);
 	const set = (next: Partial<ImageData>) => updateAttributes({ data: { ...data, ...next } });
 	const caption = useComposedValue(data.caption ?? "", (value) => set({ caption: value }));
-	const [cropping, setCropping] = useState(false);
+	const [editing, setEditing] = useState(false);
 	const [dragged, setDragged] = useState<number | null>(null);
+	/** What a screen reader hears of the size as it changes. */
+	const [spoken, setSpoken] = useState<string>();
 	const box = useRef<HTMLDivElement>(null);
 	const bar = useRef<HTMLDivElement>(null);
-	const widthId = useId();
 	const editable = editor.isEditable;
 	const open = media?.card === blockId;
 	const align = imageAlignOf(data.align);
@@ -389,7 +520,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			</NodeViewWrapper>
 		);
 
-	const item = file.data;
+	const { item } = file;
 	const url = item ? previewUrl(item) : null;
 	const size = item ? (item.web ?? item.original) : null;
 	const frame = imageFrame({ width: size?.width, height: size?.height, crop: data.crop, rotate: data.rotate });
@@ -400,16 +531,30 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		if (after) openImageCard(editor, after);
 		else media?.setCard(null);
 	};
+	/** A new share, said aloud; one that is the same as now writes nothing, so undo has no empty step. */
+	const resizeTo = (percent: number) => {
+		setSpoken(`${percent}%`);
+		if (shareOf(percent) !== (data.width ?? null)) set({ width: shareOf(percent) });
+	};
+	/** The column the picture stands in: the box's parent, its full width. */
+	const bodyWidth = () => box.current?.parentElement?.getBoundingClientRect().width;
 	const resize = (side: "left" | "right") => (event: React.PointerEvent) => {
 		const measured = box.current?.getBoundingClientRect();
 		if (!measured) return;
 		event.preventDefault();
 		event.stopPropagation();
 		const startX = event.clientX;
-		const widthOfBody = box.current?.parentElement?.getBoundingClientRect().width ?? measured.width;
+		const widthOfBody = bodyWidth() ?? measured.width;
+		// A picture in the middle grows on both sides, so the corner under the pointer moves half of what the width does: it follows the pointer.
+		const pull = align === "center" ? 2 : 1;
+		// A share of the body in percent, never under the smallest picture.
 		const sized = (clientX: number) =>
 			Math.round(
-				clamp(measured.width + (side === "right" ? clientX - startX : startX - clientX), MIN_WIDTH, widthOfBody),
+				clamp(
+					((measured.width + pull * (side === "right" ? clientX - startX : startX - clientX)) / widthOfBody) * 100,
+					leastShare(widthOfBody),
+					100,
+				),
 			);
 		const move = (next: PointerEvent) => setDragged(sized(next.clientX));
 		const finish = (keep: boolean) => (last: PointerEvent | KeyboardEvent) => {
@@ -417,7 +562,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			window.removeEventListener("pointerup", up);
 			window.removeEventListener("keydown", esc);
 			setDragged(null);
-			if (keep && "clientX" in last) set({ width: sized(last.clientX) });
+			if (keep && "clientX" in last) resizeTo(sized(last.clientX));
 		};
 		const up = finish(true);
 		const esc = (key: KeyboardEvent) => {
@@ -431,15 +576,22 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
 		event.preventDefault();
 		event.stopPropagation();
-		const measured = box.current?.getBoundingClientRect().width ?? 0;
-		set({ width: Math.round(Math.max(MIN_WIDTH, (data.width ?? measured) + (event.key === "ArrowRight" ? 16 : -16))) });
+		const widthOfBody = bodyWidth();
+		const least = widthOfBody ? leastShare(widthOfBody) : 10;
+		resizeTo(clamp((data.width ?? 100) + (event.key === "ArrowRight" ? 5 : -5), least, 100));
 	};
 
 	return (
 		<NodeViewWrapper data-block="image">
 			<Stack gap={8}>
 				<Inline justify={JUSTIFY[align]}>
-					<BlockBox ref={box} width={width}>
+					<BlockBox
+						ref={box}
+						width={width}
+						selected={selected && editable}
+						measure={dragged === null ? undefined : `${dragged}%`}
+						spoken={spoken}
+					>
 						{url ? (
 							<Image
 								src={url}
@@ -453,7 +605,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 							// While it loads, and for a file the library does not have: the frame with nothing in it (editor-tools.md).
 							<Image
 								src={null}
-								alt={file.refusal ? t("editor.image.notFound") : ""}
+								alt={file.missing ? t("editor.image.notFound") : ""}
 								fallback={ImageIcon}
 								ratio="wide"
 							/>
@@ -473,6 +625,10 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 											</FloatingBarButton>
 										))}
 										<Separator orientation="vertical" length="bar" />
+										{/* Edit is how the picture looks (its part, its turn, its size); settings are what the entry says of it (2026-11-10, owner). */}
+										<FloatingBarButton label={t("editor.image.edit")} onClick={() => setEditing(true)}>
+											<Edit aria-hidden />
+										</FloatingBarButton>
 										<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
 											<FloatingBarButton
 												label={t("editor.image.settings")}
@@ -483,20 +639,6 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 											</FloatingBarButton>
 											<PopoverContent anchor={bar} align="start">
 												<Stack gap={12}>
-													<FormField>
-														<FormFieldLabel htmlFor={widthId}>{t("editor.image.width")}</FormFieldLabel>
-														<Input
-															id={widthId}
-															size="md"
-															inputMode="numeric"
-															placeholder={t("editor.image.fitBody")}
-															value={data.width ?? ""}
-															onChange={(event) => {
-																const value = Number(event.target.value);
-																set({ width: Number.isFinite(value) && value > 0 ? value : null });
-															}}
-														/>
-													</FormField>
 													<AltFields
 														value={data.alt ?? ""}
 														decorative={data.decorative === true}
@@ -511,39 +653,44 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 												</Stack>
 											</PopoverContent>
 										</Popover>
-										<FloatingBarButton label={t("editor.image.crop")} onClick={() => setCropping(true)}>
-											<Crop aria-hidden />
-										</FloatingBarButton>
 									</FloatingBar>
 								</BlockBarPlace>
-								<ResizeCorner
-									side="left"
-									label={t("editor.image.resizeLeft")}
-									onPointerDown={resize("left")}
-									onKeyDown={resizeKeys}
-								/>
-								<ResizeCorner
-									side="right"
-									label={t("editor.image.resizeRight")}
-									onPointerDown={resize("right")}
-									onKeyDown={resizeKeys}
-								/>
+								{CORNERS[align].map((corner) =>
+									corner === "nw" || corner === "ne" ? (
+										<ResizeCorner
+											key={corner}
+											corner={corner}
+											onPointerDown={resize(corner === "nw" ? "left" : "right")}
+										/>
+									) : (
+										<ResizeCorner
+											key={corner}
+											corner={corner}
+											label={t(corner === "sw" ? "editor.image.resizeLeft" : "editor.image.resizeRight")}
+											onPointerDown={resize(corner === "sw" ? "left" : "right")}
+											onKeyDown={resizeKeys}
+											onFocus={() => setSpoken(`${data.width ?? 100}%`)}
+										/>
+									),
+								)}
 							</>
 						)}
 					</BlockBox>
 				</Inline>
 				{captionField}
 			</Stack>
-			{cropping && url && (
-				<CropDialog
+			{editing && url && (
+				<EditDialog
 					src={url}
+					size={size?.width && size.height ? { width: size.width, height: size.height } : null}
 					crop={data.crop}
 					rotate={data.rotate ?? 0}
+					width={data.width ?? null}
 					returnTo={() => editor.view.dom}
-					onClose={() => setCropping(false)}
-					onApply={(crop, rotate) => {
-						setCropping(false);
-						set({ crop, rotate: rotate === 0 ? undefined : rotate });
+					onClose={() => setEditing(false)}
+					onApply={({ crop, rotate, width: bodyShare }) => {
+						setEditing(false);
+						set({ crop, rotate: rotate === 0 ? undefined : rotate, width: bodyShare });
 					}}
 				/>
 			)}
@@ -561,7 +708,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 	const nameId = useId();
 	const bar = useRef<HTMLDivElement>(null);
 	const uploading = typeof node.attrs.upload === "string" ? node.attrs.upload : null;
-	const file = useRead<MediaDetail>("media.get", { id: data.media ?? "" }, { skip: !data.media });
+	const file = useBodyFile(data.media || undefined);
 	const shownName = useComposedValue(data.name ?? "", (name) => updateAttributes({ data: { ...data, name } }));
 	if (uploading)
 		return (
@@ -575,7 +722,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 				/>
 			</NodeViewWrapper>
 		);
-	const item = file.data;
+	const { item } = file;
 	return (
 		<NodeViewWrapper data-block="file">
 			<BlockBox>
@@ -610,9 +757,9 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 				<FileBlock
 					name={shownName.value || item?.name || ""}
 					selected={selected}
-					tone={file.refusal ? "danger" : "default"}
+					tone={file.missing ? "danger" : "default"}
 					meta={
-						file.refusal
+						file.missing
 							? t("editor.image.notFound")
 							: item
 								? `${extensionLabel(item.name)} · ${formatBytes(item.size)}`

@@ -78,7 +78,7 @@ export const SavedElsewhere: Story = {
 		);
 		fireEvent.change(page.getByRole("textbox", { name: "템플릿 이름" }), { target: { value: "기본 글 고침" } });
 		await userEvent.click(page.getByRole("button", { name: "저장" }));
-		await page.findByText("다른 곳에서 먼저 저장했어요", {}, wait);
+		await page.findByText("다른 곳에서 먼저 저장했습니다", {}, wait);
 		await waitFor(() => expect(page.getByText("저장 안 됨")).toBeVisible());
 	},
 };

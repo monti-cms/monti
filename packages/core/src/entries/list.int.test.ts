@@ -121,6 +121,20 @@ beforeEach(async () => {
 		paragraph("서버 컴포넌트 이야기"),
 	);
 	const rsc = await create("post", "리액트 서버 컴포넌트 다시 보기", { format: "memo" });
+	// A file the library has: a write naming one it does not is refused (doc 09).
+	await db
+		.insertInto("media")
+		.values({
+			id: "media-1",
+			folder_id: null,
+			name: "photo.jpg",
+			kind: "image",
+			mime: "image/jpeg",
+			size: 1,
+			original_key: "photo.jpg",
+		})
+		.onConflict((conflict) => conflict.doNothing())
+		.execute();
 	const photos = await create("post", "가을 사진 정리", { cover: { media: "media-1", alt: "사진" } });
 	const old = await create("post", "보관한 글");
 	await run("entries.publish", { ids: [first] });

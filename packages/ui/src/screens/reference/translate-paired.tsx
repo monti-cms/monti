@@ -170,7 +170,7 @@ export function TranslatePairedScreen() {
 									</FormField>
 									<FormField>
 										<FormFieldLabel htmlFor="ref-alt">대체 텍스트</FormFieldLabel>
-										<Input id="ref-alt" placeholder="아직 번역하지 않았어요" />
+										<Input id="ref-alt" placeholder="번역 전" />
 									</FormField>
 								</ImageSide>
 							}

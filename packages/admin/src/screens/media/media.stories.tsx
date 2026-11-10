@@ -12,16 +12,21 @@ const admin = { actor: "admin" } as const;
 const run = <Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) =>
 	monti.run(name, input, admin) as Promise<Output>;
 
-/** A sample photo as the reference paints it: a slanted gradient between two colours, small and real, so it loads like any picture. */
-export async function samplePhoto(from: string, to: string): Promise<Uint8Array> {
-	const canvas = new OffscreenCanvas(320, 180);
+/**
+ * A sample photo as the reference paints it: a slanted gradient between two colours, small and real, so it loads like any picture. It has the shape of the
+ * size it is said to have (16:9 unless told), so a crop drawn on it is the crop the body shows.
+ */
+export async function samplePhoto(from: string, to: string, shape = { width: 16, height: 9 }): Promise<Uint8Array> {
+	const width = 320;
+	const height = Math.round((width * shape.height) / shape.width);
+	const canvas = new OffscreenCanvas(width, height);
 	const context = canvas.getContext("2d");
 	if (!context) throw new Error("No 2d context for the sample photo.");
-	const gradient = context.createLinearGradient(0, 0, 320, 180);
+	const gradient = context.createLinearGradient(0, 0, width, height);
 	gradient.addColorStop(0, from);
 	gradient.addColorStop(1, to);
 	context.fillStyle = gradient;
-	context.fillRect(0, 0, 320, 180);
+	context.fillRect(0, 0, width, height);
 	return new Uint8Array(await (await canvas.convertToBlob({ type: "image/jpeg" })).arrayBuffer());
 }
 
@@ -34,7 +39,7 @@ async function addFile(
 	file: { name: string; from: string; to: string; width: number; height: number; folderId?: string | null },
 ) {
 	const key = nextKey(".jpg");
-	await site.storage?.put(key, await samplePhoto(file.from, file.to), { mime: "image/jpeg" });
+	await site.storage?.put(key, await samplePhoto(file.from, file.to, file), { mime: "image/jpeg" });
 	const { output } = await run(site.monti, "media.upload", {
 		name: file.name,
 		folderId: file.folderId ?? null,
@@ -234,10 +239,10 @@ export const Picked: Story = {
 /** Flow 6·15: a search reaching through the folders. */
 export const Searching: Story = { loaders: library("#/media?q=cafe") };
 
-/** Flow 6·33: a kind chosen, its chip in the filter's place. */
+/** Flow 6·33: a kind chosen, a dot after the filter's name. */
 export const KindChosen: Story = { loaders: library("#/media?kind=image") };
 
-/** A search inside a folder: where to look is a choice, this folder or all of them. At the top (`Searching`) there is nothing to choose. */
+/** A search inside a folder: the chip in the search box says where it looks, this folder or all of them. At the top (`Searching`) there is no chip. */
 export const SearchingInFolder: Story = {
 	loaders: library(),
 	play: async ({ canvasElement }) => {
@@ -248,7 +253,7 @@ export const SearchingInFolder: Story = {
 	},
 };
 
-/** A filter inside a folder: the folders give way, and where to look is a choice, as in a search. */
+/** A filter inside a folder: the folders give way, and it looks in this folder (every folder is the search box's choice). */
 export const KindChosenInFolder: Story = {
 	loaders: library(),
 	play: async ({ canvasElement }) => {
@@ -262,6 +267,18 @@ export const KindChosenInFolder: Story = {
 
 /** The list view (flow 6·14). */
 export const ListView: Story = { loaders: library("#/media?view=list") };
+
+/** The list view inside a folder, a row picked: the bulk bar takes the head's place, and the filters stay above (T113). */
+export const ListViewPicked: Story = {
+	loaders: library("#/media?view=list"),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("link", { name: "Blog Assets" }, { timeout: 15000 }));
+		const name = await page.findByText("desk-morning.jpg", {}, { timeout: 15000 });
+		const row = name.closest("tr");
+		if (row) await userEvent.click(within(row).getByRole("checkbox"));
+	},
+};
 
 /** Flow 6·31: a site with no storage. */
 export const NoStorage: Story = { loaders: library("#/media", { storage: null }) };

@@ -302,7 +302,7 @@ export const MainRowMenu: Story = {
 export const Empty: Story = {
 	loaders: site(undefined, "#/c/memo"),
 	play: ({ canvasElement }) =>
-		waitFor(() => expect(within(canvasElement).getByText("아직 메모가 없어요.")).toBeTruthy(), wait),
+		waitFor(() => expect(within(canvasElement).getByText("아직 메모가 없습니다.")).toBeTruthy(), wait),
 };
 
 /** The status column's menu: each state with its count; picking one leaves the menu open and dots the name (flow 7, step 04). */
@@ -368,7 +368,7 @@ export const AiFiltered: Story = {
 export const NoMatch: Story = {
 	loaders: site(undefined, "#/c/post?q=없는말"),
 	play: ({ canvasElement }) =>
-		waitFor(() => expect(within(canvasElement).getByText("맞는 글이 없어요.")).toBeTruthy(), wait),
+		waitFor(() => expect(within(canvasElement).getByText("맞는 글이 없습니다.")).toBeTruthy(), wait),
 };
 
 /** Opens the list inside "시리즈 원고" (doc 07): its id is made with the site, so the address is set once it is known. */
@@ -417,7 +417,7 @@ export const InFolder: Story = {
 	play: ({ canvasElement }) => waitFor(() => expect(within(canvasElement).getByText("상위 폴더로")).toBeTruthy(), wait),
 };
 
-/** A search inside a folder: "찾는 곳 시리즈 원고 | 모든 폴더" over the rows (flow 5, step 03). */
+/** A search inside a folder: the chip in the search box names the folder, its menu widens it to every folder (flow 5, step 03). */
 export const InFolderSearch: Story = {
 	loaders: site(inSeries("&q=지난 글")),
 	play: ({ canvasElement }) =>

@@ -1,4 +1,4 @@
-import { altIsMissing, type MediaDetail, type MediaValue, mediaValueOf } from "@monti-cms/core";
+import { altIsMissing, cleanMediaValue, type MediaDetail, type MediaValue, mediaValueOf } from "@monti-cms/core";
 import {
 	FormField,
 	FormFieldError,
@@ -12,7 +12,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { Settings } from "@monti-cms/ui/icons";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { AltFields } from "../../editor/alt-fields";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
@@ -35,9 +35,10 @@ export function MediaField({
 	label,
 	required,
 	accept,
+	change,
 	value,
 	source,
-	whose,
+	following,
 	readOnly,
 	uploads,
 	card,
@@ -49,11 +50,13 @@ export function MediaField({
 	label: string;
 	required: boolean;
 	accept?: "image" | "any";
+	/** The mark on a translation's own value when the source's moved on: in the place of whose value it is. */
+	change?: ReactNode;
 	value: unknown;
 	/** What it follows while empty. */
 	source?: unknown;
-	/** In a translation following its source: says whose value shows, and what × does. */
-	whose?: { following: string; own: string; clear: string };
+	/** In a translation following its source: the mark while it follows (empty, or showing the source's file); its own value needs none. */
+	following?: string;
 	readOnly: boolean;
 	uploads: FieldUploads;
 	/** Whether the picture's settings card is open: the editor's, so a to-do row can open it. */
@@ -72,7 +75,8 @@ export function MediaField({
 	const file = read.data?.id === shown?.media ? read.data : null;
 	const going = uploads.of(field);
 	const isImage = file?.kind === "image";
-	const altMissing = isImage && shown && altIsMissing(shown);
+	const said = uploads.saidOf(field);
+	const altMissing = going ? going.preview !== null && altIsMissing(said) : isImage && shown && altIsMissing(shown);
 	return (
 		<>
 			<FormField>
@@ -80,9 +84,11 @@ export function MediaField({
 					htmlFor={id}
 					required={required}
 					action={
-						whose && !going ? (
+						change && !going ? (
+							change
+						) : following && !own && !going ? (
 							<Text variant="micro" tone="faint">
-								{own ? whose.own : whose.following}
+								{following}
 							</Text>
 						) : undefined
 					}
@@ -99,7 +105,7 @@ export function MediaField({
 					onOpen={readOnly ? undefined : () => setPicking(true)}
 					// On a file going up or stopped, × takes out that file: the field goes back to what it had.
 					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
-					clearLabel={(!going && whose?.clear) || t("library.field.clear", { label })}
+					clearLabel={t("library.field.clear", { label })}
 					action={
 						going?.status === "failed" ? (
 							<RetryButton onRetry={() => uploads.retry(going)} />
@@ -116,12 +122,21 @@ export function MediaField({
 								<PopoverContent anchor={line} align="start" width="anchor">
 									<Stack gap={12}>
 										<AltFields
-											value={own?.alt ?? ""}
-											decorative={shown.decorative === true}
+											// While a new file goes up, these are about it, and wait with it.
+											value={(going ? said.alt : own?.alt) ?? ""}
+											decorative={(going ? said.decorative : shown.decorative) === true}
 											readOnly={readOnly}
-											placeholder={followed?.alt || t("entry.empty")}
-											onChange={(alt) => onChange({ ...own, media: shown.media, alt })}
-											onDecorative={(decorative) => onChange({ ...own, media: shown.media, decorative })}
+											placeholder={(!going && followed?.alt) || t("entry.empty")}
+											onChange={(alt) =>
+												going
+													? uploads.say(field, { alt })
+													: onChange(cleanMediaValue({ ...own, media: shown.media, alt }))
+											}
+											onDecorative={(decorative) =>
+												going
+													? uploads.say(field, { decorative })
+													: onChange(cleanMediaValue({ ...own, media: shown.media, decorative }))
+											}
 											onEnter={() => onCard(false)}
 										/>
 									</Stack>
@@ -147,13 +162,13 @@ export function MediaField({
 						// Alt text says what a picture shows, so another file starts with none (2026-11-09, owner). The same file keeps it.
 						onChange(item.id === own?.media ? own : { media: item.id });
 					}}
-					onFiles={([chosen]) => {
+					onFiles={([chosen], folder) => {
 						setPicking(false);
 						if (!chosen) return;
 						const only = accept === "any" ? undefined : "image";
 						// One the library refuses leaves the field as it was.
 						void acceptFiles([chosen], only).then(([taken]) => {
-							if (taken) uploads.add(field, taken, own?.alt, only);
+							if (taken) uploads.add(field, taken, folder, only);
 						});
 					}}
 				/>
@@ -163,13 +178,24 @@ export function MediaField({
 }
 
 /** A media field that is the same in every language, in a translation: the source's file, read only (doc 04). */
-export function SharedMediaValue({ value, empty }: { value: unknown; empty: string }) {
+export function SharedMediaValue({
+	value,
+	empty,
+	withAlt = false,
+}: {
+	value: unknown;
+	empty: string;
+	/** Says what the entry says of it too: a change card, where that may be all that changed. */
+	withAlt?: boolean;
+}) {
+	const { t } = useAdmin();
 	const shown = mediaValueOf(value);
 	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown });
 	const name = read.data?.id === shown?.media ? read.data?.name : undefined;
+	const words = shown?.decorative ? t("editor.image.decorative") : shown?.alt;
 	return (
 		<Text variant="note" tone={name ? undefined : "faint"}>
-			{name ?? empty}
+			{name && withAlt && words ? `${name} · ${words}` : (name ?? empty)}
 		</Text>
 	);
 }

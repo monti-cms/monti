@@ -1,4 +1,4 @@
-import { Image, MediaPicker, StatusBar, StatusBarCell, StatusBarSpacer, Tile } from "../../index";
+import { FolderTile, Image, MediaPicker, StatusBar, StatusBarCell, StatusBarSpacer, Tile } from "../../index";
 import {
 	BodyBlock,
 	BodyHeading,
@@ -16,8 +16,8 @@ const FILES = [
 	{ name: "cybersecurity-code.jpg", detail: "1600×900 · 글 2" },
 	{ name: "seoul-night.jpg", detail: "3000×2000 · 글 1" },
 	{ name: "cafe-window.jpg", detail: "2000×1333 · 글 1" },
-	{ name: "winter-02.jpg", detail: "2400×1600" },
-	{ name: "hero-dark.png", detail: "2560×1440" },
+	{ name: "winter-02.jpg", detail: "2400×1600 · 사용 안 함" },
+	{ name: "hero-dark.png", detail: "2560×1440 · 사용 안 함" },
 ];
 
 /** Inserting an image: the library open as a picker over the editor, nothing picked yet, so no "넣기" pill until a tile is. */
@@ -59,16 +59,16 @@ export function ImageInsertScreen() {
 				open
 				onOpenChange={still}
 				title="라이브러리"
-				allLabel="모든 이미지"
+				topLabel="미디어"
 				folders={[
-					{ id: "Blog Assets", name: "Blog Assets", depth: 0, count: 14 },
-					{ id: "covers", name: "covers", depth: 1, count: 6 },
-					{ id: "diagrams", name: "diagrams", depth: 1, count: 3 },
-					{ id: "Wallpapers", name: "Wallpapers", depth: 0, count: 8 },
+					{ id: "Blog Assets", name: "Blog Assets", depth: 0 },
+					{ id: "covers", name: "covers", depth: 1 },
+					{ id: "diagrams", name: "diagrams", depth: 1 },
+					{ id: "Wallpapers", name: "Wallpapers", depth: 0 },
 				]}
-				folder="Blog Assets"
+				folder={null}
 				onFolderChange={still}
-				foldersLabel="폴더"
+				pathLabel="경로"
 				search=""
 				onSearchChange={still}
 				searchLabel="파일 이름 검색"
@@ -77,6 +77,12 @@ export function ImageInsertScreen() {
 				confirmLabel="넣기"
 				onConfirm={still}
 				confirmHidden
+				subfolders={
+					<>
+						<FolderTile name="Blog Assets" />
+						<FolderTile name="Wallpapers" />
+					</>
+				}
 			>
 				{FILES.map((file) => (
 					<Tile

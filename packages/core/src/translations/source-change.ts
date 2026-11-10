@@ -5,8 +5,9 @@ import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { type Entry, loadEntries, markChanges } from "../entries/record";
 import { localeModeOf, type Schema } from "../schema/define";
+import { seenAfter, trackedFields } from "./fields";
 import { blockHash, pairedCopy } from "./links";
-import { rememberBlocks } from "./source";
+import { followedFields, rememberBlocks } from "./source";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -57,20 +58,31 @@ export async function changeSource(db: Db, from: string, to: string, schema: Sch
 				return { ...block, link: { from: paired.id, seen: blockHash(paired), state } };
 			}),
 		});
+		// What every other language holds of its own is measured from the new source from here on (T111).
+		const [newSource] = await db
+			.selectFrom("entries")
+			.select("id")
+			.where("translation_group", "=", group)
+			.where("locale", "=", to)
+			.where("trashed_at", "is", null)
+			.execute();
+		const followed = await followedFields(db, (await loadEntries(db, newSource ? [newSource.id] : []))[0] ?? null);
 		for (const entry of entries) {
 			if (entry.id === existing?.id) continue;
-			await rewrite(db, entry, (doc) => repair(doc, entry.id === old.id));
+			const seen = seenAfter(trackedFields(schema, entry.collection), {}, entry, followed);
+			await rewrite(db, entry, (doc) => repair(doc, entry.id === old.id), seen);
 		}
 	}
 }
 
 /** Writes a new body into an entry's working copy and its published copy alike, and drops what it left out. */
-async function rewrite(db: Db, entry: Entry, change: (doc: Doc) => Doc) {
+async function rewrite(db: Db, entry: Entry, change: (doc: Doc) => Doc, seen: Record<string, unknown> = {}) {
 	await db
 		.updateTable("entries")
 		.set((eb) => ({
 			doc: JSON.stringify(change(asDoc(entry.doc))),
 			translation_skips: JSON.stringify([]),
+			translation_seen: JSON.stringify(seen),
 			version: eb("version", "+", 1),
 		}))
 		.where("id", "=", entry.id)
@@ -107,6 +119,7 @@ async function promote(db: Db, entry: Entry, old: Entry, schema: Schema): Promis
 		.set((eb) => ({
 			values: JSON.stringify(values),
 			translation_skips: JSON.stringify([]),
+			translation_seen: JSON.stringify({}),
 			version: eb("version", "+", 1),
 		}))
 		.where("id", "=", entry.id)

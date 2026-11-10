@@ -56,8 +56,8 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 나가기 확인 | `AlertDialog`: `AlertDialogTitle` "저장하지 않은 바뀐 곳이 있어요", `AlertDialogDescription`, `AlertDialogCancel variant="danger"` "저장하지 않고 나가기", `AlertDialogAction` "계속 고치기" | 바뀐 곳이 있는 채 다른 곳으로 갈 때 묻는다. |
-| 운영 검토 (빠짐, 2026-11-05) | `Sheet`(`SheetTitle` "검토", `of` "사이트 · 바뀐 곳 3"): 가는 곳마다 `ListSection flush`("바로 저장" 2, "PR" 1), 그 안에 변경마다 `ChangeGroup kind="edit"`(값은 전·후, [change.md](../components/change.md)), 파일 변경은 `Patch`(`file` "monti.schema.ts"), 발은 "취소" · "PR 만들기" | 바로 저장되는 것과 PR로 가는 것을 나눠 보인다. |
+| 나가기 확인 | `AlertDialog`: `AlertDialogTitle` "저장하지 않은 변경 사항이 있습니다", `AlertDialogDescription`, `AlertDialogCancel variant="danger"` "저장하지 않고 나가기", `AlertDialogAction` "계속 고치기" | 바뀐 곳이 있는 채 다른 곳으로 갈 때 묻는다. |
+| 운영 검토 (빠짐, 2026-11-05) | `Sheet`(`SheetTitle` "검토", `of` "사이트 · 변경 사항 3"): 가는 곳마다 `ListSection flush`("바로 저장" 2, "PR" 1), 그 안에 변경마다 `ChangeGroup kind="edit"`(값은 전·후, [change.md](../components/change.md)), 파일 변경은 `Patch`(`file` "monti.schema.ts"), 발은 "취소" · "PR 만들기" | 바로 저장되는 것과 PR로 가는 것을 나눠 보인다. |
 
 ### 흐름 2 · 어시스턴트
 
@@ -65,7 +65,7 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| "기본" | 2.20 | 바뀐 곳 2: 사이트 이름 `FormFieldLabel changed`, 저장 묶음 | Controls/Field/Field |
+| "기본" | 2.20 | 변경 사항 2: 사이트 이름 `FormFieldLabel changed`, 저장 묶음 | Controls/Field/Field |
 
 ### 흐름 11 · 설정
 
@@ -96,7 +96,7 @@
 | 절 | `Section`("콘텐츠 언어") | 읽기 전용이면 언어 행마다(원어 이름 뒤) `LockMark`. |
 | 언어 행 | `LanguageRow`(`name` 원어 이름, `code`, `label` 표시 이름, 바뀐 행은 `dot`, 뺄 행은 `gone`) | 이름은 언어 코드에서 오는 글이다. 다른 행은 끌기 손잡이(`handle`에 `DragHandle`)로 순서를 바꾼다. |
 | 원문 행의 "원문 │ 바꾸기" | `LanguageSource` | 굵은 "원문", 구분선, 조용한 밑줄 버튼 "바꾸기". "바꾸기"는 `DropdownMenu`(`DropdownMenuRadioGroup`, 지금 원문에 ✓)를 연다. 고르면 그 언어가 맨 위로 가고 두 행에 바뀜 점이 붙는다. 원문 행은 손잡이 자리를 비운다. |
-| 다른 행의 × | `TextButton variant="quiet"`(`aria-label` "… 빼기") | 누르면 행에 취소선(`gone`)을 긋고 바뀐 곳에 더한다. 번역이 있는 언어는 저장 때 검토에서 처리를 고른다. |
+| 다른 행의 × | `TextButton variant="quiet"`(`aria-label` "… 빼기") | 누르면 행에 취소선(`gone`)을 긋고 변경 사항에 더한다. 번역이 있는 언어는 저장 때 검토에서 처리를 고른다. |
 | "+ 언어 추가" | `TextButton` + `Popover`(`PopoverContent padding="menu"`) 안의 `Command`(`shouldFilter={false}`, `CommandInput`, `CommandList`, `CommandItem` 코드 mono · 원어 이름 · 끝에 표시 이름, `CommandSeparator`, 마지막 "직접 입력") | 코드를 고르면 그 자리에서 행이 생긴다. "직접 입력"은 창을 연다. |
 | 직접 입력 창 | `Dialog`(`DialogTitle` "새 언어", `of` 코드): "코드" `Text mono`, "원어 이름" `Input`, "표시 이름" `Input`, `DialogFormFooter`("취소" · "추가") | 420px 작은 창. 포커스는 원어 이름으로 간다. |
 
@@ -116,7 +116,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 빼기 검토 | `Sheet`(`SheetTitle` "검토", `of` "언어 · 바뀐 곳 1"): `ChangeGroup kind="drop"`(`tag` "뺌", `title` "English", `identifier` "en") 안에 `ChangeNote` "번역이 함께 지워져요.", 발은 "취소" · 빨간 "지우고 적용"(2026-11-05 바뀜) | 번역이 있는 언어를 뺀 채 저장하면 열린다. |
+| 빼기 검토 | `Sheet`(`SheetTitle` "검토", `of` "언어 · 변경 사항 1"): `ChangeGroup kind="drop"`(`tag` "뺌", `title` "English", `identifier` "en") 안에 `ChangeNote` "번역이 함께 지워집니다.", 발은 "취소" · 빨간 "지우고 적용"(2026-11-05 바뀜) | 번역이 있는 언어를 뺀 채 저장하면 열린다. |
 
 ### 흐름 11 · 설정
 
@@ -126,7 +126,7 @@
 |---|---|---|---|
 | "언어 찾기" | 11.05 | "+ 언어 추가"의 `Command` 팝오버, 검색어 "zh" | Controls/Menu/Command |
 | "직접 입력" | 11.06b | 직접 입력 `Dialog` | Controls/Overlay/Dialog |
-| "언어 추가됨" | 11.06 | 日本語 행이 `dot`("새로")과 함께 생김, 탭 `dot`, 저장 묶음 |  |
+| "언어 추가됨" | 11.06 | 日本語 행이 `dot`("추가")과 함께 생김, 탭 `dot`, 저장 묶음 |  |
 | "원문 메뉴" | 11.07 | "바꾸기"의 `DropdownMenu`(지금 원문 ✓) | Controls/Menu/DropdownMenu |
 | "원문 바꿈" | 11.07b | English가 맨 위의 원문, 두 행에 `dot`("원문 변경"), 옛 원문 행에 손잡이와 × |  |
 | "빼기 검토" | 11.08 | English 행 `gone`, 빼기 검토 `Sheet`, ✦ 버튼은 시트에 가려진다 | Controls/Overlay/Sheet |
@@ -170,7 +170,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| "바뀐 곳 1 · 제안 2 ▾" | `ChangesGroup`(`proposals`: `label` "제안", `discardLabel` "버리기", `items`) | 사람이 바꾼 곳과 어시스턴트 제안을 따로 센다. "바뀐 곳"에 제안을 넣어 세지 않는다(2026-11-05 소유자). 제안 개수는 파랗다. 목록에서 제안도 하나씩 버린다. |
+| "변경 사항 1 · 제안 2 ▾" | `ChangesGroup`(`proposals`: `label` "제안", `discardLabel` "버리기", `items`) | 사람이 바꾼 곳과 어시스턴트 제안을 따로 센다. "변경 사항"에 제안을 넣어 세지 않는다(2026-11-05 소유자). 제안 개수는 파랗다. 목록에서 제안도 하나씩 버린다. |
 | 제안된 값 (미리보기 경로) | `Affix proposal` | 파란 글자와 파란 밑줄. 아래에 옛 값 `Del`("/preview"). 사람이 고치거나 저장하면 보통 색으로 돌아간다([proposal.md](../components/proposal.md)). |
 | 제안된 값 (주소에 언어 표시) | `Select` + `SelectTrigger proposal` | 같다. 아래에 옛 값 `Del`("항상"). |
 | 제안된 필드의 라벨 줄 | `FormFieldLabel changed`(`tone="proposal"`, `undoLabel` "버리기"), 입력 아래 `Del` 옛 값 | 버리면 옛 값으로 돌아간다. |
@@ -186,7 +186,7 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| (상태 없음) | 2.21 | 사이트 이름 바뀜 1, 제안 2(미리보기 경로, 주소에 언어 표시): "바뀐 곳 1 · 제안 2" |  |
+| (상태 없음) | 2.21 | 사이트 이름 바뀜 1, 제안 2(미리보기 경로, 주소에 언어 표시): "변경 사항 1 · 제안 2" |  |
 | `withRail` | 2.21 | ✦ 어시스턴트 열기 |  |
 
 

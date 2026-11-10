@@ -32,14 +32,14 @@
 | 화면 버튼으로 보낸 말 | `ChatMessage author="user" request` | 앞에 파란 반짝이. |
 | 하는 중인 도구 줄 | `ToolCallLine status="running"` | 돌아가는 표시와 진한 글("요약 확인 중 · 62 / 148"). |
 | 멈춘 도구 줄 | `ToolCallLine status="failed"` | 빨간 ×와 "… 에서 멈춤". |
-| 오류 답장 | `ErrorNote`(`title`, 회색 한 줄, `actions`에 `TextButton variant="underline"`) | 크레딧 부족: "Anthropic 크레딧이 부족해요" · "다른 모델로 보내기". 연결 끊김: "연결이 끊겼어요" · "이어서 하기". 보내기는 미리 막지 않고, 보낸 뒤에 이 답장으로 알린다. |
+| 오류 답장 | `ErrorNote`(`title`, 회색 한 줄, `actions`에 `TextButton variant="underline"`) | 크레딧 부족: "Anthropic 크레딧이 부족합니다" · "다른 모델로 보내기". 연결 끊김: "연결이 끊겼습니다" · "이어서 하기". 보내기는 미리 막지 않고, 보낸 뒤에 이 답장으로 알린다. |
 | 옮기지 못한 이동 | 답의 글 + 글 이름 `TextButton variant="underline"` + mono 주소 + `Button variant="secondary" size="sm"` "저장하고 열기" | 저장하지 않은 편집이 있어 화면을 옮기지 않았을 때. 대화 안의 답으로 알린다. |
 | 여러 묶음 제안 | `ProposalCard`(`summary` "4묶음 · 19건") 안에 `ProposalRow` 넷(`name`, `detail`, `count`) | 기다림: `ProposalActions` "검토" · "버리기" · [19건 적용]. 적용 뒤: `ProposalResult` "✓ 16건 적용" · "1건 못 함" · 시각 · "모두 되돌리기", `after`에 `ProposalRow tone="danger"` "못 옮김 · 겨울 사진 · 그 사이 휴지통으로 감". |
 | 파일 제안 (대체 텍스트) | `ProposalCard`(`summary` "대체 텍스트 · 3개") 안에 `ProposalItem` 셋(mono 파일 이름과 `Ins` 새 글) | 셋 이하라 "검토"가 없다. 넘으면 흐린 "외 N개" 줄(`ProposalRow`에 `detail`만)과 "검토". |
 | 지운 제안 (다시 연 대화) | `ProposalCard` 안에 `ProposalRow`(`detail`에 `Del`로 태그들, `count` "글 0편") |  |
 | 설정 · 스키마 제안 | 도구 줄과 답의 글만 | 제안은 그 화면에 파랗게 표시된다. 카드는 없다. |
 | 빈 패널 | `SuggestList`, `SuggestLabel` "이 목록에서" · "최근", `Suggest kind="request"` · `Suggest kind="recent"` | |
-| 키가 없을 때 | `Text variant="title"` "AI 연결이 없어요", `Text variant="note" tone="subtle"`, `Button variant="primary"`(`render`로 API 키 화면 링크) "API 키 넣기" | 입력 상자는 없다. |
+| 키가 없을 때 | `Text variant="title"` "AI 연결이 없습니다", `Text variant="note" tone="subtle"`, `Button variant="primary"`(`render`로 API 키 화면 링크) "API 키 넣기" | 입력 상자는 없다. |
 | 지난 대화 목록 | `ConversationList`, `ConversationGroupLabel` "오늘" · "이전", `ConversationRow`(`title`, `meta` "10:52 · 적용 16건", 지금 대화는 `current`, `menu`에 `ConversationRowMore` + `DropdownMenu` "지우기") | 행을 누르면 그 대화를 연다. 지우기는 묻지 않는다. |
 | 지난 대화의 발 | `SidePanel footer`에 `Text variant="note"` "안 연 대화 지우기"와 `FilterButton filled` "30일 뒤" + `DropdownMenu`(`DropdownMenuRadioGroup` 7일 · 30일 · 90일 · 지우지 않음) | 날수는 메뉴에서 고른다. |
 | 입력 상자의 고른 행 칩 | `ChatInput context`에 `Chip onRemove`("고른 글 2편") | ×로 빼면 그 행들은 가지 않는다. |
@@ -62,7 +62,7 @@
 | "목록 거름" | 2.03 | 도구 줄 셋과 답 |  |
 | "글 엶" | 2.04 | 이어서 "첫 번째 글 열어 줘", 도구 줄 "화면 이동", 답. 플레이스홀더 "이 글에 대해 물어보세요" |  |
 | "이동 막힘" | 2.05 | 이어서 옮기지 못한 이동의 답과 "저장하고 열기" |  |
-| "실패" | 2.06 | `ToolCallLine status="failed"`와 `ErrorNote` "연결이 끊겼어요" | Monti/Assistant/ToolCallLine, Controls/Status/ErrorNote |
+| "실패" | 2.06 | `ToolCallLine status="failed"`와 `ErrorNote` "연결이 끊겼습니다" | Monti/Assistant/ToolCallLine, Controls/Status/ErrorNote |
 | "글에서 요청" | 2.07 | "글 엶"에 입력 상자의 글 "더 짧게 다듬어 줘. 말투는 그대로." |  |
 | "맡기기" | 2.10 | "둘 다 골라 줘" 답, 입력 상자의 긴 요청과 `Chip` "고른 글 2편" |  |
 | "제안 카드" | 2.11 | 여러 묶음 `ProposalCard`와 `ProposalActions` | Monti/Proposal/ProposalCard |
@@ -74,7 +74,7 @@
 | "생각 고르기" | 2.23b | `ModelMenu`의 "생각 ›" 둘째 단계 열림 | Controls/Menu/ModelMenu |
 | "생각 높음" | 2.23c | `ModelMenuButton`에 "· 생각 높음" | Controls/Menu/ModelMenu |
 | "생각 없는 모델" | 2.23d | 다른 모델에 ✓, "생각" 행과 버튼의 "· 생각"이 없음 |  |
-| "크레딧 부족" | 2.24 | 내 말 아래 `ErrorNote` "Anthropic 크레딧이 부족해요" | Controls/Status/ErrorNote |
+| "크레딧 부족" | 2.24 | 내 말 아래 `ErrorNote` "Anthropic 크레딧이 부족합니다" | Controls/Status/ErrorNote |
 | "지난 대화" | 2.25 | 머리 `back`, `ConversationList`, 발의 `FilterButton`. 입력 상자 없음 | Monti/Assistant/ConversationList, Patterns/List/FilterButton |
 | "다시 연 대화" | 2.26 | `ChatDate`, 지운 제안 카드, 모델 "claude-opus-5-5 · 생각 높음" | Monti/Assistant/ChatThread |
 
@@ -125,7 +125,7 @@
 | 그사이 바뀐 항목 | `ReviewItem muted`, `end`에 "이 사이에 고쳐짐"과 `TextButton variant="underline"` "다시 만들기" | 체크가 빠지고 흐려진다. |
 | 나란히 | `ReviewCompareHead`("지금 / 제안"), 항목마다 `ReviewCompare`(`label` "문단 2", `before`, `after`) |  |
 | 긴 묶음 | `ReviewMore`(`moreLabel` "6편 더 보기", `lessLabel` "접기") | 다섯 줄이 넘을 때. |
-| 번역 묶음의 항목 | `ReviewItem`(`end`에 `Count` "블록 8 · 원문 유지 1", 흐린 블록 수는 경고 톤) + `Collapsible`(`CollapsibleTrigger`에 `Caret solo`, `CollapsibleContent`) | 펼치면 `ReviewCompareHead`("원문 · 한국어 / 번역 · English")와 블록마다 `ReviewCompare`(번역 글은 `Fill`, 원문 유지 블록은 `label`에 `Marker tone="keep"`), 끝에 `ReviewMore` "블록 4개 더". 펼침 표시는 `Caret solo`다(보드 첫 항목의 글자 ▴는 이것으로 맞춘다). |
+| 번역 묶음의 항목 | `ReviewItem`(`end`에 `Count` "블록 8 · 원문 따름 1", 흐린 블록 수는 경고 톤) + `Collapsible`(`CollapsibleTrigger`에 `Caret solo`, `CollapsibleContent`) | 펼치면 `ReviewCompareHead`("원문 · 한국어 / 번역 · English")와 블록마다 `ReviewCompare`(번역 글은 `Fill`, 원문 유지 블록은 `label`에 `Marker tone="keep"`), 끝에 `ReviewMore` "블록 4개 더". 펼침 표시는 `Caret solo`다(보드 첫 항목의 글자 ▴는 이것으로 맞춘다). |
 | 결과 뒤의 체크 | `ReviewItem readOnly` | 회색 체크, 바꿀 수 없다. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Button/Button, Primitives/Text, Controls/Status/Count, Controls/Status/Progress, Monti/Proposal/Review, Primitives/Separator, Controls/Tabs/Tabs, Monti/Proposal/Marks, Patterns/Frame/Collapsible, Controls/Field/Caret, Monti/Translation/Marks.

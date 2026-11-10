@@ -17,6 +17,7 @@ import {
 	onImageCard,
 	placeFiles,
 	placeLibraryFile,
+	useBodyFiles,
 } from "./media-context";
 import { type BodyProposal, showProposals, takeInEditor } from "./proposal-marks";
 import { nodeName } from "./schema";
@@ -127,6 +128,7 @@ export function BodyEditor({
 	const handle = useBlockHandle(editor, catalogs, translation);
 	const tables = useTableTools(editor);
 	const [card, setCard] = useState<string | null>(null);
+	const bodyFiles = useBodyFiles();
 	useEffect(() => (editor ? onImageCard(editor, setCard) : undefined), [editor]);
 	const media = useMemo<EditorMediaValue>(
 		() => ({
@@ -136,8 +138,10 @@ export function BodyEditor({
 			finished: (id) => finished.current.get(id),
 			card,
 			setCard,
+			files: bodyFiles.files,
+			want: bodyFiles.want,
 		}),
-		[upload.uploads, upload.retry, upload.holds, card],
+		[upload.uploads, upload.retry, upload.holds, card, bodyFiles.files, bodyFiles.want],
 	);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);
@@ -169,9 +173,13 @@ export function BodyEditor({
 					const target = event.target as Node;
 					// A mark in the margin opens its card; it is not a press under the text.
 					if (target instanceof Element && target.closest("[data-slot=editor-margin]")) return;
-					// A press under the last block puts the cursor at the end of the text.
-					if (editor && event.currentTarget.contains(target) && !editor.view.dom.contains(target))
-						editor.chain().focus("end").run();
+					// A press under the last block puts the cursor at the end of the text. Under a block with no text of its own (a picture, a file), a new
+					// paragraph opens there, as Notion does: no need to know that Enter on the picked block makes one (2026-11-10, owner).
+					if (!editor || !event.currentTarget.contains(target) || editor.view.dom.contains(target)) return;
+					const last = editor.state.doc.lastChild;
+					if (editor.isEditable && last && !last.isTextblock)
+						editor.chain().insertContentAt(editor.state.doc.content.size, { type: "paragraph" }).focus("end").run();
+					else editor.chain().focus("end").run();
 				}}
 			>
 				<EditorContent editor={editor} />
@@ -191,9 +199,9 @@ export function BodyEditor({
 							setLibrary(null);
 							if (editor) placeLibraryFile(editor, item);
 						}}
-						onFiles={(files) => {
+						onFiles={(files, folder) => {
 							setLibrary(null);
-							if (editor) placeFiles(editor, files, null, accept, upload.add);
+							if (editor) placeFiles(editor, files, null, accept, (taken) => upload.add(taken, folder));
 						}}
 					/>
 				)}

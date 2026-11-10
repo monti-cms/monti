@@ -83,7 +83,7 @@ export const WithTag: Story = {
 		<>
 			<TodoItem
 				title="I rebuilt the blog because fixing the tool took longer than writing."
-				tag="바뀜"
+				tag="변경"
 				onOpen={noop}
 				actionLabel="확인"
 				onAction={noop}
@@ -98,7 +98,7 @@ export const WithTag: Story = {
 			/>
 			<TodoItem
 				title="다음 글에서는 번역을 다룬다."
-				tag="새로"
+				tag="추가"
 				tagTone="success"
 				onOpen={noop}
 				actionLabel="빼기"
@@ -128,18 +128,11 @@ export const WithDone: Story = {
 				actionLabel="고르기"
 				onAction={noop}
 			/>
-			<TodoDone>이미지 대체 텍스트 2개</TodoDone>
-			<TodoDone>제목 · 주소 · 대표 이미지</TodoDone>
 		</>
 	),
 };
 
-/** Nothing left to fix: only the ✓ rows. */
+/** Nothing left to fix: one line that says so. Done things are not listed. */
 export const AllDone: Story = {
-	render: () => (
-		<>
-			<TodoDone>요약</TodoDone>
-			<TodoDone>제목 · 주소 · 대표 이미지</TodoDone>
-		</>
-	),
+	render: () => <TodoDone>할 일 없음</TodoDone>,
 };

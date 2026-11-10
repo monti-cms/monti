@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight, TrashCan } from "./icons";
+import { Edit, Settings, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight, TrashCan } from "./icons";
 import { FloatingBar, FloatingBarButton, Separator } from "./index";
 
 /** The small floating row of tools: 3px inside, 2px between 28px buttons, a rule between groups, the floating shadow. */
@@ -21,11 +21,11 @@ export const Default: Story = {
 				<TextAlignRight aria-hidden />
 			</FloatingBarButton>
 			<Separator orientation="vertical" length="bar" />
-			<FloatingBarButton label="설정">
-				<SettingsAdjust aria-hidden />
+			<FloatingBarButton label="편집">
+				<Edit aria-hidden />
 			</FloatingBarButton>
-			<FloatingBarButton label="자르기와 회전">
-				<Crop aria-hidden />
+			<FloatingBarButton label="설정">
+				<Settings aria-hidden />
 			</FloatingBarButton>
 		</FloatingBar>
 	),
@@ -50,11 +50,11 @@ export const DangerAndShortcut: Story = {
 export const Disabled: Story = {
 	render: () => (
 		<FloatingBar aria-label="이미지 도구">
-			<FloatingBarButton label="설정">
-				<SettingsAdjust aria-hidden />
+			<FloatingBarButton label="편집" disabled>
+				<Edit aria-hidden />
 			</FloatingBarButton>
-			<FloatingBarButton label="자르기와 회전" disabled>
-				<Crop aria-hidden />
+			<FloatingBarButton label="설정">
+				<Settings aria-hidden />
 			</FloatingBarButton>
 		</FloatingBar>
 	),

@@ -10,7 +10,7 @@ export function EmptyScreen() {
 				<PageHeader title="메모" meta="/notes/:slug">
 					<NewPostButton label="+ 새 메모 쓰기" />
 				</PageHeader>
-				<Empty title="아직 메모가 없어요.">
+				<Empty title="아직 메모가 없습니다.">
 					<EmptyStep number="01">첫 메모 쓰기</EmptyStep>
 					<EmptyStep number="02">쓰던 글 가져오기</EmptyStep>
 					<EmptyStep number="03">템플릿으로 쓰기</EmptyStep>

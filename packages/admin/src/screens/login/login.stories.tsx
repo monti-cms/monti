@@ -57,7 +57,7 @@ export const FirstAdminErrors: Story = {
 		fill(page.getByLabelText("비밀번호"), "short");
 		fill(page.getByLabelText("비밀번호 확인"), "shorter");
 		await userEvent.click(page.getByRole("button", { name: "생성" }));
-		await expect(await page.findByText("10자 이상이어야 해요.")).toBeInTheDocument();
+		await expect(await page.findByText("10자 이상이어야 합니다.")).toBeInTheDocument();
 	},
 };
 
@@ -76,7 +76,7 @@ export const Closed: Story = {
 			{ actor: "admin" },
 		);
 		await userEvent.click(page.getByRole("button", { name: "생성" }));
-		await expect(await page.findByText("이미 관리자가 있어요.")).toBeInTheDocument();
+		await expect(await page.findByText("이미 관리자가 있습니다.")).toBeInTheDocument();
 	},
 };
 
@@ -91,7 +91,7 @@ export const Wrong: Story = {
 		fill(page.getByLabelText("이메일"), "me@example.dev");
 		fill(page.getByLabelText("비밀번호"), "not it at all");
 		await userEvent.click(page.getByRole("button", { name: "로그인" }));
-		await expect(await page.findByText("이메일 또는 비밀번호가 맞지 않아요.")).toBeInTheDocument();
+		await expect(await page.findByText("이메일 또는 비밀번호가 맞지 않습니다.")).toBeInTheDocument();
 	},
 };
 

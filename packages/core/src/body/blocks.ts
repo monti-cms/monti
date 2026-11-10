@@ -135,7 +135,8 @@ export const coreBlocks: AnyBlockDefinition[] = [
 	defineBlock({
 		type: "image",
 		label: label("image"),
-		description: "An image from the media library, with alt text and an optional caption.",
+		description:
+			"An image from the media library, with alt text and an optional caption. `width`, when set, is its share of the body in percent (none fills the body); its height follows its shape.",
 		menu: "insert",
 		attrs: z.object({
 			media: z.string(),
@@ -143,7 +144,8 @@ export const coreBlocks: AnyBlockDefinition[] = [
 			caption: z.string().optional(),
 			/** Left empty on purpose: the site draws an empty alt, and no publish check asks for one (doc 09). */
 			decorative: z.boolean().optional(),
-			width: z.number().positive().nullable().optional(),
+			/** Its share of the body's width in percent, as a table's `widths`: a pixel width means nothing on another screen (2026-11-10, owner). */
+			width: z.number().int().min(1).max(100).nullable().optional(),
 			align: z.enum(["left", "center", "right"]).optional(),
 			/** What of the picture shows, and how it is turned. The original is never changed. */
 			crop: ImageCropShape.optional(),

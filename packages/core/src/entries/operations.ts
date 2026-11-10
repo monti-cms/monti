@@ -5,11 +5,19 @@ import { randomUUID } from "../bytes";
 import { CheckError, ConflictError } from "../errors";
 import { sameJson } from "../json";
 import { checkMediaValues } from "../media/uses";
+import { cleanMediaValue, mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
 import { generateUniqueSlug, resolveInlineCreation, syncRelationsForEntry } from "../relations/sync";
 import { localeModeOf, type Schema } from "../schema/define";
 import { blockHashes, keepLinks } from "../translations/links";
-import { addedSourceBlocks, addSkips, isTranslation, rememberBlocks } from "../translations/source";
+import {
+	addedSourceBlocks,
+	addSkips,
+	followedHashes,
+	isTranslation,
+	rememberBlocks,
+	seenOf,
+} from "../translations/source";
 import { previewSlug, publicPath, publishSlug, slugify } from "./paths";
 import { PREVIEW_MINUTES, previewToken } from "./preview";
 import { type Entry, loadEntries, markChanges } from "./record";
@@ -67,6 +75,17 @@ function applyDraft(entry: Pick<Entry, "title" | "slug" | "values" | "doc">, dra
 	};
 }
 
+/** The media fields of these values as they are kept (`cleanMediaValue`). */
+function cleanMediaFields(schema: Schema, collection: string, values: Record<string, unknown>) {
+	const fields = schema.collections[collection]?.fields ?? {};
+	return Object.fromEntries(
+		Object.entries(values).map(([name, value]) => {
+			const media = fields[name]?.kind === "media" ? mediaValueOf(value) : null;
+			return [name, media ? cleanMediaValue(media) : value];
+		}),
+	);
+}
+
 /** Checks the body a draft brings against the body the entry had: a person's save and the assistant's block edits pass the same check (doc 03). */
 async function checkBodyOf(ctx: OperationContext, doc: unknown, previous: unknown) {
 	if (doc === undefined || doc === null) return;
@@ -77,7 +96,7 @@ async function checkBodyOf(ctx: OperationContext, doc: unknown, previous: unknow
 export async function saveWorking(
 	ctx: OperationContext,
 	entry: Entry,
-	working: Pick<Entry, "title" | "slug" | "values" | "doc">,
+	working: Pick<Entry, "title" | "slug" | "values" | "doc"> & { translationSeen?: Record<string, unknown> },
 ): Promise<{ id: string; version: number }> {
 	await ctx.db
 		.updateTable("entries")
@@ -86,6 +105,7 @@ export async function saveWorking(
 			slug: working.slug,
 			values: JSON.stringify(working.values),
 			doc: working.doc === null ? null : JSON.stringify(working.doc),
+			...(working.translationSeen ? { translation_seen: JSON.stringify(working.translationSeen) } : {}),
 			version: eb("version", "+", 1),
 			updated_at: ctx.now(),
 		}))
@@ -205,6 +225,7 @@ export const entryOperations = [
 			let values = input.values ? { ...input.values } : {};
 			values = await resolveInlineCreation(ctx, input.collection, values);
 			const working = applyDraft({ title: "", slug: "", values: {}, doc: null }, { ...input, values });
+			working.values = cleanMediaFields(ctx.site.schema(), input.collection, working.values);
 			if (isItem && working.slug === "" && working.title !== "") {
 				working.slug = await generateUniqueSlug(ctx.db, input.collection, locale, working.title, undefined, id);
 			}
@@ -386,6 +407,7 @@ export const entryOperations = [
 				values = await resolveInlineCreation(ctx, entry.collection, values);
 			}
 			const working = applyDraft(entry, { ...input, values });
+			working.values = cleanMediaFields(ctx.site.schema(), entry.collection, working.values);
 			if (isItem && working.slug === "" && working.title !== "") {
 				working.slug = await generateUniqueSlug(
 					ctx.db,
@@ -396,14 +418,18 @@ export const entryOperations = [
 					entry.id,
 				);
 			}
+			// What it has seen of its source is the core's too: a save only says which fields hold a value now (doc 04).
+			const translationSeen = await seenOf(ctx.db, ctx.site.schema(), entry, working);
 			let saved: { id: string; version: number };
 			if (input.doc === undefined || working.doc === null) {
-				saved = await saveWorking(ctx, entry, working);
+				saved = await saveWorking(ctx, entry, { ...working, translationSeen });
 			} else {
 				// The links are the core's: the save keeps them, whatever the editor sent, but for a new block paired with a source block added since (doc 04).
 				const added = await addedSourceBlocks(ctx, entry);
-				const { doc, skipped } = keepLinks(asDoc(entry.doc), working.doc as Doc, {}, new Set(), added);
-				saved = await saveWorking(ctx, entry, { ...working, doc });
+				// A block whose words change takes in what its source block says now (2026-11-10, owner).
+				const hashes = await followedHashes(ctx.db, ctx.site.schema(), entry);
+				const { doc, skipped } = keepLinks(asDoc(entry.doc), working.doc as Doc, hashes, new Set(), added);
+				saved = await saveWorking(ctx, entry, { ...working, doc, translationSeen });
 				await addSkips(ctx.db, entry, skipped);
 			}
 			if (isItem && working.title !== "" && working.slug !== "") {

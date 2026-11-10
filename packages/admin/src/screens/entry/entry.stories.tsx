@@ -286,7 +286,7 @@ export const PublishBlocked: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, all } = await opened(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "발행하기" }));
-		await all.findByText("발행할 수 없어요 · 할 일 2개를 먼저 해 주세요", {}, wait);
+		await all.findByText("발행할 수 없습니다 · 할 일 2개를 먼저 해 주세요", {}, wait);
 		await all.findByRole("button", { name: /제목 쓰기/ }, wait);
 	},
 };
@@ -297,7 +297,7 @@ export const Published: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, all } = await opened(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "발행하기" }));
-		await all.findByText("발행되었어요", {}, wait);
+		await all.findByText("발행되었습니다", {}, wait);
 		await waitFor(() => expect(page.getByRole("button", { name: "발행됨" })).toBeDisabled(), wait);
 	},
 };
@@ -327,7 +327,7 @@ export const SavedElsewhere: Story = {
 			admin,
 		);
 		await userEvent.keyboard("{Meta>}s{/Meta}");
-		await page.findByText(/먼저 저장했어요/, {}, wait);
+		await page.findByText(/먼저 저장했습니다/, {}, wait);
 		await expect(page.getByRole("button", { name: "편집 충돌" })).toBeVisible();
 	},
 };
@@ -355,7 +355,7 @@ export const BrowserCopy: Story = {
 	}),
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
-		await page.findByText("이 브라우저에 저장하지 않은 편집이 있어요", {}, wait);
+		await page.findByText("이 브라우저에 저장하지 않은 편집이 있습니다", {}, wait);
 		await expect(page.getByRole("button", { name: "브라우저에만 임시 저장됨" })).toBeVisible();
 	},
 };
@@ -384,8 +384,8 @@ export const SignedOut: Story = {
 		await userEvent.type(title, " 다시 쓰기");
 		await made.db.deleteFrom("monti_session").execute();
 		await userEvent.keyboard("{Meta>}s{/Meta}");
-		await expect(await page.findByRole("button", { name: "로그인이 풀렸어요" }, wait)).toBeVisible();
-		await page.findByText("저장하지 않은 입력은 이 브라우저에 남아 있어요", {}, wait);
+		await expect(await page.findByRole("button", { name: "로그인 풀림" }, wait)).toBeVisible();
+		await page.findByText("저장하지 않은 입력은 이 브라우저에 남아 있습니다", {}, wait);
 	},
 };
 

@@ -33,10 +33,10 @@
 | 서식 카드 | `FloatingBar`: `FormatButton`(B, I, U, S, 코드, 서식이 있을 때 `clear` / 위 첨자, 아래 첨자, 링크, 각주, `more`의 ⋯) · `Separator orientation="vertical" length="bar"` · `FormatBarRequest`("✦ 요청") | 글자를 고르면 그 위에 뜬다. 켜진 서식은 `pressed`. 서식 지우기(⌘\)는 고른 범위 안의 서식을 링크만 남기고 모두 뺀다(editor-tools.md). |
 | "/" 메뉴 | `Command`(`CommandInput`, `CommandList`, `CommandGroup` "글" · "넣기" · "컴포넌트" · "템플릿", `CommandItem`(행 앞에 블록 아이콘, 제목은 `HeadingIcon`, 행 끝에 마크다운 단축 `MenuShortcut typed`), `CommandSeparator`) | 한 단계뿐이다. 포커스는 본문에 남고 화살표 · Enter · Esc로 움직인다. "템플릿"을 치면 템플릿만 남는다. |
 | 올리는 중에 묻기 | `AlertDialog`(`AlertDialogCancel variant="danger"` "그만 올리기", `AlertDialogAction` "계속 올리기") | 파일이 올라가는 동안 비교 화면이나 나란히 보기로 가면 묻는다. 그러면 본문이 새로 그려져 올라가던 파일이 끝나기 때문이다. 글은 그대로이고 파일만 멈춘다. |
-| 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. 캡션 칸은 그때부터 있다. 빈 줄이면 그 줄을 대신하고, 글이 있는 줄이면 그 줄 바로 뒤에 간다. 목록 항목은 글자만 담으므로(03번 문서) 그 항목 바로 뒤에서 목록이 나뉘고, 번호 목록은 번호가 이어진다. 넣은 뒤 커서는 그림 다음 글로 간다. 글이 없으면 새 줄을 만든다. 그래서 바로 이어 써도 그림이 지워지지 않는다. 여러 개를 함께 놓으면 순서대로 들어간다. 자르기와 회전 대화상자에서 돌리면 잡아 둔 자를 곳도 그림과 함께 돈다. 시트가 닫히면 포커스는 본문으로 간다. 그래서 캡션을 쓰다가 열었어도 ⌘Z가 방금 한 일을 되돌린다. |
+| 올리는 중인 이미지 | `UploadingImage` | 붙여 넣거나 끌어 넣은 그림은 창 없이 커서 자리에 들어가고 아래에 막대가 흐른다. 캡션 칸은 그때부터 있다. 빈 줄이면 그 줄을 대신하고, 글이 있는 줄이면 그 줄 바로 뒤에 간다. 목록 항목은 글자만 담으므로(03번 문서) 그 항목 바로 뒤에서 목록이 나뉘고, 번호 목록은 번호가 이어진다. 넣은 뒤 커서는 그림 다음 글로 간다. 글이 없으면 새 줄을 만든다. 그래서 바로 이어 써도 그림이 지워지지 않는다. 여러 개를 함께 놓으면 순서대로 들어간다. 편집 대화상자에서 돌리면 잡아 둔 자를 곳도 그림과 함께 돈다. 시트가 닫히면 포커스는 본문으로 간다. 그래서 캡션을 쓰다가 열었어도 ⌘Z가 방금 한 일을 되돌린다. |
 | 올리지 못한 파일 | `FileBlock tone="danger"`(세부에 "올리기 실패", 고르면 `selected`, `action`에 `IconButton` `Renew` "다시 올리기") | 제자리에 남는다. 이미지도 파일도 같고, 실패한 동안 캡션 칸은 없다(2026-11-09). 다른 블록처럼 눌러 고른 뒤 Backspace나 핸들 메뉴로 지운다(2026-11-09 소유자). 네트워크로 끊긴 파일만 남는다. 받지 않는 파일은 블록이 되지 않고 토스트로 막히며, 깨진 그림은 알게 된 때 블록이 사라지고 같은 토스트가 뜬다(2026-11-09 소유자). 파일이 끝나며 블록이 바뀌거나 사라지는 것은 실행 취소에 남지 않는다. 속성 패널에서는 `FormFieldError`에 "올리기 실패", `MediaInput`의 `action`에 같은 버튼이다. 받지 않는 파일이면 칸은 그대로고 토스트만 뜬다. 격자와 같은 버튼이고 줄을 따로 쓰지 않는다(2026-11-09). 빼는 것은 칸의 ×가 한다. ×는 그 파일만 빼고, 칸은 전의 그림과 대체 텍스트로 돌아간다(2026-11-09 소유자). |
-| 이미지 도구 행 | `BlockBarPlace` 안 `FloatingBar`: `FloatingBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 설정 / 자르기·회전) · `Separator orientation="vertical" length="bar"`, 아래 모서리 `ResizeCorner` 둘 | 설정은 카드(`Popover`)를 연다. 자르기·회전은 대화상자(`Dialog` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
-| 이미지 설정 카드 | `Popover` 안에 `FormField`: "너비" `Input`(플레이스홀더 "본문 맞춤"), "대체 텍스트" `Input`(라벨 줄 `FormFieldLabel action`에 `TextButton tone="proposal" size="micro"` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
+| 이미지 도구 행 | `BlockBarPlace` 안 `FloatingBar`: `FloatingBarButton`(왼쪽 · 가운데 · 오른쪽 정렬 `pressed` / 편집 / 설정) · `Separator orientation="vertical" length="bar"`, 모서리 `ResizeCorner`(`corner`, 가운데 그림은 넷, 한쪽에 붙은 그림은 움직이는 쪽 둘), `BlockBox selected`의 2px 진한 선 | 설정은 카드(`Popover`)를 연다. 편집(자르기 · 돌리기 · 비율 · 크기)은 대화상자(`Dialog` + `CropStage`)로 연다. 삭제는 블록 메뉴에 있다. |
+| 이미지 설정 카드 | `Popover` 안에 그림의 속성만(2026-11-10 소유자: 모양은 "편집"이다): "대체 텍스트" `Input`(라벨 줄 `FormFieldLabel action`에 `TextButton tone="proposal" size="micro"` "✦ 채우기", 비었으면 `FormFieldError`), "장식 이미지" `Option` + `Switch` | 장식 이미지를 켜면 대체 텍스트 칸이 사라지고 커서는 스위치에 남는다. 안내 문구는 없다. 대체 텍스트를 쓰는 동안 라벨 줄에 글자 수("23 / 80"). 다른 빈 이미지가 있으면 끝에 "다음 이미지 ↵"(`TextButton`). |
 | 캡션 | `Input appearance="inline" size="sm" align="center"`, 같은 줄 끝에 `TextButton tone="proposal" size="micro"` | 이미지 아래 그 자리에서 고친다. AI 버튼은 다른 필드와 같은 "✦ 채우기"다(보드의 ✦만 있는 버튼 대신). |
 | 파일 블록 | `FileBlock`. 누르면 통째로 선택되고 `BlockBarPlace` 안 `FloatingBar`의 설정 `Popover`에서 보이는 이름을 쓴다(2026-11-09 소유자) | 고르는 창은 `MediaPicker`를 담은 `Dialog`([media.md](media.md)). |
 
@@ -70,8 +70,8 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 줄 | `StatusBar` | 담을 칸이 없으면 그리지 않는다. |
-| 저장 상태 | `StatusBarCell`(편집 충돌이면 `tone`). 알리기만 할 때는 `render={<span />}` | "저장 전 변경사항" · "저장됨" · "브라우저에만 임시 저장됨" · "편집 충돌". 누를 일이 있으면 칸이 버튼이다(저장 전 변경사항은 누르면 저장, 로그인이 풀렸으면 로그인 화면). 소리 알림은 `StatusBarAnnouncer`. |
-| "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem`, `TodoDone`) | 누르면 위로 목록이 열린다. 행을 누르면 그 자리로 간다. 행 끝에 동작은 두지 않는다: 여러 곳을 한꺼번에 채우는 버튼은 무엇이 어디서 바뀌는지 보여 줄 수 없어서, 채우기는 그 자리의 ✦(필드 라벨 줄의 "✦ 채우기", 이미지의 대체 텍스트 칸) 하나로만 한다. 발행을 막는 행은 `blocking`. 행의 덧말(`detail`)은 그 자리만 말한다("속성 · 비어 있음", "대표 이미지 · 본문 1"). 제목이 이미 말한 필드 이름("요약 쓰기"의 "요약")은 되풀이하지 않는다(원칙 8). 남은 것이 없으면 "할 일 없음"과 ✓ 행만. |
+| 저장 상태 | `StatusBarCell`(편집 충돌이면 `tone`). 알리기만 할 때는 `render={<span />}` | "저장 전 변경사항" · "저장됨" · "브라우저에만 임시 저장됨" · "편집 충돌" · "로그인 풀림". 누를 일이 있으면 칸이 버튼이다(저장 전 변경사항은 누르면 저장, 로그인이 풀렸으면 로그인 화면). 소리 알림은 `StatusBarAnnouncer`. |
+| "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem`, 할 일이 없을 때만 `TodoDone`) | 누르면 위로 목록이 열린다. 행을 누르면 그 자리로 간다. 행 끝에 동작은 두지 않는다: 여러 곳을 한꺼번에 채우는 버튼은 무엇이 어디서 바뀌는지 보여 줄 수 없어서, 채우기는 그 자리의 ✦(필드 라벨 줄의 "✦ 채우기", 이미지의 대체 텍스트 칸) 하나로만 한다. 발행을 막는 행은 `blocking`. 행의 덧말(`detail`)은 그 자리만 말한다("속성 · 비어 있음", "대표 이미지 · 본문 1"). 제목이 이미 말한 필드 이름("요약 쓰기"의 "요약")은 되풀이하지 않는다(원칙 8). 끝난 것은 행이 사라질 뿐 따로 적지 않는다. 남은 것이 없으면 `TodoDone` "할 일 없음" 한 줄만(2026-11-10 소유자). |
 | 플러그인 칸 ("맞춤법 2") | `StatusBarPluginCell` | 패널 행과 "설정" · "모두 고치기"는 플러그인이 채운다. |
 | 글자 수 | `StatusBarSpacer` 뒤 `StatusBarCell end` | 좁은 화면에서 먼저 숨는다. |
 
@@ -96,10 +96,10 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 로그인 풀림 | `Banner tone="danger"`(`title` "로그인이 풀렸어요", `meta` "저장하지 않은 입력은 이 브라우저에 남아 있어요" `plainMeta`) | 맨 위. 화면을 바로 빼앗지 않아 쓰던 문장을 마저 쓸 수 있다. 끝에 `TextButton variant="underline"` "다시 로그인"은 평소 로그인 화면으로 간다(GitHub도 평소처럼 다녀온다). 로그인하면 주소가 같은 글을 다시 열고, 쓰던 입력은 묻지 않고 다시 들어간다(그 사이 다른 곳에서 저장하지 않았을 때. 저장했으면 임시 저장본 띠가 묻는다). 저장 칸도 "로그인이 풀렸어요"이고 누르면 같은 곳으로 간다. 모든 화면에서 같다(15). 2026-11-06 소유자: 로그인 창은 두지 않는다. |
-| 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했어요", `meta` "이 글은 저장할 수 없어요" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. |
-| 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있어요", `meta` 시각) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). |
-| 휴지통에 있는 글 | `Banner tone="neutral"`(`title` "휴지통에 있는 글이에요", 남은 날) | 읽기 전용 화면의 상태. |
+| 로그인 풀림 | `Banner tone="danger"`(`title` "로그인이 풀렸습니다", `meta` "저장하지 않은 입력은 이 브라우저에 남아 있습니다" `plainMeta`) | 맨 위. 화면을 바로 빼앗지 않아 쓰던 문장을 마저 쓸 수 있다. 끝에 `TextButton variant="underline"` "다시 로그인"은 평소 로그인 화면으로 간다(GitHub도 평소처럼 다녀온다). 로그인하면 주소가 같은 글을 다시 열고, 쓰던 입력은 묻지 않고 다시 들어간다(그 사이 다른 곳에서 저장하지 않았을 때. 저장했으면 임시 저장본 띠가 묻는다). 저장 칸도 "로그인이 풀렸습니다"이고 누르면 같은 곳으로 간다. 모든 화면에서 같다(15). 2026-11-06 소유자: 로그인 창은 두지 않는다. |
+| 편집 충돌 | `Banner tone="danger"`(`title` "다른 곳에서 10:41에 먼저 저장했습니다", `meta` "이 글은 저장할 수 없습니다" `plainMeta`) | 끝에 `TextButton variant="underline"` "비교하기"(비교 화면으로), `TextButton` "서버 최신본 불러오기". 답하기 전에는 사라지지 않는다. |
+| 임시 저장본 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있습니다", `meta` 시각) | 끝에 "비교하기"(underline) · "불러오기" · "버리기"(`variant="quiet"`). |
+| 휴지통에 있는 글 | `Banner tone="neutral"`(`title` "휴지통에 있는 글입니다", 남은 날) | 읽기 전용 화면의 상태. |
 
 ### 링크 칸 (서식 카드의 링크 버튼 아래)
 
@@ -109,7 +109,7 @@
 |---|---|---|
 | 칸 | `Popover`(링크 `FormatButton`이 트리거, `padding="menu"`, `width="md"`) 안 `Command`: `CommandInput`(플레이스홀더 "주소를 붙여 넣거나 글 찾기", 이름 "링크 주소") | `/` 메뉴와 같은 모양이다. 화살표와 Enter로 행을 고른다. |
 | 막 열었을 때 | `CommandGroup` "최근에 고친 글": `CommandItem`(앞 `Document` 아이콘, 글 제목, 끝 `MenuValue` 컬렉션 이름) | 문서 컬렉션마다 가장 최근에 고친 글을 모아 다섯 줄. |
-| 글자를 쳤을 때 | `CommandGroup` "글": 제목에 그 글자가 있는 글. 발행 안 된 글은 끝이 "게시글 · 초안". 없으면 `CommandEmpty` "맞는 글이 없어요" | 고르면 그 글 자체를 가리키는 링크(`monti:entry/<묶음 id>`)가 걸린다. 글의 주소가 바뀌어도 끊기지 않는다. |
+| 글자를 쳤을 때 | `CommandGroup` "글": 제목에 그 글자가 있는 글. 발행 안 된 글은 끝이 "게시글 · 초안". 없으면 `CommandEmpty` "맞는 글 없음" | 고르면 그 글 자체를 가리키는 링크(`monti:entry/<묶음 id>`)가 걸린다. 글의 주소가 바뀌어도 끊기지 않는다. |
 | 주소를 쳤을 때 | `CommandGroup` "주소": `CommandItem`(앞 `Link` 아이콘, 주소, 끝 `MenuShortcut` "↵") | `https://` · `mailto:` · `/` · `#`로 시작하거나 `react.dev` 같은 도메인이면 주소다(도메인에는 `https://`를 붙인다). Enter로 바깥 링크를 건다. |
 | 이미 링크가 걸린 글자 | 글 링크면 칸에 그 글 제목, `CommandGroup` "지금 링크"에 그 글(`checked`). 바깥 링크면 칸에 그 주소 | 아래에 `CommandSeparator`와 "링크 떼기"(`Unlink` 아이콘) 행. |
 
@@ -127,11 +127,11 @@
 | `dialog` "편집 충돌" · "임시 저장본 복구" | 1.16, 1.18 | 해당 `Banner` | Patterns/Frame/Banner |
 | `fix` "요약" | 1.11 | 요약 `Textarea`에 포커스, 라벨 줄 끝 "28 / 120" | Controls/Field/Textarea |
 | `fix` "대체 텍스트" | 1.12 | 그 이미지 `Block active`와 대체 텍스트 `Popover`. "✦ 채우기"(`TextButton tone="proposal" size="micro"`)는 이미지 설정 카드처럼 라벨 줄 끝에 있다(보드의 필드 아래 자리 대신). | Monti/EditorTools/BlockHandle, Controls/Overlay/Popover, Controls/Button/TextButton |
-| `todo` · `todoOpen` | 1.10, 1.13, 1.14, 1.15, 1.16, 1.18 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `todo` · `todoOpen` | 1.10, 1.13, 1.14, 1.15, 1.16, 1.18 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
 | `pluginOpen` | 1.06 | 플러그인 칸의 `StatusBarList` | Patterns/Frame/StatusBarList |
 | `panel` · `panelTab` | 1.08 | `PropertyPanel`과 고른 탭 | Monti/Proposal/PropertyPanel |
 | `seriesPending` | 1.07 | 시리즈 값이 `proposal`, 라벨 줄 끝 `TextButton tone="proposal" size="micro"`("↻ 다시") | Controls/Button/TextButton |
-| `toast` "발행 막힘" · "발행됨" | 1.10, 1.14 | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었어요"와 "보기" | Controls/Status/Toast |
+| `toast` "발행 막힘" · "발행됨" | 1.10, 1.14 | `toast.error` "발행할 수 없습니다 …" · `toast` "발행되었습니다"와 "보기" | Controls/Status/Toast |
 
 ## 흐름 2 · 어시스턴트
 
@@ -148,8 +148,8 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | `langMenu` "열림" · "언어 하나뿐" | 3.01, 3.14 | "+ 언어" `DropdownMenu` | Controls/Menu/DropdownMenu |
-| `todo` · `todoOpen` | 3.01, 3.08, 3.14 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
-| `toast` "발행 막힘" · "발행됨" | 3.08 | `toast.error` "발행할 수 없어요 …" · `toast` "발행되었어요"와 "보기" | Controls/Status/Toast |
+| `todo` · `todoOpen` | 3.01, 3.08, 3.14 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `toast` "발행 막힘" · "발행됨" | 3.08 | `toast.error` "발행할 수 없습니다 …" · `toast` "발행되었습니다"와 "보기" | Controls/Status/Toast |
 
 ## 흐름 5 · 휴지통
 
@@ -158,7 +158,7 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | `trashed` | 5.18 | 휴지통 머리와 `Banner`, 본문과 속성은 읽기 전용(입력 부품 `disabled`) | Patterns/Frame/Banner |
-| `todo` · `todoOpen` | 5.18 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `todo` · `todoOpen` | 5.18 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
 
 ## 흐름 6 · 미디어
 
@@ -167,4 +167,4 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | `img` "올리는 중" · "설정" · "파일" | 6.05, 6.06, 6.38 | `UploadingImage` · `FloatingBar`와 설정 `Popover` · `FileBlock` | Patterns/Frame/UploadingImage, Monti/EditorTools/FloatingBar, Controls/Overlay/Popover, Patterns/Frame/FileBlock |
-| `todo` · `todoOpen` | 6.05, 6.06, 6.38 | "할 일" `StatusBarList`(남음: `TodoItem` + `TodoDone`, 다 채움: `TodoDone`만) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |
+| `todo` · `todoOpen` | 6.05, 6.06, 6.38 | "할 일" `StatusBarList`(남음: `TodoItem`만, 다 채움: `TodoDone` "할 일 없음" 한 줄) | Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem |

@@ -127,6 +127,13 @@ export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
 		return block;
 	};
 	const blocks = stored(json.content ?? []).map(fromEditor);
+	// An empty paragraph after a last block with no text of its own (a picture, a file) is only where the cursor was put under it (body-editor): nothing to
+	// keep (2026-11-10, owner). After a block with text it is the writer's.
+	const last = blocks.at(-1);
+	const before = blocks.at(-2);
+	const holdsNothing = (block: Block) => kit.blocks.find((each) => each.type === block.type)?.holds === "nothing";
+	if (last?.type === "paragraph" && !last.content && !last.attrs && !last.link && before && holdsNothing(before))
+		blocks.pop();
 	const only = blocks[0];
 	if (blocks.length === 1 && only?.type === "paragraph" && !only.content && !only.attrs)
 		return { type: "doc", blocks: [] };

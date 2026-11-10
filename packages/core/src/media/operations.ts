@@ -26,6 +26,9 @@ const moveMessage = (count: number, name: string | null): Message =>
 /** How many files one page of the library holds. */
 export const MEDIA_PAGE_SIZE = 100;
 
+/** The most files one `media.query` returns: a window that loads more stops here, and a body reads its files in parts of this. */
+export const MEDIA_QUERY_MOST = 1000;
+
 /** One stored size of a file. */
 export type MediaFile = { url: string; width: number | null; height: number | null };
 
@@ -232,12 +235,17 @@ const Query = z.object({
 	scope: z.enum(["here", "all"]).default("here"),
 	search: z.string().default(""),
 	kinds: z.array(z.enum(["image", "file"])).default([]),
+	/** What the asker can take at all (a library window for a picture). Unlike `kinds`, which someone looks for, it leaves a folder listing what sits right in it. */
+	only: z.enum(["image", "file"]).optional(),
 	used: z.array(z.enum(["used", "unused"])).default([]),
 	sort: z.enum(["uploaded", "name", "size"]).default("uploaded"),
 	page: z.number().int().positive().default(1),
 	/** How many files a page holds. The library's screen keeps to pages of 100; a window that loads more asks for more. */
-	pageSize: z.number().int().min(1).max(1000).default(MEDIA_PAGE_SIZE),
-	/** These files, wherever they are. An empty list asks for no file: it is how a body learns `storage`, whether the site can take uploads. */
+	pageSize: z.number().int().min(1).max(MEDIA_QUERY_MOST).default(MEDIA_PAGE_SIZE),
+	/**
+	 * These files, wherever they are, the trash too (as `media.get`): a body shows the files it holds, and a draft can hold one trashed since. An empty list asks
+	 * for no file: it is how a body learns `storage`, whether the site can take uploads.
+	 */
 	ids: z.array(z.string()).optional(),
 });
 
@@ -246,17 +254,20 @@ export const mediaOperations = [
 		name: "media.query",
 		kind: "read",
 		description:
-			"Find files in the media library by folder, name, kind (image or file) and whether anything uses them, newest upload first or by name or size. Each has how many entries use it. Alt text is not here: it belongs to the entries that use a file (see entries.missingAlt).",
+			"Find files in the media library by folder, name, kind (image or file) and whether anything uses them, newest upload first or by name or size. Each has how many entries use it. By ids, files in the trash come back too; media.get says whether one is. Alt text is not here: it belongs to the entries that use a file (see entries.missingAlt).",
 		input: Query,
 		async run(input, ctx): Promise<MediaQueryResult> {
 			const search = input.search.trim();
 			// A search or a filter looks for files, so it goes through folders; a folder on its own lists what sits right in it (2026-11-09, owner).
 			const looking = search !== "" || input.kinds.length > 0 || input.used.length > 0;
 			const live = ctx.db.selectFrom("media").where("trashed_at", "is", null);
-			let filtered = live;
-			if (input.ids)
-				filtered = input.ids.length > 0 ? filtered.where("id", "in", input.ids) : filtered.where(sql<boolean>`false`);
-			else if (input.folder !== undefined && input.scope === "here") {
+			const asked =
+				input.ids &&
+				(input.ids.length > 0
+					? ctx.db.selectFrom("media").where("id", "in", input.ids)
+					: live.where(sql<boolean>`false`));
+			let filtered = asked ?? live;
+			if (!asked && input.folder !== undefined && input.scope === "here") {
 				// A folder lists what sits right in it; a search or a filter looks for files, so it goes through the subfolders (as the entry list, doc 07).
 				if (input.folder !== null && looking)
 					filtered = filtered.where("folder_id", "in", [input.folder, ...(await subtree(ctx.db, input.folder))]);
@@ -266,6 +277,7 @@ export const mediaOperations = [
 			if (search !== "")
 				filtered = filtered.where("name", "ilike", `%${search.replace(/[\\%_]/g, (char) => `\\${char}`)}%`);
 			if (input.kinds.length > 0) filtered = filtered.where("kind", "in", input.kinds);
+			if (input.only) filtered = filtered.where("kind", "=", input.only);
 			if (input.used.length === 1)
 				filtered = filtered.where(
 					input.used[0] === "used" ? sql<boolean>`${usesCount} > 0` : sql<boolean>`${usesCount} = 0`,
@@ -284,11 +296,13 @@ export const mediaOperations = [
 				.limit(input.pageSize)
 				.offset((input.page - 1) * input.pageSize)
 				.execute();
-			// A menu's count is what picking it would find from here: the open folder and those under it, or everything.
+			// A menu's count is what picking it would find from here: the open folder and those under it, or everything. Files asked for by id are
+			// counted among themselves: a body reading its pictures does not count the whole library (T110).
 			const reach =
-				input.scope === "here" && input.folder
+				asked ??
+				(input.scope === "here" && input.folder
 					? live.where("folder_id", "in", [input.folder, ...(await subtree(ctx.db, input.folder))])
-					: live;
+					: live);
 			const counted = await reach
 				.select([
 					sql<number>`count(*) filter (where kind = 'image')::int`.as("image"),

@@ -55,6 +55,18 @@ export function MediaScreen() {
 					}
 					title="Blog Assets"
 				>
+					{/* How the library shows sits with the page's controls, not the filters (2026-11-10, owner). */}
+					<Segmented
+						aria-label="보기"
+						size="sm"
+						inline
+						value="grid"
+						onValueChange={() => {}}
+						options={[
+							{ value: "grid", label: "격자" },
+							{ value: "list", label: "목록" },
+						]}
+					/>
 					<SearchToggle label="검색" value="" aria-label="검색" />
 					{/* The caret holds the rare other way to add: a folder. */}
 					<SplitButton
@@ -71,20 +83,9 @@ export function MediaScreen() {
 				</PageHeader>
 				<PageToolbar inset>
 					<FilterButton>종류</FilterButton>
-					<FilterButton>사용 여부</FilterButton>
+					<FilterButton>사용</FilterButton>
 					<PageToolbarEnd>
 						<FilterButton>최근 올린순</FilterButton>
-						<Segmented
-							aria-label="보기"
-							size="sm"
-							inline
-							value="grid"
-							onValueChange={() => {}}
-							options={[
-								{ value: "grid", label: "격자" },
-								{ value: "list", label: "목록" },
-							]}
-						/>
 					</PageToolbarEnd>
 				</PageToolbar>
 				<DropArea>

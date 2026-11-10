@@ -1,4 +1,4 @@
-import { type EntryState, mediaValueOf, type PublishTask, publicPath } from "@monti-cms/core";
+import { cleanMediaValue, type EntryState, type PublishTask, publicPath } from "@monti-cms/core";
 import {
 	Banner,
 	Box,
@@ -8,6 +8,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	EditorHeader,
+	EditorMarginLine,
 	EditorTitleRule,
 	EntryStatus,
 	type EntryStatusKind,
@@ -25,6 +26,7 @@ import {
 	StatusBarAnnouncer,
 	StatusBarCell,
 	StatusBarList,
+	StatusBarListGroup,
 	StatusBarSpacer,
 	Text,
 	TextButton,
@@ -55,10 +57,11 @@ import { clock, day, dayTime } from "./dates";
 import { EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
 import {
 	decidedOnly,
+	FieldChange,
 	LocaleTabs,
 	PairedView,
 	SourceChangedBanner,
-	SourceChangedCell,
+	SourceChangeRows,
 	SourcePane,
 	type SourceView,
 	SourceViewPicker,
@@ -120,10 +123,9 @@ export function EntryEditor({
 		setBodyEditor(made);
 	}, []);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
-	const fieldUploads = useFieldUploads((field, item, altThen) => {
-		// The words there when the file set off were for the old picture (2026-11-09, owner). Only what was written since is for this one.
-		const alt = mediaValueOf(editor.value(`values.${field}`))?.alt;
-		editor.set(`values.${field}`, { media: item.id, ...(alt && alt !== altThen ? { alt } : {}) });
+	// The field's alt text was for the old picture (2026-11-09, owner): the new one has only what was said while it went up.
+	const fieldUploads = useFieldUploads((field, item, said) => {
+		editor.set(`values.${field}`, cleanMediaValue({ media: item.id, ...said }));
 	});
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
 	const duplicate = useOperation<{ output: { id: string } }>("entries.duplicate");
@@ -137,7 +139,6 @@ export function EntryEditor({
 	const archived = read?.state === "archived";
 	const trashed = Boolean(read?.entry.trashedAt);
 	const readOnly = archived || trashed;
-	const definition = schema.data?.schema.collections[collection];
 	const fieldLabels = schema.data?.adminValues[collection]?.fields ?? {};
 	const fieldLabel = (field: string) => fieldLabels[field]?.label ?? field;
 	const slug = String(editor.value("slug") ?? "");
@@ -307,15 +308,29 @@ export function EntryEditor({
 	};
 	const cell = saveCell[editor.saveState];
 
-	// The required fields that are filled: the ✓ line under the rows says what was checked.
-	const filled = Object.entries(definition?.fields ?? {})
-		.filter(
-			([field, def]) =>
-				def.required &&
-				!publish.tasks.some((task) => task.field === field) &&
-				(field === "title" ? editor.title : editor.value(field === "slug" ? "slug" : `values.${field}`)),
-		)
-		.map(([field]) => (field === "title" ? t("entry.title") : fieldLabel(field)));
+	// What changed in the source since the translation saw it: rows of the to-do list, after what stops publishing.
+	// A block new in the source is already a to-do (it stops publishing until decided): the group leaves it out, so it is listed and counted once.
+	const sourceCount =
+		compared && !readOnly ? compared.marks.filter((mark) => mark.kind !== "added").length + compared.fields.length : 0;
+	const sourceOnly = sourceCount > 0 && publish.tasks.length === 0;
+	const sourceRows =
+		compared && sourceCount > 0 ? (
+			<SourceChangeRows
+				compared={compared}
+				doc={editor.doc}
+				fieldLabel={(field) => (field === "title" ? t("entry.title") : fieldLabel(field))}
+				onGo={(block) => {
+					setTodoOpen(false);
+					goTo({ code: "mark", field: "doc", block, blocking: false, message: { key: "" } });
+				}}
+				onGoField={(field) => {
+					setTodoOpen(false);
+					if (field === "title") document.getElementById(fieldInputId("title"))?.focus();
+					else goTo({ code: "mark", field, blocking: false, message: { key: "" } });
+				}}
+				onDecide={(decision) => void translation.decide([decision])}
+			/>
+		) : null;
 	const taskTitle = (task: PublishTask) =>
 		task.code === "required" && task.field
 			? t("entry.todo.fill", { field: task.field === "title" ? t("entry.title") : fieldLabel(task.field) })
@@ -329,6 +344,16 @@ export function EntryEditor({
 
 	const hasContent = editor.title.trim() !== "" || editor.doc.blocks.length > 0;
 
+	const confirmField = (field: string) => void translation.decide([{ do: "confirmField", field }]);
+	const titleMark = readOnly ? undefined : compared?.fields.find((mark) => mark.field === "title");
+	const titleChange = titleMark ? (
+		<FieldChange
+			mark={titleMark}
+			// Under the title, where a changed block's card opens under its block.
+			anchor={() => document.getElementById(fieldInputId("title"))}
+			onConfirm={() => confirmField("title")}
+		/>
+	) : undefined;
 	// The title and the body, the same in the text alone and side by side (where the title takes the size of its row, and the body the rows).
 	const titleField = (size: "display" | "inherit") => (
 		<FormField>
@@ -583,6 +608,7 @@ export function EntryEditor({
 								compared={compared}
 								translationUpdatedAt={read?.entry.updatedAt ?? null}
 								title={titleField("inherit")}
+								titleChange={titleChange}
 							>
 								{bodyField(pairedRows)}
 							</PairedView>
@@ -591,7 +617,7 @@ export function EntryEditor({
 						<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
 							{languages}
 							<Stack gap={0} paddingTop={16} paddingBottom={32}>
-								{titleField("display")}
+								<EditorMarginLine margin={titleChange}>{titleField("display")}</EditorMarginLine>
 								<EditorTitleRule />
 							</Stack>
 							{bodyField(null)}
@@ -624,10 +650,10 @@ export function EntryEditor({
 						onTab={setTab}
 						readOnly={readOnly}
 						shared={translation.isTranslation ? (compared?.source.values ?? null) : null}
-						sourcePublished={Boolean(compared?.source.publishedAt)}
 						uploads={fieldUploads}
 						altCard={altCard}
 						onAltCard={setAltCard}
+						changes={compared && !readOnly ? { marks: compared.fields, onConfirm: confirmField } : undefined}
 					/>
 				) : null}
 			</Inline>
@@ -639,45 +665,42 @@ export function EntryEditor({
 						</StatusBarCell>
 					)}
 					<StatusBarAnnouncer>{cell.text}</StatusBarAnnouncer>
+					{/* One list of what is left in the entry: what stops publishing, then what changed in the source (translation.md, 2026-11-10 owner). */}
 					<StatusBarList
 						trigger={
 							<StatusBarCell tone={publish.blocking > 0 ? "warning" : undefined}>
-								{publish.tasks.length > 0
-									? t("entry.todo.count", { count: publish.tasks.length })
+								{publish.tasks.length + sourceCount > 0
+									? t("entry.todo.count", { count: publish.tasks.length + sourceCount })
 									: t("entry.todo.none")}
 							</StatusBarCell>
 						}
-						label={t("entry.todo.label")}
-						count={publish.tasks.length}
+						label={t(sourceOnly ? "translation.changedTitle" : "entry.todo.label")}
+						count={sourceOnly ? sourceCount : publish.tasks.length}
 						open={todoOpen}
 						onOpenChange={setTodoOpen}
 					>
-						{publish.tasks.map((task, index) => (
-							<TodoItem
-								key={`${task.code}:${task.field ?? ""}:${task.block ?? ""}:${index}`}
-								title={taskTitle(task)}
-								detail={taskDetail(task)}
-								blocking={task.blocking}
-								onOpen={() => goTo(task)}
-							/>
-						))}
-						{publish.tasks.length === 0 ? (
-							<TodoDone>{t("entry.todo.none")}</TodoDone>
-						) : filled.length > 0 ? (
-							<TodoDone>{filled.join(" · ")}</TodoDone>
+						{sourceOnly ? null : (
+							<>
+								{publish.tasks.map((task, index) => (
+									<TodoItem
+										key={`${task.code}:${task.field ?? ""}:${task.block ?? ""}:${index}`}
+										title={taskTitle(task)}
+										detail={taskDetail(task)}
+										blocking={task.blocking}
+										onOpen={() => goTo(task)}
+									/>
+								))}
+								{/* The list holds what is left to do, nothing done beside it (2026-11-10, owner): a row that is done goes. */}
+								{publish.tasks.length === 0 ? <TodoDone>{t("entry.todo.none")}</TodoDone> : null}
+							</>
+						)}
+						{sourceRows && sourceOnly ? sourceRows : null}
+						{sourceRows && !sourceOnly ? (
+							<StatusBarListGroup label={t("translation.changedTitle")} count={sourceCount}>
+								{sourceRows}
+							</StatusBarListGroup>
 						) : null}
 					</StatusBarList>
-					{compared && !readOnly ? (
-						<SourceChangedCell
-							compared={compared}
-							doc={editor.doc}
-							onGo={(block) =>
-								goTo({ code: "mark", field: "doc", block: block ?? undefined, blocking: false, message: { key: "" } })
-							}
-							onConfirmAll={() => void translation.confirmAll()}
-							onDecide={(decision) => void translation.decide([decision])}
-						/>
-					) : null}
 					<StatusBarSpacer />
 					<StatusBarCell end render={<span />}>
 						{t("entry.chars", { count: docLength(decidedOnly(editor.doc)) })}

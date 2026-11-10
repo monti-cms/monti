@@ -13,7 +13,7 @@ const blocks: readonly Choice[] = [
 	{ label: "표", checked: true },
 	{ label: "구분선", checked: true },
 	{ label: "이미지", checked: true },
-	{ label: "파일", note: "· 바뀜" },
+	{ label: "파일", note: "· 변경" },
 	{ label: "각주", checked: true },
 	{ label: "코드 탐색기", checked: true },
 	{ label: "수식", checked: true },
@@ -73,10 +73,10 @@ export function CollectionEditorScreen() {
 				tab="editor"
 				save={
 					<ChangesGroup
-						label="바뀐 곳"
-						listLabel="바뀐 곳"
+						label="변경 사항"
+						listLabel="변경 사항"
 						countLabel="1곳"
-						items={[{ id: "file", name: "파일", tag: "바뀜", tone: "warning", onUndo: none }]}
+						items={[{ id: "file", name: "파일", tag: "변경", tone: "warning", onUndo: none }]}
 						undoLabel="되돌리기"
 						discardLabel="모두 되돌리기"
 						onDiscard={none}

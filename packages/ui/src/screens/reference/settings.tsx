@@ -107,7 +107,7 @@ export function SiteUrl() {
 	return (
 		<ReadValue label="사이트 URL" mono={false}>
 			<Text tone="warning">
-				설정되지 않았어요. 배포하는 곳에 <Text mono>SITE_URL</Text>을 넣어 주세요.
+				설정되지 않았습니다. 배포하는 곳에 <Text mono>SITE_URL</Text>을 넣어 주세요.
 			</Text>
 		</ReadValue>
 	);
@@ -119,7 +119,7 @@ export function SettingsScreen() {
 		<AdminFrame open="settings">
 			<PageColumn>
 				<PageHeader title="설정">
-					<ChangesBar label="바뀐 곳" count={2} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />
+					<ChangesBar label="변경 사항" count={2} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />
 				</PageHeader>
 				<PageToolbar>
 					<SettingsTabs open="site" />

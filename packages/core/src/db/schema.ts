@@ -87,6 +87,8 @@ export interface EntryTable {
 	trashed_at: Date | null;
 	/** In a translation: source block ids it chose to leave out, so they are not marked as new (doc 04). */
 	translation_skips: ColumnType<string[], string | undefined, string>;
+	/** In a translation: the source's value of each field holding its own, as it saw it. A field's mark is the source moving on from this. */
+	translation_seen: ColumnType<Record<string, unknown>, string | undefined, string>;
 	/** The body's text, made by the database from the blocks (search reads it). */
 	body_text: ColumnType<string | null, never, never>;
 }

@@ -39,7 +39,7 @@ type Story = StoryObj<typeof meta>;
 export const New: Story = {
 	render: () => (
 		<ChangeGroup kind="new" tag="추가" title="요약" identifier="excerpt">
-			<ChangeNote>저장된 데이터는 바뀌지 않아요.</ChangeNote>
+			<ChangeNote>저장된 데이터는 바뀌지 않습니다.</ChangeNote>
 		</ChangeGroup>
 	),
 };
@@ -71,7 +71,7 @@ export const Drop: Story = {
 				<Checkbox defaultChecked />
 				컬렉션 내보내기
 			</Option>
-			<ChangeNote danger>되돌릴 수 없어요.</ChangeNote>
+			<ChangeNote danger>되돌릴 수 없습니다.</ChangeNote>
 			<ChangeActions>
 				<Button variant="ghost" size="sm">
 					연결 보기
@@ -88,9 +88,9 @@ export const Address: Story = {
 			<ChangeLines>
 				<ChangeLine what="전" then="/posts/:slug" />
 				<ChangeLine what="후" then="/blog/:slug" />
-				<ChangeLine what="발행된 글" then="148편 주소 바뀜" tone="warning" />
+				<ChangeLine what="발행된 글" then="148편 주소 변경" tone="warning" />
 			</ChangeLines>
-			<ChangeNote>옛 주소는 404가 돼요.</ChangeNote>
+			<ChangeNote>옛 주소는 404가 됩니다.</ChangeNote>
 		</ChangeGroup>
 	),
 };
@@ -137,20 +137,20 @@ export const LongText: Story = {
 export const Run: Story = {
 	render: () => (
 		<Stack gap={0}>
-			<ChangeGroup kind="edit" tag="이름" title="요약" identifier="summary → excerpt">
+			<ChangeGroup kind="edit" tag="이름 변경" title="요약" identifier="summary → excerpt">
 				<RadioGroup defaultValue="move">
 					<RadioItem value="move" label="값 옮기기" hint="148편" />
 					<RadioItem value="empty" label="빈 칸으로 시작" />
 				</RadioGroup>
 			</ChangeGroup>
-			<ChangeGroup kind="drop" tag="지움" title="부제" identifier="subtitle">
+			<ChangeGroup kind="drop" tag="삭제" title="부제" identifier="subtitle">
 				<RadioGroup defaultValue="clear">
 					<RadioItem value="clear" label="값 지우기" hint="132편" />
 					<RadioItem value="keep" label="그대로 두기" />
 				</RadioGroup>
 			</ChangeGroup>
 			<ChangeGroup kind="new" tag="추가" title="읽는 시간" identifier="readingTime">
-				<ChangeNote>저장된 데이터는 바뀌지 않아요.</ChangeNote>
+				<ChangeNote>저장된 데이터는 바뀌지 않습니다.</ChangeNote>
 			</ChangeGroup>
 		</Stack>
 	),

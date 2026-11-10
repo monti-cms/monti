@@ -1,4 +1,4 @@
-import { type FieldDefinition, localeModeOf, slugify } from "@monti-cms/core";
+import { type FieldDefinition, type FieldMark, localeModeOf, slugify } from "@monti-cms/core";
 import {
 	Combobox,
 	ComboboxChip,
@@ -13,6 +13,7 @@ import {
 	FormField,
 	FormFieldLabel,
 	IconButton,
+	Inline,
 	Input,
 	List,
 	OrderedRow,
@@ -33,6 +34,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "../settings/pick-one";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
 import { MediaField, SharedMediaValue } from "./media-field";
+import { FieldChange } from "./translation";
 import type { EntryEditorModel } from "./use-entry-editor";
 import { useRelationField } from "./use-relation-field";
 
@@ -116,6 +118,13 @@ function PickMany({
 			</ComboboxContent>
 		</Combobox>
 	);
+}
+
+/** What a pick shows as: its option's name, a comma between several. */
+function pickNames(value: unknown, labels: Record<string, string> = {}) {
+	return (Array.isArray(value) ? value : value === undefined ? [] : [value])
+		.map((each) => labels[String(each)] ?? String(each))
+		.join(", ");
 }
 
 /** In a translation where the field is shared, resolves relation group IDs to titles. */
@@ -477,10 +486,10 @@ export function EntryProperties({
 	onTab,
 	readOnly,
 	shared,
-	sourcePublished,
 	uploads,
 	altCard,
 	onAltCard,
+	changes,
 }: {
 	editor: EntryEditorModel;
 	schema: SchemaRead | null;
@@ -490,13 +499,13 @@ export function EntryProperties({
 	readOnly: boolean;
 	/** In a translation, the source's field values: a field that is the same in every language shows the source's, read only (doc 04). */
 	shared?: Record<string, unknown> | null;
-	/** Whether those values are what the source has on the site (doc 04, principle 5), or its working copy, not being on the site. */
-	sourcePublished?: boolean;
 	/** The files going up for the media fields: the editor's, so they outlive this panel. */
 	uploads: FieldUploads;
 	/** The media field whose picture settings are open: a to-do row opens them. */
 	altCard: string | null;
 	onAltCard: (field: string | null) => void;
+	/** In a translation: the fields whose source moved on (T111), and confirming one. */
+	changes?: { marks: readonly FieldMark[]; onConfirm: (field: string) => void };
 }) {
 	const { t } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
@@ -528,6 +537,20 @@ export function EntryProperties({
 				</Text>
 			) : undefined;
 		const focus = { onFocus: () => setFocused(key), onBlur: () => setFocused(null) };
+		const changeMark = changes?.marks.find((mark) => mark.field === key);
+		const shownInCard = (shownValue: unknown) =>
+			def.kind === "media" ? (
+				<SharedMediaValue value={shownValue} empty={empty} withAlt />
+			) : (
+				pickNames(shownValue, values[key]?.optionLabels)
+			);
+		const change = changeMark ? (
+			<FieldChange
+				mark={changeMark}
+				shown={def.kind === "text" ? undefined : shownInCard}
+				onConfirm={() => changes?.onConfirm(key)}
+			/>
+		) : undefined;
 		// In a translation a field that is the same in every language is the source's: its value, read only (editor.md, a value no one changes here).
 		if (shared && localeModeOf(key, def) === "same") {
 			const sourceNote = (
@@ -556,11 +579,7 @@ export function EntryProperties({
 					</FormField>
 				);
 			}
-			const sharedValue = shared[key];
-			const labels = values[key]?.optionLabels ?? {};
-			const shown = (Array.isArray(sharedValue) ? sharedValue : sharedValue === undefined ? [] : [sharedValue])
-				.map((each) => labels[String(each)] ?? String(each))
-				.join(", ");
+			const shown = pickNames(shared[key], values[key]?.optionLabels);
 			return (
 				<FormField key={key}>
 					<FormFieldLabel action={sourceNote}>{values[key]?.label ?? key}</FormFieldLabel>
@@ -582,18 +601,12 @@ export function EntryProperties({
 					label={values[key]?.label ?? key}
 					required={marksRequired && required(key)}
 					accept={def.accept}
+					change={change}
 					value={value}
 					// A translation's empty field follows the source's (doc 09): what shows is that file, until it has its own.
 					source={localeModeOf(key, def) === "fromSource" ? shared?.[key] : undefined}
-					whose={
-						shared && localeModeOf(key, def) === "fromSource"
-							? {
-									following: t(sourcePublished ? "translation.followsPublished" : "translation.followsSource"),
-									own: t("translation.ownValue"),
-									clear: t("translation.backToSource", { label: values[key]?.label ?? key }),
-								}
-							: undefined
-					}
+					// × says what it does, as on any field: what follows (the source's file and the follows-source label) shows at once (2026-11-10, owner).
+					following={shared && localeModeOf(key, def) === "fromSource" ? t("translation.followsSource") : undefined}
 					readOnly={readOnly}
 					onChange={(next) => editor.set(path, next)}
 				/>
@@ -719,7 +732,20 @@ export function EntryProperties({
 		};
 		return (
 			<FormField key={key}>
-				<FormFieldLabel htmlFor={id} required={marksRequired && required(key)} action={count}>
+				<FormFieldLabel
+					htmlFor={id}
+					required={marksRequired && required(key)}
+					action={
+						change && count ? (
+							<Inline gap={8}>
+								{count}
+								{change}
+							</Inline>
+						) : (
+							(change ?? count)
+						)
+					}
+				>
 					{values[key]?.label ?? key}
 				</FormFieldLabel>
 				{input()}

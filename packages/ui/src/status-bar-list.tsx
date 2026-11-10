@@ -8,7 +8,7 @@ import { MENU_CARD, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR } from "./menu-parts
 
 /**
  * The list that opens upward from a status bar cell ("To do 3"): a card with the group's name and its count in the head (no count once nothing is
- * left), then the rows to do (`TodoItem`) and the ones already done (`TodoDone`), and under a rule the actions that belong to the whole list
+ * left), then the rows to do (`TodoItem`), or one `TodoDone` line when nothing is, and under a rule the actions that belong to the whole list
  * (`footer`: a link to its settings, "Fix all"). `trigger` is the cell that opens it.
  */
 function StatusBarList({
@@ -80,4 +80,31 @@ function StatusBarList({
 	);
 }
 
-export { StatusBarList };
+/**
+ * A second group in a `StatusBarList`, under a rule: its own name and count in a head like the list's, then its rows. The editor's to-do list keeps what
+ * stops publishing first and what changed in the source after it (translation.md, 2026-11-10 owner): one list of what is left in the entry.
+ */
+function StatusBarListGroup({
+	label,
+	count,
+	countTone = "warning",
+	children,
+}: {
+	label: string;
+	count: number;
+	countTone?: "warning" | "danger";
+	children: React.ReactNode;
+}) {
+	return (
+		<div role="group" aria-label={count > 0 ? `${label} ${count}` : label} data-slot="status-bar-list-group">
+			<div aria-hidden className={MENU_SEPARATOR} />
+			<div data-slot="status-bar-list-head" aria-hidden className={MENU_LABEL}>
+				<span>{label}</span>
+				{count > 0 && <Count tone={countTone}>{count}</Count>}
+			</div>
+			{children}
+		</div>
+	);
+}
+
+export { StatusBarList, StatusBarListGroup };

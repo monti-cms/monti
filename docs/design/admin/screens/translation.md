@@ -27,21 +27,24 @@
 | 원문 보기 "끔 · 옆 창 · 나란히" | 앞에 `Text variant="note"` "원문", 그 뒤 `Segmented size="sm" inline` | "나란히"는 나란히 보기(TranslatePaired)로 바꾼다. 파일이 올라가는 동안에는 먼저 묻는다(editor.md, "올리는 중에 묻기"). |
 | 제목 | [editor.md](editor.md)의 제목 칸 | 흐린 동안에는 `Untranslated` 안의 원문 글. 치면 흐림이 사라진다. |
 | 흐린 블록 | `Untranslated`(편집기 본문에서는 `EditorBody`의 `data-untranslated`와 `data-source-placeholder`) | 아직 정하지 않은 블록. 비어 있고 원문은 자리 표시 글로만 깔려 있다. 발행되지 않는다. 블록마다 보고 정한다. 글자를 치면 자리 표시가 사라지고 친 글만 남는다. |
-| 흐린 블록의 메뉴 | `BlockHandle` + `DropdownMenu`: `DropdownMenuItem` "✦ 번역"(`Spark`) · "원문 유지" │ `DropdownMenuSeparator` │ "지우기" | 블록마다 셋 중 하나를 고른다. |
-| "원문 유지" 표시 | `EditorMargin` 안의 `Marker tone="keep"` "원문" | 왼쪽 여백에 붙는다. 원문을 따르는 블록(코드처럼 옮길 글자가 없는 블록)에도 같은 표시가 붙는다. |
+| 흐린 블록의 메뉴 | `BlockHandle` + `DropdownMenu`: `DropdownMenuItem` "✦ 번역"(`Spark`) · "원문 따르기" │ `DropdownMenuSeparator` │ "지우기" | 블록마다 셋 중 하나를 고른다. |
+| "원문 따름" 표시 | `EditorMargin` 안의 `Marker tone="keep"` "원문 따름" | 왼쪽 여백에 붙는다. 필드가 원문 값을 보일 때의 라벨과 같은 말이다(2026-11-10 소유자). 원문을 따르는 블록(코드처럼 옮길 글자가 없는 블록)에도 같은 표시가 붙는다. |
 | 원문을 따르는 블록의 메뉴 | 블록 메뉴 맨 위 `DropdownMenuItem` "따로 고치기" | 이 언어에서만 따로 고친다(`translations.setBlocks`의 `detach`). 블록 끝에 버튼을 두지 않는다. 글자를 치면 따로 고친 것이 된다(2026-11-06). |
 | 번역 제안 (블록이 비었을 때 채운 것) | `Fill` | 바탕 없는 파란 글자. 받거나 버리기는 버블에서. |
 | 다시 번역한 제안 | `CurrentProposal` 안에 `Del` · `Ins` | 바뀐 블록의 새 번역. |
-| 원문 변경 표시 | `EditorMargin` 안의 `Marker` "변경"(`changed`, 주황) · "삭제"(`removed`, 빨강) · "추가"(`added`, 초록)(카드가 열리면 `active`) | 누르면 그 블록 아래에 카드가 열린다. "추가"는 그 자리의 흐린 블록이라 바로 쓰고, 카드에는 "빼기"(이 언어에서 뺀다)만 있다(2026-11-06 소유자). "삭제" 카드는 "확인"(블록은 짝 없이 남는다) · "지우기"다(04 결정 기록, 2026-11-06). |
-| 바뀜 카드 | `MemoCardPopover`의 `MemoCard`(`where` "원문 변경", `discardLabel` "확인", `acceptLabel` "다시 번역", `acceptSpark`) 안에 `MemoDiff`(`beforeLabel` "전", `afterLabel` "후") | 머리에 "확인" · [✦ 다시 번역]. 바뀐 말은 주황 밑줄(`CompareText source`). 바깥을 누르거나 Esc로 닫는다. |
+| 원문 변경 표시 | `EditorMargin` 안의 `Marker` "변경"(`changed`, 주황) · "삭제"(`removed`, 빨강) · "추가"(`added`, 초록)(카드가 열리면 `active`) | 누르면 그 블록 아래에 카드가 열린다. "추가"는 그 자리의 흐린 블록이라 바로 쓰고, 카드에는 "빼기"(이 언어에서 뺀다)만 있다(2026-11-06 소유자). "삭제" 카드는 "번역 유지"(블록은 짝 없이 남는다) · "지우기"다(04 결정 기록, 2026-11-06, 2026-11-10). |
+| 변경 카드 | `MemoCardPopover`의 `MemoCard`(`where` "원문 변경" · "원문 추가" · "원문 삭제", `discardLabel` "번역 유지", `acceptLabel` "다시 번역", `acceptSpark`) 안에 `MemoDiff`(`beforeLabel` "전", `afterLabel` "후") | 머리에 "번역 유지" · [✦ 다시 번역]. 바뀐 말은 주황 밑줄(`CompareText source`). 바깥을 누르거나 Esc로 닫는다. 번역을 고칠 거면 카드를 닫고 그 블록을 고친다. 저장하면 표시가 저절로 사라진다(2026-11-10 소유자). "번역 유지"는 고칠 것이 없을 때만 누른다. |
+| 제목의 원문 변경 | `EditorMarginLine`의 `margin`에 `Marker tone="changed"` "변경"(나란히 보기에서는 `CompareRow`의 `note`) | 제목 줄 왼쪽 여백에, 블록의 표시와 같은 세로선에 붙는다. 카드는 변경 카드와 같고 제목 아래에 열리며 머리에 "번역 유지"만 있다. 제목을 고쳐 저장하면 표시가 사라진다. |
+| 필드의 원문 변경 | `FormFieldLabel`의 `action`에 `Marker tone="changed"` "변경" | 번역이 자기 값을 가진 필드의 라벨 줄 끝이다. 미디어 필드에서는 "원문 따름" 자리에 온다. 카드에 전과 후를 보이고 머리에 "번역 유지"가 있다. 값을 고쳐 저장하면 표시가 사라진다. 글자 필드는 바뀐 말에 주황 밑줄, 미디어는 "파일 이름 · 대체 텍스트", 고르기와 관계는 이름. 빈 쪽은 "비어 있음". 포커스한 글자 필드는 표시 앞에 글자 수가 있다. 표시는 라벨 줄의 높이를 바꾸지 않는다. |
+| 필드가 누구 값인가 | `FormFieldLabel`의 `action`에 `Text variant="micro" tone="faint"` | 자기 값이 없어 원문을 따르는 필드는(원문도 비어 있으면 빈 채로) "원문 따름", 모든 언어가 같아 여기서 못 고치는 필드는 "언어 공통"(설정의 언어 선택지와 같은 말). 번역이 직접 쓴 값은 평소 상태라 라벨이 없다(2026-11-10 소유자). |
 | 제안 버블 | `ProposalBubbleDock` 안에 `ProposalBubble`(`name` "번역" 또는 "다시 번역", `position`, `total`) | 버블에는 이전 · 다음, "모두 버리기", [모두 받기]만 있다. |
 
 #### 상태 표시줄
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem blocking` "흐린 블록 1" + 끝 동작 "✦ 번역"은 `proposal`, 아래 `TodoDone` "제목 · 주소 · 원문 유지 1") | 흐린 블록이 발행을 막는 할 일이다. 행을 누르면 그 블록으로 간다. 제안이 도착한 동안 칸은 "제안 6". |
-| "원문 변경 3" | `StatusBarCell tone="warning"` + `StatusBarList`(`TodoItem`마다 앞에 `tag` "변경" · "삭제" · "추가"를 그 색으로, 블록의 글은 한 줄, 줄마다 끝 동작 하나: 바뀜 "확인", 지워짐 "지우기", 새로 "빼기"(설정의 "바뀐 곳" 목록과 같은 모양, 2026-11-06 소유자). 줄을 누르면 그 블록으로 간다. `footer`에 `TextButton` "모두 확인") | 발행을 막지 않는 알림이라 할 일과 다른 칸이다. 할 일 칸과 따로 있는 칸이다. |
+| "할 일 N" | `StatusBarCell` + `StatusBarList`(`TodoItem blocking` "흐린 블록 1" + 끝 동작 "✦ 번역"은 `proposal`), 그 아래 `StatusBarListGroup` "원문 변경 N" | 흐린 블록이 발행을 막는 할 일이다. 행을 누르면 그 블록으로 간다. 제안이 도착한 동안 칸은 "제안 6". 칸의 수는 할 일과 원문 변경을 더한 것이다(2026-11-10 소유자: 글에 남은 일은 창 하나에서 본다). |
+| "원문 변경" 묶음 | `StatusBarListGroup`(발행 전에 고칠 것이 없으면 목록 머리가 곧 "원문 변경") 안에 `TodoItem`마다 앞에 `tag` "변경" · "삭제" · "추가"를 그 색으로, 필드는 이름, 블록의 글은 한 줄, 줄마다 끝 동작 하나: 변경 "번역 유지", 삭제 "지우기"(설정의 "변경 사항" 목록과 같은 모양, 2026-11-06 소유자). 원문에 새로 생긴 블록은 이 묶음에 없다. 발행을 막는 할 일("원문 추가 블록")로 위에 한 번만 있고, "빼기"는 그 블록의 카드에 있다 | 발행을 막지 않아서 할 일 아래 따로 묶는다. 줄을 누르면 그 블록이나 필드로 간다. "모두 번역 유지"는 알림 띠에만 있다. |
 | 글자 수 | [editor.md](editor.md)와 같다 | 흐린 동안 "0자". |
 
 스토리: Primitives/Text, Controls/Status/EntryStatus, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Tabs/Tabs, Controls/Status/ChangeDot, Controls/Button/TextButton, Primitives/AI mark, Primitives/Separator, Controls/Choice/Segmented, Monti/Translation/Marks, Monti/EditorTools/BlockHandle, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBubble, Patterns/Frame/StatusBar, Patterns/Frame/StatusBarList, Monti/EditorTools/TodoItem, Patterns/Frame/Banner, Patterns/Frame/ResizablePane, Primitives/Box.
@@ -54,7 +57,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 원문 변경 | `Banner`(`title` "원문이 변경됐어요", `meta` "10. 26 · 3곳") | 끝에 `TextButton` "모두 확인"이 바뀜 표시를 한 번에 모두 확인한다. 바뀐 블록은 블록마다 "변경" 표시의 카드로 본다. |
+| 원문 변경 | `Banner`(`title` "원문 변경", `meta` "10. 26 · 3곳") | 끝에 `TextButton` "모두 번역 유지"가 변경 · 삭제 표시를 한 번에 내린다. 번역 글은 그대로다. 바뀐 블록은 블록마다 "변경" 표시의 카드로 본다. |
 
 #### 원문 옆 창
 
@@ -73,7 +76,7 @@
 | `stage` "번역 제안" | 3.03 | 블록이 `Fill`, `ProposalBubble`("번역", 1 / 6), 할 일 칸 "제안 6" | Monti/Proposal/Marks, Monti/Proposal/ProposalBubble |
 | `stage` "블록 고르기" | 3.04 | 흐린 블록 둘, 그중 하나에 `BlockHandle`과 흐린 블록 메뉴 | Monti/EditorTools/BlockHandle |
 | `stage` "발행 막힘" | 3.06 | 흐린 블록 하나, 할 일 `StatusBarList` 열림, `toast.error`와 "이동" | Patterns/Frame/StatusBarList, Controls/Status/Toast |
-| `stage` "발행됨" | 3.07 | "원문 유지" `Marker`, `EntryStatus` 발행됨, `toast` "발행되었어요"와 "보기" | Monti/Translation/Marks, Controls/Status/EntryStatus, Controls/Status/Toast |
+| `stage` "발행됨" | 3.07 | "원문 따름" `Marker`, `EntryStatus` 발행됨, `toast` "발행되었습니다"와 "보기" | Monti/Translation/Marks, Controls/Status/EntryStatus, Controls/Status/Toast |
 | `stage` "원문 변경" | 3.09 | 원문 변경 `Banner`, 언어 탭 `ChangeDot`, 원문 창의 주황 밑줄(`CompareText source`), 블록마다 `Marker`(`changed` · `removed` · `added`), "원문 변경" `StatusBarList` 열림 | Patterns/Frame/Banner, Controls/Status/ChangeDot, Monti/Proposal/Marks, Monti/Translation/Marks, Patterns/Frame/StatusBarList |
 | `stage` "바뀜 카드" | 3.10 | "변경" `Marker active`와 `MemoCard` + `MemoDiff` | Monti/Translation/Marks, Monti/Proposal/MemoCard |
 | `stage` "다시 번역" | 3.11 | 바뀐 블록이 `CurrentProposal` + `Del` · `Ins`, `ProposalBubble`("다시 번역", 1 / 1), `EntryStatus` 수정 중 | Monti/Proposal/Marks, Monti/Proposal/ProposalBubble, Controls/Status/EntryStatus |
@@ -98,8 +101,8 @@
 | 머리 행 (10. 26 수정 / 09. 20 수정) | `CompareRows`의 첫 행 `CompareRow head` | 양쪽 고친 날만 잉크 선 아래 mono 작은 줄로. 어느 쪽이 원문이고 어느 언어인지는 탭과 원문 칸의 도구 바탕이 이미 말한다(2026-11-05 소유자, 원칙 8). |
 | 블록 한 행 | `EditorBody paired`: 편집기 하나가 행으로 놓이고, 블록마다 앞에 블록 종류와 원문 칸이 붙는다 | 원문은 도구 바탕이고 고칠 수 없다. 번역 칸은 편집기 그대로라 그 자리에서 쓴다. 커서가 있는 행은 원문 칸과 번역 칸이 함께 블록 바탕(`bg-block`)이다. 드래그로 고른 글자는 한 단계 진한 `bg-selection`이다. 원문 칸은 글로만 보인다. |
 | 제목 행 | `CompareRow title` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다(`Input size="inherit"`). |
-| 여백의 상태 "원문 변경" · "원문에 추가" | 행의 블록 종류 칸 메모(`data-pair-note`) | 바뀜 주황, 지워짐 빨강, 새로 초록. 원문 쪽 바뀐 말은 주황 밑줄. |
-| 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "아직 번역하지 않았어요") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
+| 여백의 상태 "변경" · "삭제" · "추가" | 행의 블록 종류 칸 메모(`data-pair-note`) | 변경 주황, 삭제 빨강, 추가 초록(여백 표시와 같은 낱말과 색). 원문 쪽 바뀐 말은 주황 밑줄. |
+| 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "번역 전") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
 | 코드 블록의 번역 칸 | `CompareShared`(children 원문 블록 `CompareCode`, `action` `TextButton variant="underline"` "따로 고치기") | 원문 블록이 흐린 글자로 보인다. 누르는 순간 이 언어용 사본을 만든다. |
 | 흐린 블록 | `Untranslated` | EditorTranslate와 같다. |
 | 상태 표시줄 | "할 일 1", 글자 수 | EditorTranslate와 같다. |

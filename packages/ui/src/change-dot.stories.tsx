@@ -14,7 +14,7 @@ export const Tones: Story = {
 		<Stack direction="row" gap={24} align="center">
 			<Stack direction="row" gap={6} align="center">
 				게시글
-				<ChangeDot label="바뀜" />
+				<ChangeDot label="변경" />
 			</Stack>
 			<Stack direction="row" gap={6} align="center">
 				SEO

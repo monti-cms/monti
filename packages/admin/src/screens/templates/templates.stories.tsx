@@ -149,7 +149,7 @@ export const NoTemplates: Story = {
 	play: async ({ canvasElement }) => {
 		const page = within(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "도구" }, wait));
-		await page.findByText("아직 템플릿이 없어요.", {}, wait);
+		await page.findByText("아직 템플릿이 없습니다.", {}, wait);
 	},
 };
 

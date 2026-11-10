@@ -2,6 +2,7 @@ import type { Kysely, Transaction } from "kysely";
 import { asDoc, walk } from "../body/doc";
 import { linkedGroups } from "../body/links";
 import type { Database } from "../db/schema";
+import { isEmptyValue } from "../json";
 import { altGaps } from "../media/alt";
 import type { Message } from "../operation";
 import type { FieldDefinition, Schema } from "../schema/define";
@@ -28,9 +29,6 @@ export type PublishCheck = (
 	context: { db: Kysely<Database> | Transaction<Database>; schema: Schema },
 ) => Awaitable<PublishTask[]>;
 
-const isEmpty = (value: unknown) =>
-	value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
-
 /** The value of a field: `title` and `slug` are columns, the rest sit in `values`. */
 export const fieldValue = (entry: Pick<Entry, "title" | "slug" | "values">, field: string) =>
 	field === "title" ? entry.title : field === "slug" ? entry.slug : entry.values[field];
@@ -53,7 +51,7 @@ export async function publishTasks(
 	const read = translatedFields(schema, entry.collection, entry, await followedFields(db, source));
 	// The slug is the published address: an empty one always blocks, whatever the schema says (doc 02, 2026-11-06).
 	for (const [field, definition] of Object.entries(fields))
-		if ((definition.required || field === "slug") && isEmpty(fieldValue(field === "slug" ? entry : read, field)))
+		if ((definition.required || field === "slug") && isEmptyValue(fieldValue(field === "slug" ? entry : read, field)))
 			tasks.push({
 				code: "required",
 				field,

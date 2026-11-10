@@ -97,7 +97,7 @@ export {
 } from "./context-menu";
 export { ConversationGroupLabel, ConversationList, ConversationRow, ConversationRowMore } from "./conversation-list";
 export { Count } from "./count";
-export { type CropGrip, type CropRect, CropStage } from "./crop-stage";
+export { type CropCorner, type CropGrip, type CropRect, CropStage } from "./crop-stage";
 export { DangerBlock, DangerRow } from "./danger-block";
 export { CountRow, DescriptionItem, DescriptionList } from "./description-list";
 export {
@@ -137,7 +137,7 @@ export {
 } from "./dropdown-menu";
 export { EditorBody } from "./editor-body";
 export { EditorHeader, EditorTitleRule } from "./editor-header";
-export { DropLine, EditorMargin, EditorOverlay, HeldBlock } from "./editor-overlay";
+export { DropLine, EditorMargin, EditorMarginLine, EditorOverlay, HeldBlock } from "./editor-overlay";
 export { Empty, EmptyStep } from "./empty";
 export { EntryStatus, type EntryStatusKind } from "./entry-status";
 export { ErrorBox } from "./error-box";
@@ -314,7 +314,7 @@ export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
-export { StatusBarList } from "./status-bar-list";
+export { StatusBarList, StatusBarListGroup } from "./status-bar-list";
 export { Suggest, SuggestLabel, SuggestList } from "./suggest";
 export { Switch } from "./switch";
 export {

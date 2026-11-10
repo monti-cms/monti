@@ -1,20 +1,20 @@
-import type { MediaItem, MediaQueryResult } from "@monti-cms/core";
-import { FilePreview, Image, MediaPicker, Text, TextButton, Tile } from "@monti-cms/ui";
-import { useState } from "react";
+import { MEDIA_QUERY_MOST, type MediaItem, type MediaQueryResult } from "@monti-cms/core";
+import { FolderTile, MediaPicker, Text, TextButton, Tile } from "@monti-cms/ui";
+import { useEffect, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
-import { useFolders } from "../screens/list/folders";
+import { searchScopes, useFolders } from "../screens/list/folders";
 import { chooseFiles } from "./choose-files";
-import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "./file-text";
+import { FileThumb, useFileDetail } from "./file-shown";
 
 /** How many more files the window loads at a time. */
 const PAGE = 100;
-/** The most `media.query` gives at a time: past it, a search finds the file. */
-const MOST = 1000;
 
 /**
- * The library's window (doc 09's `MediaPicker`, 09-3): the one every place that takes a file opens. An image's place shows images, a file's place files. Picking a tile and
- * pressing the pill puts it in; uploading hands the files back to the page, where they go up in place as if pasted (screens/media.md).
+ * The library's window (doc 09's `MediaPicker`, 09-3): the one every place that takes a file opens. It is a file browser (2026-11-09, owner): the top or a folder shows its folders
+ * and its own files, and an image's place shows images, a file's place files. A search looks as the library's screen does, through the folder's subfolders or, by the chip in
+ * the search box, all of them. Picking
+ * a tile and pressing the pill puts it in; uploading hands the files back to the page with the open folder, and they go up in place as if pasted (screens/media.md).
  */
 export function MediaPickerDialog({
 	kind,
@@ -29,61 +29,96 @@ export function MediaPickerDialog({
 	confirmLabel?: string;
 	onClose: () => void;
 	onPick: (item: MediaItem) => void;
-	onFiles: (files: File[]) => void;
+	/** The files chosen to upload, and the folder open when they were. */
+	onFiles: (files: File[], folder: string | null) => void;
 }) {
 	const { t } = useAdmin();
 	const [folder, setFolder] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
-	const [picked, setPicked] = useState<MediaItem | null>(null);
+	const [everywhere, setEverywhere] = useState(false);
+	const [pickedId, setPicked] = useState<string | null>(null);
 	const [shown, setShown] = useState(PAGE);
 	const folders = useFolders("media", true);
+	const here = folder === null ? undefined : folders.byId.get(folder);
+	const looking = search !== "";
 	const read = useRead<MediaQueryResult>(
 		"media.query",
-		{ ...(folder === null ? {} : { folder }), search, kinds: kind === "any" ? [] : [kind], pageSize: shown },
+		{
+			folder,
+			scope: everywhere && search.trim() !== "" ? "all" : "here",
+			search,
+			...(kind === "any" ? {} : { only: kind }),
+			pageSize: shown,
+		},
 		{ afterWrites: true },
 	);
-	const items = read.data?.items ?? [];
+	// A read keeps its last answer while the next one comes: the files it shows are the open folder's only once that folder's answer is in, so no tile of the
+	// folder just left can be picked, or take the keyboard.
+	const [readFolder, setReadFolder] = useState(folder);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: an answer arriving is what marks the folder it is for.
+	useEffect(() => setReadFolder(folder), [read.data]);
+	const settled = readFolder === folder;
+	const items = settled ? (read.data?.items ?? []) : [];
+	// What goes in is always a file in sight, whichever list a press landed on.
+	const picked = items.find((item) => item.id === pickedId) ?? null;
+	const subfolders = looking ? [] : folders.children(folder);
+	const detail = useFileDetail(looking, here && !everywhere ? folders.path(here.id).map((up) => up.name) : []);
+	/** What is in sight changes: what was picked goes with it, and the list starts over. */
+	const startOver = () => {
+		setPicked(null);
+		setShown(PAGE);
+	};
+	const go = (next: string | null) => {
+		startOver();
+		setFolder(next);
+		setSearch("");
+		setEverywhere(false);
+	};
 	return (
 		<MediaPicker
 			open
 			onOpenChange={(open) => !open && onClose()}
 			title={title ?? t(kind === "file" ? "library.picker.file" : "library.picker.image")}
-			allLabel={t(kind === "image" ? "library.picker.allImages" : "library.picker.allFiles")}
-			// A folder's count is of all its files, so it shows only where images are what is listed (components/list.md).
-			folders={folders.list.map((each) => ({
-				id: each.id,
-				name: each.name,
-				depth: each.depth,
-				...(kind === "image" ? { count: each.count } : {}),
-			}))}
+			topLabel={t("frame.media")}
+			folders={folders.list.map((each) => ({ id: each.id, name: each.name, depth: each.depth }))}
 			folder={folder}
-			onFolderChange={(next) => {
-				setPicked(null);
-				setShown(PAGE);
-				setFolder(next);
-			}}
-			foldersLabel={t("folders.tree")}
+			onFolderChange={go}
+			pathLabel={t("library.path")}
 			search={search}
 			onSearchChange={(next) => {
-				setPicked(null);
-				setShown(PAGE);
+				startOver();
 				setSearch(next);
+				// Emptied, the box starts over on the open folder.
+				if (next.trim() === "") setEverywhere(false);
 			}}
 			searchLabel={t("library.picker.search")}
+			// Inside a folder the search box's chip says where a search looks, as on the library's page.
+			scopes={here ? searchScopes(here.name, t) : undefined}
+			scope={everywhere ? "all" : "here"}
+			onScopeChange={(next) => {
+				startOver();
+				setEverywhere(next === "all");
+			}}
+			scopeLabel={t("list.searchIn")}
 			uploadLabel={t("library.upload")}
 			onUpload={() =>
 				chooseFiles({
 					accept: kind === "image" ? "image/*" : undefined,
-					onFiles,
+					onFiles: (files) => onFiles(files, folder),
 				})
 			}
 			confirmLabel={confirmLabel ?? t("library.picker.insert")}
 			confirmHidden={picked === null}
 			onConfirm={() => picked && onPick(picked)}
+			subfolders={
+				subfolders.length > 0
+					? subfolders.map((each) => <FolderTile key={each.id} name={each.name} onClick={() => go(each.id)} />)
+					: undefined
+			}
 			notice={
-				read.data && items.length === 0 ? (
+				read.data && settled && items.length === 0 && subfolders.length === 0 ? (
 					<Text variant="note" tone="subtle">
-						{t("library.picker.none")}
+						{t(looking ? "library.nothingFound" : "library.picker.none")}
 					</Text>
 				) : undefined
 			}
@@ -92,27 +127,16 @@ export function MediaPickerDialog({
 				<Tile
 					key={item.id}
 					title={item.name}
-					detail={[
-						item.kind === "image" ? sizeLabel(item) : formatBytes(item.size),
-						item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed"),
-					]
-						.filter(Boolean)
-						.join(" · ")}
+					detail={detail(item)}
 					selected={picked?.id === item.id}
-					onClick={() => setPicked(picked?.id === item.id ? null : item)}
-					preview={
-						item.kind === "image" ? (
-							<Image src={previewUrl(item)} alt="" ratio="photo" radius="none" />
-						) : (
-							<FilePreview ext={extensionLabel(item.name)} />
-						)
-					}
+					onClick={() => setPicked(picked?.id === item.id ? null : item.id)}
+					preview={<FileThumb item={item} />}
 				/>
 			))}
-			{read.data && read.data.total > items.length && shown < MOST ? (
+			{settled && read.data && read.data.total > items.length && shown < MEDIA_QUERY_MOST ? (
 				<TextButton onClick={() => setShown(shown + PAGE)}>{t("library.picker.more")}</TextButton>
 			) : null}
-			{read.data && read.data.total > items.length && shown >= MOST ? (
+			{settled && read.data && read.data.total > items.length && shown >= MEDIA_QUERY_MOST ? (
 				<Text variant="note" tone="subtle">
 					{t("library.picker.narrow")}
 				</Text>

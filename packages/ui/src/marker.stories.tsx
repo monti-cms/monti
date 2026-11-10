@@ -9,7 +9,7 @@ import { Text } from "./text";
  * Translation in the editor. A block not decided yet is dimmed (`Untranslated`); a small `Marker` in the left margin says what a block is: its
  * source changed, it is new, it was removed, or it stays in the source language.
  */
-const meta = { title: "Monti/Translation/Marks", component: Marker, args: { children: "바뀜" } } satisfies Meta<
+const meta = { title: "Monti/Translation/Marks", component: Marker, args: { children: "변경" } } satisfies Meta<
 	typeof Marker
 >;
 export default meta;
@@ -21,8 +21,8 @@ export const Playground: Story = { args: { tone: "changed" } };
 export const Tones: Story = {
 	render: () => (
 		<Stack direction="row" gap={12} align="center">
-			<Marker tone="changed">바뀜</Marker>
-			<Marker tone="added">새로</Marker>
+			<Marker tone="changed">변경</Marker>
+			<Marker tone="added">추가</Marker>
 			<Marker tone="removed">지워짐</Marker>
 			<Marker tone="keep">원문</Marker>
 			<Marker tone="request">1</Marker>
@@ -36,10 +36,10 @@ export const Active: Story = {
 	render: () => (
 		<Stack direction="row" gap={12} align="center">
 			<Marker tone="changed" onClick={() => undefined}>
-				바뀜
+				변경
 			</Marker>
 			<Marker tone="changed" active onClick={() => undefined}>
-				바뀜
+				변경
 			</Marker>
 			<Marker tone="request" onClick={() => undefined}>
 				2
@@ -71,7 +71,7 @@ export const InBlocks: Story = {
 			</div>
 			<div className="relative">
 				<Marker tone="changed" margin onClick={() => undefined}>
-					바뀜
+					변경
 				</Marker>
 				<Text as="p" variant="reading">
 					The rest I open only when I need it.
@@ -102,7 +102,7 @@ export const InEditor: Story = {
 				<p>글은 도구보다 오래 남는다.</p>
 				<EditorMargin top={4}>
 					<Marker tone="changed" onClick={() => undefined}>
-						바뀜
+						변경
 					</Marker>
 				</EditorMargin>
 				<EditorMargin top={108}>

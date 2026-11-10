@@ -51,3 +51,46 @@ describe("site editor extensions", () => {
 		expect(docFromEditor(docToEditor(doc, catalog), catalog)).toEqual(doc);
 	});
 });
+
+describe("the body as it is saved", () => {
+	const kit: Catalog = {
+		...catalog,
+		blocks: [
+			...catalog.blocks,
+			{
+				type: "divider",
+				label: "Divider",
+				description: "",
+				menu: "insert",
+				holds: "nothing",
+				children: null,
+				attrs: null,
+			},
+		],
+	};
+	const divider = { id: "b1", type: "divider" };
+	const callout = { id: "b1", type: "callout", content: [{ type: "text" as const, text: "Note" }] };
+	it("03-1 an empty paragraph opened under a last block with no text of its own is not kept", () => {
+		const opened: Doc = { type: "doc", blocks: [divider, { id: "b2", type: "paragraph" }] };
+		expect(docFromEditor(docToEditor(opened, kit), kit)).toEqual({ type: "doc", blocks: [divider] });
+	});
+	it("03-1 an empty paragraph after a block with text is the writer's: kept", () => {
+		const after: Doc = { type: "doc", blocks: [callout, { id: "b2", type: "paragraph" }] };
+		expect(docFromEditor(docToEditor(after, catalog), catalog).blocks).toHaveLength(2);
+	});
+	it("03-1 an empty paragraph after a paragraph, or one paired with a source block, is kept", () => {
+		const blank: Doc = {
+			type: "doc",
+			blocks: [
+				{ id: "b1", type: "paragraph", content: [{ type: "text", text: "One" }] },
+				{ id: "b2", type: "paragraph" },
+			],
+		};
+		expect(docFromEditor(docToEditor(blank, catalog), catalog).blocks).toHaveLength(2);
+		const paired: Doc = {
+			type: "doc",
+			blocks: [divider, { id: "b2", type: "paragraph", link: { from: "s2", seen: "h", state: "pending" } }],
+		};
+		expect(docFromEditor(docToEditor(paired, kit), kit).blocks).toHaveLength(2);
+	});
+});

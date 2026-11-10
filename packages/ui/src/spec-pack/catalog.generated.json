@@ -382,10 +382,6 @@
 			"children": true,
 			"slots": [],
 			"props": {
-				"allLabel": {
-					"kind": "text",
-					"type": "string"
-				},
 				"confirmLabel": {
 					"kind": "text",
 					"type": "string"
@@ -395,9 +391,9 @@
 				},
 				"folders": {
 					"kind": "data",
-					"fields": ["id", "name", "depth", "count"]
+					"fields": ["id", "name", "depth"]
 				},
-				"foldersLabel": {
+				"pathLabel": {
 					"kind": "text",
 					"type": "string"
 				},
@@ -406,6 +402,10 @@
 					"type": "string"
 				},
 				"title": {
+					"kind": "text",
+					"type": "string"
+				},
+				"topLabel": {
 					"kind": "text",
 					"type": "string"
 				},
@@ -3138,7 +3138,7 @@
 			"kind": "part",
 			"bind": false,
 			"children": true,
-			"slots": ["address", "title"],
+			"slots": ["address", "thumb", "title"],
 			"props": {
 				"folder": {
 					"kind": "flag",

@@ -77,6 +77,15 @@ describe("browsing", () => {
 		await expect.element(heading()).toHaveTextContent("배경");
 	});
 
+	it('09-1 [flow 6·16] a file\'s right-click menu says "상세": its panel opens beside the grid, on the same screen', async () => {
+		await Top.run();
+		await userEvent.click(tile("top-level-photo.jpg"), { button: "right" });
+		await expect.element(page.getByRole("menuitem", { name: "열기" })).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("menuitem", { name: "상세" }));
+		await expect.element(page.getByRole("complementary").getByRole("textbox", { name: "파일 이름" })).toBeVisible();
+		await expect.element(heading()).toHaveTextContent("미디어");
+	});
+
 	it("09-1 [flow 6·13] a right click on empty ground offers uploading and a new folder", async () => {
 		await Top.run();
 		await expect.element(folder("Blog Assets")).toBeVisible();
@@ -95,6 +104,97 @@ describe("browsing", () => {
 		await expect.element(row).toHaveTextContent("글 1");
 		await expect.element(row).toHaveTextContent("JPG");
 		await expect.element(row).toHaveTextContent("2400×1600");
+	});
+
+	it("09-1 T113 [flow 6·14] the list view is the post table: its column names are the one row under the title, as wide as its line, and say what it is sorted by", async () => {
+		await ListView.run();
+		const table = main().getByRole("table");
+		for (const name of ["이름", "사용", "종류", "크기", "치수", "올린 날"])
+			await expect.element(table.getByRole("columnheader", { name })).toBeVisible();
+		await expect
+			.element(table.getByRole("columnheader", { name: "올린 날" }))
+			.toHaveAttribute("aria-sort", "descending");
+		// No filter row over it (2026-11-10, owner): the filters and the order are the columns' menus.
+		expect(main().element().querySelector("[data-slot=page-toolbar]")).toBeNull();
+		const line = main().element().querySelector("[data-slot=page-header]")?.getBoundingClientRect();
+		const box = table.element().getBoundingClientRect();
+		expect(Math.round(box.top)).toBe(Math.round(line?.bottom ?? 0));
+		expect(box.left).toBe(line?.left);
+		expect(box.right).toBe(line?.right);
+	});
+
+	it("09-1 T113 in the list view a column's menu filters and sorts: 종류 and 사용 tick values, 크기 orders by size", async () => {
+		await ListView.run();
+		const table = main().getByRole("table");
+		const kind = table.getByRole("button", { name: "종류" });
+		await userEvent.click(kind);
+		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /파일/ }));
+		await userEvent.keyboard("{Escape}");
+		await expect.element(main().getByRole("link", { name: "top-level-photo.jpg" })).not.toBeInTheDocument();
+		await userEvent.click(kind);
+		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /파일/ }));
+		await userEvent.keyboard("{Escape}");
+		await expect.element(main().getByRole("link", { name: "top-level-photo.jpg" })).toBeVisible();
+		await userEvent.click(table.getByRole("button", { name: "크기" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "크기순" }));
+		await expect.element(table.getByRole("columnheader", { name: "크기" })).toHaveAttribute("aria-sort", "descending");
+	});
+
+	it("09-1 T113 [keys-move] a column's edge moves width between its two columns, and the width is still there next time", async () => {
+		localStorage.removeItem("monti:media-columns");
+		await ListView.run();
+		const head = (name: string) => main().getByRole("table").getByRole("columnheader", { name });
+		const width = (name: string) => head(name).element().getBoundingClientRect().width;
+		await expect.element(head("크기")).toBeVisible();
+		const [size, measure] = [width("크기"), width("치수")];
+		(page.getByRole("separator", { name: "크기 열 너비 조절" }).element() as HTMLElement).focus();
+		await userEvent.keyboard("{ArrowRight}");
+		await expect.poll(() => width("크기")).toBeGreaterThan(size);
+		const widened = width("크기");
+		expect(widened + width("치수")).toBe(size + measure);
+		await ListView.run();
+		await expect.element(head("크기")).toBeVisible();
+		expect(width("크기")).toBe(widened);
+		localStorage.removeItem("monti:media-columns");
+	});
+
+	it("09-1 T113 [reach] a row's check shows under the pointer; picking puts the bulk bar in the head's place, the one row under the title", async () => {
+		await ListView.run();
+		const row = main().getByRole("row").filter({ hasText: "top-level-photo.jpg" });
+		const check = row.getByRole("checkbox");
+		await userEvent.hover(row);
+		await expect.element(check).toBeVisible();
+		await userEvent.click(check);
+		const bar = main().getByRole("toolbar", { name: "1개 선택" });
+		await expect.element(bar).toBeVisible();
+		await expect.element(main().getByRole("table").getByRole("columnheader", { name: "사용" })).not.toBeInTheDocument();
+		// One row under the title: no filter row stands over the picks.
+		expect(main().element().querySelector("[data-slot=page-toolbar]")).toBeNull();
+		await expect.element(row).toHaveAttribute("aria-selected", "true");
+		await userEvent.click(bar.getByRole("button", { name: "선택 해제" }));
+		await expect.element(main().getByRole("table").getByRole("columnheader", { name: "사용" })).toBeVisible();
+	});
+
+	it("09-1 T113 with a file open beside it the list keeps a name that can be read: name and date, the panel saying the rest", async () => {
+		await ListView.run();
+		await userEvent.click(main().getByRole("link", { name: "top-level-photo.jpg" }));
+		await expect.element(page.getByRole("complementary").getByRole("textbox", { name: "파일 이름" })).toBeVisible();
+		const table = main().getByRole("table");
+		await expect.element(table.getByRole("columnheader", { name: "사용" })).not.toBeInTheDocument();
+		const name = table.getByRole("columnheader", { name: "이름" }).element().getBoundingClientRect();
+		expect(name.width).toBeGreaterThan(120);
+		expect(scrollsSideways(main().element())).toEqual([]);
+	});
+
+	it("09-1 T113 going into a folder from its row lets go of what was picked", async () => {
+		await ListView.run();
+		const row = main().getByRole("row").filter({ hasText: "top-level-photo.jpg" });
+		await userEvent.hover(row);
+		await userEvent.click(row.getByRole("checkbox"));
+		await expect.element(main().getByRole("toolbar", { name: "1개 선택" })).toBeVisible();
+		await userEvent.click(main().getByRole("link", { name: "Blog Assets" }));
+		await expect.element(main().getByText("desk-morning.jpg")).toBeVisible();
+		await expect.element(main().getByRole("toolbar", { name: "1개 선택" })).not.toBeInTheDocument();
 	});
 
 	it("09-1 a very long name ends in … in the list view: the row's other columns stay on the page", async () => {
@@ -175,13 +275,16 @@ describe("browsing", () => {
 		await expect.element(folder("covers")).not.toBeInTheDocument();
 		await userEvent.fill(main().getByRole("searchbox"), "top-level");
 		await expect.element(tile("top-level-photo.jpg")).not.toBeInTheDocument();
-		await userEvent.click(main().getByRole("button", { name: "모든 폴더" }));
+		// The chip in the search box says where it looks (2026-11-10, owner: no row of its own).
+		await userEvent.click(main().getByRole("button", { name: "Blog Assets, 찾을 곳" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "모든 폴더" }));
 		await expect.element(tile("top-level-photo.jpg")).toBeVisible();
 	});
 
-	it("09-1 [flow 6·32, 6·33] the kind menu counts and stays open; a chosen kind is a chip in its place, folders give way to where to look, and × takes it off", async () => {
+	it("09-1 T113 [flow 6·32, 6·33] the kind menu counts and stays open; a chosen kind leaves a dot on its button, folders give way, and unticking takes it off", async () => {
 		await openAssets();
-		await userEvent.click(main().getByRole("button", { name: "종류" }));
+		const kind = main().getByRole("button", { name: "종류" });
+		await userEvent.click(kind);
 		// What picking it would find: three here and one in the folder under it.
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toHaveTextContent("4");
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /파일/ }));
@@ -189,20 +292,23 @@ describe("browsing", () => {
 		await userEvent.keyboard("{Escape}");
 		await expect.element(tile("notes-scan.pdf")).toBeVisible();
 		await expect.element(tile("desk-morning.jpg")).not.toBeInTheDocument();
-		// A filter looks for files as a search does: no folders, and where to look is a choice.
+		expect(kind.element().querySelector("[data-slot=filter-dot]")).not.toBeNull();
+		// A filter looks for files as a search does: no folders. It looks in this folder: every folder is the search box's choice.
 		await expect.element(folder("covers")).not.toBeInTheDocument();
-		await expect.element(main().getByRole("button", { name: "모든 폴더" })).toBeVisible();
-		await userEvent.click(main().getByRole("button", { name: "필터 지우기" }));
+		await expect.element(main().getByText("모든 폴더")).not.toBeInTheDocument();
+		await userEvent.click(kind);
+		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /파일/ }));
+		await userEvent.keyboard("{Escape}");
 		await expect.element(tile("desk-morning.jpg")).toBeVisible();
+		expect(kind.element().querySelector("[data-slot=filter-dot]")).toBeNull();
 		await expect.element(folder("covers")).toBeVisible();
-		await expect.element(main().getByRole("button", { name: "모든 폴더" })).not.toBeInTheDocument();
 	});
 
-	it("07-2 the stories of looking inside a folder show where to look; at the top there is nothing to choose", async () => {
+	it("07-2 the stories of looking inside a folder: a search's chip says where it looks; a filter has none", async () => {
 		await SearchingInFolder.run();
-		await expect.element(main().getByRole("button", { name: "모든 폴더" })).toBeVisible();
+		await expect.element(main().getByRole("button", { name: "Blog Assets, 찾을 곳" })).toBeVisible();
 		await KindChosenInFolder.run();
-		await expect.element(main().getByRole("button", { name: "모든 폴더" })).toBeVisible();
+		await expect.element(main().getByRole("button", { name: /찾을 곳$/ })).not.toBeInTheDocument();
 	});
 
 	it("09-1 a sort is a menu with one mark of its own", async () => {
@@ -214,7 +320,7 @@ describe("browsing", () => {
 
 	it("09-1 [flow 6·31] with no storage it says so, with the way to connect one and no way to upload", async () => {
 		await NoStorage.run();
-		await expect.element(main().getByText("미디어 저장소가 없어요")).toBeVisible();
+		await expect.element(main().getByText("미디어 저장소가 없습니다")).toBeVisible();
 		await expect.element(main().getByRole("link", { name: "연결 방법" })).toBeVisible();
 		await expect.element(main().getByRole("button", { name: "올리기" })).not.toBeInTheDocument();
 	});
@@ -370,7 +476,7 @@ describe("many files at once", () => {
 		source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer }));
 		for (const type of ["dragenter", "dragover"])
 			target.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
-		await expect.element(toast("covers에 올려요")).toBeVisible();
+		await expect.element(toast("covers에 올리기")).toBeVisible();
 		target.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer }));
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(folder("covers")).toHaveTextContent("2");
@@ -399,7 +505,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("checkbox", { name: "seoul-night.jpg 고르기" }));
 		await userEvent.click(main().getByRole("button", { name: "휴지통으로" }));
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
-		await userEvent.click(toast("1개를 휴지통으로 옮겼어요").getByRole("button", { name: "되돌리기" }));
+		await userEvent.click(toast("1개를 휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
 		await expect.element(tile("seoul-night.jpg")).toBeVisible();
 	});
 
@@ -408,7 +514,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("checkbox", { name: "seoul-night.jpg 고르기" }));
 		await userEvent.click(page.getByRole("checkbox", { name: "desk-morning.jpg 고르기" }));
 		await userEvent.click(main().getByRole("button", { name: "휴지통으로" }));
-		const said = toast("1개를 옮겼고 1개는 쓰는 곳이 있어 남겼어요");
+		const said = toast("1개를 옮겼고 1개는 쓰는 곳이 있어 남겼습니다");
 		await expect.element(said).toBeVisible();
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(tile("desk-morning.jpg")).toBeVisible();
@@ -462,7 +568,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("menuitem", { name: "폴더 지우기" }));
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
 		await expect.element(folder("Wallpapers")).not.toBeInTheDocument();
-		await userEvent.click(toast("Wallpapers 폴더를 휴지통으로 옮겼어요").getByRole("button", { name: "되돌리기" }));
+		await userEvent.click(toast("Wallpapers 폴더를 휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
 		await expect.element(folder("Wallpapers")).toBeVisible();
 	});
 
@@ -470,7 +576,7 @@ describe("the trash", () => {
 		await Top.run();
 		await userEvent.click(folder("Blog Assets"), { button: "right" });
 		await userEvent.click(page.getByRole("menuitem", { name: "폴더 지우기" }));
-		const said = toast("쓰는 곳이 있어 폴더와 함께 남겼어요");
+		const said = toast("쓰는 곳이 있어 폴더와 함께 남겼습니다");
 		await expect.element(said).toBeVisible();
 		await userEvent.click(said.getByRole("button", { name: "보기" }));
 		await expect.element(heading()).toHaveTextContent("Blog Assets");

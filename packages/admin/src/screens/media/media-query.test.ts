@@ -28,9 +28,9 @@ describe("the library's address", () => {
 		expect(isLooking(read("folder=f1&sort=size"))).toBe(false);
 	});
 
-	it("09-1 'all folders' holds only while something is looked for: with nothing left to look for, the folder is its own", () => {
+	it("09-1 'all folders' holds only while words are looked for: a filter alone, or nothing, keeps to the folder (2026-11-10, owner)", () => {
 		expect(queryOf(read("folder=f1&q=cover&in=all")).scope).toBe("all");
-		expect(queryOf(read("folder=f1&kind=file&in=all")).scope).toBe("all");
+		expect(queryOf(read("folder=f1&kind=file&in=all")).scope).toBe("here");
 		expect(queryOf(read("folder=f1&in=all")).scope).toBe("here");
 	});
 

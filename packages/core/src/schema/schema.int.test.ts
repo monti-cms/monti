@@ -99,6 +99,23 @@ const reviewAnswers = {
 	"addField:post.format": { do: "addRequiredField", fill: "memo" },
 } as const;
 
+describe("filling a new required media field", () => {
+	it("09-4 a fill naming a file the library does not have is refused, as a save's would be", async () => {
+		const draft = withPostFields({ ...base.collections.post.fields, cover: { kind: "media", required: true } });
+		await expect(
+			dev().run(
+				"schema.apply",
+				{
+					draft,
+					renames: [],
+					answers: { "addField:post.cover": { do: "addRequiredField", fill: { media: "no-such-file" } } },
+				},
+				{ actor: "admin" },
+			),
+		).rejects.toMatchObject({ reason: { key: "media.unknown", values: { id: "no-such-file" } } });
+	});
+});
+
 describe("one change file, two ways in, one way to apply", () => {
 	it("01-1 two schema saves at the same time get distinct immutable change files", async () => {
 		const now = () => new Date("2026-11-06T12:34:56.789Z");

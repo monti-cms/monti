@@ -65,7 +65,7 @@ export const Wide: Story = {
 			<AlertDialogContent size="wide">
 				<AlertDialogHeader>
 					<AlertDialogTitle>3개를 영구 삭제할까요?</AlertDialogTitle>
-					<AlertDialogDescription>되돌릴 수 없어요.</AlertDialogDescription>
+					<AlertDialogDescription>되돌릴 수 없습니다.</AlertDialogDescription>
 				</AlertDialogHeader>
 				<List>
 					<ListItem>봄에 쓴 첫 글 · 번역 1개</ListItem>

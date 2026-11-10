@@ -2,7 +2,9 @@ import type { Kysely, Transaction } from "kysely";
 import { asDoc, type Block, type Doc } from "../body/doc";
 import type { Database } from "../db/schema";
 import { type Entry, loadEntries } from "../entries/record";
+import { isEmptyValue } from "../json";
 import { localeModeOf, type Schema } from "../schema/define";
+import { seenAfter, trackedFields } from "./fields";
 import { blockHash, blockHashes, marksOf } from "./links";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -30,6 +32,24 @@ export async function followedFields(db: Db, source: Entry | null): Promise<Fiel
 	if (!source) return null;
 	const published = await publishedOf(db, source.id);
 	return published ? { title: published.title, slug: published.slug, values: published.values } : source;
+}
+
+/** What a translation has seen of its source's fields once `working` are its fields, the entry's being what they were; a source-language entry has seen nothing (doc 04, T111). */
+export async function seenOf(
+	db: Db,
+	schema: Schema,
+	entry: Entry,
+	working: Pick<Entry, "title" | "values">,
+): Promise<Record<string, unknown>> {
+	if (!isTranslation(schema, entry)) return {};
+	const source = await sourceEntryOf(db, schema, entry.translationGroup);
+	return seenAfter(
+		trackedFields(schema, entry.collection),
+		entry.translationSeen,
+		working,
+		await followedFields(db, source),
+		entry,
+	);
 }
 
 /** What the site shows of an entry: its body and fields, or `null` when it is not on the site. */
@@ -100,8 +120,6 @@ export async function addSkips(db: Db, entry: Pick<Entry, "id" | "translationSki
 }
 
 type Fields = { title: string; slug: string; values: Record<string, unknown> };
-const empty = (value: unknown) =>
-	value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 
 /**
  * A translation's fields as the site and the publish check read them (doc 04, field values): `same` is the source's value, `fromSource` its own or
@@ -114,7 +132,7 @@ export function translatedFields(schema: Schema, collection: string, own: Fields
 		const definition = fields[name];
 		if (!definition) return mine;
 		const mode = localeModeOf(name, definition);
-		return mode === "same" ? theirs : mode === "fromSource" && empty(mine) ? theirs : mine;
+		return mode === "same" ? theirs : mode === "fromSource" && isEmptyValue(mine) ? theirs : mine;
 	};
 	const values: Record<string, unknown> = {};
 	for (const name of Object.keys(fields)) {

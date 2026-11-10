@@ -47,11 +47,12 @@ async function bytes(mime = "image/jpeg", extension = ".jpg") {
 }
 const upload = async (name: string, more: Record<string, unknown> = {}) =>
 	(await write<MediaItem>("media.upload", { name, original: { key: await bytes() }, ...more })).output;
-const pdf = async (name: string) =>
+const pdf = async (name: string, more: Record<string, unknown> = {}) =>
 	(
 		await write<MediaItem>("media.upload", {
 			name,
 			original: { key: await bytes("application/pdf", ".pdf") },
+			...more,
 		})
 	).output;
 const folder = async (name: string, parentId: string | null = null) =>
@@ -211,6 +212,20 @@ describe("browsing", () => {
 		expect(everywhere.items.find((item) => item.name === "cover-deep.jpg")?.path).toEqual(["Blog Assets", "covers"]);
 	});
 
+	it("09-3 T117 what a window can take narrows every listing and looks for nothing: a folder still lists what sits right in it", async () => {
+		const assets = await folder("Blog Assets");
+		const covers = await folder("covers", assets);
+		await upload("here.jpg", { folderId: assets });
+		await upload("deep.jpg", { folderId: covers });
+		await upload("top.jpg");
+		await pdf("notes.pdf", { folderId: assets });
+		expect(await names({ folder: assets, only: "image" })).toEqual(["here.jpg"]);
+		expect(await names({ folder: covers, only: "image" })).toEqual(["deep.jpg"]);
+		expect(await names({ folder: null, only: "image" })).toEqual(["top.jpg"]);
+		expect(await names({ folder: assets, only: "file" })).toEqual(["notes.pdf"]);
+		expect((await names({ folder: assets, only: "image", search: "e" })).sort()).toEqual(["deep.jpg", "here.jpg"]);
+	});
+
 	it("09-1 kind and use look through folders as a search does: the open folder and those under it, all of them on request, everything from the top", async () => {
 		const assets = await folder("Blog Assets");
 		const covers = await folder("covers", assets);
@@ -272,12 +287,18 @@ describe("browsing", () => {
 		expect(empty).toMatchObject({ items: [], total: 2, page: 2, pageSize: 100 });
 	});
 
-	it("09-1 ids find those files wherever they are, and nothing for none", async () => {
+	it("09-1 T110 ids find those files wherever they are, the trash too, counted among themselves, and nothing for none", async () => {
 		const assets = await folder("Blog Assets");
 		const one = await upload("one.jpg", { folderId: assets });
-		await upload("two.jpg");
+		const two = await upload("two.jpg");
 		expect(await names({ ids: [one.id] })).toEqual(["one.jpg"]);
+		// In the trash too, as media.get: a draft can hold a file trashed since, and saving it brings the file back.
+		await write("media.trash", { ids: [two.id] });
+		expect(await names({ ids: [two.id] })).toEqual(["two.jpg"]);
+		expect(await names({})).toEqual(["one.jpg"]);
+		expect((await query({ ids: [one.id] })).counts).toEqual({ image: 1, file: 0, used: 0, unused: 1 });
 		expect(await names({ ids: [] })).toEqual([]);
+		expect((await query({ ids: [] })).counts).toEqual({ image: 0, file: 0, used: 0, unused: 0 });
 	});
 });
 

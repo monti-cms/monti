@@ -245,10 +245,59 @@ describe("every way a body or a field changes writes the uses again", () => {
 		await migrateContent(db, schema, []);
 	});
 
-	it("09-4 a file the library does not have writes no use, and the save still goes through", async () => {
-		const { output } = await post({ values: { cover: { media: "no-such-file", alt: "표지" } } });
-		expect(output.id).toBeTypeOf("string");
+	it("09-4 a file the library does not have is refused, in a field or in the body: nothing is written", async () => {
+		const entries = async () => (await db.selectFrom("entries").select("id").execute()).length;
+		const before = await entries();
+		await expect(post({ values: { cover: { media: "no-such-file", alt: "표지" } } })).rejects.toMatchObject({
+			reason: { key: "media.unknown", values: { id: "no-such-file" } },
+		});
+		await expect(
+			post({ doc: { type: "doc", blocks: [{ id: "b1", type: "image", attrs: { media: "no-such-file" } }] } }),
+		).rejects.toMatchObject({ reason: { key: "media.unknown" } });
 		expect(await rows()).toEqual([]);
+		expect(await entries()).toBe(before);
+	});
+});
+
+describe("a file the library does not have, already named", () => {
+	/** A published post whose cover names a file no write could put in now (one deleted from storage by hand, say). */
+	async function stranded() {
+		const { output } = await post({ values: { cover: { media: await file(), alt: "표지" } } });
+		await write("entries.publish", { ids: [output.id] });
+		for (const table of ["entries", "entry_published"] as const)
+			await db
+				.updateTable(table)
+				.set({ values: JSON.stringify({ cover: { media: "gone", alt: "표지" } }) })
+				.where(table === "entries" ? "id" : "entry_id", "=", output.id)
+				.execute();
+		return output.id;
+	}
+
+	it("09-4 a write that does not bring it in goes through: another field, archiving, and taking it out", async () => {
+		const id = await stranded();
+		await write("entries.save", { id, version: await versionOf(id), title: "고친 글" });
+		await write("entries.archive", { ids: [id] });
+		await write("entries.unarchive", { ids: [id] });
+		await write("entries.save", { id, version: await versionOf(id), values: { cover: null } });
+		await write("entries.publish", { ids: [id] });
+		expect(await rows()).toEqual([]);
+	});
+
+	it("09-4 a copy carries it, as it carries every other file: duplicating, and starting a translation", async () => {
+		const id = await stranded();
+		await write("entries.save", { id, version: await versionOf(id), doc: doc(image("b1", "gone")) });
+		await expect(write("entries.duplicate", { id })).resolves.toBeDefined();
+		await expect(write("translations.create", { source: id, locale: "en" })).resolves.toBeDefined();
+	});
+
+	it("09-4 a write may move it, but a missing file it names for the first time is refused", async () => {
+		const id = await stranded();
+		await expect(
+			write("entries.save", { id, version: await versionOf(id), doc: doc(image("b1", "gone")) }),
+		).resolves.toBeDefined();
+		await expect(
+			write("entries.save", { id, version: await versionOf(id), doc: doc(image("b2", "also-gone")) }),
+		).rejects.toMatchObject({ reason: { key: "media.unknown", values: { id: "also-gone" } } });
 	});
 });
 

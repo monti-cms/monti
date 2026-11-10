@@ -84,15 +84,15 @@ const blankImage = entry({
 /** Flow 6·06, 1·12: the picture picked, its tools and settings card open. */
 export const ImageTools: Story = { loaders: blankImage, play: toTheImage };
 
-/** The crop dialog, a part chosen. */
-export const CropDialog: Story = {
+/** The edit dialog (T122), a 16:9 part kept: the picture large, one line of tools under it (turn, shape, size). */
+export const EditDialog: Story = {
 	loaders: blankImage,
 	play: async () => {
 		await toTheImage();
 		const page = within(document.body);
 		await userEvent.keyboard("{Escape}");
-		await userEvent.click(await page.findByRole("button", { name: "자르기와 회전" }, wait));
-		await userEvent.click(await page.findByRole("button", { name: "자를 곳 잡기" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "편집" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "16:9" }, wait));
 	},
 };
 
@@ -100,6 +100,17 @@ export const CropDialog: Story = {
 export const FileInBody: Story = {
 	loaders: entry({
 		body: ({ notes }) => [{ id: "f_1", type: "file", attrs: { media: notes } }],
+	}),
+};
+
+/** A body of several pictures and files: read together when the entry opens (T110). */
+export const ManyInBody: Story = {
+	loaders: entry({
+		body: ({ desk, code, notes }) => [
+			{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상" } },
+			{ id: "f_1", type: "file", attrs: { media: notes } },
+			{ id: "i_2", type: "image", attrs: { media: code, alt: "화면에 뜬 코드" } },
+		],
 	}),
 };
 
@@ -113,6 +124,29 @@ export const LibraryWindow: Story = {
 		await userEvent.keyboard("/이미지");
 		await userEvent.keyboard("{Enter}");
 		await page.findByRole("dialog", {}, wait);
+	},
+};
+
+/** The window inside a folder: its folders over its own files (T117). */
+export const LibraryInFolder: Story = {
+	loaders: entry(),
+	play: async (context) => {
+		await LibraryWindow.play?.(context);
+		const dialog = within(within(document.body).getByRole("dialog"));
+		// At the top, the only "Blog Assets" button is its folder's card.
+		await userEvent.click(await dialog.findByRole("button", { name: /^Blog Assets/ }, wait));
+		await dialog.findByRole("button", { name: /desk-morning/ }, wait);
+	},
+};
+
+/** A search inside a folder: its folders give way, each file says where it is, and the search can widen (T117). */
+export const LibrarySearching: Story = {
+	loaders: entry(),
+	play: async (context) => {
+		await LibraryInFolder.play?.(context);
+		const dialog = within(within(document.body).getByRole("dialog"));
+		await userEvent.type(dialog.getByRole("searchbox", { name: "파일 이름 검색" }), "cafe");
+		await dialog.findByRole("button", { name: /cafe-window/ }, wait);
 	},
 };
 
@@ -155,6 +189,52 @@ export const TranslationCover: Story = {
 		const properties = await page.findByRole("button", { name: "속성" }, wait);
 		if (properties.getAttribute("aria-pressed") !== "true") await userEvent.click(properties);
 	},
+};
+
+/** A translation's own cover, its source's since changed: the mark in the place of whose value it is (T111). */
+export const TranslationCoverChanged: Story = {
+	loaders: [
+		async (): Promise<Loaded> => {
+			startAt("#/");
+			let id = "";
+			const made = await storySite({
+				schema,
+				auth: { password: true },
+				signedIn: true,
+				setup: async (monti, storage) => {
+					const ids = await fillLibrary(monti, storage);
+					const run = async <Output = { id: string; version: number }>(name: string, input: unknown) =>
+						((await monti.run(name, input, { actor: "admin" })) as { output: Output }).output;
+					const source = await run("entries.create", {
+						collection: "post",
+						locale: "ko",
+						title: "쓰는 중인 글",
+						slug: "writing",
+						values: { cover: { media: ids.desk, alt: "아침 책상" } },
+						doc: { type: "doc", blocks: [paragraph] },
+					});
+					await run("entries.publish", { ids: [source.id] });
+					const translation = await run("translations.create", { source: source.id, locale: "en" });
+					await run("entries.save", {
+						id: translation.id,
+						version: 1,
+						title: "Writing",
+						values: { cover: { media: ids.desk, alt: "A desk in the morning" } },
+					});
+					await run("entries.save", {
+						id: source.id,
+						version: 2,
+						values: { cover: { media: ids.code, alt: "화면에 뜬 코드" } },
+					});
+					await run("entries.publish", { ids: [source.id] });
+					id = translation.id;
+				},
+			});
+			window.location.hash = `#/c/post/${id}`;
+			return { site: made };
+		},
+	],
+	play: TranslationCover.play,
 };
 
 /** A site with no storage (flow 6·31). */

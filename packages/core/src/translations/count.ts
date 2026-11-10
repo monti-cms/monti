@@ -13,17 +13,20 @@ export const sourceJoin = (x: string, source: string) => sql`
 	left join entry_published sp on sp.entry_id = s.id`;
 
 /**
- * How many marks a translation has (`marksOf` in SQL): paired blocks whose source block changed (not `followSource`) or was removed, and published
- * source blocks it neither pairs nor left out. A source that is not on the site marks nothing; the source itself has none.
+ * How many marks a translation has (`marksOf` and `fieldMarksOf` in SQL): paired blocks whose source block changed (not `followSource`) or was removed, published source blocks it
+ * neither pairs nor left out, and fields whose source value moved on from the one it saw. A source that is not on the site marks nothing; the source itself has none.
  */
 export const changesSql = (x: string, source: string): RawBuilder<number> => {
 	const hashes = sql.ref("sp.block_hashes");
 	const from = sql`(b.value -> 'link' ->> 'from')`;
+	const sourceValue = sql`case when f.key = 'title' then to_jsonb(sp.title) else ${sql.ref("sp.values")} -> f.key end`;
 	return sql<number>`(case when sp.entry_id is null or ${sql.ref(`${x}.locale`)} = ${source} then 0 else
 		(select count(*) from ${blocksOf(x)} b where b.value ? 'link' and (not (${hashes} ? ${from})
 			or (b.value -> 'link' ->> 'state' <> 'followSource' and ${hashes} ->> ${from} <> b.value -> 'link' ->> 'seen')))
 		+ (select count(*) from jsonb_object_keys(${hashes}) k where not (${sql.ref(`${x}.translation_skips`)} ? k)
 			and not exists (select 1 from ${blocksOf(x)} p where p.value -> 'link' ->> 'from' = k))
+		+ (select count(*) from jsonb_each(${sql.ref(`${x}.translation_seen`)}) f
+			where f.value is distinct from coalesce(nullif(nullif(${sourceValue}, '""'::jsonb), '[]'::jsonb), 'null'::jsonb))
 	end)::int`;
 };
 

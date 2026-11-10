@@ -53,7 +53,7 @@ export function SchemaFieldScreen() {
 										defaultValue="120"
 									/>
 								</RuleRow>
-								<PickRule label="언어" value="모두 같음" />
+								<PickRule label="언어" value="언어 공통" />
 							</Stack>
 						</SheetSection>
 					</SheetBody>

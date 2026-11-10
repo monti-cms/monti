@@ -12,3 +12,7 @@ export const canonical = (value: unknown): unknown =>
 
 /** Whether two JSON values are the same, whatever their key order. */
 export const sameJson = (a: unknown, b: unknown) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+
+/** Nothing written: no value, an empty text or an empty list. */
+export const isEmptyValue = (value: unknown) =>
+	value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);

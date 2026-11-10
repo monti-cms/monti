@@ -7,6 +7,7 @@ import { Stack } from "./stack";
 const meta = {
 	title: "Patterns/List/FilterButton",
 	component: FilterButton,
+	tags: ["visual"],
 	args: { children: "태그" },
 } satisfies Meta<typeof FilterButton>;
 export default meta;
@@ -21,6 +22,7 @@ export const Row: Story = {
 			<FilterButton>언어</FilterButton>
 			<FilterButton>최근 수정순</FilterButton>
 			<FilterButton disabled>비활성</FilterButton>
+			<FilterButton dot>종류</FilterButton>
 		</Stack>
 	),
 };

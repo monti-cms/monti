@@ -64,3 +64,50 @@ export const Toggle: Story = {
 		);
 	},
 };
+
+function InFolder({
+	folder,
+	withTargets,
+	initialTarget = "all",
+}: {
+	folder: string;
+	withTargets: boolean;
+	initialTarget?: (typeof TARGETS)[number]["value"];
+}) {
+	const [value, setValue] = useState("리액트");
+	const [scope, setScope] = useState<"here" | "all">("here");
+	const [target, setTarget] = useState<(typeof TARGETS)[number]["value"]>(initialTarget);
+	return (
+		<SearchBox
+			aria-label="검색"
+			placeholder="검색"
+			value={value}
+			onValueChange={setValue}
+			scopes={[
+				{ value: "here", label: folder },
+				{ value: "all", label: "모든 폴더" },
+			]}
+			scope={scope}
+			onScopeChange={setScope}
+			targets={withTargets ? TARGETS : undefined}
+			target={target}
+			onTargetChange={setTarget}
+			targetLabel="찾을 곳"
+		/>
+	);
+}
+
+/**
+ * Inside a folder the chip names the folder it looks in, its menu widening it to every folder: alone (the library), and with the part of an entry (the list), which follows
+ * the folder once it is not "전체". A long name is cut at 160px.
+ */
+export const Scopes: Story = {
+	render: () => (
+		<Stack gap={16}>
+			<InFolder folder="Blog Assets" withTargets={false} />
+			<InFolder folder="시리즈 원고" withTargets />
+			<InFolder folder="시리즈 원고" withTargets initialTarget="title" />
+			<InFolder folder="2026년 봄 여행 사진과 메모 모음" withTargets={false} />
+		</Stack>
+	),
+};

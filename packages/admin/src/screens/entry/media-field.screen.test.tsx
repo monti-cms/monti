@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import * as media from "./media.stories";
 
-const { Draft, WithCover, MissingAlt, TranslationCover } = composeStories(media);
+const { Draft, WithCover, MissingAlt, TranslationCover, TranslationCoverChanged } = composeStories(media);
 
 const cover = () => page.getByRole("button", { name: "대표 이미지", exact: true });
 const alt = () => page.getByRole("textbox", { name: "대체 텍스트" });
@@ -12,6 +12,12 @@ const settings = () => page.getByRole("button", { name: "대표 이미지 설정
 const openCard = () => userEvent.click(settings());
 const closeCard = () => userEvent.keyboard("{Escape}");
 const body = () => page.getByRole("textbox", { name: "본문" });
+/** The window opens at the top of the library: the story's files are in a folder. */
+const openAssets = async () => {
+	const card = () => document.querySelector<HTMLElement>("[role=dialog] button[data-slot=folder-tile]");
+	await expect.poll(card).not.toBeNull();
+	await userEvent.click(page.elementLocator(card() as HTMLElement));
+};
 const properties = async () => {
 	const open = page.getByRole("button", { name: "속성" });
 	if (open.elements().length > 0 && open.element().getAttribute("aria-pressed") !== "true") await userEvent.click(open);
@@ -24,6 +30,8 @@ describe("a cover in the property panel", () => {
 		await userEvent.click(cover());
 		const dialog = page.getByRole("dialog");
 		await expect.element(dialog.getByRole("heading", { name: "대표 이미지" })).toBeVisible();
+		await openAssets();
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
 		await expect.element(dialog.getByRole("button", { name: /notes-scan/ })).not.toBeInTheDocument();
 		await userEvent.click(dialog.getByRole("button", { name: /desk-morning/ }));
 		await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
@@ -118,7 +126,7 @@ describe("in a translation", () => {
 		await TranslationCover.run();
 		await properties();
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
-		await expect.element(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "대표 이미지 빼기" })).not.toBeInTheDocument();
 		await openCard();
 		await expect.element(alt()).toHaveAttribute("placeholder", "아침 책상");
 		await expect.element(alt()).toHaveValue("");
@@ -133,6 +141,7 @@ describe("in a translation", () => {
 		const pick = async (name: RegExp) => {
 			await userEvent.click(cover());
 			const dialog = page.getByRole("dialog");
+			await openAssets();
 			await userEvent.click(dialog.getByRole("button", { name }));
 			await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
 			await expect.element(dialog).not.toBeInTheDocument();
@@ -156,23 +165,19 @@ describe("in a translation", () => {
 		await expect.element(page.getByText("대체 텍스트 없음")).toBeVisible();
 		await userEvent.click(page.getByRole("switch", { name: "장식 이미지" }));
 		await expect.element(page.getByText("대체 텍스트 없음")).not.toBeInTheDocument();
-		await expect.element(alt()).toBeDisabled();
+		await expect.element(alt()).not.toBeInTheDocument();
 	});
 
-	it("04-5 a following cover says whose it is, and stops saying so once it is the translation's own", async () => {
+	it("04-5 a following cover says it follows the source, and says nothing once it is the translation's own", async () => {
 		await TranslationCover.run();
 		await properties();
-		const note = page.getByText(/원문( 발행본)? 따름/);
-		const own = page.getByText("이 언어 값");
+		const note = page.getByText("원문 따름", { exact: true });
 		await expect.element(note).toBeVisible();
-		await expect.element(own).not.toBeInTheDocument();
 		await openCard();
 		await userEvent.fill(alt(), "A desk in the morning");
 		await expect.element(note).not.toBeInTheDocument();
-		await expect.element(own).toBeVisible();
-		await userEvent.click(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" }));
+		await userEvent.click(page.getByRole("button", { name: "대표 이미지 빼기" }));
 		await expect.element(note).toBeVisible();
-		await expect.element(own).not.toBeInTheDocument();
 	});
 
 	it("04-5 words of its own keep the file and make it its own; × follows the source again", async () => {
@@ -180,12 +185,27 @@ describe("in a translation", () => {
 		await properties();
 		await openCard();
 		await userEvent.fill(alt(), "A desk");
-		await expect.element(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "대표 이미지 빼기" })).toBeVisible();
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
-		await userEvent.click(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" }));
+		await userEvent.click(page.getByRole("button", { name: "대표 이미지 빼기" }));
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
 		await openCard();
 		await expect.element(alt()).toHaveValue("");
+	});
+
+	it("09-1 T111 a translation's own cover keeps its picture when the source's changes, says so, and shows it before and after", async () => {
+		await TranslationCoverChanged.run();
+		await properties();
+		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
+		await expect.element(page.getByText("원문 따름", { exact: true })).not.toBeInTheDocument();
+		const mark = page.getByRole("button", { name: "변경", exact: true });
+		await userEvent.click(mark);
+		await expect.element(page.getByText("desk-morning.jpg · 아침 책상")).toBeVisible();
+		await expect.element(page.getByText("cybersecurity-code.jpg · 화면에 뜬 코드")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "번역 유지", exact: true }));
+		await expect.element(mark).not.toBeInTheDocument();
+		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
+		await expect.element(page.getByText("원문 따름", { exact: true })).not.toBeInTheDocument();
 	});
 
 	it("04-5 another picture is this translation's own", async () => {
@@ -193,6 +213,7 @@ describe("in a translation", () => {
 		await properties();
 		await userEvent.click(cover());
 		const dialog = page.getByRole("dialog");
+		await openAssets();
 		await userEvent.click(dialog.getByRole("button", { name: /seoul-night/ }));
 		await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
 		await expect.element(cover()).toHaveTextContent("seoul-night.jpg");

@@ -72,7 +72,7 @@ export const States: Story = {
 export const ReservedError: Story = {
 	render: () => (
 		<Stack gap={32}>
-			{[undefined, "10자 이상이어야 해요."].map((error) => (
+			{[undefined, "10자 이상이어야 합니다."].map((error) => (
 				<Stack key={error ?? "empty"} gap={12}>
 					<FormField data-invalid={error ? "true" : undefined}>
 						<FormFieldLabel htmlFor={`r-${error ? "bad" : "ok"}`}>비밀번호</FormFieldLabel>
@@ -182,7 +182,7 @@ export const Changed: Story = {
 			<FormField>
 				<FormFieldLabel
 					htmlFor="c-name"
-					changed={{ label: "바뀜", undoLabel: "되돌리기", undoName: "사이트 이름 되돌리기", onUndo: () => {} }}
+					changed={{ label: "변경", undoLabel: "되돌리기", undoName: "사이트 이름 되돌리기", onUndo: () => {} }}
 				>
 					사이트 이름
 				</FormFieldLabel>
@@ -193,7 +193,7 @@ export const Changed: Story = {
 				<Input id="c-name-saved" defaultValue="example.dev" />
 			</FormField>
 			<FormField>
-				<FormFieldLabel htmlFor="c-dot" changed={{ label: "바뀜", undoLabel: "되돌리기" }}>
+				<FormFieldLabel htmlFor="c-dot" changed={{ label: "변경", undoLabel: "되돌리기" }}>
 					점만 있는 줄
 				</FormFieldLabel>
 				<Input id="c-dot" mono defaultValue="/preview" />

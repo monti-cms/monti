@@ -37,9 +37,7 @@ import {
 	RowThumb,
 	RowTitle,
 	SearchToggle,
-	Segmented,
 	type SelectAll,
-	Separator,
 	SplitButton,
 	Table,
 	TableBody,
@@ -60,11 +58,12 @@ import {
 	FolderMenuItems,
 	FolderTargets,
 	MoveToFolderMenu,
+	searchScopes,
 	useFolderNaming,
 	useFolders,
 	useRemoveFolder,
 } from "./folders";
-import { endsClosed, fieldCell, localeCell, shortDate } from "./format";
+import { endsClosed, fieldCell, localeCell, shortDate, widthsAfter } from "./format";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
 import { RelationSubmenu } from "./relations-menu";
@@ -174,7 +173,17 @@ function DocumentListScreen({
 		setWords(text);
 		if (typing.current) clearTimeout(typing.current);
 		typing.current = setTimeout(
-			() => setState({ ...state, page: 1, search: { ...state.search, text } }, { replace: true }),
+			// Emptied, the box starts over on the open folder.
+			() =>
+				setState(
+					{
+						...state,
+						page: 1,
+						search: { ...state.search, text },
+						everywhere: text.trim() === "" ? false : state.everywhere,
+					},
+					{ replace: true },
+				),
 			250,
 		);
 	};
@@ -244,12 +253,8 @@ function DocumentListScreen({
 		void savePrefs.run({ collection, order, hidden: nextHidden, widths: nextWidths });
 	};
 	const resize = (changes: Record<string, number | null>, commit: boolean) => {
-		const next = Object.fromEntries(
-			// Onto the drag in progress: a width it pinned on its first move (the title) is not sent again.
-			Object.entries({ ...(dragWidths ?? widths), ...changes }).filter(
-				(entry): entry is [string, number] => entry[1] !== null,
-			),
-		);
+		// Onto the drag in progress: a width it pinned on its first move (the title) is not sent again.
+		const next = widthsAfter(dragWidths ?? widths, changes);
 		if (!commit) return setDragWidths(next);
 		setDragWidths(null);
 		if (JSON.stringify(next) !== JSON.stringify(widths)) keep(allIds, hidden, next);
@@ -421,7 +426,18 @@ function DocumentListScreen({
 						{ value: "body", label: t("list.searchBody") },
 					]}
 					target={state.search.in}
-					onTargetChange={(target) => setState({ ...state, page: 1, search: { text: words, in: target } })}
+					onTargetChange={(target) => {
+						// The words still waiting to be applied go with the choice, so the wait cannot undo it.
+						if (typing.current) clearTimeout(typing.current);
+						setState({ ...state, page: 1, search: { text: words, in: target } });
+					}}
+					// Inside a folder the same chip says which folders it looks in (2026-11-10, owner: no row of its own).
+					scopes={openFolder ? searchScopes(openFolder.name, t) : undefined}
+					scope={state.everywhere ? "all" : "here"}
+					onScopeChange={(scope) => {
+						if (typing.current) clearTimeout(typing.current);
+						setState({ ...state, page: 1, search: { ...state.search, text: words }, everywhere: scope === "all" });
+					}}
 					targetLabel={t("list.searchIn")}
 				/>
 			)}
@@ -758,24 +774,8 @@ function DocumentListScreen({
 		<PageColumn width="list">
 			{removeFolder.dialog}
 			{header}
-			{(aiChips.length > 0 || (openFolder && looking)) && (
+			{aiChips.length > 0 && (
 				<PageToolbar inset>
-					{openFolder && looking && (
-						<>
-							<Segmented
-								size="sm"
-								inline
-								aria-label={t("folders.searchIn")}
-								value={state.everywhere ? "all" : "here"}
-								onValueChange={(value) => setState({ ...state, page: 1, everywhere: value === "all" })}
-								options={[
-									{ value: "here", label: openFolder.name },
-									{ value: "all", label: t("folders.everywhere") },
-								]}
-							/>
-							{aiChips.length > 0 && <Separator orientation="vertical" length="control" />}
-						</>
-					)}
 					{aiChips.map((filter) => (
 						<Chip
 							key={filterColumn(filter)}

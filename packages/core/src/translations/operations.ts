@@ -11,8 +11,17 @@ import { checkSchema, localeModeOf, type Schema } from "../schema/define";
 import { AnswersInput, applySchema, checkApply, LocalesInput } from "../schema/operations";
 import { type Answers, planSchema } from "../schema/plan";
 import { changesSql, pendingSql, sourceJoin } from "./count";
+import { type FieldMark, fieldMarksOf, seenAfter, trackedFields, writtenValue } from "./fields";
 import { blockHash, marksOf, pairedCopy, type TranslationMark } from "./links";
-import { addSkips, followedDoc, isTranslation, publishedOf, rememberBlocks, sourceEntryOf } from "./source";
+import {
+	addSkips,
+	followedDoc,
+	followedFields,
+	isTranslation,
+	publishedOf,
+	rememberBlocks,
+	sourceEntryOf,
+} from "./source";
 
 const ref = (id: string): RecordRef => ({ kind: "entry", id });
 
@@ -36,6 +45,20 @@ async function marksNow(ctx: OperationContext, entry: Entry, source: Entry): Pro
 	return marksOf(asDoc(entry.doc), entry.translationSkips, published ? asDoc(published.doc) : null);
 }
 
+/** The field marks of a translation now: against what the site shows of its source, nothing while the source is not on the site. */
+async function fieldMarksNow(ctx: OperationContext, entry: Entry, source: Entry): Promise<FieldMark[]> {
+	return fieldMarksOf(entry.translationSeen, await publishedOf(ctx.db, source.id));
+}
+
+/** What a translation has seen once these field marks are confirmed: the source as it is now. Its own words stay. */
+async function seenConfirmed(ctx: OperationContext, entry: Entry, source: Entry, fields: readonly string[]) {
+	const published = await publishedOf(ctx.db, source.id);
+	return {
+		...entry.translationSeen,
+		...Object.fromEntries(published ? fields.map((field) => [field, writtenValue(published, field)]) : []),
+	};
+}
+
 const BlockDecision = z.discriminatedUnion("do", [
 	/** A pending block keeps the source's words (a name, a quote). */
 	z.object({ do: z.literal("keepSource"), block: z.string() }),
@@ -50,6 +73,15 @@ const BlockDecision = z.discriminatedUnion("do", [
 	z.object({ do: z.literal("skip"), from: z.string() }),
 ]);
 type BlockDecision = z.infer<typeof BlockDecision>;
+const Decision = z.union([
+	BlockDecision,
+	/** A field's mark: the translation's value stays, and it has seen the source as it is now. */
+	z.object({ do: z.literal("confirmField"), field: z.string() }),
+]);
+type Decision = z.infer<typeof Decision>;
+const isBlockDecision = (decision: Decision): decision is BlockDecision => decision.do !== "confirmField";
+const fieldsIn = (decisions: Decision[]) =>
+	decisions.flatMap((decision) => (decision.do === "confirmField" ? [decision.field] : []));
 
 /** A translation's body after the decisions, and the source blocks it now leaves out. */
 function decide(
@@ -154,14 +186,17 @@ export const translationOperations = [
 			// Per language: empty; from the source: the source's to start with; the same: never stored on a translation. A media field starts empty too: an empty one
 			// follows the source (doc 09), and a copy would stop following it.
 			const fields = schema.collections[source.collection]?.fields ?? {};
+			// The source as a translation follows it: what it copies and what it has seen are the same thing.
+			const following = (await followedFields(ctx.db, source)) ?? source;
 			const values = Object.fromEntries(
-				Object.entries(source.values).filter(([name]) => {
+				Object.entries(following.values).filter(([name]) => {
 					const definition = fields[name];
 					return (
 						definition !== undefined && definition.kind !== "media" && localeModeOf(name, definition) === "fromSource"
 					);
 				}),
 			);
+			const seen = seenAfter(trackedFields(schema, source.collection), {}, { title: "", values }, following);
 			const id = randomUUID();
 			await ctx.db
 				.insertInto("entries")
@@ -175,6 +210,7 @@ export const translationOperations = [
 					folder_id: source.folderId,
 					values: JSON.stringify(values),
 					doc: JSON.stringify(doc),
+					translation_seen: JSON.stringify(seen),
 				})
 				.execute();
 			ctx.created(ref(id));
@@ -187,7 +223,7 @@ export const translationOperations = [
 		name: "translations.status",
 		kind: "read",
 		description:
-			"For the groups of these entries: each language's entry with its state, how many marks the source's changes left on it (changed, added, removed blocks) and how many pending blocks it has, and the site's languages it lacks. Find translations that are missing or behind their source with it; the list's language column and filters read the same counts.",
+			"For the groups of these entries: each language's entry with its state, how many marks the source's changes left on it (changed, added, removed blocks, changed fields) and how many pending blocks it has, and the site's languages it lacks. Find translations that are missing or behind their source with it; the list's language column and filters read the same counts.",
 		input: z.object({ ids: z.array(z.string()).min(1) }),
 		async run(input, ctx) {
 			const { locales } = ctx.site.schema();
@@ -235,7 +271,7 @@ export const translationOperations = [
 		name: "translations.compare",
 		kind: "read",
 		description:
-			"Read a translation next to its source block by block: each translation block with the source block it is paired with, the source's fields, and each mark the source's changes left (changed: the source block before and after; removed; added: the new source block and the translation block it goes after).",
+			"Read a translation next to its source block by block: each translation block with the source block it is paired with, the source's fields, each mark the source's changes left (changed: the source block before and after; removed; added: the new source block and the translation block it goes after), and each field whose source value moved on from the one the translation saw (its value before and after).",
 		input: z.object({ id: z.string() }),
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
@@ -275,6 +311,7 @@ export const translationOperations = [
 						? { ...mark, source: sourceBlocks.get(mark.from) ?? null }
 						: { ...mark, before: before.get(mark.seen) ?? null, after: sourceBlocks.get(mark.from) ?? null },
 				),
+				fields: await fieldMarksNow(ctx, entry, source),
 				pending: doc.blocks.filter((block) => block.link?.state === "pending").length,
 			};
 		},
@@ -283,25 +320,39 @@ export const translationOperations = [
 		name: "translations.setBlocks",
 		kind: "write",
 		description:
-			"Decide blocks of a translation, in order: keepSource (a pending block keeps the source's words), confirm (a changed mark is seen, the text stays; a removed mark leaves the block unpaired), detach (a block that follows the source is changed in this language only), remove, add (an added source block comes in as a pending block) or skip (it is left out for good). Translating a block's words is a body.edit, not this.",
-		input: z.object({ id: z.string(), version: z.number().int(), blocks: z.array(BlockDecision).min(1) }),
+			"Decide blocks of a translation, in order: keepSource (a pending block keeps the source's words), confirm (a changed mark is seen, the text stays; a removed mark leaves the block unpaired), detach (a block that follows the source is changed in this language only), remove, add (an added source block comes in as a pending block) or skip (it is left out for good). confirmField does for a field's mark what confirm does for a block's. Translating a block's words is a body.edit, not this.",
+		input: z.object({ id: z.string(), version: z.number().int(), blocks: z.array(Decision).min(1) }),
 		touches: (input) => [ref(input.id)],
 		async check(input, ctx) {
 			const entry = await editableEntry(ctx, input.id, input.version);
 			const { source, sourceBlocks } = await pairOf(ctx, entry);
-			decide(asDoc(entry.doc), input.blocks, await marksNow(ctx, entry, source), sourceBlocks, ctx);
+			decide(
+				asDoc(entry.doc),
+				input.blocks.filter(isBlockDecision),
+				await marksNow(ctx, entry, source),
+				sourceBlocks,
+				ctx,
+			);
+			const marked = await fieldMarksNow(ctx, entry, source);
+			for (const field of fieldsIn(input.blocks))
+				if (!marked.some((mark) => mark.field === field))
+					throw new CheckError({ key: "translations.notMarked", values: { field } });
 		},
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
 			const { source, sourceBlocks } = await pairOf(ctx, entry);
 			const { doc, skipped } = decide(
 				asDoc(entry.doc),
-				input.blocks,
+				input.blocks.filter(isBlockDecision),
 				await marksNow(ctx, entry, source),
 				sourceBlocks,
 				ctx,
 			);
-			const saved = await saveWorking(ctx, entry, { ...entry, doc });
+			const saved = await saveWorking(ctx, entry, {
+				...entry,
+				doc,
+				translationSeen: await seenConfirmed(ctx, entry, source, fieldsIn(input.blocks)),
+			});
 			await addSkips(ctx.db, entry, skipped);
 			return saved;
 		},
@@ -311,7 +362,7 @@ export const translationOperations = [
 		name: "translations.confirmAll",
 		kind: "write",
 		description:
-			"Confirm every changed and removed mark of a translation at once: the text stays, changed blocks are seen against the source as it is now, removed ones become unpaired. Added source blocks are left to decide one by one.",
+			"Confirm every changed and removed mark of a translation at once, fields too: the text stays, changed blocks and fields are seen against the source as it is now, removed blocks become unpaired. Added source blocks are left to decide one by one.",
 		input: z.object({ id: z.string(), version: z.number().int() }),
 		touches: (input) => [ref(input.id)],
 		async check(input, ctx) {
@@ -325,7 +376,10 @@ export const translationOperations = [
 				mark.kind === "added" ? [] : [{ do: "confirm" as const, block: mark.block }],
 			);
 			const { doc } = decide(asDoc(entry.doc), decisions, marks, sourceBlocks, ctx);
-			return { ...(await saveWorking(ctx, entry, { ...entry, doc })), confirmed: decisions.length };
+			const fields = (await fieldMarksNow(ctx, entry, source)).map((mark) => mark.field);
+			const translationSeen = await seenConfirmed(ctx, entry, source, fields);
+			const saved = await saveWorking(ctx, entry, { ...entry, doc, translationSeen });
+			return { ...saved, confirmed: decisions.length + fields.length };
 		},
 		summary: (_input, output) => ({ key: "translations.confirmAll", values: { count: output.confirmed } }),
 	}),

@@ -61,7 +61,6 @@ import {
 	Text,
 	Textarea,
 	TextButton,
-	TodoDone,
 	TodoItem,
 } from "../../index";
 
@@ -424,7 +423,6 @@ function NotionStatusBar() {
 				{/* A row only takes you to its place; filling is the field's own ✦ there, beside what it fills. */}
 				<TodoItem title="요약 쓰기" detail="속성 · 비어 있음" current />
 				<TodoItem title="대체 텍스트 없는 이미지 2개" detail="대표 이미지 · 본문 1" />
-				<TodoDone>제목 · 주소 · 대표 이미지</TodoDone>
 			</StatusBarList>
 			<StatusBarCell>맞춤법 2</StatusBarCell>
 			<StatusBarSpacer />

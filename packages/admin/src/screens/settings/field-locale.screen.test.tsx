@@ -49,7 +49,7 @@ describe("the field sheet's language", () => {
 		for (const [field, mode] of [
 			["title", "언어마다"],
 			["slug", "원문 따름"],
-			["subtitle", "모두 같음"],
+			["subtitle", "언어 공통"],
 		]) {
 			await openField(field as string);
 			await expect.element(language()).toHaveTextContent(mode as string);
@@ -62,12 +62,12 @@ describe("the field sheet's language", () => {
 		await openField("title");
 		await userEvent.click(sheet().getByRole("button", { name: "저장" }));
 		await expect.element(sheet()).not.toBeInTheDocument();
-		await expect.element(page.getByRole("button", { name: "바뀐 곳" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "변경 사항" })).not.toBeInTheDocument();
 
 		await openField("title");
 		await userEvent.click(language());
-		await userEvent.click(page.getByRole("option", { name: "모두 같음" }));
+		await userEvent.click(page.getByRole("option", { name: "언어 공통" }));
 		await userEvent.click(sheet().getByRole("button", { name: "저장" }));
-		await expect.element(page.getByRole("button", { name: "바뀐 곳" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "변경 사항" })).toBeVisible();
 	});
 });

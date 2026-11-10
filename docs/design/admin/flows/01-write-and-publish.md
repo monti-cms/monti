@@ -103,7 +103,7 @@
 
 - 보드: `Flow1Step14.dc.html`
 - 화면: `EditorNotion` (state "아무것도 안 할 때"; pub "발행됨"; save "저장됨"; todo "다 채움"; toast "발행됨"; todo-open off)
-- 글이 발행된다. 상태는 발행됨이고, 토스트가 "보기" 동작과 함께 "발행되었어요"라고 알린다.
+- 글이 발행된다. 상태는 발행됨이고, 토스트가 "보기" 동작과 함께 "발행되었습니다"라고 알린다.
 - 테스트: `packages/admin/src/screens/entries/__test__/write-and-publish-flow.dom.test.tsx` (`flow: write and publish (steps 09–15)`)
 
 ### 단계 15: "발행 후 고침 → 수정 중 · 다시 발행"

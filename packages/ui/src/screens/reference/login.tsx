@@ -37,7 +37,7 @@ export function LoginScreen({ state }: { state: LoginState }) {
 		state.kind === "first-admin"
 			? "첫 관리자 만들기"
 			: state.kind === "no-login"
-				? "로그인이 설정되지 않았어요"
+				? "로그인이 설정되지 않았습니다"
 				: undefined;
 	return (
 		<Stack gap={32} minHeight="screen" paddingTop={48} paddingBottom={24} paddingX={16} background="page">
@@ -75,7 +75,7 @@ function SignIn({ password = false, error, locked = false, denied }: Extract<Log
 	const passwordError = locked
 		? "1분 뒤에 다시 시도해 주세요."
 		: error === "credentials"
-			? "이메일 또는 비밀번호가 맞지 않아요."
+			? "이메일 또는 비밀번호가 맞지 않습니다."
 			: undefined;
 	return (
 		<Stack gap={12}>
@@ -105,11 +105,11 @@ function SignIn({ password = false, error, locked = false, denied }: Extract<Log
 			{/* The form's own error line keeps its room under the password form, so an error moves nothing. */}
 			{error === "other" || password ? (
 				<FormFieldError reserve>
-					{error === "other" ? "로그인하지 못했어요. 다시 시도해 주세요." : undefined}
+					{error === "other" ? "로그인하지 못했습니다. 다시 시도해 주세요." : undefined}
 				</FormFieldError>
 			) : null}
 			{/* "GitHub로 로그인" opens GitHub's account picker now, so the line needs no button of its own. */}
-			{denied ? <FormFieldError>{denied}는 관리자가 아니에요.</FormFieldError> : null}
+			{denied ? <FormFieldError>{denied}는 관리자가 아닙니다.</FormFieldError> : null}
 		</Stack>
 	);
 }
@@ -127,13 +127,13 @@ function FirstAdmin({ errors = [] }: Extract<LoginState, { kind: "first-admin" }
 							label="비밀번호"
 							value={wrong ? "aaaaaa" : "aaaaaaaaaa"}
 							hint="10자 이상"
-							error={errors.includes("password") ? "10자 이상이어야 해요." : undefined}
+							error={errors.includes("password") ? "10자 이상이어야 합니다." : undefined}
 						/>
 						<PasswordField
 							id="confirm"
 							label="비밀번호 확인"
 							value={wrong ? "aaaaaaa" : "aaaaaaaaaa"}
-							error={errors.includes("confirm") ? "두 비밀번호가 같지 않아요." : undefined}
+							error={errors.includes("confirm") ? "두 비밀번호가 같지 않습니다." : undefined}
 						/>
 					</Stack>
 					<Button variant="primary" width="full" pendingLabel="생성 중…">
@@ -150,7 +150,7 @@ function FirstAdmin({ errors = [] }: Extract<LoginState, { kind: "first-admin" }
 function Closed() {
 	return (
 		<Stack gap={16} paddingTop={16}>
-			<Text as="p">이미 관리자가 있어요.</Text>
+			<Text as="p">이미 관리자가 있습니다.</Text>
 			<form>
 				<Button type="submit" variant="primary" width="full">
 					로그인하기

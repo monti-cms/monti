@@ -31,7 +31,7 @@ export const Plain: Story = {
 	render: (args) => (
 		<StatusBar {...args}>
 			<StatusBarCell tone="warning" dot={false} href="#">
-				원문에서 바뀐 곳 2
+				원문에서 변경 사항 2
 			</StatusBarCell>
 			<StatusBarSpacer />
 			<StatusBarCell end render={<span />}>
