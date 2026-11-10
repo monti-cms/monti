@@ -157,6 +157,10 @@ describe("from the library", () => {
 		await userEvent.keyboard("{Enter}");
 		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).toBeVisible();
 		await expect.element(await folderCard(dialog, "covers")).toHaveFocus();
+		// A folder of files only: the keyboard waits for them, and goes on from the first.
+		await userEvent.keyboard("{Enter}");
+		await expect.element(dialog.getByRole("button", { name: /cafe-window/ })).toHaveFocus();
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).not.toBeInTheDocument();
 	});
 
 	it("09-3 T117 going to another folder ends the search", async () => {

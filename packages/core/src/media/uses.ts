@@ -76,15 +76,16 @@ type Owner = { entry_id: string; template_id: null } | { entry_id: null; templat
  * Each file named is locked first, so this and `media.trash` take turns: a save that starts using a file either waits for the trash to finish and brings the file
  * back out, or makes the trash see the use and leave the file. Either way a file in use is never in the trash (09-4).
  *
- * A write that brings a file the library does not have into a body or a field is refused (`named`: the files these records named before it): an import, an
- * agent or the API cannot put in a file that is not there (2026-11-10, owner). One named already is let be, so a write can still take it out, publish or archive
- * around it. An undo or a schema change puts back what was, and writes the uses it can.
+ * A write that brings a file the library does not have into a body or a field is refused (`before`: what its records held before it): an import, an agent or
+ * the API cannot put in a file that is not there (2026-11-10, owner). One these records named already is let be, so a write can still take it out, publish or
+ * archive around it; so is one another record names (a copy: duplicating, starting a translation). An undo or a schema change puts back what was, and writes the
+ * uses it can.
  */
 export async function rewriteUses(
 	db: Db,
 	schema: Schema,
 	refs: RecordRef[],
-	{ named: before }: { named?: ReadonlySet<string> } = {},
+	{ before }: { before?: Iterable<unknown> } = {},
 ): Promise<void> {
 	const entryIds = refs.filter((ref) => ref.kind === "entry").map((ref) => ref.id);
 	const templateIds = refs.filter((ref) => ref.kind === "template").map((ref) => ref.id);
@@ -100,8 +101,14 @@ export async function rewriteUses(
 		named.length === 0
 			? new Set<string>()
 			: new Set((await db.selectFrom("media").select("id").where("id", "in", named).execute()).map((row) => row.id));
-	const brought = before ? named.find((id) => !existing.has(id) && !before.has(id)) : undefined;
-	if (brought !== undefined) throw new CheckError({ key: "media.unknown", values: { id: brought } });
+	if (before) {
+		const held = [...before];
+		for (const id of named.filter((each) => !existing.has(each))) {
+			if (held.some((state) => namesFile(state, id))) continue;
+			if (await namedElsewhere(db, id, entryIds, templateIds)) continue;
+			throw new CheckError({ key: "media.unknown", values: { id } });
+		}
+	}
 
 	if (entryIds.length > 0) await db.deleteFrom("media_uses").where("entry_id", "in", entryIds).execute();
 	if (templateIds.length > 0) await db.deleteFrom("media_uses").where("template_id", "in", templateIds).execute();
@@ -113,12 +120,41 @@ export async function rewriteUses(
 	await bringBack(db, [...existing]);
 }
 
-/** The files these entries and templates name now: for `rewriteUses`, and before a write so it knows which it brings in. */
-export async function mediaNamed(db: Db, schema: Schema, refs: RecordRef[]): Promise<Set<string>> {
-	const entryIds = refs.filter((ref) => ref.kind === "entry").map((ref) => ref.id);
-	const templateIds = refs.filter((ref) => ref.kind === "template").map((ref) => ref.id);
-	if (entryIds.length === 0 && templateIds.length === 0) return new Set();
-	return new Set([...(await usesNow(db, schema, entryIds, templateIds)).values()].map((use) => use.media));
+/** Whether a record's state names this file anywhere: a `media` of a block's attrs or of a field's value, however deep. */
+function namesFile(value: unknown, id: string): boolean {
+	if (Array.isArray(value)) return value.some((each) => namesFile(each, id));
+	if (value === null || typeof value !== "object") return false;
+	return Object.entries(value).some(([key, each]) => (key === "media" && each === id) || namesFile(each, id));
+}
+
+/** Whether an entry or a template other than these names the file: what a copy of it carries is not brought in. */
+async function namedElsewhere(db: Db, id: string, entryIds: string[], templateIds: string[]): Promise<boolean> {
+	const names = (column: string) =>
+		sql<boolean>`jsonb_path_exists(${sql.ref(column)}, '$.**.media ? (@ == $id)', ${JSON.stringify({ id })}::jsonb)`;
+	const entries = await db
+		.selectFrom("entries")
+		.select("id")
+		.where((eb) => eb.or([names("entries.doc"), names("entries.values")]))
+		.$if(entryIds.length > 0, (query) => query.where("id", "not in", entryIds))
+		.limit(1)
+		.execute();
+	if (entries.length > 0) return true;
+	const published = await db
+		.selectFrom("entry_published")
+		.select("entry_id")
+		.where((eb) => eb.or([names("entry_published.doc"), names("entry_published.values")]))
+		.$if(entryIds.length > 0, (query) => query.where("entry_id", "not in", entryIds))
+		.limit(1)
+		.execute();
+	if (published.length > 0) return true;
+	const templates = await db
+		.selectFrom("templates")
+		.select("id")
+		.where(names("templates.doc"))
+		.$if(templateIds.length > 0, (query) => query.where("id", "not in", templateIds))
+		.limit(1)
+		.execute();
+	return templates.length > 0;
 }
 
 /** Each use these entries and templates make, from their working and published copies, by file, owner and place. */

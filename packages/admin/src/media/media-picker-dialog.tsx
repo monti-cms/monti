@@ -1,6 +1,6 @@
 import { MEDIA_QUERY_MOST, type MediaItem, type MediaQueryResult } from "@monti-cms/core";
 import { FolderTile, MediaPicker, Text, TextButton, Tile } from "@monti-cms/ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { searchScopes, useFolders } from "../screens/list/folders";
@@ -52,7 +52,13 @@ export function MediaPickerDialog({
 		},
 		{ afterWrites: true },
 	);
-	const items = read.data?.items ?? [];
+	// A read keeps its last answer while the next one comes: the files it shows are the open folder's only once that folder's answer is in, so no tile of the
+	// folder just left can be picked, or take the keyboard.
+	const [readFolder, setReadFolder] = useState(folder);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: an answer arriving is what marks the folder it is for.
+	useEffect(() => setReadFolder(folder), [read.data]);
+	const settled = readFolder === folder;
+	const items = settled ? (read.data?.items ?? []) : [];
 	// What goes in is always a file in sight, whichever list a press landed on.
 	const picked = items.find((item) => item.id === pickedId) ?? null;
 	const subfolders = looking ? [] : folders.children(folder);
@@ -110,7 +116,7 @@ export function MediaPickerDialog({
 					: undefined
 			}
 			notice={
-				read.data && items.length === 0 && subfolders.length === 0 ? (
+				read.data && settled && items.length === 0 && subfolders.length === 0 ? (
 					<Text variant="note" tone="subtle">
 						{t(looking ? "library.nothingFound" : "library.picker.none")}
 					</Text>
@@ -127,10 +133,10 @@ export function MediaPickerDialog({
 					preview={<FileThumb item={item} />}
 				/>
 			))}
-			{read.data && read.data.total > items.length && shown < MEDIA_QUERY_MOST ? (
+			{settled && read.data && read.data.total > items.length && shown < MEDIA_QUERY_MOST ? (
 				<TextButton onClick={() => setShown(shown + PAGE)}>{t("library.picker.more")}</TextButton>
 			) : null}
-			{read.data && read.data.total > items.length && shown >= MEDIA_QUERY_MOST ? (
+			{settled && read.data && read.data.total > items.length && shown >= MEDIA_QUERY_MOST ? (
 				<Text variant="note" tone="subtle">
 					{t("library.picker.narrow")}
 				</Text>

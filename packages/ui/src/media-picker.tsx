@@ -100,17 +100,30 @@ function MediaPicker({
 	const labels = useUiLabels();
 	const openIndex = folders.findIndex((item) => item.id === folder);
 	const openFolder = openIndex < 0 ? null : folders[openIndex];
-	const path = openFolder ? [{ id: null, name: topLabel }, ...aboveOf(folders, openIndex)] : [];
-	// The card or the step of the path that was pressed goes with the place it was in: the keyboard goes on from the new place's first card or file.
+	// Inside a folder whose name is not in yet (the list still loading), the way to the top is there all the same.
+	const path =
+		folder === null ? [] : [{ id: null, name: topLabel }, ...(openFolder ? aboveOf(folders, openIndex) : [])];
+	// The card or the step of the path that was pressed goes with the place it was in: the keyboard goes on from the new place's first card or file, once the
+	// place shows one (its files come after its folders). A person who has gone on to something else meanwhile keeps where they are.
 	const place = React.useRef<HTMLDivElement>(null);
 	const lastFolder = React.useRef(folder);
-	React.useEffect(() => {
-		if (lastFolder.current === folder) return;
+	const owed = React.useRef(false);
+	if (lastFolder.current !== folder) {
 		lastFolder.current = folder;
+		owed.current = true;
+	}
+	React.useEffect(() => {
+		if (!owed.current) return;
 		const active = place.current?.ownerDocument.activeElement;
-		if (!active || active === place.current?.ownerDocument.body || active.matches("[role=dialog]"))
-			place.current?.querySelector<HTMLElement>("button, [tabindex='0']")?.focus();
-	}, [folder]);
+		if (active && active !== place.current?.ownerDocument.body && !active.matches("[role=dialog]")) {
+			owed.current = false;
+			return;
+		}
+		const first = place.current?.querySelector<HTMLElement>("button, [tabindex='0']");
+		if (!first) return;
+		owed.current = false;
+		first.focus();
+	});
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent size="xl" className="gap-monti-20 pb-monti-20">
@@ -131,10 +144,19 @@ function MediaPicker({
 				</div>
 				{/* One height, whatever a folder holds: the tiles scroll inside it, under the path. */}
 				<div className="flex h-[min(36rem,70vh)] min-w-0 flex-col gap-monti-16">
-					<nav aria-label={pathLabel} className="flex min-w-0 shrink-0 items-baseline gap-monti-6 text-monti-note">
+					<nav
+						aria-label={pathLabel}
+						className="flex min-w-0 shrink-0 items-baseline gap-monti-6 overflow-hidden text-monti-note"
+					>
 						{path.map((up) => (
 							<React.Fragment key={up.id ?? "top"}>
-								<TextButton variant="underline" quiet onClick={() => onFolderChange(up.id)}>
+								{/* A long name above gives way before the open one: each step keeps at most 160px. */}
+								<TextButton
+									variant="underline"
+									quiet
+									className="min-w-0 max-w-40 shrink truncate"
+									onClick={() => onFolderChange(up.id)}
+								>
 									{up.name}
 								</TextButton>
 								<span aria-hidden="true" className="text-monti-faint">
@@ -143,7 +165,7 @@ function MediaPicker({
 							</React.Fragment>
 						))}
 						<span aria-current="page" className="min-w-0 truncate text-monti-default">
-							{openFolder?.name ?? topLabel}
+							{folder === null ? topLabel : openFolder?.name}
 						</span>
 					</nav>
 					{/* 4px of room around the tiles so the ring of a picked one is not cut by the scrolling area. */}

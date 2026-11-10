@@ -3,7 +3,7 @@ import type { Session } from "../auth/session";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { ConflictError, ForbiddenError, InputError } from "../errors";
-import { mediaNamed, rewriteUses } from "../media/uses";
+import { rewriteUses } from "../media/uses";
 import {
 	type Actor,
 	type AnyOperation,
@@ -136,13 +136,12 @@ export async function runWrite<Output>(
 		if (conflicts.length > 0) throw new ConflictError(conflicts);
 
 		await operation.check?.(input, ctx);
-		// What the records named before, so a file the library does not have is refused only when this write brings it in (doc 09).
-		const named = await mediaNamed(trx, engine.site.schema(), touched);
 		const output = (await operation.run(input, ctx)) as Output;
 
 		const records = unique([...touched, ...created]);
 		// Whatever the write did to a body or a field, what uses which media file is read from the result, here and nowhere else (doc 09).
-		await rewriteUses(trx, engine.site.schema(), records, { named });
+		// What the records held before, so a file the library does not have is refused only when this write brings it in (doc 09).
+		await rewriteUses(trx, engine.site.schema(), records, { before: before.values() });
 		const after = await loadRecords(engine, trx, records);
 		const undoable = !operation.humanOnly && !operation.structure && records.length > 0;
 		const now = engine.now();

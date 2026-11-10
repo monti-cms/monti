@@ -283,6 +283,13 @@ describe("a file the library does not have, already named", () => {
 		expect(await rows()).toEqual([]);
 	});
 
+	it("09-4 a copy carries it, as it carries every other file: duplicating, and starting a translation", async () => {
+		const id = await stranded();
+		await write("entries.save", { id, version: await versionOf(id), doc: doc(image("b1", "gone")) });
+		await expect(write("entries.duplicate", { id })).resolves.toBeDefined();
+		await expect(write("translations.create", { source: id, locale: "en" })).resolves.toBeDefined();
+	});
+
 	it("09-4 a write may move it, but a missing file it names for the first time is refused", async () => {
 		const id = await stranded();
 		await expect(
