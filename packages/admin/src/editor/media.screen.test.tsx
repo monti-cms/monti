@@ -425,6 +425,20 @@ describe("an image in the text", () => {
 		await expect.element(page.getByText("대체 텍스트 없음")).not.toBeInTheDocument();
 	});
 
+	it("09-1 a picked picture reads as picked: a line around it, and a handle on each corner", async () => {
+		await WithImage.run();
+		await userEvent.click(image());
+		const box = body().element().querySelector("[data-slot=block-box]");
+		expect(box?.getAttribute("data-selected")).toBe("true");
+		expect(
+			[...(box?.querySelectorAll("[data-slot=resize-corner]") ?? [])].map((corner) =>
+				corner.getAttribute("data-corner"),
+			),
+		).toEqual(["nw", "ne", "sw", "se"]);
+		// The bottom two take the keyboard; the top two are for the pointer, so each side is heard once.
+		expect(page.getByRole("button", { name: /크기 바꾸기/ }).elements()).toHaveLength(2);
+	});
+
 	it("09-1 [flow 1·12] the alt text counts as it is written, up to 80", async () => {
 		await WithImage.run();
 		await userEvent.click(image());

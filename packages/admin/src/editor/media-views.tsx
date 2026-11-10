@@ -9,6 +9,7 @@ import {
 import {
 	BlockBarPlace,
 	BlockBox,
+	type BlockCorner,
 	Button,
 	type CropCorner,
 	type CropGrip,
@@ -435,6 +436,9 @@ function CropDialog({
 	);
 }
 
+/** A selected picture's handles: one on each corner, the left two pulling the left edge. */
+const CORNERS = ["nw", "ne", "sw", "se"] as const satisfies readonly BlockCorner[];
+
 /** An image in the body (doc 09, screens/editor.md): the picture, its tool row while it is picked, its settings card and the caption under it. */
 function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: NodeViewProps) {
 	const { t } = useAdmin();
@@ -535,7 +539,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		<NodeViewWrapper data-block="image">
 			<Stack gap={8}>
 				<Inline justify={JUSTIFY[align]}>
-					<BlockBox ref={box} width={width}>
+					<BlockBox ref={box} width={width} selected={selected && editable}>
 						{url ? (
 							<Image
 								src={url}
@@ -612,18 +616,15 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 										</FloatingBarButton>
 									</FloatingBar>
 								</BlockBarPlace>
-								<ResizeCorner
-									side="left"
-									label={t("editor.image.resizeLeft")}
-									onPointerDown={resize("left")}
-									onKeyDown={resizeKeys}
-								/>
-								<ResizeCorner
-									side="right"
-									label={t("editor.image.resizeRight")}
-									onPointerDown={resize("right")}
-									onKeyDown={resizeKeys}
-								/>
+								{CORNERS.map((corner) => (
+									<ResizeCorner
+										key={corner}
+										corner={corner}
+										label={t(corner.endsWith("w") ? "editor.image.resizeLeft" : "editor.image.resizeRight")}
+										onPointerDown={resize(corner.endsWith("w") ? "left" : "right")}
+										onKeyDown={resizeKeys}
+									/>
+								))}
 							</>
 						)}
 					</BlockBox>
