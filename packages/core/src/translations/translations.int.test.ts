@@ -681,9 +681,14 @@ describe("when the source changes", () => {
 
 	it("04-2 T120 a source saved again without its empty parts, the words the same, marks nothing in its translation", async () => {
 		const { source, id } = await publishedPair();
+		// What an import or an agent may write and the editor drops: empty attrs on the block, empty marks on its text.
 		const padded = (doc: Doc): Doc => ({
 			...doc,
-			blocks: doc.blocks.map((block) => ({ ...block, attrs: {}, marks: [] }) as Block),
+			blocks: doc.blocks.map((block) => ({
+				...block,
+				attrs: {},
+				content: block.content?.map((part) => ({ ...part, marks: [] })),
+			})),
 		});
 		const words = body(p("s1", "하나"), p("s2", "둘"), code("s3", "npm i"), p("s4", "넷"));
 		await republish(source, padded(words));

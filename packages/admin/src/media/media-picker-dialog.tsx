@@ -1,4 +1,4 @@
-import type { MediaItem, MediaQueryResult } from "@monti-cms/core";
+import { MEDIA_QUERY_MOST, type MediaItem, type MediaQueryResult } from "@monti-cms/core";
 import { FolderTile, MediaPicker, Text, TextButton, Tile } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
@@ -9,8 +9,6 @@ import { FileThumb, useFileDetail } from "./file-shown";
 
 /** How many more files the window loads at a time. */
 const PAGE = 100;
-/** The most `media.query` gives at a time: past it, a search finds the file. */
-const MOST = 1000;
 
 /**
  * The library's window (doc 09's `MediaPicker`, 09-3): the one every place that takes a file opens. It is a file browser (2026-11-09, owner): the top or a folder shows its folders
@@ -129,10 +127,10 @@ export function MediaPickerDialog({
 					preview={<FileThumb item={item} />}
 				/>
 			))}
-			{read.data && read.data.total > items.length && shown < MOST ? (
+			{read.data && read.data.total > items.length && shown < MEDIA_QUERY_MOST ? (
 				<TextButton onClick={() => setShown(shown + PAGE)}>{t("library.picker.more")}</TextButton>
 			) : null}
-			{read.data && read.data.total > items.length && shown >= MOST ? (
+			{read.data && read.data.total > items.length && shown >= MEDIA_QUERY_MOST ? (
 				<Text variant="note" tone="subtle">
 					{t("library.picker.narrow")}
 				</Text>

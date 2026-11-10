@@ -26,6 +26,9 @@ const moveMessage = (count: number, name: string | null): Message =>
 /** How many files one page of the library holds. */
 export const MEDIA_PAGE_SIZE = 100;
 
+/** The most files one `media.query` returns: a window that loads more stops here, and a body reads its files in parts of this. */
+export const MEDIA_QUERY_MOST = 1000;
+
 /** One stored size of a file. */
 export type MediaFile = { url: string; width: number | null; height: number | null };
 
@@ -238,7 +241,7 @@ const Query = z.object({
 	sort: z.enum(["uploaded", "name", "size"]).default("uploaded"),
 	page: z.number().int().positive().default(1),
 	/** How many files a page holds. The library's screen keeps to pages of 100; a window that loads more asks for more. */
-	pageSize: z.number().int().min(1).max(1000).default(MEDIA_PAGE_SIZE),
+	pageSize: z.number().int().min(1).max(MEDIA_QUERY_MOST).default(MEDIA_PAGE_SIZE),
 	/**
 	 * These files, wherever they are, the trash too (as `media.get`): a body shows the files it holds, and a draft can hold one trashed since. An empty list asks
 	 * for no file: it is how a body learns `storage`, whether the site can take uploads.
@@ -251,7 +254,7 @@ export const mediaOperations = [
 		name: "media.query",
 		kind: "read",
 		description:
-			"Find files in the media library by folder, name, kind (image or file) and whether anything uses them, newest upload first or by name or size. Each has how many entries use it. Alt text is not here: it belongs to the entries that use a file (see entries.missingAlt).",
+			"Find files in the media library by folder, name, kind (image or file) and whether anything uses them, newest upload first or by name or size. Each has how many entries use it. By ids, files in the trash come back too; media.get says whether one is. Alt text is not here: it belongs to the entries that use a file (see entries.missingAlt).",
 		input: Query,
 		async run(input, ctx): Promise<MediaQueryResult> {
 			const search = input.search.trim();

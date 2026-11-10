@@ -85,6 +85,7 @@ export type {
 	MediaUseRow,
 	MissingAlt,
 } from "./media/operations";
+export { MEDIA_QUERY_MOST } from "./media/operations";
 export { memoryStorage, type Storage } from "./media/storage";
 export { altIsMissing, cleanMediaValue, type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";
 export { coreMessages, defineMessages, formatMessage, type MessageBundle } from "./messages";

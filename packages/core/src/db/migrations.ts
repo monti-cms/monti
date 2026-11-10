@@ -2,7 +2,7 @@ import { type Kysely, sql } from "kysely";
 import { type Migration, Migrator } from "kysely/migration";
 import type { Block, Doc } from "../body/doc";
 import { fingerprint } from "../bytes";
-import { canonical } from "../json";
+import { canonical, sameJson } from "../json";
 import { blockHash, blockHashes } from "../translations/links";
 import type { Database } from "./schema";
 
@@ -261,7 +261,7 @@ const MIGRATIONS = {
 				doc: Doc | null;
 			}>`select entry_id, doc from entry_published`.execute(db);
 			for (const row of published.rows)
-				await sql`update entry_published set block_hashes = ${JSON.stringify(blockHashes(row.doc))}::jsonb
+				await sql`update entry_published set block_hashes = ${JSON.stringify(Object.fromEntries((row.doc?.blocks ?? []).map((block) => [block.id, hashBefore0013(block)])))}::jsonb
 					where entry_id = ${row.entry_id}`.execute(db);
 		},
 	},
@@ -366,73 +366,134 @@ const MIGRATIONS = {
 	"0013_block_hashes": {
 		async up(db) {
 			// A block's hash no longer counts its empty parts (T120). Every hash kept so far moves to the new one: the published hashes, the source blocks
-			// kept by hash, what each translation has seen, and the same in the entries' undo snapshots. Every place a source block is found is measured
-			// first (published copies, kept blocks, working copies and drafts, snapshots), then rewritten. A hash no block is left for stays, as before.
+			// kept by hash, what each translation has seen, and the same in the undo snapshots an entry can still go back to. Every place a source block
+			// is found is measured first (kept blocks, published copies, working copies and drafts, those snapshots), then rewritten, a page at a time. A
+			// hash no block is left for stays, as before; a snapshot past its undo can never come back, so it stays too.
 			const moved = new Map<string, string>();
-			const measure = (doc: Doc | null | undefined) => {
-				for (const block of doc?.blocks ?? []) moved.set(hashBefore0013(block), blockHash(block));
+			const measure = (block: Block) => {
+				const before = hashBefore0013(block);
+				const now = blockHash(block);
+				if (before !== now) moved.set(before, now);
 			};
-			const kept = await sql<{ hash: string; block: Block }>`select hash, block from source_blocks`.execute(db);
-			for (const row of kept.rows) moved.set(row.hash, blockHash(row.block));
-			const published = await sql<{
-				entry_id: string;
-				doc: Doc | null;
-			}>`select entry_id, doc from entry_published`.execute(db);
-			for (const row of published.rows) measure(row.doc);
-			const entries = await sql<{ id: string; doc: Doc | null }>`select id, doc from entries`.execute(db);
-			for (const row of entries.rows) measure(row.doc);
-			const snapshots = await sql<{ activity_id: string; record_id: string; before: EntrySnapshot }>`
-				select activity_id, record_id, before from monti_activity_snapshot where kind = 'entry' and before is not null`.execute(
-				db,
-			);
-			for (const { before } of snapshots.rows) {
-				measure(before.row?.doc);
-				measure(before.published?.doc);
-			}
+			const blocksOf = (doc: Doc | null | undefined) => doc?.blocks ?? [];
+			const kept = (after: string) =>
+				sql<{
+					key: string;
+					block: Block;
+				}>`select hash as key, block from source_blocks where hash > ${after} order by hash limit ${PAGE}`
+					.execute(db)
+					.then((result) => result.rows);
+			const published = (after: string) =>
+				sql<{
+					key: string;
+					doc: Doc | null;
+					block_hashes: Record<string, string>;
+				}>`select entry_id as key, doc, block_hashes
+					from entry_published where entry_id > ${after} order by entry_id limit ${PAGE}`
+					.execute(db)
+					.then((result) => result.rows);
+			const entries = (after: string) =>
+				sql<{
+					key: string;
+					doc: Doc | null;
+				}>`select id as key, doc from entries where id > ${after} order by id limit ${PAGE}`
+					.execute(db)
+					.then((result) => result.rows);
+			const snapshots = (after: string) =>
+				sql<{ key: string; activity_id: string; record_id: string; before: EntrySnapshot }>`
+					select s.activity_id || '/' || s.record_id as key, s.activity_id, s.record_id, s.before
+					from monti_activity_snapshot s join monti_activity a on a.id = s.activity_id
+					where s.kind = 'entry' and s.before is not null and a.undo_until > now() and a.undone_at is null
+						and s.activity_id || '/' || s.record_id > ${after}
+					order by key limit ${PAGE}`
+					.execute(db)
+					.then((result) => result.rows);
 
-			for (const row of published.rows) {
-				const doc = seenMoved(row.doc, moved);
-				await sql`update entry_published set block_hashes = ${JSON.stringify(blockHashes(row.doc))}::jsonb where entry_id = ${row.entry_id}`.execute(
-					db,
-				);
-				if (doc !== row.doc)
-					await sql`update entry_published set doc = ${JSON.stringify(doc)}::jsonb where entry_id = ${row.entry_id}`.execute(
-						db,
-					);
-			}
-			for (const row of kept.rows) {
-				const hash = moved.get(row.hash) ?? row.hash;
-				if (hash === row.hash) continue;
-				await sql`insert into source_blocks (hash, block) values (${hash}, ${JSON.stringify(row.block)}::jsonb) on conflict (hash) do nothing`.execute(
-					db,
-				);
-				await sql`delete from source_blocks where hash = ${row.hash}`.execute(db);
-			}
-			for (const row of entries.rows) {
-				const doc = seenMoved(row.doc, moved);
-				if (doc !== row.doc)
-					await sql`update entries set doc = ${JSON.stringify(doc)}::jsonb where id = ${row.id}`.execute(db);
-			}
+			await eachPage(kept, (rows) => {
+				for (const row of rows) measure(row.block);
+			});
+			await eachPage(published, (rows) => {
+				for (const row of rows) for (const block of blocksOf(row.doc)) measure(block);
+			});
+			await eachPage(entries, (rows) => {
+				for (const row of rows) for (const block of blocksOf(row.doc)) measure(block);
+			});
+			await eachPage(snapshots, (rows) => {
+				for (const { before } of rows)
+					for (const block of [...blocksOf(before.row?.doc), ...blocksOf(before.published?.doc)]) measure(block);
+			});
+
+			await eachPage(kept, async (rows) => {
+				for (const row of rows) {
+					const hash = moved.get(row.key);
+					if (hash === undefined) continue;
+					await sql`insert into source_blocks (hash, block) values (${hash}, ${JSON.stringify(row.block)}::jsonb)
+						on conflict (hash) do nothing`.execute(db);
+					await sql`delete from source_blocks where hash = ${row.key}`.execute(db);
+				}
+			});
+			await eachPage(published, async (rows) => {
+				for (const row of rows) {
+					const hashes = blockHashes(row.doc);
+					if (!sameJson(hashes, row.block_hashes))
+						await sql`update entry_published set block_hashes = ${JSON.stringify(hashes)}::jsonb where entry_id = ${row.key}`.execute(
+							db,
+						);
+					const doc = seenMoved(row.doc, moved);
+					if (doc !== row.doc)
+						await sql`update entry_published set doc = ${JSON.stringify(doc)}::jsonb where entry_id = ${row.key}`.execute(
+							db,
+						);
+				}
+			});
+			await eachPage(entries, async (rows) => {
+				for (const row of rows) {
+					const doc = seenMoved(row.doc, moved);
+					if (doc !== row.doc)
+						await sql`update entries set doc = ${JSON.stringify(doc)}::jsonb where id = ${row.key}`.execute(db);
+				}
+			});
 			// An undo puts the snapshot back as it is: its published hashes and seen move too, or undoing would bring the old measure back.
-			for (const { activity_id, record_id, before } of snapshots.rows) {
-				const doc = before.row ? seenMoved(before.row.doc, moved) : undefined;
-				const copy = before.published && {
-					...before.published,
-					doc: seenMoved(before.published.doc, moved),
-					block_hashes: blockHashes(before.published.doc),
-				};
-				const next = {
-					...before,
-					...(before.row ? { row: { ...before.row, doc } } : {}),
-					...(copy ? { published: copy } : {}),
-				};
-				if (JSON.stringify(next) === JSON.stringify(before)) continue;
-				await sql`update monti_activity_snapshot set before = ${JSON.stringify(next)}::jsonb
-					where activity_id = ${activity_id} and record_id = ${record_id} and kind = 'entry'`.execute(db);
-			}
+			await eachPage(snapshots, async (rows) => {
+				for (const { activity_id, record_id, before } of rows) {
+					const next = {
+						...before,
+						...(before.row ? { row: { ...before.row, doc: seenMoved(before.row.doc, moved) } } : {}),
+						...(before.published
+							? {
+									published: {
+										...before.published,
+										doc: seenMoved(before.published.doc, moved),
+										block_hashes: blockHashes(before.published.doc),
+									},
+								}
+							: {}),
+					};
+					if (sameJson(next, before)) continue;
+					await sql`update monti_activity_snapshot set before = ${JSON.stringify(next)}::jsonb
+						where activity_id = ${activity_id} and record_id = ${record_id} and kind = 'entry'`.execute(db);
+				}
+			});
 		},
 	},
 } satisfies Record<string, Migration>;
+
+/** How many rows a step that reads whole tables holds at once. */
+const PAGE = 200;
+
+/** Goes through rows a page at a time, each page after the last one's `key`: a large site's tables never sit in memory whole. */
+async function eachPage<Row extends { key: string }>(
+	read: (after: string) => Promise<Row[]>,
+	use: (rows: Row[]) => void | Promise<void>,
+): Promise<void> {
+	for (let after = ""; ; ) {
+		const rows = await read(after);
+		const last = rows.at(-1);
+		if (!last) return;
+		await use(rows);
+		after = last.key;
+	}
+}
 
 /** What 0013 reads of an entry's undo snapshot (`entries/record.ts`): the working row and the published copy, each with its doc. */
 type EntrySnapshot = {
@@ -440,7 +501,7 @@ type EntrySnapshot = {
 	published?: ({ doc: Doc | null; block_hashes?: Record<string, string> } & Record<string, unknown>) | null;
 } & Record<string, unknown>;
 
-/** A block's hash as steps up to 0012 measured it, empty parts and all. Kept here as it was, so 0013 can find the hashes it measured. */
+/** A block's hash as steps up to 0012 measured it, empty parts and all. Kept here as it was: 0007 writes it, and 0013 finds the hashes it measured. */
 const hashBefore0013 = (block: Block): string => {
 	const bare = ({ id: _id, link: _link, children, ...rest }: Block): unknown => ({
 		...rest,
@@ -452,7 +513,7 @@ const hashBefore0013 = (block: Block): string => {
 /** The doc with each block's `link.seen` moved to its new hash; the same doc when nothing moved. */
 const seenMoved = (doc: Doc | null, moved: Map<string, string>): Doc | null => {
 	const to = (block: Block) => (block.link ? moved.get(block.link.seen) : undefined);
-	if (!doc?.blocks.some((block) => to(block) !== undefined)) return doc;
+	if (!doc?.blocks?.some((block) => to(block) !== undefined)) return doc;
 	return {
 		...doc,
 		blocks: doc.blocks.map((block) => {
@@ -465,8 +526,16 @@ const seenMoved = (doc: Doc | null, moved: Map<string, string>): Doc | null => {
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */
 const RACE_TRIES = 30;
 
-/** Brings the database up to the latest step (`monti db:setup`, `monti db:migrate`), or only up to step `until` (a test of one step's data). */
-export async function migrateToLatest(db: Kysely<Database>, until?: keyof typeof MIGRATIONS): Promise<void> {
+/** Brings the database up to the latest step (`monti db:setup`, `monti db:migrate`). */
+export const migrateToLatest = (db: Kysely<Database>): Promise<void> => migrate(db);
+
+/**
+ * Brings the database up to step `until` only: a test of one step puts in data as the steps before it left it.
+ * @internal
+ */
+export const migrateUntil = (db: Kysely<Database>, until: keyof typeof MIGRATIONS): Promise<void> => migrate(db, until);
+
+async function migrate(db: Kysely<Database>, until?: keyof typeof MIGRATIONS): Promise<void> {
 	// Named, because the migrator otherwise looks for its tables in every schema and takes another schema's (a second site in the same database).
 	const { rows } = await sql<{ schema: string }>`select current_schema() as schema`.execute(db);
 	const migrator = new Migrator({

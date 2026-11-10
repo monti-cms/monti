@@ -6,7 +6,7 @@ import type { Block } from "../body/doc";
 import { fingerprint } from "../bytes";
 import { canonical } from "../json";
 import { blockHash } from "../translations/links";
-import { migrateToLatest } from "./migrations";
+import { migrateToLatest, migrateUntil } from "./migrations";
 import type { Database } from "./schema";
 
 const URL = process.env.CMS_TEST_DATABASE_URL;
@@ -59,7 +59,7 @@ describe("0013: block hashes without empty parts", () => {
 			dialect: new PostgresDialect({ pool: new Pool({ connectionString: URL, options: `-c search_path=${schema}` }) }),
 		});
 		try {
-			await migrateToLatest(db, "0012_translation_seen");
+			await migrateUntil(db, "0012_translation_seen");
 			// As 0012 measured: empty parts and all, without the id and the link.
 			const oldHash = ({ id: _id, link: _link, ...rest }: Block) => fingerprint(JSON.stringify(canonical(rest)));
 			const now: Block = {
@@ -120,40 +120,45 @@ describe("0013: block hashes without empty parts", () => {
 				('empty', 'post', 'k', 'ko', 'empty', null)`.execute(db);
 			await sql`insert into entry_published (entry_id, collection, locale, title, slug, values, doc, published_at, from_version)
 				values ('empty', 'post', 'ko', '빈 글', 'empty', '{}'::jsonb, null, now(), 1)`.execute(db);
-			// An undo of the translation's last save puts this back.
-			await sql`insert into monti_activity (id, actor, operation, summary, targets)
-				values ('a1', '{}'::jsonb, 'entries.save', '{}'::jsonb, '[]'::jsonb)`.execute(db);
-			await sql`insert into monti_activity_snapshot (activity_id, kind, record_id, before, after_version) values ('a1', 'entry', 'en', ${JSON.stringify(
-				{
-					row: {
-						id: "en",
-						doc: {
-							type: "doc",
-							blocks: [
-								{
-									id: "t1",
-									type: "paragraph",
-									content: [],
-									link: { from: "s1", seen: oldHash(now), state: "translated" },
-								},
-							],
-						},
+			// An undo of the translation's last save puts this back; one past its undo never comes back, and stays as it was.
+			await sql`insert into monti_activity (id, actor, operation, summary, targets, undo_until) values
+				('a1', '{}'::jsonb, 'entries.save', '{}'::jsonb, '[]'::jsonb, now() + interval '1 day'),
+				('a0', '{}'::jsonb, 'entries.save', '{}'::jsonb, '[]'::jsonb, now() - interval '1 day')`.execute(db);
+			const seeing = (seen: string) => ({
+				row: {
+					id: "en",
+					doc: {
+						type: "doc",
+						blocks: [{ id: "t1", type: "paragraph", content: [], link: { from: "s1", seen, state: "translated" } }],
 					},
-					published: { entry_id: "en", doc: null, block_hashes: {} },
+				},
+				published: { entry_id: "en", doc: null, block_hashes: {} },
+				oldPaths: [],
+				links: [],
+			});
+			await sql`insert into monti_activity_snapshot (activity_id, kind, record_id, before, after_version)
+				values ('a0', 'entry', 'old-en', ${JSON.stringify(seeing(oldHash(now)))}::jsonb, 1)`.execute(db);
+			await sql`insert into monti_activity_snapshot (activity_id, kind, record_id, before, after_version) values ('a1', 'entry', 'en', ${JSON.stringify(seeing(oldHash(now)))}::jsonb, 2), ('a1', 'entry', 'ko', ${JSON.stringify(
+				{
+					row: { id: "ko", doc: { type: "doc", blocks: [now] } },
+					published: { entry_id: "ko", doc: { type: "doc", blocks: [now] }, block_hashes: { s1: oldHash(now) } },
 					oldPaths: [],
 					links: [],
 				},
-			)}::jsonb, 2), ('a1', 'entry', 'ko', ${JSON.stringify({
-				row: { id: "ko", doc: { type: "doc", blocks: [now] } },
-				published: { entry_id: "ko", doc: { type: "doc", blocks: [now] }, block_hashes: { s1: oldHash(now) } },
-				oldPaths: [],
-				links: [],
-			})}::jsonb, 2)`.execute(db);
+			)}::jsonb, 2)`.execute(db);
+
+			// More translations than a page holds, so the step goes through pages.
+			await sql`insert into entries (id, collection, translation_group, locale, slug, doc)
+				select 'bulk' || n, 'post', 'bulk' || n, 'en', 'bulk' || n, ${JSON.stringify(follows(oldHash(now)))}::jsonb
+				from generate_series(1, 450) n`.execute(db);
 
 			await migrateToLatest(db);
+			const bulk = await sql<{ moved: number }>`select count(*)::int as moved from entries
+				where id like 'bulk%' and doc->'blocks'->0->'link'->>'seen' = ${blockHash(now)}`.execute(db);
+			expect(bulk.rows[0]?.moved).toBe(450);
 			const published = await sql<{
 				block_hashes: Record<string, string>;
-			}>`select block_hashes from entry_published`.execute(db);
+			}>`select block_hashes from entry_published where entry_id = 'ko'`.execute(db);
 			expect(published.rows[0]?.block_hashes).toEqual({ s1: blockHash(now) });
 			const kept = await sql<{ hash: string }>`select hash from source_blocks`.execute(db);
 			expect(kept.rows.map((row) => row.hash)).toEqual([blockHash(earlier)]);
@@ -184,6 +189,7 @@ describe("0013: block hashes without empty parts", () => {
 			).toEqual([
 				["en", blockHash(now), {}],
 				["ko", undefined, { s1: blockHash(now) }],
+				["old-en", oldHash(now), {}],
 			]);
 			expect(blockHash(now)).not.toBe(oldHash(now));
 		} finally {

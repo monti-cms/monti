@@ -1,5 +1,5 @@
 import type { MediaItem, MediaQueryResult } from "@monti-cms/core";
-import { altIsMissing } from "@monti-cms/core";
+import { altIsMissing, MEDIA_QUERY_MOST } from "@monti-cms/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { NodeSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
@@ -31,9 +31,6 @@ type BodyFiles = {
 	want: (id: string) => void;
 };
 
-/** The most files one `media.query` returns. */
-const MOST = 1000;
-
 /**
  * The files a body's image and file blocks show, read together: the blocks that appear at once ask in the same moment, and one `media.query` reads them all,
  * not a read for each block (T110). A block that comes back (undo, the same file picked again) reads its file again, as its own read did, and shows what it
@@ -43,17 +40,23 @@ export function useBodyFiles(): BodyFiles {
 	const { run } = useOperation<MediaQueryResult>("media.query");
 	const [files, setFiles] = useState<ReadonlyMap<string, MediaItem | null>>(() => new Map());
 	const waiting = useRef(new Set<string>());
+	// Each id's latest read: an answer that comes back after a newer read of the same file has begun says nothing about it.
+	const latest = useRef(new Map<string, number>());
+	const reads = useRef(0);
 	const read = useCallback(
 		async (ids: string[]) => {
+			const call = ++reads.current;
+			for (const id of ids) latest.current.set(id, call);
 			const result = await run({ ids, pageSize: ids.length }).catch(() => null);
 			const found = result?.ok ? new Map(result.body.items.map((item) => [item.id, item])) : null;
+			const answered = ids.filter((id) => latest.current.get(id) === call);
 			setFiles(
 				(known) =>
 					new Map([
 						...known,
 						// Not read (refused, the network): a file already shown stays; one never shown says it is not there, as a block's own read did. The
 						// block reads again when it comes back.
-						...ids.flatMap((id) =>
+						...answered.flatMap((id) =>
 							found ? [[id, found.get(id) ?? null] as const] : known.has(id) ? [] : [[id, null] as const],
 						),
 					]),
@@ -70,7 +73,8 @@ export function useBodyFiles(): BodyFiles {
 			setTimeout(() => {
 				const ids = [...waiting.current];
 				waiting.current.clear();
-				for (let start = 0; start < ids.length; start += MOST) void read(ids.slice(start, start + MOST));
+				for (let start = 0; start < ids.length; start += MEDIA_QUERY_MOST)
+					void read(ids.slice(start, start + MEDIA_QUERY_MOST));
 			});
 		},
 		[read],
