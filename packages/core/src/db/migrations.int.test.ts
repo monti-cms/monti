@@ -101,6 +101,54 @@ describe("0013: block hashes without empty parts", () => {
 			await sql`insert into source_blocks (hash, block) values (${oldHash(earlier)}, ${JSON.stringify(earlier)}::jsonb)`.execute(
 				db,
 			);
+			// A source never published: its translation kept the draft's block as it left it ("keep the source"), and nothing else holds that block.
+			const drafted: Block = { id: "d1", type: "paragraph", attrs: {}, content: [{ type: "text", text: "초안" }] };
+			const follows = (seen: string) => ({
+				type: "doc",
+				blocks: [
+					{
+						id: "u1",
+						type: "paragraph",
+						content: [{ type: "text", text: "초안" }],
+						link: { from: "d1", seen, state: "keepSource" },
+					},
+				],
+			});
+			await sql`insert into entries (id, collection, translation_group, locale, slug, doc) values
+				('draft-ko', 'post', 'h', 'ko', 'draft', ${JSON.stringify({ type: "doc", blocks: [drafted] })}::jsonb),
+				('draft-en', 'post', 'h', 'en', 'draft', ${JSON.stringify(follows(oldHash(drafted)))}::jsonb),
+				('empty', 'post', 'k', 'ko', 'empty', null)`.execute(db);
+			await sql`insert into entry_published (entry_id, collection, locale, title, slug, values, doc, published_at, from_version)
+				values ('empty', 'post', 'ko', '빈 글', 'empty', '{}'::jsonb, null, now(), 1)`.execute(db);
+			// An undo of the translation's last save puts this back.
+			await sql`insert into monti_activity (id, actor, operation, summary, targets)
+				values ('a1', '{}'::jsonb, 'entries.save', '{}'::jsonb, '[]'::jsonb)`.execute(db);
+			await sql`insert into monti_activity_snapshot (activity_id, kind, record_id, before, after_version) values ('a1', 'entry', 'en', ${JSON.stringify(
+				{
+					row: {
+						id: "en",
+						doc: {
+							type: "doc",
+							blocks: [
+								{
+									id: "t1",
+									type: "paragraph",
+									content: [],
+									link: { from: "s1", seen: oldHash(now), state: "translated" },
+								},
+							],
+						},
+					},
+					published: { entry_id: "en", doc: null, block_hashes: {} },
+					oldPaths: [],
+					links: [],
+				},
+			)}::jsonb, 2), ('a1', 'entry', 'ko', ${JSON.stringify({
+				row: { id: "ko", doc: { type: "doc", blocks: [now] } },
+				published: { entry_id: "ko", doc: { type: "doc", blocks: [now] }, block_hashes: { s1: oldHash(now) } },
+				oldPaths: [],
+				links: [],
+			})}::jsonb, 2)`.execute(db);
 
 			await migrateToLatest(db);
 			const published = await sql<{
@@ -114,6 +162,28 @@ describe("0013: block hashes without empty parts", () => {
 				blockHash(now),
 				blockHash(earlier),
 				gone,
+			]);
+			const draft = await sql<{ doc: { blocks: Block[] } }>`select doc from entries where id = 'draft-en'`.execute(db);
+			expect(draft.rows[0]?.doc.blocks[0]?.link?.seen).toBe(blockHash(drafted));
+			// No body stays no body: SQL null, not JSON null, or the next unchanged save would read as a change.
+			const empty = await sql<{ working: boolean; published: boolean }>`
+				select (select doc is null from entries where id = 'empty') as working,
+					(select doc is null from entry_published where entry_id = 'empty') as published`.execute(db);
+			expect(empty.rows[0]).toEqual({ working: true, published: true });
+			const undo = await sql<{
+				record_id: string;
+				before: { row: { doc: { blocks: Block[] } }; published: { block_hashes: Record<string, string> } };
+			}>`
+				select record_id, before from monti_activity_snapshot order by record_id`.execute(db);
+			expect(
+				undo.rows.map((row) => [
+					row.record_id,
+					row.before.row.doc.blocks[0]?.link?.seen,
+					row.before.published.block_hashes,
+				]),
+			).toEqual([
+				["en", blockHash(now), {}],
+				["ko", undefined, { s1: blockHash(now) }],
 			]);
 			expect(blockHash(now)).not.toBe(oldHash(now));
 		} finally {
