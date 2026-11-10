@@ -70,6 +70,7 @@ export default defineConfig({ schema, database: process.env.DATABASE_URL, auth: 
 monti db:setup          # 표를 만들고 모든 변경 파일을 따른다
 monti db:migrate        # 배포할 때: 이 데이터베이스가 아직 안 따른 변경 파일을 따른다
 monti deliveries:run    # 때가 된 웹훅 다시 보내기
+monti trash:purge       # 휴지통에 30일 있던 것과 주인 없는 파일 지우기
 monti admin:reset-password  # 관리자 비밀번호를 바꾸고 모든 브라우저를 로그아웃
 monti help              # 모든 기능, 기능마다 명령 하나
 monti schema.read
