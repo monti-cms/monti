@@ -142,7 +142,7 @@ describe("into the trash", () => {
 
 		expect(moved.output).toMatchObject({ rows: 1, entries: 2, unpublished: 1 });
 		expect(await fromSite("first-post")).toBeNull();
-		expect(await entry(english)).toMatchObject({ trashed_with: source, trashed_by: "admin" });
+		expect(await entry(english)).toMatchObject({ trashed_by: "admin" });
 		expect(await list()).toMatchObject({
 			total: 1,
 			counts: { post: 1 },
@@ -151,7 +151,7 @@ describe("into the trash", () => {
 
 		await write("activity.undo", { id: moved.activityId });
 		expect(await fromSite("first-post")).toMatchObject({ entry: { title: "첫 번째 글" } });
-		expect(await entry(english)).toMatchObject({ trashed_at: null, trashed_with: null });
+		expect(await entry(english)).toMatchObject({ trashed_at: null });
 		expect((await list()).total).toBe(0);
 	});
 
@@ -165,7 +165,7 @@ describe("into the trash", () => {
 
 		expect(await fromSite("react-19")).not.toBeNull();
 		expect(await fromSite("react-19-en", "post", "en")).toBeNull();
-		expect(await list()).toMatchObject({ rows: [{ id: english, locales: ["en"], source: null }] });
+		expect(await list()).toMatchObject({ rows: [{ id: english, locales: ["en"] }] });
 	});
 
 	it("11-2 a folder is one row; its subfolders and entries are inside it", async () => {
@@ -313,21 +313,23 @@ describe("restoring", () => {
 		expect((await publish(source)).output.published).toEqual([source]);
 	});
 
-	it("11-1 a translation thrown away alone comes back with its source when that is in the trash too", async () => {
+	it("11-1 an entry's languages in the trash are one row with one day to go, however they got there, and come back together", async () => {
 		const source = await post("리액트 19 마이그레이션", "react-19");
 		const english = await translate(source);
 		await move(entryRow(english));
+		// Alone, the translation is a row of its own: its source is still alive.
+		expect(await list()).toMatchObject({ total: 1, rows: [{ id: english, locales: ["en"] }] });
 		later(2);
+		expect((await list()).rows[0]?.daysLeft).toBe(28);
 		await move(entryRow(source));
 
-		expect((await list()).rows.find((each) => each.id === english)).toMatchObject({
-			locales: ["en"],
-			source: { id: source, title: "리액트 19 마이그레이션" },
-			daysLeft: 28,
-		});
-		// Opened on its own, it says the same: its source is what restoring it brings back.
-		expect(await read<TrashedEntry>("trash.get", { id: english })).toMatchObject({ source: { id: source } });
-		expect(await read<TrashedEntry>("trash.get", { id: source })).toMatchObject({ source: null });
+		// The source followed: one row for the entry, and the translation's days start again with it.
+		expect(await list()).toMatchObject({ total: 1, rows: [{ id: source, locales: ["ko", "en"], daysLeft: 30 }] });
+		expect((await read<TrashedEntry>("trash.get", { id: english })).locales.map((each) => each.locale)).toEqual([
+			"en",
+			"ko",
+		]);
+		// Either language brings the whole entry back.
 		await restore(entryRow(english));
 
 		expect((await entry(source)).trashed_at).toBeNull();

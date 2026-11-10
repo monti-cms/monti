@@ -23,57 +23,59 @@ const idsOf = (rows: TrashRef[], kind: TrashRef["kind"]) =>
 const actorName = (actor: Actor): TrashedBy => (typeof actor === "string" ? actor : "plugin");
 const UNKNOWN = { entry: "entries.unknown", folder: "folders.unknown", media: "media.unknown" } as const;
 
-type Going = { id: string; collection: string; locale: string; group: string; with: string | null };
+type Going = {
+	id: string;
+	collection: string;
+	locale: string;
+	group: string;
+	/** Every language of its entry goes: nothing of it is left for those who point at it. */
+	whole: boolean;
+};
 
 /**
- * The entries that go to the trash when these do (doc 11): a source-language entry takes its translations, and an item every language it has, each marked as gone
- * with it so the trash shows one row; a translation goes alone and its source stays.
+ * The entries that go to the trash when these do (doc 11): a source-language entry takes its translations, and an item every language it has; a translation goes alone
+ * and its source stays. `stamped` are languages of the same entries already in the trash: they take the day of this move, so an entry in the trash is one row with
+ * one day to go.
  */
-async function entriesGoing(ctx: OperationContext, seeds: string[]): Promise<Going[]> {
-	if (seeds.length === 0) return [];
+async function entriesGoing(ctx: OperationContext, seeds: string[]): Promise<{ going: Going[]; stamped: string[] }> {
+	if (seeds.length === 0) return { going: [], stamped: [] };
 	const schema = ctx.site.schema();
-	const columns = ["id", "collection", "locale", "translation_group"] as const;
+	const columns = ["id", "collection", "locale", "translation_group", "trashed_at"] as const;
 	const given = await ctx.db
 		.selectFrom("entries")
 		.select(columns)
 		.where("id", "in", seeds)
 		.where("trashed_at", "is", null)
 		.execute();
-	const leads = given.filter(
-		(row) => row.locale === schema.locales.source || schema.collections[row.collection]?.kind === "item",
-	);
+	const groups = [...new Set(given.map((row) => row.translation_group))];
 	const members =
-		leads.length === 0
+		groups.length === 0
 			? []
-			: await ctx.db
-					.selectFrom("entries")
-					.select(columns)
-					.where(
-						"translation_group",
-						"in",
-						leads.map((row) => row.translation_group),
-					)
-					.where("trashed_at", "is", null)
-					.execute();
-	// The row a whole group is shown by: its source-language entry, or for an item with none, the entry asked for.
-	const leadOf = new Map<string, string>();
-	for (const row of leads) if (!leadOf.has(row.translation_group)) leadOf.set(row.translation_group, row.id);
-	for (const row of members) if (row.locale === schema.locales.source) leadOf.set(row.translation_group, row.id);
-	const going = new Map([...given, ...members].map((row) => [row.id, row]));
-	return [...going.values()].map((row) => {
-		const lead = leadOf.get(row.translation_group);
-		return {
-			id: row.id,
-			collection: row.collection,
-			locale: row.locale,
-			group: row.translation_group,
-			with: lead !== undefined && lead !== row.id ? lead : null,
-		};
-	});
+			: await ctx.db.selectFrom("entries").select(columns).where("translation_group", "in", groups).execute();
+	const whole = new Set(
+		given
+			.filter((row) => row.locale === schema.locales.source || schema.collections[row.collection]?.kind === "item")
+			.map((row) => row.translation_group),
+	);
+	const seeded = new Set(given.map((row) => row.id));
+	return {
+		going: members
+			.filter((row) => row.trashed_at === null && (seeded.has(row.id) || whole.has(row.translation_group)))
+			.map((row) => ({
+				id: row.id,
+				collection: row.collection,
+				locale: row.locale,
+				group: row.translation_group,
+				whole: whole.has(row.translation_group),
+			})),
+		stamped: members.filter((row) => row.trashed_at !== null).map((row) => row.id),
+	};
 }
 
 type MovePlan = {
 	entries: Going[];
+	/** Entries already in the trash that take this move's day (see `entriesGoing`). */
+	stamped: string[];
 	folders: string[];
 	/** Files that go. */
 	media: string[];
@@ -129,8 +131,10 @@ async function planMove(ctx: OperationContext, rows: TrashRef[], lock = false): 
 		if (uses === undefined) media.add(id);
 		else kept.set(id, uses);
 	}
+	const { going, stamped } = await entriesGoing(ctx, [...seeds]);
 	return {
-		entries: await entriesGoing(ctx, [...seeds]),
+		entries: going,
+		stamped,
 		folders: [...folders],
 		media: [...media],
 		kept,
@@ -165,12 +169,8 @@ async function effectsOf(ctx: OperationContext, plan: MovePlan): Promise<TrashEf
 					),
 				);
 	const documents = plan.entries.filter((entry) => isDocument(entry.collection));
-	// A group leaves the site for those who point at it only when every language of it goes.
-	const whole = [...new Set(plan.entries.filter((entry) => entry.with !== null).map((entry) => entry.group))];
-	const lone = plan.entries.filter(
-		(entry) => entry.with === null && (entry.locale === schema.locales.source || !isDocument(entry.collection)),
-	);
-	const groups = [...new Set([...whole, ...lone.map((entry) => entry.group)])];
+	// An entry leaves the site for those who point at it only when every language of it goes.
+	const groups = [...new Set(plan.entries.filter((entry) => entry.whole).map((entry) => entry.group))];
 	const pointing =
 		groups.length === 0
 			? []
@@ -187,7 +187,11 @@ async function effectsOf(ctx: OperationContext, plan: MovePlan): Promise<TrashEf
 	return {
 		entries: ids.length,
 		unpublished: new Set(documents.filter((entry) => published.has(entry.id)).map((entry) => entry.group)).size,
-		translations: [...new Set(documents.filter((entry) => entry.with !== null).map((entry) => entry.locale))].sort(),
+		translations: [
+			...new Set(
+				documents.filter((entry) => entry.whole && entry.locale !== schema.locales.source).map((entry) => entry.locale),
+			),
+		].sort(),
 		pointing: new Set(pointing.filter((row) => isDocument(row.collection)).map((row) => row.from_group)).size,
 		kept: plan.kept.size,
 	};
@@ -230,8 +234,8 @@ type RestorePlan = {
 };
 
 /**
- * What restoring these rows brings back (doc 11, restoring): an entry with the translations that went with it; a translation whose source is in the trash, with that
- * source; a folder with everything under it; and above anything that comes back, the folders it sat in, when they are in the trash too.
+ * What restoring these rows brings back (doc 11, restoring): an entry with every language of it that is in the trash; a folder with everything under it; and above
+ * anything that comes back, the folders it sat in, when they are in the trash too.
  */
 async function planRestore(ctx: OperationContext, rows: TrashRef[]): Promise<RestorePlan> {
 	const { db } = ctx;
@@ -276,33 +280,24 @@ async function planRestore(ctx: OperationContext, rows: TrashRef[]): Promise<Res
 		"folder_id as folderId",
 		"version",
 	] as const;
-	const trashed = () => db.selectFrom("entries").select(columns).where("trashed_at", "is not", null);
+	// Every language of an entry that is in the trash comes back with it: the trash showed them as one row.
 	const entries = new Map<string, RestoreEntry>();
-	if (entryIds.size > 0) {
-		for (const row of await trashed()
-			.where("id", "in", [...entryIds])
+	if (entryIds.size > 0)
+		for (const row of await db
+			.selectFrom("entries")
+			.select(columns)
+			.where("trashed_at", "is not", null)
+			.where(
+				"translation_group",
+				"in",
+				db
+					.selectFrom("entries")
+					.select("translation_group")
+					.where("id", "in", [...entryIds])
+					.where("trashed_at", "is not", null),
+			)
 			.execute())
 			entries.set(row.id, row);
-		// A translation alone comes back only with its source, when that is in the trash too.
-		const alone = [...entries.values()].filter(
-			(entry) => entry.locale !== schema.locales.source && schema.collections[entry.collection]?.kind === "document",
-		);
-		if (alone.length > 0)
-			for (const row of await trashed()
-				.where(
-					"translation_group",
-					"in",
-					alone.map((entry) => entry.group),
-				)
-				.where("locale", "=", schema.locales.source)
-				.execute())
-				entries.set(row.id, row);
-		if (entries.size > 0)
-			for (const row of await trashed()
-				.where("trashed_with", "in", [...entries.keys()])
-				.execute())
-				entries.set(row.id, row);
-	}
 	const media =
 		mediaIds.size === 0
 			? []
@@ -422,6 +417,7 @@ export const trashOperations = [
 			const plan = await planMove(ctx, input.rows, true);
 			return [
 				...plan.entries.map((entry) => ref("entry")(entry.id)),
+				...plan.stamped.map(ref("entry")),
 				...plan.folders.map(ref("folder")),
 				...plan.files.map(ref("media")),
 			];
@@ -502,7 +498,6 @@ export const trashOperations = [
 						.updateTable("entries")
 						.set((eb) => ({
 							trashed_at: now,
-							trashed_with: entry.with,
 							trashed_by: by,
 							version: eb("version", "+", 1),
 							// A restored document is a draft: it reaches the site again only when a person publishes it (principle 3).
@@ -513,6 +508,12 @@ export const trashOperations = [
 				}
 				await db.deleteFrom("entry_published").where("entry_id", "in", ids).execute();
 			}
+			if (plan.stamped.length > 0)
+				await db
+					.updateTable("entries")
+					.set((eb) => ({ trashed_at: now, version: eb("version", "+", 1) }))
+					.where("id", "in", plan.stamped)
+					.execute();
 			if (plan.folders.length > 0)
 				await db
 					.updateTable("folders")
@@ -543,7 +544,7 @@ export const trashOperations = [
 		name: "trash.restore",
 		kind: "write",
 		description:
-			"Bring rows of the trash back. A document comes back as a draft, where it was; a translation whose source is in the trash comes back with that source; a folder comes back with everything in it; and a thing whose folder is in the trash brings that folder back to sit in. A translation whose language the entry has again is refused.",
+			"Bring rows of the trash back. A document comes back as a draft, where it was, with every language of it that is in the trash; a folder comes back with everything in it; and a thing whose folder is in the trash brings that folder back to sit in. A translation whose language the entry has again is refused.",
 		input: Rows,
 		async touches(input, ctx) {
 			const plan = await planRestore(ctx, input.rows);
@@ -619,7 +620,6 @@ export const trashOperations = [
 					.updateTable("entries")
 					.set((eb) => ({
 						trashed_at: null,
-						trashed_with: null,
 						trashed_by: null,
 						folder_id: boxOf(entry.folderId),
 						slug,
@@ -715,12 +715,15 @@ export const trashOperations = [
 		async preview(_input, ctx): Promise<Preview> {
 			const rows = await everyTrashRow(ctx.db);
 			return {
-				summary: { key: "trash.empty", values: { count: await trashRowCount(ctx.db) } },
+				summary: {
+					key: "trash.empty",
+					values: { count: await trashRowCount(ctx.db, ctx.site.schema().locales.source) },
+				},
 				changes: rows.map((row) => ref(row.kind)(row.id)),
 			};
 		},
 		async run(_input, ctx) {
-			const purged = await trashRowCount(ctx.db);
+			const purged = await trashRowCount(ctx.db, ctx.site.schema().locales.source);
 			await purgeRows(ctx.db, ctx.site.schema(), await everyTrashRow(ctx.db), ctx.now());
 			return { purged };
 		},

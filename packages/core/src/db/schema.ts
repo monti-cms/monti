@@ -85,8 +85,6 @@ export interface EntryTable {
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 	trashed_at: Date | null;
-	/** In the trash: the entry it went with, a translation thrown away with its source. The trash shows them as one row (doc 11). */
-	trashed_with: string | null;
 	/** In the trash: who threw it away. */
 	trashed_by: TrashedBy | null;
 	/** In a translation: source block ids it chose to leave out, so they are not marked as new (doc 04). */

@@ -28,32 +28,20 @@ export async function foldersUnder(db: Db, id: string): Promise<string[]> {
 	return rows.map((row) => row.id);
 }
 
-/**
- * The entries a permanent delete of these takes: a translation goes alone, a source-language entry (and an item) takes every language of its group, which
- * cannot stay without it.
- */
-async function entriesToPurge(db: Db, schema: Schema, ids: string[]): Promise<{ id: string; group: string }[]> {
+/** The entries a permanent delete of these takes: every language of each that is in the trash, as the trash shows them, one row. */
+async function entriesToPurge(db: Db, ids: string[]): Promise<{ id: string; group: string }[]> {
 	if (ids.length === 0) return [];
-	const given = await db
+	const rows = await db
 		.selectFrom("entries")
-		.select(["id", "translation_group", "locale", "collection"])
-		.where("id", "in", ids)
+		.select(["id", "translation_group as group"])
 		.where("trashed_at", "is not", null)
+		.where(
+			"translation_group",
+			"in",
+			db.selectFrom("entries").select("translation_group").where("id", "in", ids).where("trashed_at", "is not", null),
+		)
 		.execute();
-	const whole = given
-		.filter((row) => row.locale === schema.locales.source || schema.collections[row.collection]?.kind === "item")
-		.map((row) => row.translation_group);
-	const more =
-		whole.length === 0
-			? []
-			: await db
-					.selectFrom("entries")
-					.select(["id", "translation_group"])
-					.where("translation_group", "in", whole)
-					.where("trashed_at", "is not", null)
-					.execute();
-	const all = new Map([...given, ...more].map((row) => [row.id, { id: row.id, group: row.translation_group }]));
-	return [...all.values()];
+	return rows;
 }
 
 /** Hands a file's keys to the clean-up: the bytes leave the storage after the delete commits. */
@@ -98,7 +86,7 @@ export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: D
 		for (const row of files) mediaIds.add(row.id);
 	}
 
-	const entries = await entriesToPurge(db, schema, [...entryIds]);
+	const entries = await entriesToPurge(db, [...entryIds]);
 	if (entries.length > 0) {
 		const gone = entries.map((entry) => entry.id);
 		// Every path the entry was ever published under: `trash.move` wrote down the last one (doc 11, principle 5).

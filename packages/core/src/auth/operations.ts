@@ -145,7 +145,7 @@ export const authOperations = [
 						Number(groups.find((row) => row.collection === name)?.count ?? 0),
 					]),
 				),
-				trash: await trashRowCount(ctx.db),
+				trash: await trashRowCount(ctx.db, ctx.site.schema().locales.source),
 				failedDeliveries: Number(failed.count),
 			};
 		},

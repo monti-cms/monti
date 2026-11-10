@@ -30,7 +30,7 @@ export const TrashQuery = z.object({
 });
 export type TrashQuery = z.infer<typeof TrashQuery>;
 
-/** One row of the trash (doc 11): what was thrown away, with what went with it. */
+/** One row of the trash (doc 11): an entry with every language of it that is there, a folder with what it holds, or a file. */
 export type TrashRow = TrashRef & {
 	version: number;
 	/** The collection it belongs to; `null` for the media library's. */
@@ -38,10 +38,8 @@ export type TrashRow = TrashRef & {
 	title: string;
 	/** An entry's public path, when its collection has one and it has a slug. */
 	address: string | null;
-	/** An entry's language, then the languages of the translations that went with it. */
+	/** An entry's language, then the other languages of it in the trash. */
 	locales: string[];
-	/** A translation thrown away alone whose source is in the trash too: it comes back only with its source. */
-	source: { id: string; title: string } | null;
 	/** A folder: how many entries or files it holds. */
 	holds: number | null;
 	/** A file: what it is and how large. */
@@ -82,9 +80,15 @@ export const daysLeft = (trashedAt: Date, now: Date) =>
 const pattern = (words: string) => `%${words.trim().replace(/[\\%_]/g, "\\$&")}%`;
 const list = (values: string[]) => sql.join(values.map((value) => sql`${value}`));
 
-/** A translation that went to the trash with its source, which is still there: the source's row shows it. */
-const folded = sql<boolean>`(e.trashed_with is not null and exists (
-	select 1 from entries s where s.id = e.trashed_with and s.trashed_at is not null))`;
+/**
+ * An entry another row stands for: an entry's languages in the trash are one row (2026-11-11, owner), its source-language one when that is there, else the first
+ * of them.
+ */
+const shownByAnother = (source: string) => sql<boolean>`exists (
+	select 1 from entries o
+	where o.translation_group = e.translation_group and o.trashed_at is not null and o.id <> e.id
+		and (case when o.locale = ${source} then 0 else 1 end, o.locale, o.id)
+			< (case when e.locale = ${source} then 0 else 1 end, e.locale, e.id))`;
 const folderInTrash = (column: string) =>
 	sql<boolean>`exists (select 1 from folders box where box.id = ${sql.ref(column)} and box.trashed_at is not null)`;
 
@@ -92,7 +96,13 @@ const folderInTrash = (column: string) =>
  * The rows of the trash as one list: entries that are not shown by another's row, folders and files. Without a search, a thing whose folder is in the trash too is
  * shown inside that folder, not beside it.
  */
-function rowsSql(where: { inside: string[] | null; direct: string | null; search: string }): RawBuilder<unknown> {
+function rowsSql(where: {
+	/** The site's source language: the entry that stands for its group. */
+	source: string;
+	inside: string[] | null;
+	direct: string | null;
+	search: string;
+}): RawBuilder<unknown> {
 	const place = (column: string) =>
 		where.direct !== null
 			? sql<boolean>`${sql.ref(column)} = ${where.direct}`
@@ -105,9 +115,10 @@ function rowsSql(where: { inside: string[] | null; direct: string | null; search
 	const found = (columns: RawBuilder<unknown>) => (where.search === "" ? sql<boolean>`true` : columns);
 	return sql`(
 		select 'entry'::text as kind, e.id, e.collection as type, e.trashed_at, e.title
-			from entries e where e.trashed_at is not null and not ${folded} and ${place("e.folder_id")}
-			and ${found(sql`(e.title ilike ${like} or e.slug ilike ${like} or exists (
-				select 1 from entries t where t.trashed_with = e.id and t.trashed_at is not null and t.title ilike ${like}))`)}
+			from entries e where e.trashed_at is not null and not ${shownByAnother(where.source)} and ${place("e.folder_id")}
+			and ${found(sql`(e.slug ilike ${like} or exists (
+				select 1 from entries t
+				where t.translation_group = e.translation_group and t.trashed_at is not null and t.title ilike ${like}))`)}
 		union all
 		select 'folder'::text, f.id, coalesce(f.collection, ${MEDIA_KIND}::text), f.trashed_at, f.name
 			from folders f where f.trashed_at is not null and ${place("f.parent_id")} and ${found(sql`f.name ilike ${like}`)}
@@ -118,8 +129,9 @@ function rowsSql(where: { inside: string[] | null; direct: string | null; search
 }
 
 /** How many rows the trash shows at its top level: the sidebar's number (T38). */
-export async function trashRowCount(db: Db): Promise<number> {
+export async function trashRowCount(db: Db, source: string): Promise<number> {
 	const { rows } = await sql<{ count: string }>`select count(*) as count from ${rowsSql({
+		source,
 		inside: null,
 		direct: null,
 		search: "",
@@ -152,6 +164,7 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 	if (query.folder !== undefined && !open?.trashed_at) throw new CheckError({ key: "trash.unknown" });
 	const searching = query.search.trim() !== "";
 	const found = rowsSql({
+		source: schema.locales.source,
 		search: searching ? query.search : "",
 		direct: open && !searching ? open.id : null,
 		inside: open && searching && query.scope === "here" ? await foldersUnder(db, open.id) : null,
@@ -184,7 +197,6 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 	const base = (trashedAt: Date, by: string | null) => ({
 		address: null,
 		locales: [],
-		source: null,
 		holds: null,
 		file: null,
 		trashedAt: new Date(trashedAt).toISOString(),
@@ -211,41 +223,29 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 			])
 			.where("id", "in", entryIds)
 			.execute();
-		const along = await db
+		// Every language of each entry that is in the trash: the row names them, and a permanent delete keeps the paths of them all.
+		const members = await db
 			.selectFrom("entries")
-			.select(["id", "trashed_with", "locale"])
-			.where("trashed_with", "in", entryIds)
+			.select(["id", "translation_group", "locale"])
+			.where(
+				"translation_group",
+				"in",
+				entries.map((entry) => entry.translation_group),
+			)
 			.where("trashed_at", "is not", null)
 			.orderBy("locale")
 			.execute();
-		// A translation thrown away alone: its source, when that is in the trash too.
-		const alone = entries.filter(
-			(entry) => entry.locale !== schema.locales.source && schema.collections[entry.collection]?.kind === "document",
-		);
-		const sources =
-			alone.length === 0
-				? []
-				: await db
-						.selectFrom("entries")
-						.select(["id", "title", "translation_group"])
-						.where(
-							"translation_group",
-							"in",
-							alone.map((entry) => entry.translation_group),
-						)
-						.where("locale", "=", schema.locales.source)
-						.where("trashed_at", "is not", null)
-						.execute();
 		const paths = await db
 			.selectFrom("old_paths")
 			.select(["entry_id", "collection", "locale", "slug"])
-			.where("entry_id", "in", [...entryIds, ...along.map((row) => row.id)])
+			.where(
+				"entry_id",
+				"in",
+				members.map((row) => row.id),
+			)
 			.execute();
-		const owner = new Map(along.map((row) => [row.id, row.trashed_with]));
+		const groupOf = new Map(members.map((row) => [row.id, row.translation_group]));
 		for (const entry of entries) {
-			const source = alone.includes(entry)
-				? sources.find((each) => each.translation_group === entry.translation_group)
-				: undefined;
 			rows.set(`entry:${entry.id}`, {
 				...base(entry.trashed_at as Date, entry.trashed_by),
 				kind: "entry",
@@ -257,13 +257,17 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 					schema.collections[entry.collection]?.kind === "document" && entry.slug !== ""
 						? publicPath(schema, entry.collection, entry.slug, entry.locale)
 						: null,
-				locales: [entry.locale, ...along.filter((row) => row.trashed_with === entry.id).map((row) => row.locale)],
-				source: source ? { id: source.id, title: source.title } : null,
+				locales: [
+					entry.locale,
+					...members
+						.filter((row) => row.translation_group === entry.translation_group && row.id !== entry.id)
+						.map((row) => row.locale),
+				],
 				folderId: entry.folder_id,
 				path: pathOf(entry.folder_id),
 				inTrashedFolder: inTrash(entry.folder_id),
 				reserves: paths
-					.filter((path) => (owner.get(path.entry_id) ?? path.entry_id) === entry.id)
+					.filter((path) => groupOf.get(path.entry_id) === entry.translation_group)
 					.flatMap((path) => publicPath(schema, path.collection, path.slug, path.locale) ?? []),
 			});
 		}
@@ -274,7 +278,8 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 		// What each folder holds itself; a row's number adds up its subfolders'.
 		const entriesIn = await sql<{ folder_id: string; count: string }>`
 			select e.folder_id, count(*) as count from entries e
-			where e.trashed_at is not null and e.folder_id is not null and not ${folded} group by e.folder_id`.execute(db);
+			where e.trashed_at is not null and e.folder_id is not null and not ${shownByAnother(schema.locales.source)}
+			group by e.folder_id`.execute(db);
 		const filesIn = await db
 			.selectFrom("media")
 			.select(["folder_id", (eb) => eb.fn.countAll<string>().as("count")])
@@ -355,20 +360,18 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 
 const sum = (counts: Record<string, number>) => Object.values(counts).reduce((total, count) => total + count, 0);
 
-/** An entry in the trash as its panel shows it (flow 5·19): every language it has there, and the entries that point at it. */
+/** An entry in the trash as its panel shows it (flow 5·19): every language of it that is there, and the entries that point at it. */
 export type TrashedEntry = {
 	id: string;
 	collection: string;
 	version: number;
 	daysLeft: number;
-	/** Its own language first, then the languages that went with it. */
+	/** Its own language first, then the others in the trash. */
 	locales: { locale: string; title: string; slug: string; address: string | null }[];
 	/** The entries whose relations point at it (doc 08): they show it again once it is restored. */
 	pointing: { id: string; collection: string; title: string; trashed: boolean }[];
 	/** Public paths a permanent delete keeps from every other entry. */
 	reserves: string[];
-	/** A translation thrown away alone whose source is in the trash too: restoring it brings that source back. */
-	source: { id: string; title: string } | null;
 };
 
 export async function trashedEntry(ctx: OperationContext, id: string): Promise<TrashedEntry> {
@@ -376,18 +379,8 @@ export async function trashedEntry(ctx: OperationContext, id: string): Promise<T
 	const schema = ctx.site.schema();
 	const rows = await db
 		.selectFrom("entries")
-		.select([
-			"id",
-			"collection",
-			"locale",
-			"translation_group",
-			"title",
-			"slug",
-			"version",
-			"trashed_at",
-			"trashed_with",
-		])
-		.where((eb) => eb.or([eb("id", "=", id), eb("trashed_with", "=", id)]))
+		.select(["id", "collection", "locale", "translation_group", "title", "slug", "version", "trashed_at"])
+		.where("translation_group", "in", db.selectFrom("entries").select("translation_group").where("id", "=", id))
 		.where("trashed_at", "is not", null)
 		.orderBy("locale")
 		.execute();
@@ -415,25 +408,11 @@ export async function trashedEntry(ctx: OperationContext, id: string): Promise<T
 			rows.map((row) => row.id),
 		)
 		.execute();
-	const alone =
-		entry.locale !== schema.locales.source &&
-		entry.trashed_with === null &&
-		schema.collections[entry.collection]?.kind === "document";
-	const source = !alone
-		? undefined
-		: await db
-				.selectFrom("entries")
-				.select(["id", "title"])
-				.where("translation_group", "=", entry.translation_group)
-				.where("locale", "=", schema.locales.source)
-				.where("trashed_at", "is not", null)
-				.executeTakeFirst();
 	return {
 		id: entry.id,
 		collection: entry.collection,
 		version: entry.version,
 		daysLeft: daysLeft(entry.trashed_at, ctx.now()),
-		source: source ?? null,
 		reserves: paths.flatMap((path) => publicPath(schema, path.collection, path.slug, path.locale) ?? []),
 		locales: [entry, ...rows.filter((row) => row.id !== id)].map((row) => ({
 			locale: row.locale,

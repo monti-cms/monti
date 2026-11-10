@@ -346,8 +346,8 @@ const MIGRATIONS: Record<string, Migration> = {
 	},
 	"0014_trash": {
 		async up(db) {
-			// The trash (doc 11): what went with what, who threw it away, the paths a deleted entry leaves taken, and files waiting to leave the storage.
-			await db.schema.alterTable("entries").addColumn("trashed_with", "text").addColumn("trashed_by", "text").execute();
+			// The trash (doc 11): who threw it away, the paths a deleted entry leaves taken, and files waiting to leave the storage.
+			await db.schema.alterTable("entries").addColumn("trashed_by", "text").execute();
 			await db.schema.alterTable("folders").addColumn("trashed_by", "text").execute();
 			await db.schema.alterTable("media").addColumn("trashed_by", "text").execute();
 			await db.schema.createIndex("entries_trashed").on("entries").column("trashed_at").execute();
