@@ -7,9 +7,13 @@
  * Rules (each finding names its rule id):
  *   undocumented    An operation defined in code (`defineOperation({ name: "…" })` in a package's src) is in no doc's "기능 목록" table.
  *   missing         A doc marked 끝 or 통합 대기 has an operation in its table that no code defines.
- *   open-item       A doc marked 끝 still has an open item in the tracker's "남은 일" that is to be done with it.
+ *   open-item       A doc marked 끝 or 통합 대기 still has an open item in the tracker's "남은 일" that is to be done with it: its pull requests are
+ *                   merged, so nothing would pick the item up.
+ *   late-item       An open item is to be done before a stage ("4단계 전") and a doc of that stage or a later one is marked 끝 or 통합 대기.
+ *                   It cannot stop a stage from starting; it stops its first doc from being finished.
  *   unblocked       A doc marked 통합 대기 has no open item whose 나온 곳 names that doc.
- *   bad-item        An item's id repeats (open, finished or dropped), or an open item's "할 때" is neither a doc number nor 출시 전.
+ *   bad-item        An item's id repeats (open, finished or dropped), or an open item's "할 때" is neither a doc number nor a stage ("4단계 전").
+ *                   There is no "before the release": an item without a time is picked up by nobody (2026-11-11).
  *   unknown-id      A test title starts with a done-criterion id (`00-1 …`) that no doc's "끝 조건" lists.
  *
  * Operations defined in tests (`__test__`, `*.test.ts`) are samples, not Monti's, and are left out.
@@ -67,6 +71,9 @@ const rows = (title) =>
 				.map((cell) => cell.trim()),
 		);
 const status = new Map(rows("문서마다 상태").map((cells) => [cells[0], cells[2]]));
+const stageOf = new Map(rows("문서마다 상태").map((cells) => [cells[0], Number(cells[1])]));
+/** Its pull requests are merged: nothing more is built with it. */
+const BUILT = new Set(["끝", "통합 대기"]);
 const openItems = rows("남은 일").map(([id, , when, from]) => ({ id, when, from }));
 
 const sources = readdirSync(path.join(root, "packages"), { withFileTypes: true })
@@ -99,7 +106,7 @@ for (const [name, where] of defined)
 	if (!documented.has(name))
 		findings.push(`${rel(where.file)}:${where.line}: [undocumented] \`${name}\` is in no feature doc's 기능 목록`);
 for (const doc of docs) {
-	if (!new Set(["끝", "통합 대기"]).has(status.get(doc.number))) continue;
+	if (!BUILT.has(status.get(doc.number))) continue;
 	for (const name of doc.operations)
 		if (!defined.has(name))
 			findings.push(`${rel(doc.file)}: [missing] \`${name}\` is listed and the doc is 끝, but no code defines it`);
@@ -111,13 +118,24 @@ for (const [id] of [...rows("남은 일"), ...rows("끝낸 일"), ...rows("그�
 	seen.add(id);
 }
 for (const item of openItems) {
-	if (item.when !== "출시 전" && !docs.some((doc) => doc.number === item.when))
+	const stage = /^(\d+)단계 전$/.exec(item.when)?.[1];
+	if (stage !== undefined) {
+		if (![...stageOf.values()].includes(Number(stage)))
+			findings.push(
+				`${rel(trackerFile)}: [bad-item] ${item.id} is to be done before stage ${stage}, which no doc is in`,
+			);
+		const built = [...status].filter(([doc, state]) => stageOf.get(doc) >= Number(stage) && BUILT.has(state));
+		if (built.length > 0)
+			findings.push(
+				`${rel(trackerFile)}: [late-item] ${item.id} is to be done before stage ${stage}, but doc ${built.map(([doc]) => doc).join(", ")} is ${built[0][1]}: do the item first`,
+			);
+	} else if (!docs.some((doc) => doc.number === item.when))
 		findings.push(
-			`${rel(trackerFile)}: [bad-item] ${item.id} is to be done with "${item.when}", which is no doc number`,
+			`${rel(trackerFile)}: [bad-item] ${item.id} is to be done with "${item.when}", which is neither a doc number nor a stage ("4단계 전")`,
 		);
-	else if (status.get(item.when) === "끝")
+	else if (BUILT.has(status.get(item.when)))
 		findings.push(
-			`${rel(trackerFile)}: [open-item] doc ${item.when} is 끝, but ${item.id} is still to be done with it`,
+			`${rel(trackerFile)}: [open-item] doc ${item.when} is ${status.get(item.when)}, but ${item.id} is still to be done with it: finish the item, or give it a doc that is not built yet or a stage`,
 		);
 }
 for (const [number, state] of status)
