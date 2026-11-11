@@ -9,7 +9,7 @@ const wait = { timeout: 15000 };
 type Monti = StorySite["monti"];
 
 const admin = { actor: "admin" } as const;
-const run = <Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) =>
+export const run = <Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) =>
 	monti.run(name, input, admin) as Promise<Output>;
 
 /**

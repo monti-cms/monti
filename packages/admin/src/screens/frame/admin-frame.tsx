@@ -135,13 +135,13 @@ function FolderTreeRow({
 	const give = useGiveFolderFiles();
 	const drop = useFolderDrop({
 		// Files from outside go up into the folder, as on its tile: the media screen sends them (T106).
-		onFiles: scope === "media" ? (files) => give.files(files, folder.id) : undefined,
+		onFiles: scope === "media" && give ? (files) => give.files(files, folder.id) : undefined,
 		onMove: (ids) => void move(ids, folder.id),
 	});
 	// The screen's hint at the bottom says the folder the files are over.
 	const overMedia = scope === "media" && drop.files;
 	useEffect(() => {
-		if (!overMedia) return;
+		if (!overMedia || !give) return;
 		give.over(folder.name);
 		return () => give.over(null);
 	}, [overMedia, folder.name, give]);

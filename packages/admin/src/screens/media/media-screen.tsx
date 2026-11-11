@@ -444,8 +444,8 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const addFiles = (files: File[], folder = state.folder) =>
 		void acceptFiles(files).then((taken) => upload.add(taken, folder));
 	const areaDrop = useFileDrop((files) => addFiles(files));
-	// The sidebar's folder rows are outside this screen: files dropped on one come here to go up (T106).
-	useTakeFolderFiles({ over: setFolderTarget, files: (files, folder) => addFiles(files, folder) });
+	// The sidebar's folder rows are outside this screen: files dropped on one come here to go up (T106). With no storage nothing can go up, so they take none.
+	useTakeFolderFiles(storage ? { over: setFolderTarget, files: (files, folder) => addFiles(files, folder) } : null);
 	useKeepFilesInPage();
 
 	// The hint at the bottom says where files would land: the folder they are over, or this place (flow 6·01, 6·02).

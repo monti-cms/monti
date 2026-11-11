@@ -4,7 +4,7 @@ import { useLeaveGuard } from "../draft/leave-guard";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation } from "../operations/use-operation";
 import { putFile } from "./put-file";
-import { useSayRefused, useSayTurnedDown } from "./upload-problem";
+import { useSayRefused } from "./upload-problem";
 import { nextToStart, stillGoing, type Upload, uploadQueue } from "./upload-queue";
 
 const previewOf = (file: File) => (file.type.startsWith("image/") ? URL.createObjectURL(file) : null);
@@ -25,7 +25,6 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 	const onUploaded = useRef(options.onUploaded);
 	onUploaded.current = options.onUploaded;
 	const sayRefused = useSayRefused();
-	const sayTurnedDown = useSayTurnedDown();
 
 	const forget = useCallback((upload: Upload) => {
 		files.current.delete(upload.id);
@@ -71,14 +70,14 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 			// Taken out while the library made it: it stays in the library, and takes no place here.
 			if (stop.signal.aborted) return;
 			if (!made?.ok) {
-				// The library gave a reason (the folder it was going to is gone): trying again would change nothing, so the file leaves its place and a toast says
-				// why, as for a file it does not take (2026-11-09, owner). No answer at all, or the session ending, is still "try again".
-				const reason = made && made.refusal.status !== 401 ? made.refusal.reason : null;
-				if (!reason) {
+				// The folder it was going to is gone: trying again would change nothing, so the file leaves its place and a toast says why, as for a file the
+				// library does not take (2026-11-09, owner). Every other answer is "try again", which sends the bytes anew: no answer at all, the session ending,
+				// bytes that are no longer there (`media.unknownKey`).
+				if (made?.refusal.reason?.key !== "folders.unknown") {
 					dispatch({ type: "failed", id: upload.id });
 					return;
 				}
-				sayTurnedDown(upload.name, reason);
+				sayRefused([{ name: upload.name, refusal: "noFolder" }]);
 				forget(upload);
 				dispatch({ type: "remove", id: upload.id });
 				return;
@@ -87,7 +86,7 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 			forget(upload);
 			dispatch({ type: "remove", id: upload.id });
 		},
-		[uploader, session.end, makeItem.run, forget, sayRefused, sayTurnedDown],
+		[uploader, session.end, makeItem.run, forget, sayRefused],
 	);
 
 	useEffect(() => {
