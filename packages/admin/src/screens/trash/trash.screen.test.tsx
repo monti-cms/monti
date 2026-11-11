@@ -303,6 +303,13 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(panel).toHaveTextContent("남은 날3일 남음");
 		await expect.element(panel).toHaveTextContent("가리키는 글 · 4");
 		await expect.element(panel.getByRole("link", { name: "여름 여행기" })).toBeVisible();
+		// Where an entry is from is words, a size under the entry's name, in the panel's own type.
+		const [name, from] = [
+			panel.getByRole("link", { name: "여름 여행기" }).element(),
+			panel.getByText("게시글", { exact: true }).first().element(),
+		];
+		expect(getComputedStyle(from).fontSize).toBe("12px");
+		expect(getComputedStyle(from).fontFamily).toBe(getComputedStyle(name).fontFamily);
 		await expect.element(panel.getByRole("textbox")).not.toBeInTheDocument();
 		await userEvent.click(panel.getByRole("button", { name: "복원" }));
 		await expect.element(toast("복원했습니다")).toBeVisible();
