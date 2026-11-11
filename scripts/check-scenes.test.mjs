@@ -117,6 +117,7 @@ test("titles and calls in their other spellings are read: a template over lines,
 	assert.deepEqual(withTests("it(`[reach] the pointer\n\tgets to the handle`, () => {});\n"), []);
 	assert.deepEqual(withTests('it.each([1, 2])("[reach] the pointer gets to handle %i", () => {});\n'), []);
 	assert.match(withTests('it.only.each([make(1)])("[reach] to the handle", () => {});\n')[0], /\.only/);
+	// biome-ignore lint/suspicious/noTemplateCurlyInString: the text of a test file, with its own template
 	assert.match(withTests('it.only.each`\n  a\n  ${1}\n`("[reach] to the handle $a", () => {});\n')[0], /\.only/);
 	assert.match(
 		withTests('test.describe.only("the handle", () => {\n\ttest("[reach] to it", () => {});\n});\n')[0],
