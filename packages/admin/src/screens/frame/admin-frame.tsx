@@ -139,7 +139,7 @@ function FolderTreeRow({
 		onMove: (ids) => void move(ids, folder.id),
 	});
 	// The screen's hint at the bottom says the folder the files are over.
-	const overMedia = scope === "media" && drop.target;
+	const overMedia = scope === "media" && drop.files;
 	useEffect(() => {
 		if (!overMedia) return;
 		give.over(folder.name);

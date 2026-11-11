@@ -97,8 +97,16 @@ function TaxonomySidePanel({
 	const languageName = useLanguageName();
 	const [activeLocale, setActiveLocale] = useState(sourceLocale);
 	const [proposalIndex, setProposalIndex] = useState(0);
-	/** Save was pressed with no name in any language: the name field says so until one is typed (README principle 7: the button is never greyed). */
-	const [nameMissing, setNameMissing] = useState(false);
+	/**
+	 * Save was pressed with no name in any language (README principle 7: the button is never greyed): the name field says so while that item is open and still
+	 * has none. Another item, a name, or dropping the changes takes it away.
+	 */
+	const [saveAsked, setSaveAsked] = useState(false);
+	const [askedIn, setAskedIn] = useState(group);
+	if (askedIn !== group) {
+		setAskedIn(group);
+		setSaveAsked(false);
+	}
 
 	const panel = useItemPanel({
 		collection,
@@ -108,6 +116,7 @@ function TaxonomySidePanel({
 		sourceLocale,
 		onSaved,
 	});
+	const nameMissing = saveAsked && !panel.named;
 
 	const title = item?.title || t("taxonomy.newItem", { label: collectionName });
 	const titlePath = `locales.${activeLocale}.title`;
@@ -186,7 +195,14 @@ function TaxonomySidePanel({
 							{t("taxonomy.changesCount", { count: panel.draft.changes.length || 1 })}
 						</Text>
 						<Inline gap={8}>
-							<Button variant="secondary" size="md" onClick={() => panel.draft.revertAll()}>
+							<Button
+								variant="secondary"
+								size="md"
+								onClick={() => {
+									setSaveAsked(false);
+									panel.draft.revertAll();
+								}}
+							>
 								{t("common.discard")}
 							</Button>
 							<Button
@@ -194,8 +210,8 @@ function TaxonomySidePanel({
 								size="md"
 								loading={panel.saving}
 								onClick={async () => {
-									if (!panel.canSave) {
-										setNameMissing(true);
+									if (!panel.named) {
+										setSaveAsked(true);
 										document.getElementById("item-title")?.focus();
 										return;
 									}
@@ -241,10 +257,7 @@ function TaxonomySidePanel({
 					proposal={panel.draft.cell(titlePath).kind === "proposed"}
 					value={shownValue(titlePath)}
 					aria-invalid={nameMissing || undefined}
-					onChange={(e) => {
-						setNameMissing(false);
-						panel.draft.set(titlePath, e.target.value);
-					}}
+					onChange={(e) => panel.draft.set(titlePath, e.target.value)}
 				/>
 				{nameMissing && <FormFieldError>{t("taxonomy.nameMissing")}</FormFieldError>}
 				{wasLine(titlePath)}

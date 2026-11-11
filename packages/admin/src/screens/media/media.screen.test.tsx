@@ -1,3 +1,4 @@
+import { toast as toastApi } from "@monti-cms/ui";
 import { composeStories, composeStory } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
@@ -450,10 +451,12 @@ describe("uploading", () => {
 		await expect.element(folder("Blog Assets")).toBeVisible();
 		dropFiles(folder("Blog Assets").element(), [await jpeg("late.jpg")]);
 		dropFiles(main().getByText("Blog Assets").element(), [await jpeg("here.jpg")]);
-		await expect.element(toast("late.jpg · 없는 폴더입니다.")).toBeVisible();
-		await expect.element(toast("here.jpg · 없는 폴더입니다.")).toBeVisible();
+		await expect.element(toast("late.jpg · 지워진 폴더")).toBeVisible();
+		await expect.element(toast("here.jpg · 지워진 폴더")).toBeVisible();
 		await expect.element(main().getByText("here.jpg")).not.toBeInTheDocument();
 		await expect.element(page.getByRole("button", { name: "다시 올리기" })).not.toBeInTheDocument();
+		// An error's toast stays until it is closed: these two would lie over the tiles the next tests point at.
+		toastApi.dismiss();
 	});
 
 	it("09-1 [flow 6·34] a PDF goes up with no picture, its type on the tile", async () => {
@@ -549,7 +552,9 @@ describe("many files at once", () => {
 		source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer }));
 		for (const type of ["dragenter", "dragover"])
 			target.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
-		await expect.element(toast("covers에 올리기")).toBeVisible();
+		// The folder is marked as where the tile goes. The hint at the bottom is for files going up, and a move is not that.
+		await expect.element(folder("covers")).toHaveAttribute("data-drop-target");
+		await expect.element(page.getByText("covers에 올리기")).not.toBeInTheDocument();
 		target.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer }));
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(folder("covers")).toHaveTextContent("2");
@@ -676,8 +681,14 @@ describe("the sidebar", () => {
 		const target = tree.getByRole("link", { name: /Wallpapers/ }).element();
 		const dataTransfer = new DataTransfer();
 		source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer }));
-		for (const type of ["dragenter", "dragover", "drop"])
+		const fire = (type: string) =>
 			target.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
+		fire("dragenter");
+		fire("dragover");
+		// The row is marked, and nothing says "올리기": a move is not an upload.
+		await expect.element(tree.getByRole("link", { name: /Wallpapers/ })).toHaveAttribute("data-droptarget");
+		await expect.element(page.getByText("Wallpapers에 올리기")).not.toBeInTheDocument();
+		fire("drop");
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(tree.getByRole("link", { name: /Wallpapers/ })).toHaveTextContent("1");
 	});

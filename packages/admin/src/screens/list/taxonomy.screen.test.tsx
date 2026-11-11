@@ -70,6 +70,17 @@ describe("taxonomy screen (doc 08)", () => {
 		await expect.element(name).toHaveAttribute("aria-invalid", "true");
 		// Nothing was made: the panel is still the new item's.
 		await expect.element(page.getByRole("heading", { name: "새 태그" })).toBeVisible();
+		// The error is this item's: another item opened in its place has a name and no error.
+		await userEvent.click(table().getByText("리액트", { exact: true }));
+		await expect.element(name).toHaveValue("리액트");
+		await expect.element(page.getByText("이름을 입력해 주세요.")).not.toBeInTheDocument();
+		await expect.element(name).not.toHaveAttribute("aria-invalid");
+		// Back on a new item it is said again only when save is pressed again, and a name takes it away.
+		await userEvent.click(main().getByRole("button", { name: "+ 태그 추가" }));
+		await expect.element(name).toHaveValue("");
+		await expect.element(page.getByText("이름을 입력해 주세요.")).not.toBeInTheDocument();
+		await userEvent.click(save);
+		await expect.element(page.getByText("이름을 입력해 주세요.")).toBeVisible();
 		await userEvent.keyboard("새");
 		await expect.element(page.getByText("이름을 입력해 주세요.")).not.toBeInTheDocument();
 		await expect.element(name).not.toHaveAttribute("aria-invalid");

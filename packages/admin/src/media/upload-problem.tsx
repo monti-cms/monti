@@ -32,7 +32,14 @@ export function useSayRefused() {
 export function useSayTurnedDown() {
 	const { t } = useAdmin();
 	return useCallback(
-		(name: string, reason: Message) => toast.error(t("library.refused.one", { name, reason: t(reason) })),
+		(name: string, reason: Message) =>
+			toast.error(
+				t("library.refused.one", {
+					name,
+					// The one reason known to come here, in the few words the other refusals use; anything else in the library's own.
+					reason: reason.key === "folders.unknown" ? t("library.refused.noFolder") : t(reason),
+				}),
+			),
 		[t],
 	);
 }

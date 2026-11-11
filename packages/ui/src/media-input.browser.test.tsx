@@ -4,12 +4,19 @@ import { render } from "../test/render";
 import { MediaInput } from "./index";
 
 describe("MediaInput", () => {
-	it("read-only, the line is the value to read: no button, no hand, no tint under the pointer, no icon that says to choose (T125)", async () => {
+	it("read-only, the field is the value to read: no button of any kind, no hand, no tint under the pointer, no icon that says to choose (T125)", async () => {
 		const opened = vi.fn();
 		render(
 			<div style={{ width: 280 }}>
 				<MediaInput value={{ name: "cover-react.png" }} onOpen={opened} />
-				<MediaInput value={{ name: "archived-cover.png" }} readOnly onOpen={opened} />
+				<MediaInput
+					value={{ name: "archived-cover.png" }}
+					readOnly
+					onOpen={opened}
+					onClear={opened}
+					clearLabel="빼기"
+					action={<button type="button">설정</button>}
+				/>
 			</div>,
 		);
 		const open = page.getByRole("button", { name: "cover-react.png" });
@@ -29,7 +36,9 @@ describe("MediaInput", () => {
 		expect(getComputedStyle(field(read)).backgroundColor).toBe("rgba(0, 0, 0, 0)");
 		expect(getComputedStyle(read.element()).cursor).not.toBe("pointer");
 		expect(field(open).querySelector("svg")).not.toBeNull();
+		// Nothing at its end either, whatever it was given: no ×, no control of the file's own, no icon.
 		expect(field(read).querySelector("svg")).toBeNull();
+		expect(field(read).querySelector("button")).toBeNull();
 
 		await userEvent.click(read);
 		expect(opened).not.toHaveBeenCalled();

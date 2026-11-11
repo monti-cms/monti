@@ -230,11 +230,12 @@ function useMediaFolderDrop({
 	onTarget: (name: string | null) => void;
 }) {
 	const drop = useFolderDrop({ onFiles, onMove });
+	// Only files from outside: tiles moved into a folder are not going up.
 	useEffect(() => {
-		if (!drop.target) return;
+		if (!drop.files) return;
 		onTarget(folder.name);
 		return () => onTarget(null);
-	}, [drop.target, folder.name, onTarget]);
+	}, [drop.files, folder.name, onTarget]);
 	return drop;
 }
 

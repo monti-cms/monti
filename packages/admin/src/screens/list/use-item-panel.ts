@@ -95,12 +95,12 @@ export function useItemPanel({ collection, group, item, locales, sourceLocale, o
 
 	useLeaveGuard({ changes: draft.changes, revertAll: draft.revertAll });
 
-	const canSave = useMemo(() => {
-		if (group === "__new__") {
-			return locales.some((l) => Boolean(String(draft.value(`locales.${l}.title`) ?? "").trim()));
-		}
-		return draft.dirty && locales.some((l) => Boolean(String(draft.value(`locales.${l}.title`) ?? "").trim()));
-	}, [group, locales, draft]);
+	/** A name in some language: an item cannot be saved without one. */
+	const named = useMemo(
+		() => locales.some((l) => Boolean(String(draft.value(`locales.${l}.title`) ?? "").trim())),
+		[locales, draft],
+	);
+	const canSave = group === "__new__" ? named : draft.dirty && named;
 
 	const save = async () => {
 		const localesData: Record<string, { title?: string; slug?: string; description?: string }> = {};
@@ -136,6 +136,7 @@ export function useItemPanel({ collection, group, item, locales, sourceLocale, o
 	return {
 		draft,
 		saving: saveGroupOp.pending,
+		named,
 		canSave,
 		save,
 	};

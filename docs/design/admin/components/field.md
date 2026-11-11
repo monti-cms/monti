@@ -49,7 +49,7 @@
 
 ### 코드
 
-`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `readOnly`(보관 글과 휴지통 글: 줄이 버튼이 아니고, 손 모양과 호버 바탕이 없고, 끝의 그림 아이콘도 없다. 2026-11-11 소유자), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정, 끊긴 파일의 다시 올리기. 안의 `IconButton`은 ×와 같은 크기가 된다). 줄에 딸린 카드는 `ref`로 이 줄을 `PopoverContent`의 `anchor`로 삼는다.
+`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `readOnly`(보관 글과 휴지통 글: 버튼이 없다. 줄은 누르는 것이 아니고 손 모양과 호버 바탕이 없으며, 끝의 ×, `action`, 그림 아이콘도 그리지 않는다. 2026-11-11 소유자), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정, 끊긴 파일의 다시 올리기. 안의 `IconButton`은 ×와 같은 크기가 된다). 줄에 딸린 카드는 `ref`로 이 줄을 `PopoverContent`의 `anchor`로 삼는다.
 
 ## 앞뒤가 고정된 필드 (`.mt-affix`)
 

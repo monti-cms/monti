@@ -15,7 +15,7 @@ const HEIGHT = { sm: "h-monti-control-sm", md: "h-monti-control-md", default: "h
  * not shown here: the field reads like its neighbours, an input or a select.
  *
  * `readOnly` (an archived entry, one in the trash) is the value to read and nothing to press: the line is not a button, the pointer stays an arrow, the
- * ground does not answer it, and the picture icon that says "choose one" is gone.
+ * ground does not answer it, and the end holds nothing: no ×, no `action`, no picture icon that says "choose one".
  */
 function MediaInput({
 	id,
@@ -101,12 +101,12 @@ function MediaInput({
 				</button>
 			)}
 			<span className={cn(FIELD_ACTION, "flex items-center")}>
-				{action && <IconButtonContext value={actionSize}>{action}</IconButtonContext>}
-				{value && onClear ? (
+				{action && !readOnly && <IconButtonContext value={actionSize}>{action}</IconButtonContext>}
+				{readOnly ? null : value && onClear ? (
 					<IconButton {...actionSize} label={clearLabel ?? ""} onClick={onClear}>
 						<Close />
 					</IconButton>
-				) : action || readOnly ? null : (
+				) : action ? null : (
 					<ImageIcon aria-hidden className="mr-monti-6 size-4 text-monti-faint" />
 				)}
 			</span>
