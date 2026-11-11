@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import * as media from "./media.stories";
 
-const { Draft, WithCover, ArchivedCover, MissingAlt, TranslationCover, TranslationCoverChanged } =
+const { Draft, WithCover, ArchivedCover, ArchivedImage, MissingAlt, TranslationCover, TranslationCoverChanged } =
 	composeStories(media);
 
 const cover = () => page.getByRole("button", { name: "대표 이미지", exact: true });
@@ -23,6 +23,28 @@ const properties = async () => {
 	const open = page.getByRole("button", { name: "속성" });
 	if (open.elements().length > 0 && open.element().getAttribute("aria-pressed") !== "true") await userEvent.click(open);
 };
+
+describe("a read-only entry", () => {
+	it("09-3 T130 an archived entry's picture in the body can still be read: picked, its bar has only the settings, and their fields cannot be typed in", async () => {
+		await ArchivedImage.run();
+		// The story has picked the picture and opened its settings.
+		await expect.element(alt()).toHaveValue("아침 책상");
+		await expect.element(alt()).toBeDisabled();
+		const bar = page.getByRole("toolbar");
+		await expect.element(bar.getByRole("button", { name: "설정" })).toBeVisible();
+		// Nothing that changes the picture: no alignment, no edit.
+		await expect.element(bar.getByRole("button", { name: "편집" })).not.toBeInTheDocument();
+		await expect.element(bar.getByRole("button", { name: "가운데 정렬" })).not.toBeInTheDocument();
+	});
+
+	it("02-6 T131 an archived entry's fields that pick from a list are off for the keyboard too, like its other fields", async () => {
+		await ArchivedCover.run();
+		await closeCard();
+		const lists = page.getByRole("complementary").getByRole("combobox");
+		await expect.poll(() => lists.elements().length).toBeGreaterThan(0);
+		for (const field of lists.elements()) await expect.element(page.elementLocator(field)).toBeDisabled();
+	});
+});
 
 describe("a cover in the property panel", () => {
 	it("09-3 T125 in an archived entry the cover is read, not changed: its line is no button and has no ×, and its settings open with their fields read-only", async () => {

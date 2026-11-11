@@ -77,7 +77,7 @@ function ComboboxInput({
 			className={cn(
 				cn(
 					FIELD_HOVER,
-					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[input[data-disabled]:not(:disabled)]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input[data-disabled]:not(:disabled)]:opacity-45",
+					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45",
 					FIELD_INSET,
 				),
 				size === "sm" ? "h-monti-control-sm" : size === "md" ? "h-monti-control-md" : "h-monti-control-lg",
@@ -85,22 +85,31 @@ function ComboboxInput({
 			)}
 		>
 			<ComboboxPrimitive.Input
-				render={
+				// A combobox that is off (`Combobox disabled`) marks its input but leaves it in the Tab order: the input itself is turned off here, so the field is
+				// off for the keyboard too, as an `Input disabled` is.
+				render={(given, state) => (
 					<Input
-						disabled={disabled}
+						{...given}
+						disabled={disabled || state.disabled}
 						size={size}
 						mono={mono}
 						proposal={proposal}
-						// The field around it holds the room and the tint; the input inside takes neither.
-						className="h-full flex-1 border-b-0 px-0 hover:bg-transparent data-proposal:border-b-0"
+						// The field around it holds the room, the tint and the dimming of a field that is off; the input inside takes none of them.
+						className={cn(
+							"h-full flex-1 border-b-0 px-0 hover:bg-transparent disabled:opacity-100 data-proposal:border-b-0",
+							given.className,
+						)}
 					/>
-				}
+				)}
 				{...props}
 			/>
 			{showTrigger && (
-				<ComboboxTrigger disabled={disabled} className="group-has-data-[slot=combobox-clear]/combobox-input:hidden" />
+				<ComboboxTrigger
+					disabled={disabled || undefined}
+					className="group-has-data-[slot=combobox-clear]/combobox-input:hidden"
+				/>
 			)}
-			{showClear && <ComboboxClear disabled={disabled} />}
+			{showClear && <ComboboxClear disabled={disabled || undefined} />}
 			{children}
 		</div>
 	);

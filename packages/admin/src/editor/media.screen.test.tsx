@@ -1035,6 +1035,49 @@ describe("opening a body with files", () => {
 	});
 });
 
+describe("archiving while a file goes up", () => {
+	it("02-6 T129 archiving waits for a file still going up: it says so and archives nothing, and archives once the file is up", async () => {
+		const [load] = media.Draft.loaders as [() => Promise<{ site: StorySite }>];
+		let release: () => void = () => {};
+		const held = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const story = composeStory(
+			{
+				...media.Draft,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						const { uploader } = loaded.site;
+						loaded.site.uploader = async (file, options) => {
+							await held;
+							return uploader(file, options);
+						};
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		);
+		await story.run();
+		await userEvent.click(body());
+		await paste(await canvasFile("slow.png"));
+		await expect.element(body().getByRole("progressbar")).toBeVisible();
+		const archive = async () => {
+			await userEvent.click(page.getByRole("button", { name: "더 보기", exact: true }));
+			await userEvent.click(page.getByRole("menuitem", { name: "보관", exact: true }));
+		};
+		await archive();
+		await expect.element(page.getByText("파일을 올리는 중입니다")).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "보관 풀기" })).not.toBeInTheDocument();
+		release();
+		await expect.element(body().getByRole("progressbar")).not.toBeInTheDocument();
+		toast.dismiss();
+		await archive();
+		await expect.element(page.getByRole("button", { name: "보관 풀기" })).toBeVisible();
+	});
+});
+
 describe("a save the server refuses", () => {
 	it("09-4 the reason shows, not an entry left unsaved with no word", async () => {
 		const [load] = media.FileInBody.loaders as [() => Promise<{ site: StorySite }>];

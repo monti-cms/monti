@@ -36,6 +36,7 @@ import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
+	toast,
 	useShortcut,
 } from "@monti-cms/ui";
 import {
@@ -51,7 +52,7 @@ import {
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { download } from "../../download";
-import { useLeaveFiles, useLeaveGuard } from "../../draft/leave-guard";
+import { useLeaveFiles, useLeaveGuard, useUploadsGoing } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { openImageCard } from "../../editor/media-context";
 import { drawable, scrollToProposal, takeInEditor } from "../../editor/proposal-marks";
@@ -146,6 +147,7 @@ export function EntryEditor({
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
 	const duplicate = useOperation<{ output: { id: string } }>("entries.duplicate");
 	const archive = useOperation("entries.archive");
+	const uploadsGoing = useUploadsGoing();
 	const unarchive = useOperation("entries.unarchive");
 	const exporter = useOperation("entries.export");
 	const saveKeys = useShortcut(SAVE_KEYS);
@@ -632,6 +634,12 @@ export function EntryEditor({
 										</DropdownMenuItem>
 										<DropdownMenuItem
 											onClick={async () => {
+												// An archived entry cannot be changed, so a file on its way would have nowhere to land: archiving waits for it
+												// (2026-11-12, owner). The button is not greyed: it says why, and is pressed again once the file is up.
+												if (uploadsGoing() > 0) {
+													toast(t("leave.uploads.title"));
+													return;
+												}
 												if ((await archive.run({ ids: [id] })).ok) await editor.reload();
 											}}
 										>

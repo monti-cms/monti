@@ -801,6 +801,35 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 								ratio="wide"
 							/>
 						)}
+						{selected && !editable && url && (
+							// Read-only (an archived entry, one in the trash): nothing changes the picture, but what the entry says of it can still be read. The
+							// settings card opens with its fields read-only (T130; read-only keeps the ways to read, 2026-11-11 owner).
+							<BlockBarPlace>
+								<FloatingBar ref={bar}>
+									<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
+										<FloatingBarButton
+											label={t("editor.image.settings")}
+											pressed={open}
+											trigger={(button) => <PopoverTrigger render={button} />}
+										>
+											<Settings aria-hidden />
+										</FloatingBarButton>
+										<PopoverContent anchor={bar} align="start">
+											<Stack gap={12}>
+												<AltFields
+													readOnly
+													value={data.alt ?? ""}
+													decorative={data.decorative === true}
+													onChange={() => {}}
+													onDecorative={() => {}}
+													onEnter={() => media?.setCard(null)}
+												/>
+											</Stack>
+										</PopoverContent>
+									</Popover>
+								</FloatingBar>
+							</BlockBarPlace>
+						)}
 						{selected && editable && url && (
 							<>
 								<BlockBarPlace>
