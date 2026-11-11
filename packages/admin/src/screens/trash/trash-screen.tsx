@@ -56,21 +56,13 @@ import { ListPages } from "../list/list-pages";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
 import { TrashedFilePanel } from "../media/media-panel";
+import type { SchemaRead } from "../settings/schema-draft";
 import { readTrashState, TRASH_PAGE_SIZE, type TrashState, trashQueryOf, writeTrashState } from "./trash-query";
 import { TrashedItemPanel } from "./trashed-item-panel";
-
-type SchemaRead = {
-	schema: {
-		collections: Record<string, { kind: "document" | "item" }>;
-		locales: { source: string; list: { code: string }[] };
-	};
-	adminValues: Record<string, { label?: string }>;
-};
 
 /** The widths of the trash's own columns, of the lists' kinds (screens/trash.md): what a row is (one value), and how long it stays (a short mono line). */
 const KIND_SIZE = LIST_COLUMN_SIZE.one;
 const LEFT_SIZE = LIST_COLUMN_SIZE.measure;
-/** Under a week left, the days turn to the warning tone (doc 11). */
 
 const keyOf = (row: TrashRef) => `${row.kind}:${row.id}`;
 const refOf = (row: TrashRef): TrashRef => ({ kind: row.kind, id: row.id });

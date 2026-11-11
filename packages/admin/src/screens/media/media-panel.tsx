@@ -1,4 +1,4 @@
-import { daysLeft, type MediaDetail, type MediaItem, type MediaUseRow, splitName } from "@monti-cms/core";
+import { type MediaDetail, type MediaItem, type MediaUseRow, splitName } from "@monti-cms/core";
 import {
 	Affix,
 	AlertDialog,
@@ -268,7 +268,7 @@ export function TrashedFilePanel({
 	const item = read.data;
 	const uses = useUseRows(item?.useRows ?? []);
 	useCoverCorner(true);
-	if (!item?.trashedAt) return null;
+	if (!item || item.daysLeft === null) return null;
 	return (
 		<SidePanel
 			width="side"
@@ -301,7 +301,7 @@ export function TrashedFilePanel({
 				)}
 				{/* The panel's title is the file's name already; the folder is the one row the library edits and the trash only reads. */}
 				<FileFacts item={item}>
-					<DaysLeftFact days={daysLeft(new Date(item.trashedAt), new Date())} />
+					<DaysLeftFact days={item.daysLeft} />
 					<DescriptionItem label={t("library.folder")}>{item.path.join(" / ") || t("folders.top")}</DescriptionItem>
 				</FileFacts>
 				<FileUses uses={uses} go={go} />

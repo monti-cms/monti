@@ -1,4 +1,4 @@
-import type { TrashRef } from "@monti-cms/core";
+import type { TrashQuery, TrashRef } from "@monti-cms/core";
 
 /** How many rows a page of the trash holds. */
 export const TRASH_PAGE_SIZE = 50;
@@ -14,7 +14,7 @@ export type TrashState = {
 	/** Languages: entries with one of them in the trash. */
 	locales: string[];
 	/** By the days left (the most left first, as it opens) or by title. */
-	sort: { by: "left" | "title"; dir: "asc" | "desc" };
+	sort: TrashQuery["sort"];
 	page: number;
 	/** The item or the file open beside the list. */
 	open: TrashRef | null;

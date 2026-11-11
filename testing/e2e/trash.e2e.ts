@@ -83,10 +83,12 @@ test.describe("the trash", () => {
 			title: "같은 주소의 새 글",
 			slug: post.slug,
 		});
-		const answer = await operation<{ published: string[]; blocked: string[] }>(admin, "entries.publish", {
-			ids: [again.output.id],
-		}).catch(() => null);
-		expect(answer?.output.published ?? []).toEqual([]);
+		// Refused for that reason, not for any failure: the address is the to-do that blocks it.
+		const refused = await admin.request.post("/admin/api/operations/entries.publish", {
+			data: { input: { ids: [again.output.id] } },
+		});
+		expect(refused.status()).not.toBe(200);
+		expect(await refused.text()).toContain("entries.publishBlocked");
 		expect(await onSite(admin, post.slug)).toBe(404);
 	});
 });

@@ -1,4 +1,10 @@
-import type { FolderNode, MediaItem, MediaKind, MediaQueryResult } from "@monti-cms/core";
+import {
+	type FolderNode,
+	type MediaItem,
+	type MediaKind,
+	type MediaQueryResult,
+	mediaSortStart,
+} from "@monti-cms/core";
 import {
 	BulkBar,
 	Button,
@@ -97,7 +103,6 @@ import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
 import { MediaPanel, useFileUses } from "./media-panel";
 import {
-	firstDir,
 	isLooking,
 	KINDS,
 	type MediaState,
@@ -592,7 +597,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				value={state.sort}
 				onValueChange={(sort) => {
 					const found = SORTS.find((known) => known === sort);
-					if (found) setState({ ...state, sort: found, dir: firstDir(found), page: 1 });
+					if (found) setState({ ...state, sort: found, dir: mediaSortStart(found), page: 1 });
 				}}
 			>
 				{SORTS.map((sort) => (

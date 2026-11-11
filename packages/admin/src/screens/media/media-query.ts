@@ -1,10 +1,8 @@
-import type { MediaKind } from "@monti-cms/core";
+import { type MediaKind, mediaSortStart } from "@monti-cms/core";
 
 export const SORTS = ["uploaded", "name", "size"] as const;
 export type Sort = (typeof SORTS)[number];
 type Dir = "asc" | "desc";
-/** The way each order starts: names from A, the newest and the largest first. */
-export const firstDir = (sort: Sort): Dir => (sort === "name" ? "asc" : "desc");
 export const USES = ["used", "unused"] as const;
 type Use = (typeof USES)[number];
 export const KINDS: readonly MediaKind[] = ["image", "file"];
@@ -39,7 +37,7 @@ export function readMediaState(params: URLSearchParams): MediaState {
 		kinds: list(params.get("kind"), KINDS),
 		used: list(params.get("used"), USES),
 		sort,
-		dir: dir === "asc" || dir === "desc" ? dir : firstDir(sort),
+		dir: dir === "asc" || dir === "desc" ? dir : mediaSortStart(sort),
 		view: params.get("view") === "list" ? "list" : "grid",
 		page: Number.isInteger(page) && page > 1 ? page : 1,
 		file: params.get("file"),
@@ -55,7 +53,7 @@ export function writeMediaState(state: MediaState): URLSearchParams {
 	if (state.kinds.length > 0) params.set("kind", state.kinds.join(","));
 	if (state.used.length > 0) params.set("used", state.used.join(","));
 	if (state.sort !== "uploaded") params.set("sort", state.sort);
-	if (state.dir !== firstDir(state.sort)) params.set("dir", state.dir);
+	if (state.dir !== mediaSortStart(state.sort)) params.set("dir", state.dir);
 	if (state.view !== "grid") params.set("view", state.view);
 	if (state.page > 1) params.set("page", String(state.page));
 	if (state.file) params.set("file", state.file);
