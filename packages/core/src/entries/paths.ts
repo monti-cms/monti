@@ -40,11 +40,16 @@ export async function slugPublishedByOther(db: Db, entry: Entry, slug: string): 
 		.where("entry_id", "<>", entry.id)
 		.executeTakeFirst();
 	if (row !== undefined) return true;
+	return pathKept(db, entry.collection, entry.locale, slug);
+}
+
+/** Whether a path is kept from every entry: one deleted for good was published under it (doc 11, principle 5). */
+export async function pathKept(db: Db, collection: string, locale: string, slug: string): Promise<boolean> {
 	const kept = await db
 		.selectFrom("reserved_paths")
 		.select("slug")
-		.where("collection", "=", entry.collection)
-		.where("locale", "=", entry.locale)
+		.where("collection", "=", collection)
+		.where("locale", "=", locale)
 		.where("slug", "=", slug)
 		.executeTakeFirst();
 	return kept !== undefined;

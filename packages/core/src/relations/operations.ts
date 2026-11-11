@@ -1,7 +1,7 @@
 import { sql } from "kysely";
 import { z } from "zod";
 import { randomUUID } from "../bytes";
-import { publicPath } from "../entries/paths";
+import { pathKept, publicPath } from "../entries/paths";
 import { CheckError } from "../errors";
 import { checkMediaValues } from "../media/uses";
 import { defineOperation, type Preview, type RecordRef } from "../operation";
@@ -810,6 +810,10 @@ export const relationOperations = [
 				throw new CheckError({ key: "items.notItem", values: { collection: input.collection } });
 			for (const locale of Object.values(input.locales))
 				await checkMediaValues(ctx.db, schema, input.collection, locale.values);
+			// An item is on the site as soon as it is saved: a typed address that a deleted item was published under is refused (doc 11, principle 5).
+			for (const [locale, data] of Object.entries(input.locales))
+				if (data.slug && (await pathKept(ctx.db, input.collection, locale, data.slug)))
+					throw new CheckError({ key: "items.pathKept", values: { slug: data.slug } });
 		},
 		async run(input, ctx) {
 			const group = input.group ?? randomUUID();

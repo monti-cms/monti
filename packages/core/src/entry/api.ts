@@ -72,8 +72,15 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		if (!found?.open && !session) return { status: 401, body: { error: "unauthenticated" } };
 		// The admin's frame asks this when it opens: the trash is cleaned before it is counted, an hour apart at most (doc 11).
 		if (name === "frame.counts" && monti.now().getTime() - cleanedAt >= CLEAN_EVERY) {
+			// Set before it runs, so two frames opening at once clean once; put back when it fails, so the next frame tries again.
+			const last = cleanedAt;
 			cleanedAt = monti.now().getTime();
-			await monti.trash.purgeDue();
+			try {
+				await monti.trash.purgeDue();
+			} catch (error) {
+				cleanedAt = last;
+				console.error("Monti: the trash clean-up failed; the next admin visit tries again:", error);
+			}
 		}
 		const body = Body.safeParse(rawBody);
 		if (!body.success) return { status: 400, body: { error: "invalid-body" } };

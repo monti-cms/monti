@@ -1,7 +1,9 @@
 import { type Kysely, sql, type Transaction } from "kysely";
 import type { Database } from "../db/schema";
 import { UNDO_DAYS } from "../engine/execute";
+import { freeName, lockFolderScope } from "../folders/operations";
 import type { Storage } from "../media/storage";
+import { lockRecords } from "../records";
 import { unlinkTargetGroup } from "../relations/sync";
 import type { Schema } from "../schema/define";
 
@@ -10,6 +12,10 @@ type Db = Kysely<Database> | Transaction<Database>;
 /** How long the trash keeps something: as long as a write can be undone (doc 11). */
 export const TRASH_DAYS = UNDO_DAYS;
 const DAY = 86_400_000;
+
+/** The days something thrown away at `trashedAt` still has in the trash, by the site's clock. */
+export const daysLeft = (trashedAt: Date, now: Date) =>
+	Math.max(0, Math.ceil((new Date(trashedAt).getTime() + TRASH_DAYS * DAY - now.getTime()) / DAY));
 
 /** A row of the trash: an entry (with the translations that went with it), a folder (with what it holds) or a file. */
 export type TrashRef = { kind: "entry" | "folder" | "media"; id: string };
@@ -26,6 +32,48 @@ export async function foldersUnder(db: Db, id: string): Promise<string[]> {
 			select f.id from folders f join tree on f.parent_id = tree.id
 		) select id from tree`.execute(db);
 	return rows.map((row) => row.id);
+}
+
+/** The folder, if it is in the trash, and the folders under it that are: what a permanent delete of it takes. A folder that is not in the trash stays, with what is under it. */
+async function trashedUnder(db: Db, id: string): Promise<string[]> {
+	const { rows } = await sql<{ id: string }>`
+		with recursive tree as (
+			select id from folders where id = ${id} and trashed_at is not null
+			union all
+			select f.id from folders f join tree on f.parent_id = tree.id where f.trashed_at is not null
+		) select id from tree`.execute(db);
+	return rows.map((row) => row.id);
+}
+
+/**
+ * The paths a permanent delete of these entries keeps from every other entry (doc 11, principle 5): every path they were published under (`trash.move` wrote down
+ * the last one). A path another entry is published under now is not kept: that entry took it while these sat in the trash, and it goes on publishing under it.
+ */
+export async function keptPaths(
+	db: Db,
+	entryIds: string[],
+): Promise<{ entry_id: string; collection: string; locale: string; slug: string }[]> {
+	if (entryIds.length === 0) return [];
+	const paths = await db
+		.selectFrom("old_paths")
+		.select(["entry_id", "collection", "locale", "slug"])
+		.where("entry_id", "in", entryIds)
+		.execute();
+	if (paths.length === 0) return [];
+	const taken = await db
+		.selectFrom("entry_published")
+		.select(["collection", "locale", "slug"])
+		.where("entry_id", "not in", entryIds)
+		.where(
+			"slug",
+			"in",
+			paths.map((path) => path.slug),
+		)
+		.execute();
+	const key = (path: { collection: string; locale: string; slug: string }) =>
+		[path.collection, path.locale, path.slug].join("\n");
+	const others = new Set(taken.map(key));
+	return paths.filter((path) => !others.has(key(path)));
 }
 
 /** The entries a permanent delete of these takes: every language of each that is in the trash, as the trash shows them, one row. */
@@ -74,7 +122,7 @@ export const looseUntil = (now: Date) => new Date(now.getTime() + LOOSE_DAYS * D
 export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: Date): Promise<void> {
 	const ids = (kind: TrashRef["kind"]) => rows.filter((row) => row.kind === kind).map((row) => row.id);
 	const folders = new Set<string>();
-	for (const id of ids("folder")) for (const each of await foldersUnder(db, id)) folders.add(each);
+	for (const id of ids("folder")) for (const each of await trashedUnder(db, id)) folders.add(each);
 	const entryIds = new Set(ids("entry"));
 	const mediaIds = new Set(ids("media"));
 	if (folders.size > 0) {
@@ -98,19 +146,14 @@ export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: D
 	const entries = await entriesToPurge(db, [...entryIds]);
 	if (entries.length > 0) {
 		const gone = entries.map((entry) => entry.id);
-		// Every path the entry was ever published under: `trash.move` wrote down the last one (doc 11, principle 5).
-		const paths = await db
-			.selectFrom("old_paths")
-			.select(["collection", "locale", "slug"])
-			.where("entry_id", "in", gone)
-			.execute();
-		if (paths.length > 0)
+		const kept = await keptPaths(db, gone);
+		if (kept.length > 0)
 			await db
 				.insertInto("reserved_paths")
-				.values(paths.map((path) => ({ ...path, since: now })))
+				.values(kept.map(({ collection, locale, slug }) => ({ collection, locale, slug, since: now })))
 				.onConflict((conflict) => conflict.doNothing())
 				.execute();
-		await db.deleteFrom("entries").where("id", "in", gone).execute();
+		await db.deleteFrom("entries").where("id", "in", gone).where("trashed_at", "is not", null).execute();
 		const groups = [...new Set(entries.map((entry) => entry.group))];
 		const left = await db
 			.selectFrom("entries")
@@ -139,6 +182,7 @@ export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: D
 					"in",
 					files.map((file) => file.id),
 				)
+				.where("trashed_at", "is not", null)
 				.execute();
 			await loosen(
 				db,
@@ -160,7 +204,23 @@ export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: D
 			.set((eb) => ({ folder_id: null, version: eb("version", "+", 1) }))
 			.where("folder_id", "in", inside)
 			.execute();
-		await db.deleteFrom("folders").where("id", "in", inside).execute();
+		// A folder under them that is not in the trash (an undo can put one there) stays, at the top level, under a name free there.
+		const live = await db
+			.selectFrom("folders")
+			.select(["id", "name", "collection"])
+			.where("parent_id", "in", inside)
+			.where("trashed_at", "is", null)
+			.execute();
+		for (const folder of live) {
+			await lockFolderScope(db, folder.collection, null);
+			const name = await freeName(db, folder.collection, null, folder.name, folder.id);
+			await db
+				.updateTable("folders")
+				.set((eb) => ({ parent_id: null, name, version: eb("version", "+", 1) }))
+				.where("id", "=", folder.id)
+				.execute();
+		}
+		await db.deleteFrom("folders").where("id", "in", inside).where("trashed_at", "is not", null).execute();
 	}
 }
 
@@ -231,7 +291,10 @@ export async function purgeDue(
 	now: Date,
 ): Promise<{ purged: number; files: number }> {
 	const purged = await db.transaction().execute(async (trx) => {
-		const rows = await everyTrashRow(trx, new Date(now.getTime() - TRASH_DAYS * DAY));
+		const due = new Date(now.getTime() - TRASH_DAYS * DAY);
+		// Held as a restore holds them, then read again: a row that came back at this moment stays.
+		await lockRecords(trx, await everyTrashRow(trx, due));
+		const rows = await everyTrashRow(trx, due);
 		if (rows.length > 0) await purgeRows(trx, schema, rows, now);
 		await trx
 			.deleteFrom("monti_activity_snapshot")

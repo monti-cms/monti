@@ -629,6 +629,129 @@ describe("deleting for good", () => {
 	});
 });
 
+describe("what the final review found", () => {
+	it("11-3 an entry is in one folder with every language of it, the ones in the trash too: a folder's delete takes no entry shown outside it", async () => {
+		const folder = await postFolder("상자");
+		const source = await post("원문", "source");
+		const english = await translate(source);
+		await write("entries.moveToFolder", { ids: [source], folder });
+		await move(entryRow(english));
+		// The source leaves the folder: its translation in the trash goes with it.
+		await write("entries.moveToFolder", { ids: [source], folder: null });
+		expect((await entry(english)).folder_id).toBeNull();
+
+		await move(folderRow(folder));
+		later(20);
+		await move(entryRow(source));
+		later(11);
+		// The folder has been 31 days in the trash and goes; the entry, thrown away 11 days ago, stays with both its languages.
+		await site().trash.purgeDue();
+		expect(await db.selectFrom("folders").select("id").where("id", "=", folder).execute()).toEqual([]);
+		expect(await list()).toMatchObject({ total: 1, rows: [{ id: source, locales: ["ko", "en"], daysLeft: 19 }] });
+	});
+
+	it("11-3 a folder's delete takes only folders that are in the trash: one under it that is not stays, at the top level, with what it holds", async () => {
+		const outer = await postFolder("바깥");
+		const inner = await postFolder("안", outer);
+		const kept = await post("남는 글", "kept");
+		await write("entries.moveToFolder", { ids: [kept], folder: inner });
+		const out = await write("folders.move", { id: inner, parentId: null });
+		await move(folderRow(outer));
+		// The undo puts the live folder back under the one that is in the trash by now.
+		await write("activity.undo", { id: out.activityId });
+		expect(
+			await db.selectFrom("folders").select("parent_id").where("id", "=", inner).executeTakeFirstOrThrow(),
+		).toEqual({ parent_id: outer });
+
+		await purge(folderRow(outer));
+
+		expect(await db.selectFrom("folders").select(["id", "parent_id", "trashed_at"]).execute()).toEqual([
+			{ id: inner, parent_id: null, trashed_at: null },
+		]);
+		expect((await entry(kept)).folder_id).toBe(inner);
+	});
+
+	it("11-4 a path another entry is published under by then stays that entry's: it publishes under it again", async () => {
+		const first = await post("첫 글", "shared");
+		await publish(first);
+		await move(entryRow(first));
+		const second = await post("둘째 글", "shared");
+		await publish(second);
+		// The delete would keep no path: the one it had is the second entry's now.
+		expect(await row("첫 글")).toMatchObject({ reserves: [] });
+		await purge(entryRow(first));
+
+		await write("entries.save", { id: second, version: (await entry(second)).version, title: "둘째 글, 고침" });
+		expect((await publish(second)).output).toEqual({ published: [second], blocked: [] });
+	});
+
+	it("11-4 a deleted item's address is kept from new items too: a new one of its name gets the next, and typing the address is refused", async () => {
+		const react = await tag("react");
+		await move(entryRow(react.locales.ko.id));
+		await purge(entryRow(react.locales.ko.id));
+
+		const again = (await write<Item>("items.saveGroup", { collection: "tag", locales: { ko: { title: "react" } } }))
+			.output;
+		expect(again.locales.ko.slug).toBe("react-2");
+		await expect(tag("react")).rejects.toThrow("items.pathKept");
+	});
+
+	it("11-2 a folder going to the trash and an entry moving into a folder under it, at the same moment: neither stops the other for good", async () => {
+		for (let round = 0; round < 10; round++) {
+			const outer = await postFolder(`바깥 ${round}`);
+			const inner = await postFolder("안", outer);
+			const inside = await post(`안의 글 ${round}`, `inside-${round}`);
+			await write("entries.moveToFolder", { ids: [inside], folder: outer });
+			const results = await Promise.allSettled([
+				move(folderRow(outer)),
+				write("entries.moveToFolder", { ids: [inside], folder: inner }),
+			]);
+			// The move may be refused (the folder is in the trash by then); a deadlock is neither.
+			for (const result of results)
+				if (result.status === "rejected") expect(String(result.reason)).not.toContain("deadlock");
+			expect(results[0].status).toBe("fulfilled");
+		}
+	});
+
+	it("11-2 undo puts a language that was already in the trash back to the day it went there", async () => {
+		const source = await post("원문", "source");
+		const english = await translate(source);
+		await move(entryRow(english));
+		const went = (await entry(english)).trashed_at;
+		later(5);
+		const moved = await move(entryRow(source));
+		expect((await entry(english)).trashed_at).toEqual((await entry(source)).trashed_at);
+
+		await write("activity.undo", { id: moved.activityId });
+		expect((await entry(source)).trashed_at).toBeNull();
+		expect((await entry(english)).trashed_at).toEqual(went);
+		expect(await list()).toMatchObject({ total: 1, rows: [{ id: english, locales: ["en"], daysLeft: 25 }] });
+	});
+
+	it("11-5 a clean-up that fails does not fail the admin's frame, and the next visit tries again", async () => {
+		const monti = site();
+		const api = signedInApi(monti);
+		const clean = monti.trash.purgeDue;
+		let tries = 0;
+		monti.trash.purgeDue = () => {
+			tries++;
+			return Promise.reject(new Error("the database is busy"));
+		};
+		const frame = () =>
+			api(new Request("http://site/admin/api/operations/frame.counts", { method: "POST", body: JSON.stringify({}) }));
+		const said = console.error;
+		console.error = () => {};
+		try {
+			expect((await frame()).status).toBe(200);
+			expect((await frame()).status).toBe(200);
+		} finally {
+			console.error = said;
+			monti.trash.purgeDue = clean;
+		}
+		expect(tries).toBe(2);
+	});
+});
+
 describe("the clean-up", () => {
 	it("11-5 what has been in the trash for 30 days is deleted; what has not stays", async () => {
 		const [old, young] = [await post("오래된 글", "old"), await post("최근 글", "young")];

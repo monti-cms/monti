@@ -8,7 +8,7 @@ import { folderOf, subtree } from "../folders/operations";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import { bodyAsRead, followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
-import { lockFileKeys, loosen, looseUntil } from "../trash/purge";
+import { daysLeft, lockFileKeys, loosen, looseUntil } from "../trash/purge";
 import { isMediaKey, kindOf, type MediaKind, splitName, WEB_LONGEST_SIDE } from "./accept";
 import { altGaps } from "./alt";
 import { type MediaPlace, placeOf } from "./value";
@@ -74,7 +74,12 @@ export type MediaUseRow =
 	  }
 	| { owner: "template"; id: string; name: string; place: MediaPlace };
 
-export type MediaDetail = MediaItem & { useRows: MediaUseRow[]; trashedAt: string | null };
+/** A file with where it is used. In the trash it says so, with the days it has left there by the site's clock (doc 11). */
+/** The way each order of the library starts: names from A, the newest and the largest first. */
+export const mediaSortStart = (sort: "uploaded" | "name" | "size"): "asc" | "desc" =>
+	sort === "name" ? "asc" : "desc";
+
+export type MediaDetail = MediaItem & { useRows: MediaUseRow[]; trashedAt: string | null; daysLeft: number | null };
 
 /** An image with no alt text, and where. */
 export type MissingAlt = {
@@ -253,7 +258,7 @@ const Query = z.object({
 	only: z.enum(["image", "file"]).optional(),
 	used: z.array(z.enum(["used", "unused"])).default([]),
 	sort: z.enum(["uploaded", "name", "size"]).default("uploaded"),
-	/** Left out, the way each is first looked for: names from A, the largest and the newest first. */
+	/** Left out, the way the order starts (`mediaSortStart`). */
 	dir: z.enum(["asc", "desc"]).optional(),
 	page: z.number().int().positive().default(1),
 	/** How many files a page holds. The library's screen keeps to pages of 100; a window that loads more asks for more. */
@@ -301,7 +306,7 @@ export const mediaOperations = [
 			const { total } = await filtered.select(sql<number>`count(*)::int`.as("total")).executeTakeFirstOrThrow();
 			const ordered = filtered.orderBy(
 				input.sort === "name" ? "name" : input.sort === "size" ? "size" : "uploaded_at",
-				input.dir ?? (input.sort === "name" ? "asc" : "desc"),
+				input.dir ?? mediaSortStart(input.sort),
 			);
 			const rows = await ordered
 				.select(COLUMNS)
@@ -376,6 +381,7 @@ export const mediaOperations = [
 			return {
 				...itemOf(row, ctx, await folderPaths(ctx.db)),
 				trashedAt: row.trashed_at && new Date(row.trashed_at).toISOString(),
+				daysLeft: row.trashed_at ? daysLeft(new Date(row.trashed_at), ctx.now()) : null,
 				useRows: [
 					...entries.map(
 						(use): MediaUseRow => ({

@@ -5,7 +5,7 @@ import type { Database, TrashedBy } from "../db/schema";
 import { CheckError } from "../errors";
 import { usedOf } from "../media/uses";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
-import { defineRecordKind } from "../records";
+import { defineRecordKind, lockRecords } from "../records";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -147,14 +147,20 @@ async function checkParent(db: Db, collection: string | null, parentId: string |
 	if (parent.collection !== collection) throw new CheckError({ key: "folders.otherScope" });
 }
 
-/** The entries of the translation groups that hold `ids`, not in the trash: a folder holds a group, never one language of it (principle 3). */
+/**
+ * The entries of the translation groups that hold the live ones of `ids`: a folder holds a group, never one language of it (principle 3). A language of the
+ * group that is in the trash moves too, so the trash never shows, deletes or brings back one entry out of two folders (doc 11).
+ */
 async function groupsOf(db: Db, ids: string[]) {
 	if (ids.length === 0) return [];
 	return db
 		.selectFrom("entries")
 		.select(["id", "collection", "translation_group", "folder_id", "version"])
-		.where("trashed_at", "is", null)
-		.where("translation_group", "in", db.selectFrom("entries").select("translation_group").where("id", "in", ids))
+		.where(
+			"translation_group",
+			"in",
+			db.selectFrom("entries").select("translation_group").where("id", "in", ids).where("trashed_at", "is", null),
+		)
 		.execute();
 }
 
@@ -355,6 +361,8 @@ export const folderOperations = [
 		input: z.object({ ids: z.array(z.string()).min(1), folder: z.string().nullable() }),
 		async touches(input, ctx) {
 			// The folder too, as a file's move takes its folder: a folder on its way to the trash and an entry on its way in go one after the other (doc 11).
+			// It is held here, before the entries are: `trash.move` holds a folder before what is in it, and two writes that hold them in two orders stop each other.
+			if (input.folder) await lockRecords(ctx.db, [folderRef(input.folder)]);
 			return [
 				...(input.folder ? [folderRef(input.folder)] : []),
 				...(await groupsOf(ctx.db, input.ids)).map((entry) => entryRef(entry.id)),

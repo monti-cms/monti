@@ -5,11 +5,9 @@ import { publicPath } from "../entries/paths";
 import { CheckError } from "../errors";
 import type { MediaKind } from "../media/accept";
 import type { OperationContext } from "../operation";
-import { foldersUnder, TRASH_DAYS, type TrashRef } from "./purge";
+import { daysLeft, foldersUnder, keptPaths, type TrashRef } from "./purge";
 
 type Db = Kysely<Database> | Transaction<Database>;
-
-const DAY = 86_400_000;
 
 /** The kind the trash names for the media library's files and folders, next to the collections' names. */
 export const MEDIA_KIND = "media";
@@ -78,9 +76,6 @@ export type TrashList = {
 };
 type Trail = { id: string; name: string }[];
 
-export const daysLeft = (trashedAt: Date, now: Date) =>
-	Math.max(0, Math.ceil((new Date(trashedAt).getTime() + TRASH_DAYS * DAY - now.getTime()) / DAY));
-
 const pattern = (words: string) => `%${words.trim().replace(/[\\%_]/g, "\\$&")}%`;
 const list = (values: string[]) => sql.join(values.map((value) => sql`${value}`));
 
@@ -122,9 +117,10 @@ function rowsSql(where: {
 				select array_agg(t.locale) from entries t
 				where t.translation_group = e.translation_group and t.trashed_at is not null) as locales
 			from entries e where e.trashed_at is not null and not ${shownByAnother(where.source)} and ${place("e.folder_id")}
-			and ${found(sql`(e.slug ilike ${like} or exists (
+			and ${found(sql`exists (
 				select 1 from entries t
-				where t.translation_group = e.translation_group and t.trashed_at is not null and t.title ilike ${like}))`)}
+				where t.translation_group = e.translation_group and t.trashed_at is not null
+					and (t.title ilike ${like} or t.slug ilike ${like}))`)}
 		union all
 		select 'folder'::text, f.id, coalesce(f.collection, ${MEDIA_KIND}::text), f.trashed_at, f.name, null::text[]
 			from folders f where f.trashed_at is not null and ${place("f.parent_id")} and ${found(sql`f.name ilike ${like}`)}
@@ -248,19 +244,16 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 			.where("trashed_at", "is not", null)
 			.orderBy("locale")
 			.execute();
-		const paths = await db
-			.selectFrom("old_paths")
-			.select(["entry_id", "collection", "locale", "slug"])
-			.where(
-				"entry_id",
-				"in",
-				members.map((row) => row.id),
-			)
-			.execute();
+		const paths = await keptPaths(
+			db,
+			members.map((row) => row.id),
+		);
 		const groupOf = new Map(members.map((row) => [row.id, row.translation_group]));
 		for (const entry of entries) {
+			// Read after the page was: one that came back in between is no longer a row.
+			if (entry.trashed_at === null) continue;
 			rows.set(`entry:${entry.id}`, {
-				...base(entry.trashed_at as Date, entry.trashed_by),
+				...base(entry.trashed_at, entry.trashed_by),
 				kind: "entry",
 				id: entry.id,
 				version: entry.version,
@@ -334,9 +327,10 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 			.select(["id", "name", "kind", "size", "folder_id", "trashed_at", "trashed_by", "version"])
 			.where("id", "in", mediaIds)
 			.execute();
-		for (const file of files)
+		for (const file of files) {
+			if (file.trashed_at === null) continue;
 			rows.set(`media:${file.id}`, {
-				...base(file.trashed_at as Date, file.trashed_by),
+				...base(file.trashed_at, file.trashed_by),
 				kind: "media",
 				id: file.id,
 				version: file.version,
@@ -347,6 +341,7 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 				path: pathOf(file.folder_id),
 				inTrashedFolder: inTrash(file.folder_id),
 			});
+		}
 	}
 
 	const trail: Trail = [];
@@ -413,15 +408,10 @@ export async function trashedEntry(ctx: OperationContext, id: string): Promise<T
 		const seen = pointing.get(link.translation_group);
 		if (!seen || link.locale === schema.locales.source) pointing.set(link.translation_group, link);
 	}
-	const paths = await db
-		.selectFrom("old_paths")
-		.select(["collection", "locale", "slug"])
-		.where(
-			"entry_id",
-			"in",
-			rows.map((row) => row.id),
-		)
-		.execute();
+	const paths = await keptPaths(
+		db,
+		rows.map((row) => row.id),
+	);
 	return {
 		id: entry.id,
 		collection: entry.collection,

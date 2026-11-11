@@ -1,7 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import { z } from "zod";
 import type { Database, TrashedBy } from "../db/schema";
-import { publicPath } from "../entries/paths";
+import { pathKept, publicPath } from "../entries/paths";
 import { CheckError } from "../errors";
 import { freeName, lockFolderScope, mediaRemoval, subtree } from "../folders/operations";
 import { usedOf } from "../media/uses";
@@ -242,7 +242,6 @@ type RestorePlan = {
  */
 async function planRestore(ctx: OperationContext, rows: TrashRef[]): Promise<RestorePlan> {
 	const { db } = ctx;
-	const schema = ctx.site.schema();
 	const boxes: RestorePlan["boxes"] = new Map(
 		(await db.selectFrom("folders").select(["id", "parent_id", "collection", "name", "trashed_at"]).execute()).map(
 			(row) => [row.id, row],
@@ -358,14 +357,7 @@ async function freeSlug(db: Db, entry: RestoreEntry): Promise<string> {
 			.where("trashed_at", "is", null)
 			.where("id", "<>", entry.id)
 			.executeTakeFirst();
-		const kept = await db
-			.selectFrom("reserved_paths")
-			.select("slug")
-			.where("collection", "=", entry.collection)
-			.where("locale", "=", entry.locale)
-			.where("slug", "=", slug)
-			.executeTakeFirst();
-		if (!live && !kept) return slug;
+		if (!live && !(await pathKept(db, entry.collection, entry.locale, slug))) return slug;
 	}
 }
 
@@ -716,6 +708,8 @@ export const trashOperations = [
 		humanOnly: true,
 		description: "Delete everything in the trash for good. Only a person does it; it is never an agent tool.",
 		input: z.object({}),
+		// Every row is held, as a restore holds its own: one that comes back at this moment stays, and is not in what `run` reads next.
+		touches: async (_input, ctx) => (await everyTrashRow(ctx.db)).map((row) => ref(row.kind)(row.id)),
 		async preview(_input, ctx): Promise<Preview> {
 			const rows = await everyTrashRow(ctx.db);
 			return {

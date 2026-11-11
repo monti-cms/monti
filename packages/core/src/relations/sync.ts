@@ -1,7 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
-import { slugify } from "../entries/paths";
+import { pathKept, slugify } from "../entries/paths";
 import type { OperationContext, RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import { localeModeOf, type Schema } from "../schema/define";
@@ -10,7 +10,7 @@ type Db = Kysely<Database> | Transaction<Database>;
 
 const ref = (id: string): RecordRef => ({ kind: "entry", id });
 
-/** Generates a unique slug within (collection, locale) by appending -2, -3 if taken. */
+/** Generates a unique slug within (collection, locale) by appending -2, -3 if taken, by a live entry or by one deleted for good. */
 export async function generateUniqueSlug(
 	db: Db,
 	collection: string,
@@ -45,7 +45,7 @@ export async function generateUniqueSlug(
 				queryPublished = queryPublished.where("entry_id", "<>", excludeEntryId);
 			}
 			const inPublished = await queryPublished.executeTakeFirst();
-			if (!inPublished) return candidate;
+			if (!inPublished && !(await pathKept(db, collection, locale, candidate))) return candidate;
 		}
 		candidate = `${base}-${suffix++}`;
 	}
