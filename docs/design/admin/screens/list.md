@@ -21,7 +21,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `add`, `moveLabel`, `onPlace`, `onStep`, `onPreview`) | `columns`의 열마다 `id`, `label`, `size`, `sort`, `filtered`, `menu`. 필터, 정렬, 열 숨기기는 모두 이름을 누르면 열리는 그 열의 메뉴에서 한다. 필터가 걸린 열은 `filtered`로 점, 정렬된 열은 `sort`로 화살표. |
+| 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `add`, `moveLabel`, `onPlace`, `onStep`, `onPreview`, `onResize`, `resizeLabel`) | `columns`의 열마다 `id`, `label`, `size`, `sort`, `filtered`, `menu`. 필터, 정렬, 열 숨기기는 모두 이름을 누르면 열리는 그 열의 메뉴에서 한다. 필터가 걸린 열은 `filtered`로 점, 정렬된 열은 `sort`로 화살표. |
 | 모두 선택 | `ListHead`의 `selectAll`(`state` `none`·`some`·`all`) | 포인터가 머리 위에 있을 때 보인다. 지금 쪽만 고른다. |
 | 열 메뉴의 정렬 (제목, 날짜) | `SortRows`(`DropdownMenuRadioGroup` + `DropdownMenuRadioItem`) | 제목은 "오름차순 · 내림차순", 날짜는 "최근부터 · 오래전부터". 고르면 닫힌다. |
 | 열 메뉴의 거를 값 | `DropdownMenuCheckboxItem box`, 끝에 개수 `MenuShortcut` | 상태: 발행됨 · 수정 중 · 초안 · 보관됨. 관계(카테고리, 태그): 맨 위 `DropdownMenuSearch`, "없음", `DropdownMenuSeparator`, 항목(많으면 `DropdownMenuScroll`). 언어: 관리자 화면 언어로 된 언어 이름들("한국어", "영어"), 구분선, `DropdownMenuLabel` "번역", 번역 없음 · 원문 변경 · 최신. 텍스트 필드(검색 설명): "비어 있음" 하나. 골라도 메뉴는 열려 있다. |
@@ -38,7 +38,7 @@
 |---|---|---|
 | 표 | `ListScroll` 안의 `Table`(`TableBody`, `TableRow`, `TableCell`) | 고른 행은 `TableRow selected`, 어시스턴트가 고른 행은 `proposal`도. 오른쪽 클릭 메뉴가 열린 동안 그 행은 호버 바탕을 유지한다. |
 | 행 체크 | `RowCheck`(`checked`, `onCheckedChange`, `label` "고르기", 어시스턴트가 고른 행은 `proposal`과 이름 "AI가 고름") | 포인터가 행 위에 있을 때와 고른 행에만 보인다. |
-| 상태 칸 | `EntryStatus`, 발행됨만 `quiet` | 발행됨은 조용한 색, 수정 중과 초안은 제 색이다. |
+| 상태 칸 | `TableCell truncate`(`title`) 안의 `EntryStatus`, 발행됨만 `quiet` | 발행됨은 조용한 색, 수정 중과 초안은 제 색이다. 열을 좁히면 점은 남고 이름이 "…"로 잘린다. 날짜 칸도 좁히면 잘리고 `title`이 말한다. |
 | 제목 칸 | `RowLink` 안의 `RowTitle`(`title`, `address`) | 제목 뒤 같은 줄에 주소. 행 어디를 눌러도 글이 열린다. |
 | 카테고리 · 태그 · 텍스트 필드 칸 | `TableCell tone="subtle" truncate`, 셀 `title`에 전부 | 끝은 늘 "…". 값 여럿은 " · "로 잇는다. |
 | 언어 · 수정일 칸 | 언어는 `LocaleCodes`, 날짜는 `Text mono variant="meta"`(`tone="muted"`, 칸은 `align="end"`) | 언어는 기본 너비에서 "KO +1", 열을 넓히면 "KO · EN"이고, 세기만 한 언어는 가리킬 때 툴팁이 이름으로 말한다(2026-11-11 소유자). 날짜는 올해면 "10. 26", 지난해면 "25. 10. 26". 기준 화면(`Screens/Reference/Lists` › Main)과 같다. |
