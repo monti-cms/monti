@@ -73,7 +73,11 @@ export async function keptPaths(
 	const key = (path: { collection: string; locale: string; slug: string }) =>
 		[path.collection, path.locale, path.slug].join("\n");
 	const others = new Set(taken.map(key));
-	return paths.filter((path) => !others.has(key(path)));
+	// In the order the entries were asked for, then by path: the database gives its rows in no order, and a screen lists these.
+	const place = new Map(entryIds.map((id, at) => [id, at]));
+	return paths
+		.filter((path) => !others.has(key(path)))
+		.sort((a, b) => (place.get(a.entry_id) ?? 0) - (place.get(b.entry_id) ?? 0) || a.slug.localeCompare(b.slug));
 }
 
 /** The entries a permanent delete of these takes: every language of each that is in the trash, as the trash shows them, one row. */

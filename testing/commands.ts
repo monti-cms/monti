@@ -1,9 +1,11 @@
 import type { BrowserCommand, BrowserCommandContext } from "vitest/node";
 
 /**
- * The two inputs Vitest's `userEvent` cannot give, as browser commands (they run in Node, on Playwright's page):
+ * The inputs Vitest's `userEvent` cannot give, as browser commands (they run in Node, on Playwright's page):
  * - `movePointer`: the mouse travels along a path, passing everything on the way. `userEvent.hover` jumps to its target, so it never crosses the gap
  *   a person's pointer crosses (the table's + strip that hid when the pointer left the body, 2026-11-06).
+ * - `dragPointer`: the mouse is held at the first point, travels through the others and is let go at the last: a drag as a hand makes it, which
+ *   `userEvent` has no call for (a column's edge, a table's border).
  * - `typeKorean`: Hangul typed through an input method, syllable by syllable as a Korean keyboard composes it. `userEvent.keyboard` sends the
  *   finished letters, so code that runs while a word is still being composed is never reached.
  *
@@ -46,6 +48,36 @@ export const movePointer: BrowserCommand<[points: Point[], options?: { steps?: n
 		await page.page.mouse.move(frame.x + point.x * frame.scale, frame.y + point.y * frame.scale, {
 			steps: options.steps ?? 10,
 		});
+};
+
+/**
+ * Holds the mouse at the first of `points`, moves through the rest (each leg in `steps` small moves, default 10) and lets go at the last. With
+ * `hold` it is not let go: the test looks at the middle of the drag, then calls `dropPointer`.
+ */
+export const dragPointer: BrowserCommand<[points: Point[], options?: { steps?: number; hold?: boolean }]> = async (
+	context,
+	points,
+	options = {},
+) => {
+	const page = playwright(context);
+	const frame = await frameBox(page);
+	const [first, ...rest] = points;
+	if (!first) return;
+	const at = (point: Point) => [frame.x + point.x * frame.scale, frame.y + point.y * frame.scale] as const;
+	await page.page.mouse.move(...at(first));
+	await page.page.mouse.down();
+	try {
+		for (const point of rest) await page.page.mouse.move(...at(point), { steps: options.steps ?? 10 });
+	} catch (error) {
+		await page.page.mouse.up();
+		throw error;
+	}
+	if (!options.hold) await page.page.mouse.up();
+};
+
+/** Lets go of the mouse a `dragPointer` with `hold` still holds. */
+export const dropPointer: BrowserCommand<[]> = async (context) => {
+	await playwright(context).page.mouse.up();
 };
 
 const INITIALS = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
@@ -102,6 +134,8 @@ export const typeKorean: BrowserCommand<[text: string, options?: { commit?: bool
 declare module "vitest/browser" {
 	interface BrowserCommands {
 		movePointer: (points: Point[], options?: { steps?: number }) => Promise<void>;
+		dragPointer: (points: Point[], options?: { steps?: number; hold?: boolean }) => Promise<void>;
+		dropPointer: () => Promise<void>;
 		typeKorean: (text: string, options?: { commit?: boolean }) => Promise<void>;
 	}
 }

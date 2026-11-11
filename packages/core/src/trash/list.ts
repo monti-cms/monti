@@ -408,9 +408,11 @@ export async function trashedEntry(ctx: OperationContext, id: string): Promise<T
 		const seen = pointing.get(link.translation_group);
 		if (!seen || link.locale === schema.locales.source) pointing.set(link.translation_group, link);
 	}
+	// The entry opened first, as its languages are listed.
+	const members = [entry, ...rows.filter((row) => row.id !== id)];
 	const paths = await keptPaths(
 		db,
-		rows.map((row) => row.id),
+		members.map((row) => row.id),
 	);
 	return {
 		id: entry.id,
@@ -418,7 +420,7 @@ export async function trashedEntry(ctx: OperationContext, id: string): Promise<T
 		version: entry.version,
 		daysLeft: daysLeft(entry.trashed_at, ctx.now()),
 		reserves: paths.flatMap((path) => publicPath(schema, path.collection, path.slug, path.locale) ?? []),
-		locales: [entry, ...rows.filter((row) => row.id !== id)].map((row) => ({
+		locales: members.map((row) => ({
 			locale: row.locale,
 			title: row.title,
 			slug: row.slug,

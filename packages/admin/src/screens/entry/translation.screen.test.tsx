@@ -268,7 +268,7 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.poll(faint).toBe(3);
 	});
 
-	it("[input] Korean typed through the IME into a placeholder block is the block's only words", async () => {
+	it("[korean] Korean typed through the IME into a placeholder block is the block's only words", async () => {
 		await open(NewTranslation);
 		await expect.poll(() => undecided("편집기도 같은 원칙으로")).not.toBeNull();
 		await userEvent.click(undecided("편집기도 같은 원칙으로") as HTMLElement);
@@ -292,7 +292,7 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.element(body().getByText("I rebuilt the blog.")).toBeVisible();
 	});
 
-	it("[input] Backspace in an untouched placeholder block leaves the block where it is", async () => {
+	it("Backspace in an untouched placeholder block leaves the block where it is", async () => {
 		await open(NewTranslation);
 		await expect.poll(() => undecided("무엇을 덜어냈나")).not.toBeNull();
 		await userEvent.click(undecided("무엇을 덜어냈나") as HTMLElement);

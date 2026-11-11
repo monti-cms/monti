@@ -25,13 +25,13 @@ async function form(canvasElement: HTMLElement) {
 /** Fills a field as typing would, through the input's change event. */
 const fill = (field: HTMLElement, value: string) => fireEvent.change(field, { target: { value } });
 
-export const site = (options: Parameters<typeof storySite>[0]) => [
+const site = (options: Parameters<typeof storySite>[0]) => [
 	async () => {
 		startAt();
 		return { site: await storySite(options) };
 	},
 ];
-export const password = { password: true };
+const password = { password: true };
 const github = { clientId: "id", clientSecret: "secret", admin: "monti-owner" };
 const withAdmin = {
 	schema,

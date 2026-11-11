@@ -18,7 +18,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const admin = { actor: "admin" } as const;
-export const wait = { timeout: 15000 };
+const wait = { timeout: 15000 };
 
 let count = 0;
 const text = (value: string) => [{ type: "text" as const, text: value }];
@@ -60,7 +60,7 @@ async function setup(monti: Monti) {
 	);
 }
 
-export const site = ({ empty = false } = {}) => [
+const site = ({ empty = false } = {}) => [
 	async () => {
 		startAt();
 		return {
@@ -78,7 +78,7 @@ async function tools(canvasElement: HTMLElement) {
 }
 
 /** Opens "기본 글" in the template editor and waits for its body. */
-export async function editor(canvasElement: HTMLElement) {
+async function editor(canvasElement: HTMLElement) {
 	const screen = await tools(canvasElement);
 	await userEvent.click(screen.page.getByRole("button", { name: "기본 글" }));
 	const text = await screen.page.findByRole("textbox", { name: "본문" }, wait);
@@ -93,7 +93,7 @@ const pointAt = (element: Element) => {
 };
 
 /** Selects words in the text the way a drag does. The words may run over several pieces of one block (a bold part and a plain part). */
-export async function select(text: HTMLElement, words: string) {
+async function select(text: HTMLElement, words: string) {
 	const pieces: Text[] = [];
 	const walker = document.createTreeWalker(text, NodeFilter.SHOW_TEXT);
 	for (let node = walker.nextNode(); node; node = walker.nextNode()) pieces.push(node as Text);
@@ -123,15 +123,6 @@ export async function select(text: HTMLElement, words: string) {
 		return;
 	}
 	throw new Error(`no text "${words}"`);
-}
-
-/** Puts the caret inside the given words, nothing selected. */
-export async function caretIn(text: HTMLElement, words: string) {
-	await select(text, words);
-	// One letter back from the end: the start may sit at the end of the plain piece before the words.
-	const picked = document.getSelection();
-	picked?.collapse(picked.focusNode, Math.max(0, picked.focusOffset - 1));
-	document.dispatchEvent(new Event("selectionchange"));
 }
 
 /** Tools › Templates: each template with its sections, the day it was changed and its ⋯. */

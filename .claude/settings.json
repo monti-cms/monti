@@ -7,6 +7,20 @@
 					{
 						"type": "command",
 						"command": "node \"$CLAUDE_PROJECT_DIR/scripts/check-review.mjs\" --hook"
+					},
+					{
+						"type": "command",
+						"command": "node \"$CLAUDE_PROJECT_DIR/scripts/check-scenes.mjs\" --hook"
+					}
+				]
+			}
+		],
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"$CLAUDE_PROJECT_DIR/scripts/check-scenes.mjs\" --notice"
 					}
 				]
 			}

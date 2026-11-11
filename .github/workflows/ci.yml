@@ -41,6 +41,10 @@ jobs:
       - run: pnpm check:messages
       # The feature docs and the code name the same operations, and test titles name done criteria that exist (docs/design/features/build.md).
       - run: pnpm check:operations
+      # Every scene of testing/scenes.ts is tried where its kind of part is used, and no test is left to do, skipped without its tracker item, or
+      # alone under ".only" (docs/testing.md). The check's own tests first.
+      - run: node --test scripts/check-scenes.test.mjs
+      - run: pnpm check:scenes
       - run: pnpm typecheck
       # Files and exports of the packages that nothing uses.
       - run: pnpm knip

@@ -2,11 +2,12 @@ import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { pointerPath, scrollsSideways } from "../../../../testing/input";
+import { scene } from "../../test/scene";
 import * as entry from "../screens/entry/entry.stories";
-import * as entryTests from "../screens/entry/entry.test.stories";
 
 const { TableGrips } = composeStories(entry);
-const { TableSized } = composeStories(entryTests);
+/** A table whose columns were sized (20 · 50 · 30). */
+const TableSized = scene({ loaders: entry.site("tableSized") }, entry.default);
 
 const body = () => page.getByRole("textbox", { name: "본문" });
 const table = () => body().getByRole("table");
