@@ -12,7 +12,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 제목 "카테고리" · "태그" | `PageHeader`(`title`, optional `meta` for the public path) | Items without a public page omit the meta value. |
+| 제목 "카테고리" · "태그" | `PageHeader`(`title`, 공개 경로가 있으면 `meta`) | 공개 페이지가 없는 항목 컬렉션은 `meta`를 비운다. |
 | 검색 | `SearchToggle` → `SearchBox` | 그 자리에서 열린다. 보드는 돋보기만 있는 알약이지만 [field.md](../components/field.md)를 따라 돋보기와 "검색" 글자가 있는 `SearchToggle`이다. |
 | "+ 카테고리 추가" · "+ 태그 추가" | `Button variant="secondary"` | 새 항목을 옆 패널에 빈 채로 연다. |
 
@@ -34,7 +34,7 @@
 |---|---|---|
 | 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle` "어느 이름으로 합칠까요?", `DialogFooter`) | 남길 이름을 고르고 결과를 한 줄로 보인다. 합쳐진 태그는 휴지통으로 가서 되돌릴 수 있으므로 알약은 primary다. |
 | 남길 이름 | `RadioGroup` + `RadioItem`(`label` 이름과 주소, `hint` "글 12") | 처음에는 글이 더 많은 쪽이 골라져 있다. |
-| Result summary | `DialogDescription`, followed by a faint address note only when public addresses exist | State the number of affected posts, the item that remains, and which items move to trash. Keep removed addresses out of the main sentence. |
+| 결과 요약 | `DialogDescription`, 공개 주소가 있을 때만 그 뒤에 흐린 주소 줄 | 바뀌는 글 수, 남는 항목, 휴지통으로 가는 항목을 말한다. 없어지는 주소는 본문 문장에 넣지 않는다. |
 | "취소" · "합치기" | `DialogClose`(`TextButton`) · `Button variant="primary"` | 합친 뒤 `toast` "글 3편의 태그를 리액트로 바꿨습니다" + "되돌리기". |
 
 스토리: Patterns/Frame/PageHeader, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/ListHead, Patterns/List/BulkBar, Patterns/List/Table, Primitives/Text, Controls/Button/TextButton, Controls/Menu/DropdownMenu, Controls/Overlay/Dialog, Controls/Choice/Radio, Controls/Status/Toast, Controls/Overlay/SidePanel, Controls/Button/IconButton, Controls/Tabs/Tabs, Controls/Field/Field, Controls/Field/Input, Controls/Field/Textarea.
