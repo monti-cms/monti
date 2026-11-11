@@ -270,7 +270,8 @@ export const ChangedCard: Story = {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
 		await userEvent.click(await page.findByRole("button", { name: "변경" }, wait));
-		await within(canvasElement.ownerDocument.body).findByText("원문 변경", undefined, wait);
+		// The card says it, and so does the mark beside the block.
+		await within(canvasElement.ownerDocument.body).findAllByText("원문 변경", undefined, wait);
 	},
 };
 

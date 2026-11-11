@@ -421,7 +421,8 @@ export const InFolder: Story = {
 export const InFolderSearch: Story = {
 	loaders: site(inSeries("&q=지난 글")),
 	play: ({ canvasElement }) =>
-		waitFor(() => expect(within(canvasElement).getByRole("button", { name: "모든 폴더" })).toBeTruthy(), wait),
+		// The chip is named by where it looks now (the folder), then by what it is.
+		waitFor(() => expect(within(canvasElement).getByRole("button", { name: /, 찾을 곳$/ })).toBeTruthy(), wait),
 };
 
 /** A folder row right-clicked: open, rename, move ▸, delete (flow 5, step 04). */
