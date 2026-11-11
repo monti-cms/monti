@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import * as media from "./media.stories";
 
-const { Draft, WithCover, MissingAlt, TranslationCover, TranslationCoverChanged } = composeStories(media);
+const { Draft, WithCover, ArchivedCover, MissingAlt, TranslationCover, TranslationCoverChanged } =
+	composeStories(media);
 
 const cover = () => page.getByRole("button", { name: "대표 이미지", exact: true });
 const alt = () => page.getByRole("textbox", { name: "대체 텍스트" });
@@ -24,6 +25,24 @@ const properties = async () => {
 };
 
 describe("a cover in the property panel", () => {
+	it("09-3 T125 in an archived entry the cover is read, not changed: its line is no button and has no ×, and its settings open with their fields read-only", async () => {
+		await ArchivedCover.run();
+		// The story has opened the card: what the entry says of the picture is there to read, and cannot be typed in.
+		await expect.element(alt()).toHaveValue("아침 책상");
+		await expect.element(alt()).toBeDisabled();
+		await expect.element(page.getByRole("switch", { name: "장식 이미지" })).toBeDisabled();
+		await closeCard();
+		// The field is named by its label, shows the file, and is not something to press.
+		const field = page.getByRole("group", { name: "대표 이미지" });
+		await expect.element(field).toHaveTextContent("desk-morning.jpg");
+		await expect.element(cover()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "대표 이미지 빼기" })).not.toBeInTheDocument();
+		await userEvent.click(field.getByText("desk-morning.jpg"));
+		await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+		// The settings are the one control it keeps.
+		await expect.element(settings()).toBeVisible();
+	});
+
 	it("09-3 T67 [flow 6·30] the field opens the same window, showing images, and what is picked goes in", async () => {
 		await Draft.run();
 		await properties();

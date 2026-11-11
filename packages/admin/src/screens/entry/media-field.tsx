@@ -112,8 +112,8 @@ export function MediaField({
 					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
 					clearLabel={t("library.field.clear", { label })}
 					action={
-						// Read-only, the field has no control at all, its settings too: as the body's picture has none (2026-11-11, owner).
-						readOnly ? undefined : going?.status === "failed" ? (
+						// Read-only the settings stay, to read what the entry says of its picture: the card's fields are read-only there (2026-11-11, owner).
+						going?.status === "failed" ? (
 							<RetryButton onRetry={() => uploads.retry(going)} />
 						) : isImage && shown ? (
 							<Popover open={card} onOpenChange={onCard}>

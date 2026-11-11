@@ -20,6 +20,8 @@ const entry = (
 		storage?: null;
 		/** Puts a picture smaller than the body in the library too (80 × 80). */
 		icon?: true;
+		/** The entry is archived: read-only (doc 02). */
+		archived?: true;
 	} = {},
 ) => [
 	async (): Promise<Loaded> => {
@@ -53,6 +55,7 @@ const entry = (
 					doc: { type: "doc", blocks: [paragraph, ...(ids && options.body ? options.body(ids) : [])] },
 				});
 				if (options.translate) id = await run("translations.create", { source: id, locale: options.translate });
+				if (options.archived) await monti.run("entries.archive", { ids: [id] }, { actor: "admin" });
 			},
 		});
 		window.location.hash = `#/c/post/${id}`;
@@ -198,6 +201,20 @@ export const LibrarySearching: Story = {
 /** A cover in the property panel, with what the entry says of it (T67). */
 export const WithCover: Story = {
 	loaders: entry({ values: ({ desk }) => ({ cover: { media: desk, alt: "아침 책상" } }) }),
+};
+
+/**
+ * An archived entry's cover: the line is the value to read (no hand, no ×), and its settings card still opens, its fields read-only, so what the entry says of
+ * the picture can be read (T125, 2026-11-11 owner).
+ */
+export const ArchivedCover: Story = {
+	loaders: entry({ values: ({ desk }) => ({ cover: { media: desk, alt: "아침 책상" } }), archived: true }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement.ownerDocument.body);
+		const open = await page.findByRole("button", { name: "속성" }, wait);
+		if (open.getAttribute("aria-pressed") !== "true") await userEvent.click(open);
+		await userEvent.click(await page.findByRole("button", { name: "대표 이미지 설정" }, wait));
+	},
 };
 
 /** A cover's settings card open, under its line and as wide as it. */

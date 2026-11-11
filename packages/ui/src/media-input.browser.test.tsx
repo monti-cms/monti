@@ -4,7 +4,7 @@ import { render } from "../test/render";
 import { MediaInput } from "./index";
 
 describe("MediaInput", () => {
-	it("read-only, the field is the value to read: no button of any kind, no hand, no tint under the pointer, no icon that says to choose (T125)", async () => {
+	it("read-only, the field is the value to read: its line is no button, with no hand, no tint under the pointer, no × and no icon that says to choose; the control it was given stays (T125)", async () => {
 		const opened = vi.fn();
 		render(
 			<div style={{ width: 280 }}>
@@ -40,9 +40,9 @@ describe("MediaInput", () => {
 		expect(getComputedStyle(field(read)).backgroundColor).toBe("rgba(0, 0, 0, 0)");
 		expect(getComputedStyle(read.element()).cursor).not.toBe("pointer");
 		expect(field(open).querySelector("svg")).not.toBeNull();
-		// Nothing at its end either, whatever it was given: no ×, no control of the file's own, no icon.
+		// At its end: no × and no icon, whatever it was given. The control of the file's own stays, to read with.
 		expect(field(read).querySelector("svg")).toBeNull();
-		expect(field(read).querySelector("button")).toBeNull();
+		expect([...field(read).querySelectorAll("button")].map((button) => button.textContent)).toEqual(["설정"]);
 
 		await userEvent.click(read);
 		expect(opened).not.toHaveBeenCalled();

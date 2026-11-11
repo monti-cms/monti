@@ -14,9 +14,10 @@ const HEIGHT = { sm: "h-monti-control-sm", md: "h-monti-control-md", default: "h
  * placeholder while empty. Pressing the line opens the media picker (`onOpen`); the × at the end takes the file out (`onClear`). The picture itself is
  * not shown here: the field reads like its neighbours, an input or a select.
  *
- * `readOnly` (an archived entry, one in the trash) is the value to read and nothing to press: the line is not a button, the pointer stays an arrow, the
- * ground does not answer it, and the end holds nothing: no ×, no `action`, no picture icon that says "choose one". It is then a group, named with
- * `aria-labelledby` (the label's id): a label's `htmlFor` names only what can be pressed or typed in.
+ * `readOnly` (an archived entry, one in the trash) is the value to read, with nothing that changes it: the line is not a button, the pointer stays an
+ * arrow, the ground does not answer it, and there is no × and no picture icon that says "choose one". The `action` stays: it is the caller's, and read-only
+ * it is a way to read (a picture's settings card with its fields read-only). The field is then a group, named with `aria-labelledby` (the label's id): a
+ * label's `htmlFor` names only what can be pressed or typed in.
  */
 function MediaInput({
 	id,
@@ -103,7 +104,7 @@ function MediaInput({
 				</button>
 			)}
 			<span className={cn(FIELD_ACTION, "flex items-center")}>
-				{action && !readOnly && <IconButtonContext value={actionSize}>{action}</IconButtonContext>}
+				{action && <IconButtonContext value={actionSize}>{action}</IconButtonContext>}
 				{readOnly ? null : value && onClear ? (
 					<IconButton {...actionSize} label={clearLabel ?? ""} onClick={onClear}>
 						<Close />
