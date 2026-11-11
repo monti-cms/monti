@@ -1,7 +1,7 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { spillingCells, titleUnderPointer } from "../../../../../testing/input";
+import { rowHeights, spillingCells, titleUnderPointer } from "../../../../../testing/input";
 import * as list from "./list.stories";
 
 const { Main, NarrowColumns } = composeStories(list);
@@ -17,6 +17,12 @@ describe("the list's column names", () => {
 		await expect.element(menu.getByRole("menuitem", { name: "열 숨기기" })).toBeVisible();
 		await userEvent.click(menu.getByRole("menuitem", { name: "열 숨기기" }));
 		await expect.element(columnName("수정일")).not.toBeInTheDocument();
+	});
+
+	it("06-1 every row is as tall as the others: a folder's, an entry's with a category and one without", async () => {
+		await Main.run();
+		await expect.element(columnName("수정일")).toBeVisible();
+		expect(rowHeights(main().getByRole("table").element())).toHaveLength(1);
 	});
 
 	it("06-1 columns dragged to their narrowest keep their words inside their cells", async () => {

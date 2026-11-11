@@ -806,6 +806,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 														</RowLink>
 													}
 													address={<Count>{folder.count}</Count>}
+													addressTitle={String(folder.count)}
 												/>
 											)}
 										</TableCell>

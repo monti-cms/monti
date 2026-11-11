@@ -829,7 +829,7 @@ export const TaxonomyUsageMenu: Story = {
 	},
 };
 
-/** The usage column dragged to its narrowest: a count is cut with "…" inside its cell. */
+/** The usage column dragged to its narrowest: "쓰는 글 없음" is cut with "…" inside its cell; the short counts fit. A long count cut is in Patterns/List/Table › CutCells. */
 export const TaxonomyNarrowColumns: Story = {
 	loaders: site(withDuplicateReactTag, "#/c/tag", { schema: oneLanguage }),
 	beforeEach: () => {

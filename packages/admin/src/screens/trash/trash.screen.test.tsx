@@ -1,7 +1,7 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { spillingCells, titleUnderPointer } from "../../../../../testing/input";
+import { rowHeights, spillingCells, titleUnderPointer } from "../../../../../testing/input";
 import * as stories from "./trash.stories";
 
 const {
@@ -261,6 +261,11 @@ describe("the trash (doc 11, flow 5)", () => {
 		expect(spillingCells(table().element())).toEqual([]);
 		// What stands after a title is cut first, so it says itself whole too.
 		expect(titleUnderPointer(row("첫 번째 글").getByText("/posts/first-post").element())).toBe("/posts/first-post");
+		// A cell that says its value keeps its row as tall as the others (the way up, in a folder, has none).
+		expect(rowHeights(table().element())).toHaveLength(1);
+		await InFolder.run();
+		await expect.element(row("시리즈 1: 시작")).toBeVisible();
+		expect(rowHeights(table().element())).toHaveLength(1);
 	});
 
 	it("11-1 a press anywhere on a row opens it, on what stands over the row's link too: its languages, its kind, its address", async () => {

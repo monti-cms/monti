@@ -48,3 +48,9 @@ export function titleUnderPointer(element: Element): string | null {
 	const top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
 	return top?.closest("[title]")?.getAttribute("title") ?? null;
 }
+
+/** The heights of a table's body rows that hold something, each once: one height when every row is as tall as the others. */
+export function rowHeights(table: Element): number[] {
+	const heights = [...table.querySelectorAll("tbody tr")].map((row) => row.getBoundingClientRect().height);
+	return [...new Set(heights.filter((height) => height > 0))];
+}
