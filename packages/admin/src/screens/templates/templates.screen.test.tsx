@@ -41,7 +41,8 @@ describe("the template editor", () => {
 		await userEvent.click(button("굵게"));
 		await expect.poll(() => formatted("strong")).not.toBeNull();
 		await caretAfter(text().element(), "무엇을 다루");
-		await userEvent.keyboard("{Meta>}\\{/Meta}");
+		// The editor's Mod: ⌘ on a Mac, Ctrl elsewhere (CI).
+		await userEvent.keyboard("{ControlOrMeta>}\\{/ControlOrMeta}");
 		await expect.poll(() => formatted("strong")).toBeNull();
 	});
 

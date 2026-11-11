@@ -28,6 +28,26 @@ const fieldOrder = () =>
 		(button) => button.getAttribute("aria-label")?.replace(/ 열기$/, ""),
 	);
 
+/** Where a field's row stands: the top of its "열기" button (the one in the outline, not the copy in hand). */
+const topOf = (name: string) =>
+	Math.round(
+		document.querySelector(`[role=tabpanel] button[aria-label='${name} 열기']`)?.getBoundingClientRect().top ??
+			Number.NaN,
+	);
+/**
+ * What a person sees of the fields at a point: the words of the row on top there, or "" when what is on top is not drawn (the gap a field in hand
+ * leaves keeps its place, unseen). The row is as far up from the point as holds one field only.
+ */
+function fieldShownAt(x: number, y: number, others: string[]) {
+	let box = document.elementFromPoint(x, y);
+	for (let up: Element | null = box; up; up = up.parentElement) if (getComputedStyle(up).opacity === "0") return "";
+	while (box?.parentElement && !others.some((name) => box?.parentElement?.textContent?.includes(name)))
+		box = box.parentElement;
+	return box?.textContent ?? "";
+}
+/** What the screen reader was last told about a drag. */
+const said = () => document.querySelector("[id^=DndLiveRegion]")?.textContent ?? "";
+
 describe("settings › collections: what an action does", () => {
 	it("[flow 4·10] a row's undo in the changes list puts that change back and keeps the list open; a press on a row opens its field", async () => {
 		await ChangesList.run();
@@ -73,26 +93,27 @@ describe("settings › collections: what an action does", () => {
 		expect(fieldOrder()).toEqual(["title", "slug", "summary", "subtitle", "cover", "category"]);
 		(page.getByRole("button", { name: "summary 옮기기" }).element() as HTMLElement).focus();
 		await userEvent.keyboard(" ");
-		await new Promise((done) => setTimeout(done, 100));
+		// Lifted: the screen reader is told, and the arrow moves it only from then on.
+		await expect.poll(said).toContain("summary");
 		await userEvent.keyboard("{ArrowDown}");
-		await new Promise((done) => setTimeout(done, 300));
+		await expect.poll(() => topOf("summary") - topOf("subtitle")).toBeGreaterThan(0);
 		await userEvent.keyboard(" ");
 		await expect.poll(fieldOrder).toEqual(["title", "slug", "subtitle", "summary", "cover", "category"]);
 	});
 
-	it("[dragging] [dropped] a field held by its grip follows the pointer while the next one makes room; let go, it stays after it", async () => {
+	it("[dragging] [dropped] a field held by its grip is under the pointer while only the next one makes room; let go, it stays after it", async () => {
 		await Fields.run();
-		const grip = page.getByRole("button", { name: "summary 옮기기" }).element();
-		const rowOf = (name: string) => page.getByRole("button", { name: `${name} 열기` }).element();
-		const from = middleOf(grip);
-		const down = rowOf("subtitle").getBoundingClientRect().top - rowOf("summary").getBoundingClientRect().top;
+		const before = { title: topOf("title"), subtitle: topOf("subtitle"), cover: topOf("cover") };
+		const from = middleOf(page.getByRole("button", { name: "summary 옮기기" }).element());
+		const down = before.subtitle - topOf("summary");
 		await dragPath([from, { x: from.x, y: from.y + down }], { hold: true });
-		// The floating copy of the field is under the pointer.
+		// What the pointer finds beside the grip is the field in hand, floating over the row it passes; that row moved up into its place.
 		await expect
-			.poll(() =>
-				document.elementsFromPoint(from.x + 60, from.y + down).some((each) => each.textContent?.includes("summary")),
-			)
-			.toBe(true);
+			.poll(() => fieldShownAt(from.x + 60, from.y + down, ["subtitle", "slug", "cover"]))
+			.toContain("summary");
+		await expect.poll(() => topOf("subtitle")).toBe(before.subtitle - down);
+		expect(topOf("title")).toBe(before.title);
+		expect(topOf("cover")).toBe(before.cover);
 		await dropDrag();
 		await expect.poll(fieldOrder).toEqual(["title", "slug", "subtitle", "summary", "cover", "category"]);
 	});

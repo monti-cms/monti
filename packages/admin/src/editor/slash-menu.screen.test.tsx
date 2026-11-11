@@ -65,6 +65,8 @@ describe("the '/' menu", () => {
 		await expect
 			.poll(() => line.textContent)
 			.toBe("목록에는 제목과 주소, 지금 상태만 남겼다. 나머지는 필요할 때 꺼내 본다.");
+		// The footnote itself is there too, one of it, not only its number.
+		expect(body().element().querySelectorAll("[data-footnote]")).toHaveLength(1);
 		// The number sits after "지금 상태만", not at the start or the end of the line.
 		const ref = line.querySelector("[data-footnote-ref]");
 		expect(ref?.previousSibling?.textContent?.endsWith("지금 상태만")).toBe(true);

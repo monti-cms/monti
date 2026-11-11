@@ -30,7 +30,7 @@ Core work that does not depend on the screen (operations, tables, their tests) c
 
 ## 3. Build
 
-Load the `admin-ui` skill and follow its order: parts first in `@monti-cms/ui` with stories, then the screen. A story brings the screen to a state and checks nothing; what must hold is a test.
+Load the `admin-ui` skill and follow its order: parts first in `@monti-cms/ui` with stories, then the screen. A new story's `play` brings the screen to a state and only waits until it is there; what must hold after an action is a test. Older stories still check results in their `play`: move those checks to a test when you touch the story.
 
 Fill each `it.todo` as its piece is built:
 - Real input (`userEvent` of `vitest/browser`, and `testing/input.ts`: `pointerPath`, `dragPath` with `hold`, `typeKorean`, `pickWords`, `caretAfter`), not dispatched events.

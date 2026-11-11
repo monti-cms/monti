@@ -72,6 +72,9 @@ importers:
       lint-staged:
         specifier: ^17.6.0
         version: 17.6.0
+      oxc-parser:
+        specifier: 0.153.0
+        version: 0.153.0
       pg:
         specifier: ^8.23.0
         version: 8.23.1
