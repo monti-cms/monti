@@ -61,9 +61,10 @@ jobs:
           package-manager-cache: false
       # The admin UI of this commit is the one the design-review agent read (scripts/design-review.json). Its own job, so a branch that is
       # still being worked on shows the other checks' results while this one waits for the review.
+      # The gate's own tests first, so they run on a branch that is still waiting for its review: the check in a repository of its own, and the
+      # shell command lines the merge hook must see a merge in or leave alone.
+      - run: node --test scripts/check-review.test.mjs scripts/merge-commands.test.mjs
       - run: node scripts/check-review.mjs
-      # The merge hook reads shell command lines to find the merges in them: the cases it must see, and the ones it must leave alone.
-      - run: node --test scripts/merge-commands.test.mjs
 
   test:
     name: core and admin tests

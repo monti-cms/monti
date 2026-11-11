@@ -42,7 +42,8 @@ const short = (commit) => git("rev-parse", "--short", commit).trim();
 /** The admin UI's files at a commit: path to blob id. */
 function filesAt(commit) {
 	const files = new Map();
-	for (const line of git("ls-tree", "-r", commit, "--", ...PATHS).split("\n")) {
+	// `-z`: each path as it is. Without it git writes a path that is not ASCII in quotes or not, by `core.quotePath`, and two machines would hash two things.
+	for (const line of git("ls-tree", "-r", "-z", commit, "--", ...PATHS).split("\0")) {
 		const [meta, file] = line.split("\t");
 		if (file && !TEST.test(file)) files.set(file, meta.split(" ")[2]);
 	}
@@ -54,16 +55,19 @@ const hashOf = (files) =>
 		.update([...files].map(([file, blob]) => `${file}\0${blob}\n`).join(""))
 		.digest("hex");
 
-/** The record as a commit has it. */
+/** The record as a commit has it: `undefined` when there is none, `UNREADABLE` when the file is not a record (a merge conflict left in it). */
+const UNREADABLE = Symbol("unreadable");
 function recordAt(commit) {
 	const text = attempt(() => git("show", `${commit}:${RECORD}`));
-	return text === undefined ? undefined : JSON.parse(text);
+	if (text === undefined) return undefined;
+	const record = attempt(() => JSON.parse(text));
+	return typeof record?.tree === "string" ? record : UNREADABLE;
 }
 
 /** The commit the record was last written in, when its admin UI is still the one on record (a hand edit or a shallow clone has none). */
 function reviewedCommit(commit, record) {
 	const base = attempt(() => git("log", "-1", "--format=%H", commit, "--", RECORD).trim());
-	if (!base || !record || hashOf(filesAt(base)) !== record.tree) return undefined;
+	if (!base || !record || record === UNREADABLE || hashOf(filesAt(base)) !== record.tree) return undefined;
 	return base;
 }
 
@@ -77,6 +81,8 @@ function changedSince(base, files) {
 function problemOf(commit) {
 	const files = filesAt(commit);
 	const record = recordAt(commit);
+	if (record === UNREADABLE)
+		return `${RECORD} at ${short(commit)} is not a record (a merge conflict left in it?). Put back the one of the branch this was made from, then run the design-review agent: its last step writes the record.`;
 	if (record?.tree === hashOf(files)) return undefined;
 	const base = reviewedCommit(commit, record);
 	const lines = [`The admin UI at ${short(commit)} has not been through a design review.`];
@@ -148,7 +154,6 @@ function hook() {
 	const command = call.tool_input?.command;
 	if (call.tool_name !== "Bash" || typeof command !== "string") return;
 	try {
-		const own = repoOf(attempt(() => git("remote", "get-url", "origin").trim()) ?? "");
 		for (const merge of mergesIn(command)) {
 			const bound = "Merge with `gh pr merge <number> --squash --match-head-commit <sha>`.";
 			if (merge.how === "api")
@@ -164,6 +169,7 @@ function hook() {
 				),
 			);
 			// Another repository's pull request is not this gate's to check.
+			const own = repoOf(attempt(() => git("remote", "get-url", "origin").trim()) ?? "");
 			if (own && repoOf(view.url) !== own) continue;
 			const head = view.headRefOid;
 			if (attempt(() => git("cat-file", "-e", `${head}^{commit}`)) === undefined) git("fetch", "-q", "origin", head);

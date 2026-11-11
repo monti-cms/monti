@@ -66,3 +66,47 @@ test("what follows a here-document is still read", () => {
 test("a quoted word stays one word", () => {
 	assert.deepEqual(commandsOf(`a "b c" 'd; e' f\\ g`), [["a", "b c", "d; e", "f g"]]);
 });
+
+test("a merge after a shell's own words, or behind a command that runs another, is seen", () => {
+	assert.deepEqual(mergesIn(`if gh pr checks 461; then ${M} 461 --squash; fi`), [pr("461")]);
+	assert.deepEqual(mergesIn(`for p in 461 462; do ${M} $p --squash; done`), [pr("$p")]);
+	assert.deepEqual(mergesIn(`while true; do ${M} 461; done`), [pr("461")]);
+	assert.deepEqual(mergesIn(`! ${M} 461`), [pr("461")]);
+	assert.deepEqual(mergesIn(`sudo -u me ${M} 461`), [pr("461")]);
+	assert.deepEqual(mergesIn(`env -i PATH=$PATH ${M} 461`), [pr("461")]);
+	assert.deepEqual(mergesIn(`timeout 60 ${M} 461`), [pr("461")]);
+	assert.deepEqual(mergesIn(`time -p ${M} 461`), [pr("461")]);
+	assert.deepEqual(mergesIn(`echo 461 | xargs ${M} --squash`), [pr(undefined)]);
+	assert.deepEqual(mergesIn(`sudo -u me bash -c "${M} 461"`), [pr("461")]);
+});
+
+test("a script a shell is fed is read", () => {
+	assert.deepEqual(mergesIn(`bash <<'EOF'\n${M} 461\nEOF`), [pr("461")]);
+	assert.deepEqual(mergesIn(`sh <<EOF\n${M} 461\nEOF\nls`), [pr("461")]);
+	assert.deepEqual(mergesIn(`bash <<< '${M} 461'`), [pr("461")]);
+	assert.deepEqual(mergesIn(`echo '${M} 461' | sh`), [pr("461")]);
+	assert.deepEqual(mergesIn(`cat <<'EOF' | bash\n${M} 461\nEOF`), [pr("461")]);
+	assert.deepEqual(mergesIn(`cat <<EOF\nmerged: $(${M} 461)\nEOF`), [pr("461")]);
+});
+
+test("a here-string is one word, and what follows its line is still read", () => {
+	assert.deepEqual(mergesIn(`grep -q x <<< foo\n${M} 461 --squash`), [pr("461")]);
+	assert.deepEqual(mergesIn(`grep -q merge <<< "${M} 461"`), []);
+	assert.deepEqual(mergesIn(`cat <<\\EOF\n${M} 461\nEOF`), []);
+});
+
+test("a merge through GraphQL is seen", () => {
+	assert.deepEqual(
+		mergesIn("gh api graphql -f query='mutation { mergePullRequest(input: {}) { clientMutationId } }'"),
+		[{ how: "api", pull: undefined, repo: undefined }],
+	);
+});
+
+test("a parenthesis inside quotes does not end a substitution", () => {
+	assert.deepEqual(mergesIn(`git commit -m "$(printf '1) the hook reads %s' "${M} 461")"`), []);
+	assert.deepEqual(mergesIn(`echo "$(echo ')' ; ${M} 461)"`), [pr("461")]);
+});
+
+test("without quotes, words that name a merge are taken for one: the safe side", () => {
+	assert.deepEqual(mergesIn(`echo ${M} 461`), [pr("461")]);
+});
