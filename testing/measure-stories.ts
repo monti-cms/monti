@@ -8,8 +8,7 @@ type Compose = (module: never) => Record<string, unknown>;
 
 /**
  * One test for each story file: every story is drawn and brought to its state, and what is on the page is measured (`testing/measure.ts`). A story
- * whose `play` cannot reach its state here (a tooltip that needs a real hover) is measured as far as it got: bringing a story to its state is the
- * story's, and what a person does on a screen is a screen test's.
+ * whose `play` cannot reach its state fails here too: a state nobody can be brought to is not looked at by anyone.
  */
 export function measureStories(files: Record<string, unknown>, composeStories: Compose) {
 	describe("every story, measured: control heights, pressable heights, corners and focus rings", () => {
@@ -17,7 +16,7 @@ export function measureStories(files: Record<string, unknown>, composeStories: C
 			it(file, async () => {
 				const found: string[] = [];
 				for (const [name, story] of Object.entries(composeStories(module as never)) as [string, Composed][]) {
-					await story.run().catch(() => {});
+					await story.run();
 					// A key, so that a focus from here on is the keyboard's and draws its ring.
 					await userEvent.keyboard("{Shift}");
 					await settled();

@@ -36,11 +36,6 @@ export const ALLOWED: { slot: string; rules: Rule[]; why: string }[] = [
 		rules: ["corner"],
 		why: "a folder tab is the top of the card under it and has the card's corner",
 	},
-	...["crop-handle-nw", "crop-handle-ne", "crop-handle-sw", "crop-handle-se"].map((slot) => ({
-		slot,
-		rules: ["ring"] as Rule[],
-		why: "T134: with the crop at the picture's edge the stage cuts the handle and its ring; the stage's room is to be decided",
-	})),
 	...[
 		"resize-corner",
 		"crop-handle-nw",
