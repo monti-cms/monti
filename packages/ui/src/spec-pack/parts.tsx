@@ -975,7 +975,7 @@ function LanguageLine({
 /** The source language's mark at the end of its row: the bold word, a rule, the button that changes it. */
 function LanguageSourceMark({ flag, children }: { flag?: string; children?: React.ReactNode }) {
 	// A translation's row has no mark: only its own buttons.
-	return flag ? <LanguageSource flag={flag}>{children}</LanguageSource> : <>{children}</>;
+	return flag ? <LanguageSource flag={flag}>{children}</LanguageSource> : children;
 }
 
 /** A panel beside the page: its title, its actions (⋯) and × in its head, what it holds, and its footer. */
@@ -1717,7 +1717,6 @@ function EditorBody({
 							spaced
 						)}
 						{own.map((tool, at) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: a block's tools never move
 							<div
 								key={at}
 								className="absolute z-3"
@@ -1749,7 +1748,6 @@ function blockOf(block: BodyBlock, text: React.ReactNode) {
 		return (
 			<ul className="m-0 pl-monti-16 *:my-0 *:pl-0">
 				{block.items.map((item, at) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: a list's items never move
 					<li key={at}>{item}</li>
 				))}
 			</ul>
@@ -1785,21 +1783,13 @@ function toolOf(tool: BodyTool) {
 			<div role="menu" className={cn(MENU_CARD, "p-monti-6")}>
 				{items.map((item, at) =>
 					item.kind === "label" ? (
-						// biome-ignore lint/suspicious/noArrayIndexKey: a menu's rows never move
 						<span key={at} className={MENU_LABEL}>
 							{item.text}
 						</span>
 					) : item.kind === "sep" ? (
-						// biome-ignore lint/suspicious/noArrayIndexKey: a menu's rows never move
 						<span key={at} className={MENU_SEPARATOR} />
 					) : (
-						<span
-							// biome-ignore lint/suspicious/noArrayIndexKey: a menu's rows never move
-							key={at}
-							role="menuitem"
-							data-highlighted={item.on || undefined}
-							className={MENU_ITEM}
-						>
+						<span key={at} role="menuitem" data-highlighted={item.on || undefined} className={MENU_ITEM}>
 							{item.icon && <Icon name={item.icon} />}
 							{item.text}
 							{item.key && <MenuShortcut>{item.key}</MenuShortcut>}
@@ -1818,19 +1808,11 @@ function toolOf(tool: BodyTool) {
 			<FloatingBar>
 				{items.map((item, at) =>
 					item.kind === "sep" ? (
-						// biome-ignore lint/suspicious/noArrayIndexKey: a bar's buttons never move
 						<Separator key={at} orientation="vertical" length="bar" />
 					) : item.kind === "ask" ? (
-						// biome-ignore lint/suspicious/noArrayIndexKey: a bar's buttons never move
 						<FormatBarRequest key={at} label={item.text ?? ""} />
 					) : (
-						<FormatButton
-							// biome-ignore lint/suspicious/noArrayIndexKey: a bar's buttons never move
-							key={at}
-							mark={item.kind as FormatMark}
-							label={item.text ?? ""}
-							pressed={item.on}
-						/>
+						<FormatButton key={at} mark={item.kind as FormatMark} label={item.text ?? ""} pressed={item.on} />
 					),
 				)}
 			</FloatingBar>
@@ -1849,7 +1831,6 @@ function toolOf(tool: BodyTool) {
 		>
 			<MemoThread>
 				{items.map((message, at) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: a note's messages never move
 					<MemoMessage key={at} author={message.label ?? ""} time={message.key} ai={message.kind === "ai"}>
 						{message.text}
 					</MemoMessage>

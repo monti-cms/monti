@@ -55,7 +55,6 @@ function Banner({
 			>
 				<ul className="m-0 flex list-none flex-col gap-monti-4 p-0">
 					{lines.map((line, index) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: the lines are read in order and never move.
 						<li key={index} className="flex items-baseline gap-monti-8 break-words font-semibold">
 							<span className="flex h-[1lh] items-center">{dot}</span>
 							<span className="min-w-0">{line}</span>
