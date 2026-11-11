@@ -218,7 +218,7 @@ describe("the trash (doc 11, flow 5)", () => {
 	it("11-1 [flow 5·19] an item opens beside the list, to read: who points at it, with restore as its one pill", async () => {
 		await ItemPanel.run();
 		const panel = page.getByRole("complementary", { name: "임시" });
-		await expect.element(panel).toHaveTextContent("3일 남음 · 읽기 전용");
+		await expect.element(panel).toHaveTextContent("남은 날3일 남음");
 		await expect.element(panel).toHaveTextContent("가리키는 글 · 4");
 		await expect.element(panel.getByRole("link", { name: "여름 여행기" })).toBeVisible();
 		await expect.element(panel.getByRole("textbox")).not.toBeInTheDocument();
@@ -231,7 +231,7 @@ describe("the trash (doc 11, flow 5)", () => {
 	it("11-1 [flow 5·20] a file opens beside the list as the library shows it, to read, with no alt text", async () => {
 		await FilePanel.run();
 		const panel = page.getByRole("complementary", { name: "winter-01.jpg" });
-		await expect.element(panel).toHaveTextContent("28일 남음 · 읽기 전용");
+		await expect.element(panel).toHaveTextContent("남은 날28일 남음");
 		await expect.element(panel).toHaveTextContent("Blog Assets");
 		await expect.element(panel).toHaveTextContent("쓰는 곳 · 0");
 		expect(panel.element().textContent).not.toContain("대체 텍스트");

@@ -48,6 +48,7 @@ import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
+import { URGENT_DAYS } from "../../trash/days-left";
 import { usePurge, useRestore } from "../../trash/use-trash";
 import type { FrameCounts } from "../frame/admin-frame";
 import { searchScopes } from "../list/folders";
@@ -68,7 +69,6 @@ type SchemaRead = {
 const KIND_SIZE = LIST_COLUMN_SIZE.one;
 const LEFT_SIZE = LIST_COLUMN_SIZE.measure;
 /** Under a week left, the days turn to the warning tone (doc 11). */
-const URGENT_DAYS = 7;
 
 const keyOf = (row: TrashRef) => `${row.kind}:${row.id}`;
 const refOf = (row: TrashRef): TrashRef => ({ kind: row.kind, id: row.id });

@@ -12,7 +12,6 @@ import {
 	Button,
 	DescriptionItem,
 	DescriptionList,
-	DotNote,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -51,6 +50,7 @@ import { useAcceptFiles } from "../../media/upload-problem";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
+import { DaysLeftFact } from "../../trash/days-left";
 import { useCoverCorner } from "../frame/admin-frame";
 import type { Folders } from "../list/folders";
 import { shortDate } from "../list/format";
@@ -294,16 +294,14 @@ export function TrashedFilePanel({
 			}
 		>
 			<Stack gap={32}>
-				<Stack gap={12}>
-					<DotNote>{t("trash.readOnly", { days: daysLeft(new Date(item.trashedAt), new Date()) })}</DotNote>
-					{item.kind === "image" ? (
-						<Image src={previewUrl(item)} alt={item.name} ratio="photo" />
-					) : (
-						<FilePreview ext={extensionLabel(item.name)} framed />
-					)}
-				</Stack>
+				{item.kind === "image" ? (
+					<Image src={previewUrl(item)} alt={item.name} ratio="photo" />
+				) : (
+					<FilePreview ext={extensionLabel(item.name)} framed />
+				)}
 				{/* The panel's title is the file's name already; the folder is the one row the library edits and the trash only reads. */}
 				<FileFacts item={item}>
+					<DaysLeftFact days={daysLeft(new Date(item.trashedAt), new Date())} />
 					<DescriptionItem label={t("library.folder")}>{item.path.join(" / ") || t("folders.top")}</DescriptionItem>
 				</FileFacts>
 				<FileUses uses={uses} go={go} />

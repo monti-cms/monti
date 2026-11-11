@@ -3,7 +3,6 @@ import {
 	Button,
 	DescriptionItem,
 	DescriptionList,
-	DotNote,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -21,12 +20,13 @@ import { OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
+import { DaysLeftFact } from "../../trash/days-left";
 import { useCoverCorner } from "../frame/admin-frame";
 import { useLanguageName } from "../list/column-menu";
 
 /**
  * An item in the trash, beside the trash's list (flow 5·19): its collection, its name and address in each language, and the entries that point at it, which show it
- * again once it is restored. To read only: restoring is its one pill, deleting it for good is in its ⋯ (doc 11).
+ * again once it is restored. Its first fact is the days it has left, as the list's column says them. To read only: restoring is its one pill, deleting it for good is in its ⋯ (doc 11).
  */
 export function TrashedItemPanel({
 	id,
@@ -78,33 +78,28 @@ export function TrashedItemPanel({
 			}
 		>
 			<Stack gap={32}>
-				<Stack gap={12}>
-					<DotNote>{t("trash.readOnly", { days: item.daysLeft })}</DotNote>
-					<DescriptionList>
-						<DescriptionItem label={t("trash.collection")}>{collectionLabel(item.collection)}</DescriptionItem>
-						{/* The panel's title is its name already: only an item with several languages lists them. */}
-						{several &&
-							item.locales.map((each) => (
-								<DescriptionItem
-									key={`name:${each.locale}`}
-									label={`${t("trash.name")} · ${languageName(each.locale)}`}
-								>
-									{each.title}
-								</DescriptionItem>
-							))}
-						{item.locales.map((each) =>
-							each.address ? (
-								<DescriptionItem
-									key={`address:${each.locale}`}
-									label={several ? `${t("trash.address")} · ${languageName(each.locale)}` : t("trash.address")}
-									mono
-								>
-									{each.address}
-								</DescriptionItem>
-							) : null,
-						)}
-					</DescriptionList>
-				</Stack>
+				<DescriptionList>
+					<DaysLeftFact days={item.daysLeft} />
+					<DescriptionItem label={t("trash.collection")}>{collectionLabel(item.collection)}</DescriptionItem>
+					{/* The panel's title is its name already: only an item with several languages lists them. */}
+					{several &&
+						item.locales.map((each) => (
+							<DescriptionItem key={`name:${each.locale}`} label={`${t("trash.name")} · ${languageName(each.locale)}`}>
+								{each.title}
+							</DescriptionItem>
+						))}
+					{item.locales.map((each) =>
+						each.address ? (
+							<DescriptionItem
+								key={`address:${each.locale}`}
+								label={several ? `${t("trash.address")} · ${languageName(each.locale)}` : t("trash.address")}
+								mono
+							>
+								{each.address}
+							</DescriptionItem>
+						) : null,
+					)}
+				</DescriptionList>
 				<FormField>
 					<FormFieldLabel>{t("trash.pointing", { count: item.pointing.length })}</FormFieldLabel>
 					{item.pointing.length === 0 ? (
