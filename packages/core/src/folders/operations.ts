@@ -128,7 +128,7 @@ export async function freeName(
 }
 
 /** Serializes name and position choices within one sibling list. */
-async function lockFolderScope(db: Db, collection: string | null, parentId: string | null): Promise<void> {
+export async function lockFolderScope(db: Db, collection: string | null, parentId: string | null): Promise<void> {
 	await sql`select pg_advisory_xact_lock(hashtext(${`monti:folders:${collection ?? "media"}:${parentId ?? "root"}`}))`.execute(
 		db,
 	);
@@ -354,7 +354,11 @@ export const folderOperations = [
 			"Move entries into a folder of their collection, or to the top level with `folder` null. A translation group moves whole. Addresses and publish states stay as they are.",
 		input: z.object({ ids: z.array(z.string()).min(1), folder: z.string().nullable() }),
 		async touches(input, ctx) {
-			return (await groupsOf(ctx.db, input.ids)).map((entry) => entryRef(entry.id));
+			// The folder too, as a file's move takes its folder: a folder on its way to the trash and an entry on its way in go one after the other (doc 11).
+			return [
+				...(input.folder ? [folderRef(input.folder)] : []),
+				...(await groupsOf(ctx.db, input.ids)).map((entry) => entryRef(entry.id)),
+			];
 		},
 		async check(input, ctx) {
 			const entries = await groupsOf(ctx.db, input.ids);

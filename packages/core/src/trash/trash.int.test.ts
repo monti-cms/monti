@@ -188,6 +188,41 @@ describe("into the trash", () => {
 		expect((await entry(outside)).trashed_at).toBeNull();
 	});
 
+	it("11-2 a folder going to the trash and an entry moving into it, at the same moment: the undo brings back everything that went", async () => {
+		for (let round = 0; round < 12; round++) {
+			const folder = await postFolder(`상자 ${round}`);
+			const entry = await post(`들어가는 글 ${round}`, `moving-in-${round}`);
+			const throwAway = () => move(folderRow(folder));
+			const moveIn = () => write("entries.moveToFolder", { ids: [entry], folder });
+			const first = round % 2 === 0 ? throwAway() : moveIn();
+			const second = round % 2 === 0 ? moveIn() : throwAway();
+			const [one, other] = await Promise.allSettled([first, second]);
+			const moved = round % 2 === 0 ? one : other;
+			if (moved.status !== "fulfilled") throw moved.reason;
+			await write("activity.undo", { id: (moved.value as Written<TrashMoved>).activityId });
+			// Whichever came first, nothing the folder took with it is left behind in the trash.
+			expect(
+				await db.selectFrom("entries").select("trashed_at").where("id", "=", entry).executeTakeFirstOrThrow(),
+			).toEqual({
+				trashed_at: null,
+			});
+		}
+	});
+
+	it("11-1 a folder coming back and a folder made with its name, at the same moment: both are there, under two names", async () => {
+		for (let round = 0; round < 8; round++) {
+			const name = `같은 이름 ${round}`;
+			const folder = await postFolder(name);
+			await move(folderRow(folder));
+			const back = () => restore(folderRow(folder));
+			const make = () => postFolder(name);
+			const results = await Promise.allSettled(round % 2 === 0 ? [back(), make()] : [make(), back()]);
+			expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"]);
+			const names = await db.selectFrom("folders").select("name").where("name", "like", `${name}%`).execute();
+			expect(names.map((row) => row.name).sort()).toEqual([name, `${name} 2`]);
+		}
+	});
+
 	it("11-2 what a screen asks about first: published entries, translations that go along, entries that point here, files that stay", async () => {
 		const react = await tag("react");
 		const source = await post("첫 번째 글", "first-post", { tags: [react.group] });

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Database, TrashedBy } from "../db/schema";
 import { publicPath } from "../entries/paths";
 import { CheckError } from "../errors";
-import { freeName, mediaRemoval, subtree } from "../folders/operations";
+import { freeName, lockFolderScope, mediaRemoval, subtree } from "../folders/operations";
 import { usedOf } from "../media/uses";
 import { type Actor, defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
 import { lockRecords } from "../records";
@@ -113,6 +113,9 @@ async function planMove(ctx: OperationContext, rows: TrashRef[], lock = false): 
 			for (const [file, uses] of removal.used) kept.set(file, uses);
 			continue;
 		}
+		// The folders first, as the library's: an entry on its way in waits (`entries.moveToFolder` takes the folder too), so the entries listed
+		// here, and snapshotted for the undo, are all there are. Read again once they are held: a move that came first has landed.
+		if (lock) await lockRecords(db, (await subtree(db, id)).map(ref("folder")));
 		const inside = await subtree(db, id);
 		for (const each of inside) folders.add(each);
 		const held = await db
@@ -597,7 +600,8 @@ export const trashOperations = [
 				const folder = plan.boxes.get(id);
 				if (!folder) continue;
 				const parent = boxOf(folder.parent_id);
-				// A sibling may have taken its name meanwhile (doc 07).
+				// A sibling may have taken its name meanwhile (doc 07); one that is being made waits, as for any folder named among its siblings.
+				await lockFolderScope(db, folder.collection, parent);
 				const name = await freeName(db, folder.collection, parent, folder.name, id);
 				await db
 					.updateTable("folders")
