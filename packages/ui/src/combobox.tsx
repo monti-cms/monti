@@ -106,10 +106,11 @@ function ComboboxInput({
 			{showTrigger && (
 				<ComboboxTrigger
 					disabled={disabled || undefined}
-					className="group-has-data-[slot=combobox-clear]/combobox-input:hidden"
+					// The field dims everything in it once: its buttons do not dim again.
+					className="disabled:opacity-100 group-has-data-[slot=combobox-clear]/combobox-input:hidden"
 				/>
 			)}
-			{showClear && <ComboboxClear disabled={disabled || undefined} />}
+			{showClear && <ComboboxClear disabled={disabled || undefined} className="disabled:opacity-100" />}
 			{children}
 		</div>
 	);
