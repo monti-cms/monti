@@ -124,8 +124,8 @@ function TableRow({
 			)}
 			{...props}
 			onClick={(event) => {
-				// The press this row passes on to its link comes back up through the row: it is the same press, not a second one.
-				if (passingOn) return;
+				// The press this row passed on to its link comes back up through the row: it is the same press, not a second one.
+				if (passedOn.has(event.nativeEvent)) return;
 				onClick?.(event);
 				if (!event.defaultPrevented) openFromOver(event);
 			}}
@@ -146,7 +146,8 @@ function TableRow({
 const OWN_PRESS =
 	"a, button, input, select, textarea, label, summary, [role=button], [role=link], [role=checkbox], [role=radio], [role=switch], [role=tab], [role=option], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=combobox], [role=textbox], [role=slider], [contenteditable=true], [data-slot=row-check], [data-slot=row-actions]";
 
-let passingOn = false;
+/** The clicks a row made for its link, so the row knows them when they come back up. */
+const passedOn = new WeakSet<Event>();
 
 /** Where a row's link goes, when it is a link with an address: a row that opens a panel (a button) has none for a new tab. */
 const addressOf = (link: HTMLElement | null) => (link instanceof HTMLAnchorElement && link.href ? link.href : null);
@@ -154,11 +155,15 @@ const addressOf = (link: HTMLElement | null) => (link instanceof HTMLAnchorEleme
 /** The row's link, when the press was on something of the row that stands over it and has no press of its own. */
 function overLink(event: React.MouseEvent<HTMLTableRowElement>): HTMLElement | null {
 	const row = event.currentTarget;
-	const link = row.querySelector<HTMLElement>("[data-slot=row-link]");
 	const pressed = event.target;
-	// A press in a menu the row opened reaches the row through React, not through the page: it is not a press on the row.
-	if (!link || !(pressed instanceof Element) || !row.contains(pressed)) return null;
-	return link.contains(pressed) || pressed.closest(OWN_PRESS) ? null : link;
+	// Not a press on this row: one in a menu the row opened reaches the row through React and not through the page, and one in a table inside the row
+	// is that table's row's.
+	if (!(pressed instanceof Element) || pressed.closest("tr") !== row) return null;
+	const link = [...row.querySelectorAll<HTMLElement>("[data-slot=row-link]")].find(
+		(each) => each.closest("tr") === row,
+	);
+	if (!link || link.contains(pressed) || pressed.closest(OWN_PRESS)) return null;
+	return link;
 }
 
 /**
@@ -174,15 +179,14 @@ function openFromOver(event: React.MouseEvent<HTMLTableRowElement>) {
 		if (event.button === 1 && address) window.open(address, "_blank", "noopener");
 		return;
 	}
+	// Words dragged over to select them were not pressed: a link under them would not open either.
+	const selected = window.getSelection();
+	if (selected && !selected.isCollapsed && selected.anchorNode && event.currentTarget.contains(selected.anchorNode))
+		return;
 	const { metaKey, ctrlKey, shiftKey, altKey } = event;
-	passingOn = true;
-	try {
-		link.dispatchEvent(
-			new MouseEvent("click", { bubbles: true, cancelable: true, metaKey, ctrlKey, shiftKey, altKey }),
-		);
-	} finally {
-		passingOn = false;
-	}
+	const click = new MouseEvent("click", { bubbles: true, cancelable: true, metaKey, ctrlKey, shiftKey, altKey });
+	passedOn.add(click);
+	link.dispatchEvent(click);
 }
 
 /**

@@ -21,7 +21,7 @@ const onTop = (element: Element) => {
 	return document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
 };
 
-function rows(opened: () => void, rowPressed?: () => void) {
+function rows(opened: (held: { meta: boolean }) => void, rowPressed?: () => void) {
 	return (
 		<ListScroll>
 			<Table container="none" layout="fixed" columns={[60, undefined, 84, 48]}>
@@ -38,7 +38,7 @@ function rows(opened: () => void, rowPressed?: () => void) {
 										href="#/first"
 										onClick={(event) => {
 											event.preventDefault();
-											opened();
+											opened({ meta: event.metaKey });
 										}}
 									>
 										첫 번째 글
@@ -99,11 +99,17 @@ describe("Table rows with a link", () => {
 		expect(rowPressed).toHaveBeenCalledTimes(1);
 		await userEvent.click(page.getByText("KO +2"));
 		expect(opened).toHaveBeenCalledTimes(2);
+		expect(opened).toHaveBeenLastCalledWith({ meta: false });
+		// A key held with the press (a new tab) reaches the link with it.
+		await userEvent.click(page.getByText("개발"), { modifiers: ["Meta"] });
+		expect(opened).toHaveBeenLastCalledWith({ meta: true });
+		opened.mockClear();
+		opened.mockImplementation(() => {});
 
 		await userEvent.click(page.getByText("개발"), { button: "middle" });
 		expect(tab).toHaveBeenCalledTimes(1);
 		expect(String(tab.mock.calls[0]?.[0])).toMatch(/#\/first$/);
-		expect(opened).toHaveBeenCalledTimes(2);
+		expect(opened).not.toHaveBeenCalled();
 
 		// The middle button held there does not start the browser's own scrolling: the row has an address to open.
 		const held = (on: Element) => {
@@ -116,7 +122,7 @@ describe("Table rows with a link", () => {
 
 		await userEvent.click(page.getByRole("button", { name: "더 보기", exact: true }));
 		await userEvent.click(page.getByRole("checkbox", { name: "첫 번째 글 고르기" }), { force: true });
-		expect(opened).toHaveBeenCalledTimes(2);
+		expect(opened).not.toHaveBeenCalled();
 		tab.mockRestore();
 	});
 
@@ -183,5 +189,82 @@ describe("Table rows with a link", () => {
 		await userEvent.click(page.getByText("태그"), { button: "middle" });
 		expect(tab).not.toHaveBeenCalled();
 		tab.mockRestore();
+	});
+
+	it("words dragged over to select them do not open the row", async () => {
+		const opened = vi.fn();
+		render(rows(opened));
+		await expect.element(page.getByText("개발")).toBeVisible();
+		const words = page.getByText("개발").element();
+		// A drag ends in a click on the words, with them selected.
+		window.getSelection()?.selectAllChildren(words);
+		words.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+		expect(opened).not.toHaveBeenCalled();
+		window.getSelection()?.removeAllRanges();
+		words.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+		expect(opened).toHaveBeenCalledTimes(1);
+	});
+
+	it("a press in a table inside a row opens that table's row, not the row around it; a row's own press is heard when another row's link makes it", async () => {
+		const [outer, inner, other] = [vi.fn(), vi.fn(), vi.fn()];
+		const link = (name: string, opened: () => void) => (
+			<RowTitle
+				title={
+					<RowLink
+						href={`#/${name}`}
+						onClick={(event) => {
+							event.preventDefault();
+							opened();
+						}}
+					>
+						{name}
+					</RowLink>
+				}
+			/>
+		);
+		render(
+			<Table container="none" layout="fixed" columns={[undefined, 240]}>
+				<TableBody>
+					<TableRow>
+						<TableCell truncate>{link("바깥", outer)}</TableCell>
+						<TableCell>
+							<Table container="none" layout="fixed" columns={[undefined, 84]}>
+								<TableBody>
+									<TableRow>
+										<TableCell truncate>{link("안", inner)}</TableCell>
+										<TableCell tone="subtle" truncate title="안쪽 값">
+											안쪽 값
+										</TableCell>
+									</TableRow>
+								</TableBody>
+							</Table>
+						</TableCell>
+					</TableRow>
+					<TableRow>
+						<TableCell truncate>
+							{link("누르는 행", () =>
+								page
+									.getByText("제 누름")
+									.element()
+									.dispatchEvent(new MouseEvent("click", { bubbles: true })),
+							)}
+						</TableCell>
+						<TableCell tone="subtle" truncate title="건너">
+							건너
+						</TableCell>
+					</TableRow>
+					<TableRow onClick={other}>
+						<TableCell>제 누름</TableCell>
+						<TableCell />
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		await userEvent.click(page.getByText("안쪽 값"));
+		expect(inner).toHaveBeenCalledTimes(1);
+		expect(outer).not.toHaveBeenCalled();
+		// The third row's link, reached through what stands over it, presses the fourth row while its own press is on its way: the fourth hears it.
+		await userEvent.click(page.getByText("건너"));
+		expect(other).toHaveBeenCalledTimes(1);
 	});
 });
