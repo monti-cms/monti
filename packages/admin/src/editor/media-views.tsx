@@ -150,7 +150,8 @@ function UploadInPlace({
 				meta={t("library.failed")}
 				tone="danger"
 				selected={selected}
-				action={<RetryButton onRetry={() => media.retry(upload)} />}
+				// The entry cannot be changed (archived since the file was cut off): the file stays to be tried again later, with no way to try it now.
+				action={media.readOnly ? undefined : <RetryButton onRetry={() => media.retry(upload)} />}
 			/>
 		);
 	return isImage ? (
