@@ -20,7 +20,6 @@ import {
 	TableRow,
 	Text,
 	TextButton,
-	TooltipProvider,
 } from "./index";
 
 /**
@@ -287,43 +286,41 @@ export const CutCells: Story = {
 	),
 };
 
-/** A title too long for its line, its words pointed at: the tooltip says it whole, on as many lines as it takes. Over the rest of the row it says nothing. */
+/** A title too long for its line, its words pointed at: the tooltip says it whole, on as many lines as it takes. */
 export const CutTitle: Story = {
 	tags: ["visual"],
 	render: () => (
-		<TooltipProvider>
-			<Box width="sheet">
-				<ListScroll>
-					<Table container="none" layout="fixed" columns={[undefined, 84]}>
-						<TableBody>
-							<TableRow>
-								<TableCell truncate>
-									<RowTitle
-										title={
-											<RowLink href="#">
-												리액트 19 마이그레이션에서 서버 컴포넌트와 액션을 옮기며 배운 것, 그리고 남은 일
-											</RowLink>
-										}
-										address="/posts/react-19-migration"
-									/>
-								</TableCell>
-								<TableCell tone="subtle" truncate title="개발">
-									개발
-								</TableCell>
-							</TableRow>
-							<TableRow>
-								<TableCell truncate>
-									<RowTitle title={<RowLink href="#">봄에 쓴 첫 글</RowLink>} address="/posts/first-spring" />
-								</TableCell>
-								<TableCell tone="subtle" truncate title="일상">
-									일상
-								</TableCell>
-							</TableRow>
-						</TableBody>
-					</Table>
-				</ListScroll>
-			</Box>
-		</TooltipProvider>
+		<Box width="sheet">
+			<ListScroll>
+				<Table container="none" layout="fixed" columns={[undefined, 84]}>
+					<TableBody>
+						<TableRow>
+							<TableCell truncate>
+								<RowTitle
+									title={
+										<RowLink href="#">
+											리액트 19 마이그레이션에서 서버 컴포넌트와 액션을 옮기며 배운 것, 그리고 남은 일
+										</RowLink>
+									}
+									address="/posts/react-19-migration"
+								/>
+							</TableCell>
+							<TableCell tone="subtle" truncate title="개발">
+								개발
+							</TableCell>
+						</TableRow>
+						<TableRow>
+							<TableCell truncate>
+								<RowTitle title={<RowLink href="#">봄에 쓴 첫 글</RowLink>} address="/posts/first-spring" />
+							</TableCell>
+							<TableCell tone="subtle" truncate title="일상">
+								일상
+							</TableCell>
+						</TableRow>
+					</TableBody>
+				</Table>
+			</ListScroll>
+		</Box>
 	),
 	play: async ({ canvasElement }) => {
 		const words = within(canvasElement).getByRole("link", { name: /^리액트 19/ });

@@ -39,14 +39,18 @@ export function spillingCells(table: Element): string[] {
 		.map((cell) => `"${cell.textContent}" ${cell.scrollWidth} > ${cell.clientWidth}`);
 }
 
+/** What is on top at the middle of `element`: what a pointer there finds, which is not the element when something covers it. */
+export function onTopOf(element: Element): Element | null {
+	const box = element.getBoundingClientRect();
+	return document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+}
+
 /**
  * What the browser's tooltip would say with the pointer at the middle of `element`: the `title` of what is on top there, or of what holds it. A `title` under
  * something that covers it (a row's link covers its row) is never said, and this is `null`.
  */
 export function titleUnderPointer(element: Element): string | null {
-	const box = element.getBoundingClientRect();
-	const top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-	return top?.closest("[title]")?.getAttribute("title") ?? null;
+	return onTopOf(element)?.closest("[title]")?.getAttribute("title") ?? null;
 }
 
 /** The heights of a table's body rows that hold something, each once: one height when every row is as tall as the others. */

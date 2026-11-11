@@ -52,7 +52,7 @@ export function formatShortcut(keys: ShortcutKeys, mac: boolean): string {
 }
 
 /** Whether the admin runs on Apple's systems, where the shortcut modifier is ⌘ rather than Ctrl. */
-const isApple = () => {
+export const isApple = () => {
 	const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
 	return /mac|iphone|ipad|ipod/i.test(nav.userAgentData?.platform || nav.platform || "");
 };

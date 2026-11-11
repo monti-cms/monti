@@ -7,6 +7,7 @@ import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
 import { Folder, OverflowMenuHorizontal } from "./icons";
+import { isApple } from "./shortcut";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 function Table({
@@ -170,21 +171,21 @@ function overLink(event: React.MouseEvent<HTMLTableRowElement>): HTMLElement | n
 /**
  * A row's link covers the row, and some of the row stands over the link so the pointer can find it: a cell's words that say themselves whole when pointed at, a
  * tooltip's trigger. A press there still opens the row, as a press on the link would: a click is passed on with the keys held (a new tab), and the middle
- * button opens the link's address in a new tab.
+ * button as a click with the key that opens a new tab.
  */
 function openFromOver(event: React.MouseEvent<HTMLTableRowElement>) {
 	const link = overLink(event);
 	if (!link) return;
-	if (event.type === "auxclick") {
-		const address = addressOf(link);
-		if (event.button === 1 && address) window.open(address, "_blank", "noopener");
-		return;
-	}
+	// The middle button on a link opens its address in a new tab behind this one: the click is passed on with the key that asks for that.
+	const middle = event.type === "auxclick";
+	if (middle && (event.button !== 1 || !addressOf(link))) return;
 	// Words dragged over to select them were not pressed: a link under them would not open either.
 	const selected = window.getSelection();
 	if (selected && !selected.isCollapsed && selected.anchorNode && event.currentTarget.contains(selected.anchorNode))
 		return;
-	const { metaKey, ctrlKey, shiftKey, altKey } = event;
+	const { shiftKey, altKey } = event;
+	const metaKey = event.metaKey || (middle && isApple());
+	const ctrlKey = event.ctrlKey || (middle && !isApple());
 	const click = new MouseEvent("click", { bubbles: true, cancelable: true, metaKey, ctrlKey, shiftKey, altKey });
 	passedOn.add(click);
 	link.dispatchEvent(click);
@@ -376,26 +377,44 @@ function RowTitle({
  */
 function RowTitleWords({ children }: { children: React.ReactNode }) {
 	const box = React.useRef<HTMLSpanElement>(null);
-	const [said, setSaid] = React.useState<string | null>(null);
+	/** Open, and by what: the pointer on the words, or the keyboard on the title. */
+	const [by, setBy] = React.useState<"pointer" | "keys" | null>(null);
+	/** What it says. Kept while it closes, so the tooltip does not empty before it is gone. */
+	const [words, setWords] = React.useState("");
+	/** Closed by hand (Escape, a press) with the pointer on the words: it stays closed until the pointer has left them. */
+	const dismissed = React.useRef(false);
 	/** The words, when they are cut: a fraction of a pixel short already ends them in "…". */
 	const cut = () => {
 		const node = box.current;
 		if (!node) return null;
-		const words = document.createRange();
-		words.selectNodeContents(node);
-		return words.getBoundingClientRect().width > node.getBoundingClientRect().width + 0.01 ? node.textContent : null;
+		const all = document.createRange();
+		all.selectNodeContents(node);
+		return all.getBoundingClientRect().width > node.getBoundingClientRect().width + 0.01 ? node.textContent : null;
 	};
-	const at = (x: number, y: number) => {
-		const edge = box.current?.getBoundingClientRect();
-		return edge && x >= edge.left && x <= edge.right && y >= edge.top && y <= edge.bottom ? cut() : null;
+	const say = (how: "pointer" | "keys") => {
+		const whole = cut();
+		if (whole === null) return;
+		setWords(whole);
+		setBy(how);
+	};
+	/** The pointer is no longer on the words: what it opened closes, and what was closed by hand may open again. */
+	const left = () => {
+		dismissed.current = false;
+		if (by === "pointer") setBy(null);
 	};
 	return (
 		<Tooltip
-			open={said !== null}
+			open={by !== null}
 			onOpenChange={(open, details) => {
-				// The pointer's place decides for the pointer (below); the keyboard on the title says a cut one, and anything that closes it closes it.
-				if (!open) setSaid(null);
-				else if (details.reason === "trigger-focus") setSaid(cut());
+				// The pointer's coming and going is seen by its place (below): the trigger's own hover is the whole row's.
+				if (details.reason === "trigger-hover") return;
+				if (open) {
+					if (details.reason === "trigger-focus") say("keys");
+					return;
+				}
+				// Escape, a press, the keyboard moving on.
+				if (by === "pointer") dismissed.current = true;
+				setBy(null);
 			}}
 		>
 			<TooltipTrigger
@@ -403,8 +422,24 @@ function RowTitleWords({ children }: { children: React.ReactNode }) {
 					<span
 						ref={box}
 						className="min-w-0 truncate text-monti-body text-monti-default"
-						onPointerMove={(event) => setSaid(at(event.clientX, event.clientY))}
-						onPointerLeave={() => setSaid(null)}
+						onPointerMove={(event) => {
+							// A finger that starts a scroll here is not pointing.
+							if (event.pointerType === "touch") return;
+							const edge = event.currentTarget.getBoundingClientRect();
+							const on =
+								event.clientX >= edge.left &&
+								event.clientX <= edge.right &&
+								event.clientY >= edge.top &&
+								event.clientY <= edge.bottom;
+							if (!on) left();
+							else if (by === null && !dismissed.current) say("pointer");
+						}}
+						onPointerLeave={left}
+						onPointerDown={() => {
+							if (by !== "pointer") return;
+							dismissed.current = true;
+							setBy(null);
+						}}
 					/>
 				}
 			>
@@ -412,7 +447,7 @@ function RowTitleWords({ children }: { children: React.ReactNode }) {
 			</TooltipTrigger>
 			{/* A title can be long: it wraps in the tooltip instead of running off the window. */}
 			<TooltipContent align="start" className="max-w-monti-panel whitespace-normal break-words">
-				{said}
+				{words}
 			</TooltipContent>
 		</Tooltip>
 	);
