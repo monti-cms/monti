@@ -19,7 +19,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const admin = { actor: "admin" } as const;
-export const wait = { timeout: 15000 };
+const wait = { timeout: 15000 };
 
 /** The posts' admin values the reference screens show: a Korean name, the field labels and help. */
 const postValues = {
@@ -88,7 +88,7 @@ export const site = (
 ];
 
 /** Fills a field as typing would, through the input's change event (`userEvent.type` does not reach these inputs). */
-export const fill = (field: HTMLElement, value: string) => fireEvent.change(field, { target: { value } });
+const fill = (field: HTMLElement, value: string) => fireEvent.change(field, { target: { value } });
 
 /** Waits until the open sheet has gone, so the next click reaches the page instead of its closing backdrop. */
 const sheetGone = (body: ReturnType<typeof within>) =>
@@ -99,7 +99,7 @@ const collectionLink = (page: ReturnType<typeof within>, name: RegExp) =>
 	within(page.getByRole("navigation", { name: "컬렉션" })).getByRole("button", { name });
 
 /** Opens "변경 사항 ▾" once its group has settled (it appears with the first change, and a second press would close the list). */
-export async function openChanges(page: ReturnType<typeof within>, body: ReturnType<typeof within>) {
+async function openChanges(page: ReturnType<typeof within>, body: ReturnType<typeof within>) {
 	const trigger = await page.findByRole("button", { name: "변경 사항" });
 	await new Promise((done) => setTimeout(done, 300));
 	await userEvent.click(trigger);
@@ -107,7 +107,7 @@ export async function openChanges(page: ReturnType<typeof within>, body: ReturnT
 }
 
 /** Opens settings from the sidebar and waits for the collections; sheets and menus are in the body, outside the canvas. */
-export async function settings(canvasElement: HTMLElement) {
+async function settings(canvasElement: HTMLElement) {
 	const page = within(canvasElement);
 	await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
 	await page.findByRole("button", { name: "summary 열기" }, wait);
@@ -123,7 +123,7 @@ async function addField(
 }
 
 /** Flow 4, step 07: summary renamed to excerpt, subtitle removed, a new required choice "글 종류" with its choices. */
-export async function changeFields(canvasElement: HTMLElement) {
+async function changeFields(canvasElement: HTMLElement) {
 	const screen = await settings(canvasElement);
 	const { page, body } = screen;
 	await userEvent.click(page.getByRole("button", { name: "summary 열기" }));
@@ -533,11 +533,3 @@ export const twoTabs = async ({ monti }: StorySite) => {
 		admin,
 	);
 };
-
-/** The fields' names in the order the outline shows them. */
-export const fieldOrder = (page: ReturnType<typeof within>) =>
-	within(page.getByRole("tabpanel"))
-		.getAllByRole("button", { name: / 열기$/ })
-		.map((button: HTMLElement) => button.getAttribute("aria-label")?.replace(/ 열기$/, ""));
-
-export const pause = (ms: number) => new Promise((done) => setTimeout(done, ms));

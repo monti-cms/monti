@@ -28,7 +28,7 @@ const schema = defineSchema({
 });
 
 const admin = { actor: "admin" } as const;
-export const wait = { timeout: 15000 };
+const wait = { timeout: 15000 };
 
 /** The reference list's rows (`Screens/Reference/Lists` › Main): status, title, address, category, tags, other languages and date. */
 const POSTS = [
@@ -269,7 +269,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const rowsShown = (canvas: HTMLElement) =>
+const rowsShown = (canvas: HTMLElement) =>
 	waitFor(() => expect(within(canvas).getByText("발행 후 고친 글")).toBeTruthy(), wait);
 
 /** Flow 1, step 01: the posts list as the reference draws it, newest change first, 25 of 148. */
@@ -515,9 +515,9 @@ export const Categories: Story = {
 	play: ({ canvasElement }) => waitFor(() => expect(within(canvasElement).getByText("일상")).toBeTruthy(), wait),
 };
 
-export const body = () => within(document.body);
+const body = () => within(document.body);
 /** Opens a column's menu by its name in the head row. */
-export async function openColumn(canvas: HTMLElement, name: string) {
+async function openColumn(canvas: HTMLElement, name: string) {
 	await waitFor(() => expect(within(canvas).getByRole("button", { name })).toBeTruthy(), wait);
 	await userEvent.click(within(canvas).getByRole("button", { name }));
 	await waitFor(() => expect(body().getByRole("menu")).toBeTruthy(), wait);
@@ -562,7 +562,7 @@ export const ColumnMoving: Story = {
 };
 
 /** Drags a column's resize handle by `by` px; lets go unless `hold`. */
-export async function dragHandle(canvas: HTMLElement, name: string, by: number, hold = false) {
+async function dragHandle(canvas: HTMLElement, name: string, by: number, hold = false) {
 	const handle = await within(canvas).findByRole("separator", { name }, wait);
 	const box = handle.getBoundingClientRect();
 	const y = box.top + box.height / 2;
@@ -576,9 +576,6 @@ export async function dragHandle(canvas: HTMLElement, name: string, by: number, 
 	if (!hold) at("pointerup", box.left + by);
 	return handle;
 }
-export const columnWidth = (canvas: HTMLElement, id: string) =>
-	Math.round(canvas.querySelector(`th[data-column=${id}]`)?.getBoundingClientRect().width ?? 0);
-
 const rightEdge = (canvas: HTMLElement, id: string) =>
 	Math.round(canvas.querySelector(`th[data-column=${id}]`)?.getBoundingClientRect().right ?? 0);
 

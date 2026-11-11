@@ -228,7 +228,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** The save cell's words (a live region repeats them for screen readers, so the text is found twice). */
-export const saveCell = (page: ReturnType<typeof within>, text: string) =>
+const saveCell = (page: ReturnType<typeof within>, text: string) =>
 	page.findByText(text, { selector: "[data-slot=status-bar-cell]" }, wait);
 
 /** Waits for the editor: its title and body. */
@@ -379,7 +379,7 @@ export const SignedOut: Story = {
 	loaders: site("draft"),
 	play: async ({ canvasElement, loaded }) => {
 		const { site: made } = loaded as Loaded;
-		const { page, title, all } = await opened(canvasElement);
+		const { page, title } = await opened(canvasElement);
 		await saveCell(page, "저장됨");
 		await userEvent.type(title, " 다시 쓰기");
 		await made.db.deleteFrom("monti_session").execute();
@@ -390,7 +390,7 @@ export const SignedOut: Story = {
 };
 
 /** Selects words in the body the way a drag does, so the format card shows. */
-export async function select(body: HTMLElement, words: string) {
+async function select(body: HTMLElement, words: string) {
 	const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
 	let textNode: Node | null = walker.nextNode();
 	while (textNode && !textNode.textContent?.includes(words)) textNode = walker.nextNode();
@@ -436,25 +436,15 @@ export const LinkedEntry: Story = {
 };
 
 /** Puts the caret at the end of a cell's text. */
-export async function inCell(body: HTMLElement, words: string) {
+async function inCell(body: HTMLElement, words: string) {
 	const cell = [...body.querySelectorAll("td, th")].find((each) => each.textContent === words);
 	if (!cell) throw new Error(`no cell "${words}"`);
 	await userEvent.click(cell);
 	return cell;
 }
 
-/** The table's column widths as the editor draws them. */
-export const shares = (body: HTMLElement) =>
-	[...body.querySelectorAll("col")].map((col) => (col as HTMLElement).style.width);
-
-/** The table is no wider than the body. */
-export const fitsBody = (body: HTMLElement) => {
-	const table = body.querySelector("table");
-	return Boolean(table) && (table?.getBoundingClientRect().width ?? 0) <= body.getBoundingClientRect().width + 1;
-};
-
 /** The table's cells as rows of text. */
-export const cells = (body: HTMLElement) =>
+const cells = (body: HTMLElement) =>
 	[...body.querySelectorAll("tr")].map((row) => [...row.querySelectorAll("td, th")].map((cell) => cell.textContent));
 
 /** The caret in a cell: a grip on its column's top edge and its row's left edge (T62). */
@@ -510,7 +500,7 @@ export const TableHeaderRow: Story = {
 };
 
 /** The footnotes' numbers and texts, in the order the editor shows them. */
-export const notes = (body: HTMLElement) => ({
+const notes = (body: HTMLElement) => ({
 	refs: [...body.querySelectorAll("[data-footnote-ref]")].map((ref) => ref.getAttribute("data-n")),
 	notes: [...body.querySelectorAll("[data-footnote]")].map(
 		(note) => `${note.getAttribute("data-n")}. ${note.textContent}`,

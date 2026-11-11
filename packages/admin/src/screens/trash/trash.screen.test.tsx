@@ -1,7 +1,14 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { rowHeights, spillingCells, titleUnderPointer } from "../../../../../testing/input";
+import {
+	dragPath,
+	dropDrag,
+	middleOf,
+	rowHeights,
+	spillingCells,
+	titleUnderPointer,
+} from "../../../../../testing/input";
 import * as stories from "./trash.stories";
 
 const {
@@ -370,5 +377,21 @@ describe("into the trash (doc 11, principle 2)", () => {
 		await userEvent.click(dialog().getByRole("button", { name: "휴지통으로" }));
 		await expect.element(row("리액트")).not.toBeInTheDocument();
 		await expect.element(toast("휴지통으로 옮겼습니다")).toBeVisible();
+	});
+
+	it("[dragging] [dropped] a column's edge held and dragged stays under the pointer and moves no other edge; let go, the column keeps its width", async () => {
+		await Top.run();
+		await expect.element(row("첫 번째 글")).toBeVisible();
+		const heads = () =>
+			[...table().element().querySelectorAll("th")].map((th) => Math.round(th.getBoundingClientRect().right));
+		const edge = table().getByRole("separator").first().element();
+		const at = [...table().element().querySelectorAll("th")].findIndex((th) => th.contains(edge));
+		const before = heads();
+		const from = middleOf(edge);
+		await dragPath([from, { x: from.x - 40, y: from.y }], { hold: true });
+		const moved = before.map((right, index) => (index === at ? right - 40 : right));
+		await expect.poll(heads).toEqual(moved);
+		await dropDrag();
+		await expect.poll(heads).toEqual(moved);
 	});
 });
