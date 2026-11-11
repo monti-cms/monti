@@ -46,7 +46,6 @@ export function parseRoute(hash: string): Route {
 	return { screen: "home" };
 }
 
-/** The hash of a route: what links carry, so "open in a new tab" opens the same screen. */
 /**
  * What a link to a screen takes: its address, and a press that goes there in this tab. With a key held that asks for another place (a new tab, a new
  * window) the press is left to the browser, which follows the address.
@@ -62,6 +61,7 @@ export function linkTo(route: Route, go: (route: Route) => void) {
 	};
 }
 
+/** The hash of a route: what links carry, so "open in a new tab" opens the same screen. */
 export function href(route: Route): string {
 	switch (route.screen) {
 		case "list": {
