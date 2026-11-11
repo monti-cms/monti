@@ -267,4 +267,45 @@ describe("Table rows with a link", () => {
 		await userEvent.click(page.getByText("건너"));
 		expect(other).toHaveBeenCalledTimes(1);
 	});
+
+	it("a cut title says itself whole when its words are pointed at or come to with the keyboard, and not from the rest of the row", async () => {
+		const long = "리액트 19 마이그레이션에서 서버 컴포넌트와 액션을 옮기며 배운 것";
+		render(
+			// The last column takes the room that is left, so the first two keep their widths.
+			<Table container="none" layout="fixed" columns={[200, 200, undefined]}>
+				<TableBody>
+					<TableRow>
+						<TableCell truncate>
+							<RowTitle title={<RowLink href="#/long">{long}</RowLink>} />
+						</TableCell>
+						<TableCell tone="subtle">가운데</TableCell>
+						<TableCell />
+					</TableRow>
+					<TableRow>
+						<TableCell truncate>
+							<RowTitle title={<RowLink href="#/short">짧은 글</RowLink>} />
+						</TableCell>
+						<TableCell tone="subtle">옆 칸</TableCell>
+						<TableCell />
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		// Near their start: the words run on under the cut, past where they show.
+		await userEvent.hover(page.getByText(long), { position: { x: 12, y: 8 } });
+		await expect.poll(tip).toBe(long);
+		// The link covers the row: over another cell the pointer is still on the link, and the title is not said.
+		await userEvent.hover(page.getByText("가운데"), { force: true });
+		await expect.poll(tip).toBe(null);
+		// A title that fits says nothing.
+		await userEvent.hover(page.getByText("짧은 글"));
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(tip()).toBe(null);
+		await userEvent.unhover(page.getByText("짧은 글"));
+		// The keyboard comes to the first link of the page, the long title's.
+		await userEvent.keyboard("{Tab}");
+		await expect.element(page.getByRole("link", { name: long })).toHaveFocus();
+		await expect.poll(tip).toBe(long);
+	});
 });

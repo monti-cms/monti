@@ -6,7 +6,8 @@ import { TextButton } from "./text-button";
 
 /**
  * One place that uses a file, in the file's panel: its title goes there, and at the end stands where in it the file is ("Cover · Body"). However long the title, the row stays
- * one line: the title is cut with "…" and the places keep their room. The title is the panel's own text size (`note`), not larger than the values above it.
+ * one line: the title is cut with "…" and the places keep their room. The title is the panel's own text size (`note`), not larger than the values above it, and
+ * the places are words a size under it (`caption`).
  */
 function FileUseRow({
 	title,
@@ -26,7 +27,7 @@ function FileUseRow({
 			<TextButton size="note" href={href} title={title} onClick={onClick} className="flex min-w-0">
 				<span className="truncate">{title}</span>
 			</TextButton>
-			<Text variant="micro" tone="subtle" className="shrink-0 whitespace-nowrap">
+			<Text variant="caption" tone="subtle" className="shrink-0 whitespace-nowrap">
 				{places}
 			</Text>
 		</div>

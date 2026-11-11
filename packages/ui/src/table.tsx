@@ -7,6 +7,7 @@ import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
 import { Folder, OverflowMenuHorizontal } from "./icons";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 function Table({
 	className,
@@ -349,7 +350,11 @@ function RowTitle({
 			>
 				{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
 				{thumb && <span className="mr-monti-4 flex shrink-0 self-center">{thumb}</span>}
-				<span className={cn("min-w-0 text-monti-body text-monti-default", !editing && "truncate")}>{title}</span>
+				{editing ? (
+					<span className="min-w-0 text-monti-body text-monti-default">{title}</span>
+				) : (
+					<RowTitleWords>{title}</RowTitleWords>
+				)}
 			</span>
 			{address && (
 				// It is cut before the title is, so it says itself whole when pointed at: it stands over the row's link for the pointer to find it.
@@ -361,6 +366,55 @@ function RowTitle({
 				</span>
 			)}
 		</span>
+	);
+}
+
+/**
+ * A row title's words, cut to the line with "…". While they are cut, pointing at them (or coming to the title with the keyboard) says them whole in a tooltip,
+ * as a language cell says its languages. The title's link covers the whole row, so the pointer is "on the title" everywhere on the row: the tooltip is for
+ * the pointer on the words themselves, not on the rest of the row.
+ */
+function RowTitleWords({ children }: { children: React.ReactNode }) {
+	const box = React.useRef<HTMLSpanElement>(null);
+	const [said, setSaid] = React.useState<string | null>(null);
+	/** The words, when they are cut: a fraction of a pixel short already ends them in "…". */
+	const cut = () => {
+		const node = box.current;
+		if (!node) return null;
+		const words = document.createRange();
+		words.selectNodeContents(node);
+		return words.getBoundingClientRect().width > node.getBoundingClientRect().width + 0.01 ? node.textContent : null;
+	};
+	const at = (x: number, y: number) => {
+		const edge = box.current?.getBoundingClientRect();
+		return edge && x >= edge.left && x <= edge.right && y >= edge.top && y <= edge.bottom ? cut() : null;
+	};
+	return (
+		<Tooltip
+			open={said !== null}
+			onOpenChange={(open, details) => {
+				// The pointer's place decides for the pointer (below); the keyboard on the title says a cut one, and anything that closes it closes it.
+				if (!open) setSaid(null);
+				else if (details.reason === "trigger-focus") setSaid(cut());
+			}}
+		>
+			<TooltipTrigger
+				render={
+					<span
+						ref={box}
+						className="min-w-0 truncate text-monti-body text-monti-default"
+						onPointerMove={(event) => setSaid(at(event.clientX, event.clientY))}
+						onPointerLeave={() => setSaid(null)}
+					/>
+				}
+			>
+				{children}
+			</TooltipTrigger>
+			{/* A title can be long: it wraps in the tooltip instead of running off the window. */}
+			<TooltipContent align="start" className="max-w-monti-panel whitespace-normal break-words">
+				{said}
+			</TooltipContent>
+		</Tooltip>
 	);
 }
 

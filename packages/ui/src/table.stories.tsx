@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import {
 	Box,
 	EntryStatus,
@@ -19,6 +20,7 @@ import {
 	TableRow,
 	Text,
 	TextButton,
+	TooltipProvider,
 } from "./index";
 
 /**
@@ -283,4 +285,51 @@ export const CutCells: Story = {
 			</ListScroll>
 		</Box>
 	),
+};
+
+/** A title too long for its line, its words pointed at: the tooltip says it whole, on as many lines as it takes. Over the rest of the row it says nothing. */
+export const CutTitle: Story = {
+	tags: ["visual"],
+	render: () => (
+		<TooltipProvider>
+			<Box width="sheet">
+				<ListScroll>
+					<Table container="none" layout="fixed" columns={[undefined, 84]}>
+						<TableBody>
+							<TableRow>
+								<TableCell truncate>
+									<RowTitle
+										title={
+											<RowLink href="#">
+												리액트 19 마이그레이션에서 서버 컴포넌트와 액션을 옮기며 배운 것, 그리고 남은 일
+											</RowLink>
+										}
+										address="/posts/react-19-migration"
+									/>
+								</TableCell>
+								<TableCell tone="subtle" truncate title="개발">
+									개발
+								</TableCell>
+							</TableRow>
+							<TableRow>
+								<TableCell truncate>
+									<RowTitle title={<RowLink href="#">봄에 쓴 첫 글</RowLink>} address="/posts/first-spring" />
+								</TableCell>
+								<TableCell tone="subtle" truncate title="일상">
+									일상
+								</TableCell>
+							</TableRow>
+						</TableBody>
+					</Table>
+				</ListScroll>
+			</Box>
+		</TooltipProvider>
+	),
+	play: async ({ canvasElement }) => {
+		const words = within(canvasElement).getByRole("link", { name: /^리액트 19/ });
+		const box = words.getBoundingClientRect();
+		// A pointer near the start of the words: they run on under the cut.
+		await userEvent.pointer({ target: words, coords: { clientX: box.left + 12, clientY: box.top + 8 } });
+		await within(document.body).findByRole("tooltip");
+	},
 };
