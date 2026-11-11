@@ -14,7 +14,6 @@ import {
 	IconButton,
 	SidePanel,
 	Stack,
-	Text,
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useAdmin } from "../../operations/admin-context";
@@ -102,31 +101,25 @@ export function TrashedItemPanel({
 				</DescriptionList>
 				<FormField>
 					<FormFieldLabel>{t("trash.pointing", { count: item.pointing.length })}</FormFieldLabel>
-					{item.pointing.length === 0 ? (
-						<Text variant="note" tone="faint">
-							{t("library.usesNone")}
-						</Text>
-					) : (
-						<FileUseList>
-							{item.pointing.map((entry) => {
-								const route: Route = { screen: "entry", collection: entry.collection, id: entry.id };
-								const label = collectionLabel(entry.collection);
-								return (
-									<FileUseRow
-										key={entry.id}
-										title={entry.title}
-										places={entry.trashed ? t("trash.inTrash", { label }) : label}
-										href={href(route)}
-										onClick={(event) => {
-											if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-											event.preventDefault();
-											go(route);
-										}}
-									/>
-								);
-							})}
-						</FileUseList>
-					)}
+					<FileUseList empty={t("library.usesNone")}>
+						{item.pointing.map((entry) => {
+							const route: Route = { screen: "entry", collection: entry.collection, id: entry.id };
+							const label = collectionLabel(entry.collection);
+							return (
+								<FileUseRow
+									key={entry.id}
+									title={entry.title}
+									places={entry.trashed ? t("trash.inTrash", { label }) : label}
+									href={href(route)}
+									onClick={(event) => {
+										if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+										event.preventDefault();
+										go(route);
+									}}
+								/>
+							);
+						})}
+					</FileUseList>
 				</FormField>
 			</Stack>
 		</SidePanel>

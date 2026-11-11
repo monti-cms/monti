@@ -1,11 +1,13 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { spillingCells } from "../../../../../testing/input";
 import * as stories from "./trash.stories";
 
 const {
 	Top,
 	InFolder,
+	InUrgentFolder,
 	Searching,
 	SearchingInFolder,
 	NoMatch,
@@ -245,6 +247,35 @@ describe("the trash (doc 11, flow 5)", () => {
 		await Empty.run();
 		await expect.element(main().getByText("휴지통이 비었습니다.")).toBeVisible();
 		await expect.element(main().getByRole("table")).not.toBeInTheDocument();
+	});
+
+	it("11-1 a column dragged to its narrowest cuts its value inside the cell, and the cell says it whole", async () => {
+		localStorage.setItem("monti:trash-columns", JSON.stringify({ kind: 60, locale: 60, left: 60 }));
+		await Top.run();
+		const kind = row("옛 소개 글").getByRole("cell", { name: "게시글" });
+		await expect.element(kind).toHaveAttribute("title", "게시글");
+		// No cell's words run over the next column: each is clipped at its own edge.
+		expect(spillingCells(table().element())).toEqual([]);
+		// What stands after a title is cut first, so it says itself whole too.
+		await expect
+			.element(row("첫 번째 글").getByText("/posts/first-post"))
+			.toHaveAttribute("title", "/posts/first-post");
+		localStorage.removeItem("monti:trash-columns");
+	});
+
+	it("11-1 days under a week change their color only: mono in a folder's head, the values' size in a panel", async () => {
+		await InUrgentFolder.run();
+		const heading = main().getByRole("heading", { name: "시리즈 원고" });
+		await expect.element(heading).toBeVisible();
+		const days = main().getByText("3일 남음").first().element();
+		expect(getComputedStyle(days).fontFamily).toBe(getComputedStyle(days.parentElement as HTMLElement).fontFamily);
+		expect(getComputedStyle(days).fontFamily).toMatch(/mono/i);
+
+		await ItemPanel.run();
+		const panel = page.getByRole("complementary", { name: "임시" });
+		const urgent = panel.getByText("3일 남음").element();
+		const other = panel.getByText("태그", { exact: true }).element();
+		expect(getComputedStyle(urgent).fontSize).toBe(getComputedStyle(other).fontSize);
 	});
 
 	it("11-1 [flow 5·19] an item opens beside the list, to read: who points at it, with restore as its one pill", async () => {

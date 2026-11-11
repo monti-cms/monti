@@ -266,8 +266,35 @@ export const KindChosenInFolder: Story = {
 	},
 };
 
+/** The grid has no columns, so one menu holds every order: what it is ordered by, then which way. */
+export const SortMenu: Story = {
+	loaders: library(),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: /^올린 날/ }, wait));
+	},
+};
+
 /** The list view (flow 6·14). */
 export const ListView: Story = { loaders: library("#/media?view=list") };
+
+/** A column's menu in the list view holds both ways (every table's columns, components/list.md). */
+export const ListViewSizeMenu: Story = {
+	loaders: library("#/media?view=list"),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "크기" }, wait));
+	},
+};
+
+/** A file open beside the list: only the name and the day stay, and the name's menu holds every order, then the filters. */
+export const ListViewFileOpenNameMenu: Story = {
+	loaders: library("#/media?view=list"),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("link", { name: "Blog Assets" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: "desk-morning.jpg" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: /^이름/ }, wait));
+	},
+};
 
 /** The list view inside a folder, a row picked: the bulk bar takes the head's place, and the filters stay above (T113). */
 export const ListViewPicked: Story = {

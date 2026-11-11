@@ -10,7 +10,6 @@ import {
 	ContextMenuTrigger,
 	Count,
 	DropdownMenu,
-	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
@@ -51,6 +50,7 @@ import { URGENT_DAYS } from "../../trash/days-left";
 import { usePurge, useRestore } from "../../trash/use-trash";
 import type { FrameCounts } from "../frame/admin-frame";
 import { useLanguageName } from "../list/column-menu";
+import { FilterRows } from "../list/filter-rows";
 import { searchScopes } from "../list/folders";
 import { ListPages } from "../list/list-pages";
 import { SortRows } from "../list/sort-rows";
@@ -141,7 +141,7 @@ export function TrashScreen({
 	const languageName = useLanguageName();
 	// The language menu lists the languages that are in the trash here, in the site's order, and the ones it is filtered by.
 	const languages = siteLocales.filter((code) => (data?.locales[code] ?? 0) > 0 || state.locales.includes(code));
-	const { widths, resize } = useColumnWidths("trash");
+	const { sized, resize } = useColumnWidths("trash");
 	const collectionLabel = (collection: string) => schema.data?.adminValues[collection]?.label ?? collection;
 	const kindLabel = (kind: string) => (kind === MEDIA_KIND ? t("trash.kind.media") : collectionLabel(kind));
 	const isDocument = (row: TrashRow) => row.collection !== null && collections[row.collection]?.kind === "document";
@@ -227,33 +227,9 @@ export function TrashScreen({
 
 	const total = data?.total ?? 0;
 	const kinds = [...Object.keys(collections), MEDIA_KIND];
-	/** A column's menu rows that filter by its values, each with how many rows it would show. */
-	const filterRows = (
-		values: string[],
-		chosen: string[],
-		label: (value: string) => string,
-		count: (value: string) => number,
-		onChange: (chosen: string[]) => void,
-	) =>
-		values.map((value) => (
-			<DropdownMenuCheckboxItem
-				key={value}
-				box
-				closeOnClick={false}
-				checked={chosen.includes(value)}
-				onCheckedChange={() =>
-					onChange(chosen.includes(value) ? chosen.filter((each) => each !== value) : [...chosen, value])
-				}
-			>
-				{label(value)}
-				<MenuShortcut>{count(value)}</MenuShortcut>
-			</DropdownMenuCheckboxItem>
-		));
 	const sortedBy = (by: TrashState["sort"]["by"]) => (state.sort.by === by ? state.sort.dir : null);
 	const sortBy = (by: TrashState["sort"]["by"]) => (dir: "asc" | "desc") =>
 		setState({ ...state, page: 1, sort: { by, dir } });
-	/** A column's width: what was dragged, or its kind's (the title takes the room the others leave). */
-	const sized = (id: string, size: number) => ({ id, size: widths[id] ?? size, kindSize: size });
 	// As every table (components/list.md): each column's menu sorts both ways or filters by its values, and each width can be dragged.
 	const head: ListHeadColumn[] = [
 		{
@@ -269,12 +245,16 @@ export function TrashScreen({
 						...sized("locale", LIST_COLUMN_SIZE.locale),
 						label: t("list.column.locale"),
 						filtered: state.locales.length > 0,
-						menu: filterRows(
-							languages,
-							state.locales,
-							languageName,
-							(locale) => data?.locales[locale] ?? 0,
-							(locales) => setState({ ...state, page: 1, locales }),
+						menu: (
+							<FilterRows
+								values={languages.map((locale) => ({
+									value: locale,
+									label: languageName(locale),
+									count: data?.locales[locale] ?? 0,
+								}))}
+								chosen={state.locales}
+								onChange={(locales) => setState({ ...state, page: 1, locales })}
+							/>
 						),
 					},
 				]
@@ -283,12 +263,12 @@ export function TrashScreen({
 			...sized("kind", KIND_SIZE),
 			label: t("trash.column.kind"),
 			filtered: state.kinds.length > 0,
-			menu: filterRows(
-				kinds,
-				state.kinds,
-				kindLabel,
-				(kind) => data?.counts[kind] ?? 0,
-				(next) => setState({ ...state, page: 1, kinds: next }),
+			menu: (
+				<FilterRows
+					values={kinds.map((kind) => ({ value: kind, label: kindLabel(kind), count: data?.counts[kind] ?? 0 }))}
+					chosen={state.kinds}
+					onChange={(next) => setState({ ...state, page: 1, kinds: next })}
+				/>
 			),
 		},
 		{
@@ -314,7 +294,9 @@ export function TrashScreen({
 			title={place?.name ?? t("frame.trash")}
 			meta={
 				!place ? undefined : place.daysLeft < URGENT_DAYS ? (
-					<Text tone="warning">{t("trash.left", { days: place.daysLeft })}</Text>
+					<Text mono tone="warning">
+						{t("trash.left", { days: place.daysLeft })}
+					</Text>
 				) : (
 					t("trash.left", { days: place.daysLeft })
 				)
@@ -510,10 +492,10 @@ export function TrashScreen({
 												)}
 											</TableCell>
 										)}
-										<TableCell tone="subtle" truncate>
+										<TableCell tone="subtle" truncate title={kindLabel(row.collection ?? MEDIA_KIND)}>
 											{kindLabel(row.collection ?? MEDIA_KIND)}
 										</TableCell>
-										<TableCell align="end">
+										<TableCell align="end" truncate title={days === null ? undefined : t("trash.left", { days })}>
 											{days !== null && (
 												<TrashRowDate
 													left={t("trash.left", { days })}

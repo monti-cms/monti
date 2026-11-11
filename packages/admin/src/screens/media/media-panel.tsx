@@ -220,28 +220,22 @@ function FileUses({ uses, go }: { uses: ReturnType<typeof useUseRows>; go: (rout
 	return (
 		<FormField>
 			<FormFieldLabel>{t("library.usesCount", { count: uses.length })}</FormFieldLabel>
-			{uses.length === 0 ? (
-				<Text variant="note" tone="faint">
-					{t("library.usesNone")}
-				</Text>
-			) : (
-				<FileUseList>
-					{uses.map((use) => (
-						<FileUseRow
-							key={use.key}
-							title={use.title}
-							places={use.places}
-							href={href(use.route)}
-							onClick={(event) => {
-								// A new tab leaves nothing behind. A move in this one goes through the question.
-								if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-								event.preventDefault();
-								go(use.route);
-							}}
-						/>
-					))}
-				</FileUseList>
-			)}
+			<FileUseList empty={t("library.usesNone")}>
+				{uses.map((use) => (
+					<FileUseRow
+						key={use.key}
+						title={use.title}
+						places={use.places}
+						href={href(use.route)}
+						onClick={(event) => {
+							// A new tab leaves nothing behind. A move in this one goes through the question.
+							if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+							event.preventDefault();
+							go(use.route);
+						}}
+					/>
+				))}
+			</FileUseList>
 		</FormField>
 	);
 }

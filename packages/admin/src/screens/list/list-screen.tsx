@@ -577,7 +577,7 @@ function DocumentListScreen({
 		switch (column.kind) {
 			case "status":
 				return (
-					<TableCell key={column.id}>
+					<TableCell key={column.id} truncate title={stateNames[row.state]}>
 						{check}
 						<EntryStatus status={row.state === "changed" ? "editing" : row.state} quiet={row.state === "published"}>
 							{stateNames[row.state]}
@@ -601,21 +601,19 @@ function DocumentListScreen({
 						<LocaleCodes codes={row.locales} names={row.locales.map(languageName).join(", ")} />
 					</TableCell>
 				);
-			case "date":
+			case "date": {
+				const day = shortDate(
+					column.id === "publishedAt" ? row.publishedAt : column.id === "createdAt" ? row.createdAt : row.updatedAt,
+				);
 				return (
-					<TableCell key={column.id} align="end">
+					<TableCell key={column.id} align="end" truncate title={day || undefined}>
 						{check}
 						<Text mono variant="meta" tone="muted">
-							{shortDate(
-								column.id === "publishedAt"
-									? row.publishedAt
-									: column.id === "createdAt"
-										? row.createdAt
-										: row.updatedAt,
-							)}
+							{day}
 						</Text>
 					</TableCell>
 				);
+			}
 			case "media": {
 				// The picture, or a file's name; an empty cell for an empty field (T59).
 				const file = row.media[column.id];

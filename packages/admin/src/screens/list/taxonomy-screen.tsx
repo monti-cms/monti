@@ -3,7 +3,6 @@ import {
 	BulkBar,
 	Button,
 	DropdownMenu,
-	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
@@ -18,7 +17,6 @@ import {
 	ListHead,
 	type ListHeadColumn,
 	ListScroll,
-	MenuShortcut,
 	PageColumn,
 	PageHeader,
 	ProposalBubble,
@@ -50,6 +48,7 @@ import type { Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { useCoverCorner } from "../frame/admin-frame";
 import { useLanguageName } from "./column-menu";
+import { ValueRow } from "./filter-rows";
 import { endsClosed } from "./format";
 import { MergeDialog } from "./merge-dialog";
 import { SortRows } from "./sort-rows";
@@ -308,7 +307,7 @@ export function TaxonomyScreen({
 	const [openGroup, setOpenGroup] = useState<string | null>(null);
 	const [filterUnused, setFilterUnused] = useState(false);
 	const [sort, setSort] = useState<{ by: SortMode; dir: "asc" | "desc" }>({ by: "name", dir: "asc" });
-	const { widths, resize } = useColumnWidths(`items:${collection}`);
+	const { sized, resize } = useColumnWidths(`items:${collection}`);
 	const [picked, setPicked] = useState<Set<string>>(new Set());
 	const [mergeGroups, setMergeGroups] = useState<string[] | null>(null);
 
@@ -397,7 +396,6 @@ export function TaxonomyScreen({
 	const sortRows = (by: SortMode) => (
 		<SortRows dir={sort.by === by ? sort.dir : null} onChange={(dir) => setSort({ by, dir })} />
 	);
-	const usageSize = widths.usage ?? LIST_COLUMN_SIZE.one;
 	const head: ListHeadColumn[] = [
 		{
 			id: "name",
@@ -406,10 +404,8 @@ export function TaxonomyScreen({
 			menu: sortRows("name"),
 		},
 		{
-			id: "usage",
+			...sized("usage", LIST_COLUMN_SIZE.one),
 			label: t("taxonomy.column.usage"),
-			size: usageSize,
-			kindSize: LIST_COLUMN_SIZE.one,
 			align: "end",
 			sort: sort.by === "usage" ? sort.dir : undefined,
 			filtered: filterUnused,
@@ -417,10 +413,12 @@ export function TaxonomyScreen({
 				<>
 					{sortRows("usage")}
 					<DropdownMenuSeparator />
-					<DropdownMenuCheckboxItem checked={filterUnused} onCheckedChange={(checked) => setFilterUnused(checked)}>
-						{t("taxonomy.unusedFilter")}
-						<MenuShortcut>{unusedCount}</MenuShortcut>
-					</DropdownMenuCheckboxItem>
+					<ValueRow
+						checked={filterUnused}
+						onToggle={() => setFilterUnused(!filterUnused)}
+						label={t("taxonomy.unusedFilter")}
+						counted={unusedCount}
+					/>
 				</>
 			),
 		},
@@ -443,7 +441,7 @@ export function TaxonomyScreen({
 					</Button>
 				</PageHeader>
 				<ListScroll>
-					<Table container="none" layout="fixed" columns={[undefined, usageSize, LIST_COLUMN_SIZE.end]}>
+					<Table container="none" layout="fixed" columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}>
 						{picked.size === 0 ? (
 							<ListHead
 								columns={head}
@@ -504,7 +502,15 @@ export function TaxonomyScreen({
 												}
 											/>
 										</TableCell>
-										<TableCell align="end">
+										<TableCell
+											align="end"
+											truncate
+											title={
+												item.usageCount > 0
+													? t("taxonomy.usageCount", { count: item.usageCount })
+													: t("taxonomy.unused")
+											}
+										>
 											{item.usageCount > 0 ? (
 												<TextButton variant="underline" size="note" onClick={() => onFilterUsage(item)}>
 													{t("taxonomy.usageCount", { count: item.usageCount })}

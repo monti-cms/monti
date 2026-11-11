@@ -216,11 +216,42 @@ export const KindMenu: Story = {
 	},
 };
 
+/** The language column's menu filters by language, each with its count (every table's columns, components/list.md). */
+export const LanguageMenu: Story = {
+	loaders: trash(),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "언어" }, wait));
+	},
+};
+
+/** Only what has an English text, a dot on the language column. */
+export const OnlyEnglish: Story = { loaders: trash("#/trash?lang=en") };
+
+/** Sorted by title: the title's name is ink with its arrow, and its menu holds both ways. */
+export const TitleSorted: Story = {
+	loaders: trash("#/trash?sort=title"),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: /^제목/ }, wait));
+	},
+};
+
 /** Flow 5·17: only media, a dot on the kind column. */
 export const OnlyMedia: Story = { loaders: trash("#/trash?kind=media") };
 
 /** Flow 5·12: inside a thrown-away folder, with the way back above its name and the folder's own actions in the head. */
 export const InFolder: Story = { loaders: trash((ids) => `#/trash?folder=${ids.series}`) };
+
+/** A folder with under a week left: its days stand in the warning tone, in the head's own mono. */
+export const InUrgentFolder: Story = {
+	loaders: trash((ids) => `#/trash?folder=${ids.series}`, {
+		// The folder went 27 days ago with what it holds: its rows do not repeat its days.
+		also: async ({ db }, ids) => {
+			const then = { trashed_at: sql<Date>`now() - interval '27 days'` };
+			await db.updateTable("folders").set(then).where("id", "=", ids.series).execute();
+			await db.updateTable("entries").set(then).where("folder_id", "=", ids.series).execute();
+		},
+	}),
+};
 
 /** Flow 5·12: the folder's own ⋯ holds what cannot be undone. */
 export const FolderMenu: Story = {

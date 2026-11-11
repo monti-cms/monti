@@ -31,5 +31,7 @@ export function useColumnWidths(name: string) {
 			localStorage.setItem(key, JSON.stringify(next));
 		} catch {}
 	};
-	return { widths: shown, resize };
+	/** A column of `ListHead`: the width it was dragged to, or its kind's. */
+	const sized = (id: string, size: number) => ({ id, size: shown[id] ?? size, kindSize: size });
+	return { sized, resize };
 }

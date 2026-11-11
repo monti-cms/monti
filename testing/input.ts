@@ -28,3 +28,13 @@ export function scrollsSideways(element: Element): string[] {
 	if (page.scrollWidth > page.clientWidth + 1) found.push(`the page ${page.scrollWidth} > ${page.clientWidth}`);
 	return found;
 }
+
+/**
+ * The cells of a table whose words run over the next column: wider than the cell and not clipped by it. Empty when every cell keeps its words inside. Use it
+ * after columns are dragged narrow (docs/design/admin/components/list.md, every table's columns).
+ */
+export function spillingCells(table: Element): string[] {
+	return [...table.querySelectorAll("tbody td")]
+		.filter((cell) => cell.scrollWidth > cell.clientWidth + 1 && getComputedStyle(cell).overflowX === "visible")
+		.map((cell) => `"${cell.textContent}" ${cell.scrollWidth} > ${cell.clientWidth}`);
+}

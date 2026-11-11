@@ -19,7 +19,6 @@ import {
 	Count,
 	DropArea,
 	DropdownMenu,
-	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuRadioGroup,
@@ -88,6 +87,7 @@ import { useUpload } from "../../media/use-upload";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
+import { type FilterProps, FilterRows } from "../list/filter-rows";
 import {
 	FolderMenuItems,
 	FolderTargets,
@@ -317,12 +317,6 @@ function FileUsesRows({ context, id, go }: { context: boolean; id: string; go: G
 	);
 }
 
-type FilterProps<Value extends string> = {
-	values: readonly { value: Value; label: string; count: number }[];
-	chosen: readonly Value[];
-	onChange: (chosen: Value[]) => void;
-};
-
 /**
  * A filter of the library (screens/media.md): in the grid, a button over the tiles with a dot after its name while something is chosen; in the list, the menu of its
  * column, as the entries' list has it. The menu stays open as values are ticked.
@@ -338,27 +332,14 @@ function FilterMenu<Value extends string>({ label, ...filter }: FilterProps<Valu
 	);
 }
 
-/** A filter's values, each ticked or not, with how many files it holds. */
-function FilterRows<Value extends string>({ values, chosen, onChange }: FilterProps<Value>) {
+/** A cell of the list that holds a short mono value (a type, a size). */
+function MetaCell({ value }: { value: string }) {
 	return (
-		<>
-			{values.map((each) => (
-				<DropdownMenuCheckboxItem
-					box
-					key={each.value}
-					checked={chosen.includes(each.value)}
-					closeOnClick={false}
-					onCheckedChange={() =>
-						onChange(
-							chosen.includes(each.value) ? chosen.filter((value) => value !== each.value) : [...chosen, each.value],
-						)
-					}
-				>
-					{each.label}
-					<MenuShortcut>{each.count}</MenuShortcut>
-				</DropdownMenuCheckboxItem>
-			))}
-		</>
+		<TableCell truncate title={value}>
+			<Text variant="meta" tone="subtle">
+				{value}
+			</Text>
+		</TableCell>
 	);
 }
 
@@ -393,7 +374,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		else next.delete(id);
 		setPicked(next);
 	};
-	const { widths, resize } = useColumnWidths("media");
+	const { sized, resize } = useColumnWidths("media");
 	const [folderTarget, setFolderTarget] = useState<string | null>(null);
 
 	const data = read.data;
@@ -582,6 +563,8 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	/** What the library is ordered by, in the words of the list's columns. */
 	const sortLabel = (sort: Sort) =>
 		t(sort === "name" ? "library.column.name" : sort === "size" ? "library.column.size" : "library.column.date");
+	const usesLabel = (item: { uses: number }) =>
+		item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed");
 	/** A column's two ways (components/list.md): the rows of its menu. */
 	const sortRows = (sort: Sort) => (
 		<SortRows
@@ -725,11 +708,6 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			)}
 		</Stack>
 	);
-	const sized = (id: string, kind: keyof typeof LIST_COLUMN_SIZE) => ({
-		id,
-		size: widths[id] ?? LIST_COLUMN_SIZE[kind],
-		kindSize: LIST_COLUMN_SIZE[kind],
-	});
 	// With a file open beside the list there is room for its name and when: the panel says the rest of the open file.
 	const nameColumn: ListHeadColumn = {
 		id: "name",
@@ -739,18 +717,18 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		filtered: dense && (state.kinds.length > 0 || state.used.length > 0),
 		menu: dense ? (
 			<>
+				{everySort}
+				<DropdownMenuSeparator />
 				<FilterRows {...kindFilter} />
 				<DropdownMenuSeparator />
 				<FilterRows {...usedFilter} />
-				<DropdownMenuSeparator />
-				{everySort}
 			</>
 		) : (
 			sortRows("name")
 		),
 	};
 	const dateColumn: ListHeadColumn = {
-		...(dense ? { id: "date", size: LIST_COLUMN_SIZE.date } : sized("date", "date")),
+		...(dense ? { id: "date", size: LIST_COLUMN_SIZE.date } : sized("date", LIST_COLUMN_SIZE.date)),
 		label: t("library.column.date"),
 		align: "end",
 		sort: state.sort === "uploaded" ? state.dir : undefined,
@@ -761,24 +739,24 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		: [
 				nameColumn,
 				{
-					...sized("uses", "one"),
+					...sized("uses", LIST_COLUMN_SIZE.one),
 					label: t("library.column.uses"),
 					filtered: state.used.length > 0,
 					menu: <FilterRows {...usedFilter} />,
 				},
 				{
-					...sized("type", "locale"),
+					...sized("type", LIST_COLUMN_SIZE.locale),
 					label: t("library.column.type"),
 					filtered: state.kinds.length > 0,
 					menu: <FilterRows {...kindFilter} />,
 				},
 				{
-					...sized("size", "status"),
+					...sized("size", LIST_COLUMN_SIZE.status),
 					label: t("library.column.size"),
 					sort: state.sort === "size" ? state.dir : undefined,
 					menu: sortRows("size"),
 				},
-				{ ...sized("measure", "measure"), label: t("library.column.measure") },
+				{ ...sized("measure", LIST_COLUMN_SIZE.measure), label: t("library.column.measure") },
 				dateColumn,
 			];
 	const folderThumb = (
@@ -875,26 +853,13 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 										</TableCell>
 										{!dense && (
 											<>
-												<TableCell>
-													<Text variant="note" tone="subtle">
-														{item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed")}
-													</Text>
+												{/* A narrowed column cuts its value with "…", and the cell's title says it whole (components/list.md). */}
+												<TableCell tone="subtle" truncate title={usesLabel(item)}>
+													{usesLabel(item)}
 												</TableCell>
-												<TableCell>
-													<Text variant="meta" tone="subtle">
-														{extensionLabel(item.name)}
-													</Text>
-												</TableCell>
-												<TableCell>
-													<Text variant="meta" tone="subtle">
-														{formatBytes(item.size)}
-													</Text>
-												</TableCell>
-												<TableCell>
-													<Text variant="meta" tone="subtle">
-														{sizeLabel(item)}
-													</Text>
-												</TableCell>
+												<MetaCell value={extensionLabel(item.name)} />
+												<MetaCell value={formatBytes(item.size)} />
+												<MetaCell value={sizeLabel(item)} />
 											</>
 										)}
 										<TableCell align="end">
