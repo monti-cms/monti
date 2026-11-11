@@ -34,15 +34,19 @@ import {
 } from "./translation";
 import { useBodyEditor } from "./use-body-editor";
 
-/** The library's files a document's blocks show, by id, each once. */
+/** The library's files a document's picture and file blocks show, by id, each once: what their views ask the body's read for. */
 function mediaOf(doc: EditorNode): string[] {
+	const shows = new Set([nodeName("image"), nodeName("file")]);
 	const ids = new Set<string>();
 	doc.descendants((node) => {
-		const id = (node.attrs.data as { media?: unknown } | undefined)?.media;
-		if (typeof id === "string") ids.add(id);
+		const id = shows.has(node.type.name) ? (node.attrs.data as { media?: unknown } | undefined)?.media : undefined;
+		if (typeof id === "string" && id !== "") ids.add(id);
 	});
 	return [...ids];
 }
+
+/** The longest an opened body waits for its files, in ms: a read that never answers does not keep the text away. */
+const SETTLE_WITHIN = 3000;
 
 /**
  * The body of an entry or a template (doc 03): the blocks in the reading column, the handle beside the block under the pointer, the "/" menu, the
@@ -184,6 +188,11 @@ export function BodyEditor({
 	useEffect(() => {
 		if (editor && !settling) setSettled(true);
 	}, [editor, settling]);
+	useEffect(() => {
+		if (settled) return;
+		const late = setTimeout(() => setSettled(true), SETTLE_WITHIN);
+		return () => clearTimeout(late);
+	}, [settled]);
 
 	return (
 		<EditorMedia.Provider value={media}>
