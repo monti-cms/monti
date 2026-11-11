@@ -43,7 +43,7 @@ function render(message: ReactNode, { action, duration, id }: ToastOptions, erro
 					<button
 						type="button"
 						data-slot="toast-action"
-						className="shrink-0 cursor-pointer rounded-monti-full font-semibold outline-none focus-visible:ring-2 focus-visible:ring-monti-on-emphasis/50"
+						className="relative shrink-0 cursor-pointer rounded-monti-full font-semibold outline-none after:absolute after:inset-x-0 after:top-1/2 after:h-[max(100%,var(--monti-height-control-xs))] after:-translate-y-1/2 after:content-[''] focus-visible:ring-2 focus-visible:ring-monti-on-emphasis/50"
 						onClick={() => {
 							action.onClick();
 							engine.dismiss(toastId);

@@ -29,7 +29,8 @@ function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
 }
 
 function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
-	return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
+	// A part given to draw the trigger (`render`: an icon button, a table's grip) keeps its own name.
+	return <MenuPrimitive.Trigger {...(props.render ? {} : { "data-slot": "dropdown-menu-trigger" })} {...props} />;
 }
 
 /**

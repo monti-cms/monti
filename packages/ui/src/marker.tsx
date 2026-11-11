@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { cn } from "./cn";
+import { HIT_LAYER } from "./hit-area";
 import { Chat } from "./icons";
 
 /** The dimmed look of text that is not decided yet: the source text a new translation starts from. It reads as a placeholder, and it is not published. */
@@ -87,7 +88,13 @@ function Marker({
 			data-tone={tone ?? "request"}
 			type="button"
 			aria-pressed={active ?? undefined}
-			className={cn(markerVariants({ tone, active, margin }), "cursor-pointer", className)}
+			className={cn(
+				markerVariants({ tone, active, margin }),
+				HIT_LAYER,
+				!margin && "relative",
+				"cursor-pointer",
+				className,
+			)}
 			{...props}
 		>
 			{content}

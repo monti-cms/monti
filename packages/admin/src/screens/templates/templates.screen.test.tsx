@@ -62,4 +62,21 @@ describe("the template editor", () => {
 		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).toBeVisible();
 		await expect.element(page.getByText("저장 안 됨")).toBeVisible();
 	});
+
+	it("a block still in hand when the screen goes away is let go: a pointer that moves afterwards reaches no editor", async () => {
+		const thrown: string[] = [];
+		const onError = (event: ErrorEvent) => thrown.push(event.message);
+		window.addEventListener("error", onError);
+		try {
+			await scene(templates.Dragging, templates.default).run();
+			await expect.element(page.getByText("서론").last()).toBeVisible();
+			// Another screen: the editor with the block in hand is gone.
+			await scene(templates.NoTemplates, templates.default).run();
+			await expect.element(text()).not.toBeInTheDocument();
+			window.dispatchEvent(new PointerEvent("pointermove", { clientX: 400, clientY: 300 }));
+			expect(thrown).toEqual([]);
+		} finally {
+			window.removeEventListener("error", onError);
+		}
+	});
 });

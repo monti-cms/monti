@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { cn } from "./cn";
+import { HIT_LAYER } from "./hit-area";
 import { Checkmark } from "./icons";
 import { useUiLabels } from "./labels";
 import { Spark } from "./spark";
@@ -104,6 +105,7 @@ function TodoItem({
 					type="button"
 					onClick={onAction}
 					className={cn(
+						HIT_LAYER,
 						"relative inline-flex shrink-0 cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 text-monti-note decoration-1 underline-offset-4 outline-none hover:underline focus-visible:rounded-monti-full focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 						proposal ? "text-monti-proposal" : "text-monti-muted hover:text-monti-default",
 					)}

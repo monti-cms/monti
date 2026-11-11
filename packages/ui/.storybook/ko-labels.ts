@@ -32,4 +32,9 @@ export const KO_UI_LABELS: UiLabels = {
 	sidebarUnfold: "사이드바 펼치기",
 	sidebarResize: "사이드바 너비 조절",
 	resize: "패널 너비 조절",
+	sortInstructions: "Space로 들고, 화살표로 옮기고, Space로 놓습니다. Esc를 누르면 제자리로 돌아갑니다.",
+	sortLifted: "{name} 들었습니다.",
+	sortOver: "{name}, {over} 자리로 왔습니다.",
+	sortDropped: "{name}, {over} 자리에 놓았습니다.",
+	sortCancelled: "{name}, 제자리로 돌아갔습니다.",
 };

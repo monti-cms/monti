@@ -4,6 +4,7 @@ import * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
+import { HIT_AREA } from "./hit-area";
 import { Add, ArrowDown, ArrowUp } from "./icons";
 import type { SelectAll } from "./page-header";
 import { ResizeHandle } from "./resize-handle";
@@ -287,6 +288,7 @@ function ListHead({
 						</>
 					);
 					const buttonClass = cn(
+						HIT_AREA,
 						"inline-flex max-w-full items-center gap-monti-4 border-0 bg-transparent p-0 font-normal text-inherit outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/50 [&_svg]:size-3 [&_svg]:shrink-0",
 						column.menu && "hover:text-monti-default",
 						(column.sort || isOpen) && "text-monti-default",

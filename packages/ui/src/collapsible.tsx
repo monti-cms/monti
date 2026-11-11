@@ -2,6 +2,7 @@
 
 import { Collapsible as CollapsiblePrimitive } from "@base-ui/react/collapsible";
 import { cn } from "./cn";
+import { HIT_AREA } from "./hit-area";
 
 function Collapsible({ ...props }: CollapsiblePrimitive.Root.Props) {
 	return <CollapsiblePrimitive.Root data-slot="collapsible" {...props} />;
@@ -12,7 +13,7 @@ function CollapsibleTrigger({ className, ...props }: CollapsiblePrimitive.Trigge
 	return (
 		<CollapsiblePrimitive.Trigger
 			data-slot="collapsible-trigger"
-			className={cn("data-disabled:cursor-default data-disabled:opacity-45", className)}
+			className={cn(HIT_AREA, "data-disabled:cursor-default data-disabled:opacity-45", className)}
 			{...props}
 		/>
 	);

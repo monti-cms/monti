@@ -44,6 +44,8 @@ function Grip({
 	return (
 		<span
 			{...props}
+			// The reference's drawing of the grip: it carries the part's name, as `TableGrip` does on a screen.
+			data-slot="table-grip"
 			className={`absolute flex items-center justify-center rounded-monti-sm ${
 				active ? "bg-monti-emphasis text-monti-on-emphasis" : "bg-monti-muted text-monti-subtle"
 			} ${along === "column" ? "h-monti-12 w-monti-20" : "h-monti-20 w-monti-12"} ${className}`}

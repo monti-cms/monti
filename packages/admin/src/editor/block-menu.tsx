@@ -96,6 +96,9 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 	const [held, setHeld] = useState<Held | null>(null);
 	// Set from the moment a press becomes a drag until just after it is let go, so the press that ends a drag does not open the menu.
 	const dragging = useRef(false);
+	/** Takes a drag's listeners off the window: the drag's end does, and so does leaving the screen with a block still in hand. */
+	const letGo = useRef<(() => void) | null>(null);
+	useEffect(() => () => letGo.current?.(), []);
 	const element = useRef<HTMLElement | null>(null);
 
 	const point = useCallback(
@@ -190,10 +193,14 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 			lifted = { ...lifted, x: moved.clientX, y: moved.clientY, drop: dropAt(view, from, moved.clientY) };
 			setHeld(lifted);
 		};
-		const finish = (put: boolean) => {
+		const unlisten = () => {
 			window.removeEventListener("pointermove", move);
 			window.removeEventListener("pointerup", up);
 			window.removeEventListener("keydown", key, true);
+			letGo.current = null;
+		};
+		const finish = (put: boolean) => {
+			unlisten();
 			if (!lifted) return;
 			const tr = markHeld(view.state, null);
 			if (put && lifted.drop) moveTo(tr, from, lifted.drop);
@@ -214,6 +221,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 		window.addEventListener("pointermove", move);
 		window.addEventListener("pointerup", up);
 		window.addEventListener("keydown", key, true);
+		letGo.current = unlisten;
 	};
 
 	/** A block's kind as the menu names it ("Heading 2", "List item"). */
