@@ -54,9 +54,11 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      # Node alone: the check uses git and nothing installed, so the job has no pnpm for setup-node's cache to look for.
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          package-manager-cache: false
       # The admin UI of this commit is the one the design-review agent read (scripts/design-review.json). Its own job, so a branch that is
       # still being worked on shows the other checks' results while this one waits for the review.
       - run: node scripts/check-review.mjs
