@@ -4,7 +4,7 @@ import { signedInApi } from "../__test__/admin";
 import { sql, testDatabase } from "../__test__/database";
 import { createReader } from "../entries/reader";
 import { CheckError, ForbiddenError } from "../errors";
-import { lockFolderScope } from "../folders/operations";
+import { folderScopeKey, lockFolderScope } from "../folders/operations";
 import type { MediaItem } from "../media/operations";
 import { memoryStorage } from "../media/storage";
 import { createMonti, definePlugin } from "../monti";
@@ -220,7 +220,7 @@ describe("into the trash", () => {
 		await move(folderRow(folder));
 		// Two requests started together do not show this: the one that is making a folder has to have picked the name and not saved yet, so this
 		// transaction stands in for it. It holds what `folders.create` holds, and the restore has to be seen waiting for it.
-		const key = `monti:folders:post:${box}`;
+		const key = folderScopeKey("post", box);
 		const waiting = async () =>
 			(
 				await sql<{ n: number }>`select count(*)::int as n from pg_locks where locktype = 'advisory' and not granted
