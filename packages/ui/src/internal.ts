@@ -114,7 +114,6 @@ export {
 } from "./dialog";
 export { DialogFormFooter } from "./dialog-form-footer";
 export { DocCallout, DocCode, DocTable } from "./doc-blocks";
-export { DotNote } from "./dot-note";
 export { DragHandle } from "./drag-handle";
 export { DropArea } from "./drop-area";
 export {

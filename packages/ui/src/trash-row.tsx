@@ -72,7 +72,8 @@ function TrashRowDate({
 	 */
 	byAssistant?: { label: string; onOpen?: () => void };
 }) {
-	const MARK = "inline-flex items-center gap-monti-4 font-mono text-monti-meta text-monti-proposal";
+	// In a column dragged narrow the words end in "…" and the mark stays: each piece may shrink to the cell.
+	const MARK = "inline-flex min-w-0 max-w-full items-center gap-monti-4 font-mono text-monti-meta text-monti-proposal";
 	const assistant = (words: React.ReactNode) =>
 		!byAssistant ? null : byAssistant.onOpen ? (
 			<button
@@ -84,24 +85,33 @@ function TrashRowDate({
 					"relative z-10 cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 				)}
 			>
-				<Spark aria-hidden className="size-monti-icon-xs" />
-				{words}
+				<Spark aria-hidden className="size-monti-icon-xs shrink-0" />
+				<span className="truncate">{words}</span>
 			</button>
 		) : (
 			<span data-slot="trash-row-left" className={MARK}>
-				<Spark role="img" aria-hidden={false} aria-label={byAssistant.label} className="size-monti-icon-xs" />
+				<Spark role="img" aria-hidden={false} aria-label={byAssistant.label} className="size-monti-icon-xs shrink-0" />
 				{/* The mark says who; the days still say how near the purge is. */}
-				<span className={cn(urgent && date === undefined && "text-monti-warning")}>{words}</span>
+				<span className={cn("truncate", urgent && date === undefined && "text-monti-warning")}>{words}</span>
 			</span>
 		);
 	return (
-		<span data-slot="trash-row-date" className={cn("inline-flex flex-col items-end gap-monti-4", className)} {...props}>
+		<span
+			data-slot="trash-row-date"
+			className={cn("inline-flex min-w-0 max-w-full flex-col items-end gap-monti-4", className)}
+			{...props}
+		>
 			{date !== undefined &&
-				(assistant(date) ?? <span className="font-mono text-monti-meta text-monti-subtle">{date}</span>)}
+				(assistant(date) ?? (
+					<span className="max-w-full truncate font-mono text-monti-meta text-monti-subtle">{date}</span>
+				))}
 			{(date === undefined && assistant(left)) || (
 				<span
 					data-slot="trash-row-left"
-					className={cn("font-mono text-monti-meta", urgent ? "text-monti-warning" : "text-monti-faint")}
+					className={cn(
+						"max-w-full truncate font-mono text-monti-meta",
+						urgent ? "text-monti-warning" : "text-monti-faint",
+					)}
 				>
 					{left}
 				</span>

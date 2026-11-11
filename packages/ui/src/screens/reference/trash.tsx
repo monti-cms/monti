@@ -1,6 +1,7 @@
 import {
 	LIST_COLUMN_SIZE,
 	ListHead,
+	LocaleCodes,
 	PageColumn,
 	PageHeader,
 	RowActions,
@@ -13,33 +14,40 @@ import {
 	TableBody,
 	TableCell,
 	TableRow,
-	Text,
 	TextButton,
 	TrashRowDate,
 } from "../../index";
 import { AdminFrame } from "./frame";
+
+const LANGUAGES: Record<string, string> = { ko: "한국어", en: "영어" };
 
 const ROWS: readonly {
 	title: string;
 	/** After the title, as in every list: an entry's address, what a folder holds, where a file sat. */
 	address?: string;
 	folder?: boolean;
-	/** An entry's languages in the trash: its own, and how many more. */
-	locales?: string;
+	/** An entry's languages in the trash: its own first. */
+	locales?: string[];
 	kind: string;
 	left: string;
 	urgent?: boolean;
 }[] = [
-	{ title: "첫 번째 글", address: "/posts/first-post", locales: "KO +1", kind: "게시글", left: "30일 남음" },
+	{ title: "첫 번째 글", address: "/posts/first-post", locales: ["ko", "en"], kind: "게시글", left: "30일 남음" },
 	{ title: "시리즈 원고", address: "글 2", folder: true, kind: "게시글", left: "30일 남음" },
 	{ title: "diagrams", address: "파일 3 · Blog Assets", folder: true, kind: "미디어", left: "29일 남음" },
 	{ title: "winter-01.jpg", address: "Blog Assets", kind: "미디어", left: "28일 남음" },
-	{ title: "옛 소개 글", address: "/posts/about-old", locales: "KO", kind: "게시글", left: "23일 남음" },
+	{ title: "옛 소개 글", address: "/posts/about-old", locales: ["ko"], kind: "게시글", left: "23일 남음" },
 	// A translation thrown away before its source is in its source's row all the same: an entry is one row.
-	{ title: "리액트 19 마이그레이션", address: "/posts/react-19", locales: "KO +1", kind: "게시글", left: "17일 남음" },
-	{ title: "연습장", address: "/notes/scratch", locales: "KO", kind: "메모", left: "15일 남음" },
+	{
+		title: "리액트 19 마이그레이션",
+		address: "/posts/react-19",
+		locales: ["ko", "en"],
+		kind: "게시글",
+		left: "17일 남음",
+	},
+	{ title: "연습장", address: "/notes/scratch", locales: ["ko"], kind: "메모", left: "15일 남음" },
 	// Under a week left, the days are in the warning tone.
-	{ title: "임시", locales: "KO", kind: "태그", left: "3일 남음", urgent: true },
+	{ title: "임시", locales: ["ko"], kind: "태그", left: "3일 남음", urgent: true },
 ];
 
 /**
@@ -77,9 +85,9 @@ export function TrashScreen() {
 									/>
 								</TableCell>
 								<TableCell>
-									<Text mono variant="meta">
-										{row.locales}
-									</Text>
+									{row.locales && (
+										<LocaleCodes codes={row.locales} names={row.locales.map((code) => LANGUAGES[code]).join(", ")} />
+									)}
 								</TableCell>
 								<TableCell tone="subtle" truncate>
 									{row.kind}

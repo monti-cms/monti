@@ -277,7 +277,13 @@ function RowTitle({
 				<span className={cn("min-w-0 text-monti-body text-monti-default", !editing && "truncate")}>{title}</span>
 			</span>
 			{address && (
-				<span className="min-w-0 shrink-[999] truncate font-mono text-monti-faint text-monti-meta">{address}</span>
+				// It is cut before the title is, so it says itself whole when pointed at.
+				<span
+					title={typeof address === "string" ? address : undefined}
+					className="min-w-0 shrink-[999] truncate font-mono text-monti-faint text-monti-meta"
+				>
+					{address}
+				</span>
 			)}
 		</span>
 	);
@@ -358,7 +364,10 @@ function TableCell({
 				// make the line taller than either, and the row 2px taller than the design system's 42.
 				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
-				truncate && "max-w-0 truncate has-[[data-slot=row-check]]:overflow-visible",
+				// The row's check hangs in the left margin, so its cell does not clip. In a row with a link the cells are static and the check stands on the row
+				// itself: there the cell clips as any other, and a first column dragged narrow keeps its words in.
+				truncate &&
+					"max-w-0 truncate has-[[data-slot=row-check]]:overflow-visible group-has-data-[slot=row-link]/row:has-[[data-slot=row-check]]:overflow-hidden",
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top *:align-top",
 				wrap && "whitespace-normal break-words",

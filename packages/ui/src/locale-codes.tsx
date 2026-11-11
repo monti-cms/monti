@@ -12,7 +12,8 @@ const written = (codes: string[], shown: number) =>
 
 /**
  * A row's languages in a list's language column: as many codes as the column has room for ("KO · EN"), the rest counted ("KO +1"). A wider column writes more of
- * them. While some are only counted, pointing at the cell names them all. The codes are mono, so the room is counted in characters.
+ * them. A column too narrow for even the shortest form cuts it with "…". While some are only counted or the text is cut, pointing at the cell names them all. The
+ * codes are mono, so the room is counted in characters.
  */
 function LocaleCodes({
 	codes,
@@ -27,6 +28,7 @@ function LocaleCodes({
 	const unit = React.useRef<HTMLSpanElement>(null);
 	// Before it is measured, the shortest form: it never spills.
 	const [shown, setShown] = React.useState(1);
+	const [cut, setCut] = React.useState(false);
 	// The codes as one value: a list made anew on each render measures once.
 	const all = codes.join(" ");
 	React.useLayoutEffect(() => {
@@ -40,6 +42,7 @@ function LocaleCodes({
 			let fits = each.length;
 			while (fits > 1 && written(each, fits).length > room) fits -= 1;
 			setShown(fits);
+			setCut(written(each, fits).length > room);
 		};
 		measure();
 		const observer = new ResizeObserver(measure);
@@ -47,21 +50,18 @@ function LocaleCodes({
 		return () => observer.disconnect();
 	}, [all]);
 
-	const counted = shown < codes.length;
+	// Some languages are not on the cell: only counted, or cut with the text.
+	const partial = shown < codes.length || cut;
 	const text = (
-		<span
-			ref={box}
-			data-slot="locale-codes"
-			className="relative block min-w-0 overflow-hidden whitespace-nowrap font-mono text-monti-meta"
-		>
+		<span ref={box} data-slot="locale-codes" className="relative block min-w-0 truncate font-mono text-monti-meta">
 			<span ref={unit} aria-hidden className="invisible absolute w-[1ch]" />
-			<span aria-hidden={counted}>{written(codes, shown)}</span>
-			{counted && <span className="sr-only">{names}</span>}
+			<span aria-hidden={partial}>{written(codes, shown)}</span>
+			{partial && <span className="sr-only">{names}</span>}
 		</span>
 	);
 	// One tree whether it counts or not, so the measured box stays the same node: the tooltip is only off while every code is written.
 	return (
-		<Tooltip disabled={!counted}>
+		<Tooltip disabled={!partial}>
 			<TooltipTrigger render={text} />
 			<TooltipContent>{names}</TooltipContent>
 		</Tooltip>

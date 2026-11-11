@@ -1,6 +1,6 @@
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 import { Text } from "./text";
 import { TextButton } from "./text-button";
 
@@ -33,11 +33,20 @@ function FileUseRow({
 	);
 }
 
-/** The use rows under their label: 8px below the label, so it heads them, and 4px between the rows. */
-function FileUseList({ children }: { children: React.ReactNode }) {
+/**
+ * The use rows under their label: 8px below the label, so it heads them, and 4px between the rows. With no rows, `empty` says so ("Not used") where the first row
+ * would stand.
+ */
+function FileUseList({ empty, children }: { empty?: string; children?: React.ReactNode }) {
 	return (
 		<div data-slot="file-use-list" className="flex min-w-0 flex-col gap-monti-4 pt-monti-4">
-			{children}
+			{React.Children.count(children) === 0 && empty ? (
+				<Text variant="note" tone="faint">
+					{empty}
+				</Text>
+			) : (
+				children
+			)}
 		</div>
 	);
 }

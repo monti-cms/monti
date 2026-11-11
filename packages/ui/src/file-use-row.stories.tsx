@@ -30,3 +30,16 @@ export const Rows: Story = {
 		</Stack>
 	),
 };
+
+/** No use: the word stands where the first row would, the same 8px under the label. */
+export const None: Story = {
+	args: { title: "", places: "", href: "#" },
+	render: () => (
+		<Stack gap={4} width="panel">
+			<FormField>
+				<FormFieldLabel>쓰는 곳 · 0</FormFieldLabel>
+				<FileUseList empty="없음" />
+			</FormField>
+		</Stack>
+	),
+};

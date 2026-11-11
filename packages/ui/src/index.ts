@@ -385,7 +385,6 @@ export const Heading = close(open.Heading);
 export const Text = close(open.Text);
 export const DragHandle = close(open.DragHandle);
 export const DescriptionList = close(open.DescriptionList);
-export const DotNote = close(open.DotNote);
 export const DescriptionItem = close(open.DescriptionItem);
 export const CountRow = close(open.CountRow);
 export const TextButton = close(open.TextButton);

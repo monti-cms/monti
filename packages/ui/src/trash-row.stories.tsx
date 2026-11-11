@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableRow, TrashRowDate, TrashRowTitle } fr
  */
 const meta = {
 	title: "Patterns/List/TrashRow",
+	tags: ["visual"],
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;

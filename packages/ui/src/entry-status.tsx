@@ -52,14 +52,15 @@ function EntryStatus({
 			data-slot="entry-status"
 			data-status={status}
 			className={cn(
-				"inline-flex items-center gap-[7px] whitespace-nowrap text-monti-label",
+				// In a column dragged narrow the name ends in "…" and the mark stays.
+				"inline-flex min-w-0 max-w-full items-center gap-[7px] whitespace-nowrap text-monti-label",
 				quiet ? "font-normal text-monti-subtle" : COLOR[status],
 				className,
 			)}
 			{...props}
 		>
 			<span aria-hidden="true" data-slot="entry-status-mark" className={markVariants({ status })} />
-			{children}
+			{children !== undefined && children !== null && <span className="truncate">{children}</span>}
 		</span>
 	);
 }
