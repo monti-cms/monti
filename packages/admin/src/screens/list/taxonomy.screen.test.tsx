@@ -57,6 +57,24 @@ describe("taxonomy screen (doc 08)", () => {
 		await userEvent.keyboard("{Escape}");
 	});
 
+	it("08-1 T112 saving a new item with no name is not greyed out: the name field says what is missing, and typing a name takes it away", async () => {
+		await TaxonomyTags.run();
+		await userEvent.click(main().getByRole("button", { name: "+ 태그 추가" }));
+		const name = page.getByRole("textbox", { name: "이름" });
+		await expect.element(name).toBeVisible();
+		const save = page.getByRole("button", { name: "저장", exact: true });
+		await expect.element(save).toBeEnabled();
+		await userEvent.click(save);
+		await expect.element(page.getByText("이름을 입력해 주세요.")).toBeVisible();
+		await expect.element(name).toHaveFocus();
+		await expect.element(name).toHaveAttribute("aria-invalid", "true");
+		// Nothing was made: the panel is still the new item's.
+		await expect.element(page.getByRole("heading", { name: "새 태그" })).toBeVisible();
+		await userEvent.keyboard("새");
+		await expect.element(page.getByText("이름을 입력해 주세요.")).not.toBeInTheDocument();
+		await expect.element(name).not.toHaveAttribute("aria-invalid");
+	});
+
 	it("keeps the same table header height before and after a row is picked", async () => {
 		await TaxonomyTags.run();
 		const before = table().element().querySelector("thead")?.getBoundingClientRect().height;

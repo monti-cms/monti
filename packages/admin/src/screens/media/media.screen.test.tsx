@@ -1,7 +1,8 @@
-import { composeStories } from "@storybook/react-vite";
+import { composeStories, composeStory } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { scrollsSideways, spillingCells, titleUnderPointer } from "../../../../../testing/input";
+import type { StorySite } from "../../../.storybook/pglite-site";
 import * as media from "./media.stories";
 import { samplePhoto } from "./media.stories";
 
@@ -423,6 +424,38 @@ describe("uploading", () => {
 		await expect.element(page.getByText("photo.heic 외 2개 · 지원하지 않는 형식")).toBeVisible();
 	});
 
+	it("09-1 T109 a file the library turns down once it is up (its folder is gone) leaves its place, and a toast says why: nothing is left to try again", async () => {
+		const [load] = media.Top.loaders as [() => Promise<{ site: StorySite }>];
+		const story = composeStory(
+			{
+				...media.Top,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						const { transport } = loaded.site;
+						loaded.site.transport = async (name, input, options) =>
+							name === "media.upload"
+								? {
+										status: 422,
+										body: { error: "check-failed", reason: { key: "folders.unknown", values: { id: "gone" } } },
+									}
+								: transport(name, input, options);
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		);
+		await story.run();
+		await expect.element(folder("Blog Assets")).toBeVisible();
+		dropFiles(folder("Blog Assets").element(), [await jpeg("late.jpg")]);
+		dropFiles(main().getByText("Blog Assets").element(), [await jpeg("here.jpg")]);
+		await expect.element(toast("late.jpg · 없는 폴더입니다.")).toBeVisible();
+		await expect.element(toast("here.jpg · 없는 폴더입니다.")).toBeVisible();
+		await expect.element(main().getByText("here.jpg")).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "다시 올리기" })).not.toBeInTheDocument();
+	});
+
 	it("09-1 [flow 6·34] a PDF goes up with no picture, its type on the tile", async () => {
 		await openAssets();
 		dropFiles(main().getByText("desk-morning.jpg").element(), [
@@ -647,5 +680,42 @@ describe("the sidebar", () => {
 			target.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(tree.getByRole("link", { name: /Wallpapers/ })).toHaveTextContent("1");
+	});
+
+	it("09-1 T106 files from outside dropped on a tree row go up into that folder, and the hint names it while they are over it", async () => {
+		await openAssets();
+		const row = page.getByRole("list", { name: "폴더" }).getByRole("link", { name: /Wallpapers/ });
+		const dataTransfer = new DataTransfer();
+		dataTransfer.items.add(await jpeg("to-wallpapers.jpg"));
+		const fire = (type: string) =>
+			row.element().dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
+		fire("dragenter");
+		fire("dragover");
+		await expect.element(page.getByText("Wallpapers에 올리기")).toBeVisible();
+		fire("drop");
+		await expect.element(row).toHaveTextContent("1");
+		// Not into the folder that is open.
+		await expect.element(tile("to-wallpapers.jpg")).not.toBeInTheDocument();
+		await userEvent.click(row);
+		await expect.element(tile("to-wallpapers.jpg")).toBeVisible();
+	});
+
+	it("09-1 T106 in the list view a folder's row takes files too: it is marked while they are over it, and they go into it, not the open folder", async () => {
+		await ListView.run();
+		const row = main().getByRole("row", { name: /Blog Assets/ });
+		await expect.element(row).toBeVisible();
+		const dataTransfer = new DataTransfer();
+		dataTransfer.items.add(await jpeg("to-assets.jpg"));
+		const fire = (type: string) =>
+			row.element().dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
+		fire("dragenter");
+		fire("dragover");
+		await expect.element(row).toHaveAttribute("data-drop-target");
+		await expect.element(page.getByText("Blog Assets에 올리기")).toBeVisible();
+		const before = Number(row.element().textContent?.match(/\d+/)?.[0]);
+		fire("drop");
+		await expect.element(row).not.toHaveAttribute("data-drop-target");
+		await expect.poll(() => Number(row.element().textContent?.match(/\d+/)?.[0])).toBe(before + 1);
+		await expect.element(main().getByText("to-assets.jpg")).not.toBeInTheDocument();
 	});
 });

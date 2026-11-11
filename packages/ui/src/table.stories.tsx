@@ -131,6 +131,27 @@ export const Folder: Story = {
 	),
 };
 
+/** Files dragged over a folder's row (the media list): the selected ground and an ink line inside the row, as a folder tile shows it. */
+export const FolderDropTarget: Story = {
+	render: () => (
+		<Frame>
+			<TableRow dropTarget>
+				<TableCell />
+				<TableCell truncate>
+					<RowTitle folder title={<RowLink href="#">시리즈 원고</RowLink>} address="글 2" />
+				</TableCell>
+				<TableCell />
+				<TableCell>
+					<RowActions>
+						<RowMore label="더 보기" />
+					</RowActions>
+				</TableCell>
+			</TableRow>
+			{rows(() => ({}))}
+		</Frame>
+	),
+};
+
 /** A media row: the picture before the name, in the name's column, the words at its middle. */
 export const MediaRow: Story = {
 	render: () => (

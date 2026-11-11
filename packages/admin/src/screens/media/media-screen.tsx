@@ -79,6 +79,7 @@ import { useLeave } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
 import { FileThumb, useFileDetail } from "../../media/file-shown";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
+import { useTakeFolderFiles } from "../../media/folder-files";
 import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
 import type { Upload } from "../../media/upload-queue";
 import { MEDIA_DRAG, useFileDrop, useFolderDrop, useKeepFilesInPage } from "../../media/use-file-drop";
@@ -216,6 +217,52 @@ function UploadRow({
 	);
 }
 
+/** A folder as a place to drop on, in the grid or the list: files from outside go up into it, tiles move into it, and the hint at the bottom names it while they are over it. */
+function useMediaFolderDrop({
+	folder,
+	onFiles,
+	onMove,
+	onTarget,
+}: {
+	folder: FolderNode;
+	onFiles: (files: File[]) => void;
+	onMove: (ids: string[]) => void;
+	onTarget: (name: string | null) => void;
+}) {
+	const drop = useFolderDrop({ onFiles, onMove });
+	useEffect(() => {
+		if (!drop.target) return;
+		onTarget(folder.name);
+		return () => onTarget(null);
+	}, [drop.target, folder.name, onTarget]);
+	return drop;
+}
+
+/** A folder's row in the list view: it takes files and tiles as its tile does in the grid (T106), and has the folder's menu on a right click. */
+function MediaFolderRow({
+	menu,
+	children,
+	...folderDrop
+}: Parameters<typeof useMediaFolderDrop>[0] & {
+	/** The rows of the folder's right-click menu. */
+	menu: React.ReactNode;
+	children: React.ReactNode;
+}) {
+	const drop = useMediaFolderDrop(folderDrop);
+	return (
+		<ContextMenu>
+			<ContextMenuTrigger
+				render={
+					<TableRow dropTarget={drop.target} {...drop.handlers}>
+						{children}
+					</TableRow>
+				}
+			/>
+			<ContextMenuContent>{menu}</ContextMenuContent>
+		</ContextMenu>
+	);
+}
+
 /** A folder in the grid: opens, and takes files from outside and tiles from the library (flow 6·02, T99). */
 function MediaFolderTile({
 	folder,
@@ -235,12 +282,7 @@ function MediaFolderTile({
 	onMove: (ids: string[]) => void;
 	onTarget: (name: string | null) => void;
 }) {
-	const drop = useFolderDrop({ onFiles, onMove });
-	useEffect(() => {
-		if (!drop.target) return;
-		onTarget(folder.name);
-		return () => onTarget(null);
-	}, [drop.target, folder.name, onTarget]);
+	const drop = useMediaFolderDrop({ folder, onFiles, onMove, onTarget });
 	return (
 		<FolderTile
 			{...rest}
@@ -401,6 +443,8 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const addFiles = (files: File[], folder = state.folder) =>
 		void acceptFiles(files).then((taken) => upload.add(taken, folder));
 	const areaDrop = useFileDrop((files) => addFiles(files));
+	// The sidebar's folder rows are outside this screen: files dropped on one come here to go up (T106).
+	useTakeFolderFiles({ over: setFolderTarget, files: (files, folder) => addFiles(files, folder) });
 	useKeepFilesInPage();
 
 	// The hint at the bottom says where files would land: the folder they are over, or this place (flow 6·01, 6·02).
@@ -787,34 +831,34 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 						</TableRow>
 					)}
 					{childFolders.map((folder) => (
-						<ContextMenu key={folder.id}>
-							<ContextMenuTrigger
-								render={
-									<TableRow>
-										<TableCell colSpan={head.length + 1} truncate={naming.naming?.id !== folder.id}>
-											{naming.naming?.id === folder.id ? (
-												<RowTitle editing thumb={folderThumb} title={namingField(false)} />
-											) : (
-												<RowTitle
-													thumb={folderThumb}
-													title={
-														<RowLink
-															href={hrefOf({ ...state, folder: folder.id, page: 1, file: null })}
-															onClick={() => setPicked(new Set())}
-														>
-															{folder.name}
-														</RowLink>
-													}
-													address={<Count>{folder.count}</Count>}
-													addressTitle={String(folder.count)}
-												/>
-											)}
-										</TableCell>
-									</TableRow>
-								}
-							/>
-							<ContextMenuContent>{folderItems(true, folder)}</ContextMenuContent>
-						</ContextMenu>
+						<MediaFolderRow
+							key={folder.id}
+							folder={folder}
+							onFiles={(files) => addFiles(files, folder.id)}
+							onMove={(ids) => void move(ids, folder.id)}
+							onTarget={setFolderTarget}
+							menu={folderItems(true, folder)}
+						>
+							<TableCell colSpan={head.length + 1} truncate={naming.naming?.id !== folder.id}>
+								{naming.naming?.id === folder.id ? (
+									<RowTitle editing thumb={folderThumb} title={namingField(false)} />
+								) : (
+									<RowTitle
+										thumb={folderThumb}
+										title={
+											<RowLink
+												href={hrefOf({ ...state, folder: folder.id, page: 1, file: null })}
+												onClick={() => setPicked(new Set())}
+											>
+												{folder.name}
+											</RowLink>
+										}
+										address={<Count>{folder.count}</Count>}
+										addressTitle={String(folder.count)}
+									/>
+								)}
+							</TableCell>
+						</MediaFolderRow>
 					))}
 					{uploadsHere.map((each) => (
 						<UploadRow

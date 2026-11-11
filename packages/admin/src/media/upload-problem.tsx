@@ -1,3 +1,4 @@
+import type { Message } from "@monti-cms/core";
 import { IconButton, toast } from "@monti-cms/ui";
 import { Renew } from "@monti-cms/ui/icons";
 import { useCallback } from "react";
@@ -23,6 +24,15 @@ export function useSayRefused() {
 				);
 			}
 		},
+		[t],
+	);
+}
+
+/** Says why the library turned a file down once it was up (`media.upload` refused it: its folder is gone), in the same words as a file it does not take. */
+export function useSayTurnedDown() {
+	const { t } = useAdmin();
+	return useCallback(
+		(name: string, reason: Message) => toast.error(t("library.refused.one", { name, reason: t(reason) })),
 		[t],
 	);
 }

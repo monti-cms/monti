@@ -4,7 +4,7 @@ import { useLeaveGuard } from "../draft/leave-guard";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation } from "../operations/use-operation";
 import { putFile } from "./put-file";
-import { useSayRefused } from "./upload-problem";
+import { useSayRefused, useSayTurnedDown } from "./upload-problem";
 import { nextToStart, stillGoing, type Upload, uploadQueue } from "./upload-queue";
 
 const previewOf = (file: File) => (file.type.startsWith("image/") ? URL.createObjectURL(file) : null);
@@ -12,7 +12,8 @@ const previewOf = (file: File) => (file.type.startsWith("image/") ? URL.createOb
 /**
  * Files going up from a place on a page (doc 09's `useUpload`, 09-3): the library, the editor and a media field all use this one. `add` takes files where they were
  * dropped or chosen; each stays in `uploads` with its bar, and one the network cut off stays to try again. A file that made it leaves the list and comes to `onUploaded`.
- * One the library refuses leaves too, and a toast says why: `useAcceptFiles` keeps most of them from coming here at all, and this is for what shows only later (a broken picture, the server's own limit).
+ * One the library refuses leaves too, and a toast says why: `useAcceptFiles` keeps most of them from coming here at all, and this is for what shows only later (a broken picture, the server's own limit,
+ * a folder that was deleted while the file went up).
  */
 export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Upload) => void } = {}) {
 	const { uploader, session } = useAdmin();
@@ -24,6 +25,7 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 	const onUploaded = useRef(options.onUploaded);
 	onUploaded.current = options.onUploaded;
 	const sayRefused = useSayRefused();
+	const sayTurnedDown = useSayTurnedDown();
 
 	const forget = useCallback((upload: Upload) => {
 		files.current.delete(upload.id);
@@ -69,14 +71,23 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 			// Taken out while the library made it: it stays in the library, and takes no place here.
 			if (stop.signal.aborted) return;
 			if (!made?.ok) {
-				dispatch({ type: "failed", id: upload.id });
+				// The library gave a reason (the folder it was going to is gone): trying again would change nothing, so the file leaves its place and a toast says
+				// why, as for a file it does not take (2026-11-09, owner). No answer at all, or the session ending, is still "try again".
+				const reason = made && made.refusal.status !== 401 ? made.refusal.reason : null;
+				if (!reason) {
+					dispatch({ type: "failed", id: upload.id });
+					return;
+				}
+				sayTurnedDown(upload.name, reason);
+				forget(upload);
+				dispatch({ type: "remove", id: upload.id });
 				return;
 			}
 			onUploaded.current?.(made.body.output, upload);
 			forget(upload);
 			dispatch({ type: "remove", id: upload.id });
 		},
-		[uploader, session.end, makeItem.run, forget, sayRefused],
+		[uploader, session.end, makeItem.run, forget, sayRefused, sayTurnedDown],
 	);
 
 	useEffect(() => {

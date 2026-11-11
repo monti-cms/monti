@@ -102,7 +102,8 @@ export function MediaField({
 					following={followed !== null && !going}
 					value={going ? { name: going.name, thumbnail: going.preview } : shownFile(file)}
 					placeholder={t("entry.empty")}
-					onOpen={readOnly ? undefined : () => setPicking(true)}
+					readOnly={readOnly}
+					onOpen={() => setPicking(true)}
 					// On a file going up or stopped, × takes out that file: the field goes back to what it had.
 					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
 					clearLabel={t("library.field.clear", { label })}

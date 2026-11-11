@@ -8,6 +8,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	FormField,
+	FormFieldError,
 	FormFieldLabel,
 	FormFieldWas,
 	IconButton,
@@ -96,6 +97,8 @@ function TaxonomySidePanel({
 	const languageName = useLanguageName();
 	const [activeLocale, setActiveLocale] = useState(sourceLocale);
 	const [proposalIndex, setProposalIndex] = useState(0);
+	/** Save was pressed with no name in any language: the name field says so until one is typed (README principle 7: the button is never greyed). */
+	const [nameMissing, setNameMissing] = useState(false);
 
 	const panel = useItemPanel({
 		collection,
@@ -190,8 +193,12 @@ function TaxonomySidePanel({
 								variant="primary"
 								size="md"
 								loading={panel.saving}
-								disabled={!panel.canSave}
 								onClick={async () => {
+									if (!panel.canSave) {
+										setNameMissing(true);
+										document.getElementById("item-title")?.focus();
+										return;
+									}
 									const savedTitle = String(panel.draft.value(`locales.${sourceLocale}.title`) ?? "");
 									const res = await panel.save();
 									if (res) {
@@ -233,8 +240,13 @@ function TaxonomySidePanel({
 					size="md"
 					proposal={panel.draft.cell(titlePath).kind === "proposed"}
 					value={shownValue(titlePath)}
-					onChange={(e) => panel.draft.set(titlePath, e.target.value)}
+					aria-invalid={nameMissing || undefined}
+					onChange={(e) => {
+						setNameMissing(false);
+						panel.draft.set(titlePath, e.target.value);
+					}}
 				/>
+				{nameMissing && <FormFieldError>{t("taxonomy.nameMissing")}</FormFieldError>}
 				{wasLine(titlePath)}
 			</FormField>
 			<FormField>

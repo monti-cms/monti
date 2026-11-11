@@ -95,12 +95,15 @@ function TableBody({
  * A row that can be opened (it has an `onClick` or a {@link RowLink}) takes the muted background under the pointer, one step lighter than a picked row; a
  * row of a table that opens nothing takes none. Whatever the row, it keeps that background while its own menu is open (a right click, or its ⋯), so it is
  * plain which row the menu belongs to. A picked row stays as it is.
+ *
+ * `dropTarget` is the row files are dragged over (a folder's row in the media list): the selected background and a 1.5px ink line inside it, as a folder tile's.
  */
 function TableRow({
 	className,
 	selected,
 	proposal = false,
 	twoLine = false,
+	dropTarget = false,
 	...props
 }: React.ComponentProps<"tr"> & {
 	/** A row the writer picked (checked for a bulk action, or open in a side panel). */
@@ -109,6 +112,8 @@ function TableRow({
 	proposal?: boolean;
 	/** The row has a second line under its title (a template's sections): 16px above and below instead of 10. */
 	twoLine?: boolean;
+	/** Files are over this row, and would land in what it stands for. */
+	dropTarget?: boolean;
 }) {
 	const { onClick, onAuxClick, onMouseDown } = props;
 	return (
@@ -117,10 +122,13 @@ function TableRow({
 			data-selected={selected || undefined}
 			data-proposal={(selected && proposal) || undefined}
 			aria-selected={selected || undefined}
+			data-drop-target={dropTarget || undefined}
 			className={cn(
 				props.onClick && "cursor-pointer not-data-selected:hover:bg-monti-muted",
 				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted not-data-selected:has-[[data-slot=row-link]:focus-visible]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
 				twoLine && "[&>td]:py-monti-16",
+				// An outline, not a ring: a table row draws no shadow of its own.
+				dropTarget && "bg-monti-selected! outline-[1.5px] outline-monti-contrast -outline-offset-[1.5px]",
 				className,
 			)}
 			{...props}
@@ -342,39 +350,43 @@ function RowTitle({
 	/** The title is a `RenameField` being typed in: it is not cut to the line, so the field's underline shows. */
 	editing?: boolean;
 }) {
+	const words = editing ? (
+		<span className="min-w-0 text-monti-body text-monti-default">{title}</span>
+	) : (
+		<RowTitleWords>{title}</RowTitleWords>
+	);
 	return (
+		// Beside a picture the words stand at its middle, as the row's other cells do.
 		<span
 			data-slot="row-title"
-			className={cn("flex min-w-0 gap-monti-12", thumb ? "items-center" : "items-baseline", className)}
+			className={cn("flex min-w-0 gap-monti-8", thumb ? "items-center" : "items-baseline", className)}
 			{...props}
 		>
-			{/*
-			 * Beside a picture the words stand at its middle, as the row's other cells do. With an address after it the title does not give way at all until the
-			 * address has none left to give: it keeps its words whole up to the line's width less the gap, and only then is cut.
-			 */}
-			<span
-				className={cn(
-					"flex min-w-0 gap-monti-8",
-					thumb ? "items-center" : "items-baseline",
-					address && "max-w-[calc(100%-var(--monti-space-12))] shrink-0",
-				)}
-			>
-				{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
-				{thumb && <span className="mr-monti-4 flex shrink-0 self-center">{thumb}</span>}
-				{editing ? (
-					<span className="min-w-0 text-monti-body text-monti-default">{title}</span>
-				) : (
-					<RowTitleWords>{title}</RowTitleWords>
-				)}
-			</span>
-			{address && (
-				// It is cut before the title is, so it says itself whole when pointed at: it stands over the row's link for the pointer to find it.
+			{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
+			{thumb && <span className="mr-monti-4 flex shrink-0 self-center">{thumb}</span>}
+			{address ? (
+				/*
+				 * One line of two: the title, then its address 12px after. The title does not give way while the address has room: the address is cut first, down to
+				 * a letter and its "…" (3ch). With less room than that it would be cut through a letter, so it goes to a second line, which this one line's height
+				 * hides, and the title takes the whole line, the gap too. Only then is the title cut. A title being typed in (`editing`) is not clipped to the line.
+				 */
 				<span
-					title={addressTitle ?? (typeof address === "string" ? address : undefined)}
-					className="relative z-1 min-w-0 truncate font-mono text-monti-faint text-monti-meta"
+					className={cn(
+						"flex min-w-0 grow basis-0 items-baseline gap-x-monti-12",
+						!editing && "h-lh flex-wrap overflow-hidden",
+					)}
 				>
-					{address}
+					<span className="flex min-w-0 max-w-full shrink-0">{words}</span>
+					{/* It says itself whole when pointed at: it stands over the row's link for the pointer to find it. */}
+					<span
+						title={addressTitle ?? (typeof address === "string" ? address : undefined)}
+						className="relative z-1 min-w-0 max-w-max grow basis-[3ch] truncate font-mono text-monti-faint text-monti-meta"
+					>
+						{address}
+					</span>
 				</span>
+			) : (
+				words
 			)}
 		</span>
 	);

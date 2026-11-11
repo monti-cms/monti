@@ -163,6 +163,54 @@ describe("Table rows with a link", () => {
 		);
 	});
 
+	it("at every width the address shows a letter and its … or is off the line, and a title that fits the line is whole (T127)", async () => {
+		const host = render(
+			<Table container="none" layout="fixed">
+				<TableBody>
+					<TableRow>
+						<TableCell truncate>
+							<RowTitle title={<RowLink href="#">CMS elements: details</RowLink>} address="/cms-elements-details" />
+						</TableCell>
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		await expect.element(page.getByText("CMS elements: details")).toBeVisible();
+		const title = page.getByText("CMS elements: details").element().closest(".truncate") as HTMLElement;
+		const address = page.getByText("/cms-elements-details").element() as HTMLElement;
+		const line = address.parentElement as HTMLElement;
+		const wide = (node: HTMLElement) => {
+			const all = document.createRange();
+			all.selectNodeContents(node);
+			return all.getBoundingClientRect().width;
+		};
+		// A letter and its "…" in the address's own letters: less than this is a letter cut through.
+		const least = address.cloneNode(false) as HTMLElement;
+		least.textContent = "/…";
+		least.style.cssText = "position:absolute;flex:none;max-width:none";
+		line.append(least);
+		const letter = least.getBoundingClientRect().width;
+		least.remove();
+		const seen = { shown: 0, gone: 0, whole: 0, cut: 0 };
+		for (let width = 360; width >= 60; width--) {
+			host.style.width = `${width}px`;
+			const room = line.getBoundingClientRect();
+			const at = `at ${width}px`;
+			// The address is on the line or below it, where the line's height hides it.
+			if (address.getBoundingClientRect().top < room.bottom - 1) {
+				seen.shown++;
+				expect(address.getBoundingClientRect().width, at).toBeGreaterThanOrEqual(letter - 0.01);
+			} else seen.gone++;
+			if (wide(title) <= room.width + 0.01) {
+				seen.whole++;
+				expect(title.getBoundingClientRect().width, at).toBeGreaterThanOrEqual(wide(title) - 0.01);
+			} else seen.cut++;
+			expect(title.getBoundingClientRect().right, at).toBeLessThanOrEqual(room.right + 0.01);
+		}
+		// The sweep went through every case.
+		for (const count of Object.values(seen)) expect(count).toBeGreaterThan(0);
+	});
+
 	it("a row that opens a panel has no address: the middle button there is left to the browser", async () => {
 		const opened = vi.fn();
 		render(
