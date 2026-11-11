@@ -156,7 +156,7 @@ export {
 export { FieldGroup, FieldRow, FieldTree } from "./field-tree";
 export { FileBlock } from "./file-block";
 export { FilePreview } from "./file-preview";
-export { FileUseRow } from "./file-use-row";
+export { FileUseList, FileUseRow } from "./file-use-row";
 export { FilterButton } from "./filter-button";
 export { FloatingBar, FloatingBarButton } from "./floating-bar";
 export {

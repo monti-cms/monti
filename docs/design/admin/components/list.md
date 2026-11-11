@@ -141,7 +141,7 @@
 
 `MediaPicker`는 패널 전체다. `topLabel`(경로의 맨 앞), `folders`(각각 `depth`, 경로를 셈한다), `folder`(최상위는 `null`), `pathLabel`(경로의 이름), 검색(제목 줄의 `SearchBox`, 폴더 안에서는 `scopes` · `scope` · `onScopeChange` · `scopeLabel`로 찾는 곳 칩), `onUpload`, `confirmLabel`(아무것도 고르지 않은 동안은 `confirmHidden`으로 알약이 없다. 흐린 알약은 왜 못 누르는지 말하지 않는다, 원칙 7), `subfolders`(연 곳의 `FolderTile`들, 파일 위에 네 열), `children`인 타일(각각 `Tile`, 파일은 `FilePreview`)을 받는다. 타일은 경로 아래에서 스크롤한다. 폴더를 옮기면 키보드는 새 곳의 첫 카드나 파일에서 이어진다.
 
-`FileUseRow`는 파일 패널의 쓰는 곳 한 행이다. `title`(누르면 그리로 간다), 끝에 `places`(그 안의 자리, "대표 이미지 · 본문"). 제목이 길어도 한 줄이다: 제목이 …로 잘리고 자리는 줄어들지 않는다.
+`FileUseRow`는 파일 패널의 쓰는 곳 한 행이다. `title`(누르면 그리로 간다), 끝에 `places`(그 안의 자리, "대표 이미지 · 본문"). 제목이 길어도 한 줄이다: 제목이 …로 잘리고 자리는 줄어들지 않는다. 제목은 패널의 값과 같은 13px(`note`)이다: 위의 값보다 크면 딸린 목록이 본문보다 무겁게 읽힌다. 행들은 `FileUseList`에 담는다. 라벨 아래는 8px, 행 사이는 4px이라 라벨이 목록의 머리로 읽힌다(2026-11-11 소유자: 14px 제목에 라벨과 행 사이가 4px로 같아서 나열처럼 보였다). 휴지통 항목 패널의 "가리키는 글"도 같은 부품이다.
 
 ## 놓을 곳 (`.mt-droparea`, `.mt-folder.is-drop`, `.mt-toast--drop`)
 

@@ -6,7 +6,7 @@ import { TextButton } from "./text-button";
 
 /**
  * One place that uses a file, in the file's panel: its title goes there, and at the end stands where in it the file is ("Cover · Body"). However long the title, the row stays
- * one line: the title is cut with "…" and the places keep their room.
+ * one line: the title is cut with "…" and the places keep their room. The title is the panel's own text size (`note`), not larger than the values above it.
  */
 function FileUseRow({
 	title,
@@ -23,7 +23,7 @@ function FileUseRow({
 	return (
 		<div data-slot="file-use-row" className="flex min-w-0 items-center justify-between gap-monti-8">
 			{/* The words are cut inside the button, so what cuts them does not also cut its pressable room. */}
-			<TextButton href={href} title={title} onClick={onClick} className="flex min-w-0">
+			<TextButton size="note" href={href} title={title} onClick={onClick} className="flex min-w-0">
 				<span className="truncate">{title}</span>
 			</TextButton>
 			<Text variant="micro" tone="subtle" className="shrink-0 whitespace-nowrap">
@@ -33,4 +33,13 @@ function FileUseRow({
 	);
 }
 
-export { FileUseRow };
+/** The use rows under their label: 8px below the label, so it heads them, and 4px between the rows. */
+function FileUseList({ children }: { children: React.ReactNode }) {
+	return (
+		<div data-slot="file-use-list" className="flex min-w-0 flex-col gap-monti-4 pt-monti-4">
+			{children}
+		</div>
+	);
+}
+
+export { FileUseList, FileUseRow };
