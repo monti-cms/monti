@@ -81,6 +81,11 @@ describe("taxonomy screen (doc 08)", () => {
 		await expect.element(page.getByText("이름을 입력해 주세요.")).not.toBeInTheDocument();
 		await userEvent.click(save);
 		await expect.element(page.getByText("이름을 입력해 주세요.")).toBeVisible();
+		// Dropping the changes drops the error with them.
+		await userEvent.click(page.getByRole("button", { name: "버리기", exact: true }));
+		await expect.element(page.getByText("이름을 입력해 주세요.")).not.toBeInTheDocument();
+		await userEvent.click(save);
+		await expect.element(page.getByText("이름을 입력해 주세요.")).toBeVisible();
 		await userEvent.keyboard("새");
 		await expect.element(page.getByText("이름을 입력해 주세요.")).not.toBeInTheDocument();
 		await expect.element(name).not.toHaveAttribute("aria-invalid");
