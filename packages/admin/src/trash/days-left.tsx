@@ -10,7 +10,13 @@ export function DaysLeftFact({ days }: { days: number }) {
 	const left = t("trash.left", { days });
 	return (
 		<DescriptionItem label={t("trash.column.left")}>
-			{days < URGENT_DAYS ? <Text tone="warning">{left}</Text> : left}
+			{days < URGENT_DAYS ? (
+				<Text variant="note" tone="warning">
+					{left}
+				</Text>
+			) : (
+				left
+			)}
 		</DescriptionItem>
 	);
 }

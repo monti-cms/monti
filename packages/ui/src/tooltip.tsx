@@ -18,7 +18,8 @@ function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
 
 /**
  * The name of an icon button, a small black pill: 12px, one line, with its key combination after it in mono when it has one. Only names go in it (one or two
- * words), never a sentence; a text button needs no tooltip.
+ * words), never a sentence; a text button needs no tooltip. It also says whole a value its cell shows cut: a row's languages (`LocaleCodes`), a row's title
+ * (`RowTitle`, which lets a long one wrap).
  */
 function TooltipContent({
 	className,

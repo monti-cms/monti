@@ -1,7 +1,6 @@
 import type { EntryState, Facet, ListColumn, ListFilter } from "@monti-cms/core";
 import {
 	Calendar,
-	DropdownMenuCheckboxItem,
 	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
@@ -13,12 +12,12 @@ import {
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-	MenuShortcut,
 	MenuTick,
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
+import { toggled, ValueRow } from "./filter-rows";
 import { filterColumn, type ListState, TRANSLATION_STATES } from "./list-query";
 import { SortRows } from "./sort-rows";
 
@@ -35,30 +34,6 @@ function useFacets(query: Query, column: string) {
 
 const count = (facets: Facet[] | null, value: string | null) =>
 	facets === null ? null : (facets.find((facet) => facet.value === value)?.count ?? 0);
-
-function ValueRow({
-	checked,
-	onToggle,
-	label,
-	counted,
-}: {
-	checked: boolean;
-	onToggle: () => void;
-	label: string;
-	counted: number | null;
-}) {
-	return (
-		<DropdownMenuCheckboxItem box checked={checked} closeOnClick={false} onCheckedChange={onToggle}>
-			{label}
-			{counted !== null && <MenuShortcut>{counted}</MenuShortcut>}
-		</DropdownMenuCheckboxItem>
-	);
-}
-
-/** Toggles one value of a filter that takes several, dropping the filter when its last value goes. */
-function toggled<T>(chosen: readonly T[], value: T): T[] {
-	return chosen.includes(value) ? chosen.filter((each) => each !== value) : [...chosen, value];
-}
 
 type MenuProps = {
 	column: ListColumn;

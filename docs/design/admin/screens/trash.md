@@ -11,7 +11,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 제목 행 | `PageHeader`(`title` "휴지통") | 폴더 안에서는 `title`이 폴더 이름, `meta`가 "30일 남음"(7일 아래면 `Text tone="warning"`). |
+| 제목 행 | `PageHeader`(`title` "휴지통") | 폴더 안에서는 `title`이 폴더 이름, `meta`가 "30일 남음"(7일 아래면 `Text mono tone="warning"`: 색만 바뀌고 글자는 mono 그대로다). |
 | 폴더 경로 "휴지통 /" | `PageHeader`의 `trail`에 `TextButton variant="underline"` | 휴지통 안의 폴더에서만 있다. |
 | "상위 폴더로" | 폴더 행 모양(`RowTitle folder`), 체크와 ⋯ 없음 | 폴더 안의 첫 행. 누르면 한 단계 위(지운 폴더 안의 폴더면 그 폴더, 아니면 휴지통)로 간다. 게시글 목록과 같다(2026-11-11 소유자: 미디어에서 뺀 것을 휴지통까지 뺀 것은 잘못이었다). 찾는 동안에는 없다. 고를 수 없고 개수에 들지 않는다. |
 | "검색" | `SearchToggle`(`label` "검색", `targets` 없음) | 그 자리에서 `SearchBox`가 열린다. 지운 폴더 안의 것도 찾는다. 지운 폴더 안에서는 게시글 목록처럼 상자 앞 칩(`scopes`)이 그 폴더와 "모든 폴더" 가운데 고른다(2026-11-11 소유자). |
@@ -24,18 +24,18 @@
 |---|---|---|
 | 표 | `ListScroll` 안의 `Table`(`TableBody`, `TableRow`, `TableCell`) | 행은 게시글 목록의 행과 같은 한 줄이다(2026-11-11 소유자: 둘째 줄이 비는 행이 생기고, 휴지통만 다를 까닭이 없다). 고른 행과 패널에 열린 행은 `TableRow selected`. |
 | 행 체크 | `RowCheck` | 포인터가 행 위에 있을 때와 고른 행, 패널에 열린 행에 보인다(항목 화면과 같다). |
-| 제목 칸 | `RowTitle`(`title`, `address`, `folder`) | 게시글 목록과 같은 칸이다. 제목 뒤 `address` 자리에 글은 공개 주소, 폴더는 담은 수("글 2", "파일 3"), 그리고 있던 폴더가 온다("Blog Assets"). 찾은 것이 지운 폴더 안에 있으면 "시리즈 원고 폴더 안"이다. 지운 폴더는 `folder`로 앞에 폴더 아이콘, 누르면 휴지통 안에서 그 폴더가 열린다. 글 하나는 한 줄이다: 원문과 번역이 따로 버려졌어도 한 줄에 모인다. |
+| 제목 칸 | `RowTitle`(`title`, `address`, `folder`) | 게시글 목록과 같은 칸이다. 제목 뒤 `address` 자리에 글은 공개 주소, 폴더는 담은 수("글 2", "파일 3"), 그리고 있던 폴더가 온다("Blog Assets"). 찾은 것이 지운 폴더 안에 있으면 끝에 "시리즈 원고 폴더 안"이 붙는다. 좁아서 잘리면 `title`이 온전히 말한다. 지운 폴더는 `folder`로 앞에 폴더 아이콘, 누르면 휴지통 안에서 그 폴더가 열린다. 글 하나는 한 줄이다: 원문과 번역이 따로 버려졌어도 한 줄에 모인다. |
 | 제목을 누르면 | `RowLink` | 글은 편집기로 간다(읽기 전용). 항목과 미디어는 옆 패널이 열린다. 폴더는 그 안으로 들어간다. |
-| 언어 칸 | `LocaleCodes`(`codes`, `names`) | 글과 항목의 줄에만: 휴지통에 든 그 글의 언어. 기본 너비에서는 "KO +1", 열을 넓히면 "KO · EN". 세기만 한 언어가 있으면 가리킬 때 툴팁이 이름으로 말한다("한국어, 영어"). 게시글 목록의 언어 칸과 같은 부품이다. 언어가 하나인 사이트에는 열이 없다. 처음 폭은 `LIST_COLUMN_SIZE.locale`. |
-| 종류 칸 | `TableCell tone="subtle"` | 컬렉션의 이름("게시글", "메모", "태그")과 "미디어". 폭은 `LIST_COLUMN_SIZE.one`. |
-| 남은 날 칸 | `TrashRowDate`(`left`, `urgent`, `byAssistant`. `date`는 주지 않는다) | 남은 날("30일 남음")만. 버린 날은 남은 날과 같은 것을 말하므로 두지 않는다(2026-11-05 소유자, 원칙 8). 7일 아래면 `urgent`로 경고 색(2026-11-11 소유자). 폴더 안의 행은 폴더와 남은 날이 같으면 비운다. 폭은 `LIST_COLUMN_SIZE.measure`. |
+| 언어 칸 | `LocaleCodes`(`codes`, `names`) | 글과 항목의 줄에만: 휴지통에 든 그 글의 언어. 기본 너비에서는 "KO +1", 열을 넓히면 "KO · EN". 세기만 한 언어가 있거나 좁아서 잘렸으면 가리킬 때 툴팁이 이름으로 말한다("한국어, 영어"). 게시글 목록의 언어 칸과 같은 부품이다. 언어가 하나인 사이트에는 열이 없다. 처음 폭은 `LIST_COLUMN_SIZE.locale`. |
+| 종류 칸 | `TableCell tone="subtle" truncate`(`title`) | 컬렉션의 이름("게시글", "메모", "태그")과 "미디어". 좁히면 "…"로 잘리고 `title`이 온전히 말한다. 폭은 `LIST_COLUMN_SIZE.one`. |
+| 남은 날 칸 | `TableCell align="end" truncate`(`title`) 안의 `TrashRowDate`(`left`, `urgent`, `byAssistant`. `date`는 주지 않는다) | 남은 날("30일 남음")만. 버린 날은 남은 날과 같은 것을 말하므로 두지 않는다(2026-11-05 소유자, 원칙 8). 7일 아래면 `urgent`로 경고 색(2026-11-11 소유자). 폴더 안의 행은 폴더와 남은 날이 같으면 비운다. 폭은 `LIST_COLUMN_SIZE.measure`. 좁히면 "…"로 잘리고 `title`이 온전히 말한다. |
 | 행 동작 | `RowActions` 안의 `RowMore` + `DropdownMenu`: "복원" │ "영구 삭제"(`variant="danger"`), 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. 보이는 "복원" 버튼은 없다(2026-11-11 소유자). 글의 줄은 휴지통에 든 그 글의 언어 모두를 함께 복원하고 함께 지운다. 영구 삭제는 `AlertDialog`로 묻는다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "복원" │ "영구 삭제"(`variant="danger"`, `MenuShortcut` Del) | ⋯와 같은 행이다. 고른 행 중 하나에서 열면 `ContextMenuLabel` "2개 항목"으로 시작하고 아이콘 없이 고른 행 모두에 한다(게시글 목록과 같다). 행에서 Delete를 눌러도 영구 삭제를 묻는다. |
 | 빈 휴지통 | `Empty`(`title` "휴지통이 비었습니다.") | 열 이름 행과 표 대신 이 한 줄. 도구 화면의 빈 목록과 같은 부품이다. |
 | 맞는 것이 없음 | `TableRow` 한 줄: `Text tone="subtle"` "맞는 것이 없습니다."와 `TextButton` "필터 해제" | 찾거나 걸렀는데 없을 때. 게시글 목록과 같다. |
 | 쪽 | `ListFooter`(`Count`, `ListPages`) | 50줄이 넘을 때만 있다. |
 
-스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Overlay/AlertDialog, Patterns/List/Table, Patterns/List/TrashRow, Primitives/Text, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Menu/ContextMenu, Patterns/List/ListHead, Patterns/List/BulkBar, Controls/Overlay/SidePanel, Patterns/Panel/DotNote, Patterns/Frame/Image, Patterns/List/FilePreview, Patterns/Frame/DescriptionList, Patterns/List/FileUseRow, Controls/Button/Button, Patterns/List/Empty.
+스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Overlay/AlertDialog, Patterns/List/Table, Patterns/List/TrashRow, Patterns/List/LocaleCodes, Primitives/Text, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Menu/ContextMenu, Patterns/List/ListHead, Patterns/List/BulkBar, Controls/Overlay/SidePanel, Patterns/Frame/Image, Patterns/List/FilePreview, Patterns/Frame/DescriptionList, Patterns/List/FileUseRow, Controls/Button/Button, Patterns/List/Empty.
 
 ## 뜨는 자리
 
@@ -61,8 +61,8 @@
 | 패널 | `SidePanel width="side"`(`title` 항목 이름이나 파일 이름) | 행을 누르면 열리고 머리 끝 ×로 닫는다. 열린 동안 ✦ 어시스턴트 버튼은 그 아래에 가려진다. |
 | ⋯ | `SidePanel`의 `actions`에 `IconButton` + `DropdownMenu`("영구 삭제" `variant="danger"`) | 영구 삭제는 `AlertDialog`로 묻는다. |
 | 미리보기 (미디어) | `Image`(4:3), 파일이면 `FilePreview framed` | |
-| 정보 | `DescriptionList` + `DescriptionItem` | 첫 행은 "남은 날"("3일 남음", 7일 아래면 경고 색)이다. 목록의 열과 같은 이름, 같은 말이다. 정보 위에 따로 뜬 상태 줄("3일 남음 · 읽기 전용")은 두지 않는다(2026-11-11 소유자: 자리가 애매했다. 값이 글자뿐이라 "읽기 전용"은 보이는 것을 되풀이한다, 원칙 8). 미디어: 남은 날 · 폴더 · 종류 · 크기 · 올린 날. 대체 텍스트는 없다(09). 항목: 남은 날 · 컬렉션 · 주소. 이름은 패널 제목이 이미 말하므로 되풀이하지 않는다(원칙 8). 언어가 여럿인 항목만 언어마다 이름과 주소를 적는다. 값은 글자이고 입력 부품이 아니다. |
-| "쓰는 곳 · 0" / "가리키는 글 · 4" | `FormFieldLabel`, 아래 `FileUseList`에 글마다 `FileUseRow`(글 이름 링크, 끝에 컬렉션. 휴지통의 글은 "휴지통 · 게시글") | 누르면 그 글이 열린다. 없으면 `Text variant="note" tone="faint"` "없음". 많으면 패널이 스크롤한다. |
+| 정보 | `DescriptionList` + `DescriptionItem` | 첫 행은 "남은 날"("3일 남음", 7일 아래면 `Text variant="note" tone="warning"`: 다른 값과 같은 크기에 색만 경고다)이다. 목록의 열과 같은 이름, 같은 말이다. 정보 위에 따로 뜬 상태 줄("3일 남음 · 읽기 전용")은 두지 않는다(2026-11-11 소유자: 자리가 애매했다. 값이 글자뿐이라 "읽기 전용"은 보이는 것을 되풀이한다, 원칙 8). 미디어: 남은 날 · 폴더 · 종류 · 크기 · 올린 날. 대체 텍스트는 없다(09). 항목: 남은 날 · 컬렉션 · 주소. 이름은 패널 제목이 이미 말하므로 되풀이하지 않는다(원칙 8). 언어가 여럿인 항목만 언어마다 이름과 주소를 적는다. 값은 글자이고 입력 부품이 아니다. |
+| "쓰는 곳 · 0" / "가리키는 글 · 4" | `FormFieldLabel`, 아래 `FileUseList`에 글마다 `FileUseRow`(글 이름 링크, 끝에 컬렉션. 휴지통의 글은 "휴지통 · 게시글") | 누르면 그 글이 열린다. 없으면 `FileUseList`의 `empty` "없음"(첫 행 자리). 많으면 패널이 스크롤한다. |
 | 발 | `SidePanel`의 `footer`: `Button variant="primary"` "복원" | 알약은 복원 하나다. |
 
 ### 창
@@ -92,4 +92,4 @@
 | "빔" | 5.28 | 빈 휴지통 한 줄, 머리 동작 없음, 사이드바 개수 없음 | Empty |
 | "휴지통 폴더 안" | 5.12 | `PageHeader`의 `trail` "휴지통 /", 폴더 이름 제목과 `meta`, "폴더 복원"과 ⋯, 남은 날 칸이 빈 안쪽 행 | InFolder, FolderMenu |
 | "폴더에서 하나 복원" | 5.13 | 폴더가 휴지통을 떠나 화면이 휴지통 맨 위로 돌아오고, 남은 글은 폴더 이름과 함께 한 줄이 된다. `toast` "시리즈 원고 폴더와 함께 복원했습니다"와 "열기" | |
-| "휴지통 찾기" | 5.14 | `SearchBox`, 폴더 안의 항목은 `meta` 앞에 "시리즈 원고 폴더 안". 지운 폴더 안에서는 찾는 곳 칩. 맞는 것이 없으면 한 줄과 "필터 해제" | Searching, SearchingInFolder, NoMatch |
+| "휴지통 찾기" | 5.14 | `SearchBox`, 폴더 안의 항목은 주소 자리 끝에 "시리즈 원고 폴더 안". 지운 폴더 안에서는 찾는 곳 칩. 맞는 것이 없으면 한 줄과 "필터 해제" | Searching, SearchingInFolder, NoMatch |

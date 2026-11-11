@@ -28,3 +28,33 @@ export function scrollsSideways(element: Element): string[] {
 	if (page.scrollWidth > page.clientWidth + 1) found.push(`the page ${page.scrollWidth} > ${page.clientWidth}`);
 	return found;
 }
+
+/**
+ * The cells of a table whose words run over the next column: wider than the cell and not clipped by it. Empty when every cell keeps its words inside. Use it
+ * after columns are dragged narrow (docs/design/admin/components/list.md, every table's columns).
+ */
+export function spillingCells(table: Element): string[] {
+	return [...table.querySelectorAll("tbody td")]
+		.filter((cell) => cell.scrollWidth > cell.clientWidth + 1 && getComputedStyle(cell).overflowX === "visible")
+		.map((cell) => `"${cell.textContent}" ${cell.scrollWidth} > ${cell.clientWidth}`);
+}
+
+/** What is on top at the middle of `element`: what a pointer there finds, which is not the element when something covers it. */
+export function onTopOf(element: Element): Element | null {
+	const box = element.getBoundingClientRect();
+	return document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+}
+
+/**
+ * What the browser's tooltip would say with the pointer at the middle of `element`: the `title` of what is on top there, or of what holds it. A `title` under
+ * something that covers it (a row's link covers its row) is never said, and this is `null`.
+ */
+export function titleUnderPointer(element: Element): string | null {
+	return onTopOf(element)?.closest("[title]")?.getAttribute("title") ?? null;
+}
+
+/** The heights of a table's body rows that hold something, each once: one height when every row is as tall as the others. */
+export function rowHeights(table: Element): number[] {
+	const heights = [...table.querySelectorAll("tbody tr")].map((row) => row.getBoundingClientRect().height);
+	return [...new Set(heights.filter((height) => height > 0))];
+}

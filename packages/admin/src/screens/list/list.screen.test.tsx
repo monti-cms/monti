@@ -1,9 +1,10 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { rowHeights, spillingCells, titleUnderPointer } from "../../../../../testing/input";
 import * as list from "./list.stories";
 
-const { Main } = composeStories(list);
+const { Main, NarrowColumns } = composeStories(list);
 
 const main = () => page.getByRole("main");
 const columnName = (name: string) => main().getByRole("columnheader").getByRole("button", { name, exact: true });
@@ -16,5 +17,24 @@ describe("the list's column names", () => {
 		await expect.element(menu.getByRole("menuitem", { name: "열 숨기기" })).toBeVisible();
 		await userEvent.click(menu.getByRole("menuitem", { name: "열 숨기기" }));
 		await expect.element(columnName("수정일")).not.toBeInTheDocument();
+	});
+
+	it("06-1 every row is as tall as the others: a folder's, an entry's with a category and one without", async () => {
+		await Main.run();
+		await expect.element(columnName("수정일")).toBeVisible();
+		expect(rowHeights(main().getByRole("table").element())).toHaveLength(1);
+	});
+
+	it("06-1 columns dragged to their narrowest keep their words inside their cells", async () => {
+		await NarrowColumns.run();
+		await expect.element(columnName("수정일")).toBeVisible();
+		expect(spillingCells(main().getByRole("table").element())).toEqual([]);
+		// The row's link covers the row: the pointer still finds what a cut status, category and day say.
+		const row = main().getByRole("row").filter({ hasText: "발행 후 고친 글" });
+		expect(titleUnderPointer(row.getByText("수정 중").element())).toBe("수정 중");
+		expect(titleUnderPointer(row.getByText("개발", { exact: true }).element())).toBe("개발");
+		// A press on them opens the row as a press anywhere on it does.
+		await userEvent.click(row.getByText("개발", { exact: true }));
+		await expect.poll(() => location.hash).toMatch(/^#\/c\/post\/[^?]+$/);
 	});
 });

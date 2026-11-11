@@ -1,10 +1,17 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { spillingCells, titleUnderPointer } from "../../../../../testing/input";
 import * as list from "./list.stories";
 
-const { ChangeRelationMenu, TaxonomyTags, TaxonomyTagsPicked, TaxonomyMergeDialog, TaxonomySidePanel } =
-	composeStories(list);
+const {
+	ChangeRelationMenu,
+	TaxonomyTags,
+	TaxonomyNarrowColumns,
+	TaxonomyTagsPicked,
+	TaxonomyMergeDialog,
+	TaxonomySidePanel,
+} = composeStories(list);
 
 const main = () => page.getByRole("main");
 const table = () => main().getByRole("table");
@@ -28,6 +35,26 @@ describe("taxonomy screen (doc 08)", () => {
 		await expect
 			.element(table().getByRole("columnheader", { name: "이름" }))
 			.toHaveAttribute("aria-sort", "descending");
+	});
+
+	it("08-1 the usage column's filter is a box that stays open, as every table's, and a narrowed usage cell says its value whole", async () => {
+		await TaxonomyNarrowColumns.run();
+		const used = table().getByText("글 5", { exact: true });
+		await expect.element(used).toBeVisible();
+		expect(titleUnderPointer(used.element())).toBe("글 5");
+		expect(titleUnderPointer(table().getByText("react", { exact: true }).element())).toBe("react");
+		// The count is a link to the entries that use the tag.
+		expect(used.element().closest("a")?.getAttribute("href")).toMatch(/^#\/c\/post\?tags=/);
+		expect(spillingCells(table().element())).toEqual([]);
+		await userEvent.click(table().getByRole("button", { name: "글 수" }));
+		const unused = page.getByRole("menuitemcheckbox", { name: /쓰는 글 없음/ });
+		await userEvent.click(unused);
+		// The menu is still there to untick it, and the list already shows only the unused ones.
+		await expect.element(unused).toHaveAttribute("aria-checked", "true");
+		await expect.element(table().getByText("글 5", { exact: true })).not.toBeInTheDocument();
+		await userEvent.click(unused);
+		await expect.element(table().getByText("글 5", { exact: true })).toBeVisible();
+		await userEvent.keyboard("{Escape}");
 	});
 
 	it("keeps the same table header height before and after a row is picked", async () => {

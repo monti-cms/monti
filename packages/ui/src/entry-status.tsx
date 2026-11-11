@@ -52,14 +52,16 @@ function EntryStatus({
 			data-slot="entry-status"
 			data-status={status}
 			className={cn(
-				"inline-flex items-center gap-[7px] whitespace-nowrap text-monti-label",
+				// Whole wherever it stands in a row of things (`shrink-0`). Only a table cell that cuts its words bounds it: there the name ends in "…" and the
+				// mark stays.
+				"inline-flex shrink-0 items-center gap-[7px] whitespace-nowrap text-monti-label",
 				quiet ? "font-normal text-monti-subtle" : COLOR[status],
 				className,
 			)}
 			{...props}
 		>
 			<span aria-hidden="true" data-slot="entry-status-mark" className={markVariants({ status })} />
-			{children}
+			{children !== undefined && children !== null && <span className="truncate">{children}</span>}
 		</span>
 	);
 }

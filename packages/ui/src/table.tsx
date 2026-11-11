@@ -2,11 +2,12 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import type * as React from "react";
+import * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
 import { Folder, OverflowMenuHorizontal } from "./icons";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 function Table({
 	className,
@@ -109,6 +110,7 @@ function TableRow({
 	/** The row has a second line under its title (a template's sections): 16px above and below instead of 10. */
 	twoLine?: boolean;
 }) {
+	const { onClick, onAuxClick, onMouseDown } = props;
 	return (
 		<tr
 			data-slot="table-row"
@@ -122,8 +124,81 @@ function TableRow({
 				className,
 			)}
 			{...props}
+			onClick={(event) => {
+				// The press this row passed on to its link comes back up through the row: it is the same press, not a second one.
+				if (passedOn.has(event.nativeEvent)) return;
+				onClick?.(event);
+				if (!event.defaultPrevented) openFromOver(event);
+			}}
+			onAuxClick={(event) => {
+				onAuxClick?.(event);
+				if (!event.defaultPrevented) openFromOver(event);
+			}}
+			onMouseDown={(event) => {
+				onMouseDown?.(event);
+				// The middle button held on what is not a link starts the browser's own scrolling on Windows and Linux: here it opens the row's address.
+				if (event.button === 1 && addressOf(overLink(event))) event.preventDefault();
+			}}
 		/>
 	);
+}
+
+/** What keeps its own press on a row: the controls, and what holds them. */
+const OWN_PRESS =
+	"a, button, input, select, textarea, label, summary, [role=button], [role=link], [role=checkbox], [role=radio], [role=switch], [role=tab], [role=option], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=combobox], [role=textbox], [role=slider], [contenteditable=true], [data-slot=row-check], [data-slot=row-actions]";
+
+/** The clicks a row made for its link, so the row knows them when they come back up. */
+const passedOn = new WeakSet<Event>();
+
+/** Where a row's link goes, when it is a link with an address: a row that opens a panel (a button) has none for a new tab. */
+const addressOf = (link: HTMLElement | null) => (link instanceof HTMLAnchorElement && link.href ? link.href : null);
+
+/** The row's link, when the press was on something of the row that stands over it and has no press of its own. */
+function overLink(event: React.MouseEvent<HTMLTableRowElement>): HTMLElement | null {
+	const row = event.currentTarget;
+	const pressed = event.target;
+	// Not a press on this row: one in a menu the row opened reaches the row through React and not through the page, and one in a table inside the row
+	// is that table's row's.
+	if (!(pressed instanceof Element) || pressed.closest("tr") !== row) return null;
+	const link = [...row.querySelectorAll<HTMLElement>("[data-slot=row-link]")].find(
+		(each) => each.closest("tr") === row,
+	);
+	if (!link || link.contains(pressed) || pressed.closest(OWN_PRESS)) return null;
+	return link;
+}
+
+/**
+ * A row's link covers the row, and some of the row stands over the link so the pointer can find it: a cell's words that say themselves whole when pointed at, a
+ * tooltip's trigger. A press there still opens the row, as a press on the link would: a plain press is passed on to the link as a click; one that asks
+ * for another place (the middle button, a key held) opens the link's address there.
+ */
+function openFromOver(event: React.MouseEvent<HTMLTableRowElement>) {
+	const link = overLink(event);
+	if (!link) return;
+	const middle = event.type === "auxclick";
+	if (middle && event.button !== 1) return;
+	const { metaKey, ctrlKey, shiftKey, altKey } = event;
+	const address = addressOf(link);
+	// A press that asks for another place (the middle button, a key held) opens the link's address there. A click made here would not do: a browser
+	// follows a made click's keys only if it chooses to (Firefox does not). Opened during the press, the browser places it as it would from the
+	// link: behind this tab, or in a new window.
+	if (middle || metaKey || ctrlKey || shiftKey) {
+		if (address) window.open(address, "_blank", "noopener");
+		else if (!middle) pass(link, { metaKey, ctrlKey, shiftKey, altKey });
+		return;
+	}
+	// Words dragged over to select them were not pressed: a link under them would not open either.
+	const selected = window.getSelection();
+	if (selected && !selected.isCollapsed && selected.anchorNode && event.currentTarget.contains(selected.anchorNode))
+		return;
+	pass(link, { altKey });
+}
+
+/** Presses a row's link for the row, and remembers the click so the row knows it when it comes back up. */
+function pass(link: HTMLElement, keys: MouseEventInit) {
+	const click = new MouseEvent("click", { bubbles: true, cancelable: true, ...keys });
+	passedOn.add(click);
+	link.dispatchEvent(click);
 }
 
 /**
@@ -248,6 +323,7 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 function RowTitle({
 	title,
 	address,
+	addressTitle,
 	folder = false,
 	thumb,
 	editing = false,
@@ -257,6 +333,8 @@ function RowTitle({
 	title: React.ReactNode;
 	/** After the title: `/first-post`, or what a folder holds ("글 2"). (cms-allow-korean: quotes the words) */
 	address?: React.ReactNode;
+	/** The address in words, when `address` is more than a string: what it says when it is cut and pointed at. */
+	addressTitle?: string;
 	/** The row is a folder: its icon leads the line. */
 	folder?: boolean;
 	/** A {@link RowThumb} leading the line. */
@@ -270,16 +348,123 @@ function RowTitle({
 			className={cn("flex min-w-0 gap-monti-12", thumb ? "items-center" : "items-baseline", className)}
 			{...props}
 		>
-			{/* Beside a picture the words stand at its middle, as the row's other cells do. */}
-			<span className={cn("flex min-w-0 gap-monti-8", thumb ? "items-center" : "items-baseline")}>
+			{/*
+			 * Beside a picture the words stand at its middle, as the row's other cells do. With an address after it the title does not give way at all until the
+			 * address has none left to give: it keeps its words whole up to the line's width less the gap, and only then is cut.
+			 */}
+			<span
+				className={cn(
+					"flex min-w-0 gap-monti-8",
+					thumb ? "items-center" : "items-baseline",
+					address && "max-w-[calc(100%-var(--monti-space-12))] shrink-0",
+				)}
+			>
 				{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
 				{thumb && <span className="mr-monti-4 flex shrink-0 self-center">{thumb}</span>}
-				<span className={cn("min-w-0 text-monti-body text-monti-default", !editing && "truncate")}>{title}</span>
+				{editing ? (
+					<span className="min-w-0 text-monti-body text-monti-default">{title}</span>
+				) : (
+					<RowTitleWords>{title}</RowTitleWords>
+				)}
 			</span>
 			{address && (
-				<span className="min-w-0 shrink-[999] truncate font-mono text-monti-faint text-monti-meta">{address}</span>
+				// It is cut before the title is, so it says itself whole when pointed at: it stands over the row's link for the pointer to find it.
+				<span
+					title={addressTitle ?? (typeof address === "string" ? address : undefined)}
+					className="relative z-1 min-w-0 truncate font-mono text-monti-faint text-monti-meta"
+				>
+					{address}
+				</span>
 			)}
 		</span>
+	);
+}
+
+/**
+ * A row title's words, cut to the line with "…". While they are cut, pointing at them (or coming to the title with the keyboard) says them whole in a tooltip,
+ * as a language cell says its languages. The title's link covers the whole row, so the pointer is "on the title" everywhere on the row: the tooltip is for
+ * the pointer on the words themselves, not on the rest of the row.
+ */
+function RowTitleWords({ children }: { children: React.ReactNode }) {
+	const box = React.useRef<HTMLSpanElement>(null);
+	/** Open, and by what: the pointer on the words, or the keyboard on the title. */
+	const [by, setBy] = React.useState<"pointer" | "keys" | null>(null);
+	/** What it says. Kept while it closes, so the tooltip does not empty before it is gone. */
+	const [words, setWords] = React.useState("");
+	/** Whether the pointer is on the words now. */
+	const onWords = React.useRef(false);
+	/** Closed by hand (Escape, a press) with the pointer on the words, whatever opened it: it stays closed until the pointer has left them. */
+	const dismissed = React.useRef(false);
+	const dismiss = () => {
+		dismissed.current = onWords.current;
+		setBy(null);
+	};
+	/** The words, when they are cut: a fraction of a pixel short already ends them in "…". */
+	const cut = () => {
+		const node = box.current;
+		if (!node) return null;
+		const all = document.createRange();
+		all.selectNodeContents(node);
+		return all.getBoundingClientRect().width > node.getBoundingClientRect().width + 0.01 ? node.textContent : null;
+	};
+	const say = (how: "pointer" | "keys") => {
+		const whole = cut();
+		if (whole === null) return;
+		setWords(whole);
+		setBy(how);
+	};
+	/** The pointer is no longer on the words: what it opened closes, and what was closed by hand may open again. */
+	const left = () => {
+		onWords.current = false;
+		dismissed.current = false;
+		if (by === "pointer") setBy(null);
+	};
+	return (
+		<Tooltip
+			open={by !== null}
+			onOpenChange={(open, details) => {
+				// The pointer's coming and going is seen by its place (below): the trigger's own hover is the whole row's.
+				if (details.reason === "trigger-hover") return;
+				if (open) {
+					if (details.reason === "trigger-focus") say("keys");
+					return;
+				}
+				// Escape, a press, the keyboard moving on.
+				dismiss();
+			}}
+		>
+			<TooltipTrigger
+				render={
+					<span
+						ref={box}
+						className="min-w-0 truncate text-monti-body text-monti-default"
+						onPointerMove={(event) => {
+							// A finger that starts a scroll here is not pointing.
+							if (event.pointerType === "touch") return;
+							const edge = event.currentTarget.getBoundingClientRect();
+							const on =
+								event.clientX >= edge.left &&
+								event.clientX <= edge.right &&
+								event.clientY >= edge.top &&
+								event.clientY <= edge.bottom;
+							if (!on) return left();
+							onWords.current = true;
+							if (by === null && !dismissed.current) say("pointer");
+						}}
+						onPointerLeave={left}
+						onPointerDown={() => {
+							if (by !== null) dismiss();
+						}}
+					/>
+				}
+			>
+				{children}
+			</TooltipTrigger>
+			{/* A title can be long: it wraps in the tooltip instead of running off the window. */}
+			<TooltipContent align="start" className="max-w-monti-panel whitespace-normal break-words">
+				{words}
+			</TooltipContent>
+		</Tooltip>
 	);
 }
 
@@ -347,18 +532,28 @@ function TableCell({
 	tone,
 	filler,
 	style,
+	title,
+	children,
 	...props
 }: Omit<React.ComponentProps<"td">, "align"> & CellOptions) {
 	return (
 		<td
 			data-slot="table-cell"
 			data-truncate={truncate || undefined}
+			title={title}
 			className={cn(
 				// Its pieces sit on the middle of the line, not on their letters' baselines: pieces of two sizes on one baseline (a chip, a title) would
 				// make the line taller than either, and the row 2px taller than the design system's 42.
 				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
-				truncate && "max-w-0 truncate has-[[data-slot=row-check]]:overflow-visible",
+				// The row's check hangs in the left margin, so its cell does not clip. In a row with a link the cells are static and the check stands on the row
+				// itself: there the cell clips as any other, and a first column dragged narrow keeps its words in.
+				// A piece of it that can shrink (a status, its mark kept) shrinks to the cell.
+				truncate &&
+					"max-w-0 truncate *:max-w-full has-[[data-slot=row-check]]:overflow-visible group-has-data-[slot=row-link]/row:has-[[data-slot=row-check]]:overflow-hidden",
+				// With a `title` it says its value whole when pointed at. A row's link covers the row, so the cell's pieces stand over the link for the
+				// pointer to find them; a press on them still opens the row (`TableRow`).
+				title !== undefined && "[&>:not([data-slot=row-check])]:relative [&>:not([data-slot=row-check])]:z-1",
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top *:align-top",
 				wrap && "whitespace-normal break-words",
@@ -369,7 +564,19 @@ function TableCell({
 			)}
 			style={size === undefined ? style : { ...style, width: size }}
 			{...props}
-		/>
+		>
+			{title === undefined
+				? children
+				: // Bare words cannot stand over anything: they get a box of their own.
+					React.Children.map(children, (child) =>
+						// The box keeps the words where bare words stand, on the line's baseline: the row stays as tall as one without a `title`.
+						typeof child === "string" || typeof child === "number" ? (
+							<span className="align-baseline!">{child}</span>
+						) : (
+							child
+						),
+					)}
+		</td>
 	);
 }
 

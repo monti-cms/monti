@@ -127,11 +127,13 @@ export async function freeName(
 	for (let n = 2; ; n++) if (!taken.has(`${name} ${n}`)) return `${name} ${n}`;
 }
 
+/** What `lockFolderScope` locks: one sibling list, by its collection (the media library has none) and the folder it is in. */
+export const folderScopeKey = (collection: string | null, parentId: string | null) =>
+	`monti:folders:${collection ?? "media"}:${parentId ?? "root"}`;
+
 /** Serializes name and position choices within one sibling list. */
 export async function lockFolderScope(db: Db, collection: string | null, parentId: string | null): Promise<void> {
-	await sql`select pg_advisory_xact_lock(hashtext(${`monti:folders:${collection ?? "media"}:${parentId ?? "root"}`}))`.execute(
-		db,
-	);
+	await sql`select pg_advisory_xact_lock(hashtext(${folderScopeKey(collection, parentId)}))`.execute(db);
 }
 
 function checkScope(ctx: OperationContext, scope: Scope) {

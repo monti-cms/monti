@@ -1,11 +1,14 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { rowHeights, spillingCells, titleUnderPointer } from "../../../../../testing/input";
 import * as stories from "./trash.stories";
 
 const {
 	Top,
 	InFolder,
+	InUrgentFolder,
+	NarrowColumns,
 	Searching,
 	SearchingInFolder,
 	NoMatch,
@@ -247,12 +250,66 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(main().getByRole("table")).not.toBeInTheDocument();
 	});
 
+	it("11-1 a column dragged to its narrowest cuts its value inside the cell, and the cell says it whole", async () => {
+		await NarrowColumns.run();
+		const kind = row("옛 소개 글").getByRole("cell", { name: "게시글" });
+		await expect.element(kind).toBeVisible();
+		// The row's link covers the row: the pointer still finds what each cut value says.
+		expect(titleUnderPointer(kind.getByText("게시글").element())).toBe("게시글");
+		expect(titleUnderPointer(row("옛 소개 글").getByText("23일 남음").element())).toBe("23일 남음");
+		// No cell's words run over the next column: each is clipped at its own edge.
+		expect(spillingCells(table().element())).toEqual([]);
+		// What stands after a title is cut first, so it says itself whole too.
+		expect(titleUnderPointer(row("첫 번째 글").getByText("/posts/first-post").element())).toBe("/posts/first-post");
+		// A cell that says its value keeps its row as tall as the others (the way up, in a folder, has none).
+		expect(rowHeights(table().element())).toHaveLength(1);
+		await InFolder.run();
+		await expect.element(row("시리즈 1: 시작")).toBeVisible();
+		expect(rowHeights(table().element())).toHaveLength(1);
+	});
+
+	it("11-1 a press anywhere on a row opens it, on what stands over the row's link too: its languages, its kind, its address", async () => {
+		for (const words of ["KO", "게시글", "/posts/about-old"]) {
+			await Top.run();
+			await userEvent.click(row("옛 소개 글").getByText(words, { exact: true }));
+			await expect.poll(() => location.hash).toMatch(/^#\/c\/post\//);
+		}
+		// What has its own press keeps it: the row's menu opens, and the row does not.
+		await Top.run();
+		await menuOf("옛 소개 글");
+		await expect.element(page.getByRole("menuitem", { name: "복원" })).toBeVisible();
+		expect(location.hash).toBe("#/trash");
+		await userEvent.keyboard("{Escape}");
+	});
+
+	it("11-1 days under a week change their color only: mono in a folder's head, the values' size in a panel", async () => {
+		await InUrgentFolder.run();
+		const heading = main().getByRole("heading", { name: "시리즈 원고" });
+		await expect.element(heading).toBeVisible();
+		const days = main().getByText("3일 남음").first().element();
+		expect(getComputedStyle(days).fontFamily).toBe(getComputedStyle(days.parentElement as HTMLElement).fontFamily);
+		expect(getComputedStyle(days).fontFamily).toMatch(/mono/i);
+
+		await ItemPanel.run();
+		const panel = page.getByRole("complementary", { name: "임시" });
+		const urgent = panel.getByText("3일 남음").element();
+		const other = panel.getByText("태그", { exact: true }).element();
+		expect(getComputedStyle(urgent).fontSize).toBe(getComputedStyle(other).fontSize);
+	});
+
 	it("11-1 [flow 5·19] an item opens beside the list, to read: who points at it, with restore as its one pill", async () => {
 		await ItemPanel.run();
 		const panel = page.getByRole("complementary", { name: "임시" });
 		await expect.element(panel).toHaveTextContent("남은 날3일 남음");
 		await expect.element(panel).toHaveTextContent("가리키는 글 · 4");
 		await expect.element(panel.getByRole("link", { name: "여름 여행기" })).toBeVisible();
+		// Where an entry is from is words, a size under the entry's name, in the panel's own type.
+		const [name, from] = [
+			panel.getByRole("link", { name: "여름 여행기" }).element(),
+			panel.getByText("게시글", { exact: true }).first().element(),
+		];
+		expect(getComputedStyle(from).fontSize).toBe("12px");
+		expect(getComputedStyle(from).fontFamily).toBe(getComputedStyle(name).fontFamily);
 		await expect.element(panel.getByRole("textbox")).not.toBeInTheDocument();
 		await userEvent.click(panel.getByRole("button", { name: "복원" }));
 		await expect.element(toast("복원했습니다")).toBeVisible();

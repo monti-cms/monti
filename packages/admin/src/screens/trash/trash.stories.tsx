@@ -205,6 +205,12 @@ const openRowMenu = async (canvas: HTMLElement, title: string) => {
 	await userEvent.click(within(row).getByRole("button", { name: "행 메뉴" }));
 };
 
+/** The widths this browser keeps for a table (`useColumnWidths`), for one story: put there before it draws, taken away after. */
+const keptWidths = (name: string, widths: Record<string, number>) => () => {
+	localStorage.setItem(`monti:${name}-columns`, JSON.stringify(widths));
+	return () => localStorage.removeItem(`monti:${name}-columns`);
+};
+
 /** Flow 5·11: the trash, newest first. A thrown-away folder is one row; each row says how long it stays, in the warning tone under a week. */
 export const Top: Story = { loaders: trash() };
 
@@ -216,11 +222,48 @@ export const KindMenu: Story = {
 	},
 };
 
+/** The language column's menu filters by language, each with its count (every table's columns, components/list.md). */
+export const LanguageMenu: Story = {
+	loaders: trash(),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "언어" }, wait));
+	},
+};
+
+/** Only what has an English text, a dot on the language column. */
+export const OnlyEnglish: Story = { loaders: trash("#/trash?lang=en") };
+
+/** Sorted by title: the title's name is ink with its arrow, and its menu holds both ways. */
+export const TitleSorted: Story = {
+	loaders: trash("#/trash?sort=title"),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: /^제목/ }, wait));
+	},
+};
+
+/** Every column dragged to its narrowest: each cell cuts its value with "…" at its own edge, and says it whole when pointed at. */
+export const NarrowColumns: Story = {
+	loaders: trash(),
+	beforeEach: keptWidths("trash", { locale: 60, kind: 60, left: 60 }),
+};
+
 /** Flow 5·17: only media, a dot on the kind column. */
 export const OnlyMedia: Story = { loaders: trash("#/trash?kind=media") };
 
 /** Flow 5·12: inside a thrown-away folder, with the way back above its name and the folder's own actions in the head. */
 export const InFolder: Story = { loaders: trash((ids) => `#/trash?folder=${ids.series}`) };
+
+/** A folder with under a week left: its days stand in the warning tone, in the head's own mono. */
+export const InUrgentFolder: Story = {
+	loaders: trash((ids) => `#/trash?folder=${ids.series}`, {
+		// The folder went 27 days ago with what it holds: its rows do not repeat its days.
+		also: async ({ db }, ids) => {
+			const then = { trashed_at: sql<Date>`now() - interval '27 days'` };
+			await db.updateTable("folders").set(then).where("id", "=", ids.series).execute();
+			await db.updateTable("entries").set(then).where("folder_id", "=", ids.series).execute();
+		},
+	}),
+};
 
 /** Flow 5·12: the folder's own ⋯ holds what cannot be undone. */
 export const FolderMenu: Story = {

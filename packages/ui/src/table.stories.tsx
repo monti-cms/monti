@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import {
 	Box,
 	EntryStatus,
@@ -17,6 +18,8 @@ import {
 	TableHead,
 	TableHeader,
 	TableRow,
+	Text,
+	TextButton,
 } from "./index";
 
 /**
@@ -196,3 +199,134 @@ export const ProposalPicked: Story = {
 
 /** Out of date while new rows load: shown, quieter. */
 export const Refreshing: Story = { render: () => <Frame dimmed>{rows(() => ({}))}</Frame> };
+
+/**
+ * Columns dragged narrow: each cell cuts its value with "…" at its own edge and says it whole when pointed at (`title`), a status keeps its mark, a count that
+ * is a link ends in "…" too, and what stands after the title gives way before the title does and says itself whole (`addressTitle`). A press on any of them
+ * opens the row, but for the count, which is a link of its own.
+ */
+export const CutCells: Story = {
+	tags: ["visual"],
+	render: () => (
+		// A column as wide as a sheet, so the title's column is short of room too.
+		<Box width="sheet">
+			<ListScroll>
+				<Table container="none" layout="fixed" columns={[60, undefined, 60, 60, 48]}>
+					<TableHeader>
+						<TableRow>
+							<TableHead>상태</TableHead>
+							<TableHead>제목</TableHead>
+							<TableHead>카테고리</TableHead>
+							<TableHead align="end">글 수</TableHead>
+							<TableHead />
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						<TableRow>
+							<TableCell truncate title="수정 중">
+								<RowCheck checked={false} onCheckedChange={() => {}} label="편집기를 다시 만든 이유 고르기" />
+								<EntryStatus status="editing">수정 중</EntryStatus>
+							</TableCell>
+							<TableCell truncate>
+								<RowTitle
+									title={<RowLink href="#">편집기를 다시 만든 이유</RowLink>}
+									address={
+										<>
+											why-a-new-editor-and-what-it-cost-us-in-the-end
+											<Text variant="note" tone="warning">
+												{" · 영어 이름 없음"}
+											</Text>
+										</>
+									}
+									addressTitle="why-a-new-editor-and-what-it-cost-us-in-the-end · 영어 이름 없음"
+								/>
+							</TableCell>
+							<TableCell tone="subtle" truncate title="개발 이야기">
+								개발 이야기
+							</TableCell>
+							<TableCell align="end" truncate title="글 12,345">
+								<TextButton variant="underline" size="note" href="#">
+									글 12,345
+								</TextButton>
+							</TableCell>
+							<TableCell>
+								<RowActions>
+									<RowMore label="더 보기" />
+								</RowActions>
+							</TableCell>
+						</TableRow>
+						<TableRow>
+							<TableCell truncate title="발행됨">
+								<RowCheck checked={false} onCheckedChange={() => {}} label="봄에 쓴 첫 글 고르기" />
+								<EntryStatus status="published" quiet>
+									발행됨
+								</EntryStatus>
+							</TableCell>
+							<TableCell truncate>
+								<RowTitle title={<RowLink href="#">봄에 쓴 첫 글</RowLink>} address="/posts/first-spring" />
+							</TableCell>
+							<TableCell tone="subtle" truncate title="일상">
+								일상
+							</TableCell>
+							<TableCell align="end" truncate title="쓰는 글 없음">
+								<Text variant="note" tone="faint">
+									쓰는 글 없음
+								</Text>
+							</TableCell>
+							<TableCell>
+								<RowActions>
+									<RowMore label="더 보기" />
+								</RowActions>
+							</TableCell>
+						</TableRow>
+					</TableBody>
+				</Table>
+			</ListScroll>
+		</Box>
+	),
+};
+
+/** A title too long for its line, its words pointed at: the tooltip says it whole, on as many lines as it takes. */
+export const CutTitle: Story = {
+	tags: ["visual"],
+	render: () => (
+		<Box width="sheet">
+			<ListScroll>
+				<Table container="none" layout="fixed" columns={[undefined, 84]}>
+					<TableBody>
+						<TableRow>
+							<TableCell truncate>
+								<RowTitle
+									title={
+										<RowLink href="#">
+											리액트 19 마이그레이션에서 서버 컴포넌트와 액션을 옮기며 배운 것, 그리고 남은 일
+										</RowLink>
+									}
+									address="/posts/react-19-migration"
+								/>
+							</TableCell>
+							<TableCell tone="subtle" truncate title="개발">
+								개발
+							</TableCell>
+						</TableRow>
+						<TableRow>
+							<TableCell truncate>
+								<RowTitle title={<RowLink href="#">봄에 쓴 첫 글</RowLink>} address="/posts/first-spring" />
+							</TableCell>
+							<TableCell tone="subtle" truncate title="일상">
+								일상
+							</TableCell>
+						</TableRow>
+					</TableBody>
+				</Table>
+			</ListScroll>
+		</Box>
+	),
+	play: async ({ canvasElement }) => {
+		const words = within(canvasElement).getByRole("link", { name: /^리액트 19/ });
+		const box = words.getBoundingClientRect();
+		// A pointer near the start of the words: they run on under the cut.
+		await userEvent.pointer({ target: words, coords: { clientX: box.left + 12, clientY: box.top + 8 } });
+		await within(document.body).findByRole("tooltip");
+	},
+};

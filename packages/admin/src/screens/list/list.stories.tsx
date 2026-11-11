@@ -598,6 +598,18 @@ export const ColumnResizing: Story = {
 	},
 };
 
+/** Every column dragged to its narrowest: each cell cuts its value with "…" at its own edge, and says it whole when pointed at. */
+export const NarrowColumns: Story = {
+	loaders: site(async (made) => {
+		await made.monti.run(
+			"list.savePrefs",
+			{ collection: "post", widths: { status: 60, category: 60, tags: 60, locale: 60, updatedAt: 60 } },
+			admin,
+		);
+	}),
+	play: ({ canvasElement }) => rowsShown(canvasElement),
+};
+
 /** "25 per page ▾" under the table, opened upward: 25, 50, 100 (flow 7, step 02c). */
 export const PageSize: Story = {
 	loaders: site(),
@@ -806,6 +818,26 @@ export const TaxonomyTags: Story = {
 	play: async ({ canvasElement }) => {
 		await waitFor(() => expect(within(canvasElement).getByText("리액트")).toBeTruthy(), wait);
 		await waitFor(() => expect(within(canvasElement).getByText("쓰는 글 없음")).toBeTruthy(), wait);
+	},
+};
+
+/** The usage column's menu: both ways, then the filter that keeps the unused ones (every table's columns, components/list.md). */
+export const TaxonomyUsageMenu: Story = {
+	loaders: site(withDuplicateReactTag, "#/c/tag", { schema: oneLanguage }),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: /^글 수/ }, wait));
+	},
+};
+
+/** The usage column dragged to its narrowest: "쓰는 글 없음" is cut with "…" inside its cell; the short counts fit. A long count cut is in Patterns/List/Table › CutCells. */
+export const TaxonomyNarrowColumns: Story = {
+	loaders: site(withDuplicateReactTag, "#/c/tag", { schema: oneLanguage }),
+	beforeEach: () => {
+		localStorage.setItem("monti:items:tag-columns", JSON.stringify({ usage: 60 }));
+		return () => localStorage.removeItem("monti:items:tag-columns");
+	},
+	play: async ({ canvasElement }) => {
+		await waitFor(() => expect(within(canvasElement).getByText("리액트")).toBeTruthy(), wait);
 	},
 };
 

@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableRow, TrashRowDate, TrashRowTitle } fr
  */
 const meta = {
 	title: "Patterns/List/TrashRow",
+	tags: ["visual"],
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -36,7 +37,7 @@ export const Rows: Story = {
 						<TrashRowTitle
 							title="편집기를 다시 만든 이유"
 							address="/posts/why-a-new-editor"
-							meta="같은 주소의 글이 있어 복원할 수 없어요"
+							meta="같은 주소의 글이 있어 복원할 수 없습니다"
 							metaTone="warning"
 						/>
 					</TableCell>
@@ -100,6 +101,34 @@ export const DaysLeftOnly: Story = {
 					</TableCell>
 					<TableCell align="end">
 						<TrashRowDate left="29일 남음" byAssistant={{ label: "버린 대화 열기", onOpen: () => {} }} />
+					</TableCell>
+				</TableRow>
+			</TableBody>
+		</Table>
+	),
+};
+
+/** In a column dragged to its narrowest (60px) the days end in "…"; the assistant's ✦ stays, and the cell's `title` says them whole. */
+export const Narrow: Story = {
+	render: () => (
+		<Table layout="fixed" columns={[undefined, 60]}>
+			<TableBody>
+				<TableRow>
+					<TableCell>옛 소개 글</TableCell>
+					<TableCell align="end" truncate title="30일 남음">
+						<TrashRowDate left="30일 남음" />
+					</TableCell>
+				</TableRow>
+				<TableRow>
+					<TableCell>임시</TableCell>
+					<TableCell align="end" truncate title="2일 남음">
+						<TrashRowDate left="2일 남음" urgent />
+					</TableCell>
+				</TableRow>
+				<TableRow>
+					<TableCell>리액트</TableCell>
+					<TableCell align="end" truncate title="29일 남음">
+						<TrashRowDate left="29일 남음" byAssistant={{ label: "어시스턴트가 버림" }} />
 					</TableCell>
 				</TableRow>
 			</TableBody>

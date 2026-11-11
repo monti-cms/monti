@@ -274,10 +274,10 @@ export function AssistantScreen() {
 									<TableCell truncate>
 										<RowTitle title={<RowLink>{row.title}</RowLink>} address={row.address} />
 									</TableCell>
-									<TableCell tone="subtle" truncate>
+									<TableCell tone="subtle" truncate title={row.category}>
 										{row.category}
 									</TableCell>
-									<TableCell tone="subtle" truncate>
+									<TableCell tone="subtle" truncate title={row.tags}>
 										{row.tags}
 									</TableCell>
 									<TableCell>

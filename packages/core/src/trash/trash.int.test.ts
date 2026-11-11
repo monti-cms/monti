@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { signedInApi } from "../__test__/admin";
 import { sql, testDatabase } from "../__test__/database";
 import { createReader } from "../entries/reader";
 import { CheckError, ForbiddenError } from "../errors";
+import { folderScopeKey, lockFolderScope } from "../folders/operations";
 import type { MediaItem } from "../media/operations";
 import { memoryStorage } from "../media/storage";
 import { createMonti, definePlugin } from "../monti";
@@ -209,18 +211,38 @@ describe("into the trash", () => {
 		}
 	});
 
-	it("11-1 a folder coming back and a folder made with its name, at the same moment: both are there, under two names", async () => {
-		for (let round = 0; round < 8; round++) {
-			const name = `같은 이름 ${round}`;
-			const folder = await postFolder(name);
-			await move(folderRow(folder));
-			const back = () => restore(folderRow(folder));
-			const make = () => postFolder(name);
-			const results = await Promise.allSettled(round % 2 === 0 ? [back(), make()] : [make(), back()]);
-			expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"]);
-			const names = await db.selectFrom("folders").select("name").where("name", "like", `${name}%`).execute();
-			expect(names.map((row) => row.name).sort()).toEqual([name, `${name} 2`]);
-		}
+	it("11-1 a folder coming back while a folder with its name is being made: it waits, then takes the next name", async () => {
+		const name = "같은 이름";
+		// Inside a folder of its own: the lock is on that folder's list of names, a key no other test takes (advisory locks are the database's, and the
+		// other test files run beside this one in other schemas).
+		const box = await postFolder("상자");
+		const folder = await postFolder(name, box);
+		await move(folderRow(folder));
+		// Two requests started together do not show this: the one that is making a folder has to have picked the name and not saved yet, so this
+		// transaction stands in for it. It holds what `folders.create` holds, and the restore has to be seen waiting for it.
+		const key = folderScopeKey("post", box);
+		const waiting = async () =>
+			(
+				await sql<{ n: number }>`select count(*)::int as n from pg_locks where locktype = 'advisory' and not granted
+					and classid::bigint = (hashtext(${key})::bigint >> 32) & 4294967295
+					and objid::bigint = hashtext(${key})::bigint & 4294967295`.execute(db)
+			).rows[0]?.n ?? 0;
+		let back: Promise<Written<TrashRestored>> | undefined;
+		await db.transaction().execute(async (making) => {
+			await lockFolderScope(making, "post", box);
+			back = restore(folderRow(folder));
+			for (let tries = 0; (await waiting()) === 0; tries++) {
+				if (tries === 200) throw new Error("The restore did not wait for the folder that is being made.");
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			}
+			await making
+				.insertInto("folders")
+				.values({ id: randomUUID(), collection: "post", parent_id: box, name, position: 1 })
+				.execute();
+		});
+		await back;
+		const names = await db.selectFrom("folders").select("name").where("parent_id", "=", box).execute();
+		expect(names.map((row) => row.name).sort()).toEqual([name, `${name} 2`]);
 	});
 
 	it("11-2 what a screen asks about first: published entries, translations that go along, entries that point here, files that stay", async () => {

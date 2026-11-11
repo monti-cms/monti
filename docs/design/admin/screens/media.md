@@ -67,11 +67,11 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 표 | `ListScroll`, `Table container="none" layout="fixed"`, `TableBody`, `TableRow`, `TableCell` | 글 목록의 표와 같다. 도구 행 바로 아래에 붙고, 좌우 여백 없이 위 선과 폭이 같다(2026-11-09 소유자). 옆 패널에 파일이 열린 동안은 이름과 올린 날만 있다. 나머지는 패널이 말하고, 좁은 폭에서 이름 칸이 없어지지 않는다. |
-| 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `onResize`, `resizeLabel`) | "이름" · "사용" · "종류" · "크기" · "치수" · "올린 날". 제목 아래 하나뿐인 줄이다(2026-11-10 소유자: 글 목록과 같다). 이름을 누르면 그 열의 메뉴가 열린다: "사용"과 "종류"는 도구 행의 필터와 같은 체크 행(값을 고르면 이름 뒤에 점), "이름" · "크기"는 `SortRows` "오름차순" · "내림차순", "올린 날"은 "최근부터" · "오래전부터"(모든 표의 열 규칙, [list.md](../components/list.md)). "치수"는 메뉴가 없는 글자다. 옮기기는 없다. 정렬한 열은 잉크에 ↓ · ↑. 파일을 옆에 연 동안은 "이름"과 "올린 날"만 남고, "이름"의 메뉴가 종류 · 사용 필터와 모든 정렬을 담는다(필터가 켜져 있으면 이름 뒤에 점). 열 사이를 끌어 너비를 바꾼다. 너비는 이 브라우저에 남는다. |
+| 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `onResize`, `resizeLabel`) | "이름" · "사용" · "종류" · "크기" · "치수" · "올린 날". 제목 아래 하나뿐인 줄이다(2026-11-10 소유자: 글 목록과 같다). 이름을 누르면 그 열의 메뉴가 열린다: "사용"과 "종류"는 도구 행의 필터와 같은 체크 행(값을 고르면 이름 뒤에 점), "이름" · "크기"는 `SortRows` "오름차순" · "내림차순", "올린 날"은 "최근부터" · "오래전부터"(모든 표의 열 규칙, [list.md](../components/list.md)). "치수"는 메뉴가 없는 글자다. 옮기기는 없다. 정렬한 열은 잉크에 ↓ · ↑. 파일을 옆에 연 동안은 "이름"과 "올린 날"만 남고, "이름"의 메뉴가 모든 정렬과 종류 · 사용 필터를 담는다(다른 열 메뉴처럼 정렬이 먼저다. 필터가 켜져 있으면 이름 뒤에 점). 열 사이를 끌어 너비를 바꾼다. 너비는 이 브라우저에 남는다. 좁힌 칸은 "…"로 잘리고 `title`이 온전히 말한다. |
 | 고르기 | `RowCheck`, `ListHead selectAll`, 고른 동안 머리 자리에 `BulkBar colSpan` | 체크는 포인터가 행에 오면 왼쪽 여백에 보인다. 고르는 동안 열 이름 행이 막대가 된다. 그 위에 다른 행은 없다. |
 | 그림 | `RowTitle`의 `thumb`에 `RowThumb` | 이름 열 안에 있다. 파일은 40×30 그림, 폴더 행은 16px 아이콘. |
-| 이름 | `RowTitle`(`TableCell truncate`) | 행 어디를 눌러도 열린다(`TableRow`가 연다). 옆 패널에 열린 파일의 행은 고른 행과 같다(`selected`). 새 폴더는 표 맨 위 행, `RenameField`(200px)로 이름을 쓴다. 폴더 행은 이름 뒤에 개수. 긴 이름은 …으로 끝나고 다른 열을 밀어내지 않는다. |
-| 사용 · 종류 · 크기 · 치수 · 올린 날 | `TableCell` 안에: 사용 `Text variant="note" tone="subtle"`, 종류 · 크기 · 치수 `Text variant="meta" tone="subtle"`, 날짜 `align="end"`의 `Text mono variant="meta" tone="muted"` | 글 목록처럼 이름 말고는 회색이고 날짜는 끝에 맞춘다. 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
+| 이름 | `RowTitle`(`TableCell truncate`)과 `RowLink` | 행 어디를 눌러도 열린다(`RowLink`가 행을 덮는다). 옆 패널에 열린 파일의 행은 고른 행과 같다(`selected`). 새 폴더는 표 맨 위 행, `RenameField`(200px)로 이름을 쓴다. 폴더 행은 이름 뒤에 개수(`Count`, `addressTitle`로 그 수). 긴 이름은 …으로 끝나고 다른 열을 밀어내지 않는다. |
+| 사용 · 종류 · 크기 · 치수 · 올린 날 | 모두 `TableCell truncate`(`title`). 사용은 `tone="subtle"`, 종류 · 크기 · 치수는 안에 `Text variant="meta" tone="subtle"`, 날짜는 `align="end"`에 `Text mono variant="meta" tone="muted"` | 글 목록처럼 이름 말고는 회색이고 날짜는 끝에 맞춘다. 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". 좁힌 칸은 "…"로 잘리고 가리키면 `title`이 온전히 말한다. |
 | ⋯ | `RowActions` | 파일 행에만 있다. 폴더로 할 일은 오른쪽 클릭 메뉴에 있다. |
 | 올리는 중 · 끊긴 파일 | `TableRow`: `RowTitle thumb`, 칸 다섯을 합친 `Text variant="note"`, ⋯ 자리 | 파일 행 맨 위에 온다. "올리는 중 · 64%" · "대기". 끊긴 파일은 빨간 "올리기 실패" 옆에 `IconButton` `Renew` "다시 올리기"(`size="xs"`), ⋯ 자리에 `TrashCan` "지우기"(`tone="danger"`). 표 밖에 타일로 두지 않는다(2026-11-09 소유자). |
 
@@ -110,7 +110,7 @@
 | (빠짐, 2026-11-05) 기본 캡션 | `FormField` + `Input size="md"`(플레이스홀더 "비어 있음") | 늘 입력 칸이다. 이미지에만 있다. |
 | 종류 · 크기 · 올린 날 | `DescriptionList` + `DescriptionItem` | 크기는 웹용과 원본 두 줄. |
 | 어시스턴트의 이름 제안 | 파일 이름 `Affix`의 `proposal`, 패널 안 `ProposalBubbleDock` + `ProposalBubble` | 분류 패널과 같다. 받거나 버린다. |
-| "쓰는 곳 · 2" | `FormFieldLabel` 아래 `FileUseList`, 행마다 `FileUseRow`(`title`과 `href`는 그 글, `places`는 자리 "대표 이미지") | 쓰는 곳이 없으면 "없음"(`Text variant="note" tone="faint"`). 글이 많으면 패널이 스크롤한다. 긴 제목은 …로 잘리고 자리는 한 줄로 남는다(스토리 `FilePanelManyUses`). |
+| "쓰는 곳 · 2" | `FormFieldLabel` 아래 `FileUseList`, 행마다 `FileUseRow`(`title`과 `href`는 그 글, `places`는 자리 "대표 이미지") | 쓰는 곳이 없으면 `FileUseList`의 `empty` "없음"(첫 행 자리). 글이 많으면 패널이 스크롤한다. 긴 제목은 …로 잘리고 자리는 한 줄로 남는다(스토리 `FilePanelManyUses`). |
 | 저장 | `SidePanel footer`의 `Button variant="primary"` | 바뀐 것이 있을 때만 있다(원칙 7). 이미지와 파일이 같다. "파일 바꾸기" · "휴지통으로"는 둘 다 ⋯ 안에 있고 발에 두지 않는다(2026-11-05). |
 
 ### 흐름 2 · 어시스턴트
