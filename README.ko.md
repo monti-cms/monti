@@ -28,7 +28,7 @@ Monti는 설계부터 다시 만들고 있습니다. 이전 패키지는 지웠�
 pnpm install            # 설치
 pnpm lint               # 린트 (pnpm lint:fix로 고침)
 pnpm check:design       # 관리자 화면 규칙 (docs/design/admin)
-pnpm check:review       # 관리자 화면을 바꾼 작업이 디자인 검토를 거쳤는지
+pnpm check:review       # 관리자 화면이 디자인 검토가 읽은 그대로인지
 pnpm check:operations   # 기능 문서와 코드가 같은 기능을 말하는지
 pnpm typecheck          # 모든 패키지 타입 검사
 pnpm build              # 모든 패키지 빌드

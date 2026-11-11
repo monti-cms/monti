@@ -1,23 +1,21 @@
 #!/usr/bin/env node
 /**
- * Design review gate. The `design-review` agent (`.claude/agents/design-review.md`) reads a piece of admin UI work before it joins a shared branch
- * (AGENTS.md). A rule that is only written down gets skipped: the trash's screens were merged unread (#460). So the review leaves a record,
- * `scripts/design-review.json`, and work that changes the admin UI without bringing one fails.
+ * Design review gate. The `design-review` agent (`.claude/agents/design-review.md`) reads every change to the admin UI before it joins a shared
+ * branch (AGENTS.md). A rule that is only written down gets skipped: the trash's screens changed after their review and were merged unread
+ * (#460). So the review leaves a record, `scripts/design-review.json`, and a commit whose admin UI is not the one on record fails.
  *
- *   node scripts/check-review.mjs [commit] [--base <ref>]   # fails if the commit's work changed the admin UI and brings no review of its own
- *   node scripts/check-review.mjs --record                  # the design-review agent's last step: records the admin UI at HEAD as read
- *   node scripts/check-review.mjs --hook                    # Claude Code PreToolUse hook (.claude/settings.json): refuses a merge of unreviewed work, and
- *                                                           # one not bound to the head it checked (`--match-head-commit`). `merge-commands.mjs` reads the command.
+ *   node scripts/check-review.mjs            # fails if the admin UI at HEAD is not what the last review read; names the range to review
+ *   node scripts/check-review.mjs <commit>   # the same for another commit (a pull request's head)
+ *   node scripts/check-review.mjs --record   # the design-review agent's last step: records the admin UI at HEAD as read
+ *   node scripts/check-review.mjs --hook     # Claude Code PreToolUse hook (.claude/settings.json): refuses a merge of an unread head, and one
+ *                                            # not bound to the head it checked (`--match-head-commit`). `merge-commands.mjs` reads the command.
  *
- * The admin UI is the files of `PATHS` without their tests (stories count: they are the states the review looks at). A commit's work is what it has since
- * it left the shared branch; on the shared branch it is the one commit (a squash merge). The record holds the hash of the admin UI the review read and the
- * commit it read it at.
+ * The admin UI is the files of `PATHS` without their tests (stories count: they are the states the review looks at). The record holds one hash
+ * of those files' paths and contents, so a commit that only adds the record, or changes other code, keeps it valid, and a squash merge
+ * carries it to the shared branch.
  *
- * One review for a piece of work (2026-11-11, owner). It ran after every change before: what the later runs found was wording and rare cases, and each fix
- * asked for another run. So what changes after the review is not read again. Run it last, after the code review and the owner's look.
- *
- * It checks that a review ran on this work's code, not what the review saw or that it was the last thing done. Nothing here stops a record written without a
- * review; the agent's last step is the only place that writes one.
+ * It checks that the review ran on this code, not what the review saw. Nothing here stops a record written without a review; the agent's last
+ * step is the only place that writes one.
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -66,20 +64,11 @@ function recordAt(commit) {
 	return typeof record?.tree === "string" ? record : UNREADABLE;
 }
 
-/** The shared branches work leaves from and is merged into, nearest first. `--base <ref>` or `REVIEW_BASE` names another. */
-const BASES = ["origin/overhaul", "origin/main"];
-const exists = (ref) => attempt(() => git("rev-parse", "-q", "--verify", `${ref}^{commit}`).trim());
-const baseOf = (given) => given ?? process.env.REVIEW_BASE ?? BASES.find(exists);
-
-/**
- * Where a commit's own work starts: where it left the shared branch (a pull request's head), or its parent when it is on the shared branch itself (the squash
- * a pull request was merged as, `merged`). No start for a first commit.
- */
-function startOf(commit, base) {
-	const parent = exists(`${commit}^`);
-	const fork = base && attempt(() => git("merge-base", commit, base).trim());
-	if (!fork || fork === exists(commit)) return { start: parent, merged: true };
-	return { start: fork, merged: false };
+/** The commit the record was last written in, when its admin UI is still the one on record (a hand edit or a shallow clone has none). */
+function reviewedCommit(commit, record) {
+	const base = attempt(() => git("log", "-1", "--format=%H", commit, "--", RECORD).trim());
+	if (!base || !record || record === UNREADABLE || hashOf(filesAt(base)) !== record.tree) return undefined;
+	return base;
 }
 
 function changedSince(base, files) {
@@ -88,53 +77,41 @@ function changedSince(base, files) {
 	return [...names].filter((name) => before.get(name) !== files.get(name)).sort();
 }
 
-/**
- * What is wrong with a commit, or undefined. A piece of work that changes the admin UI is reviewed once: it must bring a record the design review wrote
- * while reading one of its own commits. What is fixed after that review is not read again; the code reviews and the owner's look are for that.
- */
-function problemOf(commit, base) {
+/** What is wrong with a commit, or undefined when its admin UI is the one on record. */
+function problemOf(commit) {
 	const files = filesAt(commit);
 	const record = recordAt(commit);
 	if (record === UNREADABLE)
 		return `${RECORD} at ${short(commit)} is not a record (a merge conflict left in it?). Put back the one of the branch this was made from, then run the design-review agent: its last step writes the record.`;
-	const { start, merged } = startOf(commit, baseOf(base));
-	const changed = start ? changedSince(start, files) : [...files.keys()].sort();
-	if (changed.length === 0 || record?.tree === hashOf(files)) return undefined;
-	const before = start ? recordAt(start) : undefined;
-	if (record !== undefined && JSON.stringify(record) !== JSON.stringify(before)) {
-		// On the shared branch the commit that was read is gone with its branch: the squash that brought a new record is taken at its word.
-		if (merged) return undefined;
-		const read = exists(record.head);
-		const isAncestor = (older, newer) => attempt(() => git("merge-base", "--is-ancestor", older, newer)) !== undefined;
-		if (
-			read &&
-			read !== start &&
-			isAncestor(start, read) &&
-			isAncestor(read, commit) &&
-			hashOf(filesAt(read)) === record.tree
-		)
-			return undefined;
-		return `${RECORD} at ${short(commit)} is not of a commit of this work (it names ${record.head}). Run the design-review agent: its last step writes the record; commit it.`;
+	if (record?.tree === hashOf(files)) return undefined;
+	const base = reviewedCommit(commit, record);
+	const lines = [`The admin UI at ${short(commit)} has not been through a design review.`];
+	if (base) {
+		const changed = changedSince(base, files);
+		lines.push(`${changed.length} file(s) changed since the review on record (${short(base)}):`);
+		for (const name of changed.slice(0, 12)) lines.push(`  ${name}`);
+		if (changed.length > 12) lines.push(`  … and ${changed.length - 12} more`);
+		lines.push(
+			`Run the design-review agent on ${short(base)}..${short(commit)}. Its last step writes the record; commit it.`,
+		);
+	} else {
+		lines.push(
+			record
+				? "The record does not match the commit it was written in, so the range is not known: review the whole pull request."
+				: `There is no ${RECORD} yet: the first review writes it.`,
+			"Run the design-review agent. Its last step writes the record; commit it.",
+		);
 	}
-	const lines = [
-		`The admin UI at ${short(commit)} has not been through a design review: ${changed.length} file(s) changed${start ? ` since ${short(start)}` : ""} and the work brings no record.`,
-	];
-	for (const name of changed.slice(0, 12)) lines.push(`  ${name}`);
-	if (changed.length > 12) lines.push(`  … and ${changed.length - 12} more`);
-	lines.push(
-		"Run the design-review agent once on this work, after the code review and the owner's look. Its last step writes the record; commit it.",
-		"What changes after that review does not need another.",
-	);
 	return lines.join("\n");
 }
 
-function check(commit, base) {
-	const problem = problemOf(commit, base);
+function check(commit) {
+	const problem = problemOf(commit);
 	if (problem) {
 		console.error(problem);
 		process.exit(1);
 	}
-	console.log(`check-review: the admin UI at ${short(commit)} has had its design review.`);
+	console.log(`check-review: the admin UI at ${short(commit)} is the one the design review read.`);
 }
 
 function record() {
@@ -143,9 +120,13 @@ function record() {
 		console.error(`Commit these first: the review reads commits, and the record is of HEAD.\n${dirty}`);
 		process.exit(1);
 	}
-	const next = { tree: hashOf(filesAt("HEAD")), head: short("HEAD"), date: new Date().toISOString().slice(0, 10) };
+	const before = recordAt("HEAD");
+	const base = reviewedCommit("HEAD", before);
+	const files = filesAt("HEAD");
+	const next = { tree: hashOf(files), head: short("HEAD"), date: new Date().toISOString().slice(0, 10) };
 	writeFileSync(path.join(root, RECORD), `${JSON.stringify(next, null, "\t")}\n`);
-	console.log(`check-review: recorded the admin UI at ${next.head} as read. Commit ${RECORD}.`);
+	const since = base ? `${changedSince(base, files).length} file(s) since ${short(base)}` : "the whole tree";
+	console.log(`check-review: recorded the admin UI at ${next.head} as read (${since}). Commit ${RECORD}.`);
 }
 
 /** `owner/name` of a GitHub address, in small letters: a pull request's page, or a remote. */
@@ -183,14 +164,7 @@ function hook() {
 			const view = JSON.parse(
 				execFileSync(
 					"gh",
-					[
-						"pr",
-						"view",
-						merge.pull,
-						...(merge.repo ? ["--repo", merge.repo] : []),
-						"--json",
-						"headRefOid,url,baseRefName",
-					],
+					["pr", "view", merge.pull, ...(merge.repo ? ["--repo", merge.repo] : []), "--json", "headRefOid,url"],
 					{ cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
 				),
 			);
@@ -199,14 +173,12 @@ function hook() {
 			if (own && repoOf(view.url) !== own) continue;
 			const head = view.headRefOid;
 			if (attempt(() => git("cat-file", "-e", `${head}^{commit}`)) === undefined) git("fetch", "-q", "origin", head);
-			// The branch it is merged into, as it is now: the pull request's own work is what it has since it left that branch.
-			git("fetch", "-q", "origin", view.baseRefName);
-			const problem = problemOf(head, `origin/${view.baseRefName}`);
+			const problem = problemOf(head);
 			if (problem) refuse(problem);
 			// The head can move between this check and the merge: GitHub refuses the merge when it has.
 			if (merge.head !== head)
 				refuse(
-					`${short(head)} has had its design review. Bind the merge to it, so that what was checked is what is merged:\n  --match-head-commit ${head}`,
+					`The design review has read ${short(head)}. Bind the merge to it, so that what was checked is what is merged:\n  --match-head-commit ${head}`,
 				);
 		}
 	} catch (error) {
@@ -214,10 +186,7 @@ function hook() {
 	}
 }
 
-const args = process.argv.slice(2);
-const baseAt = args.indexOf("--base");
-const base = baseAt === -1 ? undefined : args.splice(baseAt, 2)[1];
-const [mode] = args;
+const [mode] = process.argv.slice(2);
 if (mode === "--record") record();
 else if (mode === "--hook") hook();
-else check(mode ?? "HEAD", base);
+else check(mode ?? "HEAD");
