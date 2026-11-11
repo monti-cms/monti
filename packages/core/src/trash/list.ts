@@ -23,8 +23,10 @@ export const TrashQuery = z.object({
 	search: z.string().default(""),
 	/** Collections to keep, and `media` for the library's files and folders; none keeps every kind. */
 	kinds: z.array(z.string()).default([]),
-	/** By when they were thrown away. */
-	sort: z.enum(["newest", "oldest"]).default("newest"),
+	/** Languages to keep: entries with one of them in the trash. Folders and files have no language, so a language leaves them out. */
+	locales: z.array(z.string()).default([]),
+	/** By the days left (the most left is what was thrown away last) or by title. */
+	sort: z.object({ by: z.enum(["left", "title"]), dir: z.enum(["asc", "desc"]) }).default({ by: "left", dir: "desc" }),
 	page: z.number().int().min(1).default(1),
 	pageSize: z.number().int().min(1).max(500).default(50),
 });
@@ -60,8 +62,10 @@ export type TrashRow = TrashRef & {
 export type TrashList = {
 	rows: TrashRow[];
 	total: number;
-	/** How many rows each kind has here, for the kind menu: by collection, and `media`. */
+	/** How many rows each kind has here, for the kind menu: by collection, and `media`. Of the languages asked for, when some are. */
 	counts: Record<string, number>;
+	/** How many entries have each language in the trash here, for the language menu. Of the kinds asked for, when some are. */
+	locales: Record<string, number>;
 	/** The open folder, with the thrown-away folders above it. */
 	place: {
 		id: string;
@@ -114,16 +118,18 @@ function rowsSql(where: {
 	const like = pattern(where.search);
 	const found = (columns: RawBuilder<unknown>) => (where.search === "" ? sql<boolean>`true` : columns);
 	return sql`(
-		select 'entry'::text as kind, e.id, e.collection as type, e.trashed_at, e.title
+		select 'entry'::text as kind, e.id, e.collection as type, e.trashed_at, e.title, (
+				select array_agg(t.locale) from entries t
+				where t.translation_group = e.translation_group and t.trashed_at is not null) as locales
 			from entries e where e.trashed_at is not null and not ${shownByAnother(where.source)} and ${place("e.folder_id")}
 			and ${found(sql`(e.slug ilike ${like} or exists (
 				select 1 from entries t
 				where t.translation_group = e.translation_group and t.trashed_at is not null and t.title ilike ${like}))`)}
 		union all
-		select 'folder'::text, f.id, coalesce(f.collection, ${MEDIA_KIND}::text), f.trashed_at, f.name
+		select 'folder'::text, f.id, coalesce(f.collection, ${MEDIA_KIND}::text), f.trashed_at, f.name, null::text[]
 			from folders f where f.trashed_at is not null and ${place("f.parent_id")} and ${found(sql`f.name ilike ${like}`)}
 		union all
-		select 'media'::text, m.id, ${MEDIA_KIND}::text, m.trashed_at, m.name
+		select 'media'::text, m.id, ${MEDIA_KIND}::text, m.trashed_at, m.name, null::text[]
 			from media m where m.trashed_at is not null and ${place("m.folder_id")} and ${found(sql`m.name ilike ${like}`)}
 	)`;
 }
@@ -170,15 +176,22 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 		inside: open && searching && query.scope === "here" ? await foldersUnder(db, open.id) : null,
 	});
 
+	// Each menu counts under the other's choice, so a number is what ticking its row would show.
+	const ofKinds = query.kinds.length > 0 ? sql<boolean>`type in (${list(query.kinds)})` : sql<boolean>`true`;
+	const ofLocales =
+		query.locales.length > 0 ? sql<boolean>`locales && array[${list(query.locales)}]::text[]` : sql<boolean>`true`;
 	const counted = await sql<{ type: string; count: string }>`
-		select type, count(*) as count from ${found} as found group by type`.execute(db);
+		select type, count(*) as count from ${found} as found where ${ofLocales} group by type`.execute(db);
 	const counts = Object.fromEntries(counted.rows.map((row) => [row.type, Number(row.count)]));
-	const kinds = query.kinds.length > 0 ? sql`where type in (${list(query.kinds)})` : sql``;
+	const spoken = await sql<{ locale: string; count: string }>`
+		select locale, count(*) as count from ${found} as found, unnest(found.locales) as locale
+		where ${ofKinds} group by locale`.execute(db);
 	const total = query.kinds.length > 0 ? query.kinds.reduce((sum, kind) => sum + (counts[kind] ?? 0), 0) : sum(counts);
-	const order = query.sort === "newest" ? sql`desc` : sql`asc`;
+	const dir = query.sort.dir === "desc" ? sql`desc` : sql`asc`;
+	const order = query.sort.by === "title" ? sql`title ${dir}, id` : sql`trashed_at ${dir}, id`;
 	const page = await sql<{ kind: TrashRef["kind"]; id: string }>`
-		select kind, id from ${found} as found ${kinds}
-		order by trashed_at ${order}, id
+		select kind, id from ${found} as found where ${ofKinds} and ${ofLocales}
+		order by ${order}
 		limit ${query.pageSize} offset ${(query.page - 1) * query.pageSize}`.execute(db);
 
 	const ids = (kind: TrashRef["kind"]) => page.rows.filter((row) => row.kind === kind).map((row) => row.id);
@@ -345,6 +358,7 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 		rows: page.rows.flatMap((row) => rows.get(`${row.kind}:${row.id}`) ?? []),
 		total,
 		counts,
+		locales: Object.fromEntries(spoken.rows.map((row) => [row.locale, Number(row.count)])),
 		place: open?.trashed_at
 			? {
 					id: open.id,

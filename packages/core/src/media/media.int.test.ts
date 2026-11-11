@@ -298,6 +298,7 @@ describe("browsing", () => {
 		const sorted = { sort: "name" };
 		expect(await names({ folder: assets, ...sorted })).toEqual(["here.jpg"]);
 		expect(await names({ folder: assets, kinds: ["image"], ...sorted })).toEqual(["deep.jpg", "here.jpg"]);
+		expect(await names({ folder: assets, kinds: ["image"], ...sorted, dir: "desc" })).toEqual(["here.jpg", "deep.jpg"]);
 		expect(await names({ folder: assets, used: ["unused"], ...sorted })).toEqual(["deep.jpg", "here.jpg"]);
 		expect(await names({ folder: assets, scope: "all", kinds: ["image"], ...sorted })).toEqual([
 			"deep.jpg",

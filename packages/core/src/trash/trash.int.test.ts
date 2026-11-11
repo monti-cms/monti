@@ -258,7 +258,20 @@ describe("the list", () => {
 		const all = await titles();
 		expect([all[0], all[3]]).toEqual(["winter-01.jpg", "시리즈 원고"]);
 		expect([...all].sort()).toEqual(["react", "winter-01.jpg", "시리즈 원고", "연습장"].sort());
-		expect((await titles({ sort: "oldest" }))[0]).toBe("시리즈 원고");
+		expect((await titles({ sort: { by: "left", dir: "asc" } }))[0]).toBe("시리즈 원고");
+		// By title, both ways.
+		const byTitle = await titles({ sort: { by: "title", dir: "asc" } });
+		expect(byTitle.indexOf("react")).toBeLessThan(byTitle.indexOf("winter-01.jpg"));
+		expect(await titles({ sort: { by: "title", dir: "desc" } })).toEqual([...byTitle].reverse());
+		// By language: entries with it in the trash; folders and files have none. Each menu's numbers are under the other's choice.
+		expect(await list({ locales: ["ko"] })).toMatchObject({
+			total: 2,
+			counts: { post: 1, tag: 1 },
+			locales: { ko: 2 },
+		});
+		expect((await titles({ locales: ["ko"] })).sort()).toEqual(["react", "연습장"].sort());
+		expect(await list({ locales: ["en"] })).toMatchObject({ total: 0, rows: [], counts: {} });
+		expect((await list({ kinds: ["tag"] })).locales).toEqual({ ko: 1 });
 		expect((await list()).counts).toEqual({ post: 2, tag: 1, media: 1 });
 		expect(await titles({ kinds: ["media", "tag"] })).toEqual(["winter-01.jpg", "react"]);
 		expect((await list({ kinds: ["media"] })).total).toBe(1);
@@ -325,6 +338,12 @@ describe("restoring", () => {
 
 		// The source followed: one row for the entry, and the translation's days start again with it.
 		expect(await list()).toMatchObject({ total: 1, rows: [{ id: source, locales: ["ko", "en"], daysLeft: 30 }] });
+		// The row is found by either of its languages.
+		expect(await list({ locales: ["en"] })).toMatchObject({
+			total: 1,
+			rows: [{ id: source }],
+			locales: { ko: 1, en: 1 },
+		});
 		expect((await read<TrashedEntry>("trash.get", { id: english })).locales.map((each) => each.locale)).toEqual([
 			"en",
 			"ko",

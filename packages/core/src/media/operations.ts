@@ -254,6 +254,8 @@ const Query = z.object({
 	only: z.enum(["image", "file"]).optional(),
 	used: z.array(z.enum(["used", "unused"])).default([]),
 	sort: z.enum(["uploaded", "name", "size"]).default("uploaded"),
+	/** Left out, the way each is first looked for: names from A, the largest and the newest first. */
+	dir: z.enum(["asc", "desc"]).optional(),
 	page: z.number().int().positive().default(1),
 	/** How many files a page holds. The library's screen keeps to pages of 100; a window that loads more asks for more. */
 	pageSize: z.number().int().min(1).max(MEDIA_QUERY_MOST).default(MEDIA_PAGE_SIZE),
@@ -298,12 +300,10 @@ export const mediaOperations = [
 					input.used[0] === "used" ? sql<boolean>`${usesCount} > 0` : sql<boolean>`${usesCount} = 0`,
 				);
 			const { total } = await filtered.select(sql<number>`count(*)::int`.as("total")).executeTakeFirstOrThrow();
-			const ordered =
-				input.sort === "name"
-					? filtered.orderBy("name")
-					: input.sort === "size"
-						? filtered.orderBy("size", "desc")
-						: filtered.orderBy("uploaded_at", "desc");
+			const ordered = filtered.orderBy(
+				input.sort === "name" ? "name" : input.sort === "size" ? "size" : "uploaded_at",
+				input.dir ?? (input.sort === "name" ? "asc" : "desc"),
+			);
 			const rows = await ordered
 				.select(COLUMNS)
 				.select(usesCount.as("uses"))
