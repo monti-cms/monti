@@ -133,7 +133,7 @@ function TableRow({
 
 /** What keeps its own press on a row: the controls, and what holds them. */
 const OWN_PRESS =
-	"a, button, input, select, textarea, label, [role=checkbox], [data-slot=row-check], [data-slot=row-actions]";
+	"a, button, input, select, textarea, label, [role=button], [role=checkbox], [contenteditable=true], [data-slot=row-check], [data-slot=row-actions]";
 
 /**
  * A row's link covers the row, and some of the row stands over the link so the pointer can find it: a cell's words that say themselves whole when pointed at, a
