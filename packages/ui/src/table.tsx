@@ -2,7 +2,7 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import type * as React from "react";
+import * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
@@ -109,6 +109,7 @@ function TableRow({
 	/** The row has a second line under its title (a template's sections): 16px above and below instead of 10. */
 	twoLine?: boolean;
 }) {
+	const { onClick } = props;
 	return (
 		<tr
 			data-slot="table-row"
@@ -122,8 +123,31 @@ function TableRow({
 				className,
 			)}
 			{...props}
+			onClick={(event) => {
+				onClick?.(event);
+				if (!event.defaultPrevented) openFromOver(event);
+			}}
 		/>
 	);
+}
+
+/** What keeps its own press on a row: the controls, and what holds them. */
+const OWN_PRESS =
+	"a, button, input, select, textarea, label, [role=checkbox], [data-slot=row-check], [data-slot=row-actions]";
+
+/**
+ * A row's link covers the row, and some of the row stands over the link so the pointer can find it: a cell's words that say themselves whole when pointed at, a
+ * tooltip's trigger. A press there still opens the row: it is passed on to the link, with the keys held (a new tab).
+ */
+function openFromOver(event: React.MouseEvent<HTMLTableRowElement>) {
+	const row = event.currentTarget;
+	const link = row.querySelector<HTMLElement>("[data-slot=row-link]");
+	const pressed = event.target;
+	// A press in a menu the row opened reaches the row through React, not through the page: it is not a press on the row.
+	if (!link || !(pressed instanceof Element) || !row.contains(pressed)) return;
+	if (link.contains(pressed) || pressed.closest(OWN_PRESS)) return;
+	const { metaKey, ctrlKey, shiftKey, altKey } = event;
+	link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, metaKey, ctrlKey, shiftKey, altKey }));
 }
 
 /**
@@ -248,6 +272,7 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 function RowTitle({
 	title,
 	address,
+	addressTitle,
 	folder = false,
 	thumb,
 	editing = false,
@@ -257,6 +282,8 @@ function RowTitle({
 	title: React.ReactNode;
 	/** After the title: `/first-post`, or what a folder holds ("글 2"). (cms-allow-korean: quotes the words) */
 	address?: React.ReactNode;
+	/** The address in words, when `address` is more than a string: what it says when it is cut and pointed at. */
+	addressTitle?: string;
 	/** The row is a folder: its icon leads the line. */
 	folder?: boolean;
 	/** A {@link RowThumb} leading the line. */
@@ -277,10 +304,10 @@ function RowTitle({
 				<span className={cn("min-w-0 text-monti-body text-monti-default", !editing && "truncate")}>{title}</span>
 			</span>
 			{address && (
-				// It is cut before the title is, so it says itself whole when pointed at.
+				// It is cut before the title is, so it says itself whole when pointed at: it stands over the row's link for the pointer to find it.
 				<span
-					title={typeof address === "string" ? address : undefined}
-					className="min-w-0 shrink-[999] truncate font-mono text-monti-faint text-monti-meta"
+					title={addressTitle ?? (typeof address === "string" ? address : undefined)}
+					className="relative z-1 min-w-0 shrink-[999] truncate font-mono text-monti-faint text-monti-meta"
 				>
 					{address}
 				</span>
@@ -353,12 +380,15 @@ function TableCell({
 	tone,
 	filler,
 	style,
+	title,
+	children,
 	...props
 }: Omit<React.ComponentProps<"td">, "align"> & CellOptions) {
 	return (
 		<td
 			data-slot="table-cell"
 			data-truncate={truncate || undefined}
+			title={title}
 			className={cn(
 				// Its pieces sit on the middle of the line, not on their letters' baselines: pieces of two sizes on one baseline (a chip, a title) would
 				// make the line taller than either, and the row 2px taller than the design system's 42.
@@ -366,8 +396,12 @@ function TableCell({
 				ALIGN[align],
 				// The row's check hangs in the left margin, so its cell does not clip. In a row with a link the cells are static and the check stands on the row
 				// itself: there the cell clips as any other, and a first column dragged narrow keeps its words in.
+				// A piece of it that can shrink (a status, its mark kept) shrinks to the cell.
 				truncate &&
-					"max-w-0 truncate has-[[data-slot=row-check]]:overflow-visible group-has-data-[slot=row-link]/row:has-[[data-slot=row-check]]:overflow-hidden",
+					"max-w-0 truncate *:max-w-full has-[[data-slot=row-check]]:overflow-visible group-has-data-[slot=row-link]/row:has-[[data-slot=row-check]]:overflow-hidden",
+				// With a `title` it says its value whole when pointed at. A row's link covers the row, so the cell's pieces stand over the link for the
+				// pointer to find them; a press on them still opens the row (`TableRow`).
+				title !== undefined && "[&>:not([data-slot=row-check])]:relative [&>:not([data-slot=row-check])]:z-1",
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top *:align-top",
 				wrap && "whitespace-normal break-words",
@@ -378,7 +412,14 @@ function TableCell({
 			)}
 			style={size === undefined ? style : { ...style, width: size }}
 			{...props}
-		/>
+		>
+			{title === undefined
+				? children
+				: // Bare words cannot stand over anything: they get a box of their own.
+					React.Children.map(children, (child) =>
+						typeof child === "string" || typeof child === "number" ? <span>{child}</span> : child,
+					)}
+		</td>
 	);
 }
 

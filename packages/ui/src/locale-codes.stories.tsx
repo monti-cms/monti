@@ -71,7 +71,7 @@ export const Pointed: Story = {
 export const Cut: Story = {
 	args: { codes: ["zh-hans", "en"], names: "중국어(간체), 영어" },
 	render: (args) => (
-		<TooltipProvider>
+		<TooltipProvider delay={0}>
 			<Table layout="fixed" columns={[60, undefined]}>
 				<TableBody>
 					<TableRow>
@@ -84,4 +84,10 @@ export const Cut: Story = {
 			</Table>
 		</TooltipProvider>
 	),
+	play: async ({ canvasElement }) => {
+		const cell = canvasElement.querySelector('[data-slot="locale-codes"]');
+		if (!cell) throw new Error("No language cell.");
+		await userEvent.hover(cell);
+		await within(document.body).findByRole("tooltip");
+	},
 };

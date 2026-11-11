@@ -52,8 +52,9 @@ function EntryStatus({
 			data-slot="entry-status"
 			data-status={status}
 			className={cn(
-				// In a column dragged narrow the name ends in "…" and the mark stays.
-				"inline-flex min-w-0 max-w-full items-center gap-[7px] whitespace-nowrap text-monti-label",
+				// Whole wherever it stands in a row of things (`shrink-0`). Only a table cell that cuts its words bounds it: there the name ends in "…" and the
+				// mark stays.
+				"inline-flex shrink-0 items-center gap-[7px] whitespace-nowrap text-monti-label",
 				quiet ? "font-normal text-monti-subtle" : COLOR[status],
 				className,
 			)}
