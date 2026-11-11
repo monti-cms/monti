@@ -135,8 +135,8 @@ function TableRow({
 			}}
 			onMouseDown={(event) => {
 				onMouseDown?.(event);
-				// The middle button held on what is not a link starts the browser's own scrolling on Windows and Linux: here it opens the row's link.
-				if (event.button === 1 && overLink(event)) event.preventDefault();
+				// The middle button held on what is not a link starts the browser's own scrolling on Windows and Linux: here it opens the row's address.
+				if (event.button === 1 && addressOf(overLink(event))) event.preventDefault();
 			}}
 		/>
 	);
@@ -147,6 +147,9 @@ const OWN_PRESS =
 	"a, button, input, select, textarea, label, summary, [role=button], [role=link], [role=checkbox], [role=radio], [role=switch], [role=tab], [role=option], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=combobox], [role=textbox], [role=slider], [contenteditable=true], [data-slot=row-check], [data-slot=row-actions]";
 
 let passingOn = false;
+
+/** Where a row's link goes, when it is a link with an address: a row that opens a panel (a button) has none for a new tab. */
+const addressOf = (link: HTMLElement | null) => (link instanceof HTMLAnchorElement && link.href ? link.href : null);
 
 /** The row's link, when the press was on something of the row that stands over it and has no press of its own. */
 function overLink(event: React.MouseEvent<HTMLTableRowElement>): HTMLElement | null {
@@ -167,8 +170,8 @@ function openFromOver(event: React.MouseEvent<HTMLTableRowElement>) {
 	const link = overLink(event);
 	if (!link) return;
 	if (event.type === "auxclick") {
-		if (event.button === 1 && link instanceof HTMLAnchorElement && link.href)
-			window.open(link.href, "_blank", "noopener");
+		const address = addressOf(link);
+		if (event.button === 1 && address) window.open(address, "_blank", "noopener");
 		return;
 	}
 	const { metaKey, ctrlKey, shiftKey, altKey } = event;

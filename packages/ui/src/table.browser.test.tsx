@@ -105,6 +105,15 @@ describe("Table rows with a link", () => {
 		expect(String(tab.mock.calls[0]?.[0])).toMatch(/#\/first$/);
 		expect(opened).toHaveBeenCalledTimes(2);
 
+		// The middle button held there does not start the browser's own scrolling: the row has an address to open.
+		const held = (on: Element) => {
+			const press = new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 1 });
+			on.dispatchEvent(press);
+			return press.defaultPrevented;
+		};
+		expect(held(page.getByText("개발").element())).toBe(true);
+		expect(held(page.getByRole("button", { name: "더 보기", exact: true }).element())).toBe(false);
+
 		await userEvent.click(page.getByRole("button", { name: "더 보기", exact: true }));
 		await userEvent.click(page.getByRole("checkbox", { name: "첫 번째 글 고르기" }), { force: true });
 		expect(opened).toHaveBeenCalledTimes(2);
@@ -149,5 +158,30 @@ describe("Table rows with a link", () => {
 		expect(box("CMS elements: details").getBoundingClientRect().right).toBeLessThanOrEqual(
 			cell.getBoundingClientRect().right,
 		);
+	});
+
+	it("a row that opens a panel has no address: the middle button there is left to the browser", async () => {
+		const tab = vi.spyOn(window, "open").mockReturnValue(null);
+		render(
+			<Table container="none" layout="fixed" columns={[undefined, 84]}>
+				<TableBody>
+					<TableRow>
+						<TableCell truncate>
+							<RowTitle title={<RowLink render={<button type="button" />}>임시</RowLink>} />
+						</TableCell>
+						<TableCell tone="subtle" truncate title="태그">
+							태그
+						</TableCell>
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		await expect.element(page.getByText("태그")).toBeVisible();
+		const press = new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 1 });
+		page.getByText("태그").element().dispatchEvent(press);
+		expect(press.defaultPrevented).toBe(false);
+		await userEvent.click(page.getByText("태그"), { button: "middle" });
+		expect(tab).not.toHaveBeenCalled();
+		tab.mockRestore();
 	});
 });
