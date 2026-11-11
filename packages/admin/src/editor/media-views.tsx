@@ -636,7 +636,9 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const [spoken, setSpoken] = useState<string>();
 	const box = useRef<HTMLDivElement>(null);
 	const bar = useRef<HTMLDivElement>(null);
-	const editable = editor.isEditable;
+	// From the body, not from the editor: a block already drawn is not drawn again when the editor is switched to read-only (an entry archived with a
+	// picture picked kept its tools, and they worked), and the body's word reaches it.
+	const editable = media ? !media.readOnly : editor.isEditable;
 	const open = media?.card === blockId;
 	const align = imageAlignOf(data.align);
 
@@ -948,7 +950,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 	return (
 		<NodeViewWrapper data-block="file">
 			<BlockBox>
-				{selected && editor.isEditable && (
+				{selected && (media ? !media.readOnly : editor.isEditable) && (
 					<BlockBarPlace>
 						<FloatingBar ref={bar}>
 							<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>

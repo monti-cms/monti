@@ -1106,6 +1106,24 @@ describe("a file cut off, then the entry archived", () => {
 	});
 });
 
+describe("a picture picked, then the entry archived", () => {
+	it("02-6 a picture that is picked when its entry is archived loses its tools at once: only the settings stay, and nothing moves or sizes it", async () => {
+		const image = () => body().getByRole("img", { name: "아침 책상" });
+		const bar = () => body().getByRole("toolbar");
+		await WithImage.run();
+		await userEvent.click(image());
+		await expect.element(bar().getByRole("button", { name: "편집" })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "더 보기", exact: true }));
+		await userEvent.click(page.getByRole("menuitem", { name: "보관", exact: true }));
+		await expect.element(page.getByRole("button", { name: "보관 풀기" })).toBeVisible();
+		// No press in the body since: the picture is still the one picked.
+		await expect.element(bar().getByRole("button", { name: "설정" })).toBeVisible();
+		await expect.element(bar().getByRole("button", { name: "편집" })).not.toBeInTheDocument();
+		await expect.element(bar().getByRole("button", { name: "가운데 정렬" })).not.toBeInTheDocument();
+		await expect.element(body().getByRole("button", { name: /크기 바꾸기/ })).not.toBeInTheDocument();
+	});
+});
+
 describe("a save the server refuses", () => {
 	it("09-4 the reason shows, not an entry left unsaved with no word", async () => {
 		const [load] = media.FileInBody.loaders as [() => Promise<{ site: StorySite }>];
