@@ -13,7 +13,7 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * Empty, chosen, proposed and following another value's file, beside an input of the same size so the lines read as one form. The read-only one (an archived
- * entry) is the name to read: no hand, no tint under the pointer, nothing to press.
+ * entry) is the name to read: no hand, no tint under the pointer, no ×. Its settings stay, to read what the entry says of the picture.
  */
 export const States: Story = {
 	render: () => (
@@ -67,7 +67,17 @@ export const States: Story = {
 			</FormField>
 			<FormField>
 				<FormFieldLabel htmlFor="cover-read">읽기 전용</FormFieldLabel>
-				<MediaInput id="cover-read" size="sm" value={{ name: "cover-react.png" }} readOnly />
+				<MediaInput
+					id="cover-read"
+					size="sm"
+					value={{ name: "cover-react.png" }}
+					readOnly
+					action={
+						<IconButton label="설정">
+							<Settings aria-hidden />
+						</IconButton>
+					}
+				/>
 			</FormField>
 			<FormField>
 				<FormFieldLabel htmlFor="cover-ai">공유 이미지</FormFieldLabel>

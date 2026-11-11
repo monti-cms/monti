@@ -28,7 +28,7 @@ until the rebuild reaches it.
 pnpm install            # install
 pnpm lint               # lint (fix with pnpm lint:fix)
 pnpm check:design       # admin UI rules (docs/design/admin)
-pnpm check:review       # the admin UI is the one the design review read
+pnpm check:review       # work that changes the admin UI has had its design review
 pnpm check:operations   # the feature docs and the code name the same operations
 pnpm typecheck          # type check all packages
 pnpm build              # build all packages

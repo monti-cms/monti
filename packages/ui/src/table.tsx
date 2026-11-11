@@ -96,8 +96,7 @@ function TableBody({
  * row of a table that opens nothing takes none. Whatever the row, it keeps that background while its own menu is open (a right click, or its ⋯), so it is
  * plain which row the menu belongs to. A picked row stays as it is.
  *
- * `dropTarget` is the row files are dragged over (a folder's row in the media list): a tint and a 1.5px ink line with rounded corners over the row, as a
- * folder tile's mark and the drop area's.
+ * `dropTarget` is the row files are dragged over (a folder's row in the media list): the selected background and a 1.5px ink line inside it, as a folder tile's.
  */
 function TableRow({
 	className,
@@ -128,10 +127,8 @@ function TableRow({
 				props.onClick && "cursor-pointer not-data-selected:hover:bg-monti-muted",
 				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted not-data-selected:has-[[data-slot=row-link]:focus-visible]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
 				twoLine && "[&>td]:py-monti-16",
-				// A table row takes no corners of its own, so the mark is drawn over the row from its first cell: the drop area's tint and ink line, with a folder
-				// tile's corners.
-				dropTarget &&
-					"[&>td:first-child]:before:pointer-events-none [&>td:first-child]:before:absolute [&>td:first-child]:before:inset-0 [&>td:first-child]:before:z-1 [&>td:first-child]:before:rounded-monti-md [&>td:first-child]:before:bg-[color-mix(in_srgb,var(--monti-fg-default)_7%,var(--monti-bg-page))] [&>td:first-child]:before:mix-blend-multiply monti-dark:[&>td:first-child]:before:mix-blend-screen [&>td:first-child]:before:ring-[1.5px] [&>td:first-child]:before:ring-monti-contrast [&>td:first-child]:before:ring-inset [&>td:first-child]:before:content-[''] [&>td]:static",
+				// An outline, not a ring: a table row draws no shadow of its own, and takes no rounded corners either (2026-11-11, owner: left square).
+				dropTarget && "bg-monti-selected! outline-[1.5px] outline-monti-contrast -outline-offset-[1.5px]",
 				className,
 			)}
 			{...props}

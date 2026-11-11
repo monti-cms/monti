@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
@@ -50,35 +50,46 @@ function repository() {
 	return { dir, git, write, commit, run, review };
 }
 
-test("with no record the check fails and says so; the review's record makes it pass", () => {
-	const { run, review } = repository();
-	const first = run();
-	assert.equal(first.status, 1);
-	assert.match(first.stderr, /There is no scripts\/design-review\.json yet/);
+/** A piece of work on its own branch, off `main`: the check is given `main` as the shared branch. */
+function work() {
+	const made = repository();
+	made.git("checkout", "-q", "-b", "work");
+	return { ...made, check: (commit = "HEAD") => made.run([commit, "--base", "main"]) };
+}
+
+test("work that changes the admin UI and brings no record fails and names the files; the review's record makes it pass", () => {
+	const { check, review, write, commit } = work();
+	write("packages/admin/src/screens/list.tsx", "export const list = 1;\n");
+	const head = commit("a screen");
+	const failed = check();
+	assert.equal(failed.status, 1);
+	assert.match(
+		failed.stderr,
+		new RegExp(`The admin UI at ${head} has not been through a design review: 1 file\\(s\\) changed`),
+	);
+	assert.match(failed.stderr, /packages\/admin\/src\/screens\/list\.tsx/);
+	assert.match(failed.stderr, /once on this work/);
 	review();
-	assert.equal(run().status, 0);
+	assert.equal(check().status, 0);
 });
 
-test("a change to the admin UI fails it and names the range and the file; other changes do not", () => {
-	const { run, review, write, commit, git } = repository();
-	const reviewed = review();
+test("one review is enough: what changes after it passes, and so does work that never touched the admin UI", () => {
+	const { check, review, write, commit, git } = work();
+	write("packages/ui/src/one.tsx", "1\n");
+	commit("one");
+	review();
+	write("packages/ui/src/one.tsx", "1 fixed\n");
+	write("packages/ui/src/two.tsx", "2\n");
+	commit("what the reviews found");
+	assert.equal(check().status, 0);
+
+	git("checkout", "-q", "-b", "other", "main");
 	write("README.md", "changed\n");
 	write("packages/core/src/a.ts", "export {};\n");
 	write("packages/ui/src/button.test.tsx", "test\n");
 	write("packages/admin/src/__test__/site.ts", "helper\n");
 	commit("not the admin UI");
-	assert.equal(run().status, 0);
-
-	write("packages/admin/src/screens/list.tsx", "export const list = 1;\n");
-	const head = commit("a screen");
-	const failed = run();
-	assert.equal(failed.status, 1);
-	assert.match(failed.stderr, new RegExp(`1 file\\(s\\) changed since the review on record \\(${reviewed}\\)`));
-	assert.match(failed.stderr, /packages\/admin\/src\/screens\/list\.tsx/);
-	assert.match(failed.stderr, new RegExp(`on ${reviewed}\\.\\.${head}`));
-
-	// An earlier commit is checked by its own record.
-	assert.equal(run([git("rev-parse", "HEAD~1")]).status, 0);
+	assert.equal(check().status, 0);
 });
 
 test("a deleted file and a renamed one are changes", () => {
@@ -86,48 +97,60 @@ test("a deleted file and a renamed one are changes", () => {
 		(git) => git("rm", "-q", "packages/ui/src/button.tsx"),
 		(git) => git("mv", "packages/ui/src/button.tsx", "packages/ui/src/press.tsx"),
 	]) {
-		const { run, review, commit, git, write } = repository();
-		write("packages/ui/src/keep.tsx", "export const keep = 1;\n");
-		commit("another");
-		review();
+		const { check, commit, git } = work();
 		change(git);
 		commit("change");
-		assert.equal(run().status, 1);
+		assert.equal(check().status, 1);
 	}
 });
 
-test("after a second review the range starts at the second record", () => {
-	const { run, review, write, commit } = repository();
+test("the record must be of this work: one that names a commit from elsewhere, or a tree no commit of the work has, is refused", () => {
+	const { check, review, write, commit, git, dir } = work();
+	// The shared branch has a record of its own, from an earlier piece of work.
+	git("checkout", "-q", "main");
 	review();
+	git("checkout", "-q", "-b", "mine");
 	write("packages/ui/src/one.tsx", "1\n");
 	commit("one");
-	const second = review();
-	assert.equal(run().status, 0);
-	write("packages/ui/src/two.tsx", "2\n");
-	commit("two");
-	const failed = run();
-	assert.match(failed.stderr, new RegExp(`since the review on record \\(${second}\\)`));
-	assert.match(failed.stderr, /two\.tsx/);
-	assert.doesNotMatch(failed.stderr, /one\.tsx/);
+	assert.equal(check().status, 1);
+	// A record edited by hand: it changed, but it still names the shared branch's commit.
+	const record = JSON.parse(readFileSync(path.join(dir, "scripts/design-review.json"), "utf8"));
+	write("scripts/design-review.json", `${JSON.stringify({ ...record, date: "2000-01-01" })}\n`);
+	commit("a record that was not written by reading this work");
+	const failed = check();
+	assert.equal(failed.status, 1);
+	assert.match(failed.stderr, /is not of a commit of this work/);
+	// Naming a commit of the work with a tree it does not have is no better.
+	write(
+		"scripts/design-review.json",
+		`${JSON.stringify({ ...record, head: git("rev-parse", "--short", "HEAD~1") })}\n`,
+	);
+	commit("a made-up record");
+	assert.match(check().stderr, /is not of a commit of this work/);
+	review();
+	assert.equal(check().status, 0);
 });
 
-test("a squash merge carries the record: the shared branch passes, and its next range starts at the squash", () => {
-	const { run, review, write, commit, git } = repository();
-	review();
-	git("checkout", "-q", "-b", "work");
+test("on the shared branch a commit is its own work: the squash that brings a record passes, a commit that changes the admin UI without one fails", () => {
+	const { run, review, write, commit, git } = work();
 	write("packages/ui/src/one.tsx", "1\n");
 	commit("one");
 	review();
 	write("packages/ui/src/one.tsx", "1 fixed\n");
-	commit("fix");
-	review();
+	commit("fix after the review");
 	git("checkout", "-q", "main");
 	git("merge", "-q", "--squash", "work");
-	const squash = commit("squash");
+	commit("squash");
+	// No shared branch is named here: the commit is measured against its parent.
+	assert.equal(run().status, 0);
+	write("README.md", "changed\n");
+	commit("docs");
 	assert.equal(run().status, 0);
 	write("packages/ui/src/next.tsx", "next\n");
-	commit("next");
-	assert.match(run().stderr, new RegExp(`since the review on record \\(${squash}\\)`));
+	commit("pushed straight to the shared branch");
+	const failed = run();
+	assert.equal(failed.status, 1);
+	assert.match(failed.stderr, /next\.tsx/);
 });
 
 test("the record is of commits: it is not written over uncommitted admin UI", () => {
@@ -151,13 +174,17 @@ test("a record that cannot be read says so, without a stack", () => {
 });
 
 test("a path that is not ASCII is hashed the same whatever git is set to quote", () => {
-	const { run, review, write, commit, git } = repository();
+	const { run, write, commit, git, dir } = repository();
 	write("packages/ui/src/한글 부품.tsx", "export const part = 1;\n");
 	commit("a name in Korean");
+	const recorded = () => {
+		assert.equal(run(["--record"]).status, 0);
+		return JSON.parse(readFileSync(path.join(dir, "scripts/design-review.json"), "utf8")).tree;
+	};
 	git("config", "core.quotePath", "false");
-	review();
+	const plain = recorded();
 	git("config", "core.quotePath", "true");
-	assert.equal(run().status, 0);
+	assert.equal(recorded(), plain);
 });
 
 test("the hook lets other calls through, and refuses what it cannot bind or read before it asks GitHub", () => {
