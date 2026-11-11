@@ -8,6 +8,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	FileUseList,
 	FileUseRow,
 	FormField,
 	FormFieldLabel,
@@ -111,7 +112,7 @@ export function TrashedItemPanel({
 							{t("library.usesNone")}
 						</Text>
 					) : (
-						<Stack gap={4}>
+						<FileUseList>
 							{item.pointing.map((entry) => {
 								const route: Route = { screen: "entry", collection: entry.collection, id: entry.id };
 								const label = collectionLabel(entry.collection);
@@ -129,7 +130,7 @@ export function TrashedItemPanel({
 									/>
 								);
 							})}
-						</Stack>
+						</FileUseList>
 					)}
 				</FormField>
 			</Stack>

@@ -61,7 +61,7 @@
 | 상태 줄 | `DotNote` "3일 남음 · 읽기 전용" | 휴지통 화면 안이므로 "휴지통"은 되풀이하지 않는다(원칙 8). |
 | 미리보기 (미디어) | `Image`(4:3), 파일이면 `FilePreview framed` | |
 | 정보 | `DescriptionList` + `DescriptionItem` | 미디어: 폴더 · 종류 · 크기 · 올린 날. 대체 텍스트는 없다(09). 항목: 컬렉션 · 주소. 이름은 패널 제목이 이미 말하므로 되풀이하지 않는다(원칙 8). 언어가 여럿인 항목만 언어마다 이름과 주소를 적는다. 값은 글자이고 입력 부품이 아니다. 상태 줄과 그 아래 것 사이는 두 패널 모두 12px이다. |
-| "쓰는 곳 · 0" / "가리키는 글 · 4" | `FormFieldLabel`, 아래 글마다 `FileUseRow`(글 이름 링크, 끝에 컬렉션. 휴지통의 글은 "휴지통 · 게시글") | 누르면 그 글이 열린다. 없으면 `Text variant="note" tone="faint"` "없음". 많으면 패널이 스크롤한다. |
+| "쓰는 곳 · 0" / "가리키는 글 · 4" | `FormFieldLabel`, 아래 `FileUseList`에 글마다 `FileUseRow`(글 이름 링크, 끝에 컬렉션. 휴지통의 글은 "휴지통 · 게시글") | 누르면 그 글이 열린다. 없으면 `Text variant="note" tone="faint"` "없음". 많으면 패널이 스크롤한다. |
 | 발 | `SidePanel`의 `footer`: `Button variant="primary"` "복원" | 알약은 복원 하나다. |
 
 ### 창

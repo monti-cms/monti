@@ -18,6 +18,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	FilePreview,
+	FileUseList,
 	FileUseRow,
 	FormField,
 	FormFieldError,
@@ -224,7 +225,7 @@ function FileUses({ uses, go }: { uses: ReturnType<typeof useUseRows>; go: (rout
 					{t("library.usesNone")}
 				</Text>
 			) : (
-				<Stack gap={4}>
+				<FileUseList>
 					{uses.map((use) => (
 						<FileUseRow
 							key={use.key}
@@ -239,7 +240,7 @@ function FileUses({ uses, go }: { uses: ReturnType<typeof useUseRows>; go: (rout
 							}}
 						/>
 					))}
-				</Stack>
+				</FileUseList>
 			)}
 		</FormField>
 	);
