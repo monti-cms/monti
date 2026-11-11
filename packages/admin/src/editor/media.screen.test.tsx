@@ -1035,6 +1035,95 @@ describe("opening a body with files", () => {
 	});
 });
 
+describe("archiving while a file goes up", () => {
+	it("02-6 T129 archiving waits for a file still going up: it says so and archives nothing, and archives once the file is up", async () => {
+		const [load] = media.Draft.loaders as [() => Promise<{ site: StorySite }>];
+		let release: () => void = () => {};
+		const held = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const story = composeStory(
+			{
+				...media.Draft,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						const { uploader } = loaded.site;
+						loaded.site.uploader = async (file, options) => {
+							await held;
+							return uploader(file, options);
+						};
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		);
+		await story.run();
+		await userEvent.click(body());
+		await paste(await canvasFile("slow.png"));
+		await expect.element(body().getByRole("progressbar")).toBeVisible();
+		const archive = async () => {
+			await userEvent.click(page.getByRole("button", { name: "더 보기", exact: true }));
+			await userEvent.click(page.getByRole("menuitem", { name: "보관", exact: true }));
+		};
+		await archive();
+		await expect.element(page.getByText("파일을 올리는 중입니다")).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "보관 풀기" })).not.toBeInTheDocument();
+		release();
+		await expect.element(body().getByRole("progressbar")).not.toBeInTheDocument();
+		toast.dismiss();
+		await archive();
+		await expect.element(page.getByRole("button", { name: "보관 풀기" })).toBeVisible();
+	});
+});
+
+describe("a file cut off, then the entry archived", () => {
+	it("02-6 a file that was cut off stays in an archived entry's body, with no way to try it again there: nothing changes an entry that cannot be saved", async () => {
+		const [load] = media.Draft.loaders as [() => Promise<{ site: StorySite }>];
+		const story = composeStory(
+			{
+				...media.Draft,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						loaded.site.uploader = async () => ({ status: 500, body: { error: "unexpected" } });
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		);
+		await story.run();
+		await userEvent.click(body());
+		await paste(await canvasFile("cut.png"));
+		await expect.element(body().getByRole("button", { name: "다시 올리기" })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "더 보기", exact: true }));
+		await userEvent.click(page.getByRole("menuitem", { name: "보관", exact: true }));
+		await expect.element(page.getByRole("button", { name: "보관 풀기" })).toBeVisible();
+		await expect.element(body().getByText("올리기 실패")).toBeVisible();
+		await expect.element(body().getByRole("button", { name: "다시 올리기" })).not.toBeInTheDocument();
+	});
+});
+
+describe("a picture picked, then the entry archived", () => {
+	it("02-6 a picture that is picked when its entry is archived loses its tools at once: only the settings stay, and nothing moves or sizes it", async () => {
+		const image = () => body().getByRole("img", { name: "아침 책상" });
+		const bar = () => body().getByRole("toolbar");
+		await WithImage.run();
+		await userEvent.click(image());
+		await expect.element(bar().getByRole("button", { name: "편집" })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "더 보기", exact: true }));
+		await userEvent.click(page.getByRole("menuitem", { name: "보관", exact: true }));
+		await expect.element(page.getByRole("button", { name: "보관 풀기" })).toBeVisible();
+		// No press in the body since: the picture is still the one picked.
+		await expect.element(bar().getByRole("button", { name: "설정" })).toBeVisible();
+		await expect.element(bar().getByRole("button", { name: "편집" })).not.toBeInTheDocument();
+		await expect.element(bar().getByRole("button", { name: "가운데 정렬" })).not.toBeInTheDocument();
+		await expect.element(body().getByRole("button", { name: /크기 바꾸기/ })).not.toBeInTheDocument();
+	});
+});
+
 describe("a save the server refuses", () => {
 	it("09-4 the reason shows, not an entry left unsaved with no word", async () => {
 		const [load] = media.FileInBody.loaders as [() => Promise<{ site: StorySite }>];

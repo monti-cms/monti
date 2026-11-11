@@ -20,6 +20,8 @@ export type EditorMediaValue = {
 	/** The block whose settings card is open. */
 	card: string | null;
 	setCard: (blockId: string | null) => void;
+	/** The body cannot be changed (an archived entry, one in the trash). Here, so that a block already drawn hears of it when the entry is archived. */
+	readOnly: boolean;
 } & BodyFiles;
 
 export const EditorMedia = createContext<EditorMediaValue | null>(null);

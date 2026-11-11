@@ -217,6 +217,26 @@ export const ArchivedCover: Story = {
 	},
 };
 
+/** An archived entry's picture in the body, picked: its bar has only the settings, and their card's fields are read-only (T130). */
+export const ArchivedImage: Story = {
+	loaders: entry({
+		body: ({ desk }) => [{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상" } }],
+		archived: true,
+	}),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement.ownerDocument.body);
+		// A press where the picture is: the editor picks a block by where the pointer is.
+		const picture = await page.findByRole("img", { name: "아침 책상" }, wait);
+		const box = picture.getBoundingClientRect();
+		await userEvent.pointer({
+			keys: "[MouseLeft]",
+			target: picture,
+			coords: { clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 },
+		});
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+	},
+};
+
 /** A cover's settings card open, under its line and as wide as it. */
 export const CoverCard: Story = {
 	loaders: entry({ values: ({ desk }) => ({ cover: { media: desk, alt: "아침 책상" } }) }),

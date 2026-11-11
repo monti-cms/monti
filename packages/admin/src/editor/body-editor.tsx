@@ -138,10 +138,11 @@ export function BodyEditor({
 			finished: (id) => finished.current.get(id),
 			card,
 			setCard,
+			readOnly: !editable,
 			files: bodyFiles.files,
 			want: bodyFiles.want,
 		}),
-		[upload.uploads, upload.retry, upload.holds, card, bodyFiles.files, bodyFiles.want],
+		[upload.uploads, upload.retry, upload.holds, card, editable, bodyFiles.files, bodyFiles.want],
 	);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);

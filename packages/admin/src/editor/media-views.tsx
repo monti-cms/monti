@@ -150,7 +150,8 @@ function UploadInPlace({
 				meta={t("library.failed")}
 				tone="danger"
 				selected={selected}
-				action={<RetryButton onRetry={() => media.retry(upload)} />}
+				// The entry cannot be changed (archived since the file was cut off): the file stays to be tried again later, with no way to try it now.
+				action={media.readOnly ? undefined : <RetryButton onRetry={() => media.retry(upload)} />}
 			/>
 		);
 	return isImage ? (
@@ -635,7 +636,9 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const [spoken, setSpoken] = useState<string>();
 	const box = useRef<HTMLDivElement>(null);
 	const bar = useRef<HTMLDivElement>(null);
-	const editable = editor.isEditable;
+	// From the body, not from the editor: a block already drawn is not drawn again when the editor is switched to read-only (an entry archived with a
+	// picture picked kept its tools, and they worked), and the body's word reaches it.
+	const editable = media ? !media.readOnly : editor.isEditable;
 	const open = media?.card === blockId;
 	const align = imageAlignOf(data.align);
 
@@ -801,6 +804,35 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 								ratio="wide"
 							/>
 						)}
+						{selected && !editable && url && (
+							// Read-only (an archived entry, one in the trash): nothing changes the picture, but what the entry says of it can still be read. The
+							// settings card opens with its fields read-only (T130; read-only keeps the ways to read, 2026-11-11 owner).
+							<BlockBarPlace>
+								<FloatingBar ref={bar}>
+									<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
+										<FloatingBarButton
+											label={t("editor.image.settings")}
+											pressed={open}
+											trigger={(button) => <PopoverTrigger render={button} />}
+										>
+											<Settings aria-hidden />
+										</FloatingBarButton>
+										<PopoverContent anchor={bar} align="start">
+											<Stack gap={12}>
+												<AltFields
+													readOnly
+													value={data.alt ?? ""}
+													decorative={data.decorative === true}
+													onChange={() => {}}
+													onDecorative={() => {}}
+													onEnter={() => media?.setCard(null)}
+												/>
+											</Stack>
+										</PopoverContent>
+									</Popover>
+								</FloatingBar>
+							</BlockBarPlace>
+						)}
 						{selected && editable && url && (
 							<>
 								<BlockBarPlace>
@@ -918,7 +950,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 	return (
 		<NodeViewWrapper data-block="file">
 			<BlockBox>
-				{selected && editor.isEditable && (
+				{selected && (media ? !media.readOnly : editor.isEditable) && (
 					<BlockBarPlace>
 						<FloatingBar ref={bar}>
 							<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>

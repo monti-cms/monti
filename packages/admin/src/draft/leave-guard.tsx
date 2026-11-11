@@ -19,6 +19,8 @@ const Context = createContext<{
 	add: (guard: Guard) => () => void;
 	/** `filesOnly`: a step that keeps the draft but ends what goes up. It asks only about the files, and drops only them. */
 	leave: (go: () => void, filesOnly?: boolean) => void;
+	/** How many files are still going up on the screens that are open. */
+	uploads: () => number;
 } | null>(null);
 
 /**
@@ -60,6 +62,7 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 				if (changes + now.uploads === 0) go();
 				else setAsking({ go, filesOnly, changes, uploads: now.uploads });
 			},
+			uploads: () => held().uploads,
 		}),
 		[held],
 	);
@@ -112,6 +115,12 @@ export function useLeave() {
 export function useLeaveFiles() {
 	const context = useContext(Context);
 	return useCallback((go: () => void) => (context ? context.leave(go, true) : go()), [context]);
+}
+
+/** How many files are still going up, asked at the moment of an action that must wait for them (archiving an entry). */
+export function useUploadsGoing() {
+	const context = useContext(Context);
+	return useCallback(() => context?.uploads() ?? 0, [context]);
 }
 
 /** Keeps the person from leaving this screen's unsaved changes, or its files still going up, by mistake. */
