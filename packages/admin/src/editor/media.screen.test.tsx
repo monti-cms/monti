@@ -1012,17 +1012,12 @@ describe("opening a body with files", () => {
 		const fileBlocks = () => body().element().querySelectorAll("[data-block=file]");
 		const [first] = fileBlocks();
 		if (!first) throw new Error("no file block");
-		// Picked whole, then Backspace. On a busy machine the pick is sometimes lost before the key lands (the caret goes to the start of the body, T126): this
-		// test is about what the block reads when it comes back, so it picks again until the block is gone. The file block's own test (flow 6·38) keeps to one press.
-		await expect
-			.poll(async () => {
-				if (fileBlocks().length === 0) return 0;
-				await userEvent.click(page.elementLocator(first));
-				await expect.element(body()).toHaveFocus();
-				if (first.closest(".ProseMirror-selectednode")) await userEvent.keyboard("{Backspace}");
-				return fileBlocks().length;
-			})
-			.toBe(0);
+		// Picked whole with one press, then Backspace. One press only: the pictures around the file hold their place before they are in, so the
+		// press lands on the file (T126: it used to land elsewhere when a picture came in under the pointer).
+		await userEvent.click(page.elementLocator(first));
+		await expect.poll(() => first.closest(".ProseMirror-selectednode")).not.toBeNull();
+		await userEvent.keyboard("{Backspace}");
+		await expect.poll(() => fileBlocks().length).toBe(0);
 		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
 		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
 		await expect.poll(() => story.reads().length).toBe(2);

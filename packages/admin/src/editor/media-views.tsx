@@ -794,6 +794,8 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 								radius="md"
 								loading="eager"
 								frame={frame}
+								// Its place is held before it is in: what stands under it does not move when it comes (T126).
+								shape={drawnAt ? drawnAt.width / drawnAt.height : null}
 							/>
 						) : (
 							// While it loads, and for a file the library does not have: the frame with nothing in it (editor-tools.md).
