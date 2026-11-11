@@ -99,6 +99,17 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(row("시리즈 1: 시작")).not.toBeInTheDocument();
 	});
 
+	it("11-1 [flow 5·12] a folder's first row goes up, as the lists' does, and is not there while it searches", async () => {
+		await SearchingInFolder.run();
+		await expect.element(row("시리즈 2: 리액트로 옮기기")).toBeVisible();
+		await expect.element(main().getByRole("button", { name: "상위 폴더로" })).not.toBeInTheDocument();
+
+		await InFolder.run();
+		await userEvent.click(main().getByRole("button", { name: "상위 폴더로" }));
+		await expect.element(main().getByRole("heading", { name: "휴지통" })).toBeVisible();
+		await expect.element(row("시리즈 원고")).toBeVisible();
+	});
+
 	it("11-1 [flow 5·14] a search looks inside thrown-away folders and says which folder a row is in", async () => {
 		await Searching.run();
 		await expect.element(row("시리즈 2: 리액트로 옮기기")).toHaveTextContent("시리즈 원고 폴더 안");

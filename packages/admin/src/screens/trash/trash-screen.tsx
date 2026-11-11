@@ -419,6 +419,39 @@ export function TrashScreen({
 									</TableCell>
 								</TableRow>
 							)}
+							{/* The way up is the lists' first row too, beside the trail (2026-11-11, the owner). Not while it searches: those rows are from anywhere. */}
+							{place && !looking && (
+								<TableRow>
+									<TableCell truncate>
+										<RowTitle
+											folder
+											title={
+												<RowLink
+													render={<button type="button" />}
+													onClick={() =>
+														setState({
+															...state,
+															folder: place.trail.at(-1)?.id ?? null,
+															search: "",
+															everywhere: false,
+															page: 1,
+															open: null,
+														})
+													}
+												>
+													{t("folders.up")}
+												</RowLink>
+											}
+										/>
+									</TableCell>
+									{head.slice(1).map((column) => (
+										<TableCell key={column.id} />
+									))}
+									<TableCell align="end">
+										<RowActions />
+									</TableCell>
+								</TableRow>
+							)}
 							{rows.map((row) => {
 								const key = keyOf(row);
 								const link = entryHref(row);

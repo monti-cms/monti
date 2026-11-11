@@ -12,7 +12,8 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 제목 행 | `PageHeader`(`title` "휴지통") | 폴더 안에서는 `title`이 폴더 이름, `meta`가 "30일 남음"(7일 아래면 `Text tone="warning"`). |
-| 폴더 경로 "휴지통 /" | `PageHeader`의 `trail`에 `TextButton variant="underline"` | 휴지통 안의 폴더에서만 있다. 위로 가는 길은 이것 하나다. 목록 맨 위의 "상위 폴더로" 행은 두지 않는다(2026-11-05 소유자, 원칙 8). |
+| 폴더 경로 "휴지통 /" | `PageHeader`의 `trail`에 `TextButton variant="underline"` | 휴지통 안의 폴더에서만 있다. |
+| "상위 폴더로" | 폴더 행 모양(`RowTitle folder`), 체크와 ⋯ 없음 | 폴더 안의 첫 행. 누르면 한 단계 위(지운 폴더 안의 폴더면 그 폴더, 아니면 휴지통)로 간다. 게시글 목록과 같다(2026-11-11 소유자: 미디어에서 뺀 것을 휴지통까지 뺀 것은 잘못이었다). 찾는 동안에는 없다. 고를 수 없고 개수에 들지 않는다. |
 | "검색" | `SearchToggle`(`label` "검색", `targets` 없음) | 그 자리에서 `SearchBox`가 열린다. 지운 폴더 안의 것도 찾는다. 지운 폴더 안에서는 게시글 목록처럼 상자 앞 칩(`scopes`)이 그 폴더와 "모든 폴더" 가운데 고른다(2026-11-11 소유자). |
 | "비우기" | `TextButton variant="danger"` | 누르면 `AlertDialog`로 묻는다. 휴지통이 비었으면 "검색"과 함께 없다. |
 | 폴더 안의 "폴더 복원"과 ⋯ | `TextButton`, `IconButton` + `DropdownMenu`("영구 삭제" `variant="danger"`) | "비우기" 자리에 온다. 영구 삭제는 `AlertDialog`로 묻는다. |
