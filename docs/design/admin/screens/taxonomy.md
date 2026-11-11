@@ -23,8 +23,8 @@
 | 열 이름 행 | `ListHead`(열 "이름", "글 수"; 정렬된 열은 `sort`; `onResize`, `resizeLabel`) | 정렬은 열 이름의 메뉴에서 한다: 두 열 모두 `SortRows` "오름차순" · "내림차순". "글 수"의 메뉴에는 그 아래 `DropdownMenuCheckboxItem box` "쓰는 글 없음"과 개수 `MenuShortcut`(고른 뒤에도 메뉴가 열려 있다). "글 수" 열의 너비는 끌어 바꾸고 이 브라우저에 컬렉션마다 남는다(모든 표의 열 규칙, [list.md](../components/list.md), 2026-11-11 소유자). 좁힌 칸은 "…"로 잘리고 `title`이 온전히 말한다. 카테고리 보드는 툴바에 탭 "전체 3"과 "이름순 ▾"를 그리지만, [page-header.md](../components/page-header.md)를 따라 컬렉션 목록의 툴바는 비우고 카테고리도 태그처럼 `ListHead`를 쓴다. 행을 고르면 같은 자리를 `BulkBar`가 대신한다. |
 | 표 | `Table`, `TableBody`, `TableRow`(옆 패널에 열린 행은 `selected`) | |
 | 체크 | `RowCheck` | 포인터가 행 위에 있거나 무엇이든 고른 동안 보인다. |
-| 이름 · 주소 | `RowTitle` + `RowLink` | Uses the same single-line row as the document list. The secondary value is always the bare slug (`react`), not the full public path. Descriptions are edited in the side panel and never change list-row height. A missing translated name remains an inline warning. |
-| "글 3" · "쓰는 글 없음" | `TextButton variant="underline"`(`href` 그 항목으로 거른 글 목록) | The usage column is right-aligned. An unused item is faint text. |
+| 이름 · 주소 | `RowTitle`(`address`, `addressTitle`) + `RowLink` | 글 목록과 같은 한 줄 행이다. 뒤의 값은 늘 주소 끝(`react`)이고 공개 경로 전체가 아니다. 설명은 옆 패널에서 고치고 행 높이를 바꾸지 않는다. 번역 이름이 없으면 그 자리에 경고가 남는다. 좁아서 잘리면 `addressTitle`이 주소와 경고를 온전히 말한다. |
+| "글 3" · "쓰는 글 없음" | `TextButton variant="underline"`(`href` 그 항목으로 거른 글 목록) | 글 수 열은 오른쪽에 맞춘다. 쓰는 글이 없는 항목은 흐린 글자다. 칸은 `TableCell truncate`(`title`)라 좁히면 "…"로 잘린다. |
 | ⋯ | `RowActions` + `DropdownMenu` | 모든 행에 늘 보인다. 보드는 열린 행에만 그렸지만 [list.md](../components/list.md)를 따른다. |
 | 일괄 막대 | `BulkBar`(`label` "2개 선택", `selectAll`, `clearLabel` "선택 해제", `colSpan`) | 동작은 "합치기" · "휴지통으로"(`TextButton`) 둘이다. 합치기는 둘 이상 골랐을 때 보인다. 발행된 글이 가리키는 항목을 휴지통으로 보낼 때만 `AlertDialog`로 묻는다("발행된 글 3편에서 이 태그가 빠집니다.", 2026-11-11 소유자). 행의 ⋯와 패널의 ⋯의 "휴지통으로"(`variant="danger"`)도 같다. 두 ⋯의 행은 모두 앞에 아이콘이 있다. |
 
