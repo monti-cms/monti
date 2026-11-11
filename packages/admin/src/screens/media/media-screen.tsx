@@ -862,7 +862,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 												<MetaCell value={sizeLabel(item)} />
 											</>
 										)}
-										<TableCell align="end">
+										<TableCell align="end" truncate title={shortDate(item.uploadedAt)}>
 											<Text mono variant="meta" tone="muted">
 												{shortDate(item.uploadedAt)}
 											</Text>

@@ -1,13 +1,14 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { spillingCells } from "../../../../../testing/input";
+import { spillingCells, titleUnderPointer } from "../../../../../testing/input";
 import * as stories from "./trash.stories";
 
 const {
 	Top,
 	InFolder,
 	InUrgentFolder,
+	NarrowColumns,
 	Searching,
 	SearchingInFolder,
 	NoMatch,
@@ -250,17 +251,30 @@ describe("the trash (doc 11, flow 5)", () => {
 	});
 
 	it("11-1 a column dragged to its narrowest cuts its value inside the cell, and the cell says it whole", async () => {
-		localStorage.setItem("monti:trash-columns", JSON.stringify({ kind: 60, locale: 60, left: 60 }));
-		await Top.run();
+		await NarrowColumns.run();
 		const kind = row("옛 소개 글").getByRole("cell", { name: "게시글" });
-		await expect.element(kind).toHaveAttribute("title", "게시글");
+		await expect.element(kind).toBeVisible();
+		// The row's link covers the row: the pointer still finds what each cut value says.
+		expect(titleUnderPointer(kind.getByText("게시글").element())).toBe("게시글");
+		expect(titleUnderPointer(row("옛 소개 글").getByText("23일 남음").element())).toBe("23일 남음");
 		// No cell's words run over the next column: each is clipped at its own edge.
 		expect(spillingCells(table().element())).toEqual([]);
 		// What stands after a title is cut first, so it says itself whole too.
-		await expect
-			.element(row("첫 번째 글").getByText("/posts/first-post"))
-			.toHaveAttribute("title", "/posts/first-post");
-		localStorage.removeItem("monti:trash-columns");
+		expect(titleUnderPointer(row("첫 번째 글").getByText("/posts/first-post").element())).toBe("/posts/first-post");
+	});
+
+	it("11-1 a press anywhere on a row opens it, on what stands over the row's link too: its languages, its kind, its address", async () => {
+		for (const words of ["KO", "게시글", "/posts/about-old"]) {
+			await Top.run();
+			await userEvent.click(row("옛 소개 글").getByText(words, { exact: true }));
+			await expect.poll(() => location.hash).toMatch(/^#\/c\/post\//);
+		}
+		// What has its own press keeps it: the row's menu opens, and the row does not.
+		await Top.run();
+		await menuOf("옛 소개 글");
+		await expect.element(page.getByRole("menuitem", { name: "복원" })).toBeVisible();
+		expect(location.hash).toBe("#/trash");
+		await userEvent.keyboard("{Escape}");
 	});
 
 	it("11-1 days under a week change their color only: mono in a folder's head, the values' size in a panel", async () => {

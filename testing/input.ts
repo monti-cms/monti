@@ -38,3 +38,13 @@ export function spillingCells(table: Element): string[] {
 		.filter((cell) => cell.scrollWidth > cell.clientWidth + 1 && getComputedStyle(cell).overflowX === "visible")
 		.map((cell) => `"${cell.textContent}" ${cell.scrollWidth} > ${cell.clientWidth}`);
 }
+
+/**
+ * What the browser's tooltip would say with the pointer at the middle of `element`: the `title` of what is on top there, or of what holds it. A `title` under
+ * something that covers it (a row's link covers its row) is never said, and this is `null`.
+ */
+export function titleUnderPointer(element: Element): string | null {
+	const box = element.getBoundingClientRect();
+	const top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+	return top?.closest("[title]")?.getAttribute("title") ?? null;
+}

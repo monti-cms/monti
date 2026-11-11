@@ -829,6 +829,18 @@ export const TaxonomyUsageMenu: Story = {
 	},
 };
 
+/** The usage column dragged to its narrowest: a count is cut with "…" inside its cell. */
+export const TaxonomyNarrowColumns: Story = {
+	loaders: site(withDuplicateReactTag, "#/c/tag", { schema: oneLanguage }),
+	beforeEach: () => {
+		localStorage.setItem("monti:items:tag-columns", JSON.stringify({ usage: 60 }));
+		return () => localStorage.removeItem("monti:items:tag-columns");
+	},
+	play: async ({ canvasElement }) => {
+		await waitFor(() => expect(within(canvasElement).getByText("리액트")).toBeTruthy(), wait);
+	},
+};
+
 /** Two tags picked in Taxonomy: bulk bar shows "합치기" button (flow 7, step 07). */
 export const TaxonomyTagsPicked: Story = {
 	loaders: site(withDuplicateReactTag, "#/c/tag", { schema: oneLanguage }),

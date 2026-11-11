@@ -277,6 +277,18 @@ export const SortMenu: Story = {
 /** The list view (flow 6·14). */
 export const ListView: Story = { loaders: library("#/media?view=list") };
 
+/** The list view with every column dragged to its narrowest: each cell cuts its value with "…" at its own edge. */
+export const ListViewNarrowColumns: Story = {
+	loaders: library("#/media?view=list"),
+	beforeEach: () => {
+		localStorage.setItem(
+			"monti:media-columns",
+			JSON.stringify({ uses: 60, type: 60, size: 60, measure: 60, date: 60 }),
+		);
+		return () => localStorage.removeItem("monti:media-columns");
+	},
+};
+
 /** A column's menu in the list view holds both ways (every table's columns, components/list.md). */
 export const ListViewSizeMenu: Story = {
 	loaders: library("#/media?view=list"),

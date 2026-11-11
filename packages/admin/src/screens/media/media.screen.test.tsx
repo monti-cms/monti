@@ -1,12 +1,20 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { scrollsSideways, spillingCells } from "../../../../../testing/input";
+import { scrollsSideways, spillingCells, titleUnderPointer } from "../../../../../testing/input";
 import * as media from "./media.stories";
 import { samplePhoto } from "./media.stories";
 
-const { Top, NoStorage, ListView, FilePanel, FilePanelManyUses, SearchingInFolder, KindChosenInFolder } =
-	composeStories(media);
+const {
+	Top,
+	NoStorage,
+	ListView,
+	ListViewNarrowColumns,
+	FilePanel,
+	FilePanelManyUses,
+	SearchingInFolder,
+	KindChosenInFolder,
+} = composeStories(media);
 
 const main = () => page.getByRole("main");
 const heading = () => main().getByRole("heading", { level: 1 });
@@ -203,17 +211,16 @@ describe("browsing", () => {
 	});
 
 	it("09-1 T113 a column dragged to its narrowest cuts its value inside the cell, and the cell says it whole", async () => {
-		localStorage.setItem(
-			"monti:media-columns",
-			JSON.stringify({ uses: 60, type: 60, size: 60, measure: 60, date: 60 }),
-		);
-		await ListView.run();
+		await ListViewNarrowColumns.run();
 		const row = main().getByRole("row").filter({ hasText: "top-level-photo.jpg" });
 		await expect.element(row).toBeVisible();
-		const cells = [...row.element().querySelectorAll("td")].slice(1, 5);
-		expect(cells.map((cell) => cell.getAttribute("title"))).toEqual(cells.map((cell) => cell.textContent));
+		// Use, type, size, dimensions and the day: each clips at its own edge, whatever it holds, and the pointer finds what it says.
+		const cells = [...row.element().querySelectorAll("td")].slice(1, 6);
+		expect(cells.map((cell) => getComputedStyle(cell).overflowX)).toEqual(cells.map(() => "hidden"));
+		expect(cells.map((cell) => titleUnderPointer(cell.firstElementChild ?? cell))).toEqual(
+			cells.map((cell) => cell.textContent),
+		);
 		expect(spillingCells(main().getByRole("table").element())).toEqual([]);
-		localStorage.removeItem("monti:media-columns");
 	});
 
 	it("09-1 T113 going into a folder from its row lets go of what was picked", async () => {

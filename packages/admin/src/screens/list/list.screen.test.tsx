@@ -1,7 +1,7 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { spillingCells } from "../../../../../testing/input";
+import { spillingCells, titleUnderPointer } from "../../../../../testing/input";
 import * as list from "./list.stories";
 
 const { Main, NarrowColumns } = composeStories(list);
@@ -23,5 +23,12 @@ describe("the list's column names", () => {
 		await NarrowColumns.run();
 		await expect.element(columnName("수정일")).toBeVisible();
 		expect(spillingCells(main().getByRole("table").element())).toEqual([]);
+		// The row's link covers the row: the pointer still finds what a cut status, category and day say.
+		const row = main().getByRole("row").filter({ hasText: "발행 후 고친 글" });
+		expect(titleUnderPointer(row.getByText("수정 중").element())).toBe("수정 중");
+		expect(titleUnderPointer(row.getByText("개발", { exact: true }).element())).toBe("개발");
+		// A press on them opens the row as a press anywhere on it does.
+		await userEvent.click(row.getByText("개발", { exact: true }));
+		await expect.poll(() => location.hash).toMatch(/^#\/c\/post\/[^?]+$/);
 	});
 });

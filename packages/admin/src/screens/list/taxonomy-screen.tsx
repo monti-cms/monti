@@ -44,7 +44,7 @@ import { Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/
 import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
-import type { Route } from "../../route";
+import { href, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { useCoverCorner } from "../frame/admin-frame";
 import { useLanguageName } from "./column-menu";
@@ -373,15 +373,13 @@ export function TaxonomyScreen({
 		});
 	};
 
-	const onFilterUsage = (item: UsageItem) => {
-		const targetCollection = item.firstRef?.collection ?? "post";
-		const field = item.firstRef?.field ?? collection;
-		go({
-			screen: "list",
-			collection: targetCollection,
-			params: new URLSearchParams([[field, item.group]]),
-		});
-	};
+	/** The list of the entries that use an item: the first collection that points at it, filtered by it. */
+	const usageRoute = (item: UsageItem): Route => ({
+		screen: "list",
+		collection: item.firstRef?.collection ?? "post",
+		params: new URLSearchParams([[item.firstRef?.field ?? collection, item.group]]),
+	});
+	const onFilterUsage = (item: UsageItem) => go(usageRoute(item));
 
 	const selectAll = {
 		state:
@@ -472,6 +470,9 @@ export function TaxonomyScreen({
 								const hasMissing = Boolean(isMultilingual && missingLocale);
 								const slug = item.locales[language]?.slug;
 								const shownAddress = slug || undefined;
+								const missing = hasMissing
+									? t("taxonomy.missingLocale", { locale: languageName(missingLocale) })
+									: undefined;
 
 								return (
 									<TableRow key={item.group} selected={openGroup === item.group || picked.has(item.group)}>
@@ -491,15 +492,16 @@ export function TaxonomyScreen({
 													shownAddress || hasMissing ? (
 														<>
 															{shownAddress}
-															{hasMissing && (
+															{missing && (
 																<Text variant="note" tone="warning">
 																	{shownAddress ? " · " : ""}
-																	{t("taxonomy.missingLocale", { locale: languageName(missingLocale) })}
+																	{missing}
 																</Text>
 															)}
 														</>
 													) : undefined
 												}
+												addressTitle={[shownAddress, missing].filter(Boolean).join(" · ") || undefined}
 											/>
 										</TableCell>
 										<TableCell
@@ -512,7 +514,17 @@ export function TaxonomyScreen({
 											}
 										>
 											{item.usageCount > 0 ? (
-												<TextButton variant="underline" size="note" onClick={() => onFilterUsage(item)}>
+												// A link, as the map has it: it opens in a new tab too, and a narrowed cell cuts its words with "…".
+												<TextButton
+													variant="underline"
+													size="note"
+													href={href(usageRoute(item))}
+													onClick={(event) => {
+														if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+														event.preventDefault();
+														onFilterUsage(item);
+													}}
+												>
 													{t("taxonomy.usageCount", { count: item.usageCount })}
 												</TextButton>
 											) : (
