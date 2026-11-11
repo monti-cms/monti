@@ -41,7 +41,7 @@
 | 상태 칸 | `TableCell truncate`(`title`) 안의 `EntryStatus`, 발행됨만 `quiet` | 발행됨은 조용한 색, 수정 중과 초안은 제 색이다. 열을 좁히면 점은 남고 이름이 "…"로 잘린다. 날짜 칸도 좁히면 잘리고 `title`이 말한다. |
 | 제목 칸 | `RowLink` 안의 `RowTitle`(`title`, `address`) | 제목 뒤 같은 줄에 주소. 행 어디를 눌러도 글이 열린다. |
 | 카테고리 · 태그 · 텍스트 필드 칸 | `TableCell tone="subtle" truncate`, 셀 `title`에 전부 | 끝은 늘 "…". 값 여럿은 " · "로 잇는다. |
-| 언어 · 수정일 칸 | 언어는 `LocaleCodes`, 날짜는 `Text mono variant="meta"`(`tone="muted"`, 칸은 `align="end"`) | 언어는 기본 너비에서 "KO +1", 열을 넓히면 "KO · EN"이고, 세기만 한 언어는 가리킬 때 툴팁이 이름으로 말한다(2026-11-11 소유자). 날짜는 올해면 "10. 26", 지난해면 "25. 10. 26". 기준 화면(`Screens/Reference/Lists` › Main)과 같다. |
+| 언어 · 수정일 칸 | 언어는 `LocaleCodes`, 날짜는 `Text mono variant="meta"`(`tone="muted"`, 칸은 `align="end"`) | 언어는 기본 너비에서 "KO +1", 열을 넓히면 "KO · EN"이고, 세기만 한 언어는 가리킬 때 툴팁이 이름으로 말한다(2026-11-11 소유자). 좁아서 잘렸을 때도 말한다. 날짜는 올해면 "10. 26", 지난해면 "25. 10. 26". 기준 화면(`Screens/Reference/Lists` › Main)과 같다. |
 | 행 ⋯ | `RowActions` 안의 `IconButton`(`label` "행 메뉴") + `DropdownMenu` | 늘 보인다. 항목은 오른쪽 클릭과 같다. 보드는 글자 버튼으로 그렸지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "열기" · "새 탭에서 열기" · "복제" │ `ContextMenuSub` "폴더로" · "카테고리" · "태그" │ "보관" · "휴지통으로"(`variant="danger"`, `MenuShortcut` Del) | 행마다 앞에 아이콘. 둘째 단계까지. 행의 ⋯ 메뉴도 같은 행이고 Del 표시만 없다. 행에서 Delete를 누르면 휴지통으로 간다(고른 행 중 하나면 고른 행 모두). |
 | 여러 행 오른쪽 클릭 | `ContextMenu`: `ContextMenuLabel` "2개 항목" · "발행" · "보관" · `ContextMenuSub` "폴더로" │ "카테고리" · "태그" │ "내보내기" │ "휴지통으로"(`variant="danger"`, `MenuShortcut` Del) | 일괄 막대와 같은 이름. 관계 필드가 바로 놓인다. 아이콘은 없다. 여러 행에 되는 것만 담는다. |

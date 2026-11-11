@@ -71,7 +71,7 @@
 | 고르기 | `RowCheck`, `ListHead selectAll`, 고른 동안 머리 자리에 `BulkBar colSpan` | 체크는 포인터가 행에 오면 왼쪽 여백에 보인다. 고르는 동안 열 이름 행이 막대가 된다. 그 위에 다른 행은 없다. |
 | 그림 | `RowTitle`의 `thumb`에 `RowThumb` | 이름 열 안에 있다. 파일은 40×30 그림, 폴더 행은 16px 아이콘. |
 | 이름 | `RowTitle`(`TableCell truncate`) | 행 어디를 눌러도 열린다(`TableRow`가 연다). 옆 패널에 열린 파일의 행은 고른 행과 같다(`selected`). 새 폴더는 표 맨 위 행, `RenameField`(200px)로 이름을 쓴다. 폴더 행은 이름 뒤에 개수. 긴 이름은 …으로 끝나고 다른 열을 밀어내지 않는다. |
-| 사용 · 종류 · 크기 · 치수 · 올린 날 | `TableCell` 안에: 사용 `Text variant="note" tone="subtle"`, 종류 · 크기 · 치수 `Text variant="meta" tone="subtle"`, 날짜 `align="end"`의 `Text mono variant="meta" tone="muted"` | 글 목록처럼 이름 말고는 회색이고 날짜는 끝에 맞춘다. 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". |
+| 사용 · 종류 · 크기 · 치수 · 올린 날 | 모두 `TableCell truncate`(`title`). 사용은 `tone="subtle"`, 종류 · 크기 · 치수는 안에 `Text variant="meta" tone="subtle"`, 날짜는 `align="end"`에 `Text mono variant="meta" tone="muted"` | 글 목록처럼 이름 말고는 회색이고 날짜는 끝에 맞춘다. 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12". 좁힌 칸은 "…"로 잘리고 가리키면 `title`이 온전히 말한다. |
 | ⋯ | `RowActions` | 파일 행에만 있다. 폴더로 할 일은 오른쪽 클릭 메뉴에 있다. |
 | 올리는 중 · 끊긴 파일 | `TableRow`: `RowTitle thumb`, 칸 다섯을 합친 `Text variant="note"`, ⋯ 자리 | 파일 행 맨 위에 온다. "올리는 중 · 64%" · "대기". 끊긴 파일은 빨간 "올리기 실패" 옆에 `IconButton` `Renew` "다시 올리기"(`size="xs"`), ⋯ 자리에 `TrashCan` "지우기"(`tone="danger"`). 표 밖에 타일로 두지 않는다(2026-11-09 소유자). |
 

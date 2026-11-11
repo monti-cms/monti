@@ -17,7 +17,7 @@
 
 ### 코드
 
-`EntryStatus`. 종류는 `published`, `editing`, `draft`, `archived`, `failed`다. 7px 표시와 상태 이름을 그린다. children이 없으면 표시만 그린다(언어 탭의 상태). 이때는 장식이므로 상태를 근처에 말로 적어야 한다. 수정 중 점은 경고 표시 색(`bg-warning-emphasis`)으로 그리고, 이름은 경고 글자 색 그대로 둔다. 어두운 알약 위에 쓰는 버전은 없다. `quiet`는 상태가 늘어선 열에 쓰도록 흐린 톤과 보통 굵기를 준다.
+`EntryStatus`. 종류는 `published`, `editing`, `draft`, `archived`, `failed`다. 7px 표시와 상태 이름을 그린다. children이 없으면 표시만 그린다(언어 탭의 상태). 나란히 놓인 곳에서는 줄지 않고(`shrink-0`), 표의 잘리는 칸(`TableCell truncate`)에서만 이름이 "…"로 줄고 표시는 남는다. 이때는 장식이므로 상태를 근처에 말로 적어야 한다. 수정 중 점은 경고 표시 색(`bg-warning-emphasis`)으로 그리고, 이름은 경고 글자 색 그대로 둔다. 어두운 알약 위에 쓰는 버전은 없다. `quiet`는 상태가 늘어선 열에 쓰도록 흐린 톤과 보통 굵기를 준다.
 
 ## 개수
 
