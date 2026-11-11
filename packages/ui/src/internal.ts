@@ -192,6 +192,7 @@ export {
 	type ListHeadColumn,
 } from "./list-head";
 export { ListSection, ListSectionRow } from "./list-section";
+export { LocaleCodes } from "./locale-codes";
 export { LockMark } from "./lock-mark";
 export { IssueRow, MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";

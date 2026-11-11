@@ -168,6 +168,7 @@ export const Empty = close(open.Empty);
 export const EmptyStep = close(open.EmptyStep);
 export const FileUseList = close(open.FileUseList);
 export const FileUseRow = close(open.FileUseRow);
+export const LocaleCodes = close(open.LocaleCodes);
 export const FolderTile = close(open.FolderTile);
 export const RenameField = close(open.RenameField);
 export const BulkBar = close(open.BulkBar);
