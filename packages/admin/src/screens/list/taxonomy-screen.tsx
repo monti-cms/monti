@@ -8,6 +8,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	FormField,
+	FormFieldError,
 	FormFieldLabel,
 	FormFieldWas,
 	IconButton,
@@ -41,7 +42,7 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
@@ -96,6 +97,17 @@ function TaxonomySidePanel({
 	const languageName = useLanguageName();
 	const [activeLocale, setActiveLocale] = useState(sourceLocale);
 	const [proposalIndex, setProposalIndex] = useState(0);
+	/**
+	 * Save was pressed with no name in any language (README principle 7: the button is never greyed): the name field says so while that item is open and still
+	 * has none. Another item, a name, or dropping the changes takes it away.
+	 */
+	const [saveAsked, setSaveAsked] = useState(false);
+	const nameInput = useRef<HTMLInputElement>(null);
+	const [askedIn, setAskedIn] = useState(group);
+	if (askedIn !== group) {
+		setAskedIn(group);
+		setSaveAsked(false);
+	}
 
 	const panel = useItemPanel({
 		collection,
@@ -105,6 +117,7 @@ function TaxonomySidePanel({
 		sourceLocale,
 		onSaved,
 	});
+	const nameMissing = saveAsked && !panel.named;
 
 	const title = item?.title || t("taxonomy.newItem", { label: collectionName });
 	const titlePath = `locales.${activeLocale}.title`;
@@ -183,15 +196,26 @@ function TaxonomySidePanel({
 							{t("taxonomy.changesCount", { count: panel.draft.changes.length || 1 })}
 						</Text>
 						<Inline gap={8}>
-							<Button variant="secondary" size="md" onClick={() => panel.draft.revertAll()}>
+							<Button
+								variant="secondary"
+								size="md"
+								onClick={() => {
+									setSaveAsked(false);
+									panel.draft.revertAll();
+								}}
+							>
 								{t("common.discard")}
 							</Button>
 							<Button
 								variant="primary"
 								size="md"
 								loading={panel.saving}
-								disabled={!panel.canSave}
 								onClick={async () => {
+									if (!panel.named) {
+										setSaveAsked(true);
+										nameInput.current?.focus();
+										return;
+									}
 									const savedTitle = String(panel.draft.value(`locales.${sourceLocale}.title`) ?? "");
 									const res = await panel.save();
 									if (res) {
@@ -229,12 +253,15 @@ function TaxonomySidePanel({
 					{t("taxonomy.field.name")}
 				</FormFieldLabel>
 				<Input
+					ref={nameInput}
 					id="item-title"
 					size="md"
 					proposal={panel.draft.cell(titlePath).kind === "proposed"}
 					value={shownValue(titlePath)}
+					aria-invalid={nameMissing || undefined}
 					onChange={(e) => panel.draft.set(titlePath, e.target.value)}
 				/>
+				{nameMissing && <FormFieldError>{t("settings.fillIn")}</FormFieldError>}
 				{wasLine(titlePath)}
 			</FormField>
 			<FormField>

@@ -12,7 +12,8 @@ const previewOf = (file: File) => (file.type.startsWith("image/") ? URL.createOb
 /**
  * Files going up from a place on a page (doc 09's `useUpload`, 09-3): the library, the editor and a media field all use this one. `add` takes files where they were
  * dropped or chosen; each stays in `uploads` with its bar, and one the network cut off stays to try again. A file that made it leaves the list and comes to `onUploaded`.
- * One the library refuses leaves too, and a toast says why: `useAcceptFiles` keeps most of them from coming here at all, and this is for what shows only later (a broken picture, the server's own limit).
+ * One the library refuses leaves too, and a toast says why: `useAcceptFiles` keeps most of them from coming here at all, and this is for what shows only later (a broken picture, the server's own limit,
+ * a folder that was deleted while the file went up).
  */
 export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Upload) => void } = {}) {
 	const { uploader, session } = useAdmin();
@@ -24,6 +25,9 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 	const onUploaded = useRef(options.onUploaded);
 	onUploaded.current = options.onUploaded;
 	const sayRefused = useSayRefused();
+	/** The queue as it is now, for what runs later than the render that started it. */
+	const latest = useRef(uploads);
+	latest.current = uploads;
 
 	const forget = useCallback((upload: Upload) => {
 		files.current.delete(upload.id);
@@ -69,7 +73,26 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 			// Taken out while the library made it: it stays in the library, and takes no place here.
 			if (stop.signal.aborted) return;
 			if (!made?.ok) {
-				dispatch({ type: "failed", id: upload.id });
+				// The folder it was going to is gone: trying again would change nothing, so the file leaves its place and a toast says why, as for a file the
+				// library does not take (2026-11-09, owner). Every other answer is "try again", which sends the bytes anew: no answer at all, the session ending,
+				// bytes that are no longer there (`media.unknownKey`).
+				if (made?.refusal.reason?.key !== "folders.unknown") {
+					dispatch({ type: "failed", id: upload.id });
+					return;
+				}
+				// Those still waiting for the same folder would only be told the same, one toast each: they go with this one, in one toast. One of them
+				// started since this render is stopped by `forget` and leaves by its id like the rest; one another refusal already took is no longer held.
+				const gone = [
+					upload,
+					...latest.current.filter(
+						(each) => each.status === "waiting" && each.folder === upload.folder && files.current.has(each.id),
+					),
+				];
+				sayRefused(gone.map((each) => ({ name: each.name, refusal: "noFolder" })));
+				for (const each of gone) {
+					forget(each);
+					dispatch({ type: "remove", id: each.id });
+				}
 				return;
 			}
 			onUploaded.current?.(made.body.output, upload);
@@ -87,8 +110,6 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 	}, [uploads, send]);
 
 	// Nothing is left behind when the page goes.
-	const latest = useRef(uploads);
-	latest.current = uploads;
 	useEffect(
 		() => () => {
 			for (const upload of latest.current) forget(upload);

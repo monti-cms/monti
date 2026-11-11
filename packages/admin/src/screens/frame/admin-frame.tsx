@@ -26,6 +26,7 @@ import {
 } from "@monti-cms/ui";
 import { Document, Image, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { FolderFilesProvider, useGiveFolderFiles } from "../../media/folder-files";
 import { useFolderDrop } from "../../media/use-file-drop";
 import { useMoveMedia } from "../../media/use-media-actions";
 import { useAdmin } from "../../operations/admin-context";
@@ -131,7 +132,19 @@ function FolderTreeRow({
 	tree: ReturnType<typeof folderTree>[number] | undefined;
 }) {
 	const move = useMoveMedia();
-	const drop = useFolderDrop({ onMove: (ids) => void move(ids, folder.id) });
+	const give = useGiveFolderFiles();
+	const drop = useFolderDrop({
+		// Files from outside go up into the folder, as on its tile: the media screen sends them (T106).
+		onFiles: scope === "media" && give ? (files) => give.files(files, folder.id) : undefined,
+		onMove: (ids) => void move(ids, folder.id),
+	});
+	// The screen's hint at the bottom says the folder the files are over.
+	const overMedia = scope === "media" && drop.files;
+	useEffect(() => {
+		if (!overMedia || !give) return;
+		give.over(folder.name);
+		return () => give.over(null);
+	}, [overMedia, folder.name, give]);
 	const params = new URLSearchParams({ folder: folder.id });
 	return (
 		<li>
@@ -186,106 +199,114 @@ export function AdminFrame({
 	const state = schema.data;
 	return (
 		<Text as="div" variant="body">
-			<SidebarProvider fixed rail={rail} onRailChange={setRail}>
-				<Sidebar label={t("frame.menu")}>
-					<SidebarHeader>
-						<Text variant="title" truncate>
-							{siteName}
-						</Text>
-						<SidebarRailToggle />
-					</SidebarHeader>
-					<SidebarContent>
-						<SidebarGroup>
-							<SidebarGroupContent>
-								<SidebarMenu aria-label={t("frame.content")}>
-									{collections.map(([name, collection]) => (
-										<Row
-											key={name}
-											place={{ collection: name }}
-											open={open}
-											icon={collection.kind === "item" ? <Tag /> : <Document />}
-											name={state?.adminValues[name]?.label ?? name}
-											count={counts?.collections[name]}
-											onOpen={onOpen}
-										>
-											<FolderTree
-												scope={{ collection: name }}
-												open={folder}
-												on={state?.adminValues[name]?.folders === true}
-											/>
+			<FolderFilesProvider>
+				<SidebarProvider fixed rail={rail} onRailChange={setRail}>
+					<Sidebar label={t("frame.menu")}>
+						<SidebarHeader>
+							<Text variant="title" truncate>
+								{siteName}
+							</Text>
+							<SidebarRailToggle />
+						</SidebarHeader>
+						<SidebarContent>
+							<SidebarGroup>
+								<SidebarGroupContent>
+									<SidebarMenu aria-label={t("frame.content")}>
+										{collections.map(([name, collection]) => (
+											<Row
+												key={name}
+												place={{ collection: name }}
+												open={open}
+												icon={collection.kind === "item" ? <Tag /> : <Document />}
+												name={state?.adminValues[name]?.label ?? name}
+												count={counts?.collections[name]}
+												onOpen={onOpen}
+											>
+												<FolderTree
+													scope={{ collection: name }}
+													open={folder}
+													on={state?.adminValues[name]?.folders === true}
+												/>
+											</Row>
+										))}
+										<Row place="media" open={open} icon={<Image />} name={t("frame.media")} onOpen={onOpen}>
+											<FolderTree scope="media" open={folder} on />
 										</Row>
-									))}
-									<Row place="media" open={open} icon={<Image />} name={t("frame.media")} onOpen={onOpen}>
-										<FolderTree scope="media" open={folder} on />
-									</Row>
-								</SidebarMenu>
-							</SidebarGroupContent>
-						</SidebarGroup>
-					</SidebarContent>
-					<SidebarFooter>
-						<SidebarMenu aria-label={t("frame.manage")}>
-							<Row
-								place="trash"
-								open={open}
-								icon={<TrashCan />}
-								name={t("frame.trash")}
-								count={counts?.trash}
-								onOpen={onOpen}
-							/>
-							<Row
-								place="tools"
-								open={open}
-								icon={<Tools />}
-								name={t("frame.tools")}
-								count={counts?.failedDeliveries}
-								tone="warning"
-								onOpen={onOpen}
-							/>
-							<Row place="settings" open={open} icon={<SettingsAdjust />} name={t("frame.settings")} onOpen={onOpen} />
-						</SidebarMenu>
-						<SidebarFoot>
-							<SidebarScreenMode
-								value={mode}
-								onValueChange={setMode}
-								labels={{
-									label: t("frame.mode"),
-									system: t("frame.system"),
-									light: t("frame.light"),
-									dark: t("frame.dark"),
-								}}
-							/>
-						</SidebarFoot>
-					</SidebarFooter>
-				</Sidebar>
-				<SidebarInset
-					fixed
-					// The whole site's states, broader first: an ended session over a schema change (common.md, banners).
-					banner={
-						<>
-							<SessionEndedBanner />
-							<SchemaBanner onReview={onReview} />
-						</>
-					}
-					corner={
-						covered ? undefined : (
-							<IconButton label={t("frame.assistant")}>
-								<Spark className="size-monti-icon-lg" />
-							</IconButton>
-						)
-					}
-				>
-					<CornerContext.Provider value={cover}>
-						<Stack gap={0} grow minWidth={0} minHeight={0} container>
-							<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
-								{/* The page scrolls here, one bar at its right edge (or beside a docked panel), the header with it (2026-11-06, owner). */}
-								<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
-									{children}
-								</Stack>
-							</Inline>
-						</Stack>
-					</CornerContext.Provider>
-				</SidebarInset>
-			</SidebarProvider>
+									</SidebarMenu>
+								</SidebarGroupContent>
+							</SidebarGroup>
+						</SidebarContent>
+						<SidebarFooter>
+							<SidebarMenu aria-label={t("frame.manage")}>
+								<Row
+									place="trash"
+									open={open}
+									icon={<TrashCan />}
+									name={t("frame.trash")}
+									count={counts?.trash}
+									onOpen={onOpen}
+								/>
+								<Row
+									place="tools"
+									open={open}
+									icon={<Tools />}
+									name={t("frame.tools")}
+									count={counts?.failedDeliveries}
+									tone="warning"
+									onOpen={onOpen}
+								/>
+								<Row
+									place="settings"
+									open={open}
+									icon={<SettingsAdjust />}
+									name={t("frame.settings")}
+									onOpen={onOpen}
+								/>
+							</SidebarMenu>
+							<SidebarFoot>
+								<SidebarScreenMode
+									value={mode}
+									onValueChange={setMode}
+									labels={{
+										label: t("frame.mode"),
+										system: t("frame.system"),
+										light: t("frame.light"),
+										dark: t("frame.dark"),
+									}}
+								/>
+							</SidebarFoot>
+						</SidebarFooter>
+					</Sidebar>
+					<SidebarInset
+						fixed
+						// The whole site's states, broader first: an ended session over a schema change (common.md, banners).
+						banner={
+							<>
+								<SessionEndedBanner />
+								<SchemaBanner onReview={onReview} />
+							</>
+						}
+						corner={
+							covered ? undefined : (
+								<IconButton label={t("frame.assistant")}>
+									<Spark className="size-monti-icon-lg" />
+								</IconButton>
+							)
+						}
+					>
+						<CornerContext.Provider value={cover}>
+							<Stack gap={0} grow minWidth={0} minHeight={0} container>
+								<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+									{/* The page scrolls here, one bar at its right edge (or beside a docked panel), the header with it (2026-11-06, owner). */}
+									<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
+										{children}
+									</Stack>
+								</Inline>
+							</Stack>
+						</CornerContext.Provider>
+					</SidebarInset>
+				</SidebarProvider>
+			</FolderFilesProvider>
 		</Text>
 	);
 }

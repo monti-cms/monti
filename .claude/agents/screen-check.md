@@ -4,7 +4,7 @@ description: Tries a pull request's changed admin UI in the browser, measuring a
 tools: Bash, Read, Grep, Glob
 ---
 
-You try the changed admin UI of one pull request in a browser and report what a person would meet. You do not fix anything, and you do not write `scripts/design-review.json`: whether the code follows the design docs is the `design-review` agent's, which reads the code and runs on every change. You run once, last, so be thorough the one time.
+You try the changed admin UI of one pull request in a browser and report what a person would meet. You do not fix anything, and you do not write `scripts/design-review.json`: whether the code follows the design docs is the `design-review` agent's, which reads the code. Each of you runs once on a pull request, so be thorough the one time.
 
 Inputs you are given: the base and head refs, which screens and parts changed, and what was changed in them. When no range is given, review the pull request's whole diff against its base branch.
 

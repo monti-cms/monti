@@ -4,6 +4,9 @@
  */
 export type Refusal = "type" | "notImage" | "unreadable" | "tooBig";
 
+/** What ends a file's way up for good: the file itself is refused, or the folder it was going to was deleted meanwhile. One toast says either. */
+export type Ended = Refusal | "noFolder";
+
 /** One file on its way up, in its place on the page until it is an item of the library. */
 export type Upload = {
 	id: string;

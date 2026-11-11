@@ -3,7 +3,7 @@ import { Renew } from "@monti-cms/ui/icons";
 import { useCallback } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { refusalOf } from "./put-file";
-import type { Refusal } from "./upload-queue";
+import type { Ended } from "./upload-queue";
 
 /**
  * Says which files the library will not take, one toast for each reason: the first file's name and how many more. Nothing stays on the page, as nothing happened: this is the
@@ -12,7 +12,7 @@ import type { Refusal } from "./upload-queue";
 export function useSayRefused() {
 	const { t } = useAdmin();
 	return useCallback(
-		(refused: readonly { name: string; refusal: Refusal }[]) => {
+		(refused: readonly { name: string; refusal: Ended }[]) => {
 			for (const refusal of new Set(refused.map((each) => each.refusal))) {
 				const [name = "", ...more] = refused.filter((each) => each.refusal === refusal).map((each) => each.name);
 				const reason = t(`library.refused.${refusal}`);

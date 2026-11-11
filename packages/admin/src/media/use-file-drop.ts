@@ -80,18 +80,21 @@ export function useFolderDrop({
 	onFiles?: (files: File[]) => void;
 	onMove: (ids: string[]) => void;
 }) {
-	const [target, setTarget] = useState(false);
+	/** What is over it: tiles of the library to move in, or files from outside to send up. */
+	const [over, setOver] = useState<"tiles" | "files" | null>(null);
 	const depth = useRef(0);
 	const takes = (event: React.DragEvent) => holdsMedia(event) || (onFiles !== undefined && holdsFiles(event));
 	return {
-		target,
+		target: over !== null,
+		/** Files from outside are over it: they would go up into it, which the hint at the bottom says. A move says nothing there. */
+		files: over === "files",
 		handlers: {
 			onDragEnter: (event: React.DragEvent) => {
 				if (!takes(event)) return;
 				event.preventDefault();
 				event.stopPropagation();
 				depth.current += 1;
-				setTarget(true);
+				setOver(holdsMedia(event) ? "tiles" : "files");
 			},
 			onDragOver: (event: React.DragEvent) => {
 				if (!takes(event)) return;
@@ -99,18 +102,19 @@ export function useFolderDrop({
 				event.stopPropagation();
 				event.dataTransfer.dropEffect = holdsMedia(event) ? "move" : "copy";
 			},
+			// A drag it took in is seen out, even when it would not take it any more (the screen that sends files up went away meanwhile): the mark must not stay.
 			onDragLeave: (event: React.DragEvent) => {
-				if (!takes(event)) return;
+				if (depth.current === 0) return;
 				event.stopPropagation();
-				depth.current = Math.max(0, depth.current - 1);
-				if (depth.current === 0) setTarget(false);
+				depth.current -= 1;
+				if (depth.current === 0) setOver(null);
 			},
 			onDrop: (event: React.DragEvent) => {
-				if (!takes(event)) return;
+				if (depth.current === 0 && !takes(event)) return;
 				event.preventDefault();
 				event.stopPropagation();
 				depth.current = 0;
-				setTarget(false);
+				setOver(null);
 				if (holdsMedia(event)) onMove(draggedIds(event));
 				else onFiles?.([...event.dataTransfer.files]);
 			},

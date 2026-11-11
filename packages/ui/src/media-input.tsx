@@ -13,6 +13,11 @@ const HEIGHT = { sm: "h-monti-control-sm", md: "h-monti-control-md", default: "h
  * A media field (a cover image, a file) drawn like every other field: an underline, the chosen file's name after a small thumbnail, or the faint
  * placeholder while empty. Pressing the line opens the media picker (`onOpen`); the × at the end takes the file out (`onClear`). The picture itself is
  * not shown here: the field reads like its neighbours, an input or a select.
+ *
+ * `readOnly` (an archived entry, one in the trash) is the value to read, with nothing that changes it: the line is not a button, the pointer stays an
+ * arrow, the ground does not answer it, and there is no × and no picture icon that says "choose one". The `action` stays: it is the caller's, and read-only
+ * it is a way to read (a picture's settings card with its fields read-only). The field is then a group, named with `aria-labelledby` (the label's id): a
+ * label's `htmlFor` names only what can be pressed or typed in.
  */
 function MediaInput({
 	id,
@@ -24,6 +29,7 @@ function MediaInput({
 	clearLabel,
 	proposal = false,
 	following = false,
+	readOnly = false,
 	action,
 	className,
 	...props
@@ -42,18 +48,39 @@ function MediaInput({
 	proposal?: boolean;
 	/** The file is another value's, shown here because this one follows it (a translation following its source): it reads faint, and there is nothing to take out. */
 	following?: boolean;
+	/** The value cannot be changed here: it is read, not pressed. */
+	readOnly?: boolean;
 	/** A control of the file's own before the × (a picture's settings). Its icon buttons take the × 's size. */
 	action?: React.ReactNode;
 }) {
 	const description = useProposalDescription(proposal);
 	const actionSize = FIELD_ACTION_BUTTON[size === "default" ? "lg" : size];
+	const line = cn(
+		"flex h-full min-w-0 grow items-center gap-monti-8 border-0 bg-transparent p-0 text-left outline-none",
+		size === "sm" ? "text-monti-note" : "text-monti-body",
+		value && !following ? (proposal ? "text-monti-proposal" : "text-monti-default") : "text-monti-faint",
+	);
+	const shown = value ? (
+		<>
+			{value.thumbnail ? (
+				<img src={value.thumbnail} alt="" className="size-5 shrink-0 rounded-monti-sm bg-monti-muted object-cover" />
+			) : (
+				<span className="size-5 shrink-0 rounded-monti-sm bg-monti-muted" aria-hidden />
+			)}
+			<span className="truncate">{value.name}</span>
+		</>
+	) : (
+		<span className="truncate">{placeholder}</span>
+	);
 	return (
 		<div
 			data-slot="media-input"
 			data-size={size}
 			data-proposal={proposal || undefined}
+			data-readonly={readOnly || undefined}
+			role={readOnly ? "group" : undefined}
 			className={cn(
-				FIELD_HOVER,
+				!readOnly && FIELD_HOVER,
 				"flex w-full min-w-0 items-center border-monti-default border-b transition-colors focus-within:border-monti-contrast data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
 				FIELD_INSET,
 				HEIGHT[size],
@@ -61,37 +88,24 @@ function MediaInput({
 			)}
 			{...props}
 		>
-			<button
-				id={id}
-				type="button"
-				aria-description={description}
-				onClick={onOpen}
-				className={cn(
-					"flex h-full min-w-0 grow cursor-pointer items-center gap-monti-8 border-0 bg-transparent p-0 text-left outline-none",
-					size === "sm" ? "text-monti-note" : "text-monti-body",
-					value && !following ? (proposal ? "text-monti-proposal" : "text-monti-default") : "text-monti-faint",
-				)}
-			>
-				{value ? (
-					<>
-						{value.thumbnail ? (
-							<img
-								src={value.thumbnail}
-								alt=""
-								className="size-5 shrink-0 rounded-monti-sm bg-monti-muted object-cover"
-							/>
-						) : (
-							<span className="size-5 shrink-0 rounded-monti-sm bg-monti-muted" aria-hidden />
-						)}
-						<span className="truncate">{value.name}</span>
-					</>
-				) : (
-					<span className="truncate">{placeholder}</span>
-				)}
-			</button>
+			{readOnly ? (
+				<div id={id} aria-description={description} className={line}>
+					{shown}
+				</div>
+			) : (
+				<button
+					id={id}
+					type="button"
+					aria-description={description}
+					onClick={onOpen}
+					className={cn(line, "cursor-pointer")}
+				>
+					{shown}
+				</button>
+			)}
 			<span className={cn(FIELD_ACTION, "flex items-center")}>
 				{action && <IconButtonContext value={actionSize}>{action}</IconButtonContext>}
-				{value && onClear ? (
+				{readOnly ? null : value && onClear ? (
 					<IconButton {...actionSize} label={clearLabel ?? ""} onClick={onClear}>
 						<Close />
 					</IconButton>
