@@ -102,14 +102,15 @@ export function useFolderDrop({
 				event.stopPropagation();
 				event.dataTransfer.dropEffect = holdsMedia(event) ? "move" : "copy";
 			},
+			// A drag it took in is seen out, even when it would not take it any more (the screen that sends files up went away meanwhile): the mark must not stay.
 			onDragLeave: (event: React.DragEvent) => {
-				if (!takes(event)) return;
+				if (depth.current === 0) return;
 				event.stopPropagation();
-				depth.current = Math.max(0, depth.current - 1);
+				depth.current -= 1;
 				if (depth.current === 0) setOver(null);
 			},
 			onDrop: (event: React.DragEvent) => {
-				if (!takes(event)) return;
+				if (depth.current === 0 && !takes(event)) return;
 				event.preventDefault();
 				event.stopPropagation();
 				depth.current = 0;

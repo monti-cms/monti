@@ -9,8 +9,10 @@ describe("MediaInput", () => {
 		render(
 			<div style={{ width: 280 }}>
 				<MediaInput value={{ name: "cover-react.png" }} onOpen={opened} />
+				<span id="cover-label">대표 이미지</span>
 				<MediaInput
 					value={{ name: "archived-cover.png" }}
+					aria-labelledby="cover-label"
 					readOnly
 					onOpen={opened}
 					onClear={opened}
@@ -24,6 +26,8 @@ describe("MediaInput", () => {
 		const read = page.getByText("archived-cover.png");
 		await expect.element(read).toBeVisible();
 		expect(read.element().closest("button")).toBeNull();
+		// Not a control, so a label's `for` cannot name it: it is a group named by the label.
+		await expect.element(page.getByRole("group", { name: "대표 이미지" })).toHaveTextContent("archived-cover.png");
 		const field = (words: ReturnType<typeof page.getByText>) =>
 			words.element().closest("[data-slot=media-input]") as HTMLElement;
 

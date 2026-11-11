@@ -42,7 +42,7 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
@@ -102,6 +102,7 @@ function TaxonomySidePanel({
 	 * has none. Another item, a name, or dropping the changes takes it away.
 	 */
 	const [saveAsked, setSaveAsked] = useState(false);
+	const nameInput = useRef<HTMLInputElement>(null);
 	const [askedIn, setAskedIn] = useState(group);
 	if (askedIn !== group) {
 		setAskedIn(group);
@@ -212,7 +213,7 @@ function TaxonomySidePanel({
 								onClick={async () => {
 									if (!panel.named) {
 										setSaveAsked(true);
-										document.getElementById("item-title")?.focus();
+										nameInput.current?.focus();
 										return;
 									}
 									const savedTitle = String(panel.draft.value(`locales.${sourceLocale}.title`) ?? "");
@@ -252,6 +253,7 @@ function TaxonomySidePanel({
 					{t("taxonomy.field.name")}
 				</FormFieldLabel>
 				<Input
+					ref={nameInput}
 					id="item-title"
 					size="md"
 					proposal={panel.draft.cell(titlePath).kind === "proposed"}
@@ -259,7 +261,7 @@ function TaxonomySidePanel({
 					aria-invalid={nameMissing || undefined}
 					onChange={(e) => panel.draft.set(titlePath, e.target.value)}
 				/>
-				{nameMissing && <FormFieldError>{t("taxonomy.nameMissing")}</FormFieldError>}
+				{nameMissing && <FormFieldError>{t("settings.fillIn")}</FormFieldError>}
 				{wasLine(titlePath)}
 			</FormField>
 			<FormField>

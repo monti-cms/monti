@@ -1,9 +1,11 @@
 /**
- * Why the library will not take a file: not a kind it takes, not a picture where only pictures go, nothing comes out of it (a folder from the OS, a broken picture), over
- * the limit, or the folder it was going to was deleted meanwhile. Trying again would change nothing, so such a file takes no place on the page: a toast says so, at once
- * (2026-11-09, owner).
+ * Why the library will not take a file: not a kind it takes, not a picture where only pictures go, nothing comes out of it (a folder from the OS, a broken picture), or over
+ * the limit. Trying again would change nothing, so such a file takes no place on the page: a toast says so, at once (2026-11-09, owner).
  */
-export type Refusal = "type" | "notImage" | "unreadable" | "tooBig" | "noFolder";
+export type Refusal = "type" | "notImage" | "unreadable" | "tooBig";
+
+/** What ends a file's way up for good: the file itself is refused, or the folder it was going to was deleted meanwhile. One toast says either. */
+export type Ended = Refusal | "noFolder";
 
 /** One file on its way up, in its place on the page until it is an item of the library. */
 export type Upload = {

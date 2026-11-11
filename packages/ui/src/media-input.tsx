@@ -15,7 +15,8 @@ const HEIGHT = { sm: "h-monti-control-sm", md: "h-monti-control-md", default: "h
  * not shown here: the field reads like its neighbours, an input or a select.
  *
  * `readOnly` (an archived entry, one in the trash) is the value to read and nothing to press: the line is not a button, the pointer stays an arrow, the
- * ground does not answer it, and the end holds nothing: no ×, no `action`, no picture icon that says "choose one".
+ * ground does not answer it, and the end holds nothing: no ×, no `action`, no picture icon that says "choose one". It is then a group, named with
+ * `aria-labelledby` (the label's id): a label's `htmlFor` names only what can be pressed or typed in.
  */
 function MediaInput({
 	id,
@@ -76,6 +77,7 @@ function MediaInput({
 			data-size={size}
 			data-proposal={proposal || undefined}
 			data-readonly={readOnly || undefined}
+			role={readOnly ? "group" : undefined}
 			className={cn(
 				!readOnly && FIELD_HOVER,
 				"flex w-full min-w-0 items-center border-monti-default border-b transition-colors focus-within:border-monti-contrast data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",

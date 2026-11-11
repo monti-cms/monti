@@ -77,11 +77,15 @@ export function MediaField({
 	const isImage = file?.kind === "image";
 	const said = uploads.saidOf(field);
 	const altMissing = going ? going.preview !== null && altIsMissing(said) : isImage && shown && altIsMissing(shown);
+	// Only read: the entry cannot be changed and no file is on its way. A file that was going up when the entry was archived keeps its retry and its ×.
+	const reading = readOnly && !going;
 	return (
 		<>
 			<FormField>
 				<FormFieldLabel
-					htmlFor={id}
+					// Read-only the line is not a control, and a label's `for` names only controls: the field is named by the label's id instead.
+					id={`${id}-label`}
+					htmlFor={reading ? undefined : id}
 					required={required}
 					action={
 						change && !going ? (
@@ -102,14 +106,15 @@ export function MediaField({
 					following={followed !== null && !going}
 					value={going ? { name: going.name, thumbnail: going.preview } : shownFile(file)}
 					placeholder={t("entry.empty")}
-					readOnly={readOnly}
-					onOpen={() => setPicking(true)}
+					readOnly={reading}
+					aria-labelledby={reading ? `${id}-label` : undefined}
+					onOpen={readOnly ? undefined : () => setPicking(true)}
 					// On a file going up or stopped, × takes out that file: the field goes back to what it had.
 					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
 					clearLabel={t("library.field.clear", { label })}
 					action={
 						// Read-only, the field has no control at all, its settings too: as the body's picture has none (2026-11-11, owner).
-						readOnly ? undefined : going?.status === "failed" ? (
+						reading ? undefined : going?.status === "failed" ? (
 							<RetryButton onRetry={() => uploads.retry(going)} />
 						) : isImage && shown ? (
 							<Popover open={card} onOpenChange={onCard}>

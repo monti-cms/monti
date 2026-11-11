@@ -25,8 +25,9 @@ export function FolderFilesProvider({ children }: { children: React.ReactNode })
  */
 export function useTakeFolderFiles(taker: Taker | null) {
 	const setTaker = useContext(FolderFiles)?.setTaker;
+	// The last one given: when it stops taking (`null`), this is still the one to tell that no files are over a folder any more.
 	const latest = useRef(taker);
-	latest.current = taker;
+	if (taker) latest.current = taker;
 	const takes = taker !== null;
 	useEffect(() => {
 		if (!setTaker || !takes) return;
@@ -34,7 +35,10 @@ export function useTakeFolderFiles(taker: Taker | null) {
 			over: (name) => latest.current?.over(name),
 			files: (files, folder) => latest.current?.files(files, folder),
 		});
-		return () => setTaker(null);
+		return () => {
+			latest.current?.over(null);
+			setTaker(null);
+		};
 	}, [setTaker, takes]);
 }
 

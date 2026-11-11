@@ -100,7 +100,6 @@ export function useItemPanel({ collection, group, item, locales, sourceLocale, o
 		() => locales.some((l) => Boolean(String(draft.value(`locales.${l}.title`) ?? "").trim())),
 		[locales, draft],
 	);
-	const canSave = group === "__new__" ? named : draft.dirty && named;
 
 	const save = async () => {
 		const localesData: Record<string, { title?: string; slug?: string; description?: string }> = {};
@@ -137,7 +136,6 @@ export function useItemPanel({ collection, group, item, locales, sourceLocale, o
 		draft,
 		saving: saveGroupOp.pending,
 		named,
-		canSave,
 		save,
 	};
 }

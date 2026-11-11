@@ -1,6 +1,6 @@
 import { toast as toastApi } from "@monti-cms/ui";
 import { composeStories, composeStory } from "@storybook/react-vite";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { scrollsSideways, spillingCells, titleUnderPointer } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
@@ -455,6 +455,20 @@ describe("uploading", () => {
 		await expect.element(toast("here.jpg · 지워진 폴더")).toBeVisible();
 		await expect.element(main().getByText("here.jpg")).not.toBeInTheDocument();
 		await expect.element(page.getByRole("button", { name: "다시 올리기" })).not.toBeInTheDocument();
+		// Five at once: three go up together, and the two still waiting leave with the first one told, in its toast.
+		toastApi.dismiss();
+		const said = vi.spyOn(toastApi, "error");
+		dropFiles(
+			main().getByText("top-level-photo.jpg").element(),
+			await Promise.all(["1", "2", "3", "4", "5"].map((n) => jpeg(`many-${n}.jpg`))),
+		);
+		// What the toasts were asked to say: one for each of the three that were going up, and the first of them names the two that never started.
+		await expect.poll(() => said.mock.calls.length).toBe(3);
+		const texts = said.mock.calls.map(([text]) => String(text));
+		expect(texts.filter((text) => /^many-\d\.jpg 외 2개 · 지워진 폴더$/.test(text))).toHaveLength(1);
+		expect(texts.filter((text) => /^many-\d\.jpg · 지워진 폴더$/.test(text))).toHaveLength(2);
+		said.mockRestore();
+		await expect.element(main().getByText(/many-\d\.jpg/)).not.toBeInTheDocument();
 		// An error's toast stays until it is closed: these two would lie over the tiles the next tests point at.
 		toastApi.dismiss();
 	});
@@ -581,16 +595,18 @@ describe("many files at once", () => {
 		await openAssets();
 		const source = tile("seoul-night.jpg").element();
 		const target = folder("covers").element();
+		const hint = vi.spyOn(toastApi, "dropHint");
 		const dataTransfer = new DataTransfer();
 		source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer }));
 		for (const type of ["dragenter", "dragover"])
 			target.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
-		// The folder is marked as where the tile goes. The hint at the bottom is for files going up, and a move is not that.
+		// The folder is marked as where the tile goes. The hint at the bottom is for files going up, and a move is not that: it is never asked for.
 		await expect.element(folder("covers")).toHaveAttribute("data-drop-target");
-		await expect.element(page.getByText("covers에 올리기")).not.toBeInTheDocument();
 		target.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer }));
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(folder("covers")).toHaveTextContent("2");
+		expect(hint).not.toHaveBeenCalled();
+		hint.mockRestore();
 	});
 
 	it("09-1 [overflow-after-add] long file names keep to their tiles: nothing scrolls sideways", async () => {
@@ -712,18 +728,20 @@ describe("the sidebar", () => {
 		const tree = page.getByRole("list", { name: "폴더" });
 		const source = tile("seoul-night.jpg").element();
 		const target = tree.getByRole("link", { name: /Wallpapers/ }).element();
+		const hint = vi.spyOn(toastApi, "dropHint");
 		const dataTransfer = new DataTransfer();
 		source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer }));
 		const fire = (type: string) =>
 			target.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
 		fire("dragenter");
 		fire("dragover");
-		// The row is marked, and nothing says "올리기": a move is not an upload.
+		// The row is marked, and nothing says "올리기": a move is not an upload, so the hint is never asked for.
 		await expect.element(tree.getByRole("link", { name: /Wallpapers/ })).toHaveAttribute("data-droptarget");
-		await expect.element(page.getByText("Wallpapers에 올리기")).not.toBeInTheDocument();
 		fire("drop");
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
 		await expect.element(tree.getByRole("link", { name: /Wallpapers/ })).toHaveTextContent("1");
+		expect(hint).not.toHaveBeenCalled();
+		hint.mockRestore();
 	});
 
 	it("09-1 T106 files from outside dropped on a tree row go up into that folder, and the hint names it while they are over it", async () => {
@@ -766,6 +784,8 @@ describe("the sidebar", () => {
 		await story.run();
 		const row = page.getByRole("list", { name: "폴더" }).getByRole("link", { name: /Old photos/ });
 		await expect.element(row).toBeVisible();
+		// The library has answered that it has no storage: until it does, nobody knows.
+		await expect.element(main().getByText("미디어 저장소가 없습니다")).toBeVisible();
 		const dataTransfer = new DataTransfer();
 		dataTransfer.items.add(await jpeg("nowhere.jpg"));
 		// A row that takes a drag keeps it to itself (it stops there); one that does not lets it go on up the page. That is known the moment the drag is over it.

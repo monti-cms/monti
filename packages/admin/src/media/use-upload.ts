@@ -25,6 +25,9 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 	const onUploaded = useRef(options.onUploaded);
 	onUploaded.current = options.onUploaded;
 	const sayRefused = useSayRefused();
+	/** The queue as it is now, for what runs later than the render that started it. */
+	const latest = useRef(uploads);
+	latest.current = uploads;
 
 	const forget = useCallback((upload: Upload) => {
 		files.current.delete(upload.id);
@@ -77,9 +80,19 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 					dispatch({ type: "failed", id: upload.id });
 					return;
 				}
-				sayRefused([{ name: upload.name, refusal: "noFolder" }]);
-				forget(upload);
-				dispatch({ type: "remove", id: upload.id });
+				// Those still waiting for the same folder would only be told the same, one toast each: they go with this one, in one toast. One of them
+				// started since this render is stopped by `forget` and leaves by its id like the rest; one another refusal already took is no longer held.
+				const gone = [
+					upload,
+					...latest.current.filter(
+						(each) => each.status === "waiting" && each.folder === upload.folder && files.current.has(each.id),
+					),
+				];
+				sayRefused(gone.map((each) => ({ name: each.name, refusal: "noFolder" })));
+				for (const each of gone) {
+					forget(each);
+					dispatch({ type: "remove", id: each.id });
+				}
 				return;
 			}
 			onUploaded.current?.(made.body.output, upload);
@@ -97,8 +110,6 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 	}, [uploads, send]);
 
 	// Nothing is left behind when the page goes.
-	const latest = useRef(uploads);
-	latest.current = uploads;
 	useEffect(
 		() => () => {
 			for (const upload of latest.current) forget(upload);
