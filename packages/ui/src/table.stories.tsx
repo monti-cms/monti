@@ -202,7 +202,7 @@ export const Refreshing: Story = { render: () => <Frame dimmed>{rows(() => ({}))
 /**
  * Columns dragged narrow: each cell cuts its value with "…" at its own edge and says it whole when pointed at (`title`), a status keeps its mark, a count that
  * is a link ends in "…" too, and what stands after the title gives way before the title does and says itself whole (`addressTitle`). A press on any of them
- * opens the row.
+ * opens the row, but for the count, which is a link of its own.
  */
 export const CutCells: Story = {
 	tags: ["visual"],

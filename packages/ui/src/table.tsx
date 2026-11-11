@@ -109,7 +109,7 @@ function TableRow({
 	/** The row has a second line under its title (a template's sections): 16px above and below instead of 10. */
 	twoLine?: boolean;
 }) {
-	const { onClick, onAuxClick } = props;
+	const { onClick, onAuxClick, onMouseDown } = props;
 	return (
 		<tr
 			data-slot="table-row"
@@ -133,15 +133,30 @@ function TableRow({
 				onAuxClick?.(event);
 				if (!event.defaultPrevented) openFromOver(event);
 			}}
+			onMouseDown={(event) => {
+				onMouseDown?.(event);
+				// The middle button held on what is not a link starts the browser's own scrolling on Windows and Linux: here it opens the row's link.
+				if (event.button === 1 && overLink(event)) event.preventDefault();
+			}}
 		/>
 	);
 }
 
 /** What keeps its own press on a row: the controls, and what holds them. */
 const OWN_PRESS =
-	"a, button, input, select, textarea, label, summary, [role=button], [role=link], [role=checkbox], [role=switch], [role=tab], [role=menuitem], [role=combobox], [contenteditable=true], [data-slot=row-check], [data-slot=row-actions]";
+	"a, button, input, select, textarea, label, summary, [role=button], [role=link], [role=checkbox], [role=radio], [role=switch], [role=tab], [role=option], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=combobox], [role=textbox], [role=slider], [contenteditable=true], [data-slot=row-check], [data-slot=row-actions]";
 
 let passingOn = false;
+
+/** The row's link, when the press was on something of the row that stands over it and has no press of its own. */
+function overLink(event: React.MouseEvent<HTMLTableRowElement>): HTMLElement | null {
+	const row = event.currentTarget;
+	const link = row.querySelector<HTMLElement>("[data-slot=row-link]");
+	const pressed = event.target;
+	// A press in a menu the row opened reaches the row through React, not through the page: it is not a press on the row.
+	if (!link || !(pressed instanceof Element) || !row.contains(pressed)) return null;
+	return link.contains(pressed) || pressed.closest(OWN_PRESS) ? null : link;
+}
 
 /**
  * A row's link covers the row, and some of the row stands over the link so the pointer can find it: a cell's words that say themselves whole when pointed at, a
@@ -149,12 +164,8 @@ let passingOn = false;
  * button opens the link's address in a new tab.
  */
 function openFromOver(event: React.MouseEvent<HTMLTableRowElement>) {
-	const row = event.currentTarget;
-	const link = row.querySelector<HTMLElement>("[data-slot=row-link]");
-	const pressed = event.target;
-	// A press in a menu the row opened reaches the row through React, not through the page: it is not a press on the row.
-	if (!link || !(pressed instanceof Element) || !row.contains(pressed)) return;
-	if (link.contains(pressed) || pressed.closest(OWN_PRESS)) return;
+	const link = overLink(event);
+	if (!link) return;
 	if (event.type === "auxclick") {
 		if (event.button === 1 && link instanceof HTMLAnchorElement && link.href)
 			window.open(link.href, "_blank", "noopener");
@@ -318,8 +329,17 @@ function RowTitle({
 			className={cn("flex min-w-0 gap-monti-12", thumb ? "items-center" : "items-baseline", className)}
 			{...props}
 		>
-			{/* Beside a picture the words stand at its middle, as the row's other cells do. */}
-			<span className={cn("flex min-w-0 gap-monti-8", thumb ? "items-center" : "items-baseline")}>
+			{/*
+			 * Beside a picture the words stand at its middle, as the row's other cells do. With an address after it the title does not give way at all until the
+			 * address has none left to give: it keeps its words whole up to the line's width less the gap, and only then is cut.
+			 */}
+			<span
+				className={cn(
+					"flex min-w-0 gap-monti-8",
+					thumb ? "items-center" : "items-baseline",
+					address && "max-w-[calc(100%-var(--monti-space-12))] shrink-0",
+				)}
+			>
 				{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
 				{thumb && <span className="mr-monti-4 flex shrink-0 self-center">{thumb}</span>}
 				<span className={cn("min-w-0 text-monti-body text-monti-default", !editing && "truncate")}>{title}</span>
@@ -328,7 +348,7 @@ function RowTitle({
 				// It is cut before the title is, so it says itself whole when pointed at: it stands over the row's link for the pointer to find it.
 				<span
 					title={addressTitle ?? (typeof address === "string" ? address : undefined)}
-					className="relative z-1 min-w-0 shrink-[999] truncate font-mono text-monti-faint text-monti-meta"
+					className="relative z-1 min-w-0 truncate font-mono text-monti-faint text-monti-meta"
 				>
 					{address}
 				</span>

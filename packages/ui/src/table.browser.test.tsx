@@ -110,4 +110,44 @@ describe("Table rows with a link", () => {
 		expect(opened).toHaveBeenCalledTimes(2);
 		tab.mockRestore();
 	});
+
+	it("short of room, what stands after a title gives way first: the title is whole while the address has anything left, and only then is cut", async () => {
+		const row = (width: number) => (
+			// The last column takes the room that is left, so the first keeps its width.
+			<Table container="none" layout="fixed" columns={[width, undefined]}>
+				<TableBody>
+					<TableRow>
+						<TableCell truncate>
+							<RowTitle title={<RowLink href="#">CMS elements: details</RowLink>} address="/cms-elements-details" />
+						</TableCell>
+						<TableCell />
+					</TableRow>
+				</TableBody>
+			</Table>
+		);
+		// The box that cuts the words (the words' own, or the one that holds a link), and whether its words are wider than it is, to a hundredth of a pixel:
+		// a title that gives way by a tenth of one already ends in "…".
+		const box = (words: string) => {
+			const found = page.getByText(words).element().closest(".truncate");
+			if (!found) throw new Error(`Nothing cuts "${words}".`);
+			return found;
+		};
+		const cut = (words: string) => {
+			const range = document.createRange();
+			range.selectNodeContents(box(words));
+			return range.getBoundingClientRect().width > box(words).getBoundingClientRect().width + 0.01;
+		};
+		const host = render(row(260));
+		await expect.element(page.getByText("CMS elements: details")).toBeVisible();
+		expect(cut("/cms-elements-details")).toBe(true);
+		expect(cut("CMS elements: details")).toBe(false);
+		host.remove();
+		render(row(120));
+		await expect.element(page.getByText("CMS elements: details")).toBeVisible();
+		expect(cut("CMS elements: details")).toBe(true);
+		const cell = box("CMS elements: details").closest("td") as HTMLElement;
+		expect(box("CMS elements: details").getBoundingClientRect().right).toBeLessThanOrEqual(
+			cell.getBoundingClientRect().right,
+		);
+	});
 });
