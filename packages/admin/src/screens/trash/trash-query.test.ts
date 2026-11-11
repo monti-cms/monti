@@ -10,7 +10,8 @@ describe("the trash's address", () => {
 			search: "",
 			everywhere: false,
 			kinds: [],
-			sort: "newest",
+			locales: [],
+			sort: { by: "left", dir: "desc" },
 			page: 1,
 			open: null,
 		});
@@ -23,23 +24,33 @@ describe("the trash's address", () => {
 			search: "리액트",
 			everywhere: true,
 			kinds: ["post", "media"],
-			sort: "oldest",
+			locales: ["en"],
+			sort: { by: "title", dir: "desc" },
 			page: 3,
 			open: { kind: "media", id: "m:1" },
 		});
+		expect(written.toString()).toContain("sort=title&dir=desc");
 		expect(state(written.toString())).toEqual({
 			folder: "f1",
 			search: "리액트",
 			everywhere: true,
 			kinds: ["post", "media"],
-			sort: "oldest",
+			locales: ["en"],
+			sort: { by: "title", dir: "desc" },
 			page: 3,
 			open: { kind: "media", id: "m:1" },
 		});
 	});
 
 	it("what the address cannot mean is left out", () => {
-		expect(state("page=0&sort=sideways&open=folder:f1")).toMatchObject({ page: 1, sort: "newest", open: null });
+		expect(state("page=0&sort=sideways&dir=up&open=folder:f1")).toMatchObject({
+			page: 1,
+			sort: { by: "left", dir: "desc" },
+			open: null,
+		});
+		// Each order starts its own way: the days from the most left, a title from A.
+		expect(state("sort=title")).toMatchObject({ sort: { by: "title", dir: "asc" } });
+		expect(writeTrashState(state("dir=asc")).toString()).toBe("dir=asc");
 		expect(state("open=entry:")).toMatchObject({ open: null });
 	});
 

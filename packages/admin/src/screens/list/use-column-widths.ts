@@ -1,11 +1,9 @@
 import { useState } from "react";
-import { widthsAfter } from "../screens/list/format";
+import { widthsAfter } from "./format";
 
-const KEY = "monti:media-columns";
-
-function kept(): Record<string, number> {
+function kept(key: string): Record<string, number> {
 	try {
-		const stored: unknown = JSON.parse(localStorage.getItem(KEY) ?? "{}");
+		const stored: unknown = JSON.parse(localStorage.getItem(key) ?? "{}");
 		if (typeof stored !== "object" || stored === null) return {};
 		return Object.fromEntries(
 			Object.entries(stored).filter((entry): entry is [string, number] => typeof entry[1] === "number"),
@@ -16,10 +14,12 @@ function kept(): Record<string, number> {
 }
 
 /**
- * The widths of the media list's columns, as `ListHead` drags them: the library has no collection for `list.savePrefs` to keep them under, so they stay in this browser (T113).
+ * The widths of a table's columns, as `ListHead` drags them, for a table that has no collection for `list.savePrefs` to keep them under (the media list, the trash,
+ * a collection's items): they stay in this browser, under the table's `name`.
  */
-export function useColumnWidths() {
-	const [widths, setWidths] = useState(kept);
+export function useColumnWidths(name: string) {
+	const key = `monti:${name}-columns`;
+	const [widths, setWidths] = useState(() => kept(key));
 	const [dragged, setDragged] = useState<Record<string, number> | null>(null);
 	const shown = dragged ?? widths;
 	const resize = (changes: Record<string, number | null>, commit: boolean) => {
@@ -28,7 +28,7 @@ export function useColumnWidths() {
 		setDragged(null);
 		setWidths(next);
 		try {
-			localStorage.setItem(KEY, JSON.stringify(next));
+			localStorage.setItem(key, JSON.stringify(next));
 		} catch {}
 	};
 	return { widths: shown, resize };

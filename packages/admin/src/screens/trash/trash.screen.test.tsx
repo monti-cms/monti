@@ -99,6 +99,38 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(row("시리즈 1: 시작")).not.toBeInTheDocument();
 	});
 
+	it("11-1 its columns work as every table's: the title sorts both ways, the language filters, and a width can be dragged", async () => {
+		localStorage.removeItem("monti:trash-columns");
+		await Top.run();
+		const head = (name: string) => table().getByRole("columnheader", { name });
+		const first = () => table().element().querySelector("tbody tr")?.textContent ?? "";
+		await userEvent.click(table().getByRole("button", { name: "제목" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "오름차순" }));
+		await expect.element(head("제목")).toHaveAttribute("aria-sort", "ascending");
+		await expect.poll(first).toContain("diagrams");
+
+		// A row's counted languages are named under the pointer, and written out once the column has the room.
+		const languages = row("첫 번째 글").getByText("KO +1");
+		await userEvent.hover(languages);
+		await expect.poll(() => document.querySelector('[data-slot="tooltip-content"]')?.textContent).toBe("한국어, 영어");
+		await userEvent.unhover(languages);
+		const width = head("언어").element().getBoundingClientRect().width;
+		(page.getByRole("separator", { name: "제목 열 너비 조절" }).element() as HTMLElement).focus();
+		await userEvent.keyboard("{ArrowLeft}{ArrowLeft}");
+		await expect.poll(() => head("언어").element().getBoundingClientRect().width).toBeGreaterThan(width);
+		await expect.element(row("첫 번째 글")).toHaveTextContent("KO · EN");
+
+		// By language: the entries with it in the trash. A folder and a file have none.
+		await userEvent.click(table().getByRole("button", { name: "언어" }));
+		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /영어/ }));
+		await userEvent.keyboard("{Escape}");
+		await expect.element(row("옛 소개 글")).not.toBeInTheDocument();
+		await expect.element(row("시리즈 원고")).not.toBeInTheDocument();
+		await expect.element(row("첫 번째 글")).toBeVisible();
+		await expect.element(row("리액트 19 마이그레이션")).toBeVisible();
+		localStorage.removeItem("monti:trash-columns");
+	});
+
 	it("11-1 [flow 5·12] a folder's first row goes up, as the lists' does, and is not there while it searches", async () => {
 		await SearchingInFolder.run();
 		await expect.element(row("시리즈 2: 리액트로 옮기기")).toBeVisible();

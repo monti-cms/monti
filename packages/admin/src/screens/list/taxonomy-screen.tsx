@@ -6,8 +6,6 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	FormField,
@@ -54,6 +52,8 @@ import { useCoverCorner } from "../frame/admin-frame";
 import { useLanguageName } from "./column-menu";
 import { endsClosed } from "./format";
 import { MergeDialog } from "./merge-dialog";
+import { SortRows } from "./sort-rows";
+import { useColumnWidths } from "./use-column-widths";
 import { useItemPanel } from "./use-item-panel";
 
 type SchemaRead = {
@@ -307,7 +307,8 @@ export function TaxonomyScreen({
 	const [search, setSearch] = useState("");
 	const [openGroup, setOpenGroup] = useState<string | null>(null);
 	const [filterUnused, setFilterUnused] = useState(false);
-	const [sort, setSort] = useState<SortMode>("name");
+	const [sort, setSort] = useState<{ by: SortMode; dir: "asc" | "desc" }>({ by: "name", dir: "asc" });
+	const { widths, resize } = useColumnWidths(`items:${collection}`);
 	const [picked, setPicked] = useState<Set<string>>(new Set());
 	const [mergeGroups, setMergeGroups] = useState<string[] | null>(null);
 
@@ -339,8 +340,9 @@ export function TaxonomyScreen({
 					Object.values(i.locales).some((l) => l.title.toLowerCase().includes(q) || l.slug.toLowerCase().includes(q)),
 			);
 		}
-		return [...list].sort((a, b) =>
-			sort === "usage" ? b.usageCount - a.usageCount : a.title.localeCompare(b.title, language),
+		const way = sort.dir === "asc" ? 1 : -1;
+		return [...list].sort(
+			(a, b) => way * (sort.by === "usage" ? a.usageCount - b.usageCount : a.title.localeCompare(b.title, language)),
 		);
 	}, [allItems, filterUnused, search, sort, language]);
 
@@ -392,28 +394,28 @@ export function TaxonomyScreen({
 		label: t("list.selectAll"),
 		onChange: (on: boolean) => setPicked(new Set(on ? filteredItems.map((item) => item.group) : [])),
 	};
-	const sortItems = (value: SortMode, label: string) => (
-		<DropdownMenuRadioGroup value={sort} onValueChange={() => setSort(value)}>
-			<DropdownMenuRadioItem value={value}>{label}</DropdownMenuRadioItem>
-		</DropdownMenuRadioGroup>
+	const sortRows = (by: SortMode) => (
+		<SortRows dir={sort.by === by ? sort.dir : null} onChange={(dir) => setSort({ by, dir })} />
 	);
+	const usageSize = widths.usage ?? LIST_COLUMN_SIZE.one;
 	const head: ListHeadColumn[] = [
 		{
 			id: "name",
 			label: t("taxonomy.column.name"),
-			sort: sort === "name" ? "asc" : undefined,
-			menu: sortItems("name", t("taxonomy.sort.name")),
+			sort: sort.by === "name" ? sort.dir : undefined,
+			menu: sortRows("name"),
 		},
 		{
 			id: "usage",
 			label: t("taxonomy.column.usage"),
-			size: LIST_COLUMN_SIZE.one,
+			size: usageSize,
+			kindSize: LIST_COLUMN_SIZE.one,
 			align: "end",
-			sort: sort === "usage" ? "desc" : undefined,
+			sort: sort.by === "usage" ? sort.dir : undefined,
 			filtered: filterUnused,
 			menu: (
 				<>
-					{sortItems("usage", t("taxonomy.sort.usage"))}
+					{sortRows("usage")}
 					<DropdownMenuSeparator />
 					<DropdownMenuCheckboxItem checked={filterUnused} onCheckedChange={(checked) => setFilterUnused(checked)}>
 						{t("taxonomy.unusedFilter")}
@@ -441,12 +443,14 @@ export function TaxonomyScreen({
 					</Button>
 				</PageHeader>
 				<ListScroll>
-					<Table container="none" layout="fixed" columns={[undefined, LIST_COLUMN_SIZE.one, LIST_COLUMN_SIZE.end]}>
+					<Table container="none" layout="fixed" columns={[undefined, usageSize, LIST_COLUMN_SIZE.end]}>
 						{picked.size === 0 ? (
 							<ListHead
 								columns={head}
 								end={LIST_COLUMN_SIZE.end}
 								selectAll={filteredItems.length > 0 ? selectAll : undefined}
+								onResize={resize}
+								resizeLabel={(column) => t("list.resizeColumn", { column })}
 							/>
 						) : (
 							<BulkBar

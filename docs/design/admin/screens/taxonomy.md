@@ -20,7 +20,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 열 이름 행 | `ListHead`(열 "이름", "글 수"; 정렬된 열은 `sort`) | 정렬은 열 이름의 메뉴에서 한다. 카테고리 보드는 툴바에 탭 "전체 3"과 "이름순 ▾"를 그리지만, [page-header.md](../components/page-header.md)를 따라 컬렉션 목록의 툴바는 비우고 카테고리도 태그처럼 `ListHead`를 쓴다. 행을 고르면 같은 자리를 `BulkBar`가 대신한다. |
+| 열 이름 행 | `ListHead`(열 "이름", "글 수"; 정렬된 열은 `sort`; `onResize`, `resizeLabel`) | 정렬은 열 이름의 메뉴에서 한다: 두 열 모두 `SortRows` "오름차순" · "내림차순". "글 수" 열의 너비는 끌어 바꾸고 이 브라우저에 컬렉션마다 남는다(모든 표의 열 규칙, [list.md](../components/list.md), 2026-11-11 소유자). 카테고리 보드는 툴바에 탭 "전체 3"과 "이름순 ▾"를 그리지만, [page-header.md](../components/page-header.md)를 따라 컬렉션 목록의 툴바는 비우고 카테고리도 태그처럼 `ListHead`를 쓴다. 행을 고르면 같은 자리를 `BulkBar`가 대신한다. |
 | 표 | `Table`, `TableBody`, `TableRow`(옆 패널에 열린 행은 `selected`) | |
 | 체크 | `RowCheck` | 포인터가 행 위에 있거나 무엇이든 고른 동안 보인다. |
 | 이름 · 주소 | `RowTitle` + `RowLink` | Uses the same single-line row as the document list. The secondary value is always the bare slug (`react`), not the full public path. Descriptions are edited in the side panel and never change list-row height. A missing translated name remains an inline warning. |

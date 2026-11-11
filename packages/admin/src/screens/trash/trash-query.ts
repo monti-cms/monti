@@ -11,7 +11,10 @@ export type TrashState = {
 	everywhere: boolean;
 	/** Collections, and `media`. */
 	kinds: string[];
-	sort: "newest" | "oldest";
+	/** Languages: entries with one of them in the trash. */
+	locales: string[];
+	/** By the days left (the most left first, as it opens) or by title. */
+	sort: { by: "left" | "title"; dir: "asc" | "desc" };
 	page: number;
 	/** The item or the file open beside the list. */
 	open: TrashRef | null;
@@ -25,12 +28,18 @@ export function readTrashState(params: URLSearchParams): TrashState {
 	const [kind, ...rest] = (params.get("open") ?? "").split(":");
 	const panel = PANEL_KINDS.find((known) => known === kind);
 	const id = rest.join(":");
+	const dir = params.get("dir");
 	return {
 		folder: params.get("folder"),
 		search: params.get("q") ?? "",
 		everywhere: params.get("in") === "all",
 		kinds: (params.get("kind") ?? "").split(",").filter(Boolean),
-		sort: params.get("sort") === "oldest" ? "oldest" : "newest",
+		locales: (params.get("lang") ?? "").split(",").filter(Boolean),
+		sort: {
+			by: params.get("sort") === "title" ? "title" : "left",
+			// A title starts from A; the days left start from the most.
+			dir: dir === "asc" || dir === "desc" ? dir : params.get("sort") === "title" ? "asc" : "desc",
+		},
 		page: Number.isInteger(page) && page > 1 ? page : 1,
 		open: panel && id !== "" ? { kind: panel, id } : null,
 	};
@@ -43,7 +52,9 @@ export function writeTrashState(state: TrashState): URLSearchParams {
 	if (state.search) params.set("q", state.search);
 	if (state.everywhere) params.set("in", "all");
 	if (state.kinds.length > 0) params.set("kind", state.kinds.join(","));
-	if (state.sort !== "newest") params.set("sort", state.sort);
+	if (state.locales.length > 0) params.set("lang", state.locales.join(","));
+	if (state.sort.by !== "left") params.set("sort", state.sort.by);
+	if (state.sort.dir !== (state.sort.by === "title" ? "asc" : "desc")) params.set("dir", state.sort.dir);
 	if (state.page > 1) params.set("page", String(state.page));
 	if (state.open) params.set("open", `${state.open.kind}:${state.open.id}`);
 	return params;
@@ -55,6 +66,7 @@ export const trashQueryOf = (state: TrashState) => ({
 	scope: state.everywhere && state.search.trim() !== "" ? ("all" as const) : ("here" as const),
 	search: state.search,
 	kinds: state.kinds,
+	locales: state.locales,
 	sort: state.sort,
 	page: state.page,
 	pageSize: TRASH_PAGE_SIZE,

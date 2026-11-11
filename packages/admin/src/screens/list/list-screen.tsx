@@ -26,6 +26,7 @@ import {
 	ListHead,
 	type ListHeadColumn,
 	ListScroll,
+	LocaleCodes,
 	PageColumn,
 	PageHeader,
 	PageSizeMenu,
@@ -65,7 +66,7 @@ import {
 	useFolders,
 	useRemoveFolder,
 } from "./folders";
-import { endsClosed, fieldCell, localeCell, shortDate, widthsAfter } from "./format";
+import { endsClosed, fieldCell, shortDate, widthsAfter } from "./format";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
 import { RelationSubmenu } from "./relations-menu";
@@ -597,9 +598,7 @@ function DocumentListScreen({
 				return (
 					<TableCell key={column.id}>
 						{check}
-						<Text mono variant="meta">
-							{localeCell(row)}
-						</Text>
+						<LocaleCodes codes={row.locales} names={row.locales.map(languageName).join(", ")} />
 					</TableCell>
 				);
 			case "date":

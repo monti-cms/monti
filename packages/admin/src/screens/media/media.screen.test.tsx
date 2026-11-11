@@ -137,8 +137,17 @@ describe("browsing", () => {
 		await userEvent.keyboard("{Escape}");
 		await expect.element(main().getByRole("link", { name: "top-level-photo.jpg" })).toBeVisible();
 		await userEvent.click(table.getByRole("button", { name: "크기" }));
-		await userEvent.click(page.getByRole("menuitemradio", { name: "크기순" }));
+		// A column's menu sorts both ways, in the words every table uses.
+		await userEvent.click(page.getByRole("menuitemradio", { name: "내림차순" }));
 		await expect.element(table.getByRole("columnheader", { name: "크기" })).toHaveAttribute("aria-sort", "descending");
+		await userEvent.click(table.getByRole("button", { name: "크기" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "오름차순" }));
+		await expect.element(table.getByRole("columnheader", { name: "크기" })).toHaveAttribute("aria-sort", "ascending");
+		await userEvent.click(table.getByRole("button", { name: "올린 날" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "오래전부터" }));
+		await expect
+			.element(table.getByRole("columnheader", { name: "올린 날" }))
+			.toHaveAttribute("aria-sort", "ascending");
 	});
 
 	it("09-1 T113 [keys-move] a column's edge moves width between its two columns, and the width is still there next time", async () => {
@@ -312,11 +321,14 @@ describe("browsing", () => {
 		await expect.element(main().getByRole("button", { name: /찾을 곳$/ })).not.toBeInTheDocument();
 	});
 
-	it("09-1 a sort is a menu with one mark of its own", async () => {
+	it("09-1 the grid's order is one menu: what it is ordered by, then which way", async () => {
 		await openAssets();
-		await userEvent.click(main().getByRole("button", { name: "최근 올린순" }));
-		await userEvent.click(page.getByRole("menuitemradio", { name: "크기순" }));
-		await expect.element(main().getByRole("button", { name: "크기순" })).toBeVisible();
+		await userEvent.click(main().getByRole("button", { name: "올린 날 · 최근부터" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "크기" }));
+		await expect.element(main().getByRole("button", { name: "크기 · 내림차순" })).toBeVisible();
+		await userEvent.click(main().getByRole("button", { name: "크기 · 내림차순" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "오름차순" }));
+		await expect.element(main().getByRole("button", { name: "크기 · 오름차순" })).toBeVisible();
 	});
 
 	it("09-1 [flow 6·31] with no storage it says so, with the way to connect one and no way to upload", async () => {

@@ -76,7 +76,6 @@ import { FileThumb, useFileDetail } from "../../media/file-shown";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
 import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
 import type { Upload } from "../../media/upload-queue";
-import { useColumnWidths } from "../../media/use-column-widths";
 import { MEDIA_DRAG, useFileDrop, useFolderDrop, useKeepFilesInPage } from "../../media/use-file-drop";
 import { useMoveMedia, useTrashMedia } from "../../media/use-media-actions";
 import { useUpload } from "../../media/use-upload";
@@ -94,14 +93,18 @@ import {
 } from "../list/folders";
 import { shortDate } from "../list/format";
 import { ListPages } from "../list/list-pages";
+import { SortRows } from "../list/sort-rows";
+import { useColumnWidths } from "../list/use-column-widths";
 import { MediaPanel, useFileUses } from "./media-panel";
 import {
+	firstDir,
 	isLooking,
 	KINDS,
 	type MediaState,
 	queryOf,
 	readMediaState,
 	SORTS,
+	type Sort,
 	USES,
 	writeMediaState,
 } from "./media-query";
@@ -385,7 +388,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		else next.delete(id);
 		setPicked(next);
 	};
-	const { widths, resize } = useColumnWidths();
+	const { widths, resize } = useColumnWidths("media");
 	const [folderTarget, setFolderTarget] = useState<string | null>(null);
 
 	const data = read.data;
@@ -571,20 +574,45 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		chosen: state.used,
 		onChange: (used) => setState({ ...state, used, page: 1 }),
 	};
-	const sortRows = (only?: (typeof SORTS)[number]) => (
-		<DropdownMenuRadioGroup
-			value={state.sort}
-			onValueChange={(sort) => {
-				const found = SORTS.find((known) => known === sort);
-				if (found) setState({ ...state, sort: found, page: 1 });
-			}}
-		>
-			{(only ? [only] : SORTS).map((sort) => (
-				<DropdownMenuRadioItem key={sort} value={sort}>
-					{t(`library.sort.${sort}`)}
-				</DropdownMenuRadioItem>
-			))}
-		</DropdownMenuRadioGroup>
+	/** What the library is ordered by, in the words of the list's columns. */
+	const sortLabel = (sort: Sort) =>
+		t(sort === "name" ? "library.column.name" : sort === "size" ? "library.column.size" : "library.column.date");
+	/** A column's two ways (components/list.md): the rows of its menu. */
+	const sortRows = (sort: Sort) => (
+		<SortRows
+			kind={sort === "uploaded" ? "date" : "value"}
+			dir={state.sort === sort ? state.dir : null}
+			onChange={(dir) => setState({ ...state, sort, dir, page: 1 })}
+		/>
+	);
+	/** Every order in one menu, where there are no columns to hold them (the grid, the list beside an open file): what it is ordered by, then which way. */
+	const everySort = (
+		<>
+			<DropdownMenuRadioGroup
+				value={state.sort}
+				onValueChange={(sort) => {
+					const found = SORTS.find((known) => known === sort);
+					if (found) setState({ ...state, sort: found, dir: firstDir(found), page: 1 });
+				}}
+			>
+				{SORTS.map((sort) => (
+					<DropdownMenuRadioItem key={sort} value={sort}>
+						{sortLabel(sort)}
+					</DropdownMenuRadioItem>
+				))}
+			</DropdownMenuRadioGroup>
+			<DropdownMenuSeparator />
+			{sortRows(state.sort)}
+		</>
+	);
+	const dirLabel = t(
+		state.sort === "uploaded"
+			? state.dir === "desc"
+				? "list.newest"
+				: "list.oldest"
+			: state.dir === "asc"
+				? "list.sortAsc"
+				: "list.sortDesc",
 	);
 	// One row under the title, as the entries' list has it (2026-11-10, owner): in the grid the filters and the order, the picks taking their place; in the list the
 	// columns' names, their menus holding the filters and the order.
@@ -596,8 +624,10 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			<FilterMenu label={t("library.used")} {...usedFilter} />
 			<PageToolbarEnd>
 				<DropdownMenu>
-					<DropdownMenuTrigger render={<FilterButton />}>{t(`library.sort.${state.sort}`)}</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">{sortRows()}</DropdownMenuContent>
+					<DropdownMenuTrigger
+						render={<FilterButton />}
+					>{`${sortLabel(state.sort)} · ${dirLabel}`}</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">{everySort}</DropdownMenuContent>
 				</DropdownMenu>
 			</PageToolbarEnd>
 		</PageToolbar>
@@ -699,7 +729,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const nameColumn: ListHeadColumn = {
 		id: "name",
 		label: t("library.column.name"),
-		sort: state.sort === "name" ? "asc" : undefined,
+		sort: state.sort === "name" ? state.dir : undefined,
 		// With a file open beside the list its other columns step aside: the name's menu keeps their filters and every order within reach.
 		filtered: dense && (state.kinds.length > 0 || state.used.length > 0),
 		menu: dense ? (
@@ -708,7 +738,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				<DropdownMenuSeparator />
 				<FilterRows {...usedFilter} />
 				<DropdownMenuSeparator />
-				{sortRows()}
+				{everySort}
 			</>
 		) : (
 			sortRows("name")
@@ -718,7 +748,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		...(dense ? { id: "date", size: LIST_COLUMN_SIZE.date } : sized("date", "date")),
 		label: t("library.column.date"),
 		align: "end",
-		sort: state.sort === "uploaded" ? "desc" : undefined,
+		sort: state.sort === "uploaded" ? state.dir : undefined,
 		menu: sortRows("uploaded"),
 	};
 	const head: ListHeadColumn[] = dense
@@ -740,7 +770,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				{
 					...sized("size", "status"),
 					label: t("library.column.size"),
-					sort: state.sort === "size" ? "desc" : undefined,
+					sort: state.sort === "size" ? state.dir : undefined,
 					menu: sortRows("size"),
 				},
 				{ ...sized("measure", "measure"), label: t("library.column.measure") },

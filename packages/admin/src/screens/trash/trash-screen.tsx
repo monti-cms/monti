@@ -13,8 +13,6 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	Empty,
@@ -25,6 +23,7 @@ import {
 	ListHead,
 	type ListHeadColumn,
 	ListScroll,
+	LocaleCodes,
 	MenuShortcut,
 	PageColumn,
 	PageHeader,
@@ -51,8 +50,11 @@ import { href, type Route } from "../../route";
 import { URGENT_DAYS } from "../../trash/days-left";
 import { usePurge, useRestore } from "../../trash/use-trash";
 import type { FrameCounts } from "../frame/admin-frame";
+import { useLanguageName } from "../list/column-menu";
 import { searchScopes } from "../list/folders";
 import { ListPages } from "../list/list-pages";
+import { SortRows } from "../list/sort-rows";
+import { useColumnWidths } from "../list/use-column-widths";
 import { TrashedFilePanel } from "../media/media-panel";
 import { readTrashState, TRASH_PAGE_SIZE, type TrashState, trashQueryOf, writeTrashState } from "./trash-query";
 import { TrashedItemPanel } from "./trashed-item-panel";
@@ -95,7 +97,7 @@ export function TrashScreen({
 	const rows = data?.rows ?? [];
 	const place = state.folder ? (data?.place ?? null) : null;
 	const searching = state.search.trim() !== "";
-	const looking = searching || state.kinds.length > 0;
+	const looking = searching || state.kinds.length > 0 || state.locales.length > 0;
 
 	// The open folder left the trash (restored, or deleted for good): the trash itself is what is left to show.
 	const gone = state.folder !== null && read.refusal?.reason?.key === "trash.unknown";
@@ -142,7 +144,12 @@ export function TrashScreen({
 	};
 
 	const collections = schema.data?.schema.collections ?? {};
-	const multilingual = (schema.data?.schema.locales.list.length ?? 0) > 1;
+	const siteLocales = (schema.data?.schema.locales.list ?? []).map((locale) => locale.code);
+	const multilingual = siteLocales.length > 1;
+	const languageName = useLanguageName();
+	// The language menu lists the languages that are in the trash here, in the site's order, and the ones it is filtered by.
+	const languages = siteLocales.filter((code) => (data?.locales[code] ?? 0) > 0 || state.locales.includes(code));
+	const { widths, resize } = useColumnWidths("trash");
 	const collectionLabel = (collection: string) => schema.data?.adminValues[collection]?.label ?? collection;
 	const kindLabel = (kind: string) => (kind === MEDIA_KIND ? t("trash.kind.media") : collectionLabel(kind));
 	const isDocument = (row: TrashRow) => row.collection !== null && collections[row.collection]?.kind === "document";
@@ -192,11 +199,6 @@ export function TrashScreen({
 		else if (!row.inTrashedFolder && row.path.length > 0) parts.push(row.path.join(" / "));
 		return parts.join(" · ") || undefined;
 	};
-	/** An entry's languages in the trash, as a list's language cell writes them: its own, and how many more. */
-	const localesOf = (row: TrashRow) => {
-		const [own, ...more] = row.locales;
-		return own ? `${own.toUpperCase()}${more.length > 0 ? ` +${more.length}` : ""}` : "";
-	};
 
 	const menuItems = (row: TrashRow, context: boolean) => {
 		const Item = context ? ContextMenuItem : DropdownMenuItem;
@@ -233,54 +235,82 @@ export function TrashScreen({
 
 	const total = data?.total ?? 0;
 	const kinds = [...Object.keys(collections), MEDIA_KIND];
+	/** A column's menu rows that filter by its values, each with how many rows it would show. */
+	const filterRows = (
+		values: string[],
+		chosen: string[],
+		label: (value: string) => string,
+		count: (value: string) => number,
+		onChange: (chosen: string[]) => void,
+	) =>
+		values.map((value) => (
+			<DropdownMenuCheckboxItem
+				key={value}
+				box
+				closeOnClick={false}
+				checked={chosen.includes(value)}
+				onCheckedChange={() =>
+					onChange(chosen.includes(value) ? chosen.filter((each) => each !== value) : [...chosen, value])
+				}
+			>
+				{label(value)}
+				<MenuShortcut>{count(value)}</MenuShortcut>
+			</DropdownMenuCheckboxItem>
+		));
+	const sortedBy = (by: TrashState["sort"]["by"]) => (state.sort.by === by ? state.sort.dir : null);
+	const sortBy = (by: TrashState["sort"]["by"]) => (dir: "asc" | "desc") =>
+		setState({ ...state, page: 1, sort: { by, dir } });
+	/** A column's width: what was dragged, or its kind's (the title takes the room the others leave). */
+	const sized = (id: string, size: number) => ({ id, size: widths[id] ?? size, kindSize: size });
+	// As every table (components/list.md): each column's menu sorts both ways or filters by its values, and each width can be dragged.
 	const head: ListHeadColumn[] = [
-		{ id: "title", label: t("trash.column.title") },
-		// As in the lists: a site written in one language has no language column.
-		...(multilingual ? [{ id: "locale", label: t("list.column.locale"), size: LIST_COLUMN_SIZE.locale }] : []),
 		{
-			id: "kind",
+			id: "title",
+			label: t("trash.column.title"),
+			sort: sortedBy("title") ?? undefined,
+			menu: <SortRows dir={sortedBy("title")} onChange={sortBy("title")} />,
+		},
+		// As in the lists: a site written in one language has no language column.
+		...(multilingual
+			? [
+					{
+						...sized("locale", LIST_COLUMN_SIZE.locale),
+						label: t("list.column.locale"),
+						filtered: state.locales.length > 0,
+						menu: filterRows(
+							languages,
+							state.locales,
+							languageName,
+							(locale) => data?.locales[locale] ?? 0,
+							(locales) => setState({ ...state, page: 1, locales }),
+						),
+					},
+				]
+			: []),
+		{
+			...sized("kind", KIND_SIZE),
 			label: t("trash.column.kind"),
-			size: KIND_SIZE,
 			filtered: state.kinds.length > 0,
-			menu: (
-				<>
-					{kinds.map((kind) => (
-						<DropdownMenuCheckboxItem
-							key={kind}
-							box
-							closeOnClick={false}
-							checked={state.kinds.includes(kind)}
-							onCheckedChange={() =>
-								setState({
-									...state,
-									page: 1,
-									kinds: state.kinds.includes(kind)
-										? state.kinds.filter((each) => each !== kind)
-										: [...state.kinds, kind],
-								})
-							}
-						>
-							{kindLabel(kind)}
-							<MenuShortcut>{data?.counts[kind] ?? 0}</MenuShortcut>
-						</DropdownMenuCheckboxItem>
-					))}
-				</>
+			menu: filterRows(
+				kinds,
+				state.kinds,
+				kindLabel,
+				(kind) => data?.counts[kind] ?? 0,
+				(next) => setState({ ...state, page: 1, kinds: next }),
 			),
 		},
 		{
-			id: "left",
+			...sized("left", LEFT_SIZE),
 			label: t("trash.column.left"),
-			size: LEFT_SIZE,
 			align: "end",
-			sort: state.sort === "newest" ? "desc" : "asc",
+			sort: sortedBy("left") ?? undefined,
 			menu: (
-				<DropdownMenuRadioGroup
-					value={state.sort}
-					onValueChange={(sort) => setState({ ...state, page: 1, sort: sort === "oldest" ? "oldest" : "newest" })}
-				>
-					<DropdownMenuRadioItem value="newest">{t("trash.sort.newest")}</DropdownMenuRadioItem>
-					<DropdownMenuRadioItem value="oldest">{t("trash.sort.oldest")}</DropdownMenuRadioItem>
-				</DropdownMenuRadioGroup>
+				<SortRows
+					kind="date"
+					dir={sortedBy("left")}
+					onChange={sortBy("left")}
+					words={{ desc: t("trash.sort.newest"), asc: t("trash.sort.oldest") }}
+				/>
 			),
 		},
 	];
@@ -377,17 +407,7 @@ export function TrashScreen({
 			<PageColumn width="list">
 				{header}
 				<ListScroll>
-					<Table
-						container="none"
-						layout="fixed"
-						columns={[
-							undefined,
-							...(multilingual ? [LIST_COLUMN_SIZE.locale] : []),
-							KIND_SIZE,
-							LEFT_SIZE,
-							LIST_COLUMN_SIZE.end,
-						]}
-					>
+					<Table container="none" layout="fixed" columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}>
 						{pickedRows.length > 0 ? (
 							<BulkBar
 								label={t("list.selected", { count: pickedRows.length })}
@@ -402,7 +422,13 @@ export function TrashScreen({
 								</TextButton>
 							</BulkBar>
 						) : (
-							<ListHead columns={head} end={LIST_COLUMN_SIZE.end} selectAll={rows.length > 0 ? selectAll : undefined} />
+							<ListHead
+								columns={head}
+								end={LIST_COLUMN_SIZE.end}
+								selectAll={rows.length > 0 ? selectAll : undefined}
+								onResize={resize}
+								resizeLabel={(column) => t("list.resizeColumn", { column })}
+							/>
 						)}
 						<TableBody>
 							{data && rows.length === 0 && looking && (
@@ -411,7 +437,9 @@ export function TrashScreen({
 										<Inline gap={12}>
 											<Text tone="subtle">{t("trash.noMatch")}</Text>
 											<TextButton
-												onClick={() => setState({ ...state, search: "", everywhere: false, kinds: [], page: 1 })}
+												onClick={() =>
+													setState({ ...state, search: "", everywhere: false, kinds: [], locales: [], page: 1 })
+												}
 											>
 												{t("list.clearFilters")}
 											</TextButton>
@@ -486,9 +514,7 @@ export function TrashScreen({
 										{multilingual && (
 											<TableCell>
 												{row.kind === "entry" && (
-													<Text mono variant="meta">
-														{localesOf(row)}
-													</Text>
+													<LocaleCodes codes={row.locales} names={row.locales.map(languageName).join(", ")} />
 												)}
 											</TableCell>
 										)}
