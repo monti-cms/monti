@@ -1,5 +1,5 @@
-# Automated checks. On every push: lint, design and doc checks, type check, unused code, package build, the core and admin tests on Postgres, and
-# the browser tests (L3 parts and L4 screens in Chromium).
+# Automated checks. On every push: lint, design and doc checks, type check, unused code, package build, the design review's record, the core and
+# admin tests on Postgres, and the browser tests (L3 parts and L4 screens in Chromium).
 name: CI
 
 # Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
@@ -45,6 +45,21 @@ jobs:
       # Files and exports of the packages that nothing uses.
       - run: pnpm knip
       - run: pnpm build
+
+  review:
+    name: design review
+    runs-on: ubuntu-latest
+    steps:
+      # The whole history, so a failure can name the files that changed since the review on record.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      # The admin UI of this commit is the one the design-review agent read (scripts/design-review.json). Its own job, so a branch that is
+      # still being worked on shows the other checks' results while this one waits for the review.
+      - run: node scripts/check-review.mjs
 
   test:
     name: core and admin tests

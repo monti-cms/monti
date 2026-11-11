@@ -75,7 +75,7 @@
 | T85 | 플러그인이 저장 전에 값을 바꾸거나 막는 고리(옛 `beforeValidate` · `beforeSave`, `services/reactions.ts`). 14에는 발행 검사(`checks`)와 저장 뒤 받는 곳(`receivers`)만 있다 | 14 | 예전 CMS 비교, 2026-11-06 |
 | T86 | 글 편집기 속성 패널이 `entries.save` 제안(요약 같은 필드 값)을 칸 안의 파란 글자로 그리고, 본문 제안과 같은 버블이 둘을 함께 오간다. 지금 버블은 본문 제안(`body.edit`)만 오간다 | 10 | 03 T32 |
 | T87 | 그 사이 블록이나 글자가 바뀌어 본문에 그릴 수 없는 제안을 "이 사이에 고쳐짐 · 다시 만들기"로 보인다(00 제안 상태). 지금은 그리지 않고 버블도 세지 않는다. 서버에는 대기로 남는다 | 10 | 03 T32 |
-| T88 | 화면 확인 체계 B: `pnpm check:scenes`(화면 코드가 쓴 부품의 장면 테스트가 있는지, `it.todo`와 이유 없는 skip이 남았는지, 실패 메시지에 고치는 법)와 관문(Stop hook 알림, PR 직전 PreToolUse, git pre-push, CI). Claude hook이 앱에서 도는지 먼저 시험한다. 끝: 장면을 빼면 push가 막히고 이유 없는 skip도 막힌다 | 출시 전 | 화면 확인 체계 A |
+| T88 | 화면 확인 체계 B: `pnpm check:scenes`(화면 코드가 쓴 부품의 장면 테스트가 있는지, `it.todo`와 이유 없는 skip이 남았는지, 실패 메시지에 고치는 법)와 관문(Stop hook 알림, PR 직전 PreToolUse, git pre-push, CI). Claude hook은 앱(T3 Code)에서 돈다: 2026-11-11에 `.claude/settings.json`의 PreToolUse가 그 세션 안에서 바로 걸려 `gh pr merge`를 막았다(디자인 검토 관문, `scripts/check-review.mjs`). 끝: 장면을 빼면 push가 막히고 이유 없는 skip도 막힌다 | 출시 전 | 화면 확인 체계 A |
 | T114 | 화면 작업 스킬 `screen-build`(장면을 `it.todo`로 먼저 적고 소유자가 본다). T89에서 나눴다 | 출시 전 | 화면 확인 체계 A |
 | T90 | 화면 확인 체계 D: `Tests/` 스토리(`*.test.stories.tsx`, 32개)의 동작 확인을 L4 화면 테스트로 옮기고 그 스토리를 지운다. 스토리 play는 상태로 데려다 놓기만 한다(장면으로 빌려 쓰는 `TableSized`의 play가 넓이를 검사해 고치기 전 코드에서 장면이 먼저 실패했다). 끝: 옮긴 확인이 빠짐없이 있다 | 출시 전 | 화면 확인 체계 A |
 | T91 | 화면 확인 체계 E: `docs/testing.md`에 장치와 이유를 짧게 적는다(층 표는 09에서 L1–L5로 고쳤다). 메모리에서 장치가 강제하는 규칙은 빼고 판단이 필요한 것만 남긴다 | 출시 전 | 화면 확인 체계 A |
