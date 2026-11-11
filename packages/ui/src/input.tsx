@@ -71,7 +71,7 @@ function Input({
 				"w-full min-w-0 rounded-none bg-transparent outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45",
 				inline
 					? cn(
-							"h-auto rounded-monti-sm border-0 px-0",
+							"h-auto border-0 px-0 focus-visible:rounded-monti-sm",
 							size !== "title" &&
 								size !== "display" &&
 								size !== "inherit" &&

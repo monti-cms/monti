@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { cn } from "./cn";
+import { HIT_LAYER } from "./hit-area";
 import { Folder } from "./icons";
 import { Spark } from "./spark";
 
@@ -82,6 +83,7 @@ function TrashRowDate({
 				onClick={byAssistant.onOpen}
 				className={cn(
 					MARK,
+					HIT_LAYER,
 					"relative z-10 cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 				)}
 			>

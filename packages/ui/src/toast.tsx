@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Toaster as Engine, toast as engine } from "sonner";
 import { cn } from "./cn";
+import { HIT_AREA } from "./hit-area";
 import { FolderMoveTo } from "./icons";
 
 /**
@@ -43,7 +44,10 @@ function render(message: ReactNode, { action, duration, id }: ToastOptions, erro
 					<button
 						type="button"
 						data-slot="toast-action"
-						className="shrink-0 cursor-pointer rounded-monti-full font-semibold outline-none focus-visible:ring-2 focus-visible:ring-monti-on-emphasis/50"
+						className={cn(
+							HIT_AREA,
+							"shrink-0 cursor-pointer rounded-monti-full font-semibold outline-none focus-visible:ring-2 focus-visible:ring-monti-on-emphasis/50",
+						)}
 						onClick={() => {
 							action.onClick();
 							engine.dismiss(toastId);

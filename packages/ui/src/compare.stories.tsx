@@ -14,7 +14,6 @@ import {
 	CompareText,
 	CompareTitle,
 	Heading,
-	Highlight,
 	Text,
 	TextButton,
 } from "./index";

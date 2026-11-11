@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
+import { HIT_AREA } from "./hit-area";
 import { OverflowMenuHorizontal } from "./icons";
 
 /** The past conversations of the assistant panel: groups of {@link ConversationRow} by day under a {@link ConversationGroupLabel}. It scrolls. */
@@ -83,6 +84,7 @@ function ConversationRowMore({
 		<button
 			type="button"
 			className={cn(
+				HIT_AREA,
 				"flex cursor-pointer rounded-monti-full border-0 bg-transparent p-0 text-monti-muted outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 				className,
 			)}

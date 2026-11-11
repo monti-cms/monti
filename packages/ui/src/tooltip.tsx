@@ -45,6 +45,8 @@ function TooltipContent({
 				className="isolate z-50"
 			>
 				<TooltipPrimitive.Popup
+					// The library leaves the popup without a role; a tooltip says it is one, to a screen reader and to a test that asks for it.
+					role="tooltip"
 					data-slot="tooltip-content"
 					className={cn(
 						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 inline-flex w-fit origin-(--transform-origin) items-center gap-monti-6 whitespace-nowrap rounded-monti-md bg-monti-emphasis px-monti-8 py-monti-4 text-monti-caption text-monti-on-emphasis shadow-monti-floating data-closed:animate-out data-open:animate-in",

@@ -23,7 +23,7 @@ const CORNERS = [
 ] as const;
 
 /**
- * The picture of the crop dialog in its frame: the tool ground with an edge and 4px inside, as high as 62% of the window (at most 560px), the picture
+ * The picture of the crop dialog in its frame: the tool ground with an edge and 12px inside (a corner's handle and its focus ring stand outside the picture, and the frame clips), as high as 62% of the window (at most 560px), the picture
  * centered in it as large as it fits, a small one drawn larger (2026-11-10, owner: the picture is what the dialog is for). With a `crop`, the picture outside it lies under the backdrop and the crop
  * is a 2px ink box with a square handle on each corner and thirds drawn faintly inside. Every press reports what was pressed (`onGrip`); the stage is as
  * large as the picture, so the screen measures the press against it (`stageRef`).
@@ -59,7 +59,7 @@ function CropStage({
 	return (
 		<div
 			data-slot="crop-stage"
-			className="flex h-[min(62vh,560px)] w-full items-center justify-center overflow-hidden rounded-monti-md border bg-monti-tool p-monti-4 [container-type:size]"
+			className="flex h-[min(62vh,560px)] w-full items-center justify-center overflow-hidden rounded-monti-md border bg-monti-tool p-monti-12 [container-type:size]"
 		>
 			<div
 				ref={stageRef}
