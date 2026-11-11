@@ -89,7 +89,7 @@ export function TrashScreen() {
 										<LocaleCodes codes={row.locales} names={row.locales.map((code) => LANGUAGES[code]).join(", ")} />
 									)}
 								</TableCell>
-								<TableCell tone="subtle" truncate>
+								<TableCell tone="subtle" truncate title={row.kind}>
 									{row.kind}
 								</TableCell>
 								<TableCell align="end">

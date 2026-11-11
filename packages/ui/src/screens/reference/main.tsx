@@ -297,10 +297,10 @@ export function MainScreen({ rowMenu = false, banner }: { rowMenu?: boolean; ban
 										<TableCell truncate>
 											<RowTitle title={<RowLink href="#">{post.title}</RowLink>} address={post.address} />
 										</TableCell>
-										<TableCell tone="subtle" truncate>
+										<TableCell tone="subtle" truncate title={post.category}>
 											{post.category}
 										</TableCell>
-										<TableCell tone="subtle" truncate>
+										<TableCell tone="subtle" truncate title={post.tags}>
 											{post.tags}
 										</TableCell>
 										<TableCell>

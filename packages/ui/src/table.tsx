@@ -109,7 +109,7 @@ function TableRow({
 	/** The row has a second line under its title (a template's sections): 16px above and below instead of 10. */
 	twoLine?: boolean;
 }) {
-	const { onClick } = props;
+	const { onClick, onAuxClick } = props;
 	return (
 		<tr
 			data-slot="table-row"
@@ -124,7 +124,13 @@ function TableRow({
 			)}
 			{...props}
 			onClick={(event) => {
+				// The press this row passes on to its link comes back up through the row: it is the same press, not a second one.
+				if (passingOn) return;
 				onClick?.(event);
+				if (!event.defaultPrevented) openFromOver(event);
+			}}
+			onAuxClick={(event) => {
+				onAuxClick?.(event);
 				if (!event.defaultPrevented) openFromOver(event);
 			}}
 		/>
@@ -133,11 +139,14 @@ function TableRow({
 
 /** What keeps its own press on a row: the controls, and what holds them. */
 const OWN_PRESS =
-	"a, button, input, select, textarea, label, [role=button], [role=checkbox], [contenteditable=true], [data-slot=row-check], [data-slot=row-actions]";
+	"a, button, input, select, textarea, label, summary, [role=button], [role=link], [role=checkbox], [role=switch], [role=tab], [role=menuitem], [role=combobox], [contenteditable=true], [data-slot=row-check], [data-slot=row-actions]";
+
+let passingOn = false;
 
 /**
  * A row's link covers the row, and some of the row stands over the link so the pointer can find it: a cell's words that say themselves whole when pointed at, a
- * tooltip's trigger. A press there still opens the row: it is passed on to the link, with the keys held (a new tab).
+ * tooltip's trigger. A press there still opens the row, as a press on the link would: a click is passed on with the keys held (a new tab), and the middle
+ * button opens the link's address in a new tab.
  */
 function openFromOver(event: React.MouseEvent<HTMLTableRowElement>) {
 	const row = event.currentTarget;
@@ -146,8 +155,20 @@ function openFromOver(event: React.MouseEvent<HTMLTableRowElement>) {
 	// A press in a menu the row opened reaches the row through React, not through the page: it is not a press on the row.
 	if (!link || !(pressed instanceof Element) || !row.contains(pressed)) return;
 	if (link.contains(pressed) || pressed.closest(OWN_PRESS)) return;
+	if (event.type === "auxclick") {
+		if (event.button === 1 && link instanceof HTMLAnchorElement && link.href)
+			window.open(link.href, "_blank", "noopener");
+		return;
+	}
 	const { metaKey, ctrlKey, shiftKey, altKey } = event;
-	link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, metaKey, ctrlKey, shiftKey, altKey }));
+	passingOn = true;
+	try {
+		link.dispatchEvent(
+			new MouseEvent("click", { bubbles: true, cancelable: true, metaKey, ctrlKey, shiftKey, altKey }),
+		);
+	} finally {
+		passingOn = false;
+	}
 }
 
 /**
@@ -417,7 +438,12 @@ function TableCell({
 				? children
 				: // Bare words cannot stand over anything: they get a box of their own.
 					React.Children.map(children, (child) =>
-						typeof child === "string" || typeof child === "number" ? <span>{child}</span> : child,
+						// The box keeps the words where bare words stand, on the line's baseline: the row stays as tall as one without a `title`.
+						typeof child === "string" || typeof child === "number" ? (
+							<span className="align-baseline!">{child}</span>
+						) : (
+							child
+						),
 					)}
 		</td>
 	);

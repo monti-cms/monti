@@ -53,13 +53,14 @@ function LocaleCodes({
 	// Some languages are not on the cell: only counted, or cut with the text.
 	const partial = shown < codes.length || cut;
 	const text = (
-		<span ref={box} data-slot="locale-codes" className="relative block min-w-0 truncate font-mono text-monti-meta">
+		<span ref={box} data-slot="locale-codes" className="relative z-1 block min-w-0 truncate font-mono text-monti-meta">
 			<span ref={unit} aria-hidden className="invisible absolute w-[1ch]" />
 			<span aria-hidden={partial}>{written(codes, shown)}</span>
 			{partial && <span className="sr-only">{names}</span>}
 		</span>
 	);
-	// One tree whether it counts or not, so the measured box stays the same node: the tooltip is only off while every code is written.
+	// One tree whether it counts or not, so the measured box stays the same node: the tooltip is only off while every code is written. The box stands over the
+	// row's link (`z-1`), wherever the language column is, so the pointer finds it.
 	return (
 		<Tooltip disabled={!partial}>
 			<TooltipTrigger render={text} />
