@@ -18,7 +18,7 @@ import {
 import { OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
-import { href, type Route } from "../../route";
+import { linkTo, type Route } from "../../route";
 import { DaysLeftFact } from "../../trash/days-left";
 import { useCoverCorner } from "../frame/admin-frame";
 import { useLanguageName } from "../list/column-menu";
@@ -110,12 +110,7 @@ export function TrashedItemPanel({
 									key={entry.id}
 									title={entry.title}
 									places={entry.trashed ? t("trash.inTrash", { label }) : label}
-									href={href(route)}
-									onClick={(event) => {
-										if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-										event.preventDefault();
-										go(route);
-									}}
+									{...linkTo(route, go)}
 								/>
 							);
 						})}

@@ -44,7 +44,7 @@ import { Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/
 import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
-import { href, type Route } from "../../route";
+import { linkTo, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { useCoverCorner } from "../frame/admin-frame";
 import { useLanguageName } from "./column-menu";
@@ -515,16 +515,7 @@ export function TaxonomyScreen({
 										>
 											{item.usageCount > 0 ? (
 												// A link, as the map has it: it opens in a new tab too, and a narrowed cell cuts its words with "…".
-												<TextButton
-													variant="underline"
-													size="note"
-													href={href(usageRoute(item))}
-													onClick={(event) => {
-														if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-														event.preventDefault();
-														onFilterUsage(item);
-													}}
-												>
+												<TextButton variant="underline" size="note" {...linkTo(usageRoute(item), go)}>
 													{t("taxonomy.usageCount", { count: item.usageCount })}
 												</TextButton>
 											) : (

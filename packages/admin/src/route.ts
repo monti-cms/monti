@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { type MouseEvent, useCallback, useEffect, useState } from "react";
 
 /**
  * Where the admin is: its address is the hash (`#/c/post?status=draft`), so the site mounts one admin path, and reload, a new tab and back open the
@@ -47,6 +47,21 @@ export function parseRoute(hash: string): Route {
 }
 
 /** The hash of a route: what links carry, so "open in a new tab" opens the same screen. */
+/**
+ * What a link to a screen takes: its address, and a press that goes there in this tab. With a key held that asks for another place (a new tab, a new
+ * window) the press is left to the browser, which follows the address.
+ */
+export function linkTo(route: Route, go: (route: Route) => void) {
+	return {
+		href: href(route),
+		onClick: (event: MouseEvent) => {
+			if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+			event.preventDefault();
+			go(route);
+		},
+	};
+}
+
 export function href(route: Route): string {
 	switch (route.screen) {
 		case "list": {

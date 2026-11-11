@@ -49,7 +49,7 @@ import { putFile } from "../../media/put-file";
 import { useAcceptFiles } from "../../media/upload-problem";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
-import { href, type Route } from "../../route";
+import { linkTo, type Route } from "../../route";
 import { DaysLeftFact } from "../../trash/days-left";
 import { useCoverCorner } from "../frame/admin-frame";
 import type { Folders } from "../list/folders";
@@ -226,13 +226,8 @@ function FileUses({ uses, go }: { uses: ReturnType<typeof useUseRows>; go: (rout
 						key={use.key}
 						title={use.title}
 						places={use.places}
-						href={href(use.route)}
-						onClick={(event) => {
-							// A new tab leaves nothing behind. A move in this one goes through the question.
-							if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-							event.preventDefault();
-							go(use.route);
-						}}
+						// A new tab leaves nothing behind. A move in this one goes through the question.
+						{...linkTo(use.route, go)}
 					/>
 				))}
 			</FileUseList>
