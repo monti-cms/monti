@@ -8,7 +8,7 @@ import { folderOf, subtree } from "../folders/operations";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import { bodyAsRead, followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
-import { loosen, looseUntil } from "../trash/purge";
+import { lockFileKeys, loosen, looseUntil } from "../trash/purge";
 import { isMediaKey, kindOf, type MediaKind, splitName, WEB_LONGEST_SIDE } from "./accept";
 import { altGaps } from "./alt";
 import { type MediaPlace, placeOf } from "./value";
@@ -226,12 +226,11 @@ async function statOfKeys(ctx: OperationContext, original: Original, web: Web | 
 	return stat;
 }
 
+const keysOf = (original: Original, web: Web | undefined) => [original.key, ...(web ? [web.key] : [])];
+
 /** These keys are a file's now: the clean-up no longer waits to remove them (doc 11). */
 async function adopt(db: Db, original: Original, web: Web | undefined) {
-	await db
-		.deleteFrom("loose_files")
-		.where("key", "in", [original.key, ...(web ? [web.key] : [])])
-		.execute();
+	await db.deleteFrom("loose_files").where("key", "in", keysOf(original, web)).execute();
 }
 
 /** A name a person gave: the file's extension stays (doc 09: it says what the file is), slashes do not make paths. */
@@ -413,6 +412,8 @@ export const mediaOperations = [
 		async run(input, ctx): Promise<MediaItem> {
 			storageOf(ctx);
 			if (input.folderId) await checkMediaFolder(ctx.db, input.folderId);
+			// Before the bytes are looked for: the clean-up cannot remove them between that look and this write (doc 11).
+			await lockFileKeys(ctx.db, keysOf(input.original, input.web));
 			const stat = await statOfKeys(ctx, input.original, input.web);
 			const id = randomUUID();
 			await ctx.db
@@ -498,6 +499,7 @@ export const mediaOperations = [
 		},
 		async run(input, ctx): Promise<MediaItem> {
 			const row = await liveRowOf(ctx.db, input.id);
+			await lockFileKeys(ctx.db, keysOf(input.original, input.web));
 			const stat = await statOfKeys(ctx, input.original, input.web, input.id);
 			if (kindOf(stat.mime) !== row.kind) throw new CheckError({ key: "media.kindChanged" });
 			const { stem } = splitName(row.name);

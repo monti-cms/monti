@@ -509,6 +509,46 @@ describe("deleting for good", () => {
 		expect(await entry(live)).toMatchObject({ status: "published", has_unpublished_changes: false });
 	});
 
+	it("11-3 a delete cuts the draft and the published copy each on its own: what the draft changed stays unpublished", async () => {
+		const [react, vue] = [await tag("react"), await tag("vue")];
+		const edited = await post("고치는 글", "edited", { tags: [react.group, vue.group] });
+		await publish(edited);
+		// The draft drops vue; the site still shows both.
+		await write("entries.save", {
+			id: edited,
+			version: (await entry(edited)).version,
+			values: { tags: [react.group] },
+		});
+		await move(entryRow(react.locales.ko.id));
+		await purge(entryRow(react.locales.ko.id));
+
+		expect((await entry(edited)).values.tags).toEqual([]);
+		const published = await db
+			.selectFrom("entry_published")
+			.select("values")
+			.where("entry_id", "=", edited)
+			.executeTakeFirstOrThrow();
+		expect(published.values.tags).toEqual([vue.group]);
+	});
+
+	it("11-3 a delete and a save of an entry that points at it, at the same moment: the save is kept whole or refused, never written over", async () => {
+		const stays = await tag("stays");
+		for (let round = 0; round < 12; round++) {
+			const gone = await tag(`gone-${round}`);
+			const pointing = await post(`가리키는 글 ${round}`, `pointing-${round}`, { tags: [gone.group] });
+			await move(entryRow(gone.locales.ko.id));
+			const version = (await entry(pointing)).version;
+			const save = () => write("entries.save", { id: pointing, version, values: { tags: [gone.group, stays.group] } });
+			const cut = () => purge(entryRow(gone.locales.ko.id));
+			const first = round % 2 === 0 ? save() : cut();
+			const second = round % 2 === 0 ? cut() : save();
+			const [one, other] = await Promise.allSettled([first, second]);
+			const saved = round % 2 === 0 ? one : other;
+			// The tag is cut either way; the tag the save added is there exactly when the save was taken.
+			expect((await entry(pointing)).values.tags).toEqual(saved.status === "fulfilled" ? [stays.group] : []);
+		}
+	});
+
 	it("11-3 a source entry takes every language of it, and a folder everything it holds", async () => {
 		const source = await post("글", "post");
 		const english = await translate(source);
@@ -610,6 +650,27 @@ describe("the clean-up", () => {
 		expect((await site().trash.purgeDue()).files).toBe(1);
 		expect(await storage.stat(stray)).toBeNull();
 		expect(await storage.stat(kept.key)).not.toBeNull();
+	});
+
+	it("11-5 the clean-up and an upload that takes a due key, at the same moment: a file never points at bytes that left", async () => {
+		const api = signedInApi(site());
+		const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+		for (let round = 0; round < 8; round++) {
+			const answer = await api(
+				new Request(`http://site/admin/api/media/bytes?name=late-${round}.png`, {
+					method: "PUT",
+					body: PNG.slice().buffer,
+				}),
+			);
+			const { key } = (await answer.json()) as { key: string };
+			later(2);
+			const upload = () => write("media.upload", { name: `late-${round}.png`, original: { key, width: 1, height: 1 } });
+			const clean = () => site().trash.purgeDue();
+			await Promise.allSettled(round % 2 === 0 ? [upload(), clean()] : [clean(), upload()]);
+			const file = await db.selectFrom("media").select("id").where("original_key", "=", key).executeTakeFirst();
+			// Either the file took the key and its bytes are there, or the clean-up was first and there is no file.
+			expect((await storage.stat(key)) !== null).toBe(file !== undefined);
+		}
 	});
 
 	it("11-5 opening the admin cleans the trash before it counts it, an hour apart at most", async () => {

@@ -54,6 +54,15 @@ export async function loosen(db: Db, keys: string[], after: Date): Promise<void>
 		.execute();
 }
 
+/**
+ * One at a time for a storage key: the clean-up that removes its bytes, and the write that makes the key a file's (`media.upload`, `media.replace`), which takes
+ * this before it looks for the bytes. So a key is never removed after a file took it, and a file never takes a key whose bytes just left.
+ */
+export async function lockFileKeys(trx: Db, keys: string[]): Promise<void> {
+	for (const key of [...keys].sort())
+		await sql`select pg_advisory_xact_lock(hashtext(${`monti:file:${key}`}))`.execute(trx);
+}
+
 /** A key the byte route just wrote: loose until `media.upload` or `media.replace` makes it a file's. */
 export const looseUntil = (now: Date) => new Date(now.getTime() + LOOSE_DAYS * DAY);
 
@@ -181,20 +190,32 @@ export async function sweepLooseFiles(db: Kysely<Database>, storage: Storage | n
 	const due = await db.selectFrom("loose_files").select("key").where("remove_after", "<=", now).execute();
 	let removed = 0;
 	for (const { key } of due) {
-		const held = await db
-			.selectFrom("media")
-			.select("id")
-			.where((eb) => eb.or([eb("original_key", "=", key), eb("web_key", "=", key)]))
-			.executeTakeFirst();
-		if (!held) {
-			try {
-				await storage.remove(key);
-				removed++;
-			} catch {
-				continue;
+		const gone = await db.transaction().execute(async (trx) => {
+			await lockFileKeys(trx, [key]);
+			// Under the lock: an upload that took the key meanwhile has committed, and took it off the list.
+			const listed = await trx
+				.selectFrom("loose_files")
+				.select("key")
+				.where("key", "=", key)
+				.where("remove_after", "<=", now)
+				.executeTakeFirst();
+			if (!listed) return false;
+			const held = await trx
+				.selectFrom("media")
+				.select("id")
+				.where((eb) => eb.or([eb("original_key", "=", key), eb("web_key", "=", key)]))
+				.executeTakeFirst();
+			if (!held) {
+				try {
+					await storage.remove(key);
+				} catch {
+					return false;
+				}
 			}
-		}
-		await db.deleteFrom("loose_files").where("key", "=", key).execute();
+			await trx.deleteFrom("loose_files").where("key", "=", key).execute();
+			return !held;
+		});
+		if (gone) removed++;
 	}
 	return removed;
 }
