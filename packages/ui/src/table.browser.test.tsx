@@ -84,9 +84,10 @@ describe("Table rows with a link", () => {
 		expect(onTopOf(page.getByText("KO +2").element())?.closest("[data-slot=locale-codes]")).not.toBeNull();
 	});
 
-	it("a press on them opens the row once, with the keys held; the middle button asks for a new tab as it does on a link; a control keeps its own press", async () => {
+	it("a press on them opens the row once; with a key held or the middle button it opens the row's address in another place; a control keeps its own press", async () => {
 		const opened = vi.fn();
 		const rowPressed = vi.fn();
+		const elsewhere = vi.spyOn(window, "open").mockReturnValue(null);
 		render(rows(opened, rowPressed));
 		await userEvent.click(page.getByText("개발"));
 		expect(opened).toHaveBeenCalledTimes(1);
@@ -94,15 +95,18 @@ describe("Table rows with a link", () => {
 		await userEvent.click(page.getByText("KO +2"));
 		expect(opened).toHaveBeenCalledTimes(2);
 		expect(opened).toHaveBeenLastCalledWith({ newTab: false });
-		// A key held with the press (a new tab) reaches the link with it.
-		await userEvent.click(page.getByText("개발"), { modifiers: ["Meta"] });
-		expect(opened).toHaveBeenLastCalledWith({ newTab: true });
-		expect(opened).toHaveBeenCalledTimes(3);
-		// The middle button reaches the link as a click with the key that asks for a new tab: the link opens it behind this one, as for itself.
-		await userEvent.click(page.getByText("개발"), { button: "middle" });
-		expect(opened).toHaveBeenCalledTimes(4);
-		expect(opened).toHaveBeenLastCalledWith({ newTab: true });
 		opened.mockClear();
+		// A key held with the press, or the middle button, asks for another place: the row's address is opened there during the press, and this
+		// page stays as it is.
+		await userEvent.click(page.getByText("개발"), { modifiers: ["Meta"] });
+		await userEvent.click(page.getByText("개발"), { modifiers: ["Shift"] });
+		await userEvent.click(page.getByText("개발"), { button: "middle" });
+		expect(elsewhere.mock.calls.map(([address]) => String(address).replace(/^.*#/, "#"))).toEqual([
+			"#/first",
+			"#/first",
+			"#/first",
+		]);
+		expect(opened).not.toHaveBeenCalled();
 
 		// The middle button held there does not start the browser's own scrolling: the row has an address to open.
 		const held = (on: Element) => {
@@ -116,6 +120,7 @@ describe("Table rows with a link", () => {
 		await userEvent.click(page.getByRole("button", { name: "더 보기", exact: true }));
 		await userEvent.click(page.getByRole("checkbox", { name: "첫 번째 글 고르기" }), { force: true });
 		expect(opened).not.toHaveBeenCalled();
+		elsewhere.mockRestore();
 	});
 
 	it("short of room, what stands after a title gives way first: the title is whole while the address has anything left, and only then is cut", async () => {
@@ -184,11 +189,17 @@ describe("Table rows with a link", () => {
 		const press = new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 1 });
 		page.getByText("태그").element().dispatchEvent(press);
 		expect(press.defaultPrevented).toBe(false);
+		const elsewhere = vi.spyOn(window, "open").mockReturnValue(null);
 		await userEvent.click(page.getByText("태그"), { button: "middle" });
 		expect(opened).not.toHaveBeenCalled();
-		// A plain press still opens the panel.
+		// A plain press opens the panel, and one with a key held reaches the row's button with the key.
 		await userEvent.click(page.getByText("태그"));
 		expect(opened).toHaveBeenCalledTimes(1);
+		await userEvent.click(page.getByText("태그"), { modifiers: ["Meta"] });
+		expect(opened).toHaveBeenCalledTimes(2);
+		expect(opened.mock.calls[1]?.[0]).toMatchObject({ metaKey: true });
+		expect(elsewhere).not.toHaveBeenCalled();
+		elsewhere.mockRestore();
 	});
 
 	it("words dragged over to select them do not open the row", async () => {
@@ -321,5 +332,34 @@ describe("Table rows with a link", () => {
 		await userEvent.keyboard("{Tab}");
 		await expect.element(page.getByRole("link", { name: long })).toHaveFocus();
 		await expect.poll(tip).toBe(long);
+		// Opened from the keyboard and closed by hand with the pointer on the words, it stays closed too. A press closes it as Escape does.
+		await userEvent.hover(page.getByRole("link", { name: long }), { position: { x: 12, y: 8 } });
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(tip).toBe(null);
+		await userEvent.hover(page.getByRole("link", { name: long }), { position: { x: 24, y: 9 } });
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(tip()).toBe(null);
+		await userEvent.hover(page.getByText("가운데"), { force: true });
+		await userEvent.hover(page.getByRole("link", { name: long }), { position: { x: 12, y: 8 } });
+		await expect.poll(tip).toBe(long);
+		const words = page.getByRole("link", { name: long }).element();
+		words.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse" }));
+		await expect.poll(tip).toBe(null);
+		await userEvent.hover(page.getByRole("link", { name: long }), { position: { x: 30, y: 9 } });
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(tip()).toBe(null);
+		// A finger on the words does not point.
+		await userEvent.hover(page.getByText("가운데"), { force: true });
+		const box = words.getBoundingClientRect();
+		words.dispatchEvent(
+			new PointerEvent("pointermove", {
+				bubbles: true,
+				pointerType: "touch",
+				clientX: box.left + 12,
+				clientY: box.top + 8,
+			}),
+		);
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(tip()).toBe(null);
 	});
 });

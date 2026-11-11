@@ -7,7 +7,6 @@ import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
 import { Folder, OverflowMenuHorizontal } from "./icons";
-import { isApple } from "./shortcut";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 function Table({
@@ -170,23 +169,34 @@ function overLink(event: React.MouseEvent<HTMLTableRowElement>): HTMLElement | n
 
 /**
  * A row's link covers the row, and some of the row stands over the link so the pointer can find it: a cell's words that say themselves whole when pointed at, a
- * tooltip's trigger. A press there still opens the row, as a press on the link would: a click is passed on with the keys held (a new tab), and the middle
- * button as a click with the key that opens a new tab.
+ * tooltip's trigger. A press there still opens the row, as a press on the link would: a plain press is passed on to the link as a click; one that asks
+ * for another place (the middle button, a key held) opens the link's address there.
  */
 function openFromOver(event: React.MouseEvent<HTMLTableRowElement>) {
 	const link = overLink(event);
 	if (!link) return;
-	// The middle button on a link opens its address in a new tab behind this one: the click is passed on with the key that asks for that.
 	const middle = event.type === "auxclick";
-	if (middle && (event.button !== 1 || !addressOf(link))) return;
+	if (middle && event.button !== 1) return;
+	const { metaKey, ctrlKey, shiftKey, altKey } = event;
+	const address = addressOf(link);
+	// A press that asks for another place (the middle button, a key held) opens the link's address there. A click made here would not do: a browser
+	// follows a made click's keys only if it chooses to (Firefox does not). Opened during the press, the browser places it as it would from the
+	// link: behind this tab, or in a new window.
+	if (middle || metaKey || ctrlKey || shiftKey) {
+		if (address) window.open(address, "_blank", "noopener");
+		else if (!middle) pass(link, { metaKey, ctrlKey, shiftKey, altKey });
+		return;
+	}
 	// Words dragged over to select them were not pressed: a link under them would not open either.
 	const selected = window.getSelection();
 	if (selected && !selected.isCollapsed && selected.anchorNode && event.currentTarget.contains(selected.anchorNode))
 		return;
-	const { shiftKey, altKey } = event;
-	const metaKey = event.metaKey || (middle && isApple());
-	const ctrlKey = event.ctrlKey || (middle && !isApple());
-	const click = new MouseEvent("click", { bubbles: true, cancelable: true, metaKey, ctrlKey, shiftKey, altKey });
+	pass(link, { altKey });
+}
+
+/** Presses a row's link for the row, and remembers the click so the row knows it when it comes back up. */
+function pass(link: HTMLElement, keys: MouseEventInit) {
+	const click = new MouseEvent("click", { bubbles: true, cancelable: true, ...keys });
 	passedOn.add(click);
 	link.dispatchEvent(click);
 }
@@ -381,8 +391,14 @@ function RowTitleWords({ children }: { children: React.ReactNode }) {
 	const [by, setBy] = React.useState<"pointer" | "keys" | null>(null);
 	/** What it says. Kept while it closes, so the tooltip does not empty before it is gone. */
 	const [words, setWords] = React.useState("");
-	/** Closed by hand (Escape, a press) with the pointer on the words: it stays closed until the pointer has left them. */
+	/** Whether the pointer is on the words now. */
+	const onWords = React.useRef(false);
+	/** Closed by hand (Escape, a press) with the pointer on the words, whatever opened it: it stays closed until the pointer has left them. */
 	const dismissed = React.useRef(false);
+	const dismiss = () => {
+		dismissed.current = onWords.current;
+		setBy(null);
+	};
 	/** The words, when they are cut: a fraction of a pixel short already ends them in "…". */
 	const cut = () => {
 		const node = box.current;
@@ -399,6 +415,7 @@ function RowTitleWords({ children }: { children: React.ReactNode }) {
 	};
 	/** The pointer is no longer on the words: what it opened closes, and what was closed by hand may open again. */
 	const left = () => {
+		onWords.current = false;
 		dismissed.current = false;
 		if (by === "pointer") setBy(null);
 	};
@@ -413,8 +430,7 @@ function RowTitleWords({ children }: { children: React.ReactNode }) {
 					return;
 				}
 				// Escape, a press, the keyboard moving on.
-				if (by === "pointer") dismissed.current = true;
-				setBy(null);
+				dismiss();
 			}}
 		>
 			<TooltipTrigger
@@ -431,14 +447,13 @@ function RowTitleWords({ children }: { children: React.ReactNode }) {
 								event.clientX <= edge.right &&
 								event.clientY >= edge.top &&
 								event.clientY <= edge.bottom;
-							if (!on) left();
-							else if (by === null && !dismissed.current) say("pointer");
+							if (!on) return left();
+							onWords.current = true;
+							if (by === null && !dismissed.current) say("pointer");
 						}}
 						onPointerLeave={left}
 						onPointerDown={() => {
-							if (by !== "pointer") return;
-							dismissed.current = true;
-							setBy(null);
+							if (by !== null) dismiss();
 						}}
 					/>
 				}
