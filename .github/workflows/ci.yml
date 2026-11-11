@@ -60,6 +60,8 @@ jobs:
       # The admin UI of this commit is the one the design-review agent read (scripts/design-review.json). Its own job, so a branch that is
       # still being worked on shows the other checks' results while this one waits for the review.
       - run: node scripts/check-review.mjs
+      # The merge hook reads shell command lines to find the merges in them: the cases it must see, and the ones it must leave alone.
+      - run: node --test scripts/merge-commands.test.mjs
 
   test:
     name: core and admin tests

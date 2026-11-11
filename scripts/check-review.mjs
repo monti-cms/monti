@@ -7,7 +7,8 @@
  *   node scripts/check-review.mjs            # fails if the admin UI at HEAD is not what the last review read; names the range to review
  *   node scripts/check-review.mjs <commit>   # the same for another commit (a pull request's head)
  *   node scripts/check-review.mjs --record   # the design-review agent's last step: records the admin UI at HEAD as read
- *   node scripts/check-review.mjs --hook     # Claude Code PreToolUse hook (.claude/settings.json): refuses `gh pr merge` of an unread head
+ *   node scripts/check-review.mjs --hook     # Claude Code PreToolUse hook (.claude/settings.json): refuses a merge of an unread head, and one
+ *                                            # not bound to the head it checked (`--match-head-commit`). `merge-commands.mjs` reads the command.
  *
  * The admin UI is the files of `PATHS` without their tests (stories count: they are the states the review looks at). The record holds one hash
  * of those files' paths and contents, so a commit that only adds the record, or changes other code, keeps it valid, and a squash merge
@@ -21,6 +22,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { mergesIn } from "./merge-commands.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RECORD = "scripts/design-review.json";
@@ -121,39 +123,58 @@ function record() {
 	console.log(`check-review: recorded the admin UI at ${next.head} as read (${since}). Commit ${RECORD}.`);
 }
 
-/** `gh pr merge` where a command starts, not where a commit message or a search only mentions it. */
-const MERGE = /(?:^|&&|\|\||[;|\n(])\s*gh\s+pr\s+merge\b([^;&|\n]*)/;
+/** `owner/name` of a GitHub address, in small letters: a pull request's page, or a remote. */
+const repoOf = (address) => /github\.com[:/]([^/\s]+\/[^/\s]+?)(?:\.git)?(?:\/|$)/.exec(address)?.[1].toLowerCase();
 
-/** The pull request a `gh pr merge` command names: a number, a URL, or none (the branch's own). */
-function pullOf(command) {
-	const rest = command.match(MERGE)?.[1] ?? "";
-	return rest.match(/\/pull\/(\d+)/)?.[1] ?? rest.match(/\s(\d+)(\s|$)/)?.[1];
+/** Exit code 2 refuses the tool call, and Claude is shown this text. */
+function refuse(why) {
+	console.error(`Merge refused by scripts/check-review.mjs.\n${why}`);
+	process.exit(2);
 }
 
+/**
+ * The hook: every merge the command line would run is of a head the design review has read, and is bound to that head, so that what was checked is what is
+ * merged. Anything that goes wrong on the way refuses too: a merge that could not be checked is not a checked merge.
+ */
 function hook() {
-	const call = JSON.parse(readFileSync(0, "utf8"));
+	const raw = readFileSync(0, "utf8");
+	const call = attempt(() => JSON.parse(raw));
+	if (call === undefined || call === null) {
+		// Not a call this hook can read: it goes through unless it speaks of a merge.
+		if (/gh\s+pr\s+merge|pulls\/\d+\/merge/.test(raw))
+			refuse("The hook could not read this call, and it names a merge.");
+		return;
+	}
 	const command = call.tool_input?.command;
-	if (call.tool_name !== "Bash" || typeof command !== "string" || !MERGE.test(command)) return;
-	const refuse = (why) => {
-		// Exit code 2 refuses the tool call, and Claude is shown this text.
-		console.error(`Merge refused by scripts/check-review.mjs.\n${why}`);
-		process.exit(2);
-	};
-	// Anything that goes wrong from here refuses too: a merge that could not be checked is not a checked merge.
+	if (call.tool_name !== "Bash" || typeof command !== "string") return;
 	try {
-		const pull = pullOf(command);
-		const head = execFileSync(
-			"gh",
-			["pr", "view", ...(pull ? [pull] : []), "--json", "headRefOid", "-q", ".headRefOid"],
-			{
-				cwd: root,
-				encoding: "utf8",
-				stdio: ["ignore", "pipe", "pipe"],
-			},
-		).trim();
-		if (attempt(() => git("cat-file", "-e", `${head}^{commit}`)) === undefined) git("fetch", "-q", "origin", head);
-		const problem = problemOf(head);
-		if (problem) refuse(problem);
+		const own = repoOf(attempt(() => git("remote", "get-url", "origin").trim()) ?? "");
+		for (const merge of mergesIn(command)) {
+			const bound = "Merge with `gh pr merge <number> --squash --match-head-commit <sha>`.";
+			if (merge.how === "api")
+				refuse(`A merge through \`gh api\` cannot be bound to the commit that was checked. ${bound}`);
+			// A branch's name, or none, means another pull request in another folder: only a number or an address names one.
+			if (!/^\d+$/.test(merge.pull ?? "") && !/\/pull\/\d+/.test(merge.pull ?? ""))
+				refuse(`Name the pull request by its number or its address. ${bound}`);
+			const view = JSON.parse(
+				execFileSync(
+					"gh",
+					["pr", "view", merge.pull, ...(merge.repo ? ["--repo", merge.repo] : []), "--json", "headRefOid,url"],
+					{ cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+				),
+			);
+			// Another repository's pull request is not this gate's to check.
+			if (own && repoOf(view.url) !== own) continue;
+			const head = view.headRefOid;
+			if (attempt(() => git("cat-file", "-e", `${head}^{commit}`)) === undefined) git("fetch", "-q", "origin", head);
+			const problem = problemOf(head);
+			if (problem) refuse(problem);
+			// The head can move between this check and the merge: GitHub refuses the merge when it has.
+			if (merge.head !== head)
+				refuse(
+					`The design review has read ${short(head)}. Bind the merge to it, so that what was checked is what is merged:\n  --match-head-commit ${head}`,
+				);
+		}
 	} catch (error) {
 		refuse(`The pull request's design review could not be checked: ${error instanceof Error ? error.message : error}`);
 	}

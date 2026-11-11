@@ -4,6 +4,6 @@ Docs under `docs/` are written in Korean: the owner reads and approves them. Cod
 
 Commit messages and PR titles follow Conventional Commits (`type(scope): subject`). The scopes are in `commitlint.config.mjs`; a new package adds its own.
 
-Admin UI follows the rules in `docs/design/admin` (start at its README); change them in the same PR when a rule changes. Load the `admin-ui` skill first; `pnpm check:design` enforces its mechanical rules, and the `design-review` agent reviews each piece before it joins a shared branch. The agent records what it read; `pnpm check:review` fails a commit whose admin UI is not the one on record, and a hook refuses `gh pr merge` of such a pull request, so a screen changed after its review is reviewed again.
+Admin UI follows the rules in `docs/design/admin` (start at its README); change them in the same PR when a rule changes. Load the `admin-ui` skill first; `pnpm check:design` enforces its mechanical rules, and the `design-review` agent reviews each piece before it joins a shared branch. The agent records what it read; `pnpm check:review` fails a commit whose admin UI is not the one on record, and a hook refuses `gh pr merge` of such a pull request, so a screen changed after its review is reviewed again. Merge with `gh pr merge <number> --squash --match-head-commit <sha>`: the hook binds the merge to the head it checked.
 
 Prefer LSP for symbol navigation, references, types, rename and diagnostics.
