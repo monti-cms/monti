@@ -91,8 +91,11 @@ export function defineSchema(schema: Schema): Schema {
 }
 
 export const IDENTIFIER = /^[a-z][a-zA-Z0-9]*$/;
-/** Names a collection may not take: its read view (`monti_<collection>`) would clash with the core's own tables. */
-export const RESERVED_COLLECTIONS = new Set(["activity", "delivery", "proposal", "migration"]);
+/**
+ * Names a collection may not take: its read view (`monti_<collection>`) would clash with the core's own tables, and `media` is the kind the trash names the
+ * library's files and folders by (doc 11).
+ */
+export const RESERVED_COLLECTIONS = new Set(["activity", "delivery", "proposal", "migration", "media"]);
 export const PATH = /^(\/[a-z0-9-]+)*\/:slug$/;
 /** A language code: `ko`, `en`, `zh-Hant`, `pt-BR`. */
 export const LOCALE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;

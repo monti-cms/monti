@@ -12,7 +12,8 @@ const main = () => page.getByRole("main");
 const heading = () => main().getByRole("heading", { level: 1 });
 const tile = (name: string) => main().getByRole("button", { name: new RegExp(name) });
 const folder = (name: string) => main().getByRole("button", { name: new RegExp(`^${name}`) });
-const toast = (text: string) => page.getByRole("listitem").filter({ hasText: text });
+/** The newest toast that says this: earlier tests' toasts may still be on the page, and the newest is first. */
+const toast = (text: string) => page.getByRole("listitem").filter({ hasText: text }).first();
 
 /** Files from outside dropped on an element, as the browser hands them over. The OS's own drag is L5's. */
 function dropFiles(on: Element, files: File[]) {
@@ -136,8 +137,17 @@ describe("browsing", () => {
 		await userEvent.keyboard("{Escape}");
 		await expect.element(main().getByRole("link", { name: "top-level-photo.jpg" })).toBeVisible();
 		await userEvent.click(table.getByRole("button", { name: "크기" }));
-		await userEvent.click(page.getByRole("menuitemradio", { name: "크기순" }));
+		// A column's menu sorts both ways, in the words every table uses.
+		await userEvent.click(page.getByRole("menuitemradio", { name: "내림차순" }));
 		await expect.element(table.getByRole("columnheader", { name: "크기" })).toHaveAttribute("aria-sort", "descending");
+		await userEvent.click(table.getByRole("button", { name: "크기" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "오름차순" }));
+		await expect.element(table.getByRole("columnheader", { name: "크기" })).toHaveAttribute("aria-sort", "ascending");
+		await userEvent.click(table.getByRole("button", { name: "올린 날" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "오래전부터" }));
+		await expect
+			.element(table.getByRole("columnheader", { name: "올린 날" }))
+			.toHaveAttribute("aria-sort", "ascending");
 	});
 
 	it("09-1 T113 [keys-move] a column's edge moves width between its two columns, and the width is still there next time", async () => {
@@ -311,11 +321,14 @@ describe("browsing", () => {
 		await expect.element(main().getByRole("button", { name: /찾을 곳$/ })).not.toBeInTheDocument();
 	});
 
-	it("09-1 a sort is a menu with one mark of its own", async () => {
+	it("09-1 the grid's order is one menu: what it is ordered by, then which way", async () => {
 		await openAssets();
-		await userEvent.click(main().getByRole("button", { name: "최근 올린순" }));
-		await userEvent.click(page.getByRole("menuitemradio", { name: "크기순" }));
-		await expect.element(main().getByRole("button", { name: "크기순" })).toBeVisible();
+		await userEvent.click(main().getByRole("button", { name: "올린 날 · 최근부터" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "크기" }));
+		await expect.element(main().getByRole("button", { name: "크기 · 내림차순" })).toBeVisible();
+		await userEvent.click(main().getByRole("button", { name: "크기 · 내림차순" }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "오름차순" }));
+		await expect.element(main().getByRole("button", { name: "크기 · 오름차순" })).toBeVisible();
 	});
 
 	it("09-1 [flow 6·31] with no storage it says so, with the way to connect one and no way to upload", async () => {
@@ -505,7 +518,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("checkbox", { name: "seoul-night.jpg 고르기" }));
 		await userEvent.click(main().getByRole("button", { name: "휴지통으로" }));
 		await expect.element(tile("seoul-night.jpg")).not.toBeInTheDocument();
-		await userEvent.click(toast("1개를 휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
+		await userEvent.click(toast("휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
 		await expect.element(tile("seoul-night.jpg")).toBeVisible();
 	});
 
@@ -568,7 +581,7 @@ describe("the trash", () => {
 		await userEvent.click(page.getByRole("menuitem", { name: "폴더 지우기" }));
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
 		await expect.element(folder("Wallpapers")).not.toBeInTheDocument();
-		await userEvent.click(toast("Wallpapers 폴더를 휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
+		await userEvent.click(toast("휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
 		await expect.element(folder("Wallpapers")).toBeVisible();
 	});
 

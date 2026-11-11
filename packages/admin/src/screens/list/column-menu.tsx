@@ -20,6 +20,7 @@ import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { filterColumn, type ListState, TRANSLATION_STATES } from "./list-query";
+import { SortRows } from "./sort-rows";
 
 type Query = Record<string, unknown>;
 
@@ -233,15 +234,11 @@ function EmptyMenu({ column, state, query, setFilter, onHide }: MenuProps) {
 }
 
 function TitleMenu({ state, setSort }: MenuProps) {
-	const { t } = useAdmin();
 	return (
-		<DropdownMenuRadioGroup
-			value={state.sort.by === "title" ? state.sort.dir : ""}
-			onValueChange={(dir) => setSort({ by: "title", dir: dir as "asc" | "desc" })}
-		>
-			<DropdownMenuRadioItem value="asc">{t("list.sortAsc")}</DropdownMenuRadioItem>
-			<DropdownMenuRadioItem value="desc">{t("list.sortDesc")}</DropdownMenuRadioItem>
-		</DropdownMenuRadioGroup>
+		<SortRows
+			dir={state.sort.by === "title" ? state.sort.dir : null}
+			onChange={(dir) => setSort({ by: "title", dir })}
+		/>
 	);
 }
 
@@ -280,13 +277,11 @@ function DateMenu({ column, state, setFilter, setSort, onHide }: MenuProps) {
 	const on = fixed ?? (day ? "day" : span ? "range" : "all");
 	return (
 		<>
-			<DropdownMenuRadioGroup
-				value={state.sort.by === column.id ? state.sort.dir : ""}
-				onValueChange={(dir) => setSort({ by: field, dir: dir as "asc" | "desc" })}
-			>
-				<DropdownMenuRadioItem value="desc">{t("list.newest")}</DropdownMenuRadioItem>
-				<DropdownMenuRadioItem value="asc">{t("list.oldest")}</DropdownMenuRadioItem>
-			</DropdownMenuRadioGroup>
+			<SortRows
+				kind="date"
+				dir={state.sort.by === column.id ? state.sort.dir : null}
+				onChange={(dir) => setSort({ by: field, dir })}
+			/>
 			<DropdownMenuSeparator />
 			<DropdownMenuRadioGroup
 				value={on === "day" || on === "range" ? "" : on}

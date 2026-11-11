@@ -33,6 +33,11 @@ import type { SchemaFiles } from "./schema/files";
 import { schemaOperations, schemaRecordKinds } from "./schema/operations";
 import { createSite } from "./site";
 import { translationOperations } from "./translations/operations";
+import { trashOperations } from "./trash/operations";
+import { purgeDue, sweepLooseFiles } from "./trash/purge";
+
+/** The writes that delete media rows for good: their files leave the storage right after. */
+const PURGES = new Set(["trash.purge", "trash.empty"]);
 
 /** A site without a schema file yet: one language and no collections. */
 const EMPTY_SCHEMA: Schema = {
@@ -245,6 +250,7 @@ export function createMonti(options: MontiOptions) {
 		...relationOperations,
 		...folderOperations,
 		...mediaOperations,
+		...trashOperations,
 		...bodyOperations,
 		...authOperations,
 	])
@@ -264,6 +270,8 @@ export function createMonti(options: MontiOptions) {
 		const sending = sendDeliveries(engine.db, receivers, result.deliveryIds, now());
 		if (options.waitUntil) options.waitUntil(sending);
 		else await sending;
+		// A file deleted for good leaves the storage only now that its row's delete has committed (doc 11).
+		if (PURGES.has(operation.name)) await sweepLooseFiles(engine.db, site.storage, now());
 		return result;
 	};
 
@@ -299,6 +307,11 @@ export function createMonti(options: MontiOptions) {
 		deliveries: {
 			/** Sends the retries that are due (`monti deliveries:run`, and when the admin opens). */
 			sendDue: () => sendDueDeliveries(engine.db, receivers, now()),
+		},
+
+		trash: {
+			/** Deletes what the trash has kept for 30 days, with the snapshots and files nothing needs any more (`monti trash:purge`, and when the admin opens). */
+			purgeDue: () => purgeDue(engine.db, site.schema(), site.storage, now()),
 		},
 	};
 }

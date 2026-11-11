@@ -71,6 +71,7 @@ deploy, and has no way to change structure.
 monti db:setup          # create the tables and follow every change file
 monti db:migrate        # on deploy: follow the change files this database has not
 monti deliveries:run    # send webhook retries that are due
+monti trash:purge       # delete what the trash has kept for 30 days, and files nothing holds
 monti admin:reset-password  # set the admin's password, sign every browser out
 monti help              # every operation, each one a command
 monti schema.read

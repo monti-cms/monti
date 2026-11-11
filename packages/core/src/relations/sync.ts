@@ -1,15 +1,16 @@
 import type { Kysely, Transaction } from "kysely";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
-import { slugify } from "../entries/paths";
+import { pathKept, slugify } from "../entries/paths";
 import type { OperationContext, RecordRef } from "../operation";
+import { lockRecords } from "../records";
 import { localeModeOf, type Schema } from "../schema/define";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
 const ref = (id: string): RecordRef => ({ kind: "entry", id });
 
-/** Generates a unique slug within (collection, locale) by appending -2, -3 if taken. */
+/** Generates a unique slug within (collection, locale) by appending -2, -3 if taken, by a live entry or by one deleted for good. */
 export async function generateUniqueSlug(
 	db: Db,
 	collection: string,
@@ -44,7 +45,7 @@ export async function generateUniqueSlug(
 				queryPublished = queryPublished.where("entry_id", "<>", excludeEntryId);
 			}
 			const inPublished = await queryPublished.executeTakeFirst();
-			if (!inPublished) return candidate;
+			if (!inPublished && !(await pathKept(db, collection, locale, candidate))) return candidate;
 		}
 		candidate = `${base}-${suffix++}`;
 	}
@@ -321,52 +322,69 @@ export async function syncRelationsForEntry(
 	}
 }
 
-/** Unlinks target group on permanent delete (doc 08-3). */
+/**
+ * Cuts every relation to a target group that is deleted for good (doc 08-3). Entries in the trash lose it too, so a restored one names nothing that is gone.
+ * The draft and the published copy are each cut on their own: whatever else the draft changed stays unpublished. Each entry is locked as a save locks it, so
+ * neither writes over the other, and its version rises, so a screen that read it before saves no stale value over it.
+ */
 export async function unlinkTargetGroup(
 	db: Db,
 	schema: Schema,
 	targetGroup: string,
-	_ctx?: OperationContext,
+	now: Date,
 ): Promise<{ unlinkedCount: number }> {
-	const links = await db.selectFrom("entry_links").selectAll().where("to_group", "=", targetGroup).execute();
+	const links = await db.selectFrom("entry_links").select("from_group").where("to_group", "=", targetGroup).execute();
+	const fromGroups = [...new Set(links.map((link) => link.from_group))];
+	if (fromGroups.length === 0) return { unlinkedCount: 0 };
 
-	if (links.length === 0) return { unlinkedCount: 0 };
-
-	const fromGroups = [...new Set(links.map((l) => l.from_group))];
-
-	for (const fromGroup of fromGroups) {
-		const groupLinks = links.filter((l) => l.from_group === fromGroup);
-		const pointingEntries = await db
-			.selectFrom("entries")
-			.selectAll()
-			.where("translation_group", "=", fromGroup)
-			.where("trashed_at", "is", null)
-			.execute();
-
-		for (const pe of pointingEntries) {
-			const values = pe.values as Record<string, unknown>;
-			for (const gl of groupLinks) {
-				const fDef = schema.collections[pe.collection]?.fields[gl.field];
-				if (fDef?.kind === "relation") {
-					if (fDef.many) {
-						const current = Array.isArray(values[gl.field]) ? (values[gl.field] as string[]) : [];
-						values[gl.field] = current.filter((g) => g !== targetGroup);
-					} else {
-						values[gl.field] = null;
-					}
-				}
+	const ids = (await db.selectFrom("entries").select("id").where("translation_group", "in", fromGroups).execute()).map(
+		(row) => row.id,
+	);
+	await lockRecords(db, ids.map(ref));
+	// Read under the lock: a save that came first has committed, and its values are the ones cut.
+	const pointing = await db
+		.selectFrom("entries")
+		.select(["id", "collection", "values"])
+		.where("id", "in", ids)
+		.execute();
+	const published = new Map(
+		(await db.selectFrom("entry_published").select(["entry_id", "values"]).where("entry_id", "in", ids).execute()).map(
+			(row) => [row.entry_id, row.values],
+		),
+	);
+	/** The values without the target in any relation field, or `null` when they did not name it. */
+	const cut = (collection: string, values: Record<string, unknown>): Record<string, unknown> | null => {
+		const next = { ...values };
+		let changed = false;
+		for (const [field, definition] of Object.entries(schema.collections[collection]?.fields ?? {})) {
+			if (definition.kind !== "relation") continue;
+			const value = next[field];
+			if (Array.isArray(value) && value.includes(targetGroup)) {
+				next[field] = value.filter((group) => group !== targetGroup);
+				changed = true;
+			} else if (value === targetGroup) {
+				next[field] = null;
+				changed = true;
 			}
+		}
+		return changed ? next : null;
+	};
+	for (const entry of pointing) {
+		const draft = cut(entry.collection, entry.values);
+		if (draft)
 			await db
 				.updateTable("entries")
-				.set({ values: JSON.stringify(values), updated_at: new Date() })
-				.where("id", "=", pe.id)
+				.set((eb) => ({ values: JSON.stringify(draft), updated_at: now, version: eb("version", "+", 1) }))
+				.where("id", "=", entry.id)
 				.execute();
+		const shown = published.get(entry.id);
+		const site = shown ? cut(entry.collection, shown) : null;
+		if (site)
 			await db
 				.updateTable("entry_published")
-				.set({ values: JSON.stringify(values) })
-				.where("entry_id", "=", pe.id)
+				.set({ values: JSON.stringify(site) })
+				.where("entry_id", "=", entry.id)
 				.execute();
-		}
 	}
 
 	await db.deleteFrom("entry_links").where("to_group", "=", targetGroup).execute();

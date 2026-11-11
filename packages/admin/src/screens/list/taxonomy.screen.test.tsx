@@ -22,8 +22,12 @@ describe("taxonomy screen (doc 08)", () => {
 		await expect.element(page.getByRole("checkbox", { name: "이 페이지 모두 고르기" })).toBeInTheDocument();
 		expect(table().getByText("글 5", { exact: true }).element().closest("td")).toHaveClass("text-right");
 
+		// The name sorts both ways, and the way shows in its head.
 		await userEvent.click(table().getByRole("button", { name: "이름" }));
-		await expect.element(page.getByRole("menuitemradio", { name: "이름순" })).toBeVisible();
+		await userEvent.click(page.getByRole("menuitemradio", { name: "내림차순" }));
+		await expect
+			.element(table().getByRole("columnheader", { name: "이름" }))
+			.toHaveAttribute("aria-sort", "descending");
 	});
 
 	it("keeps the same table header height before and after a row is picked", async () => {

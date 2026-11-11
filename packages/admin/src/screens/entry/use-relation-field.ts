@@ -77,9 +77,12 @@ export function useRelationField({
 			if (found) {
 				return found.title || found.slug || groupOrToken;
 			}
+			// A target in the trash is no choice, but the field still points at it: it is named, and says where it is (doc 08).
+			const trashed = read.data?.trashed.find((each) => each.group === groupOrToken);
+			if (trashed) return t("relations.inTrash", { title: trashed.title });
 			return groupOrToken;
 		},
-		[allOptions],
+		[allOptions, read.data?.trashed, t],
 	);
 
 	return {

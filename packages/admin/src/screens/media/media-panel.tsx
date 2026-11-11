@@ -17,6 +17,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	FilePreview,
+	FileUseList,
 	FileUseRow,
 	FormField,
 	FormFieldError,
@@ -38,7 +39,7 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
@@ -49,6 +50,7 @@ import { useAcceptFiles } from "../../media/upload-problem";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
+import { DaysLeftFact } from "../../trash/days-left";
 import { useCoverCorner } from "../frame/admin-frame";
 import type { Folders } from "../list/folders";
 import { shortDate } from "../list/format";
@@ -188,6 +190,126 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 	);
 }
 
+/** What a file is: its type, its sizes and the day it came (flow 6·16). `children` are rows before them: what the trash only reads, its name and its folder. */
+function FileFacts({ item, children }: { item: MediaDetail; children?: ReactNode }) {
+	const { t } = useAdmin();
+	return (
+		<DescriptionList>
+			{children}
+			<DescriptionItem label={t("library.type")}>{item.mime}</DescriptionItem>
+			<DescriptionItem label={t("library.size")}>
+				<Stack gap={2}>
+					{item.web && <span>{t("library.sizeWeb", { size: sizeLabel(item) })}</span>}
+					<span>
+						{item.web
+							? t("library.sizeOriginal", {
+									size: `${item.original.width}×${item.original.height} · ${formatBytes(item.size)}`,
+								})
+							: [sizeLabel(item), formatBytes(item.size)].filter(Boolean).join(" · ")}
+					</span>
+				</Stack>
+			</DescriptionItem>
+			<DescriptionItem label={t("library.uploadedAt")}>{shortDate(item.uploadedAt)}</DescriptionItem>
+		</DescriptionList>
+	);
+}
+
+/** Where a file is used: one row for each entry or template, which goes there. */
+function FileUses({ uses, go }: { uses: ReturnType<typeof useUseRows>; go: (route: Route) => void }) {
+	const { t } = useAdmin();
+	return (
+		<FormField>
+			<FormFieldLabel>{t("library.usesCount", { count: uses.length })}</FormFieldLabel>
+			{uses.length === 0 ? (
+				<Text variant="note" tone="faint">
+					{t("library.usesNone")}
+				</Text>
+			) : (
+				<FileUseList>
+					{uses.map((use) => (
+						<FileUseRow
+							key={use.key}
+							title={use.title}
+							places={use.places}
+							href={href(use.route)}
+							onClick={(event) => {
+								// A new tab leaves nothing behind. A move in this one goes through the question.
+								if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+								event.preventDefault();
+								go(use.route);
+							}}
+						/>
+					))}
+				</FileUseList>
+			)}
+		</FormField>
+	);
+}
+
+/**
+ * A file in the trash, beside the trash's list (flow 5·20): what the library's panel says of it, in the same order, to read only. Restoring is its one pill; deleting
+ * it for good is in its ⋯ (doc 11).
+ */
+export function TrashedFilePanel({
+	id,
+	onClose,
+	onRestore,
+	onPurge,
+	go,
+}: {
+	id: string;
+	onClose: () => void;
+	onRestore: () => void;
+	onPurge: () => void;
+	go: (route: Route) => void;
+}) {
+	const { t } = useAdmin();
+	const read = useRead<MediaDetail>("media.get", { id }, { afterWrites: true });
+	const item = read.data;
+	const uses = useUseRows(item?.useRows ?? []);
+	useCoverCorner(true);
+	if (!item || item.daysLeft === null) return null;
+	return (
+		<SidePanel
+			width="side"
+			title={item.name}
+			onClose={onClose}
+			actions={
+				<DropdownMenu>
+					<IconButton label={t("library.more")} trigger={(button) => <DropdownMenuTrigger render={button} />}>
+						<OverflowMenuHorizontal aria-hidden />
+					</IconButton>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem variant="danger" onClick={onPurge}>
+							<TrashCan aria-hidden />
+							{t("trash.purge")}
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			}
+			footer={
+				<Button variant="primary" size="md" onClick={onRestore}>
+					{t("trash.restore")}
+				</Button>
+			}
+		>
+			<Stack gap={32}>
+				{item.kind === "image" ? (
+					<Image src={previewUrl(item)} alt={item.name} ratio="photo" />
+				) : (
+					<FilePreview ext={extensionLabel(item.name)} framed />
+				)}
+				{/* The panel's title is the file's name already; the folder is the one row the library edits and the trash only reads. */}
+				<FileFacts item={item}>
+					<DaysLeftFact days={item.daysLeft} />
+					<DescriptionItem label={t("library.folder")}>{item.path.join(" / ") || t("folders.top")}</DescriptionItem>
+				</FileFacts>
+				<FileUses uses={uses} go={go} />
+			</Stack>
+		</SidePanel>
+	);
+}
+
 /**
  * The panel of a file (flow 6·16, 6·18, 6·36): its name and folder, what it is, and where it is used. No alt text and no caption: those belong to the entries (09-2).
  * Its one draft goes through `useDraft` like every other screen (doc 05).
@@ -296,7 +418,7 @@ export function MediaPanel({
 						<DropdownMenuItem onClick={() => void copy(item.id)}>{t("library.copyId")}</DropdownMenuItem>
 						<DropdownMenuItem variant="danger" onClick={() => onTrash(item.id)}>
 							<TrashCan aria-hidden />
-							{t("library.toTrash")}
+							{t("trash.toTrash")}
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
@@ -363,47 +485,8 @@ export function MediaPanel({
 						</Select>
 					</FormField>
 				</Stack>
-				<DescriptionList>
-					<DescriptionItem label={t("library.type")}>{item.mime}</DescriptionItem>
-					<DescriptionItem label={t("library.size")}>
-						<Stack gap={2}>
-							{item.web && <span>{t("library.sizeWeb", { size: sizeLabel(item) })}</span>}
-							<span>
-								{item.web
-									? t("library.sizeOriginal", {
-											size: `${item.original.width}×${item.original.height} · ${formatBytes(item.size)}`,
-										})
-									: [sizeLabel(item), formatBytes(item.size)].filter(Boolean).join(" · ")}
-							</span>
-						</Stack>
-					</DescriptionItem>
-					<DescriptionItem label={t("library.uploadedAt")}>{shortDate(item.uploadedAt)}</DescriptionItem>
-				</DescriptionList>
-				<FormField>
-					<FormFieldLabel>{t("library.usesCount", { count: uses.length })}</FormFieldLabel>
-					{uses.length === 0 ? (
-						<Text variant="note" tone="faint">
-							{t("library.usesNone")}
-						</Text>
-					) : (
-						<Stack gap={4}>
-							{uses.map((use) => (
-								<FileUseRow
-									key={use.key}
-									title={use.title}
-									places={use.places}
-									href={href(use.route)}
-									onClick={(event) => {
-										// A new tab leaves nothing behind. A move in this one goes through the question.
-										if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-										event.preventDefault();
-										go(use.route);
-									}}
-								/>
-							))}
-						</Stack>
-					)}
-				</FormField>
+				<FileFacts item={item} />
+				<FileUses uses={uses} go={go} />
 			</Stack>
 			{replacing && <ReplaceDialog item={item} file={replacing} onClose={() => setReplacing(null)} />}
 			{proposal && (

@@ -6,8 +6,6 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	FormField,
@@ -44,15 +42,18 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
-import { OverflowMenuHorizontal } from "@monti-cms/ui/icons";
+import { Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import type { Route } from "../../route";
+import { useTrashMove } from "../../trash/use-trash";
 import { useCoverCorner } from "../frame/admin-frame";
 import { useLanguageName } from "./column-menu";
 import { endsClosed } from "./format";
 import { MergeDialog } from "./merge-dialog";
+import { SortRows } from "./sort-rows";
+import { useColumnWidths } from "./use-column-widths";
 import { useItemPanel } from "./use-item-panel";
 
 type SchemaRead = {
@@ -76,6 +77,7 @@ function TaxonomySidePanel({
 	hasPublicPage,
 	onClose,
 	onMerge,
+	onTrash,
 	onSaved,
 }: {
 	collection: string;
@@ -88,6 +90,7 @@ function TaxonomySidePanel({
 	hasPublicPage: boolean;
 	onClose: () => void;
 	onMerge: () => void;
+	onTrash: () => void;
 	onSaved: (savedGroup: string) => void;
 }) {
 	const { t } = useAdmin();
@@ -161,7 +164,15 @@ function TaxonomySidePanel({
 							}
 						/>
 						<DropdownMenuContent align="end">
-							<DropdownMenuItem onClick={onMerge}>{t("taxonomy.mergeWith")}</DropdownMenuItem>
+							<DropdownMenuItem onClick={onMerge}>
+								<Merge aria-hidden />
+								{t("taxonomy.mergeWith")}
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem variant="danger" onClick={onTrash}>
+								<TrashCan aria-hidden />
+								{t("trash.toTrash")}
+							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				) : undefined
@@ -296,11 +307,13 @@ export function TaxonomyScreen({
 	const [search, setSearch] = useState("");
 	const [openGroup, setOpenGroup] = useState<string | null>(null);
 	const [filterUnused, setFilterUnused] = useState(false);
-	const [sort, setSort] = useState<SortMode>("name");
+	const [sort, setSort] = useState<{ by: SortMode; dir: "asc" | "desc" }>({ by: "name", dir: "asc" });
+	const { widths, resize } = useColumnWidths(`items:${collection}`);
 	const [picked, setPicked] = useState<Set<string>>(new Set());
 	const [mergeGroups, setMergeGroups] = useState<string[] | null>(null);
 
 	useCoverCorner(openGroup !== null);
+	const trash = useTrashMove();
 
 	const collectionName = schema.data?.adminValues[collection]?.label ?? collection;
 	const path = schema.data?.schema.collections[collection]?.path;
@@ -327,8 +340,9 @@ export function TaxonomyScreen({
 					Object.values(i.locales).some((l) => l.title.toLowerCase().includes(q) || l.slug.toLowerCase().includes(q)),
 			);
 		}
-		return [...list].sort((a, b) =>
-			sort === "usage" ? b.usageCount - a.usageCount : a.title.localeCompare(b.title, language),
+		const way = sort.dir === "asc" ? 1 : -1;
+		return [...list].sort(
+			(a, b) => way * (sort.by === "usage" ? a.usageCount - b.usageCount : a.title.localeCompare(b.title, language)),
 		);
 	}, [allItems, filterUnused, search, sort, language]);
 
@@ -336,6 +350,20 @@ export function TaxonomyScreen({
 		if (!openGroup || openGroup === "__new__") return null;
 		return allItems.find((i) => i.group === openGroup) ?? null;
 	}, [allItems, openGroup]);
+
+	/** Items to the trash (doc 11): every language of each goes; it asks first when published entries point at one. */
+	const trashItems = (list: UsageItem[]) =>
+		void trash.start({
+			rows: list.flatMap((item) => {
+				const id = (item.locales[sourceLocale] ?? Object.values(item.locales)[0])?.id;
+				return id ? [{ kind: "entry" as const, id }] : [];
+			}),
+			item: collectionName,
+			onMoved: () => {
+				setPicked(new Set());
+				if (list.some((item) => item.group === openGroup)) setOpenGroup(null);
+			},
+		});
 
 	const togglePick = (group: string, checked: boolean) => {
 		setPicked((prev) => {
@@ -366,28 +394,28 @@ export function TaxonomyScreen({
 		label: t("list.selectAll"),
 		onChange: (on: boolean) => setPicked(new Set(on ? filteredItems.map((item) => item.group) : [])),
 	};
-	const sortItems = (value: SortMode, label: string) => (
-		<DropdownMenuRadioGroup value={sort} onValueChange={() => setSort(value)}>
-			<DropdownMenuRadioItem value={value}>{label}</DropdownMenuRadioItem>
-		</DropdownMenuRadioGroup>
+	const sortRows = (by: SortMode) => (
+		<SortRows dir={sort.by === by ? sort.dir : null} onChange={(dir) => setSort({ by, dir })} />
 	);
+	const usageSize = widths.usage ?? LIST_COLUMN_SIZE.one;
 	const head: ListHeadColumn[] = [
 		{
 			id: "name",
 			label: t("taxonomy.column.name"),
-			sort: sort === "name" ? "asc" : undefined,
-			menu: sortItems("name", t("taxonomy.sort.name")),
+			sort: sort.by === "name" ? sort.dir : undefined,
+			menu: sortRows("name"),
 		},
 		{
 			id: "usage",
 			label: t("taxonomy.column.usage"),
-			size: LIST_COLUMN_SIZE.one,
+			size: usageSize,
+			kindSize: LIST_COLUMN_SIZE.one,
 			align: "end",
-			sort: sort === "usage" ? "desc" : undefined,
+			sort: sort.by === "usage" ? sort.dir : undefined,
 			filtered: filterUnused,
 			menu: (
 				<>
-					{sortItems("usage", t("taxonomy.sort.usage"))}
+					{sortRows("usage")}
 					<DropdownMenuSeparator />
 					<DropdownMenuCheckboxItem checked={filterUnused} onCheckedChange={(checked) => setFilterUnused(checked)}>
 						{t("taxonomy.unusedFilter")}
@@ -400,6 +428,7 @@ export function TaxonomyScreen({
 
 	return (
 		<Inline align="stretch" gap={0} grow minHeight={0}>
+			{trash.dialog}
 			<PageColumn width="list">
 				<PageHeader title={collectionName} meta={path}>
 					<SearchToggle
@@ -414,12 +443,14 @@ export function TaxonomyScreen({
 					</Button>
 				</PageHeader>
 				<ListScroll>
-					<Table container="none" layout="fixed" columns={[undefined, LIST_COLUMN_SIZE.one, LIST_COLUMN_SIZE.end]}>
+					<Table container="none" layout="fixed" columns={[undefined, usageSize, LIST_COLUMN_SIZE.end]}>
 						{picked.size === 0 ? (
 							<ListHead
 								columns={head}
 								end={LIST_COLUMN_SIZE.end}
 								selectAll={filteredItems.length > 0 ? selectAll : undefined}
+								onResize={resize}
+								resizeLabel={(column) => t("list.resizeColumn", { column })}
 							/>
 						) : (
 							<BulkBar
@@ -432,6 +463,9 @@ export function TaxonomyScreen({
 								{picked.size >= 2 && (
 									<TextButton onClick={() => setMergeGroups([...picked])}>{t("taxonomy.merge")}</TextButton>
 								)}
+								<TextButton onClick={() => trashItems(allItems.filter((item) => picked.has(item.group)))}>
+									{t("trash.toTrash")}
+								</TextButton>
 							</BulkBar>
 						)}
 						<TableBody>
@@ -490,16 +524,24 @@ export function TaxonomyScreen({
 													/>
 													<DropdownMenuContent align="end">
 														<DropdownMenuItem onClick={() => setOpenGroup(item.group)}>
+															<Edit aria-hidden />
 															{t("taxonomy.edit")}
 														</DropdownMenuItem>
 														<DropdownMenuItem onClick={() => setMergeGroups([item.group])}>
+															<Merge aria-hidden />
 															{t("taxonomy.mergeWith")}
 														</DropdownMenuItem>
 														{item.firstRef && item.usageCount > 0 && (
 															<DropdownMenuItem onClick={() => onFilterUsage(item)}>
+																<List aria-hidden />
 																{t("taxonomy.viewUsage")}
 															</DropdownMenuItem>
 														)}
+														<DropdownMenuSeparator />
+														<DropdownMenuItem variant="danger" onClick={() => trashItems([item])}>
+															<TrashCan aria-hidden />
+															{t("trash.toTrash")}
+														</DropdownMenuItem>
 													</DropdownMenuContent>
 												</DropdownMenu>
 											</RowActions>
@@ -523,6 +565,7 @@ export function TaxonomyScreen({
 					hasPublicPage={path !== undefined}
 					onClose={() => setOpenGroup(null)}
 					onMerge={() => currentItem && setMergeGroups([currentItem.group])}
+					onTrash={() => currentItem && trashItems([currentItem])}
 					onSaved={(newGroup) => {
 						if (openGroup === "__new__") setOpenGroup(newGroup);
 					}}

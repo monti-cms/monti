@@ -597,7 +597,7 @@ describe("08-3 entry_links, ordering, and via relations", () => {
 		expect(noTagPosts.total).toBe(1);
 
 		// Permanent unlinking of tagReact via unlinkTargetGroup
-		const unlinkRes = await unlinkTargetGroup(db, schema, tagReact.group);
+		const unlinkRes = await unlinkTargetGroup(db, schema, tagReact.group, new Date());
 		expect(unlinkRes.unlinkedCount).toBe(2);
 
 		// Verify entry_links are gone

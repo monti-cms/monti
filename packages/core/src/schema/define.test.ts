@@ -24,4 +24,17 @@ describe("collection public paths", () => {
 			} as unknown as Schema),
 		).toContainEqual({ collection: "category", code: "badPath" });
 	});
+
+	it("11-1 no collection is named `media`: the trash names the library's files and folders by that kind", () => {
+		const schema = {
+			locales: { source: "ko", list: [{ code: "ko", name: "한국어" }], prefix: "never" },
+			collections: {
+				media: {
+					kind: "item",
+					fields: { title: { kind: "text", required: true }, slug: { kind: "slug", required: true } },
+				},
+			},
+		} satisfies Schema;
+		expect(checkSchema(schema)).toContainEqual({ collection: "media", code: "reserved" });
+	});
 });

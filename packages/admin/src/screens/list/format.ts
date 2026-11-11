@@ -10,10 +10,6 @@ export function shortDate(value: Date | string | null, now = new Date()): string
 	return date.getFullYear() === now.getFullYear() ? day : `${two(date.getFullYear() % 100)}. ${day}`;
 }
 
-/** "KO", or "KO +1" when the row's group has other languages (doc 06, principle 4). */
-export const localeCell = (row: ListRow) =>
-	`${row.locale.toUpperCase()}${row.locales.length > 1 ? ` +${row.locales.length - 1}` : ""}`;
-
 /** What a field's cell reads: relation titles or option labels joined, or the text. */
 export function fieldCell(row: ListRow, column: ListColumn): string {
 	if (column.kind === "relation") return (row.relations[column.id] ?? []).map((target) => target.title).join(" · ");

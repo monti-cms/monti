@@ -320,7 +320,10 @@ function RelationManyInput({
 		>
 			<ComboboxChips ref={anchor} size="md">
 				{value.map((item) => (
-					<ComboboxChip key={item}>{rel.labelOf(item)}</ComboboxChip>
+					// A field that cannot be changed offers no way to take a value out.
+					<ComboboxChip key={item} showRemove={!disabled}>
+						{rel.labelOf(item)}
+					</ComboboxChip>
 				))}
 				<ComboboxChipsInput id={id} placeholder={value.length === 0 ? placeholder : undefined} />
 			</ComboboxChips>

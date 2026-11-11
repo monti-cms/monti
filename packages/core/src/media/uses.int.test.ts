@@ -4,7 +4,8 @@ import { CheckError } from "../errors";
 import { createMonti, definePlugin } from "../monti";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
-import type { MediaItem, MediaTrashResult } from "./operations";
+import type { TrashMoved } from "../trash/operations";
+import type { MediaItem } from "./operations";
 import { memoryStorage } from "./storage";
 import { usesInDoc, usesInValues } from "./uses";
 
@@ -302,7 +303,11 @@ describe("a file the library does not have, already named", () => {
 });
 
 describe("a file in use stays out of the trash", () => {
-	const trash = async (ids: string[]) => (await write<MediaTrashResult>("media.trash", { ids })).output;
+	const trash = async (ids: string[]) => {
+		const { moved, kept } = (await write<TrashMoved>("trash.move", { rows: ids.map((id) => ({ kind: "media", id })) }))
+			.output;
+		return { moved, kept };
+	};
 	const trashed = async (id: string) =>
 		(await db.selectFrom("media").select("trashed_at").where("id", "=", id).executeTakeFirstOrThrow()).trashed_at !==
 		null;
@@ -322,7 +327,7 @@ describe("a file in use stays out of the trash", () => {
 		const folder = (await write("folders.create", { scope: { collection: "post" }, parentId: null, name: "정리" }))
 			.output.id;
 		await write("entries.moveToFolder", { ids: [made.output.id], folder });
-		await write("folders.remove", { id: folder });
+		await write("trash.move", { rows: [{ kind: "folder", id: folder }] });
 		expect(await trash([inTemplate, inTrashedEntry])).toEqual({
 			moved: [],
 			kept: [inTemplate, inTrashedEntry].sort((a, b) => (a < b ? -1 : 1)),
@@ -360,7 +365,7 @@ describe("a file in use stays out of the trash", () => {
 			version: await versionOf(output.id),
 			values: { cover: null },
 		});
-		await write("folders.remove", { id: box });
+		await write("trash.move", { rows: [{ kind: "folder", id: box }] });
 		await write("activity.undo", { id: cleared.activityId });
 		const row = await db
 			.selectFrom("media")
@@ -396,7 +401,7 @@ describe("a file in use stays out of the trash", () => {
 					if (!(error instanceof CheckError) || error.reason.key !== "folders.unknown") throw error;
 				}),
 				write("entries.save", { id: output.id, version, values: { cover: { media: cover, alt: "표지" } } }),
-				write("folders.remove", { id: box }),
+				write("trash.move", { rows: [{ kind: "folder", id: box }] }),
 			]);
 			expect(await trashed(cover)).toBe(false);
 			// Moved in time or not, it does not end up in a folder that is gone.
@@ -418,7 +423,7 @@ describe("a file in use stays out of the trash", () => {
 			const photo = await file();
 			const [, removed] = await Promise.all([
 				write("media.moveToFolder", { ids: [photo], folder: box }).catch(() => null),
-				write("folders.remove", { id: box }),
+				write("trash.move", { rows: [{ kind: "folder", id: box }] }),
 			]);
 			await write("activity.undo", { id: removed.activityId });
 			expect(await trashed(photo)).toBe(false);
@@ -430,7 +435,7 @@ describe("a file in use stays out of the trash", () => {
 		const photo = await file();
 		await write("media.moveToFolder", { ids: [photo], folder: box });
 		const out = await write("media.moveToFolder", { ids: [photo], folder: null });
-		await write("folders.remove", { id: box });
+		await write("trash.move", { rows: [{ kind: "folder", id: box }] });
 		await write("activity.undo", { id: out.activityId });
 		const row = await db
 			.selectFrom("media")
@@ -444,7 +449,7 @@ describe("a file in use stays out of the trash", () => {
 		const box = (await write("folders.create", { scope: "media", parentId: null, name: "상자" })).output.id;
 		const photo = await file();
 		await write("media.moveToFolder", { ids: [photo], folder: box });
-		const removed = await write("folders.remove", { id: box });
+		const removed = await write("trash.move", { rows: [{ kind: "folder", id: box }] });
 		await write("activity.undo", { id: removed.activityId });
 		const row = await db
 			.selectFrom("media")

@@ -192,8 +192,12 @@ export const Caption: Story = {
 		<DropdownMenu defaultOpen>
 			{More}
 			<DropdownMenuContent>
-				<DropdownMenuItem caption="한국어 원문은 그대로 둬요">영어로 번역</DropdownMenuItem>
-				<DropdownMenuItem caption="한국어 원문은 그대로 둬요">일본어로 번역</DropdownMenuItem>
+				<DropdownMenuItem caption="한국어 원문은 그대로">영어로 번역</DropdownMenuItem>
+				<DropdownMenuItem caption="한국어 원문은 그대로">일본어로 번역</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem variant="danger" icon={<TrashCan aria-hidden />} caption="한국어 원문은 그대로">
+					이 번역 휴지통으로
+				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	),

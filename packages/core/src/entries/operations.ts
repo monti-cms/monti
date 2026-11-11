@@ -7,6 +7,7 @@ import { sameJson } from "../json";
 import { checkMediaValues } from "../media/uses";
 import { cleanMediaValue, mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
+import { lockRecords } from "../records";
 import { generateUniqueSlug, resolveInlineCreation, syncRelationsForEntry } from "../relations/sync";
 import { localeModeOf, type Schema } from "../schema/define";
 import { blockHashes, keepLinks } from "../translations/links";
@@ -661,7 +662,19 @@ export const entryOperations = [
 				throw new CheckError({ key: "entries.duplicateTranslation" });
 		},
 		async run(input, ctx) {
+			// The source is held while it is copied: a folder on its way to the trash takes its entries first (doc 11), so the copy never lands in a
+			// folder that is leaving. A source in a thrown-away folder is copied to the top level.
+			await lockRecords(ctx.db, [ref(input.id)]);
 			const entry = await entryOf(ctx, input.id);
+			const folder =
+				entry.folderId === null
+					? undefined
+					: await ctx.db
+							.selectFrom("folders")
+							.select("id")
+							.where("id", "=", entry.folderId)
+							.where("trashed_at", "is", null)
+							.executeTakeFirst();
 			const id = randomUUID();
 			await ctx.db
 				.insertInto("entries")
@@ -672,7 +685,7 @@ export const entryOperations = [
 					locale: entry.locale,
 					title: entry.title,
 					slug: "",
-					folder_id: entry.folderId,
+					folder_id: folder?.id ?? null,
 					values: JSON.stringify(entry.values),
 					doc: entry.doc === null ? null : JSON.stringify(entry.doc),
 				})

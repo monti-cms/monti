@@ -23,7 +23,7 @@
 |---|---|---|
 | 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `add`, `moveLabel`, `onPlace`, `onStep`, `onPreview`) | `columns`의 열마다 `id`, `label`, `size`, `sort`, `filtered`, `menu`. 필터, 정렬, 열 숨기기는 모두 이름을 누르면 열리는 그 열의 메뉴에서 한다. 필터가 걸린 열은 `filtered`로 점, 정렬된 열은 `sort`로 화살표. |
 | 모두 선택 | `ListHead`의 `selectAll`(`state` `none`·`some`·`all`) | 포인터가 머리 위에 있을 때 보인다. 지금 쪽만 고른다. |
-| 열 메뉴의 정렬 (제목, 날짜) | `DropdownMenuRadioGroup` + `DropdownMenuRadioItem` | 제목은 "오름차순 · 내림차순", 날짜는 "최근부터 · 오래전부터". 고르면 닫힌다. |
+| 열 메뉴의 정렬 (제목, 날짜) | `SortRows`(`DropdownMenuRadioGroup` + `DropdownMenuRadioItem`) | 제목은 "오름차순 · 내림차순", 날짜는 "최근부터 · 오래전부터". 고르면 닫힌다. |
 | 열 메뉴의 거를 값 | `DropdownMenuCheckboxItem box`, 끝에 개수 `MenuShortcut` | 상태: 발행됨 · 수정 중 · 초안 · 보관됨. 관계(카테고리, 태그): 맨 위 `DropdownMenuSearch`, "없음", `DropdownMenuSeparator`, 항목(많으면 `DropdownMenuScroll`). 언어: 관리자 화면 언어로 된 언어 이름들("한국어", "영어"), 구분선, `DropdownMenuLabel` "번역", 번역 없음 · 원문 변경 · 최신. 텍스트 필드(검색 설명): "비어 있음" 하나. 골라도 메뉴는 열려 있다. |
 | 날짜 열의 거를 값 | `DropdownMenuRadioItem`(모든 날짜 · 오늘 · 최근 7일 · 최근 30일), `DropdownMenuSub` "하루 고르기" · "기간 고르기" | 한 번에 하나, 지금 것에 ✓. 거르기가 없으면 "모든 날짜"에 ✓가 있고, 그것을 누르면 거르기가 풀린다(2026-11-06 소유자). |
 | 하루 달력 | "하루 고르기"의 `DropdownMenuSubContent bare` 안에 `Calendar`(하루) | 한 번 누르면 그 하루로 거르고, 달력은 그날을 보이며 열려 있다. |
@@ -41,10 +41,10 @@
 | 상태 칸 | `EntryStatus`, 발행됨만 `quiet` | 발행됨은 조용한 색, 수정 중과 초안은 제 색이다. |
 | 제목 칸 | `RowLink` 안의 `RowTitle`(`title`, `address`) | 제목 뒤 같은 줄에 주소. 행 어디를 눌러도 글이 열린다. |
 | 카테고리 · 태그 · 텍스트 필드 칸 | `TableCell tone="subtle" truncate`, 셀 `title`에 전부 | 끝은 늘 "…". 값 여럿은 " · "로 잇는다. |
-| 언어 · 수정일 칸 | `Text mono variant="meta"`(날짜는 `tone="muted"`, 칸은 `align="end"`) | 언어는 "KO +1", 날짜는 올해면 "10. 26", 지난해면 "25. 10. 26". 기준 화면(`Screens/Reference/Lists` › Main)과 같다. |
+| 언어 · 수정일 칸 | 언어는 `LocaleCodes`, 날짜는 `Text mono variant="meta"`(`tone="muted"`, 칸은 `align="end"`) | 언어는 기본 너비에서 "KO +1", 열을 넓히면 "KO · EN"이고, 세기만 한 언어는 가리킬 때 툴팁이 이름으로 말한다(2026-11-11 소유자). 날짜는 올해면 "10. 26", 지난해면 "25. 10. 26". 기준 화면(`Screens/Reference/Lists` › Main)과 같다. |
 | 행 ⋯ | `RowActions` 안의 `IconButton`(`label` "행 메뉴") + `DropdownMenu` | 늘 보인다. 항목은 오른쪽 클릭과 같다. 보드는 글자 버튼으로 그렸지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. |
-| 행 오른쪽 클릭 | `ContextMenu`: "열기" · "새 탭에서 열기" · "복제" │ `ContextMenuSub` "폴더로" · "카테고리" · "태그" │ "보관" · "휴지통으로"(`variant="danger"`, `MenuShortcut` Del) | 행마다 앞에 아이콘. 둘째 단계까지. |
-| 여러 행 오른쪽 클릭 | `ContextMenu`: `ContextMenuLabel` "2개 항목" · "발행" · "보관" · `ContextMenuSub` "폴더로" │ "카테고리" · "태그" │ "내보내기" │ "휴지통으로" | 일괄 막대와 같은 이름. 관계 필드가 바로 놓인다. 아이콘은 없다. 여러 행에 되는 것만 담는다. |
+| 행 오른쪽 클릭 | `ContextMenu`: "열기" · "새 탭에서 열기" · "복제" │ `ContextMenuSub` "폴더로" · "카테고리" · "태그" │ "보관" · "휴지통으로"(`variant="danger"`, `MenuShortcut` Del) | 행마다 앞에 아이콘. 둘째 단계까지. 행의 ⋯ 메뉴도 같은 행이고 Del 표시만 없다. 행에서 Delete를 누르면 휴지통으로 간다(고른 행 중 하나면 고른 행 모두). |
+| 여러 행 오른쪽 클릭 | `ContextMenu`: `ContextMenuLabel` "2개 항목" · "발행" · "보관" · `ContextMenuSub` "폴더로" │ "카테고리" · "태그" │ "내보내기" │ "휴지통으로"(`variant="danger"`, `MenuShortcut` Del) | 일괄 막대와 같은 이름. 관계 필드가 바로 놓인다. 아이콘은 없다. 여러 행에 되는 것만 담는다. |
 | 미디어 필드 칸 (대표 이미지) | `RowThumb` 안 `Image size="row" ratio="photo"`, 그림이 아닌 파일은 이름 | 빈 필드는 비어 있다. 열 메뉴는 글자 필드처럼 "비어 있음"이다(T59). |
 | 폴더 행 | `RowTitle folder`(`title` 폴더 이름, `address` "글 2"), 끝에 `IconButton` ⋯ | 상태 칸은 비운다. 누르면 폴더 안으로. "상위 폴더로" 행도 같다. |
 | 폴더 오른쪽 클릭 | `ContextMenu`: "열기" · "이름 바꾸기" · `ContextMenuSub` "옮기기" │ "폴더 지우기"(`variant="danger"`) | |
@@ -121,7 +121,7 @@
 
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
-| "휴지통 확인" | 5.10 | `AlertDialog`("휴지통으로 옮길까요?", `AlertDialogAction` `variant="danger"` "휴지통으로") | Controls/Overlay/AlertDialog |
+| "휴지통 확인" | 5.10 | `AlertDialog`("휴지통으로 옮길까요?", `AlertDialogAction` `variant="danger"` "휴지통으로"). 발행된 글이 있을 때만 묻고, 무엇이 내려가는지 말한다 | Controls/Overlay/AlertDialog, Screens/Trash › AskPublished |
 | "휴지통으로 옮김" | 5.09 | `toast` "휴지통으로 옮겼습니다"와 `action` "되돌리기" | Controls/Status/Toast |
 | "행 메뉴" | 5.07 | 행 `ContextMenu`와 "폴더로" `ContextMenuSubContent`, 그 행은 호버 바탕 유지 | Controls/Menu/ContextMenu |
 | "여러 행 메뉴" | 5.08 | `BulkBar`와 여러 행 `ContextMenu`, 태그 둘째 단계(`DropdownMenuSearch`와 `DropdownMenuCheckboxItem box`, 일부 글에만 있는 태그는 `mixed`와 `MenuShortcut` "1/2") | Patterns/List/BulkBar, Controls/Menu/ContextMenu › SeveralTags |
@@ -130,7 +130,7 @@
 | "폴더 안" | 5.02 | `PageHeader`의 `trail` "게시글 /", 제목은 폴더 이름, "상위 폴더로" 행 | Patterns/Frame/PageHeader |
 | "폴더 안 검색" | 5.03 | `SearchBox`의 칩 "시리즈 원고 ▾"(메뉴: "시리즈 원고" · "모든 폴더" │ "전체" · "제목" · "주소" · "본문") | Controls/Field/SearchBox |
 | "폴더 지우기 확인" | 5.05 | `AlertDialog`("시리즈 원고를 휴지통으로 옮길까요?"). 발행된 글이 든 폴더만 묻는다 | Controls/Overlay/AlertDialog |
-| "폴더 지움" | 5.06 | `toast`("… 휴지통으로 옮겼습니다", "되돌리기"), 사이드바에서 폴더가 빠진다 | Controls/Status/Toast |
+| "폴더 지움" | 5.06 | `toast`("휴지통으로 옮겼습니다", "되돌리기"), 사이드바에서 폴더가 빠진다. 휴지통으로 보낸 뒤의 알림은 무엇을 보냈든 같은 말이다 | Controls/Status/Toast |
 
 ### 흐름 7 · 목록 정리
 

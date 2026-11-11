@@ -1,7 +1,8 @@
-import type { MediaKind } from "@monti-cms/core";
+import { type MediaKind, mediaSortStart } from "@monti-cms/core";
 
 export const SORTS = ["uploaded", "name", "size"] as const;
-type Sort = (typeof SORTS)[number];
+export type Sort = (typeof SORTS)[number];
+type Dir = "asc" | "desc";
 export const USES = ["used", "unused"] as const;
 type Use = (typeof USES)[number];
 export const KINDS: readonly MediaKind[] = ["image", "file"];
@@ -15,6 +16,7 @@ export type MediaState = {
 	kinds: MediaKind[];
 	used: Use[];
 	sort: Sort;
+	dir: Dir;
 	view: "grid" | "list";
 	page: number;
 	file: string | null;
@@ -25,7 +27,8 @@ const list = <Value extends string>(raw: string | null, known: readonly Value[])
 
 /** Reads the address. Whatever an old link says that the library does not know is left out, so it never breaks. */
 export function readMediaState(params: URLSearchParams): MediaState {
-	const sort = params.get("sort");
+	const sort = SORTS.find((known) => known === params.get("sort")) ?? "uploaded";
+	const dir = params.get("dir");
 	const page = Number(params.get("page"));
 	return {
 		folder: params.get("folder"),
@@ -33,7 +36,8 @@ export function readMediaState(params: URLSearchParams): MediaState {
 		everywhere: params.get("in") === "all",
 		kinds: list(params.get("kind"), KINDS),
 		used: list(params.get("used"), USES),
-		sort: SORTS.find((known) => known === sort) ?? "uploaded",
+		sort,
+		dir: dir === "asc" || dir === "desc" ? dir : mediaSortStart(sort),
 		view: params.get("view") === "list" ? "list" : "grid",
 		page: Number.isInteger(page) && page > 1 ? page : 1,
 		file: params.get("file"),
@@ -49,6 +53,7 @@ export function writeMediaState(state: MediaState): URLSearchParams {
 	if (state.kinds.length > 0) params.set("kind", state.kinds.join(","));
 	if (state.used.length > 0) params.set("used", state.used.join(","));
 	if (state.sort !== "uploaded") params.set("sort", state.sort);
+	if (state.dir !== mediaSortStart(state.sort)) params.set("dir", state.dir);
 	if (state.view !== "grid") params.set("view", state.view);
 	if (state.page > 1) params.set("page", String(state.page));
 	if (state.file) params.set("file", state.file);
@@ -64,6 +69,7 @@ export const queryOf = (state: MediaState) => ({
 	kinds: state.kinds,
 	used: state.used,
 	sort: state.sort,
+	dir: state.dir,
 	page: state.page,
 });
 

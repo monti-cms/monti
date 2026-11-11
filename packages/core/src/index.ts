@@ -61,7 +61,7 @@ export {
 	type MontiError,
 	UnknownOperationError,
 } from "./errors";
-export type { FolderNode, FolderRemoval } from "./folders/operations";
+export type { FolderNode } from "./folders/operations";
 export { canonical, sameJson } from "./json";
 export {
 	type Acceptance,
@@ -89,11 +89,10 @@ export type {
 	MediaFile,
 	MediaItem,
 	MediaQueryResult,
-	MediaTrashResult,
 	MediaUseRow,
 	MissingAlt,
 } from "./media/operations";
-export { MEDIA_QUERY_MOST } from "./media/operations";
+export { MEDIA_QUERY_MOST, mediaSortStart } from "./media/operations";
 export { imageFrameStyle, type SiteImage, type SiteMedia, siteImage } from "./media/site-image";
 export { memoryStorage, type Storage } from "./media/storage";
 export { altIsMissing, cleanMediaValue, type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";
@@ -144,3 +143,6 @@ export type { Answers, Choice, Rename, SchemaChange } from "./schema/plan";
 export { type SyncResult, syncSchemaFile } from "./schema/sync";
 export type { Site } from "./site";
 export type { FieldMark } from "./translations/fields";
+export { MEDIA_KIND, type TrashedEntry, type TrashList, type TrashQuery, type TrashRow } from "./trash/list";
+export type { TrashEffects, TrashMoved, TrashRestored } from "./trash/operations";
+export { TRASH_DAYS, type TrashRef } from "./trash/purge";

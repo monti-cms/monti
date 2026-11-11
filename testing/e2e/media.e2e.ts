@@ -309,7 +309,9 @@ test.describe("the editor", () => {
 			})
 		).json()) as { items: { id: string; name: string }[] };
 		const used = items[0];
-		const refused = await operation<{ moved: string[]; kept: string[] }>(admin, "media.trash", { ids: [used?.id] });
+		const refused = await operation<{ moved: string[]; kept: string[] }>(admin, "trash.move", {
+			rows: [{ kind: "media", id: used?.id }],
+		});
 		expect(refused.output.kept).toEqual([used?.id]);
 		const entry = (await (
 			await admin.request.post("/admin/api/operations/entries.get", { data: { input: { id: post.id } } })
@@ -321,7 +323,9 @@ test.describe("the editor", () => {
 			version: entry.entry.version,
 			doc: { type: "doc", blocks: [{ id: "p1", type: "paragraph", content: [{ type: "text", text: "뺐어요" }] }] },
 		});
-		const freed = await operation<{ moved: string[]; kept: string[] }>(admin, "media.trash", { ids: [used?.id] });
+		const freed = await operation<{ moved: string[]; kept: string[] }>(admin, "trash.move", {
+			rows: [{ kind: "media", id: used?.id }],
+		});
 		expect(freed.output.moved).toEqual([used?.id]);
 	});
 });

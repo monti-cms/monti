@@ -8,9 +8,9 @@ import { folderOf, subtree } from "../folders/operations";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import { bodyAsRead, followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
+import { daysLeft, lockFileKeys, loosen, looseUntil } from "../trash/purge";
 import { isMediaKey, kindOf, type MediaKind, splitName, WEB_LONGEST_SIDE } from "./accept";
 import { altGaps } from "./alt";
-import { usedOf } from "./uses";
 import { type MediaPlace, placeOf } from "./value";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -74,7 +74,12 @@ export type MediaUseRow =
 	  }
 	| { owner: "template"; id: string; name: string; place: MediaPlace };
 
-export type MediaDetail = MediaItem & { useRows: MediaUseRow[]; trashedAt: string | null };
+/** A file with where it is used. In the trash it says so, with the days it has left there by the site's clock (doc 11). */
+/** The way each order of the library starts: names from A, the newest and the largest first. */
+export const mediaSortStart = (sort: "uploaded" | "name" | "size"): "asc" | "desc" =>
+	sort === "name" ? "asc" : "desc";
+
+export type MediaDetail = MediaItem & { useRows: MediaUseRow[]; trashedAt: string | null; daysLeft: number | null };
 
 /** An image with no alt text, and where. */
 export type MissingAlt = {
@@ -86,9 +91,6 @@ export type MissingAlt = {
 	name?: string | null;
 	place: MediaPlace;
 };
-
-/** What `media.trash` did: files in use stay. */
-export type MediaTrashResult = { moved: string[]; kept: string[] };
 
 const Size = z.number().int().positive();
 const Original = z.object({ key: z.string(), width: Size.optional(), height: Size.optional() });
@@ -229,6 +231,13 @@ async function statOfKeys(ctx: OperationContext, original: Original, web: Web | 
 	return stat;
 }
 
+const keysOf = (original: Original, web: Web | undefined) => [original.key, ...(web ? [web.key] : [])];
+
+/** These keys are a file's now: the clean-up no longer waits to remove them (doc 11). */
+async function adopt(db: Db, original: Original, web: Web | undefined) {
+	await db.deleteFrom("loose_files").where("key", "in", keysOf(original, web)).execute();
+}
+
 /** A name a person gave: the file's extension stays (doc 09: it says what the file is), slashes do not make paths. */
 function cleanName(name: string, extension: string) {
 	const given = name.trim().replaceAll("/", "-");
@@ -249,6 +258,8 @@ const Query = z.object({
 	only: z.enum(["image", "file"]).optional(),
 	used: z.array(z.enum(["used", "unused"])).default([]),
 	sort: z.enum(["uploaded", "name", "size"]).default("uploaded"),
+	/** Left out, the way the order starts (`mediaSortStart`). */
+	dir: z.enum(["asc", "desc"]).optional(),
 	page: z.number().int().positive().default(1),
 	/** How many files a page holds. The library's screen keeps to pages of 100; a window that loads more asks for more. */
 	pageSize: z.number().int().min(1).max(MEDIA_QUERY_MOST).default(MEDIA_PAGE_SIZE),
@@ -293,12 +304,10 @@ export const mediaOperations = [
 					input.used[0] === "used" ? sql<boolean>`${usesCount} > 0` : sql<boolean>`${usesCount} = 0`,
 				);
 			const { total } = await filtered.select(sql<number>`count(*)::int`.as("total")).executeTakeFirstOrThrow();
-			const ordered =
-				input.sort === "name"
-					? filtered.orderBy("name")
-					: input.sort === "size"
-						? filtered.orderBy("size", "desc")
-						: filtered.orderBy("uploaded_at", "desc");
+			const ordered = filtered.orderBy(
+				input.sort === "name" ? "name" : input.sort === "size" ? "size" : "uploaded_at",
+				input.dir ?? mediaSortStart(input.sort),
+			);
 			const rows = await ordered
 				.select(COLUMNS)
 				.select(usesCount.as("uses"))
@@ -372,6 +381,7 @@ export const mediaOperations = [
 			return {
 				...itemOf(row, ctx, await folderPaths(ctx.db)),
 				trashedAt: row.trashed_at && new Date(row.trashed_at).toISOString(),
+				daysLeft: row.trashed_at ? daysLeft(new Date(row.trashed_at), ctx.now()) : null,
 				useRows: [
 					...entries.map(
 						(use): MediaUseRow => ({
@@ -408,6 +418,8 @@ export const mediaOperations = [
 		async run(input, ctx): Promise<MediaItem> {
 			storageOf(ctx);
 			if (input.folderId) await checkMediaFolder(ctx.db, input.folderId);
+			// Before the bytes are looked for: the clean-up cannot remove them between that look and this write (doc 11).
+			await lockFileKeys(ctx.db, keysOf(input.original, input.web));
 			const stat = await statOfKeys(ctx, input.original, input.web);
 			const id = randomUUID();
 			await ctx.db
@@ -431,6 +443,7 @@ export const mediaOperations = [
 					trashed_at: null,
 				})
 				.execute();
+			await adopt(ctx.db, input.original, input.web);
 			ctx.created(mediaRef(id));
 			ctx.emit({ type: "media.uploaded", ids: [id] });
 			return liveItem(ctx, id);
@@ -492,9 +505,13 @@ export const mediaOperations = [
 		},
 		async run(input, ctx): Promise<MediaItem> {
 			const row = await liveRowOf(ctx.db, input.id);
+			await lockFileKeys(ctx.db, keysOf(input.original, input.web));
 			const stat = await statOfKeys(ctx, input.original, input.web, input.id);
 			if (kindOf(stat.mime) !== row.kind) throw new CheckError({ key: "media.kindChanged" });
 			const { stem } = splitName(row.name);
+			// The file it had leaves the storage once the pages that still name it have had time to change (doc 11).
+			await loosen(ctx.db, [row.original_key, ...(row.web_key ? [row.web_key] : [])], looseUntil(ctx.now()));
+			await adopt(ctx.db, input.original, input.web);
 			await ctx.db
 				.updateTable("media")
 				.set((eb) => ({
@@ -545,47 +562,6 @@ export const mediaOperations = [
 			return { count: input.ids.length, name };
 		},
 		summary: (_input, output) => moveMessage(output.count, output.name),
-	}),
-	defineOperation({
-		name: "media.trash",
-		kind: "write",
-		description:
-			"Put files of the media library in the trash. Files in use stay where they are: the preview says which move and which stay. Make a proposal only when asked to tidy up; files in use never go in one.",
-		input: z.object({ ids: z.array(z.string()).min(1) }),
-		touches: (input) => input.ids.map(mediaRef),
-		async preview(input, ctx) {
-			const used = await usedOf(ctx.db, input.ids);
-			const moved = input.ids.filter((id) => !used.has(id));
-			return {
-				summary: { key: "media.trashPreview", values: { moved: moved.length, kept: used.size } },
-				changes: moved.map(mediaRef),
-				blocked: [...used].map(([id, uses]) => ({
-					ref: mediaRef(id),
-					reason: { key: "media.inUse", values: { uses } },
-				})),
-			};
-		},
-		async check(input, ctx) {
-			for (const id of input.ids) await liveRowOf(ctx.db, id);
-		},
-		async run(input, ctx): Promise<MediaTrashResult> {
-			// The engine has locked these files, so a save that starts using one has either finished, and is seen here, or waits and brings it back (09-4).
-			const used = await usedOf(ctx.db, input.ids);
-			const moved = input.ids.filter((id) => !used.has(id));
-			if (moved.length > 0) {
-				await ctx.db
-					.updateTable("media")
-					.set((eb) => ({ trashed_at: ctx.now(), version: eb("version", "+", 1) }))
-					.where("id", "in", moved)
-					.execute();
-				ctx.emit({ type: "media.trashed", ids: moved });
-			}
-			return { moved, kept: [...used.keys()] };
-		},
-		summary: (_input, output) => ({
-			key: "media.trash",
-			values: { moved: output.moved.length, kept: output.kept.length },
-		}),
 	}),
 	defineOperation({
 		name: "entries.missingAlt",

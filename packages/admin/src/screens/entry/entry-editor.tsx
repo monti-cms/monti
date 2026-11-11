@@ -1,4 +1,4 @@
-import { cleanMediaValue, type EntryState, type PublishTask, publicPath } from "@monti-cms/core";
+import { cleanMediaValue, type EntryState, type PublishTask, publicPath, type TrashedEntry } from "@monti-cms/core";
 import {
 	Banner,
 	Box,
@@ -6,6 +6,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	EditorHeader,
 	EditorMarginLine,
@@ -37,7 +38,16 @@ import {
 	TooltipTrigger,
 	useShortcut,
 } from "@monti-cms/ui";
-import { Archive, ChevronLeft, Copy, Export, OverflowMenuHorizontal, RightPanelOpen, Spark } from "@monti-cms/ui/icons";
+import {
+	Archive,
+	ChevronLeft,
+	Copy,
+	Export,
+	OverflowMenuHorizontal,
+	RightPanelOpen,
+	Spark,
+	TrashCan,
+} from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { download } from "../../download";
@@ -50,7 +60,9 @@ import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
+import { usePurge, useRestore, useTrashMove } from "../../trash/use-trash";
 import { SessionEndedBanner } from "../frame/session-ended";
+import { useLanguageName } from "../list/column-menu";
 import type { SchemaRead } from "../settings/schema-draft";
 import { type CompareMode, CompareView } from "./compare-view";
 import { clock, day, dayTime } from "./dates";
@@ -95,6 +107,7 @@ export function EntryEditor({
 	id,
 	compare,
 	onBack,
+	onTrash,
 	onCompare,
 	onOpen,
 }: {
@@ -103,11 +116,14 @@ export function EntryEditor({
 	/** The comparison shown over the editor (`?compare=`), or `null`. */
 	compare: CompareMode | null;
 	onBack: () => void;
+	/** To the trash's screen: where an entry in the trash goes back to, and where one deleted for good leaves for. */
+	onTrash: () => void;
 	onCompare: (mode: CompareMode | null) => void;
 	/** Another entry (a copy just made). */
 	onOpen: (id: string) => void;
 }) {
 	const { t, language } = useAdmin();
+	const languageName = useLanguageName();
 	const source = useMemo(() => ({ kind: "entry" as const, id }), [id]);
 	const editor = useEntryEditor(source);
 	const schema = useRead<SchemaRead>("schema.read");
@@ -139,6 +155,11 @@ export function EntryEditor({
 	const archived = read?.state === "archived";
 	const trashed = Boolean(read?.entry.trashedAt);
 	const readOnly = archived || trashed;
+	// In the trash (doc 11): how long it stays and what a permanent delete keeps, read with it.
+	const inTrash = useRead<TrashedEntry>("trash.get", { id }, { skip: !trashed, afterWrites: true }).data;
+	const trash = useTrashMove();
+	const restore = useRestore();
+	const purge = usePurge();
 	const fieldLabels = schema.data?.adminValues[collection]?.fields ?? {};
 	const fieldLabel = (field: string) => fieldLabels[field]?.label ?? field;
 	const slug = String(editor.value("slug") ?? "");
@@ -408,7 +429,18 @@ export function EntryEditor({
 	const publishedAt = publish.publishedAt;
 
 	const head = readOnly ? (
-		archived ? (
+		trashed ? (
+			// The one pill of an entry in the trash (doc 11): it comes back as a draft, here.
+			<Button
+				variant="primary"
+				loading={restore.pending}
+				onClick={async () => {
+					if (await restore.run([source])) await editor.reload();
+				}}
+			>
+				{t("trash.restore")}
+			</Button>
+		) : archived ? (
 			<Button
 				variant="primary"
 				loading={unarchive.pending}
@@ -480,6 +512,8 @@ export function EntryEditor({
 
 	return (
 		<Stack gap={0} height="screen" overflow="clip" background="page">
+			{trash.dialog}
+			{purge.dialog}
 			{/* Every banner of the screen stands at its very top, broader first: the session over this entry's own (common.md, banners). */}
 			<SessionEndedBanner />
 			{editor.loadRefusal ? (
@@ -516,15 +550,21 @@ export function EntryEditor({
 					</TextButton>
 				</Banner>
 			) : null}
-			{trashed ? <Banner tone="neutral" title={t("entry.trashedBanner")} /> : null}
+			{trashed ? (
+				<Banner
+					tone="neutral"
+					title={t("entry.trashedBanner")}
+					meta={inTrash ? t("trash.left", { days: inTrash.daysLeft }) : undefined}
+				/>
+			) : null}
 			{compared && !readOnly ? (
 				<SourceChangedBanner compared={compared} onConfirmAll={() => void translation.confirmAll()} />
 			) : null}
 			<EditorHeader>
 				<Inline gap={12} minWidth={0} paddingX={12}>
-					<TextButton variant="quiet" onClick={onBack}>
+					<TextButton variant="quiet" onClick={trashed ? onTrash : onBack}>
 						<ChevronLeft aria-hidden />
-						{schema.data?.adminValues[collection]?.label ?? collection}
+						{trashed ? t("frame.trash") : (schema.data?.adminValues[collection]?.label ?? collection)}
 					</TextButton>
 					{address ? (
 						<Text variant="meta" tone="faint" truncate>
@@ -549,7 +589,26 @@ export function EntryEditor({
 					>
 						<RightPanelOpen aria-hidden />
 					</IconButton>
-					{readOnly ? null : (
+					{trashed ? (
+						<DropdownMenu>
+							<IconButton
+								label={t("entry.more")}
+								side="bottom"
+								trigger={(button) => <DropdownMenuTrigger render={button} />}
+							>
+								<OverflowMenuHorizontal aria-hidden />
+							</IconButton>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem
+									variant="danger"
+									onClick={() => purge.start({ rows: [source], reserves: inTrash?.reserves, onPurged: onTrash })}
+								>
+									<TrashCan aria-hidden />
+									{t("trash.purge")}
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					) : readOnly ? null : (
 						<DropdownMenu>
 							<IconButton
 								label={t("entry.more")}
@@ -590,6 +649,26 @@ export function EntryEditor({
 									<Export aria-hidden />
 									{t("entry.export")}
 								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+								{/* A translation goes alone: its source stays, and the row says so (flow 3·15). */}
+								{translation.isTranslation && schema.data ? (
+									<DropdownMenuItem
+										variant="danger"
+										icon={<TrashCan aria-hidden />}
+										caption={t("trash.sourceStays", { language: languageName(schema.data.schema.locales.source) })}
+										onClick={() => void trash.start({ rows: [source], title: editor.title, onMoved: onBack })}
+									>
+										{t("trash.translationToTrash")}
+									</DropdownMenuItem>
+								) : (
+									<DropdownMenuItem
+										variant="danger"
+										onClick={() => void trash.start({ rows: [source], title: editor.title, onMoved: onBack })}
+									>
+										<TrashCan aria-hidden />
+										{t("trash.toTrash")}
+									</DropdownMenuItem>
+								)}
 							</DropdownMenuContent>
 						</DropdownMenu>
 					)}

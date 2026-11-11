@@ -58,7 +58,7 @@ type Folder = {
 
 ```mermaid
 flowchart TD
-  D["폴더 지우기"] --> PV["folders.remove 미리 보기<br/>안의 글 · 파일 · 하위 폴더 수<br/>발행된 글 수"]
+  D["폴더 지우기"] --> PV["trash.checkMove<br/>안의 글 수 · 발행된 글 수"]
   PV --> Q{"발행된 글이 있나"}
   Q -->|있음| C["확인: 글 n편도 휴지통으로<br/>발행된 글 m편은 사이트에서 내려갑니다"]
   Q -->|초안뿐| T
@@ -91,8 +91,9 @@ flowchart TD
 | `folders.create` | write | 새 폴더(부모, 이름) |
 | `folders.rename` | write | 이름 바꾸기 |
 | `folders.move` | write · preview | 다른 부모로. 자기 안으로는 옮길 수 없다 |
-| `folders.remove` | write · preview | 폴더와 안의 것을 휴지통으로. 미리 보기는 안의 수와 내려갈 글 수 |
 | `entries.moveToFolder` | write | 글(묶음)들을 폴더로 |
+
+- 폴더 지우기는 `trash.move`다(11번 문서). 폴더와 안의 것이 휴지통으로 가고, 폴더만의 지우기 기능은 없다(T101).
 
 파일들을 폴더로 옮기는 `media.moveToFolder`는 09번 문서의 기능 목록에 있다(T99).
 

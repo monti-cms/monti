@@ -1,5 +1,5 @@
 import {
-	Inline,
+	LIST_COLUMN_SIZE,
 	ListHead,
 	PageColumn,
 	PageHeader,
@@ -7,55 +7,48 @@ import {
 	RowCheck,
 	RowLink,
 	RowMore,
+	RowTitle,
 	SearchToggle,
 	Table,
 	TableBody,
 	TableCell,
 	TableRow,
+	Text,
 	TextButton,
 	TrashRowDate,
-	TrashRowTitle,
 } from "../../index";
 import { AdminFrame } from "./frame";
 
 const ROWS: readonly {
 	title: string;
+	/** After the title, as in every list: an entry's address, what a folder holds, where a file sat. */
 	address?: string;
-	meta?: string;
 	folder?: boolean;
+	/** An entry's languages in the trash: its own, and how many more. */
+	locales?: string;
 	kind: string;
 	left: string;
 	urgent?: boolean;
 }[] = [
-	{ title: "첫 번째 글", address: "/first-post", meta: "KO · EN", kind: "게시글", left: "30일 남음" },
-	{ title: "시리즈 원고", meta: "글 2", folder: true, kind: "게시글", left: "30일 남음" },
-	{ title: "diagrams", meta: "파일 3 · Blog Assets", folder: true, kind: "미디어", left: "29일 남음" },
-	{ title: "winter-01.jpg", meta: "이미지 · 2.4 MB · Blog Assets", kind: "미디어", left: "28일 남음" },
-	{ title: "옛 소개 글", address: "/about-old", meta: "KO", kind: "게시글", left: "23일 남음" },
-	{
-		title: "리액트 19 마이그레이션",
-		address: "/react-19",
-		meta: "KO",
-		kind: "게시글",
-
-		left: "17일 남음",
-	},
-	{
-		title: "React 19 migration",
-		address: "/en/react-19",
-		meta: "English 번역",
-		kind: "게시글",
-
-		left: "15일 남음",
-	},
-	{ title: "연습장", address: "/scratch", meta: "KO", kind: "메모", left: "15일 남음" },
-	{ title: "임시", kind: "태그", left: "3일 남음", urgent: true },
+	{ title: "첫 번째 글", address: "/posts/first-post", locales: "KO +1", kind: "게시글", left: "30일 남음" },
+	{ title: "시리즈 원고", address: "글 2", folder: true, kind: "게시글", left: "30일 남음" },
+	{ title: "diagrams", address: "파일 3 · Blog Assets", folder: true, kind: "미디어", left: "29일 남음" },
+	{ title: "winter-01.jpg", address: "Blog Assets", kind: "미디어", left: "28일 남음" },
+	{ title: "옛 소개 글", address: "/posts/about-old", locales: "KO", kind: "게시글", left: "23일 남음" },
+	// A translation thrown away before its source is in its source's row all the same: an entry is one row.
+	{ title: "리액트 19 마이그레이션", address: "/posts/react-19", locales: "KO +1", kind: "게시글", left: "17일 남음" },
+	{ title: "연습장", address: "/notes/scratch", locales: "KO", kind: "메모", left: "15일 남음" },
+	// Under a week left, the days are in the warning tone.
+	{ title: "임시", locales: "KO", kind: "태그", left: "3일 남음", urgent: true },
 ];
 
-/** The trash: what was thrown away, the days left before it goes for good, and a way back for each. */
+/**
+ * The trash: what was thrown away and the days left before it goes for good. Its rows are the lists' rows, one line each (2026-11-11, owner): the title with what
+ * stands after it, the languages, the kind, the days. A row's ways back and out are in its ⋯ (restore, delete for good).
+ */
 export function TrashScreen() {
 	return (
-		<AdminFrame open="trash" counts={{ trash: "9" }}>
+		<AdminFrame open="trash" counts={{ trash: "8" }}>
 			<PageColumn width="list">
 				<PageHeader title="휴지통">
 					<SearchToggle label="검색" value="" aria-label="검색" />
@@ -64,24 +57,29 @@ export function TrashScreen() {
 				<Table container="none" layout="fixed">
 					<ListHead
 						selectAll={{ state: "none", onChange: () => {}, label: "이 페이지 모두 고르기" }}
-						end={114}
+						end={LIST_COLUMN_SIZE.end}
 						columns={[
 							{ id: "제목", label: "제목" },
-							{ id: "종류", label: "종류", size: 128 },
-							{ id: "남은 날", label: "남은 날", sort: "desc", align: "end", size: 144 },
+							{ id: "언어", label: "언어", size: LIST_COLUMN_SIZE.locale },
+							{ id: "종류", label: "종류", size: LIST_COLUMN_SIZE.one },
+							{ id: "남은 날", label: "남은 날", sort: "desc", align: "end", size: LIST_COLUMN_SIZE.measure },
 						]}
 					/>
 					<TableBody>
 						{ROWS.map((row) => (
-							<TableRow key={row.title} twoLine>
+							<TableRow key={row.title}>
 								<TableCell truncate>
 									<RowCheck checked={false} label={`${row.title} 고르기`} />
-									<TrashRowTitle
+									<RowTitle
 										title={<RowLink render={<button type="button" />}>{row.title}</RowLink>}
 										address={row.address}
-										meta={row.meta}
 										folder={row.folder}
 									/>
+								</TableCell>
+								<TableCell>
+									<Text mono variant="meta">
+										{row.locales}
+									</Text>
 								</TableCell>
 								<TableCell tone="subtle" truncate>
 									{row.kind}
@@ -91,10 +89,7 @@ export function TrashScreen() {
 								</TableCell>
 								<TableCell align="end">
 									<RowActions>
-										<Inline gap={16}>
-											<TextButton>복원</TextButton>
-											<RowMore label="더 보기" />
-										</Inline>
+										<RowMore label="행 메뉴" />
 									</RowActions>
 								</TableCell>
 							</TableRow>

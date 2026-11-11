@@ -85,6 +85,8 @@ export interface EntryTable {
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 	trashed_at: Date | null;
+	/** In the trash: who threw it away. */
+	trashed_by: TrashedBy | null;
 	/** In a translation: source block ids it chose to leave out, so they are not marked as new (doc 04). */
 	translation_skips: ColumnType<string[], string | undefined, string>;
 	/** In a translation: the source's value of each field holding its own, as it saw it. A field's mark is the source moving on from this. */
@@ -92,6 +94,9 @@ export interface EntryTable {
 	/** The body's text, made by the database from the blocks (search reads it). */
 	body_text: ColumnType<string | null, never, never>;
 }
+
+/** Who put something in the trash: the trash marks what the assistant threw away (doc 11). */
+export type TrashedBy = "admin" | "assistant" | "cli" | "plugin";
 
 /** `draft` was never published; `archived` was taken off the site (doc 02). "Changed" is `published` with `has_unpublished_changes`. */
 export type EntryStatus = "draft" | "published" | "archived";
@@ -202,6 +207,7 @@ export interface FolderTable {
 	version: Generated<number>;
 	created_at: Generated<Date>;
 	trashed_at: Date | null;
+	trashed_by: TrashedBy | null;
 }
 
 /** A file in the media library (doc 09): the bytes are in the storage under its keys. */
@@ -225,6 +231,21 @@ export interface MediaTable {
 	uploaded_at: Generated<Date>;
 	version: Generated<number>;
 	trashed_at: Date | null;
+	trashed_by: TrashedBy | null;
+}
+
+/** A path an entry was once published under, kept after the entry is deleted for good: no other entry takes it (doc 11). */
+export interface ReservedPathTable {
+	collection: string;
+	locale: string;
+	slug: string;
+	since: Generated<Date>;
+}
+
+/** A file in the storage that no media row holds: an upload that never became an item, a replaced file, a deleted one. The clean-up removes it (doc 11). */
+export interface LooseFileTable {
+	key: string;
+	remove_after: Date;
 }
 
 /** One place a file is used: one field or one body block of an entry or a template. Written again whenever its owner changes (doc 09). */
@@ -244,6 +265,8 @@ export interface Database {
 	entry_published: EntryPublishedTable;
 	source_blocks: SourceBlockTable;
 	old_paths: OldPathTable;
+	reserved_paths: ReservedPathTable;
+	loose_files: LooseFileTable;
 	templates: TemplateTable;
 	monti_admin: AdminTable;
 	monti_session: SessionTable;

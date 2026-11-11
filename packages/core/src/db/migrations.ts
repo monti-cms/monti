@@ -344,6 +344,28 @@ const MIGRATIONS: Record<string, Migration> = {
 			await db.schema.alterTable("media").addColumn("placeholder", "text").execute();
 		},
 	},
+	"0014_trash": {
+		async up(db) {
+			// The trash (doc 11): who threw it away, the paths a deleted entry leaves taken, and files waiting to leave the storage.
+			await db.schema.alterTable("entries").addColumn("trashed_by", "text").execute();
+			await db.schema.alterTable("folders").addColumn("trashed_by", "text").execute();
+			await db.schema.alterTable("media").addColumn("trashed_by", "text").execute();
+			await db.schema.createIndex("entries_trashed").on("entries").column("trashed_at").execute();
+			await db.schema
+				.createTable("reserved_paths")
+				.addColumn("collection", "text", (column) => column.notNull())
+				.addColumn("locale", "text", (column) => column.notNull())
+				.addColumn("slug", "text", (column) => column.notNull())
+				.addColumn("since", "timestamptz", (column) => column.notNull().defaultTo(sql`now()`))
+				.addPrimaryKeyConstraint("reserved_paths_pk", ["collection", "locale", "slug"])
+				.execute();
+			await db.schema
+				.createTable("loose_files")
+				.addColumn("key", "text", (column) => column.primaryKey())
+				.addColumn("remove_after", "timestamptz", (column) => column.notNull())
+				.execute();
+		},
+	},
 };
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */

@@ -21,6 +21,7 @@ import { MediaScreen } from "./screens/media/media-screen";
 import { CollectionsScreen } from "./screens/settings/collections-screen";
 import { TemplateEditor } from "./screens/templates/template-editor";
 import { TemplatesScreen } from "./screens/templates/templates-screen";
+import { TrashScreen } from "./screens/trash/trash-screen";
 import { SessionProvider, useSession } from "./session";
 
 /** The words the `@monti-cms/ui` parts write themselves, from the admin's dictionary (`ui.*`). */
@@ -48,6 +49,8 @@ function placeOf(route: Route): Place | null {
 			return "settings";
 		case "media":
 			return "media";
+		case "trash":
+			return "trash";
 		case "place":
 			return route.place;
 		// The entry and template editors are pages of their own, outside the frame: no row of the sidebar is theirs (doc 15).
@@ -66,7 +69,9 @@ const routeOf = (place: Place): Route =>
 			? { screen: "settings" }
 			: place === "media"
 				? { screen: "media", params: new URLSearchParams() }
-				: { screen: "place", place };
+				: place === "trash"
+					? { screen: "trash", params: new URLSearchParams() }
+					: { screen: "place", place };
 
 function Signed() {
 	const { screen } = useAdmin();
@@ -117,6 +122,7 @@ function Signed() {
 				id={route.id}
 				compare={route.compare ?? null}
 				onBack={() => leave(() => go({ screen: "list", collection: route.collection, params: new URLSearchParams() }))}
+				onTrash={() => leave(() => go({ screen: "trash", params: new URLSearchParams() }))}
 				// The comparison is a step inside the editor: back returns to the editor as it was, with what was typed.
 				onCompare={(compare) =>
 					leaveFiles(() =>
@@ -154,6 +160,8 @@ function Signed() {
 				<TemplatesScreen onOpen={(id) => go({ screen: "template", id })} />
 			) : route.screen === "media" ? (
 				<MediaScreen params={route.params} go={go} />
+			) : route.screen === "trash" ? (
+				<TrashScreen params={route.params} go={go} />
 			) : route.screen === "list" ? (
 				<ListScreen
 					key={route.collection}

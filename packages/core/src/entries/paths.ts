@@ -26,7 +26,10 @@ export function publicPath(schema: Schema, collection: string, slug: string, loc
 	return prefix === "always" || (prefix === "exceptSource" && locale !== source) ? `/${locale}${path}` : path;
 }
 
-/** Whether another entry of the same collection and language is published under `slug`. */
+/**
+ * Whether another entry of the same collection and language is published under `slug`, or was when it was deleted for good: a path once published is never
+ * another entry's (doc 11, principle 5).
+ */
 export async function slugPublishedByOther(db: Db, entry: Entry, slug: string): Promise<boolean> {
 	const row = await db
 		.selectFrom("entry_published")
@@ -36,7 +39,20 @@ export async function slugPublishedByOther(db: Db, entry: Entry, slug: string): 
 		.where("slug", "=", slug)
 		.where("entry_id", "<>", entry.id)
 		.executeTakeFirst();
-	return row !== undefined;
+	if (row !== undefined) return true;
+	return pathKept(db, entry.collection, entry.locale, slug);
+}
+
+/** Whether a path is kept from every entry: one deleted for good was published under it (doc 11, principle 5). */
+export async function pathKept(db: Db, collection: string, locale: string, slug: string): Promise<boolean> {
+	const kept = await db
+		.selectFrom("reserved_paths")
+		.select("slug")
+		.where("collection", "=", collection)
+		.where("locale", "=", locale)
+		.where("slug", "=", slug)
+		.executeTakeFirst();
+	return kept !== undefined;
 }
 
 /**

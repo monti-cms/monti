@@ -11,6 +11,7 @@ const MAINTENANCE = `Maintenance commands (not operations):
   db:setup        create the tables and follow every change file
   db:migrate      follow the change files this database has not (run it on deploy)
   deliveries:run  send the webhook retries that are due
+  trash:purge     delete what the trash has kept for 30 days, and the files nothing holds
   admin:reset-password [--email address]
                   set the admin's password and sign every browser out`;
 
@@ -49,6 +50,11 @@ export async function main(config: MontiConfig, root: string, argv: string[]): P
 		}
 		if (command === "deliveries:run") {
 			await monti.deliveries.sendDue();
+			return 0;
+		}
+		if (command === "trash:purge") {
+			const { purged, files } = await monti.trash.purgeDue();
+			io.out(`Deleted ${purged} from the trash and ${files} files from the storage.`);
 			return 0;
 		}
 		if (!command || command === "help") io.out(`${MAINTENANCE}\n\nOperations:`);

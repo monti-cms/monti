@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { testDatabase } from "../__test__/database";
 import { CheckError, ForbiddenError, InputError } from "../errors";
-import type { FolderRemoval } from "../folders/operations";
 import { createMonti, definePlugin } from "../monti";
 import { defineSchema } from "../schema/define";
-import type { MediaDetail, MediaItem, MediaQueryResult, MediaTrashResult } from "./operations";
+import type { TrashMoved } from "../trash/operations";
+import type { MediaDetail, MediaItem, MediaQueryResult } from "./operations";
 import { memoryStorage } from "./storage";
 
 const db = await testDatabase();
@@ -298,6 +298,7 @@ describe("browsing", () => {
 		const sorted = { sort: "name" };
 		expect(await names({ folder: assets, ...sorted })).toEqual(["here.jpg"]);
 		expect(await names({ folder: assets, kinds: ["image"], ...sorted })).toEqual(["deep.jpg", "here.jpg"]);
+		expect(await names({ folder: assets, kinds: ["image"], ...sorted, dir: "desc" })).toEqual(["here.jpg", "deep.jpg"]);
 		expect(await names({ folder: assets, used: ["unused"], ...sorted })).toEqual(["deep.jpg", "here.jpg"]);
 		expect(await names({ folder: assets, scope: "all", kinds: ["image"], ...sorted })).toEqual([
 			"deep.jpg",
@@ -356,7 +357,7 @@ describe("browsing", () => {
 		const two = await upload("two.jpg");
 		expect(await names({ ids: [one.id] })).toEqual(["one.jpg"]);
 		// In the trash too, as media.get: a draft can hold a file trashed since, and saving it brings the file back.
-		await write("media.trash", { ids: [two.id] });
+		await write("trash.move", { rows: [{ kind: "media", id: two.id }] });
 		expect(await names({ ids: [two.id] })).toEqual(["two.jpg"]);
 		expect(await names({})).toEqual(["one.jpg"]);
 		expect((await query({ ids: [one.id] })).counts).toEqual({ image: 1, file: 0, used: 0, unused: 1 });
@@ -449,8 +450,8 @@ describe("changing", () => {
 		const covers = await folder("covers", assets);
 		await upload("one.jpg", { folderId: assets });
 		await upload("two.jpg", { folderId: covers });
-		const { output, activityId } = await write<FolderRemoval>("folders.remove", { id: assets });
-		expect(output).toMatchObject({ media: true, moved: 2, kept: 0 });
+		const { output, activityId } = await write<TrashMoved>("trash.move", { rows: [{ kind: "folder", id: assets }] });
+		expect([output.moved.length, output.kept.length]).toEqual([2, 0]);
 		expect((await read<{ folders: unknown[] }>("folders.tree", { scope: "media" })).folders).toEqual([]);
 		expect(await names({})).toEqual([]);
 		await write("activity.undo", { id: activityId });
@@ -473,8 +474,8 @@ describe("changing", () => {
 			slug: "post-keep",
 			values: { cover: { media: inUse.id, alt: "표지" } },
 		});
-		const { output } = await write<FolderRemoval>("folders.remove", { id: assets });
-		expect(output).toMatchObject({ media: true, moved: 3, kept: 1 });
+		const { output } = await write<TrashMoved>("trash.move", { rows: [{ kind: "folder", id: assets }] });
+		expect([output.moved.length, output.kept]).toEqual([3, [inUse.id]]);
 		const { folders } = await read<{ folders: { name: string; count: number }[] }>("folders.tree", { scope: "media" });
 		expect(folders.map((node) => [node.name, node.count])).toEqual([
 			["Blog Assets", 1],
@@ -605,8 +606,8 @@ describe("replacing", () => {
 describe("the trash", () => {
 	it("09-4 a file nobody uses goes to the trash, and undo brings it back", async () => {
 		const file = await upload("free.jpg");
-		const { output, activityId } = await write<MediaTrashResult>("media.trash", { ids: [file.id] });
-		expect(output).toEqual({ moved: [file.id], kept: [] });
+		const { output, activityId } = await write<TrashMoved>("trash.move", { rows: [{ kind: "media", id: file.id }] });
+		expect(output).toMatchObject({ moved: [file.id], kept: [] });
 		expect(await names({})).toEqual([]);
 		expect((await read<MediaDetail>("media.get", { id: file.id })).trashedAt).not.toBeNull();
 		await write("activity.undo", { id: activityId });

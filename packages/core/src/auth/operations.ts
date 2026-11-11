@@ -2,6 +2,7 @@ import { sql } from "kysely";
 import { z } from "zod";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
+import { trashRowCount } from "../trash/list";
 import { MIN_PASSWORD } from "./reset";
 import { hashPassword, verifyPassword } from "./secrets";
 import { endSession, startSession } from "./session";
@@ -123,7 +124,7 @@ export const authOperations = [
 		name: "frame.counts",
 		kind: "read",
 		description:
-			"How many entries each collection has (translation groups not in the trash), how many rows the trash has, and how many deliveries failed.",
+			"How many entries each collection has (translation groups not in the trash), how many rows the trash shows (entries, folders and media files), and how many deliveries failed.",
 		input: z.object({}),
 		async run(_input, ctx) {
 			const groups = await ctx.db
@@ -132,11 +133,6 @@ export const authOperations = [
 				.where("trashed_at", "is", null)
 				.groupBy("collection")
 				.execute();
-			const trash = await ctx.db
-				.selectFrom("entries")
-				.select(sql<string>`count(distinct translation_group)`.as("count"))
-				.where("trashed_at", "is not", null)
-				.executeTakeFirstOrThrow();
 			const failed = await ctx.db
 				.selectFrom("monti_delivery")
 				.select((eb) => eb.fn.countAll<string>().as("count"))
@@ -149,7 +145,7 @@ export const authOperations = [
 						Number(groups.find((row) => row.collection === name)?.count ?? 0),
 					]),
 				),
-				trash: Number(trash.count),
+				trash: await trashRowCount(ctx.db, ctx.site.schema().locales.source),
 				failedDeliveries: Number(failed.count),
 			};
 		},

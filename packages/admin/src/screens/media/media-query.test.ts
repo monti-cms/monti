@@ -12,6 +12,7 @@ describe("the library's address", () => {
 			kinds: [],
 			used: [],
 			sort: "uploaded",
+			dir: "desc",
 			view: "grid",
 			page: 1,
 			file: null,
@@ -26,6 +27,16 @@ describe("the library's address", () => {
 		expect(isLooking(read(search))).toBe(true);
 		expect(isLooking(read("kind=file&used=unused"))).toBe(true);
 		expect(isLooking(read("folder=f1&sort=size"))).toBe(false);
+	});
+
+	it("09-1 each order starts its own way and goes the other on request", () => {
+		expect(read("sort=name")).toMatchObject({ sort: "name", dir: "asc" });
+		expect(read("sort=size")).toMatchObject({ sort: "size", dir: "desc" });
+		expect(queryOf(read("sort=name&dir=desc"))).toMatchObject({ sort: "name", dir: "desc" });
+		expect(writeMediaState(read("sort=name&dir=desc")).toString()).toBe("sort=name&dir=desc");
+		// The way an order starts is not written, and a way nothing knows is that one.
+		expect(writeMediaState(read("sort=name&dir=asc")).toString()).toBe("sort=name");
+		expect(read("dir=sideways")).toMatchObject({ dir: "desc" });
 	});
 
 	it("09-1 'all folders' holds only while words are looked for: a filter alone, or nothing, keeps to the folder (2026-11-10, owner)", () => {

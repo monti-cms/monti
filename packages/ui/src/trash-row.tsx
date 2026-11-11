@@ -49,8 +49,9 @@ function TrashRowTitle({
 /**
  * The date cell of a trash row, at the end of its cell: how long it stays ("30 days left"), and over it the day it was discarded when `date` is
  * given ("10. 27"; the column's name says what the day is). The trash list gives only the days left: the day it was thrown away says the same
- * thing twice. The days turn to the warning tone when `urgent` (three or fewer): the purge is near. What the assistant discarded is blue after a ✦
- * (`byAssistant`, on the day, or on the days left when there is no day); pressing it opens the conversation.
+ * thing twice. The days turn to the warning tone when `urgent` (under a week, the screen decides): the purge is near. What the assistant discarded is blue after
+ * a ✦ (`byAssistant`, on the day, or on the days left when there is no day); with `onOpen` it is a button that opens the conversation. Without it the ✦
+ * alone is blue when the days are `urgent`: they keep the warning tone.
  */
 function TrashRowDate({
 	date,
@@ -66,23 +67,33 @@ function TrashRowDate({
 	left: React.ReactNode;
 	urgent?: boolean;
 	/**
-	 * The assistant discarded it: the day is blue with a ✦ before it, and pressing it opens that conversation. `label` names the button for a screen
-	 * reader ("Open the conversation that discarded it").
+	 * The assistant discarded it: the day is blue with a ✦ before it. `label` says so to a screen reader ("The assistant threw it away"). With `onOpen` it
+	 * is a button that opens that conversation, and `label` names the button ("Open the conversation that discarded it").
 	 */
-	byAssistant?: { label: string; onOpen: () => void };
+	byAssistant?: { label: string; onOpen?: () => void };
 }) {
+	const MARK = "inline-flex items-center gap-monti-4 font-mono text-monti-meta text-monti-proposal";
 	const assistant = (words: React.ReactNode) =>
-		byAssistant ? (
+		!byAssistant ? null : byAssistant.onOpen ? (
 			<button
 				type="button"
 				aria-label={byAssistant.label}
 				onClick={byAssistant.onOpen}
-				className="relative z-10 inline-flex cursor-pointer items-center gap-monti-4 border-0 bg-transparent p-0 font-mono text-monti-meta text-monti-proposal outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50"
+				className={cn(
+					MARK,
+					"relative z-10 cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
+				)}
 			>
 				<Spark aria-hidden className="size-monti-icon-xs" />
 				{words}
 			</button>
-		) : null;
+		) : (
+			<span data-slot="trash-row-left" className={MARK}>
+				<Spark role="img" aria-hidden={false} aria-label={byAssistant.label} className="size-monti-icon-xs" />
+				{/* The mark says who; the days still say how near the purge is. */}
+				<span className={cn(urgent && date === undefined && "text-monti-warning")}>{words}</span>
+			</span>
+		);
 	return (
 		<span data-slot="trash-row-date" className={cn("inline-flex flex-col items-end gap-monti-4", className)} {...props}>
 			{date !== undefined &&
