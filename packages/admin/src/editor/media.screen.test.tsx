@@ -968,7 +968,7 @@ const bodyRead = (call: Call) =>
 	call.name === "media.query" && ((call.input as { ids?: string[] }).ids ?? []).length > 0;
 
 /** `ManyInBody` with the operations the page runs written down; `refuse` turns the body's reads of its files away, as a server error would. */
-function recorded({ refuse = false } = {}) {
+function recorded({ refuse = false, hold }: { refuse?: boolean; hold?: Promise<void> } = {}) {
 	const calls: Call[] = [];
 	const [load] = media.ManyInBody.loaders as [() => Promise<{ site: StorySite }>];
 	const story = composeStory(
@@ -982,6 +982,7 @@ function recorded({ refuse = false } = {}) {
 						const call = { name, input };
 						calls.push(call);
 						if (refuse && bodyRead(call)) return { status: 500, body: { error: "unexpected" } };
+						if (hold && bodyRead(call)) await hold;
 						return transport(name, input, options);
 					};
 					return loaded;
@@ -1005,6 +1006,25 @@ describe("opening a body with files", () => {
 		expect((story.reads()[0]?.input as { ids: string[] }).ids).toHaveLength(3);
 	});
 
+	it("T126 an opened body is not shown until its files are read, and then every picture holds its place before it is in", async () => {
+		const held = Promise.withResolvers<void>();
+		const answer = () => held.resolve();
+		const story = recorded({ hold: held.promise });
+		await story.run();
+		// The read is asked and not answered: the text is there, unseen.
+		await expect.poll(() => story.reads().length).toBe(1);
+		const column = () => document.querySelector<HTMLElement>("[data-slot=editor-body]");
+		await expect.poll(() => column()?.getAttribute("aria-busy")).toBe("true");
+		expect(column()?.textContent).toContain("글의 첫 문단이에요.");
+		expect(getComputedStyle(column() as HTMLElement).visibility).toBe("hidden");
+		answer();
+		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
+		// Shown, every picture's frame stands at its file's shape already, whether or not the picture is in: nothing under it will move.
+		const frames = [...body().element().querySelectorAll<HTMLElement>("[data-block=image] [data-slot=image]")];
+		expect(frames.length).toBeGreaterThan(0);
+		expect(frames.filter((frame) => frame.style.aspectRatio === "")).toEqual([]);
+	});
+
 	it("09-1 T110 a block that comes back (undo) reads its file again, alone", async () => {
 		const story = recorded();
 		await story.run();
@@ -1012,17 +1032,12 @@ describe("opening a body with files", () => {
 		const fileBlocks = () => body().element().querySelectorAll("[data-block=file]");
 		const [first] = fileBlocks();
 		if (!first) throw new Error("no file block");
-		// Picked whole, then Backspace. On a busy machine the pick is sometimes lost before the key lands (the caret goes to the start of the body, T126): this
-		// test is about what the block reads when it comes back, so it picks again until the block is gone. The file block's own test (flow 6·38) keeps to one press.
-		await expect
-			.poll(async () => {
-				if (fileBlocks().length === 0) return 0;
-				await userEvent.click(page.elementLocator(first));
-				await expect.element(body()).toHaveFocus();
-				if (first.closest(".ProseMirror-selectednode")) await userEvent.keyboard("{Backspace}");
-				return fileBlocks().length;
-			})
-			.toBe(0);
+		// Picked whole with one press, then Backspace. One press only: the pictures around the file hold their place before they are in, so the
+		// press lands on the file (T126: it used to land elsewhere when a picture came in under the pointer).
+		await userEvent.click(page.elementLocator(first));
+		await expect.poll(() => first.closest(".ProseMirror-selectednode")).not.toBeNull();
+		await userEvent.keyboard("{Backspace}");
+		await expect.poll(() => fileBlocks().length).toBe(0);
 		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
 		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
 		await expect.poll(() => story.reads().length).toBe(2);

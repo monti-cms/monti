@@ -37,6 +37,24 @@ export const Framed: Story = {
 	),
 };
 
+/**
+ * `shape` with `ratio="auto"`: the frame stands at the picture's own shape (here 3:2) before the picture is in, so what is under it does not
+ * move when it comes. The second frame's picture never comes: its place is held all the same.
+ */
+export const ShapeHeld: Story = {
+	tags: ["visual"],
+	render: (args) => (
+		<Inline gap={16} align="start">
+			<Stack width="panel">
+				<Image {...args} ratio="auto" shape={3 / 2} fit="contain" />
+			</Stack>
+			<Stack width="panel">
+				<Image src="data:image/png;base64," alt="" ratio="auto" shape={3 / 2} />
+			</Stack>
+		</Inline>
+	),
+};
+
 /** The ratios: square, photo (4:3), wide (16:9), share (1.91:1), banner (3:1). */
 export const Ratios: Story = {
 	render: (args) => (

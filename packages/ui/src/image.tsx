@@ -52,6 +52,7 @@ function Image({
 	loading = "lazy",
 	onLoad,
 	frame,
+	shape,
 }: VariantProps<typeof frameVariants> & {
 	src?: string | null;
 	alt: string;
@@ -68,6 +69,11 @@ function Image({
 		aspectRatio: number;
 		image: { left: number; top: number; width: number; height: number; rotate: number };
 	} | null;
+	/**
+	 * The picture's own shape (width over height), when it is known before the picture is in: with `ratio="auto"` the frame stands at that shape from
+	 * the start, so what is under it does not move when the picture comes in. A `frame` has its own shape.
+	 */
+	shape?: number | null;
 	className?: string;
 }) {
 	const [failed, setFailed] = useState(false);
@@ -77,7 +83,7 @@ function Image({
 		<span
 			data-slot="image"
 			className={cn(frameVariants({ ratio: thumb ? "square" : ratio, size, radius, border }), className)}
-			style={frame ? { aspectRatio: frame.aspectRatio } : undefined}
+			style={frame ? { aspectRatio: frame.aspectRatio } : shape ? { aspectRatio: shape } : undefined}
 		>
 			{show ? (
 				<img
