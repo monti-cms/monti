@@ -73,19 +73,18 @@ export function MediaField({
 	const shown = own ?? followed;
 	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown });
 	const file = read.data?.id === shown?.media ? read.data : null;
-	const going = uploads.of(field);
+	// A read-only entry shows what it has saved: a file that was still going up when it was archived is not its value, and has no place here.
+	const going = readOnly ? undefined : uploads.of(field);
 	const isImage = file?.kind === "image";
 	const said = uploads.saidOf(field);
 	const altMissing = going ? going.preview !== null && altIsMissing(said) : isImage && shown && altIsMissing(shown);
-	// Only read: the entry cannot be changed and no file is on its way. A file that was going up when the entry was archived keeps its retry and its ×.
-	const reading = readOnly && !going;
 	return (
 		<>
 			<FormField>
 				<FormFieldLabel
 					// Read-only the line is not a control, and a label's `for` names only controls: the field is named by the label's id instead.
 					id={`${id}-label`}
-					htmlFor={reading ? undefined : id}
+					htmlFor={readOnly ? undefined : id}
 					required={required}
 					action={
 						change && !going ? (
@@ -106,15 +105,15 @@ export function MediaField({
 					following={followed !== null && !going}
 					value={going ? { name: going.name, thumbnail: going.preview } : shownFile(file)}
 					placeholder={t("entry.empty")}
-					readOnly={reading}
-					aria-labelledby={reading ? `${id}-label` : undefined}
-					onOpen={readOnly ? undefined : () => setPicking(true)}
+					readOnly={readOnly}
+					aria-labelledby={readOnly ? `${id}-label` : undefined}
+					onOpen={() => setPicking(true)}
 					// On a file going up or stopped, × takes out that file: the field goes back to what it had.
 					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
 					clearLabel={t("library.field.clear", { label })}
 					action={
 						// Read-only, the field has no control at all, its settings too: as the body's picture has none (2026-11-11, owner).
-						reading ? undefined : going?.status === "failed" ? (
+						readOnly ? undefined : going?.status === "failed" ? (
 							<RetryButton onRetry={() => uploads.retry(going)} />
 						) : isImage && shown ? (
 							<Popover open={card} onOpenChange={onCard}>
