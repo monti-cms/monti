@@ -777,7 +777,9 @@ describe("undo from the log", () => {
 		expect(said(lines[1])).toEqual(['"두 번째 글" 저장 · "첫 번째 글" 저장', null]);
 		expect(lines[1].undo).toEqual({ state: "open" });
 		expect((await list({}, monti)).total).toBe(4);
-		expect((await detail(proposal, monti)).records.map((record) => record.title)).toEqual(["두 번째 글", "첫 번째 글"]);
+		const whole = await detail(proposal, monti);
+		expect(whole.records.map((record) => record.title)).toEqual(["두 번째 글", "첫 번째 글"]);
+		expect(whole.writes.map(ko)).toEqual(['"두 번째 글" 저장', '"첫 번째 글" 저장']);
 
 		// The older request's line: the first entry was written again since, so it stays; the second goes back. The preview says so first.
 		const summaries = async () =>

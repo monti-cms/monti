@@ -94,8 +94,10 @@ export type ActivityDelivery = {
 	nextAttemptAt: Date | null;
 };
 
-/** A line with what its side panel shows: the records it touched and each delivery. */
+/** A line with what its side panel shows: every write of it, the records it touched and each delivery. */
 export type ActivityDetail = ActivityLine & {
+	/** What each write of the line did, newest first: all of them, where the line's `what` names the first few. */
+	writes: Message[];
 	records: ActivityRecord[];
 	/** How many records the line touched: more than `records` holds when there are many. */
 	recordCount: number;
@@ -326,8 +328,10 @@ export async function getActivity(db: Db, schema: Schema, id: string, now: Date)
 		.orderBy("created_at")
 		.orderBy("destination")
 		.execute();
+	const labels = await collectionLabels(db);
 	return {
 		...found.line,
+		writes: found.rows.map((row) => named(row.summary, labels)),
 		records: shown.map((record) => ({
 			...record,
 			exists: here.has(recordKey(record)),
