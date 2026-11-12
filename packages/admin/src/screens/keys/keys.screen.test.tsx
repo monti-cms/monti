@@ -42,7 +42,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 				answer = resolve;
 			}),
 		);
-		await userEvent.type(keyField(), `${keys.KEYS.anthropic}{Enter}`);
+		await userEvent.type(keyField(), `${keys.sample.anthropic}{Enter}`);
 		// While the service is asked, the pill says so.
 		await expect.element(button("확인하는 중…")).toBeVisible();
 		answer();
@@ -56,14 +56,14 @@ describe("adding a key (flow 10, 01–06)", () => {
 		const story = open(keys.NoKeys);
 		await story.run();
 		await addFor("Anthropic");
-		await userEvent.type(keyField(), keys.KEYS.refused);
+		await userEvent.type(keyField(), keys.sample.refused);
 		await userEvent.click(button("추가"));
 		await expect.element(page.getByText("맞지 않는 키입니다.")).toBeVisible();
-		await expect.element(keyField()).toHaveValue(keys.KEYS.refused);
+		await expect.element(keyField()).toHaveValue(keys.sample.refused);
 		await expect.element(keyField()).toHaveAttribute("aria-invalid", "true");
 		expect((await list(story.loaded().site)).keys).toEqual([]);
 
-		await userEvent.fill(keyField(), keys.KEYS.anthropic);
+		await userEvent.fill(keyField(), keys.sample.anthropic);
 		await userEvent.click(button("추가"));
 		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
 		expect((await list(story.loaded().site)).keys).toMatchObject([{ name: "Anthropic", last4: "a1b2" }]);
@@ -73,7 +73,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 		const story = open(keys.NoKeys);
 		await story.run();
 		await addFor("Anthropic");
-		await userEvent.type(keyField(), keys.KEYS.unanswered);
+		await userEvent.type(keyField(), keys.sample.unanswered);
 		await userEvent.click(button("추가"));
 		await expect.element(page.getByText("서비스가 답하지 않습니다.")).toBeVisible();
 		const asked = story.loaded().net.requests.length;
@@ -90,7 +90,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 		// Typed by hand, the note goes: the person named it.
 		await userEvent.fill(field(/이름/), "Anthropic");
 		await expect.element(page.getByText("이름이 Anthropic인 키가 이미 있습니다.")).not.toBeInTheDocument();
-		await userEvent.type(keyField(), keys.KEYS.anthropicNew);
+		await userEvent.type(keyField(), keys.sample.anthropicNew);
 		await userEvent.click(button("추가"));
 		await expect.element(page.getByText("이름이 Anthropic인 키가 이미 있습니다.")).toBeVisible();
 		await expect.element(field(/이름/)).toHaveAttribute("aria-invalid", "true");
@@ -131,7 +131,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 				answer = resolve;
 			}),
 		);
-		await userEvent.type(keyField(), keys.KEYS.anthropic);
+		await userEvent.type(keyField(), keys.sample.anthropic);
 		await userEvent.click(button("추가"));
 		await expect.element(button("확인하는 중…")).toBeVisible();
 		await userEvent.click(button("취소"));
@@ -151,7 +151,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 		expect(focused()).toBe(page.getByRole("option", { name: "Anthropic" }).element());
 		await userEvent.keyboard("{Enter}");
 		await expect.element(keyField()).toBeVisible();
-		await userEvent.keyboard(`${keys.KEYS.anthropic}{Enter}`);
+		await userEvent.keyboard(`${keys.sample.anthropic}{Enter}`);
 		await expect.element(page.getByText("··· a1b2")).toBeVisible();
 
 		button("키 추가").element().focus();
@@ -201,7 +201,7 @@ describe("changing and removing a key (flow 10, 07–11)", () => {
 		expect(save()).toBe(before);
 
 		await userEvent.click(button("바꾸기"));
-		await userEvent.type(keyField(), keys.KEYS.anthropicNew);
+		await userEvent.type(keyField(), keys.sample.anthropicNew);
 		await userEvent.click(button("저장"));
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
 		await expect.element(page.getByText("··· 7c0e")).toBeVisible();
@@ -294,7 +294,7 @@ describe("the server's secret (flow 10, 14–15)", () => {
 		await menu("Anthropic 개인", "편집");
 		await expect.element(page.getByText("키를 다시 넣어 주세요.")).toBeVisible();
 		expect(focused()).toBe(keyField().element());
-		await userEvent.type(keyField(), keys.KEYS.anthropic);
+		await userEvent.type(keyField(), keys.sample.anthropic);
 		await userEvent.click(button("저장"));
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
 		await expect.element(page.getByText("키 2개를 읽을 수 없습니다")).toBeVisible();
@@ -322,7 +322,7 @@ describe("the key itself", () => {
 		await story.run();
 		await addFor("Anthropic");
 		// It shows as dots while it is typed, and the eye shows it only then.
-		await userEvent.type(keyField(), keys.KEYS.anthropic);
+		await userEvent.type(keyField(), keys.sample.anthropic);
 		expect(keyField().element().getAttribute("type")).toBe("password");
 		await userEvent.click(button("추가"));
 		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
@@ -333,7 +333,7 @@ describe("the key itself", () => {
 		const kept = [document.documentElement.outerHTML, ...fields.map((each) => each.value)];
 		for (const store of [localStorage, sessionStorage])
 			for (let index = 0; index < store.length; index += 1) kept.push(store.getItem(store.key(index) ?? "") ?? "");
-		for (const text of kept) expect(text).not.toContain(keys.KEYS.anthropic);
+		for (const text of kept) expect(text).not.toContain(keys.sample.anthropic);
 		expect(await button("키 보기").elements()).toHaveLength(0);
 	});
 });

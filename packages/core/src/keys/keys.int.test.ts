@@ -116,6 +116,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 				last4: "a1b2",
 				baseUrl: null,
 				readable: true,
+				hasKey: true,
 				usage: { month: "2026-11", tokens: 0 },
 				uses: [
 					{ for: "assistant", model: "claude-sonnet-5-5" },
@@ -203,6 +204,8 @@ describe("adding a key (flow 10, 01–06)", () => {
 			baseUrl: "http://localhost:11434/v1",
 			last4: "",
 			readable: true,
+			// No key is stored at all: the key window says "none", not a key too short to show.
+			hasKey: false,
 		});
 		// No key, so no authorization header went out.
 		expect(net.state.requests.at(-1)).toMatchObject({ url: "http://localhost:11434/v1/models", headers: {} });
@@ -214,6 +217,8 @@ describe("adding a key (flow 10, 01–06)", () => {
 		net.state.taken.add("short-key");
 		const added = await add(monti, { service: "anthropic", name: "Short", secret: "short-key" });
 		expect(added.output.last4).toBe("");
+		// It is a key all the same, as the key window must know: no ending, but not "no key".
+		expect((await list(monti)).keys[0]).toMatchObject({ last4: "", hasKey: true });
 	});
 
 	it("a plugin's service is one more service a key can be added for, and two services cannot share an id", async () => {

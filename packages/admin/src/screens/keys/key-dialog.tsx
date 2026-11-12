@@ -136,7 +136,7 @@ export function KeyDialog({
 	const [name, setName] = useState(editing ? editing.name : suggested(service, "").name);
 	const [named, setNamed] = useState(false);
 	const [secret, setSecret] = useState("");
-	/** Editing a key the server reads: the stored key shows until "바꾸기" opens the field. One it cannot read is entered again from the start. */
+	/** Editing a key the server reads: the stored key shows until "Replace" opens the field. One it cannot read is entered again from the start. */
 	const [replacing, setReplacing] = useState(editing ? !editing.readable : true);
 	const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
 	const [checking, setChecking] = useState(false);

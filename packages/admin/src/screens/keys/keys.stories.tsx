@@ -20,9 +20,10 @@ type Story = StoryObj<typeof meta>;
 export const admin = { actor: "admin" } as const;
 const wait = { timeout: 15000 };
 
-export const SECRET = "story-secret-for-the-keys-screen";
+export const siteSecret = "story-secret-for-the-keys-screen";
+// Lower-case names: a story file's capitalized exports are its stories.
 /** Keys the story's services take, one that a service refuses, and one for a service that does not answer. */
-export const KEYS = {
+export const sample = {
 	anthropic: "sk-ant-api03-story-key-of-anthropic-a1b2",
 	anthropicNew: "sk-ant-api03-story-key-entered-new-7c0e",
 	openai: "sk-proj-story-key-of-the-company-77de",
@@ -45,7 +46,7 @@ export function network(): Network {
 	let held: Promise<void> | null = null;
 	const json = (status: number, body: unknown) =>
 		new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-	const taken = new Set<string>([KEYS.anthropic, KEYS.anthropicNew, KEYS.openai, KEYS.gemini]);
+	const taken = new Set<string>([sample.anthropic, sample.anthropicNew, sample.openai, sample.gemini]);
 	const fetch: typeof globalThis.fetch = async (input, init) => {
 		const url = String(input);
 		const headers = Object.fromEntries(new Headers(init?.headers).entries());
@@ -53,7 +54,7 @@ export function network(): Network {
 		if (held) await held;
 		const sent =
 			headers["x-api-key"] ?? headers["x-goog-api-key"] ?? headers.authorization?.replace(/^Bearer /, "") ?? "";
-		if (sent === KEYS.unanswered) throw new TypeError("fetch failed");
+		if (sent === sample.unanswered) throw new TypeError("fetch failed");
 		if (url.startsWith("https://api.anthropic.com/"))
 			return taken.has(sent)
 				? json(200, {
@@ -95,10 +96,12 @@ async function threeKeys(monti: Monti) {
 	const add = async (input: { service: string; name: string; secret: string }, tokens: number) => {
 		const made = (await monti.run("keys.add", input, admin)) as { output: { id: string } };
 		if (tokens > 0) await monti.keys.addUsage(made.output.id, tokens);
+		// The list is in the order the keys were added, by the time of each: a moment apart, as a person adds them.
+		await new Promise((resolve) => setTimeout(resolve, 5));
 	};
-	await add({ service: "anthropic", name: "Anthropic 개인", secret: KEYS.anthropic }, 1_240_000);
-	await add({ service: "openai", name: "OpenAI 회사", secret: KEYS.openai }, 312_000);
-	await add({ service: "gemini", name: "예전 Gemini 키", secret: KEYS.gemini }, 0);
+	await add({ service: "anthropic", name: "Anthropic 개인", secret: sample.anthropic }, 1_240_000);
+	await add({ service: "openai", name: "OpenAI 회사", secret: sample.openai }, 312_000);
+	await add({ service: "gemini", name: "예전 Gemini 키", secret: sample.gemini }, 0);
 }
 
 /**
@@ -107,7 +110,7 @@ async function threeKeys(monti: Monti) {
  */
 const site = ({
 	keys = "three",
-	secret = SECRET,
+	secret = siteSecret,
 }: {
 	keys?: "three" | "none" | "named";
 	secret?: string | null | "other";
@@ -124,9 +127,9 @@ const site = ({
 			setup: async (monti) => {
 				if (keys === "none") return;
 				// The keys are stored by a server that has the first secret, on the same database.
-				const first = createMonti({ db: monti.db, schema, files: null, secret: SECRET, fetch: net.fetch });
+				const first = createMonti({ db: monti.db, schema, files: null, secret: siteSecret, fetch: net.fetch });
 				if (keys === "named")
-					await first.run("keys.add", { service: "anthropic", name: "Anthropic", secret: KEYS.anthropic }, admin);
+					await first.run("keys.add", { service: "anthropic", name: "Anthropic", secret: sample.anthropic }, admin);
 				else await threeKeys(first);
 			},
 		});
@@ -224,7 +227,7 @@ export const Refused: Story = {
 		const page = await screen(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "키 추가" }, wait));
 		await userEvent.click(await page.findByRole("option", { name: "Anthropic" }));
-		await userEvent.type(await page.findByLabelText("키"), KEYS.refused);
+		await userEvent.type(await page.findByLabelText("키"), sample.refused);
 		await userEvent.click(page.getByRole("button", { name: "추가" }));
 		await page.findByText("맞지 않는 키입니다.", {}, wait);
 	},
@@ -236,7 +239,7 @@ export const EditKey: Story = {
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
 		await more(page, "Anthropic 개인", "편집");
-		await page.findByText("··· a1b2");
+		await within(await page.findByRole("dialog")).findByText("··· a1b2");
 	},
 };
 

@@ -9,7 +9,7 @@
 | 사이드바 | 공통 틀([common.md](common.md)), 현재 위치 "도구" |  |
 | 페이지 단 | `PageColumn` | 템플릿, 데이터, API 키는 `width="content"`, 활동 기록은 `width="list"`. |
 | 제목 행 "도구" | `PageHeader` | 템플릿과 API 키 화면만 검은 알약 하나("+ 템플릿 추가", "+ 키 추가"). 데이터와 활동 기록은 머리에 알약이 없다. |
-| 탭 "템플릿 · 데이터 · 활동 기록 · API 키" | `PageToolbar` 안의 `TabLinks` + `TabLink` | 탭 하나가 페이지 하나다. 도구가 템플릿 하나뿐인 동안에는 탭 줄이 없다(설정의 탭 줄과 같다). 탭에 붙는 개수는 실패한 전송 수(`TabLink count`, `countTone="warning"`, "활동 기록 1")뿐이다. 열면 다 보이는 목록의 개수(템플릿 수)는 붙이지 않는다(원칙 8, 2026-11-05 소유자). 플러그인이 더한 도구 페이지도 탭이 된다. |
+| 탭 "템플릿 · 데이터 · 활동 기록 · API 키" | `PageToolbar` 안의 `TabLinks` + `TabLink` | 탭 하나가 페이지 하나이고 탭마다 제 주소가 있다(`#/tools`, `#/tools/keys`). 만든 도구의 탭만 보인다: 지금은 "템플릿 · API 키"이고, "데이터"(14)와 "활동 기록"(13)은 그 화면과 함께 생긴다. 도구가 하나뿐이면 탭 줄이 없다(설정의 탭 줄과 같다). 탭에 붙는 개수는 실패한 전송 수(`TabLink count`, `countTone="warning"`, "활동 기록 1")뿐이다. 열면 다 보이는 목록의 개수(템플릿 수)는 붙이지 않는다(원칙 8, 2026-11-05 소유자). 플러그인이 더한 도구 페이지도 탭이 된다. |
 | ✦ 어시스턴트 열기 | 공통 틀 | 사이드 패널이 열린 동안에는 가려진다. |
 
 ## 템플릿 (Templates)
@@ -134,12 +134,13 @@
 |---|---|---|
 | "+ 키 추가" | `Button variant="primary"`(앞 아이콘 +) | 서비스 고르기 창을 연다. 서버 비밀값이 없으면 숨는다. 키를 저장할 수 없는 이유는 알림 띠 하나가 말한다(원칙 7). |
 | 알림 띠 | `PageBanner` 안의 `Banner`(`title` "키 3개를 읽을 수 없습니다" 또는 "키를 저장할 수 없습니다", 문장 안의 `MONTI_SECRET`은 `mono`) | 화면 맨 위, 틀의 띠 자리에 선다([common.md](common.md)의 "화면의 알림 띠"). 제목과 탭이 그 아래다. |
-| 표 묶음 "AI 키" · "모델" · "플러그인 키" | `ListSection`(`title`, 개수 없음) | "AI 키"는 AI 서비스 키(모델 목록이 여기서 나온다), "모델"은 빠른 작업 모델 한 줄, "플러그인 키"는 플러그인이 둔 키 자리마다 한 줄이다(2026-11-05 소유자: 한 표에 고르기, 입력 칸, 글자 버튼이 섞이지 않게 고르는 줄과 키 줄을 나눈다). 행이 다 보이므로 개수를 붙이지 않는다. 묶음은 자기 바깥 여백이 없다. 페이지가 `Stack gap={40} paddingTop={32}`로 띄운다(첫 표는 도구 줄 아래 32, 다음은 40). |
-| AI 키 한 행 | `ListSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `meta` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없음"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
-| "빠른 작업" 모델 | `ListSectionRow`(`title` "빠른 작업", `meta` 쓰는 곳), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 키가 하나도 없으면 `MenuField placeholder="키 없음"`이고, 누르면 "키 추가" 창(서비스 고르기)이 열린다. 서버 비밀값이 없으면 행이 숨는다. 모델이 많아 검색이 먼저인 메뉴로 고른다. |
-| 플러그인 키 자리 | `ListSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 `detail` "검색 키", 키가 있으면 `titleCount` "··· 4410", `meta` 플러그인 코드 `metaTone="subtle"`), `actions`는 키가 있으면 AI 키 줄과 같은 "편집" · "지우기", 없으면 "키 넣기" 하나 | 키 줄은 모두 같은 모양, 같은 방법이다. "키 넣기"와 "편집"은 같은 키 창을 열고, 플러그인 자리의 창은 서비스가 정해져 있다(서비스는 글). 자리 하나는 한 서비스의 것이라 저장된 키를 고르지 않는다(2026-11-05 소유자). 키가 없어도 행을 흐리게 하지 않는다. "키 넣기"가 말한다. 서버 비밀값이 없으면 자리들이 숨는다. |
+| 키 목록 | `Table`(`TableBody`, `TableRow twoLine`, `TableCell`). 열 이름 행은 없다 | 템플릿 탭의 목록과 같은 공용 표다(2026-11-12: 같은 종류는 같은 부품으로). 목록이 "AI 키" 하나뿐인 동안은 탭 이름이 이미 말하므로 목록 이름을 두지 않는다. 플러그인 키 자리가 생기면(T144) 목록이 둘이 되고, 목록마다 이름("AI 키", "플러그인 키")이 위에 붙는다. 페이지는 목록과 "모델"을 `Stack gap={40}`으로 띄운다. |
+| 키 한 행 | 첫 줄에 이름 `Text`와 끝 네 글자 `Count`("··· a1b2"), 둘째 줄에 `Text variant="note"`로 사용량("이번 달 1.24M 토큰" `tone="subtle"`, 쓰지 않았으면 "이번 달 사용 없음" `tone="faint"`이고 이름도 `muted`, 읽을 수 없으면 "읽을 수 없음" `tone="danger"`). 끝에 `RowActions` 안 `RowMore`(`label` "(이름) 더 보기") + `DropdownMenu`("편집" │ "지우기" `variant="danger"`) | 키 값은 끝 네 글자만 보인다. 12자보다 짧은 키는 끝 글자가 없다. 넣은 순서로 선다. 서버 비밀값이 없으면 메뉴에 "지우기"만 있다. |
+| 키가 없을 때 | `Empty`(`title` "아직 키가 없습니다.") | 템플릿 탭의 빈 목록과 같다. 시작은 머리의 "+ 키 추가"다. 서버 비밀값이 없으면 이 줄도 없고 띠만 있다. |
+| "빠른 작업" 모델 | `ListSection`(`title` "모델") 안의 `ListSectionRow`(`title` "빠른 작업", `meta` "요약 · 태그 · 대체 텍스트"), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 목록이 아니라 설정 한 줄이다. 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 모델을 주는 키가 하나도 없으면 `MenuField placeholder="키 없음"`이고, 누르면 "키 추가" 창(서비스 고르기)이 열린다. 서버 비밀값이 없으면 이 묶음이 숨는다. |
+| 플러그인 키 자리 (T144와 함께) | 키 목록과 같은 표의 행: 첫 줄에 플러그인 이름, 자리가 여럿이면 뒤에 "검색 키", 키가 있으면 "··· 4410", 둘째 줄에 플러그인 코드(mono). 끝은 키가 있으면 같은 ⋯, 없으면 `Button variant="ghost" size="sm"` "키 넣기" 하나 | 키 줄은 모두 같은 모양, 같은 방법이다. "키 넣기"와 "편집"은 같은 키 창을 열고, 플러그인 자리의 창은 서비스가 정해져 있다(서비스는 글). 자리 하나는 한 서비스의 것이라 저장된 키를 고르지 않는다(2026-11-05 소유자). 서버 비밀값이 없으면 자리들이 숨는다. |
 
-스토리: Controls/Button/Button, Patterns/Frame/Banner, Patterns/Frame/PageBanner, Patterns/List/ListSection, Controls/Button/TextButton, Controls/Menu/ModelMenu, Controls/Overlay/Dialog, Controls/Menu/PickList, Controls/Overlay/DialogFormFooter, Controls/Field/Field, Controls/Field/Select, Primitives/Text, Controls/Field/Input, Controls/Field/SecretInput, Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList.
+스토리: Screens/Tools/ApiKeys(만든 화면), Controls/Button/Button, Patterns/Frame/Banner, Patterns/Frame/PageBanner, Patterns/List/Table, Patterns/List/Empty, Patterns/List/ListSection, Controls/Menu/DropdownMenu, Controls/Menu/ModelMenu, Controls/Overlay/Dialog, Controls/Menu/PickList, Controls/Overlay/DialogFormFooter, Controls/Field/Field, Controls/Field/Select, Primitives/Text, Controls/Field/Input, Controls/Field/SecretInput, Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList.
 
 ### 뜨는 자리
 
@@ -149,14 +150,14 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 서비스 고르기 "키 추가" | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle`), 목록 `PickList`(`aria-label` "서비스") 안에 `PickListLabel` "AI" · "플러그인", `PickListItem`(덧말은 `mark`: "Ollama", "bareun"), 묶음 사이 `PickListSeparator`. 발은 `DialogFooter`에 "취소" `TextButton` | 서비스를 고르면 바로 키 입력 창이 된다. 알약이 없다. |
-| 키 추가 · 편집 창 | `Dialog` + `DialogFormFooter`(`submitLabel` "추가" 또는 "저장", 확인하는 동안 `busy`와 `busyLabel` "확인하는 중…") | 포커스는 첫 텍스트 필드로 간다. 편집 창의 제목은 `DialogTitle of`("편집 · Anthropic 개인"). |
-| "서비스" | 추가 창은 `FormField` + `Select`, 편집 창과 플러그인 자리의 창은 `FormField`에 글로만 `Text` |  |
+| 서비스 고르기 "키 추가" | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle`), 목록 `PickList`(`aria-label` "서비스") 안에 `PickListItem`. 발은 `DialogFooter`에 "취소" `Button variant="ghost"` | 서비스를 고르면 바로 키 입력 창이 된다. 알약이 없다. 서비스는 Anthropic · OpenAI · OpenRouter · Google · OpenAI 호환 주소다(Ollama는 호환 주소로 쓴다). 플러그인이 서비스를 더하면 그때 묶음 이름 `PickListLabel` "AI" · "플러그인"과 `PickListSeparator`가 생긴다. 창이 열리면 포커스는 창에 있고 Tab이 첫 서비스로 간다. |
+| 키 추가 · 편집 창 | `Dialog` + `DialogFormFooter`(`submitLabel` "추가" 또는 "저장", 서비스에 묻는 동안 `busy`와 `busyLabel` "확인하는 중…") | 포커스는 비어 있는 첫 칸으로 간다: 추가 창은 키, 호환 주소 창은 주소, 편집 창은 이름, 읽을 수 없는 키의 편집은 키. 필드 안의 Enter는 알약을 누른다. 빈 칸으로 보내면 그 칸 아래 `FormFieldError` "이 칸을 채워 주세요."와 포커스이고 서비스에 묻지 않는다. 이름만 고친 편집은 서비스에 묻지 않는다. 편집 창의 제목은 `DialogTitle of`("편집 · Anthropic 개인"). 묻는 중에 "취소"하면 창이 닫히고, 서비스가 받아 준 키는 목록에 생긴다. |
+| "서비스" | 추가 창은 `FormField` + `Select`(화면의 `PickOne`), 편집 창과 플러그인 자리의 창은 `FormField`에 글로만 `Text` | 별표는 키를 비울 수 있는 호환 주소 창의 주소와 이름에만 붙는다(모든 칸이 필수인 창에는 별표가 없다). |
 | "주소" (OpenAI 호환) | `FormField` + `FormFieldLabel required` + `Input mono` |  |
-| "이름" | `FormField` + `FormFieldLabel required` + `Input` | 서비스 이름으로 채워진다. 같은 이름이 있으면 "Anthropic 2"로 채우고 아래 `FormFieldDescription` "이름이 Anthropic인 키가 이미 있습니다." |
-| "키" (새 값) | `FormField` + `FormFieldLabel`(호환 주소와 편집이 아니면 `required`) + `SecretInput` | 눈 버튼으로 보이고 가린다. 거절되면 `aria-invalid`와 `FormFieldError` "맞지 않는 키입니다." 호환 주소는 플레이스홀더 "없음". 값을 지우려면 필드를 비운다. |
-| "키" (저장된 값, 편집) | `SavedValue`(`··· a1b2`, `action` "바꾸기") | "바꾸기"를 누르면 그 자리가 `SecretInput keep`(끝에 "그대로")이 된다. 높이가 같아 아래가 움직이지 않는다. 읽을 수 없는 키는 처음부터 `SecretInput`이고 아래 `FormFieldDescription` "키를 다시 넣어 주세요." |
-| 지우기 확인 | `AlertDialog`(`AlertDialogTitle` "Anthropic 개인을 지울까요?", `AlertDialogDescription` "되돌릴 수 없습니다. …"), 쓰는 곳은 `DescriptionList` + `DescriptionItem`(모델 `mono`), `AlertDialogCancel` "취소", `AlertDialogAction` `Button variant="danger"` "지우기" | 쓰는 곳이 없으면 목록 없이 "되돌릴 수 없습니다." 한 줄. |
+| "이름" | `FormField` + `FormFieldLabel` + `Input` | 서비스 이름으로 채워진다(호환 주소는 주소의 호스트). 같은 이름이 있으면 "Anthropic 2"로 채우고 아래 `FormFieldDescription` "이름이 Anthropic인 키가 이미 있습니다." 직접 적은 이름이 겹치면 같은 말이 `FormFieldError`로 뜬다. |
+| "키" (새 값) | `FormField` + `FormFieldLabel` + `SecretInput` | 눈 버튼으로 보이고 가린다. 거절되면 `aria-invalid`와 `FormFieldError` "맞지 않는 키입니다.", 서비스가 답하지 않으면 "서비스가 답하지 않습니다."(호환 주소는 주소 칸 아래). 적은 키는 그대로 남는다. 호환 주소는 플레이스홀더 "없음". |
+| "키" (저장된 값, 편집) | `SavedValue`(`··· a1b2`, 끝자리가 없는 짧은 키는 "···", 키가 없으면 "없음", `action` "바꾸기") | "바꾸기"를 누르면 그 자리가 `SecretInput keep`(끝에 "그대로")이 되고 포커스가 간다. 높이가 같아 아래가 움직이지 않는다. 읽을 수 없는 키는 처음부터 `SecretInput`이고 아래 `FormFieldDescription` "키를 다시 넣어 주세요." |
+| 지우기 확인 | `AlertDialog`(`AlertDialogTitle` "Anthropic 개인 키를 지울까요?", `AlertDialogDescription` "되돌릴 수 없습니다. 이 키를 쓰는 곳이 멈춥니다."), 쓰는 곳은 `DescriptionList` + `DescriptionItem`("어시스턴트" · "빠른 작업", 모델 `mono`), `AlertDialogCancel` "취소", `AlertDialogAction variant="danger"` "지우기" | 쓰는 곳이 없으면 목록 없이 "되돌릴 수 없습니다." 한 줄. 지우면 줄이 사라지고 `toast` "키를 지웠습니다". |
 
 ### 흐름 10 · API 키
 
@@ -170,7 +171,7 @@
 | "확인하는 중" | 10.03 | `DialogFormFooter busy` "확인하는 중…" | Controls/Overlay/DialogFormFooter |
 | "키 거절" | 10.04 | 키 `aria-invalid`와 `FormFieldError`, 창은 열린 채 | Controls/Field/Field |
 | "이름 겹침" | 10.05 | 이름 "Anthropic 2"와 `FormFieldDescription` | Controls/Field/Field |
-| "추가됨" | 10.06 | 새 `ListSectionRow`, `toast` "키를 추가했습니다" | Patterns/List/ListSection, Controls/Status/Toast |
+| "추가됨" | 10.06 | 표의 새 행, `toast` "키를 추가했습니다" | Controls/Status/Toast |
 | "편집" | 10.07 | 편집 창: 서비스는 글, 키는 `SavedValue` | Controls/Field/SecretInput |
 | "편집 키 열기" | 10.08 | 키 자리가 `SecretInput keep`("그대로") | Controls/Field/SecretInput |
 | "편집 확인 중" | 10.09 | `SecretInput keep`, `DialogFormFooter busy` | Controls/Field/SecretInput, Controls/Overlay/DialogFormFooter |
@@ -181,7 +182,7 @@
 | "키 넣음" | 10.12b | 플러그인 자리 이름 뒤 "··· 4410"과 "편집" · "지우기", `toast` "바른 맞춤법에 키를 넣었습니다". "AI 키" 표는 그대로 | Controls/Status/Toast |
 | "모델 고르기" | 10.13 | `ModelMenu layout="field"`가 열림 | Controls/Menu/ModelMenu |
 | "모델 바뀜" | 10.13b | 빠른 작업 값 "gpt-5-mini · OpenAI 회사", `toast` "빠른 작업 모델을 바꿨습니다" | Controls/Status/Toast |
-| "읽을 수 없음" | 10.14 | `Banner` "키 3개를 읽을 수 없습니다", 행마다 `metaTone="danger"` "읽을 수 없음" | Patterns/Frame/Banner |
+| "읽을 수 없음" | 10.14 | `Banner` "키 3개를 읽을 수 없습니다", 행마다 둘째 줄이 빨간 "읽을 수 없음" | Patterns/Frame/Banner |
 | "다시 넣기" | 10.14b | 편집 창: 키가 처음부터 `SecretInput`(포커스, `required`), `FormFieldDescription` "키를 다시 넣어 주세요." | Controls/Field/SecretInput, Controls/Field/Field |
 | "비밀값 없음" | 10.15 | `Banner` "키를 저장할 수 없습니다" 하나가 이유를 말한다. "+ 키 추가", 빠른 작업 행, 플러그인 키 표는 숨고, "AI 키"는 "없음" | Patterns/Frame/Banner, Controls/Menu/ModelMenu |
 

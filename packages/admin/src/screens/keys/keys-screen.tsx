@@ -56,7 +56,7 @@ const choice = (keyId: string, model: string) => JSON.stringify([keyId, model]);
 
 /**
  * Tools › API keys (tools.md, doc 14). The service keys are a list as the templates tab beside it draws its own: rows of the shared table, each with
- * the key's last four characters after its name, its use this month under it, and "편집 · 지우기" in its ⋯. Under the list, the one model this
+ * the key's last four characters after its name, its use this month under it, and edit and delete in its ⋯. Under the list, the one model this
  * screen picks (the quick tasks'): a setting, not a list. The key itself is on the screen only while it is typed.
  */
 export function KeysScreen({ tabs }: { tabs: ReactNode }) {
