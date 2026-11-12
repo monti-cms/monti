@@ -58,16 +58,23 @@ function CompareSide({
 function CompareProperty({
 	label,
 	empty,
+	blank = false,
 	children,
 }: {
 	label: string;
+	/** Holds the row's place and shows nothing: the other side has a property here and this one has none, and the two sides stay level. */
+	blank?: boolean;
 	/** What an empty value is called ("Empty"); shown instead of `children` when there are none. */
 	empty: string;
 	children?: React.ReactNode;
 }) {
 	const has = React.Children.count(children) > 0 && children !== "";
 	return (
-		<div data-slot="compare-property" className="flex flex-col gap-monti-4">
+		<div
+			data-slot="compare-property"
+			aria-hidden={blank || undefined}
+			className={cn("flex flex-col gap-monti-4", blank && "invisible")}
+		>
 			<span className="font-mono text-monti-micro text-monti-subtle">{label}</span>
 			<span className={cn("text-monti-note", !has && "text-monti-faint")}>{has ? children : empty}</span>
 		</div>

@@ -7,6 +7,7 @@ import type { SiteMedia } from "../media/site-image";
 import type { Storage } from "../media/storage";
 import { usesInDoc, usesInValues } from "../media/uses";
 import type { Schema } from "../schema/define";
+import { chosenValues, storedFields } from "../schema/define";
 import { siteDoc, translatedFields } from "../translations/source";
 import { previewSlug, publicPath } from "./paths";
 import { readPreviewToken } from "./preview";
@@ -55,8 +56,13 @@ export type ReaderOptions = {
 	storage?: Storage | null;
 };
 
+// And, of a conditional field, only the chosen option's (doc 19): whatever a stored copy still holds, the site is never given a value of an
+// option the entry does not have chosen.
 const onlySchemaFields = (schema: Schema, collection: string, values: Record<string, unknown>) =>
-	Object.fromEntries(Object.entries(values).filter(([field]) => schema.collections[collection]?.fields[field]));
+	chosenValues(
+		schema.collections[collection],
+		Object.fromEntries(Object.entries(values).filter(([field]) => storedFields(schema.collections[collection])[field])),
+	);
 
 /**
  * How the site reads entries (doc 02): what was published, never the working copy, except for the one entry a valid preview link opens. A slug an
@@ -84,7 +90,7 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 	async function withMedia(entry: SiteEntry): Promise<SiteEntry> {
 		const { storage } = options;
 		if (!storage) return entry;
-		const fields = schema.collections[entry.collection]?.fields ?? {};
+		const fields = storedFields(schema.collections[entry.collection]);
 		const ids = [...new Set([...usesInValues(fields, entry.values), ...usesInDoc(entry.doc)].map((use) => use.media))];
 		if (ids.length === 0) return entry;
 		const rows = await db.selectFrom("media").selectAll().where("id", "in", ids).execute();
@@ -151,7 +157,7 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 
 		// Resolve relations
 		const colDef = schema.collections[base.collection];
-		const relationFields = Object.entries(colDef?.fields ?? {}).filter(([, f]) => f.kind === "relation");
+		const relationFields = Object.entries(storedFields(colDef)).filter(([, f]) => f.kind === "relation");
 		if (relationFields.length === 0) return withMedia(base);
 
 		const relations: Record<string, ResolvedRelation | ResolvedRelation[] | null> = {};

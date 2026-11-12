@@ -5,7 +5,7 @@ import type { Database } from "../db/schema";
 import { isEmptyValue } from "../json";
 import { altGaps } from "../media/alt";
 import type { Message } from "../operation";
-import type { FieldDefinition, Schema } from "../schema/define";
+import { type FieldDefinition, notChosenFields, type Schema, storedFields } from "../schema/define";
 import type { Site } from "../site";
 import { marksOf } from "../translations/links";
 import { bodyAsRead, followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
@@ -44,14 +44,23 @@ export async function publishTasks(
 	slugTaken: boolean,
 ): Promise<PublishTask[]> {
 	const schema = site.schema();
-	const fields: Record<string, FieldDefinition> = schema.collections[entry.collection]?.fields ?? {};
+	const fields: Record<string, FieldDefinition> = storedFields(schema.collections[entry.collection]);
 	const tasks: PublishTask[] = [];
 	// A translation's `same` fields are its source's, and an empty `fromSource` one is the source's too (doc 04).
 	const source = isTranslation(schema, entry) ? await sourceEntryOf(db, schema, entry.translationGroup) : null;
 	const read = translatedFields(schema, entry.collection, entry, await followedFields(db, source));
 	// The slug is the published address: an empty one always blocks, whatever the schema says (doc 02, 2026-11-06).
+	// Required holds only inside the chosen option (doc 19): a field of another option is not the entry's, and is asked for by nothing. A
+	// choice the field no longer lists (its option was taken out of the schema) is no choice: a required one is asked for again.
+	const others = notChosenFields(schema.collections[entry.collection], read.values);
+	const chosen = (field: string, definition: FieldDefinition) => {
+		const value = fieldValue(field === "slug" ? entry : read, field);
+		const listed =
+			definition.kind !== "select" || definition.many || value == null || definition.options.includes(String(value));
+		return listed ? value : null;
+	};
 	for (const [field, definition] of Object.entries(fields))
-		if ((definition.required || field === "slug") && isEmptyValue(fieldValue(field === "slug" ? entry : read, field)))
+		if (!others.has(field) && (definition.required || field === "slug") && isEmptyValue(chosen(field, definition)))
 			tasks.push({
 				code: "required",
 				field,

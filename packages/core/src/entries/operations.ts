@@ -3,14 +3,14 @@ import { assertDoc } from "../body/check";
 import { asDoc, blockMap, type Doc, withNewIds } from "../body/doc";
 import { randomUUID } from "../bytes";
 import { CheckError, ConflictError } from "../errors";
-import { sameJson } from "../json";
+import { isEmptyValue, sameJson } from "../json";
 import { mediaInDoc } from "../media/items";
 import { checkMediaValues } from "../media/uses";
 import { cleanMediaValue, mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import { generateUniqueSlug, resolveInlineCreation, syncRelationsForEntry } from "../relations/sync";
-import { localeModeOf, type Schema } from "../schema/define";
+import { localeModeOf, notChosenFields, type Schema, storedFields } from "../schema/define";
 import { blockHashes, keepLinks } from "../translations/links";
 import {
 	addedSourceBlocks,
@@ -50,7 +50,7 @@ export async function entryOf(ctx: OperationContext, id: string): Promise<Entry>
 
 /** Refuses values the schema does not have room for: an unknown field, or a select option it does not list. */
 function checkDraft(schema: Schema, collection: string, draft: DraftInput) {
-	const fields = schema.collections[collection]?.fields;
+	const fields = storedFields(schema.collections[collection]);
 	if (!fields) throw new CheckError({ key: "collections.unknown", values: { collection } });
 	if (draft.slug !== undefined && draft.slug !== slugify(draft.slug))
 		throw new CheckError({ key: "entries.badSlug", values: { slug: draft.slug } });
@@ -77,9 +77,28 @@ function applyDraft(entry: Pick<Entry, "title" | "slug" | "values" | "doc">, dra
 	};
 }
 
+/**
+ * Only the chosen option's values are an entry's (doc 19). Of the working copy a save leaves, the values of a conditional field's other
+ * options are dropped; a value the draft itself gives for such a field is refused, with the field's name, so nothing a caller meant to write is
+ * dropped unsaid (the assistant's proposal for a field of an option that is not chosen ends here, when it is applied). A translation's choice
+ * is its source's, which this copy does not hold: its values are left as they are.
+ */
+function keepChosen(
+	schema: Schema,
+	entry: { collection: string; locale: string },
+	values: Record<string, unknown>,
+	draft: DraftInput,
+) {
+	if (entry.locale !== schema.locales.source) return values;
+	const others = notChosenFields(schema.collections[entry.collection], values);
+	for (const field of others)
+		if (!isEmptyValue(draft.values?.[field])) throw new CheckError({ key: "entries.notChosen", values: { field } });
+	return Object.fromEntries(Object.entries(values).filter(([field]) => !others.has(field)));
+}
+
 /** The media fields of these values as they are kept (`cleanMediaValue`). */
 function cleanMediaFields(schema: Schema, collection: string, values: Record<string, unknown>) {
-	const fields = schema.collections[collection]?.fields ?? {};
+	const fields = storedFields(schema.collections[collection]);
 	return Object.fromEntries(
 		Object.entries(values).map(([name, value]) => {
 			const media = fields[name]?.kind === "media" ? mediaValueOf(value) : null;
@@ -227,6 +246,7 @@ export const entryOperations = [
 			let values = input.values ? { ...input.values } : {};
 			values = await resolveInlineCreation(ctx, input.collection, values);
 			const working = applyDraft({ title: "", slug: "", values: {}, doc: null }, { ...input, values });
+			working.values = keepChosen(ctx.site.schema(), { collection: input.collection, locale }, working.values, input);
 			working.values = cleanMediaFields(ctx.site.schema(), input.collection, working.values);
 			if (isItem && working.slug === "" && working.title !== "") {
 				working.slug = await generateUniqueSlug(ctx.db, input.collection, locale, working.title, undefined, id);
@@ -305,7 +325,7 @@ export const entryOperations = [
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
 			const schema = ctx.site.schema();
-			const fields = schema.collections[entry.collection]?.fields ?? {};
+			const fields = storedFields(schema.collections[entry.collection]);
 			for (const [fieldName, fieldDef] of Object.entries(fields)) {
 				if (fieldDef.kind === "relation" && fieldDef.via !== undefined) {
 					if (entry.values[fieldName] === undefined || entry.values[fieldName] === null) {
@@ -375,7 +395,7 @@ export const entryOperations = [
 			for (const s of siblings) touchedIds.add(s.id);
 
 			// Via relation targets
-			const colFields = ctx.site.schema().collections[entry.collection]?.fields ?? {};
+			const colFields = storedFields(ctx.site.schema().collections[entry.collection]);
 			for (const [fName, fDef] of Object.entries(colFields)) {
 				if (fDef.kind === "relation" && fDef.via !== undefined) {
 					const viaGroups = new Set<string>();
@@ -408,7 +428,7 @@ export const entryOperations = [
 			// A translation's `same` fields are the source's: they are changed there (doc 04, field values).
 			if (isTranslation(schema, entry))
 				for (const field of Object.keys(input.values ?? {})) {
-					const definition = schema.collections[entry.collection]?.fields[field];
+					const definition = storedFields(schema.collections[entry.collection])[field];
 					if (definition && localeModeOf(field, definition) === "same")
 						throw new CheckError({ key: "entries.sameField", values: { field } });
 				}
@@ -422,6 +442,7 @@ export const entryOperations = [
 				values = await resolveInlineCreation(ctx, entry.collection, values);
 			}
 			const working = applyDraft(entry, { ...input, values });
+			working.values = keepChosen(ctx.site.schema(), entry, working.values, input);
 			working.values = cleanMediaFields(ctx.site.schema(), entry.collection, working.values);
 			if (isItem && working.slug === "" && working.title !== "") {
 				working.slug = await generateUniqueSlug(
@@ -503,13 +524,23 @@ export const entryOperations = [
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
 			const mine = applyDraft(entry, input);
+			// A field of an option that is not chosen in the draft is no place of its own: the choice is the place that differs (doc 19). Where
+			// the two sides chose different options, the options' fields differ because the choice does: the choice is the one place.
+			const collection = ctx.site.schema().collections[entry.collection];
+			const others = notChosenFields(collection, mine.values);
+			for (const field of others) delete mine.values[field];
+			for (const [field, definition] of Object.entries(storedFields(collection)))
+				if (definition.under && !sameJson(mine.values[definition.under.field], entry.values[definition.under.field]))
+					others.add(field);
 			const places = [
 				...(["title", "slug"] as const).map((place) => ({ place, mine: mine[place], server: entry[place] })),
-				...[...new Set([...Object.keys(mine.values), ...Object.keys(entry.values)])].map((field) => ({
-					place: `values.${field}`,
-					mine: fieldValue(mine, field),
-					server: fieldValue(entry, field),
-				})),
+				...[...new Set([...Object.keys(mine.values), ...Object.keys(entry.values)])]
+					.filter((field) => !others.has(field))
+					.map((field) => ({
+						place: `values.${field}`,
+						mine: fieldValue(mine, field),
+						server: fieldValue(entry, field),
+					})),
 				...docPlaces(mine.doc, entry.doc),
 			].filter((place) => !sameJson(place.mine, place.server));
 			return { version: entry.version, updatedAt: entry.updatedAt, places };

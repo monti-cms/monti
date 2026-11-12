@@ -29,6 +29,11 @@ const schema = defineSchema({
 				slug: { kind: "slug", required: true },
 				cover: { kind: "media", accept: "image" },
 				attachment: { kind: "media", accept: "any" },
+				format: {
+					kind: "conditional",
+					options: ["article", "video"],
+					fields: { video: { poster: { kind: "media", accept: "image", locale: "perLocale" } } },
+				},
 			},
 		},
 		author: {
@@ -203,6 +208,31 @@ describe("every way a body or a field changes writes the uses again", () => {
 		expect(uses).toHaveLength(2);
 		expect(uses.some((row) => row.includes(made.output.id))).toBe(true);
 		await expectInStep();
+	});
+
+	it("19-15 a translation's own picture in a field of the option its source has chosen is a use: the choice is read from the source, which holds it", async () => {
+		const [mine, theirs] = [await file("ko.jpg"), await file("en.jpg")];
+		const { output } = await post({ values: { format: "video", poster: { media: mine, alt: "포스터" } } });
+		const made = await write("translations.create", { source: output.id, locale: "en" });
+		await write("entries.save", {
+			id: made.output.id,
+			version: await versionOf(made.output.id),
+			values: { poster: { media: theirs, alt: "poster" } },
+		});
+		// The translation holds no choice of its own.
+		const own = await db
+			.selectFrom("entries")
+			.select("values")
+			.where("id", "=", made.output.id)
+			.executeTakeFirstOrThrow();
+		expect(own.values).not.toHaveProperty("format");
+		expect(await rows()).toContain(`${theirs} ${made.output.id} field:poster`);
+		expect(await rows()).toContain(`${mine} ${output.id} field:poster`);
+
+		// The source changed to an option without the picture: neither shows it now.
+		await write("entries.save", { id: output.id, version: await versionOf(output.id), values: { format: "article" } });
+		await write("entries.save", { id: made.output.id, version: await versionOf(made.output.id), title: "again" });
+		expect((await rows()).some((row) => row.startsWith(theirs))).toBe(false);
 	});
 
 	it("09-4 items.saveGroup: an item's media field counts", async () => {

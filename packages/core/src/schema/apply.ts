@@ -6,10 +6,28 @@ import { trackedFields } from "../translations/fields";
 import { changeSource } from "../translations/source-change";
 import type { AdminValues } from "./admin-values";
 import type { Schema } from "./define";
+import { storedFields } from "./define";
 import type { ChangeFile, ChangeStep } from "./files";
-import { schemaHash } from "./plan";
+import { hasOption, schemaHash, theirs } from "./plan";
 
 type Db = Kysely<Database> | Transaction<Database>;
+
+/**
+ * The values with one option of a select taken out of `field` (`to` null) or turned into another. A single select loses the field or holds the
+ * new word; a many keeps its other picks, the new word joining them once, and an emptied many loses the field.
+ */
+const optionSet = (field: string, option: string, to: string | null) => {
+	const rest = sql`((values->${field}) - ${option}::text)`;
+	const many =
+		to === null
+			? rest
+			: sql`(${rest} || case when ${rest} ? ${to} then '[]'::jsonb else jsonb_build_array(${to}::text) end)`;
+	const single =
+		to === null ? sql`values - ${field}::text` : sql`values || jsonb_build_object(${field}::text, ${to}::text)`;
+	return sql`case when jsonb_typeof(values->${field}) = 'array'
+		then case when ${many} = '[]'::jsonb then values - ${field}::text else values || jsonb_build_object(${field}::text, ${many}) end
+		else ${single} end`;
+};
 
 const empty = (field: string) => sql<boolean>`coalesce(values->>${field}, '') = ''`;
 
@@ -108,17 +126,38 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 		case "removeField":
 			if (step.values === "clear")
 				await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field}`);
-			else if (typeof step.values === "object")
+			else if (typeof step.values === "object") {
+				// Into a field of a conditional field's option (doc 19), only the entries that chose that option take the value: for the others
+				// it would be a value of an option that is not theirs, and it is cleared.
+				const under = storedFields(schema.collections[step.collection])[step.values.move]?.under;
 				await entries(
 					sql`(values - ${step.field}::text) || jsonb_build_object(${step.values.move}::text, coalesce(nullif(values->${step.values.move}, '""'::jsonb), values->${step.field}))`,
-					sql<boolean>`values ? ${step.field}`,
+					sql<boolean>`values ? ${step.field} and ${theirs(under)}`,
 				);
+				await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field}`);
+			}
 			await followField(db, step.collection, step.field, null);
 			return;
+		case "removeOption":
+			await entries(
+				optionSet(step.field, step.option, step.entries === "empty" ? null : step.entries.change),
+				hasOption(step.field, step.option),
+			);
+			return;
+		case "renameOption":
+			await entries(optionSet(step.field, step.from, step.to), hasOption(step.field, step.from));
+			return;
+		case "keepChosen": {
+			const under = storedFields(schema.collections[step.collection])[step.field]?.under;
+			if (under)
+				await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field} and not ${theirs(under)}`);
+			return;
+		}
 		case "fillField":
+			// A field of a conditional field's option is filled where that option is chosen: it is no other entry's field (doc 19).
 			await entries(
 				sql`values || jsonb_build_object(${step.field}::text, ${JSON.stringify(step.value)}::jsonb)`,
-				empty(step.field),
+				sql<boolean>`${empty(step.field)} and ${theirs(storedFields(schema.collections[step.collection])[step.field]?.under)}`,
 			);
 			return;
 	}
@@ -133,7 +172,7 @@ async function rebuildViews(db: Db, previous: Schema | null, schema: Schema) {
 		await sql`drop view if exists ${sql.id(`monti_${name}`)}`.execute(db);
 	// A view's definition takes no bound parameters, so field names go in as literals (they are identifiers, checked by checkSchema).
 	for (const [name, collection] of Object.entries(schema.collections)) {
-		const fields = Object.entries(collection.fields)
+		const fields = Object.entries(storedFields(collection))
 			.filter(([field]) => field !== "title" && field !== "slug")
 			.map(([field, definition]) =>
 				definition.kind === "text" || (definition.kind === "select" && !definition.many)

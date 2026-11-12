@@ -77,6 +77,30 @@ export const Group: Story = {
 };
 
 /**
+ * A field with what hangs under it, beside a group: a conditional field's line, then a band for each of its options one step in (no grip, its value
+ * after its name, the way to add a field at its end) and that option's fields one step further. The same inside a group, one step deeper.
+ */
+export const Branch: Story = {
+	render: () => (
+		<FieldTree>
+			<FieldRow name="title !" label="제목" kind="text" />
+			<FieldGroup head={<FieldRow name="format !" label="글 종류" kind="conditional · 2" />}>
+				<FieldRow group grip={false} depth={1} name="글" note="article · 필드 없음" />
+				<FieldRow group grip={false} depth={1} name="동영상" note="video" />
+				<FieldRow grip={false} name="videoUrl !" label="동영상 주소" kind="text" depth={2} />
+			</FieldGroup>
+			<FieldGroup name="분류">
+				<FieldRow name="category" label="카테고리" kind="→ category" depth={1} />
+				<FieldGroup head={<FieldRow name="source" label="출처" kind="conditional · 1" depth={1} />}>
+					<FieldRow group grip={false} depth={2} name="인용" note="quoted" />
+					<FieldRow grip={false} name="sourceUrl" label="출처 주소" kind="text" depth={3} />
+				</FieldGroup>
+			</FieldGroup>
+		</FieldTree>
+	),
+};
+
+/**
  * While dragging: the line in hand floats over the page (the whole line on the page ground, with the floating shadow, drawn by the `Sortable`
  * overlay), its place stays as a gap, and the line it passed has moved up into its place. A group in hand floats with its fields.
  */
