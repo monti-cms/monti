@@ -19,6 +19,12 @@ const {
 } = composeStories(stories);
 
 type Loaded = { site: StorySite };
+/** The stories' languages, as the story schema has them. */
+const LANGUAGES = [
+	{ code: "ko", name: "한국어" },
+	{ code: "en", name: "English" },
+	{ code: "ja", name: "日本語" },
+];
 const admin = { actor: "admin" } as const;
 
 /** A story drawn with its site at hand, to read what the operations say after the screen saved. */
@@ -337,7 +343,71 @@ describe("settings: a save that is refused", () => {
 	});
 });
 
+describe("settings: a language problem can be seen and undone", () => {
+	it("12-1 the source put back onto a language that was taken out: the review says what is to fix and opens the tab, where the struck source row has its undo", async () => {
+		const shown = withSite(stories.SourceChanged);
+		await shown.run();
+		// English is the source; Korean is taken out; then the source line of the changes list is undone: Korean is the source again, struck.
+		await userEvent.click(page.getByRole("button", { name: "한국어 빼기" }));
+		await userEvent.click(page.getByRole("button", { name: /변경 사항/ }));
+		await userEvent.click(page.getByRole("menuitem", { name: /원문 변경/ }).getByRole("button", { name: "되돌리기" }));
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(languages).toEqual(["한국어", "English", "日本語"]);
+		// The save is not offered as if nothing were wrong: the review names the problem, with no pill to apply.
+		await userEvent.click(saveGroup());
+		const sheet = page.getByRole("dialog");
+		await expect.element(sheet.getByText("원문 언어가 목록에 없습니다")).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "지우고 적용" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "적용", exact: true })).not.toBeInTheDocument();
+		// Its line goes to the language tab, where the source row itself takes the removal back.
+		await userEvent.click(sheet.getByRole("button", { name: "열기" }));
+		await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("list", { name: "콘텐츠 언어" }).getByRole("button", { name: "되돌리기" }));
+		await expect.element(page.getByRole("button", { name: "바꾸기" })).toBeVisible();
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		expect(codes(await settingsOf(shown.loaded()))).toEqual(["ko", "en", "ja"]);
+	});
+});
+
 describe("settings › collections inside the one draft", () => {
+	it("12-2 a renamed field keeps the width its column was dragged to", async () => {
+		const shown = withSite({
+			loaders: stories.settingsAt("collections", {
+				more: async ({ monti }) => {
+					await monti.run(
+						"list.savePrefs",
+						{ collection: "post", widths: { summary: 240 }, hidden: ["summary"] },
+						admin,
+					);
+				},
+			}),
+		});
+		await shown.run();
+		await userEvent.click(page.getByRole("button", { name: "summary 열기" }));
+		const sheet = page.getByRole("dialog");
+		await userEvent.fill(sheet.getByLabelText(/^식별자/), "excerpt");
+		await userEvent.click(sheet.getByRole("button", { name: "저장" }));
+		await expect.element(page.getByRole("button", { name: "excerpt 열기" })).toBeVisible();
+		await userEvent.click(saveGroup());
+		await userEvent.click(page.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(page.getByText("적용했습니다")).toBeVisible();
+		const read = (await shown.loaded().site.monti.run("schema.read", {}, admin)) as {
+			adminValues: Record<string, { list?: { widths?: Record<string, number>; hidden?: string[] } }>;
+		};
+		expect(read.adminValues.post?.list).toEqual({ widths: { excerpt: 240 }, hidden: ["excerpt"] });
+	});
+
+	it("12-2 a collection name longer than the database keeps is told in the sheet, before it is made", async () => {
+		const shown = withSite({ loaders: stories.settingsAt("collections") });
+		await shown.run();
+		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
+		const sheet = page.getByRole("dialog");
+		await userEvent.fill(sheet.getByLabelText(/^식별자/), `a${"b".repeat(57)}`);
+		await expect.element(sheet.getByText("이름이 너무 깁니다")).toBeVisible();
+		await userEvent.fill(sheet.getByLabelText(/^식별자/), `a${"b".repeat(56)}`);
+		await expect.element(sheet.getByText("이름이 너무 깁니다")).not.toBeInTheDocument();
+	});
+
 	it("12-2 a collection's first admin values are saved on the version the screen read: values another tab saved meanwhile are a conflict, not written over", async () => {
 		const shown = withSite({
 			loaders: stories.settingsAt("collections", {
@@ -514,19 +584,42 @@ describe("settings: the assistant's proposals", () => {
 		expect(read.adminValues.post).toMatchObject({ label: "글", folders: true });
 	});
 
+	it("12-2 a proposal that names a label alone proposes the label alone: nothing else of the collection is drawn as proposed, and taking it clears nothing", async () => {
+		const shown = withSite(stories.CollectionValuesProposal);
+		await shown.run();
+		const before = (await shown.loaded().site.monti.run("schema.read", {}, admin)) as {
+			adminValues: Record<string, Record<string, unknown>>;
+		};
+		// On the basics the name is the one blue thing: the folders switch is as saved, with no proposal mark.
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveAttribute("data-proposal");
+		await expect.element(page.getByRole("switch", { name: "폴더 사용" })).toBeChecked();
+		// One proposal mark on the page: the name's own, on its label row.
+		await expect.poll(() => page.getByRole("img", { name: "제안" }).elements().length).toBe(1);
+		// No field's line is the assistant's.
+		await userEvent.click(page.getByRole("button", { name: /^필드/ }));
+		await expect.element(page.getByRole("button", { name: "summary 열기" })).toBeVisible();
+		await expect.element(page.getByText("✦ 제안")).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "모두 받기" }));
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		const after = (await shown.loaded().site.monti.run("schema.read", {}, admin)) as {
+			adminValues: Record<string, Record<string, unknown>>;
+		};
+		const { version: _before, ...saved } = before.adminValues.post as { version: number };
+		const { version: _after, ...now } = after.adminValues.post as { version: number };
+		// Every field's label and help, the folders and the rest are what they were: only the name moved.
+		expect(now).toEqual({ ...saved, label: "글" });
+	});
+
 	it("12-1 a settings.save proposal that gives a site name and a collection's name draws both, without a structure change beside", async () => {
 		const shown = withSite({
 			...stories.Site,
 			loaders: stories.settingsAt("site", {
 				more: async ({ monti }) => {
-					const read = (await monti.run("schema.read", {}, admin)) as {
-						adminValues: Record<string, { version: number } & Record<string, unknown>>;
-					};
-					const { version: _version, ...values } = read.adminValues.post ?? { version: 0 };
 					const proposal = await monti.proposals.create("conversation-1", "이름을 정리해 줘");
 					await monti.proposals.add(proposal, "settings.save", {
 						site: { name: "example.blog" },
-						adminValues: { post: { ...values, label: "글" } },
+						adminValues: { post: { label: "글" } },
 					});
 				},
 			}),
@@ -538,6 +631,74 @@ describe("settings: the assistant's proposals", () => {
 		await userEvent.click(page.getByRole("button", { name: "기본", exact: true }));
 		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveValue("글");
 		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveAttribute("data-proposal");
+	});
+
+	it("12-4 a taken proposal whose save could write nothing stays the assistant's: after 모두 되돌리기 it is there to take again", async () => {
+		const files = {
+			async write() {
+				throw new Error("EACCES: permission denied, open 'monti.schema.ts'");
+			},
+			readChanges: async () => [],
+		};
+		const shown = withSite({
+			...stories.LanguageProposal,
+			loaders: stories.settingsAt("languages", {
+				files,
+				more: async ({ monti }) => {
+					const proposal = await monti.proposals.create("conversation-1", "독일어도 추가해 줘");
+					await monti.proposals.add(proposal, "locales.apply", {
+						locales: { source: "ko", prefix: "exceptSource", list: [...LANGUAGES, { code: "de", name: "Deutsch" }] },
+						answers: {},
+					});
+				},
+			}),
+		});
+		await shown.run();
+		await userEvent.click(page.getByRole("button", { name: "모두 받기" }));
+		await userEvent.click(saveGroup());
+		await userEvent.click(page.getByRole("button", { name: "적용", exact: true }));
+		// Refused where the person acts: the review says why, and nothing was saved.
+		await expect.element(page.getByText("monti.schema.ts를 쓰지 못했습니다.")).toBeVisible();
+		const { db, monti } = shown.loaded().site;
+		// The one save in the log is the story's own (the site's name, when the site was set up): the refused save left no row.
+		const saves = await db.selectFrom("monti_activity").select("id").where("operation", "=", "settings.save").execute();
+		expect(saves).toHaveLength(1);
+		await userEvent.click(page.getByRole("button", { name: "취소" }));
+		await userEvent.click(page.getByRole("button", { name: "모두 되돌리기" }));
+		// The proposal was not used up by the save that failed: it is pending, and the bubble offers it again.
+		await expect.element(page.getByRole("button", { name: "모두 받기" })).toBeVisible();
+		expect(languages()).toEqual(["한국어", "English", "日本語", "Deutsch"]);
+		const pending = (await monti.run("proposals.forTarget", { kind: "schema", id: "current" }, admin)) as unknown[];
+		expect(pending).toHaveLength(1);
+	});
+
+	it("12-2 a taken value typed back to the saved one is put back: the next save sends no item it saves nothing of, and goes through", async () => {
+		const shown = withSite({
+			loaders: stories.settingsAt("site", {
+				more: async ({ monti }) => {
+					const proposal = await monti.proposals.create("conversation-1", "사이트 이름을 블로그답게");
+					await monti.proposals.add(proposal, "settings.save", { site: { name: "example.blog" } });
+				},
+			}),
+		});
+		await shown.run();
+		await userEvent.click(page.getByRole("button", { name: "모두 받기" }));
+		await expect.element(nameField()).not.toHaveAttribute("data-proposal");
+		// The old name typed back, by hand, not with the undo.
+		await userEvent.fill(nameField(), "example.dev");
+		// Another change, of a collection: the save holds nothing of the proposal.
+		await userEvent.click(tab(/컬렉션/));
+		await userEvent.click(page.getByRole("button", { name: "기본", exact: true }));
+		await userEvent.fill(page.getByRole("textbox", { name: "표시 이름" }), "글");
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		const { monti } = shown.loaded().site;
+		expect((await settingsOf(shown.loaded())).site.name).toBe("example.dev");
+		// Not taken any more, the proposal waits as it did before.
+		const pending = (await monti.run("proposals.forTarget", { kind: "settings", id: "site" }, admin)) as unknown[];
+		expect(pending).toHaveLength(1);
+		await userEvent.click(tab(/사이트/));
+		await expect.element(nameField()).toHaveAttribute("data-proposal");
 	});
 
 	it("12-1 a proposed language is a row of the language tab until it is taken; from another tab the language tab carries the blue dot", async () => {

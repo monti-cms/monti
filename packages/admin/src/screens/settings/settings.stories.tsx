@@ -217,6 +217,37 @@ export const SourceChanged: Story = {
 	},
 };
 
+/**
+ * A language problem to fix: English was made the source, Korean taken out, and then the source change undone, so the source is a language that
+ * is on its way out. The source row is struck and carries its undo in place of "바꾸기".
+ */
+export const LanguageProblem: Story = {
+	loaders: settingsAt("languages"),
+	play: async ({ canvasElement }) => {
+		const { page, body } = screen(canvasElement);
+		await changeSource(canvasElement, /English/);
+		await userEvent.click(page.getByRole("button", { name: "한국어 빼기" }));
+		await userEvent.click(await page.findByRole("button", { name: /변경 사항/ }, wait));
+		const line = await body.findByRole("menuitem", { name: /원문 변경/ }, wait);
+		await userEvent.click(within(line).getByRole("button", { name: "되돌리기" }));
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() => {
+			if (page.queryByRole("button", { name: "바꾸기" })) throw new Error("the source row still offers a change");
+		}, wait);
+	},
+};
+
+/** Saving with that problem: the review names it under "고칠 곳" with the way to the tab, and offers nothing to apply. */
+export const LanguageProblemReview: Story = {
+	loaders: settingsAt("languages"),
+	play: async (context) => {
+		await LanguageProblem.play?.(context);
+		const { page, body } = screen(context.canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }, wait));
+		await body.findByText("원문 언어가 목록에 없습니다", {}, wait);
+	},
+};
+
 /** A language taken out: its row stays, struck, with its undo, until the save. */
 export const LanguageRemoved: Story = {
 	loaders: settingsAt("languages"),
@@ -296,14 +327,11 @@ export const LanguageProposal: Story = {
 export const CollectionValuesProposal: Story = {
 	loaders: settingsAt("collections", {
 		more: async ({ monti }) => {
-			const read = (await monti.run("schema.read", {}, admin)) as {
-				adminValues: Record<string, { version: number } & Record<string, unknown>>;
-			};
-			const { version: _version, ...values } = read.adminValues.post ?? { version: 0 };
+			// The assistant names the label alone: a patch, so nothing else of the collection is proposed (doc 12).
 			const proposal = await monti.proposals.create("conversation-1", "게시글을 글이라고 불러 줘");
 			await monti.proposals.add(proposal, "collections.updateAdminValues", {
 				collection: "post",
-				values: { ...values, label: "글" },
+				values: { label: "글" },
 			});
 		},
 	}),

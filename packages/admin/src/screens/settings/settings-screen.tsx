@@ -397,6 +397,10 @@ export function SettingsScreen({
 				}}
 				onClose={() => setPlan(null)}
 				onApply={(answers) => void send(answers)}
+				onOpenLanguages={() => {
+					setPlan(null);
+					onTab("languages");
+				}}
 				onOpenField={(c, key) => {
 					setPlan(null);
 					onTab("collections");

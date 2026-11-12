@@ -83,6 +83,8 @@
 
 순서만 바꾼 저장은 검토할 것이 없어 검토 없이 저장된다.
 
+언어에 고칠 곳이 있으면(원문 언어가 목록에 없음: 빠진 언어가 다시 원문이 됐을 때) 검토 맨 위 "고칠 곳"에 `ChangeGroup kind="drop"`(`tag` "고칠 곳", `title` 그 언어) + `ChangeNote danger` "원문 언어가 목록에 없습니다" + `TextButton` "열기"가 나오고, 발에 적용 알약이 없다. "열기"는 언어 탭을 연다. 그 탭에서 빠진 채 원문인 행은 끝에 "바꾸기" 대신 "되돌리기"(`TextButton variant="underline" quiet`)가 있다.
+
 스토리: Patterns/Frame/Section, Patterns/List/LanguageRow, Controls/Button/DragHandle, Controls/Menu/DropdownMenu, Controls/Overlay/Popover, Controls/Menu/Command, Controls/Overlay/Sheet, Monti/Change/ChangeGroup.
 
 ### 흐름 11 · 설정

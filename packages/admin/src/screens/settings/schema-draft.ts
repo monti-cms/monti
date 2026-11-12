@@ -1,9 +1,13 @@
 import {
 	type AdminLanguage,
 	type AdminValues,
+	type AdminValuesPatch,
 	type CollectionDefinition,
+	canonical,
 	type FieldDefinition,
+	fingerprint,
 	type LocalesDefinition,
+	mergeAdminValues,
 	type Rename,
 	type Schema,
 	sameJson,
@@ -213,29 +217,30 @@ function adminPlaces(
 }
 
 /**
- * The places a proposed set of a collection's admin values writes: where the whole values the assistant gave differ from the saved ones (a label,
- * a field's help, the layout, what the editor allows). The proposal names fields as its own draft does; `renames` (of the same proposal) say which
- * saved field each is, since the draft's places are keyed by the saved names.
+ * The places a proposed change of a collection's admin values writes: what the patch the assistant gave turns the saved values into, where that
+ * differs from them (a label, a field's help, the layout, what the editor allows). Only the keys it names: the rest stay as saved (doc 12). The
+ * proposal names fields as its own draft does; `renames` (of the same proposal) say which saved field each is, since the draft's places are keyed
+ * by the saved names.
  */
 export function adminValueProposalPaths(
 	read: SchemaRead,
 	catalog: Catalog | null,
 	c: string,
-	values: AdminValues,
+	patch: AdminValuesPatch,
 	renames: Rename[] = [],
 ): Record<Path, unknown> {
 	const collection = read.schema.collections[c];
 	if (!collection) return {};
 	const savedName = new Map(renames.filter((rename) => rename.collection === c).map((r) => [r.to, r.from]));
 	const key = (name: string) => savedName.get(name) ?? name;
-	const underSavedNames: AdminValues = {
-		...values,
-		...(values.fields
-			? { fields: Object.fromEntries(Object.entries(values.fields).map(([name, value]) => [key(name), value])) }
+	const underSavedNames: AdminValuesPatch = {
+		...patch,
+		...(patch.fields
+			? { fields: Object.fromEntries(Object.entries(patch.fields).map(([name, value]) => [key(name), value])) }
 			: {}),
-		...(values.layout
+		...(patch.layout
 			? {
-					layout: values.layout.map((tab) => ({
+					layout: patch.layout.map((tab) => ({
 						tab: tab.tab,
 						fields: tab.fields.map((each) =>
 							typeof each === "string" ? key(each) : { group: each.group, fields: each.fields.map(key) },
@@ -244,10 +249,27 @@ export function adminValueProposalPaths(
 				}
 			: {}),
 	};
-	const proposed = adminPlaces(c, collection, underSavedNames, catalog);
+	const proposed = adminPlaces(c, collection, mergeAdminValues(savedValues(read, c), underSavedNames), catalog);
 	const saved = adminPlaces(c, collection, read.adminValues[c], catalog);
 	return Object.fromEntries(Object.entries(proposed).filter(([path, value]) => !sameJson(value, saved[path])));
 }
+
+/**
+ * What the settings draft is a draft of, as one fingerprint: the site's values, the schema and each collection's admin values that the screen
+ * edits. The changes this browser kept come back while it is the same (doc 05). The lists' own look (a column width dragged in a list) is not the
+ * settings', so it is left out: it must not throw the kept changes away.
+ */
+export function settingsVersion(read: SettingsRead): string {
+	const edited = Object.fromEntries(
+		Object.entries(read.adminValues).map(([c, { version: _version, list: _list, ...values }]) => [c, values]),
+	);
+	return fingerprint(
+		JSON.stringify(canonical({ site: [read.site.name, read.site.writing], schema: read.schema, edited })),
+	);
+}
+
+/** Whether a place holds an admin value of a collection (its own, a field's, the editor's), as against its structure. */
+export const isAdminPlace = (path: Path) => /^(ca|fa|ed):/.test(path);
 
 /** What the screen reads the draft through: the value at a place (mine over saved). */
 export type Values = (path: Path) => unknown;
@@ -355,13 +377,8 @@ function collectionValues(
 		const everything = editor.blocks === "all" && editor.marks === "all" && editor.headings.length === HEADINGS.length;
 		if (!everything || saved?.editor) out.editor = editor;
 	} else if (saved?.editor) out.editor = saved.editor;
-	// The list's columns are the list's to keep (doc 06, `list.savePrefs`); a renamed field keeps its place there.
-	if (saved?.list) {
-		const renamed = (ids?: string[]) => ids?.map((id) => names.get(id) ?? id);
-		out.list = { ...saved.list, order: renamed(saved.list.order), hidden: renamed(saved.list.hidden) };
-		if (!out.list.order) delete out.list.order;
-		if (!out.list.hidden) delete out.list.hidden;
-	}
+	// The list's own look (its columns, their widths) is the list's to keep (doc 06, `list.savePrefs`): the draft does not hold it, and the save
+	// names nothing of it. A renamed field keeps its place there by the structure change itself.
 	return out;
 }
 
@@ -419,7 +436,7 @@ export function shownLayout(layout: Layout | undefined, keys: string[], defaultT
  */
 export function proposalPaths(
 	read: SchemaRead,
-	input: { draft?: Schema; renames?: Rename[]; adminValues?: Record<string, AdminValues> },
+	input: { draft?: Schema; renames?: Rename[]; adminValues?: Record<string, AdminValuesPatch> },
 ): Record<Path, unknown> {
 	const draft = input.draft;
 	if (!draft) return {};
@@ -428,7 +445,7 @@ export function proposalPaths(
 	const labels = (c: string, key: string, name: string) => {
 		for (const each of FIELD_VALUES) {
 			const v = input.adminValues?.[c]?.fields?.[name]?.[each];
-			if (v !== undefined) out[at.fieldValue(c, key, each)] = v;
+			if (v !== undefined && v !== null) out[at.fieldValue(c, key, each)] = v;
 		}
 	};
 	for (const [c, collection] of Object.entries(draft.collections)) {

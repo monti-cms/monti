@@ -89,6 +89,7 @@ export function ReviewSheet({
 	onClose,
 	onApply,
 	onOpenField,
+	onOpenLanguages,
 }: {
 	model: SettingsDraft;
 	plan: Plan | null;
@@ -101,6 +102,8 @@ export function ReviewSheet({
 	onApply: (answers: Answers) => void;
 	/** Opens a field's sheet from a line of what is to fix. */
 	onOpenField: (collection: string, key: string) => void;
+	/** Opens the language tab from a line of what is to fix. */
+	onOpenLanguages: () => void;
 }) {
 	return (
 		<Sheet open={plan !== null} onOpenChange={(next) => !next && !applying && onClose()}>
@@ -115,6 +118,7 @@ export function ReviewSheet({
 					onClose={onClose}
 					onApply={onApply}
 					onOpenField={onOpenField}
+					onOpenLanguages={onOpenLanguages}
 				/>
 			) : null}
 		</Sheet>
@@ -131,6 +135,7 @@ function Body({
 	onClose,
 	onApply,
 	onOpenField,
+	onOpenLanguages,
 }: {
 	model: SettingsDraft;
 	plan: Plan;
@@ -142,11 +147,29 @@ function Body({
 	onClose: () => void;
 	onApply: (answers: Answers) => void;
 	onOpenField: (collection: string, key: string) => void;
+	onOpenLanguages: () => void;
 }) {
 	const { t } = useAdmin();
 	// What must be fixed before the change can be applied: told here, when saving, each line opening its field (flow 4, step 09).
 	const problems = model.problems;
+	const languageName = (code: string | undefined) => model.locales.find((row) => row.code === code)?.name ?? code ?? "";
 	const fixFirst = problems.map((problem) => {
+		// A problem of the languages (the source is not in the list): its line opens the language tab, where the row can be put back.
+		if (!ofCollection(problem))
+			return (
+				<ChangeGroup
+					key={`languages:${problem.locale}:${problem.code}`}
+					kind="drop"
+					tag={t("settings.review.toFix")}
+					title={languageName(problem.locale) || t("settings.tab.languages")}
+					identifier={problem.locale}
+				>
+					<Inline gap={12} align="baseline">
+						<ChangeNote danger>{t(`settings.problem.${problem.code}`)}</ChangeNote>
+						<TextButton onClick={onOpenLanguages}>{t("settings.review.open")}</TextButton>
+					</Inline>
+				</ChangeGroup>
+			);
 		const key = problem.field
 			? model.fields(problem.collection).find((each) => model.fieldName(problem.collection, each) === problem.field)
 			: undefined;
@@ -200,8 +223,6 @@ function Body({
 		...(plan.changes.some((change) => !ofCollection(change)) ? [t("settings.tab.languages")] : []),
 		...new Set(plan.changes.filter(ofCollection).map((change) => model.label(change.collection))),
 	].join(", ");
-	const languageName = (code: string | undefined) => model.locales.find((row) => row.code === code)?.name ?? code ?? "";
-
 	/** A change of the languages (doc 04): one added touches nothing, one taken out takes its translations, a new source gets drafts where it has no entry. */
 	const languageBlock = (change: SchemaChange) => {
 		const name = languageName(change.locale);

@@ -162,29 +162,36 @@ export function LocalesTab({ model }: { model: SettingsDraft }) {
 			return (
 				<LanguageRow key={each.code} code={each.code} handled {...shared}>
 					<LanguageSource flag={t("settings.locales.source")}>
-						<DropdownMenu>
-							<DropdownMenuTrigger
-								render={
-									<Button variant="ghost" size="sm">
-										{t("settings.locales.changeSource")}
-									</Button>
-								}
-							/>
-							<DropdownMenuContent align="end">
-								<DropdownMenuRadioGroup
-									aria-label={t("settings.locales.sourceMenu")}
-									value={each.code}
-									onValueChange={(code) => draft.set(at.localeSource, String(code))}
-								>
-									{live.map((option) => (
-										<DropdownMenuRadioItem key={option.code} value={option.code}>
-											{option.name}
-											<MenuShortcut>{option.code}</MenuShortcut>
-										</DropdownMenuRadioItem>
-									))}
-								</DropdownMenuRadioGroup>
-							</DropdownMenuContent>
-						</DropdownMenu>
+						{each.state === "gone" ? (
+							// The source cannot be a language that was taken out (its line's undo made it the source again): the row is put back here.
+							<TextButton variant="underline" quiet size="caption" onClick={() => model.revertLocale(each.code)}>
+								{t("settings.undo")}
+							</TextButton>
+						) : (
+							<DropdownMenu>
+								<DropdownMenuTrigger
+									render={
+										<Button variant="ghost" size="sm">
+											{t("settings.locales.changeSource")}
+										</Button>
+									}
+								/>
+								<DropdownMenuContent align="end">
+									<DropdownMenuRadioGroup
+										aria-label={t("settings.locales.sourceMenu")}
+										value={each.code}
+										onValueChange={(code) => draft.set(at.localeSource, String(code))}
+									>
+										{live.map((option) => (
+											<DropdownMenuRadioItem key={option.code} value={option.code}>
+												{option.name}
+												<MenuShortcut>{option.code}</MenuShortcut>
+											</DropdownMenuRadioItem>
+										))}
+									</DropdownMenuRadioGroup>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						)}
 					</LanguageSource>
 				</LanguageRow>
 			);

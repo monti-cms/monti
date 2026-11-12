@@ -1,4 +1,4 @@
-import { type FieldDefinition, type LocaleMode, localeModeOf, translates } from "@monti-cms/core";
+import { type FieldDefinition, type LocaleMode, localeModeOf, MAX_FIELD_NAME, translates } from "@monti-cms/core";
 import {
 	Button,
 	DragHandle,
@@ -233,9 +233,11 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 			: null
 		: !IDENTIFIER.test(form.name)
 			? t("settings.field.badName")
-			: others.includes(form.name)
-				? t("settings.field.nameTaken")
-				: null;
+			: form.name.length > MAX_FIELD_NAME
+				? t("settings.problem.tooLong")
+				: others.includes(form.name)
+					? t("settings.field.nameTaken")
+					: null;
 	const ready = form.name !== "" && nameError === null;
 
 	const save = () => {

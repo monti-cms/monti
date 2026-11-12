@@ -1,10 +1,9 @@
-import { type AdminValues, type SchemaProblem, sameJson } from "@monti-cms/core";
+import { type AdminValuesPatch, diffAdminValues, type SchemaProblem, sameJson } from "@monti-cms/core";
 import { useCallback, useMemo } from "react";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
-import { ofCollection } from "./review-sheet";
 import {
 	adminValueProposalPaths,
 	at,
@@ -14,13 +13,14 @@ import {
 	type DraftField,
 	fieldKeys,
 	flatten,
+	isAdminPlace,
 	type LocaleRow,
 	localeProposalPaths,
 	localeRows,
 	placeOf,
 	proposalPaths,
 	type SettingsRead,
-	savedValues,
+	settingsVersion,
 	tabOf,
 } from "./schema-draft";
 
@@ -60,7 +60,7 @@ type SaveProposal = {
 	locales?: SettingsRead["schema"]["locales"];
 	collections?: SettingsRead["schema"]["collections"];
 	renames?: Parameters<typeof proposalPaths>[1]["renames"];
-	adminValues?: Record<string, AdminValues>;
+	adminValues?: Record<string, AdminValuesPatch>;
 };
 
 /** The places a pending proposal item writes, as the settings screen reads its input. */
@@ -69,7 +69,7 @@ function proposalPlaces(data: SettingsRead, catalog: Catalog | null, item: Propo
 	if (item.operation === "locales.apply")
 		return localeProposalPaths(data, (item.input as { locales?: SettingsRead["schema"]["locales"] }).locales);
 	if (item.operation === "collections.updateAdminValues") {
-		const input = item.input as { collection?: string; values?: AdminValues };
+		const input = item.input as { collection?: string; values?: AdminValuesPatch };
 		return input.collection && input.values
 			? adminValueProposalPaths(data, catalog, input.collection, input.values)
 			: {};
@@ -107,16 +107,8 @@ export function useSettingsDraft() {
 	const catalog = useRead<Catalog>("blocks.catalog", {});
 	const data = read.data;
 	const base = useMemo(() => (data ? flatten(data, catalog.data) : null), [data, catalog.data]);
-	// The draft's base is the site's values, the schema and every collection's admin values: its version names each of theirs.
-	const version = data
-		? [
-				data.version,
-				`site:${data.site.version}`,
-				...Object.entries(data.adminValues)
-					.sort(([a], [b]) => a.localeCompare(b))
-					.map(([c, values]) => `${c}:${values.version}`),
-			].join(" ")
-		: null;
+	// The kept changes of this browser come back while what the draft edits is as it was (`settingsVersion`).
+	const version = useMemo(() => (data ? settingsVersion(data) : null), [data]);
 	const proposalValues = useCallback(
 		(item: ProposalItem) => (data ? proposalPlaces(data, catalog.data, item) : {}),
 		[data, catalog.data],
@@ -155,7 +147,8 @@ export function useSettingsDraft() {
 	);
 	const structureChanged = Boolean(data && built && (built.renames.length > 0 || !sameJson(built.schema, data.schema)));
 	const check = useRead<SchemaProblem[]>("schema.check", { draft: built?.schema }, { skip: !built });
-	const problems = structureChanged ? (check.data ?? []).filter(ofCollection) : [];
+	// The collections' problems and the languages' (a source that is not in the list): both keep the change from being applied.
+	const problems = structureChanged ? (check.data ?? []) : [];
 
 	const label = useCallback((c: string) => String(draft.value(at.collectionValue(c, "label")) ?? "") || c, [draft]);
 	const fieldName = useCallback(
@@ -313,18 +306,21 @@ export function useSettingsDraft() {
 		return out;
 	}, [proposed, rows, draft]);
 
-	/** The collections' admin values the draft changed, whole, under the fields' names now: what the save sends beside the structure. */
+	/**
+	 * What the draft changes of the collections' admin values, as patches under the fields' names now: only what the person changed is named, so the
+	 * save leaves alone what it does not touch (and what another tab saved meanwhile). A collection the draft makes gives all it has.
+	 */
 	const changedValues = useMemo(() => {
-		const out: Record<string, AdminValues> = {};
-		if (!data || !built) return out;
-		const touched = new Set(changed.flatMap((path) => placeOf(path)?.collection ?? []));
+		const out: Record<string, AdminValuesPatch> = {};
+		if (!data || !built || !base) return out;
+		// The saved admin values under the draft's field names: what the draft's are compared with.
+		const saved = build(data, changed, (path) => (isAdminPlace(path) ? base[path] : draft.value(path)), catalog.data);
 		for (const [c, values] of Object.entries(built.adminValues)) {
-			if (!touched.has(c)) continue;
-			if (data.schema.collections[c] && sameJson(values, savedValues(data, c))) continue;
-			out[c] = values;
+			const patch = diffAdminValues(data.schema.collections[c] ? (saved.adminValues[c] ?? {}) : {}, values);
+			if (Object.keys(patch).length > 0) out[c] = patch;
 		}
 		return out;
-	}, [data, built, changed]);
+	}, [data, built, base, changed, draft.value, catalog.data]);
 
 	return {
 		read,

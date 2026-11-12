@@ -194,11 +194,15 @@ export function useDraft({
 	const put = useCallback(
 		(path: Path, next: unknown) => {
 			const copy = new Map(mineNow.current);
-			if (sameJson(next, saved(path))) copy.delete(path);
-			else copy.set(path, next);
+			if (sameJson(next, saved(path))) {
+				copy.delete(path);
+				// Typed back to the saved value is put back, as its undo would: an item taken for this place alone is no longer taken, so the
+				// next save does not send an item none of whose places it saves.
+				setAccepted((ids) => acceptedAfterRevert(ids, proposals.items, proposalValues, path, copy));
+			} else copy.set(path, next);
 			setMine(copy);
 		},
-		[saved, setMine],
+		[saved, setMine, proposals.items, proposalValues],
 	);
 
 	const take = useCallback(
@@ -334,9 +338,16 @@ export function useDraft({
 		 * now, my changes that are saved leave the draft and the rest stay to be saved again.
 		 */
 		savedPart: (now: Record<Path, unknown>) => {
-			setMine(new Map([...mineNow.current].filter(([path, value]) => !sameJson(value, now[path]))));
-			// The items taken into the draft went with the save: the server has marked them applied.
-			setAccepted([]);
+			// An item none of whose places is left went with the save. One that still has a place here was not written whole (its change of the
+			// schema waits): it stays taken, and goes with the next save.
+			const left = new Map([...mineNow.current].filter(([path, value]) => !sameJson(value, now[path])));
+			setAccepted((ids) =>
+				ids.filter((id) => {
+					const item = proposals.items.find((each) => each.id === id);
+					return item !== undefined && Object.keys(proposalValues(item)).some((path) => left.has(path));
+				}),
+			);
+			setMine(left);
 			void proposals.reload();
 		},
 	};

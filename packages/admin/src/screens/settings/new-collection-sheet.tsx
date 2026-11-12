@@ -1,3 +1,4 @@
+import { MAX_COLLECTION_NAME } from "@monti-cms/core";
 import {
 	Affix,
 	Button,
@@ -79,9 +80,11 @@ function Body({
 			: null
 		: !IDENTIFIER.test(id)
 			? t("settings.new.badId")
-			: taken
-				? t("settings.field.nameTaken")
-				: null;
+			: id.length > MAX_COLLECTION_NAME
+				? t("settings.problem.tooLong")
+				: taken
+					? t("settings.field.nameTaken")
+					: null;
 	const ready = label.trim() !== "" && id !== "" && error === null;
 	const address = path ?? addressOf(id);
 
