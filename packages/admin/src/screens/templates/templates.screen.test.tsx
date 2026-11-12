@@ -80,3 +80,44 @@ describe("the template editor", () => {
 		}
 	});
 });
+
+describe("the template editor: before the template is there", () => {
+	it("03 T153 nothing of the template can be changed before it is read: no name to type into and no save, and the saved name comes with nothing counted as changed", async () => {
+		const held = { release: () => {} };
+		const gate = new Promise<void>((done) => {
+			held.release = done;
+		});
+		const loaders = ([] as (() => Promise<{ site: StorySite }>)[]).concat(
+			templates.TemplateEditor.loaders as (() => Promise<{ site: StorySite }>)[],
+		);
+		const story = scene<{ site: StorySite }>(
+			{
+				// The story's own steps wait for the body: here the read is held.
+				loaders: loaders.map((load) => async () => {
+					const loaded = await load();
+					const { transport } = loaded.site;
+					loaded.site.transport = async (name, input, options) => {
+						if (name === "templates.get") await gate;
+						return transport(name, input, options);
+					};
+					return loaded;
+				}),
+			},
+			templates.default,
+		);
+		await story.run();
+		// From the tools, as a person opens it.
+		await userEvent.click(button("도구"));
+		await userEvent.click(button("기본 글"));
+		// The screen is drawn (its way back), the template is not read yet.
+		await expect.element(page.getByRole("button", { name: "템플릿", exact: true })).toBeVisible();
+		const name = () => page.getByRole("textbox", { name: "템플릿 이름" });
+		expect(name().elements()).toEqual([]);
+		expect(page.getByRole("button", { name: "저장", exact: true }).elements()).toEqual([]);
+		await userEvent.keyboard("먼저 친 글자");
+		held.release();
+		await expect.element(name()).toHaveValue("기본 글");
+		await expect.element(page.getByText("저장 안 됨")).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "저장", exact: true })).toBeVisible();
+	});
+});

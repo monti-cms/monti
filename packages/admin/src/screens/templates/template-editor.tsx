@@ -96,12 +96,17 @@ export function TemplateEditor({
 					{editor.dirty ? <EntryStatus status="editing">{t("templates.unsaved")}</EntryStatus> : null}
 				</Inline>
 				<Inline gap={16} justify="end">
-					<Button variant="primary" loading={editor.saving} onClick={() => void write()}>
-						{t("templates.save")}
-					</Button>
-					{/* The pill stands alone: the line sets it apart from the screen's tools (⋯, ✦). */}
-					<Separator orientation="vertical" length="control" flush />
-					{id ? (
+					{/* What acts on the template waits for the template (T153): before it is read its name is not there, and "save" would ask for one. */}
+					{editor.loaded ? (
+						<>
+							<Button variant="primary" loading={editor.saving} onClick={() => void write()}>
+								{t("templates.save")}
+							</Button>
+							{/* The pill stands alone: the line sets it apart from the screen's tools (⋯, ✦). */}
+							<Separator orientation="vertical" length="control" flush />
+						</>
+					) : null}
+					{id && editor.loaded ? (
 						<DropdownMenu>
 							<IconButton
 								label={t("templates.more")}
@@ -138,27 +143,32 @@ export function TemplateEditor({
 			</EditorHeader>
 			<Stack gap={0} grow minHeight={0} overflow="y" paddingX={48} paddingTop={16}>
 				<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
-					<Stack gap={0} paddingTop={16} paddingBottom={32}>
-						<FormField>
-							<FormFieldLabel htmlFor="monti-template-name" hidden>
-								{t("templates.name")}
-							</FormFieldLabel>
-							<Input
-								id="monti-template-name"
-								value={name}
-								placeholder={t("templates.name")}
-								size="display"
-								appearance="inline"
-								aria-invalid={nameMissing && name.trim() === "" ? true : undefined}
-								onChange={(event) => {
-									editor.set("title", event.target.value);
-									setNameMissing(false);
-								}}
-							/>
-							{nameMissing && name.trim() === "" ? <FormFieldError>{t("templates.nameMissing")}</FormFieldError> : null}
-						</FormField>
-						<EditorTitleRule />
-					</Stack>
+					{/* Like the body, the name is not there before the template is read: what was typed in an empty name stood over the saved one (T153). */}
+					{editor.loaded ? (
+						<Stack gap={0} paddingTop={16} paddingBottom={32}>
+							<FormField>
+								<FormFieldLabel htmlFor="monti-template-name" hidden>
+									{t("templates.name")}
+								</FormFieldLabel>
+								<Input
+									id="monti-template-name"
+									value={name}
+									placeholder={t("templates.name")}
+									size="display"
+									appearance="inline"
+									aria-invalid={nameMissing && name.trim() === "" ? true : undefined}
+									onChange={(event) => {
+										editor.set("title", event.target.value);
+										setNameMissing(false);
+									}}
+								/>
+								{nameMissing && name.trim() === "" ? (
+									<FormFieldError>{t("templates.nameMissing")}</FormFieldError>
+								) : null}
+							</FormField>
+							<EditorTitleRule />
+						</Stack>
+					) : null}
 					{editor.loaded && catalogs ? (
 						<BodyEditor
 							key={editor.bodyKey}
@@ -173,9 +183,11 @@ export function TemplateEditor({
 			</Stack>
 			<StatusBar>
 				<StatusBarSpacer />
-				<StatusBarCell end render={<span />}>
-					{t("templates.chars", { count: docLength(editor.doc) })}
-				</StatusBarCell>
+				{editor.loaded ? (
+					<StatusBarCell end render={<span />}>
+						{t("templates.chars", { count: docLength(editor.doc) })}
+					</StatusBarCell>
+				) : null}
 			</StatusBar>
 		</Stack>
 	);

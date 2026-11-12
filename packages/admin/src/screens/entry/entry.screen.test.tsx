@@ -133,6 +133,66 @@ describe("the entry editor: saving and coming back", () => {
 	});
 });
 
+/** The editor on a draft whose read does not answer until `release`, as on a slow connection. */
+function heldRead() {
+	const held = { release: () => {} };
+	const gate = new Promise<void>((done) => {
+		held.release = done;
+	});
+	const [load] = entry.site("draft") as [() => Promise<Loaded>];
+	const made = scene<Loaded>(
+		{
+			loaders: [
+				async () => {
+					const loaded = await load();
+					const { transport } = loaded.site;
+					loaded.site.transport = async (name, input, options) => {
+						if (name === "entries.get") await gate;
+						return transport(name, input, options);
+					};
+					return loaded;
+				},
+			],
+		},
+		entry.default,
+	);
+	return { ...made, release: () => held.release() };
+}
+
+describe("the entry editor: before the entry is there", () => {
+	it("02 T153 nothing of the entry can be changed before it is read: keys pressed where the title stands are not taken, and the saved title comes with no change counted", async () => {
+		const story = heldRead();
+		await story.run();
+		// The screen is drawn (its way back), the entry is not read yet.
+		await expect.element(button("게시글")).toBeVisible();
+		// Nothing that writes is there: no title to type into (it would read as an untitled entry), no save, no publish, no menu of the entry's actions.
+		expect(title().elements()).toEqual([]);
+		for (const name of ["저장", "발행하기", "더 보기"]) expect(button(name).elements()).toEqual([]);
+		// A press where the title stands once it is read, then keys, then ⌘S.
+		const at = { x: 500, y: 148 };
+		await userEvent.click(page.elementLocator(document.elementFromPoint(at.x, at.y) as HTMLElement));
+		await userEvent.keyboard("먼저 친 글자");
+		await save();
+		story.release();
+		await opened();
+		const box = title().element().getBoundingClientRect();
+		expect(at.x > box.left && at.x < box.right && at.y > box.top && at.y < box.bottom).toBe(true);
+		await expect.element(title()).toHaveValue("첫 번째 글");
+		await saveCell("저장됨");
+		await expect.element(button("저장 전 변경사항")).not.toBeInTheDocument();
+		const { site, id } = story.loaded();
+		const read = (await site.monti.run("entries.get", { id }, entry.admin)) as {
+			entry: { title: string; version: number };
+		};
+		expect([read.entry.title, read.entry.version]).toEqual(["첫 번째 글", 1]);
+		// Once it is there, it takes input as ever.
+		await titleEnd();
+		await userEvent.keyboard(" 다시");
+		await expect.element(title()).toHaveValue("첫 번째 글 다시");
+		await saveCell("저장 전 변경사항");
+	});
+});
+
 describe("the entry editor: tables", () => {
 	it("T62 '/' and '표' put in an empty table: three columns under a head row, the caret in its first cell", async () => {
 		await on("new").run();

@@ -383,22 +383,25 @@ export function EntryEditor({
 		/>
 	) : undefined;
 	// The title and the body, the same in the text alone and side by side (where the title takes the size of its row, and the body the rows).
-	const titleField = (size: "display" | "inherit") => (
-		<FormField>
-			<FormFieldLabel htmlFor={fieldInputId("title")} hidden>
-				{t("entry.title")}
-			</FormFieldLabel>
-			<Input
-				id={fieldInputId("title")}
-				value={editor.title}
-				placeholder={compared?.source.title || t("entry.title")}
-				size={size}
-				appearance="inline"
-				disabled={readOnly}
-				onChange={(event) => editor.set("title", event.target.value)}
-			/>
-		</FormField>
-	);
+	// Like the body, the title is not there before the entry is read: an empty title to type into would read as an untitled entry, and what was typed
+	// in it stood over the saved title when that came (T153). Keys pressed before then go nowhere, as there is nothing to take them.
+	const titleField = (size: "display" | "inherit") =>
+		read ? (
+			<FormField>
+				<FormFieldLabel htmlFor={fieldInputId("title")} hidden>
+					{t("entry.title")}
+				</FormFieldLabel>
+				<Input
+					id={fieldInputId("title")}
+					value={editor.title}
+					placeholder={compared?.source.title || t("entry.title")}
+					size={size}
+					appearance="inline"
+					disabled={readOnly}
+					onChange={(event) => editor.set("title", event.target.value)}
+				/>
+			</FormField>
+		) : null;
 	// A translation's body waits for its comparison: the source blocks new since it was translated go in as undecided blocks when the editor is made,
 	// and it is made again when they change (one is decided).
 	const addedKey = translation.added.map((each) => each.from).join(",");
@@ -436,7 +439,8 @@ export function EntryEditor({
 		) : null;
 	const publishedAt = publish.publishedAt;
 
-	const head = readOnly ? (
+	// What acts on the entry waits for the entry: before it is read nothing says whether it is published, archived or in the trash.
+	const head = !read ? null : readOnly ? (
 		trashed ? (
 			// The one pill of an entry in the trash (doc 11): it comes back as a draft, here.
 			<Button
@@ -589,7 +593,7 @@ export function EntryEditor({
 				<Inline gap={12} justify="end">
 					{head}
 					{/* The pill stands alone: the line sets it apart from the screen's tools (the panel, ⋯, ✦). */}
-					<Separator orientation="vertical" length="control" flush />
+					{head ? <Separator orientation="vertical" length="control" flush /> : null}
 					<IconButton
 						label={t("entry.properties")}
 						side="bottom"
@@ -602,7 +606,7 @@ export function EntryEditor({
 					>
 						<RightPanelOpen aria-hidden />
 					</IconButton>
-					{trashed ? (
+					{!read ? null : trashed ? (
 						<DropdownMenu>
 							<IconButton
 								label={t("entry.more")}
@@ -714,10 +718,12 @@ export function EntryEditor({
 					) : (
 						<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
 							{languages}
-							<Stack gap={0} paddingTop={16} paddingBottom={32}>
-								<EditorMarginLine margin={titleChange}>{titleField("display")}</EditorMarginLine>
-								<EditorTitleRule />
-							</Stack>
+							{read ? (
+								<Stack gap={0} paddingTop={16} paddingBottom={32}>
+									<EditorMarginLine margin={titleChange}>{titleField("display")}</EditorMarginLine>
+									<EditorTitleRule />
+								</Stack>
+							) : null}
 							{bodyField(null)}
 						</Stack>
 					)}

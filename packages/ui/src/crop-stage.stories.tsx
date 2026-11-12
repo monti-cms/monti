@@ -29,3 +29,8 @@ export const Cropped: Story = { args: { crop: { x: 20, y: 15, width: 55, height:
 
 /** No crop yet: the whole picture. */
 export const Whole: Story = {};
+
+/** Before the picture is in, its shape known: the stage stands at that shape with the crop box as large as the picture will be. */
+export const BeforeThePicture: Story = {
+	args: { src: null, shape: 16 / 9, crop: { x: 0, y: 0, width: 100, height: 100 } },
+};

@@ -42,7 +42,7 @@
 | 머리 줄 | 높이 `height-header`, 아래 가는 선 하나 | 편집기 머리와 같은 줄이다. |
 | "‹ 템플릿" | `TextButton variant="quiet"`(앞 아이콘, 템플릿 목록으로) | |
 | "저장 안 됨" | `EntryStatus status="editing"` | 바뀐 것이 있는 동안만. |
-| "저장" | `Button variant="primary"`(저장하는 동안 `loading`) | 늘 있다. 발행이 없으므로 이 페이지의 검은 알약 하나다. 보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다. |
+| "저장" | `Button variant="primary"`(저장하는 동안 `loading`) | 템플릿을 읽어 온 뒤에는 늘 있다. 읽기 전에는 "저장"과 구분선, ⋯, 이름 칸, 글자 수가 없다(이름을 모르는 채로 누르면 "이름을 써 주세요."가 떴다. T153). 발행이 없으므로 이 페이지의 검은 알약 하나다. 보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다. |
 | ⋯ | `IconButton` + `DropdownMenu`("복제" │ "지우기" `variant="danger"`) | 새 템플릿에는 없다. |
 | 머리 끝 구분선 | `Separator orientation="vertical" length="control"` | "저장" 알약 뒤, ⋯와 ✦ 앞. 편집기 머리와 같다([editor.md](editor.md)). |
 | ✦ 어시스턴트 열기 | [common.md](common.md)의 ✦ 어시스턴트 열기 | 머리 줄 끝. |
@@ -57,7 +57,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 다른 곳에서 먼저 저장함 | `Banner tone="danger"`(`title` "다른 곳에서 먼저 저장했습니다", `plainMeta`), 끝에 `TextButton` "서버 최신본 불러오기" | 화면 맨 위(머리 줄보다 위). 저장이 거절됐을 때만. |
-| 저장하지 않은 편집 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있습니다"), 끝에 `TextButton` "불러오기" · `TextButton variant="quiet"` "버리기" | 화면 맨 위(머리 줄보다 위). 저장하지 않고 닫은 편집이 이 브라우저에 남아 있을 때만. 글 편집기와 같은 임시 저장(`useEntryEditor`)이다. 템플릿에는 비교 화면이 없다. |
+| 저장하지 않은 편집 | `Banner`(`title` "이 브라우저에 저장하지 않은 편집이 있습니다"), 끝에 `TextButton` "불러오기"(한 번에 들어가고 커서는 본문으로 간다) · `TextButton variant="quiet"` "버리기" | 화면 맨 위(머리 줄보다 위). 저장하지 않고 닫은 편집이 이 브라우저에 남아 있을 때만. 글 편집기와 같은 임시 저장(`useEntryEditor`)이다. 템플릿에는 비교 화면이 없다. |
 | 불러오지 못함 | `Banner tone="danger"`(`title` "템플릿을 불러오지 못했습니다", `plainMeta`), 끝에 `TextButton` "다시 시도" | 화면 맨 위(머리 줄보다 위). 템플릿을 읽지 못했을 때만. |
 
 ## 데이터 (Data)

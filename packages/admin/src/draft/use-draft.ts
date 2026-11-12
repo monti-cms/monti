@@ -181,6 +181,9 @@ export function useDraft({
 		[quick, mine, pending, saved, value],
 	);
 
+	// Nothing is changed before the saved values are there. A change is one against what is saved: made on nothing, it would stand over the saved
+	// value when that comes, and the next save would write it (a title typed while the entry was still being read, T153).
+	const ready = base !== null;
 	const put = useCallback(
 		(path: Path, next: unknown) =>
 			setMine((current) => {
@@ -194,15 +197,17 @@ export function useDraft({
 
 	const take = useCallback(
 		(item: ProposalItem) => {
+			if (!ready) return;
 			for (const [path, next] of Object.entries(proposalValues(item))) put(path, next);
 			setAccepted((current) => (current.includes(item.id) ? current : [...current, item.id]));
 		},
-		[proposalValues, put],
+		[proposalValues, put, ready],
 	);
 
 	/** I change a place. Changing a proposed place takes the proposal first, then my change goes over it (proposal.md). */
 	const set = useCallback(
 		(path: Path, next: unknown) => {
+			if (!ready) return;
 			const state = cell(path);
 			if (state.kind === "proposed") take(state.item);
 			setQuick((current) => {
@@ -213,16 +218,17 @@ export function useDraft({
 			});
 			put(path, next);
 		},
-		[cell, take, put],
+		[cell, take, put, ready],
 	);
 
 	/** The ✦ fill button: the value goes straight in, blue until a person touches the place or it is saved. */
 	const quickFill = useCallback(
 		(path: Path, next: unknown) => {
+			if (!ready) return;
 			put(path, next);
 			setQuick((current) => new Set(current).add(path));
 		},
-		[put],
+		[put, ready],
 	);
 
 	const revert = useCallback(

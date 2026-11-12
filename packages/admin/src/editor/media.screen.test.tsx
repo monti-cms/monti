@@ -1360,7 +1360,7 @@ describe("a copy this browser kept, with a picture the saved body does not show"
 		expect(story.reads()).toHaveLength(1);
 	});
 
-	it("02 T135 [keys] '불러오기' pressed with the keyboard leaves the cursor in the text, not nowhere", async () => {
+	it("02 T135 '불러오기' pressed with the keyboard leaves the cursor in the text, not nowhere", async () => {
 		const story = keptCopy();
 		await story.run();
 		await expect.element(banner()).toBeVisible();
@@ -1372,7 +1372,7 @@ describe("a copy this browser kept, with a picture the saved body does not show"
 		await expect.element(paragraph("맨 앞에 브라우저에 남은 첫 문단.")).toBeVisible();
 	});
 
-	it("02 T135 [keys] '버리기' pressed with the keyboard throws the copy away and leaves the cursor in the text", async () => {
+	it("02 T135 '버리기' pressed with the keyboard throws the copy away and leaves the cursor in the text", async () => {
 		const story = keptCopy();
 		await story.run();
 		await expect.element(banner()).toBeVisible();
