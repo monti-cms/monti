@@ -74,8 +74,7 @@ export async function storySite({
 }: Partial<MontiOptions> & {
 	schema: Schema;
 	setup?: (monti: Monti, storage: Storage | null) => Promise<void>;
-	/** `"bypass"`: nobody signed in; the dev server let this machine in (doc 16). */
-	signedIn?: boolean | "bypass";
+	signedIn?: boolean;
 	storage?: Storage | null;
 }): Promise<StorySite> {
 	// One story shows at a time, and a Postgres left open holds its memory until the page goes: the last story's goes first (T116).
@@ -98,7 +97,7 @@ export async function storySite({
 	const api = createAdminApi(monti);
 	let token: string | null = null;
 	// A story is its own machine: a session the dev server's bypass gave holds here (the admin API asks the same of a request's address).
-	const local = signedIn === "bypass" || options.devProof != null;
+	const local = options.devProof != null;
 	const transport: Transport = async (name, input, options = {}) => {
 		const answer = await api.call(name, { input, ...options }, token, local);
 		if (answer.session !== undefined) token = answer.session?.token ?? null;
@@ -111,8 +110,7 @@ export async function storySite({
 		onProgress?.(100);
 		return { status: answer.status, body: JSON.parse(JSON.stringify(answer.body)) };
 	};
-	if (signedIn === "bypass") token = (await api.letIn()).token;
-	else if (signedIn) {
+	if (signedIn) {
 		const made = await transport("auth.createFirstAdmin", {
 			email: "me@example.dev",
 			password: "story password",

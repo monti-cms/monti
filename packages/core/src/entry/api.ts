@@ -71,8 +71,6 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		monti.site.devProof !== null &&
 		hostedBy(options.env) === undefined;
 	const bypasses = (request: Request) => bypassOn && isLocalRequest(request);
-	/** The session of someone let in without signing in, for Storybook, which has no loopback address to prove itself at. */
-	const letIn = () => startSession(monti.db, DEV_WHO, monti.now());
 	/** A bypassed session is one only while the bypass holds for the request: turned off, or from another machine, it opens nothing. */
 	async function sessionOf(token: string | null | undefined, local: boolean) {
 		const session = await findSession(monti.db, token, monti.now());
@@ -287,5 +285,5 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		if (githubRoute && request.method === "GET") return githubSignIn(request, githubRoute[1] !== undefined);
 		return json(404, { error: "not-found" });
 	};
-	return Object.assign(handle, { call, upload, letIn });
+	return Object.assign(handle, { call, upload });
 }

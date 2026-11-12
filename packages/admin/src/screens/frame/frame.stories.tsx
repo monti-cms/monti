@@ -50,9 +50,6 @@ export const signedIn = (
 /** Flow 8, step 03: the first admin is in, and the first collection is empty. A new site has no counts. */
 export const Fresh: Story = { loaders: signedIn() };
 
-/** The dev server let this machine in without signing in (doc 16): the sidebar's last line says so. */
-export const DevBypass: Story = { loaders: signedIn(undefined, { signedIn: "bypass" }) };
-
 /** The sidebar's numbers: entries per collection, the trash, failed deliveries (doc 15). */
 export const Counts: Story = {
 	loaders: signedIn(async (monti) => {

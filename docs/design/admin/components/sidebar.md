@@ -17,7 +17,7 @@
 
 `Sidebar`는 도구 바탕 위의 `nav`다. 오른쪽 가장자리를 따라 선이 있고, 사이트 이름이 든 머리, 묶음들의 행, 바닥이 있다. 쓰는 사람이 가장자리를 끌어 너비를 바꾼다(200px에서 400px, 끌기 전에는 232px, `width-sidebar`). 좁은 화면에서는 흐려진 페이지 위로 왼쪽에서 열리는 서랍이 된다. 시트처럼 모서리가 각지고 열린 쪽 가장자리에 선이 있다. `label`은 스크린 리더용 이름이다.
 
-부품: `SidebarNote`, `SidebarProvider`, `SidebarHeader`(머리 줄. 사이트 이름은 `Text`(span)로 넣으면 남는 폭을 차지해 접기 버튼이 줄 끝에 오고, 레일로 접으면 숨는다), `SidebarContent`, `SidebarGroup`, `SidebarGroupContent`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarFoot`, `SidebarInset`(`corner`: 오른쪽 위 ✦ 자리. `banner`: 사이트 전체에 관한 알림 띠. 페이지 위에 가장자리에서 가장자리까지 걸리고, ✦를 포함한 페이지 전체가 그 아래로 내려간다), `SidebarTrigger`, `SidebarRailToggle`, `SidebarScreenMode`, 그리고 `useSidebar`. 레일은 도구 바탕이고, 위 12px, 양옆 14px, 아래 16px이며, 행 사이는 2px다. 머리 줄 아래는 6px다. 위쪽 값은 펼쳐도 접어도 같아서 접기 버튼이 제자리에 있다. 접으면 양옆이 6px · 5px(오른쪽 1px 선 포함)라서 36px 행이 48px 레일을 딱 채우고 옆으로 스크롤되지 않는다.
+부품: `SidebarProvider`, `SidebarHeader`(머리 줄. 사이트 이름은 `Text`(span)로 넣으면 남는 폭을 차지해 접기 버튼이 줄 끝에 오고, 레일로 접으면 숨는다), `SidebarContent`, `SidebarGroup`, `SidebarGroupContent`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarFoot`, `SidebarInset`(`corner`: 오른쪽 위 ✦ 자리. `banner`: 사이트 전체에 관한 알림 띠. 페이지 위에 가장자리에서 가장자리까지 걸리고, ✦를 포함한 페이지 전체가 그 아래로 내려간다), `SidebarTrigger`, `SidebarRailToggle`, `SidebarScreenMode`, 그리고 `useSidebar`. 레일은 도구 바탕이고, 위 12px, 양옆 14px, 아래 16px이며, 행 사이는 2px다. 머리 줄 아래는 6px다. 위쪽 값은 펼쳐도 접어도 같아서 접기 버튼이 제자리에 있다. 접으면 양옆이 6px · 5px(오른쪽 1px 선 포함)라서 36px 행이 48px 레일을 딱 채우고 옆으로 스크롤되지 않는다.
 
 `SidebarMenuButton`의 행은 설정 화면의 `NavLink`와 같은 행(`NAV_ROW`)이다. 호버 바탕도 같은 `bg-selected`다(디자인 시스템의 색 규칙이 설정의 컬렉션 열을 이 목록에 넣는다). `SidebarMenuBadge`와 `NavLink`의 끝 식별자도 같은 모양(`NAV_ROW_END`)이다.
 
@@ -42,8 +42,6 @@
 ## 화면 모드
 
 맨 아래 행(`.mt-sidebar-foot`)은 아이콘 세 개짜리 토글이다(`.mt-seg`: 시스템, 밝게, 어둡게. 화면, 해, 달로 그린다). 사이드바 너비를 채우고 세 칸이 똑같이 나눈다. 현재 모드의 칸은 눌린 상태(`bg-current`)이고, 다른 칸은 호버하면 `bg-selected`다. 한 번 누르면 바뀐다. 처음에는 시스템을 따른다.
-
-그 위의 한 줄(`SidebarNote`)은 이 서버에 대해 일하는 동안 알아야 할 것을 말한다. 지금은 하나다: 개발 서버가 로그인 없이 들여보냈을 때의 "개발 서버 · 로그인 없이"(16번 문서). 흐린 글자(`fg-faint`, `text-note`) 한 줄이고 누를 수 없다. 자리가 모자라면 말줄임표로 줄고, 접은 사이드바에는 보이지 않는다.
 
 접힌 사이드바에는 세 칸을 둘 자리가 없으므로, 아이콘 버튼 하나가 현재 모드를 보인다. 누르면 작은 메뉴가 위로 열리고 현재 모드에 ✓가 있다.
 

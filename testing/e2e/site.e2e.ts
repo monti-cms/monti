@@ -302,7 +302,7 @@ test.describe("the preview", () => {
 
 raw.describe("the dev server and the live site", () => {
 	raw(
-		"16-5 on the dev server a browser of this machine gets into the admin without signing in, and the sidebar says why",
+		"16-5 on the dev server a browser of this machine gets into the admin without signing in",
 		async ({ browser }) => {
 			const context = await browser.newContext({
 				baseURL: DEV,
@@ -313,7 +313,6 @@ raw.describe("the dev server and the live site", () => {
 			await page.goto("/admin");
 			await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
 			await expect(page.getByLabel("이메일")).toBeHidden();
-			await expect(page.getByText("개발 서버 · 로그인 없이")).toBeVisible();
 			const state = await page.request.post("/admin/api/operations/auth.state", { data: { input: {} } });
 			expect(((await state.json()) as { session: unknown }).session).toEqual({ who: "dev", bypass: true });
 			await context.close();

@@ -260,7 +260,6 @@ export const SidebarGroup = close(open.SidebarGroup);
 export const SidebarGroupContent = close(open.SidebarGroupContent);
 export const SidebarHeader = close(open.SidebarHeader);
 export const SidebarFoot = close(open.SidebarFoot);
-export const SidebarNote = close(open.SidebarNote);
 export const SidebarInset = close(open.SidebarInset);
 export const SidebarMenu = close(open.SidebarMenu);
 export const SidebarMenuBadge = close(open.SidebarMenuBadge);

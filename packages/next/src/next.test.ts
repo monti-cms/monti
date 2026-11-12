@@ -357,12 +357,12 @@ describe("the site's cache and which server this is", () => {
 describe("opening the site once, and again when its config changed", () => {
 	it("16-4 the same config gives the same Monti; a changed config (the schema file edited, a setting changed) makes it again on the same database pool", () => {
 		const first = { schema: { v: 1 }, database: "postgres://x", dev: false } as never;
-		const one = openSite(first, "/site");
-		expect(openSite(first, "/site")).toBe(one);
+		const one = openSite(first, { root: "/site" });
+		expect(openSite(first, { root: "/site" })).toBe(one);
 		expect(core.opened).toHaveLength(1);
 		// The dev server evaluates the config again after an edit: another object.
 		const edited = { schema: { v: 2 }, database: "postgres://x", dev: false } as never;
-		const two = openSite(edited, "/site");
+		const two = openSite(edited, { root: "/site" });
 		expect(two).not.toBe(one);
 		expect(core.opened).toHaveLength(2);
 		expect((core.opened[1]?.config as { schema: unknown }).schema).toEqual({ v: 2 });
@@ -371,7 +371,7 @@ describe("opening the site once, and again when its config changed", () => {
 		expect(core.pools).toBe(1);
 		// The live site brings no proof of a local browser; the dev server brings one.
 		expect((core.opened[1]?.config as { devProof: unknown }).devProof).toBeNull();
-		openSite({ schema: {}, database: "postgres://x", dev: true } as never, "/site");
+		openSite({ schema: {}, database: "postgres://x", dev: true } as never, { root: "/site" });
 		expect((core.opened[2]?.config as { devProof: unknown }).devProof).not.toBeNull();
 	});
 });
@@ -432,5 +432,40 @@ describe("the proof that a browser runs on this machine", () => {
 		expect([asked.status, asked.headers.get("access-control-allow-private-network")]).toEqual([204, "true"]);
 		expect((await ask(url, { origin: "http://localhost:3000" }, "POST")).status).toBe(405);
 		proof.close();
+	});
+});
+
+describe("the site decides how its pages are refreshed", () => {
+	type Opened = {
+		config: {
+			receivers: {
+				destination: string;
+				accepts?: (event: MontiEvent) => boolean;
+				send: (event: MontiEvent) => Promise<void>;
+			}[];
+		};
+	};
+	const receiversOf = (opened: unknown) => (opened as Opened).config.receivers;
+	const config = () => ({ schema: {}, database: "postgres://x", dev: false }) as never;
+
+	it("16-3 left alone, the adapter refreshes the whole site; with the site's own function that runs instead, for the same events; with false nothing is added", async () => {
+		openSite(config(), { root: "/own" });
+		const [standard] = receiversOf(core.opened.at(-1));
+		await standard?.send({ type: "entry.published", ids: ["e1"] });
+		expect(next.revalidated).toEqual([["/", "layout"]]);
+
+		const got: MontiEvent[] = [];
+		openSite(config(), { root: "/own", refresh: (event) => void got.push(event) });
+		const [own] = receiversOf(core.opened.at(-1));
+		expect(own?.destination).toBe("plugin:next");
+		// The site's function gets what a visitor would see change, and not a save alone.
+		expect(own?.accepts?.({ type: "entry.saved", ids: [] })).toBe(false);
+		next.revalidated = [];
+		await own?.send({ type: "entry.published", ids: ["e1"], paths: ["/posts/a"] });
+		expect(got).toEqual([{ type: "entry.published", ids: ["e1"], paths: ["/posts/a"] }]);
+		expect(next.revalidated).toEqual([]);
+
+		openSite(config(), { root: "/own", refresh: false });
+		expect(receiversOf(core.opened.at(-1))).toEqual([]);
 	});
 });

@@ -357,23 +357,6 @@ function SidebarFoot({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-/**
- * One quiet line above the foot: something about this server the person should know while they work (the dev server let them in without signing
- * in). Words only, never pressed. A folded rail has no room for words, so it is not shown there.
- */
-function SidebarNote({ className, ...props }: React.ComponentProps<"p">) {
-	return (
-		<p
-			data-slot="sidebar-note"
-			className={cn(
-				"truncate px-monti-10 pt-monti-8 text-monti-faint text-monti-note group-data-[rail]/rail:hidden",
-				className,
-			)}
-			{...props}
-		/>
-	);
-}
-
 /** The screen modes in the order they are offered. */
 const SCREEN_MODES = ["system", "light", "dark"] as const;
 type ScreenMode = (typeof SCREEN_MODES)[number];
@@ -698,7 +681,6 @@ export {
 	SidebarGroupContent,
 	SidebarHeader,
 	SidebarFoot,
-	SidebarNote,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuBadge,

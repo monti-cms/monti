@@ -72,9 +72,27 @@ shows, and the token ends after an hour.
 
 ## The site's cache
 
-`openSite` adds a receiver that marks every cached page of the site to be drawn again when what the site shows changes (an entry published or
-taken off the site, a file replaced, trashed or restored). The whole site and not only the entry's own page: a list, a post that names a
-category, a translation that follows its source show it too. A page is drawn again when it is next visited.
+A Next site keeps the pages it has drawn, so something must tell it when an entry is published. `openSite` does: Monti's events reach the
+site inside the admin API's request.
+
+What is drawn again is the site's to decide:
+
+```ts
+// lib/monti.ts
+export const { monti, reader } = openSite(config, {
+	refresh: (event) => {
+		// event.type, event.ids, event.paths (public addresses)
+		for (const path of event.paths ?? []) revalidatePath(path);
+	},
+});
+```
+
+- **Nothing given** (the default): every cached page of the site is marked to be drawn again (`refreshSite()`), and each is drawn when it is next
+  visited. Nothing stays old, without a line of the site's: a list, a post that names a category, a translation that follows its source all
+  show an entry besides its own page.
+- **A function**: it runs instead, for every event a visitor could see (not for a save alone, an uploaded file or the admin's own values).
+  Call `refreshSite()` in it for the cases the site does not narrow.
+- **`false`**: the adapter does nothing; listen with a receiver of the site's own (`receivers` in `monti.config.ts`).
 
 The mark is on this server process's cache. A site run as several processes or machines needs a cache they share (a Next cache handler);
 with the stock one, an entry published through one process stays old on the others.

@@ -23,11 +23,12 @@ export type MontiSite = { monti: Monti; reader: SiteReader };
  */
 const UNSEEN = new Set(["entry.saved", "media.uploaded", "settings.saved"]);
 
-/** Longer than a page takes to draw: the second mark after a change comes this much later (see `cacheReceiver`). */
+/** Longer than a page takes to draw: the second mark after a change comes this much later (see `refreshSite`). */
 const SETTLE_MS = 2000;
 
 /**
- * Refreshes the site's cached pages after a change the site shows (doc 16). The whole site, not only the event's `paths`: another page may show
+ * What the adapter does unless the site says otherwise (`openSite`'s `refresh`): it refreshes the site's cached pages after a change the site
+ * shows (doc 16). The whole site, not only the event's `paths`: another page may show
  * the entry too (a list, a post that names a category, a translation that follows its source), and a page that is never stale is worth more
  * than one that is rebuilt less often. A page is rebuilt when it is next visited, not here. It works inside a request (the admin API's route);
  * a delivery sent again from the command line has no Next around it and fails, to be sent again from the admin.
@@ -38,17 +39,30 @@ const SETTLE_MS = 2000;
 export const cacheReceiver: Receiver = {
 	destination: "plugin:next",
 	accepts: (event: MontiEvent) => !UNSEEN.has(event.type),
-	send: async () => {
-		revalidatePath("/", "layout");
-		// Once more a moment later. A page being drawn at this very moment read the site as it was before the change, and Next stamps it with
-		// the time it finished drawing, which is after the mark above: it would be kept as fresh, old content and all, until the next change. The
-		// second mark comes after any such drawing has ended, so that page too is drawn again when it is next visited.
-		after(async () => {
-			await new Promise((done) => setTimeout(done, SETTLE_MS));
-			revalidatePath("/", "layout");
-		});
-	},
+	send: async () => refreshSite(),
 };
+
+/**
+ * Marks every cached page of the site to be drawn again: now, and once more a moment later. A page being drawn at the very moment of a change
+ * read the site as it was before, and Next stamps it with the time it finished drawing, which is after the first mark: it would be kept as
+ * fresh, old content and all, until the next change. The second mark comes after any such drawing has ended. A site that refreshes its pages its
+ * own way (`openSite`'s `refresh`) may call this for the cases it does not narrow.
+ */
+export function refreshSite(): void {
+	revalidatePath("/", "layout");
+	after(async () => {
+		await new Promise((done) => setTimeout(done, SETTLE_MS));
+		revalidatePath("/", "layout");
+	});
+}
+
+/**
+ * What the site does when Monti says something a visitor sees has changed. Left out, every cached page is marked to be drawn again
+ * (`refreshSite`): nothing stays old, at the cost of each page being drawn once more on its next visit. A site that knows which pages show what
+ * gives its own function (it gets the event: its type, the entries, their public `paths`), or `false` to do nothing here and listen with a
+ * receiver of its own.
+ */
+export type Refresh = false | ((event: MontiEvent) => void | Promise<void>);
 
 /** Whether the schema file can be written: the dev server changes structure values by writing it (doc 12). */
 function writable(root: string): boolean {
@@ -68,23 +82,40 @@ export const isDevServer = (root: string, env: Readonly<Record<string, string | 
 	env.NODE_ENV === "development" && writable(root);
 
 const HELD = Symbol.for("monti.next.site");
-type Held = { config: MontiConfig; root: string; site: MontiSite; proof: ReturnType<typeof loopbackProof> | null };
+type Held = {
+	config: MontiConfig;
+	root: string;
+	refresh: Refresh | undefined;
+	site: MontiSite;
+	proof: ReturnType<typeof loopbackProof> | null;
+};
 
 /**
  * Opens the site's Monti and the reader its pages read with (doc 16). Once for a server: the dev server evaluates the module again on every
  * change, and each time would open another pool of database connections. When the config itself changed (the schema file was edited, a setting
  * was), Monti is made again from it on the same pool, so the dev server runs what the files say now.
  */
-export function openSite(config: MontiConfig, root = process.cwd()): MontiSite {
+export function openSite(
+	config: MontiConfig,
+	{
+		root = process.cwd(),
+		refresh,
+	}: { /** The site's folder, where `monti.schema.ts` is. */ root?: string; refresh?: Refresh } = {},
+): MontiSite {
 	const held = globalThis as { [HELD]?: Held };
 	const before = held[HELD];
-	if (before && before.config === config && before.root === root) return before.site;
+	if (before && before.config === config && before.root === root && before.refresh === refresh) return before.site;
+	// The site's own way to refresh its pages takes the adapter's place; `false` leaves it to the site's receivers.
+	const receiver: Receiver[] =
+		refresh === false
+			? []
+			: [refresh ? { ...cacheReceiver, send: async (event) => void (await refresh(event)) } : cacheReceiver];
 	const dev = config.dev ?? isDevServer(root);
 	// The proof that a browser is on this machine, for the dev server's sign-in bypass: one listener for the server's life.
 	const proof = dev ? (before?.proof ?? loopbackProof()) : null;
 	if (!dev) before?.proof?.close();
 	const monti = openMonti(
-		{ ...config, dev, devProof: proof, receivers: [...(config.receivers ?? []), cacheReceiver] },
+		{ ...config, dev, devProof: proof, receivers: [...(config.receivers ?? []), ...receiver] },
 		root,
 		before ? { db: before.site.monti.db } : {},
 	);
@@ -97,6 +128,6 @@ export function openSite(config: MontiConfig, root = process.cwd()): MontiSite {
 			storage: monti.site.storage,
 		}),
 	};
-	held[HELD] = { config, root, site, proof };
+	held[HELD] = { config, root, refresh, site, proof };
 	return site;
 }

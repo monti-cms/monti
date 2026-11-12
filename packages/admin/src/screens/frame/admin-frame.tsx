@@ -18,7 +18,6 @@ import {
 	SidebarMenuItem,
 	SidebarMenuSub,
 	SidebarMenuSubButton,
-	SidebarNote,
 	SidebarProvider,
 	SidebarRailToggle,
 	SidebarScreenMode,
@@ -33,7 +32,6 @@ import { useMoveMedia } from "../../media/use-media-actions";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href } from "../../route";
-import { useSession } from "../../session";
 import { type FolderScope, useFolders } from "../list/folders";
 import { SchemaBanner } from "./schema-banner";
 import { SessionEndedBanner } from "./session-ended";
@@ -191,7 +189,6 @@ export function AdminFrame({
 	children: ReactNode;
 }) {
 	const { t, siteName } = useAdmin();
-	const session = useSession();
 	// Read again after every write: a saved collection's label and a new collection's row show at once (flow 4, step 06).
 	const schema = useRead<SchemaRead>("schema.read", {}, { afterWrites: true });
 	const [mode, setMode] = useScreenMode();
@@ -266,8 +263,6 @@ export function AdminFrame({
 									onOpen={onOpen}
 								/>
 							</SidebarMenu>
-							{/* Why there was no sign-in: the dev server let this machine in (doc 16). */}
-							{session.state?.session?.bypass ? <SidebarNote>{t("frame.devBypass")}</SidebarNote> : null}
 							<SidebarFoot>
 								<SidebarScreenMode
 									value={mode}
