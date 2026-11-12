@@ -9,6 +9,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 	Banner,
+	Box,
 	Button,
 	Count,
 	DescriptionItem,
@@ -19,10 +20,17 @@ import {
 	DialogFormFooter,
 	DialogHeader,
 	DialogTitle,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+	Empty,
 	FormField,
 	FormFieldDescription,
 	FormFieldError,
 	FormFieldLabel,
+	Heading,
 	Inline,
 	Input,
 	ListSection,
@@ -67,7 +75,9 @@ const KEYS: readonly Key[] = [
 ];
 
 /** The keys plugins ask for, one row per slot; `tail` when a key is in. */
-const SLOTS: readonly { id: string; title: string; detail?: string; meta: string; tail?: string }[] = [
+type Slot = { id: string; title: string; detail?: string; meta: string; tail?: string };
+
+const SLOTS: readonly Slot[] = [
 	{ id: "bareun", title: "바른 맞춤법", meta: "bareun" },
 	{ id: "algolia-search", title: "Algolia 검색", detail: "검색 키", meta: "algolia", tail: "4410" },
 	{ id: "algolia-admin", title: "Algolia 검색", detail: "관리 키", meta: "algolia" },
@@ -100,6 +110,7 @@ const MODELS = [
 /** Every state of the API keys screen (screens.md › ApiKeys, flow 10), named as the flow names it. */
 export type ApiKeysStage =
 	| "기본"
+	| "줄 메뉴"
 	| "키 없음"
 	| "서비스 고르기"
 	| "키 입력"
@@ -137,19 +148,64 @@ function Said({ children }: { children: string }) {
 	return <Toaster duration={Number.POSITIVE_INFINITY} />;
 }
 
-/** A key row's actions: change it (the key window) and remove it. */
-function KeyActions({ edit = true }: { edit?: boolean }) {
+/** A key row's ⋯: change it (the key window) and remove it. A site that cannot store keys only removes. */
+function KeyMenu({ name, edit = true, open }: { name: string; edit?: boolean; open?: boolean }) {
 	return (
-		<>
-			{edit && (
-				<Button variant="ghost" size="sm">
-					편집
-				</Button>
-			)}
-			<Button variant="ghost-danger" size="sm">
-				지우기
-			</Button>
-		</>
+		<RowActions>
+			<DropdownMenu {...(open ? { open } : {})}>
+				<RowMore label={`${name} 더 보기`} trigger={(button) => <DropdownMenuTrigger render={button} />} />
+				<DropdownMenuContent align="end">
+					{edit && (
+						<>
+							<DropdownMenuItem>편집</DropdownMenuItem>
+							<DropdownMenuSeparator />
+						</>
+					)}
+					<DropdownMenuItem variant="danger">지우기</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		</RowActions>
+	);
+}
+
+/** A key row's two lines: its name with the key's end after it, and what there is to say of it under them. */
+function KeyName({
+	name,
+	detail,
+	tail,
+	meta,
+	tone = "subtle",
+	mono = false,
+}: {
+	name: string;
+	detail?: string;
+	tail?: string;
+	meta: string;
+	tone?: "subtle" | "faint" | "danger";
+	mono?: boolean;
+}) {
+	return (
+		<Stack gap={4} minWidth={0}>
+			<Inline gap={8} align="baseline">
+				<Text truncate tone={tone === "faint" ? "muted" : "default"}>
+					{name}
+				</Text>
+				{detail ? (
+					<Text variant="note" tone="subtle">
+						{detail}
+					</Text>
+				) : null}
+				{tail ? (
+					<Count>
+						{"··· "}
+						{tail}
+					</Count>
+				) : null}
+			</Inline>
+			<Text as="div" variant={mono ? "meta" : "note"} mono={mono} tone={tone} truncate>
+				{meta}
+			</Text>
+		</Stack>
 	);
 }
 
@@ -448,33 +504,47 @@ function Floating({ stage }: { stage: ApiKeysStage }) {
 	}
 }
 
-/** The keys as rows of the shared table: the name and the key's end on one line, its use under it, and a ⋯ with "편집" and "지우기". */
-function KeyTable({ keys }: { keys: readonly Key[] }) {
+/**
+ * The keys as rows of the shared table, as the templates tab beside this one draws its list: the name and the key's end on one line, its use under
+ * it, and a ⋯ with "편집" and "지우기".
+ */
+function KeyTable({ keys, edit, menu }: { keys: readonly Key[]; edit: boolean; menu: boolean }) {
 	return (
 		<Table container="none" aria-label="AI 키">
 			<TableBody>
-				{keys.map((key) => (
+				{keys.map((key, index) => (
 					<TableRow key={key.name} twoLine>
 						<TableCell truncate>
-							<Stack gap={4} minWidth={0}>
-								<Inline gap={8} align="baseline">
-									<Text truncate>{key.name}</Text>
-									{key.tail ? (
-										<Count>
-											{"··· "}
-											{key.tail}
-										</Count>
-									) : null}
-								</Inline>
-								<Text as="div" variant="note" tone={key.tone === "danger" ? "danger" : "subtle"} truncate>
-									{key.meta}
-								</Text>
-							</Stack>
+							<KeyName name={key.name} tail={key.tail} meta={key.meta} tone={key.tone} />
 						</TableCell>
 						<TableCell align="end">
-							<RowActions>
-								<RowMore label="더 보기" />
-							</RowActions>
+							<KeyMenu name={key.name} edit={edit} open={menu && index === 0} />
+						</TableCell>
+					</TableRow>
+				))}
+			</TableBody>
+		</Table>
+	);
+}
+
+/** The keys plugins ask for, in the same table: a slot with a key has the same ⋯; one without has "키 넣기". */
+function SlotTable({ slots }: { slots: readonly Slot[] }) {
+	return (
+		<Table container="none" aria-label="플러그인 키">
+			<TableBody>
+				{slots.map((slot) => (
+					<TableRow key={slot.id} twoLine>
+						<TableCell truncate>
+							<KeyName name={slot.title} detail={slot.detail} tail={slot.tail} meta={slot.meta} mono />
+						</TableCell>
+						<TableCell align="end">
+							{slot.tail ? (
+								<KeyMenu name={slot.title} />
+							) : (
+								<Button variant="ghost" size="sm">
+									키 넣기
+								</Button>
+							)}
 						</TableCell>
 					</TableRow>
 				))}
@@ -505,21 +575,12 @@ function keysOf(stage: ApiKeysStage): readonly Key[] {
 }
 
 /**
- * Tools, API keys tab: three tables. The AI services' keys (the models come from them); the one model this screen picks (the quick task's); the
- * keys plugins ask for, one row per slot. Every key row looks and acts the same: its last four after its name, "편집 · 지우기" when it is in, and
- * "키 넣기" when it is not, all through the same key window (a plugin's has its service set). `stage` draws each state of flow 10; `plugins` off is
- * a site whose plugins ask for no key, which has no third table.
+ * Tools, API keys tab. The AI services' keys are a list like the templates tab's: rows of the shared table, each with its last four after its name,
+ * its use under it, and "편집 · 지우기" in its ⋯. Under it, the one model this screen picks (the quick task's): a setting, not a list. A site whose
+ * plugins ask for keys has a second list, one row per slot, and then each list has its name over it. All keys go through the same key window (a
+ * plugin's has its service set). `stage` draws each state of flow 10; `plugins` off is a site whose plugins ask for no key.
  */
-export function ApiKeysScreen({
-	stage = "기본",
-	plugins = true,
-	rows = "sections",
-}: {
-	stage?: ApiKeysStage;
-	plugins?: boolean;
-	/** `table` draws the keys as rows of the shared table, as the built 템플릿 tab beside this one draws its list. */
-	rows?: "sections" | "table";
-}) {
+export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: ApiKeysStage; plugins?: boolean }) {
 	const keys = keysOf(stage);
 	const noSecret = stage === "비밀값 없음" || stage === "비밀값 없음 · 키 있음";
 	const unreadable = stage === "읽을 수 없음" || stage === "다시 넣기";
@@ -528,6 +589,16 @@ export function ApiKeysScreen({
 			? { value: "o:gpt-5.4-mini", model: "gpt-5.4-mini", key: "OpenAI 회사" }
 			: { value: "a:claude-haiku-5-5", model: "claude-haiku-5-5", key: "Anthropic 개인" };
 	const slots = SLOTS.map((slot) => (stage === "키 넣음" && slot.id === "bareun" ? { ...slot, tail: "4410" } : slot));
+	/** Two lists on the page: each says which it is. One list needs no name, the tab has said it. */
+	const named = plugins && !noSecret;
+	const list =
+		keys.length === 0 ? (
+			noSecret ? null : (
+				<Empty title="아직 키가 없습니다." />
+			)
+		) : (
+			<KeyTable keys={keys} edit={!noSecret} menu={stage === "줄 메뉴"} />
+		);
 	return (
 		<AdminFrame
 			open="tools"
@@ -560,29 +631,14 @@ export function ApiKeysScreen({
 					</TabLinks>
 				</PageToolbar>
 				<PageBody>
-					<Stack gap={40} paddingTop={32}>
-						{rows === "table" ? <KeyTable keys={keys} /> : null}
-						{rows === "table" ? null : (
-							<ListSection title="AI 키">
-								{keys.length === 0 && <ListSectionRow title="없음" muted />}
-								{keys.map((key) => (
-									<ListSectionRow
-										key={key.name}
-										title={key.name}
-										titleCount={
-											key.tail && (
-												<>
-													{"··· "}
-													{key.tail}
-												</>
-											)
-										}
-										meta={key.meta}
-										metaTone={key.tone ?? "muted"}
-										actions={<KeyActions edit={!noSecret} />}
-									/>
-								))}
-							</ListSection>
+					<Stack gap={40} paddingTop={named ? 32 : 0}>
+						{named ? (
+							<Stack gap={0}>
+								<ListTitle>AI 키</ListTitle>
+								{list}
+							</Stack>
+						) : (
+							list
 						)}
 						{/* The one model this screen picks; the list comes from the AI keys above. */}
 						{!noSecret && (
@@ -619,40 +675,27 @@ export function ApiKeysScreen({
 							</ListSection>
 						)}
 						{/* A plugin's slot is a key row like the AI keys: the same window adds and changes it, with its service already set. */}
-						{plugins && !noSecret && (
-							<ListSection title="플러그인 키">
-								{slots.map((slot) => (
-									<ListSectionRow
-										key={slot.id}
-										title={slot.title}
-										detail={slot.detail}
-										titleCount={
-											slot.tail ? (
-												<>
-													{"··· "}
-													{slot.tail}
-												</>
-											) : undefined
-										}
-										meta={slot.meta}
-										metaTone="subtle"
-										actions={
-											slot.tail ? (
-												<KeyActions />
-											) : (
-												<Button variant="ghost" size="sm">
-													키 넣기
-												</Button>
-											)
-										}
-									/>
-								))}
-							</ListSection>
+						{named && (
+							<Stack gap={0}>
+								<ListTitle>플러그인 키</ListTitle>
+								<SlotTable slots={slots} />
+							</Stack>
 						)}
 					</Stack>
 				</PageBody>
 			</PageColumn>
 			<Floating stage={stage} />
 		</AdminFrame>
+	);
+}
+
+/** The name over a list when the page has more than one: label type, bold, 12px in with the rows' words, the rule under it the table's first. */
+function ListTitle({ children }: { children: string }) {
+	return (
+		<Box paddingX={12} paddingBottom={12} border="bottom">
+			<Heading as="h2" variant="label">
+				{children}
+			</Heading>
+		</Box>
 	);
 }
