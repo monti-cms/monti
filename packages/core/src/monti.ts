@@ -1,5 +1,6 @@
 import type { Kysely } from "kysely";
 import { z } from "zod";
+import type { DevProof } from "./auth/dev-bypass";
 import { type AuthSettings, authOperations } from "./auth/operations";
 import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./body/blocks";
 import { bodyOperations, templateRecord } from "./body/operations";
@@ -7,7 +8,7 @@ import type { Database } from "./db/schema";
 import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
 import { type Engine, type RunOptions, runRead, runWrite } from "./engine/execute";
 import { type ApplyResult, applyProposal, createProposal, proposeItem, settleProposal } from "./engine/proposals";
-import { planUndo, undo } from "./engine/undo";
+import { planUndo, undoWithEvents } from "./engine/undo";
 import { listOperations } from "./entries/list";
 import { entryOperations } from "./entries/operations";
 import { entryRecord } from "./entries/record";
@@ -83,6 +84,8 @@ export type MontiOptions = {
 	marks?: MarkDefinition[];
 	/** The ways to sign in that `monti init` chose. Without one, the admin says sign-in is not set up. */
 	auth?: Partial<AuthSettings>;
+	/** How a browser proves it runs on this machine (the dev server's sign-in bypass, doc 16). */
+	devProof?: DevProof | null;
 	/** `MONTI_SECRET`: signs preview links and seals service keys (doc 14). */
 	secret?: string | null;
 	/** The `fetch` the server calls other services with (tests and Storybook replace it). */
@@ -195,7 +198,8 @@ function engineOperations(engine: Engine, all: () => AnyOperation[]): AnyOperati
 				};
 			},
 			async run(input, ctx) {
-				const output = await undo(engine, ctx.db, input.id);
+				// An undo that changes what the site shows says so, so the site's cache follows (T29).
+				const output = await undoWithEvents(engine, ctx.db, input.id, ctx.emit);
 				// What an entry saw back then may be of a field that has since left the schema.
 				await keepSeenTracked(ctx.db, ctx.site.schema());
 				return output;
@@ -241,7 +245,12 @@ export function createMonti(options: MontiOptions) {
 		storage: storages[0]?.storage ?? null,
 		keyServices,
 		fetch: options.fetch,
-		auth: { password: options.auth?.password ?? false, github: options.auth?.github ?? null },
+		auth: {
+			password: options.auth?.password ?? false,
+			github: options.auth?.github ?? null,
+			devBypass: options.auth?.devBypass ?? true,
+		},
+		devProof: options.devProof ?? null,
 		kit: createBlockKit(
 			[...(options.blocks ?? []), ...plugins.flatMap((plugin) => plugin.blocks ?? [])],
 			[...(options.marks ?? []), ...plugins.flatMap((plugin) => plugin.marks ?? [])],

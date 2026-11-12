@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
 import { trashRowCount } from "../trash/list";
+import { DEV_WHO, hostedBy } from "./dev-bypass";
 import { MIN_PASSWORD } from "./reset";
 import { hashPassword, verifyPassword } from "./secrets";
 import { endSession, startSession } from "./session";
@@ -12,6 +13,11 @@ export type AuthSettings = {
 	password: boolean;
 	/** The GitHub way: the OAuth app and the one account that is the admin. */
 	github: { clientId: string; clientSecret: string; admin: string } | null;
+	/**
+	 * On the dev server, a request from this machine is let in without signing in (doc 16); `false` turns it off, to try the sign-in screens
+	 * locally. The live site never bypasses, whatever this says.
+	 */
+	devBypass: boolean;
 };
 
 /** Wrong passwords per email before the minute's lock (doc 15). */
@@ -19,6 +25,10 @@ export const SIGN_IN_TRIES = 5;
 const LOCK_MS = 60_000;
 
 const normal = (email: string) => email.trim().toLowerCase();
+
+/** The dev server (it can write the schema file) with the bypass left on and a way to prove a browser is on this machine. */
+const devBypassOn = (ctx: OperationContext) =>
+	ctx.site.files !== null && ctx.site.auth.devBypass && ctx.site.devProof !== null && hostedBy() === undefined;
 
 async function hasAdmin(ctx: OperationContext) {
 	if (ctx.site.auth.github && !ctx.site.auth.password) return true;
@@ -34,7 +44,7 @@ export const authOperations = [
 		kind: "read",
 		open: true,
 		description:
-			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, and who is signed in.",
+			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, and who is signed in (`bypass` when the dev server let this machine in without signing in).",
 		input: z.object({}),
 		async run(_input, ctx) {
 			return {
@@ -44,7 +54,13 @@ export const authOperations = [
 					external: ctx.site.auth.github ? [{ id: "github", label: "GitHub", path: "auth/github" }] : [],
 				},
 				hasAdmin: await hasAdmin(ctx),
-				session: ctx.session ? { who: ctx.session.who } : null,
+				// `bypass`: nobody signed in; the dev server let this machine in (doc 16). The screen says so.
+				session: ctx.session
+					? { who: ctx.session.who, ...(ctx.session.who === DEV_WHO ? { bypass: true } : {}) }
+					: null,
+				// Where a browser on this machine gets the ticket that lets it in without signing in (`auth.devSignIn`). The admin API leaves it out for a
+				// request that does not claim to be local.
+				...(ctx.session || !devBypassOn(ctx) ? {} : { devProof: ctx.site.devProof?.url() ?? undefined }),
 			};
 		},
 	}),
@@ -105,6 +121,22 @@ export const authOperations = [
 			}
 			await ctx.db.deleteFrom("monti_sign_in_attempt").where("email", "=", email).execute();
 			return { ok: true, who: email, ...(await startSession(ctx.db, email, now)) };
+		},
+		summary: (_input, output) => ({ key: output.ok ? "auth.signedIn" : "auth.signInRefused" }),
+	}),
+	defineOperation({
+		name: "auth.devSignIn",
+		kind: "write",
+		humanOnly: true,
+		open: true,
+		description:
+			"On the dev server, let a browser of this machine in without signing in: it hands in the one-time ticket it fetched from the loopback address `auth.state` names.",
+		input: z.object({ ticket: z.string().min(1).max(200) }),
+		async run(input, ctx): Promise<SignedIn | Refused> {
+			// The ticket is used up by the asking, good or not.
+			if (!devBypassOn(ctx) || !ctx.site.devProof?.take(input.ticket))
+				return { ok: false, reason: { key: "auth.devRefused" } };
+			return { ok: true, who: DEV_WHO, ...(await startSession(ctx.db, DEV_WHO, ctx.now())) };
 		},
 		summary: (_input, output) => ({ key: output.ok ? "auth.signedIn" : "auth.signInRefused" }),
 	}),

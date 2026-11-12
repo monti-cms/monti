@@ -302,6 +302,29 @@ export const AddressReview: Story = {
 	},
 };
 
+/** Doc 16: a preview address typed. Its line has the change dot and "되돌리기", and the hint for an empty field is gone. */
+export const PreviewAddress: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		fill(await page.findByLabelText("미리보기 주소"), "preview");
+		await page.findByRole("button", { name: "변경 사항" });
+	},
+};
+
+/** Doc 16: the preview address's review: from "공개 주소에서" to the address, and no saved data changes. */
+export const PreviewAddressReview: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page, body } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		fill(await page.findByLabelText("미리보기 주소"), "preview");
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		await body.findByText("게시글 · 미리보기 주소", {}, wait);
+	},
+};
+
 /** CollectionEditor: the posts' editor allowance with one block turned off. */
 export const Editor: Story = {
 	loaders: site(),
@@ -483,8 +506,32 @@ export const ReadOnlyBasics: Story = {
 	play: async ({ canvasElement }) => {
 		const { page } = await settings(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "기본" }));
-		// The public address is the file's: on the live site it reads as text, its lock on its own row.
-		await page.findByRole("img", { name: "운영 사이트에서는 잠김" });
+		// The public address and the preview address are the file's: on the live site each reads as text, its lock on its own row.
+		await page.findAllByRole("img", { name: "운영 사이트에서는 잠김" });
+	},
+};
+
+/** The posts with a preview page of the site's own (doc 16). */
+const previewSchema = defineSchema({
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			kind: "document",
+			path: "/posts/:slug",
+			previewPath: "/preview/:slug",
+			fields: schema.collections.post.fields,
+		},
+	},
+});
+
+/** Doc 16: the live site with a preview address set: it reads in the address's letters, with its lock. */
+export const ReadOnlyPreviewAddress: Story = {
+	loaders: site({ files: null, schema: previewSchema }),
+	play: async ({ canvasElement }) => {
+		const { page } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await page.findByText("/preview/:slug");
 	},
 };
 

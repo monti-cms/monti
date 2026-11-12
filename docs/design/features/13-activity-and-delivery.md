@@ -50,7 +50,8 @@ type Delivery = {
 
 type MontiEvent = {
   type: "entry.published" | "entry.unpublished" | "entry.saved" | "entry.trashed" | "entry.restored" | "entry.purged"
-      | "media.uploaded" | "media.trashed" | "settings.saved" | "schema.applied" | "import.done";
+      | "media.uploaded" | "media.replaced" | "media.renamed" | "media.trashed" | "media.restored"
+      | "settings.saved" | "schema.applied" | "import.done";
   at: string;
   ids: string[];
   collection?: string;

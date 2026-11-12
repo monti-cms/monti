@@ -14,6 +14,8 @@
  *   css-file            Admin styling lives in token utilities. The only stylesheets in `packages/ui` and `packages/admin` are `ui/styles/theme.css`,
  *                       `ui/styles/tokens.css` (generated), `ui/styles/admin.css` and `admin/styles/index.css` (`ui/.storybook` is exempt). A
  *                       `.ts`/`.tsx` that imports any other CSS file fails too.
+ *   admin-entry-rule    `admin/styles/index.css` is the entry the built stylesheet is made from: the layer order, `@import` and `@source` lines only.
+ *                       It holds no rule of its own (no `{ }` block).
  *   admin-css-rule      `ui/styles/admin.css` holds document-wide base rules only (the body, the border default, `.monti-admin`, the selection, the scrollbar).
  *                       Any other selector moves to token utilities on the element.
  *   arbitrary-value     A class with a raw color in brackets (`bg-[#fff]`, `[color:red]`, `color-mix(... white)`) fails everywhere. Outside `packages/ui`
@@ -92,6 +94,7 @@ const CSS_SKIP_DIRS = new Set(["node_modules", "dist", ".storybook", "storybook-
 
 /** The document-wide rules of `admin.css`: selector → the `@layer` it must sit in (`null` for none). */
 const ADMIN_CSS_FILE = "packages/ui/styles/admin.css";
+const ADMIN_ENTRY_FILE = "packages/admin/styles/index.css";
 const ADMIN_CSS_SELECTORS = new Map([
 	["html:has(.monti-admin) body", null],
 	[":where(html:has(.monti-admin)) *", "base"],
@@ -612,6 +615,27 @@ function checkAdminCss(file) {
 	}
 }
 
+/** The admin's stylesheet entry holds statements only (`@layer a, b;`, `@import …;`, `@source …;`): a block would be a rule of its own. */
+function checkAdminEntry(file) {
+	const source = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "));
+	source.split("\n").forEach((line, index) => {
+		if (line.includes("{"))
+			add(
+				file,
+				index + 1,
+				"admin-entry-rule",
+				"the admin's stylesheet entry holds the layer order, `@import` and `@source` lines only; a rule goes to token utilities on the element",
+			);
+		else if (line.trim() && !/^@(layer|import|source)\b/.test(line.trim()))
+			add(
+				file,
+				index + 1,
+				"admin-entry-rule",
+				"only `@layer`, `@import` and `@source` lines belong in the admin's stylesheet entry",
+			);
+	});
+}
+
 for (const dir of CSS_ROOTS) {
 	if (!existsSync(path.join(root, dir))) continue;
 	const found = [];
@@ -627,6 +651,8 @@ for (const dir of CSS_ROOTS) {
 			);
 		} else if (rel(file) === ADMIN_CSS_FILE) {
 			checkAdminCss(file);
+		} else if (rel(file) === ADMIN_ENTRY_FILE) {
+			checkAdminEntry(file);
 		}
 	}
 }

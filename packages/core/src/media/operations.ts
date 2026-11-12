@@ -392,6 +392,8 @@ export const mediaOperations = [
 				}))
 				.where("id", "=", input.id)
 				.execute();
+			// A page that offers the file to download shows its name.
+			if (input.name !== undefined) ctx.emit({ type: "media.renamed", ids: [input.id] });
 			return liveItem(ctx, input.id);
 		},
 		summary: (input, output) =>
@@ -441,6 +443,8 @@ export const mediaOperations = [
 				}))
 				.where("id", "=", input.id)
 				.execute();
+			// Every page that shows the file shows another picture now.
+			ctx.emit({ type: "media.replaced", ids: [input.id] });
 			return liveItem(ctx, input.id);
 		},
 		summary: (_input, output) => ({ key: "media.replace", values: { name: output.name } }),

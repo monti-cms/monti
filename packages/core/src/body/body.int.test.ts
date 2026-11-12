@@ -197,7 +197,7 @@ describe("one definition", () => {
 			{ id: "b_6", type: "removedPluginBlock" },
 		);
 		expect(draw(body, { media: { m1: picture() } })).toBe(
-			'<h2>Title</h2><p>a <strong><a href="/x">link</a></strong></p><ul><li>one</li></ul><figure style="display:flex;flexDirection:column;alignItems:center"><img src="/media/m1" alt="A cat" width="400" height="200" style="width:400px;maxWidth:100%;height:auto"/></figure>',
+			'<h2 id="title">Title</h2><p>a <strong><a href="/x">link</a></strong></p><ul><li>one</li></ul><figure style="display:flex;flexDirection:column;alignItems:center"><img src="/media/m1" alt="A cat" width="400" height="200" style="width:400px;maxWidth:100%;height:auto"/></figure>',
 		);
 	});
 });

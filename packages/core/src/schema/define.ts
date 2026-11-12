@@ -47,6 +47,11 @@ export type CollectionDefinition =
 			kind: "document";
 			/** A document always has a public address. */
 			path: string;
+			/**
+			 * The address of the site's own preview page, when it made one (`/preview/:slug`): "Preview" opens the working copy there. Without it the
+			 * working copy is previewed at the public address (doc 16).
+			 */
+			previewPath?: string;
 	  })
 	| (CollectionFields & {
 			/** Short and live on save (categories, tags). */
@@ -122,6 +127,8 @@ export type SchemaProblem = {
 		| "unknownTarget"
 		| "badMax"
 		| "pathTaken"
+		| "badPreviewPath"
+		| "previewPathTaken"
 		| "invalidVia";
 };
 
@@ -138,6 +145,7 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 	if (locales.list.length > 0 && !codes.has(locales.source))
 		problems.push({ locale: locales.source, code: "unknownSource" });
 	const paths = new Map<string, string>();
+	const previews = new Map<string, string>();
 	for (const [name, collection] of Object.entries(schema.collections)) {
 		if (!IDENTIFIER.test(name)) problems.push({ collection: name, code: "badIdentifier" });
 		if (RESERVED_COLLECTIONS.has(name)) problems.push({ collection: name, code: "reserved" });
@@ -147,6 +155,19 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 			if (!PATH.test(collection.path)) problems.push({ collection: name, code: "badPath" });
 			if (paths.has(collection.path)) problems.push({ collection: name, code: "pathTaken" });
 			paths.set(collection.path, name);
+		}
+		// A preview address is a document's (an item has no working copy to preview), has the shape of an address, and is no page's own address.
+		const previewPath = (collection as { previewPath?: unknown }).previewPath;
+		if (previewPath !== undefined) {
+			// With a folder of its own (`/preview/:slug`): `/:slug` alone would answer for every address of the site's top level.
+			if (
+				collection.kind !== "document" ||
+				typeof previewPath !== "string" ||
+				!PATH.test(previewPath) ||
+				previewPath === "/:slug"
+			)
+				problems.push({ collection: name, code: "badPreviewPath" });
+			else previews.set(name, previewPath);
 		}
 		if (collection.fields.title?.kind !== "text")
 			problems.push({ collection: name, field: "title", code: "missingTitle" });
@@ -176,6 +197,12 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 			if (field.kind === "text" && field.max !== undefined && !(Number.isInteger(field.max) && field.max > 0))
 				problems.push({ ...at, code: "badMax" });
 		}
+	}
+	// A preview page is not a public page, nor another collection's preview page.
+	const seen = new Set<string>();
+	for (const [name, previewPath] of previews) {
+		if (paths.has(previewPath) || seen.has(previewPath)) problems.push({ collection: name, code: "previewPathTaken" });
+		seen.add(previewPath);
 	}
 	return problems;
 }

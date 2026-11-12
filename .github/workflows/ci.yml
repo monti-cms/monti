@@ -50,6 +50,8 @@ jobs:
       # Files and exports of the packages that nothing uses.
       - run: pnpm knip
       - run: pnpm build
+      # The admin's prebuilt stylesheet touches nothing outside the admin: every rule under the admin's document, only its own names (doc 16).
+      - run: node --test scripts/build-styles.test.mjs
 
   review:
     name: design review
@@ -155,7 +157,7 @@ jobs:
           pnpm exec playwright install --with-deps chromium
           mkdir -p ~/.cache/playwright-apt
           cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
-      # L5: the admin over HTTP on real Postgres and a real folder of files (docs/testing.md).
+      # L5: the example app (examples/blog) built and started, over HTTP on real Postgres and a real folder of files (docs/testing.md).
       - run: pnpm test:e2e
         env:
           CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/monti_test
