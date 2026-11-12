@@ -26,6 +26,26 @@ export function publicPath(schema: Schema, collection: string, slug: string, loc
 	return prefix === "always" || (prefix === "exceptSource" && locale !== source) ? `/${locale}${path}` : path;
 }
 
+/** The public paths of slugs of one collection and language, for an event's `paths`: each once, none for a collection with no page. */
+export const publicPaths = (
+	schema: Schema,
+	collection: string,
+	locale: string,
+	slugs: (string | null | undefined)[],
+) => [...new Set(slugs.flatMap((slug) => (slug ? (publicPath(schema, collection, slug, locale) ?? []) : [])))];
+
+/**
+ * Where "Preview" opens an entry's working copy (doc 16): the collection's preview page when the site made one (`previewPath`), with the language
+ * shown as a public address shows it, and the public address otherwise.
+ */
+export function previewPath(schema: Schema, collection: string, slug: string, locale = schema.locales.source) {
+	const definition = schema.collections[collection];
+	const own = definition?.kind === "document" ? definition.previewPath?.replace(":slug", slug) : undefined;
+	if (own === undefined) return publicPath(schema, collection, slug, locale);
+	const { prefix, source } = schema.locales;
+	return prefix === "always" || (prefix === "exceptSource" && locale !== source) ? `/${locale}${own}` : own;
+}
+
 /**
  * Whether another entry of the same collection and language is published under `slug`, or was when it was deleted for good: a path once published is never
  * another entry's (doc 11, principle 5).

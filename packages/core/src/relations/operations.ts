@@ -1,7 +1,7 @@
 import { sql } from "kysely";
 import { z } from "zod";
 import { randomUUID } from "../bytes";
-import { pathKept, publicPath } from "../entries/paths";
+import { pathKept, publicPath, publicPaths } from "../entries/paths";
 import { CheckError } from "../errors";
 import { checkMediaValues } from "../media/uses";
 import { defineOperation, type Preview, type RecordRef } from "../operation";
@@ -905,7 +905,7 @@ export const relationOperations = [
 						ids: [existing.id],
 						collection: input.collection,
 						locale,
-						paths: [slug],
+						paths: publicPaths(ctx.site.schema(), input.collection, locale, [slug, existing.slug]),
 					});
 					localesOutput[locale] = { id: existing.id, title, slug };
 				} else {
@@ -958,7 +958,13 @@ export const relationOperations = [
 
 					ctx.created(ref(id));
 					ctx.emit({ type: "entry.saved", ids: [id], collection: input.collection, locale, version: 1 });
-					ctx.emit({ type: "entry.published", ids: [id], collection: input.collection, locale, paths: [slug] });
+					ctx.emit({
+						type: "entry.published",
+						ids: [id],
+						collection: input.collection,
+						locale,
+						paths: publicPaths(ctx.site.schema(), input.collection, locale, [slug]),
+					});
 					localesOutput[locale] = { id, title: data.title, slug };
 				}
 			}

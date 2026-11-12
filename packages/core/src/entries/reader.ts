@@ -29,6 +29,8 @@ export type SiteEntry = {
 	locale: string;
 	title: string;
 	slug: string;
+	/** Its public address, the language shown as the site shows it; `null` for an item of a collection with no page. */
+	path: string | null;
 	values: Record<string, unknown>;
 	/** The body as the site draws it (`renderDocument`). */
 	doc: Doc | null;
@@ -39,7 +41,7 @@ export type SiteEntry = {
 };
 
 /** An entry as it is read from its row, before it is made the site's: its body as stored. */
-type StoredEntry = Omit<SiteEntry, "doc" | "relations" | "media"> & { doc: unknown };
+type StoredEntry = Omit<SiteEntry, "doc" | "relations" | "media" | "path"> & { doc: unknown };
 
 export type ReaderOptions = {
 	db: Kysely<Database>;
@@ -99,9 +101,10 @@ export function createReader(options: ReaderOptions) {
 	 */
 	async function forSite(entry: StoredEntry): Promise<SiteEntry> {
 		const doc = entry.doc === null || entry.doc === undefined ? null : asDoc(entry.doc);
+		const path = publicPath(schema, entry.collection, entry.slug, entry.locale);
 		let base: SiteEntry;
 		if (entry.locale === schema.locales.source) {
-			base = { ...entry, doc: doc && siteDoc(doc, null) };
+			base = { ...entry, path, doc: doc && siteDoc(doc, null) };
 		} else {
 			const source = await db
 				.selectFrom("entries as e")
@@ -123,6 +126,7 @@ export function createReader(options: ReaderOptions) {
 			);
 			base = {
 				...entry,
+				path,
 				title: fields.title,
 				values: onlySchemaFields(schema, entry.collection, fields.values),
 				doc: doc && siteDoc(doc, source ? asDoc(source.doc) : null),
@@ -195,6 +199,34 @@ export function createReader(options: ReaderOptions) {
 
 		return withMedia({ ...base, relations });
 	}
+	/** The published copies of a collection and language, in the order the site lists them; the id settles what else is equal, so pages do not overlap. */
+	const published = (where: { collection: string; locale: string }) => {
+		const query = db
+			.selectFrom("entry_published as p")
+			.innerJoin("entries as e", "e.id", "p.entry_id")
+			.selectAll("p")
+			.where("p.collection", "=", where.collection)
+			.where("p.locale", "=", where.locale)
+			.where("e.trashed_at", "is", null);
+		return (
+			schema.collections[where.collection]?.kind === "item"
+				? query.orderBy("e.position", "asc").orderBy("p.published_at", "desc")
+				: query.orderBy("p.published_at", "desc")
+		).orderBy("p.entry_id", "asc");
+	};
+	type PublishedRow = Awaited<ReturnType<ReturnType<typeof published>["execute"]>>[number];
+	const asSite = (copy: PublishedRow) =>
+		forSite({
+			id: copy.entry_id,
+			collection: copy.collection,
+			locale: copy.locale,
+			title: copy.title,
+			slug: copy.slug,
+			values: onlySchemaFields(schema, copy.collection, copy.values),
+			doc: copy.doc,
+			publishedAt: copy.published_at,
+		});
+
 	return {
 		async entry(where: {
 			collection: string;
@@ -236,19 +268,7 @@ export function createReader(options: ReaderOptions) {
 				.where("p.slug", "=", where.slug)
 				.where("e.trashed_at", "is", null)
 				.executeTakeFirst();
-			if (copy)
-				return {
-					entry: await forSite({
-						id: copy.entry_id,
-						collection: copy.collection,
-						locale: copy.locale,
-						title: copy.title,
-						slug: copy.slug,
-						values: onlySchemaFields(schema, copy.collection, copy.values),
-						doc: copy.doc,
-						publishedAt: copy.published_at,
-					}),
-				};
+			if (copy) return { entry: await asSite(copy) };
 			const moved = await db
 				.selectFrom("old_paths")
 				.innerJoin("entry_published", "entry_published.entry_id", "old_paths.entry_id")
@@ -282,36 +302,33 @@ export function createReader(options: ReaderOptions) {
 			);
 		},
 
-		/** The published entries of a collection and language, newest first. */
+		/**
+		 * The published entries of a collection and language: documents newest first, items in their own order. With `limit` it gives that many, and
+		 * `after` (the `next` of the page before) gives the ones that follow; `next` is `null` on the last page.
+		 */
+		async page(where: {
+			collection: string;
+			locale: string;
+			limit: number;
+			after?: string | null;
+		}): Promise<{ entries: SiteEntry[]; next: string | null }> {
+			const start = where.after ? Number(where.after) : 0;
+			const from = Number.isInteger(start) && start > 0 ? start : 0;
+			const limit = Math.max(1, Math.floor(where.limit));
+			// One more than asked: whether a page follows.
+			const rows = await published(where)
+				.limit(limit + 1)
+				.offset(from)
+				.execute();
+			return {
+				entries: await Promise.all(rows.slice(0, limit).map(asSite)),
+				next: rows.length > limit ? String(from + limit) : null,
+			};
+		},
+
+		/** Every published entry of a collection and language: documents newest first, items in their own order. */
 		async entries(where: { collection: string; locale: string }): Promise<SiteEntry[]> {
-			const isItem = schema.collections[where.collection]?.kind === "item";
-			let query = db
-				.selectFrom("entry_published as p")
-				.innerJoin("entries as e", "e.id", "p.entry_id")
-				.selectAll("p")
-				.where("p.collection", "=", where.collection)
-				.where("p.locale", "=", where.locale)
-				.where("e.trashed_at", "is", null);
-			if (isItem) {
-				query = query.orderBy("e.position", "asc").orderBy("p.published_at", "desc");
-			} else {
-				query = query.orderBy("p.published_at", "desc");
-			}
-			const rows = await query.execute();
-			return Promise.all(
-				rows.map((copy) =>
-					forSite({
-						id: copy.entry_id,
-						collection: copy.collection,
-						locale: copy.locale,
-						title: copy.title,
-						slug: copy.slug,
-						values: onlySchemaFields(schema, copy.collection, copy.values),
-						doc: copy.doc,
-						publishedAt: copy.published_at,
-					}),
-				),
-			);
+			return Promise.all((await published(where).execute()).map(asSite));
 		},
 	};
 }

@@ -1,5 +1,5 @@
 import type { AnyBlockDefinition, MarkDefinition } from "./body/blocks";
-import type { Block, Doc, Inline, Mark } from "./body/doc";
+import { type Block, type Doc, type Inline, type Mark, walk } from "./body/doc";
 import { linkedGroup } from "./body/links";
 import { imageAlignOf } from "./media/frame";
 import { imageFrameStyle, type SiteImage, type SiteMedia, siteImage } from "./media/site-image";
@@ -20,7 +20,13 @@ export type CreateElement<Node> = (
  * What a block's `Site` component gets: the block and its attrs, with its text or child blocks already drawn as `children`. An image block's also gets its
  * picture ready to draw (`siteImage`), or `null` when the entry does not have its file.
  */
-export type BlockProps = { block: Block; attrs: Record<string, unknown>; image?: SiteImage | null };
+export type BlockProps = {
+	block: Block;
+	attrs: Record<string, unknown>;
+	image?: SiteImage | null;
+	/** A heading's `id`, the one `tocOf` gives for it: the site's own heading component puts it on its element. */
+	anchor?: string;
+};
 /** What a mark's `Site` component gets: the mark, with the text it wraps as `children`. */
 export type MarkProps = { mark: Mark };
 
@@ -39,6 +45,56 @@ export type RenderOptions<Node> = {
 };
 
 const text = (value: unknown) => (typeof value === "string" ? value : undefined);
+
+/** A heading in a body's table of contents: `depth` counts from the shallowest level listed (0), so a list can indent by it. */
+export type TocItem = { id: string; text: string; level: number; depth: number };
+
+const headingText = (block: Block) =>
+	(block.content ?? []).map((part) => (part.type === "text" ? part.text : "")).join("");
+
+/**
+ * The `id` of every heading of a body, by block id (doc 16): its words in lower case with letters and digits of any language, `-` and `_` kept and
+ * the rest joined by `-`. The same words again take `-1`, `-2`; no letter at all is `section`. An id never looks like a footnote's (`fn-…`,
+ * `fnref-…`): one that would starts with `h-`.
+ */
+function headingIds(doc: Doc): Map<string, string> {
+	const ids = new Map<string, string>();
+	const taken = new Set<string>();
+	for (const { block } of walk(doc.blocks)) {
+		if (block.type !== "heading") continue;
+		const words = headingText(block)
+			.normalize("NFKC")
+			.toLowerCase()
+			.replace(/[^\p{L}\p{N}_-]+/gu, "-")
+			.replace(/^-+|-+$/g, "");
+		const base = /^fn(ref)?-/.test(words) ? `h-${words}` : words || "section";
+		let id = base;
+		for (let again = 1; taken.has(id); again++) id = `${base}-${again}`;
+		taken.add(id);
+		ids.set(block.id, id);
+	}
+	return ids;
+}
+
+/**
+ * A body's table of contents: its headings from level `min` to `max` (2 and 3 unless said), in order, each with the `id` `renderDocument` puts on
+ * it.
+ */
+export function tocOf(doc: Doc, { min = 2, max = 3 }: { min?: number; max?: number } = {}): TocItem[] {
+	const ids = headingIds(doc);
+	const listed = [...walk(doc.blocks)]
+		.map(({ block }) => block)
+		.filter((block) => block.type === "heading")
+		.map((block) => ({ block, level: Number(block.attrs?.level ?? 2) }))
+		.filter(({ level }) => level >= min && level <= max);
+	const top = Math.min(...listed.map(({ level }) => level));
+	return listed.map(({ block, level }) => ({
+		id: ids.get(block.id) ?? "",
+		text: headingText(block),
+		level,
+		depth: level - top,
+	}));
+}
 
 const plainMarks: Record<string, string> = {
 	bold: "strong",
@@ -71,6 +127,7 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 	};
 	count(doc.blocks);
 	const anchored = new Set<string>();
+	const anchors = headingIds(doc);
 
 	const inline = (part: Inline, key: number): Node | string => {
 		if (part.type === "hardBreak") return h("br", { key });
@@ -113,7 +170,7 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 			case "paragraph":
 				return h("p", { key, style: aligned }, ...inner);
 			case "heading":
-				return h(`h${Number(attrs.level ?? 2)}`, { key, style: aligned }, ...inner);
+				return h(`h${Number(attrs.level ?? 2)}`, { key, id: anchors.get(block.id), style: aligned }, ...inner);
 			case "bulletList":
 				return h("ul", { key }, ...inner);
 			case "orderedList":
@@ -210,6 +267,7 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 				block,
 				attrs,
 				...(block.type === "image" ? { image: siteImage(attrs, options.media) } : {}),
+				...(block.type === "heading" ? { anchor: anchors.get(block.id) } : {}),
 			};
 			return h(Site, { key: block.id, ...props }, ...inner);
 		}

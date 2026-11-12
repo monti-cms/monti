@@ -1,7 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
-import { pathKept, slugify } from "../entries/paths";
+import { pathKept, publicPaths, slugify } from "../entries/paths";
 import type { OperationContext, RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import { localeModeOf, type Schema } from "../schema/define";
@@ -147,7 +147,13 @@ export async function resolveInlineCreation(
 
 			ctx.created(ref(newId));
 			ctx.emit({ type: "entry.saved", ids: [newId], collection: fieldDef.to, locale, version: 1 });
-			ctx.emit({ type: "entry.published", ids: [newId], collection: fieldDef.to, locale, paths: [slug] });
+			ctx.emit({
+				type: "entry.published",
+				ids: [newId],
+				collection: fieldDef.to,
+				locale,
+				paths: publicPaths(ctx.site.schema(), fieldDef.to, locale, [slug]),
+			});
 
 			return newGroup;
 		};
