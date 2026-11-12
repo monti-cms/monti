@@ -331,6 +331,7 @@ export function EntryEditor({
 				collection={collection}
 				address={address}
 				onBack={() => onCompare(null)}
+				toText={handOff}
 			/>
 		);
 

@@ -81,6 +81,7 @@ export function CompareView({
 	collection,
 	address,
 	onBack,
+	toText,
 }: {
 	editor: EntryEditorModel;
 	mode: CompareMode;
@@ -88,6 +89,12 @@ export function CompareView({
 	collection: string;
 	address: string | null;
 	onBack: () => void;
+	/**
+	 * The editor's hand-off (`useFocusHandOff` to `focusText`). An answer given here takes the comparison away, and the focus it held goes to the text.
+	 * The banner of a read that did not come goes when its "try again" reads the entry: the text is not there then, so the focus goes to the
+	 * comparison's first control once it is drawn.
+	 */
+	toText: React.RefCallback<HTMLElement>;
 }) {
 	const { t, language } = useAdmin();
 	const id = (editor.loaded as EntryRead | null)?.entry.id ?? "";
@@ -126,7 +133,7 @@ export function CompareView({
 					<>
 						<SessionEndedBanner />
 						{latest.refusal && latest.refusal.status !== 401 ? (
-							<Banner tone="danger" title={t("entry.loadFailed")} plainMeta>
+							<Banner ref={toText} tone="danger" title={t("entry.loadFailed")} plainMeta>
 								<TextButton onClick={() => void latest.reload()}>{t("entry.retry")}</TextButton>
 							</Banner>
 						) : null}
@@ -212,7 +219,7 @@ export function CompareView({
 						</Text>
 					) : null}
 				</Inline>
-				<Inline gap={16} justify="end" paddingX={12}>
+				<Inline ref={toText} gap={16} justify="end" paddingX={12}>
 					{places.data ? (
 						<Text variant="note" tone="subtle">
 							{t("compare.places", { count: differing.length })}

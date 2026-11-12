@@ -574,6 +574,72 @@ describe("the entry editor: the assistant's proposals before the entry is read",
 	});
 });
 
+describe("the entry editor: the focus after a read that did not come", () => {
+	/** The keyboard's focus on a button, as Tab leaves it: a key first, so the focus set next is the keyboard's. */
+	async function byKeys(name: string) {
+		await userEvent.keyboard("{Shift}");
+		(button(name).element() as HTMLElement).focus();
+		expect(button(name).element().matches(":focus-visible")).toBe(true);
+	}
+
+	it("00 '다시 시도' pressed with the keyboard: once the entry is in, the focus is in the text, not on the page", async () => {
+		const story = wired("draft");
+		story.wire.cut = (name) => (name === "entries.get" ? "none" : undefined);
+		await story.run();
+		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
+		story.wire.cut = () => undefined;
+		await byKeys("다시 시도");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(title()).toHaveValue("첫 번째 글");
+		await expect.element(body()).toHaveFocus();
+	});
+
+	it("00 '다시 시도' pressed with the pointer moves no focus: the entry comes in and the keyboard is given to nothing", async () => {
+		const story = wired("draft");
+		story.wire.cut = (name) => (name === "entries.get" ? "none" : undefined);
+		await story.run();
+		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
+		story.wire.cut = () => undefined;
+		await userEvent.click(button("다시 시도"));
+		await opened();
+		await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(done, 50))));
+		await expect.element(body()).not.toHaveFocus();
+		await expect.element(title()).not.toHaveFocus();
+	});
+
+	it("02 the comparison's '다시 시도' pressed with the keyboard: once it is read, the focus is on the comparison's first control", async () => {
+		const story = wired("draft");
+		await story.run();
+		await opened();
+		await titleEnd();
+		await userEvent.keyboard(" 내가 쓴 말");
+		const { site, id } = story.loaded();
+		await site.monti.run("entries.save", { id, version: 1, title: "다른 탭의 제목" }, entry.admin);
+		await save();
+		await expect.element(page.getByText(/먼저 저장했습니다/)).toBeVisible();
+		story.wire.cut = (name) => (name === "entries.get" ? "none" : undefined);
+		await userEvent.click(button("비교하기"));
+		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
+		story.wire.cut = () => undefined;
+		await byKeys("다시 시도");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("서버 최신본과 비교")).toBeVisible();
+		await expect.element(button("편집기로")).toHaveFocus();
+	});
+
+	it("02 an answer given in the comparison with the keyboard takes it away, and the focus goes to the text", async () => {
+		await BrowserCopy.run();
+		await opened();
+		await userEvent.click(button("비교하기"));
+		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
+		await byKeys("버리기");
+		await userEvent.keyboard("{Enter}");
+		await opened();
+		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).not.toBeInTheDocument();
+		await expect.element(body()).toHaveFocus();
+	});
+});
+
 describe("the entry editor: the stories of the states before the read", () => {
 	it("02 T153 'BeforeTheRead' and 'ReadFailed' draw what a person meets there: the way back, and for a failed read the banner with its way to try again", async () => {
 		await from(entry.BeforeTheRead).run();
