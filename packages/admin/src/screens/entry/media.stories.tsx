@@ -297,6 +297,15 @@ export const ArchivedPictures: Story = {
 	},
 };
 
+/** An archived entry's picture with no alt text: the keyboard's stop is named by its file (T133). */
+export const ArchivedNoAlt: Story = {
+	loaders: entry({
+		body: ({ desk }) => [{ id: "i_1", type: "image", attrs: { media: desk } }],
+		archived: true,
+	}),
+	tags: ["!dev"],
+};
+
 /** A cover's settings card open, under its line and as wide as it. */
 export const CoverCard: Story = {
 	loaders: entry({ values: ({ desk }) => ({ cover: { media: desk, alt: "아침 책상" } }) }),

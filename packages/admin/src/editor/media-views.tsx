@@ -55,7 +55,8 @@ import {
 	TextAlignLeft,
 	TextAlignRight,
 } from "@monti-cms/ui/icons";
-import type { Transaction } from "@tiptap/pm/state";
+import { GapCursor } from "@tiptap/pm/gapcursor";
+import { Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { type NodeViewProps, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { type ComponentType, useContext, useEffect, useId, useRef, useState } from "react";
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
@@ -649,15 +650,32 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	 * In a body that cannot be written in, the keyboard stops at the picture (T133, 2026-11-12): read-only takes away what writes, never a way to read. The
 	 * stop shows the keyboard's ordinary focus mark; Enter or Space picks the picture as a press does (the line of a picked block, and its bar, the focus going
 	 * into it), and Escape unpicks it, the focus staying on the picture. Two states, each looking as it does everywhere: where the keyboard is, and what is
-	 * picked. `shut` is a picture unpicked with Escape: the editor has no selection that is none, so it still holds the block, and nothing is drawn for it.
+	 * picked.
 	 */
-	const [shut, setShut] = useState(false);
-	const picked = selected && (editable || !shut || open);
-	/** The bar was asked for with a key: the focus goes into it once it is drawn. */
+	const pick = () => {
+		const at = getPos();
+		if (typeof at === "number") editor.commands.setNodeSelection(at);
+	};
+	/**
+	 * Lets go of the picture for real: a selection that holds nothing takes its place, so a copy made next takes nothing and no block is left picked out of
+	 * sight. The nearest place in a text, or with no text on either side the place between two blocks.
+	 */
+	const unpick = () => {
+		const at = getPos();
+		if (typeof at !== "number") return;
+		const { doc } = editor.state;
+		const before = doc.resolve(at);
+		const after = doc.resolve(at + node.nodeSize);
+		// With no text anywhere in the body, every place between its blocks stands between two that take no caret: the gap there.
+		const none =
+			[Selection.findFrom(before, -1, true), Selection.findFrom(after, 1, true)].find(
+				(found) => found instanceof TextSelection,
+			) ?? new GapCursor(before);
+		editor.view.dispatch(editor.state.tr.setSelection(none));
+	};
+	const picked = selected;
+	/** The picture is being picked with a key: the focus goes into its bar once the bar is drawn. */
 	const intoBar = useRef(false);
-	useEffect(() => {
-		if (!selected) setShut(false);
-	}, [selected]);
 	useEffect(() => {
 		if (!picked || !intoBar.current) return;
 		intoBar.current = false;
@@ -666,15 +684,17 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	// Escape is heard on the page as the key goes down to its target: a button of the bar shows its name in a tooltip while it holds the focus, and the
 	// tooltip keeps Escape from going back up. While the settings card is open, Escape is the card's.
 	const barOpen = picked && !editable && !open;
+	const letGo = useRef(unpick);
+	letGo.current = unpick;
 	useEffect(() => {
 		if (!barOpen) return;
-		const unpick = (event: KeyboardEvent) => {
+		const onEscape = (event: KeyboardEvent) => {
 			if (event.key !== "Escape" || !box.current?.contains(document.activeElement)) return;
-			setShut(true);
+			letGo.current();
 			box.current.focus();
 		};
-		document.addEventListener("keydown", unpick, true);
-		return () => document.removeEventListener("keydown", unpick, true);
+		document.addEventListener("keydown", onEscape, true);
+		return () => document.removeEventListener("keydown", onEscape, true);
 	}, [barOpen]);
 
 	const captionField = (editable || data.caption) && (
@@ -709,10 +729,6 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 
 	const { item } = file;
 	const url = item ? previewUrl(item) : null;
-	const pick = () => {
-		const at = getPos();
-		if (typeof at === "number") editor.commands.setNodeSelection(at);
-	};
 	/** What makes the picture a stop of the keyboard where the body is read only; where it is written, the arrow keys pick blocks and nothing here is set. */
 	const stop: Partial<React.ComponentProps<typeof BlockBox>> =
 		editable || !url
@@ -720,15 +736,15 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			: {
 					tabIndex: 0,
 					role: "group",
-					"aria-label": t("editor.image.block"),
-					// A press on a picture unpicked with Escape picks it again (the editor never let go of it).
-					onClick: () => setShut(false),
+					// Which picture it is: what the entry says of it, or its file's name when it says nothing.
+					"aria-label": t("editor.image.block", { name: data.alt || item?.name || "" }),
 					onKeyDown: (event) => {
 						if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
 						event.preventDefault();
+						// Already picked (with the pointer): its bar is there to go into.
+						if (picked) return void bar.current?.querySelector("button")?.focus();
 						intoBar.current = true;
-						setShut(false);
-						if (!selected) pick();
+						pick();
 					},
 				};
 	const size = item ? (item.web ?? item.original) : null;

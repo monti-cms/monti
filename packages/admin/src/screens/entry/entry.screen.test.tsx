@@ -1,6 +1,7 @@
 import type { Doc } from "@monti-cms/core";
+import { toast } from "@monti-cms/ui";
 import { composeStories } from "@storybook/react-vite";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { caretAfter, dragPath, dropDrag, middleOf, pickWords } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
@@ -243,6 +244,10 @@ function wired(kind: Parameters<typeof entry.site>[0]) {
 }
 
 describe("the entry editor: an answer that does not come", () => {
+	// Each of these ends with a toast on the page: it would lie over what the next test presses.
+	afterEach(() => {
+		toast.dismiss();
+	});
 	const savedTitle = async (story: ReturnType<typeof wired>) => {
 		const { site, id } = story.loaded();
 		return ((await site.monti.run("entries.get", { id }, entry.admin)) as { entry: { title: string } }).entry.title;
@@ -354,7 +359,8 @@ describe("the entry editor: the stories of the states before the read", () => {
 		await from(entry.BeforeTheRead).run();
 		await expect.element(button("게시글")).toBeVisible();
 		expect(title().elements()).toEqual([]);
-		expect(page.getByText("글을 불러오지 못했습니다").elements()).toEqual([]);
+		// Not read yet is not a failure: no banner asks to try again.
+		expect(button("다시 시도").elements()).toEqual([]);
 
 		await from(entry.ReadFailed).run();
 		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();

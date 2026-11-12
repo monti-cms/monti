@@ -1427,13 +1427,10 @@ function keptCopy({ hold = false }: { hold?: boolean } = {}) {
 		run: () => story.run(),
 		reads: () => calls.filter(bodyRead),
 		/**
-		 * Resolves once the read of the copy's file has answered and the page has taken the answer: the answer is handed over in the task it came in,
-		 * so one task later it is the page's.
+		 * Resolves once the read of the copy's file has answered. The page takes the answer in the task it comes in, and a press is a task of its own, so
+		 * a press after this finds the file known: nothing here waits a guessed while.
 		 */
-		answered: async () => {
-			await expect.poll(() => held.answered).toBe(1);
-			await new Promise((done) => setTimeout(done));
-		},
+		answered: () => expect.poll(() => held.answered).toBe(1),
 		release: () => held.release(),
 		stored: () => localStorage.getItem(held.key),
 	};
@@ -1445,14 +1442,13 @@ function keptCopy({ hold = false }: { hold?: boolean } = {}) {
  */
 function watchFrames() {
 	const seen: string[] = [];
-	// By its element: under an open window the text is not in the page's roles.
-	const text = document.querySelector(".ProseMirror") as HTMLElement;
+	// By their elements, on the whole page: under an open window the text is not in the page's roles, and a body made again is another element.
 	const look = () => {
-		for (const frame of text.querySelectorAll<HTMLElement>("[data-block=image] [data-slot=image]"))
+		for (const frame of document.querySelectorAll<HTMLElement>(".ProseMirror [data-block=image] [data-slot=image]"))
 			seen.push(frame.className.includes("aspect-video") ? "empty" : frame.style.aspectRatio);
 	};
 	const observer = new MutationObserver(look);
-	observer.observe(text, { subtree: true, childList: true, attributes: true });
+	observer.observe(document.body, { subtree: true, childList: true, attributes: true });
 	return { seen, stop: () => observer.disconnect() };
 }
 
@@ -1575,8 +1571,13 @@ describe("a copy this browser kept, with a picture the saved body does not show"
 		await expect.element(banner()).toBeVisible();
 		// The read is answered before a person gets to the button.
 		await story.answered();
+		const watch = watchFrames();
 		await userEvent.click(button("불러오기"));
 		await expect.element(paragraph("브라우저에 남은 첫 문단.")).toBeVisible();
+		await expect.poll(() => frames()[0]?.querySelector("img")?.complete).toBe(true);
+		watch.stop();
+		// What the page showed from the first draw on: the picture's own shape, never the empty frame.
+		expect([...new Set(watch.seen)]).toEqual(["1.5 / 1"]);
 		// 2400 × 1600, known before the body is drawn.
 		expect(frames().map((frame) => frame.style.aspectRatio)).toEqual(["1.5 / 1"]);
 		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
@@ -1618,6 +1619,54 @@ describe("a copy this browser kept, with a picture the saved body does not show"
 		await expect.element(banner()).not.toBeInTheDocument();
 		expect(story.stored()).toBeNull();
 		story.release();
+	});
+});
+
+describe("copying a file that is still going up", () => {
+	it("09-3 a picture copied while it is still on its way up is no block when pasted: not an empty picture", async () => {
+		const [load] = media.Draft.loaders as [() => Promise<{ site: StorySite }>];
+		const held = new Promise<void>(() => {});
+		const story = composeStory(
+			{
+				...media.Draft,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						const { uploader } = loaded.site;
+						loaded.site.uploader = async (file, options) => {
+							await held;
+							return uploader(file, options);
+						};
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		);
+		await story.run();
+		await caretAfter("글의 첫 문단");
+		await paste(await canvasFile("slow.png"));
+		await expect.element(body().getByRole("progressbar")).toBeVisible();
+		const count = () => body().element().querySelectorAll("[data-block=image]").length;
+		expect(count()).toBe(1);
+		await selectAll();
+		const copied = clip("copy");
+		// The words go; the picture that is not a file yet says nothing of itself.
+		expect(copied.text).toContain("글의 첫 문단이에요.");
+		expect(copied.html).not.toContain('data-block="image"');
+		await userEvent.click(paragraph("글의 첫 문단이에요."));
+		await userEvent.keyboard("{End}");
+		pasteClip(copied);
+		await expect.poll(() => body().element().textContent).toContain("글의 첫 문단이에요.글의 첫 문단이에요.");
+		expect(count()).toBe(1);
+	});
+
+	it("09-3 a picture's box pasted from elsewhere with nothing of the picture in it is no block", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		pasteClip({ html: '<p>붙인 문단</p><div data-block="image"></div>', text: "붙인 문단" });
+		await expect.poll(() => body().element().textContent).toContain("붙인 문단");
+		expect(body().element().querySelectorAll("[data-block=image]")).toHaveLength(0);
 	});
 });
 
@@ -1781,6 +1830,61 @@ describe("a read-only body with the keyboard (T133)", () => {
 		// Tab from the last picture leaves the body.
 		await userEvent.keyboard("{Tab}");
 		expect(body().element().contains(document.activeElement)).toBe(false);
+	});
+
+	it("02-6 T133 each stop says which picture it is: its alt text, or its file's name when it has none", async () => {
+		await archivedPictures().run();
+		await expect.poll(() => blocks().length).toBe(2);
+		expect(blocks().map((block) => block.getAttribute("aria-label"))).toEqual([
+			"이미지: 아침 책상",
+			"이미지: 화면에 뜬 코드",
+		]);
+		// With nothing said of it, the file's name stands for it.
+		await composeStory({ loaders: media.ArchivedNoAlt.loaders }, media.default).run();
+		await expect.poll(() => blocks().length).toBe(1);
+		expect(blocks()[0]?.getAttribute("aria-label")).toBe("이미지: desk-morning.jpg");
+	});
+
+	it("02-6 T133 Enter on a picture already picked with the pointer goes into its bar, and a later press on another picture does not jump into that one's", async () => {
+		await archivedPictures().run();
+		const first = body().getByRole("img", { name: "아침 책상" });
+		await userEvent.click(first);
+		await expect.poll(() => toolbars().length).toBe(1);
+		// The press left the focus on the picture: Enter there goes into the bar that is open.
+		expect(document.activeElement).toBe(blocks()[0]);
+		await userEvent.keyboard("{Enter}");
+		const settings = body().getByRole("toolbar").getByRole("button", { name: "설정" });
+		await expect.element(settings).toHaveFocus();
+		// Another picture, picked with the pointer: the focus is where the press put it, not in the bar.
+		await userEvent.click(body().getByRole("img", { name: "화면에 뜬 코드" }));
+		await expect.poll(() => blocks().map(drawnPicked)).toEqual([false, true]);
+		await expect.poll(() => toolbars().length).toBe(1);
+		expect(document.activeElement).toBe(blocks()[1]);
+	});
+
+	it("02-6 T133 Escape after a pointer's pick shuts the bar and unpicks", async () => {
+		await archivedPictures().run();
+		await userEvent.click(body().getByRole("img", { name: "아침 책상" }));
+		await expect.poll(() => toolbars().length).toBe(1);
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(toolbars).toEqual([]);
+		expect(blocks().map(drawnPicked)).toEqual([false, false]);
+		expect(document.activeElement).toBe(blocks()[0]);
+	});
+
+	it("02-6 T133 a picture unpicked with Escape is let go of for real: with the keyboard on the next picture, copy takes nothing", async () => {
+		await archivedPictures().run();
+		await userEvent.click(body().getByRole("img", { name: "아침 책상" }));
+		await expect.poll(() => toolbars().length).toBe(1);
+		// Picked, a copy takes it.
+		expect(clip("copy").html).toContain('data-block="image"');
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(toolbars).toEqual([]);
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(blocks()[1]);
+		const copied = clip("copy");
+		expect([copied.html, copied.text]).toEqual(["", ""]);
+		expect(body().element().querySelector(".ProseMirror-selectednode")).toBeNull();
 	});
 
 	it("02-6 T133 the story of it shows the two states: the first picture picked by a press, its bar open, and the keyboard on the second", async () => {
