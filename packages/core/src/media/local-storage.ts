@@ -43,5 +43,6 @@ export function localFolderStorage({ dir, base = "/admin/api" }: { dir: string; 
 			await Promise.all([rm(fileOf(key), { force: true }), rm(mimeOf(key), { force: true })]);
 		},
 		url: (key) => `${base}/media/files/${key}`,
+		kind: "folder",
 	};
 }
