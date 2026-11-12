@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { link, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { AdminValues } from "./admin-values";
@@ -57,7 +57,8 @@ const ChangeFileShape: z.ZodType<ChangeFile> = z.object({
 export type SchemaFiles = {
 	/**
 	 * Writes the change file, and the schema file when `writeSchema` (not when the draft is the file a developer edited by hand). Both go before the
-	 * database step: when it fails, the files are the truth to apply again.
+	 * database step: when it fails, the files are the truth to apply again. The two are written as one: when it throws, neither file has changed. The
+	 * one case it could not undo it says so with a `PartialSchemaWrite`.
 	 */
 	write(schema: Schema, change: ChangeFile, writeSchema: boolean): Promise<void>;
 	readChanges(): Promise<ChangeFile[]>;
@@ -83,16 +84,63 @@ export async function readChangeFiles(dir: string): Promise<ChangeFile[]> {
 	return files.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-/** The files of a site checkout: `monti.schema.ts` and `monti/changes` under `root`. */
+/**
+ * The schema file was changed and could not be put back after its change file failed to appear: the one way the two-file write can leave the files
+ * out of step. Nothing reports it as "not written"; the write fails with what is on disk.
+ */
+export class PartialSchemaWrite extends Error {
+	constructor(
+		readonly schemaFile: string,
+		cause: unknown,
+	) {
+		super(
+			`${schemaFile} was changed, but its change file could not be written and the schema file could not be put back.`,
+			{
+				cause,
+			},
+		);
+	}
+}
+
+/**
+ * The files of a site checkout: `monti.schema.ts` and `monti/changes` under `root`.
+ *
+ * The write is all or nothing. The change file goes first under a name nothing reads (`<id>.json.part`), then the schema file, then the change file
+ * takes its name (a hard link, which never replaces a change already there), which is the moment the change exists. A failure before that leaves the schema file as it was (it is not written yet, or the part
+ * file is removed and the schema's old text written back), so "could not write" is true of both files.
+ */
 export function schemaFilesAt(root: string, schemaFile = "monti.schema.ts"): SchemaFiles {
 	const changes = path.join(root, "monti", "changes");
+	const schemaPath = path.join(root, schemaFile);
 	return {
 		async write(schema, change, writeSchema) {
-			if (writeSchema) await writeFile(path.join(root, schemaFile), schemaSource(schema));
+			const final = path.join(changes, `${change.id}.json`);
+			const part = `${final}.part`;
 			await mkdir(changes, { recursive: true });
-			await writeFile(path.join(changes, `${change.id}.json`), `${JSON.stringify(change, null, "\t")}\n`, {
-				flag: "wx",
-			});
+			await writeFile(part, `${JSON.stringify(change, null, "\t")}\n`, { flag: "wx" });
+			const before = writeSchema ? await readFile(schemaPath, "utf8").catch(() => null) : null;
+			/** Leaves the files as they were before this write, or says that it could not. */
+			const undo = async (cause: unknown) => {
+				await rm(part, { force: true }).catch(() => {});
+				if (!writeSchema) return;
+				const now = await readFile(schemaPath, "utf8").catch(() => null);
+				if (now === before) return;
+				try {
+					if (before === null) await rm(schemaPath, { force: true });
+					else await writeFile(schemaPath, before);
+				} catch {
+					throw new PartialSchemaWrite(schemaFile, cause);
+				}
+			};
+			try {
+				if (writeSchema) await writeFile(schemaPath, schemaSource(schema));
+				// A link, not a rename: it fails (`EEXIST`) where a change by that name is already there, so an id is never written twice.
+				await link(part, final);
+				await rm(part, { force: true }).catch(() => {});
+			} catch (error) {
+				await undo(error);
+				throw error;
+			}
 		},
 		readChanges: () => readChangeFiles(changes),
 	};

@@ -55,7 +55,7 @@ export async function undo(
 	activityId: string,
 ): Promise<UndoPlan> {
 	const { snapshots, ...plan } = await planUndo(engine, trx, activityId);
-	for (const { ref, before } of snapshots) await engine.recordKinds.get(ref.kind)?.restore(trx, ref.id, before);
+	for (const { ref, before } of snapshots) await engine.recordKinds.get(ref.kind)?.restore?.(trx, ref.id, before);
 	await rewriteUses(
 		trx,
 		engine.site.schema(),

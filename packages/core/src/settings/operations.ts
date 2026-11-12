@@ -7,12 +7,12 @@ import type { CollectionDefinition, Schema } from "../schema/define";
 import {
 	AnswersInput,
 	adminValuesOf,
-	adminValuesRecord,
 	applySchema,
 	CollectionsInput,
 	checkApply,
 	LocalesInput,
 	RenameInput,
+	writeAdminValues,
 } from "../schema/operations";
 import { type Answers, type Rename, schemaHash } from "../schema/plan";
 import { AdminPreferences, readSettings, SiteValues, writeSettings } from "./values";
@@ -184,12 +184,14 @@ export const settingsOperations = [
 		description:
 			"Save the settings screen's changes in one go. Admin values (site: the name and how the site writes; adminValues: collections' labels, help, layout) go to the database, on the live site too. Structure (locales: the languages, whole; collections: every collection, with renames) goes to monti.schema.ts and the database on the dev server only, the way schema.apply does, and needs the answers schema.plan's choices ask for. A save that names structure on the live site is refused whole.",
 		input: SaveInput,
-		touches(input, ctx) {
+		async touches(input, ctx) {
 			const refs: RecordRef[] = [];
 			if (input.site) refs.push({ kind: "settings", id: "site" });
 			for (const collection of Object.keys(input.adminValues))
 				if (ctx.site.schema().collections[collection]) refs.push({ kind: "collectionAdminValues", id: collection });
-			if (draftOf(input, ctx)) refs.push({ kind: "schema", id: "current" });
+			// Only a structure that would change: naming it as it is touches no record of it.
+			const draft = draftOf(input, ctx);
+			if (draft && (await differs(ctx, draft, input.renames))) refs.push({ kind: "schema", id: "current" });
 			return refs;
 		},
 		async check(input, ctx) {
@@ -219,16 +221,17 @@ export const settingsOperations = [
 				const definition = applied.collections[collection];
 				// A collection the draft makes gets its values with the structure change (`firstAdminValues`).
 				if (!definition) continue;
-				const existed = saved[collection] !== undefined;
 				const { version: _version, ...before } = saved[collection] ?? { version: 0 };
-				await adminValuesRecord.restore(
+				await writeAdminValues(
 					ctx.db,
 					collection,
 					underAppliedNames(values, before, definition, draft?.collections[collection], input.renames),
 				);
-				if (!existed) ctx.created({ kind: "collectionAdminValues", id: collection });
 				valuesSaved.push(collection);
 			}
+			// What only the admin reads changed (`settings.saved`): no public address moves with it.
+			if (input.site || valuesSaved.length > 0)
+				ctx.emit({ type: "settings.saved", ids: [...(input.site ? ["site"] : []), ...valuesSaved] });
 
 			if (!draft || !(await differs(ctx, draft, input.renames)))
 				return { site: input.site !== undefined, adminValues: valuesSaved, structure: null };
@@ -245,7 +248,7 @@ export const settingsOperations = [
 			// The change moved a renamed field's values to its new name; what the person set beside it (a label, the layout) goes on top, under the names now.
 			if (structure.applied)
 				for (const [collection, values] of Object.entries(input.adminValues))
-					if (draft.collections[collection]) await adminValuesRecord.restore(ctx.db, collection, values);
+					if (draft.collections[collection]) await writeAdminValues(ctx.db, collection, values);
 			return {
 				site: input.site !== undefined,
 				adminValues: valuesSaved,

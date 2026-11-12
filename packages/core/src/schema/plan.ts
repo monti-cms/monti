@@ -261,5 +261,8 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 				steps.push({ do: "fillField", collection, field, value: choice.fill });
 		}
 	}
-	return { steps, missing };
+	// A new source language is made from the old one's entries (`changeSource` drafts it where a group has none), so it comes before a language
+	// leaves: taking out the old source in the same change must not delete what the new one is to be made from.
+	const first = (step: ChangeStep) => (step.do === "changeSource" ? 0 : 1);
+	return { steps: [...steps].sort((a, b) => first(a) - first(b)), missing };
 }

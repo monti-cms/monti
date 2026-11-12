@@ -133,8 +133,12 @@ function engineOperations(engine: Engine, all: () => AnyOperation[]): AnyOperati
 			name: "proposals.forTarget",
 			kind: "read",
 			description:
-				"The assistant's pending proposal items aimed at one record (an entry, the schema, a collection's admin values): what a screen draws as blue pencil. Each has its operation, input and the request it came from.",
-			input: z.object({ kind: z.string(), id: z.string() }),
+				"The assistant's pending proposal items aimed at one record (an entry, the schema, a collection's admin values): what a screen draws as blue pencil. Each has its operation, input and the request it came from. `also` names more records for a screen that shows several at once (the settings: the site's values, the schema and every collection's admin values); an item aimed at any of them is listed once.",
+			input: z.object({
+				kind: z.string(),
+				id: z.string(),
+				also: z.array(z.object({ kind: z.string(), id: z.string() })).default([]),
+			}),
 			async run(input, ctx) {
 				const rows = await ctx.db
 					.selectFrom("monti_proposal_item")
@@ -152,8 +156,8 @@ function engineOperations(engine: Engine, all: () => AnyOperation[]): AnyOperati
 					.orderBy("monti_proposal.created_at")
 					.orderBy("monti_proposal_item.position")
 					.execute();
-				const key = recordKey(input);
-				return rows.filter((row) => key in row.baseVersions);
+				const keys = [input, ...input.also].map(recordKey);
+				return rows.filter((row) => keys.some((key) => key in row.baseVersions));
 			},
 		}),
 		defineOperation({

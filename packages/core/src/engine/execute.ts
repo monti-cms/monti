@@ -15,7 +15,7 @@ import {
 import { lockRecords, type RecordKind, type RecordState } from "../records";
 import type { Site } from "../site";
 import { queueDeliveries, type Receiver } from "./deliveries";
-import { markApplied } from "./proposals";
+import { acceptedItems, markApplied } from "./proposals";
 
 /** How long a write can be undone. The trash keeps entries as long, and both are cleared together (doc 11). */
 export const UNDO_DAYS = 30;
@@ -139,6 +139,8 @@ export async function runWrite<Output>(
 		});
 		if (conflicts.length > 0) throw new ConflictError(conflicts);
 
+		// The proposal items the person took are checked before anything is written (a structure write changes files that no rollback takes back).
+		const taken = await acceptedItems(trx, options.accepted ?? [], touched);
 		await operation.check?.(input, ctx);
 		const output = (await operation.run(input, ctx)) as Output;
 
@@ -147,7 +149,10 @@ export async function runWrite<Output>(
 		// What the records held before, so a file the library does not have is refused only when this write brings it in (doc 09).
 		await rewriteUses(trx, engine.site.schema(), records, { before: before.values() });
 		const after = await loadRecords(engine, trx, records);
-		const undoable = !operation.humanOnly && !operation.structure && !flags.structure && records.length > 0;
+		// What an undo puts back: the records of kinds that can be put back. The schema is versioned only, so a write that named it and left it
+		// alone still undoes the rest.
+		const restorable = records.filter((ref) => engine.recordKinds.get(ref.kind)?.restore !== undefined);
+		const undoable = !operation.humanOnly && !operation.structure && !flags.structure && restorable.length > 0;
 		const now = engine.now();
 		await trx
 			.insertInto("monti_activity")
@@ -168,7 +173,7 @@ export async function runWrite<Output>(
 			await trx
 				.insertInto("monti_activity_snapshot")
 				.values(
-					records.map((ref) => {
+					restorable.map((ref) => {
 						const old = before.get(recordKey(ref));
 						return {
 							activity_id: activityId,
@@ -181,7 +186,7 @@ export async function runWrite<Output>(
 				)
 				.execute();
 		// Taken proposals join this write: the row gets their conversation, so the log shows ✦ (doc 05).
-		const conversation = await markApplied(trx, options.accepted ?? [], activityId, records);
+		const conversation = await markApplied(trx, taken, activityId);
 		if (conversation && !options.conversationId)
 			await trx
 				.updateTable("monti_activity")
