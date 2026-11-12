@@ -13,6 +13,8 @@ type Loaded = {
 	failing: Set<string>;
 	/** Holds an operation's answer back until the function it gives is called. */
 	holdCall: (name: string) => () => void;
+	/** The operations the screen called, in order. */
+	calls: string[];
 };
 type Monti = StorySite["monti"];
 
@@ -177,14 +179,16 @@ export const site = ({
 				release();
 			};
 		};
+		const calls: string[] = [];
 		const transport: StorySite["transport"] = async (name, ...rest) => {
+			calls.push(name);
 			if (read && name === "keys.list") await read;
 			await gates.get(name);
 			// A server that breaks on this operation: an answer with no reason in it.
 			if (failing.has(name)) return { status: 500, body: { error: "unexpected" } };
 			return made.transport(name, ...rest);
 		};
-		return { site: { ...made, transport }, net, letRead, failing, holdCall };
+		return { site: { ...made, transport }, net, letRead, failing, holdCall, calls };
 	},
 ];
 

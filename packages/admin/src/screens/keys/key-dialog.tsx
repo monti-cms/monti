@@ -22,7 +22,7 @@ import {
 } from "@monti-cms/ui";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
-import { useOperation } from "../../operations/use-operation";
+import { reasonOf, useOperation } from "../../operations/use-operation";
 import { PickOne } from "../settings/pick-one";
 
 type Service = KeyList["services"][number];
@@ -86,13 +86,10 @@ export function KeyWindow({
 }) {
 	const { t } = useAdmin();
 	const nameOf = useServiceName();
-	// While the service is asked the window cannot be left: not by Escape, not by a press outside, not by Cancel. Leaving would mean "do not
-	// add it", and the server cannot call the add back once it is sent. The wait is the check's, ten seconds at most.
-	const [busy, setBusy] = useState(false);
 	return (
 		<Dialog
 			open={open}
-			onOpenChange={(next) => !next && !busy && onClose(nth)}
+			onOpenChange={(next) => !next && onClose(nth)}
 			onOpenChangeComplete={(next) => !next && onClosed(nth)}
 		>
 			<DialogContent form={state.mode !== "pick"}>
@@ -122,7 +119,6 @@ export function KeyWindow({
 						services={services}
 						names={names}
 						onClose={() => onClose(nth)}
-						onBusy={setBusy}
 						onStale={onStale}
 					/>
 				)}
@@ -142,7 +138,6 @@ function KeyForm({
 	services,
 	names,
 	onClose,
-	onBusy,
 	onStale,
 }: {
 	state: KeyFormState;
@@ -151,8 +146,6 @@ function KeyForm({
 	services: Service[];
 	names: string[];
 	onClose: () => void;
-	/** Tells the window that a request is on its way, and when it is back: the window stays until then. */
-	onBusy: (busy: boolean) => void;
 	onStale: () => void;
 }) {
 	const { t } = useAdmin();
@@ -197,10 +190,6 @@ function KeyForm({
 		[],
 	);
 	const pending = add.pending || update.pending;
-	useEffect(() => {
-		onBusy(pending);
-		return () => onBusy(false);
-	}, [pending, onBusy]);
 
 	const hint = suggested(service, address);
 	const fix = (field: Field, message: string) => {
@@ -254,8 +243,8 @@ function KeyForm({
 			return;
 		}
 		// Closed while the service was being asked: there is no field left to say it under.
-		if (!shown.current) return void toast.error(t(refusal.reason ?? "errors.unexpected"));
-		const words = t(refusal.reason ?? "errors.unexpected");
+		if (!shown.current) return void toast.error(t(reasonOf(refusal)));
+		const words = t(reasonOf(refusal));
 		switch (refusal.reason?.key) {
 			case "keys.refused":
 			case "keys.needsKey":
@@ -267,7 +256,10 @@ function KeyForm({
 			case "keys.badAddress":
 				return fix("address", words);
 			default:
+				// Not about any one field (the server failed): said in a toast, and the caret is back in the form as after a refusal, in the key
+				// when its field is open.
 				toast.error(words);
+				(inputs.secret.current ?? inputs.name.current)?.focus();
 		}
 	};
 
@@ -387,6 +379,9 @@ function KeyForm({
 					<FormFieldDescription>{t("apiKeys.enterAgain")}</FormFieldDescription>
 				) : null}
 			</FormField>
+			{/* While the service is asked the window cannot be left: not by Cancel, not by Escape, not by a press outside. Leaving would mean
+			    "do not add it", and the server cannot call the add back once it is sent. The wait is the check's, ten seconds at most. The
+			    footer keeps that lock, for the whole window. */}
 			<DialogFormFooter
 				onCancel={onClose}
 				submitLabel={t(editing ? "ui.save" : "apiKeys.addSubmit")}

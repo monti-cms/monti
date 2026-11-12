@@ -1,6 +1,8 @@
 import type { KeyList, ModelList } from "@monti-cms/core";
-import { describe, expect, it } from "vitest";
+import { toast } from "@monti-cms/ui";
+import { afterEach, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { holdKey, keyTwice, pressTwice, releaseKey } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
 import * as keys from "./keys.stories";
@@ -12,8 +14,16 @@ type Loaded = {
 	letRead: () => void;
 	failing: Set<string>;
 	holdCall: (name: string) => () => void;
+	calls: string[];
 };
+/** How many times the screen called an operation. */
+const called = (loaded: Loaded, name: string) => loaded.calls.filter((call) => call === name).length;
+/** Longer than a window's way out (150ms), and than a toast's way in. */
+const faded = () => new Promise((done) => setTimeout(done, 500));
 const open = (story: Parameters<typeof scene>[0]) => scene<Loaded>(story, keys.default);
+
+// Storybook keeps toasts up, and a scene's toasts would stand over the next one's window: each scene starts with none.
+afterEach(() => void toast.dismiss());
 
 const button = (name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
 const field = (name: string | RegExp) => page.getByRole("textbox", { name });
@@ -257,9 +267,138 @@ describe("a key that could not be removed", () => {
 		story.loaded().failing.add("keys.remove");
 		await menu("Anthropic 개인", "지우기");
 		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
-		await expect.element(page.getByText(/문제가 생겼습니다/)).toBeVisible();
+		// A server that gave no reason: that it failed, and nothing after it (no "{message}").
+		await expect.element(page.getByText("문제가 생겼습니다", { exact: true })).toBeVisible();
 		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).not.toBeInTheDocument();
 		expect((await list(story.loaded().site)).keys).toHaveLength(3);
+	});
+});
+
+describe("one press does one thing", () => {
+	it("14-1 '지우기' in the question pressed twice 40ms apart removes the key once: one call, and no word of a key saved elsewhere", async () => {
+		const story = open(keys.Keys);
+		await story.run();
+		await menu("예전 Gemini 키", "지우기");
+		const confirm = page.getByRole("alertdialog").getByRole("button", { name: "지우기" });
+		await expect.element(confirm).toBeVisible();
+		await pressTwice(confirm.element(), 40);
+		await expect.element(page.getByText("키를 지웠습니다")).toBeVisible();
+		await faded();
+		expect(called(story.loaded(), "keys.remove")).toBe(1);
+		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).not.toBeInTheDocument();
+	});
+
+	it("14-1 Enter twice 40ms apart in '이름' saves the new name once", async () => {
+		const story = open(keys.Keys);
+		await story.run();
+		await menu("OpenAI 회사", "편집");
+		await userEvent.fill(field(/이름/), "OpenAI 회사 2");
+		await keyTwice("Enter", 40);
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		await faded();
+		expect(called(story.loaded(), "keys.update")).toBe(1);
+		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).not.toBeInTheDocument();
+	});
+
+	it("14-1 Enter held down in the key adds it once, and the window does not open again under the held key", async () => {
+		const story = open(keys.NoKeys);
+		await story.run();
+		await addFor("Anthropic");
+		await userEvent.fill(keyField(), keys.sample.anthropic);
+		try {
+			// Held across the answer and the window's way out: the focus is back on "키 추가" by then.
+			await holdKey("Enter", { repeats: 30, every: 40 });
+		} finally {
+			await releaseKey("Enter");
+		}
+		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
+		await faded();
+		expect(called(story.loaded(), "keys.add")).toBe(1);
+		await expect.element(dialog()).not.toBeInTheDocument();
+		await expect.element(page.getByText(/이미 있습니다/)).not.toBeInTheDocument();
+	});
+});
+
+describe("where the focus is afterwards", () => {
+	/** Opens a row's ⋯ and its question with the keyboard, and stands on the question's "지우기". */
+	async function askByKeyboard(name: string) {
+		button(`${name} 더 보기`).element().focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "지우기" })).toBeVisible();
+		await userEvent.keyboard("{End}{Enter}");
+		const confirm = page.getByRole("alertdialog").getByRole("button", { name: "지우기" });
+		await expect.element(confirm).toBeVisible();
+		await userEvent.keyboard("{Tab}{Tab}");
+		expect(focused()).toBe(confirm.element());
+	}
+	const gone = (name: string) => expect.element(page.getByText(name, { exact: true })).not.toBeInTheDocument();
+
+	it("14-1 a key removed with the keyboard: the focus goes to the ⋯ of the row after it, with none after it to the row before, with no row left to '키 추가'", async () => {
+		const story = open(keys.Keys);
+		await story.run();
+		const names = (await list(story.loaded().site)).keys.map((key) => key.name);
+		const [first, second, third] = names;
+		if (!first || !second || !third) throw new Error("three keys");
+
+		await askByKeyboard(first);
+		await userEvent.keyboard("{Enter}");
+		await gone(first);
+		await expect.poll(focused).toBe(button(`${second} 더 보기`).element());
+
+		await askByKeyboard(third);
+		await userEvent.keyboard("{Enter}");
+		await gone(third);
+		await expect.poll(focused).toBe(button(`${second} 더 보기`).element());
+
+		await askByKeyboard(second);
+		await userEvent.keyboard("{Enter}");
+		await gone(second);
+		await expect.poll(focused).toBe(button("키 추가").element());
+	});
+
+	it("14-1 on a site that cannot store keys the last key removed with the keyboard leaves the focus on the page's tab", async () => {
+		const story = open(keys.NoSecretWithKeys);
+		await story.run();
+		// The story stands with a row's menu open.
+		await userEvent.keyboard("{Escape}");
+		await expect.element(page.getByRole("menuitem", { name: "지우기" })).not.toBeInTheDocument();
+		const names = (await list(story.loaded().site)).keys.map((key) => key.name);
+		for (const name of names) {
+			await askByKeyboard(name);
+			await userEvent.keyboard("{Enter}");
+			await gone(name);
+		}
+		await expect.poll(() => focused()?.textContent).toBe("템플릿");
+	});
+
+	it("14-1 a key removed with the pointer moves no focus: it is not put on another row", async () => {
+		const story = open(keys.Keys);
+		await story.run();
+		await menu("Anthropic 개인", "지우기");
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
+		await gone("Anthropic 개인");
+		await faded();
+		expect(focused()).toBe(document.body);
+	});
+
+	it("14-1 a question left with '취소' or Esc gives the focus back to the row's ⋯", async () => {
+		await open(keys.Keys).run();
+		await askByKeyboard("OpenAI 회사");
+		await userEvent.keyboard("{Escape}");
+		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+		await expect.poll(focused).toBe(button("OpenAI 회사 더 보기").element());
+	});
+
+	it("14-1 a server that fails while the service is asked: a toast, and the caret is in the key as after a refusal", async () => {
+		const story = open(keys.NoKeys);
+		await story.run();
+		await addFor("Anthropic");
+		await userEvent.fill(keyField(), keys.sample.anthropic);
+		story.loaded().failing.add("keys.add");
+		await userEvent.click(button("추가"));
+		await expect.element(page.getByText("문제가 생겼습니다", { exact: true })).toBeVisible();
+		await expect.element(dialog()).toBeVisible();
+		await expect.poll(focused).toBe(keyField().element());
 	});
 });
 

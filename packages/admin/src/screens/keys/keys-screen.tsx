@@ -39,9 +39,10 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { Add } from "@monti-cms/ui/icons";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
-import { useOperation, useRead } from "../../operations/use-operation";
+import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
+import { nextStop } from "../frame/focus-hand-off";
 import { KeyWindow, type KeyWindowState } from "./key-dialog";
 
 /** Tokens as the list writes them: as they are under a thousand, then in thousands, then in millions with two decimals ("812", "312K", "1.24M"). */
@@ -72,6 +73,24 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 	/** The key the question is about, and whether the question is open: the key stays while the question closes, so its words do not empty. */
 	const [removing, setRemoving] = useState<KeyRow | null>(null);
 	const [asking, setAsking] = useState(false);
+	/** The page's head, and each row's end by its key: where the focus can go when a row is gone. */
+	const header = useRef<HTMLElement>(null);
+	const rowEnds = useRef(new Map<string, HTMLElement>());
+	/**
+	 * The rows beside the one being removed with the keyboard, the one after it first: the question closes before the row goes, and the focus
+	 * given back to that row's ⋯ would fall to the page with it (tokens.md, the states). Nothing for a pointer's press, which holds no focus.
+	 */
+	const beside = useRef<string[] | null>(null);
+	const afterRemove = () => {
+		if (!beside.current) return null;
+		for (const id of beside.current) {
+			const more = rowEnds.current.get(id)?.querySelector("button");
+			if (more) return more;
+		}
+		// No row left: the way to add one, or on a site that cannot store keys the page's first control, its tab.
+		const head = header.current;
+		return head ? (head.querySelector("button") ?? nextStop(head)) : null;
+	};
 
 	const keys = list.data?.keys ?? [];
 	// Nothing that depends on the list is drawn before it is read: a site that cannot store keys never shows the way to add one.
@@ -100,7 +119,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 					/>
 				) : null}
 			</PageBanner>
-			<PageHeader title={t("tools.title")}>
+			<PageHeader ref={header} title={t("tools.title")}>
 				{canStore ? (
 					<Button variant="primary" onClick={() => openWindow({ mode: "pick" })}>
 						<Add aria-hidden />
@@ -142,7 +161,12 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 													</Stack>
 												</TableCell>
 												<TableCell align="end">
-													<RowActions>
+													<RowActions
+														ref={(node) => {
+															if (node) rowEnds.current.set(key.id, node);
+															return () => void rowEnds.current.delete(key.id);
+														}}
+													>
 														<DropdownMenu>
 															<RowMore
 																label={t("apiKeys.more", { name: key.name })}
@@ -161,6 +185,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 																<DropdownMenuItem
 																	variant="danger"
 																	onClick={() => {
+																		beside.current = null;
 																		setRemoving(key);
 																		setAsking(true);
 																	}}
@@ -193,7 +218,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 													const [keyId, model] = JSON.parse(value) as [string, string];
 													void setQuick.run({ keyId, model }).then((result) => {
 														if (result.ok) toast(t("apiKeys.quickChanged"));
-														else toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+														else toast.error(t(reasonOf(result.refusal)));
 													});
 												}}
 												groups={models.data.keys.map((key) => ({
@@ -247,7 +272,8 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 				/>
 			) : null}
 			<AlertDialog open={asking} onOpenChange={setAsking}>
-				<AlertDialogContent>
+				{/* Closed without removing, or with a pointer: the focus goes back to the row's ⋯, the part's own way. */}
+				<AlertDialogContent finalFocus={afterRemove}>
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t("apiKeys.removeTitle")}</AlertDialogTitle>
 						<AlertDialogDescription>
@@ -269,20 +295,20 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 						<AlertDialogCancel>{t("ui.cancel")}</AlertDialogCancel>
 						<AlertDialogAction
 							variant="danger"
-							onClick={() => {
+							onClick={(event) => {
 								const key = removing;
 								if (!key) return;
+								// A click made with the keyboard counts no presses of a pointer (`detail` 0): only that has a focus to hand on.
+								const at = keys.findIndex((each) => each.id === key.id);
+								beside.current =
+									event.detail === 0 ? [keys[at + 1]?.id, keys[at - 1]?.id].filter((id) => id !== undefined) : null;
 								setAsking(false);
 								void remove.run({ id: key.id }, { versions: { [`key:${key.id}`]: key.version } }).then((result) => {
 									if (result.ok) toast(t("apiKeys.removed"));
 									else {
 										// Only a key that changed since the list was read is "saved elsewhere"; anything else says what it was.
 										toast.error(
-											t(
-												result.refusal.error === "conflict"
-													? "ui.savedElsewhere"
-													: (result.refusal.reason ?? "errors.unexpected"),
-											),
+											t(result.refusal.error === "conflict" ? "ui.savedElsewhere" : reasonOf(result.refusal)),
 										);
 										void list.reload();
 									}

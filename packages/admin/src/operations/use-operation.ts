@@ -6,6 +6,12 @@ import type { Answer, CallOptions } from "./transport";
 /** Why an operation did not go through, as the screen shows it. `conflict`: the record changed since it was read, so the screen reloads it. */
 export type Refusal = { status: number; error: string; reason: Message | null };
 
+/**
+ * What a refusal says to the person: its reason, or with none (a server that failed and said nothing) that something went wrong, and no more.
+ * The one place this fallback is made: its words take no values, so no screen can show an unfilled `{…}`.
+ */
+export const reasonOf = (refusal: Refusal): Message => refusal.reason ?? { key: "errors.unexpected" };
+
 const refusalOf = (answer: Answer): Refusal => {
 	const body = (answer.body ?? {}) as { error?: string; reason?: Message };
 	return { status: answer.status, error: body.error ?? "unexpected", reason: body.reason ?? null };

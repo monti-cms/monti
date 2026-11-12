@@ -16,7 +16,7 @@ import {
 import { Edit, Folder, Launch, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
-import { useOperation, useRead } from "../../operations/use-operation";
+import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { useTrashMove } from "../../trash/use-trash";
 
 /** Whose folders (doc 07, principle 2: one shape for both): a collection's entries, or the media library's files. */
@@ -73,7 +73,7 @@ export function useFolderNaming(scope: FolderScope, parentId: string | null) {
 		if (!target || !name) return;
 		const result =
 			target.id === null ? await create.run({ scope, parentId, name }) : await rename.run({ id: target.id, name });
-		if (!result.ok) toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+		if (!result.ok) toast.error(t(reasonOf(result.refusal)));
 	};
 	return {
 		naming,
