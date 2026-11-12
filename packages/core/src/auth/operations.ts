@@ -3,6 +3,7 @@ import { z } from "zod";
 import { deliveryCounts } from "../engine/deliveries";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
+import { siteFace } from "../settings/values";
 import { trashRowCount } from "../trash/list";
 import { DEV_WHO, hostedBy } from "./dev-bypass";
 import { MIN_PASSWORD } from "./reset";
@@ -45,7 +46,7 @@ export const authOperations = [
 		kind: "read",
 		open: true,
 		description:
-			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, and who is signed in (`bypass` when the dev server let this machine in without signing in).",
+			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, who is signed in (`bypass` when the dev server let this machine in without signing in), and what the admin draws with before any screen opens: the site's name and the admin's language as saved in the settings, and whether body templates are offered.",
 		input: z.object({}),
 		async run(_input, ctx) {
 			return {
@@ -62,6 +63,8 @@ export const authOperations = [
 				// Where a browser on this machine gets the ticket that lets it in without signing in (`auth.devSignIn`). The admin API leaves it out for a
 				// request that does not claim to be local.
 				...(ctx.session || !devBypassOn(ctx) ? {} : { devProof: ctx.site.devProof?.url() ?? undefined }),
+				// The sign-in screen is drawn before there is a session, so the name and the language come with this answer (doc 12, T36).
+				site: await siteFace(ctx.db),
 			};
 		},
 	}),

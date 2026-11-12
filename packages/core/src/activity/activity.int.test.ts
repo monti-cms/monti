@@ -1959,24 +1959,34 @@ describe("undo from the log", () => {
 			expect(undone.output).not.toHaveProperty("put");
 		});
 
-		it("13-3 only a record it held went back: the item stays applied, 'changed since', as 'revert all' leaves it", async () => {
+		it("13-3 only a record it held is left to go back: nothing would change, so the log's undo is refused and the item stays applied, as 'revert all' leaves it", async () => {
 			const monti = site({ plugins: [probe] });
 			const [changed, held] = [await newPost("하나", "one", monti), await newPost("둘", "two", monti)];
 			const proposal = await monti.proposals.create("conversation-1", "이름 바꿔 줘");
-			await monti.proposals.add(proposal, "probe.retitle", { ids: [changed], held: [held], title: "새 이름" });
+			const { itemId } = await monti.proposals.add(proposal, "probe.retitle", {
+				ids: [changed],
+				held: [held],
+				title: "새 이름",
+			});
 			await monti.proposals.apply(proposal);
-			// A person writes the record the item changed. The one it only held is as it was.
+			// A person writes the record the item changed. The one it only held is as it was: it holds what it held, and nothing of it is put back.
 			await save(changed, { title: "하나 (사람이 고침)" }, monti);
 			const line = (await list({ kinds: ["assistant"] }, monti)).lines[0];
-			const undone = await write<UndoPlan>("activity.undo", { id: line.id }, monti);
-			expect(undone.output.restore).toEqual([{ kind: "entry", id: held }]);
+			// The read of what the undo would do says so before anything is asked, and the undo says the same.
+			await expect(read<UndoPlanned>("activity.undoPlan", { id: line.id }, monti)).rejects.toThrow(
+				"activity.allChanged",
+			);
+			await expect(write("activity.undo", { id: line.id }, monti)).rejects.toThrow("activity.allChanged");
 			expect(await titleOf(changed)).toBe("하나 (사람이 고침)");
-			// Nothing of what the item changed went back: it is not "put back".
+			expect(await versionOf(held)).toBe(1);
+			// Nothing of what the item changed went back: it is not "put back", by the log or by "revert all".
+			expect(await items(proposal)).toEqual([{ state: "applied", reason: null }]);
+			const reverted = (await monti.run("proposals.revert", { id: proposal }, { actor: "admin" })) as Written<{
+				reverted: string[];
+				kept: string[];
+			}>;
+			expect(reverted.output).toEqual({ reverted: [], kept: [itemId] });
 			expect(await items(proposal)).toEqual([{ state: "applied", reason: { key: "activity.changedSince" } }]);
-			expect(
-				(await db.selectFrom("monti_proposal").select("status").where("id", "=", proposal).executeTakeFirstOrThrow())
-					.status,
-			).toBe("applied");
 		});
 	});
 

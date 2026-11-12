@@ -4,6 +4,7 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 import { useEffect, useRef, useState } from "react";
+import { BUSY_GUARD } from "./busy";
 import { cn } from "./cn";
 import { Spinner } from "./spinner";
 
@@ -13,7 +14,7 @@ import { Spinner } from "./spinner";
  * leading icon pulls 2px into the left padding so it centers visually. The filled pills have no border, so their text starts at the padding the
  * design system gives (18px, 16px for `secondary`, 12px for `sm`); only `outline-danger` draws a 1px line.
  * A button that is `loading` keeps its fill and its place: a spinner comes first, in place of the button's own leading icon, set by eye: 13px from the left edge at `md`
- * (2px more than from the top and bottom) and 10px at `sm`, with 7px to the words and a tighter right side (15px, 13px for `secondary`, 9px at `sm`). The caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`.
+ * (2px more than from the top and bottom) and 10px at `sm`, with 7px to the words and a tighter right side (15px, 13px for `secondary`, 9px at `sm`). The caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`. It keeps the keyboard's focus while it works.
  */
 const buttonVariants = cva(
 	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-not-allowed data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
@@ -123,6 +124,9 @@ function Button({
 			data-loading={busy || undefined}
 			aria-busy={busy || undefined}
 			disabled={disabled || busy}
+			// Working is not "cannot be used": the button keeps the focus it was pressed with (`aria-disabled`, not the attribute, which would hand
+			// the focus to the page) and takes no second press.
+			focusableWhenDisabled={busy && !disabled}
 			className={cn(buttonVariants({ variant, size }), width === "full" && "w-full", className)}
 			{...(href === undefined
 				? {}
@@ -133,6 +137,7 @@ function Button({
 						render: <a href={href} target={target} rel={rel} />,
 					})}
 			{...props}
+			{...(busy && !disabled ? BUSY_GUARD : {})}
 		>
 			{busy && <Spinner className={size === "sm" || size === "xs" ? "size-3" : "size-3.5"} />}
 			{sending ? pendingLabel : children}

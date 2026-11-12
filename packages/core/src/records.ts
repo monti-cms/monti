@@ -18,9 +18,10 @@ export type RecordKind = {
 	load(db: Db, ids: string[]): Promise<RecordState[]>;
 	/**
 	 * Puts a snapshot back: `data` as `load` returned it, or `null` to remove a record the write created. It raises the version, so a screen that read
-	 * the record before the undo sees a conflict instead of overwriting it.
+	 * the record before the undo sees a conflict instead of overwriting it. A kind without it is versioned only (the schema: a structure change is
+	 * reversed by a new change, doc 00): its records are never in what an undo puts back.
 	 */
-	restore(db: Db, id: string, data: unknown | null): Promise<void>;
+	restore?(db: Db, id: string, data: unknown | null): Promise<void>;
 	/** Whether a record in this state (`data` as `load` returned it) is in the trash. A kind that never goes there leaves it out. */
 	inTrash?(data: unknown): boolean;
 	/** What the activity log calls a record in this state (`data` as `load` returned it): its title, and for an entry where it is on this site. */

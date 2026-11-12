@@ -66,7 +66,7 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 				"What undoing a line of the activity log (`id`) or a proposal's writes (`proposal`) would do, without doing it: the records it would put back (`restore`), the ones written since that it would leave (`skip`, `partly`), the ones it would delete for good because the writes created them (`removes`), and the entries it would put in the trash again (`trashes`). It refuses as the undo would: already undone, past its 30 days, never undoable, or everything written since. An undo cannot itself be undone: read this before proposing one.",
 			input: Undo,
 			async run(input, ctx): Promise<UndoPlanned> {
-				const { steps: _steps, ...plan } = await planUndo(engine, ctx.db, undoOf(input));
+				const { steps: _steps, same: _same, ...plan } = await planUndo(engine, ctx.db, undoOf(input));
 				// As the undo itself refuses: a person is not asked about something that cannot happen.
 				if (plan.restore.length === 0 && plan.skip.length > 0) throw new CheckError({ key: "activity.allChanged" });
 				const entries = plan.trashes.filter((ref) => ref.kind === "entry").map((ref) => ref.id);

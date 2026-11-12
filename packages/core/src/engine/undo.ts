@@ -33,10 +33,18 @@ export type UndoPlan = {
 	trashes: RecordRef[];
 };
 
-type Step = { activityId: string; snapshots: { ref: RecordRef; before: unknown | null }[] };
+/**
+ * One write of a plan and the records it is taken back through. `same`: the record holds what the snapshot holds already (the write named it
+ * and left it as it was, or wrote the same values again), so nothing of it is put back: writing the same values would only move its version,
+ * and turn another tab's next save of it into a conflict. It is walked through all the same, as one that was put back.
+ */
+type Step = { activityId: string; snapshots: { ref: RecordRef; before: unknown | null; same: boolean }[] };
 
-/** A plan as it is carried out: the writes to undo, newest first, each with the snapshots it puts back. */
-type UndoSteps = UndoPlan & { steps: Step[] };
+/**
+ * A plan as it is carried out: the writes to undo, newest first, each with its snapshots; and the records the writes named of which nothing
+ * is put back because they hold it already (`same`). Those are neither changed (`restore`) nor left alone for a later write (`skip`).
+ */
+type UndoSteps = UndoPlan & { same: RecordRef[]; steps: Step[] };
 
 /**
  * What an undo takes back: a line of the activity log (its id is its first write's), every write applied from one proposal, however many lines it
@@ -149,6 +157,10 @@ export async function planUndo(
 	const backAt = new Map<string, number | null>();
 	/** Records an older write could not take back after a newer one did. */
 	const broken = new Set<string>();
+	/** What each record holds once the newer writes are undone: what the last of them puts back; absent while none touched it. */
+	const holds = new Map<string, unknown | null>();
+	/** Records of which something is put back. */
+	const changes = new Set<string>();
 	const steps: Step[] = [];
 	for (const row of open) {
 		const step: Step = { activityId: row.id, snapshots: [] };
@@ -159,11 +171,16 @@ export async function planUndo(
 			if (broken.has(key)) continue;
 			const version = backAt.has(key) ? (backAt.get(key) ?? null) : (current.get(key)?.version ?? null);
 			if (version === snapshot.after_version || contentOf(key, version) === snapshot.after_version) {
-				step.snapshots.push({ ref, before: snapshot.before });
+				const held = holds.has(key) ? holds.get(key) : (current.get(key)?.data ?? null);
+				const same = sameJson(held ?? null, snapshot.before ?? null);
+				step.snapshots.push({ ref, before: snapshot.before, same });
+				if (!same) changes.add(key);
 				backAt.set(key, snapshot.before_version);
+				holds.set(key, snapshot.before ?? null);
 			} else broken.add(key);
 		}
-		// A write of which nothing can be put back is no step: it is not marked undone, and no event attaches to it.
+		// A write none of whose records can be walked back through is no step: it is not marked undone, and no event attaches to it. One
+		// whose records all hold what they held before it is a step: there is nothing to put back, and it is undone.
 		if (step.snapshots.length > 0) steps.push(step);
 	}
 	// Where each record ends: at the snapshot the oldest of its undone writes holds (the steps are newest first, so the last one put back wins).
@@ -171,11 +188,12 @@ export async function planUndo(
 	for (const step of steps) for (const { ref, before } of step.snapshots) endsAt.set(recordKey(ref), before);
 	const inTrash = (ref: RecordRef, data: unknown) =>
 		data !== null && data !== undefined && (engine.recordKinds.get(ref.kind)?.inTrash?.(data) ?? false);
-	const restore = refs.filter((ref) => backAt.has(recordKey(ref)));
+	const restore = refs.filter((ref) => changes.has(recordKey(ref)));
 	return {
 		restore,
+		same: refs.filter((ref) => backAt.has(recordKey(ref)) && !changes.has(recordKey(ref))),
 		skip: refs.filter((ref) => !backAt.has(recordKey(ref))),
-		partly: refs.filter((ref) => backAt.has(recordKey(ref)) && broken.has(recordKey(ref))),
+		partly: refs.filter((ref) => changes.has(recordKey(ref)) && broken.has(recordKey(ref))),
 		removes: restore.filter((ref) => endsAt.get(recordKey(ref)) === null),
 		trashes: restore.filter(
 			(ref) => inTrash(ref, endsAt.get(recordKey(ref))) && !inTrash(ref, current.get(recordKey(ref))?.data),
@@ -188,8 +206,10 @@ export async function planUndo(
 async function applyUndo(engine: Engine, trx: Db, plan: UndoSteps): Promise<void> {
 	const restored: RecordRef[] = [];
 	for (const step of plan.steps) {
-		for (const { ref, before } of step.snapshots) {
-			await engine.recordKinds.get(ref.kind)?.restore(trx, ref.id, before);
+		for (const { ref, before, same } of step.snapshots) {
+			if (same) continue;
+			// A kind with no `restore` is versioned only (the schema), and no write keeps a snapshot of it.
+			await engine.recordKinds.get(ref.kind)?.restore?.(trx, ref.id, before);
 			restored.push(ref);
 		}
 	}
@@ -208,11 +228,16 @@ async function applyUndo(engine: Engine, trx: Db, plan: UndoSteps): Promise<void
 	// it. Before the versions are read below, so the version the undo records, and the one its events carry, is where the entry ends.
 	await keepSeenTracked(trx, engine.site.schema());
 	// Where each record stands now, on the snapshot that was put back last (the oldest write's): the next undo of an older write reads this
-	// version as the one that write left.
-	const now = await loadRecords(engine, trx, refs);
+	// version as the one that write left. Also for a record that held it already and was not written (`same`): the version it stands at
+	// holds what the snapshot holds, and an older write is walked back through it.
 	const last = new Map<string, { activityId: string; ref: RecordRef }>();
 	for (const step of plan.steps)
 		for (const { ref } of step.snapshots) last.set(recordKey(ref), { activityId: step.activityId, ref });
+	const now = await loadRecords(
+		engine,
+		trx,
+		[...last.values()].map(({ ref }) => ref),
+	);
 	for (const [key, { activityId, ref }] of last) {
 		const version = now.get(key)?.version ?? null;
 		if (version === null) continue;
@@ -305,14 +330,14 @@ export async function undoWithEvents(
 	trx: Db,
 	of: UndoOf,
 	emit: (event: EmittedEvent, undone: string) => void,
-): Promise<UndoPlan & { undone: string[]; put: { write: string; back: RecordRef[] }[] }> {
-	const { steps, ...plan } = await planUndo(engine, trx, of, { lock: true });
+): Promise<UndoPlan & { undone: string[]; put: { write: string; back: RecordRef[]; same: RecordRef[] }[] }> {
+	const { steps, same, ...plan } = await planUndo(engine, trx, of, { lock: true });
 	// Every record of the writes was written again since: nothing would change, so nothing is marked undone either.
 	if (plan.restore.length === 0 && plan.skip.length > 0) throw new CheckError({ key: "activity.allChanged" });
 	const [newest] = steps;
 	const refs = plan.restore;
 	const before = await shownNow(trx, refs);
-	await applyUndo(engine, trx, { ...plan, steps });
+	await applyUndo(engine, trx, { ...plan, same, steps });
 	const after = await shownNow(trx, refs);
 	const schema = engine.site.schema();
 	const say = (event: EmittedEvent) => {
@@ -382,7 +407,11 @@ export async function undoWithEvents(
 	return {
 		...plan,
 		undone: steps.map((step) => step.activityId),
-		// Write by write, what went back: a proposal's item is judged by the records of its own write.
-		put: steps.map((step) => ({ write: step.activityId, back: step.snapshots.map((snapshot) => snapshot.ref) })),
+		// Write by write, what went back and what held it already: a proposal's item is judged by the records of its own write.
+		put: steps.map((step) => ({
+			write: step.activityId,
+			back: step.snapshots.filter((snapshot) => !snapshot.same).map((snapshot) => snapshot.ref),
+			same: step.snapshots.filter((snapshot) => snapshot.same).map((snapshot) => snapshot.ref),
+		})),
 	};
 }

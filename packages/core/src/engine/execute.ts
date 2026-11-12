@@ -16,9 +16,10 @@ import {
 	recordKey,
 } from "../operation";
 import { lockRecords, type RecordKind, type RecordState } from "../records";
+import { markUnapplied } from "../schema/apply";
 import type { Site } from "../site";
 import { type QueuedEvent, queueDeliveries, type Receiver } from "./deliveries";
-import { claimItem, type ItemClaim, lockProposals, markApplied, settleApplied } from "./proposals";
+import { acceptedItems, claimItem, type ItemClaim, lockProposals, markApplied, settleApplied } from "./proposals";
 
 /** How long a write can be undone. The trash keeps entries as long, and both are cleared together (doc 11). */
 export const UNDO_DAYS = 30;
@@ -78,6 +79,7 @@ export function context(
 ) {
 	const events: QueuedEvent[] = [];
 	const created: RecordRef[] = [];
+	const flags: { structure: boolean; change: string | null } = { structure: false, change: null };
 	const ctx: OperationContext = {
 		db,
 		actor,
@@ -87,11 +89,15 @@ export function context(
 				activity: options?.activity,
 			}),
 		created: (ref) => created.push(ref),
+		changedStructure: (changeId) => {
+			flags.structure = true;
+			flags.change = changeId;
+		},
 		site: engine.site,
 		now: engine.now,
 		session,
 	};
-	return { ctx, events, created };
+	return { ctx, events, created, flags };
 }
 
 /** Runs a read: no transaction, no log. */
@@ -140,10 +146,16 @@ export async function runWrite<Output>(
 	if (operation.structure && engine.site.files === null)
 		throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: operation.name } });
 	const input = parseInput(operation, rawInput);
+	// A write of the assistant's own books leaves no row of the log for a taken item to be tied to: the two together are a mistake of the
+	// caller's, said at once and not left to end with the items checked and never marked.
+	if (operation.bookkeeping && options.accepted && options.accepted.length > 0)
+		throw new Error(
+			`Operation "${operation.name}" keeps the assistant's books and cannot save accepted proposal items.`,
+		);
 	const activityId = operation.bookkeeping ? null : randomUUID();
-	/** Refuses the write when a record it touches is not at the version the caller read. */
-	const mustBeAsRead = (touched: RecordRef[], states: Map<string, RecordState | null>) => {
-		const conflicts = touched.flatMap((ref) => {
+	/** Refuses the write when a record it touches or holds is not at the version the caller read. */
+	const mustBeAsRead = (refs: RecordRef[], states: Map<string, RecordState | null>) => {
+		const conflicts = refs.flatMap((ref) => {
 			const expected = options.versions?.[recordKey(ref)];
 			const actual = states.get(recordKey(ref))?.version ?? null;
 			return expected === undefined || expected === actual ? [] : [{ ref, expected, actual }];
@@ -164,28 +176,58 @@ export async function runWrite<Output>(
 		// Before the transaction, with no connection held: a write that asks another service does it here (a key's check can take ten seconds).
 		prepared = await operation.prepare(input, ctx);
 	}
-	const result = await engine.db.transaction().execute(async (trx) => {
-		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
+	// The change file a structure write left on disk: files are not rolled back with the database.
+	const onDisk: { change: string | null } = { change: null };
+	const result = await engine.db
+		.transaction()
+		.execute((trx) => inTransaction(trx))
+		.catch(async (error) => {
+			// The write failed after its files were written (the activity row, a later step): the database is as it was and the files are saved.
+			// That is the state "saved, not applied": recorded, so the admin offers "apply again" instead of reading the file as a hand edit.
+			if (onDisk.change) await markUnapplied(engine.db, onDisk.change);
+			throw error;
+		});
+	// Only now that it has committed: a first write that fails begins no line.
+	const { line: began, ...answer } = result;
+	if (began !== null && options.batch && options.batch.line === undefined) options.batch.line = began;
+	return answer;
+
+	async function inTransaction(trx: Transaction<Database>): Promise<WriteResult<Output> & { line: string | null }> {
+		const { ctx, events, created, flags } = context(engine, trx, options.actor, options.session ?? null);
 		// A save that accepts proposal items decides about their proposals: those rows first, as a revert and a discard take them, then the
 		// records. Before `touches` too: some operations already hold a record there (a move holds its folder), and a write that held a
 		// record and then waited for the proposal would wait on a write that holds the proposal and waits for the record.
 		if (options.accepted && options.accepted.length > 0) await lockProposals(trx, { items: options.accepted });
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
-		await lockRecords(trx, touched);
+		// Held beside what the write touches: locked and compared with it, its own only where the write changes them (`holds`).
+		const named = new Set(touched.map(recordKey));
+		const held = unique((await operation.holds?.(input, ctx)) ?? []).filter((ref) => !named.has(recordKey(ref)));
+		const locked = [...touched, ...held];
+		await lockRecords(trx, locked);
 		// After the records' locks, as a screen's save takes them (records, then the items it accepts): the item is held until this write ends, so
 		// nothing discards it, changes it or applies it a second time meanwhile.
 		if (options.applies) await claimItem(trx, options.applies, true);
-		const before = await loadRecords(engine, trx, touched);
-		mustBeAsRead(touched, before);
+		const before = await loadRecords(engine, trx, locked);
+		mustBeAsRead(locked, before);
 
+		// The proposal items the person took are checked before anything is written (a structure write changes files that no rollback takes back).
+		const taken = await acceptedItems(trx, options.accepted ?? [], touched);
 		await operation.check?.(input, ctx, prepared);
-		const output = (await operation.run(input, ctx, prepared)) as Output;
+		let output: Output;
+		try {
+			output = (await operation.run(input, ctx, prepared)) as Output;
+		} finally {
+			// Known whether the run ended well or threw: the files it wrote are there either way.
+			onDisk.change = flags.change;
+		}
 
-		const records = unique([...touched, ...created]);
+		const own = unique([...touched, ...created]);
 		// Whatever the write did to a body or a field, what uses which media file is read from the result, here and nowhere else (doc 09).
 		// What the records held before, so a file the library does not have is refused only when this write brings it in (doc 09).
-		await rewriteUses(trx, engine.site.schema(), records, { before: before.values() });
-		const after = await loadRecords(engine, trx, records);
+		await rewriteUses(trx, engine.site.schema(), own, {
+			before: touched.map((ref) => before.get(recordKey(ref)) ?? null),
+		});
+		const after = await loadRecords(engine, trx, unique([...own, ...held]));
 		const versions = () => Object.fromEntries([...after].map(([key, state]) => [key, state?.version ?? null]));
 		if (options.applies)
 			await settleApplied(trx, options.applies.itemId, {
@@ -196,7 +238,18 @@ export async function runWrite<Output>(
 			});
 		// The assistant's own books are not the site's history: no row, no snapshot, nothing sent.
 		if (activityId === null) return { output, activityId, versions: versions(), deliveryIds: [], line: null };
-		const undoable = !operation.humanOnly && !operation.structure && records.length > 0;
+		// The records whose version the write moved: a taken proposal aimed at one of them is applied, and a record the write only held joins
+		// its log and its undo when it is among them.
+		const written = new Set(
+			[...after].flatMap(([key, state]) =>
+				(before.get(key)?.version ?? null) === (state?.version ?? null) ? [] : [key],
+			),
+		);
+		const records = unique([...own, ...held.filter((ref) => written.has(recordKey(ref)))]);
+		// What an undo puts back: the records of kinds that can be put back. The schema is versioned only, so a write that named it and left it
+		// alone still undoes the rest.
+		const restorable = records.filter((ref) => engine.recordKinds.get(ref.kind)?.restore !== undefined);
+		const undoable = !operation.humanOnly && !operation.structure && !flags.structure && restorable.length > 0;
 		const now = engine.now();
 		// What each record was called, as the write left it (as it was, for one the write removed): the log names it even after it is gone.
 		const logged: LoggedRecord[] = records.map((ref) => {
@@ -237,7 +290,7 @@ export async function runWrite<Output>(
 			await trx
 				.insertInto("monti_activity_snapshot")
 				.values(
-					records.map((ref) => {
+					restorable.map((ref) => {
 						const old = before.get(recordKey(ref));
 						return {
 							activity_id: activityId,
@@ -251,17 +304,23 @@ export async function runWrite<Output>(
 					}),
 				)
 				.execute();
-		// Taken proposals join this write: the row gets their conversation, so the log shows ✦ (doc 05).
-		const taken = await markApplied(trx, options.accepted ?? [], activityId, records);
-		if (taken && !options.conversationId)
+		// Taken proposals join this write: the row gets their conversation and their proposal, so the log shows ✦ (doc 05). Only those the
+		// write wrote something of: an item all of whose records are as they were (its change of the schema, when the file could not be
+		// written) stays pending.
+		const applied = await markApplied(
+			trx,
+			taken.filter((item) => item.records.some((key) => written.has(key))),
+			activityId,
+		);
+		if (applied && !options.conversationId)
 			await trx
 				.updateTable("monti_activity")
-				.set({ conversation_id: taken.conversationId, proposal_id: taken.proposalId })
+				.set({ conversation_id: applied.conversationId, proposal_id: applied.proposalId })
 				.where("id", "=", activityId)
 				.execute();
 		// A line is found by the words of its request too: its head keeps them. Only its own row is written: a write never touches another write's
 		// row, so an undo that holds a line's rows and a write of the same line never wait for each other.
-		const proposalId = options.proposalId ?? taken?.proposalId;
+		const proposalId = options.proposalId ?? applied?.proposalId;
 		if (line === activityId && proposalId)
 			await trx
 				.updateTable("monti_activity")
@@ -273,11 +332,7 @@ export async function runWrite<Output>(
 				.execute();
 		const deliveryIds = await queueDeliveries(trx, engine.receivers, activityId, events, now);
 		return { output, activityId, versions: versions(), deliveryIds, line: listed ? activityId : null };
-	});
-	// Only now that it has committed: a first write that fails begins no line.
-	const { line: began, ...written } = result;
-	if (began !== null && options.batch && options.batch.line === undefined) options.batch.line = began;
-	return written;
+	}
 }
 
 /** The most a row keeps of the words it is found by: a bulk write touches hundreds of records, and the first titles find it as well as all. */

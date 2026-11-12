@@ -45,6 +45,11 @@ export type MontiEvent = {
 	version?: number;
 	/** Public paths the change affects, for the site's cache. */
 	paths?: string[];
+	/**
+	 * More public paths moved than an event lists (`MOVED_PATHS_LIMIT`: a changed language mark on a large site): `paths` is left out, and whoever
+	 * keeps the site's pages refreshes all of them.
+	 */
+	allPaths?: true;
 };
 
 /** An event as an operation queues it: the engine adds its id and when. */
@@ -81,6 +86,13 @@ export interface OperationContext {
 	emit(event: EmittedEvent, options?: { activity?: string }): void;
 	/** Marks a record the write creates, so undoing the write removes it. */
 	created(ref: RecordRef): void;
+	/**
+	 * Says the write has written structure (the schema file and the change file `changeId`), for a write that does so only sometimes
+	 * (`settings.save`). Such a write has no undo: a structure change is reversed by a new change (doc 00), and putting back only its admin values
+	 * would leave them out of step with the structure. If the write then fails and the database rolls back, the files stay: the engine records the
+	 * change as saved and not applied, so the admin offers "apply again".
+	 */
+	changedStructure(changeId: string): void;
 	/** The site's schema and, on the dev server, the way to its files. */
 	site: Site;
 	/** The engine's clock (tests set it). */
@@ -152,6 +164,12 @@ export type OperationDefinition<Input, Output, Prepared = undefined> = {
 	prepare?: (input: Input, ctx: OperationContext) => Awaitable<Prepared>;
 	/** The records the write will change, read before it runs: the engine compares their versions and keeps their snapshots for undo. */
 	touches?: (input: Input, ctx: OperationContext) => Awaitable<RecordRef[]>;
+	/**
+	 * Records the write holds while it runs without their being its own: a structure change holds every collection's admin values, because it
+	 * moves a renamed field's label with the field. They are locked and their versions compared like `touches`, so no other write works on them
+	 * meanwhile; they are in the write's log and undo only when it changed them (their version moved).
+	 */
+	holds?: (input: Input, ctx: OperationContext) => Awaitable<RecordRef[]>;
 	/** Refuses the write before it runs (throw `CheckError`). */
 	check?: (input: Input, ctx: OperationContext, prepared: Prepared) => Awaitable<void>;
 	/** What the write would change. The agent reads it before proposing, and the proposal card shows it. */
@@ -205,6 +223,7 @@ export function defineOperation<Input, Output, Prepared = undefined>(
 	if (
 		definition.kind !== "write" &&
 		(definition.touches ||
+			definition.holds ||
 			definition.preview ||
 			definition.humanOnly ||
 			definition.structure ||

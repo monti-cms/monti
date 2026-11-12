@@ -773,7 +773,7 @@ export async function revertProposal(
 			// both: the undo of the later one records the version it left, and the undo of the earlier one reads it as its own.
 			const of = { write: item.activity_id };
 			const plan = await planUndo(engine, db, of, { lock: true });
-			outcome = outcomeOf(item, plan.restore, plan.skip);
+			outcome = outcomeOf(item, plan.restore, plan.skip, plan.same);
 			// As the activity log's undo: what it changes of the site is told to the receivers (an entry off the site again). When nothing of
 			// what the item changed can go back, the write is left as it is, not used up as undone.
 			if (outcome.state === "reverted") await undoWithEvents(engine, db, of, emit);
@@ -795,11 +795,12 @@ type ItemOutcome = { state: "reverted"; reason: Message | null } | { state: "app
 
 /**
  * The one rule for an item whose write is taken back, whoever takes it back ("revert all", or the activity log's undo of its line). `back` are
- * the records of the write that go back, `stayed` the ones that do not (someone wrote them since).
+ * the records of the write that go back, `stayed` the ones that do not (someone wrote them since), `same` the ones that hold what they held
+ * before it already (the same value written again): nothing of those goes back, and they are as much "put back" as any.
  *
  * It is judged by the records the item changed. One it only held while it wrote (the folder an entry moved into) was not changed by it, and
- * putting another item back may have moved that one on. Put back when a record it changed goes back, saying how many of them stayed; still
- * applied, "changed since", when none does.
+ * putting another item back may have moved that one on. Put back when a record it changed goes back, saying how many of them stayed, or when
+ * all it changed hold what they held; still applied, "changed since", otherwise.
  */
 function outcomeOf(
 	item: {
@@ -809,14 +810,16 @@ function outcomeOf(
 	},
 	back: RecordRef[],
 	stayed: RecordRef[],
+	same: RecordRef[],
 ): ItemOutcome {
 	const found = item.from_versions ?? item.base_versions;
 	const changed = (ref: RecordRef) => {
 		const key = recordKey(ref);
 		return item.after_versions === null || item.after_versions[key] !== (found[key] ?? null);
 	};
-	if (!back.some(changed)) return { state: "applied", reason: { key: "activity.changedSince" } };
 	const count = stayed.filter(changed).length;
+	if (!back.some(changed) && !(same.some(changed) && count === 0))
+		return { state: "applied", reason: { key: "activity.changedSince" } };
 	return { state: "reverted", reason: count > 0 ? { key: "proposals.partlyReverted", values: { count } } : null };
 }
 
@@ -849,7 +852,10 @@ export async function proposalsOfWrites(db: Db, of: { line: string } | { proposa
  * one rule): the conversation's card and a later "revert all" then agree with the log, whichever of the two undid the write. `put` names, for
  * each write the undo went through, the records it put back. The caller holds the proposals' rows.
  */
-export async function markReverted(db: Db, put: { write: string; back: RecordRef[] }[]): Promise<void> {
+export async function markReverted(
+	db: Db,
+	put: { write: string; back: RecordRef[]; same: RecordRef[] }[],
+): Promise<void> {
 	if (put.length === 0) return;
 	const writes = put.map((each) => each.write);
 	const items = await db
@@ -865,14 +871,14 @@ export async function markReverted(db: Db, put: { write: string; back: RecordRef
 		.where("activity_id", "in", writes)
 		.execute();
 	for (const item of items) {
-		const back = put.find((each) => each.write === item.activity_id)?.back ?? [];
-		const went = new Set(back.map(recordKey));
+		const { back, same } = put.find((each) => each.write === item.activity_id) ?? { back: [], same: [] };
+		const went = new Set([...back, ...same].map(recordKey));
 		// The write's other records: what it holds a snapshot of and the undo left as it is.
 		const stayed = snapshots
 			.filter((snapshot) => snapshot.activity_id === item.activity_id)
 			.map((snapshot) => ({ kind: snapshot.kind, id: snapshot.record_id }))
 			.filter((ref) => !went.has(recordKey(ref)));
-		await setOutcome(db, item.id, outcomeOf(item, back, stayed));
+		await setOutcome(db, item.id, outcomeOf(item, back, stayed, same));
 	}
 	for (const proposalId of new Set(items.map((item) => item.proposal_id))) await settleProposal(db, proposalId);
 }
@@ -1032,17 +1038,26 @@ export async function viewProposal(
 	};
 }
 
+/** A pending proposal item a person took into a screen's draft, as the write that saves the draft finds it. */
+type TakenItem = {
+	id: string;
+	proposalId: string;
+	conversationId: string /** The records it is aimed at, by key. */;
+	records: string[];
+};
+
 /**
- * Items a person took in a screen and saved with the screen's own write (doc 05): they become applied, tied to that write's activity row, so the
- * activity log shows them with ✦ and their conversation, and undoing the write undoes them. Only pending items are taken.
+ * The items a person took in a screen and saves with the screen's own write (doc 05), checked before the write runs: each must exist, and each
+ * pending one must be aimed at a record this write touches. One record is enough: a person may take an item and put part of it back before saving
+ * (its change of the site's name undone, its change of the languages kept), and the part that is kept is saved with the item. An item aimed at none
+ * of the write's records belongs to another screen and refuses the write, before it has written anything.
  */
-export async function markApplied(
+export async function acceptedItems(
 	trx: Transaction<Database>,
 	itemIds: string[],
-	activityId: string,
-	records: RecordRef[],
-): Promise<{ conversationId: string; proposalId: string } | null> {
-	if (itemIds.length === 0) return null;
+	touched: RecordRef[],
+): Promise<TakenItem[]> {
+	if (itemIds.length === 0) return [];
 	const accepted = [...new Set(itemIds)];
 	const items = await trx
 		.selectFrom("monti_proposal_item")
@@ -1055,28 +1070,42 @@ export async function markApplied(
 			"monti_proposal.conversation_id",
 		])
 		.where("monti_proposal_item.id", "in", accepted)
+		// Held until the write ends, so two writes cannot both take the same item.
+		.forUpdate()
 		.execute();
 	if (items.length !== accepted.length) throw new CheckError({ key: "proposals.unknownAccepted" });
-	const targets = new Set(records.map(recordKey));
+	const targets = new Set(touched.map(recordKey));
 	const pending = items.filter((item) => item.state === "pending");
-	if (
-		pending.some((item) => {
-			const proposed = Object.keys(item.base_versions);
-			return proposed.length === 0 || proposed.some((key) => !targets.has(key));
-		})
-	)
+	if (pending.some((item) => !Object.keys(item.base_versions).some((key) => targets.has(key))))
 		throw new CheckError({ key: "proposals.wrongTarget" });
-	if (pending.length === 0) return null;
+	return pending.map((item) => ({
+		id: item.id,
+		proposalId: item.proposal_id,
+		conversationId: item.conversation_id,
+		records: Object.keys(item.base_versions),
+	}));
+}
+
+/**
+ * Marks the taken items applied, tied to the write's activity row, so the activity log shows them with ✦ and their conversation, and undoing the
+ * write undoes them. Run after the write itself, in its transaction: a write that fails leaves them pending.
+ */
+export async function markApplied(
+	trx: Transaction<Database>,
+	taken: TakenItem[],
+	activityId: string,
+): Promise<{ conversationId: string; proposalId: string } | null> {
+	if (taken.length === 0) return null;
 	await trx
 		.updateTable("monti_proposal_item")
 		.set({ state: "applied", activity_id: activityId })
 		.where(
 			"id",
 			"in",
-			pending.map((item) => item.id),
+			taken.map((item) => item.id),
 		)
 		.execute();
-	for (const proposalId of new Set(pending.map((item) => item.proposal_id))) await settleProposal(trx, proposalId);
-	const [first] = pending;
-	return first ? { conversationId: first.conversation_id, proposalId: first.proposal_id } : null;
+	for (const proposalId of new Set(taken.map((item) => item.proposalId))) await settleProposal(trx, proposalId);
+	const [first] = taken;
+	return first ? { conversationId: first.conversationId, proposalId: first.proposalId } : null;
 }

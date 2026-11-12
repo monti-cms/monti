@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { dragPath, dropDrag, middleOf, scrollsSideways } from "../../../../../testing/input";
 import { scene } from "../../../test/scene";
+import { schema } from "../story-schema";
 import * as collections from "./collections.stories";
 
 const { NewItemCollection } = composeStories(collections);
@@ -20,8 +21,17 @@ describe("collection public pages", () => {
 });
 
 describe("a collection's preview address", () => {
-	const { Basics, NewCollection, ReadOnlyBasics, PreviewAddress, PreviewAddressReview, ReadOnlyPreviewAddress } =
-		composeStories(collections);
+	const {
+		AddressProblemReview,
+		Basics,
+		NewCollection,
+		NewCollectionPreviewReview,
+		ReadOnlyBasics,
+		PreviewAddress,
+		PreviewAddressProposal,
+		PreviewAddressReview,
+		ReadOnlyPreviewAddress,
+	} = composeStories(collections);
 	const field = () => page.getByRole("textbox", { name: "미리보기 주소" });
 	const hint = () => page.getByText("비워 두면 공개 주소에서 미리봅니다.");
 	/** "변경 사항 n ▾": there only while something is changed. */
@@ -91,6 +101,121 @@ describe("a collection's preview address", () => {
 		const review = page.getByRole("dialog");
 		await expect.element(review.getByText("미리보기 주소")).toBeVisible();
 		await expect.element(review.getByText("/preview/:slug")).toBeVisible();
+	});
+
+	it("16-9 a new collection's review with a preview address is a story: the address stands under the public one (T152)", async () => {
+		await NewCollectionPreviewReview.run();
+		const review = page.getByRole("dialog");
+		await expect.element(review.getByText("/note/:slug")).toBeVisible();
+		await expect.element(review.getByText("미리보기 주소")).toBeVisible();
+		await expect.element(review.getByText("/preview/:slug")).toBeVisible();
+	});
+
+	it("16-9 a preview address that is a public address is told under its field, and the review's line opens that field (T151)", async () => {
+		await AddressProblemReview.run();
+		const review = page.getByRole("dialog");
+		await expect.element(review.getByText("이미 쓰는 주소입니다")).toBeVisible();
+		await expect.element(review.getByRole("button", { name: "적용", exact: true })).not.toBeInTheDocument();
+		await userEvent.click(review.getByRole("button", { name: "열기" }));
+		// The review is gone and the keyboard is in the field that is wrong, with what is wrong under it.
+		await expect.element(review).not.toBeInTheDocument();
+		await expect.element(field()).toHaveFocus();
+		await expect.element(field()).toHaveAttribute("aria-invalid", "true");
+		await expect.element(page.getByRole("alert").filter({ hasText: "이미 쓰는 주소입니다" })).toBeVisible();
+		// Fixed where it stands: the line goes, and the save reaches its review.
+		await userEvent.keyboard("-preview");
+		await expect.element(field()).toHaveValue("posts-preview");
+		await expect.element(page.getByText("이미 쓰는 주소입니다")).not.toBeInTheDocument();
+		await expect.element(field()).not.toHaveAttribute("aria-invalid");
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		await expect.element(page.getByRole("dialog").getByRole("button", { name: "적용", exact: true })).toBeVisible();
+	});
+
+	it("16-9 a public address two collections share is told under the field of each, and the review opens it from another tab (T151)", async () => {
+		await Basics.run();
+		const address = page.getByRole("textbox", { name: "공개 주소" });
+		const taken = () => page.getByRole("alert").filter({ hasText: "다른 컬렉션이 쓰는 주소입니다" });
+		const collection = (name: RegExp) => page.getByRole("navigation", { name: "컬렉션" }).getByRole("button", { name });
+		// The posts take the memos' address.
+		await userEvent.click(address);
+		await userEvent.keyboard("{ControlOrMeta>}a{/ControlOrMeta}notes");
+		await expect.element(address).toHaveValue("notes");
+		await expect.element(taken()).toBeVisible();
+		await expect.element(address).toHaveAttribute("aria-invalid", "true");
+		// From another tab the review's line still leads to the address the person changed: the posts', though the schema names the memos'.
+		await userEvent.click(page.getByRole("button", { name: /^필드/ }));
+		await expect.element(address).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		const review = page.getByRole("dialog");
+		await expect.element(review.getByText("다른 컬렉션이 쓰는 주소입니다")).toBeVisible();
+		await userEvent.click(review.getByRole("button", { name: "열기" }));
+		await expect.element(review).not.toBeInTheDocument();
+		await expect.element(address).toHaveFocus();
+		await expect.element(address).toHaveValue("notes");
+		await expect.element(taken()).toBeVisible();
+		// The posts' basics, where the undo of that change is: not the memos', which nobody touched.
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveValue("게시글");
+		// Put back there, it is gone from both.
+		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
+		await expect.element(taken()).not.toBeInTheDocument();
+		await userEvent.click(collection(/^메모/));
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await expect.element(address).toHaveValue("notes");
+		await expect.element(taken()).not.toBeInTheDocument();
+	});
+
+	it("16-9 a proposed preview address is in its field: blue, with its discard and what is saved under it; the bubble walks to it from the fields", async () => {
+		await PreviewAddressProposal.run();
+		// In its field, as the assistant wrote it, with the saved value ("none") struck under it.
+		await expect.element(field()).toHaveValue("preview");
+		// The blue is the whole field's (the fixed letters around the typed part too): its mark is on the field, not on the input in it.
+		const blue = () => field().element().closest("[data-proposal]") !== null;
+		expect(blue()).toBe(true);
+		await expect.element(page.getByRole("deletion").filter({ hasText: "공개 주소에서" })).toBeVisible();
+		// The bubble has two stops, the address on the basics and the new field on the fields: it walks to the fields and round to the address.
+		await expect.element(page.getByText("1 / 2")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "다음", exact: true }));
+		await expect.element(page.getByRole("button", { name: "readingTime 열기" })).toBeVisible();
+		await expect.element(field()).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "다음", exact: true }));
+		await expect.element(field()).toHaveValue("preview");
+		// Its own discard is on its row; it drops the proposal, and the field is as saved.
+		await userEvent.click(page.getByRole("button", { name: "버리기", exact: true }));
+		await expect.element(field()).toHaveValue("");
+		expect(blue()).toBe(false);
+	});
+
+	it("16-9 the changed preview address's row in the changes list opens the basics with the keyboard in its field", async () => {
+		await PreviewAddress.run();
+		await userEvent.click(page.getByRole("button", { name: /^필드/ }));
+		await expect.element(field()).not.toBeInTheDocument();
+		await userEvent.click(changes());
+		await userEvent.click(page.getByRole("menu").getByRole("menuitem", { name: /미리보기 주소/ }));
+		await expect.element(field()).toHaveValue("preview");
+		await expect.element(field()).toHaveFocus();
+	});
+
+	it("16-9 a preview address two collections share: the review opens the one whose address the draft changed, not the later one the schema names (T151)", async () => {
+		// The memos have a preview page saved; the posts, listed before them, are given the same address in this draft.
+		const saved = structuredClone(schema);
+		(saved.collections.memo as { previewPath?: string }).previewPath = "/preview/:slug";
+		await scene({ loaders: collections.site({ schema: saved }) }, collections.default).run();
+		await userEvent.click(page.getByRole("button", { name: "설정" }));
+		await userEvent.click(page.getByRole("link", { name: /컬렉션/ }));
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveValue("게시글");
+		await userEvent.click(field());
+		await userEvent.keyboard("preview");
+		await expect.element(page.getByRole("alert").filter({ hasText: "이미 쓰는 주소입니다" })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: /^필드/ }));
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		const review = page.getByRole("dialog");
+		await userEvent.click(review.getByRole("button", { name: "열기" }));
+		await expect.element(review).not.toBeInTheDocument();
+		// The posts' basics, where the change and its undo are; the memos' address is as saved and nobody touched it.
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveValue("게시글");
+		await expect.element(field()).toHaveFocus();
+		await expect.element(page.getByRole("button", { name: "되돌리기", exact: true })).toBeVisible();
 	});
 
 	it("16-9 an item collection has no preview address, and the live site reads a document's as words with its lock", async () => {
@@ -271,14 +396,30 @@ describe("settings › collections: a refused save", () => {
 	it("says why in a banner at the very top of the screen: over the title, from edge to edge of the page area, the corner under it", async () => {
 		await SaveRefused.run();
 		const box = (element: Element | null) => (element as Element).getBoundingClientRect();
-		const banner = box(
-			page.getByText("저장하지 못했습니다. 다시 시도해 주세요.").element().closest("[data-slot=banner]"),
-		);
+		const banner = box(page.getByText("저장하지 못했습니다").element().closest("[data-slot=banner]"));
 		const inset = box(document.querySelector("[data-slot=sidebar-inset]"));
 		expect(banner.top).toBe(inset.top);
 		expect([banner.left, banner.right]).toEqual([inset.left, inset.right]);
 		expect(banner.bottom).toBeLessThan(box(page.getByRole("heading", { name: "설정" }).element()).top);
 		// The assistant's corner keeps its 12px, measured from under the banner.
 		expect(box(page.getByRole("button", { name: "어시스턴트 열기" }).element()).top).toBe(banner.bottom + 12);
+	});
+});
+
+describe("settings: the review of a hand-edited schema file", () => {
+	it("검토 on the banner, pressed on the settings screen with unsaved changes, opens the review at once: nothing is left, so nothing is asked", async () => {
+		await scene({ loaders: collections.HandEditReview.loaders }, collections.default).run();
+		await expect.element(page.getByText("스키마 파일을 직접 고쳤습니다")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "설정" }));
+		// A change on another tab of the settings: the review is on this screen, and the tabs share one draft.
+		await userEvent.fill(page.getByRole("textbox", { name: "사이트 이름" }), "example.blog");
+		await expect.element(page.getByRole("button", { name: "변경 사항", exact: true })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "검토" }));
+		await expect.element(page.getByRole("dialog").getByText("옛 주소는 404가 됩니다.")).toBeVisible();
+		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+		await expect.element(page.getByText("저장하지 않은 변경 사항이 있습니다")).not.toBeInTheDocument();
+		// The change is still in the draft.
+		await userEvent.click(page.getByRole("dialog").getByRole("button", { name: "취소" }));
+		await expect.element(page.getByRole("button", { name: "변경 사항", exact: true })).toHaveTextContent(/1/);
 	});
 });

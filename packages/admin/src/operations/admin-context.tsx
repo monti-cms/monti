@@ -55,6 +55,12 @@ type AdminContext = {
 	language: Language;
 	/** The site's name over the sidebar and the login form. */
 	siteName: string;
+	/** The name the site's code gives, shown while the settings hold none: the name field's placeholder. */
+	siteNameDefault: string;
+	/** Body templates are offered (settings › admin): off, the "/" menu and the tools leave them out (doc 03). */
+	templates: boolean;
+	/** What the settings hold of the three above, once `auth.state` has said it: a saved name and language take the place of the site code's. */
+	setFace: (face: Face) => void;
 	/** Where the admin API is mounted (`/admin/api`): the GitHub sign-in is a page the browser goes to there. */
 	apiBase: string;
 	/** Tells the screens a write went through, so what they show from other reads (the sidebar's counts) is read again. */
@@ -71,6 +77,9 @@ type AdminContext = {
 	 */
 	session: { ended: boolean; end: () => void; resume: () => void };
 };
+
+/** What `auth.state` gives the admin to draw with (doc 12): the saved name and language, `null` where nothing is saved yet. */
+export type Face = { name: string | null; language: Language | null; templates: boolean };
 
 const Context = createContext<AdminContext | null>(null);
 
@@ -105,7 +114,9 @@ export function AdminProvider({
 	transport: Transport;
 	/** How file bytes go up; over HTTP at `apiBase` when left out. Storybook hands in one of its own. */
 	uploader?: Uploader;
+	/** The admin's language until one is picked in settings › admin. */
 	language?: Language;
+	/** The site's name until one is saved in settings › site. */
 	siteName: string;
 	apiBase?: string;
 	/** The assistant's way to the screen; one of its own by default. */
@@ -113,31 +124,45 @@ export function AdminProvider({
 	blocks?: AdminBlockDefinition[];
 	children: ReactNode;
 }) {
+	const [face, setFace] = useState<Face>({ name: null, language: null, templates: true });
+	const shownLanguage = face.language ?? language;
+	const shownName = face.name ?? siteName;
 	const [ended, setEnded] = useState(false);
 	// The ways to change it never change, so a call that ends the session does not make every screen's reads anew.
 	const end = useCallback(() => setEnded(true), []);
 	const resume = useCallback(() => setEnded(false), []);
 	const session = useMemo(() => ({ ended, end, resume }), [ended, end, resume]);
-	const base = useMemo<Omit<AdminContext, "session">>(() => {
+	// Made once: a change of language must not make the write notices anew, or every screen would read again.
+	const writes = useMemo(() => {
 		const listeners = new Set<() => void>();
 		return {
-			screen: screen ?? createScreenChannel(),
 			wrote: () => {
 				for (const listener of listeners) listener();
 			},
-			onWrite: (listener) => {
+			onWrite: (listener: () => void) => {
 				listeners.add(listener);
 				return () => listeners.delete(listener);
 			},
+		};
+	}, []);
+	const channel = useMemo(() => screen ?? createScreenChannel(), [screen]);
+	const base = useMemo<Omit<AdminContext, "session">>(
+		() => ({
+			screen: channel,
+			...writes,
 			transport,
 			uploader: uploader ?? httpUploader(apiBase),
-			language,
-			siteName,
+			language: shownLanguage,
+			siteName: shownName,
+			siteNameDefault: siteName,
+			templates: face.templates,
+			setFace,
 			apiBase,
 			blocks: new Map(blocks.map((block) => [block.type, block])),
-			t: (message, values) => wordsOf(language, message, values),
-		};
-	}, [transport, uploader, language, siteName, apiBase, screen, blocks]);
+			t: (message, values) => wordsOf(shownLanguage, message, values),
+		}),
+		[transport, uploader, shownLanguage, shownName, siteName, face.templates, apiBase, channel, writes, blocks],
+	);
 	// Apart from the rest, so the session ending does not make the write notices and the screens' reads anew.
 	const value = useMemo<AdminContext>(() => ({ ...base, session }), [base, session]);
 	return <Context.Provider value={value}>{children}</Context.Provider>;

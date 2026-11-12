@@ -8,7 +8,8 @@ export type Route =
 	| { screen: "list"; collection: string; params: URLSearchParams }
 	/** An entry in the editor; `compare` shows the comparison over it (`?compare=conflict` or `?compare=draft`, screens.md EditorCompare). */
 	| { screen: "entry"; collection: string; id: string; compare?: "conflict" | "draft" }
-	| { screen: "settings" }
+	/** Settings (doc 12): its four tabs share one draft, so moving between them is a move inside one screen. */
+	| { screen: "settings"; tab: SettingsTab }
 	/** The media library (doc 09): its folder, filters and the open file are in the address. */
 	| { screen: "media"; params: URLSearchParams }
 	/** The trash (doc 11): the open folder, the search, the filters and the row open beside the list are in the address. */
@@ -20,6 +21,9 @@ export type Route =
 	/** The template editor, a page of its own outside the frame (tools.md); `id` is `null` for a new template. */
 	| { screen: "template"; id: string | null }
 	| { screen: "home" };
+
+export const SETTINGS_TABS = ["site", "languages", "collections", "admin"] as const;
+export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 const PLACES = new Set(["tools"]);
 
@@ -40,7 +44,10 @@ export function parseRoute(hash: string): Route {
 		}
 		return { screen: "list", collection: parts[1], params: new URLSearchParams(search) };
 	}
-	if (parts[0] === "settings") return { screen: "settings" };
+	if (parts[0] === "settings") {
+		const tab = SETTINGS_TABS.find((each) => each === parts[1]);
+		return { screen: "settings", tab: tab ?? "site" };
+	}
 	if (parts[0] === "templates" && parts[1]) return { screen: "template", id: parts[1] === "new" ? null : parts[1] };
 	if (parts[0] === "media") return { screen: "media", params: new URLSearchParams(search) };
 	if (parts[0] === "trash") return { screen: "trash", params: new URLSearchParams(search) };
@@ -75,7 +82,7 @@ export function href(route: Route): string {
 		case "entry":
 			return `#/c/${encodeURIComponent(route.collection)}/${encodeURIComponent(route.id)}${route.compare ? `?compare=${route.compare}` : ""}`;
 		case "settings":
-			return "#/settings/collections";
+			return `#/settings/${route.tab}`;
 		case "media": {
 			const search = route.params.toString();
 			return `#/media${search ? `?${search}` : ""}`;

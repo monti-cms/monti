@@ -181,4 +181,47 @@ describe("a window that was told to close", () => {
 		await userEvent.keyboard("{Enter}");
 		expect(opened).toHaveBeenCalledTimes(2);
 	});
+
+	it("a window with fields keeps Tab inside though no frame is drawn (a browser that paints nothing): past its last button to its first field, and back", async () => {
+		const behind = vi.fn();
+		render(
+			<>
+				<Button onClick={behind}>Collapse the sidebar</Button>
+				<Dialog open>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>Edit the key</DialogTitle>
+						</DialogHeader>
+						<Stack gap={12}>
+							<Input aria-label="Name" />
+							<Input aria-label="Key" />
+						</Stack>
+						<DialogFormFooter submitLabel="Save" onCancel={() => {}} />
+					</DialogContent>
+				</Dialog>
+			</>,
+		);
+		const window_ = page.getByRole("dialog");
+		await expect.element(window_).toBeVisible();
+		const name = () => window_.getByRole("textbox", { name: "Name" }).element();
+		await expect.poll(() => document.activeElement).toBe(name());
+		// No frame comes: the primitive's own wrap, a frame late, never runs.
+		const frames: FrameRequestCallback[] = [];
+		const held = vi.spyOn(window, "requestAnimationFrame").mockImplementation((run) => frames.push(run));
+		const inside = () => window_.element().contains(document.activeElement);
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		expect(inside()).toBe(true);
+		const last = document.activeElement;
+		expect(last).not.toBe(name());
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(name());
+		for (let presses = 0; presses < 8; presses++) {
+			await userEvent.keyboard("{Tab}");
+			expect(inside()).toBe(true);
+		}
+		held.mockRestore();
+		for (const run of frames) run(performance.now());
+		await userEvent.keyboard("{Enter}");
+		expect(behind).not.toHaveBeenCalled();
+	});
 });
