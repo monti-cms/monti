@@ -1221,4 +1221,22 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(panel()).not.toBeInTheDocument();
 		expect(document.activeElement).toBe(link());
 	});
+	it("[many] scrolled to its end, the page keeps its 40px under the page links: the last control is not at the scroll's edge, beside an open panel too", async () => {
+		await draw(stories.Pages).run();
+		const link = () => main().getByRole("link", { name: "2", exact: true }).element();
+		await expect.element(main().getByRole("link", { name: "2", exact: true })).toBeVisible();
+		/** How far the page links stand over the end of the box the page scrolls in, once it is scrolled to its end. */
+		const under = () => {
+			let box: HTMLElement | null = link().parentElement;
+			while (box && !(getComputedStyle(box).overflowY === "auto" && box.scrollHeight > box.clientHeight))
+				box = box.parentElement;
+			if (!box) return null;
+			box.scrollTop = box.scrollHeight;
+			return Math.round(box.getBoundingClientRect().bottom - link().getBoundingClientRect().bottom);
+		};
+		expect(under()).toBe(40);
+		await userEvent.click(row('"고친 글" 저장').getByText("post/edited-post"));
+		await expect.element(panel()).toBeVisible();
+		expect(under()).toBe(40);
+	});
 });
