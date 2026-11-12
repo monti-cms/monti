@@ -154,7 +154,7 @@ const rowOf = async (canvas: HTMLElement, title: string) => {
 };
 
 /**
- * Flow 12·01: the log as it opens, newest first. One delivery failed: its row says so, the sidebar counts it, and there is no banner. The
+ * Flow 12·01: the log as it opens, newest first. One delivery failed: its row says so, the sidebar counts it, and the banner at the top offers to send it again. The
  * delivery cell's three ends stand side by side here: "보냄" in quiet words where every delivery went, the red mark where one failed, and nothing
  * where the write told no receiver (the template saved from the command line).
  */
@@ -188,7 +188,7 @@ export const Panel: Story = { loaders: log((ids) => `#/activity?open=${ids.faile
 /** The assistant's row open: its request whole, everything it did and touched. */
 export const AssistantPanel: Story = { loaders: log((ids) => `#/activity?open=${ids.assistant}`) };
 
-/** Flow 12·05: three failed deliveries. A banner at the top of the screen offers to send them all. */
+/** Flow 12·05: three failed deliveries. The banner at the top of the screen counts them and offers to send them all. */
 export const ThreeFailed: Story = { loaders: log("#/activity", { failures: 3 }) };
 
 /**

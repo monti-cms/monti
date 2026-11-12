@@ -778,6 +778,34 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(table().getByRole("button", { name: "필터 해제" })).toHaveFocus();
 	});
 
+	it("a row's 다시 보내기 from its ⋯ with the keyboard, with failed rows after it: the row goes, and the focus goes to the row that follows", async () => {
+		toasts.dismiss();
+		const drawn = draw(stories.ThreeFailed);
+		await drawn.run();
+		const { hooks } = drawn.loaded();
+		await userEvent.click(banner().getByRole("button", { name: "보기" }));
+		await expect.poll(() => rows().length).toBe(3);
+		const [first, second] = [...table().element().querySelectorAll("tbody tr")];
+		if (!first || !second) throw new Error("No two failed rows.");
+		let arrive = () => {};
+		hooks.hold = new Promise((resolve) => {
+			arrive = resolve;
+		});
+		const more = () => first.querySelector<HTMLElement>('button[aria-label="행 메뉴"]') as HTMLElement;
+		await tabTo(more);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
+		await userEvent.keyboard("{ArrowDown}{Enter}");
+		await expect.poll(() => document.activeElement).toBe(more());
+		hooks.hold = null;
+		arrive();
+		await expect.element(toast("보냈습니다")).toBeVisible();
+		await expect.poll(() => rows().length).toBe(2);
+		// The banner stays for the two left; the focus is in the row that stood under the one that went.
+		await expect.element(banner()).toHaveTextContent("전송 2건 실패");
+		await expect.poll(() => second.contains(document.activeElement)).toBe(true);
+	});
+
 	it("in the panel, a delivery's 다시 보내기 and its 취소 pressed with the keyboard go once used, and the focus goes to that delivery, whose state says how it came out", async () => {
 		toasts.dismiss();
 		const drawn = draw(stories.Panel);

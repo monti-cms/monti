@@ -157,7 +157,7 @@ export function DeliveryMark({ delivery, sending }: { delivery: LineDelivery | n
 /**
  * The activity log (doc 13, flow 12): every write as a row of the lists' table, newest first. A row says what was done and, after it, where; a row
  * the assistant did starts with ✦ and quotes its request. It opens its details beside the list, and what can be done with it is in its ⋯: send its
- * failed deliveries again, undo it. From two failed deliveries on, a banner at the top of the screen offers to send them all.
+ * failed deliveries again, undo it. While any delivery is failed, a banner at the top of the screen counts them and offers to send them again.
  */
 export function ActivityScreen({
 	params,

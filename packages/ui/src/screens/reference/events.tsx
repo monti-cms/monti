@@ -231,11 +231,13 @@ const FAILED_COUNT: Partial<Record<EventsStage, number>> = {
 	deliveryMenu: 1,
 	rowMenu: 1,
 	failedOnly: 1,
+	retrying: 1,
 	detail: 1,
 	detailAssistant: 1,
 	detailGone: 1,
 	cancelConfirm: 1,
 	threeFailed: 3,
+	retryingAll: 3,
 	someFailed: 1,
 	searched: 1,
 	pages: 1,
@@ -519,13 +521,16 @@ function ValueRow({ name, count, checked = false }: { name: string; count: numbe
 	);
 }
 
+/** The stages whose list shows the failed deliveries only. */
+const isFailedOnly = (stage: EventsStage) => stage === "failedOnly" || stage === "retrying" || stage === "retried";
+
 /**
  * The log's columns, as every list's: each name opens its menu. The work is filtered by its kind, the delivery by how it went, and the time is sorted both
  * ways and filtered by day as the lists' dates are. There is no column for who did it: one person uses the admin. A site with no receiver has no delivery
  * column.
  */
 function columnsOf(stage: EventsStage): ListHeadColumn[] {
-	const failedOnly = stage === "failedOnly" || stage === "retrying" || stage === "retried";
+	const failedOnly = isFailedOnly(stage);
 	return [
 		{
 			id: "what",
@@ -597,8 +602,8 @@ function StageToast({ message }: { message: string }) {
 /**
  * The activity log, a screen of its own as the trash is: its title, the search in the title's row, and the log as the lists' table right under it, newest
  * first. A row is one write, or the assistant's work for one request (✦ before its words): what was done with where after it, how its delivery went, and
- * when. A row opens its details beside the list; what can be done with it is in its ⋯. Failed deliveries, from two on, are a banner at the top of the page,
- * where every screen's banner is, with the way to send them all.
+ * when. A row opens its details beside the list; what can be done with it is in its ⋯. Failed deliveries, from the first one, are a banner at the top of the page,
+ * where every screen's banner is, with the way to show them and to send them again (2026-11-12, owner).
  */
 export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 	const lines = linesOf(stage);
@@ -616,13 +621,14 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 		>
 			{/* The page says it where its state lives; it stands at the very top of the screen, under the frame's own banners. */}
 			<PageBanner>
-				{stage === "threeFailed" || stage === "retryingAll" ? (
-					<Banner tone="danger" title="전송 실패 3건" meta="10. 26부터">
-						<TextButton variant="underline">보기</TextButton>
-						{stage === "retryingAll" ? (
+				{failed > 0 ? (
+					// It counts failed deliveries, as the sidebar does, and stays while they are on their way again.
+					<Banner tone="danger" title={`전송 ${failed}건 실패`} meta="10. 26부터">
+						{isFailedOnly(stage) ? null : <TextButton variant="underline">보기</TextButton>}
+						{stage === "retrying" || stage === "retryingAll" ? (
 							<TextButton loading>보내는 중…</TextButton>
 						) : (
-							<TextButton>모두 다시 보내기</TextButton>
+							<TextButton>{failed === 1 ? "다시 보내기" : "모두 다시 보내기"}</TextButton>
 						)}
 					</Banner>
 				) : null}
