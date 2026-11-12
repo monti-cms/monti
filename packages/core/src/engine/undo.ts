@@ -6,6 +6,7 @@ import { sameJson } from "../json";
 import { leaveNoFileInAGoneFolder, rewriteUses } from "../media/uses";
 import { type EmittedEvent, type RecordRef, recordKey } from "../operation";
 import { lockRecords } from "../records";
+import { keepSeenTracked } from "../schema/apply";
 import { type Engine, loadRecords } from "./execute";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -28,10 +29,10 @@ type Step = { activityId: string; snapshots: { ref: RecordRef; before: unknown |
 type UndoSteps = UndoPlan & { steps: Step[] };
 
 /**
- * What an undo takes back: a line of the activity log (a write's id, or a line's, which is its first write's id), or every write applied from one
- * proposal, however many lines it made.
+ * What an undo takes back: a line of the activity log (its id is its first write's), every write applied from one proposal, however many lines it
+ * made, or one write alone (a proposal's revert goes through its items one by one, each with its own result).
  */
-export type UndoOf = { line: string } | { proposal: string };
+export type UndoOf = { line: string } | { proposal: string } | { write: string };
 
 /**
  * Which records an undo would change and which it would leave alone. The writes are taken newest first. A write that cannot be undone (a permanent
@@ -42,8 +43,13 @@ export type UndoOf = { line: string } | { proposal: string };
  * the record goes back to that write, and what is older stays (`partly`). A record whose newest write is already written over is not touched at
  * all (`skip`).
  *
- * The preview, the refusal, what is carried out and what is answered are this one plan. With `lock` it is made under the locks an undo needs (see
- * `lockUndo`), so nothing it read can change before it is carried out.
+ * The preview, the refusal, what is carried out and what is answered are made the same way, by this function. They are not one reading: a
+ * preview plans with no locks, and the undo plans again under them (`lock`), so a record written between the two is skipped by the undo though
+ * the preview offered it. The undo's answer says what it did (`restore`, `skip`). Under `lock` nothing the plan read can change before it is
+ * carried out.
+ *
+ * A version an earlier undo put back counts as the version it brought back: undoing a record's writes one line after another walks back through
+ * them, each undo finding the record where the one before left it. Only a write that is no undo breaks the chain.
  */
 export async function planUndo(
 	engine: Engine,
@@ -58,7 +64,9 @@ export async function planUndo(
 			.where((eb) =>
 				"proposal" in of
 					? eb("proposal_id", "=", of.proposal)
-					: eb.or([eb("id", "=", of.line), eb("line", "=", of.line)]),
+					: "write" in of
+						? eb("id", "=", of.write)
+						: eb.or([eb("id", "=", of.line), eb("line", "=", of.line)]),
 			)
 			.orderBy("seq", "desc");
 	// Two undos of the same writes take them one after the other: the second finds them undone.
@@ -100,6 +108,33 @@ export async function planUndo(
 	// starts now waits until the undo is done. Without them an undo could read a version, lose the race, and put its snapshot over the save.
 	if (options.lock) await lockRecords(db, refs);
 	const current = await loadRecords(engine, db, refs);
+	// What earlier undos put back: the version each left a record at stands for the version whose content it brought back.
+	const putBack =
+		refs.length === 0
+			? []
+			: await db
+					.selectFrom("monti_activity_snapshot")
+					.select(["kind", "record_id", "before_version", "restored_version"])
+					.where("restored_version", "is not", null)
+					.where(
+						"record_id",
+						"in",
+						refs.map((ref) => ref.id),
+					)
+					.execute();
+	const standsFor = new Map(
+		putBack.map((row) => [
+			`${recordKey({ kind: row.kind, id: row.record_id })}@${row.restored_version}`,
+			row.before_version,
+		]),
+	);
+	/** The version whose content a record holds: itself, or what the undos that made it brought back. */
+	const contentOf = (key: string, version: number | null) => {
+		let at = version;
+		for (let hops = 0; at !== null && standsFor.has(`${key}@${at}`) && hops < 1000; hops++)
+			at = standsFor.get(`${key}@${at}`) ?? null;
+		return at;
+	};
 	/** The version each record is back at, once the newer writes are undone; absent while none of them touched it. */
 	const backAt = new Map<string, number | null>();
 	/** Records an older write could not take back after a newer one did. */
@@ -113,12 +148,13 @@ export async function planUndo(
 			// Once the chain is broken for a record, nothing older of it is taken back either: the write in between stays, with what was under it.
 			if (broken.has(key)) continue;
 			const version = backAt.has(key) ? (backAt.get(key) ?? null) : (current.get(key)?.version ?? null);
-			if (version === snapshot.after_version) {
+			if (version === snapshot.after_version || contentOf(key, version) === snapshot.after_version) {
 				step.snapshots.push({ ref, before: snapshot.before });
 				backAt.set(key, snapshot.before_version);
 			} else broken.add(key);
 		}
-		steps.push(step);
+		// A write of which nothing can be put back is no step: it is not marked undone, and no event attaches to it.
+		if (step.snapshots.length > 0) steps.push(step);
 	}
 	return {
 		restore: refs.filter((ref) => backAt.has(recordKey(ref))),
@@ -148,15 +184,33 @@ async function applyUndo(engine: Engine, trx: Db, plan: UndoSteps): Promise<void
 		...refs.filter((ref) => ref.kind === "media").map((ref) => ref.id),
 		...moved.map(({ id }) => id),
 	]);
-	await trx
-		.updateTable("monti_activity")
-		.set({ undone_at: engine.now() })
-		.where(
-			"id",
-			"in",
-			plan.steps.map((step) => step.activityId),
-		)
-		.execute();
+	// Where each record stands now, on the snapshot that was put back last (the oldest write's): the next undo of an older write reads this
+	// version as the one that write left.
+	const now = await loadRecords(engine, trx, refs);
+	const last = new Map<string, { activityId: string; ref: RecordRef }>();
+	for (const step of plan.steps)
+		for (const { ref } of step.snapshots) last.set(recordKey(ref), { activityId: step.activityId, ref });
+	for (const [key, { activityId, ref }] of last) {
+		const version = now.get(key)?.version ?? null;
+		if (version === null) continue;
+		await trx
+			.updateTable("monti_activity_snapshot")
+			.set({ restored_version: version })
+			.where("activity_id", "=", activityId)
+			.where("kind", "=", ref.kind)
+			.where("record_id", "=", ref.id)
+			.execute();
+	}
+	if (plan.steps.length > 0)
+		await trx
+			.updateTable("monti_activity")
+			.set({ undone_at: engine.now() })
+			.where(
+				"id",
+				"in",
+				plan.steps.map((step) => step.activityId),
+			)
+			.execute();
 }
 
 /** What the site shows of entries and files now: an entry's published copy while it is out of the trash, and whether a file is in the library. */
@@ -258,5 +312,7 @@ export async function undoWithEvents(
 	if (back.length > 0) say({ type: "media.restored", ids: back });
 	if (gone.length > 0) say({ type: "media.trashed", ids: gone });
 	if (renamed.length > 0) say({ type: "media.renamed", ids: renamed });
+	// What an entry saw back then may be of a field that has since left the schema.
+	await keepSeenTracked(trx, schema);
 	return { ...plan, undone: steps.map((step) => step.activityId) };
 }

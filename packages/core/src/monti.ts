@@ -5,15 +5,28 @@ import type { DevProof } from "./auth/dev-bypass";
 import { type AuthSettings, authOperations } from "./auth/operations";
 import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./body/blocks";
 import { bodyOperations, templateRecord } from "./body/operations";
-import type { Database } from "./db/schema";
+import type { Database, ItemExchange } from "./db/schema";
 import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
 import { context, type Engine, logOwnWork, type RunOptions, runRead, runWrite } from "./engine/execute";
-import { type ApplyResult, applyProposal, createProposal, proposeItem, settleProposal } from "./engine/proposals";
+import {
+	type ApplyProgress,
+	type ApplyResult,
+	addExchange,
+	applyProposal,
+	createProposal,
+	lockProposals,
+	type ProposalView,
+	proposeItem,
+	replaceItem,
+	revertProposal,
+	settleProposal,
+	viewProposal,
+} from "./engine/proposals";
 import { listOperations } from "./entries/list";
 import { entryOperations } from "./entries/operations";
 import { entryRecord } from "./entries/record";
 import type { PublishCheck } from "./entries/tasks";
-import { UnknownOperationError } from "./errors";
+import { CheckError, InputError, UnknownOperationError } from "./errors";
 import { folderOperations, folderRecord } from "./folders/operations";
 import { addKeyUsage, keyOperations, keyRecord, openKey } from "./keys/operations";
 import { aiServices, type KeyService } from "./keys/services";
@@ -27,6 +40,7 @@ import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
 import { schemaOperations, schemaRecordKinds } from "./schema/operations";
 import { createSite } from "./site";
+import { type AnyStream, defineStream, type StreamContext } from "./stream";
 import { translationOperations } from "./translations/operations";
 import { trashOperations } from "./trash/operations";
 import { purgeDue, purgedEvents } from "./trash/purge";
@@ -52,6 +66,15 @@ export type Plugin = {
 	storage?: Storage;
 	/** Services it brings that a key can be added for (doc 14). */
 	keyServices?: KeyService[];
+	/** Work it streams (doc 10: the assistant's run). */
+	streams?: AnyStream[];
+	/** Its own clean-up, run with the trash's (when the admin opens, and `monti trash:purge`): what it keeps for a time and then removes. */
+	cleanUp?: (monti: Monti) => Promise<void>;
+	/**
+	 * Called once with the site it was built into. An operation gets only its own context; a plugin whose operations run other operations (the
+	 * assistant's quick tasks read the models and open a key) keeps the site from here.
+	 */
+	attach?: (monti: Monti) => void;
 };
 
 export function definePlugin(plugin: Plugin): Plugin {
@@ -111,8 +134,15 @@ export const available = (operation: AnyOperation, actor: Actor, structureOpen: 
 	!(operation.structure && !structureOpen) &&
 	!(operation.kind === "screen" && actor === "cli");
 
+/** One step of a proposal being applied, or its end with every item's result. */
+export type ApplyEvent = ({ type: "item" } & ApplyProgress) | { type: "end"; results: ApplyResult };
+
 /** The core's own operations that belong to the engine itself. */
-function engineOperations(all: () => AnyOperation[]): AnyOperation[] {
+function engineOperations(
+	engine: Engine,
+	all: () => AnyOperation[],
+	byName: () => ReadonlyMap<string, AnyOperation>,
+): AnyOperation[] {
 	return [
 		defineOperation({
 			name: "meta.capabilities",
@@ -153,17 +183,84 @@ function engineOperations(all: () => AnyOperation[]): AnyOperation[] {
 			},
 		}),
 		defineOperation({
-			name: "proposals.discard",
+			name: "proposals.get",
+			kind: "read",
+			description:
+				"One proposal as its card and its review show it: the request, every item with its group, its state, whether the person keeps it and whether its record changed in the meantime, what the records are called, and how many items applying would run.",
+			input: z.object({ id: z.string() }),
+			async run(input, ctx): Promise<ProposalView> {
+				const view = await viewProposal(engine, byName(), ctx.db, input.id);
+				if (!view) throw new CheckError({ key: "proposals.unknown" });
+				return view;
+			},
+		}),
+		defineOperation({
+			name: "proposals.include",
 			kind: "write",
 			humanOnly: true,
-			description: "Throw away pending proposal items. Only a person does it; it is never an agent tool.",
-			input: z.object({ ids: z.array(z.string()).min(1) }),
+			bookkeeping: true,
+			log: false,
+			description:
+				"Keep waiting proposal items in the proposal or leave them out (the review's checks). An item left out is not applied. Only a person does it.",
+			input: z.object({ ids: z.array(z.string()).min(1), included: z.boolean() }),
 			async run(input, ctx) {
 				const items = await ctx.db
 					.updateTable("monti_proposal_item")
-					.set({ state: "discarded" })
+					.set({ included: input.included })
 					.where("id", "in", input.ids)
-					.where("state", "=", "pending")
+					.where("state", "in", ["pending", "stale"])
+					.returning("id")
+					.execute();
+				return { changed: items.map((item) => item.id) };
+			},
+			summary: (input) => ({ key: "proposals.include", values: { count: input.ids.length } }),
+		}),
+		defineOperation({
+			name: "proposals.revert",
+			kind: "write",
+			humanOnly: true,
+			// The lines it undoes say "undone" with when; a line of its own would say it twice (as `activity.undo`).
+			log: false,
+			description:
+				"Put back everything applying a proposal changed, as the activity log's undo does for each write. A record changed since is left alone and its item stays applied. Only a person does it.",
+			input: z.object({ id: z.string() }),
+			async run(input, ctx) {
+				// The deliveries of what it puts back show on the lines that were undone, as the log's own undo has them.
+				const output = await revertProposal(engine, ctx.db, input.id, (event, undone) =>
+					ctx.emit(event, { activity: undone }),
+				);
+				return output;
+			},
+			summary: (_input, output) => ({
+				key: "proposals.revert",
+				values: { count: output.reverted.length, kept: output.kept.length },
+			}),
+		}),
+		defineOperation({
+			name: "proposals.discard",
+			kind: "write",
+			humanOnly: true,
+			bookkeeping: true,
+			description:
+				"Throw away waiting proposal items: the ones named, or with `proposal` every waiting item of that proposal. Nothing of the site changes, so it leaves no activity row. Only a person does it; it is never an agent tool.",
+			input: z
+				.object({ ids: z.array(z.string()).min(1).optional(), proposal: z.string().optional() })
+				.refine((input) => (input.ids === undefined) !== (input.proposal === undefined), {
+					message: "Give ids or proposal, one of them.",
+				}),
+			async run(input, ctx) {
+				// The proposals' rows before their items', the order everything that decides about a proposal takes them in.
+				await lockProposals(
+					ctx.db,
+					input.proposal !== undefined ? { proposals: [input.proposal] } : { items: input.ids ?? [] },
+				);
+				const items = await ctx.db
+					.updateTable("monti_proposal_item")
+					.set({ state: "discarded" })
+					.where((eb) =>
+						input.proposal !== undefined ? eb("proposal_id", "=", input.proposal) : eb("id", "in", input.ids ?? []),
+					)
+					.where("state", "in", ["pending", "stale"])
 					.returning(["id", "proposal_id"])
 					.execute();
 				for (const proposalId of new Set(items.map((item) => item.proposal_id)))
@@ -232,7 +329,11 @@ export function createMonti(options: MontiOptions) {
 		operations.set(operation.name, operation);
 	};
 	for (const operation of [
-		...engineOperations(() => [...operations.values()]),
+		...engineOperations(
+			engine,
+			() => [...operations.values()],
+			() => operations,
+		),
 		...activityOperations(engine),
 		...schemaOperations,
 		...entryOperations,
@@ -302,11 +403,31 @@ export function createMonti(options: MontiOptions) {
 		return settled === undefined ? result : { ...result, output: settled as Output };
 	};
 
-	return {
+	const streams = new Map<string, AnyStream>();
+	const addStream = (stream: AnyStream, from: string) => {
+		if (streams.has(stream.name) || operations.has(stream.name))
+			throw new Error(`Stream "${stream.name}" from ${from} is defined twice.`);
+		streams.set(stream.name, stream);
+	};
+
+	const monti = {
 		db: options.db,
 		now,
 		site,
 		operations: operations as ReadonlyMap<string, AnyOperation>,
+		streams: streams as ReadonlyMap<string, AnyStream>,
+
+		/**
+		 * Starts a stream (doc 10): its events as they come. The input is checked before anything runs; whoever stops listening ends it through
+		 * `signal`.
+		 */
+		stream(name: string, input: unknown, context: Omit<StreamContext, "monti">): AsyncIterable<unknown> {
+			const stream = streams.get(name);
+			if (!stream) throw new UnknownOperationError(name);
+			const parsed = stream.input.safeParse(input);
+			if (!parsed.success) throw new InputError(parsed.error.issues);
+			return stream.run(parsed.data, { ...context, monti });
+		},
 
 		/**
 		 * Runs an operation at once, as a person does (the admin API, the CLI) or as the assistant does for a read. A screen operation is the browser's,
@@ -322,13 +443,31 @@ export function createMonti(options: MontiOptions) {
 		},
 
 		proposals: {
-			create: (conversationId: string, request: string) => createProposal(engine, conversationId, request),
-			/** Adds an assistant write to a proposal; nothing changes until a person applies it. */
-			add: (proposalId: string, name: string, input: unknown) =>
-				proposeItem(engine, proposalId, get(name, ["write"]), input),
-			/** Applies the pending items a person kept (all when `include` is left out). */
-			apply: (proposalId: string, include?: string[]): Promise<ApplyResult> =>
-				applyProposal(engine, operations, proposalId, include, write),
+			create: (conversationId: string, request: string, runId: string | null = null) =>
+				createProposal(engine, conversationId, request, runId),
+			/**
+			 * Adds an assistant write to a proposal; nothing changes until a person applies it. A write that names several records (`each`) becomes one
+			 * item per record. `group` is the name the assistant gave this kind of change.
+			 */
+			add: (proposalId: string, name: string, input: unknown, group?: string, call?: string) =>
+				proposeItem(engine, operations, proposalId, get(name, ["write"]), input, { group, call }),
+			/** Puts a new write in a waiting item's place: the item made again, or changed at its own place (doc 10). */
+			replace: (itemId: string, name: string, input: unknown, call?: string) =>
+				replaceItem(engine, operations, itemId, get(name, ["write"]), input, { call }),
+			/** Adds what was asked of an item at its place, and the answer, to the item. */
+			addExchange: (itemId: string, exchange: ItemExchange) => addExchange(engine.db, itemId, exchange),
+			/** A proposal as its card and review show it; `null` when there is none. */
+			view: (proposalId: string) => viewProposal(engine, operations, engine.db, proposalId),
+			/**
+			 * Applies the waiting items a person kept, one write each; `include` says which instead of the stored checks. Run again after it was cut
+			 * short, it goes on with what is left.
+			 */
+			apply: (
+				proposalId: string,
+				include?: string[],
+				onProgress?: (progress: ApplyProgress) => void | Promise<void>,
+				leaseMs?: number,
+			): Promise<ApplyResult> => applyProposal(engine, operations, proposalId, include, write, onProgress, leaseMs),
 		},
 
 		deliveries: {
@@ -373,5 +512,66 @@ export function createMonti(options: MontiOptions) {
 				return result;
 			},
 		},
+
+		/** The plugins' own clean-ups, run with the trash's (when the admin opens, and `monti trash:purge`). One that fails does not stop the others. */
+		async cleanUp(): Promise<void> {
+			for (const plugin of plugins) {
+				try {
+					await plugin.cleanUp?.(monti);
+				} catch (error) {
+					console.error(`Monti: the clean-up of plugin ${plugin.name} failed; the next one tries again:`, error);
+				}
+			}
+		},
 	};
+
+	addStream(
+		defineStream({
+			name: "proposals.apply",
+			description:
+				"Apply a proposal: each waiting item the person kept runs as its own write, in order. Each item's result comes as it is done; an item that fails or changed in the meantime is reported and the rest go on. Started again after it was cut short, it goes on with what is left.",
+			input: z.object({ id: z.string() }),
+			run: (input) => applying(monti.proposals.apply, input.id),
+		}),
+		"the core",
+	);
+	for (const plugin of plugins) for (const stream of plugin.streams ?? []) addStream(stream, `plugin ${plugin.name}`);
+	for (const plugin of plugins) plugin.attach?.(monti);
+	return monti;
+}
+
+/** An apply as a stream: each item's result as it lands, then the end with all of them. */
+async function* applying(
+	apply: (id: string, include: undefined, onProgress: (progress: ApplyProgress) => void) => Promise<ApplyResult>,
+	id: string,
+): AsyncGenerator<ApplyEvent> {
+	const queue: ApplyEvent[] = [];
+	let wake = () => {};
+	let ended = false;
+	let failure: unknown = null;
+	// The apply runs on whether or not anyone still listens: what it started is stored item by item.
+	void apply(id, undefined, (progress) => {
+		queue.push({ type: "item", ...progress });
+		wake();
+	})
+		.then(
+			(results) => {
+				queue.push({ type: "end", results });
+			},
+			(error: unknown) => {
+				failure = error;
+			},
+		)
+		.finally(() => {
+			ended = true;
+			wake();
+		});
+	for (;;) {
+		while (queue.length > 0) yield queue.shift() as ApplyEvent;
+		if (ended) break;
+		await new Promise<void>((resolve) => {
+			wake = resolve;
+		});
+	}
+	if (failure) throw failure;
 }

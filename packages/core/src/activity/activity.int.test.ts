@@ -1137,6 +1137,8 @@ describe("undo from the log", () => {
 			restore: [{ kind: "entry", id: second }],
 			skip: [{ kind: "entry", id: first }],
 			partly: [],
+			// Only the write of which something went back is named as undone.
+			undone: [expect.any(String)],
 		});
 		expect(await summaries()).toEqual({ [first]: "짧게", [second]: undefined });
 		expect((await list({ kind: "assistant" }, monti)).lines[1].undo).toEqual({ state: "done", at: clock });
@@ -1178,10 +1180,11 @@ describe("undo from the log", () => {
 		const { preview } = await monti.proposals.add(asking, "activity.undo", { proposal });
 		expect(preview).toMatchObject({ changes: plan.restore, blocked: [] });
 		const undone = await write<UndoPlan>("activity.undo", { proposal }, monti);
-		expect(undone.output).toEqual({ ...plan, partly: [{ kind: "entry", id: entry }] });
+		expect(undone.output).toEqual({ ...plan, partly: [{ kind: "entry", id: entry }], undone: expect.any(Array) });
 		// The entry is back at the person's write, not before it: the assistant's first write is under that write and stays.
 		expect([await titleOf(entry), await titleOf(other)]).toEqual(["사람이 고친 제목", "두 번째 글"]);
-		expect((await list({ kind: "assistant" }, monti)).lines.map((line) => line.undo.state)).toEqual(["done", "done"]);
+		// The newer sitting's line is undone. The older one's only write is under the person's and stays: that line is not marked undone.
+		expect((await list({ kind: "assistant" }, monti)).lines.map((line) => line.undo.state)).toEqual(["done", "open"]);
 	});
 
 	it("13-3 an undo that can take back only the newer of a proposal's writes on a record does that, and is not refused", async () => {
@@ -1199,6 +1202,8 @@ describe("undo from the log", () => {
 			restore: [{ kind: "entry", id: entry }],
 			skip: [],
 			partly: [{ kind: "entry", id: entry }],
+			// The older write, under the person's, is not undone.
+			undone: [expect.any(String)],
 		});
 		expect(
 			(await db.selectFrom("entries").select("title").where("id", "=", entry).executeTakeFirstOrThrow()).title,

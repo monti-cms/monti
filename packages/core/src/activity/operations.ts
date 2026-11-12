@@ -3,8 +3,8 @@ import { randomUUID } from "../bytes";
 import { cancelDelivery, deliveryCounts, reserveFailedDeliveries, sendDeliveries } from "../engine/deliveries";
 import type { Engine } from "../engine/execute";
 import { planUndo, type UndoOf, undoWithEvents } from "../engine/undo";
+import { CheckError } from "../errors";
 import { type AnyOperation, defineOperation, type Preview } from "../operation";
-import { keepSeenTracked } from "../schema/apply";
 import { ActivityQuery, getActivity, listActivity } from "./list";
 
 /**
@@ -66,12 +66,8 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			async run(input, ctx) {
 				// An undo that changes what the site shows (a publish taken back, a thrown-away entry put back) tells the site, as the write did (T29).
 				// The deliveries show on the line that was undone: this write has no line of its own.
-				const { undone: _undone, ...output } = await undoWithEvents(engine, ctx.db, undoOf(input), (event, undone) =>
-					ctx.emit(event, { activity: undone }),
-				);
-				// What an entry saw back then may be of a field that has since left the schema.
-				await keepSeenTracked(ctx.db, ctx.site.schema());
-				return output;
+				// `undone` names the writes of which something went back: a proposal's revert sets its items by them.
+				return undoWithEvents(engine, ctx.db, undoOf(input), (event, undone) => ctx.emit(event, { activity: undone }));
 			},
 			summary: (_input, output) => ({ key: "activity.undo", values: { count: output.restore.length } }),
 		}),
@@ -85,6 +81,12 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 				z.object({ ids: z.array(z.string()).min(1), run: z.iso.datetime().optional() }),
 				z.object({ all: z.literal(true), run: z.iso.datetime().optional() }),
 			]),
+			// A delivery that is not there is refused before anything is reserved, and before the assistant can propose it.
+			async check(input, ctx) {
+				if (!("ids" in input)) return;
+				const known = await ctx.db.selectFrom("monti_delivery").select("id").where("id", "in", input.ids).execute();
+				if (known.length < new Set(input.ids).size) throw new CheckError({ key: "deliveries.unknown" });
+			},
 			async run(input, ctx): Promise<DeliveriesRetried & { holder?: string }> {
 				// Reserved under a name of this call's own: from the commit on, no scheduled sender takes them before this call sends them.
 				const holder = randomUUID();

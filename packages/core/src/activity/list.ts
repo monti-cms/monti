@@ -137,9 +137,11 @@ async function collectionLabels(db: Db): Promise<Map<string, string>> {
 
 function undoOf(rows: Row[], now: Date): LineUndo {
 	const undoable = rows.filter((row) => row.undo_until !== null);
-	if (undoable.some((row) => row.undone_at === null && (row.undo_until as Date) >= now)) return { state: "open" };
+	// Undone once something of it went back, whatever stayed: a write of the line whose record someone wrote since is left as it is and not marked
+	// undone (the undo says which records it skipped), and the line still says when it was undone.
 	const undone = undoable.flatMap((row) => row.undone_at ?? []);
 	if (undone.length > 0) return { state: "done", at: new Date(Math.max(...undone.map((at) => at.getTime()))) };
+	if (undoable.some((row) => (row.undo_until as Date) >= now)) return { state: "open" };
 	return { state: undoable.length > 0 ? "over" : "none" };
 }
 
