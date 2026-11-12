@@ -7,8 +7,9 @@
  *      as a release's name each other by the release's, so the ones a site does not list are fetched the way they will be;
  *   2. copies the fresh app (`testing/release/app`, a Next app as create-next-app leaves it) to a temporary folder;
  *   3. `npm install`s core, admin, next and ai from those addresses (no workspace links: the least forgiving way), and loads each in Node;
- *   4. writes the Monti files a site has (the example app's, until `monti init` writes them);
- *   5. makes a database of its own, then `monti db:setup`, `tsc --noEmit`, `next build`;
+ *   4. makes a database of its own, and runs `monti init --yes`: it writes the site's Monti files and makes the tables. A second run writes
+ *      nothing, and `monti doctor` finds no failure;
+ *   5. `tsc --noEmit`, `next build`;
  *   6. `next start`, and a browser opens `/admin`: the admin is drawn with its own styles, the console is clean, the admin's API answers,
  *      and the site's own page looks as it did.
  *
@@ -21,7 +22,7 @@
  * address (a redirect) and a repository that is not public are not tried here. Only npm installs; pnpm and yarn are untried.
  */
 import { execFileSync, spawn } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -254,25 +255,26 @@ try {
 	for (const name of ["core", "core/render", "ai"])
 		inSite(process.execPath, ["--input-type=module", "-e", `await import("@monti-cms/${name}");`]);
 
-	step("the site's Monti files");
-	// Until `monti init` writes them (T82): the example app's own.
-	const example = path.join(root, "examples", "blog");
+	step(`a database of its own (${database})`);
+	onServer(`create database ${database}`);
+	made = true;
+
+	step("monti init, and monti doctor");
+	// As a person does it, with nobody to answer: the defaults. The database answers, so it makes the tables too.
+	inSite("npx", ["monti", "init", "--yes"]);
 	for (const file of [
 		"monti.config.ts",
 		"monti.schema.ts",
 		"lib/monti.ts",
 		"app/admin/page.tsx",
 		"app/admin/api/[...path]/route.ts",
-	]) {
-		mkdirSync(path.dirname(path.join(site, file)), { recursive: true });
-		cpSync(path.join(example, file), path.join(site, file));
-	}
-	writeFileSync(path.join(site, ".env.local"), `DATABASE_URL=${databaseUrl}\nMONTI_SECRET=${env.MONTI_SECRET}\n`);
-
-	step(`a database of its own (${database})`);
-	onServer(`create database ${database}`);
-	made = true;
-	inSite("npx", ["monti", "db:setup"], { env: live });
+	])
+		if (!existsSync(path.join(site, file))) throw new Error(`monti init did not write ${file}`);
+	// A second run finds everything there and writes nothing.
+	const again = execFileSync("npx", ["monti", "init", "--yes"], { cwd: site, env, encoding: "utf8" });
+	if (!again.includes("nothing to write")) throw new Error(`a second monti init wrote something:\n${again}`);
+	// The set-up it left has no failure: `monti doctor` ends with 1 on one.
+	inSite("npx", ["monti", "doctor"], { env: live });
 
 	step("tsc");
 	inSite("npx", ["tsc", "--noEmit"]);

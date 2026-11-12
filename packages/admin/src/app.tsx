@@ -22,7 +22,7 @@ import { filterColumn, type ListState, writeState } from "./screens/list/list-qu
 import { ListScreen } from "./screens/list/list-screen";
 import { LoginScreen } from "./screens/login/login-screen";
 import { MediaScreen } from "./screens/media/media-screen";
-import { CollectionsScreen } from "./screens/settings/collections-screen";
+import { SettingsScreen } from "./screens/settings/settings-screen";
 import { TemplateEditor } from "./screens/templates/template-editor";
 import { TemplatesScreen } from "./screens/templates/templates-screen";
 import { ToolsTabs } from "./screens/tools/tools-tabs";
@@ -73,7 +73,7 @@ const routeOf = (place: Place): Route =>
 		? // A collection's row opens its first list: no filters, newest change first (doc 06, decisions).
 			{ screen: "list", collection: place.collection, params: new URLSearchParams() }
 		: place === "settings"
-			? { screen: "settings" }
+			? { screen: "settings", tab: "site" }
 			: place === "media"
 				? { screen: "media", params: new URLSearchParams() }
 				: place === "trash"
@@ -111,7 +111,7 @@ function BesideAssistant({ panel, children }: { panel: ReactNode; children: Reac
 }
 
 function Screens({ route, go }: { route: Route; go: (route: Route, options?: { replace?: boolean }) => void }) {
-	const { screen } = useAdmin();
+	const { screen, templates } = useAdmin();
 	const assistant = useAssistant();
 	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
 	const [review, setReview] = useState(0);
@@ -172,6 +172,7 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 						)
 					}
 					onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
+					onLanguages={() => leave(() => go({ screen: "settings", tab: "languages" }))}
 				/>
 			</BesideAssistant>
 		);
@@ -191,22 +192,33 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 			open={placeOf(route)}
 			folder={route.screen === "list" || route.screen === "media" ? route.params.get("folder") : null}
 			onOpen={open}
-			onReview={() =>
-				leave(() => {
-					go({ screen: "settings" });
+			onReview={() => {
+				const review = () => {
+					go({ screen: "settings", tab: "collections" });
 					setReview((count) => count + 1);
-				})
-			}
+				};
+				// The review is the settings screen's own: from there nothing is left, so nothing is asked (its tabs share one draft).
+				if (route.screen === "settings") review();
+				else leave(review);
+			}}
 			counts={counts.data}
 			assistant={assistant.available ? { open: assistant.open, onOpen: () => assistant.setOpen(true), panel } : null}
 		>
 			{route.screen === "review" ? (
 				<ReviewScreen key={route.id} id={route.id} go={go} />
 			) : route.screen === "settings" ? (
-				<CollectionsScreen onOpen={open} review={review} />
+				// One screen for the four tabs: they share a draft, so a move between them asks nothing and loses nothing (doc 12).
+				<SettingsScreen
+					tab={route.tab}
+					onTab={(tab) => go({ screen: "settings", tab })}
+					onOpen={open}
+					review={review}
+				/>
 			) : route.screen === "place" && route.place === "tools" ? (
-				route.tab === "keys" ? (
-					<KeysScreen tabs={<ToolsTabs current="keys" go={go} />} />
+				// Body templates turned off (settings › admin, doc 03): the tools have one tab left, so no tab row, and every way to the tools
+				// (the sidebar, the templates' own address) opens the keys.
+				route.tab === "keys" || !templates ? (
+					<KeysScreen tabs={templates ? <ToolsTabs current="keys" go={go} /> : null} />
 				) : (
 					<TemplatesScreen
 						tabs={<ToolsTabs current="templates" go={go} />}

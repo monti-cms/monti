@@ -145,7 +145,7 @@ function DocumentListScreen({
 	count: number | undefined;
 	go: (route: Route, options?: { replace?: boolean }) => void;
 }) {
-	const { t, language, screen } = useAdmin();
+	const { t, language, screen, templates: templatesOn } = useAdmin();
 	const label = useColumnLabel();
 	const languageName = useLanguageName();
 	const schema = useRead<SchemaRead>("schema.read");
@@ -376,7 +376,8 @@ function DocumentListScreen({
 	const document = schema.data?.schema.collections[collection]?.kind !== "item";
 	const path = schema.data?.schema.collections[collection]?.path;
 	const newLabel = t("list.new", { label: collectionName });
-	const templateList = templates.data ?? [];
+	// With body templates turned off in settings › admin, no menu offers one (doc 03).
+	const templateList = templatesOn ? (templates.data ?? []) : [];
 	const fromTemplate =
 		templateList.length > 0 ? (
 			<DropdownMenuSub>

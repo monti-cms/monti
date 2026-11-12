@@ -551,7 +551,10 @@ export const CardUndone: Story = {
 		await openPanel(page);
 		await say(page, "둘 다 요약 채워 줘");
 		await userEvent.click(await page.findByRole("button", { name: "2건 적용" }, wait));
-		await userEvent.click(await page.findByRole("button", { name: "되돌리기" }, wait));
+		const undo = await page.findByRole("button", { name: "되돌리기" }, wait);
+		// A person reads that it was applied before pressing again: a press in the moment the button appears is not taken.
+		await new Promise((resolve) => setTimeout(resolve, 600));
+		await userEvent.click(undo);
 		await page.findByText("되돌림", {}, wait);
 	},
 };

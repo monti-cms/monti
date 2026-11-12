@@ -3,7 +3,47 @@
 Monti on a Next.js site (App Router, Next 16): the admin as a page of the site, the admin API as a route, the preview in draft mode, and the
 site's cached pages refreshed when something is published. The example site in [`examples/blog`](../../examples/blog) uses everything here.
 
+## Setting a site up
+
+```sh
+npx monti init          # in the site's folder, after installing @monti-cms/core, admin and next
+```
+
+It reads the site (Next 16, `app/` or `src/app/`, the language of its root layout), asks four things (`--admin-path`, `--locale`,
+`--login password|github`, `--storage local|s3|none`; `-y` takes the defaults, and nothing is asked when nobody is at the terminal) and
+writes what the site lacks:
+
+| File | What it is |
+|---|---|
+| `monti.schema.ts` | The site's structure: its language, one collection `post` to start from |
+| `monti.config.ts` | The database, how the admin signs in, where media files go |
+| `lib/monti.ts` | Opens Monti once (under `src/` when the site has one) |
+| `app/admin/page.tsx`, `app/admin/api/[...path]/route.ts` | The admin and its API. The folder's name is the admin's address |
+| `app/admin/layout.tsx` | The admin's own frame, only where the site has no top-level `app/layout.tsx` |
+| `.env.example` | The names of the values the site reads |
+
+A file that is there is never written over. `.env` is not touched; `.env.local` gets only the values neither file names (`DATABASE_URL`,
+a new `MONTI_SECRET`); `.gitignore` and `package.json` get the lines and the two `db:` scripts they lack. Then it makes the tables when the
+database answers, runs the check below, and lists what is left. Run it again at any time: it writes only what is missing.
+
+Under a top-level `app/layout.tsx` the admin is drawn inside the site's layout. If its header shows in the admin, move the site's pages
+and that layout into `app/(site)/` and run `monti init` again: it then writes the admin's own layout.
+
+```sh
+npx monti doctor        # --json for a machine, --origin https://example.com for the site's own address
+```
+
+One line for each check (`ok`, `warn`, `FAIL`, `skip`), the fix under a failure, and it ends with 1 when a check failed, so a deploy can
+stop on it: Next and the packages' versions, the config and schema, the admin's files and layout, `MONTI_SECRET`, the database (reachable,
+its tables, the changes it has followed), the storage (there, answering, not a folder on a host with no disk), the sign-in. It writes
+nothing and prints no secret.
+
+The `monti` command reads the site's env files as Next does: the environment first, then `.env.<mode>.local`, `.env.local`, `.env.<mode>`,
+`.env`. `--env-file <path>` names one more, read first.
+
 ## The three files
+
+What `monti init` writes, by hand:
 
 ```ts
 // lib/monti.ts

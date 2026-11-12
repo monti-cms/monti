@@ -509,7 +509,32 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0018_settings": {
+		async up(db) {
+			// The admin values of the settings screen (doc 12): one row for the site's (its name, how it writes), one for the admin's own (language, features).
+			await db.schema
+				.createTable("monti_settings")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("values", "jsonb", (column) => column.notNull())
+				.addColumn("version", "integer", (column) => column.notNull().defaultTo(1))
+				.execute();
+		},
+	},
 };
+
+/**
+ * The core's steps this database has not run, by name, in order (`monti doctor`): every step when the tables are not made yet. It reads only: no
+ * table is made and no step runs.
+ */
+export async function pendingMigrations(db: Kysely<Database>): Promise<string[]> {
+	const { rows } = await sql<{ schema: string; made: string | null }>`
+		select current_schema() as schema, to_regclass('monti_migration')::text as made`.execute(db);
+	if (rows[0].made === null) return Object.keys(MIGRATIONS);
+	const done = new Set(
+		(await sql<{ name: string }>`select name from monti_migration`.execute(db)).rows.map((row) => row.name),
+	);
+	return Object.keys(MIGRATIONS).filter((name) => !done.has(name));
+}
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */
 const RACE_TRIES = 30;

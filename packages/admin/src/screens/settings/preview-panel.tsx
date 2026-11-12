@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "./pick-one";
 import { at, type DraftField, type Layout, shownLayout } from "./schema-draft";
-import type { CollectionsDraft } from "./use-collections-draft";
+import type { SettingsDraft } from "./use-settings-draft";
 
 /** A tab's entries as the panel groups them: the loose fields between groups run together, each group under its name. */
 function runs(entries: Layout[number]["fields"]) {
@@ -40,7 +40,7 @@ export function PreviewPanel({
 	collection: c,
 	onClose,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	collection: string;
 	onClose: () => void;
 }) {

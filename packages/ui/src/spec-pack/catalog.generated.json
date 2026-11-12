@@ -1618,10 +1618,6 @@
 					"kind": "text",
 					"type": "string"
 				},
-				"saveDisabled": {
-					"kind": "flag",
-					"type": "boolean"
-				},
 				"saveLabel": {
 					"kind": "text",
 					"type": "string"

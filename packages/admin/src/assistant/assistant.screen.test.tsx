@@ -3,6 +3,7 @@ import type { ProposalView } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { holdKey, pressTwice, releaseKey } from "../../../../testing/input";
 import { scene } from "../../test/scene";
 import * as stories from "./assistant.stories";
 
@@ -479,6 +480,8 @@ describe("a proposal in the conversation (flow 2, 11 · 16)", () => {
 		expect(await summaryOf(loaded, loaded.ids.second)).toBe(
 			"둘째 글은 관리자 화면을 처음 여는 사람을 위한 안내입니다.",
 		);
+		// A person reads that it was applied first: a press in the moment "undo" appears is not taken.
+		await new Promise((resolve) => setTimeout(resolve, 500));
 		await userEvent.click(button("되돌리기"));
 		await expect.element(panel().getByText("되돌림", { exact: true })).toBeVisible();
 		expect(await summaryOf(loaded, loaded.ids.second)).toBeNull();
@@ -551,6 +554,8 @@ describe("the review page (flow 2, 12–15)", () => {
 		await userEvent.click(page.getByRole("button", { name: "2건 적용" }).first());
 		await expect.element(page.getByText("✓ 2건 적용").first()).toBeVisible();
 		expect(page.getByRole("main").getByText("적용", { exact: true }).elements()).toHaveLength(2);
+		// A press in the moment "undo" appears is not taken (it may have been meant for "apply"): a person reads the result first.
+		await new Promise((resolve) => setTimeout(resolve, 500));
 		expect(await summaryOf(loaded, loaded.ids.third)).toBe("셋째 글은 배포한 뒤에 확인할 것을 정리합니다.");
 		const first = (await loaded.site.monti.run("entries.get", { id: loaded.ids.first }, stories.admin)) as {
 			entry: { title: string };
@@ -1514,6 +1519,184 @@ describe("the focus after a pressed control goes (tokens.md, the states)", () =>
 		await userEvent.keyboard("{Enter}");
 		await expect.element(button("요약이 비어 있는 글 찾아 줘").first()).toBeVisible();
 		await focusIs(() => box().element());
+	});
+});
+
+describe("what the browser check of #480 found", () => {
+	const gate = () => {
+		let open = () => {};
+		const wait = new Promise<void>((resolve) => {
+			open = resolve;
+		});
+		return { wait, open };
+	};
+	const beat = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+	const past = () => page.getByRole("complementary", { name: "지난 대화" });
+	const calls = (loaded: Loaded, name: string) => loaded.net.sent.filter((each) => each.name === name);
+	/** Puts the keyboard's focus on a control, as the Tab key leaves it (a ring). */
+	async function keyTo(target: { element: () => Element }) {
+		await userEvent.keyboard("{Tab}");
+		(target.element() as HTMLElement).focus();
+		expect(target.element().matches(":focus-visible")).toBe(true);
+	}
+	/** Enter held down for a while, as a hand holds it: the press, the repeats a held key makes, and letting go. */
+	async function holdEnter() {
+		await holdKey("Enter", { repeats: 8, every: 35 });
+		await releaseKey("Enter");
+	}
+	const focusIs = (target: () => Element | null | undefined) =>
+		expect
+			.poll(() => {
+				const on = document.activeElement;
+				if (on !== null && on === target()) return "there";
+				return `on <${on?.tagName.toLowerCase()}> ${on?.getAttribute("aria-label") ?? on?.textContent?.slice(0, 30)}`;
+			})
+			.toBe("there");
+	async function twoConversations() {
+		const story = on({ script: () => [{ text: "첫 답." }, { text: "둘째 답." }] });
+		await story.run();
+		await openPanel();
+		await say("먼저 물은 것");
+		await expect.element(panel().getByText("첫 답.")).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		await userEvent.click(button("새 대화"));
+		await say("나중에 물은 것");
+		await expect.element(panel().getByText("둘째 답.")).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		await userEvent.click(button("지난 대화"));
+		await expect.poll(() => past().getByRole("row").elements().length).toBe(2);
+		return story;
+	}
+
+	it("10-1 two presses 40 ms apart on 'N건 적용' apply and undo nothing, though 'undo' takes that button's place; later 'undo' is pressed like any button", async () => {
+		const story = on({ script: stories.proposed });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("둘 다 요약 채워 줘");
+		await expect.element(button("2건 적용")).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		// Two presses of the mouse at one spot, 40 ms apart: the second comes down where "undo" stands by then.
+		await pressTwice(button("2건 적용").element(), 40);
+		await expect.element(panel().getByText("✓ 2건 적용")).toBeVisible();
+		await beat(400);
+		expect(calls(loaded, "proposals.revert")).toHaveLength(0);
+		await expect.element(panel().getByText("✓ 2건 적용")).toBeVisible();
+		expect(await summaryOf(loaded, loaded.ids.third)).toBe("셋째 글은 배포한 뒤에 확인할 것을 정리합니다.");
+		await beat(300);
+		await userEvent.click(button("되돌리기"));
+		await expect.element(panel().getByText("되돌림")).toBeVisible();
+		expect(calls(loaded, "proposals.revert")).toHaveLength(1);
+	});
+
+	it("10-1 Enter held on a past conversation's '지우기' deletes that one conversation: the repeats neither open the next row's menu nor press it", async () => {
+		await twoConversations();
+		await keyTo(button("먼저 물은 것 더 보기"));
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "지우기" })).toBeVisible();
+		await holdEnter();
+		await beat();
+		expect(past().getByRole("row").elements()).toHaveLength(1);
+		expect(page.getByRole("menuitem").elements()).toHaveLength(0);
+		await focusIs(() => button("나중에 물은 것 더 보기").elements()[0]);
+	});
+
+	it("10-1 focus: the open conversation deleted with the keyboard closes the list onto a new conversation, and the focus is in its box", async () => {
+		await twoConversations();
+		await keyTo(button("나중에 물은 것 더 보기"));
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "지우기" })).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(button("요약이 비어 있는 글 찾아 줘").first()).toBeVisible();
+		await focusIs(() => box().element());
+	});
+
+	it("10-1 focus: stop pressed with Enter held tells the run to stop once, and when the turn has ended the focus is in the box", async () => {
+		const more = gate();
+		const story = on({ script: () => [{ hold: more.wait, text: "답." }] });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("첫 질문");
+		await expect.poll(() => loaded.model.turns.length).toBe(1);
+		await keyTo(button("멈추기"));
+		await holdEnter();
+		more.open();
+		await expect.element(button("보내기")).toBeVisible();
+		await focusIs(() => box().element());
+		expect(calls(loaded, "assistant.stop")).toHaveLength(1);
+	});
+
+	it("10-1 focus: to the past conversations and back with the keyboard: the list's first control, then the box; a conversation picked there, the box", async () => {
+		const story = on({ script: () => [{ text: "첫 답." }] });
+		await story.run();
+		await openPanel();
+		await say("먼저 물은 것");
+		await expect.element(panel().getByText("첫 답.")).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		await keyTo(button("지난 대화"));
+		await userEvent.keyboard("{Enter}");
+		await focusIs(() => button("대화로 돌아가기").elements()[0]);
+		await userEvent.keyboard("{Enter}");
+		await focusIs(() => box().element());
+		await keyTo(button("지난 대화"));
+		await userEvent.keyboard("{Enter}");
+		const row = past().getByRole("button", { name: "먼저 물은 것", exact: true });
+		await expect.element(row).toBeVisible();
+		await keyTo(row);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel().getByText("첫 답.")).toBeVisible();
+		await focusIs(() => box().element());
+	});
+
+	it("10-1 focus: the review page left with the keyboard ('버리기') hands the focus to the panel's box beside the screen it goes back to", async () => {
+		const story = on({ script: stories.proposedKinds });
+		await story.run();
+		await openPanel();
+		await say("요약 채우고 제목도 다듬어 줘");
+		await userEvent.click(button("검토"));
+		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
+		await beat(600);
+		await keyTo(page.getByRole("main").getByRole("button", { name: "버리기" }).first());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
+		await focusIs(() => box().element());
+	});
+
+	it("10-1 the heads of the review page's kinds are one height, before and after the changes are applied: applying moves no row", async () => {
+		const story = on({ script: stories.proposedKinds });
+		await story.run();
+		await openPanel();
+		await say("요약 채우고 제목도 다듬어 줘");
+		await userEvent.click(button("검토"));
+		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
+		const main = page.getByRole("main");
+		await expect.element(main.getByText("글, 다시")).toBeVisible();
+		const heads = () =>
+			[...main.element().querySelectorAll("[data-slot=list-section] > h2")].map(
+				(head) => head.getBoundingClientRect().height,
+			);
+		await beat(600);
+		const before = heads();
+		expect(before.length).toBeGreaterThan(1);
+		expect(new Set(before).size).toBe(1);
+		await userEvent.click(main.getByRole("button", { name: "3건 적용" }).first());
+		await expect.element(main.getByText("✓ 3건 적용").first()).toBeVisible();
+		expect(heads()).toEqual(before);
+	});
+
+	it("10-4 a request that gets no answer at all says the connection was lost, in the panel's own words, with the way to send it again", async () => {
+		const story = on({ script: () => [{ text: "다시 보낸 답." }] });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		const back = loaded.net.lose("assistant.run");
+		await say("첫 질문");
+		await expect.element(panel().getByText("연결이 끊겼습니다")).toBeVisible();
+		expect(panel().getByText("서버가 답하지 않았습니다").elements()).toHaveLength(0);
+		back();
+		await userEvent.click(button("다시 시도"));
+		await expect.element(panel().getByText("다시 보낸 답.")).toBeVisible();
 	});
 });
 

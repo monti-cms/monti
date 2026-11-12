@@ -3,6 +3,7 @@
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import type * as React from "react";
 import { cn } from "./cn";
+import { letHeldKeyGo } from "./held-key";
 import { ChevronRight, Search } from "./icons";
 import {
 	MENU_CARD,
@@ -116,6 +117,12 @@ function DropdownMenuItem({
 			data-variant={variant}
 			className={cn(MENU_ITEM, swatch && "justify-center p-monti-2", caption && "items-start py-[7px]", className)}
 			{...props}
+			onClick={(event) => {
+				props.onClick?.(event);
+				// The press did its one thing and the menu closes: the repeats of a key still held down do nothing more (they would open
+				// the menu the focus goes back to, and press its row again).
+				letHeldKeyGo();
+			}}
 		>
 			{caption ? (
 				<>

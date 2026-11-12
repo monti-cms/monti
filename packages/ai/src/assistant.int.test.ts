@@ -186,7 +186,7 @@ beforeEach(async () => {
 	model = scriptedProvider();
 	await sql`drop view if exists monti_post`.execute(db);
 	await sql`drop view if exists monti_tag`.execute(db);
-	await sql`truncate conversations, monti_proposal, api_keys, assistant_settings, entries, folders, media, monti_activity, schema_state cascade`.execute(
+	await sql`truncate conversations, monti_proposal, api_keys, assistant_settings, entries, folders, media, monti_activity, monti_settings, schema_state cascade`.execute(
 		db,
 	);
 	await migrateContent(db, schema, []);
@@ -1108,21 +1108,11 @@ describe("quick tasks (doc 10, 빠른 작업)", () => {
 
 describe("the site's writing style (flow 2, 20)", () => {
 	it("10-1 goes into every run and every quick task when the site has one", async () => {
-		const settings = definePlugin({
-			name: "settings",
-			operations: [
-				defineOperation({
-					name: "settings.read",
-					kind: "read",
-					description: "The site's settings.",
-					input: z.object({}),
-					run: () => ({ site: { writingStyle: "해요체로, 문장은 짧게." } }),
-				}),
-			],
-		});
 		model = scriptedProvider([{ text: "네." }], () => ({ value: "요약" }));
-		const monti = site({ plugins: [settings] });
+		const monti = site();
 		await withKey(monti);
+		// The real setting (doc 12, settings › site): saved as the settings screen saves it, read as the assistant reads it.
+		await monti.run("settings.save", { site: { writingStyle: "해요체로, 문장은 짧게." } }, admin);
 		await ask(monti, { request: "안녕" });
 		expect(model.turns[0].system).toContain("해요체로, 문장은 짧게.");
 		await monti.run(
@@ -1412,6 +1402,7 @@ describe("nothing changes without a person taking it", () => {
 			"translations.confirmAll": { id, version: 2 },
 			"relations.merge": { collection: "tag", from: ["x"], into: "y" },
 			"list.savePrefs": { collection: "post", prefs: { pageSize: 50 } },
+			"settings.save": { site: { name: "바뀐 이름", writingStyle: "반말로." } },
 		};
 		const calls = tools.map((tool) => ({
 			name: tool.tool,

@@ -227,8 +227,8 @@ test("20-2 without a base the install line names every tarball of the bundle, an
 		addressed,
 		/npm install https:\/\/example\.dev\/v0\.2\.0\/monti-cms-core-0\.2\.0\.tgz https:\/\/example\.dev\/v0\.2\.0\/monti-cms-admin-0\.2\.0\.tgz https:\/\/example\.dev\/v0\.2\.0\/monti-cms-next-0\.2\.0\.tgz\n/,
 	);
-	// Neither names a command the release does not have.
-	for (const readme of [plain, addressed]) assert.doesNotMatch(readme, /monti init/);
+	// After the install comes the command that sets the site up: the one the release's proof runs in a fresh site.
+	for (const readme of [plain, addressed]) assert.match(readme, /\.tgz\nnpx monti init\n/);
 });
 
 test("20-1 a file named as having side effects is named by its built file in the tarball, with the stylesheets, and must be in it", () => {
