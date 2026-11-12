@@ -257,6 +257,13 @@ export interface MediaUseTable {
 	place: string;
 }
 
+/** The settings screen's admin values (doc 12): the row `site` holds the site's, the row `admin` the admin's own preferences. */
+export interface SettingsTable {
+	id: string;
+	values: Json<Record<string, unknown>>;
+	version: Generated<number>;
+}
+
 export interface Database {
 	entries: EntryTable;
 	folders: FolderTable;
@@ -275,6 +282,7 @@ export interface Database {
 	schema_state: SchemaStateTable;
 	schema_changes: SchemaChangeTable;
 	collection_admin_values: CollectionAdminValuesTable;
+	monti_settings: SettingsTable;
 	monti_activity: ActivityTable;
 	monti_activity_snapshot: ActivitySnapshotTable;
 	monti_delivery: DeliveryTable;

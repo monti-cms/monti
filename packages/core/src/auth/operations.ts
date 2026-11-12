@@ -2,6 +2,7 @@ import { sql } from "kysely";
 import { z } from "zod";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
+import { siteFace } from "../settings/values";
 import { trashRowCount } from "../trash/list";
 import { MIN_PASSWORD } from "./reset";
 import { hashPassword, verifyPassword } from "./secrets";
@@ -34,7 +35,7 @@ export const authOperations = [
 		kind: "read",
 		open: true,
 		description:
-			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, and who is signed in.",
+			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, who is signed in, and what the sign-in screen shows before anyone is: the site's name and the admin's language as saved in the settings.",
 		input: z.object({}),
 		async run(_input, ctx) {
 			return {
@@ -45,6 +46,8 @@ export const authOperations = [
 				},
 				hasAdmin: await hasAdmin(ctx),
 				session: ctx.session ? { who: ctx.session.who } : null,
+				// The sign-in screen is drawn before there is a session, so the name and the language come with this answer (doc 12, T36).
+				site: await siteFace(ctx.db),
 			};
 		},
 	}),

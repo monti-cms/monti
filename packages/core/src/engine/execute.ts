@@ -63,16 +63,20 @@ export function context(
 ) {
 	const events: MontiEvent[] = [];
 	const created: RecordRef[] = [];
+	const flags = { structure: false };
 	const ctx: OperationContext = {
 		db,
 		actor,
 		emit: (event) => events.push(event),
 		created: (ref) => created.push(ref),
+		changedStructure: () => {
+			flags.structure = true;
+		},
 		site: engine.site,
 		now: engine.now,
 		session,
 	};
-	return { ctx, events, created };
+	return { ctx, events, created, flags };
 }
 
 /** Runs a read: no transaction, no log. */
@@ -123,7 +127,7 @@ export async function runWrite<Output>(
 	const input = parseInput(operation, rawInput);
 	const activityId = randomUUID();
 	return engine.db.transaction().execute(async (trx) => {
-		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
+		const { ctx, events, created, flags } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 		await lockRecords(trx, touched);
 		const before = await loadRecords(engine, trx, touched);
@@ -143,7 +147,7 @@ export async function runWrite<Output>(
 		// What the records held before, so a file the library does not have is refused only when this write brings it in (doc 09).
 		await rewriteUses(trx, engine.site.schema(), records, { before: before.values() });
 		const after = await loadRecords(engine, trx, records);
-		const undoable = !operation.humanOnly && !operation.structure && records.length > 0;
+		const undoable = !operation.humanOnly && !operation.structure && !flags.structure && records.length > 0;
 		const now = engine.now();
 		await trx
 			.insertInto("monti_activity")

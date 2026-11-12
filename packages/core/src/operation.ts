@@ -49,6 +49,11 @@ export interface OperationContext {
 	emit(event: MontiEvent): void;
 	/** Marks a record the write creates, so undoing the write removes it. */
 	created(ref: RecordRef): void;
+	/**
+	 * Says the write changed structure values (the schema file), for a write that does so only sometimes (`settings.save`). Such a write has no undo:
+	 * a structure change is reversed by a new change (doc 00), and putting back only its admin values would leave them out of step with the structure.
+	 */
+	changedStructure(): void;
 	/** The site's schema and, on the dev server, the way to its files. */
 	site: Site;
 	/** The engine's clock (tests set it). */

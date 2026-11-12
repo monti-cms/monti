@@ -42,17 +42,16 @@ export const LocalesInput = z.object({
 	list: z.array(z.object({ code: z.string(), name: z.string() })),
 	prefix: z.enum(["always", "exceptSource", "never"]),
 });
-const SchemaInput: z.ZodType<Schema> = z.object({
-	locales: LocalesInput,
-	collections: z.record(
-		z.string(),
-		z.discriminatedUnion("kind", [
-			z.object({ kind: z.literal("document"), path: z.string(), fields: z.record(z.string(), Field) }),
-			z.object({ kind: z.literal("item"), path: z.string().optional(), fields: z.record(z.string(), Field) }),
-		]),
-	),
-});
-const Rename = z.object({ collection: z.string(), from: z.string(), to: z.string() });
+export const CollectionsInput: z.ZodType<Schema["collections"]> = z.record(
+	z.string(),
+	z.discriminatedUnion("kind", [
+		z.object({ kind: z.literal("document"), path: z.string(), fields: z.record(z.string(), Field) }),
+		z.object({ kind: z.literal("item"), path: z.string().optional(), fields: z.record(z.string(), Field) }),
+	]),
+);
+const SchemaInput: z.ZodType<Schema> = z.object({ locales: LocalesInput, collections: CollectionsInput });
+export const RenameInput = z.object({ collection: z.string(), from: z.string(), to: z.string() });
+const Rename = RenameInput;
 const ChoiceInput = z.discriminatedUnion("do", [
 	z.object({ do: z.literal("renameField"), values: z.enum(["move", "empty"]) }),
 	z.object({ do: z.literal("removeField"), values: z.union([z.literal("clear"), z.object({ move: z.string() })]) }),
@@ -99,7 +98,13 @@ export async function applySchema(
 		steps,
 		...(Object.keys(adminValues).length > 0 ? { firstAdminValues: adminValues } : {}),
 	};
-	await files.write(draft, change, schemaHash(draft) !== schemaHash(ctx.site.schema()));
+	try {
+		await files.write(draft, change, schemaHash(draft) !== schemaHash(ctx.site.schema()));
+	} catch (error) {
+		// Nothing is written and nothing is applied: the caller says so (doc 12), and the developer finds the reason here.
+		console.error("Monti: the schema file could not be written:", error);
+		return { changeId: change.id, written: false as const, applied: false, error: String(error), changes };
+	}
 	ctx.site.setSchema(draft);
 	await sql`savepoint schema_apply`.execute(ctx.db);
 	try {
@@ -109,9 +114,16 @@ export async function applySchema(
 		console.error(`Monti: change ${change.id} was saved to monti/changes but the database step failed:`, error);
 		await sql`rollback to savepoint schema_apply`.execute(ctx.db);
 		await setSchemaState(ctx.db, state?.schema ?? draft, change.id);
-		return { changeId: change.id, applied: false, error: String(error), changes };
+		return { changeId: change.id, written: true as const, applied: false, error: String(error), changes };
 	}
-	return { changeId: change.id, applied: true, changes };
+	return { changeId: change.id, written: true as const, applied: true, changes };
+}
+
+/** `applySchema` for the operations that change structure alone: a file that could not be written refuses the write. */
+export async function applyStructure(...args: Parameters<typeof applySchema>) {
+	const result = await applySchema(...args);
+	if (!result.written) throw new CheckError({ key: "schema.notWritten" });
+	return result;
 }
 
 /** The applied schema: its version guards against two saves over each other; it is never undone (a structure change has no undo). */
@@ -151,7 +163,7 @@ export const adminValuesRecord = defineRecordKind({
 	},
 });
 
-async function adminValuesOf(db: Db): Promise<Record<string, AdminValues & { version: number }>> {
+export async function adminValuesOf(db: Db): Promise<Record<string, AdminValues & { version: number }>> {
 	const rows = await db.selectFrom("collection_admin_values").selectAll().execute();
 	return Object.fromEntries(rows.map((row) => [row.collection, { ...row.values, version: row.version }]));
 }
@@ -219,7 +231,7 @@ export const schemaOperations = [
 		}),
 		touches: () => [{ kind: "schema", id: "current" }],
 		check: (input, ctx) => checkApply(ctx, input.draft, input.renames, input.answers as Answers),
-		run: (input, ctx) => applySchema(ctx, input.draft, input.renames, input.answers as Answers, input.adminValues),
+		run: (input, ctx) => applyStructure(ctx, input.draft, input.renames, input.answers as Answers, input.adminValues),
 		summary: (_input, output) => ({
 			key: output.applied ? "schema.applied" : "schema.applyFailed",
 			values: { change: output.changeId },

@@ -31,13 +31,14 @@ export type SchemaChange = {
 		| "changeField"
 		| "addLocale"
 		| "removeLocale"
-		| "changeSource";
+		| "changeSource"
+		| "changePrefix";
 	/** Absent for a change of the languages (doc 04). */
 	collection?: string;
 	field?: string;
 	/** The language added or removed, or the new source language. */
 	locale?: string;
-	/** For a rename, the old name; for a path change, the old path. */
+	/** For a rename, the old name; for a path change, the old path; for a change of how addresses show the language, the old way. */
 	from?: string;
 	to?: string;
 	/**
@@ -143,6 +144,9 @@ async function planLocales(db: Db, before: LocalesDefinition, after: LocalesDefi
 			count: Number(rows[0]?.all ?? 0),
 		});
 	}
+	// No stored value changes, but every translation's public address does (doc 12).
+	if (before.prefix !== after.prefix)
+		changes.push({ id: "changePrefix", do: "changePrefix", from: before.prefix, to: after.prefix });
 	return changes;
 }
 

@@ -366,6 +366,17 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0015_settings": {
+		async up(db) {
+			// The admin values of the settings screen (doc 12): one row for the site's (its name, how it writes), one for the admin's own (language, features).
+			await db.schema
+				.createTable("monti_settings")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("values", "jsonb", (column) => column.notNull())
+				.addColumn("version", "integer", (column) => column.notNull().defaultTo(1))
+				.execute();
+		},
+	},
 };
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */

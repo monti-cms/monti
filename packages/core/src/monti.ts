@@ -31,6 +31,8 @@ import { keepSeenTracked } from "./schema/apply";
 import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
 import { schemaOperations, schemaRecordKinds } from "./schema/operations";
+import { settingsOperations } from "./settings/operations";
+import { settingsRecord } from "./settings/values";
 import { createSite } from "./site";
 import { translationOperations } from "./translations/operations";
 import { trashOperations } from "./trash/operations";
@@ -207,6 +209,7 @@ export function createMonti(options: MontiOptions) {
 	const recordKinds = new Map<string, RecordKind>();
 	for (const kind of [
 		...schemaRecordKinds,
+		settingsRecord,
 		entryRecord,
 		templateRecord,
 		folderRecord,
@@ -244,6 +247,7 @@ export function createMonti(options: MontiOptions) {
 	for (const operation of [
 		...engineOperations(engine, () => [...operations.values()]),
 		...schemaOperations,
+		...settingsOperations,
 		...entryOperations,
 		...listOperations,
 		...translationOperations,

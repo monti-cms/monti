@@ -594,6 +594,7 @@ describe("replacing", () => {
 					actor: "admin",
 					emit: () => {},
 					created: () => {},
+					changedStructure: () => {},
 					site: site().site,
 					now: () => new Date(),
 					session: null,
