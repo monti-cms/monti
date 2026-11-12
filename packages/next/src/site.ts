@@ -10,6 +10,7 @@ import {
 	type SiteReader,
 } from "@monti-cms/core";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { loopbackProof } from "./dev-proof";
 
 export type MontiSite = { monti: Monti; reader: SiteReader };
@@ -20,6 +21,9 @@ export type MontiSite = { monti: Monti; reader: SiteReader };
  * list is of what is safe to skip, not of what to act on: an event nobody listed here refreshes the site.
  */
 const UNSEEN = new Set(["entry.saved", "media.uploaded"]);
+
+/** Longer than a page takes to draw: the second mark after a change comes this much later (see `cacheReceiver`). */
+const SETTLE_MS = 2000;
 
 /**
  * Refreshes the site's cached pages after a change the site shows (doc 16). The whole site, not only the event's `paths`: another page may show
@@ -35,6 +39,13 @@ export const cacheReceiver: Receiver = {
 	accepts: (event: MontiEvent) => !UNSEEN.has(event.type),
 	send: async () => {
 		revalidatePath("/", "layout");
+		// Once more a moment later. A page being drawn at this very moment read the site as it was before the change, and Next stamps it with
+		// the time it finished drawing, which is after the mark above: it would be kept as fresh, old content and all, until the next change. The
+		// second mark comes after any such drawing has ended, so that page too is drawn again when it is next visited.
+		after(async () => {
+			await new Promise((done) => setTimeout(done, SETTLE_MS));
+			revalidatePath("/", "layout");
+		});
 	},
 };
 

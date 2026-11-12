@@ -207,6 +207,20 @@ export async function syncRelationsForEntry(
 ): Promise<void> {
 	const schema = ctx.site.schema();
 	const fields = schema.collections[entry.collection]?.fields ?? {};
+	/**
+	 * Says that what the site shows of another entry changed: a relation edited from this side (`via`) is kept on the other entry, and when that one
+	 * is on the site (an item is, as saved), its page changes with this save, whatever this entry's own state.
+	 */
+	const shown = (target: { id: string; collection: string; locale: string }, live: { slug: string } | undefined) => {
+		if (live)
+			ctx.emit({
+				type: "entry.published",
+				ids: [target.id],
+				collection: target.collection,
+				locale: target.locale,
+				paths: publicPaths(schema, target.collection, target.locale, [live.slug]),
+			});
+	};
 
 	for (const [fieldName, fieldDef] of Object.entries(fields)) {
 		if (fieldDef.kind !== "relation") continue;
@@ -247,11 +261,15 @@ export async function syncRelationsForEntry(
 							.set({ values: JSON.stringify(tr.values), updated_at: ctx.now() })
 							.where("id", "=", tr.id)
 							.execute();
-						await ctx.db
-							.updateTable("entry_published")
-							.set({ values: JSON.stringify(tr.values) })
-							.where("entry_id", "=", tr.id)
-							.execute();
+						shown(
+							tr,
+							await ctx.db
+								.updateTable("entry_published")
+								.set({ values: JSON.stringify(tr.values) })
+								.where("entry_id", "=", tr.id)
+								.returning("slug")
+								.executeTakeFirst(),
+						);
 						await syncEntryLinks(ctx, targetGroup, targetField, nextTargetList);
 					}
 				}
@@ -275,11 +293,15 @@ export async function syncRelationsForEntry(
 						.set({ values: JSON.stringify(tr.values), updated_at: ctx.now() })
 						.where("id", "=", tr.id)
 						.execute();
-					await ctx.db
-						.updateTable("entry_published")
-						.set({ values: JSON.stringify(tr.values) })
-						.where("entry_id", "=", tr.id)
-						.execute();
+					shown(
+						tr,
+						await ctx.db
+							.updateTable("entry_published")
+							.set({ values: JSON.stringify(tr.values) })
+							.where("entry_id", "=", tr.id)
+							.returning("slug")
+							.executeTakeFirst(),
+					);
 					await syncEntryLinks(ctx, targetGroup, targetField, nextTargetList);
 				}
 			}

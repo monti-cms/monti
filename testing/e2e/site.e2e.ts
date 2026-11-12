@@ -169,6 +169,44 @@ test.describe("the site", () => {
 		expect((await visit(admin, `/xx/posts/${moved}`)).status).toBe(404);
 	});
 
+	test("16-7 a translation's page is in its language, and a category with no page in that language is linked where it has one", async ({
+		admin,
+	}) => {
+		const category = unique("category");
+		const made = await operation<{ group: string }>(admin, "items.saveGroup", {
+			collection: "category",
+			locales: { ko: { title: "개발", slug: category } },
+		});
+		const slug = unique("post");
+		const source = await operation<{ id: string }>(admin, "entries.create", {
+			collection: "post",
+			locale: "ko",
+			title: "원문",
+			slug,
+			values: { category: made.output.group },
+		});
+		await publish(admin, source.output.id);
+		const translation = await operation<{ id: string }>(admin, "translations.create", {
+			source: source.output.id,
+			locale: "en",
+		});
+		await operation(admin, "entries.save", {
+			id: translation.output.id,
+			version: await versionOf(admin, translation.output.id),
+			title: "Translated",
+		});
+		await publish(admin, translation.output.id);
+		await admin.goto(`/en/posts/${slug}`);
+		await expect(admin.getByRole("heading", { level: 1 })).toHaveText("Translated");
+		expect(await admin.locator("html").getAttribute("lang")).toBe("en");
+		// The category has no English page: its link goes to the Korean one, which is there.
+		const link = admin.getByRole("link", { name: "개발" });
+		await expect(link).toHaveAttribute("href", `/categories/${category}`);
+		expect((await visit(admin, `/categories/${category}`)).status).toBe(200);
+		await admin.goto(`/posts/${slug}`);
+		expect(await admin.locator("html").getAttribute("lang")).toBe("ko");
+	});
+
 	test("16-6 a post's headings are anchors, and its table of contents goes to them", async ({ admin }) => {
 		const post = await draft(admin, unique("목차가 있는 글"), [
 			heading("h1", 2, "왜 옮겼나"),
@@ -204,8 +242,9 @@ test.describe("the preview", () => {
 		const preview = await opened;
 		await preview.waitForURL(`**${post.path}`);
 		await expect(preview.getByRole("heading", { level: 1 })).toHaveText(title);
-		// The line that says this is a preview, with the way out.
+		// The line that says this is a preview, with the way out; and the page tells search engines to stay out while it shows a working copy.
 		await expect(preview.getByText("미리보기", { exact: true })).toBeVisible();
+		await expect(preview.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
 		// Anyone else gets nothing at that address: the post is not published.
 		expect((await visit(admin, post.path)).status).toBe(404);
 		await preview.getByRole("link", { name: "끝내기" }).click();
@@ -234,9 +273,12 @@ test.describe("the preview", () => {
 		expect((await admin.request.get(other.path)).status()).toBe(404);
 		expect((await visit(admin, post.path)).text).toContain(title);
 		expect((await visit(admin, post.path)).text).not.toContain(next);
+		// While the working copy shows, search engines are told to stay out; the published page says no such thing.
+		await expect(admin.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
 		await admin.goto("/admin/api/preview/exit");
 		await admin.goto(post.path);
 		await expect(admin.getByRole("heading", { level: 1 })).toHaveText(title);
+		await expect(admin.locator('meta[name="robots"]')).toHaveCount(0);
 	});
 
 	test("16-2 a ticket that is forged turns no preview on, and the preview never leaves the site", async ({ admin }) => {
@@ -282,7 +324,7 @@ raw.describe("the dev server and the live site", () => {
 		"16-5 on the dev server a sender that only says it is local gets nothing: forged headers, a made-up ticket",
 		async ({ request }) => {
 			// What a program on another machine would send: the headers a local request has, and no ticket from this machine's loopback address.
-			const forged = { "x-forwarded-host": "localhost:4175", "x-forwarded-for": "127.0.0.1" };
+			const forged = { "x-forwarded-host": new URL(DEV).host, "x-forwarded-for": "127.0.0.1" };
 			const counts = await request.post(`${DEV}/admin/api/operations/frame.counts`, {
 				data: { input: {} },
 				headers: forged,

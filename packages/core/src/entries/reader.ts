@@ -235,14 +235,12 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 		if (!next) return null;
 		try {
 			const [at, id, position] = JSON.parse(new TextDecoder().decode(fromBase64url(next))) as unknown[];
-			if (
-				typeof at !== "string" ||
-				Number.isNaN(Date.parse(at)) ||
-				typeof id !== "string" ||
-				typeof position !== "number"
-			)
-				return null;
-			return { at, id, position };
+			// Only what this reader wrote: a date the database reads as JS does, an id, a whole number. Anything else starts the list over rather than
+			// reach the database, which would refuse it with an error.
+			if (typeof at !== "string" || typeof id !== "string" || !Number.isSafeInteger(position)) return null;
+			const when = new Date(at);
+			if (Number.isNaN(when.getTime()) || when.toISOString() !== at) return null;
+			return { at, id, position: position as number };
 		} catch {
 			return null;
 		}

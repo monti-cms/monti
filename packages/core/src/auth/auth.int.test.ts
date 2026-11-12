@@ -358,6 +358,12 @@ describe("the dev server's sign-in bypass", () => {
 			401,
 			null,
 		]);
+		// A name under `localhost` is not this machine for sure.
+		expect(await refused(dev(tickets.devProof), "http://evil.localhost:3000/admin/api/operations")).toEqual([
+			undefined,
+			401,
+			null,
+		]);
 		// A hosting platform's process, even in dev mode.
 		expect(await refused(dev(tickets.devProof), LOCAL, {}, { VERCEL: "1" })).toEqual([undefined, 401, null]);
 		// Turned off in the config, to try the sign-in screens locally.

@@ -55,6 +55,8 @@ test.describe("the trash", () => {
 		await admin.goto(`/admin#/c/post?q=${encodeURIComponent(post.slug)}`);
 		await (await rowMenu(admin, post.title)).getByRole("menuitem", { name: /휴지통으로/ }).click();
 		await admin.getByRole("alertdialog").getByRole("button", { name: "휴지통으로" }).click();
+		// The first visit of this page comes just as the post leaves the site: about one run in two it is drawn from the post as published and
+		// its drawing ends after the site's pages were marked to be drawn again. Kept as fresh, it stayed on the site (doc 16, the second mark).
 		await expect.poll(() => onSite(admin, post.slug)).toBe(404);
 		await toast(admin, "휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }).click();
 		await expect(row(admin, post.title)).toBeVisible();

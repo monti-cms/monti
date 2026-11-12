@@ -43,15 +43,23 @@ const server = (port: number, schema: string, mode: Server["mode"], env: Record<
 });
 
 /**
+ * The first of the three ports. `MONTI_E2E_PORT` moves them, and with them the database schemas, so two checkouts on one machine can run their
+ * flows at the same time.
+ */
+const FIRST = Number(process.env.MONTI_E2E_PORT ?? 4173);
+if (!Number.isInteger(FIRST) || FIRST < 1024 || FIRST > 65000) throw new Error("MONTI_E2E_PORT is no port.");
+const schemaOf = (name: string) => (FIRST === 4173 ? name : `${name}_${FIRST}`);
+
+/**
  * The servers the flows run on (docs/testing.md, L5), all the example app (`examples/blog`): the live site, a live site with no media storage
  * (flow 6·31), and the dev server, for what only the dev server does (getting in without signing in).
  */
 export const SERVERS: Server[] = [
-	server(4173, "monti_site_e2e", "start"),
-	server(4174, "monti_site_e2e_bare", "start", { MONTI_STORAGE: "off" }),
-	server(4175, "monti_site_e2e_dev", "dev"),
+	server(FIRST, schemaOf("monti_site_e2e"), "start"),
+	server(FIRST + 1, schemaOf("monti_site_e2e_bare"), "start", { MONTI_STORAGE: "off" }),
+	server(FIRST + 2, schemaOf("monti_site_e2e_dev"), "dev"),
 ];
 
-export const LIVE = "http://localhost:4173";
-export const BARE = "http://localhost:4174";
-export const DEV = "http://localhost:4175";
+export const LIVE = `http://localhost:${FIRST}`;
+export const BARE = `http://localhost:${FIRST + 1}`;
+export const DEV = `http://localhost:${FIRST + 2}`;

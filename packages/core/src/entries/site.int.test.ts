@@ -24,7 +24,17 @@ const schema = defineSchema({
 		post: {
 			kind: "document",
 			path: "/posts/:slug",
-			fields: { ...fixed, tags: { kind: "relation", to: "tag", many: true, createMissing: true } },
+			fields: {
+				...fixed,
+				tags: { kind: "relation", to: "tag", many: true, createMissing: true },
+				// Kept on the series (its `posts`), edited from the post.
+				series: { kind: "relation", to: "series", via: "posts" },
+			},
+		},
+		series: {
+			kind: "item",
+			path: "/series/:slug",
+			fields: { ...fixed, posts: { kind: "relation", to: "post", many: true } },
 		},
 		note: { kind: "document", path: "/notes/:slug", previewPath: "/preview/notes/:slug", fields: { ...fixed } },
 		category: {
@@ -68,7 +78,7 @@ async function post(title: string, slug: string, collection = "post") {
 beforeEach(async () => {
 	clock = new Date("2026-10-01T09:00:00Z");
 	sent = [];
-	await sql`drop view if exists monti_post, monti_note, monti_category, monti_tag`.execute(db);
+	await sql`drop view if exists monti_post, monti_note, monti_category, monti_tag, monti_series`.execute(db);
 	for (const table of ["entries", "schema_state", "schema_changes", "monti_delivery", "monti_activity"] as const)
 		await db.deleteFrom(table).execute();
 	await migrateContent(db, schema, []);
@@ -154,6 +164,20 @@ describe("a write that changes what a live item shows says so", () => {
 		expect(types).toContainEqual(["entry.unpublished", "tag", []]);
 	});
 
+	it("16-3 a post's draft put into a series from the post's side: the series' page changed, and says so, though the post was only saved", async () => {
+		const series = await write<{ group: string }>("items.saveGroup", {
+			collection: "series",
+			locales: { ko: { title: "연재", slug: "serial" } },
+		});
+		const id = await post("연재 글", "in-series");
+		sent = [];
+		await write("entries.save", { id, version: await versionOf(id), values: { series: series.group } });
+		expect(published().map((event) => [event.collection, event.paths])).toEqual([["series", ["/series/serial"]]]);
+		sent = [];
+		await write("entries.save", { id, version: await versionOf(id), values: { series: null } });
+		expect(published().map((event) => [event.collection, event.paths])).toEqual([["series", ["/series/serial"]]]);
+	});
+
 	it("16-3 relations.edit on a live item: its page shows other values, with no new version and no publish", async () => {
 		const tag = await write<{ group: string }>("items.saveGroup", {
 			collection: "tag",
@@ -235,6 +259,22 @@ describe("an undo that changes what the site shows says so", () => {
 		expect(shown()).toEqual([["entry.published", ["/posts/hello", "/en/posts/hello-en"]]]);
 	});
 
+	it("02-7 T29 undoing a publish that changed only the date puts the old date back, and says so", async () => {
+		const id = await post("날짜만", "date-only");
+		clock = new Date("2026-10-05T09:00:00Z");
+		const again = await act("entries.publish", { ids: [id], date: "today" });
+		const at = async () => {
+			const found = await reader().entry({ collection: "post", locale: "ko", slug: "date-only" });
+			return found && "entry" in found ? found.entry.publishedAt?.toISOString() : null;
+		};
+		expect(await at()).toBe("2026-10-05T09:00:00.000Z");
+		sent = [];
+		await undo(again.activityId);
+		expect(await at()).toBe("2026-10-01T09:00:00.000Z");
+		// The lists order by this date: the pages that show it are to be drawn again.
+		expect(shown()).toEqual([["entry.published", ["/posts/date-only"]]]);
+	});
+
 	it("02-7 T29 undoing a move to the trash puts a published entry back on the site; undoing a save alone says nothing", async () => {
 		const id = await post("나온 글", "kept");
 		const saved = await act("entries.save", { id, version: await versionOf(id), title: "쓰는 중" });
@@ -297,8 +337,20 @@ describe("what the site reads", () => {
 		expect(second.entries.map((entry) => entry.slug)).toEqual(["post-2", "post-1"]);
 		expect(second.next).toBeNull();
 		// A `next` that is none of ours starts the list over; it does not throw.
-		const over = await reader().page({ collection: "post", locale: "ko", limit: 1, after: "not-a-cursor" });
-		expect(over.entries.map((entry) => entry.slug)).toEqual(["post-new"]);
+		const cursor = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+		for (const after of [
+			"not-a-cursor",
+			// Dates JS reads and the database refuses, and numbers that are no whole position: none reaches the database.
+			cursor(["1", "x", 0]),
+			cursor(["2020-01-01 junk", "x", 0]),
+			cursor(["2026-10-01T09:00:00.000Z", "x", 1.5]),
+			cursor(["2026-10-01T09:00:00.000Z", "x", 1e300]),
+			cursor(["2026-10-01T09:00:00.000Z", 7, 0]),
+			cursor({ at: "2026-10-01T09:00:00.000Z" }),
+		]) {
+			const over = await reader().page({ collection: "post", locale: "ko", limit: 1, after });
+			expect(over.entries.map((entry) => entry.slug)).toEqual(["post-new"]);
+		}
 
 		// Items: in their own order (the order they were made in), each once.
 		for (const name of ["a", "b", "c"])
@@ -378,9 +430,10 @@ describe("a collection's preview address", () => {
 		const withPreview = (over: Record<string, unknown>): Schema =>
 			({ ...schema, collections: { ...collections, ...over } }) as unknown as Schema;
 		expect(checkSchema(schema)).toEqual([]);
-		expect(checkSchema(withPreview({ note: { ...collections.note, previewPath: "/preview" } }))).toEqual([
-			{ collection: "note", code: "badPreviewPath" },
-		]);
+		for (const previewPath of ["/preview", "/:slug", "preview/:slug", 7])
+			expect(checkSchema(withPreview({ note: { ...collections.note, previewPath } }))).toEqual([
+				{ collection: "note", code: "badPreviewPath" },
+			]);
 		expect(
 			checkSchema(withPreview({ category: { ...collections.category, previewPath: "/preview/c/:slug" } })),
 		).toEqual([{ collection: "category", code: "badPreviewPath" }]);

@@ -6,7 +6,8 @@ import type { DevProof } from "@monti-cms/core";
 const TICKET_MS = 60_000;
 /** Tickets waiting at once: a page that asks again and again does not fill the memory. */
 const MOST = 200;
-const LOOPBACK = /^(localhost|127(\.\d{1,3}){3}|\[::1\]|[\w-]+\.localhost)$/;
+// `localhost` itself and the loopback addresses. Not `*.localhost`: a browser that asks the network for such a name can be sent elsewhere.
+const LOOPBACK = /^(localhost|127(\.\d{1,3}){3}|\[::1\])$/;
 
 /** Whether an origin (`http://localhost:3000`) or a host (`127.0.0.1:49152`) names this machine. */
 export function isLoopback(value: string | undefined, kind: "origin" | "host"): boolean {

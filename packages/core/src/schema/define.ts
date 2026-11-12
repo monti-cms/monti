@@ -159,7 +159,13 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 		// A preview address is a document's (an item has no working copy to preview), has the shape of an address, and is no page's own address.
 		const previewPath = (collection as { previewPath?: unknown }).previewPath;
 		if (previewPath !== undefined) {
-			if (collection.kind !== "document" || typeof previewPath !== "string" || !PATH.test(previewPath))
+			// With a folder of its own (`/preview/:slug`): `/:slug` alone would answer for every address of the site's top level.
+			if (
+				collection.kind !== "document" ||
+				typeof previewPath !== "string" ||
+				!PATH.test(previewPath) ||
+				previewPath === "/:slug"
+			)
 				problems.push({ collection: name, code: "badPreviewPath" });
 			else previews.set(name, previewPath);
 		}

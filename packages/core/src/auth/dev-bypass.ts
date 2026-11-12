@@ -37,14 +37,17 @@ const HOSTED = [
 export const hostedBy = (env: Env = typeof process === "undefined" ? {} : process.env): string | undefined =>
 	HOSTED.find((name) => env[name]);
 
-/** Whether a host name (no port) is this machine: `localhost`, `*.localhost`, `127.0.0.0/8` or `::1`. */
+/**
+ * Whether a host name (no port) is this machine: `localhost`, `127.0.0.0/8` or `::1`. Not `*.localhost`: most browsers keep such a name on this
+ * machine, but one that asks the network for it can be pointed elsewhere.
+ */
 function isLoopback(hostname: string): boolean {
 	const name = hostname
 		.trim()
 		.toLowerCase()
 		.replace(/^\[|\]$/g, "")
 		.replace(/^::ffff:/, "");
-	return name === "localhost" || name.endsWith(".localhost") || name === "::1" || /^127(\.\d{1,3}){3}$/.test(name);
+	return name === "localhost" || name === "::1" || /^127(\.\d{1,3}){3}$/.test(name);
 }
 
 /** The host name of a `Host`-style value (`example.com:3000`, `[::1]:3000`). */
@@ -56,7 +59,8 @@ function hostnameOf(host: string): string {
 }
 
 /**
- * Whether a request says it comes from this machine: its `Host` (the URL's when the header is not there), a proxy's `X-Forwarded-Host` and every
+ * Whether a request says it comes from this machine (another program or another user of this machine is this machine too: the bypass is for a
+ * developer's own computer, and trusts what runs on it): its `Host` (the URL's when the header is not there), a proxy's `X-Forwarded-Host` and every
  * address of `X-Forwarded-For` are loopback names. A client can send these headers itself, so this proves nothing: it only turns away early what
  * does not claim to be local. The proof is the `DevProof` ticket.
  */

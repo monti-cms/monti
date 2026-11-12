@@ -8,6 +8,7 @@ const next = vi.hoisted(() => ({
 	cookies: new Map<string, string>(),
 	set: [] as { name: string; value: string; options: Record<string, unknown> }[],
 	revalidated: [] as unknown[][],
+	later: [] as (() => Promise<void>)[],
 }));
 class NotFound extends Error {}
 class Redirect extends Error {
@@ -47,6 +48,8 @@ vi.mock("next/navigation", () => ({
 	},
 }));
 vi.mock("next/cache", () => ({ revalidatePath: (...args: unknown[]) => void next.revalidated.push(args) }));
+// `after`: what a route does once its answer is sent. Kept here, to be run by the test.
+vi.mock("next/server", () => ({ after: (later: () => Promise<void>) => void next.later.push(later) }));
 const core = vi.hoisted(() => ({
 	good: "good-ticket",
 	sync: { status: "same" } as Record<string, unknown>,
@@ -91,6 +94,7 @@ beforeEach(() => {
 	next.cookies.clear();
 	next.set = [];
 	next.revalidated = [];
+	next.later = [];
 	core.sync = { status: "same" };
 	core.calls = [];
 });
@@ -312,6 +316,27 @@ describe("the site's cache and which server this is", () => {
 		expect(next.revalidated).toEqual([["/", "layout"]]);
 	});
 
+	it("16-3 the pages are marked once more two seconds after the answer is sent: a page that was being drawn while the change was made is not kept", async () => {
+		vi.useFakeTimers();
+		try {
+			await cacheReceiver.send({ type: "entry.unpublished", ids: ["e1"] });
+			expect(next.revalidated).toHaveLength(1);
+			// After the answer: nothing more yet, then the second mark.
+			const [later] = next.later;
+			const running = later?.();
+			await vi.advanceTimersByTimeAsync(1900);
+			expect(next.revalidated).toHaveLength(1);
+			await vi.advanceTimersByTimeAsync(200);
+			await running;
+			expect(next.revalidated).toEqual([
+				["/", "layout"],
+				["/", "layout"],
+			]);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it("16-4 the dev server is `next dev` with a schema file it can write; a build, a started site or a folder with no such file is the live site", async () => {
 		const { mkdtempSync, writeFileSync, chmodSync } = await import("node:fs");
 		const { tmpdir } = await import("node:os");
@@ -396,7 +421,9 @@ describe("the proof that a browser runs on this machine", () => {
 		expect(isLoopback("evil.test:49152", "host")).toBe(false);
 		expect(isLoopback("127.0.0.1:49152", "host")).toBe(true);
 		expect(isLoopback("http://[::1]:3000", "origin")).toBe(true);
-		expect(isLoopback("http://app.localhost:3000", "origin")).toBe(true);
+		// A name under `localhost` is not trusted: a browser that asks the network for it can be sent elsewhere.
+		expect(isLoopback("http://app.localhost:3000", "origin")).toBe(false);
+		expect((await ask(url, { origin: "http://evil.localhost:3000" })).status).toBe(403);
 		expect(isLoopback("file://localhost", "origin")).toBe(false);
 		// The browser's question before it reaches a more private address is answered for a local page only.
 		const asked = await ask(url, { origin: "http://localhost:3000" }, "OPTIONS");

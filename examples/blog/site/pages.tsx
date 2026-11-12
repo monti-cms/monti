@@ -82,7 +82,10 @@ export async function Entry({
 			<p className="meta">
 				<time>{day(entry.publishedAt, locale)}</time>
 				{category && !Array.isArray(category) ? (
-					<Link href={`${locale === reader.locales().source ? "" : `/${locale}`}/categories/${category.slug}`}>
+					// In the category's own language: one with no page in this language is shown from the source language, and its page is there.
+					<Link
+						href={`${category.locale === reader.locales().source ? "" : `/${category.locale}`}/categories/${category.slug}`}
+					>
 						{category.title}
 					</Link>
 				) : null}

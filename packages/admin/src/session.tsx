@@ -41,6 +41,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 			left = true;
 		};
 	}, [proof, tried, letIn, reload]);
+	// Once in, the try is forgotten: a session that ends later (30 days, the server's sessions emptied) is asked for again without a reload.
+	const signedIn = Boolean(data?.session);
+	useEffect(() => {
+		if (signedIn) setTried(null);
+	}, [signedIn]);
 	const proving = proof !== undefined && tried !== proof;
 	return <SessionContext.Provider value={{ state: proving ? null : data, reload }}>{children}</SessionContext.Provider>;
 }

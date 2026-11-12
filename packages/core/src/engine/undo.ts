@@ -103,19 +103,26 @@ async function shownNow(db: Db, refs: RecordRef[]) {
 					.where("p.entry_id", "in", entries)
 					.where("e.trashed_at", "is", null)
 					.execute();
+	// A file in the library, with the name a page shows for it (a download's label).
 	const files =
 		media.length === 0
 			? []
-			: await db.selectFrom("media").select("id").where("id", "in", media).where("trashed_at", "is", null).execute();
+			: await db
+					.selectFrom("media")
+					.select(["id", "name"])
+					.where("id", "in", media)
+					.where("trashed_at", "is", null)
+					.execute();
 	return {
 		entries: new Map(copies.map((copy) => [copy.entry_id, copy])),
-		files: new Set(files.map((file) => file.id)),
+		files: new Map(files.map((file) => [file.id, file.name])),
 	};
 }
 
 /**
  * The events of an undo that changes what the site shows (doc 13, T29): an entry back on the site or off it, a published copy put back as it was
- * before, a file back in the library or out of it. An undo that only changes working copies emits nothing: no visitor sees a difference.
+ * before (its address, its date or its content), a file back in the library or out of it, or under the name it had. An undo that only
+ * changes working copies emits nothing: no visitor sees a difference.
  */
 export async function undoWithEvents(
 	engine: Engine,
@@ -150,7 +157,13 @@ export async function undoWithEvents(
 	const files = refs.filter((each) => each.kind === "media").map((each) => each.id);
 	const back = files.filter((id) => !before.files.has(id) && after.files.has(id));
 	const gone = files.filter((id) => before.files.has(id) && !after.files.has(id));
+	// In the library before and after, under another name: a rename undone. (A replacement is a person's write and is not undone.)
+	const renamed = files.filter((id) => {
+		const [was, is] = [before.files.get(id), after.files.get(id)];
+		return was !== undefined && is !== undefined && was !== is;
+	});
 	if (back.length > 0) emit({ type: "media.restored", ids: back });
 	if (gone.length > 0) emit({ type: "media.trashed", ids: gone });
+	if (renamed.length > 0) emit({ type: "media.renamed", ids: renamed });
 	return plan;
 }

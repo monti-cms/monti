@@ -642,5 +642,24 @@ describe("a replaced file and the site", () => {
 			`media.replaced ${made.output.id}`,
 			`media.renamed ${made.output.id}`,
 		]);
+
+		// A rename undone: the name is what it was, and the pages that show it are to be drawn again. A move to a folder undone shows nowhere.
+		const act = async (name: string, input: unknown) =>
+			(await monti.run(name, input, { actor: "admin" })) as { activityId: string };
+		const renamed = await act("media.update", { id: made.output.id, name: "c" });
+		sent.length = 0;
+		await monti.run("activity.undo", { id: renamed.activityId }, { actor: "admin" });
+		expect(sent).toEqual([`media.renamed ${made.output.id}`]);
+		const folder = (await monti.run(
+			"folders.create",
+			{ scope: "media", parentId: null, name: "f" },
+			{ actor: "admin" },
+		)) as {
+			output: { id: string };
+		};
+		const moved = await act("media.update", { id: made.output.id, folder: folder.output.id });
+		sent.length = 0;
+		await monti.run("activity.undo", { id: moved.activityId }, { actor: "admin" });
+		expect(sent).toEqual([]);
 	});
 });
