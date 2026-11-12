@@ -580,5 +580,9 @@ describe("monti init", () => {
 		expect(text).toContain("Monti for my-site: Next 16.4.6, App Router (app/), pnpm");
 		expect(existsSync(path.join(dir, "app/admin/page.tsx"))).toBe(true);
 		expect(existsSync(path.join(dir, "node_modules"))).toBe(false);
+
+		// A lockfile above the repository is not the site's.
+		const repo = site({ "../../yarn.lock": "", ".git/HEAD": "ref: refs/heads/main\n" }, "code/site");
+		expect((await run(repo, ["-y"])).text).toContain("App Router (app/), npm");
 	});
 });

@@ -40,11 +40,15 @@ export function installedPackage(cwd: string, name: string): Record<string, unkn
 	return null;
 }
 
-/** The first of these files in this folder or one above it, with the folder it is in. */
+/**
+ * The first of these files in this folder or one above it, with the folder it is in. It looks no higher than the repository's root: a file
+ * left in a home folder is not the site's.
+ */
 export function fileUpward(cwd: string, names: readonly string[]): { name: string; dir: string } | null {
 	for (const dir of upward(cwd)) {
 		const name = names.find((each) => existsSync(path.join(dir, each)));
 		if (name) return { name, dir };
+		if (existsSync(path.join(dir, ".git"))) return null;
 	}
 	return null;
 }
