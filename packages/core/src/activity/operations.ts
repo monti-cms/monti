@@ -5,7 +5,7 @@ import type { Engine } from "../engine/execute";
 import { planUndo, type UndoOf, undoWithEvents } from "../engine/undo";
 import { type AnyOperation, defineOperation, type Preview } from "../operation";
 import { keepSeenTracked } from "../schema/apply";
-import { ActivityQuery, getActivity, listActivity } from "./list";
+import { ACTIVITY_FACETS, ActivityQuery, activityFacets, getActivity, listActivity } from "./list";
 
 /**
  * What `deliveries.counts` answers: how many deliveries are failed, since when (the oldest of them), and how many a "send again" is sending at this
@@ -35,9 +35,17 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			name: "activity.list",
 			kind: "read",
 			description:
-				"The activity log, newest first: every write as a line with what was done and where, who did it, whether it can be undone and how its deliveries went. The assistant's work is one line per request. Filter by kind (the assistant's work, saves, publishing, the trash, imports, settings, media), by a delivery state, or by one entry. Use it to answer what changed and when.",
+				"The activity log, newest first (or oldest first): every write as a line with what was done and where, who did it, whether it can be undone and how its deliveries went. The writes one application of the assistant's proposal made are one line. Search by the words of a title or of the assistant's request; filter by kinds (the assistant's work, saves, publishing, the trash, imports, settings, media), by delivery states, by days, or by one entry. Use it to answer what changed and when.",
 			input: ActivityQuery,
 			run: (input, ctx) => listActivity(ctx.db, input, { now: ctx.now(), receivers: engine.receivers.length > 0 }),
+		}),
+		defineOperation({
+			name: "activity.facets",
+			kind: "read",
+			description:
+				"For one column of an activity.list query (`kind`: the assistant's work and the kinds of writes; `delivery`: the delivery states): each value with how many lines have it, the query's other conditions applied.",
+			input: ActivityQuery.extend({ column: z.enum(ACTIVITY_FACETS) }),
+			run: async (input, ctx) => ({ values: await activityFacets(ctx.db, input, input.column, ctx.now()) }),
 		}),
 		defineOperation({
 			name: "activity.get",

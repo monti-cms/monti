@@ -5,6 +5,7 @@ import { publicPath } from "../entries/paths";
 import { CheckError } from "../errors";
 import type { MediaKind } from "../media/accept";
 import type { OperationContext } from "../operation";
+import { likePattern } from "../query";
 import { daysLeft, foldersUnder, keptPaths, type TrashRef } from "./purge";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -76,7 +77,6 @@ export type TrashList = {
 };
 type Trail = { id: string; name: string }[];
 
-const pattern = (words: string) => `%${words.trim().replace(/[\\%_]/g, "\\$&")}%`;
 const list = (values: string[]) => sql.join(values.map((value) => sql`${value}`));
 
 /**
@@ -110,7 +110,7 @@ function rowsSql(where: {
 				: where.search === ""
 					? sql<boolean>`not ${folderInTrash(column)}`
 					: sql<boolean>`true`;
-	const like = pattern(where.search);
+	const like = likePattern(where.search.trim());
 	const found = (columns: RawBuilder<unknown>) => (where.search === "" ? sql<boolean>`true` : columns);
 	return sql`(
 		select 'entry'::text as kind, e.id, e.collection as type, e.trashed_at, e.title, (

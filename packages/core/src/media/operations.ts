@@ -6,6 +6,7 @@ import { loadEntries } from "../entries/record";
 import { CheckError } from "../errors";
 import { folderOf, subtree } from "../folders/operations";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
+import { likePattern } from "../query";
 import { lockRecords } from "../records";
 import { bodyAsRead, followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
 import { daysLeft, lockFileKeys, loosen, looseUntil } from "../trash/purge";
@@ -210,8 +211,7 @@ export const mediaOperations = [
 				else if (input.folder !== null) filtered = filtered.where("folder_id", "=", input.folder);
 				else if (!looking) filtered = filtered.where("folder_id", "is", null);
 			}
-			if (search !== "")
-				filtered = filtered.where("name", "ilike", `%${search.replace(/[\\%_]/g, (char) => `\\${char}`)}%`);
+			if (search !== "") filtered = filtered.where("name", "ilike", likePattern(search));
 			if (input.kinds.length > 0) filtered = filtered.where("kind", "in", input.kinds);
 			if (input.only) filtered = filtered.where("kind", "=", input.only);
 			if (input.used.length === 1)

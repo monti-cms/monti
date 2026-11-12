@@ -83,6 +83,13 @@ const read = <Output>(name: string, input: unknown = {}, monti = site()) =>
 
 const list = (input: unknown = {}, monti = site()) => read<ActivityList>("activity.list", input, monti);
 const detail = (id: string, monti = site()) => read<ActivityDetail>("activity.get", { id }, monti);
+/** A column menu's counts: each value with how many lines it would show. */
+const facet = async (column: "kind" | "delivery", query: object = {}, monti = site()) =>
+	Object.fromEntries(
+		(
+			await read<{ values: { value: string; count: number }[] }>("activity.facets", { ...query, column }, monti)
+		).values.map((each) => [each.value, each.count]),
+	);
 const failedCount = async (monti = site()) => (await read<DeliveryCounts>("deliveries.counts", {}, monti)).failed;
 const ko = (message: Message | null) => (message ? formatMessage([coreMessages], "ko", message) : null);
 /** A line as a person reads it: what was done, then where. */
@@ -655,11 +662,11 @@ describe("the log", () => {
 		const [failed, made] = all.lines;
 		expect(failed.delivery).toMatchObject({ failed: 1, attempts: 3, sent: 0, pending: 0 });
 		expect(made.delivery).toMatchObject({ failed: 0, sent: 1 });
-		expect(all.deliveryCounts).toEqual({ pending: 0, sent: 1, failed: 1, canceled: 0 });
+		expect(await facet("delivery", {}, monti)).toEqual({ pending: 0, sent: 1, failed: 1, canceled: 0 });
 		expect(all.deliveries).toBe(true);
 
 		// 01b: the failed filter leaves the failed line.
-		const only = await list({ delivery: "failed" }, monti);
+		const only = await list({ deliveries: ["failed"] }, monti);
 		expect(only.lines.map((line) => line.id)).toEqual([failed.id]);
 		expect(only.total).toBe(1);
 
@@ -667,8 +674,8 @@ describe("the log", () => {
 		down.clear();
 		const again = await write<DeliveriesRetried>("deliveries.retry", { ids: failed.delivery?.failedIds }, monti);
 		expect(again.output).toMatchObject({ sent: 1, failed: 0 });
-		expect((await list({ delivery: "failed" }, monti)).lines).toEqual([]);
-		expect((await list({ delivery: "failed" }, monti)).total).toBe(0);
+		expect((await list({ deliveries: ["failed"] }, monti)).lines).toEqual([]);
+		expect((await list({ deliveries: ["failed"] }, monti)).total).toBe(0);
 		expect(await failedCount(monti)).toBe(0);
 		expect(sent.map((delivery) => delivery.event.type)).toEqual(["entry.saved", "entry.published"]);
 	});
@@ -748,7 +755,7 @@ describe("the log", () => {
 		const line = (await list({}, monti)).lines[0];
 		expect(line.delivery).toMatchObject({ canceled: 1, failed: 0, sent: 1, failedIds: [] });
 		expect(await failedCount(monti)).toBe(0);
-		expect((await list({ delivery: "canceled" }, monti)).lines.map((each) => each.id)).toEqual([line.id]);
+		expect((await list({ deliveries: ["canceled"] }, monti)).lines.map((each) => each.id)).toEqual([line.id]);
 
 		// Final: no retry by itself, none by hand, no second cancel, and no undo of the cancel.
 		down.clear();
@@ -795,7 +802,7 @@ describe("the log", () => {
 			.where(sql<boolean>`event->'ids'->>0 = ${ids[0]}`)
 			.execute();
 		expect(await failedCount(monti)).toBe(3);
-		expect((await list({ delivery: "failed" }, monti)).lines).toHaveLength(3);
+		expect((await list({ deliveries: ["failed"] }, monti)).lines).toHaveLength(3);
 
 		// 08: some fail again. The receiver is back for two of the three.
 		const flaky: Receiver = {
@@ -810,7 +817,7 @@ describe("the log", () => {
 		expect(some.output).toMatchObject({ sent: 2, failed: 1 });
 		expect(some.output.ids).toHaveLength(3);
 		expect(await failedCount(back)).toBe(1);
-		const [left] = (await list({ delivery: "failed" }, back)).lines;
+		const [left] = (await list({ deliveries: ["failed"] }, back)).lines;
 		expect(said(left)[0]).toBe('"셋" 만듦');
 		expect(left.delivery).toMatchObject({ failed: 1, attempts: 1 });
 
@@ -857,13 +864,13 @@ describe("the log", () => {
 			'"두 번째 글" 만듦',
 			'"첫 번째 글" 만듦',
 		]);
-		expect(await whats({ kind: "save" })).toEqual(["en 번역 시작", '"두 번째 글" 만듦', '"첫 번째 글" 만듦']);
-		expect(await whats({ kind: "publish" })).toEqual(['"첫 번째 글" 보관', '"첫 번째 글" 발행']);
-		expect(await whats({ kind: "trash" })).toEqual(['"두 번째 글" 휴지통으로']);
-		expect(await whats({ kind: "settings" })).toEqual(["템플릿 기본 틀 저장", "게시글 컬렉션 설정 저장"]);
-		expect(await whats({ kind: "media" })).toEqual(["Blog Assets 폴더 만듦"]);
-		expect(await whats({ kind: "import" })).toEqual([]);
-		expect(await whats({ kind: "assistant" })).toEqual([]);
+		expect(await whats({ kinds: ["save"] })).toEqual(["en 번역 시작", '"두 번째 글" 만듦', '"첫 번째 글" 만듦']);
+		expect(await whats({ kinds: ["publish"] })).toEqual(['"첫 번째 글" 보관', '"첫 번째 글" 발행']);
+		expect(await whats({ kinds: ["trash"] })).toEqual(['"두 번째 글" 휴지통으로']);
+		expect(await whats({ kinds: ["settings"] })).toEqual(["템플릿 기본 틀 저장", "게시글 컬렉션 설정 저장"]);
+		expect(await whats({ kinds: ["media"] })).toEqual(["Blog Assets 폴더 만듦"]);
+		expect(await whats({ kinds: ["import"] })).toEqual([]);
+		expect(await whats({ kinds: ["assistant"] })).toEqual([]);
 		// Where it happened names the collection as the admin calls it now.
 		const lines = (await list({}, monti)).lines.map(said);
 		expect(lines[0][1]).toBe("휴지통");
@@ -881,7 +888,7 @@ describe("the log", () => {
 			'"첫 번째 글" 만듦',
 		]);
 		expect((await list({ entry: english }, monti)).lines).toHaveLength(4);
-		expect((await list({ entry: first, kind: "publish" }, monti)).lines).toHaveLength(2);
+		expect((await list({ entry: first, kinds: ["publish"] }, monti)).lines).toHaveLength(2);
 
 		// 09b: a delivery on its way is pending, and the pending filter finds its line.
 		let release!: () => void;
@@ -889,14 +896,14 @@ describe("the log", () => {
 			release = resolve;
 		});
 		const third = await newPost("세 번째 글", "third-post", monti);
-		const pending = await list({ delivery: "pending" }, monti);
+		const pending = await list({ deliveries: ["pending"] }, monti);
 		expect(pending.lines.map((line) => said(line)[0])).toEqual(['"세 번째 글" 만듦']);
 		expect(pending.lines[0].delivery).toMatchObject({ pending: 1, sent: 0, failed: 0 });
-		expect(pending.deliveryCounts.pending).toBe(1);
+		expect((await facet("delivery", {}, monti)).pending).toBe(1);
 		release();
 		await Promise.all(kept);
-		expect((await list({ delivery: "pending" }, monti)).lines).toEqual([]);
-		expect((await list({ delivery: "sent", entry: third }, monti)).lines).toHaveLength(1);
+		expect((await list({ deliveries: ["pending"] }, monti)).lines).toEqual([]);
+		expect((await list({ deliveries: ["sent"], entry: third }, monti)).lines).toHaveLength(1);
 
 		// Pages: newest first, a page at a time.
 		const page = await list({ page: 2, pageSize: 4 }, monti);
@@ -985,7 +992,7 @@ describe("the log", () => {
 				locale: "ko",
 			},
 		]);
-		const [line] = (await list({ kind: "trash" }, monti)).lines;
+		const [line] = (await list({ kinds: ["trash"] }, monti)).lines;
 		expect(said(line)).toEqual(["30일 지난 1개 영구 삭제", "휴지통"]);
 		expect(line).toMatchObject({ actor: "cli", undo: { state: "none" }, delivery: { sent: 1 } });
 		// A receiver that is down: the event waits as a failed delivery, as a write's would.
@@ -1025,13 +1032,101 @@ describe("the log", () => {
 		expect(undo).toMatchObject({ line: undo.id, listed: false });
 	});
 
+	it("13-3 the log's columns: several kinds or delivery states at once, counts under the other columns' filters, either order, days in the admin's time zone, and search", async () => {
+		const monti = site({ receivers: [receiver(SITE)] });
+		// Three days of work, the middle one's delivery failing.
+		const first = await newPost("첫 번째 글", "first-post", monti);
+		await publish([first], monti);
+		later(DAY);
+		down.add(SITE);
+		const second = await newPost("리액트 19 마이그레이션", "react-19", monti);
+		down.clear();
+		await write("folders.create", { scope: "media", parentId: null, name: "Blog Assets" }, monti);
+		later(DAY);
+		const proposal = await monti.proposals.create("conversation-1", "첫 글 요약을 짧게 다듬어 줘");
+		await monti.proposals.add(proposal, "entries.save", { id: first, version: 2, values: { summary: "짧게" } });
+		await monti.proposals.apply(proposal);
+		await write("trash.move", { rows: [{ kind: "entry", id: second }] }, monti);
+
+		const whats = async (input: unknown) => (await list(input, monti)).lines.map((line) => said(line)[0]);
+		const everything = [
+			'"리액트 19 마이그레이션" 휴지통으로',
+			'"첫 번째 글" 저장',
+			"Blog Assets 폴더 만듦",
+			'"리액트 19 마이그레이션" 만듦',
+			'"첫 번째 글" 발행',
+			'"첫 번째 글" 만듦',
+		];
+		expect(await whats({})).toEqual(everything);
+		// Oldest first.
+		expect(await whats({ sort: "asc" })).toEqual([...everything].reverse());
+
+		// One column's values are any-of; the assistant's work is one of the kinds a person picks.
+		expect(await whats({ kinds: ["trash", "publish"] })).toEqual([
+			'"리액트 19 마이그레이션" 휴지통으로',
+			'"첫 번째 글" 발행',
+		]);
+		expect(await whats({ kinds: ["assistant", "media"] })).toEqual(['"첫 번째 글" 저장', "Blog Assets 폴더 만듦"]);
+		expect(await whats({ deliveries: ["failed", "canceled"] })).toEqual(['"리액트 19 마이그레이션" 만듦']);
+		// Two columns are both-of.
+		expect(await whats({ kinds: ["save"], deliveries: ["failed"] })).toEqual(['"리액트 19 마이그레이션" 만듦']);
+		expect(await whats({ kinds: ["publish"], deliveries: ["failed"] })).toEqual([]);
+
+		// A menu's counts: what each value would show, with the other columns as they are and its own values not narrowing them.
+		expect(await facet("kind", {}, monti)).toEqual({
+			assistant: 1,
+			save: 3,
+			publish: 1,
+			trash: 1,
+			import: 0,
+			settings: 0,
+			media: 1,
+		});
+		// The menu counts lines, as every list's menu counts rows.
+		expect(await facet("delivery", {}, monti)).toEqual({ pending: 0, sent: 4, failed: 1, canceled: 0 });
+		const narrowed = { deliveries: ["failed"], kinds: ["publish"] };
+		expect(await facet("kind", narrowed, monti)).toMatchObject({ assistant: 0, save: 1, publish: 0, trash: 0 });
+		expect(await facet("delivery", narrowed, monti)).toEqual({ pending: 0, sent: 1, failed: 0, canceled: 0 });
+
+		// Days are the admin's: 10:00 UTC on the 26th is the 26th in Seoul, and 19:00 there; the next day's work is the 27th.
+		expect(await whats({ range: { from: "2026-10-27", to: "2026-10-27" }, timeZone: "Asia/Seoul" })).toEqual([
+			"Blog Assets 폴더 만듦",
+			'"리액트 19 마이그레이션" 만듦',
+		]);
+		expect(await whats({ range: { from: "2026-10-26", to: "2026-10-27" }, timeZone: "Asia/Seoul" })).toEqual(
+			everything.slice(2),
+		);
+		expect(await whats({ range: "today" })).toEqual(everything.slice(0, 2));
+		expect(await whats({ range: "7d" })).toEqual(everything);
+		// Far to the west the same instants are a day earlier: the first day's work is the 25th there.
+		expect(await whats({ range: { from: "2026-10-25", to: "2026-10-25" }, timeZone: "Pacific/Pago_Pago" })).toEqual(
+			everything.slice(4),
+		);
+		expect(await whats({ range: { from: "2026-10-26", to: "2026-10-26" }, timeZone: "Pacific/Pago_Pago" })).toEqual(
+			everything.slice(2, 4),
+		);
+
+		// Search: an entry's title, a folder's or a file's name, the words of the assistant's request. Signs of a pattern are letters.
+		expect(await whats({ search: "리액트" })).toEqual([
+			'"리액트 19 마이그레이션" 휴지통으로',
+			'"리액트 19 마이그레이션" 만듦',
+		]);
+		expect(await whats({ search: "blog assets" })).toEqual(["Blog Assets 폴더 만듦"]);
+		expect(await whats({ search: "다듬어" })).toEqual(['"첫 번째 글" 저장']);
+		expect(await whats({ search: "첫 번째", kinds: ["assistant"] })).toEqual(['"첫 번째 글" 저장']);
+		expect(await whats({ search: "%" })).toEqual([]);
+		expect(await whats({ search: "  " })).toEqual(everything);
+		expect((await list({ search: "리액트" }, monti)).total).toBe(2);
+		// The counts follow the search too.
+		expect(await facet("kind", { search: "리액트" }, monti)).toMatchObject({ save: 1, trash: 1, publish: 0 });
+	});
+
 	it("13-3 flow 12·11: a new site's log is empty", async () => {
 		expect(await list()).toEqual({
 			lines: [],
 			total: 0,
 			asOf: "0",
 			deliveries: true,
-			deliveryCounts: { pending: 0, sent: 0, failed: 0, canceled: 0 },
 			entry: null,
 		});
 	});
@@ -1112,7 +1207,7 @@ describe("undo from the log", () => {
 		await monti.proposals.add(followUp, "entries.save", { id: first, version: 2, values: { summary: "짧게" } });
 		await monti.proposals.apply(followUp);
 
-		const lines = (await list({ kind: "assistant" }, monti)).lines;
+		const lines = (await list({ kinds: ["assistant"] }, monti)).lines;
 		expect(lines.map((line) => [line.request, line.conversationId, line.actor])).toEqual([
 			["첫 글 요약 더 짧게", "conversation-1", "assistant"],
 			["이 두 편 요약 채워 줘", "conversation-1", "assistant"],
@@ -1139,7 +1234,7 @@ describe("undo from the log", () => {
 			partly: [],
 		});
 		expect(await summaries()).toEqual({ [first]: "짧게", [second]: undefined });
-		expect((await list({ kind: "assistant" }, monti)).lines[1].undo).toEqual({ state: "done", at: clock });
+		expect((await list({ kinds: ["assistant"] }, monti)).lines[1].undo).toEqual({ state: "done", at: clock });
 	});
 
 	it("13-3 a proposal applied in two sittings is two lines; undoing the proposal takes both back, and a person's write in between stays with what was under it", async () => {
@@ -1160,7 +1255,7 @@ describe("undo from the log", () => {
 		await monti.proposals.apply(proposal);
 		expect([await titleOf(entry), await titleOf(other)]).toEqual(["어시스턴트 2", "어시스턴트 3"]);
 		// Two sittings, two lines, each at its own time, both quoting the request.
-		const lines = (await list({ kind: "assistant" }, monti)).lines;
+		const lines = (await list({ kinds: ["assistant"] }, monti)).lines;
 		expect(lines.map((line) => [line.request, said(line)[0]])).toEqual([
 			["제목들을 다듬어 줘", '"어시스턴트 3" 저장 · "어시스턴트 2" 저장'],
 			["제목들을 다듬어 줘", '"어시스턴트 1" 저장'],
@@ -1181,7 +1276,10 @@ describe("undo from the log", () => {
 		expect(undone.output).toEqual({ ...plan, partly: [{ kind: "entry", id: entry }] });
 		// The entry is back at the person's write, not before it: the assistant's first write is under that write and stays.
 		expect([await titleOf(entry), await titleOf(other)]).toEqual(["사람이 고친 제목", "두 번째 글"]);
-		expect((await list({ kind: "assistant" }, monti)).lines.map((line) => line.undo.state)).toEqual(["done", "done"]);
+		expect((await list({ kinds: ["assistant"] }, monti)).lines.map((line) => line.undo.state)).toEqual([
+			"done",
+			"done",
+		]);
 	});
 
 	it("13-3 an undo that can take back only the newer of a proposal's writes on a record does that, and is not refused", async () => {
@@ -1212,7 +1310,7 @@ describe("undo from the log", () => {
 		await expect(write("activity.undo", { proposal: again }, monti)).rejects.toMatchObject({
 			reason: { key: "activity.allChanged" },
 		});
-		expect((await list({ kind: "assistant" }, monti)).lines[0].undo).toEqual({ state: "open" });
+		expect((await list({ kinds: ["assistant"] }, monti)).lines[0].undo).toEqual({ state: "open" });
 	});
 
 	it("02-7 undoing a publish tells the site: the path goes out again, on the line that was undone (T29)", async () => {
@@ -1313,21 +1411,20 @@ describe("counts and sites without receivers", () => {
 			).failedDeliveries;
 		/** The sidebar, the tab and banner, the filter menu's number, and the failed deliveries the log's lines show. */
 		const everywhere = async () => {
-			const log = await list({ delivery: "failed" }, monti);
+			const log = await list({ deliveries: ["failed"] }, monti);
 			return [
 				await sidebar(),
 				await failedCount(monti),
-				log.deliveryCounts.failed,
 				log.lines.reduce((sum, line) => sum + (line.delivery?.failed ?? 0), 0),
 			];
 		};
-		expect(await everywhere()).toEqual([0, 0, 0, 0]);
+		expect(await everywhere()).toEqual([0, 0, 0]);
 
 		down.add(SITE);
 		down.add(SEARCH);
 		const one = await newPost("하나", "one", monti);
 		await newPost("둘", "two", monti);
-		expect(await everywhere()).toEqual([4, 4, 4, 4]);
+		expect(await everywhere()).toEqual([4, 4, 4]);
 		const counts = await read<DeliveryCounts>("deliveries.counts", {}, monti);
 		expect(counts).toEqual({ failed: 4, since: START, sending: 0 });
 
@@ -1335,17 +1432,17 @@ describe("counts and sites without receivers", () => {
 		down.delete(SITE);
 		later(MINUTE);
 		await write("deliveries.retry", { all: true }, monti);
-		expect(await everywhere()).toEqual([2, 2, 2, 2]);
+		expect(await everywhere()).toEqual([2, 2, 2]);
 
 		const lines = (await list({ entry: one }, monti)).lines;
 		await write("deliveries.cancel", { id: lines[0].delivery?.failedIds[0] }, monti);
-		expect(await everywhere()).toEqual([1, 1, 1, 1]);
+		expect(await everywhere()).toEqual([1, 1, 1]);
 
 		// The retry that comes due by itself gets through.
 		down.clear();
 		later(DAY);
 		await monti.deliveries.sendDue();
-		expect(await everywhere()).toEqual([0, 0, 0, 0]);
+		expect(await everywhere()).toEqual([0, 0, 0]);
 		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toEqual({ failed: 0, since: null, sending: 0 });
 	});
 
@@ -1363,7 +1460,7 @@ describe("counts and sites without receivers", () => {
 		]);
 		expect(log.deliveries).toBe(false);
 		expect(log.lines.map((line) => line.delivery)).toEqual([null, null, null]);
-		expect(log.deliveryCounts).toEqual({ pending: 0, sent: 0, failed: 0, canceled: 0 });
+		expect(await facet("delivery", {}, monti)).toEqual({ pending: 0, sent: 0, failed: 0, canceled: 0 });
 		expect(await deliveries()).toEqual([]);
 		expect((await detail(log.lines[1].id, monti)).deliveries).toEqual([]);
 		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toEqual({ failed: 0, since: null, sending: 0 });

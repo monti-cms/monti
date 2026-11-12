@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Database, DeliveryTable } from "../db/schema";
 import { CheckError } from "../errors";
 import { ACTIVITY_KINDS, type Actor, type LoggedRecord, type Message, recordKey } from "../operation";
+import { DateRange, dateRangeSql, likePattern } from "../query";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -18,14 +19,24 @@ const WHAT_SHOWN = 3;
 /** How many records a line's details list. */
 const RECORDS_SHOWN = 20;
 
-/** The activity log's query (doc 13): what the screen's filters hold and what an agent asks ("what changed yesterday?", "what did the assistant change?"). */
+/**
+ * The activity log's query (doc 13): what the screen's search box and column menus hold, and what an agent asks ("what changed yesterday?", "what
+ * did the assistant change?"). A line shows when it meets every condition; the values of one condition are any-of, as in every list, and a
+ * condition is met by any write of the line.
+ */
 export const ActivityQuery = z.object({
-	/** The assistant's work, or one kind of write. */
-	kind: z.enum(ACTIVITY_FILTERS).optional(),
-	/** Lines with a delivery in this state. A delivery on its way is pending. */
-	delivery: z.enum(DELIVERY_STATES).optional(),
+	/** Words of a title the line touched (an entry, a file, a folder, a template) or of the assistant's request. */
+	search: z.string().optional(),
+	/** The assistant's work, or kinds of writes. */
+	kinds: z.array(z.enum(ACTIVITY_FILTERS)).default([]),
+	/** Lines with a delivery in one of these states. A delivery on its way is pending. */
+	deliveries: z.array(z.enum(DELIVERY_STATES)).default([]),
 	/** Lines that touched this entry, in any of its languages. */
 	entry: z.string().optional(),
+	/** The days the line began in, counted in `timeZone`. */
+	range: DateRange.optional(),
+	/** Newest first (`desc`), or oldest first. */
+	sort: z.enum(["desc", "asc"]).default("desc"),
 	page: z.number().int().min(1).default(1),
 	pageSize: z.number().int().min(1).max(200).default(50),
 	/**
@@ -33,8 +44,14 @@ export const ActivityQuery = z.object({
 	 * read, so a page starts where the one before it ended while new activity arrives. Left out, the log as it is now.
 	 */
 	asOf: z.string().regex(/^\d+$/).optional(),
+	/** The admin's time zone, for "today" and date ranges. */
+	timeZone: z.string().default("UTC"),
 });
 export type ActivityQuery = z.infer<typeof ActivityQuery>;
+
+/** The columns of the log whose menus filter by value: what was done (its kind) and how its delivery went. */
+export const ACTIVITY_FACETS = ["kind", "delivery"] as const;
+export type ActivityFacet = (typeof ACTIVITY_FACETS)[number];
 
 /** Whether a line can be undone: it can (`open`), it was (`done`, with when), its 30 days are over (`over`), or it never could (`none`). */
 export type LineUndo = { state: "open" | "over" | "none" } | { state: "done"; at: Date };
@@ -73,8 +90,6 @@ export type ActivityList = {
 	asOf: string;
 	/** Whether the log shows deliveries at all: the site has a receiver, or once had one whose deliveries are still here. */
 	deliveries: boolean;
-	/** How many deliveries are in each state, for the filter's menu. */
-	deliveryCounts: Record<DeliveryState, number>;
 	/** The entry the lines are filtered by, as the filter's chip names it. */
 	entry: { id: string; title: string } | null;
 };
@@ -244,28 +259,40 @@ async function entryFilter(db: Db, id: string): Promise<{ ids: string[]; title: 
 	return { ids: [id], title: logged?.title ?? "" };
 }
 
-export async function listActivity(
-	db: Db,
+type Condition = ReturnType<typeof sql>;
+
+/**
+ * The conditions of a query on the lines' heads (`h`). A page walks the heads, one row a line, in the order they were written, and asks each what
+ * its line holds: nothing groups the history. `skip` leaves one column's own values out, for that column's counts.
+ */
+function conditionsOf(
 	query: ActivityQuery,
-	options: { now: Date; receivers: boolean },
-): Promise<ActivityList> {
-	const entry = query.entry === undefined ? null : await entryFilter(db, query.entry);
-	// A page walks the heads, one row a line, in the order they were written, and asks each what its line holds: nothing groups the history.
-	// A line shows when it meets every condition; a condition is met by any of the line's rows.
-	const ofLine = (condition: ReturnType<typeof sql>) =>
+	entry: { ids: string[] } | null,
+	now: Date,
+	skip?: ActivityFacet,
+): Condition {
+	const ofLine = (condition: Condition) =>
 		sql`exists (select 1 from monti_activity r where r.line = h.id and r.listed and ${condition})`;
+	const sentIn = (states: readonly string[]) =>
+		sql`exists (select 1 from monti_delivery d join monti_activity r on r.id = d.activity_id
+			where r.line = h.id and r.listed and d.state in (${sql.join(states.map((state) => sql`${state}`))}))`;
+	const kinds = query.kinds.filter((kind) => kind !== "assistant");
+	const words = query.search?.trim() ?? "";
 	const conditions = [
 		sql`h.listed and h.id = h.line`,
 		query.asOf === undefined ? null : sql`h.seq <= ${query.asOf}`,
-		query.kind === undefined
+		query.kinds.length === 0 || skip === "kind"
 			? null
-			: query.kind === "assistant"
-				? sql`h.conversation_id is not null`
-				: ofLine(sql`r.kind = ${query.kind}`),
-		query.delivery === undefined
-			? null
-			: sql`exists (select 1 from monti_delivery d join monti_activity r on r.id = d.activity_id
-				where r.line = h.id and r.listed and d.state = ${query.delivery})`,
+			: sql`(${sql.join(
+					[
+						...(query.kinds.includes("assistant") ? [sql`h.conversation_id is not null`] : []),
+						...(kinds.length > 0 ? [ofLine(sql`r.kind in (${sql.join(kinds.map((kind) => sql`${kind}`))})`)] : []),
+					],
+					sql` or `,
+				)})`,
+		query.deliveries.length === 0 || skip === "delivery" ? null : sentIn(query.deliveries),
+		query.range === undefined ? null : dateRangeSql(sql`h."at"`, query.range, query.timeZone, now),
+		words === "" ? null : ofLine(sql`r.words ilike ${likePattern(words)}`),
 		entry === null
 			? null
 			: ofLine(
@@ -275,20 +302,23 @@ export async function listActivity(
 					)})`,
 				),
 	].filter((condition) => condition !== null);
-	const where = sql.join(conditions, sql` and `);
+	return sql.join(conditions, sql` and `);
+}
+
+export async function listActivity(
+	db: Db,
+	query: ActivityQuery,
+	options: { now: Date; receivers: boolean },
+): Promise<ActivityList> {
+	const entry = query.entry === undefined ? null : await entryFilter(db, query.entry);
+	const where = conditionsOf(query, entry, options.now);
+	const direction = query.sort === "asc" ? sql`asc` : sql`desc`;
 	const page = await sql<{ line: string }>`select h.id as line from monti_activity h where ${where}
-		order by h.seq desc limit ${query.pageSize} offset ${(query.page - 1) * query.pageSize}`.execute(db);
+		order by h.seq ${direction} limit ${query.pageSize} offset ${(query.page - 1) * query.pageSize}`.execute(db);
 	const total = await sql<{ count: string }>`select count(*) as count from monti_activity h where ${where}`.execute(db);
 	const newest = await sql<{ seq: string | null }>`select max(seq) as seq from monti_activity h
 		where h.listed and h.id = h.line`.execute(db);
-	const states = await db
-		.selectFrom("monti_delivery")
-		.select(["state", (eb) => eb.fn.countAll<string>().as("count")])
-		.groupBy("state")
-		.execute();
-	const deliveryCounts = Object.fromEntries(
-		DELIVERY_STATES.map((state) => [state, Number(states.find((row) => row.state === state)?.count ?? 0)]),
-	) as Record<DeliveryState, number>;
+	const any = await db.selectFrom("monti_delivery").select("id").limit(1).executeTakeFirst();
 	return {
 		lines: (
 			await linesOf(
@@ -299,10 +329,35 @@ export async function listActivity(
 		).map(({ line }) => line),
 		total: Number(total.rows[0]?.count ?? 0),
 		asOf: query.asOf ?? String(newest.rows[0]?.seq ?? 0),
-		deliveries: options.receivers || states.length > 0,
-		deliveryCounts,
+		deliveries: options.receivers || any !== undefined,
 		entry: entry && query.entry !== undefined ? { id: query.entry, title: entry.title } : null,
 	};
+}
+
+/**
+ * For one column of a log query: each of its values with how many lines have it, the other columns' conditions applied and its own not. It is what
+ * the column's menu shows, read when the menu opens, as a list's menus read theirs (`entries.facets`).
+ */
+export async function activityFacets(
+	db: Db,
+	query: ActivityQuery,
+	column: ActivityFacet,
+	now: Date,
+): Promise<{ value: string; count: number }[]> {
+	const entry = query.entry === undefined ? null : await entryFilter(db, query.entry);
+	const where = conditionsOf(query, entry, now, column);
+	const values: readonly string[] = column === "kind" ? ACTIVITY_FILTERS : DELIVERY_STATES;
+	const has = (value: string): Condition =>
+		column === "delivery"
+			? sql`exists (select 1 from monti_delivery d join monti_activity r on r.id = d.activity_id
+				where r.line = h.id and r.listed and d.state = ${value})`
+			: value === "assistant"
+				? sql`h.conversation_id is not null`
+				: sql`exists (select 1 from monti_activity r where r.line = h.id and r.listed and r.kind = ${value})`;
+	const { rows } = await sql<Record<string, string>>`select ${sql.join(
+		values.map((value, index) => sql`count(*) filter (where ${has(value)}) as ${sql.ref(`value_${index}`)}`),
+	)} from monti_activity h where ${where}`.execute(db);
+	return values.map((value, index) => ({ value, count: Number(rows[0]?.[`value_${index}`] ?? 0) }));
 }
 
 export async function getActivity(db: Db, id: string, now: Date): Promise<ActivityDetail> {

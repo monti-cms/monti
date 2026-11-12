@@ -1,7 +1,9 @@
 export {
+	ACTIVITY_FACETS,
 	ACTIVITY_FILTERS,
 	type ActivityDelivery,
 	type ActivityDetail,
+	type ActivityFacet,
 	type ActivityFilter,
 	type ActivityLine,
 	type ActivityList,

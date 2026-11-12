@@ -82,7 +82,8 @@ type MontiEvent = {
 
 | 기능 | 종류 | 하는 일 |
 |---|---|---|
-| `activity.list` | read | 기록 줄(종류, 전송 상태, 글 하나로 거르기, 쪽) |
+| `activity.list` | read | 기록 줄(찾기, 종류 · 전송 상태 여럿, 날짜, 글 하나, 순서, 쪽) |
+| `activity.facets` | read | 열 메뉴의 값마다 줄 수(다른 열의 거르기를 적용한) |
 | `activity.get` | read | 줄 하나와 그 전송들 |
 | `activity.undo` | write · preview | 되돌리기. 미리 보기는 그 사이 고쳐져 건너뛸 것 |
 | `deliveries.retry` | write | 전송 하나, 또는 실패 모두를 다시 보낸다 |

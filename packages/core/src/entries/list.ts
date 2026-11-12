@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CheckError } from "../errors";
 import { mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext } from "../operation";
+import { DateRange, dateRangeSql, likePattern } from "../query";
 import { type AdminValues, ListPrefs } from "../schema/admin-values";
 import { type CollectionDefinition, type FieldDefinition, type LocalesDefinition, translates } from "../schema/define";
 import { adminValuesRecord } from "../schema/operations";
@@ -25,7 +26,7 @@ const Filter = z.discriminatedUnion("on", [
 	z.object({
 		on: z.literal("date"),
 		field: z.enum(DATE_COLUMNS),
-		range: z.union([z.enum(["today", "7d", "30d"]), z.object({ from: z.iso.date(), to: z.iso.date() })]),
+		range: DateRange,
 	}),
 	z.object({ on: z.literal("empty"), field: z.string() }),
 	/** Entries by their translation group: what a body link (`monti:entry/<group>`) and a relation point at. */
@@ -133,7 +134,6 @@ const stateSql = sql`case when rep.status = 'published' and rep.has_unpublished_
 const emptySql = (field: string) =>
 	sql`(rep.values -> ${field} is null or rep.values -> ${field} in ('null'::jsonb, '""'::jsonb, '[]'::jsonb))`;
 const list = (values: readonly unknown[]) => sql.join(values.map((value) => sql`${value}`));
-const like = (text: string) => `%${text.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 const dateColumn = (field: (typeof DATE_COLUMNS)[number]) =>
 	field === "publishedAt"
 		? sql.ref("p.published_at")
@@ -194,16 +194,8 @@ function filterSql(
 			return definition.fields[filter.field]?.kind === "relation"
 				? sql`not exists (select 1 from entry_links l where l.from_group = rep.translation_group and l.field = ${filter.field})`
 				: emptySql(filter.field);
-		case "date": {
-			const column = dateColumn(filter.field);
-			const zone = query.timeZone;
-			if (filter.range === "today")
-				return sql`${column} >= (date_trunc('day', ${now}::timestamptz at time zone ${zone}) at time zone ${zone})`;
-			if (filter.range === "7d" || filter.range === "30d")
-				return sql`${column} >= ${new Date(now.getTime() - (filter.range === "7d" ? 7 : 30) * 86_400_000)}`;
-			return sql`(${column} >= (${filter.range.from}::date::timestamp at time zone ${zone})
-				and ${column} < ((${filter.range.to}::date + 1)::timestamp at time zone ${zone}))`;
-		}
+		case "date":
+			return dateRangeSql(dateColumn(filter.field), filter.range, query.timeZone, now);
 	}
 }
 
@@ -226,7 +218,7 @@ function whereSql(ctx: OperationContext, query: ListQuery, skip?: (filter: Filte
 		else if (!looking) parts.push(sql`rep.folder_id is null`);
 	}
 	if (text) {
-		const pattern = like(text);
+		const pattern = likePattern(text);
 		const where = query.search?.in ?? "all";
 		const columns = where === "all" ? ["title", "slug", "body_text"] : [where === "body" ? "body_text" : where];
 		parts.push(
