@@ -120,6 +120,8 @@ const openai: KeyService = {
 	id: "openai",
 	name: "OpenAI",
 	placeholder: "sk-…",
+	// Unverified: these ids were not checked against OpenAI's own list (that needs a key); they are read off OpenRouter's public list. A key that
+	// lists none of them starts with its first model, which the tests cover.
 	defaults: { assistant: ["gpt-5.5", "gpt-5.4", "gpt-5"], quick: ["gpt-5.4-mini", "gpt-5-mini"] },
 	async check({ secret }, fetch) {
 		const listed = await get(fetch, "https://api.openai.com/v1/models", bearer(secret));
@@ -179,6 +181,7 @@ const gemini: KeyService = {
 	id: "gemini",
 	name: "Google",
 	placeholder: "AIza…",
+	// Unverified, as OpenAI's above: read off OpenRouter's public list, not Google's own. The same fallback holds.
 	defaults: {
 		assistant: ["gemini-3.1-pro-preview", "gemini-3.8-flash"],
 		quick: ["gemini-3.8-flash", "gemini-3.5-flash"],
