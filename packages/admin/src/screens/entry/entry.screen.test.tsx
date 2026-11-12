@@ -206,15 +206,19 @@ describe("the entry editor: before the entry is there", () => {
 
 /**
  * The editor on an entry of this kind, with what an operation answers decided as the test goes: `cut(name)` says what happens to a call (`"none"`: no
- * answer at all, as `fetch` throws with no network; `"refused"`: a 500 with no reason of its own; `"held"`: no answer until `release`).
+ * answer at all, as `fetch` throws with no network; `"refused"`: a 500 with no reason of its own; `"signedOut"`: the session has ended;
+ * `"held"`: no answer until `release`).
  */
 function wired(kind: Parameters<typeof entry.site>[0]) {
-	const wire: { cut: (name: string) => "none" | "refused" | "held" | undefined; release: () => void; calls: string[] } =
-		{
-			cut: () => undefined,
-			release: () => {},
-			calls: [],
-		};
+	const wire: {
+		cut: (name: string) => "none" | "refused" | "signedOut" | "held" | undefined;
+		release: () => void;
+		calls: string[];
+	} = {
+		cut: () => undefined,
+		release: () => {},
+		calls: [],
+	};
 	const gate = new Promise<void>((done) => {
 		wire.release = done;
 	});
@@ -229,6 +233,7 @@ function wired(kind: Parameters<typeof entry.site>[0]) {
 						const cut = wire.cut(name);
 						if (cut === "none") throw new TypeError("Failed to fetch");
 						if (cut === "refused") return { status: 500, body: { error: "unexpected" } };
+						if (cut === "signedOut") return { status: 401, body: { error: "unauthenticated" } };
 						if (cut === "held") await gate;
 						const answer = await transport(name, input, options);
 						wire.calls.push(name);
@@ -306,6 +311,30 @@ describe("the entry editor: an answer that does not come", () => {
 		// The screen still has the copy from before the save: my words stay over it, not the old title in their place.
 		await expect.element(title()).toHaveValue("첫 번째 글 저장한 말");
 		await saveCell("저장 전 변경사항");
+	});
+
+	it("15 a read again that finds the session ended says so once, in the session's banner: no toast of the save or of the latest beside it", async () => {
+		const story = wired("draft");
+		await story.run();
+		await opened();
+		await titleEnd();
+		await userEvent.keyboard(" 저장한 말");
+		story.wire.cut = (name) => (name === "entries.get" ? "signedOut" : undefined);
+		await save();
+		await expect.element(page.getByText("로그인이 풀렸습니다")).toBeVisible();
+		expect(await savedTitle(story)).toBe("첫 번째 글 저장한 말");
+		expect(page.getByText("저장했지만 글을 다시 읽지 못했습니다").elements()).toEqual([]);
+		await expect.element(title()).toHaveValue("첫 번째 글 저장한 말");
+	});
+
+	it("15 '서버 최신본 불러오기' that finds the session ended keeps my changes and adds no toast to the session's banner", async () => {
+		const story = wired("draft");
+		await conflict(story);
+		story.wire.cut = (name) => (name === "entries.get" ? "signedOut" : undefined);
+		await userEvent.click(button("서버 최신본 불러오기"));
+		await expect.element(page.getByText("로그인이 풀렸습니다")).toBeVisible();
+		expect(page.getByText("글을 불러오지 못했습니다").elements()).toEqual([]);
+		await expect.element(title()).toHaveValue("첫 번째 글 내가 쓴 말");
 	});
 
 	it("00 a save that gets no answer says so in words of its own, and a refusal with no reason says only that something went wrong: no code, no empty place", async () => {

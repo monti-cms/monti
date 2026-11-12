@@ -652,9 +652,10 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	 * into it), and Escape unpicks it, the focus staying on the picture. Two states, each looking as it does everywhere: where the keyboard is, and what is
 	 * picked.
 	 */
+	/** Picks the picture; `false` when it could not (its place in the text is not known). */
 	const pick = () => {
 		const at = getPos();
-		if (typeof at === "number") editor.commands.setNodeSelection(at);
+		return typeof at === "number" && editor.commands.setNodeSelection(at);
 	};
 	/**
 	 * Lets go of the picture for real: a selection that holds nothing takes its place, so a copy made next takes nothing and no block is left picked out of
@@ -743,8 +744,10 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 						event.preventDefault();
 						// Already picked (with the pointer): its bar is there to go into.
 						if (picked) return void bar.current?.querySelector("button")?.focus();
+						// Set before the pick, which draws the bar at once; taken back if the pick did not land, or a later pick with the pointer would send
+						// the focus into the bar.
 						intoBar.current = true;
-						pick();
+						if (!pick()) intoBar.current = false;
 					},
 				};
 	const size = item ? (item.web ?? item.original) : null;

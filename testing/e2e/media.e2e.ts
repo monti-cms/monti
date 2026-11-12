@@ -710,6 +710,8 @@ test.describe("a translation's cover", () => {
 		await alt.fill("봄 표지");
 		await saveKeys(admin);
 		await admin.keyboard.press("Escape");
+		// The card takes a moment to go (it fades for about 130 ms): `card()` below must not take one that is going for one that is open.
+		await expect(alt).toBeHidden();
 
 		// On the site with no cover, and the cover only saved: a translation follows what the site shows (doc 04, principle 5).
 		await admin.getByRole("button", { name: "+ 언어" }).click();
@@ -741,6 +743,8 @@ test.describe("a translation's cover", () => {
 		await card();
 		await expect(alt).toHaveValue("spring cover");
 		await admin.keyboard.press("Escape");
+		// The card takes a moment to go (it fades for about 130 ms): `card()` below must not take one that is going for one that is open.
+		await expect(alt).toBeHidden();
 		await expect(cover).toHaveText(new RegExp(name));
 		await expect(admin.getByText("원문 따름", { exact: true })).toBeHidden();
 		await admin.getByRole("button", { name: "cover 빼기" }).click();

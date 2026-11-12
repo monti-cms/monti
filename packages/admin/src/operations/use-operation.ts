@@ -12,6 +12,9 @@ export type Refusal = { status: number; error: string; reason: Message | null };
  */
 const NO_ANSWER: Answer = { status: 0, body: { error: "network", reason: { key: "errors.noAnswer" } } };
 
+/** How a read made again went (`useRead`'s `reload`). */
+type Reread = { ok: true } | { ok: false; refusal: Refusal };
+
 const refusalOf = (answer: Answer): Refusal => {
 	const body = (answer.body ?? {}) as { error?: string; reason?: Message };
 	return { status: answer.status, error: body.error ?? "unexpected", reason: body.reason ?? null };
@@ -72,17 +75,21 @@ export function useRead<Output>(
 	const key = JSON.stringify(input);
 	const latest = useRef(0);
 	const skip = options.skip ?? false;
-	/** Reads again. Resolves to whether the read went through: a caller that goes on from the new read must not go on from the old one. */
-	const reload = useCallback(async (): Promise<boolean> => {
-		if (skip) return false;
+	/**
+	 * Reads again. Resolves to how the read went: a caller that goes on from the new read must not go on from the old one, and says why only when
+	 * the reason is its own to say (an ended session has its banner).
+	 */
+	const reload = useCallback(async (): Promise<Reread> => {
+		if (skip) return { ok: true };
 		const call = ++latest.current;
 		const result = await run(JSON.parse(key));
-		if (call !== latest.current) return result.ok;
-		if (result.ok) {
-			setData(result.body);
-			setRefusal(null);
-		} else setRefusal(result.refusal);
-		return result.ok;
+		if (call === latest.current) {
+			if (result.ok) {
+				setData(result.body);
+				setRefusal(null);
+			} else setRefusal(result.refusal);
+		}
+		return result.ok ? { ok: true } : result;
 	}, [run, key, skip]);
 	useEffect(() => {
 		void reload();

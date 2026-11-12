@@ -258,8 +258,10 @@ export function useEntryEditor(
 			}
 			// The save went through. My changes are let go only once the screen has read what was saved: let go over the copy from before the save, the
 			// old text came back in their place and the next save was a conflict with my own.
-			if (await reload()) draft.saved();
-			else toast.error(t(isEntry ? "entry.savedNotRead" : "templates.savedNotRead"));
+			const again = await reload();
+			if (again.ok) draft.saved();
+			// An ended session says so in its own banner, as for the save itself.
+			else if (again.refusal.status !== 401) toast.error(t(isEntry ? "entry.savedNotRead" : "templates.savedNotRead"));
 			return { id: answer.body.output.id };
 		},
 		[loaded, version, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload, t],
@@ -290,8 +292,9 @@ export function useEntryEditor(
 		/** The conflict's way out: the server's latest goes in and my changes are dropped. */
 		/** Resolves to whether the latest was read: not read (refused, no answer), nothing is dropped and the conflict stands, and a toast says so. */
 		loadLatest: async (byKeys = false) => {
-			if (!(await reload())) {
-				toast.error(t(isEntry ? "entry.loadFailed" : "templates.loadFailed"));
+			const again = await reload();
+			if (!again.ok) {
+				if (again.refusal.status !== 401) toast.error(t(isEntry ? "entry.loadFailed" : "templates.loadFailed"));
 				return false;
 			}
 			draft.revertAll();

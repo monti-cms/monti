@@ -79,10 +79,10 @@ export const ReadOnlyStops: Story = {
 					<Settings aria-hidden />
 				</FloatingBarButton>
 			</FloatingBar>
-			<BlockBox selected tabIndex={0} role="group" aria-label="이미지" width="420px">
+			<BlockBox selected tabIndex={0} role="group" aria-label="이미지: 언덕 위로 해가 뜨는 풍경" width="420px">
 				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" radius="md" />
 			</BlockBox>
-			<BlockBox tabIndex={0} role="group" aria-label="이미지" width="420px">
+			<BlockBox tabIndex={0} role="group" aria-label="이미지: 언덕 위로 해가 뜨는 풍경" width="420px">
 				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" radius="md" />
 			</BlockBox>
 		</Stack>
