@@ -547,7 +547,9 @@ export function EntryEditor({
 					<TextButton variant="underline" onClick={() => onCompare("draft")}>
 						{t("entry.compare")}
 					</TextButton>
-					<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
+					<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
+						{t("entry.loadCopy")}
+					</TextButton>
 					<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
 						{t("entry.dropCopy")}
 					</TextButton>

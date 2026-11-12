@@ -81,7 +81,9 @@ export function TemplateEditor({
 			) : null}
 			{editor.browserCopy ? (
 				<Banner title={t("entry.browserCopy")}>
-					<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
+					<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
+						{t("entry.loadCopy")}
+					</TextButton>
 					<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
 						{t("entry.dropCopy")}
 					</TextButton>

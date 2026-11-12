@@ -212,6 +212,8 @@ export function CompareView({
 						<>
 							<TextButton
 								onClick={() => {
+									// The copy is on its way in: it is no longer there to drop.
+									if (editor.loadingCopy) return;
 									editor.dropBrowserCopy();
 									onBack();
 								}}
@@ -219,6 +221,7 @@ export function CompareView({
 								{t("compare.drop")}
 							</TextButton>
 							<Button
+								loading={editor.loadingCopy}
 								onClick={() => {
 									void editor.loadBrowserCopy().then(onBack);
 								}}

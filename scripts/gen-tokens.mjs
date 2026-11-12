@@ -166,6 +166,8 @@ function themeLines(json) {
 	);
 	for (const { name } of json.motion.tokens)
 		if (name.startsWith("ease-")) add("ease", strip(name, "ease-"), `var(--monti-${name})`);
+	// A place that waits for its content breathes (`animate-monti-wait`); the keyframes are in the hand-written part of `theme.css`.
+	out.push("\t--animate-monti-wait: monti-wait var(--monti-duration-wait) var(--monti-ease-standard) infinite;");
 	out.push(
 		"\t--default-transition-duration: var(--monti-duration-normal);",
 		"\t--default-transition-timing-function: var(--monti-ease-standard);",

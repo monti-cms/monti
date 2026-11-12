@@ -98,6 +98,7 @@ export function useEntryEditor(source: EditorSource) {
 	const filesOp = useOperation<MediaQueryResult>("media.query");
 	/** The files of a kept copy's body that the server's body does not show: read before the copy goes in, so its pictures hold their places too. */
 	const [keptFiles, setKeptFiles] = useState<readonly MediaItem[]>([]);
+	const [loadingCopy, setLoadingCopy] = useState(false);
 	const { session, t } = useAdmin();
 	const signInAgain = useSignInAgain();
 	const loaded = source.id === null ? NEW_TEMPLATE : read.data;
@@ -114,7 +115,7 @@ export function useEntryEditor(source: EditorSource) {
 	});
 	const served = loaded?.media;
 	const files = useMemo(
-		() => (served && keptFiles.length > 0 ? [...served, ...keptFiles] : served),
+		() => (served && keptFiles.length > 0 ? [...keptFiles, ...served] : served),
 		[served, keptFiles],
 	);
 	/** Another save got in first: when, so the banner can say it. */
@@ -250,7 +251,11 @@ export function useEntryEditor(source: EditorSource) {
 			return save("entry" in latest.body ? latest.body.entry.version : latest.body.version);
 		},
 		browserCopy: draft.browserCopy,
+		/** The kept copy is being read in: its button works and cannot be pressed again. */
+		loadingCopy,
 		loadBrowserCopy: async () => {
+			if (loadingCopy || !draft.browserCopy) return;
+			setLoadingCopy(true);
 			const kept = draft.browserCopy?.mine.find(([path]) => path === "doc")?.[1] as Doc | null | undefined;
 			const known = new Set(loaded?.media?.map((item) => item.id));
 			const ids = [...mediaOf(kept?.blocks ?? [])].filter((id) => !known.has(id));
@@ -263,6 +268,7 @@ export function useEntryEditor(source: EditorSource) {
 			if (found.length > 0) setKeptFiles(found);
 			draft.loadBrowserCopy();
 			setBodyKey((key) => key + 1);
+			setLoadingCopy(false);
 		},
 		dropBrowserCopy: draft.dropBrowserCopy,
 		/** The session ended: to the login screen, and back to this entry with what was typed (`restore`). */
