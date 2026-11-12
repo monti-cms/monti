@@ -10,7 +10,7 @@ import {
 	AlertDialogTitle,
 	toast,
 } from "@monti-cms/ui";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation } from "../operations/use-operation";
 import { pointingWords } from "../trash/use-trash";
@@ -37,6 +37,10 @@ export function useUndo() {
 	const effects = useOperation<TrashEffects>("trash.checkMove");
 	const schema = useOperation<{ adminValues: Record<string, { label?: string }> }>("schema.read");
 	const [asking, setAsking] = useState<{ id: string; words: string; danger: boolean } | null>(null);
+	/** Where the focus goes after an undo confirmed with the keyboard, when what opened the question will be gone by then. */
+	const backTo = useRef<(() => HTMLElement | null) | null>(null);
+	/** The question was answered with "undo", by a press of the keyboard. */
+	const undid = useRef(false);
 	const [reading, setReading] = useState(false);
 
 	/** Refused because the screen is behind (undone in another tab, changed since): it says why, and what the screen shows reads again. */
@@ -54,8 +58,10 @@ export function useUndo() {
 		if (skip.length + partly.length > 0) toast(t("activity.undonePartly", { count: skip.length + partly.length }));
 		return true;
 	};
-	const ask = async (id: string) => {
+	const ask = async (id: string, after?: (() => HTMLElement | null) | null) => {
 		if (reading || asking) return;
+		backTo.current = after ?? null;
+		undid.current = false;
 		setReading(true);
 		try {
 			const planned = await plan.run({ id });
@@ -84,7 +90,10 @@ export function useUndo() {
 	};
 	const dialog = (
 		<AlertDialog open={asking !== null} onOpenChange={(open) => !open && setAsking(null)}>
-			<AlertDialogContent>
+			{/* Closed without undoing, the focus goes back to what opened the question (the part's own way). Undone with the keyboard from
+			    a control the undo takes away, it goes where the caller says: the question closes before that control is gone, and the focus
+			    given back to it would fall to the page with it. */}
+			<AlertDialogContent finalFocus={() => (undid.current ? (backTo.current?.() ?? null) : null)}>
 				<AlertDialogHeader>
 					<AlertDialogTitle>{t("activity.undoTitle")}</AlertDialogTitle>
 					<AlertDialogDescription>{asking?.words}</AlertDialogDescription>
@@ -93,8 +102,10 @@ export function useUndo() {
 					<AlertDialogCancel>{t("ui.cancel")}</AlertDialogCancel>
 					<AlertDialogAction
 						variant={asking?.danger ? "danger" : undefined}
-						onClick={() => {
+						onClick={(event) => {
 							const id = asking?.id;
+							// A click made with the keyboard counts no presses of a pointer (`detail` 0): only that has a focus to hand on.
+							undid.current = event.detail === 0;
 							setAsking(null);
 							if (id) void run(id);
 						}}

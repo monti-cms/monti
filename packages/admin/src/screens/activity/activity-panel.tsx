@@ -25,12 +25,29 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, Renew, Undo } from "@monti-cms/ui/icons";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { useCoverCorner } from "../frame/admin-frame";
+import { nextStop, useFocusHandOff } from "../frame/focus-hand-off";
 import { shortTime } from "../list/format";
+
+/**
+ * One receiver's delivery in the panel: its facts, and what can be done about it under them. Its buttons go when they are used ("send again"
+ * while it is on its way, both once it is canceled or arrived): the keyboard's focus they held goes to the delivery itself, whose state now
+ * says how that came out, not to the page.
+ */
+function DeliveryBlock({ id, children }: { id: string; children: ReactNode }) {
+	const handOff = useFocusHandOff((block) => () => {
+		if (block.isConnected && document.activeElement === document.body) block.focus();
+	});
+	return (
+		<Stack ref={handOff} tabIndex={-1} data-delivery={id} gap={8} align="start">
+			{children}
+		</Stack>
+	);
+}
 
 /** One group of the panel: a small heading and what is under it. */
 function Group({ title, children }: { title: string; children: ReactNode }) {
@@ -105,7 +122,8 @@ export function ActivityPanel({
 	/** There is no such line (an old link): the screen takes it out of its address. */
 	onGone: () => void;
 	onRetry: (ids: string[]) => void;
-	onUndo: () => void;
+	/** Undoes the line. `backTo` says where the focus goes when the head's ⋯ that asked will be gone once it is undone. */
+	onUndo: (backTo: (() => HTMLElement | null) | null) => void;
 	go: (route: Route) => void;
 }) {
 	const { t } = useAdmin();
@@ -113,6 +131,10 @@ export function ActivityPanel({
 	const schema = useRead<{ adminValues: Record<string, { label?: string }> }>("schema.read");
 	const cancel = useOperation("deliveries.cancel");
 	const [asking, setAsking] = useState<ActivityDelivery | null>(null);
+	/** The delivery whose cancel was just confirmed: the question gives its focus to that delivery, whose buttons are about to go. */
+	const canceled = useRef<string | null>(null);
+	// The head's ⋯ goes when nothing is left to do with the line (sent again, undone): its focus goes to the next control of the head, the ×.
+	const moreHandOff = useFocusHandOff((more) => nextStop(more));
 	const line = read.data;
 	// The corner's ✦ is covered only while a panel is there to cover it: not while it loads, not for a line that is gone.
 	useCoverCorner(line !== null);
@@ -133,6 +155,9 @@ export function ActivityPanel({
 	const receiverOf = (delivery: ActivityDelivery) =>
 		typeof delivery.receiver === "string" ? delivery.receiver : say(delivery.receiver);
 	const failed = line.deliveries.filter((delivery) => delivery.state === "failed" && !isSending(delivery));
+	// The head's ⋯ stays while a failed delivery is on its way again: it goes only once nothing is left to do with the line, and by then the
+	// menu has given its focus back to it, so that focus can be handed on.
+	const anyFailed = line.deliveries.some((delivery) => delivery.state === "failed");
 	const title = line.request !== null ? `“${line.request}”` : line.what[0] ? say(line.what[0]) : "";
 	/** Where a record opens, when it is still there to open. */
 	const routeOf = (record: ActivityRecord): Route | null =>
@@ -155,8 +180,10 @@ export function ActivityPanel({
 		);
 	};
 	const [only] = line.records;
-	const confirmCancel = async () => {
+	const confirmCancel = async (byKeys: boolean) => {
 		const delivery = asking;
+		// A pointer's press holds no keyboard focus: only a press with the keyboard has a focus to hand to the delivery.
+		canceled.current = byKeys ? (delivery?.id ?? null) : null;
 		setAsking(null);
 		if (!delivery) return;
 		const result = await cancel.run({ id: delivery.id });
@@ -170,20 +197,37 @@ export function ActivityPanel({
 				title={title}
 				onClose={onClose}
 				actions={
-					failed.length > 0 || (line.undo.state === "open" && !undoing) ? (
+					anyFailed || (line.undo.state === "open" && !undoing) ? (
 						<DropdownMenu>
-							<IconButton label={t("list.rowMenu")} trigger={(button) => <DropdownMenuTrigger render={button} />}>
+							<IconButton
+								ref={moreHandOff}
+								label={t("list.rowMenu")}
+								trigger={(button) => <DropdownMenuTrigger render={button} />}
+							>
 								<OverflowMenuHorizontal aria-hidden />
 							</IconButton>
 							<DropdownMenuContent align="end">
-								{failed.length > 0 && (
-									<DropdownMenuItem disabled={busy} onClick={() => onRetry(failed.map((delivery) => delivery.id))}>
+								{anyFailed && (
+									<DropdownMenuItem
+										disabled={busy || failed.length === 0}
+										onClick={() => onRetry(failed.map((delivery) => delivery.id))}
+									>
 										<Renew aria-hidden />
 										{t("activity.retry")}
 									</DropdownMenuItem>
 								)}
 								{line.undo.state === "open" && !undoing && (
-									<DropdownMenuItem onClick={onUndo}>
+									<DropdownMenuItem
+										// With no failed delivery left the head's ⋯ goes once the line is undone: the focus then goes to the head's ×.
+										onClick={() =>
+											onUndo(
+												anyFailed
+													? null
+													: () =>
+															document.querySelector<HTMLElement>("[data-slot=side-panel-header] button:last-of-type"),
+											)
+										}
+									>
 										<Undo aria-hidden />
 										{t("activity.undo")}
 									</DropdownMenuItem>
@@ -265,7 +309,7 @@ export function ActivityPanel({
 						<Group title={t("activity.deliveriesCount", { count: line.deliveries.length })}>
 							<Stack gap={20}>
 								{line.deliveries.map((delivery) => (
-									<Stack key={delivery.id} gap={8} align="start">
+									<DeliveryBlock key={delivery.id} id={delivery.id}>
 										<DescriptionList>
 											<DescriptionItem label={t("activity.destination")}>{receiverOf(delivery)}</DescriptionItem>
 											<DescriptionItem label={t("activity.eventName")} mono>
@@ -294,12 +338,18 @@ export function ActivityPanel({
 														{t("activity.retry")}
 													</TextButton>
 												)}
-												<TextButton variant="quiet" onClick={() => setAsking(delivery)}>
+												<TextButton
+													variant="quiet"
+													onClick={() => {
+														canceled.current = null;
+														setAsking(delivery);
+													}}
+												>
 													{t("activity.cancel")}
 												</TextButton>
 											</Inline>
 										)}
-									</Stack>
+									</DeliveryBlock>
 								))}
 							</Stack>
 						</Group>
@@ -308,7 +358,13 @@ export function ActivityPanel({
 			</SidePanel>
 			{/* Canceling cannot be taken back, so it asks (flow 12·04). */}
 			<AlertDialog open={asking !== null} onOpenChange={(open) => !open && setAsking(null)}>
-				<AlertDialogContent>
+				{/* Closed without canceling, the focus goes back to "cancel" (the part's own way). Confirmed with the keyboard, it goes to the
+				    delivery: its buttons are about to go, and the focus given back to them would fall to the page. */}
+				<AlertDialogContent
+					finalFocus={() =>
+						canceled.current ? document.querySelector<HTMLElement>(`[data-delivery="${canceled.current}"]`) : null
+					}
+				>
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t("activity.cancelTitle")}</AlertDialogTitle>
 						<AlertDialogDescription>
@@ -319,7 +375,8 @@ export function ActivityPanel({
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>{t("activity.cancelClose")}</AlertDialogCancel>
-						<AlertDialogAction variant="danger" onClick={() => void confirmCancel()}>
+						{/* A click made with the keyboard counts no presses of a pointer (`detail` 0). */}
+						<AlertDialogAction variant="danger" onClick={(event) => void confirmCancel(event.detail === 0)}>
 							{t("activity.cancelConfirm")}
 						</AlertDialogAction>
 					</AlertDialogFooter>

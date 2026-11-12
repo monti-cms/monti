@@ -44,13 +44,14 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { Renew, RightPanelOpen, Undo } from "@monti-cms/ui/icons";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { clock } from "../entry/dates";
+import { nextStop, useFocusHandOff } from "../frame/focus-hand-off";
 import { DateRows } from "../list/date-rows";
 import { toggled, ValueRow } from "../list/filter-rows";
 import { shortDate, shortTime } from "../list/format";
@@ -100,6 +101,20 @@ function FacetRows<Value extends string>({
 			))}
 		</>
 	);
+}
+
+/**
+ * A row's ⋯. The row's own action can take the row out of the list (its failed delivery is sent again while the list shows only failed ones):
+ * the keyboard's focus the ⋯ held then goes to the row that follows, or with none left to the list's start (`listStart`), not to the page.
+ */
+function LogRowActions({ listStart, children }: { listStart: () => HTMLElement | null; children: ReactNode }) {
+	const handOff = useFocusHandOff((gone) => {
+		// The next row, when there is one: what stands after the list (the corner's button, a panel) is not what the row's action was about.
+		const next = nextStop(gone);
+		if (next && gone.closest("table")?.contains(next)) return next;
+		return () => requestAnimationFrame(() => listStart()?.focus());
+	});
+	return <RowActions ref={handOff}>{children}</RowActions>;
 }
 
 /**
@@ -302,19 +317,39 @@ export function ActivityScreen({
 		},
 	];
 	const colSpan = head.length + 1;
-	const total = data?.total ?? 0;
 	const failed = counts.data?.failed ?? 0;
 	const failedOnly = state.deliveries.length === 1 && state.deliveries[0] === "failed";
+	const table = useRef<HTMLTableElement>(null);
+	/** Where the list begins for the keyboard: its first row, or what a list with no match offers in its place, or its first column's name. */
+	const listStart = () =>
+		table.current?.querySelector<HTMLElement>("tbody [data-slot=row-link], tbody button") ??
+		table.current?.querySelector<HTMLElement>("thead button") ??
+		null;
+	// A banner's action takes its own control away, and the keyboard's focus it held goes to what it acted on. "Show" goes once the list is
+	// filtered while the banner stays: to the delivery column's name, where that filter now is (the rows under it are about to change). "Send
+	// again" goes with the banner when nothing is failed any more, "try again" when the log is read: to the list's first row.
+	const bannerHandOff = useFocusHandOff((banner) => {
+		if (failed > 0 && failedOnly) {
+			const name = t("activity.column.delivery");
+			const column = [...(table.current?.querySelectorAll<HTMLElement>("thead button") ?? [])].find((button) =>
+				button.textContent?.startsWith(name),
+			);
+			if (column) return column;
+		}
+		return listStart() ?? nextStop(banner) ?? (() => requestAnimationFrame(() => listStart()?.focus()));
+	});
+	const total = data?.total ?? 0;
 	const empty = data !== null && total === 0 && !looking && state.page === 1;
 	const panel = state.open;
 
 	const banners = (
 		<PageBanner>
-			{/* From two on: one failed delivery is said by its own row (2026-11-05, owner). */}
-			{failed > 1 && data?.deliveries ? (
+			{/* Whenever a delivery has failed and not been sent again, one or many (2026-11-12, owner). */}
+			{failed > 0 && data?.deliveries ? (
 				<Banner
+					ref={bannerHandOff}
 					tone="danger"
-					title={t("activity.failedBanner", { count: failed })}
+					title={t(failed === 1 ? "activity.failedBannerOne" : "activity.failedBanner", { count: failed })}
 					meta={counts.data?.since ? t("activity.since", { date: shortDate(counts.data.since) }) : undefined}
 				>
 					{!failedOnly && (
@@ -327,12 +362,12 @@ export function ActivityScreen({
 						</TextButton>
 					)}
 					<TextButton loading={busy} onClick={() => void again.send("all")}>
-						{busy ? t("activity.sending") : t("activity.retryAll")}
+						{busy ? t("activity.sending") : t(failed === 1 ? "activity.retry" : "activity.retryAll")}
 					</TextButton>
 				</Banner>
 			) : null}
 			{read.refusal && !data ? (
-				<Banner tone="danger" title={t("activity.loadFailed")} plainMeta>
+				<Banner ref={bannerHandOff} tone="danger" title={t("activity.loadFailed")} plainMeta>
 					<TextButton variant="underline" onClick={() => void read.reload()}>
 						{t("activity.reload")}
 					</TextButton>
@@ -367,7 +402,12 @@ export function ActivityScreen({
 			<PageColumn width="list">
 				{banners}
 				{header}
-				<Table container="none" layout="fixed" columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}>
+				<Table
+					ref={table}
+					container="none"
+					layout="fixed"
+					columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}
+				>
 					<ListHead
 						columns={head}
 						end={LIST_COLUMN_SIZE.end}
@@ -408,7 +448,7 @@ export function ActivityScreen({
 										</Text>
 									</TableCell>
 									<TableCell align="end">
-										<RowActions>
+										<LogRowActions listStart={listStart}>
 											<DropdownMenu>
 												<RowMore
 													label={t("list.rowMenu")}
@@ -416,7 +456,7 @@ export function ActivityScreen({
 												/>
 												<DropdownMenuContent align="end">{menuItems(line, false)}</DropdownMenuContent>
 											</DropdownMenu>
-										</RowActions>
+										</LogRowActions>
 									</TableCell>
 								</TableRow>
 							);
@@ -475,7 +515,7 @@ export function ActivityScreen({
 					onClose={() => setState({ ...state, open: null })}
 					onGone={() => setState({ ...state, open: null }, { replace: true })}
 					onRetry={(ids) => void again.send(ids)}
-					onUndo={() => void undo.ask(panel)}
+					onUndo={(backTo) => void undo.ask(panel, backTo)}
 				/>
 			)}
 			{/* The undo's question, for the row's ⋯ and the panel's alike. */}

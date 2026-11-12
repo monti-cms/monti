@@ -30,13 +30,18 @@ const undoFromMenu = async (words: string) => {
 };
 const sidebar = (name: RegExp) => page.getByRole("navigation").getByRole("button", { name });
 const sidebarLog = () => sidebar(/^활동 기록/);
-const banner = () => page.getByRole("status").filter({ hasText: "전송 실패" });
+const banner = () => page.getByRole("status").filter({ hasText: /전송 \d+건 실패/ });
 const panel = () => page.getByRole("complementary");
 /** What each row's delivery cell says, top to bottom. */
 const deliveryCells = () =>
 	[...table().element().querySelectorAll("tbody tr")].map((each) => each.querySelectorAll("td")[1]?.textContent ?? "");
 /** What one row's delivery cell says. */
 const deliveryOf = (words: string) => row(words).element().querySelectorAll("td")[1]?.textContent ?? "";
+/** Tab until the keyboard's focus is on it: a control reached as a person on the keyboard reaches it. */
+const tabTo = async (target: () => Element) => {
+	for (let presses = 0; presses < 120 && document.activeElement !== target(); presses++) await userEvent.tab();
+	expect(document.activeElement).toBe(target());
+};
 const rows = () =>
 	[...table().element().querySelectorAll("tbody tr")].map((each) => each.querySelector("td")?.textContent ?? "");
 
@@ -44,7 +49,7 @@ const FAILED = '"리액트 19 마이그레이션" 발행';
 const ASSISTANT = "이 두 편 요약 채워 줘";
 
 describe("the activity log (doc 13, flow 12)", () => {
-	it("13-4 [flow 12·01] the sidebar's count is on the log, which opens unfiltered: one failed row says so, with no banner, and tools counts nothing", async () => {
+	it("13-4 [flow 12·01] the sidebar's count is on the log, which opens unfiltered: one failed row says so, the banner at the top says the same number, and tools counts nothing", async () => {
 		await draw({ ...stories.Log, loaders: stories.log("#/trash") }).run();
 		await expect.element(sidebarLog()).toHaveTextContent("1");
 		await expect.element(sidebar(/^도구/)).not.toHaveTextContent("1");
@@ -58,7 +63,11 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row("템플릿 기본 틀 저장")).toHaveTextContent("도구 · 템플릿 · 명령줄");
 		// The admin's own rows name nobody.
 		await expect.element(table().getByText("관리자")).not.toBeInTheDocument();
-		await expect.element(banner()).not.toBeInTheDocument();
+		// One failed delivery is enough for the banner: it counts deliveries, as the sidebar does, and offers to send that one again.
+		await expect.element(banner()).toHaveTextContent("전송 1건 실패");
+		await expect.element(banner().getByRole("button", { name: "다시 보내기" })).toBeVisible();
+		await expect.element(banner().getByRole("button", { name: "보기" })).toBeVisible();
+		await expect.element(banner().getByRole("button", { name: "모두 다시 보내기" })).not.toBeInTheDocument();
 	});
 
 	it("13-3 the assistant's work is one row for its request, marked ✦ and quoting it, with what it did after it", async () => {
@@ -216,7 +225,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 	it("13-4 [flow 12·05] [flow 12·06] [flow 12·07] three failed deliveries: a banner at the very top says so with the sidebar's number; its 보기 filters to them; sending all again clears the banner and the count and says how many went", async () => {
 		const drawn = draw(stories.ThreeFailed);
 		await drawn.run();
-		await expect.element(banner()).toHaveTextContent("전송 실패 3건");
+		await expect.element(banner()).toHaveTextContent("전송 3건 실패");
 		await expect.element(sidebarLog()).toHaveTextContent("3");
 		// The banner stands above the page's title, across the page.
 		const top = (element: Element) => element.getBoundingClientRect().top;
@@ -251,7 +260,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록$/);
 	});
 
-	it("13-4 [flow 12·08] one of three fails again: its row is left, alone, so the banner is gone; the toast says how many went and how many did not", async () => {
+	it("13-4 [flow 12·08] one of three fails again: its row is left, and the banner counts that one; the toast says how many went and how many did not", async () => {
 		const drawn = draw(stories.ThreeFailed);
 		await drawn.run();
 		const { hooks, ids } = drawn.loaded();
@@ -261,8 +270,8 @@ describe("the activity log (doc 13, flow 12)", () => {
 		if (stubborn) hooks.refuse.add(stubborn);
 		await userEvent.click(banner().getByRole("button", { name: "모두 다시 보내기" }));
 		await expect.element(toast("2건 보냈습니다 · 1건 실패")).toBeVisible();
-		await expect.element(banner()).not.toBeInTheDocument();
-		await expect.element(sidebarLog()).toHaveTextContent("1");
+		await expect.element(banner()).toHaveTextContent("전송 1건 실패");
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록1$/);
 		expect(deliveryCells().filter((words) => words !== "보냄" && words !== "")).toEqual(["실패"]);
 	});
 
@@ -487,7 +496,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 	it("13-4 one publish two receivers did not get: the sidebar, the banner and the delivery column's menu all count three deliveries, on two rows", async () => {
 		await draw(stories.TwoOnOneRow).run();
 		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록3$/);
-		await expect.element(banner()).toHaveTextContent("전송 실패 3건");
+		await expect.element(banner()).toHaveTextContent("전송 3건 실패");
 		await userEvent.click(columnName("전송"));
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /^실패/ })).toHaveTextContent(/^실패3$/);
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /^실패/ }));
@@ -613,7 +622,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await fail("또 실패한 글", "behind-2");
 		await userEvent.click(sidebarLog());
 		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록3$/);
-		await expect.element(banner()).toHaveTextContent("전송 실패 3건");
+		await expect.element(banner()).toHaveTextContent("전송 3건 실패");
 	});
 
 	it("a time's cell says the same day and hour when pointed at, in the lists' own form", async () => {
@@ -713,5 +722,131 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await userEvent.click(row(FAILED).getByText("post/react-19"));
 		await expect.element(panel()).toHaveTextContent("상태3번 실패");
 		expect(deliveryOf(FAILED)).toBe("실패");
+	});
+	it("the banner's 다시 보내기 pressed with the keyboard: sent, the banner goes and the focus it held goes to the list; with none failed there is no banner", async () => {
+		toasts.dismiss();
+		await draw(stories.Log).run();
+		await expect.element(banner()).toHaveTextContent("전송 1건 실패");
+		await tabTo(() => banner().getByRole("button", { name: "다시 보내기" }).element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(toast("보냈습니다")).toBeVisible();
+		// Nothing is failed any more: no banner, and no number on the sidebar's row.
+		await expect.element(banner()).not.toBeInTheDocument();
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록$/);
+		// The focus is on the list's first row, not on the page.
+		await expect.element(row('"고친 글" 저장').getByRole("button").first()).toHaveFocus();
+	});
+
+	it("the banner's 다시 보내기 pressed with the pointer moves no focus", async () => {
+		toasts.dismiss();
+		await draw(stories.Log).run();
+		await userEvent.click(banner().getByRole("button", { name: "다시 보내기" }));
+		await expect.element(banner()).not.toBeInTheDocument();
+		expect(table().element().contains(document.activeElement)).toBe(false);
+	});
+
+	it("the banner's 보기 pressed with the keyboard goes once the list is filtered, and its focus goes to the delivery column's name, where that filter is", async () => {
+		toasts.dismiss();
+		await draw(stories.ThreeFailed).run();
+		await tabTo(() => banner().getByRole("button", { name: "보기" }).element());
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => rows().length).toBe(3);
+		await expect.element(banner().getByRole("button", { name: "보기" })).not.toBeInTheDocument();
+		await expect.element(columnName("전송")).toHaveFocus();
+	});
+
+	it("a row's 다시 보내기 from its ⋯ with the keyboard, in a list of failed rows only: the row goes, and the focus goes to what the list offers in its place", async () => {
+		toasts.dismiss();
+		const drawn = draw(stories.FailedOnly);
+		await drawn.run();
+		const { hooks } = drawn.loaded();
+		// The receiver takes a moment, as one over a network does: the menu has closed and given its focus back to the ⋯ before the row goes.
+		let arrive = () => {};
+		hooks.hold = new Promise((resolve) => {
+			arrive = resolve;
+		});
+		const more = () => row(FAILED).getByRole("button", { name: "행 메뉴" });
+		await tabTo(() => more().element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
+		await userEvent.keyboard("{ArrowDown}{Enter}");
+		await expect.element(more()).toHaveFocus();
+		hooks.hold = null;
+		arrive();
+		await expect.element(toast("보냈습니다")).toBeVisible();
+		await expect.element(table().getByText("맞는 기록이 없습니다.")).toBeVisible();
+		await expect.element(table().getByRole("button", { name: "필터 해제" })).toHaveFocus();
+	});
+
+	it("in the panel, a delivery's 다시 보내기 and its 취소 pressed with the keyboard go once used, and the focus goes to that delivery, whose state says how it came out", async () => {
+		toasts.dismiss();
+		const drawn = draw(stories.Panel);
+		await drawn.run();
+		const { hooks } = drawn.loaded();
+		await expect.element(panel()).toHaveTextContent("상태1번 실패");
+		// It fails again: the button comes back after the try, and the delivery it stands under has the focus in between.
+		hooks.down.add(stories.SITE);
+		await tabTo(() => panel().getByRole("button", { name: "다시 보내기" }).element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(toast("보내지 못했습니다")).toBeVisible();
+		hooks.down.clear();
+		// Canceled with the keyboard, through the question: both buttons go, and the focus is on the delivery.
+		await tabTo(() => panel().getByRole("button", { name: "취소", exact: true }).element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(dialog()).toHaveTextContent("이 전송을 취소할까요?");
+		await tabTo(() => dialog().getByRole("button", { name: "취소하기" }).element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel()).toHaveTextContent("취소됨");
+		// On the delivery itself, in the panel: the question gave its focus there, not back to a button that is gone.
+		await expect.poll(() => document.activeElement?.getAttribute("data-delivery") ?? null).not.toBeNull();
+		expect(document.activeElement?.textContent).toContain("받는 곳사이트 캐시");
+		expect(document.activeElement?.textContent).toContain("취소됨");
+		expect(panel().element().contains(document.activeElement)).toBe(true);
+	});
+
+	it("in the panel, the head's ⋯ goes when nothing is left to do with the line, and the focus it held goes to the next control of the head", async () => {
+		toasts.dismiss();
+		const drawn = draw(stories.Panel);
+		await drawn.run();
+		const { site, ids, hooks } = drawn.loaded();
+		// The line is undone already, behind the screen: what is left to do is to send its failed delivery again.
+		await site.monti.run("activity.undo", { id: ids.failed[0]?.line }, { actor: "admin" });
+		await userEvent.click(row('"고친 글" 저장').getByText("post/edited-post"));
+		await userEvent.click(row(FAILED).getByText("post/react-19"));
+		const more = () => panel().getByRole("button", { name: "행 메뉴" });
+		await expect.element(more()).toBeVisible();
+		await tabTo(() => more().element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
+		await expect.element(page.getByRole("menuitem", { name: "되돌리기" })).not.toBeInTheDocument();
+		// The receiver takes a moment: the menu has given its focus back to the ⋯ before the ⋯ goes.
+		let arrive = () => {};
+		hooks.hold = new Promise((resolve) => {
+			arrive = resolve;
+		});
+		await userEvent.keyboard("{Enter}");
+		await expect.element(more()).toHaveFocus();
+		hooks.hold = null;
+		arrive();
+		await expect.element(more()).not.toBeInTheDocument();
+		await expect.element(panel().getByRole("button", { name: "닫기" })).toHaveFocus();
+	});
+
+	it("in the panel, 되돌리기 from the head's ⋯ confirmed with the keyboard: with nothing left to do the ⋯ goes, and the question gives its focus to the head's ×", async () => {
+		toasts.dismiss();
+		await draw(stories.Log).run();
+		await userEvent.click(row('"고친 글" 저장').getByText("post/edited-post"));
+		const more = () => panel().getByRole("button", { name: "행 메뉴" });
+		await expect.element(more()).toBeVisible();
+		await tabTo(() => more().element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "되돌리기" })).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(dialog()).toHaveTextContent("되돌릴까요?");
+		await tabTo(() => dialog().getByRole("button", { name: "되돌리기" }).element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(row('"고친 글" 저장')).toHaveTextContent(/되돌림 \d\d:\d\d/);
+		await expect.element(more()).not.toBeInTheDocument();
+		await expect.element(panel().getByRole("button", { name: "닫기" })).toHaveFocus();
 	});
 });
