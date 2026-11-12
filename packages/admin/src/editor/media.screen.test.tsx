@@ -16,6 +16,7 @@ const {
 	FileInBody,
 	ManyInBody,
 	TranslationEndsInPicture,
+	OnlyWholeBlocks,
 } = composeStories(media);
 
 const body = () => page.getByRole("textbox", { name: "본문" });
@@ -477,6 +478,39 @@ describe("an image in the text", () => {
 		expect(picked()?.contains(middle)).toBe(true);
 		await userEvent.keyboard("{Backspace}");
 		await expect.poll(() => rules().length).toBe(2);
+	});
+
+	it("T134 a body with no text at all, only a picture, a file and a picture: each is picked and stays picked, Backspace takes it out, and a press under the last one opens a line to write on", async () => {
+		await OnlyWholeBlocks.run();
+		const second = body().getByRole("img", { name: "화면에 뜬 코드" });
+		await expect.element(second).toBeVisible();
+		expect(body().element().querySelector("p")).toBeNull();
+		// Nothing here takes a caret, so the browser has no selection to give: the editor keeps the block picked, and the keys reach it.
+		await userEvent.click(second);
+		await nudge(second.element());
+		expect(picked()?.contains(second.element())).toBe(true);
+		await expect.element(bar()).toBeVisible();
+		await userEvent.keyboard("{Backspace}");
+		await expect.element(second).not.toBeInTheDocument();
+		// The file, in the middle of what is left.
+		await userEvent.click(page.elementLocator(fileBlock()));
+		await nudge(fileBlock());
+		expect(picked()?.contains(fileBlock())).toBe(true);
+		await userEvent.keyboard("{Backspace}");
+		await expect.poll(() => fileBlock()).toBeNull();
+		// The first picture is all that is left: picked, and still there.
+		const first = body().getByRole("img", { name: "아침 책상" });
+		await userEvent.click(first);
+		await nudge(first.element());
+		expect(picked()?.contains(first.element())).toBe(true);
+		// Writing after it: a press under the last block opens a line there.
+		const box = first.element().getBoundingClientRect();
+		const area = body().element().closest("[data-slot=editor-body]") ?? body().element().parentElement;
+		area?.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: box.left + 40, clientY: box.bottom + 60 }));
+		await expect.element(body()).toHaveFocus();
+		await userEvent.keyboard("그림 아래에 쓴 글");
+		await expect.element(paragraph("그림 아래에 쓴 글")).toBeVisible();
+		await expect.element(first).toBeVisible();
 	});
 
 	it("T134 side by side, a picture that ends a translation's body stays picked when the pointer moves, and the source's words can still be picked", async () => {

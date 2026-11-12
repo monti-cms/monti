@@ -604,18 +604,21 @@ export function EntryEditor({
 					{head}
 					{/* The pill stands alone: the line sets it apart from the screen's tools (the panel, ⋯, ✦). */}
 					{head ? <Separator orientation="vertical" length="control" flush /> : null}
-					<IconButton
-						label={t("entry.properties")}
-						side="bottom"
-						pressed={panel}
-						onClick={() => {
-							// The properties take the place of the source beside the text: one pane at a time.
-							if (!panel && translation.isTranslation) setView("off");
-							setPanel(!panel);
-						}}
-					>
-						<RightPanelOpen aria-hidden />
-					</IconButton>
+					{/* With the entry's other controls: before the read, and after a read that failed, it stood pressed and opened nothing. */}
+					{read ? (
+						<IconButton
+							label={t("entry.properties")}
+							side="bottom"
+							pressed={panel}
+							onClick={() => {
+								// The properties take the place of the source beside the text: one pane at a time.
+								if (!panel && translation.isTranslation) setView("off");
+								setPanel(!panel);
+							}}
+						>
+							<RightPanelOpen aria-hidden />
+						</IconButton>
+					) : null}
 					{!read ? null : trashed ? (
 						<DropdownMenu>
 							<IconButton

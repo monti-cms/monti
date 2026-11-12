@@ -22,6 +22,8 @@ const entry = (
 		icon?: true;
 		/** The entry is archived: read-only (doc 02). */
 		archived?: true;
+		/** No first paragraph: the body is what `body` gives, and nothing else. */
+		bare?: true;
 	} = {},
 ) => [
 	async (): Promise<Loaded> => {
@@ -52,7 +54,10 @@ const entry = (
 					title: "쓰는 중인 글",
 					slug: "writing",
 					values: ids && options.values ? options.values(ids) : undefined,
-					doc: { type: "doc", blocks: [paragraph, ...(ids && options.body ? options.body(ids) : [])] },
+					doc: {
+						type: "doc",
+						blocks: [...(options.bare ? [] : [paragraph]), ...(ids && options.body ? options.body(ids) : [])],
+					},
 				});
 				if (options.translate) id = await run("translations.create", { source: id, locale: options.translate });
 				if (options.archived) await monti.run("entries.archive", { ids: [id] }, { actor: "admin" });
@@ -169,6 +174,19 @@ export const TranslationEndsInPicture: Story = {
 		body: ({ code, notes }) => [
 			{ id: "f_1", type: "file", attrs: { media: notes } },
 			{ id: "i_1", type: "image", attrs: { media: code, alt: "화면에 뜬 코드" } },
+		],
+	}),
+	tags: ["!dev"],
+};
+
+/** A body with no text at all: a picture, a file, a picture. Nothing in it takes a caret (T134). */
+export const OnlyWholeBlocks: Story = {
+	loaders: entry({
+		bare: true,
+		body: ({ desk, code, notes }) => [
+			{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상" } },
+			{ id: "f_1", type: "file", attrs: { media: notes } },
+			{ id: "i_2", type: "image", attrs: { media: code, alt: "화면에 뜬 코드" } },
 		],
 	}),
 	tags: ["!dev"],

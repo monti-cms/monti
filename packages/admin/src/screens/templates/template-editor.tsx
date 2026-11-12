@@ -194,14 +194,15 @@ export function TemplateEditor({
 					) : null}
 				</Stack>
 			</Stack>
-			<StatusBar>
-				<StatusBarSpacer />
-				{editor.loaded ? (
+			{/* As the entry editor: no status bar for a template that is not read yet. */}
+			{editor.loaded ? (
+				<StatusBar>
+					<StatusBarSpacer />
 					<StatusBarCell end render={<span />}>
 						{t("templates.chars", { count: docLength(editor.doc) })}
 					</StatusBarCell>
-				) : null}
-			</StatusBar>
+				</StatusBar>
+			) : null}
 		</StandalonePage>
 	);
 }

@@ -167,7 +167,9 @@ describe("the entry editor: before the entry is there", () => {
 		await expect.element(button("게시글")).toBeVisible();
 		// Nothing that writes is there: no title to type into (it would read as an untitled entry), no save, no publish, no menu of the entry's actions.
 		expect(title().elements()).toEqual([]);
-		for (const name of ["저장", "발행하기", "더 보기"]) expect(button(name).elements()).toEqual([]);
+		for (const name of ["저장", "발행하기", "더 보기", "속성"]) expect(button(name).elements()).toEqual([]);
+		// No status bar either: nothing is said of an entry that is not there.
+		expect(document.querySelector("[data-slot=status-bar]")).toBeNull();
 		// The site's structure is read by now (the way back is named from it), so the properties could be drawn, empty: they are not. No field of theirs
 		// takes a letter, and no file can be chosen or sent up for an entry that is not there.
 		const property = (name: string) => page.getByLabelText(name, { exact: true });
@@ -183,6 +185,7 @@ describe("the entry editor: before the entry is there", () => {
 		const box = title().element().getBoundingClientRect();
 		expect(at.x > box.left && at.x < box.right && at.y > box.top && at.y < box.bottom).toBe(true);
 		await expect.element(title()).toHaveValue("첫 번째 글");
+		await expect.element(button("속성")).toBeVisible();
 		await expect.element(property("요약")).toHaveValue("리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.");
 		await expect.element(property("대표 이미지")).toBeVisible();
 		await saveCell("저장됨");
@@ -197,6 +200,20 @@ describe("the entry editor: before the entry is there", () => {
 		await userEvent.keyboard(" 다시");
 		await expect.element(title()).toHaveValue("첫 번째 글 다시");
 		await saveCell("저장 전 변경사항");
+	});
+});
+
+describe("the entry editor: the stories of the states before the read", () => {
+	it("02 T153 'BeforeTheRead' and 'ReadFailed' draw what a person meets there: the way back, and for a failed read the banner with its way to try again", async () => {
+		await from(entry.BeforeTheRead).run();
+		await expect.element(button("게시글")).toBeVisible();
+		expect(title().elements()).toEqual([]);
+		expect(page.getByText("글을 불러오지 못했습니다").elements()).toEqual([]);
+
+		await from(entry.ReadFailed).run();
+		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
+		await expect.element(button("다시 시도")).toBeVisible();
+		expect(title().elements()).toEqual([]);
 	});
 });
 
@@ -264,6 +281,8 @@ describe("the entry editor: a read that gets no answer", () => {
 		await story.run();
 		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
 		expect(title().elements()).toEqual([]);
+		// As before the read: none of the entry's controls, the properties button among them (it stood pressed and opened nothing).
+		for (const name of ["저장", "발행하기", "더 보기", "속성"]) expect(button(name).elements()).toEqual([]);
 		cut = false;
 		await userEvent.click(button("다시 시도"));
 		await expect.element(title()).toHaveValue("첫 번째 글");

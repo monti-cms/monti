@@ -114,10 +114,25 @@ describe("the template editor: before the template is there", () => {
 		const name = () => page.getByRole("textbox", { name: "템플릿 이름" });
 		expect(name().elements()).toEqual([]);
 		expect(page.getByRole("button", { name: "저장", exact: true }).elements()).toEqual([]);
+		// No status bar for a template that is not read yet, as in the entry editor.
+		expect(document.querySelector("[data-slot=status-bar]")).toBeNull();
 		await userEvent.keyboard("먼저 친 글자");
 		held.release();
 		await expect.element(name()).toHaveValue("기본 글");
 		await expect.element(page.getByText("저장 안 됨")).not.toBeInTheDocument();
 		await expect.element(page.getByRole("button", { name: "저장", exact: true })).toBeVisible();
+		expect(document.querySelector("[data-slot=status-bar]")).not.toBeNull();
+	});
+
+	it("03 T153 the stories of it: before the read the way back alone, and a read that failed says so with its way to try again", async () => {
+		await scene<{ site: StorySite }>(templates.EditorBeforeTheRead, templates.default).run();
+		await expect.element(page.getByRole("button", { name: "템플릿", exact: true })).toBeVisible();
+		expect(page.getByRole("textbox", { name: "템플릿 이름" }).elements()).toEqual([]);
+
+		await scene<{ site: StorySite }>(templates.EditorReadFailed, templates.default).run();
+		await expect.element(page.getByText("템플릿을 불러오지 못했습니다")).toBeVisible();
+		await expect.element(button("다시 시도")).toBeVisible();
+		expect(page.getByRole("textbox", { name: "템플릿 이름" }).elements()).toEqual([]);
+		expect(page.getByRole("button", { name: "저장", exact: true }).elements()).toEqual([]);
 	});
 });
