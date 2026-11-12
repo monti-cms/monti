@@ -196,13 +196,17 @@ function Body({
 		const count = (n: number | undefined) => (n === undefined ? undefined : t("settings.review.count", { count: n }));
 		switch (change.do) {
 			case "addCollection": {
-				const fields = Object.keys(draftSchema?.collections[c]?.fields ?? {});
+				const made = draftSchema?.collections[c];
+				const fields = Object.keys(made?.fields ?? {});
+				// A document's only: an item has no preview page.
+				const previewPath = made?.kind === "document" ? made.previewPath : undefined;
 				return (
 					<ChangeGroup key={change.id} kind="new" tag={t("changes.new")} title={model.label(c)} identifier={c}>
 						<ChangeLines>
 							{draftSchema?.collections[c]?.path && (
 								<ChangeLine what={t("settings.basics.path")} then={draftSchema.collections[c].path} />
 							)}
+							{previewPath && <ChangeLine what={t("settings.basics.previewPath")} then={previewPath} />}
 							<ChangeLine what={t("settings.review.fields")} then={fields.join(", ")} />
 						</ChangeLines>
 						{unchanged}
@@ -229,6 +233,25 @@ function Body({
 							<ChangeLine what={t("settings.review.after")} then={change.to ?? ""} />
 						</ChangeLines>
 						{change.from && <ChangeNote>{t("settings.review.oldAddresses")}</ChangeNote>}
+					</ChangeGroup>
+				);
+			case "changePreviewPath":
+				return (
+					<ChangeGroup
+						key={change.id}
+						kind="edit"
+						tag={t("changes.changed")}
+						title={`${model.label(c)} · ${t("settings.basics.previewPath")}`}
+						identifier={c}
+					>
+						<ChangeLines>
+							<ChangeLine
+								what={t("settings.review.before")}
+								then={change.from ?? t("settings.basics.previewAtPublic")}
+							/>
+							<ChangeLine what={t("settings.review.after")} then={change.to ?? t("settings.basics.previewAtPublic")} />
+						</ChangeLines>
+						<ChangeNote>{t("settings.review.dataSame")}</ChangeNote>
 					</ChangeGroup>
 				);
 			case "renameField":

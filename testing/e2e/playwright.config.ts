@@ -1,7 +1,8 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
+import { LIVE, SERVERS } from "./servers";
 
-const root = fileURLToPath(new URL("../..", import.meta.url));
+const app = fileURLToPath(new URL("../../examples/blog", import.meta.url));
 
 /** The site with a media storage, and from doc 09 on a second one without it. L5 does not retry: a failure is the test's or the app's to fix. */
 export default defineConfig({
@@ -14,26 +15,22 @@ export default defineConfig({
 	reporter: process.env.CI ? "github" : "list",
 	use: {
 		...devices["Desktop Chrome"],
-		baseURL: "http://localhost:4173",
+		baseURL: LIVE,
 		viewport: { width: 1440, height: 900 },
 		locale: "ko-KR",
 		timezoneId: "UTC",
 		trace: "retain-on-failure",
 	},
-	webServer: [
-		{
-			command: "pnpm exec vite --config testing/e2e/vite.config.ts --port 4173 --strictPort",
-			cwd: root,
-			url: "http://localhost:4173/",
-			reuseExistingServer: false,
-			env: { E2E_SCHEMA: "monti_e2e", VITE_CONFIG_NATIVE_IGNORE_WARNING: "true" },
-		},
-		{
-			command: "pnpm exec vite --config testing/e2e/vite.config.ts --port 4174 --strictPort",
-			cwd: root,
-			url: "http://localhost:4174/",
-			reuseExistingServer: false,
-			env: { E2E_SCHEMA: "monti_e2e_bare", E2E_STORAGE: "off", VITE_CONFIG_NATIVE_IGNORE_WARNING: "true" },
-		},
-	],
+	// `testing/e2e/prepare.ts` made the databases and built the app (`pnpm test:e2e` runs it first): these only serve.
+	webServer: SERVERS.map((server) => ({
+		command:
+			server.mode === "start"
+				? `pnpm exec next start --port ${server.port}`
+				: `pnpm exec next dev --port ${server.port}`,
+		cwd: app,
+		url: `http://localhost:${server.port}/admin`,
+		reuseExistingServer: false,
+		timeout: 120_000,
+		env: { ...server.env, NEXT_DIST_DIR: server.dist },
+	})),
 });

@@ -1,5 +1,6 @@
 packages:
   - "packages/*"
+  - "examples/*"
 
 # @tiptap/react's optional menus follow the editor's own version, not the newest release.
 overrides:

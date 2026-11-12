@@ -12,6 +12,13 @@ import { httpTransport, MontiAdmin } from "@monti-cms/admin";
 지금 있는 것: 로그인 화면(첫 관리자, 로그인, 잠금, GitHub)과 틀(스키마와 `frame.counts`로 그리는 사이드바, 화면 모드, 스키마 알림 띠). 다른
 화면은 각 기능 문서(`docs/design/features`)와 함께 온다.
 
+## 스타일
+
+`@monti-cms/admin/styles.css`는 빌드한 파일로 나오는 관리자 화면의 스타일이다(`pnpm --filter @monti-cms/admin build:styles`.
+`scripts/build-styles.mjs`가 `styles/index.css`에서 만든다). 사이트는 그대로 가져다 쓰고 Tailwind가 필요 없다. 관리자 밖을 건드리지 않는다.
+모든 규칙이 `.monti-admin`이 있는 문서 안에서만 걸리고, 변수와 키프레임 이름이 모두 `monti-`로 시작하고, 캐스케이드 레이어를 남기지 않으며,
+관리자 화면의 글꼴을 함께 싣는다. Next.js 사이트에서는 `@monti-cms/next`가 관리자 페이지와 함께 싣는다.
+
 ## Storybook
 
 ```sh

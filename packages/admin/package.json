@@ -6,10 +6,12 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./styles.css": "./dist/styles.css"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit -p .",
+		"build:styles": "node ../../scripts/build-styles.mjs",
 		"storybook": "storybook dev -p 6007 --no-open",
 		"build-storybook": "storybook build -o storybook-static",
 		"test": "vitest run --project admin",

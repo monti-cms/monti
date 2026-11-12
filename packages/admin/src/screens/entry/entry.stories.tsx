@@ -203,6 +203,8 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 		const made = await storySite({
 			schema,
 			auth: { password: true },
+			// A site signs its preview links: without a secret "Preview" has nothing to open.
+			secret: "story secret",
 			signedIn: true,
 			setup: async (monti) => {
 				id = await entry(monti, kind);

@@ -47,7 +47,12 @@ const SchemaInput: z.ZodType<Schema> = z.object({
 	collections: z.record(
 		z.string(),
 		z.discriminatedUnion("kind", [
-			z.object({ kind: z.literal("document"), path: z.string(), fields: z.record(z.string(), Field) }),
+			z.object({
+				kind: z.literal("document"),
+				path: z.string(),
+				previewPath: z.string().optional(),
+				fields: z.record(z.string(), Field),
+			}),
 			z.object({ kind: z.literal("item"), path: z.string().optional(), fields: z.record(z.string(), Field) }),
 		]),
 	),

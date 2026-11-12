@@ -21,6 +21,10 @@ Monti는 설계부터 다시 만들고 있습니다. 이전 패키지는 지웠�
 |---|---|
 | [`@monti-cms/core`](packages/core) | 기능(`defineOperation`), 기능을 돌리는 엔진(버전, 되돌리기 스냅숏, 활동 기록, 전송, 제안), 기능에서 나오는 입구들(관리자 API, 에이전트 도구, CLI) |
 | [`@monti-cms/ui`](packages/ui) | 디자인 시스템. 토큰, 관리자 화면을 만드는 부품, 기준 화면 |
+| [`@monti-cms/admin`](packages/admin) | 관리자 화면. 기능으로만 서버에 닿는다 |
+| [`@monti-cms/next`](packages/next) | Next.js 사이트에 Monti 붙이기. 관리자 페이지, 관리자 API 라우트, 초안 모드의 미리보기, 발행할 때의 캐시 갱신 |
+
+[`examples/blog`](examples/blog)는 Monti를 붙인 Next.js 블로그다. 흐름 테스트(`pnpm test:e2e`)가 이 앱에서 돈다.
 
 ## 개발
 

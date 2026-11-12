@@ -1,0 +1,38 @@
+{
+	"name": "@monti-cms/next",
+	"version": "0.2.0-next.16",
+	"private": true,
+	"description": "Monti on a Next.js site: the admin page, the admin API route, preview in draft mode, and the cache refreshed on publish",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./admin": "./src/admin.tsx"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit -p .",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/core": "workspace:*"
+	},
+	"peerDependencies": {
+		"next": ">=16",
+		"react": ">=19",
+		"react-dom": ">=19"
+	},
+	"devDependencies": {
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"next": "16.4.6",
+		"react": "19.2.3",
+		"react-dom": "19.2.3",
+		"typescript": "^7.0.2",
+		"vitest": "4.1.12"
+	},
+	"sideEffects": [
+		"./src/admin.tsx"
+	]
+}

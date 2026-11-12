@@ -26,7 +26,13 @@ import { mergesIn } from "./merge-commands.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RECORD = "scripts/design-review.json";
-const PATHS = ["packages/ui/src", "packages/ui/styles", "packages/ui/tokens", "packages/admin/src"];
+const PATHS = [
+	"packages/ui/src",
+	"packages/ui/styles",
+	"packages/ui/tokens",
+	"packages/admin/src",
+	"packages/admin/styles",
+];
 const TEST = /(^|\/)__test__\/|\.test\.[^/]+$/;
 
 const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
