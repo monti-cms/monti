@@ -399,4 +399,53 @@ describe("a field of an option is its option's entries' only (doc 19)", () => {
 		)) as { total: number };
 		expect(empty.total).toBe(1);
 	});
+
+	it("19-12 the count of a required field of an option is what its fill writes, whatever else the same save does: a new conditional field filled with that option, the option renamed, entries changed to it", async () => {
+		const onSite = await newPost({}, true);
+		// A new conditional field, required and filled with "b", whose option "b" has a required field: no entry has "b" chosen when the
+		// inner field is filled, so the count is 0 and nothing is written into it, on the site either.
+		const fresh = withFields({
+			source: {
+				kind: "conditional",
+				required: true,
+				options: ["a", "b"],
+				fields: { b: { byline: { kind: "text", required: true } } },
+			},
+		});
+		const added = await planSchema(db, schema, fresh);
+		expect(lineOf(added, "addField:post.byline")).toMatchObject({ count: 0, published: 0 });
+		await apply(fresh, {
+			"addField:post.source": { do: "addRequiredField", fill: "b" },
+			"addField:post.byline": { do: "addRequiredField", fill: "이름" },
+		});
+		expect(await publishedOf(onSite)).toMatchObject({ source: "b" });
+		expect(await publishedOf(onSite)).not.toHaveProperty("byline");
+
+		// The option renamed in the same save: the count reads the entries by the old word, and the fill finds them under the new one.
+		await migrateContent(db, schema, []);
+		await db.deleteFrom("entries").execute();
+		const video = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" }, true);
+		const link = await newPost({ format: "link", linkUrl: "https://example.dev" }, true);
+		const renamed = withFields({
+			format: {
+				...format,
+				options: ["article", "clip"],
+				fields: { clip: { ...format.fields.video, caption: { kind: "text", required: true } } },
+			},
+		});
+		const plan = await planSchema(db, schema, renamed, [
+			{ collection: "post", of: "format", from: "video", to: "clip" },
+		]);
+		expect(lineOf(plan, "addField:post.caption")).toMatchObject({ count: 1, published: 1 });
+		const { steps, missing } = stepsFor(plan, {
+			"addField:post.caption": { do: "addRequiredField", fill: "설명" },
+			"removeField:post.linkUrl": { do: "removeField", values: "clear" },
+			// The link posts become clips in the same save: they were not counted, and they are not filled.
+			"removeOption:post.format.link": { do: "removeOption", entries: { change: "clip" } },
+		});
+		expect(missing).toEqual([]);
+		await migrateContent(db, renamed, [{ id: "renamed-and-filled", steps }]);
+		expect(await publishedOf(video)).toMatchObject({ format: "clip", caption: "설명" });
+		expect(await publishedOf(link)).toEqual({ level: "easy", format: "clip" });
+	});
 });

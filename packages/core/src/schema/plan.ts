@@ -278,7 +278,7 @@ async function planFields(
 	for (const [field, definition] of Object.entries(after.fields)) {
 		const old = before.fields[field];
 		if (renamedTo.has(field)) continue;
-		if (!old) changes.push(await planNewField(db, collection, field, definition));
+		if (!old) changes.push(await planNewField(db, collection, field, definition, "addField", placeBefore(definition)));
 		// A field whose only change is its place in a conditional field has its own line below (it clears values: not "the data is the same").
 		else if (
 			!(definition.required && !old.required) &&
@@ -302,7 +302,7 @@ async function planFields(
 		else if (!sameJson(underRenamed(old), definition) || (definition.required && !old.required))
 			changes.push(
 				definition.required && !old.required
-					? await planNewField(db, collection, field, definition, "changeField")
+					? await planNewField(db, collection, field, definition, "changeField", placeBefore(definition))
 					: { id: `changeField:${collection}.${field}`, do: "changeField", collection, field },
 			);
 	}
@@ -361,6 +361,11 @@ async function planFields(
 	}
 	return changes;
 
+	/** A field's place in a conditional field as the database names it now (`underBefore`); none for a field on its own. */
+	function placeBefore(definition: StoredField) {
+		return definition.under ? underBefore(definition.under) : undefined;
+	}
+
 	/** Whether the field stands in another place of a conditional field than it did: into an option, or from one option to another. */
 	function movedInto(old: StoredField, now: StoredField) {
 		return now.under !== undefined && !sameJson(underRenamed(old).under, now.under);
@@ -400,12 +405,16 @@ async function planNewField(
 	field: string,
 	definition: FieldDefinition,
 	kind: "addField" | "changeField" = "addField",
+	/** For a field of a conditional field's option, that place as the database names it now: the field and the option before any rename. */
+	place?: StoredField["under"],
 ): Promise<SchemaChange> {
 	const change: SchemaChange = { id: `${kind}:${collection}.${field}`, do: kind, collection, field };
 	if (definition.required) {
-		// A required field of a conditional field's option is asked of the entries that chose that option only (doc 19).
+		// A required field of a conditional field's option is asked of the entries that chose that option only (doc 19): those that have it
+		// chosen now. Its fill runs before the same change gives any entry that option (`stepsFor`), so the count is what the fill writes.
 		const under = (definition as StoredField).under;
-		Object.assign(change, await counts(db, collection, sql<boolean>`not ${hasValue(field)} and ${theirs(under)}`));
+		if (under) change.option = under.option;
+		Object.assign(change, await counts(db, collection, sql<boolean>`not ${hasValue(field)} and ${theirs(place)}`));
 		change.choices = [
 			{ do: "addRequiredField", fill: defaultFill(definition) },
 			{ do: "addRequiredField", fill: null },
@@ -423,6 +432,8 @@ export type Answers = Record<string, Choice | Choice[]>;
 /** The data steps of a plan and its answers; the changes still unanswered come back in `missing`. */
 export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: ChangeStep[]; missing: string[] } {
 	const steps: ChangeStep[] = [];
+	/** The fills of fields of an option: they run before the change gives any entry that option. */
+	const inner = new Set<ChangeStep>();
 	const missing: string[] = [];
 	for (const change of changes) {
 		if (change.do === "changeSource")
@@ -458,22 +469,38 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 			if (choice.do === "removeField") steps.push({ do: "removeField", collection, field, values: choice.values });
 			if (choice.do === "removeOption")
 				steps.push({ do: "removeOption", collection, field, option: String(change.option), entries: choice.entries });
-			if (choice.do === "addRequiredField" && choice.fill !== null)
-				steps.push({ do: "fillField", collection, field, value: choice.fill });
+			if (choice.do === "addRequiredField" && choice.fill !== null) {
+				const fill: ChangeStep = { do: "fillField", collection, field, value: choice.fill };
+				steps.push(fill);
+				if (change.option !== undefined) inner.add(fill);
+			}
 		}
 	}
 	// A language leaves last. The collections' steps keep their place before the languages' (a renamed or moved field's values are under their
 	// new name by the time a new source language is made from the old one, which keeps only the fields the draft has), and the new source is made
 	// before the old one is taken out in the same change: the drafts the plan promises are made from it.
-	// A field's rename comes first (the option steps find the values under the new name), then the options' steps: a removed field's values
-	// moved into a field of an option go to the entries that have that option chosen by then (doc 19).
+	// The data steps in the order they must run, whatever order the plan listed them in:
+	// 0 a field's rename (every later step finds the values under the new name), 1 an option's rename (the same, for its word),
+	// 2 the fill of a required field of an option (for the entries that have the option chosen before this change gives it to others: the
+	//   review's count is exactly these), 3 an option taken out (its entries are emptied or changed), 4 the rest in the plan's order (a
+	//   removed field's values moved into an option's field go to the entries that have that option by now), 5 the fill of a field on
+	//   its own (a new conditional field's choice among them), 6 a field moved into an option cleared where another is chosen (after the
+	//   fills, so entries given that option keep it), 7 a language taken out, last.
 	const order = (step: ChangeStep) =>
-		step.do === "removeLocale"
-			? 3
-			: step.do === "renameField"
-				? 0
-				: step.do === "renameOption" || step.do === "removeOption"
-					? 1
-					: 2;
+		step.do === "renameField"
+			? 0
+			: step.do === "renameOption"
+				? 1
+				: step.do === "removeOption"
+					? 3
+					: step.do === "fillField"
+						? inner.has(step)
+							? 2
+							: 5
+						: step.do === "keepChosen"
+							? 6
+							: step.do === "removeLocale"
+								? 7
+								: 4;
 	return { steps: [...steps].sort((a, b) => order(a) - order(b)), missing };
 }

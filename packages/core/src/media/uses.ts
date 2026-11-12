@@ -23,12 +23,19 @@ export function usesInDoc(doc: unknown): Use[] {
 }
 
 /** The files an entry's fields use. A field the schema no longer has, or no longer calls media, uses nothing. */
-export function usesInValues(fields: Record<string, FieldDefinition>, values: Record<string, unknown>): Use[] {
+/**
+ * `chosenBy` are the values that hold the entry's choices: its own, or, for a translation, its source's (the choice lives on the source, doc 19).
+ */
+export function usesInValues(
+	fields: Record<string, FieldDefinition>,
+	values: Record<string, unknown>,
+	chosenBy: Record<string, unknown>[] = [values],
+): Use[] {
 	return Object.entries(fields).flatMap(([field, definition]) => {
 		if (definition.kind !== "media") return [];
 		// A picture in a field of an option that is not chosen is not shown anywhere: it is no use of the file (doc 19).
 		const under = (definition as StoredField).under;
-		if (under && values[under.field] !== under.option) return [];
+		if (under && !chosenBy.some((each) => each[under.field] === under.option)) return [];
 		const value = mediaValueOf(values[field]);
 		return value ? [{ media: value.media, place: { field } }] : [];
 	});
@@ -173,9 +180,39 @@ async function usesNow(db: Db, schema: Schema, entryIds: string[], templateIds: 
 	if (entryIds.length > 0) {
 		const working = await db
 			.selectFrom("entries")
-			.select(["id as owner", "collection", "values", "doc"])
+			.select(["id as owner", "collection", "values", "doc", "locale", "translation_group"])
 			.where("id", "in", entryIds)
 			.execute();
+		// A translation's choice of a conditional field is its source's (doc 19): the site shows the translation's own picture in the option
+		// the source has chosen, in its draft or on the site. Read by the translation's own values it would be no use, and the file could be
+		// trashed while a page shows it.
+		const translations = working.filter((copy) => copy.locale !== schema.locales.source);
+		const sources =
+			translations.length > 0
+				? await db
+						.selectFrom("entries as e")
+						.leftJoin("entry_published as p", "p.entry_id", "e.id")
+						.select(["e.translation_group", "e.values as working", "p.values as published"])
+						.where(
+							"e.translation_group",
+							"in",
+							translations.map((copy) => copy.translation_group),
+						)
+						.where("e.locale", "=", schema.locales.source)
+						.where("e.trashed_at", "is", null)
+						.execute()
+				: [];
+		const chosenBy = new Map<string, Record<string, unknown>[] | undefined>(
+			working.map((copy) => {
+				const source = sources.find((each) => each.translation_group === copy.translation_group);
+				return [
+					copy.owner,
+					copy.locale === schema.locales.source || !source
+						? undefined
+						: [source.working, source.published].filter((each): each is Record<string, unknown> => each !== null),
+				];
+			}),
+		);
 		const published = await db
 			.selectFrom("entry_published")
 			.select(["entry_id as owner", "collection", "values", "doc"])
@@ -183,7 +220,7 @@ async function usesNow(db: Db, schema: Schema, entryIds: string[], templateIds: 
 			.execute();
 		for (const copy of [...working, ...published])
 			want({ entry_id: copy.owner, template_id: null }, [
-				...usesInValues(storedFields(schema.collections[copy.collection]), copy.values),
+				...usesInValues(storedFields(schema.collections[copy.collection]), copy.values, chosenBy.get(copy.owner)),
 				...usesInDoc(copy.doc),
 			]);
 	}
