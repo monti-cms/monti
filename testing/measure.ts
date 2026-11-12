@@ -7,8 +7,8 @@
  * - a focus ring is whole, drawn on the thing or on a layer of it: no box that clips or scrolls cuts it. What the arrow keys reach inside a menu,
  *   a tab row or a radio group is focused too;
  * - the keyboard's focus draws something: a line around the thing, a ring, or the ink line of an underlined field, on the thing, a layer of it,
- *   something in it, or the box around it (tokens.md, 상태). A ring that is set and unset in one class list (`outline-none` beside `outline-2`)
- *   draws nothing.
+ *   something in it, or the box around it (tokens.md, 상태). Only what is painted counts (a colour that shows, a width, a box that is drawn), on
+ *   what was on the page before the focus. A ring that is set and unset in one class list (`outline-none` beside `outline-2`) draws nothing.
  *
  * `measure` looks at everything on the page that can be pressed or focused, focuses each in turn, and says what is off, one line each. What is off on
  * purpose is in `ALLOWED`, by the part's `data-slot`, with its reason.
@@ -174,43 +174,88 @@ const TYPED =
 	"textarea, input:not([type=checkbox], [type=radio], [type=button], [type=submit], [type=reset], [type=file], [type=range], [type=color], [type=image])";
 
 /**
- * What a focus is drawn with, as it stands now: a line around that shows, ring and other shadows, and the colours of the box's own lines; its
- * ground too where that is the mark (`LINE_IS_FOCUS`).
+ * A trigger whose popup is open: the focus is in the popup (a menu, a list, a dialog), and the trigger keeps its open look. Only what says it
+ * opens a popup (`aria-haspopup`) is let off: a thing that unfolds in place (`CollapsibleTrigger`, `ReviewMore`) is `aria-expanded` too, stays
+ * on the screen with the focus on it, and is asked. What this cannot check: that the popup really took the focus. A trigger that says
+ * `aria-haspopup` and keeps the focus while its list is open is let off with the rest.
  */
-function drawn(style: CSSStyleDeclaration, ground: boolean) {
-	const around =
-		style.outlineStyle !== "none" && px(style.outlineWidth) > 0 && !clear(style.outlineColor)
-			? `${style.outlineWidth} ${style.outlineColor}`
-			: "";
-	const lines = ["top", "right", "bottom", "left"].map((side) =>
-		px(style.getPropertyValue(`border-${side}-width`)) > 0 && style.getPropertyValue(`border-${side}-style`) !== "none"
-			? style.getPropertyValue(`border-${side}-color`)
-			: "",
-	);
-	return [around, style.boxShadow, ...lines, ground ? style.backgroundColor : ""].join("|");
+const POPUP_OPEN = '[aria-expanded="true"][aria-haspopup]:not([aria-haspopup="false"])';
+
+const SIDES = ["top", "right", "bottom", "left"];
+
+/** The shadows of a computed `box-shadow`: split on the commas between shadows, not those inside a colour. */
+const shadowsOf = (value: string) => (value === "none" ? [] : value.split(/,(?![^(]*\))/).map((each) => each.trim()));
+
+/** Whether a shadow paints anything: a colour that shows, and some reach (an offset, a blur or a spread). */
+function paints(shadow: string) {
+	const colour = shadow.match(/[a-z-]+\([^)]*\)|transparent/)?.[0] ?? "";
+	const lengths = shadow.replace(/[a-z-]+\([^)]*\)/g, "").match(/-?[\d.]+px/g) ?? [];
+	return !clear(colour) && lengths.some((length) => px(length) !== 0);
+}
+
+/**
+ * What a box paints that a focus may be drawn with: a line around (with how far off it stands), ring and other shadows, and the box's own lines;
+ * its ground too where that is the mark (`LINE_IS_FOCUS`). Only what shows: a colour that is not clear, a width that is not 0.
+ */
+function painted(style: CSSStyleDeclaration, ground: boolean) {
+	const marks: string[] = [];
+	if (style.outlineStyle !== "none" && px(style.outlineWidth) > 0 && !clear(style.outlineColor))
+		marks.push(`around ${style.outlineWidth} ${style.outlineOffset} ${style.outlineColor}`);
+	for (const shadow of shadowsOf(style.boxShadow)) if (paints(shadow)) marks.push(`shadow ${shadow}`);
+	for (const side of SIDES) {
+		const width = style.getPropertyValue(`border-${side}-width`);
+		const line = style.getPropertyValue(`border-${side}-style`);
+		const colour = style.getPropertyValue(`border-${side}-color`);
+		if (px(width) > 0 && line !== "none" && line !== "hidden" && !clear(colour))
+			marks.push(`line ${side} ${width} ${colour}`);
+	}
+	if (ground && !clear(style.backgroundColor)) marks.push(`ground ${style.backgroundColor}`);
+	return marks;
+}
+
+/** Whether an element is drawn with a box: laid out, not hidden, and nothing above it at opacity 0. */
+function hasBox(element: Element) {
+	const box = element.getBoundingClientRect();
+	if (box.width <= 0 || box.height <= 0) return false;
+	if (getComputedStyle(element).visibility !== "visible") return false;
+	for (let up: Element | null = element; up; up = up.parentElement)
+		if (getComputedStyle(up).opacity === "0") return false;
+	return true;
+}
+
+/** What an element and its two layers paint now; nothing when it has no box (`display: none`, an empty span). */
+function paintedBy(element: Element, ground: boolean) {
+	if (!hasBox(element)) return [];
+	const marks = painted(getComputedStyle(element), ground);
+	for (const pseudo of ["::before", "::after"]) {
+		const style = getComputedStyle(element, pseudo);
+		const boxed = style.content !== "none" && style.display !== "none" && px(style.width) > 0 && px(style.height) > 0;
+		if (boxed && style.visibility === "visible" && style.opacity !== "0")
+			for (const mark of painted(style, ground)) marks.push(`${pseudo} ${mark}`);
+	}
+	return marks;
 }
 
 /** How many boxes above a thing may draw its focus for it: an input's field, a search box around its input. */
 const AROUND = 4;
 
 /**
- * Where a thing's focus may be drawn, each as it stands now: the thing and its layers, what is inside it (a tile's picture takes the ring), and the
- * boxes close around it (a field's line, the ring of a box around an input). Read before the focus and after it: a difference is the focus, drawn.
+ * Where a thing's focus may be drawn: the thing and its layers, what is inside it (a tile's picture takes the ring), and the boxes close around
+ * it (a field's line, the ring of a box around an input). The places are named before the focus, so what a focus adds to the page (a span put
+ * in on focus) is not one of them.
  */
-function marks(element: Element) {
-	const ground = element.matches(LINE_IS_FOCUS);
+function places(element: Element) {
 	const around: Element[] = [];
 	for (let up = element.parentElement, level = 0; up && level < AROUND; up = up.parentElement, level++) around.push(up);
-	return [element, ...element.querySelectorAll("*"), ...around]
-		.flatMap((each) => [
-			drawn(getComputedStyle(each), ground),
-			...["::before", "::after"].map((pseudo) => {
-				const style = getComputedStyle(each, pseudo);
-				return style.content === "none" ? "" : drawn(style, ground);
-			}),
-		])
-		.join("\n");
+	return [element, ...element.querySelectorAll("*"), ...around];
 }
+
+/** What each place paints now. */
+const paintedAt = (where: Element[], ground: boolean) => where.map((each) => paintedBy(each, ground));
+
+/** Whether the focus drew something: a place paints now what it did not paint before (a line that turned ink, a ring, a line around moved off). */
+const drew = (before: string[][], after: string[][]) =>
+	after.some((marks, at) => marks.some((mark) => !(before[at] ?? []).includes(mark)));
 
 type Edges = { left: number; right: number; top: number; bottom: number };
 
@@ -369,21 +414,22 @@ export function measure(root: ParentNode = document): string[] {
 		if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body)
 			document.activeElement.blur();
 		if (!element.isConnected) continue;
-		const unfocused = marks(element);
+		const ground = element.matches(LINE_IS_FOCUS);
+		const where = places(element);
+		const unfocused = paintedAt(where, ground);
 		element.focus();
 		if (document.activeElement !== element) continue;
-		// Not asked of what is typed in (its caret), of a menu's row (lit by its menu), of what has its menu open (the focus is in the menu, and the
-		// trigger keeps its open look), of a handle that is pointed at or held (its line is out already), of a day the calendar holds as the one
-		// its keys are on (`data-focused`: ringed before and after), or of a story that holds the focused look on a thing to show it
-		// (`storybook-addon-pseudo-states`).
+		// Not asked of what is typed in (its caret), of a menu's row (lit by its menu), of a trigger whose popup is open (`POPUP_OPEN`), of a
+		// handle that is pointed at or held (its line is out already), of a day the calendar holds as the one its keys are on (`data-focused`:
+		// ringed before and after), or of a story that holds the focused look on a thing to show it (`storybook-addon-pseudo-states`).
 		const asked =
 			!allowed(element, "focus") &&
 			!element.matches(TYPED) &&
 			!element.matches(LIT_BY_ITS_MENU) &&
-			element.getAttribute("aria-expanded") !== "true" &&
+			!element.matches(POPUP_OPEN) &&
 			!(element.matches(LINE_IS_FOCUS) && element.matches(":hover, [data-active], [data-resizing], [data-hovered]")) &&
 			element.closest("[data-focused=true], [class*=pseudo-focus]") === null;
-		if (asked && element.matches(":focus-visible") && marks(element) === unfocused)
+		if (asked && element.matches(":focus-visible") && !drew(unfocused, paintedAt(where, ground)))
 			found.add(
 				`focus: ${nameOf(element)} draws nothing when the keyboard's focus is on it; a ring, or a field's ink line`,
 			);

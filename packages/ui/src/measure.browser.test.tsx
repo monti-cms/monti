@@ -172,6 +172,84 @@ describe("the measuring itself", () => {
 		expect(await said("이미 두른 것")).toEqual(["focus"]);
 	});
 
+	it("a mark that paints nothing is no mark: a clear shadow, a ring of no width, a ring on what is not drawn, a span put in on focus", async () => {
+		const BOX = "h-monti-control-sm rounded-monti-full border-0 bg-monti-selected outline-none";
+		/** Puts a ringed span of no size into itself when focused: the page changes, and nothing is drawn. */
+		const ring = (button: HTMLButtonElement) => {
+			const span = document.createElement("span");
+			span.className = "ring-2 ring-monti-contrast/50";
+			button.append(span);
+		};
+		const Appends = () => (
+			<button
+				type="button"
+				className={BOX}
+				onFocus={(event) => ring(event.currentTarget)}
+				onBlur={(event) => event.currentTarget.querySelector("span")?.remove()}
+			>
+				넣은 것
+			</button>
+		);
+		render(
+			<div className="flex flex-col items-start gap-monti-16 p-monti-8">
+				<button type="button" className={`${BOX} focus-visible:shadow-[0_0_0_2px_transparent]`}>
+					맑은 그림자
+				</button>
+				<button type="button" className={`${BOX} focus-visible:ring-0 focus-visible:ring-monti-contrast/50`}>
+					두께 없는 고리
+				</button>
+				<button type="button" className={`${BOX} group`}>
+					안 그린 것
+					<span className="hidden size-2 group-focus-visible:ring-2 group-focus-visible:ring-monti-contrast/50" />
+				</button>
+				<Appends />
+			</div>,
+		);
+		const said = async (name: string) => (await lines(name)).map((line) => line.split(":")[0]);
+		expect.soft(await said("맑은 그림자")).toEqual(["focus"]);
+		expect.soft(await said("두께 없는 고리")).toEqual(["focus"]);
+		expect.soft(await said("안 그린 것")).toEqual(["focus"]);
+		expect.soft(await said("넣은 것")).toEqual(["focus"]);
+	});
+
+	it("a line around that only steps off under the focus is a mark, and one that steps off past a clipping box is cut", async () => {
+		const LINE = "h-monti-control-sm rounded-monti-full border-0 bg-monti-selected outline-2 outline-monti-contrast/50";
+		render(
+			<div className="flex flex-col items-start gap-monti-16 p-monti-8">
+				<button type="button" className={`${LINE} focus-visible:outline-offset-2`}>
+					물러난 선
+				</button>
+				{/* Room for the line as it stands, not for the line 2px off. */}
+				<div className="overflow-hidden p-[2px]">
+					<button type="button" className={`${LINE} focus-visible:outline-offset-2`}>
+						물러나 잘린 선
+					</button>
+				</div>
+			</div>,
+		);
+		expect.soft(await lines("물러난 선")).toEqual([]);
+		expect(await lines("물러나 잘린 선")).toEqual([
+			'ring: the focus ring of button "물러나 잘린 선" is cut at its left and right and top and bottom by div',
+		]);
+	});
+
+	it("what unfolds in place is asked for its focus while it is open; a trigger whose popup is open is not", async () => {
+		const BOX = "h-monti-control-sm rounded-monti-full border-0 bg-monti-selected outline-none";
+		render(
+			<div className="flex flex-col items-start gap-monti-16 p-monti-8">
+				<button type="button" aria-expanded="true" className={BOX}>
+					펼친 것
+				</button>
+				<button type="button" aria-expanded="true" aria-haspopup="menu" className={BOX}>
+					메뉴를 연 것
+				</button>
+			</div>,
+		);
+		const said = async (name: string) => (await lines(name)).map((line) => line.split(":")[0]);
+		expect(await said("펼친 것")).toEqual(["focus"]);
+		expect(await said("메뉴를 연 것")).toEqual([]);
+	});
+
 	it("a focus drawn as the docs draw it is not said: a line around, a field's ink line, a ring on the box around or on what is inside, a caret", async () => {
 		const BOX = "h-monti-control-sm rounded-monti-full border-0 bg-monti-selected";
 		render(
