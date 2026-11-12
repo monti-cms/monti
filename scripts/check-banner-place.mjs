@@ -10,7 +10,10 @@
 // 1. A `<Banner>` stands in a top place, or is what its component returns (alone, behind a condition, or in a fragment of nothing but banners). A
 //    component that returns a banner is a banner itself: wherever it is drawn (`<SessionEndedBanner />`) the same rule holds, through any number
 //    of files.
-// 2. A `banner` prop is only passed on to a top place, or asked about (`banner ? … : …`).
+// 2. A `banner` prop is only passed on to a top place, or asked about (`banner ? … : …`), in its component and in every helper written inside
+//    it that uses it.
+//
+// A component is a function under a name, also one wrapped in `memo` or `forwardRef`, or named a second time (`const Notice = memo(Plain)`).
 //
 // What it cannot see:
 // - that a top place is at the top. That is the parts' own work (`SidebarInset`, `StandalonePage`), measured by their tests; a `PageBanner` with no
@@ -75,13 +78,16 @@ function read(file, text, known) {
 				if (from && specifier.type === "ImportSpecifier" && specifier.importKind !== "type")
 					imports.set(specifier.local.name, { from, name: specifier.imported.name ?? specifier.imported.value });
 		}
+		// A component is a function under a name: declared, kept in a `const`, or wrapped on the way (`memo(function () {…})`). A `const` that
+		// only names another component (`memo(Plain)`, `const Notice = Plain`) is that component under a second name.
 		const named =
 			node.type === "FunctionDeclaration" && node.id
 				? { name: node.id.name, fn: node }
-				: node.type === "VariableDeclarator" && node.id.type === "Identifier" && FUNCTIONS.has(unwrap(node.init)?.type)
-					? { name: node.id.name, fn: unwrap(node.init) }
+				: node.type === "VariableDeclarator" && node.id.type === "Identifier"
+					? { name: node.id.name, ...wrapped(node.init) }
 					: null;
-		if (named) components.set(named.name, { fn: named.fn, bannerProp: bannerPropOf(named.fn) });
+		if (named?.fn) components.set(named.name, { fn: named.fn, bannerProp: bannerPropOf(named.fn) });
+		else if (named?.aliasOf) components.set(named.name, { aliasOf: named.aliasOf });
 		const around = [...parents, node];
 		for (const key of Object.keys(node)) if (key !== "type") walk(node[key], around);
 	};
@@ -93,6 +99,70 @@ function unwrap(node) {
 	let inner = node;
 	while (inner && THROUGH.has(inner.type)) inner = inner.expression;
 	return inner;
+}
+
+/** React's wrappers that give back the component they take: `memo(…)`, `forwardRef(…)`, alone or as `React.memo(…)`, one inside the other. */
+const WRAPPERS = new Set(["memo", "forwardRef"]);
+const isWrapper = (callee) =>
+	(callee.type === "Identifier" && WRAPPERS.has(callee.name)) ||
+	(callee.type === "MemberExpression" && !callee.computed && WRAPPERS.has(callee.property.name));
+
+/** What a `const` holds, when it is a component: its function (`{ fn }`), or the name of another component (`{ aliasOf }`). */
+function wrapped(init) {
+	const inner = unwrap(init);
+	if (!inner) return {};
+	if (FUNCTIONS.has(inner.type)) return { fn: inner };
+	if (inner.type === "Identifier") return { aliasOf: inner.name };
+	if (inner.type === "CallExpression" && isWrapper(inner.callee)) return wrapped(inner.arguments[0]);
+	return {};
+}
+
+/** The names a pattern binds (`{ banner, rest: [first] }`). */
+function namesOf(pattern) {
+	if (!pattern) return [];
+	if (pattern.type === "Identifier") return [pattern.name];
+	if (pattern.type === "AssignmentPattern") return namesOf(pattern.left);
+	if (pattern.type === "RestElement") return namesOf(pattern.argument);
+	if (pattern.type === "TSParameterProperty") return namesOf(pattern.parameter);
+	if (pattern.type === "ArrayPattern") return pattern.elements.flatMap(namesOf);
+	if (pattern.type === "ObjectPattern")
+		return pattern.properties.flatMap((property) => namesOf(property.type === "Property" ? property.value : property));
+	return [];
+}
+
+/** The names a statement declares where it stands (`const`, `function`, `class`, behind an `export` too). */
+function declared(statement) {
+	const inner = /^Export(Named|Default)Declaration$/.test(statement?.type) ? statement.declaration : statement;
+	if (inner?.type === "VariableDeclaration") return inner.declarations.flatMap((each) => namesOf(each.id));
+	if (inner?.type === "FunctionDeclaration" || inner?.type === "ClassDeclaration")
+		return inner.id ? [inner.id.name] : [];
+	return [];
+}
+
+/**
+ * Whether a node gives a name a meaning of its own for what is inside it: a function's parameters (and its own name), the declarations of a block,
+ * the variable of a loop, what a `catch` takes.
+ */
+function declares(scope, name) {
+	if (FUNCTIONS.has(scope.type)) return [...scope.params.flatMap(namesOf), scope.id?.name].includes(name);
+	if (scope.type === "BlockStatement" || scope.type === "Program" || scope.type === "StaticBlock")
+		return scope.body.some((statement) => declared(statement).includes(name));
+	if (scope.type === "SwitchStatement")
+		return scope.cases.some((each) => each.consequent.some((statement) => declared(statement).includes(name)));
+	if (scope.type === "ForStatement") return declared(scope.init).includes(name);
+	if (scope.type === "ForInStatement" || scope.type === "ForOfStatement") return declared(scope.left).includes(name);
+	if (scope.type === "CatchClause") return namesOf(scope.param).includes(name);
+	return false;
+}
+
+/**
+ * The function whose `banner` prop a name is, where it is used: the nearest thing around the use that gives the name a meaning is that function's
+ * own parameters. So a helper written inside a component (`const Body = () => <PageBody>{banner}</PageBody>`) uses the component's prop, and a
+ * helper with a `banner` of its own (a parameter, a `const`) does not.
+ */
+function bannerPropOwner(name, parents) {
+	const scope = parents.findLast((each) => declares(each, name));
+	return scope && FUNCTIONS.has(scope.type) && bannerPropOf(scope) === name ? scope : null;
 }
 
 /** The local name a component gives its `banner` prop (`{ banner }`, `{ banner: shown }`), or null. */
@@ -192,14 +262,17 @@ export function problems(files) {
 	}
 
 	/** What a name means in a file: `ui#Banner`, `<file>#<component>`, or null for anything the check does not follow. */
-	const meaning = (file, name) => {
+	const meaning = (file, name, seen = new Set()) => {
 		const fact = facts.get(file);
 		if (!fact || !name) return null;
-		if (fact.components.has(name)) return `${file}#${name}`;
+		const own = fact.components.get(name);
+		// A second name for another component, here or imported (never back to itself).
+		if (own?.aliasOf) return own.aliasOf === name || seen.has(name) ? null : meaning(file, own.aliasOf, seen.add(name));
+		if (own) return `${file}#${name}`;
 		const imported = fact.imports.get(name);
 		if (!imported) return null;
 		if (imported.from === "ui") return UI_PARTS.has(imported.name) ? `ui#${imported.name}` : null;
-		return facts.get(imported.from)?.components.has(imported.name) ? `${imported.from}#${imported.name}` : null;
+		return facts.get(imported.from)?.components.has(imported.name) ? meaning(imported.from, imported.name, seen) : null;
 	};
 	const componentOf = (key) => {
 		const [file, name] = key?.split("#") ?? [];
@@ -285,14 +358,13 @@ export function problems(files) {
 				!(parent.type === "Property" && parent.key === node && !parent.computed && !parent.shorthand) &&
 				!/^TS/.test(parent.type);
 			if (!isUse) continue;
-			const owner = parents.findLast((each) => FUNCTIONS.has(each.type) && keyOfFunction(file, each));
-			const prop = owner && bannerPropOf(owner);
-			if (!prop || prop !== node.name) continue;
+			// Whose prop the name is, through any helper written inside that component.
+			if (!bannerPropOwner(node.name, parents)) continue;
 			if (asked(node, parents) || inTopPlace(file, parents)) continue;
 			found.push({
 				file,
 				line: fact.lineAt(node.start),
-				message: `the \`${prop}\` prop holds a banner and is passed on outside the top place. ${HOW}`,
+				message: `the \`${node.name}\` prop holds a banner and is passed on outside the top place. ${HOW}`,
 			});
 		}
 	return found.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { StrictMode, useState } from "react";
 import { describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "../test/render";
@@ -52,6 +52,132 @@ function Frame({ site = false, own = true }: { site?: boolean; own?: boolean }) 
 		</SidebarProvider>
 	);
 }
+
+/** The titles of the banners in the frame's top place, top to bottom: what is seen and what is read, in that order. */
+const shown = () => [...(place()?.querySelectorAll("[data-slot=banner]") ?? [])].map((each) => each.textContent);
+
+/** A page with two parts, each with a banner of its own: the first one's shows later, and a button turns the two parts around. */
+function TwoParts() {
+	const [first, setFirst] = useState(false);
+	const [turned, setTurned] = useState(false);
+	const parts = [
+		<PageBanner key="first">{first ? <Banner title="읽을 수 없는 키" /> : null}</PageBanner>,
+		<PageBanner key="second">
+			<Banner title="전송 실패" />
+		</PageBanner>,
+	];
+	return (
+		<SidebarProvider rail={false} onRailChange={() => {}}>
+			<Sidebar label="관리자 메뉴">
+				<Text>몬티 블로그</Text>
+			</Sidebar>
+			<SidebarInset fixed>
+				<PageColumn>
+					<PageHeader title="설정" />
+					<PageBody>
+						<Button onClick={() => setFirst(true)}>첫째 보이기</Button>
+						<Button onClick={() => setTurned(true)}>뒤집기</Button>
+						{turned ? parts.reverse() : parts}
+					</PageBody>
+				</PageColumn>
+			</SidebarInset>
+		</SidebarProvider>
+	);
+}
+
+/** Two parts that do not draw again when their page turns them around: the same two elements, in the other order. */
+const KEPT = [
+	<PageBanner key="first">
+		<Banner title="읽을 수 없는 키" />
+	</PageBanner>,
+	<PageBanner key="second">
+		<Banner title="전송 실패" />
+	</PageBanner>,
+];
+function KeptParts() {
+	const [turned, setTurned] = useState(false);
+	return (
+		<StandalonePage>
+			<EditorHeader>
+				<Button onClick={() => setTurned(true)}>뒤집기</Button>
+			</EditorHeader>
+			{turned ? [KEPT[1], KEPT[0]] : KEPT}
+		</StandalonePage>
+	);
+}
+
+describe("several PageBanners", () => {
+	it("stand in the order the page wrote them, when the first one fills after the second", async () => {
+		render(<TwoParts />);
+		await expect.element(page.getByText("전송 실패")).toBeVisible();
+		expect(shown()).toEqual(["전송 실패"]);
+		await page.getByRole("button", { name: "첫째 보이기" }).click();
+		await expect.element(page.getByText("읽을 수 없는 키")).toBeVisible();
+		expect(shown()).toEqual(["읽을 수 없는 키", "전송 실패"]);
+		expect(box(banner("읽을 수 없는 키")).bottom).toBe(box(banner("전송 실패")).top);
+	});
+
+	it("keep that order in Strict Mode, where every part is put in twice", async () => {
+		render(
+			<StrictMode>
+				<TwoParts />
+			</StrictMode>,
+		);
+		await page.getByRole("button", { name: "첫째 보이기" }).click();
+		await expect.element(page.getByText("읽을 수 없는 키")).toBeVisible();
+		expect(shown()).toEqual(["읽을 수 없는 키", "전송 실패"]);
+	});
+
+	it("follow the page when it turns its parts around", async () => {
+		render(<TwoParts />);
+		await page.getByRole("button", { name: "첫째 보이기" }).click();
+		await expect.element(page.getByText("읽을 수 없는 키")).toBeVisible();
+		expect(shown()).toEqual(["읽을 수 없는 키", "전송 실패"]);
+		await page.getByRole("button", { name: "뒤집기" }).click();
+		await expect.poll(shown).toEqual(["전송 실패", "읽을 수 없는 키"]);
+		expect(box(banner("전송 실패")).bottom).toBe(box(banner("읽을 수 없는 키")).top);
+	});
+
+	it("follow the page when the parts turned around do not draw again", async () => {
+		render(<KeptParts />);
+		await expect.element(page.getByText("읽을 수 없는 키")).toBeVisible();
+		const titles = () =>
+			[...document.querySelectorAll("[data-slot=standalone-page-banner] [data-slot=banner]")].map(
+				(each) => each.textContent,
+			);
+		expect(titles()).toEqual(["읽을 수 없는 키", "전송 실패"]);
+		await page.getByRole("button", { name: "뒤집기" }).click();
+		await expect.poll(titles).toEqual(["전송 실패", "읽을 수 없는 키"]);
+	});
+
+	it("a part taken out leaves the others in their order, and comes back to its own place", async () => {
+		function Comes() {
+			const [there, setThere] = useState(true);
+			return (
+				<StandalonePage>
+					<EditorHeader>
+						<Button onClick={() => setThere((now) => !now)}>첫째 넣고 빼기</Button>
+					</EditorHeader>
+					{there ? (
+						<PageBanner>
+							<Banner title="읽을 수 없는 키" />
+						</PageBanner>
+					) : null}
+					<PageBanner>
+						<Banner title="전송 실패" />
+					</PageBanner>
+				</StandalonePage>
+			);
+		}
+		render(<Comes />);
+		const titles = () => [...document.querySelectorAll("[data-slot=banner]")].map((each) => each.textContent);
+		await expect.poll(titles).toEqual(["읽을 수 없는 키", "전송 실패"]);
+		await page.getByRole("button", { name: "첫째 넣고 빼기" }).click();
+		await expect.poll(titles).toEqual(["전송 실패"]);
+		await page.getByRole("button", { name: "첫째 넣고 빼기" }).click();
+		await expect.poll(titles).toEqual(["읽을 수 없는 키", "전송 실패"]);
+	});
+});
 
 describe("PageBanner", () => {
 	it("stands at the very top of the frame's page, edge to edge, with the page and the corner under it", async () => {

@@ -106,6 +106,81 @@ test("a component with a banner prop is a top place when it passes the prop on t
 	assert.match(under[0].message, /^the `banner` prop holds a banner and is passed on outside the top place/);
 });
 
+test("a banner prop caught by a helper inside its component is followed: the helper's use is the component's use", () => {
+	const frame = (body) =>
+		`${UI}import { PageColumn, PageHeader } from "@monti-cms/ui";\nexport function Frame({ banner }) {\n${body}\n}\n`;
+	const list = `${UI}import { Frame } from "./frame";\nexport const List = () => <Frame banner={<Banner title="Failed" />} />;\n`;
+	const files = (body) => ({
+		"packages/ui/src/screens/reference/frame.tsx": frame(body),
+		"packages/ui/src/screens/reference/list.tsx": list,
+	});
+	const under = problems(
+		files(
+			'\tconst Body = () => <PageBody>{banner}</PageBody>;\n\treturn (\n\t\t<SidebarInset>\n\t\t\t<PageColumn>\n\t\t\t\t<PageHeader title="Screen" />\n\t\t\t\t<Body />\n\t\t\t</PageColumn>\n\t\t</SidebarInset>\n\t);',
+		),
+	);
+	assert.deepEqual(
+		under.map(({ file, line, message }) => `${path.basename(file)}:${line}: ${message.split(". ")[0]}`),
+		["frame.tsx:4: the `banner` prop holds a banner and is passed on outside the top place"],
+	);
+	// The same helper giving it to a top place, a callback that does, and a helper two functions deep.
+	assert.deepEqual(problems(files("\tconst Top = () => <SidebarInset banner={banner} />;\n\treturn <Top />;")), []);
+	assert.deepEqual(
+		problems(
+			files('\treturn <SidebarInset>{[1].map(() => <PageBanner key="a">{banner}</PageBanner>)}</SidebarInset>;'),
+		),
+		[],
+	);
+	assert.equal(
+		problems(
+			files(
+				"\tfunction Outer() {\n\t\tconst Inner = () => <PageBody>{banner}</PageBody>;\n\t\treturn <Inner />;\n\t}\n\treturn <SidebarInset><Outer /></SidebarInset>;",
+			),
+		).length,
+		1,
+	);
+});
+
+test("a name of its own in a helper is not the component's banner prop", () => {
+	const frame = `${UI}export function Frame({ banner }) {\n\tconst Row = ({ banner }) => <Box>{banner}</Box>;\n\tconst pick = (banner) => banner.id;\n\tconst label = () => {\n\t\tconst banner = "words";\n\t\treturn banner;\n\t};\n\treturn <SidebarInset banner={banner}>{pick({ id: 1 })}{label()}</SidebarInset>;\n}\n`;
+	const found = problems({ "packages/ui/src/screens/reference/frame.tsx": frame });
+	// `Row` has a banner prop of its own and draws it in a box: that one is named. `pick` and `label` have other things under the name.
+	assert.deepEqual(
+		found.map(({ line }) => line),
+		[3],
+	);
+});
+
+test("a banner component wrapped in memo or forwardRef is a banner component: right in a top place, named outside it", () => {
+	const wrapped = [
+		'const Notice = memo(function Notice() {\n\treturn <Banner title="Failed" />;\n});\n',
+		'const Notice = React.memo(() => <Banner title="Failed" />);\n',
+		'const Notice = forwardRef(function Notice(props, ref) {\n\treturn <Banner title="Failed" />;\n});\n',
+		'const Notice = memo(forwardRef((props, ref) => (props.shown ? <Banner title="Failed" /> : null)));\n',
+		'function Plain() {\n\treturn <Banner title="Failed" />;\n}\nconst Notice = memo(Plain);\n',
+	];
+	for (const more of wrapped) {
+		assert.deepEqual(check("<StandalonePage banner={<Notice />}><PageBody /></StandalonePage>", more), [], more);
+		assert.deepEqual(
+			check("<PageBody><Notice /></PageBody>", more).map((line) => line.replace(/^screen\.tsx:\d+: /, "")),
+			["<Notice> is drawn outside the top place"],
+			more,
+		);
+	}
+});
+
+test("a memoized frame with a banner prop is a top place, held to the same rule", () => {
+	const frame = (body) =>
+		`${UI}import { memo } from "react";\nexport const Frame = memo(function Frame({ banner, children }) {\n\treturn ${body};\n});\n`;
+	const list = `${UI}import { Frame } from "./frame";\nexport const List = () => <Frame banner={<Banner title="Failed" />} />;\n`;
+	const files = (body) => ({
+		"packages/ui/src/screens/reference/frame.tsx": frame(body),
+		"packages/ui/src/screens/reference/list.tsx": list,
+	});
+	assert.deepEqual(problems(files("<SidebarInset banner={banner}>{children}</SidebarInset>")), []);
+	assert.equal(problems(files("<SidebarInset><PageBody />{banner}</SidebarInset>")).length, 1);
+});
+
 test("a banner prop on a component the check does not know is not a top place", () => {
 	assert.deepEqual(
 		check("<Elsewhere banner={<Banner title={refused} />} />", 'import { Elsewhere } from "some-package";\n'),

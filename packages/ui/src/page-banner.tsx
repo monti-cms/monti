@@ -25,7 +25,7 @@ function PageBannerPlace({
 		<PageBannerContext.Provider value={place}>
 			<div className="shrink-0" {...props}>
 				{banner}
-				{/* A node of its own after the frame's banners: one of those shown later still lands above the page's. */}
+				{/* A node of its own after the frame's banners: one of those shown later still lands above the page's. Each sender has its box in it. */}
 				<div ref={setPlace} data-slot="page-banner" className="contents" />
 			</div>
 			{children}
@@ -33,17 +33,78 @@ function PageBannerPlace({
 	);
 }
 
+/** Each sender's box in a top place → the mark that says where its sender stands in the page. */
+const marks = new WeakMap<Element, Element>();
+/** The top places that watch the page for a sender moved to another place. */
+const watches = new WeakMap<Element, MutationObserver>();
+
+/**
+ * Puts the boxes of a top place in the order their senders stand in the page (the order of their marks in the document, which is the order the
+ * page wrote them), whatever the time each was filled. A box already in its place is not touched, so what has the focus in it keeps it.
+ *
+ * While a place has two senders or more it watches the document: a page can turn its parts around without drawing them again, and then nothing
+ * but the document says so. With one sender there is no order to keep and nothing is watched.
+ */
+function order(place: HTMLElement) {
+	const boxes = [...place.children].filter((box) => marks.has(box));
+	const before = (a: Element, b: Element) =>
+		(marks.get(a) as Element).compareDocumentPosition(marks.get(b) as Element) & Node.DOCUMENT_POSITION_FOLLOWING
+			? -1
+			: 1;
+	[...boxes].sort(before).forEach((box, index) => {
+		if (place.children[index] !== box) place.insertBefore(box, place.children[index] ?? null);
+	});
+	const watch = watches.get(place);
+	if (boxes.length < 2) {
+		watch?.disconnect();
+		watches.delete(place);
+	} else if (!watch) {
+		const made = new MutationObserver(() => order(place));
+		made.observe(place.ownerDocument.body, { childList: true, subtree: true });
+		watches.set(place, made);
+	}
+}
+
 /**
  * A page's own banner (a refused save, keys that cannot be read). The page renders it wherever its state lives; it is drawn at the very top of the
  * screen, in the top place of the frame around it (`SidebarInset`, {@link StandalonePage}): under the frame's own banners, edge to edge, the page and
- * its corner moving down under it. It comes before the page in the document, so it is read first, as the frame's banners are. Several stand in the
- * order they appear; put the banners of one page in one `PageBanner`, wider matter first. Nothing is drawn while it has no children. With no frame
- * around it (a part's story, a test of one page) the children are drawn where it stands.
+ * its corner moving down under it. It comes before the page in the document, so it is read first, as the frame's banners are.
+ *
+ * Several stand in the order the page wrote them (the order they stand in the page, not the time each was filled or shown), and follow the page
+ * when it moves its parts; within one `PageBanner`, in the order of its children. So a page writes the wider matter first. Nothing is drawn while
+ * it has no children; where it stands it leaves a hidden mark, which is how its place in the page is known. With no frame around it (a part's
+ * story, a test of one page) the children are drawn where it stands.
  */
 function PageBanner({ children }: { children?: React.ReactNode }) {
 	const place = React.useContext(PageBannerContext);
+	const mark = React.useRef<HTMLSpanElement>(null);
+	// This sender's own box in the top place: its children are drawn into it, so the box, not the time they come, holds their position.
+	const [box, setBox] = React.useState<HTMLElement | null>(null);
+	React.useLayoutEffect(() => {
+		if (!place || !mark.current) {
+			setBox(null);
+			return;
+		}
+		const made = place.ownerDocument.createElement("div");
+		made.dataset.slot = "page-banner-sender";
+		made.className = "contents";
+		marks.set(made, mark.current);
+		place.append(made);
+		order(place);
+		setBox(made);
+		return () => {
+			marks.delete(made);
+			made.remove();
+			order(place);
+		};
+	}, [place]);
 	if (place === undefined) return children;
-	return place ? createPortal(children, place) : null;
+	return (
+		<>
+			<span ref={mark} hidden data-slot="page-banner-mark" />
+			{box ? createPortal(children, box) : null}
+		</>
+	);
 }
 
 /**
