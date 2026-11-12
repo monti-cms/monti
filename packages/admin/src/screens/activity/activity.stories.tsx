@@ -1,4 +1,4 @@
-import { type MontiEvent, type Receiver, ReceiverAnswer } from "@monti-cms/core";
+import { type MontiEvent, type Receiver, ReceiverAnswer, SITE_CACHE_LABEL } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sql } from "kysely";
 import { userEvent, within } from "storybook/test";
@@ -29,7 +29,7 @@ const receiversOf = (hooks: Hooks): Receiver[] =>
 		// adapter's has; the webhook is named by its host and path.
 		...(destination === SEARCH
 			? { accepts: (event: MontiEvent) => event.type === "entry.published" }
-			: { label: { key: "deliveries.receiver.site" } }),
+			: { label: SITE_CACHE_LABEL }),
 		async send(event) {
 			if (hooks.hold) await hooks.hold;
 			if (hooks.down.has(destination) || (destination === SITE && event.ids.some((id) => hooks.refuse.has(id))))

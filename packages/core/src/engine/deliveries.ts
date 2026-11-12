@@ -101,6 +101,9 @@ export class ReceiverAnswer extends Error {
 	}
 }
 
+/** The name of the receiver that refreshes the site's own cached pages (an adapter's, as `@monti-cms/next`'s), in the core's dictionary. */
+export const SITE_CACHE_LABEL: Message = { key: "deliveries.receiver.site" };
+
 /** The delivery's receiver is not in the config any more. */
 class GoneError extends Error {}
 
