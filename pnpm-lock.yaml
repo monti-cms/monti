@@ -109,6 +109,43 @@ importers:
         specifier: 4.1.12
         version: 4.1.12(@types/node@20.19.43)(@vitest/browser-playwright@4.1.12)(vite@8.3.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
+  examples/blog:
+    dependencies:
+      '@carbon/icons-react':
+        specifier: 11.90.0
+        version: 11.90.0(react@19.2.3)
+      '@monti-cms/admin':
+        specifier: workspace:*
+        version: link:../../packages/admin
+      '@monti-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@monti-cms/next':
+        specifier: workspace:*
+        version: link:../../packages/next
+      next:
+        specifier: 16.4.6
+        version: 16.4.6(@playwright/test@1.64.1)(@types/node@20.19.43)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      react-dom:
+        specifier: 19.2.3
+        version: 19.2.3(react@19.2.3)
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
+      '@types/react':
+        specifier: ^19
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.3.0(@types/react@19.3.0)
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   packages/admin:
     dependencies:
       '@monti-cms/core':

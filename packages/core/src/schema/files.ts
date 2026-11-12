@@ -88,7 +88,9 @@ export function schemaFilesAt(root: string, schemaFile = "monti.schema.ts"): Sch
 	const changes = path.join(root, "monti", "changes");
 	return {
 		async write(schema, change, writeSchema) {
-			if (writeSchema) await writeFile(path.join(root, schemaFile), schemaSource(schema));
+			// The file is the site's own, under a folder known only when the server runs. A bundler that follows file paths (Turbopack) is told not to
+			// take the whole project for it.
+			if (writeSchema) await writeFile(path.join(/*turbopackIgnore: true*/ root, schemaFile), schemaSource(schema));
 			await mkdir(changes, { recursive: true });
 			await writeFile(path.join(changes, `${change.id}.json`), `${JSON.stringify(change, null, "\t")}\n`, {
 				flag: "wx",
