@@ -1678,18 +1678,26 @@ describe("a picture picked, then the entry archived", () => {
 
 describe("a read-only body with the keyboard (T133)", () => {
 	const blocks = () => [...body().element().querySelectorAll<HTMLElement>("[data-slot=block-box]")];
-	/** Whether a block is drawn as picked: the 2px line around it, the one a picked picture has where the body is written. */
-	const drawnPicked = (block: HTMLElement | undefined) => {
+	const layer = (block: HTMLElement | undefined) => {
 		const line = block?.querySelector<HTMLElement>("[data-slot=block-line]");
-		if (!line) return false;
-		const style = getComputedStyle(line);
-		return style.display !== "none" && style.outlineStyle === "solid" && style.outlineWidth === "2px";
+		const style = line ? getComputedStyle(line) : null;
+		return style && style.display !== "none" ? style : null;
+	};
+	/** Whether a block is drawn as picked: the 2px ink line around it, the one a picked picture has where the body is written. */
+	const drawnPicked = (block: HTMLElement | undefined) => {
+		const style = layer(block);
+		return Boolean(style && style.outlineStyle === "solid" && style.outlineWidth === "2px");
+	};
+	/** Whether a block shows the keyboard's ordinary focus mark: a 2px ring at half ink, as every focused thing has. */
+	const drawnFocused = (block: HTMLElement | undefined) => {
+		const style = layer(block);
+		return Boolean(style && /0px 0px 0px 2px/.test(style.boxShadow) && block?.matches(":focus-visible"));
 	};
 	const toolbars = () => body().getByRole("toolbar").elements();
 	/** The archived entry's two pictures, as the story's loaders make them: the test presses the keys itself. */
 	const archivedPictures = () => composeStory({ loaders: media.ArchivedPictures.loaders }, media.default);
 
-	it("02-6 T133 Tab stops at each picture in turn and draws it picked; Enter opens its bar with the focus in it, its alt text is read, and Escape goes back to the picture", async () => {
+	it("02-6 T133 Tab stops at each picture in turn with the keyboard's focus mark; Enter picks it and opens its bar with the focus in it, its alt text is read, and Escape unpicks it, the focus still on the picture", async () => {
 		await archivedPictures().run();
 		await expect.element(body().getByRole("img", { name: "화면에 뜬 코드" })).toBeVisible();
 		await expect.poll(() => blocks().length).toBe(2);
@@ -1702,14 +1710,16 @@ describe("a read-only body with the keyboard (T133)", () => {
 			else if (stops.length > 0) break;
 		}
 		expect(stops).toEqual([0, 1]);
-		// The one that holds the focus is the one drawn as picked, and only that one: with pictures one over the other, no guessing whose bar it is.
-		await expect.poll(() => blocks().map(drawnPicked)).toEqual([false, true]);
-		// Reaching it opens nothing.
+		// Where the keyboard is: the focus mark, on that picture only. Reaching it picks nothing and opens nothing.
+		await expect.poll(() => blocks().map(drawnFocused)).toEqual([false, true]);
+		expect(blocks().map(drawnPicked)).toEqual([false, false]);
 		expect(toolbars()).toEqual([]);
 
 		await userEvent.keyboard("{Enter}");
 		const settings = body().getByRole("toolbar").getByRole("button", { name: "설정" });
 		await expect.element(settings).toHaveFocus();
+		// Picked, as a press picks it: the line says whose bar it is.
+		expect(blocks().map(drawnPicked)).toEqual([false, true]);
 		// The bar is what a click shows in a read-only body: the settings alone, nothing that writes.
 		expect(body().getByRole("toolbar").getByRole("button").elements()).toHaveLength(1);
 		await userEvent.keyboard("{Enter}");
@@ -1718,37 +1728,42 @@ describe("a read-only body with the keyboard (T133)", () => {
 		// To read, not to write: the field is the one a click shows in a read-only body (T130).
 		await expect.element(alt).toBeDisabled();
 
-		// Escape: the card first, then the bar, and the focus is on the picture again.
+		// Escape: the card first; then the bar, and the picture is unpicked with the focus still on it.
 		await userEvent.keyboard("{Escape}");
 		await expect.element(alt).not.toBeInTheDocument();
 		await expect.element(settings).toHaveFocus();
 		await userEvent.keyboard("{Escape}");
 		await expect.poll(toolbars).toEqual([]);
 		expect(document.activeElement).toBe(blocks()[1]);
-		expect(blocks().map(drawnPicked)).toEqual([false, true]);
+		expect(blocks().map(drawnPicked)).toEqual([false, false]);
+		expect(blocks().map(drawnFocused)).toEqual([false, true]);
 
-		// Space opens it as Enter does.
+		// Space picks it as Enter does.
 		await userEvent.keyboard(" ");
 		await expect.element(settings).toHaveFocus();
+		expect(blocks().map(drawnPicked)).toEqual([false, true]);
 		await userEvent.keyboard("{Escape}");
+		await expect.poll(toolbars).toEqual([]);
 		// Tab from the last picture leaves the body.
 		await userEvent.keyboard("{Tab}");
 		expect(body().element().contains(document.activeElement)).toBe(false);
 	});
 
-	it("02-6 T133 the story of it shows what the keyboard finds: the second picture picked, no bar open", async () => {
+	it("02-6 T133 the story of it shows the two states: the first picture picked by a press, its bar open, and the keyboard on the second", async () => {
 		await composeStory(media.ArchivedPictures, media.default).run();
-		await expect.poll(() => blocks().map(drawnPicked)).toEqual([false, true]);
-		expect(document.activeElement).toBe(blocks()[1]);
-		expect(toolbars()).toEqual([]);
+		await expect.poll(() => blocks().map(drawnPicked)).toEqual([true, false]);
+		await expect.poll(() => blocks().map(drawnFocused)).toEqual([false, true]);
+		expect(toolbars()).toHaveLength(1);
 	});
 
-	it("02-6 T133 T134 a press on a picture of a read-only body draws it picked and shows its bar at once, and it stays so when the pointer moves", async () => {
+	it("02-6 T133 T134 a press on a picture of a read-only body picks it, with its line and its bar, and it stays so when the pointer moves", async () => {
 		await archivedPictures().run();
 		const first = body().getByRole("img", { name: "아침 책상" });
 		await userEvent.click(first);
 		await expect.poll(() => blocks().map(drawnPicked)).toEqual([true, false]);
 		await expect.poll(() => toolbars().length).toBe(1);
+		// A press is not the keyboard: no focus mark.
+		expect(blocks().map(drawnFocused)).toEqual([false, false]);
 		const at = middleOf(first.element());
 		await pointerPath([at, { x: at.x + 3, y: at.y }], { steps: 3 });
 		expect(blocks().map(drawnPicked)).toEqual([true, false]);

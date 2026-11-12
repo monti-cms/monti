@@ -646,33 +646,35 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const open = media?.card === blockId;
 	const align = imageAlignOf(data.align);
 	/**
-	 * In a body that cannot be written in, the keyboard stops at the picture (T133, 2026-11-12): read-only takes away what writes, never a way to read. Reached
-	 * with Tab it is picked, drawn as a picked picture is, and its bar stays shut until Enter or Space, as nothing opens by being passed. `quiet` is that: picked
-	 * by the keyboard, not opened yet. A press opens the bar at once, as it always did.
+	 * In a body that cannot be written in, the keyboard stops at the picture (T133, 2026-11-12): read-only takes away what writes, never a way to read. The
+	 * stop shows the keyboard's ordinary focus mark; Enter or Space picks the picture as a press does (the line of a picked block, and its bar, the focus going
+	 * into it), and Escape unpicks it, the focus staying on the picture. Two states, each looking as it does everywhere: where the keyboard is, and what is
+	 * picked. `shut` is a picture unpicked with Escape: the editor has no selection that is none, so it still holds the block, and nothing is drawn for it.
 	 */
-	const [quiet, setQuiet] = useState(false);
+	const [shut, setShut] = useState(false);
+	const picked = selected && (editable || !shut || open);
 	/** The bar was asked for with a key: the focus goes into it once it is drawn. */
 	const intoBar = useRef(false);
 	useEffect(() => {
-		if (!selected) setQuiet(false);
+		if (!selected) setShut(false);
 	}, [selected]);
 	useEffect(() => {
-		if (quiet || !selected || !intoBar.current) return;
+		if (!picked || !intoBar.current) return;
 		intoBar.current = false;
 		bar.current?.querySelector("button")?.focus();
-	}, [quiet, selected]);
-	// Escape shuts the bar, and the focus is the picture's again. Heard on the page as the key goes down to its target: a button of the bar shows its
-	// name in a tooltip while it holds the focus, and the tooltip keeps Escape from going back up. While the settings card is open, Escape is the card's.
-	const barOpen = selected && !editable && !quiet && !open;
+	}, [picked]);
+	// Escape is heard on the page as the key goes down to its target: a button of the bar shows its name in a tooltip while it holds the focus, and the
+	// tooltip keeps Escape from going back up. While the settings card is open, Escape is the card's.
+	const barOpen = picked && !editable && !open;
 	useEffect(() => {
 		if (!barOpen) return;
-		const shut = (event: KeyboardEvent) => {
+		const unpick = (event: KeyboardEvent) => {
 			if (event.key !== "Escape" || !box.current?.contains(document.activeElement)) return;
-			setQuiet(true);
+			setShut(true);
 			box.current.focus();
 		};
-		document.addEventListener("keydown", shut, true);
-		return () => document.removeEventListener("keydown", shut, true);
+		document.addEventListener("keydown", unpick, true);
+		return () => document.removeEventListener("keydown", unpick, true);
 	}, [barOpen]);
 
 	const captionField = (editable || data.caption) && (
@@ -719,19 +721,13 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 					tabIndex: 0,
 					role: "group",
 					"aria-label": t("editor.image.block"),
-					onFocus: (event) => {
-						// Already picked (pressed, or the focus coming back from its bar): picking it again would unpick it for a moment.
-						if (event.target !== event.currentTarget || selected) return;
-						// Arrived at with the keyboard, not pressed: picked, its bar not opened.
-						if (event.currentTarget.matches(":focus-visible")) setQuiet(true);
-						pick();
-					},
-					onClick: () => setQuiet(false),
+					// A press on a picture unpicked with Escape picks it again (the editor never let go of it).
+					onClick: () => setShut(false),
 					onKeyDown: (event) => {
 						if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
 						event.preventDefault();
 						intoBar.current = true;
-						setQuiet(false);
+						setShut(false);
 						if (!selected) pick();
 					},
 				};
@@ -844,7 +840,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 						ref={box}
 						width={width}
 						// Picked reads as picked whether the body is written or only read: with pictures one over the other, the line says whose bar it is (T133).
-						selected={selected}
+						selected={picked}
 						measure={dragged ? sizeLabel(dragged.to) : undefined}
 						spoken={spoken}
 						{...stop}
@@ -871,7 +867,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 								ratio="wide"
 							/>
 						)}
-						{selected && !editable && url && (!quiet || open) && (
+						{picked && !editable && url && (
 							// Read-only (an archived entry, one in the trash): nothing changes the picture, but what the entry says of it can still be read. The
 							// settings card opens with its fields read-only (T130; read-only keeps the ways to read, 2026-11-11 owner).
 							<BlockBarPlace>

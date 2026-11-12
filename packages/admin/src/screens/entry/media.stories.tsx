@@ -250,8 +250,8 @@ export const ArchivedImage: Story = {
 };
 
 /**
- * An archived entry with two pictures one over the other (T133): each is a place the keyboard stops at, the one that holds the focus drawn as picked.
- * Here the second one, reached with Tab.
+ * An archived entry with two pictures one over the other (T133): each is a place the keyboard stops at. The first is picked by a press (its line, its bar);
+ * the keyboard is on the second, which shows the ordinary focus mark. Two states, each looking as it does everywhere.
  */
 export const ArchivedPictures: Story = {
 	loaders: entry({
@@ -263,14 +263,23 @@ export const ArchivedPictures: Story = {
 	}),
 	play: async ({ canvasElement }) => {
 		const page = within(canvasElement.ownerDocument.body);
+		const first = await page.findByRole("img", { name: "아침 책상" }, wait);
 		await page.findByRole("img", { name: "화면에 뜬 코드" }, wait);
+		const box = first.getBoundingClientRect();
+		await userEvent.pointer({
+			keys: "[MouseLeft]",
+			target: first,
+			coords: { clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 },
+		});
+		await page.findByRole("toolbar", {}, wait);
 		const blocks = [...canvasElement.ownerDocument.querySelectorAll<HTMLElement>("[data-slot=block-box]")];
 		// As the keyboard arrives: the browser draws the keyboard's focus after a key.
-		await userEvent.tab();
+		await userEvent.keyboard("{Shift}");
 		blocks[1]?.focus();
 	},
 };
 
+/** A cover's settings card open, under its line and as wide as it. */
 export const CoverCard: Story = {
 	loaders: entry({ values: ({ desk }) => ({ cover: { media: desk, alt: "아침 책상" } }) }),
 	play: async ({ canvasElement }) => {

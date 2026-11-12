@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent } from "storybook/test";
 import { Edit, Settings, TextAlignCenter, TextAlignLeft, TextAlignRight } from "./icons";
 import { BlockBox, FloatingBar, FloatingBarButton, Image, ResizeCorner, Separator, Stack } from "./index";
 
@@ -67,12 +68,17 @@ export const ShareOfBody: Story = {
 };
 
 /**
- * In a body that cannot be written in, the keyboard stops at each picture: the one that holds the focus is drawn as a picked one is, with the same line. Here
- * the first is picked by a press (its bar shows what can be read of it); Tab goes on to the second.
+ * In a body that cannot be written in, the keyboard stops at each picture. Two states, each as it looks everywhere: the first picture is picked (the ink line,
+ * and its bar with what can be read of it); the keyboard is on the second, which shows the ordinary focus ring.
  */
 export const ReadOnlyStops: Story = {
 	render: () => (
 		<Stack gap={20} align="start" maxWidth="reading">
+			<FloatingBar aria-label="이미지 도구">
+				<FloatingBarButton label="설정">
+					<Settings aria-hidden />
+				</FloatingBarButton>
+			</FloatingBar>
 			<BlockBox selected tabIndex={0} role="group" aria-label="이미지" width="420px">
 				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" radius="md" />
 			</BlockBox>
@@ -81,4 +87,9 @@ export const ReadOnlyStops: Story = {
 			</BlockBox>
 		</Stack>
 	),
+	play: async ({ canvasElement }) => {
+		// As the keyboard arrives: the browser draws the keyboard's focus after a key.
+		await userEvent.keyboard("{Shift}");
+		canvasElement.querySelectorAll<HTMLElement>("[data-slot=block-box]")[1]?.focus();
+	},
 };
