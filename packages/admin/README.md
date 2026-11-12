@@ -9,6 +9,9 @@ import { httpTransport, MontiAdmin } from "@monti-cms/admin";
 <MontiAdmin transport={httpTransport("/admin/api")} siteName="example.dev" />;
 ```
 
+`siteName` and `language` are what the admin shows until the settings hold a name (settings › site) and a screen language (settings › admin); from
+then on the saved ones are shown, on the sign-in screen too.
+
 Now: the login screen (first admin, sign-in, the lock, GitHub) and the frame (the sidebar from the schema and `frame.counts`, the screen mode, the
 schema banners). The other screens come with their feature docs (`docs/design/features`).
 

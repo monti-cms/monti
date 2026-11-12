@@ -9,6 +9,9 @@ import { httpTransport, MontiAdmin } from "@monti-cms/admin";
 <MontiAdmin transport={httpTransport("/admin/api")} siteName="example.dev" />;
 ```
 
+`siteName`과 `language`는 설정에 이름(설정 › 사이트)과 화면 언어(설정 › 관리자)가 저장되기 전까지 보이는 값이다. 저장된 뒤에는 저장된 값이
+로그인 화면까지 보인다.
+
 지금 있는 것: 로그인 화면(첫 관리자, 로그인, 잠금, GitHub)과 틀(스키마와 `frame.counts`로 그리는 사이드바, 화면 모드, 스키마 알림 띠). 다른
 화면은 각 기능 문서(`docs/design/features`)와 함께 온다.
 

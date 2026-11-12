@@ -44,7 +44,7 @@ type CellState =
   | { kind: "proposed"; item: ProposalItem };       // blue pencil, accept or discard
 ```
 
-- `Path`는 초안 안의 자리다. 설정이면 `site.previewPath`, 글이면 `values.summary`나 `doc.b_4`, 컬렉션이면 `fields.summary`.
+- `Path`는 초안 안의 자리다. 설정이면 `site:name`, 글이면 `values.summary`나 `doc.b_4`, 컬렉션이면 `fields.summary`.
 - 한 칸에 제안과 내 바뀜이 함께 있으면, 내가 고친 순간 그 제안을 받은 뒤 고친 것으로 친다(components/proposal.md "AI가 만든 상태").
 
 ## 칸 하나의 상태
