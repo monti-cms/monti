@@ -39,6 +39,8 @@ seconds, shows as failed at once in the activity log and in the sidebar's count;
 (`RETRY_MINUTES`), when the admin opens and from `monti deliveries:run`, and after the last it stays failed until a person sends it again
 (`deliveries.retry`, a batch at a time) or cancels it (`deliveries.cancel`). The sends nobody waits for are handed to the host's `waitUntil`
 (`openMonti(config, root, { waitUntil })`; `@monti-cms/next` passes Next's `after`), so a serverless function is not ended mid-send.
+On such a host a write answers before its webhooks are sent; a receiver with `beforeAnswer: true` is still sent first (the site's own
+cached pages are one: a publish that answered is on the site).
 
 **An event can arrive twice.** A receiver may handle an event and lose its answer on the way back; Monti then counts a failure and sends it again.
 Every try carries the same ids, so a receiver that must not act twice keeps the ids it has handled:

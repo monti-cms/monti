@@ -256,15 +256,32 @@ export function createMonti(options: MontiOptions) {
 	 * away) is logged and not passed on: the write it follows has committed, the delivery is still queued, and the next visit or
 	 * `monti deliveries:run` sends it.
 	 */
-	const background = (work: Promise<unknown>): Promise<void> => {
-		const safe = work.then(
+	const quiet = (work: Promise<unknown>): Promise<void> =>
+		work.then(
 			() => {},
 			(error) => {
 				console.error("Monti: sending deliveries failed; they stay queued for the next try:", error);
 			},
 		);
+	const background = (work: Promise<unknown>): Promise<void> => {
+		const safe = quiet(work);
 		options.waitUntil?.(safe);
 		return safe;
+	};
+
+	/**
+	 * A write's first send. Without a host that keeps work going after the response, the write waits for all of it. With one, it waits only for
+	 * the receivers that ask to be done before the answer (the site's own cached pages: a publish that answered is on the site), and the rest
+	 * goes on after the response, so a webhook that does not answer never holds a save.
+	 */
+	const firstSend = async (ids: string[]): Promise<void> => {
+		if (ids.length === 0) return;
+		if (!options.waitUntil) return quiet(sendDeliveries(engine.db, receivers, ids, now));
+		const first = receivers.filter((receiver) => receiver.beforeAnswer);
+		const rest = receivers.filter((receiver) => !receiver.beforeAnswer);
+		// Each pass leaves the other's deliveries untried: a delivery is sent by the pass that has its receiver.
+		if (first.length > 0) await quiet(sendDeliveries(engine.db, first, ids, now, { leaveUnknown: true }));
+		if (rest.length > 0) void background(sendDeliveries(engine.db, rest, ids, now, { leaveUnknown: true }));
 	};
 
 	const get = (name: string, kinds: OperationKind[]) => {
@@ -275,9 +292,7 @@ export function createMonti(options: MontiOptions) {
 
 	const write = async <Output>(operation: AnyOperation, input: unknown, runOptions: RunOptions) => {
 		const result = await runWrite<Output>(engine, operation, input, runOptions);
-		const sent = background(sendDeliveries(engine.db, receivers, result.deliveryIds, now));
-		// Without a host that keeps work going after the response, the write waits for its first send.
-		if (!options.waitUntil) await sent;
+		await firstSend(result.deliveryIds);
 		if (!operation.afterCommit) return result;
 		// What waits for the commit and is waited for: a deleted file's bytes leave the storage, a failed delivery is sent again.
 		const settled = await operation.afterCommit(
@@ -354,8 +369,7 @@ export function createMonti(options: MontiOptions) {
 						events: purgedEvents(gone.entries),
 					}),
 				);
-				const sent = background(sendDeliveries(engine.db, receivers, deliveryIds, now));
-				if (!options.waitUntil) await sent;
+				await firstSend(deliveryIds);
 				return result;
 			},
 		},

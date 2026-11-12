@@ -13,6 +13,12 @@ export type Receiver = {
 	/** Which events it wants; all when left out. */
 	accepts?: (event: MontiEvent) => boolean;
 	/**
+	 * Its first send is waited for before the write answers, also on a host that sends after its response (`waitUntil`): what the person sees
+	 * next depends on it. The site's own cached pages are this (the Next adapter's receiver): a publish that answered must be on the site. It
+	 * should be quick, and has the send's time limit like any other.
+	 */
+	beforeAnswer?: boolean;
+	/**
 	 * Sends one event. It throws when the event did not arrive. `signal` aborts when the send has taken too long (`SEND_TIMEOUT_MS`). `delivery`
 	 * names this delivery (the same id on every try) and which try it is.
 	 *

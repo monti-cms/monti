@@ -542,6 +542,49 @@ describe("sending", () => {
 		expect((await deliveries())[0].state).toBe("sent");
 	});
 
+	it("13-1 on a host that sends after its response, the write still waits for a receiver that asks to be done before the answer", async () => {
+		const kept: Promise<unknown>[] = [];
+		const arrived: string[] = [];
+		let open = () => {};
+		const gate = new Promise<void>((resolve) => {
+			open = resolve;
+		});
+		// The site's own pages: marked a moment after the send starts, and before the write answers.
+		const pages: Receiver = {
+			destination: "plugin:next",
+			beforeAnswer: true,
+			async send() {
+				await new Promise((done) => setTimeout(done, 20));
+				arrived.push("plugin:next");
+			},
+		};
+		// A webhook that does not answer until the test lets it.
+		const slow: Receiver = {
+			destination: SITE,
+			async send() {
+				await gate;
+				arrived.push(SITE);
+			},
+		};
+		const monti = site({ receivers: [slow, pages], waitUntil: (work) => kept.push(work) });
+		await publish([await newPost("첫 번째 글", "first-post", monti)], monti);
+		// The write answered: the pages are marked, and the webhook is still on its way, kept going by the host.
+		const statesOf = async (destination: string) =>
+			(await deliveries()).filter((delivery) => delivery.destination === destination).map((delivery) => delivery.state);
+		const toPages = await statesOf("plugin:next");
+		expect(toPages.length).toBeGreaterThan(0);
+		expect(new Set(toPages)).toEqual(new Set(["sent"]));
+		expect(arrived).toEqual(toPages.map(() => "plugin:next"));
+		expect(new Set(await statesOf(SITE))).toEqual(new Set(["pending"]));
+		expect(kept.length).toBeGreaterThan(0);
+		open();
+		await Promise.all(kept);
+		expect(new Set(await statesOf(SITE))).toEqual(new Set(["sent"]));
+		// Each went once.
+		expect(arrived.filter((destination) => destination === "plugin:next")).toHaveLength(toPages.length);
+		expect(arrived.filter((destination) => destination === SITE)).toHaveLength(toPages.length);
+	});
+
 	it("13-1 the command line leaves what only the running site can send, untried, and says so", async () => {
 		const monti = site({ receivers: [receiver(SITE), receiver("plugin:next")] });
 		down.add(SITE);
