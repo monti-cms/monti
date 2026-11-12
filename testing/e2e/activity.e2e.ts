@@ -61,7 +61,7 @@ test.describe("the activity log", () => {
 		await sidebarLog(admin).click();
 		await expect(admin.getByRole("heading", { level: 1 })).toHaveText("활동 기록");
 		const words = `"${post.title}" 발행`;
-		await expect(row(admin, words)).toContainText("1번 실패");
+		await expect(row(admin, words).getByRole("cell").nth(1)).toHaveText("실패");
 
 		await admin.request.post(`${HOOK}/up`);
 		await (await rowMenu(admin, words)).getByRole("menuitem", { name: "다시 보내기" }).click();
@@ -87,6 +87,10 @@ test.describe("the activity log", () => {
 		await admin.goto(`/admin#/activity?q=${encodeURIComponent(post.title)}`);
 		const words = `"${post.title}" 발행`;
 		await (await rowMenu(admin, words)).getByRole("menuitem", { name: "되돌리기" }).click();
+		// From the log an undo asks first: it cannot be redone.
+		const question = admin.getByRole("alertdialog");
+		await expect(question).toContainText("되돌릴까요?");
+		await question.getByRole("button", { name: "되돌리기" }).click();
 		await expect(row(admin, words)).toContainText(/되돌림 \d\d:\d\d/);
 		await expect.poll(() => onSite(admin, post.slug)).toBe(404);
 		// The webhook heard of both: the publish, and the post going off the site.

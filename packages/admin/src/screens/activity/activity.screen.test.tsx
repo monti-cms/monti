@@ -35,6 +35,8 @@ const panel = () => page.getByRole("complementary");
 /** What each row's delivery cell says, top to bottom. */
 const deliveryCells = () =>
 	[...table().element().querySelectorAll("tbody tr")].map((each) => each.querySelectorAll("td")[1]?.textContent ?? "");
+/** What one row's delivery cell says. */
+const deliveryOf = (words: string) => row(words).element().querySelectorAll("td")[1]?.textContent ?? "";
 const rows = () =>
 	[...table().element().querySelectorAll("tbody tr")].map((each) => each.querySelector("td")?.textContent ?? "");
 
@@ -49,7 +51,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await userEvent.click(sidebarLog());
 		await expect.poll(() => location.hash).toBe("#/activity");
 		await expect.element(page.getByRole("heading", { level: 1 })).toHaveTextContent("활동 기록");
-		await expect.element(row(FAILED)).toHaveTextContent("1번 실패");
+		await expect.poll(() => deliveryOf(FAILED)).toBe("실패");
 		// Newest first; what stands after the words says where, and a row from the command line says so.
 		expect(rows()[0]).toContain('"고친 글" 저장');
 		await expect.element(row('"고친 글" 저장')).toHaveTextContent("post/edited-post");
@@ -137,7 +139,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		drawn.loaded().hooks.down.add(stories.SITE);
 		await userEvent.click((await menuOf(FAILED)).getByRole("menuitem", { name: "다시 보내기" }));
 		await expect.element(toast("보내지 못했습니다")).toBeVisible();
-		await expect.element(row(FAILED)).toHaveTextContent("1번 실패");
+		await expect.poll(() => deliveryOf(FAILED)).toBe("실패");
 		await expect.element(sidebarLog()).toHaveTextContent("1");
 	});
 
@@ -200,7 +202,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(dialog()).not.toHaveTextContent(stories.SITE);
 		await userEvent.click(dialog().getByRole("button", { name: "닫기" }));
 		await expect.element(dialog()).not.toBeInTheDocument();
-		await expect.element(row(FAILED)).toHaveTextContent("1번 실패");
+		await expect.poll(() => deliveryOf(FAILED)).toBe("실패");
 		await userEvent.click(panel().getByRole("button", { name: "취소", exact: true }));
 		await userEvent.click(dialog().getByRole("button", { name: "취소하기" }));
 		await expect.element(toast("전송을 취소했습니다")).toBeVisible();
@@ -261,7 +263,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(toast("2건 보냈습니다 · 1건 실패")).toBeVisible();
 		await expect.element(banner()).not.toBeInTheDocument();
 		await expect.element(sidebarLog()).toHaveTextContent("1");
-		await expect.element(row('"서울의 밤" 발행')).toHaveTextContent("1번 실패");
+		expect(deliveryCells().filter((words) => words !== "보냄" && words !== "")).toEqual(["실패"]);
 	});
 
 	it("[flow 12·09] with the keyboard alone: the first column's menu opens, a kind is ticked with the arrows and Enter, and the rows are that kind's", async () => {
@@ -491,6 +493,9 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /^실패/ }));
 		await expect.poll(() => rows().length).toBe(2);
 		await userEvent.keyboard("{Escape}");
+		// The row both are on says how many deliveries failed, the number the sidebar and the banner count; the other says only that it failed.
+		expect(deliveryOf('"두 곳에 못 간 글" 발행')).toBe("2건 실패");
+		expect(deliveryOf(FAILED)).toBe("실패");
 		// The row both are on names each receiver.
 		await userEvent.click(row('"두 곳에 못 간 글" 발행').getByText("post/two-failed"));
 		await expect.element(panel()).toHaveTextContent("받는 곳사이트 캐시");
@@ -566,7 +571,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const drawn = draw(stories.Log);
 		await drawn.run();
 		const { site, ids } = drawn.loaded();
-		await expect.element(row(FAILED)).toHaveTextContent("1번 실패");
+		await expect.poll(() => deliveryOf(FAILED)).toBe("실패");
 		const failed = await site.db
 			.selectFrom("monti_delivery")
 			.select("id")
@@ -643,9 +648,9 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const title = getComputedStyle(row('"첫 번째 글" 발행').getByRole("button").first().element());
 		expect(Number.parseFloat(word.fontSize)).toBeLessThan(Number.parseFloat(title.fontSize));
 		expect(word.color).not.toBe(title.color);
-		// One did not: the red mark and how many tries.
+		// One did not: the red mark and the one word. How many times it was tried is the panel's to say.
 		const failed = cellOf(FAILED);
-		expect(failed.textContent).toBe("1번 실패");
+		expect(failed.textContent).toBe("실패");
 		expect(failed.querySelector("[data-slot=entry-status]")).not.toBeNull();
 		expect(getComputedStyle(sent.firstElementChild as Element).color).not.toBe(
 			getComputedStyle(failed.querySelector("[data-slot=entry-status]") as Element).color,
@@ -700,5 +705,13 @@ describe("the activity log (doc 13, flow 12)", () => {
 			.where("collection", "=", "category")
 			.executeTakeFirstOrThrow();
 		expect(item.trashed_at).not.toBeNull();
+	});
+	it("a line whose one delivery failed three times says 실패 in its cell, and its three tries beside that delivery in the panel", async () => {
+		await draw(stories.FailedThrice).run();
+		await expect.poll(() => deliveryOf(FAILED)).toBe("실패");
+		// The count of tries is the panel's to say, on that delivery's own row.
+		await userEvent.click(row(FAILED).getByText("post/react-19"));
+		await expect.element(panel()).toHaveTextContent("상태3번 실패");
+		expect(deliveryOf(FAILED)).toBe("실패");
 	});
 });

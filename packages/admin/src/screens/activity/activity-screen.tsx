@@ -103,8 +103,8 @@ function FacetRows<Value extends string>({
 }
 
 /**
- * A line's deliveries in its cell. What needs a look has the lists' status mark: on its way, failed (with the most tries one of them has had),
- * canceled. A line whose deliveries all arrived says so in quiet words, with no mark and no colour: an empty cell under "delivery" would read as
+ * A line's deliveries in its cell. What needs a look has the lists' status mark: on its way, failed (with how many deliveries when more than
+ * one did), canceled. A line whose deliveries all arrived says so in quiet words, with no mark and no colour: an empty cell under "delivery" would read as
  * "nothing was sent" (2026-11-12, as Stripe's and GitHub's delivery lists and Svix's portal say a success). Only a line that had nothing to
  * send leaves the cell empty.
  */
@@ -118,7 +118,13 @@ export function DeliveryMark({ delivery, sending }: { delivery: LineDelivery | n
 			</EntryStatus>
 		);
 	if (delivery.failed > 0)
-		return <EntryStatus status="failed">{t("activity.failedTimes", { count: delivery.attempts })}</EntryStatus>;
+		// One failed delivery is "failed"; several say how many deliveries, the number the banner and the sidebar count. How many times one
+		// was tried is the side panel's to say, beside that delivery.
+		return (
+			<EntryStatus status="failed">
+				{delivery.failed === 1 ? t("activity.delivery.failed") : t("activity.failedCount", { count: delivery.failed })}
+			</EntryStatus>
+		);
 	if (delivery.canceled > 0)
 		return (
 			<EntryStatus status="archived" quiet>

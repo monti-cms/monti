@@ -212,6 +212,23 @@ export const TwoOnOneRow: Story = {
 	}),
 };
 
+/** The failed delivery was tried again by itself twice and failed each time: three tries. The row says only that it failed; the panel counts. */
+export const FailedThrice: Story = {
+	loaders: log("#/activity", {
+		also: async (site, _ids, hooks) => {
+			hooks.down.add(SITE);
+			for (let again = 0; again < 2; again++) {
+				// Its next try has come.
+				await sql`update monti_delivery set next_attempt_at = now() - interval '1 second' where state = 'failed'`.execute(
+					site.db,
+				);
+				await site.monti.deliveries.sendDue();
+			}
+			hooks.down.clear();
+		},
+	}),
+};
+
 /**
  * A category that a published post points at was thrown away and restored. Undoing that restore puts it in the trash again, and the post
  * loses it on the site: the undo's question says so, in the sentence throwing it away by hand says.

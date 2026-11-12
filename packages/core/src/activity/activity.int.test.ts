@@ -25,7 +25,7 @@ import { lockRecords } from "../records";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
 import { type ActivityDetail, type ActivityLine, type ActivityList, ActivityQuery, listActivity } from "./list";
-import type { DeliveriesRetried, DeliveryCounts } from "./operations";
+import type { DeliveriesRetried, DeliveryCounts, UndoPlanned } from "./operations";
 
 const db = await testDatabase();
 
@@ -1859,7 +1859,7 @@ describe("undo from the log", () => {
 
 	it("13-3 what an undo would do is read before it is done: what it deletes for good, what it puts in the trash again, and that it would refuse", async () => {
 		const monti = site();
-		const plan = (id: string) => read<UndoPlan>("activity.undoPlan", { id }, monti);
+		const plan = (id: string) => read<UndoPlanned>("activity.undoPlan", { id }, monti);
 		// A create: its undo leaves nothing, not even in the trash.
 		const made = await write<{ id: string }>(
 			"entries.create",
@@ -1873,6 +1873,7 @@ describe("undo from the log", () => {
 			partly: [],
 			removes: [entry],
 			trashes: [],
+			trashedCollections: [],
 		});
 		// A save: back to what it held, nothing deleted, nothing thrown away.
 		later(MINUTE);
@@ -1885,7 +1886,13 @@ describe("undo from the log", () => {
 		await write("trash.move", { rows: [entry] }, monti);
 		later(MINUTE);
 		const restored = await write("trash.restore", { rows: [entry] }, monti);
-		expect(await plan(restored.activityId)).toMatchObject({ restore: [entry], removes: [], trashes: [entry] });
+		// With the collection of what goes to the trash, for the question to call it by name.
+		expect(await plan(restored.activityId)).toMatchObject({
+			restore: [entry],
+			removes: [],
+			trashes: [entry],
+			trashedCollections: ["post"],
+		});
 		// Reading changes nothing: the entry is where the restore left it.
 		expect(
 			(await db.selectFrom("entries").select("trashed_at").where("id", "=", entry.id).executeTakeFirstOrThrow())

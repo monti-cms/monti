@@ -53,6 +53,7 @@ function DeliveryState({ delivery, sending }: { delivery: ActivityDelivery; send
 				{t("activity.delivery.pending")}
 			</EntryStatus>
 		);
+	// Beside one delivery, and only here, the tries are counted: the list's cell says "failed", or how many deliveries did.
 	if (delivery.state === "failed")
 		return <EntryStatus status="failed">{t("activity.failedTimes", { count: delivery.attempts })}</EntryStatus>;
 	if (delivery.state === "canceled")

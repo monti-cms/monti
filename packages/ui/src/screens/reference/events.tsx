@@ -286,7 +286,8 @@ function DeliveryCell({ delivery, whole = false }: { delivery?: Delivery; whole?
 				취소됨
 			</EntryStatus>
 		);
-	return <EntryStatus status="failed">{delivery.failed}번 실패</EntryStatus>;
+	// The list says "failed"; how many times it was tried is said beside the delivery, in the panel.
+	return <EntryStatus status="failed">{whole ? `${delivery.failed}번 실패` : "실패"}</EntryStatus>;
 }
 
 /**
