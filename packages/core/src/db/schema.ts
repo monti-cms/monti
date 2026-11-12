@@ -129,6 +129,11 @@ export interface RunTable {
 	/** The turns and tokens it had spent when a person last said to go on: its limits count from there. */
 	turns_from: Generated<number>;
 	tokens_from: Generated<number>;
+	/**
+	 * Its place among its conversation's runs, counted as they were opened. The order of a conversation's requests is this, never their start
+	 * times: two servers' clocks differ, and a test's clock stands still.
+	 */
+	position: number;
 	/** About how many tokens its stored messages are: what a later request of the conversation is sent of it, or leaves out, is decided by this. */
 	size: Generated<number>;
 	/** Which request holds it: a request whose hold ran out and was taken by another finds another name here, and stops. */

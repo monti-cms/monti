@@ -370,10 +370,8 @@ export async function* runAssistant(
 						.select(["id", "size"])
 						.where("conversation_id", "=", conversationId)
 						.where("kind", "=", "chat")
-						.where("id", "<>", run.id)
-						.where("started_at", "<=", run.started_at)
-						.orderBy("started_at", "desc")
-						.orderBy("id", "desc")
+						.where("position", "<", run.position)
+						.orderBy("position", "desc")
 						.execute()
 				: [];
 		// The newest earlier requests that fit the model's share for them, whole; only those are read.
@@ -826,6 +824,8 @@ type RunRow = {
 	tokens_from: number;
 	/** This request's name on the run while it holds it. */
 	lease_token: string | null;
+	/** Its place among its conversation's runs. */
+	position: number;
 	proposal_id: string | null;
 	item_id: string | null;
 	pending: unknown;
@@ -857,8 +857,7 @@ async function takeUp(monti: Monti, runId: string, until: Date, more: boolean): 
 			.select("id")
 			.where("conversation_id", "=", there.conversation_id)
 			.where("kind", "=", "chat")
-			.orderBy("started_at", "desc")
-			.orderBy("id", "desc")
+			.orderBy("position", "desc")
 			.executeTakeFirst();
 		if (newest?.id !== runId) throw new CheckError({ key: "assistant.notNewest" });
 	}
@@ -1020,15 +1019,28 @@ async function open(monti: Monti, input: RunInput, until: Date): Promise<RunRow>
 		lease_token: randomId(),
 		started_at: now,
 	} as const;
-	// The check above is for the common case; two requests that passed it together are told apart here, by the database.
-	await db
+	// The check above is for the common case; two requests that passed it together are told apart here, by the database. The run takes the
+	// next place in its conversation in the same statement.
+	const placed = await db
 		.insertInto("runs")
-		.values(run)
-		.execute()
+		.values({
+			...run,
+			position: sql<number>`(select coalesce(max(position), -1) + 1 from runs where conversation_id = ${id})`,
+		})
+		.returning("position")
+		.executeTakeFirstOrThrow()
 		.catch((error: unknown) => {
 			if (isBusy(error)) throw new CheckError({ key: "assistant.busy" });
 			throw error;
 		});
 	await append(db, run.id, { role: "user", text: `${requestWith(request, input.context ?? null)}${about}` }, now);
-	return { ...run, usage: { input: 0, output: 0 }, turns: 0, turns_from: 0, tokens_from: 0, pending: null };
+	return {
+		...run,
+		position: placed.position,
+		usage: { input: 0, output: 0 },
+		turns: 0,
+		turns_from: 0,
+		tokens_from: 0,
+		pending: null,
+	};
 }

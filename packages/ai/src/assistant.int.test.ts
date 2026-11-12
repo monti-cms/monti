@@ -1626,7 +1626,7 @@ describe("what the first review of the core found (#472)", () => {
 		expect(await runs()).toHaveLength(2);
 	});
 
-	it("10-1 a run that stopped is not gone on with while another of its conversation runs, and the database holds the rule itself", async () => {
+	it("10-1 a run that stopped is not gone on with once its conversation has a newer one at work, and the database holds the rule itself", async () => {
 		const monti = site({ limits: { turns: 1 } });
 		await withKey(monti);
 		const post = await newPost(monti, "글");
@@ -1644,7 +1644,7 @@ describe("what the first review of the core found (#472)", () => {
 		const second = ask(monti, { conversation: first.conversation, request: "다른 일" });
 		while (model.turns.length < 2) await new Promise((resolve) => setTimeout(resolve, 10));
 		await expect(ask(monti, { resume: first.run, more: true })).rejects.toMatchObject({
-			reason: { key: "assistant.busy" },
+			reason: { key: "assistant.notNewest" },
 		});
 		// By no way in: a second chat run of the conversation cannot be made to run.
 		await expect(
@@ -1843,10 +1843,11 @@ describe("what the first review of the core found (#472)", () => {
 			message.role === "user" ? message.text.slice(0, 5) : message.role,
 		);
 		expect(sent).toEqual(["둘째 질문", "assistant", "셋째 질문"]);
-		// The conversation still shows all three requests, and says the model no longer knows the oldest two of them when asked again.
+		// The conversation still shows all three requests, and says the model no longer knows the oldest of them when asked again: the
+		// second and the third fit together, the first with its tool's answer does not.
 		const read = await conversation(monti, first.conversation);
 		expect(read.runs).toHaveLength(3);
-		expect(read.forgotten).toBe(2);
+		expect(read.forgotten).toBe(1);
 	});
 
 	it("10-1 a text's size is estimated on the safe side for Korean, and the share for earlier requests follows the model's window", () => {

@@ -434,6 +434,7 @@ const MIGRATIONS: Record<string, Migration> = {
 				.addColumn("turns_from", "integer", (column) => column.notNull().defaultTo(0))
 				.addColumn("tokens_from", "integer", (column) => column.notNull().defaultTo(0))
 				.addColumn("size", "integer", (column) => column.notNull().defaultTo(0))
+				.addColumn("position", "integer", (column) => column.notNull())
 				.addColumn("lease_token", "text")
 				.addColumn("proposal_id", "text")
 				.addColumn("item_id", "text")

@@ -123,8 +123,7 @@ async function forgottenOf(
 		.select("size")
 		.where("conversation_id", "=", conversation.id)
 		.where("kind", "=", "chat")
-		.orderBy("started_at", "desc")
-		.orderBy("id", "desc")
+		.orderBy("position", "desc")
 		.execute();
 	const window =
 		conversation.key_id && conversation.model ? await context(conversation.key_id, conversation.model) : undefined;
@@ -459,13 +458,15 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 						.selectAll()
 						.where("conversation_id", "=", input.id)
 						.where("kind", "=", "chat")
+						// A conversation's requests stand in the order they were asked: the page before a request is the ones asked before it.
 						.$if(input.before !== undefined, (query) =>
 							query.where(
-								sql<boolean>`(started_at, id) < (${new Date(input.before?.at ?? 0)}, ${input.before?.id ?? ""})`,
+								"position",
+								"<",
+								sql<number>`(select position from runs where id = ${input.before?.id ?? ""} and conversation_id = ${input.id})`,
 							),
 						)
-						.orderBy("started_at", "desc")
-						.orderBy("id", "desc")
+						.orderBy("position", "desc")
 						// One more than the page: whether there are requests before these.
 						.limit(input.limit + 1)
 						.execute();
