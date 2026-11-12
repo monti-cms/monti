@@ -34,12 +34,17 @@ export const moveToFolder = defineOperation({
    레코드를 건너뛰고 덮어쓰지 않는다.
 5. 쓰기가 낸 이벤트는 받는 곳마다 줄에 넣고, 커밋된 뒤에만 보낸다.
 
-받는 곳은 웹훅(`receivers: [webhook("https://example.dev/api/revalidate")]`)이거나 플러그인의 것이다. 실패했거나 10초 넘게 걸린 전송은 바로
+받는 곳은 웹훅(`receivers: [webhook("https://example.dev/api/revalidate")]`)이거나 플러그인의 것이다. 웹훅에는 이름이 있고(`webhook(url, { name })`.
+없으면 주소의 호스트와 경로) 전송은 그 이름으로 저장되고 보인다. 주소 자체와 쿼리에 든 토큰은 저장하지 않는다. 한 사이트의 받는 곳 둘이 같은
+이름일 수 없다. 리다이렉트는 따라가지 않고 실패다. 실패했거나 10초 넘게 걸린 전송은 바로
 활동 기록과 사이드바 개수에 실패로 보인다. 그 뒤 사이를 늘려 가며 8번까지 저절로 다시 보내고(`RETRY_MINUTES`, 관리자 화면에 들어올 때와
 `monti deliveries:run`), 그래도 안 되면 사람이 다시 보내거나(`deliveries.retry`, 한 번에 한 묶음씩) 취소할(`deliveries.cancel`) 때까지 실패로
 남는다. 아무도 기다리지 않는 전송은 호스트의 `waitUntil`에 맡긴다(`openMonti(config, root, { waitUntil })`. `@monti-cms/next`는 Next의
-`after`를 넘긴다). 서버리스 함수가 보내는 도중에 끝나지 않게 하려는 것이다. 이런 호스트에서 쓰기는 웹훅을 기다리지 않고 답한다.
-`beforeAnswer: true`인 받는 곳은 그래도 답하기 전에 보낸다(사이트의 캐시된 페이지가 그렇다. 발행이 답했으면 사이트에 나와 있다).
+`after`를 넘긴다). 서버리스 함수가 보내는 도중에 끝나지 않게 하려는 것이다. 호스트는 돌고 있는 일이 아니라 시작할 일을 받는다:
+`waitUntil: (work) => context.waitUntil(work())`. 이런 호스트에서 쓰기는 웹훅을 기다리지 않고 답한다.
+`beforeAnswer: true`인 받는 곳은 그래도 답하기 전에 보낸다(사이트의 캐시된 페이지가 그렇다. 발행이 답했으면 사이트에 나와 있다). 그 기다림은
+쓰기 하나에 마감 하나다(10초. 남은 것은 답한 뒤에 보낸다). `oncePerWrite: true`인 받는 곳은 무슨 이벤트든 하는 일이 같아서, 쓰기가 이벤트를
+몇 개 내든 한 번만 받는다.
 
 **이벤트는 두 번 올 수 있다.** 받는 곳이 이벤트를 처리했는데 답이 돌아오다 끊기면, Monti는 실패로 세고 다시 보낸다. 다시 보낼 때마다 같은 id가
 가므로, 두 번 하면 안 되는 받는 곳은 처리한 id를 적어 둔다.
@@ -49,6 +54,7 @@ export const moveToFolder = defineOperation({
 | 본문의 `id`, 헤더 `Monti-Event-Id` | 이벤트의 id. 다시 보낼 때마다 같고, 그 이벤트를 받는 곳 모두에게 같다 |
 | 헤더 `Monti-Delivery-Id` | 이 받는 곳으로 가는 전송의 id. 다시 보낼 때마다 같다 |
 | 헤더 `Monti-Attempt` | 몇 번째 시도인지, 1부터 |
+| 헤더 `Monti-Signature` | `webhook(url, { secret })`일 때만: `t=<초>,v1=<hex>`. `v1`은 `<t>.<본문>`을 그 웹훅의 비밀값으로 HMAC-SHA256 한 hex이고, `<본문>`은 보낸 바이트 그대로다. 받은 본문으로 같은 값을 만들어 견주고, 오래된 `t`는 거절한다. `MONTI_SECRET`이 아니다 |
 
 플러그인의 받는 곳은 같은 것을 인자로 받는다: `send(event, signal, { id, attempt })`. `monti deliveries:run`은 돌고 있는 사이트만 보낼 수 있는
 전송(Next 어댑터의 캐시 갱신)을 시도하지 않고 남기며, 몇 건을 남겼는지 말한다.

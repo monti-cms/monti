@@ -52,10 +52,10 @@ export const RETRY_MINUTES = [1, 5, 30, 60, 120, 360, 720, 1440] as const;
 export const SEND_TIMEOUT_MS = 10_000;
 
 /**
- * How long a write waits, in all, for the receivers that are to be done before it answers (`beforeAnswer`), however many events it emitted: one
- * send's time. Past it the write answers and what is left is sent behind the answer.
+ * How long a write waits, in all, for the receivers that are to be done before it answers (`beforeAnswer`), however many events it emitted: as
+ * long as one send may take. Past it the write answers and what is left is sent behind the answer.
  */
-export const BEFORE_ANSWER_MS = SEND_TIMEOUT_MS;
+export const BEFORE_ANSWER_MS = 10_000;
 
 /** How long a sender holds a delivery: past the time one send may take, so a sender that died lets go by itself. */
 const HOLD_MS = SEND_TIMEOUT_MS * 3;
