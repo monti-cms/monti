@@ -60,23 +60,21 @@ export function useUpload(options: { onUploaded?: (item: MediaItem, upload: Uplo
 				dispatch({ type: "remove", id: upload.id });
 				return;
 			}
-			// A request that never got an answer throws: it is the same "try again" as one that was refused, and must not hold its place in the queue.
-			const made = await makeItem
-				.run({
-					name: file.name,
-					folderId: upload.folder,
-					original: put.original,
-					...(put.web ? { web: put.web } : {}),
-					...(put.placeholder ? { placeholder: put.placeholder } : {}),
-				})
-				.catch(() => null);
+			// A request that never got an answer is a refusal too (status 0): the same "try again" as any other, and it does not hold its place in the queue.
+			const made = await makeItem.run({
+				name: file.name,
+				folderId: upload.folder,
+				original: put.original,
+				...(put.web ? { web: put.web } : {}),
+				...(put.placeholder ? { placeholder: put.placeholder } : {}),
+			});
 			// Taken out while the library made it: it stays in the library, and takes no place here.
 			if (stop.signal.aborted) return;
-			if (!made?.ok) {
+			if (!made.ok) {
 				// The folder it was going to is gone: trying again would change nothing, so the file leaves its place and a toast says why, as for a file the
 				// library does not take (2026-11-09, owner). Every other answer is "try again", which sends the bytes anew: no answer at all, the session ending,
 				// bytes that are no longer there (`media.unknownKey`).
-				if (made?.refusal.reason?.key !== "folders.unknown") {
+				if (made.refusal.reason?.key !== "folders.unknown") {
 					dispatch({ type: "failed", id: upload.id });
 					return;
 				}

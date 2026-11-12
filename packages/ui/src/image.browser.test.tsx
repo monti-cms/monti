@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { describe, expect, it } from "vitest";
+import { page, userEvent } from "vitest/browser";
 import { render } from "../test/render";
+import { Image as ImageIcon } from "./icons";
 import { Box, Image } from "./index";
 
 describe("Image", () => {
@@ -35,5 +38,35 @@ describe("Image", () => {
 		expect(getComputedStyle(onItsWay as HTMLElement).animationName).toBe("monti-wait");
 		expect(getComputedStyle(onItsWay as HTMLElement).animationIterationCount).toBe("infinite");
 		expect(getComputedStyle(arrived as HTMLElement).animationName).toBe("none");
+	});
+
+	it("T136 a frame whose picture did not come shows the picture of the next address: the failure was that address's, not the frame's", async () => {
+		const canvas = document.createElement("canvas");
+		canvas.width = canvas.height = 4;
+		const good = canvas.toDataURL();
+		function Frame() {
+			const [src, setSrc] = useState("/no-picture-here.png");
+			return (
+				<Box width="sheet">
+					<Image src={src} alt="바뀐 그림" ratio="wide" fallback={ImageIcon} />
+					<button type="button" onClick={() => setSrc(good)}>
+						주소 바꾸기
+					</button>
+				</Box>
+			);
+		}
+		render(<Frame />);
+		const frame = () => document.querySelector<HTMLElement>("[data-slot=image]");
+		// The first address has no picture: the icon stands for it.
+		await expect.poll(() => frame()?.querySelector("svg")).not.toBeNull();
+		await userEvent.click(page.getByRole("button", { name: "주소 바꾸기" }));
+		await expect.element(page.getByRole("img", { name: "바뀐 그림" })).toBeVisible();
+		expect(frame()?.querySelector("svg")).toBeNull();
+	});
+
+	it("T136 the smallest thumb is 20px, a file's picture before its name in a field", async () => {
+		render(<Image alt="" size="thumb-sm" radius="sm" />);
+		const frame = () => document.querySelector<HTMLElement>("[data-slot=image]");
+		await expect.poll(() => [frame()?.offsetWidth, frame()?.offsetHeight]).toEqual([20, 20]);
 	});
 });

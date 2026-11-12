@@ -76,10 +76,11 @@ export const Contain: Story = {
 	),
 };
 
-/** The small sizes: a thumb, a large thumb, a list row's 40px. */
+/** The small sizes: a field's 20px, a thumb, a large thumb, a list row's 40px. */
 export const Sizes: Story = {
 	render: (args) => (
 		<Inline gap={12}>
+			<Image {...args} size="thumb-sm" radius="sm" />
 			<Image {...args} size="thumb" />
 			<Image {...args} size="thumb-lg" />
 			<Image {...args} size="row" ratio="photo" radius="sm" />

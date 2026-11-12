@@ -5,6 +5,7 @@ import { cn } from "./cn";
 import { FIELD_ACTION, FIELD_ACTION_BUTTON, FIELD_HOVER, FIELD_INSET } from "./hover";
 import { IconButton, IconButtonContext } from "./icon-button";
 import { Close, Image as ImageIcon } from "./icons";
+import { Image } from "./image";
 import { useProposalDescription } from "./proposal-cue";
 
 const HEIGHT = { sm: "h-monti-control-sm", md: "h-monti-control-md", default: "h-monti-control-lg" } as const;
@@ -62,11 +63,8 @@ function MediaInput({
 	);
 	const shown = value ? (
 		<>
-			{value.thumbnail ? (
-				<img src={value.thumbnail} alt="" className="size-5 shrink-0 rounded-monti-sm bg-monti-muted object-cover" />
-			) : (
-				<span className="size-5 shrink-0 rounded-monti-sm bg-monti-muted" aria-hidden />
-			)}
+			{/* The frame that waits for its picture; with no picture (a file) it is the same empty square, so names line up. */}
+			<Image src={value.thumbnail} alt="" size="thumb-sm" radius="sm" />
 			<span className="truncate">{value.name}</span>
 		</>
 	) : (

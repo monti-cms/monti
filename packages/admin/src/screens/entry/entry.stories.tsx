@@ -362,6 +362,42 @@ export const BrowserCopy: Story = {
 	},
 };
 
+/** The site of `site("draft")`, with what `entries.get` answers put in its place: no answer at all, or a refusal. */
+const withRead = (answer: "never" | "refused") => [
+	async (): Promise<Loaded> => {
+		const [load] = site("draft") as [() => Promise<Loaded>];
+		const loaded = await load();
+		const { transport } = loaded.site;
+		loaded.site.transport = async (name, input, options) => {
+			if (name !== "entries.get") return transport(name, input, options);
+			if (answer === "refused") return { status: 500, body: { error: "unexpected" } };
+			return new Promise(() => {});
+		};
+		return loaded;
+	},
+];
+
+/**
+ * Before the entry is read (T153): nothing of it is there to change. No title, no body, no properties, none of the head's controls of the entry and no status
+ * bar; the way back and the assistant stay.
+ */
+export const BeforeTheRead: Story = {
+	loaders: withRead("never"),
+	play: async ({ canvasElement }) => {
+		await within(canvasElement).findByRole("button", { name: "게시글" }, wait);
+	},
+};
+
+/** The entry could not be read: the banner says so and reads it again; the screen is otherwise as before the read. */
+export const ReadFailed: Story = {
+	loaders: withRead("refused"),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await page.findByText("글을 불러오지 못했습니다", {}, wait);
+		await expect(page.getByRole("button", { name: "다시 시도" })).toBeVisible();
+	},
+};
+
 /** Archived: off the site and read-only; the head has only "unarchive" (doc 02, decisions). */
 export const Archived: Story = {
 	loaders: site("archived"),

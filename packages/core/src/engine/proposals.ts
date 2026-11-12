@@ -595,7 +595,7 @@ export async function applyProposal(
 							? error instanceof CheckError || error instanceof ForbiddenError
 								? error.reason
 								: { key: `errors.${error.code}` }
-							: { key: "errors.unexpected", values: { message: String(error) } },
+							: { key: "errors.unexpectedWith", values: { message: String(error) } },
 					);
 			}
 			// Outside the write's own failures: nothing that goes wrong in telling of it turns an applied item into a failed one.
