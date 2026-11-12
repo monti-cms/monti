@@ -410,7 +410,7 @@ function FormatBar() {
 }
 
 /** The status bar of an entry with things to fix: unsaved changes, the to-do list open, spelling, the length. */
-function NotionStatusBar() {
+export function NotionStatusBar() {
 	return (
 		<StatusBar>
 			<StatusBarCell tone="warning">저장 전 변경사항</StatusBarCell>

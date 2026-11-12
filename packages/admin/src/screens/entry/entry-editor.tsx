@@ -1,4 +1,12 @@
-import { cleanMediaValue, type EntryState, type PublishTask, publicPath, type TrashedEntry } from "@monti-cms/core";
+import {
+	cleanMediaValue,
+	type EntryState,
+	notChosenFields,
+	type PublishTask,
+	publicPath,
+	storedFields,
+	type TrashedEntry,
+} from "@monti-cms/core";
 import {
 	Banner,
 	Box,
@@ -131,8 +139,18 @@ export function EntryEditor({
 	const { t, language, apiBase, templates: templatesOn } = useAdmin();
 	const languageName = useLanguageName();
 	const source = useMemo(() => ({ kind: "entry" as const, id }), [id]);
-	const editor = useEntryEditor(source);
 	const schema = useRead<SchemaRead>("schema.read");
+	const structure = schema.data?.schema;
+	// A translation's choice is its source's, which its own values do not hold: nothing of it is taken for another option's.
+	const sourceLocale = structure?.locales.source;
+	const notChosen = useCallback(
+		(values: Record<string, unknown>, locale: string) =>
+			structure && locale === sourceLocale
+				? notChosenFields(structure.collections[collection], values)
+				: new Set<string>(),
+		[structure, sourceLocale, collection],
+	);
+	const editor = useEntryEditor(source, notChosen);
 	const catalogs = useBodyCatalogs(collection);
 	const [panel, setPanel] = useState(true);
 	const [tab, setTab] = useState(0);
@@ -293,8 +311,10 @@ export function EntryEditor({
 		if (taskPlace(task) === "panel" && task.field) {
 			setPanel(true);
 			const layout = panelLayout(schema.data, collection, t("entry.defaultTab"));
+			// A field of a conditional field's option sits under that field, in its tab (doc 19).
+			const under = storedFields(schema.data?.schema.collections[collection])[task.field]?.under?.field ?? task.field;
 			const index = layout.findIndex((each) =>
-				each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(task.field ?? "")),
+				each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(under)),
 			);
 			if (index >= 0) setTab(index);
 			// A picture's words are written in its settings card, as a body's image has them (flow 1·12).

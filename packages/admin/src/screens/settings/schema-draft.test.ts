@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { schema } from "../story-schema";
-import { type SettingsRead, settingsVersion } from "./schema-draft";
+import { at, build, flatten, type SettingsRead, settingsVersion } from "./schema-draft";
 
 const read: SettingsRead = {
 	site: { name: "example.dev", writingStyle: "", version: 3 },
@@ -55,5 +55,80 @@ describe("the settings draft's version", () => {
 		expect(
 			settingsVersion({ ...read, schema: { ...schema, locales: { ...schema.locales, prefix: "always" } } }),
 		).not.toBe(base);
+	});
+});
+
+describe("a conditional field in the draft (doc 19)", () => {
+	const format = {
+		kind: "conditional" as const,
+		required: true,
+		options: ["article", "video", "link"],
+		fields: {
+			video: { videoUrl: { kind: "text" as const, required: true } },
+			link: { linkUrl: { kind: "text" as const } },
+		},
+	};
+	const post = schema.collections.post as NonNullable<typeof schema.collections.post>;
+	const withFormat: SettingsRead = {
+		...read,
+		schema: {
+			...schema,
+			collections: { ...schema.collections, post: { ...post, fields: { ...post.fields, format } } },
+		},
+	};
+	const base = flatten(withFormat, null);
+	const made = (mine: Record<string, unknown>) =>
+		build(withFormat, Object.keys(mine), (path) => (path in mine ? mine[path] : base[path]), null);
+
+	it("19-6 is held as its choice and, each on its own, the fields of its options; built again it is the schema it was", () => {
+		expect(base[at.field("post", "format")]).toEqual({ name: "format", def: { ...format, fields: {} } });
+		expect(base[at.field("post", "videoUrl")]).toEqual({
+			name: "videoUrl",
+			def: { kind: "text", required: true },
+			under: { field: "format", option: "video" },
+		});
+		expect(made({}).schema).toEqual(withFormat.schema);
+		expect(made({}).renames).toEqual([]);
+	});
+
+	it("19-6 a rule changed on the choice keeps the options' fields; a field added to an option joins it; a renamed one is a rename", () => {
+		const changed = made({
+			[at.field("post", "format")]: { name: "kind", def: { kind: "conditional", options: format.options, fields: {} } },
+			[at.field("post", "credit")]: {
+				name: "credit",
+				def: { kind: "text" },
+				under: { field: "format", option: "article" },
+			},
+			[at.field("post", "linkUrl")]: {
+				name: "href",
+				def: { kind: "text" },
+				under: { field: "format", option: "link" },
+			},
+		});
+		expect(changed.schema.collections.post?.fields.kind).toEqual({
+			kind: "conditional",
+			options: format.options,
+			fields: { article: { credit: { kind: "text" } }, video: format.fields.video, link: { href: { kind: "text" } } },
+		});
+		expect(changed.renames).toEqual([
+			{ collection: "post", from: "format", to: "kind" },
+			{ collection: "post", from: "linkUrl", to: "href" },
+		]);
+	});
+
+	it("19-6 an option taken out takes its fields out of the schema, and the layout never places an option's field", () => {
+		const changed = made({
+			[at.field("post", "format")]: { name: "format", def: { ...format, options: ["article", "link"], fields: {} } },
+			[at.collectionValue("post", "layout")]: [{ tab: "기본", fields: ["slug"] }],
+		});
+		expect(changed.schema.collections.post?.fields.format).toEqual({
+			...format,
+			options: ["article", "link"],
+			fields: { link: format.fields.link },
+		});
+		const placed = changed.adminValues.post?.layout?.flatMap((tab) => tab.fields);
+		expect(placed).toContain("format");
+		expect(placed).not.toContain("linkUrl");
+		expect(placed).not.toContain("videoUrl");
 	});
 });

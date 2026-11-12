@@ -19,14 +19,13 @@ type Db = Kysely<Database> | Transaction<Database>;
 // Zod shapes of the schema, for the operations' inputs (and so the agent's tools describe them).
 const LocaleMode = z.enum(["same", "perLocale", "fromSource"]);
 const FieldBase = { required: z.boolean().optional(), locale: LocaleMode.optional() };
-const Field = z.discriminatedUnion("kind", [
+const GroupFieldShapes = [
 	z.object({
 		kind: z.literal("text"),
 		...FieldBase,
 		multiline: z.boolean().optional(),
 		max: z.number().optional(),
 	}),
-	z.object({ kind: z.literal("slug"), ...FieldBase, from: z.string().optional() }),
 	z.object({ kind: z.literal("select"), ...FieldBase, options: z.array(z.string()), many: z.boolean().optional() }),
 	z.object({ kind: z.literal("media"), ...FieldBase, accept: z.enum(["image", "any"]).optional() }),
 	z.object({
@@ -37,6 +36,18 @@ const Field = z.discriminatedUnion("kind", [
 		createMissing: z.boolean().optional(),
 		ordered: z.boolean().optional(),
 		via: z.string().optional(),
+	}),
+] as const;
+const GroupField = z.discriminatedUnion("kind", [...GroupFieldShapes]);
+const Field = z.discriminatedUnion("kind", [
+	...GroupFieldShapes,
+	z.object({ kind: z.literal("slug"), ...FieldBase, from: z.string().optional() }),
+	// A choice with a group of fields for each option (doc 19).
+	z.object({
+		kind: z.literal("conditional"),
+		...FieldBase,
+		options: z.array(z.string()),
+		fields: z.record(z.string(), z.record(z.string(), GroupField)),
 	}),
 ]);
 export const LocalesInput = z.object({
@@ -57,12 +68,18 @@ export const CollectionsInput: z.ZodType<Schema["collections"]> = z.record(
 	]),
 );
 const SchemaInput: z.ZodType<Schema> = z.object({ locales: LocalesInput, collections: CollectionsInput });
-export const RenameInput = z.object({ collection: z.string(), from: z.string(), to: z.string() });
+export const RenameInput = z.object({
+	collection: z.string(),
+	from: z.string(),
+	to: z.string(),
+	of: z.string().optional(),
+});
 const Rename = RenameInput;
 const ChoiceInput = z.discriminatedUnion("do", [
 	z.object({ do: z.literal("renameField"), values: z.enum(["move", "empty"]) }),
 	z.object({ do: z.literal("removeField"), values: z.union([z.literal("clear"), z.object({ move: z.string() })]) }),
 	z.object({ do: z.literal("addRequiredField"), fill: z.unknown() }),
+	z.object({ do: z.literal("removeOption"), entries: z.union([z.literal("empty"), z.object({ change: z.string() })]) }),
 	z.object({ do: z.literal("removeCollection"), confirm: z.literal(true) }),
 	z.object({ do: z.literal("removeLocale"), confirm: z.literal(true) }),
 ]);
@@ -256,7 +273,7 @@ export const schemaOperations = [
 		name: "schema.plan",
 		kind: "read",
 		description:
-			"Compare a draft schema with the applied one: each change, how many entries it touches, and what the review must choose for changes that touch stored values. Renamed fields must be named in renames.",
+			"Compare a draft schema with the applied one: each change, how many entries it touches, and what the review must choose for changes that touch stored values. Renamed fields must be named in renames, and a renamed option of a select too (with of: the field): its stored word is rewritten.",
 		input: z.object({ draft: SchemaInput, renames: z.array(Rename).default([]) }),
 		async run(input, ctx) {
 			const state = await readSchemaState(ctx.db);

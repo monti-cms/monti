@@ -1,5 +1,5 @@
 import { isEmptyValue, sameJson } from "../json";
-import { localeModeOf, type Schema } from "../schema/define";
+import { localeModeOf, type Schema, storedFields } from "../schema/define";
 
 type Fields = { title: string; values: Record<string, unknown> };
 
@@ -21,7 +21,7 @@ export function writtenValue(fields: Fields, field: string): unknown {
 export function trackedFields(schema: Schema, collection: string): string[] {
 	const definition = schema.collections[collection];
 	if (definition?.kind !== "document") return [];
-	return Object.entries(definition.fields)
+	return Object.entries(storedFields(definition))
 		.filter(
 			([name, field]) => field.kind !== "slug" && field.kind !== "relation" && localeModeOf(name, field) !== "same",
 		)
