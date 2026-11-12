@@ -4,7 +4,7 @@ import {
 	ChangeDot,
 	DangerBlock,
 	FormField,
-	FormFieldDescription,
+	FormFieldError,
 	FormFieldLabel,
 	Grid,
 	Input,
@@ -169,7 +169,11 @@ export function BasicsTab({
 								draft.set(previewPlace, event.target.value.trim() === "" ? null : addressOf(event.target.value))
 							}
 						/>
-						<FormFieldDescription>{t("settings.basics.previewPathHint")}</FormFieldDescription>
+						{/* What leaving it empty does, only while it is empty (README principle 8); the line stays, so nothing moves when typed. */}
+						<FormFieldError
+							reserve
+							hint={typeof preview === "string" ? undefined : t("settings.basics.previewPathHint")}
+						/>
 					</FormField>
 				)}
 				{/* At the height of the inputs above it (36px): one group, one control height. */}

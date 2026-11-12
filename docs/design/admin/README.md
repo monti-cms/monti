@@ -88,7 +88,7 @@
 | 규칙: 부품을 언제 쓰는지, 어떻게 동작하는지, 어떤 상태가 있는지 | 이 문서 |
 | 토큰 값(이름, 밝은 테마와 어두운 테마) | `packages/ui/tokens/tokens.json`. `pnpm gen:tokens`가 이 파일에서 `packages/ui/styles/tokens.css`를 만든다. CSS는 손으로 고치지 않는다 |
 | 각 화면과 흐름이 어떻게 보이는지 | `packages/ui/src/screens/reference`의 시안 이야기(Storybook의 Screens/Reference). 캔버스는 흐름의 순서를 보는 곳이다 |
-| 부품을 어떻게 만드는지 | `packages/ui/src`와 그 스토리. 부품은 토큰 유틸리티로 스스로 스타일을 입힌다. `packages/ui/styles/admin.css`에는 문서 전체의 기본 규칙(포털로 띄운 팝업, 기본 테두리 색, 스크롤바)만 있다 |
+| 부품을 어떻게 만드는지 | `packages/ui/src`와 그 스토리. 부품은 토큰 유틸리티로 스스로 스타일을 입힌다. `packages/ui/styles/admin.css`에는 문서 전체의 기본 규칙(포털로 띄운 팝업, 기본 테두리 색, 스크롤바)만 있다. `packages/admin/styles/index.css`는 `@monti-cms/admin/styles.css`를 만드는 입구다(`scripts/build-styles.mjs`). 층 순서, `@import`, `@source` 줄만 있고 규칙은 하나도 없다 |
 
 규칙이 바뀌면 코드와 같은 풀 리퀘스트에서 이 문서와 시안 이야기를 고친다. claude.ai의 캔버스와 DS 아티팩트는 2026-11-05부터 따라 고치지 않는다(소유자). 그 페이지들은 원칙 7–10, 높이 · 모양 · 움직임 · 상태 · 글자 · 간격 기준, 알림 고르는 순서 이전의 모습이라, 모서리 · 고리 · 간격이 저장소와 다르면 저장소가 맞다.
 

@@ -20,8 +20,10 @@ describe("collection public pages", () => {
 });
 
 describe("a collection's preview address", () => {
-	const { Basics, ReadOnlyBasics } = composeStories(collections);
+	const { Basics, ReadOnlyBasics, PreviewAddress, PreviewAddressReview, ReadOnlyPreviewAddress } =
+		composeStories(collections);
 	const field = () => page.getByRole("textbox", { name: "미리보기 주소" });
+	const hint = () => page.getByText("비워 두면 공개 주소에서 미리봅니다.");
 	/** "변경 사항 n ▾": there only while something is changed. */
 	const changes = () => page.getByRole("button", { name: "변경 사항", exact: true });
 
@@ -31,9 +33,15 @@ describe("a collection's preview address", () => {
 		}>(collections.Basics, collections.default);
 		await story.run();
 		await expect.element(field()).toHaveValue("");
+		// What leaving it empty does is said only while it is empty, and its line stays: what is under the field does not move.
+		await expect.element(hint()).toBeVisible();
+		const under = () => Math.round(page.getByText("폴더 사용").element().getBoundingClientRect().top);
+		const before = under();
 		await userEvent.click(field());
 		await userEvent.keyboard("preview");
 		await expect.element(changes()).toHaveTextContent(/1/);
+		await expect.element(hint()).not.toBeInTheDocument();
+		expect(under()).toBe(before);
 		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
 		const review = page.getByRole("dialog");
 		await expect.element(review.getByText("게시글 · 미리보기 주소")).toBeVisible();
@@ -71,6 +79,18 @@ describe("a collection's preview address", () => {
 		await ReadOnlyBasics.run();
 		await expect.element(page.getByText("공개 주소에서")).toBeVisible();
 		await expect.element(field()).not.toBeInTheDocument();
+	});
+
+	it("16-9 the live site with a preview address reads the address, and the typed address and its review are drawn", async () => {
+		await ReadOnlyPreviewAddress.run();
+		await expect.element(page.getByText("/preview/:slug")).toBeVisible();
+		await expect.element(page.getByText("공개 주소에서")).not.toBeInTheDocument();
+		await expect.element(field()).not.toBeInTheDocument();
+		await PreviewAddress.run();
+		await expect.element(field()).toHaveValue("preview");
+		await expect.element(page.getByRole("button", { name: "되돌리기", exact: true })).toBeVisible();
+		await PreviewAddressReview.run();
+		await expect.element(page.getByRole("dialog").getByText("/preview/:slug")).toBeVisible();
 	});
 });
 
