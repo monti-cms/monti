@@ -19,7 +19,8 @@ function Banner({
 	children,
 	...props
 }: Omit<React.ComponentProps<"div">, "title"> & {
-	title?: React.ReactNode;
+	/** The sentence. A banner always has one. */
+	title: React.ReactNode;
 	meta?: React.ReactNode;
 	/** The detail is a plain sentence in the subtle ink, not a small mono one (a date, a count). On by default for `neutral`. */
 	plainMeta?: boolean;
