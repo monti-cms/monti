@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { test as base, expect, type Locator, type Page } from "@playwright/test";
-import { ADMIN } from "./account";
+import { ADMIN } from "./servers";
 
 type Written<Output> = { output: Output };
 

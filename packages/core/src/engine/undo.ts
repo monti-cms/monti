@@ -1,8 +1,9 @@
 import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/schema";
+import { publicPaths } from "../entries/paths";
 import { ForbiddenError } from "../errors";
 import { leaveNoFileInAGoneFolder, rewriteUses } from "../media/uses";
-import { type RecordRef, recordKey } from "../operation";
+import { type MontiEvent, type RecordRef, recordKey } from "../operation";
 import { type Engine, loadRecords } from "./execute";
 
 export type UndoPlan = {
@@ -49,7 +50,7 @@ export async function planUndo(
 }
 
 /** Puts back the records the write changed, except those changed since, and marks the write undone. */
-export async function undo(
+async function undo(
 	engine: Engine,
 	trx: Kysely<Database> | Transaction<Database>,
 	activityId: string,
@@ -71,5 +72,75 @@ export async function undo(
 		...moved.map(({ id }) => id),
 	]);
 	await trx.updateTable("monti_activity").set({ undone_at: engine.now() }).where("id", "=", activityId).execute();
+	return plan;
+}
+
+type Db = Kysely<Database> | Transaction<Database>;
+
+/** What the site shows of entries and files now: an entry's published copy while it is out of the trash, and whether a file is in the library. */
+async function shownNow(db: Db, refs: RecordRef[]) {
+	const ids = (kind: string) => refs.filter((ref) => ref.kind === kind).map((ref) => ref.id);
+	const entries = ids("entry");
+	const media = ids("media");
+	const copies =
+		entries.length === 0
+			? []
+			: await db
+					.selectFrom("entry_published as p")
+					.innerJoin("entries as e", "e.id", "p.entry_id")
+					.select(["p.entry_id", "p.collection", "p.locale", "p.slug", "p.from_version", "p.published_at"])
+					.where("p.entry_id", "in", entries)
+					.where("e.trashed_at", "is", null)
+					.execute();
+	const files =
+		media.length === 0
+			? []
+			: await db.selectFrom("media").select("id").where("id", "in", media).where("trashed_at", "is", null).execute();
+	return {
+		entries: new Map(copies.map((copy) => [copy.entry_id, copy])),
+		files: new Set(files.map((file) => file.id)),
+	};
+}
+
+/**
+ * The events of an undo that changes what the site shows (doc 13, T29): an entry back on the site or off it, a published copy put back as it was
+ * before, a file back in the library or out of it. An undo that only changes working copies emits nothing: no visitor sees a difference.
+ */
+export async function undoWithEvents(
+	engine: Engine,
+	trx: Db,
+	activityId: string,
+	emit: (event: MontiEvent) => void,
+): Promise<UndoPlan> {
+	const refs = (await planUndo(engine, trx, activityId)).restore;
+	const before = await shownNow(trx, refs);
+	const plan = await undo(engine, trx, activityId);
+	const after = await shownNow(trx, refs);
+	const schema = engine.site.schema();
+	for (const ref of refs.filter((each) => each.kind === "entry")) {
+		const [was, is] = [before.entries.get(ref.id), after.entries.get(ref.id)];
+		if (!was && !is) continue;
+		const same =
+			was &&
+			is &&
+			was.slug === is.slug &&
+			was.from_version === is.from_version &&
+			+was.published_at === +is.published_at;
+		if (same) continue;
+		const shown = is ?? was;
+		if (!shown) continue;
+		emit({
+			type: is ? "entry.published" : "entry.unpublished",
+			ids: [ref.id],
+			collection: shown.collection,
+			locale: shown.locale,
+			paths: publicPaths(schema, shown.collection, shown.locale, [is?.slug, was?.slug]),
+		});
+	}
+	const files = refs.filter((each) => each.kind === "media").map((each) => each.id);
+	const back = files.filter((id) => !before.files.has(id) && after.files.has(id));
+	const gone = files.filter((id) => before.files.has(id) && !after.files.has(id));
+	if (back.length > 0) emit({ type: "media.restored", ids: back });
+	if (gone.length > 0) emit({ type: "media.trashed", ids: gone });
 	return plan;
 }

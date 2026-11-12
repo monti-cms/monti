@@ -14,7 +14,7 @@ import { revalidatePath } from "next/cache";
 export type MontiSite = { monti: Monti; reader: SiteReader };
 
 /** What the site shows changed: an entry went on or off it, or a file it shows did. A save alone changes nothing a visitor sees. */
-const SHOWN = new Set(["entry.published", "entry.unpublished", "media.trashed", "media.restored"]);
+const SHOWN = new Set(["entry.published", "entry.unpublished", "media.replaced", "media.trashed", "media.restored"]);
 
 /**
  * Refreshes the site's cached pages after a change the site shows (doc 16). The whole site, not only the event's `paths`: another page may show

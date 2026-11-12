@@ -2,8 +2,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Page } from "@playwright/test";
 import { test as raw } from "@playwright/test";
-import { ADMIN } from "./account";
 import { decoded, dropFromDisk, expect, operation, pastePicture, picture, test, unique } from "./fixtures";
+import { ADMIN, BARE } from "./servers";
 
 const main = (page: Page) => page.getByRole("main");
 const tile = (page: Page, name: string) =>
@@ -26,7 +26,7 @@ async function writing(page: Page, more: Record<string, unknown> = {}) {
 		},
 		...more,
 	});
-	await page.goto(`/#/c/post/${made.output.id}`);
+	await page.goto(`/admin#/c/post/${made.output.id}`);
 	await expect(body(page)).toBeVisible();
 	return { id: made.output.id, slug };
 }
@@ -60,7 +60,7 @@ test.describe("the library", () => {
 		admin,
 	}, info) => {
 		const file = await picture(admin, info.outputDir, `${unique("desk")}.jpg`, { width: 4032, height: 2688 });
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		const name = file.split("/").at(-1) ?? "";
 		await dropFromDisk(admin, [file], main(admin));
@@ -83,13 +83,13 @@ test.describe("the library", () => {
 			await picture(admin, info.outputDir, `${unique("used")}.jpg`),
 		];
 		const [freeName, usedName] = [freeFile.split("/").at(-1) ?? "", usedFile.split("/").at(-1) ?? ""];
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await dropFromDisk(admin, [freeFile, usedFile], main(admin));
 		await expect(tile(admin, freeName)).toBeVisible();
 		await expect(tile(admin, usedName)).toBeVisible();
 		const used = await uploadedId(admin, usedName);
 		const post = await writing(admin, { values: { cover: { media: used, alt: "표지" } } });
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await admin.getByRole("checkbox", { name: `${freeName} 고르기` }).check({ force: true });
 		await admin.getByRole("checkbox", { name: `${usedName} 고르기` }).check({ force: true });
 		await main(admin).getByRole("button", { name: "휴지통으로" }).click();
@@ -105,12 +105,12 @@ test.describe("the library", () => {
 		admin,
 	}, info) => {
 		const first = await picture(admin, info.outputDir, `${unique("first")}.jpg`, { width: 300, height: 200 });
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await dropFromDisk(admin, [first], main(admin));
 		const id = await uploadedId(admin, path.basename(first));
 		const second = await picture(admin, info.outputDir, `${unique("second")}.jpg`, { width: 500, height: 400 });
-		await admin.goto(`/#/media?file=${id}`);
+		await admin.goto(`/admin#/media?file=${id}`);
 		await admin.getByRole("complementary").getByRole("button", { name: "더 보기" }).click();
 		const chooser = admin.waitForEvent("filechooser");
 		await admin.getByRole("menuitem", { name: "파일 바꾸기" }).click();
@@ -128,7 +128,7 @@ test.describe("the library", () => {
 	}, info) => {
 		const first = await picture(admin, info.outputDir, `${unique("first")}.jpg`, { width: 300, height: 200 });
 		const name = first.split("/").at(-1) ?? "";
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await dropFromDisk(admin, [first], main(admin));
 		await expect(tile(admin, name)).toBeVisible();
 		const id = await uploadedId(admin, name);
@@ -138,11 +138,11 @@ test.describe("the library", () => {
 		});
 		await operation(admin, "entries.publish", { ids: [post.id] });
 		const site = await admin.context().newPage();
-		await site.goto(`/site/post/${post.slug}`);
+		await site.goto(`/posts/${post.slug}`);
 		const before = await site.getByRole("img").getAttribute("src");
 
 		const second = await picture(admin, info.outputDir, `${unique("second")}.jpg`, { width: 500, height: 400 });
-		await admin.goto(`/#/media?file=${id}`);
+		await admin.goto(`/admin#/media?file=${id}`);
 		const panel = admin.getByRole("complementary");
 		await panel.getByRole("button", { name: "더 보기" }).click();
 		const chooser = admin.waitForEvent("filechooser");
@@ -163,7 +163,7 @@ test.describe("the library", () => {
 	test("09-1 a type the library does not take is refused at once, as is one too big, and neither takes a place; a disguised file is refused at the server", async ({
 		admin,
 	}, info) => {
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await mkdir(info.outputDir, { recursive: true });
 		const exe = `${info.outputDir}/setup.exe`;
@@ -283,7 +283,7 @@ test.describe("the editor", () => {
 		await expect(admin.getByRole("button", { name: "발행하기" })).toBeHidden({ timeout: 15_000 });
 
 		const site = await admin.context().newPage();
-		await site.goto(`/site/post/${post.slug}`);
+		await site.goto(`/posts/${post.slug}`);
 		const image = site.getByRole("img");
 		await expect(image).toHaveAttribute("alt", "A desk in the morning");
 		// Its own size, so the page keeps its place before it comes (doc 09).
@@ -333,7 +333,7 @@ test.describe("the editor", () => {
 raw.describe("a session that ends", () => {
 	test("09-1 a file going up with no session stays to try again, and the admin says so", async ({ admin }, info) => {
 		const file = await picture(admin, info.outputDir, `${unique("session")}.jpg`);
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await admin.context().clearCookies();
 		await dropFromDisk(admin, [file], main(admin));
@@ -351,7 +351,7 @@ raw.describe("a session that ends", () => {
 	});
 });
 
-const bare = "http://localhost:4174";
+const bare = BARE;
 
 test("09-1 a site with no storage: two lines and the way to connect, no upload, and no image row in the '/' menu", async ({
 	browser,
@@ -362,7 +362,7 @@ test("09-1 a site with no storage: two lines and the way to connect, no upload, 
 		data: { input: { email: ADMIN.email, password: ADMIN.password } },
 	});
 	expect(signedIn.status()).toBe(200);
-	await page.goto("/#/media");
+	await page.goto("/admin#/media");
 	await expect(main(page).getByText("미디어 저장소가 없습니다")).toBeVisible();
 	await expect(main(page).getByRole("link", { name: "연결 방법" })).toBeVisible();
 	await expect(main(page).getByRole("button", { name: "올리기" })).toBeHidden();
@@ -432,7 +432,7 @@ test.describe("a cover and what goes up for it", () => {
 		admin,
 	}, info) => {
 		const kept = await picture(admin, info.outputDir, `${unique("kept")}.jpg`);
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await dropFromDisk(admin, [kept], main(admin));
 		const name = path.basename(kept);
@@ -472,7 +472,7 @@ test.describe("a cover and what goes up for it", () => {
 		admin,
 	}, info) => {
 		const kept = await picture(admin, info.outputDir, `${unique("kept")}.jpg`);
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await dropFromDisk(admin, [kept], main(admin));
 		const name = path.basename(kept);
@@ -647,7 +647,7 @@ test.describe("a cover and what goes up for it", () => {
 
 	test("09-3 a file picked while another goes up is the one that stays", async ({ admin }, info) => {
 		const kept = await picture(admin, info.outputDir, `${unique("kept")}.jpg`);
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await dropFromDisk(admin, [kept], main(admin));
 		const name = path.basename(kept);
@@ -676,7 +676,7 @@ test.describe("a translation's cover", () => {
 	}, info) => {
 		const file = await picture(admin, info.outputDir, `${unique("cover")}.jpg`);
 		const name = file.split("/").at(-1) ?? "";
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await dropFromDisk(admin, [file], main(admin));
 		await uploadedId(admin, name);
@@ -755,7 +755,7 @@ test.describe("a translation's cover", () => {
 test.describe("while a file is on its way", () => {
 	test("09-1 leaving the library says the file stops; staying keeps it going", async ({ admin }, info) => {
 		const file = await picture(admin, info.outputDir, `${unique("held")}.jpg`);
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		let release = () => {};
 		const released = new Promise<void>((done) => {
@@ -781,7 +781,7 @@ test.describe("while a file is on its way", () => {
 	test("09-1 a file's use row leaves the screen too, so it asks first", async ({ admin }, info) => {
 		const used = await picture(admin, info.outputDir, `${unique("used")}.jpg`);
 		const held = await picture(admin, info.outputDir, `${unique("held")}.jpg`);
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await dropFromDisk(admin, [used], main(admin));
 		const id = await uploadedId(admin, path.basename(used));
@@ -792,7 +792,7 @@ test.describe("while a file is on its way", () => {
 			slug: unique("use"),
 			doc: { type: "doc", blocks: [{ id: "i1", type: "image", attrs: { media: id, alt: "그림" } }] },
 		});
-		await admin.goto(`/#/media?file=${id}`);
+		await admin.goto(`/admin#/media?file=${id}`);
 		const panel = admin.getByRole("complementary");
 		await expect(panel.getByRole("link", { name: /쓰는 글/ })).toBeVisible();
 		await admin.route("**/media/bytes*", () => {});
@@ -811,7 +811,7 @@ test.describe("while a file is on its way", () => {
 		const post = await writing(admin);
 		await operation(admin, "entries.publish", { ids: [post.id] });
 		const made = await operation<{ id: string }>(admin, "translations.create", { source: post.id, locale: "en" });
-		await admin.goto(`/#/c/post/${made.output.id}`);
+		await admin.goto(`/admin#/c/post/${made.output.id}`);
 		await expect(body(admin)).toBeVisible();
 		await admin.getByRole("textbox", { name: "제목" }).fill("A post");
 		await admin.route("**/media/bytes*", () => {});
@@ -830,7 +830,7 @@ test.describe("while a file is on its way", () => {
 	test("09-1 leaving anyway stops the file: the library never gets it", async ({ admin }, info) => {
 		const file = await picture(admin, info.outputDir, `${unique("stopped")}.jpg`);
 		const name = file.split("/").at(-1) ?? "";
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		let release = () => {};
 		const released = new Promise<void>((done) => {
@@ -847,7 +847,7 @@ test.describe("while a file is on its way", () => {
 		await expect(admin.getByRole("alertdialog")).toBeHidden();
 		await expect(main(admin).getByRole("heading", { level: 1, name: "memo" })).toBeVisible();
 		release();
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await expect(main(admin).getByText(name)).toBeHidden();
 		const answer = await admin.request.post("/admin/api/operations/media.query", { data: { input: { search: name } } });
@@ -859,7 +859,7 @@ test.describe("while a file is on its way", () => {
 	}, info) => {
 		const file = await picture(admin, info.outputDir, `${unique("cut")}.jpg`);
 		const ready = await picture(admin, info.outputDir, `${unique("ready")}.jpg`);
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await dropFromDisk(admin, [ready], main(admin));
 		await uploadedId(admin, path.basename(ready));
@@ -888,7 +888,7 @@ test.describe("while a file is on its way", () => {
 		const [again, gone] = await Promise.all(
 			["again", "gone"].map((name) => picture(admin, info.outputDir, `${unique(name)}.jpg`)),
 		);
-		await admin.goto("/#/media?view=list");
+		await admin.goto("/admin#/media?view=list");
 		await expect(main(admin).getByRole("table")).toBeVisible();
 		await admin.route("**/operations/media.upload", (route) => route.abort());
 		await dropFromDisk(admin, [again as string, gone as string], main(admin));
@@ -915,7 +915,7 @@ test.describe("while a file is on its way", () => {
 
 	test("09-1 a file cut off can be deleted from its tile, and the library never had it", async ({ admin }, info) => {
 		const file = await picture(admin, info.outputDir, `${unique("gone")}.jpg`);
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		await admin.route("**/operations/media.upload", (route) => route.abort());
 		await dropFromDisk(admin, [file], main(admin));
@@ -987,11 +987,11 @@ test.describe("while a file is on its way", () => {
 	}, info) => {
 		const first = await picture(admin, info.outputDir, `${unique("mine")}.jpg`);
 		const name = first.split("/").at(-1) ?? "";
-		await admin.goto("/#/media");
+		await admin.goto("/admin#/media");
 		await dropFromDisk(admin, [first], main(admin));
 		await expect(tile(admin, name)).toBeVisible();
 		const id = await uploadedId(admin, name);
-		await admin.goto(`/#/media?file=${id}`);
+		await admin.goto(`/admin#/media?file=${id}`);
 		const panel = admin.getByRole("complementary");
 		await panel.getByRole("textbox", { name: "파일 이름" }).fill("mine");
 		await operation(admin, "media.update", { id, name: "theirs" });

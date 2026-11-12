@@ -28,13 +28,13 @@ const day = (date: Date | null, locale: string) =>
 export async function Home({ locale }: { locale: string }) {
 	const { entries } = await reader.page({ collection: "post", locale, limit: 5 });
 	return (
-		<main>
+		<>
 			<h1>Monti 블로그</h1>
 			<PostRows entries={entries} locale={locale} />
 			<p>
 				<Link href={locale === reader.locales().source ? "/posts" : `/${locale}/posts`}>모든 글</Link>
 			</p>
-		</main>
+		</>
 	);
 }
 
@@ -55,10 +55,10 @@ function PostRows({ entries, locale }: { entries: Awaited<ReturnType<typeof read
 /** Every post, newest first. */
 export async function Posts({ locale }: { locale: string }) {
 	return (
-		<main>
+		<>
 			<h1>글</h1>
 			<PostRows entries={await reader.entries({ collection: "post", locale })} locale={locale} />
-		</main>
+		</>
 	);
 }
 
@@ -77,33 +77,31 @@ export async function Entry({
 	const toc = entry.doc ? tocOf(entry.doc) : [];
 	const category = entry.relations?.category;
 	return (
-		<main>
-			<article>
-				<h1>{entry.title}</h1>
-				<p className="meta">
-					<time>{day(entry.publishedAt, locale)}</time>
-					{category && !Array.isArray(category) ? (
-						<Link href={`${locale === reader.locales().source ? "" : `/${locale}`}/categories/${category.slug}`}>
-							{category.title}
-						</Link>
-					) : null}
-				</p>
-				{toc.length > 0 ? (
-					<nav aria-label="목차" className="toc">
-						<ol>
-							{toc.map((item) => (
-								<li key={item.id} data-depth={item.depth}>
-									<a href={`#${item.id}`}>{item.text}</a>
-								</li>
-							))}
-						</ol>
-					</nav>
+		<article>
+			<h1>{entry.title}</h1>
+			<p className="meta">
+				<time>{day(entry.publishedAt, locale)}</time>
+				{category && !Array.isArray(category) ? (
+					<Link href={`${locale === reader.locales().source ? "" : `/${locale}`}/categories/${category.slug}`}>
+						{category.title}
+					</Link>
 				) : null}
-				{entry.doc
-					? renderDocument(entry.doc, { createElement: h, media: entry.media, entryPath: entry.entryPath })
-					: null}
-			</article>
-		</main>
+			</p>
+			{toc.length > 0 ? (
+				<nav aria-label="목차" className="toc">
+					<ol>
+						{toc.map((item) => (
+							<li key={item.id} data-depth={item.depth}>
+								<a href={`#${item.id}`}>{item.text}</a>
+							</li>
+						))}
+					</ol>
+				</nav>
+			) : null}
+			{entry.doc
+				? renderDocument(entry.doc, { createElement: h, media: entry.media, entryPath: entry.entryPath })
+				: null}
+		</article>
 	);
 }
 
@@ -115,9 +113,9 @@ export async function Category({ slug, locale }: { slug: string; locale: string 
 		return of && !Array.isArray(of) && of.id === category.id;
 	});
 	return (
-		<main>
+		<>
 			<h1>{category.title}</h1>
 			<PostRows entries={posts} locale={locale} />
-		</main>
+		</>
 	);
 }

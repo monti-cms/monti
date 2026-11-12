@@ -9,7 +9,7 @@ const rowMenu = async (page: Page, title: string) => {
 	return page.getByRole("menu");
 };
 const toast = (page: Page, text: string) => page.getByRole("listitem").filter({ hasText: text }).first();
-const onSite = async (page: Page, slug: string) => (await page.request.get(`/site/post/${slug}`)).status();
+const onSite = async (page: Page, slug: string) => (await page.request.get(`/posts/${slug}`)).status();
 
 /** A published post with a title no other test has. */
 async function published(page: Page, word: string) {
@@ -31,7 +31,7 @@ test.describe("the trash", () => {
 	}) => {
 		const post = await published(admin, "trash");
 		expect(await onSite(admin, post.slug)).toBe(200);
-		await admin.goto(`/#/c/post?q=${encodeURIComponent(post.slug)}`);
+		await admin.goto(`/admin#/c/post?q=${encodeURIComponent(post.slug)}`);
 		await (await rowMenu(admin, post.title)).getByRole("menuitem", { name: /휴지통으로/ }).click();
 		const question = admin.getByRole("alertdialog");
 		await expect(question).toContainText(`‘${post.title}’의 공개가 끝납니다.`);
@@ -40,7 +40,7 @@ test.describe("the trash", () => {
 		await expect(row(admin, post.title)).toBeHidden();
 		expect(await onSite(admin, post.slug)).toBe(404);
 
-		await admin.goto(`/#/trash?q=${encodeURIComponent(post.slug)}`);
+		await admin.goto(`/admin#/trash?q=${encodeURIComponent(post.slug)}`);
 		await (await rowMenu(admin, post.title)).getByRole("menuitem", { name: "복원" }).click();
 		await toast(admin, "초안으로 복원했습니다").getByRole("button", { name: "열기" }).click();
 		await expect(admin.getByRole("textbox", { name: "제목" })).toHaveValue(post.title);
@@ -52,7 +52,7 @@ test.describe("the trash", () => {
 
 	test("11-2 the toast takes a thrown-away post back as it was: still on the site", async ({ admin }) => {
 		const post = await published(admin, "undo");
-		await admin.goto(`/#/c/post?q=${encodeURIComponent(post.slug)}`);
+		await admin.goto(`/admin#/c/post?q=${encodeURIComponent(post.slug)}`);
 		await (await rowMenu(admin, post.title)).getByRole("menuitem", { name: /휴지통으로/ }).click();
 		await admin.getByRole("alertdialog").getByRole("button", { name: "휴지통으로" }).click();
 		await expect.poll(() => onSite(admin, post.slug)).toBe(404);
@@ -66,7 +66,7 @@ test.describe("the trash", () => {
 	}) => {
 		const post = await published(admin, "purge");
 		await operation(admin, "trash.move", { rows: [{ kind: "entry", id: post.id }] });
-		await admin.goto(`/#/c/post/${post.id}`);
+		await admin.goto(`/admin#/c/post/${post.id}`);
 		await expect(admin.getByText("휴지통에 있는 글입니다")).toBeVisible();
 		await expect(admin.getByText("30일 남음")).toBeVisible();
 		await admin.getByRole("button", { name: "더 보기" }).click();

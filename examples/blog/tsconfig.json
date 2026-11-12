@@ -22,6 +22,18 @@
 		},
 		"allowJs": true
 	},
-	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
+	"include": [
+		"next-env.d.ts",
+		"**/*.ts",
+		"**/*.tsx",
+		".next/types/**/*.ts",
+		".next/dev/types/**/*.ts",
+		".next-e2e-4173/types/**/*.ts",
+		".next-e2e-4173/dev/types/**/*.ts",
+		".next-e2e-4175/types/**/*.ts",
+		".next-e2e-4175/dev/types/**/*.ts",
+		".next-monti_try/types/**/*.ts",
+		".next-monti_try/dev/types/**/*.ts"
+	],
 	"exclude": ["node_modules"]
 }

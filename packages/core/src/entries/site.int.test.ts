@@ -126,6 +126,47 @@ describe("an event's paths are public addresses, whatever made it", () => {
 	});
 });
 
+describe("an undo that changes what the site shows says so", () => {
+	type Activity = { activityId: string };
+	const act = async (name: string, input: unknown) =>
+		(await site().run(name, input, { actor: "admin" })) as Activity & Written<{ id: string }>;
+	const undo = (activityId: string) => write("activity.undo", { id: activityId });
+	const shown = () => sent.filter((event) => event.type !== "entry.saved").map((event) => [event.type, event.paths]);
+
+	it("02-7 T29 undoing a first publish takes the entry off the site; undoing a later one puts the copy before it back", async () => {
+		const { id } = await write("entries.create", { collection: "post", locale: "ko", title: "글", slug: "undo-me" });
+		const first = await act("entries.publish", { ids: [id] });
+		sent = [];
+		await undo(first.activityId);
+		expect(shown()).toEqual([["entry.unpublished", ["/posts/undo-me"]]]);
+		expect(await reader().entry({ collection: "post", locale: "ko", slug: "undo-me" })).toBeNull();
+
+		await write("entries.publish", { ids: [id] });
+		await write("entries.save", { id, version: await versionOf(id), title: "글 고침", slug: "undo-me-2" });
+		const again = await act("entries.publish", { ids: [id] });
+		sent = [];
+		await undo(again.activityId);
+		// The copy before is back at its own address, and the address the undone publish gave is no longer the entry's.
+		expect(shown()).toEqual([["entry.published", ["/posts/undo-me", "/posts/undo-me-2"]]]);
+		const back = await reader().entry({ collection: "post", locale: "ko", slug: "undo-me" });
+		expect(back && "entry" in back && back.entry.title).toBe("글");
+	});
+
+	it("02-7 T29 undoing a move to the trash puts a published entry back on the site; undoing a save alone says nothing", async () => {
+		const id = await post("나온 글", "kept");
+		const saved = await act("entries.save", { id, version: await versionOf(id), title: "쓰는 중" });
+		sent = [];
+		await undo(saved.activityId);
+		expect(shown()).toEqual([]);
+		const thrown = await act("trash.move", { rows: [{ kind: "entry", id }] });
+		expect(await reader().entry({ collection: "post", locale: "ko", slug: "kept" })).toBeNull();
+		sent = [];
+		await undo(thrown.activityId);
+		expect(shown()).toEqual([["entry.published", ["/posts/kept"]]]);
+		expect(await reader().entry({ collection: "post", locale: "ko", slug: "kept" })).not.toBeNull();
+	});
+});
+
 describe("what the site reads", () => {
 	it("16-7 an entry comes with its public address; an old address answers with the new one, and a language with no translation is not there", async () => {
 		const id = await post("안녕", "hello");

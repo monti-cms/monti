@@ -614,3 +614,26 @@ describe("the trash", () => {
 		expect(await names({})).toEqual(["free.jpg"]);
 	});
 });
+
+describe("a replaced file and the site", () => {
+	it("16-3 replacing a file says so, so a site that keeps its pages draws them again; uploading one does not", async () => {
+		const sent: string[] = [];
+		const monti = createMonti({
+			db,
+			schema,
+			plugins: [definePlugin({ name: "files", storage })],
+			receivers: [{ destination: "test", send: async (event) => void sent.push(`${event.type} ${event.ids.join()}`) }],
+		});
+		const made = (await monti.run(
+			"media.upload",
+			{ name: "a.jpg", original: { key: await bytes(), ...SIZE } },
+			{ actor: "admin" },
+		)) as { output: MediaItem };
+		await monti.run(
+			"media.replace",
+			{ id: made.output.id, original: { key: await bytes(), ...SIZE } },
+			{ actor: "admin" },
+		);
+		expect(sent).toEqual([`media.uploaded ${made.output.id}`, `media.replaced ${made.output.id}`]);
+	});
+});

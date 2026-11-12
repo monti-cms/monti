@@ -266,10 +266,10 @@ describe("the site's cache and which server this is", () => {
 	it("16-3 a change the site shows refreshes every cached page; a save alone refreshes nothing", async () => {
 		const event = (type: string): MontiEvent => ({ type, ids: ["e1"] });
 		expect(
-			["entry.published", "entry.unpublished", "media.trashed", "media.restored"].map((type) =>
+			["entry.published", "entry.unpublished", "media.replaced", "media.trashed", "media.restored"].map((type) =>
 				cacheReceiver.accepts?.(event(type)),
 			),
-		).toEqual([true, true, true, true]);
+		).toEqual([true, true, true, true, true]);
 		expect(["entry.saved", "media.uploaded"].map((type) => cacheReceiver.accepts?.(event(type)))).toEqual([
 			false,
 			false,

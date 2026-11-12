@@ -1,5 +1,8 @@
-/* The example site's looks: enough to read. The admin brings its own stylesheet, and neither touches the other. */
-main {
+/*
+ * The example site's looks: enough to read. Every rule sits under `.site` (the site's own layout): a bare `main { … }` would reach the admin's
+ * page too, which is a page of this same app. The admin brings its own stylesheet, which touches nothing outside the admin.
+ */
+.site {
 	max-width: 680px;
 	margin: 0 auto;
 	padding: 48px 20px 96px;
@@ -8,63 +11,63 @@ main {
 		sans-serif;
 	color: #1c1b19;
 }
-main h1 {
+.site h1 {
 	font-size: 32px;
 	line-height: 1.3;
 	margin: 0 0 16px;
 }
-main a {
+.site a {
 	color: inherit;
 }
-main img {
+.site img {
 	border-radius: 6px;
 }
-main pre {
+.site pre {
 	overflow-x: auto;
 	padding: 12px 16px;
 	border-radius: 6px;
 	background: #f1efe9;
 	font-size: 14px;
 }
-main table {
+.site table {
 	border-collapse: collapse;
 	width: 100%;
 }
-main th,
-main td {
+.site th,
+.site td {
 	border: 1px solid #dcd8cf;
 	padding: 6px 10px;
 	text-align: left;
 }
-.meta {
+.site .meta {
 	display: flex;
 	gap: 12px;
 	color: #6f6b62;
 	font-size: 14px;
 }
-.rows {
+.site .rows {
 	list-style: none;
 	padding: 0;
 }
-.rows li {
+.site .rows li {
 	display: flex;
 	justify-content: space-between;
 	gap: 16px;
 	padding: 8px 0;
 	border-bottom: 1px solid #eae7e0;
 }
-.rows time {
+.site .rows time {
 	color: #6f6b62;
 	font-size: 14px;
 	white-space: nowrap;
 }
-.toc ol {
+.site .toc ol {
 	list-style: none;
 	padding: 12px 16px;
 	border-radius: 6px;
 	background: #f6f4ee;
 	font-size: 15px;
 }
-.toc li[data-depth="1"] {
+.site .toc li[data-depth="1"] {
 	padding-left: 16px;
 }

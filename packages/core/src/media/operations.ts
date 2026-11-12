@@ -441,6 +441,8 @@ export const mediaOperations = [
 				}))
 				.where("id", "=", input.id)
 				.execute();
+			// Every page that shows the file shows another picture now.
+			ctx.emit({ type: "media.replaced", ids: [input.id] });
 			return liveItem(ctx, input.id);
 		},
 		summary: (_input, output) => ({ key: "media.replace", values: { name: output.name } }),

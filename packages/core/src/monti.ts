@@ -7,7 +7,7 @@ import type { Database } from "./db/schema";
 import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
 import { type Engine, type RunOptions, runRead, runWrite } from "./engine/execute";
 import { type ApplyResult, applyProposal, createProposal, proposeItem, settleProposal } from "./engine/proposals";
-import { planUndo, undo } from "./engine/undo";
+import { planUndo, undoWithEvents } from "./engine/undo";
 import { listOperations } from "./entries/list";
 import { entryOperations } from "./entries/operations";
 import { entryRecord } from "./entries/record";
@@ -189,7 +189,8 @@ function engineOperations(engine: Engine, all: () => AnyOperation[]): AnyOperati
 				};
 			},
 			async run(input, ctx) {
-				const output = await undo(engine, ctx.db, input.id);
+				// An undo that changes what the site shows says so, so the site's cache follows (T29).
+				const output = await undoWithEvents(engine, ctx.db, input.id, ctx.emit);
 				// What an entry saw back then may be of a field that has since left the schema.
 				await keepSeenTracked(ctx.db, ctx.site.schema());
 				return output;
