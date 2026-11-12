@@ -24,6 +24,7 @@ Monti는 설계부터 다시 만들고 있습니다. 이전 패키지는 지웠�
 | [`@monti-cms/admin`](packages/admin) | 관리자 화면. 기능으로만 서버에 닿는다 |
 | [`@monti-cms/next`](packages/next) | Next.js 사이트에 Monti 붙이기. 관리자 페이지, 관리자 API 라우트, 초안 모드의 미리보기, 발행할 때의 캐시 갱신 |
 | [`@monti-cms/ai`](packages/ai) | 어시스턴트. 사이트의 기능 위에서 모델을 돌리고, 검토할 제안을 돌려준다 |
+| [`@monti-cms/storage-s3`](packages/storage-s3) | S3와 그 API를 말하는 저장소(Cloudflare R2, MinIO)에 미디어 파일을 둡니다. 파일은 브라우저에서 버킷으로 곧장 올라갑니다 |
 
 [`examples/blog`](examples/blog)는 Monti를 붙인 Next.js 블로그다. 흐름 테스트(`pnpm test:e2e`)가 이 앱에서 돈다.
 
@@ -99,7 +100,9 @@ const monti = createMonti({
 });
 ```
 
-`localFolderStorage`는 개발 서버용입니다. 파일을 디스크의 폴더에 두고 관리자 API로 내줍니다. 다른 곳에 두려면 `Storage`를 구현한 플러그인을 씁니다. S3 호환 어댑터는 만들 예정입니다.
+`localFolderStorage`는 개발 서버나 디스크가 있는 호스트용입니다. 파일을 폴더에 두고 관리자 API로 내줍니다. 디스크가 남지 않거나 작은 요청만 받는
+호스트는 [`@monti-cms/storage-s3`](packages/storage-s3)를 씁니다(`npx monti init --storage s3`가 써 줍니다). 파일은 브라우저에서 버킷으로 곧장
+올라가고, 서버는 도착한 파일을 확인한 뒤에야 항목이 그 파일을 가리키게 합니다. 다른 곳에 두려면 `Storage`를 구현한 플러그인을 씁니다.
 
 ## 라이선스
 

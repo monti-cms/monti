@@ -520,6 +520,17 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0019_loose_tickets": {
+		async up(db) {
+			// The direct way up (doc 20): a loose key is one the server checked the bytes of (`sealed`), or one a browser was handed a signed address for,
+			// with the size that address was signed for (`ticket_size`). Only a sealed key becomes a file's on a storage that takes direct uploads.
+			await db.schema
+				.alterTable("loose_files")
+				.addColumn("sealed", "boolean", (column) => column.notNull().defaultTo(false))
+				.execute();
+			await db.schema.alterTable("loose_files").addColumn("ticket_size", "integer").execute();
+		},
+	},
 };
 
 /**
