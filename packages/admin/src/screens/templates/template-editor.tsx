@@ -24,13 +24,15 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { ChevronLeft, OverflowMenuHorizontal, Spark } from "@monti-cms/ui/icons";
-import { useMemo, useState } from "react";
+import type { Editor } from "@tiptap/react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { useEntryEditor } from "../entry/use-entry-editor";
+import { focusText, useFocusHandOff } from "../frame/focus-hand-off";
 import { SessionEndedBanner } from "../frame/session-ended";
 
 /**
@@ -58,6 +60,13 @@ export function TemplateEditor({
 	const remove = useOperation("templates.remove");
 	const [nameMissing, setNameMissing] = useState(false);
 	useLeaveGuard({ changes: editor.draft.changes, revertAll: editor.draft.revertAll });
+	// A banner whose own action takes it away (discard or load this browser's copy, load the latest, try again) had the keyboard's focus on that
+	// action: it goes to the text being written, the body, or the name when the body is not there (as in the entry editor).
+	const body = useRef<Editor | null>(null);
+	const keepBody = useCallback((made: Editor | null) => {
+		body.current = made;
+	}, []);
+	const handOff = useFocusHandOff(() => () => focusText(() => body.current, "monti-template-name"));
 
 	const name = editor.title;
 	const write = async () => {
@@ -73,17 +82,17 @@ export function TemplateEditor({
 				<>
 					<SessionEndedBanner />
 					{editor.loadRefusal ? (
-						<Banner tone="danger" title={t("templates.loadFailed")} plainMeta>
+						<Banner ref={handOff} tone="danger" title={t("templates.loadFailed")} plainMeta>
 							<TextButton onClick={() => void editor.reload()}>{t("templates.retry")}</TextButton>
 						</Banner>
 					) : null}
 					{editor.conflict ? (
-						<Banner tone="danger" title={t("templates.conflict")} plainMeta>
+						<Banner ref={handOff} tone="danger" title={t("templates.conflict")} plainMeta>
 							<TextButton onClick={() => void editor.loadLatest()}>{t("templates.loadLatest")}</TextButton>
 						</Banner>
 					) : null}
 					{editor.browserCopy ? (
-						<Banner title={t("entry.browserCopy")}>
+						<Banner ref={handOff} title={t("entry.browserCopy")}>
 							<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
 								{t("entry.loadCopy")}
 							</TextButton>
@@ -174,6 +183,7 @@ export function TemplateEditor({
 							files={editor.files}
 							catalogs={catalogs}
 							onChange={(doc) => editor.set("doc", doc)}
+							onEditor={keepBody}
 						/>
 					) : null}
 				</Stack>

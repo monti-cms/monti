@@ -16,6 +16,7 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
+import { useFocusHandOff } from "../frame/focus-hand-off";
 import { at } from "./schema-draft";
 import type { CollectionsDraft } from "./use-collections-draft";
 
@@ -62,6 +63,12 @@ export function BasicsTab({
 					onUndo: () => draft.revert(pathPlace),
 				}
 			: undefined;
+	// A row's undo goes away with the change it puts back: the keyboard's focus it held goes to the row's own control, the one the undo acted
+	// on (an item's row is its switch: the address field goes with the public page).
+	const pathUndo = useFocusHandOff(() =>
+		document.getElementById(kind === "item" ? "collection-public-page" : "collection-path"),
+	);
+	const previewUndo = useFocusHandOff(() => document.getElementById("collection-preview-path"));
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>
@@ -108,7 +115,7 @@ export function BasicsTab({
 							{pathChanged?.onUndo || kind === "item" ? (
 								<div className="ml-auto flex items-center gap-monti-12">
 									{pathChanged?.onUndo ? (
-										<TextButton variant="underline" quiet size="caption" onClick={pathChanged.onUndo}>
+										<TextButton variant="underline" quiet size="caption" ref={pathUndo} onClick={pathChanged.onUndo}>
 											{pathChanged.undoLabel}
 										</TextButton>
 									) : null}
@@ -152,7 +159,13 @@ export function BasicsTab({
 							{previewChanged ? <ChangeDot label={t("settings.changed")} /> : null}
 							{previewChanged ? (
 								<div className="ml-auto flex items-center gap-monti-12">
-									<TextButton variant="underline" quiet size="caption" onClick={() => draft.revert(previewPlace)}>
+									<TextButton
+										variant="underline"
+										quiet
+										size="caption"
+										ref={previewUndo}
+										onClick={() => draft.revert(previewPlace)}
+									>
 										{t("settings.undo")}
 									</TextButton>
 								</div>
