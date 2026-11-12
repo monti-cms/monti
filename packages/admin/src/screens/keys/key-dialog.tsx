@@ -86,10 +86,13 @@ export function KeyWindow({
 }) {
 	const { t } = useAdmin();
 	const nameOf = useServiceName();
+	// While the service is asked the window cannot be left: not by Escape, not by a press outside, not by Cancel. Leaving would mean "do not
+	// add it", and the server cannot call the add back once it is sent. The wait is the check's, ten seconds at most.
+	const [busy, setBusy] = useState(false);
 	return (
 		<Dialog
 			open={open}
-			onOpenChange={(next) => !next && onClose(nth)}
+			onOpenChange={(next) => !next && !busy && onClose(nth)}
 			onOpenChangeComplete={(next) => !next && onClosed(nth)}
 		>
 			<DialogContent form={state.mode !== "pick"}>
@@ -119,6 +122,7 @@ export function KeyWindow({
 						services={services}
 						names={names}
 						onClose={() => onClose(nth)}
+						onBusy={setBusy}
 						onStale={onStale}
 					/>
 				)}
@@ -138,14 +142,17 @@ function KeyForm({
 	services,
 	names,
 	onClose,
+	onBusy,
 	onStale,
 }: {
 	state: KeyFormState;
-	/** Whether its window is open: once it is not, however it was closed, an answer still on its way is told in a toast. */
+	/** Whether its window is open: once it is not (the screen was left meanwhile), an answer still on its way is told in a toast. */
 	open: boolean;
 	services: Service[];
 	names: string[];
 	onClose: () => void;
+	/** Tells the window that a request is on its way, and when it is back: the window stays until then. */
+	onBusy: (busy: boolean) => void;
 	onStale: () => void;
 }) {
 	const { t } = useAdmin();
@@ -190,6 +197,10 @@ function KeyForm({
 		[],
 	);
 	const pending = add.pending || update.pending;
+	useEffect(() => {
+		onBusy(pending);
+		return () => onBusy(false);
+	}, [pending, onBusy]);
 
 	const hint = suggested(service, address);
 	const fix = (field: Field, message: string) => {
@@ -380,6 +391,7 @@ function KeyForm({
 				onCancel={onClose}
 				submitLabel={t(editing ? "ui.save" : "apiKeys.addSubmit")}
 				busy={pending}
+				lockWhileBusy
 				busyLabel={checking ? t("apiKeys.checking") : undefined}
 			/>
 		</Stack>

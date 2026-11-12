@@ -122,7 +122,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 		expect(story.loaded().net.requests).toEqual([]);
 	});
 
-	it("14-1 closed while the service is asked: the window goes, and the key the service took is in the list when its answer comes", async () => {
+	it("14-1 while the service is asked the window cannot be left: Cancel is off, Esc and a press outside do nothing; the answer adds the key and closes it", async () => {
 		const story = open(keys.NoKeys);
 		await story.run();
 		await addFor("Anthropic");
@@ -130,10 +130,39 @@ describe("adding a key (flow 10, 01–06)", () => {
 		await userEvent.type(keyField(), keys.sample.anthropic);
 		await userEvent.click(button("추가"));
 		await expect.element(button("확인하는 중…")).toBeVisible();
-		await userEvent.click(button("취소"));
-		await expect.element(dialog()).not.toBeInTheDocument();
+		// Leaving would say "do not add it", and the add cannot be called back: until the answer the window stays.
+		await expect.element(button("취소")).toBeDisabled();
+		await userEvent.keyboard("{Escape}");
+		const backdrop = document.querySelector("[data-slot=dialog-overlay]");
+		if (!backdrop) throw new Error("no backdrop");
+		backdrop.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+		backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+		await new Promise((resolve) => setTimeout(resolve, 400));
+		await expect.element(dialog()).toBeVisible();
+		expect(document.querySelector("[data-slot=dialog-content]")?.hasAttribute("data-closed")).toBe(false);
+		await expect.element(keyField()).toHaveValue(keys.sample.anthropic);
+		expect((await list(story.loaded().site)).keys).toEqual([]);
+
 		story.loaded().net.hold(null);
+		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
+		await expect.element(dialog()).not.toBeInTheDocument();
 		await expect.element(page.getByText("··· a1b2")).toBeVisible();
+	});
+
+	it("14-1 a refusal leaves the window open and lets it be left again: Cancel is back on, and Esc closes it with nothing added", async () => {
+		const story = open(keys.NoKeys);
+		await story.run();
+		await addFor("Anthropic");
+		story.loaded().net.hold("held");
+		await userEvent.type(keyField(), keys.sample.refused);
+		await userEvent.click(button("추가"));
+		await expect.element(button("취소")).toBeDisabled();
+		story.loaded().net.hold(null);
+		await expect.element(page.getByText("맞지 않는 키입니다.")).toBeVisible();
+		await expect.element(button("취소")).toBeEnabled();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(dialog()).not.toBeInTheDocument();
+		expect((await list(story.loaded().site)).keys).toEqual([]);
 	});
 
 	it("14-1 by the keyboard alone: to the pill, into the service list, through the window; Esc closes it and the focus is back on the pill", async () => {
@@ -200,80 +229,6 @@ describe("the key window as one window", () => {
 		await userEvent.click(page.getByRole("option", { name: "OpenAI", exact: true }));
 		await expect.element(field(/주소/)).not.toBeInTheDocument();
 		await expect.poll(() => focused()).toBe(service.element());
-	});
-});
-
-describe("an answer that comes after its window was closed", () => {
-	it("14-1 closed with Esc while the service is asked, then a new window opened: the first key is added and said so, and the new window stays with what was typed in it", async () => {
-		const story = open(keys.NoKeys);
-		await story.run();
-		await addFor("Anthropic");
-		story.loaded().net.hold("held");
-		await userEvent.type(keyField(), keys.sample.anthropic);
-		await userEvent.click(button("추가"));
-		await expect.element(button("확인하는 중…")).toBeVisible();
-		await userEvent.keyboard("{Escape}");
-		await expect.element(dialog()).not.toBeInTheDocument();
-
-		await addFor("OpenRouter");
-		await userEvent.type(keyField(), "sk-proj-half-typed");
-		story.loaded().net.hold(null);
-		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
-		await expect.element(page.getByText("··· a1b2")).toBeVisible();
-		// The answer was for the window closed before: the one open now is left alone, also once a closing would have run its course.
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		expect(document.querySelector("[data-slot=dialog-content]")?.hasAttribute("data-closed")).toBe(false);
-		await expect.element(dialog()).toBeVisible();
-		await expect.element(keyField()).toHaveValue("sk-proj-half-typed");
-		await expect.element(field(/이름/)).toHaveValue("OpenRouter");
-	});
-
-	it("14-1 closed with Esc while the service is asked, and the service refuses the key: a toast says so, as after '취소'", async () => {
-		const story = open(keys.NoKeys);
-		await story.run();
-		await addFor("Anthropic");
-		story.loaded().net.hold("held");
-		await userEvent.type(keyField(), keys.sample.refused);
-		await userEvent.click(button("추가"));
-		await expect.element(button("확인하는 중…")).toBeVisible();
-		await userEvent.keyboard("{Escape}");
-		await expect.element(dialog()).not.toBeInTheDocument();
-		story.loaded().net.hold(null);
-		await expect.element(page.getByText("맞지 않는 키입니다.")).toBeVisible();
-		expect((await list(story.loaded().site)).keys).toEqual([]);
-	});
-
-	it("14-1 closed with '취소' while a changed key is checked, a new window opened, and the key turns out changed elsewhere: it is said, and the new window stays", async () => {
-		const story = open(keys.Keys);
-		await story.run();
-		const { site, holdCall } = story.loaded();
-		await menu("Anthropic 개인", "편집");
-		await userEvent.click(button("바꾸기"));
-		await userEvent.type(keyField(), keys.sample.anthropicNew);
-		const [first] = (await list(site)).keys;
-		if (!first) throw new Error("no key");
-		await site.monti.run(
-			"keys.update",
-			{ id: first.id, name: "다른 창의 이름" },
-			{ ...keys.admin, versions: { [`key:${first.id}`]: first.version } },
-		);
-		// The answer about the change is held back: it will say the key changed elsewhere.
-		const answer = holdCall("keys.update");
-		await userEvent.click(button("저장"));
-		await expect.element(button("확인하는 중…")).toBeVisible();
-		await userEvent.click(button("취소"));
-		await expect.element(dialog()).not.toBeInTheDocument();
-
-		await addFor("OpenRouter");
-		await userEvent.type(keyField(), "sk-proj-half-typed");
-		answer();
-		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).toBeVisible();
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		expect(document.querySelector("[data-slot=dialog-content]")?.hasAttribute("data-closed")).toBe(false);
-		await expect.element(dialog()).toBeVisible();
-		await expect.element(keyField()).toHaveValue("sk-proj-half-typed");
-		// The list was read again: it shows the name the other place gave.
-		await expect.element(page.getByText("다른 창의 이름", { exact: true })).toBeVisible();
 	});
 });
 

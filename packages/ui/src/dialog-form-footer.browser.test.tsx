@@ -35,4 +35,41 @@ describe("DialogFormFooter", () => {
 		expect(cancelled).toHaveBeenCalledTimes(1);
 		expect(sent).toHaveBeenCalledTimes(1);
 	});
+
+	it("with lockWhileBusy, Cancel is off while the request runs", async () => {
+		const cancelled = vi.fn();
+		const footer = (busy: boolean) => (
+			<Dialog defaultOpen>
+				<DialogContent form>
+					<Stack as="form" gap={16}>
+						<DialogHeader>
+							<DialogTitle>Add key</DialogTitle>
+						</DialogHeader>
+						<DialogFormFooter onCancel={cancelled} submitLabel="Add" busy={busy} busyLabel="Checking…" lockWhileBusy />
+					</Stack>
+				</DialogContent>
+			</Dialog>
+		);
+		render(footer(true));
+		await expect.element(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+		await expect.element(page.getByRole("button", { name: "Checking…" })).toBeVisible();
+	});
+
+	it("without it, Cancel can be pressed while the request runs", async () => {
+		const cancelled = vi.fn();
+		render(
+			<Dialog defaultOpen>
+				<DialogContent form>
+					<Stack as="form" gap={16}>
+						<DialogHeader>
+							<DialogTitle>Export</DialogTitle>
+						</DialogHeader>
+						<DialogFormFooter onCancel={cancelled} submitLabel="Export" busy />
+					</Stack>
+				</DialogContent>
+			</Dialog>,
+		);
+		await userEvent.click(page.getByRole("button", { name: "Cancel" }));
+		expect(cancelled).toHaveBeenCalledTimes(1);
+	});
 });
