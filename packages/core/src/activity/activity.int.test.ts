@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { sql } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { signedInApi } from "../__test__/admin";
 import { testDatabase } from "../__test__/database";
 import {
@@ -19,8 +20,8 @@ import type { UndoPlan } from "../engine/undo";
 import { createReader } from "../entries/reader";
 import { ForbiddenError } from "../errors";
 import { coreMessages, formatMessage } from "../messages";
-import { createMonti, type MontiOptions } from "../monti";
-import { type Message, type MontiEvent, recordKey } from "../operation";
+import { createMonti, definePlugin, type MontiOptions } from "../monti";
+import { defineOperation, type Message, type MontiEvent, recordKey } from "../operation";
 import { lockRecords } from "../records";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
@@ -307,9 +308,9 @@ describe("sending", () => {
 			version: 2,
 			paths: ["/posts/first-post"],
 		});
-		// Stored under its name: the address's host and path.
+		// Stored under its name: the address's host, when it is given none.
 		expect((await deliveries())[0]).toMatchObject({
-			destination: "webhook:site.test/api/revalidate",
+			destination: "webhook:site.test",
 			state: "sent",
 		});
 		// With no secret of its own, nothing is signed.
@@ -346,8 +347,10 @@ describe("sending", () => {
 				return new Response(null, { status: 200 });
 			},
 		});
-		expect(hook.destination).toBe("webhook:hooks.site.test/deploy");
+		// With no name it goes by its host alone: neither the query nor the path, where hook services keep their token.
+		expect(hook.destination).toBe("webhook:hooks.site.test");
 		expect(webhook("https://site.test/").destination).toBe("webhook:site.test");
+		expect(webhook("https://site.test:8443/hook").destination).toBe("webhook:site.test:8443");
 		expect(webhook("https://site.test/api/search?key=1", { name: "search" }).destination).toBe("webhook:search");
 		const monti = site({ receivers: [hook] });
 		const id = await newPost("첫 번째 글", "first-post", monti);
@@ -362,15 +365,68 @@ describe("sending", () => {
 		]);
 		expect(everywhere).not.toContain("s3cret");
 		expect(id).toBeTypeOf("string");
-		// Two addresses that differ only in their query would be one name: refused when the site is made, not found out by a lost event.
-		expect(() =>
-			site({ receivers: [webhook("https://a.test/hook?to=one"), webhook("https://a.test/hook?to=two")] }),
-		).toThrow('Two receivers are named "webhook:a.test/hook"');
+		// Two addresses on one host would be one name: refused when the site is made, not found out by a lost event. The refusal says to name
+		// one, and quotes nothing of either address but the host.
+		let refusal = "";
+		try {
+			site({ receivers: [webhook("https://a.test/hook/t0ken-one"), webhook("https://a.test/other?to=t0ken-two")] });
+		} catch (error) {
+			refusal = String((error as Error).message);
+		}
+		expect(refusal).toContain('Two receivers are named "webhook:a.test"');
+		expect(refusal).toContain("name");
+		expect(refusal).not.toContain("t0ken");
 		expect(() =>
 			site({
 				receivers: [webhook("https://a.test/hook?to=one"), webhook("https://a.test/hook?to=two", { name: "two" })],
 			}),
 		).not.toThrow();
+	});
+
+	it("13-1 a token in a webhook's path is in no stored row, no line's details, no event and no failure: a deploy hook, a chat hook", async () => {
+		// The services that hand out hooks keep the secret in the path, not the query.
+		const addresses = [
+			"https://api.vercel.test/v1/integrations/deploy/prj_x/AbC123tok",
+			"https://hooks.slack.test/services/T000/B000/XyZ789tok",
+		];
+		const posted: string[] = [];
+		const bodies: string[] = [];
+		let status = 503;
+		const hooks = addresses.map((address) =>
+			webhook(address, {
+				fetch: async (url, init) => {
+					posted.push(String(url));
+					bodies.push(String(init?.body));
+					return new Response(null, { status });
+				},
+			}),
+		);
+		expect(hooks.map((hook) => hook.destination)).toEqual(["webhook:api.vercel.test", "webhook:hooks.slack.test"]);
+		const monti = site({ receivers: hooks });
+		await newPost("첫 번째 글", "first-post", monti);
+		// Both failed: the failure is stored too.
+		expect((await deliveries()).map((delivery) => delivery.state)).toEqual(["failed", "failed"]);
+		status = 200;
+		await newPost("두 번째 글", "second-post", monti);
+		// Posted to the whole addresses (the two of one write go out in no fixed order).
+		expect([...posted].sort()).toEqual([...addresses, ...addresses].sort());
+		const lines = (await list({}, monti)).lines;
+		const everywhere = JSON.stringify([
+			await deliveries(),
+			await db.selectFrom("monti_activity").selectAll().execute(),
+			lines,
+			await Promise.all(lines.map((line) => detail(line.id, monti))),
+			await read("deliveries.counts", {}, monti),
+			bodies,
+		]);
+		for (const secret of ["AbC123tok", "XyZ789tok", "prj_x", "T000", "/services/", "/deploy/"])
+			expect(everywhere).not.toContain(secret);
+		// What a person, and the assistant, read as the receiver: the host.
+		const [failedLine] = lines.filter((line) => (line.delivery?.failed ?? 0) > 0);
+		expect((await detail(failedLine.id, monti)).deliveries.map((delivery) => delivery.receiver)).toEqual([
+			"api.vercel.test",
+			"hooks.slack.test",
+		]);
 	});
 
 	it("13-1 an address the platform would refuse is refused when the site is made, in words that do not quote it", async () => {
@@ -1032,7 +1088,7 @@ describe("sending", () => {
 		const shown = await detail(activityId, monti);
 		expect(shown.deliveries.map((delivery) => delivery.receiver)).toEqual([
 			{ key: "deliveries.receiver.site" },
-			"hooks.example.dev/deploy",
+			"hooks.example.dev",
 		]);
 		expect(shown.deliveries[1].lastError).toEqual({
 			key: "deliveries.error.status",
@@ -1532,6 +1588,7 @@ describe("the log", () => {
 			first: of.first as string,
 			last: of.last as string,
 			total: of.total,
+			mark: of.mark,
 		});
 		// Read from page 1's last line, page 2 begins after it: counted from the top it would begin with "글 5" again.
 		const second = await list({ pageSize: 2, page: 2, asOf: first.asOf, from: from(1, first) }, monti);
@@ -1552,6 +1609,45 @@ describe("the log", () => {
 		const fresh = await list({ pageSize: 10 }, monti);
 		expect(fresh.total).toBe(7);
 		expect(whats(fresh)[1]).toBe('"늦게 끝난 저장" 저장');
+	});
+
+	it("13-3 a page's place and count are used only under what they were read under: with another filter, order or browsing they are dropped", async () => {
+		const monti = site();
+		for (let index = 1; index <= 5; index++) await newPost(`글 ${index}`, `post-${index}`, monti);
+		await publish(
+			[(await db.selectFrom("entries").select("id").where("slug", "=", "post-1").executeTakeFirstOrThrow()).id],
+			monti,
+		);
+		const whats = (page: ActivityList) => page.lines.map((line) => said(line)[0]);
+		const from = (page: number, of: ActivityList) => ({
+			page,
+			first: of.first as string,
+			last: of.last as string,
+			total: of.total,
+			mark: of.mark,
+		});
+		// Page 1 of everything: six lines, the publish newest.
+		const all = await list({ pageSize: 2 }, monti);
+		expect(all.total).toBe(6);
+		// Page 2 of the creates only, asked with page 1 of everything as where it comes from (a link pressed before the filter's answer was
+		// in): counted from the top of the creates, with their own count, as if no `from` were given.
+		const plain = await list({ pageSize: 2, page: 2, kinds: ["save"], asOf: all.asOf }, monti);
+		const mixed = await list({ pageSize: 2, page: 2, kinds: ["save"], asOf: all.asOf, from: from(1, all) }, monti);
+		expect(plain.total).toBe(5);
+		expect(mixed.total).toBe(5);
+		expect(whats(mixed)).toEqual(whats(plain));
+		expect(whats(mixed)).toEqual(['"글 3" 만듦', '"글 2" 만듦']);
+		// The other order is another thing too.
+		const turned = await list({ pageSize: 2, page: 2, sort: "asc", asOf: all.asOf, from: from(1, all) }, monti);
+		expect(whats(turned)).toEqual(whats(await list({ pageSize: 2, page: 2, sort: "asc", asOf: all.asOf }, monti)));
+		// A mark that is the page's own is trusted: the place and the count are the browsing's.
+		const second = await list({ pageSize: 2, page: 2, asOf: all.asOf, from: from(1, all) }, monti);
+		expect(whats(second)).toEqual(['"글 4" 만듦', '"글 3" 만듦']);
+		expect(second.total).toBe(6);
+		expect(second.mark).not.toBe(all.mark);
+		// And so is another browsing, with a boundary of its own: it counts again.
+		await newPost("글 6", "post-6", monti);
+		expect((await list({ pageSize: 2, page: 2, from: from(1, all) }, monti)).total).toBe(7);
 	});
 
 	it("13-3 a row keeps a bounded length of the words it is found by, however many records its write touched", async () => {
@@ -1701,6 +1797,7 @@ describe("the log", () => {
 			total: 0,
 			first: null,
 			last: null,
+			mark: expect.any(String),
 			asOf: "0",
 			deliveries: true,
 			entry: null,
@@ -1809,6 +1906,78 @@ describe("undo from the log", () => {
 			kept: string[];
 		}>;
 		expect(reverted.output).toEqual({ reverted: [], kept: [] });
+	});
+
+	describe("an item whose write is undone from the log says what 'revert all' would say of it", () => {
+		/** A plugin's write that renames some entries and only holds others while it does (as a move holds the folder it moves into). */
+		const retitle = defineOperation({
+			name: "probe.retitle",
+			kind: "write",
+			description: "Rename entries, holding others.",
+			input: z.object({ ids: z.array(z.string()), held: z.array(z.string()).default([]), title: z.string() }),
+			touches: (input) => [...input.ids, ...input.held].map((id) => ({ kind: "entry", id })),
+			async run(input, ctx) {
+				await ctx.db
+					.updateTable("entries")
+					.set((eb) => ({ title: input.title, version: eb("version", "+", 1) }))
+					.where("id", "in", input.ids)
+					.execute();
+				return { ids: input.ids };
+			},
+			summary: () => ({ key: "probe.retitle" }),
+		});
+		const probe = definePlugin({ name: "probe", operations: [retitle] });
+		const items = async (proposal: string) =>
+			(
+				await db
+					.selectFrom("monti_proposal_item")
+					.select(["state", "reason"])
+					.where("proposal_id", "=", proposal)
+					.orderBy("position")
+					.execute()
+			).map((item) => ({ state: item.state, reason: item.reason }));
+		const titleOf = async (id: string) =>
+			(await db.selectFrom("entries").select("title").where("id", "=", id).executeTakeFirstOrThrow()).title;
+
+		it("13-3 a part of it went back: the item is put back, with how many of its records stayed", async () => {
+			const monti = site({ plugins: [probe] });
+			const posts = [await newPost("하나", "one", monti), await newPost("둘", "two", monti)];
+			const proposal = await monti.proposals.create("conversation-1", "이름 맞춰 줘");
+			await monti.proposals.add(proposal, "probe.retitle", { ids: posts, title: "같은 이름" });
+			await monti.proposals.apply(proposal);
+			// A person renames the second one afterwards: it stays as they left it.
+			await save(posts[1], { title: "둘 (사람이 고침)" }, monti);
+			const line = (await list({ kinds: ["assistant"] }, monti)).lines[0];
+			const undone = await write<UndoPlan>("activity.undo", { id: line.id }, monti);
+			expect(undone.output.skip).toEqual([{ kind: "entry", id: posts[1] }]);
+			expect([await titleOf(posts[0]), await titleOf(posts[1])]).toEqual(["하나", "둘 (사람이 고침)"]);
+			// As "revert all" records it (review.int.test, 10-1): put back, one record stayed.
+			expect(await items(proposal)).toEqual([
+				{ state: "reverted", reason: { key: "proposals.partlyReverted", values: { count: 1 } } },
+			]);
+			// What the undo answers carries nothing of the items' bookkeeping.
+			expect(undone.output).not.toHaveProperty("put");
+		});
+
+		it("13-3 only a record it held went back: the item stays applied, 'changed since', as 'revert all' leaves it", async () => {
+			const monti = site({ plugins: [probe] });
+			const [changed, held] = [await newPost("하나", "one", monti), await newPost("둘", "two", monti)];
+			const proposal = await monti.proposals.create("conversation-1", "이름 바꿔 줘");
+			await monti.proposals.add(proposal, "probe.retitle", { ids: [changed], held: [held], title: "새 이름" });
+			await monti.proposals.apply(proposal);
+			// A person writes the record the item changed. The one it only held is as it was.
+			await save(changed, { title: "하나 (사람이 고침)" }, monti);
+			const line = (await list({ kinds: ["assistant"] }, monti)).lines[0];
+			const undone = await write<UndoPlan>("activity.undo", { id: line.id }, monti);
+			expect(undone.output.restore).toEqual([{ kind: "entry", id: held }]);
+			expect(await titleOf(changed)).toBe("하나 (사람이 고침)");
+			// Nothing of what the item changed went back: it is not "put back".
+			expect(await items(proposal)).toEqual([{ state: "applied", reason: { key: "activity.changedSince" } }]);
+			expect(
+				(await db.selectFrom("monti_proposal").select("status").where("id", "=", proposal).executeTakeFirstOrThrow())
+					.status,
+			).toBe("applied");
+		});
 	});
 
 	it("13-3 a proposal's 'revert all' takes its locks at once and in order: a person's write of the same records and the revert both go through", async () => {
