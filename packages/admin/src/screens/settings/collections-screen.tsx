@@ -5,6 +5,7 @@ import {
 	ChangesGroup,
 	Inline,
 	NavLink,
+	PageBanner,
 	PageBody,
 	PageColumn,
 	PageHeader,
@@ -345,7 +346,8 @@ export function CollectionsScreen({
 			<Stack gap={0} grow minWidth={0} minHeight={0} container>
 				<SettingsPage save={saveGroup}>
 					<PageBody>
-						{refused && !plan ? <Banner tone="danger" title={refused} /> : null}
+						{/* Drawn at the very top of the screen, over the title (common.md, banners). */}
+						<PageBanner>{refused && !plan ? <Banner tone="danger" title={refused} /> : null}</PageBanner>
 						{data ? (
 							<RailLayout
 								label={t("settings.collections")}

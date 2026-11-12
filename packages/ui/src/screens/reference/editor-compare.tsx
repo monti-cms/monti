@@ -13,6 +13,7 @@ import {
 	Inline,
 	Separator,
 	Stack,
+	StandalonePage,
 	Text,
 	TextButton,
 } from "../../index";
@@ -23,7 +24,7 @@ import {
  */
 export function EditorCompareScreen() {
 	return (
-		<Stack gap={0} height="screen" overflow="clip" background="page">
+		<StandalonePage>
 			<EditorHeader>
 				<Inline gap={16} minWidth={0} paddingX={12}>
 					<TextButton variant="quiet">
@@ -91,6 +92,6 @@ export function EditorCompareScreen() {
 					</CompareSide>
 				</Compare>
 			</Stack>
-		</Stack>
+		</StandalonePage>
 	);
 }

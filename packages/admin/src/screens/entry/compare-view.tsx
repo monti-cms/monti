@@ -14,6 +14,7 @@ import {
 	Inline,
 	Separator,
 	Stack,
+	StandalonePage,
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
@@ -167,8 +168,10 @@ export function CompareView({
 
 	const savedAt = editor.browserCopy?.savedAt;
 	return (
-		<Stack gap={0} height="screen" overflow="clip" background="page">
-			<SessionEndedBanner />
+		<StandalonePage
+			// The screen's banner stands at its very top, over the head row (common.md, banners).
+			banner={<SessionEndedBanner />}
+		>
 			<EditorHeader>
 				<Inline gap={16} minWidth={0} paddingX={12}>
 					<TextButton variant="quiet" onClick={onBack}>
@@ -241,6 +244,6 @@ export function CompareView({
 						: side(server, "server", t("compare.server", { at: dayTime(updatedAt, language) }))}
 				</Compare>
 			</Stack>
-		</Stack>
+		</StandalonePage>
 	);
 }

@@ -23,6 +23,7 @@ import {
 	Separator,
 	SplitButton,
 	Stack,
+	StandalonePage,
 	StatusBar,
 	StatusBarAnnouncer,
 	StatusBarCell,
@@ -519,57 +520,62 @@ export function EntryEditor({
 	);
 
 	return (
-		<Stack gap={0} height="screen" overflow="clip" background="page">
+		<StandalonePage
+			// Every banner of the screen stands at its very top, broader first: the session over this entry's own (common.md, banners).
+			banner={
+				<>
+					<SessionEndedBanner />
+					{editor.loadRefusal ? (
+						<Banner tone="danger" title={t("entry.loadFailed")} plainMeta>
+							<TextButton onClick={() => void editor.reload()}>{t("entry.retry")}</TextButton>
+						</Banner>
+					) : null}
+					{editor.conflict ? (
+						<Banner
+							tone="danger"
+							title={
+								editor.conflict.at ? t("entry.conflict", { at: clock(editor.conflict.at) }) : t("entry.conflictNoTime")
+							}
+							meta={t("entry.conflictMeta")}
+							plainMeta
+						>
+							<TextButton variant="underline" onClick={() => onCompare("conflict")}>
+								{t("entry.compare")}
+							</TextButton>
+							<TextButton onClick={() => void editor.loadLatest()}>{t("entry.loadLatest")}</TextButton>
+						</Banner>
+					) : null}
+					{editor.browserCopy ? (
+						<Banner
+							title={t("entry.browserCopy")}
+							meta={editor.browserCopy.savedAt ? dayTime(editor.browserCopy.savedAt, language) : undefined}
+						>
+							<TextButton variant="underline" onClick={() => onCompare("draft")}>
+								{t("entry.compare")}
+							</TextButton>
+							<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
+								{t("entry.loadCopy")}
+							</TextButton>
+							<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
+								{t("entry.dropCopy")}
+							</TextButton>
+						</Banner>
+					) : null}
+					{trashed ? (
+						<Banner
+							tone="neutral"
+							title={t("entry.trashedBanner")}
+							meta={inTrash ? t("trash.left", { days: inTrash.daysLeft }) : undefined}
+						/>
+					) : null}
+					{compared && !readOnly ? (
+						<SourceChangedBanner compared={compared} onConfirmAll={() => void translation.confirmAll()} />
+					) : null}
+				</>
+			}
+		>
 			{trash.dialog}
 			{purge.dialog}
-			{/* Every banner of the screen stands at its very top, broader first: the session over this entry's own (common.md, banners). */}
-			<SessionEndedBanner />
-			{editor.loadRefusal ? (
-				<Banner tone="danger" title={t("entry.loadFailed")} plainMeta>
-					<TextButton onClick={() => void editor.reload()}>{t("entry.retry")}</TextButton>
-				</Banner>
-			) : null}
-			{editor.conflict ? (
-				<Banner
-					tone="danger"
-					title={
-						editor.conflict.at ? t("entry.conflict", { at: clock(editor.conflict.at) }) : t("entry.conflictNoTime")
-					}
-					meta={t("entry.conflictMeta")}
-					plainMeta
-				>
-					<TextButton variant="underline" onClick={() => onCompare("conflict")}>
-						{t("entry.compare")}
-					</TextButton>
-					<TextButton onClick={() => void editor.loadLatest()}>{t("entry.loadLatest")}</TextButton>
-				</Banner>
-			) : null}
-			{editor.browserCopy ? (
-				<Banner
-					title={t("entry.browserCopy")}
-					meta={editor.browserCopy.savedAt ? dayTime(editor.browserCopy.savedAt, language) : undefined}
-				>
-					<TextButton variant="underline" onClick={() => onCompare("draft")}>
-						{t("entry.compare")}
-					</TextButton>
-					<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
-						{t("entry.loadCopy")}
-					</TextButton>
-					<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
-						{t("entry.dropCopy")}
-					</TextButton>
-				</Banner>
-			) : null}
-			{trashed ? (
-				<Banner
-					tone="neutral"
-					title={t("entry.trashedBanner")}
-					meta={inTrash ? t("trash.left", { days: inTrash.daysLeft }) : undefined}
-				/>
-			) : null}
-			{compared && !readOnly ? (
-				<SourceChangedBanner compared={compared} onConfirmAll={() => void translation.confirmAll()} />
-			) : null}
 			<EditorHeader>
 				<Inline gap={12} minWidth={0} paddingX={12}>
 					<TextButton variant="quiet" onClick={trashed ? onTrash : onBack}>
@@ -802,6 +808,6 @@ export function EntryEditor({
 					</StatusBarCell>
 				</StatusBar>
 			) : null}
-		</Stack>
+		</StandalonePage>
 	);
 }
