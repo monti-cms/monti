@@ -113,7 +113,10 @@ export function packRelease({ root, out, base }) {
 			// The license lives once at the repo root: every package carries a copy.
 			copyFileSync(path.join(root, "LICENSE"), path.join(unpacked, "LICENSE"));
 			const name = tarballName(pkg.name, version);
-			execFileSync("tar", ["-czf", path.join(out, name), "-C", packed, "package"]);
+			// macOS's tar adds a `._name` entry for each file's extended attributes unless told not to: a tarball must hold the package's files only.
+			execFileSync("tar", ["-czf", path.join(out, name), "-C", packed, "package"], {
+				env: { ...process.env, COPYFILE_DISABLE: "1" },
+			});
 			made.push({ name: pkg.name, tarball: name });
 			console.log(`${pkg.name}@${version} → ${name}`);
 		}
