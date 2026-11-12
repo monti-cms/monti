@@ -270,7 +270,10 @@ export function useEntryEditor(source: EditorSource) {
 			setBodyKey((key) => key + 1);
 			setLoadingCopy(false);
 		},
-		dropBrowserCopy: draft.dropBrowserCopy,
+		/** Not while the copy is on its way in: it is no longer there to drop. */
+		dropBrowserCopy: () => {
+			if (!loadingCopy) draft.dropBrowserCopy();
+		},
 		/** The session ended: to the login screen, and back to this entry with what was typed (`restore`). */
 		signIn: signInAgain,
 		bodyKey,
