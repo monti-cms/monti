@@ -60,8 +60,8 @@ export const LAYOUT = {
 	 * where they would stretch the page past its window.
 	 */
 	overflow: {
-		// A scrolling box keeps 8px of scroll room above and below: what the keyboard scrolls to does not land on its edge, where its ring would be cut
-		// (tokens.md, the states).
+		// A box that scrolls up and down keeps 8px of scroll room above and below (tokens.md, the states section): what the focus scrolls into view
+		// does not stop flush with the edge, where its ring would be cut (a text button's stands 4px out).
 		auto: "relative scroll-py-monti-8 overflow-auto",
 		hidden: "overflow-hidden",
 		clip: "overflow-clip",

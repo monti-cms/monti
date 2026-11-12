@@ -24,17 +24,16 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { ChevronLeft, OverflowMenuHorizontal, Spark } from "@monti-cms/ui/icons";
-import { useMemo, useState } from "react";
+import type { Editor } from "@tiptap/react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
-import { pressedWithKeys, useEntryEditor } from "../entry/use-entry-editor";
+import { useEntryEditor } from "../entry/use-entry-editor";
+import { focusText, useFocusHandOff } from "../frame/focus-hand-off";
 import { SessionEndedBanner } from "../frame/session-ended";
-
-/** The name field's id: its label names it, and the focus goes to it after a banner's answer while there is no body yet. */
-const NAME_ID = "monti-template-name";
 
 /**
  * The template editor (tools.md, doc 03): a page of its own, outside the frame. The name stands where an entry's title does, over the body with every
@@ -56,11 +55,18 @@ export function TemplateEditor({
 	const { t } = useAdmin();
 	const catalogs = useBodyCatalogs();
 	const source = useMemo(() => ({ kind: "template" as const, id }), [id]);
-	const editor = useEntryEditor(source, NAME_ID);
+	const editor = useEntryEditor(source);
 	const duplicate = useOperation<{ output: { id: string } }>("templates.duplicate");
 	const remove = useOperation("templates.remove");
 	const [nameMissing, setNameMissing] = useState(false);
 	useLeaveGuard({ changes: editor.draft.changes, revertAll: editor.draft.revertAll });
+	// A banner whose own action takes it away (discard or load this browser's copy, load the latest, try again) had the keyboard's focus on that
+	// action: it goes to the text being written, the body, or the name when the body is not there (as in the entry editor).
+	const body = useRef<Editor | null>(null);
+	const keepBody = useCallback((made: Editor | null) => {
+		body.current = made;
+	}, []);
+	const handOff = useFocusHandOff(() => () => focusText(() => body.current, "monti-template-name"));
 
 	const name = editor.title;
 	const write = async () => {
@@ -76,23 +82,19 @@ export function TemplateEditor({
 				<>
 					<SessionEndedBanner />
 					{editor.loadRefusal ? (
-						<Banner tone="danger" title={t("templates.loadFailed")} plainMeta>
+						<Banner ref={handOff} tone="danger" title={t("templates.loadFailed")} plainMeta>
 							<TextButton onClick={() => void editor.reload()}>{t("templates.retry")}</TextButton>
 						</Banner>
 					) : null}
 					{editor.conflict ? (
-						<Banner tone="danger" title={t("templates.conflict")} plainMeta>
-							<TextButton onClick={(event) => void editor.loadLatest(pressedWithKeys(event))}>
-								{t("templates.loadLatest")}
-							</TextButton>
+						<Banner ref={handOff} tone="danger" title={t("templates.conflict")} plainMeta>
+							<TextButton onClick={() => void editor.loadLatest()}>{t("templates.loadLatest")}</TextButton>
 						</Banner>
 					) : null}
 					{editor.browserCopy ? (
-						<Banner title={t("entry.browserCopy")}>
-							<TextButton onClick={(event) => editor.loadBrowserCopy(pressedWithKeys(event))}>
-								{t("entry.loadCopy")}
-							</TextButton>
-							<TextButton variant="quiet" onClick={(event) => editor.dropBrowserCopy(pressedWithKeys(event))}>
+						<Banner ref={handOff} title={t("entry.browserCopy")}>
+							<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
+							<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
 								{t("entry.dropCopy")}
 							</TextButton>
 						</Banner>
@@ -160,11 +162,11 @@ export function TemplateEditor({
 					{editor.loaded ? (
 						<Stack gap={0} paddingTop={16} paddingBottom={32}>
 							<FormField>
-								<FormFieldLabel htmlFor={NAME_ID} hidden>
+								<FormFieldLabel htmlFor="monti-template-name" hidden>
 									{t("templates.name")}
 								</FormFieldLabel>
 								<Input
-									id={NAME_ID}
+									id="monti-template-name"
 									value={name}
 									placeholder={t("templates.name")}
 									size="display"
@@ -189,7 +191,7 @@ export function TemplateEditor({
 							files={editor.files}
 							catalogs={catalogs}
 							onChange={(doc) => editor.set("doc", doc)}
-							onEditor={editor.keepBody}
+							onEditor={keepBody}
 						/>
 					) : null}
 				</Stack>

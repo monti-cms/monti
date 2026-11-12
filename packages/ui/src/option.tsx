@@ -35,7 +35,8 @@ function Option({
 			data-slot="option"
 			data-height={rowHeight}
 			className={cn(
-				"[&:hover_[data-slot=checkbox]:not([data-disabled]):not([data-checked])]:border-(color:--monti-fg-muted) flex cursor-pointer items-center gap-monti-10 has-data-disabled:cursor-not-allowed has-disabled:cursor-not-allowed has-data-disabled:opacity-45 [&:hover_[data-slot=checkbox]:not([data-disabled])]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&:hover_[data-slot=switch]:not([data-checked])]:bg-(--monti-border-strong)",
+				// The pointer darkens an unchecked box's line; a wrong one keeps its red (an error shows in every state).
+				"[&:hover_[data-slot=checkbox]:not([data-disabled]):not([data-checked]):not([aria-invalid=true])]:border-(color:--monti-fg-muted) flex cursor-pointer items-center gap-monti-10 has-data-disabled:cursor-not-allowed has-disabled:cursor-not-allowed has-data-disabled:opacity-45 [&:hover_[data-slot=checkbox]:not([data-disabled])]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&:hover_[data-slot=switch]:not([data-checked])]:bg-(--monti-border-strong)",
 				words === "quiet" ? "text-monti-muted text-monti-note has-data-checked:text-monti-default" : "text-monti-body",
 				spread && "justify-between",
 				rowHeight === "lg"
