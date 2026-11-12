@@ -13,7 +13,9 @@ export type Route =
 	| { screen: "media"; params: URLSearchParams }
 	/** The trash (doc 11): the open folder, the search, the filters and the row open beside the list are in the address. */
 	| { screen: "trash"; params: URLSearchParams }
-	/** Tools: its screens come with doc 13. */
+	/** The activity log (doc 13): what it is searched and filtered by, its order, its page and the open line are in the address. */
+	| { screen: "activity"; params: URLSearchParams }
+	/** Tools: the templates; data and keys join them with doc 14. */
 	| { screen: "place"; place: "tools" }
 	/** The template editor, a page of its own outside the frame (tools.md); `id` is `null` for a new template. */
 	| { screen: "template"; id: string | null }
@@ -42,6 +44,7 @@ export function parseRoute(hash: string): Route {
 	if (parts[0] === "templates" && parts[1]) return { screen: "template", id: parts[1] === "new" ? null : parts[1] };
 	if (parts[0] === "media") return { screen: "media", params: new URLSearchParams(search) };
 	if (parts[0] === "trash") return { screen: "trash", params: new URLSearchParams(search) };
+	if (parts[0] === "activity") return { screen: "activity", params: new URLSearchParams(search) };
 	if (parts[0] && PLACES.has(parts[0])) return { screen: "place", place: "tools" };
 	return { screen: "home" };
 }
@@ -79,6 +82,10 @@ export function href(route: Route): string {
 		case "trash": {
 			const search = route.params.toString();
 			return `#/trash${search ? `?${search}` : ""}`;
+		}
+		case "activity": {
+			const search = route.params.toString();
+			return `#/activity${search ? `?${search}` : ""}`;
 		}
 		case "place":
 			return `#/${route.place}`;

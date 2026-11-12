@@ -12,6 +12,7 @@ import {
 import type { Transport, Uploader } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
 import { type Route, useRoute } from "./route";
+import { ActivityScreen } from "./screens/activity/activity-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
 import { filterColumn, type ListState, writeState } from "./screens/list/list-query";
@@ -51,6 +52,8 @@ function placeOf(route: Route): Place | null {
 			return "media";
 		case "trash":
 			return "trash";
+		case "activity":
+			return "activity";
 		case "place":
 			return route.place;
 		// The entry and template editors are pages of their own, outside the frame: no row of the sidebar is theirs (doc 15).
@@ -71,7 +74,9 @@ const routeOf = (place: Place): Route =>
 				? { screen: "media", params: new URLSearchParams() }
 				: place === "trash"
 					? { screen: "trash", params: new URLSearchParams() }
-					: { screen: "place", place };
+					: place === "activity"
+						? { screen: "activity", params: new URLSearchParams() }
+						: { screen: "place", place };
 
 function Signed() {
 	const { screen } = useAdmin();
@@ -162,6 +167,8 @@ function Signed() {
 				<MediaScreen params={route.params} go={go} />
 			) : route.screen === "trash" ? (
 				<TrashScreen params={route.params} go={go} />
+			) : route.screen === "activity" ? (
+				<ActivityScreen params={route.params} go={go} />
 			) : route.screen === "list" ? (
 				<ListScreen
 					key={route.collection}

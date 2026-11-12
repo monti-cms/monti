@@ -10,6 +10,15 @@ export function shortDate(value: Date | string | null, now = new Date()): string
 	return date.getFullYear() === now.getFullYear() ? day : `${two(date.getFullYear() % 100)}. ${day}`;
 }
 
+/** A moment as a log writes it: the list's date, then the hour and minute ("10. 26 10:58"). */
+export function shortTime(value: Date | string, now = new Date()): string {
+	const date = new Date(value);
+	return `${shortDate(date, now)} ${two(date.getHours())}:${two(date.getMinutes())}`;
+}
+
+/** The hour and minute of a moment ("10:58"). */
+export const clockTime = (value: Date | string) => shortTime(value).slice(-5);
+
 /** What a field's cell reads: relation titles or option labels joined, or the text. */
 export function fieldCell(row: ListRow, column: ListColumn): string {
 	if (column.kind === "relation") return (row.relations[column.id] ?? []).map((target) => target.title).join(" · ");
