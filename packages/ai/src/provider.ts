@@ -39,12 +39,12 @@ export type TurnRequest = {
 
 /**
  * What a turn gives as it comes: words, the tools it calls, a sign of life while it thinks or writes a call (nothing to show, but the service is
- * there), and its end with what it spent. `cut`: the service ended the answer itself, out of room or declining to go on.
+ * there; `thinking` says it began to think, or is done, when the service says so), and its end with what it spent. `cut`: the service ended the answer itself, out of room or declining to go on.
  */
 export type TurnEvent =
 	| { type: "text"; delta: string }
 	| { type: "call"; call: ToolCall }
-	| { type: "alive" }
+	| { type: "alive"; thinking?: boolean }
 	| { type: "end"; usage: Usage; raw?: unknown; cut?: "length" | "refusal" };
 
 export type AnswerRequest = {
@@ -80,6 +80,8 @@ export class ProviderError extends Error {
 		readonly kind: "refused" | "unreachable" | "interrupted",
 		readonly detail: string,
 		readonly status?: number,
+		/** What the service counted for an answer that broke off, when it said. */
+		readonly usage?: Usage,
 	) {
 		super(
 			`The model service ${kind === "refused" ? "refused" : kind === "interrupted" ? "broke off" : "could not be reached"}: ${detail}`,

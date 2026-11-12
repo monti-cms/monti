@@ -18,9 +18,11 @@ import {
 	abortRun,
 	DEFAULT_LIMITS,
 	HOLD_MS,
+	historyBudget,
 	type RunEnd,
 	RunInput,
 	type RunLimits,
+	recalled,
 	runAssistant,
 	type StoredMessage,
 } from "./run";
@@ -84,8 +86,19 @@ export type Conversation = {
 	/** The newest requests, oldest first: at most a page of them. */
 	runs: TranscriptRun[];
 	/** Where the requests before these begin (`before` of the next read); `null` when these are the first. */
-	earlier: string | null;
+	earlier: Place | null;
+	/**
+	 * How many of its oldest requests the next request would not send to the model: the conversation is longer than the model's share for what
+	 * was said before. They are still here to read; the model no longer knows them.
+	 */
+	forgotten: number;
 };
+
+/** A place in a list read a page at a time: the time of a row and its id, so rows of one moment are told apart. */
+const Place = z.object({ at: z.string().datetime(), id: z.string() });
+type Place = z.infer<typeof Place>;
+const placeOf = (row: { at: Date; id: string } | undefined): Place | null =>
+	row ? { at: row.at.toISOString(), id: row.id } : null;
 
 /** How many conversations a page of the list holds, and how many requests of a conversation one read gives, unless fewer are asked for. */
 const PAGE = { conversations: 50, runs: 30 } as const;
@@ -97,6 +110,32 @@ export type AssistantState = {
 	recent: string[];
 	keepDays: number | null;
 };
+
+/** How many of a conversation's oldest requests its next request would leave out of what it sends the model (`Conversation.forgotten`). */
+async function forgottenOf(
+	db: Db,
+	conversation: { id: string; key_id: string | null; model: string | null },
+	limits: RunLimits,
+	context: (keyId: string, model: string) => Promise<number | undefined>,
+): Promise<number> {
+	const runs = await db
+		.selectFrom("runs")
+		.select("size")
+		.where("conversation_id", "=", conversation.id)
+		.where("kind", "=", "chat")
+		.orderBy("started_at", "desc")
+		.orderBy("id", "desc")
+		.execute();
+	const window =
+		conversation.key_id && conversation.model ? await context(conversation.key_id, conversation.model) : undefined;
+	return (
+		runs.length -
+		recalled(
+			runs.map((run) => run.size),
+			historyBudget(limits, window),
+		)
+	);
+}
 
 const keepDaysOf = async (db: Db): Promise<number | null> => {
 	const row = await db.selectFrom("assistant_settings").select("keep_days").where("id", "=", 1).executeTakeFirst();
@@ -285,9 +324,10 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 				kind: "write",
 				humanOnly: true,
 				bookkeeping: true,
-				description: "Stop a run. What it proposed so far stays. Only a person does it.",
+				description:
+					"Stop a run. What it proposed so far stays. What was said to it and not taken yet comes back in the answer when the run ends here (a run waiting on the browser); a run at work hands it back as its own end. Only a person does it.",
 				input: z.object({ run: z.string() }),
-				async run(input, ctx) {
+				async run(input, ctx): Promise<{ stopped: boolean; untaken: string[] }> {
 					const stopped = await ctx.db
 						.updateTable("runs")
 						.set({ stop_requested: true })
@@ -304,11 +344,25 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 								ended: JSON.stringify({ status: "stopped" } satisfies RunEnd),
 								ended_at: ctx.now(),
 								leased_until: null,
+								lease_token: null,
 							})
 							.where("id", "=", input.run)
 							.execute();
+					// Nothing will take what was said to it: it goes back to the person, and no row is left behind.
+					const untaken =
+						stopped?.status === "waiting"
+							? (
+									await ctx.db
+										.deleteFrom("run_inbox")
+										.where("run_id", "=", input.run)
+										.returning(["text", "created_at"])
+										.execute()
+								)
+									.sort((a, b) => a.created_at.getTime() - b.created_at.getTime())
+									.map((each) => each.text)
+							: [];
 					abortRun(input.run);
-					return { stopped: stopped !== undefined };
+					return { stopped: stopped !== undefined, untaken };
 				},
 				summary: () => ({ key: "assistant.stop" }),
 			}),
@@ -338,21 +392,25 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 					"The past conversations, newest first, a page at a time: what was first asked, when it was last asked in, and what became of its proposal (waiting, applied, taken in a screen, reverted, discarded). `before` (the `earlier` of the page before) gives the next page.",
 				input: z.object({
 					limit: z.number().int().min(1).max(100).default(PAGE.conversations),
-					before: z.string().datetime().optional(),
+					before: Place.optional(),
 				}),
 				async run(
 					input,
 					ctx,
-				): Promise<{ conversations: ConversationRow[]; earlier: string | null; keepDays: number | null }> {
+				): Promise<{ conversations: ConversationRow[]; earlier: Place | null; keepDays: number | null }> {
 					// When it was last asked in; one nothing was asked in yet, when it was made.
 					const at = sql<Date>`coalesce((select max(runs.started_at) from runs where runs.conversation_id = conversations.id and runs.kind = 'chat'), conversations.created_at)`;
 					const rows = await ctx.db
 						.selectFrom("conversations")
 						.select(["id", "title"])
 						.select(at.as("at"))
-						.$if(input.before !== undefined, (query) => query.where(at, "<", new Date(input.before as string)))
+						.$if(input.before !== undefined, (query) =>
+							query.where(
+								sql<boolean>`(${at}, conversations.id) < (${new Date(input.before?.at ?? 0)}, ${input.before?.id ?? ""})`,
+							),
+						)
 						.orderBy(at, "desc")
-						.orderBy("id")
+						.orderBy("id", "desc")
 						// One more than the page: whether there is a next one.
 						.limit(input.limit + 1)
 						.execute();
@@ -368,7 +426,7 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 							at: row.at,
 							outcome: found.get(row.id) ?? null,
 						})),
-						earlier: rows.length > input.limit ? (page.at(-1)?.at.toISOString() ?? null) : null,
+						earlier: rows.length > input.limit ? placeOf(page.at(-1)) : null,
 						keepDays: await keepDaysOf(ctx.db),
 					};
 				},
@@ -381,7 +439,7 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 				input: z.object({
 					id: z.string(),
 					limit: z.number().int().min(1).max(100).default(PAGE.runs),
-					before: z.string().datetime().optional(),
+					before: Place.optional(),
 				}),
 				async run(input, ctx): Promise<Conversation> {
 					const conversation = await ctx.db
@@ -402,9 +460,12 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 						.where("conversation_id", "=", input.id)
 						.where("kind", "=", "chat")
 						.$if(input.before !== undefined, (query) =>
-							query.where("started_at", "<", new Date(input.before as string)),
+							query.where(
+								sql<boolean>`(started_at, id) < (${new Date(input.before?.at ?? 0)}, ${input.before?.id ?? ""})`,
+							),
 						)
 						.orderBy("started_at", "desc")
+						.orderBy("id", "desc")
 						// One more than the page: whether there are requests before these.
 						.limit(input.limit + 1)
 						.execute();
@@ -430,7 +491,12 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 								? { keyId: conversation.key_id, model: conversation.model }
 								: null,
 						thinking: conversation.thinking,
-						earlier: newest.length > input.limit ? (runs[0]?.started_at.toISOString() ?? null) : null,
+						earlier:
+							newest.length > input.limit && runs[0] ? { at: runs[0].started_at.toISOString(), id: runs[0].id } : null,
+						forgotten: await forgottenOf(ctx.db, conversation, limits, async (keyId, model) => {
+							const listed = (await site().run("models.list", {}, { actor: "admin" })) as ModelList;
+							return listed.keys.find((key) => key.id === keyId)?.models.find((each) => each.id === model)?.context;
+						}),
 						runs: runs.map((run) => {
 							// A run whose request died (its hold ran out) reads as cut short: it can be gone on with.
 							const dead = run.status === "running" && (run.leased_until === null || run.leased_until < ctx.now());
@@ -464,6 +530,17 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 					"Remove a conversation, with its proposals that still wait. What was applied stays in the activity log. Only a person does it.",
 				input: z.object({ id: z.string() }),
 				async run(input, ctx) {
+					// Held to the end: a request that starts a run in it meanwhile waits, and then finds no conversation.
+					await ctx.db.selectFrom("conversations").select("id").where("id", "=", input.id).forUpdate().execute();
+					// Not from under a run at work: it would go on proposing for a conversation that is gone. Stop it first.
+					const working = await ctx.db
+						.selectFrom("runs")
+						.select("id")
+						.where("conversation_id", "=", input.id)
+						.where("status", "=", "running")
+						.where("leased_until", ">=", ctx.now())
+						.executeTakeFirst();
+					if (working) throw new CheckError({ key: "assistant.busy" });
 					await removeConversations(ctx.db, [input.id]);
 					return { id: input.id };
 				},

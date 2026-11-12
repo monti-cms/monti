@@ -471,3 +471,108 @@ describe("an answer that does not end as the service ends one (review 1 of #472)
 		expect(events.slice(lastWords + 1, call).some((event) => event.type === "alive")).toBe(true);
 	});
 });
+
+describe("what the second review found in the adapters (#472)", () => {
+	it("10-1 the service's own copy of a message is handed back only when it holds the calls the message is stored with", async () => {
+		const net = network(() => streamed(STREAM));
+		// A message stored after a cut: its words, no calls; the copy the service gave still holds the call.
+		const cut: ChatMessage = {
+			role: "assistant",
+			text: "길어서 여기까지",
+			calls: [],
+			raw: {
+				service: "anthropic",
+				messages: [
+					{
+						role: "assistant",
+						content: [
+							{ type: "text", text: "길어서 여기까지" },
+							{ type: "tool-call", toolCallId: "toolu_cut", toolName: "entries_query", input: {} },
+						],
+					},
+				],
+			},
+		};
+		await turn(
+			aiSdkProvider({ fetch: net.fetch })(KEY),
+			request([{ role: "user", text: "길게 써 줘" }, cut, { role: "user", text: "계속해 줘" }]),
+		);
+		const sent = JSON.stringify(net.sent[0].body.messages);
+		expect(sent).toContain("길어서 여기까지");
+		expect(sent).not.toContain("tool_use");
+		expect(sent).not.toContain("toolu_cut");
+	});
+
+	it("10-4 a service that has sent nothing is not taken for one that began to answer: the SDK's own first parts are no sign of life", async () => {
+		// The answer's headers come, and then nothing: the body stays open and empty.
+		const net = network(
+			() =>
+				new Response(new ReadableStream({ start() {} }), {
+					status: 200,
+					headers: { "content-type": "text/event-stream" },
+				}),
+		);
+		const gone = new AbortController();
+		const events: TurnEvent[] = [];
+		const reading = (async () => {
+			for await (const event of aiSdkProvider({ fetch: net.fetch })(KEY).turn(
+				request([{ role: "user", text: "안녕" }], { signal: gone.signal }),
+			))
+				events.push(event);
+		})().catch(() => {});
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(net.sent).toHaveLength(1);
+		expect(events).toEqual([]);
+		gone.abort();
+		await reading;
+	});
+
+	it("10-4 a model's thinking is seen as it begins and as it ends, and Google is asked to show its thoughts", async () => {
+		// Anthropic's stream with a thinking block before the words.
+		const thinking = [
+			{
+				type: "message_start",
+				message: {
+					id: "msg_1",
+					type: "message",
+					role: "assistant",
+					model: "claude-sonnet-5-5",
+					content: [],
+					stop_reason: null,
+					stop_sequence: null,
+					usage: { input_tokens: 120, output_tokens: 1 },
+				},
+			},
+			{ type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } },
+			{ type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "먼저 목록을" } },
+			{ type: "content_block_delta", index: 0, delta: { type: "signature_delta", signature: "sig" } },
+			{ type: "content_block_stop", index: 0 },
+			{ type: "content_block_start", index: 1, content_block: { type: "text", text: "" } },
+			{ type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "찾아볼게요." } },
+			{ type: "content_block_stop", index: 1 },
+			{ type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 31 } },
+			{ type: "message_stop" },
+		]
+			.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)
+			.join("");
+		const net = network(() => streamed(thinking));
+		const events: TurnEvent[] = [];
+		for await (const event of aiSdkProvider({ fetch: net.fetch })(KEY).turn(request([{ role: "user", text: "안녕" }])))
+			events.push(event);
+		const signs = events.flatMap((event) =>
+			event.type === "alive" && event.thinking !== undefined ? [event.thinking] : [],
+		);
+		expect(signs[0]).toBe(true);
+		expect(signs.at(-1)).toBe(false);
+		// The thinking ended before the words came.
+		const done = events.findIndex((event) => event.type === "alive" && event.thinking === false);
+		expect(done).toBeLessThan(events.findIndex((event) => event.type === "text"));
+
+		const google = network(() => streamed(GEMINI));
+		await turn(
+			aiSdkProvider({ fetch: google.fetch })({ ...KEY, service: "gemini" }),
+			request([{ role: "user", text: "안녕" }], { model: "a-model", thinks: true }),
+		);
+		expect(google.sent[0].body.generationConfig).toMatchObject({ thinkingConfig: { includeThoughts: true } });
+	});
+});

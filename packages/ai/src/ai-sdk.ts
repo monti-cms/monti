@@ -22,6 +22,7 @@ import {
 	ProviderError,
 	type ProviderFor,
 	type Thinking,
+	type ToolCall,
 	type TurnEvent,
 	type TurnRequest,
 } from "./provider";
@@ -80,7 +81,8 @@ function thinkingOptions(
 		case "openai":
 			return { openai: { reasoningEffort: level } };
 		case "gemini":
-			return { google: { thinkingConfig: { thinkingLevel: level } } };
+			// Its thoughts come as it thinks, so a long think is seen to be one and not taken for a service gone silent.
+			return { google: { thinkingConfig: { thinkingLevel: level, includeThoughts: true } } };
 		case "openrouter":
 			return { openrouter: { reasoning: { effort: thinking === "off" ? ("none" as const) : level } } };
 		default:
@@ -90,6 +92,22 @@ function thinkingOptions(
 
 /** What the SDK gave for an assistant message, kept to hand back to the same service unchanged (its thinking goes with it). */
 type Raw = { service: string; messages: ModelMessage[] };
+
+/** Whether the service's copy of a message calls exactly the tools the stored message does, by the calls' ids. */
+function sameCalls(messages: ModelMessage[], calls: ToolCall[]): boolean {
+	const theirs = messages.flatMap((message) =>
+		message.role === "assistant" && Array.isArray(message.content)
+			? message.content.flatMap((part) => (part.type === "tool-call" ? [part.toolCallId] : []))
+			: [],
+	);
+	return theirs.length === calls.length && calls.every((call) => theirs.includes(call.id));
+}
+
+/**
+ * The parts of the SDK's stream that are the SDK's own and say nothing of the service: a stream that has given only these has not been
+ * answered yet. (`TextStreamPart` of `ai` 7: read from its type, `node_modules/ai/dist/index.d.ts`.)
+ */
+const OWN_PARTS = new Set(["start", "start-step", "finish", "abort", "steering-message"]);
 
 function toSdk(messages: ChatMessage[], service: string): ModelMessage[] {
 	return messages.flatMap((message): ModelMessage[] => {
@@ -111,7 +129,15 @@ function toSdk(messages: ChatMessage[], service: string): ModelMessage[] {
 			];
 		if (message.role === "assistant") {
 			const raw = message.raw as Raw | undefined;
-			if (raw?.service === service && Array.isArray(raw.messages) && raw.messages.length > 0) return raw.messages;
+			// The service's own copy, unchanged, when it is of this service and holds exactly the calls the message is stored with. A copy
+			// with other calls (an answer cut for length, whose calls were dropped) would carry a call nothing answers.
+			if (
+				raw?.service === service &&
+				Array.isArray(raw.messages) &&
+				raw.messages.length > 0 &&
+				sameCalls(raw.messages, message.calls)
+			)
+				return raw.messages;
 			return [
 				{
 					role: "assistant",
@@ -195,11 +221,16 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 						} else if (part.type === "tool-call")
 							yield { type: "call", call: { id: part.toolCallId, name: part.toolName, input: part.input } };
 						else if (part.type === "finish-step") {
-							// The stream closed before the service said the answer was whole (a connection cut, a proxy's limit): what came is not
-							// an answer. The run engine gives the turn up and can ask for it again.
-							if (part.finishReason === "interrupted" || part.finishReason === "error")
-								throw new ProviderError("interrupted", "The answer ended before it was whole.");
 							usage = { input: part.usage.inputTokens ?? 0, output: part.usage.outputTokens ?? 0 };
+							// The stream closed before the service said the answer was whole (a connection cut, a proxy's limit): what came is not
+							// an answer. The run engine gives the turn up and can ask for it again. What the service counted for it was spent.
+							if (part.finishReason === "interrupted" || part.finishReason === "error")
+								throw new ProviderError(
+									began ? "interrupted" : "unreachable",
+									"The answer ended before it was whole.",
+									undefined,
+									usage.input + usage.output > 0 ? usage : undefined,
+								);
 							// The service ended the answer itself: out of room, or it declined to go on.
 							cut =
 								part.finishReason === "length"
@@ -208,8 +239,16 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 										? "refusal"
 										: undefined;
 						} else if (part.type === "error") throw part.error;
-						// Anything else the service sends (its thinking, a tool call's input as it is written) shows it is there.
-						else yield { type: "alive" };
+						// The service says it thinks, and that it is done: between the two a long silence is a think (OpenAI shows nothing of it).
+						else if (part.type === "reasoning-start" || part.type === "reasoning-delta") {
+							began = true;
+							yield { type: "alive", thinking: true };
+						} else if (part.type === "reasoning-end") yield { type: "alive", thinking: false };
+						// Anything else the service sends (a tool call's input as it is written, a ping) shows it is there. The SDK's own parts do not.
+						else if (!OWN_PARTS.has(part.type)) {
+							began = true;
+							yield { type: "alive" };
+						}
 					}
 					const raw: Raw = { service: key.service, messages: await result.responseMessages };
 					yield { type: "end", usage, raw, ...(cut ? { cut } : {}) };
@@ -217,7 +256,9 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 					const failed = failure(error);
 					// The service had begun to answer: what went wrong after that (the stream cut, a last piece that cannot be read) broke the answer
 					// off. Before any word it is a service that did not answer.
-					throw began && failed.kind === "unreachable" ? new ProviderError("interrupted", failed.detail) : failed;
+					throw began && failed.kind === "unreachable"
+						? new ProviderError("interrupted", failed.detail, failed.status, failed.usage)
+						: failed;
 				}
 			},
 			async answer(request) {

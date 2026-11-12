@@ -17,6 +17,7 @@ import {
 	type Thinking,
 	type ToolAnswer,
 	type ToolCall,
+	type TurnEvent,
 	type Usage,
 } from "./provider";
 import { type AssistantTool, assistantTools, callTool, shortened, type ToolOutcome, toolError } from "./tools";
@@ -26,16 +27,20 @@ import { type AssistantTool, assistantTools, callTool, shortened, type ToolOutco
  * - `turns`, `tokens`: since a person last said go (the request, or "go on" after one of these two was reached). A request that only carries a run
  *   on (after `ms`, a lost connection, a screen tool) does not start them again.
  * - `ms`: per request: a serverless host ends a request after its own.
- * - `idleMs`: how long the service may say nothing in the middle of a turn before the turn is given up; `answerMs`: how long a quick task may take.
- * - `historyChars`: how much of a conversation's earlier requests the model is sent, counted in the characters of their stored JSON.
+ * - `idleMs`: how long the service may say nothing in the middle of a turn before the turn is given up; `thinkingIdleMs`: the same while the
+ *   service has said it is thinking and not yet that it is done (a long think may show nothing); `answerMs`: how long a quick task may take.
+ * - `historyShare`: how much of the model's context window a conversation's earlier requests may take, when the model's service says how
+ *   large the window is; `historyTokens`: how many tokens they may take when it does not. Both in estimated tokens (`estimateTokens`).
  */
 export type RunLimits = {
 	turns: number;
 	tokens: number;
 	ms: number;
 	idleMs: number;
+	thinkingIdleMs: number;
 	answerMs: number;
-	historyChars: number;
+	historyShare: number;
+	historyTokens: number;
 };
 
 export const DEFAULT_LIMITS: RunLimits = {
@@ -43,9 +48,52 @@ export const DEFAULT_LIMITS: RunLimits = {
 	tokens: 2_000_000,
 	ms: 45_000,
 	idleMs: 120_000,
+	thinkingIdleMs: 600_000,
 	answerMs: 60_000,
-	historyChars: 600_000,
+	// The rest of the window is for the instructions, the tools, the request at hand with what its tools return, and the answer.
+	historyShare: 0.4,
+	// Without a known window: small enough for any model a conversation with tools is held with.
+	historyTokens: 60_000,
 };
+
+/**
+ * About how many tokens a text is, on the safe side for Korean: one for every Korean, Japanese or Chinese character (a syllable is often
+ * more than one token, seldom less), one for every four of the rest (the usual ratio for Latin text and JSON).
+ */
+export function estimateTokens(text: string): number {
+	let wide = 0;
+	for (let index = 0; index < text.length; index += 1) {
+		const code = text.charCodeAt(index);
+		if (
+			(code >= 0x1100 && code <= 0x11ff) ||
+			(code >= 0x2e80 && code <= 0x9fff) ||
+			(code >= 0xac00 && code <= 0xd7af) ||
+			(code >= 0xf900 && code <= 0xfaff) ||
+			(code >= 0xff00 && code <= 0xffef)
+		)
+			wide += 1;
+	}
+	return wide + Math.ceil((text.length - wide) / 4);
+}
+
+/** How many tokens of earlier requests a model is sent: a share of its window when that is known, a fixed number when it is not. */
+export const historyBudget = (limits: RunLimits, context: number | undefined): number =>
+	context === undefined ? limits.historyTokens : Math.floor(context * limits.historyShare);
+
+/**
+ * How many of a conversation's earlier requests are sent, counted from the newest: as many whole ones as fit the budget. `sizes` are theirs,
+ * newest first. A long conversation forgets its beginning, never the middle of a request.
+ */
+export function recalled(sizes: number[], budget: number): number {
+	let room = budget;
+	let kept = 0;
+	for (const size of sizes) {
+		room -= size;
+		if (room < 0) break;
+		kept += 1;
+	}
+	return kept;
+}
 
 /**
  * How long a request holds its run after its last sign of life; a request that died lets go after this, and the run can be gone on with. While it
@@ -217,6 +265,13 @@ async function append(db: Db, runId: string, message: StoredMessage, at: Date): 
 			created_at: at,
 		})
 		.execute();
+	// What the run weighs in a later request of its conversation: kept as it grows, so that request need not read its messages to know.
+	const size = estimateTokens(JSON.stringify(message));
+	await db
+		.updateTable("runs")
+		.set((eb) => ({ size: eb("size", "+", size) }))
+		.where("id", "=", runId)
+		.execute();
 }
 
 export type RunSettings = { provider: ProviderFor; limits: RunLimits; holdMs: number };
@@ -256,9 +311,20 @@ export async function* runAssistant(
 			.set({ leased_until: lease() })
 			.where("id", "=", run.id)
 			.where("status", "=", "running")
+			.where("lease_token", "=", run.lease_token)
 			.execute()
 			.catch(() => {});
 	}, settings.holdMs / 3);
+	/**
+	 * Whether this request still holds the run. One that hung past its hold finds another request's name on the run when it comes back: it
+	 * stops there, and writes nothing more of the run.
+	 */
+	let lost = false;
+	const holds = async () => {
+		const row = await db.selectFrom("runs").select("lease_token").where("id", "=", run.id).executeTakeFirst();
+		lost = row?.lease_token !== run.lease_token;
+		return !lost;
+	};
 
 	const usage: Usage = { ...run.usage };
 	let end: RunEnd | null = null;
@@ -273,8 +339,11 @@ export async function* runAssistant(
 				ended_at: ended.status === "waiting" ? null : now(),
 				usage: JSON.stringify(usage),
 				leased_until: null,
+				lease_token: null,
 			})
 			.where("id", "=", run.id)
+			// Only the request that holds it says how it ended.
+			.where("lease_token", "=", run.lease_token)
 			.execute();
 	};
 
@@ -285,9 +354,10 @@ export async function* runAssistant(
 			return;
 		}
 		const provider = settings.provider(key);
-		const thinks =
-			(await modelsOf(monti)).keys.find((each) => each.id === key.id)?.models.find((each) => each.id === run.model)
-				?.thinking ?? false;
+		const model = (await modelsOf(monti)).keys
+			.find((each) => each.id === key.id)
+			?.models.find((each) => each.id === run.model);
+		const thinks = model?.thinking ?? false;
 		const tools = assistantTools(monti);
 		const byName = new Map(tools.map((tool) => [tool.name, tool]));
 		const system = await systemPrompt(monti);
@@ -297,25 +367,27 @@ export async function* runAssistant(
 			run.kind === "chat"
 				? await db
 						.selectFrom("runs")
-						.select("id")
+						.select(["id", "size"])
 						.where("conversation_id", "=", conversationId)
 						.where("kind", "=", "chat")
 						.where("id", "<>", run.id)
 						.where("started_at", "<=", run.started_at)
-						.orderBy("started_at")
+						.orderBy("started_at", "desc")
+						.orderBy("id", "desc")
 						.execute()
 				: [];
-		const stored = await messagesOf(db, [...earlier.map((each) => each.id), run.id]);
-		// The newest earlier requests that fit `historyChars`, whole: a long conversation forgets its beginning, never the middle of a request.
-		let room = settings.limits.historyChars;
-		const recalled: ChatMessage[][] = [];
-		for (const each of [...earlier].reverse()) {
-			const messages = whole(stored.get(each.id) ?? []);
-			room -= JSON.stringify(messages).length;
-			if (room < 0) break;
-			recalled.unshift(messages);
-		}
-		const history: ChatMessage[] = recalled.flat();
+		// The newest earlier requests that fit the model's share for them, whole; only those are read.
+		const sent = earlier
+			.slice(
+				0,
+				recalled(
+					earlier.map((each) => each.size),
+					historyBudget(settings.limits, model?.context),
+				),
+			)
+			.reverse();
+		const stored = await messagesOf(db, [...sent.map((each) => each.id), run.id]);
+		const history: ChatMessage[] = sent.flatMap((each) => whole(stored.get(each.id) ?? []));
 		const mine: StoredMessage[] = stored.get(run.id) ?? [];
 		const say = async (message: StoredMessage) => {
 			mine.push(message);
@@ -526,6 +598,7 @@ export async function* runAssistant(
 				await savePending();
 			}
 
+			if (!(await holds())) return;
 			if (await stopRequested()) {
 				await finish({ status: "stopped" });
 				return;
@@ -571,6 +644,8 @@ export async function* runAssistant(
 			if (stopper.signal.aborted) endTurn();
 			try {
 				for await (const event of whileAlive(
+					settings.limits,
+					endTurn,
 					provider.turn({
 						model: run.model,
 						system,
@@ -580,8 +655,6 @@ export async function* runAssistant(
 						thinks,
 						signal: turnStop.signal,
 					}),
-					settings.limits.idleMs,
-					endTurn,
 				)) {
 					if (event.type === "text") {
 						text += event.delta;
@@ -607,6 +680,12 @@ export async function* runAssistant(
 					return;
 				}
 				if (!(error instanceof ProviderError)) throw error;
+				// What the service counted for a turn that broke off was spent all the same.
+				if (error.usage) {
+					usage.input += error.usage.input;
+					usage.output += error.usage.output;
+					await monti.keys.addUsage(key.id, error.usage.input + error.usage.output);
+				}
 				// The service said no (credits, a limit) or broke off: an answer in the conversation, with the key's name (doc 10, errors). An answer
 				// that began and broke off is no answer: nothing of it is kept, and the run can be gone on with, which asks for that turn again.
 				const detail = withoutKey(error.detail, key.secret);
@@ -621,10 +700,14 @@ export async function* runAssistant(
 			} finally {
 				stopper.signal.removeEventListener("abort", endTurn);
 			}
+			// The request may have hung through the turn: another holds the run now, and this one's answer is not the run's.
+			if (!(await holds())) return;
+			// A cut answer keeps its words and none of its calls. The service's own copy of the message (`raw`) still holds the calls: sent
+			// back as it is, the next request would carry a call with no answer, and the service would refuse it and every request after it.
 			if (cut) calls.length = 0;
 			turns += 1;
 			lastText = text;
-			await say({ role: "assistant", text, calls, ...(raw === undefined ? {} : { raw }) });
+			await say({ role: "assistant", text, calls, ...(raw === undefined || cut ? {} : { raw }) });
 			await db
 				.updateTable("runs")
 				.set((eb) => ({ turns: eb("turns", "+", 1), usage: JSON.stringify(usage), leased_until: lease() }))
@@ -642,17 +725,18 @@ export async function* runAssistant(
 		signal.removeEventListener("abort", onGone);
 		inFlight.delete(run.id);
 		// Whoever listened went away, or something broke: the run is left so that it can be gone on with.
-		if (end === null) await finish({ status: "interrupted", reason: "connection" });
-		const ended = end as unknown as RunEnd;
-		// What was said too late to be taken goes back to the person's own queue.
+		if (end === null && !lost) await finish({ status: "interrupted", reason: "connection" });
+		const ended = (end ?? { status: "interrupted", reason: "connection" }) as RunEnd;
+		// What was said too late to be taken goes back to the person's own queue. A request that no longer holds the run leaves the queue
+		// to the one that does.
 		const untaken =
-			ended.status === "waiting"
+			ended.status === "waiting" || lost
 				? []
 				: (await db.deleteFrom("run_inbox").where("run_id", "=", run.id).returning(["text", "created_at"]).execute())
 						.sort((a, b) => a.created_at.getTime() - b.created_at.getTime())
 						.map((each) => each.text);
 		// A request at an item's place leaves what was asked and answered with the item (doc 10, a request at its place).
-		if (run.kind === "spot" && run.item_id !== null && ended.status === "done")
+		if (run.kind === "spot" && run.item_id !== null && ended.status === "done" && !lost)
 			await monti.proposals.addExchange(run.item_id, {
 				request: run.request,
 				answer: lastText,
@@ -674,18 +758,21 @@ export function withoutKey(detail: string, secret: string): string {
 }
 
 /**
- * A turn's events for as long as the service keeps saying something. When nothing comes for `idleMs` the call is ended (`stop`) and the turn
- * is given up: as a service that never answered when nothing had come yet, as an answer that broke off when something had.
+ * A turn's events for as long as the service keeps saying something. When nothing comes for `idleMs` (`thinkingIdleMs` while the service has
+ * said it is thinking) the call is ended (`stop`) and the turn is given up: as a service that never answered when nothing had come yet, as an
+ * answer that broke off when something had.
  */
-async function* whileAlive<Event>(
-	source: AsyncIterable<Event>,
-	idleMs: number,
+async function* whileAlive(
+	limits: RunLimits,
 	stop: () => void,
-): AsyncGenerator<Event> {
+	source: AsyncIterable<TurnEvent>,
+): AsyncGenerator<TurnEvent> {
 	const events = source[Symbol.asyncIterator]();
 	let any = false;
+	let thinking = false;
 	try {
 		for (;;) {
+			const idleMs = thinking ? limits.thinkingIdleMs : limits.idleMs;
 			let timer: ReturnType<typeof setTimeout> | undefined;
 			const silent = new Promise<"silent">((resolve) => {
 				timer = setTimeout(() => resolve("silent"), idleMs);
@@ -704,6 +791,8 @@ async function* whileAlive<Event>(
 			}
 			if (next.done) return;
 			any = true;
+			if (next.value.type === "alive") thinking = next.value.thinking ?? thinking;
+			else thinking = false;
 			yield next.value;
 		}
 	} finally {
@@ -735,6 +824,8 @@ type RunRow = {
 	turns: number;
 	turns_from: number;
 	tokens_from: number;
+	/** This request's name on the run while it holds it. */
+	lease_token: string | null;
 	proposal_id: string | null;
 	item_id: string | null;
 	pending: unknown;
@@ -748,21 +839,49 @@ const isBusy = (error: unknown) =>
 	(error as { code?: string }).code === "23505" &&
 	String((error as { constraint?: string }).constraint ?? (error as Error).message).includes("runs_one_chat");
 
-/** Takes up a run that stopped and can go on: cut by a limit or a lost connection, waiting on the browser, or left by a request that died. */
+/**
+ * Takes up a run that stopped and can go on: cut by a limit or a lost connection, waiting on the browser, or left by a request that died. Of a
+ * conversation's requests only the newest can be gone on with: an older one, in a tab that was left open, is refused with that reason.
+ * `more`: a person said to go on past the turn or token limit; it counts only for a run one of those two ended.
+ */
 async function takeUp(monti: Monti, runId: string, until: Date, more: boolean): Promise<RunRow> {
+	const there = await monti.db
+		.selectFrom("runs")
+		.select(["status", "kind", "conversation_id"])
+		.where("id", "=", runId)
+		.executeTakeFirst();
+	if (!there) throw new CheckError({ key: "assistant.noRun" });
+	if (there.kind === "chat") {
+		const newest = await monti.db
+			.selectFrom("runs")
+			.select("id")
+			.where("conversation_id", "=", there.conversation_id)
+			.where("kind", "=", "chat")
+			.orderBy("started_at", "desc")
+			.orderBy("id", "desc")
+			.executeTakeFirst();
+		if (newest?.id !== runId) throw new CheckError({ key: "assistant.notNewest" });
+	}
+	const limited = sql<boolean>`ended->>'reason' in ('turns', 'tokens')`;
 	const taken = await monti.db
 		.updateTable("runs")
 		.set((eb) => ({
 			status: "running",
 			leased_until: until,
+			lease_token: randomId(),
 			stop_requested: false,
 			ended: null,
 			ended_at: null,
-			// A person said to go on past a limit: the turns and tokens count from here.
+			// A person said to go on past a limit: the turns and tokens count from here. Only when a limit is what stopped it.
 			...(more
 				? {
-						turns_from: eb.ref("turns"),
-						tokens_from: sql<number>`(usage->>'input')::integer + (usage->>'output')::integer`,
+						turns_from: eb.case().when(limited).then(eb.ref("turns")).else(eb.ref("turns_from")).end(),
+						tokens_from: eb
+							.case()
+							.when(limited)
+							.then(sql<number>`(usage->>'input')::integer + (usage->>'output')::integer`)
+							.else(eb.ref("tokens_from"))
+							.end(),
 					}
 				: {}),
 		}))
@@ -781,9 +900,9 @@ async function takeUp(monti: Monti, runId: string, until: Date, more: boolean): 
 			throw error;
 		});
 	if (taken) return taken;
-	const there = await monti.db.selectFrom("runs").select("status").where("id", "=", runId).executeTakeFirst();
+	const now = await monti.db.selectFrom("runs").select("status").where("id", "=", runId).executeTakeFirst();
 	throw new CheckError({
-		key: !there ? "assistant.noRun" : there.status === "running" ? "assistant.busy" : "assistant.ended",
+		key: !now ? "assistant.noRun" : now.status === "running" ? "assistant.busy" : "assistant.ended",
 	});
 }
 
@@ -898,6 +1017,7 @@ async function open(monti: Monti, input: RunInput, until: Date): Promise<RunRow>
 		proposal_id: proposalId,
 		item_id: itemId,
 		leased_until: until,
+		lease_token: randomId(),
 		started_at: now,
 	} as const;
 	// The check above is for the common case; two requests that passed it together are told apart here, by the database.

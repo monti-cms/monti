@@ -20,8 +20,10 @@ export type ScriptedTurn = {
 	/** Held until this settles, after its words and before its end: a turn in the middle of which something else happens. */
 	hold?: Promise<unknown>;
 	cut?: "length" | "refusal";
-	/** After its words it gives a sign of life with nothing to show (it thinks). */
-	alive?: boolean;
+	/** After its words it gives a sign of life with nothing to show; `"thinking"`: it says it began to think, and never that it is done. */
+	alive?: boolean | "thinking";
+	/** The service's own copy of the message, kept to hand back to it as it is. */
+	raw?: unknown;
 	/** After its words the answer breaks off: no calls, no end. */
 	breaksOff?: boolean;
 };
@@ -67,7 +69,7 @@ export function scriptedProvider(
 				if (request.signal.aborted) throw new ProviderError("unreachable", "aborted");
 				yield { type: "text", delta };
 			}
-			if (turn.alive) yield { type: "alive" };
+			if (turn.alive) yield turn.alive === "thinking" ? { type: "alive", thinking: true } : { type: "alive" };
 			if (turn.hold) await turn.hold;
 			// The answer breaks off after what it said so far, as a stream that closes without its ending.
 			if (turn.breaksOff) throw new ProviderError("interrupted", "The answer ended before it was whole.");
@@ -78,7 +80,12 @@ export function scriptedProvider(
 					call: { id: call.id ?? `call-${calls}`, name: call.name, input: call.input } satisfies ToolCall,
 				};
 			}
-			yield { type: "end", usage: turn.usage ?? { input: 100, output: 20 }, ...(turn.cut ? { cut: turn.cut } : {}) };
+			yield {
+				type: "end",
+				usage: turn.usage ?? { input: 100, output: 20 },
+				...(turn.raw === undefined ? {} : { raw: turn.raw }),
+				...(turn.cut ? { cut: turn.cut } : {}),
+			};
 		},
 		async answer(request) {
 			answers.push(request);
