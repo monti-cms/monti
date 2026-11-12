@@ -2,7 +2,7 @@ import type { Editor } from "@tiptap/react";
 import { useCallback, useRef } from "react";
 
 /**
- * One rule, in one place (docs/design/admin/tokens.md, the states section; owner, 2026-11-12): when the control a person just used with the
+ * One rule, in one place (docs/design/admin/tokens.md, the states section; decided while building, 2026-11-12): when the control a person just used with the
  * keyboard goes away, the focus goes to what it acted on, not to the page. A pointer's press holds no keyboard focus and moves nothing.
  *
  * - {@link useFocusHandOff} is the rule: a ref for the thing that goes away (a button, or the box around it: a banner), and where its focus goes.

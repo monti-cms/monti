@@ -80,6 +80,29 @@ export type OperationDefinition<Input, Output, Prepared = undefined> = {
 	 * structure change is reversed by a new change (doc 00).
 	 */
 	structure?: boolean;
+	/**
+	 * The write changes nothing of the site: it keeps the assistant's own books (a proposal thrown away, an item left out, a conversation removed).
+	 * It leaves no row in the activity log and has no undo (docs 00 and 10: what was thrown away is not in the log).
+	 */
+	bookkeeping?: boolean;
+	/**
+	 * The name of an input list whose elements the write treats one by one (`ids`). Proposed by the assistant with several, it becomes one proposal
+	 * item per element, so a person takes or leaves each (doc 10: every row of the review has its own check).
+	 */
+	each?: string;
+	/**
+	 * For a write that changes only the places it names (a patch) and carries the version it read in its input: the same input at newer versions, or
+	 * `null` when it cannot follow (it replaces a whole value). Applying a proposal uses it when an earlier item of the same proposal moved the
+	 * record on, so two changes of one entry made from one reading both apply. Without it the later item is "changed in the meantime".
+	 */
+	follows?: (input: Input, versions: Record<string, number>) => Input | null;
+	/**
+	 * The places a write changes, as paths every operation names the same way (`entry:<id>/title`, `entry:<id>/field/<name>`, `entry:<id>/body` for
+	 * a whole body, `entry:<id>/body/<block id>` for one block; see `overlap`). Two waiting items of one proposal cannot change the same place, or
+	 * one a place that holds the other's, whatever operations they are: applied one after the other, the second would land on what the first left.
+	 * A write that `follows` must name its places: it follows only earlier writes that named theirs.
+	 */
+	places?: (input: Input) => string[];
 	/** It runs without a session: the sign-in operations. Only the admin API offers it, never a tool or a command (doc 15). */
 	open?: boolean;
 	/** For the model. The admin never sees it. */
@@ -132,10 +155,25 @@ export function defineOperation<Input, Output, Prepared = undefined>(
 		throw new Error(`Write operation "${definition.name}" has no summary for the activity log.`);
 	if (
 		definition.kind !== "write" &&
-		(definition.touches || definition.preview || definition.humanOnly || definition.structure || definition.prepare)
+		(definition.touches ||
+			definition.preview ||
+			definition.humanOnly ||
+			definition.structure ||
+			definition.prepare ||
+			definition.bookkeeping ||
+			definition.each ||
+			definition.follows ||
+			definition.places)
 	)
-		throw new Error(
-			`Operation "${definition.name}" is not a write, so it has no touches, preview, humanOnly, structure or prepare.`,
-		);
+		throw new Error(`Operation "${definition.name}" is not a write, so it has none of a write's parts.`);
 	return { ...definition, __operation: true };
+}
+
+/**
+ * Whether two places are the same or one holds the other: `entry:1/body` holds `entry:1/body/b_3`. A place ending in `/*` is somewhere inside
+ * its parent without saying where (a block put in): it is held by its parent, and is the same as nothing, so two of them stand side by side.
+ */
+export function overlap(a: string, b: string): boolean {
+	if (a === b) return !a.endsWith("/*");
+	return a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
 }

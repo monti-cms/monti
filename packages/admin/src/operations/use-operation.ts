@@ -30,8 +30,8 @@ export function useOperation<Output = unknown>(name: string) {
 				const answer = await transport(name, input, options);
 				if (answer.status === 200) {
 					setRefusal(null);
-					// A write's answer names its activity row; a read's does not.
-					if (typeof (answer.body as { activityId?: unknown } | null)?.activityId === "string") wrote();
+					// A write's answer has its activity row's place (`null` for a write that keeps only the assistant's books); a read's has none.
+					if (typeof answer.body === "object" && answer.body !== null && "activityId" in answer.body) wrote();
 					return { ok: true, body: answer.body as Output };
 				}
 				const refused = refusalOf(answer);

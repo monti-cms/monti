@@ -1,9 +1,22 @@
-import type { Kysely, Transaction } from "kysely";
+import { type Kysely, type Selectable, sql, type Transaction } from "kysely";
 import { randomUUID } from "../bytes";
-import type { Database, ProposalItemState } from "../db/schema";
+import type { Database, ItemExchange, ProposalItemState, ProposalItemTable, ProposalTable } from "../db/schema";
+import { publicPath } from "../entries/paths";
 import { CheckError, ConflictError, ForbiddenError, isMontiError } from "../errors";
-import { type AnyOperation, type Message, type Preview, type RecordRef, recordKey } from "../operation";
+import {
+	type AnyOperation,
+	type Message,
+	type MontiEvent,
+	overlap,
+	type Preview,
+	type RecordRef,
+	recordKey,
+} from "../operation";
 import { context, type Engine, loadRecords, parseInput, type RunOptions, type WriteResult } from "./execute";
+import { planUndo, undoWithEvents } from "./undo";
+
+type Db = Kysely<Database> | Transaction<Database>;
+type Item = Selectable<ProposalItemTable>;
 
 /**
  * In an item's input, the id a former item of the same proposal creates: `{ "$item": "<item id>" }` stands for that item's `output.id`. Applying
@@ -33,52 +46,65 @@ function refsIn(value: unknown, found = new Set<string>()): Set<string> {
 
 /** Stands in for an id that does not exist yet, so the input still passes its schema. */
 const placeholder = (itemId: string) => `$item:${itemId}`;
+const withPlaceholders = (rawInput: unknown) => mapRefs(rawInput, (itemId) => placeholder(itemId));
 
 class Rollback extends Error {}
 
-export async function createProposal(engine: Engine, conversationId: string, request: string): Promise<string> {
+/** How long an apply holds its proposal without saying it still does; an apply that died lets go after this. While it lives it says so every third of it. */
+export const APPLY_LEASE_MS = 60_000;
+
+/** The most items one proposal holds: the card, the review and an apply read them all at once. The assistant is told to ask for fewer. */
+export const MOST_ITEMS = 500;
+
+/** Makes a proposal. A run has one: asked for again by the same run (cut between making it and noting it), it gives the one it made. */
+export async function createProposal(
+	engine: Engine,
+	conversationId: string,
+	request: string,
+	runId: string | null = null,
+): Promise<string> {
 	const id = randomUUID();
-	await engine.db
+	const made = await engine.db
 		.insertInto("monti_proposal")
-		.values({ id, conversation_id: conversationId, request, status: "pending" })
-		.execute();
-	return id;
+		.values({
+			id,
+			conversation_id: conversationId,
+			run_id: runId,
+			request,
+			status: "pending",
+			created_at: engine.now(),
+		})
+		.onConflict((conflict) => conflict.column("run_id").where("run_id", "is not", null).doNothing())
+		.returning("id")
+		.executeTakeFirst();
+	if (made) return made.id;
+	const first = await engine.db
+		.selectFrom("monti_proposal")
+		.select("id")
+		.where("run_id", "=", runId)
+		.executeTakeFirstOrThrow();
+	return first.id;
 }
 
-/**
- * Adds a write the assistant asked for to a proposal. Nothing changes: the write's `check` and `preview` run in a transaction that is rolled back,
- * and the versions of the records it touches are kept, so applying it later can tell whether they changed in the meantime.
- */
-export async function proposeItem(
-	engine: Engine,
-	proposalId: string,
-	operation: AnyOperation,
-	rawInput: unknown,
-): Promise<{ itemId: string; preview: Preview | null }> {
+/** What the assistant may never propose: what only a person runs, signing in, and structure on the live site. */
+function mustBeProposable(engine: Engine, operation: AnyOperation) {
 	// Before the input is read at all: a proposal keeps its input as it came, and what only a person may run (a key to add, a password) must not be
-	// kept anywhere. The same goes for what this site does not offer the assistant: signing in, and structure on the live site.
+	// kept anywhere.
 	if (operation.humanOnly || operation.open)
 		throw new ForbiddenError({ key: "errors.humanOnly", values: { operation: operation.name } });
 	if (operation.structure && engine.site.files === null)
 		throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: operation.name } });
-	const refs = refsIn(rawInput);
-	const known = await engine.db
-		.selectFrom("monti_proposal_item")
-		.select(["id", "position"])
-		.where("proposal_id", "=", proposalId)
-		.execute();
-	for (const ref of refs)
-		if (!known.some((item) => item.id === ref)) throw new Error(`Item ${ref} is not an earlier item of this proposal.`);
-	const input = parseInput(
-		operation,
-		mapRefs(rawInput, (itemId) => placeholder(itemId)),
-	);
+}
 
+/**
+ * What a write would do, without doing it: its `check` and `preview` run in a transaction that is rolled back, and the versions of the records it
+ * touches are read, so applying it later can tell whether they changed in the meantime.
+ */
+async function rehearse(engine: Engine, operation: AnyOperation, input: unknown, checks: boolean) {
 	let baseVersions: Record<string, number> = {};
 	let preview: Preview | null = null;
 	// As a write does: before the transaction, so nothing is held while another service answers.
-	const prepared =
-		refs.size === 0 ? await operation.prepare?.(input, context(engine, engine.db, "assistant").ctx) : undefined;
+	const prepared = checks ? await operation.prepare?.(input, context(engine, engine.db, "assistant").ctx) : undefined;
 	await engine.db
 		.transaction()
 		.execute(async (trx) => {
@@ -89,38 +115,338 @@ export async function proposeItem(
 				[...states].flatMap(([key, state]) => (state === null ? [] : [[key, state.version]])),
 			);
 			// An input that points at a former item names records that do not exist yet, so its checks wait for the apply.
-			if (refs.size === 0) await operation.check?.(input, ctx, prepared);
+			if (checks) await operation.check?.(input, ctx, prepared);
 			preview = (await operation.preview?.(input, ctx)) ?? null;
 			throw new Rollback();
 		})
 		.catch((error) => {
 			if (!(error instanceof Rollback)) throw error;
 		});
+	return { baseVersions, preview: preview as Preview | null };
+}
 
-	const itemId = randomUUID();
-	await engine.db
-		.insertInto("monti_proposal_item")
-		.values({
-			id: itemId,
+/** The inputs one proposed write becomes: itself, or one per element of its `each` list when it names several. */
+function split(operation: AnyOperation, rawInput: unknown): unknown[] {
+	const list = operation.each ? (rawInput as Record<string, unknown> | null)?.[operation.each] : undefined;
+	if (!operation.each || !Array.isArray(list) || list.length < 2) return [rawInput];
+	return list.map((element) => ({ ...(rawInput as object), [operation.each as string]: [element] }));
+}
+
+/** The places an item's write changes, as its operation names them; `null` for an operation that does not say. */
+function placesOf(
+	operations: ReadonlyMap<string, AnyOperation>,
+	item: Pick<Item, "operation" | "input">,
+): string[] | null {
+	const operation = operations.get(item.operation);
+	if (!operation?.places) return null;
+	return operation.places(parseInput(operation, withPlaceholders(item.input)));
+}
+
+/**
+ * Refuses a write that changes a place another waiting item of the proposal already changes, or a place that holds it or is held by it, whatever
+ * the two operations are: a whole body saved and one of its blocks edited are the same place.
+ */
+function mustNotOverlap(
+	operations: ReadonlyMap<string, AnyOperation>,
+	operation: AnyOperation,
+	input: unknown,
+	waiting: Item[],
+	except?: string,
+) {
+	if (!operation.places) return;
+	const places = operation.places(input);
+	for (const item of waiting) {
+		if (item.id === except || item.state !== "pending") continue;
+		const theirs = placesOf(operations, item);
+		if (theirs?.some((place) => places.some((mine) => overlap(mine, place))))
+			throw new CheckError({ key: "proposals.samePlace" });
+	}
+}
+
+const itemsOf = (db: Db, proposalId: string) =>
+	db.selectFrom("monti_proposal_item").selectAll().where("proposal_id", "=", proposalId).orderBy("position").execute();
+
+/**
+ * Adds a write the assistant asked for to a proposal. Nothing changes: the write is rehearsed and rolled back. A write that names several records
+ * through its `each` list becomes one item per record, so a person takes or leaves each. `group` is the name the assistant gave this kind of change.
+ * `call` names the tool call that asks (a run and the call's id): its items are stored with it in one statement, so the same call run again after
+ * a cut finds them and gives the same answer instead of proposing a second time.
+ */
+export async function proposeItem(
+	engine: Engine,
+	operations: ReadonlyMap<string, AnyOperation>,
+	proposalId: string,
+	operation: AnyOperation,
+	rawInput: unknown,
+	options: { group?: string; call?: string } = {},
+): Promise<{ itemId: string; itemIds: string[]; preview: Preview | null }> {
+	mustBeProposable(engine, operation);
+	const known = await itemsOf(engine.db, proposalId);
+	// The items this call made: also one that a request at its place has changed since, which the call must not make a second time.
+	const made =
+		options.call === undefined
+			? []
+			: known.filter((item) => item.made_by === options.call || item.origin === options.call);
+	if (made.length > 0)
+		return { itemId: made[0].id, itemIds: made.map((item) => item.id), preview: made[0].preview as Preview | null };
+	const refs = refsIn(rawInput);
+	for (const ref of refs)
+		if (!known.some((item) => item.id === ref)) throw new Error(`Item ${ref} is not an earlier item of this proposal.`);
+	const input = parseInput(operation, withPlaceholders(rawInput));
+	mustNotOverlap(operations, operation, input, known);
+	const parts = split(operation, rawInput);
+	if (known.length + parts.length > MOST_ITEMS)
+		throw new CheckError({ key: "proposals.tooMany", values: { most: MOST_ITEMS } });
+
+	// The whole write is rehearsed once: its checks answer for all of it, and its preview says what all of it would do.
+	const whole = await rehearse(engine, operation, input, refs.size === 0);
+	const rows = [];
+	for (const [index, part] of parts.entries()) {
+		// Each record's own item keeps the versions of what that one write touches.
+		const baseVersions =
+			parts.length === 1
+				? whole.baseVersions
+				: (await rehearse(engine, operation, parseInput(operation, withPlaceholders(part)), false)).baseVersions;
+		rows.push({
+			id: randomUUID(),
 			proposal_id: proposalId,
-			position: known.length,
+			position: known.length + index,
+			operation: operation.name,
+			input: JSON.stringify(part),
+			base_versions: JSON.stringify(baseVersions),
+			state: "pending" as const,
+			reason: null,
+			output: null,
+			activity_id: null,
+			group_label: options.group ?? "",
+			made_by: options.call ?? null,
+			origin: options.call ?? null,
+			preview: whole.preview === null ? null : JSON.stringify(whole.preview),
+		});
+	}
+	await engine.db.insertInto("monti_proposal_item").values(rows).execute();
+	await settleProposal(engine.db, proposalId);
+	return { itemId: rows[0].id, itemIds: rows.map((row) => row.id), preview: whole.preview };
+}
+
+/**
+ * Puts a new write in an item's place (doc 10): the item made again after its record changed, or changed by a request at its place. The item
+ * keeps its id, its place in the proposal and what was asked of it; it waits again, kept in. `call` names the tool call that asks, as in
+ * `proposeItem`: run again, it finds the item it already made.
+ */
+export async function replaceItem(
+	engine: Engine,
+	operations: ReadonlyMap<string, AnyOperation>,
+	itemId: string,
+	operation: AnyOperation,
+	rawInput: unknown,
+	options: { call?: string } = {},
+): Promise<{ itemId: string; preview: Preview | null }> {
+	mustBeProposable(engine, operation);
+	const item = await engine.db
+		.selectFrom("monti_proposal_item")
+		.selectAll()
+		.where("id", "=", itemId)
+		.executeTakeFirst();
+	if (item && options.call !== undefined && item.made_by === options.call)
+		return { itemId, preview: item.preview as Preview | null };
+	if (!item || !["pending", "stale", "failed"].includes(item.state))
+		throw new CheckError({ key: "proposals.notWaiting" });
+	if (split(operation, rawInput).length > 1) throw new CheckError({ key: "proposals.oneRecord" });
+	// The same change, made again or made differently: the same operation, on the same records. A request at one change's place does not turn it
+	// into a change of something else.
+	if (operation.name !== item.operation) throw new CheckError({ key: "proposals.otherChange" });
+	const input = parseInput(operation, withPlaceholders(rawInput));
+	mustNotOverlap(operations, operation, input, await itemsOf(engine.db, item.proposal_id), itemId);
+	const { baseVersions, preview } = await rehearse(engine, operation, input, refsIn(rawInput).size === 0);
+	const [was, is] = [Object.keys(item.base_versions).sort(), Object.keys(baseVersions).sort()];
+	if (was.length !== is.length || was.some((key, index) => key !== is[index]))
+		throw new CheckError({ key: "proposals.otherChange" });
+	// Only the item as it was read: one an apply took, a person discarded or another request changed meanwhile is left as it is.
+	const replaced = await engine.db
+		.updateTable("monti_proposal_item")
+		.set({
 			operation: operation.name,
 			input: JSON.stringify(rawInput),
 			base_versions: JSON.stringify(baseVersions),
 			state: "pending",
 			reason: null,
-			output: null,
-			activity_id: null,
+			included: true,
+			made_by: options.call ?? null,
+			preview: preview === null ? null : JSON.stringify(preview),
 		})
-		.execute();
+		.where("id", "=", itemId)
+		.where("state", "=", item.state)
+		.where("operation", "=", item.operation)
+		.where(sql<boolean>`input = ${JSON.stringify(item.input)}::jsonb`)
+		.returning("id")
+		.executeTakeFirst();
+	if (!replaced) throw new CheckError({ key: "proposals.notWaiting" });
+	await settleProposal(engine.db, item.proposal_id);
 	return { itemId, preview };
+}
+
+/** Adds one exchange to an item's own thread (what the person asked at its place, and the answer). */
+export async function addExchange(db: Db, itemId: string, exchange: ItemExchange): Promise<void> {
+	const item = await db.selectFrom("monti_proposal_item").select("thread").where("id", "=", itemId).executeTakeFirst();
+	if (!item) return;
+	await db
+		.updateTable("monti_proposal_item")
+		.set({ thread: JSON.stringify([...item.thread, exchange]) })
+		.where("id", "=", itemId)
+		.execute();
 }
 
 export type ApplyResult = { itemId: string; state: ProposalItemState; reason?: Message }[];
 
+/** One step of an apply, for whoever watches it (the review's "9 / 17"). */
+export type ApplyProgress = { done: number; total: number; itemId: string; state: ProposalItemState; reason?: Message };
+
+/** How far this proposal's own writes moved a record on, and the places they changed in it (`null`: one of them did not say). */
+type Moved = Map<string, { from: number; to: number; places: string[] | null }>;
+
 /**
- * Applies a proposal's pending items in order, each as its own write on the same path a person's write takes. Items not in `include` are dropped.
- * There is no transaction around the whole: an item that fails or changed in the meantime is recorded with its reason and the rest go on.
+ * How far this proposal's own writes have moved each record on: the version the first of them found (the reading the items were made on) and the
+ * version the last of them left. A later item made on the same reading follows from there instead of being "changed in the meantime".
+ */
+function movedBy(operations: ReadonlyMap<string, AnyOperation>, items: Item[]) {
+	const moved: Moved = new Map();
+	for (const item of items) {
+		if (item.state !== "applied" || !item.after_versions) continue;
+		note(moved, item.base_versions, item.after_versions, placesOf(operations, item));
+	}
+	return moved;
+}
+
+function note(
+	moved: Moved,
+	base: Record<string, number>,
+	after: Record<string, number | null>,
+	places: string[] | null,
+) {
+	for (const [key, to] of Object.entries(after)) {
+		const step = moved.get(key);
+		const from = step?.from ?? base[key];
+		if (to === null || from === undefined) moved.delete(key);
+		else
+			moved.set(key, {
+				from,
+				to,
+				places: places === null || step?.places === null ? null : [...(step?.places ?? []), ...places],
+			});
+	}
+}
+
+/**
+ * The versions and input an item is applied with. Where an earlier item of the same proposal moved a record on from the reading this one was made
+ * on, a write that can follow (`follows`) is brought to the version the earlier one left; one that cannot keeps its own, and will be found changed.
+ * It follows only writes that named the places they changed, none of them its own: a block edit does not follow a save that brought a whole body.
+ */
+function following(
+	operation: AnyOperation,
+	item: Item,
+	input: unknown,
+	moved: Moved,
+): { versions: Record<string, number>; input: unknown } {
+	const ahead = Object.entries(item.base_versions).filter(([key, base]) => {
+		const step = moved.get(key);
+		return step !== undefined && step.from === base && step.to !== base;
+	});
+	if (ahead.length === 0 || !operation.follows || !operation.places) return { versions: item.base_versions, input };
+	const places = operation.places(input);
+	const clear = ahead.every(([key]) => {
+		const theirs = moved.get(key)?.places;
+		return (
+			theirs !== null && theirs !== undefined && !theirs.some((place) => places.some((mine) => overlap(mine, place)))
+		);
+	});
+	if (!clear) return { versions: item.base_versions, input };
+	const versions = {
+		...item.base_versions,
+		...Object.fromEntries(ahead.map(([key]) => [key, moved.get(key)?.to as number])),
+	};
+	const followed = operation.follows(input, versions);
+	return followed === null ? { versions: item.base_versions, input } : { versions, input: followed };
+}
+
+/** What an apply shows to take an item as its own inside the item's write (`RunOptions.applies`). */
+export type ItemClaim = {
+	itemId: string;
+	/** The apply's name on the proposal: another name there means its hold ran out and another apply took the proposal. */
+	token: string;
+	/** The write as the apply read it: an item changed since (made again, asked about at its place) is not the one it meant. */
+	operation: string;
+	input: unknown;
+	/** The stored check decides whether the item is kept; `false` when the caller named the kept items itself. */
+	checked: boolean;
+};
+
+/** The item is not this apply's to write: `taken`, another apply holds the proposal; `gone`, the item is no longer waiting as it was read. */
+export class ClaimLost extends Error {
+	constructor(readonly why: "taken" | "gone") {
+		super(why === "taken" ? "Another apply holds the proposal." : "The item is no longer waiting as it was read.");
+	}
+}
+
+/**
+ * Takes an item for its write, or refuses with `ClaimLost`. With `lock`, in the write's transaction: the item's row is held until the write ends,
+ * so discarding it, leaving it out, changing it and applying it elsewhere all wait and then find it applied.
+ */
+export async function claimItem(db: Db, claim: ItemClaim, lock: boolean): Promise<void> {
+	const query = db
+		.selectFrom("monti_proposal_item")
+		.select(["proposal_id", "state", "included", "operation", "input"])
+		.where("id", "=", claim.itemId);
+	const item = await (lock ? query.forUpdate() : query).executeTakeFirst();
+	const same =
+		item !== undefined &&
+		item.state === "pending" &&
+		(!claim.checked || item.included) &&
+		item.operation === claim.operation &&
+		JSON.stringify(item.input) === JSON.stringify(claim.input);
+	if (!item || !same) throw new ClaimLost("gone");
+	const proposal = await db
+		.selectFrom("monti_proposal")
+		.select("applying_token")
+		.where("id", "=", item.proposal_id)
+		.executeTakeFirst();
+	if (proposal?.applying_token !== claim.token) throw new ClaimLost("taken");
+}
+
+/** Records an item as applied, in its write's transaction: what the write gave, its row in the activity log, and the versions it found and left. */
+export async function settleApplied(
+	db: Db,
+	itemId: string,
+	written: {
+		output: unknown;
+		activityId: string | null;
+		after: Record<string, number | null>;
+		from: Record<string, number | null>;
+	},
+): Promise<void> {
+	await db
+		.updateTable("monti_proposal_item")
+		.set({
+			state: "applied",
+			reason: null,
+			output: written.output === undefined ? null : JSON.stringify(written.output),
+			activity_id: written.activityId,
+			after_versions: JSON.stringify(written.after),
+			from_versions: JSON.stringify(written.from),
+		})
+		.where("id", "=", itemId)
+		.execute();
+}
+
+/**
+ * Applies a proposal's waiting items the person kept, in order, each as its own write on the same path a person's write takes. Items left out are
+ * dropped. There is no transaction around the whole: an item that fails or changed in the meantime is recorded with its reason and the rest go
+ * on. Each item is read again when its turn comes and is recorded as applied inside its own write, so an item discarded, left out or changed
+ * while the apply ran is not written, and an apply cut short goes on with what is left when it is run again. `include`, when given, says which
+ * items are kept instead of the stored checks.
+ *
+ * One apply at a time: it puts its name on the proposal and says every third of `leaseMs` that it still holds it. An apply that stopped saying so
+ * (it died, or hung) is replaced by the next one, and if it comes back it finds another name and stops.
  */
 export async function applyProposal(
 	engine: Engine,
@@ -128,94 +454,479 @@ export async function applyProposal(
 	proposalId: string,
 	include: string[] | undefined,
 	write: <Output>(operation: AnyOperation, input: unknown, options: RunOptions) => Promise<WriteResult<Output>>,
+	onProgress?: (progress: ApplyProgress) => void | Promise<void>,
+	leaseMs: number = APPLY_LEASE_MS,
 ): Promise<ApplyResult> {
+	const token = randomUUID();
+	const lease = () => new Date(engine.now().getTime() + leaseMs);
 	const proposal = await engine.db
-		.selectFrom("monti_proposal")
-		.select("conversation_id")
+		.updateTable("monti_proposal")
+		.set({ applying_until: lease(), applying_token: token })
 		.where("id", "=", proposalId)
-		.executeTakeFirstOrThrow();
-	const items = await engine.db
-		.selectFrom("monti_proposal_item")
-		.selectAll()
-		.where("proposal_id", "=", proposalId)
-		.orderBy("position")
-		.execute();
-	const outputs = new Map(items.filter((item) => item.state === "applied").map((item) => [item.id, item.output]));
-	const results: ApplyResult = [];
-
-	const settle = async (
-		itemId: string,
-		state: ProposalItemState,
-		extra: { reason?: Message; output?: unknown; activityId?: string } = {},
-	) => {
-		await engine.db
-			.updateTable("monti_proposal_item")
-			.set({
-				state,
-				reason: extra.reason ? JSON.stringify(extra.reason) : null,
-				output: extra.output === undefined ? null : JSON.stringify(extra.output),
-				activity_id: extra.activityId ?? null,
-			})
-			.where("id", "=", itemId)
-			.execute();
-		results.push({ itemId, state, ...(extra.reason ? { reason: extra.reason } : {}) });
-	};
-
-	for (const item of items) {
-		if (item.state !== "pending") continue;
-		if (include && !include.includes(item.id)) {
-			await settle(item.id, "discarded");
-			continue;
-		}
-		if ([...refsIn(item.input)].some((ref) => !outputs.has(ref))) {
-			await settle(item.id, "skipped", { reason: { key: "proposals.dependsOnSkipped" } });
-			continue;
-		}
-		const operation = operations.get(item.operation);
-		if (!operation) {
-			await settle(item.id, "failed", { reason: { key: "errors.unknown-operation" } });
-			continue;
-		}
-		const input = mapRefs(item.input, (itemId) => (outputs.get(itemId) as { id?: unknown } | null)?.id);
-		try {
-			const result = await write(operation, input, {
-				actor: "assistant",
-				versions: item.base_versions,
-				conversationId: proposal.conversation_id,
-				proposalItemId: item.id,
-			});
-			outputs.set(item.id, result.output);
-			await settle(item.id, "applied", { output: result.output, activityId: result.activityId });
-		} catch (error) {
-			if (error instanceof ConflictError) await settle(item.id, "stale", { reason: { key: "proposals.changed" } });
-			else
-				await settle(item.id, "failed", {
-					reason: isMontiError(error)
-						? { key: `errors.${error.code}` }
-						: { key: "errors.unexpected", values: { message: String(error) } },
-				});
-		}
+		.where((eb) => eb.or([eb("applying_until", "is", null), eb("applying_until", "<", engine.now())]))
+		.returning("conversation_id")
+		.executeTakeFirst();
+	if (!proposal) {
+		const there = await engine.db
+			.selectFrom("monti_proposal")
+			.select("id")
+			.where("id", "=", proposalId)
+			.executeTakeFirst();
+		throw new CheckError({ key: there ? "proposals.applying" : "proposals.unknown" });
 	}
+	// A write can take longer than one hold: the apply keeps saying it is there for as long as it lives.
+	const held = setInterval(() => {
+		void engine.db
+			.updateTable("monti_proposal")
+			.set({ applying_until: lease() })
+			.where("id", "=", proposalId)
+			.where("applying_token", "=", token)
+			.execute()
+			.catch(() => {});
+	}, leaseMs / 3);
+	const results: ApplyResult = [];
+	try {
+		const first = await itemsOf(engine.db, proposalId);
+		let outputs = new Map(first.filter((item) => item.state === "applied").map((item) => [item.id, item.output]));
+		let moved = movedBy(operations, first);
+		/**
+		 * What the proposal's applied items gave and how far they moved the records, read again. An apply that took the proposal over from one still
+		 * in its last write learns of that write here: it had to wait for it at the item's row, so the write is in by now.
+		 */
+		const readAgain = async () => {
+			const now = await itemsOf(engine.db, proposalId);
+			outputs = new Map(now.filter((item) => item.state === "applied").map((item) => [item.id, item.output]));
+			moved = movedBy(operations, now);
+		};
+		const kept = (item: Item) => (include ? include.includes(item.id) : item.included);
+		const counted = new Set(first.filter((item) => item.state === "pending" && kept(item)).map((item) => item.id));
+		let total = counted.size;
+		let done = 0;
 
-	await settleProposal(engine.db, proposalId);
+		const report = async (itemId: string, state: ProposalItemState, reason?: Message) => {
+			results.push({ itemId, state, ...(reason ? { reason } : {}) });
+			if (state === "discarded") return;
+			done += 1;
+			// Whoever watches may be gone (the browser left, its stream broke): the apply runs to its end all the same (doc 00).
+			try {
+				await onProgress?.({ done, total, itemId, state, ...(reason ? { reason } : {}) });
+			} catch {}
+		};
+		/** An item that left the apply's hands (discarded, taken in a screen, changed) is no longer one of the items it counts to. */
+		const dropped = (itemId: string) => {
+			if (counted.delete(itemId)) total -= 1;
+		};
+		/** Records why a waiting item was not written. Only while it still waits: what a person did to it meanwhile stands. */
+		const settle = async (item: Item, state: "discarded" | "skipped" | "failed" | "stale", reason?: Message) => {
+			const set = await engine.db
+				.updateTable("monti_proposal_item")
+				.set({ state, reason: reason ? JSON.stringify(reason) : null })
+				.where("id", "=", item.id)
+				.where("state", "=", "pending")
+				.$if(state === "discarded" && include === undefined, (query) => query.where("included", "=", false))
+				.returning("id")
+				.executeTakeFirst();
+			if (set) await report(item.id, state, reason);
+			else dropped(item.id);
+		};
+
+		for (const { id } of first.filter((item) => item.state === "pending")) {
+			// An apply whose hold another took stops before it touches the next item.
+			const holder = await engine.db
+				.selectFrom("monti_proposal")
+				.select("applying_token")
+				.where("id", "=", proposalId)
+				.executeTakeFirst();
+			if (holder?.applying_token !== token) throw new CheckError({ key: "proposals.applying" });
+			// The item as it is now, not as it was when the apply began.
+			const item = await engine.db
+				.selectFrom("monti_proposal_item")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirst();
+			if (!item || item.state !== "pending") {
+				dropped(id);
+				await readAgain();
+				continue;
+			}
+			if (!kept(item)) {
+				await settle(item, "discarded");
+				continue;
+			}
+			if ([...refsIn(item.input)].some((ref) => !outputs.has(ref))) {
+				await settle(item, "skipped", { key: "proposals.dependsOnSkipped" });
+				continue;
+			}
+			const operation = operations.get(item.operation);
+			if (!operation) {
+				await settle(item, "failed", { key: "errors.unknown-operation" });
+				continue;
+			}
+			const resolved = mapRefs(item.input, (itemId) => (outputs.get(itemId) as { id?: unknown } | null)?.id);
+			const { versions, input } = following(operation, item, resolved, moved);
+			let written = false;
+			try {
+				const result = await write(operation, input, {
+					actor: "assistant",
+					versions,
+					conversationId: proposal.conversation_id,
+					applies: {
+						itemId: item.id,
+						token,
+						operation: item.operation,
+						input: item.input,
+						checked: include === undefined,
+					},
+				});
+				outputs.set(item.id, result.output);
+				note(moved, item.base_versions, result.versions, placesOf(operations, item));
+				written = true;
+			} catch (error) {
+				if (error instanceof ClaimLost) {
+					if (error.why === "taken") throw new CheckError({ key: "proposals.applying" });
+					dropped(item.id);
+					await readAgain();
+				} else if (error instanceof ConflictError) await settle(item, "stale", { key: "proposals.changed" });
+				else
+					await settle(
+						item,
+						"failed",
+						isMontiError(error)
+							? error instanceof CheckError || error instanceof ForbiddenError
+								? error.reason
+								: { key: `errors.${error.code}` }
+							: { key: "errors.unexpected", values: { message: String(error) } },
+					);
+			}
+			// Outside the write's own failures: nothing that goes wrong in telling of it turns an applied item into a failed one.
+			if (written) await report(item.id, "applied");
+		}
+	} finally {
+		clearInterval(held);
+		// Only its own hold: one another apply took is that apply's to let go.
+		await engine.db
+			.updateTable("monti_proposal")
+			.set({ applying_until: null, applying_token: null })
+			.where("id", "=", proposalId)
+			.where("applying_token", "=", token)
+			.execute();
+		await settleProposal(engine.db, proposalId);
+	}
 	return results;
 }
 
-/** A proposal's status from its items': all still waiting, all thrown away, all done, or some of each. */
-export async function settleProposal(db: Kysely<Database> | Transaction<Database>, proposalId: string): Promise<void> {
-	const states = await db
-		.selectFrom("monti_proposal_item")
-		.select("state")
-		.where("proposal_id", "=", proposalId)
+/**
+ * Holds the rows of the proposals named, or of the proposals the items named belong to, until the transaction ends. Whatever decides about a
+ * proposal as a whole takes them first, before any record or item: a screen's save that accepts items, a discard, a revert, the status.
+ */
+export async function lockProposals(db: Db, of: { proposals?: string[]; items?: string[] }): Promise<void> {
+	const ids = new Set(of.proposals ?? []);
+	if (of.items && of.items.length > 0)
+		for (const row of await db
+			.selectFrom("monti_proposal_item")
+			.select("proposal_id")
+			.where("id", "in", of.items)
+			.execute())
+			ids.add(row.proposal_id);
+	if (ids.size === 0) return;
+	await db
+		.selectFrom("monti_proposal")
+		.select("id")
+		.where("id", "in", [...ids])
+		.orderBy("id")
+		.forUpdate()
 		.execute();
-	const status = states.every((row) => row.state === "pending")
-		? "pending"
-		: states.every((row) => row.state === "discarded")
-			? "discarded"
-			: states.every((row) => row.state === "applied" || row.state === "discarded")
-				? "applied"
-				: "partial";
-	await db.updateTable("monti_proposal").set({ status }).where("id", "=", proposalId).execute();
+}
+
+/**
+ * A proposal's status from its items': all still waiting, all thrown away, put back, all done, or some of each. The proposal's row is held while
+ * the items are read, so two that settle at once (an apply ending, a discard beside it) do not write an older reading over a newer one.
+ */
+export async function settleProposal(db: Db, proposalId: string): Promise<void> {
+	const settle = async (trx: Db) => {
+		await lockProposals(trx, { proposals: [proposalId] });
+		const rows = await trx
+			.selectFrom("monti_proposal_item")
+			.select("state")
+			.where("proposal_id", "=", proposalId)
+			.execute();
+		const states = rows.map((row) => row.state);
+		const only = (...allowed: ProposalItemState[]) => states.every((state) => allowed.includes(state));
+		const status: Selectable<ProposalTable>["status"] = only("pending")
+			? "pending"
+			: only("discarded")
+				? "discarded"
+				: only("reverted", "discarded")
+					? "reverted"
+					: only("applied", "discarded")
+						? "applied"
+						: "partial";
+		await trx.updateTable("monti_proposal").set({ status }).where("id", "=", proposalId).execute();
+	};
+	if (db.isTransaction) await settle(db);
+	else await db.transaction().execute(settle);
+}
+
+/**
+ * Puts back what applying a proposal changed (doc 10: the card's "revert all"): each applied item's write is undone as the activity log undoes
+ * it, events and all, newest first. Only items the apply engine applied are put back here: an item taken in a screen was saved with the person's
+ * own changes, and that save is undone from the activity log.
+ *
+ * - A record changed since is left alone. An item of which something went back is `reverted`, with how many of its records stayed; its write is
+ *   undone and cannot be undone again. An item of which nothing could go back stays `applied` with that reason, and its write is not marked
+ *   undone, so the activity log can still undo it.
+ * - A write that cannot be undone at all (one that touched no record, a structure change, one older than the undo's 30 days) stays `applied`
+ *   with the undo's own reason.
+ * - Two items that changed one record go back through both. Putting the later one back gives the record a new version, which is not the one the
+ *   earlier write left; the revert knows it for its own step when the later write had found the record exactly as the earlier one left it.
+ * - Not while an apply holds the proposal. The proposal's row is held to the end, so a second revert beside this one waits and then finds
+ *   nothing left to put back.
+ */
+export async function revertProposal(
+	engine: Engine,
+	db: Db,
+	proposalId: string,
+	emit: (event: MontiEvent) => void,
+): Promise<{ reverted: string[]; kept: string[] }> {
+	await lockProposals(db, { proposals: [proposalId] });
+	const proposal = await db
+		.selectFrom("monti_proposal")
+		.select("applying_until")
+		.where("id", "=", proposalId)
+		.executeTakeFirst();
+	if (!proposal) throw new CheckError({ key: "proposals.unknown" });
+	if (proposal.applying_until !== null && proposal.applying_until > engine.now())
+		throw new CheckError({ key: "proposals.applying" });
+	const applied = (
+		await db
+			.selectFrom("monti_proposal_item")
+			.innerJoin("monti_activity", "monti_activity.id", "monti_proposal_item.activity_id")
+			.select([
+				"monti_proposal_item.id",
+				"monti_proposal_item.activity_id",
+				"monti_proposal_item.position",
+				"monti_proposal_item.base_versions",
+				"monti_proposal_item.from_versions",
+				"monti_proposal_item.after_versions",
+			])
+			.where("monti_proposal_item.proposal_id", "=", proposalId)
+			.where("monti_proposal_item.state", "=", "applied")
+			.whereRef("monti_activity.proposal_item_id", "=", "monti_proposal_item.id")
+			.orderBy("monti_proposal_item.position", "desc")
+			.execute()
+	).filter((item): item is typeof item & { activity_id: string } => item.activity_id !== null);
+	const reverted: string[] = [];
+	const kept: string[] = [];
+	/** Where the revert left each record it put back: at version `now`, holding what the write just undone found at version `was`. */
+	const walked = new Map<string, { now: number | null; was: number | null }>();
+	const ownStep = (ref: RecordRef, left: number | null, current: number | null) => {
+		const step = walked.get(recordKey(ref));
+		return step !== undefined && step.now === current && step.was === left;
+	};
+	for (const item of applied) {
+		const found: Record<string, number | null> = item.from_versions ?? item.base_versions;
+		// Judged by the records the item changed. One it only held while it wrote (the folder an entry moved into) was not changed by it, and
+		// putting another item back may have moved that one on.
+		const changed = (ref: RecordRef) => {
+			const key = recordKey(ref);
+			return item.after_versions === null || item.after_versions[key] !== (found[key] ?? null);
+		};
+		/** What becomes of the item: put back (with how many of its records stayed as they are), or left applied with why. */
+		let outcome: { state: "reverted"; stayed: number } | { state: "applied"; reason: Message };
+		try {
+			const plan = await planUndo(engine, db, item.activity_id, ownStep);
+			if (plan.restore.some(changed)) {
+				// As the activity log's undo: what it changes of the site is told to the receivers (an entry off the site again).
+				const done = await undoWithEvents(engine, db, item.activity_id, emit, ownStep);
+				const now = await loadRecords(engine, db, done.restore);
+				for (const ref of done.restore)
+					walked.set(recordKey(ref), {
+						now: now.get(recordKey(ref))?.version ?? null,
+						was: found[recordKey(ref)] ?? null,
+					});
+				for (const ref of done.skip) walked.delete(recordKey(ref));
+				outcome = { state: "reverted", stayed: done.skip.filter(changed).length };
+			} else {
+				// Nothing of what it changed can go back: the write is left as it is, not used up as undone.
+				for (const ref of plan.skip) walked.delete(recordKey(ref));
+				outcome = { state: "applied", reason: { key: "activity.changedSince" } };
+			}
+		} catch (error) {
+			if (!(error instanceof ForbiddenError)) throw error;
+			// The undo's own word: it cannot be undone, its time is over, or it was undone already (from the activity log).
+			outcome = { state: "applied", reason: error.reason };
+		}
+		if (outcome.state === "reverted") reverted.push(item.id);
+		else kept.push(item.id);
+		const reason: Message | null =
+			outcome.state === "applied"
+				? outcome.reason
+				: outcome.stayed > 0
+					? { key: "proposals.partlyReverted", values: { count: outcome.stayed } }
+					: null;
+		await db
+			.updateTable("monti_proposal_item")
+			.set({ state: outcome.state, reason: reason === null ? null : JSON.stringify(reason) })
+			.where("id", "=", item.id)
+			.execute();
+	}
+	await settleProposal(db, proposalId);
+	return { reverted, kept };
+}
+
+/** A record as a person knows it: its name, and where it is (an entry's address, a file's folder). */
+export type RecordLabel = { title: string; detail: string | null };
+
+/** What the records a proposal touches are called, for the card and the review (doc 10). A kind the core does not know is called by its id. */
+export async function describeRecords(engine: Engine, db: Db, refs: RecordRef[]): Promise<Record<string, RecordLabel>> {
+	const labels: Record<string, RecordLabel> = {};
+	const ids = (kind: string) => [...new Set(refs.filter((ref) => ref.kind === kind).map((ref) => ref.id))];
+	const schema = engine.site.schema();
+	const entries = ids("entry");
+	if (entries.length > 0)
+		for (const entry of await db
+			.selectFrom("entries")
+			.select(["id", "title", "slug", "collection", "locale"])
+			.where("id", "in", entries)
+			.execute())
+			labels[recordKey({ kind: "entry", id: entry.id })] = {
+				title: entry.title,
+				detail:
+					entry.slug === "" ? null : (publicPath(schema, entry.collection, entry.slug, entry.locale) ?? entry.slug),
+			};
+	const folders = ids("folder");
+	const media = ids("media");
+	const files =
+		media.length === 0
+			? []
+			: await db.selectFrom("media").select(["id", "name", "folder_id"]).where("id", "in", media).execute();
+	const folderIds = [...new Set([...folders, ...files.flatMap((file) => (file.folder_id ? [file.folder_id] : []))])];
+	const folderNames = new Map(
+		folderIds.length === 0
+			? []
+			: (await db.selectFrom("folders").select(["id", "name"]).where("id", "in", folderIds).execute()).map((folder) => [
+					folder.id,
+					folder.name,
+				]),
+	);
+	for (const id of folders) {
+		const name = folderNames.get(id);
+		if (name !== undefined) labels[recordKey({ kind: "folder", id })] = { title: name, detail: null };
+	}
+	for (const file of files)
+		labels[recordKey({ kind: "media", id: file.id })] = {
+			title: file.name,
+			detail: file.folder_id ? (folderNames.get(file.folder_id) ?? null) : null,
+		};
+	return labels;
+}
+
+export type ProposalItemView = {
+	id: string;
+	operation: string;
+	input: unknown;
+	/** The name the assistant gave this kind of change; items with the same name are one group. */
+	group: string;
+	state: ProposalItemState;
+	/** Waiting, and its record changed since it was made: it cannot be applied until it is made again. */
+	stale: boolean;
+	included: boolean;
+	reason: Message | null;
+	/** The records it would change (or changed), by `recordKey`. */
+	targets: string[];
+	thread: ItemExchange[];
+	activityId: string | null;
+};
+
+export type ProposalView = {
+	id: string;
+	conversationId: string;
+	runId: string | null;
+	request: string;
+	status: Selectable<ProposalTable>["status"];
+	createdAt: Date;
+	/** An apply is going on it right now. */
+	applying: boolean;
+	items: ProposalItemView[];
+	/** The groups in the order their first item came. */
+	groups: { label: string; itemIds: string[] }[];
+	records: Record<string, RecordLabel>;
+	/** `toApply`: waiting, kept in and not changed since: what "apply" would run. */
+	counts: { toApply: number; applied: number; failed: number; stale: number; reverted: number };
+};
+
+/**
+ * A proposal as the card and the review show it (doc 10). Each waiting item's versions are compared with the records as they are now: one whose
+ * record changed in the meantime is marked, unless only this proposal's own applied items moved it and the item can follow them.
+ */
+export async function viewProposal(
+	engine: Engine,
+	operations: ReadonlyMap<string, AnyOperation>,
+	db: Db,
+	proposalId: string,
+): Promise<ProposalView | null> {
+	const proposal = await db.selectFrom("monti_proposal").selectAll().where("id", "=", proposalId).executeTakeFirst();
+	if (!proposal) return null;
+	const items = await itemsOf(db, proposalId);
+	const moved = movedBy(operations, items);
+	const refs = items.flatMap((item) =>
+		Object.keys(item.base_versions).map((key) => {
+			const at = key.indexOf(":");
+			return { kind: key.slice(0, at), id: key.slice(at + 1) };
+		}),
+	);
+	const known = refs.filter((ref) => engine.recordKinds.has(ref.kind));
+	const now = await loadRecords(engine, db, known);
+	const views = items.map((item): ProposalItemView => {
+		const operation = operations.get(item.operation);
+		const expected =
+			item.state === "pending" && operation
+				? following(operation, item, withPlaceholders(item.input), moved).versions
+				: item.base_versions;
+		const stale =
+			item.state === "stale" ||
+			(item.state === "pending" &&
+				Object.entries(expected).some(([key, version]) => now.has(key) && (now.get(key)?.version ?? null) !== version));
+		return {
+			id: item.id,
+			operation: item.operation,
+			input: item.input,
+			group: item.group_label,
+			state: item.state,
+			stale,
+			included: item.included,
+			reason: item.reason,
+			targets: Object.keys(item.after_versions ?? item.base_versions),
+			thread: item.thread,
+			activityId: item.activity_id,
+		};
+	});
+	const groups: ProposalView["groups"] = [];
+	for (const item of views) {
+		const group = groups.find((each) => each.label === item.group);
+		if (group) group.itemIds.push(item.id);
+		else groups.push({ label: item.group, itemIds: [item.id] });
+	}
+	const count = (test: (item: ProposalItemView) => boolean) => views.filter(test).length;
+	return {
+		id: proposal.id,
+		conversationId: proposal.conversation_id,
+		runId: proposal.run_id,
+		request: proposal.request,
+		status: proposal.status,
+		createdAt: proposal.created_at,
+		applying: proposal.applying_until !== null && proposal.applying_until > engine.now(),
+		items: views,
+		groups,
+		records: await describeRecords(engine, db, refs),
+		counts: {
+			toApply: count((item) => item.state === "pending" && item.included && !item.stale),
+			applied: count((item) => item.state === "applied"),
+			failed: count((item) => item.state === "failed" || item.state === "skipped"),
+			stale: count((item) => item.stale),
+			reverted: count((item) => item.state === "reverted"),
+		},
+	};
 }
 
 /**

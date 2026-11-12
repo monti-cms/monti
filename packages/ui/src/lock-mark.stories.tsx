@@ -37,7 +37,7 @@ export const AfterALabel: Story = {
 	),
 };
 
-/** Pointed at, the lock says why in a tooltip: the same words a screen reader hears as its name (2026-11-12, owner). */
+/** Pointed at, the lock says why in a tooltip: the same words a screen reader hears as its name (2026-11-12, decided while building). */
 export const PointedAt: Story = {
 	args: { label: "운영 사이트에서는 잠김" },
 	render: (args) => (
