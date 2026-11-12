@@ -965,4 +965,20 @@ describe("a conditional field in the property panel (doc 19)", () => {
 		await expect.element(page.getByText(/선택지에 없는 값/)).not.toBeInTheDocument();
 		await expect.element(field("링크 주소")).toBeVisible();
 	});
+
+	it("19-5 the comparison of two sides that chose different options: each shows its choice by its label and the fields of its own option, and the choice is the one place counted", async () => {
+		const { ConditionalCompare } = composeStories(entry);
+		await ConditionalCompare.run();
+		await expect.element(page.getByText("다른 곳 1")).toBeVisible();
+		const sides = [...document.querySelectorAll<HTMLElement>("[data-slot=compare-side]")];
+		expect(sides).toHaveLength(2);
+		const [mine, server] = sides.map((side) => side.textContent ?? "");
+		expect(mine).toContain("링크");
+		expect(mine).toContain("https://example.dev/reading");
+		expect(mine).not.toContain("동영상 주소");
+		expect(server).toContain("동영상");
+		expect(server).toContain("https://example.dev/talk.mp4");
+		expect(server).toContain("다른 탭");
+		expect(server).not.toContain("링크 주소");
+	});
 });

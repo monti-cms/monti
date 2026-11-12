@@ -1,4 +1,4 @@
-import type { Doc } from "@monti-cms/core";
+import { type Doc, storedFields } from "@monti-cms/core";
 import {
 	Banner,
 	Button,
@@ -161,19 +161,48 @@ export function CompareView({
 	const title = wordDiff(mine.title, server.title);
 	const bodies = compareBodies(mine.doc, server.doc);
 	const fieldValue = (copy: Copy, field: string) => (field === "slug" ? copy.slug : copy.values[field]);
+	const stored = storedFields(schema?.schema.collections[collection]);
+	/** A value as the side shows it: a choice by its option's label. */
+	const words = (field: string, value: unknown) => {
+		const option = labels[field]?.optionLabels;
+		return stored[field]?.kind === "select" && option
+			? shown(
+					Array.isArray(value) ? value.map((each) => option[String(each)] ?? each) : (option[String(value)] ?? value),
+				)
+			: shown(value);
+	};
+	/**
+	 * Where the two sides chose different options of a conditional field (doc 19), each side shows the fields of its own option under the
+	 * choice, whole: they are what that kind of entry has, and the choice is the one place counted.
+	 */
+	const own = (copy: Copy, field: string) => {
+		const definition = schema?.schema.collections[collection]?.fields[field];
+		return definition?.kind === "conditional" ? Object.keys(definition.fields[String(copy.values[field])] ?? {}) : [];
+	};
 
 	const side = (copy: Copy, pick: "mine" | "server", label: string) => (
 		<CompareSide
 			label={label}
 			properties={
 				properties.length > 0
-					? properties.map((field) => (
+					? properties.flatMap((field) => [
 							<CompareProperty key={field} label={labels[field]?.label ?? field} empty={t("entry.empty")}>
 								{shown(fieldValue(copy, field)) ? (
-									<Words parts={wordDiff(shown(fieldValue(mine, field)), shown(fieldValue(server, field)))[pick]} />
+									<Words
+										parts={
+											wordDiff(words(field, fieldValue(mine, field)), words(field, fieldValue(server, field)))[pick]
+										}
+									/>
 								) : undefined}
-							</CompareProperty>
-						))
+							</CompareProperty>,
+							...own(copy, field).map((inner) => (
+								<CompareProperty key={inner} label={labels[inner]?.label ?? inner} empty={t("entry.empty")}>
+									{shown(copy.values[inner]) ? (
+										<Words parts={[{ text: words(inner, copy.values[inner]), changed: true }]} />
+									) : undefined}
+								</CompareProperty>
+							)),
+						])
 					: undefined
 			}
 		>

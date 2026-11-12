@@ -524,9 +524,14 @@ export const entryOperations = [
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
 			const mine = applyDraft(entry, input);
-			// A field of an option that is not chosen in the draft is no place of its own: the choice is the place that differs (doc 19).
-			const others = notChosenFields(ctx.site.schema().collections[entry.collection], mine.values);
+			// A field of an option that is not chosen in the draft is no place of its own: the choice is the place that differs (doc 19). Where
+			// the two sides chose different options, the options' fields differ because the choice does: the choice is the one place.
+			const collection = ctx.site.schema().collections[entry.collection];
+			const others = notChosenFields(collection, mine.values);
 			for (const field of others) delete mine.values[field];
+			for (const [field, definition] of Object.entries(storedFields(collection)))
+				if (definition.under && !sameJson(mine.values[definition.under.field], entry.values[definition.under.field]))
+					others.add(field);
 			const places = [
 				...(["title", "slug"] as const).map((place) => ({ place, mine: mine[place], server: entry[place] })),
 				...[...new Set([...Object.keys(mine.values), ...Object.keys(entry.values)])]

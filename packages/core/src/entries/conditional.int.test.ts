@@ -279,8 +279,15 @@ describe("the assistant and the comparison keep to the choice (T195)", () => {
 			admin,
 		)) as { places: { place: string; mine: unknown; server: unknown }[] } | { place: string }[];
 		const places = (Array.isArray(compared) ? compared : compared.places).map((each) => each.place);
-		expect(places).toContain("values.format");
-		expect(places).toContain("values.linkUrl");
-		expect(places).not.toContain("values.videoUrl");
+		// One place: the two sides are different kinds of post, and their fields differ because of it.
+		expect(places).toEqual(["values.format"]);
+
+		// With the same option on both sides, its field is a place like any other.
+		const same = (await site().run(
+			"entries.compare",
+			{ id, values: { videoUrl: "https://example.dev/other.mp4" } },
+			admin,
+		)) as { places: { place: string }[] };
+		expect(same.places.map((each) => each.place)).toEqual(["values.videoUrl"]);
 	});
 });

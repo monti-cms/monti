@@ -418,6 +418,28 @@ export const CompareConflict: Story = {
 	},
 };
 
+/**
+ * Doc 19: the comparison when the two sides chose different options of a conditional field: each side shows its choice and the fields of its own
+ * option, and the choice is the one place counted.
+ */
+export const ConditionalCompare: Story = {
+	loaders: site("conditional"),
+	play: async ({ canvasElement, loaded }) => {
+		const { site: made, id } = loaded as Loaded;
+		const { page, all } = await opened(canvasElement);
+		await saveCell(page, "저장됨");
+		await userEvent.click(await page.findByRole("combobox", { name: "글 종류" }, wait));
+		await userEvent.click(await all.findByRole("option", { name: "링크" }, wait));
+		await userEvent.type(await page.findByRole("textbox", { name: /링크 주소/ }, wait), "https://example.dev/reading");
+		await made.monti.run("entries.save", { id, version: 1, values: { videoCredit: "다른 탭" } }, admin);
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		await page.findByText(/먼저 저장했습니다/, {}, wait);
+		await userEvent.click(page.getByRole("button", { name: "비교하기" }));
+		await page.findByText("서버 최신본과 비교", {}, wait);
+		await page.findByText(/다른 곳 \d/, {}, wait);
+	},
+};
+
 /** Opened again with input this browser kept: the banner asks what to do with it (flow 1, step 18). */
 export const BrowserCopy: Story = {
 	loaders: site("draft", {
