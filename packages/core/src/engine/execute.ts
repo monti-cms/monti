@@ -83,7 +83,7 @@ export async function runRead(
 	actor: Actor,
 	session: Session | null = null,
 ): Promise<unknown> {
-	return operation.run(parseInput(operation, input), context(engine, engine.db, actor, session).ctx);
+	return operation.run(parseInput(operation, input), context(engine, engine.db, actor, session).ctx, undefined);
 }
 
 /** The current state of each record, `null` where it does not exist. */
@@ -122,21 +122,36 @@ export async function runWrite<Output>(
 		throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: operation.name } });
 	const input = parseInput(operation, rawInput);
 	const activityId = randomUUID();
+	/** Refuses the write when a record it touches is not at the version the caller read. */
+	const mustBeAsRead = (touched: RecordRef[], states: Map<string, RecordState | null>) => {
+		const conflicts = touched.flatMap((ref) => {
+			const expected = options.versions?.[recordKey(ref)];
+			const actual = states.get(recordKey(ref))?.version ?? null;
+			return expected === undefined || expected === actual ? [] : [{ ref, expected, actual }];
+		});
+		if (conflicts.length > 0) throw new ConflictError(conflicts);
+	};
+	let prepared: unknown;
+	if (operation.prepare) {
+		const { ctx } = context(engine, engine.db, options.actor, options.session ?? null);
+		// A caller whose reading is old is told so before anything is prepared: `prepare` may send what the record holds now to another service
+		// (a key to the address the stale caller named). The transaction compares the versions again, under its locks.
+		if (options.versions) {
+			const touched = unique((await operation.touches?.(input, ctx)) ?? []);
+			mustBeAsRead(touched, await loadRecords(engine, engine.db, touched));
+		}
+		// Before the transaction, with no connection held: a write that asks another service does it here (a key's check can take ten seconds).
+		prepared = await operation.prepare(input, ctx);
+	}
 	return engine.db.transaction().execute(async (trx) => {
 		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 		await lockRecords(trx, touched);
 		const before = await loadRecords(engine, trx, touched);
+		mustBeAsRead(touched, before);
 
-		const conflicts = touched.flatMap((ref) => {
-			const expected = options.versions?.[recordKey(ref)];
-			const actual = before.get(recordKey(ref))?.version ?? null;
-			return expected === undefined || expected === actual ? [] : [{ ref, expected, actual }];
-		});
-		if (conflicts.length > 0) throw new ConflictError(conflicts);
-
-		await operation.check?.(input, ctx);
-		const output = (await operation.run(input, ctx)) as Output;
+		await operation.check?.(input, ctx, prepared);
+		const output = (await operation.run(input, ctx, prepared)) as Output;
 
 		const records = unique([...touched, ...created]);
 		// Whatever the write did to a body or a field, what uses which media file is read from the result, here and nowhere else (doc 09).

@@ -26,6 +26,48 @@ export function publicPath(schema: Schema, collection: string, slug: string, loc
 	return prefix === "always" || (prefix === "exceptSource" && locale !== source) ? `/${locale}${path}` : path;
 }
 
+/** The public paths of slugs of one collection and language, for an event's `paths`: each once, none for a collection with no page. */
+export const publicPaths = (
+	schema: Schema,
+	collection: string,
+	locale: string,
+	slugs: (string | null | undefined)[],
+) => [...new Set(slugs.flatMap((slug) => (slug ? (publicPath(schema, collection, slug, locale) ?? []) : [])))];
+
+/**
+ * The public paths of the published translations of a source entry: they show the source's blocks and values where they follow them (doc 04), so
+ * their pages change when what the site shows of the source does. None for an entry that is itself a translation.
+ */
+export async function followerPaths(
+	db: Db,
+	schema: Schema,
+	entry: { id: string; collection: string; locale: string },
+): Promise<string[]> {
+	if (entry.locale !== schema.locales.source) return [];
+	const followers = await db
+		.selectFrom("entries as s")
+		.innerJoin("entries as e", "e.translation_group", "s.translation_group")
+		.innerJoin("entry_published as p", "p.entry_id", "e.id")
+		.select(["p.slug", "p.locale"])
+		.where("s.id", "=", entry.id)
+		.where("e.id", "<>", entry.id)
+		.where("e.trashed_at", "is", null)
+		.execute();
+	return followers.flatMap((follower) => publicPaths(schema, entry.collection, follower.locale, [follower.slug]));
+}
+
+/**
+ * Where "Preview" opens an entry's working copy (doc 16): the collection's preview page when the site made one (`previewPath`), with the language
+ * shown as a public address shows it, and the public address otherwise.
+ */
+export function previewPath(schema: Schema, collection: string, slug: string, locale = schema.locales.source) {
+	const definition = schema.collections[collection];
+	const own = definition?.kind === "document" ? definition.previewPath?.replace(":slug", slug) : undefined;
+	if (own === undefined) return publicPath(schema, collection, slug, locale);
+	const { prefix, source } = schema.locales;
+	return prefix === "always" || (prefix === "exceptSource" && locale !== source) ? `/${locale}${own}` : own;
+}
+
 /**
  * Whether another entry of the same collection and language is published under `slug`, or was when it was deleted for good: a path once published is never
  * another entry's (doc 11, principle 5).
@@ -65,4 +107,5 @@ export async function publishSlug(db: Db, entry: Entry): Promise<{ slug: string;
 }
 
 /** Where a preview opens an entry that has no slug yet: a stand-in made from the title, never saved. */
-export const previewSlug = (entry: Entry) => entry.slug || slugify(entry.title) || entry.id.slice(0, 8);
+export const previewSlug = (entry: Pick<Entry, "id" | "slug" | "title">) =>
+	entry.slug || slugify(entry.title) || entry.id.slice(0, 8);

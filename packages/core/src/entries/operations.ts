@@ -20,8 +20,8 @@ import {
 	rememberBlocks,
 	seenOf,
 } from "../translations/source";
-import { previewSlug, publicPath, publishSlug, slugify } from "./paths";
-import { PREVIEW_MINUTES, previewToken } from "./preview";
+import { followerPaths, previewPath, previewSlug, publicPath, publicPaths, publishSlug, slugify } from "./paths";
+import { isSecret, PREVIEW_MINUTES, previewToken } from "./preview";
 import { type Entry, loadEntries, markChanges } from "./record";
 import { fieldValue, type PublishTask, publishTasks } from "./tasks";
 
@@ -289,7 +289,7 @@ export const entryOperations = [
 					ids: [id],
 					collection: input.collection,
 					locale,
-					paths: [working.slug],
+					paths: publicPaths(ctx.site.schema(), input.collection, locale, [working.slug]),
 				});
 			}
 			return { id };
@@ -464,7 +464,8 @@ export const entryOperations = [
 					ids: [entry.id],
 					collection: entry.collection,
 					locale: entry.locale,
-					paths: [working.slug],
+					// The page it had before the save too, when its address changed.
+					paths: publicPaths(ctx.site.schema(), entry.collection, entry.locale, [working.slug, entry.slug]),
 				});
 			}
 			await syncRelationsForEntry(
@@ -584,9 +585,9 @@ export const entryOperations = [
 					.values({ entry_id: entry.id, ...copy })
 					.onConflict((conflict) => conflict.column("entry_id").doUpdateSet(copy))
 					.execute();
-				const paths = [slug, ...(previous && previous.slug !== slug ? [previous.slug] : [])].flatMap(
-					(each) => publicPath(schema, entry.collection, each, entry.locale) ?? [],
-				);
+				const paths = publicPaths(schema, entry.collection, entry.locale, [slug, previous?.slug]);
+				// A published translation's page changes with its source's (doc 04).
+				paths.push(...(await followerPaths(ctx.db, schema, entry)));
 				ctx.emit({
 					type: "entry.published",
 					ids: [entry.id],
@@ -724,18 +725,18 @@ export const entryOperations = [
 		name: "entries.previewLink",
 		kind: "read",
 		description:
-			"A short-lived link that lets the site show an entry's working copy before it is published. Refused when the entry has neither title nor body.",
+			"A short-lived link that lets the site show an entry's working copy before it is published: a token, and the path to open it at (the collection's preview page when it has one, the public address otherwise). Refused when the entry has neither title nor body.",
 		input: z.object({ id: z.string() }),
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
-			if (!ctx.site.secret) throw new CheckError({ key: "entries.noSecret" });
+			if (!isSecret(ctx.site.secret)) throw new CheckError({ key: "entries.noSecret" });
 			if (entry.title === "" && (entry.doc === null || entry.doc === undefined))
 				throw new CheckError({ key: "entries.nothingToPreview" });
 			const expiresAt = new Date(ctx.now().getTime() + PREVIEW_MINUTES * 60_000);
 			const slug = previewSlug(entry);
 			return {
 				token: await previewToken(ctx.site.secret, entry.id, expiresAt),
-				path: publicPath(ctx.site.schema(), entry.collection, slug, entry.locale),
+				path: previewPath(ctx.site.schema(), entry.collection, slug, entry.locale),
 				expiresAt,
 			};
 		},

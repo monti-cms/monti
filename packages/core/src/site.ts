@@ -1,6 +1,8 @@
+import type { DevProof } from "./auth/dev-bypass";
 import type { AuthSettings } from "./auth/operations";
 import { type BlockKit, createBlockKit } from "./body/blocks";
 import type { PublishCheck } from "./entries/tasks";
+import type { KeyService } from "./keys/services";
 import type { Storage } from "./media/storage";
 import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
@@ -15,12 +17,18 @@ export type Site = {
 	files: SchemaFiles | null;
 	/** Checks plugins add to the publish to-do list (doc 02). */
 	publishChecks: readonly PublishCheck[];
-	/** `MONTI_SECRET`: signs preview links. Without it there is no preview. */
+	/** `MONTI_SECRET`: signs preview links and seals service keys. Without it there is no preview and no key can be stored. */
 	secret: string | null;
+	/** The services a key can be for: the AI services the core knows and the plugins' (doc 14). */
+	keyServices: readonly KeyService[];
+	/** The `fetch` the server calls other services with (a key's check). Tests replace it. */
+	fetch: typeof globalThis.fetch;
 	/** The body blocks and marks: the core's, the site's and its plugins' (doc 03). */
 	kit: BlockKit;
 	/** The ways to sign in (doc 15). */
 	auth: AuthSettings;
+	/** How a browser proves it runs on this machine, for the dev server's sign-in bypass (doc 16). The adapter brings it; without one nobody is let in. */
+	devProof: DevProof | null;
 	/** Where media files are, from a plugin (doc 09). Without one the library says there is no storage and takes no file. */
 	storage: Storage | null;
 };
@@ -33,7 +41,10 @@ export function createSite(
 		secret?: string | null;
 		kit?: BlockKit;
 		auth?: AuthSettings;
+		devProof?: DevProof | null;
 		storage?: Storage | null;
+		keyServices?: readonly KeyService[];
+		fetch?: typeof globalThis.fetch;
 	} = {},
 ): Site {
 	let current = schema;
@@ -44,9 +55,13 @@ export function createSite(
 		},
 		files,
 		publishChecks: extra.publishChecks ?? [],
-		secret: extra.secret ?? null,
+		// An empty secret is none: a link signed or a key sealed with "" is signed and sealed for anyone (MONTI_SECRET="" in a deploy's settings).
+		secret: extra.secret?.trim() ? extra.secret : null,
 		kit: extra.kit ?? createBlockKit([], []),
-		auth: extra.auth ?? { password: false, github: null },
+		auth: extra.auth ?? { password: false, github: null, devBypass: true },
+		devProof: extra.devProof ?? null,
 		storage: extra.storage ?? null,
+		keyServices: extra.keyServices ?? [],
+		fetch: extra.fetch ?? ((...args) => globalThis.fetch(...args)),
 	};
 }

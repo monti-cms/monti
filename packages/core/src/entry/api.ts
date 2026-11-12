@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEV_WHO, hostedBy, isLocalRequest } from "../auth/dev-bypass";
 import { randomToken } from "../auth/secrets";
 import { findSession, startSession } from "../auth/session";
 import { randomUUID } from "../bytes";
@@ -8,8 +9,13 @@ import { loosen, looseUntil } from "../trash/purge";
 import { describeError } from "./errors";
 
 export type AdminApiOptions = {
-	/** Where the admin screens are, for the GitHub sign-in to come back to. `/admin` when left out. */
+	/**
+	 * Where the admin screens are, for the GitHub sign-in to come back to. Left out, it is read from the request: the API sits one folder under the
+	 * admin page (`/admin/api/…` is the API of `/admin`, doc 16).
+	 */
 	adminPath?: string;
+	/** The process's environment, read for a hosting platform's mark (tests replace it). */
+	env?: Readonly<Record<string, string | undefined>>;
 	/** The `fetch` the GitHub sign-in calls GitHub with (tests replace it). */
 	fetch?: typeof fetch;
 };
@@ -44,7 +50,7 @@ const cookie = (request: Request, name: string, value: string, maxAge: number) =
 	}`;
 
 /** The operations whose output carries a new session's token: the API puts it in the cookie and never in the body. */
-const SIGN_IN = new Set(["auth.signIn", "auth.createFirstAdmin"]);
+const SIGN_IN = new Set(["auth.signIn", "auth.createFirstAdmin", "auth.devSignIn"]);
 
 /**
  * The admin API: one route per operation, `POST …/operations/<name>` with `{ input, versions }`, made from the operation list, and the GitHub
@@ -52,8 +58,24 @@ const SIGN_IN = new Set(["auth.signIn", "auth.createFirstAdmin"]);
  * mount it.
  */
 export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
-	const adminPath = options.adminPath ?? "/admin";
 	const github = monti.site.auth.github;
+	/** The admin page of a GitHub route: the folder over the API's (`/admin/api/auth/github` → `/admin`). */
+	const adminPathOf = (pathname: string) =>
+		options.adminPath ?? (pathname.replace(/\/[^/]+\/auth\/github(\/callback)?$/, "") || "/");
+	// The dev server lets a browser of this machine in without signing in (doc 16): never the live site or a hosted process, and only a browser
+	// that handed in a ticket from this machine's loopback address (`auth.devSignIn`). What the request says of itself (`isLocalRequest`) proves
+	// nothing; it only turns away early what does not even claim to be local.
+	const bypassOn =
+		monti.site.files !== null &&
+		monti.site.auth.devBypass &&
+		monti.site.devProof !== null &&
+		hostedBy(options.env) === undefined;
+	const bypasses = (request: Request) => bypassOn && isLocalRequest(request);
+	/** A bypassed session is one only while the bypass holds for the request: turned off, or from another machine, it opens nothing. */
+	async function sessionOf(token: string | null | undefined, local: boolean) {
+		const session = await findSession(monti.db, token, monti.now());
+		return session?.who === DEV_WHO && !local ? null : session;
+	}
 	let cleanedAt = Number.NEGATIVE_INFINITY;
 	const sessionCookie = (request: Request, token: string, expiresAt: Date) =>
 		cookie(request, SESSION_COOKIE, token, Math.round((expiresAt.getTime() - monti.now().getTime()) / 1000));
@@ -66,8 +88,10 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		name: string,
 		rawBody: unknown,
 		token: string | null | undefined,
+		/** The request is one the dev server's bypass lets in. */
+		local = false,
 	): Promise<{ status: number; body: unknown; session?: { token: string; expiresAt: Date } | null }> {
-		const session = await findSession(monti.db, token, monti.now());
+		const session = await sessionOf(token, local);
 		const found = monti.operations.get(name);
 		if (!found?.open && !session) return { status: 401, body: { error: "unauthenticated" } };
 		// The admin's frame asks this when it opens: the trash is cleaned before it is counted, an hour apart at most (doc 11).
@@ -108,7 +132,13 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 	}
 
 	async function operation(request: Request, name: string): Promise<Response> {
-		const answer = await call(name, await request.json().catch(() => null), cookies(request)[SESSION_COOKIE]);
+		const local = bypasses(request);
+		// The ticket is asked for only where the bypass can hold at all.
+		if (name === "auth.devSignIn" && !local) return json(401, { error: "sign-in-refused" });
+		const answer = await call(name, await request.json().catch(() => null), cookies(request)[SESSION_COOKIE], local);
+		// Where to prove itself is said only to a request the bypass can hold for.
+		if (name === "auth.state" && !local && answer.status === 200)
+			delete (answer.body as { devProof?: string }).devProof;
 		if (answer.session === undefined) return json(answer.status, answer.body);
 		const setCookie =
 			answer.session === null
@@ -161,6 +191,7 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 			if (setCookie) headers.append("set-cookie", setCookie);
 			return new Response(null, { status: 302, headers });
 		};
+		const adminPath = adminPathOf(url.pathname);
 		if (login.toLowerCase() !== github.admin.toLowerCase())
 			return done(`${adminPath}?denied=${encodeURIComponent(login)}`);
 		const started = await startSession(monti.db, `github:${login}`, monti.now());
@@ -176,8 +207,9 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		bytes: Uint8Array,
 		name: string,
 		token: string | null | undefined,
+		local = false,
 	): Promise<{ status: number; body: unknown }> {
-		if (!(await findSession(monti.db, token, monti.now()))) return { status: 401, body: { error: "unauthenticated" } };
+		if (!(await sessionOf(token, local))) return { status: 401, body: { error: "unauthenticated" } };
 		const storage = monti.site.storage;
 		if (!storage) return { status: 422, body: { error: "check-failed", reason: { key: "media.noStorage" } } };
 		const accepted = acceptFile({ name, size: bytes.length, head: bytes.subarray(0, HEAD_BYTES) });
@@ -239,11 +271,12 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		if (name && request.method === "POST") return operation(request, name);
 		if (pathname.endsWith("/media/bytes") && request.method === "PUT") {
 			// Before the body: nobody without a session makes the server hold a file.
-			if (!(await findSession(monti.db, cookies(request)[SESSION_COOKIE], monti.now())))
-				return json(401, { error: "unauthenticated" });
+			const token = cookies(request)[SESSION_COOKIE];
+			const local = bypasses(request);
+			if (!(await sessionOf(token, local))) return json(401, { error: "unauthenticated" });
 			const bytes = await bodyBytes(request);
 			if (!bytes) return json(413, { error: "media-refused", reason: { key: "media.tooBig" } });
-			const answer = await upload(bytes, searchParams.get("name") ?? "", cookies(request)[SESSION_COOKIE]);
+			const answer = await upload(bytes, searchParams.get("name") ?? "", token, local);
 			return json(answer.status, answer.body);
 		}
 		const file = pathname.match(/\/media\/files\/([^/]+)$/)?.[1];

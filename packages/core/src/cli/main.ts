@@ -1,11 +1,11 @@
 import path from "node:path";
-import { createInterface } from "node:readline/promises";
 import { resetAdminPassword } from "../auth/reset";
 import { type MontiConfig, openMonti } from "../config";
 import { migrateToLatest } from "../db/migrations";
 import { runCli } from "../entry/cli";
 import { migrateContent } from "../schema/apply";
 import { readChangeFiles } from "../schema/files";
+import { secretReader } from "./secret-input";
 
 const MAINTENANCE = `Maintenance commands (not operations):
   db:setup        create the tables and follow every change file
@@ -21,7 +21,9 @@ const MAINTENANCE = `Maintenance commands (not operations):
  */
 export async function main(config: MontiConfig, root: string, argv: string[]): Promise<number> {
 	const monti = openMonti(config, root);
-	const io = { out: (line: string) => console.log(line), err: (line: string) => console.error(line) };
+	// A secret comes on standard input, typed at a prompt or piped in, never as an argument; its prompt goes to standard error.
+	const secret = secretReader(process.stdin, process.stderr);
+	const io = { out: (line: string) => console.log(line), err: (line: string) => console.error(line), secret };
 	try {
 		const [command] = argv;
 		if (command === "db:setup" || command === "db:migrate") {
@@ -37,10 +39,9 @@ export async function main(config: MontiConfig, root: string, argv: string[]): P
 		}
 		if (command === "admin:reset-password") {
 			const email = argv.indexOf("--email") > 0 ? argv[argv.indexOf("--email") + 1] : undefined;
-			const prompt = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
-			const password = await prompt.question("New password: ");
-			const again = await prompt.question("Again: ");
-			prompt.close();
+			const password = await secret("New password");
+			// Typed, it is typed twice; piped in, there is nobody to ask again.
+			const again = process.stdin.isTTY ? await secret("Again") : password;
 			if (password !== again) {
 				io.err("The two passwords differ.");
 				return 1;
