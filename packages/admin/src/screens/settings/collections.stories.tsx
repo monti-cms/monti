@@ -69,6 +69,61 @@ const relationFieldSchema = defineSchema({
 	},
 });
 
+/** The posts with a choice ("분위기") and a conditional field ("글 종류", required), for what the review says of their options (docs 12 and 19). */
+export const optionsSchema = defineSchema({
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			...schema.collections.post,
+			fields: {
+				...schema.collections.post.fields,
+				mood: { kind: "select", options: ["calm", "loud"] },
+				format: {
+					kind: "conditional",
+					required: true,
+					options: ["article", "video", "link"],
+					fields: {
+						video: { videoUrl: { kind: "text", required: true } },
+						link: { linkUrl: { kind: "text", required: true } },
+					},
+				},
+			},
+		},
+	},
+});
+
+/** Three posts on those options: a loud video post on the site, a loud draft, and a calm article on the site. */
+export async function optionEntries({ monti }: StorySite) {
+	await monti.run(
+		"collections.updateAdminValues",
+		{
+			collection: "post",
+			values: {
+				fields: {
+					mood: { label: "분위기", optionLabels: { calm: "차분", loud: "시끌" } },
+					format: { label: "글 종류", optionLabels: { article: "글", video: "동영상", link: "링크" } },
+					videoUrl: { label: "동영상 주소" },
+					linkUrl: { label: "링크 주소" },
+				},
+			},
+		},
+		admin,
+	);
+	const post = async (title: string, values: Record<string, unknown>, on: boolean) => {
+		const made = (await monti.run(
+			"entries.create",
+			{ collection: "post", locale: "ko", title, slug: title, values },
+			admin,
+		)) as { output: { id: string } };
+		if (on) await monti.run("entries.publish", { ids: [made.output.id], date: "keep" }, admin);
+		return made.output.id;
+	};
+	await post("loud-video", { mood: "loud", format: "video", videoUrl: "https://example.dev/v.mp4" }, true);
+	await post("loud-draft", { mood: "loud", format: "article" }, false);
+	await post("calm-article", { mood: "calm", format: "article" }, true);
+}
+
 export const site = (
 	options: { files?: typeof devFiles | null; more?: (site: StorySite) => Promise<void>; schema?: typeof schema } = {},
 ) => [

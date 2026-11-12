@@ -238,12 +238,14 @@ function Body({
 	const keyOf = (collection: string, name: string) =>
 		model.fields(collection).find((each) => model.fieldName(collection, each) === name) ?? name;
 	/** A choice's label as the draft gives it, else its value. */
-	const optionLabel = (collection: string, name: string, option: string) =>
-		(
-			model.draft.value(at.fieldValue(collection, keyOf(collection, name), "optionLabels")) as
-				| Record<string, string>
-				| undefined
-		)?.[option] ?? option;
+	const optionLabel = (collection: string, name: string, option: string) => {
+		const key = keyOf(collection, name);
+		const drafted = model.draft.value(at.fieldValue(collection, key, "optionLabels")) as
+			| Record<string, string>
+			| undefined;
+		// An option taken out has no label in the draft any more: it is named by the label it was saved with.
+		return drafted?.[option] ?? model.data?.adminValues[collection]?.fields?.[key]?.optionLabels?.[option] ?? option;
+	};
 	const fieldLabel = (collection: string, name: string) => {
 		const key = model.fields(collection).find((each) => model.fieldName(collection, each) === name) ?? name;
 		return model.fieldLabel(collection, key);
