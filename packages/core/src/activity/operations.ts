@@ -3,8 +3,8 @@ import { randomUUID } from "../bytes";
 import { cancelDelivery, deliveryCounts, reserveFailedDeliveries, sendDeliveries } from "../engine/deliveries";
 import type { Engine } from "../engine/execute";
 import { planUndo, type UndoOf, undoWithEvents } from "../engine/undo";
+import { CheckError, ForbiddenError } from "../errors";
 import { type AnyOperation, defineOperation, type Preview } from "../operation";
-import { keepSeenTracked } from "../schema/apply";
 import { ACTIVITY_FACETS, ActivityQuery, activityFacets, getActivity, listActivity } from "./list";
 
 /**
@@ -74,12 +74,8 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			async run(input, ctx) {
 				// An undo that changes what the site shows (a publish taken back, a thrown-away entry put back) tells the site, as the write did (T29).
 				// The deliveries show on the line that was undone: this write has no line of its own.
-				const { undone: _undone, ...output } = await undoWithEvents(engine, ctx.db, undoOf(input), (event, undone) =>
-					ctx.emit(event, { activity: undone }),
-				);
-				// What an entry saw back then may be of a field that has since left the schema.
-				await keepSeenTracked(ctx.db, ctx.site.schema());
-				return output;
+				// `undone` names the writes of which something went back: a proposal's revert sets its items by them.
+				return undoWithEvents(engine, ctx.db, undoOf(input), (event, undone) => ctx.emit(event, { activity: undone }));
 			},
 			summary: (_input, output) => ({ key: "activity.undo", values: { count: output.restore.length } }),
 		}),
@@ -88,11 +84,22 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			kind: "write",
 			log: false,
 			description:
-				"Send failed deliveries again now: the ones named by `ids` (a line's `delivery.failedIds`, or one delivery of activity.get), or with `all` every failed one. The tries are counted from the start, so automatic retries follow again if it fails. One call takes a batch and answers how many arrived, how many failed again and how many are left (`remaining`); while some are left, call again with the `run` it answered.",
+				"Send failed deliveries again now: the ones named by `ids` (a line's `delivery.failedIds`, or one delivery of activity.get), or with `all` every failed one (only a person sends all; the assistant names ids). The tries are counted from the start, so automatic retries follow again if it fails. One call takes a batch and answers how many arrived, how many failed again and how many are left (`remaining`); while some are left, call again with the `run` it answered.",
 			input: z.union([
 				z.object({ ids: z.array(z.string()).min(1), run: z.iso.datetime().optional() }),
 				z.object({ all: z.literal(true), run: z.iso.datetime().optional() }),
 			]),
+			// A delivery that is not there is refused before anything is reserved, and before the assistant can propose it.
+			async check(input, ctx) {
+				// Every failed delivery at once is a person's to send: as a proposal's item it would run one batch and stop.
+				if (!("ids" in input)) {
+					if (ctx.actor === "assistant")
+						throw new ForbiddenError({ key: "errors.humanOnly", values: { operation: "deliveries.retry" } });
+					return;
+				}
+				const known = await ctx.db.selectFrom("monti_delivery").select("id").where("id", "in", input.ids).execute();
+				if (known.length < new Set(input.ids).size) throw new CheckError({ key: "deliveries.unknown" });
+			},
 			async run(input, ctx): Promise<DeliveriesRetried & { holder?: string }> {
 				// Reserved under a name of this call's own: from the commit on, no scheduled sender takes them before this call sends them.
 				const holder = randomUUID();
@@ -101,6 +108,8 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 					now: ctx.now(),
 					holder,
 					run: input.run === undefined ? null : run,
+					// The command line has no Next around it: what only the running site can send is left as it is, as `deliveries:run` leaves it.
+					...(ctx.actor === "cli" ? { only: engine.receivers.map((receiver) => receiver.destination) } : {}),
 				});
 				return { ...reserved, sent: 0, failed: 0, run: run.toISOString(), holder };
 			},

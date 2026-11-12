@@ -77,6 +77,7 @@ export async function runCli(monti: Monti, argv: string[], io: CliIo): Promise<n
 	if (!name || name === "help") {
 		for (const operation of monti.operations.values())
 			if (available(operation, "cli", monti.site.files !== null)) io.out(`${operation.name}  ${operation.description}`);
+		for (const stream of monti.streams.values()) io.out(`${stream.name}  ${stream.description}`);
 		return 0;
 	}
 	try {
@@ -100,6 +101,12 @@ export async function runCli(monti: Monti, argv: string[], io: CliIo): Promise<n
 		}
 		const input = inputOf(flags);
 		for (const secret of fromStandardInput) input[secret] = await io.secret?.(secret);
+		// A stream is a command too: its events are printed as they come, one JSON object per line.
+		if (monti.streams.has(name)) {
+			const events = monti.stream(name, input, { actor: "cli", session: null, signal: new AbortController().signal });
+			for await (const event of events) io.out(JSON.stringify(event));
+			return 0;
+		}
 		const result = await monti.run(name, input, { actor: "cli" });
 		io.out(JSON.stringify(result, null, 2));
 		return 0;

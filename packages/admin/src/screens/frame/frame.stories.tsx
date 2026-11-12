@@ -61,7 +61,7 @@ export const Counts: Story = {
 			monti.db,
 		);
 		await sql`insert into monti_delivery (id, activity_id, destination, event, state)
-			select 'story-failed', id, 'webhook:https://example.dev/hook', '{"type":"entry.saved","ids":[]}', 'failed' from monti_activity limit 1`.execute(
+			select 'story-failed', id, 'webhook:example.dev/hook', '{"type":"entry.saved","ids":[]}', 'failed' from monti_activity limit 1`.execute(
 			monti.db,
 		);
 	}),

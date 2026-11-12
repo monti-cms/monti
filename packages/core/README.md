@@ -34,13 +34,18 @@ export const moveToFolder = defineOperation({
    changed since, and never overwrites it.
 5. The events it emitted are queued for each receiver and sent only after the commit.
 
-A receiver is a webhook (`receivers: [webhook("https://example.dev/api/revalidate")]`) or a plugin's. A send that fails, or takes longer than ten
+A receiver is a webhook (`receivers: [webhook("https://example.dev/api/revalidate")]`) or a plugin's. A webhook has a name its deliveries are
+stored and shown under (`webhook(url, { name })`; left out, the address's host and path): the address itself, with any token in its query, is
+never stored. Two receivers of one site cannot share a name. A redirect is not followed and is a failure. A send that fails, or takes longer than ten
 seconds, shows as failed at once in the activity log and in the sidebar's count; it is tried again by itself eight times at growing waits
 (`RETRY_MINUTES`), when the admin opens and from `monti deliveries:run`, and after the last it stays failed until a person sends it again
 (`deliveries.retry`, a batch at a time) or cancels it (`deliveries.cancel`). The sends nobody waits for are handed to the host's `waitUntil`
-(`openMonti(config, root, { waitUntil })`; `@monti-cms/next` passes Next's `after`), so a serverless function is not ended mid-send.
+(`openMonti(config, root, { waitUntil })`; `@monti-cms/next` passes Next's `after`), so a serverless function is not ended mid-send. The host
+is given work to start, not a running promise: `waitUntil: (work) => context.waitUntil(work())`.
 On such a host a write answers before its webhooks are sent; a receiver with `beforeAnswer: true` is still sent first (the site's own
-cached pages are one: a publish that answered is on the site).
+cached pages are one: a publish that answered is on the site), within one deadline for the write (ten seconds; what is left is sent behind
+the answer). A receiver with `oncePerWrite: true` does the same whatever the event and gets one send for a write, however many events it
+emitted.
 
 **An event can arrive twice.** A receiver may handle an event and lose its answer on the way back; Monti then counts a failure and sends it again.
 Every try carries the same ids, so a receiver that must not act twice keeps the ids it has handled:
@@ -50,6 +55,7 @@ Every try carries the same ids, so a receiver that must not act twice keeps the 
 | the body's `id`, header `Monti-Event-Id` | the event's id: the same on every try, and for every receiver of the event |
 | header `Monti-Delivery-Id` | this receiver's delivery of it: the same on every try |
 | header `Monti-Attempt` | which try this is, from 1 |
+| header `Monti-Signature` | only with `webhook(url, { secret })`: `t=<seconds>,v1=<hex>`. `v1` is the HMAC-SHA256, in hex, of `<t>.<body>` under the webhook's secret, where `<body>` is the bytes posted. Make the same from the raw body and compare; refuse a `t` that is old. Never `MONTI_SECRET` |
 
 The activity log shows a receiver by a name a person reads, never by the address it is stored under (a webhook's may carry a token): a
 receiver's `label`, or without one a webhook's host and path and a plugin receiver's name. Why a delivery failed is one of three sentences: the

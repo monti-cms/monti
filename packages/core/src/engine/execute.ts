@@ -18,7 +18,7 @@ import {
 import { lockRecords, type RecordKind, type RecordState } from "../records";
 import type { Site } from "../site";
 import { type QueuedEvent, queueDeliveries, type Receiver } from "./deliveries";
-import { markApplied } from "./proposals";
+import { claimItem, type ItemClaim, lockProposals, markApplied, settleApplied } from "./proposals";
 
 /** How long a write can be undone. The trash keeps entries as long, and both are cleared together (doc 11). */
 export const UNDO_DAYS = 30;
@@ -36,7 +36,11 @@ export type RunOptions = {
 	/** The versions the caller read, by `recordKey`. A touched record at another version is a conflict. */
 	versions?: Record<string, number>;
 	conversationId?: string;
-	proposalItemId?: string;
+	/**
+	 * The write applies this proposal item. Inside its transaction the item is claimed (still waiting, still the write that was read, still kept,
+	 * and the apply still holds the proposal) and, when the write is done, recorded as applied with what it gave: both or neither.
+	 */
+	applies?: ItemClaim;
 	/** The proposal the item is of: its line of the activity log quotes the proposal's request (doc 13). */
 	proposalId?: string;
 	/**
@@ -52,7 +56,8 @@ export type RunOptions = {
 
 export type WriteResult<Output> = {
 	output: Output;
-	activityId: string;
+	/** The write's row in the activity log; `null` for a write that only keeps the assistant's books and leaves none. */
+	activityId: string | null;
 	/** The touched and created records' versions after the write, `null` for one it removed. */
 	versions: Record<string, number | null>;
 	/** The deliveries the write queued, to send now that it has committed. */
@@ -135,7 +140,7 @@ export async function runWrite<Output>(
 	if (operation.structure && engine.site.files === null)
 		throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: operation.name } });
 	const input = parseInput(operation, rawInput);
-	const activityId = randomUUID();
+	const activityId = operation.bookkeeping ? null : randomUUID();
 	/** Refuses the write when a record it touches is not at the version the caller read. */
 	const mustBeAsRead = (touched: RecordRef[], states: Map<string, RecordState | null>) => {
 		const conflicts = touched.flatMap((ref) => {
@@ -154,13 +159,20 @@ export async function runWrite<Output>(
 			const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 			mustBeAsRead(touched, await loadRecords(engine, engine.db, touched));
 		}
+		// An item that is no longer this apply's to apply is not prepared for either.
+		if (options.applies) await claimItem(engine.db, options.applies, false);
 		// Before the transaction, with no connection held: a write that asks another service does it here (a key's check can take ten seconds).
 		prepared = await operation.prepare(input, ctx);
 	}
 	const result = await engine.db.transaction().execute(async (trx) => {
 		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
+		// A save that accepts proposal items decides about their proposals: those rows first, as a revert and a discard take them, then the records.
+		if (options.accepted && options.accepted.length > 0) await lockProposals(trx, { items: options.accepted });
 		await lockRecords(trx, touched);
+		// After the records' locks, as a screen's save takes them (records, then the items it accepts): the item is held until this write ends, so
+		// nothing discards it, changes it or applies it a second time meanwhile.
+		if (options.applies) await claimItem(trx, options.applies, true);
 		const before = await loadRecords(engine, trx, touched);
 		mustBeAsRead(touched, before);
 
@@ -172,6 +184,16 @@ export async function runWrite<Output>(
 		// What the records held before, so a file the library does not have is refused only when this write brings it in (doc 09).
 		await rewriteUses(trx, engine.site.schema(), records, { before: before.values() });
 		const after = await loadRecords(engine, trx, records);
+		const versions = () => Object.fromEntries([...after].map(([key, state]) => [key, state?.version ?? null]));
+		if (options.applies)
+			await settleApplied(trx, options.applies.itemId, {
+				output,
+				activityId,
+				after: versions(),
+				from: Object.fromEntries(touched.map((ref) => [recordKey(ref), before.get(recordKey(ref))?.version ?? null])),
+			});
+		// The assistant's own books are not the site's history: no row, no snapshot, nothing sent.
+		if (activityId === null) return { output, activityId, versions: versions(), deliveryIds: [], line: null };
 		const undoable = !operation.humanOnly && !operation.structure && records.length > 0;
 		const now = engine.now();
 		// What each record was called, as the write left it (as it was, for one the write removed): the log names it even after it is gone.
@@ -203,7 +225,7 @@ export async function runWrite<Output>(
 				kind: log === false ? null : (log ?? null),
 				listed,
 				conversation_id: options.conversationId ?? null,
-				proposal_item_id: options.proposalItemId ?? null,
+				proposal_item_id: options.applies?.itemId ?? null,
 				proposal_id: options.proposalId ?? null,
 				undo_until: undoable ? new Date(now.getTime() + UNDO_DAYS * 86_400_000) : null,
 				undone_at: null,
@@ -221,6 +243,7 @@ export async function runWrite<Output>(
 							record_id: ref.id,
 							before: old ? JSON.stringify(old.data) : null,
 							before_version: old?.version ?? null,
+							restored_version: null,
 							after_version: after.get(recordKey(ref))?.version ?? null,
 						};
 					}),
@@ -241,22 +264,29 @@ export async function runWrite<Output>(
 			await trx
 				.updateTable("monti_activity")
 				.set({
-					words: sql`words || ' ' || coalesce((select request from monti_proposal where id = ${proposalId}), '')`,
+					// The request first: a long list of titles does not push it out of the words kept.
+					words: sql`left(coalesce((select request from monti_proposal where id = ${proposalId}), '') || ' ' || words, ${WORDS_LENGTH})`,
 				})
 				.where("id", "=", activityId)
 				.execute();
 		const deliveryIds = await queueDeliveries(trx, engine.receivers, activityId, events, now);
-		const versions = Object.fromEntries([...after].map(([key, state]) => [key, state?.version ?? null]));
-		return { output, activityId, versions, deliveryIds, listed };
+		return { output, activityId, versions: versions(), deliveryIds, line: listed ? activityId : null };
 	});
 	// Only now that it has committed: a first write that fails begins no line.
-	if (result.listed && options.batch && options.batch.line === undefined) options.batch.line = result.activityId;
-	const { listed: _listed, ...written } = result;
+	const { line: began, ...written } = result;
+	if (began !== null && options.batch && options.batch.line === undefined) options.batch.line = began;
 	return written;
 }
 
-/** The words a line is found by: what each record the write touched was called. */
-const wordsOf = (records: LoggedRecord[]) => records.flatMap((record) => record.title ?? []).join(" ");
+/** The most a row keeps of the words it is found by: a bulk write touches hundreds of records, and the first titles find it as well as all. */
+export const WORDS_LENGTH = 2000;
+
+/** The words a line is found by: what each record the write touched was called, up to `WORDS_LENGTH`. */
+const wordsOf = (records: LoggedRecord[]) =>
+	records
+		.flatMap((record) => record.title ?? [])
+		.join(" ")
+		.slice(0, WORDS_LENGTH);
 
 /**
  * Logs something Monti did by itself, with the events it tells the receivers: the 30-day clean-up of the trash is no operation, and still the log

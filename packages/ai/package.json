@@ -1,0 +1,34 @@
+{
+	"name": "@monti-cms/ai",
+	"version": "0.2.0-next.16",
+	"private": true,
+	"description": "Monti's assistant: the run engine, the model providers and the quick tasks. The core does not know AI; this plugin brings it.",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit -p .",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@ai-sdk/anthropic": "^4.0.102",
+		"@ai-sdk/google": "^4.0.118",
+		"@ai-sdk/openai": "^4.0.115",
+		"@ai-sdk/openai-compatible": "^3.0.90",
+		"@monti-cms/core": "workspace:*",
+		"@openrouter/ai-sdk-provider": "^3.1.0",
+		"ai": "^7.0.170",
+		"kysely": "^0.29.6",
+		"zod": "^4.2.1"
+	},
+	"devDependencies": {
+		"@types/node": "^20",
+		"@types/pg": "^8.23.1",
+		"pg": "^8.23.0",
+		"typescript": "^7.0.2",
+		"vitest": "^4.0.0"
+	},
+	"sideEffects": false
+}

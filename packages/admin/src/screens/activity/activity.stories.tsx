@@ -11,7 +11,7 @@ export const wait = { timeout: 15000 };
 
 /** The site's own cache refresh, and a search index's webhook: the two receivers of the stories' site. */
 export const SITE = "plugin:next";
-export const SEARCH = "webhook:https://example.dev/api/search";
+export const SEARCH = "webhook:example.dev/api/search";
 
 /** The stories' receivers, for a test to take down and bring back, and to read what arrived. */
 export type Hooks = {

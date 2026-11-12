@@ -44,6 +44,8 @@ export const cacheReceiver: Receiver = {
 	accepts: (event: MontiEvent) => !UNSEEN.has(event.type),
 	// A publish that answered is on the site: the pages are marked before the write answers, not after the response (doc 16, 16-3).
 	beforeAnswer: true,
+	// Every cached page is marked whatever the event: one send for a write, however many entries it published.
+	oncePerWrite: true,
 	send: async () => refreshSite(),
 };
 
@@ -62,15 +64,20 @@ export function refreshSite(): void {
 }
 
 /**
- * Keeps Monti's background sends going after the response (the deliveries a visit to the admin starts, a write's first send): Next's `after` holds
- * the function open until the work ends, where a serverless host would otherwise end it with the response and cut a send off before its result
- * is written. Outside a request (a script that opens the site) there is nothing to hold open and the work simply runs on.
+ * Starts Monti's background sends after the response and keeps them going (the deliveries a visit to the admin starts, a write's webhooks):
+ * Next's `after` runs the work once the response is sent and holds the function open until it ends, where a serverless host would otherwise end
+ * it with the response and cut a send off before its result is written. Outside a request (a script that opens the site) there is nothing to
+ * hold open and the work starts at once.
  */
-function keepGoing(work: Promise<unknown>): void {
+function keepGoing(work: () => Promise<unknown>): void {
 	try {
-		after(() => work);
+		// Started inside the callback, not before it: by Next's source (16.4.6) a `revalidatePath` called from work that began in the handler and
+		// runs on after the handler has answered belongs neither to the handler's revalidations nor to an `after` callback's, and is dropped,
+		// while the delivery would be marked sent. Work that starts here is the callback's own.
+		after(work);
 	} catch {
-		// Not in a request.
+		// Not in a request: nothing to hold open, and the work starts now.
+		void work();
 	}
 }
 
@@ -127,7 +134,12 @@ export function openSite(
 	const receiver: Receiver[] =
 		refresh === false
 			? []
-			: [refresh ? { ...cacheReceiver, send: async (event) => void (await refresh(event)) } : cacheReceiver];
+			: [
+					// A site's own refresh looks at each event (its entries, its paths): it gets every one.
+					refresh
+						? { ...cacheReceiver, oncePerWrite: false, send: async (event) => void (await refresh(event)) }
+						: cacheReceiver,
+				];
 	const dev = config.dev ?? isDevServer(root);
 	// The proof that a browser is on this machine, for the dev server's sign-in bypass: one listener for the server's life.
 	const proof = dev ? (before?.proof ?? loopbackProof()) : null;

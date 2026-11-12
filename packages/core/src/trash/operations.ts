@@ -12,11 +12,12 @@ import {
 	type LoggedRecord,
 	type OperationContext,
 	type Preview,
+	placeEvents,
 	type RecordRef,
 } from "../operation";
 import { lockRecords } from "../records";
 import { listTrash, TrashQuery, trashedEntry, trashRowCount } from "./list";
-import { everyTrashRow, foldersUnder, placeEvents, purgeRows, sweepLooseFiles, type TrashRef } from "./purge";
+import { everyTrashRow, foldersUnder, purgeRows, sweepLooseFiles, type TrashRef } from "./purge";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -434,6 +435,11 @@ export const trashOperations = [
 		description:
 			"Put entries, folders and media files in the trash. A source-language entry takes its translations; a translation goes alone. A folder goes with its subfolders and everything in them. Published entries go off the site. A media file in use stays where it is, and so does a folder that holds one. The trash can restore them for 30 days. Read the preview first, and propose it only when asked to.",
 		input: Rows,
+		// One by one: the assistant's proposal has an item per row, each taken or left on its own (doc 10).
+		each: "rows",
+		// The whole record: nothing else of it waits beside its way to the trash in one proposal. It carries no version, so it follows as it is.
+		follows: (input) => input,
+		places: (input) => input.rows.map((row) => `${row.kind}:${row.id}`),
 		async touches(input, ctx) {
 			const plan = await planMove(ctx, input.rows, true);
 			return [
@@ -575,6 +581,10 @@ export const trashOperations = [
 		description:
 			"Bring rows of the trash back. A document comes back as a draft, where it was, with every language of it that is in the trash; a folder comes back with everything in it; and a thing whose folder is in the trash brings that folder back to sit in. A translation whose language the entry has again is refused.",
 		input: Rows,
+		each: "rows",
+		// The whole record, as its way into the trash is.
+		follows: (input) => input,
+		places: (input) => input.rows.map((row) => `${row.kind}:${row.id}`),
 		async touches(input, ctx) {
 			const plan = await planRestore(ctx, input.rows);
 			return [

@@ -400,7 +400,116 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
-	"0016_activity_log": {
+	"0016_assistant": {
+		async up(db) {
+			// The assistant (doc 10): conversations, their runs and what was said in them. The core keeps the tables, since proposals, the activity log
+			// and the trash point at conversations; what runs a conversation is `@monti-cms/ai`.
+			await db.schema
+				.createTable("conversations")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("title", "text", (column) => column.notNull())
+				.addColumn("key_id", "text")
+				.addColumn("model", "text")
+				.addColumn("thinking", "text")
+				.addColumn("created_at", "timestamptz", (column) => column.notNull())
+				.addColumn("last_opened_at", "timestamptz", (column) => column.notNull())
+				.execute();
+			await db.schema
+				.createTable("runs")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("conversation_id", "text", (column) =>
+					column.notNull().references("conversations.id").onDelete("cascade"),
+				)
+				.addColumn("kind", "text", (column) => column.notNull().check(sql`kind in ('chat', 'spot', 'again')`))
+				.addColumn("status", "text", (column) =>
+					column.notNull().check(sql`status in ('running', 'waiting', 'done', 'stopped', 'interrupted', 'failed')`),
+				)
+				.addColumn("request", "text", (column) => column.notNull())
+				.addColumn("context", "jsonb", (column) => column.notNull())
+				.addColumn("key_id", "text")
+				.addColumn("model", "text", (column) => column.notNull())
+				.addColumn("thinking", "text", (column) => column.notNull())
+				.addColumn("usage", "jsonb", (column) => column.notNull())
+				.addColumn("turns", "integer", (column) => column.notNull().defaultTo(0))
+				.addColumn("turns_from", "integer", (column) => column.notNull().defaultTo(0))
+				.addColumn("tokens_from", "integer", (column) => column.notNull().defaultTo(0))
+				.addColumn("size", "integer", (column) => column.notNull().defaultTo(0))
+				.addColumn("position", "integer", (column) => column.notNull())
+				.addColumn("lease_token", "text")
+				.addColumn("proposal_id", "text")
+				.addColumn("item_id", "text")
+				.addColumn("pending", "jsonb")
+				.addColumn("ended", "jsonb")
+				.addColumn("stop_requested", "boolean", (column) => column.notNull().defaultTo(false))
+				.addColumn("leased_until", "timestamptz")
+				.addColumn("started_at", "timestamptz", (column) => column.notNull())
+				.addColumn("ended_at", "timestamptz")
+				.execute();
+			await db.schema.createIndex("runs_conversation").on("runs").columns(["conversation_id", "started_at"]).execute();
+			// One chat run at a time in a conversation (doc 10): the database holds the rule, so two requests cannot both start one.
+			await sql`create unique index runs_one_chat on runs (conversation_id)
+				where kind = 'chat' and status in ('running', 'waiting')`.execute(db);
+			await db.schema
+				.createTable("run_messages")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("run_id", "text", (column) => column.notNull().references("runs.id").onDelete("cascade"))
+				.addColumn("position", "integer", (column) => column.notNull())
+				.addColumn("message", "jsonb", (column) => column.notNull())
+				.addColumn("created_at", "timestamptz", (column) => column.notNull())
+				.addUniqueConstraint("run_messages_position", ["run_id", "position"])
+				.execute();
+			// What the person says while a run is going: taken into its next turn, or left for the next run.
+			await db.schema
+				.createTable("run_inbox")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("run_id", "text", (column) => column.notNull().references("runs.id").onDelete("cascade"))
+				.addColumn("text", "text", (column) => column.notNull())
+				.addColumn("created_at", "timestamptz", (column) => column.notNull())
+				.execute();
+			// After how many days a conversation nobody opened is removed; one row, `null` days keeps them.
+			await db.schema
+				.createTable("assistant_settings")
+				.addColumn("id", "integer", (column) => column.primaryKey().check(sql`id = 1`))
+				.addColumn("keep_days", "integer")
+				.execute();
+			// A proposal belongs to the run that made it; its items carry the group the assistant named, whether the person keeps them, the versions
+			// their write left (so an apply cut short goes on from there) and what was asked of them at their place.
+			await db.schema.alterTable("monti_proposal").addColumn("run_id", "text").execute();
+			await db.schema.alterTable("monti_proposal").addColumn("applying_until", "timestamptz").execute();
+			await db.schema.alterTable("monti_proposal").addColumn("applying_token", "text").execute();
+			// A run has one proposal: asked for twice (a run cut between making it and noting it), the second finds the first.
+			await sql`create unique index monti_proposal_run on monti_proposal (run_id) where run_id is not null`.execute(db);
+			await sql`alter table monti_proposal drop constraint monti_proposal_status_check`.execute(db);
+			await sql`alter table monti_proposal add constraint monti_proposal_status_check
+				check (status in ('pending', 'applied', 'partial', 'discarded', 'reverted'))`.execute(db);
+			await db.schema
+				.alterTable("monti_proposal_item")
+				.addColumn("included", "boolean", (column) => column.notNull().defaultTo(true))
+				.execute();
+			await db.schema
+				.alterTable("monti_proposal_item")
+				.addColumn("group_label", "text", (column) => column.notNull().defaultTo(""))
+				.execute();
+			await db.schema.alterTable("monti_proposal_item").addColumn("after_versions", "jsonb").execute();
+			await db.schema.alterTable("monti_proposal_item").addColumn("from_versions", "jsonb").execute();
+			await db.schema.alterTable("monti_proposal_item").addColumn("made_by", "text").execute();
+			await db.schema.alterTable("monti_proposal_item").addColumn("origin", "text").execute();
+			await db.schema.alterTable("monti_proposal_item").addColumn("preview", "jsonb").execute();
+			await db.schema
+				.alterTable("monti_proposal_item")
+				.addColumn("thread", "jsonb", (column) => column.notNull().defaultTo(sql`'[]'::jsonb`))
+				.execute();
+			await sql`alter table monti_proposal_item drop constraint monti_proposal_item_state_check`.execute(db);
+			await sql`alter table monti_proposal_item add constraint monti_proposal_item_state_check
+				check (state in ('pending', 'discarded', 'stale', 'applied', 'failed', 'skipped', 'reverted'))`.execute(db);
+			await db.schema
+				.createIndex("monti_proposal_conversation")
+				.on("monti_proposal")
+				.column("conversation_id")
+				.execute();
+		},
+	},
+	"0017_activity_log": {
 		async up(db) {
 			// The activity log's lines (doc 13). A line is one write, or the writes one application of a proposal made: its first listed row is the
 			// line's head, and every row names its head in `line`. Listing walks the heads in their order and never groups the history; a row keeps
@@ -421,7 +530,13 @@ const MIGRATIONS: Record<string, Migration> = {
 			await db.schema.createIndex("monti_activity_line").on("monti_activity").column("line").execute();
 			await db.schema.createIndex("monti_activity_proposal").on("monti_activity").column("proposal_id").execute();
 			// A snapshot's version before the write: undoing several writes together follows one record through them.
-			await db.schema.alterTable("monti_activity_snapshot").addColumn("before_version", "integer").execute();
+			// And the version an undo left the record at when it put this snapshot back: the next undo of an older write reads that version as the
+			// one the older write left, so a record's writes can be undone one line after another.
+			await db.schema
+				.alterTable("monti_activity_snapshot")
+				.addColumn("before_version", "integer")
+				.addColumn("restored_version", "integer")
+				.execute();
 			// A delivery is held by one sender at a time (`sending_until`, and by whom when a person's send-again reserved it), and knows when it
 			// was last tried, so one run of "send all again" tries each once.
 			await db.schema
@@ -431,6 +546,13 @@ const MIGRATIONS: Record<string, Migration> = {
 				.addColumn("attempted_at", "timestamptz")
 				.execute();
 			await db.schema.createIndex("monti_delivery_activity").on("monti_delivery").column("activity_id").execute();
+			// The deliveries still to be sent or failed are few; the ones that arrived are the table, and it only grows. The sidebar's count (every
+			// visit), the sweep for what is due and "send all again" read the open ones by this index and never the rest.
+			await sql`create index monti_delivery_open on monti_delivery (next_attempt_at, created_at)
+				where state in ('pending', 'failed')`.execute(db);
+			// The 30-day clean-up finds the writes whose undo has run out.
+			await sql`create index monti_activity_undo_until on monti_activity (undo_until)
+				where undo_until is not null`.execute(db);
 		},
 	},
 };

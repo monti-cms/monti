@@ -455,20 +455,25 @@ describe("the site decides how its pages are refreshed", () => {
 	const receiversOf = (opened: unknown) => (opened as Opened).config.receivers;
 	const config = () => ({ schema: {}, database: "postgres://x", dev: false }) as never;
 
-	it("13-1 the sends Monti does not make a caller wait for are kept going after the answer, through Next's after", async () => {
+	it("13-1 the sends Monti does not make a caller wait for start inside Next's after and are kept going there, not before it", async () => {
 		openSite(config(), { root: "/kept" });
-		const { waitUntil } = (core.opened.at(-1) as unknown as { reuse: { waitUntil?: (work: Promise<unknown>) => void } })
-			.reuse;
+		const { waitUntil } = (
+			core.opened.at(-1) as unknown as { reuse: { waitUntil?: (work: () => Promise<unknown>) => void } }
+		).reuse;
 		// The adapter gives core the host's way to keep work going: without it a serverless host ends with the answer, mid-send.
 		expect(waitUntil).toBeTypeOf("function");
 		next.later = [];
+		let started = false;
 		let done = false;
-		const work = new Promise<void>((resolve) => setTimeout(resolve, 5)).then(() => {
+		waitUntil?.(async () => {
+			started = true;
+			await new Promise<void>((resolve) => setTimeout(resolve, 5));
 			done = true;
 		});
-		waitUntil?.(work);
-		// Handed to `after`, which holds the function open until the work ends.
+		// Handed to `after` as work to start: nothing of it has run yet, so what it revalidates is the callback's own (Next drops a
+		// revalidation made by work that began in the handler and ran on after it answered).
 		expect(next.later).toHaveLength(1);
+		expect(started).toBe(false);
 		await next.later[0]?.();
 		expect(done).toBe(true);
 	});

@@ -136,7 +136,8 @@ type Row = {
 	actor: Actor;
 	summary: Message;
 	place: Message | null;
-	targets: LoggedRecord[];
+	/** What the write touched, each with what it was called. Read for a line's details only: a bulk write keeps one for every record. */
+	targets?: LoggedRecord[];
 	conversation_id: string | null;
 	proposal_id: string | null;
 	undo_until: Date | null;
@@ -157,9 +158,11 @@ async function collectionLabels(db: Db): Promise<Map<string, string>> {
 
 function undoOf(rows: Row[], now: Date): LineUndo {
 	const undoable = rows.filter((row) => row.undo_until !== null);
-	if (undoable.some((row) => row.undone_at === null && (row.undo_until as Date) >= now)) return { state: "open" };
+	// Undone once something of it went back, whatever stayed: a write of the line whose record someone wrote since is left as it is and not marked
+	// undone (the undo says which records it skipped), and the line still says when it was undone.
 	const undone = undoable.flatMap((row) => row.undone_at ?? []);
 	if (undone.length > 0) return { state: "done", at: new Date(Math.max(...undone.map((at) => at.getTime()))) };
+	if (undoable.some((row) => (row.undo_until as Date) >= now)) return { state: "open" };
 	return { state: undoable.length > 0 ? "over" : "none" };
 }
 
@@ -179,8 +182,16 @@ function deliveryOf(deliveries: DeliveryRow[]): LineDelivery | null {
 	};
 }
 
-/** The lines of these keys, each from its rows (newest first), in the keys' order. */
-async function linesOf(db: Db, keys: string[], now: Date): Promise<{ line: ActivityLine; rows: Row[] }[]> {
+/**
+ * The lines of these keys, each from its rows (newest first), in the keys' order. `records` reads what each write touched too, for a line's
+ * details; a list never does (a page of bulk writes would carry every record of each).
+ */
+async function linesOf(
+	db: Db,
+	keys: string[],
+	now: Date,
+	{ records = false }: { records?: boolean } = {},
+): Promise<{ line: ActivityLine; rows: Row[] }[]> {
 	if (keys.length === 0) return [];
 	const rows: Row[] = await db
 		.selectFrom("monti_activity")
@@ -191,12 +202,12 @@ async function linesOf(db: Db, keys: string[], now: Date): Promise<{ line: Activ
 			"actor",
 			"summary",
 			"place",
-			"targets",
 			"conversation_id",
 			"proposal_id",
 			"undo_until",
 			"undone_at",
 		])
+		.$if(records, (query) => query.select("targets"))
 		.where("listed", "=", true)
 		.where("line", "in", keys)
 		.orderBy("seq", "desc")
@@ -313,16 +324,30 @@ function conditionsOf(
 export async function listActivity(
 	db: Db,
 	query: ActivityQuery,
-	options: { now: Date; receivers: boolean },
+	options: {
+		now: Date;
+		receivers: boolean;
+		/** For tests: runs once the boundary is read and before the page is, where a write of another request can fall. */
+		afterBoundary?: () => Promise<void>;
+	},
 ): Promise<ActivityList> {
 	const entry = query.entry === undefined ? null : await entryFilter(db, query.entry);
-	const where = conditionsOf(query, entry, options.now);
+	// Where this browsing stands is read before its first page, and bounds that page too: a line committed between the two readings is on no
+	// page of this browsing, rather than inside the boundary and missing from page 1 (page 2 would then repeat page 1's last line).
+	const asOf =
+		query.asOf ??
+		String(
+			(
+				await sql<{ seq: string | null }>`select max(seq) as seq from monti_activity h
+					where h.listed and h.id = h.line`.execute(db)
+			).rows[0]?.seq ?? 0,
+		);
+	await options.afterBoundary?.();
+	const where = conditionsOf({ ...query, asOf }, entry, options.now);
 	const direction = query.sort === "asc" ? sql`asc` : sql`desc`;
 	const page = await sql<{ line: string }>`select h.id as line from monti_activity h where ${where}
 		order by h.seq ${direction} limit ${query.pageSize} offset ${(query.page - 1) * query.pageSize}`.execute(db);
 	const total = await sql<{ count: string }>`select count(*) as count from monti_activity h where ${where}`.execute(db);
-	const newest = await sql<{ seq: string | null }>`select max(seq) as seq from monti_activity h
-		where h.listed and h.id = h.line`.execute(db);
 	const any = await db.selectFrom("monti_delivery").select("id").limit(1).executeTakeFirst();
 	return {
 		lines: (
@@ -333,7 +358,7 @@ export async function listActivity(
 			)
 		).map(({ line }) => line),
 		total: Number(total.rows[0]?.count ?? 0),
-		asOf: query.asOf ?? String(newest.rows[0]?.seq ?? 0),
+		asOf,
 		deliveries: options.receivers || any !== undefined,
 		entry: entry && query.entry !== undefined ? { id: query.entry, title: entry.title } : null,
 	};
@@ -379,14 +404,14 @@ export async function getActivity(
 	now: Date,
 	receivers: readonly Receiver[],
 ): Promise<ActivityDetail> {
-	const [found] = await linesOf(db, [id], now);
+	const [found] = await linesOf(db, [id], now, { records: true });
 	if (!found) throw new CheckError({ key: "activity.unknown" });
 	// Each record once, as the line's newest write left it.
 	const logged = [
 		...new Map(
 			[...found.rows]
 				.reverse()
-				.flatMap((row) => row.targets)
+				.flatMap((row) => row.targets ?? [])
 				.filter((record) => record.title !== undefined)
 				.map((record) => [recordKey(record), record]),
 		).values(),
