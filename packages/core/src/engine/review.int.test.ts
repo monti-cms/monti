@@ -1195,6 +1195,42 @@ describe("what the second review of the core found (#472)", () => {
 		expect((await row(post)).status).toBe("archived");
 	});
 
+	it("10-1 a save that lands while a revert is under way is not put back over: the revert decides what goes back once it holds it (T160)", async () => {
+		const monti = site();
+		const id = await newPost("글");
+		const proposal = await monti.proposals.create("c1", "제목 고쳐 줘");
+		const { itemId } = await monti.proposals.add(proposal, "entries.save", {
+			id,
+			version: await version(id),
+			title: "어시스턴트의 제목",
+		});
+		await monti.proposals.apply(proposal);
+		expect((await row(id)).title).toBe("어시스턴트의 제목");
+
+		let waited = false;
+		let reverting: ReturnType<typeof revert> | undefined;
+		await db.transaction().execute(async (held) => {
+			// The revert has begun and waits for the proposal's row, the first thing it holds.
+			await held.selectFrom("monti_proposal").select("id").where("id", "=", proposal).forUpdate().execute();
+			let done = false;
+			reverting = revert(monti, proposal).finally(() => {
+				done = true;
+			});
+			await wait(300);
+			waited = !done;
+			// A person saves the entry meanwhile.
+			await monti.run("entries.save", { id, version: await version(id), title: "사람의 제목" }, admin);
+		});
+		const result = await (reverting as ReturnType<typeof revert>);
+		expect(waited).toBe(true);
+		// The record was written since the item's write: it is left alone, and the item stays applied with the reason.
+		expect(result.output).toEqual({ reverted: [], kept: [itemId] });
+		expect((await row(id)).title).toBe("사람의 제목");
+		const [item] = (await view(proposal)).items;
+		expect(item).toMatchObject({ state: "applied" });
+		expect(item?.reason).not.toBeNull();
+	});
+
 	it("10-1 a proposal is not put back while an apply holds it, and two reverts at once put each item back once", async () => {
 		const monti = site();
 		const posts = [await newPost("하나"), await newPost("둘")];

@@ -4,7 +4,7 @@ import { sameJson } from "../json";
 import { defineOperation, type OperationContext, type RecordRef } from "../operation";
 import { type AdminValues, AdminValuesPatch, mergeAdminValues } from "../schema/admin-values";
 import { readSchemaState } from "../schema/apply";
-import type { CollectionDefinition, Schema } from "../schema/define";
+import { type CollectionDefinition, type Schema, storedFields } from "../schema/define";
 import {
 	AnswersInput,
 	adminValuesOf,
@@ -60,7 +60,9 @@ function underAppliedNames(
 ): AdminValuesPatch {
 	if (!draft) return patch;
 	const back = new Map(
-		renames.filter((rename) => applied.fields[rename.from] && draft.fields[rename.to]).map((r) => [r.to, r.from]),
+		renames
+			.filter((rename) => !rename.of && storedFields(applied)[rename.from] && storedFields(draft)[rename.to])
+			.map((r) => [r.to, r.from]),
 	);
 	if (back.size === 0) return patch;
 	const sources = new Set(back.values());
@@ -119,7 +121,7 @@ function firstValues(input: SaveInput, applied: Schema, draft: Schema): Record<s
 		const fresh = Object.keys(made.fields).filter(
 			(field) =>
 				!saved.fields[field] &&
-				!input.renames.some((rename) => rename.collection === collection && rename.to === field),
+				!input.renames.some((rename) => !rename.of && rename.collection === collection && rename.to === field),
 		);
 		const fields = Object.fromEntries(
 			fresh.flatMap((field) => (values.fields?.[field] ? [[field, values.fields[field]]] : [])),
@@ -304,10 +306,12 @@ export const settingsOperations = [
 				},
 			};
 		},
+		log: "settings",
 		summary: (_input, output) =>
 			output.structure?.written && !output.structure.applied
 				? { key: "schema.applyFailed", values: { change: output.structure.changeId } }
 				: { key: "settings.saved" },
+		where: () => ({ key: "activity.where.settings" }),
 	}),
 	defineOperation({
 		name: "admin.setPreference",
@@ -324,6 +328,8 @@ export const settingsOperations = [
 			await writeSettings(ctx.db, "admin", next);
 			return AdminPreferences.parse(next);
 		},
+		// The admin's own screen, no change to the site: written, and not listed in the log (doc 13).
+		log: false,
 		summary: () => ({ key: "admin.setPreference" }),
 	}),
 ];

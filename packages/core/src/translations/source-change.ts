@@ -4,7 +4,7 @@ import { asDoc, type Block, type Doc, newBlockId } from "../body/doc";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { type Entry, loadEntries, markChanges } from "../entries/record";
-import { localeModeOf, type Schema } from "../schema/define";
+import { localeModeOf, type Schema, storedFields } from "../schema/define";
 import { seenAfter, trackedFields } from "./fields";
 import { blockHash, pairedCopy } from "./links";
 import { followedFields, rememberBlocks } from "./source";
@@ -101,7 +101,7 @@ async function rewrite(db: Db, entry: Entry, change: (doc: Doc) => Doc, seen: Re
 
 /** The `same` fields' values, which live on the source. */
 function sameValues(schema: Schema, entry: Entry): Record<string, unknown> {
-	const fields = schema.collections[entry.collection]?.fields ?? {};
+	const fields = storedFields(schema.collections[entry.collection]);
 	return Object.fromEntries(
 		Object.entries(entry.values).filter(([name]) => {
 			const definition = fields[name];
@@ -137,7 +137,7 @@ async function promote(db: Db, entry: Entry, old: Entry, schema: Schema): Promis
 async function draftFrom(db: Db, old: Entry, locale: string, schema: Schema, kit: BlockKit): Promise<Doc> {
 	const blocks = asDoc(old.doc).blocks;
 	const doc: Doc = { type: "doc", blocks: blocks.map((block) => pairedCopy(block, newBlockId(), kit)) };
-	const fields = schema.collections[old.collection]?.fields ?? {};
+	const fields = storedFields(schema.collections[old.collection]);
 	const values = Object.fromEntries(
 		Object.entries(old.values).filter(([name]) => {
 			const definition = fields[name];

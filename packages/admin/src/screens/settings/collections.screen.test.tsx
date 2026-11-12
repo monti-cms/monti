@@ -441,3 +441,232 @@ describe("settings: the review of a hand-edited schema file", () => {
 		await expect.element(page.getByRole("button", { name: "변경 사항", exact: true })).toHaveTextContent(/1/);
 	});
 });
+
+describe("settings › collections: the options of a choice in the review (docs 12 and 19)", () => {
+	type Site = {
+		site: {
+			monti: { run: (name: string, input: unknown, as: { actor: "admin" }) => Promise<unknown> };
+			db: import("kysely").Kysely<import("@monti-cms/core").Database>;
+		};
+	};
+	const options = () =>
+		scene<Site>(
+			{ loaders: collections.site({ schema: collections.optionsSchema, more: collections.optionEntries }) },
+			collections.default,
+		);
+	const opened = async () => {
+		await userEvent.click(page.getByRole("button", { name: "설정" }));
+		await userEvent.click(page.getByRole("link", { name: /^컬렉션/ }));
+		await expect.element(page.getByRole("button", { name: "mood 열기" })).toBeVisible();
+	};
+	const sheet = () => page.getByRole("dialog");
+	const saveSheet = async () => {
+		await userEvent.click(sheet().getByRole("button", { name: "저장", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+	};
+	const review = async () => {
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		await expect.element(sheet().getByText("검토")).toBeVisible();
+		return sheet();
+	};
+	/** The values of each post as the draft and the site have them, by the post's title. */
+	const stored = async ({ site }: Site, table: "entries" | "entry_published") => {
+		const rows = await site.db.selectFrom(table).select(["title", "values"]).where("collection", "=", "post").execute();
+		return Object.fromEntries(rows.map((row) => [row.title, row.values as Record<string, unknown>]));
+	};
+	/** The value field of the n-th option's row. */
+	const option = (index: number) => sheet().getByRole("textbox", { name: "값" }).nth(index);
+
+	it("19-8 an option's value edited in its row is a rename: the review names it with the entries that chose it and the published ones, asks nothing, and the applied word is on the site", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await userEvent.click(page.getByRole("button", { name: "mood 열기" }));
+		await expect.element(option(1)).toHaveValue("loud");
+		await userEvent.fill(option(1), "noisy");
+		await saveSheet();
+		const sheetNow = await review();
+		await expect.element(sheetNow.getByText("분위기 · 시끌")).toBeVisible();
+		await expect.element(sheetNow.getByText("mood · loud → noisy")).toBeVisible();
+		await expect.element(sheetNow.getByText("2편 · 공개된 글 1편")).toBeVisible();
+		await expect.element(sheetNow.getByRole("radio")).not.toBeInTheDocument();
+		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		expect((await stored(made.loaded(), "entry_published"))["loud-video"]).toMatchObject({ mood: "noisy" });
+		expect((await stored(made.loaded(), "entries"))["loud-draft"]).toMatchObject({ mood: "noisy" });
+		expect((await stored(made.loaded(), "entry_published"))["calm-article"]).toMatchObject({ mood: "calm" });
+	});
+
+	it("19-9 an option taken out is asked about: 바꾸기 with the options that stay, or 비우기 (the red apply); changed, the entries hold the option picked, on the site too", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await userEvent.click(page.getByRole("button", { name: "mood 열기" }));
+		await userEvent.click(sheet().getByRole("button", { name: "loud 빼기" }));
+		await saveSheet();
+		const sheetNow = await review();
+		await expect.element(sheetNow.getByText("분위기 · 시끌")).toBeVisible();
+		await expect.element(sheetNow.getByText("2편 · 공개된 글 1편")).toBeVisible();
+		await expect.element(sheetNow.getByText("저장된 데이터는 바뀌지 않습니다.")).not.toBeInTheDocument();
+		// Changing is the default, to the first option that stays: emptying throws values away, so it is chosen, and the button says so.
+		await expect.element(sheetNow.getByRole("radio", { name: "바꾸기" })).toBeChecked();
+		await expect.element(sheetNow.getByRole("combobox", { name: "바꾸기" })).toHaveTextContent("차분");
+		await userEvent.click(sheetNow.getByRole("radio", { name: "비우기" }));
+		await expect.element(sheetNow.getByRole("button", { name: "지우고 적용" })).toBeVisible();
+		await userEvent.click(sheetNow.getByRole("radio", { name: "바꾸기" }));
+		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		expect((await stored(made.loaded(), "entry_published"))["loud-video"]).toMatchObject({ mood: "calm" });
+		expect((await stored(made.loaded(), "entries"))["loud-draft"]).toMatchObject({ mood: "calm" });
+	});
+
+	it("19-10 a required conditional field's option taken out offers only 바꾸기; its fields are asked about as removed fields, and the review says the new option's required fields will be empty, with the published count", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await userEvent.click(page.getByRole("button", { name: "format 열기" }));
+		await userEvent.click(sheet().getByRole("button", { name: "video 빼기" }));
+		await saveSheet();
+		const sheetNow = await review();
+		await expect.element(sheetNow.getByText("글 종류 · 동영상")).toBeVisible();
+		await expect.element(sheetNow.getByRole("radio", { name: "비우기" })).not.toBeInTheDocument();
+		await expect.element(sheetNow.getByRole("radio", { name: "바꾸기" })).toBeChecked();
+		// The removed option's field, as any removed field: with how many hold a value and how many of them are published.
+		await expect.element(sheetNow.getByText("동영상 주소")).toBeVisible();
+		await expect.element(sheetNow.getByRole("radio", { name: /값 지우기/ })).toBeVisible();
+		await userEvent.click(sheetNow.getByRole("combobox", { name: "바꾸기" }));
+		await userEvent.click(page.getByRole("option", { name: "링크" }));
+		await expect.element(sheetNow.getByText("링크의 필수 필드가 비게 됩니다 · 공개된 글 1편")).toBeVisible();
+		await userEvent.click(sheetNow.getByRole("button", { name: "지우고 적용" }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		expect((await stored(made.loaded(), "entry_published"))["loud-video"]).toEqual({ mood: "loud", format: "link" });
+	});
+
+	it("19-7 a removed field's line says how many entries hold a value and how many of them are published", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await userEvent.click(page.getByRole("button", { name: "mood 열기" }));
+		await userEvent.click(sheet().getByRole("button", { name: "필드 삭제" }));
+		const sheetNow = await review();
+		await expect.element(sheetNow.getByRole("radio", { name: /값 지우기/ })).toBeVisible();
+		await expect.element(sheetNow.getByText("3편 · 공개된 글 2편")).toBeVisible();
+	});
+
+	const read = async ({ site }: Site) =>
+		(
+			(await site.monti.run("schema.read", {}, { actor: "admin" })) as {
+				schema: { collections: Record<string, { fields: Record<string, unknown> }> };
+			}
+		).schema.collections.post?.fields;
+
+	it("19-6 a conditional field's line has a band for each option under it, one step in, with no grip, the option's fields under the band, and an option with no fields keeps its band", async () => {
+		await options().run();
+		await opened();
+		const rows = () => [...document.querySelectorAll<HTMLElement>("[data-slot=field-row]")];
+		const text = () => rows().map((row) => row.textContent ?? "");
+		const at = (words: string) => text().findIndex((each) => each.includes(words));
+		await expect.poll(() => at("videoUrl")).toBeGreaterThan(-1);
+		// The field, then each option's band in the options' order, each followed by its own fields.
+		const order = ["format", "필드 없음", "동영상", "videoUrl", "링크", "linkUrl"].map(at);
+		expect(order).toEqual([...order].sort((a, b) => a - b));
+		const band = rows()[at("동영상")] as HTMLElement;
+		expect(band.dataset.group).toBe("true");
+		expect(band.textContent).toContain("video");
+		// A band is not dragged, and neither are its fields: no grip button in them.
+		expect(band.querySelector("button[aria-label$='옮기기']")).toBeNull();
+		expect((rows()[at("videoUrl")] as HTMLElement).querySelector("button[aria-label$='옮기기']")).toBeNull();
+		// A band is one height, the group band's: 36.
+		for (const words of ["필드 없음", "동영상", "링크"])
+			expect(Math.round((rows()[at(words)] as HTMLElement).getBoundingClientRect().height)).toBe(36);
+		const left = (row: HTMLElement) =>
+			(row.querySelector("span:nth-child(2)") as HTMLElement).getBoundingClientRect().left;
+		expect(left(band)).toBeGreaterThan(left(rows()[at("format")] as HTMLElement));
+		expect(left(rows()[at("videoUrl")] as HTMLElement)).toBeGreaterThan(left(band));
+	});
+
+	it("19-6 '+ 필드' on an option's band adds a field to that option: the sheet says whose it is, the field stands under the band, and the saved schema has it in that option", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await userEvent.click(page.getByRole("button", { name: "글에 필드 추가" }));
+		await expect.element(sheet().getByText(/게시글 · 글 종류 · 글/)).toBeVisible();
+		// A field of an option is not itself conditional.
+		await expect.element(sheet().getByRole("option", { name: /^조건부/ })).not.toBeInTheDocument();
+		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "credit");
+		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "credit 열기" })).toBeVisible();
+		await expect.element(page.getByText("필드 없음")).not.toBeInTheDocument();
+		const sheetNow = await review();
+		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		expect((await read(made.loaded()))?.format).toMatchObject({
+			kind: "conditional",
+			fields: { article: { credit: { kind: "text" } }, video: { videoUrl: { kind: "text", required: true } } },
+		});
+	});
+
+	it("19-6 a conditional field is made in the field sheet: its kind, its options; in the list it has a band for each", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await userEvent.click(page.getByRole("button", { name: "+ 필드 추가" }));
+		await userEvent.click(sheet().getByRole("option", { name: /^조건부/ }));
+		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "source");
+		for (const [index, value] of ["own", "quoted"].entries()) {
+			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await userEvent.fill(sheet().getByRole("textbox", { name: "값" }).nth(index), value);
+		}
+		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "own에 필드 추가" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "quoted에 필드 추가" })).toBeVisible();
+		const sheetNow = await review();
+		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		expect((await read(made.loaded()))?.source).toEqual({
+			kind: "conditional",
+			options: ["own", "quoted"],
+			fields: {},
+		});
+	});
+
+	it("19-16 '+ 선택지' puts the keyboard in the new row's value; a value left empty is flagged on the field's line and the save is refused until it is filled, for a choice and a conditional field alike", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		for (const name of ["format", "mood"]) {
+			await userEvent.click(page.getByRole("button", { name: `${name} 열기` }));
+			const rows = sheet().getByRole("textbox", { name: "값" });
+			const before = rows.elements().length;
+			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await expect.element(rows.nth(before)).toHaveFocus();
+			await saveSheet();
+		}
+		const line = (name: string) =>
+			[...document.querySelectorAll<HTMLElement>("[data-slot=field-row]")].find((row) =>
+				row.textContent?.startsWith(name),
+			)?.textContent;
+		await expect.poll(() => line("format")).toContain("빈 값");
+		await expect.poll(() => line("mood")).toContain("빈 값");
+		const sheetNow = await review();
+		await expect.element(sheetNow.getByText("값이 빈 선택지가 있습니다").first()).toBeVisible();
+		// Refused: whatever in the sheet says "적용" and can be pressed is pressed, the sheet stays, and the schema is as it was.
+		for (const button of sheetNow.element().querySelectorAll<HTMLButtonElement>("button"))
+			if (button.textContent?.includes("적용") && !button.disabled && button.getAttribute("aria-disabled") !== "true")
+				button.click();
+		await expect.element(sheet()).toBeVisible();
+		expect((await read(made.loaded()))?.mood).toEqual({ kind: "select", options: ["calm", "loud"] });
+	});
+
+	it("19-13 the review of a field moved into an option says where it went and how many entries lose its value, and applies with the red button", async () => {
+		const { MovedFieldReview } = composeStories(collections);
+		await MovedFieldReview.run();
+		const sheetNow = sheet();
+		await expect.element(sheetNow.getByText("videoUrl → format · link")).toBeVisible();
+		await expect.element(sheetNow.getByText("글 종류 · 링크")).toBeVisible();
+		await expect.element(sheetNow.getByText("1편 · 공개된 글 1편")).toBeVisible();
+		await expect.element(sheetNow.getByRole("button", { name: "지우고 적용" })).toBeVisible();
+	});
+});

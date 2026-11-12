@@ -3,6 +3,7 @@ import type { Database } from "../db/schema";
 import { UNDO_DAYS } from "../engine/execute";
 import { freeName, lockFolderScope } from "../folders/operations";
 import type { Storage } from "../media/storage";
+import { placeEvents } from "../operation";
 import { lockRecords } from "../records";
 import { unlinkTargetGroup } from "../relations/sync";
 import type { Schema } from "../schema/define";
@@ -80,12 +81,15 @@ export async function keptPaths(
 		.sort((a, b) => (place.get(a.entry_id) ?? 0) - (place.get(b.entry_id) ?? 0) || a.slug.localeCompare(b.slug));
 }
 
+/** An entry a permanent delete took. */
+export type PurgedEntry = { id: string; group: string; collection: string; locale: string };
+
 /** The entries a permanent delete of these takes: every language of each that is in the trash, as the trash shows them, one row. */
-async function entriesToPurge(db: Db, ids: string[]): Promise<{ id: string; group: string }[]> {
+async function entriesToPurge(db: Db, ids: string[]): Promise<PurgedEntry[]> {
 	if (ids.length === 0) return [];
 	const rows = await db
 		.selectFrom("entries")
-		.select(["id", "translation_group as group"])
+		.select(["id", "translation_group as group", "collection", "locale"])
 		.where("trashed_at", "is not", null)
 		.where(
 			"translation_group",
@@ -136,9 +140,9 @@ export const looseUntil = (now: Date) => new Date(now.getTime() + LOOSE_DAYS * D
 /**
  * Deletes rows of the trash for good (doc 11): entries with the paths they were published under kept from other entries and the relations that pointed at them
  * cut (doc 08), files with their bytes handed to the clean-up, folders with everything in them. Whatever a folder still holds outside the trash moves to the top
- * level.
+ * level. It returns the entries it deleted, for the event that tells the receivers.
  */
-export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: Date): Promise<void> {
+export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: Date): Promise<PurgedEntry[]> {
 	const ids = (kind: TrashRef["kind"]) => rows.filter((row) => row.kind === kind).map((row) => row.id);
 	const folders = new Set<string>();
 	for (const id of ids("folder")) for (const each of await trashedUnder(db, id)) folders.add(each);
@@ -241,6 +245,7 @@ export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: D
 		}
 		await db.deleteFrom("folders").where("id", "in", inside).where("trashed_at", "is not", null).execute();
 	}
+	return entries;
 }
 
 /** Every row in the trash, for emptying it; with `before`, the rows thrown away by then. Entries and files inside a folder go with the folder. */
@@ -303,23 +308,29 @@ export async function sweepLooseFiles(db: Kysely<Database>, storage: Storage | n
  * The clean-up (`monti trash:purge`, and when the admin opens, doc 11): deletes what has been in the trash for 30 days, forgets the snapshots of writes that can no
  * longer be undone (T7), and removes the loose files from the storage.
  */
+export const purgedEvents = (entries: PurgedEntry[]) => placeEvents("entry.purged", entries);
+
 export async function purgeDue(
 	db: Kysely<Database>,
 	schema: Schema,
 	storage: Storage | null,
 	now: Date,
-): Promise<{ purged: number; files: number }> {
-	const purged = await db.transaction().execute(async (trx) => {
+	/** Logs the purge and queues its events, in the purge's transaction; it answers the deliveries to send once it has committed. */
+	log?: (trx: Transaction<Database>, gone: { count: number; entries: PurgedEntry[] }) => Promise<string[]>,
+): Promise<{ purged: number; files: number; deliveryIds: string[] }> {
+	const { purged, deliveryIds } = await db.transaction().execute(async (trx) => {
 		const due = new Date(now.getTime() - TRASH_DAYS * DAY);
 		// Held as a restore holds them, then read again: a row that came back at this moment stays.
 		await lockRecords(trx, await everyTrashRow(trx, due));
 		const rows = await everyTrashRow(trx, due);
-		if (rows.length > 0) await purgeRows(trx, schema, rows, now);
+		const entries = rows.length > 0 ? await purgeRows(trx, schema, rows, now) : [];
+		// Nothing was due: no line, no event.
+		const queued = rows.length > 0 && log ? await log(trx, { count: rows.length, entries }) : [];
 		await trx
 			.deleteFrom("monti_activity_snapshot")
 			.where("activity_id", "in", trx.selectFrom("monti_activity").select("id").where("undo_until", "<", now))
 			.execute();
-		return rows.length;
+		return { purged: rows.length, deliveryIds: queued };
 	});
-	return { purged, files: await sweepLooseFiles(db, storage, now) };
+	return { purged, files: await sweepLooseFiles(db, storage, now), deliveryIds };
 }

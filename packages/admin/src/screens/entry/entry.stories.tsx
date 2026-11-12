@@ -1,4 +1,4 @@
-import type { Doc } from "@monti-cms/core";
+import { type Doc, defineSchema, type Schema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
@@ -119,7 +119,32 @@ type Kind =
 	| "table"
 	| "tableSized"
 	| "footnotes"
-	| "proposed";
+	| "proposed"
+	| "conditional"
+	| "strayOption";
+
+/** The blog with a conditional field on its posts (doc 19): what a post is, and what each kind of post asks for. */
+const withFormat = defineSchema({
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			...schema.collections.post,
+			fields: {
+				...schema.collections.post?.fields,
+				format: {
+					kind: "conditional",
+					required: true,
+					options: ["article", "video", "link"],
+					fields: {
+						video: { videoUrl: { kind: "text", required: true }, videoCredit: { kind: "text" } },
+						link: { linkUrl: { kind: "text", required: true } },
+					},
+				},
+			},
+		},
+	},
+} as Schema);
 
 /** Makes the story's entry and returns its id. */
 async function entry(monti: Monti, kind: Kind): Promise<string> {
@@ -137,6 +162,14 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					subtitle: { label: "부제" },
 					cover: { label: "대표 이미지" },
 					category: { label: "카테고리" },
+					...(kind === "conditional" || kind === "strayOption"
+						? {
+								format: { label: "글 종류", optionLabels: { article: "글", video: "동영상", link: "링크" } },
+								videoUrl: { label: "동영상 주소" },
+								videoCredit: { label: "출처" },
+								linkUrl: { label: "링크 주소" },
+							}
+						: {}),
 				},
 			},
 		},
@@ -167,6 +200,9 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					values: {
 						summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.",
 						...(devCategoryGroup ? { category: devCategoryGroup } : {}),
+						...(kind === "conditional"
+							? { format: "video", videoUrl: "https://example.dev/talk.mp4", videoCredit: "example.dev" }
+							: {}),
 					},
 					doc:
 						kind === "table"
@@ -201,7 +237,7 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 	async (): Promise<Loaded> => {
 		let id = "";
 		const made = await storySite({
-			schema,
+			schema: kind === "conditional" || kind === "strayOption" ? withFormat : schema,
 			auth: { password: true },
 			// A site signs its preview links: without a secret "Preview" has nothing to open.
 			secret: "story secret",
@@ -210,6 +246,13 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 				id = await entry(monti, kind);
 			},
 		});
+		// A word the field no longer lists, as older data or a hand-edited schema file leaves it: written past the save's check.
+		if (kind === "strayOption")
+			await made.db
+				.updateTable("entries")
+				.set({ values: JSON.stringify({ format: "podcast" }) })
+				.where("id", "=", id)
+				.execute();
 		startAt(`#/c/post/${id}`);
 		if (kept)
 			localStorage.setItem(
@@ -249,6 +292,35 @@ export const Draft: Story = {
 		await saveCell(page, "저장됨");
 		await expect(page.getByText("초안")).toBeVisible();
 		await expect(page.getByRole("button", { name: "발행하기" })).toBeVisible();
+	},
+};
+
+/** A post with a conditional field (doc 19): the fields of the kind it is stand directly under the choice. */
+export const Conditional: Story = {
+	loaders: site("conditional"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByRole("textbox", { name: /동영상 주소/ }, wait);
+	},
+};
+
+/** The choice changed and not yet saved: the other kind's fields, and under the choice what the save takes away. */
+export const ConditionalChanged: Story = {
+	loaders: site("conditional"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("combobox", { name: "글 종류" }, wait));
+		await userEvent.click(await all.findByRole("option", { name: "링크" }, wait));
+		await page.findByRole("textbox", { name: /링크 주소/ }, wait);
+	},
+};
+
+/** A stored word the field no longer lists: the choice shows it as it is, marked, never as another option. */
+export const StrayOption: Story = {
+	loaders: site("strayOption"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByText("podcast: 선택지에 없는 값", {}, wait);
 	},
 };
 
@@ -340,6 +412,28 @@ export const CompareConflict: Story = {
 	play: async (context) => {
 		await SavedElsewhere.play?.(context);
 		const page = within(context.canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "비교하기" }));
+		await page.findByText("서버 최신본과 비교", {}, wait);
+		await page.findByText(/다른 곳 \d/, {}, wait);
+	},
+};
+
+/**
+ * Doc 19: the comparison when the two sides chose different options of a conditional field: each side shows its choice and the fields of its own
+ * option, and the choice is the one place counted.
+ */
+export const ConditionalCompare: Story = {
+	loaders: site("conditional"),
+	play: async ({ canvasElement, loaded }) => {
+		const { site: made, id } = loaded as Loaded;
+		const { page, all } = await opened(canvasElement);
+		await saveCell(page, "저장됨");
+		await userEvent.click(await page.findByRole("combobox", { name: "글 종류" }, wait));
+		await userEvent.click(await all.findByRole("option", { name: "링크" }, wait));
+		await userEvent.type(await page.findByRole("textbox", { name: /링크 주소/ }, wait), "https://example.dev/reading");
+		await made.monti.run("entries.save", { id, version: 1, values: { videoCredit: "다른 탭" } }, admin);
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		await page.findByText(/먼저 저장했습니다/, {}, wait);
 		await userEvent.click(page.getByRole("button", { name: "비교하기" }));
 		await page.findByText("서버 최신본과 비교", {}, wait);
 		await page.findByText(/다른 곳 \d/, {}, wait);

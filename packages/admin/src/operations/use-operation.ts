@@ -12,6 +12,12 @@ export type Refusal = { status: number; error: string; reason: Message | null };
  */
 export const reasonOf = (refusal: Refusal): Message => refusal.reason ?? { key: "errors.unexpected" };
 
+/**
+ * Whether a call was lost rather than refused: no answer came at all (status 0, the network), or the server failed and gave no reason. A
+ * refusal is the server's own no, with why; a lost call is a failure, and a screen that tells the two apart says this one as an error.
+ */
+export const isLost = (refusal: Refusal) => refusal.status === NO_ANSWER.status || refusal.reason === null;
+
 /** How a read made again went (`useRead`'s `reload`). */
 type Reread = { ok: true } | { ok: false; refusal: Refusal };
 

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Document, Image as ImageIcon, Settings, Spark, Tools, TrashCan } from "./icons";
+import { Document, Image as ImageIcon, RecentlyViewed, Settings, Spark, Tools, TrashCan } from "./icons";
 import {
 	Banner,
 	Box,
@@ -29,7 +29,7 @@ import {
 } from "./index";
 
 /**
- * The left navigation on the cream tool ground: the site's name and the fold button, the content, and under a line the trash, the tools and the settings.
+ * The left navigation on the cream tool ground: the site's name and the fold button, the content, and under a line the trash, the activity log, the tools and the settings.
  * The open row is on the current ground and semibold; a row under the pointer takes the selected ground. Folded (⌘B) it is a 48px rail of icons.
  */
 type Folder = { name: string; count: string; depth: 0 | 1; active?: boolean };
@@ -127,10 +127,16 @@ function Nav({
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 						<SidebarMenuItem>
-							<SidebarMenuButton tooltip="도구 1" railDot="실패한 전송" render={<RouterLink href="#tools" />}>
+							<SidebarMenuButton tooltip="활동 기록 1" railDot="실패한 전송" render={<RouterLink href="#activity" />}>
+								<RecentlyViewed />
+								<span>활동 기록</span>
+								<SidebarMenuBadge tone="warning">1</SidebarMenuBadge>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton tooltip="도구" render={<RouterLink href="#tools" />}>
 								<Tools />
 								<span>도구</span>
-								<SidebarMenuBadge tone="warning">1</SidebarMenuBadge>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 						<SidebarMenuItem>
@@ -172,7 +178,7 @@ export const Open: Story = { render: () => <Nav /> };
 /** A folder open (posts › essays): its own folders show under it, and the top level's line runs past them to the next folder. */
 export const FolderOpen: Story = { render: () => <Nav folders={ESSAYS_OPEN} /> };
 
-/** Folded to the rail: icons only, names in tooltips, a dot on the tools icon for a failure. */
+/** Folded to the rail: icons only, names in tooltips, a dot on the activity log's icon for a failed delivery. */
 export const Rail: Story = { render: () => <Nav rail /> };
 
 /** An alert about the whole site (a schema change saved but not applied): edge to edge above the page, which moves down under it, ✦ included. */

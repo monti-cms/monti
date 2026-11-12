@@ -509,10 +509,10 @@ describe("when the source's fields change", () => {
 			},
 		};
 		await migrateContent(db, after, []);
-		const undone = (await site(after).run("activity.undo", { id: confirmed.activityId }, { actor: "admin" })) as {
-			output: { skip: unknown[] };
-		};
-		expect(undone.output.skip).toEqual([{ kind: "entry", id }]);
+		// The migration wrote the entry since: the undo has nothing left to put back, and is refused.
+		await expect(
+			site(after).run("activity.undo", { id: confirmed.activityId }, { actor: "admin" }),
+		).rejects.toMatchObject({ reason: { key: "activity.allChanged" } });
 		expect(await fieldMarks(id)).toEqual([]);
 		expect(await changes(id)).toBe(0);
 	});

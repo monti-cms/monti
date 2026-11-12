@@ -275,7 +275,7 @@ describe("an undo that changes what the site shows says so", () => {
 		expect(shown()).toEqual([["entry.published", ["/posts/date-only"]]]);
 	});
 
-	it("02-7 T29 undoing a move to the trash puts a published entry back on the site; undoing a save alone says nothing", async () => {
+	it("02-7 T29 undoing a move to the trash puts a published entry back on the site; undoing a save alone names no page", async () => {
 		const id = await post("나온 글", "kept");
 		const saved = await act("entries.save", { id, version: await versionOf(id), title: "쓰는 중" });
 		sent = [];
@@ -285,7 +285,11 @@ describe("an undo that changes what the site shows says so", () => {
 		expect(await reader().entry({ collection: "post", locale: "ko", slug: "kept" })).toBeNull();
 		sent = [];
 		await undo(thrown.activityId);
-		expect(shown()).toEqual([["entry.published", ["/posts/kept"]]]);
+		// Back on the site, and out of the trash: the two are sent side by side, in no fixed order.
+		expect(shown().sort()).toEqual([
+			["entry.published", ["/posts/kept"]],
+			["entry.restored", undefined],
+		]);
 		expect(await reader().entry({ collection: "post", locale: "ko", slug: "kept" })).not.toBeNull();
 	});
 });

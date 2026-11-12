@@ -1,6 +1,6 @@
-import type { ColumnType, Generated, RawBuilder } from "kysely";
+import type { ColumnType, Generated, GeneratedAlways, RawBuilder } from "kysely";
 import type { Model } from "../keys/services";
-import type { Actor, Message, MontiEvent, RecordRef } from "../operation";
+import type { ActivityKind, Actor, LoggedRecord, Message, MontiEvent } from "../operation";
 import type { AdminValues } from "../schema/admin-values";
 import type { Schema } from "../schema/define";
 
@@ -9,24 +9,49 @@ type Json<T> = ColumnType<T, string, string>;
 /** One row per write: who, what, and whether it can still be undone. */
 export interface ActivityTable {
 	id: string;
+	/** The order the rows were written in, for rows of the same instant. */
+	seq: GeneratedAlways<string>;
 	at: Generated<Date>;
 	actor: Json<Actor>;
 	operation: string;
+	/** What was done: the line's first line in the log. */
 	summary: Json<Message>;
-	targets: Json<RecordRef[]>;
+	/** Where it happened: the line's second line. */
+	place: Json<Message> | null;
+	/** The records the write touched or made, with their version after it and what each was called then. */
+	targets: Json<LoggedRecord[]>;
+	/** The group the log filters it by; `null` shows under no group. */
+	kind: ActivityKind | null;
+	/** Whether the log shows it as a line: signing in, a list's column widths or an undo are written and not listed. */
+	listed: Generated<boolean>;
 	conversation_id: string | null;
 	proposal_item_id: string | null;
+	/** The proposal the write applied, or whose items a person's save took: the line quotes its request. */
+	proposal_id: string | null;
+	/**
+	 * The line of the log the row is in: the id of the line's head, which is its first listed row. A person's write is its own line; the writes of
+	 * one application of a proposal are one line. A row that is not listed is a line of its own that nothing reads.
+	 */
+	line: Generated<string>;
+	/** The words the row is found by: the titles of what it touched, and on a line's head the assistant's request. */
+	words: Generated<string>;
 	/** Until when undo works (30 days); null when the write cannot be undone. */
 	undo_until: Date | null;
 	undone_at: Date | null;
 }
 
-/** A record's state before a write and its version after it. `before` is null for a record the write created; `after_version` null when it removed one. */
+/**
+ * A record's state before a write and its versions before and after it. `before` and `before_version` are null for a record the write created;
+ * `after_version` null when it removed one.
+ */
 export interface ActivitySnapshotTable {
 	activity_id: string;
 	kind: string;
 	record_id: string;
 	before: Json<unknown> | null;
+	before_version: number | null;
+	/** The version an undo left the record at when it put this snapshot back; null until then. */
+	restored_version: number | null;
 	after_version: number | null;
 }
 
@@ -39,7 +64,14 @@ export interface DeliveryTable {
 	state: "pending" | "sent" | "failed" | "canceled";
 	attempts: Generated<number>;
 	last_error: string | null;
+	/** When it is tried again by itself; `null` once the retries are used up, and for one never tried. */
 	next_attempt_at: Date | null;
+	/** While a sender has it: nobody else sends it until then, so two admins opening at once send it once. */
+	sending_until: Date | null;
+	/** Who holds it, when a person's "send again" reserved it for its own send: no scheduled sender takes it in between. */
+	held_by: string | null;
+	/** When it was last tried. */
+	attempted_at: Date | null;
 	created_at: Generated<Date>;
 }
 

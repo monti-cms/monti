@@ -30,9 +30,18 @@ type ListHeadColumn = {
 /**
  * The width a list's column starts at by what it shows, in px (doc 06: the kind's width is where a column starts; the admin can drag the edges between
  * columns). The title has none: it takes the room the others leave. `one` is a single value (a category, a select), `many` several (tags) or a line of text (a summary), `measure`
- * a picture's size in mono ("3000×2000"). `end` is the cell over the rows' ⋯.
+ * a picture's size in mono ("3000×2000"), `time` a day and its hour in mono ("10. 26 10:58"). `end` is the cell over the rows' ⋯.
  */
-const LIST_COLUMN_SIZE = { status: 76, one: 84, many: 152, locale: 60, measure: 104, date: 84, end: 38 } as const;
+const LIST_COLUMN_SIZE = {
+	status: 76,
+	one: 84,
+	many: 152,
+	locale: 60,
+	measure: 104,
+	date: 84,
+	time: 120,
+	end: 38,
+} as const;
 type ListColumnSize = keyof typeof LIST_COLUMN_SIZE;
 /** How narrow and how wide a column can be dragged (core's `list.savePrefs` keeps no more); the title, which takes the room left, keeps `TITLE_MIN`. */
 const LIST_COLUMN_MIN = 60;

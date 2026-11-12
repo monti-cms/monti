@@ -45,7 +45,7 @@ export function PreviewPanel({
 	onClose: () => void;
 }) {
 	const { t } = useAdmin();
-	const keys = model.fields(c).filter((key) => model.shown(at.field(c, key)));
+	const keys = model.topFields(c).filter((key) => model.shown(at.field(c, key)));
 	const layout = shownLayout(
 		model.draft.value(at.collectionValue(c, "layout")) as Layout | undefined,
 		keys,
@@ -87,7 +87,8 @@ export function PreviewPanel({
 			) : (
 				<Input id={id} size="md" placeholder={placeholder} />
 			);
-		if (def.kind === "select") {
+		// A conditional field (doc 19) is its choice: with nothing chosen, none of its options' fields is the entry's.
+		if (def.kind === "select" || def.kind === "conditional") {
 			const labels = (model.shown(at.fieldValue(c, key, "optionLabels")) ?? {}) as Record<string, string>;
 			return (
 				<PickOne

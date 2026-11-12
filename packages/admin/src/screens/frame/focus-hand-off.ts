@@ -7,6 +7,7 @@ import { useCallback, useRef } from "react";
  *
  * - {@link useFocusHandOff} is the rule: a ref for the thing that goes away (a button, or the box around it: a banner), and where its focus goes.
  * - {@link focusText}, {@link nextStop} and {@link firstStop} are the places it goes to.
+ * - {@link holdsKeyboardFocus} is its test of a press with the keyboard, for a question that closes around the control that asked.
  */
 
 /** What can take the keyboard's focus, by what it is; whether the Tab key stops on each is asked of it (`stopsTab`). */
@@ -49,6 +50,27 @@ export function nextStop(after: Element) {
 				stopsTab(stop),
 		) ?? null
 	);
+}
+
+/**
+ * Whether the keyboard's focus is on it: the rule's one test of "used with the keyboard". A control pressed with a pointer does not hold it,
+ * also where the press focuses it; one reached with Tab, the arrows or a screen reader's own keys does. Never told from the click (`detail`):
+ * a screen reader's press is a click like a pointer's.
+ */
+export const holdsKeyboardFocus = (element: Element) => element.matches(":focus-visible");
+
+/**
+ * Whether the focus is in something a control of the thing opened elsewhere in the page: its menu, which is named by its button
+ * (`aria-labelledby`, kept while the menu closes). That focus is the control's own: a row whose menu's "send again" is answered before the
+ * menu has closed goes while the focus is still in the menu, and the menu then has no button to give it back to.
+ */
+function inPopupOf(node: HTMLElement, focused: Element) {
+	const popup = focused.closest("[aria-labelledby]");
+	if (!popup || node.contains(popup)) return false;
+	return (popup.getAttribute("aria-labelledby") ?? "").split(/\s+/).some((id) => {
+		const named = id ? document.getElementById(id) : null;
+		return named !== null && node.contains(named);
+	});
 }
 
 /** What a person does next with their own hands: after it, nothing is moved under them. */
@@ -182,7 +204,7 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 		let held: Element | null = null;
 		const keep = (event: FocusEvent) => {
 			const on = event.target;
-			held = on instanceof Element && node.contains(on) && on.matches(":focus-visible") ? on : null;
+			held = on instanceof Element && node.contains(on) && holdsKeyboardFocus(on) ? on : null;
 		};
 		addEventListener("focusin", keep, true);
 		// A pointer's press takes the keyboard's hold away, also where it moves no focus (a button in Safari and Firefox on macOS).
@@ -197,7 +219,7 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 		const again = (event: KeyboardEvent) => {
 			if (MODIFIERS.has(event.key)) return;
 			const on = document.activeElement;
-			if (on instanceof Element && node.contains(on) && on.matches(":focus-visible")) held = on;
+			if (on instanceof Element && node.contains(on) && holdsKeyboardFocus(on)) held = on;
 		};
 		addEventListener("keydown", again, true);
 		// Its own control went and it stayed (a banner that still has something to say): the focus that control held is handed on the same way.
@@ -213,7 +235,8 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 			removeEventListener("keydown", again, true);
 			inside.disconnect();
 			const focused = document.activeElement;
-			if (focused instanceof HTMLElement && node.contains(focused) && focused.matches(":focus-visible")) return hand();
+			const keyed = focused instanceof HTMLElement && holdsKeyboardFocus(focused);
+			if (keyed && (node.contains(focused) || inPopupOf(node, focused))) return hand();
 			// A part that takes its own node out before it lets the ref go (a menu's list, drawn outside the page): by now the focus has
 			// fallen to the page with no event. What the keyboard held in it is remembered, and is handed on the same.
 			if (held && !held.isConnected && (focused === null || focused === document.body)) hand();

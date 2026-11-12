@@ -375,8 +375,8 @@ describe("changing", () => {
 		expect((await write<MediaItem>("media.update", { id: file.id, name: "a/b.png" })).output.name).toBe("a-b.png.jpg");
 		await refused(write("media.update", { id: file.id, name: "   " }), "media.badName");
 		await refused(write("media.update", { id: file.id, name: "" }), "media.badName");
-		await write("activity.undo", { id: renamed.activityId });
-		// The newer renames changed the record, so that undo skips it: only an undo of the last one takes it back.
+		// The newer renames changed the record, so that undo has nothing left to put back and says so: only an undo of the last one takes it back.
+		await refused(write("activity.undo", { id: renamed.activityId }), "activity.allChanged");
 		expect((await read<MediaDetail>("media.get", { id: file.id })).name).toBe("a-b.png.jpg");
 	});
 

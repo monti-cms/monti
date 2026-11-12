@@ -18,7 +18,8 @@ export const moveToFolder = defineOperation({
 	touches: (input) => input.ids.map((id) => ({ kind: "entry", id })), // versioned and snapshotted for undo
 	check: async (input, ctx) => {/* throw CheckError to refuse */},
 	run: async (input, ctx) => {/* write through ctx.db; ctx.emit(event) for receivers */},
-	summary: (input) => ({ key: "entries.moveToFolder", values: { count: input.ids.length } }),
+	summary: (input) => ({ key: "entries.moveToFolder", values: { count: input.ids.length } }), // the log's first line
+	log: "save", // the group the activity log filters it by
 });
 ```
 
@@ -31,7 +32,46 @@ export const moveToFolder = defineOperation({
 3. `check`, then `run`.
 4. One activity row, with snapshots of the touched and created records, so the write can be undone for 30 days (`activity.undo`). Undo skips a record
    changed since, and never overwrites it.
-5. The events it emitted are queued for each receiver and sent only after the commit. A failed send is retried on a schedule (`RETRY_MINUTES`).
+5. The events it emitted are queued for each receiver and sent only after the commit.
+
+A receiver is a webhook (`receivers: [webhook("https://example.dev/api/revalidate")]`) or a plugin's. A webhook has a name its deliveries are
+stored and shown under (`webhook(url, { name })`; left out, the address's host alone): the address itself, with any token in its path or
+query, is never stored. Two receivers of one site cannot share a name: two webhooks on one host each need a `name`. A redirect is not followed and is a failure. An address that does not
+parse, or that carries a user or a password (`https://user:pass@…`), is refused when the site is made: send credentials in `headers`
+(`Authorization`) or sign with `secret`. Why a delivery failed is kept as one of four kinds, never as an error's own text (which can quote
+the address): the receiver's status, no answer (with the network's code), no such receiver, or failed. A send that fails, or takes longer than ten
+seconds, shows as failed at once in the activity log and in the sidebar's count; it is tried again by itself eight times at growing waits
+(`RETRY_MINUTES`), when the admin opens and from `monti deliveries:run`, and after the last it stays failed until a person sends it again
+(`deliveries.retry`, a batch at a time) or cancels it (`deliveries.cancel`). The sends nobody waits for are handed to the host's `waitUntil`
+(`openMonti(config, root, { waitUntil })`; `@monti-cms/next` passes Next's `after`), so a serverless function is not ended mid-send. The host
+is given work to start, not a running promise: `waitUntil: (work) => context.waitUntil(work())`.
+On such a host a write answers before its webhooks are sent; a receiver with `beforeAnswer: true` is still sent first (the site's own
+cached pages are one: a publish that answered is on the site), within one deadline for the write (ten seconds; what is left is sent behind
+the answer). A receiver with `oncePerWrite: true` does the same whatever the event and gets one send for a write, however many events it
+emitted.
+
+**An event can arrive twice.** A receiver may handle an event and lose its answer on the way back; Monti then counts a failure and sends it again.
+Every try carries the same ids, so a receiver that must not act twice keeps the ids it has handled:
+
+| Where | What |
+|---|---|
+| the body's `id`, header `Monti-Event-Id` | the event's id: the same on every try, and for every receiver of the event |
+| header `Monti-Delivery-Id` | this receiver's delivery of it: the same on every try |
+| header `Monti-Attempt` | which try this is, from 1 |
+| header `Monti-Signature` | only with `webhook(url, { secret })`: `t=<seconds>,v1=<hex>`. `v1` is the HMAC-SHA256, in hex, of `<t>.<body>` under the webhook's secret, where `<body>` is the bytes posted. Make the same from the raw body and compare; refuse a `t` that is old. Never `MONTI_SECRET` |
+
+The activity log shows a receiver by a name a person reads, never by the address it is stored under (a webhook's may carry a token): a
+receiver's `label`, or without one a webhook's name (its host, when it was given none) and a plugin receiver's name. Why a delivery failed is
+one of four sentences: the receiver's answer ("503 Service Unavailable"), no answer, no such receiver any more, or could not be sent. A
+plugin's receiver that got an answer throws `ReceiverAnswer(status)` for the log to show it; any other error is "could not be sent", and
+none of its text is stored.
+
+A plugin's receiver gets the same as arguments: `send(event, signal, { id, attempt })`. `monti deliveries:run` leaves what only the running site
+can send (the Next adapter's cache refresh) untried and says how many it left.
+
+The activity log (`activity.list`, `activity.get`) shows every write as a line: what was done (`summary`), where (`where`), and how its deliveries
+went. The writes one application of the assistant's proposal made are one line, undone together (`activity.undo`, which also takes a whole
+proposal). An undo holds the records it puts back, as a write does, so it never goes over a save it did not see.
 
 A record kind (`defineRecordKind`) tells the engine how to read a record's state and put an old state back.
 

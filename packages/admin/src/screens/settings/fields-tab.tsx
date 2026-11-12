@@ -23,6 +23,7 @@ import {
 	type SortableRef,
 	Stack,
 	Text,
+	TextButton,
 	useSortableItem,
 } from "@monti-cms/ui";
 import { Edit, TrashCan } from "@monti-cms/ui/icons";
@@ -46,7 +47,7 @@ import {
 	tabId,
 	tabIndex,
 } from "./layout-moves";
-import { at, type DraftField, FIELD_VALUES, type Layout, shownLayout } from "./schema-draft";
+import { at, type DraftField, FIELD_VALUES, type Layout, savedField, shownLayout } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 
 /** The kind at the end of a field's line, as the schema says it: "text · 120", "[] → tag". */
@@ -55,6 +56,7 @@ export function kindText(def: FieldDefinition): string {
 	if (def.kind === "media") return def.accept === "any" ? "media" : "image";
 	if (def.kind === "relation") return `${def.many ? "[] " : ""}→ ${def.to}`;
 	if (def.kind === "select" && def.many) return "[] select";
+	if (def.kind === "conditional") return `conditional · ${def.options.length}`;
 	return def.kind;
 }
 
@@ -71,6 +73,29 @@ function SortableField({ id, moveLabel, ...row }: RowProps & { id: string; moveL
 			dragging={item.held}
 			{...row}
 		/>
+	);
+}
+
+/**
+ * A conditional field with what hangs under it (doc 19): its own line, dragged by its grip, and under it a band for each option with that option's
+ * fields. The whole block moves as one.
+ */
+function SortableBranch({
+	id,
+	moveLabel,
+	children,
+	...row
+}: RowProps & { id: string; moveLabel: string; children: ReactNode }) {
+	const item = useSortableItem(id);
+	return (
+		<FieldGroup
+			ref={item.ref}
+			motion={item.motion}
+			dragging={item.held}
+			head={<FieldRow gripProps={{ ...item.handle, "aria-label": moveLabel }} {...row} />}
+		>
+			{children}
+		</FieldGroup>
 	);
 }
 
@@ -177,12 +202,14 @@ export function FieldsTab({
 	tab: number;
 	onTab: (tab: number) => void;
 	onOpenField: (key: string) => void;
-	onAddField: () => void;
+	/** Opens the sheet for a new field; `under` makes it a field of a conditional field's option. */
+	onAddField: (under?: { field: string; option: string }) => void;
 }) {
 	const { t } = useAdmin();
 	const { draft, data } = model;
 	const locked = data?.locked ?? true;
-	const keys = model.fields(c);
+	// The fields that stand on their own; an option's fields hang under their conditional field (doc 19).
+	const keys = model.topFields(c);
 	const layoutPath = at.collectionValue(c, "layout");
 	// A layout the assistant proposed is the one shown until it is taken or discarded.
 	const layout = shownLayout(model.shown(layoutPath) as Layout | undefined, keys, t("settings.fields.defaultTab"));
@@ -249,9 +276,9 @@ export function FieldsTab({
 		model.problems.filter((problem) => problem.collection === c && problem.field === model.fieldName(c, key));
 
 	/** What a field's line shows: its name, label, kind and what changed. */
-	const rowProps = (key: string, depth: 0 | 1) => {
+	const rowProps = (key: string, depth: 0 | 1 | 2 | 3) => {
 		const path = at.field(c, key);
-		const saved = data?.schema.collections[c]?.fields[key];
+		const saved = data ? savedField(data, c, key)?.def : undefined;
 		const cell = draft.cell(path);
 		const field = model.shown(path) as DraftField | null | undefined;
 		const mine = model.changed.some((changed) => changed === path || changed.startsWith(`fa:${c}:${key}:`));
@@ -288,10 +315,77 @@ export function FieldsTab({
 			...look,
 		};
 	};
+	/**
+	 * What hangs under a conditional field (doc 19): a band for each option, one step in, then that option's fields one step further. A band has
+	 * no grip (the field's sheet orders the options, and a band cannot leave its field), its value after its name, and the way to add a field
+	 * to it; an option with no fields keeps its band. The options' fields are not dragged (T186). `still` draws it for the block in hand.
+	 */
+	const bands = (key: string, depth: 0 | 1, still = false) => {
+		const field = model.shown(at.field(c, key)) as DraftField | null | undefined;
+		if (field?.def.kind !== "conditional") return null;
+		const labels = (model.shown(at.fieldValue(c, key, "optionLabels")) ?? {}) as Record<string, string>;
+		return field.def.options
+			.filter((option) => option !== "")
+			.flatMap((option) => {
+				const inner = model.optionFields(c, key, option);
+				const label = labels[option];
+				const word = inner.length > 0 ? option : `${option} · ${t("settings.fields.noFields")}`;
+				return [
+					<FieldRow
+						key={`band:${option}`}
+						group
+						grip={false}
+						depth={(depth + 1) as 1 | 2}
+						name={label || option}
+						note={label ? word : inner.length > 0 ? undefined : t("settings.fields.noFields")}
+						kind={
+							locked || still ? undefined : (
+								<TextButton
+									variant="quiet"
+									size="note"
+									aria-label={t("settings.fields.addToOption", { option: label || option })}
+									onClick={() => onAddField({ field: key, option })}
+								>
+									{t("settings.fields.addOptionField")}
+								</TextButton>
+							)
+						}
+					/>,
+					...inner.map((each) => {
+						const props = rowProps(each, (depth + 2) as 2 | 3);
+						if (!props) return null;
+						const { fieldName, removed, ...shownRow } = props;
+						return (
+							<FieldRow
+								key={each}
+								grip={false}
+								onOpen={removed || still ? undefined : () => onOpenField(each)}
+								openLabel={t("settings.fields.open", { name: fieldName })}
+								{...shownRow}
+							/>
+						);
+					}),
+				];
+			});
+	};
 	const row = (key: string, depth: 0 | 1) => {
 		const props = rowProps(key, depth);
 		if (!props) return null;
 		const { fieldName, removed, ...shownRow } = props;
+		const under = removed ? null : bands(key, depth);
+		if (under)
+			return (
+				<SortableBranch
+					key={key}
+					id={fieldId(key)}
+					moveLabel={t("settings.fields.move", { name: fieldName })}
+					onOpen={() => onOpenField(key)}
+					openLabel={t("settings.fields.open", { name: fieldName })}
+					{...shownRow}
+				>
+					{under}
+				</SortableBranch>
+			);
 		return (
 			<SortableField
 				key={key}
@@ -316,8 +410,18 @@ export function FieldsTab({
 			return shownRow;
 		};
 		if (isField(active.id)) {
-			const shownRow = still(active.id.slice(2), listOf(entries, active.id) === TOP ? 0 : 1);
-			return shownRow ? <FieldRow lifted {...shownRow} /> : null;
+			const depth = listOf(entries, active.id) === TOP ? 0 : 1;
+			const shownRow = still(active.id.slice(2), depth);
+			if (!shownRow) return null;
+			// A conditional field floats with its options' bands and their fields.
+			const under = bands(active.id.slice(2), depth, true);
+			return under ? (
+				<FieldGroup lifted head={<FieldRow {...shownRow} />}>
+					{under}
+				</FieldGroup>
+			) : (
+				<FieldRow lifted {...shownRow} />
+			);
 		}
 		const entry = entries[ids.indexOf(active.id)];
 		if (!entry || typeof entry === "string") return null;
@@ -451,7 +555,7 @@ export function FieldsTab({
 			<Stack gap={12}>
 				<Inline gap={4}>
 					{locked ? null : (
-						<Button variant="ghost" size="sm" onClick={onAddField}>
+						<Button variant="ghost" size="sm" onClick={() => onAddField()}>
 							{t("settings.fields.addField")}
 						</Button>
 					)}

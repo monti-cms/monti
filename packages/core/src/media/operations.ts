@@ -6,6 +6,7 @@ import { loadEntries } from "../entries/record";
 import { CheckError } from "../errors";
 import { folderOf, subtree } from "../folders/operations";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
+import { likePattern } from "../query";
 import { lockRecords } from "../records";
 import { bodyAsRead, followedFields, isTranslation, sourceEntryOf, translatedFields } from "../translations/source";
 import { daysLeft, lockFileKeys, loosen, looseUntil } from "../trash/purge";
@@ -15,12 +16,17 @@ import { COLUMNS, folderPaths, itemOf, type MediaItem, type Row, usesCount } fro
 
 export type { MediaFile, MediaItem } from "./items";
 
+import { storedFields } from "../schema/define";
 import { type MediaPlace, placeOf } from "./value";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
 const mediaRef = (id: string): RecordRef => ({ kind: "media", id });
 const folderRef = (id: string): RecordRef => ({ kind: "folder", id });
+
+/** Where a file's write happened, for the activity log: the library, and the folder when it sits in one. */
+const mediaPlace = (folder: string | null): Message =>
+	folder === null ? { key: "activity.where.media" } : { key: "activity.where.mediaFolder", values: { folder } };
 
 const moveMessage = (count: number, name: string | null): Message =>
 	name === null
@@ -230,8 +236,7 @@ export const mediaOperations = [
 				else if (input.folder !== null) filtered = filtered.where("folder_id", "=", input.folder);
 				else if (!looking) filtered = filtered.where("folder_id", "is", null);
 			}
-			if (search !== "")
-				filtered = filtered.where("name", "ilike", `%${search.replace(/[\\%_]/g, (char) => `\\${char}`)}%`);
+			if (search !== "") filtered = filtered.where("name", "ilike", likePattern(search));
 			if (input.kinds.length > 0) filtered = filtered.where("kind", "in", input.kinds);
 			if (input.only) filtered = filtered.where("kind", "=", input.only);
 			if (input.used.length === 1)
@@ -383,7 +388,9 @@ export const mediaOperations = [
 			ctx.emit({ type: "media.uploaded", ids: [id] });
 			return liveItem(ctx, id);
 		},
+		log: "media",
 		summary: (_input, output) => ({ key: "media.upload", values: { name: output.name } }),
+		where: (_input, output) => mediaPlace(output.path.at(-1) ?? null),
 	}),
 	defineOperation({
 		name: "media.update",
@@ -420,10 +427,12 @@ export const mediaOperations = [
 			if (input.name !== undefined) ctx.emit({ type: "media.renamed", ids: [input.id] });
 			return liveItem(ctx, input.id);
 		},
+		log: "media",
 		summary: (input, output) =>
 			input.name === undefined
 				? moveMessage(1, output.folderId === null ? null : (output.path.at(-1) ?? null))
 				: { key: "media.update", values: { name: output.name } },
+		where: (_input, output) => mediaPlace(output.path.at(-1) ?? null),
 	}),
 	defineOperation({
 		name: "media.replace",
@@ -471,7 +480,9 @@ export const mediaOperations = [
 			ctx.emit({ type: "media.replaced", ids: [input.id] });
 			return liveItem(ctx, input.id);
 		},
+		log: "media",
 		summary: (_input, output) => ({ key: "media.replace", values: { name: output.name } }),
+		where: (_input, output) => mediaPlace(output.path.at(-1) ?? null),
 	}),
 	defineOperation({
 		name: "media.moveToFolder",
@@ -505,7 +516,9 @@ export const mediaOperations = [
 				.execute();
 			return { count: input.ids.length, name };
 		},
+		log: "media",
 		summary: (_input, output) => moveMessage(output.count, output.name),
+		where: (_input, output) => mediaPlace(output.name),
 	}),
 	defineOperation({
 		name: "entries.missingAlt",
@@ -529,7 +542,7 @@ export const mediaOperations = [
 					? await sourceEntryOf(ctx.db, schema, entry.translationGroup)
 					: null;
 				const { values } = translatedFields(schema, entry.collection, entry, await followedFields(ctx.db, source));
-				const fields = schema.collections[entry.collection]?.fields ?? {};
+				const fields = storedFields(schema.collections[entry.collection]);
 				for (const gap of await altGaps(ctx.db, fields, values, await bodyAsRead(ctx.db, source, entry.doc)))
 					missing.push({
 						id: entry.id,

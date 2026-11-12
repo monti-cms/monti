@@ -18,6 +18,7 @@ import {
 } from "@monti-cms/ui";
 import { Tag } from "@monti-cms/ui/icons";
 import { useState } from "react";
+import { useUndo } from "../../activity/use-undo";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { endsClosed } from "./format";
@@ -48,7 +49,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 		output: { updatedGroups: string[]; count: number };
 		activityId?: string;
 	}>("relations.edit");
-	const undoOp = useOperation("activity.undo");
+	const undo = useUndo();
 
 	const options = read.data?.options ?? [];
 	const filteredOptions = find.trim()
@@ -86,7 +87,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 				action: res.body.activityId
 					? {
 							label: t("common.undo"),
-							onClick: () => void undoOp.run({ id: res.body.activityId }),
+							onClick: () => void (res.body.activityId && undo.run(res.body.activityId)),
 						}
 					: undefined,
 			});
@@ -114,7 +115,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 				action: res.body.activityId
 					? {
 							label: t("common.undo"),
-							onClick: () => void undoOp.run({ id: res.body.activityId }),
+							onClick: () => void (res.body.activityId && undo.run(res.body.activityId)),
 						}
 					: undefined,
 			});

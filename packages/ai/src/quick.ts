@@ -1,4 +1,11 @@
-import { CheckError, type ModelList, type Monti, type RelationOptionsResult, slugify } from "@monti-cms/core";
+import {
+	CheckError,
+	type ModelList,
+	type Monti,
+	type RelationOptionsResult,
+	slugify,
+	storedFields,
+} from "@monti-cms/core";
 import { z } from "zod";
 import { ProviderError, type ProviderFor } from "./provider";
 import { withoutKey } from "./run";
@@ -150,7 +157,7 @@ export async function quickFill(
 		};
 	}
 
-	const field = input.field === undefined ? undefined : collection.fields[input.field];
+	const field = input.field === undefined ? undefined : storedFields(collection)[input.field];
 	if (!field || input.field === undefined) throw new CheckError({ key: "assistant.noField" });
 	const read = (await monti.run("schema.read", {}, { actor: "admin" })) as {
 		adminValues?: Record<string, { fields?: Record<string, { label?: string; description?: string }> }>;

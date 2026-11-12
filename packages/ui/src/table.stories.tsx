@@ -110,6 +110,31 @@ const Frame = ({ children, dimmed }: { children: React.ReactNode; dimmed?: boole
 
 export const Rows: Story = { render: () => <Frame>{rows(() => ({}))}</Frame> };
 
+/** The assistant's work (the activity log): the ✦ leads the line in blue, the request after it, then what it did; the mark stays when the words are cut. */
+export const ByAssistant: Story = {
+	render: () => (
+		<Frame>
+			<TableRow>
+				<TableCell />
+				<TableCell truncate>
+					<RowTitle
+						byAssistant="어시스턴트"
+						title={<RowLink href="#">“이 두 편 요약 채워 줘. 말투는 그대로.”</RowLink>}
+						address='"첫 번째 글" 저장 · "리액트 19 마이그레이션" 저장'
+					/>
+				</TableCell>
+				<TableCell />
+				<TableCell>
+					<RowActions>
+						<RowMore label="더 보기" />
+					</RowActions>
+				</TableCell>
+			</TableRow>
+			{rows(() => ({}))}
+		</Frame>
+	),
+};
+
 /** A folder first: its icon before the name, what it holds after it; the status cell stays empty. */
 export const Folder: Story = {
 	render: () => (

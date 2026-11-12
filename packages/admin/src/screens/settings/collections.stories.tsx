@@ -70,6 +70,61 @@ const relationFieldSchema = defineSchema({
 	},
 });
 
+/** The posts with a choice ("분위기") and a conditional field ("글 종류", required), for what the review says of their options (docs 12 and 19). */
+export const optionsSchema = defineSchema({
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			...schema.collections.post,
+			fields: {
+				...schema.collections.post.fields,
+				mood: { kind: "select", options: ["calm", "loud"] },
+				format: {
+					kind: "conditional",
+					required: true,
+					options: ["article", "video", "link"],
+					fields: {
+						video: { videoUrl: { kind: "text", required: true } },
+						link: { linkUrl: { kind: "text", required: true } },
+					},
+				},
+			},
+		},
+	},
+});
+
+/** Three posts on those options: a loud video post on the site, a loud draft, and a calm article on the site. */
+export async function optionEntries({ monti }: StorySite) {
+	await monti.run(
+		"collections.updateAdminValues",
+		{
+			collection: "post",
+			values: {
+				fields: {
+					mood: { label: "분위기", optionLabels: { calm: "차분", loud: "시끌" } },
+					format: { label: "글 종류", optionLabels: { article: "글", video: "동영상", link: "링크" } },
+					videoUrl: { label: "동영상 주소" },
+					linkUrl: { label: "링크 주소" },
+				},
+			},
+		},
+		admin,
+	);
+	const post = async (title: string, values: Record<string, unknown>, on: boolean) => {
+		const made = (await monti.run(
+			"entries.create",
+			{ collection: "post", locale: "ko", title, slug: title, values },
+			admin,
+		)) as { output: { id: string } };
+		if (on) await monti.run("entries.publish", { ids: [made.output.id], date: "keep" }, admin);
+		return made.output.id;
+	};
+	await post("loud-video", { mood: "loud", format: "video", videoUrl: "https://example.dev/v.mp4" }, true);
+	await post("loud-draft", { mood: "loud", format: "article" }, false);
+	await post("calm-article", { mood: "calm", format: "article" }, true);
+}
+
 export const site = (
 	options: {
 		files?: typeof devFiles | null;
@@ -675,4 +730,104 @@ export const twoTabs = async ({ monti }: StorySite) => {
 		},
 		admin,
 	);
+};
+
+/** Doc 19: a conditional field in the fields list: under its line a band for each option, with the option's fields and the way to add one. */
+export const ConditionalFields: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await page.findByRole("button", { name: "videoUrl 열기" }, wait);
+	},
+};
+
+/** Doc 19: the field sheet of a conditional field: its options, each a value and a label. */
+export const ConditionalFieldSheet: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "format 열기" }, wait));
+		await within(canvasElement.ownerDocument.body).findByRole("dialog", {}, wait);
+	},
+};
+
+/** Docs 12 and 19: the review of an option renamed ("loud" to "noisy"): the entries that chose it, and how many of them are published. */
+export const OptionRenamedReview: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		const body = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "mood 열기" }, wait));
+		const values = await body.findAllByRole("textbox", { name: "값" }, wait);
+		fill(values[1] as HTMLElement, "noisy");
+		await userEvent.click(body.getByRole("button", { name: "저장" }));
+		await sheetGone(body);
+		await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }));
+		await body.findByText("mood · loud → noisy", {}, wait);
+	},
+};
+
+/** Docs 12 and 19: the review of a conditional field's option taken out: its field as a removed field, and what becomes of the entries that chose it. */
+export const OptionRemovedReview: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		const body = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "format 열기" }, wait));
+		await userEvent.click(await body.findByRole("button", { name: "video 빼기" }, wait));
+		await userEvent.click(body.getByRole("button", { name: "저장" }));
+		await sheetGone(body);
+		await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }));
+		await userEvent.click(await body.findByRole("combobox", { name: "바꾸기" }, wait));
+		await userEvent.click(await body.findByRole("option", { name: "링크" }, wait));
+		await body.findByText(/필수 필드가 비게 됩니다/, {}, wait);
+	},
+};
+
+/** Doc 19: the field sheet opened from an option's "+ 필드": a new field of that option, with whose it is beside the title. */
+export const OptionFieldSheet: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "글에 필드 추가" }, wait));
+		await within(canvasElement.ownerDocument.body).findByText(/게시글 · 글 종류 · 글/, {}, wait);
+	},
+};
+
+/**
+ * Doc 19: the review of a field moved into an option (the assistant proposed the video's address as the link option's): where it went, and how
+ * many entries lose its value because they chose another option.
+ */
+export const MovedFieldReview: Story = {
+	loaders: site({
+		schema: optionsSchema,
+		more: async (made) => {
+			await optionEntries(made);
+			const draft = structuredClone(optionsSchema);
+			const format = draft.collections.post.fields.format;
+			if (format?.kind !== "conditional") throw new Error("the story's posts have a conditional field");
+			format.fields = { link: { ...format.fields.link, ...format.fields.video } };
+			const proposal = await made.monti.proposals.create("conversation-1", "동영상 주소를 링크 글의 필드로 옮겨 줘");
+			await made.monti.proposals.add(proposal, "schema.apply", { draft, renames: [], answers: {} });
+		},
+	}),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		const body = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await body.findByRole("button", { name: "모두 받기" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }, wait));
+		await body.findByText("값을 잃는 글", {}, wait);
+	},
 };

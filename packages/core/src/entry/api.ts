@@ -43,6 +43,8 @@ const Body = z.object({
 export const SESSION_COOKIE = "monti_session";
 /** How often an open admin cleans the trash. */
 const CLEAN_EVERY = 3_600_000;
+/** How often an open admin sends the deliveries that are due: the shortest wait between two tries of one (doc 13). */
+const SEND_EVERY = 60_000;
 const STATE_COOKIE = "monti_github_state";
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -90,6 +92,7 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		return session?.who === DEV_WHO && !local ? null : session;
 	}
 	let cleanedAt = Number.NEGATIVE_INFINITY;
+	let sentAt = Number.NEGATIVE_INFINITY;
 	const sessionCookie = (request: Request, token: string, expiresAt: Date) =>
 		cookie(request, SESSION_COOKIE, token, Math.round((expiresAt.getTime() - monti.now().getTime()) / 1000));
 
@@ -113,12 +116,18 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 			const last = cleanedAt;
 			cleanedAt = monti.now().getTime();
 			try {
-				await monti.trash.purgeDue();
+				await monti.trash.purgeDue("admin");
 				await monti.cleanUp();
 			} catch (error) {
 				cleanedAt = last;
 				console.error("Monti: the trash clean-up failed; the next admin visit tries again:", error);
 			}
+		}
+		// The same visit sends the deliveries whose retry is due (T5). Not waited for: a receiver that does not answer must not hold the frame, and
+		// the screen reads the counts again.
+		if (name === "frame.counts" && monti.now().getTime() - sentAt >= SEND_EVERY) {
+			sentAt = monti.now().getTime();
+			void monti.deliveries.sendDueInBackground();
 		}
 		const body = Body.safeParse(rawBody);
 		if (!body.success) return { status: 400, body: { error: "invalid-body" } };
