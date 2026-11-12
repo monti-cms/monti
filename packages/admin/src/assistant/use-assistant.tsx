@@ -482,7 +482,14 @@ export function AssistantProvider({
 				// no answer came, with the way to send the same words again.
 				patchTurn(id, (turn) =>
 					turn.status === "running" && turn.parts.length === 0
-						? { ...turn, status: "failed", unsent: true, refusal: reason, end: { status: "failed" } }
+						? // No answer at all is a connection that was lost, in the panel's own words; a reason is the server's.
+							{
+								...turn,
+								status: "failed",
+								unsent: true,
+								refusal: answer.status === 0 ? null : reason,
+								end: { status: "failed" },
+							}
 						: turn,
 				);
 				// The model went while the panel was open: the models are read again, and the panel says which one is used now.
@@ -776,7 +783,8 @@ export function AssistantProvider({
 	const stop = useCallback(() => {
 		const here = shown.current;
 		const last = live.current.turns.at(-1);
-		if (!last) return;
+		// One stop for a run: a second press, or the repeats of a key held on the button, say nothing more.
+		if (!last || here.stopAsked) return;
 		// From here on nothing goes on with the run by itself: not after a screen tool, not after one request's time is up.
 		here.stopAsked = true;
 		// It shows as stopped at once: what was still going has no result, and its line goes.

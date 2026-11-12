@@ -1159,6 +1159,10 @@ const FIXED_HEIGHTS = new Map([
 		new Map([
 			["h-[52px]", "a list row of one line (title and note), measured in the list board"],
 			["h-[74px]", "a list row with its meta line, measured in the list board"],
+			[
+				"min-h-[33px]",
+				"the head of a titled list: its title's line, 12px and the rule, with or without something at its end",
+			],
 		]),
 	],
 	[

@@ -18,7 +18,6 @@ import {
 } from "@monti-cms/ui";
 import { useId, useRef } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { firstStopIn } from "../screens/frame/focus-hand-off";
 import { PickOne } from "../screens/settings/pick-one";
 import { useAssistant } from "./use-assistant";
 import { clock } from "./words";
@@ -48,7 +47,8 @@ export function History() {
 	const remove = (id: string, byKeyboard: boolean) => {
 		const all = history?.rows ?? [];
 		const at = all.findIndex((row) => row.id === id);
-		const beside = all[at + 1]?.id ?? all[at - 1]?.id ?? null;
+		// The open conversation deleted: the list closes onto a new conversation, so there is no row to go to.
+		const beside = id === conversationId ? null : (all[at + 1]?.id ?? all[at - 1]?.id ?? null);
 		deleting.current = byKeyboard ? { beside } : null;
 		const panel = root.current?.closest("aside, [role=complementary]");
 		void removeConversation(id).then(() => {
@@ -59,7 +59,9 @@ export function History() {
 				requestAnimationFrame(() => {
 					const on = document.activeElement;
 					if (on && on !== document.body && on.isConnected) return;
-					(panel.querySelector<HTMLElement>("textarea") ?? firstStopIn(panel))?.focus();
+					(
+						panel.querySelector<HTMLElement>("textarea") ?? panel.querySelector<HTMLElement>("button:not(:disabled)")
+					)?.focus();
 				}),
 			);
 		});

@@ -98,7 +98,13 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 	// A control of the panel that goes when it is pressed with the keyboard (a new conversation, a request to start from, try again, go on)
 	// hands the focus to the box: the next thing a person does here is type. A waiting message's goes to the message after it, else the box.
 	const typing = () => box.current?.querySelector("textarea");
-	const toBox = useFocusHandOff(typing);
+	// One rule for the whole panel: whatever control in it goes while it holds the keyboard's focus (a new conversation, a request to
+	// start from, try again, go on, stop, a chip taken off, the way to the past conversations and back, a conversation picked there), the
+	// focus goes to the box, where the next thing is typed; in a view without a box (the past conversations) to the view's first control.
+	const inPanel = useFocusHandOff(
+		(panel) =>
+			panel.querySelector<HTMLElement>("textarea") ?? panel.querySelector<HTMLElement>("button:not(:disabled)"),
+	);
 	const toNextWaiting = useFocusHandOff(
 		(gone) => gone.nextElementSibling?.querySelector<HTMLElement>("button") ?? typing(),
 	);
@@ -250,7 +256,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 		const act = (label: string, onClick: () => void) =>
 			// The note's own buttons (status.md): quiet and small.
 			isLast ? (
-				<Button ref={toBox} variant="ghost" size="sm" onClick={onClick}>
+				<Button variant="ghost" size="sm" onClick={onClick}>
 					{label}
 				</Button>
 			) : undefined;
@@ -367,7 +373,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 							<Copy />
 						</IconButton>
 						{isLast && !busy ? (
-							<IconButton ref={toBox} label={t("panel.again")} onClick={assistant.again}>
+							<IconButton label={t("panel.again")} onClick={assistant.again}>
 								<Renew />
 							</IconButton>
 						) : null}
@@ -392,6 +398,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 
 	return (
 		<SidePanel
+			ref={inPanel}
 			title={view === "history" ? t("panel.history") : t("panel.title")}
 			width="assistant"
 			bleed
@@ -410,7 +417,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 							<RecentlyViewed />
 						</IconButton>
 						{turns.length > 0 ? (
-							<IconButton ref={toBox} label={t("panel.new")} onClick={assistant.fresh}>
+							<IconButton label={t("panel.new")} onClick={assistant.fresh}>
 								<Add />
 							</IconButton>
 						) : null}
@@ -443,12 +450,12 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 					{assistant.loading && turns.length === 0 ? null : turns.length === 0 ? (
 						<Stack gap={4} minWidth={0}>
 							{starts.map((words) => (
-								<Suggest key={words} ref={toBox} kind="request" onClick={() => send(t(words))}>
+								<Suggest key={words} kind="request" onClick={() => send(t(words))}>
 									{t(words)}
 								</Suggest>
 							))}
 							{(state?.recent ?? []).map((words) => (
-								<Suggest key={words} ref={toBox} kind="recent" onClick={() => send(words)}>
+								<Suggest key={words} kind="recent" onClick={() => send(words)}>
 									{words}
 								</Suggest>
 							))}

@@ -1,7 +1,8 @@
 "use client";
 
-import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
+import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
 import { cn } from "./cn";
+import { letHeldKeyGo } from "./held-key";
 import { IconButton } from "./icon-button";
 import { ArrowUp, StopFilledAlt } from "./icons";
 
@@ -51,6 +52,16 @@ export function ChatInput({
 	busyPlaceholder?: string;
 }) {
 	const blank = value.trim() === "";
+	// The stop button gives way to the send button when the answer ends, and that one is off while the box is empty: a focus the keyboard
+	// held on "stop" would fall to the page. It goes to the box, where the next thing is typed; a key still held does nothing there.
+	const words = useRef<HTMLTextAreaElement>(null);
+	const stopHeld = useRef(false);
+	useEffect(() => {
+		if (busy || !stopHeld.current) return;
+		stopHeld.current = false;
+		letHeldKeyGo();
+		words.current?.focus();
+	}, [busy]);
 	const submit = () => {
 		if (blank || disabled) return;
 		if (!busy) onSubmit(value.trim());
@@ -83,6 +94,7 @@ export function ChatInput({
 			<textarea
 				aria-label={label}
 				placeholder={busy && onQueue && busyPlaceholder ? busyPlaceholder : placeholder}
+				ref={words}
 				value={value}
 				disabled={disabled}
 				rows={2}
@@ -93,7 +105,18 @@ export function ChatInput({
 			<div className="mt-monti-4 flex items-end justify-between gap-monti-8">
 				<div className="min-w-0">{aside}</div>
 				{busy ? (
-					<IconButton variant="primary" label={stopLabel} onClick={onStop} className="-mr-monti-4">
+					<IconButton
+						variant="primary"
+						label={stopLabel}
+						onClick={onStop}
+						className="-mr-monti-4"
+						onFocus={(event) => {
+							stopHeld.current = event.currentTarget.matches(":focus-visible");
+						}}
+						onBlur={() => {
+							stopHeld.current = false;
+						}}
+					>
 						<StopFilledAlt aria-hidden className="size-3" />
 					</IconButton>
 				) : (

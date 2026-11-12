@@ -78,6 +78,18 @@ function marked(runs: DiffRun[], side: "both" | "before" | "after"): ReactNode {
 export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => void }) {
 	const { t, transport } = useAdmin();
 	const assistant = useAssistant();
+	// Left with the keyboard (discard, the way back): the page goes, and the focus goes to the panel's box beside the screen that
+	// takes its place, two frames on, when that is drawn.
+	const leaving = useFocusHandOff(
+		() => () =>
+			requestAnimationFrame(() =>
+				requestAnimationFrame(() => {
+					const on = document.activeElement;
+					if (on && on !== document.body && on.isConnected) return;
+					document.querySelector<HTMLElement>("[data-slot=chat-input] textarea")?.focus();
+				}),
+			),
+	);
 	// "Make again" goes once the change is made again; pressed with the keyboard, its focus goes to that row's check.
 	const toCheck = useFocusHandOff((gone) =>
 		gone.closest("tr")?.querySelector<HTMLElement>('[role="checkbox"], input[type="checkbox"]'),
@@ -203,7 +215,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 	};
 
 	return (
-		<PageColumn width="content">
+		<PageColumn ref={leaving} width="content">
 			<PageHeader
 				title={t("review.title")}
 				meta={clock(view.createdAt)}

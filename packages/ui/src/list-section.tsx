@@ -35,15 +35,20 @@ function ListSection({
 			<h2
 				id={titleId}
 				className={cn(
-					"m-0 flex items-baseline gap-monti-8 border-monti-default border-b pb-monti-12 font-semibold text-monti-label",
+					// One height with or without something at its end (33px: the title's line, 12 under it, the rule): what stands at the end
+					// sits on the title's baseline and would otherwise make the head a little shorter or taller, and the rows under it move.
+					"m-0 flex min-h-[33px] items-baseline gap-monti-8 border-monti-default border-b pb-monti-12 font-semibold text-monti-label",
 					!flush && "px-monti-12",
 				)}
 			>
 				{title}
 				{count !== undefined && count !== null && <Count tone={countTone}>{count}</Count>}
 				{actions !== undefined && (
-					// As tall as the title's line: a control here does not push the head's rule down.
-					<span className="ml-auto flex h-lh items-center gap-monti-16 font-normal text-monti-note">{actions}</span>
+					// As tall as the title's line: a control here does not push the head's rule down. With nothing in it (every action of the
+					// moment is gone) it is not there: an empty box on the title's baseline made the head 4px taller.
+					<span className="ml-auto flex h-lh items-center gap-monti-16 font-normal text-monti-note empty:hidden">
+						{actions}
+					</span>
 				)}
 			</h2>
 			{table ? (
