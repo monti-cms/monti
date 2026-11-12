@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Globe, Image, Launch, ListBulleted, Save, SettingsAdjust, Spark, TrashCan } from "../../icons";
+import { OverflowMenuHorizontal, Renew, RightPanelOpen, Spark, Undo } from "../../icons";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -10,30 +10,30 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 	Banner,
-	Box,
-	Chip,
 	Count,
 	DescriptionItem,
 	DescriptionList,
 	DropdownMenu,
+	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
+	DropdownMenuItem,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
+	Empty,
 	EntryStatus,
-	FilterButton,
 	Heading,
+	IconButton,
 	Inline,
+	LIST_COLUMN_SIZE,
 	ListFooter,
+	ListHead,
+	type ListHeadColumn,
 	MenuShortcut,
 	PageColumn,
 	PageHeader,
 	PageToolbar,
-	PageToolbarEnd,
 	Pagination,
 	PaginationContent,
 	PaginationItem,
@@ -42,6 +42,9 @@ import {
 	PaginationPrevious,
 	RowActions,
 	RowLink,
+	RowMore,
+	RowTitle,
+	SearchToggle,
 	SidePanel,
 	Stack,
 	TabLink,
@@ -59,10 +62,13 @@ import { AdminFrame } from "./frame";
 
 /**
  * The states of the activity tab (screens.md, Events; flow 12). `default` is the log as it opens with one failed delivery; the others are the steps of
- * the flow and the states the flow does not draw (many pages, a filter with no match, a read that failed, a narrow window).
+ * the flow and the states the flow does not draw (many pages, filters with no match, a read that failed).
  */
 export type EventsStage =
 	| "default"
+	| "whatMenu"
+	| "deliveryMenu"
+	| "rowMenu"
 	| "failedOnly"
 	| "retrying"
 	| "retried"
@@ -75,150 +81,165 @@ export type EventsStage =
 	| "retryingAll"
 	| "allSent"
 	| "someFailed"
-	| "filterMenu"
-	| "filteredPending"
-	| "oneEntry"
-	| "noMatch"
+	| "searched"
 	| "noReceivers"
 	| "empty"
 	| "pages"
 	| "loadFailed";
 
-/** How a line's deliveries show at its end. */
-type Delivery = { failed: number; quiet?: boolean } | "sending" | "pending" | "canceled";
+/** How a line's deliveries came out, as its delivery cell says it. */
+type Delivery = { failed: number } | "pending" | "sent" | "canceled";
 type Line = {
 	id: string;
 	time: string;
-	/** The assistant's request, quoted as the first line. */
+	/** The assistant's request: the line's title, quoted. What it did then stands after it. */
 	request?: string;
 	what: string;
 	where?: string;
-	/** `open` shows the undo; a time shows when it was undone. */
+	/** Who did it, when it was neither the admin nor the assistant: the command line, a plugin. */
+	who?: string;
+	/** `open`: it can be undone. A time: when it was undone. */
 	undo?: "open" | string;
 	delivery?: Delivery;
 };
-type Day = { name: string; lines: readonly Line[] };
 
 const PUBLISHED: Line = {
 	id: "publish",
-	time: "10:40",
+	time: "10. 26 10:40",
 	what: '"첫 번째 글" 발행',
 	where: "post/first-post",
+	undo: "open",
 	delivery: { failed: 3 },
 };
 
-const TODAY: readonly Line[] = [
+const LINES: readonly Line[] = [
 	{
 		id: "shorter",
-		time: "10:58",
+		time: "10. 26 10:58",
 		request: "더 짧게 다듬어 줘. 말투는 그대로.",
 		what: '"첫 번째 글" 본문 5곳 고침',
 		undo: "open",
+		delivery: "sent",
 	},
 	{
 		id: "tidy",
-		time: "10:52",
+		time: "10. 26 10:52",
 		request: "이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮기고 안 쓰는 초안은 지워 줘.",
 		what: '"리액트 19 마이그레이션" 저장 · 9편을 2024 폴더로 옮김 · 3개 휴지통으로 외 1건',
 		undo: "open",
+		delivery: "sent",
 	},
-	{ id: "scans", time: "10:51", request: "예전 스캔 파일 지워 줘", what: "2개 휴지통으로", undo: "open" },
-	{ id: "saved", time: "10:42", what: '"발행 후 고친 글" 저장', where: "post/edited-post", delivery: "pending" },
+	{ id: "scans", time: "10. 26 10:51", request: "예전 스캔 파일 지워 줘", what: "2개 휴지통으로", undo: "open" },
+	{
+		id: "saved",
+		time: "10. 26 10:42",
+		what: '"발행 후 고친 글" 저장',
+		where: "post/edited-post",
+		undo: "open",
+		delivery: "pending",
+	},
 	{
 		id: "english",
-		time: "10:41",
+		time: "10. 26 10:41",
 		request: "이 글 영어로 옮겨 줘",
 		what: '"첫 번째 글" 본문 4곳 고침',
 		undo: "10:44",
+		delivery: "sent",
 	},
 	PUBLISHED,
-	{ id: "schema", time: "10:12", what: "스키마 적용", where: "설정 · monti.schema.ts" },
-	{ id: "upload", time: "09:15", what: "cover-react.png 올림", where: "미디어 · Blog Assets" },
-];
-
-const YESTERDAY: readonly Line[] = [
-	{ id: "trash", time: "17:20", what: '"옛 소개 글" 휴지통으로', where: "휴지통" },
-	{ id: "label", time: "14:03", what: "게시글 컬렉션 설정 저장", where: "설정" },
-	{ id: "bulk", time: "11:30", what: "글 3편 발행", where: "게시글" },
-];
-
-const FAILED_THREE: readonly Line[] = [
 	{
-		id: "f1",
-		time: "10:40",
-		what: '"첫 번째 글" 발행',
-		where: "post/first-post",
-		delivery: { failed: 3, quiet: true },
+		id: "schema",
+		time: "10. 26 10:12",
+		what: "스키마 적용",
+		where: "설정 · monti.schema.ts",
+		who: "명령줄",
+		delivery: "sent",
 	},
+	{ id: "upload", time: "10. 26 09:15", what: "cover-react.png 올림", where: "미디어 · Blog Assets", delivery: "sent" },
+	{
+		id: "trash",
+		time: "10. 25 17:20",
+		what: '"옛 소개 글" 휴지통으로',
+		where: "휴지통",
+		undo: "open",
+		delivery: "sent",
+	},
+	{ id: "label", time: "10. 25 14:03", what: "게시글 컬렉션 설정 저장", where: "설정", undo: "open", delivery: "sent" },
+	{ id: "bulk", time: "10. 25 11:30", what: "글 3편 발행", where: "게시글", undo: "open", delivery: "sent" },
+];
+
+/** Two more failed deliveries among the lines, newest first: with the first, three. */
+const THREE_FAILED: readonly Line[] = [
+	...LINES.slice(0, 6),
 	{
 		id: "f2",
-		time: "10:31",
+		time: "10. 26 10:31",
 		what: '"리액트 19 마이그레이션" 발행',
 		where: "post/react-19",
-		delivery: { failed: 4, quiet: true },
+		undo: "open",
+		delivery: { failed: 4 },
 	},
-	{ id: "f3", time: "09:58", what: '"연습장" 보관', where: "note/scratch", delivery: { failed: 9, quiet: true } },
+	...LINES.slice(6, 8),
+	{
+		id: "f3",
+		time: "10. 26 09:02",
+		what: '"연습장" 보관',
+		where: "note/scratch",
+		undo: "open",
+		delivery: { failed: 9 },
+	},
+	...LINES.slice(8),
 ];
 
-/** A day with three failed deliveries among the assistant's lines, newest first. */
-const THREE_FAILED_DAY: readonly Line[] = [...TODAY.slice(0, 3), ...FAILED_THREE];
-
+const isFailed = (line: Line) => typeof line.delivery === "object";
 const withDelivery = (lines: readonly Line[], change: (line: Line) => Delivery | undefined): Line[] =>
 	lines.map((line) => ({ ...line, delivery: change(line) }));
 
-/** The log of each stage: its days, newest first. */
-function daysOf(stage: EventsStage): Day[] {
-	const today = (lines: readonly Line[]): Day[] => [{ name: "오늘 · 10. 26", lines }];
-	const both = (lines: readonly Line[]): Day[] => [...today(lines), { name: "어제 · 10. 25", lines: YESTERDAY }];
+/** The lines of each stage, newest first. */
+function linesOf(stage: EventsStage): Line[] {
 	switch (stage) {
 		case "failedOnly":
-			return today([PUBLISHED]);
+			return [PUBLISHED];
 		case "retrying":
-			return today([{ ...PUBLISHED, delivery: "sending" }]);
+			return [{ ...PUBLISHED, delivery: "pending" }];
 		case "retried":
-		case "noMatch":
 		case "empty":
 		case "loadFailed":
 			return [];
 		case "canceled":
-			return both(withDelivery(TODAY, (line) => (line.id === "publish" ? "canceled" : line.delivery)));
+			return withDelivery(LINES, (line) => (line.id === "publish" ? "canceled" : line.delivery));
 		case "threeFailed":
-			return both(THREE_FAILED_DAY);
+			return [...THREE_FAILED];
 		case "retryingAll":
-			return both(withDelivery(THREE_FAILED_DAY, (line) => (line.id.startsWith("f") ? "sending" : line.delivery)));
+			return withDelivery(THREE_FAILED, (line) => (isFailed(line) ? "pending" : line.delivery));
 		case "allSent":
-			return both(withDelivery(THREE_FAILED_DAY, (line) => (line.id.startsWith("f") ? undefined : line.delivery)));
+			return withDelivery(THREE_FAILED, (line) => (isFailed(line) ? "sent" : line.delivery));
 		case "someFailed":
-			return both(
-				withDelivery(THREE_FAILED_DAY, (line) =>
-					line.id === "f3" ? { failed: 1 } : line.id.startsWith("f") ? undefined : line.delivery,
-				),
+			return withDelivery(THREE_FAILED, (line) =>
+				line.id === "f3" ? { failed: 1 } : isFailed(line) ? "sent" : line.delivery,
 			);
-		case "filteredPending":
-			return today(TODAY.filter((line) => line.delivery === "pending"));
-		case "oneEntry":
-			return today(TODAY.filter((line) => line.id === "shorter" || line.id === "english"));
+		case "searched":
+			return LINES.filter((line) => line.id === "shorter" || line.id === "english");
 		case "noReceivers":
-			return both(withDelivery(TODAY, () => undefined));
+			return withDelivery(LINES, () => undefined);
 		default:
-			return both(TODAY);
+			return [...LINES];
 	}
 }
 
 const FAILED_COUNT: Partial<Record<EventsStage, number>> = {
 	default: 1,
+	whatMenu: 1,
+	deliveryMenu: 1,
+	rowMenu: 1,
 	failedOnly: 1,
-	retrying: 1,
 	detail: 1,
 	detailAssistant: 1,
 	detailGone: 1,
 	cancelConfirm: 1,
 	threeFailed: 3,
-	retryingAll: 3,
 	someFailed: 1,
-	filterMenu: 1,
-	filteredPending: 1,
-	oneEntry: 1,
+	searched: 1,
 	pages: 1,
 };
 
@@ -238,48 +259,64 @@ const OPEN: Partial<Record<EventsStage, string>> = {
 	detailGone: "trash",
 };
 
-/** What a line's end shows: what can be done with it, and nothing else. */
-function LineEnd({ line }: { line: Line }) {
-	const { undo, delivery } = line;
-	if (!undo && !delivery) return null;
+/**
+ * A line's delivery, with the lists' status mark. In the table only what is not the usual end is said (on its way, failed, canceled): a delivery that
+ * arrived leaves the cell empty, as a line that sent nothing does. The panel, which is about one line, says "sent" too (`whole`).
+ */
+function DeliveryCell({ delivery, whole = false }: { delivery?: Delivery; whole?: boolean }) {
+	if (!delivery) return null;
+	if (delivery === "sent")
+		return whole ? (
+			<EntryStatus status="published" quiet>
+				보냄
+			</EntryStatus>
+		) : null;
+	if (delivery === "pending")
+		return (
+			<EntryStatus status="draft" quiet>
+				보내는 중
+			</EntryStatus>
+		);
+	if (delivery === "canceled")
+		return (
+			<EntryStatus status="archived" quiet>
+				취소됨
+			</EntryStatus>
+		);
+	return <EntryStatus status="failed">{delivery.failed}번 실패</EntryStatus>;
+}
+
+/**
+ * A line's ⋯, on every row as in every list: open its details (what a press on the row does, as the lists' menus start with "open"), then what can be done with
+ * it: send its failed deliveries again, undo it. `panel` leaves the first out: the panel is the details.
+ */
+function LineMenu({ line, panel = false }: { line: Line; panel?: boolean }) {
 	return (
-		<RowActions>
-			<Inline gap={16} align="baseline">
-				{undo === "open" ? (
-					<TextButton variant="underline" size="note">
-						되돌리기
-					</TextButton>
-				) : undo ? (
-					<Text as="span" variant="note" tone="subtle">
-						되돌림 · {undo}
-					</Text>
-				) : null}
-				{delivery === "sending" ? (
-					<TextButton variant="underline" size="note" loading>
-						보내는 중…
-					</TextButton>
-				) : delivery === "pending" ? (
-					<Text as="span" variant="note">
-						보내는 중
-					</Text>
-				) : delivery === "canceled" ? (
-					<Text as="span" variant="note" tone="subtle">
-						취소됨
-					</Text>
-				) : delivery ? (
-					<Inline gap={12} align="baseline">
-						<EntryStatus status="failed" quiet={delivery.quiet}>
-							{delivery.failed}번 실패
-						</EntryStatus>
-						<TextButton variant="underline" size="note">
-							다시 보내기
-						</TextButton>
-					</Inline>
-				) : null}
-			</Inline>
-		</RowActions>
+		<>
+			{panel ? null : (
+				<DropdownMenuItem>
+					<RightPanelOpen aria-hidden />
+					자세히
+				</DropdownMenuItem>
+			)}
+			{isFailed(line) ? (
+				<DropdownMenuItem>
+					<Renew aria-hidden />
+					다시 보내기
+				</DropdownMenuItem>
+			) : null}
+			{line.undo === "open" ? (
+				<DropdownMenuItem>
+					<Undo aria-hidden />
+					되돌리기
+				</DropdownMenuItem>
+			) : null}
+		</>
 	);
 }
+
+/** Whether the panel's head has a ⋯: only when there is something to do with the line. */
+const hasActions = (line: Line) => isFailed(line) || line.undo === "open";
 
 /** One group of a panel: a small heading and its rows. */
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
@@ -293,24 +330,34 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 	);
 }
 
-/** A line's details beside the list: the event, what it touched, and each receiver's delivery with what can be done about it. */
-function Details({ stage }: { stage: EventsStage }) {
+/** The ⋯ of a panel's head: the same actions as the line's own ⋯. */
+function PanelMore({ line }: { line: Line }) {
+	if (!hasActions(line)) return null;
+	return (
+		<DropdownMenu>
+			<IconButton label="더 보기" trigger={(button) => <DropdownMenuTrigger render={button} />}>
+				<OverflowMenuHorizontal aria-hidden />
+			</IconButton>
+			<DropdownMenuContent align="end">
+				<LineMenu line={line} panel />
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+/** A line's details beside the list: when and who, what it touched, and each receiver's delivery with what can be done about it. */
+function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 	if (stage === "detailAssistant")
 		return (
-			<SidePanel
-				width="side"
-				title="“이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮기고 안 쓰는 초안은 지워 줘.”"
-				closable
-				footer={<TextButton>되돌리기</TextButton>}
-			>
+			<SidePanel width="side" title={`“${line.request}”`} closable actions={<PanelMore line={line} />}>
 				<Stack gap={32}>
 					{/* The head cuts a long request; here it is whole. */}
 					<Group title="요청">
-						<Text>이 두 편 요약 채워 줘. 작년 글은 2024 폴더로 옮기고 안 쓰는 초안은 지워 줘.</Text>
+						<Text>{line.request}</Text>
 					</Group>
 					<Group title="이벤트">
 						<DescriptionList>
-							<DescriptionItem label="언제" mono>
+							<DescriptionItem label="시각" mono>
 								10. 26 10:52
 							</DescriptionItem>
 							<DescriptionItem label="한 사람">어시스턴트</DescriptionItem>
@@ -351,11 +398,11 @@ function Details({ stage }: { stage: EventsStage }) {
 		);
 	if (stage === "detailGone")
 		return (
-			<SidePanel width="side" title={'"옛 소개 글" 휴지통으로'} closable footer={<TextButton>되돌리기</TextButton>}>
+			<SidePanel width="side" title={line.what} closable actions={<PanelMore line={line} />}>
 				<Stack gap={32}>
 					<Group title="이벤트">
 						<DescriptionList>
-							<DescriptionItem label="언제" mono>
+							<DescriptionItem label="시각" mono>
 								10. 25 17:20
 							</DescriptionItem>
 							<DescriptionItem label="한 사람">관리자</DescriptionItem>
@@ -386,10 +433,7 @@ function Details({ stage }: { stage: EventsStage }) {
 								entry.unpublished
 							</DescriptionItem>
 							<DescriptionItem label="상태">
-								<EntryStatus status="published">보냄</EntryStatus>
-							</DescriptionItem>
-							<DescriptionItem label="시도 횟수" mono>
-								1
+								<DeliveryCell delivery="sent" whole />
 							</DescriptionItem>
 						</DescriptionList>
 					</Group>
@@ -398,11 +442,11 @@ function Details({ stage }: { stage: EventsStage }) {
 		);
 	const canceled = stage === "canceled";
 	return (
-		<SidePanel width="side" title={'"첫 번째 글" 발행'} closable footer={<TextButton>되돌리기</TextButton>}>
+		<SidePanel width="side" title={line.what} closable actions={<PanelMore line={line} />}>
 			<Stack gap={32}>
 				<Group title="이벤트">
 					<DescriptionList>
-						<DescriptionItem label="언제" mono>
+						<DescriptionItem label="시각" mono>
 							10. 26 10:40
 						</DescriptionItem>
 						<DescriptionItem label="한 사람">관리자</DescriptionItem>
@@ -436,10 +480,7 @@ function Details({ stage }: { stage: EventsStage }) {
 									entry.published
 								</DescriptionItem>
 								<DescriptionItem label="상태">
-									{canceled ? <Text tone="subtle">취소됨</Text> : <EntryStatus status="failed">실패</EntryStatus>}
-								</DescriptionItem>
-								<DescriptionItem label="시도 횟수" mono>
-									3
+									<DeliveryCell delivery={canceled ? "canceled" : { failed: 3 }} />
 								</DescriptionItem>
 								<DescriptionItem label="마지막 오류" mono>
 									503 Service Unavailable
@@ -465,10 +506,7 @@ function Details({ stage }: { stage: EventsStage }) {
 								entry.published
 							</DescriptionItem>
 							<DescriptionItem label="상태">
-								<EntryStatus status="published">보냄</EntryStatus>
-							</DescriptionItem>
-							<DescriptionItem label="시도 횟수" mono>
-								1
+								<DeliveryCell delivery="sent" whole />
 							</DescriptionItem>
 						</DescriptionList>
 					</Stack>
@@ -478,67 +516,90 @@ function Details({ stage }: { stage: EventsStage }) {
 	);
 }
 
-/** The kinds the log is filtered by, each with its icon; the assistant's is the spark. */
-const KINDS = [
-	{ value: "assistant", name: "AI 제안", icon: Spark },
-	{ value: "save", name: "글 저장", icon: Save },
-	{ value: "publish", name: "글 발행", icon: Globe },
-	{ value: "trash", name: "휴지통", icon: TrashCan },
-	{ value: "settings", name: "설정", icon: SettingsAdjust },
-	{ value: "media", name: "미디어", icon: Image },
-] as const;
-
-/** The filter's button and its menu: the kinds, one at a time, and under a line the delivery states with how many deliveries are in each. */
-function KindFilter({ open, kind, deliveries }: { open: boolean; kind?: string; deliveries: boolean }) {
-	const picked = KINDS.find((each) => each.value === kind);
+/** A row of a column's menu that filters by a value: a check box, the value, and how many lines have it. */
+function ValueRow({ name, count, checked = false }: { name: string; count: number; checked?: boolean }) {
 	return (
-		<DropdownMenu open={open}>
-			<DropdownMenuTrigger render={<FilterButton filled={picked !== undefined} />}>
-				{picked ? `종류: ${picked.name}` : "종류"}
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				<DropdownMenuRadioGroup value={kind ?? "all"}>
-					<DropdownMenuRadioItem value="all">
-						<ListBulleted aria-hidden />
-						전체
-					</DropdownMenuRadioItem>
-					{KINDS.map(({ value, name, icon: Icon }) => (
-						<DropdownMenuRadioItem key={value} value={value}>
-							<Icon aria-hidden />
-							{name}
-						</DropdownMenuRadioItem>
-					))}
-				</DropdownMenuRadioGroup>
-				{deliveries ? (
-					<>
-						<DropdownMenuSeparator />
-						<DropdownMenuSub open={open}>
-							<DropdownMenuSubTrigger>
-								<Launch aria-hidden />
-								전송
-							</DropdownMenuSubTrigger>
-							<DropdownMenuSubContent>
-								<DropdownMenuRadioGroup value="">
-									<DropdownMenuRadioItem value="pending">
-										대기<MenuShortcut>1</MenuShortcut>
-									</DropdownMenuRadioItem>
-									<DropdownMenuRadioItem value="sent">
-										보냄<MenuShortcut>42</MenuShortcut>
-									</DropdownMenuRadioItem>
-									<DropdownMenuRadioItem value="failed">
-										실패<MenuShortcut>1</MenuShortcut>
-									</DropdownMenuRadioItem>
-									<DropdownMenuRadioItem value="canceled">
-										취소됨<MenuShortcut>2</MenuShortcut>
-									</DropdownMenuRadioItem>
-								</DropdownMenuRadioGroup>
-							</DropdownMenuSubContent>
-						</DropdownMenuSub>
-					</>
-				) : null}
-			</DropdownMenuContent>
-		</DropdownMenu>
+		<DropdownMenuCheckboxItem box checked={checked} closeOnClick={false}>
+			{name}
+			<MenuShortcut>{count}</MenuShortcut>
+		</DropdownMenuCheckboxItem>
 	);
+}
+
+/**
+ * The log's columns, as every list's: each name opens its menu. What was done is filtered by its kind, who did it and how the delivery went by their values, and the
+ * time is sorted both ways and filtered by day as the lists' dates are. A site with no receiver has no delivery column.
+ */
+function columnsOf(stage: EventsStage): ListHeadColumn[] {
+	const failedOnly = stage === "failedOnly" || stage === "retrying" || stage === "retried";
+	return [
+		{
+			id: "what",
+			label: "한 일",
+			menu: (
+				<>
+					<ValueRow name="글 저장" count={64} />
+					<ValueRow name="글 발행" count={21} />
+					<ValueRow name="휴지통" count={9} />
+					<ValueRow name="설정" count={12} />
+					<ValueRow name="미디어" count={26} />
+				</>
+			),
+		},
+		{
+			id: "who",
+			label: "한 사람",
+			size: LIST_COLUMN_SIZE.one + 20,
+			filtered: stage === "searched",
+			menu: (
+				<>
+					<ValueRow name="관리자" count={98} />
+					<ValueRow name="어시스턴트" count={31} checked={stage === "searched"} />
+					<ValueRow name="명령줄" count={3} />
+				</>
+			),
+		},
+		...(stage === "noReceivers"
+			? []
+			: [
+					{
+						id: "delivery",
+						label: "전송",
+						size: LIST_COLUMN_SIZE.one + 8,
+						filtered: failedOnly,
+						menu: (
+							<>
+								<ValueRow name="보내는 중" count={1} />
+								<ValueRow name="보냄" count={42} />
+								<ValueRow name="실패" count={1} checked={failedOnly} />
+								<ValueRow name="취소됨" count={2} />
+							</>
+						),
+					},
+				]),
+		{
+			id: "at",
+			label: "시각",
+			sort: "desc",
+			align: "end",
+			size: LIST_COLUMN_SIZE.measure,
+			menu: (
+				<>
+					<DropdownMenuRadioGroup value="desc">
+						<DropdownMenuRadioItem value="desc">최근부터</DropdownMenuRadioItem>
+						<DropdownMenuRadioItem value="asc">오래전부터</DropdownMenuRadioItem>
+					</DropdownMenuRadioGroup>
+					<DropdownMenuSeparator />
+					<DropdownMenuRadioGroup value="all">
+						<DropdownMenuRadioItem value="all">모든 날짜</DropdownMenuRadioItem>
+						<DropdownMenuRadioItem value="today">오늘</DropdownMenuRadioItem>
+						<DropdownMenuRadioItem value="7">최근 7일</DropdownMenuRadioItem>
+						<DropdownMenuRadioItem value="30">최근 30일</DropdownMenuRadioItem>
+					</DropdownMenuRadioGroup>
+				</>
+			),
+		},
+	];
 }
 
 /** Shows the toast a stage ends with, for as long as the story is open. */
@@ -553,27 +614,51 @@ function StageToast({ message }: { message: string }) {
 }
 
 /**
- * Tools, on its activity tab: the log by day, newest first. A line says what was done and, under it, where; the assistant's work is one line per
- * request, quoted, with what it did under it. A line's end holds only what can be done with it: undo for the assistant's work, sending a failed
- * delivery again. One failed delivery shows in its own line; from two on, a banner over the log offers to send them all.
+ * Tools, on its activity tab: the log as the lists' table, newest first. A row is one write, or the assistant's work for one request: what was done with where
+ * after it, who did it, how its delivery went, and when. A row opens its details beside the list; what can be done with it is in its ⋯. Failed deliveries, from
+ * two on, are a banner at the top of the page, where every screen's banner is, with the way to send them all.
  */
 export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
-	const days = daysOf(stage);
+	const lines = linesOf(stage);
 	const failed = FAILED_COUNT[stage] ?? 0;
-	const open = OPEN[stage];
-	const banner = stage === "threeFailed" || stage === "retryingAll";
-	const noReceivers = stage === "noReceivers";
+	const open = lines.find((line) => line.id === OPEN[stage]) ?? LINES.find((line) => line.id === OPEN[stage]);
 	const message = TOAST[stage];
-	const failedFilter = stage === "failedOnly" || stage === "retrying" || stage === "retried";
+	const columns = columnsOf(stage);
+	const noMatch = stage === "retried";
+	const banner =
+		stage === "threeFailed" || stage === "retryingAll" ? (
+			<Banner tone="danger" title="전송 실패 3건" meta="10. 26부터">
+				<TextButton variant="underline">보기</TextButton>
+				{stage === "retryingAll" ? (
+					<TextButton loading>보내는 중…</TextButton>
+				) : (
+					<TextButton>모두 다시 보내기</TextButton>
+				)}
+			</Banner>
+		) : stage === "loadFailed" ? (
+			<Banner tone="danger" title="기록을 불러오지 못했습니다" plainMeta>
+				<TextButton variant="underline">다시 시도</TextButton>
+			</Banner>
+		) : undefined;
 	return (
 		<AdminFrame
 			open="tools"
 			counts={{ tools: failed > 0 ? String(failed) : undefined }}
 			corner={open === undefined}
-			panel={open ? <Details stage={stage} /> : undefined}
+			panel={open ? <Details stage={stage} line={open} /> : undefined}
+			banner={banner}
 		>
 			<PageColumn width="list">
-				<PageHeader title="도구" />
+				<PageHeader title="도구">
+					{stage === "empty" || stage === "loadFailed" ? null : (
+						<SearchToggle
+							label="검색"
+							aria-label="검색"
+							placeholder="검색"
+							value={stage === "searched" ? "첫 번째 글" : ""}
+						/>
+					)}
+				</PageHeader>
 				<PageToolbar inset>
 					<TabLinks variant="toolbar">
 						<TabLink href="#">템플릿</TabLink>
@@ -581,118 +666,81 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 							활동 기록
 						</TabLink>
 					</TabLinks>
-					<PageToolbarEnd>
-						{failedFilter ? (
-							<Chip onRemove={() => {}} removeLabel="필터 지우기">
-								전송: 실패
-							</Chip>
-						) : null}
-						{stage === "filteredPending" ? (
-							<Chip onRemove={() => {}} removeLabel="필터 지우기">
-								전송: 대기
-							</Chip>
-						) : null}
-						{stage === "oneEntry" ? (
-							<Chip onRemove={() => {}} removeLabel="필터 지우기">
-								글: 첫 번째 글
-							</Chip>
-						) : null}
-						{stage === "noMatch" ? (
-							<Chip onRemove={() => {}} removeLabel="필터 지우기">
-								전송: 취소됨
-							</Chip>
-						) : null}
-						<KindFilter
-							open={stage === "filterMenu"}
-							kind={stage === "oneEntry" ? "assistant" : stage === "noMatch" ? "media" : undefined}
-							deliveries={!noReceivers}
-						/>
-					</PageToolbarEnd>
 				</PageToolbar>
-				{banner ? (
-					<Box paddingTop={16}>
-						<Banner tone="danger" title="전송 실패 3건" meta="10. 26부터">
-							<TextButton variant="underline">보기</TextButton>
-							{stage === "retryingAll" ? (
-								<TextButton loading>보내는 중…</TextButton>
-							) : (
-								<TextButton>모두 다시 보내기</TextButton>
-							)}
-						</Banner>
-					</Box>
-				) : null}
-				{stage === "loadFailed" ? (
-					<Box paddingTop={16}>
-						<Banner tone="danger" title="기록을 불러오지 못했습니다" plainMeta>
-							<TextButton variant="underline">다시 시도</TextButton>
-						</Banner>
-					</Box>
-				) : null}
-				{stage === "empty" || stage === "retried" || stage === "noMatch" ? (
-					<Box paddingTop={24} paddingX={12}>
-						<Inline gap={12} align="baseline">
-							<Text tone="subtle">
-								{stage === "empty"
-									? "아직 기록이 없습니다"
-									: stage === "retried"
-										? "실패한 전송이 없습니다"
-										: "맞는 기록이 없습니다"}
-							</Text>
-							{stage === "empty" ? null : (
-								<TextButton variant="underline" size="note">
-									필터 끄기
-								</TextButton>
-							)}
-						</Inline>
-					</Box>
-				) : null}
-				{days.map((day) => (
-					<Stack key={day.name} gap={4} paddingTop={24}>
-						<Box paddingX={12}>
-							<Text as="p" variant="meta" tone="subtle">
-								{day.name}
-							</Text>
-						</Box>
-						{/* No widths but the time's: the end takes what its words need, and the title, which ends in "…", takes the rest. */}
-						<Table container="none" aria-label={day.name}>
-							<TableBody>
-								{day.lines.map((line) => (
-									<TableRow key={line.id} selected={line.id === open}>
-										<TableCell valign="top" size={64}>
-											<Count>{line.time}</Count>
+				{stage === "empty" ? <Empty title="아직 기록이 없습니다." /> : null}
+				{stage === "empty" || stage === "loadFailed" ? null : (
+					<Table
+						container="none"
+						layout="fixed"
+						columns={[...columns.map((column) => column.size), LIST_COLUMN_SIZE.end]}
+					>
+						<ListHead columns={columns} end={LIST_COLUMN_SIZE.end} />
+						<TableBody>
+							{noMatch ? (
+								<TableRow>
+									<TableCell colSpan={columns.length + 1}>
+										<Inline gap={12}>
+											<Text tone="subtle">맞는 것이 없습니다.</Text>
+											<TextButton>필터 해제</TextButton>
+										</Inline>
+									</TableCell>
+								</TableRow>
+							) : null}
+							{lines.map((line) => (
+								<TableRow key={line.id} selected={line.id === open?.id}>
+									<TableCell truncate>
+										<RowTitle
+											title={
+												<RowLink render={<button type="button" />}>
+													{line.request ? `“${line.request}”` : line.what}
+												</RowLink>
+											}
+											address={[
+												line.request ? line.what : line.where,
+												line.undo && line.undo !== "open" ? `되돌림 ${line.undo}` : null,
+											]
+												.filter(Boolean)
+												.join(" · ")}
+										/>
+									</TableCell>
+									<TableCell tone="subtle" truncate>
+										{/* The admin's own writes say nothing: who else would it be. The assistant, the command line and plugins are named. */}
+										{line.request ? (
+											<Text tone="proposal">
+												<Inline as="span" gap={4} align="center">
+													<Spark aria-hidden size={12} />
+													어시스턴트
+												</Inline>
+											</Text>
+										) : (
+											line.who
+										)}
+									</TableCell>
+									{stage === "noReceivers" ? null : (
+										<TableCell truncate>
+											<DeliveryCell delivery={line.delivery} />
 										</TableCell>
-										<TableCell truncate valign="top">
-											<Stack gap={4} minWidth={0}>
-												{line.request ? (
-													<Inline gap={8} align="baseline" minWidth={0}>
-														<Text tone="proposal" aria-hidden="true">
-															✦
-														</Text>
-														<Text truncate>
-															<RowLink render={<button type="button" />}>“{line.request}”</RowLink>
-														</Text>
-													</Inline>
-												) : (
-													<Text as="div" truncate>
-														<RowLink render={<button type="button" />}>{line.what}</RowLink>
-													</Text>
-												)}
-												<Box paddingY={2}>
-													<Text as="div" variant="meta" tone="subtle" truncate>
-														{line.request ? line.what : line.where}
-													</Text>
-												</Box>
-											</Stack>
-										</TableCell>
-										<TableCell align="end" valign="top">
-											<LineEnd line={line} />
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-					</Stack>
-				))}
+									)}
+									<TableCell align="end">
+										<Text mono variant="meta" tone="muted">
+											{line.time}
+										</Text>
+									</TableCell>
+									<TableCell align="end">
+										<RowActions>
+											<DropdownMenu open={stage === "rowMenu" && line.id === "publish" ? true : undefined}>
+												<RowMore label="더 보기" trigger={(button) => <DropdownMenuTrigger render={button} />} />
+												<DropdownMenuContent align="end">
+													<LineMenu line={line} />
+												</DropdownMenuContent>
+											</DropdownMenu>
+										</RowActions>
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				)}
 				{stage === "pages" ? (
 					<ListFooter>
 						<Count>1–50 / 132</Count>
