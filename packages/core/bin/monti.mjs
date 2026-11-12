@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Reads the site's env files the way Next does, loads the site's monti.config.ts (TypeScript, through jiti) and runs the command.
-// `monti doctor` runs without a config that loads: that it is missing or broken is what it reports.
+// `monti init` writes the config, and `monti doctor` runs without one that loads: that it is missing or broken is what it reports.
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { createJiti } from "jiti";
@@ -29,6 +29,16 @@ const configFile =
 const loadConfig = () => jiti.import(configFile, { default: true });
 
 const [command, ...rest] = argv;
+if (command === "init")
+	process.exit(
+		await cli.init({
+			cwd: root,
+			argv: rest,
+			env: process.env,
+			// The config init writes; an older one keeps its own name.
+			loadConfig: () => jiti.import(configFile ?? path.join(root, "monti.config.ts"), { default: true }),
+		}),
+	);
 if (command === "doctor")
 	process.exit(await cli.doctor({ cwd: root, argv: rest, env: process.env, envFrom, configFile, loadConfig }));
 if (!configFile) {
