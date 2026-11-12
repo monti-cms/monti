@@ -405,7 +405,7 @@ describe("monti doctor", () => {
 				headers: "content-type,cache-control",
 			});
 			// The address it asks at is a signed one, for a key nothing has.
-			expect(asked[0]?.url).toMatch(/^\/media\/[0-9a-f-]{36}\.png\?X-Amz-Signature=abc$/);
+			expect(asked[0]?.url).toMatch(/^\/media\/[0-9a-f-]{36}\.pdf\?X-Amz-Signature=abc$/);
 
 			const refused = await found(options(dir, { ...withStorage, origin: "https://other.example" }), "storage/cors");
 			expect(refused).toMatchObject({

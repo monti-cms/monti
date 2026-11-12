@@ -111,7 +111,95 @@ describe("s3Storage", () => {
 		expect(await put(ticket.url, "text/html", PNG)).toBe(403);
 		expect(await put(ticket.url, "image/png", new Uint8Array(PNG.length + 1))).toBe(403);
 		expect(await put(ticket.url.replace(KEY, "00000000-0000-4000-8000-000000000000.png"), "image/png", PNG)).toBe(403);
-		expect(await put(`${ticket.url}&x-amz-acl=public-read`, "image/png", PNG)).toBe(403);
+		// A parameter the address was not signed with: refused as one the storage does not take.
+		expect(await put(`${ticket.url}&x-amz-acl=public-read`, "image/png", PNG)).toBe(400);
 		expect([...bucket.objects.keys()]).toEqual([]);
+		// And nobody reads or writes the bucket unsigned.
+		expect((await fetch(`${bucket.endpoint}/media/${KEY}`)).status).toBe(403);
+		expect(await put(`${bucket.endpoint}/media/${KEY}`, "image/png", PNG)).toBe(403);
+	});
+
+	it("20-11 a ticket's address carries the signature's own parameters and no checksum: storages other than AWS refuse those", async () => {
+		const ticket = await storage().ticket?.(KEY, { mime: "image/png", size: PNG.length });
+		const names = [...new URL(ticket?.url ?? "").searchParams.keys()];
+		expect(names.sort()).toEqual([
+			"X-Amz-Algorithm",
+			"X-Amz-Content-Sha256",
+			"X-Amz-Credential",
+			"X-Amz-Date",
+			"X-Amz-Expires",
+			"X-Amz-Signature",
+			"X-Amz-SignedHeaders",
+			"x-id",
+		]);
+		expect(names.filter((name) => /checksum/i.test(name))).toEqual([]);
+		expect(new URL(ticket?.url ?? "").searchParams.get("X-Amz-SignedHeaders")).not.toMatch(/checksum/);
+	});
+
+	it("20-12 an address that has run out takes nothing; until then it takes a second PUT, which is why the site keeps what it checked under another key", async () => {
+		const files = storage();
+		const ticket = await files.ticket?.(KEY, { mime: "image/png", size: PNG.length });
+		if (!ticket) throw new Error("no ticket");
+		const put = (bytes: Uint8Array) =>
+			fetch(ticket.url, { method: "PUT", headers: ticket.headers, body: bytes.slice().buffer }).then(
+				(answer) => answer.status,
+			);
+		expect(await put(PNG)).toBe(200);
+		// The seal's copy, to a key no address was signed for: made inside the bucket, with the file's type and headers.
+		const copy = "00000000-0000-4000-8000-00000000c0b1.png";
+		await files.copy?.(KEY, copy);
+		expect(await files.stat(copy)).toEqual({ size: PNG.length, mime: "image/png" });
+		expect(bucket.objects.get(copy)?.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+
+		// The same address again, other bytes of the same length: the bucket takes them. The copy is not touched.
+		const other = PNG.map((byte, at) => (at > 7 ? 9 : byte));
+		expect(await put(other)).toBe(200);
+		expect([...((await files.read(KEY))?.bytes ?? [])]).toEqual([...other]);
+		expect([...((await files.read(copy))?.bytes ?? [])]).toEqual([...PNG]);
+
+		// Ten minutes on, the address is refused.
+		const clock = bucket.now;
+		bucket.now = () => clock() + 601_000;
+		expect(await put(PNG)).toBe(403);
+		bucket.now = clock;
+		await files.remove(KEY);
+		await files.remove(copy);
+		await expect(files.copy?.("../a.png", copy)).rejects.toThrow(/media key/);
+	});
+
+	it("20-10 anything that is not a picture is stored to be saved, not opened: the bucket's address draws no page", async () => {
+		const files = storage();
+		const pdf = "3f2a1c9e-1111-4222-8333-444455557777.pdf";
+		const body = new TextEncoder().encode("%PDF-1.7 body");
+		await files.put(pdf, body, { mime: "application/pdf" });
+		expect(bucket.objects.get(pdf)?.headers["content-disposition"]).toBe("attachment");
+		await files.put(KEY, PNG, { mime: "image/png" });
+		expect(bucket.objects.get(KEY)?.headers["content-disposition"]).toBeUndefined();
+		await files.remove(pdf);
+		await files.remove(KEY);
+
+		// A direct upload carries it too, and it is part of what the address is signed for: left out, the bucket refuses the file.
+		const ticket = await files.ticket?.(pdf, { mime: "application/pdf", size: body.length });
+		if (!ticket) throw new Error("no ticket");
+		expect(ticket.headers).toEqual({
+			"content-type": "application/pdf",
+			"cache-control": "public, max-age=31536000, immutable",
+			"content-disposition": "attachment",
+		});
+		const send = (headers: Record<string, string>) =>
+			fetch(ticket.url, { method: "PUT", headers, body: body.slice().buffer }).then((answer) => answer.status);
+		expect(await send({ "content-type": "application/pdf" })).toBe(403);
+		expect(await send({ "content-type": "application/pdf", "content-disposition": "inline" })).toBe(403);
+		expect(await send(ticket.headers)).toBe(200);
+		expect(bucket.objects.get(pdf)?.headers["content-disposition"]).toBe("attachment");
+		await files.remove(pdf);
+	});
+
+	it("20-10 the start of a file with no bytes is no bytes, not an error", async () => {
+		const files = storage();
+		const empty = "3f2a1c9e-1111-4222-8333-444455558888.txt";
+		await files.put(empty, new Uint8Array(), { mime: "text/plain" });
+		expect(await files.readStart?.(empty, 4096)).toEqual(new Uint8Array());
+		await files.remove(empty);
 	});
 });

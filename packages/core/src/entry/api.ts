@@ -21,7 +21,16 @@ export type AdminApiOptions = {
 };
 
 /** What a browser says of a file before it sends it: its name, its size, and its first bytes (base64), which say what it is. */
-const TicketBody = z.object({ name: z.string(), size: z.number().int().nonnegative(), head: z.string().max(8192) });
+const TicketBody = z.object({
+	name: z.string(),
+	size: z.number().int().nonnegative(),
+	// Decoded here, so text that is not base64 is a body the route does not take (400), not a failure of the server.
+	head: z
+		.string()
+		.max(8192)
+		.regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
+		.transform((text) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0))),
+});
 const SealedBody = z.object({ key: z.string() });
 
 const Body = z.object({
@@ -297,8 +306,8 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		if (!accepted.ok) return refusal(accepted.reason);
 		const key = `${randomUUID()}${accepted.extension}`;
 		await storage.put(key, bytes, { mime: accepted.mime });
-		// Until `media.upload` makes it a file's: an upload that stops here is removed by the clean-up (doc 11).
-		await loosen(monti.db, [key], looseUntil(monti.now()));
+		// Until `media.upload` makes it a file's: an upload that stops here is removed by the clean-up (doc 11). Its bytes were read here: sealed.
+		await loosen(monti.db, [key], looseUntil(monti.now()), { sealed: true });
 		return { status: 200, body: { key, mime: accepted.mime, size: bytes.length } };
 	}
 
@@ -320,16 +329,20 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		const accepted = acceptFile({ name: file.name, size: file.size, head: file.head.subarray(0, HEAD_BYTES) });
 		if (!accepted.ok) return refusal(accepted.reason);
 		const key = `${randomUUID()}${accepted.extension}`;
+		// Listed before the address exists, and for longer than the address works (a day; the address, minutes): whatever is sent to it, once or
+		// again after the seal, is removed by the clean-up (doc 11). The row keeps the size the address is signed for.
+		await loosen(monti.db, [key], looseUntil(monti.now()), { ticketSize: file.size });
 		const { url, headers } = await storage.ticket(key, { mime: accepted.mime, size: file.size });
-		// Loose from the start: a file that goes up and is never sealed, or never made an item, is removed by the clean-up (doc 11).
-		await loosen(monti.db, [key], looseUntil(monti.now()));
 		return { status: 200, body: { direct: true, key, url, headers } };
 	}
 
 	/**
 	 * The direct way up, last step: the browser says the file is in the storage, and the server looks at what is there. Nothing the browser said
-	 * is taken for it: the size is the stored one, the type is what the stored bytes say, by the rule of the byte route, and it must be the type
-	 * the address was signed for. A file that fails is removed from the storage. Until this passes no item names the key.
+	 * is taken for it. The uploaded file is first copied to a key of the server's own, one no browser was ever handed an address for, and the
+	 * copy is what is checked: its size is the one the ticket was signed for, and its type is what its bytes say, by the rule of the byte route,
+	 * and the type the address was signed for. So what was checked cannot change afterwards: the signed address still works for some minutes,
+	 * but what is sent to it lands on the old key, which nothing names and the clean-up removes. The answer is the new key, marked sealed:
+	 * `media.upload` takes no other.
 	 */
 	async function sealed(
 		key: string,
@@ -339,28 +352,66 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		if (!(await sessionOf(token, local))) return { status: 401, body: { error: "unauthenticated" } };
 		const storage = monti.site.storage;
 		if (!storage) return { status: 422, body: { error: "check-failed", reason: { key: "media.noStorage" } } };
-		// Only a key this server handed out and nothing has taken yet.
+		const missing = { status: 404, body: { error: "not-found" } };
+		// Only a key this server signed an address for, and only once its file is there.
 		const waiting = isMediaKey(key)
-			? await monti.db.selectFrom("loose_files").select("key").where("key", "=", key).executeTakeFirst()
+			? await monti.db
+					.selectFrom("loose_files")
+					.select("ticket_size")
+					.where("key", "=", key)
+					.where("ticket_size", "is not", null)
+					.executeTakeFirst()
 			: undefined;
-		const stored = waiting ? await storage.stat(key) : null;
-		if (!stored) return { status: 404, body: { error: "not-found" } };
-		const refuse = async (reason: "size" | "type") => {
+		if (!waiting) return missing;
+		const uploaded = await storage.stat(key);
+		if (!uploaded) return missing;
+		// The ticket is used up here, whatever follows: of two seals of one key only one goes on. The row stays, so the key is still cleaned up.
+		const taken = await monti.db
+			.updateTable("loose_files")
+			.set({ ticket_size: null })
+			.where("key", "=", key)
+			.where("ticket_size", "is not", null)
+			.returning("key")
+			.executeTakeFirst();
+		if (!taken) return missing;
+
+		const copy = `${randomUUID()}${key.slice(36)}`;
+		// Listed before it is made: a copy the server does not get to check is removed like any upload that stopped.
+		await loosen(monti.db, [copy], looseUntil(monti.now()));
+		const drop = async (answer: { status: number; body: unknown }) => {
+			await storage.remove(copy);
+			await monti.db.deleteFrom("loose_files").where("key", "=", copy).execute();
 			await storage.remove(key);
-			await monti.db.deleteFrom("loose_files").where("key", "=", key).execute();
-			return refusal(reason);
+			return answer;
 		};
-		// Before a byte of it is read.
-		if (stored.size > MAX_UPLOAD_BYTES) return refuse("size");
-		const head = storage.readStart
-			? await storage.readStart(key, HEAD_BYTES)
-			: ((await storage.read(key))?.bytes.subarray(0, HEAD_BYTES) ?? null);
-		if (!head) return { status: 404, body: { error: "not-found" } };
-		// The key carries the extension the ticket gave it: the bytes must be of that kind.
-		const accepted = acceptFile({ name: key, size: stored.size, head });
-		if (!accepted.ok) return refuse(accepted.reason);
-		if (accepted.mime !== stored.mime) return refuse("type");
-		return { status: 200, body: { key, mime: accepted.mime, size: stored.size } };
+		// Before a byte of it is copied or read.
+		if (uploaded.size > MAX_UPLOAD_BYTES) return drop(refusal("size"));
+		if (storage.copy) await storage.copy(key, copy);
+		else {
+			const file = await storage.read(key);
+			if (!file) return drop(missing);
+			await storage.put(copy, file.bytes, { mime: file.mime });
+		}
+		const stored = await storage.stat(copy);
+		const head = stored
+			? storage.readStart
+				? await storage.readStart(copy, HEAD_BYTES)
+				: ((await storage.read(copy))?.bytes.subarray(0, HEAD_BYTES) ?? null)
+			: null;
+		if (!stored || !head) return drop(missing);
+		// Not the size the address was signed for: the storage let something else through.
+		if (stored.size !== waiting.ticket_size)
+			return drop({
+				status: 409,
+				body: { error: "media-refused", reason: { key: "media.unknownKey", values: { key } } },
+			});
+		// The key carries the extension the ticket gave it: the bytes must be of that kind, and stored under that type.
+		const accepted = acceptFile({ name: copy, size: stored.size, head });
+		if (!accepted.ok) return drop(refusal(accepted.reason));
+		if (accepted.mime !== stored.mime) return drop(refusal("type"));
+		await monti.db.updateTable("loose_files").set({ sealed: true }).where("key", "=", copy).execute();
+		await storage.remove(key);
+		return { status: 200, body: { key: copy, mime: accepted.mime, size: stored.size } };
 	}
 
 	/** A small JSON body, or `null` when it is not one. */
@@ -429,11 +480,7 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		if (pathname.endsWith("/media/ticket") && request.method === "POST") {
 			const body = await jsonBody(request, TicketBody);
 			if (!body) return json(400, { error: "invalid-body" });
-			const answer = await ticket(
-				{ name: body.name, size: body.size, head: Uint8Array.from(atob(body.head), (char) => char.charCodeAt(0)) },
-				cookies(request)[SESSION_COOKIE],
-				bypasses(request),
-			);
+			const answer = await ticket(body, cookies(request)[SESSION_COOKIE], bypasses(request));
 			return json(answer.status, answer.body);
 		}
 		if (pathname.endsWith("/media/sealed") && request.method === "POST") {

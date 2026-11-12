@@ -57,7 +57,8 @@ function send(
  *   host may take smaller requests than the library's largest file), and the server is then told, and looks at what the storage holds;
  * - any other storage answers that it does not, and the file goes to the byte route, as before. That answer holds for this page: a site's
  *   storage does not change under it.
- * Either way the answer is the byte route's: `{ key, mime, size }`, or a refusal.
+ * Either way the answer is the byte route's: `{ key, mime, size }`, or a refusal. Every call asks for its own ticket: a file that is tried
+ * again never goes to an address that was used or has run out.
  */
 export function httpUploader(base: string): Uploader {
 	let direct: boolean | undefined;
@@ -84,8 +85,13 @@ export function httpUploader(base: string): Uploader {
 		if (!direct || !ticket.url || !ticket.key) return throughSite(file, name, onProgress, signal);
 		// Nothing is added to the address or the headers: they are what the storage signed.
 		const put = await send(ticket.url, file, { headers: ticket.headers, onProgress, signal });
-		// The storage's own refusal says nothing a screen can show: it is a failed upload, and the file stays to try again.
-		if (put.status < 200 || put.status >= 300) return { status: 0, body: null };
+		// No answer a page may read: the network, or a storage that does not let this address send to it (a browser hides which).
+		if (put.status === 0) return { status: 0, body: null };
+		// The storage answered, and refused: the address ran out (403), or the file is not what it was signed for. The file stays to try again, and
+		// trying again starts from a new ticket. The storage's own status is kept apart from the site's: its 401 is not the session ending, its
+		// 413 not the library's limit.
+		if (put.status < 200 || put.status >= 300)
+			return { status: 502, body: { error: "storage-refused", storage: put.status } };
 		return post("sealed", { key: ticket.key }, signal);
 	};
 }

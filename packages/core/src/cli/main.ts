@@ -8,6 +8,7 @@ import { readChangeFiles } from "../schema/files";
 import { secretReader } from "./secret-input";
 
 export { doctor } from "./doctor/command";
+export { storageCors } from "./doctor/run";
 export { loadEnvFiles, takeEnvFile } from "./env-files";
 export { init } from "./init/command";
 export { configFileOf } from "./site";

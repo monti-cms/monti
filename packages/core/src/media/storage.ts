@@ -18,6 +18,11 @@ export type Storage = {
 	 */
 	readStart?(key: string, length: number): Promise<Uint8Array | null>;
 	/**
+	 * A copy of one key's file under another key, made inside the storage (the seal of a direct upload copies what it checked to a key no
+	 * browser was handed an address for). A storage without it is copied through the server.
+	 */
+	copy?(from: string, to: string): Promise<void>;
+	/**
 	 * Where a browser sends a file's bytes straight to the storage (doc 20, the direct way up): an address signed for one `PUT` of this key,
 	 * with the headers that request must carry. The signature binds the key, the type and the size, so the address takes nothing else. A
 	 * storage without it takes files through the site (`PUT …/media/bytes`).

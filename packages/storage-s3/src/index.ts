@@ -1,4 +1,5 @@
 import {
+	CopyObjectCommand,
 	DeleteObjectCommand,
 	GetObjectCommand,
 	HeadObjectCommand,
@@ -26,6 +27,11 @@ export type S3StorageOptions = {
 	endpoint?: string;
 	/** `S3_FORCE_PATH_STYLE`: the bucket in the path, not the host name (MinIO). */
 	forcePathStyle?: boolean;
+	/**
+	 * How long a signed upload address works, in seconds (600 unless given). It must stay well under the day the site keeps an unclaimed
+	 * upload for: what is sent to an address is cleaned up by the key's own row, which must outlive the address.
+	 */
+	ticketSeconds?: number;
 	/** Where the values are read from; the process's environment unless given. */
 	env?: Readonly<Record<string, string | undefined>>;
 };
@@ -34,6 +40,12 @@ export type S3StorageOptions = {
 const TICKET_SECONDS = 600;
 /** A key is written once and never changed (a replaced file gets a new key), so a cache may keep it for good. */
 const CACHE = "public, max-age=31536000, immutable";
+/**
+ * What a browser does with a file opened at its address: a picture shows in place, anything else is saved, never drawn. The bucket's address
+ * serves whatever is in it under its own origin, without the headers the site's own file route adds (`nosniff`, a sandbox), so a PDF or a
+ * text file must not open there as a page. The library takes no SVG and no HTML, so every picture here is one that cannot run anything.
+ */
+const dispositionOf = (mime: string) => (mime.startsWith("image/") ? undefined : "attachment");
 
 /** Whether an S3 error says the key is not there. */
 const missing = (error: unknown) => {
@@ -51,7 +63,8 @@ const noSuchRange = (error: unknown) =>
  * - Files are read by anyone at `S3_PUBLIC_URL/<key>`: the bucket is public, or a CDN in front of it is. No file gets an ACL (R2 takes none);
  *   who may read is the bucket's setting.
  * - A browser sends a file straight to the bucket (`ticket`): the address is signed for one `PUT` of one key, of one type and one size. The
- *   bucket must let the site's address `PUT` to it (CORS); `monti doctor` checks that and prints the setting.
+ *   bucket must let the site's address `PUT` to it (CORS); `monti doctor` checks that and prints the setting. The address works until it
+ *   runs out, more than once: the site copies what it checked to a key of its own (`copy`), so a second `PUT` changes nothing it uses.
  */
 export function s3Storage(options: S3StorageOptions = {}): Storage {
 	let opened: { client: S3Client; bucket: string; publicUrl: string } | undefined;
@@ -105,7 +118,13 @@ export function s3Storage(options: S3StorageOptions = {}): Storage {
 	return {
 		async put(key, bytes, { mime }) {
 			await open().client.send(
-				new PutObjectCommand({ ...at(key), Body: bytes, ContentType: mime, CacheControl: CACHE }),
+				new PutObjectCommand({
+					...at(key),
+					Body: bytes,
+					ContentType: mime,
+					CacheControl: CACHE,
+					ContentDisposition: dispositionOf(mime),
+				}),
 			);
 		},
 		async stat(key) {
@@ -141,14 +160,29 @@ export function s3Storage(options: S3StorageOptions = {}): Storage {
 			await open().client.send(new DeleteObjectCommand(at(key)));
 		},
 		url: (key) => `${open().publicUrl}/${key}`,
+		async copy(from, to) {
+			// Inside the storage: the bytes do not come through the site. The type, the cache header and the disposition go with the file.
+			await open().client.send(new CopyObjectCommand({ ...at(to), CopySource: `${open().bucket}/${at(from).Key}` }));
+		},
 		async ticket(key, { mime, size }) {
+			const disposition = dispositionOf(mime);
 			const url = await getSignedUrl(
 				open().client,
-				new PutObjectCommand({ ...at(key), ContentType: mime, ContentLength: size }),
+				new PutObjectCommand({ ...at(key), ContentType: mime, ContentLength: size, ContentDisposition: disposition }),
 				// The type is signed with the address (the presigner leaves it out unless told), so the bucket takes this file's type and no other.
-				{ expiresIn: TICKET_SECONDS, signableHeaders: new Set(["content-type", "content-length"]) },
+				{
+					expiresIn: options.ticketSeconds ?? TICKET_SECONDS,
+					signableHeaders: new Set(["content-type", "content-length", "content-disposition"]),
+				},
 			);
-			return { url, headers: { "content-type": mime, "cache-control": CACHE } };
+			return {
+				url,
+				headers: {
+					"content-type": mime,
+					"cache-control": CACHE,
+					...(disposition ? { "content-disposition": disposition } : {}),
+				},
+			};
 		},
 	};
 }

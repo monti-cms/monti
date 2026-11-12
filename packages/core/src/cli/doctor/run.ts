@@ -261,7 +261,11 @@ const corsSetting = (origin: string, headers: string[]) =>
  * Whether a storage that takes files straight from the browser lets the site's address send them (doc 20). It asks what a browser asks
  * before a `PUT` from another address (the preflight), at an address signed for a key nothing has: nothing is written.
  */
-async function storageCors(storage: Storage, options: DoctorOptions, limit: number): Promise<CheckOutcome> {
+export async function storageCors(
+	storage: Storage,
+	options: Pick<DoctorOptions, "origin" | "fetch">,
+	limit = TIMEOUT,
+): Promise<CheckOutcome> {
 	if (!storage.ticket) return skip("files go up through the site, not straight to the storage");
 	if (!options.origin)
 		return warn("Whether the storage takes uploads from the site's address was not checked: no address was given.", {
@@ -269,7 +273,8 @@ async function storageCors(storage: Storage, options: DoctorOptions, limit: numb
 		});
 	const origin = options.origin;
 	try {
-		const ticket = await within(limit, storage.ticket(`${randomUUID()}.png`, { mime: "image/png", size: 1 }));
+		// A file that is not a picture: its upload carries every header a browser may send (a picture's has no disposition).
+		const ticket = await within(limit, storage.ticket(`${randomUUID()}.pdf`, { mime: "application/pdf", size: 1 }));
 		const headers = Object.keys(ticket.headers);
 		const answer = await within(
 			limit,

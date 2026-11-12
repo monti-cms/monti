@@ -102,19 +102,50 @@ describe("httpUploader", () => {
 		]);
 	});
 
-	it("20-12 a refused ticket is the answer, and nothing is sent; a storage that refuses the file is a failed upload, and nothing is sealed", async () => {
+	it("20-12 a refused ticket is the answer, and nothing is sent", async () => {
 		const refused = browser({
 			"/media/ticket": { status: 415, body: { error: "media-refused", reason: { key: "media.badType" } } },
 		});
 		expect((await httpUploader("/admin/api")(file(), { name: "a.png" })).status).toBe(415);
 		expect(refused).toHaveLength(1);
-		vi.unstubAllGlobals();
+	});
 
-		const blocked = browser({
+	it("20-12 a storage that refuses the file (its address ran out: 403) is told apart from no answer at all; nothing is sealed, and trying again asks for a new ticket", async () => {
+		const answers: Record<string, { status: number; body?: unknown }> = {
 			"/media/ticket": { status: 200, body: { direct: true, key: KEY, url: SIGNED, headers: {} } },
 			[`/media/${KEY}`]: { status: 403 },
+			"/media/sealed": { status: 200, body: { key: KEY, mime: "image/png", size: PNG.length } },
+		};
+		const sent = browser(answers);
+		const upload = httpUploader("/admin/api");
+		// Not the storage's own status: a 401 there is not the session ending, a 413 not the library's limit.
+		expect(await upload(file(), { name: "a.png" })).toEqual({
+			status: 502,
+			body: { error: "storage-refused", storage: 403 },
 		});
-		expect(await httpUploader("/admin/api")(file(), { name: "a.png" })).toEqual({ status: 0, body: null });
-		expect(blocked.map((each) => each.via)).toEqual(["fetch", "xhr"]);
+		expect(sent.map((each) => each.via)).toEqual(["fetch", "xhr"]);
+
+		// No answer a page may read (the network, or the bucket's CORS): status 0, as on the byte route.
+		answers[`/media/${KEY}`] = { status: 0 };
+		expect(await upload(file(), { name: "a.png" })).toEqual({ status: 0, body: null });
+
+		// The person tries again: a new ticket, its own address, and this time the file goes up.
+		const next = KEY.replace("3f2a", "4a3b");
+		answers["/media/ticket"] = {
+			status: 200,
+			body: { direct: true, key: next, url: SIGNED.replace(KEY, next), headers: {} },
+		};
+		answers[`/media/${next}`] = { status: 200 };
+		expect((await upload(file(), { name: "a.png" })).status).toBe(200);
+		expect(sent.map((each) => `${each.via} ${each.url.split("?")[0]}`)).toEqual([
+			"fetch /admin/api/media/ticket",
+			`xhr https://bucket.example.com/media/${KEY}`,
+			"fetch /admin/api/media/ticket",
+			`xhr https://bucket.example.com/media/${KEY}`,
+			"fetch /admin/api/media/ticket",
+			`xhr https://bucket.example.com/media/${next}`,
+			"fetch /admin/api/media/sealed",
+		]);
+		expect(sent.at(-1)?.body).toEqual({ key: next });
 	});
 });

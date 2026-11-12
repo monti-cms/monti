@@ -96,12 +96,27 @@ async function entriesToPurge(db: Db, ids: string[]): Promise<{ id: string; grou
 	return rows;
 }
 
-/** Hands a file's keys to the clean-up: the bytes leave the storage after the delete commits. */
-export async function loosen(db: Db, keys: string[], after: Date): Promise<void> {
+/**
+ * Hands a file's keys to the clean-up: the bytes leave the storage after the delete commits. `mark` says what a new key is (doc 20): `sealed`,
+ * one whose bytes the server checked, or `ticketSize`, one a browser was handed a signed address for.
+ */
+export async function loosen(
+	db: Db,
+	keys: string[],
+	after: Date,
+	mark: { sealed?: boolean; ticketSize?: number } = {},
+): Promise<void> {
 	if (keys.length === 0) return;
 	await db
 		.insertInto("loose_files")
-		.values(keys.map((key) => ({ key, remove_after: after })))
+		.values(
+			keys.map((key) => ({
+				key,
+				remove_after: after,
+				sealed: mark.sealed ?? false,
+				ticket_size: mark.ticketSize ?? null,
+			})),
+		)
 		.onConflict((conflict) => conflict.column("key").doUpdateSet({ remove_after: after }))
 		.execute();
 }
