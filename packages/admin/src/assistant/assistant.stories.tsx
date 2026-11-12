@@ -612,6 +612,39 @@ export const NoPastConversations: Story = {
 	},
 };
 
+/** The entry editor on a site with the assistant: ✦ at the end of its head opens the panel beside the page. */
+export const InEditor: Story = {
+	loaders: site(),
+	play: async ({ canvasElement, loaded }) => {
+		const page = await screen(canvasElement);
+		window.location.hash = `#/c/post/${(loaded as Loaded).ids.second}`;
+		await page.findByRole("textbox", { name: "제목" }, wait);
+		await page.findByRole("button", { name: "어시스턴트 열기" }, wait);
+	},
+};
+
+/**
+ * Asked to open another entry while this one has unsaved changes: the screen did not move, the assistant says so, and the one step that
+ * saves this entry and then opens the other stands under its answer.
+ */
+export const SaveAndOpen: Story = {
+	loaders: site({
+		script: (ids) => [
+			{ calls: [{ name: "screen_openEntry", input: { id: ids.third } }] },
+			{ text: "저장하지 않은 변경이 있어 셋째 글을 열지 않았습니다." },
+		],
+	}),
+	play: async ({ canvasElement, loaded }) => {
+		const page = await screen(canvasElement);
+		window.location.hash = `#/c/post/${(loaded as Loaded).ids.second}`;
+		const title = await page.findByRole("textbox", { name: "제목" }, wait);
+		await userEvent.click(await page.findByRole("button", { name: "어시스턴트 열기" }, wait));
+		await userEvent.type(title, ", 고치는 중");
+		await say(page, "셋째 글 열어 줘");
+		await page.findByRole("button", { name: "저장하고 열기" }, wait);
+	},
+};
+
 /** A proposal's review page: each kind of change as a titled list, each change with its check. */
 export const Review: Story = {
 	loaders: site({ script: proposedKinds }),

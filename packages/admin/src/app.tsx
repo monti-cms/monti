@@ -14,7 +14,7 @@ import {
 } from "./operations/admin-context";
 import type { StreamTransport, Transport, Uploader } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
-import { parseRoute, type Route, useRoute } from "./route";
+import { href, parseRoute, type Route, useRoute } from "./route";
 import { ActivityScreen } from "./screens/activity/activity-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
@@ -90,7 +90,7 @@ function Signed() {
 	const { route, go } = useRoute();
 	const leave = useLeave();
 	return (
-		<AssistantProvider go={go} leave={leave}>
+		<AssistantProvider go={go} leave={leave} at={href(route)}>
 			<Screens route={route} go={go} />
 		</AssistantProvider>
 	);
@@ -102,13 +102,15 @@ function Signed() {
  */
 function BesideAssistant({ panel, children }: { panel: ReactNode; children: ReactNode }) {
 	const assistant = useAssistant();
-	if (!assistant.available || !assistant.open) return children;
+	const beside = assistant.available === true && assistant.open;
+	// One tree with the panel open or closed: the page is the same page when the panel comes and goes (made anew, an editor read its entry
+	// again and lost its caret each time the panel was opened from it).
 	return (
-		<Inline gap={0} align="stretch" height="screen" overflow="clip">
+		<Inline gap={0} align="stretch" height={beside ? "screen" : undefined} overflow={beside ? "clip" : undefined}>
 			<Stack gap={0} grow minWidth={0}>
 				{children}
 			</Stack>
-			{panel}
+			{beside ? panel : null}
 		</Inline>
 	);
 }

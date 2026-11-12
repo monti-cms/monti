@@ -11,6 +11,7 @@ import {
 	EmptyStep,
 	ErrorNote,
 	IconButton,
+	Inline,
 	ModelMenu,
 	ModelMenuButton,
 	SidePanel,
@@ -21,14 +22,17 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { Add, Copy, Edit, RecentlyViewed, Renew } from "@monti-cms/ui/icons";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { holdsKeyboardFocus, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { History, HistoryFoot } from "./history";
 import { ProposalCardOf } from "./proposal-card";
 import { Prose } from "./prose";
 import { type Part, type Turn, useAssistant } from "./use-assistant";
 import { clock, groupOf, sentValue, type ToolPart, toolWords } from "./words";
+
+/** For how many frames after "save and open" a focus that fell to the page is put back where it belongs (the panel may be drawn anew). */
+const FOCUS_FRAMES = 30;
 
 /** How hard a model that can think is asked to: the levels of the model menu's second step. */
 const LEVELS = ["off", "low", "medium", "high"] as const satisfies readonly Thinking[];
@@ -76,6 +80,15 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 	const assistant = useAssistant();
 	const { view, state, turns, busy } = assistant;
 	const [menuOpen, setMenuOpen] = useState(false);
+	const [savingToOpen, setSavingToOpen] = useState(false);
+	// "Save and open" pressed with the keyboard, saved, and not moved: the step is drawn anew inside the note that says why, and the
+	// focus it held is put on it there, in the same drawing (before anything else takes a focus that fell to the page).
+	const stepButton = useRef<HTMLButtonElement>(null);
+	const keyedStep = useRef(false);
+	const moveRefused = assistant.moveRefused;
+	useLayoutEffect(() => {
+		if (moveRefused !== null && keyedStep.current) stepButton.current?.focus();
+	}, [moveRefused]);
 	/** "Send with another model": the next model picked sends the last request again. */
 	const resend = useRef(false);
 	const connected = state?.connected ?? true;
@@ -366,6 +379,59 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 					{running && !toolGoing && lastSegment?.kind !== "text" ? <Prose text="" streaming onOpen={onOpen} /> : null}
 					{turn.proposalId ? <ProposalCardOf id={turn.proposalId} /> : null}
 					{noteOf(turn, isLast)}
+					{/* The screen did not move for its unsaved changes, and the assistant has said so: the one step that does both. */}
+					{isLast && !busy && assistant.blockedMove
+						? (() => {
+								const step = (
+									<Button
+										ref={stepButton}
+										variant="ghost"
+										size="sm"
+										loading={savingToOpen}
+										onClick={async (event) => {
+											const pressed = event.currentTarget;
+											const byKeyboard = holdsKeyboardFocus(pressed);
+											keyedStep.current = byKeyboard;
+											setSavingToOpen(true);
+											const moved = await assistant.saveAndOpen();
+											setSavingToOpen(false);
+											// It did not move: the focus stays on the step (drawn anew inside the note that says why: see the
+											// layout effect above).
+											if (!byKeyboard || !moved) return;
+											// The screen moved, and the step is gone (the panel itself is drawn anew beside another page, a moment
+											// later): the focus goes to the panel's box once that is drawn. Nothing is moved once the person
+											// does something of their own.
+											let frames = 0;
+											const theirs = () => {
+												frames = FOCUS_FRAMES;
+											};
+											addEventListener("keydown", theirs, true);
+											addEventListener("pointerdown", theirs, true);
+											const place = () => {
+												frames += 1;
+												const on = document.activeElement;
+												const lost = !on || on === document.body || !on.isConnected;
+												const to = document.querySelector<HTMLElement>("[data-slot=chat-input] textarea");
+												if (lost && to) to.focus();
+												if (frames < FOCUS_FRAMES) return void requestAnimationFrame(place);
+												removeEventListener("keydown", theirs, true);
+												removeEventListener("pointerdown", theirs, true);
+											};
+											requestAnimationFrame(place);
+										}}
+									>
+										{t("panel.saveAndOpen")}
+									</Button>
+								);
+								// Saved, and the screen still did not move (the entry is gone meanwhile): the note says why, with the step in
+								// it, as every reason under an answer does (noteOf).
+								return assistant.moveRefused ? (
+									<ErrorNote title={t(`panel.move.${assistant.moveRefused}`)} actions={step} />
+								) : (
+									<Inline>{step}</Inline>
+								);
+							})()
+						: null}
 				</Stack>
 				{words !== "" && !running ? (
 					<ChatMessageActions author="assistant">

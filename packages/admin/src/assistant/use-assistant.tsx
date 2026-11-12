@@ -11,7 +11,7 @@ import type {
 import type { Message, ModelList } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useUnsavedChanges } from "../draft/leave-guard";
+import { useSaveUnsaved, useUnsavedChanges } from "../draft/leave-guard";
 import { useAdmin } from "../operations/admin-context";
 import { NO_ANSWER } from "../operations/transport";
 import type { Route } from "../route";
@@ -40,6 +40,9 @@ export type Turn = {
 
 /** Words that wait to be asked, with a name of their own: what is done to one finds it whatever was added or taken meanwhile. */
 export type Queued = { id: string; text: string };
+
+/** Why a screen tool did not move the screen: the open screen has unsaved changes, the entry is not there, or the screen cannot do it. */
+export type MoveRefusal = "unsaved" | "noEntry" | "cannot";
 
 type Place = NonNullable<Conversation["earlier"]>;
 type ScreenCall = { id: string; name: string; input: unknown };
@@ -172,6 +175,12 @@ type AssistantValue = {
 	chips: ContextChip[];
 	removeChip: (id: ContextChip["id"]) => void;
 	setScreen: (context: ScreenContext | null) => void;
+	/** The assistant asked the screen to move and it did not, for its unsaved changes, which can be saved from here. */
+	blockedMove: boolean;
+	/** Saves the open screen and then does what the assistant had asked of it (flow 2·05). `true` only when the screen moved. */
+	saveAndOpen: () => Promise<boolean>;
+	/** Why the screen did not move after its save went through, to say under the answer. */
+	moveRefused: MoveRefusal | null;
 	/** Counts the proposals' changes as the run reports them, so a card reads its proposal again. */
 	proposalTick: number;
 	touchProposals: () => void;
@@ -226,16 +235,39 @@ export function useScreenContext(context: ScreenContext | null) {
 export function AssistantProvider({
 	go,
 	leave,
+	at,
 	children,
 }: {
 	/** Moves the screen at once: the assistant's own moves, made only when nothing is unsaved. */
 	go: (route: Route) => void;
 	/** Moves the screen as a person's press does: it asks first when something is unsaved. */
 	leave: (go: () => void) => void;
+	/** The address of the screen that is open: what the assistant asked of one screen is not done on another. */
+	at: string;
 	children: ReactNode;
 }) {
 	const { transport, streams, screen, t, wrote } = useAdmin();
 	const unsaved = useUnsavedChanges();
+	const saving = useSaveUnsaved();
+	// What the assistant last asked the screen to do and the screen did not, for its unsaved changes: the step "save and open" takes. It
+	// is of the screen it was asked on, and of the request it was asked in: a new request, another conversation or another screen ends it.
+	type Step = { call: ScreenCall; at: string };
+	const [blocked, setBlockedState] = useState<Step | null>(null);
+	const step = useRef<Step | null>(null);
+	/** Why the step's move did not happen after its save went through, in the panel's words. */
+	const [moveRefused, setMoveRefused] = useState<MoveRefusal | null>(null);
+	const setBlocked = useCallback((next: Step | null) => {
+		step.current = next;
+		setBlockedState(next);
+		setMoveRefused(null);
+	}, []);
+	const here_ = useRef(at);
+	here_.current = at;
+	// While the step's own save is under way the screen may move by that save (a new template goes to its own page): that is not leaving.
+	const savingStep = useRef(false);
+	useEffect(() => {
+		if (step.current && step.current.at !== at && !savingStep.current) setBlocked(null);
+	}, [at, setBlocked]);
 	const [available, setAvailable] = useState<boolean | null>(null);
 	const [state, setState] = useState<AssistantState | null>(null);
 	const [open, setOpenState] = useState(() => kept().open);
@@ -654,25 +686,61 @@ export function AssistantProvider({
 	 * screen is about to move (the person may have stopped the run, or opened another conversation, while the entry was read).
 	 */
 	const runScreenTool = useCallback(
-		async (tool: ScreenCall, called: () => boolean): Promise<{ id: string; output?: unknown; error?: string }> => {
+		async (
+			tool: ScreenCall,
+			called: () => boolean,
+		): Promise<{ id: string; output?: unknown; error?: string; why?: MoveRefusal }> => {
 			// One guard for every screen tool: a screen with unsaved changes does not move, and nothing is asked. The assistant is told, and
 			// tells the person.
-			if (unsaved() > 0) return { id: tool.id, error: "The screen has unsaved changes, so it did not move." };
+			if (unsaved() > 0) {
+				// Kept, for "save and open": only when what is unsaved can be saved from here.
+				if (called() && saving.can()) setBlocked({ call: tool, at: here_.current });
+				return { id: tool.id, error: "The screen has unsaved changes, so it did not move.", why: "unsaved" };
+			}
+			const stopped = { id: tool.id, error: "The run was stopped before the screen moved.", why: "cannot" as const };
 			if (tool.name === "screen.openEntry") {
 				const entryId = (tool.input as { id?: string } | null)?.id ?? "";
 				const read = await call<{ entry: { collection: string; title: string } }>("entries.get", { id: entryId });
-				if (!read.ok) return { id: tool.id, error: "There is no such entry." };
-				if (!called()) return { id: tool.id, error: "The run was stopped before the screen moved." };
+				if (!read.ok) return { id: tool.id, error: "There is no such entry.", why: "noEntry" };
+				if (!called()) return stopped;
 				go({ screen: "entry", collection: read.body.entry.collection, id: entryId });
 				return { id: tool.id, output: { opened: read.body.entry.title } };
 			}
-			if (!called()) return { id: tool.id, error: "The run was stopped before the screen moved." };
+			if (!called()) return stopped;
 			return screen.run(tool.name, tool.input)
 				? { id: tool.id, output: { done: true } }
-				: { id: tool.id, error: "The screen that is open cannot do that." };
+				: { id: tool.id, error: "The screen that is open cannot do that.", why: "cannot" };
 		},
-		[screen, unsaved, call, go],
+		[screen, unsaved, call, go, saving, setBlocked],
 	);
+	/**
+	 * "Save and open": saves the open screen with its own save, then does what the assistant had asked of it. `true` only when the screen
+	 * moved. It does not move when the save was refused (the screen says so itself), when something was typed while it was saved (the page
+	 * stays with it, and the step stays), when a new request, another conversation or another screen ended the step meanwhile, or when the
+	 * move itself is refused (the entry is gone): that is said under the answer, and the step stays.
+	 */
+	const saveAndOpen = useCallback(async () => {
+		const asked = step.current;
+		if (!asked) return false;
+		setMoveRefused(null);
+		// Through the save and the move: either may change the screen's address (a new template goes to its own page, the move goes
+		// where it was asked), and that is the step's own doing, not the person leaving the screen.
+		savingStep.current = true;
+		try {
+			const outcome = await saving.save();
+			if (outcome !== "saved" || step.current !== asked) return false;
+			const moved = await runScreenTool(asked.call, () => step.current === asked);
+			if (step.current !== asked) return false;
+			if (moved.error !== undefined) {
+				setMoveRefused(moved.why ?? "cannot");
+				return false;
+			}
+			setBlocked(null);
+			return true;
+		} finally {
+			savingStep.current = false;
+		}
+	}, [saving, runScreenTool, setBlocked]);
 
 	/**
 	 * Reads a run that is going without this page listening (another tab has it, or its request was cut), until it is no longer going; then
@@ -761,6 +829,7 @@ export function AssistantProvider({
 			here.cuts = 0;
 			here.stopAsked = false;
 			here.asked.add(id);
+			setBlocked(null);
 			// The model a request goes with is the conversation's from then on, as the server keeps it: if it goes, the panel can say so.
 			if (chosen) setPicked(chosen);
 			void listen(
@@ -775,7 +844,7 @@ export function AssistantProvider({
 				here,
 			);
 		},
-		[listen, chipLabels],
+		[listen, chipLabels, setBlocked],
 	);
 
 	later.current = { ...later.current, ask, watch, runScreenTool };
@@ -843,12 +912,13 @@ export function AssistantProvider({
 			setForgotten(0);
 			setRequests(0);
 			setLoading(id !== null);
+			setBlocked(null);
 			setConversationId(id);
 			keep({ conversation: id });
 			setView("chat");
 			return here;
 		},
-		[setQueue],
+		[setQueue, setBlocked],
 	);
 
 	const fresh = useCallback(() => {
@@ -1050,6 +1120,9 @@ export function AssistantProvider({
 		chips,
 		removeChip: (id) => setRemoved((was) => new Set([...was, id])),
 		setScreen,
+		blockedMove: blocked !== null,
+		saveAndOpen,
+		moveRefused,
 		proposalTick,
 		touchProposals: () => setProposalTick((tick) => tick + 1),
 		openReview: (id) => leave(() => go({ screen: "review", id })),
