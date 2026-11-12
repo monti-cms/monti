@@ -1,5 +1,6 @@
 # Automated checks. On every push: lint, design and doc checks, type check, unused code, package build, the design review's record, the core and
-# admin tests on Postgres, and the browser tests (L3 parts and L4 screens in Chromium).
+# admin tests on Postgres, the browser tests (L3 parts and L4 screens in Chromium), and the release's proof: a fresh site installed from the
+# packed tarballs.
 name: CI
 
 # Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
@@ -50,6 +51,10 @@ jobs:
       # Files and exports of the packages that nothing uses.
       - run: pnpm knip
       - run: pnpm build
+      # The release bundle (doc 20): what the pack script makes and refuses to make, then two of the release's gates on the built packages:
+      # publint and arethetypeswrong on every tarball. The third gate, a fresh site, is its own job below.
+      - run: node --test scripts/pack-release.test.mjs
+      - run: pnpm check:packages
       # The admin's prebuilt stylesheet touches nothing outside the admin: every rule under the admin's document, only its own names (doc 16).
       - run: node --test scripts/build-styles.test.mjs
 
@@ -124,6 +129,52 @@ jobs:
           cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
       # L3: one part of @monti-cms/ui; L4: admin screens on a site in the browser (PGlite), driven with real input (docs/testing.md).
       - run: pnpm test:browser
+
+  release:
+    name: release proof
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: monti_test
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: playwright
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-apt
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - run: |
+          if ls ~/.cache/playwright-apt/*.deb >/dev/null 2>&1; then sudo cp ~/.cache/playwright-apt/*.deb /var/cache/apt/archives/; fi
+          pnpm exec playwright install --with-deps chromium
+          mkdir -p ~/.cache/playwright-apt
+          cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
+      - run: pnpm build
+      # Doc 20, 20-3: a new Next app outside this workspace installs the packed tarballs with npm, builds, starts, and a browser opens its
+      # admin (scripts/try-release.mjs). It makes a database of its own on this server and drops it.
+      - run: node scripts/try-release.mjs --shot "$RUNNER_TEMP/release-proof/admin.png"
+        env:
+          CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/monti_test
+      # The browser's picture of the admin, whether the proof passed or not.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-proof
+          path: ${{ runner.temp }}/release-proof
+          if-no-files-found: ignore
 
   e2e:
     name: e2e flows

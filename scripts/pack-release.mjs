@@ -9,7 +9,8 @@
  * name each other by the bundle's own address (`<base>/monti-cms-core-0.2.0.tgz`) instead of a version number, so a site installs from the bundle
  * alone: the versions are on no registry until the packages are published. Without it the tarballs are the ones for a registry.
  *
- * It stops when the versions differ, when a package's `exports` name a file the tarball does not hold, or when sources, tests or stories got in.
+ * It stops when the versions differ, when a package's `exports` name a file the tarball does not hold, when sources, tests or stories got in,
+ * or when a file that says `"use client"` in the source no longer starts with it in the tarball (a Next site tells server from browser by it).
  */
 import { execFileSync } from "node:child_process";
 import {
@@ -62,6 +63,30 @@ export function namedFiles(manifest) {
 export const unwanted = (files) =>
 	files.filter((file) => /^src\/|\.test\.[cm]?[jt]sx?$|\.stories\.[jt]sx?$|(^|\/)__screenshots__\//.test(file));
 
+const CLIENT = /^\s*(?:\/\/[^\n]*\n|\/\*[\s\S]*?\*\/\s*)*["']use client["']/;
+
+/** Whether a file's first statement is `"use client"` (comments may come before it). */
+export const saysClient = (text) => CLIENT.test(text);
+
+/**
+ * The built files (`dist/x.js`) whose source (`src/x.ts`, `src/x.tsx`) says `"use client"` and that no longer start with it: a bundler or a
+ * build step that dropped the line turns a browser component into a server one in the site.
+ */
+export function lostClient(packageDir, unpacked) {
+	const src = path.join(packageDir, "src");
+	if (!existsSync(src)) return [];
+	return filesUnder(src)
+		.filter(
+			(file) =>
+				/\.tsx?$/.test(file) && !/\.d\.ts$/.test(file) && saysClient(readFileSync(path.join(src, file), "utf8")),
+		)
+		.map((file) => `dist/${file.replace(/\.tsx?$/, ".js")}`)
+		.filter(
+			(built) =>
+				existsSync(path.join(unpacked, built)) && !saysClient(readFileSync(path.join(unpacked, built), "utf8")),
+		);
+}
+
 function filesUnder(dir, prefix = "") {
 	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
 		entry.isDirectory()
@@ -109,6 +134,9 @@ export function packRelease({ root, out, base }) {
 				throw new Error(`${pkg.name}: the tarball has no ${lost.join(", ")} (build the packages first: pnpm build)`);
 			const extra = unwanted(files);
 			if (extra.length > 0) throw new Error(`${pkg.name}: the tarball holds ${extra.slice(0, 5).join(", ")}`);
+			const server = lostClient(dir, unpacked);
+			if (server.length > 0)
+				throw new Error(`${pkg.name}: "use client" is gone from ${server.slice(0, 5).join(", ")} (the source says it)`);
 			if (base) writeFileSync(manifestFile, `${JSON.stringify(withBundleAddresses(manifest, base), null, "\t")}\n`);
 			// The license lives once at the repo root: every package carries a copy.
 			copyFileSync(path.join(root, "LICENSE"), path.join(unpacked, "LICENSE"));
@@ -117,7 +145,11 @@ export function packRelease({ root, out, base }) {
 			execFileSync("tar", ["-czf", path.join(out, name), "-C", packed, "package"], {
 				env: { ...process.env, COPYFILE_DISABLE: "1" },
 			});
-			made.push({ name: pkg.name, tarball: name });
+			// The entries that are not code (a stylesheet): a check of types leaves them out.
+			const notCode = Object.entries(manifest.exports ?? {})
+				.filter(([, target]) => typeof target === "string" && !/\.[cm]?js$/.test(target))
+				.map(([entry]) => entry);
+			made.push({ name: pkg.name, tarball: name, notCode });
 			console.log(`${pkg.name}@${version} → ${name}`);
 		}
 	} finally {
@@ -125,7 +157,8 @@ export function packRelease({ root, out, base }) {
 	}
 
 	const where = (tarball) => (base ? `${base.replace(/\/$/, "")}/${tarball}` : `./${tarball}`);
-	const site = made.filter(({ name }) => /\/(core|admin|next)$/.test(name));
+	// What a Next site installs, the core first; the rest of the bundle follows from these.
+	const site = ["core", "admin", "next"].flatMap((short) => made.filter(({ name }) => name === `${SCOPE}${short}`));
 	writeFileSync(
 		path.join(out, "README.md"),
 		`# Monti ${version}
