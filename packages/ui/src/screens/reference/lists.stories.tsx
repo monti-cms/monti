@@ -80,6 +80,8 @@ export const EventsCancelConfirm: Story = { render: () => <EventsScreen stage="c
 export const EventsCanceled: Story = { render: () => <EventsScreen stage="canceled" /> };
 /** Three failed deliveries: a banner at the top of the page offers to send them all (12·05). */
 export const EventsThreeFailed: Story = { render: () => <EventsScreen stage="threeFailed" /> };
+/** One publish neither receiver got: its row says how many deliveries failed, and the banner and the sidebar count deliveries (three). */
+export const EventsTwoOnOneRow: Story = { render: () => <EventsScreen stage="twoOnOneRow" /> };
 /** All of them are being sent again: the banner and the rows say so (12·06). */
 export const EventsRetryingAll: Story = { render: () => <EventsScreen stage="retryingAll" /> };
 /** All arrived: no banner, no counts, and a toast with how many (12·07). */

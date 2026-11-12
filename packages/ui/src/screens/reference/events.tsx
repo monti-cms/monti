@@ -76,6 +76,7 @@ export type EventsStage =
 	| "cancelConfirm"
 	| "canceled"
 	| "threeFailed"
+	| "twoOnOneRow"
 	| "retryingAll"
 	| "allSent"
 	| "someFailed"
@@ -85,8 +86,11 @@ export type EventsStage =
 	| "pages"
 	| "loadFailed";
 
-/** How a line's deliveries came out, as its delivery cell says it. */
-type Delivery = { failed: number } | "pending" | "sent" | "canceled";
+/**
+ * How a line's deliveries came out, as its delivery cell says it. A failure has how many times its delivery was tried (`failed`, said beside
+ * that delivery in the panel) and, when more than one of the line's deliveries failed, how many did (`deliveries`, said in the cell).
+ */
+type Delivery = { failed: number; deliveries?: number } | "pending" | "sent" | "canceled";
 type Line = {
 	id: string;
 	time: string;
@@ -189,6 +193,16 @@ const THREE_FAILED: readonly Line[] = [
 	...LINES.slice(8),
 ];
 
+/** A publish neither receiver got: two failed deliveries on one row. With the first story's one, three. */
+const TWO_ON_ONE_ROW: Line = {
+	id: "both",
+	time: "10. 26 11:02",
+	what: '"두 곳에 못 간 글" 발행',
+	where: "post/two-failed",
+	undo: "open",
+	delivery: { failed: 1, deliveries: 2 },
+};
+
 const isFailed = (line: Line) => typeof line.delivery === "object";
 const withDelivery = (lines: readonly Line[], change: (line: Line) => Delivery | undefined): Line[] =>
 	lines.map((line) => ({ ...line, delivery: change(line) }));
@@ -208,6 +222,8 @@ function linesOf(stage: EventsStage): Line[] {
 			return withDelivery(LINES, (line) => (line.id === "publish" ? "canceled" : line.delivery));
 		case "threeFailed":
 			return [...THREE_FAILED];
+		case "twoOnOneRow":
+			return [TWO_ON_ONE_ROW, ...LINES];
 		case "retryingAll":
 			return withDelivery(THREE_FAILED, (line) => (isFailed(line) ? "pending" : line.delivery));
 		case "allSent":
@@ -237,6 +253,7 @@ const FAILED_COUNT: Partial<Record<EventsStage, number>> = {
 	detailGone: 1,
 	cancelConfirm: 1,
 	threeFailed: 3,
+	twoOnOneRow: 3,
 	retryingAll: 3,
 	someFailed: 1,
 	searched: 1,
@@ -288,8 +305,16 @@ function DeliveryCell({ delivery, whole = false }: { delivery?: Delivery; whole?
 				취소됨
 			</EntryStatus>
 		);
-	// The list says "failed"; how many times it was tried is said beside the delivery, in the panel.
-	return <EntryStatus status="failed">{whole ? `${delivery.failed}번 실패` : "실패"}</EntryStatus>;
+	// The list says "failed", or how many of the line's deliveries did. How many times one was tried is said beside that delivery, in the
+	// panel, from the second try on: one try that failed is "failed" there too.
+	const words = whole
+		? delivery.failed > 1
+			? `${delivery.failed}번 실패`
+			: "실패"
+		: (delivery.deliveries ?? 1) > 1
+			? `${delivery.deliveries}건 실패`
+			: "실패";
+	return <EntryStatus status="failed">{words}</EntryStatus>;
 }
 
 /**
@@ -464,12 +489,12 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 					<Stack gap={20}>
 						<Stack gap={8} align="start">
 							<DescriptionList>
-								<DescriptionItem label="받는 곳">example.dev/api/revalidate</DescriptionItem>
+								<DescriptionItem label="받는 곳">사이트 캐시</DescriptionItem>
 								<DescriptionItem label="이벤트" mono>
 									entry.published
 								</DescriptionItem>
 								<DescriptionItem label="상태">
-									<DeliveryCell delivery={canceled ? "canceled" : { failed: 3 }} />
+									<DeliveryCell delivery={canceled ? "canceled" : { failed: 3 }} whole />
 								</DescriptionItem>
 								<DescriptionItem label="마지막 오류" mono>
 									503 Service Unavailable
@@ -492,7 +517,7 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 							)}
 						</Stack>
 						<DescriptionList>
-							<DescriptionItem label="받는 곳">example.dev/api/search</DescriptionItem>
+							<DescriptionItem label="받는 곳">search.example.dev</DescriptionItem>
 							<DescriptionItem label="이벤트" mono>
 								entry.published
 							</DescriptionItem>
@@ -746,7 +771,7 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 						<AlertDialogHeader>
 							<AlertDialogTitle>이 전송을 취소할까요?</AlertDialogTitle>
 							<AlertDialogDescription>
-								<Text>example.dev/api/revalidate</Text>
+								<Text>사이트 캐시</Text>
 								<br />
 								다시 보내지 않습니다. 되돌릴 수 없습니다.
 							</AlertDialogDescription>
