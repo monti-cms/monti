@@ -7,7 +7,7 @@ import { defineOperation, type OperationContext } from "../operation";
 import { defineRecordKind, lockRecords } from "../records";
 import type { Site } from "../site";
 import { seal, unseal } from "./seal";
-import { checkKey, KEY_LENGTH_THAT_MATTERS, type KeyCheck, type KeyService, type Model } from "./services";
+import { checkKey, KEY_LENGTH_THAT_MATTERS, type KeyService, type Model } from "./services";
 
 type Db = Kysely<Database> | Transaction<Database>;
 type KeyRecord = Selectable<ApiKeyTable>;
@@ -193,20 +193,24 @@ async function mustBeFree(ctx: OperationContext, name: string, except?: string) 
 	if (taken && taken.id !== except) throw new CheckError({ key: "keys.nameTaken", values: { name } });
 }
 
-/** The checks of a site that are on their way, by key and its sealed value: calls that want the same list at the same moment share one. */
-const onTheirWay = new WeakMap<Site, Map<string, Promise<KeyCheck>>>();
+/**
+ * The refreshes of a site that are on their way, by key and its sealed value: calls that want the same list at the same moment share one. A refresh
+ * is the question to the service and the write of its answer (or of its failure's time): it is shared until the row says what came of it, so a call
+ * that arrives while the write waits does not read the old row and ask again.
+ */
+const onTheirWay = new WeakMap<Site, Map<string, Promise<void>>>();
 
-function sharedCheck(site: Site, key: KeyRecord, check: () => Promise<KeyCheck>): Promise<KeyCheck> {
-	let checks = onTheirWay.get(site);
-	if (!checks) {
-		checks = new Map();
-		onTheirWay.set(site, checks);
+function sharedRefresh(site: Site, key: KeyRecord, refresh: () => Promise<void>): Promise<void> {
+	let refreshes = onTheirWay.get(site);
+	if (!refreshes) {
+		refreshes = new Map();
+		onTheirWay.set(site, refreshes);
 	}
 	const name = `${key.id}\n${key.secret}`;
-	const running = checks.get(name);
+	const running = refreshes.get(name);
 	if (running) return running;
-	const started = check().finally(() => checks.delete(name));
-	checks.set(name, started);
+	const started = refresh().finally(() => refreshes.delete(name));
+	refreshes.set(name, started);
 	return started;
 }
 
@@ -419,23 +423,23 @@ export const keyOperations = [
 					if (!input.refresh && (fresh || failedLately)) return;
 					const plain = await opened(secret, key);
 					if (plain === null) return;
-					const checked = await sharedCheck(ctx.site, key, () =>
-						checkKey(service, { secret: plain, baseUrl: key.base_url }, ctx.site.fetch),
-					);
-					// The answer belongs to the key and address it was asked with: when the key was changed while the service answered, the answer is
-					// dropped, and what the change stored stays.
-					await ctx.db
-						.updateTable("api_keys")
-						.set(
-							checked.ok
-								? { models: JSON.stringify(checked.models), models_at: now, models_failed_at: null }
-								: // A service that does not answer, or answers what cannot be read, keeps the list it gave last.
-									{ models_failed_at: now },
-						)
-						.where("id", "=", key.id)
-						.where("secret", "=", key.secret)
-						.where("base_url", "is not distinct from", key.base_url)
-						.execute();
+					await sharedRefresh(ctx.site, key, async () => {
+						const checked = await checkKey(service, { secret: plain, baseUrl: key.base_url }, ctx.site.fetch);
+						// The answer belongs to the key and address it was asked with: when the key was changed while the service answered, the answer
+						// is dropped, and what the change stored stays.
+						await ctx.db
+							.updateTable("api_keys")
+							.set(
+								checked.ok
+									? { models: JSON.stringify(checked.models), models_at: now, models_failed_at: null }
+									: // A service that does not answer, or answers what cannot be read, keeps the list it gave last.
+										{ models_failed_at: now },
+							)
+							.where("id", "=", key.id)
+							.where("secret", "=", key.secret)
+							.where("base_url", "is not distinct from", key.base_url)
+							.execute();
+					});
 				}),
 			);
 			// Read again: what is listed is what is stored now, not what this call happened to hear.

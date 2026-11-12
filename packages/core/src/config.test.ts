@@ -30,6 +30,12 @@ describe("the site's secret, from its config or MONTI_SECRET", () => {
 		expect(await secretOf({ secret: "from-the-config" })).toBe("from-the-config");
 	});
 
+	it("14-4 a secret that is set is used byte for byte, the spaces around it too: what it signed and sealed still opens", async () => {
+		process.env.MONTI_SECRET = " from the environment ";
+		expect(await secretOf({ secret: " secret " })).toBe(" secret ");
+		expect(await secretOf({ secret: "  " })).toBe(" from the environment ");
+	});
+
 	it("14-4 blank in both is no secret at all", async () => {
 		process.env.MONTI_SECRET = "  ";
 		expect(await secretOf({ secret: " " })).toBeNull();

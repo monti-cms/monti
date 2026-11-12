@@ -590,6 +590,29 @@ describe("two changes of one key (review 2)", () => {
 		expect(await monti.keys.open(output.id)).toMatchObject({ secret: A, name: "renamed" });
 	});
 
+	it("14-4 a change sent with an old version is a conflict before anything is asked: the key that took its place goes nowhere", async () => {
+		const monti = site();
+		const servers = twoServers();
+		servers.letGo();
+		const { output } = await add(monti, {
+			service: "openai-compatible",
+			name: "x.test",
+			secret: A,
+			baseUrl: "http://x.test/v1",
+		});
+		// Another tab replaced the key and moved it to Y.
+		await monti.run("keys.update", { id: output.id, secret: B, baseUrl: "http://y.test/v1" }, admin);
+		net.state.requests.length = 0;
+		// The tab that still shows the old key at X saves its address field, with the version it read.
+		const stale = { actor: "admin", versions: { [`key:${output.id}`]: 1 } } as const;
+		expect(await settled(monti.run("keys.update", { id: output.id, baseUrl: "http://x.test/v1" }, stale))).toBe(
+			"conflict",
+		);
+		// Nothing was asked of any service: B never left for X.
+		expect(net.state.requests).toEqual([]);
+		expect(await monti.keys.open(output.id)).toMatchObject({ secret: B, baseUrl: "http://y.test/v1" });
+	});
+
 	it("14-4 ten changes of one key at once: each either lands on the version it read or is a conflict, never both lost and counted", async () => {
 		const monti = site();
 		twoServers().letGo();
@@ -907,6 +930,46 @@ describe("a service that is slow or down (review B)", () => {
 		const before = anthropicRequests();
 		await models(monti, { refresh: true });
 		expect(anthropicRequests()).toBe(before + 1);
+	});
+
+	it("14-1 a call that arrives while a refresh is being written joins it, and does not ask the service again", async () => {
+		const monti = site();
+		await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		clock = new Date(clock.getTime() + 25 * 3_600_000);
+		const before = anthropicRequests();
+		// The key's row is held, so the refresh's write waits after the service has answered.
+		let release = () => {};
+		const released = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		let held = () => {};
+		const holding = new Promise<void>((resolve) => {
+			held = resolve;
+		});
+		const holder = db.transaction().execute(async (trx) => {
+			await trx.selectFrom("api_keys").select("id").forUpdate().execute();
+			held();
+			await released;
+		});
+		await holding;
+
+		const first = models(monti);
+		let second = first;
+		let whileWaiting = -1;
+		try {
+			while (anthropicRequests() === before) await sleep(10);
+			await sleep(150);
+			second = models(monti);
+			await sleep(300);
+			whileWaiting = anthropicRequests();
+		} finally {
+			// Whatever was found, the row is let go: the next test needs the table.
+			release();
+			await Promise.all([first, second, holder]);
+		}
+		expect(whileWaiting).toBe(before + 1);
+		expect(anthropicRequests()).toBe(before + 1);
+		expect(await first).toEqual(await second);
 	});
 
 	it("14-1 calls that want the same stale list at the same moment share one check", async () => {

@@ -11,24 +11,61 @@ export type CliIo = {
 /** How a secret input is given on the command line: `--secret -`, then the secret on standard input. */
 const FROM_STANDARD_INPUT = "-";
 
-/** `--key value` pairs as an input object. A value that reads as JSON is JSON; a key given more than once is a list. */
-function parseFlags(args: string[]): Record<string, unknown> {
-	const input: Record<string, unknown> = {};
+type Flag = { name: string; raw: string };
+
+/**
+ * The arguments as `--name value` pairs, in order. An error names an argument by its place and never by what was typed: an error that echoes the
+ * command line echoes a key someone put on it by mistake.
+ */
+function flagsOf(args: string[]): Flag[] {
+	const flags: Flag[] = [];
 	for (let index = 0; index < args.length; index += 1) {
 		const flag = args[index];
-		if (!flag.startsWith("--")) throw new Error(`Expected --name value, got "${flag}".`);
+		if (!flag.startsWith("--"))
+			throw new Error(`Argument ${index + 1} is not a --name: arguments come as --name value.`);
 		const [name, inline] = flag.slice(2).split(/=(.*)/s, 2);
 		const raw = inline ?? args[++index];
-		if (raw === undefined) throw new Error(`--${name} has no value.`);
-		let value: unknown = raw;
-		try {
-			value = JSON.parse(raw);
-		} catch {}
+		if (raw === undefined) throw new Error(`Argument ${index} has no value: arguments come as --name value.`);
+		flags.push({ name, raw });
+	}
+	return flags;
+}
+
+const parsed = (raw: string): unknown => {
+	try {
+		return JSON.parse(raw);
+	} catch {
+		return raw;
+	}
+};
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** The pairs as an input object. A value that reads as JSON is JSON; a key given more than once is a list; `--input` gives the object itself. */
+function inputOf(flags: Flag[]): Record<string, unknown> {
+	const input: Record<string, unknown> = {};
+	for (const { name, raw } of flags) {
+		const value = parsed(raw);
 		if (name === "input" && typeof value === "object" && value !== null) Object.assign(input, value);
 		else if (name in input) input[name] = [...([] as unknown[]).concat(input[name]), value];
 		else input[name] = value;
 	}
 	return input;
+}
+
+/**
+ * Whether a secret input was put on the command line, looked at on the arguments as they were typed, before anything is merged: its one allowed
+ * form is `--secret -`, once, and never inside `--input`.
+ */
+function secretOnTheLine(flags: Flag[], secret: string): "none" | "standard input" | "typed" {
+	const given = flags.filter((flag) => flag.name === secret);
+	const inJson = flags.some((flag) => {
+		const value = flag.name === "input" ? parsed(flag.raw) : null;
+		return isObject(value) && secret in value;
+	});
+	if (inJson || given.length > 1 || given.some((flag) => flag.raw !== FROM_STANDARD_INPUT)) return "typed";
+	return given.length === 1 ? "standard input" : "none";
 }
 
 /**
@@ -43,11 +80,13 @@ export async function runCli(monti: Monti, argv: string[], io: CliIo): Promise<n
 		return 0;
 	}
 	try {
-		const input = parseFlags(rest);
+		const flags = flagsOf(rest);
 		// A secret (a service key) is never an argument: the shell's history and the process list would keep it. `--secret -` reads it instead.
-		for (const secret of monti.operations.get(name)?.secretInputs ?? []) {
-			if (!(secret in input)) continue;
-			if (input[secret] !== FROM_STANDARD_INPUT || !io.secret) {
+		const secrets = monti.operations.get(name)?.secretInputs ?? [];
+		const fromStandardInput: string[] = [];
+		for (const secret of secrets) {
+			const how = secretOnTheLine(flags, secret);
+			if (how === "typed" || (how === "standard input" && !io.secret)) {
 				io.err(
 					JSON.stringify(
 						{ error: `--${secret} is not given as an argument: write --${secret} - and give it on standard input.` },
@@ -57,8 +96,10 @@ export async function runCli(monti: Monti, argv: string[], io: CliIo): Promise<n
 				);
 				return 1;
 			}
-			input[secret] = await io.secret(secret);
+			if (how === "standard input") fromStandardInput.push(secret);
 		}
+		const input = inputOf(flags);
+		for (const secret of fromStandardInput) input[secret] = await io.secret?.(secret);
 		const result = await monti.run(name, input, { actor: "cli" });
 		io.out(JSON.stringify(result, null, 2));
 		return 0;

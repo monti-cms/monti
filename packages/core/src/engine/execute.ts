@@ -122,23 +122,33 @@ export async function runWrite<Output>(
 		throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: operation.name } });
 	const input = parseInput(operation, rawInput);
 	const activityId = randomUUID();
-	// Before the transaction, with no connection held: a write that asks another service does it here (a key's check can take ten seconds).
-	const prepared = await operation.prepare?.(
-		input,
-		context(engine, engine.db, options.actor, options.session ?? null).ctx,
-	);
+	/** Refuses the write when a record it touches is not at the version the caller read. */
+	const mustBeAsRead = (touched: RecordRef[], states: Map<string, RecordState | null>) => {
+		const conflicts = touched.flatMap((ref) => {
+			const expected = options.versions?.[recordKey(ref)];
+			const actual = states.get(recordKey(ref))?.version ?? null;
+			return expected === undefined || expected === actual ? [] : [{ ref, expected, actual }];
+		});
+		if (conflicts.length > 0) throw new ConflictError(conflicts);
+	};
+	let prepared: unknown;
+	if (operation.prepare) {
+		const { ctx } = context(engine, engine.db, options.actor, options.session ?? null);
+		// A caller whose reading is old is told so before anything is prepared: `prepare` may send what the record holds now to another service
+		// (a key to the address the stale caller named). The transaction compares the versions again, under its locks.
+		if (options.versions) {
+			const touched = unique((await operation.touches?.(input, ctx)) ?? []);
+			mustBeAsRead(touched, await loadRecords(engine, engine.db, touched));
+		}
+		// Before the transaction, with no connection held: a write that asks another service does it here (a key's check can take ten seconds).
+		prepared = await operation.prepare(input, ctx);
+	}
 	return engine.db.transaction().execute(async (trx) => {
 		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 		await lockRecords(trx, touched);
 		const before = await loadRecords(engine, trx, touched);
-
-		const conflicts = touched.flatMap((ref) => {
-			const expected = options.versions?.[recordKey(ref)];
-			const actual = before.get(recordKey(ref))?.version ?? null;
-			return expected === undefined || expected === actual ? [] : [{ ref, expected, actual }];
-		});
-		if (conflicts.length > 0) throw new ConflictError(conflicts);
+		mustBeAsRead(touched, before);
 
 		await operation.check?.(input, ctx, prepared);
 		const output = (await operation.run(input, ctx, prepared)) as Output;
