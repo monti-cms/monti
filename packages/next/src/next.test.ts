@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 /** When an event of these tests was emitted, and the signal a sender passes with it. */
 const AT = "2026-11-12T00:00:00.000Z";
 const signal = new AbortController().signal;
+const TRY = { id: "delivery-1", attempt: 1 };
 
 // Next's own functions, replaced by stand-ins that write down what was asked: the real ones need a Next request around them. The example app's
 // flows try the real ones (testing/e2e).
@@ -78,6 +79,7 @@ vi.mock("@monti-cms/core", () => ({
 			site: { schema: () => ({}), secret: null, storage: null },
 			config,
 			root,
+			reuse,
 		};
 		core.opened.push(monti);
 		return monti;
@@ -303,7 +305,7 @@ describe("reading an entry for a page", () => {
 
 describe("the site's cache and which server this is", () => {
 	it("16-3 a change the site shows refreshes every cached page; a save alone, a new file and the admin's own values refresh nothing; an event nobody knows refreshes", async () => {
-		const event = (type: string): MontiEvent => ({ type, at: AT, ids: ["e1"] });
+		const event = (type: string): MontiEvent => ({ id: "event-1", type, at: AT, ids: ["e1"] });
 		const shown = [
 			"entry.published",
 			"entry.unpublished",
@@ -318,14 +320,14 @@ describe("the site's cache and which server this is", () => {
 		).toEqual([]);
 		// A later feature's event is not one of the two that are safe to skip.
 		expect(cacheReceiver.accepts?.(event("schema.applied"))).toBe(true);
-		await cacheReceiver.send(event("entry.published"), signal);
+		await cacheReceiver.send(event("entry.published"), signal, TRY);
 		expect(next.revalidated).toEqual([["/", "layout"]]);
 	});
 
 	it("16-3 the pages are marked once more two seconds after the answer is sent: a page that was being drawn while the change was made is not kept", async () => {
 		vi.useFakeTimers();
 		try {
-			await cacheReceiver.send({ type: "entry.unpublished", at: AT, ids: ["e1"] }, signal);
+			await cacheReceiver.send({ id: "event-1", type: "entry.unpublished", at: AT, ids: ["e1"] }, signal, TRY);
 			expect(next.revalidated).toHaveLength(1);
 			// After the answer: nothing more yet, then the second mark.
 			const [later] = next.later;
@@ -452,10 +454,28 @@ describe("the site decides how its pages are refreshed", () => {
 	const receiversOf = (opened: unknown) => (opened as Opened).config.receivers;
 	const config = () => ({ schema: {}, database: "postgres://x", dev: false }) as never;
 
+	it("13-1 the sends Monti does not make a caller wait for are kept going after the answer, through Next's after", async () => {
+		openSite(config(), { root: "/kept" });
+		const { waitUntil } = (core.opened.at(-1) as unknown as { reuse: { waitUntil?: (work: Promise<unknown>) => void } })
+			.reuse;
+		// The adapter gives core the host's way to keep work going: without it a serverless host ends with the answer, mid-send.
+		expect(waitUntil).toBeTypeOf("function");
+		next.later = [];
+		let done = false;
+		const work = new Promise<void>((resolve) => setTimeout(resolve, 5)).then(() => {
+			done = true;
+		});
+		waitUntil?.(work);
+		// Handed to `after`, which holds the function open until the work ends.
+		expect(next.later).toHaveLength(1);
+		await next.later[0]?.();
+		expect(done).toBe(true);
+	});
+
 	it("16-3 left alone, the adapter refreshes the whole site; with the site's own function that runs instead, for the same events; with false nothing is added", async () => {
 		openSite(config(), { root: "/own" });
 		const [standard] = receiversOf(core.opened.at(-1));
-		await standard?.send({ type: "entry.published", at: AT, ids: ["e1"] });
+		await standard?.send({ id: "event-1", type: "entry.published", at: AT, ids: ["e1"] });
 		expect(next.revalidated).toEqual([["/", "layout"]]);
 
 		const got: MontiEvent[] = [];
@@ -463,10 +483,10 @@ describe("the site decides how its pages are refreshed", () => {
 		const [own] = receiversOf(core.opened.at(-1));
 		expect(own?.destination).toBe("plugin:next");
 		// The site's function gets what a visitor would see change, and not a save alone.
-		expect(own?.accepts?.({ type: "entry.saved", at: AT, ids: [] })).toBe(false);
+		expect(own?.accepts?.({ id: "event-1", type: "entry.saved", at: AT, ids: [] })).toBe(false);
 		next.revalidated = [];
-		await own?.send({ type: "entry.published", at: AT, ids: ["e1"], paths: ["/posts/a"] });
-		expect(got).toEqual([{ type: "entry.published", at: AT, ids: ["e1"], paths: ["/posts/a"] }]);
+		await own?.send({ id: "event-1", type: "entry.published", at: AT, ids: ["e1"], paths: ["/posts/a"] });
+		expect(got).toEqual([{ id: "event-1", type: "entry.published", at: AT, ids: ["e1"], paths: ["/posts/a"] }]);
 		expect(next.revalidated).toEqual([]);
 
 		openSite(config(), { root: "/own", refresh: false });

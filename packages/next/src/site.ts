@@ -57,6 +57,19 @@ export function refreshSite(): void {
 }
 
 /**
+ * Keeps Monti's background sends going after the response (the deliveries a visit to the admin starts, a write's first send): Next's `after` holds
+ * the function open until the work ends, where a serverless host would otherwise end it with the response and cut a send off before its result
+ * is written. Outside a request (a script that opens the site) there is nothing to hold open and the work simply runs on.
+ */
+function keepGoing(work: Promise<unknown>): void {
+	try {
+		after(() => work);
+	} catch {
+		// Not in a request.
+	}
+}
+
+/**
  * What the site does when Monti says something a visitor sees has changed. Left out, every cached page is marked to be drawn again
  * (`refreshSite`): nothing stays old, at the cost of each page being drawn once more on its next visit. A site that knows which pages show what
  * gives its own function (it gets the event: its type, the entries, their public `paths`), or `false` to do nothing here and listen with a
@@ -117,7 +130,7 @@ export function openSite(
 	const monti = openMonti(
 		{ ...config, dev, devProof: proof, receivers: [...(config.receivers ?? []), ...receiver] },
 		root,
-		before ? { db: before.site.monti.db } : {},
+		{ ...(before ? { db: before.site.monti.db } : {}), waitUntil: keepGoing },
 	);
 	const site = {
 		monti,

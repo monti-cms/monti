@@ -1,23 +1,29 @@
 import { z } from "zod";
-import {
-	cancelDelivery,
-	failedDeliveryCount,
-	resetFailedDeliveries,
-	sendDeliveries,
-	sentAgain,
-} from "../engine/deliveries";
+import { randomUUID } from "../bytes";
+import { cancelDelivery, deliveryCounts, reserveFailedDeliveries, sendDeliveries } from "../engine/deliveries";
 import type { Engine } from "../engine/execute";
-import { planUndo, undoWithEvents } from "../engine/undo";
-import { CheckError } from "../errors";
+import { planUndo, type UndoOf, undoWithEvents } from "../engine/undo";
 import { type AnyOperation, defineOperation, type Preview } from "../operation";
 import { keepSeenTracked } from "../schema/apply";
 import { ActivityQuery, getActivity, listActivity } from "./list";
 
-/** What `deliveries.counts` answers: how many deliveries are failed, and since when (the oldest of them). */
-export type DeliveryCounts = { failed: number; since: Date | null };
+/**
+ * What `deliveries.counts` answers: how many deliveries are failed, since when (the oldest of them), and how many a "send again" is sending at this
+ * moment (the banner says "sending…" while there are some, in another tab or after a reload too).
+ */
+export type DeliveryCounts = { failed: number; since: Date | null; sending: number };
 
-/** What sending again came to: how many arrived and how many failed again. */
-export type DeliveriesRetried = { ids: string[]; sent: number; failed: number };
+/**
+ * What one step of sending again came to: the deliveries it took, how many arrived and how many failed again, and how many of the run are left.
+ * While `remaining` is above zero, ask again with the same `run`: each step takes a batch, so no step outlasts a request, and what a step sent stays
+ * sent whether or not the next one is asked for.
+ */
+export type DeliveriesRetried = { ids: string[]; sent: number; failed: number; remaining: number; run: string };
+
+/** What the undo takes back: a line of the log, or every write applied from a proposal. */
+const Undo = z.union([z.object({ id: z.string() }), z.object({ proposal: z.string() })]);
+const undoOf = (input: z.infer<typeof Undo>): UndoOf =>
+	"id" in input ? { line: input.id } : { proposal: input.proposal };
 
 /**
  * The activity log and the deliveries (doc 13). They are made with the engine, not a plain list: undo reads the snapshots, and sending again sends
@@ -39,7 +45,7 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			description:
 				"One line of the activity log with its details: the records it touched as they were then, and each delivery with its receiver, state, tries and last error.",
 			input: z.object({ id: z.string() }),
-			run: (input, ctx) => getActivity(ctx.db, ctx.site.schema(), input.id, ctx.now()),
+			run: (input, ctx) => getActivity(ctx.db, input.id, ctx.now()),
 		}),
 		defineOperation({
 			name: "activity.undo",
@@ -47,25 +53,20 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			// The line it undoes says "undone" with when; a line of its own would say it twice.
 			log: false,
 			description:
-				"Undo a line of the activity log: one write, or every write applied from one request of the assistant's (give the line's id). Records changed since are skipped, never overwritten; the preview says which. Works for 30 days. When it changes what the site shows, the site is told.",
-			input: z.object({ id: z.string() }),
+				"Undo a line of the activity log (`id`: one write, or the writes one application of the assistant's proposal made), or every write applied from a proposal (`proposal`). Each record goes back to what it was before the newest of those writes that can still be taken back; a record someone wrote since is left alone, never overwritten, and the preview says which. Works for 30 days. When it changes what the site shows, the site is told.",
+			input: Undo,
 			preview: async (input, ctx): Promise<Preview> => {
-				const plan = await planUndo(engine, ctx.db, input.id);
+				const plan = await planUndo(engine, ctx.db, undoOf(input));
 				return {
 					summary: { key: "activity.undo", values: { count: plan.restore.length } },
 					changes: plan.restore,
 					blocked: plan.skip.map((ref) => ({ ref, reason: { key: "activity.changedSince" } })),
 				};
 			},
-			// Nothing left to put back: every record was written again since. It is refused and stays as it is, not marked undone with nothing undone.
-			async check(input, ctx) {
-				const plan = await planUndo(engine, ctx.db, input.id);
-				if (plan.restore.length === 0 && plan.skip.length > 0) throw new CheckError({ key: "activity.allChanged" });
-			},
 			async run(input, ctx) {
 				// An undo that changes what the site shows (a publish taken back, a thrown-away entry put back) tells the site, as the write did (T29).
 				// The deliveries show on the line that was undone: this write has no line of its own.
-				const output = await undoWithEvents(engine, ctx.db, input.id, (event, undone) =>
+				const { undone: _undone, ...output } = await undoWithEvents(engine, ctx.db, undoOf(input), (event, undone) =>
 					ctx.emit(event, { activity: undone }),
 				);
 				// What an entry saw back then may be of a field that has since left the schema.
@@ -79,19 +80,26 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			kind: "write",
 			log: false,
 			description:
-				"Send failed deliveries again now: the ones named by `ids` (a line's `delivery.failedIds`, or one delivery of activity.get), or with `all` every failed one. The tries are counted from the start, so automatic retries follow again if it fails. The answer says how many arrived and how many failed again.",
-			input: z.union([z.object({ ids: z.array(z.string()).min(1) }), z.object({ all: z.literal(true) })]),
-			async run(input, ctx): Promise<DeliveriesRetried> {
-				return {
-					ids: await resetFailedDeliveries(ctx.db, "ids" in input ? input.ids : "all", ctx.now()),
-					sent: 0,
-					failed: 0,
-				};
+				"Send failed deliveries again now: the ones named by `ids` (a line's `delivery.failedIds`, or one delivery of activity.get), or with `all` every failed one. The tries are counted from the start, so automatic retries follow again if it fails. One call takes a batch and answers how many arrived, how many failed again and how many are left (`remaining`); while some are left, call again with the `run` it answered.",
+			input: z.union([
+				z.object({ ids: z.array(z.string()).min(1), run: z.iso.datetime().optional() }),
+				z.object({ all: z.literal(true), run: z.iso.datetime().optional() }),
+			]),
+			async run(input, ctx): Promise<DeliveriesRetried & { holder?: string }> {
+				// Reserved under a name of this call's own: from the commit on, no scheduled sender takes them before this call sends them.
+				const holder = randomUUID();
+				const run = input.run === undefined ? ctx.now() : new Date(input.run);
+				const reserved = await reserveFailedDeliveries(ctx.db, "ids" in input ? input.ids : "all", {
+					now: ctx.now(),
+					holder,
+					run: input.run === undefined ? null : run,
+				});
+				return { ...reserved, sent: 0, failed: 0, run: run.toISOString(), holder };
 			},
-			// Sent once the reset has committed, and waited for: the person who pressed it reads how it went.
-			async afterCommit(output) {
-				await sendDeliveries(engine.db, engine.receivers, output.ids, engine.now);
-				return { ids: output.ids, ...(await sentAgain(engine.db, output.ids)) };
+			// Sent once the reservation has committed, and waited for: the person who pressed it reads how it went.
+			async afterCommit({ holder, ...output }) {
+				const { sent, failed } = await sendDeliveries(engine.db, engine.receivers, output.ids, engine.now, { holder });
+				return { ...output, sent, failed };
 			},
 			summary: (_input, output) => ({ key: "deliveries.retry", values: { count: output.ids.length } }),
 		}),
@@ -110,18 +118,9 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			name: "deliveries.counts",
 			kind: "read",
 			description:
-				"How many deliveries are failed, and since when. The sidebar's tools row, the activity tab and the banner over the log show this number.",
+				"How many deliveries are failed, since when, and how many are being sent again at this moment. The sidebar's activity row and the banner over the log show the failed number.",
 			input: z.object({}),
-			async run(_input, ctx): Promise<DeliveryCounts> {
-				const oldest = await ctx.db
-					.selectFrom("monti_delivery")
-					.select("created_at")
-					.where("state", "=", "failed")
-					.orderBy("created_at")
-					.limit(1)
-					.executeTakeFirst();
-				return { failed: await failedDeliveryCount(ctx.db), since: oldest?.created_at ?? null };
-			},
+			run: (_input, ctx): Promise<DeliveryCounts> => deliveryCounts(ctx.db, ctx.now()),
 		}),
 	];
 }

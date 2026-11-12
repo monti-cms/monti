@@ -2,7 +2,16 @@ import { sql } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { signedInApi } from "../__test__/admin";
 import { testDatabase } from "../__test__/database";
-import { RETRY_MINUTES, type Receiver, SEND_TIMEOUT_MS, sendDeliveries, webhook } from "../engine/deliveries";
+import {
+	RETRY_BATCH,
+	RETRY_MINUTES,
+	type Receiver,
+	reserveFailedDeliveries,
+	SEND_TIMEOUT_MS,
+	sendDeliveries,
+	webhook,
+} from "../engine/deliveries";
+import type { UndoPlan } from "../engine/undo";
 import { createReader } from "../entries/reader";
 import { ForbiddenError } from "../errors";
 import { coreMessages, formatMessage } from "../messages";
@@ -277,6 +286,7 @@ describe("sending", () => {
 		expect(calls[0].init.method).toBe("POST");
 		expect(calls[0].init.headers).toMatchObject({ "content-type": "application/json", authorization: "Bearer token" });
 		expect(JSON.parse(String(calls[0].init.body))).toEqual({
+			id: expect.any(String),
 			type: "entry.published",
 			at: clock.toISOString(),
 			ids: [id],
@@ -295,6 +305,39 @@ describe("sending", () => {
 		await save(id, { title: "고친 글" }, monti);
 		await publish([id], monti);
 		expect((await deliveries())[1]).toMatchObject({ state: "failed", last_error: "503 Service Unavailable" });
+
+		// The receiver may have handled it and lost its answer: the next try says it is the same event and the same delivery, in the body and in
+		// headers, so the receiver can tell and leave it.
+		status = 200;
+		later(RETRY_MINUTES[0] * MINUTE);
+		await monti.deliveries.sendDue();
+		const [, first, again] = calls;
+		const headers = (call: (typeof calls)[number]) => call.init.headers as Record<string, string>;
+		expect(JSON.parse(String(again.init.body)).id).toBe(JSON.parse(String(first.init.body)).id);
+		expect(headers(first)["monti-event-id"]).toBe(JSON.parse(String(first.init.body)).id);
+		expect(headers(again)["monti-event-id"]).toBe(headers(first)["monti-event-id"]);
+		expect(headers(again)["monti-delivery-id"]).toBe(headers(first)["monti-delivery-id"]);
+		expect(headers(first)["monti-delivery-id"]).toBe((await deliveries())[1].id);
+		expect([headers(first)["monti-attempt"], headers(again)["monti-attempt"]]).toEqual(["1", "2"]);
+		// Another event is another id.
+		expect(headers(calls[0])["monti-event-id"]).not.toBe(headers(first)["monti-event-id"]);
+	});
+
+	it("13-1 one event has one id for every receiver, and each receiver's delivery has its own", async () => {
+		const got: { destination: string; event: string; delivery: string; attempt: number }[] = [];
+		const telling = (destination: string): Receiver => ({
+			destination,
+			async send(event, _signal, delivery) {
+				got.push({ destination, event: event.id, delivery: delivery.id, attempt: delivery.attempt });
+			},
+		});
+		const monti = site({ receivers: [telling(SITE), telling(SEARCH)] });
+		await newPost("첫 번째 글", "first-post", monti);
+		// The two are sent side by side, in no fixed order.
+		expect(got.map((each) => each.destination).sort()).toEqual([SEARCH, SITE].sort());
+		expect(got[0].event).toBe(got[1].event);
+		expect(got[0].delivery).not.toBe(got[1].delivery);
+		expect(got.map((each) => each.attempt)).toEqual([1, 1]);
 	});
 
 	it("13-1 sending again by hand counts the tries from the start, so the automatic retries follow again (T6)", async () => {
@@ -310,7 +353,7 @@ describe("sending", () => {
 
 		// Still down: the try a person asked for is the first of a new count, and the next one is scheduled.
 		const again = await write<DeliveriesRetried>("deliveries.retry", { ids: [used.id] }, monti);
-		expect(again.output).toEqual({ ids: [used.id], sent: 0, failed: 1 });
+		expect(again.output).toMatchObject({ ids: [used.id], sent: 0, failed: 1, remaining: 0 });
 		const [counted] = await deliveries();
 		expect(counted).toMatchObject({ state: "failed", attempts: 1 });
 		expect(counted.next_attempt_at).toEqual(new Date(clock.getTime() + RETRY_MINUTES[0] * MINUTE));
@@ -320,10 +363,11 @@ describe("sending", () => {
 		expect((await deliveries())[0].attempts).toBe(2);
 
 		down.clear();
-		expect((await write<DeliveriesRetried>("deliveries.retry", { ids: [used.id] }, monti)).output).toEqual({
+		expect((await write<DeliveriesRetried>("deliveries.retry", { ids: [used.id] }, monti)).output).toMatchObject({
 			ids: [used.id],
 			sent: 1,
 			failed: 0,
+			remaining: 0,
 		});
 		expect((await deliveries())[0]).toMatchObject({ state: "sent", attempts: 1, last_error: null });
 		expect(sent).toHaveLength(1);
@@ -378,6 +422,144 @@ describe("sending", () => {
 		later(MINUTE);
 		await openAdmin();
 		await vi.waitFor(async () => expect((await deliveries())[1].state).toBe("sent"));
+	});
+
+	it("13-1 a delivery a person sends again is theirs from that moment: a sender that comes by first leaves it, and it is sent once", async () => {
+		const monti = site();
+		down.add(SITE);
+		await newPost("첫 번째 글", "first-post", monti);
+		down.clear();
+		const [failed] = await deliveries();
+		// The person's "send again" has reserved it and committed; before it sends, the sweep that an admin's visit starts comes by.
+		const reserved = await reserveFailedDeliveries(db, [failed.id], { now: clock, holder: "the-person", run: null });
+		expect(reserved).toEqual({ ids: [failed.id], remaining: 0 });
+		expect(await monti.deliveries.sendDue()).toEqual({ sent: 0, failed: 0, left: 0 });
+		expect(sent).toEqual([]);
+		expect((await deliveries())[0]).toMatchObject({ state: "pending", attempts: 0 });
+		// While it is reserved the banner can say so, here and in any other tab.
+		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toMatchObject({ failed: 0, sending: 1 });
+		// The one who reserved it sends it, and reads the result.
+		expect(await sendDeliveries(db, [receiver(SITE)], reserved.ids, () => clock, { holder: "the-person" })).toEqual({
+			sent: 1,
+			failed: 0,
+			left: 0,
+		});
+		expect(sent).toHaveLength(1);
+		expect((await deliveries())[0]).toMatchObject({ state: "sent", attempts: 1, held_by: null });
+		// A reservation whose holder died lets go by itself.
+		down.add(SITE);
+		await newPost("두 번째 글", "second-post", monti);
+		down.clear();
+		const other = (await deliveries()).find((delivery) => delivery.state === "failed");
+		if (!other) throw new Error("No failed delivery.");
+		await reserveFailedDeliveries(db, [other.id], { now: clock, holder: "gone", run: null });
+		later(MINUTE);
+		expect(await monti.deliveries.sendDue()).toEqual({ sent: 1, failed: 0, left: 0 });
+	});
+
+	it("13-1 sending all again goes a batch at a time, several at once, and tries each delivery once however often it is asked", async () => {
+		let together = 0;
+		let most = 0;
+		const stillDown = new Set<string>();
+		const counting: Receiver = {
+			destination: SITE,
+			async send(event) {
+				together += 1;
+				most = Math.max(most, together);
+				await new Promise((resume) => setTimeout(resume, 15));
+				together -= 1;
+				if (down.has(SITE) || stillDown.has(event.ids[0])) throw new Error("503");
+				sent.push({ destination: SITE, event });
+			},
+		};
+		const monti = site({ receivers: [counting] });
+		down.add(SITE);
+		const ids: string[] = [];
+		for (let index = 0; index < 23; index++) ids.push(await newPost(`글 ${index}`, `post-${index}`, monti));
+		down.clear();
+		// Three of them will fail again.
+		for (const id of ids.slice(0, 3)) stillDown.add(id);
+		most = 0;
+		// The run begins a moment after they failed.
+		later(MINUTE);
+
+		const steps: DeliveriesRetried[] = [];
+		let step = (await write<DeliveriesRetried>("deliveries.retry", { all: true }, monti)).output;
+		steps.push(step);
+		// What a step sent is sent, whether or not the next step is asked for: nothing is left half-way.
+		expect((await deliveries()).filter((delivery) => delivery.state === "pending")).toEqual([]);
+		while (step.remaining > 0) {
+			step = (await write<DeliveriesRetried>("deliveries.retry", { all: true, run: step.run }, monti)).output;
+			steps.push(step);
+		}
+		expect(steps.map((each) => [each.ids.length, each.remaining])).toEqual([
+			[RETRY_BATCH, 13],
+			[RETRY_BATCH, 3],
+			[3, 0],
+		]);
+		expect(steps.reduce((sum, each) => sum + each.sent, 0)).toBe(20);
+		expect(steps.reduce((sum, each) => sum + each.failed, 0)).toBe(3);
+		expect(new Set(steps.map((each) => each.run)).size).toBe(1);
+		// Several at once, never more than a batch: a receiver that takes its time holds one place, not the whole step.
+		expect(most).toBeGreaterThan(1);
+		expect(most).toBeLessThanOrEqual(RETRY_BATCH);
+		// The three that failed again were tried once in this run: asking again with the run takes nothing more.
+		const more = (await write<DeliveriesRetried>("deliveries.retry", { all: true, run: step.run }, monti)).output;
+		expect(more).toMatchObject({ ids: [], sent: 0, failed: 0, remaining: 0 });
+		expect(sent).toHaveLength(20);
+		expect((await deliveries()).filter((delivery) => delivery.state === "failed").map((each) => each.attempts)).toEqual(
+			[1, 1, 1],
+		);
+		// A new run takes them again.
+		stillDown.clear();
+		later(MINUTE);
+		expect((await write<DeliveriesRetried>("deliveries.retry", { all: true }, monti)).output).toMatchObject({
+			sent: 3,
+			failed: 0,
+			remaining: 0,
+		});
+	});
+
+	it("13-1 the host keeps the sends an admin's visit starts going after the answer", async () => {
+		const kept: Promise<unknown>[] = [];
+		const monti = site({ waitUntil: (work) => kept.push(work) });
+		const api = signedInApi(monti);
+		down.add(SITE);
+		await newPost("첫 번째 글", "first-post", monti);
+		await Promise.all(kept);
+		down.clear();
+		later(RETRY_MINUTES[0] * MINUTE);
+		kept.length = 0;
+		await api(
+			new Request("https://site.test/admin/api/operations/frame.counts", {
+				method: "POST",
+				body: JSON.stringify({ input: {} }),
+			}),
+		);
+		// The sweep was handed to the host, which holds the function open until it ends (the trash's clean-up of the same visit too).
+		expect(kept.length).toBeGreaterThan(0);
+		await Promise.all(kept);
+		expect((await deliveries())[0].state).toBe("sent");
+	});
+
+	it("13-1 the command line leaves what only the running site can send, untried, and says so", async () => {
+		const monti = site({ receivers: [receiver(SITE), receiver("plugin:next")] });
+		down.add(SITE);
+		down.add("plugin:next");
+		await newPost("첫 번째 글", "first-post", monti);
+		down.clear();
+		later(RETRY_MINUTES[0] * MINUTE);
+		// The command line opens the site without the adapter's receiver.
+		const fromTheCommandLine = site({ receivers: [receiver(SITE)] });
+		expect(await fromTheCommandLine.deliveries.sendDue({ leaveUnknown: true })).toEqual({
+			sent: 1,
+			failed: 0,
+			left: 1,
+		});
+		const left = (await deliveries()).find((delivery) => delivery.destination === "plugin:next");
+		expect(left).toMatchObject({ state: "failed", attempts: 1, last_error: "503" });
+		// The running site sends it.
+		expect(await monti.deliveries.sendDue()).toEqual({ sent: 1, failed: 0, left: 0 });
 	});
 
 	it("13-2 a write that rolls back queues nothing for any receiver, and a receiver is called only after the commit", async () => {
@@ -532,10 +714,11 @@ describe("the log", () => {
 		await expect(write("deliveries.retry", { ids: [failed.id] }, monti)).rejects.toMatchObject({
 			reason: { key: "deliveries.alreadyCanceled" },
 		});
-		expect((await write<DeliveriesRetried>("deliveries.retry", { all: true }, monti)).output).toEqual({
+		expect((await write<DeliveriesRetried>("deliveries.retry", { all: true }, monti)).output).toMatchObject({
 			ids: [],
 			sent: 0,
 			failed: 0,
+			remaining: 0,
 		});
 		await expect(write("deliveries.cancel", { id: failed.id }, monti)).rejects.toMatchObject({
 			reason: { key: "deliveries.alreadyCanceled" },
@@ -683,10 +866,127 @@ describe("the log", () => {
 		]);
 	});
 
+	it("13-3 a browsing of the log keeps its pages while new activity arrives", async () => {
+		const monti = site();
+		for (let index = 1; index <= 5; index++) await newPost(`글 ${index}`, `post-${index}`, monti);
+		const whats = (page: ActivityList) => page.lines.map((line) => said(line)[0]);
+		const first = await list({ pageSize: 2 }, monti);
+		expect(whats(first)).toEqual(['"글 5" 만듦', '"글 4" 만듦']);
+		expect(first.total).toBe(5);
+		// Two more writes arrive before the next page is read.
+		await newPost("글 6", "post-6", monti);
+		await newPost("글 7", "post-7", monti);
+		// Without the place of the browsing, page 2 starts with what page 1 ended with.
+		expect(whats(await list({ pageSize: 2, page: 2 }, monti))).toEqual(['"글 5" 만듦', '"글 4" 만듦']);
+		// With it, the pages follow each other and the total is the browsing's.
+		const second = await list({ pageSize: 2, page: 2, asOf: first.asOf }, monti);
+		expect(whats(second)).toEqual(['"글 3" 만듦', '"글 2" 만듦']);
+		expect(second.total).toBe(5);
+		expect(second.asOf).toBe(first.asOf);
+		expect(whats(await list({ pageSize: 2, page: 3, asOf: first.asOf }, monti))).toEqual(['"글 1" 만듦']);
+		// A proposal applied after page 1 was read is a new line, and a line never moves: its place is its first write's.
+		const proposal = await monti.proposals.create("conversation-1", "제목 다듬어 줘");
+		const one = await db.selectFrom("entries").select("id").where("slug", "=", "post-1").executeTakeFirstOrThrow();
+		await monti.proposals.add(proposal, "entries.save", { id: one.id, version: 1, title: "다듬은 글 1" });
+		await monti.proposals.apply(proposal);
+		expect(whats(await list({ pageSize: 2, page: 2, asOf: first.asOf }, monti))).toEqual(whats(second));
+		// A new browsing sees everything.
+		const fresh = await list({ pageSize: 2 }, monti);
+		expect(fresh.total).toBe(8);
+		expect(whats(fresh)).toEqual(['"다듬은 글 1" 저장', '"글 7" 만듦']);
+		expect(Number(fresh.asOf)).toBeGreaterThan(Number(first.asOf));
+	});
+
+	it("13-3 a line keeps the address its entry had: a path changed or a collection removed since does not rewrite it", async () => {
+		const monti = site();
+		const id = await newPost("첫 번째 글", "first-post", monti);
+		const published = await publish([id], monti);
+		expect((await detail(published.activityId, monti)).records[0].address).toBe("/posts/first-post");
+		// The collection's path changes.
+		const post = schema.collections.post;
+		if (!post) throw new Error("no post collection");
+		const moved = site({
+			schema: { ...schema, collections: { ...schema.collections, post: { ...post, path: "/articles/:slug" } } },
+		});
+		expect((await detail(published.activityId, moved)).records[0].address).toBe("/posts/first-post");
+		// A publish under the new path says the new one.
+		await save(id, { title: "고친 글" }, moved);
+		const again = await publish([id], moved);
+		expect((await detail(again.activityId, moved)).records[0].address).toBe("/articles/first-post");
+		// The collection is gone from the schema.
+		const { post: _gone, ...rest } = schema.collections;
+		const without = site({ schema: { ...schema, collections: rest } });
+		expect((await detail(published.activityId, without)).records[0]).toMatchObject({
+			title: "첫 번째 글",
+			address: "/posts/first-post",
+		});
+	});
+
+	it("13-3 the 30-day clean-up of the trash is a line of the log and tells the receivers which entries are gone", async () => {
+		const monti = site();
+		const id = await newPost("첫 번째 글", "first-post", monti);
+		await write("trash.move", { rows: [{ kind: "entry", id }] }, monti);
+		sent.length = 0;
+		// Nothing is due yet: no line, no event.
+		expect(await monti.trash.purgeDue()).toMatchObject({ purged: 0 });
+		expect((await list({}, monti)).total).toBe(2);
+		later(31 * DAY);
+		expect(await monti.trash.purgeDue()).toMatchObject({ purged: 1 });
+		expect(sent.map((delivery) => delivery.event)).toEqual([
+			{
+				id: expect.any(String),
+				type: "entry.purged",
+				at: clock.toISOString(),
+				ids: [id],
+				collection: "post",
+				locale: "ko",
+			},
+		]);
+		const [line] = (await list({ kind: "trash" }, monti)).lines;
+		expect(said(line)).toEqual(["30일 지난 1개 영구 삭제", "휴지통"]);
+		expect(line).toMatchObject({ actor: "cli", undo: { state: "none" }, delivery: { sent: 1 } });
+		// A receiver that is down: the event waits as a failed delivery, as a write's would.
+		const next = await newPost("두 번째 글", "second-post", monti);
+		await write("trash.move", { rows: [{ kind: "entry", id: next }] }, monti);
+		later(31 * DAY);
+		down.add(SITE);
+		await monti.trash.purgeDue("admin");
+		expect(await failedCount(monti)).toBe(1);
+		expect((await list({}, monti)).lines[0]).toMatchObject({ actor: "admin", delivery: { failed: 1 } });
+	});
+
+	it("13-3 the log finds a page's lines and a line's rows by index, and never groups the history", async () => {
+		const { rows } = await sql<{ indexname: string }>`select indexname from pg_indexes
+			where schemaname = current_schema() and tablename = 'monti_activity'`.execute(db);
+		expect(rows.map((row) => row.indexname)).toEqual(
+			expect.arrayContaining(["monti_activity_heads", "monti_activity_line", "monti_activity_proposal"]),
+		);
+		// Every row names its line: a person's write its own, a proposal's writes the first of them.
+		const monti = site();
+		const first = await newPost("첫 번째 글", "first-post", monti);
+		const second = await newPost("두 번째 글", "second-post", monti);
+		const proposal = await monti.proposals.create("conversation-1", "요약 채워 줘");
+		await monti.proposals.add(proposal, "entries.save", { id: first, version: 1, values: { summary: "하나" } });
+		await monti.proposals.add(proposal, "entries.save", { id: second, version: 1, values: { summary: "둘" } });
+		await monti.proposals.apply(proposal);
+		const written = await db.selectFrom("monti_activity").select(["id", "line", "operation"]).orderBy("seq").execute();
+		expect(written.map((row) => row.line === row.id)).toEqual([true, true, true, false]);
+		expect(written[3].line).toBe(written[2].id);
+		// A row that is not listed is a line of its own, and no line's.
+		await write("activity.undo", { id: written[2].id }, monti);
+		const undo = await db
+			.selectFrom("monti_activity")
+			.select(["id", "line", "listed"])
+			.where("operation", "=", "activity.undo")
+			.executeTakeFirstOrThrow();
+		expect(undo).toMatchObject({ line: undo.id, listed: false });
+	});
+
 	it("13-3 flow 12·11: a new site's log is empty", async () => {
 		expect(await list()).toEqual({
 			lines: [],
 			total: 0,
+			asOf: "0",
 			deliveries: true,
 			deliveryCounts: { pending: 0, sent: 0, failed: 0, canceled: 0 },
 			entry: null,
@@ -770,53 +1070,106 @@ describe("undo from the log", () => {
 		await monti.proposals.apply(followUp);
 
 		const lines = (await list({ kind: "assistant" }, monti)).lines;
-		expect(lines.map((line) => [line.id, line.request, line.conversationId, line.actor])).toEqual([
-			[followUp, "첫 글 요약 더 짧게", "conversation-1", "assistant"],
-			[proposal, "이 두 편 요약 채워 줘", "conversation-1", "assistant"],
+		expect(lines.map((line) => [line.request, line.conversationId, line.actor])).toEqual([
+			["첫 글 요약 더 짧게", "conversation-1", "assistant"],
+			["이 두 편 요약 채워 줘", "conversation-1", "assistant"],
 		]);
-		expect(said(lines[1])).toEqual(['"두 번째 글" 저장 · "첫 번째 글" 저장', null]);
-		expect(lines[1].undo).toEqual({ state: "open" });
+		const [, older] = lines;
+		expect(said(older)).toEqual(['"두 번째 글" 저장 · "첫 번째 글" 저장', null]);
+		expect(older.undo).toEqual({ state: "open" });
+		// The line's time and place are those of its first write.
+		expect(older.at).toEqual(new Date(START.getTime() + MINUTE));
 		expect((await list({}, monti)).total).toBe(4);
-		const whole = await detail(proposal, monti);
+		const whole = await detail(older.id, monti);
 		expect(whole.records.map((record) => record.title)).toEqual(["두 번째 글", "첫 번째 글"]);
 		expect(whole.writes.map(ko)).toEqual(['"두 번째 글" 저장', '"첫 번째 글" 저장']);
 
-		// The older request's line: the first entry was written again since, so it stays; the second goes back. The preview says so first.
+		// The older request's line: the first entry was written again since, so it stays; the second goes back.
 		const summaries = async () =>
 			Object.fromEntries(
 				(await db.selectFrom("entries").select(["id", "values"]).execute()).map((row) => [row.id, row.values.summary]),
 			);
-		const undone = await write<{ restore: unknown[]; skip: unknown[] }>("activity.undo", { id: proposal }, monti);
-		expect(undone.output).toEqual({ restore: [{ kind: "entry", id: second }], skip: [{ kind: "entry", id: first }] });
+		const undone = await write<UndoPlan>("activity.undo", { id: older.id }, monti);
+		expect(undone.output).toEqual({
+			restore: [{ kind: "entry", id: second }],
+			skip: [{ kind: "entry", id: first }],
+			partly: [],
+		});
 		expect(await summaries()).toEqual({ [first]: "짧게", [second]: undefined });
 		expect((await list({ kind: "assistant" }, monti)).lines[1].undo).toEqual({ state: "done", at: clock });
 	});
 
-	it("13-3 undoing a line whose writes changed one record several times puts back what was there before the first of them", async () => {
+	it("13-3 a proposal applied in two sittings is two lines; undoing the proposal takes both back, and a person's write in between stays with what was under it", async () => {
 		const monti = site();
-		const id = await newPost("첫 번째 글", "first-post", monti);
-		const proposal = await monti.proposals.create("conversation-1", "요약 쓰고 제목 다듬어 줘");
-		const summary = await monti.proposals.add(proposal, "entries.save", {
-			id,
-			version: 1,
-			values: { summary: "요약" },
-		});
-		await monti.proposals.apply(proposal, [summary.itemId]);
-		// The second item is applied later, on the entry as the first left it.
-		const title = await monti.proposals.create("conversation-1", "제목 다듬어 줘");
-		await monti.proposals.add(title, "entries.save", { id, version: 2, title: "다듬은 제목" });
-		await monti.proposals.apply(title);
-		// Both writes are of the first request's line once the second proposal's row carries its id.
-		await db.updateTable("monti_activity").set({ proposal_id: proposal }).where("proposal_id", "=", title).execute();
+		const entry = await newPost("첫 번째 글", "first-post", monti);
+		const other = await newPost("두 번째 글", "second-post", monti);
+		const titleOf = async (id: string) =>
+			(await db.selectFrom("entries").select("title").where("id", "=", id).executeTakeFirstOrThrow()).title;
+		const proposal = await monti.proposals.create("conversation-1", "제목들을 다듬어 줘");
+		// The assistant writes the entry; a person writes it; the assistant writes it again, and another entry.
+		await monti.proposals.add(proposal, "entries.save", { id: entry, version: 1, title: "어시스턴트 1" });
+		await monti.proposals.apply(proposal);
+		later(MINUTE);
+		await save(entry, { title: "사람이 고친 제목" }, monti);
+		later(MINUTE);
+		await monti.proposals.add(proposal, "entries.save", { id: entry, version: 3, title: "어시스턴트 2" });
+		await monti.proposals.add(proposal, "entries.save", { id: other, version: 1, title: "어시스턴트 3" });
+		await monti.proposals.apply(proposal);
+		expect([await titleOf(entry), await titleOf(other)]).toEqual(["어시스턴트 2", "어시스턴트 3"]);
+		// Two sittings, two lines, each at its own time, both quoting the request.
+		const lines = (await list({ kind: "assistant" }, monti)).lines;
+		expect(lines.map((line) => [line.request, said(line)[0]])).toEqual([
+			["제목들을 다듬어 줘", '"어시스턴트 3" 저장 · "어시스턴트 2" 저장'],
+			["제목들을 다듬어 줘", '"어시스턴트 1" 저장'],
+		]);
 
-		const undone = await write<{ restore: unknown[]; skip: unknown[] }>("activity.undo", { id: proposal }, monti);
-		expect(undone.output).toEqual({ restore: [{ kind: "entry", id }], skip: [] });
-		const entry = await db
-			.selectFrom("entries")
-			.select(["title", "values"])
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
-		expect([entry.title, entry.values.summary]).toEqual(["첫 번째 글", undefined]);
+		// The preview, as a proposal of the undo reads it, and the undo itself say the same: both entries change, none is left alone.
+		const plan = {
+			restore: [
+				{ kind: "entry", id: other },
+				{ kind: "entry", id: entry },
+			],
+			skip: [],
+		};
+		const asking = await monti.proposals.create("conversation-1", "되돌려 줘");
+		const { preview } = await monti.proposals.add(asking, "activity.undo", { proposal });
+		expect(preview).toMatchObject({ changes: plan.restore, blocked: [] });
+		const undone = await write<UndoPlan>("activity.undo", { proposal }, monti);
+		expect(undone.output).toEqual({ ...plan, partly: [{ kind: "entry", id: entry }] });
+		// The entry is back at the person's write, not before it: the assistant's first write is under that write and stays.
+		expect([await titleOf(entry), await titleOf(other)]).toEqual(["사람이 고친 제목", "두 번째 글"]);
+		expect((await list({ kind: "assistant" }, monti)).lines.map((line) => line.undo.state)).toEqual(["done", "done"]);
+	});
+
+	it("13-3 an undo that can take back only the newer of a proposal's writes on a record does that, and is not refused", async () => {
+		const monti = site();
+		const entry = await newPost("첫 번째 글", "first-post", monti);
+		const proposal = await monti.proposals.create("conversation-1", "제목을 다듬어 줘");
+		await monti.proposals.add(proposal, "entries.save", { id: entry, version: 1, title: "어시스턴트 1" });
+		await monti.proposals.apply(proposal);
+		await save(entry, { title: "사람이 고친 제목" }, monti);
+		await monti.proposals.add(proposal, "entries.save", { id: entry, version: 3, title: "어시스턴트 2" });
+		await monti.proposals.apply(proposal);
+
+		const undone = await write<UndoPlan>("activity.undo", { proposal }, monti);
+		expect(undone.output).toEqual({
+			restore: [{ kind: "entry", id: entry }],
+			skip: [],
+			partly: [{ kind: "entry", id: entry }],
+		});
+		expect(
+			(await db.selectFrom("entries").select("title").where("id", "=", entry).executeTakeFirstOrThrow()).title,
+		).toBe("사람이 고친 제목");
+		// With nothing left that can be taken back, it is refused and nothing is marked.
+		await save(entry, { title: "또 고친 제목" }, monti);
+		const again = await monti.proposals.create("conversation-1", "한 번 더");
+		await monti.proposals.add(again, "entries.save", { id: entry, version: 6, title: "어시스턴트 3" });
+		await monti.proposals.apply(again);
+		await save(entry, { title: "마지막 제목" }, monti);
+		await expect(write("activity.undo", { proposal: again }, monti)).rejects.toMatchObject({
+			reason: { key: "activity.allChanged" },
+		});
+		expect((await list({ kind: "assistant" }, monti)).lines[0].undo).toEqual({ state: "open" });
 	});
 
 	it("02-7 undoing a publish tells the site: the path goes out again, on the line that was undone (T29)", async () => {
@@ -834,6 +1187,7 @@ describe("undo from the log", () => {
 		expect((await fromSite("first-post"))?.title).toBe("첫 번째 글");
 		expect(sent.map((delivery) => delivery.event)).toEqual([
 			{
+				id: expect.any(String),
 				type: "entry.published",
 				at: clock.toISOString(),
 				ids: [id],
@@ -932,7 +1286,7 @@ describe("counts and sites without receivers", () => {
 		await newPost("둘", "two", monti);
 		expect(await everywhere()).toEqual([4, 4, 4, 4]);
 		const counts = await read<DeliveryCounts>("deliveries.counts", {}, monti);
-		expect(counts).toEqual({ failed: 4, since: START });
+		expect(counts).toEqual({ failed: 4, since: START, sending: 0 });
 
 		// One receiver is back: sending all again leaves the other's two.
 		down.delete(SITE);
@@ -949,7 +1303,7 @@ describe("counts and sites without receivers", () => {
 		later(DAY);
 		await monti.deliveries.sendDue();
 		expect(await everywhere()).toEqual([0, 0, 0, 0]);
-		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toEqual({ failed: 0, since: null });
+		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toEqual({ failed: 0, since: null, sending: 0 });
 	});
 
 	it("13-5 a site with no receiver logs every write and shows no delivery anywhere", async () => {
@@ -969,7 +1323,7 @@ describe("counts and sites without receivers", () => {
 		expect(log.deliveryCounts).toEqual({ pending: 0, sent: 0, failed: 0, canceled: 0 });
 		expect(await deliveries()).toEqual([]);
 		expect((await detail(log.lines[1].id, monti)).deliveries).toEqual([]);
-		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toEqual({ failed: 0, since: null });
+		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toEqual({ failed: 0, since: null, sending: 0 });
 
 		// A receiver the site had and took out: its deliveries are still shown, and trying one says the receiver is gone.
 		const withOne = site();

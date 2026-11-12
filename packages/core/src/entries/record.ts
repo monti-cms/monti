@@ -9,6 +9,7 @@ import type {
 	OldPathTable,
 } from "../db/schema";
 import { defineRecordKind } from "../records";
+import { publicPath } from "./paths";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -144,9 +145,16 @@ const SnapshotShape: z.ZodType<Snapshot> = z.object({
  */
 export const entryRecord = defineRecordKind({
 	kind: "entry",
-	label(data) {
+	label(data, site) {
 		const { row } = data as Snapshot;
-		return { title: row.title, collection: row.collection, locale: row.locale, slug: row.slug };
+		const address = row.slug === "" ? null : publicPath(site.schema(), row.collection, row.slug, row.locale);
+		return {
+			title: row.title,
+			collection: row.collection,
+			locale: row.locale,
+			slug: row.slug,
+			...(address === null ? {} : { address }),
+		};
 	},
 	async load(db, ids) {
 		if (ids.length === 0) return [];

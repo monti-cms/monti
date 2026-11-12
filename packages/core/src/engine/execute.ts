@@ -1,13 +1,16 @@
-import type { Kysely, Transaction } from "kysely";
+import { type Kysely, sql, type Transaction } from "kysely";
 import type { Session } from "../auth/session";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { ConflictError, ForbiddenError, InputError } from "../errors";
 import { rewriteUses } from "../media/uses";
 import {
+	type ActivityKind,
 	type Actor,
 	type AnyOperation,
+	type EmittedEvent,
 	type LoggedRecord,
+	type Message,
 	type OperationContext,
 	type RecordRef,
 	recordKey,
@@ -34,8 +37,13 @@ export type RunOptions = {
 	versions?: Record<string, number>;
 	conversationId?: string;
 	proposalItemId?: string;
-	/** The proposal the item is of: its writes are one line of the activity log (doc 13). */
+	/** The proposal the item is of: its line of the activity log quotes the proposal's request (doc 13). */
 	proposalId?: string;
+	/**
+	 * One application of a proposal, shared by its writes: they are one line of the activity log. The first listed write becomes the line's head and
+	 * puts its id here once it has committed; the writes after it join that line.
+	 */
+	batch?: { line?: string };
 	/** The admin API's session, for the operations that read or end it. */
 	session?: Session | null;
 	/** Proposal items the person took in the screen and saves with this write (doc 05): they become applied, tied to its activity row. */
@@ -69,7 +77,10 @@ export function context(
 		db,
 		actor,
 		emit: (event, options) =>
-			events.push({ event: { ...event, at: engine.now().toISOString() }, activity: options?.activity }),
+			events.push({
+				event: { ...event, id: randomUUID(), at: engine.now().toISOString() },
+				activity: options?.activity,
+			}),
 		created: (ref) => created.push(ref),
 		site: engine.site,
 		now: engine.now,
@@ -146,7 +157,7 @@ export async function runWrite<Output>(
 		// Before the transaction, with no connection held: a write that asks another service does it here (a key's check can take ten seconds).
 		prepared = await operation.prepare(input, ctx);
 	}
-	return engine.db.transaction().execute(async (trx) => {
+	const result = await engine.db.transaction().execute(async (trx) => {
 		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 		await lockRecords(trx, touched);
@@ -169,15 +180,20 @@ export async function runWrite<Output>(
 			return {
 				...ref,
 				version: after.get(recordKey(ref))?.version ?? null,
-				...(state ? engine.recordKinds.get(ref.kind)?.label?.(state.data) : {}),
+				...(state ? engine.recordKinds.get(ref.kind)?.label?.(state.data, engine.site) : {}),
 			};
 		});
 		const log = typeof operation.log === "function" ? operation.log(input, logged) : operation.log;
 		const where = operation.where?.(input, output, logged) ?? null;
+		const listed = log !== false;
+		// A listed write of a proposal's application joins the line its first listed write began; any other write is a line of its own.
+		const line = listed ? (options.batch?.line ?? activityId) : activityId;
 		await trx
 			.insertInto("monti_activity")
 			.values({
 				id: activityId,
+				line,
+				words: wordsOf(logged),
 				at: now,
 				actor: JSON.stringify(options.actor),
 				operation: operation.name,
@@ -185,7 +201,7 @@ export async function runWrite<Output>(
 				place: where ? JSON.stringify(where) : null,
 				targets: JSON.stringify(logged),
 				kind: log === false ? null : (log ?? null),
-				listed: log !== false,
+				listed,
 				conversation_id: options.conversationId ?? null,
 				proposal_item_id: options.proposalItemId ?? null,
 				proposal_id: options.proposalId ?? null,
@@ -218,8 +234,74 @@ export async function runWrite<Output>(
 				.set({ conversation_id: taken.conversationId, proposal_id: taken.proposalId })
 				.where("id", "=", activityId)
 				.execute();
+		// A line is found by the words of its request too: its head keeps them. Only its own row is written: a write never touches another write's
+		// row, so an undo that holds a line's rows and a write of the same line never wait for each other.
+		const proposalId = options.proposalId ?? taken?.proposalId;
+		if (line === activityId && proposalId)
+			await trx
+				.updateTable("monti_activity")
+				.set({
+					words: sql`words || ' ' || coalesce((select request from monti_proposal where id = ${proposalId}), '')`,
+				})
+				.where("id", "=", activityId)
+				.execute();
 		const deliveryIds = await queueDeliveries(trx, engine.receivers, activityId, events, now);
 		const versions = Object.fromEntries([...after].map(([key, state]) => [key, state?.version ?? null]));
-		return { output, activityId, versions, deliveryIds };
+		return { output, activityId, versions, deliveryIds, listed };
 	});
+	// Only now that it has committed: a first write that fails begins no line.
+	if (result.listed && options.batch && options.batch.line === undefined) options.batch.line = result.activityId;
+	const { listed: _listed, ...written } = result;
+	return written;
+}
+
+/** The words a line is found by: what each record the write touched was called. */
+const wordsOf = (records: LoggedRecord[]) => records.flatMap((record) => record.title ?? []).join(" ");
+
+/**
+ * Logs something Monti did by itself, with the events it tells the receivers: the 30-day clean-up of the trash is no operation, and still the log
+ * has its line and a search index hears of what is gone (doc 13). It runs in the caller's transaction and returns the deliveries to send after the
+ * commit.
+ */
+export async function logOwnWork(
+	engine: Engine,
+	trx: Transaction<Database>,
+	work: {
+		actor: Actor;
+		operation: string;
+		summary: Message;
+		where: Message | null;
+		kind: ActivityKind;
+		events: EmittedEvent[];
+	},
+): Promise<string[]> {
+	const id = randomUUID();
+	const now = engine.now();
+	await trx
+		.insertInto("monti_activity")
+		.values({
+			id,
+			line: id,
+			at: now,
+			actor: JSON.stringify(work.actor),
+			operation: work.operation,
+			summary: JSON.stringify(work.summary),
+			place: work.where ? JSON.stringify(work.where) : null,
+			targets: JSON.stringify([]),
+			kind: work.kind,
+			listed: true,
+			conversation_id: null,
+			proposal_item_id: null,
+			proposal_id: null,
+			undo_until: null,
+			undone_at: null,
+		})
+		.execute();
+	return queueDeliveries(
+		trx,
+		engine.receivers,
+		id,
+		work.events.map((event) => ({ event: { ...event, id: randomUUID(), at: now.toISOString() } })),
+		now,
+	);
 }

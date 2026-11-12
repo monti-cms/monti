@@ -26,8 +26,15 @@ export interface ActivityTable {
 	listed: Generated<boolean>;
 	conversation_id: string | null;
 	proposal_item_id: string | null;
-	/** The proposal the write applied: every write of one proposal is one line of the log. */
+	/** The proposal the write applied, or whose items a person's save took: the line quotes its request. */
 	proposal_id: string | null;
+	/**
+	 * The line of the log the row is in: the id of the line's head, which is its first listed row. A person's write is its own line; the writes of
+	 * one application of a proposal are one line. A row that is not listed is a line of its own that nothing reads.
+	 */
+	line: Generated<string>;
+	/** The words the row is found by: the titles of what it touched, and on a line's head the assistant's request. */
+	words: Generated<string>;
 	/** Until when undo works (30 days); null when the write cannot be undone. */
 	undo_until: Date | null;
 	undone_at: Date | null;
@@ -59,6 +66,10 @@ export interface DeliveryTable {
 	next_attempt_at: Date | null;
 	/** While a sender has it: nobody else sends it until then, so two admins opening at once send it once. */
 	sending_until: Date | null;
+	/** Who holds it, when a person's "send again" reserved it for its own send: no scheduled sender takes it in between. */
+	held_by: string | null;
+	/** When it was last tried. */
+	attempted_at: Date | null;
 	created_at: Generated<Date>;
 }
 

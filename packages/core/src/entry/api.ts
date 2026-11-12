@@ -103,7 +103,7 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 			const last = cleanedAt;
 			cleanedAt = monti.now().getTime();
 			try {
-				await monti.trash.purgeDue();
+				await monti.trash.purgeDue("admin");
 			} catch (error) {
 				cleanedAt = last;
 				console.error("Monti: the trash clean-up failed; the next admin visit tries again:", error);

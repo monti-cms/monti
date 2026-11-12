@@ -36,10 +36,25 @@ export const moveToFolder = defineOperation({
 
 받는 곳은 웹훅(`receivers: [webhook("https://example.dev/api/revalidate")]`)이거나 플러그인의 것이다. 실패했거나 10초 넘게 걸린 전송은 바로
 활동 기록과 사이드바 개수에 실패로 보인다. 그 뒤 사이를 늘려 가며 8번까지 저절로 다시 보내고(`RETRY_MINUTES`, 관리자 화면에 들어올 때와
-`monti deliveries:run`), 그래도 안 되면 사람이 다시 보내거나(`deliveries.retry`) 취소할(`deliveries.cancel`) 때까지 실패로 남는다.
+`monti deliveries:run`), 그래도 안 되면 사람이 다시 보내거나(`deliveries.retry`, 한 번에 한 묶음씩) 취소할(`deliveries.cancel`) 때까지 실패로
+남는다. 아무도 기다리지 않는 전송은 호스트의 `waitUntil`에 맡긴다(`openMonti(config, root, { waitUntil })`. `@monti-cms/next`는 Next의
+`after`를 넘긴다). 서버리스 함수가 보내는 도중에 끝나지 않게 하려는 것이다.
+
+**이벤트는 두 번 올 수 있다.** 받는 곳이 이벤트를 처리했는데 답이 돌아오다 끊기면, Monti는 실패로 세고 다시 보낸다. 다시 보낼 때마다 같은 id가
+가므로, 두 번 하면 안 되는 받는 곳은 처리한 id를 적어 둔다.
+
+| 어디 | 무엇 |
+|---|---|
+| 본문의 `id`, 헤더 `Monti-Event-Id` | 이벤트의 id. 다시 보낼 때마다 같고, 그 이벤트를 받는 곳 모두에게 같다 |
+| 헤더 `Monti-Delivery-Id` | 이 받는 곳으로 가는 전송의 id. 다시 보낼 때마다 같다 |
+| 헤더 `Monti-Attempt` | 몇 번째 시도인지, 1부터 |
+
+플러그인의 받는 곳은 같은 것을 인자로 받는다: `send(event, signal, { id, attempt })`. `monti deliveries:run`은 돌고 있는 사이트만 보낼 수 있는
+전송(Next 어댑터의 캐시 갱신)을 시도하지 않고 남기며, 몇 건을 남겼는지 말한다.
 
 활동 기록(`activity.list`, `activity.get`)은 모든 쓰기를 한 줄로 보인다. 무엇을 했는지(`summary`), 어디서(`where`), 전송이 어떻게 됐는지다.
-어시스턴트가 요청 하나로 한 쓰기들은 한 줄이고 함께 되돌린다.
+어시스턴트의 제안을 한 번 적용해 생긴 쓰기들은 한 줄이고 함께 되돌린다(`activity.undo`. 제안 하나를 통째로 되돌릴 수도 있다). 되돌리기는
+쓰기처럼 되돌릴 레코드를 붙잡고 하므로, 보지 못한 저장 위에 덮어쓰지 않는다.
 
 레코드 종류(`defineRecordKind`)는 엔진에게 레코드의 상태를 읽는 법과 옛 상태로 되돌리는 법을 알려 준다.
 

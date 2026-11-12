@@ -50,7 +50,12 @@ export async function main(config: MontiConfig, root: string, argv: string[]): P
 			return 0;
 		}
 		if (command === "deliveries:run") {
-			await monti.deliveries.sendDue();
+			// What only the running site can send (the Next adapter's cache refresh has no Next here) is left for it, untried: the admin's next visit
+			// sends it. A try from here would only write "failed" over a delivery that has not failed.
+			const { sent, failed, left } = await monti.deliveries.sendDue({ leaveUnknown: true });
+			io.out(
+				`Sent ${sent}, ${failed} failed.${left > 0 ? ` ${left} are the running site's to send: open the admin, or send them again from the activity log.` : ""}`,
+			);
 			return 0;
 		}
 		if (command === "trash:purge") {

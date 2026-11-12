@@ -1,10 +1,8 @@
 import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
 import type { Database, DeliveryTable } from "../db/schema";
-import { publicPath } from "../entries/paths";
 import { CheckError } from "../errors";
 import { ACTIVITY_KINDS, type Actor, type LoggedRecord, type Message, recordKey } from "../operation";
-import type { Schema } from "../schema/define";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -30,6 +28,11 @@ export const ActivityQuery = z.object({
 	entry: z.string().optional(),
 	page: z.number().int().min(1).default(1),
 	pageSize: z.number().int().min(1).max(200).default(50),
+	/**
+	 * Where one browsing of the log stands: the `asOf` a first page answered. Later pages given it leave out the lines that began after that page was
+	 * read, so a page starts where the one before it ended while new activity arrives. Left out, the log as it is now.
+	 */
+	asOf: z.string().regex(/^\d+$/).optional(),
 });
 export type ActivityQuery = z.infer<typeof ActivityQuery>;
 
@@ -66,6 +69,8 @@ export type ActivityLine = {
 export type ActivityList = {
 	lines: ActivityLine[];
 	total: number;
+	/** The newest line there was when this was read: pass it with the next pages of the same browsing. */
+	asOf: string;
 	/** Whether the log shows deliveries at all: the site has a receiver, or once had one whose deliveries are still here. */
 	deliveries: boolean;
 	/** How many deliveries are in each state, for the filter's menu. */
@@ -75,10 +80,10 @@ export type ActivityList = {
 };
 
 /** A record of a line, as its details show it. */
-export type ActivityRecord = LoggedRecord & {
+export type ActivityRecord = Omit<LoggedRecord, "address"> & {
 	/** Whether it is still there to open (not deleted for good). */
 	exists: boolean;
-	/** An entry's public address as it was then; `null` without one. */
+	/** An entry's public address as it was when the write ran; `null` without one. A path changed or a collection removed since does not change it. */
 	address: string | null;
 };
 
@@ -106,6 +111,7 @@ export type ActivityDetail = ActivityLine & {
 
 type Row = {
 	id: string;
+	line: string;
 	at: Date;
 	actor: Actor;
 	summary: Message;
@@ -116,8 +122,6 @@ type Row = {
 	undo_until: Date | null;
 	undone_at: Date | null;
 };
-
-const lineOf = (row: Row) => row.proposal_id ?? row.id;
 
 /** A message with what its collection is called in the admin, for texts that name it (`{collectionLabel}`). */
 function named(message: Message, labels: Map<string, string>): Message {
@@ -162,6 +166,7 @@ async function linesOf(db: Db, keys: string[], now: Date): Promise<{ line: Activ
 		.selectFrom("monti_activity")
 		.select([
 			"id",
+			"line",
 			"at",
 			"actor",
 			"summary",
@@ -173,8 +178,7 @@ async function linesOf(db: Db, keys: string[], now: Date): Promise<{ line: Activ
 			"undone_at",
 		])
 		.where("listed", "=", true)
-		.where((eb) => eb.or([eb("id", "in", keys), eb("proposal_id", "in", keys)]))
-		.orderBy("at", "desc")
+		.where("line", "in", keys)
 		.orderBy("seq", "desc")
 		.execute();
 	if (rows.length === 0) return [];
@@ -194,13 +198,15 @@ async function linesOf(db: Db, keys: string[], now: Date): Promise<{ line: Activ
 			: await db.selectFrom("monti_proposal").select(["id", "request"]).where("id", "in", proposals).execute();
 	const labels = await collectionLabels(db);
 	return keys.flatMap((key) => {
-		const own = rows.filter((row) => lineOf(row) === key);
+		const own = rows.filter((row) => row.line === key);
 		const [newest] = own;
-		if (!newest) return [];
+		// The line's place and time are its head's, its first write: they never change, whatever joins the line later.
+		const head = own.at(-1);
+		if (!newest || !head) return [];
 		const ids = new Set(own.map((row) => row.id));
 		const line: ActivityLine = {
 			id: key,
-			at: newest.at,
+			at: head.at,
 			actor: newest.actor,
 			request: requests.find((proposal) => proposal.id === newest.proposal_id)?.request ?? null,
 			conversationId: own.find((row) => row.conversation_id !== null)?.conversation_id ?? null,
@@ -244,29 +250,37 @@ export async function listActivity(
 	options: { now: Date; receivers: boolean },
 ): Promise<ActivityList> {
 	const entry = query.entry === undefined ? null : await entryFilter(db, query.entry);
-	const hits = [
+	// A page walks the heads, one row a line, in the order they were written, and asks each what its line holds: nothing groups the history.
+	// A line shows when it meets every condition; a condition is met by any of the line's rows.
+	const ofLine = (condition: ReturnType<typeof sql>) =>
+		sql`exists (select 1 from monti_activity r where r.line = h.id and r.listed and ${condition})`;
+	const conditions = [
+		sql`h.listed and h.id = h.line`,
+		query.asOf === undefined ? null : sql`h.seq <= ${query.asOf}`,
 		query.kind === undefined
 			? null
 			: query.kind === "assistant"
-				? sql`conversation_id is not null`
-				: sql`kind = ${query.kind}`,
+				? sql`h.conversation_id is not null`
+				: ofLine(sql`r.kind = ${query.kind}`),
 		query.delivery === undefined
 			? null
-			: sql`exists (select 1 from monti_delivery d where d.activity_id = a.id and d.state = ${query.delivery})`,
+			: sql`exists (select 1 from monti_delivery d join monti_activity r on r.id = d.activity_id
+				where r.line = h.id and r.listed and d.state = ${query.delivery})`,
 		entry === null
 			? null
-			: sql`(${sql.join(
-					entry.ids.map((id) => sql`targets @> ${JSON.stringify([{ kind: "entry", id }])}::jsonb`),
-					sql` or `,
-				)})`,
-	].filter((hit) => hit !== null);
-	const hit = hits.length === 0 ? sql`true` : sql.join(hits, sql` and `);
-	// A line is its rows together: it shows when any of them matches, at the time of its newest.
-	const lines = sql`(select coalesce(proposal_id, id) as line, max("at") as newest, max(seq) as last from monti_activity a
-		where listed group by 1 having bool_or(${hit})) as lines`;
-	const page = await sql<{ line: string }>`select line from ${lines} order by newest desc, last desc
-		limit ${query.pageSize} offset ${(query.page - 1) * query.pageSize}`.execute(db);
-	const total = await sql<{ count: string }>`select count(*) as count from ${lines}`.execute(db);
+			: ofLine(
+					sql`(${sql.join(
+						entry.ids.map((id) => sql`r.targets @> ${JSON.stringify([{ kind: "entry", id }])}::jsonb`),
+						sql` or `,
+					)})`,
+				),
+	].filter((condition) => condition !== null);
+	const where = sql.join(conditions, sql` and `);
+	const page = await sql<{ line: string }>`select h.id as line from monti_activity h where ${where}
+		order by h.seq desc limit ${query.pageSize} offset ${(query.page - 1) * query.pageSize}`.execute(db);
+	const total = await sql<{ count: string }>`select count(*) as count from monti_activity h where ${where}`.execute(db);
+	const newest = await sql<{ seq: string | null }>`select max(seq) as seq from monti_activity h
+		where h.listed and h.id = h.line`.execute(db);
 	const states = await db
 		.selectFrom("monti_delivery")
 		.select(["state", (eb) => eb.fn.countAll<string>().as("count")])
@@ -284,13 +298,14 @@ export async function listActivity(
 			)
 		).map(({ line }) => line),
 		total: Number(total.rows[0]?.count ?? 0),
+		asOf: query.asOf ?? String(newest.rows[0]?.seq ?? 0),
 		deliveries: options.receivers || states.length > 0,
 		deliveryCounts,
 		entry: entry && query.entry !== undefined ? { id: query.entry, title: entry.title } : null,
 	};
 }
 
-export async function getActivity(db: Db, schema: Schema, id: string, now: Date): Promise<ActivityDetail> {
+export async function getActivity(db: Db, id: string, now: Date): Promise<ActivityDetail> {
 	const [found] = await linesOf(db, [id], now);
 	if (!found) throw new CheckError({ key: "activity.unknown" });
 	// Each record once, as the line's newest write left it.
@@ -335,10 +350,7 @@ export async function getActivity(db: Db, schema: Schema, id: string, now: Date)
 		records: shown.map((record) => ({
 			...record,
 			exists: here.has(recordKey(record)),
-			address:
-				record.kind === "entry" && record.collection && record.slug
-					? publicPath(schema, record.collection, record.slug, record.locale)
-					: null,
+			address: record.address ?? null,
 		})),
 		recordCount: logged.length,
 		deliveries: deliveries.map((delivery) => ({

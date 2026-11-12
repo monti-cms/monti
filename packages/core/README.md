@@ -37,10 +37,24 @@ export const moveToFolder = defineOperation({
 A receiver is a webhook (`receivers: [webhook("https://example.dev/api/revalidate")]`) or a plugin's. A send that fails, or takes longer than ten
 seconds, shows as failed at once in the activity log and in the sidebar's count; it is tried again by itself eight times at growing waits
 (`RETRY_MINUTES`), when the admin opens and from `monti deliveries:run`, and after the last it stays failed until a person sends it again
-(`deliveries.retry`) or cancels it (`deliveries.cancel`).
+(`deliveries.retry`, a batch at a time) or cancels it (`deliveries.cancel`). The sends nobody waits for are handed to the host's `waitUntil`
+(`openMonti(config, root, { waitUntil })`; `@monti-cms/next` passes Next's `after`), so a serverless function is not ended mid-send.
+
+**An event can arrive twice.** A receiver may handle an event and lose its answer on the way back; Monti then counts a failure and sends it again.
+Every try carries the same ids, so a receiver that must not act twice keeps the ids it has handled:
+
+| Where | What |
+|---|---|
+| the body's `id`, header `Monti-Event-Id` | the event's id: the same on every try, and for every receiver of the event |
+| header `Monti-Delivery-Id` | this receiver's delivery of it: the same on every try |
+| header `Monti-Attempt` | which try this is, from 1 |
+
+A plugin's receiver gets the same as arguments: `send(event, signal, { id, attempt })`. `monti deliveries:run` leaves what only the running site
+can send (the Next adapter's cache refresh) untried and says how many it left.
 
 The activity log (`activity.list`, `activity.get`) shows every write as a line: what was done (`summary`), where (`where`), and how its deliveries
-went. The assistant's writes for one request are one line, undone together.
+went. The writes one application of the assistant's proposal made are one line, undone together (`activity.undo`, which also takes a whole
+proposal). An undo holds the records it puts back, as a write does, so it never goes over a save it did not see.
 
 A record kind (`defineRecordKind`) tells the engine how to read a record's state and put an old state back.
 

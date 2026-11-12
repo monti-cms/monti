@@ -142,6 +142,8 @@ export async function applyProposal(
 		.execute();
 	const outputs = new Map(items.filter((item) => item.state === "applied").map((item) => [item.id, item.output]));
 	const results: ApplyResult = [];
+	// The writes of this application are one line of the activity log (doc 13).
+	const batch: RunOptions["batch"] = {};
 
 	const settle = async (
 		itemId: string,
@@ -184,6 +186,7 @@ export async function applyProposal(
 				conversationId: proposal.conversation_id,
 				proposalItemId: item.id,
 				proposalId,
+				batch,
 			});
 			outputs.set(item.id, result.output);
 			await settle(item.id, "applied", { output: result.output, activityId: result.activityId });

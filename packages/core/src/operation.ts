@@ -31,6 +31,11 @@ export type Message = { key: string; values?: Record<string, string | number> };
 
 /** Something that happened to the site, sent to every receiver (webhooks, plugins) after the write that caused it commits. */
 export type MontiEvent = {
+	/**
+	 * The event's own id, the same on every try and for every receiver: what a receiver keeps to tell a second arrival of an event it has already
+	 * handled (its answer was lost, so it was sent again). The engine makes it.
+	 */
+	id: string;
 	type: string;
 	/** When the write ran, as an ISO string. The engine stamps it. */
 	at: string;
@@ -42,8 +47,8 @@ export type MontiEvent = {
 	paths?: string[];
 };
 
-/** An event as an operation queues it: the engine adds when. */
-export type EmittedEvent = Omit<MontiEvent, "at">;
+/** An event as an operation queues it: the engine adds its id and when. */
+export type EmittedEvent = Omit<MontiEvent, "id" | "at">;
 
 /**
  * The groups the activity log filters its lines by (doc 13): saving an entry, what the site shows of it, the trash, an import, settings and media. The
@@ -58,8 +63,11 @@ export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
  */
 export type LoggedRecord = RecordRef & { version: number | null } & RecordLabel;
 
-/** What a record is called in the log, from its record kind: a title, and for an entry its collection, language and address. */
-export type RecordLabel = { title?: string; collection?: string; locale?: string; slug?: string };
+/**
+ * What a record is called in the log, from its record kind: a title, and for an entry its collection, language, slug and public address. The address is
+ * the one it had when the write ran: a collection's path changed or removed since does not rewrite what the log says.
+ */
+export type RecordLabel = { title?: string; collection?: string; locale?: string; slug?: string; address?: string };
 
 /** What an operation gets besides its input. */
 export interface OperationContext {

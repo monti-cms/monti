@@ -1,6 +1,6 @@
 import { sql } from "kysely";
 import { z } from "zod";
-import { failedDeliveryCount } from "../engine/deliveries";
+import { deliveryCounts } from "../engine/deliveries";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
 import { trashRowCount } from "../trash/list";
@@ -180,7 +180,7 @@ export const authOperations = [
 				),
 				trash: await trashRowCount(ctx.db, ctx.site.schema().locales.source),
 				// The one count the activity tab and its banner show too (13-4).
-				failedDeliveries: await failedDeliveryCount(ctx.db),
+				failedDeliveries: (await deliveryCounts(ctx.db, ctx.now())).failed,
 			};
 		},
 	}),

@@ -7,7 +7,7 @@ import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./
 import { bodyOperations, templateRecord } from "./body/operations";
 import type { Database } from "./db/schema";
 import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
-import { context, type Engine, type RunOptions, runRead, runWrite } from "./engine/execute";
+import { context, type Engine, logOwnWork, type RunOptions, runRead, runWrite } from "./engine/execute";
 import { type ApplyResult, applyProposal, createProposal, proposeItem, settleProposal } from "./engine/proposals";
 import { listOperations } from "./entries/list";
 import { entryOperations } from "./entries/operations";
@@ -29,7 +29,7 @@ import { schemaOperations, schemaRecordKinds } from "./schema/operations";
 import { createSite } from "./site";
 import { translationOperations } from "./translations/operations";
 import { trashOperations } from "./trash/operations";
-import { purgeDue } from "./trash/purge";
+import { purgeDue, purgedEvents } from "./trash/purge";
 
 /** A site without a schema file yet: one language and no collections. */
 const EMPTY_SCHEMA: Schema = {
@@ -256,10 +256,13 @@ export function createMonti(options: MontiOptions) {
 	 * away) is logged and not passed on: the write it follows has committed, the delivery is still queued, and the next visit or
 	 * `monti deliveries:run` sends it.
 	 */
-	const background = (work: Promise<void>): Promise<void> => {
-		const safe = work.catch((error) => {
-			console.error("Monti: sending deliveries failed; they stay queued for the next try:", error);
-		});
+	const background = (work: Promise<unknown>): Promise<void> => {
+		const safe = work.then(
+			() => {},
+			(error) => {
+				console.error("Monti: sending deliveries failed; they stay queued for the next try:", error);
+			},
+		);
 		options.waitUntil?.(safe);
 		return safe;
 	};
@@ -314,8 +317,12 @@ export function createMonti(options: MontiOptions) {
 		},
 
 		deliveries: {
-			/** Sends the retries that are due and waits for them (`monti deliveries:run`). */
-			sendDue: () => sendDueDeliveries(engine.db, receivers, now),
+			/**
+			 * Sends the retries that are due, a sweep's worth, and waits for them (`monti deliveries:run`). With `leaveUnknown`, a delivery whose
+			 * receiver this process does not have is left untried and counted in `left`: the command line has no Next around it, and a try from
+			 * there would write a failure that is not one.
+			 */
+			sendDue: (sweep: { leaveUnknown?: boolean } = {}) => sendDueDeliveries(engine.db, receivers, now, sweep),
 			/**
 			 * Sends the retries that are due without holding the caller: the admin opening must not wait for a receiver that does not answer (T5). The
 			 * promise is for tests and for a host that wants to wait.
@@ -331,8 +338,26 @@ export function createMonti(options: MontiOptions) {
 		},
 
 		trash: {
-			/** Deletes what the trash has kept for 30 days, with the snapshots and files nothing needs any more (`monti trash:purge`, and when the admin opens). */
-			purgeDue: () => purgeDue(engine.db, site.schema(), site.storage, now()),
+			/**
+			 * Deletes what the trash has kept for 30 days, with the snapshots and files nothing needs any more (`monti trash:purge`, and when the admin
+			 * opens). It is no operation, and still it is a line of the log that tells the receivers which entries are gone, in the purge's own
+			 * transaction (doc 13): `actor` is who set it going.
+			 */
+			async purgeDue(actor: "cli" | "admin" = "cli") {
+				const { deliveryIds, ...result } = await purgeDue(engine.db, site.schema(), site.storage, now(), (trx, gone) =>
+					logOwnWork(engine, trx, {
+						actor,
+						operation: "trash.purgeDue",
+						summary: { key: "trash.purgedDue", values: { count: gone.count } },
+						where: { key: "activity.where.trash" },
+						kind: "trash",
+						events: purgedEvents(gone.entries),
+					}),
+				);
+				const sent = background(sendDeliveries(engine.db, receivers, deliveryIds, now));
+				if (!options.waitUntil) await sent;
+				return result;
+			},
 		},
 	};
 }

@@ -250,6 +250,8 @@ export const schemaOperations = [
 			const pending = await pendingChanges(ctx.db, await files.readChanges());
 			for (const change of pending) await applyChange(ctx.db, change, ctx.site.schema(), ctx.site.kit);
 			await setSchemaState(ctx.db, ctx.site.schema(), null);
+			// The apply that failed told nobody; the one that gets through does, as a first apply would have.
+			if (pending.length > 0) ctx.emit({ type: "schema.applied", ids: pending.map((change) => change.id) });
 			return { applied: pending.map((change) => change.id) };
 		},
 		log: "settings",

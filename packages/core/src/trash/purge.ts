@@ -3,6 +3,7 @@ import type { Database } from "../db/schema";
 import { UNDO_DAYS } from "../engine/execute";
 import { freeName, lockFolderScope } from "../folders/operations";
 import type { Storage } from "../media/storage";
+import type { EmittedEvent } from "../operation";
 import { lockRecords } from "../records";
 import { unlinkTargetGroup } from "../relations/sync";
 import type { Schema } from "../schema/define";
@@ -292,23 +293,47 @@ export async function sweepLooseFiles(db: Kysely<Database>, storage: Storage | n
  * The clean-up (`monti trash:purge`, and when the admin opens, doc 11): deletes what has been in the trash for 30 days, forgets the snapshots of writes that can no
  * longer be undone (T7), and removes the loose files from the storage.
  */
+/**
+ * The events of entries deleted for good, thrown away or brought back: one for the entries of each collection and language, since the trash moves
+ * many at once and a receiver hears of them together.
+ */
+export function placeEvents(
+	type: "entry.trashed" | "entry.restored" | "entry.purged",
+	entries: { id: string; collection: string; locale: string }[],
+): EmittedEvent[] {
+	const places = new Map<string, { collection: string; locale: string; ids: string[] }>();
+	for (const entry of entries) {
+		const key = `${entry.collection}\n${entry.locale}`;
+		const place = places.get(key) ?? { collection: entry.collection, locale: entry.locale, ids: [] };
+		place.ids.push(entry.id);
+		places.set(key, place);
+	}
+	return [...places.values()].map((place) => ({ type, ...place }));
+}
+
+export const purgedEvents = (entries: PurgedEntry[]) => placeEvents("entry.purged", entries);
+
 export async function purgeDue(
 	db: Kysely<Database>,
 	schema: Schema,
 	storage: Storage | null,
 	now: Date,
-): Promise<{ purged: number; files: number }> {
-	const purged = await db.transaction().execute(async (trx) => {
+	/** Logs the purge and queues its events, in the purge's transaction; it answers the deliveries to send once it has committed. */
+	log?: (trx: Transaction<Database>, gone: { count: number; entries: PurgedEntry[] }) => Promise<string[]>,
+): Promise<{ purged: number; files: number; deliveryIds: string[] }> {
+	const { purged, deliveryIds } = await db.transaction().execute(async (trx) => {
 		const due = new Date(now.getTime() - TRASH_DAYS * DAY);
 		// Held as a restore holds them, then read again: a row that came back at this moment stays.
 		await lockRecords(trx, await everyTrashRow(trx, due));
 		const rows = await everyTrashRow(trx, due);
-		if (rows.length > 0) await purgeRows(trx, schema, rows, now);
+		const entries = rows.length > 0 ? await purgeRows(trx, schema, rows, now) : [];
+		// Nothing was due: no line, no event.
+		const queued = rows.length > 0 && log ? await log(trx, { count: rows.length, entries }) : [];
 		await trx
 			.deleteFrom("monti_activity_snapshot")
 			.where("activity_id", "in", trx.selectFrom("monti_activity").select("id").where("undo_until", "<", now))
 			.execute();
-		return rows.length;
+		return { purged: rows.length, deliveryIds: queued };
 	});
-	return { purged, files: await sweepLooseFiles(db, storage, now) };
+	return { purged, files: await sweepLooseFiles(db, storage, now), deliveryIds };
 }

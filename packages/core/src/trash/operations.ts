@@ -16,7 +16,7 @@ import {
 } from "../operation";
 import { lockRecords } from "../records";
 import { listTrash, TrashQuery, trashedEntry, trashRowCount } from "./list";
-import { everyTrashRow, foldersUnder, purgeRows, sweepLooseFiles, type TrashRef } from "./purge";
+import { everyTrashRow, foldersUnder, placeEvents, purgeRows, sweepLooseFiles, type TrashRef } from "./purge";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -389,20 +389,13 @@ async function inTrash(db: Db, rows: TrashRef[]): Promise<void> {
 const askedRecords = (rows: TrashRef[], records: LoggedRecord[]) =>
 	rows.flatMap((row) => records.find((record) => record.kind === row.kind && record.id === row.id) ?? []);
 
-/** One event for the entries of each collection and language: the trash moves many at once, and a receiver hears of them together. */
+/** Tells the receivers of entries thrown away, brought back or deleted for good: one event for each collection and language. */
 function emitByPlace(
 	ctx: OperationContext,
 	type: "entry.trashed" | "entry.restored" | "entry.purged",
 	entries: { id: string; collection: string; locale: string }[],
 ) {
-	const places = new Map<string, { collection: string; locale: string; ids: string[] }>();
-	for (const entry of entries) {
-		const key = `${entry.collection}\n${entry.locale}`;
-		const place = places.get(key) ?? { collection: entry.collection, locale: entry.locale, ids: [] };
-		place.ids.push(entry.id);
-		places.set(key, place);
-	}
-	for (const place of places.values()) ctx.emit({ type, ...place });
+	for (const event of placeEvents(type, entries)) ctx.emit(event);
 }
 
 /** A file deleted for good leaves the storage only once its row's delete has committed (doc 11): after the write, on the database itself. */
