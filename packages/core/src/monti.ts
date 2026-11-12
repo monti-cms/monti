@@ -1,14 +1,14 @@
 import type { Kysely } from "kysely";
 import { z } from "zod";
+import { activityOperations } from "./activity/operations";
 import type { DevProof } from "./auth/dev-bypass";
 import { type AuthSettings, authOperations } from "./auth/operations";
 import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./body/blocks";
 import { bodyOperations, templateRecord } from "./body/operations";
 import type { Database } from "./db/schema";
 import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
-import { type Engine, type RunOptions, runRead, runWrite } from "./engine/execute";
+import { context, type Engine, type RunOptions, runRead, runWrite } from "./engine/execute";
 import { type ApplyResult, applyProposal, createProposal, proposeItem, settleProposal } from "./engine/proposals";
-import { planUndo, undoWithEvents } from "./engine/undo";
 import { listOperations } from "./entries/list";
 import { entryOperations } from "./entries/operations";
 import { entryRecord } from "./entries/record";
@@ -20,27 +20,16 @@ import { aiServices, type KeyService } from "./keys/services";
 import { mediaOperations } from "./media/operations";
 import { mediaRecord } from "./media/record";
 import type { Storage } from "./media/storage";
-import {
-	type Actor,
-	type AnyOperation,
-	defineOperation,
-	type OperationKind,
-	type Preview,
-	recordKey,
-} from "./operation";
+import { type Actor, type AnyOperation, defineOperation, type OperationKind, recordKey } from "./operation";
 import type { RecordKind } from "./records";
 import { relationOperations } from "./relations/operations";
-import { keepSeenTracked } from "./schema/apply";
 import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
 import { schemaOperations, schemaRecordKinds } from "./schema/operations";
 import { createSite } from "./site";
 import { translationOperations } from "./translations/operations";
 import { trashOperations } from "./trash/operations";
-import { purgeDue, sweepLooseFiles } from "./trash/purge";
-
-/** The writes that delete media rows for good: their files leave the storage right after. */
-const PURGES = new Set(["trash.purge", "trash.empty"]);
+import { purgeDue } from "./trash/purge";
 
 /** A site without a schema file yet: one language and no collections. */
 const EMPTY_SCHEMA: Schema = {
@@ -123,7 +112,7 @@ export const available = (operation: AnyOperation, actor: Actor, structureOpen: 
 	!(operation.kind === "screen" && actor === "cli");
 
 /** The core's own operations that belong to the engine itself. */
-function engineOperations(engine: Engine, all: () => AnyOperation[]): AnyOperation[] {
+function engineOperations(all: () => AnyOperation[]): AnyOperation[] {
 	return [
 		defineOperation({
 			name: "meta.capabilities",
@@ -181,30 +170,9 @@ function engineOperations(engine: Engine, all: () => AnyOperation[]): AnyOperati
 					await settleProposal(ctx.db, proposalId);
 				return { discarded: items.map((item) => item.id) };
 			},
+			// Nothing changed, so the log has no line for it (doc 00).
+			log: false,
 			summary: (_input, output) => ({ key: "proposals.discard", values: { count: output.discarded.length } }),
-		}),
-		defineOperation({
-			name: "activity.undo",
-			kind: "write",
-			description:
-				"Undo a write from the activity log. Records changed since that write are skipped, never overwritten. Works for 30 days.",
-			input: z.object({ id: z.string() }),
-			preview: async (input, ctx): Promise<Preview> => {
-				const plan = await planUndo(engine, ctx.db, input.id);
-				return {
-					summary: { key: "activity.undo", values: { count: plan.restore.length } },
-					changes: plan.restore,
-					blocked: plan.skip.map((ref) => ({ ref, reason: { key: "activity.changedSince" } })),
-				};
-			},
-			async run(input, ctx) {
-				// An undo that changes what the site shows says so, so the site's cache follows (T29).
-				const output = await undoWithEvents(engine, ctx.db, input.id, ctx.emit);
-				// What an entry saw back then may be of a field that has since left the schema.
-				await keepSeenTracked(ctx.db, ctx.site.schema());
-				return output;
-			},
-			summary: (_input, output) => ({ key: "activity.undo", values: { count: output.restore.length } }),
 		}),
 	];
 }
@@ -264,7 +232,8 @@ export function createMonti(options: MontiOptions) {
 		operations.set(operation.name, operation);
 	};
 	for (const operation of [
-		...engineOperations(engine, () => [...operations.values()]),
+		...engineOperations(() => [...operations.values()]),
+		...activityOperations(engine),
 		...schemaOperations,
 		...entryOperations,
 		...listOperations,
@@ -282,6 +251,19 @@ export function createMonti(options: MontiOptions) {
 	for (const plugin of plugins)
 		for (const operation of plugin.operations ?? []) add(operation, `plugin ${plugin.name}`);
 
+	/**
+	 * Sending whose result nobody reads. A serverless host keeps it going after the response (`waitUntil`). A send that throws (the database went
+	 * away) is logged and not passed on: the write it follows has committed, the delivery is still queued, and the next visit or
+	 * `monti deliveries:run` sends it.
+	 */
+	const background = (work: Promise<void>): Promise<void> => {
+		const safe = work.catch((error) => {
+			console.error("Monti: sending deliveries failed; they stay queued for the next try:", error);
+		});
+		options.waitUntil?.(safe);
+		return safe;
+	};
+
 	const get = (name: string, kinds: OperationKind[]) => {
 		const operation = operations.get(name);
 		if (!operation || !kinds.includes(operation.kind)) throw new UnknownOperationError(name);
@@ -290,12 +272,16 @@ export function createMonti(options: MontiOptions) {
 
 	const write = async <Output>(operation: AnyOperation, input: unknown, runOptions: RunOptions) => {
 		const result = await runWrite<Output>(engine, operation, input, runOptions);
-		const sending = sendDeliveries(engine.db, receivers, result.deliveryIds, now());
-		if (options.waitUntil) options.waitUntil(sending);
-		else await sending;
-		// A file deleted for good leaves the storage only now that its row's delete has committed (doc 11).
-		if (PURGES.has(operation.name)) await sweepLooseFiles(engine.db, site.storage, now());
-		return result;
+		const sent = background(sendDeliveries(engine.db, receivers, result.deliveryIds, now));
+		// Without a host that keeps work going after the response, the write waits for its first send.
+		if (!options.waitUntil) await sent;
+		if (!operation.afterCommit) return result;
+		// What waits for the commit and is waited for: a deleted file's bytes leave the storage, a failed delivery is sent again.
+		const settled = await operation.afterCommit(
+			result.output,
+			context(engine, engine.db, runOptions.actor, runOptions.session ?? null).ctx,
+		);
+		return settled === undefined ? result : { ...result, output: settled as Output };
 	};
 
 	return {
@@ -328,8 +314,13 @@ export function createMonti(options: MontiOptions) {
 		},
 
 		deliveries: {
-			/** Sends the retries that are due (`monti deliveries:run`, and when the admin opens). */
-			sendDue: () => sendDueDeliveries(engine.db, receivers, now()),
+			/** Sends the retries that are due and waits for them (`monti deliveries:run`). */
+			sendDue: () => sendDueDeliveries(engine.db, receivers, now),
+			/**
+			 * Sends the retries that are due without holding the caller: the admin opening must not wait for a receiver that does not answer (T5). The
+			 * promise is for tests and for a host that wants to wait.
+			 */
+			sendDueInBackground: (): Promise<void> => background(sendDueDeliveries(engine.db, receivers, now)),
 		},
 
 		keys: {

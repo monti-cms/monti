@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { entryPlace, recordsOf, titleOf } from "../activity/words";
 import { randomUUID } from "../bytes";
 import { editableEntry, entryOf, saveWorking } from "../entries/operations";
 import { CheckError, ConflictError } from "../errors";
@@ -24,6 +25,7 @@ const TemplateSnapshot = z.object({
 /** A template for the engine, so saving and removing one can be undone like any admin value. */
 export const templateRecord = defineRecordKind({
 	kind: "template",
+	label: (data) => ({ title: (data as { name: string }).name }),
 	async load(db, ids) {
 		if (ids.length === 0) return [];
 		const rows = await db.selectFrom("templates").selectAll().where("id", "in", ids).execute();
@@ -135,7 +137,12 @@ export const bodyOperations = [
 			await addSkips(ctx.db, entry, skipped);
 			return saved;
 		},
-		summary: (input) => ({ key: "body.edit", values: { count: input.ops.length } }),
+		log: "save",
+		summary: (input, _output, records) => ({
+			key: "body.edit.done",
+			values: { title: titleOf(records, "entry", input.id), count: input.ops.length },
+		}),
+		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),
 	defineOperation({
 		name: "templates.list",
@@ -208,7 +215,9 @@ export const bodyOperations = [
 			ctx.created(templateRef(id));
 			return { id };
 		},
+		log: "settings",
 		summary: (input) => ({ key: "templates.save", values: { name: input.name } }),
+		where: () => ({ key: "activity.where.templates" }),
 	}),
 	defineOperation({
 		name: "templates.duplicate",
@@ -225,7 +234,12 @@ export const bodyOperations = [
 			ctx.created(templateRef(id));
 			return { id };
 		},
-		summary: (input) => ({ key: "templates.duplicate", values: { id: input.id } }),
+		log: "settings",
+		summary: (_input, output, records) => ({
+			key: "templates.duplicate",
+			values: { name: titleOf(records, "template", output.id) },
+		}),
+		where: () => ({ key: "activity.where.templates" }),
 	}),
 	defineOperation({
 		name: "templates.remove",
@@ -239,6 +253,11 @@ export const bodyOperations = [
 			await ctx.db.deleteFrom("templates").where("id", "=", input.id).execute();
 			return { id: input.id };
 		},
-		summary: (input) => ({ key: "templates.remove", values: { id: input.id } }),
+		log: "settings",
+		summary: (input, _output, records) => ({
+			key: "templates.remove",
+			values: { name: titleOf(records, "template", input.id) },
+		}),
+		where: () => ({ key: "activity.where.templates" }),
 	}),
 ];

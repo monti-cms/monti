@@ -32,6 +32,8 @@ export type Message = { key: string; values?: Record<string, string | number> };
 /** Something that happened to the site, sent to every receiver (webhooks, plugins) after the write that caused it commits. */
 export type MontiEvent = {
 	type: string;
+	/** When the write ran, as an ISO string. The engine stamps it. */
+	at: string;
 	ids: string[];
 	collection?: string;
 	locale?: string;
@@ -40,13 +42,35 @@ export type MontiEvent = {
 	paths?: string[];
 };
 
+/** An event as an operation queues it: the engine adds when. */
+export type EmittedEvent = Omit<MontiEvent, "at">;
+
+/**
+ * The groups the activity log filters its lines by (doc 13): saving an entry, what the site shows of it, the trash, an import, settings and media. The
+ * assistant's work is no group of its own: a line is the assistant's when it came from a conversation.
+ */
+export const ACTIVITY_KINDS = ["save", "publish", "trash", "import", "settings", "media"] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+
+/**
+ * A record a write touched, as the activity log keeps it: its version after the write (`null` when the write removed it) and what it was called
+ * then, so the log names an entry that has since been renamed or deleted for good.
+ */
+export type LoggedRecord = RecordRef & { version: number | null } & RecordLabel;
+
+/** What a record is called in the log, from its record kind: a title, and for an entry its collection, language and address. */
+export type RecordLabel = { title?: string; collection?: string; locale?: string; slug?: string };
+
 /** What an operation gets besides its input. */
 export interface OperationContext {
 	/** The database; inside a write, the write's transaction. */
 	db: Kysely<Database> | Transaction<Database>;
 	actor: Actor;
-	/** Queues an event. It is stored in the write's transaction and sent only after the write commits. */
-	emit(event: MontiEvent): void;
+	/**
+	 * Queues an event. It is stored in the write's transaction and sent only after the write commits. `activity` names the log row its delivery shows on
+	 * when that is not this write's own: an undo's events belong to the line it undoes.
+	 */
+	emit(event: EmittedEvent, options?: { activity?: string }): void;
 	/** Marks a record the write creates, so undoing the write removes it. */
 	created(ref: RecordRef): void;
 	/** The site's schema and, on the dev server, the way to its files. */
@@ -102,8 +126,25 @@ export type OperationDefinition<Input, Output, Prepared = undefined> = {
 	/** What the write would change. The agent reads it before proposing, and the proposal card shows it. */
 	preview?: (input: Input, ctx: OperationContext) => Awaitable<Preview>;
 	run: (input: Input, ctx: OperationContext, prepared: Prepared) => Awaitable<Output>;
-	/** One line for the activity log. Every write has one. */
-	summary?: (input: Input, output: Output) => Message;
+	/**
+	 * Work that waits for the commit and that the caller waits for: sending a delivery again, removing a deleted file's bytes. It gets the write's
+	 * output and a context on the database itself (the transaction is over); what it returns, when it returns something, is the output the caller sees.
+	 */
+	afterCommit?: (output: Output, ctx: OperationContext) => Awaitable<Output | undefined>;
+	/**
+	 * What was done, as the first line of its line in the activity log: "“First post” published". Every write has one. `records` are the records the
+	 * write touched or made, with what each was called.
+	 */
+	summary?: (input: Input, output: Output, records: LoggedRecord[]) => Message;
+	/** Where it happened, as the second line of its line in the log: an entry's address, a collection, "Media · Blog assets". */
+	where?: (input: Input, output: Output, records: LoggedRecord[]) => Message | null;
+	/**
+	 * The group the activity log files the write under, by what it touched when one operation serves two places (a folder of entries, a folder of
+	 * files).
+	 * `false` keeps the row off the log's lines: the row is still written, but signing in, a list's column widths or a discarded proposal is no change
+	 * to the site that a person looks for there. Left out, the line shows under no group.
+	 */
+	log?: ActivityKind | false | ((input: Input, records: LoggedRecord[]) => ActivityKind);
 };
 
 export type Operation<Input = unknown, Output = unknown, Prepared = undefined> = OperationDefinition<
@@ -132,10 +173,17 @@ export function defineOperation<Input, Output, Prepared = undefined>(
 		throw new Error(`Write operation "${definition.name}" has no summary for the activity log.`);
 	if (
 		definition.kind !== "write" &&
-		(definition.touches || definition.preview || definition.humanOnly || definition.structure || definition.prepare)
+		(definition.touches ||
+			definition.preview ||
+			definition.humanOnly ||
+			definition.structure ||
+			definition.prepare ||
+			definition.afterCommit ||
+			definition.where ||
+			definition.log !== undefined)
 	)
 		throw new Error(
-			`Operation "${definition.name}" is not a write, so it has no touches, preview, humanOnly, structure or prepare.`,
+			`Operation "${definition.name}" is not a write, so it has no touches, preview, humanOnly, structure, prepare, afterCommit, where or log.`,
 		);
 	return { ...definition, __operation: true };
 }

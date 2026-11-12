@@ -632,6 +632,8 @@ export const listOperations = [
 			await adminValuesRecord.restore(ctx.db, collection, { ...values, list: { ...values.list, ...prefs } });
 			if (!existed) ctx.created({ kind: "collectionAdminValues", id: collection });
 		},
+		// How one admin's list looks is no change to the site: the row is written and the log does not list it.
+		log: false,
 		summary: (input) => ({ key: "list.savePrefs", values: { collection: input.collection } }),
 	}),
 	defineOperation({

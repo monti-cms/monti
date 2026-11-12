@@ -183,6 +183,7 @@ export async function applyProposal(
 				versions: item.base_versions,
 				conversationId: proposal.conversation_id,
 				proposalItemId: item.id,
+				proposalId,
 			});
 			outputs.set(item.id, result.output);
 			await settle(item.id, "applied", { output: result.output, activityId: result.activityId });
@@ -227,7 +228,7 @@ export async function markApplied(
 	itemIds: string[],
 	activityId: string,
 	records: RecordRef[],
-): Promise<string | null> {
+): Promise<{ conversationId: string; proposalId: string } | null> {
 	if (itemIds.length === 0) return null;
 	const accepted = [...new Set(itemIds)];
 	const items = await trx
@@ -263,5 +264,6 @@ export async function markApplied(
 		)
 		.execute();
 	for (const proposalId of new Set(pending.map((item) => item.proposal_id))) await settleProposal(trx, proposalId);
-	return pending[0]?.conversation_id ?? null;
+	// The save is a line of the first taken proposal's: its request is what the log quotes.
+	return { conversationId: pending[0].conversation_id, proposalId: pending[0].proposal_id };
 }

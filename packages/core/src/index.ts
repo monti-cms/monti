@@ -1,3 +1,18 @@
+export {
+	ACTIVITY_FILTERS,
+	type ActivityDelivery,
+	type ActivityDetail,
+	type ActivityFilter,
+	type ActivityLine,
+	type ActivityList,
+	type ActivityQuery,
+	type ActivityRecord,
+	DELIVERY_STATES,
+	type DeliveryState,
+	type LineDelivery,
+	type LineUndo,
+} from "./activity/list";
+export type { DeliveriesRetried, DeliveryCounts } from "./activity/operations";
 export type { DevProof } from "./auth/dev-bypass";
 export type { AuthSettings } from "./auth/operations";
 export type { Session } from "./auth/session";
@@ -28,7 +43,7 @@ export { ENTRY_LINK, entryLink } from "./body/links";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
 export { migrateToLatest } from "./db/migrations";
 export type { Database } from "./db/schema";
-export { RETRY_MINUTES, type Receiver } from "./engine/deliveries";
+export { RETRY_MINUTES, type Receiver, SEND_TIMEOUT_MS, webhook } from "./engine/deliveries";
 export { type RunOptions, UNDO_DAYS, type WriteResult } from "./engine/execute";
 export type { ApplyResult, ItemRef } from "./engine/proposals";
 export type { UndoPlan } from "./engine/undo";
@@ -104,9 +119,13 @@ export { altIsMissing, cleanMediaValue, type MediaPlace, type MediaValue, mediaV
 export { coreMessages, defineMessages, formatMessage, type MessageBundle } from "./messages";
 export { type Capability, createMonti, definePlugin, type Monti, type MontiOptions, type Plugin } from "./monti";
 export {
+	ACTIVITY_KINDS,
+	type ActivityKind,
 	type Actor,
 	type AnyOperation,
 	defineOperation,
+	type EmittedEvent,
+	type LoggedRecord,
 	type Message,
 	type MontiEvent,
 	type Operation,

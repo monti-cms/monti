@@ -18,7 +18,8 @@ export const moveToFolder = defineOperation({
 	touches: (input) => input.ids.map((id) => ({ kind: "entry", id })), // versioned and snapshotted for undo
 	check: async (input, ctx) => {/* throw CheckError to refuse */},
 	run: async (input, ctx) => {/* write through ctx.db; ctx.emit(event) for receivers */},
-	summary: (input) => ({ key: "entries.moveToFolder", values: { count: input.ids.length } }),
+	summary: (input) => ({ key: "entries.moveToFolder", values: { count: input.ids.length } }), // 활동 기록 줄의 첫 줄
+	log: "save", // 활동 기록이 거르는 종류
 });
 ```
 
@@ -31,7 +32,14 @@ export const moveToFolder = defineOperation({
 3. `check`, 그다음 `run`.
 4. 활동 기록 한 줄과, 건드리고 만든 레코드의 스냅숏을 남긴다. 그래서 30일 동안 되돌릴 수 있다(`activity.undo`). 되돌리기는 그 사이 고쳐진
    레코드를 건너뛰고 덮어쓰지 않는다.
-5. 쓰기가 낸 이벤트는 받는 곳마다 줄에 넣고, 커밋된 뒤에만 보낸다. 실패한 전송은 정해진 사이로 다시 보낸다(`RETRY_MINUTES`).
+5. 쓰기가 낸 이벤트는 받는 곳마다 줄에 넣고, 커밋된 뒤에만 보낸다.
+
+받는 곳은 웹훅(`receivers: [webhook("https://example.dev/api/revalidate")]`)이거나 플러그인의 것이다. 실패했거나 10초 넘게 걸린 전송은 바로
+활동 기록과 사이드바 개수에 실패로 보인다. 그 뒤 사이를 늘려 가며 8번까지 저절로 다시 보내고(`RETRY_MINUTES`, 관리자 화면에 들어올 때와
+`monti deliveries:run`), 그래도 안 되면 사람이 다시 보내거나(`deliveries.retry`) 취소할(`deliveries.cancel`) 때까지 실패로 남는다.
+
+활동 기록(`activity.list`, `activity.get`)은 모든 쓰기를 한 줄로 보인다. 무엇을 했는지(`summary`), 어디서(`where`), 전송이 어떻게 됐는지다.
+어시스턴트가 요청 하나로 한 쓰기들은 한 줄이고 함께 되돌린다.
 
 레코드 종류(`defineRecordKind`)는 엔진에게 레코드의 상태를 읽는 법과 옛 상태로 되돌리는 법을 알려 준다.
 

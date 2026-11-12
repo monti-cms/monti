@@ -7,14 +7,14 @@ import { rewriteUses } from "../media/uses";
 import {
 	type Actor,
 	type AnyOperation,
-	type MontiEvent,
+	type LoggedRecord,
 	type OperationContext,
 	type RecordRef,
 	recordKey,
 } from "../operation";
 import { lockRecords, type RecordKind, type RecordState } from "../records";
 import type { Site } from "../site";
-import { queueDeliveries, type Receiver } from "./deliveries";
+import { type QueuedEvent, queueDeliveries, type Receiver } from "./deliveries";
 import { markApplied } from "./proposals";
 
 /** How long a write can be undone. The trash keeps entries as long, and both are cleared together (doc 11). */
@@ -34,6 +34,8 @@ export type RunOptions = {
 	versions?: Record<string, number>;
 	conversationId?: string;
 	proposalItemId?: string;
+	/** The proposal the item is of: its writes are one line of the activity log (doc 13). */
+	proposalId?: string;
 	/** The admin API's session, for the operations that read or end it. */
 	session?: Session | null;
 	/** Proposal items the person took in the screen and saves with this write (doc 05): they become applied, tied to its activity row. */
@@ -61,12 +63,13 @@ export function context(
 	actor: Actor,
 	session: Session | null = null,
 ) {
-	const events: MontiEvent[] = [];
+	const events: QueuedEvent[] = [];
 	const created: RecordRef[] = [];
 	const ctx: OperationContext = {
 		db,
 		actor,
-		emit: (event) => events.push(event),
+		emit: (event, options) =>
+			events.push({ event: { ...event, at: engine.now().toISOString() }, activity: options?.activity }),
 		created: (ref) => created.push(ref),
 		site: engine.site,
 		now: engine.now,
@@ -160,6 +163,17 @@ export async function runWrite<Output>(
 		const after = await loadRecords(engine, trx, records);
 		const undoable = !operation.humanOnly && !operation.structure && records.length > 0;
 		const now = engine.now();
+		// What each record was called, as the write left it (as it was, for one the write removed): the log names it even after it is gone.
+		const logged: LoggedRecord[] = records.map((ref) => {
+			const state = after.get(recordKey(ref)) ?? before.get(recordKey(ref)) ?? null;
+			return {
+				...ref,
+				version: after.get(recordKey(ref))?.version ?? null,
+				...(state ? engine.recordKinds.get(ref.kind)?.label?.(state.data) : {}),
+			};
+		});
+		const log = typeof operation.log === "function" ? operation.log(input, logged) : operation.log;
+		const where = operation.where?.(input, output, logged) ?? null;
 		await trx
 			.insertInto("monti_activity")
 			.values({
@@ -167,10 +181,14 @@ export async function runWrite<Output>(
 				at: now,
 				actor: JSON.stringify(options.actor),
 				operation: operation.name,
-				summary: JSON.stringify(operation.summary?.(input, output) ?? { key: operation.name }),
-				targets: JSON.stringify(records),
+				summary: JSON.stringify(operation.summary?.(input, output, logged) ?? { key: operation.name }),
+				place: where ? JSON.stringify(where) : null,
+				targets: JSON.stringify(logged),
+				kind: log === false ? null : (log ?? null),
+				listed: log !== false,
 				conversation_id: options.conversationId ?? null,
 				proposal_item_id: options.proposalItemId ?? null,
+				proposal_id: options.proposalId ?? null,
 				undo_until: undoable ? new Date(now.getTime() + UNDO_DAYS * 86_400_000) : null,
 				undone_at: null,
 			})
@@ -186,20 +204,21 @@ export async function runWrite<Output>(
 							kind: ref.kind,
 							record_id: ref.id,
 							before: old ? JSON.stringify(old.data) : null,
+							before_version: old?.version ?? null,
 							after_version: after.get(recordKey(ref))?.version ?? null,
 						};
 					}),
 				)
 				.execute();
 		// Taken proposals join this write: the row gets their conversation, so the log shows ✦ (doc 05).
-		const conversation = await markApplied(trx, options.accepted ?? [], activityId, records);
-		if (conversation && !options.conversationId)
+		const taken = await markApplied(trx, options.accepted ?? [], activityId, records);
+		if (taken && !options.conversationId)
 			await trx
 				.updateTable("monti_activity")
-				.set({ conversation_id: conversation })
+				.set({ conversation_id: taken.conversationId, proposal_id: taken.proposalId })
 				.where("id", "=", activityId)
 				.execute();
-		const deliveryIds = await queueDeliveries(trx, engine.receivers, activityId, events);
+		const deliveryIds = await queueDeliveries(trx, engine.receivers, activityId, events, now);
 		const versions = Object.fromEntries([...after].map(([key, state]) => [key, state?.version ?? null]));
 		return { output, activityId, versions, deliveryIds };
 	});

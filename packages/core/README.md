@@ -18,7 +18,8 @@ export const moveToFolder = defineOperation({
 	touches: (input) => input.ids.map((id) => ({ kind: "entry", id })), // versioned and snapshotted for undo
 	check: async (input, ctx) => {/* throw CheckError to refuse */},
 	run: async (input, ctx) => {/* write through ctx.db; ctx.emit(event) for receivers */},
-	summary: (input) => ({ key: "entries.moveToFolder", values: { count: input.ids.length } }),
+	summary: (input) => ({ key: "entries.moveToFolder", values: { count: input.ids.length } }), // the log's first line
+	log: "save", // the group the activity log filters it by
 });
 ```
 
@@ -31,7 +32,15 @@ export const moveToFolder = defineOperation({
 3. `check`, then `run`.
 4. One activity row, with snapshots of the touched and created records, so the write can be undone for 30 days (`activity.undo`). Undo skips a record
    changed since, and never overwrites it.
-5. The events it emitted are queued for each receiver and sent only after the commit. A failed send is retried on a schedule (`RETRY_MINUTES`).
+5. The events it emitted are queued for each receiver and sent only after the commit.
+
+A receiver is a webhook (`receivers: [webhook("https://example.dev/api/revalidate")]`) or a plugin's. A send that fails, or takes longer than ten
+seconds, shows as failed at once in the activity log and in the sidebar's count; it is tried again by itself eight times at growing waits
+(`RETRY_MINUTES`), when the admin opens and from `monti deliveries:run`, and after the last it stays failed until a person sends it again
+(`deliveries.retry`) or cancels it (`deliveries.cancel`).
+
+The activity log (`activity.list`, `activity.get`) shows every write as a line: what was done (`summary`), where (`where`), and how its deliveries
+went. The assistant's writes for one request are one line, undone together.
 
 A record kind (`defineRecordKind`) tells the engine how to read a record's state and put an old state back.
 

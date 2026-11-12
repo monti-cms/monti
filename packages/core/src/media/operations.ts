@@ -22,6 +22,10 @@ type Db = Kysely<Database> | Transaction<Database>;
 const mediaRef = (id: string): RecordRef => ({ kind: "media", id });
 const folderRef = (id: string): RecordRef => ({ kind: "folder", id });
 
+/** Where a file's write happened, for the activity log: the library, and the folder when it sits in one. */
+const mediaPlace = (folder: string | null): Message =>
+	folder === null ? { key: "activity.where.media" } : { key: "activity.where.mediaFolder", values: { folder } };
+
 const moveMessage = (count: number, name: string | null): Message =>
 	name === null
 		? { key: "media.moveToTop", values: { count } }
@@ -359,7 +363,9 @@ export const mediaOperations = [
 			ctx.emit({ type: "media.uploaded", ids: [id] });
 			return liveItem(ctx, id);
 		},
+		log: "media",
 		summary: (_input, output) => ({ key: "media.upload", values: { name: output.name } }),
+		where: (_input, output) => mediaPlace(output.path.at(-1) ?? null),
 	}),
 	defineOperation({
 		name: "media.update",
@@ -396,10 +402,12 @@ export const mediaOperations = [
 			if (input.name !== undefined) ctx.emit({ type: "media.renamed", ids: [input.id] });
 			return liveItem(ctx, input.id);
 		},
+		log: "media",
 		summary: (input, output) =>
 			input.name === undefined
 				? moveMessage(1, output.folderId === null ? null : (output.path.at(-1) ?? null))
 				: { key: "media.update", values: { name: output.name } },
+		where: (_input, output) => mediaPlace(output.path.at(-1) ?? null),
 	}),
 	defineOperation({
 		name: "media.replace",
@@ -447,7 +455,9 @@ export const mediaOperations = [
 			ctx.emit({ type: "media.replaced", ids: [input.id] });
 			return liveItem(ctx, input.id);
 		},
+		log: "media",
 		summary: (_input, output) => ({ key: "media.replace", values: { name: output.name } }),
+		where: (_input, output) => mediaPlace(output.path.at(-1) ?? null),
 	}),
 	defineOperation({
 		name: "media.moveToFolder",
@@ -476,7 +486,9 @@ export const mediaOperations = [
 				.execute();
 			return { count: input.ids.length, name };
 		},
+		log: "media",
 		summary: (_input, output) => moveMessage(output.count, output.name),
+		where: (_input, output) => mediaPlace(output.name),
 	}),
 	defineOperation({
 		name: "entries.missingAlt",

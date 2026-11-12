@@ -80,12 +80,15 @@ export async function keptPaths(
 		.sort((a, b) => (place.get(a.entry_id) ?? 0) - (place.get(b.entry_id) ?? 0) || a.slug.localeCompare(b.slug));
 }
 
+/** An entry a permanent delete took. */
+export type PurgedEntry = { id: string; group: string; collection: string; locale: string };
+
 /** The entries a permanent delete of these takes: every language of each that is in the trash, as the trash shows them, one row. */
-async function entriesToPurge(db: Db, ids: string[]): Promise<{ id: string; group: string }[]> {
+async function entriesToPurge(db: Db, ids: string[]): Promise<PurgedEntry[]> {
 	if (ids.length === 0) return [];
 	const rows = await db
 		.selectFrom("entries")
-		.select(["id", "translation_group as group"])
+		.select(["id", "translation_group as group", "collection", "locale"])
 		.where("trashed_at", "is not", null)
 		.where(
 			"translation_group",
@@ -121,9 +124,9 @@ export const looseUntil = (now: Date) => new Date(now.getTime() + LOOSE_DAYS * D
 /**
  * Deletes rows of the trash for good (doc 11): entries with the paths they were published under kept from other entries and the relations that pointed at them
  * cut (doc 08), files with their bytes handed to the clean-up, folders with everything in them. Whatever a folder still holds outside the trash moves to the top
- * level.
+ * level. It returns the entries it deleted, for the event that tells the receivers.
  */
-export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: Date): Promise<void> {
+export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: Date): Promise<PurgedEntry[]> {
 	const ids = (kind: TrashRef["kind"]) => rows.filter((row) => row.kind === kind).map((row) => row.id);
 	const folders = new Set<string>();
 	for (const id of ids("folder")) for (const each of await trashedUnder(db, id)) folders.add(each);
@@ -226,6 +229,7 @@ export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: D
 		}
 		await db.deleteFrom("folders").where("id", "in", inside).where("trashed_at", "is not", null).execute();
 	}
+	return entries;
 }
 
 /** Every row in the trash, for emptying it; with `before`, the rows thrown away by then. Entries and files inside a folder go with the folder. */

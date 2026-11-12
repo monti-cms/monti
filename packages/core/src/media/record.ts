@@ -26,6 +26,7 @@ const SnapshotShape = z.object({
 
 export const mediaRecord = defineRecordKind({
 	kind: "media",
+	label: (data) => ({ title: (data as { name: string }).name }),
 	async load(db, ids) {
 		if (ids.length === 0) return [];
 		const rows = await db.selectFrom("media").selectAll().where("id", "in", ids).execute();

@@ -224,11 +224,17 @@ export const schemaOperations = [
 		}),
 		touches: () => [{ kind: "schema", id: "current" }],
 		check: (input, ctx) => checkApply(ctx, input.draft, input.renames, input.answers as Answers),
-		run: (input, ctx) => applySchema(ctx, input.draft, input.renames, input.answers as Answers, input.adminValues),
+		async run(input, ctx) {
+			const output = await applySchema(ctx, input.draft, input.renames, input.answers as Answers, input.adminValues);
+			if (output.applied) ctx.emit({ type: "schema.applied", ids: [output.changeId] });
+			return output;
+		},
+		log: "settings",
 		summary: (_input, output) => ({
 			key: output.applied ? "schema.applied" : "schema.applyFailed",
 			values: { change: output.changeId },
 		}),
+		where: () => ({ key: "activity.where.schema" }),
 	}),
 	defineOperation({
 		name: "schema.retry",
@@ -246,7 +252,9 @@ export const schemaOperations = [
 			await setSchemaState(ctx.db, ctx.site.schema(), null);
 			return { applied: pending.map((change) => change.id) };
 		},
+		log: "settings",
 		summary: (_input, output) => ({ key: "schema.retried", values: { count: output.applied.length } }),
+		where: () => ({ key: "activity.where.schema" }),
 	}),
 	defineOperation({
 		name: "collections.updateAdminValues",
@@ -263,8 +271,11 @@ export const schemaOperations = [
 			const existed = (await adminValuesRecord.load(ctx.db, [input.collection])).length > 0;
 			await adminValuesRecord.restore(ctx.db, input.collection, input.values);
 			if (!existed) ctx.created({ kind: "collectionAdminValues", id: input.collection });
+			ctx.emit({ type: "settings.saved", ids: [input.collection], collection: input.collection });
 		},
+		log: "settings",
 		summary: (input) => ({ key: "collections.updateAdminValues", values: { collection: input.collection } }),
+		where: () => ({ key: "activity.where.settings" }),
 	}),
 	defineOperation({
 		name: "collections.export",

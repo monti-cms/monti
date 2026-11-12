@@ -305,6 +305,8 @@ export const keyOperations = [
 			ctx.created({ kind: "key", id });
 			return { id, name: input.name, last4: ending(input.secret) };
 		},
+		log: "settings",
+		where: () => ({ key: "activity.where.keys" }),
 		summary: (_input, output) => ({ key: "keys.add", values: { name: output.name } }),
 	}),
 	defineOperation({
@@ -381,6 +383,8 @@ export const keyOperations = [
 			if (!written) throw changedSince();
 			return { id: key.id, name: asked.name, last4: asked.reseal !== null ? ending(asked.reseal) : key.last4 };
 		},
+		log: "settings",
+		where: () => ({ key: "activity.where.keys" }),
 		summary: (_input, output) => ({ key: "keys.update", values: { name: output.name } }),
 	}),
 	defineOperation({
@@ -400,6 +404,8 @@ export const keyOperations = [
 			if (!removed) throw new CheckError({ key: "keys.unknown" });
 			return removed;
 		},
+		log: "settings",
+		where: () => ({ key: "activity.where.keys" }),
 		summary: (_input, output) => ({ key: "keys.remove", values: { name: output.name } }),
 	}),
 	defineOperation({
@@ -471,6 +477,8 @@ export const keyOperations = [
 				.execute();
 			return { keyId: input.keyId, model: input.model };
 		},
+		log: "settings",
+		where: () => ({ key: "activity.where.keys" }),
 		summary: (input) => ({ key: "models.setQuick", values: { model: input.model } }),
 	}),
 ];

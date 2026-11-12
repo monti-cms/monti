@@ -400,6 +400,25 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0016_activity_log": {
+		async up(db) {
+			// The activity log's lines (doc 13): where a write happened, the group it is filtered by, whether it is a line at all, and the proposal whose
+			// writes are one line. A delivery is held by one sender at a time.
+			await db.schema
+				.alterTable("monti_activity")
+				.addColumn("place", "jsonb")
+				.addColumn("kind", "text")
+				.addColumn("listed", "boolean", (column) => column.notNull().defaultTo(true))
+				.addColumn("proposal_id", "text")
+				// Two writes of the same instant keep the order they were made in: the log is newest first, and an undo goes back in that order.
+				.addColumn("seq", "bigint", (column) => column.generatedAlwaysAsIdentity().notNull())
+				.execute();
+			// A snapshot's version before the write: undoing a proposal's writes together follows one record through several of them.
+			await db.schema.alterTable("monti_activity_snapshot").addColumn("before_version", "integer").execute();
+			await db.schema.alterTable("monti_delivery").addColumn("sending_until", "timestamptz").execute();
+			await db.schema.createIndex("monti_delivery_activity").on("monti_delivery").column("activity_id").execute();
+		},
+	},
 };
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */

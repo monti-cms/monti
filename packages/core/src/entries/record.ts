@@ -144,6 +144,10 @@ const SnapshotShape: z.ZodType<Snapshot> = z.object({
  */
 export const entryRecord = defineRecordKind({
 	kind: "entry",
+	label(data) {
+		const { row } = data as Snapshot;
+		return { title: row.title, collection: row.collection, locale: row.locale, slug: row.slug };
+	},
 	async load(db, ids) {
 		if (ids.length === 0) return [];
 		const rows = await db.selectFrom("entries").selectAll().where("id", "in", ids).execute();

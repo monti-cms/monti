@@ -1,5 +1,6 @@
 import { sql } from "kysely";
 import { z } from "zod";
+import { failedDeliveryCount } from "../engine/deliveries";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
 import { trashRowCount } from "../trash/list";
@@ -90,6 +91,8 @@ export const authOperations = [
 			if (!made) throw new CheckError({ key: "auth.adminExists" });
 			return { ok: true, who: email, ...(await startSession(ctx.db, email, ctx.now())) };
 		},
+		// Who signs in and out is no change to the site: the rows are written and the log does not list them.
+		log: false,
 		summary: () => ({ key: "auth.createFirstAdmin" }),
 	}),
 	defineOperation({
@@ -122,6 +125,7 @@ export const authOperations = [
 			await ctx.db.deleteFrom("monti_sign_in_attempt").where("email", "=", email).execute();
 			return { ok: true, who: email, ...(await startSession(ctx.db, email, now)) };
 		},
+		log: false,
 		summary: (_input, output) => ({ key: output.ok ? "auth.signedIn" : "auth.signInRefused" }),
 	}),
 	defineOperation({
@@ -138,6 +142,7 @@ export const authOperations = [
 				return { ok: false, reason: { key: "auth.devRefused" } };
 			return { ok: true, who: DEV_WHO, ...(await startSession(ctx.db, DEV_WHO, ctx.now())) };
 		},
+		log: false,
 		summary: (_input, output) => ({ key: output.ok ? "auth.signedIn" : "auth.signInRefused" }),
 	}),
 	defineOperation({
@@ -150,6 +155,7 @@ export const authOperations = [
 			if (ctx.session) await endSession(ctx.db, ctx.session.id);
 			return { ok: true };
 		},
+		log: false,
 		summary: () => ({ key: "auth.signedOut" }),
 	}),
 	defineOperation({
@@ -165,11 +171,6 @@ export const authOperations = [
 				.where("trashed_at", "is", null)
 				.groupBy("collection")
 				.execute();
-			const failed = await ctx.db
-				.selectFrom("monti_delivery")
-				.select((eb) => eb.fn.countAll<string>().as("count"))
-				.where("state", "=", "failed")
-				.executeTakeFirstOrThrow();
 			return {
 				collections: Object.fromEntries(
 					Object.keys(ctx.site.schema().collections).map((name) => [
@@ -178,7 +179,8 @@ export const authOperations = [
 					]),
 				),
 				trash: await trashRowCount(ctx.db, ctx.site.schema().locales.source),
-				failedDeliveries: Number(failed.count),
+				// The one count the activity tab and its banner show too (13-4).
+				failedDeliveries: await failedDeliveryCount(ctx.db),
 			};
 		},
 	}),
