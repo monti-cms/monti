@@ -46,12 +46,25 @@ export interface DeliveryTable {
 export interface ProposalTable {
 	id: string;
 	conversation_id: string;
+	/** The run that made it (doc 10); `null` for one made without a run (a test, a later entry point). */
+	run_id: string | null;
 	request: string;
-	status: "pending" | "applied" | "partial" | "discarded";
+	status: "pending" | "applied" | "partial" | "discarded" | "reverted";
+	/** While an apply is going: until when it holds the proposal, so two applies do not run at once. */
+	applying_until: Date | null;
+	/** Which apply holds it: an apply whose hold ran out and was taken by another finds another name here, and stops. */
+	applying_token: string | null;
 	created_at: Generated<Date>;
 }
 
-export type ProposalItemState = "pending" | "discarded" | "stale" | "applied" | "failed" | "skipped";
+/**
+ * `stale`: its record changed in the meantime. `skipped`: an item it depends on was left out or failed. `reverted`: applied, then put back.
+ * An applied item that a revert left alone (its record changed since) stays `applied` with its reason.
+ */
+export type ProposalItemState = "pending" | "discarded" | "stale" | "applied" | "failed" | "skipped" | "reverted";
+
+/** One exchange at a proposal item's own place (doc 10, a request at its place): what the person asked of it, and what the assistant answered. */
+export type ItemExchange = { request: string; answer: string; at: string };
 
 /** One write the assistant proposed: the operation, its input, and the versions it read. */
 export interface ProposalItemTable {
@@ -65,6 +78,98 @@ export interface ProposalItemTable {
 	reason: Json<Message> | null;
 	output: Json<unknown> | null;
 	activity_id: string | null;
+	/** Whether the person keeps it in the proposal: left out, it is not applied (the review's check). */
+	included: Generated<boolean>;
+	/** The name the assistant gave the kind of change, shared by the items that belong together ("Fill in summaries"). */
+	group_label: Generated<string>;
+	/** The versions its write left, by `recordKey`: a later item made from the same reading follows from here. */
+	after_versions: Json<Record<string, number | null>> | null;
+	/** The versions its write found, by `recordKey`: putting the proposal back walks from one item's write to the one before it by these. */
+	from_versions: Json<Record<string, number | null>> | null;
+	/** The tool call that made it (the run and the call's id): the same call run again after a cut finds its items and makes no second ones. */
+	made_by: string | null;
+	/** The tool call that first made it. `made_by` changes when a request at its place makes it anew; this stays, so the first call finds it still. */
+	origin: string | null;
+	/** What that call's write would do, as the model was told. */
+	preview: Json<unknown> | null;
+	thread: ColumnType<ItemExchange[], string | undefined, string>;
+}
+
+/** A conversation with the assistant (doc 10). */
+export interface ConversationTable {
+	id: string;
+	/** The first thing asked, cut short. */
+	title: string;
+	/** The model the conversation runs on, picked in its input (doc 10): a key and one of its models. */
+	key_id: string | null;
+	model: string | null;
+	thinking: string | null;
+	created_at: Date;
+	/** A conversation nobody opened for the kept days is removed. Opening it, or asking in it, counts from then again. */
+	last_opened_at: Date;
+}
+
+export type RunStatus = "running" | "waiting" | "done" | "stopped" | "interrupted" | "failed";
+
+/** One run: a request and the turns that answer it (doc 10). Its `context`, `usage`, `pending` and `ended` are the run engine's (`@monti-cms/ai`). */
+export interface RunTable {
+	id: string;
+	conversation_id: string;
+	/** `chat`: asked in the panel. `spot`: asked of one proposal item at its place. `again`: an item made again after its record changed. */
+	kind: "chat" | "spot" | "again";
+	/** `waiting`: the browser has screen tools to run before it goes on. `interrupted`: cut short by a limit or a lost connection; it can go on. */
+	status: RunStatus;
+	request: string;
+	context: Json<unknown>;
+	key_id: string | null;
+	model: string;
+	thinking: string;
+	usage: Json<{ input: number; output: number }>;
+	turns: Generated<number>;
+	/** The turns and tokens it had spent when a person last said to go on: its limits count from there. */
+	turns_from: Generated<number>;
+	tokens_from: Generated<number>;
+	/**
+	 * Its place among its conversation's runs, counted as they were opened. The order of a conversation's requests is this, never their start
+	 * times: two servers' clocks differ, and a test's clock stands still.
+	 */
+	position: number;
+	/** About how many tokens its stored messages are: what a later request of the conversation is sent of it, or leaves out, is decided by this. */
+	size: Generated<number>;
+	/** Which request holds it: a request whose hold ran out and was taken by another finds another name here, and stops. */
+	lease_token: string | null;
+	proposal_id: string | null;
+	/** For `spot` and `again`: the proposal item it is about. */
+	item_id: string | null;
+	/** The turn that is not finished: its tool calls and the results that are in. */
+	pending: Json<unknown> | null;
+	/** Why and how it ended, for the panel. */
+	ended: Json<unknown> | null;
+	stop_requested: Generated<boolean>;
+	/** While a request is running it: until when that request holds the run. */
+	leased_until: Date | null;
+	started_at: Date;
+	ended_at: Date | null;
+}
+
+export interface RunMessageTable {
+	id: string;
+	run_id: string;
+	position: number;
+	message: Json<unknown>;
+	created_at: Date;
+}
+
+export interface RunInboxTable {
+	id: string;
+	run_id: string;
+	text: string;
+	created_at: Date;
+}
+
+export interface AssistantSettingsTable {
+	id: number;
+	keep_days: number | null;
 }
 
 /** Every collection's entries in one table (doc 01, D1). Field values sit in `values`; system values the list sorts and filters by are columns. */
@@ -302,6 +407,11 @@ export interface SettingsTable {
 export interface Database {
 	api_keys: ApiKeyTable;
 	api_key_usage: ApiKeyUsageTable;
+	conversations: ConversationTable;
+	runs: RunTable;
+	run_messages: RunMessageTable;
+	run_inbox: RunInboxTable;
+	assistant_settings: AssistantSettingsTable;
 	model_choices: ModelChoiceTable;
 	entries: EntryTable;
 	folders: FolderTable;

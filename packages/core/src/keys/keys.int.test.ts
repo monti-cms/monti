@@ -1273,7 +1273,15 @@ describe("the key itself goes nowhere", () => {
 			await callAgentTool(monti, "models.list", {}, session),
 		];
 		expect(JSON.stringify(read)).not.toContain(ANTHROPIC);
-		expect(JSON.stringify(read)).toContain("a1b2");
+		// What the assistant is told of a key: its name, its service, whether it can be read and what it is used for. Not its ending, not the
+		// address of a server of the person's own, not how much was used (doc 14, 2026-11-12).
+		const told = (read[0] as { output: { keys: Record<string, unknown>[] } }).output.keys;
+		expect(told).toMatchObject([{ id: output.id, name: "Anthropic", service: "anthropic", readable: true }]);
+		for (const key of told) for (const part of ["last4", "baseUrl", "usage"]) expect(key).not.toHaveProperty(part);
+		expect(JSON.stringify(read)).not.toContain("a1b2");
+		// The keys screen's own call is as it was.
+		const screen = (await monti.run("keys.list", {}, { actor: "admin" })) as KeyList;
+		expect(screen.keys[0]).toMatchObject({ last4: "a1b2", baseUrl: null, usage: { tokens: 0 } });
 		// The key is still there after everything the assistant tried.
 		expect((await monti.keys.open(output.id))?.secret).toBe(ANTHROPIC);
 	});

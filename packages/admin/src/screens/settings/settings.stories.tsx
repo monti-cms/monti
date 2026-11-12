@@ -35,7 +35,7 @@ export const settingsAt = (tab: "site" | "languages" | "admin" | "collections", 
 		const [load] = site({
 			...options,
 			more: async (made) => {
-				await made.monti.run("settings.save", { site: { name: "example.dev", writing: WRITING } }, admin);
+				await made.monti.run("settings.save", { site: { name: "example.dev", writingStyle: WRITING } }, admin);
 				await options.more?.(made);
 			},
 		});

@@ -32,7 +32,7 @@ const admin = { actor: "admin" } as const;
 const withSite = (story: object) => scene<Loaded>(story, stories.default);
 
 type Settings = {
-	site: { name: string; writing: string };
+	site: { name: string; writingStyle: string };
 	admin: { language: string | null; templates: boolean };
 	schema: {
 		locales: { source: string; prefix: string; list: { code: string }[] };
@@ -396,7 +396,7 @@ describe("settings: a save that is refused", () => {
 		// A banner that asks to read again is about what is saved elsewhere, not about my changes: it stays when they are undone.
 		server.refuse = false;
 		await userEvent.fill(nameField(), "example.blog");
-		await shown.loaded().site.monti.run("settings.save", { site: { writing: "다른 탭에서 고친 규칙" } }, admin);
+		await shown.loaded().site.monti.run("settings.save", { site: { writingStyle: "다른 탭에서 고친 규칙" } }, admin);
 		await userEvent.click(saveGroup());
 		await expect.element(banner("다른 곳에서 바뀌었습니다")).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "모두 되돌리기" }));
@@ -408,7 +408,7 @@ describe("settings: a save that is refused", () => {
 		const shown = withSite(stories.SiteChanged);
 		await shown.run();
 		// Another tab saved the writing rules after this screen read them.
-		await shown.loaded().site.monti.run("settings.save", { site: { writing: "다른 탭에서 고친 규칙" } }, admin);
+		await shown.loaded().site.monti.run("settings.save", { site: { writingStyle: "다른 탭에서 고친 규칙" } }, admin);
 		await userEvent.click(saveGroup());
 		await expect.element(page.getByText("다른 곳에서 바뀌었습니다")).toBeVisible();
 		expect((await settingsOf(shown.loaded())).site.name).toBe("example.dev");
@@ -420,7 +420,7 @@ describe("settings: a save that is refused", () => {
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
 		expect((await settingsOf(shown.loaded())).site).toMatchObject({
 			name: "example.blog",
-			writing: "다른 탭에서 고친 규칙",
+			writingStyle: "다른 탭에서 고친 규칙",
 		});
 	});
 });

@@ -77,7 +77,7 @@ const live = (schema: Schema = base) => createMonti({ db, schema, files: null })
 type Monti = ReturnType<typeof createMonti>;
 
 type Read = {
-	site: { name: string; writing: string; version: number };
+	site: { name: string; writingStyle: string; version: number };
 	admin: { language: string | null; templates: boolean; version: number };
 	schema: Schema;
 	hash: string;
@@ -133,7 +133,7 @@ beforeEach(async () => {
 describe("reading the settings", () => {
 	it("12-1 settings.read gives the four tabs' values, where each lives, whether it is locked, the file's hash and the versions", async () => {
 		const settings = await read(dev());
-		expect(settings.site).toEqual({ name: "", writing: "", version: 0 });
+		expect(settings.site).toEqual({ name: "", writingStyle: "", version: 0 });
 		expect(settings.admin).toEqual({ language: null, templates: true, version: 0 });
 		expect(settings.schema).toEqual(base);
 		expect(settings.hash).toBe(schemaHash(base));
@@ -171,16 +171,16 @@ describe("reading the settings", () => {
 describe("one save, each value in its one place", () => {
 	it("12-2 an admin value goes to the database and leaves the schema file alone", async () => {
 		const monti = dev();
-		const saved = await save(monti, { site: { name: "example.dev", writing: "Short sentences." } });
+		const saved = await save(monti, { site: { name: "example.dev", writingStyle: "Short sentences." } });
 		expect(saved.output).toEqual({ site: true, adminValues: [], structure: null });
-		expect(await settingsRows()).toEqual({ site: { name: "example.dev", writing: "Short sentences." } });
+		expect(await settingsRows()).toEqual({ site: { name: "example.dev", writingStyle: "Short sentences." } });
 		expect(await schemaFile()).toBeNull();
 		expect(await changeFiles()).toEqual([]);
-		expect((await read(monti)).site).toEqual({ name: "example.dev", writing: "Short sentences.", version: 1 });
+		expect((await read(monti)).site).toEqual({ name: "example.dev", writingStyle: "Short sentences.", version: 1 });
 
 		// One value saved leaves the other as it was; an emptied one is unset.
 		await save(monti, { site: { name: "" } });
-		expect(await settingsRows()).toEqual({ site: { writing: "Short sentences." } });
+		expect(await settingsRows()).toEqual({ site: { writingStyle: "Short sentences." } });
 	});
 
 	it("12-2 a structure value goes to the schema file and its change file, and no settings row holds it", async () => {

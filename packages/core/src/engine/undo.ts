@@ -14,11 +14,18 @@ export type UndoPlan = {
 	skip: RecordRef[];
 };
 
+/**
+ * A record that is not at the version the write left, and still holds what the write left: `left` is that version, `current` the one it has now.
+ * Putting a proposal back says so of a record its own earlier step just put back (the step gave it a new version).
+ */
+export type OwnStep = (ref: RecordRef, left: number | null, current: number | null) => boolean;
+
 /** Which records an undo would put back and which it would skip, refusing a write that cannot be undone. */
 export async function planUndo(
 	engine: Engine,
 	db: Kysely<Database> | Transaction<Database>,
 	activityId: string,
+	ownStep?: OwnStep,
 ): Promise<UndoPlan & { snapshots: { ref: RecordRef; before: unknown | null }[] }> {
 	const row = await db
 		.selectFrom("monti_activity")
@@ -43,11 +50,12 @@ export async function planUndo(
 	};
 	snapshots.forEach((snapshot, index) => {
 		const ref = refs[index];
-		const now = current.get(recordKey(ref));
-		const unchanged = (now?.version ?? null) === snapshot.after_version;
+		const state = current.get(recordKey(ref));
+		const now = state?.version ?? null;
+		const unchanged = now === snapshot.after_version || ownStep?.(ref, snapshot.after_version, now) === true;
 		// A record the write named and left as it was (a save that names a value as it is saved) has nothing to put back: writing the same
 		// values again would only move its version, and turn another tab's next save of it into a conflict.
-		if (unchanged && sameJson(now?.data ?? null, snapshot.before ?? null)) return;
+		if (unchanged && sameJson(state?.data ?? null, snapshot.before ?? null)) return;
 		(unchanged ? plan.restore : plan.skip).push(ref);
 		if (unchanged) plan.snapshots.push({ ref, before: snapshot.before });
 	});
@@ -59,8 +67,9 @@ async function undo(
 	engine: Engine,
 	trx: Kysely<Database> | Transaction<Database>,
 	activityId: string,
+	ownStep?: OwnStep,
 ): Promise<UndoPlan> {
-	const { snapshots, ...plan } = await planUndo(engine, trx, activityId);
+	const { snapshots, ...plan } = await planUndo(engine, trx, activityId, ownStep);
 	for (const { ref, before } of snapshots) await engine.recordKinds.get(ref.kind)?.restore?.(trx, ref.id, before);
 	await rewriteUses(
 		trx,
@@ -133,10 +142,11 @@ export async function undoWithEvents(
 	trx: Db,
 	activityId: string,
 	emit: (event: MontiEvent) => void,
+	ownStep?: OwnStep,
 ): Promise<UndoPlan> {
-	const refs = (await planUndo(engine, trx, activityId)).restore;
+	const refs = (await planUndo(engine, trx, activityId, ownStep)).restore;
 	const before = await shownNow(trx, refs);
-	const plan = await undo(engine, trx, activityId);
+	const plan = await undo(engine, trx, activityId, ownStep);
 	const after = await shownNow(trx, refs);
 	const schema = engine.site.schema();
 	for (const ref of refs.filter((each) => each.kind === "entry")) {

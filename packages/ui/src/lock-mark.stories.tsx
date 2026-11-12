@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { FormField, FormFieldLabel } from "./field";
 import { LockMark } from "./lock-mark";
 import { Text } from "./text";
@@ -34,4 +35,24 @@ export const AfterALabel: Story = {
 			</FormField>
 		</div>
 	),
+};
+
+/** Pointed at, the lock says why in a tooltip: the same words a screen reader hears as its name (2026-11-12, decided while building). */
+export const PointedAt: Story = {
+	args: { label: "운영 사이트에서는 잠김" },
+	render: (args) => (
+		<div className="w-80 pt-monti-32">
+			<FormField>
+				<FormFieldLabel>
+					공개 주소
+					<LockMark {...args} />
+				</FormFieldLabel>
+				<Text mono>/posts/:slug</Text>
+			</FormField>
+		</div>
+	),
+	play: async ({ canvasElement }) => {
+		await userEvent.hover(await within(canvasElement).findByRole("img", { name: "운영 사이트에서는 잠김" }));
+		await within(document.body).findByRole("tooltip");
+	},
 };

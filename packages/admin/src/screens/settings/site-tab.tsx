@@ -17,7 +17,7 @@ export function SiteTab({ model }: { model: SettingsDraft }) {
 	const { draft } = model;
 	const cell = useCell(model);
 	const name = cell(at.site("name"));
-	const writing = cell(at.site("writing"));
+	const writing = cell(at.site("writingStyle"));
 	const prefix = cell(at.localePrefix);
 	const prefixLabel = (value: unknown) => t(`settings.site.prefix.${String(value)}`);
 	return (
@@ -47,7 +47,7 @@ export function SiteTab({ model }: { model: SettingsDraft }) {
 						rows={3}
 						value={String(writing.value ?? "")}
 						proposal={writing.proposal}
-						onChange={(event) => draft.set(at.site("writing"), event.target.value)}
+						onChange={(event) => draft.set(at.site("writingStyle"), event.target.value)}
 					/>
 					{writing.proposal && writing.was ? <FormFieldWas>{String(writing.was)}</FormFieldWas> : null}
 				</FormField>

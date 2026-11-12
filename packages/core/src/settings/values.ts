@@ -14,7 +14,7 @@ export const SiteValues = z.object({
 	/** Over the sidebar and on the sign-in screen. */
 	name: z.string().trim().max(80).optional(),
 	/** How the site writes: the tone and rules the assistant follows (doc 10). */
-	writing: z.string().max(4000).optional(),
+	writingStyle: z.string().max(4000).optional(),
 });
 export type SiteValues = z.infer<typeof SiteValues>;
 

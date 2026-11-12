@@ -481,13 +481,22 @@ export const decidedOnly = (doc: Doc): Doc => ({
 });
 
 /** "The source changed · Oct 26 · 3 places" with "Confirm all" (translation.md, the banner). */
-export function SourceChangedBanner({ compared, onConfirmAll }: { compared: Compared; onConfirmAll: () => void }) {
+export function SourceChangedBanner({
+	compared,
+	onConfirmAll,
+	ref,
+}: {
+	compared: Compared;
+	onConfirmAll: () => void;
+	/** The banner's own box: the editor hands on the focus it held when "confirm all" takes it away. */
+	ref?: React.Ref<HTMLDivElement>;
+}) {
 	const { t, language } = useAdmin();
 	const count = compared.marks.length + compared.fields.length;
 	if (count === 0) return null;
 	const at = compared.source.publishedAt ? day(new Date(compared.source.publishedAt), language) : "";
 	return (
-		<Banner title={t("translation.changedTitle")} meta={t("translation.changedMeta", { date: at, count })}>
+		<Banner ref={ref} title={t("translation.changedTitle")} meta={t("translation.changedMeta", { date: at, count })}>
 			{compared.fields.length > 0 || compared.marks.some((mark) => mark.kind !== "added") ? (
 				<TextButton onClick={onConfirmAll}>{t("translation.confirmAll")}</TextButton>
 			) : null}

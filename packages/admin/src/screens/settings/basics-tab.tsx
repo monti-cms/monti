@@ -21,6 +21,7 @@ import {
 } from "@monti-cms/ui";
 import { useEffect, useRef } from "react";
 import { useAdmin } from "../../operations/admin-context";
+import { useFocusHandOff } from "../frame/focus-hand-off";
 import { at } from "./schema-draft";
 import { useCell } from "./use-cell";
 import type { SettingsDraft } from "./use-settings-draft";
@@ -112,6 +113,12 @@ export function BasicsTab({
 	}, [attention]);
 	const label = cell(labelPlace);
 	const folders = cell(foldersPlace);
+	// A row's undo goes away with the change it puts back: the keyboard's focus it held goes to the row's own control, the one the undo acted
+	// on (an item's row is its switch: the address field goes with the public page).
+	const pathUndo = useFocusHandOff(() =>
+		document.getElementById(kind === "item" ? "collection-public-page" : "collection-path"),
+	);
+	const previewUndo = useFocusHandOff(() => document.getElementById("collection-preview-path"));
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>
@@ -166,7 +173,7 @@ export function BasicsTab({
 							</Inline>
 							<Inline gap={12} align="center">
 								{pathChanged ? (
-									<TextButton variant="underline" quiet size="caption" onClick={pathChanged.onUndo}>
+									<TextButton variant="underline" quiet size="caption" ref={pathUndo} onClick={pathChanged.onUndo}>
 										{pathChanged.undoLabel}
 									</TextButton>
 								) : null}
@@ -219,7 +226,7 @@ export function BasicsTab({
 								{previewChanged ? <ChangeDot tone={previewChanged.tone} label={previewChanged.label} /> : null}
 							</Inline>
 							{previewChanged ? (
-								<TextButton variant="underline" quiet size="caption" onClick={previewChanged.onUndo}>
+								<TextButton variant="underline" quiet size="caption" ref={previewUndo} onClick={previewChanged.onUndo}>
 									{previewChanged.undoLabel}
 								</TextButton>
 							) : null}

@@ -170,7 +170,7 @@ const set = <T extends Record<string, unknown>>(values: T) =>
 /** Where each value of the settings screen lives (doc 12, "where values live"): the database, or the schema file (structure, locked on the live site). */
 const PLACES = [
 	{ value: "site.name", where: "database" },
-	{ value: "site.writing", where: "database" },
+	{ value: "site.writingStyle", where: "database" },
 	{ value: "locales.prefix", where: "file" },
 	{ value: "locales.list", where: "file" },
 	{ value: "locales.source", where: "file" },
@@ -196,7 +196,7 @@ export const settingsOperations = [
 			const siteValues = SiteValues.parse(site.values);
 			const preferences = AdminPreferences.parse(admin.values);
 			return {
-				site: { name: siteValues.name ?? "", writing: siteValues.writing ?? "", version: site.version },
+				site: { name: siteValues.name ?? "", writingStyle: siteValues.writingStyle ?? "", version: site.version },
 				admin: {
 					language: preferences.language ?? null,
 					templates: preferences.templates ?? true,

@@ -3,7 +3,7 @@ import { schema } from "../story-schema";
 import { type SettingsRead, settingsVersion } from "./schema-draft";
 
 const read: SettingsRead = {
-	site: { name: "example.dev", writing: "", version: 3 },
+	site: { name: "example.dev", writingStyle: "", version: 3 },
 	admin: { language: "ko", templates: true, version: 1 },
 	schema,
 	hash: "h",

@@ -27,7 +27,7 @@ export type SchemaRead = {
 
 /** What `settings.read` answers (doc 12): the schema's read and the two rows of admin values the settings screen holds. */
 export type SettingsRead = SchemaRead & {
-	site: { name: string; writing: string; version: number };
+	site: { name: string; writingStyle: string; version: number };
 	admin: { language: AdminLanguage | null; templates: boolean; version: number };
 };
 
@@ -58,12 +58,12 @@ export const HEADINGS = [2, 3, 4] as const;
  *
  * The site and language tabs share the draft (doc 12):
  *
- * - `site:name`, `site:writing` the site's admin values
+ * - `site:name`, `site:writingStyle` the site's admin values
  * - `locale:<code>` a language (`{ name }`, `null` once taken out) · `locales:order` the codes in their order · `locales:source` the source
  *   language's code · `locales:prefix` how addresses show the language
  */
 export const at = {
-	site: (value: "name" | "writing") => `site:${value}`,
+	site: (value: "name" | "writingStyle") => `site:${value}`,
 	locale: (code: string) => `locale:${code}`,
 	localeOrder: "locales:order",
 	localeSource: "locales:source",
@@ -182,7 +182,7 @@ export function flatten(read: SchemaRead | SettingsRead, catalog: Catalog | null
 	const base: Record<Path, unknown> = {};
 	if ("site" in read) {
 		base[at.site("name")] = read.site.name;
-		base[at.site("writing")] = read.site.writing;
+		base[at.site("writingStyle")] = read.site.writingStyle;
 	}
 	for (const locale of read.schema.locales.list)
 		base[at.locale(locale.code)] = { name: locale.name } satisfies DraftLocale;

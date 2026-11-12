@@ -234,6 +234,21 @@ describe("flow 3, a translation", () => {
 		await expect.element(mark("추가")).toBeVisible();
 	});
 
+	it("'모두 번역 유지' pressed with the keyboard goes away while its banner stays (a block is still to decide): the focus goes to the text", async () => {
+		await open(SourceChanged);
+		const keepAll = page.getByRole("button", { name: "모두 번역 유지" });
+		// The keyboard is in use (a Tab), and its focus is put on the button: wherever the test before left it, the button holds it as a key would.
+		await userEvent.keyboard("{Tab}");
+		(keepAll.element() as HTMLElement).focus();
+		await expect.element(keepAll).toHaveFocus();
+		expect(keepAll.element().matches(":focus-visible")).toBe(true);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(keepAll).not.toBeInTheDocument();
+		// The banner is still there, with what is left.
+		await expect.element(page.getByText("원문 변경", { exact: true })).toBeVisible();
+		await expect.element(body()).toHaveFocus();
+	});
+
 	it("04-1 3.10 a mark opens the source before and after, and '번역 유지' clears that mark", async () => {
 		await open(SourceChanged);
 		await userEvent.click(mark("변경"));

@@ -43,7 +43,7 @@ type SaveOutput = {
 /** Why the last save was refused, and the one thing to do about it (doc 12, T50). It stands at the very top of the screen until the next save is answered. */
 type Refused = { reason: string; action: "reload" | "save" };
 
-const SITE_VALUES = ["name", "writing"] as const;
+const SITE_VALUES = ["name", "writingStyle"] as const;
 
 /** One place the proposal bubble stops at: the item, the tab that draws it and, in the collections tab, its collection and that collection's tab. */
 type Walked = {

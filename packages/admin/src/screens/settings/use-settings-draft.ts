@@ -31,7 +31,7 @@ const SCHEMA = { kind: "schema", id: "current" };
 /** The words of the site tab's values, as the changes list names them. */
 const SITE_VALUE: Record<string, string> = {
 	[at.site("name")]: "settings.site.name",
-	[at.site("writing")]: "settings.site.writing",
+	[at.site("writingStyle")]: "settings.site.writing",
 	[at.localePrefix]: "settings.site.prefix",
 };
 
@@ -56,7 +56,7 @@ export type ChangeRow = {
 
 /** The input of an assistant's `settings.save`, as far as the screen draws it. */
 type SaveProposal = {
-	site?: { name?: string; writing?: string };
+	site?: { name?: string; writingStyle?: string };
 	locales?: SettingsRead["schema"]["locales"];
 	collections?: SettingsRead["schema"]["collections"];
 	renames?: Parameters<typeof proposalPaths>[1]["renames"];
@@ -78,7 +78,7 @@ function proposalPlaces(data: SettingsRead, catalog: Catalog | null, item: Propo
 	const input = item.input as SaveProposal;
 	const out: Record<Path, unknown> = {};
 	if (input.site?.name !== undefined) out[at.site("name")] = input.site.name;
-	if (input.site?.writing !== undefined) out[at.site("writing")] = input.site.writing;
+	if (input.site?.writingStyle !== undefined) out[at.site("writingStyle")] = input.site.writingStyle;
 	// The admin values it gives the collections that are there: a label, a field's help, the layout. With or without a structure change beside.
 	for (const [c, values] of Object.entries(input.adminValues ?? {}))
 		Object.assign(out, adminValueProposalPaths(data, catalog, c, values, input.renames));

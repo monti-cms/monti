@@ -82,6 +82,9 @@ function MediaInput({
 			className={cn(
 				!readOnly && FIELD_HOVER,
 				"flex w-full min-w-0 items-center border-monti-default border-b transition-colors focus-within:border-monti-contrast data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
+				// A proposal's blue line stays under the keyboard's focus (a state's colour is not taken away), so the focus on the file's name is a
+				// ring around the whole field, outside the line, as a select's is. The × at the end has its own ring.
+				"data-proposal:has-[>button:focus-visible]:ring-2 data-proposal:has-[>button:focus-visible]:ring-monti-contrast/50",
 				FIELD_INSET,
 				HEIGHT[size],
 				className,
