@@ -12,6 +12,7 @@ import {
 	type RecordRef,
 	recordKey,
 } from "../operation";
+import { lockRecords } from "../records";
 import { context, type Engine, loadRecords, parseInput, type RunOptions, type WriteResult } from "./execute";
 import { planUndo, undoWithEvents } from "./undo";
 
@@ -720,6 +721,33 @@ export async function revertProposal(
 			.orderBy("monti_proposal_item.position", "desc")
 			.execute()
 	).filter((item): item is typeof item & { activity_id: string } => item.activity_id !== null);
+	// Everything the revert will hold, taken once and in the engine's one order before any item is put back: the proposal's row (above), then
+	// the items' activity rows, then every record their snapshots name, sorted. The undo of each item then waits for nothing. Taken item by
+	// item instead, a later item's records would be held while an earlier item's are asked for, against a person's write that takes the same
+	// records in sorted order: each would wait for the other.
+	const writes = applied.map((item) => item.activity_id);
+	if (writes.length > 0) {
+		await db
+			.selectFrom("monti_activity")
+			.select("id")
+			.where("id", "in", writes)
+			.orderBy("seq", "desc")
+			.forUpdate()
+			.execute();
+		const snapshots = await db
+			.selectFrom("monti_activity_snapshot")
+			.select(["kind", "record_id"])
+			.where("activity_id", "in", writes)
+			.execute();
+		await lockRecords(db, [
+			...new Map(
+				snapshots.map((snapshot) => {
+					const ref = { kind: snapshot.kind, id: snapshot.record_id };
+					return [recordKey(ref), ref] as const;
+				}),
+			).values(),
+		]);
+	}
 	const reverted: string[] = [];
 	const kept: string[] = [];
 	for (const item of applied) {
@@ -766,6 +794,39 @@ export async function revertProposal(
 	}
 	await settleProposal(db, proposalId);
 	return { reverted, kept };
+}
+
+/**
+ * The proposals whose applied items made these writes, for an undo from the activity log to take their rows first (the engine's order: proposal
+ * rows, then activity rows, then records).
+ */
+export async function proposalsOfWrites(db: Db, of: { line: string } | { proposal: string } | { write: string }) {
+	if ("proposal" in of) return [of.proposal];
+	const rows = await db
+		.selectFrom("monti_activity")
+		.select("proposal_id")
+		.where((eb) =>
+			"write" in of ? eb("id", "=", of.write) : eb.or([eb("id", "=", of.line), eb("line", "=", of.line)]),
+		)
+		.where("proposal_id", "is not", null)
+		.execute();
+	return [...new Set(rows.flatMap((row) => row.proposal_id ?? []))];
+}
+
+/**
+ * Says of the proposal items whose writes an undo took back that they are put back: the conversation's card and a later "revert all" then agree
+ * with the activity log, whichever of the two undid the write. The caller holds the proposals' rows.
+ */
+export async function markReverted(db: Db, undone: string[]): Promise<void> {
+	if (undone.length === 0) return;
+	const items = await db
+		.updateTable("monti_proposal_item")
+		.set({ state: "reverted", reason: null })
+		.where("activity_id", "in", undone)
+		.where("state", "=", "applied")
+		.returning("proposal_id")
+		.execute();
+	for (const proposalId of new Set(items.map((item) => item.proposal_id))) await settleProposal(db, proposalId);
 }
 
 /** A record as a person knows it: its name, and where it is (an entry's address, a file's folder). */

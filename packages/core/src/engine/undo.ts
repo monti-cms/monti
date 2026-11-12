@@ -184,6 +184,9 @@ async function applyUndo(engine: Engine, trx: Db, plan: UndoSteps): Promise<void
 		...refs.filter((ref) => ref.kind === "media").map((ref) => ref.id),
 		...moved.map(({ id }) => id),
 	]);
+	// What an entry saw back then may be of a field that has since left the schema: that mark comes off, and the entry moves on a version with
+	// it. Before the versions are read below, so the version the undo records, and the one its events carry, is where the entry ends.
+	await keepSeenTracked(trx, engine.site.schema());
 	// Where each record stands now, on the snapshot that was put back last (the oldest write's): the next undo of an older write reads this
 	// version as the one that write left.
 	const now = await loadRecords(engine, trx, refs);
@@ -356,7 +359,5 @@ export async function undoWithEvents(
 	if (back.length > 0) say({ type: "media.restored", ids: back });
 	if (gone.length > 0) say({ type: "media.trashed", ids: gone });
 	if (renamed.length > 0) say({ type: "media.renamed", ids: renamed });
-	// What an entry saw back then may be of a field that has since left the schema.
-	await keepSeenTracked(trx, schema);
 	return { ...plan, undone: steps.map((step) => step.activityId) };
 }

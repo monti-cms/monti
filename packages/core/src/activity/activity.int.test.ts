@@ -20,7 +20,8 @@ import { createReader } from "../entries/reader";
 import { ForbiddenError } from "../errors";
 import { coreMessages, formatMessage } from "../messages";
 import { createMonti, type MontiOptions } from "../monti";
-import type { Message, MontiEvent } from "../operation";
+import { type Message, type MontiEvent, recordKey } from "../operation";
+import { lockRecords } from "../records";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
 import { type ActivityDetail, type ActivityLine, type ActivityList, ActivityQuery, listActivity } from "./list";
@@ -694,6 +695,20 @@ describe("sending", () => {
 		await expect(write("deliveries.retry", { ids: ["no-such-delivery"] }, monti)).rejects.toMatchObject({
 			reason: { key: "deliveries.unknown" },
 		});
+	});
+
+	it("13-1 a delivery that is not there is refused before any of the ones named with it is taken", async () => {
+		const monti = site();
+		down.add(SITE);
+		await newPost("첫 번째 글", "first-post", monti);
+		const [failed] = await deliveries();
+		down.clear();
+		// Named beside a real one: refused when the input is checked, so the real one is not reserved, reset or sent.
+		await expect(write("deliveries.retry", { ids: [failed.id, "no-such-delivery"] }, monti)).rejects.toMatchObject({
+			reason: { key: "deliveries.unknown" },
+		});
+		expect((await deliveries())[0]).toEqual(failed);
+		expect(sent).toEqual([]);
 	});
 
 	it("13-1 the assistant proposes sending a delivery again by its id; every failed one at once is a person's", async () => {
@@ -1530,6 +1545,105 @@ describe("undo from the log", () => {
 			expect(undone.output).toMatchObject({ restore: [{ kind: "entry", id: entry }], skip: [], undone: [line] });
 			expect(await titleNow()).toBe(title);
 		}
+	});
+
+	it("13-3 an undo that also takes a stale mark off an entry records where the entry ends: the line before it can still be undone, and the event says that version", async () => {
+		const monti = site();
+		const entry = await newPost("처음 제목", "first-post", monti);
+		// A mark of a field the schema no longer tracks, as an entry written before the schema changed carries: an undo that brings it back takes
+		// it off again, and the entry moves on a version with that.
+		await db
+			.updateTable("entries")
+			.set({ translation_seen: JSON.stringify({ gone: 1 }) })
+			.where("id", "=", entry)
+			.execute();
+		later(MINUTE);
+		const older = (await save(entry, { title: "둘째 제목" }, monti)).activityId;
+		later(MINUTE);
+		const newer = (await save(entry, { title: "셋째 제목" }, monti)).activityId;
+		sent.length = 0;
+		await write("activity.undo", { id: newer }, monti);
+		const saved = sent.find((delivery) => delivery.event.type === "entry.saved");
+		expect(saved?.event.version).toBe(await versionOf(entry));
+		// Nobody wrote the entry since: the older line goes back too.
+		later(MINUTE);
+		const undone = await write<UndoPlan>("activity.undo", { id: older }, monti);
+		expect(undone.output).toMatchObject({ restore: [{ kind: "entry", id: entry }], skip: [] });
+		expect(
+			(await db.selectFrom("entries").select("title").where("id", "=", entry).executeTakeFirstOrThrow()).title,
+		).toBe("처음 제목");
+	});
+
+	it("13-3 a proposal's line undone from the log puts its items back too: the proposal says so, and a later 'revert all' finds nothing left", async () => {
+		const monti = site();
+		const entry = await newPost("첫 번째 글", "first-post", monti);
+		const proposal = await monti.proposals.create("conversation-1", "제목을 다듬어 줘");
+		await monti.proposals.add(proposal, "entries.save", { id: entry, version: 1, title: "다듬은 제목" });
+		await monti.proposals.apply(proposal);
+		const states = async () => ({
+			items: (
+				await db.selectFrom("monti_proposal_item").select("state").where("proposal_id", "=", proposal).execute()
+			).map((item) => item.state),
+			proposal: (
+				await db.selectFrom("monti_proposal").select("status").where("id", "=", proposal).executeTakeFirstOrThrow()
+			).status,
+		});
+		expect(await states()).toEqual({ items: ["applied"], proposal: "applied" });
+		const [line] = (await list({}, monti)).lines;
+		await write("activity.undo", { id: line.id }, monti);
+		// The conversation's card agrees with the log: the item is put back, not still "applied".
+		expect(await states()).toEqual({ items: ["reverted"], proposal: "reverted" });
+		const reverted = (await monti.run("proposals.revert", { id: proposal }, { actor: "admin" })) as Written<{
+			reverted: string[];
+			kept: string[];
+		}>;
+		expect(reverted.output).toEqual({ reverted: [], kept: [] });
+	});
+
+	it("13-3 a proposal's 'revert all' takes its locks at once and in order: a person's write of the same records and the revert both go through", async () => {
+		const monti = site();
+		const ids = [await newPost("글 가", "post-a", monti), await newPost("글 나", "post-b", monti)];
+		// In the order every write takes records' locks.
+		const [first, second] = ids
+			.map((id) => ({ kind: "entry", id }))
+			.sort((a, b) => (recordKey(a) < recordKey(b) ? -1 : 1));
+		const proposal = await monti.proposals.create("conversation-1", "제목들을 다듬어 줘");
+		// The earlier item changes the record that sorts first: put back newest first, the revert comes to the records the other way round.
+		await monti.proposals.add(proposal, "entries.save", { id: first.id, version: 1, title: "다듬은 가" });
+		await monti.proposals.add(proposal, "entries.save", { id: second.id, version: 1, title: "다듬은 나" });
+		await monti.proposals.apply(proposal);
+
+		let goOn = () => {};
+		const gate = new Promise<void>((resolve) => {
+			goOn = resolve;
+		});
+		let holds = () => {};
+		const holding = new Promise<void>((resolve) => {
+			holds = resolve;
+		});
+		// A person's write of both records, between its two locks.
+		const person = db.transaction().execute(async (trx) => {
+			await lockRecords(trx, [first]);
+			holds();
+			await gate;
+			await lockRecords(trx, [second]);
+		});
+		await holding;
+		const reverting = monti.run("proposals.revert", { id: proposal }, { actor: "admin" }) as Promise<
+			Written<{ reverted: string[]; kept: string[] }>
+		>;
+		// The revert has come to a lock it must wait for.
+		for (let tries = 0; tries < 200; tries++) {
+			const { rows } = await sql<{
+				waiting: number;
+			}>`select count(*)::int as waiting from pg_locks where not granted`.execute(db);
+			if ((rows[0]?.waiting ?? 0) > 0) break;
+			await new Promise((done) => setTimeout(done, 10));
+		}
+		goOn();
+		// Neither is ended by the database for waiting on the other.
+		await expect(person).resolves.toBeUndefined();
+		expect((await reverting).output.reverted).toHaveLength(2);
 	});
 
 	it("13-3 a person's write between two undos still breaks the chain: the older line is refused, and the write stays", async () => {
