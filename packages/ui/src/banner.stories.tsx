@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Banner, TextButton } from "./index";
 
-/** A one-line notice across the top of a pane: cream ground, a rule below, a dot before the sentence, and what can be done at the right end. */
+/** A one-line notice across the very top of a screen: cream ground, a rule below, a dot before the sentence, and what can be done at the right end. */
 const meta = {
 	title: "Patterns/Frame/Banner",
 	component: Banner,
@@ -45,9 +45,4 @@ export const Neutral: Story = {
 /** `plainMeta` makes the detail a sentence on any tone. */
 export const PlainMeta: Story = {
 	args: { title: "이 글은 저장할 수 없습니다", meta: "필수 필드 2개가 비어 있어요", plainMeta: true },
-};
-
-/** `lines`: several sentences, one per line, each with its dot (the warnings of one block). */
-export const Lines: Story = {
-	args: { lines: ["대체 텍스트가 없어요", "이미지가 1600px보다 커서 줄여서 올려요"] },
 };
