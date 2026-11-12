@@ -616,7 +616,7 @@ describe("the trash", () => {
 });
 
 describe("a replaced file and the site", () => {
-	it("16-3 replacing a file says so, so a site that keeps its pages draws them again; uploading one does not", async () => {
+	it("16-3 replacing or renaming a file says so, so a site that keeps its pages draws them again; moving it to a folder does not", async () => {
 		const sent: string[] = [];
 		const monti = createMonti({
 			db,
@@ -634,6 +634,13 @@ describe("a replaced file and the site", () => {
 			{ id: made.output.id, original: { key: await bytes(), ...SIZE } },
 			{ actor: "admin" },
 		);
-		expect(sent).toEqual([`media.uploaded ${made.output.id}`, `media.replaced ${made.output.id}`]);
+		// A new name shows where a page offers the file to download; a move to another folder shows nowhere.
+		await monti.run("media.update", { id: made.output.id, name: "b" }, { actor: "admin" });
+		await monti.run("media.update", { id: made.output.id, folder: null }, { actor: "admin" });
+		expect(sent).toEqual([
+			`media.uploaded ${made.output.id}`,
+			`media.replaced ${made.output.id}`,
+			`media.renamed ${made.output.id}`,
+		]);
 	});
 });

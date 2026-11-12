@@ -1,3 +1,4 @@
+export type { DevProof } from "./auth/dev-bypass";
 export type { AuthSettings } from "./auth/operations";
 export type { Session } from "./auth/session";
 export {

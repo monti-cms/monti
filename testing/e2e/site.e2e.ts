@@ -101,6 +101,52 @@ test.describe("the site", () => {
 		expect((await visit(admin, "/posts")).text).not.toContain(changed);
 	});
 
+	test("16-3 a category thrown away leaves the site and, restored, is back at once: a restored item is live again", async ({
+		admin,
+	}) => {
+		const slug = unique("category");
+		const name = unique("분류");
+		const made = await operation<{ group: string; locales: Record<string, { id: string }> }>(admin, "items.saveGroup", {
+			collection: "category",
+			locales: { ko: { title: name, slug } },
+		});
+		const id = made.output.locales.ko?.id as string;
+		const path = `/categories/${slug}`;
+		// Read once, so the page is in the site's cache.
+		expect((await visit(admin, path)).text).toContain(name);
+		await operation(admin, "trash.move", { rows: [{ kind: "entry", id }] });
+		expect((await visit(admin, path)).status).toBe(404);
+		await operation(admin, "trash.restore", { rows: [{ kind: "entry", id }] });
+		const back = await visit(admin, path);
+		expect(back.status).toBe(200);
+		expect(back.text).toContain(name);
+	});
+
+	test("16-2 16-7 a post with a Korean address: it is on the site at that address, and its preview opens there", async ({
+		admin,
+	}) => {
+		const title = unique("한글 주소의 글");
+		const slug = unique("한글-주소");
+		const made = await operation<{ id: string }>(admin, "entries.create", {
+			collection: "post",
+			locale: "ko",
+			title,
+			slug,
+			doc: { type: "doc", blocks: [paragraph("p1", "본문입니다.")] },
+		});
+		const link = await admin.request.post("/admin/api/operations/entries.previewLink", {
+			data: { input: { id: made.output.id } },
+		});
+		const { token, path } = (await link.json()) as { token: string; path: string };
+		expect(path).toBe(`/posts/${slug}`);
+		await admin.goto(`/admin/api/preview?token=${encodeURIComponent(token)}&path=${encodeURIComponent(path)}`);
+		await expect(admin.getByRole("heading", { level: 1 })).toHaveText(title);
+		expect(decodeURIComponent(new URL(admin.url()).pathname)).toBe(path);
+		await admin.goto("/admin/api/preview/exit");
+		await publish(admin, made.output.id);
+		expect((await visit(admin, encodeURI(path))).text).toContain(title);
+	});
+
 	test("16-7 an old address goes to the new one for good, a post that is not there is not found, and so is a language it has no translation in", async ({
 		admin,
 	}) => {
@@ -213,16 +259,50 @@ test.describe("the preview", () => {
 });
 
 raw.describe("the dev server and the live site", () => {
-	raw("16-5 on the dev server this machine gets into the admin without signing in", async ({ browser }) => {
-		const context = await browser.newContext({ baseURL: DEV, locale: "ko-KR", viewport: { width: 1440, height: 900 } });
-		const page = await context.newPage();
-		await page.goto("/admin");
-		await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
-		await expect(page.getByLabel("이메일")).toBeHidden();
-		const state = await page.request.post("/admin/api/operations/auth.state", { data: { input: {} } });
-		expect(((await state.json()) as { session: unknown }).session).toEqual({ who: "dev", bypass: true });
-		await context.close();
-	});
+	raw(
+		"16-5 on the dev server a browser of this machine gets into the admin without signing in, and the sidebar says why",
+		async ({ browser }) => {
+			const context = await browser.newContext({
+				baseURL: DEV,
+				locale: "ko-KR",
+				viewport: { width: 1440, height: 900 },
+			});
+			const page = await context.newPage();
+			await page.goto("/admin");
+			await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+			await expect(page.getByLabel("이메일")).toBeHidden();
+			await expect(page.getByText("개발 서버 · 로그인 없이")).toBeVisible();
+			const state = await page.request.post("/admin/api/operations/auth.state", { data: { input: {} } });
+			expect(((await state.json()) as { session: unknown }).session).toEqual({ who: "dev", bypass: true });
+			await context.close();
+		},
+	);
+
+	raw(
+		"16-5 on the dev server a sender that only says it is local gets nothing: forged headers, a made-up ticket",
+		async ({ request }) => {
+			// What a program on another machine would send: the headers a local request has, and no ticket from this machine's loopback address.
+			const forged = { "x-forwarded-host": "localhost:4175", "x-forwarded-for": "127.0.0.1" };
+			const counts = await request.post(`${DEV}/admin/api/operations/frame.counts`, {
+				data: { input: {} },
+				headers: forged,
+			});
+			expect(counts.status()).toBe(401);
+			const state = await request.post(`${DEV}/admin/api/operations/auth.state`, {
+				data: { input: {} },
+				headers: forged,
+			});
+			expect(((await state.json()) as { session: unknown }).session).toBeNull();
+			const letIn = await request.post(`${DEV}/admin/api/operations/auth.devSignIn`, {
+				data: { input: { ticket: "made-up" } },
+				headers: forged,
+			});
+			expect(letIn.status()).toBe(401);
+			expect(letIn.headers()["set-cookie"]).toBeUndefined();
+			const upload = await request.put(`${DEV}/admin/api/media/bytes?name=a.png`, { data: "x", headers: forged });
+			expect(upload.status()).toBe(401);
+		},
+	);
 
 	raw("16-5 the live site asks to sign in, on the site with a storage and the one without", async ({ browser }) => {
 		for (const baseURL of [LIVE, BARE]) {

@@ -392,6 +392,8 @@ export const mediaOperations = [
 				}))
 				.where("id", "=", input.id)
 				.execute();
+			// A page that offers the file to download shows its name.
+			if (input.name !== undefined) ctx.emit({ type: "media.renamed", ids: [input.id] });
 			return liveItem(ctx, input.id);
 		},
 		summary: (input, output) =>

@@ -50,7 +50,7 @@ const cookie = (request: Request, name: string, value: string, maxAge: number) =
 	}`;
 
 /** The operations whose output carries a new session's token: the API puts it in the cookie and never in the body. */
-const SIGN_IN = new Set(["auth.signIn", "auth.createFirstAdmin"]);
+const SIGN_IN = new Set(["auth.signIn", "auth.createFirstAdmin", "auth.devSignIn"]);
 
 /**
  * The admin API: one route per operation, `POST …/operations/<name>` with `{ input, versions }`, made from the operation list, and the GitHub
@@ -62,20 +62,16 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 	/** The admin page of a GitHub route: the folder over the API's (`/admin/api/auth/github` → `/admin`). */
 	const adminPathOf = (pathname: string) =>
 		options.adminPath ?? (pathname.replace(/\/[^/]+\/auth\/github(\/callback)?$/, "") || "/");
-	// The dev server lets a request from this machine in without signing in (doc 16): never the live site, a hosted process or a request from elsewhere.
-	const bypassOn = monti.site.files !== null && monti.site.auth.devBypass && hostedBy(options.env) === undefined;
+	// The dev server lets a browser of this machine in without signing in (doc 16): never the live site or a hosted process, and only a browser
+	// that handed in a ticket from this machine's loopback address (`auth.devSignIn`). What the request says of itself (`isLocalRequest`) proves
+	// nothing; it only turns away early what does not even claim to be local.
+	const bypassOn =
+		monti.site.files !== null &&
+		monti.site.auth.devBypass &&
+		monti.site.devProof !== null &&
+		hostedBy(options.env) === undefined;
 	const bypasses = (request: Request) => bypassOn && isLocalRequest(request);
-	/**
-	 * The request's session token: its cookie's, or for a bypassed request with no session, one started on the spot (`started`, to put in the cookie).
-	 */
-	async function tokenOf(request: Request) {
-		const token = cookies(request)[SESSION_COOKIE];
-		const local = bypasses(request);
-		if (!local || (await sessionOf(token, local))) return { token, local };
-		const started = await letIn();
-		return { token: started.token, local, started };
-	}
-	/** The session of someone let in without signing in. It opens anything only for a request the bypass holds for (`call`'s `local`). */
+	/** The session of someone let in without signing in, for Storybook, which has no loopback address to prove itself at. */
 	const letIn = () => startSession(monti.db, DEV_WHO, monti.now());
 	/** A bypassed session is one only while the bypass holds for the request: turned off, or from another machine, it opens nothing. */
 	async function sessionOf(token: string | null | undefined, local: boolean) {
@@ -138,14 +134,14 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 	}
 
 	async function operation(request: Request, name: string): Promise<Response> {
-		const { token, local, started } = await tokenOf(request);
-		const answer = await call(name, await request.json().catch(() => null), token, local);
-		if (answer.session === undefined)
-			return json(
-				answer.status,
-				answer.body,
-				started ? { "set-cookie": sessionCookie(request, started.token, started.expiresAt) } : {},
-			);
+		const local = bypasses(request);
+		// The ticket is asked for only where the bypass can hold at all.
+		if (name === "auth.devSignIn" && !local) return json(401, { error: "sign-in-refused" });
+		const answer = await call(name, await request.json().catch(() => null), cookies(request)[SESSION_COOKIE], local);
+		// Where to prove itself is said only to a request the bypass can hold for.
+		if (name === "auth.state" && !local && answer.status === 200)
+			delete (answer.body as { devProof?: string }).devProof;
+		if (answer.session === undefined) return json(answer.status, answer.body);
 		const setCookie =
 			answer.session === null
 				? cookie(request, SESSION_COOKIE, "", 0)
@@ -277,16 +273,13 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		if (name && request.method === "POST") return operation(request, name);
 		if (pathname.endsWith("/media/bytes") && request.method === "PUT") {
 			// Before the body: nobody without a session makes the server hold a file.
-			const { token, local, started } = await tokenOf(request);
+			const token = cookies(request)[SESSION_COOKIE];
+			const local = bypasses(request);
 			if (!(await sessionOf(token, local))) return json(401, { error: "unauthenticated" });
 			const bytes = await bodyBytes(request);
 			if (!bytes) return json(413, { error: "media-refused", reason: { key: "media.tooBig" } });
 			const answer = await upload(bytes, searchParams.get("name") ?? "", token, local);
-			return json(
-				answer.status,
-				answer.body,
-				started ? { "set-cookie": sessionCookie(request, started.token, started.expiresAt) } : {},
-			);
+			return json(answer.status, answer.body);
 		}
 		const file = pathname.match(/\/media\/files\/([^/]+)$/)?.[1];
 		if (file && request.method === "GET") return mediaFile(file);

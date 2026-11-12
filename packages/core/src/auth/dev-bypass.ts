@@ -1,7 +1,20 @@
 /**
  * The guards of the dev server's sign-in bypass (doc 16): it lets whoever reaches the admin in without signing in, so being the dev server is not
- * enough. The process must not look deployed, and the request must come from this machine.
+ * enough. The process must not look deployed, and the browser must prove it runs on this machine.
+ *
+ * A request's own headers cannot prove that: `Host`, `X-Forwarded-Host` and `X-Forwarded-For` are whatever the sender wrote, and a framework
+ * passes them on as they came. The proof is a ticket only a program on this machine can fetch (`DevProof`): the adapter listens on the loopback
+ * address, which nothing outside the machine reaches, and the admin's page fetches a one-time ticket there and hands it in (`auth.devSignIn`).
+ * The headers are still read, to turn away early what does not even claim to be local.
  */
+
+/** Where a browser on this machine gets a one-time ticket, and the check that a ticket handed in is one of them. */
+export type DevProof = {
+	/** The loopback address that gives a ticket; `null` until the listener is up. */
+	url(): string | null;
+	/** Whether this ticket was given out and not used or ended yet. It is used up by the asking. */
+	take(ticket: string): boolean;
+};
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -43,8 +56,9 @@ function hostnameOf(host: string): string {
 }
 
 /**
- * Whether a request comes from this machine: its `Host` (the URL's when the header is not there), a proxy's `X-Forwarded-Host` and every address
- * of `X-Forwarded-For` are loopback names. A client can send these headers itself, so this narrows the bypass; it is no sign-in.
+ * Whether a request says it comes from this machine: its `Host` (the URL's when the header is not there), a proxy's `X-Forwarded-Host` and every
+ * address of `X-Forwarded-For` are loopback names. A client can send these headers itself, so this proves nothing: it only turns away early what
+ * does not claim to be local. The proof is the `DevProof` ticket.
  */
 export function isLocalRequest(request: Pick<Request, "headers" | "url">): boolean {
 	const host = request.headers.get("host") ?? new URL(request.url).host;

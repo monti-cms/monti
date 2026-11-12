@@ -61,9 +61,10 @@ export default defineConfig({ schema, database: process.env.DATABASE_URL, auth: 
 first visit to the admin makes the admin. The admin API (`createAdminApi`) answers only the sign-in operations without its `httpOnly` session
 cookie; a session ends after 30 days unused. A forgotten password is reset on the server with `monti admin:reset-password`.
 
-On the dev server (the one that can write `monti.schema.ts`) a request from this machine gets in without signing in, and the admin's sidebar
-says so. It never applies on the live site, on a hosting platform's process or to a request from another machine; `auth: { devBypass: false }`
-turns it off, to try the sign-in screens locally.
+On the dev server (the one that can write `monti.schema.ts`) a browser on this machine gets in without signing in, and the admin's sidebar
+says so. The browser proves where it is with a one-time ticket from the loopback address (`devProof`, which an adapter such as
+`@monti-cms/next` brings; without one nobody is let in): what a request says of itself proves nothing. It never applies on the live site or
+on a hosting platform's process; `auth: { devBypass: false }` turns it off, to try the sign-in screens locally.
 
 Labels, help texts, layout and editor permissions are admin values in the database (`collections.updateAdminValues`), editable on the live site too.
 
@@ -95,7 +96,7 @@ import { createReader } from "@monti-cms/core";
 const site = createReader({ db, schema, secret: process.env.MONTI_SECRET });
 await site.entry({ collection: "post", locale: "ko", slug }); // { entry } | { redirect } | null
 await site.entries({ collection: "post", locale: "ko" });
-await site.page({ collection: "post", locale: "ko", limit: 10, after }); // { entries, next }: a list read a page at a time
+await site.page({ collection: "post", locale: "ko", limit: 10, after }); // { entries, next }: a page at a time, by the last entry given
 ```
 
 Each entry comes with its public address (`path`). `entries.previewLink` gives a one-hour token, signed with `MONTI_SECRET`, and the path to

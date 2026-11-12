@@ -35,6 +35,28 @@ export const publicPaths = (
 ) => [...new Set(slugs.flatMap((slug) => (slug ? (publicPath(schema, collection, slug, locale) ?? []) : [])))];
 
 /**
+ * The public paths of the published translations of a source entry: they show the source's blocks and values where they follow them (doc 04), so
+ * their pages change when what the site shows of the source does. None for an entry that is itself a translation.
+ */
+export async function followerPaths(
+	db: Db,
+	schema: Schema,
+	entry: { id: string; collection: string; locale: string },
+): Promise<string[]> {
+	if (entry.locale !== schema.locales.source) return [];
+	const followers = await db
+		.selectFrom("entries as s")
+		.innerJoin("entries as e", "e.translation_group", "s.translation_group")
+		.innerJoin("entry_published as p", "p.entry_id", "e.id")
+		.select(["p.slug", "p.locale"])
+		.where("s.id", "=", entry.id)
+		.where("e.id", "<>", entry.id)
+		.where("e.trashed_at", "is", null)
+		.execute();
+	return followers.flatMap((follower) => publicPaths(schema, entry.collection, follower.locale, [follower.slug]));
+}
+
+/**
  * Where "Preview" opens an entry's working copy (doc 16): the collection's preview page when the site made one (`previewPath`), with the language
  * shown as a public address shows it, and the public address otherwise.
  */

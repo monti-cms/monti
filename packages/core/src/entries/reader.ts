@@ -1,6 +1,7 @@
-import type { Kysely } from "kysely";
+import { type Kysely, sql } from "kysely";
 import { asDoc, type Doc } from "../body/doc";
 import { linkedGroups } from "../body/links";
+import { base64url, fromBase64url } from "../bytes";
 import type { Database } from "../db/schema";
 import type { SiteMedia } from "../media/site-image";
 import type { Storage } from "../media/storage";
@@ -229,6 +230,23 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 				: query.orderBy("p.published_at", "desc")
 		).orderBy("p.entry_id", "asc");
 	};
+	/** The entry a page ended on, from its `next`; `null` for no page before, or a `next` that is none of ours (the list then starts over). */
+	const lastOf = (next: string | null | undefined): { at: string; id: string; position: number } | null => {
+		if (!next) return null;
+		try {
+			const [at, id, position] = JSON.parse(new TextDecoder().decode(fromBase64url(next))) as unknown[];
+			if (
+				typeof at !== "string" ||
+				Number.isNaN(Date.parse(at)) ||
+				typeof id !== "string" ||
+				typeof position !== "number"
+			)
+				return null;
+			return { at, id, position };
+		} catch {
+			return null;
+		}
+	};
 	type PublishedRow = Awaited<ReturnType<ReturnType<typeof published>["execute"]>>[number];
 	const asSite = (copy: PublishedRow) =>
 		forSite({
@@ -322,8 +340,9 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 		},
 
 		/**
-		 * The published entries of a collection and language: documents newest first, items in their own order. With `limit` it gives that many, and
-		 * `after` (the `next` of the page before) gives the ones that follow; `next` is `null` on the last page.
+		 * The published entries of a collection and language, a page at a time: documents newest first, items in their own order. `limit` is how many,
+		 * and `after` (the `next` of the page before) gives the ones that follow; `next` is `null` on the last page. `next` names the last entry given,
+		 * not a count: an entry published or taken off between two pages neither repeats one nor skips one.
 		 */
 		async page(where: {
 			collection: string;
@@ -331,17 +350,34 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 			limit: number;
 			after?: string | null;
 		}): Promise<{ entries: SiteEntry[]; next: string | null }> {
-			const start = where.after ? Number(where.after) : 0;
-			const from = Number.isInteger(start) && start > 0 ? start : 0;
 			const limit = Math.max(1, Math.floor(where.limit));
+			const last = lastOf(where.after);
+			const item = schema.collections[where.collection]?.kind === "item";
+			let query = published(where);
+			if (last) {
+				// What comes after the last entry given, in the list's own order (`published`).
+				const later = sql<boolean>`(p.published_at < ${last.at}::timestamptz or (p.published_at = ${last.at}::timestamptz and p.entry_id > ${last.id}))`;
+				query = query.where(
+					item ? sql<boolean>`(e.position > ${last.position} or (e.position = ${last.position} and ${later}))` : later,
+				);
+			}
 			// One more than asked: whether a page follows.
-			const rows = await published(where)
+			const rows = await query
+				.select("e.position as position")
 				.limit(limit + 1)
-				.offset(from)
 				.execute();
+			const given = rows.slice(0, limit);
+			const end = given.at(-1);
 			return {
-				entries: await Promise.all(rows.slice(0, limit).map(asSite)),
-				next: rows.length > limit ? String(from + limit) : null,
+				entries: await Promise.all(given.map(asSite)),
+				next:
+					rows.length > limit && end
+						? base64url(
+								new TextEncoder().encode(
+									JSON.stringify([end.published_at.toISOString(), end.entry_id, Number(end.position ?? 0)]),
+								),
+							)
+						: null,
 			};
 		},
 

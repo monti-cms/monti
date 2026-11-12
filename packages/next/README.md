@@ -76,6 +76,9 @@ shows, and the token ends after an hour.
 taken off the site, a file replaced, trashed or restored). The whole site and not only the entry's own page: a list, a post that names a
 category, a translation that follows its source show it too. A page is drawn again when it is next visited.
 
+The mark is on this server process's cache. A site run as several processes or machines needs a cache they share (a Next cache handler);
+with the stock one, an entry published through one process stays old on the others.
+
 ## The dev server and the live site
 
 `next dev` with a `monti.schema.ts` it can write is the dev server; anything else is the live site.
@@ -83,8 +86,12 @@ category, a translation that follows its source show it too. A page is drawn aga
 | | dev server | live site |
 |---|---|---|
 | structure (collections, fields, addresses) | edited in the admin, written to `monti.schema.ts` | locked |
-| signing in | a request from this machine gets in without it (`auth: { devBypass: false }` turns that off) | always |
+| signing in | a browser on this machine gets in without it (`auth: { devBypass: false }` turns that off) | always |
 | the first call of the admin API | follows a schema file edited by hand, and says so | says to run `monti db:migrate` when the database is behind |
+
+A browser proves it is on this machine with a one-time ticket it fetches from a listener on the loopback address, which nothing outside the
+machine reaches. What a request says of itself (`Host`, `X-Forwarded-For`) lets nobody in: the sender writes those. When the ticket cannot be
+fetched (another machine, a server in a container) the admin asks to sign in.
 
 ## Styles
 

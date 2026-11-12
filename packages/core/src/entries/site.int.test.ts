@@ -26,7 +26,11 @@ const schema = defineSchema({
 			fields: { ...fixed, tags: { kind: "relation", to: "tag", many: true, createMissing: true } },
 		},
 		note: { kind: "document", path: "/notes/:slug", previewPath: "/preview/notes/:slug", fields: { ...fixed } },
-		category: { kind: "item", path: "/categories/:slug", fields: { ...fixed } },
+		category: {
+			kind: "item",
+			path: "/categories/:slug",
+			fields: { ...fixed, tags: { kind: "relation", to: "tag", many: true } },
+		},
 		// An item with no page of its own.
 		tag: { kind: "item", fields: { ...fixed } },
 	},
@@ -126,6 +130,51 @@ describe("an event's paths are public addresses, whatever made it", () => {
 	});
 });
 
+describe("a write that changes what a live item shows says so", () => {
+	it("16-3 relations.merge: the merged item's page leaves the site and the entries that pointed at it are published again; a renamed file says so", async () => {
+		const [from, into] = await Promise.all(
+			["old", "kept"].map((slug) =>
+				write<{ group: string }>("items.saveGroup", { collection: "tag", locales: { ko: { title: slug, slug } } }),
+			),
+		);
+		const { id } = await write("entries.create", {
+			collection: "post",
+			locale: "ko",
+			title: "태그가 있는 글",
+			slug: "tagged",
+			values: { tags: [from?.group] },
+		});
+		await write("entries.publish", { ids: [id] });
+		sent = [];
+		await write("relations.merge", { collection: "tag", fromGroups: [from?.group], intoGroup: into?.group });
+		const types = sent.map((event) => [event.type, event.collection, event.paths]);
+		// The post points at the tag they became (its page changed); the merged tag is off the site (it has no page of its own, so no path).
+		expect(types).toContainEqual(["entry.published", "post", ["/posts/tagged"]]);
+		expect(types).toContainEqual(["entry.unpublished", "tag", []]);
+	});
+
+	it("16-3 relations.edit on a live item: its page shows other values, with no new version and no publish", async () => {
+		const tag = await write<{ group: string }>("items.saveGroup", {
+			collection: "tag",
+			locales: { ko: { title: "웹", slug: "web" } },
+		});
+		const category = await write<{ group: string }>("items.saveGroup", {
+			collection: "category",
+			locales: { ko: { title: "개발", slug: "dev" } },
+		});
+		sent = [];
+		await write("relations.edit", {
+			collection: "category",
+			groups: [category.group],
+			field: "tags",
+			add: [tag.group],
+		});
+		expect(sent.map((event) => [event.type, event.collection, event.paths])).toEqual([
+			["entry.published", "category", ["/categories/dev"]],
+		]);
+	});
+});
+
 describe("an undo that changes what the site shows says so", () => {
 	type Activity = { activityId: string };
 	const act = async (name: string, input: unknown) =>
@@ -150,6 +199,39 @@ describe("an undo that changes what the site shows says so", () => {
 		expect(shown()).toEqual([["entry.published", ["/posts/undo-me", "/posts/undo-me-2"]]]);
 		const back = await reader().entry({ collection: "post", locale: "ko", slug: "undo-me" });
 		expect(back && "entry" in back && back.entry.title).toBe("글");
+	});
+
+	it("02-7 T29 undoing a change that touched only what a live item shows says so too, and an undone source names its translations' pages", async () => {
+		// A live item's values change with no new version and no new date.
+		const made = await write<{ group: string }>("items.saveGroup", {
+			collection: "category",
+			locales: { ko: { title: "개발", slug: "dev" } },
+		});
+		const item = await db
+			.selectFrom("entries")
+			.select("id")
+			.where("translation_group", "=", made.group)
+			.executeTakeFirstOrThrow();
+		const renamed = await act("entries.save", { id: item.id, version: await versionOf(item.id), title: "개발 일기" });
+		sent = [];
+		await undo(renamed.activityId);
+		expect(shown()).toEqual([["entry.published", ["/categories/dev"]]]);
+
+		// A source with a published translation: undoing the source's publish names both pages.
+		const id = await post("안녕", "hello");
+		const translation = await write("translations.create", { source: id, locale: "en" });
+		await write("entries.save", {
+			id: translation.id,
+			version: await versionOf(translation.id),
+			title: "Hello",
+			slug: "hello-en",
+		});
+		await write("entries.publish", { ids: [translation.id] });
+		await write("entries.save", { id, version: await versionOf(id), title: "안녕하세요" });
+		const again = await act("entries.publish", { ids: [id] });
+		sent = [];
+		await undo(again.activityId);
+		expect(shown()).toEqual([["entry.published", ["/posts/hello", "/en/posts/hello-en"]]]);
 	});
 
 	it("02-7 T29 undoing a move to the trash puts a published entry back on the site; undoing a save alone says nothing", async () => {
@@ -196,6 +278,34 @@ describe("what the site reads", () => {
 		expect(last.entries.map((entry) => entry.slug)).toEqual(["post-1"]);
 		expect(last.next).toBeNull();
 		expect((await reader().page({ collection: "post", locale: "en", limit: 2 })).entries).toEqual([]);
+	});
+
+	it("16-1 an entry published or taken off between two pages neither repeats an entry nor skips one, and items page in their own order", async () => {
+		const ids: Record<string, string> = {};
+		for (const day of [1, 2, 3, 4]) {
+			clock = new Date(`2026-10-0${day}T09:00:00Z`);
+			ids[`post-${day}`] = await post(`글 ${day}`, `post-${day}`);
+		}
+		const first = await reader().page({ collection: "post", locale: "ko", limit: 2 });
+		expect(first.entries.map((entry) => entry.slug)).toEqual(["post-4", "post-3"]);
+		// A newer post comes on the site, and one already given leaves it.
+		clock = new Date("2026-10-09T09:00:00Z");
+		await post("새 글", "post-new");
+		await write("entries.archive", { ids: [ids["post-4"]] });
+		const second = await reader().page({ collection: "post", locale: "ko", limit: 2, after: first.next });
+		expect(second.entries.map((entry) => entry.slug)).toEqual(["post-2", "post-1"]);
+		expect(second.next).toBeNull();
+		// A `next` that is none of ours starts the list over; it does not throw.
+		const over = await reader().page({ collection: "post", locale: "ko", limit: 1, after: "not-a-cursor" });
+		expect(over.entries.map((entry) => entry.slug)).toEqual(["post-new"]);
+
+		// Items: in their own order (the order they were made in), each once.
+		for (const name of ["a", "b", "c"])
+			await write("items.saveGroup", { collection: "category", locales: { ko: { title: name, slug: name } } });
+		const one = await reader().page({ collection: "category", locale: "ko", limit: 2 });
+		const two = await reader().page({ collection: "category", locale: "ko", limit: 2, after: one.next });
+		expect([...one.entries, ...two.entries].map((entry) => entry.slug)).toEqual(["a", "b", "c"]);
+		expect(two.next).toBeNull();
 	});
 });
 

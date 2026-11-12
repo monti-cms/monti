@@ -26,7 +26,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const signedIn = (
+export const signedIn = (
 	setup?: (site: StorySite["monti"]) => Promise<void>,
 	options: Partial<Parameters<typeof storySite>[0]> = {},
 ) => [

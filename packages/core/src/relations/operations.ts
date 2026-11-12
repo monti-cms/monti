@@ -365,6 +365,15 @@ export const relationOperations = [
 		async run(input, ctx) {
 			const schema = ctx.site.schema();
 			const colDef = schema.collections[input.collection];
+			/** Says that what the site shows of a live item changed, so a site that keeps its pages draws them again. */
+			const shown = (entry: { id: string; collection: string; locale: string; slug: string }) =>
+				ctx.emit({
+					type: "entry.published",
+					ids: [entry.id],
+					collection: entry.collection,
+					locale: entry.locale,
+					paths: publicPaths(schema, entry.collection, entry.locale, [entry.slug]),
+				});
 			const fieldDef = colDef.fields[input.field];
 			if (!fieldDef || fieldDef.kind !== "relation") {
 				throw new CheckError({ key: "relations.notRelation", values: { field: input.field } });
@@ -445,6 +454,8 @@ export const relationOperations = [
 								.set({ values: JSON.stringify(values) })
 								.where("entry_id", "=", entry.id)
 								.execute();
+							// An item is live as saved: what the site shows of it changed.
+							shown(entry);
 						}
 						await syncRelationsForEntry(
 							ctx,
@@ -498,6 +509,8 @@ export const relationOperations = [
 								.set({ values: JSON.stringify(values) })
 								.where("entry_id", "=", entry.id)
 								.execute();
+							// An item is live as saved: what the site shows of it changed.
+							shown(entry);
 						}
 						await syncRelationsForEntry(
 							ctx,
@@ -746,11 +759,21 @@ export const relationOperations = [
 						.set({ values: JSON.stringify(values), updated_at: ctx.now() })
 						.where("id", "=", entry.id)
 						.execute();
-					await ctx.db
+					const live = await ctx.db
 						.updateTable("entry_published")
 						.set({ values: JSON.stringify(values) })
 						.where("entry_id", "=", entry.id)
-						.execute();
+						.returning("slug")
+						.executeTakeFirst();
+					// What the site shows of an entry that pointed at a merged item changed: it points at the one they became.
+					if (live)
+						ctx.emit({
+							type: "entry.published",
+							ids: [entry.id],
+							collection: entry.collection,
+							locale: entry.locale,
+							paths: publicPaths(schema, entry.collection, entry.locale, [live.slug]),
+						});
 				}
 			}
 
@@ -758,7 +781,20 @@ export const relationOperations = [
 			const now = ctx.now();
 			for (const fe of fromEntries) {
 				await ctx.db.updateTable("entries").set({ trashed_at: now, updated_at: now }).where("id", "=", fe.id).execute();
-				await ctx.db.deleteFrom("entry_published").where("entry_id", "=", fe.id).execute();
+				const gone = await ctx.db
+					.deleteFrom("entry_published")
+					.where("entry_id", "=", fe.id)
+					.returning("slug")
+					.executeTakeFirst();
+				// A merged item's own page is gone from the site.
+				if (gone)
+					ctx.emit({
+						type: "entry.unpublished",
+						ids: [fe.id],
+						collection: input.collection,
+						locale: fe.locale,
+						paths: publicPaths(schema, input.collection, fe.locale, [gone.slug]),
+					});
 			}
 
 			return {

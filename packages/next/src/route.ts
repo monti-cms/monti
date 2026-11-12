@@ -8,9 +8,25 @@ const PREVIEW_SECONDS = 3600;
 const text = (status: number, body: string) =>
 	new Response(body, { status, headers: { "content-type": "text/plain; charset=utf-8" } });
 
-/** A path of this site, and nothing that leaves it (`//host`, `/\host`, a full address): the preview never sends the browser elsewhere. */
-export const localPath = (value: string | null): string | null =>
-	value && /^\/(?![/\\])/.test(value) && !value.includes("\\") ? value : null;
+/**
+ * A path of this site as a `Location` can carry it, or `null` for anything that leaves the site: `//host`, `/\\host`, a full address, a path
+ * with a tab or a line break in it (a browser drops those before it reads the address). Checked by its letters and by where a browser would
+ * land with it. What comes back is the address as a browser writes it: a Korean slug is percent-encoded, since a header holds no such letters.
+ */
+export function localPath(value: string | null): string | null {
+	// Anything a browser strips or reads as a slash: control characters, spaces and backslashes.
+	const stripped = (char: string) => char.charCodeAt(0) <= 0x20 || char.charCodeAt(0) === 0x7f || char === "\\";
+	if (!value || !/^\/(?!\/)/.test(value) || [...value].some(stripped)) return null;
+	try {
+		const base = "http://monti.invalid";
+		const landed = new URL(value, base);
+		const path = `${landed.pathname}${landed.search}${landed.hash}`;
+		// Once more on what is sent: `/.//host` lands on this site but is written `//host`, which a browser reads as another site.
+		return landed.origin === base && /^\/(?!\/)/.test(path) ? path : null;
+	} catch {
+		return null;
+	}
+}
 
 /**
  * What the server says once, when the admin API is first called (doc 16, doc 01): the dev server follows a schema file edited by hand, the live

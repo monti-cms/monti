@@ -1,5 +1,6 @@
 import type { Kysely } from "kysely";
 import { z } from "zod";
+import type { DevProof } from "./auth/dev-bypass";
 import { type AuthSettings, authOperations } from "./auth/operations";
 import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./body/blocks";
 import { bodyOperations, templateRecord } from "./body/operations";
@@ -79,6 +80,8 @@ export type MontiOptions = {
 	marks?: MarkDefinition[];
 	/** The ways to sign in that `monti init` chose. Without one, the admin says sign-in is not set up. */
 	auth?: Partial<AuthSettings>;
+	/** How a browser proves it runs on this machine (the dev server's sign-in bypass, doc 16). */
+	devProof?: DevProof | null;
 	/** `MONTI_SECRET`: signs preview links (and, with doc 14, encrypts keys). */
 	secret?: string | null;
 	now?: () => Date;
@@ -234,6 +237,7 @@ export function createMonti(options: MontiOptions) {
 			github: options.auth?.github ?? null,
 			devBypass: options.auth?.devBypass ?? true,
 		},
+		devProof: options.devProof ?? null,
 		kit: createBlockKit(
 			[...(options.blocks ?? []), ...plugins.flatMap((plugin) => plugin.blocks ?? [])],
 			[...(options.marks ?? []), ...plugins.flatMap((plugin) => plugin.marks ?? [])],

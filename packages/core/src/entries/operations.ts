@@ -20,7 +20,7 @@ import {
 	rememberBlocks,
 	seenOf,
 } from "../translations/source";
-import { previewPath, previewSlug, publicPath, publicPaths, publishSlug, slugify } from "./paths";
+import { followerPaths, previewPath, previewSlug, publicPath, publicPaths, publishSlug, slugify } from "./paths";
 import { PREVIEW_MINUTES, previewToken } from "./preview";
 import { type Entry, loadEntries, markChanges } from "./record";
 import { fieldValue, type PublishTask, publishTasks } from "./tasks";
@@ -586,19 +586,8 @@ export const entryOperations = [
 					.onConflict((conflict) => conflict.column("entry_id").doUpdateSet(copy))
 					.execute();
 				const paths = publicPaths(schema, entry.collection, entry.locale, [slug, previous?.slug]);
-				// A published translation shows the source's blocks and values where it follows them (doc 04): its page changes with the source's.
-				if (!isTranslation(schema, entry)) {
-					const followers = await ctx.db
-						.selectFrom("entry_published as p")
-						.innerJoin("entries as e", "e.id", "p.entry_id")
-						.select(["p.slug", "p.locale"])
-						.where("e.translation_group", "=", entry.translationGroup)
-						.where("e.id", "<>", entry.id)
-						.where("e.trashed_at", "is", null)
-						.execute();
-					for (const follower of followers)
-						paths.push(...publicPaths(schema, entry.collection, follower.locale, [follower.slug]));
-				}
+				// A published translation's page changes with its source's (doc 04).
+				paths.push(...(await followerPaths(ctx.db, schema, entry)));
 				ctx.emit({
 					type: "entry.published",
 					ids: [entry.id],

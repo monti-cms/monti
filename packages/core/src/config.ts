@@ -1,5 +1,6 @@
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
+import type { DevProof } from "./auth/dev-bypass";
 import type { AuthSettings } from "./auth/operations";
 import type { AnyBlockDefinition, MarkDefinition } from "./body/blocks";
 import type { Database } from "./db/schema";
@@ -31,27 +32,35 @@ export type MontiConfig = {
 	auth?: Partial<AuthSettings>;
 	/** Signs preview links. Left out, `MONTI_SECRET`. */
 	secret?: string;
+	/** How a browser proves it runs on this machine, for the dev server's sign-in bypass. An adapter sets it (`@monti-cms/next`). */
+	devProof?: DevProof | null;
 };
 
 export function defineConfig(config: MontiConfig): MontiConfig {
 	return config;
 }
 
-/** Opens the site's Monti: the database pool, and on the dev server the schema files under `root`. */
-export function openMonti(config: MontiConfig, root: string): Monti {
+/**
+ * Opens the site's Monti: the database pool, and on the dev server the schema files under `root`. `reuse.db` is a pool already open (a dev server
+ * that reads a changed config again keeps its connections).
+ */
+export function openMonti(config: MontiConfig, root: string, reuse: { db?: Kysely<Database> } = {}): Monti {
 	if (!config.database) throw new Error("monti.config.ts has no database address (set DATABASE_URL).");
 	const dev = config.dev ?? process.env.NODE_ENV !== "production";
 	if (!dev && config.auth?.devBypass === true)
 		console.warn("Monti: auth.devBypass is for the dev server only; the live site signs in as always.");
 	return createMonti({
-		db: new Kysely<Database>({
-			dialect: new PostgresDialect({ pool: new Pool({ connectionString: config.database }) }),
-		}),
+		db:
+			reuse.db ??
+			new Kysely<Database>({
+				dialect: new PostgresDialect({ pool: new Pool({ connectionString: config.database }) }),
+			}),
 		schema: config.schema,
 		files: dev ? schemaFilesAt(root) : null,
 		plugins: config.plugins,
 		blocks: config.blocks,
 		auth: config.auth,
+		devProof: dev ? config.devProof : null,
 		marks: config.marks,
 		receivers: config.receivers,
 		secret: config.secret ?? process.env.MONTI_SECRET ?? null,

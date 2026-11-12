@@ -61,9 +61,10 @@ export default defineConfig({ schema, database: process.env.DATABASE_URL, auth: 
 화면의 첫 방문에서 관리자를 만든다. 관리자 API(`createAdminApi`)는 `httpOnly` 세션 쿠키가 없으면 로그인 기능만 받는다. 세션은 30일 동안 쓰지
 않으면 끝난다. 잊은 비밀번호는 서버에서 `monti admin:reset-password`로 바꾼다.
 
-개발 서버(`monti.schema.ts`를 쓸 수 있는 서버)에서는 이 컴퓨터에서 온 요청이 로그인 없이 들어오고, 관리자 화면의 사이드바가 그렇다고 말한다.
-운영 사이트, 호스팅 환경의 프로세스, 다른 컴퓨터에서 온 요청에는 적용되지 않는다. 로그인 화면을 로컬에서 써 보려면
-`auth: { devBypass: false }`로 끈다.
+개발 서버(`monti.schema.ts`를 쓸 수 있는 서버)에서는 이 컴퓨터의 브라우저가 로그인 없이 들어오고, 관리자 화면의 사이드바가 그렇다고 말한다.
+브라우저는 루프백 주소에서 받은 일회용 표로 제 자리를 증명한다(`devProof`. `@monti-cms/next` 같은 어댑터가 가져오고, 없으면 아무도
+들여보내지 않는다). 요청이 스스로 말하는 것은 증명이 아니다. 운영 사이트와 호스팅 환경의 프로세스에는 적용되지 않는다. 로그인 화면을
+로컬에서 써 보려면 `auth: { devBypass: false }`로 끈다.
 
 표시 이름, 도움말, 배치, 편집기 허용은 데이터베이스의 관리자 값이다(`collections.updateAdminValues`). 운영 사이트에서도 고칠 수 있다.
 

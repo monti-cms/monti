@@ -1,7 +1,8 @@
 import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/schema";
-import { publicPaths } from "../entries/paths";
+import { followerPaths, publicPaths } from "../entries/paths";
 import { ForbiddenError } from "../errors";
+import { sameJson } from "../json";
 import { leaveNoFileInAGoneFolder, rewriteUses } from "../media/uses";
 import { type MontiEvent, type RecordRef, recordKey } from "../operation";
 import { type Engine, loadRecords } from "./execute";
@@ -88,7 +89,17 @@ async function shownNow(db: Db, refs: RecordRef[]) {
 			: await db
 					.selectFrom("entry_published as p")
 					.innerJoin("entries as e", "e.id", "p.entry_id")
-					.select(["p.entry_id", "p.collection", "p.locale", "p.slug", "p.from_version", "p.published_at"])
+					.select([
+						"p.entry_id",
+						"p.collection",
+						"p.locale",
+						"p.slug",
+						"p.published_at",
+						// What a page draws: a live item's values change with no new version and no new date (`relations.edit`).
+						"p.title",
+						"p.values",
+						"p.doc",
+					])
 					.where("p.entry_id", "in", entries)
 					.where("e.trashed_at", "is", null)
 					.execute();
@@ -120,13 +131,8 @@ export async function undoWithEvents(
 	for (const ref of refs.filter((each) => each.kind === "entry")) {
 		const [was, is] = [before.entries.get(ref.id), after.entries.get(ref.id)];
 		if (!was && !is) continue;
-		const same =
-			was &&
-			is &&
-			was.slug === is.slug &&
-			was.from_version === is.from_version &&
-			+was.published_at === +is.published_at;
-		if (same) continue;
+		// The same address, date and content: no visitor sees a difference.
+		if (was && is && sameJson(was, is)) continue;
 		const shown = is ?? was;
 		if (!shown) continue;
 		emit({
@@ -134,7 +140,11 @@ export async function undoWithEvents(
 			ids: [ref.id],
 			collection: shown.collection,
 			locale: shown.locale,
-			paths: publicPaths(schema, shown.collection, shown.locale, [is?.slug, was?.slug]),
+			paths: [
+				...publicPaths(schema, shown.collection, shown.locale, [is?.slug, was?.slug]),
+				// The translations that follow it show the change too.
+				...(await followerPaths(trx, schema, { id: ref.id, collection: shown.collection, locale: shown.locale })),
+			],
 		});
 	}
 	const files = refs.filter((each) => each.kind === "media").map((each) => each.id);

@@ -51,6 +51,8 @@ const core = vi.hoisted(() => ({
 	good: "good-ticket",
 	sync: { status: "same" } as Record<string, unknown>,
 	calls: [] as string[],
+	pools: 0,
+	opened: [] as { db: unknown; config: unknown }[],
 }));
 vi.mock("@monti-cms/core", () => ({
 	createAdminApi: () => async (request: Request) => {
@@ -63,12 +65,22 @@ vi.mock("@monti-cms/core", () => ({
 		return core.sync;
 	},
 	createReader: () => ({}),
-	openMonti: () => ({}),
+	openMonti: (config: unknown, root: string, reuse: { db?: unknown }) => {
+		const monti = {
+			db: reuse.db ?? { pool: ++core.pools },
+			site: { schema: () => ({}), secret: null, storage: null },
+			config,
+			root,
+		};
+		core.opened.push(monti);
+		return monti;
+	},
 }));
 
 const { entryPage, previewPage } = await import("./page");
 const { adminRoute, localPath, PREVIEW_COOKIE, startUp } = await import("./route");
-const { cacheReceiver, isDevServer } = await import("./site");
+const { cacheReceiver, isDevServer, openSite } = await import("./site");
+const { isLoopback, loopbackProof } = await import("./dev-proof");
 
 const monti = { site: { secret: "secret" }, now: () => new Date("2026-11-12T00:00:00Z") } as unknown as Monti;
 const get = (route: ReturnType<typeof adminRoute>, url: string, headers: Record<string, string> = {}) =>
@@ -110,7 +122,19 @@ describe("turning the preview on and off", () => {
 	});
 
 	it("16-2 the preview never sends the browser off the site", async () => {
-		for (const path of ["https://evil.test/", "//evil.test", "/\\evil.test", "posts/hello", ""]) {
+		for (const path of [
+			"https://evil.test/",
+			"//evil.test",
+			"/\\evil.test",
+			"posts/hello",
+			"",
+			// A browser drops a tab or a line break before it reads the address: `/\t/evil.test` is `//evil.test`.
+			"/\t/evil.test",
+			"/\n/evil.test",
+			"/ /evil.test",
+			// Lands on this site, but is written back as `//evil.test`.
+			"/.//evil.test",
+		]) {
 			const answer = await get(
 				adminRoute(monti),
 				`https://site.test/admin/api/preview?token=${core.good}&path=${encodeURIComponent(path)}`,
@@ -119,6 +143,8 @@ describe("turning the preview on and off", () => {
 		}
 		expect(next.draft).toBe(false);
 		expect(localPath("/posts/hello?x=1")).toBe("/posts/hello?x=1");
+		// A Korean slug goes as a header can carry it.
+		expect(localPath("/posts/한글-글")).toBe("/posts/%ED%95%9C%EA%B8%80-%EA%B8%80");
 	});
 
 	it("16-2 exit turns draft mode off, drops the ticket and goes back to the page that was open, on this site only", async () => {
@@ -133,6 +159,11 @@ describe("turning the preview on and off", () => {
 		expect(next.cookies.has(PREVIEW_COOKIE)).toBe(false);
 		const elsewhere = await get(route, "https://site.test/admin/api/preview/exit", { referer: "https://evil.test/x" });
 		expect(elsewhere.headers.get("location")).toBe("/");
+		// The way out takes no ticket, so its `path` is checked as the way in's is.
+		for (const path of ["/\t/evil.test", "//evil.test", "https://evil.test/", "/.//evil.test"]) {
+			const away = await get(route, `https://site.test/admin/api/preview/exit?path=${encodeURIComponent(path)}`);
+			expect(away.headers.get("location")).toBe("/");
+		}
 	});
 
 	it("16-1 everything else is the core's admin API", async () => {
@@ -263,17 +294,20 @@ describe("reading an entry for a page", () => {
 });
 
 describe("the site's cache and which server this is", () => {
-	it("16-3 a change the site shows refreshes every cached page; a save alone refreshes nothing", async () => {
+	it("16-3 a change the site shows refreshes every cached page; a save alone and a new file refresh nothing; an event nobody knows refreshes", async () => {
 		const event = (type: string): MontiEvent => ({ type, ids: ["e1"] });
-		expect(
-			["entry.published", "entry.unpublished", "media.replaced", "media.trashed", "media.restored"].map((type) =>
-				cacheReceiver.accepts?.(event(type)),
-			),
-		).toEqual([true, true, true, true, true]);
-		expect(["entry.saved", "media.uploaded"].map((type) => cacheReceiver.accepts?.(event(type)))).toEqual([
-			false,
-			false,
-		]);
+		const shown = [
+			"entry.published",
+			"entry.unpublished",
+			"media.replaced",
+			"media.renamed",
+			"media.trashed",
+			"media.restored",
+		];
+		expect(shown.filter((type) => !cacheReceiver.accepts?.(event(type)))).toEqual([]);
+		expect(["entry.saved", "media.uploaded"].filter((type) => cacheReceiver.accepts?.(event(type)))).toEqual([]);
+		// A later feature's event is not one of the two that are safe to skip.
+		expect(cacheReceiver.accepts?.(event("schema.applied"))).toBe(true);
 		await cacheReceiver.send(event("entry.published"));
 		expect(next.revalidated).toEqual([["/", "layout"]]);
 	});
@@ -290,5 +324,84 @@ describe("the site's cache and which server this is", () => {
 		expect(isDevServer(root, {})).toBe(false);
 		chmodSync(path.join(root, "monti.schema.ts"), 0o444);
 		expect(isDevServer(root, { NODE_ENV: "development" })).toBe(false);
+	});
+});
+
+describe("opening the site once, and again when its config changed", () => {
+	it("16-4 the same config gives the same Monti; a changed config (the schema file edited, a setting changed) makes it again on the same database pool", () => {
+		const first = { schema: { v: 1 }, database: "postgres://x", dev: false } as never;
+		const one = openSite(first, "/site");
+		expect(openSite(first, "/site")).toBe(one);
+		expect(core.opened).toHaveLength(1);
+		// The dev server evaluates the config again after an edit: another object.
+		const edited = { schema: { v: 2 }, database: "postgres://x", dev: false } as never;
+		const two = openSite(edited, "/site");
+		expect(two).not.toBe(one);
+		expect(core.opened).toHaveLength(2);
+		expect((core.opened[1]?.config as { schema: unknown }).schema).toEqual({ v: 2 });
+		// One pool of connections for the server's life.
+		expect(core.opened[1]?.db).toBe(core.opened[0]?.db);
+		expect(core.pools).toBe(1);
+		// The live site brings no proof of a local browser; the dev server brings one.
+		expect((core.opened[1]?.config as { devProof: unknown }).devProof).toBeNull();
+		openSite({ schema: {}, database: "postgres://x", dev: true } as never, "/site");
+		expect((core.opened[2]?.config as { devProof: unknown }).devProof).not.toBeNull();
+	});
+});
+
+describe("the proof that a browser runs on this machine", () => {
+	const listening = async (proof: ReturnType<typeof loopbackProof>) => {
+		for (let tries = 0; proof.url() === null && tries < 100; tries++) await new Promise((done) => setTimeout(done, 10));
+		const url = proof.url();
+		if (!url) throw new Error("the listener did not come up");
+		return url;
+	};
+	const ask = (url: string, headers: Record<string, string>, method = "GET") => fetch(url, { method, headers });
+
+	it("16-5 a page of a local origin gets a ticket that is good once, for a minute; the listener is on the loopback address only", async () => {
+		let now = 1_000_000;
+		const proof = loopbackProof(() => now);
+		const url = await listening(proof);
+		expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+		const answer = await ask(url, { origin: "http://localhost:3000" });
+		expect(answer.status).toBe(200);
+		// Only the page that asked may read it.
+		expect(answer.headers.get("access-control-allow-origin")).toBe("http://localhost:3000");
+		const { ticket } = (await answer.json()) as { ticket: string };
+		expect(ticket.length).toBeGreaterThan(20);
+		expect(proof.take(ticket)).toBe(true);
+		expect(proof.take(ticket)).toBe(false);
+		expect(proof.take("made-up")).toBe(false);
+		const late = ((await (await ask(url, { origin: "http://127.0.0.1:3000" })).json()) as { ticket: string }).ticket;
+		now += 61_000;
+		expect(proof.take(late)).toBe(false);
+		proof.close();
+	});
+
+	it("16-5 a page of another site, a request with no origin and a name that only resolves to this machine get no ticket", async () => {
+		const proof = loopbackProof();
+		const url = await listening(proof);
+		for (const headers of [
+			{ origin: "https://evil.test" },
+			{},
+			{ origin: "http://localhost.evil.test" },
+			{ origin: "null" },
+		]) {
+			const answer = await ask(url, headers as Record<string, string>);
+			expect(answer.status).toBe(403);
+			expect(answer.headers.get("access-control-allow-origin")).toBeNull();
+			expect(await answer.text()).toBe("");
+		}
+		// DNS rebinding: the page's site is local by its origin's look, but the request names another host.
+		expect(isLoopback("evil.test:49152", "host")).toBe(false);
+		expect(isLoopback("127.0.0.1:49152", "host")).toBe(true);
+		expect(isLoopback("http://[::1]:3000", "origin")).toBe(true);
+		expect(isLoopback("http://app.localhost:3000", "origin")).toBe(true);
+		expect(isLoopback("file://localhost", "origin")).toBe(false);
+		// The browser's question before it reaches a more private address is answered for a local page only.
+		const asked = await ask(url, { origin: "http://localhost:3000" }, "OPTIONS");
+		expect([asked.status, asked.headers.get("access-control-allow-private-network")]).toEqual([204, "true"]);
+		expect((await ask(url, { origin: "http://localhost:3000" }, "POST")).status).toBe(405);
+		proof.close();
 	});
 });

@@ -263,70 +263,145 @@ describe("the frame's counts", () => {
 });
 
 describe("the dev server's sign-in bypass", () => {
+	/** The adapter's part: tickets a program on this machine fetches from the loopback address. Here they are handed out by the test. */
+	function proof() {
+		const good = new Set<string>();
+		let made = 0;
+		return {
+			give: () => {
+				const ticket = `ticket-${++made}`;
+				good.add(ticket);
+				return ticket;
+			},
+			devProof: { url: () => "http://127.0.0.1:49152/", take: (ticket: string) => good.delete(ticket) },
+		};
+	}
 	// The dev server: it has the way to the schema file. Nothing is written here, so any folder does.
-	const dev = (auth: MontiOptions["auth"] = { password: true }) => site({ files: schemaFilesAt("/nowhere"), auth });
-	const ask = (monti: ReturnType<typeof site>, name: string, headers: Record<string, string> = {}, env = {}) =>
-		createAdminApi(monti, { env })(
-			new Request(`http://localhost:3000/admin/api/operations/${name}`, { method: "POST", body: "{}", headers }),
-		);
+	const dev = (devProof: MontiOptions["devProof"], auth: MontiOptions["auth"] = { password: true }) =>
+		site({ files: schemaFilesAt("/nowhere"), auth, devProof });
+	const LOCAL = "http://localhost:3000/admin/api/operations";
+	const post = (url: string, input: unknown = {}, headers: Record<string, string> = {}) =>
+		new Request(url, { method: "POST", body: JSON.stringify({ input }), headers });
+	const stateOf = async (response: Response) => (await response.json()) as { session: unknown; devProof?: string };
 
-	it("16-5 on the dev server a request from this machine is let in without signing in, and auth.state says so", async () => {
-		const me = browser(dev(), { env: {} });
-		const local = (name: string) =>
-			me.send(new Request(`http://localhost:3000/admin/api/operations/${name}`, { method: "POST", body: "{}" }));
-		const counts = await local("frame.counts");
-		expect(counts.status).toBe(200);
-		// The session it was given is kept: the next request starts no other.
-		expect(me.cookie()).not.toBe("");
-		const kept = me.cookie();
-		const state = await local("auth.state");
-		expect(((await state.json()) as { session: unknown }).session).toEqual({ who: "dev", bypass: true });
-		expect(me.cookie()).toBe(kept);
+	it("16-5 on the dev server a browser that hands in a ticket from this machine is let in without signing in, and auth.state says so", async () => {
+		const tickets = proof();
+		const me = browser(dev(tickets.devProof), { env: {} });
+		// Not let in yet: nothing opens, and auth.state says where to get the ticket.
+		expect((await me.send(post(`${LOCAL}/frame.counts`))).status).toBe(401);
+		expect(await stateOf(await me.send(post(`${LOCAL}/auth.state`)))).toMatchObject({
+			session: null,
+			devProof: "http://127.0.0.1:49152/",
+		});
+		const let_in = await me.send(post(`${LOCAL}/auth.devSignIn`, { ticket: tickets.give() }));
+		expect(let_in.status).toBe(200);
+		// The session's token is in the cookie and nowhere in the answer.
+		expect(await let_in.text()).not.toContain(me.cookie());
+		expect((await me.send(post(`${LOCAL}/frame.counts`))).status).toBe(200);
+		const state = await stateOf(await me.send(post(`${LOCAL}/auth.state`)));
+		expect(state.session).toEqual({ who: "dev", bypass: true });
+		expect(state.devProof).toBeUndefined();
 		expect(await db.selectFrom("monti_session").select("who").execute()).toEqual([{ who: "dev" }]);
 	});
 
-	it("16-5 the live site, a request from another machine, a hosted process and devBypass: false all sign in as always", async () => {
+	it("16-5 what a request says of itself lets nobody in: forged local headers without a ticket, a made-up ticket, a ticket used twice", async () => {
+		const tickets = proof();
+		const api = createAdminApi(dev(tickets.devProof), { env: {} });
+		// A sender on another machine writes the headers a local request would have.
+		const forged = { host: "localhost:3000", "x-forwarded-host": "localhost:3000", "x-forwarded-for": "127.0.0.1" };
+		expect((await api(post("http://203.0.113.9/admin/api/operations/frame.counts", {}, forged))).status).toBe(401);
+		expect((await api(post("http://203.0.113.9/admin/api/media/bytes?name=a.png", {}, forged))).status).toBe(404);
+		const upload = new Request("http://203.0.113.9/admin/api/media/bytes?name=a.png", {
+			method: "PUT",
+			body: new Uint8Array(4),
+			headers: forged,
+		});
+		expect((await api(upload)).status).toBe(401);
+		expect((await api(post(`${LOCAL}/auth.devSignIn`, { ticket: "made-up" }, forged))).status).toBe(401);
+		const ticket = tickets.give();
+		const first = await api(post(`${LOCAL}/auth.devSignIn`, { ticket }));
+		expect(first.status).toBe(200);
+		const again = await api(post(`${LOCAL}/auth.devSignIn`, { ticket }));
+		expect(again.status).toBe(401);
+		expect(again.headers.get("set-cookie")).toBeNull();
+		expect(await db.selectFrom("monti_session").select("who").execute()).toEqual([{ who: "dev" }]);
+	});
+
+	it("16-5 the live site, a request that is not local, a hosted process, devBypass: false and a server with no proof all sign in as always, ticket or not", async () => {
+		const tickets = proof();
+		const refused = async (monti: ReturnType<typeof site>, url = LOCAL, headers = {}, env = {}) => {
+			const api = createAdminApi(monti, { env });
+			const state = await stateOf(await api(post(`${url}/auth.state`, {}, headers)));
+			const signIn = await api(post(`${url}/auth.devSignIn`, { ticket: tickets.give() }, headers));
+			return [state.devProof, signIn.status, signIn.headers.get("set-cookie")];
+		};
 		// The live site: no schema file to write.
-		expect((await ask(site(), "frame.counts")).status).toBe(401);
+		expect(await refused(site({ devProof: tickets.devProof }))).toEqual([undefined, 401, null]);
 		// Another machine, by its host or through a proxy.
-		const elsewhere = createAdminApi(dev(), { env: {} });
-		const from = (url: string, headers: Record<string, string> = {}) =>
-			elsewhere(new Request(url, { method: "POST", body: "{}", headers }));
-		expect((await from("https://site.test/admin/api/operations/frame.counts")).status).toBe(401);
-		expect((await from("http://192.168.0.7:3000/admin/api/operations/frame.counts")).status).toBe(401);
-		expect((await ask(dev(), "frame.counts", { "x-forwarded-host": "site.test" })).status).toBe(401);
-		expect((await ask(dev(), "frame.counts", { "x-forwarded-for": "203.0.113.9" })).status).toBe(401);
-		expect((await ask(dev(), "frame.counts", { "x-forwarded-for": "127.0.0.1, ::1" })).status).toBe(200);
+		expect(await refused(dev(tickets.devProof), "https://site.test/admin/api/operations")).toEqual([
+			undefined,
+			401,
+			null,
+		]);
+		expect(await refused(dev(tickets.devProof), "http://192.168.0.7:3000/admin/api/operations")).toEqual([
+			undefined,
+			401,
+			null,
+		]);
+		expect(await refused(dev(tickets.devProof), LOCAL, { "x-forwarded-host": "site.test" })).toEqual([
+			undefined,
+			401,
+			null,
+		]);
+		expect(await refused(dev(tickets.devProof), LOCAL, { "x-forwarded-for": "203.0.113.9" })).toEqual([
+			undefined,
+			401,
+			null,
+		]);
 		// A hosting platform's process, even in dev mode.
-		expect((await ask(dev(), "frame.counts", {}, { VERCEL: "1" })).status).toBe(401);
+		expect(await refused(dev(tickets.devProof), LOCAL, {}, { VERCEL: "1" })).toEqual([undefined, 401, null]);
 		// Turned off in the config, to try the sign-in screens locally.
-		expect((await ask(dev({ password: true, devBypass: false }), "frame.counts")).status).toBe(401);
-		const state = await ask(dev({ password: true, devBypass: false }), "auth.state");
-		expect(((await state.json()) as { session: unknown }).session).toBeNull();
+		expect(await refused(dev(tickets.devProof, { password: true, devBypass: false }))).toEqual([undefined, 401, null]);
+		// No adapter brought a proof: nobody is let in.
+		expect(await refused(dev(null))).toEqual([undefined, 401, null]);
+		expect(await db.selectFrom("monti_session").select("who").execute()).toEqual([]);
 	});
 
 	it("16-5 a session the bypass gave opens nothing once the bypass no longer holds", async () => {
-		const me = browser(dev(), { env: {} });
-		await me.send(
-			new Request("http://localhost:3000/admin/api/operations/frame.counts", { method: "POST", body: "{}" }),
-		);
+		const tickets = proof();
+		const me = browser(dev(tickets.devProof), { env: {} });
+		await me.send(post(`${LOCAL}/auth.devSignIn`, { ticket: tickets.give() }));
 		const replay = (monti: ReturnType<typeof site>, url: string, env = {}) =>
-			createAdminApi(monti, { env })(
-				new Request(url, { method: "POST", body: "{}", headers: { cookie: `${SESSION_COOKIE}=${me.cookie()}` } }),
-			);
-		const local = "http://localhost:3000/admin/api/operations/frame.counts";
-		expect((await replay(dev(), local)).status).toBe(200);
-		expect((await replay(dev(), "https://site.test/admin/api/operations/frame.counts")).status).toBe(401);
-		expect((await replay(site(), local)).status).toBe(401);
-		expect((await replay(dev({ password: true, devBypass: false }), local)).status).toBe(401);
-		expect((await replay(dev(), local, { NETLIFY: "true" })).status).toBe(401);
+			createAdminApi(monti, { env })(post(url, {}, { cookie: `${SESSION_COOKIE}=${me.cookie()}` }));
+		const local = `${LOCAL}/frame.counts`;
+		expect((await replay(dev(tickets.devProof), local)).status).toBe(200);
+		expect((await replay(dev(tickets.devProof), "https://site.test/admin/api/operations/frame.counts")).status).toBe(
+			401,
+		);
+		expect((await replay(site({ devProof: tickets.devProof }), local)).status).toBe(401);
+		expect((await replay(dev(tickets.devProof, { password: true, devBypass: false }), local)).status).toBe(401);
+		expect((await replay(dev(tickets.devProof), local, { NETLIFY: "true" })).status).toBe(401);
+		expect((await replay(dev(null), local)).status).toBe(401);
 	});
 
-	it("16-5 a file goes up from this machine without signing in, and from elsewhere it does not", async () => {
-		const api = createAdminApi(dev(), { env: {} });
-		const put = (url: string) => api(new Request(url, { method: "PUT", body: new Uint8Array(4) }));
+	it("16-5 15-4 letting in is never an agent tool or a command, and a file goes up only with the session it gave", async () => {
+		const tickets = proof();
+		const monti = dev(tickets.devProof);
+		expect(agentTools(monti).map((tool) => tool.name)).not.toContain("auth.devSignIn");
+		const lines: string[] = [];
+		await runCli(monti, ["help"], { out: (line) => lines.push(line), err: () => {} });
+		expect(lines.some((line) => line.startsWith("auth.devSignIn"))).toBe(false);
+		const me = browser(monti, { env: {} });
+		const put = () =>
+			me.send(
+				new Request("http://localhost:3000/admin/api/media/bytes?name=a.png", {
+					method: "PUT",
+					body: new Uint8Array(4),
+				}),
+			);
+		expect((await put()).status).toBe(401);
+		await me.send(post(`${LOCAL}/auth.devSignIn`, { ticket: tickets.give() }));
 		// Let in, the upload is then refused for its own reason (this site has no storage), not for a missing session.
-		expect((await put("http://localhost:3000/admin/api/media/bytes?name=a.png")).status).toBe(422);
-		expect((await put("https://site.test/admin/api/media/bytes?name=a.png")).status).toBe(401);
+		expect((await put()).status).toBe(422);
 	});
 });

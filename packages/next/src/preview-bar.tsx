@@ -2,7 +2,8 @@ import { draftMode } from "next/headers";
 
 /**
  * One line at the foot of the window while a preview is open: it says so, and "exit" ends it (doc 16). The site puts it in its layout; the preview
- * works without it. It carries its own looks and takes nothing from the site's styles or the admin's.
+ * works without it. It carries its own looks and takes nothing from the site's styles or the admin's. While it shows, the page also tells search
+ * engines to stay out (a page of a site that leaves the line out says so itself, from `entry.preview`).
  */
 export async function PreviewBar({
 	admin = "/admin",
@@ -14,6 +15,16 @@ export async function PreviewBar({
 	labels?: { preview: string; exit: string };
 }) {
 	if (!(await draftMode()).isEnabled) return null;
+	return (
+		<>
+			{/* What is drawn while a preview is open is not for search engines, whoever opened it. */}
+			<meta name="robots" content="noindex, nofollow" />
+			<PreviewLine admin={admin} labels={labels} />
+		</>
+	);
+}
+
+function PreviewLine({ admin, labels }: { admin: string; labels: { preview: string; exit: string } }) {
 	return (
 		<div
 			data-monti-preview=""

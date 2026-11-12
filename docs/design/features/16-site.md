@@ -69,7 +69,7 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
 
 | 이름 | 어디서 | 하는 일 |
 |---|---|---|
-| `openSite(config)` | `@monti-cms/next` | `openMonti`로 Monti를 열고 `reader`를 만든다. 개발 서버인지 가리고, 캐시 갱신을 받는 곳과 개발 서버의 로그인 건너뛰기를 건다. 서버 하나에 한 번만 연다(개발 서버가 모듈을 다시 읽어도 같은 것을 쓴다) |
+| `openSite(config)` | `@monti-cms/next` | `openMonti`로 Monti를 열고 `reader`를 만든다. 개발 서버인지 가리고, 캐시 갱신을 받는 곳과 개발 서버의 로그인 건너뛰기를 건다. 서버 하나에 한 번만 연다. 개발 서버가 모듈을 다시 읽으면 같은 것을 쓰고, 설정이 바뀌었으면(구조 파일을 손으로 고침, `auth.devBypass`를 끔) 같은 데이터베이스 연결 위에 새 설정으로 다시 만든다 |
 | `adminRoute(monti)` | `@monti-cms/next` | `createAdminApi`를 Next 라우트로 올린다. 미리보기를 켜고 끄는 두 경로(`…/preview`, `…/preview/exit`)를 더한다. 처음 불릴 때 구조 파일을 맞춘다(아래 "시작할 때") |
 | `AdminPage` | `@monti-cms/next/admin` | 관리자 화면을 그린다(`siteName`, 사이트의 블록 정의 `blocks`). 관리자 API의 주소는 이 페이지의 주소 아래 `api`다. 화면의 스타일(`@monti-cms/admin/styles.css`)을 싣고, 검색 엔진이 읽지 않게 한다(`noindex`). 화면은 브라우저에서만 그린다 |
 | `entryPage(reader, { collection, slug, locale? })` | `@monti-cms/next` | 글 하나를 읽는다. 없으면 `notFound()`, 옛 주소면 `permanentRedirect()`, 미리보기가 켜져 있으면 고치는 본 |
@@ -81,7 +81,7 @@ core가 더 내놓는 것:
 | 이름 | 하는 일 |
 |---|---|
 | `SiteEntry.path` | 그 글의 공개 주소. 목록에서 링크를 만들 때 사이트가 주소를 다시 짓지 않는다 |
-| `reader.page({ collection, locale, limit, after? })` | 목록을 나눠 읽는다: `{ entries, next }`. `next`를 다음 `after`로 주고, 마지막 쪽이면 `null`이다. `reader.entries`는 전부를 준다 |
+| `reader.page({ collection, locale, limit, after? })` | 목록을 나눠 읽는다: `{ entries, next }`. `next`를 다음 `after`로 주고, 마지막 쪽이면 `null`이다. `next`는 개수가 아니라 마지막으로 준 글을 가리킨다. 두 쪽 사이에 글이 발행되거나 내려가도 같은 글이 또 나오거나 빠지지 않는다. `reader.entries`는 전부를 준다 |
 | `reader.locales()` | 사이트의 언어: 원문 언어와 주소에 언어를 보이는 규칙 |
 | `createReader`의 `schema` | 값이거나 지금의 구조를 주는 함수다. 개발 서버에서는 구조가 도는 중에 바뀐다 |
 | `tocOf(doc, { min = 2, max = 3 })` | 제목 목록 `{ id, text, level, depth }[]` (`@monti-cms/core/render`) |
@@ -93,8 +93,9 @@ core가 더 내놓는 것:
 - 그 경로는 표를 확인하고, Next의 초안 모드를 켜고, 표를 쿠키에 담아 `path`로 보낸다. 표가 틀렸거나 끝났으면 401이다.
 - 사이트의 페이지는 그대로다. `entryPage`가 초안 모드와 쿠키의 표를 보고 고치는 본을 읽는다. 표는 그 글 하나의 것이라, 미리보기 중에 다른 글로 가면 그 글은 발행본으로 보인다.
 - 아직 발행하지 않은 글은 공개 주소에 발행본이 없다. 표가 있으면 고치는 본이 나오고, 없으면 404다.
+- 미리보기를 켜고 끄는 두 주소는 사이트 밖으로 보내지 않는다. `path`는 이 사이트의 주소여야 하고(`//host`, `/\host`, 탭이나 줄 바꿈이 든 것, 전체 주소는 거절), 한글 주소는 머리글에 실을 수 있게 바꿔 보낸다.
 - "끝내기"(`…/preview/exit`)는 초안 모드와 쿠키를 지우고 보던 주소로 돌아간다. 표는 한 시간 뒤 스스로 끝난다(02번 문서).
-- 미리보기 페이지는 캐시하지 않고, 검색 엔진이 읽지 않게 응답 머리에 `noindex`를 붙인다.
+- 미리보기 페이지는 캐시하지 않는다(초안 모드). 검색 엔진이 읽지 않게 `PreviewBar`가 `noindex`를 붙인다. `PreviewBar`를 넣지 않는 사이트는 `entry.preview`를 보고 제 페이지에 붙인다. 고치는 본은 표가 든 브라우저에만 나가므로, 검색 엔진이 그 표 없이 받는 것은 발행본이거나 404다.
 
 ### 미리보기 주소
 
@@ -109,7 +110,8 @@ core가 더 내놓는 것:
 
 ## 캐시 갱신
 
-- `openSite`가 받는 곳 하나(`plugin:next`)를 건다. 사이트에 보이는 것이 바뀌는 이벤트(`entry.published`, `entry.unpublished`, `media.replaced`, `media.trashed`, `media.restored`)가 오면 사이트 전체를 새로 그리게 표시한다(`revalidatePath("/", "layout")`). 실제로 다시 그리는 것은 그 페이지를 다음에 열 때다. 저장(`entry.saved`)만으로는 아무것도 새로 그리지 않는다.
+- `openSite`가 받는 곳 하나(`plugin:next`)를 건다. 이벤트가 오면 사이트 전체를 새로 그리게 표시한다(`revalidatePath("/", "layout")`). 실제로 다시 그리는 것은 그 페이지를 다음에 열 때다. 두 이벤트만 건너뛴다: 저장(`entry.saved`)과 파일 올림(`media.uploaded`)은 방문자가 보는 것을 바꾸지 않는다. 건너뛸 것을 적고 나머지는 모두 새로 그리므로, 뒤에 생기는 이벤트가 목록에서 빠져 옛 내용이 남는 일이 없다.
+- 이 표시는 그 서버 프로세스의 캐시에 한다. 프로세스나 기계 여럿으로 띄운 사이트는 함께 쓰는 캐시(Next의 cache handler)가 있어야 한다. 기본 캐시로는 한 프로세스에서 발행한 글이 다른 프로세스에서는 옛 내용으로 남는다.
 - 그 글의 주소만이 아니라 전체인 까닭: 그 글을 보이는 페이지가 그 글의 주소만이 아니다. 목록, 카테고리 이름을 보이는 글, 원문을 따르는 번역이 있다. 주소나 태그로 좁히면 사이트 개발자가 페이지마다 쓰는 데이터를 적어야 하고, 빠뜨리면 옛 내용이 남는다. 처음 안은 주소(`revalidatePath`)와 컬렉션 태그(`revalidateTag`)였다.
 - 이벤트의 `paths`는 늘 공개 주소다(다른 받는 곳, 웹훅이 쓴다). 네 곳(`entries.create`의 살아 있는 항목, `entries.save`, `items.saveGroup`, 글 안에서 만든 항목)이 주소가 아니라 슬러그를 넣던 것을 고쳤다. 주소가 바뀐 항목은 옛 주소도 든다.
 - 원문이 발행되면 발행된 번역의 주소도 `paths`에 든다. 번역은 원문의 블록과 값을 따라 보이기 때문이다.
@@ -134,8 +136,16 @@ core가 더 내놓는 것:
 - 개발 서버에서는 로그인 없이 관리자로 들어온다. 로컬에서 글을 써 보려고 계정을 만들 일이 없다.
 - 다음이 모두 맞을 때만이다. 하나라도 아니면 15번 문서의 로그인이 그대로 선다.
   - 개발 서버다(위 표).
-  - 요청이 이 컴퓨터에서 왔다. `Host`가 `localhost`, `*.localhost`, `127.0.0.0/8`, `::1`이고, 프록시가 붙인 `X-Forwarded-Host`와 `X-Forwarded-For`가 있으면 그것도 그렇다.
   - 호스팅 환경이 아니다(`VERCEL`, `NETLIFY`, `CF_PAGES`, `RENDER`, `FLY_APP_NAME` 같은 변수가 없다).
+  - **브라우저가 이 컴퓨터에서 돈다는 것을 증명했다**(아래).
+- 요청이 스스로 말하는 것은 증명이 아니다. `Host`, `X-Forwarded-Host`, `X-Forwarded-For`는 보내는 쪽이 적는 값이고 Next도 온 그대로 넘긴다. 처음 안은 이 값만 보았고, 다른 컴퓨터가 값을 꾸며 들어올 수 있었다(#470 코드 리뷰). 지금은 이 값으로 "이 컴퓨터라고 말하지도 않는 요청"만 먼저 돌려보낸다.
+- 증명은 이 컴퓨터의 프로그램만 받을 수 있는 표다.
+  1. 어댑터가 루프백 주소(`127.0.0.1`, 시스템이 고른 포트)에만 듣는 작은 서버를 띄운다. 이 주소는 컴퓨터 밖에서 닿지 않는다.
+  2. `auth.state`가 그 주소를 알려 준다(`devProof`). 이 컴퓨터라고 말하는 요청에게만이다.
+  3. 관리자 화면이 그 주소에서 일회용 표를 받아 `auth.devSignIn`으로 낸다. 표가 맞으면 세션이 생기고, 그 뒤는 로그인한 것과 같다.
+  4. 표는 한 번, 1분 동안만 쓴다. 로컬 주소의 페이지만 표를 읽을 수 있고(CORS), 이름만 이 컴퓨터로 풀리는 주소(DNS rebinding)는 `Host`로 돌려보낸다.
+- 표를 받지 못하면(다른 컴퓨터, 컨테이너 안의 서버, 듣는 서버가 없음) 로그인 화면이 뜬다. 관리자 화면은 한 번만 시도하고, 그동안 로그인 화면을 깜빡이지 않는다.
+- 건너뛴 세션(`who: "dev"`)은 건너뛰기가 성립하는 요청에서만 통한다. 설정을 끄거나 운영 사이트가 되면 그 쿠키는 아무것도 열지 못한다.
 - `monti.config.ts`의 `auth.devBypass: false`로 끈다. 로그인 화면을 로컬에서 써 볼 때다.
 - 건너뛴 채로 들어오면 사이드바 아래에 "개발 서버 · 로그인 없이" 한 줄이 보인다. 왜 로그인이 없었는지 화면이 말한다.
 - 건너뛰기는 운영 사이트에서 켤 수 없다. `devBypass: true`를 적어도 운영에서는 무시하고 서버 로그에 한 줄 남긴다.
@@ -205,7 +215,9 @@ auth?: { password?: boolean; github?: GitHubAuth | null; devBypass?: boolean }; 
 |---|---|
 | `entries.previewLink` | `path`가 미리 볼 주소다: 컬렉션의 `previewPath`에 슬러그를 넣은 것, 없으면 공개 주소. 화면이 그것을 관리자 API의 미리보기 경로에 실어 연다 |
 | `schema.plan` · `schema.apply` | 컬렉션의 `previewPath`를 넣고 고치고 뺀다. 바뀌면 변경 종류는 "미리보기 주소 변경"이고, 저장된 데이터는 바뀌지 않는다 |
-| `auth.state` | 건너뛴 세션이면 `bypass: true`를 함께 준다. 화면이 "개발 서버 · 로그인 없이"를 보인다 |
+| `auth.state` | 건너뛴 세션이면 `bypass: true`를 함께 준다. 화면이 "개발 서버 · 로그인 없이"를 보인다. 개발 서버에서 세션이 없으면 표를 받을 주소 `devProof`를 준다 |
+| `auth.devSignIn` | write · 사람만 · 세션 없이. 루프백 주소에서 받은 일회용 표를 내고 로그인 없이 들어온다. 개발 서버에서만 된다 |
+| `relations.edit` · `relations.merge` · `media.update` | 사이트에 보이는 것을 바꾸면 이벤트를 낸다: 살아 있는 항목의 값이 바뀜(`entry.published`), 합쳐진 항목이 내려감(`entry.unpublished`), 그 항목을 가리키던 글(`entry.published`), 파일 이름이 바뀜(`media.renamed`) |
 | `entries.create` · `entries.save` · `items.saveGroup` | 이벤트의 `paths`가 공개 주소다 |
 | `entries.publish` | 원문을 발행하면 발행된 번역의 주소도 `paths`에 든다 |
 | `activity.undo` | 사이트에 보이는 것을 바꾸면 이벤트를 낸다(T29) |
