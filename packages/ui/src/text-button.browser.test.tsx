@@ -79,3 +79,35 @@ it("a text button that is working keeps the keyboard's focus, says it is busy, a
 	await userEvent.keyboard(" ");
 	expect(presses).toBe(1);
 });
+
+it("working, it stops what it is drawn as from acting too: a native child's own press, and a link's own press and address", async () => {
+	const pressed: string[] = [];
+	// A link with a press of its own, as a router's link is; its words are the text button's.
+	// biome-ignore lint/a11y/useAnchorContent: the text button's children go in the link.
+	// biome-ignore lint/a11y/useValidAnchor: a router's link navigates in its own press handler.
+	const link = <a href="#moved" onClick={() => pressed.push("link")} />;
+	render(
+		<p>
+			<TextButton loading render={<button type="button" onClick={() => pressed.push("child")} />}>
+				자식 버튼
+			</TextButton>{" "}
+			<TextButton loading render={link}>
+				자식 링크
+			</TextButton>{" "}
+			<TextButton loading href="#gone" onClick={() => pressed.push("own")}>
+				제 링크
+			</TextButton>
+		</p>,
+	);
+	const before = location.hash;
+	for (const name of ["자식 버튼", "자식 링크", "제 링크"]) {
+		const control = page.getByText(name);
+		await expect.element(control).toBeVisible();
+		// The keyboard's press (a pointer's is kept off by the part's `pointer-events: none`), and a press sent straight to it.
+		(control.element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		(control.element() as HTMLElement).click();
+	}
+	expect(pressed).toEqual([]);
+	expect(location.hash).toBe(before);
+});

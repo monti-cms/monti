@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { colourAt } from "../test/pixels";
 import { render } from "../test/render";
 import { MediaInput } from "./index";
 
@@ -49,9 +50,9 @@ describe("MediaInput", () => {
 		await userEvent.click(open);
 		expect(opened).toHaveBeenCalledTimes(1);
 	});
-	it("a proposed file keeps its blue line under the pointer and the keyboard, and the focus is a ring added on the line's button", async () => {
+	it("a proposed file keeps its blue line under the pointer and the keyboard, and the focus is a ring around the field, outside the line", async () => {
 		const host = render(
-			<div style={{ width: 280 }}>
+			<div style={{ width: 280 }} className="p-monti-8">
 				<MediaInput value={{ name: "og-react.png" }} proposal onClear={() => {}} clearLabel="빼기" />
 			</div>,
 		);
@@ -62,24 +63,39 @@ describe("MediaInput", () => {
 		const open = page.getByRole("button", { name: "og-react.png" });
 		await expect.element(open).toBeVisible();
 		const field = open.element().closest("[data-slot=media-input]") as HTMLElement;
+		/** A ring: a shadow of 2px with no offset and no blur, in a colour that shows. */
+		const ringed = (element: Element) =>
+			getComputedStyle(element)
+				.boxShadow.split(/,(?![^(]*\))/)
+				.some((shadow) => / 0px 0px 0px 2px$/.test(shadow.trim()) && !/, 0\)|\/ 0\)/.test(shadow));
 		const drawn = () => ({
 			line: getComputedStyle(field).borderBottomColor,
-			ring: getComputedStyle(open.element())
-				.boxShadow.split(/,(?![^(]*\))/)
-				.some((shadow) => / 0px 0px 0px 2px$/.test(shadow.trim()) && !/, 0\)|\/ 0\)/.test(shadow)),
+			onField: ringed(field),
+			onName: ringed(open.element()),
 		});
+		/** The line as it is painted: the lowest row of the field's box, at its middle. */
+		const painted = () => colourAt(field, field.offsetWidth / 2, field.offsetHeight - 1);
 		// The line's colour fades to where it is going: read it there.
 		const settled = () => Promise.all(field.getAnimations().map((animation) => animation.finished));
 		await settled();
-		expect(drawn()).toEqual({ line: blue, ring: false });
+		expect(drawn()).toEqual({ line: blue, onField: false, onName: false });
+		// Blue as it is painted (a 1.5px line is smoothed into its row): more blue than red, unlike the ground and the ink.
+		const atRest = await painted();
+		const [red, , blueness] = atRest.split(" ").map(Number);
+		expect((blueness ?? 0) - (red ?? 0)).toBeGreaterThan(60);
 		// Under the pointer the field takes its tint, and the line stays blue.
 		await userEvent.hover(open);
 		await settled();
-		expect(drawn()).toEqual({ line: blue, ring: false });
+		expect(drawn()).toEqual({ line: blue, onField: false, onName: false });
 		await userEvent.unhover(open);
 		await userEvent.keyboard("{Tab}");
 		await expect.element(open).toHaveFocus();
 		await settled();
-		expect(drawn()).toEqual({ line: blue, ring: true });
+		// The ring is the field's, as a select's is: around the whole field, so nothing of it lies on the blue line.
+		expect.soft(drawn()).toEqual({ line: blue, onField: true, onName: false });
+		// The line is painted as it was at rest (within the smoothing of a 1.5px line beside a ring): the ring does not lie on it.
+		const underFocus = (await painted()).split(" ").map(Number);
+		const off = atRest.split(" ").map((channel, at) => Math.abs(Number(channel) - (underFocus[at] ?? 0)));
+		expect.soft(Math.max(...off)).toBeLessThanOrEqual(8);
 	});
 });

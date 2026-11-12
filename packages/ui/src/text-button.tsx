@@ -109,7 +109,17 @@ function TextButton({
 			{
 				...props,
 				...(href === undefined ? {} : { href }),
-				...(loading ? { onClick: (event: React.MouseEvent) => event.preventDefault() } : {}),
+				// Stopped on the way down, before any press handler hears it: what the button is drawn as (`render`: a router's link, a button of
+				// its own) runs its handler ahead of this part's, so a guard among the handlers would come too late. A link does not go either.
+				...(loading
+					? {
+							onClick: undefined,
+							onClickCapture: (event: React.MouseEvent) => {
+								event.preventDefault();
+								event.stopPropagation();
+							},
+						}
+					: {}),
 			} as React.ComponentProps<"button">,
 		),
 		render,

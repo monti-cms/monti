@@ -5,11 +5,13 @@ import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import { Chip } from "./chip";
 import { Combobox, ComboboxInput } from "./combobox";
+import { FilePreview } from "./file-preview";
 import { FilterButton } from "./filter-button";
 import { IconButton } from "./icon-button";
 import { Settings } from "./icons";
 import { Input } from "./input";
 import { ListSection, ListSectionRow } from "./list-section";
+import { MediaInput } from "./media-input";
 import { Option } from "./option";
 import { Select, SelectTrigger, SelectValue } from "./select";
 import { StoryCaption } from "./story-caption";
@@ -18,6 +20,7 @@ import { RowCheck, RowLink, Table, TableBody, TableCell, TableRow } from "./tabl
 import { TagInput } from "./tag-input";
 import { TextButton } from "./text-button";
 import { Textarea } from "./textarea";
+import { Tile } from "./tile";
 
 /**
  * Every basic part in its interaction states side by side: at rest, under the pointer, with keyboard focus, pressed, and off. The pointer, focus and
@@ -33,6 +36,9 @@ const meta = {
 				".state-hover [data-slot=chip] > button",
 				".state-hover tr",
 				".state-hover [data-slot=list-section-row]",
+				".state-hover [data-slot=checkbox]",
+				".state-hover [data-slot=tile]",
+				".state-hover [data-slot=tile] > button",
 			],
 			focus: [".state-focus input"],
 			focusVisible: [
@@ -40,6 +46,8 @@ const meta = {
 				".state-focus [data-slot=chip] > button",
 				".state-focus [data-slot=checkbox]",
 				".state-focus [data-slot=row-link]",
+				".state-focus [data-slot=media-input] > button",
+				".state-focus [data-slot=tile] > button",
 			],
 			focusWithin: [".state-focus > *"],
 			active: [".state-active > *", ".state-active [data-slot=chip] > button", ".state-active tr"],
@@ -57,14 +65,25 @@ const STATES = [
 	{ name: "비활성", className: "", disabled: true },
 ] as const;
 
+/** The states a part that already wears a state's colour is looked at in: at rest, pointed at, with the keyboard's focus. */
+const SHOWN = STATES.slice(0, 3);
+
 /** One row: the part's name, then the part drawn once per state. */
-function Row({ name, children }: { name: string; children: (disabled: boolean) => ReactNode }) {
+function Row({
+	name,
+	states = STATES,
+	children,
+}: {
+	name: string;
+	states?: readonly (typeof STATES)[number][];
+	children: (disabled: boolean) => ReactNode;
+}) {
 	return (
 		<tr>
 			<th className="py-monti-12 pr-monti-16 text-left align-middle font-normal">
 				<StoryCaption>{name}</StoryCaption>
 			</th>
-			{STATES.map((state) => (
+			{states.map((state) => (
 				<td key={state.name} className="px-monti-12 py-monti-12 align-middle">
 					<div className={state.className}>{children(state.disabled)}</div>
 				</td>
@@ -73,7 +92,7 @@ function Row({ name, children }: { name: string; children: (disabled: boolean) =
 	);
 }
 
-function Sheet({ children }: { children: ReactNode }) {
+function Sheet({ states = STATES, children }: { states?: readonly (typeof STATES)[number][]; children: ReactNode }) {
 	return (
 		<table className="w-full table-fixed border-collapse">
 			<colgroup>
@@ -82,7 +101,7 @@ function Sheet({ children }: { children: ReactNode }) {
 			<thead>
 				<tr>
 					<th />
-					{STATES.map((state) => (
+					{states.map((state) => (
 						<th key={state.name} className="px-monti-12 pb-monti-8 text-left font-normal">
 							<StoryCaption>{state.name}</StoryCaption>
 						</th>
@@ -95,6 +114,62 @@ function Sheet({ children }: { children: ReactNode }) {
 }
 
 const CATEGORIES = [{ value: "dev", label: "개발" }];
+
+/**
+ * A state's colour under the pointer and the focus (tokens.md, the states section; 2026-11-12, owner): the error's red, the proposal's blue and a
+ * picked tile's ring stay where they are, and the focus is added to them. A select and a file field keep their line and take a ring around;
+ * a wrong check keeps its red line and ring and takes a line around outside them; a picked tile's ring steps 2px off the picture in its own
+ * colour.
+ */
+export const OverAStateColour: Story = {
+	render: () => (
+		<Sheet states={SHOWN}>
+			<Row name="Select · 오류" states={SHOWN}>
+				{() => (
+					<Select items={CATEGORIES} defaultValue="dev">
+						<SelectTrigger width="full" aria-invalid>
+							<SelectValue />
+						</SelectTrigger>
+					</Select>
+				)}
+			</Row>
+			<Row name="Select · 제안" states={SHOWN}>
+				{() => (
+					<Select items={CATEGORIES} defaultValue="dev">
+						<SelectTrigger width="full" proposal>
+							<SelectValue />
+						</SelectTrigger>
+					</Select>
+				)}
+			</Row>
+			<Row name="MediaInput · 제안" states={SHOWN}>
+				{() => <MediaInput value={{ name: "og-react.png" }} proposal onClear={() => {}} clearLabel="빼기" />}
+			</Row>
+			<Row name="Checkbox · 오류" states={SHOWN}>
+				{() => (
+					<Option>
+						<Checkbox aria-invalid />
+						약관에 동의
+					</Option>
+				)}
+			</Row>
+			<Row name="Tile · 고름" states={SHOWN}>
+				{() => (
+					<div className="w-40">
+						<Tile title="spring-desk.jpg" detail="2400×1600" preview={<FilePreview ext="JPG" />} selected />
+					</div>
+				)}
+			</Row>
+			<Row name="Tile · 고름 · 제안" states={SHOWN}>
+				{() => (
+					<div className="w-40">
+						<Tile title="hero.png" proposal="✦ 노을 진 산" preview={<FilePreview ext="PNG" />} selected />
+					</div>
+				)}
+			</Row>
+		</Sheet>
+	),
+};
 
 /** Underline fields: a flat tint and a darker rule under the pointer, the ink rule with focus. */
 export const Fields: Story = {

@@ -33,6 +33,7 @@ it("a wrong check stays red under the pointer and the keyboard at once, and the 
 				style.outlineStyle === "none" ? "none" : `${style.outlineStyle} ${style.outlineWidth} ${style.outlineOffset}`,
 		};
 	};
+	await settled();
 	expect(drawn()).toEqual({ line: red, redRing: true, around: "none" });
 
 	await userEvent.keyboard("{Tab}");
@@ -47,4 +48,33 @@ it("a wrong check stays red under the pointer and the keyboard at once, and the 
 	// The line's colour fades to where it is going: read it there.
 	await settled();
 	expect(drawn()).toEqual({ line: red, redRing: true, around: "solid 2px 2px" });
+
+	// The pointer on the box itself, not only on its row's words.
+	await userEvent.hover(check);
+	expect(box.matches(":hover")).toBe(true);
+	await settled();
+	expect(drawn()).toEqual({ line: red, redRing: true, around: "solid 2px 2px" });
+	// And with the keyboard gone elsewhere: the pointer alone does not take the red.
+	(box as HTMLElement).blur();
+	await settled();
+	expect(drawn()).toEqual({ line: red, redRing: true, around: "none" });
+});
+
+it("a check's focus is one line around it, 2px at half ink at the box's edge, and a pointer's press draws none", async () => {
+	render(
+		<Option>
+			<Checkbox />
+			알림 받기
+		</Option>,
+	);
+	const check = page.getByRole("checkbox", { name: "알림 받기" });
+	await userEvent.keyboard("{Tab}");
+	await expect.element(check).toHaveFocus();
+	const style = getComputedStyle(check.element());
+	expect([style.outlineStyle, style.outlineWidth, style.outlineOffset]).toEqual(["solid", "2px", "0px"]);
+	expect(style.outlineColor).toMatch(/\/ 0\.5\)$/);
+	(check.element() as HTMLElement).blur();
+	await userEvent.click(check);
+	await expect.element(check).toBeChecked();
+	expect(getComputedStyle(check.element()).outlineStyle).toBe("none");
 });

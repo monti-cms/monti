@@ -8,22 +8,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
  * one who looks, too). The meaning is in the name, never in the icon alone. It is no stop of the Tab key. `flush` drops the margin where a row already spaces it (beside a label).
  */
 function LockMark({ label, flush = false, className }: { label: string; flush?: boolean; className?: string }) {
+	const mark = (
+		<Locked
+			data-slot="lock-mark"
+			role="img"
+			aria-label={label}
+			className={cn("inline-block size-3 shrink-0 align-middle text-monti-faint", !flush && "ml-monti-6", className)}
+		/>
+	);
+	// No tooltip without words: an empty one would be a bare black pill.
+	if (label.trim() === "") return mark;
 	return (
 		<Tooltip>
-			<TooltipTrigger
-				render={
-					<Locked
-						data-slot="lock-mark"
-						role="img"
-						aria-label={label}
-						className={cn(
-							"inline-block size-3 shrink-0 align-middle text-monti-faint",
-							!flush && "ml-monti-6",
-							className,
-						)}
-					/>
-				}
-			/>
+			<TooltipTrigger render={mark} />
 			<TooltipContent>{label}</TooltipContent>
 		</Tooltip>
 	);

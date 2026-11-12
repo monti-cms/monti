@@ -68,6 +68,17 @@ it("a select keeps its error's red line and its proposal's blue line under the p
 		// The state's colour is not replaced by the focus's ink, and the focus is not hidden by the state: a ring is added.
 		expect([line(trigger.element()), ringed(trigger.element())]).toEqual([colour, true]);
 	}
+	// Open, a select with an error still says so: its line stays red while the list is out.
+	const wrong = page.getByRole("combobox", { name: "틀린 값" });
+	await userEvent.click(wrong);
+	await expect.element(page.getByRole("option", { name: "공지사항" })).toBeVisible();
+	await settled();
+	expect(line(wrong.element())).toBe(red);
+	await userEvent.keyboard("{Escape}");
+	await expect.element(page.getByRole("option", { name: "공지사항" })).not.toBeInTheDocument();
+	// Closed with Escape, the focus is back on it; go on from there.
+	await userEvent.keyboard("{Tab}");
+
 	// Without a state the line itself turns ink, as a field's does: no ring.
 	const plain = page.getByRole("combobox", { name: "보통 값" });
 	await userEvent.keyboard("{Tab}");

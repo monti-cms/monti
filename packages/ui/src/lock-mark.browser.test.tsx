@@ -27,3 +27,16 @@ it("the lock says why when pointed at: its name in a tooltip, the one a screen r
 	await new Promise((resolve) => setTimeout(resolve, 300));
 	expect(tip()).toBe(null);
 });
+
+it("a lock without words has no tooltip: nothing shows when it is pointed at", async () => {
+	render(
+		<p>
+			식별자 <LockMark label="" />
+		</p>,
+	);
+	const found = () => document.querySelector("[data-slot=lock-mark]");
+	await expect.poll(found).not.toBeNull();
+	await userEvent.hover(page.elementLocator(found() as Element));
+	await new Promise((resolve) => setTimeout(resolve, 600));
+	expect(document.querySelector('[data-slot="tooltip-content"]')).toBeNull();
+});
