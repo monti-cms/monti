@@ -80,15 +80,18 @@ const FIELDS: Field[] = [
 	{ name: "title !", label: "제목", note: "속성 패널에 안 나옴", kind: "text" },
 	{ name: "slug !", label: "주소", kind: "slug" },
 	{ name: "format !", label: "글 종류", kind: "conditional · 3" },
-	// Each option is a band under the choice, as a group is; its fields sit one step further in.
-	{ name: "글", group: true, depth: 1, note: "article · 필드 없음", kind: ADD },
-	{ name: "동영상", group: true, depth: 1, note: "video", kind: ADD },
+	// Each option is a band under the choice, one step in, with no grip (the sheet orders the options) and its value after its name; its fields sit one step further in.
+	{ name: "글", group: true, grip: false, depth: 1, note: "article · 필드 없음", kind: ADD },
+	{ name: "동영상", group: true, grip: false, depth: 1, note: "video", kind: ADD },
 	{ name: "videoUrl !", label: "동영상 주소", kind: "text", depth: 2 },
 	{ name: "poster", label: "미리보기 그림", kind: "image", depth: 2 },
-	{ name: "링크", group: true, depth: 1, note: "link", kind: ADD },
+	{ name: "링크", group: true, grip: false, depth: 1, note: "link", kind: ADD },
 	{ name: "linkUrl !", label: "링크 주소", kind: "text", depth: 2 },
 	{ name: "summary", label: "요약", kind: "text · 120" },
-	{ name: "cover", label: "대표 이미지", kind: "image" },
+	// A group of the panel, to tell the two apart: at the list's edge, with a grip, its name alone.
+	{ name: "분류", group: true },
+	{ name: "category", label: "카테고리", kind: "→ category", depth: 1 },
+	{ name: "tags", label: "태그", kind: "[] → tag", depth: 1 },
 ];
 
 /** 2. The fields list: the conditional field, then a band for each option with fields, its fields inside it. */
