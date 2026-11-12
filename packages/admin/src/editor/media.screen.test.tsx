@@ -1160,7 +1160,7 @@ describe("opening a body with files", () => {
  */
 function keptCopy({ hold = false }: { hold?: boolean } = {}) {
 	const calls: Call[] = [];
-	const held: { release: () => void; key: string } = { release: () => {}, key: "" };
+	const held: { release: () => void; key: string; answered: number } = { release: () => {}, key: "", answered: 0 };
 	const gate = hold
 		? new Promise<void>((done) => {
 				held.release = done;
@@ -1207,7 +1207,9 @@ function keptCopy({ hold = false }: { hold?: boolean } = {}) {
 						const call = { name, input };
 						calls.push(call);
 						if (bodyRead(call)) await gate;
-						return transport(name, input, options);
+						const answer = await transport(name, input, options);
+						if (bodyRead(call)) held.answered += 1;
+						return answer;
 					};
 					return loaded;
 				},
@@ -1218,6 +1220,14 @@ function keptCopy({ hold = false }: { hold?: boolean } = {}) {
 	return {
 		run: () => story.run(),
 		reads: () => calls.filter(bodyRead),
+		/**
+		 * Resolves once the read of the copy's file has answered and the page has taken the answer: the answer is handed over in the task it came in,
+		 * so one task later it is the page's.
+		 */
+		answered: async () => {
+			await expect.poll(() => held.answered).toBe(1);
+			await new Promise((done) => setTimeout(done));
+		},
 		release: () => held.release(),
 		stored: () => localStorage.getItem(held.key),
 	};
@@ -1349,9 +1359,8 @@ describe("a copy this browser kept, with a picture the saved body does not show"
 		const story = keptCopy();
 		await story.run();
 		await expect.element(banner()).toBeVisible();
-		await expect.poll(() => story.reads().length).toBe(1);
 		// The read is answered before a person gets to the button.
-		await new Promise((done) => setTimeout(done, 300));
+		await story.answered();
 		await userEvent.click(button("불러오기"));
 		await expect.element(paragraph("브라우저에 남은 첫 문단.")).toBeVisible();
 		// 2400 × 1600, known before the body is drawn.
