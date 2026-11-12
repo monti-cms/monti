@@ -110,6 +110,14 @@ export const { monti, reader } = openSite(config, {
 요청이 스스로 말하는 것(`Host`, `X-Forwarded-For`)으로는 아무도 들어오지 못한다. 보내는 쪽이 적는 값이기 때문이다. 표를 받지 못하면(다른
 컴퓨터, 컨테이너 안의 서버) 로그인 화면이 뜬다.
 
+개발 서버의 관리자 화면은 `localhost`로 연다. Next의 개발 서버는 아는 호스트에서만 페이지의 코드를 브라우저에서 돌리는데, 관리자 화면은
+브라우저에서 그려진다. 다른 호스트(`127.0.0.1`, LAN 주소, 터널)로 열면 그 호스트를 `next.config`에 적기 전까지 빈 화면이다.
+
+```ts
+// next.config.ts
+allowedDevOrigins: ["127.0.0.1"],
+```
+
 ## 스타일
 
 `AdminPage`가 관리자 화면의 스타일(`@monti-cms/admin/styles.css`)을 함께 싣는다. 이 스타일은 관리자 밖을 건드리지 않는다. 모든 규칙이

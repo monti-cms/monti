@@ -320,6 +320,22 @@ raw.describe("the dev server and the live site", () => {
 	);
 
 	raw(
+		"16-5 the dev server's admin is drawn, and lets in, at this machine's other name too (127.0.0.1)",
+		async ({ browser }) => {
+			const context = await browser.newContext({
+				baseURL: DEV.replace("localhost", "127.0.0.1"),
+				locale: "ko-KR",
+				viewport: { width: 1440, height: 900 },
+			});
+			const page = await context.newPage();
+			await page.goto("/admin");
+			await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+			await expect(page.getByLabel("이메일")).toBeHidden();
+			await context.close();
+		},
+	);
+
+	raw(
 		"16-5 on the dev server a sender that only says it is local gets nothing: forged headers, a made-up ticket",
 		async ({ request }) => {
 			// What a program on another machine would send: the headers a local request has, and no ticket from this machine's loopback address.

@@ -111,6 +111,14 @@ A browser proves it is on this machine with a one-time ticket it fetches from a 
 machine reaches. What a request says of itself (`Host`, `X-Forwarded-For`) lets nobody in: the sender writes those. When the ticket cannot be
 fetched (another machine, a server in a container) the admin asks to sign in.
 
+Open the dev server's admin at `localhost`. Next's dev server runs a page's code in the browser only for the hosts it knows, and the admin is
+drawn in the browser: under another host (`127.0.0.1`, a LAN address, a tunnel) it stays blank until that host is named in `next.config`:
+
+```ts
+// next.config.ts
+allowedDevOrigins: ["127.0.0.1"],
+```
+
 ## Styles
 
 `AdminPage` brings the admin's stylesheet (`@monti-cms/admin/styles.css`). It touches nothing outside the admin: every rule applies only in a

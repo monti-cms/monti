@@ -165,9 +165,11 @@ export function BasicsTab({
 							width="fit"
 							placeholder="preview"
 							value={typeof preview === "string" ? addressPart(preview) : ""}
-							onChange={(event) =>
-								draft.set(previewPlace, event.target.value.trim() === "" ? null : addressOf(event.target.value))
-							}
+							onChange={(event) => {
+								// Empty is what the field shows as empty: slashes alone leave no address, so they are none (not "/:slug").
+								const address = addressOf(event.target.value);
+								draft.set(previewPlace, addressPart(address) === "" ? null : address);
+							}}
 						/>
 						{/* What leaving it empty does, only while it is empty (README principle 8); the line stays, so nothing moves when typed. */}
 						<FormFieldError

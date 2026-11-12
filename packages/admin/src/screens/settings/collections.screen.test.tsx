@@ -20,7 +20,7 @@ describe("collection public pages", () => {
 });
 
 describe("a collection's preview address", () => {
-	const { Basics, ReadOnlyBasics, PreviewAddress, PreviewAddressReview, ReadOnlyPreviewAddress } =
+	const { Basics, NewCollection, ReadOnlyBasics, PreviewAddress, PreviewAddressReview, ReadOnlyPreviewAddress } =
 		composeStories(collections);
 	const field = () => page.getByRole("textbox", { name: "미리보기 주소" });
 	const hint = () => page.getByText("비워 두면 공개 주소에서 미리봅니다.");
@@ -67,6 +67,30 @@ describe("a collection's preview address", () => {
 		await userEvent.keyboard("draft");
 		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
 		await expect.element(field()).toHaveValue("");
+	});
+
+	it("16-9 slashes alone are no address: the field stays empty with its hint, and nothing is changed", async () => {
+		await Basics.run();
+		await userEvent.click(field());
+		await userEvent.keyboard("/");
+		await expect.element(field()).toHaveValue("");
+		await expect.element(hint()).toBeVisible();
+		await expect.element(changes()).not.toBeInTheDocument();
+		await userEvent.keyboard("//");
+		await expect.element(changes()).not.toBeInTheDocument();
+	});
+
+	it("16-9 a new collection's review names the preview address it is made with", async () => {
+		await NewCollection.run();
+		await userEvent.click(page.getByRole("dialog").getByRole("button", { name: "만들기" }));
+		await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await userEvent.click(field());
+		await userEvent.keyboard("preview");
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		const review = page.getByRole("dialog");
+		await expect.element(review.getByText("미리보기 주소")).toBeVisible();
+		await expect.element(review.getByText("/preview/:slug")).toBeVisible();
 	});
 
 	it("16-9 an item collection has no preview address, and the live site reads a document's as words with its lock", async () => {
