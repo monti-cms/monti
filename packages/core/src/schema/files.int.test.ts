@@ -1,5 +1,6 @@
+import { spawnSync } from "node:child_process";
 import { access, chmod, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { hostname, tmpdir } from "node:os";
 import path from "node:path";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
@@ -7,9 +8,11 @@ import { describe, expect, it } from "vitest";
 import { testDatabase } from "../__test__/database";
 import type { Database } from "../db/schema";
 import { defineSchema } from "./define";
-import { type FileCalls, PartialSchemaWrite, SchemaFilesBusy, schemaFilesAt } from "./files";
+import { type FileCalls, PartialSchemaWrite, SchemaFilesBusy, schemaFilesAt, tryHoldFiles } from "./files";
 
 const db = await testDatabase();
+/** Another site in the same database: tables of its own. */
+const elsewhere = await testDatabase();
 
 const schema = defineSchema({
 	locales: { source: "en", list: [{ code: "en", name: "English" }], prefix: "never" },
@@ -18,7 +21,9 @@ const schema = defineSchema({
 const other = defineSchema({ ...schema, locales: { ...schema.locales, prefix: "always" } });
 
 const checkout = () => mkdtemp(path.join(tmpdir(), "monti-change-files-"));
-const changesOf = (root: string) => readdir(path.join(root, "monti", "changes"));
+/** What is in the changes folder. An owner mark (`.owner.<pid>.<token>.<host>`) reads as "(mark)": its name differs from run to run. */
+const changesOf = async (root: string) =>
+	(await readdir(path.join(root, "monti", "changes"))).map((name) => (name.startsWith(".owner.") ? "(mark)" : name));
 
 describe("schema change files", () => {
 	it("never overwrites an existing change file", async () => {
@@ -146,7 +151,7 @@ describe("schema change files", () => {
 		await writeFile(`${schemaPath}.part`, "export default defi");
 
 		expect((await files.readChanges(db)).map((change) => change.id)).toEqual(["first", "second"]);
-		expect(await readdir(changes)).toEqual(["first.json", "second.json"]);
+		expect(await changesOf(root)).toEqual(["first.json", "second.json"]);
 		expect(await readdir(root)).toEqual(["monti", "monti.schema.ts"]);
 		expect(await readFile(schemaPath, "utf8")).toBe(written);
 	});
@@ -155,7 +160,7 @@ describe("schema change files", () => {
 	 * Node's file calls, with a step that waits until the test lets it go: the moment another process gets to run. `die` is the process ending
 	 * there: from then on none of its file calls does anything.
 	 */
-	const pausing = (at: (step: "write" | "rename", file: string) => boolean) => {
+	const pausing = (at: (step: "write" | "rename", file: string) => boolean, then: "go" | "fail" = "go") => {
 		const gate: { reached?: () => void; release?: () => void } = {};
 		const reached = new Promise<void>((resolve) => {
 			gate.reached = resolve;
@@ -171,6 +176,8 @@ describe("schema change files", () => {
 			if (!at(step, file)) return;
 			gate.reached?.();
 			await released;
+			// `fail`: the call the writer stood at does not go through once it moves again (the disk refuses it).
+			if (then === "fail" && !state.dead) throw Object.assign(new Error("EIO"), { code: "EIO" });
 		};
 		const io: FileCalls = {
 			access,
@@ -242,7 +249,7 @@ describe("schema change files", () => {
 			// The reader gets every chance to run while the writer stands still.
 			await tick(150);
 			expect(read).toBeNull();
-			expect(await changesOf(root)).toEqual(["one.json.part"]);
+			expect(await changesOf(root)).toEqual(["(mark)", "one.json.part"]);
 			writer.release();
 			// The write ends as if nobody had looked: both files written, nothing left over.
 			await writing;
@@ -273,7 +280,7 @@ describe("schema change files", () => {
 				expect(refused).toBeInstanceOf(SchemaFilesBusy);
 				expect(refused).toMatchObject({ reason: { key: "schema.filesBusy" } });
 			}
-			expect(await changesOf(root)).toEqual(["one.json.part"]);
+			expect(await changesOf(root)).toEqual(["(mark)", "one.json.part"]);
 			expect(await readFile(schemaPath, "utf8")).toBe(paused);
 			writer.release();
 			// The writer finds its part where it left it: the change takes its name and the schema file is the new one, not put back.
@@ -286,7 +293,7 @@ describe("schema change files", () => {
 
 	it("12-4 two processes that find a crashed write at once finish it once: the second waits for the first and finds nothing left to do", async () => {
 		const root = await checkout();
-		const { changes, written, schemaPath } = await crashed(root);
+		const { written, schemaPath } = await crashed(root);
 		// The first stands still in the middle of giving the change its name.
 		const first = pausing((step, file) => step === "rename" && file.endsWith("second.json"));
 		const second = pausing(() => false);
@@ -301,7 +308,7 @@ describe("schema change files", () => {
 		await tick(150);
 		// The second has done nothing: the part is still the first's to finish.
 		expect(found).toBeNull();
-		expect(await readdir(changes)).toEqual(["first.json", "second.json.part"]);
+		expect(await changesOf(root)).toEqual(["(mark)", "first.json", "second.json.part"]);
 		first.release();
 		expect((await one).map((change) => change.id)).toEqual(["first", "second"]);
 		await two;
@@ -309,34 +316,35 @@ describe("schema change files", () => {
 		// Named once, by the one that held the files.
 		expect(first.moved).toEqual(["second.json"]);
 		expect(second.moved).toEqual([]);
-		expect(await readdir(changes)).toEqual(["first.json", "second.json"]);
+		expect(await changesOf(root)).toEqual(["first.json", "second.json"]);
 		expect(await readFile(schemaPath, "utf8")).toBe(written);
 	});
 
 	it("12-4 a recovery that stands still is not taken over by a writer either: the write is told the files are busy and leaves nothing", async () => {
 		const root = await checkout();
-		const { changes, written, schemaPath } = await crashed(root);
+		const { written, schemaPath } = await crashed(root);
 		const first = pausing((step, file) => step === "rename" && file.endsWith("second.json"));
 		const one = schemaFilesAt(root, "monti.schema.ts", first.io).readChanges(db);
 		await first.reached;
 		await expect(impatient(root).write(db, other, { id: "third", steps: [] }, true)).rejects.toBeInstanceOf(
 			SchemaFilesBusy,
 		);
-		expect(await readdir(changes)).toEqual(["first.json", "second.json.part"]);
+		expect(await changesOf(root)).toEqual(["(mark)", "first.json", "second.json.part"]);
 		expect(await readFile(schemaPath, "utf8")).toBe(written);
 		first.release();
 		await one;
 		// Free again: the same write goes through.
 		await impatient(root).write(db, other, { id: "third", steps: [] }, true);
-		expect(await readdir(changes)).toEqual(["first.json", "second.json", "third.json"]);
+		expect(await changesOf(root)).toEqual(["first.json", "second.json", "third.json"]);
 	});
 
 	/** A process of its own: a connection to the same site that can be cut, as a process that dies cuts its own. */
-	const process_ = async () => {
-		const found = await sql<{ name: string }>`select current_schema() as name`.execute(db);
+	const siteSchema = async () =>
+		String((await sql<{ name: string }>`select current_schema() as name`.execute(db)).rows[0]?.name);
+	const process_ = async (searchPath?: string) => {
 		const pool = new Pool({
 			connectionString: process.env.CMS_TEST_DATABASE_URL,
-			options: `-c search_path=${found.rows[0]?.name}`,
+			options: `-c search_path=${searchPath ?? (await siteSchema())}`,
 			max: 1,
 		});
 		// A connection cut from outside says so to whoever listens; nobody here is surprised by it.
@@ -363,7 +371,7 @@ describe("schema change files", () => {
 		await writer.reached;
 		// Alive and standing still: its part is its own.
 		await expect(impatient(root).readChanges(db)).rejects.toBeInstanceOf(SchemaFilesBusy);
-		expect(await changesOf(root)).toEqual(["one.json.part"]);
+		expect(await changesOf(root)).toEqual(["(mark)", "one.json.part"]);
 
 		// The process ends where it stood: its session goes with it, and it does nothing more to the files.
 		writer.die();
@@ -376,19 +384,120 @@ describe("schema change files", () => {
 		await dying.end();
 	});
 
-	it("12-4 two writes at once go one after the other, and no lock file is left in the checkout", async () => {
+	/** Waits until the database's lock of the files is free: the session that held it is gone. */
+	const lockFree = async () => {
+		for (let tries = 0; tries < 400; tries++) {
+			const free = await db.transaction().execute((trx) => tryHoldFiles(trx));
+			if (free) return;
+			await tick(10);
+		}
+		throw new Error("the lock was never released");
+	};
+
+	for (const [ends, then] of [
+		["its change then takes its name: both files are the new ones", "go"],
+		["its change then cannot take its name: both files are as they were", "fail"],
+	] as const)
+		it(`12-4 a writer whose database session is cut while its process lives on still holds the files (${ends}): whoever takes the lock is told busy and touches nothing, and the schema is never half of each`, async () => {
+			const root = await checkout();
+			const schemaPath = path.join(root, "monti.schema.ts");
+			await writeFile(schemaPath, "// as it was\n");
+			const cut = await process_();
+			// The writer has moved the schema file in and stands before giving the change its name.
+			const writer = pausing((step, file) => step === "rename" && file.endsWith("one.json"), then);
+			let pid = 0;
+			const writing = cut.db
+				.transaction()
+				.execute(async (trx) => {
+					pid = (await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(trx)).rows[0]?.pid ?? 0;
+					await schemaFilesAt(root, "monti.schema.ts", writer.io).write(trx, other, { id: "one", steps: [] }, true);
+				})
+				.catch((error: unknown) => error);
+			await writer.reached;
+			const moved = await readFile(schemaPath, "utf8");
+			expect(moved).toContain('prefix: "always"');
+
+			// Its backend is terminated; the process, and the write in it, live on. The database's lock is free.
+			await sql`select pg_terminate_backend(${pid})`.execute(db);
+			await lockFree();
+			// A recovery takes the lock and finds the writer's mark: it is told busy, and neither finishes nor clears the write.
+			await expect(impatient(root).readChanges(db)).rejects.toBeInstanceOf(SchemaFilesBusy);
+			// So is another write.
+			await expect(impatient(root).write(db, schema, { id: "two", steps: [] }, true)).rejects.toBeInstanceOf(
+				SchemaFilesBusy,
+			);
+			expect(await changesOf(root)).toEqual(["(mark)", "one.json.part"]);
+			expect(await readFile(schemaPath, "utf8")).toBe(moved);
+
+			// The writer moves again, alone in its files: it ends its write by itself, one way or the other.
+			writer.release();
+			expect(await writing).toBeInstanceOf(Error);
+			if (then === "go") {
+				expect(await changesOf(root)).toEqual(["one.json"]);
+				expect(await readFile(schemaPath, "utf8")).toBe(moved);
+				expect((await impatient(root).readChanges(db)).map((change) => change.id)).toEqual(["one"]);
+			} else {
+				expect(await changesOf(root)).toEqual([]);
+				expect(await readFile(schemaPath, "utf8")).toBe("// as it was\n");
+			}
+			await cut.end();
+		});
+
+	it("12-4 a mark whose process is gone is what a crash left: it is removed and the write is finished, with no wait; one of a living process or of another machine is busy", async () => {
 		const root = await checkout();
-		const changes = path.join(root, "monti", "changes");
+		const { changes, schemaPath, written } = await crashed(root);
+		const here = encodeURIComponent(hostname());
+		// A process that has ended: its number is nobody's now.
+		const gone = spawnSync(process.execPath, ["-e", ""]).pid;
+		const mark = (pid: number, host = here) => path.join(changes, `.owner.${pid}.crashed0.${host}`);
+
+		// Held by a process that lives (this test's parent), and by one on another machine that cannot be asked: busy, nothing touched.
+		for (const living of [mark(process.ppid), mark(gone, "another-machine")]) {
+			await writeFile(living, "");
+			await expect(impatient(root).readChanges(db)).rejects.toBeInstanceOf(SchemaFilesBusy);
+			expect(await changesOf(root)).toEqual(["(mark)", "first.json", "second.json.part"]);
+			await rm(living);
+		}
+
+		await writeFile(mark(gone), "");
+		const began = performance.now();
+		expect((await schemaFilesAt(root).readChanges(db)).map((change) => change.id)).toEqual(["first", "second"]);
+		// Told by the process being gone, not by time passing.
+		expect(performance.now() - began).toBeLessThan(5000);
+		expect(await changesOf(root)).toEqual(["first.json", "second.json"]);
+		expect(await readFile(schemaPath, "utf8")).toBe(written);
+	});
+
+	it("12-4 two connections that reach the same tables by different search paths ask for one lock; another site's tables have another", async () => {
+		const site = await siteSchema();
+		await sql.raw(`create schema ${site}_alice`).execute(db);
+		await sql.raw(`create schema ${site}_bob`).execute(db);
+		const alice = await process_(`${site}_alice,${site}`);
+		const bob = await process_(`${site}_bob,${site}`);
+		await alice.db.transaction().execute(async (held) => {
+			expect(await tryHoldFiles(held)).toBe(true);
+			// The first schema on Bob's path is another, and the tables he reaches are the same.
+			expect(await bob.db.transaction().execute((trx) => tryHoldFiles(trx))).toBe(false);
+			expect(await db.transaction().execute((trx) => tryHoldFiles(trx))).toBe(false);
+			expect(await elsewhere.transaction().execute((trx) => tryHoldFiles(trx))).toBe(true);
+		});
+		expect(await bob.db.transaction().execute((trx) => tryHoldFiles(trx))).toBe(true);
+		await alice.end();
+		await bob.end();
+	});
+
+	it("12-4 two writes at once go one after the other, and no mark is left in the checkout", async () => {
+		const root = await checkout();
 		const first = pausing((step, file) => step === "write" && file.endsWith("one.json.part"));
 		const one = schemaFilesAt(root, "monti.schema.ts", first.io).write(db, schema, { id: "one", steps: [] }, true);
 		await first.reached;
 		const two = schemaFilesAt(root).write(db, other, { id: "two", steps: [] }, true);
 		await tick(100);
-		// The second has not begun: the first holds the files.
-		expect(await readdir(changes)).toEqual([]);
+		// The second has not begun: the first holds the files, with its mark beside them.
+		expect(await changesOf(root)).toEqual(["(mark)"]);
 		first.release();
 		await Promise.all([one, two]);
-		expect(await readdir(changes)).toEqual(["one.json", "two.json"]);
+		expect(await changesOf(root)).toEqual(["one.json", "two.json"]);
 		expect(await readdir(root)).toEqual(["monti", "monti.schema.ts"]);
 		expect(await readFile(path.join(root, "monti.schema.ts"), "utf8")).toContain('prefix: "always"');
 	});

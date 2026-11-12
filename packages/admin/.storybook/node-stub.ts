@@ -9,5 +9,6 @@ export const rename = async () => {};
 export const writeFile = async () => {};
 export const rm = async () => {};
 export const stat = async () => ({ size: 0 });
+export const hostname = () => "";
 const path = { join: (...parts: string[]) => parts.join("/") };
 export default path;

@@ -1,4 +1,5 @@
 import { access, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { hostname } from "node:os";
 import path from "node:path";
 import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
@@ -144,26 +145,62 @@ export class SchemaFilesBusy extends CheckError {
 	}
 }
 
-/** How long the files' lock is waited for before the caller is told they are busy, and how often it is asked for meanwhile. */
+/** How long the files are waited for before the caller is told they are busy, and how often they are asked for meanwhile. */
 const LOCK_WAIT_MS = 10_000;
 const LOCK_POLL_MS = 25;
+const pause = () => new Promise((resume) => setTimeout(resume, LOCK_POLL_MS));
 
 /**
- * Holds the lock of "the schema files of this site" until `trx` ends. It is a Postgres advisory lock, owned by the database session: every
- * process of a site shares its database, and a session ends with its process. So a holder that died holds nothing, a holder that only stands
- * still (a debugger, a slow disk) keeps it for as long as it lives, and nobody has to tell the two apart by a clock. The key names the schema
- * the site's tables are in, so two sites in one database do not wait for each other.
+ * Asks once for the lock of "the schema files of this site", held until `trx` ends. It is a Postgres advisory lock, owned by the database
+ * session: every process of a site shares its database, so it puts the sessions that write the files, or finish a write a crash cut off, one
+ * after the other. The key is the table the site's structure is recorded in, as this connection resolves it: two connections that reach the same
+ * tables by different search paths ask for the same lock, and two sites in one database (other tables) do not wait for each other.
  */
-async function holdFiles(trx: Db, waitMs: number): Promise<void> {
-	const until = Date.now() + waitMs;
-	for (;;) {
-		const { rows } = await sql<{ held: boolean }>`
-			select pg_try_advisory_xact_lock(hashtext('monti:schema-files'), hashtext(current_schema())) as held
-		`.execute(trx);
-		if (rows[0]?.held) return;
-		// Never taken over: the holder is alive. The caller is told, and tries again.
-		if (Date.now() >= until) throw new SchemaFilesBusy();
-		await new Promise((resume) => setTimeout(resume, LOCK_POLL_MS));
+export async function tryHoldFiles(trx: Db): Promise<boolean> {
+	const { rows } = await sql<{ held: boolean }>`
+		select pg_try_advisory_xact_lock(hashtext('monti:schema-files'), 'schema_state'::regclass::oid::int) as held
+	`.execute(trx);
+	return rows[0]?.held === true;
+}
+
+/** Waits for the database's lock until `until` (on the clock that does not jump: `performance.now()`). Never taken over. */
+async function holdFiles(trx: Db, until: number): Promise<void> {
+	while (!(await tryHoldFiles(trx))) {
+		if (performance.now() >= until) throw new SchemaFilesBusy();
+		await pause();
+	}
+}
+
+/**
+ * The holders at work in this process, by their token. One process is one list, however many copies of this module it has loaded (a bundler
+ * can load two): a holder of this process is at work exactly while its token is here, so its mark needs no guess.
+ */
+const AT_WORK = Symbol.for("monti.schema-files.at-work");
+const shared = globalThis as { [AT_WORK]?: Set<string> };
+shared[AT_WORK] ??= new Set<string>();
+const atWork: Set<string> = shared[AT_WORK];
+
+/**
+ * An owner mark: an empty file beside the change files, named for who is at work in them (`.owner.<pid>.<token>.<host>`). The name is the
+ * whole mark, so it is there whole or not at all, and removing one never removes another's.
+ */
+const MARK = /^\.owner\.(\d+)\.([a-z0-9]+)\.(.*)$/;
+const markOf = (token: string) => `.owner.${process.pid}.${token}.${encodeURIComponent(hostname())}`;
+
+/**
+ * Whether the holder a mark names is still at work. On this machine the answer is exact for this process (its token is in the list) and the
+ * operating system's for another (does the process exist). A mark from another machine cannot be asked about: it counts as at work.
+ */
+function holderAtWork(name: string): boolean {
+	const [, pid, token, host] = MARK.exec(name) ?? [];
+	if (pid === undefined || token === undefined || host !== encodeURIComponent(hostname())) return true;
+	if (Number(pid) === process.pid) return atWork.has(token);
+	try {
+		process.kill(Number(pid), 0);
+		return true;
+	} catch (error) {
+		// No such process: it died with its mark. Anything else (not ours to signal) is a process that exists.
+		return (error as { code?: string }).code !== "ESRCH";
 	}
 }
 
@@ -181,10 +218,20 @@ async function holdFiles(trx: Db, waitMs: number): Promise<void> {
  * name are used, which every file system has (hard links are missing on exFAT and some network shares).
  *
  * A write and the clearing of what a crash left never run at the same time, in this process or another (two dev servers on one checkout, a
- * command beside the server): both hold the files' lock in the site's database (`holdFiles`), the write until its transaction ends. So a `.part`
- * is never taken for abandoned while its writer lives, however long it stands still, and one whose writer died is free the moment its session
- * is gone. There is no lock file and no timeout that decides a holder is dead. On a database with one connection (PGlite) every lock belongs to
- * the one session; there the connection itself, which one transaction holds at a time, keeps a write and a recovery apart.
+ * command beside the server). Two things keep them apart, and neither guesses from a clock:
+ *
+ * - the files' lock in the site's database (`tryHoldFiles`), held by the write's transaction: it puts sessions one after the other, and one
+ *   that waits longer than the wait is told the files are busy;
+ * - an owner mark beside the files (`.owner.<pid>.<token>.<host>`), there for as long as its holder's process works on them. A session can end
+ *   while its process lives on (the connection dropped, the backend was terminated): the database's lock is free then, and the holder is still
+ *   in the middle of its files. Whoever takes the lock next finds the mark, sees its holder at work, and is told the files are busy; it
+ *   touches nothing. The holder finishes or fails by itself, and puts the schema file back only while its mark is still there. A mark whose
+ *   process is gone is what a crash left: it is removed, and the write it cut off is finished or cleared.
+ *
+ * What the mark cannot tell: a process number given to another program after a crash reads as "at work" until that program ends, and so does a
+ * mark from another machine on a shared folder (a container that crashed and came back under another name). The files are then busy until
+ * the mark is deleted by hand; the server's log names it. On a database with one connection (PGlite) every lock belongs to the one session;
+ * there the connection itself, which one transaction holds at a time, keeps a write and a recovery apart.
  */
 export function schemaFilesAt(
 	root: string,
@@ -202,13 +249,47 @@ export function schemaFilesAt(
 	const drop = (file: string) => io.rm(file, { force: true }).catch(() => {});
 
 	/**
-	 * Runs `work` while holding the files' lock: one writer or one recovery at a time, across processes. Inside a write's transaction the lock
-	 * stays until that transaction ends; with no transaction at hand one is opened for the work.
+	 * Runs `work` as the one holder of the files: with the database's lock, and with its owner mark beside them. Inside a write's transaction the
+	 * lock stays until that transaction ends; with no transaction at hand one is opened for the work. `owns` tells the work whether its mark is
+	 * still there.
 	 */
-	async function locked<T>(db: Db, work: () => Promise<T>): Promise<T> {
+	async function locked<T>(db: Db, work: (owns: () => Promise<boolean>) => Promise<T>): Promise<T> {
 		if (!db.isTransaction) return db.transaction().execute((trx) => locked(trx, work));
-		await holdFiles(db, waitMs);
-		return work();
+		const until = performance.now() + waitMs;
+		await holdFiles(db, until);
+		const token = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+		const mine = markOf(token);
+		atWork.add(token);
+		try {
+			await io.mkdir(changes, { recursive: true });
+			const others = async () => (await names()).filter((name) => MARK.test(name) && name !== mine);
+			for (;;) {
+				let working = (await others()).filter(holderAtWork);
+				if (working.length === 0) {
+					// Made, then the others are looked for once more: of two that come at the same moment each sees the other, and neither goes on.
+					await io.writeFile(path.join(changes, mine), "", { flag: "wx" });
+					const found = await others();
+					working = found.filter(holderAtWork);
+					if (working.length === 0) {
+						// Marks of processes that are gone: what a crash left. By their own names, so no other's mark goes with them.
+						for (const left of found) await drop(path.join(changes, left));
+						break;
+					}
+					await drop(path.join(changes, mine));
+				}
+				if (performance.now() >= until) {
+					console.error(
+						`Monti: the schema files are in use by ${working.join(", ")} (monti/changes). If that process is gone, delete its mark.`,
+					);
+					throw new SchemaFilesBusy();
+				}
+				await pause();
+			}
+			return await work(async () => (await names()).includes(mine));
+		} finally {
+			await drop(path.join(changes, mine));
+			atWork.delete(token);
+		}
 	}
 
 	/** Finishes or clears what a write that never ended left behind. Called with the lock held. */
@@ -234,15 +315,15 @@ export function schemaFilesAt(
 
 	/**
 	 * Before the changes are read: with no `.part` there is nothing to clear and nothing is locked. A `.part` is either a writer at work or what
-	 * a crash left; the lock tells which, since a writer holds it for as long as it lives. One made after this looked is left alone.
+	 * a crash left; the lock and the owner mark tell which, since a writer holds both for as long as it works. One made after this looked is
+	 * left alone.
 	 */
 	async function recover(db: Db) {
 		if (!(await names()).some((name) => name.endsWith(".json.part"))) return;
-		await locked(db, clear);
+		await locked(db, () => clear());
 	}
 
-	async function write(schema: Schema, change: ChangeFile, writeSchema: boolean) {
-		await io.mkdir(changes, { recursive: true });
+	async function write(owns: () => Promise<boolean>, schema: Schema, change: ChangeFile, writeSchema: boolean) {
 		await clear();
 		const final = path.join(changes, `${change.id}.json`);
 		const part = `${final}.part`;
@@ -264,6 +345,12 @@ export function schemaFilesAt(
 			}
 			await io.rename(part, final);
 		} catch (error) {
+			// Only while the files are still this holder's: once its mark is gone another has been in them, and what is there now is not this
+			// write's to clear or to put back. If the schema file was already moved in, nothing here can say "not written".
+			if (!(await owns())) {
+				if (moved) throw new PartialSchemaWrite(schemaFile, error);
+				throw error;
+			}
 			await drop(part);
 			await drop(schemaPart);
 			// The schema file was already the new one: back to what it was, in one step again.
@@ -282,7 +369,7 @@ export function schemaFilesAt(
 	}
 
 	return {
-		write: (db, schema, change, writeSchema) => locked(db, () => write(schema, change, writeSchema)),
+		write: (db, schema, change, writeSchema) => locked(db, (owns) => write(owns, schema, change, writeSchema)),
 		async readChanges(db) {
 			await recover(db);
 			return readChangeFiles(changes);

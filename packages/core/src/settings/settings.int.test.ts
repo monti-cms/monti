@@ -1251,7 +1251,11 @@ describe("a save while another process holds the schema files", () => {
 		// Not "the file could not be written" with the admin values saved beside: the whole save is refused, and nothing was taken over.
 		expect((await read(monti)).site.name).toBe("");
 		expect(await schemaFile()).toBeNull();
-		expect(await changeFiles()).toEqual(["crashed.json.part"]);
+		// The other process's mark and the part it is clearing: as they were.
+		expect((await changeFiles()).map((name) => (name.startsWith(".owner.") ? "(mark)" : name))).toEqual([
+			"(mark)",
+			"crashed.json.part",
+		]);
 		expect(await db.selectFrom("monti_activity").select("id").execute()).toEqual([]);
 
 		letGo();
