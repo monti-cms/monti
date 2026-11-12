@@ -340,6 +340,23 @@ export function SettingsScreen({
 		} else void save();
 	};
 
+	// The save group goes away with the last change (saved, all undone, the last one undone in its list), and the button that was pressed goes
+	// with it. The focus then does not fall to the page: it goes to the open tab's name, the control the group acted on (tokens.md, states).
+	const openTab = useRef<HTMLAnchorElement>(null);
+	const hadChanges = useRef(false);
+	const hasChanges = rows.length > 0;
+	useEffect(() => {
+		const gone = hadChanges.current && !hasChanges;
+		hadChanges.current = hasChanges;
+		if (!gone) return;
+		// Once the list that held the button has closed and handed its focus on. A person whose focus is somewhere (a field) keeps it.
+		const later = setTimeout(() => {
+			const at = document.activeElement;
+			if (!at || at === document.body) openTab.current?.focus();
+		}, 0);
+		return () => clearTimeout(later);
+	}, [hasChanges]);
+
 	return (
 		<Inline align="stretch" gap={0} grow minHeight={0}>
 			<Stack gap={0} grow minWidth={0} minHeight={0} container>
@@ -350,6 +367,7 @@ export function SettingsScreen({
 							{SETTINGS_TABS.map((each) => (
 								<TabLink
 									key={each}
+									ref={each === tab ? openTab : undefined}
 									current={each === tab}
 									// The open tab's changes are on the page and in the save group: only the others carry a dot (settings.md).
 									dot={each === tab || each === "admin" ? undefined : model.marks[each]}

@@ -752,6 +752,31 @@ describe("settings: the assistant's proposals", () => {
 	});
 });
 
+describe("settings: where the focus goes when the save group leaves", () => {
+	it("12-1 모두 되돌리기, the last 되돌리기 of the changes list and a save each leave the focus on the open tab's name, not on the page", async () => {
+		await withSite(stories.SiteChanged).run();
+		// 모두 되돌리기, from the keyboard: the button goes with the group it stood in.
+		(page.getByRole("button", { name: "모두 되돌리기" }).element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await expect.element(tab(/사이트/)).toHaveFocus();
+
+		// The one change undone in the list: the list, its button and the group all go.
+		await userEvent.fill(nameField(), "example.blog");
+		await userEvent.click(page.getByRole("button", { name: /^변경 사항/ }));
+		await userEvent.click(page.getByRole("menu").getByRole("button", { name: "되돌리기" }));
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await expect.element(tab(/사이트/)).toHaveFocus();
+
+		// A save: the pill keeps the focus while it works, and hands it on when it leaves.
+		await userEvent.fill(nameField(), "example.blog");
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await expect.element(tab(/사이트/)).toHaveFocus();
+	});
+});
+
 describe("settings › admin", () => {
 	it("12-2 the screen language is saved the moment it is picked: every word follows at once, with no save group", async () => {
 		const shown = withSite(stories.Admin);
