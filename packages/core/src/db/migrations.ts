@@ -431,6 +431,8 @@ const MIGRATIONS: Record<string, Migration> = {
 				.addColumn("thinking", "text", (column) => column.notNull())
 				.addColumn("usage", "jsonb", (column) => column.notNull())
 				.addColumn("turns", "integer", (column) => column.notNull().defaultTo(0))
+				.addColumn("turns_from", "integer", (column) => column.notNull().defaultTo(0))
+				.addColumn("tokens_from", "integer", (column) => column.notNull().defaultTo(0))
 				.addColumn("proposal_id", "text")
 				.addColumn("item_id", "text")
 				.addColumn("pending", "jsonb")
@@ -441,6 +443,9 @@ const MIGRATIONS: Record<string, Migration> = {
 				.addColumn("ended_at", "timestamptz")
 				.execute();
 			await db.schema.createIndex("runs_conversation").on("runs").columns(["conversation_id", "started_at"]).execute();
+			// One chat run at a time in a conversation (doc 10): the database holds the rule, so two requests cannot both start one.
+			await sql`create unique index runs_one_chat on runs (conversation_id)
+				where kind = 'chat' and status in ('running', 'waiting')`.execute(db);
 			await db.schema
 				.createTable("run_messages")
 				.addColumn("id", "text", (column) => column.primaryKey())
@@ -468,6 +473,9 @@ const MIGRATIONS: Record<string, Migration> = {
 			// their write left (so an apply cut short goes on from there) and what was asked of them at their place.
 			await db.schema.alterTable("monti_proposal").addColumn("run_id", "text").execute();
 			await db.schema.alterTable("monti_proposal").addColumn("applying_until", "timestamptz").execute();
+			await db.schema.alterTable("monti_proposal").addColumn("applying_token", "text").execute();
+			// A run has one proposal: asked for twice (a run cut between making it and noting it), the second finds the first.
+			await sql`create unique index monti_proposal_run on monti_proposal (run_id) where run_id is not null`.execute(db);
 			await sql`alter table monti_proposal drop constraint monti_proposal_status_check`.execute(db);
 			await sql`alter table monti_proposal add constraint monti_proposal_status_check
 				check (status in ('pending', 'applied', 'partial', 'discarded', 'reverted'))`.execute(db);
@@ -480,6 +488,9 @@ const MIGRATIONS: Record<string, Migration> = {
 				.addColumn("group_label", "text", (column) => column.notNull().defaultTo(""))
 				.execute();
 			await db.schema.alterTable("monti_proposal_item").addColumn("after_versions", "jsonb").execute();
+			await db.schema.alterTable("monti_proposal_item").addColumn("from_versions", "jsonb").execute();
+			await db.schema.alterTable("monti_proposal_item").addColumn("made_by", "text").execute();
+			await db.schema.alterTable("monti_proposal_item").addColumn("preview", "jsonb").execute();
 			await db.schema
 				.alterTable("monti_proposal_item")
 				.addColumn("thread", "jsonb", (column) => column.notNull().defaultTo(sql`'[]'::jsonb`))

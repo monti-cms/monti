@@ -52,6 +52,8 @@ export interface ProposalTable {
 	status: "pending" | "applied" | "partial" | "discarded" | "reverted";
 	/** While an apply is going: until when it holds the proposal, so two applies do not run at once. */
 	applying_until: Date | null;
+	/** Which apply holds it: an apply whose hold ran out and was taken by another finds another name here, and stops. */
+	applying_token: string | null;
 	created_at: Generated<Date>;
 }
 
@@ -82,6 +84,12 @@ export interface ProposalItemTable {
 	group_label: Generated<string>;
 	/** The versions its write left, by `recordKey`: a later item made from the same reading follows from here. */
 	after_versions: Json<Record<string, number | null>> | null;
+	/** The versions its write found, by `recordKey`: putting the proposal back walks from one item's write to the one before it by these. */
+	from_versions: Json<Record<string, number | null>> | null;
+	/** The tool call that made it (the run and the call's id): the same call run again after a cut finds its items and makes no second ones. */
+	made_by: string | null;
+	/** What that call's write would do, as the model was told. */
+	preview: Json<unknown> | null;
 	thread: ColumnType<ItemExchange[], string | undefined, string>;
 }
 
@@ -116,6 +124,9 @@ export interface RunTable {
 	thinking: string;
 	usage: Json<{ input: number; output: number }>;
 	turns: Generated<number>;
+	/** The turns and tokens it had spent when a person last said to go on: its limits count from there. */
+	turns_from: Generated<number>;
+	tokens_from: Generated<number>;
 	proposal_id: string | null;
 	/** For `spot` and `again`: the proposal item it is about. */
 	item_id: string | null;

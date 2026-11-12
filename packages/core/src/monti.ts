@@ -232,7 +232,7 @@ function engineOperations(
 				"Put back everything applying a proposal changed, as the activity log's undo does for each write. A record changed since is left alone and its item stays applied. Only a person does it.",
 			input: z.object({ id: z.string() }),
 			async run(input, ctx) {
-				const output = await revertProposal(engine, ctx.db, input.id);
+				const output = await revertProposal(engine, ctx.db, input.id, ctx.emit);
 				// What an entry saw back then may be of a field that has since left the schema.
 				await keepSeenTracked(ctx.db, ctx.site.schema());
 				return output;
@@ -435,11 +435,11 @@ export function createMonti(options: MontiOptions) {
 			 * Adds an assistant write to a proposal; nothing changes until a person applies it. A write that names several records (`each`) becomes one
 			 * item per record. `group` is the name the assistant gave this kind of change.
 			 */
-			add: (proposalId: string, name: string, input: unknown, group?: string) =>
-				proposeItem(engine, proposalId, get(name, ["write"]), input, { group }),
+			add: (proposalId: string, name: string, input: unknown, group?: string, call?: string) =>
+				proposeItem(engine, operations, proposalId, get(name, ["write"]), input, { group, call }),
 			/** Puts a new write in a waiting item's place: the item made again, or changed at its own place (doc 10). */
-			replace: (itemId: string, name: string, input: unknown) =>
-				replaceItem(engine, itemId, get(name, ["write"]), input),
+			replace: (itemId: string, name: string, input: unknown, call?: string) =>
+				replaceItem(engine, operations, itemId, get(name, ["write"]), input, { call }),
 			/** Adds what was asked of an item at its place, and the answer, to the item. */
 			addExchange: (itemId: string, exchange: ItemExchange) => addExchange(engine.db, itemId, exchange),
 			/** A proposal as its card and review show it; `null` when there is none. */
@@ -452,7 +452,8 @@ export function createMonti(options: MontiOptions) {
 				proposalId: string,
 				include?: string[],
 				onProgress?: (progress: ApplyProgress) => void | Promise<void>,
-			): Promise<ApplyResult> => applyProposal(engine, operations, proposalId, include, write, onProgress),
+				leaseMs?: number,
+			): Promise<ApplyResult> => applyProposal(engine, operations, proposalId, include, write, onProgress, leaseMs),
 		},
 
 		deliveries: {

@@ -15,7 +15,7 @@ import {
 import { lockRecords, type RecordKind, type RecordState } from "../records";
 import type { Site } from "../site";
 import { queueDeliveries, type Receiver } from "./deliveries";
-import { markApplied } from "./proposals";
+import { claimItem, type ItemClaim, markApplied, settleApplied } from "./proposals";
 
 /** How long a write can be undone. The trash keeps entries as long, and both are cleared together (doc 11). */
 export const UNDO_DAYS = 30;
@@ -33,7 +33,11 @@ export type RunOptions = {
 	/** The versions the caller read, by `recordKey`. A touched record at another version is a conflict. */
 	versions?: Record<string, number>;
 	conversationId?: string;
-	proposalItemId?: string;
+	/**
+	 * The write applies this proposal item. Inside its transaction the item is claimed (still waiting, still the write that was read, still kept,
+	 * and the apply still holds the proposal) and, when the write is done, recorded as applied with what it gave: both or neither.
+	 */
+	applies?: ItemClaim;
 	/** The admin API's session, for the operations that read or end it. */
 	session?: Session | null;
 	/** Proposal items the person took in the screen and saves with this write (doc 05): they become applied, tied to its activity row. */
@@ -141,6 +145,8 @@ export async function runWrite<Output>(
 			const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 			mustBeAsRead(touched, await loadRecords(engine, engine.db, touched));
 		}
+		// An item that is no longer this apply's to apply is not prepared for either.
+		if (options.applies) await claimItem(engine.db, options.applies, false);
 		// Before the transaction, with no connection held: a write that asks another service does it here (a key's check can take ten seconds).
 		prepared = await operation.prepare(input, ctx);
 	}
@@ -148,6 +154,9 @@ export async function runWrite<Output>(
 		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 		await lockRecords(trx, touched);
+		// After the records' locks, as a screen's save takes them (records, then the items it accepts): the item is held until this write ends, so
+		// nothing discards it, changes it or applies it a second time meanwhile.
+		if (options.applies) await claimItem(trx, options.applies, true);
 		const before = await loadRecords(engine, trx, touched);
 		mustBeAsRead(touched, before);
 
@@ -160,6 +169,13 @@ export async function runWrite<Output>(
 		await rewriteUses(trx, engine.site.schema(), records, { before: before.values() });
 		const after = await loadRecords(engine, trx, records);
 		const versions = () => Object.fromEntries([...after].map(([key, state]) => [key, state?.version ?? null]));
+		if (options.applies)
+			await settleApplied(trx, options.applies.itemId, {
+				output,
+				activityId,
+				after: versions(),
+				from: Object.fromEntries(touched.map((ref) => [recordKey(ref), before.get(recordKey(ref))?.version ?? null])),
+			});
 		// The assistant's own books are not the site's history: no row, no snapshot, nothing sent.
 		if (activityId === null) return { output, activityId, versions: versions(), deliveryIds: [] };
 		const undoable = !operation.humanOnly && !operation.structure && records.length > 0;
@@ -174,7 +190,7 @@ export async function runWrite<Output>(
 				summary: JSON.stringify(operation.summary?.(input, output) ?? { key: operation.name }),
 				targets: JSON.stringify(records),
 				conversation_id: options.conversationId ?? null,
-				proposal_item_id: options.proposalItemId ?? null,
+				proposal_item_id: options.applies?.itemId ?? null,
 				undo_until: undoable ? new Date(now.getTime() + UNDO_DAYS * 86_400_000) : null,
 				undone_at: null,
 			})

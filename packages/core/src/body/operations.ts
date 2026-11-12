@@ -116,12 +116,13 @@ export const bodyOperations = [
 		// Block operations name blocks by id, so in a proposal an edit can follow another change of the same entry. Two edits of the same block
 		// cannot wait side by side: the second's offsets count in the text the first has not changed yet.
 		follows: (input, versions) => ({ ...input, version: versions[`entry:${input.id}`] ?? input.version }),
-		overlaps: (input, earlier) => {
-			const named = (ops: typeof input.ops) =>
-				ops.flatMap((op) => (op.op === "remove" ? op.blocks : op.op === "insert" ? [] : [op.block]));
-			const blocks = new Set(named(earlier.ops));
-			return input.id === earlier.id && named(input.ops).some((block) => blocks.has(block));
-		},
+		places: (input) =>
+			input.ops.flatMap((op) =>
+				// A block put in is somewhere in the body, beside the others; a block changed, moved or taken out is that block.
+				(op.op === "remove" ? op.blocks : op.op === "insert" ? ["*"] : [op.block]).map(
+					(block) => `entry:${input.id}/body/${block}`,
+				),
+			),
 		preview: (input) => ({
 			summary: { key: "body.edit", values: { count: input.ops.length } },
 			changes: [{ kind: "entry", id: input.id }],

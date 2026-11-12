@@ -90,6 +90,26 @@ async function limitedJson(response: Response): Promise<unknown> {
 }
 
 /**
+ * A fetch that never follows a redirect, whatever its caller asks for: a key sent in a header would go with the redirect to wherever the service
+ * points, another origin or a machine inside the server's network. Every request that carries a key goes through one: the checks of the keys
+ * (the built-in services' and a plugin's alike) and the assistant's calls to the model services.
+ */
+export function withoutRedirects(fetch: typeof globalThis.fetch): typeof globalThis.fetch {
+	return (input, init) => fetch(input, { ...init, redirect: "error" });
+}
+
+/**
+ * Where each built-in service is called. Named here once: the keys are checked there, and the assistant calls the models there and nowhere else
+ * (a provider library that reads an address from the environment is given this one instead).
+ */
+export const SERVICE_URLS = {
+	anthropic: "https://api.anthropic.com/v1",
+	openai: "https://api.openai.com/v1",
+	openrouter: "https://openrouter.ai/api/v1",
+	gemini: "https://generativelanguage.googleapis.com/v1beta",
+} as const;
+
+/**
  * One GET; `null` when the service cannot be reached. A redirect is not followed: the key's headers would go with it to wherever the service points,
  * another origin or a machine inside the server's network. Only a 2xx answer's body is read.
  */
@@ -172,7 +192,7 @@ const anthropic: KeyService = {
 	async check({ secret }, tools) {
 		// The version Anthropic's API reference writes in its Models examples; the reference says the Models endpoint answers `2026-10-21` exactly as
 		// it answers `2023-06-01`. Not tried against the live API with a real key: without one it answers 401 before it looks at the version.
-		const listed = await get(tools, "https://api.anthropic.com/v1/models?limit=1000", {
+		const listed = await get(tools, `${SERVICE_URLS.anthropic}/models?limit=1000`, {
 			"x-api-key": secret,
 			"anthropic-version": "2026-10-21",
 		});
@@ -202,7 +222,7 @@ const openai: KeyService = {
 	// lists none of them starts with its first model, which the tests cover.
 	defaults: { assistant: ["gpt-5.5", "gpt-5.4", "gpt-5"], quick: ["gpt-5.4-mini", "gpt-5-mini"] },
 	async check({ secret }, tools) {
-		const listed = await get(tools, "https://api.openai.com/v1/models", bearer(secret));
+		const listed = await get(tools, `${SERVICE_URLS.openai}/models`, bearer(secret));
 		return answer(
 			listed,
 			(status) => REFUSED.has(status),
@@ -225,14 +245,14 @@ const openrouter: KeyService = {
 	defaults: { assistant: ["anthropic/claude-sonnet-5.5"], quick: ["anthropic/claude-haiku-5.5"] },
 	async check({ secret }, tools) {
 		// Its model list is open to anyone, so the key is asked about on its own first. Both requests share the check's one deadline.
-		const key = await get(tools, "https://openrouter.ai/api/v1/key", bearer(secret));
+		const key = await get(tools, `${SERVICE_URLS.openrouter}/key`, bearer(secret));
 		const taken = answer(
 			key,
 			(status) => REFUSED.has(status),
 			(body) => (isObject(body) ? [] : null),
 		);
 		if (!taken.ok) return taken;
-		const listed = await get(tools, "https://openrouter.ai/api/v1/models", bearer(secret));
+		const listed = await get(tools, `${SERVICE_URLS.openrouter}/models`, bearer(secret));
 		return answer(
 			listed,
 			(status) => REFUSED.has(status),
@@ -265,7 +285,7 @@ const gemini: KeyService = {
 		quick: ["gemini-3.8-flash", "gemini-3.5-flash"],
 	},
 	async check({ secret }, tools) {
-		const listed = await get(tools, "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000", {
+		const listed = await get(tools, `${SERVICE_URLS.gemini}/models?pageSize=1000`, {
 			"x-goog-api-key": secret,
 		});
 		return answer(
@@ -346,7 +366,8 @@ export async function checkKey(
 		const checked: unknown = await Promise.race([
 			// A plugin's check is someone else's code: it may throw before it returns a promise, or answer anything at all.
 			Promise.resolve()
-				.then(() => service.check(credentials, { fetch, signal: deadline.signal }))
+				// A plugin's check gets the same fetch the built-in ones use: it cannot be led along a redirect with the key either.
+				.then(() => service.check(credentials, { fetch: withoutRedirects(fetch), signal: deadline.signal }))
 				.catch(() => UNREACHABLE),
 			late,
 		]);

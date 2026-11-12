@@ -353,12 +353,13 @@ export const entryOperations = [
 		// replaces what the other change left, and cannot.
 		follows: (input, versions) =>
 			input.doc !== undefined ? null : { ...input, version: versions[`entry:${input.id}`] ?? input.version },
-		overlaps: (input, earlier) =>
-			input.id === earlier.id &&
-			((input.title !== undefined && earlier.title !== undefined) ||
-				(input.slug !== undefined && earlier.slug !== undefined) ||
-				(input.doc !== undefined && earlier.doc !== undefined) ||
-				Object.keys(input.values ?? {}).some((field) => field in (earlier.values ?? {}))),
+		places: (input) => [
+			...(input.title === undefined ? [] : [`entry:${input.id}/title`]),
+			...(input.slug === undefined ? [] : [`entry:${input.id}/slug`]),
+			...Object.keys(input.values ?? {}).map((field) => `entry:${input.id}/field/${field}`),
+			// A whole body: it holds every block, so no block edit of the same entry waits beside it.
+			...(input.doc === undefined ? [] : [`entry:${input.id}/body`]),
+		],
 		async touches(input, ctx) {
 			const [entry] = await loadEntries(ctx.db, [input.id]);
 			if (!entry) return [ref(input.id)];

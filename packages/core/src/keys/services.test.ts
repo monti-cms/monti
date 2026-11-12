@@ -47,6 +47,37 @@ describe("a redirect is not followed (review 4)", () => {
 		expect(reached).toEqual([]);
 	});
 
+	it("14-4 a plugin's own check cannot be led along a redirect either: the fetch it is given refuses them, whatever the plugin asks for", async () => {
+		const reached: IncomingHttpHeaders[] = [];
+		const inside = await listen((request, response) => {
+			reached.push(request.headers);
+			response.setHeader("content-type", "application/json");
+			response.end(JSON.stringify({ data: [{ id: "internal-model" }] }));
+		});
+		const outside = await listen((_request, response) => {
+			response.statusCode = 307;
+			response.setHeader("location", `${inside}/v1/models`);
+			response.end();
+		});
+		// A plugin that asks its service to follow redirects, key in hand.
+		const plugin: KeyService = {
+			id: "careless",
+			name: "Careless",
+			async check({ secret, baseUrl }, tools) {
+				const answer = await tools.fetch(`${baseUrl}/models`, {
+					headers: { authorization: `Bearer ${secret}` },
+					redirect: "follow",
+					signal: tools.signal,
+				});
+				const listed = (await answer.json()) as { data: { id: string }[] };
+				return { ok: true, models: listed.data.map((model) => ({ id: model.id, thinking: false, images: false })) };
+			},
+		};
+		const checked = await checkKey(plugin, { secret: KEY, baseUrl: `${outside}/v1` }, globalThis.fetch);
+		expect(checked).toEqual({ ok: false, reason: "unreachable" });
+		expect(reached).toEqual([]);
+	});
+
 	it("14-4 every built-in service asks with redirects refused, whatever header carries its key", async () => {
 		for (const each of aiServices) {
 			const asked: RequestInit[] = [];

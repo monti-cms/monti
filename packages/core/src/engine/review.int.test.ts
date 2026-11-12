@@ -1,5 +1,6 @@
 import { sql } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { testDatabase } from "../__test__/database";
 import { startSession } from "../auth/session";
 import type { Doc } from "../body/doc";
@@ -7,10 +8,11 @@ import { createAdminApi } from "../entry/api";
 import { runCli } from "../entry/cli";
 import { agentTools, callAgentTool } from "../entry/tools";
 import { CheckError, ForbiddenError, UnknownOperationError } from "../errors";
-import { type ApplyEvent, createMonti, type MontiOptions } from "../monti";
+import { type ApplyEvent, createMonti, definePlugin, type MontiOptions } from "../monti";
+import { defineOperation, type MontiEvent } from "../operation";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
-import type { ProposalView } from "./proposals";
+import { MOST_ITEMS, type ProposalView } from "./proposals";
 
 const db = await testDatabase();
 
@@ -66,6 +68,57 @@ async function folder(name: string) {
 	)) as Written;
 	return made.output.id;
 }
+
+/**
+ * A plugin's write that takes as long as the test says and counts how often it ran: what an apply does with an item whose write is slow. Each
+ * name has its own gate: `entered` is when its write began, `open` lets it end.
+ */
+function slowWork() {
+	const ran: Record<string, number> = {};
+	const gates = new Map<
+		string,
+		{ entered: Promise<void>; enter: () => void; opened: Promise<void>; open: () => void }
+	>();
+	const gate = (name: string) => {
+		let found = gates.get(name);
+		if (!found) {
+			let enter = () => {};
+			let open = () => {};
+			const entered = new Promise<void>((resolve) => {
+				enter = resolve;
+			});
+			const opened = new Promise<void>((resolve) => {
+				open = resolve;
+			});
+			found = { entered, enter, opened, open };
+			gates.set(name, found);
+		}
+		return found;
+	};
+	const work = defineOperation({
+		name: "probe.work",
+		kind: "write",
+		description: "Do a named piece of work.",
+		input: z.object({ name: z.string() }),
+		async run(input) {
+			ran[input.name] = (ran[input.name] ?? 0) + 1;
+			gate(input.name).enter();
+			await gate(input.name).opened;
+			return { name: input.name };
+		},
+		summary: () => ({ key: "probe.work" }),
+	});
+	return {
+		ran,
+		plugin: definePlugin({ name: "probe", operations: [work] }),
+		entered: (name: string) => gate(name).entered,
+		open: (name: string) => gate(name).open(),
+	};
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const itemRow = (id: string) =>
+	db.selectFrom("monti_proposal_item").selectAll().where("id", "=", id).executeTakeFirstOrThrow();
 
 beforeEach(async () => {
 	clock = new Date("2026-11-12T10:00:00Z");
@@ -355,6 +408,28 @@ describe("applying (flow 2, 12–15)", () => {
 		expect((await row(posts[0])).folder_id).toBeNull();
 	});
 
+	it("10-3 16-5 a session of the dev server's bypass opens a stream only while the bypass holds for the request, as it opens an operation", async () => {
+		const monti = site();
+		const post = await newPost("하나");
+		const proposal = await monti.proposals.create("c1", "보관해 줘");
+		await monti.proposals.add(proposal, "entries.archive", { ids: [post] });
+		const api = createAdminApi(monti);
+		const { token } = await startSession(db, "dev", clock);
+		const none = new AbortController().signal;
+		// From another machine, or with the bypass off: nothing, as with no session at all.
+		expect(await api.stream("proposals.apply", { input: { id: proposal } }, token, none)).toEqual({
+			status: 401,
+			body: { error: "unauthenticated" },
+		});
+		expect((await row(post)).status).toBe("draft");
+		// While it holds, the stream runs as a signed-in person's: the write it makes is the assistant's in the activity log, as under any session.
+		const answer = await api.stream("proposals.apply", { input: { id: proposal } }, token, none, true);
+		if (!("events" in answer)) throw new Error("the stream did not start");
+		for await (const _event of answer.events);
+		expect((await row(post)).status).toBe("archived");
+		expect(await activity()).toContainEqual({ operation: "entries.archive", actor: "assistant" });
+	});
+
 	it("10-1 a stream that fails after it began says so as its last event", async () => {
 		const monti = site();
 		const api = createAdminApi(monti);
@@ -379,43 +454,31 @@ describe("an apply cut short (flow 2, 14)", () => {
 		const { itemIds } = await monti.proposals.add(proposal, "entries.moveToFolder", { ids, folder: box });
 		const folders = async () => Promise.all(ids.map(async (id) => (await row(id)).folder_id));
 
-		// The server dies during the third item, at the worst moment: the item's write is in, and the item does not say so yet.
 		const [third, fourth] = await db
 			.selectFrom("monti_proposal_item")
 			.selectAll()
 			.where("id", "in", itemIds.slice(2))
 			.orderBy("position")
 			.execute();
+		// The server dies after the second item, still holding the proposal.
 		await monti.proposals.apply(proposal, itemIds.slice(0, 2));
 		await db
 			.updateTable("monti_proposal_item")
 			.set({ state: "pending" })
 			.where("id", "in", [third.id, fourth.id])
 			.execute();
-		await monti.run("entries.moveToFolder", third.input, {
-			actor: "assistant",
-			conversationId: "c1",
-			proposalItemId: third.id,
-			versions: third.base_versions,
-		});
-		expect(await folders()).toEqual([box, box, box, null]);
-		expect((await view(proposal)).items.map((item) => item.state)).toEqual([
-			"applied",
-			"applied",
-			"pending",
-			"pending",
-		]);
-
-		// While the dead apply still holds the proposal, another cannot start beside it.
 		await db
 			.updateTable("monti_proposal")
-			.set({ applying_until: new Date(clock.getTime() + 30_000) })
+			.set({ applying_until: new Date(clock.getTime() + 30_000), applying_token: "the apply that died" })
 			.where("id", "=", proposal)
 			.execute();
+		expect(await folders()).toEqual([box, box, null, null]);
+
+		// While the dead apply still holds the proposal, another cannot start beside it.
 		await expect(site().proposals.apply(proposal)).rejects.toMatchObject({ reason: { key: "proposals.applying" } });
 		expect((await view(proposal)).applying).toBe(true);
 
-		// It lets go after its time; the next apply, in a new process, runs only what is left: the third is known to be in, the fourth is applied.
+		// It lets go after its time; the next apply, in a new process, runs only what is left.
 		clock = new Date(clock.getTime() + 31_000);
 		const before = (await activity()).length;
 		const results = await site().proposals.apply(proposal);
@@ -423,10 +486,10 @@ describe("an apply cut short (flow 2, 14)", () => {
 			[third.id, "applied"],
 			[fourth.id, "applied"],
 		]);
-		expect((await activity()).length).toBe(before + 1);
+		expect((await activity()).length).toBe(before + 2);
 		expect(await folders()).toEqual([box, box, box, box]);
 		expect(await view(proposal)).toMatchObject({ status: "applied", applying: false });
-		// Put back from the card, all four go back: the third's write is the proposal's as much as the others'.
+		// Put back from the card, all four go back.
 		const reverted = (await site().run("proposals.revert", { id: proposal }, admin)) as Written<{ reverted: string[] }>;
 		expect(reverted.output.reverted).toHaveLength(4);
 		expect(await folders()).toEqual([null, null, null, null]);
@@ -492,7 +555,7 @@ describe("putting it back, and throwing it away (flow 2, 16)", () => {
 		]);
 		expect(seen.status).toBe("partial");
 		// The revert is a row of the log itself, the person's.
-		expect((await activity()).at(-1)).toEqual({ operation: "proposals.revert", actor: "admin" });
+		expect(await activity()).toContainEqual({ operation: "proposals.revert", actor: "admin" });
 	});
 
 	it("10-1 a proposal put back whole reads as reverted", async () => {
@@ -528,6 +591,348 @@ describe("putting it back, and throwing it away (flow 2, 16)", () => {
 		// Thrown away, it cannot be applied after all.
 		expect(await monti.proposals.apply(proposal)).toEqual([]);
 		await expect(monti.run("proposals.discard", { ids: ["x"], proposal }, admin)).rejects.toThrow(/Invalid input/);
+	});
+});
+
+describe("a person's decision while an apply runs (review 1 of #472)", () => {
+	it("10-3 an item discarded after the apply began is not written", async () => {
+		const monti = site();
+		const posts = [await newPost("하나"), await newPost("둘")];
+		const proposal = await monti.proposals.create("c1", "보관해 줘");
+		const { itemIds } = await monti.proposals.add(proposal, "entries.archive", { ids: posts });
+		// The first item lands; before the apply reaches the second, the person throws the second away.
+		const results = await monti.proposals.apply(proposal, undefined, async (progress) => {
+			if (progress.itemId === itemIds[0]) await site().run("proposals.discard", { ids: [itemIds[1]] }, admin);
+		});
+		expect(results).toMatchObject([{ itemId: itemIds[0], state: "applied" }]);
+		expect((await row(posts[0])).status).toBe("archived");
+		expect((await row(posts[1])).status).toBe("draft");
+		expect((await view(proposal)).items.map((item) => item.state)).toEqual(["applied", "discarded"]);
+	});
+
+	it("10-3 an item left out after the apply began is not written, and one made again is applied as it is now", async () => {
+		const monti = site();
+		const posts = [await newPost("하나"), await newPost("둘"), await newPost("셋")];
+		const proposal = await monti.proposals.create("c1", "보관해 줘");
+		const { itemIds } = await monti.proposals.add(proposal, "entries.archive", { ids: posts });
+		await monti.proposals.apply(proposal, undefined, async (progress) => {
+			if (progress.itemId !== itemIds[0]) return;
+			await site().run("proposals.include", { ids: [itemIds[1]], included: false }, admin);
+			// The third is changed at its place: it now renames the entry and no longer archives it.
+			await site().proposals.replace(itemIds[2], "entries.save", {
+				id: posts[2],
+				version: await version(posts[2]),
+				title: "셋 (새 이름)",
+			});
+		});
+		expect((await row(posts[1])).status).toBe("draft");
+		expect(await row(posts[2])).toMatchObject({ status: "draft", title: "셋 (새 이름)" });
+		expect((await view(proposal)).items.map((item) => item.state)).toEqual(["applied", "discarded", "applied"]);
+	});
+
+	it("10-3 a discard that comes while the item's write is under way waits for it, and then finds the item applied", async () => {
+		const probe = slowWork();
+		const monti = site({ plugins: [probe.plugin] });
+		const proposal = await monti.proposals.create("c1", "해 줘");
+		const { itemId } = await monti.proposals.add(proposal, "probe.work", { name: "a" });
+		const applying = monti.proposals.apply(proposal);
+		await probe.entered("a");
+		const discarding = site({ plugins: [probe.plugin] }).run("proposals.discard", { ids: [itemId] }, admin) as Promise<
+			Written<{ discarded: string[] }>
+		>;
+		await wait(150);
+		probe.open("a");
+		expect(await applying).toMatchObject([{ itemId, state: "applied" }]);
+		// The discard is told the truth: it threw nothing away.
+		expect((await discarding).output.discarded).toEqual([]);
+		expect((await itemRow(itemId)).state).toBe("applied");
+	});
+
+	it("10-1 a whole body saved and one of its blocks edited are one place, whichever operation asks first", async () => {
+		const monti = site();
+		const id = await newPost("글", ["original body"]);
+		const at = await version(id);
+		const proposal = await monti.proposals.create("c1", "고쳐 줘");
+		await monti.proposals.add(proposal, "entries.save", { id, version: at, doc: body("ZZoriginal body") });
+		// Its offsets count in the text the save replaces: applied after it, it would cut the wrong words.
+		await expect(
+			monti.proposals.add(proposal, "body.edit", {
+				id,
+				version: at,
+				ops: [{ op: "replaceText", block: "b_1", from: 0, to: 8, text: "" }],
+			}),
+		).rejects.toMatchObject({ reason: { key: "proposals.samePlace" } });
+		await monti.proposals.apply(proposal);
+		expect(await textOf(id)).toEqual(["ZZoriginal body"]);
+
+		// The other way round too.
+		const other = await newPost("다른 글", ["original body"]);
+		const second = await monti.proposals.create("c2", "고쳐 줘");
+		const version2 = await version(other);
+		await monti.proposals.add(second, "body.edit", {
+			id: other,
+			version: version2,
+			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 8, text: "" }],
+		});
+		await expect(
+			monti.proposals.add(second, "entries.save", { id: other, version: version2, doc: body("ZZoriginal body") }),
+		).rejects.toMatchObject({ reason: { key: "proposals.samePlace" } });
+		// A block put in beside it is another place; a field is another place.
+		await monti.proposals.add(second, "body.edit", {
+			id: other,
+			version: version2,
+			ops: [{ op: "insert", after: "b_1", blocks: [paragraph("b_9", "새 문단")] }],
+		});
+		await monti.proposals.add(second, "entries.save", { id: other, version: version2, values: { summary: "요약" } });
+		expect(await monti.proposals.apply(second)).toMatchObject([
+			{ state: "applied" },
+			{ state: "applied" },
+			{ state: "applied" },
+		]);
+		expect(await textOf(other)).toEqual([" body", "새 문단"]);
+	});
+
+	it("10-1 a block edit does not follow a write that did not say what it changed", async () => {
+		// A plugin's write that changes the entry and names no places: what it left of the body is not known.
+		const stamp = defineOperation({
+			name: "probe.stamp",
+			kind: "write",
+			description: "Put a mark at the start of an entry's first block.",
+			input: z.object({ id: z.string() }),
+			touches: (input) => [{ kind: "entry", id: input.id }],
+			async run(input, ctx) {
+				const entry = await ctx.db
+					.selectFrom("entries")
+					.select(["doc", "version"])
+					.where("id", "=", input.id)
+					.executeTakeFirstOrThrow();
+				const doc = entry.doc as Doc;
+				const first = doc.blocks[0];
+				const next = {
+					...doc,
+					blocks: [
+						{ ...first, content: [{ type: "text", text: `ZZ${(first.content?.[0] as { text: string }).text}` }] },
+						...doc.blocks.slice(1),
+					],
+				};
+				await ctx.db
+					.updateTable("entries")
+					.set({ doc: JSON.stringify(next), version: entry.version + 1 })
+					.where("id", "=", input.id)
+					.execute();
+				return { id: input.id };
+			},
+			summary: () => ({ key: "probe.stamp" }),
+		});
+		const monti = site({ plugins: [definePlugin({ name: "probe", operations: [stamp] })] });
+		const id = await newPost("글", ["original body"]);
+		const at = await version(id);
+		const proposal = await monti.proposals.create("c1", "고쳐 줘");
+		await monti.proposals.add(proposal, "probe.stamp", { id });
+		await monti.proposals.add(proposal, "body.edit", {
+			id,
+			version: at,
+			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 8, text: "" }],
+		});
+		expect(await monti.proposals.apply(proposal)).toMatchObject([{ state: "applied" }, { state: "stale" }]);
+		expect(await textOf(id)).toEqual(["ZZoriginal body"]);
+	});
+
+	it("10-1 a proposal holds a stated number of items at most, and says so to the assistant", async () => {
+		const monti = site();
+		const posts = [await newPost("하나"), await newPost("둘")];
+		const proposal = await monti.proposals.create("c1", "보관해 줘");
+		await db
+			.insertInto("monti_proposal_item")
+			.values(
+				Array.from({ length: MOST_ITEMS - 1 }, (_, index) => ({
+					id: `filler-${index}`,
+					proposal_id: proposal,
+					position: index,
+					operation: "entries.archive",
+					input: JSON.stringify({ ids: ["none"] }),
+					base_versions: JSON.stringify({}),
+					state: "discarded" as const,
+					reason: null,
+					output: null,
+					activity_id: null,
+				})),
+			)
+			.execute();
+		await expect(monti.proposals.add(proposal, "entries.archive", { ids: posts })).rejects.toMatchObject({
+			reason: { key: "proposals.tooMany", values: { most: MOST_ITEMS } },
+		});
+		expect((await monti.proposals.add(proposal, "entries.archive", { ids: [posts[0]] })).itemIds).toHaveLength(1);
+		expect((await view(proposal)).items).toHaveLength(MOST_ITEMS);
+	});
+});
+
+describe("one apply at a time, however long a write takes (review 1 of #472)", () => {
+	it("10-4 an apply whose write outlasts its hold keeps the proposal: it says it is still there while it works", async () => {
+		const probe = slowWork();
+		// Real time: the hold is 300 ms and the write takes more than two of them.
+		const monti = createMonti({ db, schema, now: () => new Date(), plugins: [probe.plugin] });
+		const proposal = await monti.proposals.create("c1", "해 줘");
+		await monti.proposals.add(proposal, "probe.work", { name: "a" });
+		const first = monti.proposals.apply(proposal, undefined, undefined, 300);
+		await probe.entered("a");
+		await wait(750);
+		await expect(monti.proposals.apply(proposal, undefined, undefined, 300)).rejects.toMatchObject({
+			reason: { key: "proposals.applying" },
+		});
+		probe.open("a");
+		expect(await first).toMatchObject([{ state: "applied" }]);
+		expect(probe.ran).toEqual({ a: 1 });
+	});
+
+	it("10-4 an apply that stopped saying so loses the proposal to the next one, writes nothing twice, and stops when it comes back", async () => {
+		const probe = slowWork();
+		const monti = site({ plugins: [probe.plugin] });
+		const proposal = await monti.proposals.create("c1", "해 줘");
+		const a = (await monti.proposals.add(proposal, "probe.work", { name: "a" })).itemId;
+		const b = (await monti.proposals.add(proposal, "probe.work", { name: "b" })).itemId;
+		const first = monti.proposals.apply(proposal);
+		await probe.entered("a");
+		// The first hangs in its first write, past its hold (the test's clock moves; its own "still here" never comes). A second apply takes over.
+		clock = new Date(clock.getTime() + 61_000);
+		const second = site({ plugins: [probe.plugin] }).proposals.apply(proposal);
+		// The second waits at the item the first is still writing.
+		await wait(200);
+		expect(probe.ran).toEqual({ a: 1 });
+		probe.open("a");
+		probe.open("b");
+		await expect(first).rejects.toMatchObject({ reason: { key: "proposals.applying" } });
+		expect(await second).toMatchObject([{ itemId: b, state: "applied" }]);
+		expect(probe.ran).toEqual({ a: 1, b: 1 });
+		expect([(await itemRow(a)).state, (await itemRow(b)).state]).toEqual(["applied", "applied"]);
+		expect(await view(proposal)).toMatchObject({ status: "applied", applying: false });
+	});
+
+	it("10-4 an item is recorded as applied by its own write: what it gave is there the moment the write is, for the items that need it", async () => {
+		// A receiver is told after the write has committed and before the apply goes on: what it reads of the item then is what a crash would leave.
+		const seen: { state: string; output: unknown; after: unknown }[] = [];
+		let watched = "";
+		const monti = site({
+			receivers: [
+				{
+					destination: "plugin:watch",
+					send: async (_event: MontiEvent) => {
+						const item = await itemRow(watched);
+						seen.push({ state: item.state, output: item.output, after: item.after_versions });
+					},
+				},
+			],
+		});
+		const id = await newPost("글", ["본문"]);
+		const proposal = await monti.proposals.create("c1", "발행해 줘");
+		watched = (await monti.proposals.add(proposal, "entries.publish", { ids: [id] })).itemId;
+		await monti.proposals.apply(proposal);
+		expect(seen).toHaveLength(1);
+		expect(seen[0]).toMatchObject({ state: "applied", after: { [`entry:${id}`]: expect.any(Number) } });
+		expect(seen[0].output).not.toBeNull();
+	});
+
+	it("10-4 an apply cut after a folder was made goes on to move the entries into it", async () => {
+		const monti = site();
+		const id = await newPost("글");
+		const proposal = await monti.proposals.create("c1", "새 폴더로 옮겨 줘");
+		const made = await monti.proposals.add(proposal, "folders.create", {
+			scope: { collection: "post" },
+			parentId: null,
+			name: "2024",
+		});
+		await monti.proposals.add(proposal, "entries.moveToFolder", { ids: [id], folder: { $item: made.itemId } });
+		// The server goes away right after the first item.
+		await expect(
+			monti.proposals.apply(proposal, undefined, () => {
+				throw new Error("the server went away");
+			}),
+		).rejects.toThrow("the server went away");
+		expect((await row(id)).folder_id).toBeNull();
+		expect(await site().proposals.apply(proposal)).toMatchObject([{ state: "applied" }]);
+		const box = await db.selectFrom("folders").select("id").where("name", "=", "2024").executeTakeFirstOrThrow();
+		expect((await row(id)).folder_id).toBe(box.id);
+	});
+});
+
+describe("putting back more than one change of an entry (review 1 of #472)", () => {
+	it("10-1 a title change and a body change of one entry both go back, and both writes are undone", async () => {
+		const monti = site();
+		const id = await newPost("처음 제목", ["처음 본문"]);
+		const at = await version(id);
+		const proposal = await monti.proposals.create("c1", "고쳐 줘");
+		await monti.proposals.add(proposal, "entries.save", { id, version: at, title: "바꾼 제목" });
+		await monti.proposals.add(proposal, "body.edit", {
+			id,
+			version: at,
+			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "바꾼" }],
+		});
+		await monti.proposals.apply(proposal);
+		expect(await row(id)).toMatchObject({ title: "바꾼 제목" });
+		expect(await textOf(id)).toEqual(["바꾼 본문"]);
+
+		const reverted = (await monti.run("proposals.revert", { id: proposal }, admin)) as Written<{
+			reverted: string[];
+			kept: string[];
+		}>;
+		expect(reverted.output.kept).toEqual([]);
+		expect(reverted.output.reverted).toHaveLength(2);
+		expect(await row(id)).toMatchObject({ title: "처음 제목" });
+		expect(await textOf(id)).toEqual(["처음 본문"]);
+		expect(await view(proposal)).toMatchObject({ status: "reverted" });
+	});
+
+	it("10-1 a change someone made between two of the proposal's stays: the later one goes back, the earlier one is left and can still be undone", async () => {
+		const monti = site();
+		const id = await newPost("처음 제목", ["처음 본문"]);
+		const proposal = await monti.proposals.create("c1", "고쳐 줘");
+		const first = await monti.proposals.add(proposal, "entries.save", {
+			id,
+			version: await version(id),
+			title: "바꾼 제목",
+		});
+		await monti.proposals.apply(proposal);
+		// A person changes the summary; then the assistant's second change is made on that.
+		await monti.run("entries.save", { id, version: await version(id), values: { summary: "사람이 쓴 요약" } }, admin);
+		await monti.proposals.add(proposal, "body.edit", {
+			id,
+			version: await version(id),
+			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "바꾼" }],
+		});
+		await monti.proposals.apply(proposal);
+
+		const reverted = (await monti.run("proposals.revert", { id: proposal }, admin)) as Written<{
+			reverted: string[];
+			kept: string[];
+		}>;
+		expect(reverted.output.kept).toEqual([first.itemId]);
+		expect(await textOf(id)).toEqual(["처음 본문"]);
+		expect(await row(id)).toMatchObject({ title: "바꾼 제목" });
+		// The write it left is not used up: the activity log can still undo it when the person's change is out of the way.
+		const kept = await itemRow(first.itemId);
+		const write = await db
+			.selectFrom("monti_activity")
+			.select("undone_at")
+			.where("id", "=", kept.activity_id as string)
+			.executeTakeFirstOrThrow();
+		expect(write.undone_at).toBeNull();
+	});
+
+	it("10-1 T29 putting a publication back takes the entry off the site and tells the receivers", async () => {
+		const events: MontiEvent[] = [];
+		const monti = site({
+			receivers: [{ destination: "plugin:watch", send: async (event: MontiEvent) => void events.push(event) }],
+		});
+		const id = await newPost("글", ["본문"]);
+		const proposal = await monti.proposals.create("c1", "발행해 줘");
+		await monti.proposals.add(proposal, "entries.publish", { ids: [id] });
+		await monti.proposals.apply(proposal);
+		expect(events.map((event) => event.type)).toEqual(["entry.published"]);
+
+		await monti.run("proposals.revert", { id: proposal }, admin);
+		expect(await db.selectFrom("entry_published").select("entry_id").where("entry_id", "=", id).execute()).toEqual([]);
+		expect(events.map((event) => event.type)).toEqual(["entry.published", "entry.unpublished"]);
+		expect(events[1]).toMatchObject({ ids: [id] });
 	});
 });
 

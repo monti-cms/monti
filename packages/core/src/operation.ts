@@ -97,10 +97,12 @@ export type OperationDefinition<Input, Output, Prepared = undefined> = {
 	 */
 	follows?: (input: Input, versions: Record<string, number>) => Input | null;
 	/**
-	 * Whether two inputs change the same place (the same block, the same field of one entry). The assistant cannot propose the second while the first
-	 * waits in the same proposal: applied one after the other, the second would land on what the first left.
+	 * The places a write changes, as paths every operation names the same way (`entry:<id>/title`, `entry:<id>/field/<name>`, `entry:<id>/body` for
+	 * a whole body, `entry:<id>/body/<block id>` for one block; see `overlap`). Two waiting items of one proposal cannot change the same place, or
+	 * one a place that holds the other's, whatever operations they are: applied one after the other, the second would land on what the first left.
+	 * A write that `follows` must name its places: it follows only earlier writes that named theirs.
 	 */
-	overlaps?: (input: Input, earlier: Input) => boolean;
+	places?: (input: Input) => string[];
 	/** It runs without a session: the sign-in operations. Only the admin API offers it, never a tool or a command (doc 15). */
 	open?: boolean;
 	/** For the model. The admin never sees it. */
@@ -161,8 +163,17 @@ export function defineOperation<Input, Output, Prepared = undefined>(
 			definition.bookkeeping ||
 			definition.each ||
 			definition.follows ||
-			definition.overlaps)
+			definition.places)
 	)
 		throw new Error(`Operation "${definition.name}" is not a write, so it has none of a write's parts.`);
 	return { ...definition, __operation: true };
+}
+
+/**
+ * Whether two places are the same or one holds the other: `entry:1/body` holds `entry:1/body/b_3`. A place ending in `/*` is somewhere inside
+ * its parent without saying where (a block put in): it is held by its parent, and is the same as nothing, so two of them stand side by side.
+ */
+export function overlap(a: string, b: string): boolean {
+	if (a === b) return !a.endsWith("/*");
+	return a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
 }

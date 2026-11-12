@@ -158,8 +158,11 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		rawBody: unknown,
 		token: string | null | undefined,
 		signal: AbortSignal,
+		/** The request is one the dev server's bypass lets in. */
+		local = false,
 	): Promise<{ status: number; body: unknown } | { status: 200; events: AsyncIterable<unknown> }> {
-		const session = await findSession(monti.db, token, monti.now());
+		// As an operation's: a bypassed session opens a stream only while the bypass holds for the request.
+		const session = await sessionOf(token, local);
 		if (!session) return { status: 401, body: { error: "unauthenticated" } };
 		const body = Body.safeParse(rawBody);
 		if (!body.success) return { status: 400, body: { error: "invalid-body" } };
@@ -194,6 +197,7 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 			await request.json().catch(() => null),
 			cookies(request)[SESSION_COOKIE],
 			request.signal,
+			bypasses(request),
 		);
 		if (!("events" in answer)) return json(answer.status, answer.body);
 		const events = answer.events[Symbol.asyncIterator]();
