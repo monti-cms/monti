@@ -106,10 +106,12 @@ async function openChanges(page: ReturnType<typeof within>, body: ReturnType<typ
 	await body.findByRole("menu", {}, wait);
 }
 
-/** Opens settings from the sidebar and waits for the collections; sheets and menus are in the body, outside the canvas. */
+/** Opens settings from the sidebar, goes to its collections tab and waits for the collections; sheets and menus are in the body, outside the canvas. */
 async function settings(canvasElement: HTMLElement) {
 	const page = within(canvasElement);
 	await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+	// The tab's name ends with what its dot says when it holds a proposal.
+	await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
 	await page.findByRole("button", { name: "summary 열기" }, wait);
 	return { page, body: within(canvasElement.ownerDocument.body) };
 }
@@ -325,6 +327,32 @@ export const PreviewAddressReview: Story = {
 	},
 };
 
+/** T151: a preview address that is the posts' own public address. The problem is told under the field, where it is fixed. */
+export const AddressProblem: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		fill(await page.findByLabelText("미리보기 주소"), "posts");
+		await page.findByText("이미 쓰는 주소입니다", {}, wait);
+	},
+};
+
+/** T151: the same problem at the top of the review ("고칠 곳"), with "열기" back to the field. */
+export const AddressProblemReview: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page, body } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		fill(await page.findByLabelText("미리보기 주소"), "posts");
+		await page.findByText("이미 쓰는 주소입니다", {}, wait);
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		const review = within(await body.findByRole("dialog", {}, wait));
+		await review.findByText("고칠 곳", {}, wait);
+		await review.findByRole("button", { name: "열기" });
+	},
+};
+
 /** CollectionEditor: the posts' editor allowance with one block turned off. */
 export const Editor: Story = {
 	loaders: site(),
@@ -389,6 +417,24 @@ export const NewCollectionReview: Story = {
 	},
 };
 
+/** T152: a new collection made with a preview address: its review names the address beside the public one. */
+export const NewCollectionPreviewReview: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page, body } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
+		fill(await body.findByLabelText(/^이름/), "노트");
+		fill(body.getByLabelText(/^식별자/), "note");
+		await userEvent.click(body.getByRole("button", { name: "만들기" }));
+		await page.findByRole("button", { name: "title 열기" });
+		await sheetGone(body);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		fill(await page.findByLabelText("미리보기 주소"), "preview");
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		await body.findByText("저장된 데이터는 바뀌지 않습니다.", {}, wait);
+	},
+};
+
 /** Flow 4, step 16: the memos leave the list at once; the changes list and the toast can undo it. */
 export const DeleteCollection: Story = {
 	loaders: site(),
@@ -445,23 +491,23 @@ const refusing =
 
 /**
  * A refused apply stays where the person acts (the feedback ladder in status.md): the review keeps open with the reason at its top, not a toast that goes.
- * The site refuses `schema.apply` here.
+ * The site refuses `settings.save` here.
  */
 export const ApplyRefused: Story = {
 	loaders: site(),
-	render: refusing("schema.apply"),
+	render: refusing("settings.save"),
 	play: async (context) => {
 		await NewCollectionReview.play?.(context);
 		const body = within(context.canvasElement.ownerDocument.body);
 		await userEvent.click(body.getByRole("button", { name: "적용" }));
-		await body.findByText("저장하지 못했습니다. 다시 시도해 주세요.", {}, wait);
+		await body.findByText("저장하지 못했습니다", {}, wait);
 		await expect(body.getByRole("button", { name: "적용" })).toBeInTheDocument();
 	},
 };
 
 /**
  * A save refused before its review opens (the site refuses `schema.plan` here): the reason is the page's banner, at the very top of the screen over
- * the title, where the frame's own banners stand (common.md). It stays until the next save.
+ * the title, where the frame's own banners stand (common.md). It stays until the next save's answer.
  */
 export const SaveRefused: Story = {
 	loaders: site(),
@@ -469,7 +515,7 @@ export const SaveRefused: Story = {
 	play: async ({ canvasElement }) => {
 		const { page } = await changeFields(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
-		await page.findByText("저장하지 못했습니다. 다시 시도해 주세요.", {}, wait);
+		await page.findByText("저장하지 못했습니다", {}, wait);
 	},
 };
 
@@ -579,6 +625,29 @@ export const Proposal: Story = {
 	play: async ({ canvasElement }) => {
 		const { page } = await settings(canvasElement);
 		await page.findByRole("button", { name: "readingTime 열기" }, wait);
+	},
+};
+
+/**
+ * The assistant proposed a preview address for the posts, and a field beside it: the address is blue in its field on the basics, with its discard
+ * and what is saved ("공개 주소에서") struck under it, and the bubble walks from the fields to it.
+ */
+export const PreviewAddressProposal: Story = {
+	loaders: site({
+		more: async ({ monti }) => {
+			const draft = structuredClone(schema);
+			const post = draft.collections.post as { previewPath?: string; fields: Record<string, unknown> };
+			post.previewPath = "/preview/:slug";
+			post.fields.readingTime = { kind: "text", max: 10 };
+			const proposal = await monti.proposals.create("conversation-1", "미리보기 페이지 주소도 넣어 줘");
+			await monti.proposals.add(proposal, "schema.apply", { draft, renames: [], answers: {} });
+		},
+	}),
+	play: async ({ canvasElement }) => {
+		const { page } = await settings(canvasElement);
+		await page.findByRole("button", { name: "readingTime 열기" }, wait);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await page.findByLabelText("미리보기 주소");
 	},
 };
 

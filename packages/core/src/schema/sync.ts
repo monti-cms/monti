@@ -1,5 +1,5 @@
 import type { Monti } from "../monti";
-import { readSchemaState } from "./apply";
+import { pendingChanges, readSchemaState } from "./apply";
 import { planSchema, type SchemaChange, schemaHash } from "./plan";
 
 export type SyncResult =
@@ -21,6 +21,15 @@ export async function syncSchemaFile(monti: Monti): Promise<SyncResult> {
 	if (!state) return { status: "fresh" };
 	if (state.hash === schemaHash(schema)) return { status: "same" };
 	if (!monti.site.files) return { status: "migrate" };
+	// Change files the database has not followed (a save whose database step failed, a write a crash cut off, a teammate's change pulled in) carry
+	// their steps and the review's answers: they are applied as they are, never read back from the schema file as a hand edit.
+	const pending = await pendingChanges(monti.db, await monti.site.files.readChanges(monti.db));
+	if (pending.length > 0) {
+		await monti.run("schema.retry", {}, { actor: "cli" });
+		const after = await readSchemaState(monti.db);
+		if (after?.hash === schemaHash(schema)) return { status: "applied", changeId: String(pending.at(-1)?.id) };
+		return syncSchemaFile(monti);
+	}
 	const changes = await planSchema(monti.db, state.schema, schema);
 	if (changes.some((change) => change.choices)) return { status: "review", changes };
 	const result = (await monti.run("schema.apply", { draft: schema }, { actor: "cli" })) as {

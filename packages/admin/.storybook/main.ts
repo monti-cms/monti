@@ -21,7 +21,13 @@ const config: StorybookConfig = {
 		plugins: [...(vite.plugins ?? []), tailwindcss()],
 		resolve: {
 			...vite.resolve,
-			alias: { ...(vite.resolve?.alias as object), pg: stub, "node:fs/promises": stub, "node:path": stub },
+			alias: {
+				...(vite.resolve?.alias as object),
+				pg: stub,
+				"node:fs/promises": stub,
+				"node:path": stub,
+				"node:os": stub,
+			},
 		},
 		optimizeDeps: { ...vite.optimizeDeps, exclude: [...(vite.optimizeDeps?.exclude ?? []), "@electric-sql/pglite"] },
 	}),

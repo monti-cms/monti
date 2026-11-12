@@ -509,7 +509,18 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
-	"0017_loose_tickets": {
+	"0018_settings": {
+		async up(db) {
+			// The admin values of the settings screen (doc 12): one row for the site's (its name, how it writes), one for the admin's own (language, features).
+			await db.schema
+				.createTable("monti_settings")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("values", "jsonb", (column) => column.notNull())
+				.addColumn("version", "integer", (column) => column.notNull().defaultTo(1))
+				.execute();
+		},
+	},
+	"0019_loose_tickets": {
 		async up(db) {
 			// The direct way up (doc 20): a loose key is one the server checked the bytes of (`sealed`), or one a browser was handed a signed address for,
 			// with the size that address was signed for (`ticket_size`). Only a sealed key becomes a file's on a storage that takes direct uploads.

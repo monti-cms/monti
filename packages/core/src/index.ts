@@ -25,6 +25,7 @@ export {
 } from "./body/doc";
 export { applyOps, type BodyOp } from "./body/edit";
 export { ENTRY_LINK, entryLink } from "./body/links";
+export { fingerprint } from "./bytes";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
 export { migrateToLatest } from "./db/migrations";
 export type { Database, ItemExchange, ProposalItemState, RunStatus } from "./db/schema";
@@ -145,7 +146,7 @@ export {
 	type UsageResult,
 	unlinkTargetGroup,
 } from "./relations/operations";
-export type { AdminValues } from "./schema/admin-values";
+export { type AdminValues, type AdminValuesPatch, diffAdminValues, mergeAdminValues } from "./schema/admin-values";
 export { migrateContent } from "./schema/apply";
 export {
 	type CollectionDefinition,
@@ -157,6 +158,8 @@ export {
 	type LocaleMode,
 	type LocalesDefinition,
 	localeModeOf,
+	MAX_COLLECTION_NAME,
+	MAX_FIELD_NAME,
 	type Schema,
 	type SchemaProblem,
 	translates,
@@ -164,6 +167,7 @@ export {
 export { type ChangeFile, type ChangeStep, readChangeFiles, type SchemaFiles, schemaFilesAt } from "./schema/files";
 export type { Answers, Choice, Rename, SchemaChange } from "./schema/plan";
 export { type SyncResult, syncSchemaFile } from "./schema/sync";
+export { ADMIN_LANGUAGES, type AdminLanguage } from "./settings/values";
 export type { Site } from "./site";
 export { type AnyStream, defineStream, type Stream, type StreamContext, type StreamDefinition } from "./stream";
 export type { FieldMark } from "./translations/fields";

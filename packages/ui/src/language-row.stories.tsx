@@ -54,14 +54,36 @@ export const Languages: Story = {
 	),
 };
 
-/** A list that cannot be edited (a deployed site without the GitHub plugin): only the flag shows, no handles or ×. */
+/** A list that cannot be edited (the live site): a lock after every language, only the flag at the end, no handles or ×. */
 export const Locked: Story = {
 	render: () => (
 		<Stack as="ul" gap={0} width="content">
-			<LanguageRow name="한국어" code="ko">
+			<LanguageRow name="한국어" code="ko" locked="운영 사이트에서는 잠김">
 				<LanguageSource flag="원문" />
 			</LanguageRow>
-			<LanguageRow name="English" code="en" label="영어" />
+			<LanguageRow name="English" code="en" label="영어" locked="운영 사이트에서는 잠김" />
+		</Stack>
+	),
+};
+
+/** A language the assistant proposed and nobody has taken yet: its dot is the blue one. */
+export const Proposed: Story = {
+	render: () => (
+		<Stack as="ul" gap={0} width="content">
+			<LanguageRow name="한국어" code="ko" handled>
+				<LanguageSource flag="원문" />
+			</LanguageRow>
+			<LanguageRow
+				name="Deutsch"
+				code="de"
+				label="독일어"
+				dot="추가"
+				dotTone="proposal"
+				handled
+				handle={<DragHandle aria-label="끌어서 옮기기" />}
+			>
+				{remove}
+			</LanguageRow>
 		</Stack>
 	),
 };

@@ -45,7 +45,7 @@ function ChangeGroup({
 	}) {
 	return (
 		<section data-slot="change-group" data-kind={kind} className={cn(changeVariants({ kind }), className)} {...props}>
-			<span data-slot="change-tag" className="whitespace-nowrap font-mono text-monti-micro">
+			<span data-slot="change-tag" className="whitespace-nowrap font-sans text-monti-micro">
 				{tag}
 			</span>
 			<span className="flex min-w-0 items-baseline gap-monti-12 text-monti-body">

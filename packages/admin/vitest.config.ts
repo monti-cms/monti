@@ -15,7 +15,7 @@ export default defineConfig({
 				include: ["src/**/*.screen.test.tsx"],
 				setupFiles: ["./test/screen-setup.ts"],
 				// The core's server-only modules, as in Storybook (.storybook/main.ts).
-				resolve: { alias: { pg: stub, "node:fs/promises": stub, "node:path": stub } },
+				resolve: { alias: { pg: stub, "node:fs/promises": stub, "node:path": stub, "node:os": stub } },
 				optimizeDeps: { exclude: ["@electric-sql/pglite"] },
 			}),
 		],

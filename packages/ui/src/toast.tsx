@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Toaster as Engine, toast as engine } from "sonner";
+import { type ReactNode, useLayoutEffect, useState, useSyncExternalStore } from "react";
+import { Toaster as Engine, toast as engine, useSonner } from "sonner";
+import { dockShown, watchDock } from "./bottom-dock";
 import { cn } from "./cn";
 import { HIT_AREA } from "./hit-area";
 import { FolderMoveTo } from "./icons";
@@ -103,17 +104,51 @@ function dropHint(
  */
 export const toast = Object.assign(show, { error, dropHint, dismiss: engine.dismiss });
 
+/** How far the stack stands from the window's bottom edge, and from the top of what is docked there (the proposal bubble) while it is shown. */
+const EDGE = 32;
+const OVER_DOCK = 12;
+
 /**
- * Mount once where the admin's pages are. The look is set by `toast`; this only places the stack, bottom center, 32px above the window's bottom edge. It shows only the toasts of this
+ * Mount once where the admin's pages are. The look is set by `toast`; this only places the stack, bottom center, 32px above the window's bottom edge.
+ * While something is docked at the bottom centre (the proposal bubble, `bottom-dock.ts`) the stack stands 12px above it instead, and comes back
+ * down when it is gone: a toast never covers a control a person is about to press. It shows only the toasts of this
  * file, so it can sit beside a `sonner` `Toaster` of the site's own. `duration` is how long a toast stays
  * unless it says otherwise (four seconds; Storybook keeps them up).
  */
 export function Toaster({ duration }: { duration?: number }) {
+	const docked = useSyncExternalStore(watchDock, dockShown, () => null);
+	const { toasts } = useSonner();
+	const [bottom, setBottom] = useState(EDGE);
+	useLayoutEffect(() => {
+		if (!docked) {
+			setBottom(EDGE);
+			return;
+		}
+		// Measured, not known: what is docked stands over the end of its column, which is the window's bottom on one screen and the top of a
+		// status bar on another.
+		const measure = () => {
+			const held = docked.firstElementChild;
+			setBottom(
+				held ? Math.max(EDGE, Math.ceil(window.innerHeight - held.getBoundingClientRect().top) + OVER_DOCK) : EDGE,
+			);
+		};
+		measure();
+		// It moves without changing size when its column does (a bar comes in under the column): the column is watched too.
+		const watch = new ResizeObserver(measure);
+		watch.observe(docked);
+		if (docked.parentElement) watch.observe(docked.parentElement);
+		window.addEventListener("resize", measure);
+		return () => {
+			watch.disconnect();
+			window.removeEventListener("resize", measure);
+		};
+		// And measured again whenever a toast comes or goes: where it stands is right at the moment it matters, whatever moved it.
+	}, [docked, toasts.length]);
 	return (
 		<Engine
 			id={TOASTER_ID}
 			position="bottom-center"
-			offset={{ bottom: 32 }}
+			offset={{ bottom }}
 			duration={duration}
 			// The engine gives a custom toast the width of its content, at the left of the stack: this puts the pill in the middle of it.
 			toastOptions={{ classNames: { toast: "flex! w-full justify-center" } }}

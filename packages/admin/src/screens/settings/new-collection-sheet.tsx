@@ -1,3 +1,4 @@
+import { MAX_COLLECTION_NAME } from "@monti-cms/core";
 import {
 	Affix,
 	Button,
@@ -8,6 +9,7 @@ import {
 	FormFieldSet,
 	Inline,
 	Input,
+	Label,
 	LockMark,
 	RadioGroup,
 	RadioItem,
@@ -17,13 +19,14 @@ import {
 	SheetFooter,
 	SheetHeader,
 	SheetTitle,
+	Stack,
 	Switch,
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { addressOf, addressPart } from "./basics-tab";
 import { at, type DraftField } from "./schema-draft";
-import type { CollectionsDraft } from "./use-collections-draft";
+import type { SettingsDraft } from "./use-settings-draft";
 
 /** A collection's identifier: the schema's rule (`checkSchema`), so a wrong one is caught before it is made. */
 const IDENTIFIER = /^[a-z][a-zA-Z0-9]*$/;
@@ -38,7 +41,7 @@ export function NewCollectionSheet({
 	onClose,
 	onMade,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	open: boolean;
 	onClose: () => void;
 	onMade: (collection: string) => void;
@@ -55,7 +58,7 @@ function Body({
 	onClose,
 	onMade,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	onClose: () => void;
 	onMade: (collection: string) => void;
 }) {
@@ -77,9 +80,11 @@ function Body({
 			: null
 		: !IDENTIFIER.test(id)
 			? t("settings.new.badId")
-			: taken
-				? t("settings.field.nameTaken")
-				: null;
+			: id.length > MAX_COLLECTION_NAME
+				? t("settings.problem.tooLong")
+				: taken
+					? t("settings.field.nameTaken")
+					: null;
 	const ready = label.trim() !== "" && id !== "" && error === null;
 	const address = path ?? addressOf(id);
 
@@ -154,17 +159,20 @@ function Body({
 						<RadioItem value="item" label={t("settings.new.item")} description={t("settings.new.itemHint")} />
 					</RadioGroup>
 				</FormFieldSet>
-				<FormField>
-					<div className="flex min-h-monti-control-xs items-center gap-monti-8">
-						<FormFieldLabel htmlFor={kind === "item" ? "collection-public-page" : "collection-address"}>
+				{/* The row's words and, for an item, the switch of its public page; the address under it (collections.md). */}
+				<Stack gap={4}>
+					<Inline minHeight="control-xs" align="center" justify="between" gap={8}>
+						<Label
+							htmlFor={kind === "item" ? "collection-public-page" : "collection-address"}
+							size="caption"
+							tone="subtle"
+						>
 							{t("settings.basics.path")}
-						</FormFieldLabel>
+						</Label>
 						{kind === "item" ? (
-							<span className="ml-auto">
-								<Switch id="collection-public-page" checked={publicPage} onCheckedChange={setPublicPage} />
-							</span>
+							<Switch id="collection-public-page" checked={publicPage} onCheckedChange={setPublicPage} />
 						) : null}
-					</div>
+					</Inline>
 					{(kind === "document" || publicPage) && (
 						<Affix
 							id="collection-address"
@@ -176,7 +184,7 @@ function Body({
 							onChange={(event) => setPath(addressOf(event.target.value))}
 						/>
 					)}
-				</FormField>
+				</Stack>
 			</SheetBody>
 			<SheetFooter>
 				<Button variant="ghost" onClick={onClose}>
