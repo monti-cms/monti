@@ -1516,3 +1516,111 @@ describe("the focus after a pressed control goes (tokens.md, the states)", () =>
 		await focusIs(() => box().element());
 	});
 });
+
+describe("the assistant from inside an editor (T164; flow 2, 05)", () => {
+	const title = () => page.getByRole("textbox", { name: "제목" });
+	const titleOf = async (loaded: Loaded, id: string) =>
+		((await loaded.site.monti.run("entries.get", { id }, stories.admin)) as { entry: { title: string } }).entry.title;
+	const beat = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+
+	it("10-1 ✦ at the end of the entry editor's head opens the panel beside the entry, which stays as it is; closed, the button is back with the focus and opens it again", async () => {
+		const story = open(stories.InEditor);
+		await story.run();
+		await userEvent.fill(title(), "둘째 글, 고치는 중");
+		const typedIn = title().element();
+		await userEvent.click(button("어시스턴트 열기"));
+		await expect.element(box()).toBeVisible();
+		// The entry was not made anew for the panel: the same field, with what was typed.
+		expect(title().element()).toBe(typedIn);
+		await expect.element(title()).toHaveValue("둘째 글, 고치는 중");
+		await expect.element(button("어시스턴트 열기")).not.toBeInTheDocument();
+		// This entry goes along.
+		await expect.element(button("이 글 빼기")).toBeVisible();
+		await userEvent.click(panel().getByRole("button", { name: "닫기" }));
+		await expect.poll(() => focused()).toBe(button("어시스턴트 열기").element());
+		expect(title().element()).toBe(typedIn);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(box()).toBeVisible();
+	});
+
+	it("10-1 ✦ at the end of the template editor's head opens the panel there too", async () => {
+		const story = on({});
+		await story.run();
+		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
+		window.location.hash = "#/templates/new";
+		await userEvent.click(button("어시스턴트 열기"));
+		await expect.element(box()).toBeVisible();
+		await expect.element(button("어시스턴트 열기")).not.toBeInTheDocument();
+	});
+
+	it("10-1 on a site without the assistant an editor's head has no ✦", async () => {
+		const story = on({ plugin: false });
+		await story.run();
+		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
+		window.location.hash = `#/c/post/${story.loaded().ids.second}`;
+		await expect.element(title()).toHaveValue("둘째 글");
+		expect(button("어시스턴트 열기").elements()).toHaveLength(0);
+	});
+
+	it("10-1 [flow 2·05] '저장하고 열기': the open entry is saved, then the entry the assistant was asked for opens; the step is gone", async () => {
+		const story = open(stories.SaveAndOpen);
+		await story.run();
+		const loaded = story.loaded();
+		// Nothing moved, and nothing was saved, when the assistant was asked.
+		expect(window.location.hash).toBe(`#/c/post/${loaded.ids.second}`);
+		expect(await titleOf(loaded, loaded.ids.second)).toBe("둘째 글");
+		await userEvent.click(button("저장하고 열기"));
+		await expect.poll(() => window.location.hash).toBe(`#/c/post/${loaded.ids.third}`);
+		await expect.element(title()).toHaveValue("셋째 글");
+		expect(await titleOf(loaded, loaded.ids.second)).toBe("둘째 글, 고치는 중");
+		await expect.element(button("저장하고 열기")).not.toBeInTheDocument();
+	});
+
+	it("10-1 '저장하고 열기' when the save is refused: the editor says why as it always does, the screen stays, and the step is still there", async () => {
+		const story = open(stories.SaveAndOpen);
+		await story.run();
+		const loaded = story.loaded();
+		loaded.net.lose("entries.save");
+		await userEvent.click(button("저장하고 열기"));
+		await expect.element(page.getByText("서버가 답하지 않았습니다")).toBeVisible();
+		await beat();
+		expect(window.location.hash).toBe(`#/c/post/${loaded.ids.second}`);
+		await expect.element(title()).toHaveValue("둘째 글, 고치는 중");
+		await expect.element(button("저장하고 열기")).toBeVisible();
+		expect(await titleOf(loaded, loaded.ids.second)).toBe("둘째 글");
+	});
+
+	it("10-1 focus: asked to show a list from an entry with unsaved changes, '저장하고 열기' pressed with the keyboard saves, shows the list, and hands the focus to the box", async () => {
+		const story = on({
+			script: () => [
+				{ calls: [{ name: "list_show", input: { collection: "post", query: { filters: [] } } }] },
+				{ text: "저장하지 않은 변경이 있어 옮기지 않았습니다." },
+			],
+		});
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		window.location.hash = `#/c/post/${loaded.ids.second}`;
+		await expect.element(title()).toHaveValue("둘째 글");
+		await userEvent.fill(title(), "둘째 글, 고치는 중");
+		await say("글 목록 보여 줘");
+		await expect.element(button("저장하고 열기")).toBeVisible();
+		await userEvent.keyboard("{Tab}");
+		(button("저장하고 열기").element() as HTMLElement).focus();
+		expect(button("저장하고 열기").element().matches(":focus-visible")).toBe(true);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
+		expect(await titleOf(loaded, loaded.ids.second)).toBe("둘째 글, 고치는 중");
+		await expect.poll(() => focused()).toBe(box().element());
+	});
+
+	it("10-1 a new request takes the step away: it was about what was asked before", async () => {
+		const story = open(stories.SaveAndOpen);
+		await story.run();
+		story.loaded().model.add({ text: "네." });
+		await say("됐어, 그냥 둬");
+		await expect.element(panel().getByText("네.")).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		expect(button("저장하고 열기").elements()).toHaveLength(0);
+	});
+});

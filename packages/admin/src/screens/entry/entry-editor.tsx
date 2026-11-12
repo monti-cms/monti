@@ -47,11 +47,11 @@ import {
 	Export,
 	OverflowMenuHorizontal,
 	RightPanelOpen,
-	Spark,
 	TrashCan,
 } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AssistantButton } from "../../assistant/assistant-button";
 import { useOpenConversation, useScreenContext } from "../../assistant/use-assistant";
 import { download } from "../../download";
 import { useLeaveFiles, useLeaveGuard, useUploadsGoing } from "../../draft/leave-guard";
@@ -154,7 +154,11 @@ export function EntryEditor({
 	const unarchive = useOperation("entries.unarchive");
 	const exporter = useOperation("entries.export");
 	const saveKeys = useShortcut(SAVE_KEYS);
-	useLeaveGuard({ changes: editor.draft.changes, revertAll: editor.draft.revertAll });
+	useLeaveGuard({
+		changes: editor.draft.changes,
+		revertAll: editor.draft.revertAll,
+		save: async () => (await editor.save()) !== null,
+	});
 
 	const read = editor.loaded as EntryRead | null;
 	// What goes along with a request to the assistant from here (doc 10, context): this entry as it was read.
@@ -719,9 +723,7 @@ export function EntryEditor({
 							</DropdownMenuContent>
 						</DropdownMenu>
 					)}
-					<IconButton label={t("frame.assistant")} side="bottom">
-						<Spark aria-hidden />
-					</IconButton>
+					<AssistantButton />
 				</Inline>
 			</EditorHeader>
 			<Inline align="stretch" gap={beside ? 40 : 0} grow minHeight={0} overflow="hidden">

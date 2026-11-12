@@ -12,7 +12,15 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { useAdmin } from "../operations/admin-context";
 
 /** What a screen would lose: unsaved changes and files still going up, how many of each, and how to drop them when the person leaves anyway. */
-type Guard = { changes: () => number; uploads: () => number; drop: () => void };
+type Guard = {
+	changes: () => number;
+	uploads: () => number;
+	drop: () => void;
+	/** Whether the screen gave a way to save it from outside. */
+	canSave: () => boolean;
+	/** Saves what the screen holds, as its own save does (it says a refusal itself). `true` when it went through. */
+	save: () => Promise<boolean>;
+};
 type Held = { changes: number; uploads: number };
 
 const Context = createContext<{
@@ -23,6 +31,10 @@ const Context = createContext<{
 	uploads: () => number;
 	/** How many unsaved changes the open screens hold. */
 	changes: () => number;
+	/** Whether every screen that holds unsaved changes can be saved from outside it. */
+	canSave: () => boolean;
+	/** Saves every screen that holds unsaved changes. `true` when nothing is left unsaved. */
+	save: () => Promise<boolean>;
 } | null>(null);
 
 /**
@@ -66,6 +78,11 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 			},
 			uploads: () => held().uploads,
 			changes: () => held().changes,
+			canSave: () => [...guards.current].every((guard) => guard.changes() === 0 || guard.canSave()),
+			save: async () => {
+				for (const guard of [...guards.current]) if (guard.changes() > 0 && !(await guard.save())) return false;
+				return true;
+			},
 		}),
 		[held],
 	);
@@ -135,8 +152,29 @@ export function useUnsavedChanges() {
 	return useCallback(() => context?.changes() ?? 0, [context]);
 }
 
-/** Keeps the person from leaving this screen's unsaved changes, or its files still going up, by mistake. */
-export function useLeaveGuard(draft: { changes?: unknown[]; uploads?: unknown[]; revertAll: () => void }) {
+/**
+ * Saving the open screens from outside them (the assistant's "save and open": doc 10, flow 2·05). `can`: every screen with unsaved changes
+ * gave a way to save it (the editors do; a panel beside a list does not). `save`: saves them as their own save does, which says a refusal
+ * itself; `true` when it all went through.
+ */
+export function useSaveUnsaved() {
+	const context = useContext(Context);
+	return useMemo(
+		() => ({ can: () => context?.canSave() ?? false, save: async () => (context ? context.save() : false) }),
+		[context],
+	);
+}
+
+/**
+ * Keeps the person from leaving this screen's unsaved changes, or its files still going up, by mistake. `save`: the screen's own save, when
+ * something outside it may ask for it (`useSaveUnsaved`).
+ */
+export function useLeaveGuard(draft: {
+	changes?: unknown[];
+	uploads?: unknown[];
+	revertAll: () => void;
+	save?: () => Promise<boolean>;
+}) {
 	const context = useContext(Context);
 	const latest = useRef(draft);
 	latest.current = draft;
@@ -146,6 +184,8 @@ export function useLeaveGuard(draft: { changes?: unknown[]; uploads?: unknown[];
 				changes: () => latest.current.changes?.length ?? 0,
 				uploads: () => latest.current.uploads?.length ?? 0,
 				drop: () => latest.current.revertAll(),
+				canSave: () => latest.current.save !== undefined,
+				save: () => latest.current.save?.() ?? Promise.resolve(false),
 			}),
 		[context],
 	);

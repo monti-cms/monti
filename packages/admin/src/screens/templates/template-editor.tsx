@@ -23,9 +23,10 @@ import {
 	StatusBarSpacer,
 	TextButton,
 } from "@monti-cms/ui";
-import { ChevronLeft, OverflowMenuHorizontal, Spark } from "@monti-cms/ui/icons";
+import { ChevronLeft, OverflowMenuHorizontal } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { AssistantButton } from "../../assistant/assistant-button";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
@@ -59,7 +60,6 @@ export function TemplateEditor({
 	const duplicate = useOperation<{ output: { id: string } }>("templates.duplicate");
 	const remove = useOperation("templates.remove");
 	const [nameMissing, setNameMissing] = useState(false);
-	useLeaveGuard({ changes: editor.draft.changes, revertAll: editor.draft.revertAll });
 	// A banner whose own action takes it away (discard or load this browser's copy, load the latest, try again) had the keyboard's focus on that
 	// action: it goes to the text being written, the body, or the name when the body is not there (as in the entry editor).
 	const body = useRef<Editor | null>(null);
@@ -69,11 +69,17 @@ export function TemplateEditor({
 	const handOff = useFocusHandOff(() => () => focusText(() => body.current, "monti-template-name"));
 
 	const name = editor.title;
-	const write = async () => {
-		if (name.trim() === "") return setNameMissing(true);
+	/** Saves the template. `true` when it went through; a missing name is said at the name. */
+	const write = async (): Promise<boolean> => {
+		if (name.trim() === "") {
+			setNameMissing(true);
+			return false;
+		}
 		const saved = await editor.save();
 		if (saved && !id) onSaved(saved.id);
+		return saved !== null;
 	};
+	useLeaveGuard({ changes: editor.draft.changes, revertAll: editor.draft.revertAll, save: write });
 
 	return (
 		<StandalonePage
@@ -151,9 +157,7 @@ export function TemplateEditor({
 							</DropdownMenuContent>
 						</DropdownMenu>
 					) : null}
-					<IconButton label={t("frame.assistant")} side="bottom">
-						<Spark aria-hidden />
-					</IconButton>
+					<AssistantButton />
 				</Inline>
 			</EditorHeader>
 			<Stack gap={0} grow minHeight={0} overflow="y" paddingX={48} paddingTop={16}>

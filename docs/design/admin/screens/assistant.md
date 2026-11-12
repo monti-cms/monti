@@ -139,6 +139,13 @@
 스토리: Screens/Assistant › Review, Patterns/Frame/PageHeader, Patterns/List/ListSection, Patterns/List/Table, Controls/Field/Checkbox, Monti/Translation/Compare, Monti/Proposal/Marks, Controls/Status/EntryStatus, Controls/Tabs/Tabs, Controls/Button/TextButton.
 
 
+## 편집기 안에서
+
+| 자리 | 부품 | 동작 |
+|---|---|---|
+| 편집기 머리 끝의 ✦ | `IconButton`(`label` "어시스턴트 열기", `Spark`, 화면 코드 `AssistantButton`) | 글 편집기와 템플릿 편집기. 누르면 패널이 페이지 옆에 열리고 버튼은 사라진다. 패널을 닫으면 버튼이 돌아오고 포커스를 받는다. 어시스턴트가 없는 사이트에는 없다. 편집기는 그대로다(다시 그려지지 않는다). 이야기: `InEditor` |
+| 옮기지 못함 | 답 아래 `Button variant="ghost" size="sm"` "저장하고 열기"(저장하는 동안 `loading`) | 화면 도구가 저장 전 변경 때문에 옮기지 못했고 그 화면을 밖에서 저장할 수 있을 때(편집기), 마지막 턴에만. 누르면 저장하고, 청했던 글을 열거나 목록을 보인다. 저장이 거절되면 편집기가 늘 하던 대로 알리고 버튼은 남는다. 새 요청이나 다른 대화에서 사라진다. 흐름 2·05. 이야기: `SaveAndOpen` |
+
 ## 누른 것이 사라질 때의 포커스
 
 키보드로 누른 컨트롤이 그 누름으로 사라지면 포커스를 넘긴다([tokens.md](../tokens.md) 상태, `useFocusHandOff`. 포인터로 누르면 아무것도 옮기지 않는다).
@@ -146,6 +153,7 @@
 | 누른 것 | 포커스가 가는 곳 |
 |---|---|
 | "새 대화", 처음 요청, "다시 하기", "다시 시도", "이어서 하기" | 입력란 |
+| "저장하고 열기" | 화면이 옮겨 간 뒤 패널의 입력란 |
 | 기다리는 말의 "지금 보내기" · "취소" | 다음 줄의 첫 버튼, 없으면 입력란 |
 | 제안의 상태 줄("버리기" · "n건 적용" · "되돌리기") | 줄에 남은 첫 버튼, 없으면 줄 다음의 첫 컨트롤 |
 | 검토 화면 줄의 "다시 만들기" | 그 줄의 체크 |

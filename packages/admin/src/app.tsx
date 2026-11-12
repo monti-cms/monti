@@ -97,13 +97,15 @@ function Signed() {
  */
 function BesideAssistant({ panel, children }: { panel: ReactNode; children: ReactNode }) {
 	const assistant = useAssistant();
-	if (!assistant.available || !assistant.open) return children;
+	const beside = assistant.available === true && assistant.open;
+	// One tree with the panel open or closed: the page is the same page when the panel comes and goes (made anew, an editor read its entry
+	// again and lost its caret each time the panel was opened from it).
 	return (
-		<Inline gap={0} align="stretch" height="screen" overflow="clip">
+		<Inline gap={0} align="stretch" height={beside ? "screen" : undefined} overflow={beside ? "clip" : undefined}>
 			<Stack gap={0} grow minWidth={0}>
 				{children}
 			</Stack>
-			{panel}
+			{beside ? panel : null}
 		</Inline>
 	);
 }

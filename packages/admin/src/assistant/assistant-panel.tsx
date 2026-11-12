@@ -11,6 +11,7 @@ import {
 	EmptyStep,
 	ErrorNote,
 	IconButton,
+	Inline,
 	ModelMenu,
 	ModelMenuButton,
 	SidePanel,
@@ -76,6 +77,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 	const assistant = useAssistant();
 	const { view, state, turns, busy } = assistant;
 	const [menuOpen, setMenuOpen] = useState(false);
+	const [savingToOpen, setSavingToOpen] = useState(false);
 	/** "Send with another model": the next model picked sends the last request again. */
 	const resend = useRef(false);
 	const connected = state?.connected ?? true;
@@ -360,6 +362,35 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 					{running && !toolGoing && lastSegment?.kind !== "text" ? <Prose text="" streaming onOpen={onOpen} /> : null}
 					{turn.proposalId ? <ProposalCardOf id={turn.proposalId} /> : null}
 					{noteOf(turn, isLast)}
+					{/* The screen did not move for its unsaved changes, and the assistant has said so: the one step that does both. */}
+					{isLast && !busy && assistant.blockedMove ? (
+						<Inline>
+							<Button
+								variant="ghost"
+								size="sm"
+								loading={savingToOpen}
+								onClick={async (event) => {
+									// A key's press is a click that no pointer made.
+									const byKeyboard = event.detail === 0;
+									setSavingToOpen(true);
+									const moved = await assistant.saveAndOpen();
+									setSavingToOpen(false);
+									// The step is gone and the screen has moved (the panel itself may have been drawn anew beside another
+									// page): pressed with the keyboard, the focus goes to the panel's box, two frames on, when it is there.
+									if (moved && byKeyboard)
+										requestAnimationFrame(() =>
+											requestAnimationFrame(() => {
+												const on = document.activeElement;
+												if (on && on !== document.body && on.isConnected) return;
+												document.querySelector<HTMLElement>("[data-slot=chat-input] textarea")?.focus();
+											}),
+										);
+								}}
+							>
+								{t("panel.saveAndOpen")}
+							</Button>
+						</Inline>
+					) : null}
 				</Stack>
 				{words !== "" && !running ? (
 					<ChatMessageActions author="assistant">
