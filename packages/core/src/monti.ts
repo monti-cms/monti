@@ -80,6 +80,11 @@ export type Plugin = {
 	streams?: AnyStream[];
 	/** Its own clean-up, run with the trash's (when the admin opens, and `monti trash:purge`): what it keeps for a time and then removes. */
 	cleanUp?: (monti: Monti) => Promise<void>;
+	/**
+	 * Called once with the site it was built into. An operation gets only its own context; a plugin whose operations run other operations (the
+	 * assistant's quick tasks read the models and open a key) keeps the site from here.
+	 */
+	attach?: (monti: Monti) => void;
 };
 
 export function definePlugin(plugin: Plugin): Plugin {
@@ -490,6 +495,7 @@ export function createMonti(options: MontiOptions) {
 		"the core",
 	);
 	for (const plugin of plugins) for (const stream of plugin.streams ?? []) addStream(stream, `plugin ${plugin.name}`);
+	for (const plugin of plugins) plugin.attach?.(monti);
 	return monti;
 }
 

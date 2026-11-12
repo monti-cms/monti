@@ -12,7 +12,7 @@ export function agentTools(monti: Monti): Capability[] {
 export type ToolSession = {
 	conversationId: string;
 	proposalId: string;
-	/** The name the assistant gave this kind of change ("요약 채우기"): the group its items show under. */
+	/** The name the assistant gave this kind of change ("Fill in summaries"): the group its items show under. */
 	group?: string;
 };
 

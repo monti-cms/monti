@@ -61,7 +61,7 @@ export interface ProposalTable {
  */
 export type ProposalItemState = "pending" | "discarded" | "stale" | "applied" | "failed" | "skipped" | "reverted";
 
-/** One exchange at a proposal item's own place (doc 10, 자리 요청): what the person asked of it, and what the assistant answered. */
+/** One exchange at a proposal item's own place (doc 10, a request at its place): what the person asked of it, and what the assistant answered. */
 export type ItemExchange = { request: string; answer: string; at: string };
 
 /** One write the assistant proposed: the operation, its input, and the versions it read. */
@@ -78,7 +78,7 @@ export interface ProposalItemTable {
 	activity_id: string | null;
 	/** Whether the person keeps it in the proposal: left out, it is not applied (the review's check). */
 	included: Generated<boolean>;
-	/** The name the assistant gave the kind of change, shared by the items that belong together ("요약 채우기"). */
+	/** The name the assistant gave the kind of change, shared by the items that belong together ("Fill in summaries"). */
 	group_label: Generated<string>;
 	/** The versions its write left, by `recordKey`: a later item made from the same reading follows from here. */
 	after_versions: Json<Record<string, number | null>> | null;

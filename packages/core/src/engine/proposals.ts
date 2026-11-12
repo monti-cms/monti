@@ -461,7 +461,7 @@ export async function settleProposal(db: Db, proposalId: string): Promise<void> 
 }
 
 /**
- * Puts back what applying a proposal changed (doc 10: the card's "모두 되돌리기"): each applied item's write is undone as the activity log undoes
+ * Puts back what applying a proposal changed (doc 10: the card's "revert all"): each applied item's write is undone as the activity log undoes
  * it. A record changed since is left alone, and its item stays applied with that reason. Only items the apply engine applied are put back here: an
  * item taken in a screen was saved with the person's own changes, and that save is undone from the activity log.
  */
