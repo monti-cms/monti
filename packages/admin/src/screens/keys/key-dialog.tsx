@@ -190,6 +190,9 @@ function KeyForm({
 		[],
 	);
 	const pending = add.pending || update.pending;
+	// The form is on its way, known at once: `pending` is known only when the window is drawn again, and a second Enter that comes before
+	// that (a busy page) would send the form a second time.
+	const sending = useRef(false);
 
 	const hint = suggested(service, address);
 	const fix = (field: Field, message: string) => {
@@ -198,7 +201,7 @@ function KeyForm({
 	};
 	const submit = async (event: FormEvent) => {
 		event.preventDefault();
-		if (pending) return;
+		if (pending || sending.current) return;
 		setErrors({});
 		const baseUrl = address.trim();
 		// A field that must be filled says so itself, and the service is not asked.
@@ -217,12 +220,14 @@ function KeyForm({
 			if (Object.keys(changed).length === 0) return onClose();
 			// The service is asked again only for a new key or a new address.
 			setChecking("secret" in changed || "baseUrl" in changed);
+			sending.current = true;
 			result = await update.run(
 				{ id: editing.id, ...changed },
 				{ versions: { [`key:${editing.id}`]: editing.version } },
 			);
 		} else {
 			setChecking(true);
+			sending.current = true;
 			result = await add.run({
 				service: serviceId,
 				name: name.trim(),
@@ -242,6 +247,8 @@ function KeyForm({
 			if (shown.current) onClose();
 			return;
 		}
+		// The window stays with what was refused: it can be sent again.
+		sending.current = false;
 		// Closed while the service was being asked: there is no field left to say it under.
 		if (!shown.current) return void toast.error(t(reasonOf(refusal)));
 		const words = t(reasonOf(refusal));

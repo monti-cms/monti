@@ -1,6 +1,6 @@
 "use client";
 
-import { type ComponentProps, useEffect, useState } from "react";
+import { type ComponentProps, useCallback, useEffect, useState } from "react";
 import { dock } from "./bottom-dock";
 import { Button } from "./button";
 import { cn } from "./cn";
@@ -101,13 +101,23 @@ function ProposalBubble({
  * shorter than the window it still sits at the bottom. Put it last in the column; only the bubble takes the pointer. While it is shown the toasts
  * stand above it.
  */
-function ProposalBubbleDock({ className, ...props }: ComponentProps<"div">) {
+function ProposalBubbleDock({ className, ref, ...props }: ComponentProps<"div">) {
 	// Known to the toasts, which come up at the same place: while this is shown they stand above it (`Toaster`).
 	const [node, setNode] = useState<HTMLDivElement | null>(null);
 	useEffect(() => (node ? dock(node) : undefined), [node]);
+	// A screen's own ref (where the focus goes when the bubble does) goes to the same box, beside this one: given alone, it took this
+	// one's place, and the toasts no longer knew the bubble was there.
+	const both = useCallback(
+		(box: HTMLDivElement | null) => {
+			setNode(box);
+			if (typeof ref === "function") return ref(box);
+			if (ref) ref.current = box;
+		},
+		[ref],
+	);
 	return (
 		<div
-			ref={setNode}
+			ref={both}
 			data-slot="proposal-bubble-dock"
 			className={cn(
 				"pointer-events-none sticky bottom-monti-12 z-10 mt-auto flex justify-center px-monti-16 *:pointer-events-auto",

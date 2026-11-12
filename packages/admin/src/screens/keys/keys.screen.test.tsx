@@ -288,6 +288,21 @@ describe("one press does one thing", () => {
 		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).not.toBeInTheDocument();
 	});
 
+	it("14-1 the form sent twice before the window is drawn again (two presses on a busy page) saves the new name once", async () => {
+		const story = open(keys.Keys);
+		await story.run();
+		await menu("OpenAI 회사", "편집");
+		await userEvent.fill(field(/이름/), "OpenAI 회사 2");
+		// Nothing is drawn between the two: what the second one sees of the window is what the first one saw.
+		const form = field(/이름/).element().closest("form") as HTMLFormElement;
+		form.requestSubmit();
+		form.requestSubmit();
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		await faded();
+		expect(called(story.loaded(), "keys.update")).toBe(1);
+		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).not.toBeInTheDocument();
+	});
+
 	it("14-1 Enter twice 40ms apart in '이름' saves the new name once", async () => {
 		const story = open(keys.Keys);
 		await story.run();
