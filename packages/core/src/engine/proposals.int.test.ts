@@ -154,4 +154,59 @@ describe("proposals on a screen", () => {
 	it("05-5 only a person discards a proposal: it is no tool of the assistant", () => {
 		expect(agentTools(site()).map((tool) => tool.name)).not.toContain("proposals.discard");
 	});
+
+	it("05-1 a proposed write whose caller is no longer the one to write stores nothing: not a new item, not a change in an item's place", async () => {
+		const monti = site();
+		const id = await newPost("Hello");
+		const at = await version(id);
+		const proposalId = await monti.proposals.create("c1", "retitle it");
+		// What the caller's check finds of a call's item when it reads through the transaction it is asked in.
+		const seen: { inTransaction: boolean; titles: (string | undefined)[] }[] = [];
+		const look = async (trx: typeof db, call: string) => {
+			const written = await trx.selectFrom("monti_proposal_item").select("input").where("made_by", "=", call).execute();
+			seen.push({
+				inTransaction: trx.isTransaction,
+				titles: written.map((item) => (item.input as { title?: string }).title),
+			});
+		};
+		const { itemId } = await monti.proposals.add(
+			proposalId,
+			"entries.save",
+			{ id, version: at, title: "One" },
+			"",
+			"call-1",
+			(trx) => look(trx, "call-1"),
+		);
+		// Asked once, in the transaction that stores the item and after the item is written: the check reads the item there.
+		expect(seen).toEqual([{ inTransaction: true, titles: ["One"] }]);
+		const items = () =>
+			db.selectFrom("monti_proposal_item").select(["id", "input", "made_by"]).orderBy("position").execute();
+		const before = await items();
+		expect(before).toMatchObject([{ id: itemId, made_by: "call-1" }]);
+
+		// A caller that is no longer the one to write: it too finds its item written, and its refusal takes the item back.
+		const gone = (call: string) => async (trx: typeof db) => {
+			await look(trx, call);
+			throw new Error("not the holder");
+		};
+		const other = await newPost("Other");
+		await expect(
+			monti.proposals.add(
+				proposalId,
+				"entries.save",
+				{ id: other, version: 1, title: "Two" },
+				"",
+				"call-2",
+				gone("call-2"),
+			),
+		).rejects.toThrow("not the holder");
+		await expect(
+			monti.proposals.replace(itemId, "entries.save", { id, version: at, title: "Three" }, "call-3", gone("call-3")),
+		).rejects.toThrow("not the holder");
+		expect(seen.slice(1)).toEqual([
+			{ inTransaction: true, titles: ["Two"] },
+			{ inTransaction: true, titles: ["Three"] },
+		]);
+		expect(await items()).toEqual(before);
+	});
 });

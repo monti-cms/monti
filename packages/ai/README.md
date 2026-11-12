@@ -34,7 +34,7 @@ const model = scriptedProvider([
 createMonti({ db, schema, secret, plugins: [assistant({ provider: model.for })] });
 ```
 
-What is not verified: no test calls a model service, and none was called by hand either. The adapters are checked against each service's answer
+What is not verified: no test calls a model service. By hand, only OpenRouter was called, with two free models (2026-11-12: the key check, a streamed turn with its usage, a tool call and its answer, an answer in a fixed shape, a refusal, a turn ended by its signal, thinking parts, 65 tools in one request, one whole run). The other services, a long silence, an answer cut for length and the cache marks sent for Anthropic's models were not tried against a live service. The adapters are checked against each service's answer
 shape as the AI SDK (`ai` 7, `@ai-sdk/*` 4) reads it (Anthropic Messages, OpenAI Responses, Google generateContent, chat completions for OpenRouter
 and compatible servers). Whether the services answer in those shapes today, and whether the model ids and thinking options are accepted, is not
 confirmed. The adapters do not negotiate an API version; Anthropic's `anthropic-version` is the one the AI SDK sends. A Claude model newer than the

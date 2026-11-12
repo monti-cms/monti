@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { OpenKey } from "@monti-cms/core";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { aiSdkProvider } from "./ai-sdk";
 import { type ChatMessage, ProviderError, type TurnEvent, type TurnRequest } from "./provider";
 
@@ -574,5 +574,114 @@ describe("what the second review found in the adapters (#472)", () => {
 			request([{ role: "user", text: "안녕" }], { model: "a-model", thinks: true }),
 		);
 		expect(google.sent[0].body.generationConfig).toMatchObject({ thinkingConfig: { includeThoughts: true } });
+	});
+});
+
+describe("what the first trial against a real service showed (T161)", () => {
+	const limited = () =>
+		new Response(
+			JSON.stringify({
+				type: "error",
+				error: { type: "rate_limit_error", message: "This model is temporarily rate-limited upstream." },
+			}),
+			{ status: 429, headers: { "content-type": "application/json" } },
+		);
+
+	it("10-1 a limit the service names is a refusal in its words, also after the SDK tried again and gave up: not a service that could not be reached", async () => {
+		const net = network(limited);
+		const refused = await turn(
+			aiSdkProvider({ fetch: net.fetch })(KEY),
+			request([{ role: "user", text: "안녕" }]),
+		).catch((error: unknown) => error);
+		// Asked, and asked once more.
+		expect(net.sent).toHaveLength(2);
+		expect(refused).toBeInstanceOf(ProviderError);
+		expect(refused).toMatchObject({ kind: "refused", status: 429 });
+		expect((refused as ProviderError).detail).toBe("This model is temporarily rate-limited upstream.");
+		// The quick tasks' one call is read the same way.
+		const answered = await aiSdkProvider({ fetch: network(limited).fetch })(KEY)
+			.answer({ model: "claude-haiku-5-5", system: "Fill a field.", prompt: "요약", schema: { type: "object" } })
+			.catch((error: unknown) => error);
+		expect(answered).toMatchObject({ kind: "refused", status: 429 });
+		expect((answered as ProviderError).detail).not.toContain("Failed after");
+	});
+
+	it("10-1 a call that fails prints nothing on the server: not the request, not the answer's headers", async () => {
+		const printed = vi.spyOn(console, "error").mockImplementation(() => {});
+		const logged = vi.spyOn(console, "log").mockImplementation(() => {});
+		const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+		try {
+			const refusing = () =>
+				new Response(JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: "No." } }), {
+					status: 400,
+					headers: { "content-type": "application/json", "set-cookie": "session=abc" },
+				});
+			const provider = aiSdkProvider({ fetch: network(refusing).fetch })(KEY);
+			await turn(provider, request([{ role: "user", text: "비밀스러운 대화" }])).catch(() => {});
+			await provider
+				.answer({ model: "claude-haiku-5-5", system: "Fill a field.", prompt: "요약", schema: { type: "object" } })
+				.catch(() => {});
+			expect(printed).not.toHaveBeenCalled();
+			expect(logged).not.toHaveBeenCalled();
+			expect(warned).not.toHaveBeenCalled();
+		} finally {
+			printed.mockRestore();
+			logged.mockRestore();
+			warned.mockRestore();
+		}
+	});
+
+	const TOOLS = [
+		{ name: "zeta_read", description: "Read.", inputSchema: { type: "object", properties: {} } },
+		{ name: "alpha_read", description: "Read.", inputSchema: { type: "object", properties: {} } },
+	];
+	const refusing = () => new Response(JSON.stringify({ error: { message: "No." } }), { status: 400 });
+
+	it("10-1 a turn for one of Anthropic's models asks its service to keep the tool list and the system prompt, and the tools go in the engine's order", async () => {
+		const net = network(() => new Response(STREAM, { status: 200, headers: { "content-type": "text/event-stream" } }));
+		await turn(aiSdkProvider({ fetch: net.fetch })(KEY), request([{ role: "user", text: "안녕" }], { tools: TOOLS }));
+		const body = net.sent[0]?.body as {
+			cache_control?: unknown;
+			system: { text: string; cache_control?: unknown }[];
+			tools: { name: string; cache_control?: unknown }[];
+		};
+		expect(body.system.at(-1)).toMatchObject({ text: "You are the assistant.", cache_control: { type: "ephemeral" } });
+		// As the engine gave them, not by name: what is cached is the head of the request as it was sent.
+		expect(body.tools.map((each) => each.name)).toEqual(["zeta_read", "alpha_read"]);
+		expect(body.tools.at(-1)?.cache_control).toEqual({ type: "ephemeral" });
+		expect(body.tools[0]?.cache_control).toBeUndefined();
+		// And the request as a whole: the mark moves to the end of the conversation as it grows.
+		expect(body.cache_control).toEqual({ type: "ephemeral" });
+	});
+
+	it("10-1 through OpenRouter the same is asked for Anthropic's models only; the others, and OpenAI, cache by themselves and get no mark", async () => {
+		const router: OpenKey = { ...KEY, service: "openrouter", secret: "sk-or-v1-provider-test-a1b2" };
+		const ask = async (key: OpenKey, model: string) => {
+			const net = network(refusing);
+			await turn(
+				aiSdkProvider({ fetch: net.fetch })(key),
+				request([{ role: "user", text: "안녕" }], { model, tools: TOOLS }),
+			).catch(() => {});
+			return JSON.stringify(net.sent[0]?.body);
+		};
+		const claude = await ask(router, "anthropic/claude-sonnet-5.5");
+		expect(JSON.parse(claude).cache_control).toEqual({ type: "ephemeral" });
+		expect(JSON.parse(claude).messages[0]).toMatchObject({ role: "system" });
+		expect(JSON.stringify(JSON.parse(claude).messages[0])).toContain('"cache_control":{"type":"ephemeral"}');
+		expect(await ask(router, "google/gemma-4-31b-it:free")).not.toContain("cache_control");
+		expect(await ask({ ...KEY, service: "openai", secret: "sk-proj-provider-test-77de" }, "gpt-5.5")).not.toContain(
+			"cache",
+		);
+	});
+
+	it("10-1 what the service read from what it had kept is told beside the whole input, which stays the whole", async () => {
+		const kept = STREAM.replace(
+			'"usage":{"input_tokens":120,"output_tokens":1}',
+			'"usage":{"input_tokens":20,"cache_read_input_tokens":100,"cache_creation_input_tokens":0,"output_tokens":1}',
+		);
+		expect(kept).not.toBe(STREAM);
+		const net = network(() => new Response(kept, { status: 200, headers: { "content-type": "text/event-stream" } }));
+		const events = await turn(aiSdkProvider({ fetch: net.fetch })(KEY), request([{ role: "user", text: "안녕" }]));
+		expect(events.at(-1)).toMatchObject({ type: "end", usage: { input: 120, output: 31, cached: 100 } });
 	});
 });

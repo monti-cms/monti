@@ -5,8 +5,11 @@ export type Thinking = "off" | "low" | "medium" | "high";
 
 export const THINKING: readonly Thinking[] = ["off", "low", "medium", "high"];
 
-/** Tokens a call spent, as its service counted them. */
-export type Usage = { input: number; output: number };
+/**
+ * Tokens a call spent, as its service counted them. `input` is everything the service took in, whether it read it anew or from what it had
+ * kept of an earlier request; `cached` says how much of `input` came from there (charged at a fraction), when the service says.
+ */
+export type Usage = { input: number; output: number; cached?: number };
 
 /** A tool as the model is told of it: a name its API accepts, what it does, and its input's JSON Schema. */
 export type ToolSpec = { name: string; description: string; inputSchema: unknown };
