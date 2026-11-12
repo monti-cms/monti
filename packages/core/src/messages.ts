@@ -23,6 +23,7 @@ export const coreMessages = defineMessages({
 		en: {
 			"activity.allChanged": "It was changed again since.",
 			"activity.changedSince": "Changed since",
+			"activity.nothingToUndo": "Nothing to undo",
 			"activity.undo": "Undid {count}",
 			"trash.purge.many": "Deleted {count} for good",
 			"trash.purgedDue": "Deleted {count} kept for 30 days",
@@ -256,6 +257,7 @@ export const coreMessages = defineMessages({
 		ko: {
 			"activity.allChanged": "그 사이 다시 고쳐졌습니다.",
 			"activity.changedSince": "그 사이 고쳐짐",
+			"activity.nothingToUndo": "되돌릴 것 없음",
 			"activity.undo": "{count}개 되돌림",
 			"trash.purge.many": "{count}개 영구 삭제",
 			"trash.purgedDue": "30일 지난 {count}개 영구 삭제",

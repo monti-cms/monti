@@ -36,7 +36,18 @@ function Screen({ onAct }: { onAct?: () => void }) {
 				</DropdownMenuContent>
 			</DropdownMenu>
 			{open && (
-				<SidePanel title={open} onClose={() => setOpen(null)}>
+				<SidePanel
+					title={open}
+					onClose={() => setOpen(null)}
+					actions={
+						<DropdownMenu>
+							<DropdownMenuTrigger render={<Button>패널 메뉴</Button>} />
+							<DropdownMenuContent>
+								<DropdownMenuItem onClick={onAct}>다시 보내기</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					}
+				>
 					<TextButton onClick={onAct}>패널 안의 동작</TextButton>
 					<TextButton onClick={() => setAsking(true)}>묻기</TextButton>
 				</SidePanel>
@@ -49,7 +60,7 @@ function Screen({ onAct }: { onAct?: () => void }) {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>닫기</AlertDialogCancel>
-						<AlertDialogAction>하기</AlertDialogAction>
+						<AlertDialogAction onClick={() => setAsking(false)}>하기</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
@@ -57,7 +68,7 @@ function Screen({ onAct }: { onAct?: () => void }) {
 	);
 }
 
-const opener = (name: string) => page.getByRole("button", { name });
+const opener = (name: string) => page.getByRole("button", { name, exact: true });
 const panel = () => page.getByRole("complementary");
 const close = () => panel().getByRole("button", { name: "Close" });
 const tabTo = async (target: () => Element) => {
@@ -114,6 +125,78 @@ describe("SidePanel", () => {
 		await tabTo(() => close().element());
 		await userEvent.keyboard("{Enter}");
 		await expect.element(opener("메뉴")).toHaveFocus();
+	});
+
+	it("a menu's item used from inside the panel is not its opener: closed with the keyboard after it, focus is back on the row", async () => {
+		const acted = vi.fn();
+		render(<Screen onAct={acted} />);
+		await expect.element(opener("두 번째 열기")).toBeVisible();
+		(opener("두 번째 열기").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel()).toBeVisible();
+		await tabTo(() => panel().getByRole("button", { name: "패널 메뉴" }).element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+		expect(acted).toHaveBeenCalledTimes(1);
+		await tabTo(() => close().element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel()).not.toBeInTheDocument();
+		await expect.element(opener("두 번째 열기")).toHaveFocus();
+	});
+
+	it("a question answered from inside the panel is not its opener either: closed with the keyboard after it, focus is back on the row", async () => {
+		render(<Screen />);
+		await expect.element(opener("두 번째 열기")).toBeVisible();
+		(opener("두 번째 열기").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await tabTo(() => panel().getByRole("button", { name: "묻기" }).element());
+		await userEvent.keyboard("{Enter}");
+		const question = page.getByRole("alertdialog");
+		await expect.element(question).toBeVisible();
+		await tabTo(() => question.getByRole("button", { name: "하기" }).element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(question).not.toBeInTheDocument();
+		await tabTo(() => close().element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel()).not.toBeInTheDocument();
+		await expect.element(opener("두 번째 열기")).toHaveFocus();
+	});
+
+	it("an opener that is gone when the panel closes gives its place to the first one the panel had", async () => {
+		function Rows() {
+			const [open, setOpen] = useState(false);
+			const [second, setSecond] = useState(true);
+			return (
+				<>
+					<Button onClick={() => setOpen(true)}>첫 번째 열기</Button>
+					{second && <Button onClick={() => setOpen(true)}>두 번째 열기</Button>}
+					{open && (
+						<SidePanel title="패널" onClose={() => setOpen(false)}>
+							<TextButton onClick={() => setSecond(false)}>두 번째 지우기</TextButton>
+						</SidePanel>
+					)}
+				</>
+			);
+		}
+		render(<Rows />);
+		await expect.element(opener("첫 번째 열기")).toBeVisible();
+		(opener("첫 번째 열기").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel()).toBeVisible();
+		// Another row is opened into the panel, and then leaves the list by something done in the panel.
+		(opener("두 번째 열기").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await tabTo(() => panel().getByRole("button", { name: "두 번째 지우기" }).element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(opener("두 번째 열기")).not.toBeInTheDocument();
+		// Back to the × inside the panel, without leaving it: focus that went through the page would itself name a new opener.
+		for (let presses = 0; presses < 10 && document.activeElement !== close().element(); presses++)
+			await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		expect(document.activeElement).toBe(close().element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(opener("첫 번째 열기")).toHaveFocus();
 	});
 
 	it("closed with the pointer, it moves focus nowhere", async () => {

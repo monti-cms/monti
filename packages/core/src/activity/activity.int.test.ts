@@ -1917,11 +1917,12 @@ describe("undo from the log", () => {
 			input: z.object({ ids: z.array(z.string()), held: z.array(z.string()).default([]), title: z.string() }),
 			touches: (input) => [...input.ids, ...input.held].map((id) => ({ kind: "entry", id })),
 			async run(input, ctx) {
-				await ctx.db
-					.updateTable("entries")
-					.set((eb) => ({ title: input.title, version: eb("version", "+", 1) }))
-					.where("id", "in", input.ids)
-					.execute();
+				if (input.ids.length > 0)
+					await ctx.db
+						.updateTable("entries")
+						.set((eb) => ({ title: input.title, version: eb("version", "+", 1) }))
+						.where("id", "in", input.ids)
+						.execute();
 				return { ids: input.ids };
 			},
 			summary: () => ({ key: "probe.retitle" }),
@@ -1957,6 +1958,31 @@ describe("undo from the log", () => {
 			]);
 			// What the undo answers carries nothing of the items' bookkeeping.
 			expect(undone.output).not.toHaveProperty("put");
+		});
+
+		it("13-3 an item that changed nothing it can put back stays applied with 'nothing to undo', not 'changed since', by 'revert all' and by the log", async () => {
+			const monti = site({ plugins: [probe] });
+			const held = await newPost("둘", "two", monti);
+			const reasons = async (proposal: string) => (await items(proposal)).map((item) => item.reason);
+			// Nobody writes anything after it: "changed since" would be false.
+			const first = await monti.proposals.create("conversation-1", "살펴봐 줘");
+			const { itemId } = await monti.proposals.add(first, "probe.retitle", { ids: [], held: [held], title: "" });
+			await monti.proposals.apply(first);
+			const reverted = (await monti.run("proposals.revert", { id: first }, { actor: "admin" })) as Written<{
+				reverted: string[];
+				kept: string[];
+			}>;
+			expect(reverted.output).toEqual({ reverted: [], kept: [itemId] });
+			expect(await reasons(first)).toEqual([{ key: "activity.nothingToUndo" }]);
+			expect(ko({ key: "activity.nothingToUndo" })).toBe("되돌릴 것 없음");
+			// From the log the same write is walked through (its record holds what it held), and the item says the same.
+			const second = await monti.proposals.create("conversation-2", "다시 살펴봐 줘");
+			await monti.proposals.add(second, "probe.retitle", { ids: [], held: [held], title: "" });
+			await monti.proposals.apply(second);
+			const line = (await list({ kinds: ["assistant"] }, monti)).lines[0];
+			await write("activity.undo", { id: line.id }, monti);
+			expect(await reasons(second)).toEqual([{ key: "activity.nothingToUndo" }]);
+			expect(await versionOf(held)).toBe(1);
 		});
 
 		it("13-3 only a record it held is left to go back: nothing would change, so the log's undo is refused and the item stays applied, as 'revert all' leaves it", async () => {

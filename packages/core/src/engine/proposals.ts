@@ -800,7 +800,8 @@ type ItemOutcome = { state: "reverted"; reason: Message | null } | { state: "app
  *
  * It is judged by the records the item changed. One it only held while it wrote (the folder an entry moved into) was not changed by it, and
  * putting another item back may have moved that one on. Put back when a record it changed goes back, saying how many of them stayed, or when
- * all it changed hold what they held; still applied, "changed since", otherwise.
+ * all it changed hold what they held. Otherwise still applied: "changed since" when a record it changed was written since, "nothing to
+ * undo" when it changed none.
  */
 function outcomeOf(
 	item: {
@@ -818,8 +819,9 @@ function outcomeOf(
 		return item.after_versions === null || item.after_versions[key] !== (found[key] ?? null);
 	};
 	const count = stayed.filter(changed).length;
+	// Not put back: what it changed was written since, or it changed nothing that can be put back (it only held its records).
 	if (!back.some(changed) && !(same.some(changed) && count === 0))
-		return { state: "applied", reason: { key: "activity.changedSince" } };
+		return { state: "applied", reason: { key: count > 0 ? "activity.changedSince" : "activity.nothingToUndo" } };
 	return { state: "reverted", reason: count > 0 ? { key: "proposals.partlyReverted", values: { count } } : null };
 }
 
