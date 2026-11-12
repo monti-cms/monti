@@ -21,6 +21,8 @@ const Context = createContext<{
 	leave: (go: () => void, filesOnly?: boolean) => void;
 	/** How many files are still going up on the screens that are open. */
 	uploads: () => number;
+	/** How many unsaved changes the open screens hold. */
+	changes: () => number;
 } | null>(null);
 
 /**
@@ -63,6 +65,7 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 				else setAsking({ go, filesOnly, changes, uploads: now.uploads });
 			},
 			uploads: () => held().uploads,
+			changes: () => held().changes,
 		}),
 		[held],
 	);
@@ -121,6 +124,15 @@ export function useLeaveFiles() {
 export function useUploadsGoing() {
 	const context = useContext(Context);
 	return useCallback(() => context?.uploads() ?? 0, [context]);
+}
+
+/**
+ * How many unsaved changes the open screens hold, asked at the moment something else would move the screen without the person's own press (the
+ * assistant opening an entry): it does not move then, and nothing is asked.
+ */
+export function useUnsavedChanges() {
+	const context = useContext(Context);
+	return useCallback(() => context?.changes() ?? 0, [context]);
 }
 
 /** Keeps the person from leaving this screen's unsaved changes, or its files still going up, by mistake. */

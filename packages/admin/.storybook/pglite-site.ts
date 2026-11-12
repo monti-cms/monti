@@ -13,7 +13,7 @@ import {
 	type Storage,
 } from "@monti-cms/core";
 import { Kysely, PostgresDialect } from "kysely";
-import type { Transport, Uploader } from "../src/operations/transport";
+import type { StreamTransport, Transport, Uploader } from "../src/operations/transport";
 
 /** The Postgres of the story on the page. */
 let open: PGlite | null = null;
@@ -54,6 +54,7 @@ function pgliteDialect(pg: PGlite) {
 export type StorySite = {
 	monti: Monti;
 	transport: Transport;
+	streams: StreamTransport;
 	uploader: Uploader;
 	db: Kysely<Database>;
 	/** Where its files are: in memory, with addresses the page can load. `null` for a site with no storage. */
@@ -103,6 +104,20 @@ export async function storySite({
 		if (answer.session !== undefined) token = answer.session?.token ?? null;
 		return { status: answer.status, body: JSON.parse(JSON.stringify(answer.body)) };
 	};
+	// The stream route with the session this page holds: the events come as the engine gives them, as over HTTP.
+	const streams: StreamTransport = async (name, input, { signal } = {}) => {
+		const answer = await api.stream(name, { input }, token, signal ?? new AbortController().signal, local);
+		if ("events" in answer) {
+			const events = answer.events;
+			return {
+				status: 200,
+				events: (async function* () {
+					for await (const event of events) yield JSON.parse(JSON.stringify(event));
+				})(),
+			};
+		}
+		return { status: answer.status, body: JSON.parse(JSON.stringify(answer.body)) };
+	};
 	// The byte route with the session this page holds. A story's bar moves as a real upload's does.
 	const uploader: Uploader = async (file, { name, onProgress }) => {
 		onProgress?.(50);
@@ -118,7 +133,7 @@ export async function storySite({
 		});
 		if (made.status !== 200) await transport("auth.signIn", { email: "me@example.dev", password: "story password" });
 	}
-	return { monti, transport, uploader, db, storage };
+	return { monti, transport, streams, uploader, db, storage };
 }
 
 /**
@@ -127,6 +142,7 @@ export async function storySite({
  */
 export function startAt(hash = "#/") {
 	for (const key of Object.keys(localStorage))
-		if (key === "monti.lastScreen" || key.startsWith("monti.draft.")) localStorage.removeItem(key);
+		if (key === "monti.lastScreen" || key === "monti.assistant" || key.startsWith("monti.draft."))
+			localStorage.removeItem(key);
 	window.history.replaceState(null, "", hash);
 }

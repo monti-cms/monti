@@ -9,7 +9,7 @@ import {
 	type ScreenChannel,
 	useAdmin,
 } from "./operations/admin-context";
-import type { Transport, Uploader } from "./operations/transport";
+import type { StreamTransport, Transport, Uploader } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
 import { type Route, useRoute } from "./route";
 import { EntryEditor } from "./screens/entry/entry-editor";
@@ -199,6 +199,7 @@ function Gate({ denied }: { denied?: string }) {
  */
 export function MontiAdmin({
 	transport,
+	streams,
 	uploader,
 	siteName,
 	language = "ko",
@@ -208,6 +209,8 @@ export function MontiAdmin({
 	blocks,
 }: {
 	transport: Transport;
+	/** How streams are listened to (the assistant's run, an apply); over HTTP at `apiBase` when left out. */
+	streams?: StreamTransport;
 	/** How file bytes go up (doc 09); over HTTP at `apiBase` when left out. */
 	uploader?: Uploader;
 	siteName: string;
@@ -223,6 +226,7 @@ export function MontiAdmin({
 	return (
 		<AdminProvider
 			transport={transport}
+			streams={streams}
 			uploader={uploader}
 			siteName={siteName}
 			language={language}

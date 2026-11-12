@@ -18,6 +18,7 @@
 		"test:screen": "vitest run --project 'admin (screen)'"
 	},
 	"dependencies": {
+		"@monti-cms/ai": "workspace:*",
 		"@monti-cms/core": "workspace:*",
 		"@monti-cms/ui": "workspace:*",
 		"@tiptap/core": "3.31.3",

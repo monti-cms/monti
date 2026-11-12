@@ -1,3 +1,4 @@
+import { assistantMessages } from "@monti-cms/ai/messages";
 import {
 	type AnyBlockDefinition,
 	type Block,
@@ -8,7 +9,7 @@ import {
 } from "@monti-cms/core";
 import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { adminMessages } from "../messages";
-import { httpUploader, type Transport, type Uploader } from "./transport";
+import { httpStreams, httpUploader, type StreamTransport, type Transport, type Uploader } from "./transport";
 
 export type Language = "ko" | "en";
 export type AdminBlockComponent = ComponentType<{
@@ -51,6 +52,7 @@ export function createScreenChannel(): ScreenChannel {
 
 type AdminContext = {
 	transport: Transport;
+	streams: StreamTransport;
 	uploader: Uploader;
 	language: Language;
 	/** The site's name over the sidebar and the login form. */
@@ -74,13 +76,15 @@ type AdminContext = {
 
 const Context = createContext<AdminContext | null>(null);
 
-const BUNDLES: MessageBundle[] = [adminMessages, coreMessages];
+// The assistant's own words (why a run stopped, a conversation's activity row) come from its package: the server answers with their keys.
+const BUNDLES: MessageBundle[] = [adminMessages, coreMessages, assistantMessages];
 
 /** One list for "none": a new one on each render would make every screen read again whenever this one changes, as when the session ends. */
 const NO_BLOCKS: AdminBlockDefinition[] = [];
 
 export function AdminProvider({
 	transport,
+	streams,
 	uploader,
 	language = "ko",
 	siteName,
@@ -90,6 +94,8 @@ export function AdminProvider({
 	children,
 }: {
 	transport: Transport;
+	/** How streams are listened to; over HTTP at `apiBase` when left out. */
+	streams?: StreamTransport;
 	/** How file bytes go up; over HTTP at `apiBase` when left out. Storybook hands in one of its own. */
 	uploader?: Uploader;
 	language?: Language;
@@ -117,6 +123,7 @@ export function AdminProvider({
 				return () => listeners.delete(listener);
 			},
 			transport,
+			streams: streams ?? httpStreams(apiBase),
 			uploader: uploader ?? httpUploader(apiBase),
 			language,
 			siteName,
@@ -125,7 +132,7 @@ export function AdminProvider({
 			t: (message, values) =>
 				formatMessage(BUNDLES, language, typeof message === "string" ? { key: message, values } : message),
 		};
-	}, [transport, uploader, language, siteName, apiBase, screen, blocks]);
+	}, [transport, streams, uploader, language, siteName, apiBase, screen, blocks]);
 	// Apart from the rest, so the session ending does not make the write notices and the screens' reads anew.
 	const value = useMemo<AdminContext>(() => ({ ...base, session }), [base, session]);
 	return <Context.Provider value={value}>{children}</Context.Provider>;

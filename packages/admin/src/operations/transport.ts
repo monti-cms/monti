@@ -56,3 +56,58 @@ export function httpTransport(base: string): Transport {
 		return { status: response.status, body: await response.json().catch(() => null) };
 	};
 }
+
+/** A stream's answer: its events as they come, or an answer with a status when it never began (a refusal, no session). */
+export type StreamAnswer = Answer | { status: 200; events: AsyncIterable<unknown> };
+
+/**
+ * How the screens listen to something that takes a while and reports as it goes (docs 00 and 10: the assistant's run, a proposal being applied).
+ * Like `Transport`, the admin uses the HTTP one and Storybook one that runs the same admin API in the browser. A stream whose connection is lost
+ * ends by throwing from its `events`.
+ */
+export type StreamTransport = (
+	name: string,
+	input: unknown,
+	options?: { signal?: AbortSignal },
+) => Promise<StreamAnswer>;
+
+/** The events of an answer's body: one JSON object per line, given as each line is whole. */
+async function* lines(body: ReadableStream<Uint8Array>): AsyncGenerator<unknown> {
+	const reader = body.getReader();
+	const decoder = new TextDecoder();
+	let rest = "";
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			rest += decoder.decode(value, { stream: !done });
+			const whole = rest.split("\n");
+			rest = whole.pop() ?? "";
+			for (const line of whole) if (line.trim() !== "") yield JSON.parse(line);
+			if (done) break;
+		}
+		if (rest.trim() !== "") yield JSON.parse(rest);
+	} finally {
+		await reader.cancel().catch(() => {});
+	}
+}
+
+/** The admin API's streams over HTTP, at `base`. No answer at all (the network) is status 0, as an upload's. */
+export function httpStreams(base: string): StreamTransport {
+	return async (name, input, { signal } = {}) => {
+		let response: Response;
+		try {
+			response = await fetch(`${base}/streams/${name}`, {
+				method: "POST",
+				credentials: "same-origin",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ input }),
+				signal,
+			});
+		} catch {
+			return { status: 0, body: null };
+		}
+		if (response.status !== 200 || !response.body)
+			return { status: response.status, body: await response.json().catch(() => null) };
+		return { status: 200, events: lines(response.body) };
+	};
+}
