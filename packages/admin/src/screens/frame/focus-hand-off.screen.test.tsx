@@ -126,4 +126,35 @@ describe("the hand-off's rare cases (T159)", () => {
 		await expect.poll(() => document.getElementById("again")).toBeNull();
 		await expect.poll(focusedId).toBe("after");
 	});
+
+	it("a pointer's user who presses only Shift has not taken the keyboard up: when the button they clicked goes, nothing is moved", async () => {
+		function Banner() {
+			const [offered, setOffered] = useState(true);
+			const banner = useFocusHandOff(() => document.getElementById("after"));
+			return (
+				<>
+					<div ref={banner}>
+						{offered ? (
+							// It goes a moment after its press, by itself: no key and no second press takes it away.
+							<button type="button" id="later" onClick={() => setTimeout(() => setOffered(false), 300)}>
+								나중에
+							</button>
+						) : null}
+						<span>문장</span>
+					</div>
+					<button type="button" id="after">
+						첫 컨트롤
+					</button>
+				</>
+			);
+		}
+		await composeStory({ render: () => <Banner /> }, { title: "Tests/FocusHandOffPointer" }).run();
+		await expect.poll(() => document.getElementById("later")).not.toBeNull();
+		await userEvent.click(document.getElementById("later") as HTMLElement);
+		expect(focusedId()).toBe("later");
+		await userEvent.keyboard("{Shift}");
+		await expect.poll(() => document.getElementById("later")).toBeNull();
+		await new Promise((done) => setTimeout(done, 200));
+		expect(focusedId()).not.toBe("after");
+	});
 });

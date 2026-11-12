@@ -343,7 +343,12 @@ export function SettingsScreen({
 	const retry = () => {
 		if (refused?.action === "reload") {
 			// Gone once the settings are read again, not before: the page does not move while they are on their way.
-			void model.read.reload().then(() => setRefused(null));
+			// Working while it reads, as "save again" is while it saves: the button turns, and a second press starts no second read.
+			setBusy(true);
+			void model.read
+				.reload()
+				.then(() => setRefused(null))
+				.finally(() => setBusy(false));
 		} else void save();
 	};
 
@@ -387,7 +392,8 @@ export function SettingsScreen({
 						<PageBanner>
 							{/* A refusal from before a review stays on the page under it; one the open review got is told at the review's top instead. */}
 							{refused && !(plan && refusedInReview) ? (
-								<Banner tone="danger" title={refused.reason}>
+								// Its button goes with it once the save or the read goes through: the keyboard's focus is handed on as the save group's is.
+								<Banner ref={groupLeaving} tone="danger" title={refused.reason}>
 									<TextButton loading={busy} onClick={retry}>
 										{t(refused.action === "reload" ? "settings.reload" : "settings.saveAgain")}
 									</TextButton>

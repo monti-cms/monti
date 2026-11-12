@@ -826,6 +826,16 @@ describe("settings: where the focus goes when the save group leaves", () => {
 		await userEvent.keyboard(back ? "{Shift>}{Tab}{/Shift}" : "{Tab}");
 	};
 
+	/**
+	 * Brings the keyboard's focus to a control that is not next to a known one in the tab order (the banner's button, drawn in the frame's top
+	 * place): the keyboard moves once, and the focus is carried on from there as a script that follows the keyboard does.
+	 */
+	const keysTo = async (control: HTMLElement) => {
+		await tabTo(undoAll().element() as HTMLElement);
+		control.focus();
+		expect(control.matches(":focus-visible")).toBe(true);
+	};
+
 	it("12-1 from the keyboard, 모두 되돌리기, the last undo of the changes list and a save each leave the focus on the open tab's name, not on the page", async () => {
 		await withSite(stories.SiteChanged).run();
 		// 모두 되돌리기: the button goes with the group it stood in.
@@ -853,6 +863,105 @@ describe("settings: where the focus goes when the save group leaves", () => {
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 		await expect.element(tab(/사이트/)).toHaveFocus();
+	});
+
+	it("12-1 with two changes, one undone in the list from the keyboard leaves the list open with the keyboard on the row that is left", async () => {
+		await withSite(stories.SiteChanged).run();
+		await userEvent.fill(page.getByRole("textbox", { name: "말투와 규칙" }), "해요체로.");
+		await expect.element(changesList()).toHaveTextContent(/2/);
+		await tabTo(undoAll().element() as HTMLElement, true);
+		await userEvent.keyboard("{Enter}");
+		const list = page.getByRole("menu");
+		await expect.element(list).toBeVisible();
+		await expect.poll(() => list.getByRole("menuitem").elements().length).toBe(2);
+		await userEvent.keyboard("{Delete}");
+		// One row left, the list still open, and the keyboard on that row: not on the tab's name behind a closed list.
+		await expect.poll(() => list.getByRole("menuitem").elements().length).toBe(1);
+		await expect.element(list).toBeVisible();
+		await expect.element(list.getByRole("menuitem")).toHaveFocus();
+		await expect.element(tab(/사이트/)).not.toHaveFocus();
+		// The last one from there: now the list and the group go, and the focus is the tab's.
+		await userEvent.keyboard("{Delete}");
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await expect.element(tab(/사이트/)).toHaveFocus();
+	});
+
+	it("12-4 from the keyboard, 다시 저장 and 다시 불러오기 on the refusal's banner leave the focus on the open tab's name when the banner goes", async () => {
+		const server = { refuse: true };
+		const shown = withSite({
+			...stories.SiteChanged,
+			render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
+				<MontiAdmin
+					transport={(name, input, options) =>
+						name === "settings.save" && server.refuse
+							? Promise.resolve({ status: 500, body: { error: "unexpected" } })
+							: loaded.site.transport(name, input, options)
+					}
+					siteName="example.dev"
+				/>
+			),
+		});
+		await shown.run();
+		await userEvent.click(saveGroup());
+		const again = page.getByRole("button", { name: "다시 저장" });
+		await expect.element(again).toBeVisible();
+		await keysTo(again.element() as HTMLElement);
+		await expect.element(again).toHaveFocus();
+		server.refuse = false;
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		await expect.element(again).not.toBeInTheDocument();
+		await expect.element(tab(/사이트/)).toHaveFocus();
+
+		// 다시 불러오기: another tab saved meanwhile; read again from the keyboard, the banner goes and the change stays.
+		await userEvent.fill(nameField(), "example.net");
+		await shown.loaded().site.monti.run("settings.save", { site: { writingStyle: "다른 탭에서 고친 규칙" } }, admin);
+		await userEvent.click(saveGroup());
+		const reload = page.getByRole("button", { name: "다시 불러오기" });
+		await expect.element(reload).toBeVisible();
+		await keysTo(reload.element() as HTMLElement);
+		await expect.element(reload).toHaveFocus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(reload).not.toBeInTheDocument();
+		await expect.element(saveGroup()).toBeVisible();
+		await expect.element(tab(/사이트/)).toHaveFocus();
+	});
+
+	it("12-2 다시 불러오기 works while it reads: the button turns, and pressing it again starts no second read", async () => {
+		const reads = { count: 0, release: null as (() => void) | null, hold: false };
+		const shown = withSite({
+			...stories.SiteChanged,
+			render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
+				<MontiAdmin
+					transport={async (name, input, options) => {
+						if (name === "settings.read" && reads.hold) {
+							reads.count += 1;
+							await new Promise<void>((release) => {
+								reads.release = release;
+							});
+						}
+						return loaded.site.transport(name, input, options);
+					}}
+					siteName="example.dev"
+				/>
+			),
+		});
+		await shown.run();
+		await shown.loaded().site.monti.run("settings.save", { site: { writingStyle: "다른 탭에서 고친 규칙" } }, admin);
+		await userEvent.click(saveGroup());
+		const reload = page.getByRole("button", { name: "다시 불러오기" });
+		await expect.element(reload).toBeVisible();
+		reads.hold = true;
+		await userEvent.click(reload);
+		await expect.poll(() => reads.count).toBe(1);
+		await expect.element(reload).toHaveAttribute("aria-busy", "true");
+		await reload.click({ force: true });
+		await reload.click({ force: true });
+		await new Promise((done) => setTimeout(done, 200));
+		expect(reads.count).toBe(1);
+		reads.hold = false;
+		reads.release?.();
+		await expect.element(reload).not.toBeInTheDocument();
 	});
 
 	it("12-1 a pointer's press moves no focus: 모두 되돌리기 and a field's own 되돌리기, pressed with the pointer, do not send it to the tab's name", async () => {

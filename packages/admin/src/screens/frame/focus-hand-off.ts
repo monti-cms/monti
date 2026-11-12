@@ -144,6 +144,9 @@ function whenKeysAreUp(run: () => void) {
 	addEventListener("blur", up);
 }
 
+/** Keys that press nothing by themselves. */
+const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph", "Fn"]);
+
 /** Where a focus goes: the thing that takes it, or what gives it (the text, two frames on), or nowhere. */
 type HandedTo = HTMLElement | (() => void) | null | undefined;
 
@@ -184,9 +187,12 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 		addEventListener("pointerdown", letGo, true);
 		// A key pressed with the focus still inside is the keyboard holding it again: a pointer's press that moved no focus (a table tool that
 		// keeps the caret, a scroll bar dragged) made this forget a control the keyboard never left.
-		const again = () => {
+		// Only a key that does something with the focus, on a focus the keyboard shows: a pointer's user who holds Shift has not taken the
+		// keyboard up, and nothing is ever moved under a pointer.
+		const again = (event: KeyboardEvent) => {
+			if (MODIFIERS.has(event.key)) return;
 			const on = document.activeElement;
-			if (on instanceof Element && on !== node.ownerDocument.body && node.contains(on)) held = on;
+			if (on instanceof Element && node.contains(on) && on.matches(":focus-visible")) held = on;
 		};
 		addEventListener("keydown", again, true);
 		// Its own control went and it stayed (a banner that still has something to say): the focus that control held is handed on the same way.
