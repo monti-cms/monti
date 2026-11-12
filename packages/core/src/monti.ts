@@ -228,7 +228,11 @@ export function createMonti(options: MontiOptions) {
 		publishChecks: plugins.flatMap((plugin) => plugin.publishChecks ?? []),
 		secret: options.secret,
 		storage: storages[0]?.storage ?? null,
-		auth: { password: options.auth?.password ?? false, github: options.auth?.github ?? null },
+		auth: {
+			password: options.auth?.password ?? false,
+			github: options.auth?.github ?? null,
+			devBypass: options.auth?.devBypass ?? true,
+		},
 		kit: createBlockKit(
 			[...(options.blocks ?? []), ...plugins.flatMap((plugin) => plugin.blocks ?? [])],
 			[...(options.marks ?? []), ...plugins.flatMap((plugin) => plugin.marks ?? [])],

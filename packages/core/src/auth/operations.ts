@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
 import { trashRowCount } from "../trash/list";
+import { DEV_WHO } from "./dev-bypass";
 import { MIN_PASSWORD } from "./reset";
 import { hashPassword, verifyPassword } from "./secrets";
 import { endSession, startSession } from "./session";
@@ -12,6 +13,11 @@ export type AuthSettings = {
 	password: boolean;
 	/** The GitHub way: the OAuth app and the one account that is the admin. */
 	github: { clientId: string; clientSecret: string; admin: string } | null;
+	/**
+	 * On the dev server, a request from this machine is let in without signing in (doc 16); `false` turns it off, to try the sign-in screens
+	 * locally. The live site never bypasses, whatever this says.
+	 */
+	devBypass: boolean;
 };
 
 /** Wrong passwords per email before the minute's lock (doc 15). */
@@ -34,7 +40,7 @@ export const authOperations = [
 		kind: "read",
 		open: true,
 		description:
-			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, and who is signed in.",
+			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, and who is signed in (`bypass` when the dev server let this machine in without signing in).",
 		input: z.object({}),
 		async run(_input, ctx) {
 			return {
@@ -44,7 +50,10 @@ export const authOperations = [
 					external: ctx.site.auth.github ? [{ id: "github", label: "GitHub", path: "auth/github" }] : [],
 				},
 				hasAdmin: await hasAdmin(ctx),
-				session: ctx.session ? { who: ctx.session.who } : null,
+				// `bypass`: nobody signed in; the dev server let this machine in (doc 16). The screen says so.
+				session: ctx.session
+					? { who: ctx.session.who, ...(ctx.session.who === DEV_WHO ? { bypass: true } : {}) }
+					: null,
 			};
 		},
 	}),

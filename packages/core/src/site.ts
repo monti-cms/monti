@@ -46,7 +46,7 @@ export function createSite(
 		publishChecks: extra.publishChecks ?? [],
 		secret: extra.secret ?? null,
 		kit: extra.kit ?? createBlockKit([], []),
-		auth: extra.auth ?? { password: false, github: null },
+		auth: extra.auth ?? { password: false, github: null, devBypass: true },
 		storage: extra.storage ?? null,
 	};
 }

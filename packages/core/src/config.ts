@@ -24,7 +24,10 @@ export type MontiConfig = {
 	 * `production`. On the live site structure is locked.
 	 */
 	dev?: boolean;
-	/** How the admin signs in: `{ password: true }`, `{ github: { clientId, clientSecret, admin } }`, or both (`monti init` writes it). */
+	/**
+	 * How the admin signs in: `{ password: true }`, `{ github: { clientId, clientSecret, admin } }`, or both (`monti init` writes it). On the dev
+	 * server a request from this machine gets in without signing in; `devBypass: false` turns that off (doc 16).
+	 */
 	auth?: Partial<AuthSettings>;
 	/** Signs preview links. Left out, `MONTI_SECRET`. */
 	secret?: string;
@@ -38,6 +41,8 @@ export function defineConfig(config: MontiConfig): MontiConfig {
 export function openMonti(config: MontiConfig, root: string): Monti {
 	if (!config.database) throw new Error("monti.config.ts has no database address (set DATABASE_URL).");
 	const dev = config.dev ?? process.env.NODE_ENV !== "production";
+	if (!dev && config.auth?.devBypass === true)
+		console.warn("Monti: auth.devBypass is for the dev server only; the live site signs in as always.");
 	return createMonti({
 		db: new Kysely<Database>({
 			dialect: new PostgresDialect({ pool: new Pool({ connectionString: config.database }) }),
