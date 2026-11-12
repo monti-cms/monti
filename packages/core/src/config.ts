@@ -49,6 +49,9 @@ export function openMonti(config: MontiConfig, root: string): Monti {
 		auth: config.auth,
 		marks: config.marks,
 		receivers: config.receivers,
-		secret: config.secret ?? process.env.MONTI_SECRET ?? null,
+		// Blank is none (and falls through to the environment); a set secret is used byte for byte, spaces included: what was signed and sealed with
+		// it opens with exactly it.
+		secret:
+			[config.secret, process.env.MONTI_SECRET].find((secret) => secret !== undefined && secret.trim() !== "") ?? null,
 	});
 }

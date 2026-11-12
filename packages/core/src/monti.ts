@@ -14,6 +14,8 @@ import { entryRecord } from "./entries/record";
 import type { PublishCheck } from "./entries/tasks";
 import { UnknownOperationError } from "./errors";
 import { folderOperations, folderRecord } from "./folders/operations";
+import { addKeyUsage, keyOperations, keyRecord, openKey } from "./keys/operations";
+import { aiServices, type KeyService } from "./keys/services";
 import { mediaOperations } from "./media/operations";
 import { mediaRecord } from "./media/record";
 import type { Storage } from "./media/storage";
@@ -58,6 +60,8 @@ export type Plugin = {
 	marks?: MarkDefinition[];
 	/** Where the site's media files go (doc 09). A site has one. */
 	storage?: Storage;
+	/** Services it brings that a key can be added for (doc 14). */
+	keyServices?: KeyService[];
 };
 
 export function definePlugin(plugin: Plugin): Plugin {
@@ -79,8 +83,10 @@ export type MontiOptions = {
 	marks?: MarkDefinition[];
 	/** The ways to sign in that `monti init` chose. Without one, the admin says sign-in is not set up. */
 	auth?: Partial<AuthSettings>;
-	/** `MONTI_SECRET`: signs preview links (and, with doc 14, encrypts keys). */
+	/** `MONTI_SECRET`: signs preview links and seals service keys (doc 14). */
 	secret?: string | null;
+	/** The `fetch` the server calls other services with (tests and Storybook replace it). */
+	fetch?: typeof globalThis.fetch;
 	now?: () => Date;
 	/**
 	 * Keeps the first send of a write's events going after the response (a serverless host's `waitUntil`). Without it the write waits for the send.
@@ -211,6 +217,7 @@ export function createMonti(options: MontiOptions) {
 		templateRecord,
 		folderRecord,
 		mediaRecord,
+		keyRecord,
 		...(options.recordKinds ?? []),
 		...plugins.flatMap((plugin) => plugin.recordKinds ?? []),
 	]) {
@@ -223,11 +230,17 @@ export function createMonti(options: MontiOptions) {
 		throw new Error(
 			`Two plugins bring a media storage: ${storages.map((plugin) => plugin.name).join(", ")}. A site has one.`,
 		);
+	const keyServices = [...aiServices, ...plugins.flatMap((plugin) => plugin.keyServices ?? [])];
+	for (const service of keyServices)
+		if (keyServices.filter((other) => other.id === service.id).length > 1)
+			throw new Error(`Key service "${service.id}" is defined twice.`);
 	const now = options.now ?? (() => new Date());
 	const site = createSite(options.schema ?? EMPTY_SCHEMA, options.files ?? null, {
 		publishChecks: plugins.flatMap((plugin) => plugin.publishChecks ?? []),
 		secret: options.secret,
 		storage: storages[0]?.storage ?? null,
+		keyServices,
+		fetch: options.fetch,
 		auth: { password: options.auth?.password ?? false, github: options.auth?.github ?? null },
 		kit: createBlockKit(
 			[...(options.blocks ?? []), ...plugins.flatMap((plugin) => plugin.blocks ?? [])],
@@ -251,6 +264,7 @@ export function createMonti(options: MontiOptions) {
 		...folderOperations,
 		...mediaOperations,
 		...trashOperations,
+		...keyOperations,
 		...bodyOperations,
 		...authOperations,
 	])
@@ -307,6 +321,13 @@ export function createMonti(options: MontiOptions) {
 		deliveries: {
 			/** Sends the retries that are due (`monti deliveries:run`, and when the admin opens). */
 			sendDue: () => sendDueDeliveries(engine.db, receivers, now()),
+		},
+
+		keys: {
+			/** A key opened for the server to call its service with; `null` when it is gone or the server's secret does not open it. No operation returns it. */
+			open: (id: string) => openKey(engine.db, site.secret, id),
+			/** Counts the tokens a call spent against its key, in the month of `at`, the time the call was made (doc 14: tokens per month, no money). */
+			addUsage: (id: string, tokens: number, at: Date = now()) => addKeyUsage(engine.db, id, tokens, at),
 		},
 
 		trash: {
