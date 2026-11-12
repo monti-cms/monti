@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Banner, TextButton } from "./index";
 
-/** A one-line notice across the top of a pane: cream ground, a rule below, a dot before the sentence, and what can be done at the right end. */
+/** A one-line notice across the very top of a screen: cream ground, a rule below, a dot before the sentence, and what can be done at the right end. */
 const meta = {
 	title: "Patterns/Frame/Banner",
 	component: Banner,

@@ -17,6 +17,7 @@ import {
 	Input,
 	Separator,
 	Stack,
+	StandalonePage,
 	StatusBar,
 	StatusBarCell,
 	StatusBarSpacer,
@@ -66,29 +67,34 @@ export function TemplateEditor({
 	};
 
 	return (
-		<Stack gap={0} height="screen" overflow="clip" background="page">
-			{/* Every banner of the screen stands at its very top, broader first (common.md, banners). */}
-			<SessionEndedBanner />
-			{editor.loadRefusal ? (
-				<Banner tone="danger" title={t("templates.loadFailed")} plainMeta>
-					<TextButton onClick={() => void editor.reload()}>{t("templates.retry")}</TextButton>
-				</Banner>
-			) : null}
-			{editor.conflict ? (
-				<Banner tone="danger" title={t("templates.conflict")} plainMeta>
-					<TextButton onClick={() => void editor.loadLatest()}>{t("templates.loadLatest")}</TextButton>
-				</Banner>
-			) : null}
-			{editor.browserCopy ? (
-				<Banner title={t("entry.browserCopy")}>
-					<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
-						{t("entry.loadCopy")}
-					</TextButton>
-					<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
-						{t("entry.dropCopy")}
-					</TextButton>
-				</Banner>
-			) : null}
+		<StandalonePage
+			// Every banner of the screen stands at its very top, broader first (common.md, banners).
+			banner={
+				<>
+					<SessionEndedBanner />
+					{editor.loadRefusal ? (
+						<Banner tone="danger" title={t("templates.loadFailed")} plainMeta>
+							<TextButton onClick={() => void editor.reload()}>{t("templates.retry")}</TextButton>
+						</Banner>
+					) : null}
+					{editor.conflict ? (
+						<Banner tone="danger" title={t("templates.conflict")} plainMeta>
+							<TextButton onClick={() => void editor.loadLatest()}>{t("templates.loadLatest")}</TextButton>
+						</Banner>
+					) : null}
+					{editor.browserCopy ? (
+						<Banner title={t("entry.browserCopy")}>
+							<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
+								{t("entry.loadCopy")}
+							</TextButton>
+							<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
+								{t("entry.dropCopy")}
+							</TextButton>
+						</Banner>
+					) : null}
+				</>
+			}
+		>
 			<EditorHeader>
 				<Inline gap={16} minWidth={0} paddingX={12}>
 					<TextButton variant="quiet" onClick={onBack}>
@@ -178,6 +184,6 @@ export function TemplateEditor({
 					{t("templates.chars", { count: docLength(editor.doc) })}
 				</StatusBarCell>
 			</StatusBar>
-		</Stack>
+		</StandalonePage>
 	);
 }

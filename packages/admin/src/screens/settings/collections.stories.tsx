@@ -403,31 +403,50 @@ export const Made: Story = {
 	},
 };
 
-/**
- * A refused apply stays where the person acts (the feedback ladder in status.md): the review keeps open with the reason at its top, not a toast that goes.
- * The site refuses `schema.apply` here.
- */
-export const ApplyRefused: Story = {
-	loaders: site(),
-	render: (_args, { loaded }) => {
+/** The site refuses one operation here, as a server that fails does. */
+const refusing =
+	(refused: string): Story["render"] =>
+	(_args, { loaded }) => {
 		const { transport } = (loaded as Loaded).site;
 		return (
 			<MontiAdmin
 				transport={(name, input, options) =>
-					name === "schema.apply"
+					name === refused
 						? Promise.resolve({ status: 500, body: { error: "unexpected" } })
 						: transport(name, input, options)
 				}
 				siteName="example.dev"
 			/>
 		);
-	},
+	};
+
+/**
+ * A refused apply stays where the person acts (the feedback ladder in status.md): the review keeps open with the reason at its top, not a toast that goes.
+ * The site refuses `schema.apply` here.
+ */
+export const ApplyRefused: Story = {
+	loaders: site(),
+	render: refusing("schema.apply"),
 	play: async (context) => {
 		await NewCollectionReview.play?.(context);
 		const body = within(context.canvasElement.ownerDocument.body);
 		await userEvent.click(body.getByRole("button", { name: "적용" }));
 		await body.findByText("저장하지 못했습니다. 다시 시도해 주세요.", {}, wait);
 		await expect(body.getByRole("button", { name: "적용" })).toBeInTheDocument();
+	},
+};
+
+/**
+ * A save refused before its review opens (the site refuses `schema.plan` here): the reason is the page's banner, at the very top of the screen over
+ * the title, where the frame's own banners stand (common.md). It stays until the next save.
+ */
+export const SaveRefused: Story = {
+	loaders: site(),
+	render: refusing("schema.plan"),
+	play: async ({ canvasElement }) => {
+		const { page } = await changeFields(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		await page.findByText("저장하지 못했습니다. 다시 시도해 주세요.", {}, wait);
 	},
 };
 

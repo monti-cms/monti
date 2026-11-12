@@ -130,3 +130,21 @@ describe("settings › collections: what an action does", () => {
 		expect(scrollsSideways(row)).toEqual([]);
 	});
 });
+
+const { SaveRefused } = composeStories(collections);
+
+describe("settings › collections: a refused save", () => {
+	it("says why in a banner at the very top of the screen: over the title, from edge to edge of the page area, the corner under it", async () => {
+		await SaveRefused.run();
+		const box = (element: Element | null) => (element as Element).getBoundingClientRect();
+		const banner = box(
+			page.getByText("저장하지 못했습니다. 다시 시도해 주세요.").element().closest("[data-slot=banner]"),
+		);
+		const inset = box(document.querySelector("[data-slot=sidebar-inset]"));
+		expect(banner.top).toBe(inset.top);
+		expect([banner.left, banner.right]).toEqual([inset.left, inset.right]);
+		expect(banner.bottom).toBeLessThan(box(page.getByRole("heading", { name: "설정" }).element()).top);
+		// The assistant's corner keeps its 12px, measured from under the banner.
+		expect(box(page.getByRole("button", { name: "어시스턴트 열기" }).element()).top).toBe(banner.bottom + 12);
+	});
+});
