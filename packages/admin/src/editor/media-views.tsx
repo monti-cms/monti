@@ -55,7 +55,8 @@ import {
 	TextAlignLeft,
 	TextAlignRight,
 } from "@monti-cms/ui/icons";
-import type { Transaction } from "@tiptap/pm/state";
+import { GapCursor } from "@tiptap/pm/gapcursor";
+import { Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { type NodeViewProps, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { type ComponentType, useContext, useEffect, useId, useRef, useState } from "react";
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
@@ -341,7 +342,8 @@ function EditDialog({
 	const [amount, setAmount] = useState<number | null>(sized?.value ?? null);
 	/** A height being typed: a free shape takes it when the field is left, so each digit does not cut the picture anew. */
 	const [heightDraft, setHeightDraft] = useState<string | null>(null);
-	const [shown, setShown] = useState(src);
+	// The picture as it stands turned. One that opens turned has none until it is made: the stage stands empty at its shape meanwhile, not the upright one.
+	const [shown, setShown] = useState<string | null>(rotate === 0 ? src : null);
 	const stage = useRef<HTMLDivElement>(null);
 	// The picture's own size: the one the body frames it by, else read once from the file (the shown one is redrawn after each turn, so it can lag).
 	const [read, setRead] = useState<{ width: number; height: number } | null>(null);
@@ -472,6 +474,7 @@ function EditDialog({
 		widthPx === null || !upright
 			? null
 			: (imageSize(upright, { crop: cropOf(part), rotate: turn, width: widthPx })?.height ?? null);
+	const turned = size();
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent size="xl" finalFocus={returnTo}>
@@ -479,6 +482,8 @@ function EditDialog({
 				<CropStage
 					src={shown}
 					alt=""
+					// Known before the picture is in: the crop box stands as large as the picture will be, not as a dot (T136).
+					shape={turned ? turned.width / turned.height : null}
 					crop={part}
 					stageRef={stage}
 					onGrip={pressed}
@@ -641,6 +646,61 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const editable = media ? !media.readOnly : editor.isEditable;
 	const open = media?.card === blockId;
 	const align = imageAlignOf(data.align);
+	/**
+	 * In a body that cannot be written in, the keyboard stops at the picture (T133, 2026-11-12): read-only takes away what writes, never a way to read. The
+	 * stop shows the keyboard's ordinary focus mark; Enter or Space picks the picture as a press does (the line of a picked block, and its bar, the focus going
+	 * into it), and Escape unpicks it, the focus staying on the picture. Two states, each looking as it does everywhere: where the keyboard is, and what is
+	 * picked.
+	 */
+	/** Picks the picture; `false` when it could not (its place in the text is not known). */
+	const pick = () => {
+		const at = getPos();
+		return typeof at === "number" && editor.commands.setNodeSelection(at);
+	};
+	/**
+	 * Lets go of the picture for real: a selection that holds nothing takes its place, so a copy made next takes nothing and no block is left picked out of
+	 * sight. The nearest place in a text, or with no text on either side the place between two blocks.
+	 */
+	const unpick = () => {
+		const at = getPos();
+		if (typeof at !== "number") return;
+		const { doc } = editor.state;
+		const before = doc.resolve(at);
+		const after = doc.resolve(at + node.nodeSize);
+		// With no text anywhere in the body, every place between its blocks stands between two that take no caret: the gap there.
+		const none =
+			[Selection.findFrom(before, -1, true), Selection.findFrom(after, 1, true)].find(
+				(found) => found instanceof TextSelection,
+			) ?? new GapCursor(before);
+		editor.view.dispatch(editor.state.tr.setSelection(none));
+	};
+	const picked = selected;
+	/** The picture is being picked with a key: the focus goes into its bar once the bar is drawn. */
+	const intoBar = useRef(false);
+	useEffect(() => {
+		if (!picked || !intoBar.current) return;
+		intoBar.current = false;
+		bar.current?.querySelector("button")?.focus();
+	}, [picked]);
+	// Escape is heard on the page as the key goes down to its target: a button of the bar shows its name in a tooltip while it holds the focus, and the
+	// tooltip keeps Escape from going back up. While the settings card is open, Escape is the card's.
+	const barOpen = picked && !editable && !open;
+	const letGo = useRef(unpick);
+	letGo.current = unpick;
+	useEffect(() => {
+		if (!barOpen) return;
+		const onEscape = (event: KeyboardEvent) => {
+			if (event.key !== "Escape") return;
+			// From its own bar the focus goes back to the picture. With the keyboard elsewhere in the body (on the next picture), the picture is let go of
+			// all the same and the keyboard stays where it is: a bar left open behind it would be nobody's.
+			const own = box.current?.contains(document.activeElement) ?? false;
+			if (!own && !editor.view.dom.contains(document.activeElement)) return;
+			letGo.current();
+			if (own) box.current?.focus();
+		};
+		document.addEventListener("keydown", onEscape, true);
+		return () => document.removeEventListener("keydown", onEscape, true);
+	}, [barOpen, editor]);
 
 	const captionField = (editable || data.caption) && (
 		<Input
@@ -674,6 +734,26 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 
 	const { item } = file;
 	const url = item ? previewUrl(item) : null;
+	/** What makes the picture a stop of the keyboard where the body is read only; where it is written, the arrow keys pick blocks and nothing here is set. */
+	const stop: Partial<React.ComponentProps<typeof BlockBox>> =
+		editable || !url
+			? {}
+			: {
+					tabIndex: 0,
+					role: "group",
+					// Which picture it is: what the entry says of it, or its file's name when it says nothing.
+					"aria-label": t("editor.image.block", { name: data.alt || item?.name || "" }),
+					onKeyDown: (event) => {
+						if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+						event.preventDefault();
+						// Already picked (with the pointer): its bar is there to go into.
+						if (picked) return void bar.current?.querySelector("button")?.focus();
+						// Set before the pick, which draws the bar at once; taken back if the pick did not land, or a later pick with the pointer would send
+						// the focus into the bar.
+						intoBar.current = true;
+						if (!pick()) intoBar.current = false;
+					},
+				};
 	const size = item ? (item.web ?? item.original) : null;
 	const frame = imageFrame({ width: size?.width, height: size?.height, crop: data.crop, rotate: data.rotate });
 	const sized = sizedOf(data);
@@ -782,9 +862,11 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 					<BlockBox
 						ref={box}
 						width={width}
-						selected={selected && editable}
+						// Picked reads as picked whether the body is written or only read: with pictures one over the other, the line says whose bar it is (T133).
+						selected={picked}
 						measure={dragged ? sizeLabel(dragged.to) : undefined}
 						spoken={spoken}
+						{...stop}
 					>
 						{url ? (
 							<Image
@@ -808,11 +890,11 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 								ratio="wide"
 							/>
 						)}
-						{selected && !editable && url && (
+						{picked && !editable && url && (
 							// Read-only (an archived entry, one in the trash): nothing changes the picture, but what the entry says of it can still be read. The
 							// settings card opens with its fields read-only (T130; read-only keeps the ways to read, 2026-11-11 owner).
 							<BlockBarPlace>
-								<FloatingBar ref={bar}>
+								<FloatingBar ref={bar} aria-label={t("editor.image.tools")}>
 									<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
 										<FloatingBarButton
 											label={t("editor.image.settings")}
@@ -840,7 +922,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 						{selected && editable && url && (
 							<>
 								<BlockBarPlace>
-									<FloatingBar ref={bar}>
+									<FloatingBar ref={bar} aria-label={t("editor.image.tools")}>
 										{ALIGNS.map(({ value, icon: Icon, label }) => (
 											<FloatingBarButton
 												key={value}
@@ -956,7 +1038,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 			<BlockBox>
 				{selected && (media ? !media.readOnly : editor.isEditable) && (
 					<BlockBarPlace>
-						<FloatingBar ref={bar}>
+						<FloatingBar ref={bar} aria-label={t("editor.file.tools")}>
 							<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
 								<FloatingBarButton
 									label={t("editor.image.settings")}

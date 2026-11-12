@@ -5,6 +5,7 @@ import { cn } from "./cn";
 import { FIELD_ACTION, FIELD_ACTION_BUTTON, FIELD_HOVER, FIELD_INSET } from "./hover";
 import { IconButton, IconButtonContext } from "./icon-button";
 import { Close, Image as ImageIcon } from "./icons";
+import { Image } from "./image";
 import { useProposalDescription } from "./proposal-cue";
 
 const HEIGHT = { sm: "h-monti-control-sm", md: "h-monti-control-md", default: "h-monti-control-lg" } as const;
@@ -62,11 +63,8 @@ function MediaInput({
 	);
 	const shown = value ? (
 		<>
-			{value.thumbnail ? (
-				<img src={value.thumbnail} alt="" className="size-5 shrink-0 rounded-monti-sm bg-monti-muted object-cover" />
-			) : (
-				<span className="size-5 shrink-0 rounded-monti-sm bg-monti-muted" aria-hidden />
-			)}
+			{/* The frame that waits for its picture; with no picture (a file) it is the same empty square, so names line up. */}
+			<Image src={value.thumbnail} alt="" size="thumb-sm" radius="sm" />
 			<span className="truncate">{value.name}</span>
 		</>
 	) : (
@@ -82,6 +80,9 @@ function MediaInput({
 			className={cn(
 				!readOnly && FIELD_HOVER,
 				"flex w-full min-w-0 items-center border-monti-default border-b transition-colors focus-within:border-monti-contrast data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
+				// A proposal's blue line stays under the keyboard's focus (a state's colour is not taken away), so the focus on the file's name is a
+				// ring around the whole field, outside the line, as a select's is. The × at the end has its own ring.
+				"data-proposal:has-[>button:focus-visible]:ring-2 data-proposal:has-[>button:focus-visible]:ring-monti-contrast/50",
 				FIELD_INSET,
 				HEIGHT[size],
 				className,

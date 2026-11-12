@@ -63,6 +63,7 @@ import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { usePurge, useRestore, useTrashMove } from "../../trash/use-trash";
+import { focusText, useFocusHandOff } from "../frame/focus-hand-off";
 import { SessionEndedBanner } from "../frame/session-ended";
 import { useLanguageName } from "../list/column-menu";
 import type { SchemaRead } from "../settings/schema-draft";
@@ -206,8 +207,10 @@ export function EntryEditor({
 		) : null;
 	const paired = Boolean(compared) && view === "paired";
 	const pairedRows = usePairedRows(paired ? compared : null, catalogs);
+	// With the entry's other controls: before the read, and after one that failed, "+ language" made a translation of an entry nobody had read, and the
+	// tabs stood elsewhere than where they stay.
 	const languages =
-		translation.multilingual && schema.data ? (
+		read && translation.multilingual && schema.data ? (
 			<Inline minHeight="control-md" justify="between" gap={12}>
 				<LocaleTabs
 					schema={schema.data.schema}
@@ -226,7 +229,9 @@ export function EntryEditor({
 	// The assistant's body proposals (T32): the ones that can be drawn on the text now, the one the bubble points at, and taking or discarding it.
 	const [looking, setLooking] = useState(0);
 	const proposed = body.current ? drawable(body.current.state.doc, editor.bodyProposals) : editor.bodyProposals;
-	const walking = readOnly ? null : (proposed[Math.min(looking, proposed.length - 1)] ?? null);
+	// Not before the entry is read, nor after a read that failed: the bubble and its keys would take or discard proposals nobody has seen, on an
+	// entry that may be archived or in the trash.
+	const walking = !read || readOnly ? null : (proposed[Math.min(looking, proposed.length - 1)] ?? null);
 	const look = (direction: -1 | 1) => {
 		const next = (Math.min(looking, proposed.length - 1) + direction + proposed.length) % proposed.length;
 		setLooking(next);
@@ -261,6 +266,12 @@ export function EntryEditor({
 	}, []);
 
 	const save = editor.save;
+	/** The focus to the text being written: the body, or the title when the body is not there; to the comparison's first control when it took the editor's place. */
+	const toText = useCallback(() => () => focusText(() => body.current, fieldInputId("title")), []);
+	// What goes away by its own action had the keyboard's focus on that action, and hands it to the text: a banner (discard or load this
+	// browser's copy, load the latest, try again, confirm all, compare), and the save cell, a button only while there is something to save or
+	// to look at (saved, it is words). Nothing is remembered from the press: a save that fails leaves the cell, and the focus on it.
+	const handOff = useFocusHandOff(toText);
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
 			if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "s") {
@@ -320,6 +331,7 @@ export function EntryEditor({
 				collection={collection}
 				address={address}
 				onBack={() => onCompare(null)}
+				toText={handOff}
 			/>
 		);
 
@@ -379,22 +391,25 @@ export function EntryEditor({
 		/>
 	) : undefined;
 	// The title and the body, the same in the text alone and side by side (where the title takes the size of its row, and the body the rows).
-	const titleField = (size: "display" | "inherit") => (
-		<FormField>
-			<FormFieldLabel htmlFor={fieldInputId("title")} hidden>
-				{t("entry.title")}
-			</FormFieldLabel>
-			<Input
-				id={fieldInputId("title")}
-				value={editor.title}
-				placeholder={compared?.source.title || t("entry.title")}
-				size={size}
-				appearance="inline"
-				disabled={readOnly}
-				onChange={(event) => editor.set("title", event.target.value)}
-			/>
-		</FormField>
-	);
+	// Like the body, the title is not there before the entry is read: an empty title to type into would read as an untitled entry, and what was typed
+	// in it stood over the saved title when that came (T153). Keys pressed before then go nowhere, as there is nothing to take them.
+	const titleField = (size: "display" | "inherit") =>
+		read ? (
+			<FormField>
+				<FormFieldLabel htmlFor={fieldInputId("title")} hidden>
+					{t("entry.title")}
+				</FormFieldLabel>
+				<Input
+					id={fieldInputId("title")}
+					value={editor.title}
+					placeholder={compared?.source.title || t("entry.title")}
+					size={size}
+					appearance="inline"
+					disabled={readOnly}
+					onChange={(event) => editor.set("title", event.target.value)}
+				/>
+			</FormField>
+		) : null;
 	// A translation's body waits for its comparison: the source blocks new since it was translated go in as undecided blocks when the editor is made,
 	// and it is made again when they change (one is decided).
 	const addedKey = translation.added.map((each) => each.from).join(",");
@@ -432,7 +447,8 @@ export function EntryEditor({
 		) : null;
 	const publishedAt = publish.publishedAt;
 
-	const head = readOnly ? (
+	// What acts on the entry waits for the entry: before it is read nothing says whether it is published, archived or in the trash.
+	const head = !read ? null : readOnly ? (
 		trashed ? (
 			// The one pill of an entry in the trash (doc 11): it comes back as a draft, here.
 			<Button
@@ -526,12 +542,13 @@ export function EntryEditor({
 				<>
 					<SessionEndedBanner />
 					{editor.loadRefusal ? (
-						<Banner tone="danger" title={t("entry.loadFailed")} plainMeta>
+						<Banner ref={handOff} tone="danger" title={t("entry.loadFailed")} plainMeta>
 							<TextButton onClick={() => void editor.reload()}>{t("entry.retry")}</TextButton>
 						</Banner>
 					) : null}
 					{editor.conflict ? (
 						<Banner
+							ref={handOff}
 							tone="danger"
 							title={
 								editor.conflict.at ? t("entry.conflict", { at: clock(editor.conflict.at) }) : t("entry.conflictNoTime")
@@ -547,15 +564,14 @@ export function EntryEditor({
 					) : null}
 					{editor.browserCopy ? (
 						<Banner
+							ref={handOff}
 							title={t("entry.browserCopy")}
 							meta={editor.browserCopy.savedAt ? dayTime(editor.browserCopy.savedAt, language) : undefined}
 						>
 							<TextButton variant="underline" onClick={() => onCompare("draft")}>
 								{t("entry.compare")}
 							</TextButton>
-							<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
-								{t("entry.loadCopy")}
-							</TextButton>
+							<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
 							<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
 								{t("entry.dropCopy")}
 							</TextButton>
@@ -569,7 +585,7 @@ export function EntryEditor({
 						/>
 					) : null}
 					{compared && !readOnly ? (
-						<SourceChangedBanner compared={compared} onConfirmAll={() => void translation.confirmAll()} />
+						<SourceChangedBanner ref={handOff} compared={compared} onConfirmAll={() => void translation.confirmAll()} />
 					) : null}
 				</>
 			}
@@ -592,20 +608,23 @@ export function EntryEditor({
 				<Inline gap={12} justify="end">
 					{head}
 					{/* The pill stands alone: the line sets it apart from the screen's tools (the panel, ⋯, ✦). */}
-					<Separator orientation="vertical" length="control" flush />
-					<IconButton
-						label={t("entry.properties")}
-						side="bottom"
-						pressed={panel}
-						onClick={() => {
-							// The properties take the place of the source beside the text: one pane at a time.
-							if (!panel && translation.isTranslation) setView("off");
-							setPanel(!panel);
-						}}
-					>
-						<RightPanelOpen aria-hidden />
-					</IconButton>
-					{trashed ? (
+					{head ? <Separator orientation="vertical" length="control" flush /> : null}
+					{/* With the entry's other controls: before the read, and after a read that failed, it stood pressed and opened nothing. */}
+					{read ? (
+						<IconButton
+							label={t("entry.properties")}
+							side="bottom"
+							pressed={panel}
+							onClick={() => {
+								// The properties take the place of the source beside the text: one pane at a time.
+								if (!panel && translation.isTranslation) setView("off");
+								setPanel(!panel);
+							}}
+						>
+							<RightPanelOpen aria-hidden />
+						</IconButton>
+					) : null}
+					{!read ? null : trashed ? (
 						<DropdownMenu>
 							<IconButton
 								label={t("entry.more")}
@@ -717,10 +736,12 @@ export function EntryEditor({
 					) : (
 						<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
 							{languages}
-							<Stack gap={0} paddingTop={16} paddingBottom={32}>
-								<EditorMarginLine margin={titleChange}>{titleField("display")}</EditorMarginLine>
-								<EditorTitleRule />
-							</Stack>
+							{read ? (
+								<Stack gap={0} paddingTop={16} paddingBottom={32}>
+									<EditorMarginLine margin={titleChange}>{titleField("display")}</EditorMarginLine>
+									<EditorTitleRule />
+								</Stack>
+							) : null}
 							{bodyField(null)}
 						</Stack>
 					)}
@@ -742,7 +763,9 @@ export function EntryEditor({
 						</ProposalBubbleDock>
 					) : null}
 				</Stack>
-				{panel ? (
+				{/* The properties wait for the entry as the title and the body do (T153): drawn from the schema alone, every field stood empty and took input
+				    for an entry that was not read yet, and a file chosen or sent up then was written over the saved value when it landed. */}
+				{panel && read ? (
 					<EntryProperties
 						editor={editor}
 						schema={schema.data}
@@ -761,7 +784,12 @@ export function EntryEditor({
 			{read ? (
 				<StatusBar>
 					{readOnly ? null : (
-						<StatusBarCell tone={cell.tone} onClick={cell.press} render={cell.press ? undefined : <span />}>
+						<StatusBarCell
+							ref={handOff}
+							tone={cell.tone}
+							onClick={cell.press}
+							render={cell.press ? undefined : <span />}
+						>
 							{cell.text}
 						</StatusBarCell>
 					)}

@@ -24,13 +24,15 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { ChevronLeft, OverflowMenuHorizontal, Spark } from "@monti-cms/ui/icons";
-import { useMemo, useState } from "react";
+import type { Editor } from "@tiptap/react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { useEntryEditor } from "../entry/use-entry-editor";
+import { focusText, useFocusHandOff } from "../frame/focus-hand-off";
 import { SessionEndedBanner } from "../frame/session-ended";
 
 /**
@@ -58,6 +60,13 @@ export function TemplateEditor({
 	const remove = useOperation("templates.remove");
 	const [nameMissing, setNameMissing] = useState(false);
 	useLeaveGuard({ changes: editor.draft.changes, revertAll: editor.draft.revertAll });
+	// A banner whose own action takes it away (discard or load this browser's copy, load the latest, try again) had the keyboard's focus on that
+	// action: it goes to the text being written, the body, or the name when the body is not there (as in the entry editor).
+	const body = useRef<Editor | null>(null);
+	const keepBody = useCallback((made: Editor | null) => {
+		body.current = made;
+	}, []);
+	const handOff = useFocusHandOff(() => () => focusText(() => body.current, "monti-template-name"));
 
 	const name = editor.title;
 	const write = async () => {
@@ -73,20 +82,18 @@ export function TemplateEditor({
 				<>
 					<SessionEndedBanner />
 					{editor.loadRefusal ? (
-						<Banner tone="danger" title={t("templates.loadFailed")} plainMeta>
+						<Banner ref={handOff} tone="danger" title={t("templates.loadFailed")} plainMeta>
 							<TextButton onClick={() => void editor.reload()}>{t("templates.retry")}</TextButton>
 						</Banner>
 					) : null}
 					{editor.conflict ? (
-						<Banner tone="danger" title={t("templates.conflict")} plainMeta>
+						<Banner ref={handOff} tone="danger" title={t("templates.conflict")} plainMeta>
 							<TextButton onClick={() => void editor.loadLatest()}>{t("templates.loadLatest")}</TextButton>
 						</Banner>
 					) : null}
 					{editor.browserCopy ? (
-						<Banner title={t("entry.browserCopy")}>
-							<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
-								{t("entry.loadCopy")}
-							</TextButton>
+						<Banner ref={handOff} title={t("entry.browserCopy")}>
+							<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
 							<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
 								{t("entry.dropCopy")}
 							</TextButton>
@@ -104,12 +111,17 @@ export function TemplateEditor({
 					{editor.dirty ? <EntryStatus status="editing">{t("templates.unsaved")}</EntryStatus> : null}
 				</Inline>
 				<Inline gap={16} justify="end">
-					<Button variant="primary" loading={editor.saving} onClick={() => void write()}>
-						{t("templates.save")}
-					</Button>
-					{/* The pill stands alone: the line sets it apart from the screen's tools (⋯, ✦). */}
-					<Separator orientation="vertical" length="control" flush />
-					{id ? (
+					{/* What acts on the template waits for the template (T153): before it is read its name is not there, and "save" would ask for one. */}
+					{editor.loaded ? (
+						<>
+							<Button variant="primary" loading={editor.saving} onClick={() => void write()}>
+								{t("templates.save")}
+							</Button>
+							{/* The pill stands alone: the line sets it apart from the screen's tools (⋯, ✦). */}
+							<Separator orientation="vertical" length="control" flush />
+						</>
+					) : null}
+					{id && editor.loaded ? (
 						<DropdownMenu>
 							<IconButton
 								label={t("templates.more")}
@@ -146,27 +158,32 @@ export function TemplateEditor({
 			</EditorHeader>
 			<Stack gap={0} grow minHeight={0} overflow="y" paddingX={48} paddingTop={16}>
 				<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
-					<Stack gap={0} paddingTop={16} paddingBottom={32}>
-						<FormField>
-							<FormFieldLabel htmlFor="monti-template-name" hidden>
-								{t("templates.name")}
-							</FormFieldLabel>
-							<Input
-								id="monti-template-name"
-								value={name}
-								placeholder={t("templates.name")}
-								size="display"
-								appearance="inline"
-								aria-invalid={nameMissing && name.trim() === "" ? true : undefined}
-								onChange={(event) => {
-									editor.set("title", event.target.value);
-									setNameMissing(false);
-								}}
-							/>
-							{nameMissing && name.trim() === "" ? <FormFieldError>{t("templates.nameMissing")}</FormFieldError> : null}
-						</FormField>
-						<EditorTitleRule />
-					</Stack>
+					{/* Like the body, the name is not there before the template is read: what was typed in an empty name stood over the saved one (T153). */}
+					{editor.loaded ? (
+						<Stack gap={0} paddingTop={16} paddingBottom={32}>
+							<FormField>
+								<FormFieldLabel htmlFor="monti-template-name" hidden>
+									{t("templates.name")}
+								</FormFieldLabel>
+								<Input
+									id="monti-template-name"
+									value={name}
+									placeholder={t("templates.name")}
+									size="display"
+									appearance="inline"
+									aria-invalid={nameMissing && name.trim() === "" ? true : undefined}
+									onChange={(event) => {
+										editor.set("title", event.target.value);
+										setNameMissing(false);
+									}}
+								/>
+								{nameMissing && name.trim() === "" ? (
+									<FormFieldError>{t("templates.nameMissing")}</FormFieldError>
+								) : null}
+							</FormField>
+							<EditorTitleRule />
+						</Stack>
+					) : null}
 					{editor.loaded && catalogs ? (
 						<BodyEditor
 							key={editor.bodyKey}
@@ -174,16 +191,20 @@ export function TemplateEditor({
 							files={editor.files}
 							catalogs={catalogs}
 							onChange={(doc) => editor.set("doc", doc)}
+							onEditor={keepBody}
 						/>
 					) : null}
 				</Stack>
 			</Stack>
-			<StatusBar>
-				<StatusBarSpacer />
-				<StatusBarCell end render={<span />}>
-					{t("templates.chars", { count: docLength(editor.doc) })}
-				</StatusBarCell>
-			</StatusBar>
+			{/* As the entry editor: no status bar for a template that is not read yet. */}
+			{editor.loaded ? (
+				<StatusBar>
+					<StatusBarSpacer />
+					<StatusBarCell end render={<span />}>
+						{t("templates.chars", { count: docLength(editor.doc) })}
+					</StatusBarCell>
+				</StatusBar>
+			) : null}
 		</StandalonePage>
 	);
 }

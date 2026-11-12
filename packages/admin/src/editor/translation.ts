@@ -107,6 +107,18 @@ function cell(kind: "rule" | "kind" | "source", fill?: (element: HTMLElement) =>
 	return element;
 }
 
+/**
+ * What ends the rows when the last block is one thing (a picture, a file): an empty picture that takes no room. Chrome moves the selection of such a block to
+ * the first place that takes a caret as soon as the mouse moves when no such place comes after the block, and the source cell before it is text
+ * that can be picked, so nothing before it counts either (T134).
+ */
+function endOfRows() {
+	const element = document.createElement("img");
+	element.setAttribute("data-pair", "end");
+	element.alt = "";
+	return element;
+}
+
 function sourceWords(element: HTMLElement, block: PairedSourceBlock | undefined) {
 	if (!block) return;
 	const holder = document.createElement("div");
@@ -167,6 +179,7 @@ const PairedRowsPlugin = new Plugin<PairedRows | null>({
 				);
 				if (pos === current) shown.push(Decoration.node(pos, pos + node.nodeSize, { "data-pair-current": "" }));
 			});
+			if (state.doc.lastChild?.isAtom) widget(state.doc.content.size, 1, "end", endOfRows);
 			return DecorationSet.create(state.doc, shown);
 		},
 	},

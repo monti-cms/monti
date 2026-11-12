@@ -22,6 +22,8 @@ const entry = (
 		icon?: true;
 		/** The entry is archived: read-only (doc 02). */
 		archived?: true;
+		/** No first paragraph: the body is what `body` gives, and nothing else. */
+		bare?: true;
 	} = {},
 ) => [
 	async (): Promise<Loaded> => {
@@ -52,7 +54,10 @@ const entry = (
 					title: "쓰는 중인 글",
 					slug: "writing",
 					values: ids && options.values ? options.values(ids) : undefined,
-					doc: { type: "doc", blocks: [paragraph, ...(ids && options.body ? options.body(ids) : [])] },
+					doc: {
+						type: "doc",
+						blocks: [...(options.bare ? [] : [paragraph]), ...(ids && options.body ? options.body(ids) : [])],
+					},
 				});
 				if (options.translate) id = await run("translations.create", { source: id, locale: options.translate });
 				if (options.archived) await monti.run("entries.archive", { ids: [id] }, { actor: "admin" });
@@ -162,6 +167,31 @@ export const ManyInBody: Story = {
 	}),
 };
 
+/** A translation whose body ends in a picture after a file: side by side, each block stands between cells the editor does not edit (T134). */
+export const TranslationEndsInPicture: Story = {
+	loaders: entry({
+		translate: "en",
+		body: ({ code, notes }) => [
+			{ id: "f_1", type: "file", attrs: { media: notes } },
+			{ id: "i_1", type: "image", attrs: { media: code, alt: "화면에 뜬 코드" } },
+		],
+	}),
+	tags: ["!dev"],
+};
+
+/** A body with no text at all: a picture, a file, a picture. Nothing in it takes a caret (T134). */
+export const OnlyWholeBlocks: Story = {
+	loaders: entry({
+		bare: true,
+		body: ({ desk, code, notes }) => [
+			{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상" } },
+			{ id: "f_1", type: "file", attrs: { media: notes } },
+			{ id: "i_2", type: "image", attrs: { media: code, alt: "화면에 뜬 코드" } },
+		],
+	}),
+	tags: ["!dev"],
+};
+
 /** Flow 6·29: the library's window open from the "/" menu. */
 export const LibraryWindow: Story = {
 	loaders: entry(),
@@ -235,6 +265,45 @@ export const ArchivedImage: Story = {
 		});
 		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
 	},
+};
+
+/**
+ * An archived entry with two pictures one over the other (T133): each is a place the keyboard stops at. The first is picked by a press (its line, its bar);
+ * the keyboard is on the second, which shows the ordinary focus mark. Two states, each looking as it does everywhere.
+ */
+export const ArchivedPictures: Story = {
+	loaders: entry({
+		body: ({ desk, code }) => [
+			{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상" } },
+			{ id: "i_2", type: "image", attrs: { media: code, alt: "화면에 뜬 코드" } },
+		],
+		archived: true,
+	}),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement.ownerDocument.body);
+		const first = await page.findByRole("img", { name: "아침 책상" }, wait);
+		await page.findByRole("img", { name: "화면에 뜬 코드" }, wait);
+		const box = first.getBoundingClientRect();
+		await userEvent.pointer({
+			keys: "[MouseLeft]",
+			target: first,
+			coords: { clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 },
+		});
+		await page.findByRole("toolbar", {}, wait);
+		const blocks = [...canvasElement.ownerDocument.querySelectorAll<HTMLElement>("[data-slot=block-box]")];
+		// As the keyboard arrives: the browser draws the keyboard's focus after a key.
+		await userEvent.keyboard("{Shift}");
+		blocks[1]?.focus();
+	},
+};
+
+/** An archived entry's picture with no alt text: the keyboard's stop is named by its file (T133). */
+export const ArchivedNoAlt: Story = {
+	loaders: entry({
+		body: ({ desk }) => [{ id: "i_1", type: "image", attrs: { media: desk } }],
+		archived: true,
+	}),
+	tags: ["!dev"],
 };
 
 /** A cover's settings card open, under its line and as wide as it. */

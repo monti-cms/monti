@@ -31,22 +31,27 @@ export const Opacity: Story = {
 	),
 };
 
-/** The ring as the keyboard sees it, drawn here without focus: outside a button, inside a row that reaches its box's edges. */
+/**
+ * The ring as the keyboard sees it, drawn here without focus: outside a button, inside a row that reaches its box's edges. A picture (`inert`): the
+ * keyboard does not stop on it, and the measuring does not ask a drawn ring to change under a focus.
+ */
 export const Focus: Story = {
 	render: () => (
 		<Page>
-			<Group title="Focus ring · ring-2 ring-monti-contrast/50">
-				<Spec name="outside" usage="a part that stands alone: a button, an icon button, a chip">
-					<Button className="ring-2 ring-monti-contrast/50">저장</Button>
-				</Spec>
-				<Spec name="inside (ring-inset)" usage="a row that spans its box: sidebar, lists, status cells, table rows">
-					<Stack className="w-56 overflow-hidden">
-						<div className="rounded-monti-full ring-2 ring-monti-contrast/50 ring-inset">
-							<NavLink note="post">게시글</NavLink>
-						</div>
-					</Stack>
-				</Spec>
-			</Group>
+			<div inert>
+				<Group title="Focus ring · ring-2 ring-monti-contrast/50">
+					<Spec name="outside" usage="a part that stands alone: a button, an icon button, a chip">
+						<Button className="ring-2 ring-monti-contrast/50">저장</Button>
+					</Spec>
+					<Spec name="inside (ring-inset)" usage="a row that spans its box: sidebar, lists, status cells, table rows">
+						<Stack className="w-56 overflow-hidden">
+							<div className="rounded-monti-full ring-2 ring-monti-contrast/50 ring-inset">
+								<NavLink note="post">게시글</NavLink>
+							</div>
+						</Stack>
+					</Spec>
+				</Group>
+			</div>
 		</Page>
 	),
 };
