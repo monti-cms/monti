@@ -7,14 +7,18 @@ import {
 	type FieldDefinition,
 	type LocalesDefinition,
 	type Schema,
+	type StoredField,
 	storedFields,
 } from "./define";
 import type { ChangeStep } from "./files";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
-/** A field the admin renamed (the server cannot tell a rename from a remove and an add, so the draft says so). */
-export type Rename = { collection: string; from: string; to: string };
+/**
+ * A field the admin renamed (the server cannot tell a rename from a remove and an add, so the draft says so). With `of` it is an option of that
+ * field (by the field's name now) that was renamed: the stored word is rewritten, in a plain select and in a conditional field alike.
+ */
+export type Rename = { collection: string; from: string; to: string; of?: string };
 
 /** What a person chooses for a change that touches stored values (doc 01, the review table). The first option is the default. */
 export type Choice =
@@ -39,6 +43,7 @@ export type SchemaChange = {
 		| "renameField"
 		| "changeField"
 		| "removeOption"
+		| "renameOption"
 		| "addLocale"
 		| "removeLocale"
 		| "changeSource"
@@ -46,7 +51,7 @@ export type SchemaChange = {
 	/** Absent for a change of the languages (doc 04). */
 	collection?: string;
 	field?: string;
-	/** For an option taken out of a conditional field, the option. */
+	/** For an option taken out of a field, the option; for a renamed one, its new word (`from` is the old one). */
 	option?: string;
 	/** The language added or removed, or the new source language. */
 	locale?: string;
@@ -61,6 +66,8 @@ export type SchemaChange = {
 	 * may have more, so a count never decides whether the review asks. Path changes and removed collections show none (doc 01).
 	 */
 	count?: number;
+	/** Of those entries, how many are on the site now: their published version is changed with the draft (doc 02). Trashed ones are not counted. */
+	published?: number;
 	/** What the review asks, with the default first. Absent when the change touches no stored value. */
 	choices?: Choice[];
 };
@@ -85,6 +92,24 @@ async function countEntries(db: Db, collection: string, where: ReturnType<typeof
 		.executeTakeFirstOrThrow();
 	return Number(row.all);
 }
+
+/** The count of a data change: the entries it touches, and how many of them are on the site now, by their published version's values. */
+async function counts(db: Db, collection: string, where: ReturnType<typeof sql<boolean>>) {
+	const row = await db
+		.selectFrom("entry_published")
+		.select((eb) => eb.fn.countAll<string>().as("all"))
+		.where("collection", "=", collection)
+		.where(where)
+		.where("entry_id", "in", (eb) =>
+			eb.selectFrom("entries").select("id").where("status", "=", "published").where("trashed_at", "is", null),
+		)
+		.executeTakeFirstOrThrow();
+	return { count: await countEntries(db, collection, where), published: Number(row.all) };
+}
+
+/** Entries that have this option of a select chosen: the one value of a single select, or one of a many's. */
+export const hasOption = (field: string, option: string) =>
+	sql<boolean>`(values->>${field} = ${option} or (jsonb_typeof(values->${field}) = 'array' and values->${field} ? ${option}))`;
 
 /**
  * What saving `draft` over `current` changes, with the entries each change touches and what the review must ask. Nothing is written. The review asks
@@ -191,8 +216,22 @@ async function planFields(
 	const after = { fields: storedFields(afterCollection) };
 	const changes: SchemaChange[] = [];
 	const renamed = renames.filter(
-		(rename) => rename.collection === collection && before.fields[rename.from] && after.fields[rename.to],
+		(rename) => !rename.of && rename.collection === collection && before.fields[rename.from] && after.fields[rename.to],
 	);
+	const fromName = new Map(renamed.map((rename) => [rename.to, rename.from]));
+	/** The options of a field renamed in this change, old word to new: both sides must have them, and the old word must be gone. */
+	const optionRenames = (field: string, old: StoredField, now: StoredField) =>
+		old.kind !== "select" || now.kind !== "select"
+			? []
+			: renames.filter(
+					(rename) =>
+						rename.of === field &&
+						rename.collection === collection &&
+						old.options.includes(rename.from) &&
+						now.options.includes(rename.to) &&
+						!now.options.includes(rename.from) &&
+						!old.options.includes(rename.to),
+				);
 	const renamedFrom = new Set(renamed.map((rename) => rename.from));
 	const renamedTo = new Set(renamed.map((rename) => rename.to));
 
@@ -203,7 +242,7 @@ async function planFields(
 			collection,
 			field: rename.to,
 			from: rename.from,
-			count: await countEntries(db, collection, hasValue(rename.from)),
+			...(await counts(db, collection, hasValue(rename.from))),
 			choices: [
 				{ do: "renameField", values: "move" },
 				{ do: "renameField", values: "empty" },
@@ -220,7 +259,7 @@ async function planFields(
 			do: "removeField",
 			collection,
 			field,
-			count: await countEntries(db, collection, hasValue(field)),
+			...(await counts(db, collection, hasValue(field))),
 			choices: [
 				{ do: "removeField", values: "clear" },
 				...movable.map((target) => ({ do: "removeField" as const, values: { move: target } })),
@@ -232,40 +271,76 @@ async function planFields(
 		const old = before.fields[field];
 		if (renamedTo.has(field)) continue;
 		if (!old) changes.push(await planNewField(db, collection, field, definition));
-		else if (!sameJson(old, definition) || (definition.required && !old.required)) {
-			const change =
+		// A select whose only change is an option renamed or taken out has its own lines below: "changed, the data is the same" would be untrue.
+		else if (
+			!(definition.required && !old.required) &&
+			old.kind === "select" &&
+			definition.kind === "select" &&
+			optionsTouched(old, definition) &&
+			sameJson({ ...old, options: [] }, { ...definition, options: [] })
+		)
+			continue;
+		else if (!sameJson(underRenamed(old), definition) || (definition.required && !old.required))
+			changes.push(
 				definition.required && !old.required
 					? await planNewField(db, collection, field, definition, "changeField")
-					: ({ id: `changeField:${collection}.${field}`, do: "changeField", collection, field } as SchemaChange);
-			changes.push(change);
-			// An option taken out of a conditional field (doc 19): the review asks what becomes of the entries that chose it, as it asks about a
-			// removed field's values. They are left with no choice, or given one of the options that stay.
-			const gone =
-				old.kind === "select" && definition.kind === "select" && hangsOn(afterCollection, beforeCollection, field)
-					? old.options.filter((option) => !definition.options.includes(option))
-					: [];
-			const stay = definition.kind === "select" ? definition.options : [];
-			for (const option of gone)
-				changes.push({
-					id: `removeOption:${collection}.${field}.${option}`,
-					do: "removeOption",
-					collection,
-					field,
-					option,
-					count: await countEntries(db, collection, sql<boolean>`values->>${field} = ${option}`),
-					choices: [
-						{ do: "removeOption", entries: "empty" },
-						...stay.map((to) => ({ do: "removeOption" as const, entries: { change: to } })),
-					],
-				});
-		}
+					: { id: `changeField:${collection}.${field}`, do: "changeField", collection, field },
+			);
+	}
+
+	// The options of a select, and of a conditional field's choice, are stored words (doc 19, 2026-11-13): a renamed one is rewritten, and
+	// one taken out is asked about. A field renamed in the same change is read under its old name's definition; its steps come after the
+	// field's own rename, so they find the values under the new name.
+	for (const [field, definition] of Object.entries(after.fields)) {
+		const old = before.fields[fromName.get(field) ?? field];
+		if (!old || old.kind !== "select" || definition.kind !== "select") continue;
+		const renamedOptions = optionRenames(field, old, definition);
+		for (const rename of renamedOptions)
+			changes.push({
+				id: `renameOption:${collection}.${field}.${rename.from}`,
+				do: "renameOption",
+				collection,
+				field,
+				from: rename.from,
+				option: rename.to,
+				...(await counts(db, collection, hasOption(fromName.get(field) ?? field, rename.from))),
+			});
+		const gone = old.options.filter(
+			(option) => !definition.options.includes(option) && !renamedOptions.some((rename) => rename.from === option),
+		);
+		for (const option of gone)
+			changes.push({
+				id: `removeOption:${collection}.${field}.${option}`,
+				do: "removeOption",
+				collection,
+				field,
+				option,
+				...(await counts(db, collection, hasOption(fromName.get(field) ?? field, option))),
+				// A required field is never emptied: a site that trusts "required" would get nothing from an entry that is on it.
+				choices: [
+					...(definition.required ? [] : [{ do: "removeOption" as const, entries: "empty" as const }]),
+					...definition.options.map((to) => ({ do: "removeOption" as const, entries: { change: to } })),
+				],
+			});
 	}
 	return changes;
-}
 
-/** Whether the field is a conditional field's choice, before or after the change. */
-const hangsOn = (after: CollectionDefinition, before: CollectionDefinition, field: string) =>
-	after.fields[field]?.kind === "conditional" || before.fields[field]?.kind === "conditional";
+	/** Whether an option of the field was renamed or taken out. */
+	function optionsTouched(old: StoredField, now: StoredField) {
+		if (old.kind !== "select" || now.kind !== "select") return false;
+		return old.options.some((option) => !now.options.includes(option));
+	}
+
+	/** A field of a conditional field's option as it is after the option's own rename: the group follows its option, which is no change of the field. */
+	function underRenamed(old: StoredField): StoredField {
+		if (!old.under) return old;
+		const host = renamed.find((rename) => rename.from === old.under?.field)?.to ?? old.under.field;
+		const [was, now] = [before.fields[old.under.field], after.fields[host]];
+		const to =
+			was && now ? optionRenames(host, was, now).find((rename) => rename.from === old.under?.option)?.to : undefined;
+		return to ? { ...old, under: { ...old.under, option: to } } : old;
+	}
+}
 
 async function planNewField(
 	db: Db,
@@ -276,7 +351,7 @@ async function planNewField(
 ): Promise<SchemaChange> {
 	const change: SchemaChange = { id: `${kind}:${collection}.${field}`, do: kind, collection, field };
 	if (definition.required) {
-		change.count = await countEntries(db, collection, sql<boolean>`not ${hasValue(field)}`);
+		Object.assign(change, await counts(db, collection, sql<boolean>`not ${hasValue(field)}`));
 		change.choices = [
 			{ do: "addRequiredField", fill: defaultFill(definition) },
 			{ do: "addRequiredField", fill: null },
@@ -298,6 +373,15 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 	for (const change of changes) {
 		if (change.do === "changeSource")
 			steps.push({ do: "changeSource", from: String(change.from), to: String(change.locale) });
+		// A renamed option asks nothing: its word is rewritten wherever it is chosen.
+		if (change.do === "renameOption")
+			steps.push({
+				do: "renameOption",
+				collection: change.collection ?? "",
+				field: String(change.field),
+				from: String(change.from),
+				to: String(change.option),
+			});
 		if (!change.choices) continue;
 		const given = ([] as Choice[]).concat(answers[change.id] ?? []);
 		const kinds = new Set(change.choices.map((choice) => choice.do));

@@ -68,7 +68,12 @@ export const CollectionsInput: z.ZodType<Schema["collections"]> = z.record(
 	]),
 );
 const SchemaInput: z.ZodType<Schema> = z.object({ locales: LocalesInput, collections: CollectionsInput });
-export const RenameInput = z.object({ collection: z.string(), from: z.string(), to: z.string() });
+export const RenameInput = z.object({
+	collection: z.string(),
+	from: z.string(),
+	to: z.string(),
+	of: z.string().optional(),
+});
 const Rename = RenameInput;
 const ChoiceInput = z.discriminatedUnion("do", [
 	z.object({ do: z.literal("renameField"), values: z.enum(["move", "empty"]) }),
@@ -268,7 +273,7 @@ export const schemaOperations = [
 		name: "schema.plan",
 		kind: "read",
 		description:
-			"Compare a draft schema with the applied one: each change, how many entries it touches, and what the review must choose for changes that touch stored values. Renamed fields must be named in renames.",
+			"Compare a draft schema with the applied one: each change, how many entries it touches, and what the review must choose for changes that touch stored values. Renamed fields must be named in renames, and a renamed option of a select too (with of: the field): its stored word is rewritten.",
 		input: z.object({ draft: SchemaInput, renames: z.array(Rename).default([]) }),
 		async run(input, ctx) {
 			const state = await readSchemaState(ctx.db);

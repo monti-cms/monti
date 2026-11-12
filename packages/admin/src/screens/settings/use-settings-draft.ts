@@ -14,12 +14,15 @@ import {
 	fieldKeys,
 	flatten,
 	isAdminPlace,
+	isTopField,
 	type LocaleRow,
 	localeProposalPaths,
 	localeRows,
+	optionFields,
 	placeOf,
 	proposalPaths,
 	type SettingsRead,
+	savedField,
 	settingsVersion,
 	tabOf,
 } from "./schema-draft";
@@ -234,7 +237,7 @@ export function useSettingsDraft() {
 					path,
 				);
 			else if (place.kind === "field" || place.kind === "fieldValue") {
-				const saved = data.schema.collections[c]?.fields[place.key];
+				const saved = savedField(data, c, place.key);
 				const field = draft.value(at.field(c, place.key)) as DraftField | null | undefined;
 				const tag = !saved
 					? { tag: t("changes.new"), tone: "success" as const }
@@ -357,6 +360,11 @@ export function useSettingsDraft() {
 		fieldLabel,
 		collections: data ? collectionKeys(data, listed) : [],
 		fields: (c: string) => (data ? fieldKeys(data, listed, c) : []),
+		/** The fields that stand in the list and the panel on their own: not those of a conditional field's option (doc 19). */
+		topFields: (c: string) => (data ? fieldKeys(data, listed, c).filter((key) => isTopField(data, shown, c, key)) : []),
+		/** The fields of one option of a conditional field (by its place), as the draft and the proposals have them. */
+		optionFields: (c: string, host: string, option: string) =>
+			data ? optionFields(fieldKeys(data, listed, c), shown, c, host, option) : [],
 	};
 }
 

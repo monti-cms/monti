@@ -30,7 +30,7 @@ const REMOVED = "text-monti-faint line-through decoration-1";
 /**
  * One field. `name` is the key as written in the schema (a required field ends it with " !"), `label` what the admin sees, with the field's help text
  * after it in the faint ink (`description`) and a short note of what is special about it (`note`: "renamed from", "new", "not in the panel"); `kind` at the end
- * (mono; it can carry a mark such as "→ Tag"). `tone` colors the name for a change. `depth` indents a field that sits in a group (1) or in a branch of one (2).
+ * (mono; it can carry a mark such as "→ Tag"). `tone` colors the name for a change. `depth` indents a field that sits in a group (1), in a branch of one (2), or in a branch inside a group (3).
  * `group` makes the line a group's: a grey band with its name in sans, bold. A field that cannot be moved has no `grip`; its place stays empty so the names
  * line up. With `gripProps` the grip is the button the field is dragged by. `changed` is an unsaved change; `problems` (its name) puts a red dot after
  * the name for a field with something to fix before saving; `locked` (its name) puts a lock after the kind
@@ -69,7 +69,7 @@ function FieldRow({
 	description?: ReactNode;
 	note?: ReactNode;
 	kind?: ReactNode;
-	depth?: 0 | 1 | 2;
+	depth?: 0 | 1 | 2 | 3;
 	group?: boolean;
 	grip?: boolean;
 	gripProps?: ComponentProps<"button">;
@@ -103,6 +103,7 @@ function FieldRow({
 				depth === 0 && "pl-monti-12",
 				depth === 1 && "pl-[28px]",
 				depth === 2 && "pl-[44px]",
+				depth === 3 && "pl-[60px]",
 				group && "bg-monti-muted py-monti-8",
 				onOpen && !group && "hover:bg-monti-muted",
 				dragging && SLOT,
@@ -165,11 +166,14 @@ function FieldRow({
 /**
  * A group with its fields, as one thing that moves: its band (`name`, with `gripProps` to drag it by) and, under it, its fields (`FieldRow depth={1}`
  * as `children`). The group keeps the rules of one line of the outline, so a box or a list draws it like any other line. `motion` moves it while it
- * makes room for another, `dragging` is the gap it left while in hand, and `lifted` the group in hand, floating with its fields.
+ * makes room for another, `dragging` is the gap it left while in hand, and `lifted` the group in hand, floating with its fields. With `head`
+ * the block is a field with what hangs under it (a conditional field with its options' bands and their fields): `head` is that field's own
+ * `FieldRow`, in the band's place.
  */
 function FieldGroup({
 	name,
 	label,
+	head,
 	gripProps,
 	grip = true,
 	motion,
@@ -179,8 +183,10 @@ function FieldGroup({
 	children,
 	...props
 }: Omit<ComponentProps<"li">, "children" | "style"> & {
-	name: ReactNode;
+	name?: ReactNode;
 	label?: ReactNode;
+	/** The block's first line when it is not a group's band: the `FieldRow` of the field the rest hangs under. */
+	head?: ReactNode;
 	grip?: boolean;
 	gripProps?: ComponentProps<"button">;
 	motion?: { transform?: string; transition?: string };
@@ -204,7 +210,7 @@ function FieldGroup({
 			{...props}
 		>
 			<ul className="m-0 list-none p-0">
-				<FieldRow name={name} label={label} group grip={grip} gripProps={gripProps} />
+				{head ?? <FieldRow name={name} label={label} group grip={grip} gripProps={gripProps} />}
 				{children}
 			</ul>
 		</Root>

@@ -8,9 +8,26 @@ import type { AdminValues } from "./admin-values";
 import type { Schema } from "./define";
 import { storedFields } from "./define";
 import type { ChangeFile, ChangeStep } from "./files";
-import { schemaHash } from "./plan";
+import { hasOption, schemaHash } from "./plan";
 
 type Db = Kysely<Database> | Transaction<Database>;
+
+/**
+ * The values with one option of a select taken out of `field` (`to` null) or turned into another. A single select loses the field or holds the
+ * new word; a many keeps its other picks, the new word joining them once, and an emptied many loses the field.
+ */
+const optionSet = (field: string, option: string, to: string | null) => {
+	const rest = sql`((values->${field}) - ${option}::text)`;
+	const many =
+		to === null
+			? rest
+			: sql`(${rest} || case when ${rest} ? ${to} then '[]'::jsonb else jsonb_build_array(${to}::text) end)`;
+	const single =
+		to === null ? sql`values - ${field}::text` : sql`values || jsonb_build_object(${field}::text, ${to}::text)`;
+	return sql`case when jsonb_typeof(values->${field}) = 'array'
+		then case when ${many} = '[]'::jsonb then values - ${field}::text else values || jsonb_build_object(${field}::text, ${many}) end
+		else ${single} end`;
+};
 
 const empty = (field: string) => sql<boolean>`coalesce(values->>${field}, '') = ''`;
 
@@ -118,11 +135,12 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 			return;
 		case "removeOption":
 			await entries(
-				step.entries === "empty"
-					? sql`values - ${step.field}::text`
-					: sql`values || jsonb_build_object(${step.field}::text, ${step.entries.change}::text)`,
-				sql<boolean>`values->>${step.field} = ${step.option}`,
+				optionSet(step.field, step.option, step.entries === "empty" ? null : step.entries.change),
+				hasOption(step.field, step.option),
 			);
+			return;
+		case "renameOption":
+			await entries(optionSet(step.field, step.from, step.to), hasOption(step.field, step.from));
 			return;
 		case "fillField":
 			await entries(

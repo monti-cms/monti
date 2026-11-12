@@ -186,10 +186,9 @@ describe("changing the structure of a conditional field", () => {
 			expect.arrayContaining([
 				expect.objectContaining({ do: "removeField", field: "videoUrl", count: 1 }),
 				expect.objectContaining({ do: "removeField", field: "poster", count: 0 }),
-				expect.objectContaining({ do: "changeField", field: "format" }),
 			]),
 		);
-		// Left with no choice first, then each option that stays.
+		// The choice is required, so it is never emptied: each option that stays is offered (options.int.test.ts has the rest).
 		expect(plan.find((change) => change.do === "removeOption")).toEqual({
 			id: "removeOption:post.format.video",
 			do: "removeOption",
@@ -197,8 +196,8 @@ describe("changing the structure of a conditional field", () => {
 			field: "format",
 			option: "video",
 			count: 1,
+			published: 0,
 			choices: [
-				{ do: "removeOption", entries: "empty" },
 				{ do: "removeOption", entries: { change: "article" } },
 				{ do: "removeOption", entries: { change: "link" } },
 			],
@@ -209,38 +208,6 @@ describe("changing the structure of a conditional field", () => {
 			"removeField:post.poster": { do: "removeField", values: "clear" },
 		} as const;
 		expect(stepsFor(plan, fields).missing).toEqual(["removeOption:post.format.video"]);
-	});
-
-	it("19-4 the entries that chose a removed option are left with no choice, or changed to the option picked; the others are not touched", async () => {
-		const after = changed({ ...base, options: ["article", "link"], fields: { link: base.fields.link } });
-		const apply = async (entries: "empty" | { change: string }) => {
-			await db.deleteFrom("entries").execute();
-			const video = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" });
-			const article = (
-				(await site().run(
-					"entries.create",
-					{ collection: "post", title: "둘", slug: "two", values: { format: "article" } },
-					admin,
-				)) as Written<{ id: string }>
-			).output.id;
-			const plan = await planSchema(db, schema, after);
-			const { steps, missing } = stepsFor(plan, {
-				"removeField:post.videoUrl": { do: "removeField", values: { move: "linkUrl" } },
-				"removeField:post.poster": { do: "removeField", values: "clear" },
-				"removeOption:post.format.video": { do: "removeOption", entries },
-			});
-			expect(missing).toEqual([]);
-			await migrateContent(db, after, [{ id: `option-${JSON.stringify(entries)}`, steps }]);
-			await migrateContent(db, schema, []);
-			return { video: (await stored(video)).values, article: (await stored(article)).values };
-		};
-		const emptied = await apply("empty");
-		expect(emptied.video).not.toHaveProperty("format");
-		expect(emptied.article).toEqual({ format: "article" });
-		// Changed to the link option, with the address moved to its field by the field's own answer: the entry is a whole link post.
-		const changedTo = await apply({ change: "link" });
-		expect(changedTo.video).toEqual({ format: "link", linkUrl: "https://example.dev/v.mp4" });
-		expect(changedTo.article).toEqual({ format: "article" });
 	});
 
 	it("19-4 an option taken out: the fields' choices", async () => {

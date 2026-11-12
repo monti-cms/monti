@@ -34,11 +34,11 @@ import {
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "./pick-one";
-import { at, conditionalWith, type DraftField, FIELD_VALUES, type FieldValue, newFieldKey } from "./schema-draft";
+import { at, type DraftField, FIELD_VALUES, type FieldValue, newFieldKey } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 
-/** The four kinds a person makes (doc 01); `slug` is every collection's own and is never made here. */
-const KINDS = ["text", "select", "media", "relation"] as const;
+/** The kinds a person makes (doc 01; the conditional one of doc 19); `slug` is every collection's own and is never made here. */
+const KINDS = ["text", "select", "media", "relation", "conditional"] as const;
 const LOCALES = ["same", "perLocale", "fromSource"] as const;
 type Kind = (typeof KINDS)[number] | "slug";
 
@@ -47,8 +47,6 @@ const IDENTIFIER = /^[a-z][a-zA-Z0-9]*$/;
 
 type Form = {
 	kind: Kind;
-	/** A conditional field (doc 19): this sheet edits its choice, and its options' fields are kept as they are. */
-	conditional: boolean;
 	name: string;
 	label: string;
 	description: string;
@@ -67,7 +65,6 @@ type Form = {
 
 const blank = (to: string): Form => ({
 	kind: "text",
-	conditional: false,
 	name: "",
 	label: "",
 	description: "",
@@ -89,9 +86,7 @@ function formOf(field: DraftField, values: Partial<Record<FieldValue, unknown>>,
 	const labels = (values.optionLabels ?? {}) as Record<string, string>;
 	return {
 		...blank(to),
-		// A conditional field (doc 19) is edited here as its choice; `defOf` keeps it conditional, with its options' fields.
-		kind: def.kind === "conditional" ? "select" : def.kind,
-		conditional: def.kind === "conditional",
+		kind: def.kind,
 		name: field.name,
 		label: String(values.label ?? ""),
 		description: String(values.description ?? ""),
@@ -131,12 +126,9 @@ function defOf(form: Form, was: FieldDefinition | null): FieldDefinition {
 			max: form.max ? Number(form.max) : undefined,
 		});
 	if (form.kind === "slug") return clean({ ...(was as FieldDefinition), ...common, kind: "slug" });
-	if (was?.kind === "conditional")
-		return conditionalWith(
-			was,
-			form.options.map((option) => option.value),
-			common,
-		);
+	// A conditional field's options (doc 19); the fields of each are fields of their own in the draft, added in the fields list.
+	if (form.kind === "conditional")
+		return clean({ kind: "conditional", ...common, options: form.options.map((option) => option.value), fields: {} });
 	if (form.kind === "select")
 		return clean({ kind: "select", ...common, options: form.options.map((option) => option.value), many: form.many });
 	if (form.kind === "media")
@@ -163,8 +155,11 @@ const adminOf = (form: Form): Record<FieldValue, unknown> => {
 	};
 };
 
-/** What the sheet is open on: a new field of a collection, or one of its fields by its place in the draft. */
-export type FieldSheetOpen = { collection: string; key: string | null };
+/**
+ * What the sheet is open on: a new field of a collection, or one of its fields by its place in the draft. `under` makes the new field one of a
+ * conditional field's option (doc 19): the conditional field's place and the option.
+ */
+export type FieldSheetOpen = { collection: string; key: string | null; under?: { field: string; option: string } };
 
 const optionId = (index: number) => `o:${index}`;
 
@@ -231,6 +226,8 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 	);
 	const set = (patch: Partial<Form>) => setForm((current) => ({ ...current, ...patch }));
 	const adding = open.key === null;
+	// A field of an option stays that option's; a new one is the option's the "+ field" of its band named.
+	const under = existing?.under ?? open.under;
 	const fixedName = open.key === "title" || open.key === "slug";
 	const structure = !locked;
 
@@ -262,7 +259,11 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 		}
 		const key = open.key ?? newFieldKey(keys, form.name);
 		if (structure)
-			draft.set(at.field(c, key), { name: form.name, def: defOf(form, existing?.def ?? null) } satisfies DraftField);
+			draft.set(at.field(c, key), {
+				name: form.name,
+				def: defOf(form, existing?.def ?? null),
+				...(under ? { under } : {}),
+			} satisfies DraftField);
 		const values = adminOf(form);
 		for (const each of FIELD_VALUES) {
 			const place = at.fieldValue(c, key, each);
@@ -362,7 +363,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 			{/* A saved field's kind first: it is what the field is, and it never changes (the add sheet picks it on the left). */}
 			{adding ? null : (
 				<ReadValue label={t("settings.field.kindLabel")} mono={false}>
-					{form.conditional ? t("settings.field.kind.conditional") : kindWord(form.kind)}
+					{kindWord(form.kind)}
 					{form.kind === "relation" ? ` → ${model.label(form.to)}` : ""}
 				</ReadValue>
 			)}
@@ -392,7 +393,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 
 	// A select's choices are its values, not a rule: their own section, between what the field is and its rules. The table comes with the first row.
 	const options =
-		form.kind === "select" ? (
+		form.kind === "select" || form.kind === "conditional" ? (
 			<SheetSection title={t("settings.field.options")}>
 				{form.options.length > 0 ? (
 					<Sortable
@@ -492,7 +493,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 					</Inline>
 				) : null}
 				{/* How many of the choices are picked belongs with the choices, not with the rules. */}
-				{form.conditional ? null : switchRow(t("settings.field.many"), form.many, (many) => set({ many }))}
+				{form.kind === "select" ? switchRow(t("settings.field.many"), form.many, (many) => set({ many })) : null}
 			</SheetSection>
 		) : null;
 

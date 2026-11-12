@@ -3,10 +3,10 @@ import {
 	type AdminValues,
 	type AdminValuesPatch,
 	type CollectionDefinition,
-	type ConditionalField,
 	canonical,
 	type FieldDefinition,
 	fingerprint,
+	type GroupField,
 	type LocalesDefinition,
 	mergeAdminValues,
 	type Rename,
@@ -38,8 +38,32 @@ export type Catalog = {
 	marks: { type: string; label: string | { key: string } }[];
 };
 
-/** A field as the draft holds it: its name now (a rename changes it) and its definition. Its place in the draft is keyed by the name it came with. */
-export type DraftField = { name: string; def: FieldDefinition };
+/**
+ * A field as the draft holds it: its name now (a rename changes it) and its definition. Its place in the draft is keyed by the name it came with.
+ * A field of a conditional field's option (doc 19) is a field of its own here, as it is stored: `under` says which field (by its place) and which
+ * option it belongs to, and the conditional field's own definition holds its options with no fields in them.
+ */
+export type DraftField = { name: string; def: FieldDefinition; under?: { field: string; option: string } };
+
+/** A collection's fields as the draft holds them, in the order shown: a conditional field, then its options' fields. */
+export function draftFields(collection: Pick<CollectionDefinition, "fields"> | undefined): Record<string, DraftField> {
+	const out: Record<string, DraftField> = {};
+	for (const [name, def] of Object.entries(collection?.fields ?? {})) {
+		if (def.kind !== "conditional") {
+			out[name] = { name, def };
+			continue;
+		}
+		out[name] = { name, def: { ...def, fields: {} } };
+		for (const option of def.options)
+			for (const [inner, innerDef] of Object.entries(def.fields[option] ?? {}))
+				out[inner] = { name: inner, def: innerDef, under: { field: name, option } };
+	}
+	return out;
+}
+
+/** A field as it is saved, by its place in the draft; `undefined` for a field the draft made. */
+export const savedField = (read: SchemaRead, c: string, key: string): DraftField | undefined =>
+	draftFields(read.schema.collections[c])[key];
 
 /** The admin values of a field the screen edits. */
 export const FIELD_VALUES = ["label", "description", "optionLabels"] as const;
@@ -194,8 +218,7 @@ export function flatten(read: SchemaRead | SettingsRead, catalog: Catalog | null
 		base[at.collection(c)] = { kind: collection.kind };
 		base[at.path(c)] = collection.path ?? null;
 		base[at.preview(c)] = previewOf(collection);
-		for (const name of Object.keys(collection.fields))
-			base[at.field(c, name)] = { name, def: collection.fields[name] as FieldDefinition } satisfies DraftField;
+		for (const [name, field] of Object.entries(draftFields(collection))) base[at.field(c, name)] = field;
 		Object.assign(base, adminPlaces(c, collection, read.adminValues[c], catalog));
 	}
 	return base;
@@ -212,7 +235,7 @@ function adminPlaces(
 	places[at.collectionValue(c, "label")] = values?.label;
 	places[at.collectionValue(c, "folders")] = values?.folders ?? false;
 	places[at.collectionValue(c, "layout")] = values?.layout;
-	for (const name of Object.keys(collection.fields))
+	for (const name of Object.keys(draftFields(collection)))
 		for (const value of FIELD_VALUES) places[at.fieldValue(c, name, value)] = values?.fields?.[name]?.[value];
 	if (collection.kind === "document" && catalog) {
 		const editor = values?.editor;
@@ -299,12 +322,29 @@ export function collectionKeys(read: SchemaRead, changed: Path[]): string[] {
 
 /** The fields of a collection in the draft, removed ones too: the saved ones in the schema's order, then the new ones in the order they were made. */
 export function fieldKeys(read: SchemaRead, changed: Path[], c: string): string[] {
-	const keys = Object.keys(read.schema.collections[c]?.fields ?? {});
+	const keys = Object.keys(draftFields(read.schema.collections[c]));
 	for (const path of changed) {
 		const place = placeOf(path);
 		if (place?.kind === "field" && place.collection === c && !keys.includes(place.key)) keys.push(place.key);
 	}
 	return keys;
+}
+
+/**
+ * The fields of a conditional field's option, by their places: those the draft still has, in the order shown. `host` is the conditional field's
+ * place.
+ */
+export function optionFields(keys: string[], value: Values, c: string, host: string, option: string): string[] {
+	return keys.filter((key) => {
+		const field = value(at.field(c, key)) as DraftField | null | undefined;
+		return field?.under?.field === host && field.under.option === option;
+	});
+}
+
+/** Whether the field at a place stands in the list on its own: not a field of an option. A removed field is judged by what it was. */
+export function isTopField(read: SchemaRead, value: Values, c: string, key: string): boolean {
+	const field = (value(at.field(c, key)) ?? savedField(read, c, key)) as DraftField | undefined;
+	return !field?.under;
 }
 
 /** A place for a new field named `name` that no saved or drafted field holds (a removed `summary` keeps its own). */
@@ -326,14 +366,33 @@ export function build(read: SchemaRead, changed: Path[], value: Values, catalog:
 		const fields: Record<string, FieldDefinition> = {};
 		const names = new Map<string, string>();
 		const keys = fieldKeys(read, changed, c);
-		for (const key of keys) {
+		const drafted = keys.flatMap((key) => {
 			const field = value(at.field(c, key)) as DraftField | null | undefined;
-			if (!field) continue;
-			fields[field.name] = field.def;
+			return field ? [[key, field] as const] : [];
+		});
+		// A conditional field's options' fields, by the conditional field's place: put into its definition under each option still listed.
+		const groups = new Map<string, Record<string, Record<string, GroupField>>>();
+		for (const [key, field] of drafted) {
+			if (field.under) continue;
+			fields[field.name] = field.def.kind === "conditional" ? { ...field.def, fields: {} } : field.def;
+			if (field.def.kind === "conditional")
+				groups.set(key, Object.fromEntries(field.def.options.map((option) => [option, {}])));
 			names.set(key, field.name);
-			if (read.schema.collections[c]?.fields[key] && field.name !== key)
-				renames.push({ collection: c, from: key, to: field.name });
 		}
+		for (const [key, field] of drafted) {
+			// A field of an option that is gone, or of a conditional field that is, goes with it: the review asks about its values.
+			const group = field.under ? groups.get(field.under.field)?.[field.under.option] : undefined;
+			if (!group) continue;
+			group[field.name] = field.def as GroupField;
+			names.set(key, field.name);
+		}
+		for (const [host, options] of groups) {
+			const made = fields[names.get(host) as string];
+			if (made?.kind === "conditional")
+				made.fields = Object.fromEntries(Object.entries(options).filter(([, group]) => Object.keys(group).length > 0));
+		}
+		for (const [key, name] of names)
+			if (savedField(read, c, key) && name !== key) renames.push({ collection: c, from: key, to: name });
 		const path = value(at.path(c));
 		const preview = value(at.preview(c));
 		schema.collections[c] =
@@ -376,7 +435,9 @@ function collectionValues(
 	}
 	if (Object.keys(fields).length > 0) out.fields = fields;
 	const layout = value(at.collectionValue(c, "layout")) as Layout | undefined;
-	if (layout) out.layout = fullLayout(layout, keys, names);
+	// The layout places the fields that stand on their own; an option's fields go where their conditional field is (doc 19).
+	const top = keys.filter((key) => isTopField(read, value, c, key));
+	if (layout) out.layout = fullLayout(layout, top, names);
 	if (kind === "document" && catalog) {
 		const on = (what: "block" | "mark", list: { type: string }[]) => {
 			const picked = list.filter((each) => value(at.editor(c, what, each.type)) !== false).map((each) => each.type);
@@ -475,8 +536,8 @@ export function proposalPaths(
 			out[at.preview(c)] = previewOf(collection);
 			const label = input.adminValues?.[c]?.label;
 			if (label) out[at.collectionValue(c, "label")] = label;
-			for (const [name, def] of Object.entries(collection.fields)) {
-				out[at.field(c, name)] = { name, def } satisfies DraftField;
+			for (const [name, field] of Object.entries(draftFields(collection))) {
+				out[at.field(c, name)] = field;
 				labels(c, name, name);
 			}
 			continue;
@@ -484,17 +545,24 @@ export function proposalPaths(
 		if (before.path !== collection.path) out[at.path(c)] = collection.path ?? null;
 		if (previewOf(before) !== previewOf(collection)) out[at.preview(c)] = previewOf(collection);
 		const renamedTo = new Map(renames.filter((r) => r.collection === c).map((r) => [r.from, r.to]));
-		for (const [name, def] of Object.entries(before.fields)) {
+		const savedName = new Map([...renamedTo].map(([from, to]) => [to, from]));
+		// A field of an option names its conditional field by that field's place: the name it was saved with.
+		const placed = (field: DraftField): DraftField =>
+			field.under
+				? { ...field, under: { ...field.under, field: savedName.get(field.under.field) ?? field.under.field } }
+				: field;
+		const [was, now] = [draftFields(before), draftFields(collection)];
+		for (const [name, field] of Object.entries(was)) {
 			const to = renamedTo.get(name);
-			const next = to ? collection.fields[to] : collection.fields[name];
+			const found = now[to ?? name];
+			const next = found ? placed(found) : undefined;
 			if (!next) out[at.field(c, name)] = null;
-			else if (to || !sameJson(next, def))
-				out[at.field(c, name)] = { name: to ?? name, def: next } satisfies DraftField;
+			else if (to || !sameJson(next, field)) out[at.field(c, name)] = next;
 		}
 		const targets = new Set(renamedTo.values());
-		for (const [name, def] of Object.entries(collection.fields)) {
-			if (before.fields[name] || targets.has(name)) continue;
-			out[at.field(c, name)] = { name, def } satisfies DraftField;
+		for (const [name, field] of Object.entries(now)) {
+			if (was[name] || targets.has(name)) continue;
+			out[at.field(c, name)] = placed(field);
 			labels(c, name, name);
 		}
 	}
@@ -507,22 +575,3 @@ export const savedValues = (read: SchemaRead, c: string): AdminValues => {
 	const { version: _version, ...values } = read.adminValues[c] ?? { version: 0 };
 	return values;
 };
-
-/**
- * A conditional field (doc 19) as a sheet that edits only its choice leaves it: the options as edited, and the fields of every option that is
- * still listed. Written as a plain select it would lose them, and with them the values the entries hold.
- */
-export function conditionalWith(
-	was: ConditionalField,
-	options: string[],
-	rules: Pick<ConditionalField, "required" | "locale">,
-): ConditionalField {
-	const { required: _required, locale: _locale, ...kept } = was;
-	return {
-		...kept,
-		...(rules.required ? { required: true } : {}),
-		...(rules.locale ? { locale: rules.locale } : {}),
-		options,
-		fields: Object.fromEntries(Object.entries(was.fields).filter(([option]) => options.includes(option))),
-	};
-}
