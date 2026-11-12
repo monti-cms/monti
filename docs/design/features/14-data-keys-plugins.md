@@ -214,7 +214,7 @@ export const algolia = (options: AlgoliaOptions) =>
 1. **줄 끝의 "편집" · "지우기" 모양.** 기준 화면은 작은 회색 버튼과 빨간 글자 버튼이고(`Button variant="ghost" size="sm"`, `ghost-danger`), 화면 지도는 밑줄 글자 버튼(`TextButton`)이다. 권함: 기준 화면대로. 지도보다 나중에 고친 것이고(#430), 지도를 고친다. 그림: `ApiKeysBuilt`.
 2. **서비스 목록의 Ollama.** 흐름 10·01은 Ollama를 따로 적었고 이 문서의 서비스에는 없다. 권함: 줄을 따로 두지 않는다. Ollama는 "OpenAI 호환 주소"에 주소(`http://localhost:11434/v1`)를 넣어 쓴다. 목록은 Anthropic · OpenAI · OpenRouter · Google · OpenAI 호환 주소다. 그림: `ApiKeysPickService`, `ApiKeysAddAddress`.
 3. **서비스 목록의 "플러그인" 묶음.** 권함: 플러그인이 자기 서비스를 더했을 때만 보인다(지금은 없다). 플러그인 키 자리는 "+ 키 추가"가 아니라 자기 줄의 "키 넣기"로 채운다.
-4. **"플러그인 키" 표.** 플러그인이 키 자리를 두는 길(`plugins.setKey`)은 이 문서의 플러그인 쪽 일이다. 권함: 그 일이 들어올 때까지 화면은 표 둘("AI 키", "모델")이다. 흐름 10의 12, 12b는 그때 만든다(진행 기록 T134). 그림: `ApiKeysBuilt`(지금), `ApiKeys` · `ApiKeysSlot` · `ApiKeysSlotFilled`(그때).
+4. **"플러그인 키" 표.** 플러그인이 키 자리를 두는 길(`plugins.setKey`)은 이 문서의 플러그인 쪽 일이다. 권함: 그 일이 들어올 때까지 화면은 표 둘("AI 키", "모델")이다. 흐름 10의 12, 12b는 그때 만든다(진행 기록 T144). 그림: `ApiKeysBuilt`(지금), `ApiKeys` · `ApiKeysSlot` · `ApiKeysSlotFilled`(그때).
 5. **서비스에 닿지 못함.** 흐름에는 "받아 주지 않음"만 있다. 권함: 같은 자리(키 칸 아래)에 "서비스가 답하지 않습니다." 호환 주소는 주소 칸 아래에 둔다. 다시 누르면 다시 묻는다. 그림: `ApiKeysNoAnswer`.
 6. **"빠른 작업" 줄의 덧말.** 기준 화면은 "요약 · 태그 · 대체 텍스트 · 번역 채우기"다. 10번 문서는 번역 채우기를 빠른 작업이 아니라 제안으로 정했다. 권함: "요약 · 태그 · 대체 텍스트". 그림: `ApiKeysBuilt`.
 7. **지우기 확인의 쓰는 곳.** 흐름은 "빠른 작업: 기본"이라 적었다. 권함: 두 줄 다 멈추는 모델 이름을 적는다("어시스턴트 claude-sonnet-5-5", "빠른 작업 claude-haiku-5-5"). "기본"은 무엇이 멈추는지 말하지 않는다. 그림: `ApiKeysRemove`.
