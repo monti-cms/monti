@@ -1668,6 +1668,85 @@ describe("a picture picked, then the entry archived", () => {
 	});
 });
 
+describe("a read-only body with the keyboard (T133)", () => {
+	const blocks = () => [...body().element().querySelectorAll<HTMLElement>("[data-slot=block-box]")];
+	/** Whether a block is drawn as picked: the 2px line around it, the one a picked picture has where the body is written. */
+	const drawnPicked = (block: HTMLElement | undefined) => {
+		const line = block?.querySelector<HTMLElement>("[data-slot=block-line]");
+		if (!line) return false;
+		const style = getComputedStyle(line);
+		return style.display !== "none" && style.outlineStyle === "solid" && style.outlineWidth === "2px";
+	};
+	const toolbars = () => body().getByRole("toolbar").elements();
+	/** The archived entry's two pictures, as the story's loaders make them: the test presses the keys itself. */
+	const archivedPictures = () => composeStory({ loaders: media.ArchivedPictures.loaders }, media.default);
+
+	it("02-6 T133 Tab stops at each picture in turn and draws it picked; Enter opens its bar with the focus in it, its alt text is read, and Escape goes back to the picture", async () => {
+		await archivedPictures().run();
+		await expect.element(body().getByRole("img", { name: "화면에 뜬 코드" })).toBeVisible();
+		await expect.poll(() => blocks().length).toBe(2);
+		// From before the body: the pictures are the body's stops, in the order they stand.
+		const stops: number[] = [];
+		for (let press = 0; press < 40 && stops.length < 2; press++) {
+			await userEvent.keyboard("{Tab}");
+			const at = blocks().indexOf(document.activeElement as HTMLElement);
+			if (at >= 0) stops.push(at);
+			else if (stops.length > 0) break;
+		}
+		expect(stops).toEqual([0, 1]);
+		// The one that holds the focus is the one drawn as picked, and only that one: with pictures one over the other, no guessing whose bar it is.
+		await expect.poll(() => blocks().map(drawnPicked)).toEqual([false, true]);
+		// Reaching it opens nothing.
+		expect(toolbars()).toEqual([]);
+
+		await userEvent.keyboard("{Enter}");
+		const settings = body().getByRole("toolbar").getByRole("button", { name: "설정" });
+		await expect.element(settings).toHaveFocus();
+		// The bar is what a click shows in a read-only body: the settings alone, nothing that writes.
+		expect(body().getByRole("toolbar").getByRole("button").elements()).toHaveLength(1);
+		await userEvent.keyboard("{Enter}");
+		const alt = page.getByRole("textbox", { name: "대체 텍스트" });
+		await expect.element(alt).toHaveValue("화면에 뜬 코드");
+		// To read, not to write: the field is the one a click shows in a read-only body (T130).
+		await expect.element(alt).toBeDisabled();
+
+		// Escape: the card first, then the bar, and the focus is on the picture again.
+		await userEvent.keyboard("{Escape}");
+		await expect.element(alt).not.toBeInTheDocument();
+		await expect.element(settings).toHaveFocus();
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(toolbars).toEqual([]);
+		expect(document.activeElement).toBe(blocks()[1]);
+		expect(blocks().map(drawnPicked)).toEqual([false, true]);
+
+		// Space opens it as Enter does.
+		await userEvent.keyboard(" ");
+		await expect.element(settings).toHaveFocus();
+		await userEvent.keyboard("{Escape}");
+		// Tab from the last picture leaves the body.
+		await userEvent.keyboard("{Tab}");
+		expect(body().element().contains(document.activeElement)).toBe(false);
+	});
+
+	it("02-6 T133 T134 a press on a picture of a read-only body draws it picked and shows its bar at once, and it stays so when the pointer moves", async () => {
+		await archivedPictures().run();
+		const first = body().getByRole("img", { name: "아침 책상" });
+		await userEvent.click(first);
+		await expect.poll(() => blocks().map(drawnPicked)).toEqual([true, false]);
+		await expect.poll(() => toolbars().length).toBe(1);
+		const at = middleOf(first.element());
+		await pointerPath([at, { x: at.x + 3, y: at.y }], { steps: 3 });
+		expect(blocks().map(drawnPicked)).toEqual([true, false]);
+		expect(toolbars()).toHaveLength(1);
+		// Nothing was picked as text by the press or the move.
+		expect(String(window.getSelection())).toBe("");
+		// The other picture, pressed: the line and the bar are that one's now.
+		await userEvent.click(body().getByRole("img", { name: "화면에 뜬 코드" }));
+		await expect.poll(() => blocks().map(drawnPicked)).toEqual([false, true]);
+		expect(toolbars()).toHaveLength(1);
+	});
+});
+
 describe("a save the server refuses", () => {
 	it("09-4 the reason shows, not an entry left unsaved with no word", async () => {
 		const [load] = media.FileInBody.loaders as [() => Promise<{ site: StorySite }>];

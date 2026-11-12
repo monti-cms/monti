@@ -645,6 +645,35 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const editable = media ? !media.readOnly : editor.isEditable;
 	const open = media?.card === blockId;
 	const align = imageAlignOf(data.align);
+	/**
+	 * In a body that cannot be written in, the keyboard stops at the picture (T133, 2026-11-12): read-only takes away what writes, never a way to read. Reached
+	 * with Tab it is picked, drawn as a picked picture is, and its bar stays shut until Enter or Space, as nothing opens by being passed. `quiet` is that: picked
+	 * by the keyboard, not opened yet. A press opens the bar at once, as it always did.
+	 */
+	const [quiet, setQuiet] = useState(false);
+	/** The bar was asked for with a key: the focus goes into it once it is drawn. */
+	const intoBar = useRef(false);
+	useEffect(() => {
+		if (!selected) setQuiet(false);
+	}, [selected]);
+	useEffect(() => {
+		if (quiet || !selected || !intoBar.current) return;
+		intoBar.current = false;
+		bar.current?.querySelector("button")?.focus();
+	}, [quiet, selected]);
+	// Escape shuts the bar, and the focus is the picture's again. Heard on the page as the key goes down to its target: a button of the bar shows its
+	// name in a tooltip while it holds the focus, and the tooltip keeps Escape from going back up. While the settings card is open, Escape is the card's.
+	const barOpen = selected && !editable && !quiet && !open;
+	useEffect(() => {
+		if (!barOpen) return;
+		const shut = (event: KeyboardEvent) => {
+			if (event.key !== "Escape" || !box.current?.contains(document.activeElement)) return;
+			setQuiet(true);
+			box.current.focus();
+		};
+		document.addEventListener("keydown", shut, true);
+		return () => document.removeEventListener("keydown", shut, true);
+	}, [barOpen]);
 
 	const captionField = (editable || data.caption) && (
 		<Input
@@ -678,6 +707,34 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 
 	const { item } = file;
 	const url = item ? previewUrl(item) : null;
+	const pick = () => {
+		const at = getPos();
+		if (typeof at === "number") editor.commands.setNodeSelection(at);
+	};
+	/** What makes the picture a stop of the keyboard where the body is read only; where it is written, the arrow keys pick blocks and nothing here is set. */
+	const stop: Partial<React.ComponentProps<typeof BlockBox>> =
+		editable || !url
+			? {}
+			: {
+					tabIndex: 0,
+					role: "group",
+					"aria-label": t("editor.image.block"),
+					onFocus: (event) => {
+						// Already picked (pressed, or the focus coming back from its bar): picking it again would unpick it for a moment.
+						if (event.target !== event.currentTarget || selected) return;
+						// Arrived at with the keyboard, not pressed: picked, its bar not opened.
+						if (event.currentTarget.matches(":focus-visible")) setQuiet(true);
+						pick();
+					},
+					onClick: () => setQuiet(false),
+					onKeyDown: (event) => {
+						if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+						event.preventDefault();
+						intoBar.current = true;
+						setQuiet(false);
+						if (!selected) pick();
+					},
+				};
 	const size = item ? (item.web ?? item.original) : null;
 	const frame = imageFrame({ width: size?.width, height: size?.height, crop: data.crop, rotate: data.rotate });
 	const sized = sizedOf(data);
@@ -786,9 +843,11 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 					<BlockBox
 						ref={box}
 						width={width}
-						selected={selected && editable}
+						// Picked reads as picked whether the body is written or only read: with pictures one over the other, the line says whose bar it is (T133).
+						selected={selected}
 						measure={dragged ? sizeLabel(dragged.to) : undefined}
 						spoken={spoken}
+						{...stop}
 					>
 						{url ? (
 							<Image
@@ -812,7 +871,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 								ratio="wide"
 							/>
 						)}
-						{selected && !editable && url && (
+						{selected && !editable && url && (!quiet || open) && (
 							// Read-only (an archived entry, one in the trash): nothing changes the picture, but what the entry says of it can still be read. The
 							// settings card opens with its fields read-only (T130; read-only keeps the ways to read, 2026-11-11 owner).
 							<BlockBarPlace>

@@ -65,3 +65,20 @@ export const ShareOfBody: Story = {
 		</Stack>
 	),
 };
+
+/**
+ * In a body that cannot be written in, the keyboard stops at each picture: the one that holds the focus is drawn as a picked one is, with the same line. Here
+ * the first is picked by a press (its bar shows what can be read of it); Tab goes on to the second.
+ */
+export const ReadOnlyStops: Story = {
+	render: () => (
+		<Stack gap={20} align="start" maxWidth="reading">
+			<BlockBox selected tabIndex={0} role="group" aria-label="이미지" width="420px">
+				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" radius="md" />
+			</BlockBox>
+			<BlockBox tabIndex={0} role="group" aria-label="이미지" width="420px">
+				<Image src={SAMPLE} alt="언덕 위로 해가 뜨는 풍경" ratio="wide" radius="md" />
+			</BlockBox>
+		</Stack>
+	),
+};

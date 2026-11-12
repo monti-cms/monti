@@ -249,7 +249,28 @@ export const ArchivedImage: Story = {
 	},
 };
 
-/** A cover's settings card open, under its line and as wide as it. */
+/**
+ * An archived entry with two pictures one over the other (T133): each is a place the keyboard stops at, the one that holds the focus drawn as picked.
+ * Here the second one, reached with Tab.
+ */
+export const ArchivedPictures: Story = {
+	loaders: entry({
+		body: ({ desk, code }) => [
+			{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상" } },
+			{ id: "i_2", type: "image", attrs: { media: code, alt: "화면에 뜬 코드" } },
+		],
+		archived: true,
+	}),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement.ownerDocument.body);
+		await page.findByRole("img", { name: "화면에 뜬 코드" }, wait);
+		const blocks = [...canvasElement.ownerDocument.querySelectorAll<HTMLElement>("[data-slot=block-box]")];
+		// As the keyboard arrives: the browser draws the keyboard's focus after a key.
+		await userEvent.tab();
+		blocks[1]?.focus();
+	},
+};
+
 export const CoverCard: Story = {
 	loaders: entry({ values: ({ desk }) => ({ cover: { media: desk, alt: "아침 책상" } }) }),
 	play: async ({ canvasElement }) => {
