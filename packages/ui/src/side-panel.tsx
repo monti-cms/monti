@@ -26,6 +26,9 @@ export const PANEL_BODY = "flex flex-col gap-monti-20 px-monti-24 py-monti-20";
 export const PANEL_FOOT =
 	"flex shrink-0 items-center justify-end gap-monti-20 border-monti-default border-t px-monti-24 py-monti-12";
 
+/** What can open a panel: a control a person presses. */
+const OPENERS = 'a[href], button, [role="button"], [role="menuitem"], [tabindex]';
+
 /**
  * The widths a side panel starts at (the `width-panel`, `width-side-panel` and `width-assistant` tokens): `side` for a file or an activity beside a
  * list, `panel` for the entry's properties, `assistant` for the assistant. The writer can drag it up to twice as wide, never narrower.
@@ -43,8 +46,11 @@ const SIDE_PANEL_WIDTH = {
  * it covers the ✦ button of the page's corner. The panel is named by its title. Put it in a row beside the screen; on a narrow screen it takes the whole width. With `onSubmit` the body and the foot are one form, so Enter
  * in a field and the foot's submit button save it.
  *
- * Closed with the keyboard while focus is in it (its ×, a shortcut), the panel gives focus back to where focus came into it from: the row that
- * opened it. A pointer press moves nothing. What it came from is remembered by the panel itself; a screen passes nothing.
+ * Closed with the keyboard while focus is in it (its ×, a shortcut), the panel gives focus back to what opened it: the row. A pointer press
+ * moves nothing. The panel remembers its opener itself, and a screen passes nothing: it is the control that had focus when the panel came, or
+ * the last control outside it that was used since (another row opened into the same panel). Where focus merely passed on its way into the
+ * panel (the last row before it, by Tab) is not it. An opener that has left the page (a menu's item) gives its place to what focus goes to
+ * next (the menu's button).
  */
 export function SidePanel({
 	title,
@@ -96,16 +102,31 @@ export function SidePanel({
 	});
 	const titleId = useId();
 	const panel = useRef<HTMLElement>(null);
-	/** Where focus was before it came into the panel. */
+	/** What opened the panel. */
 	const from = useRef<HTMLElement | null>(null);
 	/** Whether the last press in the panel was a key's, not a pointer's. */
 	const keys = useRef(false);
 	useLayoutEffect(() => {
 		const node = panel.current;
+		const outside = (target: EventTarget | null): target is HTMLElement =>
+			target instanceof HTMLElement && target !== document.body && !node?.contains(target);
 		const active = document.activeElement;
-		if (active instanceof HTMLElement && active !== document.body && !node?.contains(active)) from.current = active;
+		if (outside(active)) from.current = active;
+		// A control outside the panel that is used while the panel is open is its opener from then on.
+		const used = (event: MouseEvent) => {
+			const control = event.target instanceof Element ? event.target.closest(OPENERS) : null;
+			if (outside(control)) from.current = control;
+		};
+		// The opener left the page (a menu's item, once its menu closed): what focus goes to next stands for it.
+		const next = (event: FocusEvent) => {
+			if (!from.current?.isConnected && outside(event.target)) from.current = event.target;
+		};
+		document.addEventListener("click", used, true);
+		document.addEventListener("focusin", next, true);
 		// As it leaves, before its nodes do: focus still in it would fall to the document.
 		return () => {
+			document.removeEventListener("click", used, true);
+			document.removeEventListener("focusin", next, true);
 			if (!node || !keys.current || !node.contains(document.activeElement)) return;
 			if (from.current?.isConnected) from.current.focus();
 		};
@@ -150,11 +171,6 @@ export function SidePanel({
 			onPointerDownCapture={(event) => {
 				keys.current = false;
 				props.onPointerDownCapture?.(event);
-			}}
-			onFocusCapture={(event) => {
-				const before = event.relatedTarget;
-				if (before instanceof HTMLElement && !event.currentTarget.contains(before)) from.current = before;
-				props.onFocusCapture?.(event);
 			}}
 		>
 			<ResizeHandle
