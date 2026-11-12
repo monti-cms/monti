@@ -69,7 +69,7 @@
 
 ### 코드
 
-`TextButton`은 여는 메뉴가 열린 동안 잉크다. `TextButton`: `variant`는 `plain`(기본), `underline`, `quiet`, `danger` 중 하나다. `tone="proposal"`은 어시스턴트에게 시키는 버튼의 파란 글자다(밑줄도 파랑). `size`는 `note`, `caption`, 값을 고르는 메뉴를 여는 mono 12의 `meta`(모델 버튼, 쪽마다 행 수), 그리고 필드 라벨 줄의 "✦ 채우기"에 쓰는 `micro`(mono 11)다. `loading`은 글자 앞에 고리를 두고 다시 누를 수 없게 하며, 흐리게 하지 않는다(`aria-busy`). `mono`는 주소나 식별자에 고정폭 글자를 쓴다. `href`가 있으면 링크로 그리고, 앱의 라우터 링크는 `render`에 넣는다. 아이콘은 글자 앞에 온다(14px, 간격 6px). 뒤에 오는 `Caret`은 자기 크기 12px를 지킨다. 바탕은 그리지 않는다. 글자가 잉크색이 되고 밑줄이 생기거나 진해진다. 보이는 높이는 글자의 줄 높이지만, 누를 수 있는 곳은 위아래로 넓혀 적어도 24px다(`HIT_AREA`, tokens.md의 높이 기준). 탭, `FilterButton`, `DragHandle`도 같다.
+`TextButton`은 여는 메뉴가 열린 동안 잉크다. `TextButton`: `variant`는 `plain`(기본), `underline`, `quiet`, `danger` 중 하나다. `tone="proposal"`은 어시스턴트에게 시키는 버튼의 파란 글자다(밑줄도 파랑). `size`는 `note`, `caption`, 값을 고르는 메뉴를 여는 mono 12의 `meta`(모델 버튼, 쪽마다 행 수), 그리고 필드 라벨 줄의 "✦ 채우기"에 쓰는 `micro`(mono 11)다. `loading`은 글자 앞에 고리를 두고 다시 누를 수 없게 하며, 흐리게 하지 않는다(`aria-busy`). `disabled`가 아니라 `aria-disabled`라서 키보드 포커스는 그 버튼에 남는다(브라우저는 `disabled`가 된 버튼에서 포커스를 뺀다). `mono`는 주소나 식별자에 고정폭 글자를 쓴다. `href`가 있으면 링크로 그리고, 앱의 라우터 링크는 `render`에 넣는다. 아이콘은 글자 앞에 온다(14px, 간격 6px). 뒤에 오는 `Caret`은 자기 크기 12px를 지킨다. 바탕은 그리지 않는다. 글자가 잉크색이 되고 밑줄이 생기거나 진해진다. 보이는 높이는 글자의 줄 높이지만, 누를 수 있는 곳은 위아래로 넓혀 적어도 24px다(`HIT_AREA`, tokens.md의 높이 기준). 탭, `FilterButton`, `DragHandle`도 같다.
 
 DS README는 이 부품을 `TextLink`라고 부른다. 그런 export는 없다. 부품은 `TextButton`이다.
 
