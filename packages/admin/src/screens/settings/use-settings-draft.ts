@@ -6,6 +6,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { ofCollection } from "./review-sheet";
 import {
+	adminValueProposalPaths,
 	at,
 	build,
 	type Catalog,
@@ -63,15 +64,24 @@ type SaveProposal = {
 };
 
 /** The places a pending proposal item writes, as the settings screen reads its input. */
-function proposalPlaces(data: SettingsRead, item: ProposalItem): Record<Path, unknown> {
+function proposalPlaces(data: SettingsRead, catalog: Catalog | null, item: ProposalItem): Record<Path, unknown> {
 	if (item.operation === "schema.apply") return proposalPaths(data, item.input as Parameters<typeof proposalPaths>[1]);
 	if (item.operation === "locales.apply")
 		return localeProposalPaths(data, (item.input as { locales?: SettingsRead["schema"]["locales"] }).locales);
+	if (item.operation === "collections.updateAdminValues") {
+		const input = item.input as { collection?: string; values?: AdminValues };
+		return input.collection && input.values
+			? adminValueProposalPaths(data, catalog, input.collection, input.values)
+			: {};
+	}
 	if (item.operation !== "settings.save") return {};
 	const input = item.input as SaveProposal;
 	const out: Record<Path, unknown> = {};
 	if (input.site?.name !== undefined) out[at.site("name")] = input.site.name;
 	if (input.site?.writing !== undefined) out[at.site("writing")] = input.site.writing;
+	// The admin values it gives the collections that are there: a label, a field's help, the layout. With or without a structure change beside.
+	for (const [c, values] of Object.entries(input.adminValues ?? {}))
+		Object.assign(out, adminValueProposalPaths(data, catalog, c, values, input.renames));
 	return {
 		...out,
 		...(input.collections
@@ -107,8 +117,23 @@ export function useSettingsDraft() {
 					.map(([c, values]) => `${c}:${values.version}`),
 			].join(" ")
 		: null;
-	const proposalValues = useCallback((item: ProposalItem) => (data ? proposalPlaces(data, item) : {}), [data]);
-	const draft = useDraft({ target: TARGET, also: SCHEMA, base, version, proposalValues });
+	const proposalValues = useCallback(
+		(item: ProposalItem) => (data ? proposalPlaces(data, catalog.data, item) : {}),
+		[data, catalog.data],
+	);
+	// Every record the screen shows: a proposal aimed at the schema or at one collection's admin values is drawn here too.
+	const collectionNames = data ? Object.keys(data.schema.collections).join(" ") : "";
+	const also = useMemo(
+		() => [
+			SCHEMA,
+			...collectionNames
+				.split(" ")
+				.filter(Boolean)
+				.map((id) => ({ kind: "collectionAdminValues", id })),
+		],
+		[collectionNames],
+	);
+	const draft = useDraft({ target: TARGET, also, base, version, proposalValues });
 
 	const changed = useMemo(() => draft.changes.map((change) => change.path), [draft.changes]);
 	/** The places the pending proposals write, so a proposed new field or collection is listed too. */
@@ -263,17 +288,21 @@ export function useSettingsDraft() {
 		[draft, data, changed],
 	);
 
-	/** Puts the languages that are not the source in a new order. The order they were saved in is no change. */
+	/**
+	 * Puts the languages that are not the source in a new order. The order they stand in with no order of my own (the saved ones as saved, the new
+	 * ones after them) is no change.
+	 */
 	const setLocaleOrder = useCallback(
 		(codes: string[]) => {
 			if (!data) return;
 			const source = String(draft.value(at.localeSource) ?? data.schema.locales.source);
-			const saved = data.schema.locales.list.map((locale) => locale.code).filter((code) => code !== source);
-			const kept = (list: string[], other: string[]) => list.filter((code) => other.includes(code));
-			if (sameJson(kept(codes, saved), kept(saved, codes))) draft.revert(at.localeOrder);
+			const asGiven = localeRows(data, changed, (path) => (path === at.localeOrder ? undefined : draft.value(path)))
+				.filter((row) => !row.source)
+				.map((row) => row.code);
+			if (sameJson(codes, asGiven)) draft.revert(at.localeOrder);
 			else draft.set(at.localeOrder, [source, ...codes]);
 		},
-		[draft, data],
+		[draft, data, changed],
 	);
 
 	/** The tabs that hold something unsaved or proposed: the dot on a tab that is not open (doc 05). */
@@ -325,11 +354,21 @@ export function useSettingsDraft() {
 
 export type SettingsDraft = ReturnType<typeof useSettingsDraft>;
 
-/** Whether the languages both the saved list and the draft have stand in another order (the source apart: it is always first). */
+/**
+ * Whether the languages stand in an order of my own (the source apart: it is always first): the saved ones in another order than they were saved in,
+ * or a new one before a saved one. New languages after the saved ones are where they stand anyway.
+ */
 function orderChanged(data: SettingsRead, rows: LocaleRow[]) {
 	const saved = data.schema.locales.list.map((locale) => locale.code);
 	const now = rows.filter((row) => !row.source).map((row) => row.code);
-	const kept = (codes: string[], other: string[]) => codes.filter((code) => other.includes(code));
-	const before = saved.filter((code) => !rows.some((row) => row.source && row.code === code));
-	return !sameJson(kept(now, before), kept(before, now));
+	const savedNow = now.filter((code) => saved.includes(code));
+	if (
+		!sameJson(
+			savedNow,
+			saved.filter((code) => now.includes(code)),
+		)
+	)
+		return true;
+	const firstNew = now.findIndex((code) => !saved.includes(code));
+	return firstNew !== -1 && now.slice(firstNew).some((code) => saved.includes(code));
 }

@@ -47,9 +47,9 @@
 | 묶음 | `Stack gap={24} paddingY={24}` 하나 | One group in this order: identifier and kind, display name, public-page setting/address, and folders. |
 | 식별자 | `ReadValue`(`mono`), 값 바로 뒤 `LockMark`("바꿀 수 없음") | 절대 바꿀 수 없는 값이라 글로 보이고, 자물쇠는 그 줄에 있다. |
 | 종류 | `ReadValue` "본문이 있는 글" | 만들 때 정한 값이라 글로 보인다. |
-| 표시 이름 | `FormField` + `Input` | 관리자 값이라 늘 고칠 수 있다. 처음부터 입력 칸이다. |
+| 표시 이름 | `FormField` + `Input` | 관리자 값이라 늘 고칠 수 있다. 처음부터 입력 칸이다. 제안된 이름은 `Input proposal`과 라벨 줄의 "버리기", 아래 `FormFieldWas` 옛 이름이다(설정 · AI 제안과 같다). |
 | Public address | A 36px body-text setting row matching “Use folders” (`Inline minHeight="control-lg"` + `Label size="body"`), with the `Affix` directly below. A changed address puts a `ChangeDot` after the label and “되돌리기” at the row's end. Items add a `Switch` at the far end and hide the `Affix` while off; documents have no switch. | Documents require a public address. Items start without one and keep their slug as an internal identifier. On a live site the field reads either the address or “Not used”. |
-| 폴더 사용 | `Option spread height="lg"` + `Switch` | 관리자 값이라 늘 고칠 수 있다. 위 입력 칸과 같은 36px 줄이다(원칙 10). |
+| 폴더 사용 | `Option spread height="lg"` + `Switch` | 관리자 값이라 늘 고칠 수 있다. 위 입력 칸과 같은 36px 줄이다(원칙 10). 제안된 값이면 라벨 뒤에 파란 `ChangeDot`. |
 | 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + 오른쪽 끝 `Button variant="outline-danger" size="sm"` "지우기" | 이미 고른 컬렉션의 상세라 이름을 되풀이하지 않는다. 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 변경 사항 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
 
 #### 속성 패널 미리보기
@@ -170,7 +170,7 @@
 |---|---|---|
 | 묶음 "블록" · "서식" · "제목 단계" | `Section stacked`(제목은 묶음 이름) | 이 컬렉션의 편집기가 쓸 수 있는 것을 묶음마다 고른다. 처음에는 모두 켜져 있다. |
 | "모두 허용" | 블록 묶음 제목 뒤 `TextButton variant="quiet"` | 누르면 그 묶음을 모두 켠다. |
-| 항목 | `Grid columns={3}` 안에 칸마다 `Option` + `Checkbox`(제목 단계 이름은 `Text mono` "H2") | 켜고 끄면 저장 묶음의 변경 사항이 된다. |
+| 항목 | `Grid columns={3}` 안에 칸마다 `Option` + `Checkbox`(제목 단계 이름은 `Text mono` "H2") | 켜고 끄면 저장 묶음의 변경 사항이 된다. 제안된 칸은 `Checkbox proposal`(파란 표시)이다. |
 | 바뀐 항목 | 이름 뒤 `Text variant="meta" tone="warning"` "· 바뀜" | 저장한 값과 다를 때만. |
 
 스토리: Patterns/Frame/Section, Controls/Button/TextButton, Primitives/Grid, Controls/Choice/Option, Controls/Choice/Checkbox, Primitives/Text.

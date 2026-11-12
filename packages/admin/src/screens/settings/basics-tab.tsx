@@ -5,6 +5,7 @@ import {
 	DangerBlock,
 	FormField,
 	FormFieldLabel,
+	FormFieldWas,
 	Grid,
 	Inline,
 	Input,
@@ -18,6 +19,7 @@ import {
 } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { at } from "./schema-draft";
+import { useCell } from "./use-cell";
 import type { SettingsDraft } from "./use-settings-draft";
 
 /** "/posts/:slug" ↔ "posts": the part of a public address the person types. */
@@ -52,6 +54,9 @@ export function BasicsTab({
 	const path = typeof pathValue === "string" ? pathValue : kind === "document" ? "/:slug" : undefined;
 	const labelPlace = at.collectionValue(c, "label");
 	const foldersPlace = at.collectionValue(c, "folders");
+	const cell = useCell(model);
+	const label = cell(labelPlace);
+	const folders = cell(foldersPlace);
 	const pathChanged =
 		model.changed.includes(pathPlace) && data?.schema.collections[c]
 			? {
@@ -73,13 +78,18 @@ export function BasicsTab({
 					</ReadValue>
 				</Grid>
 				<FormField>
-					<FormFieldLabel htmlFor="collection-label">{t("settings.basics.label")}</FormFieldLabel>
+					{/* A name the assistant proposed is blue, with its discard on the label row and the saved name struck under it (doc 05). */}
+					<FormFieldLabel htmlFor="collection-label" changed={label.proposal ? label.changed : undefined}>
+						{t("settings.basics.label")}
+					</FormFieldLabel>
 					<Input
 						id="collection-label"
-						value={String(draft.value(labelPlace) ?? "")}
+						value={String(label.value ?? "")}
 						placeholder={c}
+						proposal={label.proposal}
 						onChange={(event) => draft.set(labelPlace, event.target.value || undefined)}
 					/>
+					{label.proposal && label.was ? <FormFieldWas>{String(label.was)}</FormFieldWas> : null}
 				</FormField>
 				{locked ? (
 					kind === "document" || path !== undefined ? (
@@ -137,11 +147,11 @@ export function BasicsTab({
 				)}
 				{/* At the height of the inputs above it (36px): one group, one control height. */}
 				<Option spread height="lg">
-					{t("settings.basics.folders")}
-					<Switch
-						checked={Boolean(draft.value(foldersPlace))}
-						onCheckedChange={(checked) => draft.set(foldersPlace, checked)}
-					/>
+					<Inline gap={8} align="center">
+						{t("settings.basics.folders")}
+						{folders.proposal ? <ChangeDot tone="proposal" label={t("settings.proposed")} /> : null}
+					</Inline>
+					<Switch checked={Boolean(folders.value)} onCheckedChange={(checked) => draft.set(foldersPlace, checked)} />
 				</Option>
 			</Stack>
 			{locked ? null : (

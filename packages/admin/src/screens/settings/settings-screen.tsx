@@ -44,8 +44,13 @@ type Refused = { reason: string; action: "reload" | "save" };
 
 const SITE_VALUES = ["name", "writing"] as const;
 
-/** One place the proposal bubble stops at: the item, the tab that draws it and, in the collections tab, its collection. */
-type Walked = { item: ProposalItem; tab: "site" | "languages" | "collections"; collection: string | null };
+/** One place the proposal bubble stops at: the item, the tab that draws it and, in the collections tab, its collection and that collection's tab. */
+type Walked = {
+	item: ProposalItem;
+	tab: "site" | "languages" | "collections";
+	collection: string | null;
+	inside?: "basics" | "fields" | "editor";
+};
 
 /**
  * Settings (doc 12, flow 11): four tabs over one draft (doc 05). The changes of every tab are counted in the header, a tab that is not open carries
@@ -109,10 +114,9 @@ export function SettingsScreen({
 		const versions: Record<string, number> = {};
 		if (siteChanged) versions["settings:site"] = data.site.version;
 		if (structure) versions["schema:current"] = data.version;
-		for (const c of Object.keys(model.changedValues)) {
-			const version = data.adminValues[c]?.version;
-			if (version !== undefined) versions[`collectionAdminValues:${c}`] = version;
-		}
+		// A collection with no admin values yet is at version 0: a row another tab made since is a conflict, not something to write over.
+		for (const c of Object.keys(model.changedValues))
+			if (data.schema.collections[c]) versions[`collectionAdminValues:${c}`] = data.adminValues[c]?.version ?? 0;
 		const result = await saveOp.run(
 			{
 				...(siteChanged ? { site } : {}),
@@ -227,24 +231,40 @@ export function SettingsScreen({
 			if (draft.cell(path).kind !== "proposed") return [];
 			const place = placeOf(path);
 			if (!place) return [{ item, tab: tabOf(path), collection: null }];
-			return place.kind === "field" || place.kind === "collection"
-				? [{ item, tab: "collections", collection: place.collection }]
-				: [];
+			// Where the collections tab draws it: a name, an address or the folders on the basics, the editor's items on theirs, the rest on the fields.
+			const inside =
+				place.kind === "editor"
+					? "editor"
+					: place.kind === "path" || (place.kind === "collectionValue" && place.value !== "layout")
+						? "basics"
+						: "fields";
+			return [{ item, tab: "collections", collection: place.collection, inside }];
 		}),
+	);
+	// One stop for each place the tabs draw apart: a proposal that changes five labels of one collection is one stop on its fields.
+	const stops = proposed.filter(
+		(each, index) =>
+			proposed.findIndex(
+				(other) =>
+					other.item.id === each.item.id &&
+					other.tab === each.tab &&
+					other.collection === each.collection &&
+					other.inside === each.inside,
+			) === index,
 	);
 	const show = (target: Walked | undefined) => {
 		if (!target) return;
 		onTab(target.tab);
 		if (target.collection) {
 			view.open(target.collection);
-			view.setTab("fields");
+			view.setTab(target.inside ?? "fields");
 		}
 	};
-	const walking = proposed[Math.min(position, proposed.length - 1)];
+	const walking = stops[Math.min(position, stops.length - 1)];
 	const step = (by: number) => {
-		const next = (position + by + proposed.length) % proposed.length;
+		const next = (position + by + stops.length) % stops.length;
 		setPosition(next);
-		show(proposed[next]);
+		show(stops[next]);
 	};
 
 	const saveGroup =
@@ -279,7 +299,7 @@ export function SettingsScreen({
 								countLabel: t("settings.proposalsCount", { count: draft.proposals.length }),
 								discardLabel: t("settings.discard"),
 								items: draft.proposals.map(({ item }) => {
-									const first = proposed.find((each) => each.item.id === item.id);
+									const first = stops.find((each) => each.item.id === item.id);
 									return {
 										id: item.id,
 										name: item.request,
@@ -346,8 +366,8 @@ export function SettingsScreen({
 							<ProposalBubbleDock>
 								<ProposalBubble
 									name={walking.item.request}
-									position={Math.min(position, proposed.length - 1) + 1}
-									total={proposed.length}
+									position={Math.min(position, stops.length - 1) + 1}
+									total={stops.length}
 									previousLabel={t("bubble.previous")}
 									nextLabel={t("bubble.next")}
 									onPrevious={() => step(-1)}

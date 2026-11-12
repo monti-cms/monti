@@ -94,8 +94,8 @@ export function useDraft({
 	leftSignedOut = false,
 }: {
 	target: Target;
-	/** A second record this screen shows: its pending proposals join the draft's (settings: the site's values and the schema). */
-	also?: Target;
+	/** The other records this screen shows: their pending proposals join the draft's (settings: the schema and each collection's admin values). */
+	also?: Target[];
 	/** The saved values, by path; `null` while they load. */
 	base: Record<Path, unknown> | null;
 	version: number | string | null;
@@ -113,9 +113,16 @@ export function useDraft({
 	 */
 	leftSignedOut?: boolean;
 }) {
-	const proposals = useProposals(target, also ?? null);
+	const proposals = useProposals(target, also);
 	const discardOp = useOperation("proposals.discard");
-	const [mine, setMine] = useState<Map<Path, unknown>>(new Map());
+	const [mine, setMineState] = useState<Map<Path, unknown>>(new Map());
+	// My changes as they are this instant. A handler may change several places in a row (the undo of one line of the changes list puts back a
+	// field's rename and its label): each step starts from what the step before left, not from the map this render captured.
+	const mineNow = useRef(mine);
+	const setMine = useCallback((next: Map<Path, unknown>) => {
+		mineNow.current = next;
+		setMineState(next);
+	}, []);
 	const [quick, setQuick] = useState<Set<Path>>(new Set());
 	const [accepted, setAccepted] = useState<string[]>([]);
 	const [restoredFor, setRestoredFor] = useState<number | string | null>(null);
@@ -140,7 +147,7 @@ export function useDraft({
 			setAccepted(stored.accepted);
 		}
 		setRestoredFor(version);
-	}, [target, version, restoredFor, restore]);
+	}, [target, version, restoredFor, restore, setMine]);
 
 	useEffect(() => {
 		// While a kept copy waits for an answer, it stays as it is: what is typed meanwhile is not kept over it.
@@ -185,14 +192,13 @@ export function useDraft({
 	);
 
 	const put = useCallback(
-		(path: Path, next: unknown) =>
-			setMine((current) => {
-				const copy = new Map(current);
-				if (sameJson(next, saved(path))) copy.delete(path);
-				else copy.set(path, next);
-				return copy;
-			}),
-		[saved],
+		(path: Path, next: unknown) => {
+			const copy = new Map(mineNow.current);
+			if (sameJson(next, saved(path))) copy.delete(path);
+			else copy.set(path, next);
+			setMine(copy);
+		},
+		[saved, setMine],
 	);
 
 	const take = useCallback(
@@ -230,7 +236,7 @@ export function useDraft({
 
 	const revert = useCallback(
 		(path: Path) => {
-			const nextMine = new Map(mine);
+			const nextMine = new Map(mineNow.current);
 			nextMine.delete(path);
 			setMine(nextMine);
 			setAccepted((ids) => acceptedAfterRevert(ids, proposals.items, proposalValues, path, nextMine));
@@ -240,14 +246,14 @@ export function useDraft({
 				return copy;
 			});
 		},
-		[mine, proposals.items, proposalValues],
+		[setMine, proposals.items, proposalValues],
 	);
 
 	const revertAll = useCallback(() => {
 		setMine(new Map());
 		setQuick(new Set());
 		setAccepted([]);
-	}, []);
+	}, [setMine]);
 
 	const accept = useCallback(
 		(id: string) => {
@@ -328,7 +334,7 @@ export function useDraft({
 		 * now, my changes that are saved leave the draft and the rest stay to be saved again.
 		 */
 		savedPart: (now: Record<Path, unknown>) => {
-			setMine((current) => new Map([...current].filter(([path, mine]) => !sameJson(mine, now[path]))));
+			setMine(new Map([...mineNow.current].filter(([path, value]) => !sameJson(value, now[path]))));
 			// The items taken into the draft went with the save: the server has marked them applied.
 			setAccepted([]);
 			void proposals.reload();

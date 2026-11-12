@@ -179,26 +179,74 @@ export function flatten(read: SchemaRead | SettingsRead, catalog: Catalog | null
 	base[at.localeSource] = read.schema.locales.source;
 	base[at.localePrefix] = read.schema.locales.prefix;
 	for (const [c, collection] of Object.entries(read.schema.collections)) {
-		const values = read.adminValues[c];
 		base[at.collection(c)] = { kind: collection.kind };
 		base[at.path(c)] = collection.path ?? null;
-		base[at.collectionValue(c, "label")] = values?.label;
-		base[at.collectionValue(c, "folders")] = values?.folders ?? false;
-		base[at.collectionValue(c, "layout")] = values?.layout;
-		for (const [name, def] of Object.entries(collection.fields)) {
-			base[at.field(c, name)] = { name, def } satisfies DraftField;
-			for (const value of FIELD_VALUES) base[at.fieldValue(c, name, value)] = values?.fields?.[name]?.[value];
-		}
-		if (collection.kind === "document" && catalog) {
-			const editor = values?.editor;
-			for (const block of listedBlocks(catalog))
-				base[at.editor(c, "block", block.type)] = allows(editor?.blocks, block.type);
-			for (const mark of catalog.marks) base[at.editor(c, "mark", mark.type)] = allows(editor?.marks, mark.type);
-			for (const level of HEADINGS)
-				base[at.editor(c, "heading", level)] = editor?.headings ? editor.headings.includes(level) : true;
-		}
+		for (const name of Object.keys(collection.fields))
+			base[at.field(c, name)] = { name, def: collection.fields[name] as FieldDefinition } satisfies DraftField;
+		Object.assign(base, adminPlaces(c, collection, read.adminValues[c], catalog));
 	}
 	return base;
+}
+
+/** A collection's admin values at the draft's places: its own (`ca:`), each field's (`fa:`) and what its editor allows (`ed:`). */
+function adminPlaces(
+	c: string,
+	collection: CollectionDefinition,
+	values: AdminValues | undefined,
+	catalog: Catalog | null,
+): Record<Path, unknown> {
+	const places: Record<Path, unknown> = {};
+	places[at.collectionValue(c, "label")] = values?.label;
+	places[at.collectionValue(c, "folders")] = values?.folders ?? false;
+	places[at.collectionValue(c, "layout")] = values?.layout;
+	for (const name of Object.keys(collection.fields))
+		for (const value of FIELD_VALUES) places[at.fieldValue(c, name, value)] = values?.fields?.[name]?.[value];
+	if (collection.kind === "document" && catalog) {
+		const editor = values?.editor;
+		for (const block of listedBlocks(catalog))
+			places[at.editor(c, "block", block.type)] = allows(editor?.blocks, block.type);
+		for (const mark of catalog.marks) places[at.editor(c, "mark", mark.type)] = allows(editor?.marks, mark.type);
+		for (const level of HEADINGS)
+			places[at.editor(c, "heading", level)] = editor?.headings ? editor.headings.includes(level) : true;
+	}
+	return places;
+}
+
+/**
+ * The places a proposed set of a collection's admin values writes: where the whole values the assistant gave differ from the saved ones (a label,
+ * a field's help, the layout, what the editor allows). The proposal names fields as its own draft does; `renames` (of the same proposal) say which
+ * saved field each is, since the draft's places are keyed by the saved names.
+ */
+export function adminValueProposalPaths(
+	read: SchemaRead,
+	catalog: Catalog | null,
+	c: string,
+	values: AdminValues,
+	renames: Rename[] = [],
+): Record<Path, unknown> {
+	const collection = read.schema.collections[c];
+	if (!collection) return {};
+	const savedName = new Map(renames.filter((rename) => rename.collection === c).map((r) => [r.to, r.from]));
+	const key = (name: string) => savedName.get(name) ?? name;
+	const underSavedNames: AdminValues = {
+		...values,
+		...(values.fields
+			? { fields: Object.fromEntries(Object.entries(values.fields).map(([name, value]) => [key(name), value])) }
+			: {}),
+		...(values.layout
+			? {
+					layout: values.layout.map((tab) => ({
+						tab: tab.tab,
+						fields: tab.fields.map((each) =>
+							typeof each === "string" ? key(each) : { group: each.group, fields: each.fields.map(key) },
+						),
+					})),
+				}
+			: {}),
+	};
+	const proposed = adminPlaces(c, collection, underSavedNames, catalog);
+	const saved = adminPlaces(c, collection, read.adminValues[c], catalog);
+	return Object.fromEntries(Object.entries(proposed).filter(([path, value]) => !sameJson(value, saved[path])));
 }
 
 /** What the screen reads the draft through: the value at a place (mine over saved). */

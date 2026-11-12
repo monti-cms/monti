@@ -46,7 +46,7 @@ import {
 	tabId,
 	tabIndex,
 } from "./layout-moves";
-import { at, type DraftField, type Layout, shownLayout } from "./schema-draft";
+import { at, type DraftField, FIELD_VALUES, type Layout, shownLayout } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 
 /** The kind at the end of a field's line, as the schema says it: "text · 120", "[] → tag". */
@@ -184,7 +184,8 @@ export function FieldsTab({
 	const locked = data?.locked ?? true;
 	const keys = model.fields(c);
 	const layoutPath = at.collectionValue(c, "layout");
-	const layout = shownLayout(draft.value(layoutPath) as Layout | undefined, keys, t("settings.fields.defaultTab"));
+	// A layout the assistant proposed is the one shown until it is taken or discarded.
+	const layout = shownLayout(model.shown(layoutPath) as Layout | undefined, keys, t("settings.fields.defaultTab"));
 	const [held, setHeld] = useState<SortableRef | null>(null);
 	// While a field is held, the layout as it is shown: it may already sit in another group on the way.
 	const [preview, setPreview] = useState<Layout | null>(null);
@@ -256,6 +257,10 @@ export function FieldsTab({
 		const mine = model.changed.some((changed) => changed === path || changed.startsWith(`fa:${c}:${key}:`));
 		const problems = problemsOf(key);
 		const removed = field === null;
+		// A proposal of the field's admin values alone (its label, its help) marks the line as the field's own proposal does.
+		const proposed =
+			cell.kind === "proposed" ||
+			FIELD_VALUES.some((value) => draft.cell(at.fieldValue(c, key, value)).kind === "proposed");
 		const shownField = (field ?? (saved ? { name: key, def: saved } : null)) as DraftField | null;
 		if (!shownField) return null;
 		const { name, def } = shownField;
@@ -263,7 +268,7 @@ export function FieldsTab({
 			? { tone: "faint" as const, note: t("settings.fields.removed") }
 			: problems[0]
 				? { tone: "danger" as const, note: t(`settings.problem.short.${problems[0].code}`) }
-				: cell.kind === "proposed"
+				: proposed
 					? { tone: "proposal" as const, note: t("settings.fields.proposed") }
 					: !saved
 						? { tone: "success" as const, note: t("settings.fields.new") }

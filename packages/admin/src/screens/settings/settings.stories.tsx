@@ -289,6 +289,32 @@ export const LanguageProposal: Story = {
 	},
 };
 
+/**
+ * The assistant proposed a collection's admin values (its name) and nothing of its structure: the collections tab carries the blue dot, the name
+ * is blue on the collection's basics with the saved one struck under it, and the bubble takes it.
+ */
+export const CollectionValuesProposal: Story = {
+	loaders: settingsAt("collections", {
+		more: async ({ monti }) => {
+			const read = (await monti.run("schema.read", {}, admin)) as {
+				adminValues: Record<string, { version: number } & Record<string, unknown>>;
+			};
+			const { version: _version, ...values } = read.adminValues.post ?? { version: 0 };
+			const proposal = await monti.proposals.create("conversation-1", "게시글을 글이라고 불러 줘");
+			await monti.proposals.add(proposal, "collections.updateAdminValues", {
+				collection: "post",
+				values: { ...values, label: "글" },
+			});
+		},
+	}),
+	play: async ({ canvasElement }) => {
+		const { page } = screen(canvasElement);
+		await page.findByRole("button", { name: "모두 받기" }, wait);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await page.findByLabelText("표시 이름", {}, wait);
+	},
+};
+
 /** The admin tab: the screen's language, the feature switch and the signed-in account. */
 export const Admin: Story = {
 	loaders: settingsAt("admin"),

@@ -34,7 +34,8 @@ export function EditorTab({ model, collection: c }: { model: SettingsDraft; coll
 			{items.map((item) => (
 				<Option key={item.path}>
 					<Checkbox
-						checked={draft.value(item.path) !== false}
+						checked={model.shown(item.path) !== false}
+						proposal={draft.cell(item.path).kind === "proposed"}
 						onCheckedChange={(checked) => draft.set(item.path, checked)}
 					/>
 					{item.mono ? (

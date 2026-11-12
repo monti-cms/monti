@@ -4,6 +4,7 @@ import { page, userEvent } from "vitest/browser";
 import { dragPath, dropDrag, middleOf } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
+import { MontiAdmin } from "../../app";
 import * as stories from "./settings.stories";
 
 const {
@@ -144,15 +145,77 @@ describe("settings › languages", () => {
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 	});
 
-	it("12-1 [flow 11·08] saving with a language taken out asks with the red 지우고 적용 alone, and applying takes the language out of the site", async () => {
-		const shown = withSite(stories.LanguageRemoveReview);
+	it("12-1 [flow 11·08] saving with a language taken out asks with the red 지우고 적용 alone, and applying takes the language and its translations out of the site", async () => {
+		const english: { id?: string } = {};
+		const shown = withSite({
+			...stories.LanguageRemoveReview,
+			loaders: stories.settingsAt("languages", {
+				// A post with an English translation, both on the site: what the removal has to take.
+				more: async ({ monti }) => {
+					const made = (await monti.run(
+						"entries.create",
+						{ collection: "post", title: "번역이 있는 글", slug: "translated" },
+						admin,
+					)) as { output: { id: string } };
+					await monti.run("entries.publish", { ids: [made.output.id] }, admin);
+					const translated = (await monti.run(
+						"translations.create",
+						{ source: made.output.id, locale: "en" },
+						admin,
+					)) as { output: { id: string } };
+					const got = (await monti.run("entries.get", { id: translated.output.id }, admin)) as {
+						entry: { version: number };
+					};
+					await monti.run(
+						"entries.save",
+						{ id: translated.output.id, version: got.entry.version, title: "A translated post" },
+						admin,
+					);
+					await monti.run("entries.publish", { ids: [translated.output.id] }, admin);
+					english.id = translated.output.id;
+				},
+			}),
+		});
 		await shown.run();
+		const { db } = shown.loaded().site;
+		const inEnglish = async () => ({
+			working: (await db.selectFrom("entries").select("id").where("locale", "=", "en").execute()).map((row) => row.id),
+			onSite: (await db.selectFrom("entry_published").select("entry_id").where("locale", "=", "en").execute()).map(
+				(row) => row.entry_id,
+			),
+		});
+		expect(await inEnglish()).toEqual({ working: [english.id], onSite: [english.id] });
 		await expect.element(page.getByText("번역이 함께 지워집니다.")).toBeVisible();
 		await expect.element(page.getByRole("radio")).not.toBeInTheDocument();
 		await userEvent.click(page.getByRole("button", { name: "지우고 적용" }));
 		await expect.element(page.getByText("적용했습니다")).toBeVisible();
 		expect(codes(await settingsOf(shown.loaded()))).toEqual(["ko", "ja"]);
+		expect(await inEnglish()).toEqual({ working: [], onSite: [] });
 		await expect.poll(languages).toEqual(["한국어", "日本語"]);
+	});
+
+	it("12-1 the old source taken out in the save that makes another the source: the review promises the drafts, and they are there after", async () => {
+		const shown = withSite(stories.SourceChanged);
+		await shown.run();
+		const { db } = shown.loaded().site;
+		const titles = async (locale: string) =>
+			(await db.selectFrom("entries").select("title").where("locale", "=", locale).orderBy("title").execute()).map(
+				(row) => row.title,
+			);
+		const korean = await titles("ko");
+		expect(korean).toHaveLength(3);
+		expect(await titles("en")).toEqual([]);
+		// English is the source now; Korean, the source until this save, is taken out with its ×.
+		await userEvent.click(page.getByRole("button", { name: "한국어 빼기" }));
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("이 언어 글이 없는 3편에 초안이 생깁니다.")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "지우고 적용" }));
+		await expect.element(page.getByText("적용했습니다")).toBeVisible();
+		// The three posts are English drafts made from the Korean ones before those left.
+		expect(await titles("en")).toEqual(korean);
+		expect(await titles("ko")).toEqual([]);
+		expect((await settingsOf(shown.loaded())).schema.locales).toMatchObject({ source: "en" });
+		expect(codes(await settingsOf(shown.loaded()))).toEqual(["en", "ja"]);
 	});
 
 	it("12-1 one review holds the languages' changes and the collections': the plain 적용 writes them all in one save", async () => {
@@ -274,6 +337,103 @@ describe("settings: a save that is refused", () => {
 	});
 });
 
+describe("settings › collections inside the one draft", () => {
+	it("12-2 a collection's first admin values are saved on the version the screen read: values another tab saved meanwhile are a conflict, not written over", async () => {
+		const shown = withSite({
+			loaders: stories.settingsAt("collections", {
+				// The memos have no admin values yet.
+				more: async ({ db }) => {
+					await db.deleteFrom("collection_admin_values").where("collection", "=", "memo").execute();
+				},
+			}),
+		});
+		await shown.run();
+		await userEvent.click(page.getByRole("navigation", { name: "컬렉션" }).getByRole("button", { name: /memo/ }));
+		await userEvent.click(page.getByRole("button", { name: "기본", exact: true }));
+		await userEvent.fill(page.getByRole("textbox", { name: "표시 이름" }), "메모");
+		// Another tab turned folders on for the memos after this screen read them.
+		const { monti, db } = shown.loaded().site;
+		await monti.run("collections.updateAdminValues", { collection: "memo", values: { folders: true } }, admin);
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("다른 곳에서 바뀌었습니다")).toBeVisible();
+		const row = await db
+			.selectFrom("collection_admin_values")
+			.select("values")
+			.where("collection", "=", "memo")
+			.executeTakeFirstOrThrow();
+		expect(row.values).toEqual({ folders: true });
+		// Read again, both are there to save: the other tab's folders and my name.
+		await userEvent.click(page.getByRole("button", { name: "다시 불러오기" }));
+		await expect.element(page.getByRole("switch", { name: "폴더 사용" })).toBeChecked();
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		const after = await db
+			.selectFrom("collection_admin_values")
+			.select("values")
+			.where("collection", "=", "memo")
+			.executeTakeFirstOrThrow();
+		expect(after.values).toEqual({ label: "메모", folders: true });
+	});
+
+	it("12-1 [flow 4·10] the undo of one line of the changes list puts back every place of it: a field's rename and its new label together", async () => {
+		const shown = withSite({ loaders: stories.settingsAt("collections") });
+		await shown.run();
+		await userEvent.click(page.getByRole("button", { name: "summary 열기" }));
+		const sheet = page.getByRole("dialog");
+		await userEvent.fill(sheet.getByLabelText(/^식별자/), "excerpt");
+		await userEvent.fill(sheet.getByLabelText("표시 이름"), "발췌");
+		await userEvent.click(sheet.getByRole("button", { name: "저장" }));
+		await expect.element(page.getByRole("button", { name: "excerpt 열기" })).toBeVisible();
+		await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+		// One line for the field, holding both places.
+		await userEvent.click(page.getByRole("button", { name: /변경 사항/ }));
+		const line = page.getByRole("menuitem", { name: /발췌/ });
+		await userEvent.click(line.getByRole("button", { name: "되돌리기" }));
+		await expect.element(page.getByRole("button", { name: "summary 열기" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "excerpt 열기" })).not.toBeInTheDocument();
+		// Nothing is left of it: the label is the saved one, and there is no change to save.
+		await expect.element(page.getByText("요약")).toBeVisible();
+		await expect.element(page.getByText("발췌")).not.toBeInTheDocument();
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+	});
+
+	it("12-1 a new language moved above the saved ones is saved where it was put", async () => {
+		const shown = withSite(stories.LanguageAdded);
+		await shown.run();
+		(page.getByRole("button", { name: "Deutsch 옮기기" }).element() as HTMLElement).focus();
+		await userEvent.keyboard(" ");
+		await expect.poll(said).toContain("Deutsch");
+		await userEvent.keyboard("{ArrowUp}");
+		await expect.poll(said).toContain("日本語");
+		await userEvent.keyboard("{ArrowUp}");
+		await expect.poll(said).toContain("English");
+		await userEvent.keyboard(" ");
+		await expect.poll(languages).toEqual(["한국어", "Deutsch", "English", "日本語"]);
+		await userEvent.click(saveGroup());
+		await userEvent.click(page.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(page.getByText("적용했습니다")).toBeVisible();
+		expect(codes(await settingsOf(shown.loaded()))).toEqual(["ko", "de", "en", "ja"]);
+	});
+
+	it("12-1 a language added, moved and then taken back from the changes list leaves no change: its row and the order it changed go together", async () => {
+		await LanguageAdded.run();
+		// Deutsch moved above English, then its line of the changes list undone.
+		(page.getByRole("button", { name: "Deutsch 옮기기" }).element() as HTMLElement).focus();
+		await userEvent.keyboard(" ");
+		await expect.poll(said).toContain("Deutsch");
+		await userEvent.keyboard("{ArrowUp}");
+		await expect.poll(said).toContain("日本語");
+		await userEvent.keyboard("{ArrowUp}");
+		await expect.poll(said).toContain("English");
+		await userEvent.keyboard(" ");
+		await expect.poll(languages).toEqual(["한국어", "Deutsch", "English", "日本語"]);
+		await userEvent.click(page.getByRole("button", { name: /변경 사항/ }));
+		await userEvent.click(page.getByRole("menuitem", { name: /Deutsch/ }).getByRole("button", { name: "되돌리기" }));
+		await expect.poll(languages).toEqual(["한국어", "English", "日本語"]);
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+	});
+});
+
 describe("settings: the assistant's proposals", () => {
 	it("12-1 [flow 2·21] a proposed value is drawn in its field with the saved one struck under it; its label's 버리기 throws the proposal away", async () => {
 		await SiteProposal.run();
@@ -301,6 +461,83 @@ describe("settings: the assistant's proposals", () => {
 		const settings = await settingsOf(shown.loaded());
 		expect(settings.site.name).toBe("example.blog!");
 		expect(settings.schema.locales.prefix).toBe("always");
+	});
+
+	it("12-2 a proposal taken and then put back in part is saved with the part that is kept: the name undone, the address mark applied", async () => {
+		// The proposal alone, with no change of my own beside it: after the name is put back, the save holds the address mark only.
+		const shown = withSite({ loaders: stories.SiteProposal.loaders });
+		await shown.run();
+		await userEvent.click(page.getByRole("button", { name: "모두 받기" }));
+		// Taken, the proposal's two values are my changes; the name's own undo puts only the name back.
+		await expect.element(nameField()).toHaveValue("example.blog");
+		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }).first());
+		await expect.element(nameField()).toHaveValue("example.dev");
+		await expect.element(page.getByRole("button", { name: /변경 사항/ })).toHaveTextContent("1");
+		await userEvent.click(saveGroup());
+		await userEvent.click(page.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(page.getByText("적용했습니다")).toBeVisible();
+		const settings = await settingsOf(shown.loaded());
+		expect(settings.site.name).toBe("example.dev");
+		expect(settings.schema.locales.prefix).toBe("always");
+		// The item went with the save: nothing of it waits any more.
+		const pending = await shown
+			.loaded()
+			.site.monti.run(
+				"proposals.forTarget",
+				{ kind: "settings", id: "site", also: [{ kind: "schema", id: "current" }] },
+				admin,
+			);
+		expect(pending).toEqual([]);
+	});
+
+	it("12-1 a proposal of a collection's admin values alone shows on the settings: the tab's blue dot, the name blue on the basics, and the bubble takes it", async () => {
+		const shown = withSite(stories.CollectionValuesProposal);
+		await shown.run();
+		const name = page.getByRole("textbox", { name: "표시 이름" });
+		await expect.element(name).toHaveValue("글");
+		await expect.element(name).toHaveAttribute("data-proposal");
+		await expect.element(page.getByRole("deletion").filter({ hasText: "게시글" })).toBeVisible();
+		// From another tab, the collections tab says it holds a proposal.
+		await userEvent.click(tab(/사이트/));
+		await expect.element(tab(/컬렉션/).getByRole("img", { name: "제안" })).toBeVisible();
+		// Back on the collections tab it is where it was drawn.
+		await userEvent.click(tab(/컬렉션/));
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveValue("글");
+		await userEvent.click(page.getByRole("button", { name: "모두 받기" }));
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).not.toHaveAttribute("data-proposal");
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		const read = (await shown.loaded().site.monti.run("schema.read", {}, admin)) as {
+			adminValues: Record<string, { label?: string; folders?: boolean }>;
+		};
+		// The name is saved, and the rest of the collection's values are as they were.
+		expect(read.adminValues.post).toMatchObject({ label: "글", folders: true });
+	});
+
+	it("12-1 a settings.save proposal that gives a site name and a collection's name draws both, without a structure change beside", async () => {
+		const shown = withSite({
+			...stories.Site,
+			loaders: stories.settingsAt("site", {
+				more: async ({ monti }) => {
+					const read = (await monti.run("schema.read", {}, admin)) as {
+						adminValues: Record<string, { version: number } & Record<string, unknown>>;
+					};
+					const { version: _version, ...values } = read.adminValues.post ?? { version: 0 };
+					const proposal = await monti.proposals.create("conversation-1", "이름을 정리해 줘");
+					await monti.proposals.add(proposal, "settings.save", {
+						site: { name: "example.blog" },
+						adminValues: { post: { ...values, label: "글" } },
+					});
+				},
+			}),
+		});
+		await shown.run();
+		await expect.element(nameField()).toHaveValue("example.blog");
+		await expect.element(nameField()).toHaveAttribute("data-proposal");
+		await userEvent.click(tab(/컬렉션/));
+		await userEvent.click(page.getByRole("button", { name: "기본", exact: true }));
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveValue("글");
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveAttribute("data-proposal");
 	});
 
 	it("12-1 a proposed language is a row of the language tab until it is taken; from another tab the language tab carries the blue dot", async () => {
@@ -360,6 +597,26 @@ describe("settings › admin", () => {
 		await userEvent.click(page.getByRole("button", { name: /메모/ }));
 		await userEvent.click(page.getByRole("button", { name: MORE_NEW }));
 		await expect.element(page.getByRole("menuitem", { name: "템플릿으로 쓰기" })).toBeVisible();
+	});
+
+	it("12-1 a session let in without signing in (the dev server's, doc 16) has no email: the account section shows who it is and the tab stands", async () => {
+		const shown = withSite({
+			...stories.Admin,
+			render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
+				<MontiAdmin
+					transport={async (name, input, options) => {
+						const answer = await loaded.site.transport(name, input, options);
+						if (name !== "auth.state") return answer;
+						return { ...answer, body: { ...(answer.body as object), session: { who: "dev", bypass: true } } };
+					}}
+					siteName="example.dev"
+				/>
+			),
+		});
+		await shown.run();
+		await expect.element(page.getByText("dev", { exact: true })).toBeVisible();
+		await expect.element(page.getByRole("switch", { name: "본문 템플릿" })).toBeVisible();
+		await expect.element(page.getByRole("combobox", { name: "화면 언어" })).toBeVisible();
 	});
 
 	it("12-1 the sidebar and the sign-in screen show the site name the settings hold, and 로그아웃 ends the session without asking", async () => {
