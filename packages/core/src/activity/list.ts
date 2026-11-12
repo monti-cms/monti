@@ -109,6 +109,8 @@ export type ActivityDelivery = {
 	receiver: string | Message;
 	/** The event's type: `entry.published`. */
 	event: string;
+	/** The event's id, the same on every try and for every receiver: what a webhook gets as `Monti-Event-Id` (and `id` in the body). */
+	eventId: string;
 	state: DeliveryState;
 	attempts: number;
 	/** Why its last try failed: the receiver's answer, no answer, or no such receiver any more. */
@@ -428,6 +430,7 @@ export async function getActivity(
 			id: delivery.id,
 			receiver: receiverName(delivery.destination, receivers),
 			event: delivery.event.type,
+			eventId: delivery.event.id,
 			state: delivery.state,
 			attempts: delivery.attempts,
 			lastError: deliveryError(delivery.last_error),

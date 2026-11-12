@@ -751,6 +751,7 @@ describe("the log", () => {
 				// A plugin's receiver is named by what follows `plugin:`, and its failure by the answer it got.
 				receiver: "search",
 				event: "entry.published",
+				eventId: expect.any(String),
 				state: "failed",
 				attempts: 1,
 				lastError: { key: "deliveries.error.status", values: { status: "503" } },
@@ -761,6 +762,7 @@ describe("the log", () => {
 				// A webhook by its host and path.
 				receiver: "site.test/revalidate",
 				event: "entry.published",
+				eventId: expect.any(String),
 				state: "sent",
 				attempts: 1,
 				lastError: null,

@@ -86,6 +86,14 @@ function Signed() {
 	// Every move of the frame asks first when the open screen has unsaved changes (doc 05, flow 11 step 04).
 	const leave = useLeave();
 	const leaveFiles = useLeaveFiles();
+	// The counts follow this admin's own writes. What happens without one (a delivery that fails after its write answered, another tab's work) is
+	// read when the person comes back to the window, and by the activity log while it is open.
+	const recount = counts.reload;
+	useEffect(() => {
+		const again = () => void recount();
+		window.addEventListener("focus", again);
+		return () => window.removeEventListener("focus", again);
+	}, [recount]);
 	const first = Object.keys(counts.data?.collections ?? {})[0];
 	// A first visit with no last screen opens the first collection.
 	useEffect(() => {
@@ -168,7 +176,7 @@ function Signed() {
 			) : route.screen === "trash" ? (
 				<TrashScreen params={route.params} go={go} />
 			) : route.screen === "activity" ? (
-				<ActivityScreen params={route.params} go={go} />
+				<ActivityScreen params={route.params} go={go} recount={recount} />
 			) : route.screen === "list" ? (
 				<ListScreen
 					key={route.collection}

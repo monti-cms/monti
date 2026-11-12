@@ -25,6 +25,9 @@ const sidebar = (name: RegExp) => page.getByRole("navigation").getByRole("button
 const sidebarLog = () => sidebar(/^활동 기록/);
 const banner = () => page.getByRole("status").filter({ hasText: "전송 실패" });
 const panel = () => page.getByRole("complementary");
+/** What each row's delivery cell says, top to bottom. */
+const deliveryCells = () =>
+	[...table().element().querySelectorAll("tbody tr")].map((each) => each.querySelectorAll("td")[1]?.textContent ?? "");
 const rows = () =>
 	[...table().element().querySelectorAll("tbody tr")].map((each) => each.querySelector("td")?.textContent ?? "");
 
@@ -106,7 +109,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(toast("보냈습니다")).toBeVisible();
 		await expect.element(row(FAILED)).not.toHaveTextContent("실패");
 		await expect.element(row(FAILED)).not.toHaveTextContent("보내는 중");
-		await expect.element(sidebarLog()).not.toHaveTextContent("1");
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록$/);
 		expect(hooks.arrived.filter((each) => each.destination === stories.SITE).at(-1)?.event.type).toBe(
 			"entry.published",
 		);
@@ -132,18 +135,34 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(sidebarLog()).toHaveTextContent("1");
 	});
 
-	it("[flow 12·03] a press on a row opens its details beside the list: when and who, the entry as it was, each receiver's delivery; the row is picked, and × closes it", async () => {
+	it("[flow 12·03] a press on a row opens its details beside the list: when, the entry as it was, each receiver's delivery by its name; the row is picked, and × closes it", async () => {
 		await draw(stories.Log).run();
 		await userEvent.click(row(FAILED).getByText("post/react-19"));
 		await expect.poll(() => location.hash).toMatch(/^#\/activity\?open=/);
 		await expect.element(panel().getByRole("heading", { name: FAILED })).toBeVisible();
-		await expect.element(panel()).toHaveTextContent("한 사람관리자");
+		// One person uses the admin: the panel does not say who. Its first group has no heading, and the line's own id is not shown.
+		await expect.element(panel()).not.toHaveTextContent("한 사람");
+		await expect.element(panel()).not.toHaveTextContent("관리자");
+		expect(
+			panel()
+				.getByRole("heading", { level: 3 })
+				.elements()
+				.map((each) => each.textContent),
+		).toEqual(["항목", "전송 · 2"]);
+		await expect.element(panel()).not.toHaveTextContent(/(^|[^-])ID/);
 		await expect.element(panel()).toHaveTextContent("컬렉션게시글");
 		await expect.element(panel()).toHaveTextContent("주소/posts/react-19");
 		await expect.element(panel()).toHaveTextContent("전송 · 2");
-		await expect.element(panel()).toHaveTextContent(`받는 곳${stories.SITE}`);
+		// A receiver is named as a person reads it, never by what it is stored under.
+		await expect.element(panel()).toHaveTextContent("받는 곳사이트 캐시");
+		await expect.element(panel()).toHaveTextContent("받는 곳example.dev/api/search");
+		await expect.element(panel()).not.toHaveTextContent("plugin:next");
+		await expect.element(panel()).not.toHaveTextContent("webhook:");
 		await expect.element(panel()).toHaveTextContent("이벤트entry.published");
+		// Why it failed is the receiver's answer as it came; the next try says its day too; the id is the one the receiver got.
 		await expect.element(panel()).toHaveTextContent("마지막 오류503 Service Unavailable");
+		await expect.element(panel()).toHaveTextContent(/다음 시도\d\d\. \d\d \d\d:\d\d/);
+		await expect.element(panel()).toHaveTextContent(/Monti-Event-Id[0-9a-f-]{36}/);
 		// The other receiver got it: the panel, which is about this one line, says so.
 		await expect.element(panel()).toHaveTextContent("보냄");
 		expect(row(FAILED).element().getAttribute("data-selected")).not.toBeNull();
@@ -161,7 +180,6 @@ describe("the activity log (doc 13, flow 12)", () => {
 	it("the assistant's row open: its request whole, each thing it did, and what it touched", async () => {
 		await draw(stories.AssistantPanel).run();
 		await expect.element(panel()).toHaveTextContent("요청이 두 편 요약 채워 줘. 말투는 그대로.");
-		await expect.element(panel()).toHaveTextContent("한 사람어시스턴트");
 		await expect.element(panel()).toHaveTextContent("한 일 · 2");
 		await expect.element(panel()).toHaveTextContent("항목 · 2");
 		await expect.element(panel().getByRole("link", { name: "첫 번째 글" })).toBeVisible();
@@ -171,7 +189,8 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await draw(stories.Panel).run();
 		await userEvent.click(panel().getByRole("button", { name: "취소", exact: true }));
 		await expect.element(dialog()).toHaveTextContent("이 전송을 취소할까요?");
-		await expect.element(dialog()).toHaveTextContent(stories.SITE);
+		await expect.element(dialog()).toHaveTextContent("사이트 캐시");
+		await expect.element(dialog()).not.toHaveTextContent(stories.SITE);
 		await userEvent.click(dialog().getByRole("button", { name: "닫기" }));
 		await expect.element(dialog()).not.toBeInTheDocument();
 		await expect.element(row(FAILED)).toHaveTextContent("1번 실패");
@@ -180,7 +199,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(toast("전송을 취소했습니다")).toBeVisible();
 		await expect.element(row(FAILED)).toHaveTextContent("취소됨");
 		await expect.element(panel()).toHaveTextContent("취소됨");
-		await expect.element(sidebarLog()).not.toHaveTextContent("1");
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록$/);
 		// Nothing is left to do with that delivery.
 		await expect.element(panel().getByRole("button", { name: "다시 보내기" })).not.toBeInTheDocument();
 	});
@@ -193,6 +212,13 @@ describe("the activity log (doc 13, flow 12)", () => {
 		// The banner stands above the page's title, across the page.
 		const top = (element: Element) => element.getBoundingClientRect().top;
 		expect(top(banner().element())).toBeLessThan(top(page.getByRole("heading", { level: 1 }).element()));
+		// Its sentence is one line where the page is 868px wide too.
+		const high = banner().element().getBoundingClientRect().height;
+		await page.viewport(1100, 900);
+		expect(Math.round(banner().element().getBoundingClientRect().width)).toBe(868);
+		expect(banner().element().getBoundingClientRect().height).toBe(high);
+		expect(banner().element().scrollWidth).toBeLessThanOrEqual(banner().element().clientWidth);
+		await page.viewport(1440, 900);
 		await userEvent.click(banner().getByRole("button", { name: "보기" }));
 		await expect.poll(() => location.hash).toBe("#/activity?delivery=failed");
 		await expect.poll(() => rows().length).toBe(3);
@@ -206,13 +232,14 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await userEvent.click(banner().getByRole("button", { name: "모두 다시 보내기" }));
 		// On their way: the banner's button says so in its place and cannot be pressed, and the rows say so.
 		await expect.element(banner().getByRole("button", { name: "보내는 중…" })).toBeDisabled();
-		await expect.poll(() => rows().every((words) => words !== "")).toBe(true);
-		await expect.element(table().getByText("보내는 중").first()).toBeVisible();
+		// Every failed row says it is on its way (12·06), not only the first.
+		await expect.poll(() => deliveryCells()).toEqual(["보내는 중", "보내는 중", "보내는 중"]);
 		hooks.hold = null;
 		arrive();
 		await expect.element(toast("3건 보냈습니다")).toBeVisible();
 		await expect.element(banner()).not.toBeInTheDocument();
-		await expect.element(sidebarLog()).not.toHaveTextContent("3");
+		// No number at all is left on the sidebar's row.
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록$/);
 	});
 
 	it("13-4 [flow 12·08] one of three fails again: its row is left, alone, so the banner is gone; the toast says how many went and how many did not", async () => {
@@ -438,5 +465,141 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.poll(heads).toEqual(moved);
 		await dropDrag();
 		await expect.poll(heads).toEqual(moved);
+	});
+	it("13-4 one publish two receivers did not get: the sidebar, the banner and the delivery column's menu all count three deliveries, on two rows", async () => {
+		await draw(stories.TwoOnOneRow).run();
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록3$/);
+		await expect.element(banner()).toHaveTextContent("전송 실패 3건");
+		await userEvent.click(columnName("전송"));
+		await expect.element(page.getByRole("menuitemcheckbox", { name: /^실패/ })).toHaveTextContent(/^실패3$/);
+		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /^실패/ }));
+		await expect.poll(() => rows().length).toBe(2);
+		await userEvent.keyboard("{Escape}");
+		// The row both are on names each receiver.
+		await userEvent.click(row('"두 곳에 못 간 글" 발행').getByText("post/two-failed"));
+		await expect.element(panel()).toHaveTextContent("받는 곳사이트 캐시");
+		await expect.element(panel()).toHaveTextContent("받는 곳example.dev/api/search");
+	});
+
+	it("the banner's 보기 shows exactly what it counts: the failed filter alone, with the search and the other filters taken off", async () => {
+		await draw({
+			...stories.ThreeFailed,
+			loaders: stories.log("#/activity?q=서울&kind=publish&date=today", { failures: 3 }),
+		}).run();
+		await expect.poll(() => rows().length).toBe(1);
+		await userEvent.click(banner().getByRole("button", { name: "보기" }));
+		await expect.poll(() => location.hash).toBe("#/activity?delivery=failed");
+		await expect.poll(() => rows().length).toBe(3);
+	});
+
+	it("while one send runs, no other can be started: the banner's button says so and cannot be pressed, and another row's send is off", async () => {
+		const drawn = draw(stories.ThreeFailed);
+		await drawn.run();
+		const { hooks } = drawn.loaded();
+		let arrive = () => {};
+		hooks.hold = new Promise((resolve) => {
+			arrive = resolve;
+		});
+		await userEvent.click((await menuOf('"서울의 밤" 발행')).getByRole("menuitem", { name: "다시 보내기" }));
+		await expect.element(row('"서울의 밤" 발행')).toHaveTextContent("보내는 중");
+		await expect.element(banner().getByRole("button", { name: "보내는 중…" })).toBeDisabled();
+		const other = (await menuOf('"가을 사진 정리" 발행')).getByRole("menuitem", { name: "다시 보내기" });
+		await expect.element(other).toHaveAttribute("aria-disabled", "true");
+		await userEvent.keyboard("{Escape}");
+		hooks.hold = null;
+		arrive();
+		await expect.element(toast("보냈습니다")).toBeVisible();
+		await expect.element(banner().getByRole("button", { name: "모두 다시 보내기" })).toBeEnabled();
+	});
+
+	it("a send that runs somewhere else (another tab, before a reload) shows here too: the banner's button and the failed rows say so, and none can be sent again", async () => {
+		await draw({
+			...stories.ThreeFailed,
+			loaders: stories.log("#/activity", {
+				failures: 3,
+				also: async (site) => {
+					await site.db
+						.updateTable("monti_delivery")
+						.set({ held_by: "another tab", sending_until: new Date(Date.now() + 60_000) })
+						.where("state", "=", "failed")
+						.execute();
+				},
+			}),
+		}).run();
+		await expect.element(banner().getByRole("button", { name: "보내는 중…" })).toBeDisabled();
+		await expect.poll(() => deliveryCells().filter((words) => words === "보내는 중")).toHaveLength(3);
+		await expect.element((await menuOf(FAILED)).getByRole("menuitem", { name: "자세히" })).toBeVisible();
+		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).not.toBeInTheDocument();
+	});
+
+	it("an undo another tab already made is refused: the toast says why, and the row reads again and offers no undo", async () => {
+		const drawn = draw(stories.Log);
+		await drawn.run();
+		const { site, ids } = drawn.loaded();
+		await expect.element(row(FAILED)).toBeVisible();
+		// Behind the screen's back.
+		await site.monti.run("activity.undo", { id: ids.failed[0]?.line }, { actor: "admin" });
+		await userEvent.click((await menuOf(FAILED)).getByRole("menuitem", { name: "되돌리기" }));
+		await expect.element(page.getByRole("listitem").first()).toBeVisible();
+		await expect.element(row(FAILED)).toHaveTextContent(/되돌림 \d\d:\d\d/);
+		await expect.element((await menuOf(FAILED)).getByRole("menuitem", { name: "자세히" })).toBeVisible();
+		await expect.element(page.getByRole("menuitem", { name: "되돌리기" })).not.toBeInTheDocument();
+	});
+
+	it("a send refused because the delivery was canceled meanwhile says so, and the row reads again", async () => {
+		const drawn = draw(stories.Log);
+		await drawn.run();
+		const { site, ids } = drawn.loaded();
+		await expect.element(row(FAILED)).toHaveTextContent("1번 실패");
+		const failed = await site.db
+			.selectFrom("monti_delivery")
+			.select("id")
+			.where("activity_id", "=", ids.failed[0]?.line ?? "")
+			.where("state", "=", "failed")
+			.executeTakeFirstOrThrow();
+		await site.monti.run("deliveries.cancel", { id: failed.id }, { actor: "admin" });
+		await userEvent.click((await menuOf(FAILED)).getByRole("menuitem", { name: "다시 보내기" }));
+		await expect.element(row(FAILED)).toHaveTextContent("취소됨");
+	});
+
+	it("an address that opens a line that is not there: the line leaves the address, nothing is beside the list, and the corner's ✦ stays", async () => {
+		await draw({ ...stories.Log, loaders: stories.log("#/activity?open=no-such-line") }).run();
+		await expect.poll(() => location.hash).toBe("#/activity");
+		await expect.element(panel()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "어시스턴트 열기" })).toBeVisible();
+	});
+
+	it("the sidebar's count follows a delivery that failed with no write of this admin's: when the window is come back to, and when the log opens", async () => {
+		const drawn = draw({ ...stories.Log, loaders: stories.log("#/trash") });
+		await drawn.run();
+		const { site, hooks } = drawn.loaded();
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록1$/);
+		const fail = async (title: string, slug: string) => {
+			const made = (await site.monti.run(
+				"entries.create",
+				{ collection: "post", locale: "ko", title, slug },
+				{ actor: "admin" },
+			)) as { output: { id: string } };
+			hooks.down.add(stories.SITE);
+			await site.monti.run("entries.publish", { ids: [made.output.id] }, { actor: "admin" });
+			hooks.down.clear();
+		};
+		// A delivery fails behind the screen: nothing told the frame.
+		await fail("뒤에서 실패한 글", "behind-1");
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록1$/);
+		window.dispatchEvent(new Event("focus"));
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록2$/);
+		await fail("또 실패한 글", "behind-2");
+		await userEvent.click(sidebarLog());
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록3$/);
+		await expect.element(banner()).toHaveTextContent("전송 실패 3건");
+	});
+
+	it("a time's cell says the same day and hour when pointed at, in the lists' own form", async () => {
+		await draw(stories.Log).run();
+		await expect.element(row(FAILED)).toBeVisible();
+		const cell = row(FAILED).element().querySelectorAll("td")[2];
+		expect(cell?.textContent).toMatch(/^\d\d\. \d\d \d\d:\d\d$/);
+		expect(cell?.getAttribute("title")).toBe(cell?.textContent);
 	});
 });

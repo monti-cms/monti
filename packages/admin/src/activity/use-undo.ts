@@ -9,11 +9,13 @@ import { useOperation } from "../operations/use-operation";
  * a record someone changed since stayed as it is, or nothing could be taken back at all. It answers whether anything was undone.
  */
 export function useUndo() {
-	const { t } = useAdmin();
+	const { t, wrote } = useAdmin();
 	const undo = useOperation<{ output: UndoPlan }>("activity.undo");
 	const run = async (id: string): Promise<boolean> => {
 		const result = await undo.run({ id });
 		if (!result.ok) {
+			// Refused because the screen is behind (undone in another tab, changed since): what it shows reads again.
+			wrote();
 			toast.error(t(result.refusal.reason ?? "errors.unexpected"));
 			return false;
 		}

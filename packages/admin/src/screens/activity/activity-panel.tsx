@@ -25,11 +25,10 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, Renew, Undo } from "@monti-cms/ui/icons";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
-import { clock } from "../entry/dates";
 import { useCoverCorner } from "../frame/admin-frame";
 import { shortTime } from "../list/format";
 
@@ -70,15 +69,20 @@ function DeliveryState({ delivery, sending }: { delivery: ActivityDelivery; send
 }
 
 /**
- * A line of the activity log, beside the list (flow 12·03): when and who, what it touched as it was then, and each receiver's delivery with what can
- * be done about it. What can be done with the line itself is in the head's ⋯, the same as in its row's.
+ * A line of the activity log, beside the list (flow 12·03): when, what it touched as it was then, and each receiver's delivery with what can be
+ * done about it. What can be done with the line itself is in the head's ⋯, the same as in its row's. Who did it is not said: one person uses the
+ * admin, and the assistant's line says so by its request.
  */
 export function ActivityPanel({
 	id,
 	say,
 	deliveries,
 	sending,
+	busy,
+	undoing,
+	watched,
 	onClose,
+	onGone,
 	onRetry,
 	onUndo,
 	go,
@@ -90,7 +94,15 @@ export function ActivityPanel({
 	deliveries: boolean;
 	/** The deliveries being sent again now. */
 	sending: readonly string[] | "all" | null;
+	/** A send runs, here or elsewhere: no other can be started. */
+	busy: boolean;
+	/** An undo runs: no second one is offered. */
+	undoing: boolean;
+	/** Changes each time the screen looks again at deliveries on their way: the details read again with it. */
+	watched: number;
 	onClose: () => void;
+	/** There is no such line (an old link): the screen takes it out of its address. */
+	onGone: () => void;
 	onRetry: (ids: string[]) => void;
 	onUndo: () => void;
 	go: (route: Route) => void;
@@ -100,21 +112,27 @@ export function ActivityPanel({
 	const schema = useRead<{ adminValues: Record<string, { label?: string }> }>("schema.read");
 	const cancel = useOperation("deliveries.cancel");
 	const [asking, setAsking] = useState<ActivityDelivery | null>(null);
-	useCoverCorner(true);
 	const line = read.data;
+	// The corner's ✦ is covered only while a panel is there to cover it: not while it loads, not for a line that is gone.
+	useCoverCorner(line !== null);
+	const reload = read.reload;
+	useEffect(() => {
+		if (watched > 0) void reload();
+	}, [watched, reload]);
+	const gone = read.refusal?.reason?.key === "activity.unknown";
+	// biome-ignore lint/correctness/useExhaustiveDependencies: once, when the read says the line is gone.
+	useEffect(() => {
+		if (gone) onGone();
+	}, [gone]);
 	if (!line) return null;
 	const isSending = (delivery: ActivityDelivery) =>
-		sending === "all" ? delivery.state === "failed" : (sending ?? []).includes(delivery.id);
+		sending === "all" || (busy && sending === null)
+			? delivery.state === "failed"
+			: (sending ?? []).includes(delivery.id);
+	const receiverOf = (delivery: ActivityDelivery) =>
+		typeof delivery.receiver === "string" ? delivery.receiver : say(delivery.receiver);
 	const failed = line.deliveries.filter((delivery) => delivery.state === "failed" && !isSending(delivery));
 	const title = line.request !== null ? `“${line.request}”` : line.what[0] ? say(line.what[0]) : "";
-	const who =
-		line.actor === "admin"
-			? t("activity.actor.admin")
-			: line.actor === "assistant"
-				? t("activity.actor.assistant")
-				: line.actor === "cli"
-					? t("activity.actor.cli")
-					: line.actor.plugin;
 	/** Where a record opens, when it is still there to open. */
 	const routeOf = (record: ActivityRecord): Route | null =>
 		!record.exists
@@ -151,19 +169,19 @@ export function ActivityPanel({
 				title={title}
 				onClose={onClose}
 				actions={
-					failed.length > 0 || line.undo.state === "open" ? (
+					failed.length > 0 || (line.undo.state === "open" && !undoing) ? (
 						<DropdownMenu>
 							<IconButton label={t("list.rowMenu")} trigger={(button) => <DropdownMenuTrigger render={button} />}>
 								<OverflowMenuHorizontal aria-hidden />
 							</IconButton>
 							<DropdownMenuContent align="end">
 								{failed.length > 0 && (
-									<DropdownMenuItem onClick={() => onRetry(failed.map((delivery) => delivery.id))}>
+									<DropdownMenuItem disabled={busy} onClick={() => onRetry(failed.map((delivery) => delivery.id))}>
 										<Renew aria-hidden />
 										{t("activity.retry")}
 									</DropdownMenuItem>
 								)}
-								{line.undo.state === "open" && (
+								{line.undo.state === "open" && !undoing && (
 									<DropdownMenuItem onClick={onUndo}>
 										<Undo aria-hidden />
 										{t("activity.undo")}
@@ -175,28 +193,23 @@ export function ActivityPanel({
 				}
 			>
 				<Stack gap={32}>
+					{/* The first group has no heading, as in the other panels: the head names the line. */}
+					<DescriptionList>
+						<DescriptionItem label={t("activity.column.at")} mono>
+							{shortTime(line.at)}
+						</DescriptionItem>
+						{line.undo.state === "done" && (
+							<DescriptionItem label={t("activity.undoneAt")} mono>
+								{shortTime(line.undo.at)}
+							</DescriptionItem>
+						)}
+					</DescriptionList>
 					{/* The head cuts a long request; here it is whole, with everything it did. */}
 					{line.request !== null && (
 						<Group title={t("activity.request")}>
 							<Text>{line.request}</Text>
 						</Group>
 					)}
-					<Group title={t("activity.event")}>
-						<DescriptionList>
-							<DescriptionItem label={t("activity.column.at")} mono>
-								{shortTime(line.at)}
-							</DescriptionItem>
-							<DescriptionItem label={t("activity.who")}>{who}</DescriptionItem>
-							{line.undo.state === "done" && (
-								<DescriptionItem label={t("activity.undoneAt")} mono>
-									{shortTime(line.undo.at)}
-								</DescriptionItem>
-							)}
-							<DescriptionItem label={t("activity.id")} mono>
-								{line.id}
-							</DescriptionItem>
-						</DescriptionList>
-					</Group>
 					{line.request !== null && (
 						<Group title={t("activity.writes", { count: line.writes.length })}>
 							<Stack gap={8}>
@@ -253,9 +266,7 @@ export function ActivityPanel({
 								{line.deliveries.map((delivery) => (
 									<Stack key={delivery.id} gap={8} align="start">
 										<DescriptionList>
-											<DescriptionItem label={t("activity.destination")} mono>
-												{delivery.destination}
-											</DescriptionItem>
+											<DescriptionItem label={t("activity.destination")}>{receiverOf(delivery)}</DescriptionItem>
 											<DescriptionItem label={t("activity.eventName")} mono>
 												{delivery.event}
 											</DescriptionItem>
@@ -263,20 +274,22 @@ export function ActivityPanel({
 												<DeliveryState delivery={delivery} sending={isSending(delivery)} />
 											</DescriptionItem>
 											{delivery.lastError && delivery.state !== "sent" && (
-												<DescriptionItem label={t("activity.lastError")} mono>
-													{delivery.lastError}
-												</DescriptionItem>
+												<DescriptionItem label={t("activity.lastError")}>{say(delivery.lastError)}</DescriptionItem>
 											)}
 											{delivery.nextAttemptAt && !isSending(delivery) && (
 												<DescriptionItem label={t("activity.nextAttempt")} mono>
-													{clock(new Date(delivery.nextAttemptAt))}
+													{shortTime(delivery.nextAttemptAt)}
 												</DescriptionItem>
 											)}
+											{/* What the receiver got it under: the header's name, to find it in the receiver's own log. */}
+											<DescriptionItem label="Monti-Event-Id" mono>
+												{delivery.eventId}
+											</DescriptionItem>
 										</DescriptionList>
 										{(delivery.state === "failed" || delivery.state === "pending") && !isSending(delivery) && (
 											<Inline gap={16}>
 												{delivery.state === "failed" && (
-													<TextButton variant="underline" onClick={() => onRetry([delivery.id])}>
+													<TextButton variant="underline" loading={busy} onClick={() => onRetry([delivery.id])}>
 														{t("activity.retry")}
 													</TextButton>
 												)}
@@ -298,7 +311,7 @@ export function ActivityPanel({
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t("activity.cancelTitle")}</AlertDialogTitle>
 						<AlertDialogDescription>
-							<Text mono>{asking?.destination}</Text>
+							<Text>{asking ? receiverOf(asking) : ""}</Text>
 							<br />
 							{t("activity.cancelText")}
 						</AlertDialogDescription>

@@ -44,7 +44,7 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { Renew, RightPanelOpen, Undo } from "@monti-cms/ui/icons";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
 import { useAdmin } from "../../operations/admin-context";
@@ -134,11 +134,14 @@ export function DeliveryMark({ delivery, sending }: { delivery: LineDelivery | n
 export function ActivityScreen({
 	params,
 	go,
+	recount,
 }: {
 	params: URLSearchParams;
 	go: (route: Route, options?: { replace?: boolean }) => void;
+	/** Reads the sidebar's counts again: a delivery can fail after its write answered, when nothing else tells the frame. */
+	recount: () => void;
 }) {
-	const { t, wrote } = useAdmin();
+	const { t } = useAdmin();
 	const state = useMemo(() => readActivityState(params), [params]);
 	const setState = (next: ActivityState, options?: { replace?: boolean }) =>
 		go({ screen: "activity", params: writeActivityState(next) }, options);
@@ -156,13 +159,26 @@ export function ActivityScreen({
 	const again = useSendAgain();
 	const undo = useUndo();
 
-	// A delivery on its way ends by itself (a host that sends after it answers): the log reads again until none is, and the counts with it.
+	// The sidebar's count may be behind when the log opens: a delivery that failed after its write answered told nobody.
+	useEffect(() => {
+		recount();
+	}, [recount]);
+	// A delivery on its way ends by itself (a host that sends after it answers): the log reads again until none is, with the counts and the open
+	// row's details. Only what shows deliveries reads again; no other screen's reads do, and nothing was written.
 	const waiting = lines.some((line) => (line.delivery?.pending ?? 0) > 0) || (counts.data?.sending ?? 0) > 0;
+	const [watched, setWatched] = useState(0);
+	const reloadLines = read.reload;
+	const reloadCounts = counts.reload;
 	useEffect(() => {
 		if (!waiting) return;
-		const timer = setInterval(wrote, WATCH_MS);
+		const timer = setInterval(() => {
+			void reloadLines();
+			void reloadCounts();
+			recount();
+			setWatched((times) => times + 1);
+		}, WATCH_MS);
 		return () => clearInterval(timer);
-	}, [waiting, wrote]);
+	}, [waiting, reloadLines, reloadCounts, recount]);
 
 	const { sized, resize } = useColumnWidths("activity");
 	/** A message of the log in the admin's language; an entry with no title yet is called what the lists call it. */
@@ -170,10 +186,16 @@ export function ActivityScreen({
 		t(
 			message.values?.title === "" ? { ...message, values: { ...message.values, title: t("list.untitled") } } : message,
 		);
-	const isSending = (line: ActivityLine) =>
-		again.sending === "all"
-			? (line.delivery?.failed ?? 0) > 0
-			: again.sending !== null && (line.delivery?.failedIds ?? []).some((id) => again.sending?.includes(id));
+	// A send that runs somewhere else: in another tab, or started here before the page was loaded again.
+	const elsewhere = again.sending === null && (counts.data?.sending ?? 0) > 0;
+	/** While any send runs, every send control says so and none can be pressed: one runs at a time. */
+	const busy = again.sending !== null || elsewhere;
+	const isSending = (line: ActivityLine) => {
+		const failed = line.delivery?.failedIds ?? [];
+		if (failed.length === 0) return false;
+		if (again.sending === "all" || elsewhere) return true;
+		return again.sending !== null && failed.some((id) => again.sending?.includes(id));
+	};
 	/** What stands after a line's words, in grey: where it happened (for the assistant's line, what it did), who if not the admin, and its undo. */
 	const afterOf = (line: ActivityLine) =>
 		[
@@ -201,12 +223,13 @@ export function ActivityScreen({
 					{t("activity.details")}
 				</Item>
 				{failed.length > 0 && !isSending(line) && (
-					<Item onClick={() => void again.send(failed)}>
+					<Item disabled={busy} onClick={() => void again.send(failed)}>
 						<Renew aria-hidden />
 						{t("activity.retry")}
 					</Item>
 				)}
-				{line.undo.state === "open" && (
+				{/* Not offered while an undo runs: a second press would be refused right after the first went through. */}
+				{line.undo.state === "open" && !undo.pending && (
 					<Item onClick={() => void undo.run(line.id)}>
 						<Undo aria-hidden />
 						{t("activity.undo")}
@@ -282,12 +305,16 @@ export function ActivityScreen({
 					meta={counts.data?.since ? t("activity.since", { date: shortDate(counts.data.since) }) : undefined}
 				>
 					{!failedOnly && (
-						<TextButton variant="underline" onClick={() => look({ deliveries: ["failed"] })}>
+						// Exactly what the banner counts: every failed delivery, with nothing else narrowing the list.
+						<TextButton
+							variant="underline"
+							onClick={() => look({ deliveries: ["failed"], search: "", kinds: [], range: null })}
+						>
 							{t("activity.show")}
 						</TextButton>
 					)}
-					<TextButton loading={again.sending === "all"} onClick={() => void again.send("all")}>
-						{again.sending === "all" ? t("activity.sending") : t("activity.retryAll")}
+					<TextButton loading={busy} onClick={() => void again.send("all")}>
+						{busy ? t("activity.sending") : t("activity.retryAll")}
 					</TextButton>
 				</Banner>
 			) : null}
@@ -362,7 +389,7 @@ export function ActivityScreen({
 											<DeliveryMark delivery={line.delivery} sending={isSending(line)} />
 										</TableCell>
 									)}
-									<TableCell align="end" truncate title={new Date(line.at).toLocaleString()}>
+									<TableCell align="end" truncate title={shortTime(line.at)}>
 										<Text mono variant="meta" tone="muted">
 											{shortTime(line.at)}
 										</Text>
@@ -417,7 +444,11 @@ export function ActivityScreen({
 					say={say}
 					deliveries={data.deliveries}
 					sending={again.sending}
+					busy={busy}
+					undoing={undo.pending}
+					watched={watched}
 					onClose={() => setState({ ...state, open: null })}
+					onGone={() => setState({ ...state, open: null }, { replace: true })}
 					onRetry={(ids) => void again.send(ids)}
 					onUndo={() => void undo.run(panel)}
 				/>

@@ -1,4 +1,4 @@
-import type { MontiEvent, Receiver } from "@monti-cms/core";
+import { type MontiEvent, type Receiver, ReceiverAnswer } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sql } from "kysely";
 import { userEvent, within } from "storybook/test";
@@ -25,12 +25,15 @@ export type Hooks = {
 const receiversOf = (hooks: Hooks): Receiver[] =>
 	[SITE, SEARCH].map((destination) => ({
 		destination,
-		// The search index hears of what is published; the site of everything it shows.
-		...(destination === SEARCH ? { accepts: (event: MontiEvent) => event.type === "entry.published" } : {}),
+		// The search index hears of what is published; the site of everything it shows. The site's refresh has a name of its own, as the Next
+		// adapter's has; the webhook is named by its host and path.
+		...(destination === SEARCH
+			? { accepts: (event: MontiEvent) => event.type === "entry.published" }
+			: { label: { key: "deliveries.receiver.site" } }),
 		async send(event) {
 			if (hooks.hold) await hooks.hold;
 			if (hooks.down.has(destination) || (destination === SITE && event.ids.some((id) => hooks.refuse.has(id))))
-				throw new Error("503 Service Unavailable");
+				throw new ReceiverAnswer("503 Service Unavailable");
 			hooks.arrived.push({ destination, event });
 		},
 	}));
@@ -183,6 +186,27 @@ export const AssistantPanel: Story = { loaders: log((ids) => `#/activity?open=${
 
 /** Flow 12·05: three failed deliveries. A banner at the top of the screen offers to send them all. */
 export const ThreeFailed: Story = { loaders: log("#/activity", { failures: 3 }) };
+
+/**
+ * One publish neither receiver got: two failed deliveries on one row, with the first story's one. The sidebar, the banner and the delivery
+ * column's menu all count deliveries (three), while two rows say they failed.
+ */
+export const TwoOnOneRow: Story = {
+	loaders: log("#/activity", {
+		also: async (site, _ids, hooks) => {
+			const made = await run(site.monti, "entries.create", {
+				collection: "post",
+				locale: "ko",
+				title: "두 곳에 못 간 글",
+				slug: "two-failed",
+			});
+			hooks.down.add(SITE);
+			hooks.down.add(SEARCH);
+			await run(site.monti, "entries.publish", { ids: [made.output.id] });
+			hooks.down.clear();
+		},
+	}),
+};
 
 /** Flow 12·10: a site with no receiver. The log has no delivery column, and nothing counts. */
 export const NoReceivers: Story = { loaders: log("#/activity", { receivers: false }) };
