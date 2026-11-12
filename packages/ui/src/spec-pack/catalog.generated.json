@@ -2637,7 +2637,7 @@
 				},
 				"size": {
 					"kind": "variant",
-					"enum": ["fill", "icon", "row", "thumb", "thumb-lg"]
+					"enum": ["fill", "icon", "row", "thumb", "thumb-lg", "thumb-sm"]
 				},
 				"src": {
 					"kind": "state"

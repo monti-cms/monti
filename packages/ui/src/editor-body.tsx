@@ -16,6 +16,9 @@ import { cn } from "./cn";
  * - `data-off`: a block the collection's editor no longer offers stays, in the faint ink, with its `data-off-label` after it.
  * - `data-box`: a block the editor shows but does not edit here, in a quiet box with its `data-box-label`: one the site no longer defines (kept
  *   as it is), or one whose own editor comes with its feature.
+ * - `data-whole`: a block that is one thing (a picture, a file, a divider, a boxed block): nothing in it is text to pick. Chrome drops the selection of
+ *   such a block standing between two others as soon as the mouse moves, unless their contents cannot be picked as text (T134). Its own fields (a
+ *   caption) still take text.
  * - `data-checked` on a checklist's item (`ul[data-checklist]`): its box is ticked, drawn like `Checkbox` (14px, the faint ring; ticked, the ink ring and fill).
  */
 const EDITOR_BODY = cn(
@@ -63,6 +66,8 @@ const EDITOR_BODY = cn(
 	"[&_.ProseMirror-selectednode:not(:focus-within)_[data-block=file]]:selection:bg-transparent!",
 	// A picture and a file stand off the next block as a paragraph does (2026-11-10, owner: 20px above them, none under, read as stuck to what follows).
 	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20",
+	// A block that is one thing is picked whole, never as text: see `data-whole` above.
+	"[&_[data-whole]]:select-none",
 	"[&_[data-held]]:opacity-40",
 	"[&_[data-untranslated]]:text-monti-faint",
 	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-meta [&_[data-off]]:after:content-[attr(data-off-label)]",
@@ -73,13 +78,15 @@ const EDITOR_BODY = cn(
  * The text laid out as the rows of `CompareRows` (translation.md, side by side): the editor's blocks are the translation cells, and the editor puts
  * before each of them, as cells it does not edit, a rule across the row (`data-pair=rule`), the block's kind with its note
  * (`data-pair=kind`, the note `data-pair-note` in its tone: `warning`, `danger` or `success`) and the source block (`data-pair=source`, on the tool ground, quieter; its changed
- * words `mark`, underlined in the warning color, its code `data-pair-code`). The block the cursor is in, and the source cell of its row, are on the block ground (`data-pair-current`) while the text has the focus. The rows take the height of their taller side.
+ * words `mark`, underlined in the warning color, its code `data-pair-code`). After a last block that is one thing the editor puts an empty picture that takes no
+ * room (`data-pair=end`): a place a caret can take, which Chrome needs after such a block to keep it picked. The block the cursor is in, and the source cell of its row, are on the block ground (`data-pair-current`) while the text has the focus. The rows take the height of their taller side.
  */
 const PAIRED = cn(
 	"[&_.ProseMirror]:grid [&_.ProseMirror]:grid-cols-[104px_minmax(0,1fr)_minmax(0,1fr)] [&_.ProseMirror]:items-stretch",
 	// The translation cell is `CompareRow`'s: 40px before the words, so the block handle (24px, 4px off them) stays inside it.
 	"[&_.ProseMirror>:not([data-pair])]:mr-monti-24 [&_.ProseMirror>:not([data-pair])]:ml-monti-40 [&_.ProseMirror>:not([data-pair])]:my-monti-16 [&_.ProseMirror>:not([data-pair])]:min-w-0",
 	"[&_[data-pair=rule]]:col-span-full [&_[data-pair=rule]]:h-px [&_[data-pair=rule]]:bg-monti-muted",
+	"[&_[data-pair=end]]:col-span-full [&_[data-pair=end]]:size-0",
 	"[&_[data-pair=kind]]:flex [&_[data-pair=kind]]:flex-col [&_[data-pair=kind]]:gap-monti-2 [&_[data-pair=kind]]:py-monti-16 [&_[data-pair=kind]]:pr-monti-12 [&_[data-pair=kind]]:text-right [&_[data-pair=kind]]:font-mono [&_[data-pair=kind]]:text-monti-micro [&_[data-pair=kind]]:text-monti-subtle [&_[data-pair-note=warning]]:text-monti-warning [&_[data-pair-note=danger]]:text-monti-danger [&_[data-pair-note=success]]:text-monti-success",
 	"[&_[data-pair=source]]:min-w-0 [&_[data-pair=source]]:whitespace-pre-line [&_[data-pair=source]]:border-monti-default [&_[data-pair=source]]:border-r [&_[data-pair=source]]:bg-monti-tool [&_[data-pair=source]]:px-monti-24 [&_[data-pair=source]]:py-monti-16 [&_[data-pair=source]]:text-monti-muted",
 	// The source's words that changed since the translation: the warning underline of `CompareText source`.

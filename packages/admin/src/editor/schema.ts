@@ -49,6 +49,13 @@ const blockAttributes = () => ({
 
 type Data = Record<string, unknown> | null;
 
+/**
+ * Marks the element of a block that is one thing (it holds no text of its own: a picture, a file, a divider, a boxed block). `EditorBody` lets nothing
+ * in it be picked as text: Chrome moves a selection whose two ends both stand between such blocks to the first place that takes a caret as soon as the
+ * mouse moves, unless what is in them is not text to pick (T134).
+ */
+const WHOLE = { "data-whole": "" } as const;
+
 /** A paragraph's or heading's alignment, for `EditorBody` to draw (`data-align`); left is the default and adds nothing. */
 const aligned = (data: Data): Record<string, string> =>
 	data?.align === "center" || data?.align === "right" ? { "data-align": String(data.align) } : {};
@@ -79,17 +86,53 @@ function draw(block: CatalogBlock, data: Data, boxLabel: (block: CatalogBlock, d
 		case "codeBlock":
 			return ["pre", data?.language ? { "data-language": String(data.language) } : {}, ["code", 0]];
 		case "divider":
-			return ["div", ["hr"]];
+			return ["div", WHOLE, ["hr"]];
 		case "footnote":
 			return ["div", { "data-footnote": String(data?.id ?? "") }, 0];
 	}
-	if (block.holds === "nothing") return ["div", { "data-box": "", "data-box-label": boxLabel(block, data) }];
+	// A block that holds no text is all in its attrs: copied, it carries its kind and what it holds (which file, its alt text, its crop), so it is pasted
+	// as that block. Its id stays behind, as every block's does.
+	if (block.holds === "nothing")
+		return [
+			"div",
+			{
+				...WHOLE,
+				"data-box": "",
+				"data-box-label": boxLabel(block, data),
+				// With nothing to carry (a file still on its way up), it says no kind either: pasted, it is no block, not an empty one.
+				...(data ? { "data-block": block.type, [HELD]: JSON.stringify(data) } : {}),
+			},
+		];
 	return ["div", { "data-block": block.type }, 0];
+}
+
+/** Where a copied block that holds no text carries what it holds. */
+const HELD = "data-block-attrs";
+
+/** What a pasted block holds, as it was copied: an object, or nothing when the clipboard says anything else. */
+function heldOf(element: HTMLElement): Data {
+	try {
+		const held: unknown = JSON.parse(element.getAttribute(HELD) ?? "null");
+		return held !== null && typeof held === "object" && !Array.isArray(held) ? (held as Record<string, unknown>) : null;
+	} catch {
+		return null;
+	}
 }
 
 /** How a pasted element becomes a block: the core's plain HTML, and any block by its `data-block`. */
 function parse(block: CatalogBlock) {
-	const own = [{ tag: `div[data-block="${block.type}"]` }];
+	const own = [
+		block.holds === "nothing"
+			? {
+					tag: `div[data-block="${block.type}"]`,
+					// A block that holds no text and carries nothing is no block: pasted from elsewhere without its attrs, it would be an empty picture.
+					getAttrs: (element: HTMLElement) => {
+						const data = heldOf(element);
+						return data ? { data } : false;
+					},
+				}
+			: { tag: `div[data-block="${block.type}"]` },
+	];
 	switch (block.type) {
 		case "paragraph":
 			return [
@@ -165,27 +208,30 @@ export function bodyExtensions(
 			const definition = definitions.get(block.type);
 			const Component = definition?.Editor ?? definition?.Site;
 			const View = views.get(block.type);
+			const whole = block.holds === "nothing" ? { attrs: WHOLE } : {};
 			const addNodeView = View
-				? () => ReactNodeViewRenderer(View)
+				? () => ReactNodeViewRenderer(View, whole)
 				: Component
 					? () =>
-							ReactNodeViewRenderer(({ node }) =>
-								createElement(
-									NodeViewWrapper,
-									{ "data-block": block.type },
+							ReactNodeViewRenderer(
+								({ node }) =>
 									createElement(
-										Component,
-										{
-											block: {
-												id: String(node.attrs.blockId ?? ""),
-												type: block.type,
+										NodeViewWrapper,
+										{ "data-block": block.type },
+										createElement(
+											Component,
+											{
+												block: {
+													id: String(node.attrs.blockId ?? ""),
+													type: block.type,
+													attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
+												},
 												attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
 											},
-											attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
-										},
-										block.holds === "nothing" ? undefined : createElement(NodeViewContent),
+											block.holds === "nothing" ? undefined : createElement(NodeViewContent),
+										),
 									),
-								),
+								whole,
 							)
 					: undefined;
 			return Node.create({
@@ -209,7 +255,8 @@ export function bodyExtensions(
 				isolating: block.holds === "nothing",
 				addAttributes: blockAttributes,
 				parseHTML: () => parse(block),
-				renderHTML: ({ node }) => draw(block, node.attrs.data as Data, boxLabel),
+				// A file still on its way up has nothing to carry yet: copied, it is not a block.
+				renderHTML: ({ node }) => draw(block, node.attrs.upload ? null : (node.attrs.data as Data), boxLabel),
 				...(addNodeView ? { addNodeView } : {}),
 			});
 		});
@@ -222,6 +269,7 @@ export function bodyExtensions(
 		renderHTML: ({ node }) => [
 			"div",
 			{
+				...WHOLE,
 				"data-box": "",
 				"data-box-label": boxLabel({ type: String(node.attrs.block?.type ?? "") } as CatalogBlock, null),
 			},
