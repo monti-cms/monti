@@ -108,6 +108,13 @@ export function useEntryEditor(
 	const loaded = source.id === null ? NEW_TEMPLATE : read.data;
 	const base = useMemo(() => (loaded ? basePaths(loaded) : null), [loaded]);
 	const version = loaded ? ("entry" in loaded ? loaded.entry.version : loaded.version) : null;
+	/**
+	 * The version my own save wrote, while the screen has not read it again (no answer to the read). What is on the screen was written on it: the next
+	 * save is sent against it, or it would be refused as someone else's. A read that lands is the base again.
+	 */
+	const [written, setWritten] = useState<number | null>(null);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a read landed, whatever it holds
+	useEffect(() => setWritten(null), [loaded]);
 	const target = useMemo(() => ({ kind: source.kind, id: source.id ?? "new" }), [source.kind, source.id]);
 	const draft = useDraft({
 		target,
@@ -216,7 +223,7 @@ export function useEntryEditor(
 			const input = isEntry
 				? {
 						id: source.id,
-						version: at ?? version,
+						version: at ?? written ?? version,
 						...(changed.has("title") ? { title } : {}),
 						...(changed.has("slug") ? { slug: String(draft.value("slug") ?? "") } : {}),
 						...(changed.has("doc") ? { doc } : {}),
@@ -233,7 +240,7 @@ export function useEntryEditor(
 								}
 							: {}),
 					}
-				: { ...(source.id ? { id: source.id, version: at ?? version } : {}), name: title.trim(), doc };
+				: { ...(source.id ? { id: source.id, version: at ?? written ?? version } : {}), name: title.trim(), doc };
 			const answer = await saveOp.run(input, { accepted: draft.accepted });
 			if (!answer.ok) {
 				// An ended session is the admin's state (useOperation hears it); the save waits here until the person signs in again.
@@ -260,11 +267,14 @@ export function useEntryEditor(
 			// old text came back in their place and the next save was a conflict with my own.
 			const again = await reload();
 			if (again.ok) draft.saved();
-			// An ended session says so in its own banner, as for the save itself.
-			else if (again.refusal.status !== 401) toast.error(t(isEntry ? "entry.savedNotRead" : "templates.savedNotRead"));
+			else {
+				setWritten(answer.body.output.version);
+				// An ended session says so in its own banner, as for the save itself.
+				if (again.refusal.status !== 401) toast.error(t(isEntry ? "entry.savedNotRead" : "templates.savedNotRead"));
+			}
 			return { id: answer.body.output.id };
 		},
-		[loaded, version, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload, t],
+		[loaded, version, written, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload, t],
 	);
 
 	return {

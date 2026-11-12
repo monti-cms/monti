@@ -1,5 +1,6 @@
 import type { Doc } from "@monti-cms/core";
 import {
+	Banner,
 	Button,
 	Compare,
 	CompareBody,
@@ -116,7 +117,33 @@ export function CompareView({
 		{ skip: !mine },
 	);
 
-	if (!server || !mine || !latest.data) return null;
+	// Without its read there is nothing to compare: the way back stays, and a read that did not come says so at the top with a way to try again (an
+	// ended session has its own banner). Drawn as nothing, only the browser's Back left this screen.
+	if (!server || !mine || !latest.data)
+		return (
+			<StandalonePage
+				banner={
+					<>
+						<SessionEndedBanner />
+						{latest.refusal && latest.refusal.status !== 401 ? (
+							<Banner tone="danger" title={t("entry.loadFailed")} plainMeta>
+								<TextButton onClick={() => void latest.reload()}>{t("entry.retry")}</TextButton>
+							</Banner>
+						) : null}
+					</>
+				}
+			>
+				<EditorHeader>
+					<Inline gap={16} minWidth={0} paddingX={12}>
+						<TextButton variant="quiet" onClick={onBack}>
+							<ChevronLeft aria-hidden />
+							{t("compare.back")}
+						</TextButton>
+						<Text variant="title">{t(mode === "conflict" ? "compare.conflictTitle" : "compare.draftTitle")}</Text>
+					</Inline>
+				</EditorHeader>
+			</StandalonePage>
+		);
 	const updatedAt = new Date(latest.data.entry.updatedAt);
 	const labels = schema?.adminValues[collection]?.fields ?? {};
 	const differing = (places.data?.places ?? []).filter((place) => place.place !== "doc.order");

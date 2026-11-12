@@ -690,13 +690,17 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	useEffect(() => {
 		if (!barOpen) return;
 		const onEscape = (event: KeyboardEvent) => {
-			if (event.key !== "Escape" || !box.current?.contains(document.activeElement)) return;
+			if (event.key !== "Escape") return;
+			// From its own bar the focus goes back to the picture. With the keyboard elsewhere in the body (on the next picture), the picture is let go of
+			// all the same and the keyboard stays where it is: a bar left open behind it would be nobody's.
+			const own = box.current?.contains(document.activeElement) ?? false;
+			if (!own && !editor.view.dom.contains(document.activeElement)) return;
 			letGo.current();
-			box.current.focus();
+			if (own) box.current?.focus();
 		};
 		document.addEventListener("keydown", onEscape, true);
 		return () => document.removeEventListener("keydown", onEscape, true);
-	}, [barOpen]);
+	}, [barOpen, editor]);
 
 	const captionField = (editable || data.caption) && (
 		<Input
@@ -890,7 +894,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 							// Read-only (an archived entry, one in the trash): nothing changes the picture, but what the entry says of it can still be read. The
 							// settings card opens with its fields read-only (T130; read-only keeps the ways to read, 2026-11-11 owner).
 							<BlockBarPlace>
-								<FloatingBar ref={bar}>
+								<FloatingBar ref={bar} aria-label={t("editor.image.tools")}>
 									<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
 										<FloatingBarButton
 											label={t("editor.image.settings")}
@@ -918,7 +922,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 						{selected && editable && url && (
 							<>
 								<BlockBarPlace>
-									<FloatingBar ref={bar}>
+									<FloatingBar ref={bar} aria-label={t("editor.image.tools")}>
 										{ALIGNS.map(({ value, icon: Icon, label }) => (
 											<FloatingBarButton
 												key={value}
@@ -1034,7 +1038,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 			<BlockBox>
 				{selected && (media ? !media.readOnly : editor.isEditable) && (
 					<BlockBarPlace>
-						<FloatingBar ref={bar}>
+						<FloatingBar ref={bar} aria-label={t("editor.file.tools")}>
 							<Popover open={open} onOpenChange={(on) => media?.setCard(on ? blockId : null)}>
 								<FloatingBarButton
 									label={t("editor.image.settings")}

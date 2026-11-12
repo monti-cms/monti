@@ -211,8 +211,10 @@ export function EntryEditor({
 		) : null;
 	const paired = Boolean(compared) && view === "paired";
 	const pairedRows = usePairedRows(paired ? compared : null, catalogs);
+	// With the entry's other controls: before the read, and after one that failed, "+ language" made a translation of an entry nobody had read, and the
+	// tabs stood elsewhere than where they stay.
 	const languages =
-		translation.multilingual && schema.data ? (
+		read && translation.multilingual && schema.data ? (
 			<Inline minHeight="control-md" justify="between" gap={12}>
 				<LocaleTabs
 					schema={schema.data.schema}

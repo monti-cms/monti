@@ -60,10 +60,12 @@ export const LAYOUT = {
 	 * where they would stretch the page past its window.
 	 */
 	overflow: {
-		auto: "relative overflow-auto",
+		// A scrolling box keeps 8px of scroll room above and below: what the keyboard scrolls to does not land on its edge, where its ring would be cut
+		// (tokens.md, the states).
+		auto: "relative scroll-py-monti-8 overflow-auto",
 		hidden: "overflow-hidden",
 		clip: "overflow-clip",
-		y: "relative overflow-y-auto",
+		y: "relative scroll-py-monti-8 overflow-y-auto",
 		x: "relative overflow-x-auto",
 	},
 	/** Hidden on narrow screens (below the breakpoint), or from the breakpoint up. */

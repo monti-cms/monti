@@ -169,6 +169,8 @@ describe("the entry editor: before the entry is there", () => {
 		// Nothing that writes is there: no title to type into (it would read as an untitled entry), no save, no publish, no menu of the entry's actions.
 		expect(title().elements()).toEqual([]);
 		for (const name of ["저장", "발행하기", "더 보기", "속성"]) expect(button(name).elements()).toEqual([]);
+		// Nor the languages: "+ 언어" made a translation of an entry nobody had read, and the tabs moved when the entry came.
+		for (const name of ["한국어", "+ 언어"]) expect(button(name).elements()).toEqual([]);
 		// No status bar either: nothing is said of an entry that is not there.
 		expect(document.querySelector("[data-slot=status-bar]")).toBeNull();
 		// The site's structure is read by now (the way back is named from it), so the properties could be drawn, empty: they are not. No field of theirs
@@ -187,6 +189,7 @@ describe("the entry editor: before the entry is there", () => {
 		expect(at.x > box.left && at.x < box.right && at.y > box.top && at.y < box.bottom).toBe(true);
 		await expect.element(title()).toHaveValue("첫 번째 글");
 		await expect.element(button("속성")).toBeVisible();
+		await expect.element(button("+ 언어")).toBeVisible();
 		await expect.element(property("요약")).toHaveValue("리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.");
 		await expect.element(property("대표 이미지")).toBeVisible();
 		await saveCell("저장됨");
@@ -311,6 +314,46 @@ describe("the entry editor: an answer that does not come", () => {
 		// The screen still has the copy from before the save: my words stay over it, not the old title in their place.
 		await expect.element(title()).toHaveValue("첫 번째 글 저장한 말");
 		await saveCell("저장 전 변경사항");
+	});
+
+	it("02 after a save that was not read again, the next save is mine: it goes through, with no conflict against my own save", async () => {
+		const story = wired("draft");
+		await story.run();
+		await opened();
+		await titleEnd();
+		await userEvent.keyboard(" 저장한 말");
+		story.wire.cut = (name) => (name === "entries.get" ? "none" : undefined);
+		await save();
+		await expect.element(page.getByText("저장했지만 글을 다시 읽지 못했습니다")).toBeVisible();
+		// The server answers again. What is on the screen was written on the version my own save made.
+		story.wire.cut = () => undefined;
+		await userEvent.click(title());
+		await userEvent.keyboard("{End}, 그리고 더");
+		await save();
+		await saveCell("저장됨");
+		expect(page.getByText(/먼저 저장했습니다/).elements()).toEqual([]);
+		await expect.element(title()).toHaveValue("첫 번째 글 저장한 말, 그리고 더");
+		expect(await savedTitle(story)).toBe("첫 번째 글 저장한 말, 그리고 더");
+	});
+
+	it("02 the comparison whose own read does not come says so at its top with a way to try again, and its way back stays", async () => {
+		const story = wired("draft");
+		await conflict(story);
+		story.wire.cut = (name) => (name === "entries.get" ? "none" : undefined);
+		await userEvent.click(button("비교하기"));
+		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
+		await expect.element(button("편집기로")).toBeVisible();
+		story.wire.cut = () => undefined;
+		await userEvent.click(button("다시 시도"));
+		await expect.element(page.getByText("서버 최신본과 비교")).toBeVisible();
+		await expect.element(page.getByText("글을 불러오지 못했습니다")).not.toBeInTheDocument();
+		// And back to the editor from a comparison that never came.
+		story.wire.cut = (name) => (name === "entries.get" ? "refused" : undefined);
+		await userEvent.click(button("편집기로"));
+		await userEvent.click(button("비교하기"));
+		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
+		await userEvent.click(button("편집기로"));
+		await expect.element(title()).toHaveValue("첫 번째 글 내가 쓴 말");
 	});
 
 	it("15 a read again that finds the session ended says so once, in the session's banner: no toast of the save or of the latest beside it", async () => {
@@ -462,8 +505,9 @@ describe("the entry editor: a read that gets no answer", () => {
 		await story.run();
 		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
 		expect(title().elements()).toEqual([]);
-		// As before the read: none of the entry's controls, the properties button among them (it stood pressed and opened nothing).
-		for (const name of ["저장", "발행하기", "더 보기", "속성"]) expect(button(name).elements()).toEqual([]);
+		// As before the read: none of the entry's controls, the properties button among them (it stood pressed and opened nothing), nor the languages.
+		for (const name of ["저장", "발행하기", "더 보기", "속성", "한국어", "+ 언어"])
+			expect(button(name).elements()).toEqual([]);
 		cut = false;
 		await userEvent.click(button("다시 시도"));
 		await expect.element(title()).toHaveValue("첫 번째 글");

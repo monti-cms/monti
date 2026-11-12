@@ -410,6 +410,7 @@ describe("an image in the text", () => {
 		await WithImage.run();
 		await userEvent.click(image());
 		await expect.element(bar()).toBeVisible();
+		await expect.element(bar()).toHaveAccessibleName("이미지 도구");
 		const from = image().element().getBoundingClientRect();
 		const to = bar().getByRole("button", { name: "가운데 정렬" }).element().getBoundingClientRect();
 		await pointerPath([
@@ -1027,6 +1028,7 @@ describe("an image in the text", () => {
 		expect(block.querySelector("input")).toBeNull();
 		await userEvent.click(page.elementLocator(block));
 		await expect.element(bar()).toBeVisible();
+		await expect.element(bar()).toHaveAccessibleName("파일 도구");
 		await expect.element(body()).toHaveFocus();
 		await userEvent.keyboard("{Backspace}");
 		await expect.poll(() => body().element().querySelector("[data-block=file]")).toBeNull();
@@ -1777,6 +1779,14 @@ describe("a read-only body with the keyboard (T133)", () => {
 		return Boolean(style && /0px 0px 0px 2px/.test(style.boxShadow) && block?.matches(":focus-visible"));
 	};
 	const toolbars = () => body().getByRole("toolbar").elements();
+	/** The sides at which the box that scrolls the body cuts a block's 2px ring: none when the ring is whole. */
+	const ringCut = (block: HTMLElement | undefined) => {
+		let scroller: HTMLElement | null = block?.parentElement ?? null;
+		while (scroller && !/auto|scroll/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+		if (!block || !scroller) return ["no scrolling box"];
+		const [box, around] = [block.getBoundingClientRect(), scroller.getBoundingClientRect()];
+		return [...(box.top - 2 < around.top ? ["top"] : []), ...(box.bottom + 2 > around.bottom ? ["bottom"] : [])];
+	};
 	/** The archived entry's two pictures, as the story's loaders make them: the test presses the keys itself. */
 	const archivedPictures = () => composeStory({ loaders: media.ArchivedPictures.loaders }, media.default);
 
@@ -1795,11 +1805,19 @@ describe("a read-only body with the keyboard (T133)", () => {
 		expect(stops).toEqual([0, 1]);
 		// Where the keyboard is: the focus mark, on that picture only. Reaching it picks nothing and opens nothing.
 		await expect.poll(() => blocks().map(drawnFocused)).toEqual([false, true]);
+		// The ring is whole: the body's scrolling box keeps room for it at its edges (tokens.md, 상태), going down and coming back up.
+		expect(ringCut(blocks()[1])).toEqual([]);
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		expect(document.activeElement).toBe(blocks()[0]);
+		expect(ringCut(blocks()[0])).toEqual([]);
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(blocks()[1]);
 		expect(blocks().map(drawnPicked)).toEqual([false, false]);
 		expect(toolbars()).toEqual([]);
 
 		await userEvent.keyboard("{Enter}");
-		const settings = body().getByRole("toolbar").getByRole("button", { name: "설정" });
+		// The bar says what it is, as the part's story names it.
+		const settings = body().getByRole("toolbar", { name: "이미지 도구" }).getByRole("button", { name: "설정" });
 		await expect.element(settings).toHaveFocus();
 		// Picked, as a press picks it: the line says whose bar it is.
 		expect(blocks().map(drawnPicked)).toEqual([false, true]);
@@ -1870,6 +1888,21 @@ describe("a read-only body with the keyboard (T133)", () => {
 		await expect.poll(toolbars).toEqual([]);
 		expect(blocks().map(drawnPicked)).toEqual([false, false]);
 		expect(document.activeElement).toBe(blocks()[0]);
+	});
+
+	it("02-6 T133 Escape with the keyboard on another picture unpicks the one that is picked: its bar does not stay open behind the keyboard", async () => {
+		await archivedPictures().run();
+		await userEvent.click(body().getByRole("img", { name: "아침 책상" }));
+		await expect.poll(() => toolbars().length).toBe(1);
+		// From the first picture through its bar to the second.
+		await userEvent.keyboard("{Tab}{Tab}");
+		expect(document.activeElement).toBe(blocks()[1]);
+		expect(blocks().map(drawnPicked)).toEqual([true, false]);
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(toolbars).toEqual([]);
+		expect(blocks().map(drawnPicked)).toEqual([false, false]);
+		// The keyboard stays where it was.
+		expect(document.activeElement).toBe(blocks()[1]);
 	});
 
 	it("02-6 T133 a picture unpicked with Escape is let go of for real: with the keyboard on the next picture, copy takes nothing", async () => {
