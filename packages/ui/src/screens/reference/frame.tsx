@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { Document, Folder, Image, List, Pen, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "../../icons";
+import {
+	Document,
+	Folder,
+	Image,
+	List,
+	Pen,
+	RecentlyViewed,
+	SettingsAdjust,
+	Spark,
+	Tag,
+	Tools,
+	TrashCan,
+} from "../../icons";
 import {
 	Count,
 	folderTree,
@@ -35,6 +47,7 @@ export type FramePlace =
 	| "series"
 	| "media"
 	| "trash"
+	| "activity"
 	| "tools"
 	| "settings";
 
@@ -47,6 +60,7 @@ function Row({
 	name,
 	count,
 	tone,
+	railDot,
 	children,
 }: {
 	place: FramePlace;
@@ -55,6 +69,8 @@ function Row({
 	name: string;
 	count?: string;
 	tone?: "warning";
+	/** Folded, the count cannot show: a dot on the icon stands for it, named by these words. */
+	railDot?: string;
 	children?: React.ReactNode;
 }) {
 	const active = place === open;
@@ -63,6 +79,7 @@ function Row({
 			<SidebarMenuButton
 				isActive={active}
 				tooltip={count ? `${name} ${count}` : name}
+				railDot={count ? railDot : undefined}
 				render={<Link href={`#${place}`} aria-current={active ? "page" : undefined} />}
 			>
 				{icon}
@@ -106,7 +123,7 @@ export function AdminFrame({
 	modeOpen?: boolean;
 	/** The folders listed under the open row, as the board draws them. */
 	folders?: readonly FrameFolder[];
-	/** The rows' counts, as the board draws them (posts 148, trash 3, tools 1 by default). */
+	/** The rows' counts, as the board draws them (posts 148, trash 3, one failed delivery on the activity log by default). */
 	counts?: Partial<Record<FramePlace, string>>;
 	/** The assistant's ✦ button in the page's top-right corner; off where a panel covers it. */
 	corner?: boolean;
@@ -122,7 +139,7 @@ export function AdminFrame({
 }) {
 	const [rail, setRail] = useState(railStart);
 	const [mode, setMode] = useState<"system" | "light" | "dark">(modeStart);
-	const count = { posts: "148", trash: "3", tools: "1", ...counts };
+	const count = { posts: "148", trash: "3", activity: "1", ...counts };
 	const tree = folderTree(folders.map((folder) => folder.depth ?? 0));
 	const sub =
 		!rail && folders.length > 0 ? (
@@ -142,8 +159,8 @@ export function AdminFrame({
 				))}
 			</SidebarMenuSub>
 		) : null;
-	const row = (place: FramePlace, icon: React.ReactNode, name: string, tone?: "warning") => (
-		<Row place={place} open={open} icon={icon} name={name} count={count[place]} tone={tone}>
+	const row = (place: FramePlace, icon: React.ReactNode, name: string, tone?: "warning", railDot?: string) => (
+		<Row place={place} open={open} icon={icon} name={name} count={count[place]} tone={tone} railDot={railDot}>
 			{place === open ? sub : null}
 		</Row>
 	);
@@ -175,7 +192,9 @@ export function AdminFrame({
 					<SidebarFooter>
 						<SidebarMenu aria-label="관리">
 							{row("trash", <TrashCan />, "휴지통")}
-							{row("tools", <Tools />, "도구", "warning")}
+							{/* Failed deliveries are counted on the log that shows them (doc 13, 2026-11-12). */}
+							{row("activity", <RecentlyViewed />, "활동 기록", "warning", "실패한 전송")}
+							{row("tools", <Tools />, "도구")}
 							{row("settings", <SettingsAdjust />, "설정")}
 						</SidebarMenu>
 						<SidebarFoot>

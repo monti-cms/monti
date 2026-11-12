@@ -6,7 +6,7 @@ import * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
-import { Folder, OverflowMenuHorizontal } from "./icons";
+import { Folder, OverflowMenuHorizontal, Spark } from "./icons";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 function Table({
@@ -326,13 +326,15 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 /**
  * The title cell of a row, on one line: the title in ink, then its address in mono, faint (`/first-post`; a folder's count, "글 2"). The other columns (cms-allow-korean)
  * are gray, so the ink alone makes the title the emphasis. Short of room, the address gives way first. A folder row has its folder icon before the title; a media row its
- * {@link RowThumb}, in the same column as the title so a head's name stands over both.
+ * {@link RowThumb}, in the same column as the title so a head's name stands over both. A row of the assistant's work (the activity log) has the ✦ there, in
+ * the proposal's blue: the mark leads the line and is never cut with the words.
  */
 function RowTitle({
 	title,
 	address,
 	addressTitle,
 	folder = false,
+	byAssistant,
 	thumb,
 	editing = false,
 	className,
@@ -345,6 +347,8 @@ function RowTitle({
 	addressTitle?: string;
 	/** The row is a folder: its icon leads the line. */
 	folder?: boolean;
+	/** The row is the assistant's work: the ✦ leads the line, and these words name it ("Assistant"). */
+	byAssistant?: string;
 	/** A {@link RowThumb} leading the line. */
 	thumb?: React.ReactNode;
 	/** The title is a `RenameField` being typed in: it is not cut to the line, so the field's underline shows. */
@@ -363,6 +367,14 @@ function RowTitle({
 			{...props}
 		>
 			{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
+			{byAssistant && (
+				<Spark
+					role="img"
+					aria-hidden={false}
+					aria-label={byAssistant}
+					className="size-monti-icon-sm shrink-0 self-center text-monti-proposal"
+				/>
+			)}
 			{thumb && <span className="mr-monti-4 flex shrink-0 self-center">{thumb}</span>}
 			{address ? (
 				/*

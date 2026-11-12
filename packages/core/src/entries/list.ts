@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CheckError } from "../errors";
 import { mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext } from "../operation";
+import { DateRange, dateRangeSql, likePattern } from "../query";
 import { type AdminValues, ListPrefs } from "../schema/admin-values";
 import {
 	type CollectionDefinition,
@@ -32,7 +33,7 @@ const Filter = z.discriminatedUnion("on", [
 	z.object({
 		on: z.literal("date"),
 		field: z.enum(DATE_COLUMNS),
-		range: z.union([z.enum(["today", "7d", "30d"]), z.object({ from: z.iso.date(), to: z.iso.date() })]),
+		range: DateRange,
 	}),
 	z.object({ on: z.literal("empty"), field: z.string() }),
 	/** Entries by their translation group: what a body link (`monti:entry/<group>`) and a relation point at. */
@@ -150,7 +151,6 @@ const valueSql = (definition: CollectionDefinition, field: string) => {
 const emptySql = (definition: CollectionDefinition, field: string) =>
 	sql`(${valueSql(definition, field)} is null or ${valueSql(definition, field)} in ('null'::jsonb, '""'::jsonb, '[]'::jsonb))`;
 const list = (values: readonly unknown[]) => sql.join(values.map((value) => sql`${value}`));
-const like = (text: string) => `%${text.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 const dateColumn = (field: (typeof DATE_COLUMNS)[number]) =>
 	field === "publishedAt"
 		? sql.ref("p.published_at")
@@ -211,16 +211,8 @@ function filterSql(
 			return storedFields(definition)[filter.field]?.kind === "relation"
 				? sql`not exists (select 1 from entry_links l where l.from_group = rep.translation_group and l.field = ${filter.field})`
 				: emptySql(definition, filter.field);
-		case "date": {
-			const column = dateColumn(filter.field);
-			const zone = query.timeZone;
-			if (filter.range === "today")
-				return sql`${column} >= (date_trunc('day', ${now}::timestamptz at time zone ${zone}) at time zone ${zone})`;
-			if (filter.range === "7d" || filter.range === "30d")
-				return sql`${column} >= ${new Date(now.getTime() - (filter.range === "7d" ? 7 : 30) * 86_400_000)}`;
-			return sql`(${column} >= (${filter.range.from}::date::timestamp at time zone ${zone})
-				and ${column} < ((${filter.range.to}::date + 1)::timestamp at time zone ${zone}))`;
-		}
+		case "date":
+			return dateRangeSql(dateColumn(filter.field), filter.range, query.timeZone, now);
 	}
 }
 
@@ -243,7 +235,7 @@ function whereSql(ctx: OperationContext, query: ListQuery, skip?: (filter: Filte
 		else if (!looking) parts.push(sql`rep.folder_id is null`);
 	}
 	if (text) {
-		const pattern = like(text);
+		const pattern = likePattern(text);
 		const where = query.search?.in ?? "all";
 		const columns = where === "all" ? ["title", "slug", "body_text"] : [where === "body" ? "body_text" : where];
 		parts.push(
@@ -660,6 +652,8 @@ export const listOperations = [
 			const values = await adminValues(ctx, collection);
 			await writeAdminValues(ctx.db, collection, { ...values, list: { ...values.list, ...prefs } });
 		},
+		// How one admin's list looks is no change to the site: the row is written and the log does not list it.
+		log: false,
 		summary: (input) => ({ key: "list.savePrefs", values: { collection: input.collection } }),
 	}),
 	defineOperation({

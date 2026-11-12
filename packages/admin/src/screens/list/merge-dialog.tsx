@@ -15,6 +15,7 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { useEffect, useMemo, useState } from "react";
+import { useUndo } from "../../activity/use-undo";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { endsClosed, endsDirectionClosed } from "./format";
@@ -49,7 +50,7 @@ export function MergeDialog({
 		output: MergeResult;
 		activityId?: string;
 	}>("relations.merge");
-	const undoOp = useOperation("activity.undo");
+	const undo = useUndo();
 
 	const choosingTarget = groups.length === 1;
 	const sourceItem = choosingTarget ? items.find((item) => item.group === groups[0]) : undefined;
@@ -124,7 +125,7 @@ export function MergeDialog({
 					action: res.body.activityId
 						? {
 								label: t("common.undo"),
-								onClick: () => void undoOp.run({ id: res.body.activityId }),
+								onClick: () => void (res.body.activityId && undo.run(res.body.activityId)),
 							}
 						: undefined,
 				},

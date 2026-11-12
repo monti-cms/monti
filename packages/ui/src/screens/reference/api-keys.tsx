@@ -626,9 +626,6 @@ export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: Ap
 					<TabLinks variant="toolbar">
 						<TabLink>템플릿</TabLink>
 						<TabLink>데이터</TabLink>
-						<TabLink count="1" countTone="warning">
-							활동 기록
-						</TabLink>
 						<TabLink current>API 키</TabLink>
 					</TabLinks>
 				</PageToolbar>

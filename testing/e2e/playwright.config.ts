@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
-import { LIVE, SERVERS } from "./servers";
+import { HOOK, HOOK_PORT, LIVE, SERVERS } from "./servers";
 
 const app = fileURLToPath(new URL("../../examples/blog", import.meta.url));
 
@@ -22,15 +22,24 @@ export default defineConfig({
 		trace: "retain-on-failure",
 	},
 	// `testing/e2e/prepare.ts` made the databases and built the app (`pnpm test:e2e` runs it first): these only serve.
-	webServer: SERVERS.map((server) => ({
-		command:
-			server.mode === "start"
-				? `pnpm exec next start --port ${server.port}`
-				: `pnpm exec next dev --port ${server.port}`,
-		cwd: app,
-		url: `http://localhost:${server.port}/admin`,
-		reuseExistingServer: false,
-		timeout: 120_000,
-		env: { ...server.env, NEXT_DIST_DIR: server.dist },
-	})),
+	webServer: [
+		...SERVERS.map((server) => ({
+			command:
+				server.mode === "start"
+					? `pnpm exec next start --port ${server.port}`
+					: `pnpm exec next dev --port ${server.port}`,
+			cwd: app,
+			url: `http://localhost:${server.port}/admin`,
+			reuseExistingServer: false,
+			timeout: 120_000,
+			env: { ...server.env, NEXT_DIST_DIR: server.dist },
+		})),
+		// The other end of the live site's webhook (doc 13).
+		{
+			command: `pnpm exec tsx ${fileURLToPath(new URL("./hook.ts", import.meta.url))} ${HOOK_PORT}`,
+			url: HOOK,
+			reuseExistingServer: false,
+			timeout: 30_000,
+		},
+	],
 });

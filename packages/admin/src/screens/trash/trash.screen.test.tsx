@@ -367,6 +367,8 @@ describe("into the trash (doc 11, principle 2)", () => {
 		await userEvent.click(dialog().getByRole("button", { name: "휴지통으로" }));
 		await expect.element(row("여름 여행기")).not.toBeInTheDocument();
 		await userEvent.click(toast("휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
+		// A toast's undo takes back what was done a moment ago: it runs at once and asks nothing (only the activity log's undo asks).
+		expect(document.querySelector("[role=alertdialog]")).toBeNull();
 		// Taken back, it is as it was: published.
 		await expect.element(row("여름 여행기")).toHaveTextContent("발행됨");
 	});

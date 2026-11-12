@@ -26,7 +26,6 @@ export function DataScreen() {
 						<TabLink href="#" current>
 							데이터
 						</TabLink>
-						<TabLink href="#">활동 기록</TabLink>
 						<TabLink href="#">API 키</TabLink>
 					</TabLinks>
 				</PageToolbar>

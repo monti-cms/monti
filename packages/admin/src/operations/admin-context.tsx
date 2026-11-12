@@ -87,6 +87,19 @@ const Context = createContext<AdminContext | null>(null);
 
 // The assistant's own words (why a run stopped, a conversation's activity row) come from its package: the server answers with their keys.
 const BUNDLES: MessageBundle[] = [adminMessages, coreMessages, assistantMessages];
+/** For what the server says: the core's words first. */
+const SERVER_BUNDLES: MessageBundle[] = [coreMessages, assistantMessages, adminMessages];
+
+/**
+ * A message in the admin's language. A key is the screen's own word and is read from the admin's dictionary first; a message object came from an
+ * operation (a refusal's reason, a line of the activity log) and is read from the core's first. The two dictionaries name things alike
+ * (`templates.save` is the editor's "Save" button here and "Saved template {name}" in the log), so which one speaks is decided by who said it.
+ */
+export function wordsOf(language: Language, message: Message | string, values?: Message["values"]): string {
+	return typeof message === "string"
+		? formatMessage(BUNDLES, language, { key: message, values })
+		: formatMessage(SERVER_BUNDLES, language, message);
+}
 
 /** One list for "none": a new one on each render would make every screen read again whenever this one changes, as when the session ends. */
 const NO_BLOCKS: AdminBlockDefinition[] = [];
@@ -153,8 +166,7 @@ export function AdminProvider({
 			setFace,
 			apiBase,
 			blocks: new Map(blocks.map((block) => [block.type, block])),
-			t: (message, values) =>
-				formatMessage(BUNDLES, shownLanguage, typeof message === "string" ? { key: message, values } : message),
+			t: (message, values) => wordsOf(shownLanguage, message, values),
 		}),
 		[
 			transport,

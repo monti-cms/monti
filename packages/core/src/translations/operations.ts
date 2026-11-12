@@ -1,5 +1,6 @@
 import { sql } from "kysely";
 import { z } from "zod";
+import { entryPlace, recordsOf, titleOf } from "../activity/words";
 import { asDoc, type Block, type Doc, newBlockId } from "../body/doc";
 import { randomUUID } from "../bytes";
 import { type EntryState, editableEntry, entryOf, saveWorking } from "../entries/operations";
@@ -217,7 +218,9 @@ export const translationOperations = [
 			ctx.emit({ type: "entry.saved", ids: [id], collection: source.collection, locale: input.locale, version: 1 });
 			return { id };
 		},
+		log: "save",
 		summary: (input) => ({ key: "translations.create", values: { locale: input.locale } }),
+		where: (_input, output, records) => entryPlace(recordsOf(records, "entry", [output.id])),
 	}),
 	defineOperation({
 		name: "translations.status",
@@ -356,7 +359,12 @@ export const translationOperations = [
 			await addSkips(ctx.db, entry, skipped);
 			return saved;
 		},
-		summary: (input) => ({ key: "translations.setBlocks", values: { count: input.blocks.length } }),
+		log: "save",
+		summary: (input, _output, records) => ({
+			key: "translations.setBlocks",
+			values: { title: titleOf(records, "entry", input.id), count: input.blocks.length },
+		}),
+		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),
 	defineOperation({
 		name: "translations.confirmAll",
@@ -381,7 +389,12 @@ export const translationOperations = [
 			const saved = await saveWorking(ctx, entry, { ...entry, doc, translationSeen });
 			return { ...saved, confirmed: decisions.length + fields.length };
 		},
-		summary: (_input, output) => ({ key: "translations.confirmAll", values: { count: output.confirmed } }),
+		log: "save",
+		summary: (input, output, records) => ({
+			key: "translations.confirmAll",
+			values: { title: titleOf(records, "entry", input.id), count: output.confirmed },
+		}),
+		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),
 	defineOperation({
 		name: "locales.plan",
@@ -411,9 +424,11 @@ export const translationOperations = [
 			checkApply(ctx, { ...ctx.site.schema(), locales: input.locales }, [], input.answers as Answers),
 		run: (input, ctx) =>
 			applyStructure(ctx, { ...ctx.site.schema(), locales: input.locales }, [], input.answers as Answers),
+		log: "settings",
 		summary: (_input, output) => ({
 			key: output.applied ? "schema.applied" : "schema.applyFailed",
 			values: { change: output.changeId },
 		}),
+		where: () => ({ key: "activity.where.schema" }),
 	}),
 ];

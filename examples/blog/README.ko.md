@@ -30,4 +30,4 @@ pnpm dev                        # http://localhost:3000, 관리자는 /admin
 | `site/pages.tsx` | 그 페이지들이 그리는 것 |
 | `app/site.css` | 사이트의 모양. 관리자 화면에 걸리지 않게 모두 `.site` 아래에 있다 |
 
-미디어 파일은 이 컴퓨터의 `.monti/files`에 둔다(`MONTI_FILES`로 옮긴다). `MONTI_STORAGE=off`면 저장소 없이 돈다.
+미디어 파일은 이 컴퓨터의 `.monti/files`에 둔다(`MONTI_FILES`로 옮긴다). `MONTI_STORAGE=off`면 저장소 없이 돈다. `MONTI_WEBHOOK`에 주소를 적으면 모든 이벤트를 그 주소로 보낸다(검색 색인, 배포 훅). 실패한 전송은 관리자 화면의 활동 기록에 있고 거기서 다시 보낸다.

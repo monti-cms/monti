@@ -1,5 +1,6 @@
 import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
+import { entryPlace, folderLog, folderPlace, recordsOf } from "../activity/words";
 import { randomUUID } from "../bytes";
 import type { Database, TrashedBy } from "../db/schema";
 import { CheckError } from "../errors";
@@ -64,6 +65,10 @@ const RowShape: z.ZodType<Row> = z.object({
 /** A folder for the engine: its row, so undoing a removal or a rename puts it back. */
 export const folderRecord = defineRecordKind({
 	kind: "folder",
+	label(data) {
+		const row = data as Row;
+		return { title: row.name, ...(row.collection === null ? {} : { collection: row.collection }) };
+	},
 	async load(db, ids) {
 		if (ids.length === 0) return [];
 		const rows = await db.selectFrom("folders").selectAll().where("id", "in", ids).execute();
@@ -296,7 +301,9 @@ export const folderOperations = [
 			ctx.created(folderRef(id));
 			return { id, name };
 		},
+		log: folderLog,
 		summary: (_input, output) => ({ key: "folders.create", values: { name: output.name } }),
+		where: (_input, _output, records) => folderPlace(records),
 	}),
 	defineOperation({
 		name: "folders.rename",
@@ -322,7 +329,9 @@ export const folderOperations = [
 				.execute();
 			return { id: input.id, name: input.name };
 		},
+		log: folderLog,
 		summary: (input) => ({ key: "folders.rename", values: { name: input.name } }),
+		where: (_input, _output, records) => folderPlace(records),
 	}),
 	defineOperation({
 		name: "folders.move",
@@ -353,7 +362,9 @@ export const folderOperations = [
 				.execute();
 			return { id: input.id, name };
 		},
+		log: folderLog,
 		summary: (_input, output) => ({ key: "folders.move", values: { name: output.name } }),
+		where: (_input, _output, records) => folderPlace(records),
 	}),
 	defineOperation({
 		name: "entries.moveToFolder",
@@ -418,6 +429,8 @@ export const folderOperations = [
 			const name = input.folder === null ? null : (await folderOf(ctx.db, input.folder)).name;
 			return { moved: new Set(entries.map((entry) => entry.translation_group)).size, folder: input.folder, name };
 		},
+		log: "save",
 		summary: (_input, output) => moveMessage(output.moved, output.name),
+		where: (_input, _output, records) => entryPlace(recordsOf(records, "entry")),
 	}),
 ];

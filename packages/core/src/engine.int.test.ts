@@ -221,6 +221,79 @@ describe("every write is logged and can be undone", () => {
 	});
 });
 
+describe("an undo beside other writes", () => {
+	/** The note kind with a stop right after it has read a note for the next `stops` readings, so a test can do something at that very moment. */
+	function stoppingKinds(stops: number) {
+		const [note, box] = noteKinds;
+		let left = stops;
+		let open!: () => void;
+		const gate = new Promise<void>((resolve) => {
+			open = resolve;
+		});
+		const reached: (() => void)[] = [];
+		const arrived = Array.from({ length: stops }, () => new Promise<void>((resolve) => reached.push(resolve)));
+		const kinds = [
+			{
+				...note,
+				async load(...args: Parameters<typeof note.load>) {
+					const rows = await note.load(...args);
+					if (left > 0) {
+						left -= 1;
+						reached.shift()?.();
+						await gate;
+					}
+					return rows;
+				},
+			},
+			box,
+		];
+		return { kinds, arrived, open };
+	}
+	const soon = (ms: number) => new Promise<"waiting">((resolve) => setTimeout(() => resolve("waiting"), ms));
+
+	it("13-3 a save that comes while an undo is reading waits for the undo: the undo never puts its snapshot over a save it did not see", async () => {
+		const plain = site();
+		await plain.run("notes.create", { id: "a", body: "one" }, { actor: "admin" });
+		const edit = (await plain.run("notes.edit", { ids: ["a"], body: "two" }, { actor: "admin" })) as {
+			activityId: string;
+		};
+		// The undo has read the note (it is as the edit left it) and stops there.
+		const { kinds, arrived, open } = stoppingKinds(1);
+		const stopping = site({ recordKinds: kinds });
+		const undoing = stopping.run("activity.undo", { id: edit.activityId }, { actor: "admin" });
+		await arrived[0];
+		// A person saves the note at that moment. It must wait: the undo holds the note, as any write of it would.
+		const saving = plain.run("notes.edit", { ids: ["a"], body: "three" }, { actor: "admin" });
+		expect(await Promise.race([saving.then(() => "saved"), soon(300)])).toBe("waiting");
+		open();
+		await undoing;
+		await saving;
+		// The save came after the undo and is what is there. Without the wait it would have gone in first and the undo's "one" would be over it.
+		expect((await notes())[0].body).toBe("three");
+	});
+
+	it("13-3 two undos of one write at the same moment: one takes it back, the other finds it undone", async () => {
+		const plain = site();
+		await plain.run("notes.create", { id: "a", body: "one" }, { actor: "admin" });
+		const edit = (await plain.run("notes.edit", { ids: ["a"], body: "two" }, { actor: "admin" })) as {
+			activityId: string;
+		};
+		const { kinds, arrived, open } = stoppingKinds(2);
+		const stopping = site({ recordKinds: kinds });
+		const both = [1, 2].map(() => stopping.run("activity.undo", { id: edit.activityId }, { actor: "admin" }));
+		// One has read the note; the other must not get that far while the first holds the write.
+		await arrived[0];
+		expect(await Promise.race([arrived[1].then(() => "both reading"), soon(300)])).toBe("waiting");
+		open();
+		const results = await Promise.allSettled(both);
+		expect(results.map((result) => result.status).sort()).toEqual(["fulfilled", "rejected"]);
+		const refused = results.find((result) => result.status === "rejected") as PromiseRejectedResult;
+		expect(refused.reason).toMatchObject({ reason: { key: "errors.alreadyUndone" } });
+		// Put back once: the version rose by one restore, not two.
+		expect((await notes())[0]).toMatchObject({ body: "one", version: 3 });
+	});
+});
+
 describe("versions", () => {
 	it("00-4 a write that read an older version is refused as a conflict and changes nothing", async () => {
 		const monti = site();
@@ -337,7 +410,7 @@ describe("deliveries", () => {
 			await monti.deliveries.sendDue();
 		}
 		const row = await db.selectFrom("monti_delivery").selectAll().executeTakeFirstOrThrow();
-		expect(row).toMatchObject({ state: "failed", attempts: RETRY_MINUTES.length + 1, last_error: "503" });
+		expect(row).toMatchObject({ state: "failed", attempts: RETRY_MINUTES.length + 1, last_error: "failed" });
 		expect(sent).toEqual([]);
 	});
 

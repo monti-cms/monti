@@ -5,13 +5,14 @@ import { publicPath } from "../entries/paths";
 import { CheckError, ConflictError, ForbiddenError, isMontiError } from "../errors";
 import {
 	type AnyOperation,
+	type EmittedEvent,
 	type Message,
-	type MontiEvent,
 	overlap,
 	type Preview,
 	type RecordRef,
 	recordKey,
 } from "../operation";
+import { lockRecords } from "../records";
 import { context, type Engine, loadRecords, parseInput, type RunOptions, type WriteResult } from "./execute";
 import { planUndo, undoWithEvents } from "./undo";
 
@@ -474,6 +475,8 @@ export async function applyProposal(
 	leaseMs: number = APPLY_LEASE_MS,
 ): Promise<ApplyResult> {
 	const token = randomUUID();
+	// The writes of this application are one line of the activity log (doc 13).
+	const batch: RunOptions["batch"] = {};
 	const lease = () => new Date(engine.now().getTime() + leaseMs);
 	const proposal = await engine.db
 		.updateTable("monti_proposal")
@@ -586,6 +589,8 @@ export async function applyProposal(
 					actor: "assistant",
 					versions,
 					conversationId: proposal.conversation_id,
+					proposalId,
+					batch,
 					applies: {
 						itemId: item.id,
 						token,
@@ -694,7 +699,7 @@ export async function settleProposal(db: Db, proposalId: string): Promise<void> 
  * - A write that cannot be undone at all (one that touched no record, a structure change, one older than the undo's 30 days) stays `applied`
  *   with the undo's own reason.
  * - Two items that changed one record go back through both. Putting the later one back gives the record a new version, which is not the one the
- *   earlier write left; the revert knows it for its own step when the later write had found the record exactly as the earlier one left it.
+ *   earlier write left; the undo records the version it left, and the undo of the earlier write reads it as the one that write left.
  * - Not while an apply holds the proposal. The proposal's row is held to the end, so a second revert beside this one waits and then finds
  *   nothing left to put back.
  */
@@ -702,7 +707,8 @@ export async function revertProposal(
 	engine: Engine,
 	db: Db,
 	proposalId: string,
-	emit: (event: MontiEvent) => void,
+	/** Each event with the write it undid: the line its delivery shows on. */
+	emit: (event: EmittedEvent, undone: string) => void,
 ): Promise<{ reverted: string[]; kept: string[] }> {
 	await lockProposals(db, { proposals: [proposalId] });
 	const proposal = await db
@@ -731,51 +737,46 @@ export async function revertProposal(
 			.orderBy("monti_proposal_item.position", "desc")
 			.execute()
 	).filter((item): item is typeof item & { activity_id: string } => item.activity_id !== null);
+	// Everything the revert will hold, taken once and in the engine's one order before any item is put back: the proposal's row (above), then
+	// the items' activity rows, then every record their snapshots name, sorted. The undo of each item then waits for nothing. Taken item by
+	// item instead, a later item's records would be held while an earlier item's are asked for, against a person's write that takes the same
+	// records in sorted order: each would wait for the other.
+	const writes = applied.map((item) => item.activity_id);
+	if (writes.length > 0) {
+		await db
+			.selectFrom("monti_activity")
+			.select("id")
+			.where("id", "in", writes)
+			.orderBy("seq", "desc")
+			.forUpdate()
+			.execute();
+		const snapshots = await db
+			.selectFrom("monti_activity_snapshot")
+			.select(["kind", "record_id"])
+			.where("activity_id", "in", writes)
+			.execute();
+		await lockRecords(db, [
+			...new Map(
+				snapshots.map((snapshot) => {
+					const ref = { kind: snapshot.kind, id: snapshot.record_id };
+					return [recordKey(ref), ref] as const;
+				}),
+			).values(),
+		]);
+	}
 	const reverted: string[] = [];
 	const kept: string[] = [];
-	/** Where the revert left each record it put back: at version `now`, holding what the write just undone found at version `was`. */
-	const walked = new Map<string, { now: number | null; was: number | null }>();
-	const ownStep = (ref: RecordRef, left: number | null, current: number | null) => {
-		const step = walked.get(recordKey(ref));
-		return step !== undefined && step.now === current && step.was === left;
-	};
 	for (const item of applied) {
-		const found: Record<string, number | null> = item.from_versions ?? item.base_versions;
-		// Judged by the records the item changed. One it only held while it wrote (the folder an entry moved into) was not changed by it, and
-		// putting another item back may have moved that one on.
-		const changed = (ref: RecordRef) => {
-			const key = recordKey(ref);
-			return item.after_versions === null || item.after_versions[key] !== (found[key] ?? null);
-		};
-		/** What becomes of the item: put back (with how many of its records stayed as they are), or left applied with why. */
-		let outcome: { state: "reverted"; stayed: number } | { state: "applied"; reason: Message };
+		let outcome: ItemOutcome;
 		try {
-			const plan = await planUndo(engine, db, item.activity_id, ownStep);
-			// Records the write moved on without changing what they hold (the same value written again): nothing of them goes back, and
-			// they are as much "put back" as any. They stay where they are, and the earlier writes walk back through them.
-			const asItWas = plan.same.filter(changed);
-			if (plan.restore.some(changed) || (asItWas.length > 0 && !plan.skip.some(changed))) {
-				// As the activity log's undo: what it changes of the site is told to the receivers (an entry off the site again).
-				const done = await undoWithEvents(engine, db, item.activity_id, emit, ownStep);
-				const now = await loadRecords(engine, db, done.restore);
-				for (const ref of done.restore)
-					walked.set(recordKey(ref), {
-						now: now.get(recordKey(ref))?.version ?? null,
-						was: found[recordKey(ref)] ?? null,
-					});
-				for (const ref of done.skip) walked.delete(recordKey(ref));
-				const held = await loadRecords(engine, db, asItWas);
-				for (const ref of asItWas)
-					walked.set(recordKey(ref), {
-						now: held.get(recordKey(ref))?.version ?? null,
-						was: found[recordKey(ref)] ?? null,
-					});
-				outcome = { state: "reverted", stayed: done.skip.filter(changed).length };
-			} else {
-				// Nothing of what it changed can go back: the write is left as it is, not used up as undone.
-				for (const ref of plan.skip) walked.delete(recordKey(ref));
-				outcome = { state: "applied", reason: { key: "activity.changedSince" } };
-			}
+			// The one way writes are taken back (doc 13): the item's write, under the undo's locks. Two items that changed one record go back through
+			// both: the undo of the later one records the version it left, and the undo of the earlier one reads it as its own.
+			const of = { write: item.activity_id };
+			const plan = await planUndo(engine, db, of, { lock: true });
+			outcome = outcomeOf(item, plan.restore, plan.skip, plan.same);
+			// As the activity log's undo: what it changes of the site is told to the receivers (an entry off the site again). When nothing of
+			// what the item changed can go back, the write is left as it is, not used up as undone.
+			if (outcome.state === "reverted") await undoWithEvents(engine, db, of, emit);
 		} catch (error) {
 			if (!(error instanceof ForbiddenError)) throw error;
 			// The undo's own word: it cannot be undone, its time is over, or it was undone already (from the activity log).
@@ -783,20 +784,105 @@ export async function revertProposal(
 		}
 		if (outcome.state === "reverted") reverted.push(item.id);
 		else kept.push(item.id);
-		const reason: Message | null =
-			outcome.state === "applied"
-				? outcome.reason
-				: outcome.stayed > 0
-					? { key: "proposals.partlyReverted", values: { count: outcome.stayed } }
-					: null;
-		await db
-			.updateTable("monti_proposal_item")
-			.set({ state: outcome.state, reason: reason === null ? null : JSON.stringify(reason) })
-			.where("id", "=", item.id)
-			.execute();
+		await setOutcome(db, item.id, outcome);
 	}
 	await settleProposal(db, proposalId);
 	return { reverted, kept };
+}
+
+/** What becomes of an applied item once an undo went through its write: put back (with a word when part of it stayed), or still applied, with why. */
+type ItemOutcome = { state: "reverted"; reason: Message | null } | { state: "applied"; reason: Message };
+
+/**
+ * The one rule for an item whose write is taken back, whoever takes it back ("revert all", or the activity log's undo of its line). `back` are
+ * the records of the write that go back, `stayed` the ones that do not (someone wrote them since), `same` the ones that hold what they held
+ * before it already (the same value written again): nothing of those goes back, and they are as much "put back" as any.
+ *
+ * It is judged by the records the item changed. One it only held while it wrote (the folder an entry moved into) was not changed by it, and
+ * putting another item back may have moved that one on. Put back when a record it changed goes back, saying how many of them stayed, or when
+ * all it changed hold what they held. Otherwise still applied: "changed since" when a record it changed was written since, "nothing to
+ * undo" when it changed none.
+ */
+function outcomeOf(
+	item: {
+		base_versions: Record<string, number | null>;
+		from_versions: Record<string, number | null> | null;
+		after_versions: Record<string, number | null> | null;
+	},
+	back: RecordRef[],
+	stayed: RecordRef[],
+	same: RecordRef[],
+): ItemOutcome {
+	const found = item.from_versions ?? item.base_versions;
+	const changed = (ref: RecordRef) => {
+		const key = recordKey(ref);
+		return item.after_versions === null || item.after_versions[key] !== (found[key] ?? null);
+	};
+	const count = stayed.filter(changed).length;
+	// Not put back: what it changed was written since, or it changed nothing that can be put back (it only held its records).
+	if (!back.some(changed) && !(same.some(changed) && count === 0))
+		return { state: "applied", reason: { key: count > 0 ? "activity.changedSince" : "activity.nothingToUndo" } };
+	return { state: "reverted", reason: count > 0 ? { key: "proposals.partlyReverted", values: { count } } : null };
+}
+
+const setOutcome = (db: Db, itemId: string, outcome: ItemOutcome) =>
+	db
+		.updateTable("monti_proposal_item")
+		.set({ state: outcome.state, reason: outcome.reason === null ? null : JSON.stringify(outcome.reason) })
+		.where("id", "=", itemId)
+		.execute();
+
+/**
+ * The proposals whose applied items made these writes, for an undo from the activity log to take their rows first (the engine's order: proposal
+ * rows, then activity rows, then records).
+ */
+export async function proposalsOfWrites(db: Db, of: { line: string } | { proposal: string } | { write: string }) {
+	if ("proposal" in of) return [of.proposal];
+	const rows = await db
+		.selectFrom("monti_activity")
+		.select("proposal_id")
+		.where((eb) =>
+			"write" in of ? eb("id", "=", of.write) : eb.or([eb("id", "=", of.line), eb("line", "=", of.line)]),
+		)
+		.where("proposal_id", "is not", null)
+		.execute();
+	return [...new Set(rows.flatMap((row) => row.proposal_id ?? []))];
+}
+
+/**
+ * Says of the proposal items whose writes an undo from the activity log took back what "revert all" would have said of them (`outcomeOf`, the
+ * one rule): the conversation's card and a later "revert all" then agree with the log, whichever of the two undid the write. `put` names, for
+ * each write the undo went through, the records it put back. The caller holds the proposals' rows.
+ */
+export async function markReverted(
+	db: Db,
+	put: { write: string; back: RecordRef[]; same: RecordRef[] }[],
+): Promise<void> {
+	if (put.length === 0) return;
+	const writes = put.map((each) => each.write);
+	const items = await db
+		.selectFrom("monti_proposal_item")
+		.select(["id", "proposal_id", "activity_id", "base_versions", "from_versions", "after_versions"])
+		.where("activity_id", "in", writes)
+		.where("state", "=", "applied")
+		.execute();
+	if (items.length === 0) return;
+	const snapshots = await db
+		.selectFrom("monti_activity_snapshot")
+		.select(["activity_id", "kind", "record_id"])
+		.where("activity_id", "in", writes)
+		.execute();
+	for (const item of items) {
+		const { back, same } = put.find((each) => each.write === item.activity_id) ?? { back: [], same: [] };
+		const went = new Set([...back, ...same].map(recordKey));
+		// The write's other records: what it holds a snapshot of and the undo left as it is.
+		const stayed = snapshots
+			.filter((snapshot) => snapshot.activity_id === item.activity_id)
+			.map((snapshot) => ({ kind: snapshot.kind, id: snapshot.record_id }))
+			.filter((ref) => !went.has(recordKey(ref)));
+		await setOutcome(db, item.id, outcomeOf(item, back, stayed, same));
+	}
+	for (const proposalId of new Set(items.map((item) => item.proposal_id))) await settleProposal(db, proposalId);
 }
 
 /** A record as a person knows it: its name, and where it is (an entry's address, a file's folder). */
@@ -1010,7 +1096,7 @@ export async function markApplied(
 	trx: Transaction<Database>,
 	taken: TakenItem[],
 	activityId: string,
-): Promise<string | null> {
+): Promise<{ conversationId: string; proposalId: string } | null> {
 	if (taken.length === 0) return null;
 	await trx
 		.updateTable("monti_proposal_item")
@@ -1022,5 +1108,6 @@ export async function markApplied(
 		)
 		.execute();
 	for (const proposalId of new Set(taken.map((item) => item.proposalId))) await settleProposal(trx, proposalId);
-	return taken[0]?.conversationId ?? null;
+	const [first] = taken;
+	return first ? { conversationId: first.conversationId, proposalId: first.proposalId } : null;
 }

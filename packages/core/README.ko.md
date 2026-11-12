@@ -18,7 +18,8 @@ export const moveToFolder = defineOperation({
 	touches: (input) => input.ids.map((id) => ({ kind: "entry", id })), // versioned and snapshotted for undo
 	check: async (input, ctx) => {/* throw CheckError to refuse */},
 	run: async (input, ctx) => {/* write through ctx.db; ctx.emit(event) for receivers */},
-	summary: (input) => ({ key: "entries.moveToFolder", values: { count: input.ids.length } }),
+	summary: (input) => ({ key: "entries.moveToFolder", values: { count: input.ids.length } }), // 활동 기록 줄의 첫 줄
+	log: "save", // 활동 기록이 거르는 종류
 });
 ```
 
@@ -31,7 +32,43 @@ export const moveToFolder = defineOperation({
 3. `check`, 그다음 `run`.
 4. 활동 기록 한 줄과, 건드리고 만든 레코드의 스냅숏을 남긴다. 그래서 30일 동안 되돌릴 수 있다(`activity.undo`). 되돌리기는 그 사이 고쳐진
    레코드를 건너뛰고 덮어쓰지 않는다.
-5. 쓰기가 낸 이벤트는 받는 곳마다 줄에 넣고, 커밋된 뒤에만 보낸다. 실패한 전송은 정해진 사이로 다시 보낸다(`RETRY_MINUTES`).
+5. 쓰기가 낸 이벤트는 받는 곳마다 줄에 넣고, 커밋된 뒤에만 보낸다.
+
+받는 곳은 웹훅(`receivers: [webhook("https://example.dev/api/revalidate")]`)이거나 플러그인의 것이다. 웹훅에는 이름이 있고(`webhook(url, { name })`.
+없으면 주소의 호스트만) 전송은 그 이름으로 저장되고 보인다. 주소 자체와 경로나 쿼리에 든 토큰은 저장하지 않는다. 한 사이트의 받는 곳 둘이 같은
+이름일 수 없다: 한 호스트의 웹훅 둘은 저마다 `name`이 있어야 한다. 리다이렉트는 따라가지 않고 실패다. 풀리지 않는 주소와 사용자 · 비밀번호가 든 주소(`https://user:pass@…`)는 사이트를 열 때
+거절한다: 계정은 `headers`(`Authorization`)로 보내거나 `secret`으로 서명한다. 전송이 실패한 까닭은 네 가지 가운데 하나로 남고, 오류의 글(주소를
+옮길 수 있다)은 남기지 않는다: 받는 곳의 상태, 답 없음(네트워크의 코드와 함께), 받는 곳 없음, 보내지 못함. 실패했거나 10초 넘게 걸린 전송은 바로
+활동 기록과 사이드바 개수에 실패로 보인다. 그 뒤 사이를 늘려 가며 8번까지 저절로 다시 보내고(`RETRY_MINUTES`, 관리자 화면에 들어올 때와
+`monti deliveries:run`), 그래도 안 되면 사람이 다시 보내거나(`deliveries.retry`, 한 번에 한 묶음씩) 취소할(`deliveries.cancel`) 때까지 실패로
+남는다. 아무도 기다리지 않는 전송은 호스트의 `waitUntil`에 맡긴다(`openMonti(config, root, { waitUntil })`. `@monti-cms/next`는 Next의
+`after`를 넘긴다). 서버리스 함수가 보내는 도중에 끝나지 않게 하려는 것이다. 호스트는 돌고 있는 일이 아니라 시작할 일을 받는다:
+`waitUntil: (work) => context.waitUntil(work())`. 이런 호스트에서 쓰기는 웹훅을 기다리지 않고 답한다.
+`beforeAnswer: true`인 받는 곳은 그래도 답하기 전에 보낸다(사이트의 캐시된 페이지가 그렇다. 발행이 답했으면 사이트에 나와 있다). 그 기다림은
+쓰기 하나에 마감 하나다(10초. 남은 것은 답한 뒤에 보낸다). `oncePerWrite: true`인 받는 곳은 무슨 이벤트든 하는 일이 같아서, 쓰기가 이벤트를
+몇 개 내든 한 번만 받는다.
+
+**이벤트는 두 번 올 수 있다.** 받는 곳이 이벤트를 처리했는데 답이 돌아오다 끊기면, Monti는 실패로 세고 다시 보낸다. 다시 보낼 때마다 같은 id가
+가므로, 두 번 하면 안 되는 받는 곳은 처리한 id를 적어 둔다.
+
+| 어디 | 무엇 |
+|---|---|
+| 본문의 `id`, 헤더 `Monti-Event-Id` | 이벤트의 id. 다시 보낼 때마다 같고, 그 이벤트를 받는 곳 모두에게 같다 |
+| 헤더 `Monti-Delivery-Id` | 이 받는 곳으로 가는 전송의 id. 다시 보낼 때마다 같다 |
+| 헤더 `Monti-Attempt` | 몇 번째 시도인지, 1부터 |
+| 헤더 `Monti-Signature` | `webhook(url, { secret })`일 때만: `t=<초>,v1=<hex>`. `v1`은 `<t>.<본문>`을 그 웹훅의 비밀값으로 HMAC-SHA256 한 hex이고, `<본문>`은 보낸 바이트 그대로다. 받은 본문으로 같은 값을 만들어 견주고, 오래된 `t`는 거절한다. `MONTI_SECRET`이 아니다 |
+
+활동 기록은 받는 곳을 사람이 읽는 이름으로 보이고, 저장된 주소는 보이지 않는다(웹훅 주소에는 토큰이 들 수 있다). 이름은 받는 곳의
+`label`이고, 없으면 웹훅은 그 이름(이름을 주지 않았으면 호스트), 플러그인의 받는 곳은 그 이름이다. 전송이 실패한 까닭은 네 문장 가운데
+하나다: 받는 곳이 답한 상태("503 Service Unavailable"), 답 없음, 받는 곳 없음, 보내지 못함. 답을 받은 플러그인의 받는 곳은
+`ReceiverAnswer(status)`를 던져 그 상태가 기록에 보이게 한다. 다른 오류는 "보내지 못함"이고 그 글은 저장하지 않는다.
+
+플러그인의 받는 곳은 같은 것을 인자로 받는다: `send(event, signal, { id, attempt })`. `monti deliveries:run`은 돌고 있는 사이트만 보낼 수 있는
+전송(Next 어댑터의 캐시 갱신)을 시도하지 않고 남기며, 몇 건을 남겼는지 말한다.
+
+활동 기록(`activity.list`, `activity.get`)은 모든 쓰기를 한 줄로 보인다. 무엇을 했는지(`summary`), 어디서(`where`), 전송이 어떻게 됐는지다.
+어시스턴트의 제안을 한 번 적용해 생긴 쓰기들은 한 줄이고 함께 되돌린다(`activity.undo`. 제안 하나를 통째로 되돌릴 수도 있다). 되돌리기는
+쓰기처럼 되돌릴 레코드를 붙잡고 하므로, 보지 못한 저장 위에 덮어쓰지 않는다.
 
 레코드 종류(`defineRecordKind`)는 엔진에게 레코드의 상태를 읽는 법과 옛 상태로 되돌리는 법을 알려 준다.
 
