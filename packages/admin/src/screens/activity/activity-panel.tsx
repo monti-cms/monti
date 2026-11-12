@@ -103,7 +103,7 @@ export function ActivityPanel({
 	const line = read.data;
 	if (!line) return null;
 	const isSending = (delivery: ActivityDelivery) =>
-		sending === "all" ? delivery.state === "failed" : sending !== null && sending.includes(delivery.id);
+		sending === "all" ? delivery.state === "failed" : (sending ?? []).includes(delivery.id);
 	const failed = line.deliveries.filter((delivery) => delivery.state === "failed" && !isSending(delivery));
 	const title = line.request !== null ? `“${line.request}”` : line.what[0] ? say(line.what[0]) : "";
 	const who =
