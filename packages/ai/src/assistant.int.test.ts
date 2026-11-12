@@ -141,8 +141,8 @@ async function newPost(monti: Site, title: string, texts: string[] = [], values:
 }
 const row = (id: string) => db.selectFrom("entries").selectAll().where("id", "=", id).executeTakeFirstOrThrow();
 const version = async (id: string) => (await row(id)).version;
-const conversation = (monti: Site, id: string) =>
-	monti.run("conversations.get", { id }, admin) as Promise<Conversation>;
+const conversation = (monti: Site, id: string, more: { limit?: number } = {}) =>
+	monti.run("conversations.get", { id, ...more }, admin) as Promise<Conversation>;
 const proposalOf = (monti: Site, id: string) => monti.run("proposals.get", { id }, admin) as Promise<ProposalView>;
 
 /** Everything the site holds that is not the assistant's own books: what must be the same before and after anything the assistant does. */
@@ -1848,6 +1848,9 @@ describe("what the first review of the core found (#472)", () => {
 		const read = await conversation(monti, first.conversation);
 		expect(read.runs).toHaveLength(3);
 		expect(read.forgotten).toBe(1);
+		// Out of how many: the panel reads a page of requests and needs the whole count to know where the forgotten ones end.
+		expect(read.requests).toBe(3);
+		expect((await conversation(monti, first.conversation, { limit: 1 })).requests).toBe(3);
 	});
 
 	it("10-1 a text's size is estimated on the safe side for Korean, and the share for earlier requests follows the model's window", () => {

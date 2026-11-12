@@ -176,6 +176,7 @@ export function AdminFrame({
 	onReview,
 	counts,
 	folder = null,
+	assistant = null,
 	children,
 }: {
 	open: Place | null;
@@ -186,6 +187,11 @@ export function AdminFrame({
 	onReview?: () => void;
 	/** The sidebar's numbers; the app reads them and reads them again after a write that changes them. */
 	counts: FrameCounts | null;
+	/**
+	 * The site's assistant, when it has one: the ✦ in the page's corner opens its panel, which then stands at the page's right edge. `null` on a
+	 * site without one: no ✦ is drawn.
+	 */
+	assistant?: { open: boolean; onOpen: () => void; panel: ReactNode } | null;
 	children: ReactNode;
 }) {
 	const { t, siteName } = useAdmin();
@@ -286,9 +292,10 @@ export function AdminFrame({
 								<SchemaBanner onReview={onReview} />
 							</>
 						}
+						// No assistant on the site: no button. Its panel open, or another docked at the edge: the button is under it.
 						corner={
-							covered ? undefined : (
-								<IconButton label={t("frame.assistant")}>
+							covered || !assistant || assistant.open ? undefined : (
+								<IconButton label={t("frame.assistant")} onClick={assistant.onOpen}>
 									<Spark className="size-monti-icon-lg" />
 								</IconButton>
 							)
@@ -301,6 +308,7 @@ export function AdminFrame({
 									<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
 										{children}
 									</Stack>
+									{assistant?.open ? assistant.panel : null}
 								</Inline>
 							</Stack>
 						</CornerContext.Provider>

@@ -15,6 +15,8 @@ export type Route =
 	| { screen: "trash"; params: URLSearchParams }
 	/** Tools: its screens come with doc 13. */
 	| { screen: "place"; place: "tools" }
+	/** One proposal of the assistant's, to look through and take or leave change by change (doc 10; screens/assistant.md). */
+	| { screen: "review"; id: string }
 	/** The template editor, a page of its own outside the frame (tools.md); `id` is `null` for a new template. */
 	| { screen: "template"; id: string | null }
 	| { screen: "home" };
@@ -42,6 +44,7 @@ export function parseRoute(hash: string): Route {
 	if (parts[0] === "templates" && parts[1]) return { screen: "template", id: parts[1] === "new" ? null : parts[1] };
 	if (parts[0] === "media") return { screen: "media", params: new URLSearchParams(search) };
 	if (parts[0] === "trash") return { screen: "trash", params: new URLSearchParams(search) };
+	if (parts[0] === "ai" && parts[1] === "review" && parts[2]) return { screen: "review", id: parts[2] };
 	if (parts[0] && PLACES.has(parts[0])) return { screen: "place", place: "tools" };
 	return { screen: "home" };
 }
@@ -82,6 +85,8 @@ export function href(route: Route): string {
 		}
 		case "place":
 			return `#/${route.place}`;
+		case "review":
+			return `#/ai/review/${encodeURIComponent(route.id)}`;
 		case "template":
 			return `#/templates/${route.id === null ? "new" : encodeURIComponent(route.id)}`;
 		case "home":

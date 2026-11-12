@@ -13,6 +13,8 @@ function ListSection({
 	count,
 	countTone = "default",
 	flush = false,
+	actions,
+	table = false,
 	children,
 	...props
 }: Omit<React.ComponentProps<"section">, "title" | "className" | "style" | "aria-labelledby"> & {
@@ -22,6 +24,10 @@ function ListSection({
 	countTone?: "default" | "warning";
 	/** The rows have no inset of their own (a review sheet's changes): the title starts at the edge with them, not 12px in, and the list keeps 16px under the line, since the first change block has none above. */
 	flush?: boolean;
+	/** What is done with the whole section, at the end of its head: text buttons, a switch of view (a review's "leave out all 11"). */
+	actions?: React.ReactNode;
+	/** Its rows are a `Table` of their own (a review's changes, a list of keys): the section names the table and is not itself a list. */
+	table?: boolean;
 }) {
 	const titleId = useId();
 	return (
@@ -35,10 +41,18 @@ function ListSection({
 			>
 				{title}
 				{count !== undefined && count !== null && <Count tone={countTone}>{count}</Count>}
+				{actions !== undefined && (
+					// As tall as the title's line: a control here does not push the head's rule down.
+					<span className="ml-auto flex h-lh items-center gap-monti-16 font-normal text-monti-note">{actions}</span>
+				)}
 			</h2>
-			<div role="list" className={cn(flush && "pt-monti-16")}>
-				{children}
-			</div>
+			{table ? (
+				children
+			) : (
+				<div role="list" className={cn(flush && "pt-monti-16")}>
+					{children}
+				</div>
+			)}
 		</section>
 	);
 }

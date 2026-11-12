@@ -85,8 +85,11 @@ type AssistantValue = {
 	setView: (view: "chat" | "history") => void;
 	conversationId: string | null;
 	turns: Turn[];
-	/** How many of the oldest requests the next request leaves out of what the model is sent. */
+	/** How many of the oldest requests the next request leaves out of what the model is sent, out of how many it has. */
 	forgotten: number;
+	requests: number;
+	/** Which screen is open, as it registered itself (`list`, `entry`, `media`). */
+	screenKind: string | null;
 	hasEarlier: boolean;
 	loadEarlier: () => Promise<void>;
 	busy: boolean;
@@ -121,6 +124,8 @@ type AssistantValue = {
 	/** Counts the proposals' changes as the run reports them, so a card reads its proposal again. */
 	proposalTick: number;
 	touchProposals: () => void;
+	/** Opens a proposal's review page. */
+	openReview: (id: string) => void;
 };
 
 const Context = createContext<AssistantValue | null>(null);
@@ -146,7 +151,17 @@ export function useScreenContext(context: ScreenContext | null) {
  * queued behind it, the model, and the past conversations. It listens to the run's stream and goes on by itself where no person is needed: a
  * request that reached its time limit, a screen tool the browser ran, a request the host cut.
  */
-export function AssistantProvider({ go, children }: { go: (route: Route) => void; children: ReactNode }) {
+export function AssistantProvider({
+	go,
+	leave,
+	children,
+}: {
+	/** Moves the screen at once: the assistant's own moves, made only when nothing is unsaved. */
+	go: (route: Route) => void;
+	/** Moves the screen as a person's press does: it asks first when something is unsaved. */
+	leave: (go: () => void) => void;
+	children: ReactNode;
+}) {
 	const { transport, streams, screen, t, wrote } = useAdmin();
 	const unsaved = useUnsavedChanges();
 	const [available, setAvailable] = useState<boolean | null>(null);
@@ -157,6 +172,7 @@ export function AssistantProvider({ go, children }: { go: (route: Route) => void
 	const [turns, setTurns] = useState<Turn[]>([]);
 	const [earlier, setEarlier] = useState<Place | null>(null);
 	const [forgotten, setForgotten] = useState(0);
+	const [requests, setRequests] = useState(0);
 	const [busy, setBusy] = useState(false);
 	const [draft, setDraft] = useState("");
 	const [queue, setQueue] = useState<string[]>([]);
@@ -238,6 +254,7 @@ export function AssistantProvider({ go, children }: { go: (route: Route) => void
 			});
 			setEarlier(read.body.earlier);
 			setForgotten(read.body.forgotten);
+			setRequests(read.body.requests);
 			if (read.body.model) setPicked(read.body.model);
 			if (read.body.thinking) setLevel(read.body.thinking as Thinking);
 			return read.body;
@@ -559,6 +576,7 @@ export function AssistantProvider({ go, children }: { go: (route: Route) => void
 		setTurns([]);
 		setEarlier(null);
 		setForgotten(0);
+		setRequests(0);
 		setConversationId(null);
 		live.current.conversationId = null;
 		setPicked(null);
@@ -653,6 +671,9 @@ export function AssistantProvider({ go, children }: { go: (route: Route) => void
 		conversationId,
 		turns,
 		forgotten,
+		// A request just asked is one more than the last read counted.
+		requests: Math.max(requests, turns.length),
+		screenKind: screenContext?.screen ?? null,
 		hasEarlier: earlier !== null,
 		loadEarlier,
 		busy,
@@ -696,6 +717,7 @@ export function AssistantProvider({ go, children }: { go: (route: Route) => void
 		setScreen,
 		proposalTick,
 		touchProposals: () => setProposalTick((tick) => tick + 1),
+		openReview: (id) => leave(() => go({ screen: "review", id })),
 	};
 	return <Context.Provider value={value}>{children}</Context.Provider>;
 }

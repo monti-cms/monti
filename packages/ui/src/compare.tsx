@@ -152,6 +152,8 @@ function CompareRow({
 	head = false,
 	title = false,
 	current = false,
+	check,
+	single = false,
 	source,
 	translation,
 	className,
@@ -166,7 +168,11 @@ function CompareRow({
 	/** The title row: the two titles at the page heading size. */
 	title?: boolean;
 	current?: boolean;
-	source: React.ReactNode;
+	/** A check before the block's name: whether this block's change is kept in (a proposal's review). */
+	check?: React.ReactNode;
+	/** One column: `translation` alone, across both (a change shown on one line, with what goes out and comes in marked in it). */
+	single?: boolean;
+	source?: React.ReactNode;
 	translation: React.ReactNode;
 }) {
 	return (
@@ -175,7 +181,8 @@ function CompareRow({
 			data-current={current || undefined}
 			data-title={title || undefined}
 			className={cn(
-				"grid grid-cols-[104px_minmax(0,1fr)_minmax(0,1fr)] items-stretch border-monti-muted border-b last:border-b-0",
+				"grid items-stretch border-monti-muted border-b last:border-b-0",
+				single ? "grid-cols-[104px_minmax(0,1fr)]" : "grid-cols-[104px_minmax(0,1fr)_minmax(0,1fr)]",
 				head && "border-t border-t-monti-contrast font-mono text-monti-micro text-monti-subtle",
 				className,
 			)}
@@ -183,25 +190,32 @@ function CompareRow({
 		>
 			<span
 				className={cn(
-					"flex flex-col gap-monti-2 py-monti-16 pr-monti-12 text-right font-mono text-monti-micro text-monti-subtle",
+					"flex gap-monti-8 py-monti-16 pr-monti-12 font-mono text-monti-micro text-monti-subtle",
 					title && "pt-monti-20",
 				)}
 			>
-				{name}
-				{note && <span className="text-monti-warning">{note}</span>}
+				{/* The check stands at the row's start, level with the name's line; the name stays at the column's end. */}
+				{check !== undefined && <span className="flex h-lh shrink-0 items-center">{check}</span>}
+				<span className="flex min-w-0 grow flex-col gap-monti-2 text-right">
+					{name}
+					{note && <span className="text-monti-warning">{note}</span>}
+				</span>
 			</span>
-			<div
-				className={cn(
-					"min-w-0 bg-monti-tool px-monti-24 py-monti-16 **:data-[slot=compare-code]:mb-0 **:data-[slot=compare-code]:bg-monti-selected",
-					!head && "text-monti-muted",
-				)}
-			>
-				{source}
-			</div>
+			{!single && (
+				<div
+					className={cn(
+						"min-w-0 bg-monti-tool px-monti-24 py-monti-16 **:data-[slot=compare-code]:mb-0 **:data-[slot=compare-code]:bg-monti-selected",
+						!head && "text-monti-muted",
+					)}
+				>
+					{source}
+				</div>
+			)}
 			<div
 				className={cn(
 					// 40px before the words: the block handle of the translation written here (24px, 4px off the words) stays inside the cell.
 					"min-w-0 border-monti-default border-l py-monti-16 pr-monti-24 pl-monti-40 **:data-[slot=compare-code]:mb-0",
+					single && "border-l-0 pl-monti-24",
 					current && "bg-monti-block",
 				)}
 			>

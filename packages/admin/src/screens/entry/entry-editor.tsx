@@ -52,6 +52,7 @@ import {
 } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useScreenContext } from "../../assistant/use-assistant";
 import { download } from "../../download";
 import { useLeaveFiles, useLeaveGuard, useUploadsGoing } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
@@ -155,6 +156,10 @@ export function EntryEditor({
 	useLeaveGuard({ changes: editor.draft.changes, revertAll: editor.draft.revertAll });
 
 	const read = editor.loaded as EntryRead | null;
+	// What goes along with a request to the assistant from here (doc 10, context): this entry as it was read.
+	useScreenContext(
+		read ? { screen: "entry", collection, entry: { id, version: read.entry.version, title: read.entry.title } } : null,
+	);
 	const archived = read?.state === "archived";
 	const trashed = Boolean(read?.entry.trashedAt);
 	const readOnly = archived || trashed;
