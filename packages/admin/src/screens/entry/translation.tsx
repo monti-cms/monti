@@ -15,6 +15,7 @@ import {
 	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	EditorMargin,
 	EditorTitleRule,
@@ -156,12 +157,15 @@ export function LocaleTabs({
 	current,
 	onOpen,
 	onCreate,
+	onManage,
 }: {
 	schema: Schema;
 	group: GroupStatus | null;
 	current: string;
 	onOpen: (id: string) => void;
 	onCreate: (locale: string) => void;
+	/** Goes to settings › languages, where languages are added and taken out (T92). */
+	onManage: () => void;
 }) {
 	const { t } = useAdmin();
 	const name = (code: string) => schema.locales.list.find((locale) => locale.code === code)?.name ?? code;
@@ -180,23 +184,29 @@ export function LocaleTabs({
 						{name(locale.locale)}
 					</TabLink>
 				))}
-				{/* With every language there, nothing is left to add here: adding a language is the settings' (T92). */}
-				{missing.length > 0 ? (
-					<DropdownMenu modal={false}>
-						<DropdownMenuTrigger render={<TabLink render={<button type="button" />}>{t("translation.add")}</TabLink>} />
-						<DropdownMenuContent side="bottom" align="start">
-							<DropdownMenuGroup>
-								<DropdownMenuLabel>{t("translation.addLabel")}</DropdownMenuLabel>
-								{missing.map((code) => (
-									<DropdownMenuItem key={code} onClick={() => onCreate(code)}>
-										{name(code)}
-										<MenuShortcut>{code}</MenuShortcut>
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuGroup>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				) : null}
+				<DropdownMenu modal={false}>
+					<DropdownMenuTrigger render={<TabLink render={<button type="button" />}>{t("translation.add")}</TabLink>} />
+					<DropdownMenuContent side="bottom" align="start">
+						{missing.length > 0 ? (
+							<>
+								<DropdownMenuGroup>
+									<DropdownMenuLabel>{t("translation.addLabel")}</DropdownMenuLabel>
+									{missing.map((code) => (
+										<DropdownMenuItem key={code} onClick={() => onCreate(code)}>
+											{name(code)}
+											<MenuShortcut>{code}</MenuShortcut>
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuGroup>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onClick={onManage}>{t("translation.manage")}</DropdownMenuItem>
+							</>
+						) : (
+							// With every language there, the one thing left is to add a language to the site: the settings' (editor.md).
+							<DropdownMenuItem onClick={onManage}>{t("translation.addInSettings")}</DropdownMenuItem>
+						)}
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</TabLinks>
 		</Box>
 	);

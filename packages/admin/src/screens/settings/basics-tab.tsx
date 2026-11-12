@@ -1,3 +1,4 @@
+import type { SchemaProblem } from "@monti-cms/core";
 import {
 	Affix,
 	Button,
@@ -6,8 +7,11 @@ import {
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
+	FormFieldWas,
 	Grid,
+	Inline,
 	Input,
+	Label,
 	LockMark,
 	Option,
 	ReadValue,
@@ -15,10 +19,12 @@ import {
 	Switch,
 	TextButton,
 } from "@monti-cms/ui";
+import { useEffect, useRef } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useFocusHandOff } from "../frame/focus-hand-off";
 import { at } from "./schema-draft";
-import type { CollectionsDraft } from "./use-collections-draft";
+import { useCell } from "./use-cell";
+import type { SettingsDraft } from "./use-settings-draft";
 
 /** "/posts/:slug" ↔ "posts": the part of a public address the person types. */
 export const addressPart = (path: string) => path.replace(/^\//, "").replace(/\/?:slug$/, "");
@@ -34,41 +40,86 @@ export const addressOf = (part: string) => {
  * No section names the system's split between file and admin values (README principle 9). Deleting it takes it out of the list at once; the
  * review is the last check.
  */
+/** One of a collection's two addresses: its public one, or its preview page's. */
+export type AddressPlace = "path" | "preview";
+
+/** The address a problem of the schema is about, when it is about one (the others are a field's or the name's). */
+export function addressOfProblem(code: SchemaProblem["code"]): AddressPlace | null {
+	if (code === "badPath" || code === "pathTaken") return "path";
+	if (code === "badPreviewPath" || code === "previewPathTaken") return "preview";
+	return null;
+}
+
 export function BasicsTab({
 	model,
 	collection: c,
 	onDelete,
+	attention = null,
+	onAttended,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	collection: string;
 	onDelete: () => void;
+	/** The address the review's "open" asks to be fixed: its field takes the keyboard once. */
+	attention?: AddressPlace | null;
+	onAttended?: () => void;
 }) {
 	const { t } = useAdmin();
 	const { draft, data } = model;
 	const locked = data?.locked ?? true;
 	const kind = (draft.value(at.collection(c)) as { kind: "document" | "item" } | null)?.kind ?? "document";
+	const cell = useCell(model);
+	// A collection made in this draft is new as a whole: its addresses carry no mark of their own. A proposed address always does.
+	const marked = (shown: ReturnType<typeof cell>) =>
+		shown.proposal || data?.schema.collections[c] ? shown.changed : undefined;
 	const pathPlace = at.path(c);
-	const pathValue = draft.value(pathPlace);
+	const pathCell = cell(pathPlace);
+	const pathValue = pathCell.value;
 	const path = typeof pathValue === "string" ? pathValue : kind === "document" ? "/:slug" : undefined;
+	const pathChanged = marked(pathCell);
 	const previewPlace = at.preview(c);
-	const preview = draft.value(previewPlace);
-	const previewChanged = model.changed.includes(previewPlace) && Boolean(data?.schema.collections[c]);
+	const previewCell = cell(previewPlace);
+	const preview = previewCell.value;
+	const previewChanged = marked(previewCell);
 	const labelPlace = at.collectionValue(c, "label");
 	const foldersPlace = at.collectionValue(c, "folders");
-	const pathChanged =
-		model.changed.includes(pathPlace) && data?.schema.collections[c]
-			? {
-					label: t("settings.changed"),
-					undoLabel: t("settings.undo"),
-					onUndo: () => draft.revert(pathPlace),
-				}
-			: undefined;
+	// What is wrong with an address is told under its field, as a field's problem is told on its row: the review's "open" leads here.
+	const problemOf = (place: AddressPlace) => {
+		// Two collections with one address: the schema names the later one, and it is as wrong here as there.
+		const sharedWith = (other: string | undefined, code: SchemaProblem["code"]) =>
+			other !== undefined &&
+			((code === "pathTaken" && draft.value(at.path(other)) === pathValue) ||
+				(code === "previewPathTaken" && typeof preview === "string" && draft.value(at.preview(other)) === preview));
+		const problem = model.problems.find(
+			(each) =>
+				!each.field &&
+				addressOfProblem(each.code) === place &&
+				(each.collection === c || sharedWith(each.collection, each.code)),
+		);
+		return problem ? t(`settings.problem.${problem.code}`) : undefined;
+	};
+	const pathProblem = problemOf("path");
+	const previewProblem = problemOf("preview");
+	const attended = useRef(onAttended);
+	attended.current = onAttended;
+	useEffect(() => {
+		if (!attention) return;
+		// After the review has closed and handed the focus back to the button that opened it.
+		const later = setTimeout(() => {
+			document.getElementById(attention === "path" ? "collection-path" : "collection-preview-path")?.focus();
+			attended.current?.();
+		}, 0);
+		return () => clearTimeout(later);
+	}, [attention]);
+	const label = cell(labelPlace);
+	const folders = cell(foldersPlace);
 	// A row's undo goes away with the change it puts back: the keyboard's focus it held goes to the row's own control, the one the undo acted
 	// on (an item's row is its switch: the address field goes with the public page).
 	const pathUndo = useFocusHandOff(() =>
 		document.getElementById(kind === "item" ? "collection-public-page" : "collection-path"),
 	);
 	const previewUndo = useFocusHandOff(() => document.getElementById("collection-preview-path"));
+	const labelUndo = useFocusHandOff(() => document.getElementById("collection-label"));
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>
@@ -82,13 +133,21 @@ export function BasicsTab({
 					</ReadValue>
 				</Grid>
 				<FormField>
-					<FormFieldLabel htmlFor="collection-label">{t("settings.basics.label")}</FormFieldLabel>
+					{/* A name the assistant proposed is blue, with its discard on the label row and the saved name struck under it (doc 05). */}
+					<FormFieldLabel
+						htmlFor="collection-label"
+						changed={label.proposal && label.changed ? { ...label.changed, undoRef: labelUndo } : undefined}
+					>
+						{t("settings.basics.label")}
+					</FormFieldLabel>
 					<Input
 						id="collection-label"
-						value={String(draft.value(labelPlace) ?? "")}
+						value={String(label.value ?? "")}
 						placeholder={c}
+						proposal={label.proposal}
 						onChange={(event) => draft.set(labelPlace, event.target.value || undefined)}
 					/>
+					{label.proposal && label.was ? <FormFieldWas>{String(label.was)}</FormFieldWas> : null}
 				</FormField>
 				{locked ? (
 					kind === "document" || path !== undefined ? (
@@ -103,32 +162,34 @@ export function BasicsTab({
 						</ReadValue>
 					)
 				) : (
-					<FormField>
-						<div className="flex min-h-monti-control-lg items-center gap-monti-8">
-							<label
-								htmlFor={kind === "item" ? "collection-public-page" : "collection-path"}
-								className="cursor-pointer text-monti-body"
-							>
-								{t("settings.basics.path")}
-							</label>
-							{pathChanged ? <ChangeDot label={pathChanged.label} /> : null}
-							{pathChanged?.onUndo || kind === "item" ? (
-								<div className="ml-auto flex items-center gap-monti-12">
-									{pathChanged?.onUndo ? (
-										<TextButton variant="underline" quiet size="caption" ref={pathUndo} onClick={pathChanged.onUndo}>
-											{pathChanged.undoLabel}
-										</TextButton>
-									) : null}
-									{kind === "item" ? (
-										<Switch
-											id="collection-public-page"
-											checked={path !== undefined}
-											onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
-										/>
-									) : null}
-								</div>
-							) : null}
-						</div>
+					// A 36px body-text row like "Use folders" below it, the address under it (collections.md). An item's row ends in the switch of its public page.
+					<Stack gap={4}>
+						<Inline minHeight="control-lg" align="center" justify="between" gap={12}>
+							<Inline gap={8} align="center">
+								<Label
+									htmlFor={kind === "item" ? "collection-public-page" : "collection-path"}
+									size="body"
+									tone="default"
+								>
+									{t("settings.basics.path")}
+								</Label>
+								{pathChanged ? <ChangeDot tone={pathChanged.tone} label={pathChanged.label} /> : null}
+							</Inline>
+							<Inline gap={12} align="center">
+								{pathChanged ? (
+									<TextButton variant="underline" quiet size="caption" ref={pathUndo} onClick={pathChanged.onUndo}>
+										{pathChanged.undoLabel}
+									</TextButton>
+								) : null}
+								{kind === "item" ? (
+									<Switch
+										id="collection-public-page"
+										checked={path !== undefined}
+										onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
+									/>
+								) : null}
+							</Inline>
+						</Inline>
 						{path !== undefined && (
 							<Affix
 								id="collection-path"
@@ -136,11 +197,20 @@ export function BasicsTab({
 								prefix="/"
 								suffix="/:slug"
 								width="fit"
+								aria-invalid={pathProblem !== undefined || undefined}
+								proposal={pathCell.proposal}
 								value={addressPart(path)}
 								onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
 							/>
 						)}
-					</FormField>
+						{/* A proposed address is blue, with the saved one struck under it (doc 05), as the name above. */}
+						{pathCell.proposal ? (
+							<FormFieldWas>
+								{typeof pathCell.was === "string" ? pathCell.was : t("settings.basics.publicPageOff")}
+							</FormFieldWas>
+						) : null}
+						{pathProblem ? <FormFieldError>{pathProblem}</FormFieldError> : null}
+					</Stack>
 				)}
 				{/* The site's own preview page, when it made one (doc 16): a document's only, since an item has nothing to preview. */}
 				{kind !== "document" ? null : locked ? (
@@ -152,31 +222,27 @@ export function BasicsTab({
 				) : (
 					<FormField>
 						{/* The same line as the public address above it: the two are one kind of value. */}
-						<div className="flex min-h-monti-control-lg items-center gap-monti-8">
-							<label htmlFor="collection-preview-path" className="cursor-pointer text-monti-body">
-								{t("settings.basics.previewPath")}
-							</label>
-							{previewChanged ? <ChangeDot label={t("settings.changed")} /> : null}
+						<Inline minHeight="control-lg" align="center" justify="between" gap={12}>
+							<Inline gap={8} align="center">
+								<Label htmlFor="collection-preview-path" size="body" tone="default">
+									{t("settings.basics.previewPath")}
+								</Label>
+								{previewChanged ? <ChangeDot tone={previewChanged.tone} label={previewChanged.label} /> : null}
+							</Inline>
 							{previewChanged ? (
-								<div className="ml-auto flex items-center gap-monti-12">
-									<TextButton
-										variant="underline"
-										quiet
-										size="caption"
-										ref={previewUndo}
-										onClick={() => draft.revert(previewPlace)}
-									>
-										{t("settings.undo")}
-									</TextButton>
-								</div>
+								<TextButton variant="underline" quiet size="caption" ref={previewUndo} onClick={previewChanged.onUndo}>
+									{previewChanged.undoLabel}
+								</TextButton>
 							) : null}
-						</div>
+						</Inline>
 						<Affix
 							id="collection-preview-path"
 							prefix="/"
 							suffix="/:slug"
 							width="fit"
 							placeholder="preview"
+							aria-invalid={previewProblem !== undefined || undefined}
+							proposal={previewCell.proposal}
 							value={typeof preview === "string" ? addressPart(preview) : ""}
 							onChange={(event) => {
 								// Empty is what the field shows as empty: slashes alone leave no address, so they are none (not "/:slug").
@@ -184,29 +250,37 @@ export function BasicsTab({
 								draft.set(previewPlace, addressPart(address) === "" ? null : address);
 							}}
 						/>
+						{/* A proposed address is blue, with what is saved struck under it (doc 05): an address, or the words for none. */}
+						{previewCell.proposal ? (
+							<FormFieldWas>
+								{typeof previewCell.was === "string" ? previewCell.was : t("settings.basics.previewAtPublic")}
+							</FormFieldWas>
+						) : null}
 						{/* What leaving it empty does, only while it is empty (README principle 8); the line stays, so nothing moves when typed. */}
 						<FormFieldError
 							reserve
 							hint={typeof preview === "string" ? undefined : t("settings.basics.previewPathHint")}
-						/>
+						>
+							{previewProblem}
+						</FormFieldError>
 					</FormField>
 				)}
 				{/* At the height of the inputs above it (36px): one group, one control height. */}
 				<Option spread height="lg">
-					{t("settings.basics.folders")}
-					<Switch
-						checked={Boolean(draft.value(foldersPlace))}
-						onCheckedChange={(checked) => draft.set(foldersPlace, checked)}
-					/>
+					<Inline gap={8} align="center">
+						{t("settings.basics.folders")}
+						{folders.proposal ? <ChangeDot tone="proposal" label={t("settings.proposed")} /> : null}
+					</Inline>
+					<Switch checked={Boolean(folders.value)} onCheckedChange={(checked) => draft.set(foldersPlace, checked)} />
 				</Option>
 			</Stack>
 			{locked ? null : (
 				<DangerBlock title={t("settings.basics.delete")}>
-					<div className="flex justify-end">
+					<Inline justify="end">
 						<Button variant="outline-danger" size="sm" onClick={onDelete}>
 							{t("settings.basics.deleteButton")}
 						</Button>
-					</div>
+					</Inline>
 				</DangerBlock>
 			)}
 		</>

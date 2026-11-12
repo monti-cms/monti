@@ -81,6 +81,8 @@ describe("first admin and sign-in", () => {
 			methods: { password: true, external: [] },
 			hasAdmin: false,
 			session: null,
+			// What the sign-in screen draws with before anyone is signed in (doc 12): nothing saved yet.
+			site: { name: null, language: null, templates: true },
 		});
 		expect(
 			(await me.call("auth.createFirstAdmin", { ...first, password: "short", confirm: "short" })).body,

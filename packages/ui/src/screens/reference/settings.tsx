@@ -1,29 +1,20 @@
 import { ChangesBar } from "../../changes-group";
-import { Close } from "../../icons";
 import {
-	Affix,
-	Box,
-	Button,
 	FormField,
 	FormFieldLabel,
-	IconButton,
-	Inline,
 	Input,
 	Option,
 	PageBody,
 	PageColumn,
 	PageHeader,
 	PageToolbar,
-	ReadValue,
 	Section,
 	Select,
 	SelectTrigger,
 	SelectValue,
-	Stack,
 	Switch,
 	TabLink,
 	TabLinks,
-	Text,
 	Textarea,
 } from "../../index";
 import { AdminFrame } from "./frame";
@@ -102,55 +93,24 @@ export function SwitchOption({
 	);
 }
 
-/** The read-only site URL that is not set yet. */
-export function SiteUrl() {
-	return (
-		<ReadValue label="사이트 URL" mono={false}>
-			<Text tone="warning">
-				설정되지 않았습니다. 배포하는 곳에 <Text mono>SITE_URL</Text>을 넣어 주세요.
-			</Text>
-		</ReadValue>
-	);
-}
-
-/** Settings, Site tab, with two unsaved changes. */
+/** Settings, Site tab, with one unsaved change (doc 12: the name, how the site writes, and how addresses show the language). */
 export function SettingsScreen() {
 	return (
 		<AdminFrame open="settings">
 			<PageColumn>
 				<PageHeader title="설정">
-					<ChangesBar label="변경 사항" count={2} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />
+					<ChangesBar label="변경 사항" count={1} discardLabel="모두 되돌리기" saveLabel="저장하고 적용" />
 				</PageHeader>
 				<PageToolbar>
 					<SettingsTabs open="site" />
 				</PageToolbar>
 				<PageBody>
-					<Section title="이름과 링크">
+					<Section title="이름">
 						<FormField>
 							<FormFieldLabel htmlFor="site-name" changed={{ label: "", undoLabel: "되돌리기", undoShown: true }}>
 								사이트 이름
 							</FormFieldLabel>
 							<Input id="site-name" defaultValue="example.dev" />
-						</FormField>
-						<FormField>
-							<FormFieldLabel htmlFor="home">홈 링크</FormFieldLabel>
-							<Affix id="home" prefix="/" defaultValue="" />
-						</FormField>
-						<FormField>
-							<FormFieldLabel>다른 호스트 이름</FormFieldLabel>
-							<Stack gap={2}>
-								<Inline gap={8} align="center">
-									<Input mono defaultValue="www.example.dev" aria-label="호스트 1" />
-									<IconButton label="www.example.dev 빼기" onClick={() => {}}>
-										<Close aria-hidden />
-									</IconButton>
-								</Inline>
-								<Box paddingTop={8}>
-									<Button variant="ghost" size="sm">
-										+ 호스트
-									</Button>
-								</Box>
-							</Stack>
 						</FormField>
 					</Section>
 					<Section title="글 쓰는 방식">
@@ -165,19 +125,11 @@ export function SettingsScreen() {
 							/>
 						</FormField>
 					</Section>
-					<Section title="미리보기">
-						<FormField>
-							<FormFieldLabel htmlFor="preview">미리보기 경로</FormFieldLabel>
-							<Affix id="preview" prefix="/" defaultValue="preview" />
-						</FormField>
-						<SwitchOption label="미리보기 경로에 언어 넣기" checked height="lg" />
-					</Section>
 					<Section title="공개 주소" last>
 						<FormField>
 							<FormFieldLabel>주소에 언어 표시</FormFieldLabel>
-							<ShownSelect value="항상" />
+							<ShownSelect value="원문 언어만 빼고" />
 						</FormField>
-						<SiteUrl />
 					</Section>
 				</PageBody>
 			</PageColumn>

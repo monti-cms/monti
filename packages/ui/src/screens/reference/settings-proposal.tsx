@@ -1,6 +1,5 @@
 import { ChangesBar } from "../../changes-group";
 import {
-	Affix,
 	FormField,
 	FormFieldLabel,
 	FormFieldWas,
@@ -10,9 +9,10 @@ import {
 	PageHeader,
 	PageToolbar,
 	Section,
+	Textarea,
 } from "../../index";
 import { AdminFrame } from "./frame";
-import { SettingsTabs, ShownSelect, SiteUrl, SwitchOption } from "./settings";
+import { SettingsTabs, ShownSelect } from "./settings";
 
 /** Settings, Site tab, with the assistant's two proposals waiting beside one change of the admin's: "변경 사항 1 · 제안 2", counted apart. */
 export function SettingsProposalScreen() {
@@ -33,30 +33,25 @@ export function SettingsProposalScreen() {
 					<SettingsTabs open="site" />
 				</PageToolbar>
 				<PageBody>
-					<Section title="이름과 링크">
-						<FormField>
-							<FormFieldLabel htmlFor="site-name" changed={{ label: "", undoLabel: "되돌리기", undoShown: true }}>
-								사이트 이름
-							</FormFieldLabel>
-							<Input id="site-name" defaultValue="example.dev" />
-						</FormField>
-						<FormField>
-							<FormFieldLabel htmlFor="home">홈 링크</FormFieldLabel>
-							<Affix id="home" prefix="/" defaultValue="" />
-						</FormField>
-					</Section>
-					<Section title="미리보기">
+					<Section title="이름">
 						<FormField>
 							<FormFieldLabel
-								htmlFor="preview"
+								htmlFor="site-name"
 								changed={{ label: "", undoLabel: "버리기", undoShown: true, tone: "proposal" }}
 							>
-								미리보기 경로
+								사이트 이름
 							</FormFieldLabel>
-							<Affix id="preview" prefix="/" defaultValue="draft" proposal />
-							<FormFieldWas>/preview</FormFieldWas>
+							<Input id="site-name" defaultValue="example.blog" proposal />
+							<FormFieldWas>example.dev</FormFieldWas>
 						</FormField>
-						<SwitchOption label="미리보기 경로에 언어 넣기" checked height="lg" />
+					</Section>
+					<Section title="글 쓰는 방식">
+						<FormField>
+							<FormFieldLabel htmlFor="voice" changed={{ label: "", undoLabel: "되돌리기", undoShown: true }}>
+								말투와 규칙
+							</FormFieldLabel>
+							<Textarea id="voice" rows={3} defaultValue={"‘~다’체로 쓴다. 숫자는 아라비아 숫자로."} />
+						</FormField>
 					</Section>
 					<Section title="공개 주소" last>
 						<FormField>
@@ -66,10 +61,9 @@ export function SettingsProposalScreen() {
 							>
 								주소에 언어 표시
 							</FormFieldLabel>
-							<ShownSelect id="locale-path" value="기본 언어만 빼고" proposal />
-							<FormFieldWas>항상</FormFieldWas>
+							<ShownSelect id="locale-path" value="항상" proposal />
+							<FormFieldWas>원문 언어만 빼고</FormFieldWas>
 						</FormField>
-						<SiteUrl />
 					</Section>
 				</PageBody>
 			</PageColumn>

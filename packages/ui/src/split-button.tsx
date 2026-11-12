@@ -2,6 +2,7 @@
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { type ReactNode, useRef } from "react";
+import { BUSY_GUARD } from "./busy";
 import { Caret } from "./caret";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
@@ -11,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 // The pill is one shape, so its focus ring goes round the whole pill (the container, which `overflow-hidden` does not clip: it clips what is inside it),
 // and the half that has the focus is marked by a lighter fill, not by a line of its own.
 const HALF =
-	"inline-flex items-center border-0 bg-transparent font-semibold text-current outline-none transition-colors focus-visible:bg-[color-mix(in_srgb,var(--monti-fg-on-emphasis)_16%,transparent)] cursor-pointer disabled:pointer-events-none";
+	"inline-flex items-center border-0 bg-transparent font-semibold text-current outline-none transition-colors focus-visible:bg-[color-mix(in_srgb,var(--monti-fg-on-emphasis)_16%,transparent)] cursor-pointer disabled:pointer-events-none aria-disabled:cursor-not-allowed";
 
 /**
  * A main action with a menu of its variants ("Publish" + "Republish with today's date") in one ink pill. The menu holds only other ways of
@@ -61,8 +62,11 @@ function SplitButton({
 				type="button"
 				data-slot="button"
 				disabled={inert}
+				// Working: the half that was pressed keeps the focus (`aria-disabled`, not the attribute) and takes no second press.
+				focusableWhenDisabled={Boolean(loading) && !disabled}
 				aria-busy={loading || undefined}
 				onClick={onClick}
+				{...(loading && !disabled ? BUSY_GUARD : {})}
 				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px]", loading && "gap-[7px] pl-[13px]")}
 			>
 				{loading && <Spinner />}
