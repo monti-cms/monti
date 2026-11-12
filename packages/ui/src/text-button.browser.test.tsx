@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "../test/render";
@@ -46,4 +47,35 @@ it("a press with the pointer draws no ring", async () => {
 	const { keyboard, style } = ringOf(button.element());
 	expect(keyboard).toBe(false);
 	expect(style).toBe("none");
+});
+
+it("a text button that is working keeps the keyboard's focus, says it is busy, and hears no second press", async () => {
+	let presses = 0;
+	function Loads() {
+		const [loading, setLoading] = useState(false);
+		return (
+			<TextButton
+				loading={loading}
+				onClick={() => {
+					presses += 1;
+					setLoading(true);
+				}}
+			>
+				불러오기
+			</TextButton>
+		);
+	}
+	render(<Loads />);
+	const button = page.getByRole("button", { name: "불러오기" });
+	await userEvent.keyboard("{Tab}");
+	await expect.element(button).toHaveFocus();
+	await userEvent.keyboard("{Enter}");
+	await expect.element(button).toHaveAttribute("aria-busy", "true");
+	// A browser takes the focus from a button that turns `disabled`, a moment later: wait for that moment.
+	await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done(null))));
+	await expect.element(button).toHaveFocus();
+	await expect.element(button).toHaveAttribute("aria-disabled", "true");
+	await userEvent.keyboard("{Enter}");
+	await userEvent.keyboard(" ");
+	expect(presses).toBe(1);
 });
