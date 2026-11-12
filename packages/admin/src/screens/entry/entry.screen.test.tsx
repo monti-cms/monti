@@ -70,6 +70,31 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(title()).toHaveValue("첫 번째 글 다시 쓰기");
 	});
 
+	it("16-2 'Preview' opens the site's preview address in a new tab, with the entry's ticket and the page to go on to", async () => {
+		const story = on("draft");
+		await story.run();
+		await opened();
+		const opens: unknown[][] = [];
+		const open = window.open;
+		window.open = (...args: unknown[]) => {
+			opens.push(args);
+			return null;
+		};
+		try {
+			await userEvent.click(button("미리보기"));
+			await expect.poll(() => opens.length).toBe(1);
+		} finally {
+			window.open = open;
+		}
+		const [address, target] = opens[0] as [string, string];
+		const url = new URL(address, "http://site.test");
+		// The admin API's own address: it turns the preview on, then goes to the entry's public page.
+		expect(url.pathname).toBe("/admin/api/preview");
+		expect(url.searchParams.get("path")).toMatch(/^\/posts\/.+/);
+		expect(url.searchParams.get("token")?.length ?? 0).toBeGreaterThan(20);
+		expect(target).toBe("_blank");
+	});
+
 	it("a to-do's row takes the cursor to its place: the empty title", async () => {
 		await on("untitled").run();
 		await opened();
