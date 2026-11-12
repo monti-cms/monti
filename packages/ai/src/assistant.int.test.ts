@@ -2119,6 +2119,25 @@ describe("what the second review of the core found (#472)", () => {
 		expect(run.size).toBeLessThan(messages.reduce((sum, message) => sum + estimateTokens(JSON.stringify(message)), 0));
 	});
 
+	it("10-1 what a service read from what it had kept is counted beside the run's input; the key's count for the month is every token, as before", async () => {
+		const monti = site();
+		const keyId = await withKey(monti);
+		model.add(
+			{ calls: [{ name: "entries_query", input: { collection: "post" } }], usage: { input: 1000, output: 20 } },
+			{ text: "없습니다.", usage: { input: 1100, output: 10, cached: 1000 } },
+		);
+		const asked = await ask(monti, { request: "글 찾아 줘" });
+		expect(asked.of("usage").at(-1)).toEqual({ type: "usage", input: 2100, output: 30, cached: 1000 });
+		const [run] = await runs();
+		expect(run.usage).toEqual({ input: 2100, output: 30, cached: 1000 });
+		const month = await db
+			.selectFrom("api_key_usage")
+			.select("tokens")
+			.where("key_id", "=", keyId)
+			.executeTakeFirstOrThrow();
+		expect(Number(month.tokens)).toBe(2130);
+	});
+
 	it("10-1 two conversations of the same moment are both listed when the list is read a page at a time", async () => {
 		const monti = site();
 		await withKey(monti);

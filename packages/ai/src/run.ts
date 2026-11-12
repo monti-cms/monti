@@ -167,7 +167,8 @@ export type RunEvent =
 	| { type: "taken"; text: string }
 	/** Screen tools the browser runs now; it goes on with `resume` and their answers. */
 	| { type: "screen"; calls: { id: string; name: string; input: unknown }[] }
-	| { type: "usage"; input: number; output: number }
+	/** What the run has spent so far; `cached` is the part of `input` its service read from what it had kept, when it says. */
+	| { type: "usage"; input: number; output: number; cached?: number }
 	| ({ type: "end"; untaken: string[] } & RunEnd);
 
 /** A stored message: what the model saw or said, with what the panel needs to show a tool line again. */
@@ -709,8 +710,15 @@ export async function* runAssistant(
 						raw = event.raw;
 						usage.input += event.usage.input;
 						usage.output += event.usage.output;
+						if (event.usage.cached) usage.cached = (usage.cached ?? 0) + event.usage.cached;
+						// The key's count for the month is every token the service took in and gave out, cached or not, as before.
 						await monti.keys.addUsage(key.id, event.usage.input + event.usage.output);
-						yield { type: "usage", input: usage.input, output: usage.output };
+						yield {
+							type: "usage",
+							input: usage.input,
+							output: usage.output,
+							...(usage.cached ? { cached: usage.cached } : {}),
+						};
 					}
 				}
 			} catch (error) {
@@ -793,7 +801,12 @@ export async function* runAssistant(
 				at: now().toISOString(),
 			});
 		await db.updateTable("conversations").set({ last_opened_at: now() }).where("id", "=", conversationId).execute();
-		yield { type: "usage", input: usage.input, output: usage.output };
+		yield {
+			type: "usage",
+			input: usage.input,
+			output: usage.output,
+			...(usage.cached ? { cached: usage.cached } : {}),
+		};
 		yield { type: "end", untaken, ...ended };
 	}
 }
