@@ -85,4 +85,5 @@ export async function publishSlug(db: Db, entry: Entry): Promise<{ slug: string;
 }
 
 /** Where a preview opens an entry that has no slug yet: a stand-in made from the title, never saved. */
-export const previewSlug = (entry: Entry) => entry.slug || slugify(entry.title) || entry.id.slice(0, 8);
+export const previewSlug = (entry: Pick<Entry, "id" | "slug" | "title">) =>
+	entry.slug || slugify(entry.title) || entry.id.slice(0, 8);

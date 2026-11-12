@@ -7,7 +7,7 @@ import type { Storage } from "../media/storage";
 import { usesInDoc, usesInValues } from "../media/uses";
 import type { Schema } from "../schema/define";
 import { siteDoc, translatedFields } from "../translations/source";
-import { publicPath } from "./paths";
+import { previewSlug, publicPath } from "./paths";
 import { readPreviewToken } from "./preview";
 
 /** A relation item as resolved on the site (doc 08). */
@@ -245,7 +245,8 @@ export function createReader(options: ReaderOptions) {
 					.where("collection", "=", where.collection)
 					.where("trashed_at", "is", null)
 					.executeTakeFirst();
-				if (row)
+				// The ticket is one entry's: it opens that entry at its own address only. Another entry asked for with it is read as the site shows it.
+				if (row && row.locale === where.locale && previewSlug(row) === where.slug)
 					return {
 						entry: await forSite({
 							id: row.id,
@@ -332,3 +333,6 @@ export function createReader(options: ReaderOptions) {
 		},
 	};
 }
+
+/** How the site reads entries: what `createReader` gives. */
+export type SiteReader = ReturnType<typeof createReader>;

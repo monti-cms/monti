@@ -170,6 +170,26 @@ describe("a collection's preview address", () => {
 		expect((await linkOf(translation.id)).path).toBe("/en/preview/notes/a-note");
 	});
 
+	it("16-2 a preview ticket opens its own entry at its own address only: another entry read with it is what the site shows", async () => {
+		const draft = await write("entries.create", { collection: "post", locale: "ko", title: "쓰는 중", slug: "draft" });
+		await post("나온 글", "out");
+		const { token } = await read<{ token: string }>("entries.previewLink", { id: draft.id });
+		const at = (slug: string, locale = "ko", preview: string | null = token) =>
+			reader().entry({ collection: "post", locale, slug, ...(preview === null ? {} : { preview }) });
+		const own = await at("draft");
+		expect(own && "entry" in own && [own.entry.title, own.entry.publishedAt]).toEqual(["쓰는 중", null]);
+		// Not published, so without the ticket its address is not there.
+		expect(await at("draft", "ko", null)).toBeNull();
+		const other = await at("out");
+		expect(other && "entry" in other && other.entry.title).toBe("나온 글");
+		expect(await at("nothing")).toBeNull();
+		expect(await at("draft", "en")).toBeNull();
+		// A forged ticket, and one past its hour, open nothing.
+		expect(await at("draft", "ko", `${token}x`)).toBeNull();
+		clock = new Date(clock.getTime() + 61 * 60_000);
+		expect(await at("draft")).toBeNull();
+	});
+
 	it("16-9 a preview address has the shape of an address, belongs to a document, and is no page's address", () => {
 		const collections = schema.collections;
 		const withPreview = (over: Record<string, unknown>): Schema =>
