@@ -818,27 +818,54 @@ describe("settings: a toast while proposals wait", () => {
 });
 
 describe("settings: where the focus goes when the save group leaves", () => {
-	it("12-1 모두 되돌리기, the last 되돌리기 of the changes list and a save each leave the focus on the open tab's name, not on the page", async () => {
+	const undoAll = () => page.getByRole("button", { name: "모두 되돌리기" });
+	const changesList = () => page.getByRole("button", { name: /^변경 사항/ });
+	/** Comes to a control with the Tab key from the one before it, as a person at the keyboard does: the focus is the keyboard's. */
+	const tabTo = async (from: HTMLElement, back = false) => {
+		from.focus();
+		await userEvent.keyboard(back ? "{Shift>}{Tab}{/Shift}" : "{Tab}");
+	};
+
+	it("12-1 from the keyboard, 모두 되돌리기, the last undo of the changes list and a save each leave the focus on the open tab's name, not on the page", async () => {
 		await withSite(stories.SiteChanged).run();
-		// 모두 되돌리기, from the keyboard: the button goes with the group it stood in.
-		(page.getByRole("button", { name: "모두 되돌리기" }).element() as HTMLElement).focus();
+		// 모두 되돌리기: the button goes with the group it stood in.
+		await tabTo(changesList().element() as HTMLElement);
+		await expect.element(undoAll()).toHaveFocus();
 		await userEvent.keyboard("{Enter}");
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 		await expect.element(tab(/사이트/)).toHaveFocus();
 
-		// The one change undone in the list: the list, its button and the group all go.
+		// The one change undone in the list, with the row's own key: the list, its row and the group all go.
 		await userEvent.fill(nameField(), "example.blog");
-		await userEvent.click(page.getByRole("button", { name: /^변경 사항/ }));
-		await userEvent.click(page.getByRole("menu").getByRole("button", { name: "되돌리기" }));
+		await tabTo(undoAll().element() as HTMLElement, true);
+		await expect.element(changesList()).toHaveFocus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menu")).toBeVisible();
+		await userEvent.keyboard("{Delete}");
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 		await expect.element(tab(/사이트/)).toHaveFocus();
 
 		// A save: the pill keeps the focus while it works, and hands it on when it leaves.
 		await userEvent.fill(nameField(), "example.blog");
-		await userEvent.click(saveGroup());
+		await tabTo(undoAll().element() as HTMLElement);
+		await expect.element(saveGroup()).toHaveFocus();
+		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 		await expect.element(tab(/사이트/)).toHaveFocus();
+	});
+
+	it("12-1 a pointer's press moves no focus: 모두 되돌리기 and a field's own 되돌리기, pressed with the pointer, do not send it to the tab's name", async () => {
+		await withSite(stories.SiteChanged).run();
+		await userEvent.click(undoAll());
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await expect.element(tab(/사이트/)).not.toHaveFocus();
+
+		// The field's own undo, on its label row: the last change goes, and the group with it.
+		await userEvent.fill(nameField(), "example.blog");
+		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await expect.element(tab(/사이트/)).not.toHaveFocus();
 	});
 });
 

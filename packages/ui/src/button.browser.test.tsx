@@ -190,4 +190,42 @@ describe("a button while it works", () => {
 			expect(sent).toBe(0);
 		});
 	}
+
+	for (const [part, working] of [
+		["button", "저장 중…"],
+		["text", "저장 중…"],
+		["split", "발행 중…"],
+	] as const)
+		it(`${part}: a pointer's press on it while it works lands on it: what is beneath hears nothing, and the focus does not go to the page`, async () => {
+			let beneath = 0;
+			render(
+				// biome-ignore lint/a11y/noStaticElementInteractions: what lies under the button (a row that opens on a press).
+				<div
+					onClick={() => {
+						beneath += 1;
+					}}
+				>
+					{part === "button" ? (
+						<Button loading>{working}</Button>
+					) : part === "text" ? (
+						<TextButton loading>{working}</TextButton>
+					) : (
+						<SplitButton
+							loading
+							menuLabel="다른 방법"
+							menu={<DropdownMenuItem>오늘 날짜로 다시 발행</DropdownMenuItem>}
+						>
+							{working}
+						</SplitButton>
+					)}
+				</div>,
+			);
+			const busy = page.getByRole("button", { name: working });
+			await expect.element(busy).toBeVisible();
+			(busy.element() as HTMLElement).focus();
+			// The pointer, where the button is. Let through (`pointer-events: none`), the press goes to what is under it and the focus to the page.
+			await busy.click({ force: true });
+			expect(beneath).toBe(0);
+			expect(document.activeElement).toBe(busy.element());
+		});
 });

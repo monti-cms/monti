@@ -24,6 +24,7 @@ import { useOperation } from "../../operations/use-operation";
 import { linkTo, SETTINGS_TABS, type SettingsTab } from "../../route";
 import { useSession } from "../../session";
 import { type Place as FramePlace, useCoverCorner } from "../frame/admin-frame";
+import { useFocusHandOff } from "../frame/focus-hand-off";
 import { AdminTab, type PreferenceFailure } from "./admin-tab";
 import { CollectionsTab, useCollectionsView } from "./collections-tab";
 import { LocalesTab } from "./locales-tab";
@@ -87,6 +88,11 @@ export function SettingsScreen({
 	// Whether that refusal answered a save made in the review that is open: the review says it then, at its top, and the page's banner waits.
 	const [refusedInReview, setRefusedInReview] = useState(false);
 	const [position, setPosition] = useState(0);
+	// The save group goes away with the last change (saved, all undone, the last one undone in its list), and the button that was pressed
+	// goes with it. A focus the keyboard held there goes to the open tab's name, the control the group acted on (tokens.md, states); a
+	// pointer's press held none, and moves nothing.
+	const openTab = useRef<HTMLAnchorElement>(null);
+	const groupLeaving = useFocusHandOff(() => openTab.current);
 	// Kept here, not in the admin tab: the tab is taken down when another is shown, and a refusal nobody answered must still be there on the way back.
 	const [preferenceFailed, setPreferenceFailed] = useState<PreferenceFailure | null>(null);
 
@@ -310,6 +316,7 @@ export function SettingsScreen({
 				onDiscard={draft.revertAll}
 				saveLabel={locked ? t("settings.save") : t("settings.saveApply")}
 				onSave={() => void save()}
+				leavingRef={groupLeaving}
 				// Not greyed while the save is on its way: the pill says what it is doing (README principle 7).
 				saving={busy ? t("ui.saving") : undefined}
 				proposals={
@@ -340,22 +347,7 @@ export function SettingsScreen({
 		} else void save();
 	};
 
-	// The save group goes away with the last change (saved, all undone, the last one undone in its list), and the button that was pressed goes
-	// with it. The focus then does not fall to the page: it goes to the open tab's name, the control the group acted on (tokens.md, states).
-	const openTab = useRef<HTMLAnchorElement>(null);
-	const hadChanges = useRef(false);
 	const hasChanges = rows.length > 0;
-	useEffect(() => {
-		const gone = hadChanges.current && !hasChanges;
-		hadChanges.current = hasChanges;
-		if (!gone) return;
-		// Once the list that held the button has closed and handed its focus on. A person whose focus is somewhere (a field) keeps it.
-		const later = setTimeout(() => {
-			const at = document.activeElement;
-			if (!at || at === document.body) openTab.current?.focus();
-		}, 0);
-		return () => clearTimeout(later);
-	}, [hasChanges]);
 
 	// A refused save's banner is about the changes that were not saved. Once they are gone (all undone, the last one undone) there is nothing
 	// for "save again" to save: the banner goes with them. One that asks to read again is about what is saved, and stays.

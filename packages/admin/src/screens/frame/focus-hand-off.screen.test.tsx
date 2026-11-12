@@ -1,5 +1,8 @@
+import { composeStory } from "@storybook/react-vite";
+import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { firstStop, nextStop } from "./focus-hand-off";
+import { userEvent } from "vitest/browser";
+import { firstStop, focusText, nextStop, useFocusHandOff } from "./focus-hand-off";
 
 describe("where the Tab key stops next", () => {
 	const made: Element[] = [];
@@ -43,5 +46,84 @@ describe("where the Tab key stops next", () => {
 		expect(nextStop(banner)?.id).toBe("field");
 		// And the page's first stop is the banner's own action while the banner is there.
 		expect(firstStop()).toBe(banner.querySelector("button"));
+	});
+});
+
+describe("the hand-off's rare cases (T159)", () => {
+	const made: (() => void)[] = [];
+	afterEach(() => {
+		for (const undo of made.splice(0)) undo();
+	});
+	const page = (html: string) => {
+		const host = document.createElement("div");
+		host.innerHTML = html;
+		document.body.append(host);
+		made.push(() => host.remove());
+		return host;
+	};
+	const focusedId = () => document.activeElement?.id ?? "";
+
+	it("a toast's button is not the page's first control, nor the next one after a banner: the toasts stand over the page, not in it", () => {
+		const host = page(`
+			<section aria-label="Notifications"><ol data-sonner-toaster><li><button id="undo">되돌리기</button></li></ol></section>
+			<div id="banner"><span>문장</span></div>
+			<section><ol data-sonner-toaster><li><button id="view">보기</button></li></ol></section>
+			<button id="first">첫 컨트롤</button>`);
+		expect(firstStop()?.id).toBe("first");
+		expect(nextStop(host.querySelector("#banner") as Element)?.id).toBe("first");
+	});
+
+	it("a first control drawn off and switched on later takes the focus that waits for it: an attribute alone makes it a stop", async () => {
+		// A view that took the editor's place, with its one control off until its read is in.
+		const host = page(`<button id="pill" disabled>복원</button>`);
+		(document.activeElement as HTMLElement | null)?.blur();
+		// No body, no title: the focus is for the view's first control, once it has one.
+		focusText(() => null, "no-title-here");
+		await new Promise((frames) => requestAnimationFrame(() => requestAnimationFrame(frames)));
+		expect(focusedId()).toBe("");
+		host.querySelector("#pill")?.removeAttribute("disabled");
+		await expect.poll(focusedId).toBe("pill");
+	});
+
+	it("a control the keyboard holds is still remembered after a pointer's press that moved no focus: pressed by key, its focus is handed on", async () => {
+		function Banner() {
+			const [offered, setOffered] = useState(true);
+			const banner = useFocusHandOff(() => document.getElementById("after"));
+			return (
+				<>
+					<button type="button" id="before">
+						앞
+					</button>
+					<div ref={banner}>
+						{offered ? (
+							<button type="button" id="again" onClick={() => setOffered(false)}>
+								다시 적용
+							</button>
+						) : null}
+						{/* A tool that keeps the caret where it is: its press takes no focus. */}
+						<button type="button" id="tool" tabIndex={-1} onMouseDown={(event) => event.preventDefault()}>
+							도구
+						</button>
+					</div>
+					<button type="button" id="after">
+						첫 컨트롤
+					</button>
+				</>
+			);
+		}
+		// Drawn as the stories are (the renderer the screen tests already load).
+		await composeStory({ render: () => <Banner /> }, { title: "Tests/FocusHandOff" }).run();
+		await expect.poll(() => document.getElementById("before")).not.toBeNull();
+		// The keyboard comes to the banner's button.
+		document.getElementById("before")?.focus();
+		await userEvent.keyboard("{Tab}");
+		expect(focusedId()).toBe("again");
+		// A pointer's press elsewhere in the banner that moves no focus: the button still has the keyboard's.
+		await userEvent.click(document.getElementById("tool") as HTMLElement);
+		expect(focusedId()).toBe("again");
+		// Pressed by key, the button goes and the banner stays: the focus goes on, not to the page.
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => document.getElementById("again")).toBeNull();
+		await expect.poll(focusedId).toBe("after");
 	});
 });
