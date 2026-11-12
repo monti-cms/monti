@@ -31,6 +31,7 @@ import {
 	ListHead,
 	type ListHeadColumn,
 	MenuShortcut,
+	PageBanner,
 	PageColumn,
 	PageHeader,
 	PageToolbar,
@@ -625,29 +626,31 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 	const message = TOAST[stage];
 	const columns = columnsOf(stage);
 	const noMatch = stage === "retried";
-	const banner =
-		stage === "threeFailed" || stage === "retryingAll" ? (
-			<Banner tone="danger" title="전송 실패 3건" meta="10. 26부터">
-				<TextButton variant="underline">보기</TextButton>
-				{stage === "retryingAll" ? (
-					<TextButton loading>보내는 중…</TextButton>
-				) : (
-					<TextButton>모두 다시 보내기</TextButton>
-				)}
-			</Banner>
-		) : stage === "loadFailed" ? (
-			<Banner tone="danger" title="기록을 불러오지 못했습니다" plainMeta>
-				<TextButton variant="underline">다시 시도</TextButton>
-			</Banner>
-		) : undefined;
 	return (
 		<AdminFrame
 			open="tools"
 			counts={{ tools: failed > 0 ? String(failed) : undefined }}
 			corner={open === undefined}
 			panel={open ? <Details stage={stage} line={open} /> : undefined}
-			banner={banner}
 		>
+			{/* The page says it where its state lives; it stands at the very top of the screen, under the frame's own banners. */}
+			<PageBanner>
+				{stage === "threeFailed" || stage === "retryingAll" ? (
+					<Banner tone="danger" title="전송 실패 3건" meta="10. 26부터">
+						<TextButton variant="underline">보기</TextButton>
+						{stage === "retryingAll" ? (
+							<TextButton loading>보내는 중…</TextButton>
+						) : (
+							<TextButton>모두 다시 보내기</TextButton>
+						)}
+					</Banner>
+				) : null}
+				{stage === "loadFailed" ? (
+					<Banner tone="danger" title="기록을 불러오지 못했습니다" plainMeta>
+						<TextButton variant="underline">다시 시도</TextButton>
+					</Banner>
+				) : null}
+			</PageBanner>
 			<PageColumn width="list">
 				<PageHeader title="도구">
 					{stage === "empty" || stage === "loadFailed" ? null : (
