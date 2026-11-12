@@ -5,6 +5,7 @@ import { pathKept, publicPath, publicPaths } from "../entries/paths";
 import { CheckError } from "../errors";
 import { checkMediaValues } from "../media/uses";
 import { defineOperation, type Preview, type RecordRef } from "../operation";
+import { storedFields } from "../schema/define";
 import {
 	generateUniqueSlug,
 	resolveInlineCreation,
@@ -81,7 +82,7 @@ export const relationOperations = [
 			const schema = ctx.site.schema();
 			const colDef = schema.collections[input.collection];
 			if (!colDef) throw new CheckError({ key: "collections.unknown", values: { collection: input.collection } });
-			const fieldDef = colDef.fields[input.field];
+			const fieldDef = storedFields(colDef)[input.field];
 			if (!fieldDef) throw new CheckError({ key: "entries.unknownField", values: { field: input.field } });
 			if (fieldDef.kind !== "relation")
 				throw new CheckError({ key: "relations.notRelation", values: { field: input.field } });
@@ -89,7 +90,7 @@ export const relationOperations = [
 		async run(input, ctx): Promise<RelationOptionsResult> {
 			const schema = ctx.site.schema();
 			const colDef = schema.collections[input.collection];
-			const fieldDef = colDef.fields[input.field];
+			const fieldDef = storedFields(colDef)[input.field];
 			if (!fieldDef || fieldDef.kind !== "relation") {
 				throw new CheckError({ key: "relations.notRelation", values: { field: input.field } });
 			}
@@ -224,7 +225,7 @@ export const relationOperations = [
 			// Default firstRef from schema
 			let defaultFirstRef: { collection: string; field: string } | undefined;
 			for (const [colName, colDef] of Object.entries(schema.collections)) {
-				for (const [fName, fDef] of Object.entries(colDef.fields)) {
+				for (const [fName, fDef] of Object.entries(storedFields(colDef))) {
 					if (fDef.kind === "relation" && fDef.to === input.collection) {
 						defaultFirstRef = { collection: colName, field: fName };
 						break;
@@ -323,7 +324,7 @@ export const relationOperations = [
 
 			const touchedIds = new Set<string>(rows.map((r) => r.id));
 
-			const fieldDef = ctx.site.schema().collections[input.collection]?.fields[input.field];
+			const fieldDef = storedFields(ctx.site.schema().collections[input.collection])[input.field];
 			if (fieldDef?.kind === "relation" && fieldDef.via !== undefined) {
 				const targetCol = fieldDef.to;
 				const viaGroups = new Set<string>();
@@ -357,7 +358,7 @@ export const relationOperations = [
 			const schema = ctx.site.schema();
 			const colDef = schema.collections[input.collection];
 			if (!colDef) throw new CheckError({ key: "collections.unknown", values: { collection: input.collection } });
-			const fieldDef = colDef.fields[input.field];
+			const fieldDef = storedFields(colDef)[input.field];
 			if (!fieldDef) throw new CheckError({ key: "entries.unknownField", values: { field: input.field } });
 			if (fieldDef.kind !== "relation")
 				throw new CheckError({ key: "relations.notRelation", values: { field: input.field } });
@@ -374,7 +375,7 @@ export const relationOperations = [
 					locale: entry.locale,
 					paths: publicPaths(schema, entry.collection, entry.locale, [entry.slug]),
 				});
-			const fieldDef = colDef.fields[input.field];
+			const fieldDef = storedFields(colDef)[input.field];
 			if (!fieldDef || fieldDef.kind !== "relation") {
 				throw new CheckError({ key: "relations.notRelation", values: { field: input.field } });
 			}
@@ -725,7 +726,7 @@ export const relationOperations = [
 
 				for (const entry of entries) {
 					const values = entry.values as Record<string, unknown>;
-					const colFields = schema.collections[entry.collection]?.fields ?? {};
+					const colFields = storedFields(schema.collections[entry.collection]);
 
 					for (const [fName, fDef] of Object.entries(colFields)) {
 						if (fDef.kind === "relation" && fDef.to === input.collection) {

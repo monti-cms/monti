@@ -17,14 +17,13 @@ type Db = Kysely<Database> | Transaction<Database>;
 // Zod shapes of the schema, for the operations' inputs (and so the agent's tools describe them).
 const LocaleMode = z.enum(["same", "perLocale", "fromSource"]);
 const FieldBase = { required: z.boolean().optional(), locale: LocaleMode.optional() };
-const Field = z.discriminatedUnion("kind", [
+const GroupFieldShapes = [
 	z.object({
 		kind: z.literal("text"),
 		...FieldBase,
 		multiline: z.boolean().optional(),
 		max: z.number().optional(),
 	}),
-	z.object({ kind: z.literal("slug"), ...FieldBase, from: z.string().optional() }),
 	z.object({ kind: z.literal("select"), ...FieldBase, options: z.array(z.string()), many: z.boolean().optional() }),
 	z.object({ kind: z.literal("media"), ...FieldBase, accept: z.enum(["image", "any"]).optional() }),
 	z.object({
@@ -35,6 +34,18 @@ const Field = z.discriminatedUnion("kind", [
 		createMissing: z.boolean().optional(),
 		ordered: z.boolean().optional(),
 		via: z.string().optional(),
+	}),
+] as const;
+const GroupField = z.discriminatedUnion("kind", [...GroupFieldShapes]);
+const Field = z.discriminatedUnion("kind", [
+	...GroupFieldShapes,
+	z.object({ kind: z.literal("slug"), ...FieldBase, from: z.string().optional() }),
+	// A choice with a group of fields for each option (doc 19).
+	z.object({
+		kind: z.literal("conditional"),
+		...FieldBase,
+		options: z.array(z.string()),
+		fields: z.record(z.string(), z.record(z.string(), GroupField)),
 	}),
 ]);
 export const LocalesInput = z.object({

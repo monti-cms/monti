@@ -15,6 +15,7 @@ import { COLUMNS, folderPaths, itemOf, type MediaItem, type Row, usesCount } fro
 
 export type { MediaFile, MediaItem } from "./items";
 
+import { storedFields } from "../schema/define";
 import { type MediaPlace, placeOf } from "./value";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -505,7 +506,7 @@ export const mediaOperations = [
 					? await sourceEntryOf(ctx.db, schema, entry.translationGroup)
 					: null;
 				const { values } = translatedFields(schema, entry.collection, entry, await followedFields(ctx.db, source));
-				const fields = schema.collections[entry.collection]?.fields ?? {};
+				const fields = storedFields(schema.collections[entry.collection]);
 				for (const gap of await altGaps(ctx.db, fields, values, await bodyAsRead(ctx.db, source, entry.doc)))
 					missing.push({
 						id: entry.id,

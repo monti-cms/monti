@@ -5,6 +5,7 @@ import { CheckError } from "../errors";
 import type { RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import type { FieldDefinition, Schema } from "../schema/define";
+import { storedFields } from "../schema/define";
 import { type MediaPlace, mediaValueOf, placeKey } from "./value";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -54,7 +55,7 @@ export async function checkMediaValues(
 	values: Record<string, unknown> | undefined,
 	{ missing = "let be" }: { missing?: "let be" | "refuse" } = {},
 ): Promise<void> {
-	const fields = schema.collections[collection]?.fields ?? {};
+	const fields = storedFields(schema.collections[collection]);
 	for (const [field, given] of Object.entries(values ?? {})) {
 		const definition = fields[field];
 		if (definition?.kind !== "media" || given === null) continue;
@@ -179,7 +180,7 @@ async function usesNow(db: Db, schema: Schema, entryIds: string[], templateIds: 
 			.execute();
 		for (const copy of [...working, ...published])
 			want({ entry_id: copy.owner, template_id: null }, [
-				...usesInValues(schema.collections[copy.collection]?.fields ?? {}, copy.values),
+				...usesInValues(storedFields(schema.collections[copy.collection]), copy.values),
 				...usesInDoc(copy.doc),
 			]);
 	}

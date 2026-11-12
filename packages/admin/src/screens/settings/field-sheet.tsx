@@ -86,7 +86,9 @@ function formOf(field: DraftField, values: Partial<Record<FieldValue, unknown>>,
 	const labels = (values.optionLabels ?? {}) as Record<string, string>;
 	return {
 		...blank(to),
-		kind: def.kind,
+		// A conditional field (doc 19) is shown as its choice until this sheet learns its groups (the screen piece of doc 19): saving it from
+		// here would write a plain select, so that piece comes before the kind is offered anywhere.
+		kind: def.kind === "conditional" ? "select" : def.kind,
 		name: field.name,
 		label: String(values.label ?? ""),
 		description: String(values.description ?? ""),

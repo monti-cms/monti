@@ -6,6 +6,7 @@ import { trackedFields } from "../translations/fields";
 import { changeSource } from "../translations/source-change";
 import type { AdminValues } from "./admin-values";
 import type { Schema } from "./define";
+import { storedFields } from "./define";
 import type { ChangeFile, ChangeStep } from "./files";
 import { schemaHash } from "./plan";
 
@@ -121,7 +122,7 @@ async function rebuildViews(db: Db, previous: Schema | null, schema: Schema) {
 		await sql`drop view if exists ${sql.id(`monti_${name}`)}`.execute(db);
 	// A view's definition takes no bound parameters, so field names go in as literals (they are identifiers, checked by checkSchema).
 	for (const [name, collection] of Object.entries(schema.collections)) {
-		const fields = Object.entries(collection.fields)
+		const fields = Object.entries(storedFields(collection))
 			.filter(([field]) => field !== "title" && field !== "slug")
 			.map(([field, definition]) =>
 				definition.kind === "text" || (definition.kind === "select" && !definition.many)

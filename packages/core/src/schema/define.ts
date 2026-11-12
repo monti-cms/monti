@@ -33,8 +33,66 @@ export type RelationField = FieldBase & {
 	via?: string;
 };
 
-export type FieldDefinition = TextField | SlugField | SelectField | MediaField | RelationField;
+/** A field that can stand in a conditional field's group: any kind but the address and another conditional field. */
+export type GroupField = TextField | SelectField | MediaField | RelationField;
+/**
+ * A choice with fields of its own for each option (doc 19): the entry holds the chosen option under this field's name, and only the chosen
+ * option's fields are shown and kept. An option with no group has no fields. Its fields are stored flat, beside the collection's other
+ * fields, so their names are the collection's: no two fields of a collection share a name, whichever group they are in.
+ */
+export type ConditionalField = FieldBase & {
+	kind: "conditional";
+	options: string[];
+	fields: Record<string, Record<string, GroupField>>;
+};
+
+export type FieldDefinition = TextField | SlugField | SelectField | MediaField | RelationField | ConditionalField;
 export type FieldKind = FieldDefinition["kind"];
+
+/**
+ * A field as an entry stores it: every kind but `conditional`, which is stored as the choice it is (a select) with its groups' fields beside
+ * it. `under` names the conditional field and the option a field belongs to.
+ */
+export type StoredField = (TextField | SlugField | SelectField | MediaField | RelationField) & {
+	under?: { field: string; option: string };
+};
+
+/**
+ * The fields an entry's values are stored and read by, in the order the schema writes them: a conditional field as its choice, then each
+ * option's fields. Everything that reads or writes values goes by these, so a field in a group is listed, searched, linked and translated
+ * like any other.
+ */
+export function storedFields(
+	collection: Pick<CollectionDefinition, "fields"> | undefined,
+): Record<string, StoredField> {
+	const stored: Record<string, StoredField> = {};
+	for (const [name, field] of Object.entries(collection?.fields ?? {})) {
+		if (field.kind !== "conditional") {
+			stored[name] = field;
+			continue;
+		}
+		const { fields, kind: _kind, ...choice } = field;
+		stored[name] = { ...choice, kind: "select" };
+		for (const [option, group] of Object.entries(fields))
+			for (const [inner, definition] of Object.entries(group))
+				stored[inner] = { ...definition, under: { field: name, option } };
+	}
+	return stored;
+}
+
+/**
+ * The fields that are not the entry's now: those of an option that is not the chosen one (with nothing chosen, or a value the field no longer
+ * lists, every option's). They are not shown, not required and not kept.
+ */
+export function notChosenFields(
+	collection: Pick<CollectionDefinition, "fields"> | undefined,
+	values: Record<string, unknown>,
+): Set<string> {
+	const hidden = new Set<string>();
+	for (const [name, field] of Object.entries(storedFields(collection)))
+		if (field.under && values[field.under.field] !== field.under.option) hidden.add(name);
+	return hidden;
+}
 
 type CollectionFields = {
 	/** In this order; `title` and `slug` come first in every collection. */
@@ -129,7 +187,10 @@ export type SchemaProblem = {
 		| "pathTaken"
 		| "badPreviewPath"
 		| "previewPathTaken"
-		| "invalidVia";
+		| "invalidVia"
+		| "unknownOption"
+		| "duplicateField"
+		| "nestedConditional";
 };
 
 export function checkSchema(schema: Schema): SchemaProblem[] {
@@ -177,7 +238,24 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 		for (const fixed of ["title", "slug"] as const)
 			if (collection.fields[fixed] && collection.fields[fixed].required !== true)
 				problems.push({ collection: name, field: fixed, code: "fixedOptional" });
+		// A conditional field's own shape (doc 19): a group for a listed option only, no conditional field or address inside one, and no name
+		// used twice in the collection (the fields are stored side by side).
+		const names = new Set(Object.keys(collection.fields));
 		for (const [fieldName, field] of Object.entries(collection.fields)) {
+			if (field.kind !== "conditional") continue;
+			for (const [option, group] of Object.entries(field.fields ?? {})) {
+				if (!field.options.includes(option))
+					problems.push({ collection: name, field: fieldName, code: "unknownOption" });
+				for (const [inner, definition] of Object.entries(group)) {
+					const kind = (definition as { kind: string }).kind;
+					if (kind === "conditional" || kind === "slug")
+						problems.push({ collection: name, field: inner, code: "nestedConditional" });
+					if (names.has(inner)) problems.push({ collection: name, field: inner, code: "duplicateField" });
+					names.add(inner);
+				}
+			}
+		}
+		for (const [fieldName, field] of Object.entries(storedFields(collection))) {
 			const at = { collection: name, field: fieldName };
 			if (!IDENTIFIER.test(fieldName)) problems.push({ ...at, code: "badIdentifier" });
 			if (field.kind === "select") {
@@ -188,7 +266,7 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 				if (!schema.collections[field.to]) {
 					problems.push({ ...at, code: "unknownTarget" });
 				} else if (field.via !== undefined) {
-					const targetField = schema.collections[field.to]?.fields[field.via];
+					const targetField = storedFields(schema.collections[field.to])[field.via];
 					if (!targetField || targetField.kind !== "relation" || targetField.to !== name || targetField.many !== true) {
 						problems.push({ ...at, code: "invalidVia" });
 					}

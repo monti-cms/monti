@@ -148,16 +148,21 @@ export type { AdminValues } from "./schema/admin-values";
 export { migrateContent } from "./schema/apply";
 export {
 	type CollectionDefinition,
+	type ConditionalField,
 	checkSchema,
 	defineSchema,
 	type FieldDefinition,
 	type FieldKind,
+	type GroupField,
 	type LocaleDefinition,
 	type LocaleMode,
 	type LocalesDefinition,
 	localeModeOf,
+	notChosenFields,
 	type Schema,
 	type SchemaProblem,
+	type StoredField,
+	storedFields,
 	translates,
 } from "./schema/define";
 export { type ChangeFile, type ChangeStep, readChangeFiles, type SchemaFiles, schemaFilesAt } from "./schema/files";

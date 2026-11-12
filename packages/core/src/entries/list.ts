@@ -4,7 +4,13 @@ import { CheckError } from "../errors";
 import { mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext } from "../operation";
 import { type AdminValues, ListPrefs } from "../schema/admin-values";
-import { type CollectionDefinition, type FieldDefinition, type LocalesDefinition, translates } from "../schema/define";
+import {
+	type CollectionDefinition,
+	type FieldDefinition,
+	type LocalesDefinition,
+	storedFields,
+	translates,
+} from "../schema/define";
 import { adminValuesRecord } from "../schema/operations";
 import { translationSql } from "../translations/count";
 import type { EntryState } from "./operations";
@@ -116,7 +122,7 @@ const collectionOf = (ctx: OperationContext, collection: string): CollectionDefi
 };
 
 const fieldOf = (definition: CollectionDefinition, field: string, kinds: FieldDefinition["kind"][]) => {
-	const found = definition.fields[field];
+	const found = storedFields(definition)[field];
 	if (!found || !kinds.includes(found.kind) || field === "title" || field === "slug")
 		throw new CheckError({ key: "list.badFilter", values: { field } });
 	return found;
@@ -191,7 +197,7 @@ function filterSql(
 		}
 		case "empty":
 			fieldOf(definition, filter.field, ["text", "media", "select", "relation"]);
-			return definition.fields[filter.field]?.kind === "relation"
+			return storedFields(definition)[filter.field]?.kind === "relation"
 				? sql`not exists (select 1 from entry_links l where l.from_group = rep.translation_group and l.field = ${filter.field})`
 				: emptySql(filter.field);
 		case "date": {
@@ -310,7 +316,7 @@ export async function runListQuery(
 		where ${whereSql(ctx, query)}
 		order by ${await sortSql(ctx, query)}
 		limit ${query.pageSize} offset ${(query.page - 1) * query.pageSize}`.execute(ctx.db);
-	const relationFields = Object.entries(definition.fields)
+	const relationFields = Object.entries(storedFields(definition))
 		.filter(([, field]) => field.kind === "relation")
 		.map(([name]) => name);
 	const groups = rows.map((row) => row.translation_group);
@@ -326,7 +332,7 @@ export async function runListQuery(
 					.execute()
 			: [];
 	const titles = await groupTitles(ctx, [...new Set(links.map((link) => link.to_group))]);
-	const mediaFields = Object.entries(definition.fields)
+	const mediaFields = Object.entries(storedFields(definition))
 		.filter(([, field]) => field.kind === "media")
 		.map(([name]) => name);
 	const fileIds = rows.flatMap((row) =>
@@ -494,7 +500,7 @@ function schemaColumns(
 	values: AdminValues,
 	multilingual: boolean,
 ): (ListColumn & { shown: boolean })[] {
-	const fields = Object.entries(definition.fields).flatMap(([name, field]) => {
+	const fields = Object.entries(storedFields(definition)).flatMap(([name, field]) => {
 		const kind = KIND_OF[field.kind];
 		if (!kind || name === "title" || name === "slug") return [];
 		const labels = values.fields?.[name];

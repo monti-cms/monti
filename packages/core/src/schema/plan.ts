@@ -2,7 +2,13 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import { fingerprint } from "../bytes";
 import type { Database } from "../db/schema";
 import { canonical, sameJson } from "../json";
-import type { CollectionDefinition, FieldDefinition, LocalesDefinition, Schema } from "./define";
+import {
+	type CollectionDefinition,
+	type FieldDefinition,
+	type LocalesDefinition,
+	type Schema,
+	storedFields,
+} from "./define";
 import type { ChangeStep } from "./files";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -163,10 +169,14 @@ async function planLocales(db: Db, before: LocalesDefinition, after: LocalesDefi
 async function planFields(
 	db: Db,
 	collection: string,
-	before: CollectionDefinition,
-	after: CollectionDefinition,
+	beforeCollection: CollectionDefinition,
+	afterCollection: CollectionDefinition,
 	renames: Rename[],
 ): Promise<SchemaChange[]> {
+	// By the fields as they are stored (doc 19): a field moved into a conditional field's group, or from one group to another, keeps its
+	// name and its values; an option taken out takes its group's fields with it, and they are asked about as any removed field is.
+	const before = { fields: storedFields(beforeCollection) };
+	const after = { fields: storedFields(afterCollection) };
 	const changes: SchemaChange[] = [];
 	const renamed = renames.filter(
 		(rename) => rename.collection === collection && before.fields[rename.from] && after.fields[rename.to],
@@ -210,15 +220,28 @@ async function planFields(
 		const old = before.fields[field];
 		if (renamedTo.has(field)) continue;
 		if (!old) changes.push(await planNewField(db, collection, field, definition));
-		else if (!sameJson(old, definition) || (definition.required && !old.required))
-			changes.push(
+		else if (!sameJson(old, definition) || (definition.required && !old.required)) {
+			const change =
 				definition.required && !old.required
 					? await planNewField(db, collection, field, definition, "changeField")
-					: { id: `changeField:${collection}.${field}`, do: "changeField", collection, field },
-			);
+					: ({ id: `changeField:${collection}.${field}`, do: "changeField", collection, field } as SchemaChange);
+			// An option taken out of a choice other fields hang on: how many entries have it chosen. They keep the word until they are saved
+			// again, and until then none of the field's groups is theirs (doc 19).
+			const gone =
+				old.kind === "select" && definition.kind === "select" && hangsOn(afterCollection, beforeCollection, field)
+					? old.options.filter((option) => !definition.options.includes(option))
+					: [];
+			if (gone.length > 0 && change.count === undefined)
+				change.count = await countEntries(db, collection, sql<boolean>`values->>${field} in (${sql.join(gone)})`);
+			changes.push(change);
+		}
 	}
 	return changes;
 }
+
+/** Whether the field is a conditional field's choice, before or after the change. */
+const hangsOn = (after: CollectionDefinition, before: CollectionDefinition, field: string) =>
+	after.fields[field]?.kind === "conditional" || before.fields[field]?.kind === "conditional";
 
 async function planNewField(
 	db: Db,

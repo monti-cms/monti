@@ -4,7 +4,7 @@ import type { Database } from "../db/schema";
 import { pathKept, publicPaths, slugify } from "../entries/paths";
 import type { OperationContext, RecordRef } from "../operation";
 import { lockRecords } from "../records";
-import { localeModeOf, type Schema } from "../schema/define";
+import { localeModeOf, type Schema, storedFields } from "../schema/define";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -70,7 +70,7 @@ export async function resolveInlineCreation(
 	values: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
 	const schema = ctx.site.schema();
-	const fields = schema.collections[collection]?.fields ?? {};
+	const fields = storedFields(schema.collections[collection]);
 	const result = { ...values };
 
 	for (const [fieldName, fieldDef] of Object.entries(fields)) {
@@ -206,7 +206,7 @@ export async function syncRelationsForEntry(
 	previousValues?: Record<string, unknown>,
 ): Promise<void> {
 	const schema = ctx.site.schema();
-	const fields = schema.collections[entry.collection]?.fields ?? {};
+	const fields = storedFields(schema.collections[entry.collection]);
 	/**
 	 * Says that what the site shows of another entry changed: a relation edited from this side (`via`) is kept on the other entry, and when that one
 	 * is on the site (an item is, as saved), its page changes with this save, whatever this entry's own state.
@@ -384,7 +384,7 @@ export async function unlinkTargetGroup(
 	const cut = (collection: string, values: Record<string, unknown>): Record<string, unknown> | null => {
 		const next = { ...values };
 		let changed = false;
-		for (const [field, definition] of Object.entries(schema.collections[collection]?.fields ?? {})) {
+		for (const [field, definition] of Object.entries(storedFields(schema.collections[collection]))) {
 			if (definition.kind !== "relation") continue;
 			const value = next[field];
 			if (Array.isArray(value) && value.includes(targetGroup)) {
