@@ -147,12 +147,15 @@ function Signed() {
 			open={placeOf(route)}
 			folder={route.screen === "list" || route.screen === "media" ? route.params.get("folder") : null}
 			onOpen={open}
-			onReview={() =>
-				leave(() => {
+			onReview={() => {
+				const review = () => {
 					go({ screen: "settings", tab: "collections" });
 					setReview((count) => count + 1);
-				})
-			}
+				};
+				// The review is the settings screen's own: from there nothing is left, so nothing is asked (its tabs share one draft).
+				if (route.screen === "settings") review();
+				else leave(review);
+			}}
 			counts={counts.data}
 		>
 			{route.screen === "settings" ? (

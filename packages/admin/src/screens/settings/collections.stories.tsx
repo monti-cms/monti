@@ -507,7 +507,7 @@ export const ApplyRefused: Story = {
 
 /**
  * A save refused before its review opens (the site refuses `schema.plan` here): the reason is the page's banner, at the very top of the screen over
- * the title, where the frame's own banners stand (common.md). It stays until the next save.
+ * the title, where the frame's own banners stand (common.md). It stays until the next save's answer.
  */
 export const SaveRefused: Story = {
 	loaders: site(),

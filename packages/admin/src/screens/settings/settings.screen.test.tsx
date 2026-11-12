@@ -291,7 +291,7 @@ describe("settings › languages", () => {
 });
 
 describe("settings: a save that is refused", () => {
-	it("12-4 when the schema file cannot be written, the reason stays under the tabs with 다시 저장: the name is saved, the structure change waits, and saving again finishes it", async () => {
+	it("12-4 when the schema file cannot be written, the reason stays at the top of the screen with 다시 저장: the name is saved, the structure change waits, and saving again finishes it", async () => {
 		const files = {
 			locked: true,
 			async write() {
@@ -322,7 +322,45 @@ describe("settings: a save that is refused", () => {
 		expect((await settingsOf(shown.loaded())).schema.locales.prefix).toBe("always");
 	});
 
-	it("12-2 a save over values changed elsewhere is refused under the tabs with 다시 불러오기: reading again keeps my change, and the next save goes", async () => {
+	it("12-4 a refusal's banner stays while the next save is on its way and goes with its answer: the page does not move up and down again", async () => {
+		const server: { refuse: boolean; release: (() => void) | null } = { refuse: true, release: null };
+		const shown = withSite({
+			...stories.SiteChanged,
+			render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
+				<MontiAdmin
+					transport={async (name, input, options) => {
+						if (name === "settings.save") {
+							if (server.refuse) return { status: 500, body: { error: "unexpected" } };
+							// The next save waits until the test lets it go.
+							await new Promise<void>((release) => {
+								server.release = release;
+							});
+						}
+						return loaded.site.transport(name, input, options);
+					}}
+					siteName="example.dev"
+				/>
+			),
+		});
+		await shown.run();
+		await userEvent.click(saveGroup());
+		const banner = page.getByRole("status").filter({ hasText: "저장하지 못했습니다" });
+		await expect.element(banner).toBeVisible();
+		const title = () => Math.round(page.getByRole("heading", { name: "설정" }).element().getBoundingClientRect().top);
+		const under = title();
+		server.refuse = false;
+		await userEvent.click(page.getByRole("button", { name: "다시 저장" }));
+		await expect.poll(() => server.release !== null).toBe(true);
+		// On its way: the banner is where it was, and so is the page under it.
+		await expect.element(banner).toBeVisible();
+		expect(title()).toBe(under);
+		server.release?.();
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		await expect.element(banner).not.toBeInTheDocument();
+		expect(title()).toBeLessThan(under);
+	});
+
+	it("12-2 a save over values changed elsewhere is refused at the top of the screen with 다시 불러오기: reading again keeps my change, and the next save goes", async () => {
 		const shown = withSite(stories.SiteChanged);
 		await shown.run();
 		// Another tab saved the writing rules after this screen read them.

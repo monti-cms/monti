@@ -346,3 +346,21 @@ describe("settings › collections: a refused save", () => {
 		expect(box(page.getByRole("button", { name: "어시스턴트 열기" }).element()).top).toBe(banner.bottom + 12);
 	});
 });
+
+describe("settings: the review of a hand-edited schema file", () => {
+	it("검토 on the banner, pressed on the settings screen with unsaved changes, opens the review at once: nothing is left, so nothing is asked", async () => {
+		await scene({ loaders: collections.HandEditReview.loaders }, collections.default).run();
+		await expect.element(page.getByText("스키마 파일을 직접 고쳤습니다")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "설정" }));
+		// A change on another tab of the settings: the review is on this screen, and the tabs share one draft.
+		await userEvent.fill(page.getByRole("textbox", { name: "사이트 이름" }), "example.blog");
+		await expect.element(page.getByRole("button", { name: "변경 사항", exact: true })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "검토" }));
+		await expect.element(page.getByRole("dialog").getByText("옛 주소는 404가 됩니다.")).toBeVisible();
+		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+		await expect.element(page.getByText("저장하지 않은 변경 사항이 있습니다")).not.toBeInTheDocument();
+		// The change is still in the draft.
+		await userEvent.click(page.getByRole("dialog").getByRole("button", { name: "취소" }));
+		await expect.element(page.getByRole("button", { name: "변경 사항", exact: true })).toHaveTextContent(/1/);
+	});
+});

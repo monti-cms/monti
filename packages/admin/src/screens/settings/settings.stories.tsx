@@ -123,8 +123,8 @@ export const SiteProposal: Story = {
 };
 
 /**
- * A save whose schema file could not be written (doc 12): the name is saved, the structure change stays in the draft, and the line under the tabs
- * says why with the one thing to do.
+ * A save whose schema file could not be written (doc 12): the name is saved, the structure change stays in the draft, and the banner at the top of
+ * the screen says why with the one thing to do.
  */
 export const SaveRefused: Story = {
 	loaders: settingsAt("site", readOnlyFiles),

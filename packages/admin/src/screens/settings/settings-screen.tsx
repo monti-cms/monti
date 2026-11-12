@@ -40,7 +40,7 @@ type SaveOutput = {
 	structure: { changeId: string; written: boolean; applied: boolean } | null;
 };
 
-/** Why the last save was refused, and the one thing to do about it (doc 12, T50). It stays under the tabs until it is done. */
+/** Why the last save was refused, and the one thing to do about it (doc 12, T50). It stands at the very top of the screen until the next save is answered. */
 type Refused = { reason: string; action: "reload" | "save" };
 
 const SITE_VALUES = ["name", "writing"] as const;
@@ -56,7 +56,7 @@ type Walked = {
 /**
  * Settings (doc 12, flow 11): four tabs over one draft (doc 05). The changes of every tab are counted in the header, a tab that is not open carries
  * a dot when it holds one, and one button saves them all with `settings.save`: admin values at once, on the live site too, and structure (the
- * languages, the collections) through one review on the dev server. A refused save leaves its reason under the tabs with the one thing to do.
+ * languages, the collections) through one review on the dev server. A refused save leaves its reason at the top of the screen with the one thing to do.
  */
 export function SettingsScreen({
 	tab,
@@ -84,6 +84,8 @@ export function SettingsScreen({
 	const [conflict, setConflict] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [refused, setRefused] = useState<Refused | null>(null);
+	// Whether that refusal answered a save made in the review that is open: the review says it then, at its top, and the page's banner waits.
+	const [refusedInReview, setRefusedInReview] = useState(false);
 	const [position, setPosition] = useState(0);
 	// Kept here, not in the admin tab: the tab is taken down when another is shown, and a refusal nobody answered must still be there on the way back.
 	const [preferenceFailed, setPreferenceFailed] = useState<PreferenceFailure | null>(null);
@@ -104,7 +106,8 @@ export function SettingsScreen({
 	/** Sends the whole draft: the site's values and the collections' admin values, and on the dev server the structure with the review's answers. */
 	const send = async (answers: Answers) => {
 		if (!data || !built) return;
-		setRefused(null);
+		// A refusal on the page stays while this save is on its way: its answer replaces it or takes it away. Taken away now, the page would
+		// move up for the length of the request and down again.
 		setBusy(true);
 		const site = Object.fromEntries(
 			SITE_VALUES.flatMap((value) =>
@@ -132,11 +135,17 @@ export function SettingsScreen({
 		);
 		if (!result.ok) {
 			setBusy(false);
-			// Changed since this screen read it: in the review the sheet says so; outside it the line under the tabs does.
+			// Changed since this screen read it: in the review the sheet says so; outside it the banner at the top does.
 			if (result.refusal.status === 409) {
 				if (plan) setConflict(true);
-				else setRefused({ reason: t("settings.conflict"), action: "reload" });
-			} else setRefused({ reason: refusal(result.refusal.reason), action: "save" });
+				else {
+					setRefused({ reason: t("settings.conflict"), action: "reload" });
+					setRefusedInReview(false);
+				}
+			} else {
+				setRefused({ reason: refusal(result.refusal.reason), action: "save" });
+				setRefusedInReview(plan !== null);
+			}
 			return;
 		}
 		const done = result.body.output.structure;
@@ -147,10 +156,12 @@ export function SettingsScreen({
 			await model.read.reload();
 			setPlan(null);
 			setRefused({ reason: t("settings.fileNotWritten"), action: "save" });
+			setRefusedInReview(false);
 		} else {
 			await model.read.reload();
 			saved();
 			setPlan(null);
+			setRefused(null);
 			// Files saved but not applied: the frame's line over every screen says so, with "apply again" (flow 11, step 20).
 			if (!done || done.applied) {
 				const one = made.length === 1 ? made[0] : undefined;
@@ -168,7 +179,6 @@ export function SettingsScreen({
 
 	const openReview = async () => {
 		if (!data || !built) return;
-		setRefused(null);
 		setBusy(true);
 		const [fresh, planned] = await Promise.all([
 			readOp.run(),
@@ -177,6 +187,7 @@ export function SettingsScreen({
 		setBusy(false);
 		if (!planned.ok) {
 			setRefused({ reason: refusal(planned.refusal.reason), action: "save" });
+			setRefusedInReview(false);
 			return;
 		}
 		// Nothing the review could ask about (the languages' order alone): saved like any value that needs no review.
@@ -324,8 +335,8 @@ export function SettingsScreen({
 
 	const retry = () => {
 		if (refused?.action === "reload") {
-			setRefused(null);
-			void model.read.reload();
+			// Gone once the settings are read again, not before: the page does not move while they are on their way.
+			void model.read.reload().then(() => setRefused(null));
 		} else void save();
 	};
 
@@ -357,7 +368,8 @@ export function SettingsScreen({
 					<PageBody>
 						{/* Drawn at the very top of the screen, over the title (common.md, banners). */}
 						<PageBanner>
-							{refused && !plan ? (
+							{/* A refusal from before a review stays on the page under it; one the open review got is told at the review's top instead. */}
+							{refused && !(plan && refusedInReview) ? (
 								<Banner tone="danger" title={refused.reason}>
 									<TextButton loading={busy} onClick={retry}>
 										{t(refused.action === "reload" ? "settings.reload" : "settings.saveAgain")}
@@ -401,7 +413,7 @@ export function SettingsScreen({
 				model={model}
 				plan={plan}
 				conflict={conflict}
-				refused={plan ? (refused?.reason ?? null) : null}
+				refused={plan && refusedInReview ? (refused?.reason ?? null) : null}
 				applying={busy}
 				onReload={() => {
 					setPlan(null);
