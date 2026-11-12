@@ -116,6 +116,14 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 				);
 			await followField(db, step.collection, step.field, null);
 			return;
+		case "removeOption":
+			await entries(
+				step.entries === "empty"
+					? sql`values - ${step.field}::text`
+					: sql`values || jsonb_build_object(${step.field}::text, ${step.entries.change}::text)`,
+				sql<boolean>`values->>${step.field} = ${step.option}`,
+			);
+			return;
 		case "fillField":
 			await entries(
 				sql`values || jsonb_build_object(${step.field}::text, ${JSON.stringify(step.value)}::jsonb)`,

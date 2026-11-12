@@ -21,6 +21,8 @@ export type Choice =
 	| { do: "renameField"; values: "move" | "empty" }
 	| { do: "removeField"; values: "clear" | { move: string } }
 	| { do: "addRequiredField"; fill: unknown | null }
+	/** An option taken out of a conditional field (doc 19): the entries that chose it are left with no choice, or given another option. */
+	| { do: "removeOption"; entries: "empty" | { change: string } }
 	| { do: "removeCollection"; confirm: true }
 	| { do: "removeLocale"; confirm: true };
 
@@ -36,6 +38,7 @@ export type SchemaChange = {
 		| "removeField"
 		| "renameField"
 		| "changeField"
+		| "removeOption"
 		| "addLocale"
 		| "removeLocale"
 		| "changeSource"
@@ -43,6 +46,8 @@ export type SchemaChange = {
 	/** Absent for a change of the languages (doc 04). */
 	collection?: string;
 	field?: string;
+	/** For an option taken out of a conditional field, the option. */
+	option?: string;
 	/** The language added or removed, or the new source language. */
 	locale?: string;
 	/**
@@ -232,15 +237,27 @@ async function planFields(
 				definition.required && !old.required
 					? await planNewField(db, collection, field, definition, "changeField")
 					: ({ id: `changeField:${collection}.${field}`, do: "changeField", collection, field } as SchemaChange);
-			// An option taken out of a choice other fields hang on: how many entries have it chosen. They keep the word until they are saved
-			// again, and until then none of the field's groups is theirs (doc 19).
+			changes.push(change);
+			// An option taken out of a conditional field (doc 19): the review asks what becomes of the entries that chose it, as it asks about a
+			// removed field's values. They are left with no choice, or given one of the options that stay.
 			const gone =
 				old.kind === "select" && definition.kind === "select" && hangsOn(afterCollection, beforeCollection, field)
 					? old.options.filter((option) => !definition.options.includes(option))
 					: [];
-			if (gone.length > 0 && change.count === undefined)
-				change.count = await countEntries(db, collection, sql<boolean>`values->>${field} in (${sql.join(gone)})`);
-			changes.push(change);
+			const stay = definition.kind === "select" ? definition.options : [];
+			for (const option of gone)
+				changes.push({
+					id: `removeOption:${collection}.${field}.${option}`,
+					do: "removeOption",
+					collection,
+					field,
+					option,
+					count: await countEntries(db, collection, sql<boolean>`values->>${field} = ${option}`),
+					choices: [
+						{ do: "removeOption", entries: "empty" },
+						...stay.map((to) => ({ do: "removeOption" as const, entries: { change: to } })),
+					],
+				});
 		}
 	}
 	return changes;
@@ -297,6 +314,8 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 			if (choice.do === "renameField")
 				steps.push({ do: "renameField", collection, from: change.from as string, to: field, values: choice.values });
 			if (choice.do === "removeField") steps.push({ do: "removeField", collection, field, values: choice.values });
+			if (choice.do === "removeOption")
+				steps.push({ do: "removeOption", collection, field, option: String(change.option), entries: choice.entries });
 			if (choice.do === "addRequiredField" && choice.fill !== null)
 				steps.push({ do: "fillField", collection, field, value: choice.fill });
 		}

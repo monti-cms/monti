@@ -74,6 +74,7 @@ const ChoiceInput = z.discriminatedUnion("do", [
 	z.object({ do: z.literal("renameField"), values: z.enum(["move", "empty"]) }),
 	z.object({ do: z.literal("removeField"), values: z.union([z.literal("clear"), z.object({ move: z.string() })]) }),
 	z.object({ do: z.literal("addRequiredField"), fill: z.unknown() }),
+	z.object({ do: z.literal("removeOption"), entries: z.union([z.literal("empty"), z.object({ change: z.string() })]) }),
 	z.object({ do: z.literal("removeCollection"), confirm: z.literal(true) }),
 	z.object({ do: z.literal("removeLocale"), confirm: z.literal(true) }),
 ]);
