@@ -32,6 +32,20 @@ export type TrashAsk = {
 };
 
 /**
+ * What published entries lose when an item they point at goes to the trash: the sentence the question says, by hand and when an undo does it.
+ */
+export function pointingWords(
+	t: ReturnType<typeof useAdmin>["t"],
+	{ count, one, label }: { count: number; one: boolean; label: string },
+): string {
+	return t(one ? "trash.askPointing" : "trash.askPointingMany", {
+		count,
+		label,
+		subject: t(endsClosed(label) ? "list.subjectFinal" : "list.subjectOpen", { name: label }),
+	});
+}
+
+/**
  * Puts rows in the trash, the one way every screen does (doc 11): it asks first only when the site changes (a published entry goes off it, or published entries lose an
  * item they point at), and the toast takes the move back. Files in use stay, and the toast says how many.
  */
@@ -80,16 +94,10 @@ export function useTrashMove() {
 			);
 		if (effects.unpublished > 0 && ask.rows.length === 1 && effects.translations.length > 0)
 			said.push(t("trash.askTranslations", { languages: effects.translations.map(languageName).join(", ") }));
-		if (effects.pointing > 0) {
-			const label = ask.item ?? t("trash.item");
+		if (effects.pointing > 0)
 			said.push(
-				t(ask.rows.length === 1 ? "trash.askPointing" : "trash.askPointingMany", {
-					count: effects.pointing,
-					label,
-					subject: t(endsClosed(label) ? "list.subjectFinal" : "list.subjectOpen", { name: label }),
-				}),
+				pointingWords(t, { count: effects.pointing, one: ask.rows.length === 1, label: ask.item ?? t("trash.item") }),
 			);
-		}
 		return said;
 	};
 	const dialog = (

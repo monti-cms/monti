@@ -1857,6 +1857,45 @@ describe("undo from the log", () => {
 		expect((await reverting).output.reverted).toHaveLength(2);
 	});
 
+	it("13-3 what an undo would do is read before it is done: what it deletes for good, what it puts in the trash again, and that it would refuse", async () => {
+		const monti = site();
+		const plan = (id: string) => read<UndoPlan>("activity.undoPlan", { id }, monti);
+		// A create: its undo leaves nothing, not even in the trash.
+		const made = await write<{ id: string }>(
+			"entries.create",
+			{ collection: "post", title: "잘못 만든 글", slug: "oops" },
+			monti,
+		);
+		const entry = { kind: "entry", id: made.output.id };
+		expect(await plan(made.activityId)).toEqual({
+			restore: [entry],
+			skip: [],
+			partly: [],
+			removes: [entry],
+			trashes: [],
+		});
+		// A save: back to what it held, nothing deleted, nothing thrown away.
+		later(MINUTE);
+		const saved = await save(made.output.id, { title: "고친 제목" }, monti);
+		expect(await plan(saved.activityId)).toMatchObject({ restore: [entry], removes: [], trashes: [] });
+		// The create under that save cannot go back any more: the read refuses as the undo would.
+		await expect(plan(made.activityId)).rejects.toMatchObject({ reason: { key: "activity.allChanged" } });
+		// A restore from the trash: its undo puts the entry in the trash again.
+		later(MINUTE);
+		await write("trash.move", { rows: [entry] }, monti);
+		later(MINUTE);
+		const restored = await write("trash.restore", { rows: [entry] }, monti);
+		expect(await plan(restored.activityId)).toMatchObject({ restore: [entry], removes: [], trashes: [entry] });
+		// Reading changes nothing: the entry is where the restore left it.
+		expect(
+			(await db.selectFrom("entries").select("trashed_at").where("id", "=", entry.id).executeTakeFirstOrThrow())
+				.trashed_at,
+		).toBeNull();
+		// Undone already: nothing to ask about.
+		await write("activity.undo", { id: restored.activityId }, monti);
+		await expect(plan(restored.activityId)).rejects.toMatchObject({ reason: { key: "errors.alreadyUndone" } });
+	});
+
 	it("13-3 a person's write between two undos still breaks the chain: the older line is refused, and the write stays", async () => {
 		const monti = site();
 		const entry = await newPost("처음 제목", "first-post", monti);
@@ -1949,6 +1988,8 @@ describe("undo from the log", () => {
 			restore: [{ kind: "entry", id: second }],
 			skip: [{ kind: "entry", id: first }],
 			partly: [],
+			removes: [],
+			trashes: [],
 			// Only the write of which something went back is named as undone.
 			undone: [expect.any(String)],
 		});
@@ -1992,7 +2033,13 @@ describe("undo from the log", () => {
 		const { preview } = await monti.proposals.add(asking, "activity.undo", { proposal });
 		expect(preview).toMatchObject({ changes: plan.restore, blocked: [] });
 		const undone = await write<UndoPlan>("activity.undo", { proposal }, monti);
-		expect(undone.output).toEqual({ ...plan, partly: [{ kind: "entry", id: entry }], undone: expect.any(Array) });
+		expect(undone.output).toEqual({
+			...plan,
+			partly: [{ kind: "entry", id: entry }],
+			removes: [],
+			trashes: [],
+			undone: expect.any(Array),
+		});
 		// The entry is back at the person's write, not before it: the assistant's first write is under that write and stays.
 		expect([await titleOf(entry), await titleOf(other)]).toEqual(["사람이 고친 제목", "두 번째 글"]);
 		// The newer sitting's line is undone. The older one's only write is under the person's and stays: that line is not marked undone.
@@ -2017,6 +2064,8 @@ describe("undo from the log", () => {
 			restore: [{ kind: "entry", id: entry }],
 			skip: [],
 			partly: [{ kind: "entry", id: entry }],
+			removes: [],
+			trashes: [],
 			// The older write, under the person's, is not undone.
 			undone: [expect.any(String)],
 		});
@@ -2112,11 +2161,12 @@ describe("undo from the log", () => {
 		await publish([id], monti);
 		const moved = await write("trash.move", { rows: [{ kind: "entry", id }] }, monti);
 		expect(await fromSite("first-post")).toBeNull();
-		expect(sent.map((delivery) => delivery.event.type)).toEqual([
-			"entry.saved",
+		// The move's two events are sent side by side, in no fixed order.
+		expect(sent.map((delivery) => delivery.event.type).sort()).toEqual([
 			"entry.published",
-			"entry.unpublished",
+			"entry.saved",
 			"entry.trashed",
+			"entry.unpublished",
 		]);
 		sent.length = 0;
 		await write("activity.undo", { id: moved.activityId }, monti);

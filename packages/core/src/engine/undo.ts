@@ -21,6 +21,16 @@ export type UndoPlan = {
 	 * someone else wrote the record in between and that write stays.
 	 */
 	partly: RecordRef[];
+	/**
+	 * Records among `restore` the undo deletes for good: the writes created them, and taking a create back leaves nothing in the trash. An undo
+	 * leaves no line of its own and cannot be undone, so nothing brings them back.
+	 */
+	removes: RecordRef[];
+	/**
+	 * Records among `restore` the undo puts in the trash again: a restore taken back. What points at them on the site loses them, as when a
+	 * person throws them away by hand.
+	 */
+	trashes: RecordRef[];
 };
 
 type Step = { activityId: string; snapshots: { ref: RecordRef; before: unknown | null }[] };
@@ -156,10 +166,20 @@ export async function planUndo(
 		// A write of which nothing can be put back is no step: it is not marked undone, and no event attaches to it.
 		if (step.snapshots.length > 0) steps.push(step);
 	}
+	// Where each record ends: at the snapshot the oldest of its undone writes holds (the steps are newest first, so the last one put back wins).
+	const endsAt = new Map<string, unknown | null>();
+	for (const step of steps) for (const { ref, before } of step.snapshots) endsAt.set(recordKey(ref), before);
+	const inTrash = (ref: RecordRef, data: unknown) =>
+		data !== null && data !== undefined && (engine.recordKinds.get(ref.kind)?.inTrash?.(data) ?? false);
+	const restore = refs.filter((ref) => backAt.has(recordKey(ref)));
 	return {
-		restore: refs.filter((ref) => backAt.has(recordKey(ref))),
+		restore,
 		skip: refs.filter((ref) => !backAt.has(recordKey(ref))),
 		partly: refs.filter((ref) => backAt.has(recordKey(ref)) && broken.has(recordKey(ref))),
+		removes: restore.filter((ref) => endsAt.get(recordKey(ref)) === null),
+		trashes: restore.filter(
+			(ref) => inTrash(ref, endsAt.get(recordKey(ref))) && !inTrash(ref, current.get(recordKey(ref))?.data),
+		),
 		steps,
 	};
 }

@@ -156,6 +156,7 @@ export const entryRecord = defineRecordKind({
 			...(address === null ? {} : { address }),
 		};
 	},
+	inTrash: (data) => (data as { row?: { trashed_at?: unknown } } | null)?.row?.trashed_at != null,
 	async load(db, ids) {
 		if (ids.length === 0) return [];
 		const rows = await db.selectFrom("entries").selectAll().where("id", "in", ids).execute();

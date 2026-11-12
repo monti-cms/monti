@@ -3,7 +3,7 @@ import { randomUUID } from "../bytes";
 import { cancelDelivery, deliveryCounts, reserveFailedDeliveries, sendDeliveries } from "../engine/deliveries";
 import type { Engine } from "../engine/execute";
 import { lockProposals, markReverted, proposalsOfWrites } from "../engine/proposals";
-import { planUndo, type UndoOf, undoWithEvents } from "../engine/undo";
+import { planUndo, type UndoOf, type UndoPlan, undoWithEvents } from "../engine/undo";
 import { CheckError, ForbiddenError } from "../errors";
 import { type AnyOperation, defineOperation, type Preview } from "../operation";
 import { ACTIVITY_FACETS, ActivityQuery, activityFacets, getActivity, listActivity } from "./list";
@@ -20,6 +20,9 @@ export type DeliveryCounts = { failed: number; since: Date | null; sending: numb
  * sent whether or not the next one is asked for.
  */
 export type DeliveriesRetried = { ids: string[]; sent: number; failed: number; remaining: number; run: string };
+
+/** What `activity.undoPlan` answers: the undo's plan, and the collections of the entries it would put in the trash (to call them by name). */
+export type UndoPlanned = UndoPlan & { trashedCollections: string[] };
 
 /** What the undo takes back: a line of the log, or every write applied from a proposal. */
 const Undo = z.union([z.object({ id: z.string() }), z.object({ proposal: z.string() })]);
@@ -55,6 +58,24 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 				"One line of the activity log with its details: the records it touched as they were then, and each delivery with its receiver's name, state, tries and why its last try failed.",
 			input: z.object({ id: z.string() }),
 			run: (input, ctx) => getActivity(ctx.db, input.id, ctx.now(), engine.receivers),
+		}),
+		defineOperation({
+			name: "activity.undoPlan",
+			kind: "read",
+			description:
+				"What undoing a line of the activity log (`id`) or a proposal's writes (`proposal`) would do, without doing it: the records it would put back (`restore`), the ones written since that it would leave (`skip`, `partly`), the ones it would delete for good because the writes created them (`removes`), and the entries it would put in the trash again (`trashes`). It refuses as the undo would: already undone, past its 30 days, never undoable, or everything written since. An undo cannot itself be undone: read this before proposing one.",
+			input: Undo,
+			async run(input, ctx): Promise<UndoPlanned> {
+				const { steps: _steps, ...plan } = await planUndo(engine, ctx.db, undoOf(input));
+				// As the undo itself refuses: a person is not asked about something that cannot happen.
+				if (plan.restore.length === 0 && plan.skip.length > 0) throw new CheckError({ key: "activity.allChanged" });
+				const entries = plan.trashes.filter((ref) => ref.kind === "entry").map((ref) => ref.id);
+				const rows =
+					entries.length === 0
+						? []
+						: await ctx.db.selectFrom("entries").select("collection").distinct().where("id", "in", entries).execute();
+				return { ...plan, trashedCollections: rows.map((row) => row.collection) };
+			},
 		}),
 		defineOperation({
 			name: "activity.undo",

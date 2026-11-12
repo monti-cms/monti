@@ -14,7 +14,7 @@ export {
 	type LineDelivery,
 	type LineUndo,
 } from "./activity/list";
-export type { DeliveriesRetried, DeliveryCounts } from "./activity/operations";
+export type { DeliveriesRetried, DeliveryCounts, UndoPlanned } from "./activity/operations";
 export type { DevProof } from "./auth/dev-bypass";
 export type { AuthSettings } from "./auth/operations";
 export type { Session } from "./auth/session";

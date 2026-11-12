@@ -237,7 +237,7 @@ export function ActivityScreen({
 				)}
 				{/* Not offered while an undo runs: a second press would be refused right after the first went through. */}
 				{line.undo.state === "open" && !undo.pending && (
-					<Item onClick={() => void undo.run(line.id)}>
+					<Item onClick={() => void undo.ask(line.id)}>
 						<Undo aria-hidden />
 						{t("activity.undo")}
 					</Item>
@@ -469,9 +469,11 @@ export function ActivityScreen({
 					onClose={() => setState({ ...state, open: null })}
 					onGone={() => setState({ ...state, open: null }, { replace: true })}
 					onRetry={(ids) => void again.send(ids)}
-					onUndo={() => void undo.run(panel)}
+					onUndo={() => void undo.ask(panel)}
 				/>
 			)}
+			{/* The undo's question, for the row's ⋯ and the panel's alike. */}
+			{undo.dialog}
 		</Inline>
 	);
 }

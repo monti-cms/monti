@@ -1,4 +1,5 @@
 import type { ActivityList } from "@monti-cms/core";
+import { toast as toasts } from "@monti-cms/ui";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { dragPath, dropDrag, middleOf, rowHeights, spillingCells } from "../../../../../testing/input";
@@ -21,6 +22,12 @@ const menuOf = async (words: string) => {
 /** The newest toast that says this: earlier tests' toasts may still be on the page, and the newest is first. */
 const toast = (text: string) => page.getByRole("listitem").filter({ hasText: text }).first();
 const dialog = () => page.getByRole("alertdialog");
+/** A row's ⋯ › "되돌리기", and "되돌리기" in the question it asks. */
+const undoFromMenu = async (words: string) => {
+	await userEvent.click((await menuOf(words)).getByRole("menuitem", { name: "되돌리기" }));
+	await expect.element(dialog()).toHaveTextContent("되돌릴까요?");
+	await userEvent.click(dialog().getByRole("button", { name: "되돌리기" }));
+};
 const sidebar = (name: RegExp) => page.getByRole("navigation").getByRole("button", { name });
 const sidebarLog = () => sidebar(/^활동 기록/);
 const banner = () => page.getByRole("status").filter({ hasText: "전송 실패" });
@@ -342,7 +349,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row(FAILED)).toBeVisible();
 	});
 
-	it("[flow 2·17] a row's ⋯ undoes it without asking: the assistant's work goes back and its row says when; a person's own publish goes off the site", async () => {
+	it("[flow 2·17] a row's ⋯ undoes it once the question is answered: the assistant's work goes back and its row says when; a person's own publish goes off the site", async () => {
 		const drawn = draw(stories.Log);
 		await drawn.run();
 		const { site, ids } = drawn.loaded();
@@ -351,7 +358,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 				.summary;
 		expect(await summaryOf(ids.first)).toBe("한 줄 요약");
 		// The second post was published since the assistant wrote it: that one stays, and the toast says one did.
-		await userEvent.click((await menuOf(ASSISTANT)).getByRole("menuitem", { name: "되돌리기" }));
+		await undoFromMenu(ASSISTANT);
 		await expect.element(row(ASSISTANT)).toHaveTextContent(/되돌림 \d\d:\d\d/);
 		await expect.element(toast("그 사이 고쳐진 1개는 그대로 둠")).toBeVisible();
 		expect(await summaryOf(ids.first)).toBeUndefined();
@@ -365,7 +372,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const published = () =>
 			site.db.selectFrom("entry_published").select("entry_id").where("entry_id", "=", ids.second).execute();
 		expect(await published()).toHaveLength(1);
-		await userEvent.click((await menuOf(FAILED)).getByRole("menuitem", { name: "되돌리기" }));
+		await undoFromMenu(FAILED);
 		await expect.element(row(FAILED)).toHaveTextContent(/되돌림 \d\d:\d\d/);
 		expect(await published()).toHaveLength(0);
 	});
@@ -375,7 +382,9 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await drawn.run();
 		// The post made first was published and written by the assistant since: nothing of its making is left as it was.
 		await userEvent.click((await menuOf('"첫 번째 글" 만듦')).getByRole("menuitem", { name: "되돌리기" }));
+		// The reason stands in place of the question: nobody is asked about an undo that cannot happen.
 		await expect.element(toast("그 사이 다시 고쳐졌습니다.")).toBeVisible();
+		await expect.element(dialog()).not.toBeInTheDocument();
 		await expect.element(row('"첫 번째 글" 만듦')).not.toHaveTextContent("되돌림");
 		await expect.element((await menuOf('"첫 번째 글" 만듦')).getByRole("menuitem", { name: "되돌리기" })).toBeVisible();
 	});
@@ -646,5 +655,50 @@ describe("the activity log (doc 13, flow 12)", () => {
 		// The side panel says the same word for a delivery that went.
 		await userEvent.click(row(FAILED).getByText("post/react-19"));
 		await expect.element(panel()).toHaveTextContent("상태보냄");
+	});
+	it("the log's 되돌리기 asks once, with what the row cannot show: only that it cannot be redone, that what the line made is deleted for good, or that published posts lose an item", async () => {
+		// The toasts of the tests before this one stay on the page (a test's toasts do not time out) and would stand over the question.
+		toasts.dismiss();
+		const drawn = draw(stories.ItemRestored);
+		await drawn.run();
+		const { site } = drawn.loaded();
+		const ask = async (words: string) =>
+			userEvent.click((await menuOf(words)).getByRole("menuitem", { name: "되돌리기" }));
+		const confirm = () => dialog().getByRole("button", { name: "되돌리기" });
+
+		// A save: nothing is lost that the row does not say, so only that an undo cannot be redone.
+		await ask('"고친 글" 저장');
+		await expect.element(dialog()).toHaveTextContent("되돌릴까요?");
+		await expect.element(dialog()).toHaveTextContent("되돌리면 다시 돌릴 수 없습니다.");
+		const ground = () => getComputedStyle(confirm().element()).backgroundColor;
+		const plain = ground();
+		// Closed without undoing: nothing changed, and focus is back on the row's ⋯.
+		await userEvent.click(dialog().getByRole("button", { name: "취소" }));
+		await expect.element(dialog()).not.toBeInTheDocument();
+		await expect.element(row('"고친 글" 저장')).not.toHaveTextContent("되돌림");
+		await expect.element(row('"고친 글" 저장').getByRole("button", { name: "행 메뉴" })).toHaveFocus();
+
+		// A create: its undo deletes what was made, for good. The confirming button is the dangerous one, as "영구 삭제" has it.
+		await ask("Blog Assets 폴더 만듦");
+		await expect.element(dialog()).toHaveTextContent("이 작업으로 만든 것을 영구 삭제합니다.");
+		expect(ground()).not.toBe(plain);
+		await userEvent.keyboard("{Escape}");
+		await expect.element(dialog()).not.toBeInTheDocument();
+		expect(await site.db.selectFrom("folders").select("id").where("name", "=", "Blog Assets").execute()).toHaveLength(
+			1,
+		);
+
+		// A restore of a category a published post points at: the undo throws it away again, in the words throwing it away by hand says.
+		await ask('"개발" 복원');
+		await expect.element(dialog()).toHaveTextContent("발행된 글 1편에서 이 카테고리가 빠집니다.");
+		expect(ground()).toBe(plain);
+		await userEvent.click(confirm());
+		await expect.element(row('"개발" 복원')).toHaveTextContent(/되돌림 \d\d:\d\d/);
+		const item = await site.db
+			.selectFrom("entries")
+			.select("trashed_at")
+			.where("collection", "=", "category")
+			.executeTakeFirstOrThrow();
+		expect(item.trashed_at).not.toBeNull();
 	});
 });

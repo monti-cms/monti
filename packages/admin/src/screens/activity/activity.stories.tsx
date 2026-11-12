@@ -212,6 +212,34 @@ export const TwoOnOneRow: Story = {
 	}),
 };
 
+/**
+ * A category that a published post points at was thrown away and restored. Undoing that restore puts it in the trash again, and the post
+ * loses it on the site: the undo's question says so, in the sentence throwing it away by hand says.
+ */
+export const ItemRestored: Story = {
+	loaders: log("#/activity", {
+		also: async (site, ids) => {
+			const { monti } = site;
+			await run(monti, "collections.updateAdminValues", { collection: "category", values: { label: "카테고리" } });
+			const made = await run<{ output: { group: string; locales: Record<string, { id: string }> } }>(
+				monti,
+				"items.saveGroup",
+				{ collection: "category", locales: { ko: { title: "개발", slug: "dev" } } },
+			);
+			await run(monti, "relations.edit", {
+				collection: "post",
+				entryIds: [ids.first],
+				field: "category",
+				set: made.output.group,
+			});
+			await run(monti, "entries.publish", { ids: [ids.first] });
+			const item = { kind: "entry", id: made.output.locales.ko?.id };
+			await run(monti, "trash.move", { rows: [item] });
+			await run(monti, "trash.restore", { rows: [item] });
+		},
+	}),
+};
+
 /** Flow 12·10: a site with no receiver. The log has no delivery column, and nothing counts. */
 export const NoReceivers: Story = { loaders: log("#/activity", { receivers: false }) };
 
