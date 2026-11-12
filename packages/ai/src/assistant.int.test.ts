@@ -2366,6 +2366,98 @@ describe("what the review of the run's hold found (#481)", () => {
 		expect(spot.of("proposal")).toEqual([]);
 	});
 
+	it("10-4 a request whose run a new message in its conversation found dead writes nothing when its service answers at last", async () => {
+		const monti = site();
+		await withKey(monti);
+		const id = await newPost(monti, "글", ["처음 글을 발행하고 나서 만들기로 한 메모입니다."]);
+		let late = () => {};
+		let answer = () => {};
+		model.add(
+			{
+				calls: [edit(id, await version(id), 6, "")],
+				hold: new Promise<void>((resolve) => {
+					late = resolve;
+				}),
+			},
+			{
+				text: "새 요청의 답",
+				hold: new Promise<void>((resolve) => {
+					answer = resolve;
+				}),
+			},
+			// Asked for only by a request that goes on with a run that is not its own.
+			{ text: "다듬었어요." },
+		);
+		const hung = ask(monti, { request: "더 짧게 다듬어 줘" });
+		while (model.turns.length < 1) await tick();
+		const [first] = await runs();
+		// The first request hangs in its service past its hold. The person writes again in the conversation: the dead run is marked cut
+		// short, a new run starts, and the person says something to it.
+		clock = new Date(clock.getTime() + 91_000);
+		const asking = ask(monti, { conversation: first.conversation_id, request: "제목도 봐 줘" });
+		while (model.turns.length < 2) await tick();
+		const second = (await runs()).find((run) => run.id !== first.id);
+		if (!second) throw new Error("The new message started no run.");
+		await monti.run("assistant.say", { run: second.id, text: "발행된 글만 봐 줘" }, admin);
+		const messages = () =>
+			db.selectFrom("run_messages").select(["run_id", "message"]).orderBy("run_id").orderBy("position").execute();
+		const before = await messages();
+
+		// The first request's service answers, with a write to propose. The run is nobody's: it is not this request's to write, or to end.
+		late();
+		expect((await hung).end).toEqual({ type: "end", status: "interrupted", reason: "connection", untaken: [] });
+		expect(model.turns).toHaveLength(2);
+		expect(await messages()).toEqual(before);
+		expect(await db.selectFrom("monti_proposal_item").select("id").execute()).toEqual([]);
+		expect((await runs()).find((run) => run.id === first.id)).toMatchObject({
+			status: "interrupted",
+			lease_token: null,
+			leased_until: null,
+			turns: 0,
+			pending: null,
+		});
+		// The new run is as it was: still at work, with the word said to it.
+		expect((await runs()).find((run) => run.id === second.id)).toMatchObject({ status: "running" });
+		expect(await inbox()).toEqual([{ text: "발행된 글만 봐 줘" }]);
+
+		answer();
+		expect((await asking).end).toMatchObject({ status: "done", untaken: ["발행된 글만 봐 줘"] });
+		const read = await conversation(monti, first.conversation_id);
+		expect(read.runs.map((run) => [run.status, run.parts])).toEqual([
+			["interrupted", []],
+			["done", [{ type: "text", text: "새 요청의 답" }]],
+		]);
+	});
+
+	it("10-1 a word said at the moment the run ends is not left on an ended run: the run's end waits for it, and hands it back", async () => {
+		let release = () => {};
+		let working: ReturnType<typeof ask> | null = null;
+		// Right after `assistant.say` has read that the run is at work, and before it stores the word: the service answers and the run goes
+		// to its end. The end is given a moment to get there if nothing makes it wait for the word.
+		const moment = meanwhile("SelectQueryNode", "status", 1, async () => {
+			release();
+			await Promise.race([working, new Promise((resolve) => setTimeout(resolve, 200))]);
+		});
+		const monti = site({ db: moment.db });
+		await withKey(monti);
+		model.add({
+			text: "네.",
+			hold: new Promise<void>((resolve) => {
+				release = resolve;
+			}),
+		});
+		working = ask(monti, { request: "정리해 줘" });
+		while (model.turns.length < 1) await tick();
+		const [run] = await runs();
+		moment.from();
+		const said = (await monti.run("assistant.say", { run: run.id, text: "발행된 글만 봐 줘" }, admin)) as Written<{
+			queued: boolean;
+		}>;
+		expect(said.output).toEqual({ queued: true });
+		expect((await working).end).toMatchObject({ status: "done", untaken: ["발행된 글만 봐 줘"] });
+		expect(await inbox()).toEqual([]);
+	});
+
 	it("10-1 the clean-up does not remove a conversation from under a run at work, however long ago it was opened; one nobody works in goes", async () => {
 		const monti = site();
 		await withKey(monti);

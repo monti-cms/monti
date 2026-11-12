@@ -404,7 +404,15 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 					"Say something more to a run that is going: it is taken into its next turn. If the run ends first, the run's end hands it back. Only a person does it.",
 				input: z.object({ run: z.string(), text: z.string().trim().min(1).max(20_000) }),
 				async run(input, ctx) {
-					const run = await ctx.db.selectFrom("runs").select("status").where("id", "=", input.run).executeTakeFirst();
+					// The run's row is held to the end of this write (the operation's transaction): a run that ends meanwhile waits for the word and
+					// hands it back with its end, or has ended before this reads it. Unheld, the word could be stored on a run that had just
+					// ended, where nothing takes it.
+					const run = await ctx.db
+						.selectFrom("runs")
+						.select("status")
+						.where("id", "=", input.run)
+						.forShare()
+						.executeTakeFirst();
 					if (run?.status !== "running" && run?.status !== "waiting") throw new CheckError({ key: "assistant.ended" });
 					await ctx.db
 						.insertInto("run_inbox")

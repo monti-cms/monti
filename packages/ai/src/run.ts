@@ -1074,11 +1074,15 @@ async function open(monti: Monti, input: RunInput, until: Date): Promise<RunRow>
 
 	// One chat run at a time in a conversation; requests at items' places run beside it and beside each other (doc 10).
 	if (kind === "chat" && conversation) {
+		// A run whose request died is cut short here, and is nobody's from here on: the request that held it may only have hung, and with
+		// its name still on the run it would come back and write beside the run this message starts.
 		await db
 			.updateTable("runs")
 			.set({
 				status: "interrupted",
 				ended: JSON.stringify({ status: "interrupted", reason: "connection" } satisfies RunEnd),
+				leased_until: null,
+				lease_token: null,
 			})
 			.where("conversation_id", "=", conversation.id)
 			.where("status", "=", "running")
