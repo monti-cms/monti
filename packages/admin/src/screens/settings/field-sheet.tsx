@@ -626,7 +626,11 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 					? pickRow(
 							t("settings.field.locale"),
 							"field-locale",
-							LOCALES.map((value) => ({ value, label: t(`settings.field.locale.${value}`) })),
+							// A conditional field is chosen once, on the source: not per language (doc 19).
+							LOCALES.filter((value) => !(form.kind === "conditional" && value === "perLocale")).map((value) => ({
+								value,
+								label: t(`settings.field.locale.${value}`),
+							})),
 							form.locale,
 							(locale) => set({ locale: locale as LocaleMode }),
 						)

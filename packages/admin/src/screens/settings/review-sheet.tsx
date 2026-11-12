@@ -84,6 +84,8 @@ const deletes = (change: SchemaChange, pick: Pick | undefined) =>
 	change.do === "removeLocale" ||
 	(change.do === "removeField" && pick?.radio !== "move") ||
 	(change.do === "removeOption" && pick?.radio === "empty") ||
+	// A field moved into an option is cleared where another option is chosen: here, and on the live site that follows the same change.
+	change.do === "moveField" ||
 	(change.do === "renameField" && pick?.radio === "empty");
 
 /**
@@ -431,6 +433,31 @@ function Body({
 							<RadioItem value="clear" label={t("settings.review.clearValues")} hint={count(change.count)} />
 						</RadioGroup>
 						{current?.radio !== "move" ? <ChangeNote danger>{t("settings.review.valuesGo")}</ChangeNote> : null}
+					</ChangeGroup>
+				);
+			}
+			case "moveField": {
+				const field = change.field as string;
+				const under = definition(change) as
+					| (FieldDefinition & { under?: { field: string; option: string } })
+					| undefined;
+				const host = under?.under?.field ?? "";
+				return (
+					<ChangeGroup
+						key={change.id}
+						kind="edit"
+						tag={t("changes.changed")}
+						title={fieldLabel(c, field)}
+						identifier={`${field} → ${host} · ${change.option}`}
+					>
+						<ChangeLines>
+							<ChangeLine
+								what={t("settings.review.movedTo")}
+								then={`${fieldLabel(c, host)} · ${optionLabel(c, host, change.option ?? "")}`}
+							/>
+							<ChangeLine what={t("settings.review.lose")} then={count(change.count) ?? ""} />
+						</ChangeLines>
+						<ChangeNote danger>{t("settings.review.othersLose")}</ChangeNote>
 					</ChangeGroup>
 				);
 			}

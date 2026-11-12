@@ -1,6 +1,7 @@
 import {
 	cleanMediaValue,
 	type EntryState,
+	notChosenFields,
 	type PublishTask,
 	publicPath,
 	storedFields,
@@ -138,8 +139,18 @@ export function EntryEditor({
 	const { t, language, apiBase, templates: templatesOn } = useAdmin();
 	const languageName = useLanguageName();
 	const source = useMemo(() => ({ kind: "entry" as const, id }), [id]);
-	const editor = useEntryEditor(source);
 	const schema = useRead<SchemaRead>("schema.read");
+	const structure = schema.data?.schema;
+	// A translation's choice is its source's, which its own values do not hold: nothing of it is taken for another option's.
+	const sourceLocale = structure?.locales.source;
+	const notChosen = useCallback(
+		(values: Record<string, unknown>, locale: string) =>
+			structure && locale === sourceLocale
+				? notChosenFields(structure.collections[collection], values)
+				: new Set<string>(),
+		[structure, sourceLocale, collection],
+	);
+	const editor = useEntryEditor(source, notChosen);
 	const catalogs = useBodyCatalogs(collection);
 	const [panel, setPanel] = useState(true);
 	const [tab, setTab] = useState(0);

@@ -490,12 +490,12 @@ describe("settings › collections: the options of a choice in the review (docs 
 		await expect.element(sheetNow.getByText("분위기 · 시끌")).toBeVisible();
 		await expect.element(sheetNow.getByText("2편 · 공개된 글 1편")).toBeVisible();
 		await expect.element(sheetNow.getByText("저장된 데이터는 바뀌지 않습니다.")).not.toBeInTheDocument();
-		// Emptying is the default where the field may be empty: it throws values away, so the button says so.
-		await expect.element(sheetNow.getByRole("radio", { name: "비우기" })).toBeChecked();
+		// Changing is the default, to the first option that stays: emptying throws values away, so it is chosen, and the button says so.
+		await expect.element(sheetNow.getByRole("radio", { name: "바꾸기" })).toBeChecked();
+		await expect.element(sheetNow.getByRole("combobox", { name: "바꾸기" })).toHaveTextContent("차분");
+		await userEvent.click(sheetNow.getByRole("radio", { name: "비우기" }));
 		await expect.element(sheetNow.getByRole("button", { name: "지우고 적용" })).toBeVisible();
 		await userEvent.click(sheetNow.getByRole("radio", { name: "바꾸기" }));
-		await userEvent.click(sheetNow.getByRole("combobox", { name: "바꾸기" }));
-		await userEvent.click(page.getByRole("option", { name: "차분" }));
 		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
 		await expect.element(sheet()).not.toBeInTheDocument();
 		expect((await stored(made.loaded(), "entry_published"))["loud-video"]).toMatchObject({ mood: "calm" });

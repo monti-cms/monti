@@ -936,6 +936,23 @@ describe("a conditional field in the property panel (doc 19)", () => {
 		expect(await stored(loaded)).not.toHaveProperty("videoCredit");
 	});
 
+	it("19-14 a value typed in the old option's field, then the choice changed and saved: the save goes through, and the old option's values are gone as the line said", async () => {
+		const made = on("conditional");
+		await made.run();
+		await opened();
+		await userEvent.fill(field("동영상 주소"), "https://example.dev/changed.mp4");
+		await userEvent.click(page.getByRole("combobox", { name: "글 종류" }));
+		await userEvent.click(page.getByRole("option", { name: "링크" }));
+		await expect.element(page.getByText("저장하면 동영상의 값 2개가 지워집니다")).toBeVisible();
+		await save();
+		await saveCell("저장됨");
+		await expect.element(page.getByText(/지워집니다/)).not.toBeInTheDocument();
+		const values = await stored(made.loaded());
+		expect(values).toMatchObject({ format: "link" });
+		expect(values).not.toHaveProperty("videoUrl");
+		expect(values).not.toHaveProperty("videoCredit");
+	});
+
 	it("19-6 the choice put back before saving shows the values again, and nothing is said", async () => {
 		await on("conditional").run();
 		await opened();
