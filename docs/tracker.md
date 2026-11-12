@@ -45,7 +45,7 @@
 | 18 | 6 | 대기 | |
 | 14 | 7 | 만드는 중 | #469(키와 모델의 core), API 키 화면(`feat/14-keys-screen`). 데이터와 플러그인은 아직 |
 | 10 | 8 | 만드는 중 | core(실행 엔진, 제안 검토와 적용, 빠른 작업)는 있다(`feat/10-assistant`). 화면은 화면 승인을 기다린다 |
-| 20 | 9 | 만드는 중 | 설계(`docs/20-release-design`). 릴리스 묶음(T14)부터 |
+| 20 | 9 | 만드는 중 | 설계(#482), 릴리스 묶음(T14, #483), `monti init`과 `monti doctor`(T82, #484), S3 저장소와 직접 올리기(T102, #485). "9단계 전"의 남은 일이 끝나야 끝이다 |
 
 ## 남은 일
 
@@ -135,7 +135,7 @@
 
 | 번호 | 할 일 | PR |
 |---|---|---|
-| T102 | S3 호환 저장소 어댑터(`@monti-cms/storage-s3`, `s3Storage()`): `S3_ENDPOINT` · `S3_FORCE_PATH_STYLE`, 지역 `auto`, ACL 없음. 브라우저가 저장소로 직접 올리는 길(`POST …/media/ticket`, 서명된 `PUT`, `POST …/media/sealed`: 서버가 저장소에 든 파일을 보고 다르면 지운다). `doctor`의 `storage/cors`, `init --storage s3`. 릴리스 묶음과 증명에 들어간다 | PRNUM |
+| T102 | S3 호환 저장소 어댑터(`@monti-cms/storage-s3`, `s3Storage()`): `S3_ENDPOINT` · `S3_FORCE_PATH_STYLE`, 지역 `auto`, ACL 없음. 브라우저가 저장소로 직접 올리는 길(`POST …/media/ticket`, 서명된 `PUT`, `POST …/media/sealed`: 서버가 저장소에 든 파일을 보고 다르면 지운다). `doctor`의 `storage/cors`, `init --storage s3`. 릴리스 묶음과 증명에 들어간다 | #485 |
 | T82 | `monti init`(있던 Next 사이트에 Monti 파일을 쓰고 남은 일을 말한다)과 `monti doctor`(설정 점검). `monti` 명령이 사이트의 환경 파일을 Next의 순서로 읽는다. 새 사이트 증명이 `monti init --yes`와 `monti doctor`를 돌린다. 있던 글 알아보기와 플러그인 고르기는 14번(T198), 저장소의 CORS 점검은 T102와 함께 | #484 |
 | T14 | 릴리스 묶음: 다섯 패키지가 모두 빌드되고, 패키지마다 압축 파일 하나로 낸다(`scripts/pack-release.mjs`). 저장소 밖의 새 Next 앱이 묶음에서 설치해 도는 것(`scripts/try-release.mjs`), `publint`, `@arethetypeswrong/cli`가 릴리스의 관문이고 CI가 push마다 돌린다. `release.yml`은 태그에서 GitHub 릴리스를 만든다 | #483 |
 | T133 | 읽기 전용 본문(보관 글, 휴지통 글)에서 키보드가 이미지에 선다. 눌렀을 때 도구 행이 뜨는 블록(지금은 이미지뿐)이 글 차례대로 Tab 자리이고, 닿은 이미지는 보통 포커스 고리를 그린다. Enter · Space나 포인터가 그 이미지를 골라 쓰는 편집기와 같은 2px 진한 선과 도구 행이 뜨고(키로 골랐으면 포커스가 "설정"으로 간다), Escape가 카드 다음에 도구 행을 닫으며 고른 것을 푼다. 포커스는 이미지에 남는다. 키보드가 있는 곳과 고른 것은 두 상태다. 쓰는 것은 닿지 않는다(2026-11-12 결정). 쓰는 편집기는 그대로다 | #475 |
