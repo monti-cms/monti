@@ -41,19 +41,51 @@ export function nextStop(after: Element) {
 	);
 }
 
+/** What a person does next with their own hands: after it, nothing is moved under them. */
+const THEIR_OWN = ["keydown", "pointerdown", "focusin"] as const;
+
+/** How long a view that takes another's place may take to draw its first control before the hand-off is let go. */
+const DRAWN_WITHIN = 10_000;
+
+/**
+ * Gives the focus to the page's first control, now or as soon as the page draws one: a view that takes another's place may draw nothing until
+ * its read is in (the comparison), and the focus handed to it must not be lost in that wait. Let go when the person does something of their
+ * own first (a key, a press, a focus elsewhere), or when nothing is drawn in `DRAWN_WITHIN`.
+ */
+function focusFirstStopWhenDrawn() {
+	const first = firstStop();
+	if (first) return first.focus();
+	const letGo = () => {
+		drawn.disconnect();
+		clearTimeout(limit);
+		for (const event of THEIR_OWN) removeEventListener(event, letGo, true);
+	};
+	const drawn = new MutationObserver(() => {
+		const found = firstStop();
+		if (!found) return;
+		letGo();
+		if (document.activeElement === document.body) found.focus();
+	});
+	drawn.observe(document.body, { childList: true, subtree: true });
+	const limit = setTimeout(letGo, DRAWN_WITHIN);
+	for (const event of THEIR_OWN) addEventListener(event, letGo, true);
+}
+
 /**
  * Gives the focus to the text being written: the body, or the field with `titleId` when the body is not there; and when neither is (the
- * editor gave way to another view: the comparison), to that view's first control. Two frames on, not now: what took the control away may make
- * the body anew (this browser's copy loaded or dropped), and the focus belongs in the one that stays. If the person has gone elsewhere by then,
- * nothing moves.
+ * editor gave way to another view: the comparison), to that view's first control, once it is drawn. Two frames on, not now: what took the
+ * control away may make the body anew (this browser's copy loaded or dropped), and the focus belongs in the one that stays. If the person has
+ * gone elsewhere by then, nothing moves.
  */
 export function focusText(body: () => Editor | null, titleId: string) {
 	requestAnimationFrame(() =>
 		requestAnimationFrame(() => {
 			if (document.activeElement !== document.body) return;
 			const view = body();
-			if (view && !view.isDestroyed) view.commands.focus();
-			else (document.getElementById(titleId) ?? firstStop())?.focus();
+			if (view && !view.isDestroyed) return view.commands.focus();
+			const title = document.getElementById(titleId);
+			if (title) title.focus();
+			else focusFirstStopWhenDrawn();
 		}),
 	);
 }

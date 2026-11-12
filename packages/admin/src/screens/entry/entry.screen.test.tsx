@@ -160,6 +160,28 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(button("편집기로")).toHaveFocus();
 	});
 
+	it("the comparison draws nothing until its read is in: however long that takes, the focus is on its first control once it is drawn", async () => {
+		const story = from(entry.BrowserCopy);
+		await story.run();
+		await opened();
+		// A slow server: the comparison's own read of the entry answers half a second late, long after the editor is gone.
+		const { site } = story.loaded();
+		const run = site.monti.run.bind(site.monti);
+		let slowed = 0;
+		site.monti.run = (async (name: string, ...rest: unknown[]) => {
+			if (name === "entries.get") {
+				slowed += 1;
+				await new Promise((answered) => setTimeout(answered, 500));
+			}
+			return (run as (...all: unknown[]) => unknown)(name, ...rest);
+		}) as typeof site.monti.run;
+		await tabTo("비교하기");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
+		expect(slowed).toBeGreaterThan(0);
+		await expect.element(button("편집기로")).toHaveFocus();
+	});
+
 	it("a save the keyboard asked of the save cell and the server refused leaves the cell, and the focus on it", async () => {
 		const story = on("draft");
 		await story.run();
