@@ -31,6 +31,11 @@ const schema = defineSchema({
 					},
 				},
 				note: { kind: "text" },
+				extra: {
+					kind: "conditional",
+					options: ["none", "quote"],
+					fields: { quote: { quoteText: { kind: "text" } } },
+				},
 			},
 		},
 	},
@@ -149,7 +154,8 @@ describe("an option renamed (docs 12 and 19)", () => {
 	it("19-8 without the rename named, the same draft is an option taken out: it is asked about, not rewritten unsaid", async () => {
 		await newPost({ mood: "loud" });
 		const plan = await planSchema(db, schema, withFields({ mood: { kind: "select", options: ["calm", "noisy"] } }));
-		expect(plan.map((change) => change.id)).toEqual(["removeOption:post.mood.loud"]);
+		// The added word has the field's own line; the one taken out is asked about.
+		expect(plan.map((change) => change.id)).toEqual(["changeField:post.mood", "removeOption:post.mood.loud"]);
 	});
 
 	it("19-8 a conditional field's option renamed takes its group of fields with it untouched: the site reads the new word and the same values", async () => {
@@ -187,9 +193,10 @@ describe("an option taken out while entries chose it (docs 12 and 19)", () => {
 				option: "loud",
 				count: 1,
 				published: 1,
+				// Changing first: it is the default, and emptying is chosen, not fallen into.
 				choices: [
-					{ do: "removeOption", entries: "empty" },
 					{ do: "removeOption", entries: { change: "calm" } },
+					{ do: "removeOption", entries: "empty" },
 				],
 			},
 		]);
@@ -300,5 +307,96 @@ describe("a conditional field's option taken out, its entries changed to another
 		expect(await draftOf(video)).toEqual({ level: "easy", format: "link", linkUrl: "https://example.dev/v.mp4" });
 		// The article is not a link post: the site is given no address of a kind it is not.
 		expect(await publishedOf(noted)).toEqual({ level: "easy", format: "article" });
+	});
+});
+
+describe("a field of an option is its option's entries' only (doc 19)", () => {
+	const format = post.fields.format as Extract<FieldDefinition, { kind: "conditional" }>;
+
+	it("19-12 a required field added to an option is asked of the entries that chose that option, and filled in them only: the others, on the site too, get no value of an option that is not theirs", async () => {
+		const video = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" }, true);
+		const article = await newPost({ format: "article" }, true);
+		await newPost({ format: "link", linkUrl: "https://example.dev" }, false);
+		const after = withFields({
+			format: {
+				...format,
+				fields: { ...format.fields, video: { ...format.fields.video, caption: { kind: "text", required: true } } },
+			},
+		});
+		const plan = await planSchema(db, schema, after);
+		expect(lineOf(plan, "addField:post.caption")).toMatchObject({ count: 1, published: 1 });
+		await apply(after, { "addField:post.caption": { do: "addRequiredField", fill: "설명" } });
+		expect(await publishedOf(video)).toMatchObject({ caption: "설명" });
+		expect(await draftOf(video)).toMatchObject({ caption: "설명" });
+		expect(await publishedOf(article)).not.toHaveProperty("caption");
+		expect(await draftOf(article)).not.toHaveProperty("caption");
+	});
+
+	it("19-13 a field moved into an option is cleared from the entries that chose another, in the draft and on the site, and the review says how many; those that chose it keep it", async () => {
+		const video = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4", note: "영상 메모" }, true);
+		const link = await newPost({ format: "link", linkUrl: "https://example.dev", note: "링크 메모" }, true);
+		// `note`, on its own until now, becomes the link option's; `videoUrl` goes from the video option to the link option.
+		const after = withFields({
+			note: undefined,
+			format: {
+				...format,
+				fields: {
+					link: {
+						...format.fields.link,
+						note: { kind: "text" },
+						...(format.fields.video?.videoUrl ? { videoUrl: format.fields.video.videoUrl } : {}),
+					},
+				},
+			},
+		});
+		const plan = await planSchema(db, schema, after);
+		expect(lineOf(plan, "moveField:post.note")).toMatchObject({ option: "link", count: 1, published: 1 });
+		expect(lineOf(plan, "moveField:post.videoUrl")).toMatchObject({ option: "link", count: 1, published: 1 });
+		expect(plan.some((change) => change.do === "changeField")).toBe(false);
+		await apply(after);
+		expect(await publishedOf(video)).toEqual({ level: "easy", format: "video" });
+		expect(await draftOf(video)).toEqual({ level: "easy", format: "video" });
+		expect(await publishedOf(link)).toEqual({
+			level: "easy",
+			format: "link",
+			linkUrl: "https://example.dev",
+			note: "링크 메모",
+		});
+	});
+
+	it("19-13 an option emptied leaves none of its group's values: its fields are removed fields, and a value moved into another option's field goes to no entry that has not chosen it", async () => {
+		const quoted = await newPost({ extra: "quote", quoteText: "인용" }, true);
+		const extra = post.fields.extra as Extract<FieldDefinition, { kind: "conditional" }>;
+		const after = withFields({ extra: { ...extra, options: ["none"], fields: {} } });
+		await apply(after, {
+			"removeField:post.quoteText": { do: "removeField", values: { move: "linkUrl" } },
+			"removeOption:post.extra.quote": { do: "removeOption", entries: "empty" },
+		});
+		expect(await publishedOf(quoted)).toEqual({ level: "easy", format: "article" });
+		expect(await draftOf(quoted)).toEqual({ level: "easy", format: "article" });
+	});
+
+	it("19-13 whatever a stored copy still holds, the site and the list give no value of an option that is not chosen, and the list does not filter on it", async () => {
+		const id = await newPost({ format: "article" }, true);
+		// As older data, a translation or an undone save can leave it: a video address on an article.
+		for (const table of ["entries", "entry_published"] as const)
+			await sql`update ${sql.table(table)} set values = values || '{"videoUrl": "https://example.dev/stray.mp4"}'::jsonb`.execute(
+				db,
+			);
+		const slug = (await db.selectFrom("entries").select("slug").where("id", "=", id).executeTakeFirstOrThrow()).slug;
+		const read = (await createReader({ db, schema }).entry({ collection: "post", locale: "ko", slug })) as {
+			entry: { values: Record<string, unknown> };
+		};
+		expect(read.entry.values).toEqual({ level: "easy", format: "article" });
+		const listed = (await site().run("entries.query", { collection: "post" }, admin)) as {
+			rows: { values: Record<string, unknown> }[];
+		};
+		expect(listed.rows[0]?.values).not.toHaveProperty("videoUrl");
+		const empty = (await site().run(
+			"entries.query",
+			{ collection: "post", filters: [{ on: "empty", field: "videoUrl" }] },
+			admin,
+		)) as { total: number };
+		expect(empty.total).toBe(1);
 	});
 });

@@ -44,6 +44,7 @@ export type SchemaChange = {
 		| "changeField"
 		| "removeOption"
 		| "renameOption"
+		| "moveField"
 		| "addLocale"
 		| "removeLocale"
 		| "changeSource"
@@ -51,7 +52,10 @@ export type SchemaChange = {
 	/** Absent for a change of the languages (doc 04). */
 	collection?: string;
 	field?: string;
-	/** For an option taken out of a field, the option; for a renamed one, its new word (`from` is the old one). */
+	/**
+	 * For an option taken out of a field, the option; for a renamed one, its new word (`from` is the old one); for a field moved into a
+	 * conditional field's option, that option (the entries that chose another lose the field's value).
+	 */
 	option?: string;
 	/** The language added or removed, or the new source language. */
 	locale?: string;
@@ -106,6 +110,10 @@ async function counts(db: Db, collection: string, where: ReturnType<typeof sql<b
 		.executeTakeFirstOrThrow();
 	return { count: await countEntries(db, collection, where), published: Number(row.all) };
 }
+
+/** Entries for which a field of a conditional field's option is theirs: those that chose that option. Any entry, for a field on its own. */
+export const theirs = (under: StoredField["under"]) =>
+	under ? sql<boolean>`coalesce(values->>${under.field} = ${under.option}, false)` : sql<boolean>`true`;
 
 /** Entries that have this option of a select chosen: the one value of a single select, or one of a many's. */
 export const hasOption = (field: string, option: string) =>
@@ -271,12 +279,23 @@ async function planFields(
 		const old = before.fields[field];
 		if (renamedTo.has(field)) continue;
 		if (!old) changes.push(await planNewField(db, collection, field, definition));
+		// A field whose only change is its place in a conditional field has its own line below (it clears values: not "the data is the same").
+		else if (
+			!(definition.required && !old.required) &&
+			movedInto(old, definition) &&
+			sameJson({ ...old, under: undefined }, { ...definition, under: undefined })
+		)
+			continue;
 		// A select whose only change is an option renamed or taken out has its own lines below: "changed, the data is the same" would be untrue.
 		else if (
 			!(definition.required && !old.required) &&
 			old.kind === "select" &&
 			definition.kind === "select" &&
 			optionsTouched(old, definition) &&
+			// An option added in the same change keeps the field's own line: nothing below says it.
+			definition.options.every(
+				(option) => old.options.includes(option) || optionRenames(field, old, definition).some((r) => r.to === option),
+			) &&
 			sameJson({ ...old, options: [] }, { ...definition, options: [] })
 		)
 			continue;
@@ -293,7 +312,23 @@ async function planFields(
 	// field's own rename, so they find the values under the new name.
 	for (const [field, definition] of Object.entries(after.fields)) {
 		const old = before.fields[fromName.get(field) ?? field];
-		if (!old || old.kind !== "select" || definition.kind !== "select") continue;
+		if (!old) continue;
+		// A field moved into a conditional field's option (from on its own, or from another option) is that option's from now on: the
+		// entries that chose another option lose its value, in the draft and on the site. Nothing to choose; the review says how many.
+		if (definition.under && movedInto(old, definition))
+			changes.push({
+				id: `moveField:${collection}.${field}`,
+				do: "moveField",
+				collection,
+				field,
+				option: definition.under.option,
+				...(await counts(
+					db,
+					collection,
+					sql<boolean>`${hasValue(fromName.get(field) ?? field)} and not ${theirs(underBefore(definition.under))}`,
+				)),
+			});
+		if (old.kind !== "select" || definition.kind !== "select") continue;
 		const renamedOptions = optionRenames(field, old, definition);
 		for (const rename of renamedOptions)
 			changes.push({
@@ -316,14 +351,31 @@ async function planFields(
 				field,
 				option,
 				...(await counts(db, collection, hasOption(fromName.get(field) ?? field, option))),
-				// A required field is never emptied: a site that trusts "required" would get nothing from an entry that is on it.
+				// Changing comes first, so it is the default: emptying published values is chosen, not fallen into. A required field is
+				// never emptied: a site that trusts "required" would get nothing from an entry that is on it.
 				choices: [
-					...(definition.required ? [] : [{ do: "removeOption" as const, entries: "empty" as const }]),
 					...definition.options.map((to) => ({ do: "removeOption" as const, entries: { change: to } })),
+					...(definition.required ? [] : [{ do: "removeOption" as const, entries: "empty" as const }]),
 				],
 			});
 	}
 	return changes;
+
+	/** Whether the field stands in another place of a conditional field than it did: into an option, or from one option to another. */
+	function movedInto(old: StoredField, now: StoredField) {
+		return now.under !== undefined && !sameJson(underRenamed(old).under, now.under);
+	}
+
+	/**
+	 * The place a field has after the change, as the entries name it before the change's steps: the conditional field under its old name
+	 * and the option under its old word. The count reads the database as it is now.
+	 */
+	function underBefore(under: NonNullable<StoredField["under"]>) {
+		const host = fromName.get(under.field) ?? under.field;
+		const [was, now] = [before.fields[host], after.fields[under.field]];
+		const word = was && now ? optionRenames(under.field, was, now).find((r) => r.to === under.option)?.from : undefined;
+		return { field: host, option: word ?? under.option };
+	}
 
 	/** Whether an option of the field was renamed or taken out. */
 	function optionsTouched(old: StoredField, now: StoredField) {
@@ -351,7 +403,9 @@ async function planNewField(
 ): Promise<SchemaChange> {
 	const change: SchemaChange = { id: `${kind}:${collection}.${field}`, do: kind, collection, field };
 	if (definition.required) {
-		Object.assign(change, await counts(db, collection, sql<boolean>`not ${hasValue(field)}`));
+		// A required field of a conditional field's option is asked of the entries that chose that option only (doc 19).
+		const under = (definition as StoredField).under;
+		Object.assign(change, await counts(db, collection, sql<boolean>`not ${hasValue(field)} and ${theirs(under)}`));
 		change.choices = [
 			{ do: "addRequiredField", fill: defaultFill(definition) },
 			{ do: "addRequiredField", fill: null },
@@ -373,6 +427,10 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 	for (const change of changes) {
 		if (change.do === "changeSource")
 			steps.push({ do: "changeSource", from: String(change.from), to: String(change.locale) });
+		// A field moved into an option asks nothing: the entries that did not choose that option lose its value. The step reads the
+		// place from the schema it is followed with.
+		if (change.do === "moveField")
+			steps.push({ do: "keepChosen", collection: change.collection ?? "", field: String(change.field) });
 		// A renamed option asks nothing: its word is rewritten wherever it is chosen.
 		if (change.do === "renameOption")
 			steps.push({

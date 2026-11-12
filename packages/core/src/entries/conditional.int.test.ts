@@ -220,7 +220,7 @@ describe("changing the structure of a conditional field", () => {
 		});
 	});
 
-	it("19-4 a field moved to another group, and fields gathered under a new conditional field, keep their names and so their values", async () => {
+	it("19-4 a field moved to another group keeps its name, and its values where that group's option is chosen: it is a line of its own that says how many entries lose the value (options.int.test.ts applies it)", async () => {
 		await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" });
 		const moved = changed({
 			...base,
@@ -230,28 +230,16 @@ describe("changing the structure of a conditional field", () => {
 			},
 		});
 		const plan = await planSchema(db, schema, moved);
-		expect(plan.map((change) => [change.do, change.field])).toEqual([["changeField", "videoUrl"]]);
+		expect(plan.map((change) => [change.do, change.field, change.option, change.count])).toEqual([
+			["moveField", "videoUrl", "link", 1],
+		]);
 		expect(plan[0]?.choices).toBeUndefined();
+		expect(plan.some((change) => change.do === "removeField")).toBe(false);
+	});
 
-		// `summary` gathered into a group of a new conditional field: nothing is asked about its values.
-		const { summary, ...rest } = post.fields;
-		const gathered: Schema = {
-			...schema,
-			collections: {
-				post: {
-					...post,
-					fields: { ...rest, kind: { kind: "conditional", options: ["a", "b"], fields: { a: { summary } } } } as never,
-				},
-			},
-		};
-		const added = await planSchema(db, schema, gathered);
-		expect(added.map((change) => [change.do, change.field])).toEqual(
-			expect.arrayContaining([
-				["addField", "kind"],
-				["changeField", "summary"],
-			]),
-		);
-		expect(added.some((change) => change.do === "removeField")).toBe(false);
+	it("19-1 a conditional field with a choice of its own in each language is to fix: one choice per entry, made on the source", () => {
+		const perLocale = changed({ ...base, kind: "conditional", locale: "perLocale" });
+		expect(checkSchema(perLocale)).toEqual([{ collection: "post", field: "format", code: "choicePerLocale" }]);
 	});
 });
 

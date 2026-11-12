@@ -8,7 +8,7 @@ import type { AdminValues } from "./admin-values";
 import type { Schema } from "./define";
 import { storedFields } from "./define";
 import type { ChangeFile, ChangeStep } from "./files";
-import { hasOption, schemaHash } from "./plan";
+import { hasOption, schemaHash, theirs } from "./plan";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -130,10 +130,9 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 				// Into a field of a conditional field's option (doc 19), only the entries that chose that option take the value: for the others
 				// it would be a value of an option that is not theirs, and it is cleared.
 				const under = storedFields(schema.collections[step.collection])[step.values.move]?.under;
-				const theirs = under ? sql<boolean>`values->>${under.field} = ${under.option}` : sql<boolean>`true`;
 				await entries(
 					sql`(values - ${step.field}::text) || jsonb_build_object(${step.values.move}::text, coalesce(nullif(values->${step.values.move}, '""'::jsonb), values->${step.field}))`,
-					sql<boolean>`values ? ${step.field} and ${theirs}`,
+					sql<boolean>`values ? ${step.field} and ${theirs(under)}`,
 				);
 				await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field}`);
 			}
@@ -148,10 +147,17 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 		case "renameOption":
 			await entries(optionSet(step.field, step.from, step.to), hasOption(step.field, step.from));
 			return;
+		case "keepChosen": {
+			const under = storedFields(schema.collections[step.collection])[step.field]?.under;
+			if (under)
+				await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field} and not ${theirs(under)}`);
+			return;
+		}
 		case "fillField":
+			// A field of a conditional field's option is filled where that option is chosen: it is no other entry's field (doc 19).
 			await entries(
 				sql`values || jsonb_build_object(${step.field}::text, ${JSON.stringify(step.value)}::jsonb)`,
-				empty(step.field),
+				sql<boolean>`${empty(step.field)} and ${theirs(storedFields(schema.collections[step.collection])[step.field]?.under)}`,
 			);
 			return;
 	}

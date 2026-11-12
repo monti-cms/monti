@@ -6,6 +6,7 @@ import { defineOperation, type OperationContext } from "../operation";
 import { type AdminValues, ListPrefs } from "../schema/admin-values";
 import {
 	type CollectionDefinition,
+	chosenValues,
 	type FieldDefinition,
 	type LocalesDefinition,
 	storedFields,
@@ -136,8 +137,18 @@ const representatives = (collection: string, source: string) => sql`(
 )`;
 
 const stateSql = sql`case when rep.status = 'published' and rep.has_unpublished_changes then 'changed' else rep.status end`;
-const emptySql = (field: string) =>
-	sql`(rep.values -> ${field} is null or rep.values -> ${field} in ('null'::jsonb, '""'::jsonb, '[]'::jsonb))`;
+/**
+ * A field's value as the list reads it: of a conditional field's option, only where that option is chosen (doc 19). A value a stored copy still
+ * holds for another option is no value: it is not filtered on, counted or shown.
+ */
+const valueSql = (definition: CollectionDefinition, field: string) => {
+	const under = storedFields(definition)[field]?.under;
+	return under
+		? sql`(case when rep.values ->> ${under.field} = ${under.option} then rep.values -> ${field} end)`
+		: sql`(rep.values -> ${field})`;
+};
+const emptySql = (definition: CollectionDefinition, field: string) =>
+	sql`(${valueSql(definition, field)} is null or ${valueSql(definition, field)} in ('null'::jsonb, '""'::jsonb, '[]'::jsonb))`;
 const list = (values: readonly unknown[]) => sql.join(values.map((value) => sql`${value}`));
 const like = (text: string) => `%${text.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 const dateColumn = (field: (typeof DATE_COLUMNS)[number]) =>
@@ -191,15 +202,15 @@ function filterSql(
 			const options = filter.any.filter((value): value is string => value !== null);
 			const parts = [];
 			if (options.length)
-				parts.push(sql`coalesce(rep.values -> ${filter.field} ?| array[${list(options)}]::text[], false)`);
-			if (filter.any.includes(null)) parts.push(emptySql(filter.field));
+				parts.push(sql`coalesce(${valueSql(definition, filter.field)} ?| array[${list(options)}]::text[], false)`);
+			if (filter.any.includes(null)) parts.push(emptySql(definition, filter.field));
 			return sql`(${sql.join(parts, sql` or `)})`;
 		}
 		case "empty":
 			fieldOf(definition, filter.field, ["text", "media", "select", "relation"]);
 			return storedFields(definition)[filter.field]?.kind === "relation"
 				? sql`not exists (select 1 from entry_links l where l.from_group = rep.translation_group and l.field = ${filter.field})`
-				: emptySql(filter.field);
+				: emptySql(definition, filter.field);
 		case "date": {
 			const column = dateColumn(filter.field);
 			const zone = query.timeZone;
@@ -320,6 +331,13 @@ export async function runListQuery(
 		.filter(([, field]) => field.kind === "relation")
 		.map(([name]) => name);
 	const groups = rows.map((row) => row.translation_group);
+	// A row shows the chosen option's values only (doc 19), whatever its stored copy still holds.
+	for (const row of rows) row.values = chosenValues(definition, row.values);
+	const stored = storedFields(definition);
+	const shownIn = (values: Record<string, unknown>, field: string) => {
+		const under = stored[field]?.under;
+		return !under || values[under.field] === under.option;
+	};
 	const links =
 		relationFields.length && groups.length
 			? await ctx.db
@@ -373,7 +391,9 @@ export async function runListQuery(
 				relationFields.map((field) => [
 					field,
 					links
-						.filter((link) => link.from_group === row.translation_group && link.field === field)
+						.filter(
+							(link) => link.from_group === row.translation_group && link.field === field && shownIn(row.values, field),
+						)
 						.map((link) => ({ id: link.to_group, title: titles.get(link.to_group) ?? "" })),
 				]),
 			),
@@ -457,11 +477,15 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 		return [{ value: null, count: counts.get(null) ?? 0 }, ...facets];
 	}
 	if (field.kind === "select") {
+		// Of a conditional field's option, only where that option is chosen (doc 19).
+		const value = field.under
+			? sql`(case when rep.values ->> ${field.under.field} = ${field.under.option} then rep.values -> ${column} end)`
+			: sql`(rep.values -> ${column})`;
 		const { rows } = await sql<{ option: string | null; count: string }>`
 			select o.option, count(*) as count from ${from}
 			left join lateral (
-				select jsonb_array_elements_text(case jsonb_typeof(rep.values -> ${column}) when 'array' then rep.values -> ${column}
-					when 'string' then jsonb_build_array(rep.values -> ${column}) else '[]'::jsonb end) as option
+				select jsonb_array_elements_text(case jsonb_typeof(${value}) when 'array' then ${value}
+					when 'string' then jsonb_build_array(${value}) else '[]'::jsonb end) as option
 			) o on true
 			where ${where} group by o.option`.execute(ctx.db);
 		const counts = new Map(rows.map((row) => [row.option, Number(row.count)]));
@@ -477,7 +501,7 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 	}
 	const { rows } = await sql<{
 		count: string;
-	}>`select count(*) as count from ${from} where ${where} and ${emptySql(column)}`.execute(ctx.db);
+	}>`select count(*) as count from ${from} where ${where} and ${emptySql(definition, column)}`.execute(ctx.db);
 	return [{ value: "empty", count: Number(rows[0]?.count ?? 0) }];
 }
 

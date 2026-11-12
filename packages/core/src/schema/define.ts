@@ -94,6 +94,17 @@ export function notChosenFields(
 	return hidden;
 }
 
+/** An entry's values without those of options that are not chosen: what every reader gives (the site, the list, the uses of files). */
+export function chosenValues<Value>(
+	collection: Pick<CollectionDefinition, "fields"> | undefined,
+	values: Record<string, Value>,
+): Record<string, Value> {
+	const hidden = notChosenFields(collection, values);
+	return hidden.size === 0
+		? values
+		: Object.fromEntries(Object.entries(values).filter(([field]) => !hidden.has(field)));
+}
+
 type CollectionFields = {
 	/** In this order; `title` and `slug` come first in every collection. */
 	fields: Record<string, FieldDefinition>;
@@ -207,7 +218,8 @@ export type SchemaProblem = {
 		| "invalidVia"
 		| "unknownOption"
 		| "duplicateField"
-		| "nestedConditional";
+		| "nestedConditional"
+		| "choicePerLocale";
 };
 
 export function checkSchema(schema: Schema): SchemaProblem[] {
@@ -261,6 +273,8 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 		const names = new Set(Object.keys(collection.fields));
 		for (const [fieldName, field] of Object.entries(collection.fields)) {
 			if (field.kind !== "conditional") continue;
+			// One choice per entry, made on the source: a translation is the same kind of entry as its source.
+			if (field.locale === "perLocale") problems.push({ collection: name, field: fieldName, code: "choicePerLocale" });
 			for (const [option, group] of Object.entries(field.fields ?? {})) {
 				if (!field.options.includes(option))
 					problems.push({ collection: name, field: fieldName, code: "unknownOption" });

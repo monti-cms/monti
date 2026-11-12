@@ -20,6 +20,8 @@ export type ChangeStep =
 	| { do: "fillField"; collection: string; field: string; value: unknown }
 	/** An option left a conditional field (doc 19): the entries that chose it lose the choice, or get another option. */
 	| { do: "removeOption"; collection: string; field: string; option: string; entries: "empty" | { change: string } }
+	/** A field became a conditional field's option's: entries that did not choose that option lose its value. */
+	| { do: "keepChosen"; collection: string; field: string }
 	/** An option's word changed: every entry that chose it holds the new word. */
 	| { do: "renameOption"; collection: string; field: string; from: string; to: string }
 	/** A language left the site: its translations go with it (doc 04). */
@@ -78,6 +80,7 @@ const ChangeStepShape: z.ZodType<ChangeStep> = z.discriminatedUnion("do", [
 		from: z.string(),
 		to: z.string(),
 	}),
+	z.object({ do: z.literal("keepChosen"), collection: z.string(), field: z.string() }),
 	z.object({ do: z.literal("removeLocale"), locale: z.string() }),
 	z.object({ do: z.literal("changeSource"), from: z.string(), to: z.string() }),
 ]);

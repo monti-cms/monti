@@ -7,7 +7,7 @@ import type { SiteMedia } from "../media/site-image";
 import type { Storage } from "../media/storage";
 import { usesInDoc, usesInValues } from "../media/uses";
 import type { Schema } from "../schema/define";
-import { storedFields } from "../schema/define";
+import { chosenValues, storedFields } from "../schema/define";
 import { siteDoc, translatedFields } from "../translations/source";
 import { previewSlug, publicPath } from "./paths";
 import { readPreviewToken } from "./preview";
@@ -56,8 +56,13 @@ export type ReaderOptions = {
 	storage?: Storage | null;
 };
 
+// And, of a conditional field, only the chosen option's (doc 19): whatever a stored copy still holds, the site is never given a value of an
+// option the entry does not have chosen.
 const onlySchemaFields = (schema: Schema, collection: string, values: Record<string, unknown>) =>
-	Object.fromEntries(Object.entries(values).filter(([field]) => storedFields(schema.collections[collection])[field]));
+	chosenValues(
+		schema.collections[collection],
+		Object.fromEntries(Object.entries(values).filter(([field]) => storedFields(schema.collections[collection])[field])),
+	);
 
 /**
  * How the site reads entries (doc 02): what was published, never the working copy, except for the one entry a valid preview link opens. A slug an
