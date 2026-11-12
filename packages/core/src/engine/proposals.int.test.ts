@@ -154,4 +154,41 @@ describe("proposals on a screen", () => {
 	it("05-5 only a person discards a proposal: it is no tool of the assistant", () => {
 		expect(agentTools(site()).map((tool) => tool.name)).not.toContain("proposals.discard");
 	});
+
+	it("05-1 a proposed write whose caller is no longer the one to write stores nothing: not a new item, not a change in an item's place", async () => {
+		const monti = site();
+		const id = await newPost("Hello");
+		const at = await version(id);
+		const proposalId = await monti.proposals.create("c1", "retitle it");
+		const asked: boolean[] = [];
+		const holds = async (trx: { isTransaction: boolean }) => {
+			asked.push(trx.isTransaction);
+		};
+		const { itemId } = await monti.proposals.add(
+			proposalId,
+			"entries.save",
+			{ id, version: at, title: "One" },
+			"",
+			"call-1",
+			holds,
+		);
+		// Asked in the transaction that stores the item, once.
+		expect(asked).toEqual([true]);
+		const items = () =>
+			db.selectFrom("monti_proposal_item").select(["id", "input", "made_by"]).orderBy("position").execute();
+		const before = await items();
+		expect(before).toMatchObject([{ id: itemId, made_by: "call-1" }]);
+
+		const gone = async () => {
+			throw new Error("not the holder");
+		};
+		const other = await newPost("Other");
+		await expect(
+			monti.proposals.add(proposalId, "entries.save", { id: other, version: 1, title: "Two" }, "", "call-2", gone),
+		).rejects.toThrow("not the holder");
+		await expect(
+			monti.proposals.replace(itemId, "entries.save", { id, version: at, title: "Three" }, "call-3", gone),
+		).rejects.toThrow("not the holder");
+		expect(await items()).toEqual(before);
+	});
 });

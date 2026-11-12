@@ -79,9 +79,11 @@ let clock = new Date("2026-11-12T10:00:00Z");
 const storage = memoryStorage();
 let model = scriptedProvider();
 
-function site(more: { limits?: Partial<RunLimits>; holdMs?: number; plugins?: MontiOptions["plugins"] } = {}) {
+function site(
+	more: { limits?: Partial<RunLimits>; holdMs?: number; plugins?: MontiOptions["plugins"]; db?: typeof db } = {},
+) {
 	return createMonti({
-		db,
+		db: more.db ?? db,
 		schema,
 		secret: SECRET,
 		fetch: network,
@@ -2201,5 +2203,194 @@ describe("what the second review of the core found (#472)", () => {
 		expect(stopped.output).toEqual({ stopped: true, untaken: ["발행된 글만 봐 줘"] });
 		expect(await db.selectFrom("run_inbox").select("id").execute()).toEqual([]);
 		expect((await runs())[0].status).toBe("stopped");
+	});
+});
+
+describe("what the review of the run's hold found (#481)", () => {
+	const runs = () => db.selectFrom("runs").selectAll().orderBy("started_at").execute();
+	const inbox = () => db.selectFrom("run_inbox").select("text").execute();
+	const tick = () => new Promise((resolve) => setTimeout(resolve, 5));
+
+	/**
+	 * A database on which something happens once, right after the `nth` statement of one kind that names `column`, from when the test says
+	 * (`from`): what another request did at that very moment, between two steps of the request under test.
+	 */
+	function meanwhile(
+		kind: "SelectQueryNode" | "UpdateQueryNode",
+		column: string,
+		nth: number,
+		then: () => Promise<void>,
+	) {
+		let left = 0;
+		const marked = new Set<string>();
+		return {
+			from: () => {
+				left = nth;
+			},
+			db: db.withPlugin({
+				transformQuery({ node, queryId }) {
+					if (left > 0 && node.kind === kind && JSON.stringify(node).includes(`"name":"${column}"`)) {
+						left -= 1;
+						if (left === 0) marked.add(queryId.queryId);
+					}
+					return node;
+				},
+				async transformResult({ queryId, result }) {
+					if (marked.delete(queryId.queryId)) await then();
+					return result;
+				},
+			}),
+		};
+	}
+	/** Another request takes up the run that is at work, and the person says something to the run. */
+	const takenUpAndSpokenTo = async () => {
+		const run = await db.selectFrom("runs").select("id").where("status", "=", "running").executeTakeFirstOrThrow();
+		await db
+			.updateTable("runs")
+			.set({ lease_token: "another request", leased_until: new Date(clock.getTime() + 90_000) })
+			.where("id", "=", run.id)
+			.execute();
+		await db
+			.insertInto("run_inbox")
+			.values({ id: "word", run_id: run.id, text: "발행된 글만 봐 줘", created_at: clock })
+			.execute();
+	};
+	const edit = (id: string, at: number, to: number, text: string) => ({
+		name: "body_edit",
+		input: { id, version: at, ops: [{ op: "replaceText", block: "b_1", from: 0, to, text }], [GROUP]: "다듬기" },
+	});
+
+	it("10-4 a request that lost its run and then fails ends nothing of it: the run and what was said to it stay with the request that holds it", async () => {
+		const monti = site();
+		await withKey(monti);
+		let refuse = () => {};
+		let answer = () => {};
+		model.add(
+			async () => {
+				await new Promise<void>((resolve) => {
+					refuse = resolve;
+				});
+				return { fail: new ProviderError("refused", "Too many requests.", 429) };
+			},
+			{
+				text: "이어 받은 요청의 답",
+				hold: new Promise<void>((resolve) => {
+					answer = resolve;
+				}),
+			},
+		);
+		const hung = ask(monti, { request: "정리해 줘" });
+		while (model.turns.length < 1) await tick();
+		const [run] = await runs();
+		// The first request hangs in its service past its hold; another takes the run up, and the person says something to it.
+		clock = new Date(clock.getTime() + 91_000);
+		const taking = ask(monti, { resume: run.id });
+		while (model.turns.length < 2) await tick();
+		await monti.run("assistant.say", { run: run.id, text: "발행된 글만 봐 줘" }, admin);
+
+		// The first request's service answers at last, with a refusal. It is not the run's end, and the word is not this request's to hand back.
+		refuse();
+		const late = await hung;
+		expect(late.end).toEqual({ type: "end", status: "interrupted", reason: "connection", untaken: [] });
+		expect((await runs())[0]).toMatchObject({ status: "running", ended_at: null });
+		expect(await inbox()).toEqual([{ text: "발행된 글만 봐 줘" }]);
+
+		// It reaches the request that holds the run: said too late for its last turn, it goes back to the person with the run's end.
+		answer();
+		const taken = await taking;
+		expect(taken.end).toMatchObject({ status: "done", untaken: ["발행된 글만 봐 줘"] });
+		expect(await inbox()).toEqual([]);
+	});
+
+	it("10-4 a request at an item's place that loses its run at the very end leaves no exchange with the item, and takes nothing said to the run", async () => {
+		const moment = meanwhile("UpdateQueryNode", "turns", 1, takenUpAndSpokenTo);
+		const monti = site({ db: moment.db });
+		await withKey(monti);
+		const id = await newPost(monti, "글", ["처음 글을 발행하고 나서 만들기로 한 메모입니다."]);
+		model.add({ calls: [edit(id, await version(id), 6, "")] }, { text: "다듬었어요." });
+		const asked = await ask(monti, { request: "더 짧게 다듬어 줘" });
+		const [itemId] = asked.of("proposal")[0].itemIds;
+
+		// Its answer is written, and before it can end the run another request has taken the run up.
+		model.add({ text: "지금 그대로가 좋겠어요." });
+		moment.from();
+		const spot = await ask(monti, { request: "이대로 괜찮아?", item: itemId });
+		expect(spot.end).toEqual({ type: "end", status: "interrupted", reason: "connection", untaken: [] });
+		const seen = await proposalOf(monti, asked.of("proposal")[0].proposalId);
+		expect(seen.items[0].thread).toEqual([]);
+		expect(await inbox()).toEqual([{ text: "발행된 글만 봐 줘" }]);
+		expect((await runs()).find((run) => run.kind === "spot")).toMatchObject({
+			status: "running",
+			lease_token: "another request",
+		});
+	});
+
+	it("10-4 a request that loses its run just before a turn takes nothing of what was said to the run: the word waits for the request that holds it", async () => {
+		const moment = meanwhile("SelectQueryNode", "stop_requested", 1, takenUpAndSpokenTo);
+		const monti = site({ db: moment.db });
+		await withKey(monti);
+		moment.from();
+		const asked = await ask(monti, { request: "정리해 줘" });
+		expect(asked.end).toEqual({ type: "end", status: "interrupted", reason: "connection", untaken: [] });
+		expect(asked.of("taken")).toEqual([]);
+		// No turn was asked for, the word is where it was said, and the run holds nothing but its request.
+		expect(model.turns).toHaveLength(0);
+		expect(await inbox()).toEqual([{ text: "발행된 글만 봐 줘" }]);
+		expect(await db.selectFrom("run_messages").select("id").where("run_id", "=", asked.run).execute()).toHaveLength(1);
+	});
+
+	it("10-4 a request at an item's place that loses its run before its write does not put its change in the item's place", async () => {
+		// The second look for a stop in the run: the one before the turn's write, after the turn was asked for and stored.
+		const moment = meanwhile("SelectQueryNode", "stop_requested", 2, takenUpAndSpokenTo);
+		const monti = site({ db: moment.db });
+		await withKey(monti);
+		const id = await newPost(monti, "글", ["처음 글을 발행하고 나서 만들기로 한 메모입니다."]);
+		const at = await version(id);
+		model.add({ calls: [edit(id, at, 6, "")] }, { text: "다듬었어요." });
+		const asked = await ask(monti, { request: "더 짧게 다듬어 줘" });
+		const [itemId] = asked.of("proposal")[0].itemIds;
+		const before = await db
+			.selectFrom("monti_proposal_item")
+			.selectAll()
+			.where("id", "=", itemId)
+			.executeTakeFirstOrThrow();
+
+		model.add({ calls: [edit(id, at, 2, "맨 ")] });
+		moment.from();
+		const spot = await ask(monti, { request: "앞만 바꿔 줘", item: itemId });
+		expect(spot.end).toEqual({ type: "end", status: "interrupted", reason: "connection", untaken: [] });
+		// The item is as the request that holds the run finds it: what this one would have written is that request's to write.
+		expect(
+			await db.selectFrom("monti_proposal_item").selectAll().where("id", "=", itemId).executeTakeFirstOrThrow(),
+		).toEqual(before);
+		expect(spot.of("proposal")).toEqual([]);
+	});
+
+	it("10-1 the clean-up does not remove a conversation from under a run at work, however long ago it was opened; one nobody works in goes", async () => {
+		const monti = site();
+		await withKey(monti);
+		model.add({ text: "절반만 온 ", breaksOff: true }, { text: "네." });
+		const first = await ask(monti, { request: "설명해 줘" });
+		expect(first.end).toMatchObject({ status: "interrupted" });
+		const idle = await ask(monti, { request: "아무도 다시 열지 않는 대화" });
+		clock = new Date(clock.getTime() + 31 * 86_400_000);
+		// Gone on with after a month: the run is at work when the clean-up comes by.
+		let release = () => {};
+		model.add({
+			text: "이어서 온 답",
+			hold: new Promise<void>((resolve) => {
+				release = resolve;
+			}),
+		});
+		const working = ask(monti, { resume: first.run });
+		while (model.turns.length < 3) await tick();
+		await monti.cleanUp();
+		expect((await db.selectFrom("conversations").select("id").execute()).map((each) => each.id)).toEqual([
+			first.conversation,
+		]);
+		expect(idle.conversation).not.toBe(first.conversation);
+		release();
+		expect((await working).end.status).toBe("done");
+		expect(await runs()).toHaveLength(1);
 	});
 });

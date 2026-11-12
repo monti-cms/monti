@@ -234,17 +234,47 @@ async function removeConversations(db: Db, ids: string[]): Promise<void> {
 	await db.deleteFrom("conversations").where("id", "in", ids).execute();
 }
 
-/** Removes the conversations nobody opened for the kept days (doc 10). Run with the trash's clean-up. */
+/** Of these conversations, the ones with a run at work: a request holds it now. Nothing is removed from under such a run. */
+async function atWork(db: Db, ids: string[], now: Date): Promise<Set<string>> {
+	if (ids.length === 0) return new Set();
+	const working = await db
+		.selectFrom("runs")
+		.select("conversation_id")
+		.where("conversation_id", "in", ids)
+		.where("status", "=", "running")
+		.where("leased_until", ">=", now)
+		.execute();
+	return new Set(working.map((row) => row.conversation_id));
+}
+
+/**
+ * Removes the conversations nobody opened for the kept days (doc 10). Run with the trash's clean-up. One with a run at work stays, as it does
+ * when a person removes it: a conversation counts as opened when a request in it ends, so a long run in an old conversation looks unopened
+ * until then.
+ */
 export async function removeUnopened(monti: Monti): Promise<number> {
 	const days = await keepDaysOf(monti.db);
 	if (days === null) return 0;
 	const before = new Date(monti.now().getTime() - days * 86_400_000);
-	const due = await monti.db.selectFrom("conversations").select("id").where("last_opened_at", "<", before).execute();
-	await removeConversations(
-		monti.db,
-		due.map((row) => row.id),
-	);
-	return due.length;
+	return monti.db.transaction().execute(async (trx) => {
+		// Held to the end, as a person's removal holds its one: a request that starts or takes up a run in one of them meanwhile waits, and
+		// then finds no conversation.
+		const due = await trx
+			.selectFrom("conversations")
+			.select("id")
+			.where("last_opened_at", "<", before)
+			.orderBy("id")
+			.forUpdate()
+			.execute();
+		const working = await atWork(
+			trx,
+			due.map((row) => row.id),
+			monti.now(),
+		);
+		const idle = due.filter((row) => !working.has(row.id)).map((row) => row.id);
+		await removeConversations(trx, idle);
+		return idle.length;
+	});
 }
 
 /**
@@ -534,14 +564,8 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 					// Held to the end: a request that starts a run in it meanwhile waits, and then finds no conversation.
 					await ctx.db.selectFrom("conversations").select("id").where("id", "=", input.id).forUpdate().execute();
 					// Not from under a run at work: it would go on proposing for a conversation that is gone. Stop it first.
-					const working = await ctx.db
-						.selectFrom("runs")
-						.select("id")
-						.where("conversation_id", "=", input.id)
-						.where("status", "=", "running")
-						.where("leased_until", ">=", ctx.now())
-						.executeTakeFirst();
-					if (working) throw new CheckError({ key: "assistant.busy" });
+					if ((await atWork(ctx.db, [input.id], ctx.now())).has(input.id))
+						throw new CheckError({ key: "assistant.busy" });
 					await removeConversations(ctx.db, [input.id]);
 					return { id: input.id };
 				},
