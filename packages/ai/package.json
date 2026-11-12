@@ -42,6 +42,10 @@
 			".": {
 				"types": "./dist/index.d.ts",
 				"default": "./dist/index.js"
+			},
+			"./messages": {
+				"types": "./dist/messages.d.ts",
+				"default": "./dist/messages.js"
 			}
 		}
 	}
