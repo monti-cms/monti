@@ -79,9 +79,10 @@ function Tile({
 				aria-pressed={selected}
 				className={cn(
 					"flex min-w-0 flex-col gap-monti-8 border-0 bg-transparent p-0 text-left outline-none focus-visible:*:first:ring-2",
-					// A picked or open tile keeps its ink ring under the keyboard's focus (a fainter ring there would hide the state); the focus only thickens it.
+					// A picked or open tile is ringed already, in ink or in a proposal's blue. Under the keyboard that ring steps 2px off the picture and
+					// keeps its colour: the step is the focus, the same for every picked tile, and no state's colour is taken away.
 					selected || current
-						? "focus-visible:*:first:ring-monti-contrast"
+						? "focus-visible:*:first:ring-offset-2 focus-visible:*:first:ring-offset-monti-page"
 						: "focus-visible:*:first:ring-monti-contrast/50",
 				)}
 				{...props}

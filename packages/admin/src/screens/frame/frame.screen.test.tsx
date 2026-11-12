@@ -1,5 +1,6 @@
+import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { scene } from "../../../test/scene";
 import * as frame from "./frame.stories";
 
@@ -60,5 +61,29 @@ describe("getting in on the dev server", () => {
 				dev.restore();
 			}
 		}
+	});
+});
+
+describe("the frame's banner", () => {
+	const { FailedChange } = composeStories(frame);
+
+	it('"apply again" pressed with the keyboard takes its line away and hands the focus to the page\'s first control, not to the page', async () => {
+		await FailedChange.run();
+		const again = page.getByRole("button", { name: "다시 적용" });
+		await expect.element(again).toBeVisible();
+		for (let pressed = 0; pressed < 40 && document.activeElement !== again.element(); pressed++)
+			await userEvent.keyboard("{Tab}");
+		await expect.element(again).toHaveFocus();
+		expect(again.element().matches(":focus-visible")).toBe(true);
+		// The page's first control: the stop after the banner's action.
+		await userEvent.keyboard("{Tab}");
+		const first = document.activeElement;
+		expect(first).not.toBe(document.body);
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		await expect.element(again).toHaveFocus();
+
+		await userEvent.keyboard("{Enter}");
+		await expect.element(again).not.toBeInTheDocument();
+		await expect.poll(() => document.activeElement).toBe(first);
 	});
 });
