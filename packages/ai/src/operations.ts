@@ -17,6 +17,7 @@ import { QuickInput, type QuickOutput, quickFill } from "./quick";
 import {
 	abortRun,
 	DEFAULT_LIMITS,
+	HOLD_MS,
 	type RunEnd,
 	RunInput,
 	type RunLimits,
@@ -39,6 +40,8 @@ export type AssistantOptions = {
 	 */
 	provider?: ProviderFor;
 	limits?: Partial<RunLimits>;
+	/** How long a request holds its run after its last sign of life (`HOLD_MS`). Tests shorten it. */
+	holdMs?: number;
 };
 
 /** What became of a conversation's proposals, for its row in the past conversations (doc 10). */
@@ -227,7 +230,8 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 				description:
 					"Ask the assistant: a new request in a conversation, a request at one proposed change, or going on with a run that stopped. Its events come as it works: its words, the tools it calls, the proposal it adds to, and how it ended. It changes nothing of the site: what it would change is a proposal.",
 				input: RunInput,
-				run: (input, ctx) => runAssistant(ctx.monti, { provider, limits }, input, ctx.signal),
+				run: (input, ctx) =>
+					runAssistant(ctx.monti, { provider, limits, holdMs: options.holdMs ?? HOLD_MS }, input, ctx.signal),
 			}),
 		],
 		operations: [

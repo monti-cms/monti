@@ -65,7 +65,7 @@ let clock = new Date("2026-11-12T10:00:00Z");
 const storage = memoryStorage();
 let model = scriptedProvider();
 
-function site(more: { limits?: Partial<RunLimits>; plugins?: MontiOptions["plugins"] } = {}) {
+function site(more: { limits?: Partial<RunLimits>; holdMs?: number; plugins?: MontiOptions["plugins"] } = {}) {
 	return createMonti({
 		db,
 		schema,
@@ -74,7 +74,7 @@ function site(more: { limits?: Partial<RunLimits>; plugins?: MontiOptions["plugi
 		now: () => clock,
 		plugins: [
 			definePlugin({ name: "files", storage }),
-			assistant({ provider: model.for, limits: more.limits }),
+			assistant({ provider: model.for, limits: more.limits, holdMs: more.holdMs }),
 			...(more.plugins ?? []),
 		],
 	});
@@ -254,6 +254,23 @@ describe("asking from a list (flow 2, 01–05)", () => {
 			"entries.get 3 / 3",
 		]);
 		expect(asked.end.status).toBe("done");
+	});
+
+	it("10-1 what the browser answers for a screen tool is cut like any tool's answer", async () => {
+		const monti = site();
+		await withKey(monti);
+		model.add({ calls: [{ name: "list_show", input: { collection: "post", query: {} }, id: "show" }] }, (request) => {
+			const answered = JSON.stringify(request.messages.at(-1));
+			expect(answered).toContain("The result was cut here");
+			expect(answered.length).toBeLessThan(MOST_RESULT * 1.5);
+			return { text: "띄웠습니다." };
+		});
+		const first = await ask(monti, { request: "목록 띄워 줘" });
+		const second = await ask(monti, {
+			resume: first.run,
+			screen: [{ id: "show", output: { rows: "가".repeat(MOST_RESULT * 4) } }],
+		});
+		expect(second.end.status).toBe("done");
 	});
 
 	it("10-1 a screen that does not move says so, and the model tells the person (unsaved changes)", async () => {
@@ -599,6 +616,45 @@ describe("the model, per conversation (flow 2, 22–24)", () => {
 		expect(model.turns[1].messages.map((message) => message.role)).toEqual(["user", "user"]);
 	});
 
+	it("10-1 a service that repeats the key in its refusal does not get it into the conversation, the run's row or the quick task's answer", async () => {
+		const echo = new ProviderError("refused", `Incorrect API key provided: ${KEY}. Check your key.`, 401);
+		model = scriptedProvider([{ fail: echo }], () => {
+			throw echo;
+		});
+		const monti = site();
+		await withKey(monti);
+		const refused = await ask(monti, { request: "요약해 줘" });
+		expect(refused.end.error?.detail).toBe("Incorrect API key provided: •••. Check your key.");
+		expect(JSON.stringify(refused.events)).not.toContain(KEY);
+		expect(JSON.stringify(await db.selectFrom("runs").selectAll().execute())).not.toContain(KEY);
+		expect(JSON.stringify(await conversation(monti, refused.conversation))).not.toContain(KEY);
+
+		const filled = await monti
+			.run("assistant.fill", { task: "text", collection: "post", field: "summary", entry: { title: "글" } }, admin)
+			.catch((error: unknown) => error);
+		expect(filled).toMatchObject({
+			reason: {
+				key: "assistant.refused",
+				values: { name: "Anthropic 개인", detail: "Incorrect API key provided: •••. Check your key." },
+			},
+		});
+	});
+
+	it("10-1 a quick task whose service does not answer says which key did not", async () => {
+		model = scriptedProvider([], () => {
+			throw new ProviderError("unreachable", "fetch failed");
+		});
+		const monti = site();
+		await withKey(monti);
+		await expect(
+			monti.run(
+				"assistant.fill",
+				{ task: "text", collection: "post", field: "summary", entry: { title: "글" } },
+				admin,
+			),
+		).rejects.toMatchObject({ reason: { key: "assistant.unreachable", values: { name: "Anthropic 개인" } } });
+	});
+
 	it("10-1 tokens the model spent are counted against the key it ran on", async () => {
 		const monti = site();
 		const keyId = await withKey(monti);
@@ -768,6 +824,37 @@ describe("going on, saying more, stopping (flow 2, 06; doc 10)", () => {
 		// The tool the dead request never ran was answered for the model as not run.
 		expect(JSON.stringify(model.turns.at(-1)?.messages)).toContain("entries_query");
 		await expect(ask(monti, { resume: first.run })).rejects.toMatchObject({ reason: { key: "assistant.ended" } });
+	});
+
+	it("10-4 a turn that takes longer than one hold keeps the run held: nobody takes it up beside the request that is working on it", async () => {
+		const monti = site({ holdMs: 300 });
+		await withKey(monti);
+		let release = () => {};
+		const thinking = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		model.add({ text: "생각 중…", hold: thinking }, { text: "끝." });
+		const events: RunEvent[] = [];
+		const running = (async () => {
+			for await (const event of monti.stream(
+				"assistant.run",
+				{ request: "오래 걸리는 일" },
+				{ actor: "admin", session: null, signal: new AbortController().signal },
+			))
+				events.push(event as RunEvent);
+		})();
+		while (!events.some((event) => event.type === "text")) await new Promise((resume) => setTimeout(resume, 5));
+		const run = (events[0] as Extract<RunEvent, { type: "run" }>).runId;
+		// Ten minutes pass while the model is on the same turn: far longer than one hold.
+		clock = new Date(clock.getTime() + 600_000);
+		await new Promise((resume) => setTimeout(resume, 350));
+		const held = await db.selectFrom("runs").select("leased_until").where("id", "=", run).executeTakeFirstOrThrow();
+		expect(held.leased_until?.getTime()).toBeGreaterThan(clock.getTime());
+		await expect(ask(monti, { resume: run })).rejects.toMatchObject({ reason: { key: "assistant.busy" } });
+		release();
+		await running;
+		expect(events.at(-1)).toMatchObject({ type: "end", status: "done" });
+		expect(model.turns).toHaveLength(1);
 	});
 
 	it("10-1 what the person says while it works goes into the next turn; said too late, it is handed back", async () => {

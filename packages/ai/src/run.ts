@@ -19,15 +19,18 @@ import {
 	type ToolCall,
 	type Usage,
 } from "./provider";
-import { type AssistantTool, assistantTools, callTool, type ToolOutcome, toolError } from "./tools";
+import { type AssistantTool, assistantTools, callTool, shortened, type ToolOutcome, toolError } from "./tools";
 
 /** What a run may spend before it stops and offers to go on (doc 10, limits). `ms` is per request: a serverless host ends a request after its own. */
 export type RunLimits = { turns: number; tokens: number; ms: number };
 
 export const DEFAULT_LIMITS: RunLimits = { turns: 40, tokens: 2_000_000, ms: 45_000 };
 
-/** How long a request holds its run between two steps; a request that died lets go after this, and the run can be gone on with. */
-const LEASE_MS = 90_000;
+/**
+ * How long a request holds its run after its last sign of life; a request that died lets go after this, and the run can be gone on with. While it
+ * works, the request says so again every third of it.
+ */
+export const HOLD_MS = 90_000;
 
 /** How often the same read with the same input is run in one run before the model is told it already has the answer. */
 const SAME_CALL_TIMES = 2;
@@ -135,22 +138,26 @@ async function pickModel(
 /** A history a model API accepts: every call an assistant message made has its answer, also where a run stopped before its tools ran. */
 function whole(messages: StoredMessage[]): ChatMessage[] {
 	const out: ChatMessage[] = [];
-	messages.forEach((message, index) => {
+	for (let index = 0; index < messages.length; index += 1) {
+		const message = messages[index];
 		out.push(message);
-		if (message.role !== "assistant" || message.calls.length === 0) return;
+		if (message.role !== "assistant" || message.calls.length === 0) continue;
 		const next = messages[index + 1];
-		const answered = new Set(next?.role === "tools" ? next.answers.map((answer) => answer.id) : []);
-		const missing = message.calls.filter((call) => !answered.has(call.id));
-		if (missing.length === 0) return;
-		const answers = missing.map((call) => ({
-			id: call.id,
-			name: call.name,
-			output: { error: "The run stopped before this tool ran." },
-			error: true,
-		}));
-		if (next?.role === "tools") next.answers.push(...answers);
-		else out.push({ role: "tools", answers });
-	});
+		const given = next?.role === "tools" ? next.answers : [];
+		const answered = new Set(given.map((answer) => answer.id));
+		const missing = message.calls
+			.filter((call) => !answered.has(call.id))
+			.map((call) => ({
+				id: call.id,
+				name: call.name,
+				output: { error: "The run stopped before this tool ran." },
+				error: true,
+			}));
+		if (missing.length === 0) continue;
+		// A new message, never a change of the stored one: the answers that are in, then the ones made up for the calls that never ran.
+		out.push({ role: "tools", answers: [...given, ...missing] });
+		if (next?.role === "tools") index += 1;
+	}
 	return out;
 }
 
@@ -186,7 +193,7 @@ async function append(db: Db, runId: string, message: StoredMessage, at: Date): 
 		.execute();
 }
 
-export type RunSettings = { provider: ProviderFor; limits: RunLimits };
+export type RunSettings = { provider: ProviderFor; limits: RunLimits; holdMs: number };
 
 /**
  * One request's part of a run (doc 10, runs): it opens the run or takes up one that stopped, then turns the loop: ask the model, run the tools it
@@ -202,7 +209,7 @@ export async function* runAssistant(
 ): AsyncGenerator<RunEvent> {
 	const db = monti.db;
 	const now = () => monti.now();
-	const lease = () => new Date(now().getTime() + LEASE_MS);
+	const lease = () => new Date(now().getTime() + settings.holdMs);
 
 	const run =
 		input.resume !== undefined ? await takeUp(monti, input.resume, lease()) : await open(monti, input, lease());
@@ -213,6 +220,17 @@ export async function* runAssistant(
 	const onGone = () => stopper.abort();
 	signal.addEventListener("abort", onGone);
 	inFlight.set(run.id, stopper);
+	// The request holds the run for as long as it works on it: a model's turn can take longer than one hold, and a run that looked let go
+	// would be taken up by another request beside this one.
+	const held = setInterval(() => {
+		void db
+			.updateTable("runs")
+			.set({ leased_until: lease() })
+			.where("id", "=", run.id)
+			.where("status", "=", "running")
+			.execute()
+			.catch(() => {});
+	}, settings.holdMs / 3);
 
 	const usage: Usage = { ...run.usage };
 	let end: RunEnd | null = null;
@@ -396,7 +414,8 @@ export async function* runAssistant(
 							turn.answers[call.id] = {
 								id: call.id,
 								name: call.name,
-								output: given.error !== undefined ? { error: given.error } : (given.output ?? null),
+								// What the browser says is a tool's answer like any other: cut when it is long.
+								output: given.error !== undefined ? { error: given.error } : shortened(given.output ?? null),
 								error: given.error !== undefined,
 								kind: "screen",
 							};
@@ -528,12 +547,13 @@ export async function* runAssistant(
 				}
 				if (!(error instanceof ProviderError)) throw error;
 				// The service said no (credits, a limit) or broke off: an answer in the conversation, with the key's name (doc 10, errors).
+				const detail = withoutKey(error.detail, key.secret);
 				await finish(
 					error.kind === "refused"
-						? { status: "failed", error: { kind: "refused", detail: error.detail, keyName: key.name } }
+						? { status: "failed", error: { kind: "refused", detail, keyName: key.name } }
 						: mine.some((message) => message.role === "assistant")
 							? { status: "interrupted", reason: "connection" }
-							: { status: "failed", error: { kind: "unreachable", detail: error.detail, keyName: key.name } },
+							: { status: "failed", error: { kind: "unreachable", detail, keyName: key.name } },
 				);
 				return;
 			}
@@ -553,6 +573,7 @@ export async function* runAssistant(
 			await savePending();
 		}
 	} finally {
+		clearInterval(held);
 		signal.removeEventListener("abort", onGone);
 		inFlight.delete(run.id);
 		// Whoever listened went away, or something broke: the run is left so that it can be gone on with.
@@ -576,6 +597,14 @@ export async function* runAssistant(
 		yield { type: "usage", input: usage.input, output: usage.output };
 		yield { type: "end", untaken, ...ended };
 	}
+}
+
+/**
+ * A service's own words, safe to show and to store: a service that repeats the key it was sent in its error (some do, whole or in part) does
+ * not get it into the conversation.
+ */
+export function withoutKey(detail: string, secret: string): string {
+	return secret.length < 8 ? detail : detail.split(secret).join("•••");
 }
 
 /** How many times the conversation already holds this very call: the same tool with the same input. */

@@ -1,6 +1,7 @@
 import { CheckError, type ModelList, type Monti, type RelationOptionsResult, slugify } from "@monti-cms/core";
 import { z } from "zod";
-import type { ProviderFor } from "./provider";
+import { ProviderError, type ProviderFor } from "./provider";
+import { withoutKey } from "./run";
 
 /**
  * A quick task (doc 10, quick tasks): one field filled by one call of the quick-task model, with an answer in a fixed shape. No loop, no tools, no
@@ -67,13 +68,23 @@ export async function quickFill(monti: Monti, providerFor: ProviderFor, input: Q
 		.filter((part) => part !== null)
 		.join("\n\n");
 	const ask = async (prompt: string, schema: unknown, picture?: { mime: string; base64: string }) => {
-		const answered = await provider.answer({
-			model: listed.quick?.model ?? "",
-			system: style === null ? SYSTEM : `${SYSTEM}\n\nThe site's writing style:\n${style}`,
-			prompt,
-			schema,
-			...(picture ? { picture } : {}),
-		});
+		const answered = await provider
+			.answer({
+				model: listed.quick?.model ?? "",
+				system: style === null ? SYSTEM : `${SYSTEM}\n\nThe site's writing style:\n${style}`,
+				prompt,
+				schema,
+				...(picture ? { picture } : {}),
+			})
+			.catch((error: unknown) => {
+				if (!(error instanceof ProviderError)) throw error;
+				// The service said no or did not answer: the field's own line says which key and, for a refusal, the service's words.
+				throw new CheckError(
+					error.kind === "refused"
+						? { key: "assistant.refused", values: { name: key.name, detail: withoutKey(error.detail, key.secret) } }
+						: { key: "assistant.unreachable", values: { name: key.name } },
+				);
+			});
 		await monti.keys.addUsage(key.id, answered.usage.input + answered.usage.output);
 		return answered.value;
 	};
