@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { scene } from "../../../test/scene";
+import { MontiAdmin } from "../../app";
+import type { Transport } from "../../operations/transport";
 import * as frame from "./frame.stories";
 
 const menu = () => page.getByRole("navigation", { name: "관리 메뉴" });
@@ -9,10 +11,11 @@ describe("getting in on the dev server", () => {
 	// The dev server: it has a schema file to write (nothing is written here) and a proof of a local browser. The proof's ticket comes from a
 	// loopback address, which this test's page cannot reach: its fetch is answered here, as the listener would.
 	const PROOF = "http://127.0.0.1:9/";
-	const devServer = (ticket: string | null) => {
+	const devServer = (ticket: string | null, render?: object) => {
 		const asked: string[] = [];
 		const story = scene(
 			{
+				...render,
 				loaders: frame.signedIn(undefined, {
 					signedIn: false,
 					files: { write: async () => {}, readChanges: async () => [] },
@@ -59,6 +62,30 @@ describe("getting in on the dev server", () => {
 			} finally {
 				dev.restore();
 			}
+		}
+	});
+
+	it("16-5 when handing the ticket in never comes back (the connection drops), the login screen shows: the admin does not stay blank", async () => {
+		type Loaded = { site: { transport: Transport } };
+		const dev = devServer("good", {
+			render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
+				<MontiAdmin
+					transport={(name, input, options) =>
+						name === "auth.devSignIn"
+							? Promise.reject(new TypeError("Failed to fetch"))
+							: loaded.site.transport(name, input, options)
+					}
+					siteName="example.dev"
+				/>
+			),
+		});
+		try {
+			await dev.story.run();
+			await expect.element(page.getByLabelText("이메일")).toBeVisible();
+			await expect.element(menu()).not.toBeInTheDocument();
+			expect(dev.asked).toEqual([PROOF]);
+		} finally {
+			dev.restore();
 		}
 	});
 });

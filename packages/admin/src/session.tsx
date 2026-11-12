@@ -44,9 +44,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 		if (!proof || tried === proof) return;
 		let left = false;
 		void (async () => {
-			const ticket = await devTicket(proof);
-			if (ticket && (await letIn({ ticket })).ok) await reload();
-			if (!left) setTried(proof);
+			try {
+				const ticket = await devTicket(proof);
+				if (ticket && (await letIn({ ticket })).ok) await reload();
+			} catch {
+				// The call did not come back (the connection dropped on the way): not let in. The sign-in screen is the way in.
+			} finally {
+				// Settled whatever happened: an admin that goes on waiting for a try that never ends shows nothing at all.
+				if (!left) setTried(proof);
+			}
 		})();
 		return () => {
 			left = true;
