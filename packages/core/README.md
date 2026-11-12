@@ -36,7 +36,10 @@ export const moveToFolder = defineOperation({
 
 A receiver is a webhook (`receivers: [webhook("https://example.dev/api/revalidate")]`) or a plugin's. A webhook has a name its deliveries are
 stored and shown under (`webhook(url, { name })`; left out, the address's host and path): the address itself, with any token in its query, is
-never stored. Two receivers of one site cannot share a name. A redirect is not followed and is a failure. A send that fails, or takes longer than ten
+never stored. Two receivers of one site cannot share a name. A redirect is not followed and is a failure. An address that does not
+parse, or that carries a user or a password (`https://user:pass@…`), is refused when the site is made: send credentials in `headers`
+(`Authorization`) or sign with `secret`. Why a delivery failed is kept as one of four kinds, never as an error's own text (which can quote
+the address): the receiver's status, no answer (with the network's code), no such receiver, or failed. A send that fails, or takes longer than ten
 seconds, shows as failed at once in the activity log and in the sidebar's count; it is tried again by itself eight times at growing waits
 (`RETRY_MINUTES`), when the admin opens and from `monti deliveries:run`, and after the last it stays failed until a person sends it again
 (`deliveries.retry`, a batch at a time) or cancels it (`deliveries.cancel`). The sends nobody waits for are handed to the host's `waitUntil`

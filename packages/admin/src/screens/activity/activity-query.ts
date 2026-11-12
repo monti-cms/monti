@@ -26,11 +26,18 @@ export type ActivityState = {
 	sort: "desc" | "asc";
 	page: number;
 	asOf: string | null;
+	/**
+	 * The page this one was reached from in the same browsing: its number, the places of its first and last lines, and the browsing's count. The
+	 * server reads the page from there, so a line committed late does not make it repeat one, and the count under the list stays.
+	 */
+	from: { page: number; first: string; last: string; total: number } | null;
 	/** The line open in the panel. */
 	open: string | null;
 };
 
 const RANGE = /^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})$/;
+/** `from` in the address: the page's number, its first and last lines' places and the count, dot between. */
+const FROM = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/;
 const among = <Value extends string>(known: readonly Value[], raw: string | null) =>
 	(raw ?? "").split(",").filter((value): value is Value => (known as readonly string[]).includes(value));
 
@@ -40,6 +47,8 @@ export function readActivityState(params: URLSearchParams): ActivityState {
 	const date = params.get("date") ?? "";
 	const span = RANGE.exec(date);
 	const asOf = params.get("as");
+	const from = FROM.exec(params.get("from") ?? "");
+	const later = Number.isInteger(page) && page > 1;
 	return {
 		search: params.get("q") ?? "",
 		kinds: among(ACTIVITY_KINDS_SHOWN, params.get("kind")),
@@ -53,7 +62,11 @@ export function readActivityState(params: URLSearchParams): ActivityState {
 		sort: params.get("sort") === "asc" ? "asc" : "desc",
 		page: Number.isInteger(page) && page > 1 ? page : 1,
 		// Only a later page stands somewhere: a first page reads the log as it is now.
-		asOf: asOf !== null && /^\d+$/.test(asOf) && Number.isInteger(page) && page > 1 ? asOf : null,
+		asOf: asOf !== null && /^\d+$/.test(asOf) && later ? asOf : null,
+		from:
+			from && later && Number(from[1]) >= 1
+				? { page: Number(from[1]), first: from[2] as string, last: from[3] as string, total: Number(from[4]) }
+				: null,
 		open: params.get("open"),
 	};
 }
@@ -70,6 +83,7 @@ export function writeActivityState(state: ActivityState): URLSearchParams {
 	if (state.page > 1) {
 		params.set("page", String(state.page));
 		if (state.asOf) params.set("as", state.asOf);
+		if (state.from) params.set("from", `${state.from.page}.${state.from.first}.${state.from.last}.${state.from.total}`);
 	}
 	if (state.open) params.set("open", state.open);
 	return params;
@@ -85,5 +99,6 @@ export const activityQueryOf = (state: ActivityState) => ({
 	page: state.page,
 	pageSize: ACTIVITY_PAGE_SIZE,
 	...(state.asOf ? { asOf: state.asOf } : {}),
+	...(state.from ? { from: state.from } : {}),
 	timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 });

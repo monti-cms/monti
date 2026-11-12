@@ -154,7 +154,7 @@ export function ActivityScreen({
 		go({ screen: "activity", params: writeActivityState(next) }, options);
 	/** A change of what the log is searched, filtered or ordered by starts over at its first page, as it is now. */
 	const look = (change: Partial<ActivityState>, options?: { replace?: boolean }) =>
-		setState({ ...state, ...change, page: 1, asOf: null }, options);
+		setState({ ...state, ...change, page: 1, asOf: null, from: null }, options);
 	const query = activityQueryOf(state);
 	const read = useRead<ActivityList>("activity.list", query, { afterWrites: true });
 	const counts = useRead<DeliveryCounts>("deliveries.counts", {}, { afterWrites: true });
@@ -435,9 +435,21 @@ export function ActivityScreen({
 						<ListPages
 							page={state.page}
 							pages={Math.ceil(total / ACTIVITY_PAGE_SIZE)}
-							// The other pages of this browsing stand where this one was read, so new activity does not shift them.
+							// The other pages of this browsing are read from this one's edges, inside the boundary it was read in: neither new activity
+							// nor a line committed late shifts them, and the count stays.
 							hrefOf={(page) =>
-								href({ screen: "activity", params: writeActivityState({ ...state, page, asOf: data.asOf }) })
+								href({
+									screen: "activity",
+									params: writeActivityState({
+										...state,
+										page,
+										asOf: data.asOf,
+										from:
+											data.first !== null && data.last !== null
+												? { page: state.page, first: data.first, last: data.last, total }
+												: null,
+									}),
+								})
 							}
 						/>
 					</ListFooter>

@@ -36,7 +36,9 @@ export const moveToFolder = defineOperation({
 
 받는 곳은 웹훅(`receivers: [webhook("https://example.dev/api/revalidate")]`)이거나 플러그인의 것이다. 웹훅에는 이름이 있고(`webhook(url, { name })`.
 없으면 주소의 호스트와 경로) 전송은 그 이름으로 저장되고 보인다. 주소 자체와 쿼리에 든 토큰은 저장하지 않는다. 한 사이트의 받는 곳 둘이 같은
-이름일 수 없다. 리다이렉트는 따라가지 않고 실패다. 실패했거나 10초 넘게 걸린 전송은 바로
+이름일 수 없다. 리다이렉트는 따라가지 않고 실패다. 풀리지 않는 주소와 사용자 · 비밀번호가 든 주소(`https://user:pass@…`)는 사이트를 열 때
+거절한다: 계정은 `headers`(`Authorization`)로 보내거나 `secret`으로 서명한다. 전송이 실패한 까닭은 네 가지 가운데 하나로 남고, 오류의 글(주소를
+옮길 수 있다)은 남기지 않는다: 받는 곳의 상태, 답 없음(네트워크의 코드와 함께), 받는 곳 없음, 보내지 못함. 실패했거나 10초 넘게 걸린 전송은 바로
 활동 기록과 사이드바 개수에 실패로 보인다. 그 뒤 사이를 늘려 가며 8번까지 저절로 다시 보내고(`RETRY_MINUTES`, 관리자 화면에 들어올 때와
 `monti deliveries:run`), 그래도 안 되면 사람이 다시 보내거나(`deliveries.retry`, 한 번에 한 묶음씩) 취소할(`deliveries.cancel`) 때까지 실패로
 남는다. 아무도 기다리지 않는 전송은 호스트의 `waitUntil`에 맡긴다(`openMonti(config, root, { waitUntil })`. `@monti-cms/next`는 Next의

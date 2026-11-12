@@ -410,7 +410,7 @@ describe("deliveries", () => {
 			await monti.deliveries.sendDue();
 		}
 		const row = await db.selectFrom("monti_delivery").selectAll().executeTakeFirstOrThrow();
-		expect(row).toMatchObject({ state: "failed", attempts: RETRY_MINUTES.length + 1, last_error: "noAnswer" });
+		expect(row).toMatchObject({ state: "failed", attempts: RETRY_MINUTES.length + 1, last_error: "failed" });
 		expect(sent).toEqual([]);
 	});
 

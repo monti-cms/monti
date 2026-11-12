@@ -65,7 +65,7 @@
 | 묶음 "요청" | `Heading variant="label"` + `Text` | 어시스턴트의 줄에만. 머리에서 잘린 요청을 온전히 보인다. |
 | 묶음 "한 일 · 4" | `Text variant="note" tone="muted"` 여러 줄 | 어시스턴트의 줄에만: 그 요청으로 한 쓰기 하나하나. |
 | 묶음 "항목" | `DescriptionList`("글" · "컬렉션" · "언어" · "주소"). 여럿이면 "항목 · 9"와 이름 목록 | 글 이름은 `TextButton variant="underline"`(`href`)로 그 글을 연다. 영구 삭제되어 없는 것은 글자만이다. |
-| 묶음 "전송 · 2" | 받는 곳마다 `DescriptionList`("받는 곳" · "이벤트" · "상태" · "마지막 오류" · "다음 시도" · "이벤트 ID") | 받는 곳은 사람이 읽는 이름이다("사이트 캐시", 웹훅은 호스트와 경로 "example.dev/api/search"). 저장된 주소는 보이지 않는다(토큰이 들 수 있다). 상태는 `EntryStatus`(이 패널은 줄 하나의 이야기라 "보냄"도 적는다). 마지막 오류는 세 문장 가운데 하나다: 받는 곳의 답 그대로("503 Service Unavailable"), "답 없음", "받는 곳 없음". 다음 시도는 날짜와 시각("11. 13 09:10"). "이벤트 ID"는 받는 쪽이 `Monti-Event-Id` 헤더(본문의 `id`)로 받은 id라 받는 쪽 로그와 맞춰 본다. 이벤트 이름, 다음 시도, id는 `mono`. 받는 곳이 없는 사이트에는 묶음이 없다. |
+| 묶음 "전송 · 2" | 받는 곳마다 `DescriptionList`("받는 곳" · "이벤트" · "상태" · "마지막 오류" · "다음 시도" · "이벤트 ID") | 받는 곳은 사람이 읽는 이름이다("사이트 캐시", 웹훅은 호스트와 경로 "example.dev/api/search"). 저장된 주소는 보이지 않는다(토큰이 들 수 있다). 상태는 `EntryStatus`(이 패널은 줄 하나의 이야기라 "보냄"도 적는다). 마지막 오류는 네 문장 가운데 하나다: 받는 곳의 답("503 Service Unavailable". 숫자와 HTTP의 표준 말), "답 없음", "받는 곳 없음", "보내지 못함"(그 밖의 실패). 오류의 글은 저장하지도 보이지도 않는다. 다음 시도는 날짜와 시각("11. 13 09:10"). "이벤트 ID"는 받는 쪽이 `Monti-Event-Id` 헤더(본문의 `id`)로 받은 id라 받는 쪽 로그와 맞춰 본다. 이벤트 이름, 다음 시도, id는 `mono`. 받는 곳이 없는 사이트에는 묶음이 없다. |
 | 전송 동작 | "다시 보내기" `TextButton variant="underline"`, "취소" `TextButton variant="quiet"` | 받는 곳마다 그 아래. 실패했거나 기다리는 전송에만. 다른 보내기가 도는 동안 "다시 보내기"는 `loading`이다. |
 | 전송 취소 확인 | `AlertDialog`(`AlertDialogTitle` "이 전송을 취소할까요?", `AlertDialogDescription`의 받는 곳 이름), `AlertDialogCancel` "닫기", `AlertDialogAction variant="danger"` "취소하기" | 취소는 되돌릴 수 없어 묻는다. |
 

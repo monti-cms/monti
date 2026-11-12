@@ -550,6 +550,9 @@ const MIGRATIONS: Record<string, Migration> = {
 			// visit), the sweep for what is due and "send all again" read the open ones by this index and never the rest.
 			await sql`create index monti_delivery_open on monti_delivery (next_attempt_at, created_at)
 				where state in ('pending', 'failed')`.execute(db);
+			// An undo reads what earlier undos put back of the records it is about: by record, among the few snapshots that were put back.
+			await sql`create index monti_activity_snapshot_restored on monti_activity_snapshot (record_id)
+				where restored_version is not null`.execute(db);
 			// The 30-day clean-up finds the writes whose undo has run out.
 			await sql`create index monti_activity_undo_until on monti_activity (undo_until)
 				where undo_until is not null`.execute(db);

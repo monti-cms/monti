@@ -68,14 +68,26 @@ export const BEFORE_ANSWER_MS = 10_000;
 /** How long a sender holds a delivery: past the time one send may take, so a sender that died lets go by itself. */
 const HOLD_MS = SEND_TIMEOUT_MS * 3;
 
-/** The longest error text kept on a delivery: a receiver's whole error page is no use in a side panel. */
-const ERROR_LENGTH = 300;
-
-/** A webhook's name when it is given none: its host and path. Never the query or the credentials, where a token may be. */
-function hostAndPath(url: string): string {
-	const parsed = new URL(url);
-	return `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname}`;
+/**
+ * A webhook's address, read when the site is made. One that does not parse, or that carries a user or a password, is refused there: the
+ * platform's `fetch` refuses both when it sends, with an error that quotes the whole address. The refusal does not quote it.
+ */
+function webhookAddress(url: string): URL {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw new Error("webhook(): the address is no URL. Give a whole address (https://host/path).");
+	}
+	if (parsed.username !== "" || parsed.password !== "")
+		throw new Error(
+			"webhook(): the address carries a user or a password, which a request cannot be sent with. Send them in `headers` (Authorization), or sign with `secret`.",
+		);
+	return parsed;
 }
+
+/** A webhook's name when it is given none: its host and path. Never the query, where a token may be. */
+const hostAndPath = (parsed: URL) => `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname}`;
 
 /** HMAC-SHA256 of `text` under `secret`, in hex. */
 async function hmac(secret: string, text: string): Promise<string> {
@@ -117,8 +129,9 @@ export function webhook(
 	} = {},
 ): Receiver {
 	const { events } = options;
+	const address = webhookAddress(url);
 	return {
-		destination: `webhook:${options.name ?? hostAndPath(url)}`,
+		destination: `webhook:${options.name ?? hostAndPath(address)}`,
 		...(events ? { accepts: (event: MontiEvent) => events.includes(event.type) } : {}),
 		async send(event, signal, delivery) {
 			const body = JSON.stringify(event);
@@ -143,10 +156,10 @@ export function webhook(
 					signal,
 				});
 			} catch (error) {
-				// The other side was not reached: the network's own word for why (`ECONNREFUSED`, `ENOTFOUND`) is kept with the message, and
-				// stored with the failure.
+				// The other side was not reached: the network's own word for why (`ECONNREFUSED`, `ENOTFOUND`) is what is kept. An error with no
+				// such word is passed on, and stored as a failure with none of its text: the platform's messages quote the address.
 				const code = networkCode(error);
-				if (code !== null && error instanceof Error) throw new Error(`${error.message} (${code})`, { cause: error });
+				if (code !== null) throw new NoAnswer(code);
 				throw error;
 			}
 			// Nothing reads the answer's body: it is let go, so the connection is free at once.
@@ -158,7 +171,8 @@ export function webhook(
 
 /**
  * What a receiver throws when the other side answered, and not with success: `status` is the answer as it came ("503 Service Unavailable"), and
- * the log shows it. Anything else a receiver throws is read as no answer: an error's own message is never shown to a person.
+ * the log shows it (the number, and HTTP's own words for it). Anything else a receiver throws is stored as a failure with none of its text: an
+ * error's own message is never stored or shown.
  */
 export class ReceiverAnswer extends Error {
 	constructor(readonly status: string) {
@@ -173,26 +187,73 @@ export const SITE_CACHE_LABEL: Message = { key: "deliveries.receiver.site" };
 /** The delivery's receiver is not in the config any more. */
 class GoneError extends Error {}
 
-/** The network's own word for why the other side was not reached (`ECONNREFUSED`, `ENOTFOUND`), when the error carries one. */
+/** The sender gave up on a receiver that did not answer in time, or the other side was not reached (`code`: the network's own word for why). */
+class NoAnswer extends Error {
+	constructor(readonly code: string | null = null) {
+		super("No answer");
+		this.name = "NoAnswer";
+	}
+}
+
+/** The network's own word for why the other side was not reached (`ECONNREFUSED`, `ENOTFOUND`), when the error carries one that is such a word. */
 function networkCode(error: unknown): string | null {
 	let at = error;
 	for (let depth = 0; typeof at === "object" && at !== null && depth < 3; depth++) {
 		const { code, cause } = at as { code?: unknown; cause?: unknown };
-		if (typeof code === "string") return code;
+		// A code and nothing else: capitals, digits and underscores, never a sentence that could quote an address.
+		if (typeof code === "string" && /^[A-Z][A-Z0-9_]{2,39}$/.test(code)) return code;
 		at = cause;
 	}
 	return null;
 }
 
+/** The words HTTP has for the statuses a receiver is likely to answer with: a status is stored with these and no others. */
+const STATUS_WORDS: Record<number, string> = {
+	301: "Moved Permanently",
+	302: "Found",
+	303: "See Other",
+	307: "Temporary Redirect",
+	308: "Permanent Redirect",
+	400: "Bad Request",
+	401: "Unauthorized",
+	403: "Forbidden",
+	404: "Not Found",
+	405: "Method Not Allowed",
+	408: "Request Timeout",
+	409: "Conflict",
+	410: "Gone",
+	413: "Content Too Large",
+	422: "Unprocessable Content",
+	429: "Too Many Requests",
+	500: "Internal Server Error",
+	501: "Not Implemented",
+	502: "Bad Gateway",
+	503: "Service Unavailable",
+	504: "Gateway Timeout",
+};
+
 /**
- * Why a delivery failed, as it is stored (`last_error`): the receiver's answer (`status:503 Service Unavailable`), no answer (`noAnswer`, with
- * the network's word after it when there is one: `noAnswer:ECONNREFUSED`), or no such receiver in the config any more (`gone`).
+ * Why a delivery failed, as it is stored (`last_error`). It is one of four kinds and never a text that came from outside: an error's own
+ * message can quote the address it was sent to, with the token in it, and what is stored is shown in the log and read by the assistant.
+ *
+ * - `status:503 Service Unavailable`: the receiver answered. The number, and HTTP's own words for it when the answer used them; words of the
+ *   other side's own are not kept.
+ * - `noAnswer`, `noAnswer:ECONNREFUSED`: no answer in time, or the other side was not reached, with the network's code when there is one.
+ * - `gone`: no such receiver in the config any more.
+ * - `failed`: anything else a receiver threw. What it said is not kept.
  */
 const failureOf = (error: unknown): string => {
 	if (error instanceof GoneError) return "gone";
-	if (error instanceof ReceiverAnswer) return `status:${error.status}`.slice(0, ERROR_LENGTH);
-	const code = networkCode(error);
-	return code === null ? "noAnswer" : `noAnswer:${code}`.slice(0, ERROR_LENGTH);
+	if (error instanceof ReceiverAnswer) {
+		const answered = /^(\d{3})(?: (.*))?$/.exec(error.status.trim());
+		if (!answered) return "failed";
+		const code = Number(answered[1]);
+		return STATUS_WORDS[code] !== undefined && answered[2] === STATUS_WORDS[code]
+			? `status:${code} ${STATUS_WORDS[code]}`
+			: `status:${code}`;
+	}
+	if (error instanceof NoAnswer) return error.code === null ? "noAnswer" : `noAnswer:${error.code}`;
+	return "failed";
 };
 
 /** A stored failure in words: one of three sentences (doc 13). */
@@ -200,7 +261,8 @@ export function deliveryError(stored: string | null): Message | null {
 	if (stored === null) return null;
 	if (stored === "gone") return { key: "deliveries.error.gone" };
 	if (stored.startsWith("status:")) return { key: "deliveries.error.status", values: { status: stored.slice(7) } };
-	return { key: "deliveries.error.noAnswer" };
+	if (stored.startsWith("noAnswer")) return { key: "deliveries.error.noAnswer" };
+	return { key: "deliveries.error.failed" };
 }
 
 /**
@@ -260,7 +322,7 @@ async function sendOnce(receiver: Receiver, event: MontiEvent, delivery: Deliver
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	const late = new Promise<never>((_resolve, reject) => {
 		timer = setTimeout(() => {
-			const error = new Error("No answer in time");
+			const error = new NoAnswer();
 			abort.abort(error);
 			reject(error);
 		}, SEND_TIMEOUT_MS);

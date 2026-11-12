@@ -395,11 +395,18 @@ describe("the activity log (doc 13, flow 12)", () => {
 			{ actor: "admin" },
 		);
 		await userEvent.click(main().getByRole("link", { name: "2", exact: true }));
-		await expect.poll(() => location.hash).toBe(`#/activity?page=2&as=${first.asOf}`);
+		// The address says where the browsing stands and the page it came from: its number, its first and last lines' places, the count.
+		await expect
+			.poll(() => location.hash)
+			.toBe(`#/activity?page=2&as=${first.asOf}&from=1.${first.first}.${first.last}.${first.total}`);
 		await expect.element(main().getByText(`51–${first.total} / ${first.total}`)).toBeVisible();
 		// Page 2 goes on after page 1's last row: the new row did not push that one over.
 		expect(rows()).not.toContain(last);
 		expect(rows()).toHaveLength(first.total - 50);
+		// Back at page 1 a new browsing begins: it counts the row that arrived.
+		await userEvent.click(main().getByRole("link", { name: "1", exact: true }));
+		await expect.poll(() => location.hash).toBe("#/activity");
+		await expect.element(main().getByText(`1–50 / ${first.total + 1}`)).toBeVisible();
 	});
 
 	it("[many] every row is one line, as high as a list's; long words are cut in their own cell", async () => {

@@ -20,7 +20,8 @@ import { createReader } from "../entries/reader";
 import { ForbiddenError } from "../errors";
 import { coreMessages, formatMessage } from "../messages";
 import { createMonti, type MontiOptions } from "../monti";
-import type { Message, MontiEvent } from "../operation";
+import { type Message, type MontiEvent, recordKey } from "../operation";
+import { lockRecords } from "../records";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
 import { type ActivityDetail, type ActivityLine, type ActivityList, ActivityQuery, listActivity } from "./list";
@@ -339,7 +340,7 @@ describe("sending", () => {
 
 	it("13-1 a webhook is stored and shown under a name, never its address: a token in the address stays in the config, and two receivers cannot share a name", async () => {
 		const posted: string[] = [];
-		const hook = webhook("https://user:pass@hooks.site.test/deploy?token=s3cret", {
+		const hook = webhook("https://hooks.site.test/deploy?token=s3cret", {
 			fetch: async (url) => {
 				posted.push(String(url));
 				return new Response(null, { status: 200 });
@@ -349,13 +350,18 @@ describe("sending", () => {
 		expect(webhook("https://site.test/").destination).toBe("webhook:site.test");
 		expect(webhook("https://site.test/api/search?key=1", { name: "search" }).destination).toBe("webhook:search");
 		const monti = site({ receivers: [hook] });
-		await newPost("첫 번째 글", "first-post", monti);
-		// Posted to the whole address; nothing of the token or the credentials is in any row.
-		expect(posted).toEqual(["https://user:pass@hooks.site.test/deploy?token=s3cret"]);
+		const id = await newPost("첫 번째 글", "first-post", monti);
+		// Posted to the whole address; nothing of the token is in any row, nor in what the log's details answer.
+		expect(posted).toEqual(["https://hooks.site.test/deploy?token=s3cret"]);
 		expect(await deliveries()).toHaveLength(1);
-		const rows = JSON.stringify([await deliveries(), await db.selectFrom("monti_activity").selectAll().execute()]);
-		expect(rows).not.toContain("s3cret");
-		expect(rows).not.toContain("pass@");
+		const [made] = await db.selectFrom("monti_activity").select("id").execute();
+		const everywhere = JSON.stringify([
+			await deliveries(),
+			await db.selectFrom("monti_activity").selectAll().execute(),
+			await detail(made.id, monti),
+		]);
+		expect(everywhere).not.toContain("s3cret");
+		expect(id).toBeTypeOf("string");
 		// Two addresses that differ only in their query would be one name: refused when the site is made, not found out by a lost event.
 		expect(() =>
 			site({ receivers: [webhook("https://a.test/hook?to=one"), webhook("https://a.test/hook?to=two")] }),
@@ -365,6 +371,88 @@ describe("sending", () => {
 				receivers: [webhook("https://a.test/hook?to=one"), webhook("https://a.test/hook?to=two", { name: "two" })],
 			}),
 		).not.toThrow();
+	});
+
+	it("13-1 an address the platform would refuse is refused when the site is made, in words that do not quote it", async () => {
+		// The platform's fetch throws for both when it sends, quoting the whole address: neither gets that far.
+		for (const address of [
+			"https://user:pass@hooks.site.test/deploy?token=s3cret",
+			"hooks.site.test/deploy?token=s3cret",
+		]) {
+			let said = "";
+			try {
+				webhook(address);
+			} catch (error) {
+				said = String(error);
+			}
+			expect(said).toContain("webhook()");
+			expect(said).not.toContain("s3cret");
+			expect(said).not.toContain("user:pass");
+			expect(said).not.toContain("hooks.site.test");
+		}
+	});
+
+	it("13-1 what a send throws is never stored or shown as it is: an error that quotes the address leaves no trace of the address, the password or the token", async () => {
+		const address = "https://hooks.site.test/deploy?token=s3cret";
+		// As the platform's own fetch throws: with no network code, and with the address in the message.
+		const thrown = [
+			new TypeError(
+				`Request cannot be constructed from a URL that includes credentials: https://user:pass@hooks.site.test/deploy?token=s3cret`,
+			),
+			new TypeError(`Failed to parse URL from ${address}`),
+			Object.assign(new TypeError("fetch failed"), { cause: { code: `connect to ${address} refused` } }),
+		];
+		let next = 0;
+		const hook = webhook(address, {
+			fetch: async () => {
+				throw thrown[next++];
+			},
+		});
+		// A plugin's receiver that throws its own words, the address among them.
+		const loud: Receiver = {
+			destination: "plugin:loud",
+			async send() {
+				throw new Error(`could not reach ${address} as user:pass`);
+			},
+		};
+		const answered: Receiver = {
+			destination: "plugin:answered",
+			async send() {
+				// An answer whose words are the other side's own: only the number is kept.
+				throw new ReceiverAnswer(`503 token=s3cret was not accepted`);
+			},
+		};
+		const monti = site({ receivers: [hook, loud, answered] });
+		const id = await newPost("첫 번째 글", "first-post", monti);
+		for (const title of ["둘째 제목", "셋째 제목"]) {
+			later(MINUTE);
+			await save(id, { title }, monti);
+		}
+		const rows = await deliveries();
+		expect(rows.filter((row) => row.destination === hook.destination).map((row) => row.last_error)).toEqual([
+			"failed",
+			"failed",
+			"failed",
+		]);
+		expect(new Set(rows.filter((row) => row.destination === "plugin:loud").map((row) => row.last_error))).toEqual(
+			new Set(["failed"]),
+		);
+		expect(new Set(rows.filter((row) => row.destination === "plugin:answered").map((row) => row.last_error))).toEqual(
+			new Set(["status:503"]),
+		);
+		const lines = await db.selectFrom("monti_activity").select("id").execute();
+		const everywhere = JSON.stringify([
+			rows,
+			await db.selectFrom("monti_activity").selectAll().execute(),
+			await Promise.all(lines.map((line) => detail(line.id, monti))),
+		]);
+		for (const secret of ["s3cret", "user:pass", "pass@", "hooks.site.test/deploy?"])
+			expect(everywhere).not.toContain(secret);
+		// What the log shows for them is one fixed sentence.
+		const shown = await detail(lines[0].id, monti);
+		expect(shown.deliveries.find((delivery) => delivery.receiver === "loud")?.lastError).toEqual({
+			key: "deliveries.error.failed",
+		});
 	});
 
 	it("13-1 a webhook signs with its own secret, does not follow a redirect, lets the answer's body go, and keeps the network's word for a failure", async () => {
@@ -614,6 +702,20 @@ describe("sending", () => {
 		await expect(write("deliveries.retry", { ids: ["no-such-delivery"] }, monti)).rejects.toMatchObject({
 			reason: { key: "deliveries.unknown" },
 		});
+	});
+
+	it("13-1 a delivery that is not there is refused before any of the ones named with it is taken", async () => {
+		const monti = site();
+		down.add(SITE);
+		await newPost("첫 번째 글", "first-post", monti);
+		const [failed] = await deliveries();
+		down.clear();
+		// Named beside a real one: refused when the input is checked, so the real one is not reserved, reset or sent.
+		await expect(write("deliveries.retry", { ids: [failed.id, "no-such-delivery"] }, monti)).rejects.toMatchObject({
+			reason: { key: "deliveries.unknown" },
+		});
+		expect((await deliveries())[0]).toEqual(failed);
+		expect(sent).toEqual([]);
 	});
 
 	it("13-1 the assistant proposes sending a delivery again by its id; every failed one at once is a person's", async () => {
@@ -920,7 +1022,7 @@ describe("sending", () => {
 	});
 
 	it("a receiver is shown by a name a person reads, never by its stored destination: a webhook's token stays on the server", async () => {
-		const secret = webhook("https://user:pass@hooks.example.dev/deploy?token=s3cret", {
+		const secret = webhook("https://hooks.example.dev/deploy?token=s3cret", {
 			fetch: async () => new Response(null, { status: 503, statusText: "Service Unavailable" }),
 		});
 		const named: Receiver = { ...receiver("plugin:next"), label: { key: "deliveries.receiver.site" } };
@@ -937,7 +1039,6 @@ describe("sending", () => {
 			values: { status: "503 Service Unavailable" },
 		});
 		expect(JSON.stringify(shown)).not.toContain("s3cret");
-		expect(JSON.stringify(shown)).not.toContain("pass@");
 		// Canceling answers nothing of the destination either.
 		const failed = shown.deliveries[1];
 		expect(JSON.stringify(await write("deliveries.cancel", { id: failed.id }, monti))).not.toContain("s3cret");
@@ -1068,7 +1169,7 @@ describe("the log", () => {
 			},
 			{
 				id: expect.any(String),
-				// A webhook by its host and path.
+				// A webhook by the name it is stored under.
 				receiver: "site.test/revalidate",
 				event: "entry.published",
 				eventId: expect.any(String),
@@ -1379,6 +1480,80 @@ describe("the log", () => {
 		expect(whats(await list({ pageSize: 1 }, monti))).toEqual(['"끼어든 글" 만듦']);
 	});
 
+	it("13-3 a line that was being written when a browsing began and is committed during it repeats no line on the next page, and the count stays", async () => {
+		const monti = site();
+		for (let index = 1; index <= 5; index++) await newPost(`글 ${index}`, `post-${index}`, monti);
+		const whats = (page: ActivityList) => page.lines.map((line) => said(line)[0]);
+		// Another request's write: its row has its place in the order already, and is not committed yet.
+		let commit = () => {};
+		const gate = new Promise<void>((resolve) => {
+			commit = resolve;
+		});
+		let placed = () => {};
+		const written = new Promise<void>((resolve) => {
+			placed = resolve;
+		});
+		const late = db.transaction().execute(async (trx) => {
+			const id = "00000000-0000-4000-8000-00000000aaaa";
+			await trx
+				.insertInto("monti_activity")
+				.values({
+					id,
+					line: id,
+					at: clock,
+					actor: JSON.stringify("admin"),
+					operation: "entries.save",
+					summary: JSON.stringify({ key: "entries.save", values: { title: "늦게 끝난 저장" } }),
+					place: null,
+					targets: JSON.stringify([]),
+					kind: "save",
+					listed: true,
+					conversation_id: null,
+					proposal_item_id: null,
+					proposal_id: null,
+					undo_until: null,
+					undone_at: null,
+				})
+				.execute();
+			placed();
+			await gate;
+		});
+		await written;
+		// A newer write begins and commits while that one is still open.
+		await newPost("글 6", "post-6", monti);
+		const first = await list({ pageSize: 2 }, monti);
+		expect(whats(first)).toEqual(['"글 6" 만듦', '"글 5" 만듦']);
+		expect(first.total).toBe(6);
+		// The older write commits: its place is inside the browsing's boundary, between the lines of page 1.
+		commit();
+		await late;
+		const from = (page: number, of: ActivityList) => ({
+			page,
+			first: of.first as string,
+			last: of.last as string,
+			total: of.total,
+		});
+		// Read from page 1's last line, page 2 begins after it: counted from the top it would begin with "글 5" again.
+		const second = await list({ pageSize: 2, page: 2, asOf: first.asOf, from: from(1, first) }, monti);
+		expect(whats(second)).toEqual(['"글 4" 만듦', '"글 3" 만듦']);
+		expect(whats(await list({ pageSize: 2, page: 2, asOf: first.asOf }, monti))[0]).toBe('"글 5" 만듦');
+		// The count under the list is the browsing's, on every page of it.
+		expect(second.total).toBe(first.total);
+		// Two pages on from page 1, and back again, by the same places.
+		const third = await list({ pageSize: 2, page: 3, asOf: first.asOf, from: from(1, first) }, monti);
+		expect(whats(third)).toEqual(['"글 2" 만듦', '"글 1" 만듦']);
+		expect(whats(await list({ pageSize: 2, page: 2, asOf: first.asOf, from: from(3, third) }, monti))).toEqual(
+			whats(second),
+		);
+		expect(whats(await list({ pageSize: 2, page: 2, asOf: first.asOf, from: from(2, second) }, monti))).toEqual(
+			whats(second),
+		);
+		// A new browsing has the late line, and counts it.
+		const fresh = await list({ pageSize: 10 }, monti);
+		expect(fresh.total).toBe(7);
+		expect(whats(fresh)[1]).toBe('"늦게 끝난 저장" 저장');
+	});
+
 	it("13-3 a row keeps a bounded length of the words it is found by, however many records its write touched", async () => {
 		const monti = site();
 		const ids = [];
@@ -1524,6 +1699,8 @@ describe("the log", () => {
 		expect(await list()).toEqual({
 			lines: [],
 			total: 0,
+			first: null,
+			last: null,
 			asOf: "0",
 			deliveries: true,
 			entry: null,
@@ -1579,6 +1756,105 @@ describe("undo from the log", () => {
 			expect(undone.output).toMatchObject({ restore: [{ kind: "entry", id: entry }], skip: [], undone: [line] });
 			expect(await titleNow()).toBe(title);
 		}
+	});
+
+	it("13-3 an undo that also takes a stale mark off an entry records where the entry ends: the line before it can still be undone, and the event says that version", async () => {
+		const monti = site();
+		const entry = await newPost("처음 제목", "first-post", monti);
+		later(MINUTE);
+		const older = (await save(entry, { title: "둘째 제목" }, monti)).activityId;
+		// A mark of a field the schema no longer tracks, as an entry written before the schema changed carries. The newer save's snapshot holds
+		// it: the undo of that save brings it back, takes it off again, and the entry moves on a version with that.
+		await db
+			.updateTable("entries")
+			.set({ translation_seen: JSON.stringify({ gone: 1 }) })
+			.where("id", "=", entry)
+			.execute();
+		later(MINUTE);
+		const newer = (await save(entry, { title: "셋째 제목" }, monti)).activityId;
+		sent.length = 0;
+		await write("activity.undo", { id: newer }, monti);
+		const saved = sent.find((delivery) => delivery.event.type === "entry.saved");
+		expect(saved?.event.version).toBe(await versionOf(entry));
+		// Nobody wrote the entry since: the older line goes back too.
+		later(MINUTE);
+		const undone = await write<UndoPlan>("activity.undo", { id: older }, monti);
+		expect(undone.output).toMatchObject({ restore: [{ kind: "entry", id: entry }], skip: [] });
+		expect(
+			(await db.selectFrom("entries").select("title").where("id", "=", entry).executeTakeFirstOrThrow()).title,
+		).toBe("처음 제목");
+	});
+
+	it("13-3 a proposal's line undone from the log puts its items back too: the proposal says so, and a later 'revert all' finds nothing left", async () => {
+		const monti = site();
+		const entry = await newPost("첫 번째 글", "first-post", monti);
+		const proposal = await monti.proposals.create("conversation-1", "제목을 다듬어 줘");
+		await monti.proposals.add(proposal, "entries.save", { id: entry, version: 1, title: "다듬은 제목" });
+		await monti.proposals.apply(proposal);
+		const states = async () => ({
+			items: (
+				await db.selectFrom("monti_proposal_item").select("state").where("proposal_id", "=", proposal).execute()
+			).map((item) => item.state),
+			proposal: (
+				await db.selectFrom("monti_proposal").select("status").where("id", "=", proposal).executeTakeFirstOrThrow()
+			).status,
+		});
+		expect(await states()).toEqual({ items: ["applied"], proposal: "applied" });
+		const [line] = (await list({}, monti)).lines;
+		await write("activity.undo", { id: line.id }, monti);
+		// The conversation's card agrees with the log: the item is put back, not still "applied".
+		expect(await states()).toEqual({ items: ["reverted"], proposal: "reverted" });
+		const reverted = (await monti.run("proposals.revert", { id: proposal }, { actor: "admin" })) as Written<{
+			reverted: string[];
+			kept: string[];
+		}>;
+		expect(reverted.output).toEqual({ reverted: [], kept: [] });
+	});
+
+	it("13-3 a proposal's 'revert all' takes its locks at once and in order: a person's write of the same records and the revert both go through", async () => {
+		const monti = site();
+		const ids = [await newPost("글 가", "post-a", monti), await newPost("글 나", "post-b", monti)];
+		// In the order every write takes records' locks.
+		const [first, second] = ids
+			.map((id) => ({ kind: "entry", id }))
+			.sort((a, b) => (recordKey(a) < recordKey(b) ? -1 : 1));
+		const proposal = await monti.proposals.create("conversation-1", "제목들을 다듬어 줘");
+		// The earlier item changes the record that sorts first: put back newest first, the revert comes to the records the other way round.
+		await monti.proposals.add(proposal, "entries.save", { id: first.id, version: 1, title: "다듬은 가" });
+		await monti.proposals.add(proposal, "entries.save", { id: second.id, version: 1, title: "다듬은 나" });
+		await monti.proposals.apply(proposal);
+
+		let goOn = () => {};
+		const gate = new Promise<void>((resolve) => {
+			goOn = resolve;
+		});
+		let holds = () => {};
+		const holding = new Promise<void>((resolve) => {
+			holds = resolve;
+		});
+		// A person's write of both records, between its two locks.
+		const person = db.transaction().execute(async (trx) => {
+			await lockRecords(trx, [first]);
+			holds();
+			await gate;
+			await lockRecords(trx, [second]);
+		});
+		await holding;
+		const reverting = monti.run("proposals.revert", { id: proposal }, { actor: "admin" }) as Promise<
+			Written<{ reverted: string[]; kept: string[] }>
+		>;
+		// The revert has come to a lock it must wait for.
+		for (let tries = 0; tries < 200; tries++) {
+			const { rows } = await sql<{
+				waiting: number;
+			}>`select count(*)::int as waiting from pg_locks where not granted`.execute(db);
+			if ((rows[0]?.waiting ?? 0) > 0) break;
+			await new Promise((done) => setTimeout(done, 10));
+		}
+		goOn();
+		// Neither is ended by the database for waiting on the other.
+		await expect(person).resolves.toBeUndefined();
+		expect((await reverting).output.reverted).toHaveLength(2);
 	});
 
 	it("13-3 a person's write between two undos still breaks the chain: the older line is refused, and the write stays", async () => {
