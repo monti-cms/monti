@@ -49,4 +49,24 @@ describe("MediaInput", () => {
 		await userEvent.click(open);
 		expect(opened).toHaveBeenCalledTimes(1);
 	});
+
+	it("T136 the chosen file's picture stands in the frame that waits for a picture (`Image`), 20px, before its name", async () => {
+		const canvas = document.createElement("canvas");
+		canvas.width = canvas.height = 4;
+		render(
+			<div style={{ width: 280 }}>
+				<MediaInput value={{ name: "cover.png", thumbnail: canvas.toDataURL() }} onOpen={() => {}} />
+				<MediaInput value={{ name: "notes.pdf" }} onOpen={() => {}} />
+			</div>,
+		);
+		await expect.element(page.getByRole("button", { name: "cover.png" })).toBeVisible();
+		const frames = [...document.querySelectorAll<HTMLElement>("[data-slot=image]")];
+		// A file with no picture keeps the same empty square, so the names line up.
+		expect(frames.map((frame) => [frame.offsetWidth, frame.offsetHeight])).toEqual([
+			[20, 20],
+			[20, 20],
+		]);
+		await expect.poll(() => frames[0]?.querySelector("img")?.complete).toBe(true);
+		expect(frames[1]?.querySelector("img")).toBeNull();
+	});
 });

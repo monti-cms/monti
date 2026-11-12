@@ -341,7 +341,8 @@ function EditDialog({
 	const [amount, setAmount] = useState<number | null>(sized?.value ?? null);
 	/** A height being typed: a free shape takes it when the field is left, so each digit does not cut the picture anew. */
 	const [heightDraft, setHeightDraft] = useState<string | null>(null);
-	const [shown, setShown] = useState(src);
+	// The picture as it stands turned. One that opens turned has none until it is made: the stage stands empty at its shape meanwhile, not the upright one.
+	const [shown, setShown] = useState<string | null>(rotate === 0 ? src : null);
 	const stage = useRef<HTMLDivElement>(null);
 	// The picture's own size: the one the body frames it by, else read once from the file (the shown one is redrawn after each turn, so it can lag).
 	const [read, setRead] = useState<{ width: number; height: number } | null>(null);
@@ -472,6 +473,7 @@ function EditDialog({
 		widthPx === null || !upright
 			? null
 			: (imageSize(upright, { crop: cropOf(part), rotate: turn, width: widthPx })?.height ?? null);
+	const turned = size();
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent size="xl" finalFocus={returnTo}>
@@ -479,6 +481,8 @@ function EditDialog({
 				<CropStage
 					src={shown}
 					alt=""
+					// Known before the picture is in: the crop box stands as large as the picture will be, not as a dot (T136).
+					shape={turned ? turned.width / turned.height : null}
 					crop={part}
 					stageRef={stage}
 					onGrip={pressed}

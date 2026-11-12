@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "./cn";
+import { Image } from "./image";
 
 /** A crop in % of the picture. */
 export interface CropRect {
@@ -27,25 +29,31 @@ const CORNERS = [
  * centered in it as large as it fits, a small one drawn larger (2026-11-10, owner: the picture is what the dialog is for). With a `crop`, the picture outside it lies under the backdrop and the crop
  * is a 2px ink box with a square handle on each corner and thirds drawn faintly inside. Every press reports what was pressed (`onGrip`); the stage is as
  * large as the picture, so the screen measures the press against it (`stageRef`).
+ *
+ * The picture stands in the frame that waits for a picture (`Image`): with the picture's `shape` known, the stage stands at it before the picture is in, the
+ * crop box as large as the picture will be, and breathes until it comes (tokens.md, motion). Once the picture is in, its own shape is the stage's, whatever
+ * was said of it. With no shape known and no picture yet there is nothing to crop: the box comes with the picture.
  */
 function CropStage({
 	src,
 	alt,
+	shape: told,
 	crop,
 	stageRef,
-	imageRef,
 	onGrip,
 	onGripKey,
 	moveLabel,
 	cornerLabels,
 }: {
-	src: string;
+	/** The picture's address; `null` while there is none yet (a turned picture being made): the stage stands empty at `shape`. */
+	src: string | null;
 	alt: string;
+	/** The picture's shape (width over height), when it is known before the picture is in. */
+	shape?: number | null;
 	/** The crop, in % of the picture; absent when the whole picture is kept. */
 	crop?: CropRect;
 	/** The box the picture fills, for measuring where a press lands. */
 	stageRef?: React.Ref<HTMLDivElement>;
-	imageRef?: React.Ref<HTMLImageElement>;
 	onGrip?: (event: React.PointerEvent, grip: CropGrip) => void;
 	/** A key on the box or a corner: the same moves as the pointer, for a person with a keyboard. */
 	onGripKey?: (event: React.KeyboardEvent, grip: CropGrip) => void;
@@ -54,8 +62,10 @@ function CropStage({
 	/** The names of the four corner handles, for screen readers. */
 	cornerLabels: Record<CropCorner, string>;
 }) {
-	// The picture's shape, once it is in: the picture then fills the frame whatever its size, a small one drawn larger (2026-11-10, owner).
-	const [shape, setShape] = React.useState<number | null>(null);
+	// The shape of the picture that is in: the picture then fills the frame whatever its size, a small one drawn larger (2026-11-10, owner).
+	const [measured, setMeasured] = React.useState<{ src: string; shape: number } | null>(null);
+	// This address's own shape once it is in; until then the shape it was said to have, or the shape of the picture before it (a turn being made).
+	const shape = (measured?.src === src ? measured.shape : null) ?? told ?? measured?.shape ?? null;
 	return (
 		<div
 			data-slot="crop-stage"
@@ -64,22 +74,26 @@ function CropStage({
 			<div
 				ref={stageRef}
 				onPointerDown={(event) => onGrip?.(event, "stage")}
-				className="relative inline-block touch-none select-none"
+				className={cn("relative touch-none select-none", shape ? "inline-block" : "size-full")}
 				// design-allow: the picture's measured shape, fitted into the frame on both sides.
 				style={shape ? { aspectRatio: shape, width: `min(100cqw, ${shape} * 100cqh)` } : undefined}
 			>
-				<img
-					ref={imageRef}
+				<Image
 					src={src}
 					alt={alt}
+					ratio="auto"
+					shape={shape}
+					// All of the picture, should the shape said of it be off: a sliver of ground, not a cut picture.
+					fit="contain"
+					loading="eager"
 					onLoad={(event) => {
 						const { naturalWidth, naturalHeight } = event.currentTarget;
-						if (naturalWidth && naturalHeight) setShape(naturalWidth / naturalHeight);
+						if (src && naturalWidth && naturalHeight) setMeasured({ src, shape: naturalWidth / naturalHeight });
 					}}
-					className={`pointer-events-none block select-none rounded-monti-md ${shape ? "size-full" : "max-h-full max-w-full"}`}
-					draggable={false}
+					// The stage takes the presses, and the picture is not dragged out of it.
+					className="pointer-events-none size-full"
 				/>
-				{crop && (
+				{crop && shape && (
 					<>
 						<div
 							className="pointer-events-none absolute inset-0 bg-monti-backdrop"

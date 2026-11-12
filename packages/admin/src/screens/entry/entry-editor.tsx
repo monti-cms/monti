@@ -135,10 +135,15 @@ export function EntryEditor({
 	const [altCard, setAltCard] = useState<string | null>(null);
 	const body = useRef<Editor | null>(null);
 	const [bodyEditor, setBodyEditor] = useState<Editor | null>(null);
-	const keepEditor = useCallback((made: Editor | null) => {
-		body.current = made;
-		setBodyEditor(made);
-	}, []);
+	const { keepBody } = editor;
+	const keepEditor = useCallback(
+		(made: Editor | null) => {
+			body.current = made;
+			setBodyEditor(made);
+			keepBody(made);
+		},
+		[keepBody],
+	);
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
 	// The field's alt text was for the old picture (2026-11-09, owner): the new one has only what was said while it went up.
 	const fieldUploads = useFieldUploads((field, item, said) => {
@@ -547,9 +552,7 @@ export function EntryEditor({
 					<TextButton variant="underline" onClick={() => onCompare("draft")}>
 						{t("entry.compare")}
 					</TextButton>
-					<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
-						{t("entry.loadCopy")}
-					</TextButton>
+					<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
 					<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
 						{t("entry.dropCopy")}
 					</TextButton>

@@ -212,7 +212,6 @@ export function CompareView({
 						<>
 							<TextButton
 								onClick={() => {
-									if (editor.loadingCopy) return;
 									editor.dropBrowserCopy();
 									onBack();
 								}}
@@ -220,9 +219,9 @@ export function CompareView({
 								{t("compare.drop")}
 							</TextButton>
 							<Button
-								loading={editor.loadingCopy}
 								onClick={() => {
-									void editor.loadBrowserCopy().then(onBack);
+									editor.loadBrowserCopy();
+									onBack();
 								}}
 							>
 								{t("compare.load")}

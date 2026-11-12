@@ -162,6 +162,18 @@ export const ManyInBody: Story = {
 	}),
 };
 
+/** A translation whose body ends in a picture after a file: side by side, each block stands between cells the editor does not edit (T134). */
+export const TranslationEndsInPicture: Story = {
+	loaders: entry({
+		translate: "en",
+		body: ({ code, notes }) => [
+			{ id: "f_1", type: "file", attrs: { media: notes } },
+			{ id: "i_1", type: "image", attrs: { media: code, alt: "화면에 뜬 코드" } },
+		],
+	}),
+	tags: ["!dev"],
+};
+
 /** Flow 6·29: the library's window open from the "/" menu. */
 export const LibraryWindow: Story = {
 	loaders: entry(),

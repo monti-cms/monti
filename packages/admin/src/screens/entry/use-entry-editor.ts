@@ -1,7 +1,8 @@
 import type { Block, BodyOp, Doc, EntryState, MediaItem, MediaQueryResult, PublishTask } from "@monti-cms/core";
 import { MEDIA_QUERY_MOST } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
-import { useCallback, useMemo, useState } from "react";
+import type { Editor } from "@tiptap/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
 import { useAdmin } from "../../operations/admin-context";
@@ -96,9 +97,8 @@ export function useEntryEditor(source: EditorSource) {
 	const saveOp = useOperation<{ output: { id: string; version: number } }>(isEntry ? "entries.save" : "templates.save");
 	const latestOp = useOperation<EntryRead | TemplateRead>(isEntry ? "entries.get" : "templates.get");
 	const filesOp = useOperation<MediaQueryResult>("media.query");
-	/** The files of a kept copy's body that the server's body does not show: read before the copy goes in, so its pictures hold their places too. */
+	/** The files of a kept copy's body that the server's body does not show: its pictures hold their places too when the copy goes in. */
 	const [keptFiles, setKeptFiles] = useState<readonly MediaItem[]>([]);
-	const [loadingCopy, setLoadingCopy] = useState(false);
 	const { session, t } = useAdmin();
 	const signInAgain = useSignInAgain();
 	const loaded = source.id === null ? NEW_TEMPLATE : read.data;
@@ -114,6 +114,29 @@ export function useEntryEditor(source: EditorSource) {
 		leftSignedOut: session.ended,
 	});
 	const served = loaded?.media;
+	/**
+	 * A kept copy's files are read as soon as the copy is offered, not when it is taken: by the time a person presses "load" they are known, so the copy
+	 * goes in in one step. Reading them after the press left the banner standing meanwhile, with a button that did nothing and a body that took typing
+	 * only to lose it (T135). A copy taken before the read answers goes in all the same, and its body reads what it lacks, as any body does.
+	 */
+	const keptDoc = draft.browserCopy?.mine.find(([path]) => path === "doc")?.[1] as Doc | null | undefined;
+	const readFor = useRef<Doc | null>(null);
+	const readFiles = filesOp.run;
+	useEffect(() => {
+		if (!keptDoc || !loaded || readFor.current === keptDoc) return;
+		readFor.current = keptDoc;
+		const known = new Set(served?.map((item) => item.id));
+		const ids = [...mediaOf(keptDoc.blocks ?? [])].filter((id) => !known.has(id));
+		void (async () => {
+			const found: MediaItem[] = [];
+			for (let start = 0; start < ids.length; start += MEDIA_QUERY_MOST) {
+				const part = ids.slice(start, start + MEDIA_QUERY_MOST);
+				const read = await readFiles({ ids: part, pageSize: part.length }).catch(() => null);
+				if (read?.ok) found.push(...read.body.items);
+			}
+			if (found.length > 0) setKeptFiles(found);
+		})();
+	}, [keptDoc, loaded, served, readFiles]);
 	const files = useMemo(
 		() => (served && keptFiles.length > 0 ? [...keptFiles, ...served] : served),
 		[served, keptFiles],
@@ -122,6 +145,25 @@ export function useEntryEditor(source: EditorSource) {
 	const [conflict, setConflict] = useState<{ at: Date | null } | null>(null);
 	/** Bumped when the body shown changes other than by typing (the latest loaded, a kept copy taken): the body editor mounts again. */
 	const [bodyKey, setBodyKey] = useState(0);
+
+	/**
+	 * The body's editor. A banner's answer takes the banner away, and the button that was pressed with it: the cursor goes to the text, where the person
+	 * goes on, or the keyboard would be left on nothing (T135).
+	 */
+	const bodyEditor = useRef<Editor | null>(null);
+	const focusNextBody = useRef(false);
+	const focusBody = useCallback(() => {
+		const made = bodyEditor.current;
+		// The body is not on screen (the compare screen is), or it is about to be made again: the next one takes the cursor.
+		if (!made || made.isDestroyed) focusNextBody.current = true;
+		else made.commands.focus(null, { scrollIntoView: false });
+	}, []);
+	const keepBody = useCallback((made: Editor | null) => {
+		bodyEditor.current = made;
+		if (!made || !focusNextBody.current) return;
+		focusNextBody.current = false;
+		made.commands.focus(null, { scrollIntoView: false });
+	}, []);
 
 	const fields = useMemo(() => {
 		const keys = new Set(Object.keys(base ?? {}));
@@ -242,6 +284,7 @@ export function useEntryEditor(source: EditorSource) {
 			await reload();
 			draft.revertAll();
 			setConflict(null);
+			focusNextBody.current = true;
 			setBodyKey((key) => key + 1);
 		},
 		/** The other way out: my changes go over the server's latest. */
@@ -251,29 +294,19 @@ export function useEntryEditor(source: EditorSource) {
 			return save("entry" in latest.body ? latest.body.entry.version : latest.body.version);
 		},
 		browserCopy: draft.browserCopy,
-		/** The kept copy is being read in: its button works and cannot be pressed again. */
-		loadingCopy,
-		loadBrowserCopy: async () => {
-			if (loadingCopy || !draft.browserCopy) return;
-			setLoadingCopy(true);
-			const kept = draft.browserCopy?.mine.find(([path]) => path === "doc")?.[1] as Doc | null | undefined;
-			const known = new Set(loaded?.media?.map((item) => item.id));
-			const ids = [...mediaOf(kept?.blocks ?? [])].filter((id) => !known.has(id));
-			const found: MediaItem[] = [];
-			for (let start = 0; start < ids.length; start += MEDIA_QUERY_MOST) {
-				const part = ids.slice(start, start + MEDIA_QUERY_MOST);
-				const read = await filesOp.run({ ids: part, pageSize: part.length }).catch(() => null);
-				if (read?.ok) found.push(...read.body.items);
-			}
-			if (found.length > 0) setKeptFiles(found);
+		/** The kept copy goes in, in one step, and the body is made again from it with the cursor in it. */
+		loadBrowserCopy: () => {
+			if (!draft.browserCopy) return;
 			draft.loadBrowserCopy();
+			focusNextBody.current = true;
 			setBodyKey((key) => key + 1);
-			setLoadingCopy(false);
 		},
-		/** Not while the copy is on its way in: it is no longer there to drop. */
 		dropBrowserCopy: () => {
-			if (!loadingCopy) draft.dropBrowserCopy();
+			draft.dropBrowserCopy();
+			focusBody();
 		},
+		/** Hands the body's editor over as it is made (`BodyEditor onEditor`). */
+		keepBody,
 		/** The session ended: to the login screen, and back to this entry with what was typed (`restore`). */
 		signIn: signInAgain,
 		bodyKey,
