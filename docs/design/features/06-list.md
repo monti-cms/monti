@@ -16,7 +16,7 @@
 
 ## 쓰는 화면과 흐름
 
-- 기준 화면: `Screens/Reference/Lists` › Main, MainRowMenu, Empty, `Screens/Reference/Assistant` › Assistant(어시스턴트가 고른 행).
+- 기준 화면: `Screens/Reference/Lists` › Main, MainRowMenu, Empty, 어시스턴트가 거른 목록과 고른 행은 만든 화면의 `Screens/List` › AiFiltered, AiPicked(시안의 그림은 2026-11-12에 없앴다).
 - 흐름: [흐름 7 · 목록 정리](../admin/flows/07-list-tidy-up.md)의 01~05, 10단계, [흐름 3](../admin/flows/03-translation.md)의 12단계, [흐름 5](../admin/flows/05-trash.md)의 행 메뉴 단계, [흐름 2](../admin/flows/02-assistant.md)의 목록 단계.
 - 폴더 행과 폴더 안 찾기는 07번 문서, 태그 합치기는 08번 문서.
 

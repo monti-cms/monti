@@ -152,7 +152,6 @@ function CompareRow({
 	head = false,
 	title = false,
 	current = false,
-	check,
 	single = false,
 	source,
 	translation,
@@ -168,8 +167,6 @@ function CompareRow({
 	/** The title row: the two titles at the page heading size. */
 	title?: boolean;
 	current?: boolean;
-	/** A check before the block's name: whether this block's change is kept in (a proposal's review). */
-	check?: React.ReactNode;
 	/** One column: `translation` alone, across both (a change shown on one line, with what goes out and comes in marked in it). */
 	single?: boolean;
 	source?: React.ReactNode;
@@ -190,16 +187,12 @@ function CompareRow({
 		>
 			<span
 				className={cn(
-					"flex gap-monti-8 py-monti-16 pr-monti-12 font-mono text-monti-micro text-monti-subtle",
+					"flex flex-col gap-monti-2 py-monti-16 pr-monti-12 text-right font-mono text-monti-micro text-monti-subtle",
 					title && "pt-monti-20",
 				)}
 			>
-				{/* The check stands at the row's start, level with the name's line; the name stays at the column's end. */}
-				{check !== undefined && <span className="flex h-lh shrink-0 items-center">{check}</span>}
-				<span className="flex min-w-0 grow flex-col gap-monti-2 text-right">
-					{name}
-					{note && <span className="text-monti-warning">{note}</span>}
-				</span>
+				{name}
+				{note && <span className="text-monti-warning">{note}</span>}
 			</span>
 			{!single && (
 				<div

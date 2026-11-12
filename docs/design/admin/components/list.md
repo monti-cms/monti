@@ -248,7 +248,7 @@
 
 ### 코드
 
-`ListSection`(`title`, `count`, `countTone`, 행에 안쪽 여백이 없을 때 `flush`)은 제목과 개수가 붙은 행 목록이다. 자기 바깥 여백을 갖지 않고, 놓는 쪽의 `gap`이 묶음 사이를 띄운다. 행은 도구 화면의 `ListSectionRow`이거나 검토 시트의 `ChangeGroup`이다. 행 부품은 `ListSectionRow`(`title`, `titleCount`, `detail`, `meta`, `metaTone`: muted · subtle · faint · danger, `muted`, `actions` 또는 `control`, 칸의 `aria-labelledby`를 위한 `labelId`). 행 높이는 행의 종류마다 하나로 고정된다. 제목만 있는 행은 52px, `meta` 줄이 있는 행은 74px이다(아래 선 포함). 끝에 무엇이 오든(글자 버튼, 36px 컨트롤) 높이는 같다. 컨트롤이 행을 키우지 않는다. 행은 보기만 하는 목록이라 포인터가 올라가도 바탕이 바뀌지 않는다. 동작은 끝의 글자 버튼과 컨트롤에만 있다. `meta` 줄은 늘 mono 12다. 쓰임새나 상태("이번 달 1.24M 토큰")에도, 식별자(플러그인 코드 "bareun", `metaTone="subtle"`)에도 같은 줄을 쓴다. 플러그인이 API 키 화면에 묶음을 더할 때(`defineAdminPlugin({ keySections })`, AI 플러그인의 "모델")도 이것을 쓴다.
+`ListSection`(`title`, `count`, `countTone`, 행에 안쪽 여백이 없을 때 `flush`, 머리 끝의 `actions`, 행이 표일 때 `table`)은 제목과 개수가 붙은 행 목록이다. `actions`는 묶음 전체에 하는 일이다(제안 검토의 "3건 모두 빼기", 보기 전환). 머리 줄 높이 안에 서서 머리 선을 밀지 않는다. `table`이면 행이 공용 `Table`이고 묶음은 그 표의 이름일 뿐 목록 역할을 갖지 않는다(제안 검토의 묶음). 자기 바깥 여백을 갖지 않고, 놓는 쪽의 `gap`이 묶음 사이를 띄운다. 행은 도구 화면의 `ListSectionRow`이거나 검토 시트의 `ChangeGroup`이다. 행 부품은 `ListSectionRow`(`title`, `titleCount`, `detail`, `meta`, `metaTone`: muted · subtle · faint · danger, `muted`, `actions` 또는 `control`, 칸의 `aria-labelledby`를 위한 `labelId`). 행 높이는 행의 종류마다 하나로 고정된다. 제목만 있는 행은 52px, `meta` 줄이 있는 행은 74px이다(아래 선 포함). 끝에 무엇이 오든(글자 버튼, 36px 컨트롤) 높이는 같다. 컨트롤이 행을 키우지 않는다. 행은 보기만 하는 목록이라 포인터가 올라가도 바탕이 바뀌지 않는다. 동작은 끝의 글자 버튼과 컨트롤에만 있다. `meta` 줄은 늘 mono 12다. 쓰임새나 상태("이번 달 1.24M 토큰")에도, 식별자(플러그인 코드 "bareun", `metaTone="subtle"`)에도 같은 줄을 쓴다. 플러그인이 API 키 화면에 묶음을 더할 때(`defineAdminPlugin({ keySections })`, AI 플러그인의 "모델")도 이것을 쓴다.
 
 ## 휴지통 안의 폴더
 

@@ -13,7 +13,9 @@ import {
 	CompareSide,
 	CompareText,
 	CompareTitle,
+	Del,
 	Heading,
+	Ins,
 	Text,
 	TextButton,
 } from "./index";
@@ -170,6 +172,38 @@ export const TranslationRows: Story = {
 					translation={
 						<Text variant="reading" tone="faint">
 							편집기도 같은 원칙으로 정리했다.
+						</Text>
+					}
+				/>
+			</CompareRows>
+		</Box>
+	),
+};
+
+/**
+ * A change shown on one line (`single`): one column, with the words that go out and the words that come in marked where they stand. A proposal's
+ * review draws a change of words this way, or in two columns as it is and as proposed.
+ */
+export const OneColumn: Story = {
+	render: () => (
+		<Box paddingX={40} paddingY={24}>
+			<CompareRows>
+				<CompareRow
+					single
+					name="제목"
+					translation={
+						<Text variant="reading">
+							첫 번째 <Del>글</Del>
+							<Ins>글, 다시</Ins>
+						</Text>
+					}
+				/>
+				<CompareRow
+					single
+					name="블록 2"
+					translation={
+						<Text variant="reading">
+							목록에는 제목과 주소, 지금 상태만 남겼다. <Ins>나머지는 필요할 때 꺼내 본다.</Ins>
 						</Text>
 					}
 				/>

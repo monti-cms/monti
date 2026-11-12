@@ -43,7 +43,7 @@ type Kept = { open: boolean; conversation: string | null; recent: ModelChoice[] 
 const KEPT = "monti.assistant";
 /** How often a run that is going somewhere else (another tab, a request that was cut) is read again. */
 const POLL_MS = 3000;
-/** How many times in a row the browser goes on by itself with a run whose request was cut, before it says so (T162). */
+/** How many times in a row the browser goes on by itself with a run whose request was cut, before it says so. */
 const CUTS_BEFORE_ASKING = 2;
 
 function kept(): Kept {

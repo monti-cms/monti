@@ -63,7 +63,7 @@ export function proseBlocks(text: string): ProseBlock[] {
 const INLINE = /!\[([^\]]*)\]\(([^)\s]+)\)|\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*|`([^`]+)`|\*([^*\s][^*]*)\*/g;
 
 /**
- * The words of one line. The model's text never makes the browser ask for anything (T162): a picture is its words and its address as text, never
+ * The words of one line. The model's text never makes the browser ask for anything: a picture is its words and its address as text, never
  * loaded; a link to a place in the admin (`#/…`) opens it here; a link elsewhere opens a new tab only when pressed, and sends no referrer.
  * Anything else that looks like a link (`javascript:`, `data:`) stays text.
  */
