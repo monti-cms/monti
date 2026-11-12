@@ -16,6 +16,9 @@
 		"packages/core": {
 			"entry": ["src/**/*.test.ts", "src/__test__/**"]
 		},
+		"packages/ai": {
+			"entry": ["src/**/*.test.ts"]
+		},
 		"packages/ui": {
 			"entry": ["src/spec-pack/pack.mjs"],
 			"ignoreIssues": {

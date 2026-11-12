@@ -86,6 +86,7 @@ const ALL_RULES = ["file-name", "missing-key", "unreferenced"];
 const PACKAGES = {
 	core: ALL_RULES,
 	admin: ALL_RULES,
+	ai: ALL_RULES,
 };
 const packages = Object.keys(PACKAGES).filter((name) => only.length === 0 || only.includes(name));
 
