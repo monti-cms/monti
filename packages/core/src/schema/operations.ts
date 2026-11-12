@@ -3,13 +3,15 @@ import { z } from "zod";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { CheckError } from "../errors";
+import { sameJson } from "../json";
 import { checkMediaValues } from "../media/uses";
-import { defineOperation, type OperationContext } from "../operation";
+import { defineOperation, type OperationContext, type RecordRef } from "../operation";
 import { defineRecordKind } from "../records";
-import { AdminValues } from "./admin-values";
+import { addressesBefore, movedAddresses } from "./addresses";
+import { AdminValues, AdminValuesPatch, mergeAdminValues } from "./admin-values";
 import { applyChange, pendingChanges, readSchemaState, setSchemaState } from "./apply";
 import { checkSchema, type Schema } from "./define";
-import type { ChangeFile } from "./files";
+import { type ChangeFile, PartialSchemaWrite, SchemaFilesBusy } from "./files";
 import { type Answers, type Rename as FieldRename, planSchema, schemaHash, stepsFor } from "./plan";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -53,22 +55,21 @@ export const LocalesInput = z.object({
 	list: z.array(z.object({ code: z.string(), name: z.string() })),
 	prefix: z.enum(["always", "exceptSource", "never"]),
 });
-const SchemaInput: z.ZodType<Schema> = z.object({
-	locales: LocalesInput,
-	collections: z.record(
-		z.string(),
-		z.discriminatedUnion("kind", [
-			z.object({
-				kind: z.literal("document"),
-				path: z.string(),
-				previewPath: z.string().optional(),
-				fields: z.record(z.string(), Field),
-			}),
-			z.object({ kind: z.literal("item"), path: z.string().optional(), fields: z.record(z.string(), Field) }),
-		]),
-	),
-});
-const Rename = z.object({ collection: z.string(), from: z.string(), to: z.string() });
+export const CollectionsInput: z.ZodType<Schema["collections"]> = z.record(
+	z.string(),
+	z.discriminatedUnion("kind", [
+		z.object({
+			kind: z.literal("document"),
+			path: z.string(),
+			previewPath: z.string().optional(),
+			fields: z.record(z.string(), Field),
+		}),
+		z.object({ kind: z.literal("item"), path: z.string().optional(), fields: z.record(z.string(), Field) }),
+	]),
+);
+const SchemaInput: z.ZodType<Schema> = z.object({ locales: LocalesInput, collections: CollectionsInput });
+export const RenameInput = z.object({ collection: z.string(), from: z.string(), to: z.string() });
+const Rename = RenameInput;
 const ChoiceInput = z.discriminatedUnion("do", [
 	z.object({ do: z.literal("renameField"), values: z.enum(["move", "empty"]) }),
 	z.object({ do: z.literal("removeField"), values: z.union([z.literal("clear"), z.object({ move: z.string() })]) }),
@@ -115,8 +116,21 @@ export async function applySchema(
 		steps,
 		...(Object.keys(adminValues).length > 0 ? { firstAdminValues: adminValues } : {}),
 	};
-	await files.write(draft, change, schemaHash(draft) !== schemaHash(ctx.site.schema()));
+	try {
+		await files.write(ctx.db, draft, change, schemaHash(draft) !== schemaHash(ctx.site.schema()));
+	} catch (error) {
+		// The files are out of step and could not be put back: nothing here may call that "not written". The whole write fails.
+		// Held by another process for longer than the wait: not a file that cannot be written, and the same save goes through a moment later.
+		if (error instanceof PartialSchemaWrite || error instanceof SchemaFilesBusy) throw error;
+		// Neither file changed (`SchemaFiles.write` is all or nothing) and nothing is applied: the caller says so (doc 12), and the developer finds
+		// the reason here.
+		console.error("Monti: the schema file could not be written:", error);
+		return { changeId: change.id, written: false as const, applied: false, error: String(error), changes };
+	}
+	// From here the files are on disk whatever becomes of this write.
+	ctx.changedStructure(change.id);
 	ctx.site.setSchema(draft);
+	const addresses = await addressesBefore(ctx.db, state?.schema ?? draft, draft);
 	await sql`savepoint schema_apply`.execute(ctx.db);
 	try {
 		await applyChange(ctx.db, change, draft, ctx.site.kit);
@@ -125,49 +139,91 @@ export async function applySchema(
 		console.error(`Monti: change ${change.id} was saved to monti/changes but the database step failed:`, error);
 		await sql`rollback to savepoint schema_apply`.execute(ctx.db);
 		await setSchemaState(ctx.db, state?.schema ?? draft, change.id);
-		return { changeId: change.id, applied: false, error: String(error), changes };
+		return { changeId: change.id, written: true as const, applied: false, error: String(error), changes };
 	}
-	return { changeId: change.id, applied: true, changes };
+	await emitApplied(ctx, [change.id], addresses);
+	return { changeId: change.id, written: true as const, applied: true, changes };
 }
 
-/** The applied schema: its version guards against two saves over each other; it is never undone (a structure change has no undo). */
+/**
+ * Tells the receivers the structure was applied (`schema.applied`), with the public addresses it moved: a changed language mark or collection path
+ * gives every published entry of it another address, and a site that keeps its pages would go on serving the old ones (doc 16). `before` is what the
+ * addresses were under the schema the database followed until now.
+ */
+async function emitApplied(ctx: OperationContext, changeIds: string[], before: Map<string, string> | null) {
+	ctx.emit({ type: "schema.applied", ids: changeIds, ...(await movedAddresses(ctx.db, before, ctx.site.schema())) });
+}
+
+/** `applySchema` for the operations that change structure alone: a file that could not be written refuses the write. */
+export async function applyStructure(...args: Parameters<typeof applySchema>) {
+	const result = await applySchema(...args);
+	if (!result.written) throw new CheckError({ key: "schema.notWritten" });
+	return result;
+}
+
+/**
+ * The records a structure write holds beside the schema: every collection's admin values. A change of fields moves admin values with it (a renamed
+ * field's label, its place in the layout, its column in the list), reading a collection's row and writing it back; the writes of admin values
+ * (`list.savePrefs`, `collections.updateAdminValues`, `settings.save`) touch the same record, so neither works on a row the other is changing.
+ */
+export async function heldByStructure(ctx: OperationContext, draft?: Schema): Promise<RecordRef[]> {
+	const followed = (await readSchemaState(ctx.db))?.schema;
+	const collections = new Set(
+		[ctx.site.schema(), draft, followed].flatMap((schema) => Object.keys(schema?.collections ?? {})),
+	);
+	return [...collections].sort().map((id) => ({ kind: "collectionAdminValues", id }));
+}
+
+/**
+ * The applied schema: its version guards against two saves over each other. It has no `restore`: a structure change has no undo, so an undo of a
+ * write that named the schema and left it as it was (a save whose file could not be written) puts back the rest and leaves this alone.
+ */
 export const schemaRecord = defineRecordKind({
 	kind: "schema",
 	async load(db, ids) {
 		const state = await readSchemaState(db);
 		return state && ids.includes("current") ? [{ id: "current", version: state.version, data: state.hash }] : [];
 	},
-	async restore() {
-		throw new Error("A structure change is not undone; make the opposite change.");
-	},
 });
 
+/**
+ * A collection's admin values. A collection with no row yet is the empty record at version 0, so the first save names a version too: a row another
+ * save made in the meantime is at version 1 and the save is a conflict, not an overwrite.
+ */
 export const adminValuesRecord = defineRecordKind({
 	kind: "collectionAdminValues",
 	async load(db, ids) {
+		if (ids.length === 0) return [];
 		const rows = await db.selectFrom("collection_admin_values").selectAll().where("collection", "in", ids).execute();
-		return rows.map((row) => ({ id: row.collection, version: row.version, data: row.values }));
+		return ids.map((id) => {
+			const row = rows.find((each) => each.collection === id);
+			return row ? { id, version: row.version, data: row.values } : { id, version: 0, data: null };
+		});
 	},
 	async restore(db, id, data) {
 		if (data === null) {
 			await db.deleteFrom("collection_admin_values").where("collection", "=", id).execute();
 			return;
 		}
-		const values = AdminValues.parse(data);
-		await db
-			.insertInto("collection_admin_values")
-			.values({ collection: id, values: JSON.stringify(values) })
-			.onConflict((conflict) =>
-				conflict.column("collection").doUpdateSet((eb) => ({
-					values: JSON.stringify(values),
-					version: eb("collection_admin_values.version", "+", 1),
-				})),
-			)
-			.execute();
+		await writeAdminValues(db, id, AdminValues.parse(data));
 	},
 });
 
-async function adminValuesOf(db: Db): Promise<Record<string, AdminValues & { version: number }>> {
+/** Writes a collection's admin values whole: its first row, or the next version of the one it has. */
+export async function writeAdminValues(db: Db, collection: string, values: AdminValues): Promise<void> {
+	await db
+		.insertInto("collection_admin_values")
+		.values({ collection, values: JSON.stringify(values) })
+		.onConflict((conflict) =>
+			conflict.column("collection").doUpdateSet((eb) => ({
+				values: JSON.stringify(values),
+				version: eb("collection_admin_values.version", "+", 1),
+			})),
+		)
+		.execute();
+}
+
+export async function adminValuesOf(db: Db): Promise<Record<string, AdminValues & { version: number }>> {
 	const rows = await db.selectFrom("collection_admin_values").selectAll().execute();
 	return Object.fromEntries(rows.map((row) => [row.collection, { ...row.values, version: row.version }]));
 }
@@ -234,8 +290,9 @@ export const schemaOperations = [
 			adminValues: z.record(z.string(), AdminValues).default({}),
 		}),
 		touches: () => [{ kind: "schema", id: "current" }],
+		holds: (input, ctx) => heldByStructure(ctx, input.draft),
 		check: (input, ctx) => checkApply(ctx, input.draft, input.renames, input.answers as Answers),
-		run: (input, ctx) => applySchema(ctx, input.draft, input.renames, input.answers as Answers, input.adminValues),
+		run: (input, ctx) => applyStructure(ctx, input.draft, input.renames, input.answers as Answers, input.adminValues),
 		summary: (_input, output) => ({
 			key: output.applied ? "schema.applied" : "schema.applyFailed",
 			values: { change: output.changeId },
@@ -246,15 +303,31 @@ export const schemaOperations = [
 		kind: "write",
 		structure: true,
 		description:
-			"Apply again the change files the database has not followed, after an apply whose database step failed.",
+			"Apply again the change files the database has not followed, after an apply whose database step failed. The database is then recorded as following the schema those changes leave: an edit made to the schema file since still waits for its own review.",
 		input: z.object({}),
 		touches: () => [{ kind: "schema", id: "current" }],
+		holds: (_input, ctx) => heldByStructure(ctx),
 		async run(_input, ctx) {
 			const files = ctx.site.files;
 			if (!files) throw new Error("Structure is locked on the live site.");
-			const pending = await pendingChanges(ctx.db, await files.readChanges());
-			for (const change of pending) await applyChange(ctx.db, change, ctx.site.schema(), ctx.site.kit);
-			await setSchemaState(ctx.db, ctx.site.schema(), null);
+			const pending = await pendingChanges(ctx.db, await files.readChanges(ctx.db));
+			// The addresses as the database last followed them: what the site was serving while the change waited.
+			const state = await readSchemaState(ctx.db);
+			const addresses = await addressesBefore(ctx.db, state?.schema ?? ctx.site.schema(), ctx.site.schema());
+			// Each change brings the database to the schema it was written for, and that is the schema recorded as followed: not the schema file
+			// as it is now. A field taken out of the file by hand after the change was saved is no part of it, and is planned and reviewed apart
+			// (the file then differs from what the database follows, as after any hand edit).
+			let followed = state?.schema ?? ctx.site.schema();
+			for (const change of pending) {
+				followed = change.schema ?? ctx.site.schema();
+				await applyChange(ctx.db, change, followed, ctx.site.kit);
+			}
+			await setSchemaState(ctx.db, followed, null);
+			await emitApplied(
+				ctx,
+				pending.map((change) => change.id),
+				addresses,
+			);
 			return { applied: pending.map((change) => change.id) };
 		},
 		summary: (_input, output) => ({ key: "schema.retried", values: { count: output.applied.length } }),
@@ -263,17 +336,17 @@ export const schemaOperations = [
 		name: "collections.updateAdminValues",
 		kind: "write",
 		description:
-			"Save a collection's admin values: its label, folders, field labels and descriptions (how to fill each field), the property panel layout and the editor's allowed blocks. Works on the live site too.",
-		input: z.object({ collection: z.string(), values: AdminValues }),
+			"Change a collection's admin values: its label, folders, field labels and descriptions (how to fill each field), the property panel layout and the editor's allowed blocks. A patch: only the keys given change, null clears one, everything left out stays as saved (fields go by field and by key, so { fields: { summary: { label } } } renames one label and nothing else). Works on the live site too.",
+		input: z.object({ collection: z.string(), values: AdminValuesPatch }),
 		touches: (input) => [{ kind: "collectionAdminValues", id: input.collection }],
 		check(input, ctx) {
 			if (!ctx.site.schema().collections[input.collection])
 				throw new CheckError({ key: "collections.unknown", values: { collection: input.collection } });
 		},
 		async run(input, ctx) {
-			const existed = (await adminValuesRecord.load(ctx.db, [input.collection])).length > 0;
-			await adminValuesRecord.restore(ctx.db, input.collection, input.values);
-			if (!existed) ctx.created({ kind: "collectionAdminValues", id: input.collection });
+			const { version: _version, ...saved } = (await adminValuesOf(ctx.db))[input.collection] ?? { version: 0 };
+			const next = mergeAdminValues(saved, input.values);
+			if (!sameJson(next, saved)) await writeAdminValues(ctx.db, input.collection, next);
 		},
 		summary: (input) => ({ key: "collections.updateAdminValues", values: { collection: input.collection } }),
 	}),

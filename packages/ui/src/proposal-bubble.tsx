@@ -1,6 +1,7 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
+import { dock } from "./bottom-dock";
 import { Button } from "./button";
 import { cn } from "./cn";
 import { HIT_AREA } from "./hit-area";
@@ -97,11 +98,16 @@ function ProposalBubble({
 
 /**
  * Where the bubble floats: at the bottom of the scrolling column, centered, 12px over its end, staying there as the content scrolls under it; on a page
- * shorter than the window it still sits at the bottom. Put it last in the column; only the bubble takes the pointer.
+ * shorter than the window it still sits at the bottom. Put it last in the column; only the bubble takes the pointer. While it is shown the toasts
+ * stand above it.
  */
 function ProposalBubbleDock({ className, ...props }: ComponentProps<"div">) {
+	// Known to the toasts, which come up at the same place: while this is shown they stand above it (`Toaster`).
+	const [node, setNode] = useState<HTMLDivElement | null>(null);
+	useEffect(() => (node ? dock(node) : undefined), [node]);
 	return (
 		<div
+			ref={setNode}
 			data-slot="proposal-bubble-dock"
 			className={cn(
 				"pointer-events-none sticky bottom-monti-12 z-10 mt-auto flex justify-center px-monti-16 *:pointer-events-auto",

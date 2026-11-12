@@ -26,7 +26,7 @@ export async function planUndo(
 	db: Kysely<Database> | Transaction<Database>,
 	activityId: string,
 	ownStep?: OwnStep,
-): Promise<UndoPlan & { snapshots: { ref: RecordRef; before: unknown | null }[] }> {
+): Promise<UndoPlan & { same: RecordRef[]; snapshots: { ref: RecordRef; before: unknown | null }[] }> {
 	const row = await db
 		.selectFrom("monti_activity")
 		.select(["undo_until", "undone_at"])
@@ -43,15 +43,24 @@ export async function planUndo(
 		.execute();
 	const refs = snapshots.map((snapshot) => ({ kind: snapshot.kind, id: snapshot.record_id }));
 	const current = await loadRecords(engine, db, refs);
-	const plan: UndoPlan & { snapshots: { ref: RecordRef; before: unknown | null }[] } = {
+	const plan: UndoPlan & { same: RecordRef[]; snapshots: { ref: RecordRef; before: unknown | null }[] } = {
 		restore: [],
 		skip: [],
+		same: [],
 		snapshots: [],
 	};
 	snapshots.forEach((snapshot, index) => {
 		const ref = refs[index];
-		const now = current.get(recordKey(ref))?.version ?? null;
+		const state = current.get(recordKey(ref));
+		const now = state?.version ?? null;
 		const unchanged = now === snapshot.after_version || ownStep?.(ref, snapshot.after_version, now) === true;
+		// A record the write named and left as it was (a save that names a value as it is saved) has nothing to put back: writing the same
+		// values again would only move its version, and turn another tab's next save of it into a conflict.
+		// It is told apart (`same`), not lost: a revert of several writes walks back through it as through one it put back.
+		if (unchanged && sameJson(state?.data ?? null, snapshot.before ?? null)) {
+			plan.same.push(ref);
+			return;
+		}
 		(unchanged ? plan.restore : plan.skip).push(ref);
 		if (unchanged) plan.snapshots.push({ ref, before: snapshot.before });
 	});
@@ -65,8 +74,8 @@ async function undo(
 	activityId: string,
 	ownStep?: OwnStep,
 ): Promise<UndoPlan> {
-	const { snapshots, ...plan } = await planUndo(engine, trx, activityId, ownStep);
-	for (const { ref, before } of snapshots) await engine.recordKinds.get(ref.kind)?.restore(trx, ref.id, before);
+	const { snapshots, same: _same, ...plan } = await planUndo(engine, trx, activityId, ownStep);
+	for (const { ref, before } of snapshots) await engine.recordKinds.get(ref.kind)?.restore?.(trx, ref.id, before);
 	await rewriteUses(
 		trx,
 		engine.site.schema(),

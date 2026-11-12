@@ -8,7 +8,7 @@ import { CheckError } from "../errors";
 import { defineOperation, type OperationContext, type RecordRef } from "../operation";
 import { readSchemaState } from "../schema/apply";
 import { checkSchema, localeModeOf, type Schema, storedFields } from "../schema/define";
-import { AnswersInput, applySchema, checkApply, LocalesInput } from "../schema/operations";
+import { AnswersInput, applyStructure, checkApply, heldByStructure, LocalesInput } from "../schema/operations";
 import { type Answers, planSchema } from "../schema/plan";
 import { changesSql, pendingSql, sourceJoin } from "./count";
 import { type FieldMark, fieldMarksOf, seenAfter, trackedFields, writtenValue } from "./fields";
@@ -406,10 +406,11 @@ export const translationOperations = [
 			"Apply a draft of the site's languages on the dev server, the way schema.apply applies collections: monti.schema.ts and a change file, then the database. A removed language needs the answer { do: 'removeLocale', confirm: true } and deletes its translations; a new source language makes it the source of every group, with a draft where a group has no entry in it.",
 		input: z.object({ locales: LocalesInput, answers: AnswersInput }),
 		touches: () => [{ kind: "schema", id: "current" }],
+		holds: (_input, ctx) => heldByStructure(ctx),
 		check: (input, ctx) =>
 			checkApply(ctx, { ...ctx.site.schema(), locales: input.locales }, [], input.answers as Answers),
 		run: (input, ctx) =>
-			applySchema(ctx, { ...ctx.site.schema(), locales: input.locales }, [], input.answers as Answers),
+			applyStructure(ctx, { ...ctx.site.schema(), locales: input.locales }, [], input.answers as Answers),
 		summary: (_input, output) => ({
 			key: output.applied ? "schema.applied" : "schema.applyFailed",
 			values: { change: output.changeId },

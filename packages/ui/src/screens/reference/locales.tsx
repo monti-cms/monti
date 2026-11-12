@@ -14,9 +14,9 @@ import {
 	Stack,
 } from "../../index";
 import { AdminFrame } from "./frame";
-import { SettingsTabs, ShownSelect } from "./settings";
+import { SettingsTabs } from "./settings";
 
-/** Settings, Languages tab: the source language, one translation, the time zone. */
+/** Settings, Languages tab: the source language and one translation. The list is all the tab holds (doc 12, 2026-11-11: no time zone). */
 export function LocalesScreen() {
 	return (
 		<AdminFrame open="settings">
@@ -26,7 +26,7 @@ export function LocalesScreen() {
 					<SettingsTabs open="locales" />
 				</PageToolbar>
 				<PageBody>
-					<Section title="콘텐츠 언어">
+					<Section title="콘텐츠 언어" last>
 						<Stack gap={0}>
 							<Box as="ul">
 								<LanguageRow name="한국어" code="ko" handled>
@@ -54,9 +54,6 @@ export function LocalesScreen() {
 								</Button>
 							</Box>
 						</Stack>
-					</Section>
-					<Section title="시간대" last>
-						<ShownSelect id="time-zone" value="Asia/Seoul" label="시간대" />
 					</Section>
 				</PageBody>
 			</PageColumn>

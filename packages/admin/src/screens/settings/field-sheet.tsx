@@ -1,4 +1,4 @@
-import { type FieldDefinition, type LocaleMode, localeModeOf, translates } from "@monti-cms/core";
+import { type FieldDefinition, type LocaleMode, localeModeOf, MAX_FIELD_NAME, translates } from "@monti-cms/core";
 import {
 	Button,
 	DragHandle,
@@ -35,7 +35,7 @@ import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "./pick-one";
 import { at, type DraftField, FIELD_VALUES, type FieldValue, newFieldKey } from "./schema-draft";
-import type { CollectionsDraft } from "./use-collections-draft";
+import type { SettingsDraft } from "./use-settings-draft";
 
 /** The four kinds a person makes (doc 01); `slug` is every collection's own and is never made here. */
 const KINDS = ["text", "select", "media", "relation"] as const;
@@ -183,7 +183,7 @@ export function FieldSheet({
 	open,
 	onClose,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	open: FieldSheetOpen | null;
 	onClose: () => void;
 }) {
@@ -196,15 +196,7 @@ export function FieldSheet({
 	);
 }
 
-function FieldSheetBody({
-	model,
-	open,
-	onClose,
-}: {
-	model: CollectionsDraft;
-	open: FieldSheetOpen;
-	onClose: () => void;
-}) {
+function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: FieldSheetOpen; onClose: () => void }) {
 	const { t } = useAdmin();
 	const { draft, data } = model;
 	const c = open.collection;
@@ -243,9 +235,11 @@ function FieldSheetBody({
 			: null
 		: !IDENTIFIER.test(form.name)
 			? t("settings.field.badName")
-			: others.includes(form.name)
-				? t("settings.field.nameTaken")
-				: null;
+			: form.name.length > MAX_FIELD_NAME
+				? t("settings.problem.tooLong")
+				: others.includes(form.name)
+					? t("settings.field.nameTaken")
+					: null;
 	const ready = form.name !== "" && nameError === null;
 
 	const save = () => {

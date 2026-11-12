@@ -11,7 +11,7 @@ import {
 	storedFields,
 	translates,
 } from "../schema/define";
-import { adminValuesRecord } from "../schema/operations";
+import { adminValuesRecord, writeAdminValues } from "../schema/operations";
 import { translationSql } from "../translations/count";
 import type { EntryState } from "./operations";
 
@@ -634,9 +634,7 @@ export const listOperations = [
 		},
 		async run({ collection, ...prefs }, ctx) {
 			const values = await adminValues(ctx, collection);
-			const existed = (await adminValuesRecord.load(ctx.db, [collection])).length > 0;
-			await adminValuesRecord.restore(ctx.db, collection, { ...values, list: { ...values.list, ...prefs } });
-			if (!existed) ctx.created({ kind: "collectionAdminValues", id: collection });
+			await writeAdminValues(ctx.db, collection, { ...values, list: { ...values.list, ...prefs } });
 		},
 		summary: (input) => ({ key: "list.savePrefs", values: { collection: input.collection } }),
 	}),

@@ -4,6 +4,7 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
+import { BUSY_GUARD } from "./busy";
 import { cn } from "./cn";
 import { HIT_AREA } from "./hit-area";
 import { useUiLabels } from "./labels";
@@ -20,17 +21,17 @@ import { Spinner } from "./spinner";
  * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
-	`${HIT_AREA} inline cursor-pointer border-0 decoration-1 focus-visible:rounded-monti-sm underline-offset-4 not-disabled:hover:underline focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
+	`${HIT_AREA} inline cursor-pointer border-0 decoration-1 focus-visible:rounded-monti-sm underline-offset-4 not-data-loading:not-disabled:hover:underline focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
 	{
 		variants: {
 			variant: {
 				/** Cancel, undo all. */
-				plain: "text-monti-muted not-disabled:hover:text-monti-default",
+				plain: "text-monti-muted not-data-loading:not-disabled:hover:text-monti-default",
 				/** Takes you somewhere or opens something: review, fill with AI, see in the list →. */
 				underline:
-					"underline decoration-monti-strong text-monti-muted not-disabled:hover:decoration-monti-contrast not-disabled:hover:text-monti-default",
+					"underline decoration-monti-strong text-monti-muted not-data-loading:not-disabled:hover:decoration-monti-contrast not-data-loading:not-disabled:hover:text-monti-default",
 				/** Less important: + language, + group. */
-				quiet: "text-monti-subtle not-disabled:hover:text-monti-default",
+				quiet: "text-monti-subtle not-data-loading:not-disabled:hover:text-monti-default",
 				/** The risky second choice of a confirmation. */
 				danger: "text-monti-danger",
 				/** The one thing a row asks for before anything else (restore the original first): in ink, among quieter buttons. */
@@ -41,7 +42,7 @@ const textButtonVariants = cva(
 			/** Fixed-width letters, for an address or an identifier. */
 			mono: { true: "font-mono" },
 			/** Takes the quiet ink on top of its variant: an underlined button that is not the main action of its line (undo, change). */
-			quiet: { true: "text-monti-subtle not-disabled:hover:text-monti-default" },
+			quiet: { true: "text-monti-subtle not-data-loading:not-disabled:hover:text-monti-default" },
 			/** The text size of the line it stands in, when that is not the surrounding text's: the `note` of a list row, the `caption` of a label row. */
 			size: {
 				note: "text-monti-note",
@@ -55,10 +56,11 @@ const textButtonVariants = cva(
 			/** The assistant's action, in the proposal blue (its rule too). */
 			tone: {
 				proposal:
-					"text-monti-proposal not-disabled:hover:text-monti-proposal decoration-monti-proposal not-disabled:hover:decoration-monti-proposal",
+					"text-monti-proposal not-data-loading:not-disabled:hover:text-monti-proposal decoration-monti-proposal not-data-loading:not-disabled:hover:decoration-monti-proposal",
 			},
 			/** Working: a ring before the words; it cannot be pressed again and is not dimmed. */
-			loading: { true: "cursor-default aria-disabled:opacity-100" },
+			// The pointer lands on it (and is stopped by the guard): let through, the press would fall to what is beneath and take the focus there.
+			loading: { true: "cursor-default aria-disabled:pointer-events-auto aria-disabled:opacity-100" },
 		},
 		defaultVariants: { variant: "plain" },
 	},
@@ -93,10 +95,11 @@ function TextButton({
 				...(isButton ? { type: "button" } : {}),
 				...({ "data-tone": tone ?? undefined, "data-loading": loading || undefined } as React.ComponentProps<"button">),
 				"aria-busy": loading || undefined,
-				// Working, it says it is off (`aria-disabled`) and hears no press, but it is not `disabled`: a browser takes the focus from a
-				// disabled button, and the keyboard's focus would fall to the page while the action runs.
-				"aria-disabled": loading || undefined,
+				// Working is not "cannot be used": it keeps the focus it was pressed with (`aria-disabled`, not the attribute, which would hand the
+				// focus to the page), and a press while it works does nothing, whatever it is drawn over (`BUSY_GUARD`).
 				disabled: disabled || undefined,
+				"aria-disabled": (loading && !disabled) || undefined,
+				...(loading && !disabled ? BUSY_GUARD : {}),
 				children: loading ? (
 					<>
 						<Spinner className="mr-monti-4 size-[0.85em] align-[-0.1em]" />
@@ -109,17 +112,6 @@ function TextButton({
 			{
 				...props,
 				...(href === undefined ? {} : { href }),
-				// Stopped on the way down, before any press handler hears it: what the button is drawn as (`render`: a router's link, a button of
-				// its own) runs its handler ahead of this part's, so a guard among the handlers would come too late. A link does not go either.
-				...(loading
-					? {
-							onClick: undefined,
-							onClickCapture: (event: React.MouseEvent) => {
-								event.preventDefault();
-								event.stopPropagation();
-							},
-						}
-					: {}),
 			} as React.ComponentProps<"button">,
 		),
 		render,

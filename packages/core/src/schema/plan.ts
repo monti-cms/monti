@@ -38,13 +38,17 @@ export type SchemaChange = {
 		| "changeField"
 		| "addLocale"
 		| "removeLocale"
-		| "changeSource";
+		| "changeSource"
+		| "changePrefix";
 	/** Absent for a change of the languages (doc 04). */
 	collection?: string;
 	field?: string;
 	/** The language added or removed, or the new source language. */
 	locale?: string;
-	/** For a rename, the old name; for a path change, the old path. A preview path put in has no `from`, one taken out no `to`. */
+	/**
+	 * For a rename, the old name; for a path change, the old path; for a change of how addresses show the language, the old way. A preview path put
+	 * in has no `from`, one taken out no `to`.
+	 */
 	from?: string;
 	to?: string;
 	/**
@@ -163,6 +167,9 @@ async function planLocales(db: Db, before: LocalesDefinition, after: LocalesDefi
 			count: Number(rows[0]?.all ?? 0),
 		});
 	}
+	// No stored value changes, but every translation's public address does (doc 12).
+	if (before.prefix !== after.prefix)
+		changes.push({ id: "changePrefix", do: "changePrefix", from: before.prefix, to: after.prefix });
 	return changes;
 }
 
@@ -294,5 +301,9 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 				steps.push({ do: "fillField", collection, field, value: choice.fill });
 		}
 	}
-	return { steps, missing };
+	// A language leaves last. The collections' steps keep their place before the languages' (a renamed or moved field's values are under their
+	// new name by the time a new source language is made from the old one, which keeps only the fields the draft has), and the new source is made
+	// before the old one is taken out in the same change: the drafts the plan promises are made from it.
+	const last = (step: ChangeStep) => (step.do === "removeLocale" ? 1 : 0);
+	return { steps: [...steps].sort((a, b) => last(a) - last(b)), missing };
 }

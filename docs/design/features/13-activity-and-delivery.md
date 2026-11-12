@@ -58,11 +58,14 @@ type MontiEvent = {
   locale?: string;
   version?: number;
   paths?: string[];               // public paths affected, for the site's cache
+  allPaths?: true;                // more than 1000 paths moved: `paths` is left out, refresh the whole site
 };
 ```
 
 - 발행, 보관(사이트에서 내림), 휴지통, 복원, 영구 삭제처럼 사이트에 보이는 것이 바뀌면 `paths`에 그 주소들이 든다. 사이트는 이것으로 캐시를 새로 만든다.
 - 저장(`entry.saved`)은 사이트를 바꾸지 않지만, 미리보기 캐시나 검색 플러그인이 쓰도록 이벤트는 낸다. 받는 곳이 그 이벤트를 고른다.
+- 구조가 적용되면(`schema.applied`, 12) 주소가 바뀐 발행본의 옛 주소와 새 주소가 `paths`에 든다. 주소의 언어 표시를 바꾸면 발행본 전부의 주소가 바뀌므로, 옮겨진 주소가 1000개를 넘으면 `paths`를 싣지 않고 `allPaths: true`를 싣는다(웹훅 본문 한도를 넘지 않게). 받는 곳은 그때 사이트 전체를 새로 만든다. 필드만 바뀐 적용처럼 주소가 움직일 수 없는 변경에서는 발행본을 읽지 않고 `paths`가 비어 있다.
+- 운영 사이트의 `monti db:migrate`는 `schema.applied`를 내지 않는다. 운영 사이트의 구조는 배포와 함께 바뀌고, 배포가 페이지를 새로 만든다. 이벤트는 돌고 있는 사이트의 캐시를 갱신하려는 것이라 개발 서버의 적용(저장, "다시 적용")에서만 낸다.
 
 ## 보내기
 
