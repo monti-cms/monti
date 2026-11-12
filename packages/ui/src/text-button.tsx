@@ -13,13 +13,14 @@ import { Spinner } from "./spinner";
  * Words that act where a button's height does not fit: in a sentence, on a field's label row, at the end of a short line. Where a button fits, use
  * `Button variant="ghost"`. A `<button>`; with an `href` it is an `<a>`, and the app's router link goes in
  * `render` (`render={<Link href="…" />}`). An icon goes before the text, 14px with a 6px gap; a `Caret` after it keeps its own 12px. It has no box: its text color
- * and, for `underline`, a 1px rule under it say what it is. It acts like a link: no ground at all; under the pointer its words turn ink and a rule shows (or darkens); pressing it changes nothing more. The keyboard's ring sits close around the words.
+ * and, for `underline`, a 1px rule under it say what it is. It acts like a link: no ground at all; under the pointer its words turn ink and a rule shows (or darkens); pressing it changes nothing more. The keyboard's ring sits close around the words: an outline 2px off them, since a ring on the words' own box would touch the letters. The outline is
+ * never unset here (`outline-none` beside `outline-2` leaves a width without a style: no ring at all); a browser draws it for the keyboard only.
  * `tone="proposal"` is an action the assistant takes, in the proposal blue: "✦ Fill" on a field's label row (`size="micro"`, the label's own type), "✦ Translate"
  * over a text. While it works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, and it is `aria-busy`. A label row shows the
  * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
-	`${HIT_AREA} inline cursor-pointer border-0 decoration-1 focus-visible:rounded-monti-sm underline-offset-4 not-disabled:hover:underline focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap outline-none aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
+	`${HIT_AREA} inline cursor-pointer border-0 decoration-1 focus-visible:rounded-monti-sm underline-offset-4 not-disabled:hover:underline focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
 	{
 		variants: {
 			variant: {

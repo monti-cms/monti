@@ -192,7 +192,8 @@ function TabsContent({
 		<TabsPrimitive.Panel
 			data-slot="tabs-content"
 			className={cn(
-				"flex-1 text-monti-body outline-none",
+				// The panel is a stop of the Tab key: its ring is inside, where no scrolling or clipping box cuts it.
+				"flex-1 text-monti-body outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset",
 				fill && "flex min-h-0 flex-col",
 				scroll && "min-h-0 overflow-auto",
 				className,

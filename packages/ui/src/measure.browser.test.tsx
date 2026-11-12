@@ -90,7 +90,7 @@ describe("the measuring itself", () => {
 				<div className="h-4 overflow-hidden">
 					<button
 						type="button"
-						className="relative block h-4 border-0 bg-transparent p-0 text-monti-caption leading-4 outline-none after:absolute after:inset-x-0 after:top-1/2 after:h-6 after:-translate-y-1/2 after:content-['']"
+						className="relative block h-4 border-0 bg-transparent p-0 text-monti-caption leading-4 outline-none after:absolute after:inset-x-0 after:top-1/2 after:h-6 after:-translate-y-1/2 after:content-[''] focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset"
 					>
 						잘린 층
 					</button>
@@ -132,8 +132,85 @@ describe("the measuring itself", () => {
 				.map((line) => line.split(":")[0]),
 		).toEqual(["ring"]);
 		expect(await said("층의 고리")).toEqual(["ring"]);
-		// An outline that draws nothing is not a ring to cut.
-		expect(await said("안 보이는 선")).toEqual([]);
+		// An outline that draws nothing is not a ring to cut; that the focus then draws nothing is said.
+		expect(await said("안 보이는 선")).toEqual(["focus"]);
+	});
+
+	it("a keyboard focus that draws nothing is said, however the ring was lost", async () => {
+		const BOX = "h-monti-control-sm rounded-monti-full border-0 bg-monti-selected";
+		render(
+			<div className="flex flex-col items-start gap-monti-16 p-monti-8">
+				{/* The text button's mistake: with Tailwind 4 `outline-none` sets the style to none, and `outline-2` only the width. */}
+				<button
+					type="button"
+					className={`${BOX} outline-none focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2`}
+				>
+					두께만
+				</button>
+				<button type="button" className={`${BOX} outline-none`}>
+					아무것도
+				</button>
+				{/* The pointer's ground is not the keyboard's mark (tokens.md: the focus shows apart from hover). */}
+				<button type="button" className={`${BOX} outline-none focus-visible:bg-monti-current`}>
+					바탕만
+				</button>
+				{/* A state that wears the ring already: the focus adds nothing to it. */}
+				<button
+					type="button"
+					className={`${BOX} outline-none ring-2 ring-monti-contrast focus-visible:ring-2 focus-visible:ring-monti-contrast`}
+				>
+					이미 두른 것
+				</button>
+			</div>,
+		);
+		const said = async (name: string) => (await lines(name)).map((line) => line.split(":")[0]);
+		expect(await lines("두께만")).toEqual([
+			"focus: button \"두께만\" draws nothing when the keyboard's focus is on it; a ring, or a field's ink line",
+		]);
+		expect(await said("아무것도")).toEqual(["focus"]);
+		expect(await said("바탕만")).toEqual(["focus"]);
+		expect(await said("이미 두른 것")).toEqual(["focus"]);
+	});
+
+	it("a focus drawn as the docs draw it is not said: a line around, a field's ink line, a ring on the box around or on what is inside, a caret", async () => {
+		const BOX = "h-monti-control-sm rounded-monti-full border-0 bg-monti-selected";
+		render(
+			<div className="flex flex-col items-start gap-monti-16 p-monti-8">
+				<button
+					type="button"
+					className={`${BOX} focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2`}
+				>
+					둘레 선
+				</button>
+				<button
+					type="button"
+					className="h-monti-control-sm rounded-none border-0 border-monti-default border-b bg-transparent outline-none focus-visible:border-monti-contrast"
+				>
+					밑줄
+				</button>
+				<div className="rounded-monti-full has-focus-visible:ring-2 has-focus-visible:ring-monti-contrast/50">
+					<button type="button" className={`${BOX} outline-none`}>
+						감싼 상자의 고리
+					</button>
+				</div>
+				<button
+					type="button"
+					className="flex h-monti-control-sm border-0 bg-transparent p-0 outline-none focus-visible:*:first:ring-2 focus-visible:*:first:ring-monti-contrast/50"
+				>
+					<span className="rounded-monti-full bg-monti-selected">안쪽의 고리</span>
+				</button>
+				<div className="flex h-monti-control-sm items-center border-monti-default border-b focus-within:border-monti-contrast">
+					<input aria-label="칸" className="border-0 bg-transparent outline-none" />
+				</div>
+				{/* An error's red line stays under the focus: what is typed in has its caret. */}
+				<div className="flex h-monti-control-sm items-center border-monti-danger border-b">
+					<input aria-label="틀린 칸" className="border-0 bg-transparent outline-none" />
+				</div>
+			</div>,
+		);
+		for (const name of ["둘레 선", "밑줄", "감싼 상자의 고리", "안쪽의 고리"]) expect(await lines(name)).toEqual([]);
+		await expect.element(page.getByRole("textbox", { name: "틀린 칸" })).toBeVisible();
+		expect(measure().filter((line) => line.startsWith("focus"))).toEqual([]);
 	});
 });
 

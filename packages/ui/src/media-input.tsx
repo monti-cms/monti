@@ -81,7 +81,7 @@ function MediaInput({
 			role={readOnly ? "group" : undefined}
 			className={cn(
 				!readOnly && FIELD_HOVER,
-				"flex w-full min-w-0 items-center border-monti-default border-b transition-colors focus-within:border-monti-contrast data-proposal:border-monti-proposal data-proposal:border-b-[1.5px]",
+				"flex w-full min-w-0 items-center border-monti-default border-b transition-colors focus-within:border-monti-contrast data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:focus-within:border-monti-contrast",
 				FIELD_INSET,
 				HEIGHT[size],
 				className,

@@ -168,7 +168,7 @@ function FolderTabsBody({ className, ...props }: TabsPrimitive.Panel.Props) {
 		<TabsPrimitive.Panel
 			data-slot="folder-tabs-body"
 			className={cn(
-				"overflow-hidden rounded-monti-lg rounded-tl-none border border-monti-default outline-none [&>ul>li:first-child]:border-t-0 [&>ul>li:last-child]:border-b-0",
+				"overflow-hidden rounded-monti-lg rounded-tl-none border border-monti-default outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset [&>ul>li:first-child]:border-t-0 [&>ul>li:last-child]:border-b-0",
 				className,
 			)}
 			{...props}
