@@ -1,5 +1,5 @@
 import { Button } from "./button";
-import { DialogFooter } from "./dialog";
+import { DialogFooter, useDialogLock } from "./dialog";
 import { useUiLabels } from "./labels";
 
 /**
@@ -7,7 +7,8 @@ import { useUiLabels } from "./labels";
  * (the labels' "saving") with a spinner while the request runs, keeping its fill. Put it inside the `<form>`; the dialog closes through `onCancel`.
  * Enter in a field of the form presses the pill; Cancel never sends the form. With `lockWhileBusy` Cancel is off while the request runs: a
  * request the server cannot take back once it is sent (a key being checked with its service, then stored) is not one a person can leave half
- * way, and the pill beside it says what is going on. The dialog itself must then not close on Escape or a press outside either. It has no off state: the pill can always be pressed, and a form that is not ready says why at the field that needs fixing (README principle 7).
+ * way, and the pill beside it says what is going on. The `Dialog` it is in is then locked too, from here and nowhere else: Escape and a press
+ * outside do nothing until the request is back (`useDialogLock`). It has no off state: the pill can always be pressed, and a form that is not ready says why at the field that needs fixing (README principle 7).
  */
 export function DialogFormFooter({
 	onCancel,
@@ -21,11 +22,12 @@ export function DialogFormFooter({
 	submitLabel?: string;
 	busyLabel?: string;
 	busy?: boolean;
-	/** Cancel cannot be pressed while `busy`: what was sent cannot be called back. */
+	/** The window cannot be left while `busy` (Cancel, Escape, a press outside): what was sent cannot be called back. */
 	lockWhileBusy?: boolean;
 	cancelLabel?: string;
 }) {
 	const labels = useUiLabels();
+	useDialogLock(lockWhileBusy && busy);
 	return (
 		<DialogFooter>
 			{/* Not the form's button: Enter in a field presses the pill, never Cancel (a button without a type is a submit button, and the first one in a form is its default). */}

@@ -1769,6 +1769,10 @@
 			"children": false,
 			"slots": ["actions", "control", "detail", "meta", "title", "titleCount"],
 			"props": {
+				"metaMono": {
+					"kind": "flag",
+					"type": "boolean"
+				},
 				"metaTone": {
 					"kind": "variant",
 					"enum": ["danger", "faint", "muted", "subtle"]
