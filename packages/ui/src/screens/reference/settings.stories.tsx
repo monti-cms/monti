@@ -25,6 +25,8 @@ export const ApiKeys: Story = { render: () => <ApiKeysScreen /> };
 /** Flow 10 on a site whose plugins ask for no key: the AI keys and the quick-task model, no third table. */
 export const ApiKeysBuilt: Story = { render: () => <ApiKeysScreen stage="기본" plugins={false} /> };
 /** No key yet: the AI keys say so, and the quick-task model has nothing to pick from. */
+/** The same screen with its keys as rows of the shared table (the built 템플릿 tab's list): a choice for the screen approval. */
+export const ApiKeysBuiltTable: Story = { render: () => <ApiKeysScreen stage="기본" plugins={false} rows="table" /> };
 export const ApiKeysEmpty: Story = { render: () => <ApiKeysScreen stage="키 없음" plugins={false} /> };
 /** 10.01: "+ 키 추가" opens the services. */
 export const ApiKeysPickService: Story = { render: () => <ApiKeysScreen stage="서비스 고르기" plugins={false} /> };

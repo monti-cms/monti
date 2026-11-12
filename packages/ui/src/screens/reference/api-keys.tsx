@@ -10,6 +10,7 @@ import {
 	AlertDialogTitle,
 	Banner,
 	Button,
+	Count,
 	DescriptionItem,
 	DescriptionList,
 	Dialog,
@@ -22,6 +23,7 @@ import {
 	FormFieldDescription,
 	FormFieldError,
 	FormFieldLabel,
+	Inline,
 	Input,
 	ListSection,
 	ListSectionRow,
@@ -34,6 +36,8 @@ import {
 	PickList,
 	PickListItem,
 	PickListLabel,
+	RowActions,
+	RowMore,
 	SavedValue,
 	SecretInput,
 	Select,
@@ -44,6 +48,10 @@ import {
 	Stack,
 	TabLink,
 	TabLinks,
+	Table,
+	TableBody,
+	TableCell,
+	TableRow,
 	Text,
 	Toaster,
 	toast,
@@ -440,6 +448,41 @@ function Floating({ stage }: { stage: ApiKeysStage }) {
 	}
 }
 
+/** The keys as rows of the shared table: the name and the key's end on one line, its use under it, and a ⋯ with "편집" and "지우기". */
+function KeyTable({ keys }: { keys: readonly Key[] }) {
+	return (
+		<Table container="none" aria-label="AI 키">
+			<TableBody>
+				{keys.map((key) => (
+					<TableRow key={key.name} twoLine>
+						<TableCell truncate>
+							<Stack gap={4} minWidth={0}>
+								<Inline gap={8} align="baseline">
+									<Text truncate>{key.name}</Text>
+									{key.tail ? (
+										<Count>
+											{"··· "}
+											{key.tail}
+										</Count>
+									) : null}
+								</Inline>
+								<Text as="div" variant="note" tone={key.tone === "danger" ? "danger" : "subtle"} truncate>
+									{key.meta}
+								</Text>
+							</Stack>
+						</TableCell>
+						<TableCell align="end">
+							<RowActions>
+								<RowMore label="더 보기" />
+							</RowActions>
+						</TableCell>
+					</TableRow>
+				))}
+			</TableBody>
+		</Table>
+	);
+}
+
 /** The AI keys each stage shows. */
 function keysOf(stage: ApiKeysStage): readonly Key[] {
 	switch (stage) {
@@ -467,7 +510,16 @@ function keysOf(stage: ApiKeysStage): readonly Key[] {
  * "키 넣기" when it is not, all through the same key window (a plugin's has its service set). `stage` draws each state of flow 10; `plugins` off is
  * a site whose plugins ask for no key, which has no third table.
  */
-export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: ApiKeysStage; plugins?: boolean }) {
+export function ApiKeysScreen({
+	stage = "기본",
+	plugins = true,
+	rows = "sections",
+}: {
+	stage?: ApiKeysStage;
+	plugins?: boolean;
+	/** `table` draws the keys as rows of the shared table, as the built 템플릿 tab beside this one draws its list. */
+	rows?: "sections" | "table";
+}) {
 	const keys = keysOf(stage);
 	const noSecret = stage === "비밀값 없음" || stage === "비밀값 없음 · 키 있음";
 	const unreadable = stage === "읽을 수 없음" || stage === "다시 넣기";
@@ -477,7 +529,17 @@ export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: Ap
 			: { value: "a:claude-haiku-5-5", model: "claude-haiku-5-5", key: "Anthropic 개인" };
 	const slots = SLOTS.map((slot) => (stage === "키 넣음" && slot.id === "bareun" ? { ...slot, tail: "4410" } : slot));
 	return (
-		<AdminFrame open="tools">
+		<AdminFrame
+			open="tools"
+			// A banner about the screen stands at the very top of the page, edge to edge, over its title (screens/common.md).
+			banner={
+				noSecret ? (
+					<Banner title="키를 저장할 수 없습니다" meta="MONTI_SECRET 없음" />
+				) : unreadable ? (
+					<Banner title="키 3개를 읽을 수 없습니다" meta="MONTI_SECRET 변경" />
+				) : undefined
+			}
+		>
 			<PageColumn>
 				<PageHeader title="도구">
 					{!noSecret && (
@@ -499,28 +561,29 @@ export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: Ap
 				</PageToolbar>
 				<PageBody>
 					<Stack gap={40} paddingTop={32}>
-						{noSecret && <Banner title="키를 저장할 수 없습니다" meta="MONTI_SECRET 없음" />}
-						{unreadable && <Banner title="키 3개를 읽을 수 없습니다" meta="MONTI_SECRET 변경" />}
-						<ListSection title="AI 키">
-							{keys.length === 0 && <ListSectionRow title="없음" muted />}
-							{keys.map((key) => (
-								<ListSectionRow
-									key={key.name}
-									title={key.name}
-									titleCount={
-										key.tail && (
-											<>
-												{"··· "}
-												{key.tail}
-											</>
-										)
-									}
-									meta={key.meta}
-									metaTone={key.tone ?? "muted"}
-									actions={<KeyActions edit={!noSecret} />}
-								/>
-							))}
-						</ListSection>
+						{rows === "table" ? <KeyTable keys={keys} /> : null}
+						{rows === "table" ? null : (
+							<ListSection title="AI 키">
+								{keys.length === 0 && <ListSectionRow title="없음" muted />}
+								{keys.map((key) => (
+									<ListSectionRow
+										key={key.name}
+										title={key.name}
+										titleCount={
+											key.tail && (
+												<>
+													{"··· "}
+													{key.tail}
+												</>
+											)
+										}
+										meta={key.meta}
+										metaTone={key.tone ?? "muted"}
+										actions={<KeyActions edit={!noSecret} />}
+									/>
+								))}
+							</ListSection>
+						)}
 						{/* The one model this screen picks; the list comes from the AI keys above. */}
 						{!noSecret && (
 							<ListSection title="모델">
