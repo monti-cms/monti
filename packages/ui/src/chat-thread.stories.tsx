@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ChatMessage, ChatThread, ErrorNote, Stack, Text, TextButton, ToolCallLine } from "./index";
+import { Button, ChatMessage, ChatThread, ErrorNote, Stack, Text, ToolCallLine } from "./index";
 
 /**
  * The assistant's conversation: requests and what answered them, 24px apart, at the foot of the panel. Inside an answer the screen spaces its
@@ -86,7 +86,14 @@ export const Stopped: Story = {
 						글 · 여기서 멈춤
 					</ToolCallLine>
 				</Stack>
-				<ErrorNote title="연결이 끊겼습니다" actions={<TextButton variant="underline">이어서 하기</TextButton>} />
+				<ErrorNote
+					title="연결이 끊겼습니다"
+					actions={
+						<Button variant="ghost" size="sm">
+							이어서 하기
+						</Button>
+					}
+				/>
 			</Stack>
 		</ChatThread>
 	),

@@ -1,5 +1,6 @@
 import type { Thinking } from "@monti-cms/ai";
 import {
+	Button,
 	ChatInput,
 	ChatMessage,
 	ChatMessageActions,
@@ -16,7 +17,6 @@ import {
 	Stack,
 	Suggest,
 	Text,
-	TextButton,
 	ToolCallLine,
 	toast,
 } from "@monti-cms/ui";
@@ -238,10 +238,11 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 		const end = turn.end;
 		if (!end || turn.status === "done" || turn.status === "stopped" || turn.status === "running") return null;
 		const act = (label: string, onClick: () => void) =>
+			// The note's own buttons (status.md): quiet and small.
 			isLast ? (
-				<TextButton variant="underline" onClick={onClick}>
+				<Button variant="ghost" size="sm" onClick={onClick}>
 					{label}
-				</TextButton>
+				</Button>
 			) : undefined;
 		if (turn.status === "failed") {
 			if (turn.unsent || !end.error)

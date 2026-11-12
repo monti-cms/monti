@@ -35,7 +35,7 @@
 | 일하는 동안 한 말 | `ChatMessage author="user"` | 실행이 받아들인 말은 그 자리에 말풍선으로 선다. |
 | 기억의 끝 | `Text as="div" variant="micro" tone="subtle" align="center"` "여기부터 기억합니다" | 대화가 길어 모델에 보내지 않는 오래된 요청이 생기면, 아직 보내는 첫 요청 위에 선다. 없으면 없다. |
 | 제안 카드 | 아래 "제안 카드" | 그 요청이 만든 제안. 설정과 열린 글의 제안은 그 화면에 파랗게 표시되고 카드가 없다. |
-| 오류 답장 | `ErrorNote`(`title`, 회색 한 줄, `actions`에 `TextButton variant="underline"`) | 아래 표. 할 수 있는 일은 마지막 요청에만 붙는다. 보내기는 미리 막지 않는다. |
+| 오류 답장 | `ErrorNote`(`title`, 회색 한 줄, `actions`에 `Button variant="ghost" size="sm"`: 그 부품의 규칙대로) | 아래 표. 할 수 있는 일은 마지막 요청에만 붙는다. 보내기는 미리 막지 않는다. |
 
 오류 답장의 말:
 
