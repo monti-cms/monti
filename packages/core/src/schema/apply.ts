@@ -28,9 +28,21 @@ async function followField(db: Db, collection: string, from: string, to: string 
 	type Layout = NonNullable<AdminValues["layout"]>;
 	const rename = (names: string[]) => names.flatMap((name) => (name !== from ? [name] : to ? [to] : []));
 	const { [from]: moved, ...fields } = values.fields ?? {};
+	const { [from]: width, ...widths } = values.list?.widths ?? {};
 	const next: AdminValues = {
 		...values,
 		...(values.fields ? { fields: moved && to ? { ...fields, [to]: moved } : fields } : {}),
+		// The list's own look follows the field too: its place among the columns, whether it is hidden, the width it was dragged to (doc 06).
+		...(values.list
+			? {
+					list: {
+						...values.list,
+						...(values.list.order ? { order: rename(values.list.order) } : {}),
+						...(values.list.hidden ? { hidden: rename(values.list.hidden) } : {}),
+						...(values.list.widths ? { widths: width !== undefined && to ? { ...widths, [to]: width } : widths } : {}),
+					},
+				}
+			: {}),
 		...(values.layout
 			? {
 					layout: values.layout.map((tab) => ({
@@ -181,6 +193,14 @@ export async function setSchemaState(db: Db, schema: Schema, failedChange: strin
 		.values({ id: 1, ...values })
 		.onConflict((conflict) => conflict.column("id").doUpdateSet(values))
 		.execute();
+}
+
+/**
+ * Records a change file as saved and not applied, outside the write that made it: that write failed after its files were written and its database
+ * work rolled back, the record of the failure with it. The schema the database follows is still the old one; `schema.retry` applies the change.
+ */
+export async function markUnapplied(db: Db, changeId: string): Promise<void> {
+	await db.updateTable("schema_state").set({ failed_change: changeId }).where("id", "=", 1).execute();
 }
 
 /** Change files this database has not followed yet, in order. */

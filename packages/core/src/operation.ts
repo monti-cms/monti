@@ -38,6 +38,11 @@ export type MontiEvent = {
 	version?: number;
 	/** Public paths the change affects, for the site's cache. */
 	paths?: string[];
+	/**
+	 * More public paths moved than an event lists (`MOVED_PATHS_LIMIT`: a changed language mark on a large site): `paths` is left out, and whoever
+	 * keeps the site's pages refreshes all of them.
+	 */
+	allPaths?: true;
 };
 
 /** What an operation gets besides its input. */
@@ -50,10 +55,12 @@ export interface OperationContext {
 	/** Marks a record the write creates, so undoing the write removes it. */
 	created(ref: RecordRef): void;
 	/**
-	 * Says the write changed structure values (the schema file), for a write that does so only sometimes (`settings.save`). Such a write has no undo:
-	 * a structure change is reversed by a new change (doc 00), and putting back only its admin values would leave them out of step with the structure.
+	 * Says the write has written structure (the schema file and the change file `changeId`), for a write that does so only sometimes
+	 * (`settings.save`). Such a write has no undo: a structure change is reversed by a new change (doc 00), and putting back only its admin values
+	 * would leave them out of step with the structure. If the write then fails and the database rolls back, the files stay: the engine records the
+	 * change as saved and not applied, so the admin offers "apply again".
 	 */
-	changedStructure(): void;
+	changedStructure(changeId: string): void;
 	/** The site's schema and, on the dev server, the way to its files. */
 	site: Site;
 	/** The engine's clock (tests set it). */

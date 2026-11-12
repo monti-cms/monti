@@ -261,8 +261,9 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 				steps.push({ do: "fillField", collection, field, value: choice.fill });
 		}
 	}
-	// A new source language is made from the old one's entries (`changeSource` drafts it where a group has none), so it comes before a language
-	// leaves: taking out the old source in the same change must not delete what the new one is to be made from.
-	const first = (step: ChangeStep) => (step.do === "changeSource" ? 0 : 1);
-	return { steps: [...steps].sort((a, b) => first(a) - first(b)), missing };
+	// A language leaves last. The collections' steps keep their place before the languages' (a renamed or moved field's values are under their
+	// new name by the time a new source language is made from the old one, which keeps only the fields the draft has), and the new source is made
+	// before the old one is taken out in the same change: the drafts the plan promises are made from it.
+	const last = (step: ChangeStep) => (step.do === "removeLocale" ? 1 : 0);
+	return { steps: [...steps].sort((a, b) => last(a) - last(b)), missing };
 }

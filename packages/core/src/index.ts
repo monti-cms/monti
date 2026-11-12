@@ -24,6 +24,7 @@ export {
 } from "./body/doc";
 export { applyOps, type BodyOp } from "./body/edit";
 export { ENTRY_LINK, entryLink } from "./body/links";
+export { fingerprint } from "./bytes";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
 export { migrateToLatest } from "./db/migrations";
 export type { Database } from "./db/schema";
@@ -122,7 +123,7 @@ export {
 	type UsageResult,
 	unlinkTargetGroup,
 } from "./relations/operations";
-export type { AdminValues } from "./schema/admin-values";
+export { type AdminValues, type AdminValuesPatch, diffAdminValues, mergeAdminValues } from "./schema/admin-values";
 export { migrateContent } from "./schema/apply";
 export {
 	type CollectionDefinition,
@@ -134,6 +135,8 @@ export {
 	type LocaleMode,
 	type LocalesDefinition,
 	localeModeOf,
+	MAX_COLLECTION_NAME,
+	MAX_FIELD_NAME,
 	type Schema,
 	type SchemaProblem,
 	translates,

@@ -3,11 +3,12 @@ import { z } from "zod";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { CheckError } from "../errors";
+import { sameJson } from "../json";
 import { checkMediaValues } from "../media/uses";
 import { defineOperation, type OperationContext } from "../operation";
 import { defineRecordKind } from "../records";
-import { movedAddresses, publishedAddresses } from "./addresses";
-import { AdminValues } from "./admin-values";
+import { addressesBefore, movedAddresses } from "./addresses";
+import { AdminValues, AdminValuesPatch, mergeAdminValues } from "./admin-values";
 import { applyChange, pendingChanges, readSchemaState, setSchemaState } from "./apply";
 import { checkSchema, type Schema } from "./define";
 import { type ChangeFile, PartialSchemaWrite } from "./files";
@@ -109,8 +110,10 @@ export async function applySchema(
 		console.error("Monti: the schema file could not be written:", error);
 		return { changeId: change.id, written: false as const, applied: false, error: String(error), changes };
 	}
+	// From here the files are on disk whatever becomes of this write.
+	ctx.changedStructure(change.id);
 	ctx.site.setSchema(draft);
-	const addresses = await publishedAddresses(ctx.db, state?.schema ?? draft);
+	const addresses = await addressesBefore(ctx.db, state?.schema ?? draft, draft);
 	await sql`savepoint schema_apply`.execute(ctx.db);
 	try {
 		await applyChange(ctx.db, change, draft, ctx.site.kit);
@@ -130,9 +133,8 @@ export async function applySchema(
  * gives every published entry of it another address, and a site that keeps its pages would go on serving the old ones (doc 16). `before` is what the
  * addresses were under the schema the database followed until now.
  */
-async function emitApplied(ctx: OperationContext, changeIds: string[], before: Map<string, string>) {
-	const after = await publishedAddresses(ctx.db, ctx.site.schema());
-	ctx.emit({ type: "schema.applied", ids: changeIds, paths: movedAddresses(before, after) });
+async function emitApplied(ctx: OperationContext, changeIds: string[], before: Map<string, string> | null) {
+	ctx.emit({ type: "schema.applied", ids: changeIds, ...(await movedAddresses(ctx.db, before, ctx.site.schema())) });
 }
 
 /** `applySchema` for the operations that change structure alone: a file that could not be written refuses the write. */
@@ -279,7 +281,7 @@ export const schemaOperations = [
 			const pending = await pendingChanges(ctx.db, await files.readChanges());
 			// The addresses as the database last followed them: what the site was serving while the change waited.
 			const state = await readSchemaState(ctx.db);
-			const addresses = await publishedAddresses(ctx.db, state?.schema ?? ctx.site.schema());
+			const addresses = await addressesBefore(ctx.db, state?.schema ?? ctx.site.schema(), ctx.site.schema());
 			for (const change of pending) await applyChange(ctx.db, change, ctx.site.schema(), ctx.site.kit);
 			await setSchemaState(ctx.db, ctx.site.schema(), null);
 			await emitApplied(
@@ -295,15 +297,17 @@ export const schemaOperations = [
 		name: "collections.updateAdminValues",
 		kind: "write",
 		description:
-			"Save a collection's admin values: its label, folders, field labels and descriptions (how to fill each field), the property panel layout and the editor's allowed blocks. Works on the live site too.",
-		input: z.object({ collection: z.string(), values: AdminValues }),
+			"Change a collection's admin values: its label, folders, field labels and descriptions (how to fill each field), the property panel layout and the editor's allowed blocks. A patch: only the keys given change, null clears one, everything left out stays as saved (fields go by field and by key, so { fields: { summary: { label } } } renames one label and nothing else). Works on the live site too.",
+		input: z.object({ collection: z.string(), values: AdminValuesPatch }),
 		touches: (input) => [{ kind: "collectionAdminValues", id: input.collection }],
 		check(input, ctx) {
 			if (!ctx.site.schema().collections[input.collection])
 				throw new CheckError({ key: "collections.unknown", values: { collection: input.collection } });
 		},
 		async run(input, ctx) {
-			await writeAdminValues(ctx.db, input.collection, input.values);
+			const { version: _version, ...saved } = (await adminValuesOf(ctx.db))[input.collection] ?? { version: 0 };
+			const next = mergeAdminValues(saved, input.values);
+			if (!sameJson(next, saved)) await writeAdminValues(ctx.db, input.collection, next);
 		},
 		summary: (input) => ({ key: "collections.updateAdminValues", values: { collection: input.collection } }),
 	}),

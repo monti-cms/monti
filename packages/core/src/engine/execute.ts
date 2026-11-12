@@ -13,6 +13,7 @@ import {
 	recordKey,
 } from "../operation";
 import { lockRecords, type RecordKind, type RecordState } from "../records";
+import { markUnapplied } from "../schema/apply";
 import type { Site } from "../site";
 import { queueDeliveries, type Receiver } from "./deliveries";
 import { acceptedItems, markApplied } from "./proposals";
@@ -63,14 +64,15 @@ export function context(
 ) {
 	const events: MontiEvent[] = [];
 	const created: RecordRef[] = [];
-	const flags = { structure: false };
+	const flags: { structure: boolean; change: string | null } = { structure: false, change: null };
 	const ctx: OperationContext = {
 		db,
 		actor,
 		emit: (event) => events.push(event),
 		created: (ref) => created.push(ref),
-		changedStructure: () => {
+		changedStructure: (changeId) => {
 			flags.structure = true;
+			flags.change = changeId;
 		},
 		site: engine.site,
 		now: engine.now,
@@ -126,7 +128,19 @@ export async function runWrite<Output>(
 		throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: operation.name } });
 	const input = parseInput(operation, rawInput);
 	const activityId = randomUUID();
-	return engine.db.transaction().execute(async (trx) => {
+	// The change file a structure write left on disk: files are not rolled back with the database.
+	const onDisk: { change: string | null } = { change: null };
+	return engine.db
+		.transaction()
+		.execute((trx) => inTransaction(trx))
+		.catch(async (error) => {
+			// The write failed after its files were written (the activity row, a later step): the database is as it was and the files are saved.
+			// That is the state "saved, not applied": recorded, so the admin offers "apply again" instead of reading the file as a hand edit.
+			if (onDisk.change) await markUnapplied(engine.db, onDisk.change);
+			throw error;
+		});
+
+	async function inTransaction(trx: Transaction<Database>): Promise<WriteResult<Output>> {
 		const { ctx, events, created, flags } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 		await lockRecords(trx, touched);
@@ -142,7 +156,13 @@ export async function runWrite<Output>(
 		// The proposal items the person took are checked before anything is written (a structure write changes files that no rollback takes back).
 		const taken = await acceptedItems(trx, options.accepted ?? [], touched);
 		await operation.check?.(input, ctx);
-		const output = (await operation.run(input, ctx)) as Output;
+		let output: Output;
+		try {
+			output = (await operation.run(input, ctx)) as Output;
+		} finally {
+			// Known whether the run ended well or threw: the files it wrote are there either way.
+			onDisk.change = flags.change;
+		}
 
 		const records = unique([...touched, ...created]);
 		// Whatever the write did to a body or a field, what uses which media file is read from the result, here and nowhere else (doc 09).
@@ -185,8 +205,18 @@ export async function runWrite<Output>(
 					}),
 				)
 				.execute();
-		// Taken proposals join this write: the row gets their conversation, so the log shows ✦ (doc 05).
-		const conversation = await markApplied(trx, taken, activityId);
+		// Taken proposals join this write: the row gets their conversation, so the log shows ✦ (doc 05). Only those the write wrote something of:
+		// an item all of whose records are as they were (its change of the schema, when the file could not be written) stays pending.
+		const written = new Set(
+			[...after].flatMap(([key, state]) =>
+				(before.get(key)?.version ?? null) === (state?.version ?? null) ? [] : [key],
+			),
+		);
+		const conversation = await markApplied(
+			trx,
+			taken.filter((item) => item.records.some((key) => written.has(key))),
+			activityId,
+		);
 		if (conversation && !options.conversationId)
 			await trx
 				.updateTable("monti_activity")
@@ -196,5 +226,5 @@ export async function runWrite<Output>(
 		const deliveryIds = await queueDeliveries(trx, engine.receivers, activityId, events);
 		const versions = Object.fromEntries([...after].map(([key, state]) => [key, state?.version ?? null]));
 		return { output, activityId, versions, deliveryIds };
-	});
+	}
 }

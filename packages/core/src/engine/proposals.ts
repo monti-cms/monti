@@ -210,7 +210,12 @@ export async function settleProposal(db: Kysely<Database> | Transaction<Database
 }
 
 /** A pending proposal item a person took into a screen's draft, as the write that saves the draft finds it. */
-type TakenItem = { id: string; proposalId: string; conversationId: string };
+type TakenItem = {
+	id: string;
+	proposalId: string;
+	conversationId: string /** The records it is aimed at, by key. */;
+	records: string[];
+};
 
 /**
  * The items a person took in a screen and saves with the screen's own write (doc 05), checked before the write runs: each must exist, and each
@@ -244,7 +249,12 @@ export async function acceptedItems(
 	const pending = items.filter((item) => item.state === "pending");
 	if (pending.some((item) => !Object.keys(item.base_versions).some((key) => targets.has(key))))
 		throw new CheckError({ key: "proposals.wrongTarget" });
-	return pending.map((item) => ({ id: item.id, proposalId: item.proposal_id, conversationId: item.conversation_id }));
+	return pending.map((item) => ({
+		id: item.id,
+		proposalId: item.proposal_id,
+		conversationId: item.conversation_id,
+		records: Object.keys(item.base_versions),
+	}));
 }
 
 /**

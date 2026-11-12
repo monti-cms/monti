@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { CheckError, ForbiddenError } from "../errors";
+import { sameJson } from "../json";
 import { defineOperation, type OperationContext, type RecordRef } from "../operation";
-import { AdminValues } from "../schema/admin-values";
+import { type AdminValues, AdminValuesPatch, mergeAdminValues } from "../schema/admin-values";
 import { readSchemaState } from "../schema/apply";
 import type { CollectionDefinition, Schema } from "../schema/define";
 import {
@@ -26,8 +27,8 @@ const SaveInput = z.object({
 	collections: CollectionsInput.optional(),
 	renames: z.array(RenameInput).default([]),
 	answers: AnswersInput,
-	/** Each changed collection's admin values, whole, under the draft's field names. */
-	adminValues: z.record(z.string(), AdminValues).default({}),
+	/** What changes of each collection's admin values, under the draft's field names: a key given is set, `null` clears it, the rest stay. */
+	adminValues: z.record(z.string(), AdminValuesPatch).default({}),
 });
 type SaveInput = z.infer<typeof SaveInput>;
 
@@ -46,37 +47,38 @@ async function differs(ctx: OperationContext, draft: Schema, renames: Rename[]) 
 }
 
 /**
- * A collection's admin values under the field names the applied schema has. They are saved before the structure change (doc 12), so a change that
- * then fails leaves them matching the structure that stayed: a renamed field's values go back under its old name, and a field on its way out keeps
- * what it had. The structure change moves and drops them itself when it goes through.
+ * A patch of a collection's admin values under the field names the applied schema has. Admin values are saved before the structure change (doc 12),
+ * so a change that then fails leaves them matching the structure that stayed: what is said of a renamed field goes under its old name. The
+ * structure change moves it to the new name (and drops a removed field's) when it goes through.
  */
 function underAppliedNames(
-	values: AdminValues,
-	saved: AdminValues | undefined,
+	patch: AdminValuesPatch,
 	applied: CollectionDefinition,
 	draft: CollectionDefinition | undefined,
 	renames: Rename[],
-): AdminValues {
-	if (!draft) return values;
+): AdminValuesPatch {
+	if (!draft) return patch;
 	const back = new Map(
 		renames.filter((rename) => applied.fields[rename.from] && draft.fields[rename.to]).map((r) => [r.to, r.from]),
 	);
+	if (back.size === 0) return patch;
 	const sources = new Set(back.values());
 	const name = (field: string) => back.get(field) ?? field;
-	const fields: NonNullable<AdminValues["fields"]> = {};
-	// A new field that takes the name a renamed field leaves waits for the structure change; the renamed field's values hold that name until then.
-	for (const [field, value] of Object.entries(values.fields ?? {}))
-		if (!sources.has(field)) fields[name(field)] = value;
-	for (const field of Object.keys(applied.fields)) {
-		const leaving = !draft.fields[field] && !sources.has(field);
-		if (leaving && saved?.fields?.[field]) fields[field] = saved.fields[field];
-	}
 	return {
-		...values,
-		...(Object.keys(fields).length > 0 ? { fields } : { fields: undefined }),
-		...(values.layout
+		...patch,
+		...(patch.fields
 			? {
-					layout: values.layout.map((tab) => ({
+					// A new field that takes the name a renamed field leaves waits for the structure change: the renamed field holds that name until then.
+					fields: Object.fromEntries(
+						Object.entries(patch.fields)
+							.filter(([field]) => !sources.has(field))
+							.map(([field, values]) => [name(field), values]),
+					),
+				}
+			: {}),
+		...(patch.layout
+			? {
+					layout: patch.layout.map((tab) => ({
 						tab: tab.tab,
 						fields: tab.fields.map((each) =>
 							typeof each === "string" ? name(each) : { group: each.group, fields: each.fields.map(name) },
@@ -84,17 +86,15 @@ function underAppliedNames(
 					})),
 				}
 			: {}),
-		...(values.list
+		...(patch.list
 			? {
 					list: {
-						...values.list,
-						...(values.list.order ? { order: values.list.order.map(name) } : {}),
-						...(values.list.hidden ? { hidden: values.list.hidden.map(name) } : {}),
-						...(values.list.widths
+						...patch.list,
+						...(patch.list.order ? { order: patch.list.order.map(name) } : {}),
+						...(patch.list.hidden ? { hidden: patch.list.hidden.map(name) } : {}),
+						...(patch.list.widths
 							? {
-									widths: Object.fromEntries(
-										Object.entries(values.list.widths).map(([id, width]) => [name(id), width]),
-									),
+									widths: Object.fromEntries(Object.entries(patch.list.widths).map(([id, width]) => [name(id), width])),
 								}
 							: {}),
 					},
@@ -106,9 +106,10 @@ function underAppliedNames(
 /** The admin values a structure change carries for what it makes (doc 01): a new collection's in full, a new field's of an existing one. */
 function firstValues(input: SaveInput, applied: Schema, draft: Schema): Record<string, AdminValues> {
 	const out: Record<string, AdminValues> = {};
-	for (const [collection, values] of Object.entries(input.adminValues)) {
+	for (const [collection, patch] of Object.entries(input.adminValues)) {
 		const made = draft.collections[collection];
 		if (!made) continue;
+		const values = mergeAdminValues({}, patch);
 		const saved = applied.collections[collection];
 		if (!saved) {
 			out[collection] = values;
@@ -125,6 +126,40 @@ function firstValues(input: SaveInput, applied: Schema, draft: Schema): Record<s
 		if (Object.keys(fields).length > 0) out[collection] = { fields };
 	}
 	return out;
+}
+
+/** The site's values after the save, or `null` when what it names is what is saved already. */
+async function siteWrite(input: SaveInput, ctx: OperationContext): Promise<Record<string, unknown> | null> {
+	if (!input.site) return null;
+	const current = await readSettings(ctx.db, "site");
+	const next = set({ ...current.values, ...input.site });
+	return sameJson(next, set(current.values)) ? null : next;
+}
+
+/**
+ * The collections whose admin values the save changes before the structure: those the applied schema has, each with its values after the patch.
+ * A patch that says what is saved already writes nothing.
+ */
+async function adminWrites(
+	input: SaveInput,
+	ctx: OperationContext,
+): Promise<{ collection: string; next: AdminValues }[]> {
+	const applied = ctx.site.schema();
+	const draft = draftOf(input, ctx);
+	const saved = await adminValuesOf(ctx.db);
+	const writes: { collection: string; next: AdminValues }[] = [];
+	for (const [collection, patch] of Object.entries(input.adminValues)) {
+		const definition = applied.collections[collection];
+		// A collection the draft makes gets its values with the structure change (`firstAdminValues`).
+		if (!definition) continue;
+		const { version: _version, ...before } = saved[collection] ?? { version: 0 };
+		const next = mergeAdminValues(
+			before,
+			underAppliedNames(patch, definition, draft?.collections[collection], input.renames),
+		);
+		if (!sameJson(next, before)) writes.push({ collection, next });
+	}
+	return writes;
 }
 
 /** Drops the keys an `undefined` left behind, so the stored JSON says only what is set. */
@@ -182,14 +217,14 @@ export const settingsOperations = [
 		name: "settings.save",
 		kind: "write",
 		description:
-			"Save the settings screen's changes in one go. Admin values (site: the name and how the site writes; adminValues: collections' labels, help, layout) go to the database, on the live site too. Structure (locales: the languages, whole; collections: every collection, with renames) goes to monti.schema.ts and the database on the dev server only, the way schema.apply does, and needs the answers schema.plan's choices ask for. A save that names structure on the live site is refused whole.",
+			"Save the settings screen's changes in one go. Admin values go to the database, on the live site too: site (the name and how the site writes) and adminValues (a patch per collection of its label, folders, field labels and descriptions, layout and editor allowance: only the keys given change, null clears one, the rest stay as saved). Structure (locales: the languages, whole; collections: every collection, with renames) goes to monti.schema.ts and the database on the dev server only, the way schema.apply does, and needs the answers schema.plan's choices ask for. A save that names structure on the live site is refused whole, and so is one that would change nothing.",
 		input: SaveInput,
 		async touches(input, ctx) {
 			const refs: RecordRef[] = [];
-			if (input.site) refs.push({ kind: "settings", id: "site" });
-			for (const collection of Object.keys(input.adminValues))
-				if (ctx.site.schema().collections[collection]) refs.push({ kind: "collectionAdminValues", id: collection });
-			// Only a structure that would change: naming it as it is touches no record of it.
+			// Only what would change: naming a value as it is touches no record of it.
+			if (await siteWrite(input, ctx)) refs.push({ kind: "settings", id: "site" });
+			for (const { collection } of await adminWrites(input, ctx))
+				refs.push({ kind: "collectionAdminValues", id: collection });
 			const draft = draftOf(input, ctx);
 			if (draft && (await differs(ctx, draft, input.renames))) refs.push({ kind: "schema", id: "current" });
 			return refs;
@@ -203,38 +238,30 @@ export const settingsOperations = [
 			for (const collection of Object.keys(input.adminValues))
 				if (!collections[collection] && !ctx.site.schema().collections[collection])
 					throw new CheckError({ key: "collections.unknown", values: { collection } });
-			if (draft && (await differs(ctx, draft, input.renames)))
-				await checkApply(ctx, draft, input.renames, input.answers as Answers);
+			const structure = draft !== null && (await differs(ctx, draft, input.renames));
+			if (draft && structure) await checkApply(ctx, draft, input.renames, input.answers as Answers);
+			// Nothing of it differs from what is saved: there is nothing to write, and no line for the activity log.
+			if (!structure && !(await siteWrite(input, ctx)) && (await adminWrites(input, ctx)).length === 0)
+				throw new CheckError({ key: "settings.nothingToSave" });
 		},
 		async run(input, ctx) {
 			const applied = ctx.site.schema();
 			const draft = draftOf(input, ctx);
 
 			// Admin values first (doc 12): whatever happens to the structure after, they are saved.
-			if (input.site) {
-				const current = await readSettings(ctx.db, "site");
-				await writeSettings(ctx.db, "site", set({ ...current.values, ...input.site }));
-			}
-			const saved = await adminValuesOf(ctx.db);
+			const site = await siteWrite(input, ctx);
+			if (site) await writeSettings(ctx.db, "site", site);
 			const valuesSaved: string[] = [];
-			for (const [collection, values] of Object.entries(input.adminValues)) {
-				const definition = applied.collections[collection];
-				// A collection the draft makes gets its values with the structure change (`firstAdminValues`).
-				if (!definition) continue;
-				const { version: _version, ...before } = saved[collection] ?? { version: 0 };
-				await writeAdminValues(
-					ctx.db,
-					collection,
-					underAppliedNames(values, before, definition, draft?.collections[collection], input.renames),
-				);
+			for (const { collection, next } of await adminWrites(input, ctx)) {
+				await writeAdminValues(ctx.db, collection, next);
 				valuesSaved.push(collection);
 			}
 			// What only the admin reads changed (`settings.saved`): no public address moves with it.
-			if (input.site || valuesSaved.length > 0)
-				ctx.emit({ type: "settings.saved", ids: [...(input.site ? ["site"] : []), ...valuesSaved] });
+			if (site || valuesSaved.length > 0)
+				ctx.emit({ type: "settings.saved", ids: [...(site ? ["site"] : []), ...valuesSaved] });
 
 			if (!draft || !(await differs(ctx, draft, input.renames)))
-				return { site: input.site !== undefined, adminValues: valuesSaved, structure: null };
+				return { site: site !== null, adminValues: valuesSaved, structure: null };
 
 			// Then the structure, on doc 01's path: the files, then the database.
 			const structure = await applySchema(
@@ -244,13 +271,22 @@ export const settingsOperations = [
 				input.answers as Answers,
 				firstValues(input, applied, draft),
 			);
-			if (structure.written) ctx.changedStructure();
-			// The change moved a renamed field's values to its new name; what the person set beside it (a label, the layout) goes on top, under the names now.
-			if (structure.applied)
-				for (const [collection, values] of Object.entries(input.adminValues))
-					if (draft.collections[collection]) await writeAdminValues(ctx.db, collection, values);
+			// The schema file could not be written and nothing else was to be saved: the save wrote nothing, so it is refused like `schema.apply`
+			// (no activity row, and the proposal items taken with it stay pending).
+			if (!structure.written && !site && valuesSaved.length === 0) throw new CheckError({ key: "schema.notWritten" });
+			// The change moved a renamed field's values to its new name; what the person set beside it (a label, the layout) goes on top, under the
+			// names now, and a collection the change made gets what is said of it.
+			if (structure.applied) {
+				const now = await adminValuesOf(ctx.db);
+				for (const [collection, patch] of Object.entries(input.adminValues)) {
+					if (!draft.collections[collection]) continue;
+					const { version: _version, ...before } = now[collection] ?? { version: 0 };
+					const next = mergeAdminValues(before, patch);
+					if (!sameJson(next, before)) await writeAdminValues(ctx.db, collection, next);
+				}
+			}
 			return {
-				site: input.site !== undefined,
+				site: site !== null,
 				adminValues: valuesSaved,
 				structure: {
 					changeId: structure.changeId,
@@ -270,6 +306,8 @@ export const settingsOperations = [
 	defineOperation({
 		name: "admin.setPreference",
 		kind: "write",
+		// The admin's own screen: nothing draws a proposal of it and nobody could take one, so the assistant has no such tool (doc 12).
+		humanOnly: true,
 		description:
 			"Set the admin's own preferences, saved at once: the language of the admin screen (ko or en) and whether body templates are offered.",
 		input: AdminPreferences.refine((input) => Object.keys(set(input)).length > 0, { message: "Name a preference." }),

@@ -1,4 +1,4 @@
-import { chmod, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { sql } from "kysely";
@@ -6,12 +6,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { signedInApi } from "../__test__/admin";
 import { testDatabase } from "../__test__/database";
 import { runCli } from "../entry/cli";
-import { callAgentTool } from "../entry/tools";
+import { agentTools, callAgentTool } from "../entry/tools";
 import { createMonti } from "../monti";
+import { addressesBefore, canMoveAddresses, MOVED_PATHS_LIMIT, movedAddresses } from "../schema/addresses";
 import { migrateContent, readSchemaState } from "../schema/apply";
-import { defineSchema, type Schema } from "../schema/define";
-import { schemaFilesAt } from "../schema/files";
+import { checkSchema, defineSchema, MAX_COLLECTION_NAME, MAX_FIELD_NAME, type Schema } from "../schema/define";
+import { type FileCalls, schemaFilesAt } from "../schema/files";
 import { schemaHash } from "../schema/plan";
+import { syncSchemaFile } from "../schema/sync";
 
 const db = await testDatabase();
 
@@ -50,7 +52,27 @@ const answers = {
 } as const;
 
 let root: string;
-const dev = (schema: Schema = base) => createMonti({ db, schema, files: schemaFilesAt(root) });
+/**
+ * The dev server's files, with a way to make a write fail that does not depend on who runs the tests (a file marked read-only is still written by
+ * root, as in a Docker CI): the schema file cannot be moved into place, or the changes folder cannot be made.
+ */
+const locked = { schema: false, changes: false };
+const refused = (what: string) => Object.assign(new Error(`EACCES: permission denied, ${what}`), { code: "EACCES" });
+const io: FileCalls = {
+	access,
+	readdir,
+	readFile,
+	rm,
+	writeFile,
+	mkdir: ((...args: Parameters<typeof mkdir>) =>
+		locked.changes ? Promise.reject(refused("monti/changes")) : mkdir(...args)) as typeof mkdir,
+	rename: (from, to) =>
+		locked.schema && String(to).endsWith("monti.schema.ts")
+			? Promise.reject(refused("monti.schema.ts"))
+			: rename(from, to),
+};
+const files = () => schemaFilesAt(root, "monti.schema.ts", io);
+const dev = (schema: Schema = base) => createMonti({ db, schema, files: files() });
 const live = (schema: Schema = base) => createMonti({ db, schema, files: null });
 type Monti = ReturnType<typeof createMonti>;
 
@@ -90,6 +112,8 @@ const schemaFile = () => readFile(path.join(root, "monti.schema.ts"), "utf8").ca
 const changeFiles = () => readdir(path.join(root, "monti", "changes")).catch(() => [] as string[]);
 
 beforeEach(async () => {
+	locked.schema = false;
+	locked.changes = false;
 	root = await mkdtemp(path.join(tmpdir(), "monti-settings-"));
 	await sql`drop view if exists monti_post`.execute(db);
 	for (const table of [
@@ -351,7 +375,7 @@ describe("when the structure side fails", () => {
 			.values({ collection: "post", values: JSON.stringify({ fields: { subtitle: { label: "부제" } } }) })
 			.execute();
 		await writeFile(path.join(root, "monti.schema.ts"), "// read-only\n");
-		await chmod(path.join(root, "monti.schema.ts"), 0o444);
+		locked.schema = true;
 		const monti = dev();
 
 		const saved = await save(monti, labelled);
@@ -370,7 +394,7 @@ describe("when the structure side fails", () => {
 		expect(await changeFiles()).toEqual([]);
 
 		// Once the file can be written, the same save goes through, and the values follow the rename.
-		await chmod(path.join(root, "monti.schema.ts"), 0o644);
+		locked.schema = false;
 		expect((await save(monti, labelled)).output.structure).toMatchObject({ written: true, applied: true });
 		expect(await postValues()).toEqual(labelled.adminValues.post);
 	});
@@ -413,7 +437,7 @@ describe("when the structure side fails", () => {
 
 	it("12-4 schema.apply and locales.apply refuse, rather than crash, when the schema file cannot be written", async () => {
 		await writeFile(path.join(root, "monti.schema.ts"), "// read-only\n");
-		await chmod(path.join(root, "monti.schema.ts"), 0o444);
+		locked.schema = true;
 		const monti = dev();
 		await expect(
 			monti.run("locales.apply", { locales: { ...base.locales, prefix: "always" } }, { actor: "admin" }),
@@ -588,11 +612,9 @@ describe("names the core keeps", () => {
 describe("when the two files cannot both be written", () => {
 	it("12-4 when the change file cannot be written the schema file is left as it was, and the save says nothing was written", async () => {
 		await writeFile(path.join(root, "monti.schema.ts"), "// as it was\n");
-		await mkdir(path.join(root, "monti", "changes"), { recursive: true });
-		await chmod(path.join(root, "monti", "changes"), 0o555);
+		locked.changes = true;
 		const monti = dev();
 		const saved = await save(monti, { site: { name: "example.dev" }, locales: { ...base.locales, prefix: "always" } });
-		await chmod(path.join(root, "monti", "changes"), 0o755);
 		expect(saved.output.structure).toMatchObject({ written: false, applied: false });
 		// "Nothing written" is true of both files: the schema file was not changed on the way to the change file that failed.
 		expect(await schemaFile()).toBe("// as it was\n");
@@ -615,7 +637,7 @@ describe("undoing a save that named the structure and left it as it was", () => 
 
 	it("12-4 a save whose schema file could not be written is undone too: the admin values it saved go back", async () => {
 		await writeFile(path.join(root, "monti.schema.ts"), "// read-only\n");
-		await chmod(path.join(root, "monti.schema.ts"), 0o444);
+		locked.schema = true;
 		const monti = dev();
 		await save(monti, { site: { name: "first" }, adminValues: { post: { label: "첫 이름" } } });
 		const failed = await save(monti, {
@@ -640,7 +662,7 @@ describe("what a structure change tells the site", () => {
 		const monti = createMonti({
 			db,
 			schema,
-			files: schemaFilesAt(root),
+			files: files(),
 			receivers: [{ destination: "test", send: async (event) => void sent.push(event) }],
 		});
 		return { monti, sent, of: (type: string) => sent.filter((event) => event.type === type) };
@@ -746,8 +768,8 @@ describe("proposals a person took into the settings' draft", () => {
 
 	it("12-2 an accepted item aimed at none of the save's records refuses it before a file is written", async () => {
 		const monti = dev();
-		// A proposal for the admin's preferences: no part of it is in a save of the languages.
-		const item = await propose(monti, "admin.setPreference", { templates: false });
+		// A proposal for a collection's name: no part of it is in a save of the languages.
+		const item = await propose(monti, "collections.updateAdminValues", { collection: "post", values: { label: "글" } });
 		await expect(
 			monti.run(
 				"settings.save",
@@ -777,5 +799,359 @@ describe("proposals a person took into the settings' draft", () => {
 		});
 		expect(await pending(monti)).toEqual([both]);
 		expect(await pending(monti, [{ kind: "collectionAdminValues", id: "post" }])).toEqual([label, both]);
+	});
+});
+
+describe("a source change beside a change of fields", () => {
+	/** English the source; the list as it was. */
+	const englishSource = { ...base.locales, source: "en" };
+	const postWithValues = async (monti: Monti, values: Record<string, unknown>) => {
+		const made = (await monti.run(
+			"entries.create",
+			{ collection: "post", title: "글", slug: "first", values },
+			{ actor: "admin" },
+		)) as { output: { id: string } };
+		await monti.run("entries.publish", { ids: [made.output.id] }, { actor: "admin" });
+	};
+	const englishValues = async () =>
+		(await db.selectFrom("entries").select("values").where("locale", "=", "en").executeTakeFirstOrThrow()).values;
+
+	it("12-1 a field renamed in the save that changes the source: the new source is made with the value under its new name", async () => {
+		const monti = dev();
+		await postWithValues(monti, { summary: "요약" });
+		const saved = await save(monti, { locales: englishSource, collections: edited, renames, answers });
+		expect(saved.output.structure).toMatchObject({ applied: true });
+		// `summary` is the same in every language, so it is read from the source: the English draft has it, as `excerpt`.
+		expect(await englishValues()).toEqual({ excerpt: "요약" });
+		const [name] = await changeFiles();
+		const change = JSON.parse(await readFile(path.join(root, "monti", "changes", String(name)), "utf8")) as {
+			steps: { do: string }[];
+		};
+		// The fields first, then the source: the order the live database follows too.
+		expect(change.steps.map((step) => step.do)).toEqual(["renameField", "removeField", "changeSource"]);
+	});
+
+	it("12-1 a field removed with its values moved to another, in the save that changes the source: the new source has the moved value", async () => {
+		const monti = dev();
+		await postWithValues(monti, { subtitle: "부제" });
+		const saved = await save(monti, {
+			locales: englishSource,
+			collections: postWith({ title, slug, summary }),
+			answers: { "removeField:post.subtitle": { do: "removeField", values: { move: "summary" } } },
+		});
+		expect(saved.output.structure).toMatchObject({ applied: true });
+		expect(await englishValues()).toEqual({ summary: "부제" });
+	});
+});
+
+describe("a taken proposal when nothing of it is written", () => {
+	const proposeLanguages = async (monti: Monti) => {
+		const proposalId = await monti.proposals.create("c1", "always show the language");
+		return (await monti.proposals.add(proposalId, "locales.apply", { locales: { ...base.locales, prefix: "always" } }))
+			.itemId;
+	};
+	const stateOf = async (item: string) =>
+		(await db.selectFrom("monti_proposal_item").select("state").where("id", "=", item).executeTakeFirstOrThrow()).state;
+	const activity = () =>
+		db.selectFrom("monti_activity").select("id").where("operation", "=", "settings.save").execute();
+
+	it("12-4 a save that could write nothing (its schema file refused, no admin value beside) is refused: no activity row, and the item stays pending", async () => {
+		const monti = dev();
+		const item = await proposeLanguages(monti);
+		locked.schema = true;
+		await expect(
+			monti.run(
+				"settings.save",
+				{ locales: { ...base.locales, prefix: "always" } },
+				{ actor: "admin", accepted: [item] },
+			),
+		).rejects.toMatchObject({ reason: { key: "schema.notWritten" } });
+		expect(await stateOf(item)).toBe("pending");
+		expect(await activity()).toEqual([]);
+		// It is still there to take again once the file can be written.
+		locked.schema = false;
+		await monti.run(
+			"settings.save",
+			{ locales: { ...base.locales, prefix: "always" } },
+			{ actor: "admin", accepted: [item] },
+		);
+		expect(await stateOf(item)).toBe("applied");
+	});
+
+	it("12-4 an item aimed at the schema alone stays pending when the save wrote only an admin value beside it", async () => {
+		const monti = dev();
+		const item = await proposeLanguages(monti);
+		locked.schema = true;
+		const saved = (await monti.run(
+			"settings.save",
+			{ site: { name: "example.dev" }, locales: { ...base.locales, prefix: "always" } },
+			{ actor: "admin", accepted: [item] },
+		)) as Saved;
+		expect(saved.output).toMatchObject({ site: true, structure: { written: false } });
+		// The name is saved and logged; the proposal's change of the languages was not written, so it is not applied.
+		expect(await stateOf(item)).toBe("pending");
+		expect(await activity()).toHaveLength(1);
+	});
+
+	it("12-2 a save that names only what is saved already is refused: nothing is written, logged or sent", async () => {
+		const sent: { type: string }[] = [];
+		const monti = createMonti({
+			db,
+			schema: base,
+			files: files(),
+			receivers: [{ destination: "test", send: async (event) => void sent.push(event) }],
+		});
+		await save(monti, { site: { name: "example.dev" }, adminValues: { post: { label: "글" } } });
+		const before = await read(monti);
+		sent.length = 0;
+		for (const same of [
+			{ site: {} },
+			{ site: { name: "example.dev" } },
+			{ adminValues: { post: { label: "글" } } },
+			{ site: {}, locales: base.locales },
+		])
+			await expect(save(monti, same)).rejects.toMatchObject({ reason: { key: "settings.nothingToSave" } });
+		expect(await read(monti)).toEqual(before);
+		expect(await activity()).toHaveLength(1);
+		expect(sent).toEqual([]);
+		// Beside a real change, the unchanged side is neither written nor named in the event.
+		await save(monti, { site: { name: "example.dev" }, adminValues: { post: { folders: true } } });
+		expect(sent).toEqual([{ type: "settings.saved", ids: ["post"] }]);
+		expect((await read(monti)).site.version).toBe(before.site.version);
+	});
+});
+
+describe("a collection's admin values are changed by what is named", () => {
+	const whole = {
+		label: "게시글",
+		folders: true,
+		fields: { summary: { label: "요약", description: "한 문장" }, subtitle: { label: "부제" } },
+		layout: [{ tab: "기본", fields: ["title", "summary", "subtitle"] }],
+		editor: { blocks: ["paragraph"], marks: "all" as const, headings: [2] },
+		list: { hidden: ["subtitle"], pageSize: 50 as const },
+	};
+	const update = (monti: Monti, values: unknown) =>
+		monti.run("collections.updateAdminValues", { collection: "post", values }, { actor: "admin" });
+
+	it("12-2 collections.updateAdminValues is a patch: a label alone leaves every other value as saved", async () => {
+		const monti = dev();
+		await update(monti, whole);
+		await update(monti, { label: "글" });
+		expect(await postValues()).toEqual({ ...whole, label: "글" });
+	});
+
+	it("12-2 a patch goes by field and by key, null clears, and settings.save's adminValues follow the same rule", async () => {
+		const monti = dev();
+		await update(monti, whole);
+		await update(monti, { fields: { summary: { label: null }, subtitle: null, title: { label: "제목" } } });
+		expect((await postValues())?.fields).toEqual({ summary: { description: "한 문장" }, title: { label: "제목" } });
+		await update(monti, { editor: { headings: [2, 3] }, list: { pageSize: null } });
+		expect(await postValues()).toMatchObject({
+			editor: { blocks: ["paragraph"], marks: "all", headings: [2, 3] },
+			list: { hidden: ["subtitle"] },
+		});
+		await save(monti, { adminValues: { post: { label: null, layout: null } } });
+		const after = await postValues();
+		expect(after).not.toHaveProperty("label");
+		expect(after).not.toHaveProperty("layout");
+		expect(after).toMatchObject({ folders: true, fields: { summary: { description: "한 문장" } } });
+	});
+
+	it("12-2 an assistant's proposal that names only a label, applied, changes only the label", async () => {
+		const monti = dev();
+		await update(monti, whole);
+		const proposalId = await monti.proposals.create("c1", "call the posts 글");
+		await callAgentTool(
+			monti,
+			"collections.updateAdminValues",
+			{ collection: "post", values: { label: "글" } },
+			{ conversationId: "c1", proposalId },
+		);
+		expect((await monti.proposals.apply(proposalId))[0]?.state).toBe("applied");
+		expect(await postValues()).toEqual({ ...whole, label: "글" });
+	});
+});
+
+describe("the admin's own preferences", () => {
+	it("12-2 admin.setPreference is a person's: the assistant has no such tool and cannot propose it", async () => {
+		const monti = dev();
+		expect(agentTools(monti).map((tool) => tool.name)).not.toContain("admin.setPreference");
+		expect(agentTools(monti).map((tool) => tool.name)).toContain("settings.save");
+		const proposalId = await monti.proposals.create("c1", "switch to English");
+		await expect(
+			callAgentTool(monti, "admin.setPreference", { language: "en" }, { conversationId: "c1", proposalId }),
+		).rejects.toThrow("Unknown operation");
+		expect((await read(monti)).admin.language).toBeNull();
+	});
+});
+
+describe("an event's list of moved addresses", () => {
+	it("12-2 past the limit the event lists no address and says the whole site changed", async () => {
+		const sent: { type: string; paths?: string[]; allPaths?: true }[] = [];
+		const monti = createMonti({
+			db,
+			schema: base,
+			files: files(),
+			receivers: [{ destination: "test", send: async (event) => void sent.push(event) }],
+		});
+		// Each published entry that moves gives two addresses (old and new): one more entry than half the limit goes past it.
+		const count = MOVED_PATHS_LIMIT / 2 + 1;
+		await sql`insert into entries (id, collection, translation_group, locale, slug, title, values)
+			select 'e' || n, 'post', 'g' || n, 'ko', 's' || n, 't', '{}'::jsonb from generate_series(1, ${count}::int) n`.execute(
+			db,
+		);
+		await sql`insert into entry_published (entry_id, collection, locale, title, slug, values, published_at, from_version, block_hashes)
+			select 'e' || n, 'post', 'ko', 't', 's' || n, '{}'::jsonb, now(), 1, '{}'::jsonb from generate_series(1, ${count}::int) n`.execute(
+			db,
+		);
+		await save(monti, { locales: { ...base.locales, prefix: "always" } });
+		const [applied] = sent.filter((event) => event.type === "schema.applied");
+		expect(applied).toMatchObject({ type: "schema.applied", allPaths: true });
+		expect(applied).not.toHaveProperty("paths");
+
+		// One entry fewer moved (the mark taken off again from all but the limit's worth): the list is back.
+		await sql`delete from entries where id = 'e1'`.execute(db);
+		await save(monti, { locales: { ...base.locales, prefix: "never" } });
+		const last = sent.filter((event) => event.type === "schema.applied").at(-1);
+		expect(last?.paths).toHaveLength(MOVED_PATHS_LIMIT);
+		expect(last).not.toHaveProperty("allPaths");
+	});
+
+	it("12-2 a change that can move no address reads none: a field added, a label, an added language", async () => {
+		// Any read of the published entries would throw here.
+		const unread = new Proxy({}, { get: () => () => Promise.reject(new Error("read")) }) as never;
+		const withField: Schema = {
+			...base,
+			collections: postWith({ ...base.collections.post.fields, kicker: { kind: "text" } }),
+		};
+		const withLanguage: Schema = {
+			...base,
+			locales: { ...base.locales, list: [...base.locales.list, { code: "ja", name: "日本語" }] },
+		};
+		for (const after of [base, withField, withLanguage]) {
+			expect(canMoveAddresses(base, after)).toBe(false);
+			expect(await addressesBefore(unread, base, after)).toBeNull();
+			expect(await movedAddresses(unread, null, after)).toEqual({ paths: [] });
+		}
+		// What can move one: the mark, a path, a language or a collection gone, the source where the mark depends on it.
+		expect(canMoveAddresses(base, { ...base, locales: { ...base.locales, prefix: "always" } })).toBe(true);
+		expect(canMoveAddresses(base, { ...base, locales: { ...base.locales, source: "en" } })).toBe(true);
+		expect(canMoveAddresses(base, { ...base, locales: { ...base.locales, list: [base.locales.list[0]] } })).toBe(true);
+		expect(canMoveAddresses(base, { ...base, collections: {} })).toBe(true);
+		expect(
+			canMoveAddresses(base, { ...base, collections: { post: { ...base.collections.post, path: "/blog/:slug" } } }),
+		).toBe(true);
+		const never: Schema = { ...base, locales: { ...base.locales, prefix: "never" } };
+		expect(canMoveAddresses(never, { ...never, locales: { ...never.locales, source: "en" } })).toBe(false);
+	});
+});
+
+describe("a write that fails after its files are written", () => {
+	it("12-4 the database rolls back and the files stay: the change is recorded as saved and not applied, and schema.retry finishes it", async () => {
+		const monti = dev();
+		await monti.run(
+			"entries.create",
+			{ collection: "post", title: "글", slug: "first", values: { summary: "요약" } },
+			{ actor: "admin" },
+		);
+		// The step after the structure is applied fails: the write's activity row.
+		await sql`create function refuse() returns trigger language plpgsql as $$ begin
+			if new.operation = 'settings.save' then raise exception 'refused'; end if; return new; end $$`.execute(db);
+		await sql`create trigger refuse before insert on monti_activity for each row execute function refuse()`.execute(db);
+		await expect(save(monti, { site: { name: "example.dev" }, collections: edited, renames, answers })).rejects.toThrow(
+			"refused",
+		);
+		await sql`drop trigger refuse on monti_activity`.execute(db);
+		await sql`drop function refuse`.execute(db);
+
+		// Nothing of the write is in the database, and its files are on disk.
+		const [name] = await changeFiles();
+		expect(name).toBeDefined();
+		expect(await schemaFile()).toContain("excerpt");
+		const failed = await read(monti);
+		expect(failed.site.name).toBe("");
+		expect((await readSchemaState(db))?.schema).toEqual(base);
+		// Recorded as "saved, not applied", not left to be read as a hand edit of the file.
+		expect(failed.failedChange).toBe(String(name).replace(/\.json$/, ""));
+
+		await monti.run("schema.retry", {}, { actor: "admin" });
+		expect((await read(monti)).failedChange).toBeNull();
+		expect((await readSchemaState(db))?.schema.collections).toEqual(edited);
+		expect((await db.selectFrom("entries").select("values").executeTakeFirstOrThrow()).values).toEqual({
+			excerpt: "요약",
+		});
+	});
+
+	it("12-4 a change file a write left without its database step is applied at the next start, with its steps, not read back as a hand edit", async () => {
+		const monti = dev();
+		await monti.run(
+			"entries.create",
+			{ collection: "post", title: "글", slug: "first", values: { summary: "요약" } },
+			{ actor: "admin" },
+		);
+		// The files of a rename, written whole; the server stopped before the database followed them.
+		const draft: Schema = { ...base, collections: edited };
+		await files().write(
+			draft,
+			{
+				id: "2026-11-12-crashed",
+				steps: [
+					{ do: "renameField", collection: "post", from: "summary", to: "excerpt", values: "move" },
+					{ do: "removeField", collection: "post", field: "subtitle", values: "clear" },
+				],
+			},
+			true,
+		);
+		// The next start reads the new schema file.
+		const restarted = dev(draft);
+		expect(await syncSchemaFile(restarted)).toEqual({ status: "applied", changeId: "2026-11-12-crashed" });
+		// The rename moved the value: read as a hand edit it would have been a removed field and a new one, waiting for a review.
+		expect((await db.selectFrom("entries").select("values").executeTakeFirstOrThrow()).values).toEqual({
+			excerpt: "요약",
+		});
+		expect((await read(restarted)).failedChange).toBeNull();
+	});
+});
+
+describe("names Postgres would cut", () => {
+	it("12-2 a collection or field name longer than the database keeps is a problem of the schema, before two long names become one view", () => {
+		const long = (length: number) => `a${"b".repeat(length - 1)}`;
+		const named = (collection: string, field: string): Schema => ({
+			...base,
+			collections: {
+				[collection]: {
+					...base.collections.post,
+					fields: { ...base.collections.post.fields, [field]: { kind: "text" } },
+				},
+			},
+		});
+		expect(checkSchema(named(long(MAX_COLLECTION_NAME), long(MAX_FIELD_NAME)))).toEqual([]);
+		expect(checkSchema(named(long(MAX_COLLECTION_NAME + 1), "kicker"))).toEqual([
+			{ collection: long(MAX_COLLECTION_NAME + 1), code: "tooLong" },
+		]);
+		expect(checkSchema(named("post", long(MAX_FIELD_NAME + 1)))).toEqual([
+			{ collection: "post", field: long(MAX_FIELD_NAME + 1), code: "tooLong" },
+		]);
+		// `monti_` and the name fit the 63 bytes Postgres keeps.
+		expect(`monti_${long(MAX_COLLECTION_NAME)}`).toHaveLength(63);
+	});
+});
+
+describe("a list's own look when a field is renamed or removed", () => {
+	it("12-2 the column's place, whether it is hidden and the width it was dragged to follow a renamed field, and go with a removed one", async () => {
+		const monti = dev();
+		await monti.run(
+			"list.savePrefs",
+			{
+				collection: "post",
+				order: ["subtitle", "summary"],
+				hidden: ["summary"],
+				widths: { summary: 240, subtitle: 120 },
+			},
+			{ actor: "admin" },
+		);
+		// `summary` becomes `excerpt`, `subtitle` goes; the save names nothing of the list.
+		await save(monti, { collections: edited, renames, answers });
+		expect((await postValues())?.list).toEqual({ order: ["excerpt"], hidden: ["excerpt"], widths: { excerpt: 240 } });
 	});
 });

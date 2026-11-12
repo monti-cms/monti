@@ -92,6 +92,12 @@ export function defineSchema(schema: Schema): Schema {
 
 export const IDENTIFIER = /^[a-z][a-zA-Z0-9]*$/;
 /**
+ * Postgres keeps 63 bytes of a name and cuts the rest. A collection's read view is `monti_<collection>`, so two collection names that share their
+ * first 57 letters would be one view; a field is a column of that view.
+ */
+export const MAX_FIELD_NAME = 63;
+export const MAX_COLLECTION_NAME = MAX_FIELD_NAME - "monti_".length;
+/**
  * Names a collection may not take: its read view (`monti_<collection>`) would clash with the core's own tables (`monti_activity`, `monti_admin`,
  * `monti_delivery`, `monti_migration`, `monti_proposal`, `monti_session`, `monti_settings`), and `media` is the kind the trash names the library's
  * files and folders by (doc 11). A test holds this list against the tables the migrations make, so a new core table cannot be forgotten.
@@ -122,6 +128,7 @@ export type SchemaProblem = {
 		| "duplicateLocale"
 		| "unknownSource"
 		| "badIdentifier"
+		| "tooLong"
 		| "reserved"
 		| "badPath"
 		| "missingTitle"
@@ -150,6 +157,7 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 	const paths = new Map<string, string>();
 	for (const [name, collection] of Object.entries(schema.collections)) {
 		if (!IDENTIFIER.test(name)) problems.push({ collection: name, code: "badIdentifier" });
+		if (name.length > MAX_COLLECTION_NAME) problems.push({ collection: name, code: "tooLong" });
 		if (RESERVED_COLLECTIONS.has(name)) problems.push({ collection: name, code: "reserved" });
 		if (collection.path === undefined) {
 			if (collection.kind === "document") problems.push({ collection: name, code: "badPath" });
@@ -169,6 +177,7 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 		for (const [fieldName, field] of Object.entries(collection.fields)) {
 			const at = { collection: name, field: fieldName };
 			if (!IDENTIFIER.test(fieldName)) problems.push({ ...at, code: "badIdentifier" });
+			if (fieldName.length > MAX_FIELD_NAME) problems.push({ ...at, code: "tooLong" });
 			if (field.kind === "select") {
 				if (field.options.length === 0) problems.push({ ...at, code: "noOptions" });
 				if (new Set(field.options).size !== field.options.length) problems.push({ ...at, code: "duplicateOption" });
