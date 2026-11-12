@@ -271,10 +271,16 @@ export interface ApiKeyTable {
 	/** The models the service listed for this key when it was last asked, and when that was. */
 	models: ColumnType<Model[], string | undefined, string>;
 	models_at: Date | null;
-	/** Tokens used in `usage_month` (`2026-11`); another month's count is not this month's. */
-	usage_month: string;
-	usage_tokens: ColumnType<number | string, number | undefined, number | RawBuilder<unknown>>;
+	/** Raised by every change: a change made from an old reading is a conflict. */
+	version: Generated<number>;
 	created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+/** Tokens a key's calls spent in one month (`2026-11`, UTC). */
+export interface ApiKeyUsageTable {
+	key_id: string;
+	month: string;
+	tokens: ColumnType<number | string, number, RawBuilder<unknown>>;
 }
 
 /** A model picked for a job. The one job is the quick tasks' (doc 14); the assistant's model is picked per conversation. */
@@ -286,6 +292,7 @@ export interface ModelChoiceTable {
 
 export interface Database {
 	api_keys: ApiKeyTable;
+	api_key_usage: ApiKeyUsageTable;
 	model_choices: ModelChoiceTable;
 	entries: EntryTable;
 	folders: FolderTable;

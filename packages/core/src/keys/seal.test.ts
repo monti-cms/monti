@@ -22,6 +22,11 @@ describe("sealing a key", () => {
 		expect(await unseal("s", `v2.${sealed.slice(3)}`)).toBeNull();
 	});
 
+	it.each(["", "  "])("14-4 an empty secret (%j) seals nothing and opens nothing", async (empty) => {
+		await expect(seal(empty, "sk-ant-api03-abcdef-a1b2")).rejects.toThrow(/empty secret/);
+		expect(await unseal(empty, await seal("s", "key"))).toBeNull();
+	});
+
 	it("an empty key (a service that needs none) seals and opens as empty", async () => {
 		expect(await unseal("s", await seal("s", ""))).toBe("");
 	});

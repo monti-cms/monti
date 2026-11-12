@@ -14,7 +14,7 @@ import { entryRecord } from "./entries/record";
 import type { PublishCheck } from "./entries/tasks";
 import { UnknownOperationError } from "./errors";
 import { folderOperations, folderRecord } from "./folders/operations";
-import { addKeyUsage, keyOperations, openKey } from "./keys/operations";
+import { addKeyUsage, keyOperations, keyRecord, openKey } from "./keys/operations";
 import { aiServices, type KeyService } from "./keys/services";
 import { mediaOperations } from "./media/operations";
 import { mediaRecord } from "./media/record";
@@ -217,6 +217,7 @@ export function createMonti(options: MontiOptions) {
 		templateRecord,
 		folderRecord,
 		mediaRecord,
+		keyRecord,
 		...(options.recordKinds ?? []),
 		...plugins.flatMap((plugin) => plugin.recordKinds ?? []),
 	]) {
@@ -325,8 +326,8 @@ export function createMonti(options: MontiOptions) {
 		keys: {
 			/** A key opened for the server to call its service with; `null` when it is gone or the server's secret does not open it. No operation returns it. */
 			open: (id: string) => openKey(engine.db, site.secret, id),
-			/** Counts the tokens a call spent against its key (doc 14: tokens per month, no money). */
-			addUsage: (id: string, tokens: number) => addKeyUsage(engine.db, id, tokens, now()),
+			/** Counts the tokens a call spent against its key, in the month of `at`, the time the call was made (doc 14: tokens per month, no money). */
+			addUsage: (id: string, tokens: number, at: Date = now()) => addKeyUsage(engine.db, id, tokens, at),
 		},
 
 		trash: {

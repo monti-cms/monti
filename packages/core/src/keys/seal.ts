@@ -8,6 +8,9 @@ const VERSION = "v1";
 const subtle = () => globalThis.crypto.subtle;
 const encode = (text: string) => new TextEncoder().encode(text);
 
+/** An empty secret is no secret: a key sealed with it would be open to anyone who has the database. */
+const usable = (secret: string) => secret.trim() !== "";
+
 async function sealingKey(secret: string) {
 	const material = await subtle().importKey("raw", encode(secret), "HKDF", false, ["deriveKey"]);
 	return subtle().deriveKey(
@@ -21,6 +24,7 @@ async function sealingKey(secret: string) {
 
 /** `v1.<iv>.<ciphertext>`, each part base64url. A fresh iv every time, so the same key sealed twice reads differently. */
 export async function seal(secret: string, plain: string): Promise<string> {
+	if (!usable(secret)) throw new Error("Refusing to seal a key with an empty secret.");
 	const iv = randomBytes(12);
 	const sealed = await subtle().encrypt({ name: "AES-GCM", iv }, await sealingKey(secret), encode(plain));
 	return `${VERSION}.${base64url(iv)}.${base64url(new Uint8Array(sealed))}`;
@@ -29,7 +33,7 @@ export async function seal(secret: string, plain: string): Promise<string> {
 /** The key as it was sealed, or `null` when this secret does not open it (the server's secret changed, or the value is not a sealed key). */
 export async function unseal(secret: string, sealed: string): Promise<string | null> {
 	const [version, iv, body] = sealed.split(".");
-	if (version !== VERSION || !iv || body === undefined) return null;
+	if (!usable(secret) || version !== VERSION || !iv || body === undefined) return null;
 	try {
 		const plain = await subtle().decrypt(
 			{ name: "AES-GCM", iv: fromBase64url(iv) },

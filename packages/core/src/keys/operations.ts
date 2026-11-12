@@ -4,8 +4,9 @@ import { randomUUID } from "../bytes";
 import type { ApiKeyTable, Database } from "../db/schema";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
+import { defineRecordKind, lockRecords } from "../records";
 import { seal, unseal } from "./seal";
-import type { KeyService, Model } from "./services";
+import { checkKey, type KeyService, type Model } from "./services";
 
 type Db = Kysely<Database> | Transaction<Database>;
 type KeyRecord = Selectable<ApiKeyTable>;
@@ -32,6 +33,8 @@ export type KeyRow = {
 	/** Tokens this month. Money and limits are not counted (doc 10). */
 	usage: { month: string; tokens: number };
 	uses: KeyUse[];
+	/** The key's version, by `recordKey({ kind: "key", id })`: a change sent with it is refused when the key changed since it was read. */
+	version: number;
 };
 
 export type KeyServiceRow = {
@@ -70,6 +73,28 @@ const serviceOf = (ctx: OperationContext, id: string) => ctx.site.keyServices.fi
 
 const keysInOrder = (db: Db): Promise<KeyRecord[]> =>
 	db.selectFrom("api_keys").selectAll().orderBy("created_at").orderBy("id").execute();
+
+/**
+ * A key as the engine sees it: a record with a version, so two changes of one key run one after the other, and a change made from an old reading is
+ * a conflict (doc 00). Its state never holds the key itself, and it is not restored: adding, changing and removing a key have no undo (doc 14).
+ */
+export const keyRecord = defineRecordKind({
+	kind: "key",
+	async load(db, ids) {
+		const rows = await db
+			.selectFrom("api_keys")
+			.select(["id", "version", "name", "service", "base_url"])
+			.where("id", "in", ids)
+			.execute();
+		return rows.map(({ id, version, ...data }) => ({ id, version, data }));
+	},
+	async restore() {
+		throw new Error("A service key is not restored: adding, changing and removing one cannot be undone.");
+	},
+});
+
+/** Holds a key name until the write ends, so two keys cannot take one name at the same moment. */
+const lockName = (ctx: OperationContext, name: string) => lockRecords(ctx.db, [{ kind: "key-name", id: name }]);
 
 /** Each key with whether the server's secret opens it. */
 async function readKeys(ctx: OperationContext) {
@@ -126,7 +151,7 @@ function address(raw: string | undefined): string {
 /** Asks the service once whether it takes the key (doc 14: on add, and again whenever the key or its address changes). */
 async function ask(ctx: OperationContext, service: KeyService, secret: string, baseUrl: string | null) {
 	if (secret === "" && !service.keyOptional) throw new CheckError({ key: "keys.needsKey" });
-	const checked = await service.check({ secret, baseUrl }, ctx.site.fetch);
+	const checked = await checkKey(service, { secret, baseUrl }, ctx.site.fetch);
 	if (!checked.ok) throw new CheckError({ key: checked.reason === "refused" ? "keys.refused" : "keys.unreachable" });
 	return checked.models;
 }
@@ -149,6 +174,11 @@ export const keyOperations = [
 			const keys = await readKeys(ctx);
 			const { assistant, quick } = await startingModels(ctx, keys);
 			const month = monthOf(ctx.now());
+			const used = new Map(
+				(
+					await ctx.db.selectFrom("api_key_usage").select(["key_id", "tokens"]).where("month", "=", month).execute()
+				).map((row) => [row.key_id, Number(row.tokens)]),
+			);
 			return {
 				canStore: ctx.site.secret !== null,
 				keys: keys.map((key) => ({
@@ -159,11 +189,12 @@ export const keyOperations = [
 					last4: key.last4,
 					baseUrl: key.base_url,
 					readable: key.readable,
-					usage: { month, tokens: key.usage_month === month ? Number(key.usage_tokens) : 0 },
+					usage: { month, tokens: used.get(key.id) ?? 0 },
 					uses: [
 						...(assistant?.keyId === key.id ? [{ for: "assistant" as const, model: assistant.model }] : []),
 						...(quick?.keyId === key.id ? [{ for: "quick" as const, model: quick.model }] : []),
 					],
+					version: key.version,
 				})),
 				services: ctx.site.keyServices.map((service) => ({
 					id: service.id,
@@ -194,6 +225,7 @@ export const keyOperations = [
 			if (secret === null) throw new CheckError({ key: "keys.noSecret" });
 			const service = serviceOf(ctx, input.service);
 			if (!service) throw new CheckError({ key: "keys.unknownService" });
+			await lockName(ctx, input.name);
 			await mustBeFree(ctx, input.name);
 			const baseUrl = service.address ? address(input.baseUrl) : null;
 			const models = await ask(ctx, service, input.secret, baseUrl);
@@ -209,10 +241,10 @@ export const keyOperations = [
 					last4: ending(input.secret),
 					models: JSON.stringify(models),
 					models_at: ctx.now(),
-					usage_month: monthOf(ctx.now()),
 					created_at: ctx.now(),
 				})
 				.execute();
+			ctx.created({ kind: "key", id });
 			return { id, name: input.name, last4: ending(input.secret) };
 		},
 		summary: (_input, output) => ({ key: "keys.add", values: { name: output.name } }),
@@ -230,13 +262,19 @@ export const keyOperations = [
 			secret: z.string().trim().optional(),
 			baseUrl: z.string().optional(),
 		}),
+		// The engine holds the key from here to the end of the write: the key and the address read below are the ones this change is checked and
+		// stored with, whatever another change of the same key is doing.
+		touches: (input) => [{ kind: "key", id: input.id }],
 		async run(input, ctx) {
 			const secret = ctx.site.secret;
 			if (secret === null) throw new CheckError({ key: "keys.noSecret" });
 			const key = await ctx.db.selectFrom("api_keys").selectAll().where("id", "=", input.id).executeTakeFirst();
 			if (!key) throw new CheckError({ key: "keys.unknown" });
 			const name = input.name ?? key.name;
-			if (name !== key.name) await mustBeFree(ctx, name, key.id);
+			if (name !== key.name) {
+				await lockName(ctx, name);
+				await mustBeFree(ctx, name, key.id);
+			}
 
 			const service = serviceOf(ctx, key.service);
 			const baseUrl = service?.address && input.baseUrl !== undefined ? address(input.baseUrl) : key.base_url;
@@ -247,15 +285,17 @@ export const keyOperations = [
 			const changed = next !== stored || baseUrl !== key.base_url;
 			if (changed && !service) throw new CheckError({ key: "keys.unknownService" });
 			const models = changed && service ? await ask(ctx, service, next, baseUrl) : null;
+			const sealed = next !== stored ? await seal(secret, next) : null;
 
 			await ctx.db
 				.updateTable("api_keys")
-				.set({
+				.set((eb) => ({
 					name,
 					base_url: baseUrl,
+					version: eb("version", "+", 1),
 					...(models ? { models: JSON.stringify(models), models_at: ctx.now() } : {}),
-					...(next !== stored ? { secret: await seal(secret, next), last4: ending(next) } : {}),
-				})
+					...(sealed ? { secret: sealed, last4: ending(next) } : {}),
+				}))
 				.where("id", "=", key.id)
 				.execute();
 			return { id: key.id, name, last4: next !== stored ? ending(next) : key.last4 };
@@ -269,6 +309,7 @@ export const keyOperations = [
 		description:
 			"Remove a key for good. What used it stops: `keys.list` tells where a key is used. It cannot be undone. Only a person does it.",
 		input: z.object({ id: z.string() }),
+		touches: (input) => [{ kind: "key", id: input.id }],
 		async run(input, ctx) {
 			const removed = await ctx.db
 				.deleteFrom("api_keys")
@@ -297,23 +338,27 @@ export const keyOperations = [
 					if (!input.refresh && key.models_at !== null && key.models_at.getTime() > stale) return;
 					const opened = await unseal(secret, key.secret);
 					if (opened === null) return;
-					const checked = await service.check({ secret: opened, baseUrl: key.base_url }, ctx.site.fetch);
-					// A service that does not answer now keeps the list it gave last.
+					const checked = await checkKey(service, { secret: opened, baseUrl: key.base_url }, ctx.site.fetch);
+					// A service that does not answer now, or answers what cannot be read, keeps the list it gave last.
 					if (!checked.ok) return;
-					key.models = checked.models;
-					key.models_at = ctx.now();
+					// The list belongs to the key and address it was asked with: when the key was changed while the service answered, this answer is
+					// dropped, and the list the change stored stays.
 					await ctx.db
 						.updateTable("api_keys")
-						.set({ models: JSON.stringify(checked.models), models_at: key.models_at })
+						.set({ models: JSON.stringify(checked.models), models_at: ctx.now() })
 						.where("id", "=", key.id)
+						.where("secret", "=", key.secret)
+						.where("base_url", "is not distinct from", key.base_url)
 						.execute();
 				}),
 			);
+			// Read again: what is listed is what is stored now, not what this call happened to hear.
+			const stored = await readKeys(ctx);
 			return {
-				keys: keys
+				keys: stored
 					.filter((key) => key.readable)
 					.map((key) => ({ id: key.id, name: key.name, service: key.service, models: key.models })),
-				...(await startingModels(ctx, keys)),
+				...(await startingModels(ctx, stored)),
 			};
 		},
 	}),
@@ -353,15 +398,26 @@ export async function openKey(db: Db, secret: string | null, id: string): Promis
 		: null;
 }
 
-/** Counts tokens a call spent against its key, in the month the call was made. A new month starts from nothing. */
+/**
+ * Counts tokens a call spent against its key, in the month the call was made (`at`). Each month has its own count, so a count that arrives late for
+ * last month goes to last month and this month's stays. A key that is gone counts nothing.
+ */
 export async function addKeyUsage(db: Db, id: string, tokens: number, at: Date): Promise<void> {
-	const month = monthOf(at);
 	await db
-		.updateTable("api_keys")
-		.set({
-			usage_tokens: sql`case when usage_month = ${month} then usage_tokens else 0 end + ${Math.max(0, Math.round(tokens))}`,
-			usage_month: month,
-		})
-		.where("id", "=", id)
+		.insertInto("api_key_usage")
+		.columns(["key_id", "month", "tokens"])
+		.expression((eb) =>
+			eb
+				.selectFrom("api_keys")
+				.select([
+					"id",
+					sql<string>`${monthOf(at)}::text`.as("month"),
+					sql<number>`${Math.max(0, Math.round(tokens))}::bigint`.as("tokens"),
+				])
+				.where("id", "=", id),
+		)
+		.onConflict((conflict) =>
+			conflict.columns(["key_id", "month"]).doUpdateSet({ tokens: sql`api_key_usage.tokens + excluded.tokens` }),
+		)
 		.execute();
 }

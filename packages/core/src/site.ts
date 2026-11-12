@@ -51,7 +51,8 @@ export function createSite(
 		},
 		files,
 		publishChecks: extra.publishChecks ?? [],
-		secret: extra.secret ?? null,
+		// An empty secret is none: a link signed or a key sealed with "" is signed and sealed for anyone (MONTI_SECRET="" in a deploy's settings).
+		secret: extra.secret?.trim() ? extra.secret : null,
 		kit: extra.kit ?? createBlockKit([], []),
 		auth: extra.auth ?? { password: false, github: null },
 		storage: extra.storage ?? null,
