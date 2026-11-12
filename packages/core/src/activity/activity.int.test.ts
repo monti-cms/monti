@@ -848,10 +848,13 @@ describe("undo from the log", () => {
 			"entry.published",
 		]);
 
-		// The first publish was written over since (a save, a publish, an undo): its undo skips the entry, the site keeps it, and nobody is told.
+		// The first publish was written over since (a save, a publish, an undo): nothing of it is left to undo. It is refused, the line stays as it
+		// was, the site keeps the entry and nobody is told.
 		sent.length = 0;
-		const skipped = await write<{ skip: unknown[] }>("activity.undo", { id: first.activityId }, monti);
-		expect(skipped.output.skip).toEqual([{ kind: "entry", id }]);
+		await expect(write("activity.undo", { id: first.activityId }, monti)).rejects.toMatchObject({
+			reason: { key: "activity.allChanged" },
+		});
+		expect((await list({}, monti)).lines.find((each) => each.id === first.activityId)?.undo).toEqual({ state: "open" });
 		expect((await fromSite("first-post"))?.title).toBe("첫 번째 글");
 		expect(sent).toEqual([]);
 

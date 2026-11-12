@@ -21,6 +21,7 @@ export const coreMessages = defineMessages({
 	namespace: "core",
 	messages: {
 		en: {
+			"activity.allChanged": "It was changed again since.",
 			"activity.changedSince": "Changed since",
 			"activity.undo": "Undid {count}",
 			"trash.purge.many": "Deleted {count} for good",
@@ -228,6 +229,7 @@ export const coreMessages = defineMessages({
 			"templates.unknown": "There is no such template.",
 		},
 		ko: {
+			"activity.allChanged": "그 사이 다시 고쳐졌습니다.",
 			"activity.changedSince": "그 사이 고쳐짐",
 			"activity.undo": "{count}개 되돌림",
 			"trash.purge.many": "{count}개 영구 삭제",

@@ -8,6 +8,7 @@ import {
 } from "../engine/deliveries";
 import type { Engine } from "../engine/execute";
 import { planUndo, undoWithEvents } from "../engine/undo";
+import { CheckError } from "../errors";
 import { type AnyOperation, defineOperation, type Preview } from "../operation";
 import { keepSeenTracked } from "../schema/apply";
 import { ActivityQuery, getActivity, listActivity } from "./list";
@@ -55,6 +56,11 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 					changes: plan.restore,
 					blocked: plan.skip.map((ref) => ({ ref, reason: { key: "activity.changedSince" } })),
 				};
+			},
+			// Nothing left to put back: every record was written again since. It is refused and stays as it is, not marked undone with nothing undone.
+			async check(input, ctx) {
+				const plan = await planUndo(engine, ctx.db, input.id);
+				if (plan.restore.length === 0 && plan.skip.length > 0) throw new CheckError({ key: "activity.allChanged" });
 			},
 			async run(input, ctx) {
 				// An undo that changes what the site shows (a publish taken back, a thrown-away entry put back) tells the site, as the write did (T29).
