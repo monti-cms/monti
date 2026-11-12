@@ -6,6 +6,7 @@ import {
 	RETRY_BATCH,
 	RETRY_MINUTES,
 	type Receiver,
+	ReceiverAnswer,
 	reserveFailedDeliveries,
 	SEND_TIMEOUT_MS,
 	sendDeliveries,
@@ -67,7 +68,7 @@ const down = new Set<string>();
 const receiver = (destination: string): Receiver => ({
 	destination,
 	async send(event) {
-		if (down.has(destination)) throw new Error("503");
+		if (down.has(destination)) throw new ReceiverAnswer("503");
 		sent.push({ destination, event });
 	},
 });
@@ -142,7 +143,7 @@ describe("sending", () => {
 		await newPost("첫 번째 글", "first-post", monti);
 		// Failed from the first try: the count does not wait for the retries to run out (principle 3).
 		let [delivery] = await deliveries();
-		expect(delivery).toMatchObject({ state: "failed", attempts: 1, last_error: "503" });
+		expect(delivery).toMatchObject({ state: "failed", attempts: 1, last_error: "status:503" });
 		expect(delivery.next_attempt_at).toEqual(new Date(clock.getTime() + RETRY_MINUTES[0] * MINUTE));
 		expect(await failedCount(monti)).toBe(1);
 
@@ -169,7 +170,7 @@ describe("sending", () => {
 		const slow: Receiver = {
 			destination: SITE,
 			async send(event) {
-				if (down.has(SITE)) throw new Error("503");
+				if (down.has(SITE)) throw new ReceiverAnswer("503");
 				// Long enough for the second sender to reach the same delivery.
 				await new Promise((resume) => setTimeout(resume, 30));
 				sent.push({ destination: SITE, event });
@@ -217,7 +218,7 @@ describe("sending", () => {
 		const gated: Receiver = {
 			destination: SITE,
 			async send(event) {
-				if (down.has(SITE)) throw new Error("503");
+				if (down.has(SITE)) throw new ReceiverAnswer("503");
 				if (hold) {
 					reached();
 					await gate;
@@ -266,7 +267,7 @@ describe("sending", () => {
 		expect((await deliveries())[0]).toMatchObject({
 			state: "failed",
 			attempts: 1,
-			last_error: "No answer in 10 seconds",
+			last_error: "noAnswer",
 		});
 		expect(aborted).toBe(true);
 	});
@@ -311,7 +312,7 @@ describe("sending", () => {
 		later(MINUTE);
 		await save(id, { title: "고친 글" }, monti);
 		await publish([id], monti);
-		expect((await deliveries())[1]).toMatchObject({ state: "failed", last_error: "503 Service Unavailable" });
+		expect((await deliveries())[1]).toMatchObject({ state: "failed", last_error: "status:503 Service Unavailable" });
 
 		// The receiver may have handled it and lost its answer: the next try says it is the same event and the same delivery, in the body and in
 		// headers, so the receiver can tell and leave it.
@@ -386,7 +387,7 @@ describe("sending", () => {
 		const gated: Receiver = {
 			destination: SITE,
 			async send(event) {
-				if (down.has(SITE)) throw new Error("503");
+				if (down.has(SITE)) throw new ReceiverAnswer("503");
 				await gate;
 				sent.push({ destination: SITE, event });
 			},
@@ -475,7 +476,7 @@ describe("sending", () => {
 				most = Math.max(most, together);
 				await new Promise((resume) => setTimeout(resume, 15));
 				together -= 1;
-				if (down.has(SITE) || stillDown.has(event.ids[0])) throw new Error("503");
+				if (down.has(SITE) || stillDown.has(event.ids[0])) throw new ReceiverAnswer("503");
 				sent.push({ destination: SITE, event });
 			},
 		};
@@ -592,6 +593,47 @@ describe("sending", () => {
 		expect(arrived.filter((destination) => destination === SITE)).toHaveLength(toPages.length);
 	});
 
+	it("13-4 one publish two receivers did not get is two failed deliveries on one line: the sidebar's count and the menu's are the same number", async () => {
+		const monti = site({ receivers: [receiver(SITE), receiver(SEARCH)] });
+		const id = await newPost("첫 번째 글", "first-post", monti);
+		down.add(SITE);
+		down.add(SEARCH);
+		await publish([id], monti);
+		expect(await failedCount(monti)).toBe(2);
+		expect((await facet("delivery", {}, monti)).failed).toBe(2);
+		// The filter still shows lines: the one line both are on.
+		const failed = await list({ deliveries: ["failed"] }, monti);
+		expect(failed.total).toBe(1);
+		expect(failed.lines[0].delivery).toMatchObject({ failed: 2 });
+		// Narrowed by another column, the menu counts the deliveries of the lines left.
+		expect((await facet("delivery", { kinds: ["save"] }, monti)).failed).toBe(0);
+		expect((await facet("delivery", { kinds: ["publish"] }, monti)).failed).toBe(2);
+	});
+
+	it("a receiver is shown by a name a person reads, never by its stored destination: a webhook's token stays on the server", async () => {
+		const secret = webhook("https://user:pass@hooks.example.dev/deploy?token=s3cret", {
+			fetch: async () => new Response(null, { status: 503, statusText: "Service Unavailable" }),
+		});
+		const named: Receiver = { ...receiver("plugin:next"), label: { key: "deliveries.receiver.site" } };
+		const monti = site({ receivers: [secret, named] });
+		const id = await newPost("첫 번째 글", "first-post", monti);
+		const { activityId } = await publish([id], monti);
+		const shown = await detail(activityId, monti);
+		expect(shown.deliveries.map((delivery) => delivery.receiver)).toEqual([
+			{ key: "deliveries.receiver.site" },
+			"hooks.example.dev/deploy",
+		]);
+		expect(shown.deliveries[1].lastError).toEqual({
+			key: "deliveries.error.status",
+			values: { status: "503 Service Unavailable" },
+		});
+		expect(JSON.stringify(shown)).not.toContain("s3cret");
+		expect(JSON.stringify(shown)).not.toContain("pass@");
+		// Canceling answers nothing of the destination either.
+		const failed = shown.deliveries[1];
+		expect(JSON.stringify(await write("deliveries.cancel", { id: failed.id }, monti))).not.toContain("s3cret");
+	});
+
 	it("13-1 the command line leaves what only the running site can send, untried, and says so", async () => {
 		const monti = site({ receivers: [receiver(SITE), receiver("plugin:next")] });
 		down.add(SITE);
@@ -607,7 +649,7 @@ describe("sending", () => {
 			left: 1,
 		});
 		const left = (await deliveries()).find((delivery) => delivery.destination === "plugin:next");
-		expect(left).toMatchObject({ state: "failed", attempts: 1, last_error: "503" });
+		expect(left).toMatchObject({ state: "failed", attempts: 1, last_error: "status:503" });
 		// The running site sends it.
 		expect(await monti.deliveries.sendDue()).toEqual({ sent: 1, failed: 0, left: 0 });
 	});
@@ -706,16 +748,18 @@ describe("the log", () => {
 		expect(shown.deliveries).toEqual([
 			{
 				id: expect.any(String),
-				destination: SEARCH,
+				// A plugin's receiver is named by what follows `plugin:`, and its failure by the answer it got.
+				receiver: "search",
 				event: "entry.published",
 				state: "failed",
 				attempts: 1,
-				lastError: "503",
+				lastError: { key: "deliveries.error.status", values: { status: "503" } },
 				nextAttemptAt: new Date(clock.getTime() + RETRY_MINUTES[0] * MINUTE),
 			},
 			{
 				id: expect.any(String),
-				destination: SITE,
+				// A webhook by its host and path.
+				receiver: "site.test/revalidate",
 				event: "entry.published",
 				state: "sent",
 				attempts: 1,
@@ -1082,7 +1126,7 @@ describe("the log", () => {
 			settings: 0,
 			media: 1,
 		});
-		// The menu counts lines, as every list's menu counts rows.
+		// The delivery menu counts deliveries, as the sidebar does.
 		expect(await facet("delivery", {}, monti)).toEqual({ pending: 0, sent: 4, failed: 1, canceled: 0 });
 		const narrowed = { deliveries: ["failed"], kinds: ["publish"] };
 		expect(await facet("kind", narrowed, monti)).toMatchObject({ assistant: 0, save: 1, publish: 0, trash: 0 });
@@ -1476,7 +1520,7 @@ describe("counts and sites without receivers", () => {
 		expect((await deliveries())[0]).toMatchObject({
 			state: "failed",
 			attempts: 2,
-			last_error: `No receiver ${SITE} any more`,
+			last_error: "gone",
 		});
 	});
 });

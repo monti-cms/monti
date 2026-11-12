@@ -2,14 +2,19 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { CheckError } from "../errors";
-import type { MontiEvent } from "../operation";
+import type { Message, MontiEvent } from "../operation";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
 /** Somewhere events go after a write commits: a webhook from the config file, or a plugin. */
 export type Receiver = {
-	/** `webhook:https://example.dev/api/revalidate`, `plugin:algolia`. */
+	/** `webhook:https://example.dev/api/revalidate`, `plugin:algolia`. It is what a delivery is stored under, and is never shown to a person. */
 	destination: string;
+	/**
+	 * Its name as a person reads it in the activity log ("Site cache", "Search index"): words, or a message of a dictionary. Left out, a webhook is
+	 * named by its host and path (never its query or credentials, where a token may be) and a plugin's receiver by what follows `plugin:`.
+	 */
+	label?: string | Message;
 	/** Which events it wants; all when left out. */
 	accepts?: (event: MontiEvent) => boolean;
 	/**
@@ -80,9 +85,57 @@ export function webhook(
 				body: JSON.stringify(event),
 				signal,
 			});
-			if (!response.ok) throw new Error(`${response.status} ${response.statusText}`.trim());
+			if (!response.ok) throw new ReceiverAnswer(`${response.status} ${response.statusText}`.trim());
 		},
 	};
+}
+
+/**
+ * What a receiver throws when the other side answered, and not with success: `status` is the answer as it came ("503 Service Unavailable"), and
+ * the log shows it. Anything else a receiver throws is read as no answer: an error's own message is never shown to a person.
+ */
+export class ReceiverAnswer extends Error {
+	constructor(readonly status: string) {
+		super(status);
+		this.name = "ReceiverAnswer";
+	}
+}
+
+/** The delivery's receiver is not in the config any more. */
+class GoneError extends Error {}
+
+/** Why a delivery failed, as it is stored (`last_error`): the receiver's answer, no answer in time, or no such receiver in the config any more. */
+const failureOf = (error: unknown): string =>
+	error instanceof GoneError
+		? "gone"
+		: error instanceof ReceiverAnswer
+			? `status:${error.status}`.slice(0, ERROR_LENGTH)
+			: "noAnswer";
+
+/** A stored failure in words: one of three sentences (doc 13). */
+export function deliveryError(stored: string | null): Message | null {
+	if (stored === null) return null;
+	if (stored === "gone") return { key: "deliveries.error.gone" };
+	if (stored.startsWith("status:")) return { key: "deliveries.error.status", values: { status: stored.slice(7) } };
+	return { key: "deliveries.error.noAnswer" };
+}
+
+/**
+ * A receiver's name as the log shows it, from the destination a delivery was stored under: the receiver's own `label`, or the webhook's host and
+ * path, or the plugin receiver's name. Never the stored destination itself: a webhook's address may carry a token.
+ */
+export function receiverName(destination: string, receivers: readonly Receiver[]): string | Message {
+	const label = receivers.find((receiver) => receiver.destination === destination)?.label;
+	if (label !== undefined) return label;
+	if (destination.startsWith("webhook:")) {
+		try {
+			const url = new URL(destination.slice(8));
+			return `${url.host}${url.pathname === "/" ? "" : url.pathname}`;
+		} catch {
+			return "webhook";
+		}
+	}
+	return destination.replace(/^plugin:/, "");
 }
 
 /** An event queued by a write, with the log row its delivery shows on when that is not the write's own. */
@@ -123,7 +176,7 @@ async function sendOnce(receiver: Receiver, event: MontiEvent, delivery: Deliver
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	const late = new Promise<never>((_resolve, reject) => {
 		timer = setTimeout(() => {
-			const error = new Error(`No answer in ${SEND_TIMEOUT_MS / 1000} seconds`);
+			const error = new Error("No answer in time");
 			abort.abort(error);
 			reject(error);
 		}, SEND_TIMEOUT_MS);
@@ -185,10 +238,10 @@ export async function sendDeliveries(
 		const attempts = held.attempts + 1;
 		let failure: string | null = null;
 		try {
-			if (!receiver) throw new Error(`No receiver ${held.destination} any more`);
+			if (!receiver) throw new GoneError();
 			await sendOnce(receiver, held.event, { id: held.id, attempt: attempts });
 		} catch (error) {
-			failure = (error instanceof Error ? error.message : String(error)).slice(0, ERROR_LENGTH) || "Failed";
+			failure = failureOf(error);
 		}
 		// The first send is not a retry, so the retries run out on attempt RETRY_MINUTES.length + 1.
 		const wait = failure === null ? undefined : RETRY_MINUTES[attempts - 1];

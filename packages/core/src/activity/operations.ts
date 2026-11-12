@@ -43,7 +43,7 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			name: "activity.facets",
 			kind: "read",
 			description:
-				"For one column of an activity.list query (`kind`: the assistant's work and the kinds of writes; `delivery`: the delivery states): each value with how many lines have it, the query's other conditions applied.",
+				"For one column of an activity.list query (`kind`: the assistant's work and the kinds of writes; `delivery`: the delivery states): each value with its count, the query's other conditions applied. A kind counts lines; a delivery state counts deliveries, as deliveries.counts does.",
 			input: ActivityQuery.extend({ column: z.enum(ACTIVITY_FACETS) }),
 			run: async (input, ctx) => ({ values: await activityFacets(ctx.db, input, input.column, ctx.now()) }),
 		}),
@@ -51,9 +51,9 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			name: "activity.get",
 			kind: "read",
 			description:
-				"One line of the activity log with its details: the records it touched as they were then, and each delivery with its receiver, state, tries and last error.",
+				"One line of the activity log with its details: the records it touched as they were then, and each delivery with its receiver's name, state, tries and why its last try failed.",
 			input: z.object({ id: z.string() }),
-			run: (input, ctx) => getActivity(ctx.db, input.id, ctx.now()),
+			run: (input, ctx) => getActivity(ctx.db, input.id, ctx.now(), engine.receivers),
 		}),
 		defineOperation({
 			name: "activity.undo",
@@ -119,8 +119,12 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			description:
 				"Cancel one delivery: it is not sent again and no longer counts as failed. It cannot be taken back, so only a person does it; it is never an agent tool.",
 			input: z.object({ id: z.string() }),
-			run: (input, ctx) => cancelDelivery(ctx.db, input.id),
-			summary: (_input, output) => ({ key: "deliveries.cancel", values: { destination: output.destination } }),
+			// The stored destination stays on the server: a webhook's address may carry a token.
+			async run(input, ctx) {
+				await cancelDelivery(ctx.db, input.id);
+				return { id: input.id };
+			},
+			summary: () => ({ key: "deliveries.cancel" }),
 		}),
 		defineOperation({
 			name: "deliveries.counts",

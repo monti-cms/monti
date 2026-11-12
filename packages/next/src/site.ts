@@ -38,6 +38,8 @@ const SETTLE_MS = 2000;
  */
 export const cacheReceiver: Receiver = {
 	destination: "plugin:next",
+	// What the activity log calls it.
+	label: { key: "deliveries.receiver.site" },
 	accepts: (event: MontiEvent) => !UNSEEN.has(event.type),
 	// A publish that answered is on the site: the pages are marked before the write answers, not after the response (doc 16, 16-3).
 	beforeAnswer: true,

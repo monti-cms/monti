@@ -1,6 +1,7 @@
 import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
 import type { Database, DeliveryTable } from "../db/schema";
+import { deliveryError, type Receiver, receiverName } from "../engine/deliveries";
 import { CheckError } from "../errors";
 import { ACTIVITY_KINDS, type Actor, type LoggedRecord, type Message, recordKey } from "../operation";
 import { DateRange, dateRangeSql, likePattern } from "../query";
@@ -104,12 +105,14 @@ export type ActivityRecord = Omit<LoggedRecord, "address"> & {
 
 export type ActivityDelivery = {
 	id: string;
-	destination: string;
+	/** The receiver's name as a person reads it: its label, or a webhook's host and path. Never the stored destination, which may carry a token. */
+	receiver: string | Message;
 	/** The event's type: `entry.published`. */
 	event: string;
 	state: DeliveryState;
 	attempts: number;
-	lastError: string | null;
+	/** Why its last try failed: the receiver's answer, no answer, or no such receiver any more. */
+	lastError: Message | null;
 	/** When it is tried again by itself; `null` when it is not. */
 	nextAttemptAt: Date | null;
 };
@@ -335,8 +338,9 @@ export async function listActivity(
 }
 
 /**
- * For one column of a log query: each of its values with how many lines have it, the other columns' conditions applied and its own not. It is what
- * the column's menu shows, read when the menu opens, as a list's menus read theirs (`entries.facets`).
+ * For one column of a log query: each of its values with its count, the other columns' conditions applied and its own not. It is what the
+ * column's menu shows, read when the menu opens, as a list's menus read theirs (`entries.facets`). A kind counts lines. A delivery state counts
+ * deliveries, as the sidebar and the banner do (doc 13, 13-4): one publish that two receivers did not get is two failed, on one line.
  */
 export async function activityFacets(
 	db: Db,
@@ -346,21 +350,33 @@ export async function activityFacets(
 ): Promise<{ value: string; count: number }[]> {
 	const entry = query.entry === undefined ? null : await entryFilter(db, query.entry);
 	const where = conditionsOf(query, entry, now, column);
-	const values: readonly string[] = column === "kind" ? ACTIVITY_FILTERS : DELIVERY_STATES;
+	if (column === "delivery") {
+		const counted = await sql<{ state: string; count: string }>`select d.state, count(*) as count from monti_activity h
+			join monti_activity r on r.line = h.id and r.listed
+			join monti_delivery d on d.activity_id = r.id
+			where ${where} group by d.state`.execute(db);
+		return DELIVERY_STATES.map((value) => ({
+			value,
+			count: Number(counted.rows.find((row) => row.state === value)?.count ?? 0),
+		}));
+	}
+	const values: readonly string[] = ACTIVITY_FILTERS;
 	const has = (value: string): Condition =>
-		column === "delivery"
-			? sql`exists (select 1 from monti_delivery d join monti_activity r on r.id = d.activity_id
-				where r.line = h.id and r.listed and d.state = ${value})`
-			: value === "assistant"
-				? sql`h.conversation_id is not null`
-				: sql`exists (select 1 from monti_activity r where r.line = h.id and r.listed and r.kind = ${value})`;
+		value === "assistant"
+			? sql`h.conversation_id is not null`
+			: sql`exists (select 1 from monti_activity r where r.line = h.id and r.listed and r.kind = ${value})`;
 	const { rows } = await sql<Record<string, string>>`select ${sql.join(
 		values.map((value, index) => sql`count(*) filter (where ${has(value)}) as ${sql.ref(`value_${index}`)}`),
 	)} from monti_activity h where ${where}`.execute(db);
 	return values.map((value, index) => ({ value, count: Number(rows[0]?.[`value_${index}`] ?? 0) }));
 }
 
-export async function getActivity(db: Db, id: string, now: Date): Promise<ActivityDetail> {
+export async function getActivity(
+	db: Db,
+	id: string,
+	now: Date,
+	receivers: readonly Receiver[],
+): Promise<ActivityDetail> {
 	const [found] = await linesOf(db, [id], now);
 	if (!found) throw new CheckError({ key: "activity.unknown" });
 	// Each record once, as the line's newest write left it.
@@ -410,11 +426,11 @@ export async function getActivity(db: Db, id: string, now: Date): Promise<Activi
 		recordCount: logged.length,
 		deliveries: deliveries.map((delivery) => ({
 			id: delivery.id,
-			destination: delivery.destination,
+			receiver: receiverName(delivery.destination, receivers),
 			event: delivery.event.type,
 			state: delivery.state,
 			attempts: delivery.attempts,
-			lastError: delivery.last_error,
+			lastError: deliveryError(delivery.last_error),
 			nextAttemptAt: delivery.state === "failed" ? delivery.next_attempt_at : null,
 		})),
 	};
