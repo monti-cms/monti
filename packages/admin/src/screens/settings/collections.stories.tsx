@@ -327,6 +327,32 @@ export const PreviewAddressReview: Story = {
 	},
 };
 
+/** T151: a preview address that is the posts' own public address. The problem is told under the field, where it is fixed. */
+export const AddressProblem: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		fill(await page.findByLabelText("미리보기 주소"), "posts");
+		await page.findByText("이미 쓰는 주소입니다", {}, wait);
+	},
+};
+
+/** T151: the same problem at the top of the review ("고칠 곳"), with "열기" back to the field. */
+export const AddressProblemReview: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page, body } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		fill(await page.findByLabelText("미리보기 주소"), "posts");
+		await page.findByText("이미 쓰는 주소입니다", {}, wait);
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		const review = within(await body.findByRole("dialog", {}, wait));
+		await review.findByText("고칠 곳", {}, wait);
+		await review.findByRole("button", { name: "열기" });
+	},
+};
+
 /** CollectionEditor: the posts' editor allowance with one block turned off. */
 export const Editor: Story = {
 	loaders: site(),
@@ -386,6 +412,24 @@ export const NewCollectionReview: Story = {
 		await userEvent.click(body.getByRole("button", { name: "만들기" }));
 		await page.findByRole("button", { name: "title 열기" });
 		await sheetGone(body);
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		await body.findByText("저장된 데이터는 바뀌지 않습니다.", {}, wait);
+	},
+};
+
+/** T152: a new collection made with a preview address: its review names the address beside the public one. */
+export const NewCollectionPreviewReview: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page, body } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
+		fill(await body.findByLabelText(/^이름/), "노트");
+		fill(body.getByLabelText(/^식별자/), "note");
+		await userEvent.click(body.getByRole("button", { name: "만들기" }));
+		await page.findByRole("button", { name: "title 열기" });
+		await sheetGone(body);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		fill(await page.findByLabelText("미리보기 주소"), "preview");
 		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
 		await body.findByText("저장된 데이터는 바뀌지 않습니다.", {}, wait);
 	},

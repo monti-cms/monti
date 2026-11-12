@@ -22,6 +22,7 @@ import {
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
+import { type AddressPlace, addressOfProblem } from "./basics-tab";
 import { PickOne } from "./pick-one";
 import { at } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
@@ -89,6 +90,7 @@ export function ReviewSheet({
 	onClose,
 	onApply,
 	onOpenField,
+	onOpenAddress,
 	onOpenLanguages,
 }: {
 	model: SettingsDraft;
@@ -102,6 +104,8 @@ export function ReviewSheet({
 	onApply: (answers: Answers) => void;
 	/** Opens a field's sheet from a line of what is to fix. */
 	onOpenField: (collection: string, key: string) => void;
+	/** Goes to a collection's address field in its basics tab (a problem of its public or its preview address). */
+	onOpenAddress: (collection: string, place: AddressPlace) => void;
 	/** Opens the language tab from a line of what is to fix. */
 	onOpenLanguages: () => void;
 }) {
@@ -118,6 +122,7 @@ export function ReviewSheet({
 					onClose={onClose}
 					onApply={onApply}
 					onOpenField={onOpenField}
+					onOpenAddress={onOpenAddress}
 					onOpenLanguages={onOpenLanguages}
 				/>
 			) : null}
@@ -135,6 +140,7 @@ function Body({
 	onClose,
 	onApply,
 	onOpenField,
+	onOpenAddress,
 	onOpenLanguages,
 }: {
 	model: SettingsDraft;
@@ -147,6 +153,8 @@ function Body({
 	onClose: () => void;
 	onApply: (answers: Answers) => void;
 	onOpenField: (collection: string, key: string) => void;
+	/** Goes to a collection's address field in its basics tab (a problem of its public or its preview address). */
+	onOpenAddress: (collection: string, place: AddressPlace) => void;
 	onOpenLanguages: () => void;
 }) {
 	const { t } = useAdmin();
@@ -173,6 +181,8 @@ function Body({
 		const key = problem.field
 			? model.fields(problem.collection).find((each) => model.fieldName(problem.collection, each) === problem.field)
 			: undefined;
+		// A problem of an address has its field in the basics tab.
+		const address = problem.field ? null : addressOfProblem(problem.code);
 		return (
 			<ChangeGroup
 				key={`${problem.collection}:${problem.field}:${problem.code}`}
@@ -185,6 +195,10 @@ function Body({
 					<ChangeNote danger>{t(`settings.problem.${problem.code}`)}</ChangeNote>
 					{key ? (
 						<TextButton onClick={() => onOpenField(problem.collection, key)}>{t("settings.review.open")}</TextButton>
+					) : address ? (
+						<TextButton onClick={() => onOpenAddress(problem.collection, address)}>
+							{t("settings.review.open")}
+						</TextButton>
 					) : null}
 				</Inline>
 			</ChangeGroup>

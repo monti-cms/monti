@@ -404,6 +404,13 @@ export function SettingsScreen({
 					setPlan(null);
 					onTab("languages");
 				}}
+				onOpenAddress={(c, place) => {
+					setPlan(null);
+					onTab("collections");
+					view.open(c);
+					view.setTab("basics");
+					view.setAttention(place);
+				}}
 				onOpenField={(c, key) => {
 					setPlan(null);
 					onTab("collections");

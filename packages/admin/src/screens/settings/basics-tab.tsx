@@ -1,3 +1,4 @@
+import type { SchemaProblem } from "@monti-cms/core";
 import {
 	Affix,
 	Button,
@@ -18,6 +19,7 @@ import {
 	Switch,
 	TextButton,
 } from "@monti-cms/ui";
+import { useEffect, useRef } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { at } from "./schema-draft";
 import { useCell } from "./use-cell";
@@ -37,14 +39,29 @@ export const addressOf = (part: string) => {
  * No section names the system's split between file and admin values (README principle 9). Deleting it takes it out of the list at once; the
  * review is the last check.
  */
+/** One of a collection's two addresses: its public one, or its preview page's. */
+export type AddressPlace = "path" | "preview";
+
+/** The address a problem of the schema is about, when it is about one (the others are a field's or the name's). */
+export function addressOfProblem(code: SchemaProblem["code"]): AddressPlace | null {
+	if (code === "badPath" || code === "pathTaken") return "path";
+	if (code === "badPreviewPath" || code === "previewPathTaken") return "preview";
+	return null;
+}
+
 export function BasicsTab({
 	model,
 	collection: c,
 	onDelete,
+	attention = null,
+	onAttended,
 }: {
 	model: SettingsDraft;
 	collection: string;
 	onDelete: () => void;
+	/** The address the review's "open" asks to be fixed: its field takes the keyboard once. */
+	attention?: AddressPlace | null;
+	onAttended?: () => void;
 }) {
 	const { t } = useAdmin();
 	const { draft, data } = model;
@@ -58,6 +75,33 @@ export function BasicsTab({
 	const previewChanged = model.changed.includes(previewPlace) && Boolean(data?.schema.collections[c]);
 	const labelPlace = at.collectionValue(c, "label");
 	const foldersPlace = at.collectionValue(c, "folders");
+	// What is wrong with an address is told under its field, as a field's problem is told on its row: the review's "open" leads here.
+	const problemOf = (place: AddressPlace) => {
+		const problem = model.problems.find(
+			(each) =>
+				!each.field &&
+				addressOfProblem(each.code) === place &&
+				// Two collections with one public address: the schema names the later one, and it is as wrong here as there.
+				(each.collection === c ||
+					(each.code === "pathTaken" &&
+						each.collection !== undefined &&
+						draft.value(at.path(each.collection)) === pathValue)),
+		);
+		return problem ? t(`settings.problem.${problem.code}`) : undefined;
+	};
+	const pathProblem = problemOf("path");
+	const previewProblem = problemOf("preview");
+	const attended = useRef(onAttended);
+	attended.current = onAttended;
+	useEffect(() => {
+		if (!attention) return;
+		// After the review has closed and handed the focus back to the button that opened it.
+		const later = setTimeout(() => {
+			document.getElementById(attention === "path" ? "collection-path" : "collection-preview-path")?.focus();
+			attended.current?.();
+		}, 0);
+		return () => clearTimeout(later);
+	}, [attention]);
 	const cell = useCell(model);
 	const label = cell(labelPlace);
 	const folders = cell(foldersPlace);
@@ -143,10 +187,12 @@ export function BasicsTab({
 								prefix="/"
 								suffix="/:slug"
 								width="fit"
+								aria-invalid={pathProblem !== undefined || undefined}
 								value={addressPart(path)}
 								onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
 							/>
 						)}
+						{pathProblem ? <FormFieldError>{pathProblem}</FormFieldError> : null}
 					</Stack>
 				)}
 				{/* The site's own preview page, when it made one (doc 16): a document's only, since an item has nothing to preview. */}
@@ -178,6 +224,7 @@ export function BasicsTab({
 							suffix="/:slug"
 							width="fit"
 							placeholder="preview"
+							aria-invalid={previewProblem !== undefined || undefined}
 							value={typeof preview === "string" ? addressPart(preview) : ""}
 							onChange={(event) => {
 								// Empty is what the field shows as empty: slashes alone leave no address, so they are none (not "/:slug").
@@ -189,7 +236,9 @@ export function BasicsTab({
 						<FormFieldError
 							reserve
 							hint={typeof preview === "string" ? undefined : t("settings.basics.previewPathHint")}
-						/>
+						>
+							{previewProblem}
+						</FormFieldError>
 					</FormField>
 				)}
 				{/* At the height of the inputs above it (36px): one group, one control height. */}

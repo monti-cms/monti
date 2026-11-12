@@ -1,7 +1,7 @@
 import { Button, NavLink, PageToolbar, PageToolbarEnd, RailAction, RailLayout, TabLink, TabLinks } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
-import { BasicsTab } from "./basics-tab";
+import { type AddressPlace, BasicsTab } from "./basics-tab";
 import { EditorTab } from "./editor-tab";
 import { FieldSheet, type FieldSheetOpen } from "./field-sheet";
 import { FieldsTab } from "./fields-tab";
@@ -22,6 +22,8 @@ export function useCollectionsView(model: SettingsDraft) {
 	const [preview, setPreview] = useState(false);
 	const [fieldSheet, setFieldSheet] = useState<FieldSheetOpen | null>(null);
 	const [making, setMaking] = useState(false);
+	// An address the review sent the person to fix: the basics tab puts the keyboard in it once.
+	const [attention, setAttention] = useState<AddressPlace | null>(null);
 	const live = model.collections.filter((c) => model.shown(at.collection(c)));
 	const current = active && live.includes(active) ? active : (live[0] ?? null);
 	const kind = current ? (model.shown(at.collection(current)) as { kind: "document" | "item" }).kind : "document";
@@ -40,6 +42,8 @@ export function useCollectionsView(model: SettingsDraft) {
 		setFieldSheet,
 		making,
 		setMaking,
+		attention,
+		setAttention,
 		/** Opens a collection at its first property tab. */
 		open: (c: string | null) => {
 			setActive(c);
@@ -144,7 +148,13 @@ export function CollectionsTab({
 								onAddField={() => view.setFieldSheet({ collection: current, key: null })}
 							/>
 						) : tab === "basics" ? (
-							<BasicsTab model={model} collection={current} onDelete={() => onRemove(current)} />
+							<BasicsTab
+								model={model}
+								collection={current}
+								onDelete={() => onRemove(current)}
+								attention={view.attention}
+								onAttended={() => view.setAttention(null)}
+							/>
 						) : (
 							<EditorTab model={model} collection={current} />
 						)}
