@@ -37,7 +37,11 @@
 		".next-e2e-4273/types/**/*.ts",
 		".next-e2e-4273/dev/types/**/*.ts",
 		".next-e2e-4275/types/**/*.ts",
-		".next-e2e-4275/dev/types/**/*.ts"
+		".next-e2e-4275/dev/types/**/*.ts",
+		".next-e2e-4673/types/**/*.ts",
+		".next-e2e-4673/dev/types/**/*.ts",
+		".next-e2e-4675/types/**/*.ts",
+		".next-e2e-4675/dev/types/**/*.ts"
 	],
 	"exclude": ["node_modules", ".next-*"]
 }
