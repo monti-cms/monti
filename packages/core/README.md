@@ -61,6 +61,10 @@ export default defineConfig({ schema, database: process.env.DATABASE_URL, auth: 
 first visit to the admin makes the admin. The admin API (`createAdminApi`) answers only the sign-in operations without its `httpOnly` session
 cookie; a session ends after 30 days unused. A forgotten password is reset on the server with `monti admin:reset-password`.
 
+On the dev server (the one that can write `monti.schema.ts`) a request from this machine gets in without signing in, and the admin's sidebar
+says so. It never applies on the live site, on a hosting platform's process or to a request from another machine; `auth: { devBypass: false }`
+turns it off, to try the sign-in screens locally.
+
 Labels, help texts, layout and editor permissions are admin values in the database (`collections.updateAdminValues`), editable on the live site too.
 
 Structure changes only on the dev server. `schema.plan` lists what a draft changes and what the review must choose for stored values;
@@ -91,9 +95,15 @@ import { createReader } from "@monti-cms/core";
 const site = createReader({ db, schema, secret: process.env.MONTI_SECRET });
 await site.entry({ collection: "post", locale: "ko", slug }); // { entry } | { redirect } | null
 await site.entries({ collection: "post", locale: "ko" });
+await site.page({ collection: "post", locale: "ko", limit: 10, after }); // { entries, next }: a list read a page at a time
 ```
 
-`entries.previewLink` gives a one-hour token, signed with `MONTI_SECRET`; passed as `preview`, it opens that entry's working copy.
+Each entry comes with its public address (`path`). `entries.previewLink` gives a one-hour token, signed with `MONTI_SECRET`, and the path to
+open it at: the collection's own preview page when the schema names one (`previewPath: "/preview/:slug"`, a document collection's), the public
+address otherwise. Passed as `preview`, the token opens that entry's working copy at that entry's own address only.
+
+On a Next.js site, `@monti-cms/next` does this wiring: the admin page, the admin API route, the preview in draft mode and the cache refreshed
+when something is published (`packages/next`, and the example site in `examples/blog`).
 
 ## Bodies
 
@@ -137,6 +147,9 @@ person's save and a block edit pass the same check. Templates are one list for t
 
 A link to an entry is `monti:entry/<translation group>` (`entryLink`), so it holds when the entry's slug changes. The reader's
 `linkPaths(doc, locale)` gives `renderDocument`'s `entryPath`; a link to an entry not on the site is drawn as its text.
+
+Every heading is drawn with an `id` made of its words (letters of any language kept, the same words again numbered), and
+`tocOf(doc, { min, max })` gives the table of contents with those ids: `{ id, text, level, depth }` for levels 2 and 3 unless said.
 
 ## Tests
 

@@ -30,9 +30,8 @@ export const { monti, reader } = openSite(config);
 ```tsx
 // app/admin/page.tsx
 import { AdminPage } from "@monti-cms/next/admin";
-import { monti } from "@/lib/monti";
 
-export default () => <AdminPage monti={monti} />;
+export default () => <AdminPage siteName="내 블로그" />;
 ```
 
 ```ts
@@ -72,16 +71,19 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
 |---|---|---|
 | `openSite(config)` | `@monti-cms/next` | `openMonti`로 Monti를 열고 `reader`를 만든다. 개발 서버인지 가리고, 캐시 갱신을 받는 곳과 개발 서버의 로그인 건너뛰기를 건다. 서버 하나에 한 번만 연다(개발 서버가 모듈을 다시 읽어도 같은 것을 쓴다) |
 | `adminRoute(monti)` | `@monti-cms/next` | `createAdminApi`를 Next 라우트로 올린다. 미리보기를 켜고 끄는 두 경로(`…/preview`, `…/preview/exit`)를 더한다. 처음 불릴 때 구조 파일을 맞춘다(아래 "시작할 때") |
-| `AdminPage` | `@monti-cms/next/admin` | 관리자 화면을 그린다. 관리자 API의 주소는 이 페이지의 주소 아래 `api`다. 화면의 스타일(`@monti-cms/admin/styles.css`)을 싣고, 검색 엔진이 읽지 않게 한다 |
+| `AdminPage` | `@monti-cms/next/admin` | 관리자 화면을 그린다(`siteName`, 사이트의 블록 정의 `blocks`). 관리자 API의 주소는 이 페이지의 주소 아래 `api`다. 화면의 스타일(`@monti-cms/admin/styles.css`)을 싣고, 검색 엔진이 읽지 않게 한다(`noindex`). 화면은 브라우저에서만 그린다 |
 | `entryPage(reader, { collection, slug, locale? })` | `@monti-cms/next` | 글 하나를 읽는다. 없으면 `notFound()`, 옛 주소면 `permanentRedirect()`, 미리보기가 켜져 있으면 고치는 본 |
-| `PreviewBar` | `@monti-cms/next` | 미리보기 중일 때만 보이는 한 줄: "미리보기 · 끝내기". 사이트가 레이아웃에 넣는다(넣지 않아도 미리보기는 된다) |
+| `previewPage(reader, { collection, slug, locale? })` | `@monti-cms/next` | 사이트가 따로 만든 미리보기 페이지가 쓴다. 미리보기를 연 사람에게만 고치는 본을 주고, 그 밖에는 `notFound()` |
+| `PreviewBar` | `@monti-cms/next` | 미리보기 중일 때만 보이는 한 줄: "미리보기 · 끝내기". 사이트가 레이아웃에 넣는다(넣지 않아도 미리보기는 된다). 글자는 `labels`로, 관리자 주소는 `admin`으로 준다(기본 `/admin`) |
 
 core가 더 내놓는 것:
 
 | 이름 | 하는 일 |
 |---|---|
 | `SiteEntry.path` | 그 글의 공개 주소. 목록에서 링크를 만들 때 사이트가 주소를 다시 짓지 않는다 |
-| `reader.entries({ collection, locale, limit?, after? })` | 목록을 나눠 읽는다 |
+| `reader.page({ collection, locale, limit, after? })` | 목록을 나눠 읽는다: `{ entries, next }`. `next`를 다음 `after`로 주고, 마지막 쪽이면 `null`이다. `reader.entries`는 전부를 준다 |
+| `reader.locales()` | 사이트의 언어: 원문 언어와 주소에 언어를 보이는 규칙 |
+| `createReader`의 `schema` | 값이거나 지금의 구조를 주는 함수다. 개발 서버에서는 구조가 도는 중에 바뀐다 |
 | `tocOf(doc, { min = 2, max = 3 })` | 제목 목록 `{ id, text, level, depth }[]` (`@monti-cms/core/render`) |
 | `renderDocument`의 제목 | `id`가 붙는다. `tocOf`의 `id`와 같다 |
 
@@ -107,17 +109,19 @@ core가 더 내놓는 것:
 
 ## 캐시 갱신
 
-- `openSite`가 받는 곳 하나(`plugin:next`)를 건다. 이벤트의 `paths`마다 `revalidatePath`를 부르고, 이벤트의 컬렉션에 `revalidateTag("monti:<컬렉션>")`를 부른다.
-- `reader`가 읽을 때 그 컬렉션의 태그를 단다. 그래서 목록 페이지(글 목록, 태그별 목록)도 발행과 함께 새로 만들어진다. 사이트가 태그를 적지 않는다.
-- 이벤트의 `paths`는 늘 공개 주소다. 지금은 네 곳(`entries.create`의 살아 있는 항목, `entries.save`, `items.saveGroup`, 글 안에서 만든 항목)이 주소가 아니라 슬러그를 넣는다. 이 문서에서 고친다.
-- 번역이 발행되면 그 언어의 주소가, 원문이 발행되면 원문을 따르는 번역의 주소도 `paths`에 든다.
-- 받는 곳이 실패하면 13번 문서의 다시 보내기를 그대로 따른다.
+- `openSite`가 받는 곳 하나(`plugin:next`)를 건다. 사이트에 보이는 것이 바뀌는 이벤트(`entry.published`, `entry.unpublished`, `media.replaced`, `media.trashed`, `media.restored`)가 오면 사이트 전체를 새로 그리게 표시한다(`revalidatePath("/", "layout")`). 실제로 다시 그리는 것은 그 페이지를 다음에 열 때다. 저장(`entry.saved`)만으로는 아무것도 새로 그리지 않는다.
+- 그 글의 주소만이 아니라 전체인 까닭: 그 글을 보이는 페이지가 그 글의 주소만이 아니다. 목록, 카테고리 이름을 보이는 글, 원문을 따르는 번역이 있다. 주소나 태그로 좁히면 사이트 개발자가 페이지마다 쓰는 데이터를 적어야 하고, 빠뜨리면 옛 내용이 남는다. 처음 안은 주소(`revalidatePath`)와 컬렉션 태그(`revalidateTag`)였다.
+- 이벤트의 `paths`는 늘 공개 주소다(다른 받는 곳, 웹훅이 쓴다). 네 곳(`entries.create`의 살아 있는 항목, `entries.save`, `items.saveGroup`, 글 안에서 만든 항목)이 주소가 아니라 슬러그를 넣던 것을 고쳤다. 주소가 바뀐 항목은 옛 주소도 든다.
+- 원문이 발행되면 발행된 번역의 주소도 `paths`에 든다. 번역은 원문의 블록과 값을 따라 보이기 때문이다.
+- 되돌리기(`activity.undo`)가 사이트에 보이는 것을 바꾸면 이벤트를 낸다(T29): 발행을 되돌리면 앞의 발행본이 돌아오거나(`entry.published`) 사이트에서 내려가고(`entry.unpublished`), 휴지통으로 보낸 것을 되돌리면 다시 올라온다. 작업 사본만 바뀌는 되돌리기는 아무것도 내지 않는다.
+- 파일을 바꾸면(`media.replace`) `media.replaced`가 나간다. 그 파일을 보이는 페이지가 다른 그림을 보인다.
+- 받는 곳은 요청 안에서만 돈다(관리자 API의 라우트). 명령줄에서 다시 보낸 전송(`monti deliveries:run`)은 Next 밖이라 실패하고, 관리자 화면에서 다시 보내면 된다(13번 문서).
 
 ## 개발 서버와 운영 사이트
 
 | | 개발 서버 | 운영 사이트 |
 |---|---|---|
-| 가르는 법 | `next dev`이고 `monti.schema.ts`를 쓸 수 있다 | 그 밖 모두 |
+| 가르는 법 | `next dev`(`NODE_ENV=development`)이고 사이트 폴더의 `monti.schema.ts`를 쓸 수 있다. `monti.config.ts`의 `dev`로 바꿀 수 있다 | 그 밖 모두 |
 | 구조 값(`monti.schema.ts`) | 화면에서 고친다 | 잠긴다 |
 | 로그인 | 건너뛴다(아래) | 15번 문서대로 |
 | 시작할 때 | 구조 파일이 데이터베이스와 다르면 맞추고 한 줄 알린다. 고를 것이 있는 변경이면 "설정에서 검토해 주세요" | 안 따른 변경 파일이 있으면 "`monti db:migrate`를 돌려 주세요"를 서버 로그에 남긴다. 화면에는 띄우지 않는다(01번 결정) |
@@ -141,6 +145,7 @@ core가 더 내놓는 것:
 - 관리자 페이지 파일이 놓인 폴더가 관리자 주소다(`app/admin/page.tsx`면 `/admin`). 관리자 API는 그 아래 `api`다.
 - 바꾸려면 폴더 이름을 바꾼다. 화면에서 바꾸지 않는다. 12번 문서의 "관리자 주소" 값과 그 초안 · 검토는 없어진다.
 - GitHub 로그인이 돌아올 주소는 요청의 주소에서 읽는다. `createAdminApi`의 `adminPath`를 사이트가 적지 않는다.
+- 관리자 페이지는 사이트와 같은 앱의 페이지다. 그래서 사이트의 전역 스타일(`main { max-width: … }`, `td { border: … }` 같은 태그 이름 규칙)은 관리자 화면에도 걸린다. 사이트의 스타일은 사이트의 레이아웃 아래에만 걸리게 쓴다(예제 앱의 `.site`). 관리자의 스타일은 반대로 관리자 밖을 건드리지 않게 만들어져 있다: `@monti-cms/admin/styles.css`는 `scripts/build-styles.mjs`가 만든 파일이고, 모든 규칙이 관리자가 있는 문서 안에서만 걸리고, 변수와 키프레임 이름이 모두 `monti-`로 시작하고, 글꼴 파일을 함께 싣는다.
 
 ## 본문 그리기: 제목 앵커와 목차
 
@@ -152,29 +157,34 @@ core가 더 내놓는 것:
 ## 예제 앱
 
 - `examples/blog`. 글(`/posts/:slug`), 메모(`/notes/:slug`), 카테고리(`/categories/:slug`), 언어 둘(한국어 원문, 영어는 주소에 `/en`). 지금 시험용 서버가 쓰는 구조와 같다.
-- 페이지: 첫 화면(최근 글), 글 목록, 글, 메모, 카테고리별 글. 글에는 목차가 있다. 모양은 읽을 수 있을 만큼만 낸다. 디자인을 보이는 곳이 아니다.
+- 페이지: 첫 화면(최근 글), 글 목록, 글, 메모, 카테고리별 글. 글에는 목차가 있다. 모양은 읽을 수 있을 만큼만 낸다. 디자인을 보이는 곳이 아니다. 언어마다 같은 페이지를 쓴다: 한국어는 주소에 언어가 없고(`app/(site)/…`), 번역은 `app/(site)/[locale]/…`이다. 사이트에 없는 언어와 원문 언어의 주소(`/ko/…`)는 404다.
+- 페이지는 처음 열릴 때 그려 두고 쓴다(`generateStaticParams`가 빈 목록). 첫 화면과 글 목록은 빌드할 때 그리므로 빌드에 데이터베이스가 있어야 한다.
 - 저장소는 로컬 폴더다(`localFolderStorage`). 파일은 관리자 API의 파일 경로로 나간다.
 - `pnpm dev`로 뜨고(개발 서버), `pnpm build && pnpm start`로 운영 사이트가 된다.
-- 흐름 테스트(L5)는 예제 앱에서 돈다. `testing/e2e`의 작은 서버(`vite.config.ts`, `site.ts`, `main.tsx`)는 지운다. 운영 사이트로 한 번(빌드해서 띄운다), 개발 서버로만 되는 것(구조 값 고치기, 로그인 건너뛰기)은 개발 서버로 돈다.
-- 사용성 드라이버(`testing/usability`)도 예제 앱을 띄운다.
+- 흐름 테스트(L5)는 예제 앱에서 돈다. `testing/e2e`의 작은 서버(`vite.config.ts`, `site.ts`, `main.tsx`)는 지웠다. `pnpm test:e2e`는 먼저 `testing/e2e/prepare.ts`로 데이터베이스를 비우고 관리자 스타일과 예제 앱을 빌드한 뒤 서버 셋을 띄운다(`testing/e2e/servers.ts`): 운영 사이트(4173), 저장소가 없는 운영 사이트(4174), 개발 서버(4175, 로그인 건너뛰기). 서버마다 데이터베이스 스키마와 빌드 폴더가 따로다.
+- 사용성 드라이버(`testing/usability`)도 예제 앱을 띄운다(`pnpm usability:server`: 씨앗 데이터를 넣고 운영 사이트로 빌드해 띄운다. 구조가 잠겨 있어 예제의 구조 파일을 고쳐 쓰지 못한다).
 
 ## 데이터
 
 ```ts
 // @monti-cms/next
-export function openSite(config: MontiConfig): { monti: Monti; reader: SiteReader };
+export function openSite(config: MontiConfig, root?: string): { monti: Monti; reader: SiteReader };
 export function adminRoute(monti: Monti): Record<"GET" | "POST" | "PUT", (request: Request) => Promise<Response>>;
 export function entryPage(
 	reader: SiteReader,
 	where: { collection: string; slug: string; locale?: string },
 ): Promise<PageEntry>; // 없으면 notFound(), 옛 주소면 permanentRedirect()
-export type PageEntry = SiteEntry & { entryPath: (group: string) => string | undefined };
+export function previewPage(reader: SiteReader, where: { collection: string; slug: string; locale?: string }): Promise<PageEntry>;
+export type PageEntry = SiteEntry & { entryPath: (group: string) => string | undefined; preview: boolean };
 
 // @monti-cms/core
 export type SiteEntry = {
 	// … 지금 있는 것에 더해
 	path: string | null; // 공개 주소. 주소가 없는 컬렉션은 null
 };
+
+// 이벤트
+type: … | "media.replaced"; // 파일을 바꿈
 
 // @monti-cms/core/render
 export type TocItem = { id: string; text: string; level: number; depth: number };
@@ -197,6 +207,10 @@ auth?: { password?: boolean; github?: GitHubAuth | null; devBypass?: boolean }; 
 | `schema.plan` · `schema.apply` | 컬렉션의 `previewPath`를 넣고 고치고 뺀다. 바뀌면 변경 종류는 "미리보기 주소 변경"이고, 저장된 데이터는 바뀌지 않는다 |
 | `auth.state` | 건너뛴 세션이면 `bypass: true`를 함께 준다. 화면이 "개발 서버 · 로그인 없이"를 보인다 |
 | `entries.create` · `entries.save` · `items.saveGroup` | 이벤트의 `paths`가 공개 주소다 |
+| `entries.publish` | 원문을 발행하면 발행된 번역의 주소도 `paths`에 든다 |
+| `activity.undo` | 사이트에 보이는 것을 바꾸면 이벤트를 낸다(T29) |
+| `media.replace` | `media.replaced` 이벤트를 낸다 |
+| `entries.get` · `templates.get` | 본문이 쓰는 파일을 함께 준다(#468) |
 
 ## 에이전트
 
@@ -206,7 +220,7 @@ auth?: { password?: boolean; github?: GitHubAuth | null; devBypass?: boolean }; 
 
 - 편집기의 "미리보기"가 여는 주소가 바뀐다(위 "미리보기").
 - 설정 › 컬렉션 › 기본 탭의 "미리보기 주소" 칸. 본문이 있는 컬렉션에만 있다. 만들기 전에 화면 그림으로 소유자에게 먼저 보인다.
-- 사이드바 아래의 한 줄 "개발 서버 · 로그인 없이". 건너뛴 세션에서만 보인다. 누를 수 없다.
+- 사이드바 아래의 한 줄 "개발 서버 · 로그인 없이"(`SidebarNote`, "설정" 밑, 화면 모드 위). 건너뛴 세션에서만 보인다. 누를 수 없고, 접은 사이드바에는 없다.
 - `PreviewBar`: 사이트 쪽 부품이다. 관리자 화면의 부품을 쓰지 않고, 사이트의 스타일을 건드리지 않게 제 스타일만 가진다.
 
 ## 12번 문서에 미치는 것
@@ -229,6 +243,8 @@ auth?: { password?: boolean; github?: GitHubAuth | null; devBypass?: boolean }; 
 3. **개발 서버에서는 로그인을 건너뛰는 것이 기본이다.**
 4. **흐름 테스트를 예제 앱으로 옮기고 시험용 서버를 지운다.**
 5. **패키지 이름은 `@monti-cms/next`, 예제는 `examples/blog`, Next 16.**
+6. **캐시는 사이트 전체를 새로 그리게 표시한다.** 만들면서 바꾼 것이다(위 "캐시 갱신"). 소유자 확인을 기다린다.
+7. **화면 두 곳**(사이드바의 "개발 서버 · 로그인 없이", 설정 › 컬렉션 › 기본의 "미리보기 주소")은 만든 화면을 소유자에게 보였고 확인을 기다린다.
 
 ## 옛 코드
 
@@ -238,7 +254,7 @@ auth?: { password?: boolean; github?: GitHubAuth | null; devBypass?: boolean }; 
 
 - **16-1** 사이트가 파일 셋(`lib/monti.ts`, 관리자 페이지, 관리자 API 라우트)을 두면 관리자 화면이 뜨고, 글을 쓰고 발행하면 사이트의 공개 주소에서 보인다. 예제 앱의 흐름 테스트가 확인한다.
 - **16-2** "미리보기"는 발행하지 않은 글을 그 글의 공개 주소에서 보인다. 표가 없으면 같은 주소가 404이고, 발행된 글은 표가 없으면 발행본이다. "끝내기" 뒤에는 발행본이다. 표가 틀리거나 끝났으면 미리보기가 켜지지 않는다.
-- **16-3** 발행 · 보관 · 휴지통 · 복원 뒤, 운영 사이트에서 그 글의 주소와 그 글이 든 목록 페이지가 새 내용으로 보인다. 이벤트의 `paths`는 어느 기능에서나 공개 주소다.
+- **16-3** 발행 · 보관 · 휴지통 · 복원 · 되돌리기 · 파일 바꾸기 뒤, 운영 사이트에서 그 글의 주소와 그 글이 든 목록 페이지가 새 내용으로 보인다. 이벤트의 `paths`는 어느 기능에서나 공개 주소다.
 - **16-4** 개발 서버는 구조 파일이 바뀌어 있으면 관리자 API가 처음 불릴 때 맞추고 한 줄 알린다. 운영 사이트는 안 따른 변경이 있으면 서버 로그에 `monti db:migrate`를 말하고, 구조 값은 잠긴다.
 - **16-5** 개발 서버에서 이 컴퓨터로 들어오면 로그인 없이 관리자 화면이 뜨고 "개발 서버 · 로그인 없이"가 보인다. 운영 사이트, 다른 컴퓨터에서 온 요청, 호스팅 환경, `devBypass: false`에서는 로그인을 거친다.
 - **16-6** 본문의 제목마다 `id`가 붙고, `tocOf`가 같은 `id`로 2 · 3단계 제목을 준다. 같은 글자의 제목 둘은 `id`가 다르고, 한글 제목의 `id`는 한글이다.

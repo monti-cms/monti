@@ -61,6 +61,10 @@ export default defineConfig({ schema, database: process.env.DATABASE_URL, auth: 
 화면의 첫 방문에서 관리자를 만든다. 관리자 API(`createAdminApi`)는 `httpOnly` 세션 쿠키가 없으면 로그인 기능만 받는다. 세션은 30일 동안 쓰지
 않으면 끝난다. 잊은 비밀번호는 서버에서 `monti admin:reset-password`로 바꾼다.
 
+개발 서버(`monti.schema.ts`를 쓸 수 있는 서버)에서는 이 컴퓨터에서 온 요청이 로그인 없이 들어오고, 관리자 화면의 사이드바가 그렇다고 말한다.
+운영 사이트, 호스팅 환경의 프로세스, 다른 컴퓨터에서 온 요청에는 적용되지 않는다. 로그인 화면을 로컬에서 써 보려면
+`auth: { devBypass: false }`로 끈다.
+
 표시 이름, 도움말, 배치, 편집기 허용은 데이터베이스의 관리자 값이다(`collections.updateAdminValues`). 운영 사이트에서도 고칠 수 있다.
 
 구조는 개발 서버에서만 바꾼다. `schema.plan`은 초안이 무엇을 바꾸고 저장된 값에 대해 검토에서 무엇을 골라야 하는지 보인다. `schema.apply`는
@@ -90,9 +94,15 @@ import { createReader } from "@monti-cms/core";
 const site = createReader({ db, schema, secret: process.env.MONTI_SECRET });
 await site.entry({ collection: "post", locale: "ko", slug }); // { entry } | { redirect } | null
 await site.entries({ collection: "post", locale: "ko" });
+await site.page({ collection: "post", locale: "ko", limit: 10, after }); // { entries, next }: 목록을 나눠 읽는다
 ```
 
-`entries.previewLink`는 `MONTI_SECRET`으로 서명한 한 시간짜리 표를 준다. 그 표를 `preview`로 넘기면 그 글의 고치는 본이 열린다.
+글마다 공개 주소(`path`)가 함께 온다. `entries.previewLink`는 `MONTI_SECRET`으로 서명한 한 시간짜리 표와 그 표로 열 주소를 준다. 구조에
+미리보기 페이지의 주소가 있으면(`previewPath: "/preview/:slug"`, 본문이 있는 컬렉션) 그 주소이고, 없으면 공개 주소다. 그 표를 `preview`로
+넘기면 그 글의 고치는 본이 그 글의 주소에서만 열린다.
+
+Next.js 사이트에서는 `@monti-cms/next`가 이 연결을 한다. 관리자 페이지, 관리자 API 라우트, 초안 모드의 미리보기, 발행할 때의 캐시
+갱신이다(`packages/next`, 예제 사이트는 `examples/blog`).
 
 ## 본문
 
@@ -136,6 +146,9 @@ export function Picture({ image }: { image: SiteImage }) {
 
 글로 가는 링크는 `monti:entry/<번역 묶음 id>`다(`entryLink`). 그래서 글 주소가 바뀌어도 끊기지 않는다. 읽기 API의 `linkPaths(doc, locale)`를
 `renderDocument`의 `entryPath`로 넘기고, 사이트에 없는 글로 가는 링크는 글자만 그린다.
+
+제목은 글자로 만든 `id`와 함께 그린다(어느 언어의 글자든 남고, 같은 글자가 또 나오면 번호가 붙는다). `tocOf(doc, { min, max })`는 그
+`id`로 목차를 준다. 따로 말하지 않으면 2 · 3단계 제목의 `{ id, text, level, depth }`다.
 
 ## 테스트
 
