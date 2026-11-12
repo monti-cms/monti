@@ -138,6 +138,7 @@ export {
 	type RecordRef,
 	recordKey,
 } from "./operation";
+export type { DateRange } from "./query";
 export { defineRecordKind, type RecordKind, type RecordState } from "./records";
 export {
 	type MergeResult,
