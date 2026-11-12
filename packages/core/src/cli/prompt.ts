@@ -18,17 +18,14 @@ export type Ask = (question: {
 
 /**
  * Questions for a person at a terminal: one line each, on Node's own readline (no prompt library: `monti init` asks four things). Ctrl+C or
- * the end of input throws {@link Cancelled}.
+ * the end of input throws {@link Cancelled}. The terminal is held only while a question waits: between questions it is the shell's own, so
+ * Ctrl+C during the work that follows (a database being set up) ends the command as it does any other.
  */
-export function terminalAsk(input: Readable, output: Writable): { ask: Ask; close: () => void } {
-	const lines = createInterface({ input, output });
-	let closed = false;
-	lines.once("close", () => {
-		closed = true;
-	});
-	const ask: Ask = async ({ message, initial, check }) => {
+export function terminalAsk(input: Readable, output: Writable): Ask {
+	return async ({ message, initial, check }) => {
 		for (;;) {
-			if (closed) throw new Cancelled();
+			if (input.readableEnded || input.destroyed) throw new Cancelled();
+			const lines = createInterface({ input, output });
 			const leave = new AbortController();
 			const left = () => leave.abort();
 			lines.once("close", left);
@@ -40,7 +37,7 @@ export function terminalAsk(input: Readable, output: Writable): { ask: Ask; clos
 				throw new Cancelled();
 			} finally {
 				lines.off("close", left);
-				lines.off("SIGINT", left);
+				lines.close();
 			}
 			const answer = typed.trim() === "" ? initial : typed.trim();
 			const wrong = check?.(answer) ?? null;
@@ -48,5 +45,4 @@ export function terminalAsk(input: Readable, output: Writable): { ask: Ask; clos
 			output.write(`  ${wrong}\n`);
 		}
 	};
-	return { ask, close: () => lines.close() };
 }

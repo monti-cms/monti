@@ -1,14 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
 import { type MontiConfig, openMonti } from "../../config";
 import { pendingMigrations } from "../../db/migrations";
 import type { Database } from "../../db/schema";
+import type { Storage } from "../../media/storage";
 import { pendingChanges } from "../../schema/apply";
 import { checkSchema } from "../../schema/define";
 import { readChangeFiles } from "../../schema/files";
+import { adminFolder, appFolder, installedPackage, layoutsOver, readJson, sourceIn } from "../site";
 import { type CheckOutcome, type CheckResult, type DoctorReport, fail, ok, reportOf, skip, warn } from "./report";
 
 /**
@@ -29,6 +31,8 @@ export type DoctorOptions = {
 	loadConfig: () => Promise<MontiConfig>;
 	/** The site's own address (`--origin`), for what a browser must be let do from it. */
 	origin?: string;
+	/** How long a call outside this machine (the database, the storage) may take, in milliseconds. A check that waits longer fails. */
+	timeout?: number;
 };
 
 /** The packages a Next site installs itself. They are released together and must be one version. */
@@ -37,54 +41,22 @@ const PACKAGES = ["core", "admin", "next"] as const;
 const SECRET_LENGTH = 32;
 /** Environment names that say the site runs on a host that keeps no disk between requests. */
 const NO_DISK = ["VERCEL", "NETLIFY", "CF_PAGES", "AWS_LAMBDA_FUNCTION_NAME"];
-const SOURCES = ["tsx", "ts", "jsx", "js"];
-
-const readJson = (file: string): Record<string, unknown> | null => {
-	try {
-		return JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
-	} catch {
-		return null;
-	}
-};
 const firstLine = (error: unknown) => (error instanceof Error ? error.message : String(error)).split("\n")[0] ?? "";
-const withSource = (dir: string, name: string) =>
-	SOURCES.map((extension) => path.join(dir, `${name}.${extension}`)).find((file) => existsSync(file));
 
-/** The App Router's folder: `app`, or `src/app`. */
-export function appFolder(cwd: string): string | null {
-	return ["app", path.join("src", "app")].find((dir) => existsSync(path.join(cwd, dir))) ?? null;
-}
+/** How long the database or the storage is waited for. */
+const TIMEOUT = 5000;
 
-/** Every file under a folder with one of these names, skipping what a site does not write. */
-function filesNamed(dir: string, name: string): string[] {
-	const found: string[] = [];
-	for (const entry of readdirSync(dir, { withFileTypes: true })) {
-		if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
-		const full = path.join(dir, entry.name);
-		if (entry.isDirectory()) found.push(...filesNamed(full, name));
-		else if (SOURCES.some((extension) => entry.name === `${name}.${extension}`)) found.push(full);
-	}
-	return found;
-}
-
-/**
- * Where the admin is mounted: the folder that holds the admin's page, with its API route under `api/[...path]`. The folder's name is the admin's
- * address (doc 16).
- */
-export function adminFolder(cwd: string): { folder: string; page: string | null } | null {
-	const app = appFolder(cwd);
-	if (!app) return null;
-	const route = filesNamed(path.join(cwd, app), "route").find((file) =>
-		readFileSync(file, "utf8").includes("adminRoute"),
-	);
-	if (!route) return null;
-	// <admin>/api/[...path]/route.ts
-	const folder = path.dirname(path.dirname(path.dirname(route)));
-	return { folder: path.relative(cwd, folder), page: withSource(folder, "page") ?? null };
+/** A promise that fails when its answer does not come in time: an outside call (the database, the storage) may never answer. */
+function within<T>(ms: number, work: Promise<T>): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const late = new Promise<never>((_, reject) => {
+		timer = setTimeout(() => reject(new Error(`no answer in ${ms / 1000} ${ms === 1000 ? "second" : "seconds"}`)), ms);
+	});
+	return Promise.race([work, late]).finally(() => clearTimeout(timer));
 }
 
 function siteNext(cwd: string): CheckOutcome {
-	const installed = readJson(path.join(cwd, "node_modules", "next", "package.json"))?.version;
+	const installed = installedPackage(cwd, "next")?.version;
 	const manifest = readJson(path.join(cwd, "package.json"));
 	const asked = (manifest?.dependencies as Record<string, string> | undefined)?.next;
 	if (!manifest)
@@ -112,9 +84,7 @@ function siteNext(cwd: string): CheckOutcome {
 function sitePackages(cwd: string): CheckOutcome {
 	const versions = PACKAGES.map((name) => ({
 		name: `@monti-cms/${name}`,
-		version: readJson(path.join(cwd, "node_modules", "@monti-cms", name, "package.json"))?.version as
-			| string
-			| undefined,
+		version: installedPackage(cwd, `@monti-cms/${name}`)?.version as string | undefined,
 	}));
 	const missing = versions.filter((each) => each.version === undefined).map((each) => each.name);
 	if (missing.length > 0)
@@ -148,15 +118,14 @@ function filesAdmin(cwd: string): CheckOutcome {
 				fix: "npx monti init",
 			},
 		);
-	return ok(`the admin is at /${path.basename(admin.folder)} (${admin.folder}/)`);
+	return ok(`the admin is at ${admin.address} (${admin.folder}/)`);
 }
 
 function siteLayout(cwd: string): CheckOutcome {
 	const app = appFolder(cwd);
 	const admin = adminFolder(cwd);
 	if (!app || !admin) return skip("the admin's page is not there");
-	const own = withSource(path.join(cwd, admin.folder), "layout");
-	if (withSource(path.join(cwd, app), "layout"))
+	if (sourceIn(path.join(cwd, app), "layout"))
 		return warn(
 			`The admin is drawn inside the site's own layout (${app}/layout): its header and styles show in the admin too.`,
 			{
@@ -164,7 +133,8 @@ function siteLayout(cwd: string): CheckOutcome {
 				fix: `move the site's pages and that layout into ${app}/(site)/, then run npx monti init again: it writes the admin's own layout`,
 			},
 		);
-	if (!own)
+	// A layout on a route group above the admin's folder is over it as much as one in the folder.
+	if (layoutsOver(cwd, admin.folder).length === 0)
 		return fail("The admin's page has no layout over it.", {
 			where: `${admin.folder}/layout.tsx`,
 			fix: "npx monti init",
@@ -228,8 +198,114 @@ function authLogin(options: DoctorOptions, config: MontiConfig, admin: ReturnTyp
 			where: "monti.config.ts (auth.github), and the environment values it reads",
 			fix: "set them from the site's GitHub OAuth app",
 		});
-	const address = `${options.origin ?? "<the site's address>"}/${admin ? path.basename(admin.folder) : "admin"}/api/auth/github`;
+	const address = `${options.origin ?? "<the site's address>"}${(admin?.address ?? "/admin").replace(/\/$/, "")}/api/auth/github`;
 	return ok(`the admin signs in with GitHub\nthe OAuth app's callback address: ${address}`);
+}
+
+/** What the database has followed: Monti's own tables, then the schema's changes. A failure to read either is this check's failure. */
+async function databaseMigrations(db: Kysely<Database>, cwd: string, limit: number): Promise<CheckOutcome> {
+	let steps: string[];
+	let bare: boolean;
+	try {
+		steps = await within(limit, pendingMigrations(db));
+		const { rows } = await within(
+			limit,
+			sql<{ made: string | null }>`select to_regclass('monti_migration')::text as made`.execute(db),
+		);
+		bare = rows[0]?.made === null;
+	} catch (error) {
+		return fail(`What the database has followed could not be read: ${firstLine(error)}`, {
+			fix: "check that the database's user may read Monti's tables",
+		});
+	}
+	if (bare) return fail("The database has none of Monti's tables.", { fix: "npx monti db:setup" });
+	if (steps.length > 0)
+		return fail(
+			`The database is ${steps.length} ${steps.length === 1 ? "step" : "steps"} behind this version of Monti.`,
+			{ fix: "npx monti db:migrate" },
+		);
+	let files: Awaited<ReturnType<typeof readChangeFiles>>;
+	try {
+		files = await readChangeFiles(path.join(cwd, "monti", "changes"));
+	} catch (error) {
+		return fail(`The schema's change files do not read: ${firstLine(error)}`, { where: "monti/changes" });
+	}
+	try {
+		const changes = await within(limit, pendingChanges(db, files));
+		return changes.length > 0
+			? fail(
+					`The database has not followed ${changes.length === 1 ? "a change" : `${changes.length} changes`} of the schema: ${changes.map((change) => change.id).join(", ")}`,
+					{ where: "monti/changes", fix: "npx monti db:migrate" },
+				)
+			: ok("the database is up to date");
+	} catch (error) {
+		return fail(`What the database has followed of the schema could not be read: ${firstLine(error)}`, {
+			where: "monti/changes",
+		});
+	}
+}
+
+/** The storage's three checks, by id. The storage is the site's own (a plugin's): it is asked through the site, on the pool that is open. */
+async function storageChecks(
+	options: DoctorOptions,
+	config: MontiConfig,
+	db: Kysely<Database>,
+	limit: number,
+): Promise<[string, CheckOutcome][]> {
+	let storage: Storage | null | undefined;
+	try {
+		storage = openMonti(config, options.cwd, { db }).site.storage;
+	} catch (error) {
+		return [
+			["storage/configured", fail(`The site does not open: ${firstLine(error)}`, { where: "monti.config.ts" })],
+			["storage/reachable", skip("the site did not open")],
+			["storage/host", skip("the site did not open")],
+		];
+	}
+	if (!storage)
+		return [
+			[
+				"storage/configured",
+				warn("The site has no storage: no file can be uploaded.", {
+					where: "monti.config.ts (plugins)",
+					fix: "give it one: localFolderStorage on a server with a disk, an S3-compatible storage elsewhere",
+				}),
+			],
+			["storage/reachable", skip("there is no storage")],
+			["storage/host", skip("there is no storage")],
+		];
+	let reachable: CheckOutcome;
+	try {
+		// A key nothing has: the answer "no such file" shows the storage is there and lets the site in. Nothing is written.
+		await within(limit, storage.stat(`${randomUUID()}.png`));
+		reachable = ok("the storage answers");
+	} catch (error) {
+		reachable = fail(`The storage does not answer: ${firstLine(error)}`, {
+			where: "monti.config.ts (the storage's settings)",
+			fix: "check its address and keys",
+		});
+	}
+	const host = NO_DISK.find((name) => options.env[name]);
+	return [
+		[
+			"storage/configured",
+			ok(storage.kind === "folder" ? "files go to a folder on this machine" : "the site has a storage"),
+		],
+		["storage/reachable", reachable],
+		[
+			"storage/host",
+			storage.kind === "folder" && host
+				? fail(`Files go to a folder on disk, and this host (${host}) keeps no disk: uploads would be lost.`, {
+						where: "monti.config.ts (plugins)",
+						fix: "use an S3-compatible storage on this host",
+					})
+				: ok(
+						storage.kind === "folder"
+							? "a folder on disk: keep it when the server moves"
+							: "the storage is not this machine's disk",
+					),
+		],
+	];
 }
 
 /** Runs every check, in the order a person reads them: the site, its files, its environment, the database, the storage, the sign-in. */
@@ -298,15 +374,16 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
 		say("database/migrations", skip("there is no database address"));
 	} else {
 		say("database/url", ok(`DATABASE_URL is set (${options.envFrom?.get("DATABASE_URL") ?? "the environment"})`));
+		const limit = options.timeout ?? TIMEOUT;
 		const db = new Kysely<Database>({
 			dialect: new PostgresDialect({
-				pool: new Pool({ connectionString: address, connectionTimeoutMillis: 5000, max: 2 }),
+				pool: new Pool({ connectionString: address, connectionTimeoutMillis: limit, max: 2 }),
 			}),
 		});
 		try {
 			let reached = false;
 			try {
-				await sql`select 1`.execute(db);
+				await within(limit, sql`select 1`.execute(db));
 				reached = true;
 				say("database/reachable", ok(`the database answers (${databaseName(address)})`));
 			} catch (error) {
@@ -319,85 +396,12 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
 				);
 				say("database/migrations", skip("the database is not reachable"));
 			}
-			if (reached) {
-				const steps = await pendingMigrations(db);
-				const { rows } = await sql<{
-					made: string | null;
-				}>`select to_regclass('monti_migration')::text as made`.execute(db);
-				if (rows[0]?.made === null)
-					say("database/migrations", fail("The database has none of Monti's tables.", { fix: "npx monti db:setup" }));
-				else if (steps.length > 0)
-					say(
-						"database/migrations",
-						fail(
-							`The database is ${steps.length} ${steps.length === 1 ? "step" : "steps"} behind this version of Monti.`,
-							{ fix: "npx monti db:migrate" },
-						),
-					);
-				else {
-					const changes = await pendingChanges(db, await readChangeFiles(path.join(cwd, "monti", "changes")));
-					say(
-						"database/migrations",
-						changes.length > 0
-							? fail(
-									`The database has not followed ${changes.length === 1 ? "a change" : `${changes.length} changes`} of the schema: ${changes.map((change) => change.id).join(", ")}`,
-									{ where: "monti/changes", fix: "npx monti db:migrate" },
-								)
-							: ok("the database is up to date"),
-					);
-				}
-			}
-
-			// The storage is the site's own (a plugin's): it is asked through the site, on the pool that is already open.
+			if (reached) say("database/migrations", await databaseMigrations(db, cwd, limit));
 			if (!config) for (const id of ["storage/configured", "storage/reachable", "storage/host"]) say(id, noConfig);
-			else {
-				const storage = openMonti(config, cwd, { db }).site.storage;
-				if (!storage) {
-					say(
-						"storage/configured",
-						warn("The site has no storage: no file can be uploaded.", {
-							where: "monti.config.ts (plugins)",
-							fix: "give it one: localFolderStorage on a server with a disk, an S3-compatible storage elsewhere",
-						}),
-					);
-					say("storage/reachable", skip("there is no storage"));
-					say("storage/host", skip("there is no storage"));
-				} else {
-					say(
-						"storage/configured",
-						ok(storage.kind === "folder" ? "files go to a folder on this machine" : "the site has a storage"),
-					);
-					try {
-						// A key nothing has: the answer "no such file" shows the storage is there and lets the site in. Nothing is written.
-						await storage.stat(`${randomUUID()}.png`);
-						say("storage/reachable", ok("the storage answers"));
-					} catch (error) {
-						say(
-							"storage/reachable",
-							fail(`The storage does not answer: ${firstLine(error)}`, {
-								where: "monti.config.ts (the storage's settings)",
-								fix: "check its address and keys",
-							}),
-						);
-					}
-					const host = NO_DISK.find((name) => options.env[name]);
-					say(
-						"storage/host",
-						storage.kind === "folder" && host
-							? fail(`Files go to a folder on disk, and this host (${host}) keeps no disk: uploads would be lost.`, {
-									where: "monti.config.ts (plugins)",
-									fix: "use an S3-compatible storage on this host",
-								})
-							: ok(
-									storage.kind === "folder"
-										? "a folder on disk: keep it when the server moves"
-										: "the storage is not this machine's disk",
-								),
-					);
-				}
-			}
+			else for (const [id, outcome] of await storageChecks(options, config, db, limit)) say(id, outcome);
 		} finally {
-			await db.destroy();
+			// A pool whose server never answers never closes: it is not waited for past the limit.
+			await within(limit, db.destroy()).catch(() => {});
 		}
 	}
 	if (!address || address.trim() === "")

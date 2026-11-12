@@ -14,7 +14,8 @@ import { loadEnvFiles } from "../env-files";
 import { Cancelled, terminalAsk } from "../prompt";
 import { type Answers, readFlags, settle } from "./answers";
 import { cannotInit, detectSite, type Site } from "./detect";
-import { writeSite } from "./write";
+import { adminDir } from "./files";
+import { WriteFailed, type Written, writeSite } from "./write";
 
 /**
  * `monti init` (docs/design/features/20-release.md): takes a Next.js site to a running admin. It reads the site, settles four things (each has
@@ -79,11 +80,17 @@ const script = (site: Site, name: string) =>
 		? `${site.packageManager} run ${name}`
 		: `${site.packageManager} ${name}`;
 
-function nextSteps(site: Site, answers: Answers, state: { tables: boolean; admin: string }): string[] {
+function nextSteps(
+	site: Site,
+	answers: Answers,
+	state: { tables: boolean; admin: string; byHand: Written["byHand"] },
+): string[] {
 	const steps: string[] = [];
+	if (state.byHand.length > 0)
+		steps.push(`Add to the scripts of package.json (it was left as it is): ${state.byHand.join(", ")}`);
 	if (!state.tables)
 		steps.push(
-			`Set DATABASE_URL in .env.local to your Postgres database, then make Monti's tables: ${script(site, "db:setup")}`,
+			`Set DATABASE_URL in .env.local to your Postgres database, then make Monti's tables: ${state.byHand.length > 0 ? "npx monti db:setup" : script(site, "db:setup")}`,
 		);
 	if (answers.login === "github")
 		steps.push(
@@ -126,12 +133,11 @@ export async function init(options: InitOptions): Promise<number> {
 	out(`Monti for ${site.name}: Next ${site.next}, App Router (${site.app}/), ${site.packageManager}`);
 
 	// Every answer first: nothing is written until all four are settled, so leaving a question leaves the site as it was.
-	const terminal = input.isTTY && !flags.yes ? terminalAsk(input, options.output ?? process.stdout) : null;
+	const ask = input.isTTY && !flags.yes ? terminalAsk(input, options.output ?? process.stdout) : null;
 	let answers: Answers;
 	try {
-		answers = await settle(site, flags, terminal?.ask ?? null);
+		answers = await settle(site, flags, ask);
 	} catch (error) {
-		terminal?.close();
 		out(error instanceof Error ? error.message : String(error));
 		return error instanceof Cancelled ? 130 : 1;
 	}
@@ -139,7 +145,15 @@ export async function init(options: InitOptions): Promise<number> {
 		`  admin ${answers.adminPath} · language ${answers.locale} · sign-in ${answers.login} · media files ${answers.storage}`,
 	);
 
-	const written = writeSite(site, answers, { dryRun: flags.dryRun, secret: randomBytes(32).toString("base64") });
+	let written: Written;
+	try {
+		written = writeSite(site, answers, { dryRun: flags.dryRun, secret: randomBytes(32).toString("base64"), env });
+	} catch (error) {
+		// One plain line: what was written and what was not. Anything else is a defect and keeps its trace.
+		if (!(error instanceof WriteFailed)) throw error;
+		out(`\n${error.message}`);
+		return 1;
+	}
 	const verb = flags.dryRun ? "Would write" : "Wrote";
 	const nothing = written.created.length === 0 && written.added.length === 0;
 	out("");
@@ -151,9 +165,9 @@ export async function init(options: InitOptions): Promise<number> {
 		);
 	if (written.kept.length > 0)
 		out(`Left as they are (already there):\n${written.kept.map((file) => `  ${file}`).join("\n")}`);
-	const admin = `${site.app}${answers.adminPath}`;
+	const admin = adminDir(site, answers);
+	const configName = site.config ?? "monti.config.ts";
 	if (flags.dryRun) {
-		terminal?.close();
 		out(`\nNothing was written (--dry-run).`);
 		return 0;
 	}
@@ -166,15 +180,15 @@ export async function init(options: InitOptions): Promise<number> {
 		config = await options.loadConfig();
 	} catch (error) {
 		out(
-			`\nmonti.config.ts does not load yet: ${(error instanceof Error ? error.message : String(error)).split("\n")[0]}`,
+			`\n${configName} does not load yet: ${(error instanceof Error ? error.message : String(error)).split("\n")[0]}`,
 		);
 	}
 	if (config?.database && (await database.answers(config.database))) {
 		let make = true;
-		if (terminal)
+		if (ask)
 			try {
 				make = (
-					await terminal.ask({
+					await ask({
 						message: "The database answers. Make Monti's tables in it now? (yes, no)",
 						initial: "yes",
 					})
@@ -195,17 +209,16 @@ export async function init(options: InitOptions): Promise<number> {
 				);
 			}
 	}
-	terminal?.close();
 
 	const report = await (options.doctor ?? runDoctor)({
 		cwd,
 		env,
-		configFile: path.join(cwd, "monti.config.ts"),
+		configFile: path.join(cwd, configName),
 		loadConfig: options.loadConfig,
 	});
 	out(`\n${formatReport(report)}`);
 	out(
-		`\nWhat is left:\n${nextSteps(site, answers, { tables, admin })
+		`\nWhat is left:\n${nextSteps(site, answers, { tables, admin, byHand: written.byHand })
 			.map((step, at) => `  ${at + 1}. ${step}`)
 			.join("\n")}`,
 	);

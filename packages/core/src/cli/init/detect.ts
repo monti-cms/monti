@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { adminFolder, appFolder } from "../doctor/run";
+import { adminFolder, appFolder, configFileOf, fileUpward, installedPackage, readJson, sourceIn } from "../site";
 
 /** What `monti init` reads of a site before it asks or writes anything (docs/design/features/20-release.md, `monti init`). */
 export type Site = {
@@ -21,18 +21,24 @@ export type Site = {
 	topLayout: string | null;
 	/** The Monti packages that are installed, by short name. */
 	packages: Record<"core" | "admin" | "next" | "storage-s3", string | null>;
-	/** Where the admin is mounted already, when a route of the site exports its API. */
-	admin: string | null;
+	/**
+	 * Where the admin is mounted already, when a route of the site exports its API: its folder, wherever in the app it is, and the address it
+	 * answers at (`app/(cms)/admin` is `/admin`).
+	 */
+	admin: { folder: string; address: string } | null;
+	/** The site's config file by its own name (`monti.config.mjs`), when it has one the `monti` command would load. */
+	config: string | null;
 };
 
-const SOURCES = ["tsx", "ts", "jsx", "js"];
-const readJson = (file: string): Record<string, unknown> | null => {
-	try {
-		return JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
-	} catch {
-		return null;
-	}
-};
+/** Each package manager's lockfile. A workspace keeps one at its root, above the site's folder. */
+const LOCKFILES = {
+	"package-lock.json": "npm",
+	"npm-shrinkwrap.json": "npm",
+	"pnpm-lock.yaml": "pnpm",
+	"yarn.lock": "yarn",
+	"bun.lock": "bun",
+	"bun.lockb": "bun",
+} as const;
 
 export function detectSite(cwd: string): Site {
 	const manifest = readJson(path.join(cwd, "package.json"));
@@ -40,24 +46,15 @@ export function detectSite(cwd: string): Site {
 		string,
 		string
 	>;
-	const installed = (name: string) =>
-		(readJson(path.join(cwd, "node_modules", ...name.split("/"), "package.json"))?.version as string | undefined) ??
-		null;
+	const installed = (name: string) => (installedPackage(cwd, name)?.version as string | undefined) ?? null;
 	const app = appFolder(cwd);
-	const topLayout = app
-		? (SOURCES.map((extension) => path.join(app, `layout.${extension}`)).find((file) =>
-				existsSync(path.join(cwd, file)),
-			) ?? null)
-		: null;
+	const layout = app ? sourceIn(path.join(cwd, app), "layout") : undefined;
+	const topLayout = layout ? path.relative(cwd, layout) : null;
+	const lockfile = fileUpward(cwd, Object.keys(LOCKFILES));
+	const admin = adminFolder(cwd);
 	const lang = topLayout
 		? (readFileSync(path.join(cwd, topLayout), "utf8").match(/<html[^>]*\blang=["']([A-Za-z-]+)["']/)?.[1] ?? null)
 		: null;
-	const lockfiles = [
-		["pnpm-lock.yaml", "pnpm"],
-		["yarn.lock", "yarn"],
-		["bun.lock", "bun"],
-		["bun.lockb", "bun"],
-	] as const;
 	return {
 		cwd,
 		name: typeof manifest?.name === "string" && manifest.name !== "" ? manifest.name : path.basename(cwd),
@@ -65,7 +62,7 @@ export function detectSite(cwd: string): Site {
 		app,
 		src: app?.startsWith("src") ?? false,
 		typescript: existsSync(path.join(cwd, "tsconfig.json")),
-		packageManager: lockfiles.find(([file]) => existsSync(path.join(cwd, file)))?.[1] ?? "npm",
+		packageManager: lockfile ? LOCKFILES[lockfile.name as keyof typeof LOCKFILES] : "npm",
 		lang,
 		topLayout,
 		packages: {
@@ -74,7 +71,8 @@ export function detectSite(cwd: string): Site {
 			next: installed("@monti-cms/next"),
 			"storage-s3": installed("@monti-cms/storage-s3"),
 		},
-		admin: adminFolder(cwd)?.folder ?? null,
+		admin: admin ? { folder: admin.folder, address: admin.address } : null,
+		config: configFileOf(cwd),
 	};
 }
 

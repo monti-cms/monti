@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadEnvFiles } from "./env-files";
+import { loadEnvFiles, takeEnvFile } from "./env-files";
 
 describe("the site's env files, as the monti command reads them", () => {
 	let dir = "";
@@ -51,5 +51,20 @@ describe("the site's env files, as the monti command reads them", () => {
 		const env: Record<string, string | undefined> = {};
 		expect(loadEnvFiles(site({}), env).size).toBe(0);
 		expect(env).toEqual({});
+	});
+
+	it("20-8 --env-file is read with a space or an equals sign, taken out of the command's arguments; one with no path is refused", () => {
+		expect(takeEnvFile(["doctor", "--env-file", ".env.production", "--json"])).toEqual({
+			argv: ["doctor", "--json"],
+			file: ".env.production",
+		});
+		expect(takeEnvFile(["--env-file=.env.production", "doctor"])).toEqual({
+			argv: ["doctor"],
+			file: ".env.production",
+		});
+		expect(takeEnvFile(["doctor", "--json"])).toEqual({ argv: ["doctor", "--json"], file: undefined });
+		// Passing it over would run the command on other values without saying so.
+		expect(() => takeEnvFile(["doctor", "--env-file"])).toThrow("--env-file needs a path");
+		expect(() => takeEnvFile(["doctor", "--env-file="])).toThrow("--env-file needs a path");
 	});
 });

@@ -1,4 +1,14 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
@@ -12,10 +22,14 @@ afterEach(() => {
 	for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-/** A Next app as create-next-app leaves it, with Monti's three packages installed; `files` adds, changes or (with `null`) takes away. */
-function site(files: Record<string, string | null> = {}) {
-	const dir = mkdtempSync(path.join(tmpdir(), "monti-init-"));
-	made.push(dir);
+/**
+ * A Next app as create-next-app leaves it, with Monti's three packages installed; `files` adds, changes or (with `null`) takes away. With
+ * `under` it is a package of a workspace: its own files are in that folder, and the installed packages stay at the workspace's root.
+ */
+function site(files: Record<string, string | null> = {}, under = "") {
+	const root = mkdtempSync(path.join(tmpdir(), "monti-init-"));
+	made.push(root);
+	const dir = path.join(root, under);
 	const all: Record<string, string | null> = {
 		"package.json": `${JSON.stringify({ name: "my-site", scripts: { dev: "next dev", build: "next build" }, dependencies: { next: "16.4.6" } }, null, 2)}\n`,
 		"tsconfig.json": "{}\n",
@@ -29,10 +43,11 @@ function site(files: Record<string, string | null> = {}) {
 		".gitignore": "node_modules\n.next\n",
 		...files,
 	};
-	for (const [file, text] of Object.entries(all)) {
+	for (const [name, text] of Object.entries(all)) {
 		if (text === null) continue;
-		mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
-		writeFileSync(path.join(dir, file), text);
+		const file = name.startsWith("node_modules/") ? path.join(root, name) : path.join(dir, name);
+		mkdirSync(path.dirname(file), { recursive: true });
+		writeFileSync(file, text);
 	}
 	return dir;
 }
@@ -245,7 +260,7 @@ describe("monti init", () => {
 	});
 
 	it("20-6 a file that is there is never written over, whatever is in it, and the run says which it left alone", async () => {
-		const edited = "// mine: do not touch\nexport default {};\n";
+		const edited = '// mine: do not touch\nimport schema from "./monti.schema";\nexport default { schema };\n';
 		const dir = site({ "monti.config.ts": edited, "lib/monti.ts": "// mine too\n" });
 		const { text } = await run(dir, ["-y"]);
 		const after = tree(dir);
@@ -371,6 +386,17 @@ describe("monti init", () => {
 		rmSync(path.join(shared, "app/layout.tsx"));
 		const moved = await run(shared, ["-y"]);
 		expect(moved.text).toContain("Wrote:\n  app/admin/layout.tsx\n");
+
+		// A layout on the route group the admin is in is over it: a second one, with its own <html>, is not written under it.
+		const inGroup = site({
+			"app/layout.tsx": null,
+			"app/page.tsx": null,
+			"app/(cms)/layout.tsx": "export default ({ children }) => <html><body>{children}</body></html>;\n",
+			"app/(cms)/admin/page.tsx": "export default () => <AdminPage />;\n",
+			"app/(cms)/admin/api/[...path]/route.ts": "export const { GET, POST, PUT } = adminRoute(monti);\n",
+		});
+		await run(inGroup, ["-y"]);
+		expect(existsSync(path.join(inGroup, "app/(cms)/admin/layout.tsx"))).toBe(false);
 	});
 
 	it("20-5 when the database answers it makes the tables (asking first when a person is there); when it does not, that is the first thing left to do", async () => {
@@ -392,5 +418,167 @@ describe("monti init", () => {
 		expect(silent.database.setUp).not.toHaveBeenCalled();
 		expect(silent.text).toContain("then make Monti's tables: pnpm db:setup");
 		expect(silent.text).toContain("Start the site (pnpm dev) and open http://localhost:3000/admin");
+	});
+
+	it("20-6 a site whose config has another of the names the command loads keeps it: no second config beside it, and the files read it by its own name", async () => {
+		const mjs = site({ "monti.config.mjs": "export default { schema: {} };\n" });
+		const given: string[] = [];
+		const { code, text } = await run(mjs, ["-y"], {
+			doctor: async (options) => {
+				given.push(options.configFile ?? "none");
+				return reportOf(options.cwd, []);
+			},
+		});
+		expect(code).toBe(0);
+		const after = tree(mjs);
+		expect(after["monti.config.mjs"]).toBe("export default { schema: {} };\n");
+		expect("monti.config.ts" in after).toBe(false);
+		// The config names its own schema: no schema file that nothing reads.
+		expect("monti.schema.ts" in after).toBe(false);
+		expect(after["lib/monti.ts"]).toContain('import config from "../monti.config.mjs";');
+		expect(text).toContain("Left as they are (already there):\n  monti.config.mjs");
+		expect(given).toEqual([path.join(mjs, "monti.config.mjs")]);
+
+		// A config that reads ./monti.schema gets the schema file it reads.
+		const js = site({ "monti.config.js": 'import schema from "./monti.schema";\nexport default { schema };\n' });
+		await run(js, ["-y"]);
+		expect("monti.config.ts" in tree(js)).toBe(false);
+		expect(tree(js)["monti.schema.ts"]).toContain("defineSchema");
+		expect(tree(js)["lib/monti.ts"]).toContain('import config from "../monti.config";');
+	});
+
+	it("20-6 an admin in a route group or under another folder gets no second one, and another address for it is refused", async () => {
+		const mounted = {
+			"app/(cms)/admin/page.tsx": "export default () => <AdminPage />;\n",
+			"app/(cms)/admin/api/[...path]/route.ts": "export const { GET, POST, PUT } = adminRoute(monti);\n",
+		};
+		const grouped = site(mounted);
+		const { text, asked } = await run(grouped, [], { typed: ["", "", ""] });
+		// Its address is where it is: a route group is no part of it, and it is not asked.
+		expect(text).toContain("admin /admin ·");
+		expect(asked).not.toContain("Where should the admin be?");
+		expect(text).toContain(
+			"Left as they are (already there):\n  app/(cms)/admin/page.tsx\n  app/(cms)/admin/api/[...path]/route.ts",
+		);
+		expect(existsSync(path.join(grouped, "app/admin"))).toBe(false);
+		expect(tree(grouped)["monti.config.ts"]).toContain('base: "/admin/api"');
+
+		const nested = site({
+			"app/tools/cms/page.tsx": "export default () => <AdminPage />;\n",
+			"app/tools/cms/api/[...path]/route.ts": "export const { GET, POST, PUT } = adminRoute(monti);\n",
+		});
+		const under = await run(nested, ["-y"]);
+		expect(under.text).toContain("admin /tools/cms ·");
+		expect(under.text).toContain("open http://localhost:3000/tools/cms");
+		expect(existsSync(path.join(nested, "app/admin"))).toBe(false);
+
+		const other = site(mounted);
+		const before = tree(other);
+		const refused = await run(other, ["-y", "--admin-path", "/cms"]);
+		expect(refused.code).toBe(1);
+		expect(refused.text).toContain(
+			"The admin is already at /admin (app/(cms)/admin/), and a site has one admin. To move it, move that folder.",
+		);
+		expect(tree(other)).toEqual(before);
+
+		// A page of the site's own at the address, in whatever group: two pages at one address do not build.
+		const taken = site({ "app/(site)/admin/page.tsx": "export default () => <main>Staff</main>;\n" });
+		const full = tree(taken);
+		const clash = await run(taken, ["-y"]);
+		expect(clash.code).toBe(1);
+		expect(clash.text).toContain(
+			"A page of the site already answers at /admin (app/(site)/admin/page.tsx). Give the admin another address.",
+		);
+		expect(tree(taken)).toEqual(full);
+		expect((await run(taken, ["-y", "--admin-path", "/cms"])).code).toBe(0);
+		expect(existsSync(path.join(taken, "app/cms/page.tsx"))).toBe(true);
+	});
+
+	it("20-6 package.json keeps its line endings, indentation and byte-order mark: the two scripts are all that is new", async () => {
+		const manifest = { name: "my-site", scripts: { dev: "next dev" }, dependencies: { next: "16.4.6" } };
+		const windows = `﻿${JSON.stringify(manifest, null, 4).replace(/\n/g, "\r\n")}\r\n`;
+		const dir = site({ "package.json": windows });
+		expect((await run(dir, ["-y"])).code).toBe(0);
+		expect(readFileSync(path.join(dir, "package.json"), "utf8")).toBe(
+			`﻿${JSON.stringify(
+				{ ...manifest, scripts: { dev: "next dev", "db:setup": "monti db:setup", "db:migrate": "monti db:migrate" } },
+				null,
+				4,
+			).replace(/\n/g, "\r\n")}\r\n`,
+		);
+
+		// Written as a formatter leaves it (a short list on one line): every other byte stays.
+		const formatted =
+			'{\n  "name": "my-site",\n  "files": ["dist"],\n  "scripts": {\n    "dev": "next dev"\n  },\n  "dependencies": { "next": "16.4.6" }\n}\n';
+		const short = site({ "package.json": formatted });
+		await run(short, ["-y"]);
+		expect(readFileSync(path.join(short, "package.json"), "utf8")).toBe(
+			formatted.replace(
+				'"scripts": {\n',
+				'"scripts": {\n    "db:setup": "monti db:setup",\n    "db:migrate": "monti db:migrate",\n',
+			),
+		);
+	});
+
+	it("20-6 a package.json it cannot edit surely is left as it is, checked before anything is written, and the run says which two lines to add", async () => {
+		// Not JSON (a comment): the installed packages still say what the site is.
+		const odd = '{\n  // the site\n  "name": "my-site",\n  "scripts": { "dev": "next dev" },\n}\n';
+		const dir = site({ "package.json": odd });
+		const { code, text } = await run(dir, ["-y"]);
+		expect(code).toBe(0);
+		expect(readFileSync(path.join(dir, "package.json"), "utf8")).toBe(odd);
+		expect(existsSync(path.join(dir, "monti.config.ts"))).toBe(true);
+		expect(text).not.toContain("package.json: the script");
+		expect(text).toContain(
+			'What is left:\n  1. Add to the scripts of package.json (it was left as it is): "db:setup": "monti db:setup", "db:migrate": "monti db:migrate"\n  2. Set DATABASE_URL in .env.local to your Postgres database, then make Monti\'s tables: npx monti db:setup',
+		);
+	});
+
+	it("20-6 a placeholder never hides a value the site has: a name in any of its env files, or in the environment, is not added to .env.local", async () => {
+		const dir = site({ ".env.production": "DATABASE_URL=postgres://db.internal/site\n" });
+		const { text } = await run(dir, ["-y"], { env: { MONTI_SECRET: "the-secret-the-host-gave-this-site-0123456789" } });
+		// .env.local comes before .env.production: a made-up address there would be the one the live site reads.
+		expect(existsSync(path.join(dir, ".env.local"))).toBe(false);
+		expect(text).not.toContain(".env.local:");
+
+		// An example file names values, it does not hold them.
+		const example = site({ ".env.example": "DATABASE_URL=\nMONTI_SECRET=\n" });
+		await run(example, ["-y"]);
+		expect(readFileSync(path.join(example, ".env.local"), "utf8")).toMatch(
+			/^DATABASE_URL=postgres:\/\/localhost\/my_site\nMONTI_SECRET=.{40,}\n$/,
+		);
+	});
+
+	it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+		"20-7 a write that fails partway ends with one plain line: what was written and what was not; .env.local is its owner's alone and ignored before it is there",
+		async () => {
+			const dir = site();
+			chmodSync(path.join(dir, "app"), 0o555);
+			try {
+				const { code, text } = await run(dir, ["-y"]);
+				expect(code).toBe(1);
+				expect(text.split("\n").at(-1)).toBe(
+					"Could not write app/admin/page.tsx (no permission to write there). Written: .gitignore, monti.schema.ts, monti.config.ts, lib/monti.ts. Not written: app/admin/page.tsx, app/admin/api/[...path]/route.ts, .env.example, .env.local, package.json. Run monti init again once it can be written: it writes only what is missing.",
+				);
+				expect(text).not.toContain("    at ");
+				expect(text).not.toContain("What is left:");
+			} finally {
+				chmodSync(path.join(dir, "app"), 0o755);
+			}
+			// Once it can be written, a second run writes the rest.
+			const again = await run(dir, ["-y"]);
+			expect(again.code).toBe(0);
+			expect(again.text).toContain("Wrote:\n  app/admin/page.tsx");
+			expect(statSync(path.join(dir, ".env.local")).mode & 0o777).toBe(0o600);
+		},
+	);
+
+	it("20-6 in a workspace it finds the packages and the lockfile above the site's folder", async () => {
+		const dir = site({ "../../pnpm-lock.yaml": "" }, "apps/web");
+		const { code, text } = await run(dir, ["-y"]);
+		expect(code).toBe(0);
+		expect(text).toContain("Monti for my-site: Next 16.4.6, App Router (app/), pnpm");
+		expect(existsSync(path.join(dir, "app/admin/page.tsx"))).toBe(true);
+		expect(existsSync(path.join(dir, "node_modules"))).toBe(false);
 	});
 });

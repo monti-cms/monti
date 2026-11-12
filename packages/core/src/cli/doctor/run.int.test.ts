@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { type AddressInfo, createServer, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
@@ -26,12 +27,19 @@ afterEach(() => {
 });
 afterAll(async () => {
 	await sql`drop schema if exists doctor_bare cascade`.execute(db);
+	await sql`drop schema if exists doctor_odd cascade`.execute(db);
 });
 
-/** A site's folder as `monti init` leaves it: a Next app with the three packages, the admin's page, layout and API route. */
-function site(change: { versions?: Record<string, string>; files?: Record<string, string | null> } = {}) {
-	const dir = mkdtempSync(path.join(tmpdir(), "monti-doctor-"));
-	made.push(dir);
+/**
+ * A site's folder as `monti init` leaves it: a Next app with the three packages, the admin's page, layout and API route. With `under` it is a
+ * package of a workspace: the installed packages stay at the workspace's root.
+ */
+function site(
+	change: { versions?: Record<string, string>; files?: Record<string, string | null>; under?: string } = {},
+) {
+	const root = mkdtempSync(path.join(tmpdir(), "monti-doctor-"));
+	made.push(root);
+	const dir = path.join(root, change.under ?? "");
 	const files: Record<string, string | null> = {
 		"package.json": JSON.stringify({ name: "site", dependencies: { next: "16.4.6" } }),
 		"node_modules/next/package.json": JSON.stringify({ version: "16.4.6" }),
@@ -51,10 +59,11 @@ function site(change: { versions?: Record<string, string>; files?: Record<string
 		".gitignore": "node_modules\n.env*\n",
 		...change.files,
 	};
-	for (const [file, text] of Object.entries(files)) {
+	for (const [name, text] of Object.entries(files)) {
 		if (text === null) continue;
-		mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
-		writeFileSync(path.join(dir, file), text);
+		const file = name.startsWith("node_modules/") ? path.join(root, name) : path.join(dir, name);
+		mkdirSync(path.dirname(file), { recursive: true });
+		writeFileSync(file, text);
 	}
 	return dir;
 }
@@ -276,5 +285,109 @@ describe("monti doctor", () => {
 		expect(json.join("\n")).not.toContain(password);
 		// A healthy site ends with 0.
 		expect(await doctor({ ...options(site()), argv: [], out: () => {} })).toBe(0);
+	});
+
+	it("20-9 what it cannot read is that check's failure, not a crash: a broken change file, tables it cannot read, a site that does not open; --json still prints", async () => {
+		const broken = site({ files: { "monti/changes/0001-first.json": "{ not json" } });
+		const report = await runDoctor(options(broken));
+		expect(report.checks.find((check) => check.id === "database/migrations")).toMatchObject({
+			status: "fail",
+			where: "monti/changes",
+		});
+		expect(report.checks.find((check) => check.id === "database/migrations")?.message).toMatch(
+			/^The schema's change files do not read: /,
+		);
+		expect(report.checks).toHaveLength(15);
+		expect(report.checks.at(-1)).toMatchObject({ id: "auth/login", status: "ok" });
+
+		// A table by Monti's name that is not Monti's: reading what was followed fails.
+		await sql`create schema doctor_odd`.execute(db);
+		await sql`create table doctor_odd.monti_migration (id int)`.execute(db);
+		expect(
+			await found(options(site(), { config: { database: databaseAt("doctor_odd") } }), "database/migrations"),
+		).toMatchObject({
+			status: "fail",
+			message: 'What the database has followed could not be read: column "name" does not exist',
+		});
+
+		const twice = {
+			plugins: [
+				{ name: "files", storage: memoryStorage() },
+				{ name: "more", storage: memoryStorage() },
+			],
+		};
+		const printed: string[] = [];
+		expect(
+			await doctor({ ...options(site(), { config: twice }), argv: ["--json"], out: (line) => printed.push(line) }),
+		).toBe(1);
+		const json = JSON.parse(printed.join("\n")) as { checks: { id: string; status: string; message: string }[] };
+		expect(json.checks.filter((check) => check.id.startsWith("storage/"))).toEqual([
+			expect.objectContaining({
+				id: "storage/configured",
+				status: "fail",
+				message: "The site does not open: Two plugins bring a media storage: files, more. A site has one.",
+			}),
+			expect.objectContaining({ id: "storage/reachable", status: "skip" }),
+			expect.objectContaining({ id: "storage/host", status: "skip" }),
+		]);
+		expect(json.checks.at(-1)?.id).toBe("auth/login");
+	});
+
+	it("20-9 a database or a storage that takes the call and never answers fails its check by name, in time", async () => {
+		// Takes the connection and says nothing.
+		const taken: Socket[] = [];
+		const silent = createServer((socket) => taken.push(socket));
+		await new Promise<void>((resolve) => silent.listen(0, "127.0.0.1", resolve));
+		try {
+			const { port } = silent.address() as AddressInfo;
+			const started = Date.now();
+			const report = await runDoctor(
+				options(site(), { timeout: 100, config: { database: `postgres://127.0.0.1:${port}/nowhere` } }),
+			);
+			expect(Date.now() - started).toBeLessThan(3000);
+			expect(report.checks.find((check) => check.id === "database/reachable")).toMatchObject({ status: "fail" });
+			expect(report.checks.find((check) => check.id === "database/migrations")?.status).toBe("skip");
+			expect(report.checks).toHaveLength(15);
+		} finally {
+			for (const socket of taken) socket.destroy();
+			silent.close();
+		}
+
+		const hung = { ...memoryStorage(), stat: () => new Promise<never>(() => {}) };
+		expect(
+			await found(
+				options(site(), { timeout: 100, config: { plugins: [{ name: "files", storage: hung }] } }),
+				"storage/reachable",
+			),
+		).toMatchObject({ status: "fail", message: "The storage does not answer: no answer in 0.1 seconds" });
+	});
+
+	it("20-8 in a workspace the packages are found above the site's folder, and an admin in a route group is found with its address and the layout over it", async () => {
+		const dir = site({
+			under: "apps/web",
+			files: {
+				"app/admin/layout.tsx": null,
+				"app/admin/page.tsx": null,
+				"app/admin/api/[...path]/route.ts": null,
+				"app/(cms)/layout.tsx": "export default function Layout() { return null; }\n",
+				"app/(cms)/admin/page.tsx":
+					'import { AdminPage } from "@monti-cms/next/admin";\nexport default () => <AdminPage />;\n',
+				"app/(cms)/admin/api/[...path]/route.ts": "export const { GET, POST, PUT } = adminRoute(monti);\n",
+			},
+		});
+		const report = await runDoctor(
+			options(dir, {
+				origin: "https://example.com",
+				config: {
+					auth: { password: false, github: { clientId: "id", clientSecret: "secret", admin: "someone" } },
+				},
+			}),
+		);
+		const by = Object.fromEntries(report.checks.map((check) => [check.id, check]));
+		expect(by["site/next"]).toMatchObject({ status: "ok" });
+		expect(by["site/packages"]).toMatchObject({ status: "ok" });
+		expect(by["site/layout"]).toMatchObject({ status: "ok" });
+		expect(by["files/admin"]).toMatchObject({ status: "ok", message: "the admin is at /admin (app/(cms)/admin/)" });
+		expect(by["auth/login"]?.message).toContain("https://example.com/admin/api/auth/github");
 	});
 });

@@ -8,8 +8,9 @@ import { readChangeFiles } from "../schema/files";
 import { secretReader } from "./secret-input";
 
 export { doctor } from "./doctor/command";
-export { loadEnvFiles } from "./env-files";
+export { loadEnvFiles, takeEnvFile } from "./env-files";
 export { init } from "./init/command";
+export { configFileOf } from "./site";
 
 const MAINTENANCE = `Maintenance commands (not operations):
   db:setup        create the tables and follow every change file

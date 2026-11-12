@@ -3,6 +3,26 @@ import path from "node:path";
 import { parseEnv } from "node:util";
 
 /**
+ * Takes `--env-file <path>` or `--env-file=<path>` out of a command's arguments. One with no path after it is refused, not passed over: the
+ * person meant a file, and the command would otherwise run on other values without saying so.
+ */
+export function takeEnvFile(argv: string[]): { argv: string[]; file?: string } {
+	const rest: string[] = [];
+	let file: string | undefined;
+	for (let at = 0; at < argv.length; at++) {
+		const arg = argv[at] as string;
+		if (arg !== "--env-file" && !arg.startsWith("--env-file=")) {
+			rest.push(arg);
+			continue;
+		}
+		const value = arg === "--env-file" ? argv[++at] : arg.slice("--env-file=".length);
+		if (value === undefined || value === "") throw new Error("--env-file needs a path: --env-file .env.production");
+		file = value;
+	}
+	return { argv: rest, file };
+}
+
+/**
  * The site's env files, read the way Next reads them, so `monti` sees the values the site runs with: what the environment already holds wins,
  * then `.env.<mode>.local`, `.env.local`, `.env.<mode>`, `.env` (the first file that names a value gives it). `mode` is `NODE_ENV`, or
  * `development`. Returns where each value it set came from, so a message can say "in .env.local" without printing the value.

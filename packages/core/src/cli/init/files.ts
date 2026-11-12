@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
+import { layoutsOver } from "../site";
 import type { Answers } from "./answers";
 import type { Site } from "./detect";
 
@@ -16,7 +18,7 @@ function languageName(code: string): string {
 const posix = (file: string) => file.split(path.sep).join("/");
 /** How one file of the site imports another, without its extension: no alias of the site's is assumed. */
 function importPath(from: string, to: string): string {
-	const relative = posix(path.relative(path.dirname(from), to)).replace(/\.tsx?$/, "");
+	const relative = posix(path.relative(path.dirname(from), to)).replace(/\.[jt]sx?$/, "");
 	return relative.startsWith(".") ? relative : `./${relative}`;
 }
 
@@ -54,7 +56,7 @@ function configFile(answers: Answers): string {
 	plugins: [
 		definePlugin({
 			name: "files",
-			storage: localFolderStorage({ dir: path.join(process.cwd(), ".monti", "files"), base: "${answers.adminPath}/api" }),
+			storage: localFolderStorage({ dir: path.join(process.cwd(), ".monti", "files"), base: "${answers.adminPath.replace(/\/$/, "")}/api" }),
 		}),
 	],
 `;
@@ -129,24 +131,34 @@ const envExample = (site: Site, answers: Answers) =>
 		)
 		.join("\n")}\n`;
 
+/** The admin's folder in the site: where it is mounted already, else the folder of the address that was chosen. */
+export const adminDir = (site: Site, answers: Answers) =>
+	site.admin?.folder ?? path.join(site.app ?? "app", answers.adminPath.slice(1));
+
 /**
- * Every file `monti init` would write, by its path in the site. The admin gets a layout of its own only where the site has no top-level one:
- * under a top-level layout the admin's page is drawn inside it, and a second layout with its own `<html>` would be wrong there.
+ * Every file `monti init` would write, by its path in the site.
+ * - A site that has a config the `monti` command would load (`monti.config.mjs` too) keeps it: no second config is written beside it. The
+ *   schema file is written for a config that reads it (`./monti.schema`, as the one written here does), not for one that names its own.
+ * - The admin's files go in the folder the admin is mounted in, wherever that is, so a site that has one gets no second.
+ * - The admin gets a layout of its own only where nothing is over it: under a top-level layout the admin's page is drawn inside it, and a
+ *   second layout with its own `<html>` would be wrong there, as it would under a route group's.
  */
 export function planFiles(site: Site, answers: Answers): { file: string; text: string }[] {
-	const app = site.app ?? "app";
 	const root = site.src ? "src" : "";
-	const admin = path.join(app, answers.adminPath.slice(1));
+	const admin = adminDir(site, answers);
+	const config = site.config ?? "monti.config.ts";
+	const ownSchema =
+		site.config !== null && !readFileSync(path.join(site.cwd, site.config), "utf8").includes("monti.schema");
 	const lib = path.join(root, "lib", "monti.ts");
 	const page = path.join(admin, "page.tsx");
 	const route = path.join(admin, "api", "[...path]", "route.ts");
 	const files = [
-		{ file: "monti.schema.ts", text: schemaFile(answers) },
-		{ file: "monti.config.ts", text: configFile(answers) },
+		...(ownSchema ? [] : [{ file: "monti.schema.ts", text: schemaFile(answers) }]),
+		{ file: config, text: configFile(answers) },
 		{
 			file: lib,
 			text: `import { openSite } from "@monti-cms/next";
-import config from "${importPath(lib, "monti.config.ts")}";
+import config from "${importPath(lib, config)}";
 
 // Opens Monti once: \`monti\` for the admin's API, \`reader\` for the site's own pages to read published entries with.
 export const { monti, reader } = openSite(config);
@@ -171,7 +183,7 @@ import { monti } from "${importPath(route, lib)}";
 export const { GET, POST, PUT } = adminRoute(monti);
 `,
 		},
-		...(site.topLayout
+		...(site.topLayout || layoutsOver(site.cwd, path.dirname(admin)).length > 0
 			? []
 			: [
 					{

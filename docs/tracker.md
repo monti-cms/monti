@@ -113,6 +113,7 @@
 | T212 | `release.yml`은 태그가 가리키는 커밋이 릴리스를 내는 브랜치에 있는지 보지 않는다. 어느 브랜치의 커밋에든 `v*` 태그를 밀면 릴리스가 나간다 | 9단계 전 | #483 코드 리뷰 |
 | T213 | 새 사이트 증명(`scripts/try-release.mjs`)의 `tsc`는 `skipLibCheck`로 돈다(새 Next 앱의 기본). Monti의 선언 파일 안의 오류는 `@arethetypeswrong/cli`만 본다. 증명이 Monti의 선언까지 검사하게 할지 정한다 | 9단계 전 | #483 코드 리뷰 |
 | T214 | 묶음(`scripts/pack-release.mjs`)은 같은 소스에서 바이트까지 같게 나오지 않는다(파일 시각, 폴더를 읽는 순서). 파일 목록은 같다. 같은 태그를 다시 묶었을 때 같은 파일이 나오게 할지 정한다 | 9단계 전 | #483 코드 리뷰 |
+| T215 | `monti` 명령은 환경 파일 안의 `$VAR` · `${VAR}`를 풀지 않는다(`packages/core/src/cli/env-files.ts`). Next(`@next/env`)는 푼다. 다른 값을 가리키는 값(`DATABASE_URL=postgres://$DB_HOST/site`)을 쓴 사이트에서 명령과 사이트가 서로 다른 값을 읽는다 | 9단계 전 | #484 코드 리뷰 |
 
 ## 끝낸 일
 
