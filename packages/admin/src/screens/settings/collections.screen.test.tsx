@@ -138,6 +138,19 @@ describe("a control that goes away with its press", () => {
 			expect(document.activeElement).not.toBe(document.body);
 		}
 	});
+
+	it("the same undo pressed with the pointer moves no focus into the field: it stays where the browser puts it", async () => {
+		await Basics.run();
+		for (const name of ["공개 주소", "미리보기 주소"]) {
+			const field = page.getByRole("textbox", { name });
+			await userEvent.click(field);
+			await userEvent.keyboard("x");
+			const undo = page.getByRole("button", { name: "되돌리기", exact: true });
+			await userEvent.click(undo);
+			await expect.element(undo).not.toBeInTheDocument();
+			await expect.element(field).not.toHaveFocus();
+		}
+	});
 });
 
 const { ChangesList, DeleteReview, Fields } = composeStories(collections);

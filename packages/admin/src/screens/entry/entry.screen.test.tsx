@@ -60,6 +60,29 @@ const notes = () => ({
 });
 
 describe("the entry editor: saving and coming back", () => {
+	it("the save cell pressed with the keyboard goes away saved, and the focus goes to the text, not to the page; a pointer's press moves none", async () => {
+		await on("draft").run();
+		await opened();
+		const unsaved = page.getByRole("button", { name: "저장 전 변경사항" });
+		await titleEnd();
+		await userEvent.keyboard(" 다시");
+		await expect.element(unsaved).toBeVisible();
+		// The keyboard is what was last used, so a focus set here is the keyboard's (as after the Tab keys that reach the status bar).
+		(unsaved.element() as HTMLElement).focus();
+		expect(unsaved.element().matches(":focus-visible")).toBe(true);
+		await userEvent.keyboard("{Enter}");
+		await saveCell("저장됨");
+		await expect.element(unsaved).not.toBeInTheDocument();
+		await expect.element(body()).toHaveFocus();
+
+		await titleEnd();
+		await userEvent.keyboard(" 한 번 더");
+		await userEvent.click(unsaved);
+		await saveCell("저장됨");
+		await expect.element(unsaved).not.toBeInTheDocument();
+		await expect.element(body()).not.toHaveFocus();
+	});
+
 	it("[flow 1·09] ⌘S saves what was typed: the save cell turns to saved", async () => {
 		await on("draft").run();
 		await opened();

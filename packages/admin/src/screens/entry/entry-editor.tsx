@@ -260,6 +260,18 @@ export function EntryEditor({
 	}, []);
 
 	const save = editor.save;
+	// The save cell is a button only while there is something to save: saved, it is words. Pressed with the keyboard it held the focus, which then
+	// goes to what was saved, the text being written (the title when there is no body), not to the page (docs/design/admin/tokens.md, the states
+	// section). A pointer's press moves nothing, and neither does a save after the person has gone elsewhere.
+	const savedByKeys = useRef(false);
+	const saveState = editor.saveState;
+	useEffect(() => {
+		if (saveState !== "saved" || !savedByKeys.current) return;
+		savedByKeys.current = false;
+		if (document.activeElement !== document.body) return;
+		if (body.current) body.current.commands.focus();
+		else document.getElementById(fieldInputId("title"))?.focus();
+	}, [saveState]);
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
 			if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "s") {
@@ -322,8 +334,18 @@ export function EntryEditor({
 			/>
 		);
 
-	const saveCell: Record<SaveState, { text: string; tone?: "warning" | "danger"; press?: () => void }> = {
-		unsaved: { text: t("entry.save.unsaved"), tone: "warning", press: () => void save() },
+	const saveCell: Record<
+		SaveState,
+		{ text: string; tone?: "warning" | "danger"; press?: (event: React.MouseEvent<HTMLElement>) => void }
+	> = {
+		unsaved: {
+			text: t("entry.save.unsaved"),
+			tone: "warning",
+			press: (event) => {
+				savedByKeys.current = event.currentTarget.matches(":focus-visible");
+				void save();
+			},
+		},
 		saved: { text: t("entry.save.saved") },
 		browser: { text: t("entry.save.browser"), tone: "warning", press: () => onCompare("draft") },
 		conflict: { text: t("entry.save.conflict"), tone: "danger", press: () => onCompare("conflict") },
