@@ -16,6 +16,7 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
+import { useFocusHandOff } from "../frame/focus-hand-off";
 import { at } from "./schema-draft";
 import type { CollectionsDraft } from "./use-collections-draft";
 
@@ -25,15 +26,6 @@ export const addressOf = (part: string) => {
 	// Kept as typed (a slash on its way to "blog/posts" too): the schema check names a path that is not one yet.
 	const typed = part.trim().replace(/^\/+/, "");
 	return typed ? `/${typed}/:slug` : "/:slug";
-};
-
-/**
- * A row's undo goes away with the change it puts back. Pressed with the keyboard it held the focus, which then goes to the row's own control,
- * the one the undo acted on, not to the page (docs/design/admin/tokens.md, the states section: where the focus goes when what held it is gone).
- * A pointer's press moves nothing: the focus stays where the browser puts it.
- */
-const focusAfter = (pressed: Element, id: string) => {
-	if (pressed.matches(":focus-visible")) document.getElementById(id)?.focus();
 };
 
 /**
@@ -68,13 +60,15 @@ export function BasicsTab({
 			? {
 					label: t("settings.changed"),
 					undoLabel: t("settings.undo"),
-					onUndo: (pressed: Element) => {
-						// An item's row is its switch (the address field goes with the public page).
-						focusAfter(pressed, kind === "item" ? "collection-public-page" : "collection-path");
-						draft.revert(pathPlace);
-					},
+					onUndo: () => draft.revert(pathPlace),
 				}
 			: undefined;
+	// A row's undo goes away with the change it puts back: the keyboard's focus it held goes to the row's own control, the one the undo acted
+	// on (an item's row is its switch: the address field goes with the public page).
+	const pathUndo = useFocusHandOff(() =>
+		document.getElementById(kind === "item" ? "collection-public-page" : "collection-path")?.focus(),
+	);
+	const previewUndo = useFocusHandOff(() => document.getElementById("collection-preview-path")?.focus());
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>
@@ -121,12 +115,7 @@ export function BasicsTab({
 							{pathChanged?.onUndo || kind === "item" ? (
 								<div className="ml-auto flex items-center gap-monti-12">
 									{pathChanged?.onUndo ? (
-										<TextButton
-											variant="underline"
-											quiet
-											size="caption"
-											onClick={(event) => pathChanged.onUndo(event.currentTarget)}
-										>
+										<TextButton variant="underline" quiet size="caption" ref={pathUndo} onClick={pathChanged.onUndo}>
 											{pathChanged.undoLabel}
 										</TextButton>
 									) : null}
@@ -174,10 +163,8 @@ export function BasicsTab({
 										variant="underline"
 										quiet
 										size="caption"
-										onClick={(event) => {
-											focusAfter(event.currentTarget, "collection-preview-path");
-											draft.revert(previewPlace);
-										}}
+										ref={previewUndo}
+										onClick={() => draft.revert(previewPlace)}
 									>
 										{t("settings.undo")}
 									</TextButton>

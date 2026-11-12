@@ -151,6 +151,32 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(body()).toHaveFocus();
 	});
 
+	it("\"compare\" pressed with the keyboard gives the editor's place to the comparison, and the focus to the comparison's first control", async () => {
+		await BrowserCopy.run();
+		await opened();
+		await tabTo("비교하기");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
+		await expect.element(button("편집기로")).toHaveFocus();
+	});
+
+	it("a save the keyboard asked of the save cell and the server refused leaves the cell, and the focus on it", async () => {
+		const story = on("draft");
+		await story.run();
+		await opened();
+		await titleEnd();
+		await userEvent.keyboard(" 다시 쓰기");
+		const { site, id } = story.loaded();
+		await site.monti.run("entries.save", { id, version: 1, title: "첫 번째 글 (다른 탭)" }, entry.admin);
+		const cell = button("저장 전 변경사항");
+		(cell.element() as HTMLElement).focus();
+		expect(cell.element().matches(":focus-visible")).toBe(true);
+		await userEvent.keyboard("{Enter}");
+		// Saved elsewhere first: the cell is still a button, with other words, and nothing took its focus.
+		await expect.element(button("편집 충돌")).toHaveFocus();
+		await expect.element(body()).not.toHaveFocus();
+	});
+
 	it("the same action pressed with the pointer moves no focus", async () => {
 		await BrowserCopy.run();
 		await opened();

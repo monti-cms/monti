@@ -262,20 +262,11 @@ export function EntryEditor({
 	}, []);
 
 	const save = editor.save;
-	// The save cell is a button only while there is something to save: saved, it is words. Pressed with the keyboard it held the focus, which then
-	// goes to what was saved, the text being written (the title when there is no body), not to the page (docs/design/admin/tokens.md, the states
-	// section). A pointer's press moves nothing, and neither does a save after the person has gone elsewhere.
-	const savedByKeys = useRef(false);
-	const saveState = editor.saveState;
-	/** The focus to the text being written: the body, or the title when the body is not there. */
+	/** The focus to the text being written: the body, or the title when the body is not there; to the comparison's first control when it took the editor's place. */
 	const toText = useCallback(() => focusText(() => body.current, fieldInputId("title")), []);
-	useEffect(() => {
-		if (saveState !== "saved" || !savedByKeys.current) return;
-		savedByKeys.current = false;
-		if (document.activeElement === document.body) toText();
-	}, [saveState, toText]);
-	// A banner whose own action takes it away (discard or load this browser's copy, load the latest, try again, confirm all) had the
-	// keyboard's focus on that action: it goes to the text too.
+	// What goes away by its own action had the keyboard's focus on that action, and hands it to the text: a banner (discard or load this
+	// browser's copy, load the latest, try again, confirm all, compare), and the save cell, a button only while there is something to save or
+	// to look at (saved, it is words). Nothing is remembered from the press: a save that fails leaves the cell, and the focus on it.
 	const handOff = useFocusHandOff(toText);
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
@@ -339,18 +330,8 @@ export function EntryEditor({
 			/>
 		);
 
-	const saveCell: Record<
-		SaveState,
-		{ text: string; tone?: "warning" | "danger"; press?: (event: React.MouseEvent<HTMLElement>) => void }
-	> = {
-		unsaved: {
-			text: t("entry.save.unsaved"),
-			tone: "warning",
-			press: (event) => {
-				savedByKeys.current = event.currentTarget.matches(":focus-visible");
-				void save();
-			},
-		},
+	const saveCell: Record<SaveState, { text: string; tone?: "warning" | "danger"; press?: () => void }> = {
+		unsaved: { text: t("entry.save.unsaved"), tone: "warning", press: () => void save() },
 		saved: { text: t("entry.save.saved") },
 		browser: { text: t("entry.save.browser"), tone: "warning", press: () => onCompare("draft") },
 		conflict: { text: t("entry.save.conflict"), tone: "danger", press: () => onCompare("conflict") },
@@ -789,7 +770,12 @@ export function EntryEditor({
 			{read ? (
 				<StatusBar>
 					{readOnly ? null : (
-						<StatusBarCell tone={cell.tone} onClick={cell.press} render={cell.press ? undefined : <span />}>
+						<StatusBarCell
+							ref={handOff}
+							tone={cell.tone}
+							onClick={cell.press}
+							render={cell.press ? undefined : <span />}
+						>
 							{cell.text}
 						</StatusBarCell>
 					)}
