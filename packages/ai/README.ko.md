@@ -34,7 +34,7 @@ const model = scriptedProvider([
 createMonti({ db, schema, secret, plugins: [assistant({ provider: model.for })] });
 ```
 
-확인하지 못한 것: 어떤 테스트도 모델 서비스를 부르지 않고, 손으로 불러 본 적도 없다. 어댑터는 AI SDK(`ai` 7, `@ai-sdk/*` 4)가 읽는 서비스마다의
+확인하지 못한 것: 어떤 테스트도 모델 서비스를 부르지 않는다. 손으로는 OpenRouter만, 무료 모델 둘로 불러 봤다(2026-11-12: 키 확인, 글이 오는 턴과 사용량, 도구 호출과 그 답, 정해진 모양의 답, 거절, 신호로 끝낸 턴, 생각 조각, 한 요청에 도구 65개, 실행 하나). 다른 서비스, 긴 침묵, 길이로 잘린 답, Anthropic 모델에 보내는 캐시 표시는 진짜 서비스에 대고 해 보지 못했다. 어댑터는 AI SDK(`ai` 7, `@ai-sdk/*` 4)가 읽는 서비스마다의
 답 모양(Anthropic Messages, OpenAI Responses, Google generateContent, OpenRouter와 호환 서버의 chat completions)으로 확인했다. 서비스가 지금 그
 모양으로 답하는지, 모델 id와 생각 옵션이 받아들여지는지는 확인하지 않았다. 어댑터는 API 버전을 맞춰 보지 않는다. Anthropic의
 `anthropic-version`은 AI SDK가 보내는 값이다. 설치된 AI SDK보다 새 Claude 모델은 SDK가 답을 4,096 토큰으로 묶는다. 그때는 SDK를 올린다.

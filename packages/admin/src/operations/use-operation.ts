@@ -7,6 +7,12 @@ import type { Answer, CallOptions } from "./transport";
 export type Refusal = { status: number; error: string; reason: Message | null };
 
 /**
+ * What a refusal says to the person: its reason, or with none (a server that failed and said nothing) that something went wrong, and no more.
+ * The one place this fallback is made: its words take no values, so no screen can show an unfilled `{…}`.
+ */
+export const reasonOf = (refusal: Refusal): Message => refusal.reason ?? { key: "errors.unexpected" };
+
+/**
  * What stands for an answer that never came, as the byte route does (`httpUploader`): status 0. It carries its own words, so every screen that shows a
  * refusal's reason says this one whole, with no code of ours in it.
  */

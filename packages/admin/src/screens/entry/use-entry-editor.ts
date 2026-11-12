@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
 import { useAdmin } from "../../operations/admin-context";
-import { useOperation, useRead } from "../../operations/use-operation";
+import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { useSignInAgain } from "../frame/session-ended";
 
 /** What the editor writes: an entry, or a template (its name stands where an entry's title does). `id` is `null` for a new template. */
@@ -226,7 +226,7 @@ export function useEntryEditor(source: EditorSource) {
 					setConflict({ at: at ? new Date(at) : null });
 				} else if (answer.refusal.status !== 401)
 					// A check the save failed (a file the library does not have): the reason, or the save would just stay unsaved with no word.
-					toast.error(t(answer.refusal.reason ?? "errors.unexpected"));
+					toast.error(t(reasonOf(answer.refusal)));
 				return null;
 			}
 			setConflict(null);
