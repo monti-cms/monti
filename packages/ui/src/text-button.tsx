@@ -4,6 +4,7 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
+import { BUSY_GUARD } from "./busy";
 import { cn } from "./cn";
 import { HIT_AREA } from "./hit-area";
 import { useUiLabels } from "./labels";
@@ -75,7 +76,6 @@ function TextButton({
 	render,
 	href,
 	children,
-	onClick,
 	...props
 }: useRender.ComponentProps<"button"> &
 	VariantProps<typeof textButtonVariants> &
@@ -94,9 +94,10 @@ function TextButton({
 				...({ "data-tone": tone ?? undefined, "data-loading": loading || undefined } as React.ComponentProps<"button">),
 				"aria-busy": loading || undefined,
 				// Working is not "cannot be used": it keeps the focus it was pressed with (`aria-disabled`, not the attribute, which would hand the
-				// focus to the page), and a press while it works does nothing.
+				// focus to the page), and a press while it works does nothing, whatever it is drawn over (`BUSY_GUARD`).
 				disabled: disabled || undefined,
 				"aria-disabled": (loading && !disabled) || undefined,
+				...(loading && !disabled ? BUSY_GUARD : {}),
 				children: loading ? (
 					<>
 						<Spinner className="mr-monti-4 size-[0.85em] align-[-0.1em]" />
@@ -106,11 +107,7 @@ function TextButton({
 					children
 				),
 			},
-			{
-				...props,
-				onClick: loading ? (event: React.MouseEvent) => event.preventDefault() : onClick,
-				...(href === undefined ? {} : { href }),
-			} as React.ComponentProps<"button">,
+			{ ...props, ...(href === undefined ? {} : { href }) } as React.ComponentProps<"button">,
 		),
 		render,
 		state: { slot: "text-button" },

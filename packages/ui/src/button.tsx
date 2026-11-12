@@ -4,6 +4,7 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 import { useEffect, useRef, useState } from "react";
+import { BUSY_GUARD } from "./busy";
 import { cn } from "./cn";
 import { Spinner } from "./spinner";
 
@@ -136,6 +137,7 @@ function Button({
 						render: <a href={href} target={target} rel={rel} />,
 					})}
 			{...props}
+			{...(busy && !disabled ? BUSY_GUARD : {})}
 		>
 			{busy && <Spinner className={size === "sm" || size === "xs" ? "size-3" : "size-3.5"} />}
 			{sending ? pendingLabel : children}

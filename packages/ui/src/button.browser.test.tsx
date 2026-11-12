@@ -56,10 +56,107 @@ describe("a button while it works", () => {
 			await expect.element(busy).toHaveAttribute("aria-disabled", "true");
 			await expect.element(busy).not.toHaveAttribute("disabled");
 			expect(getComputedStyle(busy.element()).opacity).toBe("1");
+			// Not the hand of something to press: its own "cannot be pressed" cursor, or none of its own (the pointer goes through it).
+			const look = getComputedStyle(busy.element());
+			expect(look.cursor === "pointer" && look.pointerEvents !== "none").toBe(false);
 			// A second press, by key and by pointer, starts nothing.
 			await userEvent.keyboard("{Enter}");
 			await userEvent.keyboard(" ");
 			await busy.click({ force: true }).catch(() => {});
 			await expect.element(page.getByLabelText("presses")).toHaveTextContent("1");
 		});
+
+	/** Presses a control every way a person can: the pointer, Enter and Space with the keyboard in it. */
+	const pressEveryWay = async (control: HTMLElement) => {
+		control.click();
+		control.focus();
+		await userEvent.keyboard("{Enter}");
+		await userEvent.keyboard(" ");
+	};
+
+	for (const part of ["button", "text"] as const) {
+		const Part = part === "button" ? Button : TextButton;
+
+		it(`${part}: drawn over the caller's own button, that button's handler does not run while it works`, async () => {
+			let ran = 0;
+			const own = (
+				<button
+					type="button"
+					onClick={() => {
+						ran += 1;
+					}}
+				/>
+			);
+			render(
+				<Part loading render={own}>
+					저장 중…
+				</Part>,
+			);
+			const busy = page.getByRole("button", { name: "저장 중…" });
+			await expect.element(busy).toHaveAttribute("aria-busy", "true");
+			await pressEveryWay(busy.element() as HTMLElement);
+			expect(ran).toBe(0);
+		});
+
+		it(`${part}: drawn as a link (an address, a router's link with its own handler), it does not go anywhere while it works`, async () => {
+			let ran = 0;
+			const before = window.location.hash;
+			const link = (
+				// biome-ignore lint/a11y/useAnchorContent: the part's children go in the link.
+				// biome-ignore lint/a11y/useValidAnchor: a router's link, which has a handler of its own beside its address.
+				<a
+					href="#/elsewhere"
+					onClick={() => {
+						ran += 1;
+					}}
+				/>
+			);
+			render(
+				<>
+					<Part loading href="#/by-address">
+						주소로 가는 중…
+					</Part>
+					{part === "button" ? (
+						<Button loading nativeButton={false} render={link}>
+							링크로 가는 중…
+						</Button>
+					) : (
+						<TextButton loading render={link}>
+							링크로 가는 중…
+						</TextButton>
+					)}
+				</>,
+			);
+			for (const name of ["주소로 가는 중…", "링크로 가는 중…"]) {
+				const busy = page.getByText(name);
+				await expect.element(busy).toBeVisible();
+				await pressEveryWay(busy.element().closest("a") as HTMLElement);
+			}
+			expect(ran).toBe(0);
+			expect(window.location.hash).toBe(before);
+		});
+
+		it(`${part}: the submit button of a form, it does not let Enter in a field send the form while it works`, async () => {
+			let sent = 0;
+			render(
+				<form
+					onSubmit={(event) => {
+						event.preventDefault();
+						sent += 1;
+					}}
+				>
+					<input aria-label="이름" />
+					<Part type="submit" loading>
+						저장 중…
+					</Part>
+				</form>,
+			);
+			const field = page.getByRole("textbox", { name: "이름" });
+			await expect.element(field).toBeVisible();
+			(field.element() as HTMLElement).focus();
+			await userEvent.keyboard("{Enter}");
+			await pressEveryWay(page.getByRole("button", { name: "저장 중…" }).element() as HTMLElement);
+			expect(sent).toBe(0);
+		});
+	}
 });
