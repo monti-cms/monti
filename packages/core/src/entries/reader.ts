@@ -45,7 +45,8 @@ type StoredEntry = Omit<SiteEntry, "doc" | "relations" | "media" | "path"> & { d
 
 export type ReaderOptions = {
 	db: Kysely<Database>;
-	schema: Schema;
+	/** The site's schema, or how to read it now: on the dev server it changes while the server runs (the settings screen writes the file). */
+	schema: Schema | (() => Schema);
 	/** `MONTI_SECRET`, to open preview links. Without it the reader never shows a working copy. */
 	secret?: string | null;
 	now?: () => Date;
@@ -61,6 +62,20 @@ const onlySchemaFields = (schema: Schema, collection: string, values: Record<str
  * entry was published under before answers with a redirect to where it is now.
  */
 export function createReader(options: ReaderOptions) {
+	const { schema } = options;
+	if (typeof schema !== "function") return readerOf({ ...options, schema });
+	// Each read takes the schema as it is then.
+	const now = () => readerOf({ ...options, schema: schema() });
+	return {
+		locales: () => now().locales(),
+		entry: (where) => now().entry(where),
+		linkPaths: (doc, locale) => now().linkPaths(doc, locale),
+		page: (where) => now().page(where),
+		entries: (where) => now().entries(where),
+	} satisfies ReturnType<typeof readerOf>;
+}
+
+function readerOf(options: ReaderOptions & { schema: Schema }) {
 	const { db, schema } = options;
 	const now = options.now ?? (() => new Date());
 
@@ -228,6 +243,9 @@ export function createReader(options: ReaderOptions) {
 		});
 
 	return {
+		/** The site's languages: which one a page without a language in its address is in (`source`), and how an address shows the others. */
+		locales: () => schema.locales,
+
 		async entry(where: {
 			collection: string;
 			slug: string;
