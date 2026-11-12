@@ -8,7 +8,9 @@ const SMALL_QUIET = { size: "xs", tone: "quiet" } as const;
 
 /**
  * The row right under one message of a conversation: when it was sent (faint caption) and icon-only buttons (`children`, `IconButton`s: the row
- * makes them small and quiet, 24px with 14px icons; their names are tooltips). It sits on the message's side (`user` right, `assistant` left), pulled up into the thread's gap so showing it moves nothing. It
+ * makes them small and quiet, 24px with 14px icons; their names are tooltips). It sits on the message's side (`user` right, `assistant` left).
+ * It takes the thread's gap instead of adding to it: in a column 24px apart (`ChatThread`, a turn's `Stack`) it stands 4px under its message
+ * and 8px over what follows, so from a message to the next thing is 36px whether or not the row shows, and showing it moves nothing. It
  * shows only while the pointer or the keyboard is on its message (the sibling just before it) or on the row, and always on touch
  * screens (no pointer to hover with).
  */
@@ -28,7 +30,7 @@ export function ChatMessageActions({
 			data-slot="chat-message-actions"
 			data-author={author}
 			className={cn(
-				"-mt-monti-16 flex items-center gap-monti-2 opacity-0 pointer-coarse:opacity-100 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [:focus-within+&]:opacity-100 [:hover+&]:opacity-100",
+				"-mt-monti-20 -mb-monti-16 flex items-center gap-monti-2 opacity-0 pointer-coarse:opacity-100 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [:focus-within+&]:opacity-100 [:hover+&]:opacity-100",
 				author === "user" ? "self-end" : "self-start",
 				className,
 			)}

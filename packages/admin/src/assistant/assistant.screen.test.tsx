@@ -138,6 +138,38 @@ describe("asking (flow 2, 01–03)", () => {
 	});
 });
 
+describe("the conversation's spacing", () => {
+	it("10-1 from a message to what follows it is 36px, with the row of its time and buttons inside that room: showing the row moves nothing", async () => {
+		const story = on({ script: stories.scripts(stories.found, () => [{ text: "네." }]) });
+		await story.run();
+		await openPanel();
+		await say("요약이 비어 있는 글 찾아 줘");
+		await expect.element(button("셋째 글")).toBeVisible();
+		await say("고마워");
+		await expect.element(panel().getByText("네.")).toBeVisible();
+		const all = (selector: string) => [...panel().element().querySelectorAll<HTMLElement>(selector)];
+		const measure = () => {
+			const [first, second] = all("[data-slot=chat-message][data-author=user]");
+			const [line] = all("[data-slot=tool-call-line]");
+			const answers = all("[data-slot=chat-message][data-author=assistant]");
+			// The last piece of the first answer: the second entry it names.
+			const lastOfFirst = answers
+				.filter((each) => each.getBoundingClientRect().top < (second?.getBoundingClientRect().top ?? 0))
+				.at(-1);
+			if (!first || !second || !line || !lastOfFirst) throw new Error("the conversation is not drawn");
+			return {
+				questionToAnswer: Math.round(line.getBoundingClientRect().top - first.getBoundingClientRect().bottom),
+				answerToQuestion: Math.round(second.getBoundingClientRect().top - lastOfFirst.getBoundingClientRect().bottom),
+			};
+		};
+		const atRest = measure();
+		expect(atRest).toEqual({ questionToAnswer: 36, answerToQuestion: 36 });
+		await userEvent.hover(panel().getByText("요약이 비어 있는 글 찾아 줘"));
+		await expect.element(button("복사").first()).toBeVisible();
+		expect(measure()).toEqual(atRest);
+	});
+});
+
 describe("more said while it works", () => {
 	it("10-1 words said while it works wait over the box: edit puts them back in it, cancel drops them, and what waits is asked when the run ends", async () => {
 		const story = on({
