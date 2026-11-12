@@ -2,7 +2,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import type { OpenKey } from "@monti-cms/core";
+import { type OpenKey, SERVICE_URLS, withoutRedirects } from "@monti-cms/core";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import {
 	APICallError,
@@ -28,25 +28,32 @@ import {
 
 type Fetch = typeof globalThis.fetch;
 
-/** The AI SDK's model for a key: the service the key is for, with the key itself. A plugin's service the SDK has no provider for gives none. */
-function languageModel(key: OpenKey, fetch: Fetch | undefined): ((model: string) => LanguageModel) | null {
-	const shared = { apiKey: key.secret, ...(fetch ? { fetch } : {}) };
+/**
+ * The AI SDK's model for a key: the service the key is for, with the key itself. A plugin's service the SDK has no provider for gives none.
+ *
+ * A key goes to its own service and nowhere else. Each built-in service is called at its one address, given here: the SDK's providers would
+ * otherwise take one from the environment (`ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL`), and a stored key would follow it. And no request follows a
+ * redirect, which would carry the key's header to wherever the service points.
+ */
+function languageModel(key: OpenKey, given: Fetch | undefined): ((model: string) => LanguageModel) | null {
+	const fetch = withoutRedirects(given ?? globalThis.fetch);
+	const at = (baseURL: string) => ({ apiKey: key.secret, baseURL, fetch });
 	switch (key.service) {
 		case "anthropic":
-			return (model) => createAnthropic(shared)(model);
+			return (model) => createAnthropic(at(SERVICE_URLS.anthropic))(model);
 		case "openai":
-			return (model) => createOpenAI(shared)(model);
+			return (model) => createOpenAI(at(SERVICE_URLS.openai))(model);
 		case "gemini":
-			return (model) => createGoogleGenerativeAI(shared)(model);
+			return (model) => createGoogleGenerativeAI(at(SERVICE_URLS.gemini))(model);
 		case "openrouter":
-			return (model) => createOpenRouter(shared)(model);
+			return (model) => createOpenRouter(at(SERVICE_URLS.openrouter))(model);
 		case "openai-compatible":
 			return (model) =>
 				createOpenAICompatible({
 					name: "compatible",
 					baseURL: key.baseUrl ?? "",
 					...(key.secret ? { apiKey: key.secret } : {}),
-					...(fetch ? { fetch } : {}),
+					fetch,
 				})(model);
 		default:
 			return null;
@@ -162,6 +169,7 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 		return {
 			async *turn(request: TurnRequest): AsyncGenerator<TurnEvent> {
 				if (!model) throw none();
+				let began = false;
 				try {
 					const result = streamText({
 						model: model(request.model),
@@ -181,10 +189,16 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 					let usage = { input: 0, output: 0 };
 					let cut: "length" | "refusal" | undefined;
 					for await (const part of result.fullStream) {
-						if (part.type === "text-delta") yield { type: "text", delta: part.text };
-						else if (part.type === "tool-call")
+						if (part.type === "text-delta") {
+							began = true;
+							yield { type: "text", delta: part.text };
+						} else if (part.type === "tool-call")
 							yield { type: "call", call: { id: part.toolCallId, name: part.toolName, input: part.input } };
 						else if (part.type === "finish-step") {
+							// The stream closed before the service said the answer was whole (a connection cut, a proxy's limit): what came is not
+							// an answer. The run engine gives the turn up and can ask for it again.
+							if (part.finishReason === "interrupted" || part.finishReason === "error")
+								throw new ProviderError("interrupted", "The answer ended before it was whole.");
 							usage = { input: part.usage.inputTokens ?? 0, output: part.usage.outputTokens ?? 0 };
 							// The service ended the answer itself: out of room, or it declined to go on.
 							cut =
@@ -194,11 +208,16 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 										? "refusal"
 										: undefined;
 						} else if (part.type === "error") throw part.error;
+						// Anything else the service sends (its thinking, a tool call's input as it is written) shows it is there.
+						else yield { type: "alive" };
 					}
 					const raw: Raw = { service: key.service, messages: await result.responseMessages };
 					yield { type: "end", usage, raw, ...(cut ? { cut } : {}) };
 				} catch (error) {
-					throw failure(error);
+					const failed = failure(error);
+					// The service had begun to answer: what went wrong after that (the stream cut, a last piece that cannot be read) broke the answer
+					// off. Before any word it is a service that did not answer.
+					throw began && failed.kind === "unreachable" ? new ProviderError("interrupted", failed.detail) : failed;
 				}
 			},
 			async answer(request) {

@@ -34,4 +34,13 @@ const model = scriptedProvider([
 createMonti({ db, schema, secret, plugins: [assistant({ provider: model.for })] });
 ```
 
+What is not verified: no test calls a model service, and none was called by hand either. The adapters are checked against each service's answer
+shape as the AI SDK (`ai` 7, `@ai-sdk/*` 4) reads it (Anthropic Messages, OpenAI Responses, Google generateContent, chat completions for OpenRouter
+and compatible servers). Whether the services answer in those shapes today, and whether the model ids and thinking options are accepted, is not
+confirmed. The adapters do not negotiate an API version; Anthropic's `anthropic-version` is the one the AI SDK sends. A Claude model newer than the
+installed AI SDK gets its answers capped at 4,096 tokens by the SDK: update the SDK then.
+
+A key goes to its own service only: the built-in services are called at one fixed address each (an address in the server's environment, such as
+`ANTHROPIC_BASE_URL`, is not used), and no request that carries a key follows a redirect.
+
 The design is in `docs/design/features/10-assistant.md`.

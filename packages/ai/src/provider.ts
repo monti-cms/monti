@@ -37,10 +37,14 @@ export type TurnRequest = {
 	signal: AbortSignal;
 };
 
-/** What a turn gives as it comes: words, the tools it calls, and its end with what it spent. */
+/**
+ * What a turn gives as it comes: words, the tools it calls, a sign of life while it thinks or writes a call (nothing to show, but the service is
+ * there), and its end with what it spent. `cut`: the service ended the answer itself, out of room or declining to go on.
+ */
 export type TurnEvent =
 	| { type: "text"; delta: string }
 	| { type: "call"; call: ToolCall }
+	| { type: "alive" }
 	| { type: "end"; usage: Usage; raw?: unknown; cut?: "length" | "refusal" };
 
 export type AnswerRequest = {
@@ -50,6 +54,7 @@ export type AnswerRequest = {
 	picture?: Picture;
 	/** The JSON Schema of the answer. */
 	schema: unknown;
+	/** Ends the call: the quick task's deadline. */
 	signal?: AbortSignal;
 };
 
@@ -67,14 +72,17 @@ export type ProviderFor = (key: OpenKey) => ModelProvider;
 
 /**
  * The service did not do what was asked. `refused`: it answered no (credits, a limit, the key, the model); the person can do something about it.
- * `unreachable`: it did not answer, or the answer broke off. `detail` is the service's own words, shown as they are.
+ * `unreachable`: it did not answer. `interrupted`: it began to answer and broke off, or went silent; what it said so far is no answer, and the
+ * run can be gone on with. `detail` is the service's own words, shown as they are.
  */
 export class ProviderError extends Error {
 	constructor(
-		readonly kind: "refused" | "unreachable",
+		readonly kind: "refused" | "unreachable" | "interrupted",
 		readonly detail: string,
 		readonly status?: number,
 	) {
-		super(`The model service ${kind === "refused" ? "refused" : "could not be reached"}: ${detail}`);
+		super(
+			`The model service ${kind === "refused" ? "refused" : kind === "interrupted" ? "broke off" : "could not be reached"}: ${detail}`,
+		);
 	}
 }

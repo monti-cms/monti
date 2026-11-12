@@ -16,7 +16,7 @@ import { testDatabase } from "../../core/src/__test__/database";
 import { type Scripted, scriptedProvider } from "./fake";
 import { type AssistantState, assistant, type Conversation, type ConversationRow } from "./operations";
 import { ProviderError } from "./provider";
-import type { RunEvent, RunInput, RunLimits } from "./run";
+import { type RunEvent, type RunInput, type RunLimits, withoutKey } from "./run";
 import { GROUP, MOST_RESULT } from "./tools";
 
 const db = await testDatabase();
@@ -46,8 +46,13 @@ const SECRET = "assistant-test-secret";
 const KEY = "sk-ant-api03-assistant-test-key-a1b2";
 const OTHER_KEY = "sk-proj-assistant-other-key-77de";
 
+/** A test holds the services' answers here to keep requests waiting at one place, and counts the ones that came. */
+const held = { until: null as Promise<void> | null, asked: 0 };
+
 /** The services' model lists, so keys can be added without a network. */
 const network: typeof globalThis.fetch = async (input) => {
+	held.asked += 1;
+	if (held.until) await held.until;
 	const url = String(input);
 	const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 	if (url.startsWith("https://api.anthropic.com/"))
@@ -165,6 +170,8 @@ async function withKey(monti: Site) {
 
 beforeEach(async () => {
 	clock = new Date("2026-11-12T10:00:00Z");
+	held.until = null;
+	held.asked = 0;
 	model = scriptedProvider();
 	await sql`drop view if exists monti_post`.execute(db);
 	await sql`drop view if exists monti_tag`.execute(db);
@@ -1504,5 +1511,319 @@ describe("the models the assistant offers", () => {
 			["claude-haiku-5-5", true],
 			["claude-sonnet-5-5", true],
 		]);
+	});
+});
+
+describe("what the first review of the core found (#472)", () => {
+	const never = new Promise<never>(() => {});
+	const runs = () => db.selectFrom("runs").selectAll().orderBy("started_at").execute();
+
+	it("10-1 a short key a service repeats in its refusal is kept out of the conversation as a long one is", async () => {
+		expect(withoutKey("Invalid API key: abc123", "abc123")).toBe("Invalid API key: •••");
+		expect(withoutKey("Invalid API key: x", "x")).toBe("Invalid API key: •••");
+		expect(withoutKey("No key was sent.", "")).toBe("No key was sent.");
+
+		const monti = site();
+		await monti.run("keys.add", { service: "anthropic", name: "짧은 키", secret: "abc123" }, admin);
+		model.add({ fail: new ProviderError("refused", "Invalid API key: abc123", 401) });
+		const refused = await ask(monti, { request: "안녕" });
+		expect(refused.end).toMatchObject({ status: "failed", error: { kind: "refused", detail: "Invalid API key: •••" } });
+		expect(JSON.stringify(refused.events)).not.toContain("abc123");
+		expect(JSON.stringify(await runs())).not.toContain("abc123");
+	});
+
+	it("10-3 10-4 a write tool cut after its proposal was stored and before its answer was noted proposes nothing twice when the run goes on", async () => {
+		const monti = site();
+		await withKey(monti);
+		model.add(
+			{
+				calls: [
+					{
+						id: "make",
+						name: "entries_create",
+						input: { collection: "post", locale: "ko", title: "새 글", [GROUP]: "글 만들기" },
+					},
+				],
+			},
+			{ text: "글 하나를 제안했습니다." },
+		);
+		// The request ends at the worst moment: the proposal item is in, the run's note of the tool's answer is not.
+		const stream = monti.stream(
+			"assistant.run",
+			{ request: "새 글 만들어 줘" },
+			{ actor: "admin", session: null, signal: new AbortController().signal },
+		);
+		const events = stream[Symbol.asyncIterator]();
+		let run = "";
+		let proposal = "";
+		for (;;) {
+			const { value } = (await events.next()) as { value: RunEvent };
+			if (value.type === "run") run = value.runId;
+			if (value.type === "proposal") {
+				proposal = value.proposalId;
+				break;
+			}
+		}
+		await events.return?.();
+		expect((await proposalOf(monti, proposal)).items).toHaveLength(1);
+
+		const second = await ask(monti, { resume: run });
+		expect(second.end.status).toBe("done");
+		// The call ran again and was given what it had already made.
+		const seen = await proposalOf(monti, proposal);
+		expect(seen.items).toHaveLength(1);
+		expect(second.of("proposal")).toMatchObject([{ proposalId: proposal, itemIds: [seen.items[0].id] }]);
+		expect(await db.selectFrom("monti_proposal").select("id").execute()).toHaveLength(1);
+		// Applied, it makes one entry.
+		const before = (await db.selectFrom("entries").select("id").execute()).length;
+		await monti.proposals.apply(proposal);
+		expect((await db.selectFrom("entries").select("id").execute()).length).toBe(before + 1);
+	});
+
+	it("10-4 a run asks for its proposal once, however often it asks", async () => {
+		const monti = site();
+		const first = await monti.proposals.create("c1", "요청", "run-1");
+		expect(await monti.proposals.create("c1", "요청", "run-1")).toBe(first);
+		expect(await monti.proposals.create("c1", "요청", "run-2")).not.toBe(first);
+	});
+
+	it("10-1 two requests that ask in one conversation at the same moment: one runs, the other is told the conversation is busy", async () => {
+		const monti = site();
+		await withKey(monti);
+		model.add({ text: "네." });
+		const first = await ask(monti, { request: "안녕" });
+		model.add({ text: "하나만 답합니다." });
+		// Both requests find the conversation free, then wait at the same place before either has made its run: the models' list is a day
+		// old, so picking the model asks the service again, and the test holds that answer until both are there.
+		clock = new Date(clock.getTime() + 2 * 86_400_000);
+		let release = () => {};
+		held.until = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const asked = held.asked;
+		const both = Promise.allSettled([
+			ask(monti, { conversation: first.conversation, request: "첫째" }),
+			ask(monti, { conversation: first.conversation, request: "둘째" }),
+		]);
+		while (held.asked === asked) await new Promise((resolve) => setTimeout(resolve, 5));
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect((await runs()).length).toBe(1);
+		release();
+		const settled = await both;
+		const won = settled.filter((each) => each.status === "fulfilled");
+		const lost = settled.filter((each) => each.status === "rejected");
+		expect(won).toHaveLength(1);
+		expect(lost).toMatchObject([{ reason: { reason: { key: "assistant.busy" } } }]);
+		expect(await runs()).toHaveLength(2);
+	});
+
+	it("10-1 a run that stopped is not gone on with while another of its conversation runs, and the database holds the rule itself", async () => {
+		const monti = site({ limits: { turns: 1 } });
+		await withKey(monti);
+		const post = await newPost(monti, "글");
+		model.add({ calls: [{ name: "entries_get", input: { id: post } }] });
+		const first = await ask(monti, { request: "글 확인해 줘" });
+		expect(first.end).toMatchObject({ status: "interrupted", reason: "turns" });
+		// A new request in the same conversation is at work.
+		let release = () => {};
+		model.add({
+			text: "생각 중",
+			hold: new Promise<void>((resolve) => {
+				release = resolve;
+			}),
+		});
+		const second = ask(monti, { conversation: first.conversation, request: "다른 일" });
+		while (model.turns.length < 2) await new Promise((resolve) => setTimeout(resolve, 10));
+		await expect(ask(monti, { resume: first.run, more: true })).rejects.toMatchObject({
+			reason: { key: "assistant.busy" },
+		});
+		// By no way in: a second chat run of the conversation cannot be made to run.
+		await expect(
+			db.updateTable("runs").set({ status: "running" }).where("id", "=", first.run).execute(),
+		).rejects.toThrow(/runs_one_chat/);
+		release();
+		expect((await second).end.status).toBe("done");
+	});
+
+	it("10-4 an answer that breaks off after it began is no answer: nothing of it is kept, and the run goes on by asking for that turn again", async () => {
+		const monti = site();
+		await withKey(monti);
+		model.add({ text: "절반만 온 ", breaksOff: true }, { text: "온전한 답입니다." });
+		const first = await ask(monti, { request: "설명해 줘" });
+		expect(first.end).toMatchObject({ status: "interrupted", reason: "connection" });
+		expect((await conversation(monti, first.conversation)).runs[0].parts).toEqual([]);
+
+		const second = await ask(monti, { resume: first.run });
+		expect(second.end.status).toBe("done");
+		// The model was asked the same thing again: the half answer is not in what it was sent.
+		expect(model.turns[1].messages.map((message) => message.role)).toEqual(["user"]);
+		expect((await conversation(monti, first.conversation)).runs[0]).toMatchObject({
+			status: "done",
+			parts: [{ type: "text", text: "온전한 답입니다." }],
+		});
+	});
+
+	it("10-3 an answer the service cut for length keeps its words, and a tool call cut with them is not run", async () => {
+		const monti = site();
+		await withKey(monti);
+		const post = await newPost(monti, "글");
+		model.add({
+			text: "길어서 여기까지",
+			calls: [{ name: "entries_save", input: { id: post, version: 2, title: "잘린", [GROUP]: "제목" } }],
+			cut: "length",
+		});
+		const asked = await ask(monti, { request: "길게 써 줘" });
+		expect(asked.end.status).toBe("done");
+		expect(asked.of("tool")).toEqual([]);
+		expect(await db.selectFrom("monti_proposal_item").select("id").execute()).toEqual([]);
+	});
+
+	it("10-4 a run that reached its token limit goes on when a person says so, with that much again; carried on without that, it stays stopped", async () => {
+		const monti = site({ limits: { tokens: 150 } });
+		await withKey(monti);
+		const post = await newPost(monti, "글");
+		model.add(
+			{ calls: [{ name: "entries_get", input: { id: post } }], usage: { input: 100, output: 60 } },
+			{ calls: [{ name: "entries_get", input: { id: post } }], usage: { input: 100, output: 60 } },
+			{ text: "끝났습니다.", usage: { input: 10, output: 5 } },
+		);
+		const first = await ask(monti, { request: "글 확인해 줘" });
+		expect(first.end).toMatchObject({ status: "interrupted", reason: "tokens" });
+		expect(model.turns).toHaveLength(1);
+
+		// A request that only carries the run on (the browser going on by itself) does not lift the limit: the model is not asked.
+		const carried = await ask(monti, { resume: first.run });
+		expect(carried.end).toMatchObject({ status: "interrupted", reason: "tokens" });
+		expect(model.turns).toHaveLength(1);
+
+		// "이어서 하기": the person's word. The run gets its limit again, counted from here, and reaches it again after one more turn.
+		const more = await ask(monti, { resume: first.run, more: true });
+		expect(model.turns).toHaveLength(2);
+		expect(more.end).toMatchObject({ status: "interrupted", reason: "tokens" });
+		const last = await ask(monti, { resume: first.run, more: true });
+		expect(last.end.status).toBe("done");
+		// What it spent in all is still counted whole.
+		expect(last.of("usage").at(-1)).toMatchObject({ input: 210, output: 125 });
+	});
+
+	it("10-4 the turn limit counts across the requests that carry a run on, and starts again only on a person's word", async () => {
+		const monti = site({ limits: { turns: 2, ms: 30_000 } });
+		await withKey(monti);
+		const post = await newPost(monti, "글");
+		const read = { calls: [{ name: "entries_get", input: { id: post } }] };
+		model.add(
+			() => {
+				// The first request's time runs out during its first turn.
+				clock = new Date(clock.getTime() + 31_000);
+				return read;
+			},
+			read,
+			{ text: "끝났습니다." },
+		);
+		const first = await ask(monti, { request: "글 확인해 줘" });
+		expect(first.end).toMatchObject({ status: "interrupted", reason: "time" });
+		// Carried on, it takes its second turn and is at the limit of two: the count did not start again with the new request.
+		const second = await ask(monti, { resume: first.run });
+		expect(second.end).toMatchObject({ status: "interrupted", reason: "turns" });
+		expect(model.turns).toHaveLength(2);
+		const third = await ask(monti, { resume: first.run, more: true });
+		expect(third.end.status).toBe("done");
+	});
+
+	it("10-4 a service that goes silent in the middle of an answer does not hold the run for ever: the turn is given up and the run can be gone on with", async () => {
+		const monti = site({ limits: { idleMs: 80 } });
+		await withKey(monti);
+		model.add({ text: "말하다가 ", hold: never }, { text: "이번에는 끝까지." });
+		const started = Date.now();
+		const first = await ask(monti, { request: "설명해 줘" });
+		expect(Date.now() - started).toBeLessThan(2000);
+		expect(first.end).toMatchObject({ status: "interrupted", reason: "connection" });
+		// The call to the service was ended, not left open.
+		expect(model.turns[0].signal.aborted).toBe(true);
+		const second = await ask(monti, { resume: first.run });
+		expect(second.end.status).toBe("done");
+	});
+
+	it("10-4 a service that never says anything is one that did not answer; one that thinks without words is still there", async () => {
+		const monti = site({ limits: { idleMs: 80 } });
+		await withKey(monti);
+		model.add({ hold: never });
+		const silent = await ask(monti, { request: "안녕" });
+		expect(silent.end).toMatchObject({ status: "failed", error: { kind: "unreachable", keyName: "Anthropic 개인" } });
+
+		// Signs of life with nothing to show (thinking) keep the turn: each silence is shorter than the limit, though the turn is longer.
+		const pause = () => new Promise<void>((resolve) => setTimeout(resolve, 50));
+		model.add(async (request) => {
+			void request;
+			return { text: ["생각", "하고", " 답합니다."], alive: true, hold: pause() };
+		});
+		const thinking = await ask(monti, { request: "천천히" });
+		expect(thinking.end.status).toBe("done");
+	});
+
+	it("10-1 a quick task whose service never answers ends at its deadline and says which key got no answer", async () => {
+		model = scriptedProvider([], () => never);
+		const monti = site({ limits: { answerMs: 80 } });
+		await withKey(monti);
+		const started = Date.now();
+		await expect(
+			monti.run(
+				"assistant.fill",
+				{ task: "text", collection: "post", field: "summary", entry: { title: "글" } },
+				admin,
+			),
+		).rejects.toMatchObject({ reason: { key: "assistant.unreachable", values: { name: "Anthropic 개인" } } });
+		expect(Date.now() - started).toBeLessThan(2000);
+		expect(model.answers[0].signal?.aborted).toBe(true);
+	});
+
+	it("10-1 past conversations, and the requests of one, are read a page at a time", async () => {
+		const monti = site();
+		await withKey(monti);
+		model.add({ text: "하나" }, { text: "둘" }, { text: "셋" });
+		const first = await ask(monti, { request: "첫째 대화" });
+		clock = new Date(clock.getTime() + 60_000);
+		const second = await ask(monti, { request: "둘째 대화" });
+		clock = new Date(clock.getTime() + 60_000);
+		await ask(monti, { conversation: second.conversation, request: "둘째 대화의 다음 질문" });
+
+		type Page = { conversations: ConversationRow[]; earlier: string | null };
+		const newest = (await monti.run("conversations.list", { limit: 1 }, admin)) as Page;
+		expect(newest.conversations.map((each) => each.id)).toEqual([second.conversation]);
+		expect(newest.earlier).not.toBeNull();
+		const older = (await monti.run("conversations.list", { limit: 1, before: newest.earlier }, admin)) as Page;
+		expect(older.conversations.map((each) => each.id)).toEqual([first.conversation]);
+		expect(older.earlier).toBeNull();
+		// Without a limit, a page is all of them here.
+		expect(((await monti.run("conversations.list", {}, admin)) as Page).conversations).toHaveLength(2);
+
+		const last = (await monti.run("conversations.get", { id: second.conversation, limit: 1 }, admin)) as Conversation;
+		expect(last.runs.map((run) => run.request)).toEqual(["둘째 대화의 다음 질문"]);
+		expect(last.earlier).not.toBeNull();
+		const before = (await monti.run(
+			"conversations.get",
+			{ id: second.conversation, limit: 1, before: last.earlier },
+			admin,
+		)) as Conversation;
+		expect(before.runs.map((run) => run.request)).toEqual(["둘째 대화"]);
+		expect(before.earlier).toBeNull();
+		expect((await conversation(monti, second.conversation)).runs.map((run) => run.request)).toEqual([
+			"둘째 대화",
+			"둘째 대화의 다음 질문",
+		]);
+	});
+
+	it("10-1 a long conversation sends the model its newest requests whole and forgets its beginning", async () => {
+		const monti = site({ limits: { historyChars: 400 } });
+		await withKey(monti);
+		model.add({ text: "가".repeat(150) }, { text: "나".repeat(150) }, { text: "다" });
+		const first = await ask(monti, { request: "첫째 질문" });
+		await ask(monti, { conversation: first.conversation, request: "둘째 질문" });
+		await ask(monti, { conversation: first.conversation, request: "셋째 질문" });
+		// The third request is sent with the second, whole, and without the first: both do not fit.
+		const sent = model.turns[2].messages.map((message) =>
+			message.role === "user" ? message.text.slice(0, 5) : message.role,
+		);
+		expect(sent).toEqual(["둘째 질문", "assistant", "셋째 질문"]);
 	});
 });

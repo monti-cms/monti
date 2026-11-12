@@ -20,6 +20,10 @@ export type ScriptedTurn = {
 	/** Held until this settles, after its words and before its end: a turn in the middle of which something else happens. */
 	hold?: Promise<unknown>;
 	cut?: "length" | "refusal";
+	/** After its words it gives a sign of life with nothing to show (it thinks). */
+	alive?: boolean;
+	/** After its words the answer breaks off: no calls, no end. */
+	breaksOff?: boolean;
 };
 
 /** A turn, or what makes one from the request the engine sent (to answer by what a tool returned). */
@@ -63,7 +67,10 @@ export function scriptedProvider(
 				if (request.signal.aborted) throw new ProviderError("unreachable", "aborted");
 				yield { type: "text", delta };
 			}
+			if (turn.alive) yield { type: "alive" };
 			if (turn.hold) await turn.hold;
+			// The answer breaks off after what it said so far, as a stream that closes without its ending.
+			if (turn.breaksOff) throw new ProviderError("interrupted", "The answer ended before it was whole.");
 			for (const call of turn.calls ?? []) {
 				calls += 1;
 				yield {
@@ -75,7 +82,8 @@ export function scriptedProvider(
 		},
 		async answer(request) {
 			answers.push(request);
-			return { value: answer(request), usage: { input: 50, output: 10 } };
+			// The scripted answer may be a promise: one that never comes is a service that never answers.
+			return { value: await answer(request), usage: { input: 50, output: 10 } };
 		},
 	};
 	return {

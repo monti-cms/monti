@@ -9,7 +9,7 @@ import {
 	type Plugin,
 	type RunStatus,
 } from "@monti-cms/core";
-import type { Kysely, Transaction } from "kysely";
+import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
 import { aiSdkProvider } from "./ai-sdk";
 import type { ProviderFor } from "./provider";
@@ -81,8 +81,14 @@ export type Conversation = {
 	title: string;
 	model: { keyId: string; model: string } | null;
 	thinking: string | null;
+	/** The newest requests, oldest first: at most a page of them. */
 	runs: TranscriptRun[];
+	/** Where the requests before these begin (`before` of the next read); `null` when these are the first. */
+	earlier: string | null;
 };
+
+/** How many conversations a page of the list holds, and how many requests of a conversation one read gives, unless fewer are asked for. */
+const PAGE = { conversations: 50, runs: 30 } as const;
 
 export type AssistantState = {
 	/** Whether a run can start: a readable AI key with a model is there. Without it the panel only says so and points at the keys screen. */
@@ -272,7 +278,7 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 				description:
 					"Fill one field with the quick-task model, in one call: a text field, values for a relation field, a picture's alt text or caption, an address. It stores nothing: the screen puts the answer in the field.",
 				input: QuickInput,
-				run: (input): Promise<QuickOutput> => quickFill(site(), provider, input),
+				run: (input): Promise<QuickOutput> => quickFill(site(), provider, input, limits.answerMs),
 			}),
 			defineOperation({
 				name: "assistant.stop",
@@ -329,34 +335,40 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 				name: "conversations.list",
 				kind: "read",
 				description:
-					"The past conversations, newest first: what was first asked, when it was last asked in, and what became of its proposal (waiting, applied, taken in a screen, reverted, discarded).",
-				input: z.object({}),
-				async run(_input, ctx): Promise<{ conversations: ConversationRow[]; keepDays: number | null }> {
+					"The past conversations, newest first, a page at a time: what was first asked, when it was last asked in, and what became of its proposal (waiting, applied, taken in a screen, reverted, discarded). `before` (the `earlier` of the page before) gives the next page.",
+				input: z.object({
+					limit: z.number().int().min(1).max(100).default(PAGE.conversations),
+					before: z.string().datetime().optional(),
+				}),
+				async run(
+					input,
+					ctx,
+				): Promise<{ conversations: ConversationRow[]; earlier: string | null; keepDays: number | null }> {
+					// When it was last asked in; one nothing was asked in yet, when it was made.
+					const at = sql<Date>`coalesce((select max(runs.started_at) from runs where runs.conversation_id = conversations.id and runs.kind = 'chat'), conversations.created_at)`;
 					const rows = await ctx.db
 						.selectFrom("conversations")
-						.select(["id", "title", "created_at"])
-						.select((eb) =>
-							eb
-								.selectFrom("runs")
-								.select((run) => run.fn.max("runs.started_at").as("at"))
-								.whereRef("runs.conversation_id", "=", "conversations.id")
-								.where("runs.kind", "=", "chat")
-								.as("asked_at"),
-						)
+						.select(["id", "title"])
+						.select(at.as("at"))
+						.$if(input.before !== undefined, (query) => query.where(at, "<", new Date(input.before as string)))
+						.orderBy(at, "desc")
+						.orderBy("id")
+						// One more than the page: whether there is a next one.
+						.limit(input.limit + 1)
 						.execute();
+					const page = rows.slice(0, input.limit);
 					const found = await outcomes(
 						ctx.db,
-						rows.map((row) => row.id),
+						page.map((row) => row.id),
 					);
 					return {
-						conversations: rows
-							.map((row) => ({
-								id: row.id,
-								title: row.title,
-								at: row.asked_at ?? row.created_at,
-								outcome: found.get(row.id) ?? null,
-							}))
-							.sort((a, b) => b.at.getTime() - a.at.getTime()),
+						conversations: page.map((row) => ({
+							id: row.id,
+							title: row.title,
+							at: row.at,
+							outcome: found.get(row.id) ?? null,
+						})),
+						earlier: rows.length > input.limit ? (page.at(-1)?.at.toISOString() ?? null) : null,
 						keepDays: await keepDaysOf(ctx.db),
 					};
 				},
@@ -365,8 +377,12 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 				name: "conversations.get",
 				kind: "read",
 				description:
-					"One conversation as the panel shows it: each request with what the assistant said and did, the proposal it made, and how it ended. Opening it counts as opened: its days start again.",
-				input: z.object({ id: z.string() }),
+					"One conversation as the panel shows it: its newest requests, each with what the assistant said and did, the proposal it made, and how it ended. `before` (the `earlier` of the read before) gives the requests before those. Opening it counts as opened: its days start again.",
+				input: z.object({
+					id: z.string(),
+					limit: z.number().int().min(1).max(100).default(PAGE.runs),
+					before: z.string().datetime().optional(),
+				}),
 				async run(input, ctx): Promise<Conversation> {
 					const conversation = await ctx.db
 						.selectFrom("conversations")
@@ -380,13 +396,19 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 						.set({ last_opened_at: ctx.now() })
 						.where("id", "=", input.id)
 						.execute();
-					const runs = await ctx.db
+					const newest = await ctx.db
 						.selectFrom("runs")
 						.selectAll()
 						.where("conversation_id", "=", input.id)
 						.where("kind", "=", "chat")
-						.orderBy("started_at")
+						.$if(input.before !== undefined, (query) =>
+							query.where("started_at", "<", new Date(input.before as string)),
+						)
+						.orderBy("started_at", "desc")
+						// One more than the page: whether there are requests before these.
+						.limit(input.limit + 1)
 						.execute();
+					const runs = newest.slice(0, input.limit).reverse();
 					const messages =
 						runs.length === 0
 							? []
@@ -408,6 +430,7 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 								? { keyId: conversation.key_id, model: conversation.model }
 								: null,
 						thinking: conversation.thinking,
+						earlier: newest.length > input.limit ? (runs[0]?.started_at.toISOString() ?? null) : null,
 						runs: runs.map((run) => {
 							// A run whose request died (its hold ran out) reads as cut short: it can be gone on with.
 							const dead = run.status === "running" && (run.leased_until === null || run.leased_until < ctx.now());

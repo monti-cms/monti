@@ -34,4 +34,12 @@ const model = scriptedProvider([
 createMonti({ db, schema, secret, plugins: [assistant({ provider: model.for })] });
 ```
 
+확인하지 못한 것: 어떤 테스트도 모델 서비스를 부르지 않고, 손으로 불러 본 적도 없다. 어댑터는 AI SDK(`ai` 7, `@ai-sdk/*` 4)가 읽는 서비스마다의
+답 모양(Anthropic Messages, OpenAI Responses, Google generateContent, OpenRouter와 호환 서버의 chat completions)으로 확인했다. 서비스가 지금 그
+모양으로 답하는지, 모델 id와 생각 옵션이 받아들여지는지는 확인하지 않았다. 어댑터는 API 버전을 맞춰 보지 않는다. Anthropic의
+`anthropic-version`은 AI SDK가 보내는 값이다. 설치된 AI SDK보다 새 Claude 모델은 SDK가 답을 4,096 토큰으로 묶는다. 그때는 SDK를 올린다.
+
+키는 제 서비스로만 간다. 내장 서비스는 정해진 주소 하나로만 부르고(서버 환경 변수의 주소, 예를 들어 `ANTHROPIC_BASE_URL`은 쓰지 않는다),
+키를 실은 요청은 리다이렉트를 따라가지 않는다.
+
 설계는 `docs/design/features/10-assistant.md`에 있다.

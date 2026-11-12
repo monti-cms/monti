@@ -47,7 +47,13 @@ const answerOf = (value: unknown): string => {
 	return text.trim();
 };
 
-export async function quickFill(monti: Monti, providerFor: ProviderFor, input: QuickInput): Promise<QuickOutput> {
+export async function quickFill(
+	monti: Monti,
+	providerFor: ProviderFor,
+	input: QuickInput,
+	/** How long the service may take to answer (`RunLimits.answerMs`). */
+	answerMs: number,
+): Promise<QuickOutput> {
 	const collection = monti.site.schema().collections[input.collection];
 	if (!collection) throw new CheckError({ key: "collections.unknown", values: { collection: input.collection } });
 	const listed = (await monti.run("models.list", {}, { actor: "admin" })) as ModelList;
@@ -68,14 +74,27 @@ export async function quickFill(monti: Monti, providerFor: ProviderFor, input: Q
 		.filter((part) => part !== null)
 		.join("\n\n");
 	const ask = async (prompt: string, schema: unknown, picture?: { mime: string; base64: string }) => {
-		const answered = await provider
-			.answer({
-				model: listed.quick?.model ?? "",
-				system: style === null ? SYSTEM : `${SYSTEM}\n\nThe site's writing style:\n${style}`,
-				prompt,
-				schema,
-				...(picture ? { picture } : {}),
-			})
+		// A service that never answers does not hold the field for ever: the call is ended at the deadline, and the field says it got no answer.
+		const deadline = new AbortController();
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const late = new Promise<never>((_resolve, reject) => {
+			timer = setTimeout(() => {
+				deadline.abort();
+				reject(new ProviderError("unreachable", `No answer in ${Math.round(answerMs / 1000)} seconds.`));
+			}, answerMs);
+		});
+		const asked = provider.answer({
+			model: listed.quick?.model ?? "",
+			system: style === null ? SYSTEM : `${SYSTEM}\n\nThe site's writing style:\n${style}`,
+			prompt,
+			schema,
+			...(picture ? { picture } : {}),
+			signal: deadline.signal,
+		});
+		// What the call still gives after its deadline is nobody's.
+		asked.catch(() => {});
+		const answered = await Promise.race([asked, late])
+			.finally(() => clearTimeout(timer))
 			.catch((error: unknown) => {
 				if (!(error instanceof ProviderError)) throw error;
 				// The service said no or did not answer: the field's own line says which key and, for a refusal, the service's words.

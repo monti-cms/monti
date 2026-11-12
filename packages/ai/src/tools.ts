@@ -87,6 +87,7 @@ export type Propose = (
 	operation: string,
 	input: unknown,
 	group: string,
+	callId: string,
 ) => Promise<{ itemIds: string[]; preview: Preview | null; proposalId: string }>;
 
 /** How many things a read gave, when it is a list or carries one: the "148" of "read the list · 148 posts". */
@@ -134,6 +135,8 @@ export async function callTool(
 	tool: AssistantTool | undefined,
 	rawInput: unknown,
 	propose: Propose,
+	/** The call's own id: a write names it, so the same call run again after a cut proposes nothing twice. */
+	callId = "",
 ): Promise<ToolOutcome> {
 	if (!tool) return { kind: "read", output: toolError(new UnknownOperationError("")), error: true };
 	try {
@@ -146,7 +149,7 @@ export async function callTool(
 					error: true,
 					items: [],
 				};
-			const proposed = await propose(tool.operation, input, group.trim().slice(0, 80));
+			const proposed = await propose(tool.operation, input, group.trim().slice(0, 80), callId);
 			return {
 				kind: "write",
 				output: {
