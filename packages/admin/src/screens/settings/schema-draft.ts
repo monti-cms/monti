@@ -1,7 +1,9 @@
 import {
+	type AdminLanguage,
 	type AdminValues,
 	type CollectionDefinition,
 	type FieldDefinition,
+	type LocalesDefinition,
 	type Rename,
 	type Schema,
 	sameJson,
@@ -17,6 +19,12 @@ export type SchemaRead = {
 	locked: boolean;
 	fileChanged: boolean;
 	failedChange: string | null;
+};
+
+/** What `settings.read` answers (doc 12): the schema's read and the two rows of admin values the settings screen holds. */
+export type SettingsRead = SchemaRead & {
+	site: { name: string; writing: string; version: number };
+	admin: { language: AdminLanguage | null; templates: boolean; version: number };
 };
 
 /** The blocks and marks the site's editor has (`blocks.catalog`), the ones a collection's editor tab turns on and off. */
@@ -43,8 +51,19 @@ export const HEADINGS = [2, 3, 4] as const;
  * - `field:<c>:<key>` a field (`DraftField`, `null` once removed)
  * - `ca:<c>:label|folders|layout` the collection's admin values · `fa:<c>:<key>:<value>` a field's
  * - `ed:<c>:block:<type>`, `ed:<c>:mark:<type>`, `ed:<c>:heading:<level>` what its editor allows
+ *
+ * The site and language tabs share the draft (doc 12):
+ *
+ * - `site:name`, `site:writing` the site's admin values
+ * - `locale:<code>` a language (`{ name }`, `null` once taken out) · `locales:order` the codes in their order · `locales:source` the source
+ *   language's code · `locales:prefix` how addresses show the language
  */
 export const at = {
+	site: (value: "name" | "writing") => `site:${value}`,
+	locale: (code: string) => `locale:${code}`,
+	localeOrder: "locales:order",
+	localeSource: "locales:source",
+	localePrefix: "locales:prefix",
 	collection: (c: string) => `col:${c}`,
 	path: (c: string) => `path:${c}`,
 	field: (c: string, key: string) => `field:${c}:${key}`,
@@ -83,9 +102,82 @@ const allows = (list: "all" | string[] | undefined, type: string) =>
 export const listedBlocks = (catalog: Catalog) =>
 	catalog.blocks.filter((block) => block.menu !== null && block.type !== "paragraph" && block.type !== "heading");
 
+/** The settings tab a place belongs to: its dot, and where a row of the changes list goes. */
+export function tabOf(path: Path): "site" | "languages" | "collections" {
+	if (path.startsWith("site:") || path === at.localePrefix) return "site";
+	return path.startsWith("locale:") || path.startsWith("locales:") ? "languages" : "collections";
+}
+
+/** A language as the draft holds it: its own name ("한국어"). */
+export type DraftLocale = { name: string };
+
+/** One row of the language tab: the saved languages and the ones the draft adds, in the order shown, the source first. */
+export type LocaleRow = { code: string; name: string; source: boolean; state: "same" | "added" | "gone" };
+
+/**
+ * The languages as the draft has them. `paths` are the places changed or proposed (a new language is only there); `value` reads a place. The source
+ * stands first (flow 11, step 07b); a language taken out keeps its row until the save.
+ */
+export function localeRows(read: SchemaRead, paths: Path[], value: Values): LocaleRow[] {
+	const saved = read.schema.locales.list.map((locale) => locale.code);
+	const codes = [...saved];
+	for (const path of paths)
+		if (path.startsWith("locale:") && !codes.includes(path.slice(7)) && value(path)) codes.push(path.slice(7));
+	const order = ((value(at.localeOrder) as string[] | undefined) ?? saved).filter((code) => codes.includes(code));
+	const ordered = [...order, ...codes.filter((code) => !order.includes(code))];
+	const source = String(value(at.localeSource) ?? read.schema.locales.source);
+	return [...ordered.filter((code) => code === source), ...ordered.filter((code) => code !== source)].map((code) => {
+		const locale = value(at.locale(code)) as DraftLocale | null | undefined;
+		const before = read.schema.locales.list.find((each) => each.code === code);
+		return {
+			code,
+			name: locale?.name ?? before?.name ?? code,
+			source: code === source,
+			state: !locale ? "gone" : before ? "same" : "added",
+		};
+	});
+}
+
+/** The languages the draft makes: the rows still there, in order, with the source and the way addresses show the language. */
+export function buildLocales(read: SchemaRead, paths: Path[], value: Values): LocalesDefinition {
+	const rows = localeRows(read, paths, value).filter((row) => row.state !== "gone");
+	return {
+		source: rows.find((row) => row.source)?.code ?? read.schema.locales.source,
+		list: rows.map((row) => ({ code: row.code, name: row.name })),
+		prefix: (value(at.localePrefix) as LocalesDefinition["prefix"] | undefined) ?? read.schema.locales.prefix,
+	};
+}
+
+/** The places a proposed set of languages writes, read against the saved one: languages added and taken out, the source, the order, the prefix. */
+export function localeProposalPaths(read: SchemaRead, locales: LocalesDefinition | undefined): Record<Path, unknown> {
+	const out: Record<Path, unknown> = {};
+	if (!locales) return out;
+	const saved = read.schema.locales;
+	const had = saved.list.map((locale) => locale.code);
+	const has = locales.list.map((locale) => locale.code);
+	for (const locale of locales.list)
+		if (!had.includes(locale.code)) out[at.locale(locale.code)] = { name: locale.name } satisfies DraftLocale;
+	for (const code of had) if (!has.includes(code)) out[at.locale(code)] = null;
+	if (locales.source !== saved.source) out[at.localeSource] = locales.source;
+	if (locales.prefix !== saved.prefix) out[at.localePrefix] = locales.prefix;
+	// The order counts only among the languages both have: a new one at the end is no reordering.
+	const kept = (codes: string[], other: string[]) => codes.filter((code) => other.includes(code));
+	if (!sameJson(kept(has, had), kept(had, has))) out[at.localeOrder] = has;
+	return out;
+}
+
 /** The saved values, flattened to the draft's places. */
-export function flatten(read: SchemaRead, catalog: Catalog | null): Record<Path, unknown> {
+export function flatten(read: SchemaRead | SettingsRead, catalog: Catalog | null): Record<Path, unknown> {
 	const base: Record<Path, unknown> = {};
+	if ("site" in read) {
+		base[at.site("name")] = read.site.name;
+		base[at.site("writing")] = read.site.writing;
+	}
+	for (const locale of read.schema.locales.list)
+		base[at.locale(locale.code)] = { name: locale.name } satisfies DraftLocale;
+	base[at.localeOrder] = read.schema.locales.list.map((locale) => locale.code);
+	base[at.localeSource] = read.schema.locales.source;
+	base[at.localePrefix] = read.schema.locales.prefix;
 	for (const [c, collection] of Object.entries(read.schema.collections)) {
 		const values = read.adminValues[c];
 		base[at.collection(c)] = { kind: collection.kind };
@@ -142,8 +234,7 @@ export function newFieldKey(taken: string[], name: string): string {
 
 /** The schema the draft makes, the renames it holds and, for each collection, its admin values in full under the fields' names now. */
 export function build(read: SchemaRead, changed: Path[], value: Values, catalog: Catalog | null) {
-	// The languages are the settings' language tab's (doc 04): this screen keeps them as they are.
-	const schema: Schema = { locales: read.schema.locales, collections: {} };
+	const schema: Schema = { locales: buildLocales(read, changed, value), collections: {} };
 	const renames: Rename[] = [];
 	const adminValues: Record<string, AdminValues> = {};
 	for (const c of collectionKeys(read, changed)) {
@@ -282,9 +373,9 @@ export function proposalPaths(
 	read: SchemaRead,
 	input: { draft?: Schema; renames?: Rename[]; adminValues?: Record<string, AdminValues> },
 ): Record<Path, unknown> {
-	const out: Record<Path, unknown> = {};
 	const draft = input.draft;
-	if (!draft) return out;
+	if (!draft) return {};
+	const out: Record<Path, unknown> = localeProposalPaths(read, draft.locales);
 	const renames = input.renames ?? [];
 	const labels = (c: string, key: string, name: string) => {
 		for (const each of FIELD_VALUES) {

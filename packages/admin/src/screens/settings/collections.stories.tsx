@@ -106,10 +106,11 @@ async function openChanges(page: ReturnType<typeof within>, body: ReturnType<typ
 	await body.findByRole("menu", {}, wait);
 }
 
-/** Opens settings from the sidebar and waits for the collections; sheets and menus are in the body, outside the canvas. */
+/** Opens settings from the sidebar, goes to its collections tab and waits for the collections; sheets and menus are in the body, outside the canvas. */
 async function settings(canvasElement: HTMLElement) {
 	const page = within(canvasElement);
 	await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+	await userEvent.click(await page.findByRole("link", { name: "컬렉션" }, wait));
 	await page.findByRole("button", { name: "summary 열기" }, wait);
 	return { page, body: within(canvasElement.ownerDocument.body) };
 }

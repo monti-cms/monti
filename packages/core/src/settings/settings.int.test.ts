@@ -127,16 +127,18 @@ describe("reading the settings", () => {
 
 	it("12-1 the sign-in screen gets the site's name and the admin's language with auth.state, before anyone is signed in", async () => {
 		const monti = dev();
-		type State = { site: { name: string | null; language: string | null } };
+		type State = { site: { name: string | null; language: string | null; templates: boolean } };
 		expect(((await monti.run("auth.state", {}, { actor: "admin" })) as State).site).toEqual({
 			name: null,
 			language: null,
+			templates: true,
 		});
 		await save(monti, { site: { name: "example.dev" } });
 		await monti.run("admin.setPreference", { language: "en" }, { actor: "admin" });
 		expect(((await monti.run("auth.state", {}, { actor: "admin" })) as State).site).toEqual({
 			name: "example.dev",
 			language: "en",
+			templates: true,
 		});
 	});
 });

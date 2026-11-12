@@ -16,7 +16,7 @@ import {
 } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { at } from "./schema-draft";
-import type { CollectionsDraft } from "./use-collections-draft";
+import type { SettingsDraft } from "./use-settings-draft";
 
 /** "/posts/:slug" ↔ "posts": the part of a public address the person types. */
 export const addressPart = (path: string) => path.replace(/^\//, "").replace(/\/?:slug$/, "");
@@ -37,7 +37,7 @@ export function BasicsTab({
 	collection: c,
 	onDelete,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	collection: string;
 	onDelete: () => void;
 }) {

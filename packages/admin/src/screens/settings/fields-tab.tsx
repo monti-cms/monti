@@ -47,7 +47,7 @@ import {
 	tabIndex,
 } from "./layout-moves";
 import { at, type DraftField, type Layout, shownLayout } from "./schema-draft";
-import type { CollectionsDraft } from "./use-collections-draft";
+import type { SettingsDraft } from "./use-settings-draft";
 
 /** The kind at the end of a field's line, as the schema says it: "text · 120", "[] → tag". */
 export function kindText(def: FieldDefinition): string {
@@ -172,7 +172,7 @@ export function FieldsTab({
 	onOpenField,
 	onAddField,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	collection: string;
 	tab: number;
 	onTab: (tab: number) => void;

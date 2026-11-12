@@ -86,6 +86,7 @@ const readStored = (target: Target): Stored | null => {
  */
 export function useDraft({
 	target,
+	also,
 	base,
 	version,
 	proposalValues,
@@ -93,6 +94,8 @@ export function useDraft({
 	leftSignedOut = false,
 }: {
 	target: Target;
+	/** A second record this screen shows: its pending proposals join the draft's (settings: the site's values and the schema). */
+	also?: Target;
 	/** The saved values, by path; `null` while they load. */
 	base: Record<Path, unknown> | null;
 	version: number | string | null;
@@ -110,7 +113,7 @@ export function useDraft({
 	 */
 	leftSignedOut?: boolean;
 }) {
-	const proposals = useProposals(target);
+	const proposals = useProposals(target, also ?? null);
 	const discardOp = useOperation("proposals.discard");
 	const [mine, setMine] = useState<Map<Path, unknown>>(new Map());
 	const [quick, setQuick] = useState<Set<Path>>(new Set());
@@ -317,6 +320,16 @@ export function useDraft({
 		saved: () => {
 			setMine(new Map());
 			setQuick(new Set());
+			setAccepted([]);
+			void proposals.reload();
+		},
+		/**
+		 * After a save that went through in part (settings: the admin values saved, the schema file not written): given the values the server has
+		 * now, my changes that are saved leave the draft and the rest stay to be saved again.
+		 */
+		savedPart: (now: Record<Path, unknown>) => {
+			setMine((current) => new Map([...current].filter(([path, mine]) => !sameJson(mine, now[path]))));
+			// The items taken into the draft went with the save: the server has marked them applied.
 			setAccepted([]);
 			void proposals.reload();
 		},

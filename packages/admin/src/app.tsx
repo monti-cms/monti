@@ -18,7 +18,7 @@ import { filterColumn, type ListState, writeState } from "./screens/list/list-qu
 import { ListScreen } from "./screens/list/list-screen";
 import { LoginScreen } from "./screens/login/login-screen";
 import { MediaScreen } from "./screens/media/media-screen";
-import { CollectionsScreen } from "./screens/settings/collections-screen";
+import { SettingsScreen } from "./screens/settings/settings-screen";
 import { TemplateEditor } from "./screens/templates/template-editor";
 import { TemplatesScreen } from "./screens/templates/templates-screen";
 import { TrashScreen } from "./screens/trash/trash-screen";
@@ -66,7 +66,7 @@ const routeOf = (place: Place): Route =>
 		? // A collection's row opens its first list: no filters, newest change first (doc 06, decisions).
 			{ screen: "list", collection: place.collection, params: new URLSearchParams() }
 		: place === "settings"
-			? { screen: "settings" }
+			? { screen: "settings", tab: "site" }
 			: place === "media"
 				? { screen: "media", params: new URLSearchParams() }
 				: place === "trash"
@@ -130,6 +130,7 @@ function Signed() {
 					)
 				}
 				onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
+				onLanguages={() => leave(() => go({ screen: "settings", tab: "languages" }))}
 			/>
 		);
 	if (route.screen === "template")
@@ -148,14 +149,20 @@ function Signed() {
 			onOpen={open}
 			onReview={() =>
 				leave(() => {
-					go({ screen: "settings" });
+					go({ screen: "settings", tab: "collections" });
 					setReview((count) => count + 1);
 				})
 			}
 			counts={counts.data}
 		>
 			{route.screen === "settings" ? (
-				<CollectionsScreen onOpen={open} review={review} />
+				// One screen for the four tabs: they share a draft, so a move between them asks nothing and loses nothing (doc 12).
+				<SettingsScreen
+					tab={route.tab}
+					onTab={(tab) => go({ screen: "settings", tab })}
+					onOpen={open}
+					review={review}
+				/>
 			) : route.screen === "place" && route.place === "tools" ? (
 				<TemplatesScreen onOpen={(id) => go({ screen: "template", id })} />
 			) : route.screen === "media" ? (

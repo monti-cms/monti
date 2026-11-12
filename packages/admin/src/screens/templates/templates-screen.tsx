@@ -38,10 +38,17 @@ export function shortDate(value: string, language: string) {
  * The tools' tab row comes with a second tool; until then the page is the templates alone (T44's rule for one tab).
  */
 export function TemplatesScreen({ onOpen }: { onOpen: (template: string | null) => void }) {
-	const { t, language } = useAdmin();
-	const list = useRead<TemplateRow[]>("templates.list", {}, { afterWrites: true });
+	const { t, language, templates } = useAdmin();
+	const list = useRead<TemplateRow[]>("templates.list", {}, { afterWrites: true, skip: !templates });
 	const duplicate = useOperation("templates.duplicate");
 	const remove = useOperation("templates.remove");
+	// Body templates turned off in settings › admin (doc 03): the tools keep their page, without the templates. They are not deleted.
+	if (!templates)
+		return (
+			<PageColumn width="content">
+				<PageHeader title={t("tools.title")} />
+			</PageColumn>
+		);
 	return (
 		<PageColumn width="content">
 			<PageHeader title={t("tools.title")}>

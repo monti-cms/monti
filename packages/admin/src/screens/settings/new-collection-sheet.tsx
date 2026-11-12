@@ -23,7 +23,7 @@ import { useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { addressOf, addressPart } from "./basics-tab";
 import { at, type DraftField } from "./schema-draft";
-import type { CollectionsDraft } from "./use-collections-draft";
+import type { SettingsDraft } from "./use-settings-draft";
 
 /** A collection's identifier: the schema's rule (`checkSchema`), so a wrong one is caught before it is made. */
 const IDENTIFIER = /^[a-z][a-zA-Z0-9]*$/;
@@ -38,7 +38,7 @@ export function NewCollectionSheet({
 	onClose,
 	onMade,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	open: boolean;
 	onClose: () => void;
 	onMade: (collection: string) => void;
@@ -55,7 +55,7 @@ function Body({
 	onClose,
 	onMade,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	onClose: () => void;
 	onMade: (collection: string) => void;
 }) {

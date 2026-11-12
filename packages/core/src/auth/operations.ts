@@ -35,7 +35,7 @@ export const authOperations = [
 		kind: "read",
 		open: true,
 		description:
-			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, who is signed in, and what the sign-in screen shows before anyone is: the site's name and the admin's language as saved in the settings.",
+			"The ways to sign in (a password, and sign-ins at another site such as GitHub, each with the admin API path that starts it), whether there is an admin yet, who is signed in, and what the admin draws with before any screen opens: the site's name and the admin's language as saved in the settings, and whether body templates are offered.",
 		input: z.object({}),
 		async run(_input, ctx) {
 			return {

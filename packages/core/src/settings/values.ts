@@ -55,12 +55,19 @@ export async function writeSettings(db: Db, id: SettingsId, values: Record<strin
 		.execute();
 }
 
-/** What the sign-in screen and the frame show before any screen reads the settings: the site's name and the admin's language, `null` until saved. */
-export async function siteFace(db: Db): Promise<{ name: string | null; language: AdminLanguage | null }> {
+/**
+ * What the admin needs before any screen reads the settings (doc 12): the site's name and the admin's language for the sign-in screen and the frame,
+ * `null` until saved, and whether body templates are offered.
+ */
+export async function siteFace(
+	db: Db,
+): Promise<{ name: string | null; language: AdminLanguage | null; templates: boolean }> {
 	const [site, admin] = await Promise.all([readSettings(db, "site"), readSettings(db, "admin")]);
+	const preferences = AdminPreferences.parse(admin.values);
 	return {
 		name: SiteValues.parse(site.values).name || null,
-		language: AdminPreferences.parse(admin.values).language ?? null,
+		language: preferences.language ?? null,
+		templates: preferences.templates ?? true,
 	};
 }
 
