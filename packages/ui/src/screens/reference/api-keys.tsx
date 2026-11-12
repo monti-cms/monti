@@ -43,7 +43,6 @@ import {
 	PageToolbar,
 	PickList,
 	PickListItem,
-	PickListLabel,
 	RowActions,
 	RowMore,
 	SavedValue,
@@ -316,7 +315,6 @@ function Floating({ stage }: { stage: ApiKeysStage }) {
 							<DialogTitle>키 추가</DialogTitle>
 						</DialogHeader>
 						<PickList aria-label="서비스">
-							<PickListLabel>AI</PickListLabel>
 							{SERVICES.map((service) => (
 								<PickListItem key={service}>{service}</PickListItem>
 							))}
@@ -456,10 +454,11 @@ function Floating({ stage }: { stage: ApiKeysStage }) {
 				<AlertDialog defaultOpen>
 					<AlertDialogContent>
 						<AlertDialogHeader>
-							<AlertDialogTitle>Anthropic 개인을 지울까요?</AlertDialogTitle>
+							<AlertDialogTitle>키를 지울까요?</AlertDialogTitle>
 							<AlertDialogDescription>되돌릴 수 없습니다. 이 키를 쓰는 곳이 멈춥니다.</AlertDialogDescription>
 						</AlertDialogHeader>
 						<DescriptionList>
+							<DescriptionItem label="이름">Anthropic 개인</DescriptionItem>
 							<DescriptionItem label="어시스턴트" mono>
 								claude-sonnet-5-5
 							</DescriptionItem>
@@ -479,9 +478,12 @@ function Floating({ stage }: { stage: ApiKeysStage }) {
 				<AlertDialog defaultOpen>
 					<AlertDialogContent>
 						<AlertDialogHeader>
-							<AlertDialogTitle>예전 Gemini 키를 지울까요?</AlertDialogTitle>
+							<AlertDialogTitle>키를 지울까요?</AlertDialogTitle>
 							<AlertDialogDescription>되돌릴 수 없습니다.</AlertDialogDescription>
 						</AlertDialogHeader>
+						<DescriptionList>
+							<DescriptionItem label="이름">예전 Gemini 키</DescriptionItem>
+						</DescriptionList>
 						<AlertDialogFooter>
 							<AlertDialogCancel>취소</AlertDialogCancel>
 							<AlertDialogAction variant="danger">지우기</AlertDialogAction>

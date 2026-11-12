@@ -1321,6 +1321,18 @@ describe("the key itself goes nowhere", () => {
 		]);
 	});
 
+	it("14-1 keys stand in the order they were added, also when the clock has not moved between two of them or stands behind", async () => {
+		const monti = site();
+		const names = ["one", "two", "three", "four", "five", "six"];
+		// The same instant for the first four (a clock that does not tick), then a server whose clock is a minute behind.
+		for (const name of names.slice(0, 4)) await add(monti, { service: "anthropic", name, secret: ANTHROPIC });
+		clock = new Date(clock.getTime() - 60_000);
+		for (const name of names.slice(4)) await add(monti, { service: "anthropic", name, secret: ANTHROPIC });
+		expect((await list(monti)).keys.map((key) => key.name)).toEqual(names);
+		// The first model comes from the first key.
+		expect((await models(monti)).keys.map((key) => key.name)).toEqual(names);
+	});
+
 	it("14-4 a key is sent to its own service only", async () => {
 		const monti = site();
 		await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });

@@ -216,7 +216,9 @@ function sharedRefresh(site: Site, key: KeyRecord, refresh: () => Promise<void>)
 	return started;
 }
 
-const Name = z.string().trim().min(1).max(60);
+/** The most characters a key's name has: the window's name field stops there. */
+export const KEY_NAME_MAX = 60;
+const Name = z.string().trim().min(1).max(KEY_NAME_MAX);
 
 export const keyOperations = [
 	defineOperation({
@@ -302,7 +304,9 @@ export const keyOperations = [
 					last4: ending(input.secret),
 					models: JSON.stringify(asked.models),
 					models_at: ctx.now(),
-					created_at: ctx.now(),
+					// The list is in the order the keys were added, and this is what orders it: a key is never dated at or before the newest one,
+					// whatever this server's clock says (two servers' clocks differ, and two keys can be added within one tick of a clock).
+					created_at: sql<Date>`greatest(${ctx.now()}::timestamptz, (select max(created_at) + interval '1 millisecond' from api_keys))`,
 				})
 				.execute();
 			ctx.created({ kind: "key", id });

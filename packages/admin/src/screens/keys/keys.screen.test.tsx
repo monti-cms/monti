@@ -6,7 +6,7 @@ import { scene } from "../../../test/scene";
 import * as keys from "./keys.stories";
 import { tokenAmount } from "./keys-screen";
 
-type Loaded = { site: StorySite; net: keys.Network };
+type Loaded = { site: StorySite; net: keys.Network; letRead: () => void };
 const open = (story: Parameters<typeof scene>[0]) => scene<Loaded>(story, keys.default);
 
 const button = (name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
@@ -36,16 +36,11 @@ describe("adding a key (flow 10, 01–06)", () => {
 		await expect.element(field(/이름/)).toHaveValue("Anthropic");
 		expect(focused()).toBe(keyField().element());
 
-		let answer = () => {};
-		story.loaded().net.hold(
-			new Promise<void>((resolve) => {
-				answer = resolve;
-			}),
-		);
+		story.loaded().net.hold("held");
 		await userEvent.type(keyField(), `${keys.sample.anthropic}{Enter}`);
 		// While the service is asked, the pill says so.
 		await expect.element(button("확인하는 중…")).toBeVisible();
-		answer();
+		story.loaded().net.hold(null);
 		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
 		await expect.element(dialog()).not.toBeInTheDocument();
 		await expect.element(page.getByRole("cell", { name: /Anthropic/ }).getByText("··· a1b2")).toBeVisible();
@@ -125,18 +120,13 @@ describe("adding a key (flow 10, 01–06)", () => {
 		const story = open(keys.NoKeys);
 		await story.run();
 		await addFor("Anthropic");
-		let answer = () => {};
-		story.loaded().net.hold(
-			new Promise<void>((resolve) => {
-				answer = resolve;
-			}),
-		);
+		story.loaded().net.hold("held");
 		await userEvent.type(keyField(), keys.sample.anthropic);
 		await userEvent.click(button("추가"));
 		await expect.element(button("확인하는 중…")).toBeVisible();
 		await userEvent.click(button("취소"));
 		await expect.element(dialog()).not.toBeInTheDocument();
-		answer();
+		story.loaded().net.hold(null);
 		await expect.element(page.getByText("··· a1b2")).toBeVisible();
 	});
 
@@ -163,7 +153,70 @@ describe("adding a key (flow 10, 01–06)", () => {
 	});
 });
 
+describe("the key window as one window", () => {
+	it("14-1 picking the service turns the same window into the key's fields: nothing closes and opens between the two", async () => {
+		await open(keys.NoKeys).run();
+		await userEvent.click(button("키 추가"));
+		await expect.element(page.getByRole("option", { name: "Anthropic" })).toBeVisible();
+		const first = dialog().element();
+		await userEvent.click(page.getByRole("option", { name: "Anthropic" }));
+		await expect.element(keyField()).toBeVisible();
+		// The window that asked for the service is the one that asks for the key, over the one backdrop.
+		expect(dialog().element()).toBe(first);
+		expect(document.querySelectorAll("[data-slot=dialog-overlay]")).toHaveLength(1);
+		expect(focused()).toBe(keyField().element());
+	});
+
+	it("14-1 closed, the window fades out as every window does, and a new one starts empty", async () => {
+		await open(keys.NoKeys).run();
+		await addFor("Anthropic");
+		await userEvent.type(keyField(), "sk-ant-half-typed");
+		await userEvent.click(button("취소"));
+		// It is still in the page, leaving.
+		const leaving = document.querySelector("[data-slot=dialog-content]");
+		expect(leaving?.hasAttribute("data-closed")).toBe(true);
+		await expect.element(dialog()).not.toBeInTheDocument();
+		await addFor("Anthropic");
+		await expect.element(keyField()).toHaveValue("");
+	});
+
+	it("14-1 changing the service in the window leaves the focus on the service, and the address field comes and goes", async () => {
+		await open(keys.NoKeys).run();
+		await addFor("Anthropic");
+		const service = page.getByRole("combobox", { name: "서비스" });
+		await userEvent.click(service);
+		await userEvent.click(page.getByRole("option", { name: "OpenAI 호환 주소" }));
+		await expect.element(field(/주소/)).toBeVisible();
+		await expect.poll(() => focused()).toBe(service.element());
+		// The name follows the service until it is typed.
+		await expect.element(field(/이름/)).toHaveValue("OpenAI 호환 주소");
+		await userEvent.click(service);
+		await userEvent.click(page.getByRole("option", { name: "OpenAI", exact: true }));
+		await expect.element(field(/주소/)).not.toBeInTheDocument();
+		await expect.poll(() => focused()).toBe(service.element());
+	});
+});
+
 describe("changing and removing a key (flow 10, 07–11)", () => {
+	it("14-1 a key changed elsewhere since the list was read: saving says so in the words every screen uses, and the list is read again", async () => {
+		const story = open(keys.Keys);
+		await story.run();
+		await menu("Anthropic 개인", "편집");
+		const { site } = story.loaded();
+		const [first] = (await list(site)).keys;
+		if (!first) throw new Error("no key");
+		await site.monti.run(
+			"keys.update",
+			{ id: first.id, name: "다른 창의 이름" },
+			{ ...keys.admin, versions: { [`key:${first.id}`]: first.version } },
+		);
+		await userEvent.fill(field(/이름/), "이 창의 이름");
+		await userEvent.click(button("저장"));
+		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).toBeVisible();
+		await expect.element(dialog()).not.toBeInTheDocument();
+		await expect.element(page.getByText("다른 창의 이름", { exact: true })).toBeVisible();
+	});
+
 	it("14-1 [flow 10·07, 10] the window shows the service as words; a new name alone is saved without asking the service", async () => {
 		const story = open(keys.Keys);
 		await story.run();
@@ -213,7 +266,9 @@ describe("changing and removing a key (flow 10, 07–11)", () => {
 		await story.run();
 		await menu("Anthropic 개인", "지우기");
 		const asking = page.getByRole("alertdialog");
-		await expect.element(asking.getByText("Anthropic 개인 키를 지울까요?")).toBeVisible();
+		// The question has no name in it; which key stands first in the window, before what stops.
+		await expect.element(asking.getByRole("heading", { name: "키를 지울까요?" })).toBeVisible();
+		await expect.element(asking.getByText("Anthropic 개인")).toBeVisible();
 		await expect.element(asking.getByText("claude-sonnet-5-5")).toBeVisible();
 		await expect.element(asking.getByText("claude-haiku-5-5")).toBeVisible();
 		await userEvent.click(asking.getByRole("button", { name: "취소" }));
@@ -232,6 +287,8 @@ describe("changing and removing a key (flow 10, 07–11)", () => {
 	it("14-1 [flow 10·11b] a key nothing uses is asked about without a list", async () => {
 		await open(keys.RemoveUnusedKey).run();
 		const asking = page.getByRole("alertdialog");
+		await expect.element(asking.getByRole("heading", { name: "키를 지울까요?" })).toBeVisible();
+		await expect.element(asking.getByText("예전 Gemini 키")).toBeVisible();
 		await expect.element(asking.getByText("되돌릴 수 없습니다.", { exact: true })).toBeVisible();
 		await expect.element(asking.getByText("어시스턴트")).not.toBeInTheDocument();
 	});
@@ -313,6 +370,67 @@ describe("the server's secret (flow 10, 14–15)", () => {
 		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
 		await expect.element(page.getByText("키를 지웠습니다")).toBeVisible();
 		expect((await list(story.loaded().site)).keys).toHaveLength(2);
+	});
+});
+
+describe("before the list is read", () => {
+	it("14-1 a site that cannot store keys never shows the way to add one, not even while its list is being read", async () => {
+		const story = open({ loaders: keys.site({ keys: "none", secret: null, reading: true }) });
+		await story.run();
+		await expect.element(page.getByRole("link", { name: "API 키" })).toBeVisible();
+		// The read has not come: there is the title and the tabs, and nothing that depends on the list.
+		await expect.element(button("키 추가")).not.toBeInTheDocument();
+		await expect.element(page.getByText("키를 저장할 수 없습니다")).not.toBeInTheDocument();
+		story.loaded().letRead();
+		await expect.element(page.getByText("키를 저장할 수 없습니다")).toBeVisible();
+		await expect.element(button("키 추가")).not.toBeInTheDocument();
+	});
+
+	it("14-1 a site that can store keys shows the pill once its list is read", async () => {
+		const story = open({ loaders: keys.site({ reading: true }) });
+		await story.run();
+		await expect.element(page.getByRole("link", { name: "API 키" })).toBeVisible();
+		await expect.element(button("키 추가")).not.toBeInTheDocument();
+		story.loaded().letRead();
+		await expect.element(button("키 추가")).toBeVisible();
+	});
+});
+
+describe("a long name", () => {
+	it("14-1 the longest name a key may have stays on one line; where the row is too short it is cut, the key's last four keep their room, and the row is as tall as the others", async () => {
+		await open(keys.LongName).run();
+		const row = (name: string | RegExp) => page.getByRole("row", { name }).element().getBoundingClientRect();
+		const long = page.getByRole("cell", { name: /^블로그초안/ }).first();
+		const name = long.getByText(keys.longName).element();
+		const tail = () => long.getByText("··· a1b2").element().getBoundingClientRect();
+		const more = () => button(`${keys.longName} 더 보기`).element().getBoundingClientRect();
+		// As tall as the others to half a pixel: a name with no Latin letter sits on another baseline than one with some.
+		expect(tail().right).toBeLessThanOrEqual(more().left);
+		expect(Math.abs(row(/블로그초안/).height - row(/OpenAI 회사/).height)).toBeLessThanOrEqual(0.5);
+		// A smaller window, where the row is shorter than the name.
+		const { innerWidth, innerHeight } = window;
+		await page.viewport(1024, 768);
+		try {
+			expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
+			expect(tail().width).toBeGreaterThan(0);
+			expect(tail().right).toBeLessThanOrEqual(more().left);
+			expect(Math.abs(row(/블로그초안/).height - row(/OpenAI 회사/).height)).toBeLessThanOrEqual(0.5);
+		} finally {
+			await page.viewport(innerWidth, innerHeight);
+		}
+		// The model field under the list names the key too: the model keeps its room, the name gives way, and nothing leaves the field.
+		const quick = button(/빠른 작업/).element();
+		expect(quick.scrollWidth).toBeLessThanOrEqual(quick.clientWidth);
+		const model = page.getByText("claude-haiku-5-5").element();
+		const words = document.createRange();
+		words.selectNodeContents(model);
+		expect(model.getBoundingClientRect().width).toBeGreaterThanOrEqual(words.getBoundingClientRect().width);
+		// In the window that asks, the whole name is read, on as many lines as it takes, inside the window.
+		await menu(keys.longName, "지우기");
+		const asking = page.getByRole("alertdialog");
+		await expect.element(asking.getByText(keys.longName)).toBeVisible();
+		const box = asking.element();
+		expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth);
 	});
 });
 

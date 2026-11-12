@@ -44,7 +44,8 @@ function ListSection({
 }
 
 /**
- * One row of a {@link ListSection}: a title (body text in ink, or `muted`) with an optional count after it ("··· a1b2"), a meta line under it, and at
+ * One row of a {@link ListSection}: a title (body text in ink, or `muted`) with an optional count after it ("··· a1b2"), a meta line under it (words
+ * in the note type; `metaMono` for what is typed or copied as it stands, a plugin's code), and at
  * the end either text buttons (`actions`, each its own column) or one 320px control (`control`, a select or a model field). A row has one fixed height
  * for its kind, whatever it ends in: 52px for a title alone, 74px for a title with a meta line (its line inside). A control (36px) stands in the row
  * without making it taller.
@@ -55,6 +56,7 @@ function ListSectionRow({
 	detail,
 	meta,
 	metaTone = "muted",
+	metaMono = false,
 	muted = false,
 	actions,
 	control,
@@ -69,6 +71,8 @@ function ListSectionRow({
 	meta?: React.ReactNode;
 	/** `faint` for a row that has nothing to report, `danger` for one that cannot be used, `subtle` for an identifier. */
 	metaTone?: "muted" | "subtle" | "faint" | "danger";
+	/** The meta line is an identifier, written as it is typed or copied (a plugin's code): mono. Words a person reads stay in the note type. */
+	metaMono?: boolean;
 	/** The title in muted ink (a key that is not used). */
 	muted?: boolean;
 	/** Text buttons at the end, one column each. */
@@ -100,7 +104,8 @@ function ListSectionRow({
 				{meta !== undefined && (
 					<span
 						className={cn(
-							"mt-monti-2 truncate font-mono text-monti-meta",
+							"mt-monti-2 truncate",
+							metaMono ? "font-mono text-monti-meta" : "text-monti-note",
 							metaTone === "muted" && "text-monti-muted",
 							metaTone === "subtle" && "text-monti-subtle",
 							metaTone === "faint" && "text-monti-faint",

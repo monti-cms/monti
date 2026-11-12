@@ -5,7 +5,7 @@ import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-s
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
 
-type Loaded = { site: StorySite; net: Network };
+type Loaded = { site: StorySite; net: Network; letRead: () => void };
 type Monti = StorySite["monti"];
 
 const meta = {
@@ -31,19 +31,27 @@ export const sample = {
 	refused: "sk-ant-api03-a-key-the-service-refuses",
 	unanswered: "sk-ant-api03-a-key-nobody-answers-for",
 };
+/** A name longer than a row: as long as a key's name may be (60 characters), with no room to break at. */
+export const longName =
+	"블로그초안과요약에만쓰려고개인계정으로따로받아둔한도가낮은키이며다른일에는절대로쓰지않기로한바로그키입니다그리고이름이아";
 
 export type Network = {
 	fetch: typeof globalThis.fetch;
 	/** Every request that reached a service: its address and headers. */
 	requests: { url: string; headers: Record<string, string> }[];
-	/** Held, the services answer nothing until it is let go: the moment the window says "확인하는 중…". */
-	hold: (until: Promise<void> | null) => void;
+	/** Held, the services answer nothing until it is let go (`null`): the moment the window says "확인하는 중…". */
+	hold: (until: "held" | null) => void;
 };
 
 /** The services as the stories' network: which keys each takes and the models it lists. No story reaches a real service. */
 export function network(): Network {
 	const requests: Network["requests"] = [];
 	let held: Promise<void> | null = null;
+	let letGo = () => {};
+	const gate = () =>
+		new Promise<void>((resolve) => {
+			letGo = resolve;
+		});
 	const json = (status: number, body: unknown) =>
 		new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 	const taken = new Set<string>([sample.anthropic, sample.anthropicNew, sample.openai, sample.gemini]);
@@ -86,7 +94,8 @@ export function network(): Network {
 		fetch,
 		requests,
 		hold: (until) => {
-			held = until;
+			letGo();
+			held = until === null ? null : gate();
 		},
 	};
 }
@@ -96,8 +105,6 @@ async function threeKeys(monti: Monti) {
 	const add = async (input: { service: string; name: string; secret: string }, tokens: number) => {
 		const made = (await monti.run("keys.add", input, admin)) as { output: { id: string } };
 		if (tokens > 0) await monti.keys.addUsage(made.output.id, tokens);
-		// The list is in the order the keys were added, by the time of each: a moment apart, as a person adds them.
-		await new Promise((resolve) => setTimeout(resolve, 5));
 	};
 	await add({ service: "anthropic", name: "Anthropic 개인", secret: sample.anthropic }, 1_240_000);
 	await add({ service: "openai", name: "OpenAI 회사", secret: sample.openai }, 312_000);
@@ -106,14 +113,17 @@ async function threeKeys(monti: Monti) {
 
 /**
  * A site for a keys story. `keys`: which keys it has. `secret`: the server's secret as the story's server has it; `"other"` is a server whose
- * secret changed since the keys were stored, `null` one that has none (the keys, if any, were stored when it had one).
+ * secret changed since the keys were stored, `null` one that has none (the keys, if any, were stored when it had one). `reading`: the list of keys
+ * does not come until `letRead` is called (the screen before its read).
  */
-const site = ({
+export const site = ({
 	keys = "three",
 	secret = siteSecret,
+	reading = false,
 }: {
-	keys?: "three" | "none" | "named";
+	keys?: "three" | "none" | "named" | "long";
 	secret?: string | null | "other";
+	reading?: boolean;
 } = {}) => [
 	async (): Promise<Loaded> => {
 		startAt("#/tools/keys");
@@ -130,12 +140,25 @@ const site = ({
 				const first = createMonti({ db: monti.db, schema, files: null, secret: siteSecret, fetch: net.fetch });
 				if (keys === "named")
 					await first.run("keys.add", { service: "anthropic", name: "Anthropic", secret: sample.anthropic }, admin);
-				else await threeKeys(first);
+				else if (keys === "long") {
+					await first.run("keys.add", { service: "anthropic", name: longName, secret: sample.anthropic }, admin);
+					await first.run("keys.add", { service: "openai", name: "OpenAI 회사", secret: sample.openai }, admin);
+				} else await threeKeys(first);
 			},
 		});
 		// What the setup asked of the services is not what the story is about.
 		net.requests.length = 0;
-		return { site: made, net };
+		let letRead = () => {};
+		const read = reading
+			? new Promise<void>((resolve) => {
+					letRead = resolve;
+				})
+			: null;
+		const transport: StorySite["transport"] = async (name, ...rest) => {
+			if (read && name === "keys.list") await read;
+			return made.transport(name, ...rest);
+		};
+		return { site: { ...made, transport }, net, letRead };
 	},
 ];
 
@@ -164,6 +187,15 @@ export const NoKeys: Story = {
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
 		await page.findByText("아직 키가 없습니다.", {}, wait);
+	},
+};
+
+/** A name longer than its row is cut, and the key's last four keep their room. */
+export const LongName: Story = {
+	loaders: site({ keys: "long" }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await page.findByText("OpenAI 회사", {}, wait);
 	},
 };
 
@@ -230,6 +262,45 @@ export const Refused: Story = {
 		await userEvent.type(await page.findByLabelText("키"), sample.refused);
 		await userEvent.click(page.getByRole("button", { name: "추가" }));
 		await page.findByText("맞지 않는 키입니다.", {}, wait);
+	},
+};
+
+/** The service is being asked whether it takes the key: the pill says so and cannot be pressed again (step 3). */
+export const Checking: Story = {
+	loaders: site({ keys: "none" }),
+	play: async ({ canvasElement, loaded }) => {
+		const page = await screen(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "키 추가" }, wait));
+		await userEvent.click(await page.findByRole("option", { name: "Anthropic" }));
+		await userEvent.type(await page.findByLabelText("키"), sample.anthropic);
+		(loaded as Loaded).net.hold("held");
+		await userEvent.click(page.getByRole("button", { name: "추가" }));
+		await page.findByRole("button", { name: "확인하는 중…" }, wait);
+	},
+};
+
+/** A service that does not answer: the same place says so, and pressing again asks again. */
+export const NoAnswer: Story = {
+	loaders: site({ keys: "none" }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "키 추가" }, wait));
+		await userEvent.click(await page.findByRole("option", { name: "Anthropic" }));
+		await userEvent.type(await page.findByLabelText("키"), sample.unanswered);
+		await userEvent.click(page.getByRole("button", { name: "추가" }));
+		await page.findByText("서비스가 답하지 않습니다.", {}, wait);
+	},
+};
+
+/** Sent with the key empty: the field says to fill it in, and the service is not asked. */
+export const MissingField: Story = {
+	loaders: site({ keys: "none" }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "키 추가" }, wait));
+		await userEvent.click(await page.findByRole("option", { name: "Anthropic" }));
+		await userEvent.click(await page.findByRole("button", { name: "추가" }));
+		await page.findByText("이 칸을 채워 주세요.");
 	},
 };
 

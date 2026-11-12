@@ -42,7 +42,7 @@ import { Add } from "@monti-cms/ui/icons";
 import { type ReactNode, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
-import { KeyDialog, type KeyDialogState, ServiceDialog } from "./key-dialog";
+import { KeyWindow, type KeyWindowState } from "./key-dialog";
 
 /** Tokens as the list writes them: as they are under a thousand, then in thousands, then in millions with two decimals ("812", "312K", "1.24M"). */
 export function tokenAmount(tokens: number): string {
@@ -65,14 +65,17 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 	const models = useRead<ModelList>("models.list", {}, { afterWrites: true });
 	const setQuick = useOperation("models.setQuick");
 	const remove = useOperation("keys.remove");
-	const [picking, setPicking] = useState(false);
-	const [dialog, setDialog] = useState<KeyDialogState | null>(null);
+	/** The key window: what it is open for, and whether it is open. It stays in the page while it fades out, and each opening is a new one (`nth`). */
+	const [keyWindow, setKeyWindow] = useState<{ state: KeyWindowState; open: boolean; nth: number } | null>(null);
+	const openWindow = (state: KeyWindowState) =>
+		setKeyWindow((was) => ({ state, open: true, nth: (was?.nth ?? 0) + 1 }));
 	/** The key the question is about, and whether the question is open: the key stays while the question closes, so its words do not empty. */
 	const [removing, setRemoving] = useState<KeyRow | null>(null);
 	const [asking, setAsking] = useState(false);
 
 	const keys = list.data?.keys ?? [];
-	const canStore = list.data?.canStore ?? true;
+	// Nothing that depends on the list is drawn before it is read: a site that cannot store keys never shows the way to add one.
+	const canStore = list.data?.canStore ?? false;
 	const unreadable = keys.filter((key) => !key.readable).length;
 	const quick = models.data?.quick ?? null;
 	const quickKey = quick ? models.data?.keys.find((key) => key.id === quick.keyId) : undefined;
@@ -99,7 +102,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 			</PageBanner>
 			<PageHeader title={t("tools.title")}>
 				{canStore ? (
-					<Button variant="primary" onClick={() => setPicking(true)}>
+					<Button variant="primary" onClick={() => openWindow({ mode: "pick" })}>
 						<Add aria-hidden />
 						{t("apiKeys.add")}
 					</Button>
@@ -149,7 +152,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 																{/* A site that cannot store keys cannot store a changed one either: it only removes. */}
 																{canStore ? (
 																	<>
-																		<DropdownMenuItem onClick={() => setDialog({ mode: "edit", key })}>
+																		<DropdownMenuItem onClick={() => openWindow({ mode: "edit", key })}>
 																			{t("apiKeys.edit")}
 																		</DropdownMenuItem>
 																		<DropdownMenuSeparator />
@@ -217,7 +220,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 												aria-labelledby="keys-quick-model"
 												size="default"
 												placeholder={t("apiKeys.noKey")}
-												onClick={() => setPicking(true)}
+												onClick={() => openWindow({ mode: "pick" })}
 											/>
 										)
 									}
@@ -228,37 +231,34 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 				</PageBody>
 			) : null}
 
-			<ServiceDialog
-				open={picking}
-				services={list.data?.services ?? []}
-				onClose={() => setPicking(false)}
-				onPick={(service) => {
-					setPicking(false);
-					setDialog({ mode: "add", service });
-				}}
-			/>
-			{dialog ? (
-				<KeyDialog
-					key={dialog.mode === "add" ? `add:${dialog.service}` : `edit:${dialog.key.id}`}
-					state={dialog}
+			{keyWindow ? (
+				<KeyWindow
+					state={keyWindow.state}
+					open={keyWindow.open}
+					nth={keyWindow.nth}
 					services={list.data?.services ?? []}
 					names={keys.map((key) => key.name)}
-					onClose={() => setDialog(null)}
+					onPick={(service) => setKeyWindow((was) => was && { ...was, state: { mode: "add", service } })}
+					onClose={() => setKeyWindow((was) => was && { ...was, open: false })}
+					// Out of the page once its fade is over, unless it was opened again meanwhile.
+					onClosed={() => setKeyWindow((was) => (was?.open ? was : null))}
 					onStale={() => void list.reload()}
 				/>
 			) : null}
 			<AlertDialog open={asking} onOpenChange={setAsking}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>{t("apiKeys.removeTitle", { name: removing?.name ?? "" })}</AlertDialogTitle>
+						<AlertDialogTitle>{t("apiKeys.removeTitle")}</AlertDialogTitle>
 						<AlertDialogDescription>
 							{removing && removing.uses.length > 0
 								? `${t("apiKeys.removeText")} ${t("apiKeys.removeStops")}`
 								: t("apiKeys.removeText")}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
-					{removing && removing.uses.length > 0 ? (
+					{/* Which key, then what stops with it. */}
+					{removing ? (
 						<DescriptionList>
+							<DescriptionItem label={t("apiKeys.name")}>{removing.name}</DescriptionItem>
 							{removing.uses.map((use) => (
 								<DescriptionItem key={use.for} label={t(`apiKeys.use.${use.for}`)} mono>
 									{use.model}
@@ -277,7 +277,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 								void remove.run({ id: key.id }, { versions: { [`key:${key.id}`]: key.version } }).then((result) => {
 									if (result.ok) toast(t("apiKeys.removed"));
 									else {
-										toast.error(t(result.refusal.reason ?? "apiKeys.conflict"));
+										toast.error(t(result.refusal.reason ?? "ui.savedElsewhere"));
 										void list.reload();
 									}
 								});

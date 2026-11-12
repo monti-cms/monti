@@ -1,4 +1,4 @@
-import type { KeyList, KeyRow } from "@monti-cms/core";
+import { KEY_NAME_MAX, type KeyList, type KeyRow } from "@monti-cms/core";
 import {
 	Button,
 	Dialog,
@@ -27,8 +27,9 @@ import { PickOne } from "../settings/pick-one";
 
 type Service = KeyList["services"][number];
 
-/** The key window is open to add a key of a service, or to change a key. */
-export type KeyDialogState = { mode: "add"; service: string } | { mode: "edit"; key: KeyRow };
+/** What the key window is open for: to pick the service of a new key, to add a key of a service, or to change a key. */
+export type KeyWindowState = { mode: "pick" } | { mode: "add"; service: string } | { mode: "edit"; key: KeyRow };
+type KeyFormState = Exclude<KeyWindowState, { mode: "pick" }>;
 
 type Field = "address" | "name" | "secret";
 
@@ -54,61 +55,85 @@ function freeName(base: string, taken: string[]): string {
 	for (let number = 2; ; number += 1) if (!taken.includes(`${base} ${number}`)) return `${base} ${number}`;
 }
 
-/** The first step of adding a key: which service it is for. Picking one opens the key window. */
-export function ServiceDialog({
+/**
+ * The key window (tools.md), one window from the add button to the stored key: it asks which service first, and picking one turns the same window
+ * into the key's fields, so nothing closes and opens between the two. `nth` counts its openings: each starts with empty fields. When it has
+ * closed and its fade is over, `onClosed` lets the screen take it out of the page, with whatever was typed.
+ */
+export function KeyWindow({
+	state,
 	open,
+	nth,
 	services,
+	names,
 	onPick,
 	onClose,
+	onClosed,
+	onStale,
 }: {
+	state: KeyWindowState;
 	open: boolean;
+	nth: number;
 	services: Service[];
+	/** The names the keys have: a new key's name starts as one not taken. */
+	names: string[];
 	onPick: (service: string) => void;
 	onClose: () => void;
+	onClosed: () => void;
+	/** The key changed elsewhere since the list was read: the list is read again. */
+	onStale: () => void;
 }) {
 	const { t } = useAdmin();
 	const nameOf = useServiceName();
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>{t("apiKeys.add")}</DialogTitle>
-				</DialogHeader>
-				<PickList aria-label={t("apiKeys.service")}>
-					{services.map((service) => (
-						<PickListItem key={service.id} onClick={() => onPick(service.id)}>
-							{nameOf(service)}
-						</PickListItem>
-					))}
-				</PickList>
-				<DialogFooter>
-					<Button variant="ghost" onClick={onClose}>
-						{t("ui.cancel")}
-					</Button>
-				</DialogFooter>
+		<Dialog
+			open={open}
+			onOpenChange={(next) => !next && onClose()}
+			onOpenChangeComplete={(next) => !next && onClosed()}
+		>
+			<DialogContent form={state.mode !== "pick"}>
+				{state.mode === "pick" ? (
+					<>
+						<DialogHeader>
+							<DialogTitle>{t("apiKeys.add")}</DialogTitle>
+						</DialogHeader>
+						<PickList aria-label={t("apiKeys.service")}>
+							{services.map((service) => (
+								<PickListItem key={service.id} onClick={() => onPick(service.id)}>
+									{nameOf(service)}
+								</PickListItem>
+							))}
+						</PickList>
+						<DialogFooter>
+							<Button variant="ghost" onClick={onClose}>
+								{t("ui.cancel")}
+							</Button>
+						</DialogFooter>
+					</>
+				) : (
+					<KeyForm key={nth} state={state} services={services} names={names} onClose={onClose} onStale={onStale} />
+				)}
 			</DialogContent>
 		</Dialog>
 	);
 }
 
 /**
- * The key window (tools.md): adds a key, or changes one's name, address or the key itself. The service is asked whether it takes the key before
- * anything is stored; what it says comes back under the field it is about, and the window stays open with what was typed. The key is in the
- * page only here, while it is typed.
+ * The key's fields: adds a key, or changes one's name, address or the key itself. The service is asked whether it takes the key before anything is
+ * stored; what it says comes back under the field it is about, and the window stays open with what was typed. The key is in the page only here,
+ * while it is typed.
  */
-export function KeyDialog({
+function KeyForm({
 	state,
 	services,
 	names,
 	onClose,
 	onStale,
 }: {
-	state: KeyDialogState;
+	state: KeyFormState;
 	services: Service[];
-	/** The names the keys have: a new key's name starts as one not taken. */
 	names: string[];
 	onClose: () => void;
-	/** The key changed elsewhere since the list was read: the list is read again. */
 	onStale: () => void;
 }) {
 	const { t } = useAdmin();
@@ -123,7 +148,9 @@ export function KeyDialog({
 		secret: useRef<HTMLInputElement>(null),
 	};
 
-	const [serviceId, setServiceId] = useState(editing ? editing.service : state.mode === "add" ? state.service : "");
+	const [serviceId, setServiceId] = useState(state.mode === "edit" ? state.key.service : state.service);
+	/** Until the service is changed in the window: the caret goes to the first empty field only as the window opens, never away from the service just picked. */
+	const [asOpened, setAsOpened] = useState(true);
 	const service = services.find((each) => each.id === serviceId);
 	const serviceName = service ? nameOf(service) : (editing?.serviceName ?? serviceId);
 	const others = editing ? names.filter((name) => name !== editing.name) : names;
@@ -196,7 +223,7 @@ export function KeyDialog({
 		// Closed while the service was being asked: there is no field left to say it under.
 		if (closed.current) return void toast.error(t(refusal.reason ?? "errors.unexpected"));
 		if (refusal.error === "conflict") {
-			toast.error(t("apiKeys.conflict"));
+			toast.error(t("ui.savedElsewhere"));
 			onStale();
 			return onClose();
 		}
@@ -246,102 +273,98 @@ export function KeyDialog({
 	);
 
 	return (
-		<Dialog open onOpenChange={(open) => !open && close()}>
-			<DialogContent form>
-				<Stack as="form" gap={16} onSubmit={(event) => void submit(event as FormEvent)}>
-					<DialogHeader>
-						<DialogTitle of={editing ? editing.name : undefined}>
-							{t(editing ? "apiKeys.edit" : "apiKeys.add")}
-						</DialogTitle>
-					</DialogHeader>
-					<FormField>
-						<FormFieldLabel htmlFor={editing ? undefined : ids.service}>{t("apiKeys.service")}</FormFieldLabel>
-						{editing ? (
-							<Text>{serviceName}</Text>
-						) : (
-							<PickOne
-								id={ids.service}
-								items={services.map((each) => ({ value: each.id, label: nameOf(each) }))}
-								value={serviceId}
-								onChange={(next) => {
-									setServiceId(next);
-									setErrors({});
-									if (!named)
-										setName(
-											suggested(
-												services.find((each) => each.id === next),
-												address,
-											).name,
-										);
-								}}
-							/>
-						)}
-					</FormField>
-					{service?.address ? (
-						<FormField>
-							<FormFieldLabel htmlFor={ids.address} required={service.keyOptional}>
-								{t("apiKeys.address")}
-							</FormFieldLabel>
-							<Input
-								ref={inputs.address}
-								id={ids.address}
-								mono
-								value={address}
-								onChange={(event) => {
-									setAddress(event.target.value);
-									if (!editing && !named) setName(suggested(service, event.target.value).name);
-								}}
-								aria-invalid={errors.address !== undefined || undefined}
-								autoFocus={!editing}
-							/>
-							{errors.address ? <FormFieldError>{errors.address}</FormFieldError> : null}
-						</FormField>
-					) : null}
-					<FormField>
-						<FormFieldLabel htmlFor={ids.name} required={service?.keyOptional}>
-							{t("apiKeys.name")}
-						</FormFieldLabel>
-						<Input
-							ref={inputs.name}
-							id={ids.name}
-							value={name}
-							onChange={(event) => {
-								setName(event.target.value);
-								setNamed(true);
-							}}
-							aria-invalid={errors.name !== undefined || undefined}
-							autoFocus={editing?.readable}
-						/>
-						{errors.name ? (
-							<FormFieldError>{errors.name}</FormFieldError>
-						) : !editing && !named && name !== hint.base ? (
-							// The name was taken, so the window put a number after it: it says which name that was.
-							<FormFieldDescription>{t("apiKeys.nameTaken", { name: hint.base })}</FormFieldDescription>
-						) : null}
-					</FormField>
-					<FormField>
-						<FormFieldLabel htmlFor={replacing ? ids.secret : undefined}>{t("apiKeys.key")}</FormFieldLabel>
-						{editing && !replacing ? (
-							<SavedValue action={{ label: t("apiKeys.replace"), onClick: () => setReplacing(true) }}>
-								{editing.last4 ? `··· ${editing.last4}` : editing.hasKey ? "···" : t("apiKeys.noneValue")}
-							</SavedValue>
-						) : (
-							secretField
-						)}
-						{errors.secret ? (
-							<FormFieldError>{errors.secret}</FormFieldError>
-						) : editing && !editing.readable ? (
-							<FormFieldDescription>{t("apiKeys.enterAgain")}</FormFieldDescription>
-						) : null}
-					</FormField>
-					<DialogFormFooter
-						onCancel={close}
-						submitLabel={t(editing ? "ui.save" : "apiKeys.addSubmit")}
-						busy={pending}
-						busyLabel={checking ? t("apiKeys.checking") : undefined}
+		<Stack as="form" gap={16} onSubmit={(event) => void submit(event as FormEvent)}>
+			<DialogHeader>
+				<DialogTitle of={editing ? editing.name : undefined}>{t(editing ? "apiKeys.edit" : "apiKeys.add")}</DialogTitle>
+			</DialogHeader>
+			<FormField>
+				<FormFieldLabel htmlFor={editing ? undefined : ids.service}>{t("apiKeys.service")}</FormFieldLabel>
+				{editing ? (
+					<Text>{serviceName}</Text>
+				) : (
+					<PickOne
+						id={ids.service}
+						items={services.map((each) => ({ value: each.id, label: nameOf(each) }))}
+						value={serviceId}
+						onChange={(next) => {
+							setServiceId(next);
+							setAsOpened(false);
+							setErrors({});
+							if (!named)
+								setName(
+									suggested(
+										services.find((each) => each.id === next),
+										address,
+									).name,
+								);
+						}}
 					/>
-				</Stack>
-			</DialogContent>
-		</Dialog>
+				)}
+			</FormField>
+			{service?.address ? (
+				<FormField>
+					<FormFieldLabel htmlFor={ids.address} required={service.keyOptional}>
+						{t("apiKeys.address")}
+					</FormFieldLabel>
+					<Input
+						ref={inputs.address}
+						id={ids.address}
+						mono
+						value={address}
+						onChange={(event) => {
+							setAddress(event.target.value);
+							if (!editing && !named) setName(suggested(service, event.target.value).name);
+						}}
+						aria-invalid={errors.address !== undefined || undefined}
+						autoFocus={!editing && asOpened}
+					/>
+					{errors.address ? <FormFieldError>{errors.address}</FormFieldError> : null}
+				</FormField>
+			) : null}
+			<FormField>
+				<FormFieldLabel htmlFor={ids.name} required={service?.keyOptional}>
+					{t("apiKeys.name")}
+				</FormFieldLabel>
+				<Input
+					ref={inputs.name}
+					id={ids.name}
+					maxLength={KEY_NAME_MAX}
+					value={name}
+					onChange={(event) => {
+						setName(event.target.value);
+						setNamed(true);
+					}}
+					aria-invalid={errors.name !== undefined || undefined}
+					autoFocus={editing?.readable}
+				/>
+				{errors.name ? (
+					<FormFieldError>{errors.name}</FormFieldError>
+				) : !editing && !named && name !== hint.base ? (
+					// The name was taken, so the window put a number after it: it says which name that was.
+					<FormFieldDescription>{t("apiKeys.nameTaken", { name: hint.base })}</FormFieldDescription>
+				) : null}
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor={replacing ? ids.secret : undefined}>{t("apiKeys.key")}</FormFieldLabel>
+				{editing && !replacing ? (
+					<SavedValue action={{ label: t("apiKeys.replace"), onClick: () => setReplacing(true) }}>
+						{editing.last4 ? `··· ${editing.last4}` : editing.hasKey ? "···" : t("apiKeys.noneValue")}
+					</SavedValue>
+				) : (
+					secretField
+				)}
+				{errors.secret ? (
+					<FormFieldError>{errors.secret}</FormFieldError>
+				) : editing && !editing.readable ? (
+					<FormFieldDescription>{t("apiKeys.enterAgain")}</FormFieldDescription>
+				) : null}
+			</FormField>
+			<DialogFormFooter
+				onCancel={close}
+				submitLabel={t(editing ? "ui.save" : "apiKeys.addSubmit")}
+				busy={pending}
+				busyLabel={checking ? t("apiKeys.checking") : undefined}
+			/>
+		</Stack>
 	);
 }

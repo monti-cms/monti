@@ -67,6 +67,7 @@ export {
 export type { FolderNode } from "./folders/operations";
 export { canonical, sameJson } from "./json";
 export type { KeyList, KeyRow, KeyServiceRow, KeyUse, ModelChoice, ModelList, OpenKey } from "./keys/operations";
+export { KEY_NAME_MAX } from "./keys/operations";
 export type { KeyCheck, KeyCheckTools, KeyCredentials, KeyService, Model } from "./keys/services";
 export {
 	type Acceptance,
