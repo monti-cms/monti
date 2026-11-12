@@ -82,7 +82,9 @@ export function focusText(body: () => Editor | null, titleId: string) {
 		requestAnimationFrame(() => {
 			if (document.activeElement !== document.body) return;
 			const view = body();
-			if (view && !view.isDestroyed) return view.commands.focus();
+			// A body that gave its place away is taken down a task later, not at once: under load two frames can pass first, and the focus
+			// given to it then would go nowhere. Only a body still in the page takes it.
+			if (view && !view.isDestroyed && view.view.dom.isConnected) return view.commands.focus();
 			const title = document.getElementById(titleId);
 			if (title) title.focus();
 			else focusFirstStopWhenDrawn();

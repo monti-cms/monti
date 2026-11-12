@@ -1,6 +1,6 @@
 import type { Doc } from "@monti-cms/core";
 import { composeStories } from "@storybook/react-vite";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { caretAfter, dragPath, dropDrag, middleOf, pickWords } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
@@ -180,6 +180,25 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
 		expect(slowed).toBeGreaterThan(0);
 		await expect.element(button("편집기로")).toHaveFocus();
+	});
+
+	it("the comparison gets the focus while the body it replaced is not yet taken down", async () => {
+		await BrowserCopy.run();
+		await opened();
+		await tabTo("비교하기");
+		// The editor library takes a replaced body down a task later (a 1ms timer). On a busy page two frames pass before that task runs:
+		// hold it back, so the hand-off meets a body that is out of the page and not yet destroyed.
+		const timer = window.setTimeout;
+		const held = vi
+			.spyOn(window, "setTimeout")
+			.mockImplementation(((run: TimerHandler, ms?: number, ...rest: unknown[]) =>
+				timer(run, ms === 1 ? 400 : ms, ...rest)) as typeof window.setTimeout);
+		try {
+			await userEvent.keyboard("{Enter}");
+			await expect.element(button("편집기로")).toHaveFocus();
+		} finally {
+			held.mockRestore();
+		}
 	});
 
 	it("a save the keyboard asked of the save cell and the server refused leaves the cell, and the focus on it", async () => {
