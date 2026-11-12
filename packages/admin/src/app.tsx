@@ -1,5 +1,8 @@
-import { Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
+import { Inline, Stack, Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { AssistantPanel } from "./assistant/assistant-panel";
+import { ReviewScreen } from "./assistant/review-screen";
+import { AssistantProvider, useAssistant } from "./assistant/use-assistant";
 import { LeaveGuardProvider, useLeave, useLeaveFiles } from "./draft/leave-guard";
 import { adminMessages } from "./messages";
 import {
@@ -9,9 +12,9 @@ import {
 	type ScreenChannel,
 	useAdmin,
 } from "./operations/admin-context";
-import type { Transport, Uploader } from "./operations/transport";
+import type { StreamTransport, Transport, Uploader } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
-import { type Route, useRoute } from "./route";
+import { parseRoute, type Route, useRoute } from "./route";
 import { ActivityScreen } from "./screens/activity/activity-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
@@ -62,6 +65,8 @@ function placeOf(route: Route): Place | null {
 		case "entry":
 		case "template":
 		case "home":
+		// A proposal's review is the assistant's page: no row of the sidebar is picked (screens/assistant.md).
+		case "review":
 			return null;
 	}
 }
@@ -80,10 +85,38 @@ const routeOf = (place: Place): Route =>
 						? { screen: "activity", params: new URLSearchParams() }
 						: { screen: "place", place };
 
+/** The signed-in admin with its assistant: the conversation stays as the screens change under it. */
 function Signed() {
-	const { screen, templates } = useAdmin();
-	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
 	const { route, go } = useRoute();
+	const leave = useLeave();
+	return (
+		<AssistantProvider go={go} leave={leave}>
+			<Screens route={route} go={go} />
+		</AssistantProvider>
+	);
+}
+
+/**
+ * A page outside the frame (the editors) with the assistant's panel beside it while it is open: the page keeps the window's height and gives
+ * the panel its width.
+ */
+function BesideAssistant({ panel, children }: { panel: ReactNode; children: ReactNode }) {
+	const assistant = useAssistant();
+	if (!assistant.available || !assistant.open) return children;
+	return (
+		<Inline gap={0} align="stretch" height="screen" overflow="clip">
+			<Stack gap={0} grow minWidth={0}>
+				{children}
+			</Stack>
+			{panel}
+		</Inline>
+	);
+}
+
+function Screens({ route, go }: { route: Route; go: (route: Route, options?: { replace?: boolean }) => void }) {
+	const { screen, templates } = useAdmin();
+	const assistant = useAssistant();
+	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
 	const [review, setReview] = useState(0);
 	// Every move of the frame asks first when the open screen has unsaved changes (doc 05, flow 11 step 04).
 	const leave = useLeave();
@@ -129,33 +162,41 @@ function Signed() {
 		[screen, go],
 	);
 	const open = (place: Place) => leave(() => go(routeOf(place)));
+	// A link in an answer names a place of the admin by its address; it opens as a press on any link does.
+	const panel = <AssistantPanel onOpen={(address) => leave(() => go(parseRoute(address)))} />;
 	if (route.screen === "entry")
 		return (
-			<EntryEditor
-				key={route.id}
-				collection={route.collection}
-				id={route.id}
-				compare={route.compare ?? null}
-				onBack={() => leave(() => go({ screen: "list", collection: route.collection, params: new URLSearchParams() }))}
-				onTrash={() => leave(() => go({ screen: "trash", params: new URLSearchParams() }))}
-				// The comparison is a step inside the editor: back returns to the editor as it was, with what was typed.
-				onCompare={(compare) =>
-					leaveFiles(() =>
-						go({ screen: "entry", collection: route.collection, id: route.id, ...(compare ? { compare } : {}) }),
-					)
-				}
-				onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
-				onLanguages={() => leave(() => go({ screen: "settings", tab: "languages" }))}
-			/>
+			<BesideAssistant panel={panel}>
+				<EntryEditor
+					key={route.id}
+					collection={route.collection}
+					id={route.id}
+					compare={route.compare ?? null}
+					onBack={() =>
+						leave(() => go({ screen: "list", collection: route.collection, params: new URLSearchParams() }))
+					}
+					onTrash={() => leave(() => go({ screen: "trash", params: new URLSearchParams() }))}
+					// The comparison is a step inside the editor: back returns to the editor as it was, with what was typed.
+					onCompare={(compare) =>
+						leaveFiles(() =>
+							go({ screen: "entry", collection: route.collection, id: route.id, ...(compare ? { compare } : {}) }),
+						)
+					}
+					onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
+					onLanguages={() => leave(() => go({ screen: "settings", tab: "languages" }))}
+				/>
+			</BesideAssistant>
 		);
 	if (route.screen === "template")
 		return (
-			<TemplateEditor
-				key={route.id ?? "new"}
-				id={route.id}
-				onBack={() => leave(() => go({ screen: "place", place: "tools" }))}
-				onSaved={(id) => go({ screen: "template", id }, { replace: true })}
-			/>
+			<BesideAssistant panel={panel}>
+				<TemplateEditor
+					key={route.id ?? "new"}
+					id={route.id}
+					onBack={() => leave(() => go({ screen: "place", place: "tools" }))}
+					onSaved={(id) => go({ screen: "template", id }, { replace: true })}
+				/>
+			</BesideAssistant>
 		);
 	return (
 		<AdminFrame
@@ -172,8 +213,11 @@ function Signed() {
 				else leave(review);
 			}}
 			counts={counts.data}
+			assistant={assistant.available ? { open: assistant.open, onOpen: () => assistant.setOpen(true), panel } : null}
 		>
-			{route.screen === "settings" ? (
+			{route.screen === "review" ? (
+				<ReviewScreen key={route.id} id={route.id} go={go} />
+			) : route.screen === "settings" ? (
 				// One screen for the four tabs: they share a draft, so a move between them asks nothing and loses nothing (doc 12).
 				<SettingsScreen
 					tab={route.tab}
@@ -235,6 +279,7 @@ function Gate({ denied }: { denied?: string }) {
  */
 export function MontiAdmin({
 	transport,
+	streams,
 	uploader,
 	siteName,
 	language = "ko",
@@ -244,6 +289,8 @@ export function MontiAdmin({
 	blocks,
 }: {
 	transport: Transport;
+	/** How streams are listened to (the assistant's run, an apply); over HTTP at `apiBase` when left out. */
+	streams?: StreamTransport;
 	/** How file bytes go up (doc 09); over HTTP at `apiBase` when left out. */
 	uploader?: Uploader;
 	siteName: string;
@@ -259,6 +306,7 @@ export function MontiAdmin({
 	return (
 		<AdminProvider
 			transport={transport}
+			streams={streams}
 			uploader={uploader}
 			siteName={siteName}
 			language={language}

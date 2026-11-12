@@ -143,8 +143,8 @@ async function newPost(monti: Site, title: string, texts: string[] = [], values:
 }
 const row = (id: string) => db.selectFrom("entries").selectAll().where("id", "=", id).executeTakeFirstOrThrow();
 const version = async (id: string) => (await row(id)).version;
-const conversation = (monti: Site, id: string) =>
-	monti.run("conversations.get", { id }, admin) as Promise<Conversation>;
+const conversation = (monti: Site, id: string, more: { limit?: number } = {}) =>
+	monti.run("conversations.get", { id, ...more }, admin) as Promise<Conversation>;
 const proposalOf = (monti: Site, id: string) => monti.run("proposals.get", { id }, admin) as Promise<ProposalView>;
 
 /** Everything the site holds that is not the assistant's own books: what must be the same before and after anything the assistant does. */
@@ -1648,6 +1648,29 @@ describe("what the first review of the core found (#472)", () => {
 		expect((await second).end.status).toBe("done");
 	});
 
+	it("10-4 a run gone on with after its key was removed ends for want of a key, in words a person reads; so does the conversation's next request", async () => {
+		const monti = site();
+		const keyId = await withKey(monti);
+		model.add({ text: "절반만 온 ", breaksOff: true });
+		const first = await ask(monti, { request: "설명해 줘" });
+		expect(first.end).toMatchObject({ status: "interrupted", reason: "connection" });
+		await monti.run("keys.remove", { id: keyId }, admin);
+
+		// The run's key is gone: it ends as failed for want of a key, not with an error nobody can read, and the model is not asked.
+		const second = await ask(monti, { resume: first.run });
+		expect(second.end).toMatchObject({ status: "failed", error: { kind: "no-key" } });
+		expect(model.turns).toHaveLength(1);
+		expect((await conversation(monti, first.conversation)).runs[0]).toMatchObject({
+			status: "failed",
+			end: { status: "failed", error: { kind: "no-key" } },
+		});
+		// A new request in the same conversation is refused before anything starts, with a reason the admin has words for.
+		await expect(ask(monti, { conversation: first.conversation, request: "다시" })).rejects.toMatchObject({
+			reason: { key: "assistant.noModel" },
+		});
+		expect(await monti.run("assistant.state", {}, admin)).toMatchObject({ connected: false });
+	});
+
 	it("10-4 an answer that breaks off after it began is no answer: nothing of it is kept, and the run goes on by asking for that turn again", async () => {
 		const monti = site();
 		await withKey(monti);
@@ -1842,6 +1865,9 @@ describe("what the first review of the core found (#472)", () => {
 		const read = await conversation(monti, first.conversation);
 		expect(read.runs).toHaveLength(3);
 		expect(read.forgotten).toBe(1);
+		// Out of how many: the panel reads a page of requests and needs the whole count to know where the forgotten ones end.
+		expect(read.requests).toBe(3);
+		expect((await conversation(monti, first.conversation, { limit: 1 })).requests).toBe(3);
 	});
 
 	it("10-1 a text's size is estimated on the safe side for Korean, and the share for earlier requests follows the model's window", () => {
@@ -2175,6 +2201,28 @@ describe("what the second review of the core found (#472)", () => {
 		await monti.run("conversations.remove", { id: run.conversation_id }, admin);
 		expect(await runs()).toEqual([]);
 		expect(await db.selectFrom("monti_proposal").select("id").execute()).toEqual([]);
+	});
+
+	it("10-1 a page that takes up a run it found waiting on a screen answers what waited as not done, and the run goes on; what the run asks of the screen after that is asked as usual", async () => {
+		const monti = site();
+		await withKey(monti);
+		const show = (id: string) => ({ name: "list_show", input: { collection: "post", query: { filters: [] } }, id });
+		model.add({ calls: [show("long-ago")] }, { calls: [show("now")] });
+		const waiting = await ask(monti, { request: "목록 보여 줘", context: { screen: "list", collection: "post" } });
+		expect(waiting.end.status).toBe("waiting");
+		expect(waiting.of("screen")).toHaveLength(1);
+
+		const taken = await ask(monti, { resume: waiting.run, away: true });
+		// What waited is told to the model as not done, and no screen is asked for it.
+		expect(taken.of("tool").find((event) => event.id === "long-ago")).toMatchObject({
+			kind: "screen",
+			state: "failed",
+		});
+		expect(JSON.stringify(model.turns[1]?.messages)).toContain("Not done: the conversation was no longer open");
+		// The turn after it asks the screen for something new: that one is this page's to do.
+		expect(taken.of("screen").map((event) => event.calls.map((call) => call.id))).toEqual([["now"]]);
+		expect(taken.end.status).toBe("waiting");
+		await expect(ask(monti, { request: "다른 말", away: true })).rejects.toThrow(/Invalid input/);
 	});
 
 	it("10-1 a run stopped while it waits on the browser hands back what was said to it: no word is left behind", async () => {

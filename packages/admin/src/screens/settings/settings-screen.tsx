@@ -17,6 +17,7 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
+import { useOpenConversation, useScreenContext } from "../../assistant/use-assistant";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import type { ProposalItem } from "../../draft/use-proposals";
 import { useAdmin } from "../../operations/admin-context";
@@ -24,7 +25,7 @@ import { useOperation } from "../../operations/use-operation";
 import { linkTo, SETTINGS_TABS, type SettingsTab } from "../../route";
 import { useSession } from "../../session";
 import { type Place as FramePlace, useCoverCorner } from "../frame/admin-frame";
-import { useFocusHandOff } from "../frame/focus-hand-off";
+import { firstStopIn, useFocusHandOff } from "../frame/focus-hand-off";
 import { AdminTab, type PreferenceFailure } from "./admin-tab";
 import { CollectionsTab, useCollectionsView } from "./collections-tab";
 import { LocalesTab } from "./locales-tab";
@@ -99,6 +100,14 @@ export function SettingsScreen({
 	const [preferenceFailed, setPreferenceFailed] = useState<PreferenceFailure | null>(null);
 
 	useLeaveGuard({ changes: rows, revertAll: draft.revertAll });
+	// What goes along with a request to the assistant from here (doc 10, context): the settings, and the collection that is shown.
+	useScreenContext({
+		screen: "settings",
+		...(tab === "collections" && view.current ? { collection: view.current } : {}),
+	});
+	const openConversation = useOpenConversation();
+	// The bubble goes once every proposed change is taken or left: with the keyboard, the focus goes to the first control of what it sat over.
+	const overBubble = useFocusHandOff((gone) => (gone.parentElement ? firstStopIn(gone.parentElement) : null));
 	const previewing = tab === "collections" && view.preview && view.tab === "fields" && view.current !== null;
 	useCoverCorner(previewing);
 
@@ -412,9 +421,10 @@ export function SettingsScreen({
 							<AdminTab failed={preferenceFailed} onFailed={setPreferenceFailed} />
 						)}
 						{walking ? (
-							<ProposalBubbleDock>
+							<ProposalBubbleDock ref={overBubble}>
 								<ProposalBubble
 									name={walking.item.request}
+									onOpen={openConversation ? () => openConversation(walking.item.conversationId) : undefined}
 									position={Math.min(position, stops.length - 1) + 1}
 									total={stops.length}
 									previousLabel={t("bubble.previous")}

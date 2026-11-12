@@ -1,9 +1,13 @@
 import { Spark } from "../../icons";
 import {
 	Box,
+	CurrentProposal,
 	EditorTitleRule,
+	Fill,
 	Heading,
 	Inline,
+	ProposalBubble,
+	ProposalBubbleDock,
 	Segmented,
 	Separator,
 	Stack,
@@ -33,32 +37,52 @@ function Quote({ children }: { children: React.ReactNode }) {
 	);
 }
 
-/** The body of the entry, the same words on both sides; `faint` while it is still the source's. */
-function Body({ faint }: { faint?: boolean }) {
-	const words = (text: string) => (faint ? <Untranslated>{text}</Untranslated> : text);
+const SOURCE = [
+	"블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.",
+	"무엇을 덜어냈나",
+	"목록에는 제목과 주소, 지금 상태만 남겼다. 나머지는 필요할 때 꺼내 본다.",
+	"글은 도구보다 오래 남는다.",
+	"편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.",
+];
+
+const ENGLISH = [
+	"I rebuilt this blog because I was spending more time fixing my tools than writing.",
+	"What I took out",
+	"The list keeps only the title, the address and the state. The rest comes out when it is needed.",
+	"Writing outlives its tools.",
+	"The editor follows the same rule. While you write, all you see is the writing.",
+];
+
+/**
+ * The body of the entry, the same blocks on both sides: `faint` while it is still the source's words, `proposed` with the assistant's translation in
+ * each block, in the proposal's letters until it is taken (the first one is the one looked at).
+ */
+function Body({ faint, proposed }: { faint?: boolean; proposed?: boolean }) {
+	const words = (index: number) =>
+		proposed ? <Fill>{ENGLISH[index]}</Fill> : faint ? <Untranslated>{SOURCE[index]}</Untranslated> : SOURCE[index];
+	const first = <Paragraph>{words(0)}</Paragraph>;
 	return (
 		<>
-			<Paragraph>
-				{words("블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.")}
-			</Paragraph>
+			{proposed ? <CurrentProposal>{first}</CurrentProposal> : first}
 			<BodyBlock gap={32}>
-				<BodyHeading>{words("무엇을 덜어냈나")}</BodyHeading>
+				<BodyHeading>{words(1)}</BodyHeading>
 			</BodyBlock>
 			<BodyBlock gap={12}>
-				<Paragraph>{words("목록에는 제목과 주소, 지금 상태만 남겼다. 나머지는 필요할 때 꺼내 본다.")}</Paragraph>
+				<Paragraph>{words(2)}</Paragraph>
 			</BodyBlock>
 			<BodyBlock gap={20}>
-				<Quote>{words("글은 도구보다 오래 남는다.")}</Quote>
+				<Quote>{words(3)}</Quote>
 			</BodyBlock>
 			<BodyBlock gap={20}>
-				<Paragraph>{words("편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.")}</Paragraph>
+				<Paragraph>{words(4)}</Paragraph>
 			</BodyBlock>
 		</>
 	);
 }
 
 /** A new translation with its source in a pane beside it: the source read only on the tool ground, the translation still in the source's words. */
-export function EditorTranslateScreen() {
+export function EditorTranslateScreen({ stage = "new" }: { stage?: "new" | "translating" | "proposed" } = {}) {
+	const proposed = stage === "proposed";
 	return (
 		<EditorPage
 			header={<EntryHeader address="/en/first-post" status="draft" statusLabel="초안" panelOpen={false} />}
@@ -92,15 +116,34 @@ export function EditorTranslateScreen() {
 						</TabLinks>
 					</Box>
 					<Inline gap={12}>
-						<TextButton tone="proposal">
-							<Spark aria-hidden />
-							번역
+						<TextButton tone="proposal" loading={stage === "translating"}>
+							{stage === "translating" ? null : <Spark aria-hidden />}
+							{stage === "translating" ? "번역하는 중…" : "번역"}
 						</TextButton>
 						<Separator orientation="vertical" length="control" flush />
 						<Text variant="note">원문</Text>
 						<Segmented aria-label="원문 보기" value="옆 창" onValueChange={still} options={VIEWS} size="sm" inline />
 					</Inline>
 				</Inline>
+			}
+			dock={
+				proposed ? (
+					<ProposalBubbleDock>
+						<ProposalBubble
+							name="번역"
+							position={1}
+							total={6}
+							previousLabel="이전 제안"
+							nextLabel="다음 제안"
+							onPrevious={still}
+							onNext={still}
+							discardAllLabel="모두 버리기"
+							onDiscardAll={still}
+							acceptAllLabel="모두 받기"
+							onAcceptAll={still}
+						/>
+					</ProposalBubbleDock>
+				) : undefined
 			}
 			statusBar={
 				<StatusBar>
@@ -113,11 +156,11 @@ export function EditorTranslateScreen() {
 		>
 			<Stack gap={0} paddingTop={16} paddingBottom={32}>
 				<Heading as="h1" variant="display">
-					<Untranslated>첫 번째 글</Untranslated>
+					{proposed ? <Fill>The first post</Fill> : <Untranslated>첫 번째 글</Untranslated>}
 				</Heading>
 				<EditorTitleRule />
 			</Stack>
-			<Body faint />
+			<Body faint proposed={proposed} />
 		</EditorPage>
 	);
 }

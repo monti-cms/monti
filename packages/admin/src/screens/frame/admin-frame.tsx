@@ -26,7 +26,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { Document, Image, RecentlyViewed, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FolderFilesProvider, useGiveFolderFiles } from "../../media/folder-files";
 import { useFolderDrop } from "../../media/use-file-drop";
 import { useMoveMedia } from "../../media/use-media-actions";
@@ -181,6 +181,7 @@ export function AdminFrame({
 	onReview,
 	counts,
 	folder = null,
+	assistant = null,
 	children,
 }: {
 	open: Place | null;
@@ -191,6 +192,11 @@ export function AdminFrame({
 	onReview?: () => void;
 	/** The sidebar's numbers; the app reads them and reads them again after a write that changes them. */
 	counts: FrameCounts | null;
+	/**
+	 * The site's assistant, when it has one: the ✦ in the page's corner opens its panel, which then stands at the page's right edge. `null` on a
+	 * site without one: no ✦ is drawn.
+	 */
+	assistant?: { open: boolean; onOpen: () => void; panel: ReactNode } | null;
 	children: ReactNode;
 }) {
 	const { t, siteName } = useAdmin();
@@ -198,6 +204,14 @@ export function AdminFrame({
 	const schema = useRead<SchemaRead>("schema.read", {}, { afterWrites: true });
 	const [mode, setMode] = useScreenMode();
 	const [covered, setCovered] = useState(false);
+	// Closing the assistant's panel hands the focus back to the button that opened it, which is drawn again as the panel goes.
+	const corner = useRef<HTMLButtonElement>(null);
+	const assistantOpen = assistant?.open ?? false;
+	const wasOpen = useRef(assistantOpen);
+	useEffect(() => {
+		if (wasOpen.current && !assistantOpen) corner.current?.focus();
+		wasOpen.current = assistantOpen;
+	}, [assistantOpen]);
 	const cover = useMemo(() => (next: boolean) => setCovered(next), []);
 	const [rail, setRail] = useSidebarRail();
 	const collections = Object.entries(schema.data?.schema.collections ?? {});
@@ -294,9 +308,10 @@ export function AdminFrame({
 								<SchemaBanner onReview={onReview} />
 							</>
 						}
+						// No assistant on the site: no button. Its panel open, or another docked at the edge: the button is under it.
 						corner={
-							covered ? undefined : (
-								<IconButton label={t("frame.assistant")}>
+							covered || !assistant || assistant.open ? undefined : (
+								<IconButton ref={corner} label={t("frame.assistant")} onClick={assistant.onOpen}>
 									<Icon icon={Spark} size="lg" />
 								</IconButton>
 							)
@@ -309,6 +324,7 @@ export function AdminFrame({
 									<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
 										{children}
 									</Stack>
+									{assistant?.open ? assistant.panel : null}
 								</Inline>
 							</Stack>
 						</CornerContext.Provider>

@@ -11,8 +11,8 @@ import { ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "../change";
 import { ChangeDot } from "../change-dot";
 import { ChangesBar } from "../changes-group";
 import { ChatInput } from "../chat-input";
-import { ChatEntryLink, ChatEntryList, ChatMessage } from "../chat-message";
-import { ChatAnswer, ChatThread, ToolCallLines } from "../chat-thread";
+import { ChatMessage } from "../chat-message";
+import { ChatThread } from "../chat-thread";
 import { Checkbox } from "../checkbox";
 import { cn } from "../cn";
 import {
@@ -72,20 +72,10 @@ import {
 import { PickList, PickListItem } from "../pick-list";
 import { PropertyGroup, PropertyPanel } from "../property-list";
 import { ProposalBubble, ProposalBubbleDock } from "../proposal-bubble";
-import { ProposalActions, ProposalCard, ProposalEntry } from "../proposal-card";
 import { Del, Ins, PROPOSAL_MARK_CLASSES } from "../proposal-marks";
 import { RadioGroup, RadioItem } from "../radio-group";
 import { RailAction, RailLayout } from "../rail-layout";
 import { ReadValue as ReadValuePart } from "../read-value";
-import {
-	ReviewCompare,
-	ReviewCompareHead,
-	ReviewGroup,
-	ReviewItem,
-	ReviewLine,
-	ReviewMore,
-	ReviewQuote,
-} from "../review";
 import { SearchToggle as SearchTogglePart } from "../search-box";
 import { Section } from "../section";
 import { Segmented } from "../segmented";
@@ -123,7 +113,7 @@ import { SplitButton } from "../split-button";
 import { Inline, Stack as StackPart } from "../stack";
 import { StatusBar, StatusBarCell, StatusBarSpacer } from "../status-bar";
 import { StatusBarList } from "../status-bar-list";
-import { Suggest, SuggestLabel, SuggestList } from "../suggest";
+import { Suggest } from "../suggest";
 import { Switch } from "../switch";
 import {
 	ListScroll,
@@ -1460,139 +1450,6 @@ function TrailSlash() {
 	return <span aria-hidden="true">/</span>;
 }
 
-/** A run of an entry's words with what a change takes out (`del`) and puts in (`ins`), as the data gives it. */
-type Marked = readonly { kind?: string; text: string }[];
-
-function marked(run: Marked | undefined) {
-	return run?.map((piece, index) =>
-		piece.kind === "del" ? (
-			<Del key={index}>{piece.text}</Del>
-		) : piece.kind === "ins" ? (
-			<Ins key={index}>{piece.text}</Ins>
-		) : (
-			piece.text
-		),
-	);
-}
-
-/** What the admin asked, quoted under a review page's title (the admin's own words, from the data). */
-function ReviewAsk({ text }: { text?: string }) {
-	// The room above it is the screen's (a Spacing before it), so the quote is drawn without its own.
-	return <ReviewQuote>{text}</ReviewQuote>;
-}
-
-/** The head of a group of changes: its name, what and how much (`meta`), and what applies to the whole group (`actions`). Its rows follow it. */
-function ReviewHead({ title, meta, actions }: { title?: string; meta?: string; actions?: React.ReactNode }) {
-	// The room above it is the screen's (a Spacing before it), so the group is drawn without its own.
-	return <ReviewGroup title={title} meta={meta} actions={actions} />;
-}
-
-/**
- * One change of a review: its check (`included`), what it is about (`title`, `path`: an entry's, from the data), how it went at the end (`end`), and
- * the change itself under it (`change`, marked words from the data). `muted` when it cannot be applied any more.
- */
-function ReviewEntry({
-	title,
-	path,
-	end,
-	again,
-	change,
-	included,
-	muted,
-	endWarning,
-}: {
-	title?: string;
-	path?: string;
-	end?: string;
-	/** What can be done about how it went ("Make again"), after `end`. */
-	again?: string;
-	change?: Marked;
-	included?: boolean;
-	muted?: boolean;
-	/** `end` in the warning ink: the entry changed since the proposal was made ("이 사이에 고쳐짐"). (cms-allow-korean: quotes the words) */
-	endWarning?: boolean;
-}) {
-	const endWords = endWarning ? <span className="text-monti-warning">{end}</span> : end;
-	return (
-		<ReviewItem
-			included={included ?? false}
-			includeLabel=""
-			title={title}
-			path={path}
-			end={
-				again ? (
-					<>
-						{endWords}{" "}
-						<TextButton variant="underline" size="caption">
-							{again}
-						</TextButton>
-					</>
-				) : (
-					endWords
-				)
-			}
-			muted={muted}
-		>
-			{change ? marked(change) : undefined}
-		</ReviewItem>
-	);
-}
-
-/** One block's change on one line: its check, the block's name (`label`, a `note` under it), its words marked (`text`, from the data). */
-function ReviewBlockLine({
-	label,
-	note,
-	text,
-	included,
-}: {
-	label?: string;
-	note?: string;
-	text?: Marked;
-	included?: boolean;
-}) {
-	return (
-		<ReviewLine included={included ?? false} includeLabel="" label={label} note={note}>
-			{marked(text)}
-		</ReviewLine>
-	);
-}
-
-/** One block's change side by side: its check and name, the words now (`before`) and proposed (`after`), from the data. */
-function ReviewBlockCompare({
-	label,
-	note,
-	before,
-	after,
-	included,
-}: {
-	label?: string;
-	note?: string;
-	before?: Marked;
-	after?: Marked;
-	included?: boolean;
-}) {
-	return (
-		<ReviewCompare
-			included={included ?? false}
-			includeLabel=""
-			label={label}
-			note={note}
-			before={marked(before)}
-			after={marked(after)}
-		/>
-	);
-}
-
-/** The column names over side-by-side changes. */
-function ReviewColumns({ before, after }: { before?: string; after?: string }) {
-	return <ReviewCompareHead before={before} after={after} />;
-}
-
-/** The way to the rest of a long group ("6 more"). */
-function ReviewRest({ label }: { label?: string }) {
-	return <ReviewMore open={false} onOpenChange={() => {}} moreLabel={label ?? ""} lessLabel="" />;
-}
-
 /** The head of an editor: the way back, where the entry lives and its state, then saving, publishing and the editor's tools. */
 function EditorTopBar({ start, end }: { start?: React.ReactNode; end?: React.ReactNode }) {
 	return (
@@ -2553,16 +2410,6 @@ function SamplePicture({ paint }: { paint: string }) {
 	);
 }
 
-/** The assistant's empty panel: the requests to start from, in groups under their `SuggestHeading`s. */
-function Suggestions({ children }: { children?: React.ReactNode }) {
-	return <SuggestList>{children}</SuggestList>;
-}
-
-/** The name of a group of requests ("In this list", "Recent"). */
-function SuggestHeading({ text }: { text?: string }) {
-	return <SuggestLabel>{text}</SuggestLabel>;
-}
-
 /** One request to start from: `recent` for one asked before; otherwise a saved one. */
 function SuggestRow({ label, recent }: { label?: string; recent?: boolean }) {
 	return <Suggest kind={recent ? "recent" : "request"}>{label}</Suggest>;
@@ -2610,8 +2457,7 @@ function ChatBox({
 }
 
 /**
- * A conversation with the assistant, from the data: each turn's `role` (`user` asked, `tool` a call it made, `assistant` its words, `entry` an entry its
- * answer names, with its slug as `detail`) and `text`. The proposals it made (`ProposalBox`) follow it.
+ * A conversation with the assistant, from the data: each turn's `role` (`user` asked, `tool` a call it made, `assistant` its words) and `text`.
  */
 function Conversation({
 	turns,
@@ -2620,7 +2466,7 @@ function Conversation({
 	turns?: readonly { role: string; text: string; detail?: string }[];
 	children?: React.ReactNode;
 }) {
-	// The turns of one answer (its calls, its words, the entries it names) go together.
+	// The turns of one answer (its calls, its words) go together.
 	const groups: { role: string; turns: { role: string; text: string; detail?: string }[] }[] = [];
 	for (const turn of turns ?? []) {
 		const last = groups[groups.length - 1];
@@ -2636,9 +2482,9 @@ function Conversation({
 						{group.turns[0]?.text}
 					</ChatMessage>
 				) : (
-					<ChatAnswer key={index}>
+					<div key={index} className="flex min-w-0 flex-col gap-monti-12">
 						{group.turns.some((turn) => turn.role === "tool") && (
-							<ToolCallLines>
+							<div className="flex min-w-0 flex-col">
 								{group.turns
 									.filter((turn) => turn.role === "tool")
 									.map((turn) => (
@@ -2646,7 +2492,7 @@ function Conversation({
 											{turn.text}
 										</ToolCallLine>
 									))}
-							</ToolCallLines>
+							</div>
 						)}
 						{group.turns
 							.filter((turn) => turn.role === "assistant")
@@ -2655,68 +2501,11 @@ function Conversation({
 									{turn.text}
 								</ChatMessage>
 							))}
-						{group.turns.some((turn) => turn.role === "entry") && (
-							<ChatEntryList>
-								{group.turns
-									.filter((turn) => turn.role === "entry")
-									.map((turn) => (
-										<ChatEntryLink key={turn.text} slug={turn.detail}>
-											{turn.text}
-										</ChatEntryLink>
-									))}
-							</ChatEntryList>
-						)}
-					</ChatAnswer>
+					</div>
 				),
 			)}
 			{children}
 		</ChatThread>
-	);
-}
-
-/**
- * A proposal in the conversation: what it is (`title`) and how much (`summary`), where it stands (`status`), the entries it changes (from the data:
- * each one's `name`, `slug`, `field` and new `text`), and its foot (review, discard, apply).
- */
-function ProposalBox({
-	title,
-	summary,
-	status,
-	entries,
-	reviewLabel,
-	discardLabel,
-	applyLabel,
-}: {
-	title?: string;
-	summary?: string;
-	status?: string;
-	entries?: readonly { name: string; slug?: string; field?: string; text: string }[];
-	reviewLabel?: string;
-	discardLabel?: string;
-	applyLabel?: string;
-}) {
-	const none = () => {};
-	return (
-		<ProposalCard
-			title={title}
-			summary={summary}
-			status={status}
-			statusTone="warning"
-			footer={
-				<ProposalActions
-					reviewLabel={reviewLabel}
-					onReview={reviewLabel ? none : undefined}
-					discardLabel={discardLabel ?? ""}
-					onDiscard={none}
-					applyLabel={applyLabel ?? ""}
-					onApply={none}
-				/>
-			}
-		>
-			{entries?.map((entry) => (
-				<ProposalEntry key={entry.name} name={entry.name} slug={entry.slug} field={entry.field} after={entry.text} />
-			))}
-		</ProposalCard>
 	);
 }
 
@@ -2735,9 +2524,6 @@ export const parts = {
 	Box,
 	SectionHead,
 	Conversation,
-	ProposalBox,
-	Suggestions,
-	SuggestHeading,
 	SuggestRow,
 	ChatBox,
 	PropsPanel,
@@ -2766,13 +2552,6 @@ export const parts = {
 	StatusCell,
 	StatusGap,
 	StatusListCell,
-	ReviewAsk,
-	ReviewHead,
-	ReviewEntry,
-	ReviewBlockLine,
-	ReviewBlockCompare,
-	ReviewColumns,
-	ReviewRest,
 	Trail,
 	TrailSlash,
 	DropZone,
@@ -2945,20 +2724,6 @@ export const CATALOG = {
 	Box: { kind: "part", props: { border: "variant" } },
 	SectionHead: { kind: "part", props: {} },
 	Conversation: { kind: "part", props: { turns: "data:role,text,detail" } },
-	ProposalBox: {
-		kind: "part",
-		props: {
-			title: "text",
-			summary: "text",
-			status: "state",
-			entries: "data:name,slug,field,text",
-			reviewLabel: "text",
-			discardLabel: "text",
-			applyLabel: "text",
-		},
-	},
-	Suggestions: { kind: "part", props: {} },
-	SuggestHeading: { kind: "part", props: { text: "text" } },
 	SuggestRow: { kind: "part", props: { label: "text", recent: "flag" } },
 	ChatBox: {
 		kind: "part",
@@ -3073,28 +2838,6 @@ export const CATALOG = {
 			done: "data:text",
 		},
 	},
-	ReviewAsk: { kind: "part", props: { text: "state" } },
-	ReviewHead: { kind: "part", props: { title: "text", meta: "text" } },
-	ReviewEntry: {
-		kind: "part",
-		props: {
-			title: "state",
-			path: "state",
-			end: "text",
-			again: "text",
-			change: "data:kind,text",
-			included: "flag",
-			muted: "flag",
-			endWarning: "flag",
-		},
-	},
-	ReviewBlockLine: { kind: "part", props: { label: "text", note: "text", text: "data:kind,text", included: "flag" } },
-	ReviewBlockCompare: {
-		kind: "part",
-		props: { label: "text", note: "text", before: "data:kind,text", after: "data:kind,text", included: "flag" },
-	},
-	ReviewColumns: { kind: "part", props: { before: "text", after: "text" } },
-	ReviewRest: { kind: "part", props: { label: "text" } },
 	Trail: { kind: "part", props: { label: "text" } },
 	TrailSlash: { kind: "part", props: {} },
 	DropZone: { kind: "part", props: { over: "flag" } },

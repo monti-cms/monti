@@ -17,8 +17,10 @@ export interface ToolCallDetail {
 	readonly value: string;
 }
 
+// 24px a line (16 of text, 4 above and below): lines stand one under the other with no gap, and a line that opens is pressable over its
+// whole height, which must be 24 at least.
 const LINE =
-	"flex items-center gap-monti-8 py-[3px] text-left font-mono text-monti-meta text-monti-subtle [&_svg]:shrink-0";
+	"flex items-center gap-monti-8 py-monti-4 text-left font-mono text-monti-meta text-monti-subtle [&_svg]:shrink-0";
 
 /**
  * One call the assistant made, as a mono line: a mark for where it stands (a spinner and darker words while running, ✓ done, a red × and red words when
@@ -69,7 +71,7 @@ function ToolCallLine({
 						className={cn(
 							LINE,
 							tone,
-							"group/line cursor-pointer border-0 bg-transparent p-0 py-[3px] outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
+							"group/line cursor-pointer border-0 bg-transparent px-0 outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 						)}
 					>
 						{summary}

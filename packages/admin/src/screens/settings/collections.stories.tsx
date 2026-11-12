@@ -1,4 +1,5 @@
-import { defineSchema } from "@monti-cms/core";
+import { assistant, scriptedProvider } from "@monti-cms/ai";
+import { defineSchema, type MontiOptions } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sql } from "kysely";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
@@ -125,7 +126,12 @@ export async function optionEntries({ monti }: StorySite) {
 }
 
 export const site = (
-	options: { files?: typeof devFiles | null; more?: (site: StorySite) => Promise<void>; schema?: typeof schema } = {},
+	options: {
+		files?: typeof devFiles | null;
+		more?: (site: StorySite) => Promise<void>;
+		schema?: typeof schema;
+		plugins?: MontiOptions["plugins"];
+	} = {},
 ) => [
 	async () => {
 		// The draft keeps unsaved changes in this browser (doc 05); every story starts from the saved values, at the first screen.
@@ -136,6 +142,7 @@ export const site = (
 			signedIn: true,
 			setup,
 			files: options.files === undefined ? devFiles : options.files,
+			plugins: options.plugins,
 		});
 		await options.more?.(made);
 		return { site: made };
@@ -562,10 +569,11 @@ export const ApplyRefused: Story = {
 
 /**
  * A save refused before its review opens (the site refuses `schema.plan` here): the reason is the page's banner, at the very top of the screen over
- * the title, where the frame's own banners stand (common.md). It stays until the next save's answer.
+ * the title, where the frame's own banners stand (common.md). It stays until the next save's answer. The site has the assistant, so its
+ * button is in the page's corner: it stands under the banner.
  */
 export const SaveRefused: Story = {
-	loaders: site(),
+	loaders: site({ plugins: [assistant({ provider: scriptedProvider().for })] }),
 	render: refusing("schema.plan"),
 	play: async ({ canvasElement }) => {
 		const { page } = await changeFields(canvasElement);

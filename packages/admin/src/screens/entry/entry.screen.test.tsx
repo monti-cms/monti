@@ -892,6 +892,16 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 		expect(body().element().textContent).toContain("때문이다!");
 	});
 
+	it("focus: '모두 버리기' pressed with the keyboard: the bubble goes, and the focus is in the text it sat over", async () => {
+		await proposed();
+		await userEvent.keyboard("{Tab}");
+		(button("모두 버리기").element() as HTMLElement).focus();
+		expect(button("모두 버리기").element().matches(":focus-visible")).toBe(true);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(button("모두 받기")).not.toBeInTheDocument();
+		await expect.poll(() => body().element().contains(document.activeElement)).toBe(true);
+	});
+
 	it("'모두 버리기': the proposals are gone from the text and the bubble with them; nothing changed", async () => {
 		await proposed();
 		await userEvent.click(button("모두 버리기"));

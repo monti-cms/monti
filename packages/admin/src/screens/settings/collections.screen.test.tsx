@@ -406,6 +406,24 @@ describe("settings › collections: a refused save", () => {
 	});
 });
 
+describe("settings › collections: what the assistant proposed", () => {
+	it("focus: the bubble's '모두 버리기' pressed with the keyboard: the bubble goes, and the focus is on the first control of what it sat over", async () => {
+		const { Proposal } = composeStories(collections);
+		await Proposal.run();
+		const discard = page.getByRole("button", { name: "모두 버리기" });
+		await expect.element(discard).toBeVisible();
+		const over = discard.element().closest("[data-slot=proposal-bubble-dock]")?.parentElement as HTMLElement;
+		await userEvent.keyboard("{Tab}");
+		(discard.element() as HTMLElement).focus();
+		expect(discard.element().matches(":focus-visible")).toBe(true);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(discard).not.toBeInTheDocument();
+		await expect
+			.poll(() => document.activeElement !== document.body && over.contains(document.activeElement))
+			.toBe(true);
+	});
+});
+
 describe("settings: the review of a hand-edited schema file", () => {
 	it("검토 on the banner, pressed on the settings screen with unsaved changes, opens the review at once: nothing is left, so nothing is asked", async () => {
 		await scene({ loaders: collections.HandEditReview.loaders }, collections.default).run();

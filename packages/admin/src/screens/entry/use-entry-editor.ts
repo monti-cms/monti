@@ -170,7 +170,12 @@ export function useEntryEditor(
 		() =>
 			draft.proposals
 				.filter(({ item }) => item.operation === "body.edit")
-				.map(({ item }) => ({ id: item.id, request: item.request, ops: (item.input as { ops: BodyOp[] }).ops })),
+				.map(({ item }) => ({
+					id: item.id,
+					request: item.request,
+					conversationId: item.conversationId,
+					ops: (item.input as { ops: BodyOp[] }).ops,
+				})),
 		[draft.proposals],
 	);
 

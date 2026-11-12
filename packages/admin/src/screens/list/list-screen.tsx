@@ -51,6 +51,7 @@ import {
 } from "@monti-cms/ui";
 import { FolderAdd, Template } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useScreenContext } from "../../assistant/use-assistant";
 import { download } from "../../download";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
@@ -203,6 +204,13 @@ function DocumentListScreen({
 		[screen],
 	);
 	const pickedRows = (rows ?? []).filter((row) => picked.has(row.id));
+	// What goes along with a request to the assistant from here (doc 10, context): this list as it is asked for, and the rows picked in it.
+	useScreenContext({
+		screen: "list",
+		collection,
+		query,
+		...(pickedRows.length > 0 ? { selection: { kind: "rows" as const, ids: pickedRows.map((row) => row.id) } } : {}),
+	});
 	const pick = (row: ListRow, on: boolean) =>
 		setPicked((current) => {
 			// Touching the pick ends the assistant's: every picked row is the admin's now.

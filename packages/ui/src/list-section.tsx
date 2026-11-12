@@ -13,6 +13,8 @@ function ListSection({
 	count,
 	countTone = "default",
 	flush = false,
+	actions,
+	table = false,
 	children,
 	...props
 }: Omit<React.ComponentProps<"section">, "title" | "className" | "style" | "aria-labelledby"> & {
@@ -22,6 +24,10 @@ function ListSection({
 	countTone?: "default" | "warning";
 	/** The rows have no inset of their own (a review sheet's changes): the title starts at the edge with them, not 12px in, and the list keeps 16px under the line, since the first change block has none above. */
 	flush?: boolean;
+	/** What is done with the whole section, at the end of its head: text buttons, a switch of view (a review's "leave out all 11"). */
+	actions?: React.ReactNode;
+	/** Its rows are a `Table` of their own (a review's changes, a list of keys): the section names the table and is not itself a list. */
+	table?: boolean;
 }) {
 	const titleId = useId();
 	return (
@@ -29,16 +35,29 @@ function ListSection({
 			<h2
 				id={titleId}
 				className={cn(
-					"m-0 flex items-baseline gap-monti-8 border-monti-default border-b pb-monti-12 font-semibold text-monti-label",
+					// One height with or without something at its end (33px: the title's line, 12 under it, the rule): what stands at the end
+					// sits on the title's baseline and would otherwise make the head a little shorter or taller, and the rows under it move.
+					"m-0 flex min-h-[33px] items-baseline gap-monti-8 border-monti-default border-b pb-monti-12 font-semibold text-monti-label",
 					!flush && "px-monti-12",
 				)}
 			>
 				{title}
 				{count !== undefined && count !== null && <Count tone={countTone}>{count}</Count>}
+				{actions !== undefined && (
+					// As tall as the title's line: a control here does not push the head's rule down. With nothing in it (every action of the
+					// moment is gone) it is not there: an empty box on the title's baseline made the head 4px taller.
+					<span className="ml-auto flex h-lh items-center gap-monti-16 font-normal text-monti-note empty:hidden">
+						{actions}
+					</span>
+				)}
 			</h2>
-			<div role="list" className={cn(flush && "pt-monti-16")}>
-				{children}
-			</div>
+			{table ? (
+				children
+			) : (
+				<div role="list" className={cn(flush && "pt-monti-16")}>
+					{children}
+				</div>
+			)}
 		</section>
 	);
 }

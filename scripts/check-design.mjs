@@ -1005,7 +1005,6 @@ const OFF_SCALE_SPACE = new Map([
 	["ui/src/pick-list.tsx", "pill sides from the height rule (32→14)"],
 	["ui/src/proposal-bubble.tsx", "the arrows' 7px gap, measured in the bubble"],
 	["ui/src/proposal-marks.tsx", "2px of colour beyond the marked letters"],
-	["ui/src/review.tsx", "3px drops the check box to the first line's middle"],
 	["ui/src/segmented.tsx", "the track's 2px ring around its cells"],
 	["ui/src/separator.tsx", "a vertical rule 3px clear of the words on each side"],
 	[
@@ -1019,7 +1018,6 @@ const OFF_SCALE_SPACE = new Map([
 	["ui/src/textarea.tsx", "the small field's 3px keeps one line at 28px with the 20px line"],
 	["ui/src/tile.tsx", "a tile's caption sides follow its 14px picture corner; 44px leaves room for its menu button"],
 	["ui/src/todo-item.tsx", "to-dos are menu rows (9px sides); 11px drops the done mark to the first line's middle"],
-	["ui/src/tool-call-line.tsx", "3px keeps a tool line at the 20px line inside 26px"],
 ]);
 
 /** Files where `font-bold` is not stress but the thing itself: bold text in an entry's body, the format bar's B, the toolbar's open tab (tokens.md). */
@@ -1161,6 +1159,10 @@ const FIXED_HEIGHTS = new Map([
 		new Map([
 			["h-[52px]", "a list row of one line (title and note), measured in the list board"],
 			["h-[74px]", "a list row with its meta line, measured in the list board"],
+			[
+				"min-h-[33px]",
+				"the head of a titled list: its title's line, 12px and the rule, with or without something at its end",
+			],
 		]),
 	],
 	[
@@ -1245,7 +1247,6 @@ checkFixedHeights();
  */
 const SIX_PX = new Map([
 	["ui/src/menu-parts.tsx", "rows of a floating menu follow the menu's own corners"],
-	["ui/src/conversation-list.tsx", "a conversation row is two lines tall, a block"],
 	["ui/src/tile.tsx", "a media or folder tile is a card"],
 	["ui/src/todo-item.tsx", "a to-do is a two-line block"],
 	[

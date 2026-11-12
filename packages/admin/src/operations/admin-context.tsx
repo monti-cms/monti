@@ -1,3 +1,4 @@
+import { assistantMessages } from "@monti-cms/ai/messages";
 import {
 	type AnyBlockDefinition,
 	type Block,
@@ -8,7 +9,7 @@ import {
 } from "@monti-cms/core";
 import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { adminMessages } from "../messages";
-import { httpUploader, type Transport, type Uploader } from "./transport";
+import { httpStreams, httpUploader, type StreamTransport, type Transport, type Uploader } from "./transport";
 
 export type Language = "ko" | "en";
 export type AdminBlockComponent = ComponentType<{
@@ -51,6 +52,7 @@ export function createScreenChannel(): ScreenChannel {
 
 type AdminContext = {
 	transport: Transport;
+	streams: StreamTransport;
 	uploader: Uploader;
 	language: Language;
 	/** The site's name over the sidebar and the login form. */
@@ -83,9 +85,10 @@ export type Face = { name: string | null; language: Language | null; templates: 
 
 const Context = createContext<AdminContext | null>(null);
 
-const BUNDLES: MessageBundle[] = [adminMessages, coreMessages];
+// The assistant's own words (why a run stopped, a conversation's activity row) come from its package: the server answers with their keys.
+const BUNDLES: MessageBundle[] = [adminMessages, coreMessages, assistantMessages];
 /** For what the server says: the core's words first. */
-const SERVER_BUNDLES: MessageBundle[] = [coreMessages, adminMessages];
+const SERVER_BUNDLES: MessageBundle[] = [coreMessages, assistantMessages, adminMessages];
 
 /**
  * A message in the admin's language. A key is the screen's own word and is read from the admin's dictionary first; a message object came from an
@@ -103,6 +106,7 @@ const NO_BLOCKS: AdminBlockDefinition[] = [];
 
 export function AdminProvider({
 	transport,
+	streams,
 	uploader,
 	language = "ko",
 	siteName,
@@ -112,6 +116,8 @@ export function AdminProvider({
 	children,
 }: {
 	transport: Transport;
+	/** How streams are listened to; over HTTP at `apiBase` when left out. */
+	streams?: StreamTransport;
 	/** How file bytes go up; over HTTP at `apiBase` when left out. Storybook hands in one of its own. */
 	uploader?: Uploader;
 	/** The admin's language until one is picked in settings › admin. */
@@ -151,6 +157,7 @@ export function AdminProvider({
 			screen: channel,
 			...writes,
 			transport,
+			streams: streams ?? httpStreams(apiBase),
 			uploader: uploader ?? httpUploader(apiBase),
 			language: shownLanguage,
 			siteName: shownName,
@@ -161,7 +168,19 @@ export function AdminProvider({
 			blocks: new Map(blocks.map((block) => [block.type, block])),
 			t: (message, values) => wordsOf(shownLanguage, message, values),
 		}),
-		[transport, uploader, shownLanguage, shownName, siteName, face.templates, apiBase, channel, writes, blocks],
+		[
+			transport,
+			streams,
+			uploader,
+			shownLanguage,
+			shownName,
+			siteName,
+			face.templates,
+			apiBase,
+			channel,
+			writes,
+			blocks,
+		],
 	);
 	// Apart from the rest, so the session ending does not make the write notices and the screens' reads anew.
 	const value = useMemo<AdminContext>(() => ({ ...base, session }), [base, session]);

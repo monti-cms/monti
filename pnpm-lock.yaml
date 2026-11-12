@@ -157,6 +157,9 @@ importers:
 
   packages/admin:
     dependencies:
+      '@monti-cms/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@monti-cms/core':
         specifier: workspace:*
         version: link:../core

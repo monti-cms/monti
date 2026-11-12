@@ -4,8 +4,8 @@ import { RecentlyViewed } from "./icons";
 import { Spark } from "./spark";
 
 /**
- * One row of the assistant's empty panel: a request to start from. `request` is a saved one (a spark), `recent` one asked before (a clock). Pressing it
- * sends the words, or puts them in the box.
+ * One row of the assistant's empty panel: a request to start from. `request` is one the screen offers (a spark), `recent` one asked before (a
+ * clock): the mark tells them apart, so the rows have no group names. Pressing it sends the words. The rows stand in the `ChatThread`, at its foot.
  */
 function Suggest({
 	kind,
@@ -34,31 +34,4 @@ function Suggest({
 	);
 }
 
-/**
- * The assistant's empty panel: the requests to start from, in groups under a {@link SuggestLabel}, sitting at the bottom of the panel just over the box
- * to type in. It fills the panel's height and scrolls when the rows do not fit.
- */
-function SuggestList({ className, children, ...props }: ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="suggest-list"
-			className={cn("flex min-h-0 flex-1 scroll-py-monti-8 flex-col-reverse overflow-auto", className)}
-			{...props}
-		>
-			<div className="flex flex-col gap-monti-4 px-monti-12 pt-monti-12 pb-monti-4">{children}</div>
-		</div>
-	);
-}
-
-/** The name of a group of {@link Suggest} rows ("In this list", "Recent"): mono 11 in the subtle gray, lined up with the rows' words. */
-function SuggestLabel({ className, ...props }: ComponentProps<"span">) {
-	return (
-		<span
-			data-slot="suggest-label"
-			className={cn("px-monti-12 pt-monti-12 pb-monti-6 text-monti-micro text-monti-subtle first:pt-0", className)}
-			{...props}
-		/>
-	);
-}
-
-export { Suggest, SuggestLabel, SuggestList };
+export { Suggest };

@@ -92,6 +92,8 @@ export type Conversation = {
 	 * was said before. They are still here to read; the model no longer knows them.
 	 */
 	forgotten: number;
+	/** How many requests it has in all, so the panel knows where the forgotten ones end among those it has read. */
+	requests: number;
 };
 
 /** A place in a list read a page at a time: the time of a row and its id, so rows of one moment are told apart. */
@@ -111,13 +113,16 @@ export type AssistantState = {
 	keepDays: number | null;
 };
 
-/** How many of a conversation's oldest requests its next request would leave out of what it sends the model (`Conversation.forgotten`). */
+/**
+ * How many requests a conversation has, and how many of its oldest its next request would leave out of what it sends the model
+ * (`Conversation.requests`, `Conversation.forgotten`).
+ */
 async function forgottenOf(
 	db: Db,
 	conversation: { id: string; key_id: string | null; model: string | null },
 	limits: RunLimits,
 	context: (keyId: string, model: string) => Promise<number | undefined>,
-): Promise<number> {
+): Promise<{ requests: number; forgotten: number }> {
 	const runs = await db
 		.selectFrom("runs")
 		.select("size")
@@ -127,13 +132,15 @@ async function forgottenOf(
 		.execute();
 	const window =
 		conversation.key_id && conversation.model ? await context(conversation.key_id, conversation.model) : undefined;
-	return (
-		runs.length -
-		recalled(
-			runs.map((run) => run.size),
-			historyBudget(limits, window),
-		)
-	);
+	return {
+		requests: runs.length,
+		forgotten:
+			runs.length -
+			recalled(
+				runs.map((run) => run.size),
+				historyBudget(limits, window),
+			),
+	};
 }
 
 const keepDaysOf = async (db: Db): Promise<number | null> => {
@@ -532,10 +539,10 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 						thinking: conversation.thinking,
 						earlier:
 							newest.length > input.limit && runs[0] ? { at: runs[0].started_at.toISOString(), id: runs[0].id } : null,
-						forgotten: await forgottenOf(ctx.db, conversation, limits, async (keyId, model) => {
+						...(await forgottenOf(ctx.db, conversation, limits, async (keyId, model) => {
 							const listed = (await site().run("models.list", {}, { actor: "admin" })) as ModelList;
 							return listed.keys.find((key) => key.id === keyId)?.models.find((each) => each.id === model)?.context;
-						}),
+						})),
 						runs: runs.map((run) => {
 							// A run whose request died (its hold ran out) reads as cut short: it can be gone on with.
 							const dead = run.status === "running" && (run.leased_until === null || run.leased_until < ctx.now());

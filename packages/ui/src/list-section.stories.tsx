@@ -1,5 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Box, Button, ChangeGroup, ChangeNote, ListSection, ListSectionRow, MenuField, Stack } from "./index";
+import {
+	Box,
+	Button,
+	ChangeGroup,
+	ChangeNote,
+	ListSection,
+	ListSectionRow,
+	MenuField,
+	RowTitle,
+	Stack,
+	Table,
+	TableBody,
+	TableCell,
+	TableRow,
+	TextButton,
+} from "./index";
 
 /**
  * A titled list of rows: the title bold with a count, a line under it, then its rows. On a tools page, rows with a meta line and their actions or one control
@@ -123,5 +138,32 @@ export const PluginKeys: Story = {
 				control={<MenuField aria-labelledby="slot-admin" value="Algolia" meta="··· 4410" metaMono />}
 			/>
 		</ListSection>
+	),
+};
+
+/**
+ * A section whose rows are a table of their own (`table`), with what is done to the whole section at the end of its head (`actions`): a kind
+ * of change on a proposal's review page. The head is the same as every titled list's.
+ */
+export const TableWithActions: Story = {
+	render: () => (
+		<Box width="sheet">
+			<ListSection table title="요약 채우기" count="2건" actions={<TextButton>2건 모두 빼기</TextButton>}>
+				<Table container="none" aria-label="요약 채우기">
+					<TableBody>
+						<TableRow>
+							<TableCell truncate>
+								<RowTitle title="둘째 글" address="/posts/second-post" />
+							</TableCell>
+						</TableRow>
+						<TableRow>
+							<TableCell truncate>
+								<RowTitle title="셋째 글" address="/posts/third-post" />
+							</TableCell>
+						</TableRow>
+					</TableBody>
+				</Table>
+			</ListSection>
+		</Box>
 	),
 };

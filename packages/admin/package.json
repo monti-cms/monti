@@ -23,6 +23,7 @@
 		"build": "node ../../scripts/build-package.mjs && node ../../scripts/build-styles.mjs"
 	},
 	"dependencies": {
+		"@monti-cms/ai": "workspace:*",
 		"@monti-cms/core": "workspace:*",
 		"@monti-cms/ui": "workspace:*",
 		"@tiptap/core": "3.31.3",

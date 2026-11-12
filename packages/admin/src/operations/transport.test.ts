@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { httpUploader } from "./transport";
+import { httpStreams, httpTransport, httpUploader, NO_ANSWER } from "./transport";
 
 /** What left the browser, in order: `fetch` for the JSON routes, a request with progress for the file's bytes. */
 type Sent = { via: "fetch" | "xhr"; method: string; url: string; headers: Record<string, string>; body: unknown };
@@ -147,5 +147,30 @@ describe("httpUploader", () => {
 			"fetch /admin/api/media/sealed",
 		]);
 		expect(sent.at(-1)?.body).toEqual({ key: next });
+	});
+});
+
+describe("the admin API over HTTP when the network is down", () => {
+	it("a call that gets no answer is answered as a refusal with its own words, not thrown: whoever waits on it is told", async () => {
+		vi.stubGlobal("fetch", () => Promise.reject(new TypeError("Failed to fetch")));
+		const answer = await httpTransport("/admin/api")("conversations.get", { id: "c1" });
+		expect(answer).toEqual(NO_ANSWER);
+		expect(answer).toMatchObject({ status: 0, body: { reason: { key: "errors.noAnswer" } } });
+	});
+
+	it("a stream that cannot begin is answered the same way", async () => {
+		vi.stubGlobal("fetch", () => Promise.reject(new TypeError("Failed to fetch")));
+		expect(await httpStreams("/admin/api")("assistant.run", { resume: "r1" })).toEqual(NO_ANSWER);
+	});
+
+	it("a file's ticket that gets no answer is status 0 too, and nothing is sent", async () => {
+		const sent: string[] = [];
+		vi.stubGlobal("fetch", (url: string) => {
+			sent.push(url);
+			return Promise.reject(new TypeError("Failed to fetch"));
+		});
+		const answer = await httpUploader("/admin/api")(new Blob([PNG], { type: "image/png" }), { name: "a.png" });
+		expect(answer.status).toBe(0);
+		expect(sent).toEqual(["/admin/api/media/ticket"]);
 	});
 });
