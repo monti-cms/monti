@@ -1728,6 +1728,13 @@ describe("a read-only body with the keyboard (T133)", () => {
 		expect(body().element().contains(document.activeElement)).toBe(false);
 	});
 
+	it("02-6 T133 the story of it shows what the keyboard finds: the second picture picked, no bar open", async () => {
+		await composeStory(media.ArchivedPictures, media.default).run();
+		await expect.poll(() => blocks().map(drawnPicked)).toEqual([false, true]);
+		expect(document.activeElement).toBe(blocks()[1]);
+		expect(toolbars()).toEqual([]);
+	});
+
 	it("02-6 T133 T134 a press on a picture of a read-only body draws it picked and shows its bar at once, and it stays so when the pointer moves", async () => {
 		await archivedPictures().run();
 		const first = body().getByRole("img", { name: "아침 책상" });
