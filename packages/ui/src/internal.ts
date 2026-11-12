@@ -206,6 +206,7 @@ export { NavLink } from "./nav-link";
 export { Option } from "./option";
 export { OptionRow, OptionTable } from "./option-table";
 export { OrderedRow } from "./ordered-row";
+export { PageBanner, StandalonePage } from "./page-banner";
 export {
 	PageBody,
 	PageColumn,

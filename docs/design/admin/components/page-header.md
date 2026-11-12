@@ -46,4 +46,4 @@
 
 ### 코드
 
-`EditorHeader`가 그 띠다(`min-height: header`, 아래 선, 양 끝 정렬). `EditorTitleRule`은 제목 아래 잉크색 선이다.
+`EditorHeader`가 그 띠다(`min-height: header`, 아래 선, 양 끝 정렬). 편집기처럼 사이드바 틀 밖에 서는 화면은 `StandalonePage` 안에 머리 줄부터 쌓고, 그 화면의 알림 띠는 `StandalonePage`의 `banner`로 머리 줄 위에 둔다([status.md](status.md)의 "알림 띠"). `EditorTitleRule`은 제목 아래 잉크색 선이다.

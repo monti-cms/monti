@@ -32,13 +32,9 @@ export function SignedOutListScreen() {
 export function SignedOutEditorScreen() {
 	return (
 		<EditorPage
-			// The whole site's state stands over the editor's bar, where it stands over every screen; the bar's own banners (a conflict) stay under it.
-			header={
-				<>
-					<SignedOutBanner />
-					<EntryHeader address="/posts/first-post" status="editing" statusLabel="수정 중" />
-				</>
-			}
+			// The whole site's state stands over the editor's bar, where it stands over every screen; the entry's own banners (a conflict) stay under it.
+			banner={<SignedOutBanner />}
+			header={<EntryHeader address="/posts/first-post" status="editing" statusLabel="수정 중" />}
 			head={<LanguageTabs />}
 			side={<EntryProperties />}
 			statusBar={

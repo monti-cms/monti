@@ -52,6 +52,7 @@
 ## 글 편집기 · 비교 (EditorCompare)
 
 - 보드: `EditorCompare.dc.html`. 상태와 흐름 단계: [screens.md › EditorCompare](../screens.md#editorcompare).
+- 틀: 글 편집기와 같은 `StandalonePage`다. 알림 띠는 그 `banner` 자리에 선다.
 - 공통 틀: 상태 표시줄은 없다. 제목이 무엇의 비교인지 말하고 "다른 곳 3"은 머리에 한 번만 있다(2026-11-05, 원칙 8). 편집기 주소에 `?compare=conflict`나 `?compare=draft`가 붙은 화면이고, 편집기의 저장하지 않은 입력은 그대로 남는다.
 
 ### 기본 틀

@@ -3,6 +3,7 @@ import {
 	Banner,
 	ChangesGroup,
 	Inline,
+	PageBanner,
 	PageBody,
 	PageColumn,
 	PageHeader,
@@ -349,13 +350,16 @@ export function SettingsScreen({
 						</TabLinks>
 					</PageToolbar>
 					<PageBody>
-						{refused && !plan ? (
-							<Banner tone="danger" title={refused.reason}>
-								<TextButton loading={busy} onClick={retry}>
-									{t(refused.action === "reload" ? "settings.reload" : "settings.saveAgain")}
-								</TextButton>
-							</Banner>
-						) : null}
+						{/* Drawn at the very top of the screen, over the title (common.md, banners). */}
+						<PageBanner>
+							{refused && !plan ? (
+								<Banner tone="danger" title={refused.reason}>
+									<TextButton loading={busy} onClick={retry}>
+										{t(refused.action === "reload" ? "settings.reload" : "settings.saveAgain")}
+									</TextButton>
+								</Banner>
+							) : null}
+						</PageBanner>
 						{!data ? null : tab === "site" ? (
 							<SiteTab model={model} />
 						) : tab === "languages" ? (
