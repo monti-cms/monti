@@ -263,7 +263,7 @@ export function EntryEditor({
 
 	const save = editor.save;
 	/** The focus to the text being written: the body, or the title when the body is not there; to the comparison's first control when it took the editor's place. */
-	const toText = useCallback(() => focusText(() => body.current, fieldInputId("title")), []);
+	const toText = useCallback(() => () => focusText(() => body.current, fieldInputId("title")), []);
 	// What goes away by its own action had the keyboard's focus on that action, and hands it to the text: a banner (discard or load this
 	// browser's copy, load the latest, try again, confirm all, compare), and the save cell, a button only while there is something to save or
 	// to look at (saved, it is words). Nothing is remembered from the press: a save that fails leaves the cell, and the focus on it.

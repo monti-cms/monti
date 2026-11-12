@@ -93,20 +93,85 @@ export function focusText(body: () => Editor | null, titleId: string) {
 }
 
 /**
- * The ref of a thing that goes away by an action of its own: a button that undoes the change it stands for, a cell that turns to words once
- * saved, a banner whose button puts its matter right. When the thing leaves the page with the keyboard's focus on it or in it, `to` is called
- * with it (still in the document), to give that focus to what the action was about. Nothing is kept from the press: a press that fails leaves
- * the thing and its focus where they were, and a pointer's press never held the keyboard's focus.
+ * The key that is held down now: the last one pressed, until it comes up. The focus is handed on only once it is up: a held key repeats, and
+ * would repeat into what the focus was given to (Enter held on "discard" wrote empty paragraphs into the body; on "apply again" it would press
+ * the next button). Only the last key matters, as only it repeats; and a key whose coming up is never told (macOS tells none for a key pressed
+ * with Command; another window took the keyboard) is forgotten at the next press, so nothing waits on it for long.
  */
-export function useFocusHandOff(to: (gone: HTMLElement) => void) {
+let heldKey: string | null = null;
+if (typeof window !== "undefined") {
+	addEventListener(
+		"keydown",
+		(event) => {
+			if (!event.repeat) heldKey = event.metaKey ? null : event.code;
+		},
+		true,
+	);
+	addEventListener(
+		"keyup",
+		(event) => {
+			if (event.code === heldKey || event.key === "Meta") heldKey = null;
+		},
+		true,
+	);
+	addEventListener("blur", () => {
+		heldKey = null;
+	});
+}
+
+/** Runs it now, or when the held key comes up. */
+function whenKeysAreUp(run: () => void) {
+	if (heldKey === null) return run();
+	const up = () => {
+		if (heldKey !== null) return;
+		removeEventListener("keyup", up);
+		removeEventListener("blur", up);
+		run();
+	};
+	// After the listeners above (capture, at the window) have forgotten the key.
+	addEventListener("keyup", up);
+	addEventListener("blur", up);
+}
+
+/** Where a focus goes: the thing that takes it, or what gives it (the text, two frames on), or nowhere. */
+type HandedTo = HTMLElement | (() => void) | null | undefined;
+
+/**
+ * The ref of a thing that goes away by an action of its own, or whose own control does: a button that undoes the change it stands for, a cell
+ * that turns to words once saved, a banner whose button puts its matter right (the banner goes, or stays with that button gone). When the
+ * keyboard's focus leaves the page with it, `to` is called with the thing (still in the document, so what stands after it can be found) and
+ * says where the focus goes; it is given there once no key is down. Nothing is kept from the press: a press that fails leaves the thing and its
+ * focus where they were, and a pointer's press never held the keyboard's focus.
+ */
+export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 	const latest = useRef(to);
 	latest.current = to;
 	// One callback for the thing's whole life: a new one each time the screen draws would be let go and taken again, focus and all.
 	return useCallback((node: HTMLElement | null) => {
 		if (!node) return;
+		const hand = () => {
+			const next = latest.current(node);
+			if (next) whenKeysAreUp(() => (typeof next === "function" ? next() : next.focus()));
+		};
+		// What inside it holds the keyboard's focus. A control taken out of the page loses the focus without an event: only this remembers it.
+		let held: Element | null = null;
+		const keep = (event: FocusEvent) => {
+			const on = event.target;
+			held = on instanceof Element && node.contains(on) && on.matches(":focus-visible") ? on : null;
+		};
+		addEventListener("focusin", keep, true);
+		// Its own control went and it stayed (a banner that still has something to say): the focus that control held is handed on the same way.
+		const inside = new MutationObserver(() => {
+			if (!held || held.isConnected || !node.isConnected) return;
+			held = null;
+			if (document.activeElement === document.body) hand();
+		});
+		inside.observe(node, { childList: true, subtree: true });
 		return () => {
-			const held = document.activeElement;
-			if (held instanceof HTMLElement && node.contains(held) && held.matches(":focus-visible")) latest.current(node);
+			removeEventListener("focusin", keep, true);
+			inside.disconnect();
+			const focused = document.activeElement;
+			if (focused instanceof HTMLElement && node.contains(focused) && focused.matches(":focus-visible")) hand();
 		};
 	}, []);
 }

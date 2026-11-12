@@ -66,9 +66,9 @@ export function BasicsTab({
 	// A row's undo goes away with the change it puts back: the keyboard's focus it held goes to the row's own control, the one the undo acted
 	// on (an item's row is its switch: the address field goes with the public page).
 	const pathUndo = useFocusHandOff(() =>
-		document.getElementById(kind === "item" ? "collection-public-page" : "collection-path")?.focus(),
+		document.getElementById(kind === "item" ? "collection-public-page" : "collection-path"),
 	);
-	const previewUndo = useFocusHandOff(() => document.getElementById("collection-preview-path")?.focus());
+	const previewUndo = useFocusHandOff(() => document.getElementById("collection-preview-path"));
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>

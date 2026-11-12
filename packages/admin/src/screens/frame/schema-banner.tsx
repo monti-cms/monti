@@ -16,7 +16,7 @@ export function SchemaBanner({ onReview }: { onReview?: () => void }) {
 	const retry = useOperation("schema.retry");
 	const state = schema.data;
 	// "Apply again" takes its line away when it works: the keyboard's focus it held goes to the page's first control, the next stop after the line.
-	const handOff = useFocusHandOff((banner) => nextStop(banner)?.focus());
+	const handOff = useFocusHandOff((banner) => nextStop(banner));
 	// The change file's name and the database's error are the developer's: the server's log has them (`schema.apply`), the line does not.
 	if (state?.failedChange)
 		return (

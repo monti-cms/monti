@@ -151,6 +151,24 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(body()).toHaveFocus();
 	});
 
+	it("a key held down on a banner's action writes nothing into the text: the focus is handed on when the key comes up", async () => {
+		await BrowserCopy.run();
+		await opened();
+		const blocks = within("p, h1, h2, h3").length;
+		await tabTo("버리기");
+		// Held: the key goes down, and repeats while it stays down.
+		await userEvent.keyboard("{Enter>}");
+		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).not.toBeInTheDocument();
+		await userEvent.keyboard("{Enter>}");
+		await userEvent.keyboard("{Enter>}");
+		expect(document.activeElement).toBe(document.body);
+		expect(within("p, h1, h2, h3")).toHaveLength(blocks);
+		await userEvent.keyboard("{/Enter}");
+		await expect.element(body()).toHaveFocus();
+		expect(within("p, h1, h2, h3")).toHaveLength(blocks);
+		await expect.element(button("저장 전 변경사항")).not.toBeInTheDocument();
+	});
+
 	it("\"compare\" pressed with the keyboard gives the editor's place to the comparison, and the focus to the comparison's first control", async () => {
 		await BrowserCopy.run();
 		await opened();

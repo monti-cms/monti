@@ -66,7 +66,7 @@ export function TemplateEditor({
 	const keepBody = useCallback((made: Editor | null) => {
 		body.current = made;
 	}, []);
-	const handOff = useFocusHandOff(() => focusText(() => body.current, "monti-template-name"));
+	const handOff = useFocusHandOff(() => () => focusText(() => body.current, "monti-template-name"));
 
 	const name = editor.title;
 	const write = async () => {
