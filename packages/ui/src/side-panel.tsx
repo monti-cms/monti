@@ -1,6 +1,14 @@
 "use client";
 
-import { type ComponentProps, type CSSProperties, type FormEventHandler, type ReactNode, useId } from "react";
+import {
+	type ComponentProps,
+	type CSSProperties,
+	type FormEventHandler,
+	type ReactNode,
+	useId,
+	useLayoutEffect,
+	useRef,
+} from "react";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
 import { ChevronLeft, Close } from "./icons";
@@ -34,6 +42,9 @@ const SIDE_PANEL_WIDTH = {
  * icon buttons and the close button. Under the body an optional foot holds the one pill, or the box to type in. Docked at the window's right edge,
  * it covers the ✦ button of the page's corner. The panel is named by its title. Put it in a row beside the screen; on a narrow screen it takes the whole width. With `onSubmit` the body and the foot are one form, so Enter
  * in a field and the foot's submit button save it.
+ *
+ * Closed with the keyboard while focus is in it (its ×, a shortcut), the panel gives focus back to where focus came into it from: the row that
+ * opened it. A pointer press moves nothing. What it came from is remembered by the panel itself; a screen passes nothing.
  */
 export function SidePanel({
 	title,
@@ -84,6 +95,21 @@ export function SidePanel({
 		max: start * 2,
 	});
 	const titleId = useId();
+	const panel = useRef<HTMLElement>(null);
+	/** Where focus was before it came into the panel. */
+	const from = useRef<HTMLElement | null>(null);
+	/** Whether the last press in the panel was a key's, not a pointer's. */
+	const keys = useRef(false);
+	useLayoutEffect(() => {
+		const node = panel.current;
+		const active = document.activeElement;
+		if (active instanceof HTMLElement && active !== document.body && !node?.contains(active)) from.current = active;
+		// As it leaves, before its nodes do: focus still in it would fall to the document.
+		return () => {
+			if (!node || !keys.current || !node.contains(document.activeElement)) return;
+			if (from.current?.isConnected) from.current.focus();
+		};
+	}, []);
 	const body = (
 		<div
 			data-slot="side-panel-body"
@@ -116,6 +142,20 @@ export function SidePanel({
 			)}
 			style={{ "--side-panel-width": `${resize.width}px`, ...style } as CSSProperties}
 			{...props}
+			ref={panel}
+			onKeyDownCapture={(event) => {
+				keys.current = true;
+				props.onKeyDownCapture?.(event);
+			}}
+			onPointerDownCapture={(event) => {
+				keys.current = false;
+				props.onPointerDownCapture?.(event);
+			}}
+			onFocusCapture={(event) => {
+				const before = event.relatedTarget;
+				if (before instanceof HTMLElement && !event.currentTarget.contains(before)) from.current = before;
+				props.onFocusCapture?.(event);
+			}}
 		>
 			<ResizeHandle
 				value={resize.width}

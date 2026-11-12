@@ -602,4 +602,16 @@ describe("the activity log (doc 13, flow 12)", () => {
 		expect(cell?.textContent).toMatch(/^\d\d\. \d\d \d\d:\d\d$/);
 		expect(cell?.getAttribute("title")).toBe(cell?.textContent);
 	});
+	it("[flow 12·03] the details closed with the keyboard give focus back to the row that opened them", async () => {
+		await draw(stories.Log).run();
+		const link = row(FAILED).getByRole("button").first();
+		await expect.element(link).toBeVisible();
+		(link.element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel().getByRole("heading", { name: FAILED })).toBeVisible();
+		(panel().getByRole("button", { name: "닫기" }).element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel()).not.toBeInTheDocument();
+		await expect.element(link).toHaveFocus();
+	});
 });
