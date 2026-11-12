@@ -1,3 +1,4 @@
+import { toast } from "@monti-cms/ui";
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
@@ -749,6 +750,27 @@ describe("settings: the assistant's proposals", () => {
 		await userEvent.click(page.getByRole("button", { name: "모두 받기" }));
 		await expect.element(saveGroup()).toBeVisible();
 		await expect.element(page.getByRole("button", { name: "모두 받기" })).not.toBeInTheDocument();
+	});
+});
+
+describe("settings: a toast while proposals wait", () => {
+	it("12-1 a toast stands over the proposal bubble, not on it: with a toast up, 모두 받기 takes a pointer press (T180)", async () => {
+		await LanguageProposal.run();
+		const accept = page.getByRole("button", { name: "모두 받기" });
+		// What a save beside pending proposals leaves on the screen: its toast, at the bottom centre where the bubble is.
+		toast("저장했습니다", { duration: Number.POSITIVE_INFINITY });
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		const box = (element: Element | null) => (element as Element).getBoundingClientRect();
+		const bubble = () => box(document.querySelector("[data-slot=proposal-bubble-dock]")?.firstElementChild ?? null);
+		const shown = () => box(document.querySelector("[data-sonner-toast]"));
+		// The two boxes do not meet: the toast ends 12px over the bubble.
+		await expect.poll(() => Math.round(bubble().top - shown().bottom)).toBe(12);
+		// The press CI could not make with a toast lying on the bubble: a real pointer on the button, which takes it.
+		await userEvent.click(accept);
+		await expect.element(saveGroup()).toBeVisible();
+		await expect.element(accept).not.toBeInTheDocument();
+		// With the bubble gone the toast is back at its own place over the window's edge.
+		await expect.poll(() => Math.round(window.innerHeight - shown().bottom)).toBe(32);
 	});
 });
 
