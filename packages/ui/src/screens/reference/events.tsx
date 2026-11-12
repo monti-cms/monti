@@ -421,7 +421,7 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 								<DeliveryCell delivery="sent" whole />
 							</DescriptionItem>
 							{/* The id the receiver got it under, to find it in the receiver's own log. */}
-							<DescriptionItem label="Monti-Event-Id" mono>
+							<DescriptionItem label="이벤트 ID" mono>
 								7d3c1f0e-52a8-4b6d-9e1f-c04a8b7d21f1
 							</DescriptionItem>
 						</DescriptionList>
@@ -472,7 +472,7 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 									</DescriptionItem>
 								)}
 								{/* The id the receiver got it under, to find it in the receiver's own log. */}
-								<DescriptionItem label="Monti-Event-Id" mono>
+								<DescriptionItem label="이벤트 ID" mono>
 									7d3c1f0e-52a8-4b6d-9e1f-c04a8b7d21f2
 								</DescriptionItem>
 							</DescriptionList>
@@ -492,7 +492,7 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 								<DeliveryCell delivery="sent" whole />
 							</DescriptionItem>
 							{/* The id the receiver got it under, to find it in the receiver's own log. */}
-							<DescriptionItem label="Monti-Event-Id" mono>
+							<DescriptionItem label="이벤트 ID" mono>
 								7d3c1f0e-52a8-4b6d-9e1f-c04a8b7d21f3
 							</DescriptionItem>
 						</DescriptionList>

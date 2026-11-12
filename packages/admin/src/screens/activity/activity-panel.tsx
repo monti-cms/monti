@@ -281,8 +281,8 @@ export function ActivityPanel({
 													{shortTime(delivery.nextAttemptAt)}
 												</DescriptionItem>
 											)}
-											{/* What the receiver got it under: the header's name, to find it in the receiver's own log. */}
-											<DescriptionItem label="Monti-Event-Id" mono>
+											{/* The id the receiver got the event under (`Monti-Event-Id`, and `id` in the body): to find it in the receiver's own log. */}
+											<DescriptionItem label={t("activity.eventId")} mono>
 												{delivery.eventId}
 											</DescriptionItem>
 										</DescriptionList>

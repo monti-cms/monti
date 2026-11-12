@@ -149,7 +149,6 @@ describe("the activity log (doc 13, flow 12)", () => {
 				.elements()
 				.map((each) => each.textContent),
 		).toEqual(["항목", "전송 · 2"]);
-		await expect.element(panel()).not.toHaveTextContent(/(^|[^-])ID/);
 		await expect.element(panel()).toHaveTextContent("컬렉션게시글");
 		await expect.element(panel()).toHaveTextContent("주소/posts/react-19");
 		await expect.element(panel()).toHaveTextContent("전송 · 2");
@@ -162,7 +161,9 @@ describe("the activity log (doc 13, flow 12)", () => {
 		// Why it failed is the receiver's answer as it came; the next try says its day too; the id is the one the receiver got.
 		await expect.element(panel()).toHaveTextContent("마지막 오류503 Service Unavailable");
 		await expect.element(panel()).toHaveTextContent(/다음 시도\d\d\. \d\d \d\d:\d\d/);
-		await expect.element(panel()).toHaveTextContent(/Monti-Event-Id[0-9a-f-]{36}/);
+		await expect.element(panel()).toHaveTextContent(/이벤트 ID[0-9a-f-]{36}/);
+		// The line's own id is nothing a person uses: it is not shown.
+		expect(panel().element().textContent).not.toContain(new URLSearchParams(location.hash.split("?")[1]).get("open"));
 		// The other receiver got it: the panel, which is about this one line, says so.
 		await expect.element(panel()).toHaveTextContent("보냄");
 		expect(row(FAILED).element().getAttribute("data-selected")).not.toBeNull();
