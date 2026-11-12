@@ -17,7 +17,7 @@
 
 ### 코드
 
-`Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`. `TabsList`에는 `variant`가 있다. `line`(기본), `bar`(창 맨 위. `inset`은 첫 탭을 내용의 양옆 안쪽 여백에 맞춘다), `toolbar`(페이지 제목 아래)다. 탭은 mono 개수(실패한 전송처럼 살펴봐야 할 개수에는 `warning` 톤)와 `ChangeDot`을 가질 수 있다. `TabsContent`는 Tab이 멈추는 곳이라, 키보드로 오면 안쪽 고리를 그린다.
+`Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`. `TabsList`에는 `variant`가 있다. `line`(기본), `bar`(창 맨 위. `inset`은 첫 탭을 내용의 양옆 안쪽 여백에 맞춘다), `toolbar`(페이지 제목 아래)다. 탭은 mono 개수(실패한 전송처럼 살펴봐야 할 개수에는 `warning` 톤)와 `ChangeDot`을 가질 수 있다. `TabsContent`는 Tab이 멈추는 곳이라, 키보드로 오면 안쪽에 고리를 그린다(2px 안쪽의 둘레 선. 담긴 것 위에 그려지고 스크롤해도 제자리다).
 
 `TabLinks`와 `TabLink`는 링크인 페이지에 같은 일을 한다. 제목 아래 필터 행에 놓인, 도구 페이지 하나의 여러 페이지가 그렇다.
 
