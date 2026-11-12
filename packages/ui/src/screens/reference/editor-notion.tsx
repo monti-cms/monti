@@ -51,6 +51,7 @@ import {
 	Separator,
 	SplitButton,
 	Stack,
+	StandalonePage,
 	StatusBar,
 	StatusBarCell,
 	StatusBarList,
@@ -169,7 +170,7 @@ export function EditorPage({
 	children,
 }: {
 	header: React.ReactNode;
-	/** A `Banner` about the whole entry, edge to edge under the bar (a conflict, an ended session). */
+	/** Every `Banner` of the screen (an ended session, a conflict), at its very top over the bar, edge to edge, wider matter first. */
 	banner?: React.ReactNode;
 	/** Over the title (the language tabs). */
 	head?: React.ReactNode;
@@ -183,9 +184,8 @@ export function EditorPage({
 	children?: React.ReactNode;
 }) {
 	return (
-		<Stack gap={0} height="screen" overflow="clip" background="page">
+		<StandalonePage banner={banner}>
 			{header}
-			{banner}
 			<Inline align="stretch" gap={beside ? 40 : 0} grow minHeight={0} overflow="hidden">
 				{beside}
 				<Stack gap={0} grow minWidth={0} overflow="y" paddingX={48} paddingTop={16}>
@@ -198,7 +198,7 @@ export function EditorPage({
 				{side}
 			</Inline>
 			{statusBar}
-		</Stack>
+		</StandalonePage>
 	);
 }
 

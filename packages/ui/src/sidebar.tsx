@@ -19,6 +19,7 @@ import { ICON_BUTTON, IconButton } from "./icon-button";
 import { Asleep, Light, OpenPanelLeft, Screen, SidePanelClose, SidePanelOpen } from "./icons";
 import { useUiLabels } from "./labels";
 import { NAV_ROW, NAV_ROW_END } from "./nav-link";
+import { PageBannerPlace } from "./page-banner";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { Segmented } from "./segmented";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -244,7 +245,7 @@ function SidebarTrigger({
  * The page beside the rail. `corner` is what sits in its top-right corner, 12px from both edges (the assistant's button); the page's own header keeps
  * clear of it, and a panel docked at the right edge covers it. On a narrow screen, where the rail is a drawer, a bar above the page holds the button that opens it, with the corner at its end.
  * `banner` is an alert about the whole site (a schema change saved but not applied): it spans the page edge to edge above everything, and the page,
- * its corner included, moves down under it.
+ * its corner included, moves down under it. A page's own banner stands in the same place, under the site's: the page gives it with `PageBanner`.
  */
 function SidebarInset({
 	fixed = false,
@@ -257,40 +258,30 @@ function SidebarInset({
 	/** Inside a `fixed` frame: the main area clips to the window, so its own panes scroll. */
 	fixed?: boolean;
 	corner?: React.ReactNode;
-	/** A `Banner` about the whole site, above the page and its corner. */
+	/** A `Banner` about the whole site, above the page and its corner (and above what the page gives with `PageBanner`). */
 	banner?: React.ReactNode;
 }) {
 	const { isMobile } = useSidebar();
-	const page = (
-		<>
-			{isMobile ? (
-				<div className="flex h-monti-header shrink-0 items-center justify-between px-monti-12">
-					<SidebarTrigger />
-					{corner}
-				</div>
-			) : (
-				corner && <div className="absolute top-monti-12 right-monti-12 z-10">{corner}</div>
-			)}
-			{children}
-		</>
-	);
 	return (
 		<main
 			data-slot="sidebar-inset"
 			className={cn("relative flex w-full flex-1 flex-col bg-monti-page", fixed && "min-w-0 overflow-clip", className)}
 			{...props}
 		>
-			{banner ? (
-				<>
-					<div data-slot="sidebar-inset-banner" className="shrink-0">
-						{banner}
-					</div>
-					{/* The page under the banner: the corner is measured from here, so it moves down with the page. */}
-					<div className="relative flex min-h-0 min-w-0 flex-1 flex-col">{page}</div>
-				</>
-			) : (
-				page
-			)}
+			<PageBannerPlace data-slot="sidebar-inset-banner" banner={banner}>
+				{/* The page under the banners: the corner is measured from here, so it moves down with the page. */}
+				<div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+					{isMobile ? (
+						<div className="flex h-monti-header shrink-0 items-center justify-between px-monti-12">
+							<SidebarTrigger />
+							{corner}
+						</div>
+					) : (
+						corner && <div className="absolute top-monti-12 right-monti-12 z-10">{corner}</div>
+					)}
+					{children}
+				</div>
+			</PageBannerPlace>
 		</main>
 	);
 }
