@@ -229,3 +229,21 @@ export function overlap(a: string, b: string): boolean {
 	if (a === b) return !a.endsWith("/*");
 	return a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
 }
+
+/**
+ * The events of entries deleted for good, thrown away or brought back: one for the entries of each collection and language, since the trash moves
+ * many at once and a receiver hears of them together.
+ */
+export function placeEvents(
+	type: "entry.trashed" | "entry.restored" | "entry.purged",
+	entries: { id: string; collection: string; locale: string }[],
+): EmittedEvent[] {
+	const places = new Map<string, { collection: string; locale: string; ids: string[] }>();
+	for (const entry of entries) {
+		const key = `${entry.collection}\n${entry.locale}`;
+		const place = places.get(key) ?? { collection: entry.collection, locale: entry.locale, ids: [] };
+		place.ids.push(entry.id);
+		places.set(key, place);
+	}
+	return [...places.values()].map((place) => ({ type, ...place }));
+}

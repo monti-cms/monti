@@ -6,7 +6,7 @@ import { type AuthSettings, authOperations } from "./auth/operations";
 import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./body/blocks";
 import { bodyOperations, templateRecord } from "./body/operations";
 import type { Database, ItemExchange } from "./db/schema";
-import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
+import { BEFORE_ANSWER_MS, type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
 import { context, type Engine, logOwnWork, type RunOptions, runRead, runWrite } from "./engine/execute";
 import {
 	type ApplyProgress,
@@ -104,9 +104,10 @@ export type MontiOptions = {
 	fetch?: typeof globalThis.fetch;
 	now?: () => Date;
 	/**
-	 * Keeps the first send of a write's events going after the response (a serverless host's `waitUntil`). Without it the write waits for the send.
+	 * Keeps a write's first sends going after the response: the host is given the work to start, and starts it where it holds work open (a
+	 * serverless host's `waitUntil`, Next's `after`). Without it the write waits for the send.
 	 */
-	waitUntil?: (work: Promise<unknown>) => void;
+	waitUntil?: (work: () => Promise<unknown>) => void;
 };
 
 /** An operation as the agent and the CLI discover it. */
@@ -294,6 +295,12 @@ export function createMonti(options: MontiOptions) {
 		recordKinds.set(kind.kind, kind);
 	}
 	const receivers = [...(options.receivers ?? []), ...plugins.flatMap((plugin) => plugin.receivers ?? [])];
+	// A delivery finds its receiver by name: two under one name would both resolve to the first, which would get each event twice.
+	for (const receiver of receivers)
+		if (receivers.filter((other) => other.destination === receiver.destination).length > 1)
+			throw new Error(
+				`Two receivers are named "${receiver.destination}". Give one a name of its own: webhook(url, { name: "…" }).`,
+			);
 	const storages = plugins.filter((plugin) => plugin.storage);
 	if (storages.length > 1)
 		throw new Error(
@@ -353,9 +360,8 @@ export function createMonti(options: MontiOptions) {
 		for (const operation of plugin.operations ?? []) add(operation, `plugin ${plugin.name}`);
 
 	/**
-	 * Sending whose result nobody reads. A serverless host keeps it going after the response (`waitUntil`). A send that throws (the database went
-	 * away) is logged and not passed on: the write it follows has committed, the delivery is still queued, and the next visit or
-	 * `monti deliveries:run` sends it.
+	 * A send that throws (the database went away) is logged and not passed on: the write it follows has committed, the delivery is still queued,
+	 * and the next visit or `monti deliveries:run` sends it.
 	 */
 	const quiet = (work: Promise<unknown>): Promise<void> =>
 		work.then(
@@ -364,25 +370,58 @@ export function createMonti(options: MontiOptions) {
 				console.error("Monti: sending deliveries failed; they stay queued for the next try:", error);
 			},
 		);
-	const background = (work: Promise<unknown>): Promise<void> => {
-		const safe = quiet(work);
-		options.waitUntil?.(safe);
-		return safe;
+	/**
+	 * Sending whose result nobody reads. The host is given the work to start, and starts it where it keeps work going after the response
+	 * (`waitUntil`; Next's `after`): what a receiver does there is then inside the host's own scope, not in a promise that began in a request
+	 * and ends after it. Without a host's way the work starts now. The promise ends when the work does, for a caller that wants to wait.
+	 */
+	const background = (start: () => Promise<unknown>): Promise<void> => {
+		const keep = options.waitUntil;
+		if (!keep) return quiet(start());
+		return new Promise<void>((done) => keep(() => quiet(start()).then(done)));
 	};
 
 	/**
 	 * A write's first send. Without a host that keeps work going after the response, the write waits for all of it. With one, it waits only for
 	 * the receivers that ask to be done before the answer (the site's own cached pages: a publish that answered is on the site), and the rest
 	 * goes on after the response, so a webhook that does not answer never holds a save.
+	 *
+	 * The wait has one deadline for the whole write (`BEFORE_ANSWER_MS`), however many events it emitted: at the deadline no further send is
+	 * started, the write answers, and what is left is sent behind the answer.
 	 */
 	const firstSend = async (ids: string[]): Promise<void> => {
 		if (ids.length === 0) return;
-		if (!options.waitUntil) return quiet(sendDeliveries(engine.db, receivers, ids, now));
+		const keep = options.waitUntil;
+		if (!keep) return quiet(sendDeliveries(engine.db, receivers, ids, now));
 		const first = receivers.filter((receiver) => receiver.beforeAnswer);
 		const rest = receivers.filter((receiver) => !receiver.beforeAnswer);
 		// Each pass leaves the other's deliveries untried: a delivery is sent by the pass that has its receiver.
-		if (first.length > 0) await quiet(sendDeliveries(engine.db, first, ids, now, { leaveUnknown: true }));
-		if (rest.length > 0) void background(sendDeliveries(engine.db, rest, ids, now, { leaveUnknown: true }));
+		if (first.length > 0) {
+			let over = false;
+
+			/** What the deadline kept from starting: these alone are sent behind the answer, each still once. */
+			const left: string[] = [];
+			const pass = quiet(
+				sendDeliveries(engine.db, first, ids, now, {
+					leaveUnknown: true,
+					stop: () => over,
+					notStarted: (id) => left.push(id),
+				}),
+			);
+			let timer: ReturnType<typeof setTimeout> | undefined;
+			const late = new Promise<"late">((resolve) => {
+				timer = setTimeout(() => {
+					over = true;
+					resolve("late");
+				}, BEFORE_ANSWER_MS);
+			});
+			const outcome = await Promise.race([pass.then(() => "done" as const), late]);
+			clearTimeout(timer);
+			// The sends under way end by themselves; what was never started is started behind the answer, in the host's own scope.
+			if (outcome === "late")
+				keep(() => pass.then(() => quiet(sendDeliveries(engine.db, first, left, now, { leaveUnknown: true }))));
+		}
+		if (rest.length > 0) void background(() => sendDeliveries(engine.db, rest, ids, now, { leaveUnknown: true }));
 	};
 
 	const get = (name: string, kinds: OperationKind[]) => {
@@ -481,7 +520,7 @@ export function createMonti(options: MontiOptions) {
 			 * Sends the retries that are due without holding the caller: the admin opening must not wait for a receiver that does not answer (T5). The
 			 * promise is for tests and for a host that wants to wait.
 			 */
-			sendDueInBackground: (): Promise<void> => background(sendDueDeliveries(engine.db, receivers, now)),
+			sendDueInBackground: (): Promise<void> => background(() => sendDueDeliveries(engine.db, receivers, now)),
 		},
 
 		keys: {

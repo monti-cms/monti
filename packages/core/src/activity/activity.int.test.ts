@@ -1,8 +1,10 @@
+import { createHmac } from "node:crypto";
 import { sql } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { signedInApi } from "../__test__/admin";
 import { testDatabase } from "../__test__/database";
 import {
+	BEFORE_ANSWER_MS,
 	RETRY_BATCH,
 	RETRY_MINUTES,
 	type Receiver,
@@ -11,6 +13,7 @@ import {
 	sendDeliveries,
 	webhook,
 } from "../engine/deliveries";
+import { WORDS_LENGTH } from "../engine/execute";
 import type { UndoPlan } from "../engine/undo";
 import { createReader } from "../entries/reader";
 import { ForbiddenError } from "../errors";
@@ -19,7 +22,7 @@ import { createMonti, type MontiOptions } from "../monti";
 import type { Message, MontiEvent } from "../operation";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
-import type { ActivityDetail, ActivityLine, ActivityList } from "./list";
+import { type ActivityDetail, type ActivityLine, type ActivityList, ActivityQuery, listActivity } from "./list";
 import type { DeliveriesRetried, DeliveryCounts } from "./operations";
 
 const db = await testDatabase();
@@ -295,10 +298,13 @@ describe("sending", () => {
 			version: 2,
 			paths: ["/posts/first-post"],
 		});
+		// Stored under its name: the address's host and path.
 		expect((await deliveries())[0]).toMatchObject({
-			destination: "webhook:https://site.test/api/revalidate",
+			destination: "webhook:site.test/api/revalidate",
 			state: "sent",
 		});
+		// With no secret of its own, nothing is signed.
+		expect((calls[0].init.headers as Record<string, string>)["monti-signature"]).toBeUndefined();
 
 		status = 503;
 		later(MINUTE);
@@ -321,6 +327,309 @@ describe("sending", () => {
 		expect([headers(first)["monti-attempt"], headers(again)["monti-attempt"]]).toEqual(["1", "2"]);
 		// Another event is another id.
 		expect(headers(calls[0])["monti-event-id"]).not.toBe(headers(first)["monti-event-id"]);
+	});
+
+	it("13-1 a webhook is stored and shown under a name, never its address: a token in the address stays in the config, and two receivers cannot share a name", async () => {
+		const posted: string[] = [];
+		const hook = webhook("https://user:pass@hooks.site.test/deploy?token=s3cret", {
+			fetch: async (url) => {
+				posted.push(String(url));
+				return new Response(null, { status: 200 });
+			},
+		});
+		expect(hook.destination).toBe("webhook:hooks.site.test/deploy");
+		expect(webhook("https://site.test/").destination).toBe("webhook:site.test");
+		expect(webhook("https://site.test/api/search?key=1", { name: "search" }).destination).toBe("webhook:search");
+		const monti = site({ receivers: [hook] });
+		await newPost("첫 번째 글", "first-post", monti);
+		// Posted to the whole address; nothing of the token or the credentials is in any row.
+		expect(posted).toEqual(["https://user:pass@hooks.site.test/deploy?token=s3cret"]);
+		expect(await deliveries()).toHaveLength(1);
+		const rows = JSON.stringify([await deliveries(), await db.selectFrom("monti_activity").selectAll().execute()]);
+		expect(rows).not.toContain("s3cret");
+		expect(rows).not.toContain("pass@");
+		// Two addresses that differ only in their query would be one name: refused when the site is made, not found out by a lost event.
+		expect(() =>
+			site({ receivers: [webhook("https://a.test/hook?to=one"), webhook("https://a.test/hook?to=two")] }),
+		).toThrow('Two receivers are named "webhook:a.test/hook"');
+		expect(() =>
+			site({
+				receivers: [webhook("https://a.test/hook?to=one"), webhook("https://a.test/hook?to=two", { name: "two" })],
+			}),
+		).not.toThrow();
+	});
+
+	it("13-1 a webhook signs with its own secret, does not follow a redirect, lets the answer's body go, and keeps the network's word for a failure", async () => {
+		const inits: RequestInit[] = [];
+		let answer: () => Response = () => new Response(null, { status: 200 });
+		const signedAt = new Date("2026-10-26T10:00:00Z");
+		const hook = webhook("https://site.test/hook", {
+			secret: "the hook's secret",
+			now: () => signedAt,
+			fetch: async (_url, init) => {
+				inits.push(init ?? {});
+				return answer();
+			},
+		});
+		const monti = site({ receivers: [hook] });
+		let let_go = false;
+		answer = () =>
+			new Response(
+				new ReadableStream({
+					start(controller) {
+						controller.enqueue(new TextEncoder().encode("a long answer nobody reads"));
+					},
+					cancel() {
+						let_go = true;
+					},
+				}),
+				{ status: 200 },
+			);
+		const id = await newPost("첫 번째 글", "first-post", monti);
+		expect(inits[0].redirect).toBe("manual");
+		expect(let_go).toBe(true);
+		// `t` is the time of the send, `v1` the HMAC-SHA256 of `<t>.<body>` under the webhook's secret: a receiver makes the same and compares.
+		const seconds = Math.floor(signedAt.getTime() / 1000);
+		const expected = createHmac("sha256", "the hook's secret")
+			.update(`${seconds}.${String(inits[0].body)}`)
+			.digest("hex");
+		expect((inits[0].headers as Record<string, string>)["monti-signature"]).toBe(`t=${seconds},v1=${expected}`);
+
+		// A redirect is an answer that is no success: it fails with its status, and nothing is posted to where it points.
+		answer = () =>
+			new Response(null, { status: 302, statusText: "Found", headers: { location: "https://elsewhere.test/" } });
+		later(MINUTE);
+		await save(id, { title: "고친 글" }, monti);
+		expect(inits).toHaveLength(2);
+		expect((await deliveries())[1]).toMatchObject({ state: "failed", last_error: "302 Found" });
+
+		// Not reached at all: the network's own word for why is kept.
+		answer = () => {
+			throw Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNREFUSED" } });
+		};
+		later(MINUTE);
+		await save(id, { title: "또 고친 글" }, monti);
+		expect((await deliveries())[2]).toMatchObject({ state: "failed", last_error: "fetch failed (ECONNREFUSED)" });
+	});
+
+	it("13-1 a receiver whose work is the same whatever the event gets one send for a write, however many events it emitted", async () => {
+		const everything: Receiver = { ...receiver("plugin:next"), oncePerWrite: true };
+		const monti = site({ receivers: [everything, receiver(SITE)] });
+		const ids = [];
+		for (let index = 1; index <= 5; index++) ids.push(await newPost(`글 ${index}`, `post-${index}`, monti));
+		sent.length = 0;
+		const { activityId } = await publish(ids, monti);
+		const of = (destination: string) => sent.filter((delivery) => delivery.destination === destination);
+		// Five entries published at once: five events for the webhook, one send for the receiver that refreshes everything.
+		expect(of(SITE)).toHaveLength(5);
+		expect(of("plugin:next")).toHaveLength(1);
+		expect(
+			(await deliveries()).filter(
+				(delivery) => delivery.activity_id === activityId && delivery.destination === "plugin:next",
+			),
+		).toHaveLength(1);
+	});
+
+	it("13-1 the wait for the receivers a write answers after has one deadline, however many events: the write answers, and the rest is sent behind it", async () => {
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		const started: string[] = [];
+		let reached: (() => void) | null = null;
+		const startedAt = (count: number) =>
+			new Promise<void>((resolve) => {
+				reached = () => {
+					if (started.length >= count) resolve();
+				};
+				reached();
+			});
+		// The site's pages, refreshed by a function that never comes back, entry by entry.
+		const hanging: Receiver = {
+			destination: "plugin:next",
+			beforeAnswer: true,
+			accepts: (event) => event.type === "entry.published",
+			send: (event) => {
+				started.push(event.ids[0]);
+				reached?.();
+				return new Promise(() => {});
+			},
+		};
+		const kept: (() => Promise<unknown>)[] = [];
+		const monti = site({ receivers: [hanging], waitUntil: (work) => kept.push(work) });
+		const ids = [];
+		for (let index = 1; index <= 12; index++) ids.push(await newPost(`글 ${index}`, `post-${index}`, monti));
+		const writing = publish(ids, monti);
+		// Ten at a time are under way; the deadline comes, and with it each send's own time limit.
+		await startedAt(10);
+		vi.advanceTimersByTime(BEFORE_ANSWER_MS);
+		// The write answers at the deadline: twelve hanging sends do not make it twelve time limits long.
+		await writing;
+		expect(started).toHaveLength(10);
+		// What was never started is handed to the host, which starts it behind the answer.
+		expect(kept).toHaveLength(1);
+		const rest = kept[0]();
+		await startedAt(12);
+		vi.advanceTimersByTime(SEND_TIMEOUT_MS);
+		await rest;
+		const mine = (await deliveries()).filter((delivery) => delivery.event.type === "entry.published");
+		expect(mine).toHaveLength(12);
+		// Each was tried once.
+		expect(mine.every((delivery) => delivery.state === "failed" && delivery.attempts === 1)).toBe(true);
+	});
+
+	it("13-1 a delivery just queued is its write's to send first: another request's sweep leaves it until a sender's hold has passed", async () => {
+		// A write whose host never ran the send it was handed (the function ended with the answer).
+		const cut = site({ waitUntil: () => {} });
+		await newPost("첫 번째 글", "first-post", cut);
+		expect((await deliveries())[0]).toMatchObject({ state: "pending", attempts: 0 });
+		const monti = site();
+		// Another visit's sweep, a moment later: not due yet, or it would race the write's own first send.
+		later(1000);
+		expect(await monti.deliveries.sendDue()).toEqual({ sent: 0, failed: 0, left: 0 });
+		// Past a sender's hold nobody is sending it: the sweep takes it.
+		later(SEND_TIMEOUT_MS * 3);
+		expect(await monti.deliveries.sendDue()).toEqual({ sent: 1, failed: 0, left: 0 });
+	});
+
+	it("13-1 a sweep that takes a delivery whose reservation ran out takes the person's name off it: it is not counted as being sent again by a person", async () => {
+		let open = () => {};
+		const gate = new Promise<void>((resolve) => {
+			open = resolve;
+		});
+		let reached = () => {};
+		const calling = new Promise<void>((resolve) => {
+			reached = resolve;
+		});
+		let hold = false;
+		const holding: Receiver = {
+			destination: SITE,
+			async send() {
+				if (down.has(SITE)) throw new Error("503");
+				if (!hold) return;
+				reached();
+				await gate;
+			},
+		};
+		const monti = site({ receivers: [holding] });
+		down.add(SITE);
+		await newPost("첫 번째 글", "first-post", monti);
+		down.clear();
+		const [failed] = await deliveries();
+		// A person's "send again" reserved it, and never sent it (the request died).
+		await reserveFailedDeliveries(db, [failed.id], { now: clock, holder: "the-person", run: null });
+		expect((await read<DeliveryCounts>("deliveries.counts", {}, monti)).sending).toBe(1);
+		later(SEND_TIMEOUT_MS * 3 + 1000);
+		hold = true;
+		const sweeping = monti.deliveries.sendDue();
+		await calling;
+		expect((await deliveries())[0]).toMatchObject({ held_by: null });
+		expect((await read<DeliveryCounts>("deliveries.counts", {}, monti)).sending).toBe(0);
+		open();
+		expect(await sweeping).toEqual({ sent: 1, failed: 0, left: 0 });
+	});
+
+	it("13-1 the command line's run sends what it can though more than a sweep of what it cannot send is due before it", async () => {
+		const monti = site({ receivers: [receiver(SITE), receiver("plugin:next")] });
+		down.add(SITE);
+		down.add("plugin:next");
+		await newPost("첫 번째 글", "first-post", monti);
+		down.clear();
+		const [first] = (await deliveries()).filter((delivery) => delivery.destination === "plugin:next");
+		// Sixty older failed deliveries of the receiver only the running site has, all due.
+		await db
+			.insertInto("monti_delivery")
+			.values(
+				Array.from({ length: 60 }, (_unused, index) => ({
+					...first,
+					id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+					event: JSON.stringify(first.event),
+					created_at: new Date(clock.getTime() - (index + 1) * 1000),
+				})),
+			)
+			.execute();
+		later(RETRY_MINUTES[0] * MINUTE);
+		const fromTheCommandLine = site({ receivers: [receiver(SITE)] });
+		// The webhook's delivery is the newest of them all: a sweep of the fifty oldest would never reach it.
+		expect(await fromTheCommandLine.deliveries.sendDue({ leaveUnknown: true })).toEqual({
+			sent: 1,
+			failed: 0,
+			left: 61,
+		});
+		expect(
+			(await deliveries()).filter((delivery) => delivery.destination === "plugin:next" && delivery.attempts !== 1),
+		).toEqual([]);
+	});
+
+	it("13-1 sending again from the command line leaves what only the running site can send as it is", async () => {
+		const monti = site({ receivers: [receiver(SITE), receiver("plugin:next")] });
+		down.add(SITE);
+		down.add("plugin:next");
+		await newPost("첫 번째 글", "first-post", monti);
+		down.clear();
+		const pages = async () => (await deliveries()).find((delivery) => delivery.destination === "plugin:next");
+		const before = await pages();
+		// The command line opens the site without the adapter's receiver.
+		const fromTheCommandLine = site({ receivers: [receiver(SITE)] });
+		const all = (await fromTheCommandLine.run(
+			"deliveries.retry",
+			{ all: true },
+			{ actor: "cli" },
+		)) as Written<DeliveriesRetried>;
+		expect(all.output).toMatchObject({ sent: 1, failed: 0, remaining: 0 });
+		// Its tries are not reset and no failure is written over it.
+		expect(await pages()).toEqual(before);
+		await expect(
+			fromTheCommandLine.run("deliveries.retry", { ids: [before?.id ?? ""] }, { actor: "cli" }),
+		).rejects.toMatchObject({ reason: { key: "deliveries.notHere" } });
+		expect(await pages()).toEqual(before);
+		// The running site sends it.
+		expect(
+			(await write<DeliveriesRetried>("deliveries.retry", { ids: [before?.id ?? ""] }, monti)).output,
+		).toMatchObject({
+			sent: 1,
+		});
+	});
+
+	it("13-1 asked to send several again of which none can be sent, it says why for each state, not for whichever came first", async () => {
+		const monti = site({ receivers: [receiver(SITE), receiver(SEARCH)] });
+		down.add(SEARCH);
+		await newPost("첫 번째 글", "first-post", monti);
+		down.clear();
+		const arrived = (await deliveries()).find((delivery) => delivery.destination === SITE);
+		const failed = (await deliveries()).find((delivery) => delivery.destination === SEARCH);
+		await write("deliveries.cancel", { id: failed?.id }, monti);
+		await expect(write("deliveries.retry", { ids: [arrived?.id, failed?.id] }, monti)).rejects.toMatchObject({
+			reason: { key: "deliveries.noneToSend", values: { sent: 1, canceled: 1, sending: 0, notHere: 0 } },
+		});
+		// One reason for all of them is said as it is.
+		await expect(write("deliveries.retry", { ids: [arrived?.id] }, monti)).rejects.toMatchObject({
+			reason: { key: "deliveries.alreadySent" },
+		});
+		await expect(write("deliveries.retry", { ids: ["no-such-delivery"] }, monti)).rejects.toMatchObject({
+			reason: { key: "deliveries.unknown" },
+		});
+	});
+
+	it("13-1 the assistant proposes sending a delivery again by its id; every failed one at once is a person's", async () => {
+		const monti = site();
+		down.add(SITE);
+		await newPost("첫 번째 글", "first-post", monti);
+		down.clear();
+		const [failed] = await deliveries();
+		const proposal = await monti.proposals.create("conversation-1", "실패한 전송 다시 보내 줘");
+		await expect(monti.proposals.add(proposal, "deliveries.retry", { all: true })).rejects.toMatchObject({
+			reason: { key: "errors.humanOnly" },
+		});
+		await monti.proposals.add(proposal, "deliveries.retry", { ids: [failed.id] });
+		const results = await monti.proposals.apply(proposal);
+		expect(results.map((result) => result.state)).toEqual(["applied"]);
+		expect((await deliveries())[0]).toMatchObject({ state: "sent" });
+		// A person still sends them all.
+		down.add(SITE);
+		later(MINUTE);
+		await newPost("두 번째 글", "second-post", monti);
+		down.clear();
+		expect((await write<DeliveriesRetried>("deliveries.retry", { all: true }, monti)).output).toMatchObject({
+			sent: 1,
+		});
 	});
 
 	it("13-1 one event has one id for every receiver, and each receiver's delivery has its own", async () => {
@@ -522,7 +831,7 @@ describe("sending", () => {
 
 	it("13-1 the host keeps the sends an admin's visit starts going after the answer", async () => {
 		const kept: Promise<unknown>[] = [];
-		const monti = site({ waitUntil: (work) => kept.push(work) });
+		const monti = site({ waitUntil: (work) => kept.push(work()) });
 		const api = signedInApi(monti);
 		down.add(SITE);
 		await newPost("첫 번째 글", "first-post", monti);
@@ -566,7 +875,7 @@ describe("sending", () => {
 				arrived.push(SITE);
 			},
 		};
-		const monti = site({ receivers: [slow, pages], waitUntil: (work) => kept.push(work) });
+		const monti = site({ receivers: [slow, pages], waitUntil: (work) => kept.push(work()) });
 		await publish([await newPost("첫 번째 글", "first-post", monti)], monti);
 		// The write answered: the pages are marked, and the webhook is still on its way, kept going by the host.
 		const statesOf = async (destination: string) =>
@@ -833,7 +1142,7 @@ describe("the log", () => {
 		};
 		// A host that keeps sending after the response: the write returns while its delivery is on its way.
 		const kept: Promise<unknown>[] = [];
-		const monti = site({ receivers: [holding], waitUntil: (work) => kept.push(work) });
+		const monti = site({ receivers: [holding], waitUntil: (work) => kept.push(work()) });
 		const first = await newPost("첫 번째 글", "first-post", monti);
 		const second = await newPost("두 번째 글", "second-post", monti);
 		const english = (await write("translations.create", { source: first, locale: "en" }, monti)).output.id;
@@ -998,11 +1307,55 @@ describe("the log", () => {
 		expect((await list({}, monti)).lines[0]).toMatchObject({ actor: "admin", delivery: { failed: 1 } });
 	});
 
-	it("13-3 the log finds a page's lines and a line's rows by index, and never groups the history", async () => {
+	it("13-3 a line committed between reading where a browsing stands and reading its first page is on no page of that browsing", async () => {
+		const monti = site();
+		for (let index = 1; index <= 4; index++) await newPost(`글 ${index}`, `post-${index}`, monti);
+		const whats = (page: ActivityList) => page.lines.map((line) => said(line)[0]);
+		// Another request's write lands after the boundary is read and before the page is.
+		const first = await listActivity(db, ActivityQuery.parse({ pageSize: 2 }), {
+			now: clock,
+			receivers: true,
+			afterBoundary: async () => void (await newPost("끼어든 글", "between", monti)),
+		});
+		expect(whats(first)).toEqual(['"글 4" 만듦', '"글 3" 만듦']);
+		expect(first.total).toBe(4);
+		// Page 2 goes on where page 1 ended, with no line twice and none lost.
+		const second = await list({ pageSize: 2, page: 2, asOf: first.asOf }, monti);
+		expect(whats(second)).toEqual(['"글 2" 만듦', '"글 1" 만듦']);
+		// A new browsing has the line that came between.
+		expect(whats(await list({ pageSize: 1 }, monti))).toEqual(['"끼어든 글" 만듦']);
+	});
+
+	it("13-3 a row keeps a bounded length of the words it is found by, however many records its write touched", async () => {
+		const monti = site();
+		const ids = [];
+		for (let index = 1; index <= 30; index++)
+			ids.push(await newPost(`${"아주 긴 제목 ".repeat(12)}${index}`, `post-${index}`, monti));
+		const { activityId } = await publish(ids, monti);
+		const row = await db
+			.selectFrom("monti_activity")
+			.select(["words", "targets"])
+			.where("id", "=", activityId)
+			.executeTakeFirstOrThrow();
+		expect(row.targets).toHaveLength(30);
+		expect(row.words.length).toBe(WORDS_LENGTH);
+		// The line still reads whole in the list and in its details.
+		expect((await list({ pageSize: 1 }, monti)).lines[0].id).toBe(activityId);
+		expect((await detail(activityId, monti)).recordCount).toBe(30);
+	});
+
+	it("13-3 every row names its line, and the indexes the log's and the deliveries' queries are written for are there", async () => {
 		const { rows } = await sql<{ indexname: string }>`select indexname from pg_indexes
-			where schemaname = current_schema() and tablename = 'monti_activity'`.execute(db);
+			where schemaname = current_schema() and tablename in ('monti_activity', 'monti_delivery')`.execute(db);
 		expect(rows.map((row) => row.indexname)).toEqual(
-			expect.arrayContaining(["monti_activity_heads", "monti_activity_line", "monti_activity_proposal"]),
+			expect.arrayContaining([
+				"monti_activity_heads",
+				"monti_activity_line",
+				"monti_activity_proposal",
+				"monti_activity_undo_until",
+				"monti_delivery_activity",
+				"monti_delivery_open",
+			]),
 		);
 		// Every row names its line: a person's write its own, a proposal's writes the first of them.
 		const monti = site();
@@ -1314,12 +1667,23 @@ describe("undo from the log", () => {
 			["entry.unpublished", ["/posts/second-post"]],
 		]);
 
-		// An undo that changes nothing the site shows (a draft's save) tells nobody.
+		// An undo that changes nothing the site shows (a draft's save) names no path, and still says the save: a receiver that keeps its own copy
+		// of the entries (a search index) has the title the undo took back.
 		const draft = await newPost("초안", "draft", monti);
 		const edited = await save(draft, { title: "고친 초안" }, monti);
 		sent.length = 0;
 		await write("activity.undo", { id: edited.activityId }, monti);
-		expect(sent).toEqual([]);
+		expect(sent.map((delivery) => delivery.event)).toEqual([
+			{
+				id: expect.any(String),
+				type: "entry.saved",
+				at: clock.toISOString(),
+				ids: [draft],
+				collection: "post",
+				locale: "ko",
+				version: (await versionOf(draft)) as number,
+			},
+		]);
 	});
 
 	it("02-7 putting a thrown-away published entry back with undo brings it to the site again and tells the site", async () => {
@@ -1337,8 +1701,51 @@ describe("undo from the log", () => {
 		sent.length = 0;
 		await write("activity.undo", { id: moved.activityId }, monti);
 		expect((await fromSite("first-post"))?.title).toBe("첫 번째 글");
-		expect(sent.map((delivery) => [delivery.event.type, delivery.event.paths])).toEqual([
+		// Back on the site, and out of the trash: both are told, side by side.
+		expect(sent.map((delivery) => [delivery.event.type, delivery.event.paths]).sort()).toEqual([
 			["entry.published", ["/posts/first-post"]],
+			["entry.restored", undefined],
+		]);
+	});
+
+	it("13-3 an undo tells receivers what it changed of an entry though no visitor sees it: into the trash again, out of it, gone again", async () => {
+		const monti = site();
+		const types = () => sent.map((delivery) => [delivery.event.type, delivery.event.ids]);
+		// A draft thrown away, and the move undone: it is out of the trash again.
+		const draft = await newPost("초안", "draft", monti);
+		const moved = await write("trash.move", { rows: [{ kind: "entry", id: draft }] }, monti);
+		sent.length = 0;
+		await write("activity.undo", { id: moved.activityId }, monti);
+		expect(types()).toEqual([["entry.restored", [draft]]]);
+
+		// Thrown away again and restored; the restore undone: it is in the trash again.
+		later(MINUTE);
+		await write("trash.move", { rows: [{ kind: "entry", id: draft }] }, monti);
+		later(MINUTE);
+		const restored = await write("trash.restore", { rows: [{ kind: "entry", id: draft }] }, monti);
+		sent.length = 0;
+		await write("activity.undo", { id: restored.activityId }, monti);
+		expect(types()).toEqual([["entry.trashed", [draft]]]);
+
+		// A create undone: the entry is gone, and a receiver that had it hears so.
+		later(MINUTE);
+		const made = await write<{ id: string }>(
+			"entries.create",
+			{ collection: "post", title: "잘못 만든 글", slug: "oops" },
+			monti,
+		);
+		sent.length = 0;
+		await write("activity.undo", { id: made.activityId }, monti);
+		expect(await db.selectFrom("entries").select("id").where("id", "=", made.output.id).execute()).toEqual([]);
+		expect(sent.map((delivery) => delivery.event)).toEqual([
+			{
+				id: expect.any(String),
+				type: "entry.purged",
+				at: clock.toISOString(),
+				ids: [made.output.id],
+				collection: "post",
+				locale: "ko",
+			},
 		]);
 	});
 });

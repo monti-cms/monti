@@ -4,7 +4,7 @@ import { followerPaths, publicPaths } from "../entries/paths";
 import { CheckError, ForbiddenError } from "../errors";
 import { sameJson } from "../json";
 import { leaveNoFileInAGoneFolder, rewriteUses } from "../media/uses";
-import { type EmittedEvent, type RecordRef, recordKey } from "../operation";
+import { type EmittedEvent, placeEvents, type RecordRef, recordKey } from "../operation";
 import { lockRecords } from "../records";
 import { keepSeenTracked } from "../schema/apply";
 import { type Engine, loadRecords } from "./execute";
@@ -213,11 +213,22 @@ async function applyUndo(engine: Engine, trx: Db, plan: UndoSteps): Promise<void
 			.execute();
 }
 
-/** What the site shows of entries and files now: an entry's published copy while it is out of the trash, and whether a file is in the library. */
+/**
+ * What receivers know of entries and files now: each entry's working copy (where it is, its version, whether it is in the trash), its published
+ * copy while it is out of the trash, and whether a file is in the library.
+ */
 async function shownNow(db: Db, refs: RecordRef[]) {
 	const ids = (kind: string) => refs.filter((ref) => ref.kind === kind).map((ref) => ref.id);
 	const entries = ids("entry");
 	const media = ids("media");
+	const working =
+		entries.length === 0
+			? []
+			: await db
+					.selectFrom("entries")
+					.select(["id", "collection", "locale", "version", "trashed_at"])
+					.where("id", "in", entries)
+					.execute();
 	const copies =
 		entries.length === 0
 			? []
@@ -249,15 +260,17 @@ async function shownNow(db: Db, refs: RecordRef[]) {
 					.where("trashed_at", "is", null)
 					.execute();
 	return {
+		working: new Map(working.map((entry) => [entry.id, entry])),
 		entries: new Map(copies.map((copy) => [copy.entry_id, copy])),
 		files: new Map(files.map((file) => [file.id, file.name])),
 	};
 }
 
 /**
- * Undoes writes of the activity log (a line, or a proposal's), with the events of an undo that changes what the site shows (doc 13, T29): an entry
+ * Undoes writes of the activity log (a line, a proposal's, or one write), with the events of what it changes (doc 13, T29): an entry
  * back on the site or off it, a published copy put back as it was before (its address, its date or its content), a file back in the library or out
- * of it, or under the name it had. An undo that only changes working copies emits nothing: no visitor sees a difference. `emit` gets each event with
+ * of it, or under the name it had; and what a receiver with its own copy of the entries must hear though no visitor sees it: an entry gone again,
+ * in the trash again or out of it, or back at what it held before a save. `emit` gets each event with
  * the newest write the undo took back: the line its delivery shows on, since the undo has no line of its own.
  *
  * This is the one way writes are taken back: the log's undo and a proposal's revert both come here, so the locks, the plan and the events are the
@@ -282,6 +295,8 @@ export async function undoWithEvents(
 	const say = (event: EmittedEvent) => {
 		if (newest) emit(event, newest.activityId);
 	};
+	/** The entries whose change on the site is told: that event carries the news, and no save is said beside it. */
+	const told = new Set<string>();
 	for (const ref of refs.filter((each) => each.kind === "entry")) {
 		const [was, is] = [before.entries.get(ref.id), after.entries.get(ref.id)];
 		if (!was && !is) continue;
@@ -289,6 +304,7 @@ export async function undoWithEvents(
 		if (was && is && sameJson(was, is)) continue;
 		const shown = is ?? was;
 		if (!shown) continue;
+		told.add(ref.id);
 		say({
 			type: is ? "entry.published" : "entry.unpublished",
 			ids: [ref.id],
@@ -300,6 +316,34 @@ export async function undoWithEvents(
 				...(await followerPaths(trx, schema, { id: ref.id, collection: shown.collection, locale: shown.locale })),
 			],
 		});
+	}
+	// What a receiver that keeps its own copy of the entries has to hear, though no visitor sees a difference (a search index): an entry that is
+	// gone again (a create undone), in the trash again or out of it, or back at what it held before a save.
+	const placed = (ids: string[], from: typeof before) =>
+		ids.flatMap((id) => {
+			const entry = from.working.get(id);
+			return entry ? [{ id, collection: entry.collection, locale: entry.locale }] : [];
+		});
+	const entryIds = refs.filter((each) => each.kind === "entry").map((each) => each.id);
+	const deleted = entryIds.filter((id) => before.working.has(id) && !after.working.has(id));
+	const trashed = entryIds.filter(
+		(id) => before.working.get(id)?.trashed_at === null && (after.working.get(id)?.trashed_at ?? null) !== null,
+	);
+	const restored = entryIds.filter(
+		(id) => (before.working.get(id)?.trashed_at ?? null) !== null && after.working.get(id)?.trashed_at === null,
+	);
+	const moved = new Set([...deleted, ...trashed, ...restored]);
+	for (const event of [
+		...placeEvents("entry.purged", placed(deleted, before)),
+		...placeEvents("entry.trashed", placed(trashed, after)),
+		...placeEvents("entry.restored", placed(restored, after)),
+	])
+		say(event);
+	for (const id of entryIds) {
+		const [was, is] = [before.working.get(id), after.working.get(id)];
+		// Its content went back and it is neither in the trash nor just out of it: a save, as the receivers heard the one that is undone.
+		if (!is || moved.has(id) || told.has(id) || is.trashed_at !== null || was?.version === is.version) continue;
+		say({ type: "entry.saved", ids: [id], collection: is.collection, locale: is.locale, version: is.version });
 	}
 	const files = refs.filter((each) => each.kind === "media").map((each) => each.id);
 	const back = files.filter((id) => !before.files.has(id) && after.files.has(id));

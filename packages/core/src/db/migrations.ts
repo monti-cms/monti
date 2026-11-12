@@ -546,6 +546,13 @@ const MIGRATIONS: Record<string, Migration> = {
 				.addColumn("attempted_at", "timestamptz")
 				.execute();
 			await db.schema.createIndex("monti_delivery_activity").on("monti_delivery").column("activity_id").execute();
+			// The deliveries still to be sent or failed are few; the ones that arrived are the table, and it only grows. The sidebar's count (every
+			// visit), the sweep for what is due and "send all again" read the open ones by this index and never the rest.
+			await sql`create index monti_delivery_open on monti_delivery (next_attempt_at, created_at)
+				where state in ('pending', 'failed')`.execute(db);
+			// The 30-day clean-up finds the writes whose undo has run out.
+			await sql`create index monti_activity_undo_until on monti_activity (undo_until)
+				where undo_until is not null`.execute(db);
 		},
 	},
 };

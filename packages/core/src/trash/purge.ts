@@ -3,7 +3,7 @@ import type { Database } from "../db/schema";
 import { UNDO_DAYS } from "../engine/execute";
 import { freeName, lockFolderScope } from "../folders/operations";
 import type { Storage } from "../media/storage";
-import type { EmittedEvent } from "../operation";
+import { placeEvents } from "../operation";
 import { lockRecords } from "../records";
 import { unlinkTargetGroup } from "../relations/sync";
 import type { Schema } from "../schema/define";
@@ -293,24 +293,6 @@ export async function sweepLooseFiles(db: Kysely<Database>, storage: Storage | n
  * The clean-up (`monti trash:purge`, and when the admin opens, doc 11): deletes what has been in the trash for 30 days, forgets the snapshots of writes that can no
  * longer be undone (T7), and removes the loose files from the storage.
  */
-/**
- * The events of entries deleted for good, thrown away or brought back: one for the entries of each collection and language, since the trash moves
- * many at once and a receiver hears of them together.
- */
-export function placeEvents(
-	type: "entry.trashed" | "entry.restored" | "entry.purged",
-	entries: { id: string; collection: string; locale: string }[],
-): EmittedEvent[] {
-	const places = new Map<string, { collection: string; locale: string; ids: string[] }>();
-	for (const entry of entries) {
-		const key = `${entry.collection}\n${entry.locale}`;
-		const place = places.get(key) ?? { collection: entry.collection, locale: entry.locale, ids: [] };
-		place.ids.push(entry.id);
-		places.set(key, place);
-	}
-	return [...places.values()].map((place) => ({ type, ...place }));
-}
-
 export const purgedEvents = (entries: PurgedEntry[]) => placeEvents("entry.purged", entries);
 
 export async function purgeDue(

@@ -12,11 +12,12 @@ import {
 	type LoggedRecord,
 	type OperationContext,
 	type Preview,
+	placeEvents,
 	type RecordRef,
 } from "../operation";
 import { lockRecords } from "../records";
 import { listTrash, TrashQuery, trashedEntry, trashRowCount } from "./list";
-import { everyTrashRow, foldersUnder, placeEvents, purgeRows, sweepLooseFiles, type TrashRef } from "./purge";
+import { everyTrashRow, foldersUnder, purgeRows, sweepLooseFiles, type TrashRef } from "./purge";
 
 type Db = Kysely<Database> | Transaction<Database>;
 

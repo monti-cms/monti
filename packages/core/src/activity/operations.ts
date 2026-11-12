@@ -3,7 +3,7 @@ import { randomUUID } from "../bytes";
 import { cancelDelivery, deliveryCounts, reserveFailedDeliveries, sendDeliveries } from "../engine/deliveries";
 import type { Engine } from "../engine/execute";
 import { planUndo, type UndoOf, undoWithEvents } from "../engine/undo";
-import { CheckError } from "../errors";
+import { CheckError, ForbiddenError } from "../errors";
 import { type AnyOperation, defineOperation, type Preview } from "../operation";
 import { ActivityQuery, getActivity, listActivity } from "./list";
 
@@ -76,14 +76,19 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			kind: "write",
 			log: false,
 			description:
-				"Send failed deliveries again now: the ones named by `ids` (a line's `delivery.failedIds`, or one delivery of activity.get), or with `all` every failed one. The tries are counted from the start, so automatic retries follow again if it fails. One call takes a batch and answers how many arrived, how many failed again and how many are left (`remaining`); while some are left, call again with the `run` it answered.",
+				"Send failed deliveries again now: the ones named by `ids` (a line's `delivery.failedIds`, or one delivery of activity.get), or with `all` every failed one (only a person sends all; the assistant names ids). The tries are counted from the start, so automatic retries follow again if it fails. One call takes a batch and answers how many arrived, how many failed again and how many are left (`remaining`); while some are left, call again with the `run` it answered.",
 			input: z.union([
 				z.object({ ids: z.array(z.string()).min(1), run: z.iso.datetime().optional() }),
 				z.object({ all: z.literal(true), run: z.iso.datetime().optional() }),
 			]),
 			// A delivery that is not there is refused before anything is reserved, and before the assistant can propose it.
 			async check(input, ctx) {
-				if (!("ids" in input)) return;
+				// Every failed delivery at once is a person's to send: as a proposal's item it would run one batch and stop.
+				if (!("ids" in input)) {
+					if (ctx.actor === "assistant")
+						throw new ForbiddenError({ key: "errors.humanOnly", values: { operation: "deliveries.retry" } });
+					return;
+				}
 				const known = await ctx.db.selectFrom("monti_delivery").select("id").where("id", "in", input.ids).execute();
 				if (known.length < new Set(input.ids).size) throw new CheckError({ key: "deliveries.unknown" });
 			},
@@ -95,6 +100,8 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 					now: ctx.now(),
 					holder,
 					run: input.run === undefined ? null : run,
+					// The command line has no Next around it: what only the running site can send is left as it is, as `deliveries:run` leaves it.
+					...(ctx.actor === "cli" ? { only: engine.receivers.map((receiver) => receiver.destination) } : {}),
 				});
 				return { ...reserved, sent: 0, failed: 0, run: run.toISOString(), holder };
 			},

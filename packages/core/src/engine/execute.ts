@@ -264,7 +264,8 @@ export async function runWrite<Output>(
 			await trx
 				.updateTable("monti_activity")
 				.set({
-					words: sql`words || ' ' || coalesce((select request from monti_proposal where id = ${proposalId}), '')`,
+					// The request first: a long list of titles does not push it out of the words kept.
+					words: sql`left(coalesce((select request from monti_proposal where id = ${proposalId}), '') || ' ' || words, ${WORDS_LENGTH})`,
 				})
 				.where("id", "=", activityId)
 				.execute();
@@ -277,8 +278,15 @@ export async function runWrite<Output>(
 	return written;
 }
 
-/** The words a line is found by: what each record the write touched was called. */
-const wordsOf = (records: LoggedRecord[]) => records.flatMap((record) => record.title ?? []).join(" ");
+/** The most a row keeps of the words it is found by: a bulk write touches hundreds of records, and the first titles find it as well as all. */
+export const WORDS_LENGTH = 2000;
+
+/** The words a line is found by: what each record the write touched was called, up to `WORDS_LENGTH`. */
+const wordsOf = (records: LoggedRecord[]) =>
+	records
+		.flatMap((record) => record.title ?? [])
+		.join(" ")
+		.slice(0, WORDS_LENGTH);
 
 /**
  * Logs something Monti did by itself, with the events it tells the receivers: the 30-day clean-up of the trash is no operation, and still the log
