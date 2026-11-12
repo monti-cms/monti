@@ -22,10 +22,10 @@
 |---|---|---|
 | 표 | `Table`(`layout="fixed"`) + `TableBody` + `TableRow` + `TableCell` | 행은 게시글 목록과 같은 한 줄이다. 한 줄은 쓰기 하나, 또는 어시스턴트가 요청 하나로 한 일 전부다. 새것이 위다. 패널에 열린 행은 `TableRow selected`. 여러 줄을 골라 하는 일이 없어 행 체크는 없다. 날짜 묶음도 없다. 시각 열이 말한다. |
 | 작업 칸 | `RowTitle`(`title`, `address`) | 게시글 목록의 제목 칸이다. `title`은 한 일("\"첫 번째 글\" 발행"), 어시스턴트의 줄은 요청 인용("“더 짧게 다듬어 줘.”"). 뒤의 회색 글(`address`)은 어디서("post/first-post", "미디어 · Blog Assets"), 어시스턴트의 줄은 한 일. 명령줄이나 플러그인이 한 줄은 그 뒤에 "명령줄"이나 플러그인 이름, 되돌린 줄은 "되돌림 10:44"가 붙는다. 좁아서 잘리면 `title`이 온전히 말한다. |
-| 어시스턴트의 줄 | 작업 칸의 글 앞에 `Text tone="proposal"` 안의 `Icon icon={Spark}`(이름 "어시스턴트") | "한 사람" 열은 없다. 관리자는 한 사람이므로 사람이 한 줄에는 아무 표시가 없다(2026-11-12 소유자). |
+| 어시스턴트의 줄 | `RowTitle`의 `byAssistant`("어시스턴트"): 작업 칸의 글 앞에 파란 ✦ | "한 사람" 열은 없다. 관리자는 한 사람이므로 사람이 한 줄에는 아무 표시가 없다(2026-11-12 소유자). |
 | 작업을 누르면 | `RowLink` | 옆 패널이 열린다. |
 | 전송 칸 | `EntryStatus`: 실패 `status="failed"` "3번 실패", 보내는 중 `status="draft" quiet` "보내는 중", 취소 `status="archived" quiet` "취소됨" | 잘 간 줄과 보낼 것이 없던 줄은 비운다. 받는 곳이 없는 사이트에는 열이 없다. 폭은 `LIST_COLUMN_SIZE.one`. |
-| 시각 칸 | `TableCell align="end" truncate`(`title`) 안의 `Text mono variant="meta" tone="muted"` | "10. 26 10:58". 폭은 `LIST_COLUMN_SIZE.measure`. |
+| 시각 칸 | `TableCell align="end" truncate`(`title`) 안의 `Text mono variant="meta" tone="muted"` | "10. 26 10:58". 폭은 `LIST_COLUMN_SIZE.time`. |
 | 행 동작 | `RowActions` 안의 `RowMore` + `DropdownMenu`: "자세히" · "다시 보내기" · "되돌리기", 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. "다시 보내기"는 실패한 전송이 있는 줄에만, "되돌리기"는 되돌릴 수 있는 줄에만 있다. 사람이 한 줄도 되돌릴 수 있다(2026-11-12 소유자). "되돌리기"는 묻지 않고 바로 한다. 되돌린 줄 뒤에 "되돌림 10:44"가 붙고, 토스트는 그 사이 고쳐져 그대로 둔 것이 있을 때만 말한다. 보내는 동안에는 "다시 보내기"가 없다. |
 | 행 오른쪽 클릭 | `ContextMenu` | ⋯와 같은 행이다. |
 | 빈 기록 | `Empty`(`title` "아직 기록이 없습니다.") | 열 이름 행과 표 대신 이 한 줄. 휴지통의 빈 목록과 같은 부품이다. |

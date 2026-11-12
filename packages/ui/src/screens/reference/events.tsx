@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { OverflowMenuHorizontal, Renew, RightPanelOpen, Spark, Undo } from "../../icons";
+import { OverflowMenuHorizontal, Renew, RightPanelOpen, Undo } from "../../icons";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -24,7 +24,6 @@ import {
 	Empty,
 	EntryStatus,
 	Heading,
-	Icon,
 	IconButton,
 	Inline,
 	LIST_COLUMN_SIZE,
@@ -569,7 +568,7 @@ function columnsOf(stage: EventsStage): ListHeadColumn[] {
 			label: "시각",
 			sort: "desc",
 			align: "end",
-			size: LIST_COLUMN_SIZE.measure,
+			size: LIST_COLUMN_SIZE.time,
 			menu: (
 				<>
 					<DropdownMenuRadioGroup value="desc">
@@ -672,20 +671,12 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 								<TableRow key={line.id} selected={line.id === open?.id}>
 									<TableCell truncate>
 										<RowTitle
+											// The assistant's work is marked before its words; there is no column for who.
+											byAssistant={line.request ? "어시스턴트" : undefined}
 											title={
-												<>
-													{/* The assistant's work is marked before its words; there is no column for who. */}
-													{line.request ? (
-														<>
-															<Text tone="proposal">
-																<Icon icon={Spark} size="sm" label="어시스턴트" />
-															</Text>{" "}
-														</>
-													) : null}
-													<RowLink render={<button type="button" />}>
-														{line.request ? `“${line.request}”` : line.what}
-													</RowLink>
-												</>
+												<RowLink render={<button type="button" />}>
+													{line.request ? `“${line.request}”` : line.what}
+												</RowLink>
 											}
 											address={[
 												line.request ? line.what : line.where,

@@ -23,7 +23,6 @@ import {
 	DropdownMenuTrigger,
 	Empty,
 	EntryStatus,
-	Icon,
 	Inline,
 	LIST_COLUMN_SIZE,
 	ListFooter,
@@ -44,7 +43,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { Renew, RightPanelOpen, Spark, Undo } from "@monti-cms/ui/icons";
+import { Renew, RightPanelOpen, Undo } from "@monti-cms/ui/icons";
 import { useEffect, useMemo } from "react";
 import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
@@ -252,7 +251,7 @@ export function ActivityScreen({
 				]
 			: []),
 		{
-			...sized("at", LIST_COLUMN_SIZE.measure),
+			...sized("at", LIST_COLUMN_SIZE.time),
 			label: t("activity.column.at"),
 			align: "end",
 			sort: state.sort,
@@ -349,19 +348,11 @@ export function ActivityScreen({
 								<TableRow key={line.id} selected={panel === line.id}>
 									<TableCell truncate>
 										<RowTitle
+											byAssistant={line.request !== null ? t("activity.actor.assistant") : undefined}
 											title={
-												<>
-													{line.request !== null && (
-														<>
-															<Text tone="proposal">
-																<Icon icon={Spark} size="sm" label={t("activity.actor.assistant")} />
-															</Text>{" "}
-														</>
-													)}
-													<RowLink render={<button type="button" />} onClick={() => open(line)}>
-														{title}
-													</RowLink>
-												</>
+												<RowLink render={<button type="button" />} onClick={() => open(line)}>
+													{title}
+												</RowLink>
 											}
 											address={afterOf(line) || undefined}
 										/>

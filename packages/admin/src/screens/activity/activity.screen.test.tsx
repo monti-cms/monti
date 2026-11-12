@@ -55,6 +55,18 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row(ASSISTANT)).toHaveTextContent("“이 두 편 요약 채워 줘. 말투는 그대로.”");
 		await expect.element(row(ASSISTANT)).toHaveTextContent('"리액트 19 마이그레이션" 저장 · "첫 번째 글" 저장');
 		await expect.element(row(ASSISTANT).getByRole("img", { name: "어시스턴트" })).toBeVisible();
+		// The mark leads the line and the words stand on it: neither is pushed out of the row's one line.
+		const line = row(ASSISTANT).element().getBoundingClientRect();
+		const mark = row(ASSISTANT).getByRole("img", { name: "어시스턴트" }).element().getBoundingClientRect();
+		const words = row(ASSISTANT)
+			.getByRole("button", { name: /이 두 편 요약/ })
+			.element();
+		const [first] = words.getClientRects();
+		if (!first) throw new Error("the request has no line");
+		expect(first.top).toBeGreaterThanOrEqual(line.top);
+		expect(first.bottom).toBeLessThanOrEqual(line.bottom);
+		expect(mark.right).toBeLessThanOrEqual(first.left);
+		expect(Math.abs((mark.top + mark.bottom) / 2 - (first.top + first.bottom) / 2)).toBeLessThanOrEqual(2);
 		// Its two writes are one row, not two.
 		expect(rows().filter((words) => words.includes('"첫 번째 글" 저장'))).toHaveLength(1);
 	});
@@ -368,6 +380,12 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row(FAILED)).toBeVisible();
 		expect(rowHeights(table().element())).toHaveLength(1);
 		expect(spillingCells(table().element())).toEqual([]);
+		// As the log opens, the time is whole in its column: the day and the hour, not "11. 12 21:…".
+		const times = [...table().element().querySelectorAll("tbody td")].filter((cell) =>
+			/^\d\d\. \d\d \d\d:\d\d$/.test(cell.textContent ?? ""),
+		);
+		expect(times.length).toBeGreaterThan(3);
+		expect(times.filter((cell) => cell.scrollWidth > cell.clientWidth)).toEqual([]);
 	});
 
 	it("an address with a search, filters, an order and an open row opens the same screen", async () => {
