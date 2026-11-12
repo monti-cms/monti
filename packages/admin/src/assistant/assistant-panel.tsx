@@ -24,12 +24,15 @@ import {
 import { Add, Copy, Edit, RecentlyViewed, Renew } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { holdsKeyboardFocus, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { History, HistoryFoot } from "./history";
 import { ProposalCardOf } from "./proposal-card";
 import { Prose } from "./prose";
 import { type Part, type Turn, useAssistant } from "./use-assistant";
 import { clock, groupOf, sentValue, type ToolPart, toolWords } from "./words";
+
+/** For how many frames after "save and open" a focus that fell to the page is put back where it belongs (the panel may be drawn anew). */
+const FOCUS_FRAMES = 30;
 
 /** How hard a model that can think is asked to: the levels of the model menu's second step. */
 const LEVELS = ["off", "low", "medium", "high"] as const satisfies readonly Thinking[];
@@ -376,26 +379,47 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 								size="sm"
 								loading={savingToOpen}
 								onClick={async (event) => {
-									// A key's press is a click that no pointer made.
-									const byKeyboard = event.detail === 0;
+									const pressed = event.currentTarget;
+									const byKeyboard = holdsKeyboardFocus(pressed);
 									setSavingToOpen(true);
 									const moved = await assistant.saveAndOpen();
 									setSavingToOpen(false);
-									// The step is gone and the screen has moved (the panel itself may have been drawn anew beside another
-									// page): pressed with the keyboard, the focus goes to the panel's box, two frames on, when it is there.
-									if (moved && byKeyboard)
-										requestAnimationFrame(() =>
-											requestAnimationFrame(() => {
-												const on = document.activeElement;
-												if (on && on !== document.body && on.isConnected) return;
-												document.querySelector<HTMLElement>("[data-slot=chat-input] textarea")?.focus();
-											}),
-										);
+									if (!byKeyboard) return;
+									// The screen moved, and the step is gone (the panel itself is drawn anew beside another page, a moment
+									// later): the focus goes to the panel's box once that is drawn. It did not move: the focus stays on the
+									// step, which is still there. Nothing is moved once the person does something of their own.
+									let frames = 0;
+									const theirs = () => {
+										frames = FOCUS_FRAMES;
+									};
+									addEventListener("keydown", theirs, true);
+									addEventListener("pointerdown", theirs, true);
+									const place = () => {
+										frames += 1;
+										const on = document.activeElement;
+										const lost = !on || on === document.body || !on.isConnected;
+										const to = moved
+											? document.querySelector<HTMLElement>("[data-slot=chat-input] textarea")
+											: pressed.isConnected
+												? pressed
+												: null;
+										if (lost && to) to.focus();
+										if (frames < FOCUS_FRAMES) return void requestAnimationFrame(place);
+										removeEventListener("keydown", theirs, true);
+										removeEventListener("pointerdown", theirs, true);
+									};
+									requestAnimationFrame(place);
 								}}
 							>
 								{t("panel.saveAndOpen")}
 							</Button>
 						</Inline>
+					) : null}
+					{/* Saved, and the screen still did not move (the entry is gone meanwhile): one line says why. */}
+					{isLast && !busy && assistant.blockedMove && assistant.moveRefused ? (
+						<Text variant="note" tone="danger" role="status">
+							{t(`panel.move.${assistant.moveRefused}`)}
+						</Text>
 					) : null}
 				</Stack>
 				{words !== "" && !running ? (

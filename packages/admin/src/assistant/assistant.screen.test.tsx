@@ -1797,6 +1797,85 @@ describe("the assistant from inside an editor (T164; flow 2, 05)", () => {
 		await expect.poll(() => focused()).toBe(box().element());
 	});
 
+	it("10-1 '저장하고 열기' for an entry that is gone by then: the open entry is saved, one line says the entry is not there, the screen and the step stay, and the focus stays on the step", async () => {
+		const story = open(stories.SaveAndOpen);
+		await story.run();
+		const loaded = story.loaded();
+		await loaded.site.db.deleteFrom("entries").where("id", "=", loaded.ids.third).execute();
+		await userEvent.keyboard("{Tab}");
+		(button("저장하고 열기").element() as HTMLElement).focus();
+		expect(button("저장하고 열기").element().matches(":focus-visible")).toBe(true);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel().getByText("없는 글입니다")).toBeVisible();
+		expect(await titleOf(loaded, loaded.ids.second)).toBe("둘째 글, 고치는 중");
+		expect(window.location.hash).toBe(`#/c/post/${loaded.ids.second}`);
+		await expect.poll(() => focused()).toBe(button("저장하고 열기").element());
+	});
+
+	it("10-1 a new request made while '저장하고 열기' is saving ends the step: the entry is saved and the screen does not move", async () => {
+		const story = open(stories.SaveAndOpen);
+		await story.run();
+		const loaded = story.loaded();
+		loaded.model.add({ text: "네." });
+		const saved = loaded.net.hold("entries.save");
+		await userEvent.click(button("저장하고 열기"));
+		await say("됐어, 그냥 둬");
+		await expect.element(panel().getByText("네.")).toBeVisible();
+		saved();
+		await expect.poll(() => titleOf(loaded, loaded.ids.second)).toBe("둘째 글, 고치는 중");
+		await beat(500);
+		expect(window.location.hash).toBe(`#/c/post/${loaded.ids.second}`);
+		expect(button("저장하고 열기").elements()).toHaveLength(0);
+	});
+
+	it("10-1 the step is of the screen it was asked on: saved there by hand and left for another screen, it is gone", async () => {
+		const story = open(stories.SaveAndOpen);
+		await story.run();
+		const loaded = story.loaded();
+		await userEvent.click(title());
+		await userEvent.keyboard("{ControlOrMeta>}s{/ControlOrMeta}");
+		await expect.poll(() => titleOf(loaded, loaded.ids.second)).toBe("둘째 글, 고치는 중");
+		await expect.element(button("저장하고 열기")).toBeVisible();
+		window.location.hash = "#/c/post";
+		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
+		await expect.element(button("저장하고 열기")).not.toBeInTheDocument();
+	});
+
+	it("10-1 something typed while '저장하고 열기' is saving keeps the page: the screen does not move away from it, and the step stays", async () => {
+		const story = open(stories.SaveAndOpen);
+		await story.run();
+		const loaded = story.loaded();
+		const saved = loaded.net.hold("entries.save");
+		await userEvent.click(button("저장하고 열기"));
+		await userEvent.type(title(), "!");
+		saved();
+		await expect.poll(() => titleOf(loaded, loaded.ids.second)).toBe("둘째 글, 고치는 중");
+		await beat(600);
+		expect(window.location.hash).toBe(`#/c/post/${loaded.ids.second}`);
+		await expect.element(button("저장하고 열기")).toBeVisible();
+	});
+
+	it("10-1 '저장하고 열기' from a new template: its first save takes it to its own page, and then the entry that was asked for opens", async () => {
+		const story = on({
+			script: (ids) => [
+				{ calls: [{ name: "screen_openEntry", input: { id: ids.second } }] },
+				{ text: "저장하지 않은 변경이 있어 열지 않았습니다." },
+			],
+		});
+		await story.run();
+		const loaded = story.loaded();
+		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
+		window.location.hash = "#/templates/new";
+		await userEvent.click(button("어시스턴트 열기"));
+		await userEvent.fill(page.getByPlaceholder("템플릿 이름"), "새 템플릿");
+		await say("둘째 글 열어 줘");
+		await userEvent.click(button("저장하고 열기"));
+		await expect.poll(() => window.location.hash).toBe(`#/c/post/${loaded.ids.second}`);
+		await expect.element(title()).toHaveValue("둘째 글");
+		const made = (await loaded.site.monti.run("templates.list", {}, stories.admin)) as { name: string }[];
+		expect(made.map((each) => each.name)).toContain("새 템플릿");
+	});
+
 	it("10-1 a new request takes the step away: it was about what was asked before", async () => {
 		const story = open(stories.SaveAndOpen);
 		await story.run();

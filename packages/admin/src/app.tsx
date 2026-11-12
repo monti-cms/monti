@@ -14,7 +14,7 @@ import {
 } from "./operations/admin-context";
 import type { StreamTransport, Transport, Uploader } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
-import { parseRoute, type Route, useRoute } from "./route";
+import { href, parseRoute, type Route, useRoute } from "./route";
 import { ActivityScreen } from "./screens/activity/activity-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
@@ -90,7 +90,7 @@ function Signed() {
 	const { route, go } = useRoute();
 	const leave = useLeave();
 	return (
-		<AssistantProvider go={go} leave={leave}>
+		<AssistantProvider go={go} leave={leave} at={href(route)}>
 			<Screens route={route} go={go} />
 		</AssistantProvider>
 	);
