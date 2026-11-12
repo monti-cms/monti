@@ -735,7 +735,10 @@ export async function revertProposal(
 		let outcome: { state: "reverted"; stayed: number } | { state: "applied"; reason: Message };
 		try {
 			const plan = await planUndo(engine, db, item.activity_id, ownStep);
-			if (plan.restore.some(changed)) {
+			// Records the write moved on without changing what they hold (the same value written again): nothing of them goes back, and
+			// they are as much "put back" as any. They stay where they are, and the earlier writes walk back through them.
+			const asItWas = plan.same.filter(changed);
+			if (plan.restore.some(changed) || (asItWas.length > 0 && !plan.skip.some(changed))) {
 				// As the activity log's undo: what it changes of the site is told to the receivers (an entry off the site again).
 				const done = await undoWithEvents(engine, db, item.activity_id, emit, ownStep);
 				const now = await loadRecords(engine, db, done.restore);
@@ -745,6 +748,12 @@ export async function revertProposal(
 						was: found[recordKey(ref)] ?? null,
 					});
 				for (const ref of done.skip) walked.delete(recordKey(ref));
+				const held = await loadRecords(engine, db, asItWas);
+				for (const ref of asItWas)
+					walked.set(recordKey(ref), {
+						now: held.get(recordKey(ref))?.version ?? null,
+						was: found[recordKey(ref)] ?? null,
+					});
 				outcome = { state: "reverted", stayed: done.skip.filter(changed).length };
 			} else {
 				// Nothing of what it changed can go back: the write is left as it is, not used up as undone.

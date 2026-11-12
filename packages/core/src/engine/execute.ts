@@ -132,6 +132,12 @@ export async function runWrite<Output>(
 	if (operation.structure && engine.site.files === null)
 		throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: operation.name } });
 	const input = parseInput(operation, rawInput);
+	// A write of the assistant's own books leaves no row of the log for a taken item to be tied to: the two together are a mistake of the
+	// caller's, said at once and not left to end with the items checked and never marked.
+	if (operation.bookkeeping && options.accepted && options.accepted.length > 0)
+		throw new Error(
+			`Operation "${operation.name}" keeps the assistant's books and cannot save accepted proposal items.`,
+		);
 	const activityId = operation.bookkeeping ? null : randomUUID();
 	/** Refuses the write when a record it touches or holds is not at the version the caller read. */
 	const mustBeAsRead = (refs: RecordRef[], states: Map<string, RecordState | null>) => {

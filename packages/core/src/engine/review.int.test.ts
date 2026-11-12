@@ -936,6 +936,31 @@ describe("one apply at a time, however long a write takes (review 1 of #472)", (
 	});
 });
 
+describe("a write of the assistant's own books", () => {
+	it("10-1 given accepted proposal items it is refused at once, for the developer: it has no row of the log to tie them to", async () => {
+		const books = definePlugin({
+			name: "books",
+			operations: [
+				defineOperation({
+					name: "books.note",
+					kind: "write",
+					bookkeeping: true,
+					description: "Note something in the assistant's own books.",
+					input: z.object({}),
+					run: async () => ({}),
+					summary: () => ({ key: "books.note" }),
+				}),
+			],
+		});
+		const monti = site({ plugins: [books] });
+		await expect(monti.run("books.note", {}, { actor: "admin", accepted: ["any-item"] })).rejects.toThrow(
+			"cannot save accepted proposal items",
+		);
+		// Alone it runs.
+		await monti.run("books.note", {}, admin);
+	});
+});
+
 describe("putting back more than one change of an entry (review 1 of #472)", () => {
 	it("10-1 a title change and a body change of one entry both go back, and both writes are undone", async () => {
 		const monti = site();
@@ -961,6 +986,75 @@ describe("putting back more than one change of an entry (review 1 of #472)", () 
 		expect(await row(id)).toMatchObject({ title: "처음 제목" });
 		expect(await textOf(id)).toEqual(["처음 본문"]);
 		expect(await view(proposal)).toMatchObject({ status: "reverted" });
+	});
+
+	it("10-1 a later item that wrote a record again with what it already held does not stop the revert: both are put back, and the first change is undone", async () => {
+		// A record whose snapshot is its contents alone (as the settings' and a collection's admin values are), with a write two items of one
+		// proposal can both make: the entries' snapshot holds the version too, so no two of theirs are ever the same.
+		await sql`create table if not exists plain_word (id text primary key, version integer not null, word text not null)`.execute(
+			db,
+		);
+		await sql`delete from plain_word`.execute(db);
+		await sql`insert into plain_word (id, version, word) values ('w', 2, 'A')`.execute(db);
+		const word = async () =>
+			(await sql<{ version: number; word: string }>`select version, word from plain_word`.execute(db)).rows[0];
+		const plain = definePlugin({
+			name: "plain",
+			recordKinds: [
+				{
+					kind: "plainWord",
+					async load(on, ids) {
+						const { rows } = await sql<{
+							id: string;
+							version: number;
+							word: string;
+						}>`select * from plain_word where id = any(${ids})`.execute(on);
+						return rows.map((row) => ({ id: row.id, version: row.version, data: { word: row.word } }));
+					},
+					async restore(on, id, data) {
+						await sql`update plain_word set word = ${(data as { word: string }).word}, version = version + 1 where id = ${id}`.execute(
+							on,
+						);
+					},
+				},
+			],
+			operations: [
+				defineOperation({
+					name: "plain.write",
+					kind: "write",
+					description: "Write the word, from one of two hands.",
+					input: z.object({ id: z.string(), word: z.string(), hand: z.string() }),
+					touches: (input) => [{ kind: "plainWord", id: input.id }],
+					follows: (input) => input,
+					places: (input) => [`plainWord:${input.id}/${input.hand}`],
+					async run(input, ctx) {
+						await sql`update plain_word set word = ${input.word}, version = version + 1 where id = ${input.id}`.execute(
+							ctx.db,
+						);
+					},
+					summary: () => ({ key: "plain.write" }),
+				}),
+			],
+		});
+		const monti = site({ plugins: [plain] });
+		const proposal = await monti.proposals.create("c1", "고쳐 줘");
+		// Item 1 changes the word, 2 to 3 (A to B). Item 2 writes the same word again, 3 to 4 (B to B).
+		await monti.proposals.add(proposal, "plain.write", { id: "w", word: "B", hand: "left" });
+		await monti.proposals.add(proposal, "plain.write", { id: "w", word: "B", hand: "right" });
+		await monti.proposals.apply(proposal);
+		expect(await word()).toEqual({ version: 4, word: "B" });
+
+		const reverted = (await monti.run("proposals.revert", { id: proposal }, admin)) as Written<{
+			reverted: string[];
+			kept: string[];
+		}>;
+		// Item 2 had nothing to put back and is reverted, not "changed since"; item 1 then finds the record as its own step left it.
+		expect(reverted.output.kept).toEqual([]);
+		expect(reverted.output.reverted).toHaveLength(2);
+		expect((await word())?.word).toBe("A");
+		const seen = await view(proposal);
+		expect(seen).toMatchObject({ status: "reverted" });
+		expect(seen.items.map((item: { reason: unknown }) => item.reason)).toEqual([null, null]);
 	});
 
 	it("10-1 a change someone made between two of the proposal's stays: the later one goes back, the earlier one is left and can still be undone", async () => {
