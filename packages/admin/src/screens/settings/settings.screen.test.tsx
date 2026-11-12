@@ -785,6 +785,13 @@ describe("settings › admin", () => {
 		// It does not leave by itself, as a toast would.
 		await new Promise((done) => setTimeout(done, 6000));
 		await expect.element(page.getByText("저장하지 못했습니다")).toBeVisible();
+		// Nor with a look at another tab: nothing was picked again, so the refusal still stands on the way back.
+		await userEvent.click(tab(/사이트/));
+		await expect.element(page.getByLabelText("사이트 이름")).toBeVisible();
+		await expect.element(page.getByText("저장하지 못했습니다")).not.toBeInTheDocument();
+		await userEvent.click(tab(/관리자/));
+		await expect.element(page.getByRole("alert").filter({ hasText: "저장하지 못했습니다" })).toBeVisible();
+		await expect.element(templates).toBeChecked();
 		refusing.on = false;
 		await userEvent.click(templates);
 		await expect.element(templates).not.toBeChecked();
@@ -816,6 +823,8 @@ describe("settings › admin", () => {
 		await expect.element(saving).toHaveAttribute("aria-busy", "true");
 		// Drawn at full strength, not faded as a control that cannot be used is.
 		expect(getComputedStyle(saving.element()).opacity).toBe("1");
+		// The pill that was pressed still has the focus: it did not fall to the page.
+		expect(document.activeElement).toBe(saving.element());
 		held.release?.();
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
 	});

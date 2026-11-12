@@ -23,7 +23,7 @@ import { useOperation } from "../../operations/use-operation";
 import { linkTo, SETTINGS_TABS, type SettingsTab } from "../../route";
 import { useSession } from "../../session";
 import { type Place as FramePlace, useCoverCorner } from "../frame/admin-frame";
-import { AdminTab } from "./admin-tab";
+import { AdminTab, type PreferenceFailure } from "./admin-tab";
 import { CollectionsTab, useCollectionsView } from "./collections-tab";
 import { LocalesTab } from "./locales-tab";
 import { PreviewPanel } from "./preview-panel";
@@ -84,6 +84,8 @@ export function SettingsScreen({
 	const [busy, setBusy] = useState(false);
 	const [refused, setRefused] = useState<Refused | null>(null);
 	const [position, setPosition] = useState(0);
+	// Kept here, not in the admin tab: the tab is taken down when another is shown, and a refusal nobody answered must still be there on the way back.
+	const [preferenceFailed, setPreferenceFailed] = useState<PreferenceFailure | null>(null);
 
 	useLeaveGuard({ changes: rows, revertAll: draft.revertAll });
 	const previewing = tab === "collections" && view.preview && view.tab === "fields" && view.current !== null;
@@ -361,7 +363,7 @@ export function SettingsScreen({
 						) : tab === "collections" ? (
 							<CollectionsTab model={model} view={view} onRemove={remove} />
 						) : (
-							<AdminTab />
+							<AdminTab failed={preferenceFailed} onFailed={setPreferenceFailed} />
 						)}
 						{walking ? (
 							<ProposalBubbleDock>

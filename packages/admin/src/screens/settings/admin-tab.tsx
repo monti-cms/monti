@@ -16,31 +16,39 @@ import {
 	Switch,
 	TextButton,
 } from "@monti-cms/ui";
-import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { useSession } from "../../session";
 import { languageName } from "./language-catalog";
 
+/** A preference that was not saved: which control it was picked on, and why. */
+export type PreferenceFailure = { what: "language" | "templates"; reason: string };
+
 /**
  * Settings › admin (doc 12): the admin screen's own language and its feature switches, saved the moment they are picked (no draft, so this tab never
  * holds a change), and the signed-in account with the way out.
  */
-export function AdminTab() {
+export function AdminTab({
+	failed,
+	onFailed,
+}: {
+	/** The pick that was not saved. The settings screen keeps it, so it is still here after a look at another tab. */
+	failed: PreferenceFailure | null;
+	onFailed: (failure: PreferenceFailure | null) => void;
+}) {
 	const { t, language, templates } = useAdmin();
 	const session = useSession();
 	const preference = useOperation("admin.setPreference");
 	const signOut = useOperation("auth.signOut");
 
 	// A pick that was not saved says so beside its control and stays until the next pick goes through: not in a toast that leaves (status.md).
-	const [failed, setFailed] = useState<{ what: "language" | "templates"; reason: string } | null>(null);
 	// What `auth.state` says is what every screen draws with, so the pick shows once it is read again.
 	const set = async (what: "language" | "templates", values: { language?: AdminLanguage; templates?: boolean }) => {
 		const result = await preference.run(values);
 		if (result.ok) {
-			setFailed(null);
+			onFailed(null);
 			await session.reload();
-		} else setFailed({ what, reason: result.refusal.reason ? t(result.refusal.reason) : t("settings.saveFailed") });
+		} else onFailed({ what, reason: result.refusal.reason ? t(result.refusal.reason) : t("settings.saveFailed") });
 	};
 
 	return (

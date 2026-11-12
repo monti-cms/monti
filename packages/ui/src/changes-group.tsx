@@ -75,7 +75,8 @@ function ChangeRow({
 /**
  * How the save group looks: "changes N" (and "· proposals N" in blue), then "undo all" and the one primary pill ("save and apply"). `list` is what
  * "changes N" opens, hanging from the whole group with its right edge on the group's; without it the group is drawn and opens nothing (a screen spec's
- * look, before its behavior is wired). The pill is disabled (not hidden) while something blocks saving.
+ * look, before its behavior is wired). The pill is never greyed: what blocks saving is shown when it is pressed, and while the save is on its way it
+ * says so (`saving`) and keeps the focus.
  */
 function ChangesBar({
 	label,
@@ -89,7 +90,6 @@ function ChangesBar({
 	onDiscard,
 	saveLabel,
 	onSave,
-	saveDisabled,
 	saving,
 	saveDanger,
 	list,
@@ -112,8 +112,7 @@ function ChangesBar({
 	onDiscard?: () => void;
 	saveLabel: string;
 	onSave?: () => void;
-	saveDisabled?: boolean;
-	/** While the save is on its way: what the pill says ("Saving…"). It keeps its fill, shows the spinner and cannot be pressed again. */
+	/** While the save is on its way: what the pill says ("Saving…"). It keeps its fill and the focus, shows the spinner and cannot be pressed again. */
 	saving?: string;
 	saveDanger?: boolean;
 	/** The changes, as menu rows. */
@@ -151,13 +150,7 @@ function ChangesBar({
 			<Button type="button" variant="ghost" onClick={onDiscard}>
 				{discardLabel}
 			</Button>
-			<Button
-				type="button"
-				variant={saveDanger ? "danger" : "primary"}
-				disabled={saveDisabled}
-				loading={saving !== undefined}
-				onClick={onSave}
-			>
+			<Button type="button" variant={saveDanger ? "danger" : "primary"} loading={saving !== undefined} onClick={onSave}>
 				{saving ?? saveLabel}
 			</Button>
 		</section>
@@ -191,7 +184,6 @@ function ChangesGroup({
 	onDiscard: () => void;
 	saveLabel: string;
 	onSave: () => void;
-	saveDisabled?: boolean;
 	/** While the save is on its way: what the pill says ("Saving…"). */
 	saving?: string;
 	saveDanger?: boolean;

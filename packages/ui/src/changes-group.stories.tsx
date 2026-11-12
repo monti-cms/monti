@@ -33,9 +33,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** Something blocks saving: the pill stays, disabled. */
-export const Blocked: Story = { args: { saveDisabled: true } };
-
 /** The save is on its way: the pill keeps its fill, turns its spinner and says so. It is not greyed. */
 export const Saving: Story = { args: { saving: "저장 중…" } };
 

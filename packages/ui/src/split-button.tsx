@@ -61,6 +61,8 @@ function SplitButton({
 				type="button"
 				data-slot="button"
 				disabled={inert}
+				// Working: the half that was pressed keeps the focus (`aria-disabled`, not the attribute) and takes no second press.
+				focusableWhenDisabled={Boolean(loading) && !disabled}
 				aria-busy={loading || undefined}
 				onClick={onClick}
 				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px]", loading && "gap-[7px] pl-[13px]")}

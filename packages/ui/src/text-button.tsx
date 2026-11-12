@@ -15,7 +15,7 @@ import { Spinner } from "./spinner";
  * `render` (`render={<Link href="…" />}`). An icon goes before the text, 14px with a 6px gap; a `Caret` after it keeps its own 12px. It has no box: its text color
  * and, for `underline`, a 1px rule under it say what it is. It acts like a link: no ground at all; under the pointer its words turn ink and a rule shows (or darkens); pressing it changes nothing more. The keyboard's ring sits close around the words.
  * `tone="proposal"` is an action the assistant takes, in the proposal blue: "✦ Fill" on a field's label row (`size="micro"`, the label's own type), "✦ Translate"
- * over a text. While it works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, and it is `aria-busy`. A label row shows the
+ * over a text. While it works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, it keeps the focus, and it is `aria-busy`. A label row shows the
  * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
@@ -57,7 +57,7 @@ const textButtonVariants = cva(
 					"text-monti-proposal not-disabled:hover:text-monti-proposal decoration-monti-proposal not-disabled:hover:decoration-monti-proposal",
 			},
 			/** Working: a ring before the words; it cannot be pressed again and is not dimmed. */
-			loading: { true: "cursor-default disabled:opacity-100" },
+			loading: { true: "cursor-default aria-disabled:opacity-100" },
 		},
 		defaultVariants: { variant: "plain" },
 	},
@@ -75,6 +75,7 @@ function TextButton({
 	render,
 	href,
 	children,
+	onClick,
 	...props
 }: useRender.ComponentProps<"button"> &
 	VariantProps<typeof textButtonVariants> &
@@ -92,7 +93,10 @@ function TextButton({
 				...(isButton ? { type: "button" } : {}),
 				...({ "data-tone": tone ?? undefined, "data-loading": loading || undefined } as React.ComponentProps<"button">),
 				"aria-busy": loading || undefined,
-				disabled: disabled || loading || undefined,
+				// Working is not "cannot be used": it keeps the focus it was pressed with (`aria-disabled`, not the attribute, which would hand the
+				// focus to the page), and a press while it works does nothing.
+				disabled: disabled || undefined,
+				"aria-disabled": (loading && !disabled) || undefined,
 				children: loading ? (
 					<>
 						<Spinner className="mr-monti-4 size-[0.85em] align-[-0.1em]" />
@@ -102,7 +106,11 @@ function TextButton({
 					children
 				),
 			},
-			{ ...props, ...(href === undefined ? {} : { href }) } as React.ComponentProps<"button">,
+			{
+				...props,
+				onClick: loading ? (event: React.MouseEvent) => event.preventDefault() : onClick,
+				...(href === undefined ? {} : { href }),
+			} as React.ComponentProps<"button">,
 		),
 		render,
 		state: { slot: "text-button" },
