@@ -163,6 +163,7 @@ export function TemplateEditor({
 						<BodyEditor
 							key={editor.bodyKey}
 							doc={editor.doc}
+							files={editor.files}
 							catalogs={catalogs}
 							onChange={(doc) => editor.set("doc", doc)}
 						/>

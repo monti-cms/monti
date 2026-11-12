@@ -106,6 +106,27 @@ beforeEach(async () => {
 	await db.deleteFrom("monti_proposal").execute();
 });
 
+describe("a body is read with the files it shows", () => {
+	it("09-1 T126 entries.get and templates.get give the body's files with their sizes, each once, and not the fields' files", async () => {
+		const [cover, shown] = [await file("cover.jpg"), await file("shown.jpg")];
+		const body = doc(image("b1", shown), image("b2", shown));
+		const { output } = await post({ values: { cover: { media: cover, alt: "표지" } }, doc: body });
+		const read = (await site().run("entries.get", { id: output.id }, { actor: "admin" })) as { media: MediaItem[] };
+		expect(read.media.map((item) => [item.id, item.name, item.original.width, item.original.height])).toEqual([
+			[shown, "shown.jpg", 10, 10],
+		]);
+		const made = await write("templates.save", { name: "회고", doc: body });
+		const template = (await site().run("templates.get", { id: made.output.id }, { actor: "admin" })) as {
+			media: MediaItem[];
+		};
+		expect(template.media.map((item) => item.id)).toEqual([shown]);
+		const empty = await post({ doc: doc() });
+		expect(
+			((await site().run("entries.get", { id: empty.output.id }, { actor: "admin" })) as { media: MediaItem[] }).media,
+		).toEqual([]);
+	});
+});
+
 describe("every way a body or a field changes writes the uses again", () => {
 	it("09-4 entries.create and entries.save: a new file in, an old one out, both from fields and the body", async () => {
 		const [cover, body, next] = [await file(), await file(), await file()];

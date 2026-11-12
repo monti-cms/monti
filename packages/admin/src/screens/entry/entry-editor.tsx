@@ -403,6 +403,7 @@ export function EntryEditor({
 				key={`${editor.bodyKey}:${addedKey}`}
 				added={translation.added}
 				doc={editor.doc}
+				files={editor.files}
 				catalogs={catalogs}
 				onChange={(doc) => editor.set("doc", doc)}
 				editable={!readOnly}

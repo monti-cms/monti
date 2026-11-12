@@ -18,24 +18,6 @@ const Column = ({ children }: { children: React.ReactNode }) => (
 	</div>
 );
 
-/**
- * A body that waits for its files: the text holds its place unseen and three grey lines stand for it. They come only after 200ms, so a body
- * that is ready at once shows nothing of them.
- */
-export const Settling: Story = {
-	render: () => (
-		<div className="max-w-monti-reading">
-			<EditorBody settling>
-				<div className="ProseMirror">
-					<p>글의 첫 문단이에요.</p>
-					<p>둘째 문단이에요.</p>
-					<p>셋째 문단이에요.</p>
-				</div>
-			</EditorBody>
-		</div>
-	),
-};
-
 /** Every core block once: headings, a paragraph with marks, the three lists, a quote, code, a table and the divider. */
 export const Blocks: Story = {
 	render: () => (

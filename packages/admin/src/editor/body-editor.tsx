@@ -1,6 +1,5 @@
 import type { Doc, MediaItem, MediaQueryResult } from "@monti-cms/core";
 import { EditorBody } from "@monti-cms/ui";
-import type { Node as EditorNode } from "@tiptap/pm/model";
 import { type Editor, EditorContent } from "@tiptap/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { MediaPickerDialog } from "../media/media-picker-dialog";
@@ -34,20 +33,6 @@ import {
 } from "./translation";
 import { useBodyEditor } from "./use-body-editor";
 
-/** The library's files a document's picture and file blocks show, by id, each once: what their views ask the body's read for. */
-function mediaOf(doc: EditorNode): string[] {
-	const shows = new Set([nodeName("image"), nodeName("file")]);
-	const ids = new Set<string>();
-	doc.descendants((node) => {
-		const id = shows.has(node.type.name) ? (node.attrs.data as { media?: unknown } | undefined)?.media : undefined;
-		if (typeof id === "string" && id !== "") ids.add(id);
-	});
-	return [...ids];
-}
-
-/** The longest an opened body waits for its files, in ms: a read that never answers does not keep the text away. */
-const SETTLE_WITHIN = 3000;
-
 /**
  * The body of an entry or a template (doc 03): the blocks in the reading column, the handle beside the block under the pointer, the "/" menu, the
  * format card and a table's grips and + strips. It shows the body it is mounted with; to show another, mount it again with a new `key`.
@@ -64,8 +49,11 @@ export function BodyEditor({
 	margin,
 	paired = null,
 	added,
+	files,
 }: {
 	doc: Doc;
+	/** The library's files the body shows, as its read brought them: their shapes hold the pictures' places from the first draw. */
+	files?: readonly MediaItem[];
 	catalogs: BodyCatalogs;
 	onChange: (doc: Doc) => void;
 	editable?: boolean;
@@ -143,7 +131,7 @@ export function BodyEditor({
 	const handle = useBlockHandle(editor, catalogs, translation);
 	const tables = useTableTools(editor);
 	const [card, setCard] = useState<string | null>(null);
-	const bodyFiles = useBodyFiles();
+	const bodyFiles = useBodyFiles(files);
 	useEffect(() => (editor ? onImageCard(editor, setCard) : undefined), [editor]);
 	const media = useMemo<EditorMediaValue>(
 		() => ({
@@ -180,25 +168,10 @@ export function BodyEditor({
 		if (editor && editor.isEditable !== editable) editor.setEditable(editable, false);
 	}, [editor, editable]);
 
-	// An opened body waits, unseen, until the files its blocks show are read: a picture's shape comes with its file, and text drawn before it
-	// would jump when it came (T126). Once only: a file put in later is read in its own block.
-	const [settled, setSettled] = useState(false);
-	const unread = !settled && editor ? mediaOf(editor.state.doc).filter((id) => !bodyFiles.files.has(id)) : [];
-	const settling = !settled && (!editor || unread.length > 0);
-	useEffect(() => {
-		if (editor && !settling) setSettled(true);
-	}, [editor, settling]);
-	useEffect(() => {
-		if (settled) return;
-		const late = setTimeout(() => setSettled(true), SETTLE_WITHIN);
-		return () => clearTimeout(late);
-	}, [settled]);
-
 	return (
 		<EditorMedia.Provider value={media}>
 			<EditorBody
 				paired={paired !== null}
-				settling={settling}
 				// The handle, the menus and the card are portals: their events pass through here in React's tree, but they are not presses on the text.
 				onClick={(event) => {
 					const target = event.target as Node;

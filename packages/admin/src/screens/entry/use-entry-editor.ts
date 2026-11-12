@@ -1,4 +1,4 @@
-import type { BodyOp, Doc, EntryState, PublishTask } from "@monti-cms/core";
+import type { BodyOp, Doc, EntryState, MediaItem, PublishTask } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
 import { useCallback, useMemo, useState } from "react";
 import { type Path, useDraft } from "../../draft/use-draft";
@@ -28,9 +28,11 @@ export type EntryRead = {
 	state: EntryState;
 	published: { slug: string; path: string | null; publishedAt: string; fromVersion: number } | null;
 	tasks: PublishTask[];
+	/** The library's files the body shows. */
+	media: MediaItem[];
 };
 
-type TemplateRead = { id: string; name: string; doc: Doc; version: number; updatedAt?: string };
+type TemplateRead = { id: string; name: string; doc: Doc; version: number; updatedAt?: string; media?: MediaItem[] };
 
 /** The save cell (doc 02, save): one of four, or "signed out" when the session ended (T39). */
 export type SaveState = "unsaved" | "saved" | "browser" | "conflict" | "signedOut";
@@ -196,6 +198,8 @@ export function useEntryEditor(source: EditorSource) {
 	return {
 		/** The saved copy as the server gave it; `null` while it loads. */
 		loaded,
+		/** The library's files the saved body shows, for the body editor's first draw. */
+		files: loaded?.media,
 		/** Reading it failed: the screen offers to try again. */
 		loadRefusal: read.data ? null : read.refusal,
 		reload,
