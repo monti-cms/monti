@@ -9,6 +9,7 @@ import {
 	Inline,
 	Input,
 	LockMark,
+	Option,
 	RadioGroup,
 	RadioItem,
 	Sheet,
@@ -17,6 +18,7 @@ import {
 	SheetFooter,
 	SheetHeader,
 	SheetTitle,
+	Stack,
 	Switch,
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
@@ -154,29 +156,38 @@ function Body({
 						<RadioItem value="item" label={t("settings.new.item")} description={t("settings.new.itemHint")} />
 					</RadioGroup>
 				</FormFieldSet>
-				<FormField>
-					<div className="flex min-h-monti-control-xs items-center gap-monti-8">
-						<FormFieldLabel htmlFor={kind === "item" ? "collection-public-page" : "collection-address"}>
+				{kind === "item" ? (
+					// An item's public page is a switch; its address shows under it while it is on.
+					<Stack gap={4}>
+						<Option spread>
 							{t("settings.basics.path")}
-						</FormFieldLabel>
-						{kind === "item" ? (
-							<span className="ml-auto">
-								<Switch id="collection-public-page" checked={publicPage} onCheckedChange={setPublicPage} />
-							</span>
-						) : null}
-					</div>
-					{(kind === "document" || publicPage) && (
+							<Switch checked={publicPage} onCheckedChange={setPublicPage} />
+						</Option>
+						{publicPage && (
+							<Affix
+								id="collection-address"
+								aria-label={t("settings.basics.path")}
+								prefix="/"
+								suffix="/:slug"
+								width="fit"
+								value={addressPart(address)}
+								onChange={(event) => setPath(addressOf(event.target.value))}
+							/>
+						)}
+					</Stack>
+				) : (
+					<FormField>
+						<FormFieldLabel htmlFor="collection-address">{t("settings.basics.path")}</FormFieldLabel>
 						<Affix
 							id="collection-address"
-							aria-label={kind === "item" ? t("settings.basics.path") : undefined}
 							prefix="/"
 							suffix="/:slug"
 							width="fit"
 							value={addressPart(address)}
 							onChange={(event) => setPath(addressOf(event.target.value))}
 						/>
-					)}
-				</FormField>
+					</FormField>
+				)}
 			</SheetBody>
 			<SheetFooter>
 				<Button variant="ghost" onClick={onClose}>

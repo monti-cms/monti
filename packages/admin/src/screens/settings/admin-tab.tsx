@@ -1,10 +1,25 @@
 import { ADMIN_LANGUAGES, type AdminLanguage } from "@monti-cms/core";
-import { FormField, FormFieldLabel, Option, ReadValue, Section, Stack, Switch, TextButton, toast } from "@monti-cms/ui";
+import {
+	FormField,
+	FormFieldLabel,
+	MenuShortcut,
+	Option,
+	ReadValue,
+	Section,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Stack,
+	Switch,
+	TextButton,
+	toast,
+} from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { useSession } from "../../session";
 import { languageName } from "./language-catalog";
-import { PickOne } from "./pick-one";
 
 /**
  * Settings › admin (doc 12): the admin screen's own language and its feature switches, saved the moment they are picked (no draft, so this tab never
@@ -28,12 +43,23 @@ export function AdminTab() {
 			<Section title={t("settings.admin.languageSection")}>
 				<FormField>
 					<FormFieldLabel htmlFor="admin-language">{t("settings.admin.language")}</FormFieldLabel>
-					<PickOne
-						id="admin-language"
+					<Select
 						items={ADMIN_LANGUAGES.map((code) => ({ value: code, label: languageName(code, code) }))}
 						value={language}
-						onChange={(code) => void set({ language: code as AdminLanguage })}
-					/>
+						onValueChange={(code) => code !== null && void set({ language: code as AdminLanguage })}
+					>
+						<SelectTrigger id="admin-language" width="full">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{ADMIN_LANGUAGES.map((code) => (
+								<SelectItem key={code} value={code}>
+									{languageName(code, code)}
+									<MenuShortcut>{code}</MenuShortcut>
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 				</FormField>
 			</Section>
 			<Section title={t("settings.admin.features")}>

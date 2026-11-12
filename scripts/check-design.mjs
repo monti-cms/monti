@@ -684,12 +684,7 @@ const ADMIN_UI_PACKAGES = ["ui", "admin"];
  * geometry, an imitation of another site), with the reason. Only these set `className` or `style`, import the open entry or the class helpers.
  * Adding a file here is a design decision, made in review.
  */
-const DRAWING = new Map([
-	// Raw layout written while this check silently skipped the admin (T105).
-	["admin/src/screens/frame/admin-frame.tsx", "the assistant corner's icon size (T105)"],
-	["admin/src/screens/settings/basics-tab.tsx", "the public address row (T105)"],
-	["admin/src/screens/settings/new-collection-sheet.tsx", "the public address row (T105)"],
-]);
+const DRAWING = new Map([]);
 
 /**
  * Screens are built from `@monti-cms/ui` components and their options only: no `className`, no `style`, no import of the open entry

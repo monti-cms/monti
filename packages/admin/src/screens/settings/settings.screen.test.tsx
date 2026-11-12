@@ -1,0 +1,382 @@
+import { composeStories } from "@storybook/react-vite";
+import { describe, expect, it } from "vitest";
+import { page, userEvent } from "vitest/browser";
+import { dragPath, dropDrag, middleOf } from "../../../../../testing/input";
+import type { StorySite } from "../../../.storybook/pglite-site";
+import { scene } from "../../../test/scene";
+import * as stories from "./settings.stories";
+
+const {
+	Languages,
+	LanguageAdded,
+	LanguageProposal,
+	LanguageRemoved,
+	LanguagesLive,
+	SiteChanged,
+	SiteProposal,
+	SourceChanged,
+} = composeStories(stories);
+
+type Loaded = { site: StorySite };
+const admin = { actor: "admin" } as const;
+
+/** A story drawn with its site at hand, to read what the operations say after the screen saved. */
+const withSite = (story: object) => scene<Loaded>(story, stories.default);
+
+type Settings = {
+	site: { name: string; writing: string };
+	admin: { language: string | null; templates: boolean };
+	schema: {
+		locales: { source: string; prefix: string; list: { code: string }[] };
+		collections: Record<string, { fields: Record<string, unknown> }>;
+	};
+};
+const settingsOf = (loaded: Loaded) => loaded.site.monti.run("settings.read", {}, admin) as Promise<Settings>;
+const codes = (settings: Settings) => settings.schema.locales.list.map((locale) => locale.code);
+
+const tab = (name: RegExp) => page.getByRole("link", { name });
+const saveGroup = () => page.getByRole("button", { name: /^저장/ });
+const nameField = () => page.getByRole("textbox", { name: "사이트 이름" });
+/** The menu beside a collection's new-entry pill, there only when it has something to offer. */
+const MORE_NEW = "더 만들기";
+/** The site's name over the sidebar. */
+const siteName = () => document.querySelector("[data-slot=sidebar-header]")?.textContent;
+/** The languages in the order the tab shows them, by their own names. */
+const languages = () =>
+	[...document.querySelectorAll("[data-slot=language-row]")].map((row) => row.querySelector("span span")?.textContent);
+const topOf = (name: string) =>
+	Math.round(
+		[...document.querySelectorAll("[data-slot=language-row]")]
+			.find((row) => row.querySelector("span span")?.textContent === name)
+			?.getBoundingClientRect().top ?? Number.NaN,
+	);
+/** What the screen reader was last told about a drag. */
+const said = () => document.querySelector("[id^=DndLiveRegion]")?.textContent ?? "";
+
+describe("settings: four tabs over one draft", () => {
+	it("12-1 a change on the site tab is counted on the other tabs, its tab carries the dot from there, and moving between tabs asks nothing", async () => {
+		await SiteChanged.run();
+		await userEvent.click(tab(/언어/));
+		await expect.element(page.getByRole("button", { name: "+ 언어 추가" })).toBeVisible();
+		await expect.element(saveGroup()).toBeVisible();
+		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+		// The dot is on the tab that holds the change, and only while another tab is open.
+		await expect.element(tab(/사이트/).getByRole("img", { name: "변경" })).toBeVisible();
+		await userEvent.click(tab(/사이트/));
+		await expect.element(nameField()).toHaveValue("example.blog");
+		await expect.element(tab(/사이트/).getByRole("img", { name: "변경" })).not.toBeInTheDocument();
+	});
+
+	it("12-1 [flow 11·04] leaving settings with a change asks first; 계속 고치기 stays, with the change still there", async () => {
+		await SiteChanged.run();
+		await userEvent.click(page.getByRole("button", { name: /게시글/ }));
+		await expect.element(page.getByRole("alertdialog")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "계속 고치기" }));
+		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+		await expect.element(nameField()).toHaveValue("example.blog");
+	});
+
+	it("12-2 [flow 11·15b] a site name saved on the dev server: no review opens, the toast says saved, and the sidebar and the settings hold the new name", async () => {
+		const shown = withSite(stories.SiteChanged);
+		await shown.run();
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await expect.poll(siteName).toBe("example.blog");
+		expect((await settingsOf(shown.loaded())).site.name).toBe("example.blog");
+	});
+
+	it("12-1 the name's undo on its label row puts the saved name back, and the save group goes with the last change", async () => {
+		await SiteChanged.run();
+		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
+		await expect.element(nameField()).toHaveValue("example.dev");
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+	});
+
+	it("12-3 [flow 11·15b] on the live site the pill says 저장 and a name is saved at once", async () => {
+		const shown = withSite(stories.SiteLiveChanged);
+		await shown.run();
+		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		expect((await settingsOf(shown.loaded())).site.name).toBe("example.blog");
+	});
+});
+
+describe("settings › languages", () => {
+	it("12-1 [flow 11·05] '+ 언어 추가' finds codes as they are typed, and does not offer a language the site has", async () => {
+		await Languages.run();
+		await userEvent.click(page.getByRole("button", { name: "+ 언어 추가" }));
+		await userEvent.type(page.getByRole("combobox"), "zh");
+		await expect.element(page.getByRole("option", { name: /zh-Hans/ })).toBeVisible();
+		await expect.element(page.getByRole("option", { name: /zh-HK/ })).toBeVisible();
+		await userEvent.clear(page.getByRole("combobox"));
+		await userEvent.type(page.getByRole("combobox"), "en");
+		// English is the site's already; its regional forms are other languages.
+		await expect.element(page.getByRole("option", { name: /en-GB/ })).toBeVisible();
+		expect(document.querySelector("[cmdk-item][data-value='en']")).toBeNull();
+	});
+
+	it("12-1 [flow 11·06] a language picked is a row at once; taken out again before the save, it leaves no change behind", async () => {
+		await LanguageAdded.run();
+		expect(languages()).toEqual(["한국어", "English", "日本語", "Deutsch"]);
+		await expect.element(saveGroup()).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "Deutsch 빼기" }));
+		await expect.poll(languages).toEqual(["한국어", "English", "日本語"]);
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+	});
+
+	it("12-1 [flow 11·07b] another source picked stands first; the old source gets its handle and ×, the new one loses them", async () => {
+		await SourceChanged.run();
+		expect(languages()).toEqual(["English", "한국어", "日本語"]);
+		await expect.element(page.getByRole("button", { name: "한국어 옮기기" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "한국어 빼기" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "English 빼기" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "English 옮기기" })).not.toBeInTheDocument();
+	});
+
+	it("12-1 [flow 11·08] a language taken out stays as a struck row; its undo puts it back and the save group goes", async () => {
+		await LanguageRemoved.run();
+		expect(languages()).toEqual(["한국어", "English", "日本語"]);
+		await expect.element(page.getByRole("button", { name: "English 빼기" })).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("list", { name: "콘텐츠 언어" }).getByRole("button", { name: "되돌리기" }));
+		await expect.element(page.getByRole("button", { name: "English 빼기" })).toBeVisible();
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+	});
+
+	it("12-1 [flow 11·08] saving with a language taken out asks with the red 지우고 적용 alone, and applying takes the language out of the site", async () => {
+		const shown = withSite(stories.LanguageRemoveReview);
+		await shown.run();
+		await expect.element(page.getByText("번역이 함께 지워집니다.")).toBeVisible();
+		await expect.element(page.getByRole("radio")).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "지우고 적용" }));
+		await expect.element(page.getByText("적용했습니다")).toBeVisible();
+		expect(codes(await settingsOf(shown.loaded()))).toEqual(["ko", "ja"]);
+		await expect.poll(languages).toEqual(["한국어", "日本語"]);
+	});
+
+	it("12-1 one review holds the languages' changes and the collections': the plain 적용 writes them all in one save", async () => {
+		const shown = withSite(stories.OneReview);
+		await shown.run();
+		const sheet = page.getByRole("dialog");
+		for (const title of ["Deutsch", "English", "주소에 언어 표시", "kicker"])
+			await expect.element(sheet.getByText(title, { exact: true }).first()).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "지우고 적용" })).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(page.getByText("적용했습니다")).toBeVisible();
+		const settings = await settingsOf(shown.loaded());
+		expect(settings.schema.locales.source).toBe("en");
+		expect(settings.schema.locales.prefix).toBe("always");
+		expect(codes(settings)).toContain("de");
+		expect(Object.keys(settings.schema.collections.post?.fields ?? {})).toContain("kicker");
+		const activity = await shown.loaded().site.db.selectFrom("monti_activity").select("operation").execute();
+		expect(activity.filter((row) => row.operation === "settings.save")).toHaveLength(2);
+	});
+
+	it("[keys-move] 12-1 languages reordered with the keyboard alone, and an order change by itself is saved without a review", async () => {
+		const shown = withSite(stories.Languages);
+		await shown.run();
+		(page.getByRole("button", { name: "English 옮기기" }).element() as HTMLElement).focus();
+		await userEvent.keyboard(" ");
+		await expect.poll(said).toContain("English");
+		await userEvent.keyboard("{ArrowDown}");
+		await userEvent.keyboard(" ");
+		await expect.poll(languages).toEqual(["한국어", "日本語", "English"]);
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("적용했습니다")).toBeVisible();
+		await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+		expect(codes(await settingsOf(shown.loaded()))).toEqual(["ko", "ja", "en"]);
+	});
+
+	it("[dragging] [dropped] a language held by its handle is under the pointer while the next one makes room; let go, it stays after it, and the source never moves", async () => {
+		await Languages.run();
+		const before = { source: topOf("한국어"), english: topOf("English"), japanese: topOf("日本語") };
+		const from = middleOf(page.getByRole("button", { name: "English 옮기기" }).element());
+		const down = before.japanese - before.english;
+		await dragPath([from, { x: from.x, y: from.y + down }], { hold: true });
+		// The row in hand follows the pointer; the one it passes moved up into its place; the source stays put.
+		await expect.poll(() => topOf("English")).toBe(before.english + down);
+		await expect.poll(() => topOf("日本語")).toBe(before.english);
+		expect(topOf("한국어")).toBe(before.source);
+		await dropDrag();
+		await expect.poll(languages).toEqual(["한국어", "日本語", "English"]);
+		// Dragged back to where it was saved, nothing is left to save.
+		const again = middleOf(page.getByRole("button", { name: "English 옮기기" }).element());
+		await dragPath([again, { x: again.x, y: again.y - down }]);
+		await expect.poll(languages).toEqual(["한국어", "English", "日本語"]);
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+	});
+
+	it("12-3 [flow 11·16] on the live site the languages are read-only: a lock on every row, and nothing to move, take out, change or add", async () => {
+		await LanguagesLive.run();
+		expect(languages()).toEqual(["한국어", "English", "日本語"]);
+		for (const name of ["English 옮기기", "English 빼기", "바꾸기", "+ 언어 추가"])
+			await expect.element(page.getByRole("button", { name })).not.toBeInTheDocument();
+		// The address mark of the site tab is the file's too: text with its lock, no select.
+		await userEvent.click(tab(/사이트/));
+		await expect.element(page.getByText("원문 언어만 빼고")).toBeVisible();
+		await expect.element(page.getByRole("combobox", { name: "주소에 언어 표시" })).not.toBeInTheDocument();
+		// What lives in the database is still an input.
+		await expect.element(nameField()).toBeEnabled();
+	});
+});
+
+describe("settings: a save that is refused", () => {
+	it("12-4 when the schema file cannot be written, the reason stays under the tabs with 다시 저장: the name is saved, the structure change waits, and saving again finishes it", async () => {
+		const files = {
+			locked: true,
+			async write() {
+				if (this.locked) throw new Error("EACCES: permission denied, open 'monti.schema.ts'");
+			},
+			readChanges: async () => [],
+		};
+		const shown = withSite({ ...stories.SaveRefused, loaders: stories.settingsAt("site", { files }) });
+		await shown.run();
+		await expect.element(page.getByText("monti.schema.ts를 쓰지 못했습니다")).toBeVisible();
+		// The admin value is saved and left the draft; the structure value is still a change to save.
+		const partly = await settingsOf(shown.loaded());
+		expect(partly.site.name).toBe("example.blog");
+		expect(partly.schema.locales.prefix).toBe("exceptSource");
+		await expect.poll(siteName).toBe("example.blog");
+		await expect.element(page.getByRole("button", { name: /변경 사항/ })).toHaveTextContent("1");
+		await expect.element(page.getByRole("combobox", { name: "주소에 언어 표시" })).toHaveTextContent("항상");
+		// It does not go by itself: moving to another tab and back, the line is still there.
+		await userEvent.click(tab(/언어/));
+		await userEvent.click(tab(/사이트/));
+		await expect.element(page.getByText("monti.schema.ts를 쓰지 못했습니다")).toBeVisible();
+
+		files.locked = false;
+		await userEvent.click(page.getByRole("button", { name: "다시 저장" }));
+		await userEvent.click(page.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(page.getByText("적용했습니다")).toBeVisible();
+		await expect.element(page.getByText("monti.schema.ts를 쓰지 못했습니다")).not.toBeInTheDocument();
+		expect((await settingsOf(shown.loaded())).schema.locales.prefix).toBe("always");
+	});
+
+	it("12-2 a save over values changed elsewhere is refused under the tabs with 다시 불러오기: reading again keeps my change, and the next save goes", async () => {
+		const shown = withSite(stories.SiteChanged);
+		await shown.run();
+		// Another tab saved the writing rules after this screen read them.
+		await shown.loaded().site.monti.run("settings.save", { site: { writing: "다른 탭에서 고친 규칙" } }, admin);
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("다른 곳에서 바뀌었습니다")).toBeVisible();
+		expect((await settingsOf(shown.loaded())).site.name).toBe("example.dev");
+		await userEvent.click(page.getByRole("button", { name: "다시 불러오기" }));
+		await expect.element(page.getByText("다른 곳에서 바뀌었습니다")).not.toBeInTheDocument();
+		await expect.element(page.getByRole("textbox", { name: "말투와 규칙" })).toHaveValue("다른 탭에서 고친 규칙");
+		await expect.element(nameField()).toHaveValue("example.blog");
+		await userEvent.click(saveGroup());
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		expect((await settingsOf(shown.loaded())).site).toMatchObject({
+			name: "example.blog",
+			writing: "다른 탭에서 고친 규칙",
+		});
+	});
+});
+
+describe("settings: the assistant's proposals", () => {
+	it("12-1 [flow 2·21] a proposed value is drawn in its field with the saved one struck under it; its label's 버리기 throws the proposal away", async () => {
+		await SiteProposal.run();
+		await expect.element(nameField()).toHaveValue("example.blog");
+		await expect.element(nameField()).toHaveAttribute("data-proposal");
+		await expect.element(page.getByRole("deletion").filter({ hasText: "example.dev" })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "버리기", exact: true }).first());
+		await expect.element(nameField()).toHaveValue("example.dev");
+		await expect.element(nameField()).not.toHaveAttribute("data-proposal");
+		await expect.element(page.getByRole("button", { name: "모두 받기" })).not.toBeInTheDocument();
+	});
+
+	it("12-1 typing in a proposed field takes the proposal first: it becomes my unsaved change, and nothing is saved until the save", async () => {
+		const shown = withSite(stories.SiteProposal);
+		await shown.run();
+		await userEvent.type(nameField(), "!");
+		await expect.element(nameField()).toHaveValue("example.blog!");
+		await expect.element(nameField()).not.toHaveAttribute("data-proposal");
+		await expect.element(page.getByRole("button", { name: "모두 받기" })).not.toBeInTheDocument();
+		expect((await settingsOf(shown.loaded())).site.name).toBe("example.dev");
+		// The proposal's other value was taken with it: the save now sends the address mark too, through the review.
+		await userEvent.click(saveGroup());
+		await userEvent.click(page.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(page.getByText("적용했습니다")).toBeVisible();
+		const settings = await settingsOf(shown.loaded());
+		expect(settings.site.name).toBe("example.blog!");
+		expect(settings.schema.locales.prefix).toBe("always");
+	});
+
+	it("12-1 a proposed language is a row of the language tab until it is taken; from another tab the language tab carries the blue dot", async () => {
+		await LanguageProposal.run();
+		expect(languages()).toEqual(["한국어", "English", "日本語", "Deutsch"]);
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await userEvent.click(tab(/관리자/));
+		await expect.element(tab(/언어/).getByRole("img", { name: "제안" })).toBeVisible();
+		await userEvent.click(tab(/언어/));
+		await userEvent.click(page.getByRole("button", { name: "모두 받기" }));
+		await expect.element(saveGroup()).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "모두 받기" })).not.toBeInTheDocument();
+	});
+});
+
+describe("settings › admin", () => {
+	it("12-2 the screen language is saved the moment it is picked: every word follows at once, with no save group", async () => {
+		const shown = withSite(stories.Admin);
+		await shown.run();
+		await userEvent.click(page.getByRole("combobox", { name: "화면 언어" }));
+		await userEvent.click(page.getByRole("option", { name: /English/ }));
+		await expect.element(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "Trash" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: /^Save/ })).not.toBeInTheDocument();
+		expect((await settingsOf(shown.loaded())).admin.language).toBe("en");
+	});
+
+	it("12-2 body templates turned off are offered nowhere: not in the tools, not in the new-entry menu; turned on, they are back", async () => {
+		const shown = withSite({
+			...stories.Admin,
+			loaders: stories.settingsAt("admin", {
+				more: async ({ monti }) => {
+					await monti.run("templates.save", { name: "회고", doc: { type: "doc", blocks: [] } }, admin);
+				},
+			}),
+		});
+		await shown.run();
+		const templates = page.getByRole("switch", { name: "본문 템플릿" });
+		await expect.element(templates).toBeChecked();
+		await userEvent.click(templates);
+		await expect.element(templates).not.toBeChecked();
+		expect((await settingsOf(shown.loaded())).admin.templates).toBe(false);
+		await userEvent.click(page.getByRole("button", { name: "도구" }));
+		await expect.element(page.getByRole("heading", { name: "도구" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "템플릿 추가" })).not.toBeInTheDocument();
+		await expect.element(page.getByText("회고")).not.toBeInTheDocument();
+		// The memos have no folders, so with no template to offer their new-entry pill has no menu at all.
+		await userEvent.click(page.getByRole("button", { name: /메모/ }));
+		await expect.element(page.getByRole("button", { name: "+ 새 메모" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: MORE_NEW })).not.toBeInTheDocument();
+
+		await userEvent.click(page.getByRole("button", { name: "설정" }));
+		await userEvent.click(tab(/관리자/));
+		await userEvent.click(page.getByRole("switch", { name: "본문 템플릿" }));
+		await userEvent.click(page.getByRole("button", { name: "도구" }));
+		await expect.element(page.getByText("회고")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: /메모/ }));
+		await userEvent.click(page.getByRole("button", { name: MORE_NEW }));
+		await expect.element(page.getByRole("menuitem", { name: "템플릿으로 쓰기" })).toBeVisible();
+	});
+
+	it("12-1 the sidebar and the sign-in screen show the site name the settings hold, and 로그아웃 ends the session without asking", async () => {
+		const shown = withSite({
+			...stories.Admin,
+			loaders: stories.settingsAt("admin", {
+				more: async ({ monti }) => {
+					await monti.run("settings.save", { site: { name: "저장한 이름" } }, admin);
+				},
+			}),
+		});
+		await shown.run();
+		await expect.poll(siteName).toBe("저장한 이름");
+		await expect.element(page.getByText("me@example.dev")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "로그아웃" }));
+		await expect.element(page.getByRole("button", { name: "로그인", exact: true })).toBeVisible();
+		await expect.element(page.getByText("저장한 이름")).toBeVisible();
+		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+	});
+});

@@ -6,13 +6,13 @@ import {
 	FormField,
 	FormFieldLabel,
 	Grid,
+	Inline,
 	Input,
 	LockMark,
 	Option,
 	ReadValue,
 	Stack,
 	Switch,
-	TextButton,
 } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { at } from "./schema-draft";
@@ -91,37 +91,23 @@ export function BasicsTab({
 							<LockMark label={t("settings.locked")} />
 						</ReadValue>
 					)
-				) : (
-					<FormField>
-						<div className="flex min-h-monti-control-lg items-center gap-monti-8">
-							<label
-								htmlFor={kind === "item" ? "collection-public-page" : "collection-path"}
-								className="cursor-pointer text-monti-body"
-							>
+				) : kind === "item" ? (
+					// An item's public page is a switch; its address shows under it while it is on. The switch row is 36px, as the inputs above it.
+					<Stack gap={4}>
+						<Option spread height="lg">
+							<Inline gap={8} align="center">
 								{t("settings.basics.path")}
-							</label>
-							{pathChanged ? <ChangeDot label={pathChanged.label} /> : null}
-							{pathChanged?.onUndo || kind === "item" ? (
-								<div className="ml-auto flex items-center gap-monti-12">
-									{pathChanged?.onUndo ? (
-										<TextButton variant="underline" quiet size="caption" onClick={pathChanged.onUndo}>
-											{pathChanged.undoLabel}
-										</TextButton>
-									) : null}
-									{kind === "item" ? (
-										<Switch
-											id="collection-public-page"
-											checked={path !== undefined}
-											onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
-										/>
-									) : null}
-								</div>
-							) : null}
-						</div>
+								{pathChanged ? <ChangeDot label={pathChanged.label} /> : null}
+							</Inline>
+							<Switch
+								checked={path !== undefined}
+								onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
+							/>
+						</Option>
 						{path !== undefined && (
 							<Affix
 								id="collection-path"
-								aria-label={kind === "item" ? t("settings.basics.path") : undefined}
+								aria-label={t("settings.basics.path")}
 								prefix="/"
 								suffix="/:slug"
 								width="fit"
@@ -129,6 +115,20 @@ export function BasicsTab({
 								onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
 							/>
 						)}
+					</Stack>
+				) : (
+					<FormField>
+						<FormFieldLabel htmlFor="collection-path" changed={pathChanged}>
+							{t("settings.basics.path")}
+						</FormFieldLabel>
+						<Affix
+							id="collection-path"
+							prefix="/"
+							suffix="/:slug"
+							width="fit"
+							value={addressPart(path ?? "/:slug")}
+							onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
+						/>
 					</FormField>
 				)}
 				{/* At the height of the inputs above it (36px): one group, one control height. */}
@@ -142,11 +142,11 @@ export function BasicsTab({
 			</Stack>
 			{locked ? null : (
 				<DangerBlock title={t("settings.basics.delete")}>
-					<div className="flex justify-end">
+					<Inline justify="end">
 						<Button variant="outline-danger" size="sm" onClick={onDelete}>
 							{t("settings.basics.deleteButton")}
 						</Button>
-					</div>
+					</Inline>
 				</DangerBlock>
 			)}
 		</>

@@ -441,7 +441,8 @@ function Body({
 						</Box>
 					) : null}
 					{fixFirst}
-					{plan.changes.map(block)}
+					{/* The languages first, then the collections: the order the sheet's title names them in. */}
+					{[...plan.changes.filter((change) => !ofCollection(change)), ...plan.changes.filter(ofCollection)].map(block)}
 				</Stack>
 			</SheetBody>
 			<SheetFooter>
