@@ -69,7 +69,7 @@ export type Preview = {
 
 type Awaitable<T> = T | Promise<T>;
 
-export type OperationDefinition<Input, Output> = {
+export type OperationDefinition<Input, Output, Prepared = undefined> = {
 	/** `<area>.<verb>`, as the feature docs name it: `entries.publish`. */
 	name: string;
 	kind: OperationKind;
@@ -85,23 +85,37 @@ export type OperationDefinition<Input, Output> = {
 	/** For the model. The admin never sees it. */
 	description: string;
 	input: z.ZodType<Input>;
+	/**
+	 * Input fields that hold a secret (a service key). The CLI never takes one as an argument, where the shell's history and the process list would
+	 * keep it: it reads it from standard input (`--secret -`).
+	 */
+	secretInputs?: string[];
+	/**
+	 * Work a write does before its transaction opens, with nothing held: asking another service (does it take this key?). It reads and asks, never
+	 * writes. What it returns goes to `check` and `run`, which run inside the transaction and must make sure what `prepare` read is still so.
+	 */
+	prepare?: (input: Input, ctx: OperationContext) => Awaitable<Prepared>;
 	/** The records the write will change, read before it runs: the engine compares their versions and keeps their snapshots for undo. */
 	touches?: (input: Input, ctx: OperationContext) => Awaitable<RecordRef[]>;
 	/** Refuses the write before it runs (throw `CheckError`). */
-	check?: (input: Input, ctx: OperationContext) => Awaitable<void>;
+	check?: (input: Input, ctx: OperationContext, prepared: Prepared) => Awaitable<void>;
 	/** What the write would change. The agent reads it before proposing, and the proposal card shows it. */
 	preview?: (input: Input, ctx: OperationContext) => Awaitable<Preview>;
-	run: (input: Input, ctx: OperationContext) => Awaitable<Output>;
+	run: (input: Input, ctx: OperationContext, prepared: Prepared) => Awaitable<Output>;
 	/** One line for the activity log. Every write has one. */
 	summary?: (input: Input, output: Output) => Message;
 };
 
-export type Operation<Input = unknown, Output = unknown> = OperationDefinition<Input, Output> & {
+export type Operation<Input = unknown, Output = unknown, Prepared = undefined> = OperationDefinition<
+	Input,
+	Output,
+	Prepared
+> & {
 	readonly __operation: true;
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: a list of operations holds every input and output type.
-export type AnyOperation = Operation<any, any>;
+export type AnyOperation = Operation<any, any, any>;
 
 const NAME = /^[a-z][a-zA-Z]*(\.[a-z][a-zA-Z]*)+$/;
 
@@ -109,19 +123,19 @@ const NAME = /^[a-z][a-zA-Z]*(\.[a-z][a-zA-Z]*)+$/;
  * Defines one thing Monti can do. One definition gives the admin API route, the agent tool and the CLI command, with the same input check, so no
  * entry point has a way around another's rules.
  */
-export function defineOperation<Input, Output>(
-	definition: OperationDefinition<Input, Output>,
-): Operation<Input, Output> {
+export function defineOperation<Input, Output, Prepared = undefined>(
+	definition: OperationDefinition<Input, Output, Prepared>,
+): Operation<Input, Output, Prepared> {
 	if (!NAME.test(definition.name))
 		throw new Error(`Operation name "${definition.name}" is not "<area>.<verb>" in camel case.`);
 	if (definition.kind === "write" && definition.summary === undefined)
 		throw new Error(`Write operation "${definition.name}" has no summary for the activity log.`);
 	if (
 		definition.kind !== "write" &&
-		(definition.touches || definition.preview || definition.humanOnly || definition.structure)
+		(definition.touches || definition.preview || definition.humanOnly || definition.structure || definition.prepare)
 	)
 		throw new Error(
-			`Operation "${definition.name}" is not a write, so it has no touches, preview, humanOnly or structure.`,
+			`Operation "${definition.name}" is not a write, so it has no touches, preview, humanOnly, structure or prepare.`,
 		);
 	return { ...definition, __operation: true };
 }
