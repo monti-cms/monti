@@ -110,7 +110,8 @@ async function openChanges(page: ReturnType<typeof within>, body: ReturnType<typ
 async function settings(canvasElement: HTMLElement) {
 	const page = within(canvasElement);
 	await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
-	await userEvent.click(await page.findByRole("link", { name: "컬렉션" }, wait));
+	// The tab's name ends with what its dot says when it holds a proposal.
+	await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
 	await page.findByRole("button", { name: "summary 열기" }, wait);
 	return { page, body: within(canvasElement.ownerDocument.body) };
 }
@@ -406,7 +407,7 @@ export const Made: Story = {
 
 /**
  * A refused apply stays where the person acts (the feedback ladder in status.md): the review keeps open with the reason at its top, not a toast that goes.
- * The site refuses `schema.apply` here.
+ * The site refuses `settings.save` here.
  */
 export const ApplyRefused: Story = {
 	loaders: site(),
@@ -415,7 +416,7 @@ export const ApplyRefused: Story = {
 		return (
 			<MontiAdmin
 				transport={(name, input, options) =>
-					name === "schema.apply"
+					name === "settings.save"
 						? Promise.resolve({ status: 500, body: { error: "unexpected" } })
 						: transport(name, input, options)
 				}
