@@ -366,6 +366,40 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0015_keys": {
+		async up(db) {
+			// Service keys (doc 14): the key sealed with MONTI_SECRET, its last four characters to show, the models its service listed, and its version.
+			await db.schema
+				.createTable("api_keys")
+				.addColumn("id", "text", (column) => column.primaryKey())
+				.addColumn("service", "text", (column) => column.notNull())
+				.addColumn("name", "text", (column) => column.notNull().unique())
+				.addColumn("base_url", "text")
+				.addColumn("secret", "text", (column) => column.notNull())
+				.addColumn("last4", "text", (column) => column.notNull())
+				.addColumn("models", "jsonb", (column) => column.notNull().defaultTo(sql`'[]'::jsonb`))
+				.addColumn("models_at", "timestamptz")
+				.addColumn("models_failed_at", "timestamptz")
+				.addColumn("version", "integer", (column) => column.notNull().defaultTo(1))
+				.addColumn("created_at", "timestamptz", (column) => column.notNull().defaultTo(sql`now()`))
+				.execute();
+			// Tokens per key and month: a count that comes late for last month does not touch this month's.
+			await db.schema
+				.createTable("api_key_usage")
+				.addColumn("key_id", "text", (column) => column.notNull().references("api_keys.id").onDelete("cascade"))
+				.addColumn("month", "text", (column) => column.notNull())
+				.addColumn("tokens", "bigint", (column) => column.notNull())
+				.addPrimaryKeyConstraint("api_key_usage_pk", ["key_id", "month"])
+				.execute();
+			// The one model the keys screen picks: the quick tasks'. It goes with its key.
+			await db.schema
+				.createTable("model_choices")
+				.addColumn("role", "text", (column) => column.primaryKey().check(sql`role in ('quick')`))
+				.addColumn("key_id", "text", (column) => column.notNull().references("api_keys.id").onDelete("cascade"))
+				.addColumn("model", "text", (column) => column.notNull())
+				.execute();
+		},
+	},
 };
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */
