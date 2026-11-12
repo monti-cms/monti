@@ -34,6 +34,8 @@ export type KeyRow = {
 	baseUrl: string | null;
 	/** Whether the server's secret opens it. One that does not is entered again. */
 	readable: boolean;
+	/** Whether a key is stored at all: `false` for a service that needs none and was given none. One the server cannot read counts as there. */
+	hasKey: boolean;
 	/** Tokens this month. Money and limits are not counted (doc 10). */
 	usage: { month: string; tokens: number };
 	uses: KeyUse[];
@@ -115,10 +117,10 @@ const lockName = (ctx: OperationContext, name: string) => lockRecords(ctx.db, [{
 async function readKeys(ctx: OperationContext) {
 	const secret = ctx.site.secret;
 	return Promise.all(
-		(await keysInOrder(ctx.db)).map(async (key) => ({
-			...key,
-			readable: secret !== null && (await opened(secret, key)) !== null,
-		})),
+		(await keysInOrder(ctx.db)).map(async (key) => {
+			const plain = secret === null ? null : await opened(secret, key);
+			return { ...key, readable: plain !== null, hasKey: plain !== "" };
+		}),
 	);
 }
 
@@ -242,6 +244,7 @@ export const keyOperations = [
 					last4: key.last4,
 					baseUrl: key.base_url,
 					readable: key.readable,
+					hasKey: key.hasKey,
 					usage: { month, tokens: used.get(key.id) ?? 0 },
 					uses: [
 						...(assistant?.keyId === key.id ? [{ for: "assistant" as const, model: assistant.model }] : []),
