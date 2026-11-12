@@ -23,6 +23,10 @@ export const MODELS_RETRY_MS = 15 * 60_000;
 /** Where a key is at work: the assistant's starting model comes from it, or the quick tasks' model does. */
 export type KeyUse = { for: "assistant" | "quick"; model: string };
 
+/** A key as the assistant is told of it (`keys.list` as its tool): no ending, no address, no usage. */
+export type AssistantKeyRow = Pick<KeyRow, "id" | "service" | "serviceName" | "name" | "readable" | "uses">;
+export type AssistantKeyList = Omit<KeyList, "keys"> & { keys: AssistantKeyRow[] };
+
 export type KeyRow = {
 	id: string;
 	service: string;
@@ -225,9 +229,9 @@ export const keyOperations = [
 		name: "keys.list",
 		kind: "read",
 		description:
-			"The service keys: each one's name, service, last four characters, tokens used this month and where it is used. Never the key itself. Also the services a key can be added for, and whether the server can store keys at all.",
+			"The service keys: each one's name, service, whether the server can read it and where it is used. Never the key itself. Also the services a key can be added for, and whether the server can store keys at all. (The keys screen is also given each key's last four characters, its address and the tokens it used this month.)",
 		input: z.object({}),
-		async run(_input, ctx): Promise<KeyList> {
+		async run(_input, ctx): Promise<KeyList | AssistantKeyList> {
 			const keys = await readKeys(ctx);
 			const { assistant, quick } = await startingModels(ctx, keys);
 			const month = monthOf(ctx.now());
@@ -236,6 +240,32 @@ export const keyOperations = [
 					await ctx.db.selectFrom("api_key_usage").select(["key_id", "tokens"]).where("month", "=", month).execute()
 				).map((row) => [row.key_id, Number(row.tokens)]),
 			);
+			const services = ctx.site.keyServices.map((service) => ({
+				id: service.id,
+				name: service.name,
+				address: service.address ?? false,
+				keyOptional: service.keyOptional ?? false,
+				placeholder: service.placeholder ?? null,
+			}));
+			const usesOf = (keyId: string): KeyUse[] => [
+				...(assistant?.keyId === keyId ? [{ for: "assistant" as const, model: assistant.model }] : []),
+				...(quick?.keyId === keyId ? [{ for: "quick" as const, model: quick.model }] : []),
+			];
+			// The assistant knows which keys there are and what they are for (doc 14); it is not told a key's ending, where a server of the
+			// person's own is, or how much was used. Nothing it does needs them, and what it is told can end up in a conversation.
+			if (ctx.actor === "assistant")
+				return {
+					canStore: ctx.site.secret !== null,
+					keys: keys.map((key) => ({
+						id: key.id,
+						service: key.service,
+						serviceName: serviceOf(ctx, key.service)?.name ?? key.service,
+						name: key.name,
+						readable: key.readable,
+						uses: usesOf(key.id),
+					})),
+					services,
+				};
 			return {
 				canStore: ctx.site.secret !== null,
 				keys: keys.map((key) => ({
@@ -248,19 +278,10 @@ export const keyOperations = [
 					readable: key.readable,
 					hasKey: key.hasKey,
 					usage: { month, tokens: used.get(key.id) ?? 0 },
-					uses: [
-						...(assistant?.keyId === key.id ? [{ for: "assistant" as const, model: assistant.model }] : []),
-						...(quick?.keyId === key.id ? [{ for: "quick" as const, model: quick.model }] : []),
-					],
+					uses: usesOf(key.id),
 					version: key.version,
 				})),
-				services: ctx.site.keyServices.map((service) => ({
-					id: service.id,
-					name: service.name,
-					address: service.address ?? false,
-					keyOptional: service.keyOptional ?? false,
-					placeholder: service.placeholder ?? null,
-				})),
+				services,
 			};
 		},
 	}),

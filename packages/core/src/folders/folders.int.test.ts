@@ -295,7 +295,9 @@ describe("folders", () => {
 				ids: posts,
 				folder: { $item: made.itemId },
 			});
-			return { proposal, made: made.itemId, moved: moved.itemId };
+			// One item per post: each can be taken or left (doc 10).
+			expect(moved.itemIds).toHaveLength(2);
+			return { proposal, made: made.itemId, moved: moved.itemIds };
 		};
 
 		const all = await propose();
@@ -306,8 +308,8 @@ describe("folders", () => {
 
 		await move(posts, null);
 		const part = await propose();
-		const result = await site().proposals.apply(part.proposal, [part.moved]);
-		expect(result.map((item) => item.state)).toEqual(["discarded", "skipped"]);
+		const result = await site().proposals.apply(part.proposal, part.moved);
+		expect(result.map((item) => item.state)).toEqual(["discarded", "skipped", "skipped"]);
 		expect((await entry(posts[0] ?? "")).folder_id).toBeNull();
 	});
 });

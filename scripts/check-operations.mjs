@@ -5,7 +5,8 @@
  *   node scripts/check-operations.mjs
  *
  * Rules (each finding names its rule id):
- *   undocumented    An operation defined in code (`defineOperation({ name: "…" })` in a package's src) is in no doc's "기능 목록" table.
+ *   undocumented    An operation or stream defined in code (`defineOperation({ name: "…" })`, `defineStream({ name: "…" })` in a package's src) is
+ *                   in no doc's "기능 목록" table.
  *   missing         A doc marked 끝 or 통합 대기 has an operation in its table that no code defines.
  *   open-item       A doc marked 끝 or 통합 대기 still has an open item in the tracker's "남은 일" that is to be done with it: its pull requests are
  *                   merged, so nothing would pick the item up.
@@ -96,7 +97,8 @@ for (const file of sources) {
 			testIds.push({ file, id: match[1], line: text.slice(0, match.index).split("\n").length });
 		continue;
 	}
-	for (const match of text.matchAll(/defineOperation\(\{\s*name:\s*"([^"]+)"/g))
+	// A stream (an assistant's run, a proposal being applied) is listed in its doc like an operation.
+	for (const match of text.matchAll(/define(?:Operation|Stream)\(\{\s*name:\s*"([^"]+)"/g))
 		defined.set(match[1], { file, line: text.slice(0, match.index).split("\n").length });
 }
 

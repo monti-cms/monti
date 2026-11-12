@@ -361,6 +361,11 @@ export const folderOperations = [
 		description:
 			"Move entries into a folder of their collection, or to the top level with `folder` null. A translation group moves whole. Addresses and publish states stay as they are.",
 		input: z.object({ ids: z.array(z.string()).min(1), folder: z.string().nullable() }),
+		// One by one: the assistant's proposal has an item per entry, each taken or left on its own (doc 10).
+		each: "ids",
+		// In a proposal it follows another change of the same entry as it is (it carries no version). What it changes is where the entry is.
+		follows: (input) => input,
+		places: (input) => input.ids.map((id) => `entry:${id}/folder`),
 		async touches(input, ctx) {
 			// The folder too, as a file's move takes its folder: a folder on its way to the trash and an entry on its way in go one after the other (doc 11).
 			// It is held here, before the entries are: `trash.move` holds a folder before what is in it, and two writes that hold them in two orders stop each other.

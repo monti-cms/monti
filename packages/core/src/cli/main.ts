@@ -55,6 +55,7 @@ export async function main(config: MontiConfig, root: string, argv: string[]): P
 		}
 		if (command === "trash:purge") {
 			const { purged, files } = await monti.trash.purgeDue();
+			await monti.cleanUp();
 			io.out(`Deleted ${purged} from the trash and ${files} files from the storage.`);
 			return 0;
 		}
