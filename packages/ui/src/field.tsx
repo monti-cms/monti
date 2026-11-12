@@ -181,7 +181,7 @@ function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">
 }
 
 /**
- * The error line under a field. `reserve` keeps the line (20px, 6px below the control: the field's 2px and 4px more) while it is empty, for a field whose error comes back
+ * The error line under a field. `reserve` keeps the line (20px, 8px below the control: the field's 4px and 4px more) while it is empty, for a field whose error comes back
  * after the form is sent (a password): the button under it does not move when the error appears. `hint` fills that line in grey while there is no
  * error, for what the user must know before typing ("10자 이상"); the error takes its place. (cms-allow-korean)
  */

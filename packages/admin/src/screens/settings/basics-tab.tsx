@@ -159,19 +159,19 @@ export function BasicsTab({
 				) : (
 					<FormField>
 						{/* The same line as the public address above it: the two are one kind of value. */}
-						<div className="flex min-h-monti-control-lg items-center gap-monti-8">
-							<label htmlFor="collection-preview-path" className="cursor-pointer text-monti-body">
-								{t("settings.basics.previewPath")}
-							</label>
-							{previewChanged ? <ChangeDot label={t("settings.changed")} /> : null}
+						<Inline minHeight="control-lg" align="center" justify="between" gap={12}>
+							<Inline gap={8} align="center">
+								<Label htmlFor="collection-preview-path" size="body" tone="default">
+									{t("settings.basics.previewPath")}
+								</Label>
+								{previewChanged ? <ChangeDot label={t("settings.changed")} /> : null}
+							</Inline>
 							{previewChanged ? (
-								<div className="ml-auto flex items-center gap-monti-12">
-									<TextButton variant="underline" quiet size="caption" onClick={() => draft.revert(previewPlace)}>
-										{t("settings.undo")}
-									</TextButton>
-								</div>
+								<TextButton variant="underline" quiet size="caption" onClick={() => draft.revert(previewPlace)}>
+									{t("settings.undo")}
+								</TextButton>
 							) : null}
-						</div>
+						</Inline>
 						<Affix
 							id="collection-preview-path"
 							prefix="/"
