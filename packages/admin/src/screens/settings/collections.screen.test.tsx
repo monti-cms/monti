@@ -19,6 +19,61 @@ describe("collection public pages", () => {
 	});
 });
 
+describe("a collection's preview address", () => {
+	const { Basics, ReadOnlyBasics } = composeStories(collections);
+	const field = () => page.getByRole("textbox", { name: "미리보기 주소" });
+	/** "변경 사항 n ▾": there only while something is changed. */
+	const changes = () => page.getByRole("button", { name: "변경 사항", exact: true });
+
+	it("16-9 typed in the basics tab it is one change with its review; applied, the schema has it and the review is gone", async () => {
+		const story = scene<{
+			site: { monti: { run: (name: string, input: unknown, as: { actor: "admin" }) => Promise<unknown> } };
+		}>(collections.Basics, collections.default);
+		await story.run();
+		await expect.element(field()).toHaveValue("");
+		await userEvent.click(field());
+		await userEvent.keyboard("preview");
+		await expect.element(changes()).toHaveTextContent(/1/);
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		const review = page.getByRole("dialog");
+		await expect.element(review.getByText("게시글 · 미리보기 주소")).toBeVisible();
+		await expect.element(review.getByText("공개 주소에서")).toBeVisible();
+		await expect.element(review.getByText("/preview/:slug")).toBeVisible();
+		await expect.element(review.getByText("저장된 데이터는 바뀌지 않습니다.")).toBeVisible();
+		await userEvent.click(review.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(review).not.toBeInTheDocument();
+		const read = (await story.loaded().site.monti.run("schema.read", {}, { actor: "admin" })) as {
+			schema: { collections: Record<string, { previewPath?: string }> };
+		};
+		expect(read.schema.collections.post?.previewPath).toBe("/preview/:slug");
+		await expect.element(field()).toHaveValue("preview");
+	});
+
+	it("16-9 emptied again it is no change, and its undo puts back what was saved", async () => {
+		await Basics.run();
+		await userEvent.click(field());
+		await userEvent.keyboard("draft");
+		await expect.element(changes()).toHaveTextContent(/1/);
+		await userEvent.keyboard("{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}");
+		await expect.element(changes()).not.toBeInTheDocument();
+		await userEvent.keyboard("draft");
+		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
+		await expect.element(field()).toHaveValue("");
+	});
+
+	it("16-9 an item collection has no preview address, and the live site reads a document's as words with its lock", async () => {
+		await Basics.run();
+		await expect.element(field()).toBeVisible();
+		await userEvent.click(page.getByRole("navigation", { name: "컬렉션" }).getByRole("button", { name: /^카테고리/ }));
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await expect.element(page.getByText("공개 주소", { exact: true })).toBeVisible();
+		await expect.element(field()).not.toBeInTheDocument();
+		await ReadOnlyBasics.run();
+		await expect.element(page.getByText("공개 주소에서")).toBeVisible();
+		await expect.element(field()).not.toBeInTheDocument();
+	});
+});
+
 const { ChangesList, DeleteReview, Fields } = composeStories(collections);
 
 const tab = (name: RegExp) => page.getByRole("tab", { name });
