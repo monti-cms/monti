@@ -51,6 +51,7 @@
 
 | 번호 | 할 일 | 할 때 | 나온 곳 |
 |---|---|---|---|
+| T138 | 설정의 저장 거절 띠("monti.schema.ts를 쓰지 못했습니다 · 다시 저장", "다른 곳에서 바뀌었습니다 · 다시 불러오기")를 탭 아래에서 화면 맨 위로 옮긴다(`settings-screen.tsx`의 `Banner` 하나). 화면의 띠는 모두 맨 위 한 자리에 선다(common.md, 2026-11-06 · 2026-11-12 소유자). 틀 안의 페이지가 그 자리에 띠를 놓는 부품(`fix/banner-at-top`의 `PageBanner`)이 `overhaul`에 들어오면 옮기고, 12번 문서의 "탭 아래 띠" 문장, 화면 지도, 스토리 SaveRefused, 자리를 재는 테스트를 함께 고친다 | 12 | #471 소유자 확인 전 점검 |
 | T5 | 관리자 화면에 들어올 때 밀린 전송 보내기(`monti.deliveries.sendDue`). 명령 `deliveries:run`은 있다 | 13 | #432 |
 | T6 | 사람이 누른 "다시 보내기"는 시도 수를 처음부터 센다(`deliveries.retry`) | 13 | 13 보내기 |
 | T13 | 사이트에 붙이는 길(Next 어댑터, 관리자 경로, 사이트에서 글 읽기는 `createReader`로)과 예제 앱. 개발 서버가 시작할 때 `syncSchemaFile`을 부르고 한 줄 알린다. 운영 사이트가 시작할 때 데이터베이스가 스키마보다 뒤에 있으면(`schema.read`의 `fileChanged`) `monti db:migrate`를 돌리라고 서버 로그에 남긴다 | 16 | #432에서 지움, 01 |

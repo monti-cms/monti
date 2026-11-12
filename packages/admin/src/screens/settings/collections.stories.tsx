@@ -428,7 +428,7 @@ export const ApplyRefused: Story = {
 		await NewCollectionReview.play?.(context);
 		const body = within(context.canvasElement.ownerDocument.body);
 		await userEvent.click(body.getByRole("button", { name: "적용" }));
-		await body.findByText("저장하지 못했습니다. 다시 시도해 주세요.", {}, wait);
+		await body.findByText("저장하지 못했습니다", {}, wait);
 		await expect(body.getByRole("button", { name: "적용" })).toBeInTheDocument();
 	},
 };

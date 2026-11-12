@@ -351,6 +351,29 @@ export const Admin: Story = {
 	},
 };
 
+/** A preference that could not be saved: the reason stays under its control, and the control shows what is still saved. */
+export const AdminRefused: Story = {
+	loaders: settingsAt("admin"),
+	render: (_args, { loaded }) => {
+		const { transport } = (loaded as Loaded).site;
+		return (
+			<MontiAdmin
+				transport={(name, input, options) =>
+					name === "admin.setPreference"
+						? Promise.resolve({ status: 500, body: { error: "unexpected" } })
+						: transport(name, input, options)
+				}
+				siteName="example.dev"
+			/>
+		);
+	},
+	play: async ({ canvasElement }) => {
+		const { page } = screen(canvasElement);
+		await userEvent.click(await page.findByRole("switch", { name: "본문 템플릿" }, wait));
+		await page.findByText("저장하지 못했습니다", {}, wait);
+	},
+};
+
 /** The screen's language set to English: every word of the admin follows at once. */
 export const AdminEnglish: Story = {
 	loaders: settingsAt("admin", {

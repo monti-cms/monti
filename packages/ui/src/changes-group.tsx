@@ -90,6 +90,7 @@ function ChangesBar({
 	saveLabel,
 	onSave,
 	saveDisabled,
+	saving,
 	saveDanger,
 	list,
 	...props
@@ -112,6 +113,8 @@ function ChangesBar({
 	saveLabel: string;
 	onSave?: () => void;
 	saveDisabled?: boolean;
+	/** While the save is on its way: what the pill says ("Saving…"). It keeps its fill, shows the spinner and cannot be pressed again. */
+	saving?: string;
 	saveDanger?: boolean;
 	/** The changes, as menu rows. */
 	list?: ReactNode;
@@ -148,8 +151,14 @@ function ChangesBar({
 			<Button type="button" variant="ghost" onClick={onDiscard}>
 				{discardLabel}
 			</Button>
-			<Button type="button" variant={saveDanger ? "danger" : "primary"} disabled={saveDisabled} onClick={onSave}>
-				{saveLabel}
+			<Button
+				type="button"
+				variant={saveDanger ? "danger" : "primary"}
+				disabled={saveDisabled}
+				loading={saving !== undefined}
+				onClick={onSave}
+			>
+				{saving ?? saveLabel}
 			</Button>
 		</section>
 	);
@@ -183,6 +192,8 @@ function ChangesGroup({
 	saveLabel: string;
 	onSave: () => void;
 	saveDisabled?: boolean;
+	/** While the save is on its way: what the pill says ("Saving…"). */
+	saving?: string;
 	saveDanger?: boolean;
 	/** The assistant's proposals in the form, not taken yet. */
 	proposals?: {

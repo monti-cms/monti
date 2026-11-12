@@ -106,7 +106,7 @@
 ## 설정 · 관리자 (AdminSettings)
 
 - 상태와 흐름 단계: [screens.md › AdminSettings](../screens.md#adminsettings).
-- 이 탭의 값은 고르는 대로 바로 저장된다(`admin.setPreference`). 저장 묶음이 없고 초안에 들지 않는다.
+- 이 탭의 값은 고르는 대로 바로 저장된다(`admin.setPreference`). 저장 묶음이 없고 초안에 들지 않는다. 저장이 거절되면 그 칸 아래에 `FormFieldError` 한 줄("저장하지 못했습니다")이 남고, 칸은 저장된 값 그대로다. 다음에 고른 것이 저장되면 사라진다. 토스트로 알리지 않는다(status.md).
 
 ### 기본 틀
 

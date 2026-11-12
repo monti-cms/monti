@@ -760,6 +760,66 @@ describe("settings › admin", () => {
 		await expect.element(page.getByRole("menuitem", { name: "템플릿으로 쓰기" })).toBeVisible();
 	});
 
+	it("12-2 a preference that could not be saved says so under its control and stays: the switch is as saved, and the next pick that goes through clears it", async () => {
+		const refusing = { on: true };
+		const shown = withSite({
+			...stories.Admin,
+			render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
+				<MontiAdmin
+					transport={(name, input, options) =>
+						name === "admin.setPreference" && refusing.on
+							? Promise.resolve({ status: 500, body: { error: "unexpected" } })
+							: loaded.site.transport(name, input, options)
+					}
+					siteName="example.dev"
+				/>
+			),
+		});
+		await shown.run();
+		const templates = page.getByRole("switch", { name: "본문 템플릿" });
+		await userEvent.click(templates);
+		// Not saved: the reason is beside the switch, which still shows what is saved.
+		await expect.element(page.getByRole("alert").filter({ hasText: "저장하지 못했습니다" })).toBeVisible();
+		await expect.element(templates).toBeChecked();
+		expect((await settingsOf(shown.loaded())).admin.templates).toBe(true);
+		// It does not leave by itself, as a toast would.
+		await new Promise((done) => setTimeout(done, 6000));
+		await expect.element(page.getByText("저장하지 못했습니다")).toBeVisible();
+		refusing.on = false;
+		await userEvent.click(templates);
+		await expect.element(templates).not.toBeChecked();
+		await expect.element(page.getByText("저장하지 못했습니다")).not.toBeInTheDocument();
+	});
+
+	it("12-1 the save pill is not greyed while the save is on its way: it says it is saving, at full strength", async () => {
+		const held: { release?: () => void } = {};
+		const shown = withSite({
+			...stories.SiteChanged,
+			render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
+				<MontiAdmin
+					transport={async (name, input, options) => {
+						// The save waits until the test lets it go.
+						if (name === "settings.save")
+							await new Promise<void>((release) => {
+								held.release = release;
+							});
+						return loaded.site.transport(name, input, options);
+					}}
+					siteName="example.dev"
+				/>
+			),
+		});
+		await shown.run();
+		await userEvent.click(saveGroup());
+		const saving = page.getByRole("button", { name: "저장 중…" });
+		await expect.element(saving).toBeVisible();
+		await expect.element(saving).toHaveAttribute("aria-busy", "true");
+		// Drawn at full strength, not faded as a control that cannot be used is.
+		expect(getComputedStyle(saving.element()).opacity).toBe("1");
+		held.release?.();
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+	});
+
 	it("12-1 a session let in without signing in (the dev server's, doc 16) has no email: the account section shows who it is and the tab stands", async () => {
 		const shown = withSite({
 			...stories.Admin,

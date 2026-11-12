@@ -291,7 +291,8 @@ export function SettingsScreen({
 				onDiscard={draft.revertAll}
 				saveLabel={locked ? t("settings.save") : t("settings.saveApply")}
 				onSave={() => void save()}
-				saveDisabled={busy}
+				// Not greyed while the save is on its way: the pill says what it is doing (README principle 7).
+				saving={busy ? t("ui.saving") : undefined}
 				proposals={
 					draft.proposals.length > 0
 						? {
