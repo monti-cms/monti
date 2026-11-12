@@ -2,14 +2,22 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import { hex, randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { CheckError } from "../errors";
-import type { MontiEvent } from "../operation";
+import type { Message, MontiEvent } from "../operation";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
 /** Somewhere events go after a write commits: a webhook from the config file, or a plugin. */
 export type Receiver = {
-	/** `webhook:https://example.dev/api/revalidate`, `plugin:algolia`. */
+	/**
+	 * What its deliveries are stored under and found by: `webhook:<name>` (a webhook's own name, or its address's host and path),
+	 * `plugin:algolia`. It is a name, never an address: nothing secret is in it. No two receivers of a site share one.
+	 */
 	destination: string;
+	/**
+	 * Its name as a person reads it in the activity log ("Site cache", "Search index"): words, or a message of a dictionary. Left out, it is
+	 * what follows `webhook:` or `plugin:` in `destination`.
+	 */
+	label?: string | Message;
 	/** Which events it wants; all when left out. */
 	accepts?: (event: MontiEvent) => boolean;
 	/**
@@ -60,14 +68,26 @@ export const BEFORE_ANSWER_MS = 10_000;
 /** How long a sender holds a delivery: past the time one send may take, so a sender that died lets go by itself. */
 const HOLD_MS = SEND_TIMEOUT_MS * 3;
 
-/** The longest error text kept on a delivery: a receiver's whole error page is no use in a side panel. */
-const ERROR_LENGTH = 300;
-
-/** A webhook's name when it is given none: its host and path. Never the query or the credentials, where a token may be. */
-function hostAndPath(url: string): string {
-	const parsed = new URL(url);
-	return `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname}`;
+/**
+ * A webhook's address, read when the site is made. One that does not parse, or that carries a user or a password, is refused there: the
+ * platform's `fetch` refuses both when it sends, with an error that quotes the whole address. The refusal does not quote it.
+ */
+function webhookAddress(url: string): URL {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw new Error("webhook(): the address is no URL. Give a whole address (https://host/path).");
+	}
+	if (parsed.username !== "" || parsed.password !== "")
+		throw new Error(
+			"webhook(): the address carries a user or a password, which a request cannot be sent with. Send them in `headers` (Authorization), or sign with `secret`.",
+		);
+	return parsed;
 }
+
+/** A webhook's name when it is given none: its host and path. Never the query, where a token may be. */
+const hostAndPath = (parsed: URL) => `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname}`;
 
 /** HMAC-SHA256 of `text` under `secret`, in hex. */
 async function hmac(secret: string, text: string): Promise<string> {
@@ -109,8 +129,9 @@ export function webhook(
 	} = {},
 ): Receiver {
 	const { events } = options;
+	const address = webhookAddress(url);
 	return {
-		destination: `webhook:${options.name ?? hostAndPath(url)}`,
+		destination: `webhook:${options.name ?? hostAndPath(address)}`,
 		...(events ? { accepts: (event: MontiEvent) => events.includes(event.type) } : {}),
 		async send(event, signal, delivery) {
 			const body = JSON.stringify(event);
@@ -135,17 +156,124 @@ export function webhook(
 					signal,
 				});
 			} catch (error) {
-				// The other side was not reached: the network's own word for why (`ECONNREFUSED`, `ENOTFOUND`) is kept with the message.
-				const code = (error as { cause?: { code?: unknown } } | null)?.cause?.code;
-				if (typeof code === "string" && error instanceof Error)
-					throw new Error(`${error.message} (${code})`, { cause: error });
+				// The other side was not reached: the network's own word for why (`ECONNREFUSED`, `ENOTFOUND`) is what is kept. An error with no
+				// such word is passed on, and stored as a failure with none of its text: the platform's messages quote the address.
+				const code = networkCode(error);
+				if (code !== null) throw new NoAnswer(code);
 				throw error;
 			}
 			// Nothing reads the answer's body: it is let go, so the connection is free at once.
 			await response.body?.cancel().catch(() => {});
-			if (!response.ok) throw new Error(`${response.status} ${response.statusText}`.trim());
+			if (!response.ok) throw new ReceiverAnswer(`${response.status} ${response.statusText}`.trim());
 		},
 	};
+}
+
+/**
+ * What a receiver throws when the other side answered, and not with success: `status` is the answer as it came ("503 Service Unavailable"), and
+ * the log shows it (the number, and HTTP's own words for it). Anything else a receiver throws is stored as a failure with none of its text: an
+ * error's own message is never stored or shown.
+ */
+export class ReceiverAnswer extends Error {
+	constructor(readonly status: string) {
+		super(status);
+		this.name = "ReceiverAnswer";
+	}
+}
+
+/** The name of the receiver that refreshes the site's own cached pages (an adapter's, as `@monti-cms/next`'s), in the core's dictionary. */
+export const SITE_CACHE_LABEL: Message = { key: "deliveries.receiver.site" };
+
+/** The delivery's receiver is not in the config any more. */
+class GoneError extends Error {}
+
+/** The sender gave up on a receiver that did not answer in time, or the other side was not reached (`code`: the network's own word for why). */
+class NoAnswer extends Error {
+	constructor(readonly code: string | null = null) {
+		super("No answer");
+		this.name = "NoAnswer";
+	}
+}
+
+/** The network's own word for why the other side was not reached (`ECONNREFUSED`, `ENOTFOUND`), when the error carries one that is such a word. */
+function networkCode(error: unknown): string | null {
+	let at = error;
+	for (let depth = 0; typeof at === "object" && at !== null && depth < 3; depth++) {
+		const { code, cause } = at as { code?: unknown; cause?: unknown };
+		// A code and nothing else: capitals, digits and underscores, never a sentence that could quote an address.
+		if (typeof code === "string" && /^[A-Z][A-Z0-9_]{2,39}$/.test(code)) return code;
+		at = cause;
+	}
+	return null;
+}
+
+/** The words HTTP has for the statuses a receiver is likely to answer with: a status is stored with these and no others. */
+const STATUS_WORDS: Record<number, string> = {
+	301: "Moved Permanently",
+	302: "Found",
+	303: "See Other",
+	307: "Temporary Redirect",
+	308: "Permanent Redirect",
+	400: "Bad Request",
+	401: "Unauthorized",
+	403: "Forbidden",
+	404: "Not Found",
+	405: "Method Not Allowed",
+	408: "Request Timeout",
+	409: "Conflict",
+	410: "Gone",
+	413: "Content Too Large",
+	422: "Unprocessable Content",
+	429: "Too Many Requests",
+	500: "Internal Server Error",
+	501: "Not Implemented",
+	502: "Bad Gateway",
+	503: "Service Unavailable",
+	504: "Gateway Timeout",
+};
+
+/**
+ * Why a delivery failed, as it is stored (`last_error`). It is one of four kinds and never a text that came from outside: an error's own
+ * message can quote the address it was sent to, with the token in it, and what is stored is shown in the log and read by the assistant.
+ *
+ * - `status:503 Service Unavailable`: the receiver answered. The number, and HTTP's own words for it when the answer used them; words of the
+ *   other side's own are not kept.
+ * - `noAnswer`, `noAnswer:ECONNREFUSED`: no answer in time, or the other side was not reached, with the network's code when there is one.
+ * - `gone`: no such receiver in the config any more.
+ * - `failed`: anything else a receiver threw. What it said is not kept.
+ */
+const failureOf = (error: unknown): string => {
+	if (error instanceof GoneError) return "gone";
+	if (error instanceof ReceiverAnswer) {
+		const answered = /^(\d{3})(?: (.*))?$/.exec(error.status.trim());
+		if (!answered) return "failed";
+		const code = Number(answered[1]);
+		return STATUS_WORDS[code] !== undefined && answered[2] === STATUS_WORDS[code]
+			? `status:${code} ${STATUS_WORDS[code]}`
+			: `status:${code}`;
+	}
+	if (error instanceof NoAnswer) return error.code === null ? "noAnswer" : `noAnswer:${error.code}`;
+	return "failed";
+};
+
+/** A stored failure in words: one of three sentences (doc 13). */
+export function deliveryError(stored: string | null): Message | null {
+	if (stored === null) return null;
+	if (stored === "gone") return { key: "deliveries.error.gone" };
+	if (stored.startsWith("status:")) return { key: "deliveries.error.status", values: { status: stored.slice(7) } };
+	if (stored.startsWith("noAnswer")) return { key: "deliveries.error.noAnswer" };
+	return { key: "deliveries.error.failed" };
+}
+
+/**
+ * A receiver's name as the log shows it, from the destination a delivery was stored under: the receiver's own `label`, or the name in the
+ * destination without its kind (a webhook's own name or its host and path, a plugin receiver's name).
+ */
+export function receiverName(destination: string, receivers: readonly Receiver[]): string | Message {
+	const label = receivers.find((receiver) => receiver.destination === destination)?.label;
+	if (label !== undefined) return label;
+	// What it is stored under is already a name (a webhook's own, or its host and path; a plugin receiver's): without the kind before it.
+	return destination.replace(/^(webhook|plugin):/, "");
 }
 
 /** An event queued by a write, with the log row its delivery shows on when that is not the write's own. */
@@ -194,7 +322,7 @@ async function sendOnce(receiver: Receiver, event: MontiEvent, delivery: Deliver
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	const late = new Promise<never>((_resolve, reject) => {
 		timer = setTimeout(() => {
-			const error = new Error(`No answer in ${SEND_TIMEOUT_MS / 1000} seconds`);
+			const error = new NoAnswer();
 			abort.abort(error);
 			reject(error);
 		}, SEND_TIMEOUT_MS);
@@ -269,10 +397,10 @@ export async function sendDeliveries(
 		const attempts = held.attempts + 1;
 		let failure: string | null = null;
 		try {
-			if (!receiver) throw new Error(`No receiver ${held.destination} any more`);
+			if (!receiver) throw new GoneError();
 			await sendOnce(receiver, held.event, { id: held.id, attempt: attempts });
 		} catch (error) {
-			failure = (error instanceof Error ? error.message : String(error)).slice(0, ERROR_LENGTH) || "Failed";
+			failure = failureOf(error);
 		}
 		// The first send is not a retry, so the retries run out on attempt RETRY_MINUTES.length + 1.
 		const wait = failure === null ? undefined : RETRY_MINUTES[attempts - 1];

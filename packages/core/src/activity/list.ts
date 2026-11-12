@@ -1,6 +1,7 @@
 import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
 import type { Database, DeliveryTable } from "../db/schema";
+import { deliveryError, type Receiver, receiverName } from "../engine/deliveries";
 import { CheckError } from "../errors";
 import { ACTIVITY_KINDS, type Actor, type LoggedRecord, type Message, recordKey } from "../operation";
 
@@ -89,12 +90,16 @@ export type ActivityRecord = Omit<LoggedRecord, "address"> & {
 
 export type ActivityDelivery = {
 	id: string;
-	destination: string;
+	/** The receiver's name as a person reads it: its label, or the name its deliveries are stored under without its kind. */
+	receiver: string | Message;
 	/** The event's type: `entry.published`. */
 	event: string;
+	/** The event's id, the same on every try and for every receiver: what a webhook gets as `Monti-Event-Id` (and `id` in the body). */
+	eventId: string;
 	state: DeliveryState;
 	attempts: number;
-	lastError: string | null;
+	/** Why its last try failed: the receiver's answer, no answer, no such receiver any more, or that it could not be sent. Never a thrown text. */
+	lastError: Message | null;
 	/** When it is tried again by itself; `null` when it is not. */
 	nextAttemptAt: Date | null;
 };
@@ -330,7 +335,12 @@ export async function listActivity(
 	};
 }
 
-export async function getActivity(db: Db, id: string, now: Date): Promise<ActivityDetail> {
+export async function getActivity(
+	db: Db,
+	id: string,
+	now: Date,
+	receivers: readonly Receiver[],
+): Promise<ActivityDetail> {
 	const [found] = await linesOf(db, [id], now, { records: true });
 	if (!found) throw new CheckError({ key: "activity.unknown" });
 	// Each record once, as the line's newest write left it.
@@ -380,11 +390,12 @@ export async function getActivity(db: Db, id: string, now: Date): Promise<Activi
 		recordCount: logged.length,
 		deliveries: deliveries.map((delivery) => ({
 			id: delivery.id,
-			destination: delivery.destination,
+			receiver: receiverName(delivery.destination, receivers),
 			event: delivery.event.type,
+			eventId: delivery.event.id,
 			state: delivery.state,
 			attempts: delivery.attempts,
-			lastError: delivery.last_error,
+			lastError: deliveryError(delivery.last_error),
 			nextAttemptAt: delivery.state === "failed" ? delivery.next_attempt_at : null,
 		})),
 	};

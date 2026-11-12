@@ -63,6 +63,7 @@ const core = vi.hoisted(() => ({
 	opened: [] as { db: unknown; config: unknown }[],
 }));
 vi.mock("@monti-cms/core", () => ({
+	SITE_CACHE_LABEL: { key: "deliveries.receiver.site" },
 	createAdminApi: () => async (request: Request) => {
 		core.calls.push(`${request.method} ${new URL(request.url).pathname}`);
 		return new Response("api");

@@ -8,6 +8,7 @@ import {
 	RETRY_BATCH,
 	RETRY_MINUTES,
 	type Receiver,
+	ReceiverAnswer,
 	reserveFailedDeliveries,
 	SEND_TIMEOUT_MS,
 	sendDeliveries,
@@ -62,7 +63,7 @@ const later = (ms: number) => {
 	clock = new Date(clock.getTime() + ms);
 };
 
-const SITE = "webhook:https://site.test/revalidate";
+const SITE = "webhook:site.test/revalidate";
 const SEARCH = "plugin:search";
 /** What arrived, and which receivers are down. */
 const sent: { destination: string; event: MontiEvent }[] = [];
@@ -70,7 +71,7 @@ const down = new Set<string>();
 const receiver = (destination: string): Receiver => ({
 	destination,
 	async send(event) {
-		if (down.has(destination)) throw new Error("503");
+		if (down.has(destination)) throw new ReceiverAnswer("503");
 		sent.push({ destination, event });
 	},
 });
@@ -138,7 +139,7 @@ describe("sending", () => {
 		await newPost("첫 번째 글", "first-post", monti);
 		// Failed from the first try: the count does not wait for the retries to run out (principle 3).
 		let [delivery] = await deliveries();
-		expect(delivery).toMatchObject({ state: "failed", attempts: 1, last_error: "503" });
+		expect(delivery).toMatchObject({ state: "failed", attempts: 1, last_error: "status:503" });
 		expect(delivery.next_attempt_at).toEqual(new Date(clock.getTime() + RETRY_MINUTES[0] * MINUTE));
 		expect(await failedCount(monti)).toBe(1);
 
@@ -165,7 +166,7 @@ describe("sending", () => {
 		const slow: Receiver = {
 			destination: SITE,
 			async send(event) {
-				if (down.has(SITE)) throw new Error("503");
+				if (down.has(SITE)) throw new ReceiverAnswer("503");
 				// Long enough for the second sender to reach the same delivery.
 				await new Promise((resume) => setTimeout(resume, 30));
 				sent.push({ destination: SITE, event });
@@ -213,7 +214,7 @@ describe("sending", () => {
 		const gated: Receiver = {
 			destination: SITE,
 			async send(event) {
-				if (down.has(SITE)) throw new Error("503");
+				if (down.has(SITE)) throw new ReceiverAnswer("503");
 				if (hold) {
 					reached();
 					await gate;
@@ -262,7 +263,7 @@ describe("sending", () => {
 		expect((await deliveries())[0]).toMatchObject({
 			state: "failed",
 			attempts: 1,
-			last_error: "No answer in 10 seconds",
+			last_error: "noAnswer",
 		});
 		expect(aborted).toBe(true);
 	});
@@ -310,7 +311,7 @@ describe("sending", () => {
 		later(MINUTE);
 		await save(id, { title: "고친 글" }, monti);
 		await publish([id], monti);
-		expect((await deliveries())[1]).toMatchObject({ state: "failed", last_error: "503 Service Unavailable" });
+		expect((await deliveries())[1]).toMatchObject({ state: "failed", last_error: "status:503 Service Unavailable" });
 
 		// The receiver may have handled it and lost its answer: the next try says it is the same event and the same delivery, in the body and in
 		// headers, so the receiver can tell and leave it.
@@ -331,7 +332,7 @@ describe("sending", () => {
 
 	it("13-1 a webhook is stored and shown under a name, never its address: a token in the address stays in the config, and two receivers cannot share a name", async () => {
 		const posted: string[] = [];
-		const hook = webhook("https://user:pass@hooks.site.test/deploy?token=s3cret", {
+		const hook = webhook("https://hooks.site.test/deploy?token=s3cret", {
 			fetch: async (url) => {
 				posted.push(String(url));
 				return new Response(null, { status: 200 });
@@ -341,13 +342,18 @@ describe("sending", () => {
 		expect(webhook("https://site.test/").destination).toBe("webhook:site.test");
 		expect(webhook("https://site.test/api/search?key=1", { name: "search" }).destination).toBe("webhook:search");
 		const monti = site({ receivers: [hook] });
-		await newPost("첫 번째 글", "first-post", monti);
-		// Posted to the whole address; nothing of the token or the credentials is in any row.
-		expect(posted).toEqual(["https://user:pass@hooks.site.test/deploy?token=s3cret"]);
+		const id = await newPost("첫 번째 글", "first-post", monti);
+		// Posted to the whole address; nothing of the token is in any row, nor in what the log's details answer.
+		expect(posted).toEqual(["https://hooks.site.test/deploy?token=s3cret"]);
 		expect(await deliveries()).toHaveLength(1);
-		const rows = JSON.stringify([await deliveries(), await db.selectFrom("monti_activity").selectAll().execute()]);
-		expect(rows).not.toContain("s3cret");
-		expect(rows).not.toContain("pass@");
+		const [made] = await db.selectFrom("monti_activity").select("id").execute();
+		const everywhere = JSON.stringify([
+			await deliveries(),
+			await db.selectFrom("monti_activity").selectAll().execute(),
+			await detail(made.id, monti),
+		]);
+		expect(everywhere).not.toContain("s3cret");
+		expect(id).toBeTypeOf("string");
 		// Two addresses that differ only in their query would be one name: refused when the site is made, not found out by a lost event.
 		expect(() =>
 			site({ receivers: [webhook("https://a.test/hook?to=one"), webhook("https://a.test/hook?to=two")] }),
@@ -357,6 +363,88 @@ describe("sending", () => {
 				receivers: [webhook("https://a.test/hook?to=one"), webhook("https://a.test/hook?to=two", { name: "two" })],
 			}),
 		).not.toThrow();
+	});
+
+	it("13-1 an address the platform would refuse is refused when the site is made, in words that do not quote it", async () => {
+		// The platform's fetch throws for both when it sends, quoting the whole address: neither gets that far.
+		for (const address of [
+			"https://user:pass@hooks.site.test/deploy?token=s3cret",
+			"hooks.site.test/deploy?token=s3cret",
+		]) {
+			let said = "";
+			try {
+				webhook(address);
+			} catch (error) {
+				said = String(error);
+			}
+			expect(said).toContain("webhook()");
+			expect(said).not.toContain("s3cret");
+			expect(said).not.toContain("user:pass");
+			expect(said).not.toContain("hooks.site.test");
+		}
+	});
+
+	it("13-1 what a send throws is never stored or shown as it is: an error that quotes the address leaves no trace of the address, the password or the token", async () => {
+		const address = "https://hooks.site.test/deploy?token=s3cret";
+		// As the platform's own fetch throws: with no network code, and with the address in the message.
+		const thrown = [
+			new TypeError(
+				`Request cannot be constructed from a URL that includes credentials: https://user:pass@hooks.site.test/deploy?token=s3cret`,
+			),
+			new TypeError(`Failed to parse URL from ${address}`),
+			Object.assign(new TypeError("fetch failed"), { cause: { code: `connect to ${address} refused` } }),
+		];
+		let next = 0;
+		const hook = webhook(address, {
+			fetch: async () => {
+				throw thrown[next++];
+			},
+		});
+		// A plugin's receiver that throws its own words, the address among them.
+		const loud: Receiver = {
+			destination: "plugin:loud",
+			async send() {
+				throw new Error(`could not reach ${address} as user:pass`);
+			},
+		};
+		const answered: Receiver = {
+			destination: "plugin:answered",
+			async send() {
+				// An answer whose words are the other side's own: only the number is kept.
+				throw new ReceiverAnswer(`503 token=s3cret was not accepted`);
+			},
+		};
+		const monti = site({ receivers: [hook, loud, answered] });
+		const id = await newPost("첫 번째 글", "first-post", monti);
+		for (const title of ["둘째 제목", "셋째 제목"]) {
+			later(MINUTE);
+			await save(id, { title }, monti);
+		}
+		const rows = await deliveries();
+		expect(rows.filter((row) => row.destination === hook.destination).map((row) => row.last_error)).toEqual([
+			"failed",
+			"failed",
+			"failed",
+		]);
+		expect(new Set(rows.filter((row) => row.destination === "plugin:loud").map((row) => row.last_error))).toEqual(
+			new Set(["failed"]),
+		);
+		expect(new Set(rows.filter((row) => row.destination === "plugin:answered").map((row) => row.last_error))).toEqual(
+			new Set(["status:503"]),
+		);
+		const lines = await db.selectFrom("monti_activity").select("id").execute();
+		const everywhere = JSON.stringify([
+			rows,
+			await db.selectFrom("monti_activity").selectAll().execute(),
+			await Promise.all(lines.map((line) => detail(line.id, monti))),
+		]);
+		for (const secret of ["s3cret", "user:pass", "pass@", "hooks.site.test/deploy?"])
+			expect(everywhere).not.toContain(secret);
+		// What the log shows for them is one fixed sentence.
+		const shown = await detail(lines[0].id, monti);
+		expect(shown.deliveries.find((delivery) => delivery.receiver === "loud")?.lastError).toEqual({
+			key: "deliveries.error.failed",
+		});
 	});
 
 	it("13-1 a webhook signs with its own secret, does not follow a redirect, lets the answer's body go, and keeps the network's word for a failure", async () => {
@@ -401,7 +489,7 @@ describe("sending", () => {
 		later(MINUTE);
 		await save(id, { title: "고친 글" }, monti);
 		expect(inits).toHaveLength(2);
-		expect((await deliveries())[1]).toMatchObject({ state: "failed", last_error: "302 Found" });
+		expect((await deliveries())[1]).toMatchObject({ state: "failed", last_error: "status:302 Found" });
 
 		// Not reached at all: the network's own word for why is kept.
 		answer = () => {
@@ -409,7 +497,7 @@ describe("sending", () => {
 		};
 		later(MINUTE);
 		await save(id, { title: "또 고친 글" }, monti);
-		expect((await deliveries())[2]).toMatchObject({ state: "failed", last_error: "fetch failed (ECONNREFUSED)" });
+		expect((await deliveries())[2]).toMatchObject({ state: "failed", last_error: "noAnswer:ECONNREFUSED" });
 	});
 
 	it("13-1 a receiver whose work is the same whatever the event gets one send for a write, however many events it emitted", async () => {
@@ -502,7 +590,7 @@ describe("sending", () => {
 		const holding: Receiver = {
 			destination: SITE,
 			async send() {
-				if (down.has(SITE)) throw new Error("503");
+				if (down.has(SITE)) throw new ReceiverAnswer("503");
 				if (!hold) return;
 				reached();
 				await gate;
@@ -688,7 +776,7 @@ describe("sending", () => {
 		const gated: Receiver = {
 			destination: SITE,
 			async send(event) {
-				if (down.has(SITE)) throw new Error("503");
+				if (down.has(SITE)) throw new ReceiverAnswer("503");
 				await gate;
 				sent.push({ destination: SITE, event });
 			},
@@ -777,7 +865,7 @@ describe("sending", () => {
 				most = Math.max(most, together);
 				await new Promise((resume) => setTimeout(resume, 15));
 				together -= 1;
-				if (down.has(SITE) || stillDown.has(event.ids[0])) throw new Error("503");
+				if (down.has(SITE) || stillDown.has(event.ids[0])) throw new ReceiverAnswer("503");
 				sent.push({ destination: SITE, event });
 			},
 		};
@@ -909,7 +997,7 @@ describe("sending", () => {
 			left: 1,
 		});
 		const left = (await deliveries()).find((delivery) => delivery.destination === "plugin:next");
-		expect(left).toMatchObject({ state: "failed", attempts: 1, last_error: "503" });
+		expect(left).toMatchObject({ state: "failed", attempts: 1, last_error: "status:503" });
 		// The running site sends it.
 		expect(await monti.deliveries.sendDue()).toEqual({ sent: 1, failed: 0, left: 0 });
 	});
@@ -1008,17 +1096,21 @@ describe("the log", () => {
 		expect(shown.deliveries).toEqual([
 			{
 				id: expect.any(String),
-				destination: SEARCH,
+				// A plugin's receiver is named by what follows `plugin:`, and its failure by the answer it got.
+				receiver: "search",
 				event: "entry.published",
+				eventId: expect.any(String),
 				state: "failed",
 				attempts: 1,
-				lastError: "503",
+				lastError: { key: "deliveries.error.status", values: { status: "503" } },
 				nextAttemptAt: new Date(clock.getTime() + RETRY_MINUTES[0] * MINUTE),
 			},
 			{
 				id: expect.any(String),
-				destination: SITE,
+				// A webhook by the name it is stored under.
+				receiver: "site.test/revalidate",
 				event: "entry.published",
+				eventId: expect.any(String),
 				state: "sent",
 				attempts: 1,
 				lastError: null,
@@ -1833,7 +1925,7 @@ describe("counts and sites without receivers", () => {
 		expect((await deliveries())[0]).toMatchObject({
 			state: "failed",
 			attempts: 2,
-			last_error: `No receiver ${SITE} any more`,
+			last_error: "gone",
 		});
 	});
 });

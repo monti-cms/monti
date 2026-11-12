@@ -43,7 +43,14 @@ export { ENTRY_LINK, entryLink } from "./body/links";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
 export { migrateToLatest } from "./db/migrations";
 export type { Database, ItemExchange, ProposalItemState, RunStatus } from "./db/schema";
-export { RETRY_MINUTES, type Receiver, SEND_TIMEOUT_MS, webhook } from "./engine/deliveries";
+export {
+	RETRY_MINUTES,
+	type Receiver,
+	ReceiverAnswer,
+	SEND_TIMEOUT_MS,
+	SITE_CACHE_LABEL,
+	webhook,
+} from "./engine/deliveries";
 export { type RunOptions, UNDO_DAYS, type WriteResult } from "./engine/execute";
 export type {
 	ApplyProgress,

@@ -45,7 +45,7 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			description:
 				"One line of the activity log with its details: the records it touched as they were then, and each delivery with its receiver, state, tries and last error.",
 			input: z.object({ id: z.string() }),
-			run: (input, ctx) => getActivity(ctx.db, input.id, ctx.now()),
+			run: (input, ctx) => getActivity(ctx.db, input.id, ctx.now(), engine.receivers),
 		}),
 		defineOperation({
 			name: "activity.undo",
@@ -120,8 +120,11 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			description:
 				"Cancel one delivery: it is not sent again and no longer counts as failed. It cannot be taken back, so only a person does it; it is never an agent tool.",
 			input: z.object({ id: z.string() }),
-			run: (input, ctx) => cancelDelivery(ctx.db, input.id),
-			summary: (_input, output) => ({ key: "deliveries.cancel", values: { destination: output.destination } }),
+			async run(input, ctx) {
+				await cancelDelivery(ctx.db, input.id);
+				return { id: input.id };
+			},
+			summary: () => ({ key: "deliveries.cancel" }),
 		}),
 		defineOperation({
 			name: "deliveries.counts",
