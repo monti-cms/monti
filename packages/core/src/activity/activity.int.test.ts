@@ -1064,6 +1064,48 @@ describe("the log", () => {
 });
 
 describe("undo from the log", () => {
+	it("13-3 a record's writes are undone one line after another, newest first: each undo finds the record where the one before left it", async () => {
+		const monti = site();
+		const entry = await newPost("처음 제목", "first-post", monti);
+		const titleNow = async () =>
+			(await db.selectFrom("entries").select("title").where("id", "=", entry).executeTakeFirstOrThrow()).title;
+		const lines: string[] = [];
+		for (const title of ["둘째 제목", "셋째 제목", "넷째 제목"]) {
+			later(MINUTE);
+			lines.push((await save(entry, { title }, monti)).activityId);
+		}
+		// Newest first, one line at a time. Nobody wrote the entry in between: the only later writes are the undos themselves.
+		for (const [line, title] of [
+			[lines[2], "셋째 제목"],
+			[lines[1], "둘째 제목"],
+			[lines[0], "처음 제목"],
+		] as const) {
+			later(MINUTE);
+			const undone = await write<UndoPlan & { undone: string[] }>("activity.undo", { id: line }, monti);
+			expect(undone.output).toMatchObject({ restore: [{ kind: "entry", id: entry }], skip: [], undone: [line] });
+			expect(await titleNow()).toBe(title);
+		}
+	});
+
+	it("13-3 a person's write between two undos still breaks the chain: the older line is refused, and the write stays", async () => {
+		const monti = site();
+		const entry = await newPost("처음 제목", "first-post", monti);
+		later(MINUTE);
+		const older = (await save(entry, { title: "둘째 제목" }, monti)).activityId;
+		later(MINUTE);
+		const newer = (await save(entry, { title: "셋째 제목" }, monti)).activityId;
+		await write("activity.undo", { id: newer }, monti);
+		// Someone writes the entry after the undo: that is no undo's version.
+		later(MINUTE);
+		await save(entry, { title: "사람이 고친 제목" }, monti);
+		await expect(write("activity.undo", { id: older }, monti)).rejects.toMatchObject({
+			reason: { key: "activity.allChanged" },
+		});
+		expect(
+			(await db.selectFrom("entries").select("title").where("id", "=", entry).executeTakeFirstOrThrow()).title,
+		).toBe("사람이 고친 제목");
+	});
+
 	it("13-3 a line can be undone for 30 days; it then says when it was undone, and an old line only loses its undo", async () => {
 		const monti = site();
 		const id = await newPost("첫 번째 글", "first-post", monti);
