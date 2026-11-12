@@ -41,7 +41,7 @@
 
 ### 코드
 
-`Select`(`items` prop은 필수다. 모든 값과 그 라벨을 주어야 닫힌 트리거가 라벨을 보여 준다)와 `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton`, 그리고 `Combobox`가 있다. `ComboboxInput`이 그 필드이고(`Input`처럼 밑줄이며, 끝에 여는 버튼이, 값이 생기면 지우는 버튼이 있다. 어시스턴트가 고른 값은 `Input`처럼 `proposal`이다), 이어서 `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator`, `ComboboxEmpty`가 있다. `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`과 함께)는 값을 여러 개 담는 콤보박스의 필드다. `SelectTrigger`는 `width`를 받는다. 폼에서는 `full`, 툴바나 필터에서는 `fit`, 선택 행 끝에서는 `choice`(검토 시트가 그리는 대로 최소 120px이고, note 크기 글자로 행의 20px 줄 위에 놓여 행 높이를 바꾸지 않는다)다. `proposal`은 어시스턴트가 고른 값을 표시한다.
+`Select`(`items` prop은 필수다. 모든 값과 그 라벨을 주어야 닫힌 트리거가 라벨을 보여 준다)와 `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton`, 그리고 `Combobox`가 있다. `ComboboxInput`이 그 필드이고(`Input`처럼 밑줄이며, 끝에 여는 버튼이, 값이 생기면 지우는 버튼이 있다. 어시스턴트가 고른 값은 `Input`처럼 `proposal`이다), 이어서 `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator`, `ComboboxEmpty`가 있다. `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`과 함께)는 값을 여러 개 담는 콤보박스의 필드다. `SelectTrigger`는 `width`를 받는다. 폼에서는 `full`, 툴바나 필터에서는 `fit`, 선택 행 끝에서는 `choice`(검토 시트가 그리는 대로 최소 120px이고, note 크기 글자로 행의 20px 줄 위에 놓여 행 높이를 바꾸지 않는다)다. `proposal`은 어시스턴트가 고른 값을 표시한다. `SelectTrigger`는 캐럿이 없어 밑줄이 포커스를 말한다. 오류나 제안 색의 밑줄도 키보드 포커스 동안은 잉크다.
 
 ## 미디어 필드
 
@@ -49,7 +49,7 @@
 
 ### 코드
 
-`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `readOnly`(보관 글과 휴지통 글: 값을 바꾸는 것이 없다. 줄은 누르는 것이 아니고 손 모양과 호버 바탕이 없으며, 끝의 ×와 그림 아이콘을 그리지 않는다. `action`은 남는다: 읽기 전용에서는 읽는 길이다(이미지의 설정 카드가 읽기 전용으로 열린다). 라벨의 `htmlFor`는 누르거나 쓰는 것만 가리키므로, 이때는 묶음(`role="group"`)이 되고 `aria-labelledby`에 라벨의 id를 줘서 이름을 붙인다. 2026-11-11 소유자), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정, 끊긴 파일의 다시 올리기. 안의 `IconButton`은 ×와 같은 크기가 된다). 줄에 딸린 카드는 `ref`로 이 줄을 `PopoverContent`의 `anchor`로 삼는다.
+`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `readOnly`(보관 글과 휴지통 글: 값을 바꾸는 것이 없다. 줄은 누르는 것이 아니고 손 모양과 호버 바탕이 없으며, 끝의 ×와 그림 아이콘을 그리지 않는다. `action`은 남는다: 읽기 전용에서는 읽는 길이다(이미지의 설정 카드가 읽기 전용으로 열린다). 라벨의 `htmlFor`는 누르거나 쓰는 것만 가리키므로, 이때는 묶음(`role="group"`)이 되고 `aria-labelledby`에 라벨의 id를 줘서 이름을 붙인다. 2026-11-11 소유자), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정, 끊긴 파일의 다시 올리기. 안의 `IconButton`은 ×와 같은 크기가 된다). 줄에 딸린 카드는 `ref`로 이 줄을 `PopoverContent`의 `anchor`로 삼는다. 제안 색(파랑)의 밑줄도 포커스가 안에 있는 동안은 잉크다.
 
 ## 앞뒤가 고정된 필드 (`.mt-affix`)
 
