@@ -1,7 +1,7 @@
 import type { Block, BodyOp, Doc, EntryState, MediaItem, MediaQueryResult, PublishTask } from "@monti-cms/core";
 import { MEDIA_QUERY_MOST } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
 import { useAdmin } from "../../operations/admin-context";
@@ -96,14 +96,20 @@ export function useEntryEditor(source: EditorSource) {
 	const saveOp = useOperation<{ output: { id: string; version: number } }>(isEntry ? "entries.save" : "templates.save");
 	const latestOp = useOperation<EntryRead | TemplateRead>(isEntry ? "entries.get" : "templates.get");
 	const filesOp = useOperation<MediaQueryResult>("media.query");
-	/** The files of a kept copy's body that the server's body does not show: read before the copy goes in, so its pictures hold their places too. */
+	/** The files of a kept copy's body that the server's body does not show: its pictures hold their places too when the copy goes in. */
 	const [keptFiles, setKeptFiles] = useState<readonly MediaItem[]>([]);
-	const [loadingCopy, setLoadingCopy] = useState(false);
 	const { session, t } = useAdmin();
 	const signInAgain = useSignInAgain();
 	const loaded = source.id === null ? NEW_TEMPLATE : read.data;
 	const base = useMemo(() => (loaded ? basePaths(loaded) : null), [loaded]);
 	const version = loaded ? ("entry" in loaded ? loaded.entry.version : loaded.version) : null;
+	/**
+	 * The version my own save wrote, while the screen has not read it again (no answer to the read). What is on the screen was written on it: the next
+	 * save is sent against it, or it would be refused as someone else's. A read that lands is the base again.
+	 */
+	const [written, setWritten] = useState<number | null>(null);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a read landed, whatever it holds
+	useEffect(() => setWritten(null), [loaded]);
 	const target = useMemo(() => ({ kind: source.kind, id: source.id ?? "new" }), [source.kind, source.id]);
 	const draft = useDraft({
 		target,
@@ -114,6 +120,29 @@ export function useEntryEditor(source: EditorSource) {
 		leftSignedOut: session.ended,
 	});
 	const served = loaded?.media;
+	/**
+	 * A kept copy's files are read as soon as the copy is offered, not when it is taken: by the time a person presses "load" they are known, so the copy
+	 * goes in in one step. Reading them after the press left the banner standing meanwhile, with a button that did nothing and a body that took typing
+	 * only to lose it (T135). A copy taken before the read answers goes in all the same, and its body reads what it lacks, as any body does.
+	 */
+	const keptDoc = draft.browserCopy?.mine.find(([path]) => path === "doc")?.[1] as Doc | null | undefined;
+	const readFor = useRef<Doc | null>(null);
+	const readFiles = filesOp.run;
+	useEffect(() => {
+		if (!keptDoc || !loaded || readFor.current === keptDoc) return;
+		readFor.current = keptDoc;
+		const known = new Set(served?.map((item) => item.id));
+		const ids = [...mediaOf(keptDoc.blocks ?? [])].filter((id) => !known.has(id));
+		void (async () => {
+			const found: MediaItem[] = [];
+			for (let start = 0; start < ids.length; start += MEDIA_QUERY_MOST) {
+				const part = ids.slice(start, start + MEDIA_QUERY_MOST);
+				const read = await readFiles({ ids: part, pageSize: part.length });
+				if (read.ok) found.push(...read.body.items);
+			}
+			if (found.length > 0) setKeptFiles(found);
+		})();
+	}, [keptDoc, loaded, served, readFiles]);
 	const files = useMemo(
 		() => (served && keptFiles.length > 0 ? [...keptFiles, ...served] : served),
 		[served, keptFiles],
@@ -166,7 +195,7 @@ export function useEntryEditor(source: EditorSource) {
 			const input = isEntry
 				? {
 						id: source.id,
-						version: at ?? version,
+						version: at ?? written ?? version,
 						...(changed.has("title") ? { title } : {}),
 						...(changed.has("slug") ? { slug: String(draft.value("slug") ?? "") } : {}),
 						...(changed.has("doc") ? { doc } : {}),
@@ -183,7 +212,7 @@ export function useEntryEditor(source: EditorSource) {
 								}
 							: {}),
 					}
-				: { ...(source.id ? { id: source.id, version: at ?? version } : {}), name: title.trim(), doc };
+				: { ...(source.id ? { id: source.id, version: at ?? written ?? version } : {}), name: title.trim(), doc };
 			const answer = await saveOp.run(input, { accepted: draft.accepted });
 			if (!answer.ok) {
 				// An ended session is the admin's state (useOperation hears it); the save waits here until the person signs in again.
@@ -206,11 +235,18 @@ export function useEntryEditor(source: EditorSource) {
 				draft.saved();
 				return { id: answer.body.output.id };
 			}
-			await reload();
-			draft.saved();
+			// The save went through. My changes are let go only once the screen has read what was saved: let go over the copy from before the save, the
+			// old text came back in their place and the next save was a conflict with my own.
+			const again = await reload();
+			if (again.ok) draft.saved();
+			else {
+				setWritten(answer.body.output.version);
+				// An ended session says so in its own banner, as for the save itself.
+				if (again.refusal.status !== 401) toast.error(t(isEntry ? "entry.savedNotRead" : "templates.savedNotRead"));
+			}
 			return { id: answer.body.output.id };
 		},
-		[loaded, version, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload, t],
+		[loaded, version, written, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload, t],
 	);
 
 	return {
@@ -236,11 +272,17 @@ export function useEntryEditor(source: EditorSource) {
 		save,
 		conflict,
 		/** The conflict's way out: the server's latest goes in and my changes are dropped. */
+		/** Resolves to whether the latest was read: not read (refused, no answer), nothing is dropped and the conflict stands, and a toast says so. */
 		loadLatest: async () => {
-			await reload();
+			const again = await reload();
+			if (!again.ok) {
+				if (again.refusal.status !== 401) toast.error(t(isEntry ? "entry.loadFailed" : "templates.loadFailed"));
+				return false;
+			}
 			draft.revertAll();
 			setConflict(null);
 			setBodyKey((key) => key + 1);
+			return true;
 		},
 		/** The other way out: my changes go over the server's latest. */
 		saveOver: async () => {
@@ -249,29 +291,13 @@ export function useEntryEditor(source: EditorSource) {
 			return save("entry" in latest.body ? latest.body.entry.version : latest.body.version);
 		},
 		browserCopy: draft.browserCopy,
-		/** The kept copy is being read in: its button works and cannot be pressed again. */
-		loadingCopy,
-		loadBrowserCopy: async () => {
-			if (loadingCopy || !draft.browserCopy) return;
-			setLoadingCopy(true);
-			const kept = draft.browserCopy?.mine.find(([path]) => path === "doc")?.[1] as Doc | null | undefined;
-			const known = new Set(loaded?.media?.map((item) => item.id));
-			const ids = [...mediaOf(kept?.blocks ?? [])].filter((id) => !known.has(id));
-			const found: MediaItem[] = [];
-			for (let start = 0; start < ids.length; start += MEDIA_QUERY_MOST) {
-				const part = ids.slice(start, start + MEDIA_QUERY_MOST);
-				const read = await filesOp.run({ ids: part, pageSize: part.length }).catch(() => null);
-				if (read?.ok) found.push(...read.body.items);
-			}
-			if (found.length > 0) setKeptFiles(found);
+		/** The kept copy goes in, in one step, and the body is made again from it. */
+		loadBrowserCopy: () => {
+			if (!draft.browserCopy) return;
 			draft.loadBrowserCopy();
 			setBodyKey((key) => key + 1);
-			setLoadingCopy(false);
 		},
-		/** Not while the copy is on its way in: it is no longer there to drop. */
-		dropBrowserCopy: () => {
-			if (!loadingCopy) draft.dropBrowserCopy();
-		},
+		dropBrowserCopy: draft.dropBrowserCopy,
 		/** The session ended: to the login screen, and back to this entry with what was typed (`restore`). */
 		signIn: signInAgain,
 		bodyKey,

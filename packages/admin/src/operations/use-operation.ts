@@ -12,6 +12,15 @@ export type Refusal = { status: number; error: string; reason: Message | null };
  */
 export const reasonOf = (refusal: Refusal): Message => refusal.reason ?? { key: "errors.unexpected" };
 
+/**
+ * What stands for an answer that never came, as the byte route does (`httpUploader`): status 0. It carries its own words, so every screen that shows a
+ * refusal's reason says this one whole, with no code of ours in it.
+ */
+const NO_ANSWER: Answer = { status: 0, body: { error: "network", reason: { key: "errors.noAnswer" } } };
+
+/** How a read made again went (`useRead`'s `reload`). */
+type Reread = { ok: true } | { ok: false; refusal: Refusal };
+
 const refusalOf = (answer: Answer): Refusal => {
 	const body = (answer.body ?? {}) as { error?: string; reason?: Message };
 	return { status: answer.status, error: body.error ?? "unexpected", reason: body.reason ?? null };
@@ -33,7 +42,9 @@ export function useOperation<Output = unknown>(name: string) {
 		): Promise<{ ok: true; body: Output } | { ok: false; refusal: Refusal }> => {
 			setPending(true);
 			try {
-				const answer = await transport(name, input, options);
+				// No answer at all (the network, a transport that throws): a refusal like any other, so a screen's read shows its way to try again and a
+				// write says it did not go through. Thrown on, a first read left its screen empty for good, with nothing to press.
+				const answer = await transport(name, input, options).catch((): Answer => NO_ANSWER);
 				if (answer.status === 200) {
 					setRefusal(null);
 					// A write's answer has its activity row's place (`null` for a write that keeps only the assistant's books); a read's has none.
@@ -70,15 +81,21 @@ export function useRead<Output>(
 	const key = JSON.stringify(input);
 	const latest = useRef(0);
 	const skip = options.skip ?? false;
-	const reload = useCallback(async () => {
-		if (skip) return;
+	/**
+	 * Reads again. Resolves to how the read went: a caller that goes on from the new read must not go on from the old one, and says why only when
+	 * the reason is its own to say (an ended session has its banner).
+	 */
+	const reload = useCallback(async (): Promise<Reread> => {
+		if (skip) return { ok: true };
 		const call = ++latest.current;
 		const result = await run(JSON.parse(key));
-		if (call !== latest.current) return;
-		if (result.ok) {
-			setData(result.body);
-			setRefusal(null);
-		} else setRefusal(result.refusal);
+		if (call === latest.current) {
+			if (result.ok) {
+				setData(result.body);
+				setRefusal(null);
+			} else setRefusal(result.refusal);
+		}
+		return result.ok ? { ok: true } : result;
 	}, [run, key, skip]);
 	useEffect(() => {
 		void reload();

@@ -49,7 +49,7 @@
 
 ### 코드
 
-`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `readOnly`(보관 글과 휴지통 글: 값을 바꾸는 것이 없다. 줄은 누르는 것이 아니고 손 모양과 호버 바탕이 없으며, 끝의 ×와 그림 아이콘을 그리지 않는다. `action`은 남는다: 읽기 전용에서는 읽는 길이다(이미지의 설정 카드가 읽기 전용으로 열린다). 라벨의 `htmlFor`는 누르거나 쓰는 것만 가리키므로, 이때는 묶음(`role="group"`)이 되고 `aria-labelledby`에 라벨의 id를 줘서 이름을 붙인다. 2026-11-11 소유자), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정, 끊긴 파일의 다시 올리기. 안의 `IconButton`은 ×와 같은 크기가 된다). 줄에 딸린 카드는 `ref`로 이 줄을 `PopoverContent`의 `anchor`로 삼는다. 제안 색(파랑)의 밑줄은 가리킬 때도 키보드 포커스에서도 파랑 그대로이고, 그때 포커스는 `Select`처럼 칸 둘레의 고리다(밑줄 바깥이라 파란 선을 덮지 않는다).
+`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`. 이름 앞 20px 그림은 `Image size="thumb-sm"`이라 그림이 올 때까지 숨 쉬고, 그림이 없는 파일은 같은 크기의 빈 칸이다), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `readOnly`(보관 글과 휴지통 글: 값을 바꾸는 것이 없다. 줄은 누르는 것이 아니고 손 모양과 호버 바탕이 없으며, 끝의 ×와 그림 아이콘을 그리지 않는다. `action`은 남는다: 읽기 전용에서는 읽는 길이다(이미지의 설정 카드가 읽기 전용으로 열린다). 라벨의 `htmlFor`는 누르거나 쓰는 것만 가리키므로, 이때는 묶음(`role="group"`)이 되고 `aria-labelledby`에 라벨의 id를 줘서 이름을 붙인다. 2026-11-11 소유자), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정, 끊긴 파일의 다시 올리기. 안의 `IconButton`은 ×와 같은 크기가 된다). 줄에 딸린 카드는 `ref`로 이 줄을 `PopoverContent`의 `anchor`로 삼는다. 제안 색(파랑)의 밑줄은 가리킬 때도 키보드 포커스에서도 파랑 그대로이고, 그때 포커스는 `Select`처럼 칸 둘레의 고리다(밑줄 바깥이라 파란 선을 덮지 않는다).
 
 ## 앞뒤가 고정된 필드 (`.mt-affix`)
 

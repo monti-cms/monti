@@ -31,6 +31,11 @@ type BodyFiles = {
 	files: ReadonlyMap<string, MediaItem | null>;
 	/** Asks for a file, read again if known; those asked in the same moment are read together. */
 	want: (id: string) => void;
+	/**
+	 * Tells the body of a file it has in hand already (one just picked in the library's window, one whose upload just ended): its block shows it from its first
+	 * draw, at its own shape, with nothing read. Read first, the block stood as the empty 16:9 frame until the answer came (T136).
+	 */
+	know: (item: MediaItem) => void;
 };
 
 const NONE: readonly MediaItem[] = [];
@@ -67,8 +72,8 @@ export function useBodyFiles(given: readonly MediaItem[] = NONE): BodyFiles {
 		async (ids: string[]) => {
 			const call = ++reads.current;
 			for (const id of ids) latest.current.set(id, call);
-			const result = await run({ ids, pageSize: ids.length }).catch(() => null);
-			const found = result?.ok ? new Map(result.body.items.map((item) => [item.id, item])) : null;
+			const result = await run({ ids, pageSize: ids.length });
+			const found = result.ok ? new Map(result.body.items.map((item) => [item.id, item])) : null;
 			const answered = ids.filter((id) => latest.current.get(id) === call);
 			setFiles(
 				(known) =>
@@ -100,7 +105,11 @@ export function useBodyFiles(given: readonly MediaItem[] = NONE): BodyFiles {
 		},
 		[read],
 	);
-	return { files, want };
+	const know = useCallback((item: MediaItem) => {
+		fresh.current?.add(item.id);
+		setFiles((known) => new Map([...known, [item.id, item]]));
+	}, []);
+	return { files, want, know };
 }
 
 /** The library's file a body block shows: `item` once read, `missing` when the library does not have it. */
