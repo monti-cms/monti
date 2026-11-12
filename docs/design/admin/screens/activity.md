@@ -26,10 +26,10 @@
 | 작업을 누르면 | `RowLink` | 옆 패널이 열린다. |
 | 전송 칸 | `EntryStatus`: 실패 `status="failed"` "3번 실패", 보내는 중 `status="draft" quiet` "보내는 중", 취소 `status="archived" quiet` "취소됨" | 잘 간 줄과 보낼 것이 없던 줄은 비운다. 받는 곳이 없는 사이트에는 열이 없다. 폭은 `LIST_COLUMN_SIZE.one`. |
 | 시각 칸 | `TableCell align="end" truncate`(`title`) 안의 `Text mono variant="meta" tone="muted"` | "10. 26 10:58". 폭은 `LIST_COLUMN_SIZE.time`. |
-| 행 동작 | `RowActions` 안의 `RowMore` + `DropdownMenu`: "자세히" · "다시 보내기" · "되돌리기", 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. "다시 보내기"는 실패한 전송이 있는 줄에만, "되돌리기"는 되돌릴 수 있는 줄에만 있다. 사람이 한 줄도 되돌릴 수 있다(2026-11-12 소유자). "되돌리기"는 묻지 않고 바로 한다. 되돌린 줄 뒤에 "되돌림 10:44"가 붙고, 토스트는 그 사이 고쳐져 그대로 둔 것이 있을 때만 말한다. 보내는 동안에는 "다시 보내기"가 없다. |
+| 행 동작 | `RowActions` 안의 `RowMore` + `DropdownMenu`: "자세히" · "다시 보내기" · "되돌리기", 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. "다시 보내기"는 실패한 전송이 있는 줄에만, "되돌리기"는 되돌릴 수 있는 줄에만 있다. 다른 보내기가 도는 동안 "다시 보내기"는 흐리고 눌리지 않는다. 되돌리는 동안에는 "되돌리기"가 없다. 사람이 한 줄도 되돌릴 수 있다(2026-11-12 소유자). "되돌리기"는 묻지 않고 바로 한다. 되돌린 줄 뒤에 "되돌림 10:44"가 붙고, 토스트는 그 사이 고쳐져 그대로 둔 것이 있을 때만 말한다. 보내는 동안에는 "다시 보내기"가 없다. |
 | 행 오른쪽 클릭 | `ContextMenu` | ⋯와 같은 행이다. |
 | 빈 기록 | `Empty`(`title` "아직 기록이 없습니다.") | 열 이름 행과 표 대신 이 한 줄. 휴지통의 빈 목록과 같은 부품이다. |
-| 맞는 것이 없음 | `TableRow` 한 줄: `Text tone="subtle"` "맞는 것이 없습니다."와 `TextButton` "필터 해제" | 찾거나 걸렀는데 없을 때. 게시글 목록, 휴지통과 같다. |
+| 맞는 기록이 없음 | `TableRow` 한 줄: `Text tone="subtle"` "맞는 기록이 없습니다."와 `TextButton` "필터 해제" | 찾거나 걸렀는데 없을 때. 게시글 목록, 휴지통과 같다. |
 | 쪽 | `ListFooter`(`Count`, `ListPages`) | 50줄이 넘을 때만 있다. 쪽을 넘기는 동안 새로 생긴 줄 때문에 줄이 밀리지 않는다. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Field/SearchBox, Patterns/List/Table, Patterns/List/ListHead, Primitives/AI mark, Primitives/Icon, Controls/Status/EntryStatus, Primitives/Text, Controls/Menu/DropdownMenu, Controls/Menu/ContextMenu, Patterns/List/Empty, Patterns/List/Pagination, Patterns/Frame/Banner, Patterns/Frame/PageBanner, Controls/Button/TextButton, Controls/Overlay/SidePanel, Patterns/Frame/DescriptionList, Controls/Overlay/AlertDialog, Controls/Status/Toast.
@@ -51,22 +51,22 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 실패 알림 | `PageBanner` 안의 `Banner tone="danger"`(`title` "전송 실패 3건", `meta` "10. 26부터"), 끝에 "보기" `TextButton variant="underline"`(실패로 이미 걸렀으면 없다)과 "모두 다시 보내기" `TextButton` | 실패가 둘 이상일 때만 뜬다. 화면 맨 위, 제목보다 위에 선다([common.md](common.md)의 "화면의 알림 띠"). 실패 하나는 그 행의 빨간 상태가 말하므로 띠가 없다(2026-11-05 소유자). 보내는 동안 "모두 다시 보내기"는 `TextButton loading` "보내는 중…"이고 다시 누를 수 없다. |
+| 실패 알림 | `PageBanner` 안의 `Banner tone="danger"`(`title` "전송 실패 3건", `meta` "10. 26부터"), 끝에 "보기" `TextButton variant="underline"`(실패로만 걸렀으면 없다. 누르면 전송을 실패로 거르고 찾는 말과 다른 거르기를 푼다: 띠가 센 것만 남는다)과 "모두 다시 보내기" `TextButton` | 실패가 둘 이상일 때만 뜬다. 화면 맨 위, 제목보다 위에 선다([common.md](common.md)의 "화면의 알림 띠"). 실패 하나는 그 행의 빨간 상태가 말하므로 띠가 없다(2026-11-05 소유자). 어떤 보내기든 도는 동안(한 줄의 것, 다른 탭의 것도) "모두 다시 보내기"는 `TextButton loading` "보내는 중…"이고 누를 수 없다. 보내기는 한 번에 하나다. |
 | 읽지 못함 | `PageBanner` 안의 `Banner tone="danger"`(`title` "기록을 불러오지 못했습니다", `plainMeta`), "다시 시도" `TextButton variant="underline"` | 표 대신 이 띠만 있다. |
 
 ### 옆 패널 (자세히)
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 패널 | `SidePanel width="side"`(`title`은 그 줄의 작업, 머리 끝 닫기) | 목록 옆에 붙고 ✦ 버튼을 가린다. 미디어와 휴지통이 여는 옆 패널과 같다. |
+| 패널 | `SidePanel width="side"`(`title`은 그 줄의 작업, 머리 끝 닫기) | 목록 옆에 붙고 ✦ 버튼을 가린다. 미디어와 휴지통이 여는 옆 패널과 같다. 키보드로 닫으면 포커스가 연 줄로 돌아간다(`SidePanel`). 없는 줄을 여는 주소는 그 줄을 주소에서 뺀다. |
 | 머리의 ⋯ | `IconButton` + `DropdownMenu`: "다시 보내기" · "되돌리기" | 그 행의 ⋯와 같은 동작이다. 할 것이 없으면 ⋯가 없다. |
+| 첫 묶음 (제목 없음) | `DescriptionList` + `DescriptionItem`("시각" · "되돌림") | 미디어와 휴지통의 패널처럼 첫 묶음에는 제목이 없다. 누가 했는지와 줄의 ID는 없다(2026-11-12 소유자: 관리자는 한 사람이다). `mono`. |
 | 묶음 "요청" | `Heading variant="label"` + `Text` | 어시스턴트의 줄에만. 머리에서 잘린 요청을 온전히 보인다. |
-| 묶음 "이벤트" | `DescriptionList` + `DescriptionItem`("시각" · "한 사람" · "되돌림" · "ID") | 누가 했는지는 여기서 말한다("관리자" · "어시스턴트" · "명령줄" · 플러그인 이름). 시각과 ID는 `mono`. |
 | 묶음 "한 일 · 4" | `Text variant="note" tone="muted"` 여러 줄 | 어시스턴트의 줄에만: 그 요청으로 한 쓰기 하나하나. |
 | 묶음 "항목" | `DescriptionList`("글" · "컬렉션" · "언어" · "주소"). 여럿이면 "항목 · 9"와 이름 목록 | 글 이름은 `TextButton variant="underline"`(`href`)로 그 글을 연다. 영구 삭제되어 없는 것은 글자만이다. |
-| 묶음 "전송 · 2" | 받는 곳마다 `DescriptionList`("받는 곳" · "이벤트" · "상태" · "마지막 오류" · "다음 시도") | 상태는 `EntryStatus`(이 패널은 줄 하나의 이야기라 "보냄"도 적는다). 받는 곳, 이벤트 이름(`entry.published`), 오류는 `mono`. 받는 곳이 없는 사이트에는 묶음이 없다. |
-| 전송 동작 | "다시 보내기" `TextButton variant="underline"`, "취소" `TextButton variant="quiet"` | 받는 곳마다 그 아래. 실패했거나 기다리는 전송에만. |
-| 전송 취소 확인 | `AlertDialog`(`AlertDialogTitle` "이 전송을 취소할까요?", `AlertDialogDescription`의 받는 곳 `mono`), `AlertDialogCancel` "닫기", `AlertDialogAction variant="danger"` "취소하기" | 취소는 되돌릴 수 없어 묻는다. |
+| 묶음 "전송 · 2" | 받는 곳마다 `DescriptionList`("받는 곳" · "이벤트" · "상태" · "마지막 오류" · "다음 시도" · "Monti-Event-Id") | 받는 곳은 사람이 읽는 이름이다("사이트 캐시", 웹훅은 호스트와 경로 "example.dev/api/search"). 저장된 주소는 보이지 않는다(토큰이 들 수 있다). 상태는 `EntryStatus`(이 패널은 줄 하나의 이야기라 "보냄"도 적는다). 마지막 오류는 세 문장 가운데 하나다: 받는 곳의 답 그대로("503 Service Unavailable"), "답 없음", "받는 곳 없음". 다음 시도는 날짜와 시각("11. 13 09:10"). `Monti-Event-Id`는 받는 쪽이 받은 id라 받는 쪽 로그와 맞춰 본다. 이벤트 이름, 다음 시도, id는 `mono`. 받는 곳이 없는 사이트에는 묶음이 없다. |
+| 전송 동작 | "다시 보내기" `TextButton variant="underline"`, "취소" `TextButton variant="quiet"` | 받는 곳마다 그 아래. 실패했거나 기다리는 전송에만. 다른 보내기가 도는 동안 "다시 보내기"는 `loading`이다. |
+| 전송 취소 확인 | `AlertDialog`(`AlertDialogTitle` "이 전송을 취소할까요?", `AlertDialogDescription`의 받는 곳 이름), `AlertDialogCancel` "닫기", `AlertDialogAction variant="danger"` "취소하기" | 취소는 되돌릴 수 없어 묻는다. |
 
 ## 흐름 2 · 어시스턴트
 
@@ -90,7 +90,7 @@
 | "실패 알림" | 12.01 | 실패한 행 하나: 전송 칸 `EntryStatus` "3번 실패". 띠는 없다(실패가 하나라서). 사이드바 "활동 기록 1" |  |
 | "실패만" | 12.01b | "전송" 열 이름 뒤의 점, 실패한 행만 | Patterns/List/ListHead |
 | "다시 보내는 중" | 12.02 | 그 행의 전송 칸이 "보내는 중", ⋯에 "다시 보내기" 없음 |  |
-| "다시 보냄" | 12.02b | 표의 한 줄 "맞는 것이 없습니다." + "필터 해제", `toast` "보냈습니다", 사이드바 숫자 없음 | Controls/Status/Toast |
+| "다시 보냄" | 12.02b | 표의 한 줄 "맞는 기록이 없습니다." + "필터 해제", `toast` "보냈습니다", 사이드바 숫자 없음 | Controls/Status/Toast |
 | "자세히" | 12.03 | 자세히 `SidePanel`(이벤트 · 항목 · 전송 · 2), 그 행 `selected`, ✦ 가려짐 | Controls/Overlay/SidePanel |
 | "취소 확인" | 12.04 | 자세히 패널 위 `AlertDialog` | Controls/Overlay/AlertDialog |
 | "취소됨" | 12.04b | 그 행의 전송 칸 "취소됨"(흐림), `toast` "전송을 취소했습니다" | Controls/Status/Toast |

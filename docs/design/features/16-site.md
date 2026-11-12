@@ -175,7 +175,7 @@ core가 더 내놓는 것:
 - 페이지는 처음 열릴 때 그려 두고 쓴다(`generateStaticParams`가 빈 목록). 첫 화면과 글 목록은 빌드할 때 그리므로 빌드에 데이터베이스가 있어야 한다.
 - 저장소는 로컬 폴더다(`localFolderStorage`). 파일은 관리자 API의 파일 경로로 나간다.
 - `pnpm dev`로 뜨고(개발 서버), `pnpm build && pnpm start`로 운영 사이트가 된다.
-- 흐름 테스트(L5)는 예제 앱에서 돈다. `testing/e2e`의 작은 서버(`vite.config.ts`, `site.ts`, `main.tsx`)는 지웠다. `pnpm test:e2e`는 먼저 `testing/e2e/prepare.ts`로 데이터베이스를 비우고 관리자 스타일과 예제 앱을 빌드한 뒤 서버 셋을 띄운다(`testing/e2e/servers.ts`): 운영 사이트(4173), 저장소가 없는 운영 사이트(4174), 개발 서버(4175, 로그인 건너뛰기). 서버마다 데이터베이스 스키마와 빌드 폴더가 따로다. `MONTI_E2E_PORT`로 첫 포트를 옮기면 스키마 이름도 따라 달라져, 한 컴퓨터에서 저장소 둘이 흐름 테스트를 동시에 돌릴 수 있다.
+- 흐름 테스트(L5)는 예제 앱에서 돈다. `testing/e2e`의 작은 서버(`vite.config.ts`, `site.ts`, `main.tsx`)는 지웠다. `pnpm test:e2e`는 먼저 `testing/e2e/prepare.ts`로 데이터베이스를 비우고 관리자 스타일과 예제 앱을 빌드한 뒤 서버 넷을 띄운다(`testing/e2e/servers.ts`): 운영 사이트(4173), 저장소가 없는 운영 사이트(4174), 개발 서버(4175, 로그인 건너뛰기), 운영 사이트의 웹훅을 받는 쪽(4176, `testing/e2e/hook.ts`, 13번 문서). 서버마다 데이터베이스 스키마와 빌드 폴더가 따로다. `MONTI_E2E_PORT`로 첫 포트를 옮기면 스키마 이름도 따라 달라져, 한 컴퓨터에서 저장소 둘이 흐름 테스트를 동시에 돌릴 수 있다.
 - 사용성 드라이버(`testing/usability`)도 예제 앱을 띄운다(`pnpm usability:server`: 씨앗 데이터를 넣고 운영 사이트로 빌드해 띄운다. 구조가 잠겨 있어 예제의 구조 파일을 고쳐 쓰지 못한다).
 
 ## 데이터

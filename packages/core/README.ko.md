@@ -50,6 +50,11 @@ export const moveToFolder = defineOperation({
 | 헤더 `Monti-Delivery-Id` | 이 받는 곳으로 가는 전송의 id. 다시 보낼 때마다 같다 |
 | 헤더 `Monti-Attempt` | 몇 번째 시도인지, 1부터 |
 
+활동 기록은 받는 곳을 사람이 읽는 이름으로 보이고, 저장된 주소는 보이지 않는다(웹훅 주소에는 토큰이 들 수 있다). 이름은 받는 곳의
+`label`이고, 없으면 웹훅은 호스트와 경로, 플러그인의 받는 곳은 그 이름이다. 전송이 실패한 까닭은 세 문장 가운데 하나다: 받는 곳이 답한
+상태 그대로("503 Service Unavailable"), 답 없음, 받는 곳 없음. 답을 받은 플러그인의 받는 곳은 `ReceiverAnswer(status)`를 던져 그 상태가
+기록에 보이게 한다. 다른 오류는 답 없음으로 읽는다.
+
 플러그인의 받는 곳은 같은 것을 인자로 받는다: `send(event, signal, { id, attempt })`. `monti deliveries:run`은 돌고 있는 사이트만 보낼 수 있는
 전송(Next 어댑터의 캐시 갱신)을 시도하지 않고 남기며, 몇 건을 남겼는지 말한다.
 

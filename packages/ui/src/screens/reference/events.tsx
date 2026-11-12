@@ -343,26 +343,21 @@ function PanelMore({ line }: { line: Line }) {
 	);
 }
 
-/** A line's details beside the list: when and who, what it touched, and each receiver's delivery with what can be done about it. */
+/** A line's details beside the list: when, what it touched, and each receiver's delivery (by its name) with what can be done about it. Who is not said. */
 function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 	if (stage === "detailAssistant")
 		return (
 			<SidePanel width="side" title={`“${line.request}”`} closable actions={<PanelMore line={line} />}>
 				<Stack gap={32}>
+					{/* The first group has no heading, as in the other panels. */}
+					<DescriptionList>
+						<DescriptionItem label="시각" mono>
+							10. 26 10:52
+						</DescriptionItem>
+					</DescriptionList>
 					{/* The head cuts a long request; here it is whole. */}
 					<Group title="요청">
 						<Text>{line.request}</Text>
-					</Group>
-					<Group title="이벤트">
-						<DescriptionList>
-							<DescriptionItem label="시각" mono>
-								10. 26 10:52
-							</DescriptionItem>
-							<DescriptionItem label="한 사람">어시스턴트</DescriptionItem>
-							<DescriptionItem label="ID" mono>
-								5b1e6c0a-93d2-4c7b-8a44-0d5f6f1b2e91
-							</DescriptionItem>
-						</DescriptionList>
 					</Group>
 					<Group title="한 일 · 4">
 						<Stack gap={8}>
@@ -398,17 +393,11 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 		return (
 			<SidePanel width="side" title={line.what} closable actions={<PanelMore line={line} />}>
 				<Stack gap={32}>
-					<Group title="이벤트">
-						<DescriptionList>
-							<DescriptionItem label="시각" mono>
-								10. 25 17:20
-							</DescriptionItem>
-							<DescriptionItem label="한 사람">관리자</DescriptionItem>
-							<DescriptionItem label="ID" mono>
-								0c9d2a71-6e55-4f0e-b1c3-7a2f48d09be4
-							</DescriptionItem>
-						</DescriptionList>
-					</Group>
+					<DescriptionList>
+						<DescriptionItem label="시각" mono>
+							10. 25 17:20
+						</DescriptionItem>
+					</DescriptionList>
 					<Group title="항목">
 						<DescriptionList>
 							{/* Deleted for good since: its name stays as text, with nothing to open. */}
@@ -424,14 +413,16 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 					</Group>
 					<Group title="전송 · 1">
 						<DescriptionList>
-							<DescriptionItem label="받는 곳" mono>
-								plugin:next
-							</DescriptionItem>
+							<DescriptionItem label="받는 곳">사이트 캐시</DescriptionItem>
 							<DescriptionItem label="이벤트" mono>
 								entry.unpublished
 							</DescriptionItem>
 							<DescriptionItem label="상태">
 								<DeliveryCell delivery="sent" whole />
+							</DescriptionItem>
+							{/* The id the receiver got it under, to find it in the receiver's own log. */}
+							<DescriptionItem label="Monti-Event-Id" mono>
+								7d3c1f0e-52a8-4b6d-9e1f-c04a8b7d21f1
 							</DescriptionItem>
 						</DescriptionList>
 					</Group>
@@ -442,17 +433,11 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 	return (
 		<SidePanel width="side" title={line.what} closable actions={<PanelMore line={line} />}>
 			<Stack gap={32}>
-				<Group title="이벤트">
-					<DescriptionList>
-						<DescriptionItem label="시각" mono>
-							10. 26 10:40
-						</DescriptionItem>
-						<DescriptionItem label="한 사람">관리자</DescriptionItem>
-						<DescriptionItem label="ID" mono>
-							a81f3d52-7c4e-4b19-9f6a-2e0d1c8b5a37
-						</DescriptionItem>
-					</DescriptionList>
-				</Group>
+				<DescriptionList>
+					<DescriptionItem label="시각" mono>
+						10. 26 10:40
+					</DescriptionItem>
+				</DescriptionList>
 				<Group title="항목">
 					<DescriptionList>
 						<DescriptionItem label="글">
@@ -471,9 +456,7 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 					<Stack gap={20}>
 						<Stack gap={8} align="start">
 							<DescriptionList>
-								<DescriptionItem label="받는 곳" mono>
-									webhook:https://example.dev/api/revalidate
-								</DescriptionItem>
+								<DescriptionItem label="받는 곳">example.dev/api/revalidate</DescriptionItem>
 								<DescriptionItem label="이벤트" mono>
 									entry.published
 								</DescriptionItem>
@@ -485,9 +468,13 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 								</DescriptionItem>
 								{canceled ? null : (
 									<DescriptionItem label="다음 시도" mono>
-										11:16
+										10. 26 11:16
 									</DescriptionItem>
 								)}
+								{/* The id the receiver got it under, to find it in the receiver's own log. */}
+								<DescriptionItem label="Monti-Event-Id" mono>
+									7d3c1f0e-52a8-4b6d-9e1f-c04a8b7d21f2
+								</DescriptionItem>
 							</DescriptionList>
 							{canceled ? null : (
 								<Inline gap={16}>
@@ -497,14 +484,16 @@ function Details({ stage, line }: { stage: EventsStage; line: Line }) {
 							)}
 						</Stack>
 						<DescriptionList>
-							<DescriptionItem label="받는 곳" mono>
-								plugin:search
-							</DescriptionItem>
+							<DescriptionItem label="받는 곳">example.dev/api/search</DescriptionItem>
 							<DescriptionItem label="이벤트" mono>
 								entry.published
 							</DescriptionItem>
 							<DescriptionItem label="상태">
 								<DeliveryCell delivery="sent" whole />
+							</DescriptionItem>
+							{/* The id the receiver got it under, to find it in the receiver's own log. */}
+							<DescriptionItem label="Monti-Event-Id" mono>
+								7d3c1f0e-52a8-4b6d-9e1f-c04a8b7d21f3
 							</DescriptionItem>
 						</DescriptionList>
 					</Stack>
@@ -745,7 +734,7 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 						<AlertDialogHeader>
 							<AlertDialogTitle>이 전송을 취소할까요?</AlertDialogTitle>
 							<AlertDialogDescription>
-								<Text mono>webhook:https://example.dev/api/revalidate</Text>
+								<Text>example.dev/api/revalidate</Text>
 								<br />
 								다시 보내지 않습니다. 되돌릴 수 없습니다.
 							</AlertDialogDescription>

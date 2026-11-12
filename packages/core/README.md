@@ -51,6 +51,11 @@ Every try carries the same ids, so a receiver that must not act twice keeps the 
 | header `Monti-Delivery-Id` | this receiver's delivery of it: the same on every try |
 | header `Monti-Attempt` | which try this is, from 1 |
 
+The activity log shows a receiver by a name a person reads, never by the address it is stored under (a webhook's may carry a token): a
+receiver's `label`, or without one a webhook's host and path and a plugin receiver's name. Why a delivery failed is one of three sentences: the
+receiver's answer as it came ("503 Service Unavailable"), no answer, or no such receiver any more. A plugin's receiver that got an answer
+throws `ReceiverAnswer(status)` for the log to show it; any other error is read as no answer.
+
 A plugin's receiver gets the same as arguments: `send(event, signal, { id, attempt })`. `monti deliveries:run` leaves what only the running site
 can send (the Next adapter's cache refresh) untried and says how many it left.
 
