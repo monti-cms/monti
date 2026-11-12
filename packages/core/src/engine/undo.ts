@@ -1,6 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/schema";
 import { ForbiddenError } from "../errors";
+import { sameJson } from "../json";
 import { leaveNoFileInAGoneFolder, rewriteUses } from "../media/uses";
 import { type RecordRef, recordKey } from "../operation";
 import { type Engine, loadRecords } from "./execute";
@@ -41,7 +42,11 @@ export async function planUndo(
 	};
 	snapshots.forEach((snapshot, index) => {
 		const ref = refs[index];
-		const unchanged = (current.get(recordKey(ref))?.version ?? null) === snapshot.after_version;
+		const now = current.get(recordKey(ref));
+		const unchanged = (now?.version ?? null) === snapshot.after_version;
+		// A record the write named and left as it was (a save that names a value as it is saved) has nothing to put back: writing the same
+		// values again would only move its version, and turn another tab's next save of it into a conflict.
+		if (unchanged && sameJson(now?.data ?? null, snapshot.before ?? null)) return;
 		(unchanged ? plan.restore : plan.skip).push(ref);
 		if (unchanged) plan.snapshots.push({ ref, before: snapshot.before });
 	});

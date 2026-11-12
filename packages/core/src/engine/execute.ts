@@ -143,10 +143,14 @@ export async function runWrite<Output>(
 	async function inTransaction(trx: Transaction<Database>): Promise<WriteResult<Output>> {
 		const { ctx, events, created, flags } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
-		await lockRecords(trx, touched);
-		const before = await loadRecords(engine, trx, touched);
+		// Held beside what the write touches: locked and compared with it, its own only where the write changes them (`holds`).
+		const named = new Set(touched.map(recordKey));
+		const held = unique((await operation.holds?.(input, ctx)) ?? []).filter((ref) => !named.has(recordKey(ref)));
+		const locked = [...touched, ...held];
+		await lockRecords(trx, locked);
+		const before = await loadRecords(engine, trx, locked);
 
-		const conflicts = touched.flatMap((ref) => {
+		const conflicts = locked.flatMap((ref) => {
 			const expected = options.versions?.[recordKey(ref)];
 			const actual = before.get(recordKey(ref))?.version ?? null;
 			return expected === undefined || expected === actual ? [] : [{ ref, expected, actual }];
@@ -164,11 +168,21 @@ export async function runWrite<Output>(
 			onDisk.change = flags.change;
 		}
 
-		const records = unique([...touched, ...created]);
+		const own = unique([...touched, ...created]);
 		// Whatever the write did to a body or a field, what uses which media file is read from the result, here and nowhere else (doc 09).
 		// What the records held before, so a file the library does not have is refused only when this write brings it in (doc 09).
-		await rewriteUses(trx, engine.site.schema(), records, { before: before.values() });
-		const after = await loadRecords(engine, trx, records);
+		await rewriteUses(trx, engine.site.schema(), own, {
+			before: touched.map((ref) => before.get(recordKey(ref)) ?? null),
+		});
+		const after = await loadRecords(engine, trx, unique([...own, ...held]));
+		// The records whose version the write moved: a taken proposal aimed at one of them is applied, and a record the write only held joins
+		// its log and its undo when it is among them.
+		const written = new Set(
+			[...after].flatMap(([key, state]) =>
+				(before.get(key)?.version ?? null) === (state?.version ?? null) ? [] : [key],
+			),
+		);
+		const records = unique([...own, ...held.filter((ref) => written.has(recordKey(ref)))]);
 		// What an undo puts back: the records of kinds that can be put back. The schema is versioned only, so a write that named it and left it
 		// alone still undoes the rest.
 		const restorable = records.filter((ref) => engine.recordKinds.get(ref.kind)?.restore !== undefined);
@@ -207,11 +221,6 @@ export async function runWrite<Output>(
 				.execute();
 		// Taken proposals join this write: the row gets their conversation, so the log shows ✦ (doc 05). Only those the write wrote something of:
 		// an item all of whose records are as they were (its change of the schema, when the file could not be written) stays pending.
-		const written = new Set(
-			[...after].flatMap(([key, state]) =>
-				(before.get(key)?.version ?? null) === (state?.version ?? null) ? [] : [key],
-			),
-		);
 		const conversation = await markApplied(
 			trx,
 			taken.filter((item) => item.records.some((key) => written.has(key))),

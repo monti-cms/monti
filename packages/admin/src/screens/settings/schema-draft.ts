@@ -260,12 +260,16 @@ export function adminValueProposalPaths(
  * settings', so it is left out: it must not throw the kept changes away.
  */
 export function settingsVersion(read: SettingsRead): string {
-	const edited = Object.fromEntries(
-		Object.entries(read.adminValues).map(([c, { version: _version, list: _list, ...values }]) => [c, values]),
+	// The draft's own places as they are saved (`flatten`): a collection with no admin values, one whose only values are the list's, and one
+	// with a value left at what it is by default (folders off) are all the same places, so they are the same version.
+	const places = flatten(read, null);
+	// What a collection's editor allows becomes places only once the site's blocks are known; here it is taken as saved.
+	const editors = Object.fromEntries(
+		Object.entries(read.adminValues).flatMap(([c, values]) =>
+			values.editor && Object.keys(values.editor).length > 0 ? [[c, values.editor]] : [],
+		),
 	);
-	return fingerprint(
-		JSON.stringify(canonical({ site: [read.site.name, read.site.writing], schema: read.schema, edited })),
-	);
+	return fingerprint(JSON.stringify(canonical({ places, editors })));
 }
 
 /** Whether a place holds an admin value of a collection (its own, a field's, the editor's), as against its structure. */

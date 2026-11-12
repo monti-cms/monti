@@ -29,6 +29,23 @@ describe("the settings draft's version", () => {
 		);
 	});
 
+	it("12-1 is the same whether a collection has no admin values yet or only a list's look: the first column dragged does not drop the kept changes", () => {
+		const none: SettingsRead = { ...read, adminValues: {} };
+		const listOnly: SettingsRead = {
+			...read,
+			adminValues: { post: { list: { widths: { summary: 320 } }, version: 1 } },
+		};
+		expect(settingsVersion(listOnly)).toBe(settingsVersion(none));
+		// Empty values of something the draft edits, and a value at what it is by default, are no values either.
+		expect(settingsVersion({ ...read, adminValues: { post: { fields: {}, version: 2 } } })).toBe(settingsVersion(none));
+		expect(settingsVersion({ ...read, adminValues: { post: { folders: false, version: 3 } } })).toBe(
+			settingsVersion(none),
+		);
+		expect(settingsVersion({ ...read, adminValues: { post: { folders: true, version: 3 } } })).not.toBe(
+			settingsVersion(none),
+		);
+	});
+
 	it("12-1 is another once something the draft edits was saved: a label, the site's name, the languages", () => {
 		const base = settingsVersion(read);
 		expect(

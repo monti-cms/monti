@@ -1155,3 +1155,205 @@ describe("a list's own look when a field is renamed or removed", () => {
 		expect((await postValues())?.list).toEqual({ order: ["excerpt"], hidden: ["excerpt"], widths: { excerpt: 240 } });
 	});
 });
+
+describe("a pending change and a hand edit made after it", () => {
+	/** `summary` renamed to `excerpt`; `subtitle` still there. */
+	const renamed: Schema = { ...base, collections: postWith({ title, slug, excerpt: summary, subtitle: summary }) };
+	/** The same, with `subtitle` taken out of the file by hand afterwards. */
+	const handEdited: Schema = { ...base, collections: edited };
+	const pendingRename = async () => {
+		const monti = dev();
+		await monti.run(
+			"entries.create",
+			{ collection: "post", title: "글", slug: "first", values: { summary: "요약", subtitle: "부제" } },
+			{ actor: "admin" },
+		);
+		// A reviewed rename, its files written; the database has not followed it yet.
+		await files().write(
+			renamed,
+			{
+				id: "2026-11-12-pending",
+				steps: [{ do: "renameField", collection: "post", from: "summary", to: "excerpt", values: "move" }],
+			},
+			true,
+		);
+	};
+	const values = async () => (await db.selectFrom("entries").select("values").executeTakeFirstOrThrow()).values;
+
+	it("12-4 the start applies the pending change as the schema it was written for, and the field taken out by hand since still waits for its review", async () => {
+		await pendingRename();
+		const restarted = dev(handEdited);
+		const result = await syncSchemaFile(restarted);
+		// The removal was never reviewed: it has values to decide about, so it is not applied with the pending change.
+		expect(result.status).toBe("review");
+		expect(result).toMatchObject({
+			changes: [{ id: "removeField:post.subtitle", do: "removeField", count: 1 }],
+		});
+		// The database follows the pending change's schema: the rename is done, the field removed by hand is still a field with its value.
+		expect((await readSchemaState(db))?.schema).toEqual(renamed);
+		expect(await values()).toEqual({ excerpt: "요약", subtitle: "부제" });
+		const state = await read(restarted);
+		expect(state.failedChange).toBeNull();
+		expect((state as Read & { fileChanged: boolean }).fileChanged).toBe(true);
+	});
+
+	it("12-4 schema.retry records the schema its changes leave, not the schema file as it is by then", async () => {
+		await pendingRename();
+		const restarted = dev(handEdited);
+		await restarted.run("schema.retry", {}, { actor: "admin" });
+		expect((await readSchemaState(db))?.schema).toEqual(renamed);
+		// The hand edit is planned against what the database follows, with its choice still to make.
+		const plan = (await restarted.run("schema.plan", { draft: handEdited }, { actor: "admin" })) as {
+			changes: { id: string; choices?: unknown[] }[];
+		};
+		expect(plan.changes.map((change) => change.id)).toEqual(["removeField:post.subtitle"]);
+		expect(plan.changes[0]?.choices?.length).toBeGreaterThan(0);
+	});
+});
+
+describe("two writes at the same moment", () => {
+	const key = (record: string) => `monti:record:${record}`;
+	/** Holds a record's lock, as a write that touches it does, until `release`. */
+	const holding = async (record: string) => {
+		let release = () => {};
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		let held = () => {};
+		const taken = new Promise<void>((resolve) => {
+			held = resolve;
+		});
+		const done = db.transaction().execute(async (trx) => {
+			await sql`select pg_advisory_xact_lock(hashtext(${key(record)}))`.execute(trx);
+			held();
+			await gate;
+		});
+		await taken;
+		return async () => {
+			release();
+			await done;
+		};
+	};
+	/** How many writes wait for a record's lock right now. */
+	const waitingFor = async (record: string) => {
+		const { rows } = await sql<{ count: string }>`select count(*) as count from pg_locks
+			where locktype = 'advisory' and not granted
+				and objid::bigint = (hashtext(${key(record)})::bigint & 4294967295)`.execute(db);
+		return Number(rows[0]?.count ?? 0);
+	};
+	const until = async (condition: () => Promise<boolean>) => {
+		for (let tries = 0; tries < 400; tries++) {
+			if (await condition()) return;
+			await new Promise((resume) => setTimeout(resume, 10));
+		}
+		throw new Error("the writes never reached the moment the test waits for");
+	};
+
+	it("12-2 a save that names a value as it is saved holds that record too: a change made to it meanwhile is not written over", async () => {
+		const monti = dev();
+		await save(monti, { adminValues: { post: { label: "글" } } });
+		// Save A names a new site name and the collection's label as it is. It is stopped at the site's record, after it decided what it holds.
+		const releaseSite = await holding("settings:site");
+		const a = save(monti, { site: { name: "새 이름" }, adminValues: { post: { label: "글" } } });
+		await until(async () => (await waitingFor("settings:site")) > 0);
+		// Save B changes that label. A holds the collection's record, so B waits its turn; without that B would be done before A goes on.
+		let settled = false;
+		const b = monti
+			.run("collections.updateAdminValues", { collection: "post", values: { label: "다른 탭" } }, { actor: "admin" })
+			.finally(() => {
+				settled = true;
+			});
+		await until(async () => settled || (await waitingFor("collectionAdminValues:post")) > 0);
+		await releaseSite();
+		await Promise.all([a, b]);
+		// Both saves are whole: A's name, B's label. A did not write the label it read back over B's.
+		expect((await read(monti)).site.name).toBe("새 이름");
+		expect(await postValues()).toEqual({ label: "다른 탭" });
+	});
+
+	it("12-2 a save made on an old read of a value it names as it is now is still a conflict: its version is compared, changed or not", async () => {
+		const monti = dev();
+		await save(monti, { adminValues: { post: { label: "글" } } });
+		await save(monti, { adminValues: { post: { folders: true } } });
+		// The label is what this save names, but it was read before the second save: the record moved on.
+		await expect(
+			save(
+				monti,
+				{ site: { name: "새 이름" }, adminValues: { post: { label: "글" } } },
+				{ "collectionAdminValues:post": 1 },
+			),
+		).rejects.toMatchObject({ code: "conflict" });
+		expect((await read(monti)).site.name).toBe("");
+	});
+
+	it("12-2 undoing a save that named a value as it is leaves that record alone: its version does not move", async () => {
+		const monti = dev();
+		await save(monti, { adminValues: { post: { label: "글" } } });
+		const saved = await save(monti, { site: { name: "새 이름" }, adminValues: { post: { label: "글" } } });
+		const before = (await read(monti)).adminValues.post?.version;
+		await monti.run("activity.undo", { id: saved.activityId }, { actor: "admin" });
+		expect((await read(monti)).site.name).toBe("");
+		expect((await read(monti)).adminValues.post?.version).toBe(before);
+	});
+
+	it("12-2 a rename of a field and a list's saved look at the same moment: the structure change holds the collection's admin values, so the width saved meanwhile is kept", async () => {
+		const monti = dev();
+		const prefs = (widths: Record<string, number>) =>
+			monti.run("list.savePrefs", { collection: "post", widths }, { actor: "admin" });
+		await prefs({ summary: 120 });
+		// The list's save is stopped after it wrote its row and before it ends: its activity row waits for a lock the test holds.
+		await sql`create function gate() returns trigger language plpgsql as $$ begin
+			if new.operation = 'list.savePrefs' then perform pg_advisory_xact_lock(424242); end if; return new; end $$`.execute(
+			db,
+		);
+		await sql`create trigger gate before insert on monti_activity for each row execute function gate()`.execute(db);
+		let open = () => {};
+		const gate = new Promise<void>((resolve) => {
+			open = resolve;
+		});
+		let closed = () => {};
+		const shut = new Promise<void>((resolve) => {
+			closed = resolve;
+		});
+		const holder = db.transaction().execute(async (trx) => {
+			await sql`select pg_advisory_xact_lock(424242)`.execute(trx);
+			closed();
+			await gate;
+		});
+		await shut;
+		const waitingAtGate = async () =>
+			Number(
+				(
+					await sql<{ count: string }>`select count(*) as count from pg_locks
+						where locktype = 'advisory' and not granted and objid = 424242 and classid = 0`.execute(db)
+				).rows[0]?.count ?? 0,
+			);
+		const dragging = prefs({ summary: 320 });
+		await until(async () => (await waitingAtGate()) > 0);
+
+		// A rename of `summary`, with no admin value in the save: it moves the collection's admin values with the field.
+		const renaming = save(monti, {
+			collections: postWith({ title, slug, excerpt: summary, subtitle: summary }),
+			renames,
+			answers: { "renameField:post.summary": { do: "renameField", values: "move" } },
+		});
+		// It waits for the collection's record (which the list's save holds) before it reads the row. Without the hold it would read the
+		// row as it was (120) and wait only to write it back.
+		const blockedOnRow = async () =>
+			Number(
+				(
+					await sql<{ count: string }>`select count(*) as count from pg_stat_activity
+						where datname = current_database() and wait_event_type = 'Lock'
+							and query ilike '%update%collection_admin_values%'`.execute(db)
+				).rows[0]?.count ?? 0,
+			);
+		await until(async () => (await waitingFor("collectionAdminValues:post")) > 0 || (await blockedOnRow()) > 0);
+		open();
+		await holder;
+		await Promise.all([dragging, renaming]);
+		await sql`drop trigger gate on monti_activity`.execute(db);
+		await sql`drop function gate`.execute(db);
+		// The width dragged while the rename waited is the one the renamed field has.
+		expect((await postValues())?.list).toEqual({ widths: { excerpt: 320 } });
+	});
+});

@@ -99,6 +99,12 @@ export type OperationDefinition<Input, Output> = {
 	input: z.ZodType<Input>;
 	/** The records the write will change, read before it runs: the engine compares their versions and keeps their snapshots for undo. */
 	touches?: (input: Input, ctx: OperationContext) => Awaitable<RecordRef[]>;
+	/**
+	 * Records the write holds while it runs without their being its own: a structure change holds every collection's admin values, because it
+	 * moves a renamed field's label with the field. They are locked and their versions compared like `touches`, so no other write works on them
+	 * meanwhile; they are in the write's log and undo only when it changed them (their version moved).
+	 */
+	holds?: (input: Input, ctx: OperationContext) => Awaitable<RecordRef[]>;
 	/** Refuses the write before it runs (throw `CheckError`). */
 	check?: (input: Input, ctx: OperationContext) => Awaitable<void>;
 	/** What the write would change. The agent reads it before proposing, and the proposal card shows it. */
@@ -130,10 +136,10 @@ export function defineOperation<Input, Output>(
 		throw new Error(`Write operation "${definition.name}" has no summary for the activity log.`);
 	if (
 		definition.kind !== "write" &&
-		(definition.touches || definition.preview || definition.humanOnly || definition.structure)
+		(definition.touches || definition.holds || definition.preview || definition.humanOnly || definition.structure)
 	)
 		throw new Error(
-			`Operation "${definition.name}" is not a write, so it has no touches, preview, humanOnly or structure.`,
+			`Operation "${definition.name}" is not a write, so it has no touches, holds, preview, humanOnly or structure.`,
 		);
 	return { ...definition, __operation: true };
 }

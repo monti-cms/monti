@@ -11,6 +11,7 @@ import {
 	applySchema,
 	CollectionsInput,
 	checkApply,
+	heldByStructure,
 	LocalesInput,
 	RenameInput,
 	writeAdminValues,
@@ -219,15 +220,20 @@ export const settingsOperations = [
 		description:
 			"Save the settings screen's changes in one go. Admin values go to the database, on the live site too: site (the name and how the site writes) and adminValues (a patch per collection of its label, folders, field labels and descriptions, layout and editor allowance: only the keys given change, null clears one, the rest stay as saved). Structure (locales: the languages, whole; collections: every collection, with renames) goes to monti.schema.ts and the database on the dev server only, the way schema.apply does, and needs the answers schema.plan's choices ask for. A save that names structure on the live site is refused whole, and so is one that would change nothing.",
 		input: SaveInput,
-		async touches(input, ctx) {
+		touches(input, ctx) {
+			// Everything the save names, whether or not it differs from what is saved right now: the records are held first and what needs
+			// writing is decided after, so a value another save changes meanwhile is neither written over nor let past its version.
 			const refs: RecordRef[] = [];
-			// Only what would change: naming a value as it is touches no record of it.
-			if (await siteWrite(input, ctx)) refs.push({ kind: "settings", id: "site" });
-			for (const { collection } of await adminWrites(input, ctx))
-				refs.push({ kind: "collectionAdminValues", id: collection });
-			const draft = draftOf(input, ctx);
-			if (draft && (await differs(ctx, draft, input.renames))) refs.push({ kind: "schema", id: "current" });
+			if (Object.keys(input.site ?? {}).length > 0) refs.push({ kind: "settings", id: "site" });
+			for (const collection of Object.keys(input.adminValues))
+				if (ctx.site.schema().collections[collection]) refs.push({ kind: "collectionAdminValues", id: collection });
+			if (draftOf(input, ctx)) refs.push({ kind: "schema", id: "current" });
 			return refs;
+		},
+		// A structure change moves every collection's admin values with its fields: they are held with the schema.
+		holds: async (input, ctx) => {
+			const draft = draftOf(input, ctx);
+			return draft ? heldByStructure(ctx, draft) : [];
 		},
 		async check(input, ctx) {
 			const draft = draftOf(input, ctx);

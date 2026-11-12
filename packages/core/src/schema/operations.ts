@@ -5,7 +5,7 @@ import type { Database } from "../db/schema";
 import { CheckError } from "../errors";
 import { sameJson } from "../json";
 import { checkMediaValues } from "../media/uses";
-import { defineOperation, type OperationContext } from "../operation";
+import { defineOperation, type OperationContext, type RecordRef } from "../operation";
 import { defineRecordKind } from "../records";
 import { addressesBefore, movedAddresses } from "./addresses";
 import { AdminValues, AdminValuesPatch, mergeAdminValues } from "./admin-values";
@@ -145,6 +145,19 @@ export async function applyStructure(...args: Parameters<typeof applySchema>) {
 }
 
 /**
+ * The records a structure write holds beside the schema: every collection's admin values. A change of fields moves admin values with it (a renamed
+ * field's label, its place in the layout, its column in the list), reading a collection's row and writing it back; the writes of admin values
+ * (`list.savePrefs`, `collections.updateAdminValues`, `settings.save`) touch the same record, so neither works on a row the other is changing.
+ */
+export async function heldByStructure(ctx: OperationContext, draft?: Schema): Promise<RecordRef[]> {
+	const followed = (await readSchemaState(ctx.db))?.schema;
+	const collections = new Set(
+		[ctx.site.schema(), draft, followed].flatMap((schema) => Object.keys(schema?.collections ?? {})),
+	);
+	return [...collections].sort().map((id) => ({ kind: "collectionAdminValues", id }));
+}
+
+/**
  * The applied schema: its version guards against two saves over each other. It has no `restore`: a structure change has no undo, so an undo of a
  * write that named the schema and left it as it was (a save whose file could not be written) puts back the rest and leaves this alone.
  */
@@ -260,6 +273,7 @@ export const schemaOperations = [
 			adminValues: z.record(z.string(), AdminValues).default({}),
 		}),
 		touches: () => [{ kind: "schema", id: "current" }],
+		holds: (input, ctx) => heldByStructure(ctx, input.draft),
 		check: (input, ctx) => checkApply(ctx, input.draft, input.renames, input.answers as Answers),
 		run: (input, ctx) => applyStructure(ctx, input.draft, input.renames, input.answers as Answers, input.adminValues),
 		summary: (_input, output) => ({
@@ -272,9 +286,10 @@ export const schemaOperations = [
 		kind: "write",
 		structure: true,
 		description:
-			"Apply again the change files the database has not followed, after an apply whose database step failed.",
+			"Apply again the change files the database has not followed, after an apply whose database step failed. The database is then recorded as following the schema those changes leave: an edit made to the schema file since still waits for its own review.",
 		input: z.object({}),
 		touches: () => [{ kind: "schema", id: "current" }],
+		holds: (_input, ctx) => heldByStructure(ctx),
 		async run(_input, ctx) {
 			const files = ctx.site.files;
 			if (!files) throw new Error("Structure is locked on the live site.");
@@ -282,8 +297,15 @@ export const schemaOperations = [
 			// The addresses as the database last followed them: what the site was serving while the change waited.
 			const state = await readSchemaState(ctx.db);
 			const addresses = await addressesBefore(ctx.db, state?.schema ?? ctx.site.schema(), ctx.site.schema());
-			for (const change of pending) await applyChange(ctx.db, change, ctx.site.schema(), ctx.site.kit);
-			await setSchemaState(ctx.db, ctx.site.schema(), null);
+			// Each change brings the database to the schema it was written for, and that is the schema recorded as followed: not the schema file
+			// as it is now. A field taken out of the file by hand after the change was saved is no part of it, and is planned and reviewed apart
+			// (the file then differs from what the database follows, as after any hand edit).
+			let followed = state?.schema ?? ctx.site.schema();
+			for (const change of pending) {
+				followed = change.schema ?? ctx.site.schema();
+				await applyChange(ctx.db, change, followed, ctx.site.kit);
+			}
+			await setSchemaState(ctx.db, followed, null);
 			await emitApplied(
 				ctx,
 				pending.map((change) => change.id),
