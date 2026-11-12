@@ -1,0 +1,22 @@
+{
+	"name": "monti-fresh-site",
+	"version": "0.0.0",
+	"private": true,
+	"description": "A new Next.js app as create-next-app leaves it (TypeScript, App Router): scripts/try-release.mjs installs the release bundle into a copy of it",
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start"
+	},
+	"dependencies": {
+		"next": "16.4.6",
+		"react": "19.2.3",
+		"react-dom": "19.2.3"
+	},
+	"devDependencies": {
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"typescript": "^5"
+	}
+}
