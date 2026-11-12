@@ -20,7 +20,7 @@ import {
 	Text,
 	toast,
 } from "@monti-cms/ui";
-import { type FormEvent, useId, useRef, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { PickOne } from "../settings/pick-one";
@@ -58,7 +58,8 @@ function freeName(base: string, taken: string[]): string {
 /**
  * The key window (tools.md), one window from the add button to the stored key: it asks which service first, and picking one turns the same window
  * into the key's fields, so nothing closes and opens between the two. `nth` counts its openings: each starts with empty fields. When it has
- * closed and its fade is over, `onClosed` lets the screen take it out of the page, with whatever was typed.
+ * closed and its fade is over, `onClosed` lets the screen take it out of the page, with whatever was typed. Both name the opening they are
+ * about (`nth`): an answer that comes for a window closed earlier never closes the one opened since.
  */
 export function KeyWindow({
 	state,
@@ -78,8 +79,8 @@ export function KeyWindow({
 	/** The names the keys have: a new key's name starts as one not taken. */
 	names: string[];
 	onPick: (service: string) => void;
-	onClose: () => void;
-	onClosed: () => void;
+	onClose: (nth: number) => void;
+	onClosed: (nth: number) => void;
 	/** The key changed elsewhere since the list was read: the list is read again. */
 	onStale: () => void;
 }) {
@@ -88,8 +89,8 @@ export function KeyWindow({
 	return (
 		<Dialog
 			open={open}
-			onOpenChange={(next) => !next && onClose()}
-			onOpenChangeComplete={(next) => !next && onClosed()}
+			onOpenChange={(next) => !next && onClose(nth)}
+			onOpenChangeComplete={(next) => !next && onClosed(nth)}
 		>
 			<DialogContent form={state.mode !== "pick"}>
 				{state.mode === "pick" ? (
@@ -105,13 +106,21 @@ export function KeyWindow({
 							))}
 						</PickList>
 						<DialogFooter>
-							<Button variant="ghost" onClick={onClose}>
+							<Button variant="ghost" onClick={() => onClose(nth)}>
 								{t("ui.cancel")}
 							</Button>
 						</DialogFooter>
 					</>
 				) : (
-					<KeyForm key={nth} state={state} services={services} names={names} onClose={onClose} onStale={onStale} />
+					<KeyForm
+						key={nth}
+						state={state}
+						open={open}
+						services={services}
+						names={names}
+						onClose={() => onClose(nth)}
+						onStale={onStale}
+					/>
 				)}
 			</DialogContent>
 		</Dialog>
@@ -125,12 +134,15 @@ export function KeyWindow({
  */
 function KeyForm({
 	state,
+	open,
 	services,
 	names,
 	onClose,
 	onStale,
 }: {
 	state: KeyFormState;
+	/** Whether its window is open: once it is not, however it was closed, an answer still on its way is told in a toast. */
+	open: boolean;
 	services: Service[];
 	names: string[];
 	onClose: () => void;
@@ -167,7 +179,16 @@ function KeyForm({
 	const [replacing, setReplacing] = useState(editing ? !editing.readable : true);
 	const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
 	const [checking, setChecking] = useState(false);
-	const closed = useRef(false);
+	// The window as it is when an answer comes, not as it was when the question went: closed by "Cancel", by Esc, by a press outside, or gone
+	// from the page since. There is then no field left to say anything under, and nothing of this form's to close.
+	const shown = useRef(open);
+	shown.current = open;
+	useEffect(
+		() => () => {
+			shown.current = false;
+		},
+		[],
+	);
 	const pending = add.pending || update.pending;
 
 	const hint = suggested(service, address);
@@ -175,11 +196,6 @@ function KeyForm({
 		setErrors({ [field]: message });
 		inputs[field].current?.focus();
 	};
-	const close = () => {
-		closed.current = true;
-		onClose();
-	};
-
 	const submit = async (event: FormEvent) => {
 		event.preventDefault();
 		if (pending) return;
@@ -198,7 +214,7 @@ function KeyForm({
 				...(replacing ? { secret } : {}),
 				...(service?.address && baseUrl !== (editing.baseUrl ?? "") ? { baseUrl } : {}),
 			};
-			if (Object.keys(changed).length === 0) return close();
+			if (Object.keys(changed).length === 0) return onClose();
 			// The service is asked again only for a new key or a new address.
 			setChecking("secret" in changed || "baseUrl" in changed);
 			result = await update.run(
@@ -216,17 +232,18 @@ function KeyForm({
 		}
 		if (result.ok) {
 			toast(t(editing ? "apiKeys.saved" : "apiKeys.added"));
-			if (!closed.current) onClose();
+			if (shown.current) onClose();
 			return;
 		}
 		const { refusal } = result;
-		// Closed while the service was being asked: there is no field left to say it under.
-		if (closed.current) return void toast.error(t(refusal.reason ?? "errors.unexpected"));
 		if (refusal.error === "conflict") {
 			toast.error(t("ui.savedElsewhere"));
 			onStale();
-			return onClose();
+			if (shown.current) onClose();
+			return;
 		}
+		// Closed while the service was being asked: there is no field left to say it under.
+		if (!shown.current) return void toast.error(t(refusal.reason ?? "errors.unexpected"));
 		const words = t(refusal.reason ?? "errors.unexpected");
 		switch (refusal.reason?.key) {
 			case "keys.refused":
@@ -360,7 +377,7 @@ function KeyForm({
 				) : null}
 			</FormField>
 			<DialogFormFooter
-				onCancel={close}
+				onCancel={onClose}
 				submitLabel={t(editing ? "ui.save" : "apiKeys.addSubmit")}
 				busy={pending}
 				busyLabel={checking ? t("apiKeys.checking") : undefined}

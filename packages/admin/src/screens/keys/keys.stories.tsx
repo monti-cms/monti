@@ -5,7 +5,15 @@ import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-s
 import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
 
-type Loaded = { site: StorySite; net: Network; letRead: () => void };
+type Loaded = {
+	site: StorySite;
+	net: Network;
+	letRead: () => void;
+	/** Operations the server breaks on. */
+	failing: Set<string>;
+	/** Holds an operation's answer back until the function it gives is called. */
+	holdCall: (name: string) => () => void;
+};
 type Monti = StorySite["monti"];
 
 const meta = {
@@ -154,11 +162,29 @@ export const site = ({
 					letRead = resolve;
 				})
 			: null;
+		const failing = new Set<string>();
+		const gates = new Map<string, Promise<void>>();
+		const holdCall = (name: string) => {
+			let release = () => {};
+			gates.set(
+				name,
+				new Promise<void>((resolve) => {
+					release = resolve;
+				}),
+			);
+			return () => {
+				gates.delete(name);
+				release();
+			};
+		};
 		const transport: StorySite["transport"] = async (name, ...rest) => {
 			if (read && name === "keys.list") await read;
+			await gates.get(name);
+			// A server that breaks on this operation: an answer with no reason in it.
+			if (failing.has(name)) return { status: 500, body: { error: "unexpected" } };
 			return made.transport(name, ...rest);
 		};
-		return { site: { ...made, transport }, net, letRead };
+		return { site: { ...made, transport }, net, letRead, failing, holdCall };
 	},
 ];
 

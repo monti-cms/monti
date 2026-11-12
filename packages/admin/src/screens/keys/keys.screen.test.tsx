@@ -6,7 +6,13 @@ import { scene } from "../../../test/scene";
 import * as keys from "./keys.stories";
 import { tokenAmount } from "./keys-screen";
 
-type Loaded = { site: StorySite; net: keys.Network; letRead: () => void };
+type Loaded = {
+	site: StorySite;
+	net: keys.Network;
+	letRead: () => void;
+	failing: Set<string>;
+	holdCall: (name: string) => () => void;
+};
 const open = (story: Parameters<typeof scene>[0]) => scene<Loaded>(story, keys.default);
 
 const button = (name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
@@ -197,6 +203,111 @@ describe("the key window as one window", () => {
 	});
 });
 
+describe("an answer that comes after its window was closed", () => {
+	it("14-1 closed with Esc while the service is asked, then a new window opened: the first key is added and said so, and the new window stays with what was typed in it", async () => {
+		const story = open(keys.NoKeys);
+		await story.run();
+		await addFor("Anthropic");
+		story.loaded().net.hold("held");
+		await userEvent.type(keyField(), keys.sample.anthropic);
+		await userEvent.click(button("추가"));
+		await expect.element(button("확인하는 중…")).toBeVisible();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(dialog()).not.toBeInTheDocument();
+
+		await addFor("OpenRouter");
+		await userEvent.type(keyField(), "sk-proj-half-typed");
+		story.loaded().net.hold(null);
+		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
+		await expect.element(page.getByText("··· a1b2")).toBeVisible();
+		// The answer was for the window closed before: the one open now is left alone, also once a closing would have run its course.
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		expect(document.querySelector("[data-slot=dialog-content]")?.hasAttribute("data-closed")).toBe(false);
+		await expect.element(dialog()).toBeVisible();
+		await expect.element(keyField()).toHaveValue("sk-proj-half-typed");
+		await expect.element(field(/이름/)).toHaveValue("OpenRouter");
+	});
+
+	it("14-1 closed with Esc while the service is asked, and the service refuses the key: a toast says so, as after '취소'", async () => {
+		const story = open(keys.NoKeys);
+		await story.run();
+		await addFor("Anthropic");
+		story.loaded().net.hold("held");
+		await userEvent.type(keyField(), keys.sample.refused);
+		await userEvent.click(button("추가"));
+		await expect.element(button("확인하는 중…")).toBeVisible();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(dialog()).not.toBeInTheDocument();
+		story.loaded().net.hold(null);
+		await expect.element(page.getByText("맞지 않는 키입니다.")).toBeVisible();
+		expect((await list(story.loaded().site)).keys).toEqual([]);
+	});
+
+	it("14-1 closed with '취소' while a changed key is checked, a new window opened, and the key turns out changed elsewhere: it is said, and the new window stays", async () => {
+		const story = open(keys.Keys);
+		await story.run();
+		const { site, holdCall } = story.loaded();
+		await menu("Anthropic 개인", "편집");
+		await userEvent.click(button("바꾸기"));
+		await userEvent.type(keyField(), keys.sample.anthropicNew);
+		const [first] = (await list(site)).keys;
+		if (!first) throw new Error("no key");
+		await site.monti.run(
+			"keys.update",
+			{ id: first.id, name: "다른 창의 이름" },
+			{ ...keys.admin, versions: { [`key:${first.id}`]: first.version } },
+		);
+		// The answer about the change is held back: it will say the key changed elsewhere.
+		const answer = holdCall("keys.update");
+		await userEvent.click(button("저장"));
+		await expect.element(button("확인하는 중…")).toBeVisible();
+		await userEvent.click(button("취소"));
+		await expect.element(dialog()).not.toBeInTheDocument();
+
+		await addFor("OpenRouter");
+		await userEvent.type(keyField(), "sk-proj-half-typed");
+		answer();
+		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).toBeVisible();
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		expect(document.querySelector("[data-slot=dialog-content]")?.hasAttribute("data-closed")).toBe(false);
+		await expect.element(dialog()).toBeVisible();
+		await expect.element(keyField()).toHaveValue("sk-proj-half-typed");
+		// The list was read again: it shows the name the other place gave.
+		await expect.element(page.getByText("다른 창의 이름", { exact: true })).toBeVisible();
+	});
+});
+
+describe("a key that could not be removed", () => {
+	it("14-1 changed elsewhere since the list was read: the words every screen uses, and the list is read again", async () => {
+		const story = open(keys.Keys);
+		await story.run();
+		const { site } = story.loaded();
+		const [first] = (await list(site)).keys;
+		if (!first) throw new Error("no key");
+		await site.monti.run(
+			"keys.update",
+			{ id: first.id, name: "다른 창의 이름" },
+			{ ...keys.admin, versions: { [`key:${first.id}`]: first.version } },
+		);
+		await menu("Anthropic 개인", "지우기");
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
+		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).toBeVisible();
+		await expect.element(page.getByText("다른 창의 이름", { exact: true })).toBeVisible();
+		expect((await list(site)).keys).toHaveLength(3);
+	});
+
+	it("14-1 a server that fails says that it failed, not that the key was saved elsewhere", async () => {
+		const story = open(keys.Keys);
+		await story.run();
+		story.loaded().failing.add("keys.remove");
+		await menu("Anthropic 개인", "지우기");
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
+		await expect.element(page.getByText(/문제가 생겼습니다/)).toBeVisible();
+		await expect.element(page.getByText("다른 곳에서 먼저 저장했습니다")).not.toBeInTheDocument();
+		expect((await list(story.loaded().site)).keys).toHaveLength(3);
+	});
+});
+
 describe("changing and removing a key (flow 10, 07–11)", () => {
 	it("14-1 a key changed elsewhere since the list was read: saving says so in the words every screen uses, and the list is read again", async () => {
 		const story = open(keys.Keys);
@@ -269,6 +380,7 @@ describe("changing and removing a key (flow 10, 07–11)", () => {
 		// The question has no name in it; which key stands first in the window, before what stops.
 		await expect.element(asking.getByRole("heading", { name: "키를 지울까요?" })).toBeVisible();
 		await expect.element(asking.getByText("Anthropic 개인")).toBeVisible();
+		await expect.element(asking.getByText("되돌릴 수 없습니다. 이 키를 쓰는 곳이 멈춥니다.")).toBeVisible();
 		await expect.element(asking.getByText("claude-sonnet-5-5")).toBeVisible();
 		await expect.element(asking.getByText("claude-haiku-5-5")).toBeVisible();
 		await userEvent.click(asking.getByRole("button", { name: "취소" }));

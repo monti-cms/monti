@@ -239,9 +239,10 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 					services={list.data?.services ?? []}
 					names={keys.map((key) => key.name)}
 					onPick={(service) => setKeyWindow((was) => was && { ...was, state: { mode: "add", service } })}
-					onClose={() => setKeyWindow((was) => was && { ...was, open: false })}
+					// Each closes the opening it names: an answer that comes for a window closed earlier leaves the one opened since alone.
+					onClose={(nth) => setKeyWindow((was) => (was && was.nth === nth ? { ...was, open: false } : was))}
 					// Out of the page once its fade is over, unless it was opened again meanwhile.
-					onClosed={() => setKeyWindow((was) => (was?.open ? was : null))}
+					onClosed={(nth) => setKeyWindow((was) => (was && was.nth === nth && !was.open ? null : was))}
 					onStale={() => void list.reload()}
 				/>
 			) : null}
@@ -250,9 +251,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t("apiKeys.removeTitle")}</AlertDialogTitle>
 						<AlertDialogDescription>
-							{removing && removing.uses.length > 0
-								? `${t("apiKeys.removeText")} ${t("apiKeys.removeStops")}`
-								: t("apiKeys.removeText")}
+							{t(removing && removing.uses.length > 0 ? "apiKeys.removeTextInUse" : "apiKeys.removeText")}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					{/* Which key, then what stops with it. */}
@@ -277,7 +276,14 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 								void remove.run({ id: key.id }, { versions: { [`key:${key.id}`]: key.version } }).then((result) => {
 									if (result.ok) toast(t("apiKeys.removed"));
 									else {
-										toast.error(t(result.refusal.reason ?? "ui.savedElsewhere"));
+										// Only a key that changed since the list was read is "saved elsewhere"; anything else says what it was.
+										toast.error(
+											t(
+												result.refusal.error === "conflict"
+													? "ui.savedElsewhere"
+													: (result.refusal.reason ?? "errors.unexpected"),
+											),
+										);
 										void list.reload();
 									}
 								});
