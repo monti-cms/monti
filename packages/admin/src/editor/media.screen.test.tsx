@@ -1047,6 +1047,21 @@ describe("opening a body with files", () => {
 		expect((story.reads()[0]?.input as { ids: string[] }).ids).toHaveLength(1);
 	});
 
+	it("09-1 a file that came with the body stays shown when its block comes back and the read is turned away", async () => {
+		await recorded({ refuse: true }).run();
+		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
+		const fileBlocks = () => body().element().querySelectorAll("[data-block=file]");
+		const [first] = fileBlocks();
+		if (!first) throw new Error("no file block");
+		await userEvent.click(page.elementLocator(first));
+		await expect.poll(() => first.closest(".ProseMirror-selectednode")).not.toBeNull();
+		await userEvent.keyboard("{Backspace}");
+		await expect.poll(() => fileBlocks().length).toBe(0);
+		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
+		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
+		expect(body().element().textContent).not.toContain("파일 없음");
+	});
+
 	it("09-1 T110 a read turned away leaves no file blank: each says it is not there, as a block's own read did", async () => {
 		await recorded({ refuse: true, bare: true }).run();
 		await expect.element(body().getByText("파일 없음")).toBeVisible();

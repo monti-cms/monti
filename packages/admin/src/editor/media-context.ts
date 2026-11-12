@@ -3,7 +3,7 @@ import { altIsMissing, MEDIA_QUERY_MOST } from "@monti-cms/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { NodeSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { Upload } from "../media/upload-queue";
 import { useOperation } from "../operations/use-operation";
 import { caretPast, insertBlocks, inTableCell } from "./commands";
@@ -33,23 +33,32 @@ type BodyFiles = {
 	want: (id: string) => void;
 };
 
+const NONE: readonly MediaItem[] = [];
+/** The reads' answers that a body was already drawn from: a body made again from the same one (a kept copy loaded) no longer takes it as fresh. */
+const drawnFrom = new WeakSet<readonly MediaItem[]>();
+const byId = (items: readonly MediaItem[]) => items.map((item) => [item.id, item] as const);
+
 /**
  * The files a body's image and file blocks show. Those the body's read brought (`given`: `entries.get`, `templates.get`) are known from the first
- * draw, so every picture's frame stands at its shape before anything is read. A file that was not given (one put in since, a copy kept in this
- * browser) is read: the blocks that appear at once ask in the same moment, and one `media.query` reads them all, not a read for each block (T110).
- * A block that comes back (undo, the same file picked again) reads its file again, and shows what it knew meanwhile.
+ * draw, so every picture's frame stands at its shape before anything is read; when the read comes again (after a save), what it brings is the
+ * newest. A file that was not given (one put in since) is read: the blocks that appear at once ask in the same moment, and one `media.query` reads
+ * them all, not a read for each block (T110). A block that comes back (undo, the same file picked again) reads its file again, and shows what it
+ * knew meanwhile.
  */
-const NONE: readonly MediaItem[] = [];
-
 export function useBodyFiles(given: readonly MediaItem[] = NONE): BodyFiles {
 	const { run } = useOperation<MediaQueryResult>("media.query");
-	const [answered_, setFiles] = useState<ReadonlyMap<string, MediaItem | null>>(() => new Map());
-	const files = useMemo<ReadonlyMap<string, MediaItem | null>>(
-		() => new Map([...given.map((item) => [item.id, item] as const), ...answered_]),
-		[given, answered_],
-	);
-	// A given file's block does not read it when it first appears: only when it comes back.
-	const fresh = useRef(new Set(given.map((item) => item.id)));
+	const [files, setFiles] = useState<ReadonlyMap<string, MediaItem | null>>(() => new Map(byId(given)));
+	const [taken, setTaken] = useState(given);
+	if (taken !== given) {
+		setTaken(given);
+		setFiles((known) => new Map([...known, ...byId(given)]));
+	}
+	// A file that came with a read just made is not read again when its block first appears: only when the block comes back.
+	const fresh = useRef<Set<string> | null>(null);
+	if (fresh.current === null) {
+		fresh.current = new Set(drawnFrom.has(given) ? [] : given.map((item) => item.id));
+		drawnFrom.add(given);
+	}
 	const waiting = useRef(new Set<string>());
 	// Each id's latest read: an answer that comes back after a newer read of the same file has begun says nothing about it.
 	const latest = useRef(new Map<string, number>());
@@ -77,7 +86,7 @@ export function useBodyFiles(given: readonly MediaItem[] = NONE): BodyFiles {
 	);
 	const want = useCallback(
 		(id: string) => {
-			if (fresh.current.delete(id)) return;
+			if (fresh.current?.delete(id)) return;
 			if (waiting.current.has(id)) return;
 			waiting.current.add(id);
 			if (waiting.current.size > 1) return;

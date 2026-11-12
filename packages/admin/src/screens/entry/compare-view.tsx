@@ -220,8 +220,7 @@ export function CompareView({
 							</TextButton>
 							<Button
 								onClick={() => {
-									editor.loadBrowserCopy();
-									onBack();
+									void editor.loadBrowserCopy().then(onBack);
 								}}
 							>
 								{t("compare.load")}
