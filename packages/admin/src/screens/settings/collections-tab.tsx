@@ -145,7 +145,7 @@ export function CollectionsTab({
 								tab={view.folderTab}
 								onTab={view.setFolderTab}
 								onOpenField={(key) => view.setFieldSheet({ collection: current, key })}
-								onAddField={() => view.setFieldSheet({ collection: current, key: null })}
+								onAddField={(under) => view.setFieldSheet({ collection: current, key: null, under })}
 							/>
 						) : tab === "basics" ? (
 							<BasicsTab

@@ -534,4 +534,80 @@ describe("settings › collections: the options of a choice in the review (docs 
 		await expect.element(sheetNow.getByRole("radio", { name: /값 지우기/ })).toBeVisible();
 		await expect.element(sheetNow.getByText("3편 · 공개된 글 2편")).toBeVisible();
 	});
+
+	const read = async ({ site }: Site) =>
+		(
+			(await site.monti.run("schema.read", {}, { actor: "admin" })) as {
+				schema: { collections: Record<string, { fields: Record<string, unknown> }> };
+			}
+		).schema.collections.post?.fields;
+
+	it("19-6 a conditional field's line has a band for each option under it, one step in, with no grip, the option's fields under the band, and an option with no fields keeps its band", async () => {
+		await options().run();
+		await opened();
+		const rows = () => [...document.querySelectorAll<HTMLElement>("[data-slot=field-row]")];
+		const text = () => rows().map((row) => row.textContent ?? "");
+		const at = (words: string) => text().findIndex((each) => each.includes(words));
+		await expect.poll(() => at("videoUrl")).toBeGreaterThan(-1);
+		// The field, then each option's band in the options' order, each followed by its own fields.
+		const order = ["format", "필드 없음", "동영상", "videoUrl", "링크", "linkUrl"].map(at);
+		expect(order).toEqual([...order].sort((a, b) => a - b));
+		const band = rows()[at("동영상")] as HTMLElement;
+		expect(band.dataset.group).toBe("true");
+		expect(band.textContent).toContain("video");
+		// A band is not dragged, and neither are its fields: no grip button in them.
+		expect(band.querySelector("button[aria-label$='옮기기']")).toBeNull();
+		expect((rows()[at("videoUrl")] as HTMLElement).querySelector("button[aria-label$='옮기기']")).toBeNull();
+		const left = (row: HTMLElement) =>
+			(row.querySelector("span:nth-child(2)") as HTMLElement).getBoundingClientRect().left;
+		expect(left(band)).toBeGreaterThan(left(rows()[at("format")] as HTMLElement));
+		expect(left(rows()[at("videoUrl")] as HTMLElement)).toBeGreaterThan(left(band));
+	});
+
+	it("19-6 '+ 필드' on an option's band adds a field to that option: the sheet says whose it is, the field stands under the band, and the saved schema has it in that option", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await userEvent.click(page.getByRole("button", { name: "글에 필드 추가" }));
+		await expect.element(sheet().getByText(/게시글 · 글 종류 · 글/)).toBeVisible();
+		// A field of an option is not itself conditional.
+		await expect.element(sheet().getByRole("option", { name: /^조건부/ })).not.toBeInTheDocument();
+		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "credit");
+		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "credit 열기" })).toBeVisible();
+		await expect.element(page.getByText("필드 없음")).not.toBeInTheDocument();
+		const sheetNow = await review();
+		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		expect((await read(made.loaded()))?.format).toMatchObject({
+			kind: "conditional",
+			fields: { article: { credit: { kind: "text" } }, video: { videoUrl: { kind: "text", required: true } } },
+		});
+	});
+
+	it("19-6 a conditional field is made in the field sheet: its kind, its options; in the list it has a band for each", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await userEvent.click(page.getByRole("button", { name: "+ 필드 추가" }));
+		await userEvent.click(sheet().getByRole("option", { name: /^조건부/ }));
+		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "source");
+		for (const [index, value] of ["own", "quoted"].entries()) {
+			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await userEvent.fill(sheet().getByRole("textbox", { name: "값" }).nth(index), value);
+		}
+		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "own에 필드 추가" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "quoted에 필드 추가" })).toBeVisible();
+		const sheetNow = await review();
+		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		expect((await read(made.loaded()))?.source).toEqual({
+			kind: "conditional",
+			options: ["own", "quoted"],
+			fields: {},
+		});
+	});
 });

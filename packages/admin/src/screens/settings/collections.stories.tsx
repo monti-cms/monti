@@ -723,3 +723,63 @@ export const twoTabs = async ({ monti }: StorySite) => {
 		admin,
 	);
 };
+
+/** Doc 19: a conditional field in the fields list: under its line a band for each option, with the option's fields and the way to add one. */
+export const ConditionalFields: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await page.findByRole("button", { name: "videoUrl 열기" }, wait);
+	},
+};
+
+/** Doc 19: the field sheet of a conditional field: its options, each a value and a label. */
+export const ConditionalFieldSheet: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "format 열기" }, wait));
+		await within(canvasElement.ownerDocument.body).findByRole("dialog", {}, wait);
+	},
+};
+
+/** Docs 12 and 19: the review of an option renamed ("loud" to "noisy"): the entries that chose it, and how many of them are published. */
+export const OptionRenamedReview: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		const body = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "mood 열기" }, wait));
+		const values = await body.findAllByRole("textbox", { name: "값" }, wait);
+		fill(values[1] as HTMLElement, "noisy");
+		await userEvent.click(body.getByRole("button", { name: "저장" }));
+		await sheetGone(body);
+		await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }));
+		await body.findByText("mood · loud → noisy", {}, wait);
+	},
+};
+
+/** Docs 12 and 19: the review of a conditional field's option taken out: its field as a removed field, and what becomes of the entries that chose it. */
+export const OptionRemovedReview: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		const body = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "format 열기" }, wait));
+		await userEvent.click(await body.findByRole("button", { name: "video 빼기" }, wait));
+		await userEvent.click(body.getByRole("button", { name: "저장" }));
+		await sheetGone(body);
+		await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }));
+		await userEvent.click(await body.findByRole("combobox", { name: "바꾸기" }, wait));
+		await userEvent.click(await body.findByRole("option", { name: "링크" }, wait));
+		await body.findByText(/필수 필드가 비게 됩니다/, {}, wait);
+	},
+};
