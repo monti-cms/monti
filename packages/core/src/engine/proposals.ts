@@ -751,7 +751,10 @@ export async function revertProposal(
 		let outcome: { state: "reverted"; stayed: number } | { state: "applied"; reason: Message };
 		try {
 			const plan = await planUndo(engine, db, item.activity_id, ownStep);
-			if (plan.restore.some(changed)) {
+			// Records the write moved on without changing what they hold (the same value written again): nothing of them goes back, and
+			// they are as much "put back" as any. They stay where they are, and the earlier writes walk back through them.
+			const asItWas = plan.same.filter(changed);
+			if (plan.restore.some(changed) || (asItWas.length > 0 && !plan.skip.some(changed))) {
 				// As the activity log's undo: what it changes of the site is told to the receivers (an entry off the site again).
 				const done = await undoWithEvents(engine, db, item.activity_id, emit, ownStep);
 				const now = await loadRecords(engine, db, done.restore);
@@ -761,6 +764,12 @@ export async function revertProposal(
 						was: found[recordKey(ref)] ?? null,
 					});
 				for (const ref of done.skip) walked.delete(recordKey(ref));
+				const held = await loadRecords(engine, db, asItWas);
+				for (const ref of asItWas)
+					walked.set(recordKey(ref), {
+						now: held.get(recordKey(ref))?.version ?? null,
+						was: found[recordKey(ref)] ?? null,
+					});
 				outcome = { state: "reverted", stayed: done.skip.filter(changed).length };
 			} else {
 				// Nothing of what it changed can go back: the write is left as it is, not used up as undone.
@@ -945,17 +954,26 @@ export async function viewProposal(
 	};
 }
 
+/** A pending proposal item a person took into a screen's draft, as the write that saves the draft finds it. */
+type TakenItem = {
+	id: string;
+	proposalId: string;
+	conversationId: string /** The records it is aimed at, by key. */;
+	records: string[];
+};
+
 /**
- * Items a person took in a screen and saved with the screen's own write (doc 05): they become applied, tied to that write's activity row, so the
- * activity log shows them with ✦ and their conversation, and undoing the write undoes them. Only pending items are taken.
+ * The items a person took in a screen and saves with the screen's own write (doc 05), checked before the write runs: each must exist, and each
+ * pending one must be aimed at a record this write touches. One record is enough: a person may take an item and put part of it back before saving
+ * (its change of the site's name undone, its change of the languages kept), and the part that is kept is saved with the item. An item aimed at none
+ * of the write's records belongs to another screen and refuses the write, before it has written anything.
  */
-export async function markApplied(
+export async function acceptedItems(
 	trx: Transaction<Database>,
 	itemIds: string[],
-	activityId: string,
-	records: RecordRef[],
-): Promise<string | null> {
-	if (itemIds.length === 0) return null;
+	touched: RecordRef[],
+): Promise<TakenItem[]> {
+	if (itemIds.length === 0) return [];
 	const accepted = [...new Set(itemIds)];
 	const items = await trx
 		.selectFrom("monti_proposal_item")
@@ -968,27 +986,41 @@ export async function markApplied(
 			"monti_proposal.conversation_id",
 		])
 		.where("monti_proposal_item.id", "in", accepted)
+		// Held until the write ends, so two writes cannot both take the same item.
+		.forUpdate()
 		.execute();
 	if (items.length !== accepted.length) throw new CheckError({ key: "proposals.unknownAccepted" });
-	const targets = new Set(records.map(recordKey));
+	const targets = new Set(touched.map(recordKey));
 	const pending = items.filter((item) => item.state === "pending");
-	if (
-		pending.some((item) => {
-			const proposed = Object.keys(item.base_versions);
-			return proposed.length === 0 || proposed.some((key) => !targets.has(key));
-		})
-	)
+	if (pending.some((item) => !Object.keys(item.base_versions).some((key) => targets.has(key))))
 		throw new CheckError({ key: "proposals.wrongTarget" });
-	if (pending.length === 0) return null;
+	return pending.map((item) => ({
+		id: item.id,
+		proposalId: item.proposal_id,
+		conversationId: item.conversation_id,
+		records: Object.keys(item.base_versions),
+	}));
+}
+
+/**
+ * Marks the taken items applied, tied to the write's activity row, so the activity log shows them with ✦ and their conversation, and undoing the
+ * write undoes them. Run after the write itself, in its transaction: a write that fails leaves them pending.
+ */
+export async function markApplied(
+	trx: Transaction<Database>,
+	taken: TakenItem[],
+	activityId: string,
+): Promise<string | null> {
+	if (taken.length === 0) return null;
 	await trx
 		.updateTable("monti_proposal_item")
 		.set({ state: "applied", activity_id: activityId })
 		.where(
 			"id",
 			"in",
-			pending.map((item) => item.id),
+			taken.map((item) => item.id),
 		)
 		.execute();
-	for (const proposalId of new Set(pending.map((item) => item.proposal_id))) await settleProposal(trx, proposalId);
-	return pending[0]?.conversation_id ?? null;
+	for (const proposalId of new Set(taken.map((item) => item.proposalId))) await settleProposal(trx, proposalId);
+	return taken[0]?.conversationId ?? null;
 }

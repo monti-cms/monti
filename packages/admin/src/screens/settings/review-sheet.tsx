@@ -20,23 +20,27 @@ import {
 	Stack,
 	TextButton,
 } from "@monti-cms/ui";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
+import { type AddressPlace, addressOfProblem } from "./basics-tab";
 import { PickOne } from "./pick-one";
 import { at } from "./schema-draft";
-import type { CollectionsDraft } from "./use-collections-draft";
+import type { SettingsDraft } from "./use-settings-draft";
 
-/** What `schema.plan` answers: what must be fixed first, and each change with its choices (the first is the default). */
-/** A change of a collection. The languages' changes are the language tab's (doc 04), never in this review. */
-export type CollectionChange = SchemaChange & { collection: string };
+/** A change or a problem of a collection, as against one of the languages (which names none). */
+type CollectionChange = SchemaChange & { collection: string };
 export const ofCollection = <T extends { collection?: string }>(item: T): item is T & { collection: string } =>
 	item.collection !== undefined;
-export type Plan = { problems: unknown[]; changes: CollectionChange[] };
+/**
+ * What `schema.plan` answers: what must be fixed first, and each change with its choices (the first is the default). The collections' changes and the
+ * languages' are reviewed on one sheet (doc 12, 2026-11-11).
+ */
+export type Plan = { problems: unknown[]; changes: SchemaChange[] };
 
 /** The person's pick for one change: the radio, and the extra answer a pick may need (the field to move values to, the value to fill). */
 type Pick = { radio: string; move?: string; fill?: unknown };
 
-const firstPick = (change: CollectionChange): Pick | null => {
+const firstPick = (change: SchemaChange): Pick | null => {
 	const first = change.choices?.[0];
 	if (!first) return null;
 	if (first.do === "renameField") return { radio: first.values };
@@ -50,7 +54,7 @@ const firstPick = (change: CollectionChange): Pick | null => {
 	return { radio: "confirm" };
 };
 
-const answerOf = (change: CollectionChange, pick: Pick): Choice | null => {
+const answerOf = (change: SchemaChange, pick: Pick): Choice | null => {
 	const first = change.choices?.[0];
 	if (!first) return null;
 	if (first.do === "renameField") return { do: "renameField", values: pick.radio as "move" | "empty" };
@@ -58,12 +62,16 @@ const answerOf = (change: CollectionChange, pick: Pick): Choice | null => {
 		return { do: "removeField", values: pick.radio === "move" && pick.move ? { move: pick.move } : "clear" };
 	if (first.do === "addRequiredField")
 		return { do: "addRequiredField", fill: pick.radio === "fill" ? pick.fill : null };
-	return { do: "removeCollection", confirm: true };
+	// Nothing to choose: the answer is the red button itself.
+	return first.do === "removeLocale"
+		? { do: "removeLocale", confirm: true }
+		: { do: "removeCollection", confirm: true };
 };
 
 /** A pick that throws stored values away: the apply pill turns into the red delete-and-apply (change.md). */
-const deletes = (change: CollectionChange, pick: Pick | undefined) =>
+const deletes = (change: SchemaChange, pick: Pick | undefined) =>
 	change.do === "removeCollection" ||
+	change.do === "removeLocale" ||
 	(change.do === "removeField" && pick?.radio !== "move") ||
 	(change.do === "renameField" && pick?.radio === "empty");
 
@@ -82,8 +90,11 @@ export function ReviewSheet({
 	onClose,
 	onApply,
 	onOpenField,
+	onOpenAddress,
+	onOpenLanguages,
+	afterApply,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	plan: Plan | null;
 	conflict: boolean;
 	/** Why the last apply was refused (not a conflict): it stays at the top of the review until the next try. */
@@ -94,6 +105,12 @@ export function ReviewSheet({
 	onApply: (answers: Answers) => void;
 	/** Opens a field's sheet from a line of what is to fix. */
 	onOpenField: (collection: string, key: string) => void;
+	/** Goes to a collection's address field in its basics tab (a problem of its public or its preview address). */
+	onOpenAddress: (collection: string, place: AddressPlace) => void;
+	/** Opens the language tab from a line of what is to fix. */
+	onOpenLanguages: () => void;
+	/** Where the keyboard's focus goes once an apply made with it has closed the sheet (the open tab's name). */
+	afterApply?: () => HTMLElement | null;
 }) {
 	return (
 		<Sheet open={plan !== null} onOpenChange={(next) => !next && !applying && onClose()}>
@@ -108,6 +125,9 @@ export function ReviewSheet({
 					onClose={onClose}
 					onApply={onApply}
 					onOpenField={onOpenField}
+					onOpenAddress={onOpenAddress}
+					onOpenLanguages={onOpenLanguages}
+					afterApply={afterApply}
 				/>
 			) : null}
 		</Sheet>
@@ -124,8 +144,11 @@ function Body({
 	onClose,
 	onApply,
 	onOpenField,
+	onOpenAddress,
+	onOpenLanguages,
+	afterApply,
 }: {
-	model: CollectionsDraft;
+	model: SettingsDraft;
 	plan: Plan;
 	conflict: boolean;
 	/** Why the last apply was refused (not a conflict): it stays at the top of the review until the next try. */
@@ -135,14 +158,37 @@ function Body({
 	onClose: () => void;
 	onApply: (answers: Answers) => void;
 	onOpenField: (collection: string, key: string) => void;
+	/** Goes to a collection's address field in its basics tab (a problem of its public or its preview address). */
+	onOpenAddress: (collection: string, place: AddressPlace) => void;
+	onOpenLanguages: () => void;
+	afterApply?: () => HTMLElement | null;
 }) {
 	const { t } = useAdmin();
 	// What must be fixed before the change can be applied: told here, when saving, each line opening its field (flow 4, step 09).
 	const problems = model.problems;
+	const languageName = (code: string | undefined) => model.locales.find((row) => row.code === code)?.name ?? code ?? "";
 	const fixFirst = problems.map((problem) => {
+		// A problem of the languages (the source is not in the list): its line opens the language tab, where the row can be put back.
+		if (!ofCollection(problem))
+			return (
+				<ChangeGroup
+					key={`languages:${problem.locale}:${problem.code}`}
+					kind="drop"
+					tag={t("settings.review.toFix")}
+					title={languageName(problem.locale) || t("settings.tab.languages")}
+					identifier={problem.locale}
+				>
+					<Inline gap={12} align="baseline">
+						<ChangeNote danger>{t(`settings.problem.${problem.code}`)}</ChangeNote>
+						<TextButton onClick={onOpenLanguages}>{t("settings.review.open")}</TextButton>
+					</Inline>
+				</ChangeGroup>
+			);
 		const key = problem.field
 			? model.fields(problem.collection).find((each) => model.fieldName(problem.collection, each) === problem.field)
 			: undefined;
+		// A problem of an address has its field in the basics tab.
+		const address = problem.field ? null : addressOfProblem(problem.code);
 		return (
 			<ChangeGroup
 				key={`${problem.collection}:${problem.field}:${problem.code}`}
@@ -155,6 +201,10 @@ function Body({
 					<ChangeNote danger>{t(`settings.problem.${problem.code}`)}</ChangeNote>
 					{key ? (
 						<TextButton onClick={() => onOpenField(problem.collection, key)}>{t("settings.review.open")}</TextButton>
+					) : address ? (
+						<TextButton onClick={() => onOpenAddress(problem.collection, address)}>
+							{t("settings.review.open")}
+						</TextButton>
 					) : null}
 				</Inline>
 			</ChangeGroup>
@@ -188,9 +238,56 @@ function Body({
 	};
 	const unchanged = <ChangeNote>{t("settings.review.dataSame")}</ChangeNote>;
 	const danger = plan.changes.some((change) => deletes(change, picks[change.id]));
-	const collections = [...new Set(plan.changes.map((change) => model.label(change.collection)))].join(", ");
+	// What the sheet is about: the languages when one of them changes, then each collection that does.
+	const subjects = [
+		...(plan.changes.some((change) => !ofCollection(change)) ? [t("settings.tab.languages")] : []),
+		...new Set(plan.changes.filter(ofCollection).map((change) => model.label(change.collection))),
+	].join(", ");
+	/** A change of the languages (doc 04): one added touches nothing, one taken out takes its translations, a new source gets drafts where it has no entry. */
+	const languageBlock = (change: SchemaChange) => {
+		const name = languageName(change.locale);
+		switch (change.do) {
+			case "addLocale":
+				return (
+					<ChangeGroup key={change.id} kind="new" tag={t("changes.new")} title={name} identifier={change.locale}>
+						{unchanged}
+					</ChangeGroup>
+				);
+			case "removeLocale":
+				return (
+					<ChangeGroup key={change.id} kind="drop" tag={t("changes.removed")} title={name} identifier={change.locale}>
+						<ChangeNote danger>{t("settings.review.localeGoes")}</ChangeNote>
+					</ChangeGroup>
+				);
+			case "changeSource":
+				return (
+					<ChangeGroup key={change.id} kind="edit" tag={t("changes.source")} title={name} identifier={change.locale}>
+						<ChangeLines>
+							<ChangeLine what={t("settings.review.before")} then={languageName(change.from)} />
+							<ChangeLine what={t("settings.review.after")} then={name} />
+						</ChangeLines>
+						{change.count ? (
+							<ChangeNote>{t("settings.review.sourceDrafts", { count: change.count })}</ChangeNote>
+						) : null}
+					</ChangeGroup>
+				);
+			case "changePrefix":
+				return (
+					<ChangeGroup key={change.id} kind="edit" tag={t("changes.path")} title={t("settings.site.prefix")}>
+						<ChangeLines>
+							<ChangeLine what={t("settings.review.before")} then={t(`settings.site.prefix.${change.from}`)} />
+							<ChangeLine what={t("settings.review.after")} then={t(`settings.site.prefix.${change.to}`)} />
+						</ChangeLines>
+						<ChangeNote>{t("settings.review.oldAddresses")}</ChangeNote>
+					</ChangeGroup>
+				);
+			default:
+				return null;
+		}
+	};
 
-	const block = (change: CollectionChange) => {
+	const block = (change: SchemaChange) => {
+		if (!ofCollection(change)) return languageBlock(change);
 		const c = change.collection;
 		const current = picks[change.id];
 		const count = (n: number | undefined) => (n === undefined ? undefined : t("settings.review.count", { count: n }));
@@ -374,6 +471,8 @@ function Body({
 		}
 	};
 
+	/** Whether the apply was pressed with a key. */
+	const byKeys = useRef(false);
 	const apply = () => {
 		const answers: Answers = {};
 		for (const change of plan.changes) {
@@ -385,10 +484,12 @@ function Body({
 	};
 
 	return (
-		<SheetContent>
+		// Applied from the keyboard, the sheet goes with the save group that opened it: the focus goes where that group's would, not to the page.
+		// Closed any other way, or applied with a pointer (which holds no focus), it is the sheet's own to give back.
+		<SheetContent finalFocus={() => (byKeys.current ? (afterApply?.() ?? true) : true)}>
 			<SheetHeader closable={!applying}>
 				<SheetTitle
-					of={`· ${collections} · ${t("settings.review.changes", { count: plan.changes.length })}`}
+					of={`· ${subjects} · ${t("settings.review.changes", { count: plan.changes.length })}`}
 					ofMono={false}
 				>
 					{t("settings.review.title")}
@@ -408,7 +509,8 @@ function Body({
 						</Box>
 					) : null}
 					{fixFirst}
-					{plan.changes.map(block)}
+					{/* The languages first, then the collections: the order the sheet's title names them in. */}
+					{[...plan.changes.filter((change) => !ofCollection(change)), ...plan.changes.filter(ofCollection)].map(block)}
 				</Stack>
 			</SheetBody>
 			<SheetFooter>
@@ -420,7 +522,15 @@ function Body({
 				{problems.length > 0 ? null : conflict ? (
 					<Button onClick={onReload}>{t("settings.reload")}</Button>
 				) : (
-					<Button variant={danger ? "danger" : "primary"} loading={applying} onClick={apply}>
+					<Button
+						variant={danger ? "danger" : "primary"}
+						loading={applying}
+						onClick={(event) => {
+							// A press made by a key carries no pointer's count.
+							byKeys.current = event.detail === 0;
+							apply();
+						}}
+					>
 						{danger ? t("settings.review.applyDelete") : t("settings.review.apply")}
 					</Button>
 				)}

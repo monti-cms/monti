@@ -12,8 +12,11 @@ import { useCallback, useRef } from "react";
 /** What can take the keyboard's focus, by what it is; whether the Tab key stops on each is asked of it (`stopsTab`). */
 const FOCUSABLE = 'a[href], button, input, select, textarea, [contenteditable="true"], [tabindex]';
 
+/** What is drawn over the page and is no part of it: the toasts. */
+const NOT_THE_PAGE = "[data-sonner-toaster]";
+
 /**
- * Whether the Tab key stops on it: in the tab order (not `tabindex="-1"`: an unpicked tab of a row the arrow keys move in, a part's own hidden
+ * Whether the Tab key stops on it in the page: in the tab order (not `tabindex="-1"`: an unpicked tab of a row the arrow keys move in, a part's own hidden
  * input), not off, and drawn.
  */
 function stopsTab(element: HTMLElement) {
@@ -21,6 +24,8 @@ function stopsTab(element: HTMLElement) {
 	if (order !== null && Number(order) < 0) return false;
 	if (element.matches(':disabled, [aria-disabled="true"], input[type="hidden"]')) return false;
 	if (element.closest('[inert], [aria-hidden="true"]')) return false;
+	// A toast's button stands over the page, not in it: the Tab key comes to it last, and a focus handed to "the page's first control" is not its.
+	if (element.closest(NOT_THE_PAGE)) return false;
 	return element.getClientRects().length > 0 && getComputedStyle(element).visibility === "visible";
 }
 
@@ -66,7 +71,13 @@ function focusFirstStopWhenDrawn() {
 		letGo();
 		if (document.activeElement === document.body) found.focus();
 	});
-	drawn.observe(document.body, { childList: true, subtree: true });
+	// Drawn, or switched on: a first control that is there but off (a pill waiting for its read) becomes a stop by an attribute alone.
+	drawn.observe(document.body, {
+		childList: true,
+		subtree: true,
+		attributes: true,
+		attributeFilter: ["disabled", "aria-disabled", "aria-hidden", "inert", "hidden", "tabindex", "class", "style"],
+	});
 	const limit = setTimeout(letGo, DRAWN_WITHIN);
 	for (const event of THEIR_OWN) addEventListener(event, letGo, true);
 }
@@ -133,6 +144,9 @@ function whenKeysAreUp(run: () => void) {
 	addEventListener("blur", up);
 }
 
+/** Keys that press nothing by themselves. */
+const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph", "Fn"]);
+
 /** Where a focus goes: the thing that takes it, or what gives it (the text, two frames on), or nowhere. */
 type HandedTo = HTMLElement | (() => void) | null | undefined;
 
@@ -171,6 +185,16 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 			held = null;
 		};
 		addEventListener("pointerdown", letGo, true);
+		// A key pressed with the focus still inside is the keyboard holding it again: a pointer's press that moved no focus (a table tool that
+		// keeps the caret, a scroll bar dragged) made this forget a control the keyboard never left.
+		// Only a key that does something with the focus, on a focus the keyboard shows: a pointer's user who holds Shift has not taken the
+		// keyboard up, and nothing is ever moved under a pointer.
+		const again = (event: KeyboardEvent) => {
+			if (MODIFIERS.has(event.key)) return;
+			const on = document.activeElement;
+			if (on instanceof Element && node.contains(on) && on.matches(":focus-visible")) held = on;
+		};
+		addEventListener("keydown", again, true);
 		// Its own control went and it stayed (a banner that still has something to say): the focus that control held is handed on the same way.
 		const inside = new MutationObserver(() => {
 			if (!held || held.isConnected || !node.isConnected) return;
@@ -181,9 +205,13 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 		return () => {
 			removeEventListener("focusin", keep, true);
 			removeEventListener("pointerdown", letGo, true);
+			removeEventListener("keydown", again, true);
 			inside.disconnect();
 			const focused = document.activeElement;
-			if (focused instanceof HTMLElement && node.contains(focused) && focused.matches(":focus-visible")) hand();
+			if (focused instanceof HTMLElement && node.contains(focused) && focused.matches(":focus-visible")) return hand();
+			// A part that takes its own node out before it lets the ref go (a menu's list, drawn outside the page): by now the focus has
+			// fallen to the page with no event. What the keyboard held in it is remembered, and is handed on the same.
+			if (held && !held.isConnected && (focused === null || focused === document.body)) hand();
 		};
 	}, []);
 }

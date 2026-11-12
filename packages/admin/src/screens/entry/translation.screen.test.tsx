@@ -106,13 +106,26 @@ describe("flow 3, a translation", () => {
 		await open(LanguageMenu);
 		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
 		const rows = await page.getByRole("menuitem").all();
-		expect(rows.map((row) => row.element().textContent)).toEqual(["日本語ja"]);
+		// After the languages to translate into, the way to the site's languages (editor.md).
+		expect(rows.map((row) => row.element().textContent)).toEqual(["日本語ja", "언어 관리"]);
 	});
 
-	it("T68 with every language already there, '+ 언어' is not offered: adding a language is the settings' (T92)", async () => {
+	it("T92 '언어 관리' in the '+ 언어' menu goes to settings › languages", async () => {
+		await open(LanguageMenu);
+		await userEvent.click(page.getByRole("menuitem", { name: "언어 관리" }));
+		await expect.element(page.getByRole("list", { name: "콘텐츠 언어" })).toBeVisible();
+		expect(window.location.hash).toBe("#/settings/languages");
+	});
+
+	it("T92 with every language already there, '+ 언어' has one row that goes to settings › languages, where a language is added", async () => {
 		await open(siteOf(stories.site("all", "korean")));
 		await expect.element(tab("日本語")).toBeVisible();
-		await expect.element(addLanguage()).not.toBeInTheDocument();
+		await userEvent.click(addLanguage());
+		const rows = await page.getByRole("menuitem").all();
+		expect(rows.map((row) => row.element().textContent)).toEqual(["언어 추가 · 설정"]);
+		await userEvent.click(page.getByRole("menuitem", { name: "언어 추가 · 설정" }));
+		await expect.element(page.getByRole("list", { name: "콘텐츠 언어" })).toBeVisible();
+		expect(window.location.hash).toBe("#/settings/languages");
 	});
 
 	it("04-1 3.02 picking a language opens the new translation: every block faint, the address copied, one to-do open", async () => {
