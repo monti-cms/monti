@@ -522,6 +522,20 @@ const MIGRATIONS: Record<string, Migration> = {
 	},
 };
 
+/**
+ * The core's steps this database has not run, by name, in order (`monti doctor`): every step when the tables are not made yet. It reads only: no
+ * table is made and no step runs.
+ */
+export async function pendingMigrations(db: Kysely<Database>): Promise<string[]> {
+	const { rows } = await sql<{ schema: string; made: string | null }>`
+		select current_schema() as schema, to_regclass('monti_migration')::text as made`.execute(db);
+	if (rows[0].made === null) return Object.keys(MIGRATIONS);
+	const done = new Set(
+		(await sql<{ name: string }>`select name from monti_migration`.execute(db)).rows.map((row) => row.name),
+	);
+	return Object.keys(MIGRATIONS).filter((name) => !done.has(name));
+}
+
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */
 const RACE_TRIES = 30;
 

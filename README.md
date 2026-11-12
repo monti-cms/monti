@@ -39,10 +39,17 @@ npm install \
   https://github.com/monti-cms/monti/releases/download/v<version>/monti-cms-core-<version>.tgz \
   https://github.com/monti-cms/monti/releases/download/v<version>/monti-cms-admin-<version>.tgz \
   https://github.com/monti-cms/monti/releases/download/v<version>/monti-cms-next-<version>.tgz
+npx monti init        # writes the site's Monti files, adds what .env.local lacks, says what is left
+npx monti doctor      # checks the set-up: files, environment, database, storage
 ```
 
-What a site then writes (four small files) is in [`packages/next`](packages/next), and [`examples/blog`](examples/blog) is a whole site.
-The admin brings its own stylesheet, already built: the site needs no Tailwind for it.
+`monti init` asks four things (the admin's address, the site's language, how the admin signs in, where media files go); each has a flag,
+and `-y` takes the defaults. It writes only files the site lacks and never writes over one, so it can be run again. What it writes is in
+[`packages/next`](packages/next), and [`examples/blog`](examples/blog) is a whole site. The admin brings its own stylesheet, already
+built: the site needs no Tailwind for it.
+
+The `monti` command reads the site's env files in the order Next does: what the environment already holds, then `.env.<mode>.local`,
+`.env.local`, `.env.<mode>`, `.env` (`<mode>` is `NODE_ENV`, or `development`). `--env-file <path>` names one more, read first.
 
 ## Development
 

@@ -12,6 +12,11 @@ export type Storage = {
 	remove(key: string): Promise<void>;
 	/** The address the admin and the site load the file from. */
 	url(key: string): string;
+	/**
+	 * `"folder"` when the files are on this machine's disk (`localFolderStorage`): `monti doctor` says so on a host that keeps no disk. Other
+	 * storages leave it out.
+	 */
+	kind?: "folder";
 };
 
 /** Files in memory, for tests and Storybook: in a browser a key's address is an object URL, so the picture really loads. */
