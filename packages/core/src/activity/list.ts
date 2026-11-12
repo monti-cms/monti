@@ -34,6 +34,21 @@ export const ActivityQuery = z.object({
 	 * read, so a page starts where the one before it ended while new activity arrives. Left out, the log as it is now.
 	 */
 	asOf: z.string().regex(/^\d+$/).optional(),
+	/**
+	 * The page this one is reached from in the same browsing: its number, the places of its first and last lines (`first`, `last` of its
+	 * answer) and the browsing's `total`. The page is then read by place, not by counting lines from the top: a line that was being written
+	 * when the browsing began and is committed since has an older place than the boundary, and counted from the top it would push every later
+	 * line down one, so the next page would begin with this page's last line. Read from the last line's place, nothing repeats; that late
+	 * line is on no page of this browsing, as a line that began after it is not. Left out, the page is counted from the top.
+	 */
+	from: z
+		.object({
+			page: z.number().int().min(1),
+			first: z.string().regex(/^\d+$/),
+			last: z.string().regex(/^\d+$/),
+			total: z.number().int().min(0),
+		})
+		.optional(),
 });
 export type ActivityQuery = z.infer<typeof ActivityQuery>;
 
@@ -69,7 +84,14 @@ export type ActivityLine = {
 
 export type ActivityList = {
 	lines: ActivityLine[];
+	/**
+	 * How many lines the browsing has: counted when its first page is read, and the same number on every page reached from it (`from`), so the
+	 * count under the list does not move while a person pages. A new browsing counts again.
+	 */
 	total: number;
+	/** The places of this page's first and last lines, to reach another page from it (`from`); `null` on a page with no line. */
+	first: string | null;
+	last: string | null;
 	/** The newest line there was when this was read: pass it with the next pages of the same browsing. */
 	asOf: string;
 	/** Whether the log shows deliveries at all: the site has a receiver, or once had one whose deliveries are still here. */
@@ -260,6 +282,38 @@ async function entryFilter(db: Db, id: string): Promise<{ ids: string[]; title: 
 	return { ids: [id], title: logged?.title ?? "" };
 }
 
+/**
+ * One page of line heads under `where`, in the order shown (`newestFirst`, or oldest first). Reached from another page of the browsing
+ * (`query.from`), it is read from that page's edge: the lines after its last one going on, the lines before its first one going back, as many
+ * pages away as the two numbers say. Without `from` it is counted from the top.
+ */
+async function readPage(
+	db: Db,
+	where: ReturnType<typeof sql>,
+	query: Pick<ActivityQuery, "page" | "pageSize" | "from">,
+	newestFirst: boolean,
+): Promise<{ line: string; seq: string }[]> {
+	const { page, pageSize, from } = query;
+	const read = async (edge: ReturnType<typeof sql> | null, forward: boolean, skip: number) => {
+		// Forward is the order shown; backward reads the other way from the edge and is turned round.
+		const descending = forward === newestFirst;
+		const { rows } = await sql<{
+			line: string;
+			seq: string;
+		}>`select h.id as line, h.seq::text as seq from monti_activity h
+			where ${edge === null ? where : sql`${where} and ${edge}`}
+			order by h.seq ${descending ? sql`desc` : sql`asc`} limit ${pageSize} offset ${skip * pageSize}`.execute(db);
+		return forward ? rows : rows.reverse();
+	};
+	if (!from) return read(null, true, page - 1);
+	const after = (seq: string) => (newestFirst ? sql`h.seq < ${seq}` : sql`h.seq > ${seq}`);
+	const before = (seq: string) => (newestFirst ? sql`h.seq > ${seq}` : sql`h.seq < ${seq}`);
+	if (page > from.page) return read(after(from.last), true, page - from.page - 1);
+	if (page < from.page) return read(before(from.first), false, from.page - page - 1);
+	// The same page again: from its own first line on.
+	return read(sql`not (${before(from.first)})`, true, 0);
+}
+
 export async function listActivity(
 	db: Db,
 	query: ActivityQuery,
@@ -308,9 +362,14 @@ export async function listActivity(
 				),
 	].filter((condition) => condition !== null);
 	const where = sql.join(conditions, sql` and `);
-	const page = await sql<{ line: string }>`select h.id as line from monti_activity h where ${where}
-		order by h.seq desc limit ${query.pageSize} offset ${(query.page - 1) * query.pageSize}`.execute(db);
-	const total = await sql<{ count: string }>`select count(*) as count from monti_activity h where ${where}`.execute(db);
+	const page = await readPage(db, where, query, true);
+	// Counted once for a browsing: a page reached from another answers the number that one had.
+	const total =
+		query.from?.total ??
+		Number(
+			(await sql<{ count: string }>`select count(*) as count from monti_activity h where ${where}`.execute(db)).rows[0]
+				?.count ?? 0,
+		);
 	const states = await db
 		.selectFrom("monti_delivery")
 		.select(["state", (eb) => eb.fn.countAll<string>().as("count")])
@@ -323,11 +382,13 @@ export async function listActivity(
 		lines: (
 			await linesOf(
 				db,
-				page.rows.map((row) => row.line),
+				page.map((row) => row.line),
 				options.now,
 			)
 		).map(({ line }) => line),
-		total: Number(total.rows[0]?.count ?? 0),
+		total,
+		first: page[0]?.seq ?? null,
+		last: page.at(-1)?.seq ?? null,
 		asOf,
 		deliveries: options.receivers || states.length > 0,
 		deliveryCounts,

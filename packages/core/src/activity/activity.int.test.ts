@@ -1433,6 +1433,80 @@ describe("the log", () => {
 		expect(whats(await list({ pageSize: 1 }, monti))).toEqual(['"끼어든 글" 만듦']);
 	});
 
+	it("13-3 a line that was being written when a browsing began and is committed during it repeats no line on the next page, and the count stays", async () => {
+		const monti = site();
+		for (let index = 1; index <= 5; index++) await newPost(`글 ${index}`, `post-${index}`, monti);
+		const whats = (page: ActivityList) => page.lines.map((line) => said(line)[0]);
+		// Another request's write: its row has its place in the order already, and is not committed yet.
+		let commit = () => {};
+		const gate = new Promise<void>((resolve) => {
+			commit = resolve;
+		});
+		let placed = () => {};
+		const written = new Promise<void>((resolve) => {
+			placed = resolve;
+		});
+		const late = db.transaction().execute(async (trx) => {
+			const id = "00000000-0000-4000-8000-00000000aaaa";
+			await trx
+				.insertInto("monti_activity")
+				.values({
+					id,
+					line: id,
+					at: clock,
+					actor: JSON.stringify("admin"),
+					operation: "entries.save",
+					summary: JSON.stringify({ key: "entries.save", values: { title: "늦게 끝난 저장" } }),
+					place: null,
+					targets: JSON.stringify([]),
+					kind: "save",
+					listed: true,
+					conversation_id: null,
+					proposal_item_id: null,
+					proposal_id: null,
+					undo_until: null,
+					undone_at: null,
+				})
+				.execute();
+			placed();
+			await gate;
+		});
+		await written;
+		// A newer write begins and commits while that one is still open.
+		await newPost("글 6", "post-6", monti);
+		const first = await list({ pageSize: 2 }, monti);
+		expect(whats(first)).toEqual(['"글 6" 만듦', '"글 5" 만듦']);
+		expect(first.total).toBe(6);
+		// The older write commits: its place is inside the browsing's boundary, between the lines of page 1.
+		commit();
+		await late;
+		const from = (page: number, of: ActivityList) => ({
+			page,
+			first: of.first as string,
+			last: of.last as string,
+			total: of.total,
+		});
+		// Read from page 1's last line, page 2 begins after it: counted from the top it would begin with "글 5" again.
+		const second = await list({ pageSize: 2, page: 2, asOf: first.asOf, from: from(1, first) }, monti);
+		expect(whats(second)).toEqual(['"글 4" 만듦', '"글 3" 만듦']);
+		expect(whats(await list({ pageSize: 2, page: 2, asOf: first.asOf }, monti))[0]).toBe('"글 5" 만듦');
+		// The count under the list is the browsing's, on every page of it.
+		expect(second.total).toBe(first.total);
+		// Two pages on from page 1, and back again, by the same places.
+		const third = await list({ pageSize: 2, page: 3, asOf: first.asOf, from: from(1, first) }, monti);
+		expect(whats(third)).toEqual(['"글 2" 만듦', '"글 1" 만듦']);
+		expect(whats(await list({ pageSize: 2, page: 2, asOf: first.asOf, from: from(3, third) }, monti))).toEqual(
+			whats(second),
+		);
+		expect(whats(await list({ pageSize: 2, page: 2, asOf: first.asOf, from: from(2, second) }, monti))).toEqual(
+			whats(second),
+		);
+		// A new browsing has the late line, and counts it.
+		const fresh = await list({ pageSize: 10 }, monti);
+		expect(fresh.total).toBe(7);
+		expect(whats(fresh)[1]).toBe('"늦게 끝난 저장" 저장');
+	});
+
 	it("13-3 a row keeps a bounded length of the words it is found by, however many records its write touched", async () => {
 		const monti = site();
 		const ids = [];
@@ -1489,6 +1563,8 @@ describe("the log", () => {
 		expect(await list()).toEqual({
 			lines: [],
 			total: 0,
+			first: null,
+			last: null,
 			asOf: "0",
 			deliveries: true,
 			deliveryCounts: { pending: 0, sent: 0, failed: 0, canceled: 0 },
@@ -1550,15 +1626,15 @@ describe("undo from the log", () => {
 	it("13-3 an undo that also takes a stale mark off an entry records where the entry ends: the line before it can still be undone, and the event says that version", async () => {
 		const monti = site();
 		const entry = await newPost("처음 제목", "first-post", monti);
-		// A mark of a field the schema no longer tracks, as an entry written before the schema changed carries: an undo that brings it back takes
-		// it off again, and the entry moves on a version with that.
+		later(MINUTE);
+		const older = (await save(entry, { title: "둘째 제목" }, monti)).activityId;
+		// A mark of a field the schema no longer tracks, as an entry written before the schema changed carries. The newer save's snapshot holds
+		// it: the undo of that save brings it back, takes it off again, and the entry moves on a version with that.
 		await db
 			.updateTable("entries")
 			.set({ translation_seen: JSON.stringify({ gone: 1 }) })
 			.where("id", "=", entry)
 			.execute();
-		later(MINUTE);
-		const older = (await save(entry, { title: "둘째 제목" }, monti)).activityId;
 		later(MINUTE);
 		const newer = (await save(entry, { title: "셋째 제목" }, monti)).activityId;
 		sent.length = 0;
