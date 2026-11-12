@@ -100,11 +100,16 @@ const walk = (dir) => {
 walk(dist);
 
 const SPEC =
-	/((?:from|import)\s*\(?\s*|export\s+\*\s+from\s+|export\s+\*\s+as\s+\w+\s+from\s+)(["'])(\.{1,2}(?:\/[^"']*)?)\2/g;
+	/((?<![.\w$])(?:from|import)\s*\(?\s*|export\s+\*\s+from\s+|export\s+\*\s+as\s+\w+\s+from\s+)(["'])(\.{1,2}(?:\/[^"']*)?)\2/g;
 const resolveSpec = (file, spec) => {
 	if (/\.(js|mjs|cjs|json|css)$/.test(spec)) return spec;
-	// A folder named by dots alone (`from ".."`, a type import of the folder's index): Node's own resolution reads no folder, so its index is named.
-	if (/^\.{1,2}\/?$/.test(spec)) return `${spec.replace(/\/$/, "")}/index.js`;
+	// A folder named by dots alone (`import("..")`, which tsc writes into a declaration for a type of the folder's index): Node's own
+	// resolution reads no folder, so its index is named. Only in declarations, and only where that index is: code does not import this way,
+	// and a string that merely looks like it (`Array.from(".")` is kept out by the pattern too) is left alone.
+	if (/^\.{1,2}\/?$/.test(spec)) {
+		const index = path.join(path.resolve(path.dirname(file), spec), "index.d.ts");
+		return file.endsWith(".d.ts") && existsSync(index) ? `${spec.replace(/\/$/, "")}/index.js` : spec;
+	}
 	const base = path.resolve(path.dirname(file), spec);
 	if (existsSync(`${base}.js`) || existsSync(`${base}.d.ts`)) return `${spec}.js`;
 	if (existsSync(path.join(base, "index.js")) || existsSync(path.join(base, "index.d.ts"))) return `${spec}/index.js`;

@@ -47,6 +47,51 @@ export function withBundleAddresses(manifest, base) {
 	return out;
 }
 
+/**
+ * `sideEffects` as the tarball must say it. In the repo it names sources (`./src/admin.tsx`, the file that brings the admin's stylesheet); the
+ * sources do not ship, so left as it is every built file would count as free of side effects and a bundler could drop the stylesheet's import.
+ * A source becomes its built file, and a package that names any file with side effects names its stylesheets too.
+ */
+export function builtSideEffects(sideEffects) {
+	if (!Array.isArray(sideEffects)) return sideEffects;
+	const built = sideEffects.map((file) => file.replace(/^\.\/src\//, "./dist/").replace(/\.tsx?$/, ".js"));
+	return built.some((file) => file.endsWith(".css")) ? built : [...built, "**/*.css"];
+}
+
+/**
+ * The bundle's README, which is also a release's notes: the lines a site installs by. With a base the packages follow each other from the
+ * bundle's address, so a site names the three it uses; without one they name each other by a version that is on no registry, so every
+ * tarball is installed together. It names no command that does not exist yet: the files a site writes are in the adapter's README.
+ */
+export function bundleReadme({ version, packages, base }) {
+	const where = (tarball) => (base ? `${base.replace(/\/$/, "")}/${tarball}` : `./${tarball}`);
+	// What a Next site uses itself, the core first.
+	const site = ["core", "admin", "next"].flatMap((short) => packages.filter(({ name }) => name === `${SCOPE}${short}`));
+	const install = base ? site : packages;
+	const how = base
+		? "The packages name each other by this bundle's address, so a site installs the ones it uses and the rest follow."
+		: "The packages name each other by version, and that version is on no registry: install every tarball together, from the folder they are in.";
+	return `# Monti ${version}
+
+One tarball for each package. ${how}
+
+A Next.js site (App Router, Next 16 or later), with npm:
+
+\`\`\`sh
+npm install ${install.map(({ tarball }) => where(tarball)).join(" ")}
+\`\`\`
+
+Then the site writes four small files (its schema and config, the admin page, the admin's API route): they are in the
+[\`@monti-cms/next\` README](https://github.com/monti-cms/monti/tree/v${version}/packages/next#readme), and
+[\`examples/blog\`](https://github.com/monti-cms/monti/tree/v${version}/examples/blog) is a whole site. The admin brings its own stylesheet,
+already built. npm is the package manager this release was proven with; pnpm and yarn are untried.
+
+| Package | Address |
+| --- | --- |
+${packages.map(({ name, tarball }) => `| \`${name}\` | \`${where(tarball)}\` |`).join("\n")}
+`;
+}
+
 /** Every file a manifest's `exports` and `bin` name, as paths in the package. */
 export function namedFiles(manifest) {
 	const found = [];
@@ -137,7 +182,16 @@ export function packRelease({ root, out, base }) {
 			const server = lostClient(dir, unpacked);
 			if (server.length > 0)
 				throw new Error(`${pkg.name}: "use client" is gone from ${server.slice(0, 5).join(", ")} (the source says it)`);
-			if (base) writeFileSync(manifestFile, `${JSON.stringify(withBundleAddresses(manifest, base), null, "\t")}\n`);
+			const shipped = { ...(base ? withBundleAddresses(manifest, base) : manifest) };
+			if ("sideEffects" in shipped) shipped.sideEffects = builtSideEffects(shipped.sideEffects);
+			// A file named as having side effects is in the tarball, as an export is.
+			const gone = (Array.isArray(shipped.sideEffects) ? shipped.sideEffects : [])
+				.filter((file) => !file.includes("*"))
+				.map((file) => file.replace(/^\.\//, ""))
+				.filter((file) => !files.includes(file));
+			if (gone.length > 0)
+				throw new Error(`${pkg.name}: "sideEffects" names ${gone.join(", ")}, which the tarball does not hold`);
+			writeFileSync(manifestFile, `${JSON.stringify(shipped, null, "\t")}\n`);
 			// The license lives once at the repo root: every package carries a copy.
 			copyFileSync(path.join(root, "LICENSE"), path.join(unpacked, "LICENSE"));
 			const name = tarballName(pkg.name, version);
@@ -156,27 +210,7 @@ export function packRelease({ root, out, base }) {
 		rmSync(work, { recursive: true, force: true });
 	}
 
-	const where = (tarball) => (base ? `${base.replace(/\/$/, "")}/${tarball}` : `./${tarball}`);
-	// What a Next site installs, the core first; the rest of the bundle follows from these.
-	const site = ["core", "admin", "next"].flatMap((short) => made.filter(({ name }) => name === `${SCOPE}${short}`));
-	writeFileSync(
-		path.join(out, "README.md"),
-		`# Monti ${version}
-
-One tarball for each package. The packages name each other by ${base ? "this bundle's address" : "version"}, so a site installs the ones it uses and the rest follow.
-
-A Next.js site (App Router, Next 16 or later):
-
-\`\`\`sh
-npm install ${site.map(({ tarball }) => where(tarball)).join(" ")}
-npx monti init
-\`\`\`
-
-| Package | Address |
-| --- | --- |
-${made.map(({ name, tarball }) => `| \`${name}\` | \`${where(tarball)}\` |`).join("\n")}
-`,
-	);
+	writeFileSync(path.join(out, "README.md"), bundleReadme({ version, packages: made, base }));
 	return { version, packages: made };
 }
 

@@ -1,11 +1,19 @@
 // The release bundle (docs/design/features/20-release.md): what `pack-release.mjs` makes of a small workspace, and what it refuses to make.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { packRelease, saysClient, tarballName, unwanted, withBundleAddresses } from "./pack-release.mjs";
+import {
+	builtSideEffects,
+	bundleReadme,
+	packRelease,
+	saysClient,
+	tarballName,
+	unwanted,
+	withBundleAddresses,
+} from "./pack-release.mjs";
 
 /** A workspace of two packages, the second using the first, built by hand: `files` is what each one's `package.json` and folders hold. */
 function workspace(change = {}) {
@@ -151,9 +159,14 @@ test("20-2 with a base the bundle's packages name each other by the bundle's add
 		assert.deepEqual(addressed.manifest.dependencies, {
 			"@monti-cms/core": "https://example.dev/releases/v1.2.3/monti-cms-core-1.2.3.tgz",
 		});
-		// The bundle's README gives the lines to install by, with the same addresses.
-		const readme = execFileSync("cat", [path.join(out, "README.md")], { encoding: "utf8" });
-		assert.match(readme, /npm install https:\/\/example\.dev\/releases\/v1\.2\.3\/monti-cms-core-1\.2\.3\.tgz/);
+		// The bundle's README gives the line to install by, with the same addresses: the core and the admin (this workspace has no adapter),
+		// and nothing of what follows from them is asked of the person.
+		const readme = readFileSync(path.join(out, "README.md"), "utf8");
+		assert.match(
+			readme,
+			/npm install https:\/\/example\.dev\/releases\/v1\.2\.3\/monti-cms-core-1\.2\.3\.tgz https:\/\/example\.dev\/releases\/v1\.2\.3\/monti-cms-admin-1\.2\.3\.tgz\n/,
+		);
+		assert.match(readme, /the rest follow/);
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 	}
@@ -194,4 +207,44 @@ test('20-14 a file whose source says "use client" starts with it in the tarball,
 	assert.equal(saysClient("// A note.\n/* and another */\n'use client'\nexport {};"), true);
 	assert.equal(saysClient('import x from "y";\n"use client";'), false);
 	assert.equal(saysClient('const said = "use client";'), false);
+});
+
+test("20-2 without a base the install line names every tarball of the bundle, and with one only what a site uses itself", () => {
+	const packages = ["admin", "ai", "core", "next", "ui"].map((short) => ({
+		name: `@monti-cms/${short}`,
+		tarball: `monti-cms-${short}-0.2.0.tgz`,
+	}));
+	const plain = bundleReadme({ version: "0.2.0", packages });
+	// By version the packages are on no registry: the admin's `@monti-cms/ui@0.2.0` is found only if its tarball is installed with it.
+	assert.match(
+		plain,
+		/npm install \.\/monti-cms-admin-0\.2\.0\.tgz \.\/monti-cms-ai-0\.2\.0\.tgz \.\/monti-cms-core-0\.2\.0\.tgz \.\/monti-cms-next-0\.2\.0\.tgz \.\/monti-cms-ui-0\.2\.0\.tgz\n/,
+	);
+	assert.doesNotMatch(plain, /the rest follow/);
+	assert.match(plain, /install every tarball together/);
+	const addressed = bundleReadme({ version: "0.2.0", packages, base: "https://example.dev/v0.2.0" });
+	assert.match(
+		addressed,
+		/npm install https:\/\/example\.dev\/v0\.2\.0\/monti-cms-core-0\.2\.0\.tgz https:\/\/example\.dev\/v0\.2\.0\/monti-cms-admin-0\.2\.0\.tgz https:\/\/example\.dev\/v0\.2\.0\/monti-cms-next-0\.2\.0\.tgz\n/,
+	);
+	// Neither names a command the release does not have.
+	for (const readme of [plain, addressed]) assert.doesNotMatch(readme, /monti init/);
+});
+
+test("20-1 a file named as having side effects is named by its built file in the tarball, with the stylesheets, and must be in it", () => {
+	assert.deepEqual(builtSideEffects(["./src/admin.tsx"]), ["./dist/admin.js", "**/*.css"]);
+	assert.deepEqual(builtSideEffects(["./src/a.ts", "./dist/styles.css"]), ["./dist/a.js", "./dist/styles.css"]);
+	assert.equal(builtSideEffects(false), false);
+	const named = workspace({ admin: { sideEffects: ["./src/screen.tsx"] } });
+	const lost = workspace({ admin: { sideEffects: ["./src/nowhere.tsx"] } });
+	try {
+		const { out } = pack(named);
+		assert.deepEqual(opened(path.join(out, "monti-cms-admin-1.2.3.tgz")).manifest.sideEffects, [
+			"./dist/screen.js",
+			"**/*.css",
+		]);
+		assert.throws(() => pack(lost), /@monti-cms\/admin: "sideEffects" names dist\/nowhere\.js/);
+	} finally {
+		for (const root of [named, lost]) rmSync(root, { recursive: true, force: true });
+	}
 });

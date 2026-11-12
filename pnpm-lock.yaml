@@ -212,9 +212,6 @@ importers:
         specifier: 3.31.3
         version: 3.31.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
     devDependencies:
-      '@carbon/icons-react':
-        specifier: 11.90.0
-        version: 11.90.0(react@19.2.3)
       '@electric-sql/pglite':
         specifier: 0.5.15
         version: 0.5.15
@@ -377,6 +374,9 @@ importers:
       '@base-ui/react':
         specifier: ^1.8.0
         version: 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.3.0)(date-fns@4.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@carbon/icons-react':
+        specifier: 11.90.0
+        version: 11.90.0(react@19.2.3)
       '@dnd-kit/core':
         specifier: 6.3.1
         version: 6.3.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -405,9 +405,6 @@ importers:
         specifier: ^3.4.0
         version: 3.7.0
     devDependencies:
-      '@carbon/icons-react':
-        specifier: 11.90.0
-        version: 11.90.0(react@19.2.3)
       '@fontsource/ibm-plex-mono':
         specifier: ^5.3.0
         version: 5.3.0

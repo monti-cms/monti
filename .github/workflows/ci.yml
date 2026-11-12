@@ -163,6 +163,11 @@ jobs:
           mkdir -p ~/.cache/playwright-apt
           cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
       - run: pnpm build
+      # What the fresh site downloads with npm (Next and its own dependencies) is kept between runs: it changes with the site's package.json.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-release-proof-${{ runner.os }}-${{ hashFiles('testing/release/app/package.json') }}
       # Doc 20, 20-3: a new Next app outside this workspace installs the packed tarballs with npm, builds, starts, and a browser opens its
       # admin (scripts/try-release.mjs). It makes a database of its own on this server and drops it.
       - run: node scripts/try-release.mjs --shot "$RUNNER_TEMP/release-proof/admin.png"

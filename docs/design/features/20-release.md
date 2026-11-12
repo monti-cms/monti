@@ -35,8 +35,11 @@
 - 다섯 패키지를 모두 빌드해 낸다: `@monti-cms/core`, `@monti-cms/ui`, `@monti-cms/admin`, `@monti-cms/ai`, `@monti-cms/next`. `@monti-cms/storage-s3`가 생기면 여섯이다. 버전은 늘 같다(`scripts/version.mjs`).
 - `admin` · `next` · `ai`에 core · ui와 같은 빌드를 붙인다(`build-package.mjs`: 파일마다 옮겨 `"use client"`가 남는다. `tsconfig.build.json`, `files`, `publishConfig.exports`). `admin`의 빌드는 스타일시트(`dist/styles.css`, `build-styles.mjs`)까지다. 루트의 `pnpm build`는 의존 순서대로 다섯을 빌드한다: core → ui → admin → ai → next.
 - 묶음은 패키지마다 압축 파일 하나(`monti-cms-core-0.2.0.tgz` …)와 설치 줄을 적은 `README.md`다. 압축 파일에는 `dist`, 그 패키지의 `README.md`, `LICENSE`가 있고 소스(`src`) · 테스트 · 스토리는 없다. core에는 `bin`(`monti` 명령), ui에는 `styles`가 더 있다.
-- 묶음 안의 패키지끼리는 **같은 묶음의 주소**로 가리킨다. `pack-release.mjs --base <주소>`가 압축 파일 안 `package.json`의 `@monti-cms/*` 줄을 `<주소>/monti-cms-core-0.2.0.tgz`로 바꿔 쓴다. 그래서 사이트는 직접 쓰는 패키지만 주소로 적고, 나머지는 따라온다. npm · pnpm · yarn · bun이 모두 이 주소를 읽는다. `--base` 없이 묶으면 버전 번호 그대로이고, 그것이 npm에 올릴 파일이다(원칙 2).
-- `release` 브랜치와 `github:…&path:` 설치는 없앤다. `v*` 태그를 밀면 `release.yml`이 버전을 확인하고, 빌드하고, 새 사이트로 증명하고(아래), GitHub 릴리스를 만들어 압축 파일을 자산으로 올린다.
+- 묶음 안의 패키지끼리는 **같은 묶음의 주소**로 가리킨다. `pack-release.mjs --base <주소>`가 압축 파일 안 `package.json`의 `@monti-cms/*` 줄을 `<주소>/monti-cms-core-0.2.0.tgz`로 바꿔 쓴다. 그래서 사이트는 직접 쓰는 패키지만 주소로 적고, 나머지는 따라온다. 증명이 돌리는 것은 npm이다. pnpm과 yarn으로는 해 보지 않았으므로 된다고 말하지 않는다. `--base` 없이 묶으면 버전 번호 그대로이고, 그것이 npm에 올릴 파일이다(원칙 2). 그 버전은 아직 npm에 없으므로, 그렇게 묶은 것을 설치하려면 묶음의 압축 파일을 모두 함께 설치한다(묶음의 `README.md`가 그 줄을 적는다).
+- 묶음의 `README.md`가 릴리스의 글이다. 있는 것만 적는다: `monti init`은 T82가 들어온 뒤에 적는다. 그 전에는 사이트가 쓰는 파일 넷이 어디 있는지(`packages/next`의 README, 예제 앱)를 가리킨다.
+- 아이콘 패키지(`@carbon/icons-react`)는 그것을 가져다 쓰는 `@monti-cms/ui`의 의존이다. 전에는 ui와 admin의 peer였는데, peer를 스스로 설치하지 않는 패키지 매니저(yarn)에서는 빌드가 그 패키지를 찾지 못한다. peer여야 할 까닭(하나만 있어야 하는 상태)이 없다.
+- 압축 파일의 `sideEffects`는 낸 파일을 가리킨다. 저장소 안에서는 소스(`./src/admin.tsx`: 관리자의 스타일시트를 가져오는 파일)를 가리키는데 소스는 나가지 않으므로, 묶을 때 낸 파일 이름(`./dist/admin.js`)으로 바꾸고 스타일시트도 함께 적는다. 그대로 두면 번들러가 스타일시트를 가져오는 줄을 버려도 된다고 읽는다.
+- `release` 브랜치와 `github:…&path:` 설치는 없앤다. `v*` 태그를 밀면 `release.yml`이 버전을 확인하고, 빌드하고, 새 사이트로 증명하고(아래), GitHub 릴리스를 만들어 압축 파일을 자산으로 올린다. 릴리스는 초안으로 만들어 압축 파일을 다 올린 뒤에 공개한다: 올리다 실패해도 반쯤 된 릴리스가 보이지 않고, 다시 돌리면 그 초안을 이어 쓴다.
 - **관리자 화면의 스타일은 다 만든 CSS 파일 하나로 나간다.** `@monti-cms/admin/styles.css`(`dist/styles.css`)는 빌드할 때 Tailwind로 이미 만든 파일이고, `@monti-cms/next/admin`이 그것을 가져온다. 사이트의 Tailwind가 `node_modules` 안의 클래스를 찾아야 하는 것이 없으므로, 사이트에 Tailwind가 없어도, 다른 버전이어도 된다. 그 파일의 규칙은 모두 관리자 화면이 든 문서 아래에만 걸리고 `--monti-` 이름만 쓰며 글꼴도 함께 담는다(16번 문서, `scripts/build-styles.mjs`). 지금 `packages/admin`과 예제 앱이 하는 그대로다. 공개한 관리자 패키지가 흔히 깨지는 곳이 여기라서, 아래 증명이 새 사이트에서 관리자 화면을 브라우저로 열어 스타일이 걸렸는지까지 본다.
 - **`"use client"`는 파일마다 남는다.** 빌드가 파일을 하나로 뭉치지 않고 하나씩 옮기기 때문이다. `pack-release.mjs`가 소스에 그 줄이 있던 파일은 `dist`의 같은 파일도 그 줄로 시작하는지 본다.
 - 패키지의 `private: true`는 그대로 둔다. npm에 올리기로 정해질 때 뗀다(실수로 올라가지 않게 하는 잠금이다).
@@ -46,14 +49,20 @@
 
 `scripts/try-release.mjs`가 한다. CI의 한 작업으로 PR마다 돌고, `release.yml`도 릴리스를 만들기 전에 돌린다.
 
-1. `pnpm build` 뒤 묶음을 임시 폴더에 만든다(`--base file://…`).
+1. `pnpm build` 뒤 묶음을 임시 폴더에 만들고, 이 컴퓨터의 HTTP 주소로 내준다(`--base http://127.0.0.1:…`). 릴리스에서 사람이 받는 것과 같은 모양이다: 사이트가 적지 않은 패키지가 주소에서 따라온다.
 2. 저장소 밖 임시 폴더에 새 Next 16 앱을 놓는다. `create-next-app`이 만드는 것과 같은 모양의 틀(`testing/release/app`: TypeScript, App Router, `app/layout.tsx`, `app/page.tsx`)이다. 네트워크와 그날의 `create-next-app`에 기대지 않으려고 틀을 저장소에 둔다.
-3. npm으로 묶음에서 설치한다(`@monti-cms/core` · `admin` · `next`). pnpm의 작업 공간 연결이 없는, 가장 봐주지 않는 길이다.
+3. npm으로 그 주소에서 설치한다(`@monti-cms/core` · `admin` · `next`, 그리고 이 사이트의 어느 페이지도 쓰지 않는 `ai`). pnpm의 작업 공간 연결이 없는, 가장 봐주지 않는 길이다. core와 ai는 설치된 자리에서 Node로 읽어 본다.
 4. `npx monti init --yes`로 Monti 파일을 쓴다. `init`이 생기기 전(T14의 PR)에는 스크립트가 예제 앱의 파일 넷을 그대로 넣는다.
 5. `npx monti db:setup`, `npx monti doctor`, `npx tsc --noEmit`, `npx next build`를 차례로 돌린다. 하나라도 실패하면 멈춘다.
 6. `npx next start`를 띄우고 브라우저(흐름 테스트가 쓰는 Playwright)로 `/admin`을 연다. 관리자 화면이 그려지는지(15번 문서의 첫 화면), 그 화면의 버튼이 토큰의 높이와 색을 가졌는지(스타일 파일이 걸렸다는 뜻이다), 브라우저 콘솔에 오류가 없는지, 관리자 API(`auth.state`)가 답하는지, 사이트의 첫 페이지가 제 모습 그대로인지(관리자의 스타일이 사이트로 새지 않았는지) 본다.
 
-데이터베이스는 CI의 Postgres를 쓴다. 로컬에서는 `DATABASE_URL`을 받는다.
+데이터베이스는 CI의 Postgres를 쓴다. 로컬에서는 `DATABASE_URL`을 받는다. 중간에 멈춰도(Ctrl-C, 취소된 CI 작업) 만든 데이터베이스와 임시 사이트를 치운다.
+
+증명이 보지 못하는 것:
+
+- 릴리스에 올라가는 압축 파일은 릴리스의 주소로 한 번 더 묶은 것이다(`release.yml`). 내용은 같고 서로를 가리키는 주소만 다르다. 그래서 GitHub의 내려받기 주소(다른 주소로 넘겨 준다)와 공개가 아닌 저장소는 여기서 해 보지 못한다.
+- npm 말고 다른 패키지 매니저.
+- 타입 검사는 새 Next 앱이 기본으로 그러듯 라이브러리의 선언 파일 안은 보지 않는다(`skipLibCheck`). Monti의 선언이 맞는지는 `@arethetypeswrong/cli`가 본다(진행 기록 T201).
 
 ### 릴리스의 관문
 
@@ -274,7 +283,9 @@ monti doctor: /Users/me/my-site
 17. **첫 파일부터 직접 올리고, 서명된 주소에 아무것도 덧붙이지 않는다.** (레퍼런스: Payload에서 첫 올리기가 서버를 지나 작은 한도에 걸린 것과, 서명된 주소에 붙인 값이 서명을 깬 것이 보고되었다.)
 18. **R2와 MinIO는 주소, 경로 방식, 지역 `auto`로 되고 ACL은 쓰지 않는다.** (레퍼런스: Cloudflare R2의 문서, 확인.)
 19. **직접 올리기의 한도는 서버를 거친 길과 같은 10 MB다.** 큰 파일을 나눠 올리는 길(multipart)은 넣지 않는다.
-20. **패키지는 늘 같은 버전이고, 버전을 올리는 도구를 따로 들이지 않는다.** (레퍼런스: 한 번호로 묶는 것은 Payload, tRPC와 같다. Changesets를 쓰는 곳이 많지만 Payload는 제 스크립트를 쓴다.)
+20. **증명은 묶음을 HTTP 주소로 내주고 npm으로 설치한다. 된다고 말하는 것은 해 본 것뿐이다.** `file:` 주소로 설치하면 사람이 받는 모양과 다르다(#483 코드 리뷰).
+21. **아이콘 패키지는 ui의 의존이고, 압축 파일의 `sideEffects`는 낸 파일을 가리킨다.** (#483 코드 리뷰.)
+22. **패키지는 늘 같은 버전이고, 버전을 올리는 도구를 따로 들이지 않는다.** (레퍼런스: 한 번호로 묶는 것은 Payload, tRPC와 같다. Changesets를 쓰는 곳이 많지만 Payload는 제 스크립트를 쓴다.)
 
 ## 옛 코드
 

@@ -30,7 +30,8 @@ rebuilt packages is being made ([doc 20](docs/design/features/20-release.md)); u
 ## Installing a release
 
 A release is one tarball for each package, on the [releases page](https://github.com/monti-cms/monti/releases), not on npm. A site names the
-tarballs by their address; the packages name each other the same way, so the ones a site does not list follow. Any package manager reads them.
+tarballs by their address; the packages name each other the same way, so the ones a site does not list follow. npm is the
+package manager a release is proven with; pnpm and yarn are untried.
 Each release's notes give the exact lines. For a Next.js site (App Router, Next 16 or later):
 
 ```sh

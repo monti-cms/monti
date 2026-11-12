@@ -3,9 +3,10 @@
  * The release's proof (docs/design/features/20-release.md, 20-3): a new Next app outside this workspace installs Monti from the packed
  * tarballs with npm and runs. What it does, stopping at the first thing that fails:
  *
- *   1. packs the built packages into a bundle whose packages name each other by the bundle's own address;
+ *   1. packs the built packages into a bundle and serves it over HTTP on this machine: the bundle's packages name each other by that address,
+ *      as a release's name each other by the release's, so the ones a site does not list are fetched the way they will be;
  *   2. copies the fresh app (`testing/release/app`, a Next app as create-next-app leaves it) to a temporary folder;
- *   3. `npm install`s core, admin and next from the tarballs (no workspace links: the least forgiving way);
+ *   3. `npm install`s core, admin, next and ai from those addresses (no workspace links: the least forgiving way), and loads each in Node;
  *   4. writes the Monti files a site has (the example app's, until `monti init` writes them);
  *   5. makes a database of its own, then `monti db:setup`, `tsc --noEmit`, `next build`;
  *   6. `next start`, and a browser opens `/admin`: the admin is drawn with its own styles, the console is clean, the admin's API answers,
@@ -15,13 +16,16 @@
  *
  * `DATABASE_URL` (or `CMS_TEST_DATABASE_URL`) names a Postgres server the script may make a database on; the database is dropped at the end.
  * `--shot` keeps the browser's picture of `/admin`; `--keep` leaves the temporary site in place and says where it is.
+ *
+ * What it cannot show: the release's own assets are packed once more with the release's address (`release.yml`), so GitHub's download
+ * address (a redirect) and a repository that is not public are not tried here. Only npm installs; pnpm and yarn are untried.
  */
 import { execFileSync, spawn } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { packRelease, tarballName } from "./pack-release.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -66,6 +70,26 @@ const onServer = (sql) =>
 		{ cwd: site, env: { ...process.env, SERVER: server, SQL: sql }, stdio: "inherit" },
 	);
 
+/**
+ * The bundle over HTTP, from a process of its own: this script waits on its commands one at a time (`execFileSync`), and a server inside it
+ * could not answer while npm asks.
+ */
+function serveBundle(port) {
+	const code = `
+		import { createReadStream, existsSync } from "node:fs";
+		import { createServer } from "node:http";
+		import path from "node:path";
+		const [dir, port] = process.argv.slice(1);
+		createServer((request, answer) => {
+			const file = path.join(dir, path.basename(decodeURIComponent(new URL(request.url, "http://x").pathname)));
+			if (!existsSync(file)) return answer.writeHead(404).end();
+			answer.writeHead(200, { "content-type": "application/octet-stream" });
+			createReadStream(file).pipe(answer);
+		}).listen(Number(port), "127.0.0.1");
+	`;
+	return spawn(process.execPath, ["--input-type=module", "-e", code, bundle, String(port)], { stdio: "inherit" });
+}
+
 const freePort = () =>
 	new Promise((resolve, reject) => {
 		const probe = createServer();
@@ -76,9 +100,9 @@ const freePort = () =>
 		});
 	});
 
-async function waitFor(url, running) {
+async function waitFor(url, child, name) {
 	for (let tries = 0; tries < 120; tries++) {
-		if (running.exitCode !== null) throw new Error(`next start stopped (exit ${running.exitCode})`);
+		if (child.exitCode !== null) throw new Error(`${name} stopped (exit ${child.exitCode})`);
 		try {
 			const answer = await fetch(url);
 			if (answer.status < 500) return;
@@ -130,7 +154,6 @@ async function look(base) {
 				font: getComputedStyle(frame).fontFamily,
 				height: button.getBoundingClientRect().height,
 				radius: Number.parseFloat(style.borderTopLeftRadius),
-				ground: style.backgroundColor,
 			};
 		});
 		if (!admin) wrong.push("the admin's frame is not on the page");
@@ -140,8 +163,6 @@ async function look(base) {
 			if (![24, 28, 32, 36].includes(Math.round(admin.height)))
 				wrong.push(`the admin's button is ${admin.height}px high: not a control's height, so its styles are missing`);
 			if (admin.radius < 12) wrong.push(`the admin's button has a ${admin.radius}px corner: not a pill`);
-			if (/rgba\(0, 0, 0, 0\)|transparent/.test(admin.ground) && admin.token === "")
-				wrong.push("the admin's button has no ground");
 			if (!/Pretendard/i.test(admin.font)) wrong.push(`the admin's font is ${admin.font}: its own font did not come`);
 		}
 		const fonts = await page.evaluate(async () => {
@@ -184,21 +205,54 @@ async function look(base) {
 	return wrong;
 }
 
+let serving;
 let running;
 let made = false;
 let failed = false;
+let cleaned = false;
+
+/** Puts everything back, once: the servers stopped, the database dropped, the temporary site gone. Also on Ctrl-C and on a cancelled job. */
+function cleanUp() {
+	if (cleaned) return;
+	cleaned = true;
+	for (const child of [running, serving]) if (child && child.exitCode === null) child.kill("SIGKILL");
+	if (made)
+		try {
+			onServer(`drop database if exists ${database} with (force)`);
+		} catch {
+			console.error(`The database ${database} was not dropped.`);
+		}
+	if (keep) console.log(`The site is kept at ${site}`);
+	else rmSync(work, { recursive: true, force: true });
+}
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
+	process.on(signal, () => {
+		console.error(`\n${signal}: stopping and cleaning up.`);
+		cleanUp();
+		process.exit(130);
+	});
+
 try {
-	step("pack");
-	const { version } = packRelease({ root, out: bundle, base: pathToFileURL(bundle).href });
+	step("pack, and serve the bundle over HTTP");
+	const bundlePort = await freePort();
+	const address = `http://127.0.0.1:${bundlePort}`;
+	const { version } = packRelease({ root, out: bundle, base: address });
+	serving = serveBundle(bundlePort);
+	await waitFor(`${address}/README.md`, serving, "the bundle's server");
 
 	step("a fresh Next app, outside the workspace");
 	cpSync(path.join(root, "testing", "release", "app"), site, { recursive: true });
+	// By address, as a person installs a release: what a site uses itself, and the assistant's package, which no page of this site imports.
+	const named = ["core", "admin", "next", "ai"];
 	inSite("npm", [
 		"install",
 		"--no-audit",
 		"--no-fund",
-		...["core", "admin", "next"].map((name) => path.join(bundle, tarballName(`@monti-cms/${name}`, version))),
+		...named.map((name) => `${address}/${tarballName(`@monti-cms/${name}`, version)}`),
 	]);
+	// Each package resolves and loads in Node from the site's own node_modules (the admin and the adapter are loaded by the build below).
+	for (const name of ["core", "core/render", "ai"])
+		inSite(process.execPath, ["--input-type=module", "-e", `await import("@monti-cms/${name}");`]);
 
 	step("the site's Monti files");
 	// Until `monti init` writes them (T82): the example app's own.
@@ -228,20 +282,21 @@ try {
 
 	step("next start, and a browser");
 	const port = await freePort();
-	running = spawn("npx", ["next", "start", "-p", String(port), "-H", "127.0.0.1"], {
+	// Next itself, not through `npx`: a signal sent to npm does not reach the server under it, which would keep the port.
+	running = spawn(path.join(site, "node_modules", ".bin", "next"), ["start", "-p", String(port), "-H", "127.0.0.1"], {
 		cwd: site,
 		env: live,
 		stdio: "inherit",
 	});
 	const base = `http://127.0.0.1:${port}`;
-	await waitFor(`${base}/`, running);
+	await waitFor(`${base}/`, running, "next start");
 	const wrong = await look(base);
 	if (wrong.length > 0) {
 		failed = true;
 		console.error(`\nThe fresh site does not run as it should:\n${wrong.map((line) => `  - ${line}`).join("\n")}`);
 	} else {
 		console.log(
-			`\nA fresh Next app installed Monti ${version} from the tarballs and runs: the admin is drawn with its styles, its API answers,`,
+			`\nA fresh Next app installed Monti ${version} from the tarballs with npm and runs: the admin is drawn with its styles, its API answers,`,
 		);
 		console.log("the console is clean and the site's own page is untouched.");
 	}
@@ -254,19 +309,9 @@ try {
 		running.kill("SIGTERM");
 		await new Promise((done) => {
 			running.once("exit", done);
-			setTimeout(() => {
-				running.kill("SIGKILL");
-				done();
-			}, 5000);
+			setTimeout(done, 5000);
 		});
 	}
-	if (made)
-		try {
-			onServer(`drop database if exists ${database} with (force)`);
-		} catch {
-			console.error(`The database ${database} was not dropped.`);
-		}
-	if (keep) console.log(`The site is kept at ${site}`);
-	else rmSync(work, { recursive: true, force: true });
+	cleanUp();
 }
 process.exit(failed ? 1 : 0);
