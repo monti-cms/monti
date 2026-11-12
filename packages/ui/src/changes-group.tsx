@@ -77,7 +77,7 @@ function ChangeRow({
  * callback, the same for the group's whole life, and hears each of them come and go: that is where it hands the keyboard's focus on when the
  * button that was pressed goes with them.
  */
-type LeavingRef = React.RefCallback<HTMLElement>;
+type LeavingRef = (node: HTMLElement | null) => undefined | (() => void);
 
 /**
  * How the save group looks: "changes N" (and "· proposals N" in blue), then "undo all" and the one primary pill ("save and apply"). `list` is what
