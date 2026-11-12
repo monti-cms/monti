@@ -35,9 +35,45 @@ export type Turn = {
 	unsent?: boolean;
 };
 
+/** Words that wait to be asked, with a name of their own: what is done to one finds it whatever was added or taken meanwhile. */
+export type Queued = { id: string; text: string };
+
 type Place = NonNullable<Conversation["earlier"]>;
 type ScreenCall = { id: string; name: string; input: unknown };
 type ModelChoice = { keyId: string; model: string };
+
+/**
+ * The conversation that is open, as one object. Another is made whenever another conversation is opened (or none: "+"), so "is this still the
+ * conversation on the page" is one comparison, and everything that waits on the server (a run's stream, a read, a poll) keeps the one it began
+ * under and looks again when it comes back. What belongs to a conversation that is no longer open changes nothing on the page; its run is
+ * not cut, and goes on.
+ */
+type Shown = {
+	conversationId: string | null;
+	/** What follows this conversation's run now: one request's stream, or the poll of a run that goes on elsewhere. One at a time. */
+	following: AbortController | null;
+	/** The person said stop: nothing goes on with the run by itself until they ask again. */
+	stopAsked: boolean;
+	/** How many times in a row the run's request was cut. */
+	cuts: number;
+	/** Where the requests before the ones read begin, and whether they are being read now. */
+	earlier: Place | null;
+	loadingEarlier: boolean;
+};
+const showing = (conversationId: string | null): Shown => ({
+	conversationId,
+	following: null,
+	stopAsked: false,
+	cuts: 0,
+	earlier: null,
+	loadingEarlier: false,
+});
+const local = (id: string) => id.startsWith("local:");
+/** Whether a key of the site still has this model. A list not read yet says nothing against it. */
+const has = (list: ModelList | null, choice: ModelChoice | null) =>
+	choice !== null &&
+	(list?.keys.some((key) => key.id === choice.keyId && key.models.some((each) => each.id === choice.model)) ?? true);
+const named = (text: string): Queued => ({ id: `q:${Date.now()}:${Math.random().toString(36).slice(2)}`, text });
 type Kept = { open: boolean; conversation: string | null; recent: ModelChoice[] };
 
 const KEPT = "monti.assistant";
@@ -95,11 +131,12 @@ type AssistantValue = {
 	busy: boolean;
 	draft: string;
 	setDraft: (draft: string) => void;
-	queue: string[];
+	queue: Queued[];
 	queueAdd: (words: string) => void;
-	queueTake: (index: number) => void;
-	queueCancel: (index: number) => void;
-	queueSendNow: (index: number) => void;
+	/** Each acts on the waiting words with this id, wherever they stand by now. */
+	queueTake: (id: string) => void;
+	queueCancel: (id: string) => void;
+	queueSendNow: (id: string) => void;
 	ask: (request: string) => void;
 	stop: () => void;
 	/** Goes on with the last run where it stopped; `more` past a turn or token limit. */
@@ -175,11 +212,11 @@ export function AssistantProvider({
 	const [requests, setRequests] = useState(0);
 	const [busy, setBusy] = useState(false);
 	const [draft, setDraft] = useState("");
-	const [queue, setQueueState] = useState<string[]>([]);
+	const [queue, setQueueState] = useState<Queued[]>([]);
 	// What waits, as it is this instant: a run can end and the next one begin before the page is drawn again, and each must see the queue
 	// the one before left.
-	const queueNow = useRef<string[]>([]);
-	const setQueue = useCallback((next: string[] | ((waiting: string[]) => string[])) => {
+	const queueNow = useRef<Queued[]>([]);
+	const setQueue = useCallback((next: Queued[] | ((waiting: Queued[]) => Queued[])) => {
 		queueNow.current = typeof next === "function" ? next(queueNow.current) : next;
 		setQueueState(queueNow.current);
 	}, []);
@@ -192,17 +229,46 @@ export function AssistantProvider({
 	const [removed, setRemoved] = useState<ReadonlySet<ContextChip["id"]>>(new Set());
 	const [proposalTick, setProposalTick] = useState(0);
 
-	// What the stream's loop reads as it is now, not as it was when the request began.
-	const live = useRef({ conversationId, turns, queue, busy });
-	live.current = { conversationId, turns, queue, busy };
-	const listening = useRef<AbortController | null>(null);
-	const cuts = useRef(0);
+	// What the page shows as it is now, not as it was when a request began.
+	const live = useRef({ turns, busy });
+	live.current = { turns, busy };
+	// The conversation that is open (`Shown`). The page's `conversationId` follows it.
+	const shown = useRef<Shown>(showing(conversationId));
+	// Every request and poll that is going, of the open conversation and of the ones left behind: all end when the admin goes (sign-out).
+	const going = useRef(new Set<AbortController>());
+	const gone = useRef(false);
+	useEffect(() => {
+		gone.current = false;
+		const all = going.current;
+		return () => {
+			gone.current = true;
+			for (const each of all) each.abort();
+			all.clear();
+			queueNow.current = [];
+		};
+	}, []);
+	/** Takes over following a conversation's run: a stream that broke, or a poll, gives way to the one that takes over. */
+	const follow = useCallback((here: Shown) => {
+		const controller = new AbortController();
+		here.following?.abort();
+		here.following = controller;
+		going.current.add(controller);
+		// Whether this is still what follows the run of the conversation on the page: asked after every wait, before anything is shown.
+		const mine = () => !gone.current && shown.current === here && here.following === controller;
+		const done = () => {
+			going.current.delete(controller);
+		};
+		return { controller, mine, done };
+	}, []);
 	// What listening to a request leads on to (the next queued words, a run to watch, a screen tool): each is made further down and calls back
 	// into listening, so they are reached through here as they are now.
 	const later = useRef<{
 		ask: (request: string) => void;
-		watch: (runId: string) => Promise<void>;
-		runScreenTool: (tool: ScreenCall) => Promise<{ id: string; output?: unknown; error?: string }>;
+		watch: (runId: string, here: Shown, mayGoOn?: boolean) => Promise<void>;
+		runScreenTool: (
+			tool: ScreenCall,
+			called: () => boolean,
+		) => Promise<{ id: string; output?: unknown; error?: string }>;
 	}>({ ask: () => {}, watch: async () => {}, runScreenTool: async (tool) => ({ id: tool.id }) });
 
 	const call = useCallback(
@@ -219,13 +285,14 @@ export function AssistantProvider({
 	);
 	const chipLabels = useCallback((context: ScreenContext | null) => chipsOf(context, t).map((chip) => chip.label), [t]);
 
-	const readState = useCallback(async () => {
+	const readState = useCallback(async (): Promise<ModelList | null> => {
 		const read = await call<AssistantState>("assistant.state");
 		// A site without the assistant has no such operation: nothing of the assistant is drawn.
 		setAvailable(read.ok || read.status !== 404);
 		if (read.ok) setState(read.body);
 		const listed = await call<ModelList>("models.list");
 		if (listed.ok) setModels(listed.body);
+		return listed.ok ? listed.body : null;
 	}, [call]);
 	useEffect(() => {
 		void readState();
@@ -245,10 +312,13 @@ export function AssistantProvider({
 		setTurns((all) => all.map((turn) => (turn.id === id ? change(turn) : turn)));
 	}, []);
 
+	/** Reads a conversation and shows it, if it is still the one that is open (`here`) when the answer comes. */
 	const readConversation = useCallback(
-		async (id: string): Promise<Conversation | null> => {
+		async (id: string, here: Shown): Promise<Conversation | null> => {
 			const read = await call<Conversation>("conversations.get", { id });
 			if (!read.ok) return null;
+			// Another conversation was opened meanwhile: this answer is not about what is on the page.
+			if (gone.current || shown.current !== here || here.conversationId !== id) return read.body;
 			setTurns((now) => {
 				const stored = read.body.runs.map((run) => turnOf(run, chipLabels));
 				// Words of an answer that was cut are not stored: they stay on screen until the answer comes again.
@@ -259,6 +329,7 @@ export function AssistantProvider({
 					return [...stored.slice(0, -1), { ...same, parts: [...same.parts, cut] }];
 				return stored;
 			});
+			here.earlier = read.body.earlier;
 			setEarlier(read.body.earlier);
 			setForgotten(read.body.forgotten);
 			setRequests(read.body.requests);
@@ -269,12 +340,16 @@ export function AssistantProvider({
 		[call, chipLabels],
 	);
 
-	// The conversation's model, while a key of the site still has it; a conversation whose key was removed goes on with the site's starting model.
-	const listed = (choice: ModelChoice | null) =>
-		choice !== null &&
-		(models?.keys.some((key) => key.id === choice.keyId && key.models.some((each) => each.id === choice.model)) ??
-			true);
-	const model = (listed(picked) ? picked : null) ?? models?.assistant ?? null;
+	// The conversation's model, while a key of the site still has it. When it has gone (its key was removed, the service dropped the model) the
+	// site's starting model takes its place, and the person is told once, where they are looking: in the open panel.
+	const model = (has(models, picked) ? picked : null) ?? models?.assistant ?? null;
+	const pickedGone = open && picked !== null && !has(models, picked);
+	const startingModel = models?.assistant?.model ?? null;
+	useEffect(() => {
+		if (!pickedGone) return;
+		setPicked(null);
+		if (startingModel) toast(t("panel.modelGone", { model: startingModel }));
+	}, [pickedGone, startingModel, t]);
 	const canThink =
 		models?.keys.find((key) => key.id === model?.keyId)?.models.find((each) => each.id === model?.model)?.thinking ??
 		false;
@@ -282,28 +357,75 @@ export function AssistantProvider({
 	const sending = useRef({ model, thinking, screenContext, removed });
 	sending.current = { model, thinking, screenContext, removed };
 
-	/** Listens to one request of a run to its end, and does what follows without a person: the next request of the same run, or the next queued words. */
+	/** The run of the open conversation is over, as far as this page goes: the box takes requests again, and what waited behind a finished run is asked. */
+	const settle = useCallback(
+		(here: Shown, status: TranscriptRun["status"] | null) => {
+			setBusy(false);
+			here.cuts = 0;
+			void readState();
+			if (status !== "done") return;
+			const [next, ...rest] = queueNow.current;
+			if (next === undefined) return;
+			setQueue(rest);
+			later.current.ask(next.text);
+		},
+		[readState, setQueue],
+	);
+
+	/** Tells a run to stop. What was said to it and not taken comes back in the answer when the run was only waiting. */
+	const tellStop = useCallback(
+		(runId: string, here: Shown) => {
+			void call<{ output: { untaken: string[] } }>("assistant.stop", { run: runId }).then((stopped) => {
+				const untaken = stopped.ok ? stopped.body.output.untaken : [];
+				if (untaken.length > 0 && !gone.current && shown.current === here)
+					setQueue((waiting) => [...untaken.map(named), ...waiting]);
+			});
+		},
+		[call, setQueue],
+	);
+
+	/**
+	 * Listens to one request of a run to its end, and does what follows without a person: the next request of the same run, or the next queued
+	 * words. `here` is the conversation it was asked in. While that is the one on the page, what comes is shown; once another was opened, the
+	 * stream is still read to its end (the run goes on, doc 10 item 38) and nothing of it is shown, queued or moved on the screen.
+	 * `byPerson`: a person pressed for this request, so a refusal is said; a request the browser made by itself is refused silently.
+	 */
 	const listen = useCallback(
-		async (input: Record<string, unknown>, turnId: string) => {
-			listening.current?.abort();
-			const controller = new AbortController();
-			listening.current = controller;
-			setBusy(true);
+		async (input: Record<string, unknown>, turnId: string, here: Shown, byPerson = true) => {
+			if (gone.current) return;
+			const { controller, mine, done } = follow(here);
+			const show = (write: () => void) => {
+				if (mine()) write();
+			};
+			show(() => setBusy(true));
 			let id = turnId;
 			let ended: (RunEnd & { untaken: string[] }) | null = null;
 			let screenCalls: ScreenCall[] = [];
 			let cut = false;
 			const answer = await streams("assistant.run", input, { signal: controller.signal });
 			if (!("events" in answer)) {
-				if (controller.signal.aborted) return;
-				setBusy(false);
+				done();
+				if (controller.signal.aborted || !mine()) return;
 				const reason = ((answer.body ?? {}) as { reason?: Message }).reason;
+				if ("resume" in input) {
+					// The run could not be taken up: it ended meanwhile (stopped from here or elsewhere), or another page has it. What the
+					// server has is read again, and nothing goes on by itself from this refusal.
+					if (reason && byPerson) toast.error(t(reason));
+					return later.current.watch(id, here, false);
+				}
+				setBusy(false);
 				// It never began. With a reason the server said why (another request is still going); without one it was not reached.
-				if (reason) toast.error(t(reason));
-				patchTurn(id, (turn) =>
-					turn.status === "running" && turn.parts.length === 0
-						? { ...turn, status: "failed", unsent: true, end: { status: "failed" } }
-						: turn,
+				if (reason?.key === "assistant.noModel") {
+					// The model went while the panel was open: the models are read again, and the panel says which one is used now.
+					const sent = (input.model ?? null) as ModelChoice | null;
+					if (has(await readState(), sent)) toast.error(t(reason));
+				} else if (reason) toast.error(t(reason));
+				show(() =>
+					patchTurn(id, (turn) =>
+						turn.status === "running" && turn.parts.length === 0
+							? { ...turn, status: "failed", unsent: true, end: { status: "failed" } }
+							: turn,
+					),
 				);
 				return;
 			}
@@ -312,63 +434,76 @@ export function AssistantProvider({
 					if (event.type === "run") {
 						const from = id;
 						id = event.runId;
-						setConversationId(event.conversationId);
 						// At once, for a request that follows before the page is drawn again: it is asked in this conversation.
-						live.current.conversationId = event.conversationId;
-						keep({ conversation: event.conversationId });
-						setTurns((all) => all.map((turn) => (turn.id === from ? { ...turn, id: event.runId } : turn)));
+						here.conversationId = event.conversationId;
+						show(() => {
+							setConversationId(event.conversationId);
+							keep({ conversation: event.conversationId });
+							setTurns((all) => all.map((turn) => (turn.id === from ? { ...turn, id: event.runId } : turn)));
+						});
+						// Stop was pressed before the run had a name to stop it by, or just as it was taken up again: it is told now.
+						if (here.stopAsked) tellStop(event.runId, here);
 					} else if (event.type === "text") {
-						patchTurn(id, (turn) => {
-							const last = turn.parts.at(-1);
-							// The answer that was cut comes again from its start: its old words give way.
-							if (last?.type === "text" && last.stale)
-								return { ...turn, parts: [...turn.parts.slice(0, -1), { type: "text", text: event.delta }] };
-							if (last?.type === "text")
+						show(() =>
+							patchTurn(id, (turn) => {
+								const last = turn.parts.at(-1);
+								// The answer that was cut comes again from its start: its old words give way.
+								if (last?.type === "text" && last.stale)
+									return { ...turn, parts: [...turn.parts.slice(0, -1), { type: "text", text: event.delta }] };
+								if (last?.type === "text")
+									return {
+										...turn,
+										parts: [...turn.parts.slice(0, -1), { type: "text", text: last.text + event.delta }],
+									};
+								return { ...turn, parts: [...turn.parts, { type: "text", text: event.delta }] };
+							}),
+						);
+					} else if (event.type === "tool") {
+						if (event.state !== "running") here.cuts = 0;
+						show(() =>
+							patchTurn(id, (turn) => {
+								const parts = turn.parts.filter((part) => !(part.type === "text" && part.stale));
+								const at = parts.findIndex((part) => part.type === "tool" && part.id === event.id);
+								const before = at === -1 ? undefined : (parts[at] as ToolPart);
+								const next: ToolPart = {
+									type: "tool",
+									id: event.id,
+									name: event.name,
+									kind: event.kind,
+									input: event.input ?? before?.input,
+									state: event.state,
+									count: event.count ?? before?.count,
+									progress: event.state === "running" ? before?.progress : undefined,
+								};
 								return {
 									...turn,
-									parts: [...turn.parts.slice(0, -1), { type: "text", text: last.text + event.delta }],
+									parts: at === -1 ? [...parts, next] : parts.map((part, index) => (index === at ? next : part)),
 								};
-							return { ...turn, parts: [...turn.parts, { type: "text", text: event.delta }] };
-						});
-					} else if (event.type === "tool") {
-						if (event.state !== "running") cuts.current = 0;
-						patchTurn(id, (turn) => {
-							const parts = turn.parts.filter((part) => !(part.type === "text" && part.stale));
-							const at = parts.findIndex((part) => part.type === "tool" && part.id === event.id);
-							const before = at === -1 ? undefined : (parts[at] as ToolPart);
-							const next: ToolPart = {
-								type: "tool",
-								id: event.id,
-								name: event.name,
-								kind: event.kind,
-								input: event.input ?? before?.input,
-								state: event.state,
-								count: event.count ?? before?.count,
-								progress: event.state === "running" ? before?.progress : undefined,
-							};
-							return {
-								...turn,
-								parts: at === -1 ? [...parts, next] : parts.map((part, index) => (index === at ? next : part)),
-							};
-						});
+							}),
+						);
 					} else if (event.type === "progress") {
-						patchTurn(id, (turn) => {
-							const at = turn.parts.findLastIndex(
-								(part) => part.type === "tool" && part.name === event.name && part.state === "running",
-							);
-							if (at === -1) return turn;
-							return {
-								...turn,
-								parts: turn.parts.map((part, index) =>
-									index === at ? { ...(part as ToolPart), progress: { done: event.done, total: event.total } } : part,
-								),
-							};
-						});
+						show(() =>
+							patchTurn(id, (turn) => {
+								const at = turn.parts.findLastIndex(
+									(part) => part.type === "tool" && part.name === event.name && part.state === "running",
+								);
+								if (at === -1) return turn;
+								return {
+									...turn,
+									parts: turn.parts.map((part, index) =>
+										index === at ? { ...(part as ToolPart), progress: { done: event.done, total: event.total } } : part,
+									),
+								};
+							}),
+						);
 					} else if (event.type === "proposal") {
-						patchTurn(id, (turn) => ({ ...turn, proposalId: event.proposalId }));
-						setProposalTick((tick) => tick + 1);
+						show(() => patchTurn(id, (turn) => ({ ...turn, proposalId: event.proposalId })));
+						// A card of this proposal may stand on the page whichever conversation is open (the review page): it reads again.
+						if (!gone.current) setProposalTick((tick) => tick + 1);
 					} else if (event.type === "taken") {
-						patchTurn(id, (turn) => ({ ...turn, parts: [...turn.parts, { type: "said", text: event.text }] }));
+						show(() =>
+							patchTurn(id, (turn) => ({ ...turn, parts: [...turn.parts, { type: "said", text: event.text }] })),
+						);
 					} else if (event.type === "screen") screenCalls = event.calls;
 					else if (event.type === "end") ended = event;
 					else if (event.type === "error") cut = true;
@@ -376,68 +511,80 @@ export function AssistantProvider({
 			} catch {
 				cut = true;
 			}
+			done();
 			if (controller.signal.aborted) return;
 			if (!ended) cut = true;
 
 			if (cut || !ended) {
 				// The request ended without the run's own ending (the host cut it, the network went): the run may still be going on the server.
-				cuts.current += 1;
+				// A conversation left behind is read where it stands when it is opened again.
+				if (!mine()) return;
+				here.cuts += 1;
 				patchTurn(id, (turn) => {
 					const last = turn.parts.at(-1);
 					return last?.type === "text"
 						? { ...turn, parts: [...turn.parts.slice(0, -1), { ...last, stale: true }] }
 						: turn;
 				});
-				void later.current.watch(id);
-				return;
+				return later.current.watch(id, here);
 			}
 			const end = ended as RunEnd & { untaken: string[] };
-			if (end.untaken.length > 0) setQueue((waiting) => [...end.untaken, ...waiting]);
-			patchTurn(id, (turn) => ({
-				...turn,
-				status: end.status,
-				end: { status: end.status, reason: end.reason, error: end.error },
-				// A person stopped it: what was still going has no result, and its line goes.
-				parts:
-					end.status === "stopped"
-						? turn.parts.filter((part) => !(part.type === "tool" && part.state === "running"))
-						: turn.parts,
-			}));
-			if (end.status === "waiting") {
-				// Screen tools run here, in the browser, and the run goes on with what they answered.
-				const answers = await Promise.all(screenCalls.map((each) => later.current.runScreenTool(each)));
-				if (controller.signal.aborted) return;
-				patchTurn(id, (turn) => ({ ...turn, status: "running", end: null }));
-				return listen({ resume: id, screen: answers }, id);
-			}
-			if (end.status === "interrupted" && end.reason === "time") {
-				// One request's time is up, not the run's: the next request goes on where this one stopped. Nobody presses anything.
-				patchTurn(id, (turn) => ({ ...turn, status: "running", end: null }));
-				return listen({ resume: id }, id);
-			}
-			setBusy(false);
-			cuts.current = 0;
-			void readState();
-			if (end.status === "done") {
-				const [next, ...rest] = queueNow.current;
-				if (next !== undefined) {
-					setQueue(rest);
-					later.current.ask(next);
+			// Where the request ended is a place the browser goes on from by itself, and the person had said stop: it does not go on.
+			const onward = end.status === "waiting" || (end.status === "interrupted" && end.reason === "time");
+			const halted = onward && here.stopAsked;
+			show(() => {
+				if (end.untaken.length > 0) setQueue((waiting) => [...end.untaken.map(named), ...waiting]);
+				patchTurn(id, (turn) => ({
+					...turn,
+					status: halted ? "stopped" : end.status,
+					end: halted ? { status: "stopped" } : { status: end.status, reason: end.reason, error: end.error },
+					// A person stopped it: what was still going has no result, and its line goes.
+					parts:
+						halted || end.status === "stopped"
+							? turn.parts.filter((part) => !(part.type === "tool" && part.state === "running"))
+							: turn.parts,
+				}));
+			});
+			if (!halted && end.status === "waiting") {
+				// Screen tools run here, in the browser, on the screen of the conversation that is open: a run left behind waits until its
+				// conversation is opened again.
+				if (!mine()) return;
+				const answers = await Promise.all(
+					screenCalls.map((each) => later.current.runScreenTool(each, () => mine() && !here.stopAsked)),
+				);
+				if (controller.signal.aborted || !mine()) return;
+				// Stopped while the screen did it: the server has ended the run, and there is nothing to go on with.
+				if (here.stopAsked) {
+					patchTurn(id, (turn) => ({ ...turn, status: "stopped", end: { status: "stopped" } }));
+					return settle(here, "stopped");
 				}
+				patchTurn(id, (turn) => ({ ...turn, status: "running", end: null }));
+				return listen({ resume: id, screen: answers }, id, here, false);
 			}
+			if (!halted && end.status === "interrupted" && end.reason === "time") {
+				// One request's time is up, not the run's: the next request goes on where this one stopped. Nobody presses anything, and it is
+				// so for a conversation left behind too.
+				show(() => patchTurn(id, (turn) => ({ ...turn, status: "running", end: null })));
+				return listen({ resume: id }, id, here, false);
+			}
+			if (mine()) settle(here, halted ? "stopped" : end.status);
 		},
-		[streams, patchTurn, readState, t, setQueue],
+		[streams, patchTurn, readState, t, setQueue, follow, settle, tellStop],
 	);
 
-	/** Runs one screen tool in the browser and says what happened, as the model reads it. */
+	/**
+	 * Runs one screen tool in the browser and says what happened, as the model reads it. `called`: whether the run still asks for it when the
+	 * screen is about to move (the person may have stopped the run, or opened another conversation, while the entry was read).
+	 */
 	const runScreenTool = useCallback(
-		async (tool: ScreenCall): Promise<{ id: string; output?: unknown; error?: string }> => {
+		async (tool: ScreenCall, called: () => boolean): Promise<{ id: string; output?: unknown; error?: string }> => {
 			if (tool.name === "screen.openEntry") {
 				// A screen with unsaved changes does not move, and nothing is asked: the assistant is told, and tells the person.
 				if (unsaved() > 0) return { id: tool.id, error: "The screen has unsaved changes, so it did not move." };
 				const entryId = (tool.input as { id?: string } | null)?.id ?? "";
 				const read = await call<{ entry: { collection: string; title: string } }>("entries.get", { id: entryId });
 				if (!read.ok) return { id: tool.id, error: "There is no such entry." };
+				if (!called()) return { id: tool.id, error: "The run was stopped before the screen moved." };
 				go({ screen: "entry", collection: read.body.entry.collection, id: entryId });
 				return { id: tool.id, output: { opened: read.body.entry.title } };
 			}
@@ -448,37 +595,60 @@ export function AssistantProvider({
 		[screen, unsaved, call, go],
 	);
 
-	/** Reads a run that is going without this page listening, until it is no longer going; then goes on with it, or says it stopped. */
+	/**
+	 * Reads a run that is going without this page listening (another tab has it, or its request was cut), until it is no longer going; then
+	 * goes on with it, or says how it ended. `mayGoOn` false: it only reads, and goes on with nothing by itself.
+	 */
 	const watch = useCallback(
-		async (runId: string) => {
-			const conversation = live.current.conversationId;
-			if (!conversation) return setBusy(false);
-			for (;;) {
-				const read = await readConversation(conversation);
-				if (live.current.conversationId !== conversation) return;
-				const run = read?.runs.find((each) => each.id === runId);
-				if (!run) return setBusy(false);
-				if (run.status === "running") {
-					setBusy(true);
-					await new Promise((resolve) => setTimeout(resolve, POLL_MS));
-					continue;
+		async (runId: string, here: Shown, mayGoOn = true) => {
+			if (gone.current) return;
+			const { controller, mine, done } = follow(here);
+			const conversation = here.conversationId;
+			let waited = 0;
+			try {
+				for (;;) {
+					const read = conversation ? await readConversation(conversation, here) : null;
+					if (controller.signal.aborted || !mine()) return;
+					const run = read?.runs.find((each) => each.id === runId);
+					if (!run) return setBusy(false);
+					const resume = mayGoOn && !here.stopAsked;
+					// A run that waits on a screen is another page's for a moment (it runs the tool and goes on). One that still waits at the
+					// next look has no page: this one takes it up, and is given the screen's part again.
+					const pause = run.status === "running" || (run.status === "waiting" && resume && waited === 0);
+					if (pause) {
+						waited = run.status === "waiting" ? 1 : 0;
+						setBusy(true);
+						await new Promise<void>((resolve) => {
+							const timer = setTimeout(resolve, POLL_MS);
+							controller.signal.addEventListener("abort", () => {
+								clearTimeout(timer);
+								resolve();
+							});
+						});
+						if (controller.signal.aborted || !mine()) return;
+						continue;
+					}
+					// It stopped where its request was cut. The browser goes on with it by itself, unless that keeps happening at the same place.
+					const cutShort = run.status === "interrupted" && here.cuts > 0 && here.cuts < CUTS_BEFORE_ASKING;
+					if (resume && (run.status === "waiting" || cutShort)) {
+						patchTurn(runId, (turn) => ({ ...turn, status: "running", end: null }));
+						return listen({ resume: runId }, runId, here, false);
+					}
+					// It ended while nobody listened: as when its end is heard, the box is free and what waited behind a finished run is asked.
+					return settle(here, run.status);
 				}
-				// It stopped where its request was cut. The browser goes on with it by itself, unless that keeps happening at the same place.
-				if (run.status === "interrupted" && cuts.current > 0 && cuts.current < CUTS_BEFORE_ASKING) {
-					patchTurn(runId, (turn) => ({ ...turn, status: "running", end: null }));
-					return listen({ resume: runId }, runId);
-				}
-				cuts.current = 0;
-				return setBusy(false);
+			} finally {
+				done();
 			}
 		},
-		[readConversation, patchTurn, listen],
+		[readConversation, patchTurn, listen, follow, settle],
 	);
 
 	const ask = useCallback(
 		(request: string) => {
 			const words = request.trim();
 			if (words === "") return;
+			const here = shown.current;
 			const { model: chosen, thinking: think, screenContext: on, removed: off } = sending.current;
 			const context = contextWithout(on, off);
 			const id = `local:${Date.now()}:${Math.random().toString(36).slice(2)}`;
@@ -496,16 +666,20 @@ export function AssistantProvider({
 					at: new Date().toISOString(),
 				},
 			]);
-			cuts.current = 0;
+			here.cuts = 0;
+			here.stopAsked = false;
+			// The model a request goes with is the conversation's from then on, as the server keeps it: if it goes, the panel can say so.
+			if (chosen) setPicked(chosen);
 			void listen(
 				{
-					...(live.current.conversationId ? { conversation: live.current.conversationId } : {}),
+					...(here.conversationId ? { conversation: here.conversationId } : {}),
 					request: words,
 					...(context ? { context } : {}),
 					...(chosen ? { model: chosen } : {}),
 					thinking: think,
 				},
 				id,
+				here,
 			);
 		},
 		[listen, chipLabels],
@@ -514,8 +688,11 @@ export function AssistantProvider({
 	later.current = { ask, watch, runScreenTool };
 
 	const stop = useCallback(() => {
+		const here = shown.current;
 		const last = live.current.turns.at(-1);
 		if (!last) return;
+		// From here on nothing goes on with the run by itself: not after a screen tool, not after one request's time is up.
+		here.stopAsked = true;
 		// It shows as stopped at once: what was still going has no result, and its line goes.
 		patchTurn(last.id, (turn) => ({
 			...turn,
@@ -523,26 +700,22 @@ export function AssistantProvider({
 			end: { status: "stopped" },
 			parts: turn.parts.filter((part) => !(part.type === "tool" && part.state === "running")),
 		}));
-		// A run that has not said its id yet has nothing to stop on the server but its request.
-		if (last.id.startsWith("local:")) {
-			listening.current?.abort();
-			return setBusy(false);
-		}
+		// A run that has not said its id yet may already be open on the server: it is told to stop when it says its id (`listen`).
+		if (local(last.id)) return;
 		// The run is told to stop and ends by itself: its request stays listened to, so the run ends as stopped and not as cut off, and a new
 		// request is taken once it has. What was said to it and not taken comes back with its end, or here when it was only waiting.
-		void call<{ output: { untaken: string[] } }>("assistant.stop", { run: last.id }).then((stopped) => {
-			const untaken = stopped.ok ? stopped.body.output.untaken : [];
-			if (untaken.length > 0) setQueue((waiting) => [...untaken, ...waiting]);
-		});
-	}, [call, patchTurn, setQueue]);
+		tellStop(last.id, here);
+	}, [patchTurn, tellStop]);
 
 	const goOn = useCallback(
 		(more = false) => {
+			const here = shown.current;
 			const last = live.current.turns.at(-1);
-			if (!last || last.id.startsWith("local:")) return;
-			cuts.current = 0;
+			if (!last || local(last.id)) return;
+			here.cuts = 0;
+			here.stopAsked = false;
 			patchTurn(last.id, (turn) => ({ ...turn, status: "running", end: null }));
-			void listen({ resume: last.id, ...(more ? { more: true } : {}) }, last.id);
+			void listen({ resume: last.id, ...(more ? { more: true } : {}) }, last.id, here);
 		},
 		[listen, patchTurn],
 	);
@@ -555,28 +728,61 @@ export function AssistantProvider({
 		ask(last.request);
 	}, [ask]);
 
-	const openConversation = useCallback(
-		async (id: string) => {
-			listening.current?.abort();
+	/**
+	 * Makes another conversation the open one, or none. What followed the one that was open is let be: its run is not cut and goes on, and
+	 * shows nothing here any more. The words that waited behind it are dropped with it, as they are when "+" is pressed.
+	 */
+	const turnTo = useCallback(
+		(id: string | null): Shown => {
+			const here = showing(id);
+			shown.current = here;
 			setBusy(false);
 			setQueue([]);
 			setConversationId(id);
-			live.current.conversationId = id;
 			keep({ conversation: id });
 			setView("chat");
-			const read = await readConversation(id);
-			if (!read) {
-				// It was deleted meanwhile (here or in another tab): a new one.
-				setConversationId(null);
-				keep({ conversation: null });
-				setTurns([]);
-				return;
-			}
+			return here;
+		},
+		[setQueue],
+	);
+
+	const fresh = useCallback(() => {
+		// A run that is going goes on; it is in the past conversations.
+		turnTo(null);
+		setTurns([]);
+		setEarlier(null);
+		setForgotten(0);
+		setRequests(0);
+		setPicked(null);
+		setLevel(null);
+	}, [turnTo]);
+
+	const load = useCallback(
+		async (id: string) => {
+			const here = turnTo(id);
+			const read = await readConversation(id, here);
+			if (gone.current || shown.current !== here) return;
+			// It was deleted meanwhile (here or in another tab): a new one.
+			if (!read) return fresh();
 			// A run that is going elsewhere shows as going, and is read again until it is not.
 			const last = read.runs.at(-1);
-			if (last && (last.status === "running" || last.status === "waiting")) void watch(last.id);
+			if (last && (last.status === "running" || last.status === "waiting")) void watch(last.id, here);
 		},
-		[readConversation, watch, setQueue],
+		[readConversation, watch, turnTo, fresh],
+	);
+	const openConversation = useCallback(
+		async (id: string) => {
+			const here = shown.current;
+			// The one that is open already: its run, what waits behind it and what was said to it stay as they are.
+			if (here.conversationId === id) {
+				setView("chat");
+				// Nothing is going in it: it is read again, for what another tab did to it.
+				if (!live.current.busy) await readConversation(id, here);
+				return;
+			}
+			await load(id);
+		},
+		[readConversation, load],
 	);
 	// The conversation that was open comes back with the page.
 	const restored = useRef(false);
@@ -584,34 +790,28 @@ export function AssistantProvider({
 		if (restored.current || available !== true) return;
 		restored.current = true;
 		const id = kept().conversation;
-		if (id) void openConversation(id);
-	}, [available, openConversation]);
-
-	const fresh = useCallback(() => {
-		// A run that is going goes on; it is in the past conversations.
-		listening.current = null;
-		setBusy(false);
-		setQueue([]);
-		setTurns([]);
-		setEarlier(null);
-		setForgotten(0);
-		setRequests(0);
-		setConversationId(null);
-		live.current.conversationId = null;
-		setPicked(null);
-		setLevel(null);
-		keep({ conversation: null });
-		setView("chat");
-	}, [setQueue]);
+		if (id) void load(id);
+	}, [available, load]);
 
 	const loadEarlier = useCallback(async () => {
-		const id = live.current.conversationId;
-		if (!id || !earlier) return;
-		const read = await call<Conversation>("conversations.get", { id, before: earlier });
-		if (!read.ok) return;
-		setTurns((now) => [...read.body.runs.map((run) => turnOf(run, chipLabels)), ...now]);
-		setEarlier(read.body.earlier);
-	}, [call, earlier, chipLabels]);
+		const here = shown.current;
+		const id = here.conversationId;
+		// One read of the requests before these at a time: the thread says it is at its top with every scroll event.
+		if (!id || !here.earlier || here.loadingEarlier) return;
+		here.loadingEarlier = true;
+		try {
+			const read = await call<Conversation>("conversations.get", { id, before: here.earlier });
+			if (!read.ok || gone.current || shown.current !== here) return;
+			here.earlier = read.body.earlier;
+			setEarlier(read.body.earlier);
+			setTurns((now) => {
+				const have = new Set(now.map((turn) => turn.id));
+				return [...read.body.runs.filter((run) => !have.has(run.id)).map((run) => turnOf(run, chipLabels)), ...now];
+			});
+		} finally {
+			here.loadingEarlier = false;
+		}
+	}, [call, chipLabels]);
 
 	const loadHistory = useCallback(
 		async (more = false) => {
@@ -635,7 +835,7 @@ export function AssistantProvider({
 			const done = await call("conversations.remove", { id });
 			if (!done.ok) return void toast.error(t(done.reason ?? "errors.unexpected"));
 			setHistory((was) => (was ? { ...was, rows: was.rows.filter((row) => row.id !== id) } : was));
-			if (live.current.conversationId === id) fresh();
+			if (!gone.current && shown.current.conversationId === id) fresh();
 		},
 		[call, fresh, t],
 	);
@@ -699,20 +899,24 @@ export function AssistantProvider({
 		draft,
 		setDraft,
 		queue,
-		queueAdd: (words) => setQueue((waiting) => [...waiting, words]),
-		queueTake: (index) => {
-			setDraft(queue[index] ?? "");
-			setQueue((waiting) => waiting.filter((_, at) => at !== index));
+		queueAdd: (words) => setQueue((waiting) => [...waiting, named(words)]),
+		queueTake: (id) => {
+			const item = queueNow.current.find((each) => each.id === id);
+			if (!item) return;
+			setDraft(item.text);
+			setQueue((waiting) => waiting.filter((each) => each.id !== id));
 		},
-		queueCancel: (index) => setQueue((waiting) => waiting.filter((_, at) => at !== index)),
-		queueSendNow: (index) => {
-			const words = queue[index];
-			const last = turns.at(-1);
-			if (words === undefined || !last) return;
-			setQueue((waiting) => waiting.filter((_, at) => at !== index));
+		queueCancel: (id) => setQueue((waiting) => waiting.filter((each) => each.id !== id)),
+		queueSendNow: (id) => {
+			const here = shown.current;
+			const item = queueNow.current.find((each) => each.id === id);
+			const last = live.current.turns.at(-1);
+			// A run that has not said its id yet cannot be told anything: the words wait.
+			if (!item || !last || local(last.id)) return;
+			setQueue((waiting) => waiting.filter((each) => each.id !== id));
 			// The run takes it in before its next turn and says so (`taken`); if it ends first, its end hands the words back.
-			void call("assistant.say", { run: last.id, text: words }).then((said) => {
-				if (!said.ok) setQueue((waiting) => [words, ...waiting]);
+			void call("assistant.say", { run: last.id, text: item.text }).then((said) => {
+				if (!said.ok && !gone.current && shown.current === here) setQueue((waiting) => [item, ...waiting]);
 			});
 		},
 		ask,

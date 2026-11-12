@@ -334,9 +334,34 @@ describe("the key and the model (flow 2, 22–23)", () => {
 		// The panel reads the keys again as it opens.
 		await userEvent.click(page.getByRole("button", { name: "닫기" }));
 		await userEvent.click(button("어시스턴트 열기"));
+		// It says so, with the model that is used from now on.
+		await expect.element(page.getByText(/^쓰던 모델이 없어졌습니다\. 지금 모델: claude-/)).toBeVisible();
 		await say("다시");
 		await expect.element(panel().getByText("둘째 답.")).toBeVisible();
 		await expect.element(page.getByText("그 키에 없는 모델입니다.")).not.toBeInTheDocument();
+	});
+
+	it("10-1 a key removed while the panel is open: the request that is refused for its model reads the models again, the panel says which model is used now, and the same words go with it", async () => {
+		const story = on({ script: () => [{ text: "첫 답." }, { text: "둘째 답." }] });
+		await story.run();
+		const { site, model } = story.loaded();
+		await openPanel();
+		await say("안녕");
+		await expect.element(panel().getByText("첫 답.")).toBeVisible();
+		const keys = (await site.monti.run("keys.list", {}, stories.admin)) as { keys: { id: string }[] };
+		await site.monti.run(
+			"keys.add",
+			{ service: "anthropic", name: "Anthropic 회사", secret: "sk-ant-api03-another-story-key-77de" },
+			stories.admin,
+		);
+		await site.monti.run("keys.remove", { id: keys.keys[0]?.id }, stories.admin);
+		await say("다시");
+		await expect.element(page.getByText(/^쓰던 모델이 없어졌습니다\. 지금 모델: claude-/)).toBeVisible();
+		// One thing is said about it, not the server's refusal beside it (looked at once, while a toast would still stand).
+		expect(page.getByText("그 키에 없는 모델입니다.").elements()).toHaveLength(0);
+		expect(model.turns).toHaveLength(1);
+		await userEvent.click(button("다시 시도"));
+		await expect.element(panel().getByText("둘째 답.")).toBeVisible();
 	});
 
 	it("10-1 by the keyboard: Tab goes from the box to the model button to send; Esc closes the menu and the focus is back on its button; closing the panel hands the focus to ✦", async () => {
@@ -587,4 +612,385 @@ describe("the review page (flow 2, 12–15)", () => {
 		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
 		await expect.element(panel().getByRole("button", { name: "3건 적용" })).toBeVisible();
 	});
+});
+
+describe("which run and which conversation the page follows (the first review of #480)", () => {
+	const gate = () => {
+		let open = () => {};
+		const wait = new Promise<void>((resolve) => {
+			open = resolve;
+		});
+		return { wait, open };
+	};
+	const beat = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+	const runsOf = (loaded: Loaded) =>
+		loaded.site.db
+			.selectFrom("runs")
+			.select(["id", "status", "conversation_id", "request", "stop_requested"])
+			.execute();
+	const runOf = async (loaded: Loaded, request: string) =>
+		(await runsOf(loaded)).find((run) => run.request === request);
+	const past = () => page.getByRole("complementary", { name: "지난 대화" });
+	const going = () => panel().element().querySelectorAll("[aria-busy=true]").length;
+	const calls = (loaded: Loaded, name: string) => loaded.net.sent.filter((each) => each.name === name);
+
+	it("10-1 '새 대화' while a run works: the run left behind goes on to its end and changes nothing in the new conversation, where what waits is asked after its own run", async () => {
+		const first = gate();
+		const second = gate();
+		const story = on({
+			script: () => [
+				{ hold: first.wait, text: "첫 대화의 답." },
+				{ hold: second.wait, text: "둘째 대화의 답." },
+				{ text: "셋째 답." },
+			],
+		});
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("첫 질문");
+		await expect.poll(() => loaded.model.turns.length).toBe(1);
+		await userEvent.click(button("새 대화"));
+		await say("둘째 질문");
+		await expect.poll(() => loaded.model.turns.length).toBe(2);
+		await say("셋째 질문");
+		await expect.element(button("지금 보내기")).toBeVisible();
+
+		// The first conversation's run ends while the second's works: it is not this conversation's end.
+		first.open();
+		await expect.poll(async () => (await runOf(loaded, "첫 질문"))?.status).toBe("done");
+		await beat();
+		expect(loaded.model.turns).toHaveLength(2);
+		await expect.element(button("지금 보내기")).toBeVisible();
+		await expect.element(button("멈추기")).toBeVisible();
+		await expect.element(panel().getByText("첫 대화의 답.")).not.toBeInTheDocument();
+		expect((await runOf(loaded, "둘째 질문"))?.status).toBe("running");
+
+		second.open();
+		await expect.element(panel().getByText("셋째 답.")).toBeVisible();
+		const all = await runsOf(loaded);
+		expect(all.map((run) => run.status)).toEqual(["done", "done", "done"]);
+		const conversation = (request: string) => all.find((run) => run.request === request)?.conversation_id;
+		expect(conversation("셋째 질문")).toBe(conversation("둘째 질문"));
+		expect(conversation("첫 질문")).not.toBe(conversation("둘째 질문"));
+	});
+
+	it("10-1 '새 대화' before the run has said its id: the run that then begins does not pull the panel back into its conversation", async () => {
+		const story = on({ script: () => [{ text: "첫 답." }, { text: "둘째 답." }] });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		const begin = loaded.net.hold("assistant.run");
+		await say("첫 질문");
+		await userEvent.click(button("새 대화"));
+		begin();
+		await expect.poll(async () => (await runOf(loaded, "첫 질문"))?.status).toBe("done");
+		await beat();
+		await expect.element(panel().getByText("첫 답.")).not.toBeInTheDocument();
+		await say("둘째 질문");
+		await expect.element(panel().getByText("둘째 답.")).toBeVisible();
+		const [one, two] = [await runOf(loaded, "첫 질문"), await runOf(loaded, "둘째 질문")];
+		expect(two?.conversation_id).not.toBe(one?.conversation_id);
+		expect((JSON.parse(localStorage.getItem("monti.assistant") ?? "{}") as { conversation: string }).conversation).toBe(
+			two?.conversation_id,
+		);
+	});
+
+	it("10-1 a past conversation opened while a run works: pressing the one that is open changes nothing; opening another lets the run go on to its end, and it is there when opened again", async () => {
+		const long = gate();
+		const story = on({
+			script: () => [{ text: "옛 답." }, { hold: long.wait, text: "긴 답의 앞." }, { text: "기다린 말의 답." }],
+		});
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("옛 질문");
+		await expect.element(panel().getByText("옛 답.")).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		await userEvent.click(button("새 대화"));
+		await say("긴 질문");
+		await expect.poll(() => loaded.model.turns.length).toBe(2);
+		await say("기다리는 말");
+
+		// The conversation that is open, pressed in the list: its run, and what waits behind it, are as they were.
+		await userEvent.click(button("지난 대화"));
+		await userEvent.click(past().getByRole("button", { name: "긴 질문", exact: true }));
+		await expect.element(button("멈추기")).toBeVisible();
+		await expect.element(button("지금 보내기")).toBeVisible();
+		await beat();
+		expect((await runOf(loaded, "긴 질문"))?.status).toBe("running");
+
+		// Another one opened: the run is not cut.
+		await userEvent.click(button("지난 대화"));
+		await userEvent.click(past().getByRole("button", { name: "옛 질문", exact: true }));
+		await expect.element(panel().getByText("옛 답.")).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		await beat();
+		expect((await runOf(loaded, "긴 질문"))?.status).toBe("running");
+		long.open();
+		await expect.poll(async () => (await runOf(loaded, "긴 질문"))?.status).toBe("done");
+		await beat();
+		// Its end is not shown here, and the words that waited behind it went with it: nothing is asked in this conversation.
+		await expect.element(panel().getByText("긴 답의 앞.")).not.toBeInTheDocument();
+		expect(loaded.model.turns).toHaveLength(2);
+
+		await userEvent.click(button("지난 대화"));
+		await userEvent.click(past().getByRole("button", { name: "긴 질문", exact: true }));
+		await expect.element(panel().getByText("긴 답의 앞.")).toBeVisible();
+		await expect.element(panel().getByText("연결이 끊겼습니다")).not.toBeInTheDocument();
+	});
+
+	it("10-1 '‹ 어시스턴트' on the review page while the run works: the run goes on, and what waits behind it is asked when it ends", async () => {
+		const more = gate();
+		const story = on({
+			script: async (ids, version, held) => {
+				const [writes] = await stories.proposedKinds(ids, version, held);
+				return [writes, { hold: more.wait, text: "제안했습니다." }, { text: "기다린 말의 답." }];
+			},
+		});
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("요약 채우고 제목도 다듬어 줘");
+		await expect.element(button("검토")).toBeVisible();
+		await say("기다리는 말");
+		await expect.element(button("지금 보내기")).toBeVisible();
+		await userEvent.click(button("검토"));
+		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
+		await userEvent.click(button("‹ 어시스턴트"));
+		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
+		await beat();
+		await expect.element(button("멈추기")).toBeVisible();
+		await expect.element(button("지금 보내기")).toBeVisible();
+		await expect.element(panel().getByText("연결이 끊겼습니다")).not.toBeInTheDocument();
+		expect((await runOf(loaded, "요약 채우고 제목도 다듬어 줘"))?.status).toBe("running");
+		more.open();
+		await expect.element(panel().getByText("기다린 말의 답.")).toBeVisible();
+		expect((await runsOf(loaded)).map((run) => run.status)).toEqual(["done", "done"]);
+	});
+
+	it("10-1 a conversation's read that comes back after another was opened is not shown", async () => {
+		const story = on({ script: () => [{ text: "옛 답." }, { text: "새 답." }] });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("옛 질문");
+		await expect.element(panel().getByText("옛 답.")).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		await userEvent.click(button("새 대화"));
+		await say("새 질문");
+		await expect.element(panel().getByText("새 답.")).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		await userEvent.click(button("지난 대화"));
+		// The old one is asked for, and before its answer is here the person goes to a new conversation.
+		const read = loaded.net.hold("conversations.get");
+		await userEvent.click(past().getByRole("button", { name: "옛 질문", exact: true }));
+		await userEvent.click(button("새 대화"));
+		read();
+		await beat();
+		await expect.element(panel().getByText("옛 답.")).not.toBeInTheDocument();
+		await expect.element(panel().getByText("새 답.")).not.toBeInTheDocument();
+		await expect.element(button("한 달 넘게 안 고친 초안 찾아 줘")).toBeVisible();
+	});
+
+	it("10-1 stopped while the screen does what the assistant asked: the run is not gone on with, the screen does not move, and nothing is said of a run that ended", async () => {
+		const story = on({
+			script: (ids) => [{ calls: [{ name: "screen_openEntry", input: { id: ids.second } }] }, { text: "열었습니다." }],
+		});
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		// The screen's part takes a while: the entry it opens is being read.
+		const opened = loaded.net.hold("entries.get");
+		await say("둘째 글 열어 줘");
+		await expect.poll(async () => (await runOf(loaded, "둘째 글 열어 줘"))?.status).toBe("waiting");
+		await userEvent.click(button("멈추기"));
+		await expect.poll(async () => (await runOf(loaded, "둘째 글 열어 줘"))?.status).toBe("stopped");
+		opened();
+		await beat(500);
+		await expect.element(button("보내기")).toBeVisible();
+		expect(going()).toBe(0);
+		// Looked at once, now: a toast that came and went would be gone by itself in a few seconds.
+		expect(page.getByText("끝난 실행입니다.").elements()).toHaveLength(0);
+		expect(panel().getByText("연결이 끊겼습니다").elements()).toHaveLength(0);
+		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
+		expect(loaded.model.turns).toHaveLength(1);
+		expect(calls(loaded, "assistant.run")).toHaveLength(1);
+		expect((await runOf(loaded, "둘째 글 열어 줘"))?.status).toBe("stopped");
+	});
+
+	it("10-4 stopped just as one request's time was up: the request the browser had already made to go on is told to stop, and the run goes no further", async () => {
+		const more = gate();
+		const story = on({
+			limits: { ms: 1 },
+			script: () => [READ, { hold: more.wait, ...READ }, { text: "끝까지 간 답." }],
+		});
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		// The first request goes through; the one the browser makes by itself when its time is up is on its way for a while.
+		const onward = loaded.net.hold("assistant.run", 1);
+		await say("요약이 비어 있는 글 찾아 줘");
+		await expect.poll(async () => (await runsOf(loaded))[0]?.status).toBe("interrupted");
+		await expect.poll(() => calls(loaded, "assistant.run").length).toBe(2);
+		await userEvent.click(button("멈추기"));
+		await expect.poll(() => calls(loaded, "assistant.stop").length).toBe(1);
+		onward();
+		await beat(600);
+		more.open();
+		await expect.element(button("보내기")).toBeVisible();
+		await beat();
+		// It did not go on to its end: at most the turn it was taken up into, which was told to stop.
+		await expect.element(panel().getByText("끝까지 간 답.")).not.toBeInTheDocument();
+		expect(loaded.model.turns.length).toBeLessThanOrEqual(2);
+		expect(["stopped", "interrupted"]).toContain((await runsOf(loaded))[0]?.status);
+		expect(going()).toBe(0);
+		await expect.element(button("이어서 하기")).not.toBeInTheDocument();
+	});
+
+	it("10-1 stopped before the run has said its id: the run is told to stop when it does, and ends as stopped", async () => {
+		const more = gate();
+		const story = on({ script: () => [{ hold: more.wait, text: "답." }] });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		const begin = loaded.net.hold("assistant.run");
+		await say("첫 질문");
+		await userEvent.click(button("멈추기"));
+		begin();
+		await expect.poll(async () => (await runsOf(loaded))[0]?.stop_requested).toBe(true);
+		more.open();
+		await expect.poll(async () => (await runsOf(loaded))[0]?.status).toBe("stopped");
+		await expect.element(button("보내기")).toBeVisible();
+		expect(await runsOf(loaded)).toHaveLength(1);
+	});
+
+	it("10-4 the connection went and the run ended in the server meanwhile: what waited behind it is asked, as when its end is heard", async () => {
+		const more = gate();
+		const story = on({ script: () => [{ hold: more.wait, text: "첫 답." }, { text: "둘째 답." }] });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("첫 질문");
+		await expect.poll(() => loaded.model.turns.length).toBe(1);
+		await say("기다리는 말");
+		await expect.element(button("지금 보내기")).toBeVisible();
+		loaded.net.cut();
+		more.open();
+		await expect.element(panel().getByText("둘째 답."), { timeout: 15_000 }).toBeVisible();
+		await expect.element(button("지금 보내기")).not.toBeInTheDocument();
+		expect((await runsOf(loaded)).map((run) => run.status)).toEqual(["done", "done"]);
+	});
+
+	it("10-1 at the top of a long conversation the requests before are read once, however often the thread says it is at its top", async () => {
+		const story = on({ script: () => Array.from({ length: 35 }, (_, index) => ({ text: `답 ${index + 1}` })) });
+		await story.run();
+		const loaded = story.loaded();
+		let conversation: string | undefined;
+		for (let index = 1; index <= 35; index += 1)
+			for await (const event of loaded.site.monti.stream(
+				"assistant.run",
+				{ ...(conversation ? { conversation } : {}), request: `질문 ${index}` },
+				{ actor: "admin", session: null, signal: new AbortController().signal },
+			)) {
+				const told = event as { type: string; conversationId?: string };
+				if (told.type === "run") conversation = told.conversationId;
+			}
+		await openPanel();
+		await userEvent.click(button("지난 대화"));
+		await userEvent.click(past().getByRole("button", { name: "질문 1", exact: true }));
+		await expect.element(panel().getByText("답 35", { exact: true })).toBeVisible();
+		await expect.element(panel().getByText("질문 5", { exact: true })).not.toBeInTheDocument();
+
+		const thread = document.querySelector("[data-slot=chat-thread]") as HTMLElement;
+		const earlier = () =>
+			calls(loaded, "conversations.get").filter((each) => (each.input as { before?: unknown }).before);
+		const read = loaded.net.hold("conversations.get");
+		// The browser's own scrolling to the top, several times while the read is on its way (no device: the thread's position is set).
+		// The thread is laid out from its foot: its top is as far up as it scrolls.
+		const top = thread.clientHeight - thread.scrollHeight;
+		let scrolls = 0;
+		thread.addEventListener("scroll", () => {
+			scrolls += 1;
+		});
+		for (const nudge of [0, 1, 0, 1, 0]) {
+			thread.scrollTop = top + nudge;
+			await beat(50);
+		}
+		expect(scrolls).toBeGreaterThan(2);
+		expect(earlier().length).toBe(1);
+		read();
+		await expect.element(panel().getByText("질문 1", { exact: true })).toBeVisible();
+		await beat();
+		expect(earlier().length).toBe(1);
+		expect(panel().getByText("질문 3", { exact: true }).elements()).toHaveLength(1);
+	});
+
+	it("10-1 the admin goes while a run works (the session ended): the request it listened to is ended, and nothing waits to be asked", async () => {
+		const more = gate();
+		const story = on({ script: () => [{ hold: more.wait, text: "답." }, { text: "묻지 않을 답." }] });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("첫 질문");
+		await expect.poll(() => loaded.model.turns.length).toBe(1);
+		await say("기다리는 말");
+		loaded.net.leave();
+		await expect.poll(() => calls(loaded, "assistant.run")[0]?.signal?.aborted).toBe(true);
+		// The scripted model has no call to cut short: its turn is let go and the run ends in the server, with nobody to ask what waited.
+		more.open();
+		await expect.poll(async () => (await runsOf(loaded))[0]?.status).not.toBe("running");
+		await beat();
+		expect(loaded.model.turns).toHaveLength(1);
+	});
+
+	it("10-1 of two waiting messages with the same words, edit and cancel act on the one that was pressed", async () => {
+		const story = on({ script: (_ids, _version, held) => [{ hold: held, text: "답." }] });
+		await story.run();
+		await openPanel();
+		await say("첫 질문");
+		await expect.poll(() => story.loaded().model.turns.length).toBe(1);
+		for (const words of ["같은 말", "가운데 말", "같은 말"]) await say(words);
+		const waiting = () =>
+			[...panel().element().querySelectorAll("[data-slot=chat-queue-item]")].map((each) => each.textContent ?? "");
+		expect(waiting()).toHaveLength(3);
+		await userEvent.click(button("취소").last());
+		expect(waiting().map((words) => words.includes("가운데 말"))).toEqual([false, true]);
+		await userEvent.click(button("고치기").first());
+		await expect.element(box()).toHaveValue("같은 말");
+		expect(waiting()).toHaveLength(1);
+		expect(waiting()[0]).toContain("가운데 말");
+	});
+});
+
+describe("what goes along from each screen (doc 10, context)", () => {
+	const SCREENS = [
+		{ name: "the list", at: () => null, chip: "이 목록", kind: "list" },
+		{ name: "the editor", at: (ids: Loaded["ids"]) => `#/c/post/${ids.second}`, chip: "이 글", kind: "entry" },
+		{ name: "the media library", at: () => "#/media", chip: "미디어", kind: "media" },
+		{ name: "the settings", at: () => "#/settings/collections", chip: "설정", kind: "settings" },
+	];
+	for (const screen of SCREENS)
+		it(`10-1 on ${screen.name} the screen is a chip over the box and goes along with what is asked; taken off, nothing of the screen goes`, async () => {
+			const story = on({ script: () => [{ text: "첫 답." }, { text: "둘째 답." }] });
+			await story.run();
+			const { model, ids } = story.loaded();
+			await openPanel();
+			const at = screen.at(ids);
+			if (at) window.location.hash = at;
+			const off = button(`${screen.chip} 빼기`);
+			await expect.element(off).toBeVisible();
+			// The library's own request to start from.
+			if (screen.kind === "media") await expect.element(button("쓰지 않는 파일 찾아 줘")).toBeVisible();
+			await say("첫 질문");
+			await expect.element(panel().getByText("첫 답.")).toBeVisible();
+			await expect.element(button("보내기")).toBeVisible();
+			const asked = (turn: number) => JSON.stringify(model.turns[turn]?.messages.at(-1)).replaceAll('\\"', '"');
+			expect(asked(0)).toContain(`"screen":"${screen.kind}"`);
+			await userEvent.click(off);
+			await expect.element(off).not.toBeInTheDocument();
+			await say("둘째 질문");
+			await expect.element(panel().getByText("둘째 답.")).toBeVisible();
+			expect(asked(1)).toContain("둘째 질문");
+			expect(asked(1)).not.toContain("<screen");
+		});
 });

@@ -75,6 +75,7 @@ import {
 	Upload as UploadIcon,
 } from "@monti-cms/ui/icons";
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { useScreenContext } from "../../assistant/use-assistant";
 import { useLeave } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
 import { FileThumb, useFileDetail } from "../../media/file-shown";
@@ -428,6 +429,12 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const childFolders = looking ? [] : folders.children(state.folder);
 	const pickedItems = items.filter((item) => picked.has(item.id));
 	const picking = pickedItems.length > 0;
+	// What goes along with a request to the assistant from here (doc 10, context): the library, the folder that is open and the files picked.
+	useScreenContext({
+		screen: "media",
+		...(state.folder ? { query: { folder: state.folder } } : {}),
+		...(picking ? { selection: { kind: "rows" as const, ids: pickedItems.map((item) => item.id) } } : {}),
+	});
 	const openPath = useMemo(
 		() => (here && !state.everywhere ? folders.path(here.id).map((up) => up.name) : []),
 		[here, state.everywhere, folders],

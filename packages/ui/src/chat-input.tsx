@@ -57,7 +57,9 @@ export function ChatInput({
 		else if (onQueue) onQueue(value.trim());
 	};
 	const onKeyDown = (event: KeyboardEvent) => {
-		if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+		// An Enter that ends a syllable being composed (Korean, Japanese, Chinese) is the input method's, not a send. Safari sends it after
+		// the composition has ended, with `isComposing` false; its key code is still the input method's, 229.
+		if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === 229) return;
 		event.preventDefault();
 		submit();
 	};

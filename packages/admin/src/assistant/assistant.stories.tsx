@@ -8,9 +8,11 @@ import {
 } from "@monti-cms/ai";
 import type { Monti } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useSyncExternalStore } from "react";
 import { userEvent, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../.storybook/pglite-site";
 import { MontiAdmin } from "../app";
+import type { StreamTransport, Transport } from "../operations/transport";
 import { schema } from "../screens/story-schema";
 
 export type Loaded = {
@@ -19,15 +21,127 @@ export type Loaded = {
 	ids: { first: string; second: string; third: string };
 	/** Lets a turn that waits on the story's gate go on. */
 	release: () => void;
+	net: Net;
 };
+
+/** What a test does to the page's traffic and to the page, to bring about a moment no press brings about by itself. */
+export type Net = {
+	/**
+	 * From now on the requests of this name wait (an operation's answer, or a stream's start), after `skip` of them have gone through, until
+	 * the function this gives is called.
+	 */
+	hold: (name: string, skip?: number) => () => void;
+	/** The stream the page listens to breaks here, as when the network goes. The run goes on in the server. */
+	cut: () => void;
+	/** Every request the page made, in order; a stream's has the signal it was asked with. */
+	sent: { name: string; input: unknown; signal?: AbortSignal }[];
+	/** Takes the admin off the page, as when the session ends. */
+	leave: () => void;
+};
+
+/** The story site's two ways to the server, with what a test can do to them (`Net`). */
+function netOf(made: StorySite): { net: Net; transport: Transport; streams: StreamTransport; left: Left } {
+	const holds = new Map<string, { skip: number; open: Promise<void> }>();
+	const sent: Net["sent"] = [];
+	const cuts = new Set<() => void>();
+	const watchers = new Set<() => void>();
+	let gone = false;
+	const held = async (name: string) => {
+		const hold = holds.get(name);
+		if (!hold) return;
+		if (hold.skip > 0) hold.skip -= 1;
+		else await hold.open;
+	};
+	const transport: Transport = async (name, input, options) => {
+		sent.push({ name, input });
+		await held(name);
+		return made.transport(name, input, options);
+	};
+	const streams: StreamTransport = async (name, input, options) => {
+		sent.push({ name, input, signal: options?.signal });
+		await held(name);
+		const answer = await made.streams(name, input, options);
+		if (!("events" in answer)) return answer;
+		const events = answer.events[Symbol.asyncIterator]();
+		return {
+			status: 200,
+			events: (async function* () {
+				let broke = () => {};
+				const broken = new Promise<"cut">((resolve) => {
+					broke = () => resolve("cut");
+				});
+				cuts.add(broke);
+				try {
+					for (;;) {
+						const next = events.next();
+						const got = await Promise.race([next, broken]);
+						if (got === "cut") {
+							// Read on without the page: only the page's connection went, and the server's run is not cut.
+							void (async () => {
+								await next;
+								while (!(await events.next()).done);
+							})().catch(() => {});
+							throw new Error("The network went.");
+						}
+						if (got.done) return;
+						yield got.value;
+					}
+				} finally {
+					cuts.delete(broke);
+				}
+			})(),
+		};
+	};
+	return {
+		transport,
+		streams,
+		left: {
+			subscribe: (watcher) => {
+				watchers.add(watcher);
+				return () => watchers.delete(watcher);
+			},
+			now: () => gone,
+		},
+		net: {
+			hold: (name, skip = 0) => {
+				let release = () => {};
+				holds.set(name, {
+					skip,
+					open: new Promise<void>((resolve) => {
+						release = resolve;
+					}),
+				});
+				return () => {
+					holds.delete(name);
+					release();
+				};
+			},
+			cut: () => {
+				for (const broke of [...cuts]) broke();
+			},
+			sent,
+			leave: () => {
+				gone = true;
+				for (const watcher of watchers) watcher();
+			},
+		},
+	};
+}
+type Left = { subscribe: (watcher: () => void) => () => void; now: () => boolean };
+
+/** The admin on a story's site, until a test takes it off the page. */
+function Stage({ site: made, left }: { site: StorySite; left: Left }) {
+	const gone = useSyncExternalStore(left.subscribe, left.now);
+	return gone ? null : <MontiAdmin transport={made.transport} streams={made.streams} siteName="example.dev" />;
+}
 
 const meta = {
 	excludeStories: /^[a-z]/,
 	tags: ["visual"],
 	title: "Screens/Assistant",
 	render: (_args, { loaded }) => {
-		const { site: made } = loaded as Loaded;
-		return <MontiAdmin transport={made.transport} streams={made.streams} siteName="example.dev" />;
+		const { site: made, left } = loaded as Loaded & { left: Left };
+		return <Stage site={made} left={left} />;
 	},
 } satisfies Meta;
 export default meta;
@@ -149,7 +263,7 @@ export const site = ({
 	limits?: Partial<RunLimits>;
 	at?: string;
 } = {}) => [
-	async (): Promise<Loaded> => {
+	async (): Promise<Loaded & { left: Left }> => {
 		startAt(at);
 		const model = scriptedProvider();
 		const ids = { first: "", second: "", third: "" };
@@ -180,7 +294,8 @@ export const site = ({
 			release = resolve;
 		});
 		model.add(...(await script(ids, version, gate)));
-		return { site: made, model, ids, release };
+		const { net, transport, streams, left } = netOf(made);
+		return { site: { ...made, transport, streams }, model, ids, release, net, left };
 	},
 ];
 

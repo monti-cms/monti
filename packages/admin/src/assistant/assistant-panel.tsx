@@ -153,18 +153,17 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 			}
 			queue={
 				assistant.queue.length > 0
-					? assistant.queue.map((words, index) => (
+					? assistant.queue.map((waiting) => (
 							<ChatQueueItem
-								// Two waiting messages may say the same: their place tells them apart.
-								key={`${index}:${words}`}
+								key={waiting.id}
 								sendNowLabel={t("panel.sendNow")}
 								editLabel={t("panel.editQueued")}
 								cancelLabel={t("panel.cancelQueued")}
-								onSendNow={() => assistant.queueSendNow(index)}
-								onEdit={() => intoBox(() => assistant.queueTake(index))}
-								onCancel={() => assistant.queueCancel(index)}
+								onSendNow={() => assistant.queueSendNow(waiting.id)}
+								onEdit={() => intoBox(() => assistant.queueTake(waiting.id))}
+								onCancel={() => assistant.queueCancel(waiting.id)}
 							>
-								{words}
+								{waiting.text}
 							</ChatQueueItem>
 						))
 					: undefined

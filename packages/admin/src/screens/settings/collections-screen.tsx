@@ -21,6 +21,7 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
+import { useScreenContext } from "../../assistant/use-assistant";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
@@ -119,6 +120,8 @@ export function CollectionsScreen({
 
 	const live = model.collections.filter((c) => model.shown(at.collection(c)));
 	const current = active && live.includes(active) ? active : (live[0] ?? null);
+	// What goes along with a request to the assistant from here (doc 10, context): the settings, and the collection that is shown.
+	useScreenContext({ screen: "settings", ...(current ? { collection: current } : {}) });
 	const kind = current ? (model.shown(at.collection(current)) as { kind: "document" | "item" }).kind : "document";
 	const shownTab: Tab = tab === "editor" && kind !== "document" ? "fields" : tab;
 	const locked = data?.locked ?? true;
