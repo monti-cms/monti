@@ -186,11 +186,15 @@ describe("monti init", () => {
 			"GITHUB_ADMIN",
 			"S3_BUCKET",
 			"S3_REGION",
+			"S3_ENDPOINT",
 			"S3_ACCESS_KEY_ID",
 			"S3_SECRET_ACCESS_KEY",
 			"S3_PUBLIC_URL",
 		]);
 		expect(text).toContain("Its callback address: <the site's address>/studio/api/auth/github");
+		// The S3 storage is written as its own package gives it, with what is left for it: its values, and the bucket's CORS.
+		expect(after["monti.config.ts"]).toContain('plugins: [definePlugin({ name: "files", storage: s3Storage() })]');
+		expect(text).toContain("`npx monti doctor --origin <address>` checks it and prints the CORS setting.");
 		// A flag's value that is not one, and a flag it does not know, stop it before anything is read or written.
 		const other = site();
 		const wrong = await run(other, ["--login", "magic"]);

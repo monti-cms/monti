@@ -82,6 +82,7 @@ export {
 	acceptFile,
 	FILE_CHOOSER_ACCEPT,
 	HEAD_BYTES,
+	isMediaKey,
 	MAX_UPLOAD_BYTES,
 	type MediaKind,
 	splitName,
@@ -108,7 +109,7 @@ export type {
 } from "./media/operations";
 export { MEDIA_QUERY_MOST, mediaSortStart } from "./media/operations";
 export { imageFrameStyle, type SiteImage, type SiteMedia, siteImage } from "./media/site-image";
-export { memoryStorage, type Storage } from "./media/storage";
+export { memoryStorage, type Storage, type UploadTicket } from "./media/storage";
 export { altIsMissing, cleanMediaValue, type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";
 export { coreMessages, defineMessages, formatMessage, type MessageBundle } from "./messages";
 export {

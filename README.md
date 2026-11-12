@@ -24,6 +24,7 @@ rebuilt packages is being made ([doc 20](docs/design/features/20-release.md)); u
 | [`@monti-cms/admin`](packages/admin) | The admin screens. They reach the server only through operations |
 | [`@monti-cms/next`](packages/next) | Monti on a Next.js site: the admin page, the admin API route, the preview in draft mode, the cache refreshed on publish |
 | [`@monti-cms/ai`](packages/ai) | The assistant: it runs a model over the site's operations and hands back proposals to review |
+| [`@monti-cms/storage-s3`](packages/storage-s3) | Media files in S3 and what speaks its API (Cloudflare R2, MinIO): files go straight from the browser to the bucket |
 
 [`examples/blog`](examples/blog) is a blog on Next.js with Monti mounted on it; the flow tests (`pnpm test:e2e`) run on it.
 
@@ -100,7 +101,10 @@ const monti = createMonti({
 });
 ```
 
-`localFolderStorage` is for a development server: it keeps files in a folder on disk, served by the admin API. Any other place takes a plugin that implements `Storage`. An S3-compatible adapter is planned.
+`localFolderStorage` is for a development server, or a host with a disk: it keeps files in a folder, served by the admin API. A host that keeps
+no disk, or takes only small requests, uses [`@monti-cms/storage-s3`](packages/storage-s3) (`npx monti init --storage s3` writes it): files go
+straight from the browser to the bucket, and the server checks what arrived before any item names it. Any other place takes a plugin that
+implements `Storage`.
 
 ## License
 

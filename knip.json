@@ -20,6 +20,9 @@
 		"packages/ai": {
 			"entry": ["src/**/*.test.ts"]
 		},
+		"packages/storage-s3": {
+			"entry": ["src/**/*.test.ts"]
+		},
 		"packages/ui": {
 			"entry": ["src/spec-pack/pack.mjs"],
 			"ignoreIssues": {

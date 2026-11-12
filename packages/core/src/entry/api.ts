@@ -20,6 +20,10 @@ export type AdminApiOptions = {
 	fetch?: typeof fetch;
 };
 
+/** What a browser says of a file before it sends it: its name, its size, and its first bytes (base64), which say what it is. */
+const TicketBody = z.object({ name: z.string(), size: z.number().int().nonnegative(), head: z.string().max(8192) });
+const SealedBody = z.object({ key: z.string() });
+
 const Body = z.object({
 	input: z.unknown().optional(),
 	versions: z.record(z.string(), z.number()).optional(),
@@ -269,6 +273,12 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		return done(adminPath, sessionCookie(request, started.token, started.expiresAt));
 	}
 
+	/** The library will not take the file: too big, or not a kind it takes. */
+	const refusal = (reason: "size" | "type") =>
+		reason === "size"
+			? { status: 413, body: { error: "media-refused", reason: { key: "media.tooBig" } } }
+			: { status: 415, body: { error: "media-refused", reason: { key: "media.badType" } } };
+
 	/**
 	 * A file's bytes on their way to the library (doc 09, the way up): this is the one route a screen reaches the server by that is not an operation, because an
 	 * operation is JSON in one transaction. The browser asked `acceptFile` already; here the file's own bytes answer, and the key is the server's. `media.upload`
@@ -284,15 +294,79 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		const storage = monti.site.storage;
 		if (!storage) return { status: 422, body: { error: "check-failed", reason: { key: "media.noStorage" } } };
 		const accepted = acceptFile({ name, size: bytes.length, head: bytes.subarray(0, HEAD_BYTES) });
-		if (!accepted.ok)
-			return accepted.reason === "size"
-				? { status: 413, body: { error: "media-refused", reason: { key: "media.tooBig" } } }
-				: { status: 415, body: { error: "media-refused", reason: { key: "media.badType" } } };
+		if (!accepted.ok) return refusal(accepted.reason);
 		const key = `${randomUUID()}${accepted.extension}`;
 		await storage.put(key, bytes, { mime: accepted.mime });
 		// Until `media.upload` makes it a file's: an upload that stops here is removed by the clean-up (doc 11).
 		await loosen(monti.db, [key], looseUntil(monti.now()));
 		return { status: 200, body: { key, mime: accepted.mime, size: bytes.length } };
+	}
+
+	/**
+	 * The direct way up, first step (doc 20): a host may take smaller requests than the library's largest file, so the bytes go from the browser
+	 * straight to the storage. The same rule answers here as on the byte route, from the file's first bytes; the key is the server's, and the
+	 * address it hands back is signed for that key, type and size alone. A storage that takes no direct uploads answers `direct: false`, and
+	 * the browser uses the byte route.
+	 */
+	async function ticket(
+		file: { name: string; size: number; head: Uint8Array },
+		token: string | null | undefined,
+		local = false,
+	): Promise<{ status: number; body: unknown }> {
+		if (!(await sessionOf(token, local))) return { status: 401, body: { error: "unauthenticated" } };
+		const storage = monti.site.storage;
+		if (!storage) return { status: 422, body: { error: "check-failed", reason: { key: "media.noStorage" } } };
+		if (!storage.ticket) return { status: 200, body: { direct: false } };
+		const accepted = acceptFile({ name: file.name, size: file.size, head: file.head.subarray(0, HEAD_BYTES) });
+		if (!accepted.ok) return refusal(accepted.reason);
+		const key = `${randomUUID()}${accepted.extension}`;
+		const { url, headers } = await storage.ticket(key, { mime: accepted.mime, size: file.size });
+		// Loose from the start: a file that goes up and is never sealed, or never made an item, is removed by the clean-up (doc 11).
+		await loosen(monti.db, [key], looseUntil(monti.now()));
+		return { status: 200, body: { direct: true, key, url, headers } };
+	}
+
+	/**
+	 * The direct way up, last step: the browser says the file is in the storage, and the server looks at what is there. Nothing the browser said
+	 * is taken for it: the size is the stored one, the type is what the stored bytes say, by the rule of the byte route, and it must be the type
+	 * the address was signed for. A file that fails is removed from the storage. Until this passes no item names the key.
+	 */
+	async function sealed(
+		key: string,
+		token: string | null | undefined,
+		local = false,
+	): Promise<{ status: number; body: unknown }> {
+		if (!(await sessionOf(token, local))) return { status: 401, body: { error: "unauthenticated" } };
+		const storage = monti.site.storage;
+		if (!storage) return { status: 422, body: { error: "check-failed", reason: { key: "media.noStorage" } } };
+		// Only a key this server handed out and nothing has taken yet.
+		const waiting = isMediaKey(key)
+			? await monti.db.selectFrom("loose_files").select("key").where("key", "=", key).executeTakeFirst()
+			: undefined;
+		const stored = waiting ? await storage.stat(key) : null;
+		if (!stored) return { status: 404, body: { error: "not-found" } };
+		const refuse = async (reason: "size" | "type") => {
+			await storage.remove(key);
+			await monti.db.deleteFrom("loose_files").where("key", "=", key).execute();
+			return refusal(reason);
+		};
+		// Before a byte of it is read.
+		if (stored.size > MAX_UPLOAD_BYTES) return refuse("size");
+		const head = storage.readStart
+			? await storage.readStart(key, HEAD_BYTES)
+			: ((await storage.read(key))?.bytes.subarray(0, HEAD_BYTES) ?? null);
+		if (!head) return { status: 404, body: { error: "not-found" } };
+		// The key carries the extension the ticket gave it: the bytes must be of that kind.
+		const accepted = acceptFile({ name: key, size: stored.size, head });
+		if (!accepted.ok) return refuse(accepted.reason);
+		if (accepted.mime !== stored.mime) return refuse("type");
+		return { status: 200, body: { key, mime: accepted.mime, size: stored.size } };
+	}
+
+	/** A small JSON body, or `null` when it is not one. */
+	async function jsonBody<Shape>(request: Request, shape: z.ZodType<Shape>): Promise<Shape | null> {
+		const parsed = shape.safeParse(await request.json().catch(() => null));
+		return parsed.success ? parsed.data : null;
 	}
 
 	/** The request's body, or `null` past the largest file the library takes: it stops reading there, whatever the request said it holds. */
@@ -352,11 +426,27 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 			const answer = await upload(bytes, searchParams.get("name") ?? "", token, local);
 			return json(answer.status, answer.body);
 		}
+		if (pathname.endsWith("/media/ticket") && request.method === "POST") {
+			const body = await jsonBody(request, TicketBody);
+			if (!body) return json(400, { error: "invalid-body" });
+			const answer = await ticket(
+				{ name: body.name, size: body.size, head: Uint8Array.from(atob(body.head), (char) => char.charCodeAt(0)) },
+				cookies(request)[SESSION_COOKIE],
+				bypasses(request),
+			);
+			return json(answer.status, answer.body);
+		}
+		if (pathname.endsWith("/media/sealed") && request.method === "POST") {
+			const body = await jsonBody(request, SealedBody);
+			if (!body) return json(400, { error: "invalid-body" });
+			const answer = await sealed(body.key, cookies(request)[SESSION_COOKIE], bypasses(request));
+			return json(answer.status, answer.body);
+		}
 		const file = pathname.match(/\/media\/files\/([^/]+)$/)?.[1];
 		if (file && request.method === "GET") return mediaFile(file);
 		const githubRoute = pathname.match(/\/auth\/github(\/callback)?$/);
 		if (githubRoute && request.method === "GET") return githubSignIn(request, githubRoute[1] !== undefined);
 		return json(404, { error: "not-found" });
 	};
-	return Object.assign(handle, { call, upload, stream });
+	return Object.assign(handle, { call, upload, ticket, sealed, stream });
 }

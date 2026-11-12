@@ -80,7 +80,6 @@
 | T87 | 그 사이 블록이나 글자가 바뀌어 본문에 그릴 수 없는 제안을 "이 사이에 고쳐짐 · 다시 만들기"로 보인다(00 제안 상태). 지금은 그리지 않고 버블도 세지 않는다. 서버에는 대기로 남는다 | 10 | 03 T32 |
 | T92 | 설정 › 언어 탭(흐름 11의 05~08 · 16: 코드 찾기와 직접 입력, 원문 바꾸기, 빼기 검토의 빨간 "지우고 적용", 운영 사이트의 잠금)과 언어의 표시 이름 · 시간대(관리자 값). "+ 언어" 메뉴의 "언어 관리"와, 언어가 모두 있을 때의 "언어 추가 · 설정"(흐름 3·14)도 그 탭으로 간다. 그때까지 언어가 모두 있으면 "+ 언어"가 없다. core의 `locales.plan` · `locales.apply`는 있다 | 12 | 04 |
 | T94 | 번역의 "✦ 번역"(탭 줄 오른쪽, 흐린 블록 메뉴)과 "✦ 다시 번역"(바뀜 카드의 수락), 번역 제안 버블("번역" · "다시 번역"), 여러 글 번역 검토(흐름 3·03, 11, 13). core는 받은 `body.edit` 제안의 블록을 `translated`로, `seen`을 지금 원문으로 둔다 | 10 | 04 |
-| T102 | S3 호환 저장소 어댑터(`@monti-cms/storage-s3`). 09에는 저장소 접점과 개발용 로컬 폴더 어댑터만 있다. 새 패키지라 `commitlint.config.mjs`의 scope와 T14(릴리스 묶음)도 함께. 호스트의 요청 크기 한도가 10 MB보다 작을 수 있으므로 브라우저가 저장소로 직접 올리는 길(`PUT …/media/bytes` 자리)을 함께 만든다 | 20 | 09 원칙 6 |
 | T105 | `check:design`이 옛 파일을 읽느라 관리자 화면을 보지 않던 것을 09에서 고쳤다. 그 사이 쓰인 원시 레이아웃 세 파일(`admin-frame.tsx`의 아이콘 크기, 설정의 `basics-tab.tsx`와 `new-collection-sheet.tsx`의 공개 주소 줄, 16에서 같은 줄을 한 번 더 쓴 `basics-tab.tsx`의 미리보기 주소 줄)을 부품으로 바꾸고 `DRAWING`에서 뺀다. 같은 때 `packages/ui/src/field.tsx`의 `FormFieldError` 주석("6px")을 field.md와 실제 간격(8px)에 맞춘다(#470 디자인 검토) | 12 | 09 디자인 검토 |
 | T104 | 이미지 설정 카드, 캡션 줄, 미디어 필드의 "✦ 채우기"(흐름 6·06, 09 에이전트의 "보기"). 그때까지 버튼이 없다 | 10 | 09 |
 | T108 | 파일 패널의 제안 표시는 `name`만 읽는다(`media-panel.tsx`의 `proposalValues`). `folder`만 제안하거나 그 파일의 `trash.move`를 제안하면 말풍선은 뜨는데 받아도 아무 일이 없다 | 10 | 09 리뷰 |
@@ -130,11 +129,13 @@
 | T213 | 새 사이트 증명(`scripts/try-release.mjs`)의 `tsc`는 `skipLibCheck`로 돈다(새 Next 앱의 기본). Monti의 선언 파일 안의 오류는 `@arethetypeswrong/cli`만 본다. 증명이 Monti의 선언까지 검사하게 할지 정한다 | 9단계 전 | #483 코드 리뷰 |
 | T214 | 묶음(`scripts/pack-release.mjs`)은 같은 소스에서 바이트까지 같게 나오지 않는다(파일 시각, 폴더를 읽는 순서). 파일 목록은 같다. 같은 태그를 다시 묶었을 때 같은 파일이 나오게 할지 정한다 | 9단계 전 | #483 코드 리뷰 |
 | T215 | `monti` 명령은 환경 파일 안의 `$VAR` · `${VAR}`를 풀지 않는다(`packages/core/src/cli/env-files.ts`). Next(`@next/env`)는 푼다. 다른 값을 가리키는 값(`DATABASE_URL=postgres://$DB_HOST/site`)을 쓴 사이트에서 명령과 사이트가 서로 다른 값을 읽는다 | 9단계 전 | #484 코드 리뷰 |
+| T216 | S3 저장소(`@monti-cms/storage-s3`)와 직접 올리기를 실제 버킷에서 해 본다: AWS S3, Cloudflare R2, MinIO 가운데 릴리스가 된다고 말할 것. 다른 주소에서 브라우저가 올리는 것(CORS), 서명된 주소가 다른 종류와 크기를 거절하는 것, `monti doctor --origin`의 `storage/cors`. 지금 테스트는 패키지 안의 대역 버킷에서만 돈다 | 9단계 전 | T102 |
 
 ## 끝낸 일
 
 | 번호 | 할 일 | PR |
 |---|---|---|
+| T102 | S3 호환 저장소 어댑터(`@monti-cms/storage-s3`, `s3Storage()`): `S3_ENDPOINT` · `S3_FORCE_PATH_STYLE`, 지역 `auto`, ACL 없음. 브라우저가 저장소로 직접 올리는 길(`POST …/media/ticket`, 서명된 `PUT`, `POST …/media/sealed`: 서버가 저장소에 든 파일을 보고 다르면 지운다). `doctor`의 `storage/cors`, `init --storage s3`. 릴리스 묶음과 증명에 들어간다 | PRNUM |
 | T82 | `monti init`(있던 Next 사이트에 Monti 파일을 쓰고 남은 일을 말한다)과 `monti doctor`(설정 점검). `monti` 명령이 사이트의 환경 파일을 Next의 순서로 읽는다. 새 사이트 증명이 `monti init --yes`와 `monti doctor`를 돌린다. 있던 글 알아보기와 플러그인 고르기는 14번(T198), 저장소의 CORS 점검은 T102와 함께 | #484 |
 | T14 | 릴리스 묶음: 다섯 패키지가 모두 빌드되고, 패키지마다 압축 파일 하나로 낸다(`scripts/pack-release.mjs`). 저장소 밖의 새 Next 앱이 묶음에서 설치해 도는 것(`scripts/try-release.mjs`), `publint`, `@arethetypeswrong/cli`가 릴리스의 관문이고 CI가 push마다 돌린다. `release.yml`은 태그에서 GitHub 릴리스를 만든다 | #483 |
 | T133 | 읽기 전용 본문(보관 글, 휴지통 글)에서 키보드가 이미지에 선다. 눌렀을 때 도구 행이 뜨는 블록(지금은 이미지뿐)이 글 차례대로 Tab 자리이고, 닿은 이미지는 보통 포커스 고리를 그린다. Enter · Space나 포인터가 그 이미지를 골라 쓰는 편집기와 같은 2px 진한 선과 도구 행이 뜨고(키로 골랐으면 포커스가 "설정"으로 간다), Escape가 카드 다음에 도구 행을 닫으며 고른 것을 푼다. 포커스는 이미지에 남는다. 키보드가 있는 곳과 고른 것은 두 상태다. 쓰는 것은 닿지 않는다(2026-11-12 결정). 쓰는 편집기는 그대로다 | #475 |

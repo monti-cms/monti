@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { createServer as createHttpServer } from "node:http";
 import { type AddressInfo, createServer, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -123,6 +124,7 @@ describe("monti doctor", () => {
 			"ok storage/configured",
 			"ok storage/reachable",
 			"ok storage/host",
+			"skip storage/cors",
 			"ok auth/login",
 		]);
 		expect(report.ok).toBe(true);
@@ -231,7 +233,7 @@ describe("monti doctor", () => {
 			"storage/configured": "skip",
 			"auth/login": "skip",
 		});
-		expect(none.checks).toHaveLength(15);
+		expect(none.checks).toHaveLength(16);
 		const thrown = await runDoctor(
 			options(site(), {
 				loadConfig: async () => {
@@ -297,7 +299,7 @@ describe("monti doctor", () => {
 		expect(report.checks.find((check) => check.id === "database/migrations")?.message).toMatch(
 			/^The schema's change files do not read: /,
 		);
-		expect(report.checks).toHaveLength(15);
+		expect(report.checks).toHaveLength(16);
 		expect(report.checks.at(-1)).toMatchObject({ id: "auth/login", status: "ok" });
 
 		// A table by Monti's name that is not Monti's: reading what was followed fails.
@@ -329,6 +331,7 @@ describe("monti doctor", () => {
 			}),
 			expect.objectContaining({ id: "storage/reachable", status: "skip" }),
 			expect.objectContaining({ id: "storage/host", status: "skip" }),
+			expect.objectContaining({ id: "storage/cors", status: "skip" }),
 		]);
 		expect(json.checks.at(-1)?.id).toBe("auth/login");
 	});
@@ -347,7 +350,7 @@ describe("monti doctor", () => {
 			expect(Date.now() - started).toBeLessThan(3000);
 			expect(report.checks.find((check) => check.id === "database/reachable")).toMatchObject({ status: "fail" });
 			expect(report.checks.find((check) => check.id === "database/migrations")?.status).toBe("skip");
-			expect(report.checks).toHaveLength(15);
+			expect(report.checks).toHaveLength(16);
 		} finally {
 			for (const socket of taken) socket.destroy();
 			silent.close();
@@ -360,6 +363,81 @@ describe("monti doctor", () => {
 				"storage/reachable",
 			),
 		).toMatchObject({ status: "fail", message: "The storage does not answer: no answer in 0.1 seconds" });
+	});
+
+	it("20-8 a storage that takes files from the browser is asked, as a browser asks, whether the site's address may send them; a no prints the setting to paste", async () => {
+		// The bucket: it answers the preflight for the origins it allows, as S3 does.
+		const asked: { origin?: string; method?: string; headers?: string; url?: string }[] = [];
+		const bucket = createHttpServer((request, response) => {
+			asked.push({
+				origin: request.headers.origin,
+				method: request.headers["access-control-request-method"],
+				headers: request.headers["access-control-request-headers"],
+				url: request.url,
+			});
+			const allowed = request.method === "OPTIONS" && request.headers.origin === "https://example.com";
+			response.writeHead(allowed ? 200 : 403, allowed ? { "access-control-allow-origin": "https://example.com" } : {});
+			response.end();
+		});
+		await new Promise<void>((resolve) => bucket.listen(0, "127.0.0.1", resolve));
+		const { port } = bucket.address() as AddressInfo;
+		const files = memoryStorage();
+		const direct = {
+			...files,
+			ticket: async (key: string) => ({
+				url: `http://127.0.0.1:${port}/media/${key}?X-Amz-Signature=abc`,
+				headers: { "content-type": "image/png", "cache-control": "public" },
+			}),
+		};
+		const put = vi.spyOn(files, "put");
+		const withStorage = { config: { plugins: [{ name: "files", storage: direct }] } };
+		try {
+			const dir = site();
+			expect(
+				await found(options(dir, { ...withStorage, origin: "https://example.com" }), "storage/cors"),
+			).toMatchObject({
+				status: "ok",
+				message: "the storage takes uploads from https://example.com",
+			});
+			expect(asked[0]).toMatchObject({
+				origin: "https://example.com",
+				method: "PUT",
+				headers: "content-type,cache-control",
+			});
+			// The address it asks at is a signed one, for a key nothing has.
+			expect(asked[0]?.url).toMatch(/^\/media\/[0-9a-f-]{36}\.png\?X-Amz-Signature=abc$/);
+
+			const refused = await found(options(dir, { ...withStorage, origin: "https://other.example" }), "storage/cors");
+			expect(refused).toMatchObject({
+				status: "fail",
+				message:
+					"The storage does not take uploads from https://other.example: a file sent from the admin would be refused.",
+			});
+			expect(JSON.parse((refused.fix ?? "").replace("set it to:\n", ""))).toEqual([
+				{
+					AllowedOrigins: ["https://other.example"],
+					AllowedMethods: ["PUT"],
+					AllowedHeaders: ["content-type", "cache-control"],
+					MaxAgeSeconds: 3600,
+				},
+			]);
+
+			// No address to try from: said, not failed. The command reads it from --origin, or SITE_URL.
+			expect(await found(options(dir, withStorage), "storage/cors")).toMatchObject({
+				status: "warn",
+				fix: "npx monti doctor --origin https://your.site (or set SITE_URL)",
+			});
+			const printed: string[] = [];
+			await doctor({
+				...options(dir, { ...withStorage, env: { MONTI_SECRET: SECRET, SITE_URL: "https://example.com/" } }),
+				argv: [],
+				out: (line) => printed.push(line),
+			});
+			expect(printed.join("\n")).toContain("ok    storage/cors");
+			expect(put).not.toHaveBeenCalled();
+		} finally {
+			bucket.close();
+		}
 	});
 
 	it("20-8 in a workspace the packages are found above the site's folder, and an admin in a route group is found with its address and the layout over it", async () => {

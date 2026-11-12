@@ -13,11 +13,25 @@ export type Storage = {
 	/** The address the admin and the site load the file from. */
 	url(key: string): string;
 	/**
+	 * The file's first bytes, at most `length` of them: what the type check reads (`HEAD_BYTES`), without fetching the whole file. A storage
+	 * without it is read whole.
+	 */
+	readStart?(key: string, length: number): Promise<Uint8Array | null>;
+	/**
+	 * Where a browser sends a file's bytes straight to the storage (doc 20, the direct way up): an address signed for one `PUT` of this key,
+	 * with the headers that request must carry. The signature binds the key, the type and the size, so the address takes nothing else. A
+	 * storage without it takes files through the site (`PUT …/media/bytes`).
+	 */
+	ticket?(key: string, file: { mime: string; size: number }): Promise<UploadTicket>;
+	/**
 	 * `"folder"` when the files are on this machine's disk (`localFolderStorage`): `monti doctor` says so on a host that keeps no disk. Other
 	 * storages leave it out.
 	 */
 	kind?: "folder";
 };
+
+/** A signed address for one upload. Nothing is added to `url`: a changed address is one the storage refuses. */
+export type UploadTicket = { url: string; headers: Record<string, string> };
 
 /** Files in memory, for tests and Storybook: in a browser a key's address is an object URL, so the picture really loads. */
 export function memoryStorage(options: { url?: (key: string) => string } = {}): Storage {
