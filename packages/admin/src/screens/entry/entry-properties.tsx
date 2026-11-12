@@ -620,6 +620,12 @@ export function EntryProperties({
 					onChange={(next) => editor.set(path, next)}
 				/>
 			);
+		const strays =
+			def.kind === "select"
+				? (Array.isArray(value) ? value : typeof value === "string" ? [value] : []).filter(
+						(option): option is string => typeof option === "string" && !def.options.includes(option),
+					)
+				: [];
 		const input = () => {
 			if (def.kind === "slug")
 				return (
@@ -666,7 +672,8 @@ export function EntryProperties({
 				);
 			if (def.kind === "select") {
 				const labels = values[key]?.optionLabels ?? {};
-				const items = def.options.map((option) => ({ value: option, label: labels[option] ?? option }));
+				// A stored word the field no longer lists (older data, a schema file edited by hand) is shown as it is, never as another option.
+				const items = [...def.options, ...strays].map((option) => ({ value: option, label: labels[option] ?? option }));
 				return def.many ? (
 					<PickMany
 						id={id}
@@ -758,6 +765,11 @@ export function EntryProperties({
 					{values[key]?.label ?? key}
 				</FormFieldLabel>
 				{input()}
+				{strays.length > 0 ? (
+					<Text variant="caption" tone="warning">
+						{t("entry.notAnOption", { option: strays.join(", ") })}
+					</Text>
+				) : null}
 				{after}
 			</FormField>
 		);

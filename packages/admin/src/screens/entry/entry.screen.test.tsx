@@ -947,4 +947,22 @@ describe("a conditional field in the property panel (doc 19)", () => {
 		await expect.element(field("동영상 주소")).toHaveValue("https://example.dev/talk.mp4");
 		await expect.element(page.getByText(/지워집니다/)).not.toBeInTheDocument();
 	});
+
+	it("19-11 a stored word the field no longer lists is shown as it is, marked as not an option, and no other option is shown in its place; picking one takes the mark away", async () => {
+		const made = on("strayOption");
+		await made.run();
+		await opened();
+		const choice = page.getByRole("combobox", { name: "글 종류" });
+		await expect.element(choice).toHaveTextContent("podcast");
+		await expect.element(page.getByText("podcast: 선택지에 없는 값")).toBeVisible();
+		// None of the listed options' fields is the entry's.
+		await expect.element(field("동영상 주소")).not.toBeInTheDocument();
+		await expect.element(field("링크 주소")).not.toBeInTheDocument();
+
+		await userEvent.click(choice);
+		await userEvent.click(page.getByRole("option", { name: "링크" }));
+		await expect.element(choice).toHaveTextContent("링크");
+		await expect.element(page.getByText(/선택지에 없는 값/)).not.toBeInTheDocument();
+		await expect.element(field("링크 주소")).toBeVisible();
+	});
 });

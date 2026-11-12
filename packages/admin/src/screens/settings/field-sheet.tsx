@@ -34,7 +34,7 @@ import {
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "./pick-one";
-import { at, type DraftField, FIELD_VALUES, type FieldValue, newFieldKey } from "./schema-draft";
+import { at, type DraftField, FIELD_VALUES, type FieldValue, newFieldKey, savedField } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 
 /** The kinds a person makes (doc 01; the conditional one of doc 19); `slug` is every collection's own and is never made here. */
@@ -54,7 +54,8 @@ type Form = {
 	max: string;
 	required: boolean;
 	locale: LocaleMode;
-	options: { value: string; label: string }[];
+	/** `was` is the saved word of an option the field was saved with: the row keeps it while its value is edited, so the edit is a rename. */
+	options: { value: string; label: string; was?: string }[];
 	many: boolean;
 	ordered: boolean;
 	via: string;
@@ -81,8 +82,16 @@ const blank = (to: string): Form => ({
 	createMissing: false,
 });
 
-function formOf(field: DraftField, values: Partial<Record<FieldValue, unknown>>, to: string): Form {
+function formOf(
+	field: DraftField,
+	values: Partial<Record<FieldValue, unknown>>,
+	to: string,
+	saved: FieldDefinition | undefined,
+): Form {
 	const def = field.def;
+	const savedOptions = saved && "options" in saved ? saved.options : [];
+	const wordNow = new Map(Object.entries(field.renamed ?? {}).map(([from, now]) => [now, from]));
+	const wasOf = (value: string) => wordNow.get(value) ?? (savedOptions.includes(value) ? value : undefined);
 	const labels = (values.optionLabels ?? {}) as Record<string, string>;
 	return {
 		...blank(to),
@@ -97,7 +106,7 @@ function formOf(field: DraftField, values: Partial<Record<FieldValue, unknown>>,
 		locale: localeModeOf(field.name, def),
 		options:
 			def.kind === "select" || def.kind === "conditional"
-				? def.options.map((value) => ({ value, label: labels[value] ?? "" }))
+				? def.options.map((value) => ({ value, label: labels[value] ?? "", was: wasOf(value) }))
 				: [],
 		many: (def.kind === "select" || def.kind === "relation") && Boolean(def.many),
 		ordered: def.kind === "relation" && Boolean(def.ordered),
@@ -221,6 +230,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 						FIELD_VALUES.map((each) => [each, model.shown(at.fieldValue(c, open.key as string, each))]),
 					),
 					targets[0]?.value ?? "",
+					data && open.key ? savedField(data, c, open.key)?.def : undefined,
 				)
 			: blank(targets[0]?.value ?? ""),
 	);
@@ -251,6 +261,12 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 					: null;
 	const ready = form.name !== "" && nameError === null;
 
+	// An option whose value was edited in its row is renamed: the save rewrites the word wherever it is chosen (docs 12 and 19).
+	const renamedOptions = Object.fromEntries(
+		form.options.flatMap((option) =>
+			option.was && option.value && option.was !== option.value ? [[option.was, option.value]] : [],
+		),
+	);
 	const save = () => {
 		if (!ready) {
 			setTried(true);
@@ -263,6 +279,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 				name: form.name,
 				def: defOf(form, existing?.def ?? null),
 				...(under ? { under } : {}),
+				...(Object.keys(renamedOptions).length > 0 ? { renamed: renamedOptions } : {}),
 			} satisfies DraftField);
 		const values = adminOf(form);
 		for (const each of FIELD_VALUES) {
@@ -631,9 +648,14 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 	);
 
 	const title = adding ? t("settings.field.add") : model.fieldLabel(c, open.key as string);
+	// A field of an option says whose it is: the conditional field and the option, by their labels.
+	const hostLabels = under
+		? ((model.shown(at.fieldValue(c, under.field, "optionLabels")) ?? {}) as Record<string, string>)
+		: {};
+	const whose = under ? [model.fieldLabel(c, under.field), hostLabels[under.option] ?? under.option] : [];
 	const head = (
 		<SheetHeader>
-			<SheetTitle of={`· ${model.label(c)}`} ofMono={false}>
+			<SheetTitle of={`· ${[model.label(c), ...whose].join(" · ")}`} ofMono={false}>
 				{title}
 			</SheetTitle>
 		</SheetHeader>
@@ -652,7 +674,8 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 				<SheetSplit
 					list={
 						<PickList aria-label={t("settings.field.kinds")}>
-							{KINDS.map((kind) => (
+							{/* A field of an option is not itself conditional (doc 19: no nesting). */}
+							{KINDS.filter((kind) => !(under && kind === "conditional")).map((kind) => (
 								<PickListItem key={kind} selected={form.kind === kind} onClick={() => set({ kind })}>
 									{kindWord(kind)}
 								</PickListItem>

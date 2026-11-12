@@ -1,4 +1,4 @@
-import type { Answers, Choice, FieldDefinition, SchemaChange } from "@monti-cms/core";
+import { type Answers, type Choice, type FieldDefinition, type SchemaChange, storedFields } from "@monti-cms/core";
 import {
 	Box,
 	Button,
@@ -51,6 +51,9 @@ const firstPick = (change: SchemaChange): Pick | null => {
 		return { radio: "clear", move: moves[0] };
 	}
 	if (first.do === "addRequiredField") return { radio: "fill", fill: first.fill };
+	// An option taken out: emptying is the default where it is offered (not on a required field), else the first option that stays.
+	if (first.do === "removeOption")
+		return first.entries === "empty" ? { radio: "empty" } : { radio: "change", move: first.entries.change };
 	return { radio: "confirm" };
 };
 
@@ -62,6 +65,13 @@ const answerOf = (change: SchemaChange, pick: Pick): Choice | null => {
 		return { do: "removeField", values: pick.radio === "move" && pick.move ? { move: pick.move } : "clear" };
 	if (first.do === "addRequiredField")
 		return { do: "addRequiredField", fill: pick.radio === "fill" ? pick.fill : null };
+	if (first.do === "removeOption")
+		// "Change" with no option picked yet is no answer: the save refuses it by the change's name.
+		return pick.radio === "change"
+			? pick.move
+				? { do: "removeOption", entries: { change: pick.move } }
+				: null
+			: { do: "removeOption", entries: "empty" };
 	// Nothing to choose: the answer is the red button itself.
 	return first.do === "removeLocale"
 		? { do: "removeLocale", confirm: true }
@@ -73,6 +83,7 @@ const deletes = (change: SchemaChange, pick: Pick | undefined) =>
 	change.do === "removeCollection" ||
 	change.do === "removeLocale" ||
 	(change.do === "removeField" && pick?.radio !== "move") ||
+	(change.do === "removeOption" && pick?.radio === "empty") ||
 	(change.do === "renameField" && pick?.radio === "empty");
 
 /**
@@ -221,8 +232,9 @@ function Body({
 	const pick = (id: string, patch: Partial<Pick>) =>
 		setPicks((current) => ({ ...current, [id]: { ...(current[id] as Pick), ...patch } }));
 	const draftSchema = model.built?.schema;
+	// By the fields as they are stored: a conditional field is its choice here, and its options' fields are fields (doc 19).
 	const definition = (change: CollectionChange): FieldDefinition | undefined =>
-		change.field ? draftSchema?.collections[change.collection]?.fields[change.field] : undefined;
+		change.field ? storedFields(draftSchema?.collections[change.collection])[change.field] : undefined;
 	const keyOf = (collection: string, name: string) =>
 		model.fields(collection).find((each) => model.fieldName(collection, each) === name) ?? name;
 	/** A choice's label as the draft gives it, else its value. */
@@ -290,7 +302,13 @@ function Body({
 		if (!ofCollection(change)) return languageBlock(change);
 		const c = change.collection;
 		const current = picks[change.id];
-		const count = (n: number | undefined) => (n === undefined ? undefined : t("settings.review.count", { count: n }));
+		// How many entries, and how many of them are on the site now: their published version changes with the draft (doc 02).
+		const count = (n: number | undefined, published = change.published) =>
+			n === undefined
+				? undefined
+				: published
+					? `${t("settings.review.count", { count: n })} · ${t("settings.review.published", { count: published })}`
+					: t("settings.review.count", { count: n });
 		switch (change.do) {
 			case "addCollection": {
 				const made = draftSchema?.collections[c];
@@ -414,6 +432,85 @@ function Body({
 					</ChangeGroup>
 				);
 			}
+			case "renameOption": {
+				const field = change.field as string;
+				return (
+					<ChangeGroup
+						key={change.id}
+						kind="edit"
+						tag={t("changes.renamed")}
+						title={`${fieldLabel(c, field)} · ${optionLabel(c, field, change.option ?? "")}`}
+						identifier={`${field} · ${change.from} → ${change.option}`}
+					>
+						<ChangeLines>
+							<ChangeLine what={t("settings.review.chose")} then={count(change.count) ?? ""} />
+						</ChangeLines>
+					</ChangeGroup>
+				);
+			}
+			case "removeOption": {
+				const field = change.field as string;
+				const option = change.option ?? "";
+				const stay = (change.choices ?? []).flatMap((choice) =>
+					choice.do === "removeOption" && typeof choice.entries === "object" ? [choice.entries.change] : [],
+				);
+				const canEmpty = (change.choices ?? []).some(
+					(choice) => choice.do === "removeOption" && choice.entries === "empty",
+				);
+				// A conditional field's entries changed to an option whose fields are required hold none of them yet: said here, asked for at
+				// each entry's next publish (doc 19).
+				const host = draftSchema?.collections[c]?.fields[field];
+				const target = current?.radio === "change" ? current.move : undefined;
+				const asks =
+					host?.kind === "conditional" && target
+						? Object.values(host.fields[target] ?? {}).some((each) => each.required)
+						: false;
+				return (
+					<ChangeGroup
+						key={change.id}
+						kind="drop"
+						tag={t("changes.removed")}
+						title={`${fieldLabel(c, field)} · ${optionLabel(c, field, option)}`}
+						identifier={`${field} · ${option}`}
+					>
+						<ChangeLines>
+							<ChangeLine what={t("settings.review.chose")} then={count(change.count) ?? ""} />
+						</ChangeLines>
+						<RadioGroup
+							height="md"
+							aria-label={t("settings.review.entriesOf", { name: option })}
+							value={current?.radio}
+							onValueChange={(radio) => pick(change.id, { radio: String(radio) })}
+						>
+							<RadioItem
+								value="change"
+								label={t("settings.review.changeEntries")}
+								control={
+									<PickOne
+										width="fit"
+										size="md"
+										label={t("settings.review.changeEntries")}
+										items={stay.map((each) => ({ value: each, label: optionLabel(c, field, each) }))}
+										value={current?.radio === "change" ? (current.move ?? null) : null}
+										placeholder={t("settings.review.option")}
+										onChange={(move) => pick(change.id, { radio: "change", move })}
+									/>
+								}
+							/>
+							{canEmpty ? <RadioItem value="empty" label={t("settings.review.emptyEntries")} /> : null}
+						</RadioGroup>
+						{current?.radio === "empty" ? <ChangeNote danger>{t("settings.review.valuesGo")}</ChangeNote> : null}
+						{asks && target ? (
+							<ChangeNote>
+								{[
+									t("settings.review.requiredEmpty", { option: optionLabel(c, field, target) }),
+									...(change.published ? [t("settings.review.published", { count: change.published })] : []),
+								].join(" · ")}
+							</ChangeNote>
+						) : null}
+					</ChangeGroup>
+				);
+			}
 			case "addField":
 			case "changeField": {
 				const def = definition(change);
@@ -461,7 +558,12 @@ function Body({
 							value={current?.radio}
 							onValueChange={(radio) => pick(change.id, { radio: String(radio) })}
 						>
-							<RadioItem value="fill" label={t("settings.review.fill", { count: change.count ?? 0 })} control={fill} />
+							<RadioItem
+								value="fill"
+								label={t("settings.review.fill", { count: change.count ?? 0 })}
+								hint={change.published ? t("settings.review.published", { count: change.published }) : undefined}
+								control={fill}
+							/>
 							<RadioItem value="leave" label={t("settings.review.leave")} />
 						</RadioGroup>
 						{current?.radio === "leave" ? <ChangeNote>{t("settings.review.leaveNote")}</ChangeNote> : null}

@@ -120,7 +120,8 @@ type Kind =
 	| "tableSized"
 	| "footnotes"
 	| "proposed"
-	| "conditional";
+	| "conditional"
+	| "strayOption";
 
 /** The blog with a conditional field on its posts (doc 19): what a post is, and what each kind of post asks for. */
 const withFormat = defineSchema({
@@ -161,7 +162,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					subtitle: { label: "부제" },
 					cover: { label: "대표 이미지" },
 					category: { label: "카테고리" },
-					...(kind === "conditional"
+					...(kind === "conditional" || kind === "strayOption"
 						? {
 								format: { label: "글 종류", optionLabels: { article: "글", video: "동영상", link: "링크" } },
 								videoUrl: { label: "동영상 주소" },
@@ -236,7 +237,7 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 	async (): Promise<Loaded> => {
 		let id = "";
 		const made = await storySite({
-			schema: kind === "conditional" ? withFormat : schema,
+			schema: kind === "conditional" || kind === "strayOption" ? withFormat : schema,
 			auth: { password: true },
 			// A site signs its preview links: without a secret "Preview" has nothing to open.
 			secret: "story secret",
@@ -245,6 +246,13 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 				id = await entry(monti, kind);
 			},
 		});
+		// A word the field no longer lists, as older data or a hand-edited schema file leaves it: written past the save's check.
+		if (kind === "strayOption")
+			await made.db
+				.updateTable("entries")
+				.set({ values: JSON.stringify({ format: "podcast" }) })
+				.where("id", "=", id)
+				.execute();
 		startAt(`#/c/post/${id}`);
 		if (kept)
 			localStorage.setItem(
@@ -304,6 +312,15 @@ export const ConditionalChanged: Story = {
 		await userEvent.click(await page.findByRole("combobox", { name: "글 종류" }, wait));
 		await userEvent.click(await all.findByRole("option", { name: "링크" }, wait));
 		await page.findByRole("textbox", { name: /링크 주소/ }, wait);
+	},
+};
+
+/** A stored word the field no longer lists: the choice shows it as it is, marked, never as another option. */
+export const StrayOption: Story = {
+	loaders: site("strayOption"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByText("podcast: 선택지에 없는 값", {}, wait);
 	},
 };
 

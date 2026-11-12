@@ -46,7 +46,7 @@ import {
 	tabId,
 	tabIndex,
 } from "./layout-moves";
-import { at, type DraftField, FIELD_VALUES, type Layout, shownLayout } from "./schema-draft";
+import { at, type DraftField, FIELD_VALUES, type Layout, savedField, shownLayout } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 
 /** The kind at the end of a field's line, as the schema says it: "text · 120", "[] → tag". */
@@ -182,7 +182,8 @@ export function FieldsTab({
 	const { t } = useAdmin();
 	const { draft, data } = model;
 	const locked = data?.locked ?? true;
-	const keys = model.fields(c);
+	// The fields that stand on their own; an option's fields hang under their conditional field (doc 19).
+	const keys = model.topFields(c);
 	const layoutPath = at.collectionValue(c, "layout");
 	// A layout the assistant proposed is the one shown until it is taken or discarded.
 	const layout = shownLayout(model.shown(layoutPath) as Layout | undefined, keys, t("settings.fields.defaultTab"));
@@ -251,7 +252,7 @@ export function FieldsTab({
 	/** What a field's line shows: its name, label, kind and what changed. */
 	const rowProps = (key: string, depth: 0 | 1) => {
 		const path = at.field(c, key);
-		const saved = data?.schema.collections[c]?.fields[key];
+		const saved = data ? savedField(data, c, key)?.def : undefined;
 		const cell = draft.cell(path);
 		const field = model.shown(path) as DraftField | null | undefined;
 		const mine = model.changed.some((changed) => changed === path || changed.startsWith(`fa:${c}:${key}:`));

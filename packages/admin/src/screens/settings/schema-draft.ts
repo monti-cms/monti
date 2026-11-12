@@ -43,7 +43,25 @@ export type Catalog = {
  * A field of a conditional field's option (doc 19) is a field of its own here, as it is stored: `under` says which field (by its place) and which
  * option it belongs to, and the conditional field's own definition holds its options with no fields in them.
  */
-export type DraftField = { name: string; def: FieldDefinition; under?: { field: string; option: string } };
+export type DraftField = {
+	name: string;
+	def: FieldDefinition;
+	under?: { field: string; option: string };
+	/** The options of a select or a conditional field renamed in the draft: the saved word to the word now. The save rewrites the stored word. */
+	renamed?: Record<string, string>;
+};
+
+/** An option's word now, from the word a field of it names it by (the saved word, or the word now). */
+const optionNow = (host: DraftField | null | undefined, option: string) => host?.renamed?.[option] ?? option;
+
+/** The option renames a field holds that are real: the saved field lists the old word, the field now lists the new one and not the old. */
+function optionRenames(saved: DraftField | undefined, field: DraftField): [string, string][] {
+	const [was, now] = [saved?.def, field.def];
+	if (!was || !("options" in was) || !("options" in now)) return [];
+	return Object.entries(field.renamed ?? {}).filter(
+		([from, to]) => was.options.includes(from) && now.options.includes(to) && !now.options.includes(from),
+	);
+}
 
 /** A collection's fields as the draft holds them, in the order shown: a conditional field, then its options' fields. */
 export function draftFields(collection: Pick<CollectionDefinition, "fields"> | undefined): Record<string, DraftField> {
@@ -335,9 +353,10 @@ export function fieldKeys(read: SchemaRead, changed: Path[], c: string): string[
  * place.
  */
 export function optionFields(keys: string[], value: Values, c: string, host: string, option: string): string[] {
+	const hostField = value(at.field(c, host)) as DraftField | null | undefined;
 	return keys.filter((key) => {
 		const field = value(at.field(c, key)) as DraftField | null | undefined;
-		return field?.under?.field === host && field.under.option === option;
+		return field?.under?.field === host && optionNow(hostField, field.under.option) === option;
 	});
 }
 
@@ -381,7 +400,8 @@ export function build(read: SchemaRead, changed: Path[], value: Values, catalog:
 		}
 		for (const [key, field] of drafted) {
 			// A field of an option that is gone, or of a conditional field that is, goes with it: the review asks about its values.
-			const group = field.under ? groups.get(field.under.field)?.[field.under.option] : undefined;
+			const host = field.under ? (value(at.field(c, field.under.field)) as DraftField | null | undefined) : null;
+			const group = field.under ? groups.get(field.under.field)?.[optionNow(host, field.under.option)] : undefined;
 			if (!group) continue;
 			group[field.name] = field.def as GroupField;
 			names.set(key, field.name);
@@ -393,6 +413,10 @@ export function build(read: SchemaRead, changed: Path[], value: Values, catalog:
 		}
 		for (const [key, name] of names)
 			if (savedField(read, c, key) && name !== key) renames.push({ collection: c, from: key, to: name });
+		for (const [key, field] of drafted)
+			if (names.has(key))
+				for (const [from, to] of optionRenames(savedField(read, c, key), field))
+					renames.push({ collection: c, of: field.name, from, to });
 		const path = value(at.path(c));
 		const preview = value(at.preview(c));
 		schema.collections[c] =
@@ -544,13 +568,24 @@ export function proposalPaths(
 		}
 		if (before.path !== collection.path) out[at.path(c)] = collection.path ?? null;
 		if (previewOf(before) !== previewOf(collection)) out[at.preview(c)] = previewOf(collection);
-		const renamedTo = new Map(renames.filter((r) => r.collection === c).map((r) => [r.from, r.to]));
+		const renamedTo = new Map(renames.filter((r) => r.collection === c && !r.of).map((r) => [r.from, r.to]));
 		const savedName = new Map([...renamedTo].map(([from, to]) => [to, from]));
-		// A field of an option names its conditional field by that field's place: the name it was saved with.
-		const placed = (field: DraftField): DraftField =>
-			field.under
-				? { ...field, under: { ...field.under, field: savedName.get(field.under.field) ?? field.under.field } }
-				: field;
+		const ofField = (name: string) => renames.filter((r) => r.collection === c && r.of === name);
+		// A field of an option names its conditional field by that field's place (the name it was saved with) and its option by the saved
+		// word; a field with renamed options carries them.
+		const placed = (field: DraftField): DraftField => {
+			const options = ofField(field.name);
+			const out: DraftField =
+				options.length > 0
+					? { ...field, renamed: Object.fromEntries(options.map((rename) => [rename.from, rename.to])) }
+					: field;
+			if (!out.under) return out;
+			const word = ofField(out.under.field).find((rename) => rename.to === out.under?.option)?.from;
+			return {
+				...out,
+				under: { field: savedName.get(out.under.field) ?? out.under.field, option: word ?? out.under.option },
+			};
+		};
 		const [was, now] = [draftFields(before), draftFields(collection)];
 		for (const [name, field] of Object.entries(was)) {
 			const to = renamedTo.get(name);
