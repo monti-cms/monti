@@ -373,15 +373,16 @@ export function measure(root: ParentNode = document): string[] {
 		element.focus();
 		if (document.activeElement !== element) continue;
 		// Not asked of what is typed in (its caret), of a menu's row (lit by its menu), of what has its menu open (the focus is in the menu, and the
-		// trigger keeps its open look), of a handle that is pointed at or held (its line is out already), or of a story that holds the focused look on a
-		// thing to show it (`storybook-addon-pseudo-states`).
+		// trigger keeps its open look), of a handle that is pointed at or held (its line is out already), of a day the calendar holds as the one
+		// its keys are on (`data-focused`: ringed before and after), or of a story that holds the focused look on a thing to show it
+		// (`storybook-addon-pseudo-states`).
 		const asked =
 			!allowed(element, "focus") &&
 			!element.matches(TYPED) &&
 			!element.matches(LIT_BY_ITS_MENU) &&
 			element.getAttribute("aria-expanded") !== "true" &&
 			!(element.matches(LINE_IS_FOCUS) && element.matches(":hover, [data-active], [data-resizing], [data-hovered]")) &&
-			element.closest("[class*=pseudo-focus]") === null;
+			element.closest("[data-focused=true], [class*=pseudo-focus]") === null;
 		if (asked && element.matches(":focus-visible") && marks(element) === unfocused)
 			found.add(
 				`focus: ${nameOf(element)} draws nothing when the keyboard's focus is on it; a ring, or a field's ink line`,
