@@ -108,7 +108,7 @@ export function tabOf(path: Path): "site" | "languages" | "collections" {
 	return path.startsWith("locale:") || path.startsWith("locales:") ? "languages" : "collections";
 }
 
-/** A language as the draft holds it: its own name ("한국어"). */
+/** A language as the draft holds it: its name written in itself. */
 export type DraftLocale = { name: string };
 
 /** One row of the language tab: the saved languages and the ones the draft adds, in the order shown, the source first. */

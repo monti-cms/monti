@@ -1,5 +1,4 @@
 import {
-	Affix,
 	FormField,
 	FormFieldLabel,
 	MenuField,
@@ -15,7 +14,10 @@ import {
 import { AdminFrame } from "./frame";
 import { SettingsTabs, SwitchOption } from "./settings";
 
-/** Settings, Admin tab: the admin's own language, its features, its address, and the signed-in account. */
+/**
+ * Settings, Admin tab: the admin's own language, its feature switch, and the signed-in account. Nothing here waits in a draft: each is saved the
+ * moment it is picked (doc 12). The admin's address is the folder its page file sits in, so it is not a setting (doc 16).
+ */
 export function AdminSettingsScreen() {
 	return (
 		<AdminFrame open="settings">
@@ -33,18 +35,10 @@ export function AdminSettingsScreen() {
 						</FormField>
 					</Section>
 					<Section title="기능">
-						{/* One group of switch rows: one height, 4px apart. */}
+						{/* A group of switch rows: one height, 4px apart. */}
 						<Stack gap={4}>
 							<SwitchOption label="본문 템플릿" checked height="lg" />
-							<SwitchOption label="번역" checked height="lg" />
 						</Stack>
-					</Section>
-					<Section title="주소">
-						{/* Set in the config file, so it can be changed here in local development, as the preview path can. */}
-						<FormField>
-							<FormFieldLabel htmlFor="admin-path">관리자 주소</FormFieldLabel>
-							<Affix id="admin-path" prefix="/" defaultValue="studio" />
-						</FormField>
 					</Section>
 					<Section title="계정" last>
 						<ReadValue label="로그인한 계정">me@example.dev</ReadValue>

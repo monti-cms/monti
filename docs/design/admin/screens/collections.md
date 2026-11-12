@@ -48,7 +48,7 @@
 | 식별자 | `ReadValue`(`mono`), 값 바로 뒤 `LockMark`("바꿀 수 없음") | 절대 바꿀 수 없는 값이라 글로 보이고, 자물쇠는 그 줄에 있다. |
 | 종류 | `ReadValue` "본문이 있는 글" | 만들 때 정한 값이라 글로 보인다. |
 | 표시 이름 | `FormField` + `Input` | 관리자 값이라 늘 고칠 수 있다. 처음부터 입력 칸이다. |
-| Public address | A 36px body-text setting row matching “Use folders”, with the `Affix` directly below. Items add a `Switch` at the far end and hide the `Affix` while off; documents have no switch. | Documents require a public address. Items start without one and keep their slug as an internal identifier. On a live site the field reads either the address or “Not used”. |
+| Public address | A 36px body-text setting row matching “Use folders” (`Inline minHeight="control-lg"` + `Label size="body"`), with the `Affix` directly below. A changed address puts a `ChangeDot` after the label and “되돌리기” at the row's end. Items add a `Switch` at the far end and hide the `Affix` while off; documents have no switch. | Documents require a public address. Items start without one and keep their slug as an internal identifier. On a live site the field reads either the address or “Not used”. |
 | 폴더 사용 | `Option spread height="lg"` + `Switch` | 관리자 값이라 늘 고칠 수 있다. 위 입력 칸과 같은 36px 줄이다(원칙 10). |
 | 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + 오른쪽 끝 `Button variant="outline-danger" size="sm"` "지우기" | 이미 고른 컬렉션의 상세라 이름을 되풀이하지 않는다. 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 변경 사항 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
 

@@ -8,11 +8,13 @@ import {
 	Grid,
 	Inline,
 	Input,
+	Label,
 	LockMark,
 	Option,
 	ReadValue,
 	Stack,
 	Switch,
+	TextButton,
 } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { at } from "./schema-draft";
@@ -91,23 +93,39 @@ export function BasicsTab({
 							<LockMark label={t("settings.locked")} />
 						</ReadValue>
 					)
-				) : kind === "item" ? (
-					// An item's public page is a switch; its address shows under it while it is on. The switch row is 36px, as the inputs above it.
+				) : (
+					// A 36px body-text row like "Use folders" below it, the address under it (collections.md). An item's row ends in the switch of its public page.
 					<Stack gap={4}>
-						<Option spread height="lg">
+						<Inline minHeight="control-lg" align="center" justify="between" gap={12}>
 							<Inline gap={8} align="center">
-								{t("settings.basics.path")}
+								<Label
+									htmlFor={kind === "item" ? "collection-public-page" : "collection-path"}
+									size="body"
+									tone="default"
+								>
+									{t("settings.basics.path")}
+								</Label>
 								{pathChanged ? <ChangeDot label={pathChanged.label} /> : null}
 							</Inline>
-							<Switch
-								checked={path !== undefined}
-								onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
-							/>
-						</Option>
+							<Inline gap={12} align="center">
+								{pathChanged ? (
+									<TextButton variant="underline" quiet size="caption" onClick={pathChanged.onUndo}>
+										{pathChanged.undoLabel}
+									</TextButton>
+								) : null}
+								{kind === "item" ? (
+									<Switch
+										id="collection-public-page"
+										checked={path !== undefined}
+										onCheckedChange={(checked) => draft.set(pathPlace, checked ? addressOf(c) : null)}
+									/>
+								) : null}
+							</Inline>
+						</Inline>
 						{path !== undefined && (
 							<Affix
 								id="collection-path"
-								aria-label={t("settings.basics.path")}
+								aria-label={kind === "item" ? t("settings.basics.path") : undefined}
 								prefix="/"
 								suffix="/:slug"
 								width="fit"
@@ -116,20 +134,6 @@ export function BasicsTab({
 							/>
 						)}
 					</Stack>
-				) : (
-					<FormField>
-						<FormFieldLabel htmlFor="collection-path" changed={pathChanged}>
-							{t("settings.basics.path")}
-						</FormFieldLabel>
-						<Affix
-							id="collection-path"
-							prefix="/"
-							suffix="/:slug"
-							width="fit"
-							value={addressPart(path ?? "/:slug")}
-							onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
-						/>
-					</FormField>
 				)}
 				{/* At the height of the inputs above it (36px): one group, one control height. */}
 				<Option spread height="lg">

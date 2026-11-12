@@ -8,8 +8,8 @@ import {
 	FormFieldSet,
 	Inline,
 	Input,
+	Label,
 	LockMark,
-	Option,
 	RadioGroup,
 	RadioItem,
 	Sheet,
@@ -156,38 +156,32 @@ function Body({
 						<RadioItem value="item" label={t("settings.new.item")} description={t("settings.new.itemHint")} />
 					</RadioGroup>
 				</FormFieldSet>
-				{kind === "item" ? (
-					// An item's public page is a switch; its address shows under it while it is on.
-					<Stack gap={4}>
-						<Option spread>
+				{/* The row's words and, for an item, the switch of its public page; the address under it (collections.md). */}
+				<Stack gap={4}>
+					<Inline minHeight="control-xs" align="center" justify="between" gap={8}>
+						<Label
+							htmlFor={kind === "item" ? "collection-public-page" : "collection-address"}
+							size="caption"
+							tone="subtle"
+						>
 							{t("settings.basics.path")}
-							<Switch checked={publicPage} onCheckedChange={setPublicPage} />
-						</Option>
-						{publicPage && (
-							<Affix
-								id="collection-address"
-								aria-label={t("settings.basics.path")}
-								prefix="/"
-								suffix="/:slug"
-								width="fit"
-								value={addressPart(address)}
-								onChange={(event) => setPath(addressOf(event.target.value))}
-							/>
-						)}
-					</Stack>
-				) : (
-					<FormField>
-						<FormFieldLabel htmlFor="collection-address">{t("settings.basics.path")}</FormFieldLabel>
+						</Label>
+						{kind === "item" ? (
+							<Switch id="collection-public-page" checked={publicPage} onCheckedChange={setPublicPage} />
+						) : null}
+					</Inline>
+					{(kind === "document" || publicPage) && (
 						<Affix
 							id="collection-address"
+							aria-label={kind === "item" ? t("settings.basics.path") : undefined}
 							prefix="/"
 							suffix="/:slug"
 							width="fit"
 							value={addressPart(address)}
 							onChange={(event) => setPath(addressOf(event.target.value))}
 						/>
-					</FormField>
-				)}
+					)}
+				</Stack>
 			</SheetBody>
 			<SheetFooter>
 				<Button variant="ghost" onClick={onClose}>

@@ -113,7 +113,7 @@ describe("flow 3, a translation", () => {
 	it("T92 '언어 관리' in the '+ 언어' menu goes to settings › languages", async () => {
 		await open(LanguageMenu);
 		await userEvent.click(page.getByRole("menuitem", { name: "언어 관리" }));
-		await expect.element(page.getByRole("button", { name: "+ 언어 추가" })).toBeVisible();
+		await expect.element(page.getByRole("list", { name: "콘텐츠 언어" })).toBeVisible();
 		expect(window.location.hash).toBe("#/settings/languages");
 	});
 
@@ -124,7 +124,7 @@ describe("flow 3, a translation", () => {
 		const rows = await page.getByRole("menuitem").all();
 		expect(rows.map((row) => row.element().textContent)).toEqual(["언어 추가 · 설정"]);
 		await userEvent.click(page.getByRole("menuitem", { name: "언어 추가 · 설정" }));
-		await expect.element(page.getByRole("button", { name: "+ 언어 추가" })).toBeVisible();
+		await expect.element(page.getByRole("list", { name: "콘텐츠 언어" })).toBeVisible();
 		expect(window.location.hash).toBe("#/settings/languages");
 	});
 
