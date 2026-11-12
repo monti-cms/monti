@@ -1,4 +1,5 @@
-import type { ColumnType, Generated } from "kysely";
+import type { ColumnType, Generated, RawBuilder } from "kysely";
+import type { Model } from "../keys/services";
 import type { Actor, Message, MontiEvent, RecordRef } from "../operation";
 import type { AdminValues } from "../schema/admin-values";
 import type { Schema } from "../schema/define";
@@ -257,7 +258,35 @@ export interface MediaUseTable {
 	place: string;
 }
 
+/** A service key (doc 14): sealed with `MONTI_SECRET`, so only the server reads it. */
+export interface ApiKeyTable {
+	id: string;
+	service: string;
+	/** Unique: the model menu groups models under it. */
+	name: string;
+	/** The service's address, for a service that asks for one (an OpenAI-compatible server). */
+	base_url: string | null;
+	secret: string;
+	last4: string;
+	/** The models the service listed for this key when it was last asked, and when that was. */
+	models: ColumnType<Model[], string | undefined, string>;
+	models_at: Date | null;
+	/** Tokens used in `usage_month` (`2026-11`); another month's count is not this month's. */
+	usage_month: string;
+	usage_tokens: ColumnType<number | string, number | undefined, number | RawBuilder<unknown>>;
+	created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+/** A model picked for a job. The one job is the quick tasks' (doc 14); the assistant's model is picked per conversation. */
+export interface ModelChoiceTable {
+	role: "quick";
+	key_id: string;
+	model: string;
+}
+
 export interface Database {
+	api_keys: ApiKeyTable;
+	model_choices: ModelChoiceTable;
 	entries: EntryTable;
 	folders: FolderTable;
 	media: MediaTable;
