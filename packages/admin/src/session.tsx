@@ -13,7 +13,7 @@ export type AuthState = {
 	devProof?: string;
 };
 
-type Session = { state: AuthState | null; reload: () => Promise<void> };
+type Session = { state: AuthState | null; reload: () => Promise<unknown> };
 
 const SessionContext = createContext<Session | null>(null);
 

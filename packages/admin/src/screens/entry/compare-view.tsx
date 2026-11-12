@@ -1,5 +1,6 @@
 import type { Doc } from "@monti-cms/core";
 import {
+	Banner,
 	Button,
 	Compare,
 	CompareBody,
@@ -80,6 +81,7 @@ export function CompareView({
 	collection,
 	address,
 	onBack,
+	toText,
 }: {
 	editor: EntryEditorModel;
 	mode: CompareMode;
@@ -87,6 +89,12 @@ export function CompareView({
 	collection: string;
 	address: string | null;
 	onBack: () => void;
+	/**
+	 * The editor's hand-off (`useFocusHandOff` to `focusText`). An answer given here takes the comparison away, and the focus it held goes to the text.
+	 * The banner of a read that did not come goes when its "try again" reads the entry: the text is not there then, so the focus goes to the
+	 * comparison's first control once it is drawn.
+	 */
+	toText: React.RefCallback<HTMLElement>;
 }) {
 	const { t, language } = useAdmin();
 	const id = (editor.loaded as EntryRead | null)?.entry.id ?? "";
@@ -116,7 +124,33 @@ export function CompareView({
 		{ skip: !mine },
 	);
 
-	if (!server || !mine || !latest.data) return null;
+	// Without its read there is nothing to compare: the way back stays, and a read that did not come says so at the top with a way to try again (an
+	// ended session has its own banner). Drawn as nothing, only the browser's Back left this screen.
+	if (!server || !mine || !latest.data)
+		return (
+			<StandalonePage
+				banner={
+					<>
+						<SessionEndedBanner />
+						{latest.refusal && latest.refusal.status !== 401 ? (
+							<Banner ref={toText} tone="danger" title={t("entry.loadFailed")} plainMeta>
+								<TextButton onClick={() => void latest.reload()}>{t("entry.retry")}</TextButton>
+							</Banner>
+						) : null}
+					</>
+				}
+			>
+				<EditorHeader>
+					<Inline gap={16} minWidth={0} paddingX={12}>
+						<TextButton variant="quiet" onClick={onBack}>
+							<ChevronLeft aria-hidden />
+							{t("compare.back")}
+						</TextButton>
+						<Text variant="title">{t(mode === "conflict" ? "compare.conflictTitle" : "compare.draftTitle")}</Text>
+					</Inline>
+				</EditorHeader>
+			</StandalonePage>
+		);
 	const updatedAt = new Date(latest.data.entry.updatedAt);
 	const labels = schema?.adminValues[collection]?.fields ?? {};
 	const differing = (places.data?.places ?? []).filter((place) => place.place !== "doc.order");
@@ -185,7 +219,7 @@ export function CompareView({
 						</Text>
 					) : null}
 				</Inline>
-				<Inline gap={16} justify="end" paddingX={12}>
+				<Inline ref={toText} gap={16} justify="end" paddingX={12}>
 					{places.data ? (
 						<Text variant="note" tone="subtle">
 							{t("compare.places", { count: differing.length })}
@@ -196,8 +230,8 @@ export function CompareView({
 						<>
 							<TextButton
 								onClick={async () => {
-									await editor.loadLatest();
-									onBack();
+									// Not read: the comparison stays, with what it compares.
+									if (await editor.loadLatest()) onBack();
 								}}
 							>
 								{t("compare.loadLatest")}
@@ -215,7 +249,6 @@ export function CompareView({
 						<>
 							<TextButton
 								onClick={() => {
-									if (editor.loadingCopy) return;
 									editor.dropBrowserCopy();
 									onBack();
 								}}
@@ -223,9 +256,9 @@ export function CompareView({
 								{t("compare.drop")}
 							</TextButton>
 							<Button
-								loading={editor.loadingCopy}
 								onClick={() => {
-									void editor.loadBrowserCopy().then(onBack);
+									editor.loadBrowserCopy();
+									onBack();
 								}}
 							>
 								{t("compare.load")}
