@@ -153,7 +153,11 @@ const rowOf = async (canvas: HTMLElement, title: string) => {
 	return row;
 };
 
-/** Flow 12·01: the log as it opens, newest first. One delivery failed: its row says so, the sidebar counts it, and there is no banner. */
+/**
+ * Flow 12·01: the log as it opens, newest first. One delivery failed: its row says so, the sidebar counts it, and there is no banner. The
+ * delivery cell's three ends stand side by side here: "보냄" in quiet words where every delivery went, the red mark where one failed, and nothing
+ * where the write told no receiver (the template saved from the command line).
+ */
 export const Log: Story = { loaders: log() };
 
 /** A row's ⋯: its details, and what can be done with it: send the failed delivery again, undo the publish. */

@@ -258,8 +258,9 @@ const OPEN: Partial<Record<EventsStage, string>> = {
 };
 
 /**
- * A line's delivery, with the lists' status mark. In the table only what is not the usual end is said (on its way, failed, canceled): a delivery that
- * arrived leaves the cell empty, as a line that sent nothing does. The panel, which is about one line, says "sent" too (`whole`).
+ * A line's delivery. What needs a look has the lists' status mark (on its way, failed, canceled). A delivery that arrived says so in quiet words
+ * with no mark: an empty cell under "전송" would read as nothing sent. Only a line that had nothing to send leaves the cell empty. The panel,
+ * which is about one line, says "sent" with its mark (`whole`).
  */
 function DeliveryCell({ delivery, whole = false }: { delivery?: Delivery; whole?: boolean }) {
 	if (!delivery) return null;
@@ -268,7 +269,11 @@ function DeliveryCell({ delivery, whole = false }: { delivery?: Delivery; whole?
 			<EntryStatus status="published" quiet>
 				보냄
 			</EntryStatus>
-		) : null;
+		) : (
+			<Text variant="note" tone="subtle">
+				보냄
+			</Text>
+		);
 	if (delivery === "pending")
 		return (
 			<EntryStatus status="draft" quiet>

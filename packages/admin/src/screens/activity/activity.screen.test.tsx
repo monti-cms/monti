@@ -47,8 +47,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		expect(rows()[0]).toContain('"고친 글" 저장');
 		await expect.element(row('"고친 글" 저장')).toHaveTextContent("post/edited-post");
 		await expect.element(row("템플릿 기본 틀 저장")).toHaveTextContent("도구 · 템플릿 · 명령줄");
-		// A delivery that arrived says nothing in its cell; the admin's own rows name nobody.
-		await expect.element(row('"첫 번째 글" 발행')).not.toHaveTextContent("보냄");
+		// The admin's own rows name nobody.
 		await expect.element(table().getByText("관리자")).not.toBeInTheDocument();
 		await expect.element(banner()).not.toBeInTheDocument();
 	});
@@ -614,5 +613,31 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await userEvent.keyboard("{Enter}");
 		await expect.element(panel()).not.toBeInTheDocument();
 		await expect.element(link).toHaveFocus();
+	});
+	it("the delivery cell's three ends side by side: went through says so in quiet words, failed has its mark, and a write that told nobody leaves it empty", async () => {
+		await draw(stories.Log).run();
+		await expect.element(row(FAILED)).toBeVisible();
+		const cellOf = (words: string) => row(words).element().querySelectorAll("td")[1] as HTMLElement;
+		// Every delivery of the line went: the word, with no status mark before it and in the table's faint tone.
+		const sent = cellOf('"첫 번째 글" 발행');
+		expect(sent.textContent).toBe("보냄");
+		expect(sent.querySelector("[data-slot=entry-status]")).toBeNull();
+		// As quiet as the lists' quietest cells: smaller than the row's title, and not in ink.
+		const word = getComputedStyle(sent.firstElementChild as Element);
+		const title = getComputedStyle(row('"첫 번째 글" 발행').getByRole("button").first().element());
+		expect(Number.parseFloat(word.fontSize)).toBeLessThan(Number.parseFloat(title.fontSize));
+		expect(word.color).not.toBe(title.color);
+		// One did not: the red mark and how many tries.
+		const failed = cellOf(FAILED);
+		expect(failed.textContent).toBe("1번 실패");
+		expect(failed.querySelector("[data-slot=entry-status]")).not.toBeNull();
+		expect(getComputedStyle(sent.firstElementChild as Element).color).not.toBe(
+			getComputedStyle(failed.querySelector("[data-slot=entry-status]") as Element).color,
+		);
+		// A write that tells no receiver (a template saved from the command line): nothing was to be sent, and the cell says nothing.
+		expect(cellOf("템플릿 기본 틀 저장").textContent).toBe("");
+		// The side panel says the same word for a delivery that went.
+		await userEvent.click(row(FAILED).getByText("post/react-19"));
+		await expect.element(panel()).toHaveTextContent("상태보냄");
 	});
 });

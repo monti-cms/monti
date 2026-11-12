@@ -103,8 +103,10 @@ function FacetRows<Value extends string>({
 }
 
 /**
- * A line's deliveries in its cell, with the lists' status mark. Only what is not the usual end is said: on its way, failed (with the most tries one
- * of them has had), canceled. A line whose deliveries all arrived leaves the cell empty, as a line that sent nothing does.
+ * A line's deliveries in its cell. What needs a look has the lists' status mark: on its way, failed (with the most tries one of them has had),
+ * canceled. A line whose deliveries all arrived says so in quiet words, with no mark and no colour: an empty cell under "delivery" would read as
+ * "nothing was sent" (2026-11-12, as Stripe's and GitHub's delivery lists and Svix's portal say a success). Only a line that had nothing to
+ * send leaves the cell empty.
  */
 export function DeliveryMark({ delivery, sending }: { delivery: LineDelivery | null; sending: boolean }) {
 	const { t } = useAdmin();
@@ -123,7 +125,12 @@ export function DeliveryMark({ delivery, sending }: { delivery: LineDelivery | n
 				{t("activity.delivery.canceled")}
 			</EntryStatus>
 		);
-	return null;
+	// The words of the lists' quietest cells (a kind, a category): the note size, the subtle tone.
+	return delivery.sent > 0 ? (
+		<Text variant="note" tone="subtle">
+			{t("activity.delivery.sent")}
+		</Text>
+	) : null;
 }
 
 /**
