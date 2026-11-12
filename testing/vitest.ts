@@ -3,7 +3,16 @@ import { playwright } from "@vitest/browser-playwright";
 import type { Plugin } from "vite";
 import type { TestProjectInlineConfiguration } from "vitest/config";
 import { fontDirs, fontFaces } from "../packages/ui/.storybook/fonts";
-import { dragPointer, dropPointer, movePointer, typeKorean } from "./commands";
+import {
+	dragPointer,
+	dropPointer,
+	holdKey,
+	keyTwice,
+	movePointer,
+	pressTwice,
+	releaseKey,
+	typeKorean,
+} from "./commands";
 
 const FONTS = "virtual:monti-fonts";
 
@@ -51,7 +60,7 @@ export function browserProject({
 				provider: playwright({ contextOptions: { timezoneId: "UTC", locale: "ko-KR" } }),
 				instances: [{ browser: "chromium" }],
 				viewport: { width: 1440, height: 900 },
-				commands: { dragPointer, dropPointer, movePointer, typeKorean },
+				commands: { dragPointer, dropPointer, holdKey, keyTwice, movePointer, pressTwice, releaseKey, typeKorean },
 			},
 		},
 	};

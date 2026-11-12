@@ -16,7 +16,7 @@ export type AuthState = {
 	site: Face;
 };
 
-type Session = { state: AuthState | null; reload: () => Promise<void> };
+type Session = { state: AuthState | null; reload: () => Promise<unknown> };
 
 /** How long handing the dev ticket in is waited for: the bound the ticket's own fetch has (`devTicket`). */
 const DEV_SIGN_IN_WAIT_MS = 3000;

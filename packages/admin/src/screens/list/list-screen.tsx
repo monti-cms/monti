@@ -53,7 +53,7 @@ import { FolderAdd, Template } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { download } from "../../download";
 import { useAdmin } from "../../operations/admin-context";
-import { useOperation, useRead } from "../../operations/use-operation";
+import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { ColumnMenu, useLanguageName } from "./column-menu";
@@ -306,7 +306,7 @@ function DocumentListScreen({
 		});
 	const moveRows = async (list: ListRow[], folder: string | null) => {
 		const result = await run.moveToFolder.run({ ids: list.map((row) => row.id), folder });
-		if (!result.ok) return void toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+		if (!result.ok) return void toast.error(t(reasonOf(result.refusal)));
 		setPicked(new Map());
 	};
 	const startNewFolder = () => {
@@ -325,7 +325,7 @@ function DocumentListScreen({
 		unarchive: (list) => void run.unarchive.run(ids(list)).then(() => setPicked(new Map())),
 		publish: async (list) => {
 			const result = await run.publish.run(ids(publishable(list)));
-			if (!result.ok) return void toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+			if (!result.ok) return void toast.error(t(reasonOf(result.refusal)));
 			const { published, blocked } = result.body.output;
 			setPicked(new Map());
 			toast(

@@ -20,6 +20,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { Add } from "@monti-cms/ui/icons";
+import type { ReactNode } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 
@@ -35,18 +36,19 @@ export function shortDate(value: string, language: string) {
 
 /**
  * Tools › Templates (tools.md): each body template with its sections under its name, the day it was last changed, and its ⋯ (duplicate, delete).
- * The tools' tab row comes with a second tool; until then the page is the templates alone (T44's rule for one tab).
+ * `tabs` is the tools' tab row, under the title.
  */
-export function TemplatesScreen({ onOpen }: { onOpen: (template: string | null) => void }) {
+export function TemplatesScreen({ tabs, onOpen }: { tabs: ReactNode; onOpen: (template: string | null) => void }) {
 	const { t, language, templates } = useAdmin();
 	const list = useRead<TemplateRow[]>("templates.list", {}, { afterWrites: true, skip: !templates });
 	const duplicate = useOperation("templates.duplicate");
 	const remove = useOperation("templates.remove");
-	// Body templates turned off in settings › admin (doc 03): the tools keep their page, without the templates. They are not deleted.
+	// Body templates turned off in settings › admin (doc 03): the tools keep their page and their other tabs, without the templates. They are not deleted.
 	if (!templates)
 		return (
 			<PageColumn width="content">
 				<PageHeader title={t("tools.title")} />
+				{tabs}
 			</PageColumn>
 		);
 	return (
@@ -57,6 +59,7 @@ export function TemplatesScreen({ onOpen }: { onOpen: (template: string | null) 
 					{t("templates.add")}
 				</Button>
 			</PageHeader>
+			{tabs}
 			{list.data && list.data.length === 0 ? <Empty title={t("templates.none")} /> : null}
 			{list.data?.length ? (
 				<Table container="none" aria-label={t("tools.templates")}>

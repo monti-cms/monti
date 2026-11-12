@@ -176,13 +176,15 @@ export async function runWrite<Output>(
 
 	async function inTransaction(trx: Transaction<Database>): Promise<WriteResult<Output>> {
 		const { ctx, events, created, flags } = context(engine, trx, options.actor, options.session ?? null);
+		// A save that accepts proposal items decides about their proposals: those rows first, as a revert and a discard take them, then the
+		// records. Before `touches` too: some operations already hold a record there (a move holds its folder), and a write that held a
+		// record and then waited for the proposal would wait on a write that holds the proposal and waits for the record.
+		if (options.accepted && options.accepted.length > 0) await lockProposals(trx, { items: options.accepted });
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 		// Held beside what the write touches: locked and compared with it, its own only where the write changes them (`holds`).
 		const named = new Set(touched.map(recordKey));
 		const held = unique((await operation.holds?.(input, ctx)) ?? []).filter((ref) => !named.has(recordKey(ref)));
 		const locked = [...touched, ...held];
-		// A save that accepts proposal items decides about their proposals: those rows first, as a revert and a discard take them, then the records.
-		if (options.accepted && options.accepted.length > 0) await lockProposals(trx, { items: options.accepted });
 		await lockRecords(trx, locked);
 		// After the records' locks, as a screen's save takes them (records, then the items it accepts): the item is held until this write ends, so
 		// nothing discards it, changes it or applies it a second time meanwhile.

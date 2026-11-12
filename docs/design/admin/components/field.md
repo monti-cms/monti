@@ -49,7 +49,7 @@
 
 ### 코드
 
-`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `readOnly`(보관 글과 휴지통 글: 값을 바꾸는 것이 없다. 줄은 누르는 것이 아니고 손 모양과 호버 바탕이 없으며, 끝의 ×와 그림 아이콘을 그리지 않는다. `action`은 남는다: 읽기 전용에서는 읽는 길이다(이미지의 설정 카드가 읽기 전용으로 열린다). 라벨의 `htmlFor`는 누르거나 쓰는 것만 가리키므로, 이때는 묶음(`role="group"`)이 되고 `aria-labelledby`에 라벨의 id를 줘서 이름을 붙인다. 2026-11-11 소유자), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정, 끊긴 파일의 다시 올리기. 안의 `IconButton`은 ×와 같은 크기가 된다). 줄에 딸린 카드는 `ref`로 이 줄을 `PopoverContent`의 `anchor`로 삼는다. 제안 색(파랑)의 밑줄은 가리킬 때도 키보드 포커스에서도 파랑 그대로이고, 그때 포커스는 `Select`처럼 칸 둘레의 고리다(밑줄 바깥이라 파란 선을 덮지 않는다).
+`MediaInput`: `size`(`sm` · `md` · `default`, `Input`과 같은 높이), `value`(`name`, `thumbnail`. 이름 앞 20px 그림은 `Image size="thumb-sm"`이라 그림이 올 때까지 숨 쉬고, 그림이 없는 파일은 같은 크기의 빈 칸이다), `placeholder`, `onOpen`(고르기 열기), `onClear`와 `clearLabel`(×), `proposal`(AI가 고른 파일: 파란 글자와 밑줄), `following`(다른 값을 따르는 중인 파일: 흐린 글자. 번역의 대표 이미지), `readOnly`(보관 글과 휴지통 글: 값을 바꾸는 것이 없다. 줄은 누르는 것이 아니고 손 모양과 호버 바탕이 없으며, 끝의 ×와 그림 아이콘을 그리지 않는다. `action`은 남는다: 읽기 전용에서는 읽는 길이다(이미지의 설정 카드가 읽기 전용으로 열린다). 라벨의 `htmlFor`는 누르거나 쓰는 것만 가리키므로, 이때는 묶음(`role="group"`)이 되고 `aria-labelledby`에 라벨의 id를 줘서 이름을 붙인다. 2026-11-11 소유자), `action`(× 앞에 두는 그 파일의 도구. 이미지의 설정, 끊긴 파일의 다시 올리기. 안의 `IconButton`은 ×와 같은 크기가 된다). 줄에 딸린 카드는 `ref`로 이 줄을 `PopoverContent`의 `anchor`로 삼는다. 제안 색(파랑)의 밑줄은 가리킬 때도 키보드 포커스에서도 파랑 그대로이고, 그때 포커스는 `Select`처럼 칸 둘레의 고리다(밑줄 바깥이라 파란 선을 덮지 않는다).
 
 ## 앞뒤가 고정된 필드 (`.mt-affix`)
 
@@ -129,7 +129,7 @@ API 키처럼 가려서 입력하는 값을 위한 필드. 밑줄 하나 위에 
 
 ### 코드
 
-`MenuField`: `value`, `meta`, `mono`, `placeholder`, `warning`(값이 없을 때 경고색), `size`(`SelectTrigger`와 같다. 기본은 `sm`)를 받는 버튼이다. 닫힌 `SelectTrigger`와 같은 모양(`SELECT_TRIGGER`)이다. `DropdownMenuTrigger`나 `ModelMenu`의 `trigger`로 쓰고, 고를 것이 없으면 그냥 `onClick`으로 창을 연다. 열린 동안(`aria-expanded`) 밑줄이 잉크다.
+`MenuField`: `value`, `meta`, `mono`, `metaMono`, `placeholder`, `warning`(값이 없을 때 경고색), `size`(`SelectTrigger`와 같다. 기본은 `sm`)를 받는 버튼이다. `meta`는 값 뒤의 조용한 덧말이다. 사람이 붙인 이름(모델의 키 이름)이면 sans 12(`text-caption`), 적힌 그대로인 것(키의 끝 글자 "··· 4410", 언어 코드)이면 `metaMono`로 mono 12다. 자리가 모자라면 `meta`가 먼저 줄어 "…"로 잘리고 값은 제 폭을 지킨다. 값만으로 칸을 넘을 때에야 값이 잘린다. 어느 쪽도 칸 밖으로 나가지 않는다. 닫힌 `SelectTrigger`와 같은 모양(`SELECT_TRIGGER`)이다. `DropdownMenuTrigger`나 `ModelMenu`의 `trigger`로 쓰고, 고를 것이 없으면 그냥 `onClick`으로 창을 연다. 열린 동안(`aria-expanded`) 밑줄이 잉크다.
 
 ## 필수 필드 (`.mt-label > .req`)
 

@@ -13,6 +13,7 @@ import {
 	type LanguageModel,
 	type ModelMessage,
 	Output,
+	RetryError,
 	streamText,
 	tool,
 } from "ai";
@@ -25,6 +26,7 @@ import {
 	type ToolCall,
 	type TurnEvent,
 	type TurnRequest,
+	type Usage,
 } from "./provider";
 
 type Fetch = typeof globalThis.fetch;
@@ -174,6 +176,9 @@ function toSdk(messages: ChatMessage[], service: string): ModelMessage[] {
 /** A service's failure as the run reports it: it said no (the person can act on that), or it could not be reached. */
 function failure(error: unknown): ProviderError {
 	if (error instanceof ProviderError) return error;
+	// The SDK tried again and gave up: what failed is the last answer it got, not the trying. A limit the service names (429) is the service
+	// saying no in its own words, not a service that could not be reached.
+	if (RetryError.isInstance(error)) return failure(error.lastError);
 	if (APICallError.isInstance(error)) {
 		const status = error.statusCode;
 		// 4xx is the service's answer: the key, the credit, a limit, the model, the request. 408 and 5xx are the service not answering.
@@ -181,6 +186,45 @@ function failure(error: unknown): ProviderError {
 		return new ProviderError(refused ? "refused" : "unreachable", error.message, status);
 	}
 	return new ProviderError("unreachable", error instanceof Error ? error.message : String(error));
+}
+
+const EPHEMERAL = { type: "ephemeral" } as const;
+
+/**
+ * What a turn's request is marked with so its service keeps the unchanging head of it (the tool list and the system prompt, some 23,000 tokens
+ * on a site with every tool) and charges a fraction for it on the next turn, instead of the whole again on each. Anthropic's models cache
+ * only what is marked: the system prompt (the tools come before it in what is cached, so the mark covers both), the last tool (the tools alone,
+ * for when only the system prompt changed), and the request as a whole, which moves the mark to the end of the conversation as it grows.
+ * OpenRouter passes the same marks on for Anthropic's models. OpenAI, Google and OpenRouter's other models cache a repeated head by
+ * themselves and take no mark: for them it is enough that nothing which changes from turn to turn stands before the tools and the system
+ * prompt, and nothing does (what the screen shows goes with the person's message).
+ */
+type Marks = Record<string, Record<string, JSONValue>>;
+function cacheMarks(
+	service: string,
+	model: string,
+): { system: Marks; lastTool: Marks | undefined; call: Marks } | null {
+	if (service === "anthropic")
+		return {
+			system: { anthropic: { cacheControl: EPHEMERAL } },
+			lastTool: { anthropic: { cacheControl: EPHEMERAL } },
+			call: { anthropic: { cacheControl: EPHEMERAL } },
+		};
+	if (service === "openrouter" && model.startsWith("anthropic/"))
+		return {
+			system: { openrouter: { cacheControl: EPHEMERAL } },
+			lastTool: undefined,
+			call: { openrouter: { cache_control: EPHEMERAL } },
+		};
+	return null;
+}
+
+/** Two sets of provider options as one: a service's options from both, the second's over the first's. */
+function merged(first: Marks | undefined, second: Marks | undefined): Marks | undefined {
+	if (!first || !second) return first ?? second;
+	const all = { ...first };
+	for (const [service, options] of Object.entries(second ?? {})) all[service] = { ...all[service], ...options };
+	return all;
 }
 
 /**
@@ -196,23 +240,36 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 			async *turn(request: TurnRequest): AsyncGenerator<TurnEvent> {
 				if (!model) throw none();
 				let began = false;
+				const marks = cacheMarks(key.service, request.model);
+				const lastTool = request.tools.at(-1)?.name;
 				try {
 					const result = streamText({
 						model: model(request.model),
-						system: request.system,
+						system: marks ? { role: "system", content: request.system, providerOptions: marks.system } : request.system,
 						messages: toSdk(request.messages, key.service),
 						tools: Object.fromEntries(
 							request.tools.map((spec) => [
 								spec.name,
-								tool({ description: spec.description, inputSchema: jsonSchema(spec.inputSchema as JSONSchema7) }),
+								tool({
+									description: spec.description,
+									inputSchema: jsonSchema(spec.inputSchema as JSONSchema7),
+									...(marks?.lastTool && spec.name === lastTool ? { providerOptions: marks.lastTool } : {}),
+								}),
 							]),
 						),
+						// The tools go in the order the engine gives them, the same on every turn: what a service caches is the head of the request
+						// as it was sent, and the SDK would otherwise sort them by name.
+						toolOrder: request.tools.map((spec) => spec.name),
 						abortSignal: request.signal,
 						// The run engine decides what happens after a failure; one retry covers a dropped connection.
 						maxRetries: 1,
-						providerOptions: thinkingOptions(key.service, request.thinking, request.thinks),
+						providerOptions: merged(thinkingOptions(key.service, request.thinking, request.thinks), marks?.call),
+						// The SDK's own way with a failed call is to print the whole error: the request with the system prompt and the conversation,
+						// the answer's headers, the service's name for the account. None of that belongs in a site's server log. The failure is
+						// not lost: it comes as the stream's error part, and is thrown and told to the run as what it is.
+						onError: () => {},
 					});
-					let usage = { input: 0, output: 0 };
+					let usage: Usage = { input: 0, output: 0 };
 					let cut: "length" | "refusal" | undefined;
 					for await (const part of result.fullStream) {
 						if (part.type === "text-delta") {
@@ -221,7 +278,14 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 						} else if (part.type === "tool-call")
 							yield { type: "call", call: { id: part.toolCallId, name: part.toolName, input: part.input } };
 						else if (part.type === "finish-step") {
-							usage = { input: part.usage.inputTokens ?? 0, output: part.usage.outputTokens ?? 0 };
+							// Of the input, how much the service read from what it had kept (charged at a fraction): told beside the whole, which
+							// stays the whole input as before.
+							const cached = part.usage.inputTokenDetails?.cacheReadTokens ?? 0;
+							usage = {
+								input: part.usage.inputTokens ?? 0,
+								output: part.usage.outputTokens ?? 0,
+								...(cached > 0 ? { cached } : {}),
+							};
 							// The stream closed before the service said the answer was whole (a connection cut, a proxy's limit): what came is not
 							// an answer. The run engine gives the turn up and can ask for it again. What the service counted for it was spent.
 							if (part.finishReason === "interrupted" || part.finishReason === "error")

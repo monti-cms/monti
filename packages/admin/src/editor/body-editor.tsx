@@ -82,12 +82,14 @@ export function BodyEditor({
 	useKeepFilesInPage();
 	const [library, setLibrary] = useState<"image" | "file" | null>(null);
 	const slash = useSlashMenu({ catalogs, templates, editorRef, onLibrary: storage ? setLibrary : undefined });
+	const bodyFiles = useBodyFiles(files);
 	// A file on its way up waits in its block; when the library has it, the block has it too, wherever it has moved since.
 	const finished = useRef(new Map<string, MediaItem>());
 	const accept = useAcceptFiles();
 	const upload = useUpload({
 		onUploaded: (item: MediaItem, done) => {
 			finished.current.set(done.id, item);
+			bodyFiles.know(item);
 			const view = editorRef.current;
 			if (!view || view.isDestroyed) return;
 			view.state.doc.descendants((node, pos) => {
@@ -131,7 +133,6 @@ export function BodyEditor({
 	const handle = useBlockHandle(editor, catalogs, translation);
 	const tables = useTableTools(editor);
 	const [card, setCard] = useState<string | null>(null);
-	const bodyFiles = useBodyFiles(files);
 	useEffect(() => (editor ? onImageCard(editor, setCard) : undefined), [editor]);
 	const media = useMemo<EditorMediaValue>(
 		() => ({
@@ -144,8 +145,9 @@ export function BodyEditor({
 			readOnly: !editable,
 			files: bodyFiles.files,
 			want: bodyFiles.want,
+			know: bodyFiles.know,
 		}),
-		[upload.uploads, upload.retry, upload.holds, card, editable, bodyFiles.files, bodyFiles.want],
+		[upload.uploads, upload.retry, upload.holds, card, editable, bodyFiles.files, bodyFiles.want, bodyFiles.know],
 	);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);
@@ -201,6 +203,7 @@ export function BodyEditor({
 						}}
 						onPick={(item) => {
 							setLibrary(null);
+							bodyFiles.know(item);
 							if (editor) placeLibraryFile(editor, item);
 						}}
 						onFiles={(files, folder) => {

@@ -3182,7 +3182,7 @@ export const CATALOG = {
 	LanguageSourceMark: { kind: "part", props: { flag: "text" } },
 	ListSection: { kind: "part", props: { count: "text", countTone: "variant" } },
 	ListSectionRows: { kind: "part", props: {} },
-	ListSectionRow: { kind: "part", props: { metaTone: "variant", muted: "flag" } },
+	ListSectionRow: { kind: "part", props: { metaTone: "variant", metaMono: "flag", muted: "flag" } },
 	Textarea: { kind: "part", bind: "yes", props: { rows: "state", mono: "flag", value: "state" } },
 	SaveGroup: {
 		kind: "part",

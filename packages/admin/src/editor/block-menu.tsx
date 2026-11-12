@@ -138,15 +138,20 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 			setSpot((now) => (now ? spotOf(current, now.pos) : now));
 		};
 		const typing = () => !open && setSpot(null);
+		// A change of the body moves its blocks: the place the handle knew is another block's now, or none's. It goes, as when a key is pressed, unless its
+		// menu is open or its block is in hand (those changes are its own, and it is put away when they end).
+		const changed = () => !open && !held && setSpot(null);
 		window.addEventListener("scroll", follow, true);
 		window.addEventListener("resize", follow);
 		editor.view.dom.addEventListener("keydown", typing);
+		editor.on("update", changed);
 		return () => {
 			window.removeEventListener("scroll", follow, true);
 			window.removeEventListener("resize", follow);
 			editor.view.dom.removeEventListener("keydown", typing);
+			editor.off("update", changed);
 		};
-	}, [editor, spot, open]);
+	}, [editor, spot, open, held]);
 
 	const run = (make: (tr: Transaction, pos: number) => unknown) => {
 		if (!editor || !spot) return;
@@ -252,7 +257,9 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 			);
 		if (!editor || !spot || !editor.isEditable) return null;
 		const { doc } = editor.state;
-		const node = doc.nodeAt(spot.pos);
+		// The body may have changed under the pointer with no key pressed (a cut from the menu, an upload taken out): the handle's block may be gone,
+		// its place past the end of what is left. It goes with its block; the next move of the pointer finds the block there now.
+		const node = spot.pos > doc.content.size ? null : doc.nodeAt(spot.pos);
 		if (!node) return null;
 		const $pos = doc.resolve(spot.pos);
 		const block = catalogs.kit.blocks.find((each) => nodeName(each.type) === node.type.name);

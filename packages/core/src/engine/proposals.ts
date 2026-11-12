@@ -1,4 +1,4 @@
-import { type Kysely, type Selectable, sql, type Transaction } from "kysely";
+import { type Insertable, type Kysely, type Selectable, sql, type Transaction } from "kysely";
 import { randomUUID } from "../bytes";
 import type { Database, ItemExchange, ProposalItemState, ProposalItemTable, ProposalTable } from "../db/schema";
 import { publicPath } from "../entries/paths";
@@ -163,6 +163,15 @@ function mustNotOverlap(
 	}
 }
 
+/**
+ * What a caller that writes for something it may no longer hold (a run's request, which another request can take the run from) gives with its
+ * write: called in the transaction that stores the item, with that transaction, after the item is written and before it is kept. It holds
+ * whatever says the caller is still the one to write, and throws when it is not; nothing is stored then. After the item, not before: what
+ * removes a conversation takes its proposals and their items first and its runs last, and a holder that held a run and then waited for the
+ * proposal would wait on a removal that waits for the run.
+ */
+export type WriteHolder = (trx: Transaction<Database>) => Promise<void>;
+
 const itemsOf = (db: Db, proposalId: string) =>
 	db.selectFrom("monti_proposal_item").selectAll().where("proposal_id", "=", proposalId).orderBy("position").execute();
 
@@ -170,7 +179,7 @@ const itemsOf = (db: Db, proposalId: string) =>
  * Adds a write the assistant asked for to a proposal. Nothing changes: the write is rehearsed and rolled back. A write that names several records
  * through its `each` list becomes one item per record, so a person takes or leaves each. `group` is the name the assistant gave this kind of change.
  * `call` names the tool call that asks (a run and the call's id): its items are stored with it in one statement, so the same call run again after
- * a cut finds them and gives the same answer instead of proposing a second time.
+ * a cut finds them and gives the same answer instead of proposing a second time. `holder` is asked in the transaction that stores them.
  */
 export async function proposeItem(
 	engine: Engine,
@@ -178,7 +187,7 @@ export async function proposeItem(
 	proposalId: string,
 	operation: AnyOperation,
 	rawInput: unknown,
-	options: { group?: string; call?: string } = {},
+	options: { group?: string; call?: string; holder?: WriteHolder } = {},
 ): Promise<{ itemId: string; itemIds: string[]; preview: Preview | null }> {
 	mustBeProposable(engine, operation);
 	const known = await itemsOf(engine.db, proposalId);
@@ -200,7 +209,7 @@ export async function proposeItem(
 
 	// The whole write is rehearsed once: its checks answer for all of it, and its preview says what all of it would do.
 	const whole = await rehearse(engine, operation, input, refs.size === 0);
-	const rows = [];
+	const rows: Insertable<ProposalItemTable>[] = [];
 	for (const [index, part] of parts.entries()) {
 		// Each record's own item keeps the versions of what that one write touches.
 		const baseVersions =
@@ -224,7 +233,10 @@ export async function proposeItem(
 			preview: whole.preview === null ? null : JSON.stringify(whole.preview),
 		});
 	}
-	await engine.db.insertInto("monti_proposal_item").values(rows).execute();
+	await engine.db.transaction().execute(async (trx) => {
+		await trx.insertInto("monti_proposal_item").values(rows).execute();
+		await options.holder?.(trx);
+	});
 	await settleProposal(engine.db, proposalId);
 	return { itemId: rows[0].id, itemIds: rows.map((row) => row.id), preview: whole.preview };
 }
@@ -240,7 +252,7 @@ export async function replaceItem(
 	itemId: string,
 	operation: AnyOperation,
 	rawInput: unknown,
-	options: { call?: string } = {},
+	options: { call?: string; holder?: WriteHolder } = {},
 ): Promise<{ itemId: string; preview: Preview | null }> {
 	mustBeProposable(engine, operation);
 	const item = await engine.db
@@ -263,24 +275,28 @@ export async function replaceItem(
 	if (was.length !== is.length || was.some((key, index) => key !== is[index]))
 		throw new CheckError({ key: "proposals.otherChange" });
 	// Only the item as it was read: one an apply took, a person discarded or another request changed meanwhile is left as it is.
-	const replaced = await engine.db
-		.updateTable("monti_proposal_item")
-		.set({
-			operation: operation.name,
-			input: JSON.stringify(rawInput),
-			base_versions: JSON.stringify(baseVersions),
-			state: "pending",
-			reason: null,
-			included: true,
-			made_by: options.call ?? null,
-			preview: preview === null ? null : JSON.stringify(preview),
-		})
-		.where("id", "=", itemId)
-		.where("state", "=", item.state)
-		.where("operation", "=", item.operation)
-		.where(sql<boolean>`input = ${JSON.stringify(item.input)}::jsonb`)
-		.returning("id")
-		.executeTakeFirst();
+	const replaced = await engine.db.transaction().execute(async (trx) => {
+		const written = await trx
+			.updateTable("monti_proposal_item")
+			.set({
+				operation: operation.name,
+				input: JSON.stringify(rawInput),
+				base_versions: JSON.stringify(baseVersions),
+				state: "pending",
+				reason: null,
+				included: true,
+				made_by: options.call ?? null,
+				preview: preview === null ? null : JSON.stringify(preview),
+			})
+			.where("id", "=", itemId)
+			.where("state", "=", item.state)
+			.where("operation", "=", item.operation)
+			.where(sql<boolean>`input = ${JSON.stringify(item.input)}::jsonb`)
+			.returning("id")
+			.executeTakeFirst();
+		await options.holder?.(trx);
+		return written;
+	});
 	if (!replaced) throw new CheckError({ key: "proposals.notWaiting" });
 	await settleProposal(engine.db, item.proposal_id);
 	return { itemId, preview };
@@ -595,7 +611,7 @@ export async function applyProposal(
 							? error instanceof CheckError || error instanceof ForbiddenError
 								? error.reason
 								: { key: `errors.${error.code}` }
-							: { key: "errors.unexpected", values: { message: String(error) } },
+							: { key: "errors.unexpectedWith", values: { message: String(error) } },
 					);
 			}
 			// Outside the write's own failures: nothing that goes wrong in telling of it turns an applied item into a failed one.

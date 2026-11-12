@@ -8,7 +8,8 @@
 				"testing/e2e/*.e2e.ts",
 				"testing/e2e/playwright.config.ts",
 				"testing/usability/do.ts"
-			]
+			],
+			"ignore": ["testing/release/app/**"]
 		},
 		"packages/admin": {
 			"entry": ["styles/index.css"]

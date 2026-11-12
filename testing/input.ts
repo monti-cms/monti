@@ -85,6 +85,21 @@ export async function pickWords(root: Element, words: string) {
 export const typeKorean = (text: string, options?: { commit?: boolean }) => commands.typeKorean(text, options);
 
 /**
+ * Presses the middle of `element` with the mouse, and again `gap` milliseconds later on whatever is there by then: a second press that comes
+ * while the first one's doing is still on the screen (a window fading out).
+ */
+export const pressTwice = (element: Element, gap: number) => commands.pressTwice(middleOf(element), gap);
+
+/** Presses `key`, and again `gap` milliseconds later, into whatever holds the focus by then. */
+export const keyTwice = (key: string, gap: number) => commands.keyTwice(key, gap);
+
+/** Holds `key` down as a hand does: one press and then `repeats` repeats, `every` milliseconds apart. `releaseKey` lets it go. */
+export const holdKey = (key: string, options: { repeats: number; every: number }) => commands.holdKey(key, options);
+
+/** Lets go of a key that `holdKey` holds. */
+export const releaseKey = (key: string) => commands.releaseKey(key);
+
+/**
  * The boxes from `element` up to the page that scroll sideways: each one that clips or scrolls what is in it (overflow other than visible) and holds
  * more than its width, and the page itself. Empty when everything fits. Use it after anything that makes something wider.
  */

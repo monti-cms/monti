@@ -9,9 +9,14 @@
 		".": "./src/index.ts",
 		"./admin": "./src/admin.tsx"
 	},
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"scripts": {
 		"typecheck": "tsc --noEmit -p .",
-		"test": "vitest run"
+		"test": "vitest run",
+		"build": "node ../../scripts/build-package.mjs"
 	},
 	"dependencies": {
 		"@monti-cms/admin": "workspace:*",
@@ -34,5 +39,17 @@
 	},
 	"sideEffects": [
 		"./src/admin.tsx"
-	]
+	],
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"./admin": {
+				"types": "./dist/admin.d.ts",
+				"default": "./dist/admin.js"
+			}
+		}
+	}
 }

@@ -48,7 +48,7 @@ import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/
 import { putFile } from "../../media/put-file";
 import { useAcceptFiles } from "../../media/upload-problem";
 import { useAdmin } from "../../operations/admin-context";
-import { useOperation, useRead } from "../../operations/use-operation";
+import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { DaysLeftFact } from "../../trash/days-left";
 import { useCoverCorner } from "../frame/admin-frame";
@@ -120,21 +120,19 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 			setRefused(t(put.problem === "failed" ? "library.failed" : `library.refused.${put.problem}`));
 			return;
 		}
-		// A request that never got an answer throws: the dialog must not stay locked behind it.
-		const done = await replace
-			.run(
-				{
-					id: item.id,
-					original: put.original,
-					...(put.web ? { web: put.web } : {}),
-					...(put.placeholder ? { placeholder: put.placeholder } : {}),
-				},
-				{ versions: { [`media:${item.id}`]: item.version } },
-			)
-			.catch(() => null);
+		const done = await replace.run(
+			{
+				id: item.id,
+				original: put.original,
+				...(put.web ? { web: put.web } : {}),
+				...(put.placeholder ? { placeholder: put.placeholder } : {}),
+			},
+			{ versions: { [`media:${item.id}`]: item.version } },
+		);
 		setGoing(false);
-		if (!done) return setRefused(t("library.failed"));
-		if (!done.ok) return setRefused(t(done.refusal.reason ?? "errors.unexpected"));
+		// A request that never got an answer (status 0) is the same word as bytes that did not go up, and the dialog is not left locked behind it.
+		if (!done.ok && done.refusal.status === 0) return setRefused(t("library.failed"));
+		if (!done.ok) return setRefused(t(reasonOf(done.refusal)));
 		onClose();
 	};
 	return (
@@ -361,9 +359,9 @@ export function MediaPanel({
 		if (done.refusal.status === 409) {
 			draft.revertAll();
 			void read.reload();
-			return setRefused(t("library.conflict"));
+			return setRefused(t("ui.savedElsewhere"));
 		}
-		setRefused(t(done.refusal.reason ?? "errors.unexpected"));
+		setRefused(t(reasonOf(done.refusal)));
 	};
 	const proposal = draft.proposals[Math.min(proposalAt, Math.max(0, draft.proposals.length - 1))];
 	const copy = async (text: string) => {
