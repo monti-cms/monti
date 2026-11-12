@@ -44,11 +44,12 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 묶음 | `Stack gap={24} paddingY={24}` 하나 | One group in this order: identifier and kind, display name, public-page setting/address, and folders. |
+| 묶음 | `Stack gap={24} paddingY={24}` 하나 | 한 묶음에 이 순서로 선다: 식별자와 종류, 표시 이름, 공개 주소, 미리보기 주소(본문이 있는 글만), 폴더 사용. |
 | 식별자 | `ReadValue`(`mono`), 값 바로 뒤 `LockMark`("바꿀 수 없음") | 절대 바꿀 수 없는 값이라 글로 보이고, 자물쇠는 그 줄에 있다. |
 | 종류 | `ReadValue` "본문이 있는 글" | 만들 때 정한 값이라 글로 보인다. |
 | 표시 이름 | `FormField` + `Input` | 관리자 값이라 늘 고칠 수 있다. 처음부터 입력 칸이다. 제안된 이름은 `Input proposal`과 라벨 줄의 "버리기", 아래 `FormFieldWas` 옛 이름이다(설정 · AI 제안과 같다). |
-| Public address | A 36px body-text setting row matching “Use folders” (`Inline minHeight="control-lg"` + `Label size="body"`), with the `Affix` directly below. A changed address puts a `ChangeDot` after the label and “되돌리기” at the row's end. Items add a `Switch` at the far end and hide the `Affix` while off; documents have no switch. | Documents require a public address. Items start without one and keep their slug as an internal identifier. On a live site the field reads either the address or “Not used”. |
+| 공개 주소 | "폴더 사용"과 같은 36px 본문 글자 줄(`Inline minHeight="control-lg"` + `Label size="body"`: 이름, 바뀌었으면 `ChangeDot`과 끝의 "되돌리기" `TextButton variant="underline" quiet size="caption"`), 바로 아래 `Affix`(`prefix` "/", `suffix` "/:slug", `width="fit"`). 항목은 줄 끝에 `Switch`가 있고 꺼져 있으면 `Affix`가 없다. 글은 `Switch`가 없다. | 글은 공개 주소가 꼭 있다. 항목은 없이 시작하고, 슬러그는 안에서 쓰는 식별자로 남는다. 운영 사이트에서는 `ReadValue`로 주소나 "사용 안 함"을 읽고, 값 바로 뒤에 `LockMark`가 붙는다. |
+| 미리보기 주소 | 공개 주소와 같은 36px 줄(같은 `Inline` + `Label`), 바로 아래 `Affix`(`prefix` "/", `suffix` "/:slug", `width="fit"`, `placeholder` "preview"), 그 아래 `FormFieldError reserve`의 `hint` "비워 두면 공개 주소에서 미리봅니다." | 본문이 있는 글에만 있다(항목은 미리 볼 페이지가 없다). 사이트가 미리보기 페이지를 따로 만들었을 때 그 주소를 적는 칸이고, 비우면 공개 주소에서 미리본다(16번 문서). 힌트는 칸이 비어 있을 때만 보이고(원칙 8), 줄은 남아서 글자를 쳐도 아래가 움직이지 않는다. 운영 사이트에서는 `ReadValue`로 읽는다: 주소가 있으면 `mono`로 그 주소, 없으면 "공개 주소에서", 값 바로 뒤에 `LockMark`(2026-11-12, 소유자). |
 | 폴더 사용 | `Option spread height="lg"` + `Switch` | 관리자 값이라 늘 고칠 수 있다. 위 입력 칸과 같은 36px 줄이다(원칙 10). 제안된 값이면 라벨 뒤에 파란 `ChangeDot`. |
 | 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + 오른쪽 끝 `Button variant="outline-danger" size="sm"` "지우기" | 이미 고른 컬렉션의 상세라 이름을 되풀이하지 않는다. 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 변경 사항 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
 
@@ -104,10 +105,10 @@
 | 시트 | `Sheet`(`SheetTitle` "검토", `of` "게시글 · 변경 사항 3"), 발은 "취소" · 알약 하나 | 알약: "적용", 값을 지우는 선택이 있으면 `Button variant="danger"` "지우고 적용", 운영 환경 "PR 만들기". 파일이 바뀌었으면 "다시 불러오기". 발에는 "취소"와 알약 하나만 있다. |
 | 고칠 곳 | 변경 블록과 같은 `ChangeGroup kind="drop"`(`tag` "고칠 곳", `title` 필드 이름, `identifier`) + `ChangeNote danger` 무엇이 문제인지 + `TextButton` "열기" | 검토의 맨 위, 다른 변경 블록과 같은 모양이다. 저장을 누른 그때 알린다. "열기"는 검토를 닫고 그 필드 시트를 연다. 고칠 곳이 남아 있는 동안 발에는 "취소"만 있다(2026-11-05, 소유자). |
 | 파일이 바뀜 | `ErrorNote`(`title` "파일이 바뀌었습니다", 회색 한 줄) | 시트 맨 위, 위로 변경 블록과 같은 16px. 이때 발의 알약은 "다시 불러오기"다. 할 수 있는 일이 그것뿐이라 비활성 "적용" 대신 그 자리에 둔다(2026-11-05, 소유자). |
-| 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "추가" · "이름 변경" · "삭제" · "필수" · "주소 변경", `title`, `identifier` "summary → excerpt") | |
+| 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "추가" · "이름 변경" · "삭제" · "필수" · "주소 변경" · "변경"(미리보기 주소), `title`, `identifier` "summary → excerpt") | |
 | 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기", 글자 필드를 채우면 `Input size="sm"`) | 하나를 고른다. `RadioGroup height="md"`: 줄마다 32px, 4px 간격이라 고르기가 든 줄도 높이가 같고, 고르기와 입력 칸은 `md`다. 순서는 늘 값을 살리는 선택이 먼저, 비우는 선택이 나중이다(이름: 옮기기 → 빈 칸, 지움: 다른 필드로 옮기기 → 지우기, 필수: 채우기 → 그대로). 지움의 처음 선택은 그대로 "값 지우기"다(2026-11-05, 소유자). |
 | 한 줄 결과 | `ChangeNote`(되돌릴 수 없으면 `danger`) | "저장된 데이터는 바뀌지 않습니다." · "옛 주소는 404가 됩니다." · "값이 사라집니다. 되돌릴 수 없습니다." |
-| 영향 목록 | `ChangeLines` + `ChangeLine`(`what`, `then`) | A path change shows before and after. The old-address warning appears only when a previous public path is being removed or changed. |
+| 영향 목록 | `ChangeLines` + `ChangeLine`(`what`, `then`) | 주소 변경은 전과 후를 보인다. "옛 주소는 404가 됩니다."는 있던 공개 주소가 바뀌거나 없어질 때만 붙는다. 미리보기 주소 변경도 전과 후를 보이고(없는 쪽은 "공개 주소에서"), 방문자가 보는 주소가 아니므로 "저장된 데이터는 바뀌지 않습니다."가 붙는다. 새 컬렉션의 "추가" 블록은 공개 주소 줄 아래에 미리보기 주소 줄을 보인다(적었을 때만). |
 | 영향받는 글 (빠짐, 2026-11-05) | | 개발 데이터의 글이라 운영에서 영향받는 글과 다르다. 개수와 같은 이유로 뺐다. |
 | 파일 변경 | `Patch`(`file` "monti.schema.ts", `lines`) | 운영 검토에만 있다. 파일 변경이 보이는 내용은 `Patch` 한 곳에만 둔다. |
 
@@ -121,7 +122,7 @@
 | "새 컬렉션 오류" | 4.02 | 식별자 `aria-invalid`와 `FormFieldError`, "만들기" 비활성 | Controls/Field/Field |
 | "만든 직후" | 4.03 | 노트 컬렉션(`NavLink dot`), "기본" 탭 하나와 `FieldTree`(제목, 주소), 저장 묶음 변경 사항 1 | Patterns/Frame/NavLink, Patterns/List/FieldTree |
 | "노트 필드 추가" | 4.04 | 노트 컬렉션의 필드 `Sheet` | Controls/Overlay/Sheet |
-| "새 컬렉션 검토" | 4.05 | Review `Sheet`: `ChangeGroup kind="new"` and `ChangeLines`; the public-address line is omitted for an item without a public page. | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
+| "새 컬렉션 검토" | 4.05 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `ChangeLines`. 줄은 공개 주소, 미리보기 주소(적었을 때만, 본문이 있는 글만), 필드 순서다. 공개 페이지가 없는 항목은 공개 주소 줄이 없다. | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "만듦" | 4.06 | `toast` "노트를 만들었습니다"와 "보기" | Controls/Status/Toast |
 | "필드 바꿈" | 4.07 | `FieldRow` 셋: 이름 바꿈(`warning`, "← summary"), 지움(`faint`), 새 필수(`success`), 게시글 `NavLink dot`, 변경 사항 3 | Patterns/List/FieldTree, Patterns/Frame/NavLink |
 | "미리보기" | 4.08 | 미리보기 `SidePanel`, "속성 패널 미리보기" 눌림, ✦ 버튼 가려짐 | Controls/Overlay/SidePanel |
@@ -151,7 +152,7 @@
 | "운영 검토" (빠짐, 2026-11-05) | 11.12 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `Patch`, 알약 "PR 만들기" | Controls/Overlay/Sheet, Monti/Change/ChangeGroup, Monti/Change/Patch |
 | "PR 만듦" (빠짐, 2026-11-05) | 11.14 | 열린 PR `Banner`, `toast` "PR을 만들었습니다"와 "보기" | Patterns/Frame/Banner, Controls/Status/Toast |
 | "PR에 더하기" (빠짐, 2026-11-05) | 11.14b | 열린 PR `Banner`, 새 `FieldRow`(lead), 알약 "PR에 더하기" | Patterns/Frame/Banner, Patterns/List/FieldTree |
-| "읽기 전용" | 11.17, 11.17c | 공개 주소 줄의 `LockMark`, 식별자 · 종류 · 공개 주소는 글, "+ 새 컬렉션" · "+ 필드 추가" · `FolderTabsAdd` · 컬렉션 지우기 없음. 보기와 배치(끌기, "+ 묶음 추가")는 고칠 수 있다 | Primitives/LockMark, Controls/Tabs/FolderTabs |
+| "읽기 전용" | 11.17, 11.17c | 공개 주소 줄과 미리보기 주소 줄의 `LockMark`, 식별자 · 종류 · 공개 주소 · 미리보기 주소는 글, "+ 새 컬렉션" · "+ 필드 추가" · `FolderTabsAdd` · 컬렉션 지우기 없음. 보기와 배치(끌기, "+ 묶음 추가")는 고칠 수 있다 | Primitives/LockMark, Controls/Tabs/FolderTabs |
 | "읽기 전용 필드" | 11.17b | 읽기 전용 필드 `Sheet` | Controls/Overlay/Sheet |
 | "적용 실패" | 11.20 | 틀의 알림 띠(`SchemaBanner`) "스키마를 데이터베이스에 적용하지 못했습니다"와 "다시 적용" | Patterns/Frame/Banner |
 | "충돌" | 11.19 | 검토 `Sheet` 맨 위 `ErrorNote` "파일이 바뀌었습니다", 알약 비활성 | Controls/Overlay/Sheet, Controls/Status/ErrorNote |

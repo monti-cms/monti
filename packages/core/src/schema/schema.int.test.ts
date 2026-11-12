@@ -214,6 +214,52 @@ describe("the live site", () => {
 	});
 });
 
+describe("a collection's preview address", () => {
+	const withPreview = (previewPath?: string): Schema => {
+		const { previewPath: _old, ...post } = base.collections.post as Schema["collections"][string] & {
+			previewPath?: string;
+		};
+		return {
+			...base,
+			collections: { ...base.collections, post: { ...post, ...(previewPath ? { previewPath } : {}) } },
+		} as Schema;
+	};
+	const run = <Output>(monti: ReturnType<typeof createMonti>, name: string, input: unknown) =>
+		monti.run(name, input, { actor: "admin" }) as Promise<Output>;
+
+	it("16-9 the settings put it in, change it and take it out: one change each, with nothing to answer, written to the schema file", async () => {
+		const monti = dev();
+		const draft = withPreview("/preview/:slug");
+		const plan = await run<{ problems: unknown[]; changes: { do: string; to?: string; choices?: unknown }[] }>(
+			monti,
+			"schema.plan",
+			{ draft },
+		);
+		expect(plan.problems).toEqual([]);
+		expect(plan.changes).toEqual([
+			expect.objectContaining({ do: "changePreviewPath", collection: "post", to: "/preview/:slug" }),
+		]);
+		expect(plan.changes[0]?.choices).toBeUndefined();
+		await run(monti, "schema.apply", { draft });
+		expect(await readFile(path.join(root, "monti.schema.ts"), "utf8")).toContain('previewPath: "/preview/:slug"');
+		const read = await run<{ schema: Schema }>(monti, "schema.read", {});
+		expect((read.schema.collections.post as { previewPath?: string }).previewPath).toBe("/preview/:slug");
+
+		await run(monti, "schema.apply", { draft: withPreview() });
+		expect(await readFile(path.join(root, "monti.schema.ts"), "utf8")).not.toContain("previewPath");
+	});
+
+	it("16-9 an address that is no address, or a page's own, must be fixed first; the live site does not take the change at all", async () => {
+		const problems = async (previewPath: string) =>
+			(
+				await run<{ problems: { code: string }[] }>(dev(), "schema.plan", { draft: withPreview(previewPath) })
+			).problems.map((problem) => problem.code);
+		expect(await problems("preview")).toEqual(["badPreviewPath"]);
+		expect(await problems(base.collections.post.path as string)).toEqual(["previewPathTaken"]);
+		expect((await api(live())(post("schema.apply", { draft: withPreview("/preview/:slug") }))).status).toBe(403);
+	});
+});
+
 describe("review before values change", () => {
 	it("01-4 a change that touches stored values is refused until each choice is made, and nothing is written", async () => {
 		const monti = dev();

@@ -15,6 +15,13 @@ then on the saved ones are shown, on the sign-in screen too.
 Now: the login screen (first admin, sign-in, the lock, GitHub) and the frame (the sidebar from the schema and `frame.counts`, the screen mode, the
 schema banners). The other screens come with their feature docs (`docs/design/features`).
 
+## Styles
+
+`@monti-cms/admin/styles.css` is the admin's stylesheet as a built file (`pnpm --filter @monti-cms/admin build:styles`, from `styles/index.css`
+by `scripts/build-styles.mjs`). A site imports it as it is and needs no Tailwind. It touches nothing outside the admin: every rule applies only
+in a document that holds `.monti-admin`, its variables and keyframes all start with `monti-`, it leaves no cascade layer, and it carries the
+admin's own fonts. On a Next.js site `@monti-cms/next` brings it with the admin page.
+
 ## Storybook
 
 ```sh

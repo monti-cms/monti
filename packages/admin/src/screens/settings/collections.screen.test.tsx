@@ -19,6 +19,105 @@ describe("collection public pages", () => {
 	});
 });
 
+describe("a collection's preview address", () => {
+	const { Basics, NewCollection, ReadOnlyBasics, PreviewAddress, PreviewAddressReview, ReadOnlyPreviewAddress } =
+		composeStories(collections);
+	const field = () => page.getByRole("textbox", { name: "미리보기 주소" });
+	const hint = () => page.getByText("비워 두면 공개 주소에서 미리봅니다.");
+	/** "변경 사항 n ▾": there only while something is changed. */
+	const changes = () => page.getByRole("button", { name: "변경 사항", exact: true });
+
+	it("16-9 typed in the basics tab it is one change with its review; applied, the schema has it and the review is gone", async () => {
+		const story = scene<{
+			site: { monti: { run: (name: string, input: unknown, as: { actor: "admin" }) => Promise<unknown> } };
+		}>(collections.Basics, collections.default);
+		await story.run();
+		await expect.element(field()).toHaveValue("");
+		// What leaving it empty does is said only while it is empty, and its line stays: what is under the field does not move.
+		await expect.element(hint()).toBeVisible();
+		const under = () => Math.round(page.getByText("폴더 사용").element().getBoundingClientRect().top);
+		const before = under();
+		await userEvent.click(field());
+		await userEvent.keyboard("preview");
+		await expect.element(changes()).toHaveTextContent(/1/);
+		await expect.element(hint()).not.toBeInTheDocument();
+		expect(under()).toBe(before);
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		const review = page.getByRole("dialog");
+		await expect.element(review.getByText("게시글 · 미리보기 주소")).toBeVisible();
+		await expect.element(review.getByText("공개 주소에서")).toBeVisible();
+		await expect.element(review.getByText("/preview/:slug")).toBeVisible();
+		await expect.element(review.getByText("저장된 데이터는 바뀌지 않습니다.")).toBeVisible();
+		await userEvent.click(review.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(review).not.toBeInTheDocument();
+		const read = (await story.loaded().site.monti.run("schema.read", {}, { actor: "admin" })) as {
+			schema: { collections: Record<string, { previewPath?: string }> };
+		};
+		expect(read.schema.collections.post?.previewPath).toBe("/preview/:slug");
+		await expect.element(field()).toHaveValue("preview");
+	});
+
+	it("16-9 emptied again it is no change, and its undo puts back what was saved", async () => {
+		await Basics.run();
+		await userEvent.click(field());
+		await userEvent.keyboard("draft");
+		await expect.element(changes()).toHaveTextContent(/1/);
+		await userEvent.keyboard("{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}");
+		await expect.element(changes()).not.toBeInTheDocument();
+		await userEvent.keyboard("draft");
+		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
+		await expect.element(field()).toHaveValue("");
+	});
+
+	it("16-9 slashes alone are no address: the field stays empty with its hint, and nothing is changed", async () => {
+		await Basics.run();
+		await userEvent.click(field());
+		await userEvent.keyboard("/");
+		await expect.element(field()).toHaveValue("");
+		await expect.element(hint()).toBeVisible();
+		await expect.element(changes()).not.toBeInTheDocument();
+		await userEvent.keyboard("//");
+		await expect.element(changes()).not.toBeInTheDocument();
+	});
+
+	it("16-9 a new collection's review names the preview address it is made with", async () => {
+		await NewCollection.run();
+		await userEvent.click(page.getByRole("dialog").getByRole("button", { name: "만들기" }));
+		await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await userEvent.click(field());
+		await userEvent.keyboard("preview");
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		const review = page.getByRole("dialog");
+		await expect.element(review.getByText("미리보기 주소")).toBeVisible();
+		await expect.element(review.getByText("/preview/:slug")).toBeVisible();
+	});
+
+	it("16-9 an item collection has no preview address, and the live site reads a document's as words with its lock", async () => {
+		await Basics.run();
+		await expect.element(field()).toBeVisible();
+		await userEvent.click(page.getByRole("navigation", { name: "컬렉션" }).getByRole("button", { name: /^카테고리/ }));
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await expect.element(page.getByText("공개 주소", { exact: true })).toBeVisible();
+		await expect.element(field()).not.toBeInTheDocument();
+		await ReadOnlyBasics.run();
+		await expect.element(page.getByText("공개 주소에서")).toBeVisible();
+		await expect.element(field()).not.toBeInTheDocument();
+	});
+
+	it("16-9 the live site with a preview address reads the address, and the typed address and its review are drawn", async () => {
+		await ReadOnlyPreviewAddress.run();
+		await expect.element(page.getByText("/preview/:slug")).toBeVisible();
+		await expect.element(page.getByText("공개 주소에서")).not.toBeInTheDocument();
+		await expect.element(field()).not.toBeInTheDocument();
+		await PreviewAddress.run();
+		await expect.element(field()).toHaveValue("preview");
+		await expect.element(page.getByRole("button", { name: "되돌리기", exact: true })).toBeVisible();
+		await PreviewAddressReview.run();
+		await expect.element(page.getByRole("dialog").getByText("/preview/:slug")).toBeVisible();
+	});
+});
+
 const { ChangesList, DeleteReview, Fields } = composeStories(collections);
 
 const tab = (name: RegExp) => page.getByRole("tab", { name });

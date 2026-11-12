@@ -193,7 +193,9 @@ export function schemaFilesAt(
 	waitMs = LOCK_WAIT_MS,
 ): SchemaFiles {
 	const changes = path.join(root, "monti", "changes");
-	const schemaPath = path.join(root, schemaFile);
+	// The file is the site's own, under a folder known only when the server runs. A bundler that follows file paths (Turbopack) is told not to
+	// take the whole project for it.
+	const schemaPath = path.join(/*turbopackIgnore: true*/ root, schemaFile);
 	const schemaPart = `${schemaPath}.part`;
 	const text = (file: string) => io.readFile(file, "utf8").catch(() => null);
 	const names = () => io.readdir(changes).catch(() => [] as string[]);

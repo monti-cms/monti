@@ -126,7 +126,7 @@ export function EntryEditor({
 	/** To settings › languages, from the "+ Language" menu. */
 	onLanguages: () => void;
 }) {
-	const { t, language, templates: templatesOn } = useAdmin();
+	const { t, language, apiBase, templates: templatesOn } = useAdmin();
 	const languageName = useLanguageName();
 	const source = useMemo(() => ({ kind: "entry" as const, id }), [id]);
 	const editor = useEntryEditor(source);
@@ -478,7 +478,12 @@ export function EntryEditor({
 						if (editor.dirty && !(await save())) return;
 						const link = await preview.run({ id });
 						if (link.ok && link.body.path)
-							window.open(`${link.body.path}?preview=${encodeURIComponent(link.body.token)}`, "_blank", "noopener");
+							// The site's admin API turns the preview on for this browser and goes on to the entry's page (doc 16).
+							window.open(
+								`${apiBase}/preview?token=${encodeURIComponent(link.body.token)}&path=${encodeURIComponent(link.body.path)}`,
+								"_blank",
+								"noopener",
+							);
 					}}
 				>
 					{t("entry.preview")}

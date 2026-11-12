@@ -1,4 +1,5 @@
-import type { ColumnType, Generated } from "kysely";
+import type { ColumnType, Generated, RawBuilder } from "kysely";
+import type { Model } from "../keys/services";
 import type { Actor, Message, MontiEvent, RecordRef } from "../operation";
 import type { AdminValues } from "../schema/admin-values";
 import type { Schema } from "../schema/define";
@@ -257,6 +258,40 @@ export interface MediaUseTable {
 	place: string;
 }
 
+/** A service key (doc 14): sealed with `MONTI_SECRET`, so only the server reads it. */
+export interface ApiKeyTable {
+	id: string;
+	service: string;
+	/** Unique: the model menu groups models under it. */
+	name: string;
+	/** The service's address, for a service that asks for one (an OpenAI-compatible server). */
+	base_url: string | null;
+	secret: string;
+	last4: string;
+	/** The models the service listed for this key when it was last asked, and when that was. */
+	models: ColumnType<Model[], string | undefined, string>;
+	models_at: Date | null;
+	/** When its service last failed to give a list: it is not asked again for a while (doc 14). Cleared by a list that came. */
+	models_failed_at: Date | null;
+	/** Raised by every change: a change made from an old reading is a conflict. */
+	version: Generated<number>;
+	created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+/** Tokens a key's calls spent in one month (`2026-11`, UTC). */
+export interface ApiKeyUsageTable {
+	key_id: string;
+	month: string;
+	tokens: ColumnType<number | string, number, RawBuilder<unknown>>;
+}
+
+/** A model picked for a job. The one job is the quick tasks' (doc 14); the assistant's model is picked per conversation. */
+export interface ModelChoiceTable {
+	role: "quick";
+	key_id: string;
+	model: string;
+}
+
 /** The settings screen's admin values (doc 12): the row `site` holds the site's, the row `admin` the admin's own preferences. */
 export interface SettingsTable {
 	id: string;
@@ -265,6 +300,9 @@ export interface SettingsTable {
 }
 
 export interface Database {
+	api_keys: ApiKeyTable;
+	api_key_usage: ApiKeyUsageTable;
+	model_choices: ModelChoiceTable;
 	entries: EntryTable;
 	folders: FolderTable;
 	media: MediaTable;

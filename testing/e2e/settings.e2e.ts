@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
-import { ADMIN } from "./account";
 import { expect, operation, test, unique } from "./fixtures";
+import { ADMIN } from "./servers";
 
 const toast = (page: Page, text: string) => page.getByRole("listitem").filter({ hasText: text }).first();
 const tab = (page: Page, name: string) => page.getByRole("link", { name });
@@ -12,7 +12,7 @@ test.describe("settings", () => {
 		admin,
 	}) => {
 		const name = unique("사이트");
-		await admin.goto("/#/settings/site");
+		await admin.goto("/admin#/settings/site");
 		await admin.getByRole("textbox", { name: "사이트 이름" }).fill(name);
 		// The live site saves admin values only: the pill says so, and no review opens.
 		await admin.getByRole("button", { name: "저장", exact: true }).click();
@@ -49,7 +49,7 @@ test.describe("settings", () => {
 	test("12-2 the screen language is saved the moment it is picked, and the sign-in screen follows it after signing out", async ({
 		admin,
 	}) => {
-		await admin.goto("/#/settings/admin");
+		await admin.goto("/admin#/settings/admin");
 		try {
 			await admin.getByRole("combobox", { name: "화면 언어" }).click();
 			await admin.getByRole("option", { name: /English/ }).click();

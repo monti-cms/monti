@@ -1,7 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import { randomUUID } from "../bytes";
 import type { Database, ProposalItemState } from "../db/schema";
-import { CheckError, ConflictError, isMontiError } from "../errors";
+import { CheckError, ConflictError, ForbiddenError, isMontiError } from "../errors";
 import { type AnyOperation, type Message, type Preview, type RecordRef, recordKey } from "../operation";
 import { context, type Engine, loadRecords, parseInput, type RunOptions, type WriteResult } from "./execute";
 
@@ -55,6 +55,12 @@ export async function proposeItem(
 	operation: AnyOperation,
 	rawInput: unknown,
 ): Promise<{ itemId: string; preview: Preview | null }> {
+	// Before the input is read at all: a proposal keeps its input as it came, and what only a person may run (a key to add, a password) must not be
+	// kept anywhere. The same goes for what this site does not offer the assistant: signing in, and structure on the live site.
+	if (operation.humanOnly || operation.open)
+		throw new ForbiddenError({ key: "errors.humanOnly", values: { operation: operation.name } });
+	if (operation.structure && engine.site.files === null)
+		throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: operation.name } });
 	const refs = refsIn(rawInput);
 	const known = await engine.db
 		.selectFrom("monti_proposal_item")
@@ -70,6 +76,9 @@ export async function proposeItem(
 
 	let baseVersions: Record<string, number> = {};
 	let preview: Preview | null = null;
+	// As a write does: before the transaction, so nothing is held while another service answers.
+	const prepared =
+		refs.size === 0 ? await operation.prepare?.(input, context(engine, engine.db, "assistant").ctx) : undefined;
 	await engine.db
 		.transaction()
 		.execute(async (trx) => {
@@ -80,7 +89,7 @@ export async function proposeItem(
 				[...states].flatMap(([key, state]) => (state === null ? [] : [[key, state.version]])),
 			);
 			// An input that points at a former item names records that do not exist yet, so its checks wait for the apply.
-			if (refs.size === 0) await operation.check?.(input, ctx);
+			if (refs.size === 0) await operation.check?.(input, ctx, prepared);
 			preview = (await operation.preview?.(input, ctx)) ?? null;
 			throw new Rollback();
 		})

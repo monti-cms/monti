@@ -1,3 +1,4 @@
+export type { DevProof } from "./auth/dev-bypass";
 export type { AuthSettings } from "./auth/operations";
 export type { Session } from "./auth/session";
 export {
@@ -43,11 +44,13 @@ export {
 } from "./entries/list";
 export type { EntryState } from "./entries/operations";
 export { publicPath, slugify } from "./entries/paths";
+export { readPreviewToken } from "./entries/preview";
 export {
 	createReader,
 	type ReaderOptions,
 	type ResolvedRelation,
 	type SiteEntry,
+	type SiteReader,
 } from "./entries/reader";
 export type { Entry } from "./entries/record";
 export type { PublishCheck, PublishTask } from "./entries/tasks";
@@ -64,6 +67,8 @@ export {
 } from "./errors";
 export type { FolderNode } from "./folders/operations";
 export { canonical, sameJson } from "./json";
+export type { KeyList, KeyRow, KeyServiceRow, KeyUse, ModelChoice, ModelList, OpenKey } from "./keys/operations";
+export type { KeyCheck, KeyCheckTools, KeyCredentials, KeyService, Model } from "./keys/services";
 export {
 	type Acceptance,
 	acceptFile,

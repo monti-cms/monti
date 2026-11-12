@@ -96,15 +96,17 @@ export async function storySite({
 	await setup?.(monti, storage);
 	const api = createAdminApi(monti);
 	let token: string | null = null;
+	// A story is its own machine: a session the dev server's bypass gave holds here (the admin API asks the same of a request's address).
+	const local = options.devProof != null;
 	const transport: Transport = async (name, input, options = {}) => {
-		const answer = await api.call(name, { input, ...options }, token);
+		const answer = await api.call(name, { input, ...options }, token, local);
 		if (answer.session !== undefined) token = answer.session?.token ?? null;
 		return { status: answer.status, body: JSON.parse(JSON.stringify(answer.body)) };
 	};
 	// The byte route with the session this page holds. A story's bar moves as a real upload's does.
 	const uploader: Uploader = async (file, { name, onProgress }) => {
 		onProgress?.(50);
-		const answer = await api.upload(new Uint8Array(await file.arrayBuffer()), name, token);
+		const answer = await api.upload(new Uint8Array(await file.arrayBuffer()), name, token, local);
 		onProgress?.(100);
 		return { status: answer.status, body: JSON.parse(JSON.stringify(answer.body)) };
 	};

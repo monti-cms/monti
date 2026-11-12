@@ -143,7 +143,7 @@
 
 ## 글자
 
-글꼴 계열은 둘이다. 글은 Pretendard, 주소, 숫자, 라벨은 IBM Plex Mono다. Pretendard는 `fonts/PretendardVariable.woff2`로 들어 있고, `tokens.css` 맨 위의 `@font-face`가 불러온다. Noto Sans KR은 대체 글꼴이고, Pretendard를 불러올 수 없을 때만 쓴다. 전체 글꼴 목록은 다음과 같다.
+글꼴 계열은 둘이다. 글은 Pretendard, 주소, 숫자, 라벨은 IBM Plex Mono다. 두 글꼴의 `@font-face`와 파일은 `scripts/build-styles.mjs`가 `@monti-cms/admin/styles.css`를 만들 때 넣는다(파일은 그 옆 `fonts/`). `tokens.css`에는 `@font-face`가 없다. Noto Sans KR은 대체 글꼴이고, Pretendard를 불러올 수 없을 때만 쓴다. 전체 글꼴 목록은 다음과 같다.
 
 - `sans`: `Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif`
 - `mono`: `"IBM Plex Mono", ui-monospace, Menlo, monospace`
