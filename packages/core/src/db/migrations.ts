@@ -433,6 +433,8 @@ const MIGRATIONS: Record<string, Migration> = {
 				.addColumn("turns", "integer", (column) => column.notNull().defaultTo(0))
 				.addColumn("turns_from", "integer", (column) => column.notNull().defaultTo(0))
 				.addColumn("tokens_from", "integer", (column) => column.notNull().defaultTo(0))
+				.addColumn("size", "integer", (column) => column.notNull().defaultTo(0))
+				.addColumn("lease_token", "text")
 				.addColumn("proposal_id", "text")
 				.addColumn("item_id", "text")
 				.addColumn("pending", "jsonb")
@@ -490,6 +492,7 @@ const MIGRATIONS: Record<string, Migration> = {
 			await db.schema.alterTable("monti_proposal_item").addColumn("after_versions", "jsonb").execute();
 			await db.schema.alterTable("monti_proposal_item").addColumn("from_versions", "jsonb").execute();
 			await db.schema.alterTable("monti_proposal_item").addColumn("made_by", "text").execute();
+			await db.schema.alterTable("monti_proposal_item").addColumn("origin", "text").execute();
 			await db.schema.alterTable("monti_proposal_item").addColumn("preview", "jsonb").execute();
 			await db.schema
 				.alterTable("monti_proposal_item")

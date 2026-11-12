@@ -88,6 +88,8 @@ export interface ProposalItemTable {
 	from_versions: Json<Record<string, number | null>> | null;
 	/** The tool call that made it (the run and the call's id): the same call run again after a cut finds its items and makes no second ones. */
 	made_by: string | null;
+	/** The tool call that first made it. `made_by` changes when a request at its place makes it anew; this stays, so the first call finds it still. */
+	origin: string | null;
 	/** What that call's write would do, as the model was told. */
 	preview: Json<unknown> | null;
 	thread: ColumnType<ItemExchange[], string | undefined, string>;
@@ -127,6 +129,10 @@ export interface RunTable {
 	/** The turns and tokens it had spent when a person last said to go on: its limits count from there. */
 	turns_from: Generated<number>;
 	tokens_from: Generated<number>;
+	/** About how many tokens its stored messages are: what a later request of the conversation is sent of it, or leaves out, is decided by this. */
+	size: Generated<number>;
+	/** Which request holds it: a request whose hold ran out and was taken by another finds another name here, and stops. */
+	lease_token: string | null;
 	proposal_id: string | null;
 	/** For `spot` and `again`: the proposal item it is about. */
 	item_id: string | null;

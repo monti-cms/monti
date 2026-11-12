@@ -7,6 +7,8 @@ export type Model = {
 	thinking: boolean;
 	/** It reads pictures: writing alt text needs it. */
 	images: boolean;
+	/** How many tokens it takes in at once (its context window), when its service says. The assistant sizes what it sends by it. */
+	context?: number;
 };
 
 /** What a service answered when asked about a key: its models, or that it refused the key, or that it could not be reached. */
@@ -208,6 +210,8 @@ const anthropic: KeyService = {
 						label: text(row.display_name),
 						thinking: supported(row.capabilities, "thinking"),
 						images: supported(row.capabilities, "image_input"),
+						// The field the Models API's model object names; read when it is there. Not confirmed against the live API.
+						context: tokens(row.max_input_tokens),
 					};
 				}),
 		);
@@ -269,6 +273,7 @@ const openrouter: KeyService = {
 						label: text(row.name),
 						thinking: can.includes("reasoning"),
 						images: Array.isArray(reads) && reads.includes("image"),
+						context: tokens(row.context_length),
 					};
 				}),
 		);
@@ -298,7 +303,13 @@ const gemini: KeyService = {
 					if (!id) return null;
 					const does = Array.isArray(row.supportedGenerationMethods) ? row.supportedGenerationMethods : [];
 					if (!id.startsWith("gemini-") || !does.includes("generateContent") || NOT_CHAT.test(id)) return undefined;
-					return { id, label: text(row.displayName), thinking: row.thinking === true, images: true };
+					return {
+						id,
+						label: text(row.displayName),
+						thinking: row.thinking === true,
+						images: true,
+						context: tokens(row.inputTokenLimit),
+					};
 				}),
 		);
 	},
@@ -328,16 +339,25 @@ const compatible: KeyService = {
 /** The AI services Monti knows without a plugin (doc 14). The model lists and the assistant's models come from keys of these. */
 export const aiServices: readonly KeyService[] = [anthropic, openai, openrouter, gemini, compatible];
 
-/** A model as it is stored: the four things the menu reads and nothing else a service put in. `null` for one that is not a model. */
+/** A count of tokens a service gave: a whole number above zero, or nothing. */
+const tokens = (value: unknown): number | undefined =>
+	typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
+
+/**
+ * A model as it is stored: the things the menu and the assistant read (its id, its name, whether it thinks and reads pictures, how much it
+ * takes in) and nothing else a service put in. `null` for one that is not a model.
+ */
 function plain(model: unknown): Model | null {
 	if (!isObject(model) || typeof model.id !== "string" || model.id === "") return null;
 	if (model.label !== undefined && typeof model.label !== "string") return null;
 	if (typeof model.thinking !== "boolean" || typeof model.images !== "boolean") return null;
+	const context = tokens(model.context);
 	return {
 		id: model.id,
 		...(model.label ? { label: model.label } : {}),
 		thinking: model.thinking,
 		images: model.images,
+		...(context === undefined ? {} : { context }),
 	};
 }
 

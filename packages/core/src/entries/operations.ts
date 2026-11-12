@@ -534,6 +534,10 @@ export const entryOperations = [
 		input: Ids.extend({ date: z.enum(["keep", "today"]).default("keep") }),
 		// One by one: the assistant's proposal has an item per entry, each taken or left on its own (doc 10).
 		each: "ids",
+		// In a proposal it comes after a change of the same entry (a summary filled in, then published): it carries no version of its own, so it
+		// follows as it is. What it changes is what the site shows of the entry: two of these on one entry do not wait side by side.
+		follows: (input) => input,
+		places: (input) => input.ids.map((id) => `entry:${id}/site`),
 		touches: (input) => input.ids.map(ref),
 		async preview(input, ctx) {
 			const plans = await planPublish(ctx, input.ids);
@@ -623,6 +627,10 @@ export const entryOperations = [
 		input: Ids,
 		// One by one: the assistant's proposal has an item per entry, each taken or left on its own (doc 10).
 		each: "ids",
+		// In a proposal it comes after a change of the same entry (a summary filled in, then published): it carries no version of its own, so it
+		// follows as it is. What it changes is what the site shows of the entry: two of these on one entry do not wait side by side.
+		follows: (input) => input,
+		places: (input) => input.ids.map((id) => `entry:${id}/site`),
 		touches: (input) => input.ids.map(ref),
 		async run(input, ctx) {
 			const archived: string[] = [];
@@ -656,6 +664,10 @@ export const entryOperations = [
 		input: Ids,
 		// One by one: the assistant's proposal has an item per entry, each taken or left on its own (doc 10).
 		each: "ids",
+		// In a proposal it comes after a change of the same entry (a summary filled in, then published): it carries no version of its own, so it
+		// follows as it is. What it changes is what the site shows of the entry: two of these on one entry do not wait side by side.
+		follows: (input) => input,
+		places: (input) => input.ids.map((id) => `entry:${id}/site`),
 		touches: (input) => input.ids.map(ref),
 		async run(input, ctx) {
 			const unarchived: string[] = [];

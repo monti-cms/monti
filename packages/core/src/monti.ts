@@ -13,6 +13,7 @@ import {
 	addExchange,
 	applyProposal,
 	createProposal,
+	lockProposals,
 	type ProposalView,
 	proposeItem,
 	replaceItem,
@@ -255,6 +256,11 @@ function engineOperations(
 					message: "Give ids or proposal, one of them.",
 				}),
 			async run(input, ctx) {
+				// The proposals' rows before their items', the order everything that decides about a proposal takes them in.
+				await lockProposals(
+					ctx.db,
+					input.proposal !== undefined ? { proposals: [input.proposal] } : { items: input.ids ?? [] },
+				);
 				const items = await ctx.db
 					.updateTable("monti_proposal_item")
 					.set({ state: "discarded" })

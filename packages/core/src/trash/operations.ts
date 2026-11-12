@@ -410,6 +410,9 @@ export const trashOperations = [
 		input: Rows,
 		// One by one: the assistant's proposal has an item per row, each taken or left on its own (doc 10).
 		each: "rows",
+		// The whole record: nothing else of it waits beside its way to the trash in one proposal. It carries no version, so it follows as it is.
+		follows: (input) => input,
+		places: (input) => input.rows.map((row) => `${row.kind}:${row.id}`),
 		async touches(input, ctx) {
 			const plan = await planMove(ctx, input.rows, true);
 			return [
@@ -544,6 +547,9 @@ export const trashOperations = [
 			"Bring rows of the trash back. A document comes back as a draft, where it was, with every language of it that is in the trash; a folder comes back with everything in it; and a thing whose folder is in the trash brings that folder back to sit in. A translation whose language the entry has again is refused.",
 		input: Rows,
 		each: "rows",
+		// The whole record, as its way into the trash is.
+		follows: (input) => input,
+		places: (input) => input.rows.map((row) => `${row.kind}:${row.id}`),
 		async touches(input, ctx) {
 			const plan = await planRestore(ctx, input.rows);
 			return [

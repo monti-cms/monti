@@ -456,6 +456,9 @@ export const mediaOperations = [
 		input: z.object({ ids: z.array(z.string()).min(1), folder: z.string().nullable() }),
 		// One by one: the assistant's proposal has an item per file, each taken or left on its own (doc 10).
 		each: "ids",
+		// In a proposal it follows another change of the same file as it is (it carries no version). What it changes is where the file is.
+		follows: (input) => input,
+		places: (input) => input.ids.map((id) => `media:${id}/folder`),
 		// The target folder's lock too, in the order every write takes locks: a folder being removed either sees the files come in, or refuses them here (09-4).
 		touches: (input) => [...(input.folder === null ? [] : [folderRef(input.folder)]), ...input.ids.map(mediaRef)],
 		async preview(input, ctx) {

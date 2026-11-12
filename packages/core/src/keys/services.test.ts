@@ -269,15 +269,18 @@ describe("what a check hands on", () => {
 				ok: true,
 				models: [
 					{ id: "b-model", thinking: false, images: true, echoed: secret } as never,
-					{ id: "a-model", thinking: true, images: false },
+					{ id: "a-model", thinking: true, images: false, context: 200_000 },
+					// How much a model takes in is kept only as a whole number above zero.
+					{ id: "c-model", thinking: false, images: false, context: "a lot" } as never,
 				],
 			}),
 		};
 		expect(await checkKey(loose, { secret: KEY, baseUrl: null }, globalThis.fetch)).toEqual({
 			ok: true,
 			models: [
-				{ id: "a-model", thinking: true, images: false },
+				{ id: "a-model", thinking: true, images: false, context: 200_000 },
 				{ id: "b-model", thinking: false, images: true },
+				{ id: "c-model", thinking: false, images: false },
 			],
 		});
 		const echo: KeyService = {

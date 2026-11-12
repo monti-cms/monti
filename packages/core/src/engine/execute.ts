@@ -15,7 +15,7 @@ import {
 import { lockRecords, type RecordKind, type RecordState } from "../records";
 import type { Site } from "../site";
 import { queueDeliveries, type Receiver } from "./deliveries";
-import { claimItem, type ItemClaim, markApplied, settleApplied } from "./proposals";
+import { claimItem, type ItemClaim, lockProposals, markApplied, settleApplied } from "./proposals";
 
 /** How long a write can be undone. The trash keeps entries as long, and both are cleared together (doc 11). */
 export const UNDO_DAYS = 30;
@@ -153,6 +153,8 @@ export async function runWrite<Output>(
 	return engine.db.transaction().execute(async (trx) => {
 		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
+		// A save that accepts proposal items decides about their proposals: those rows first, as a revert and a discard take them, then the records.
+		if (options.accepted && options.accepted.length > 0) await lockProposals(trx, { items: options.accepted });
 		await lockRecords(trx, touched);
 		// After the records' locks, as a screen's save takes them (records, then the items it accepts): the item is held until this write ends, so
 		// nothing discards it, changes it or applies it a second time meanwhile.

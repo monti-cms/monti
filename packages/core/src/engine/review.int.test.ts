@@ -613,20 +613,26 @@ describe("a person's decision while an apply runs (review 1 of #472)", () => {
 	it("10-3 an item left out after the apply began is not written, and one made again is applied as it is now", async () => {
 		const monti = site();
 		const posts = [await newPost("하나"), await newPost("둘"), await newPost("셋")];
-		const proposal = await monti.proposals.create("c1", "보관해 줘");
-		const { itemIds } = await monti.proposals.add(proposal, "entries.archive", { ids: posts });
+		const proposal = await monti.proposals.create("c1", "보관하고 이름 고쳐 줘");
+		const archived = await monti.proposals.add(proposal, "entries.archive", { ids: posts.slice(0, 2) });
+		const at = await version(posts[2]);
+		const renamed = await monti.proposals.add(proposal, "entries.save", {
+			id: posts[2],
+			version: at,
+			title: "셋 (처음 제안)",
+		});
 		await monti.proposals.apply(proposal, undefined, async (progress) => {
-			if (progress.itemId !== itemIds[0]) return;
-			await site().run("proposals.include", { ids: [itemIds[1]], included: false }, admin);
-			// The third is changed at its place: it now renames the entry and no longer archives it.
-			await site().proposals.replace(itemIds[2], "entries.save", {
+			if (progress.itemId !== archived.itemIds[0]) return;
+			await site().run("proposals.include", { ids: [archived.itemIds[1]], included: false }, admin);
+			// The third is changed at its place: the same change, with another name.
+			await site().proposals.replace(renamed.itemId, "entries.save", {
 				id: posts[2],
-				version: await version(posts[2]),
+				version: at,
 				title: "셋 (새 이름)",
 			});
 		});
 		expect((await row(posts[1])).status).toBe("draft");
-		expect(await row(posts[2])).toMatchObject({ status: "draft", title: "셋 (새 이름)" });
+		expect((await row(posts[2])).title).toBe("셋 (새 이름)");
 		expect((await view(proposal)).items.map((item) => item.state)).toEqual(["applied", "discarded", "applied"]);
 	});
 
@@ -832,7 +838,7 @@ describe("one apply at a time, however long a write takes (review 1 of #472)", (
 		expect(seen[0].output).not.toBeNull();
 	});
 
-	it("10-4 an apply cut after a folder was made goes on to move the entries into it", async () => {
+	it("10-4 an apply a host froze after a folder was made: its hold runs out, the next apply takes over and moves the entries into it", async () => {
 		const monti = site();
 		const id = await newPost("글");
 		const proposal = await monti.proposals.create("c1", "새 폴더로 옮겨 줘");
@@ -842,16 +848,91 @@ describe("one apply at a time, however long a write takes (review 1 of #472)", (
 			name: "2024",
 		});
 		await monti.proposals.add(proposal, "entries.moveToFolder", { ids: [id], folder: { $item: made.itemId } });
-		// The server goes away right after the first item.
+		// The host freezes the process right after the first item; when it thaws, another apply has the proposal, and it stops.
 		await expect(
-			monti.proposals.apply(proposal, undefined, () => {
-				throw new Error("the server went away");
+			monti.proposals.apply(proposal, undefined, async () => {
+				await db
+					.updateTable("monti_proposal")
+					.set({ applying_token: "the apply that took over" })
+					.where("id", "=", proposal)
+					.execute();
 			}),
-		).rejects.toThrow("the server went away");
+		).rejects.toMatchObject({ reason: { key: "proposals.applying" } });
 		expect((await row(id)).folder_id).toBeNull();
+		// Nothing lets go of the proposal by hand: the hold runs out, and the next apply goes on with what is left.
+		await expect(site().proposals.apply(proposal)).rejects.toMatchObject({ reason: { key: "proposals.applying" } });
+		clock = new Date(clock.getTime() + 61_000);
 		expect(await site().proposals.apply(proposal)).toMatchObject([{ state: "applied" }]);
 		const box = await db.selectFrom("folders").select("id").where("name", "=", "2024").executeTakeFirstOrThrow();
 		expect((await row(id)).folder_id).toBe(box.id);
+	});
+
+	it("10-1 an apply runs to its end when whoever watched it is gone", async () => {
+		const monti = site();
+		const posts = [await newPost("하나"), await newPost("둘")];
+		const proposal = await monti.proposals.create("c1", "보관해 줘");
+		await monti.proposals.add(proposal, "entries.archive", { ids: posts });
+		// The browser left: telling it of each item fails from the first one on.
+		const results = await monti.proposals.apply(proposal, undefined, () => {
+			throw new Error("nobody is listening");
+		});
+		expect(results).toMatchObject([{ state: "applied" }, { state: "applied" }]);
+		expect([(await row(posts[0])).status, (await row(posts[1])).status]).toEqual(["archived", "archived"]);
+		expect(await view(proposal)).toMatchObject({ status: "applied", applying: false });
+	});
+
+	it("10-4 an apply that took the proposal over reads what the other one's last write left: a change that follows it applies", async () => {
+		// A plugin's write that renames an entry, slowly, and says what it changed.
+		let entered = () => {};
+		let open = () => {};
+		const began = new Promise<void>((resolve) => {
+			entered = resolve;
+		});
+		const opened = new Promise<void>((resolve) => {
+			open = resolve;
+		});
+		const retitle = defineOperation({
+			name: "probe.retitle",
+			kind: "write",
+			description: "Rename an entry.",
+			input: z.object({ id: z.string(), title: z.string() }),
+			touches: (input) => [{ kind: "entry", id: input.id }],
+			places: (input) => [`entry:${input.id}/title`],
+			async run(input, ctx) {
+				entered();
+				await opened;
+				await ctx.db
+					.updateTable("entries")
+					.set((eb) => ({ title: input.title, version: eb("version", "+", 1) }))
+					.where("id", "=", input.id)
+					.execute();
+				return { id: input.id };
+			},
+			summary: () => ({ key: "probe.retitle" }),
+		});
+		const plugins = [definePlugin({ name: "probe", operations: [retitle] })];
+		const monti = site({ plugins });
+		const id = await newPost("처음 제목", ["처음 본문"]);
+		const at = await version(id);
+		const proposal = await monti.proposals.create("c1", "고쳐 줘");
+		await monti.proposals.add(proposal, "probe.retitle", { id, title: "바꾼 제목" });
+		const edit = await monti.proposals.add(proposal, "body.edit", {
+			id,
+			version: at,
+			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "바꾼" }],
+		});
+		const first = monti.proposals.apply(proposal);
+		await began;
+		// The first hangs in its write past its hold; the second takes over, and waits at the entry the first is writing.
+		clock = new Date(clock.getTime() + 61_000);
+		const second = site({ plugins }).proposals.apply(proposal);
+		await wait(200);
+		open();
+		await expect(first).rejects.toMatchObject({ reason: { key: "proposals.applying" } });
+		// The second saw the first's write only after it began: it reads again, and the edit follows the rename instead of being "changed".
+		expect(await second).toMatchObject([{ itemId: edit.itemId, state: "applied" }]);
+		expect(await row(id)).toMatchObject({ title: "바꾼 제목" });
+		expect(await textOf(id)).toEqual(["바꾼 본문"]);
 	});
 });
 
@@ -933,6 +1014,238 @@ describe("putting back more than one change of an entry (review 1 of #472)", () 
 		expect(await db.selectFrom("entry_published").select("entry_id").where("entry_id", "=", id).execute()).toEqual([]);
 		expect(events.map((event) => event.type)).toEqual(["entry.published", "entry.unpublished"]);
 		expect(events[1]).toMatchObject({ ids: [id] });
+	});
+});
+
+describe("what the second review of the core found (#472)", () => {
+	/** A plugin's write that renames several entries at once: one item that changes more than one record. */
+	const retitleAll = defineOperation({
+		name: "probe.retitleAll",
+		kind: "write",
+		description: "Rename entries.",
+		input: z.object({ ids: z.array(z.string()), title: z.string() }),
+		touches: (input) => input.ids.map((id) => ({ kind: "entry", id })),
+		async run(input, ctx) {
+			await ctx.db
+				.updateTable("entries")
+				.set((eb) => ({ title: input.title, version: eb("version", "+", 1) }))
+				.where("id", "in", input.ids)
+				.execute();
+			return { ids: input.ids };
+		},
+		summary: () => ({ key: "probe.retitleAll" }),
+	});
+	/** A plugin's write that touches no record: its row in the activity log cannot be undone. */
+	const ping = defineOperation({
+		name: "probe.ping",
+		kind: "write",
+		description: "Do something outside the site's records.",
+		input: z.object({}),
+		run: async () => ({}),
+		summary: () => ({ key: "probe.ping" }),
+	});
+	const probe = definePlugin({ name: "probe", operations: [retitleAll, ping] });
+	const revert = (monti: ReturnType<typeof site>, id: string) =>
+		monti.run("proposals.revert", { id }, admin) as Promise<Written<{ reverted: string[]; kept: string[] }>>;
+
+	it("10-1 an item of which a part went back is put back, with how much of it stayed; a second revert finds nothing to do", async () => {
+		const monti = site({ plugins: [probe] });
+		const posts = [await newPost("하나"), await newPost("둘")];
+		const proposal = await monti.proposals.create("c1", "이름 맞춰 줘");
+		const { itemId } = await monti.proposals.add(proposal, "probe.retitleAll", { ids: posts, title: "같은 이름" });
+		await monti.proposals.apply(proposal);
+		// A person renames the second one afterwards.
+		await monti.run(
+			"entries.save",
+			{ id: posts[1], version: await version(posts[1]), title: "둘 (사람이 고침)" },
+			admin,
+		);
+
+		const first = await revert(monti, proposal);
+		expect(first.output).toEqual({ reverted: [itemId], kept: [] });
+		expect([(await row(posts[0])).title, (await row(posts[1])).title]).toEqual(["하나", "둘 (사람이 고침)"]);
+		const seen = await view(proposal);
+		expect(seen.items).toMatchObject([
+			{ state: "reverted", reason: { key: "proposals.partlyReverted", values: { count: 1 } } },
+		]);
+		expect(seen).toMatchObject({ status: "reverted", counts: { reverted: 1, applied: 0 } });
+
+		// Again: nothing is left that a revert could put back, and nothing fails.
+		expect((await revert(monti, proposal)).output).toEqual({ reverted: [], kept: [] });
+		expect((await view(proposal)).items).toMatchObject([
+			{ state: "reverted", reason: { key: "proposals.partlyReverted" } },
+		]);
+	});
+
+	it("10-1 a write that cannot be undone, and one whose 30 days are over, each stay applied with the undo's own reason", async () => {
+		const monti = site({ plugins: [probe] });
+		const post = await newPost("하나");
+		const proposal = await monti.proposals.create("c1", "해 줘");
+		const pinged = await monti.proposals.add(proposal, "probe.ping", {});
+		const archived = await monti.proposals.add(proposal, "entries.archive", { ids: [post] });
+		await monti.proposals.apply(proposal);
+
+		// The archive is put back; the write that touched no record cannot be.
+		expect((await revert(monti, proposal)).output).toEqual({ reverted: [archived.itemId], kept: [pinged.itemId] });
+		expect((await view(proposal)).items).toMatchObject([
+			{ state: "applied", reason: { key: "errors.notUndoable" } },
+			{ state: "reverted", reason: null },
+		]);
+
+		const old = await monti.proposals.create("c2", "보관해 줘");
+		const late = await monti.proposals.add(old, "entries.archive", { ids: [post] });
+		await monti.proposals.apply(old);
+		clock = new Date(clock.getTime() + 31 * 86_400_000);
+		expect((await revert(site({ plugins: [probe] }), old)).output).toEqual({ reverted: [], kept: [late.itemId] });
+		expect((await view(old)).items).toMatchObject([{ state: "applied", reason: { key: "errors.undoExpired" } }]);
+		expect((await row(post)).status).toBe("archived");
+	});
+
+	it("10-1 a proposal is not put back while an apply holds it, and two reverts at once put each item back once", async () => {
+		const monti = site();
+		const posts = [await newPost("하나"), await newPost("둘")];
+		const proposal = await monti.proposals.create("c1", "보관해 줘");
+		const { itemIds } = await monti.proposals.add(proposal, "entries.archive", { ids: posts });
+		await monti.proposals.apply(proposal, [itemIds[0]]);
+		await db
+			.updateTable("monti_proposal")
+			.set({ applying_until: new Date(clock.getTime() + 30_000), applying_token: "an apply" })
+			.where("id", "=", proposal)
+			.execute();
+		await expect(revert(monti, proposal)).rejects.toMatchObject({ reason: { key: "proposals.applying" } });
+		expect((await row(posts[0])).status).toBe("archived");
+
+		await db
+			.updateTable("monti_proposal")
+			.set({ applying_until: null, applying_token: null })
+			.where("id", "=", proposal)
+			.execute();
+		const both = await Promise.all([revert(site(), proposal), revert(site(), proposal)]);
+		// One of them put it back; the other waited for it and found nothing left.
+		expect(both.flatMap((each) => each.output.reverted)).toEqual([itemIds[0]]);
+		expect(both.flatMap((each) => each.output.kept)).toEqual([]);
+		expect((await row(posts[0])).status).toBe("draft");
+		expect((await view(proposal)).items[0]).toMatchObject({ state: "reverted", reason: null });
+	});
+
+	it("10-1 a change of an entry and then its publication apply in order; the same in the other order; a move too", async () => {
+		const monti = site();
+		const id = await newPost("글", ["본문"]);
+		const box = await folder("2024");
+		const at = await version(id);
+		const proposal = await monti.proposals.create("c1", "요약 채우고 폴더로 옮기고 발행해 줘");
+		await monti.proposals.add(proposal, "entries.save", { id, version: at, values: { summary: "새 요약" } });
+		await monti.proposals.add(proposal, "entries.moveToFolder", { ids: [id], folder: box });
+		await monti.proposals.add(proposal, "entries.publish", { ids: [id] });
+		// Before anything is applied, the review shows none of them as changed in the meantime.
+		expect((await view(proposal)).counts).toMatchObject({ toApply: 3, stale: 0 });
+		expect(await monti.proposals.apply(proposal)).toMatchObject([
+			{ state: "applied" },
+			{ state: "applied" },
+			{ state: "applied" },
+		]);
+		const published = await db
+			.selectFrom("entry_published")
+			.select("values")
+			.where("entry_id", "=", id)
+			.executeTakeFirstOrThrow();
+		expect(published.values).toMatchObject({ summary: "새 요약" });
+		expect((await row(id)).folder_id).toBe(box);
+
+		// Published first, then changed: both apply, and the entry has a change the site does not show yet.
+		const other = await newPost("다른 글", ["본문"]);
+		const second = await monti.proposals.create("c2", "발행하고 요약 고쳐 줘");
+		await monti.proposals.add(second, "entries.publish", { ids: [other] });
+		await monti.proposals.add(second, "entries.save", {
+			id: other,
+			version: await version(other),
+			values: { summary: "발행 뒤 요약" },
+		});
+		expect(await monti.proposals.apply(second)).toMatchObject([{ state: "applied" }, { state: "applied" }]);
+		expect(await row(other)).toMatchObject({ status: "published", has_unpublished_changes: true });
+	});
+
+	it("10-1 two writes of the same thing of one record do not wait side by side: publish twice, publish and archive, two moves, anything beside the trash", async () => {
+		const monti = site();
+		const id = await newPost("글", ["본문"]);
+		const boxes = [await folder("2024"), await folder("2025")];
+		const at = await version(id);
+		const same = { reason: { key: "proposals.samePlace" } };
+		const proposal = await monti.proposals.create("c1", "발행해 줘");
+		await monti.proposals.add(proposal, "entries.publish", { ids: [id] });
+		await expect(monti.proposals.add(proposal, "entries.publish", { ids: [id] })).rejects.toMatchObject(same);
+		await expect(monti.proposals.add(proposal, "entries.archive", { ids: [id] })).rejects.toMatchObject(same);
+		await monti.proposals.add(proposal, "entries.moveToFolder", { ids: [id], folder: boxes[0] });
+		await expect(
+			monti.proposals.add(proposal, "entries.moveToFolder", { ids: [id], folder: boxes[1] }),
+		).rejects.toMatchObject(same);
+		// The trash takes the whole record: it waits beside nothing else of it, and nothing else waits beside it.
+		await expect(monti.proposals.add(proposal, "trash.move", { rows: [{ kind: "entry", id }] })).rejects.toMatchObject(
+			same,
+		);
+		const trash = await monti.proposals.create("c2", "지워 줘");
+		await monti.proposals.add(trash, "trash.move", { rows: [{ kind: "entry", id }] });
+		await expect(
+			monti.proposals.add(trash, "entries.save", { id, version: at, title: "새 제목" }),
+		).rejects.toMatchObject(same);
+	});
+
+	it("10-3 a change made again at its place stays the same change: another operation or another record is refused", async () => {
+		const monti = site();
+		const posts = [await newPost("하나"), await newPost("둘")];
+		const at = await version(posts[0]);
+		const proposal = await monti.proposals.create("c1", "이름 고쳐 줘");
+		const { itemId } = await monti.proposals.add(proposal, "entries.save", {
+			id: posts[0],
+			version: at,
+			title: "하나 (제안)",
+		});
+		const other = { reason: { key: "proposals.otherChange" } };
+		await expect(monti.proposals.replace(itemId, "entries.archive", { ids: [posts[0]] })).rejects.toMatchObject(other);
+		await expect(
+			monti.proposals.replace(itemId, "trash.move", { rows: [{ kind: "entry", id: posts[0] }] }),
+		).rejects.toMatchObject(other);
+		await expect(
+			monti.proposals.replace(itemId, "entries.save", {
+				id: posts[1],
+				version: await version(posts[1]),
+				title: "둘 (제안)",
+			}),
+		).rejects.toMatchObject(other);
+		expect((await view(proposal)).items).toMatchObject([
+			{ operation: "entries.save", input: { id: posts[0], title: "하나 (제안)" } },
+		]);
+		await monti.proposals.replace(itemId, "entries.save", { id: posts[0], version: at, title: "하나 (다시)" });
+		expect((await view(proposal)).items).toMatchObject([{ input: { title: "하나 (다시)" } }]);
+	});
+
+	it("10-4 a tool call run again finds the item it made also after a request at the item's place changed it", async () => {
+		const monti = site();
+		const id = await newPost("하나");
+		const at = await version(id);
+		const proposal = await monti.proposals.create("c1", "이름 고쳐 줘");
+		const made = await monti.proposals.add(
+			proposal,
+			"entries.save",
+			{ id, version: at, title: "제안" },
+			"이름",
+			"run-1:call-1",
+		);
+		await monti.proposals.replace(
+			made.itemId,
+			"entries.save",
+			{ id, version: at, title: "자리에서 고친 제안" },
+			"run-2:call-1",
+		);
+		const again = await monti.proposals.add(
+			proposal,
+			"entries.save",
+			{ id, version: at, title: "제안" },
+			"이름",
+			"run-1:call-1",
+		);
+		expect(again.itemIds).toEqual(made.itemIds);
+		expect((await view(proposal)).items).toMatchObject([{ input: { title: "자리에서 고친 제안" } }]);
 	});
 });
 
