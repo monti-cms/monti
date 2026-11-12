@@ -49,6 +49,20 @@ export function nextStop(after: Element) {
  */
 export const holdsKeyboardFocus = (element: Element) => element.matches(":focus-visible");
 
+/**
+ * Whether the focus is in something a control of the thing opened elsewhere in the page: its menu, which is named by its button
+ * (`aria-labelledby`, kept while the menu closes). That focus is the control's own: a row whose menu's "send again" is answered before the
+ * menu has closed goes while the focus is still in the menu, and the menu then has no button to give it back to.
+ */
+function inPopupOf(node: HTMLElement, focused: Element) {
+	const popup = focused.closest("[aria-labelledby]");
+	if (!popup || node.contains(popup)) return false;
+	return (popup.getAttribute("aria-labelledby") ?? "").split(/\s+/).some((id) => {
+		const named = id ? document.getElementById(id) : null;
+		return named !== null && node.contains(named);
+	});
+}
+
 /** What a person does next with their own hands: after it, nothing is moved under them. */
 const THEIR_OWN = ["keydown", "pointerdown", "focusin"] as const;
 
@@ -191,7 +205,8 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 			removeEventListener("pointerdown", letGo, true);
 			inside.disconnect();
 			const focused = document.activeElement;
-			if (focused instanceof HTMLElement && node.contains(focused) && holdsKeyboardFocus(focused)) hand();
+			if (!(focused instanceof HTMLElement) || !holdsKeyboardFocus(focused)) return;
+			if (node.contains(focused) || inPopupOf(node, focused)) hand();
 		};
 	}, []);
 }

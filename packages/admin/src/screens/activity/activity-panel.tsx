@@ -34,9 +34,8 @@ import { holdsKeyboardFocus, nextStop, useFocusHandOff } from "../frame/focus-ha
 import { shortTime } from "../list/format";
 
 /**
- * One receiver's delivery in the panel: its facts, and what can be done about it under them. Its buttons go when they are used ("send again"
- * while it is on its way, both once it is canceled or arrived): the keyboard's focus they held goes to the delivery itself, whose state now
- * says how that came out, not to the page.
+ * One receiver's delivery in the panel: its facts, and what can be done about it under them. Its buttons go once it is canceled or has
+ * arrived: the keyboard's focus they held goes to the delivery itself, whose state now says how that came out, not to the page.
  */
 function DeliveryBlock({ id, children }: { id: string; children: ReactNode }) {
 	const handOff = useFocusHandOff((block) => () => {
@@ -220,7 +219,7 @@ export function ActivityPanel({
 						<DropdownMenu>
 							<IconButton
 								ref={moreHandOff}
-								label={t("list.rowMenu")}
+								label={t("list.more")}
 								trigger={(button) => <DropdownMenuTrigger render={button} />}
 							>
 								<OverflowMenuHorizontal aria-hidden />
@@ -351,7 +350,9 @@ export function ActivityPanel({
 												{delivery.eventId}
 											</DescriptionItem>
 										</DescriptionList>
-										{(delivery.state === "failed" || delivery.state === "pending") && !isSending(delivery) && (
+										{/* "Send again" stays while it is on its way: at work, with its focus, not to be pressed. When it arrives the buttons
+										    go and the delivery takes the focus; when it fails, or its answer is lost, the button is as it was. */}
+										{(delivery.state === "failed" || delivery.state === "pending") && (
 											<Inline gap={16}>
 												{delivery.state === "failed" && (
 													<TextButton variant="underline" loading={busy} onClick={() => onRetry([delivery.id])}>
@@ -359,17 +360,19 @@ export function ActivityPanel({
 													</TextButton>
 												)}
 												{/* While its cancel is on its way it works, keeps its focus and cannot be pressed again: a second cancel
-												    would only be refused. */}
-												<TextButton
-													variant="quiet"
-													loading={canceling === delivery.id}
-													onClick={() => {
-														canceled.current = null;
-														setAsking(delivery);
-													}}
-												>
-													{t("activity.cancel")}
-												</TextButton>
+												    would only be refused. Not offered for a delivery that is being sent. */}
+												{!isSending(delivery) && (
+													<TextButton
+														variant="quiet"
+														loading={canceling === delivery.id}
+														onClick={() => {
+															canceled.current = null;
+															setAsking(delivery);
+														}}
+													>
+														{t("activity.cancel")}
+													</TextButton>
+												)}
 											</Inline>
 										)}
 									</DeliveryBlock>
