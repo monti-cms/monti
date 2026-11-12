@@ -21,8 +21,10 @@ export type Hooks = {
 	arrived: { destination: string; event: MontiEvent }[];
 	/** While set, a send waits for it: a delivery is on its way for as long as a test needs. */
 	hold: Promise<void> | null;
-	/** Operations whose answer is lost on its way (a network that dropped): the call comes back with no reason. */
+	/** Operations the server fails at and says nothing (a 502 with no body): the call comes back with no reason. */
 	lose: Set<string>;
+	/** Operations whose call the network drops: no answer comes at all. */
+	drop: Set<string>;
 	/** Operations that wait for this before they answer: a call is on its way for as long as a test needs. */
 	slow: Map<string, Promise<void>>;
 	/** Every operation the screen called, in order. */
@@ -132,6 +134,7 @@ export const log = (
 			arrived: [],
 			hold: null,
 			lose: new Set(),
+			drop: new Set(),
 			slow: new Map(),
 			calls: [],
 		};
@@ -146,6 +149,7 @@ export const log = (
 			async transport(name, ...rest) {
 				hooks.calls.push(name);
 				await hooks.slow.get(name);
+				if (hooks.drop.has(name)) throw new TypeError("Failed to fetch");
 				if (hooks.lose.has(name)) return { status: 502, body: null };
 				return made.transport(name, ...rest);
 			},

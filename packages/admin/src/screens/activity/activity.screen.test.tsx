@@ -989,9 +989,21 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const drawn = draw(stories.Log);
 		await drawn.run();
 		const { hooks } = drawn.loaded();
-		hooks.lose.add("deliveries.retry");
 		const more = () => row(FAILED).getByRole("button", { name: "행 메뉴" });
 		await tabTo(() => more().element());
+		// The network drops the call: no answer comes at all. It carries words of its own ("no answer"), and is an error all the same.
+		hooks.drop.add("deliveries.retry");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
+		await userEvent.keyboard("{ArrowDown}{Enter}");
+		await expect.poll(newestIsError).toBe(true);
+		await expect.poll(() => deliveryOf(FAILED)).toBe("실패");
+		await expect.element(more()).toHaveFocus();
+		toasts.dismiss();
+		await expect.poll(newestIsError).toBe(false);
+		// The server fails and says nothing: the same.
+		hooks.drop.clear();
+		hooks.lose.add("deliveries.retry");
 		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
 		await userEvent.keyboard("{ArrowDown}{Enter}");

@@ -2,7 +2,7 @@ import type { DeliveriesRetried } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { reasonOf, useOperation } from "../operations/use-operation";
+import { isLost, reasonOf, useOperation } from "../operations/use-operation";
 
 /**
  * Sends failed deliveries again (doc 13, flow 12): a line's, one delivery's, or all of them. The server takes a batch at a time and says how many
@@ -39,10 +39,11 @@ export function useSendAgain() {
 					wrote();
 					const reason = t(reasonOf(result.refusal));
 					const before = tally();
-					// Refused at the start with a reason, it only says why. Refused part-way, what the earlier steps did is said with it, as the
-					// error it is; and an answer that never came (no reason) is an error too.
-					if (before !== null) return void toast.error(`${before} · ${reason}`);
-					return void (result.refusal.reason ? toast(reason) : toast.error(reason));
+					// Refused at the start, it only says why. Refused part-way, what the earlier steps did is said with it, as the error it is; and
+					// a call that was lost (the network dropped it, the server failed) is an error too, whatever words it carries.
+					if (before !== null || isLost(result.refusal))
+						return void toast.error(before === null ? reason : `${before} · ${reason}`);
+					return void toast(reason);
 				}
 				const step = result.body.output;
 				sent += step.sent;
