@@ -28,6 +28,12 @@ export const addressOf = (part: string) => {
 };
 
 /**
+ * A row's undo goes away with the change it puts back: the focus goes to the row's own control, the one the undo acted on, not to the page
+ * (docs/design/admin/tokens.md, the states section: where the focus goes when what held it is gone).
+ */
+const focusOn = (id: string) => document.getElementById(id)?.focus();
+
+/**
  * A collection's basic tab (flow 4, steps 13 and 15; flow 11, step 17c): one group, in the field sheet's order: the identifier (never changes,
  * its lock on its row) and the kind side by side, the name the admin reads, the public address (the file's, locked on its row on the live site) and folders.
  * No section names the system's split between file and admin values (README principle 9). Deleting it takes it out of the list at once; the
@@ -59,7 +65,11 @@ export function BasicsTab({
 			? {
 					label: t("settings.changed"),
 					undoLabel: t("settings.undo"),
-					onUndo: () => draft.revert(pathPlace),
+					onUndo: () => {
+						draft.revert(pathPlace);
+						// An item's row is its switch (the address field goes with the public page).
+						focusOn(kind === "item" ? "collection-public-page" : "collection-path");
+					},
 				}
 			: undefined;
 	return (
@@ -152,7 +162,15 @@ export function BasicsTab({
 							{previewChanged ? <ChangeDot label={t("settings.changed")} /> : null}
 							{previewChanged ? (
 								<div className="ml-auto flex items-center gap-monti-12">
-									<TextButton variant="underline" quiet size="caption" onClick={() => draft.revert(previewPlace)}>
+									<TextButton
+										variant="underline"
+										quiet
+										size="caption"
+										onClick={() => {
+											draft.revert(previewPlace);
+											focusOn("collection-preview-path");
+										}}
+									>
 										{t("settings.undo")}
 									</TextButton>
 								</div>

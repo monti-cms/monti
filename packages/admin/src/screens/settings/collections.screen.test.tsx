@@ -118,6 +118,28 @@ describe("a collection's preview address", () => {
 	});
 });
 
+describe("a control that goes away with its press", () => {
+	const { Basics } = composeStories(collections);
+
+	it("a changed address's undo, pressed with the keyboard, leaves the focus in that row's field, not on the page", async () => {
+		await Basics.run();
+		for (const name of ["공개 주소", "미리보기 주소"]) {
+			const field = page.getByRole("textbox", { name });
+			await userEvent.click(field);
+			await userEvent.keyboard("x");
+			const undo = page.getByRole("button", { name: "되돌리기", exact: true });
+			await expect.element(undo).toBeVisible();
+			// The undo stands on the label's line, before its field.
+			await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+			await expect.element(undo).toHaveFocus();
+			await userEvent.keyboard("{Enter}");
+			await expect.element(undo).not.toBeInTheDocument();
+			await expect.element(field).toHaveFocus();
+			expect(document.activeElement).not.toBe(document.body);
+		}
+	});
+});
+
 const { ChangesList, DeleteReview, Fields } = composeStories(collections);
 
 const tab = (name: RegExp) => page.getByRole("tab", { name });
