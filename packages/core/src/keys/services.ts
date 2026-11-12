@@ -7,6 +7,8 @@ export type Model = {
 	thinking: boolean;
 	/** It reads pictures: writing alt text needs it. */
 	images: boolean;
+	/** How many tokens it takes in at once (its context window), when its service says. The assistant sizes what it sends by it. */
+	context?: number;
 };
 
 /** What a service answered when asked about a key: its models, or that it refused the key, or that it could not be reached. */
@@ -88,6 +90,26 @@ async function limitedJson(response: Response): Promise<unknown> {
 		return UNREADABLE;
 	}
 }
+
+/**
+ * A fetch that never follows a redirect, whatever its caller asks for: a key sent in a header would go with the redirect to wherever the service
+ * points, another origin or a machine inside the server's network. Every request that carries a key goes through one: the checks of the keys
+ * (the built-in services' and a plugin's alike) and the assistant's calls to the model services.
+ */
+export function withoutRedirects(fetch: typeof globalThis.fetch): typeof globalThis.fetch {
+	return (input, init) => fetch(input, { ...init, redirect: "error" });
+}
+
+/**
+ * Where each built-in service is called. Named here once: the keys are checked there, and the assistant calls the models there and nowhere else
+ * (a provider library that reads an address from the environment is given this one instead).
+ */
+export const SERVICE_URLS = {
+	anthropic: "https://api.anthropic.com/v1",
+	openai: "https://api.openai.com/v1",
+	openrouter: "https://openrouter.ai/api/v1",
+	gemini: "https://generativelanguage.googleapis.com/v1beta",
+} as const;
 
 /**
  * One GET; `null` when the service cannot be reached. A redirect is not followed: the key's headers would go with it to wherever the service points,
@@ -172,7 +194,7 @@ const anthropic: KeyService = {
 	async check({ secret }, tools) {
 		// The version Anthropic's API reference writes in its Models examples; the reference says the Models endpoint answers `2026-10-21` exactly as
 		// it answers `2023-06-01`. Not tried against the live API with a real key: without one it answers 401 before it looks at the version.
-		const listed = await get(tools, "https://api.anthropic.com/v1/models?limit=1000", {
+		const listed = await get(tools, `${SERVICE_URLS.anthropic}/models?limit=1000`, {
 			"x-api-key": secret,
 			"anthropic-version": "2026-10-21",
 		});
@@ -188,6 +210,8 @@ const anthropic: KeyService = {
 						label: text(row.display_name),
 						thinking: supported(row.capabilities, "thinking"),
 						images: supported(row.capabilities, "image_input"),
+						// The field the Models API's model object names; read when it is there. Not confirmed against the live API.
+						context: tokens(row.max_input_tokens),
 					};
 				}),
 		);
@@ -202,7 +226,7 @@ const openai: KeyService = {
 	// lists none of them starts with its first model, which the tests cover.
 	defaults: { assistant: ["gpt-5.5", "gpt-5.4", "gpt-5"], quick: ["gpt-5.4-mini", "gpt-5-mini"] },
 	async check({ secret }, tools) {
-		const listed = await get(tools, "https://api.openai.com/v1/models", bearer(secret));
+		const listed = await get(tools, `${SERVICE_URLS.openai}/models`, bearer(secret));
 		return answer(
 			listed,
 			(status) => REFUSED.has(status),
@@ -225,14 +249,14 @@ const openrouter: KeyService = {
 	defaults: { assistant: ["anthropic/claude-sonnet-5.5"], quick: ["anthropic/claude-haiku-5.5"] },
 	async check({ secret }, tools) {
 		// Its model list is open to anyone, so the key is asked about on its own first. Both requests share the check's one deadline.
-		const key = await get(tools, "https://openrouter.ai/api/v1/key", bearer(secret));
+		const key = await get(tools, `${SERVICE_URLS.openrouter}/key`, bearer(secret));
 		const taken = answer(
 			key,
 			(status) => REFUSED.has(status),
 			(body) => (isObject(body) ? [] : null),
 		);
 		if (!taken.ok) return taken;
-		const listed = await get(tools, "https://openrouter.ai/api/v1/models", bearer(secret));
+		const listed = await get(tools, `${SERVICE_URLS.openrouter}/models`, bearer(secret));
 		return answer(
 			listed,
 			(status) => REFUSED.has(status),
@@ -249,6 +273,7 @@ const openrouter: KeyService = {
 						label: text(row.name),
 						thinking: can.includes("reasoning"),
 						images: Array.isArray(reads) && reads.includes("image"),
+						context: tokens(row.context_length),
 					};
 				}),
 		);
@@ -265,7 +290,7 @@ const gemini: KeyService = {
 		quick: ["gemini-3.8-flash", "gemini-3.5-flash"],
 	},
 	async check({ secret }, tools) {
-		const listed = await get(tools, "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000", {
+		const listed = await get(tools, `${SERVICE_URLS.gemini}/models?pageSize=1000`, {
 			"x-goog-api-key": secret,
 		});
 		return answer(
@@ -278,7 +303,13 @@ const gemini: KeyService = {
 					if (!id) return null;
 					const does = Array.isArray(row.supportedGenerationMethods) ? row.supportedGenerationMethods : [];
 					if (!id.startsWith("gemini-") || !does.includes("generateContent") || NOT_CHAT.test(id)) return undefined;
-					return { id, label: text(row.displayName), thinking: row.thinking === true, images: true };
+					return {
+						id,
+						label: text(row.displayName),
+						thinking: row.thinking === true,
+						images: true,
+						context: tokens(row.inputTokenLimit),
+					};
 				}),
 		);
 	},
@@ -308,16 +339,25 @@ const compatible: KeyService = {
 /** The AI services Monti knows without a plugin (doc 14). The model lists and the assistant's models come from keys of these. */
 export const aiServices: readonly KeyService[] = [anthropic, openai, openrouter, gemini, compatible];
 
-/** A model as it is stored: the four things the menu reads and nothing else a service put in. `null` for one that is not a model. */
+/** A count of tokens a service gave: a whole number above zero, or nothing. */
+const tokens = (value: unknown): number | undefined =>
+	typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
+
+/**
+ * A model as it is stored: the things the menu and the assistant read (its id, its name, whether it thinks and reads pictures, how much it
+ * takes in) and nothing else a service put in. `null` for one that is not a model.
+ */
 function plain(model: unknown): Model | null {
 	if (!isObject(model) || typeof model.id !== "string" || model.id === "") return null;
 	if (model.label !== undefined && typeof model.label !== "string") return null;
 	if (typeof model.thinking !== "boolean" || typeof model.images !== "boolean") return null;
+	const context = tokens(model.context);
 	return {
 		id: model.id,
 		...(model.label ? { label: model.label } : {}),
 		thinking: model.thinking,
 		images: model.images,
+		...(context === undefined ? {} : { context }),
 	};
 }
 
@@ -346,7 +386,8 @@ export async function checkKey(
 		const checked: unknown = await Promise.race([
 			// A plugin's check is someone else's code: it may throw before it returns a promise, or answer anything at all.
 			Promise.resolve()
-				.then(() => service.check(credentials, { fetch, signal: deadline.signal }))
+				// A plugin's check gets the same fetch the built-in ones use: it cannot be led along a redirect with the key either.
+				.then(() => service.check(credentials, { fetch: withoutRedirects(fetch), signal: deadline.signal }))
 				.catch(() => UNREACHABLE),
 			late,
 		]);

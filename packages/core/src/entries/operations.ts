@@ -349,6 +349,17 @@ export const entryOperations = [
 		description:
 			"Save changed places of an entry's working copy: title, slug, field values (null empties a field) and body. Give the version you read: if it was saved elsewhere since, the save is refused as a conflict. Archived entries cannot be changed; unarchive first. Saving does not change the site; publishing does.",
 		input: z.object({ id: z.string(), version: z.number().int(), ...Draft }),
+		// A save names the places it changes, so in a proposal it can follow another change of the same entry; a save that brings a whole body
+		// replaces what the other change left, and cannot.
+		follows: (input, versions) =>
+			input.doc !== undefined ? null : { ...input, version: versions[`entry:${input.id}`] ?? input.version },
+		places: (input) => [
+			...(input.title === undefined ? [] : [`entry:${input.id}/title`]),
+			...(input.slug === undefined ? [] : [`entry:${input.id}/slug`]),
+			...Object.keys(input.values ?? {}).map((field) => `entry:${input.id}/field/${field}`),
+			// A whole body: it holds every block, so no block edit of the same entry waits beside it.
+			...(input.doc === undefined ? [] : [`entry:${input.id}/body`]),
+		],
 		async touches(input, ctx) {
 			const [entry] = await loadEntries(ctx.db, [input.id]);
 			if (!entry) return [ref(input.id)];
@@ -521,6 +532,12 @@ export const entryOperations = [
 		description:
 			'Publish entries: copy each working copy to the site. An entry with an empty slug or another blocking to-do row is not published. Republishing keeps the first publish date ("keep") or sets today ("today"). Entries with blocking to-do rows are left alone; the preview lists them.',
 		input: Ids.extend({ date: z.enum(["keep", "today"]).default("keep") }),
+		// One by one: the assistant's proposal has an item per entry, each taken or left on its own (doc 10).
+		each: "ids",
+		// In a proposal it comes after a change of the same entry (a summary filled in, then published): it carries no version of its own, so it
+		// follows as it is. What it changes is what the site shows of the entry: two of these on one entry do not wait side by side.
+		follows: (input) => input,
+		places: (input) => input.ids.map((id) => `entry:${id}/site`),
 		touches: (input) => input.ids.map(ref),
 		async preview(input, ctx) {
 			const plans = await planPublish(ctx, input.ids);
@@ -608,6 +625,12 @@ export const entryOperations = [
 		description:
 			"Archive entries: take them off the site. They leave the list's default view and become read-only until unarchived, which makes them drafts again.",
 		input: Ids,
+		// One by one: the assistant's proposal has an item per entry, each taken or left on its own (doc 10).
+		each: "ids",
+		// In a proposal it comes after a change of the same entry (a summary filled in, then published): it carries no version of its own, so it
+		// follows as it is. What it changes is what the site shows of the entry: two of these on one entry do not wait side by side.
+		follows: (input) => input,
+		places: (input) => input.ids.map((id) => `entry:${id}/site`),
 		touches: (input) => input.ids.map(ref),
 		async run(input, ctx) {
 			const archived: string[] = [];
@@ -639,6 +662,12 @@ export const entryOperations = [
 		kind: "write",
 		description: "Unarchive entries: they become drafts, and reach the site again only when published.",
 		input: Ids,
+		// One by one: the assistant's proposal has an item per entry, each taken or left on its own (doc 10).
+		each: "ids",
+		// In a proposal it comes after a change of the same entry (a summary filled in, then published): it carries no version of its own, so it
+		// follows as it is. What it changes is what the site shows of the entry: two of these on one entry do not wait side by side.
+		follows: (input) => input,
+		places: (input) => input.ids.map((id) => `entry:${id}/site`),
 		touches: (input) => input.ids.map(ref),
 		async run(input, ctx) {
 			const unarchived: string[] = [];
