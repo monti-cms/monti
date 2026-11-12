@@ -151,7 +151,13 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 		if (!node) return;
 		const hand = () => {
 			const next = latest.current(node);
-			if (next) whenKeysAreUp(() => (typeof next === "function" ? next() : next.focus()));
+			if (!next) return;
+			const waited = heldKey !== null;
+			whenKeysAreUp(() => {
+				if (typeof next === "function") return next();
+				// After a wait the person may have gone elsewhere with another key: then nothing is moved under them.
+				if (!waited || document.activeElement === document.body) next.focus();
+			});
 		};
 		// What inside it holds the keyboard's focus. A control taken out of the page loses the focus without an event: only this remembers it.
 		let held: Element | null = null;
@@ -160,6 +166,11 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 			held = on instanceof Element && node.contains(on) && on.matches(":focus-visible") ? on : null;
 		};
 		addEventListener("focusin", keep, true);
+		// A pointer's press takes the keyboard's hold away, also where it moves no focus (a button in Safari and Firefox on macOS).
+		const letGo = () => {
+			held = null;
+		};
+		addEventListener("pointerdown", letGo, true);
 		// Its own control went and it stayed (a banner that still has something to say): the focus that control held is handed on the same way.
 		const inside = new MutationObserver(() => {
 			if (!held || held.isConnected || !node.isConnected) return;
@@ -169,6 +180,7 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 		inside.observe(node, { childList: true, subtree: true });
 		return () => {
 			removeEventListener("focusin", keep, true);
+			removeEventListener("pointerdown", letGo, true);
 			inside.disconnect();
 			const focused = document.activeElement;
 			if (focused instanceof HTMLElement && node.contains(focused) && focused.matches(":focus-visible")) hand();
