@@ -2,7 +2,7 @@ import type { DeliveriesRetried } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { useOperation } from "../operations/use-operation";
+import { reasonOf, useOperation } from "../operations/use-operation";
 
 /**
  * Sends failed deliveries again (doc 13, flow 12): a line's, one delivery's, or all of them. The server takes a batch at a time and says how many
@@ -37,7 +37,7 @@ export function useSendAgain() {
 				if (!result.ok) {
 					// What the screen shows is behind (it was sent by itself in the meantime, canceled in another tab): everything reads again.
 					wrote();
-					const reason = t(result.refusal.reason ?? "errors.unexpected");
+					const reason = t(reasonOf(result.refusal));
 					const before = tally();
 					// Refused at the start with a reason, it only says why. Refused part-way, what the earlier steps did is said with it, as the
 					// error it is; and an answer that never came (no reason) is an error too.

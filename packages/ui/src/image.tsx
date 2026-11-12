@@ -8,8 +8,8 @@ import type { MontiIcon } from "./monti-icon";
 
 /**
  * A picture in a frame of a fixed shape: `cover` fills the frame and crops, `contain` shows all of it. When the source is missing or fails,
- * the frame shows `fallback` (a file-type icon) on the neutral fill instead of a broken image. While the picture is on its way the frame waits:
- * it breathes (`animate-monti-wait`, `data-waiting`), and is still once the picture is in.
+ * the frame shows `fallback` (a file-type icon) on the neutral fill instead of a broken image; a failure is its address's, so a new address is tried
+ * anew. While the picture is on its way the frame waits: it breathes (`animate-monti-wait`, `data-waiting`), and is still once the picture is in.
  */
 const frameVariants = cva(
 	"relative flex shrink-0 items-center justify-center overflow-hidden bg-monti-muted text-monti-muted",
@@ -26,6 +26,8 @@ const frameVariants = cva(
 			},
 			size: {
 				fill: "w-full",
+				/** A file's picture before its name in a field: 20px, the line's own height of letters. */
+				"thumb-sm": "size-monti-icon-lg",
 				thumb: "size-monti-control-sm",
 				"thumb-lg": "size-monti-control-lg",
 				/** A file's picture in a list row: 40px wide at the ratio given (the tile's 4:3), so a row of files stays as tall as its title. */
@@ -77,12 +79,13 @@ function Image({
 	shape?: number | null;
 	className?: string;
 }) {
-	const [failed, setFailed] = useState(false);
-	const show = src && !failed;
+	// The address that did not answer with a picture: the next address is not that one (T136).
+	const [failed, setFailed] = useState<string | null>(null);
+	const show = src && failed !== src;
 	// The address whose picture is in. Until it is, the frame is a place that waits (tokens.md, motion).
 	const [arrived, setArrived] = useState<string | null>(null);
 	const waiting = Boolean(show) && arrived !== src;
-	const thumb = size === "thumb" || size === "thumb-lg" || size === "icon";
+	const thumb = size === "thumb-sm" || size === "thumb" || size === "thumb-lg" || size === "icon";
 	return (
 		<span
 			data-slot="image"
@@ -103,7 +106,7 @@ function Image({
 					ref={(img) => {
 						if (img?.complete && img.naturalWidth > 0) setArrived(src);
 					}}
-					onError={() => setFailed(true)}
+					onError={() => setFailed(src)}
 					onLoad={(event) => {
 						setArrived(src);
 						onLoad?.(event);

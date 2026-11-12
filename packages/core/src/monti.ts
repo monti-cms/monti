@@ -21,6 +21,7 @@ import {
 	revertProposal,
 	settleProposal,
 	viewProposal,
+	type WriteHolder,
 } from "./engine/proposals";
 import { listOperations } from "./entries/list";
 import { entryOperations } from "./entries/operations";
@@ -486,13 +487,14 @@ export function createMonti(options: MontiOptions) {
 				createProposal(engine, conversationId, request, runId),
 			/**
 			 * Adds an assistant write to a proposal; nothing changes until a person applies it. A write that names several records (`each`) becomes one
-			 * item per record. `group` is the name the assistant gave this kind of change.
+			 * item per record. `group` is the name the assistant gave this kind of change. `call` names the tool call that asks, and `holder` is
+			 * asked, in the transaction that stores the items, whether the caller is still the one to write (`WriteHolder`).
 			 */
-			add: (proposalId: string, name: string, input: unknown, group?: string, call?: string) =>
-				proposeItem(engine, operations, proposalId, get(name, ["write"]), input, { group, call }),
+			add: (proposalId: string, name: string, input: unknown, group?: string, call?: string, holder?: WriteHolder) =>
+				proposeItem(engine, operations, proposalId, get(name, ["write"]), input, { group, call, holder }),
 			/** Puts a new write in a waiting item's place: the item made again, or changed at its own place (doc 10). */
-			replace: (itemId: string, name: string, input: unknown, call?: string) =>
-				replaceItem(engine, operations, itemId, get(name, ["write"]), input, { call }),
+			replace: (itemId: string, name: string, input: unknown, call?: string, holder?: WriteHolder) =>
+				replaceItem(engine, operations, itemId, get(name, ["write"]), input, { call, holder }),
 			/** Adds what was asked of an item at its place, and the answer, to the item. */
 			addExchange: (itemId: string, exchange: ItemExchange) => addExchange(engine.db, itemId, exchange),
 			/** A proposal as its card and review show it; `null` when there is none. */

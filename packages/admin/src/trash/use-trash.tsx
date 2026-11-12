@@ -13,7 +13,7 @@ import {
 import { useState } from "react";
 import { useUndo } from "../activity/use-undo";
 import { useAdmin } from "../operations/admin-context";
-import { useOperation } from "../operations/use-operation";
+import { reasonOf, useOperation } from "../operations/use-operation";
 import { useLanguageName } from "../screens/list/column-menu";
 import { endsClosed } from "../screens/list/format";
 
@@ -60,7 +60,7 @@ export function useTrashMove() {
 	const run = async (ask: TrashAsk) => {
 		setAsking(null);
 		const result = await move.run({ rows: ask.rows });
-		if (!result.ok) return void toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+		if (!result.ok) return void toast.error(t(reasonOf(result.refusal)));
 		const { activityId, output } = result.body;
 		ask.onMoved?.(output);
 		const [kept] = output.kept;
@@ -76,7 +76,7 @@ export function useTrashMove() {
 	const start = async (ask: TrashAsk) => {
 		if (ask.rows.length === 0) return;
 		const effects = await check.run({ rows: ask.rows });
-		if (!effects.ok) return void toast.error(t(effects.refusal.reason ?? "errors.unexpected"));
+		if (!effects.ok) return void toast.error(t(reasonOf(effects.refusal)));
 		if (effects.body.unpublished > 0 || effects.body.pointing > 0) return setAsking({ ask, effects: effects.body });
 		await run(ask);
 	};
@@ -139,7 +139,7 @@ export function useRestore({
 		if (rows.length === 0) return false;
 		const result = await restore.run({ rows });
 		if (!result.ok) {
-			toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+			toast.error(t(reasonOf(result.refusal)));
 			return false;
 		}
 		const { output } = result.body;
@@ -176,11 +176,11 @@ export function usePurge() {
 		if (!ask) return;
 		if ("all" in ask) {
 			const result = await empty.run({});
-			if (!result.ok) return void toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+			if (!result.ok) return void toast.error(t(reasonOf(result.refusal)));
 			return void toast(t("trash.emptied", { count: result.body.output.purged }));
 		}
 		const result = await purge.run({ rows: ask.rows });
-		if (!result.ok) return void toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+		if (!result.ok) return void toast.error(t(reasonOf(result.refusal)));
 		ask.onPurged?.();
 		toast(t("trash.purged"));
 	};

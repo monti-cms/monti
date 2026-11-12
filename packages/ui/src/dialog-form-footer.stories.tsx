@@ -43,3 +43,6 @@ export const Ready: Story = {};
 
 /** The request is running. */
 export const Busy: Story = { args: { busy: true } };
+
+/** A request that cannot be called back once sent (a key being checked with its service): Cancel is off until the answer. */
+export const BusyAndLocked: Story = { args: { busy: true, busyLabel: "확인하는 중…", lockWhileBusy: true } };

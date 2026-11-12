@@ -15,8 +15,8 @@ export type Route =
 	| { screen: "trash"; params: URLSearchParams }
 	/** The activity log (doc 13): what it is searched and filtered by, its order, its page and the open line are in the address. */
 	| { screen: "activity"; params: URLSearchParams }
-	/** Tools: the templates; data and keys join them with doc 14. */
-	| { screen: "place"; place: "tools" }
+	/** Tools: its templates, or with `tab` another of its tabs (`#/tools/keys`). */
+	| { screen: "place"; place: "tools"; tab?: "keys" }
 	/** The template editor, a page of its own outside the frame (tools.md); `id` is `null` for a new template. */
 	| { screen: "template"; id: string | null }
 	| { screen: "home" };
@@ -45,7 +45,8 @@ export function parseRoute(hash: string): Route {
 	if (parts[0] === "media") return { screen: "media", params: new URLSearchParams(search) };
 	if (parts[0] === "trash") return { screen: "trash", params: new URLSearchParams(search) };
 	if (parts[0] === "activity") return { screen: "activity", params: new URLSearchParams(search) };
-	if (parts[0] && PLACES.has(parts[0])) return { screen: "place", place: "tools" };
+	if (parts[0] && PLACES.has(parts[0]))
+		return { screen: "place", place: "tools", ...(parts[1] === "keys" ? { tab: "keys" as const } : {}) };
 	return { screen: "home" };
 }
 
@@ -88,7 +89,7 @@ export function href(route: Route): string {
 			return `#/activity${search ? `?${search}` : ""}`;
 		}
 		case "place":
-			return `#/${route.place}`;
+			return `#/${route.place}${route.tab ? `/${route.tab}` : ""}`;
 		case "template":
 			return `#/templates/${route.id === null ? "new" : encodeURIComponent(route.id)}`;
 		case "home":

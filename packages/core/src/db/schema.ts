@@ -156,7 +156,7 @@ export interface RunTable {
 	key_id: string | null;
 	model: string;
 	thinking: string;
-	usage: Json<{ input: number; output: number }>;
+	usage: Json<{ input: number; output: number; cached?: number }>;
 	turns: Generated<number>;
 	/** The turns and tokens it had spent when a person last said to go on: its limits count from there. */
 	turns_from: Generated<number>;

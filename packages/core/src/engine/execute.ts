@@ -166,9 +166,11 @@ export async function runWrite<Output>(
 	}
 	const result = await engine.db.transaction().execute(async (trx) => {
 		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
-		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
-		// A save that accepts proposal items decides about their proposals: those rows first, as a revert and a discard take them, then the records.
+		// A save that accepts proposal items decides about their proposals: those rows first, as a revert and a discard take them, then the
+		// records. Before `touches` too: some operations already hold a record there (a move holds its folder), and a write that held a
+		// record and then waited for the proposal would wait on a write that holds the proposal and waits for the record.
 		if (options.accepted && options.accepted.length > 0) await lockProposals(trx, { items: options.accepted });
+		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
 		await lockRecords(trx, touched);
 		// After the records' locks, as a screen's save takes them (records, then the items it accepts): the item is held until this write ends, so
 		// nothing discards it, changes it or applies it a second time meanwhile.

@@ -15,6 +15,7 @@ import { type Route, useRoute } from "./route";
 import { ActivityScreen } from "./screens/activity/activity-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
+import { KeysScreen } from "./screens/keys/keys-screen";
 import { filterColumn, type ListState, writeState } from "./screens/list/list-query";
 import { ListScreen } from "./screens/list/list-screen";
 import { LoginScreen } from "./screens/login/login-screen";
@@ -22,6 +23,7 @@ import { MediaScreen } from "./screens/media/media-screen";
 import { CollectionsScreen } from "./screens/settings/collections-screen";
 import { TemplateEditor } from "./screens/templates/template-editor";
 import { TemplatesScreen } from "./screens/templates/templates-screen";
+import { ToolsTabs } from "./screens/tools/tools-tabs";
 import { TrashScreen } from "./screens/trash/trash-screen";
 import { SessionProvider, useSession } from "./session";
 
@@ -170,7 +172,14 @@ function Signed() {
 			{route.screen === "settings" ? (
 				<CollectionsScreen onOpen={open} review={review} />
 			) : route.screen === "place" && route.place === "tools" ? (
-				<TemplatesScreen onOpen={(id) => go({ screen: "template", id })} />
+				route.tab === "keys" ? (
+					<KeysScreen tabs={<ToolsTabs current="keys" go={go} />} />
+				) : (
+					<TemplatesScreen
+						tabs={<ToolsTabs current="templates" go={go} />}
+						onOpen={(id) => go({ screen: "template", id })}
+					/>
+				)
 			) : route.screen === "media" ? (
 				<MediaScreen params={route.params} go={go} />
 			) : route.screen === "trash" ? (

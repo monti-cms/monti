@@ -12,7 +12,7 @@ import {
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { useOperation } from "../operations/use-operation";
+import { type Refusal, reasonOf, useOperation } from "../operations/use-operation";
 import { holdsKeyboardFocus } from "../screens/frame/focus-hand-off";
 import { pointingWords } from "../trash/use-trash";
 
@@ -49,14 +49,14 @@ export function useUndo() {
 	const [reading, setReading] = useState(false);
 
 	/** Refused because the screen is behind (undone in another tab, changed since): it says why, and what the screen shows reads again. */
-	const refused = (reason: Parameters<typeof t>[0] | null) => {
+	const refused = (refusal: Refusal) => {
 		wrote();
-		toast.error(t(reason ?? "errors.unexpected"));
+		toast.error(t(reasonOf(refusal)));
 	};
 	const run = async (id: string): Promise<boolean> => {
 		const result = await undo.run({ id });
 		if (!result.ok) {
-			refused(result.refusal.reason);
+			refused(result.refusal);
 			return false;
 		}
 		const { skip, partly } = result.body.output;
@@ -70,7 +70,7 @@ export function useUndo() {
 		setReading(true);
 		try {
 			const planned = await plan.run({ id });
-			if (!planned.ok) return refused(planned.refusal.reason);
+			if (!planned.ok) return refused(planned.refusal);
 			const { removes, trashes, trashedCollections } = planned.body;
 			const words: string[] = [];
 			if (removes.length > 0) words.push(t("activity.undoRemoves"));
@@ -78,7 +78,7 @@ export function useUndo() {
 			if (rows.length > 0) {
 				const moved = await effects.run({ rows });
 				// Whether published entries lose the items is not known: nothing is asked, since the question could not say it.
-				if (!moved.ok) return refused(moved.refusal.reason);
+				if (!moved.ok) return refused(moved.refusal);
 				if (moved.body.pointing > 0) {
 					// What the item is called, as the list that throws it away by hand calls it: its collection's name.
 					const [only, ...more] = trashedCollections;

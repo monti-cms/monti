@@ -29,7 +29,7 @@ export function AdminSettingsScreen() {
 						{/* A small label over the field, as every field on the site tab has, so the tabs read alike. */}
 						<FormField>
 							<FormFieldLabel htmlFor="ui-locale">화면 언어</FormFieldLabel>
-							<MenuField id="ui-locale" value="한국어" meta="ko" />
+							<MenuField id="ui-locale" value="한국어" meta="ko" metaMono />
 						</FormField>
 					</Section>
 					<Section title="기능">

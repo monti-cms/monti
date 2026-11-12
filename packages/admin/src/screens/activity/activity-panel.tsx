@@ -27,7 +27,7 @@ import {
 import { OverflowMenuHorizontal, Renew, Undo } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
-import { useOperation, useRead } from "../../operations/use-operation";
+import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { useCoverCorner } from "../frame/admin-frame";
 import { holdsKeyboardFocus, nextStop, useFocusHandOff } from "../frame/focus-hand-off";
@@ -204,7 +204,7 @@ export function ActivityPanel({
 			// What the panel shows is behind (the delivery went by itself, or was canceled in another tab): everything reads again, as when a
 			// send is refused.
 			wrote();
-			toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+			toast.error(t(reasonOf(result.refusal)));
 		} finally {
 			setCanceling(null);
 		}

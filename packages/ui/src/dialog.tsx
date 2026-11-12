@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import * as React from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { letHeldKeyGo } from "./held-key";
 import { useUiLabels } from "./labels";
 
 /**
@@ -39,8 +40,57 @@ export function useModalFocus() {
 	return { popup, initialFocus };
 }
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-	return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+/**
+ * The box of a modal or a sheet, which takes nothing once it has been told to close: it stays in the page while it fades, and a second press in
+ * that time (a pointer on its button, Enter in its field, its form sent) would do the thing again. While it closes it is `inert`: no press, no
+ * key and no focus reach it. A key still held when it is told to close does nothing more either ({@link letHeldKeyGo}): its repeats would
+ * press whatever the focus goes back to.
+ */
+function ModalSurface({ closing, ...props }: React.ComponentProps<"div"> & { closing: boolean }) {
+	React.useLayoutEffect(() => {
+		if (closing) letHeldKeyGo();
+	}, [closing]);
+	return <div {...props} inert={closing} />;
+}
+
+/** The `render` of every modal's and sheet's popup: {@link ModalSurface}, closing when the popup is no longer open. */
+export const modalSurface = (props: React.ComponentProps<"div">, state: { open: boolean }) => (
+	<ModalSurface {...props} closing={!state.open} />
+);
+
+/** Whether the window may not be left now: set by what is inside it (`DialogFormFooter` with `lockWhileBusy`, while its request runs). */
+const DialogLock = React.createContext<React.RefObject<boolean> | null>(null);
+
+/**
+ * Keeps the window it is in from being left while `locked`: not by Escape, not by a press outside, not by a close button. The window's owner
+ * can still close it (the request came back). Outside a `Dialog` it does nothing.
+ */
+export function useDialogLock(locked: boolean) {
+	const lock = React.useContext(DialogLock);
+	React.useLayoutEffect(() => {
+		if (!lock) return;
+		lock.current = locked;
+		return () => {
+			lock.current = false;
+		};
+	}, [lock, locked]);
+}
+
+function Dialog({ onOpenChange, ...props }: DialogPrimitive.Root.Props) {
+	const lock = React.useRef(false);
+	return (
+		<DialogLock value={lock}>
+			<DialogPrimitive.Root
+				data-slot="dialog"
+				onOpenChange={(open, details) => {
+					// Locked from inside: the person's ways out do nothing, as if not pressed.
+					if (!open && lock.current) return details.cancel();
+					onOpenChange?.(open, details);
+				}}
+				{...props}
+			/>
+		</DialogLock>
+	);
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
@@ -83,6 +133,7 @@ function DialogContent({
 			<DialogPrimitive.Popup
 				ref={popup}
 				initialFocus={initialFocus}
+				render={modalSurface}
 				data-slot="dialog-content"
 				className={cn(
 					DIALOG_SURFACE,

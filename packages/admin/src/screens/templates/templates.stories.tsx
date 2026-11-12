@@ -153,6 +153,42 @@ export const TemplateEditor: Story = {
 	},
 };
 
+/** The site, with what `templates.get` answers put in its place: no answer at all, or a refusal. */
+const withRead = (answer: "never" | "refused") => [
+	async () => {
+		const [load] = site();
+		const loaded = await load();
+		const { transport } = loaded.site;
+		loaded.site.transport = async (name, input, options) => {
+			if (name !== "templates.get") return transport(name, input, options);
+			if (answer === "refused") return { status: 500, body: { error: "unexpected" } };
+			return new Promise(() => {});
+		};
+		return loaded;
+	},
+];
+
+/** The template editor before "기본 글" is read (T153): no name, no body, no save, no menu and no status bar; the way back and the assistant stay. */
+export const EditorBeforeTheRead: Story = {
+	loaders: withRead("never"),
+	play: async ({ canvasElement }) => {
+		const screen = await tools(canvasElement);
+		await userEvent.click(screen.page.getByRole("button", { name: "기본 글" }));
+		await screen.page.findByRole("button", { name: "템플릿" }, wait);
+	},
+};
+
+/** The template could not be read: the banner says so and reads it again. */
+export const EditorReadFailed: Story = {
+	loaders: withRead("refused"),
+	play: async ({ canvasElement }) => {
+		const screen = await tools(canvasElement);
+		await userEvent.click(screen.page.getByRole("button", { name: "기본 글" }));
+		await screen.page.findByText("템플릿을 불러오지 못했습니다", {}, wait);
+		await expect(screen.page.getByRole("button", { name: "다시 시도" })).toBeVisible();
+	},
+};
+
 /** The handle beside a list item and its block menu, with "다른 블록으로 바꾸기" open (flow 1, steps 03–04). */
 export const BlockMenu: Story = {
 	loaders: site(),

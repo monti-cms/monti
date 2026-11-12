@@ -199,13 +199,15 @@ export function ModelMenuButton({
 
 /**
  * A value picked from a menu, drawn as a field in the look of a closed `SelectTrigger` (the quick-task model, a plugin's key): an underline with the value (in mono with `mono`), a quieter
- * `meta` after it (the key of a model, the last characters of a key), and a caret. Without a value it shows `placeholder`, faint, or in the warning ink
+ * `meta` after it (the key of a model, in words; with `metaMono`, the last characters of a key), and a caret. Short of room the meta gives way
+ * first and is cut, then the value: nothing leaves the field. Without a value it shows `placeholder`, faint, or in the warning ink
  * with `warning` (a key a plugin still needs). It opens a menu, or a dialog when there is nothing to pick yet.
  */
 export function MenuField({
 	value,
 	meta,
 	mono = false,
+	metaMono = false,
 	placeholder,
 	warning = false,
 	size = "sm",
@@ -214,6 +216,8 @@ export function MenuField({
 	value?: ReactNode;
 	meta?: ReactNode;
 	mono?: boolean;
+	/** The meta is written as it is typed or copied (a key's last characters): mono. A name a person gave stays in sans. */
+	metaMono?: boolean;
 	placeholder?: ReactNode;
 	warning?: boolean;
 	/** As a `SelectTrigger`'s: `sm` (note text, the default: a settings row) or `default` (body text, beside a form's inputs). */
@@ -234,8 +238,18 @@ export function MenuField({
 					<span className={cn(!warning && "text-monti-faint")}>{placeholder}</span>
 				) : (
 					<>
-						<span className={cn("truncate", mono && "font-mono")}>{value}</span>
-						{meta && <span className="shrink-0 font-mono text-monti-meta text-monti-subtle">{meta}</span>}
+						{/* The value does not give way at all while a meta can (a part of a pixel short and its end would turn into "…"); alone, it is cut at the field's width. */}
+						<span className={cn("max-w-full shrink-0 truncate", mono && "font-mono")}>{value}</span>
+						{meta && (
+							<span
+								className={cn(
+									"min-w-0 truncate text-monti-subtle",
+									metaMono ? "font-mono text-monti-meta" : "text-monti-caption",
+								)}
+							>
+								{meta}
+							</span>
+						)}
 					</>
 				)}
 			</span>
