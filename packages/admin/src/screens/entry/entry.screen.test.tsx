@@ -168,6 +168,11 @@ describe("the entry editor: before the entry is there", () => {
 		// Nothing that writes is there: no title to type into (it would read as an untitled entry), no save, no publish, no menu of the entry's actions.
 		expect(title().elements()).toEqual([]);
 		for (const name of ["저장", "발행하기", "더 보기"]) expect(button(name).elements()).toEqual([]);
+		// The site's structure is read by now (the way back is named from it), so the properties could be drawn, empty: they are not. No field of theirs
+		// takes a letter, and no file can be chosen or sent up for an entry that is not there.
+		const property = (name: string) => page.getByLabelText(name, { exact: true });
+		for (const name of ["요약", "대표 이미지"]) expect(property(name).elements()).toEqual([]);
+		expect(page.getByRole("tablist").elements()).toEqual([]);
 		// A press where the title stands once it is read, then keys, then ⌘S.
 		const at = { x: 500, y: 148 };
 		await userEvent.click(page.elementLocator(document.elementFromPoint(at.x, at.y) as HTMLElement));
@@ -178,6 +183,8 @@ describe("the entry editor: before the entry is there", () => {
 		const box = title().element().getBoundingClientRect();
 		expect(at.x > box.left && at.x < box.right && at.y > box.top && at.y < box.bottom).toBe(true);
 		await expect.element(title()).toHaveValue("첫 번째 글");
+		await expect.element(property("요약")).toHaveValue("리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.");
+		await expect.element(property("대표 이미지")).toBeVisible();
 		await saveCell("저장됨");
 		await expect.element(button("저장 전 변경사항")).not.toBeInTheDocument();
 		const { site, id } = story.loaded();

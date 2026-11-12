@@ -745,7 +745,9 @@ export function EntryEditor({
 						</ProposalBubbleDock>
 					) : null}
 				</Stack>
-				{panel ? (
+				{/* The properties wait for the entry as the title and the body do (T153): drawn from the schema alone, every field stood empty and took input
+				    for an entry that was not read yet, and a file chosen or sent up then was written over the saved value when it landed. */}
+				{panel && read ? (
 					<EntryProperties
 						editor={editor}
 						schema={schema.data}

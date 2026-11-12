@@ -46,7 +46,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 패널 | `PropertyPanel`(300px `SidePanel`, 제목과 ×가 없다) | 머리의 속성 버튼으로 열고 닫는다. |
+| 패널 | `PropertyPanel`(300px `SidePanel`, 제목과 ×가 없다) | 머리의 속성 버튼으로 열고 닫는다. 글을 읽어 오기 전에는 열려 있어도 그리지 않는다: 값이 없는 칸은 빈 칸으로 읽히고, 그때 고른 파일이 읽어 온 값을 덮는다(T153). |
 | 탭 줄 "기본 · SEO" | `PropertyPanel`의 `tabs`(속은 `TabsList variant="bar"`, 탭마다 `dot`) | 다른 탭에 제안이 있으면 그 탭에 `dot` "proposal"(파란 점), 고칠 곳이 있으면 `dot` "warning"(주황 점). |
 | 속성 한 행 | `FormField` + `FormFieldLabel`(`htmlFor`, 라벨 줄 끝 `action`) + 입력 부품 + `FormFieldError` | 라벨은 mono 11, 값은 13. 라벨 줄 끝의 어시스턴트 버튼은 포인터나 키보드가 행 안에 있을 때만 보인다. |
 | 묶음 이름 "분류" | `PropertyGroup` | 조용한 소제목. |
