@@ -87,7 +87,14 @@ what is left to do; \`npx monti doctor\` checks a set-up. What the files are is 
 [\`@monti-cms/next\` README](https://github.com/monti-cms/monti/tree/v${version}/packages/next#readme), and
 [\`examples/blog\`](https://github.com/monti-cms/monti/tree/v${version}/examples/blog) is a whole site. The admin brings its own stylesheet,
 already built. npm is the package manager this release was proven with; pnpm and yarn are untried.
-
+${
+	packages.some(({ name }) => name === `${SCOPE}storage-s3`)
+		? `
+Media files in S3, or a storage that speaks its API (Cloudflare R2, MinIO): install \`${SCOPE}storage-s3\` from the table below too, and run
+\`npx monti init --storage s3\`. Files then go straight from the browser to the bucket.
+`
+		: ""
+}
 | Package | Address |
 | --- | --- |
 ${packages.map(({ name, tarball }) => `| \`${name}\` | \`${where(tarball)}\` |`).join("\n")}

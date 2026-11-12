@@ -62,7 +62,7 @@ function configFile(answers: Answers): string {
 `;
 	} else if (answers.storage === "s3") {
 		imports.push("definePlugin");
-		storage = `	// Media files in an S3-compatible storage: its values are the S3_* names in the environment.
+		storage = `	// Media files in an S3-compatible storage: its values are the S3_* names in the environment. Files go straight to it from the browser.
 	plugins: [definePlugin({ name: "files", storage: s3Storage() })],
 `;
 	} else
@@ -98,7 +98,7 @@ const ENV_EXAMPLE: Record<string, string> = {
 	MONTI_SECRET: "# Signs preview links and seals stored keys. Any long random text (openssl rand -base64 32).",
 	GITHUB_CLIENT_ID: "# The GitHub OAuth app the admin signs in with, and the GitHub account that is the admin.",
 	S3_BUCKET:
-		"# The S3-compatible storage for media files (S3_ENDPOINT for a storage that is not AWS, S3_PUBLIC_URL for where files are read).",
+		"# The S3-compatible storage for media files. S3_REGION for AWS, or S3_ENDPOINT for another storage (R2: https://<account>.r2.cloudflarestorage.com).\n# S3_PUBLIC_URL is where files are read from: the public bucket, or the CDN in front of it.",
 };
 
 /** The environment values a site with these answers reads, in the order they are written, with what `.env.local` gets when the value is new. */
@@ -115,10 +115,12 @@ export function envValues(site: Site, answers: Answers, secret: string): { name:
 				]
 			: []),
 		...(answers.storage === "s3"
-			? ["S3_BUCKET", "S3_REGION", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_PUBLIC_URL"].map((name) => ({
-					name,
-					value: "",
-				}))
+			? ["S3_BUCKET", "S3_REGION", "S3_ENDPOINT", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_PUBLIC_URL"].map(
+					(name) => ({
+						name,
+						value: "",
+					}),
+				)
 			: []),
 	];
 }
