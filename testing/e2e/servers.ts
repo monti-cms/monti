@@ -43,7 +43,7 @@ const server = (port: number, schema: string, mode: Server["mode"], env: Record<
 });
 
 /**
- * The first of the three ports. `MONTI_E2E_PORT` moves them, and with them the database schemas, so two checkouts on one machine can run their
+ * The first of the four ports. `MONTI_E2E_PORT` moves them, and with them the database schemas, so two checkouts on one machine can run their
  * flows at the same time.
  */
 const FIRST = Number(process.env.MONTI_E2E_PORT ?? 4173);
@@ -52,10 +52,11 @@ const schemaOf = (name: string) => (FIRST === 4173 ? name : `${name}_${FIRST}`);
 
 /**
  * The servers the flows run on (docs/testing.md, L5), all the example app (`examples/blog`): the live site, a live site with no media storage
- * (flow 6·31), and the dev server, for what only the dev server does (getting in without signing in).
+ * (flow 6·31), and the dev server, for what only the dev server does (getting in without signing in). The live site also posts its events to a
+ * webhook (`HOOK`, `hook.ts`), which a test takes down to see a delivery fail (doc 13).
  */
 export const SERVERS: Server[] = [
-	server(FIRST, schemaOf("monti_site_e2e"), "start"),
+	server(FIRST, schemaOf("monti_site_e2e"), "start", { MONTI_WEBHOOK: `http://localhost:${FIRST + 3}/hook` }),
 	server(FIRST + 1, schemaOf("monti_site_e2e_bare"), "start", { MONTI_STORAGE: "off" }),
 	server(FIRST + 2, schemaOf("monti_site_e2e_dev"), "dev"),
 ];
@@ -63,3 +64,6 @@ export const SERVERS: Server[] = [
 export const LIVE = `http://localhost:${FIRST}`;
 export const BARE = `http://localhost:${FIRST + 1}`;
 export const DEV = `http://localhost:${FIRST + 2}`;
+/** The webhook's other end: its port, and where a test reaches it. */
+export const HOOK_PORT = FIRST + 3;
+export const HOOK = `http://localhost:${HOOK_PORT}`;
