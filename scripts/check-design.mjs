@@ -47,6 +47,10 @@
  *                       names with its reason. Other corners (`rounded-monti-sm`, `-lg`, `rounded-[5px]`) fail.
  *   icon-list           Only `packages/ui/src/icons.ts`, the one list of icons, imports `@carbon/icons-react` (stories and tests too, in
  *                       every package). Code takes icons from `@monti-cms/ui/icons`, or `@monti-cms/admin/icons` in an extension.
+ *   banner-place        A screen's banner stands at the very top of the screen (screens/common.md): a `Banner`, or a component that returns one,
+ *                       is drawn only in the `banner` of `SidebarInset` or `StandalonePage`, or inside `PageBanner`. Screens and the reference
+ *                       screens of `packages/ui/src/screens`; the rule and what it cannot see are in `check-banner-place.mjs`. No list of
+ *                       exceptions, and a `design-allow` marker does not skip it.
  *   design-allow        A `design-allow` marker without a reason.
  *
  * A value that is measured or computed at runtime (a position under the pointer, a width the user dragged) ends its line with
@@ -56,6 +60,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { problems as bannerPlaces } from "./check-banner-place.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rel = (file) => path.relative(root, file).split(path.sep).join("/");
@@ -1303,6 +1308,18 @@ function checkControlShapes() {
 }
 checkControlShapes();
 
+/**
+ * Where the banners stand (`check-banner-place.mjs`): every screen is read whatever the command line names, as a banner passes through files (a
+ * component that returns one, the frame that takes it).
+ */
+function checkBannerPlaces() {
+	const read = files.filter(({ file, kind }) => kind === "screen" || rel(file).startsWith("packages/ui/src/screens/"));
+	const sources = Object.fromEntries(read.map(({ file }) => [rel(file), readFileSync(file, "utf8")]));
+	for (const { file, line, message } of bannerPlaces(sources))
+		if (inTargets(path.join(root, file))) add(path.join(root, file), line, "banner-place", message);
+}
+checkBannerPlaces();
+
 const HINTS = {
 	"css-file": "Admin UI is styled with token utilities, not stylesheets.",
 	"admin-css-rule": "admin.css holds document-wide base rules only; style the element with token utilities.",
@@ -1322,6 +1339,8 @@ const HINTS = {
 	"fixed-height":
 		"Controls stand at the height tokens (control-lg/md/sm/xs); a fixed row or box height is listed in FIXED_HEIGHTS with its reason.",
 	"icon-list": "Icons come from the one list, packages/ui/src/icons.ts; add a new icon there first.",
+	"banner-place":
+		"A screen's banner stands at the very top: <PageBanner> inside the frame, the `banner` of <StandalonePage> outside it.",
 	"design-allow": "A marker states why the value cannot be a token.",
 };
 

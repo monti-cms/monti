@@ -1,7 +1,7 @@
 # 글 편집기 (EditorNotion)
 
 - 보드: `EditorNotion.dc.html`. 상태와 흐름 단계: [screens.md › EditorNotion](../screens.md#editornotion).
-- 공통 틀: [common.md](common.md)의 ✦ 어시스턴트 열기, 토스트, 알림 띠, 메뉴. 편집기는 `PageHeader`를 쓰지 않는다. 머리가 편집기 자신의 줄이다.
+- 공통 틀: [common.md](common.md)의 ✦ 어시스턴트 열기, 토스트, 알림 띠, 메뉴. 편집기는 `PageHeader`를 쓰지 않는다. 머리가 편집기 자신의 줄이다. 틀은 사이드바 밖의 따로 된 페이지(`StandalonePage`)이고, 알림 띠는 그 `banner` 자리(머리 줄보다 위)에 선다.
 
 ## 기본 틀
 

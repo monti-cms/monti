@@ -33,7 +33,7 @@
 ## 템플릿 편집기 (TemplateEditor)
 
 - 보드: `TemplateEditor.dc.html`. 상태: [screens.md › TemplateEditor](../screens.md#templateeditor).
-- 공통 틀: 사이드바와 도구 틀이 없는 따로 된 페이지다. 본문(블록 손잡이, 블록 메뉴, "/" 메뉴, 서식 카드)은 [editor.md](editor.md)의 글 단과 같다. 알림 띠는 [common.md](common.md).
+- 공통 틀: 사이드바와 도구 틀이 없는 따로 된 페이지다(`StandalonePage`). 본문(블록 손잡이, 블록 메뉴, "/" 메뉴, 서식 카드)은 [editor.md](editor.md)의 글 단과 같다. 알림 띠는 [common.md](common.md)를 따라 `StandalonePage`의 `banner` 자리에 선다.
 
 ### 기본 틀
 
@@ -133,13 +133,13 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | "+ 키 추가" | `Button variant="primary"`(앞 아이콘 +) | 서비스 고르기 창을 연다. 서버 비밀값이 없으면 숨는다. 키를 저장할 수 없는 이유는 알림 띠 하나가 말한다(원칙 7). |
-| 알림 띠 | `Banner`(`title` "키 3개를 읽을 수 없습니다" 또는 "키를 저장할 수 없습니다", 문장 안의 `MONTI_SECRET`은 `mono`) | 목록 바로 위, 단 안에 둔다. |
+| 알림 띠 | `PageBanner` 안의 `Banner`(`title` "키 3개를 읽을 수 없습니다" 또는 "키를 저장할 수 없습니다", 문장 안의 `MONTI_SECRET`은 `mono`) | 화면 맨 위, 틀의 띠 자리에 선다([common.md](common.md)의 "화면의 알림 띠"). 제목과 탭이 그 아래다. |
 | 표 묶음 "AI 키" · "모델" · "플러그인 키" | `ListSection`(`title`, 개수 없음) | "AI 키"는 AI 서비스 키(모델 목록이 여기서 나온다), "모델"은 빠른 작업 모델 한 줄, "플러그인 키"는 플러그인이 둔 키 자리마다 한 줄이다(2026-11-05 소유자: 한 표에 고르기, 입력 칸, 글자 버튼이 섞이지 않게 고르는 줄과 키 줄을 나눈다). 행이 다 보이므로 개수를 붙이지 않는다. 묶음은 자기 바깥 여백이 없다. 페이지가 `Stack gap={40} paddingTop={32}`로 띄운다(첫 표는 도구 줄 아래 32, 다음은 40). |
 | AI 키 한 행 | `ListSectionRow`(`title` 키 이름, `titleCount` "··· a1b2", `meta` 사용량 "이번 달 1.24M 토큰", 쓰지 않았으면 `metaTone="faint"`, 읽을 수 없으면 `metaTone="danger"` "읽을 수 없음"), `actions`에 "편집" `TextButton variant="underline"`과 "지우기" `TextButton variant="quiet"` | 행이 없으면 "없음" 한 줄을 흐리게. 키 값은 끝 네 글자만 보인다. |
 | "빠른 작업" 모델 | `ListSectionRow`(`title` "빠른 작업", `meta` 쓰는 곳), `control`에 `MenuField`(`value` 모델 `mono`, `meta` 키 이름)를 트리거로 둔 `ModelMenu layout="field"` | 열면 검색 행과 키별 묶음, 지금 모델에 ✓. 고르면 바로 적용하고 토스트. "최근" 묶음과 생각 행은 없다. 키가 하나도 없으면 `MenuField placeholder="키 없음"`이고, 누르면 "키 추가" 창(서비스 고르기)이 열린다. 서버 비밀값이 없으면 행이 숨는다. 모델이 많아 검색이 먼저인 메뉴로 고른다. |
 | 플러그인 키 자리 | `ListSectionRow`(`title` 플러그인 이름, 자리가 여럿이면 `detail` "검색 키", 키가 있으면 `titleCount` "··· 4410", `meta` 플러그인 코드 `metaTone="subtle"`), `actions`는 키가 있으면 AI 키 줄과 같은 "편집" · "지우기", 없으면 "키 넣기" 하나 | 키 줄은 모두 같은 모양, 같은 방법이다. "키 넣기"와 "편집"은 같은 키 창을 열고, 플러그인 자리의 창은 서비스가 정해져 있다(서비스는 글). 자리 하나는 한 서비스의 것이라 저장된 키를 고르지 않는다(2026-11-05 소유자). 키가 없어도 행을 흐리게 하지 않는다. "키 넣기"가 말한다. 서버 비밀값이 없으면 자리들이 숨는다. |
 
-스토리: Controls/Button/Button, Patterns/Frame/Banner, Patterns/List/ListSection, Controls/Button/TextButton, Controls/Menu/ModelMenu, Controls/Overlay/Dialog, Controls/Menu/PickList, Controls/Overlay/DialogFormFooter, Controls/Field/Field, Controls/Field/Select, Primitives/Text, Controls/Field/Input, Controls/Field/SecretInput, Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList.
+스토리: Controls/Button/Button, Patterns/Frame/Banner, Patterns/Frame/PageBanner, Patterns/List/ListSection, Controls/Button/TextButton, Controls/Menu/ModelMenu, Controls/Overlay/Dialog, Controls/Menu/PickList, Controls/Overlay/DialogFormFooter, Controls/Field/Field, Controls/Field/Select, Primitives/Text, Controls/Field/Input, Controls/Field/SecretInput, Controls/Overlay/AlertDialog, Patterns/Frame/DescriptionList.
 
 ### 뜨는 자리
 
@@ -198,7 +198,7 @@
 |---|---|---|
 | 걸린 필터 | `Chip`(`onRemove`, `removeLabel` "필터 지우기"): "글: 첫 번째 글", "전송: 실패" | 탭 줄 오른쪽(`PageToolbarEnd`). ×로 그 필터만 뺀다. |
 | "종류 ▾" | `FilterButton`(값이 있으면 `filled`, "종류: AI 제안") + `DropdownMenu`: 종류마다 `DropdownMenuRadioItem`(앞 아이콘, AI 제안은 `Spark`), 구분선, "전송" `DropdownMenuSub`("대기" · "보냄" · "실패" · "취소됨", 끝에 개수 `MenuShortcut`) | 전송 값을 고르면 `Chip`이 된다. 보드의 행 메뉴 카드(`.mt-menu--ctx`)는 필터 버튼이 여는 메뉴이므로 `DropdownMenu`로 그린다. |
-| 실패 알림 | `Banner tone="danger"`(`title` "전송 실패 N건", `meta` 날짜), 끝에 "보기" `TextButton variant="underline"`(실패 필터가 이미 걸렸으면 없다)과 "모두 다시 보내기" `TextButton` | 실패가 둘 이상일 때만 목록 바로 위, 단 안에 뜬다. 실패 하나는 그 행이 상태와 "다시 보내기"로 말하므로 띠를 두지 않는다(원칙 8, 2026-11-05 소유자). 보내는 동안 "모두 다시 보내기"는 `TextButton loading` "보내는 중…"이고 다시 누를 수 없다. 실패는 빨강이다. |
+| 실패 알림 | `PageBanner` 안의 `Banner tone="danger"`(`title` "전송 실패 N건", `meta` 날짜), 끝에 "보기" `TextButton variant="underline"`(실패 필터가 이미 걸렸으면 없다)과 "모두 다시 보내기" `TextButton` | 실패가 둘 이상일 때만 뜬다. 화면 맨 위, 틀의 띠 자리에 선다([common.md](common.md)의 "화면의 알림 띠"). 제목과 탭이 그 아래다. 실패 하나는 그 행이 상태와 "다시 보내기"로 말하므로 띠를 두지 않는다(원칙 8, 2026-11-05 소유자). 보내는 동안 "모두 다시 보내기"는 `TextButton loading` "보내는 중…"이고 다시 누를 수 없다. 실패는 빨강이다. |
 | 날짜 묶음 "오늘 · 10. 26" | `Text variant="meta" tone="subtle"`, 표 안쪽 12px에 맞춘다 |  |
 | 목록 | `Table` + `TableBody` + `TableRow` + `TableCell`, 아래 `ListFooter`와 `Pagination` | 행 어디를 눌러도 자세히 패널이 열린다(`RowLink`). 열린 행은 `selected`. |
 | 시각 | `TableCell` 안 `Count` |  |
@@ -206,7 +206,7 @@
 | 끝 동작 | AI 제안: "대화" `TextButton variant="quiet" size="note"`(`href`), "되돌리기" `TextButton variant="underline" size="note"`. 결과 글 "되돌림 · 10:44" `Text variant="note" tone="subtle"`. 실패한 전송: 빨간 상태 하나 `EntryStatus status="failed"` "3번 실패", "다시 보내기" `TextButton variant="underline" size="note"`. 기다리는 전송: `Text variant="note"` "보내는 중". | 한 행에 할 수 있는 것만 보인다. |
 | 빈 목록 | 한 줄 `Text tone="subtle"`("실패한 전송이 없습니다", "아직 기록이 없습니다"), 거른 결과가 비었으면 뒤에 "필터 끄기" `TextButton variant="underline" size="note"` | 할 일이 없으므로 한 줄로 충분하다. |
 
-스토리: Patterns/Frame/PageHeader, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/AI mark, Patterns/Frame/Banner, Controls/Button/TextButton, Primitives/Text, Patterns/List/Table, Patterns/List/Pagination, Controls/Status/Count, Primitives/Icon, Controls/Status/EntryStatus, Controls/Overlay/SidePanel, Patterns/Frame/DescriptionList, Controls/Button/Button, Controls/Overlay/AlertDialog.
+스토리: Patterns/Frame/PageHeader, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/AI mark, Patterns/Frame/Banner, Patterns/Frame/PageBanner, Controls/Button/TextButton, Primitives/Text, Patterns/List/Table, Patterns/List/Pagination, Controls/Status/Count, Primitives/Icon, Controls/Status/EntryStatus, Controls/Overlay/SidePanel, Patterns/Frame/DescriptionList, Controls/Button/Button, Controls/Overlay/AlertDialog.
 
 ### 뜨는 자리
 

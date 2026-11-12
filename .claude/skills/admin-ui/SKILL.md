@@ -29,6 +29,7 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 - A map row or a board detail is not a reason by itself. For each part a place gets, say what the person does with it; a mark, line or column that repeats what is already shown is dropped (and the map changed), not built.
 - No control is greyed out without its reason shown where the person acts (README principles 7–10).
 - Tab through the screen and look at each focus ring whole: a row that spans its box draws the ring inside (`ring-inset`), and a scrolling box keeps `scroll-py-monti-8`; an outside ring at a scrolling edge is cut (tokens.md, 상태).
+- A screen's banner (`Banner`) stands at the very top of the screen, edge to edge, whatever it is about (a list's failures too): never under the title, the tabs or over a list. Inside the sidebar frame the page gives it with `PageBanner`; a screen outside the frame gives it to the `banner` of `StandalonePage` (status.md, 알림 띠). `check:design` (`banner-place`) refuses any other place, in reference screens too.
 - A pressable thing's shape comes from where it sits (button.md, 모양 기준): a pill on the page ground at one line's height; 6px only for rows in a floating surface and blocks taller than a line; no shape for text buttons, tabs and whole rows. Every pressable thing changes when pointed at; nothing that cannot be pressed shows a pointer.
 
 ## Order of work
