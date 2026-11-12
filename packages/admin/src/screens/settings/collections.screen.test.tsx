@@ -27,6 +27,7 @@ describe("a collection's preview address", () => {
 		NewCollectionPreviewReview,
 		ReadOnlyBasics,
 		PreviewAddress,
+		PreviewAddressProposal,
 		PreviewAddressReview,
 		ReadOnlyPreviewAddress,
 	} = composeStories(collections);
@@ -140,7 +141,7 @@ describe("a collection's preview address", () => {
 		await expect.element(address).toHaveValue("notes");
 		await expect.element(taken()).toBeVisible();
 		await expect.element(address).toHaveAttribute("aria-invalid", "true");
-		// From another tab the review's line still leads to an address field that says so: the memos', which the schema names.
+		// From another tab the review's line still leads to the address the person changed: the posts', though the schema names the memos'.
 		await userEvent.click(page.getByRole("button", { name: /^필드/ }));
 		await expect.element(address).not.toBeInTheDocument();
 		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
@@ -151,15 +152,46 @@ describe("a collection's preview address", () => {
 		await expect.element(address).toHaveFocus();
 		await expect.element(address).toHaveValue("notes");
 		await expect.element(taken()).toBeVisible();
-		// Put back at the posts, it is gone from both.
-		await userEvent.click(collection(/^게시글/));
-		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		// The posts' basics, where the undo of that change is: not the memos', which nobody touched.
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveValue("게시글");
+		// Put back there, it is gone from both.
 		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
 		await expect.element(taken()).not.toBeInTheDocument();
 		await userEvent.click(collection(/^메모/));
 		await userEvent.click(page.getByRole("button", { name: "기본" }));
 		await expect.element(address).toHaveValue("notes");
 		await expect.element(taken()).not.toBeInTheDocument();
+	});
+
+	it("16-9 a proposed preview address is in its field: blue, with its discard and what is saved under it; the bubble walks to it from the fields", async () => {
+		await PreviewAddressProposal.run();
+		// In its field, as the assistant wrote it, with the saved value ("none") struck under it.
+		await expect.element(field()).toHaveValue("preview");
+		// The blue is the whole field's (the fixed letters around the typed part too): its mark is on the field, not on the input in it.
+		const blue = () => field().element().closest("[data-proposal]") !== null;
+		expect(blue()).toBe(true);
+		await expect.element(page.getByRole("deletion").filter({ hasText: "공개 주소에서" })).toBeVisible();
+		// The bubble has two stops, the address on the basics and the new field on the fields: it walks to the fields and round to the address.
+		await expect.element(page.getByText("1 / 2")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "다음", exact: true }));
+		await expect.element(page.getByRole("button", { name: "readingTime 열기" })).toBeVisible();
+		await expect.element(field()).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "다음", exact: true }));
+		await expect.element(field()).toHaveValue("preview");
+		// Its own discard is on its row; it drops the proposal, and the field is as saved.
+		await userEvent.click(page.getByRole("button", { name: "버리기", exact: true }));
+		await expect.element(field()).toHaveValue("");
+		expect(blue()).toBe(false);
+	});
+
+	it("16-9 the changed preview address's row in the changes list opens the basics with the keyboard in its field", async () => {
+		await PreviewAddress.run();
+		await userEvent.click(page.getByRole("button", { name: /^필드/ }));
+		await expect.element(field()).not.toBeInTheDocument();
+		await userEvent.click(changes());
+		await userEvent.click(page.getByRole("menu").getByRole("menuitem", { name: /미리보기 주소/ }));
+		await expect.element(field()).toHaveValue("preview");
+		await expect.element(field()).toHaveFocus();
 	});
 
 	it("16-9 an item collection has no preview address, and the live site reads a document's as words with its lock", async () => {

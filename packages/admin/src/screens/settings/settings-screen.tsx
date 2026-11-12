@@ -222,8 +222,11 @@ export function SettingsScreen({
 				if (model.shown(at.field(place.collection, place.key)))
 					view.setFieldSheet({ collection: place.collection, key: place.key });
 			} else if (place.kind === "editor") view.setTab("editor");
-			else if (place.kind === "path" || (place.kind === "collectionValue" && place.value !== "layout"))
+			else if (place.kind === "path" || place.kind === "preview") {
+				// An address is a field of the basics: the row leads to it, as a field's row leads to its sheet.
 				view.setTab("basics");
+				view.setAttention(place.kind);
+			} else if (place.kind === "collectionValue" && place.value !== "layout") view.setTab("basics");
 			else view.setTab("fields");
 		};
 	};
@@ -238,7 +241,9 @@ export function SettingsScreen({
 			const inside =
 				place.kind === "editor"
 					? "editor"
-					: place.kind === "path" || (place.kind === "collectionValue" && place.value !== "layout")
+					: place.kind === "path" ||
+							place.kind === "preview" ||
+							(place.kind === "collectionValue" && place.value !== "layout")
 						? "basics"
 						: "fields";
 			return [{ item, tab: "collections", collection: place.collection, inside }];
@@ -408,7 +413,18 @@ export function SettingsScreen({
 					setPlan(null);
 					onTab("languages");
 				}}
-				onOpenAddress={(c, place) => {
+				onOpenAddress={(named, place) => {
+					// Two collections with one public address: the schema names the later one. The one to open is the one whose address this
+					// draft changed; when both or neither were, the first listed.
+					const sharing =
+						place === "path"
+							? model.collections.filter(
+									(each) =>
+										model.shown(at.collection(each)) && draft.value(at.path(each)) === draft.value(at.path(named)),
+								)
+							: [named];
+					const changed = sharing.filter((each) => model.changed.includes(at.path(each)));
+					const c = (changed.length === 1 ? changed[0] : sharing[0]) ?? named;
 					setPlan(null);
 					onTab("collections");
 					view.open(c);

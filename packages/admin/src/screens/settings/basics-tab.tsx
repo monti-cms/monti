@@ -67,12 +67,19 @@ export function BasicsTab({
 	const { draft, data } = model;
 	const locked = data?.locked ?? true;
 	const kind = (draft.value(at.collection(c)) as { kind: "document" | "item" } | null)?.kind ?? "document";
+	const cell = useCell(model);
+	// A collection made in this draft is new as a whole: its addresses carry no mark of their own. A proposed address always does.
+	const marked = (shown: ReturnType<typeof cell>) =>
+		shown.proposal || data?.schema.collections[c] ? shown.changed : undefined;
 	const pathPlace = at.path(c);
-	const pathValue = draft.value(pathPlace);
+	const pathCell = cell(pathPlace);
+	const pathValue = pathCell.value;
 	const path = typeof pathValue === "string" ? pathValue : kind === "document" ? "/:slug" : undefined;
+	const pathChanged = marked(pathCell);
 	const previewPlace = at.preview(c);
-	const preview = draft.value(previewPlace);
-	const previewChanged = model.changed.includes(previewPlace) && Boolean(data?.schema.collections[c]);
+	const previewCell = cell(previewPlace);
+	const preview = previewCell.value;
+	const previewChanged = marked(previewCell);
 	const labelPlace = at.collectionValue(c, "label");
 	const foldersPlace = at.collectionValue(c, "folders");
 	// What is wrong with an address is told under its field, as a field's problem is told on its row: the review's "open" leads here.
@@ -102,17 +109,8 @@ export function BasicsTab({
 		}, 0);
 		return () => clearTimeout(later);
 	}, [attention]);
-	const cell = useCell(model);
 	const label = cell(labelPlace);
 	const folders = cell(foldersPlace);
-	const pathChanged =
-		model.changed.includes(pathPlace) && data?.schema.collections[c]
-			? {
-					label: t("settings.changed"),
-					undoLabel: t("settings.undo"),
-					onUndo: () => draft.revert(pathPlace),
-				}
-			: undefined;
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>
@@ -163,7 +161,7 @@ export function BasicsTab({
 								>
 									{t("settings.basics.path")}
 								</Label>
-								{pathChanged ? <ChangeDot label={pathChanged.label} /> : null}
+								{pathChanged ? <ChangeDot tone={pathChanged.tone} label={pathChanged.label} /> : null}
 							</Inline>
 							<Inline gap={12} align="center">
 								{pathChanged ? (
@@ -188,10 +186,17 @@ export function BasicsTab({
 								suffix="/:slug"
 								width="fit"
 								aria-invalid={pathProblem !== undefined || undefined}
+								proposal={pathCell.proposal}
 								value={addressPart(path)}
 								onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
 							/>
 						)}
+						{/* A proposed address is blue, with the saved one struck under it (doc 05), as the name above. */}
+						{pathCell.proposal ? (
+							<FormFieldWas>
+								{typeof pathCell.was === "string" ? pathCell.was : t("settings.basics.publicPageOff")}
+							</FormFieldWas>
+						) : null}
 						{pathProblem ? <FormFieldError>{pathProblem}</FormFieldError> : null}
 					</Stack>
 				)}
@@ -210,11 +215,11 @@ export function BasicsTab({
 								<Label htmlFor="collection-preview-path" size="body" tone="default">
 									{t("settings.basics.previewPath")}
 								</Label>
-								{previewChanged ? <ChangeDot label={t("settings.changed")} /> : null}
+								{previewChanged ? <ChangeDot tone={previewChanged.tone} label={previewChanged.label} /> : null}
 							</Inline>
 							{previewChanged ? (
-								<TextButton variant="underline" quiet size="caption" onClick={() => draft.revert(previewPlace)}>
-									{t("settings.undo")}
+								<TextButton variant="underline" quiet size="caption" onClick={previewChanged.onUndo}>
+									{previewChanged.undoLabel}
 								</TextButton>
 							) : null}
 						</Inline>
@@ -225,6 +230,7 @@ export function BasicsTab({
 							width="fit"
 							placeholder="preview"
 							aria-invalid={previewProblem !== undefined || undefined}
+							proposal={previewCell.proposal}
 							value={typeof preview === "string" ? addressPart(preview) : ""}
 							onChange={(event) => {
 								// Empty is what the field shows as empty: slashes alone leave no address, so they are none (not "/:slug").
@@ -232,6 +238,12 @@ export function BasicsTab({
 								draft.set(previewPlace, addressPart(address) === "" ? null : address);
 							}}
 						/>
+						{/* A proposed address is blue, with what is saved struck under it (doc 05): an address, or the words for none. */}
+						{previewCell.proposal ? (
+							<FormFieldWas>
+								{typeof previewCell.was === "string" ? previewCell.was : t("settings.basics.previewAtPublic")}
+							</FormFieldWas>
+						) : null}
 						{/* What leaving it empty does, only while it is empty (README principle 8); the line stays, so nothing moves when typed. */}
 						<FormFieldError
 							reserve

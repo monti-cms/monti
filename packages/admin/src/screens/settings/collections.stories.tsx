@@ -628,6 +628,29 @@ export const Proposal: Story = {
 	},
 };
 
+/**
+ * The assistant proposed a preview address for the posts, and a field beside it: the address is blue in its field on the basics, with its discard
+ * and what is saved ("공개 주소에서") struck under it, and the bubble walks from the fields to it.
+ */
+export const PreviewAddressProposal: Story = {
+	loaders: site({
+		more: async ({ monti }) => {
+			const draft = structuredClone(schema);
+			const post = draft.collections.post as { previewPath?: string; fields: Record<string, unknown> };
+			post.previewPath = "/preview/:slug";
+			post.fields.readingTime = { kind: "text", max: 10 };
+			const proposal = await monti.proposals.create("conversation-1", "미리보기 페이지 주소도 넣어 줘");
+			await monti.proposals.add(proposal, "schema.apply", { draft, renames: [], answers: {} });
+		},
+	}),
+	play: async ({ canvasElement }) => {
+		const { page } = await settings(canvasElement);
+		await page.findByRole("button", { name: "readingTime 열기" }, wait);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await page.findByLabelText("미리보기 주소");
+	},
+};
+
 /** The posts' panel in two tabs: "기본" and "SEO" (subtitle and cover). */
 export const twoTabs = async ({ monti }: StorySite) => {
 	await monti.run(
