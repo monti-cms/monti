@@ -45,7 +45,9 @@ type BlockWidth = `${number}px` | `${number}%`;
 /**
  * The box of a block with a size of its own (an image): its corners and tool row hang off it. `width` is its width in px or a share of the column, as the
  * site draws it, and a narrower column shrinks it; with none it fills the column. `selected` draws a 2px ink line around it, as a picked file block's
- * border, so a picked picture reads as picked. `measure` is what a corner being dragged makes of it ("420 × 280", "62%"), shown at its top right; `spoken`
+ * border, so a picked picture reads as picked. Where the keyboard stops at the box itself (`tabIndex`, in a body that cannot be written in), holding the
+ * keyboard's focus draws the ordinary focus ring (2px, ink 50%) around it, on the same layer: where the keyboard is and what is picked are two states,
+ * and a picked box that holds the focus shows the line. `measure` is what a corner being dragged makes of it ("420 × 280", "62%"), shown at its top right; `spoken`
  * is what a screen reader hears of its size as it changes by keys or by pointer, read from a region that is always there so the first change is heard too.
  */
 function BlockBox({
@@ -55,6 +57,7 @@ function BlockBox({
 	spoken,
 	ref,
 	children,
+	...props
 }: {
 	width?: BlockWidth;
 	selected?: boolean;
@@ -62,15 +65,16 @@ function BlockBox({
 	spoken?: string;
 	ref?: Ref<HTMLDivElement>;
 	children: ReactNode;
-}) {
+} & Omit<ComponentProps<"div">, "children" | "className" | "style" | "ref">) {
 	return (
 		<div
 			ref={ref}
 			data-slot="block-box"
 			data-selected={selected || undefined}
-			className="relative w-full max-w-full"
+			className="group/block-box relative w-full max-w-full outline-none"
 			// design-allow: the block's own width, chosen by the person or the picture's own.
 			style={width ? { width } : undefined}
+			{...props}
 		>
 			{children}
 			<span aria-live="polite" className="sr-only">
@@ -84,12 +88,11 @@ function BlockBox({
 					{measure}
 				</span>
 			)}
-			{selected && (
-				<div
-					aria-hidden="true"
-					className="pointer-events-none absolute inset-0 rounded-monti-md outline-2 outline-monti-contrast outline-offset-0"
-				/>
-			)}
+			<div
+				aria-hidden="true"
+				data-slot="block-line"
+				className="pointer-events-none absolute inset-0 hidden rounded-monti-md outline-offset-0 group-focus-visible/block-box:block group-focus-visible/block-box:ring-2 group-focus-visible/block-box:ring-monti-contrast/50 group-data-selected/block-box:block group-data-selected/block-box:outline-2 group-data-selected/block-box:outline-monti-contrast"
+			/>
 		</div>
 	);
 }
