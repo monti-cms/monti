@@ -26,7 +26,7 @@ export type PreferenceFailure = { what: "language" | "templates"; reason: string
 
 /**
  * Settings › admin (doc 12): the admin screen's own language and its feature switches, saved the moment they are picked (no draft, so this tab never
- * holds a change), and the signed-in account with the way out.
+ * holds a change), and the signed-in account with the way out (not drawn for a session the dev server let in without signing in).
  */
 export function AdminTab({
 	failed,
@@ -40,6 +40,8 @@ export function AdminTab({
 	const session = useSession();
 	const preference = useOperation("admin.setPreference");
 	const signOut = useOperation("auth.signOut");
+	// Let in by the dev server without signing in (doc 16): there is no account to name, and signing out would only be let in again.
+	const account = session.state?.session && !session.state.session.bypass ? session.state.session : null;
 
 	// A pick that was not saved says so beside its control and stays until the next pick goes through: not in a toast that leaves (status.md).
 	// What `auth.state` says is what every screen draws with, so the pick shows once it is read again.
@@ -76,7 +78,7 @@ export function AdminTab({
 					{failed?.what === "language" ? <FormFieldError>{failed.reason}</FormFieldError> : null}
 				</FormField>
 			</Section>
-			<Section title={t("settings.admin.features")}>
+			<Section title={t("settings.admin.features")} last={!account}>
 				<Stack gap={4}>
 					<Option spread height="lg">
 						{t("settings.admin.templates")}
@@ -85,17 +87,19 @@ export function AdminTab({
 					{failed?.what === "templates" ? <FormFieldError>{failed.reason}</FormFieldError> : null}
 				</Stack>
 			</Section>
-			<Section title={t("settings.admin.account")} last>
-				<ReadValue label={t("settings.admin.signedInAs")}>{session.state?.session?.who}</ReadValue>
-				<TextButton
-					loading={signOut.pending}
-					onClick={async () => {
-						if ((await signOut.run()).ok) await session.reload();
-					}}
-				>
-					{t("settings.admin.signOut")}
-				</TextButton>
-			</Section>
+			{account ? (
+				<Section title={t("settings.admin.account")} last>
+					<ReadValue label={t("settings.admin.signedInAs")}>{account.who}</ReadValue>
+					<TextButton
+						loading={signOut.pending}
+						onClick={async () => {
+							if ((await signOut.run()).ok) await session.reload();
+						}}
+					>
+						{t("settings.admin.signOut")}
+					</TextButton>
+				</Section>
+			) : null}
 		</>
 	);
 }

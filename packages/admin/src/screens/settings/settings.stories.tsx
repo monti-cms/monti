@@ -374,6 +374,27 @@ export const AdminRefused: Story = {
 	},
 };
 
+/** The dev server let this machine in without signing in (doc 16): there is no account, so the account section is not drawn. */
+export const AdminDevBypass: Story = {
+	loaders: settingsAt("admin"),
+	render: (_args, { loaded }) => {
+		const { transport } = (loaded as Loaded).site;
+		return (
+			<MontiAdmin
+				transport={async (name, input, options) => {
+					const answer = await transport(name, input, options);
+					if (name !== "auth.state") return answer;
+					return { ...answer, body: { ...(answer.body as object), session: { who: "dev", bypass: true } } };
+				}}
+				siteName="example.dev"
+			/>
+		);
+	},
+	play: async ({ canvasElement }) => {
+		await screen(canvasElement).page.findByRole("switch", { name: "본문 템플릿" }, wait);
+	},
+};
+
 /** The screen's language set to English: every word of the admin follows at once. */
 export const AdminEnglish: Story = {
 	loaders: settingsAt("admin", {

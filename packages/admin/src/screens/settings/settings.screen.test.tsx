@@ -829,24 +829,19 @@ describe("settings › admin", () => {
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
 	});
 
-	it("12-1 a session let in without signing in (the dev server's, doc 16) has no email: the account section shows who it is and the tab stands", async () => {
-		const shown = withSite({
-			...stories.Admin,
-			render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
-				<MontiAdmin
-					transport={async (name, input, options) => {
-						const answer = await loaded.site.transport(name, input, options);
-						if (name !== "auth.state") return answer;
-						return { ...answer, body: { ...(answer.body as object), session: { who: "dev", bypass: true } } };
-					}}
-					siteName="example.dev"
-				/>
-			),
-		});
-		await shown.run();
-		await expect.element(page.getByText("dev", { exact: true })).toBeVisible();
+	it("12-1 a session let in without signing in (the dev server's, doc 16) has no account: the account section is not drawn, and the rest of the tab stands", async () => {
+		await withSite(stories.AdminDevBypass).run();
 		await expect.element(page.getByRole("switch", { name: "본문 템플릿" })).toBeVisible();
 		await expect.element(page.getByRole("combobox", { name: "화면 언어" })).toBeVisible();
+		// Nobody signed in: no account to name and no way out to offer ("dev" and a sign-out that lets the person straight back in tell nothing).
+		await expect.element(page.getByRole("heading", { name: "계정" })).not.toBeInTheDocument();
+		await expect.element(page.getByText("로그인한 계정")).not.toBeInTheDocument();
+		await expect.element(page.getByText("dev", { exact: true })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "로그아웃" })).not.toBeInTheDocument();
+		// A person who signed in has the section.
+		await withSite(stories.Admin).run();
+		await expect.element(page.getByRole("heading", { name: "계정" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "로그아웃" })).toBeVisible();
 	});
 
 	it("12-1 the sidebar and the sign-in screen show the site name the settings hold, and 로그아웃 ends the session without asking", async () => {

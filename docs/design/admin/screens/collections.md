@@ -48,8 +48,8 @@
 | 식별자 | `ReadValue`(`mono`), 값 바로 뒤 `LockMark`("바꿀 수 없음") | 절대 바꿀 수 없는 값이라 글로 보이고, 자물쇠는 그 줄에 있다. |
 | 종류 | `ReadValue` "본문이 있는 글" | 만들 때 정한 값이라 글로 보인다. |
 | 표시 이름 | `FormField` + `Input` | 관리자 값이라 늘 고칠 수 있다. 처음부터 입력 칸이다. 제안된 이름은 `Input proposal`과 라벨 줄의 "버리기", 아래 `FormFieldWas` 옛 이름이다(설정 · AI 제안과 같다). |
-| 공개 주소 | "폴더 사용"과 같은 36px 본문 글자 줄(`Inline minHeight="control-lg"` + `Label size="body"`: 이름, 바뀌었으면 `ChangeDot`과 끝의 "되돌리기" `TextButton variant="underline" quiet size="caption"`), 바로 아래 `Affix`(`prefix` "/", `suffix` "/:slug", `width="fit"`). 항목은 줄 끝에 `Switch`가 있고 꺼져 있으면 `Affix`가 없다. 글은 `Switch`가 없다. | 글은 공개 주소가 꼭 있다. 항목은 없이 시작하고, 슬러그는 안에서 쓰는 식별자로 남는다. 운영 사이트에서는 `ReadValue`로 주소나 "사용 안 함"을 읽고, 값 바로 뒤에 `LockMark`가 붙는다. |
-| 미리보기 주소 | 공개 주소와 같은 36px 줄(같은 `Inline` + `Label`), 바로 아래 `Affix`(`prefix` "/", `suffix` "/:slug", `width="fit"`, `placeholder` "preview"), 그 아래 `FormFieldError reserve`의 `hint` "비워 두면 공개 주소에서 미리봅니다." | 본문이 있는 글에만 있다(항목은 미리 볼 페이지가 없다). 사이트가 미리보기 페이지를 따로 만들었을 때 그 주소를 적는 칸이고, 비우면 공개 주소에서 미리본다(16번 문서). 힌트는 칸이 비어 있을 때만 보이고(원칙 8), 줄은 남아서 글자를 쳐도 아래가 움직이지 않는다. 운영 사이트에서는 `ReadValue`로 읽는다: 주소가 있으면 `mono`로 그 주소, 없으면 "공개 주소에서", 값 바로 뒤에 `LockMark`(2026-11-12, 소유자). |
+| 공개 주소 | "폴더 사용"과 같은 36px 본문 글자 줄(`Inline minHeight="control-lg"` + `Label size="body"`: 이름, 바뀌었으면 `ChangeDot`과 끝의 "되돌리기" `TextButton variant="underline" quiet size="caption"`), 바로 아래 `Affix`(`prefix` "/", `suffix` "/:slug", `width="fit"`). 항목은 줄 끝에 `Switch`가 있고 꺼져 있으면 `Affix`가 없다. 글은 `Switch`가 없다. | 글은 공개 주소가 꼭 있다. 항목은 없이 시작하고, 슬러그는 안에서 쓰는 식별자로 남는다. 주소에 문제가 있으면(모양이 틀림, 다른 컬렉션이 쓰는 주소) 칸이 `aria-invalid`가 되고 바로 아래 `FormFieldError`에 까닭이 보인다. 두 컬렉션이 한 주소를 쓰면 두 쪽 칸 모두에 보인다. 검토 "고칠 곳"의 그 줄에 있는 "열기"가 이 칸으로 오고 키보드가 칸에 들어간다(T151). 운영 사이트에서는 `ReadValue`로 주소나 "사용 안 함"을 읽고, 값 바로 뒤에 `LockMark`가 붙는다. |
+| 미리보기 주소 | 공개 주소와 같은 36px 줄(같은 `Inline` + `Label`), 바로 아래 `Affix`(`prefix` "/", `suffix` "/:slug", `width="fit"`, `placeholder` "preview"), 그 아래 `FormFieldError reserve`의 `hint` "비워 두면 공개 주소에서 미리봅니다." | 본문이 있는 글에만 있다(항목은 미리 볼 페이지가 없다). 사이트가 미리보기 페이지를 따로 만들었을 때 그 주소를 적는 칸이고, 비우면 공개 주소에서 미리본다(16번 문서). 힌트는 칸이 비어 있을 때만 보이고(원칙 8), 줄은 남아서 글자를 쳐도 아래가 움직이지 않는다. 주소에 문제가 있으면(모양이 틀림, 공개 주소나 다른 미리보기 주소와 같음) 그 줄에 까닭이 오류로 보이고, 검토의 "열기"가 이 칸으로 온다(T151). 운영 사이트에서는 `ReadValue`로 읽는다: 주소가 있으면 `mono`로 그 주소, 없으면 "공개 주소에서", 값 바로 뒤에 `LockMark`(2026-11-12, 소유자). |
 | 폴더 사용 | `Option spread height="lg"` + `Switch` | 관리자 값이라 늘 고칠 수 있다. 위 입력 칸과 같은 36px 줄이다(원칙 10). 제안된 값이면 라벨 뒤에 파란 `ChangeDot`. |
 | 컬렉션 지우기 | `DangerBlock`(`title` "컬렉션 지우기") + 오른쪽 끝 `Button variant="outline-danger" size="sm"` "지우기" | 이미 고른 컬렉션의 상세라 이름을 되풀이하지 않는다. 누르면 묻지 않고 곧바로 목록에서 빠지고, 토스트와 변경 사항 목록에 되돌리기가 생긴다. 저장할 때 검토가 마지막 확인이다. 읽기 전용이면 없다. |
 
@@ -103,7 +103,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 시트 | `Sheet`(`SheetTitle` "검토", `of` "게시글 · 변경 사항 3"), 발은 "취소" · 알약 하나 | 알약: "적용", 값을 지우는 선택이 있으면 `Button variant="danger"` "지우고 적용", 운영 환경 "PR 만들기". 파일이 바뀌었으면 "다시 불러오기". 발에는 "취소"와 알약 하나만 있다. |
-| 고칠 곳 | 변경 블록과 같은 `ChangeGroup kind="drop"`(`tag` "고칠 곳", `title` 필드 이름, `identifier`) + `ChangeNote danger` 무엇이 문제인지 + `TextButton` "열기" | 검토의 맨 위, 다른 변경 블록과 같은 모양이다. 저장을 누른 그때 알린다. "열기"는 검토를 닫고 그 필드 시트를 연다. 고칠 곳이 남아 있는 동안 발에는 "취소"만 있다(2026-11-05, 소유자). |
+| 고칠 곳 | 변경 블록과 같은 `ChangeGroup kind="drop"`(`tag` "고칠 곳", `title` 필드 이름, `identifier`) + `ChangeNote danger` 무엇이 문제인지 + `TextButton` "열기" | 검토의 맨 위, 다른 변경 블록과 같은 모양이다. 저장을 누른 그때 알린다. "열기"는 검토를 닫고 그 필드 시트를 연다. 주소의 문제(공개 주소, 미리보기 주소)는 `title`이 컬렉션 이름이고, "열기"가 그 컬렉션의 기본 탭을 열어 키보드를 그 주소 칸에 넣는다(T151). 고칠 곳이 남아 있는 동안 발에는 "취소"만 있다(2026-11-05, 소유자). |
 | 파일이 바뀜 | `ErrorNote`(`title` "파일이 바뀌었습니다", 회색 한 줄) | 시트 맨 위, 위로 변경 블록과 같은 16px. 이때 발의 알약은 "다시 불러오기"다. 할 수 있는 일이 그것뿐이라 비활성 "적용" 대신 그 자리에 둔다(2026-11-05, 소유자). |
 | 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "추가" · "이름 변경" · "삭제" · "필수" · "주소 변경" · "변경"(미리보기 주소), `title`, `identifier` "summary → excerpt") | |
 | 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기", 글자 필드를 채우면 `Input size="sm"`) | 하나를 고른다. `RadioGroup height="md"`: 줄마다 32px, 4px 간격이라 고르기가 든 줄도 높이가 같고, 고르기와 입력 칸은 `md`다. 순서는 늘 값을 살리는 선택이 먼저, 비우는 선택이 나중이다(이름: 옮기기 → 빈 칸, 지움: 다른 필드로 옮기기 → 지우기, 필수: 채우기 → 그대로). 지움의 처음 선택은 그대로 "값 지우기"다(2026-11-05, 소유자). |
@@ -132,6 +132,8 @@
 | "값 지우기" | 4.12 | 지움 블록에서 "값 지우기"를 고름, `ChangeNote danger`, 알약 `Button variant="danger"` "지우고 적용" | Monti/Change/ChangeGroup, Controls/Button/Button |
 | "주소 바꿈" | 4.13 | 기본 탭, `Affix` 값 "blog", 공개 주소 `ChangeDot`, 변경 사항 1 | Controls/Field/Affix, Controls/Status/ChangeDot |
 | "주소 검토" | 4.14 | 검토 `Sheet`: 주소 `ChangeGroup kind="edit"`, 전 / 후 / 발행된 글 `ChangeLines`, `ChangeNote` | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
+| "주소 문제" | (T151) | 기본 탭, 미리보기 주소 `Affix` 값 "posts"(게시글의 공개 주소와 같다), 칸 아래 `FormFieldError` "이미 쓰는 주소입니다". 저장을 누르면 검토 맨 위 "고칠 곳"에 같은 까닭과 "열기" | AddressProblem, AddressProblemReview |
+| "새 컬렉션 검토 · 미리보기 주소" | (T152) | 새 컬렉션에 미리보기 주소를 적고 연 검토: 공개 주소 줄 아래 미리보기 주소 줄 | NewCollectionPreviewReview |
 | "지우기 전" | 4.15 | 메모의 기본 탭과 `DangerBlock` | Patterns/Frame/DangerBlock |
 | "지울 예정" | 4.16 | 메모가 목록에서 빠짐, 변경 사항 목록 열림("메모 · 컬렉션 삭제 · 되돌리기"), `toast` "메모를 지웠습니다"와 "되돌리기" | Controls/Status/Toast |
 | "지우기 검토" | 4.17 | 검토 `Sheet`: `ChangeGroup kind="drop"`, `ChangeNote` "이 컬렉션의 글이 모두 지워집니다.", 알약 "지우고 적용"(2026-11-05 바뀜: 받아 두기와 개수는 빠짐) | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
