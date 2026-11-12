@@ -8,7 +8,7 @@ import type {
 	LineDelivery,
 	Message,
 } from "@monti-cms/core";
-import { DELIVERY_STATES } from "@monti-cms/core";
+import { activityPageMark, DELIVERY_STATES } from "@monti-cms/core";
 import {
 	Banner,
 	ContextMenu,
@@ -180,6 +180,8 @@ export function ActivityScreen({
 	const read = useRead<ActivityList>("activity.list", query, { afterWrites: true });
 	const counts = useRead<DeliveryCounts>("deliveries.counts", {}, { afterWrites: true });
 	const data = read.data;
+	/** What is shown is the answer to this address: its search, filters, order and page, not the one before, still on screen while this reads. */
+	const answered = data !== null && data.mark === activityPageMark(query, data.asOf, state.page);
 	const lines = data?.lines ?? [];
 	const looking =
 		state.search.trim() !== "" || state.kinds.length > 0 || state.deliveries.length > 0 || state.range !== null;
@@ -482,17 +484,19 @@ export function ActivityScreen({
 							page={state.page}
 							pages={Math.ceil(total / ACTIVITY_PAGE_SIZE)}
 							// The other pages of this browsing are read from this one's edges, inside the boundary it was read in: neither new activity
-							// nor a line committed late shifts them, and the count stays.
+							// nor a line committed late shifts them, and the count stays. Only while what is shown is this address's own answer: after
+							// a new filter or page is asked for and before it answers, the rows are still the old answer's, and its places and count
+							// belong to that one. A link pressed then starts from the top.
 							hrefOf={(page) =>
 								href({
 									screen: "activity",
 									params: writeActivityState({
 										...state,
 										page,
-										asOf: data.asOf,
+										asOf: answered ? data.asOf : null,
 										from:
-											data.first !== null && data.last !== null
-												? { page: state.page, first: data.first, last: data.last, total }
+											answered && data.first !== null && data.last !== null
+												? { page: state.page, first: data.first, last: data.last, total, mark: data.mark }
 												: null,
 									}),
 								})
@@ -515,7 +519,7 @@ export function ActivityScreen({
 					onClose={() => setState({ ...state, open: null })}
 					onGone={() => setState({ ...state, open: null }, { replace: true })}
 					onRetry={(ids) => void again.send(ids)}
-					onUndo={(backTo) => void undo.ask(panel, backTo)}
+					onUndo={(whenGone) => void undo.ask(panel, whenGone)}
 				/>
 			)}
 			{/* The undo's question, for the row's ⋯ and the panel's alike. */}

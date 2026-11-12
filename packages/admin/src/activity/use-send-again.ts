@@ -39,8 +39,10 @@ export function useSendAgain() {
 					wrote();
 					const reason = t(result.refusal.reason ?? "errors.unexpected");
 					const before = tally();
-					// Refused at the start, it only says why. Refused part-way, what the earlier steps did is said with it, as the error it is.
-					return void (before === null ? toast(reason) : toast.error(`${before} · ${reason}`));
+					// Refused at the start with a reason, it only says why. Refused part-way, what the earlier steps did is said with it, as the
+					// error it is; and an answer that never came (no reason) is an error too.
+					if (before !== null) return void toast.error(`${before} · ${reason}`);
+					return void (result.refusal.reason ? toast(reason) : toast.error(reason));
 				}
 				const step = result.body.output;
 				sent += step.sent;

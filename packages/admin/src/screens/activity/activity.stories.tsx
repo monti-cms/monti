@@ -11,7 +11,7 @@ export const wait = { timeout: 15000 };
 
 /** The site's own cache refresh, and a search index's webhook: the two receivers of the stories' site. */
 export const SITE = "plugin:next";
-export const SEARCH = "webhook:example.dev/api/search";
+export const SEARCH = "webhook:search.example.dev";
 
 /** The stories' receivers, for a test to take down and bring back, and to read what arrived. */
 export type Hooks = {
@@ -21,12 +21,18 @@ export type Hooks = {
 	arrived: { destination: string; event: MontiEvent }[];
 	/** While set, a send waits for it: a delivery is on its way for as long as a test needs. */
 	hold: Promise<void> | null;
+	/** Operations whose answer is lost on its way (a network that dropped): the call comes back with no reason. */
+	lose: Set<string>;
+	/** Operations that wait for this before they answer: a call is on its way for as long as a test needs. */
+	slow: Map<string, Promise<void>>;
+	/** Every operation the screen called, in order. */
+	calls: string[];
 };
 const receiversOf = (hooks: Hooks): Receiver[] =>
 	[SITE, SEARCH].map((destination) => ({
 		destination,
 		// The search index hears of what is published; the site of everything it shows. The site's refresh has a name of its own, as the Next
-		// adapter's has; the webhook is named by its host and path.
+		// adapter's has; the webhook, given no name, goes by its host.
 		...(destination === SEARCH
 			? { accepts: (event: MontiEvent) => event.type === "entry.published" }
 			: { label: SITE_CACHE_LABEL }),
@@ -120,13 +126,30 @@ export const log = (
 	async (): Promise<Loaded> => {
 		startAt(typeof hash === "string" ? hash : "#/activity");
 		localStorage.removeItem("monti:activity-columns");
-		const hooks: Hooks = { down: new Set(), refuse: new Set(), arrived: [], hold: null };
-		const site = await storySite({
+		const hooks: Hooks = {
+			down: new Set(),
+			refuse: new Set(),
+			arrived: [],
+			hold: null,
+			lose: new Set(),
+			slow: new Map(),
+			calls: [],
+		};
+		const made = await storySite({
 			schema,
 			auth: { password: true },
 			signedIn: true,
 			receivers: receivers ? receiversOf(hooks) : [],
 		});
+		const site: StorySite = {
+			...made,
+			async transport(name, ...rest) {
+				hooks.calls.push(name);
+				await hooks.slow.get(name);
+				if (hooks.lose.has(name)) return { status: 502, body: null };
+				return made.transport(name, ...rest);
+			},
+		};
 		if (empty) return { site, hooks, ids: null };
 		const ids = await fillLog(site, hooks, { failures });
 		await also?.(site, ids, hooks);

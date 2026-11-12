@@ -27,17 +27,18 @@ export type ActivityState = {
 	page: number;
 	asOf: string | null;
 	/**
-	 * The page this one was reached from in the same browsing: its number, the places of its first and last lines, and the browsing's count. The
-	 * server reads the page from there, so a line committed late does not make it repeat one, and the count under the list stays.
+	 * The page this one was reached from in the same browsing: its number, the places of its first and last lines, the browsing's count, and
+	 * that page's mark (what it was read under). The server reads the page from there, so a line committed late does not make it repeat one,
+	 * and the count under the list stays; a place read under another filter it leaves out of account.
 	 */
-	from: { page: number; first: string; last: string; total: number } | null;
+	from: { page: number; first: string; last: string; total: number; mark: string } | null;
 	/** The line open in the panel. */
 	open: string | null;
 };
 
 const RANGE = /^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})$/;
-/** `from` in the address: the page's number, its first and last lines' places and the count, dot between. */
-const FROM = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/;
+/** `from` in the address: the page's number, its first and last lines' places, the count and the page's mark, dot between. */
+const FROM = /^(\d+)\.(\d+)\.(\d+)\.(\d+)\.([0-9a-z]+)$/;
 const among = <Value extends string>(known: readonly Value[], raw: string | null) =>
 	(raw ?? "").split(",").filter((value): value is Value => (known as readonly string[]).includes(value));
 
@@ -65,7 +66,13 @@ export function readActivityState(params: URLSearchParams): ActivityState {
 		asOf: asOf !== null && /^\d+$/.test(asOf) && later ? asOf : null,
 		from:
 			from && later && Number(from[1]) >= 1
-				? { page: Number(from[1]), first: from[2] as string, last: from[3] as string, total: Number(from[4]) }
+				? {
+						page: Number(from[1]),
+						first: from[2] as string,
+						last: from[3] as string,
+						total: Number(from[4]),
+						mark: from[5] as string,
+					}
 				: null,
 		open: params.get("open"),
 	};
@@ -83,7 +90,10 @@ export function writeActivityState(state: ActivityState): URLSearchParams {
 	if (state.page > 1) {
 		params.set("page", String(state.page));
 		if (state.asOf) params.set("as", state.asOf);
-		if (state.from) params.set("from", `${state.from.page}.${state.from.first}.${state.from.last}.${state.from.total}`);
+		if (state.from) {
+			const { page, first, last, total, mark } = state.from;
+			params.set("from", `${page}.${first}.${last}.${total}.${mark}`);
+		}
 	}
 	if (state.open) params.set("open", state.open);
 	return params;

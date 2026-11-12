@@ -86,8 +86,11 @@ function webhookAddress(url: string): URL {
 	return parsed;
 }
 
-/** A webhook's name when it is given none: its host and path. Never the query, where a token may be. */
-const hostAndPath = (parsed: URL) => `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname}`;
+/**
+ * A webhook's name when it is given none: its host alone. Never the path or the query: hook services keep their token in either (a deploy
+ * hook's last path segment, a chat hook's `/services/…/<secret>`), and the name is stored, shown in the log and handed to the assistant.
+ */
+const hostOf = (parsed: URL) => parsed.host;
 
 /** HMAC-SHA256 of `text` under `secret`, in hex. */
 async function hmac(secret: string, text: string): Promise<string> {
@@ -107,8 +110,9 @@ async function hmac(secret: string, text: string): Promise<string> {
  * answer but a 2xx is a failure (a redirect too: it is not followed). `events` keeps it to some event types; `headers` carry what the other
  * side checks (a token).
  *
- * - `name` is what its deliveries are stored and shown under (`webhook:<name>`); left out, the address's host and path. The address itself, with
- *   whatever token its query carries, is never stored or shown. Two receivers of one site cannot share a name.
+ * - `name` is what its deliveries are stored and shown under (`webhook:<name>`); left out, the address's host alone. The address itself, with
+ *   whatever token its path or query carries, is never stored or shown. Two receivers of one site cannot share a name: two webhooks on one
+ *   host each need a `name`.
  * - `secret` signs every send: header `Monti-Signature: t=<seconds>,v1=<hex>`, where `v1` is the HMAC-SHA256 of `<t>.<body>` under the secret,
  *   `t` the time of the send and `<body>` the bytes posted. The receiver makes the same HMAC and compares, and may refuse a `t` that is old.
  *   Without `secret` nothing is signed. It is the webhook's own secret, never `MONTI_SECRET`.
@@ -131,7 +135,7 @@ export function webhook(
 	const { events } = options;
 	const address = webhookAddress(url);
 	return {
-		destination: `webhook:${options.name ?? hostAndPath(address)}`,
+		destination: `webhook:${options.name ?? hostOf(address)}`,
 		...(events ? { accepts: (event: MontiEvent) => events.includes(event.type) } : {}),
 		async send(event, signal, delivery) {
 			const body = JSON.stringify(event);

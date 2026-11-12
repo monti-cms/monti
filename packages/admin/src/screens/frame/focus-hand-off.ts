@@ -7,6 +7,7 @@ import { useCallback, useRef } from "react";
  *
  * - {@link useFocusHandOff} is the rule: a ref for the thing that goes away (a button, or the box around it: a banner), and where its focus goes.
  * - {@link focusText}, {@link nextStop} and {@link firstStop} are the places it goes to.
+ * - {@link holdsKeyboardFocus} is its test of a press with the keyboard, for a question that closes around the control that asked.
  */
 
 /** What can take the keyboard's focus, by what it is; whether the Tab key stops on each is asked of it (`stopsTab`). */
@@ -40,6 +41,13 @@ export function nextStop(after: Element) {
 		) ?? null
 	);
 }
+
+/**
+ * Whether the keyboard's focus is on it: the rule's one test of "used with the keyboard". A control pressed with a pointer does not hold it,
+ * also where the press focuses it; one reached with Tab, the arrows or a screen reader's own keys does. Never told from the click (`detail`):
+ * a screen reader's press is a click like a pointer's.
+ */
+export const holdsKeyboardFocus = (element: Element) => element.matches(":focus-visible");
 
 /** What a person does next with their own hands: after it, nothing is moved under them. */
 const THEIR_OWN = ["keydown", "pointerdown", "focusin"] as const;
@@ -163,7 +171,7 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 		let held: Element | null = null;
 		const keep = (event: FocusEvent) => {
 			const on = event.target;
-			held = on instanceof Element && node.contains(on) && on.matches(":focus-visible") ? on : null;
+			held = on instanceof Element && node.contains(on) && holdsKeyboardFocus(on) ? on : null;
 		};
 		addEventListener("focusin", keep, true);
 		// A pointer's press takes the keyboard's hold away, also where it moves no focus (a button in Safari and Firefox on macOS).
@@ -183,7 +191,7 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 			removeEventListener("pointerdown", letGo, true);
 			inside.disconnect();
 			const focused = document.activeElement;
-			if (focused instanceof HTMLElement && node.contains(focused) && focused.matches(":focus-visible")) hand();
+			if (focused instanceof HTMLElement && node.contains(focused) && holdsKeyboardFocus(focused)) hand();
 		};
 	}, []);
 }

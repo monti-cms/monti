@@ -9,6 +9,7 @@ export {
 	type ActivityList,
 	type ActivityQuery,
 	type ActivityRecord,
+	activityPageMark,
 	DELIVERY_STATES,
 	type DeliveryState,
 	type LineDelivery,

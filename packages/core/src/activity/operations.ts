@@ -99,9 +99,11 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 				// The rows of the proposals these writes came from are taken first, before the activity rows and the records (the engine's order).
 				const of = undoOf(input);
 				await lockProposals(ctx.db, { proposals: await proposalsOfWrites(ctx.db, of) });
-				const done = await undoWithEvents(engine, ctx.db, of, (event, undone) => ctx.emit(event, { activity: undone }));
-				// A write an applied proposal item made is that item's: undone here, the item is put back, as "revert all" would have said.
-				await markReverted(ctx.db, done.undone);
+				const { put, ...done } = await undoWithEvents(engine, ctx.db, of, (event, undone) =>
+					ctx.emit(event, { activity: undone }),
+				);
+				// A write an applied proposal item made is that item's: undone here, the item says what "revert all" would have said of it.
+				await markReverted(ctx.db, put);
 				return done;
 			},
 			summary: (_input, output) => ({ key: "activity.undo", values: { count: output.restore.length } }),

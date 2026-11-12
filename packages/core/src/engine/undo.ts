@@ -305,7 +305,7 @@ export async function undoWithEvents(
 	trx: Db,
 	of: UndoOf,
 	emit: (event: EmittedEvent, undone: string) => void,
-): Promise<UndoPlan & { undone: string[] }> {
+): Promise<UndoPlan & { undone: string[]; put: { write: string; back: RecordRef[] }[] }> {
 	const { steps, ...plan } = await planUndo(engine, trx, of, { lock: true });
 	// Every record of the writes was written again since: nothing would change, so nothing is marked undone either.
 	if (plan.restore.length === 0 && plan.skip.length > 0) throw new CheckError({ key: "activity.allChanged" });
@@ -379,5 +379,10 @@ export async function undoWithEvents(
 	if (back.length > 0) say({ type: "media.restored", ids: back });
 	if (gone.length > 0) say({ type: "media.trashed", ids: gone });
 	if (renamed.length > 0) say({ type: "media.renamed", ids: renamed });
-	return { ...plan, undone: steps.map((step) => step.activityId) };
+	return {
+		...plan,
+		undone: steps.map((step) => step.activityId),
+		// Write by write, what went back: a proposal's item is judged by the records of its own write.
+		put: steps.map((step) => ({ write: step.activityId, back: step.snapshots.map((snapshot) => snapshot.ref) })),
+	};
 }

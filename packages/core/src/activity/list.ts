@@ -51,6 +51,9 @@ export const ActivityQuery = z.object({
 	 * when the browsing began and is committed since has an older place than the boundary, and counted from the top it would push every later
 	 * line down one, so the next page would begin with this page's last line. Read from the last line's place, nothing repeats; that late
 	 * line is on no page of this browsing, as a line that began after it is not. Left out, the page is counted from the top.
+	 *
+	 * `mark` is that page's own (`mark` of its answer). A place and a count belong to the search, filters, order and boundary they were read
+	 * under: a `from` whose mark is not that page's under this query is left out of account, and the page is counted from the top.
 	 */
 	from: z
 		.object({
@@ -58,12 +61,54 @@ export const ActivityQuery = z.object({
 			first: z.string().regex(/^\d+$/),
 			last: z.string().regex(/^\d+$/),
 			total: z.number().int().min(0),
+			mark: z.string(),
 		})
 		.optional(),
 	/** The admin's time zone, for "today" and date ranges. */
 	timeZone: z.string().default("UTC"),
 });
 export type ActivityQuery = z.infer<typeof ActivityQuery>;
+
+/**
+ * A short mark of what a page of the log is read under: its search, filters, order, page size, time zone, the browsing's boundary (`asOf`)
+ * and its own number. The answer carries it (`mark`), and a page reached from that one gives it back in `from`. Two pages have the same mark
+ * only when they are the same page of the same browsing; it is no secret and guards nothing but a place used under another filter.
+ */
+export function activityPageMark(
+	query: Partial<
+		Pick<ActivityQuery, "search" | "kinds" | "deliveries" | "entry" | "range" | "sort" | "pageSize" | "timeZone">
+	>,
+	asOf: string,
+	page: number,
+): string {
+	const text = JSON.stringify([
+		query.search ?? "",
+		[...(query.kinds ?? [])].sort(),
+		[...(query.deliveries ?? [])].sort(),
+		query.entry ?? null,
+		query.range === undefined
+			? null
+			: typeof query.range === "string"
+				? query.range
+				: [query.range.from, query.range.to],
+		query.sort ?? "desc",
+		query.pageSize ?? 50,
+		query.timeZone ?? "UTC",
+		asOf,
+		page,
+	]);
+	// A 53-bit string hash (cyrb53): enough to tell one query from another, with no need of a digest.
+	let high = 0xdeadbeef;
+	let low = 0x41c6ce57;
+	for (let index = 0; index < text.length; index++) {
+		const code = text.charCodeAt(index);
+		high = Math.imul(high ^ code, 2654435761);
+		low = Math.imul(low ^ code, 1597334677);
+	}
+	high = Math.imul(high ^ (high >>> 16), 2246822507) ^ Math.imul(low ^ (low >>> 13), 3266489909);
+	low = Math.imul(low ^ (low >>> 16), 2246822507) ^ Math.imul(high ^ (high >>> 13), 3266489909);
+	return (4294967296 * (2097151 & low) + (high >>> 0)).toString(36);
+}
 
 /** The columns of the log whose menus filter by value: what was done (its kind) and how its delivery went. */
 export const ACTIVITY_FACETS = ["kind", "delivery"] as const;
@@ -109,6 +154,8 @@ export type ActivityList = {
 	/** The places of this page's first and last lines, to reach another page from it (`from`); `null` on a page with no line. */
 	first: string | null;
 	last: string | null;
+	/** What this page was read under (`activityPageMark`): given back in `from` with its places and count. */
+	mark: string;
 	/** The newest line there was when this was read: pass it with the next pages of the same browsing. */
 	asOf: string;
 	/** Whether the log shows deliveries at all: the site has a receiver, or once had one whose deliveries are still here. */
@@ -127,7 +174,7 @@ export type ActivityRecord = Omit<LoggedRecord, "address"> & {
 
 export type ActivityDelivery = {
 	id: string;
-	/** The receiver's name as a person reads it: its label, or a webhook's host and path. Never the stored destination, which may carry a token. */
+	/** The receiver's name as a person reads it: its label, or a webhook's name (its host, when it was given none). The address is stored nowhere. */
 	receiver: string | Message;
 	/** The event's type: `entry.published`. */
 	event: string;
@@ -398,10 +445,14 @@ export async function listActivity(
 		);
 	await options.afterBoundary?.();
 	const where = conditionsOf({ ...query, asOf }, entry, options.now);
-	const page = await readPage(db, where, query, query.sort !== "asc");
+	// A place and a count are used only under what they were read under: a `from` of another search, filter, order or browsing is dropped,
+	// and the page is counted from the top and counted anew.
+	const from =
+		query.from && query.from.mark === activityPageMark(query, asOf, query.from.page) ? query.from : undefined;
+	const page = await readPage(db, where, { ...query, from }, query.sort !== "asc");
 	// Counted once for a browsing: a page reached from another answers the number that one had.
 	const total =
-		query.from?.total ??
+		from?.total ??
 		Number(
 			(await sql<{ count: string }>`select count(*) as count from monti_activity h where ${where}`.execute(db)).rows[0]
 				?.count ?? 0,
@@ -418,6 +469,7 @@ export async function listActivity(
 		total,
 		first: page[0]?.seq ?? null,
 		last: page.at(-1)?.seq ?? null,
+		mark: activityPageMark(query, asOf, query.page),
 		asOf,
 		deliveries: options.receivers || any !== undefined,
 		entry: entry && query.entry !== undefined ? { id: query.entry, title: entry.title } : null,
