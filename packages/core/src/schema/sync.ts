@@ -23,7 +23,7 @@ export async function syncSchemaFile(monti: Monti): Promise<SyncResult> {
 	if (!monti.site.files) return { status: "migrate" };
 	// Change files the database has not followed (a save whose database step failed, a write a crash cut off, a teammate's change pulled in) carry
 	// their steps and the review's answers: they are applied as they are, never read back from the schema file as a hand edit.
-	const pending = await pendingChanges(monti.db, await monti.site.files.readChanges());
+	const pending = await pendingChanges(monti.db, await monti.site.files.readChanges(monti.db));
 	if (pending.length > 0) {
 		await monti.run("schema.retry", {}, { actor: "cli" });
 		const after = await readSchemaState(monti.db);

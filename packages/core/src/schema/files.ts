@@ -1,10 +1,15 @@
 import { access, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
 import { fingerprint } from "../bytes";
+import type { Database } from "../db/schema";
+import { CheckError } from "../errors";
 import { AdminValues } from "./admin-values";
 import type { Schema } from "./define";
 import { schemaSource } from "./source";
+
+type Db = Kysely<Database> | Transaction<Database>;
 
 /** One data step of a structure change. Steps that change no stored value (a new collection, a field's settings) leave none. */
 export type ChangeStep =
@@ -72,10 +77,12 @@ export type SchemaFiles = {
 	/**
 	 * Writes the change file, and the schema file when `writeSchema` (not when the draft is the file a developer edited by hand). Both go before the
 	 * database step: when it fails, the files are the truth to apply again. The two are written as one: when it throws, neither file has changed. The
-	 * one case it could not undo it says so with a `PartialSchemaWrite`.
+	 * one case it could not undo it says so with a `PartialSchemaWrite`. `db` is the write's transaction: it holds the files' lock until it ends, and
+	 * a wait for the lock that runs out is a `SchemaFilesBusy`.
 	 */
-	write(schema: Schema, change: ChangeFile, writeSchema: boolean): Promise<void>;
-	readChanges(): Promise<ChangeFile[]>;
+	write(db: Db, schema: Schema, change: ChangeFile, writeSchema: boolean): Promise<void>;
+	/** The change files in the order they are applied, after finishing or clearing what a write a crash cut off left (`db` holds the lock for it). */
+	readChanges(db: Db): Promise<ChangeFile[]>;
 };
 
 /** The change files in a folder, in the order they are applied. */
@@ -130,12 +137,35 @@ export type FileCalls = {
 /** `fs.constants.W_OK`: the file can be written by this process. */
 const WRITABLE = 2;
 
+/** The schema files are held by another write or recovery for longer than the wait: nothing was read or written. Trying again is the way on. */
+export class SchemaFilesBusy extends CheckError {
+	constructor() {
+		super({ key: "schema.filesBusy" });
+	}
+}
+
+/** How long the files' lock is waited for before the caller is told they are busy, and how often it is asked for meanwhile. */
+const LOCK_WAIT_MS = 10_000;
+const LOCK_POLL_MS = 25;
+
 /**
- * How long the files' lock is waited for, and when a lock is taken to be left behind by a process that died. A write holds it for milliseconds;
- * a lock older than `staleMs` belongs to nobody.
+ * Holds the lock of "the schema files of this site" until `trx` ends. It is a Postgres advisory lock, owned by the database session: every
+ * process of a site shares its database, and a session ends with its process. So a holder that died holds nothing, a holder that only stands
+ * still (a debugger, a slow disk) keeps it for as long as it lives, and nobody has to tell the two apart by a clock. The key names the schema
+ * the site's tables are in, so two sites in one database do not wait for each other.
  */
-export type LockTiming = { staleMs: number; waitMs: number; pollMs: number };
-const LOCK_TIMING: LockTiming = { staleMs: 10_000, waitMs: 30_000, pollMs: 20 };
+async function holdFiles(trx: Db, waitMs: number): Promise<void> {
+	const until = Date.now() + waitMs;
+	for (;;) {
+		const { rows } = await sql<{ held: boolean }>`
+			select pg_try_advisory_xact_lock(hashtext('monti:schema-files'), hashtext(current_schema())) as held
+		`.execute(trx);
+		if (rows[0]?.held) return;
+		// Never taken over: the holder is alive. The caller is told, and tries again.
+		if (Date.now() >= until) throw new SchemaFilesBusy();
+		await new Promise((resume) => setTimeout(resume, LOCK_POLL_MS));
+	}
+}
 
 /**
  * The files of a site checkout: `monti.schema.ts` and `monti/changes` under `root`.
@@ -151,51 +181,32 @@ const LOCK_TIMING: LockTiming = { staleMs: 10_000, waitMs: 30_000, pollMs: 20 };
  * name are used, which every file system has (hard links are missing on exFAT and some network shares).
  *
  * A write and the clearing of what a crash left never run at the same time, in this process or another (two dev servers on one checkout, a
- * command beside the server): both hold `monti/changes/.lock`, a file made only when it is not there. So a `.part` is never taken for abandoned
- * while its writer is still at work. A lock whose holder died is taken over once it is older than a write could be.
+ * command beside the server): both hold the files' lock in the site's database (`holdFiles`), the write until its transaction ends. So a `.part`
+ * is never taken for abandoned while its writer lives, however long it stands still, and one whose writer died is free the moment its session
+ * is gone. There is no lock file and no timeout that decides a holder is dead. On a database with one connection (PGlite) every lock belongs to
+ * the one session; there the connection itself, which one transaction holds at a time, keeps a write and a recovery apart.
  */
 export function schemaFilesAt(
 	root: string,
 	schemaFile = "monti.schema.ts",
 	io: FileCalls = { access, mkdir, readdir, readFile, rename, rm, writeFile },
-	timing: LockTiming = LOCK_TIMING,
+	waitMs = LOCK_WAIT_MS,
 ): SchemaFiles {
 	const changes = path.join(root, "monti", "changes");
 	const schemaPath = path.join(root, schemaFile);
 	const schemaPart = `${schemaPath}.part`;
-	const lock = path.join(changes, ".lock");
 	const text = (file: string) => io.readFile(file, "utf8").catch(() => null);
 	const names = () => io.readdir(changes).catch(() => [] as string[]);
 	const drop = (file: string) => io.rm(file, { force: true }).catch(() => {});
 
-	/** Runs `work` while holding the files' lock: one writer or one recovery at a time, across processes. */
-	async function locked<T>(work: () => Promise<T>): Promise<T> {
-		await io.mkdir(changes, { recursive: true });
-		const mine = `${Date.now()} ${Math.random().toString(36).slice(2)}`;
-		const waited = Date.now();
-		for (;;) {
-			try {
-				await io.writeFile(lock, mine, { flag: "wx" });
-				break;
-			} catch (error) {
-				if ((error as { code?: string }).code !== "EEXIST") throw error;
-			}
-			const held = await text(lock);
-			const since = Number(held?.split(" ")[0]);
-			// Left by a process that died: taken over only if it is still that same lock, so a lock another waiter just took is not removed.
-			if (held !== null && Number.isFinite(since) && Date.now() - since > timing.staleMs) {
-				if ((await text(lock)) === held) await drop(lock);
-				continue;
-			}
-			if (Date.now() - waited > timing.waitMs) throw new Error("The schema files are in use by another process.");
-			await new Promise((resume) => setTimeout(resume, timing.pollMs));
-		}
-		try {
-			return await work();
-		} finally {
-			// Only its own: if this lock was taken over as stale meanwhile, the one that took it over holds another.
-			if ((await text(lock)) === mine) await drop(lock);
-		}
+	/**
+	 * Runs `work` while holding the files' lock: one writer or one recovery at a time, across processes. Inside a write's transaction the lock
+	 * stays until that transaction ends; with no transaction at hand one is opened for the work.
+	 */
+	async function locked<T>(db: Db, work: () => Promise<T>): Promise<T> {
+		if (!db.isTransaction) return db.transaction().execute((trx) => locked(trx, work));
+		await holdFiles(db, waitMs);
+		return work();
 	}
 
 	/** Finishes or clears what a write that never ended left behind. Called with the lock held. */
@@ -220,15 +231,16 @@ export function schemaFilesAt(
 	}
 
 	/**
-	 * Before the changes are read: with no `.part` there is nothing to clear and nothing is locked (a reader needs no write access). A `.part` is
-	 * either a writer at work or what a crash left; the lock tells which, since the writer holds it until its part is gone.
+	 * Before the changes are read: with no `.part` there is nothing to clear and nothing is locked. A `.part` is either a writer at work or what
+	 * a crash left; the lock tells which, since a writer holds it for as long as it lives. One made after this looked is left alone.
 	 */
-	async function recover() {
+	async function recover(db: Db) {
 		if (!(await names()).some((name) => name.endsWith(".json.part"))) return;
-		await locked(clear);
+		await locked(db, clear);
 	}
 
 	async function write(schema: Schema, change: ChangeFile, writeSchema: boolean) {
+		await io.mkdir(changes, { recursive: true });
 		await clear();
 		const final = path.join(changes, `${change.id}.json`);
 		const part = `${final}.part`;
@@ -268,9 +280,9 @@ export function schemaFilesAt(
 	}
 
 	return {
-		write: (schema, change, writeSchema) => locked(() => write(schema, change, writeSchema)),
-		async readChanges() {
-			await recover();
+		write: (db, schema, change, writeSchema) => locked(db, () => write(schema, change, writeSchema)),
+		async readChanges(db) {
+			await recover(db);
 			return readChangeFiles(changes);
 		},
 	};

@@ -1092,6 +1092,7 @@ describe("a write that fails after its files are written", () => {
 		// The files of a rename, written whole; the server stopped before the database followed them.
 		const draft: Schema = { ...base, collections: edited };
 		await files().write(
+			db,
 			draft,
 			{
 				id: "2026-11-12-crashed",
@@ -1170,6 +1171,7 @@ describe("a pending change and a hand edit made after it", () => {
 		);
 		// A reviewed rename, its files written; the database has not followed it yet.
 		await files().write(
+			db,
 			renamed,
 			{
 				id: "2026-11-12-pending",
@@ -1208,6 +1210,56 @@ describe("a pending change and a hand edit made after it", () => {
 		};
 		expect(plan.changes.map((change) => change.id)).toEqual(["removeField:post.subtitle"]);
 		expect(plan.changes[0]?.choices?.length).toBeGreaterThan(0);
+	});
+});
+
+describe("a save while another process holds the schema files", () => {
+	it("12-4 a structure save is refused whole, saying the files are in use, when they stay held past the wait: nothing of it is saved, and the same save goes through once they are free", async () => {
+		// Another process is clearing what a crashed write left, and stands still in the middle of it: it holds the files.
+		const changes = path.join(root, "monti", "changes");
+		await mkdir(changes, { recursive: true });
+		await writeFile(
+			path.join(changes, "crashed.json.part"),
+			JSON.stringify({ id: "crashed", steps: [], file: "0000000000000000" }),
+		);
+		let reached = () => {};
+		const standing = new Promise<void>((resolve) => {
+			reached = resolve;
+		});
+		let letGo = () => {};
+		const released = new Promise<void>((resolve) => {
+			letGo = resolve;
+		});
+		const other = schemaFilesAt(root, "monti.schema.ts", {
+			...io,
+			rm: (async (...args: Parameters<typeof rm>) => {
+				reached();
+				await released;
+				return rm(...args);
+			}) as typeof rm,
+		});
+		const recovering = other.readChanges(db);
+		await standing;
+
+		// This server waits a moment for the files, not the ten seconds of a real one.
+		const monti = createMonti({ db, schema: base, files: schemaFilesAt(root, "monti.schema.ts", io, 100) });
+		const input = { site: { name: "example.dev" }, collections: edited, renames, answers };
+		await expect(save(monti, input)).rejects.toMatchObject({
+			code: "check-failed",
+			reason: { key: "schema.filesBusy" },
+		});
+		// Not "the file could not be written" with the admin values saved beside: the whole save is refused, and nothing was taken over.
+		expect((await read(monti)).site.name).toBe("");
+		expect(await schemaFile()).toBeNull();
+		expect(await changeFiles()).toEqual(["crashed.json.part"]);
+		expect(await db.selectFrom("monti_activity").select("id").execute()).toEqual([]);
+
+		letGo();
+		await recovering;
+		const saved = await save(monti, input);
+		expect(saved.output.structure).toMatchObject({ written: true, applied: true });
+		expect((await read(monti)).site.name).toBe("example.dev");
+		expect(await schemaFile()).toContain("excerpt");
 	});
 });
 

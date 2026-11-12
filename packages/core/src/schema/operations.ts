@@ -11,7 +11,7 @@ import { addressesBefore, movedAddresses } from "./addresses";
 import { AdminValues, AdminValuesPatch, mergeAdminValues } from "./admin-values";
 import { applyChange, pendingChanges, readSchemaState, setSchemaState } from "./apply";
 import { checkSchema, type Schema } from "./define";
-import { type ChangeFile, PartialSchemaWrite } from "./files";
+import { type ChangeFile, PartialSchemaWrite, SchemaFilesBusy } from "./files";
 import { type Answers, type Rename as FieldRename, planSchema, schemaHash, stepsFor } from "./plan";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -101,10 +101,11 @@ export async function applySchema(
 		...(Object.keys(adminValues).length > 0 ? { firstAdminValues: adminValues } : {}),
 	};
 	try {
-		await files.write(draft, change, schemaHash(draft) !== schemaHash(ctx.site.schema()));
+		await files.write(ctx.db, draft, change, schemaHash(draft) !== schemaHash(ctx.site.schema()));
 	} catch (error) {
 		// The files are out of step and could not be put back: nothing here may call that "not written". The whole write fails.
-		if (error instanceof PartialSchemaWrite) throw error;
+		// Held by another process for longer than the wait: not a file that cannot be written, and the same save goes through a moment later.
+		if (error instanceof PartialSchemaWrite || error instanceof SchemaFilesBusy) throw error;
 		// Neither file changed (`SchemaFiles.write` is all or nothing) and nothing is applied: the caller says so (doc 12), and the developer finds
 		// the reason here.
 		console.error("Monti: the schema file could not be written:", error);
@@ -293,7 +294,7 @@ export const schemaOperations = [
 		async run(_input, ctx) {
 			const files = ctx.site.files;
 			if (!files) throw new Error("Structure is locked on the live site.");
-			const pending = await pendingChanges(ctx.db, await files.readChanges());
+			const pending = await pendingChanges(ctx.db, await files.readChanges(ctx.db));
 			// The addresses as the database last followed them: what the site was serving while the change waited.
 			const state = await readSchemaState(ctx.db);
 			const addresses = await addressesBefore(ctx.db, state?.schema ?? ctx.site.schema(), ctx.site.schema());
