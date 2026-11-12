@@ -7,10 +7,13 @@ import {
 	ChangeLine,
 	ChangeLines,
 	ChangeNote,
+	Checkbox,
 	Compare,
 	CompareBody,
 	CompareParagraph,
 	CompareProperty,
+	CompareRow,
+	CompareRows,
 	CompareSide,
 	CompareText,
 	CompareTitle,
@@ -21,6 +24,8 @@ import {
 	IconButton,
 	Inline,
 	Input,
+	Ins,
+	ListSection,
 	MediaInput,
 	OptionRow,
 	OptionTable,
@@ -29,9 +34,7 @@ import {
 	PageHeader,
 	RadioGroup,
 	RadioItem,
-	ReviewGroup,
-	ReviewItem,
-	ReviewQuote,
+	RowTitle,
 	Select,
 	SelectTrigger,
 	SelectValue,
@@ -45,10 +48,13 @@ import {
 	SheetTitle,
 	Stack,
 	StandalonePage,
+	Table,
+	TableBody,
+	TableCell,
+	TableRow,
 	Text,
 	TextButton,
 } from "../../index";
-import { marked } from "./assistant-parts";
 import {
 	EditorPage,
 	EntryHeader,
@@ -301,26 +307,48 @@ export function ConditionalProposalScreen() {
 				</Stack>
 				<PageBody>
 					<Stack gap={32} paddingTop={16}>
-						<ReviewQuote>“링크 주소가 빈 글에 주소를 채워 줘.”</ReviewQuote>
-						<ReviewGroup title="링크 주소 채우기" meta="글 2편">
-							<ReviewItem included includeLabel="읽을거리 모음 넣기" title="읽을거리 모음" path="/reading-list">
-								{marked([["ins", "https://example.dev/reading"]])}
-							</ReviewItem>
-							<ReviewItem
-								included={false}
-								includeLabel="발표 영상 넣기"
-								title="발표 영상"
-								path="/talk"
-								muted
-								end={
-									<Text variant="caption" tone="warning">
-										글 종류가 링크가 아님
-									</Text>
-								}
-							>
-								{marked([["ins", "https://example.dev/talk"]])}
-							</ReviewItem>
-						</ReviewGroup>
+						<Text as="p" variant="title" tone="muted">
+							“링크 주소가 빈 글에 주소를 채워 줘.”
+						</Text>
+						{/* The review page as it is built (screens/assistant.md): a titled list whose rows are the shared table. */}
+						<ListSection table title="링크 주소 채우기" count="2건">
+							<Table container="none" aria-label="링크 주소 채우기">
+								<TableBody>
+									<TableRow twoLine>
+										<TableCell>
+											<Checkbox checked aria-label="읽을거리 모음 넣기" />
+										</TableCell>
+										<TableCell truncate>
+											<Stack gap={8} minWidth={0}>
+												<RowTitle title="읽을거리 모음" address="/reading-list" />
+												<CompareRows>
+													<CompareRow single name="링크 주소" translation={<Ins>https://example.dev/reading</Ins>} />
+												</CompareRows>
+											</Stack>
+										</TableCell>
+										<TableCell align="end" />
+									</TableRow>
+									<TableRow twoLine>
+										<TableCell>
+											<Checkbox checked={false} readOnly aria-label="발표 영상 넣기" />
+										</TableCell>
+										<TableCell truncate>
+											<Stack gap={8} minWidth={0}>
+												<RowTitle title="발표 영상" address="/talk" />
+												<CompareRows>
+													<CompareRow single name="링크 주소" translation={<Ins>https://example.dev/talk</Ins>} />
+												</CompareRows>
+											</Stack>
+										</TableCell>
+										<TableCell align="end">
+											<Text variant="note" tone="subtle">
+												글 종류가 링크가 아님
+											</Text>
+										</TableCell>
+									</TableRow>
+								</TableBody>
+							</Table>
+						</ListSection>
 					</Stack>
 				</PageBody>
 			</PageColumn>
