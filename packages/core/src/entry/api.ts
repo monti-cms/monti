@@ -53,8 +53,8 @@ const cookie = (request: Request, name: string, value: string, maxAge: number) =
 const SIGN_IN = new Set(["auth.signIn", "auth.createFirstAdmin", "auth.devSignIn"]);
 
 /**
- * The admin API: one route per operation, `POST …/operations/<name>` with `{ input, versions }`, made from the operation list, and the GitHub
- * sign-in routes. A request needs the session cookie except for the open operations (signing in). It takes a web `Request`, so any framework can
+ * The admin API: one route per operation, `POST …/operations/<name>` with `{ input, versions }`, made from the operation list, one per stream,
+ * `POST …/streams/<name>` with `{ input }`, answered line by line, and the GitHub sign-in routes. A request needs the session cookie except for the open operations (signing in). It takes a web `Request`, so any framework can
  * mount it.
  */
 export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
@@ -101,6 +101,7 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 			cleanedAt = monti.now().getTime();
 			try {
 				await monti.trash.purgeDue();
+				await monti.cleanUp();
 			} catch (error) {
 				cleanedAt = last;
 				console.error("Monti: the trash clean-up failed; the next admin visit tries again:", error);
@@ -145,6 +146,72 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 				? cookie(request, SESSION_COOKIE, "", 0)
 				: sessionCookie(request, answer.session.token, answer.session.expiresAt);
 		return json(answer.status, answer.body, { "set-cookie": setCookie });
+	}
+
+	/**
+	 * A stream as the admin API answers it (docs 00 and 10): `events` gives its events as they come. What goes wrong before the first event is an
+	 * answer with a status, like an operation's; what goes wrong later is the stream's last event, `{ type: "error", … }`, since the answer has
+	 * already begun. `signal` ends it when whoever listens goes away.
+	 */
+	async function stream(
+		name: string,
+		rawBody: unknown,
+		token: string | null | undefined,
+		signal: AbortSignal,
+	): Promise<{ status: number; body: unknown } | { status: 200; events: AsyncIterable<unknown> }> {
+		const session = await findSession(monti.db, token, monti.now());
+		if (!session) return { status: 401, body: { error: "unauthenticated" } };
+		const body = Body.safeParse(rawBody);
+		if (!body.success) return { status: 400, body: { error: "invalid-body" } };
+		let events: AsyncIterator<unknown>;
+		let first: IteratorResult<unknown>;
+		try {
+			events = monti.stream(name, body.data.input ?? {}, { actor: "admin", session, signal })[Symbol.asyncIterator]();
+			first = await events.next();
+		} catch (error) {
+			const described = describeError(error);
+			if (described) return described;
+			throw error;
+		}
+		async function* rest() {
+			try {
+				for (let next = first; !next.done; next = await events.next()) yield next.value;
+			} catch (error) {
+				const described = describeError(error);
+				if (!described) console.error(`Monti: the stream ${name} failed:`, error);
+				yield { type: "error", ...(described?.body ?? { error: "unexpected" }) };
+			} finally {
+				await events.return?.();
+			}
+		}
+		return { status: 200, events: rest() };
+	}
+
+	/** The stream's events as the answer's body: one JSON object per line, sent as each comes. */
+	async function streamed(request: Request, name: string): Promise<Response> {
+		const answer = await stream(
+			name,
+			await request.json().catch(() => null),
+			cookies(request)[SESSION_COOKIE],
+			request.signal,
+		);
+		if (!("events" in answer)) return json(answer.status, answer.body);
+		const events = answer.events[Symbol.asyncIterator]();
+		const encoder = new TextEncoder();
+		return new Response(
+			new ReadableStream<Uint8Array>({
+				async pull(controller) {
+					const next = await events.next();
+					if (next.done) controller.close();
+					else controller.enqueue(encoder.encode(`${JSON.stringify(next.value)}\n`));
+				},
+				// The browser went away: the stream ends with it.
+				async cancel() {
+					await events.return?.();
+				},
+			}),
+			{ headers: { "content-type": "application/x-ndjson", "cache-control": "no-store", "x-accel-buffering": "no" } },
+		);
 	}
 
 	/** GitHub's sign-in: send the browser to GitHub, then take its answer and sign in the one account the config names (doc 15). */
@@ -269,6 +336,8 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		const { pathname, searchParams } = new URL(request.url);
 		const name = pathname.match(/\/operations\/([\w.]+)$/)?.[1];
 		if (name && request.method === "POST") return operation(request, name);
+		const streamName = pathname.match(/\/streams\/([\w.]+)$/)?.[1];
+		if (streamName && request.method === "POST") return streamed(request, streamName);
 		if (pathname.endsWith("/media/bytes") && request.method === "PUT") {
 			// Before the body: nobody without a session makes the server hold a file.
 			const token = cookies(request)[SESSION_COOKIE];
@@ -285,5 +354,5 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		if (githubRoute && request.method === "GET") return githubSignIn(request, githubRoute[1] !== undefined);
 		return json(404, { error: "not-found" });
 	};
-	return Object.assign(handle, { call, upload });
+	return Object.assign(handle, { call, upload, stream });
 }

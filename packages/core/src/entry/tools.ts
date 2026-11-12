@@ -9,11 +9,16 @@ export function agentTools(monti: Monti): Capability[] {
 	return [...monti.operations.values()].filter((operation) => available(operation, "assistant", open)).map(describe);
 }
 
-export type ToolSession = { conversationId: string; proposalId: string };
+export type ToolSession = {
+	conversationId: string;
+	proposalId: string;
+	/** The name the assistant gave this kind of change ("요약 채우기"): the group its items show under. */
+	group?: string;
+};
 
 export type ToolResult =
 	| { kind: "read"; output: unknown }
-	| { kind: "proposed"; itemId: string; preview: Preview | null }
+	| { kind: "proposed"; itemId: string; itemIds: string[]; preview: Preview | null }
 	| { kind: "screen"; name: string; input: unknown };
 
 /**
@@ -35,5 +40,5 @@ export async function callAgentTool(
 			output: await monti.run(name, input, { actor: "assistant", conversationId: session.conversationId }),
 		};
 	if (operation.kind === "screen") return { kind: "screen", name, input: parseInput(operation, input) };
-	return { kind: "proposed", ...(await monti.proposals.add(session.proposalId, name, input)) };
+	return { kind: "proposed", ...(await monti.proposals.add(session.proposalId, name, input, session.group)) };
 }

@@ -113,6 +113,15 @@ export const bodyOperations = [
 			"Change an entry's body with block operations, never by rewriting it: replaceText inside one block, setBlock, insert after a block (null: first), move, remove. Blocks are named by id from body.read; new blocks get new ids. Give the entry version you read.",
 		input: z.object({ id: z.string(), version: z.number().int(), ops: z.array(BodyOpShape).min(1) }),
 		touches: (input) => [{ kind: "entry", id: input.id }],
+		// Block operations name blocks by id, so in a proposal an edit can follow another change of the same entry. Two edits of the same block
+		// cannot wait side by side: the second's offsets count in the text the first has not changed yet.
+		follows: (input, versions) => ({ ...input, version: versions[`entry:${input.id}`] ?? input.version }),
+		overlaps: (input, earlier) => {
+			const named = (ops: typeof input.ops) =>
+				ops.flatMap((op) => (op.op === "remove" ? op.blocks : op.op === "insert" ? [] : [op.block]));
+			const blocks = new Set(named(earlier.ops));
+			return input.id === earlier.id && named(input.ops).some((block) => blocks.has(block));
+		},
 		preview: (input) => ({
 			summary: { key: "body.edit", values: { count: input.ops.length } },
 			changes: [{ kind: "entry", id: input.id }],

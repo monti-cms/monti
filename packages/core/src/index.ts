@@ -27,10 +27,17 @@ export { applyOps, type BodyOp } from "./body/edit";
 export { ENTRY_LINK, entryLink } from "./body/links";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
 export { migrateToLatest } from "./db/migrations";
-export type { Database } from "./db/schema";
+export type { Database, ItemExchange, ProposalItemState, RunStatus } from "./db/schema";
 export { RETRY_MINUTES, type Receiver } from "./engine/deliveries";
 export { type RunOptions, UNDO_DAYS, type WriteResult } from "./engine/execute";
-export type { ApplyResult, ItemRef } from "./engine/proposals";
+export type {
+	ApplyProgress,
+	ApplyResult,
+	ItemRef,
+	ProposalItemView,
+	ProposalView,
+	RecordLabel,
+} from "./engine/proposals";
 export type { UndoPlan } from "./engine/undo";
 export {
 	type ColumnKind,
@@ -102,7 +109,15 @@ export { imageFrameStyle, type SiteImage, type SiteMedia, siteImage } from "./me
 export { memoryStorage, type Storage } from "./media/storage";
 export { altIsMissing, cleanMediaValue, type MediaPlace, type MediaValue, mediaValueOf } from "./media/value";
 export { coreMessages, defineMessages, formatMessage, type MessageBundle } from "./messages";
-export { type Capability, createMonti, definePlugin, type Monti, type MontiOptions, type Plugin } from "./monti";
+export {
+	type ApplyEvent,
+	type Capability,
+	createMonti,
+	definePlugin,
+	type Monti,
+	type MontiOptions,
+	type Plugin,
+} from "./monti";
 export {
 	type Actor,
 	type AnyOperation,
@@ -147,6 +162,7 @@ export { type ChangeFile, type ChangeStep, readChangeFiles, type SchemaFiles, sc
 export type { Answers, Choice, Rename, SchemaChange } from "./schema/plan";
 export { type SyncResult, syncSchemaFile } from "./schema/sync";
 export type { Site } from "./site";
+export { type AnyStream, defineStream, type Stream, type StreamContext, type StreamDefinition } from "./stream";
 export type { FieldMark } from "./translations/fields";
 export { MEDIA_KIND, type TrashedEntry, type TrashList, type TrashQuery, type TrashRow } from "./trash/list";
 export type { TrashEffects, TrashMoved, TrashRestored } from "./trash/operations";

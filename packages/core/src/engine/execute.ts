@@ -42,7 +42,8 @@ export type RunOptions = {
 
 export type WriteResult<Output> = {
 	output: Output;
-	activityId: string;
+	/** The write's row in the activity log; `null` for a write that only keeps the assistant's books and leaves none. */
+	activityId: string | null;
 	/** The touched and created records' versions after the write, `null` for one it removed. */
 	versions: Record<string, number | null>;
 	/** The deliveries the write queued, to send now that it has committed. */
@@ -121,7 +122,7 @@ export async function runWrite<Output>(
 	if (operation.structure && engine.site.files === null)
 		throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: operation.name } });
 	const input = parseInput(operation, rawInput);
-	const activityId = randomUUID();
+	const activityId = operation.bookkeeping ? null : randomUUID();
 	/** Refuses the write when a record it touches is not at the version the caller read. */
 	const mustBeAsRead = (touched: RecordRef[], states: Map<string, RecordState | null>) => {
 		const conflicts = touched.flatMap((ref) => {
@@ -158,6 +159,9 @@ export async function runWrite<Output>(
 		// What the records held before, so a file the library does not have is refused only when this write brings it in (doc 09).
 		await rewriteUses(trx, engine.site.schema(), records, { before: before.values() });
 		const after = await loadRecords(engine, trx, records);
+		const versions = () => Object.fromEntries([...after].map(([key, state]) => [key, state?.version ?? null]));
+		// The assistant's own books are not the site's history: no row, no snapshot, nothing sent.
+		if (activityId === null) return { output, activityId, versions: versions(), deliveryIds: [] };
 		const undoable = !operation.humanOnly && !operation.structure && records.length > 0;
 		const now = engine.now();
 		await trx
@@ -200,7 +204,6 @@ export async function runWrite<Output>(
 				.where("id", "=", activityId)
 				.execute();
 		const deliveryIds = await queueDeliveries(trx, engine.receivers, activityId, events);
-		const versions = Object.fromEntries([...after].map(([key, state]) => [key, state?.version ?? null]));
-		return { output, activityId, versions, deliveryIds };
+		return { output, activityId, versions: versions(), deliveryIds };
 	});
 }
