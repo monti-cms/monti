@@ -6,10 +6,11 @@ import { draftMode } from "next/headers";
  */
 export async function PreviewBar({
 	admin = "/admin",
-	labels = { preview: "미리보기", exit: "끝내기" },
+	labels = { preview: "Preview", exit: "Exit" },
 }: {
 	/** Where the admin page is: its API ends the preview. */
 	admin?: string;
+	/** The line's two words, in the site's language. */
 	labels?: { preview: string; exit: string };
 }) {
 	if (!(await draftMode()).isEnabled) return null;

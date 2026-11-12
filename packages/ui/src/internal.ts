@@ -303,6 +303,7 @@ export {
 	SidebarMenuItem,
 	SidebarMenuSub,
 	SidebarMenuSubButton,
+	SidebarNote,
 	SidebarProvider,
 	SidebarRailToggle,
 	SidebarScreenMode,

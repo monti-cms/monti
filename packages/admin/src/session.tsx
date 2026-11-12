@@ -6,7 +6,8 @@ export type AuthState = {
 	/** A password, and sign-ins at another site (GitHub) with the admin API path that starts each. */
 	methods: { password: boolean; external: { id: string; label: string; path: string }[] };
 	hasAdmin: boolean;
-	session: { who: string } | null;
+	/** `bypass`: nobody signed in; the dev server let this machine in (doc 16). */
+	session: { who: string; bypass?: boolean } | null;
 };
 
 type Session = { state: AuthState | null; reload: () => Promise<void> };

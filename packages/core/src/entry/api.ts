@@ -72,9 +72,11 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		const token = cookies(request)[SESSION_COOKIE];
 		const local = bypasses(request);
 		if (!local || (await sessionOf(token, local))) return { token, local };
-		const started = await startSession(monti.db, DEV_WHO, monti.now());
+		const started = await letIn();
 		return { token: started.token, local, started };
 	}
+	/** The session of someone let in without signing in. It opens anything only for a request the bypass holds for (`call`'s `local`). */
+	const letIn = () => startSession(monti.db, DEV_WHO, monti.now());
 	/** A bypassed session is one only while the bypass holds for the request: turned off, or from another machine, it opens nothing. */
 	async function sessionOf(token: string | null | undefined, local: boolean) {
 		const session = await findSession(monti.db, token, monti.now());
@@ -292,5 +294,5 @@ export function createAdminApi(monti: Monti, options: AdminApiOptions = {}) {
 		if (githubRoute && request.method === "GET") return githubSignIn(request, githubRoute[1] !== undefined);
 		return json(404, { error: "not-found" });
 	};
-	return Object.assign(handle, { call, upload });
+	return Object.assign(handle, { call, upload, letIn });
 }

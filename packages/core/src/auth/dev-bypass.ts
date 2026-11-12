@@ -20,8 +20,9 @@ const HOSTED = [
 	"DYNO",
 ] as const;
 
-/** The hosting platform's variable this process has, or `undefined` on a developer's machine. */
-export const hostedBy = (env: Env = process.env): string | undefined => HOSTED.find((name) => env[name]);
+/** The hosting platform's variable this process has, or `undefined` on a developer's machine (and in a browser, where the stories run the API). */
+export const hostedBy = (env: Env = typeof process === "undefined" ? {} : process.env): string | undefined =>
+	HOSTED.find((name) => env[name]);
 
 /** Whether a host name (no port) is this machine: `localhost`, `*.localhost`, `127.0.0.0/8` or `::1`. */
 function isLoopback(hostname: string): boolean {

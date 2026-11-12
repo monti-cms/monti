@@ -8,7 +8,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
 		<>
 			<main className="site">{children}</main>
 			{/* One line while a preview is open, with the way out of it. */}
-			<PreviewBar />
+			<PreviewBar labels={{ preview: "미리보기", exit: "끝내기" }} />
 		</>
 	);
 }

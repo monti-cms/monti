@@ -4,6 +4,7 @@ import {
 	ChangeDot,
 	DangerBlock,
 	FormField,
+	FormFieldDescription,
 	FormFieldLabel,
 	Grid,
 	Input,
@@ -48,6 +49,9 @@ export function BasicsTab({
 	const pathPlace = at.path(c);
 	const pathValue = draft.value(pathPlace);
 	const path = typeof pathValue === "string" ? pathValue : kind === "document" ? "/:slug" : undefined;
+	const previewPlace = at.preview(c);
+	const preview = draft.value(previewPlace);
+	const previewChanged = model.changed.includes(previewPlace) && Boolean(data?.schema.collections[c]);
 	const labelPlace = at.collectionValue(c, "label");
 	const foldersPlace = at.collectionValue(c, "folders");
 	const pathChanged =
@@ -129,6 +133,43 @@ export function BasicsTab({
 								onChange={(event) => draft.set(pathPlace, addressOf(event.target.value))}
 							/>
 						)}
+					</FormField>
+				)}
+				{/* The site's own preview page, when it made one (doc 16): a document's only, since an item has nothing to preview. */}
+				{kind !== "document" ? null : locked ? (
+					// An address reads in the address's letters; the words for "none" read as words.
+					<ReadValue label={t("settings.basics.previewPath")} mono={typeof preview === "string"}>
+						{typeof preview === "string" ? preview : t("settings.basics.previewAtPublic")}
+						<LockMark label={t("settings.locked")} />
+					</ReadValue>
+				) : (
+					<FormField>
+						{/* The same line as the public address above it: the two are one kind of value. */}
+						<div className="flex min-h-monti-control-lg items-center gap-monti-8">
+							<label htmlFor="collection-preview-path" className="cursor-pointer text-monti-body">
+								{t("settings.basics.previewPath")}
+							</label>
+							{previewChanged ? <ChangeDot label={t("settings.changed")} /> : null}
+							{previewChanged ? (
+								<div className="ml-auto flex items-center gap-monti-12">
+									<TextButton variant="underline" quiet size="caption" onClick={() => draft.revert(previewPlace)}>
+										{t("settings.undo")}
+									</TextButton>
+								</div>
+							) : null}
+						</div>
+						<Affix
+							id="collection-preview-path"
+							prefix="/"
+							suffix="/:slug"
+							width="fit"
+							placeholder="preview"
+							value={typeof preview === "string" ? addressPart(preview) : ""}
+							onChange={(event) =>
+								draft.set(previewPlace, event.target.value.trim() === "" ? null : addressOf(event.target.value))
+							}
+						/>
+						<FormFieldDescription>{t("settings.basics.previewPathHint")}</FormFieldDescription>
 					</FormField>
 				)}
 				{/* At the height of the inputs above it (36px): one group, one control height. */}

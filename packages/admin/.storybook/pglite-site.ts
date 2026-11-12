@@ -74,7 +74,8 @@ export async function storySite({
 }: Partial<MontiOptions> & {
 	schema: Schema;
 	setup?: (monti: Monti, storage: Storage | null) => Promise<void>;
-	signedIn?: boolean;
+	/** `"bypass"`: nobody signed in; the dev server let this machine in (doc 16). */
+	signedIn?: boolean | "bypass";
 	storage?: Storage | null;
 }): Promise<StorySite> {
 	// One story shows at a time, and a Postgres left open holds its memory until the page goes: the last story's goes first (T116).
@@ -97,18 +98,19 @@ export async function storySite({
 	const api = createAdminApi(monti);
 	let token: string | null = null;
 	const transport: Transport = async (name, input, options = {}) => {
-		const answer = await api.call(name, { input, ...options }, token);
+		const answer = await api.call(name, { input, ...options }, token, signedIn === "bypass");
 		if (answer.session !== undefined) token = answer.session?.token ?? null;
 		return { status: answer.status, body: JSON.parse(JSON.stringify(answer.body)) };
 	};
 	// The byte route with the session this page holds. A story's bar moves as a real upload's does.
 	const uploader: Uploader = async (file, { name, onProgress }) => {
 		onProgress?.(50);
-		const answer = await api.upload(new Uint8Array(await file.arrayBuffer()), name, token);
+		const answer = await api.upload(new Uint8Array(await file.arrayBuffer()), name, token, signedIn === "bypass");
 		onProgress?.(100);
 		return { status: answer.status, body: JSON.parse(JSON.stringify(answer.body)) };
 	};
-	if (signedIn) {
+	if (signedIn === "bypass") token = (await api.letIn()).token;
+	else if (signedIn) {
 		const made = await transport("auth.createFirstAdmin", {
 			email: "me@example.dev",
 			password: "story password",
