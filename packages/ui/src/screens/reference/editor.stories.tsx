@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { EditorAssistScreen } from "./editor-assist";
 import { EditorCompareScreen } from "./editor-compare";
 import { EditorNotionScreen } from "./editor-notion";
 import { EditorProposalScreen } from "./editor-proposal";
@@ -22,8 +23,24 @@ type Story = StoryObj<typeof meta>;
 
 export const EditorNotion: Story = { render: () => <EditorNotionScreen /> };
 export const EditorProposal: Story = { render: () => <EditorProposalScreen /> };
+/** A field's ✦ button while the quick task writes. */
+export const EditorFilling: Story = { render: () => <EditorAssistScreen state="filling" /> };
+/** The field filled: the value in the proposal blue until it is touched or saved, and "다시". */
+export const EditorFilled: Story = { render: () => <EditorAssistScreen state="filled" /> };
+/** The service said no: one line under the field. */
+export const EditorFillFailed: Story = { render: () => <EditorAssistScreen state="fillFailed" /> };
+/** "✦ 요청" on picked words: a card with only the box to write in. */
+export const EditorRequest: Story = { render: () => <EditorAssistScreen state="request" /> };
+/** A proposal whose paragraph was changed since: what it was made from, what it proposed, and making it again. */
+export const EditorProposalStale: Story = { render: () => <EditorAssistScreen state="stale" /> };
+/** A picture's words: "✦ 채우기" on the alt text's label row in its settings card, and at the end of its empty caption line. */
+export const EditorImageFill: Story = { render: () => <EditorAssistScreen state="image" /> };
 export const EditorCompare: Story = { render: () => <EditorCompareScreen /> };
 export const EditorTranslate: Story = { render: () => <EditorTranslateScreen /> };
+/** "✦ 번역" pressed: the button works until the translation is in. */
+export const EditorTranslating: Story = { render: () => <EditorTranslateScreen stage="translating" /> };
+/** The translation as proposals in each block (flow 3, step 3): blue letters, and the pill to step through and take them. */
+export const EditorTranslateProposed: Story = { render: () => <EditorTranslateScreen stage="proposed" /> };
 export const TranslatePaired: Story = { render: () => <TranslatePairedScreen /> };
 export const TemplateEditor: Story = { render: () => <TemplateEditorScreen /> };
 export const ImageInsert: Story = { render: () => <ImageInsertScreen /> };

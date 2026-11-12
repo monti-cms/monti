@@ -1,9 +1,11 @@
 import { ChevronLeft } from "../../icons";
 import {
 	Button,
+	Count,
 	PageBody,
 	PageColumn,
 	PageHeader,
+	Progress,
 	ReviewCompare,
 	ReviewCompareHead,
 	ReviewGroup,
@@ -107,20 +109,47 @@ const files: readonly { name: string; folder: string }[] = [
 	{ name: "tmp.gif", folder: "Blog Assets" },
 ];
 
-const moves: readonly { title: string; path: string; included: boolean }[] = [
+const moves: readonly { title: string; path: string; included: boolean; failed?: string }[] = [
 	{ title: "2024 회고", path: "/retro-2024", included: true },
 	{ title: "리액트 18 정리", path: "/react-18", included: true },
-	{ title: "겨울 사진", path: "/winter-photos", included: true },
+	{ title: "겨울 사진", path: "/winter-photos", included: true, failed: "휴지통에 있음" },
 	{ title: "타입스크립트 5.4", path: "/ts-54", included: false },
 	{ title: "블로그 이전 기록", path: "/blog-move", included: true },
 ];
+
+/**
+ * Where the review stands: being looked at; being applied (9 of 17 done); applied (16 done, one could not be); applied in part and cut off (the
+ * rest waits to be applied); undone; and one item being made again for the entry as it is now.
+ */
+export type ReviewStage = "review" | "applying" | "result" | "cut" | "reverted" | "remaking";
+
+/** What a row says at its end once the proposal has run: applied, undone, or why it could not be. */
+function Outcome({ stage, done, failed }: { stage: ReviewStage; done: boolean; failed?: string }) {
+	if (stage === "review" || stage === "remaking" || !done) return undefined;
+	if (failed !== undefined && stage !== "applying" && stage !== "cut")
+		return (
+			<Text variant="caption" tone="danger">
+				못 함 · {failed}
+			</Text>
+		);
+	return (
+		<Text variant="caption" tone={stage === "reverted" ? "subtle" : "success"}>
+			{stage === "reverted" ? "되돌림" : "✓ 적용"}
+		</Text>
+	);
+}
 
 /**
  * The review page of the assistant's proposal: what was asked, then each group of changes, every row its own check; `side` shows the rewrites
  * side by side. A row's `end` says only a result or a failure, never what the group title already says. The page body spaces the parts: 16px
  * under the header, 32px under the quote and between groups.
  */
-export function ProposalReviewView({ side = false }: { side?: boolean }) {
+export function ProposalReviewView({ side = false, stage = "review" }: { side?: boolean; stage?: ReviewStage }) {
+	const looking = stage === "review" || stage === "remaking";
+	/** Checks no longer change once the proposal runs. */
+	const readOnly = !looking;
+	/** While applying, and after an apply that was cut off, only the first two groups and part of the third are done. */
+	const part = stage === "applying" || stage === "cut";
 	return (
 		<AdminFrame open={null}>
 			<PageColumn>
@@ -130,8 +159,39 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 				</TextButton>
 				<Stack gap={0} paddingTop={2}>
 					<PageHeader title="제안 검토" meta="10. 26 10:51">
-						<Button variant="ghost">버리기</Button>
-						<Button>17건 적용</Button>
+						{looking ? (
+							<>
+								<Button variant="ghost">버리기</Button>
+								<Button>17건 적용</Button>
+							</>
+						) : stage === "applying" ? (
+							<>
+								<Text variant="note">적용 중</Text>
+								<Count>9 / 17</Count>
+								<Progress inline value={53} label="적용 중" />
+							</>
+						) : stage === "cut" ? (
+							<>
+								<Text variant="note" tone="success">
+									✓ 9건 적용
+								</Text>
+								<Button>8건 적용</Button>
+							</>
+						) : stage === "result" ? (
+							<>
+								<Text variant="note" tone="success">
+									✓ 16건 적용
+								</Text>
+								<Text variant="note" tone="danger">
+									1건 못 함
+								</Text>
+								<Button variant="secondary">모두 되돌리기</Button>
+							</>
+						) : (
+							<Text variant="note" tone="subtle">
+								되돌림 · 10:58
+							</Text>
+						)}
 					</PageHeader>
 				</Stack>
 				<PageBody>
@@ -161,13 +221,20 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 										<ReviewCompare
 											key={block.label}
 											included
+											readOnly={readOnly}
 											includeLabel={`${block.label} 넣기`}
 											label={block.label}
 											before={marked(block.before)}
 											after={marked(block.after)}
 										/>
 									) : (
-										<ReviewLine key={block.label} included includeLabel={`${block.label} 넣기`} label={block.label}>
+										<ReviewLine
+											key={block.label}
+											included
+											readOnly={readOnly}
+											includeLabel={`${block.label} 넣기`}
+											label={block.label}
+										>
 											{marked(block.line)}
 										</ReviewLine>
 									),
@@ -175,7 +242,14 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 							</ReviewGroup>
 							<ReviewGroup title="요약 채우기" meta="글 2편">
 								{/* The old summary was empty: the new one stands alone in the proposal's mark, with no struck "비어 있음 →" before it. */}
-								<ReviewItem included includeLabel="타입 정리 메모 넣기" title="타입 정리 메모" path="/types-memo">
+								<ReviewItem
+									included
+									readOnly={readOnly}
+									includeLabel="타입 정리 메모 넣기"
+									title="타입 정리 메모"
+									path="/types-memo"
+									end={<Outcome stage={stage} done />}
+								>
 									{marked([["ins", "자주 헷갈리는 타입 세 가지를 예시 하나씩으로 정리한 메모."]])}
 								</ReviewItem>
 								<ReviewItem
@@ -184,28 +258,43 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 									title="쓰는 중인 글"
 									path="/draft-post"
 									muted
+									readOnly
 									end={
-										<>
-											<Text variant="caption" tone="warning">
-												이 사이에 고쳐짐
-											</Text>{" "}
-											<TextButton variant="underline" size="caption">
-												다시 만들기
+										stage === "remaking" ? (
+											<TextButton variant="underline" size="caption" loading>
+												다시 만드는 중…
 											</TextButton>
-										</>
+										) : (
+											<>
+												<Text variant="caption" tone="warning">
+													이 사이에 고쳐짐
+												</Text>{" "}
+												{looking || stage === "cut" ? (
+													<TextButton variant="underline" size="caption">
+														다시 만들기
+													</TextButton>
+												) : null}
+											</>
+										)
 									}
 								>
 									{marked([["ins", "글보다 도구를 고치는 데 시간을 더 쓰게 된 이유와 그 정리."]])}
 								</ReviewItem>
 							</ReviewGroup>
-							<ReviewGroup title="2024 폴더로 옮기기" meta="글 11편" actions={<TextButton>11편 모두 빼기</TextButton>}>
-								{moves.map((move) => (
+							<ReviewGroup
+								title="2024 폴더로 옮기기"
+								meta="글 11편"
+								actions={looking ? <TextButton>11편 모두 빼기</TextButton> : undefined}
+							>
+								{moves.map((move, index) => (
 									<ReviewItem
 										key={move.path}
 										included={move.included}
+										readOnly={readOnly}
 										includeLabel={`${move.title} 넣기`}
 										title={move.title}
 										path={move.path}
+										end={<Outcome stage={stage} done={move.included && (!part || index < 2)} failed={move.failed} />}
 									/>
 								))}
 								<ReviewMore open={false} onOpenChange={none} moreLabel="6편 더 보기" lessLabel="접기" />
@@ -216,9 +305,11 @@ export function ProposalReviewView({ side = false }: { side?: boolean }) {
 									<ReviewItem
 										key={file.name}
 										included
+										readOnly={readOnly}
 										includeLabel={`${file.name} 넣기`}
 										title={file.name}
 										path={file.folder}
+										end={<Outcome stage={stage} done={!part} />}
 									/>
 								))}
 							</ReviewGroup>

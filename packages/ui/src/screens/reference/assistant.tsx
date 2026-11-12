@@ -1,9 +1,12 @@
 import {
+	BulkBar,
+	Caret,
 	ChatAnswer,
 	ChatEntryLink,
 	ChatEntryList,
 	ChatMessage,
 	ChatThread,
+	Chip,
 	Count,
 	EntryStatus,
 	ListFooter,
@@ -12,6 +15,7 @@ import {
 	PageColumn,
 	PageHeader,
 	PageSizeMenu,
+	PageToolbar,
 	Pagination,
 	PaginationContent,
 	PaginationItem,
@@ -31,10 +35,12 @@ import {
 	TableCell,
 	TableRow,
 	Text,
+	TextButton,
 	ToolCallLine,
 	ToolCallLines,
 } from "../../index";
 import { AssistantPanel, MessageActions } from "./assistant-parts";
+import { panelOf } from "./assistant-states";
 import { AdminFrame } from "./frame";
 import { NewPostButton, PostSearch } from "./main";
 
@@ -217,56 +223,113 @@ const conversation = (
 	</AssistantPanel>
 );
 
-/** The posts list with the assistant open beside it: a conversation that ends in a proposal waiting for review. */
-export function AssistantScreen() {
+/** The two posts the assistant found: the list filtered to them. */
+const foundRows: readonly Row[] = [
+	{
+		status: "editing",
+		statusLabel: "수정 중",
+		title: "발행 후 고친 글",
+		address: "/edited-post",
+		category: "개발",
+		tags: "리액트",
+		language: "KO",
+		date: "10. 26",
+	},
+	{
+		status: "draft",
+		statusLabel: "초안",
+		title: "쓰는 중인 글",
+		address: "/draft-post",
+		category: "개발",
+		language: "KO",
+		date: "10. 25",
+	},
+];
+
+/**
+ * The posts list with the assistant open beside it: a conversation that ends in a proposal waiting for review. `mode` is the list as the assistant
+ * left it: `filtered` to what it found (its filter is blue until someone touches it), or `picked` with those rows picked by it (blue checks), the
+ * bar over them offering "✦ 요청".
+ */
+export function AssistantScreen({ mode }: { mode?: "filtered" | "picked" } = {}) {
+	const shown = mode ? foundRows : rows;
+	const picked = mode === "picked";
 	return (
 		<AdminFrame
 			open="posts"
 			folders={[{ name: "시리즈 원고", count: "2" }]}
 			counts={{ trash: "6" }}
 			corner={false}
-			panel={conversation}
+			panel={mode === "filtered" ? panelOf("filtered") : picked ? panelOf("delegate") : conversation}
 		>
 			<PageColumn width="list">
 				<PageHeader title="게시글" meta="/posts/:slug">
 					<PostSearch />
 					<NewPostButton />
 				</PageHeader>
+				{mode ? (
+					<PageToolbar inset>
+						<Chip proposal removeLabel="거르기 빼기" onRemove={none}>
+							요약 비어 있음
+						</Chip>
+					</PageToolbar>
+				) : null}
 				<ListScroll>
 					<Table container="none" layout="fixed" columns={[76, undefined, 84, 152, 60, 71, 39]}>
-						<ListHead
-							selectAll={{ state: "none", onChange: () => {}, label: "이 페이지 모두 고르기" }}
-							end={39}
-							columns={[
-								{ id: "status", label: "상태", size: 76 },
-								{ id: "title", label: "제목" },
-								{ id: "category", label: "카테고리", size: 84 },
-								{ id: "tags", label: "태그", size: 152 },
-								{ id: "language", label: "언어", size: 60 },
-								{ id: "updated", label: "수정일", sort: "desc", align: "end", size: 64 },
-							]}
-							add={{ label: "열 추가", columns: [{ id: "more", label: "열 추가" }], onAdd: none }}
-						/>
+						{picked ? (
+							<BulkBar
+								label="2개 선택"
+								colSpan={7}
+								request={{ label: "요청", onClick: none }}
+								more={{ label: "더 보기", children: null }}
+								selectAll={{ state: "all", onChange: none, label: "이 페이지 모두 고르기" }}
+								clearLabel="선택 해제"
+								onClear={none}
+							>
+								<TextButton>발행</TextButton>
+								<TextButton>보관</TextButton>
+								<TextButton>
+									폴더로
+									<Caret />
+								</TextButton>
+							</BulkBar>
+						) : (
+							<ListHead
+								selectAll={{ state: "none", onChange: () => {}, label: "이 페이지 모두 고르기" }}
+								end={39}
+								columns={[
+									{ id: "status", label: "상태", size: 76 },
+									{ id: "title", label: "제목" },
+									{ id: "category", label: "카테고리", size: 84 },
+									{ id: "tags", label: "태그", size: 152 },
+									{ id: "language", label: "언어", size: 60 },
+									{ id: "updated", label: "수정일", sort: "desc", align: "end", size: 64 },
+								]}
+								add={{ label: "열 추가", columns: [{ id: "more", label: "열 추가" }], onAdd: none }}
+							/>
+						)}
 						<TableBody>
-							<TableRow>
-								<TableCell />
-								<TableCell truncate>
-									<RowTitle folder title={<RowLink>시리즈 원고</RowLink>} address="글 2" />
-								</TableCell>
-								<TableCell />
-								<TableCell />
-								<TableCell />
-								<TableCell />
-								<TableCell align="end">
-									<RowActions>
-										<RowMore label="더 보기" />
-									</RowActions>
-								</TableCell>
-							</TableRow>
-							{rows.map((row) => (
-								<TableRow key={row.address}>
+							{mode ? null : (
+								<TableRow>
+									<TableCell />
+									<TableCell truncate>
+										<RowTitle folder title={<RowLink>시리즈 원고</RowLink>} address="글 2" />
+									</TableCell>
+									<TableCell />
+									<TableCell />
+									<TableCell />
+									<TableCell />
+									<TableCell align="end">
+										<RowActions>
+											<RowMore label="더 보기" />
+										</RowActions>
+									</TableCell>
+								</TableRow>
+							)}
+							{shown.map((row) => (
+								<TableRow key={row.address} selected={picked} proposal={picked}>
 									<TableCell>
-										<RowCheck checked={false} label={`${row.title} 고르기`} />
+										<RowCheck checked={picked} proposal={picked} label={`${row.title} 고르기`} />
 										<EntryStatus status={row.status} quiet={row.status === "published"}>
 											{row.statusLabel}
 										</EntryStatus>
@@ -301,23 +364,21 @@ export function AssistantScreen() {
 					</Table>
 				</ListScroll>
 				<ListFooter>
-					<Count>1–25 / 148</Count>
+					<Count>{mode ? "1–2 / 2" : "1–25 / 148"}</Count>
 					<PageSizeMenu label="한 쪽에 보일 수" value={25} options={[{ value: 25, label: "25개씩" }]} />
 					<Pagination>
 						<PaginationContent>
 							<PaginationItem>
 								<PaginationPrevious disabled />
 							</PaginationItem>
-							{["1", "2", "3", "4", "5", "6"].map((page) => (
+							{(mode ? ["1"] : ["1", "2", "3", "4", "5", "6"]).map((page) => (
 								<PaginationItem key={page}>
 									<PaginationLink href="#" isActive={page === "1"}>
 										{page}
 									</PaginationLink>
 								</PaginationItem>
 							))}
-							<PaginationItem>
-								<PaginationNext href="#" />
-							</PaginationItem>
+							<PaginationItem>{mode ? <PaginationNext disabled /> : <PaginationNext href="#" />}</PaginationItem>
 						</PaginationContent>
 					</Pagination>
 				</ListFooter>
