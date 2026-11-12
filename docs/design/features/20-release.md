@@ -36,7 +36,7 @@
 - `admin` · `next` · `ai`에 core · ui와 같은 빌드를 붙인다(`build-package.mjs`: 파일마다 옮겨 `"use client"`가 남는다. `tsconfig.build.json`, `files`, `publishConfig.exports`). `admin`의 빌드는 스타일시트(`dist/styles.css`, `build-styles.mjs`)까지다. 루트의 `pnpm build`는 의존 순서대로 다섯을 빌드한다: core → ui → admin → ai → next.
 - 묶음은 패키지마다 압축 파일 하나(`monti-cms-core-0.2.0.tgz` …)와 설치 줄을 적은 `README.md`다. 압축 파일에는 `dist`, 그 패키지의 `README.md`, `LICENSE`가 있고 소스(`src`) · 테스트 · 스토리는 없다. core에는 `bin`(`monti` 명령), ui에는 `styles`가 더 있다.
 - 묶음 안의 패키지끼리는 **같은 묶음의 주소**로 가리킨다. `pack-release.mjs --base <주소>`가 압축 파일 안 `package.json`의 `@monti-cms/*` 줄을 `<주소>/monti-cms-core-0.2.0.tgz`로 바꿔 쓴다. 그래서 사이트는 직접 쓰는 패키지만 주소로 적고, 나머지는 따라온다. 증명이 돌리는 것은 npm이다. pnpm과 yarn으로는 해 보지 않았으므로 된다고 말하지 않는다. `--base` 없이 묶으면 버전 번호 그대로이고, 그것이 npm에 올릴 파일이다(원칙 2). 그 버전은 아직 npm에 없으므로, 그렇게 묶은 것을 설치하려면 묶음의 압축 파일을 모두 함께 설치한다(묶음의 `README.md`가 그 줄을 적는다).
-- 묶음의 `README.md`가 릴리스의 글이다. 있는 것만 적는다: `monti init`은 T82가 들어온 뒤에 적는다. 그 전에는 사이트가 쓰는 파일 넷이 어디 있는지(`packages/next`의 README, 예제 앱)를 가리킨다.
+- 묶음의 `README.md`가 릴리스의 글이다. 있는 것만 적는다: 설치하는 줄 다음이 `npx monti init`이고, 그 명령은 증명이 새 사이트에서 돌리는 것이다.
 - 아이콘 패키지(`@carbon/icons-react`)는 그것을 가져다 쓰는 `@monti-cms/ui`의 의존이다. 전에는 ui와 admin의 peer였는데, peer를 스스로 설치하지 않는 패키지 매니저(yarn)에서는 빌드가 그 패키지를 찾지 못한다. peer여야 할 까닭(하나만 있어야 하는 상태)이 없다.
 - 압축 파일의 `sideEffects`는 낸 파일을 가리킨다. 저장소 안에서는 소스(`./src/admin.tsx`: 관리자의 스타일시트를 가져오는 파일)를 가리키는데 소스는 나가지 않으므로, 묶을 때 낸 파일 이름(`./dist/admin.js`)으로 바꾸고 스타일시트도 함께 적는다. 그대로 두면 번들러가 스타일시트를 가져오는 줄을 버려도 된다고 읽는다.
 - `release` 브랜치와 `github:…&path:` 설치는 없앤다. `v*` 태그를 밀면 `release.yml`이 버전을 확인하고, 빌드하고, 새 사이트로 증명하고(아래), GitHub 릴리스를 만들어 압축 파일을 자산으로 올린다. 릴리스는 초안으로 만들어 압축 파일을 다 올린 뒤에 공개한다: 올리다 실패해도 반쯤 된 릴리스가 보이지 않고, 다시 돌리면 그 초안을 이어 쓴다.
@@ -52,8 +52,8 @@
 1. `pnpm build` 뒤 묶음을 임시 폴더에 만들고, 이 컴퓨터의 HTTP 주소로 내준다(`--base http://127.0.0.1:…`). 릴리스에서 사람이 받는 것과 같은 모양이다: 사이트가 적지 않은 패키지가 주소에서 따라온다.
 2. 저장소 밖 임시 폴더에 새 Next 16 앱을 놓는다. `create-next-app`이 만드는 것과 같은 모양의 틀(`testing/release/app`: TypeScript, App Router, `app/layout.tsx`, `app/page.tsx`)이다. 네트워크와 그날의 `create-next-app`에 기대지 않으려고 틀을 저장소에 둔다.
 3. npm으로 그 주소에서 설치한다(`@monti-cms/core` · `admin` · `next`, 그리고 이 사이트의 어느 페이지도 쓰지 않는 `ai`). pnpm의 작업 공간 연결이 없는, 가장 봐주지 않는 길이다. core와 ai는 설치된 자리에서 Node로 읽어 본다.
-4. `npx monti init --yes`로 Monti 파일을 쓴다. `init`이 생기기 전(T14의 PR)에는 스크립트가 예제 앱의 파일 넷을 그대로 넣는다.
-5. `npx monti db:setup`, `npx monti doctor`, `npx tsc --noEmit`, `npx next build`를 차례로 돌린다. 하나라도 실패하면 멈춘다.
+4. 제 데이터베이스를 만들고 `npx monti init --yes`를 돌린다. Monti 파일을 쓰고 표를 만든다. 한 번 더 돌려 아무것도 쓰지 않는지 보고, `npx monti doctor`에 FAIL이 없는지 본다.
+5. `npx tsc --noEmit`, `npx next build`를 차례로 돌린다. 하나라도 실패하면 멈춘다.
 6. `npx next start`를 띄우고 브라우저(흐름 테스트가 쓰는 Playwright)로 `/admin`을 연다. 관리자 화면이 그려지는지(15번 문서의 첫 화면), 그 화면의 버튼이 토큰의 높이와 색을 가졌는지(스타일 파일이 걸렸다는 뜻이다), 브라우저 콘솔에 오류가 없는지, 관리자 API(`auth.state`)가 답하는지, 사이트의 첫 페이지가 제 모습 그대로인지(관리자의 스타일이 사이트로 새지 않았는지) 본다.
 
 데이터베이스는 CI의 Postgres를 쓴다. 로컬에서는 `DATABASE_URL`을 받는다. 중간에 멈춰도(Ctrl-C, 취소된 CI 작업) 만든 데이터베이스와 임시 사이트를 치운다.
@@ -93,6 +93,7 @@ npx monti init
 ```
 
 - `monti` 명령은 `@monti-cms/core`에 있다. 지금은 `monti.config.ts`가 없으면 멈추는데, `init`과 `doctor`는 그 파일 없이 돈다(`bin/monti.mjs`가 두 명령을 먼저 가른다).
+- **`monti` 명령은 사이트의 환경 파일을 읽는다.** 만들며 찾은 빈틈이다(2026-11-13): 명령은 환경 파일을 하나도 읽지 않았다. 예제 앱의 README대로 `.env.local`을 만들고 `monti db:setup`을 돌리면 데이터베이스 주소를 찾지 못했다. 이제 설정을 읽기 전에 Next가 읽는 순서로 읽는다: 환경에 이미 있는 값, 그다음 `.env.<mode>.local`, `.env.local`, `.env.<mode>`, `.env`(`<mode>`는 `NODE_ENV`, 없으면 `development`. 테스트 모드에서는 Next처럼 `.env.local`을 뺀다). `--env-file`은 하나를 더 가리키고 가장 먼저 읽는다. 모든 명령에 해당한다.
 - `init`은 패키지를 설치하지 않는다. `@monti-cms/admin`이나 `@monti-cms/next`가 없으면 아무것도 쓰지 않고 설치할 줄을 말한다. 설치는 사이트의 패키지 매니저가 할 일이고, 묶음의 주소는 릴리스 README에 있다.
 
 ### 무엇을 보고, 묻고, 쓰나
@@ -108,15 +109,19 @@ npx monti init
    | 미디어 파일을 둘 곳 | `--storage local\|s3\|none` | `local`(이 컴퓨터의 폴더) |
 
    `s3`는 `@monti-cms/storage-s3`가 설치되어 있을 때만 고를 수 있다. 없으면 설치할 줄을 말한다.
+
+   물음은 한 줄씩이고, 대괄호 안이 Enter를 눌렀을 때의 답이다(`Where should the admin be? [/admin]:`). 틀린 답은 까닭을 한 줄 말하고 다시 묻는다. 물음을 그리는 라이브러리는 쓰지 않는다: 넷뿐이라 Node의 것으로 충분하다. 사이트가 이미 관리자 화면을 붙여 두었으면 그 폴더 이름이 관리자 주소의 기본값이다.
+   TypeScript가 없는 사이트(`tsconfig.json`이 없다)에서는 쓰지 않고 그렇게 말한다. 구조 파일과 설정 파일이 TypeScript다.
 3. **쓴다.** 새 파일만이다(원칙 3).
 
    | 파일 | 무엇 |
    |---|---|
    | `monti.schema.ts` | 구조의 시작: 고른 기본 언어, 본문이 있는 컬렉션 `post` 하나(제목, 주소). 값만 있는 파일이다 |
    | `monti.config.ts` | 데이터베이스(`DATABASE_URL`), 고른 로그인, 고른 저장소 |
-   | `lib/monti.ts` (`src/`가 있으면 그 아래) | `openSite(config)` |
+   | `lib/monti.ts` (`src/`가 있으면 그 아래) | `openSite(config)`. 파일끼리는 상대 경로로 가져온다: 사이트의 `@/` 별칭이 있다고 가정하지 않는다 |
    | `app/<관리자 주소>/page.tsx` | `AdminPage` |
    | `app/<관리자 주소>/api/[...path]/route.ts` | `adminRoute(monti)` |
+   | `app/<관리자 주소>/layout.tsx` | 관리자 화면의 제 틀. 사이트에 맨 위 `app/layout.tsx`가 없을 때만 쓴다(아래 "사이트의 틀") |
    | `.env.example` | `DATABASE_URL`, `MONTI_SECRET`(GitHub 로그인이면 그 값들, S3면 `S3_*`)의 이름과 한 줄 설명 |
 
    있던 파일에 하는 것은 덧붙이기뿐이다.
@@ -125,7 +130,7 @@ npx monti init
    - `package.json`의 `scripts`에 `db:setup`과 `db:migrate`가 없으면 더한다. 있던 `dev` · `build` 같은 줄은 바꾸지 않는다.
    - 사람이 고친 파일을 덮어쓰는 길은 없다. 덮어쓰라는 값(`--force`)도 두지 않는다. Monti 파일을 처음 모양으로 되돌리려면 그 파일을 지우고 다시 돌린다.
 4. **데이터베이스.** `DATABASE_URL`에 닿으면 표를 만든다(`db:setup`). 사람이 있으면 먼저 묻는다. 닿지 않으면 건너뛰고 남은 일에 적는다.
-5. **점검하고 말한다.** `doctor`를 돌려 결과를 보이고, 쓴 것 · 건너뛴 것 · 남은 일을 적는다. 남은 일은 번호와 정확한 명령이다: 데이터베이스 주소 넣기, `npm run db:setup`, `npm run dev` 뒤 `/admin` 열기, 운영에 올릴 때 넣을 환경 변수와 `monti db:migrate`.
+5. **점검하고 말한다.** `doctor`를 돌려 결과를 보이고, 쓴 것 · 건너뛴 것 · 남은 일을 적는다. 쓰지 못할 까닭이 있을 때만 1로 끝난다(Next가 없음, 패키지가 빠짐, 모르는 값). 점검에 FAIL이 있어도 `init` 자체는 0이다: 그것은 남은 일이고, 배포를 멈추는 것은 `doctor`의 일이다. 물음에서 나가면(Ctrl+C) 130이다. 남은 일은 번호와 정확한 명령이다: 데이터베이스 주소 넣기, `npm run db:setup`, `npm run dev` 뒤 `/admin` 열기, 운영에 올릴 때 넣을 환경 변수와 `monti db:migrate`.
 
 - `--dry-run`은 쓸 것을 보이기만 한다.
 - 다시 돌려도 된다. 있는 것은 건너뛰고 빠진 것만 채운다. 빠진 것이 없으면 아무것도 쓰지 않고, 무엇이 이미 있는지 말한 뒤 `doctor`를 돌린다.
@@ -181,6 +186,11 @@ monti doctor: /Users/me/my-site
 | `storage/host` | 디스크가 남지 않는 호스트(`VERCEL` 같은 변수가 있다)에서 로컬 폴더 저장소를 쓴다 | FAIL |
 | `storage/cors` | 직접 올리는 저장소가 사이트 주소(`--origin`이나 `SITE_URL`)에서 온 올리기를 받는다 | FAIL, 버킷에 붙여 넣을 CORS 설정을 그대로 찍는다. 주소를 모르면 skip |
 | `auth/login` | GitHub 로그인이면 그 값들이 있다. 돌아올 주소를 한 줄로 알려 준다 | FAIL |
+
+- `storage/cors`는 S3 어댑터(T102)와 함께 들어온다. 그 전의 `doctor`에는 이 줄이 없다.
+- `MONTI_SECRET`은 32자보다 짧으면 FAIL이다(`openssl rand -base64 24`가 32자다).
+- 디스크가 남지 않는 호스트는 `VERCEL`, `NETLIFY`, `CF_PAGES`, `AWS_LAMBDA_FUNCTION_NAME` 가운데 하나가 있는 것으로 안다.
+- 저장소가 이 컴퓨터의 폴더인지는 저장소가 스스로 말한다(`Storage`의 선택 값 `kind: "folder"`, `localFolderStorage`가 단다).
 
 - 점검 하나가 한 줄이고, 앞에 표시(`ok` · `warn` · `FAIL` · `skip`)가 있다. 틀린 것은 그 줄 바로 아래에 어디에서 틀렸는지와 고치는 명령을 적는다. 끝에 개수를 센다.
 - 끝나는 값은 FAIL이 있으면 1, 없으면 0이다. 경고는 세지 않는다. `--json`은 같은 것을 JSON으로 낸다. 배포 과정이 이 값으로 멈출 수 있다.
@@ -283,9 +293,14 @@ monti doctor: /Users/me/my-site
 17. **첫 파일부터 직접 올리고, 서명된 주소에 아무것도 덧붙이지 않는다.** (레퍼런스: Payload에서 첫 올리기가 서버를 지나 작은 한도에 걸린 것과, 서명된 주소에 붙인 값이 서명을 깬 것이 보고되었다.)
 18. **R2와 MinIO는 주소, 경로 방식, 지역 `auto`로 되고 ACL은 쓰지 않는다.** (레퍼런스: Cloudflare R2의 문서, 확인.)
 19. **직접 올리기의 한도는 서버를 거친 길과 같은 10 MB다.** 큰 파일을 나눠 올리는 길(multipart)은 넣지 않는다.
-20. **증명은 묶음을 HTTP 주소로 내주고 npm으로 설치한다. 된다고 말하는 것은 해 본 것뿐이다.** `file:` 주소로 설치하면 사람이 받는 모양과 다르다(#483 코드 리뷰).
-21. **아이콘 패키지는 ui의 의존이고, 압축 파일의 `sideEffects`는 낸 파일을 가리킨다.** (#483 코드 리뷰.)
-22. **패키지는 늘 같은 버전이고, 버전을 올리는 도구를 따로 들이지 않는다.** (레퍼런스: 한 번호로 묶는 것은 Payload, tRPC와 같다. Changesets를 쓰는 곳이 많지만 Payload는 제 스크립트를 쓴다.)
+20. **`monti` 명령은 사이트의 환경 파일을 Next의 순서로 읽는다.** 만들며 찾은 빈틈을 메운 것이다. (레퍼런스: 조사 요약의 불만 1, 환경 파일은 Next의 순서(`.env.local`이 `.env`보다 먼저)를 따르라는 것.)
+21. **물음은 Node의 것으로 한 줄씩 묻는다. 물음 라이브러리를 들이지 않는다.** 옛 `init`은 `@clack/prompts`를 썼다.
+22. **`init`은 TypeScript가 없는 사이트에 쓰지 않는다.** `create-next-app`의 기본이 TypeScript다.
+23. **`init`이 쓰는 파일은 서로를 상대 경로로 가져온다.** 사이트의 별칭(`@/`)에 기대지 않는다. (레퍼런스: Payload는 `tsconfig`에 별칭을 더한다. Monti는 사이트의 파일을 고치지 않으므로 별칭 없이 쓴다.)
+24. **`init`의 끝나는 값은 쓸 수 있었는지만 말한다.** 점검의 FAIL은 남은 일이다.
+25. **증명은 묶음을 HTTP 주소로 내주고 npm으로 설치한다. 된다고 말하는 것은 해 본 것뿐이다.** `file:` 주소로 설치하면 사람이 받는 모양과 다르다(#483 코드 리뷰).
+26. **아이콘 패키지는 ui의 의존이고, 압축 파일의 `sideEffects`는 낸 파일을 가리킨다.** (#483 코드 리뷰.)
+27. **패키지는 늘 같은 버전이고, 버전을 올리는 도구를 따로 들이지 않는다.** (레퍼런스: 한 번호로 묶는 것은 Payload, tRPC와 같다. Changesets를 쓰는 곳이 많지만 Payload는 제 스크립트를 쓴다.)
 
 ## 옛 코드
 

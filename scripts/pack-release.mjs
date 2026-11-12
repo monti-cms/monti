@@ -61,7 +61,7 @@ export function builtSideEffects(sideEffects) {
 /**
  * The bundle's README, which is also a release's notes: the lines a site installs by. With a base the packages follow each other from the
  * bundle's address, so a site names the three it uses; without one they name each other by a version that is on no registry, so every
- * tarball is installed together. It names no command that does not exist yet: the files a site writes are in the adapter's README.
+ * tarball is installed together. The command it names, `monti init`, is the one the release's proof runs in a fresh site.
  */
 export function bundleReadme({ version, packages, base }) {
 	const where = (tarball) => (base ? `${base.replace(/\/$/, "")}/${tarball}` : `./${tarball}`);
@@ -79,9 +79,11 @@ A Next.js site (App Router, Next 16 or later), with npm:
 
 \`\`\`sh
 npm install ${install.map(({ tarball }) => where(tarball)).join(" ")}
+npx monti init
 \`\`\`
 
-Then the site writes four small files (its schema and config, the admin page, the admin's API route): they are in the
+\`monti init\` writes the site's Monti files (its schema and config, the admin's page and API route), adds what \`.env.local\` lacks, and says
+what is left to do; \`npx monti doctor\` checks a set-up. What the files are is in the
 [\`@monti-cms/next\` README](https://github.com/monti-cms/monti/tree/v${version}/packages/next#readme), and
 [\`examples/blog\`](https://github.com/monti-cms/monti/tree/v${version}/examples/blog) is a whole site. The admin brings its own stylesheet,
 already built. npm is the package manager this release was proven with; pnpm and yarn are untried.

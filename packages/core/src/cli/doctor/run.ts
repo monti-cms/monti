@@ -275,7 +275,9 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
 							fix: "fix the schema file (the admin's settings name each problem on the dev server)",
 						},
 					)
-				: ok(`the schema checks: ${Object.keys(config.schema.collections).length} collections`),
+				: ok(
+						`the schema checks: ${Object.keys(config.schema.collections).length} ${Object.keys(config.schema.collections).length === 1 ? "collection" : "collections"}`,
+					),
 		);
 	}
 	say("files/admin", filesAdmin(cwd));

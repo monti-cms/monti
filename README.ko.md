@@ -39,10 +39,17 @@ npm install \
   https://github.com/monti-cms/monti/releases/download/v<버전>/monti-cms-core-<버전>.tgz \
   https://github.com/monti-cms/monti/releases/download/v<버전>/monti-cms-admin-<버전>.tgz \
   https://github.com/monti-cms/monti/releases/download/v<버전>/monti-cms-next-<버전>.tgz
+npx monti init        # 사이트의 Monti 파일을 쓰고, .env.local에 없는 값을 더하고, 남은 일을 말한다
+npx monti doctor      # 설정 점검: 파일, 환경 값, 데이터베이스, 저장소
 ```
 
-그 뒤 사이트가 쓰는 것(작은 파일 넷)은 [`packages/next`](packages/next)에 있고, [`examples/blog`](examples/blog)는 사이트 하나 전체입니다.
-관리자 화면은 이미 만들어진 제 스타일시트를 가져옵니다. 그것 때문에 사이트에 Tailwind가 있어야 하지 않습니다.
+`monti init`은 넷을 묻습니다(관리자 주소, 사이트의 언어, 관리자가 로그인하는 법, 미디어 파일을 둘 곳). 저마다 명령줄 값이 있고,
+`-y`는 기본값을 씁니다. 사이트에 없는 파일만 쓰고 있는 파일은 덮어쓰지 않으므로 다시 돌려도 됩니다. 무엇을 쓰는지는
+[`packages/next`](packages/next)에 있고, [`examples/blog`](examples/blog)는 사이트 하나 전체입니다. 관리자 화면은 이미 만들어진 제
+스타일시트를 가져옵니다. 그것 때문에 사이트에 Tailwind가 있어야 하지 않습니다.
+
+`monti` 명령은 사이트의 환경 파일을 Next가 읽는 순서로 읽습니다. 환경에 이미 있는 값, 그다음 `.env.<mode>.local`, `.env.local`,
+`.env.<mode>`, `.env`입니다(`<mode>`는 `NODE_ENV`, 없으면 `development`). `--env-file <경로>`는 하나를 더 가리키고, 가장 먼저 읽습니다.
 
 ## 개발
 

@@ -4,7 +4,7 @@ import type { Site } from "./detect";
 
 /** The files `monti init` writes for a site, with their text: new files only. What an answer changes is in the text. */
 
-/** A language's own name ("한국어" for `ko`), for the schema's language list. */
+/** A language's own name (Korean in Korean for `ko`), for the schema's language list. */
 function languageName(code: string): string {
 	try {
 		return new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
