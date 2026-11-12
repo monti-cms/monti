@@ -1249,6 +1249,35 @@ describe("what the second review of the core found (#472)", () => {
 	});
 });
 
+describe("what the review after the merge found (#472)", () => {
+	it("05-1 a save that accepts items takes their proposal before any record, also the record its own `touches` holds: it does not hold a folder while it waits", async () => {
+		const monti = site();
+		const post = await newPost("옮길 글");
+		const target = await folder("2024");
+		const proposal = await monti.proposals.create("c1", "옮겨 줘");
+		const { itemId } = await monti.proposals.add(proposal, "entries.moveToFolder", { ids: [post], folder: target });
+		let free: boolean | null = null;
+		let saving: Promise<unknown> = Promise.resolve();
+		// Something that decides about the proposal holds its row (a discard, a revert), and the save comes meanwhile.
+		await db.transaction().execute(async (held) => {
+			await held.selectFrom("monti_proposal").select("id").where("id", "=", proposal).forUpdate().execute();
+			saving = monti
+				.run("entries.moveToFolder", { ids: [post], folder: target }, { ...admin, accepted: [itemId] })
+				.catch((error: unknown) => error);
+			await wait(300);
+			// The save waits for the proposal with nothing in its hands: the folder its `touches` would hold is free for whoever holds the proposal.
+			await db.transaction().execute(async (other) => {
+				const { rows } = await sql<{ free: boolean }>`
+					select pg_try_advisory_xact_lock(hashtext(${`monti:record:folder:${target}`})) as free
+				`.execute(other);
+				free = rows[0]?.free ?? null;
+			});
+		});
+		await saving;
+		expect(free).toBe(true);
+	});
+});
+
 describe("only a person takes a proposal", () => {
 	it("10-3 applying, leaving out, putting back and throwing away are no tools of the assistant, by any way in", async () => {
 		const monti = site();

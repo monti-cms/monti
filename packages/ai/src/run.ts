@@ -167,7 +167,8 @@ export type RunEvent =
 	| { type: "taken"; text: string }
 	/** Screen tools the browser runs now; it goes on with `resume` and their answers. */
 	| { type: "screen"; calls: { id: string; name: string; input: unknown }[] }
-	| { type: "usage"; input: number; output: number }
+	/** What the run has spent so far; `cached` is the part of `input` its service read from what it had kept, when it says. */
+	| { type: "usage"; input: number; output: number; cached?: number }
 	| ({ type: "end"; untaken: string[] } & RunEnd);
 
 /** A stored message: what the model saw or said, with what the panel needs to show a tool line again. */
@@ -249,29 +250,66 @@ const messagesOf = async (db: Db, runIds: string[]): Promise<Map<string, StoredM
 	return byRun;
 };
 
-async function append(db: Db, runId: string, message: StoredMessage, at: Date): Promise<void> {
-	const last = await db
-		.selectFrom("run_messages")
-		.select((eb) => eb.fn.max("position").as("position"))
-		.where("run_id", "=", runId)
-		.executeTakeFirst();
-	await db
-		.insertInto("run_messages")
-		.values({
-			id: randomId(),
-			run_id: runId,
-			position: (last?.position ?? -1) + 1,
-			message: JSON.stringify(message),
-			created_at: at,
-		})
-		.execute();
-	// What the run weighs in a later request of its conversation: kept as it grows, so that request need not read its messages to know.
-	const size = estimateTokens(JSON.stringify(message));
-	await db
-		.updateTable("runs")
-		.set((eb) => ({ size: eb("size", "+", size) }))
+/**
+ * A request found that the run it was working on is another request's now (it hung past its hold, and the run was taken up). It writes nothing
+ * more of the run and stops: whatever it would have written, the request that holds the run writes for itself.
+ */
+class LostRun extends Error {}
+
+/** What a stored message weighs when it is sent again: the service's own copy of it when there is one (that is what goes), else its words. */
+const sizeOf = (message: StoredMessage) =>
+	estimateTokens(
+		JSON.stringify("raw" in message && message.raw !== undefined ? { role: message.role, raw: message.raw } : message),
+	);
+
+/**
+ * Holds a run's row to the end of a transaction as the request with this hold (`token`): `LostRun` when the run is another request's by now,
+ * or nobody's. What the transaction then writes is written by the request that holds the run, and no other request takes the run meanwhile.
+ */
+async function holdRun(trx: Db, runId: string, token: string | null): Promise<void> {
+	const mine = await trx
+		.selectFrom("runs")
+		.select("id")
 		.where("id", "=", runId)
-		.execute();
+		.where("lease_token", "=", token)
+		.forUpdate()
+		.executeTakeFirst();
+	if (!mine) throw new LostRun();
+}
+
+/**
+ * Adds a message to a run. `token` is the hold of the request that writes it: the message goes in only while the run is still that request's,
+ * decided with the run's row held, so a request that lost the run cannot add to it between another request's messages (`LostRun`). A run that
+ * is only being opened has no holder to check yet.
+ */
+async function append(db: Db, runId: string, message: StoredMessage, at: Date, token?: string | null): Promise<void> {
+	const write = async (trx: Db) => {
+		if (token !== undefined) await holdRun(trx, runId, token);
+		const last = await trx
+			.selectFrom("run_messages")
+			.select((eb) => eb.fn.max("position").as("position"))
+			.where("run_id", "=", runId)
+			.executeTakeFirst();
+		await trx
+			.insertInto("run_messages")
+			.values({
+				id: randomId(),
+				run_id: runId,
+				position: (last?.position ?? -1) + 1,
+				message: JSON.stringify(message),
+				created_at: at,
+			})
+			.execute();
+		// What the run weighs in a later request of its conversation: kept as it grows, so that request need not read its messages to know.
+		const size = sizeOf(message);
+		await trx
+			.updateTable("runs")
+			.set((eb) => ({ size: eb("size", "+", size) }))
+			.where("id", "=", runId)
+			.execute();
+	};
+	if (token === undefined || db.isTransaction) await write(db);
+	else await db.transaction().execute(write);
 }
 
 export type RunSettings = { provider: ProviderFor; limits: RunLimits; holdMs: number };
@@ -329,22 +367,42 @@ export async function* runAssistant(
 	const usage: Usage = { ...run.usage };
 	let end: RunEnd | null = null;
 	let lastText = "";
+	/** What was said too late to be taken: it goes back to the person's own queue with the run's end. */
+	let untaken: string[] = [];
+	/**
+	 * Ends this request's part of the run. Only the request that holds the run says how it ended: one that finds the run is no longer its own
+	 * has lost it (`lost`), ends nothing, and leaves what was said meanwhile to the request that holds the run.
+	 */
 	const finish = async (ended: RunEnd) => {
-		end = ended;
-		await db
-			.updateTable("runs")
-			.set({
-				status: ended.status,
-				ended: JSON.stringify(ended),
-				ended_at: ended.status === "waiting" ? null : now(),
-				usage: JSON.stringify(usage),
-				leased_until: null,
-				lease_token: null,
-			})
-			.where("id", "=", run.id)
-			// Only the request that holds it says how it ended.
-			.where("lease_token", "=", run.lease_token)
-			.execute();
+		await db.transaction().execute(async (trx) => {
+			const written = await trx
+				.updateTable("runs")
+				.set({
+					status: ended.status,
+					ended: JSON.stringify(ended),
+					ended_at: ended.status === "waiting" ? null : now(),
+					usage: JSON.stringify(usage),
+					leased_until: null,
+					lease_token: null,
+				})
+				.where("id", "=", run.id)
+				.where("lease_token", "=", run.lease_token)
+				.executeTakeFirst();
+			if (written.numUpdatedRows === 0n) {
+				lost = true;
+				return;
+			}
+			end = ended;
+			// With the end, in one transaction: the request that takes the run up next finds an inbox that holds only what was said to it. A
+			// run that waits on the browser goes on in a moment, and keeps what was said for its next turn.
+			if (ended.status === "waiting") return;
+			const left = await trx
+				.deleteFrom("run_inbox")
+				.where("run_id", "=", run.id)
+				.returning(["text", "created_at"])
+				.execute();
+			untaken = left.sort((a, b) => a.created_at.getTime() - b.created_at.getTime()).map((each) => each.text);
+		});
 	};
 
 	try {
@@ -387,16 +445,27 @@ export async function* runAssistant(
 		const stored = await messagesOf(db, [...sent.map((each) => each.id), run.id]);
 		const history: ChatMessage[] = sent.flatMap((each) => whole(stored.get(each.id) ?? []));
 		const mine: StoredMessage[] = stored.get(run.id) ?? [];
+		// Everything this request writes of the run is written only while the run is still its own (`LostRun` otherwise).
 		const say = async (message: StoredMessage) => {
+			await append(db, run.id, message, now(), run.lease_token);
 			mine.push(message);
-			await append(db, run.id, message, now());
+		};
+		const whileMine = (updated: { numUpdatedRows: bigint }) => {
+			if (updated.numUpdatedRows === 0n) throw new LostRun();
 		};
 
 		let proposalId = run.proposal_id;
 		const proposal = async () => {
 			if (proposalId === null) {
 				proposalId = await monti.proposals.create(conversationId, run.request, run.id);
-				await db.updateTable("runs").set({ proposal_id: proposalId }).where("id", "=", run.id).execute();
+				whileMine(
+					await db
+						.updateTable("runs")
+						.set({ proposal_id: proposalId })
+						.where("id", "=", run.id)
+						.where("lease_token", "=", run.lease_token)
+						.executeTakeFirst(),
+				);
 			}
 			return proposalId;
 		};
@@ -405,10 +474,24 @@ export async function* runAssistant(
 		 * with it (this run and the call's id), and what it made is stored under that name in the same statement: a request cut between the
 		 * proposal and the note of the tool's answer runs the call again, and gets what it already made instead of making it twice.
 		 */
+		/**
+		 * Asked in the transaction that stores a proposed item, before it is kept: the item stays only while the run is still this request's. Without it a request
+		 * that lost the run could still write: a request at an item's place would put its change over the one a later request made there, and a
+		 * call the run's new holder never came to (it was stopped first) would still be proposed. (Making the run's proposal needs no such
+		 * check: there is one for a run whoever asks, and an empty one is shown nowhere.)
+		 */
+		const asHolder = async (trx: Db) => {
+			try {
+				await holdRun(trx, run.id, run.lease_token);
+			} catch (error) {
+				if (error instanceof LostRun) lost = true;
+				throw error;
+			}
+		};
 		const propose = async (operation: string, toolInput: unknown, group: string, callId: string) => {
 			const call = `${run.id}:${callId}`;
 			if (run.kind === "chat") {
-				const added = await monti.proposals.add(await proposal(), operation, toolInput, group, call);
+				const added = await monti.proposals.add(await proposal(), operation, toolInput, group, call, asHolder);
 				return { itemIds: added.itemIds, preview: added.preview, proposalId: await proposal() };
 			}
 			if (run.item_id === null) throw new CheckError({ key: "assistant.oneItem" });
@@ -420,18 +503,21 @@ export async function* runAssistant(
 				.executeTakeFirst();
 			if (item?.made_by?.startsWith(`${run.id}:`) && item.made_by !== call)
 				throw new CheckError({ key: "assistant.oneItem" });
-			const made = await monti.proposals.replace(run.item_id, operation, toolInput, call);
+			const made = await monti.proposals.replace(run.item_id, operation, toolInput, call, asHolder);
 			return { itemIds: [made.itemId], preview: made.preview, proposalId: run.proposal_id ?? "" };
 		};
 
 		const screenAnswers = new Map((input.screen ?? []).map((answer) => [answer.id, answer]));
 		let pending = run.pending as Pending | null;
 		const savePending = async () => {
-			await db
-				.updateTable("runs")
-				.set({ pending: pending === null ? null : JSON.stringify(pending), leased_until: lease() })
-				.where("id", "=", run.id)
-				.execute();
+			whileMine(
+				await db
+					.updateTable("runs")
+					.set({ pending: pending === null ? null : JSON.stringify(pending), leased_until: lease() })
+					.where("id", "=", run.id)
+					.where("lease_token", "=", run.lease_token)
+					.executeTakeFirst(),
+			);
 		};
 		const stopRequested = async () =>
 			(await db.selectFrom("runs").select("stop_requested").where("id", "=", run.id).executeTakeFirst())
@@ -568,6 +654,8 @@ export async function* runAssistant(
 					}
 					yield { type: "tool", id: call.id, name: tool.operation, kind: "write", state: "running", input: call.input };
 					const outcome = await callTool(monti, tool, call.input, propose, call.id);
+					// A tool's failure is its answer, except this one: the write was refused because the run is not this request's any more.
+					if (lost) throw new LostRun();
 					await answer(call, tool, outcome);
 					const failed = outcome.kind !== "screen" && outcome.error;
 					yield { type: "tool", id: call.id, name: tool.operation, kind: "write", state: failed ? "failed" : "done" };
@@ -620,15 +708,24 @@ export async function* runAssistant(
 				return;
 			}
 
-			// What the person said while it ran goes into this turn (doc 10, saying more).
-			const said = await db
-				.deleteFrom("run_inbox")
-				.where("run_id", "=", run.id)
-				.returning(["text", "created_at"])
-				.execute();
-			for (const each of said.sort((a, b) => a.created_at.getTime() - b.created_at.getTime())) {
-				await say({ role: "user", text: each.text });
-				yield { type: "taken", text: each.text };
+			// What the person said while it ran goes into this turn (doc 10, saying more). Taken and written in one transaction that holds the
+			// run as this request's: a request that lost the run takes nothing from the inbox of the one that holds it.
+			const said = await db.transaction().execute(async (trx) => {
+				await holdRun(trx, run.id, run.lease_token);
+				const taken = await trx
+					.deleteFrom("run_inbox")
+					.where("run_id", "=", run.id)
+					.returning(["text", "created_at"])
+					.execute();
+				const messages = taken
+					.sort((a, b) => a.created_at.getTime() - b.created_at.getTime())
+					.map((each): StoredMessage => ({ role: "user", text: each.text }));
+				for (const message of messages) await append(trx, run.id, message, now(), run.lease_token);
+				return messages;
+			});
+			for (const message of said) {
+				mine.push(message);
+				if (message.role === "user") yield { type: "taken", text: message.text };
 			}
 
 			let text = "";
@@ -664,8 +761,15 @@ export async function* runAssistant(
 						raw = event.raw;
 						usage.input += event.usage.input;
 						usage.output += event.usage.output;
+						if (event.usage.cached) usage.cached = (usage.cached ?? 0) + event.usage.cached;
+						// The key's count for the month is every token the service took in and gave out, cached or not, as before.
 						await monti.keys.addUsage(key.id, event.usage.input + event.usage.output);
-						yield { type: "usage", input: usage.input, output: usage.output };
+						yield {
+							type: "usage",
+							input: usage.input,
+							output: usage.output,
+							...(usage.cached ? { cached: usage.cached } : {}),
+						};
 					}
 				}
 			} catch (error) {
@@ -706,11 +810,14 @@ export async function* runAssistant(
 			turns += 1;
 			lastText = text;
 			await say({ role: "assistant", text, calls, ...(raw === undefined || cut ? {} : { raw }) });
-			await db
-				.updateTable("runs")
-				.set((eb) => ({ turns: eb("turns", "+", 1), usage: JSON.stringify(usage), leased_until: lease() }))
-				.where("id", "=", run.id)
-				.execute();
+			whileMine(
+				await db
+					.updateTable("runs")
+					.set((eb) => ({ turns: eb("turns", "+", 1), usage: JSON.stringify(usage), leased_until: lease() }))
+					.where("id", "=", run.id)
+					.where("lease_token", "=", run.lease_token)
+					.executeTakeFirst(),
+			);
 			if (calls.length === 0) {
 				await finish({ status: "done" });
 				return;
@@ -718,30 +825,35 @@ export async function* runAssistant(
 			pending = { calls, answers: {} };
 			await savePending();
 		}
+	} catch (error) {
+		// The run is another request's now: this one stops here, having written nothing since.
+		if (!(error instanceof LostRun)) throw error;
+		lost = true;
 	} finally {
 		clearInterval(held);
 		signal.removeEventListener("abort", onGone);
 		inFlight.delete(run.id);
 		// Whoever listened went away, or something broke: the run is left so that it can be gone on with.
 		if (end === null && !lost) await finish({ status: "interrupted", reason: "connection" });
+		// A request that lost the run tells whoever listens to it that its connection to the run broke, and writes nothing: the run's end, its
+		// inbox, the item's thread and the conversation are the business of the request that holds the run.
 		const ended = (end ?? { status: "interrupted", reason: "connection" }) as RunEnd;
-		// What was said too late to be taken goes back to the person's own queue. A request that no longer holds the run leaves the queue
-		// to the one that does.
-		const untaken =
-			ended.status === "waiting" || lost
-				? []
-				: (await db.deleteFrom("run_inbox").where("run_id", "=", run.id).returning(["text", "created_at"]).execute())
-						.sort((a, b) => a.created_at.getTime() - b.created_at.getTime())
-						.map((each) => each.text);
-		// A request at an item's place leaves what was asked and answered with the item (doc 10, a request at its place).
-		if (run.kind === "spot" && run.item_id !== null && ended.status === "done" && !lost)
-			await monti.proposals.addExchange(run.item_id, {
-				request: run.request,
-				answer: lastText,
-				at: now().toISOString(),
-			});
-		await db.updateTable("conversations").set({ last_opened_at: now() }).where("id", "=", conversationId).execute();
-		yield { type: "usage", input: usage.input, output: usage.output };
+		if (end !== null) {
+			// A request at an item's place leaves what was asked and answered with the item (doc 10, a request at its place).
+			if (run.kind === "spot" && run.item_id !== null && ended.status === "done")
+				await monti.proposals.addExchange(run.item_id, {
+					request: run.request,
+					answer: lastText,
+					at: now().toISOString(),
+				});
+			await db.updateTable("conversations").set({ last_opened_at: now() }).where("id", "=", conversationId).execute();
+		}
+		yield {
+			type: "usage",
+			input: usage.input,
+			output: usage.output,
+			...(usage.cached ? { cached: usage.cached } : {}),
+		};
 		yield { type: "end", untaken, ...ended };
 	}
 }
@@ -863,36 +975,44 @@ async function takeUp(monti: Monti, runId: string, until: Date, more: boolean): 
 	}
 	const limited = sql<boolean>`ended->>'reason' in ('turns', 'tokens')`;
 	const taken = await monti.db
-		.updateTable("runs")
-		.set((eb) => ({
-			status: "running",
-			leased_until: until,
-			lease_token: randomId(),
-			stop_requested: false,
-			ended: null,
-			ended_at: null,
-			// A person said to go on past a limit: the turns and tokens count from here. Only when a limit is what stopped it.
-			...(more
-				? {
-						turns_from: eb.case().when(limited).then(eb.ref("turns")).else(eb.ref("turns_from")).end(),
-						tokens_from: eb
-							.case()
-							.when(limited)
-							.then(sql<number>`(usage->>'input')::integer + (usage->>'output')::integer`)
-							.else(eb.ref("tokens_from"))
-							.end(),
-					}
-				: {}),
-		}))
-		.where("id", "=", runId)
-		.where((eb) =>
-			eb.or([
-				eb("status", "in", ["interrupted", "waiting"]),
-				eb.and([eb("status", "=", "running"), eb("leased_until", "<", monti.now())]),
-			]),
-		)
-		.returningAll()
-		.executeTakeFirst()
+		.transaction()
+		.execute(async (trx) => {
+			// With the conversation's row held: a removal of the conversation holds that row for itself, so the run is taken up before the
+			// removal looks for a live run (and the removal is refused), or after it is gone (and there is no run to take). Never in between,
+			// where the run just taken would be deleted from under its request.
+			await trx.selectFrom("conversations").select("id").where("id", "=", there.conversation_id).forShare().execute();
+			return trx
+				.updateTable("runs")
+				.set((eb) => ({
+					status: "running",
+					leased_until: until,
+					lease_token: randomId(),
+					stop_requested: false,
+					ended: null,
+					ended_at: null,
+					// A person said to go on past a limit: the turns and tokens count from here. Only when a limit is what stopped it.
+					...(more
+						? {
+								turns_from: eb.case().when(limited).then(eb.ref("turns")).else(eb.ref("turns_from")).end(),
+								tokens_from: eb
+									.case()
+									.when(limited)
+									.then(sql<number>`(usage->>'input')::integer + (usage->>'output')::integer`)
+									.else(eb.ref("tokens_from"))
+									.end(),
+							}
+						: {}),
+				}))
+				.where("id", "=", runId)
+				.where((eb) =>
+					eb.or([
+						eb("status", "in", ["interrupted", "waiting"]),
+						eb.and([eb("status", "=", "running"), eb("leased_until", "<", monti.now())]),
+					]),
+				)
+				.returningAll()
+				.executeTakeFirst();
+		})
 		.catch((error: unknown) => {
 			// Another chat run of the conversation is going: this one waits its turn.
 			if (isBusy(error)) throw new CheckError({ key: "assistant.busy" });
@@ -954,11 +1074,15 @@ async function open(monti: Monti, input: RunInput, until: Date): Promise<RunRow>
 
 	// One chat run at a time in a conversation; requests at items' places run beside it and beside each other (doc 10).
 	if (kind === "chat" && conversation) {
+		// A run whose request died is cut short here, and is nobody's from here on: the request that held it may only have hung, and with
+		// its name still on the run it would come back and write beside the run this message starts.
 		await db
 			.updateTable("runs")
 			.set({
 				status: "interrupted",
 				ended: JSON.stringify({ status: "interrupted", reason: "connection" } satisfies RunEnd),
+				leased_until: null,
+				lease_token: null,
 			})
 			.where("conversation_id", "=", conversation.id)
 			.where("status", "=", "running")
