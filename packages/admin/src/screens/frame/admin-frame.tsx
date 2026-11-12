@@ -2,6 +2,7 @@ import type { FolderNode } from "@monti-cms/core";
 import {
 	Count,
 	folderTree,
+	Icon,
 	IconButton,
 	Inline,
 	Sidebar,
@@ -304,7 +305,7 @@ export function AdminFrame({
 						corner={
 							covered || !assistant || assistant.open ? undefined : (
 								<IconButton ref={corner} label={t("frame.assistant")} onClick={assistant.onOpen}>
-									<Spark className="size-monti-icon-lg" />
+									<Icon icon={Spark} size="lg" />
 								</IconButton>
 							)
 						}

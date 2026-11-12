@@ -7,7 +7,7 @@ import { Count } from "./count";
  * changed"): cream background and one rule below. Where it stands is not its own: a screen gives it to the top place (`PageBanner`, or the `banner`
  * of `SidebarInset` and `StandalonePage`). A 6px dot leads the sentence, 8px before its words. `tone="warning"` (the default) sets the sentence in the warning text color and the dot in the
  * warning mark color; `tone="danger"` is for something that failed (a delivery, a save) and makes both red; `tone="neutral"` is a state that is neither (an
- * entry in the trash): both are subtle, and `meta` is a plain sentence (`plainMeta` makes it one on any tone: "This post can't be saved"). `title` is the sentence, `meta` the small detail after it in mono, which is cut with "…" when the line is short (the sentence and the actions never wrap); `children`
+ * entry in the trash): both are subtle, and `meta` is a plain sentence (`plainMeta` makes it one on any tone: "This post can't be saved"). `title` is the sentence, `meta` the small detail after it in mono. Nothing wraps: on a short line the detail is cut with "…" first, then the sentence, which then says itself whole to a pointer on it (its `title`); the actions are never cut; `children`
  * are what can be done about it, at the right end (text buttons: the one that goes there underlined, then the one that dismisses).
  */
 function Banner({
@@ -49,15 +49,26 @@ function Banner({
 			)}
 			{...props}
 		>
-			<span className={cn("inline-flex shrink-0 items-center gap-monti-8 whitespace-nowrap font-semibold", ink)}>
+			<span className={cn("inline-flex min-w-0 items-center gap-monti-8 font-semibold", ink)}>
 				{dot}
-				{title}
+				{/* A sentence longer than the line ends in "…"; while it is cut, pointing at it says it whole (`title`, as a cut table cell does). */}
+				<span
+					data-slot="banner-title"
+					className="min-w-0 truncate"
+					onPointerEnter={(event) => {
+						const words = event.currentTarget;
+						if (words.scrollWidth > words.clientWidth) words.title = words.textContent ?? "";
+						else words.removeAttribute("title");
+					}}
+				>
+					{title}
+				</span>
 			</span>
 			{meta &&
 				((plainMeta ?? tone === "neutral") ? (
-					<span className="min-w-0 truncate text-monti-subtle">{meta}</span>
+					<span className="min-w-0 shrink-[999] truncate text-monti-subtle">{meta}</span>
 				) : (
-					<Count className="min-w-0 truncate">{meta}</Count>
+					<Count className="min-w-0 shrink-[999] truncate">{meta}</Count>
 				))}
 			{children && (
 				<span className="ml-auto flex shrink-0 items-center gap-monti-16 whitespace-nowrap">{children}</span>

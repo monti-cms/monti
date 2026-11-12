@@ -827,7 +827,6 @@ function SaveGroup({
 	proposalsCount,
 	discardLabel,
 	saveLabel,
-	saveDisabled,
 }: {
 	label?: string;
 	count?: number;
@@ -836,7 +835,6 @@ function SaveGroup({
 	proposalsCount?: number;
 	discardLabel?: string;
 	saveLabel?: string;
-	saveDisabled?: boolean;
 }) {
 	return (
 		<ChangesBar
@@ -846,7 +844,6 @@ function SaveGroup({
 			proposalsCount={proposalsCount}
 			discardLabel={discardLabel ?? ""}
 			saveLabel={saveLabel ?? ""}
-			saveDisabled={saveDisabled}
 		/>
 	);
 }
@@ -2937,7 +2934,6 @@ export const CATALOG = {
 			count: "state",
 			discardLabel: "text",
 			saveLabel: "text",
-			saveDisabled: "flag",
 			proposalsLabel: "text",
 			proposalsCount: "state",
 		},

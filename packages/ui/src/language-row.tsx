@@ -1,19 +1,23 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { LockMark } from "./lock-mark";
 import { HELD } from "./sortable";
 
 /**
  * One content language in Settings › Languages. Its name written in itself leads, then the code in mono and, when it differs, the display name in the admin
  * language ("English en · display name"). Names come from the code and are never edited, so a row has no input. At the end of the row sits `children`: the × icon button that
  * takes the language out, or the {@link LanguageSource} mark on the source row. `handle` is the drag handle (a {@link DragHandle}); a list whose rows can
- * be moved sets `handled` on every row, so a row without a handle (the source) keeps its column. `dot` is the name of the change dot ("new", "source changed").
+ * be moved sets `handled` on every row, so a row without a handle (the source) keeps its column. `dot` is the name of the change dot ("new", "source changed");
+ * `dotTone="proposal"` makes it the assistant's blue one. `locked` is the name of the lock after the language's name, on a list that cannot be changed here.
  */
 function LanguageRow({
 	name,
 	code,
 	label,
 	dot,
+	dotTone,
+	locked,
 	gone = false,
 	handle,
 	handled = false,
@@ -28,6 +32,10 @@ function LanguageRow({
 	/** The display name; shown only when it differs from `name`. */
 	label?: string;
 	dot?: string;
+	/** `proposal`: the change is the assistant's and nobody has taken it yet. */
+	dotTone?: "warning" | "proposal";
+	/** The list cannot be changed here (the live site): a lock after the name, named by this. */
+	locked?: string;
 	/** The language is taken out and the file is not saved yet: the row stays, struck through and faint, with the dot saying so. */
 	gone?: boolean;
 	handle?: React.ReactNode;
@@ -56,7 +64,8 @@ function LanguageRow({
 				<span className={cn("text-monti-body", !gone && "text-monti-default")}>{name}</span>{" "}
 				<span className="text-monti-faint text-monti-meta">{code}</span>
 				{label && label !== name && <span className="text-monti-note text-monti-subtle"> · {label}</span>}
-				{dot && <ChangeDot label={dot} className="ml-monti-6 align-middle" />}
+				{locked && <LockMark label={locked} />}
+				{dot && <ChangeDot tone={dotTone} label={dot} className="ml-monti-6 align-middle" />}
 			</span>
 			<span className="flex items-center justify-end">{children}</span>
 		</li>

@@ -11,6 +11,7 @@ export function PickOne({
 	disabled,
 	label,
 	placeholder,
+	proposal,
 }: {
 	id?: string;
 	items: { value: string; label: string }[];
@@ -22,6 +23,8 @@ export function PickOne({
 	/** The name for screen readers when no label points at it. */
 	label?: string;
 	placeholder?: string;
+	/** The value is the assistant's and nobody has taken it yet: blue. */
+	proposal?: boolean;
 }) {
 	return (
 		<Select
@@ -30,7 +33,7 @@ export function PickOne({
 			onValueChange={(next) => next !== null && onChange(String(next))}
 			disabled={disabled}
 		>
-			<SelectTrigger id={id} width={width} size={size} aria-label={label}>
+			<SelectTrigger id={id} width={width} size={size} aria-label={label} proposal={proposal}>
 				<SelectValue placeholder={placeholder} />
 			</SelectTrigger>
 			<SelectContent>

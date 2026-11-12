@@ -14,10 +14,19 @@ export type ProposalItem = {
 /** A record a screen shows: `{ kind: "entry", id }`, `{ kind: "schema", id: "current" }`. */
 export type Target = { kind: string; id: string };
 
-/** The pending proposals aimed at the screen's record (T2). They live on the server, so they are there again when the screen opens. */
-export function useProposals(target: Target | null) {
-	const { data, reload } = useRead<ProposalItem[]>("proposals.forTarget", target ?? { kind: "none", id: "none" }, {
-		afterWrites: true,
-	});
+const NONE: Target = { kind: "none", id: "none" };
+const NO_OTHERS: Target[] = [];
+
+/**
+ * The pending proposals aimed at the screen's record (T2). They live on the server, so they are there again when the screen opens. `also`: the other
+ * records the same screen shows (settings: the schema and every collection's admin values beside the site's values); an item aimed at any of them
+ * is in the list once.
+ */
+export function useProposals(target: Target | null, also: Target[] = NO_OTHERS) {
+	const { data, reload } = useRead<ProposalItem[]>(
+		"proposals.forTarget",
+		{ ...(target ?? NONE), also },
+		{ afterWrites: true, skip: !target },
+	);
 	return { items: target ? (data ?? []) : [], reload };
 }

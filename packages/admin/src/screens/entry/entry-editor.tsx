@@ -114,6 +114,7 @@ export function EntryEditor({
 	onTrash,
 	onCompare,
 	onOpen,
+	onLanguages,
 }: {
 	collection: string;
 	id: string;
@@ -125,8 +126,10 @@ export function EntryEditor({
 	onCompare: (mode: CompareMode | null) => void;
 	/** Another entry (a copy just made). */
 	onOpen: (id: string) => void;
+	/** To settings › languages, from the "+ Language" menu. */
+	onLanguages: () => void;
 }) {
-	const { t, language, apiBase } = useAdmin();
+	const { t, language, apiBase, templates: templatesOn } = useAdmin();
 	const languageName = useLanguageName();
 	const source = useMemo(() => ({ kind: "entry" as const, id }), [id]);
 	const editor = useEntryEditor(source);
@@ -226,6 +229,7 @@ export function EntryEditor({
 						const made = await translation.create(code);
 						if (made) onOpen(made);
 					}}
+					onManage={onLanguages}
 				/>
 				{translation.isTranslation ? <SourceViewPicker value={view} onChange={showView} /> : null}
 			</Inline>
@@ -429,7 +433,7 @@ export function EntryEditor({
 				catalogs={catalogs}
 				onChange={(doc) => editor.set("doc", doc)}
 				editable={!readOnly}
-				templates
+				templates={templatesOn}
 				onEditor={keepEditor}
 				proposals={{
 					items: editor.bodyProposals,

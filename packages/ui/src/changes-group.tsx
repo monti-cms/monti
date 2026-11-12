@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { Button } from "./button";
 import { Caret } from "./caret";
 import { Count } from "./count";
@@ -73,9 +73,17 @@ function ChangeRow({
 }
 
 /**
+ * A ref for the two things that leave with the last change: the group, and the list it opens (which is drawn outside it). A screen gives one
+ * callback, the same for the group's whole life, and hears each of them come and go: that is where it hands the keyboard's focus on when the
+ * button that was pressed goes with them.
+ */
+type LeavingRef = (node: HTMLElement | null) => undefined | (() => void);
+
+/**
  * How the save group looks: "changes N" (and "· proposals N" in blue), then "undo all" and the one primary pill ("save and apply"). `list` is what
  * "changes N" opens, hanging from the whole group with its right edge on the group's; without it the group is drawn and opens nothing (a screen spec's
- * look, before its behavior is wired). The pill is disabled (not hidden) while something blocks saving.
+ * look, before its behavior is wired). The pill is never greyed: what blocks saving is shown when it is pressed, and while the save is on its way it
+ * says so (`saving`) and keeps the focus.
  */
 function ChangesBar({
 	label,
@@ -89,9 +97,10 @@ function ChangesBar({
 	onDiscard,
 	saveLabel,
 	onSave,
-	saveDisabled,
+	saving,
 	saveDanger,
 	list,
+	leavingRef,
 	...props
 }: {
 	/** "changes". */
@@ -111,14 +120,28 @@ function ChangesBar({
 	onDiscard?: () => void;
 	saveLabel: string;
 	onSave?: () => void;
-	saveDisabled?: boolean;
+	/** While the save is on its way: what the pill says ("Saving…"). It keeps its fill and the focus, shows the spinner and cannot be pressed again. */
+	saving?: string;
 	saveDanger?: boolean;
 	/** The changes, as menu rows. */
 	list?: ReactNode;
+	leavingRef?: LeavingRef;
 } & Omit<React.ComponentProps<"section">, "children" | "onSelect">) {
 	const [group, setGroup] = useState<HTMLElement | null>(null);
+	// One callback for the group's life: drawn anew each time, it would be let go and taken again with every change of the screen.
+	const groupRef = useCallback(
+		(node: HTMLElement | null) => {
+			setGroup(node);
+			const left = leavingRef?.(node);
+			return () => {
+				if (typeof left === "function") left();
+				setGroup(null);
+			};
+		},
+		[leavingRef],
+	);
 	return (
-		<section ref={setGroup} data-slot="changes-group" className="flex items-center gap-monti-16" {...props}>
+		<section ref={groupRef} data-slot="changes-group" className="flex items-center gap-monti-16" {...props}>
 			<DropdownMenu>
 				<DropdownMenuTrigger render={<Button variant="ghost" aria-label={listLabel} />}>
 					{label}{" "}
@@ -140,7 +163,7 @@ function ChangesBar({
 					<Caret />
 				</DropdownMenuTrigger>
 				{list && (
-					<DropdownMenuContent align="end" anchor={group ?? undefined} width="panel">
+					<DropdownMenuContent ref={leavingRef} align="end" anchor={group ?? undefined} width="panel">
 						{list}
 					</DropdownMenuContent>
 				)}
@@ -148,8 +171,8 @@ function ChangesBar({
 			<Button type="button" variant="ghost" onClick={onDiscard}>
 				{discardLabel}
 			</Button>
-			<Button type="button" variant={saveDanger ? "danger" : "primary"} disabled={saveDisabled} onClick={onSave}>
-				{saveLabel}
+			<Button type="button" variant={saveDanger ? "danger" : "primary"} loading={saving !== undefined} onClick={onSave}>
+				{saving ?? saveLabel}
 			</Button>
 		</section>
 	);
@@ -182,8 +205,11 @@ function ChangesGroup({
 	onDiscard: () => void;
 	saveLabel: string;
 	onSave: () => void;
-	saveDisabled?: boolean;
+	/** While the save is on its way: what the pill says ("Saving…"). */
+	saving?: string;
 	saveDanger?: boolean;
+	/** Given to the group and to the list it opens ({@link LeavingRef}). */
+	leavingRef?: LeavingRef;
 	/** The assistant's proposals in the form, not taken yet. */
 	proposals?: {
 		/** "proposals". */

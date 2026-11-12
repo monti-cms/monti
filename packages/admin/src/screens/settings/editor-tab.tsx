@@ -1,7 +1,7 @@
 import { Checkbox, Grid, Inline, Option, Section, Text, TextButton } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { at, HEADINGS, listedBlocks } from "./schema-draft";
-import type { CollectionsDraft } from "./use-collections-draft";
+import type { SettingsDraft } from "./use-settings-draft";
 
 type Choice = { path: string; label: string; mono?: boolean };
 
@@ -9,7 +9,7 @@ type Choice = { path: string; label: string; mono?: boolean };
  * A document collection's editor tab (CollectionEditor): the blocks, text styles and heading levels its body offers. All are on at first; an
  * admin value, so it changes on the live site too. Turning a block off leaves the entries that use it as they are (doc 01, decisions).
  */
-export function EditorTab({ model, collection: c }: { model: CollectionsDraft; collection: string }) {
+export function EditorTab({ model, collection: c }: { model: SettingsDraft; collection: string }) {
 	const { t } = useAdmin();
 	const { draft, catalog } = model;
 	if (!catalog) return null;
@@ -34,7 +34,8 @@ export function EditorTab({ model, collection: c }: { model: CollectionsDraft; c
 			{items.map((item) => (
 				<Option key={item.path}>
 					<Checkbox
-						checked={draft.value(item.path) !== false}
+						checked={model.shown(item.path) !== false}
+						proposal={draft.cell(item.path).kind === "proposed"}
 						onCheckedChange={(checked) => draft.set(item.path, checked)}
 					/>
 					{item.mono ? (
