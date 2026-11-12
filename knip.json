@@ -7,9 +7,11 @@
 				"testing/scenes.ts",
 				"testing/e2e/*.e2e.ts",
 				"testing/e2e/playwright.config.ts",
-				"testing/e2e/prepare.ts",
 				"testing/usability/do.ts"
 			]
+		},
+		"packages/admin": {
+			"entry": ["styles/index.css"]
 		},
 		"packages/core": {
 			"entry": ["src/**/*.test.ts", "src/__test__/**"]
