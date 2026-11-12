@@ -967,6 +967,47 @@ describe("settings: where the focus goes when the save group leaves", () => {
 		await expect.element(reload).not.toBeInTheDocument();
 	});
 
+	it("12-1 a field's own 되돌리기 pressed with a key hands the focus to the field it undid, also when it undoes the last change", async () => {
+		await withSite(stories.SiteChanged).run();
+		const undo = page.getByRole("button", { name: "되돌리기", exact: true });
+		await keysTo(undo.element() as HTMLElement);
+		await expect.element(undo).toHaveFocus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await expect.element(nameField()).toHaveFocus();
+		await expect.element(nameField()).toHaveValue("example.dev");
+	});
+
+	it("12-1 적용 pressed with a key in the review: the sheet and the save group go, and the focus is on the open tab's name; with a pointer nothing is moved", async () => {
+		for (const keys of [true, false]) {
+			await withSite(stories.OneReview).run();
+			const apply = page.getByRole("dialog").getByRole("button", { name: /적용$/ });
+			await expect.element(apply).toBeVisible();
+			// The tags are words, in the body face: two-word ones ("원문 변경") stay on one line inside their 48px column.
+			const tags = [...document.querySelectorAll<HTMLElement>("[data-slot=change-tag]")];
+			expect(tags.map((tag) => tag.textContent)).toContain("원문 변경");
+			const body = getComputedStyle(page.getByRole("dialog").element()).fontFamily;
+			for (const tag of tags) {
+				expect(getComputedStyle(tag).fontFamily).toBe(body);
+				expect(tag.getBoundingClientRect().width).toBeLessThanOrEqual(48);
+				expect(tag.getBoundingClientRect().height).toBeLessThan(20);
+			}
+			if (keys) {
+				await tabTo(page.getByRole("dialog").getByRole("button", { name: "취소" }).element() as HTMLElement);
+				await expect.element(apply).toHaveFocus();
+				await userEvent.keyboard("{Enter}");
+			} else await userEvent.click(apply);
+			await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+			await expect.element(saveGroup()).not.toBeInTheDocument();
+			const open = tab(/컬렉션/);
+			if (keys) await expect.element(open).toHaveFocus();
+			else {
+				await new Promise((done) => setTimeout(done, 300));
+				await expect.element(open).not.toHaveFocus();
+			}
+		}
+	});
+
 	it("12-1 a pointer's press moves no focus: 모두 되돌리기 and a field's own 되돌리기, pressed with the pointer, do not send it to the tab's name", async () => {
 		await withSite(stories.SiteChanged).run();
 		await userEvent.click(undoAll());
@@ -978,6 +1019,36 @@ describe("settings: where the focus goes when the save group leaves", () => {
 		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
 		await expect.element(saveGroup()).not.toBeInTheDocument();
 		await expect.element(tab(/사이트/)).not.toHaveFocus();
+	});
+});
+
+describe("the tools with body templates off", () => {
+	it("12-2 no tab row and no templates: the sidebar's 도구 and the templates' own address both open the API keys", async () => {
+		const shown = withSite({
+			...stories.Admin,
+			loaders: stories.settingsAt("admin", {
+				more: async ({ monti }) => {
+					await monti.run("admin.setPreference", { templates: false }, admin);
+				},
+			}),
+		});
+		await shown.run();
+		await userEvent.click(page.getByRole("button", { name: "도구" }));
+		await expect.element(page.getByRole("heading", { name: "도구" })).toBeVisible();
+		// One tool left: its page, with no row of tabs over it.
+		await expect.element(page.getByRole("link", { name: "템플릿" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("link", { name: "API 키" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "템플릿 추가" })).not.toBeInTheDocument();
+		expect(window.location.hash).toBe("#/tools");
+		await expect.element(page.getByText(/키/).first()).toBeVisible();
+
+		// Turned on again, both tabs are back.
+		await userEvent.click(page.getByRole("button", { name: "설정" }));
+		await userEvent.click(tab(/관리자/));
+		await userEvent.click(page.getByRole("switch", { name: "본문 템플릿" }));
+		await userEvent.click(page.getByRole("button", { name: "도구" }));
+		await expect.element(page.getByRole("link", { name: "템플릿" })).toBeVisible();
+		await expect.element(page.getByRole("link", { name: "API 키" })).toBeVisible();
 	});
 });
 

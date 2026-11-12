@@ -100,6 +100,8 @@ export interface FormFieldChange {
 	undoDisabled?: boolean;
 	/** `proposal`: the value is the assistant's and nobody has taken it yet; the dot is blue and the button discards it ("discard"). */
 	tone?: "warning" | "proposal";
+	/** A ref for the undo button, which goes away with the change it puts back: where a screen hands its keyboard focus on to the field. */
+	undoRef?: React.Ref<HTMLButtonElement>;
 }
 
 /**
@@ -132,6 +134,7 @@ function FormFieldLabel({
 						quiet
 						size="caption"
 						className="ml-auto"
+						ref={changed.undoRef}
 						aria-label={changed.undoName}
 						disabled={changed.undoDisabled}
 						onClick={changed.onUndo}

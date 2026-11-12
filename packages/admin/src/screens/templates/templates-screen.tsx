@@ -39,18 +39,10 @@ export function shortDate(value: string, language: string) {
  * `tabs` is the tools' tab row, under the title.
  */
 export function TemplatesScreen({ tabs, onOpen }: { tabs: ReactNode; onOpen: (template: string | null) => void }) {
-	const { t, language, templates } = useAdmin();
-	const list = useRead<TemplateRow[]>("templates.list", {}, { afterWrites: true, skip: !templates });
+	const { t, language } = useAdmin();
+	const list = useRead<TemplateRow[]>("templates.list", {}, { afterWrites: true });
 	const duplicate = useOperation("templates.duplicate");
 	const remove = useOperation("templates.remove");
-	// Body templates turned off in settings › admin (doc 03): the tools keep their page and their other tabs, without the templates. They are not deleted.
-	if (!templates)
-		return (
-			<PageColumn width="content">
-				<PageHeader title={t("tools.title")} />
-				{tabs}
-			</PageColumn>
-		);
 	return (
 		<PageColumn width="content">
 			<PageHeader title={t("tools.title")}>

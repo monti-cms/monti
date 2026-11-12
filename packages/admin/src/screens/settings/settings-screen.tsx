@@ -446,6 +446,7 @@ export function SettingsScreen({
 				}}
 				onClose={() => setPlan(null)}
 				onApply={(answers) => void send(answers)}
+				afterApply={() => openTab.current}
 				onOpenLanguages={() => {
 					setPlan(null);
 					onTab("languages");

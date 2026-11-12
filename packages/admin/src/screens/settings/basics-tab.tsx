@@ -119,6 +119,7 @@ export function BasicsTab({
 		document.getElementById(kind === "item" ? "collection-public-page" : "collection-path"),
 	);
 	const previewUndo = useFocusHandOff(() => document.getElementById("collection-preview-path"));
+	const labelUndo = useFocusHandOff(() => document.getElementById("collection-label"));
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>
@@ -133,7 +134,10 @@ export function BasicsTab({
 				</Grid>
 				<FormField>
 					{/* A name the assistant proposed is blue, with its discard on the label row and the saved name struck under it (doc 05). */}
-					<FormFieldLabel htmlFor="collection-label" changed={label.proposal ? label.changed : undefined}>
+					<FormFieldLabel
+						htmlFor="collection-label"
+						changed={label.proposal && label.changed ? { ...label.changed, undoRef: labelUndo } : undefined}
+					>
 						{t("settings.basics.label")}
 					</FormFieldLabel>
 					<Input

@@ -76,7 +76,7 @@ const routeOf = (place: Place): Route =>
 					: { screen: "place", place };
 
 function Signed() {
-	const { screen } = useAdmin();
+	const { screen, templates } = useAdmin();
 	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
 	const { route, go } = useRoute();
 	const [review, setReview] = useState(0);
@@ -169,8 +169,10 @@ function Signed() {
 					review={review}
 				/>
 			) : route.screen === "place" && route.place === "tools" ? (
-				route.tab === "keys" ? (
-					<KeysScreen tabs={<ToolsTabs current="keys" go={go} />} />
+				// Body templates turned off (settings › admin, doc 03): the tools have one tab left, so no tab row, and every way to the tools
+				// (the sidebar, the templates' own address) opens the keys.
+				route.tab === "keys" || !templates ? (
+					<KeysScreen tabs={templates ? <ToolsTabs current="keys" go={go} /> : null} />
 				) : (
 					<TemplatesScreen
 						tabs={<ToolsTabs current="templates" go={go} />}

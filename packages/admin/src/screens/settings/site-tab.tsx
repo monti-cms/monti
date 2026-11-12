@@ -1,6 +1,7 @@
 import type { LocalesDefinition } from "@monti-cms/core";
 import { FormField, FormFieldLabel, FormFieldWas, Input, LockMark, ReadValue, Section, Textarea } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
+import { useFocusHandOff } from "../frame/focus-hand-off";
 import { PickOne } from "./pick-one";
 import { at } from "./schema-draft";
 import { useCell } from "./use-cell";
@@ -16,6 +17,10 @@ export function SiteTab({ model }: { model: SettingsDraft }) {
 	const { t, siteNameDefault } = useAdmin();
 	const { draft } = model;
 	const cell = useCell(model);
+	// A field's own undo goes away with the change it puts back: the keyboard's focus it held goes to the field it undid (tokens.md, states).
+	const nameUndo = useFocusHandOff(() => document.getElementById("site-name"));
+	const writingUndo = useFocusHandOff(() => document.getElementById("site-writing"));
+	const prefixUndo = useFocusHandOff(() => document.getElementById("site-prefix"));
 	const name = cell(at.site("name"));
 	const writing = cell(at.site("writingStyle"));
 	const prefix = cell(at.localePrefix);
@@ -24,7 +29,7 @@ export function SiteTab({ model }: { model: SettingsDraft }) {
 		<>
 			<Section title={t("settings.site.nameSection")}>
 				<FormField>
-					<FormFieldLabel htmlFor="site-name" changed={name.changed}>
+					<FormFieldLabel htmlFor="site-name" changed={name.changed && { ...name.changed, undoRef: nameUndo }}>
 						{t("settings.site.name")}
 					</FormFieldLabel>
 					<Input
@@ -39,7 +44,10 @@ export function SiteTab({ model }: { model: SettingsDraft }) {
 			</Section>
 			<Section title={t("settings.site.writingSection")}>
 				<FormField>
-					<FormFieldLabel htmlFor="site-writing" changed={writing.changed}>
+					<FormFieldLabel
+						htmlFor="site-writing"
+						changed={writing.changed && { ...writing.changed, undoRef: writingUndo }}
+					>
 						{t("settings.site.writing")}
 					</FormFieldLabel>
 					<Textarea
@@ -60,7 +68,10 @@ export function SiteTab({ model }: { model: SettingsDraft }) {
 					</ReadValue>
 				) : (
 					<FormField>
-						<FormFieldLabel htmlFor="site-prefix" changed={prefix.changed}>
+						<FormFieldLabel
+							htmlFor="site-prefix"
+							changed={prefix.changed && { ...prefix.changed, undoRef: prefixUndo }}
+						>
 							{t("settings.site.prefix")}
 						</FormFieldLabel>
 						<PickOne

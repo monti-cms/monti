@@ -20,7 +20,7 @@ import {
 	Stack,
 	TextButton,
 } from "@monti-cms/ui";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { type AddressPlace, addressOfProblem } from "./basics-tab";
 import { PickOne } from "./pick-one";
@@ -92,6 +92,7 @@ export function ReviewSheet({
 	onOpenField,
 	onOpenAddress,
 	onOpenLanguages,
+	afterApply,
 }: {
 	model: SettingsDraft;
 	plan: Plan | null;
@@ -108,6 +109,8 @@ export function ReviewSheet({
 	onOpenAddress: (collection: string, place: AddressPlace) => void;
 	/** Opens the language tab from a line of what is to fix. */
 	onOpenLanguages: () => void;
+	/** Where the keyboard's focus goes once an apply made with it has closed the sheet (the open tab's name). */
+	afterApply?: () => HTMLElement | null;
 }) {
 	return (
 		<Sheet open={plan !== null} onOpenChange={(next) => !next && !applying && onClose()}>
@@ -124,6 +127,7 @@ export function ReviewSheet({
 					onOpenField={onOpenField}
 					onOpenAddress={onOpenAddress}
 					onOpenLanguages={onOpenLanguages}
+					afterApply={afterApply}
 				/>
 			) : null}
 		</Sheet>
@@ -142,6 +146,7 @@ function Body({
 	onOpenField,
 	onOpenAddress,
 	onOpenLanguages,
+	afterApply,
 }: {
 	model: SettingsDraft;
 	plan: Plan;
@@ -156,6 +161,7 @@ function Body({
 	/** Goes to a collection's address field in its basics tab (a problem of its public or its preview address). */
 	onOpenAddress: (collection: string, place: AddressPlace) => void;
 	onOpenLanguages: () => void;
+	afterApply?: () => HTMLElement | null;
 }) {
 	const { t } = useAdmin();
 	// What must be fixed before the change can be applied: told here, when saving, each line opening its field (flow 4, step 09).
@@ -465,6 +471,8 @@ function Body({
 		}
 	};
 
+	/** Whether the apply was pressed with a key. */
+	const byKeys = useRef(false);
 	const apply = () => {
 		const answers: Answers = {};
 		for (const change of plan.changes) {
@@ -476,7 +484,9 @@ function Body({
 	};
 
 	return (
-		<SheetContent>
+		// Applied from the keyboard, the sheet goes with the save group that opened it: the focus goes where that group's would, not to the page.
+		// Closed any other way, or applied with a pointer (which holds no focus), it is the sheet's own to give back.
+		<SheetContent finalFocus={() => (byKeys.current ? (afterApply?.() ?? true) : true)}>
 			<SheetHeader closable={!applying}>
 				<SheetTitle
 					of={`· ${subjects} · ${t("settings.review.changes", { count: plan.changes.length })}`}
@@ -512,7 +522,15 @@ function Body({
 				{problems.length > 0 ? null : conflict ? (
 					<Button onClick={onReload}>{t("settings.reload")}</Button>
 				) : (
-					<Button variant={danger ? "danger" : "primary"} loading={applying} onClick={apply}>
+					<Button
+						variant={danger ? "danger" : "primary"}
+						loading={applying}
+						onClick={(event) => {
+							// A press made by a key carries no pointer's count.
+							byKeys.current = event.detail === 0;
+							apply();
+						}}
+					>
 						{danger ? t("settings.review.applyDelete") : t("settings.review.apply")}
 					</Button>
 				)}
