@@ -49,4 +49,37 @@ describe("MediaInput", () => {
 		await userEvent.click(open);
 		expect(opened).toHaveBeenCalledTimes(1);
 	});
+	it("a proposed file keeps its blue line under the pointer and the keyboard, and the focus is a ring added on the line's button", async () => {
+		const host = render(
+			<div style={{ width: 280 }}>
+				<MediaInput value={{ name: "og-react.png" }} proposal onClear={() => {}} clearLabel="빼기" />
+			</div>,
+		);
+		const probe = document.createElement("span");
+		probe.className = "border border-monti-proposal";
+		host.append(probe);
+		const blue = getComputedStyle(probe).borderTopColor;
+		const open = page.getByRole("button", { name: "og-react.png" });
+		await expect.element(open).toBeVisible();
+		const field = open.element().closest("[data-slot=media-input]") as HTMLElement;
+		const drawn = () => ({
+			line: getComputedStyle(field).borderBottomColor,
+			ring: getComputedStyle(open.element())
+				.boxShadow.split(/,(?![^(]*\))/)
+				.some((shadow) => / 0px 0px 0px 2px$/.test(shadow.trim()) && !/, 0\)|\/ 0\)/.test(shadow)),
+		});
+		// The line's colour fades to where it is going: read it there.
+		const settled = () => Promise.all(field.getAnimations().map((animation) => animation.finished));
+		await settled();
+		expect(drawn()).toEqual({ line: blue, ring: false });
+		// Under the pointer the field takes its tint, and the line stays blue.
+		await userEvent.hover(open);
+		await settled();
+		expect(drawn()).toEqual({ line: blue, ring: false });
+		await userEvent.unhover(open);
+		await userEvent.keyboard("{Tab}");
+		await expect.element(open).toHaveFocus();
+		await settled();
+		expect(drawn()).toEqual({ line: blue, ring: true });
+	});
 });

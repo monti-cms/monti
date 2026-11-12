@@ -192,8 +192,10 @@ function TabsContent({
 		<TabsPrimitive.Panel
 			data-slot="tabs-content"
 			className={cn(
-				// The panel is a stop of the Tab key: its ring is inside, where no scrolling or clipping box cuts it.
-				"flex-1 text-monti-body outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset",
+				// The panel is a stop of the Tab key. Its ring is inside it, where no scrolling or clipping box cuts it, and drawn as a line around
+				// (2px in), not as a shadow: a shadow inside is painted under what the panel holds, and a first row with a ground would cover it; the
+				// line is painted over them and stays put while the panel scrolls. No `outline-none` here: it would unset the line's style.
+				"flex-1 text-monti-body focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:-outline-offset-2",
 				fill && "flex min-h-0 flex-col",
 				scroll && "min-h-0 overflow-auto",
 				className,

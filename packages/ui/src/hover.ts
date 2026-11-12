@@ -1,10 +1,11 @@
 /**
  * The pointer over an underline field (an input, a select, a combobox, an affix, a textarea, a tag field): the whole field takes a flat tint
  * (`bg-muted`, no rounded corners) and its rule turns a step darker. Once the field has focus the ink rule says so instead, so the tint goes;
- * a field that is off (or holds a part that is off) takes none.
+ * a field that is off (or holds a part that is off) takes none. A rule that says a state (an error's red, a proposal's blue, on the field or on
+ * the input in it) keeps its colour under the pointer: only the tint comes.
  */
 export const FIELD_HOVER =
-	"hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:bg-monti-muted hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:border-monti-strong";
+	"hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:bg-monti-muted hover:not-focus-within:not-disabled:not-data-disabled:not-has-[:disabled]:not-aria-invalid:not-has-[[aria-invalid=true]]:not-data-proposal:not-has-data-proposal:border-monti-strong";
 
 /**
  * An underline field's room for that tint: 8px inside at each side. The field starts where its label starts; the words sit 8px in from both.
