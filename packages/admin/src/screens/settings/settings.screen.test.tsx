@@ -955,6 +955,9 @@ describe("settings: where the focus goes when the save group leaves", () => {
 		await userEvent.click(reload);
 		await expect.poll(() => reads.count).toBe(1);
 		await expect.element(reload).toHaveAttribute("aria-busy", "true");
+		// Nothing is being saved: the head's pill says what it always says, and is not working.
+		await expect.element(page.getByRole("button", { name: "저장하고 적용" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "저장 중…" })).not.toBeInTheDocument();
 		await reload.click({ force: true });
 		await reload.click({ force: true });
 		await new Promise((done) => setTimeout(done, 200));

@@ -84,6 +84,8 @@ export function SettingsScreen({
 	const [plan, setPlan] = useState<Plan | null>(null);
 	const [conflict, setConflict] = useState(false);
 	const [busy, setBusy] = useState(false);
+	// Reading again after a conflict: the banner's own button works, and nothing says "saving" (nothing is being saved).
+	const [reading, setReading] = useState(false);
 	const [refused, setRefused] = useState<Refused | null>(null);
 	// Whether that refusal answered a save made in the review that is open: the review says it then, at its top, and the page's banner waits.
 	const [refusedInReview, setRefusedInReview] = useState(false);
@@ -344,11 +346,11 @@ export function SettingsScreen({
 		if (refused?.action === "reload") {
 			// Gone once the settings are read again, not before: the page does not move while they are on their way.
 			// Working while it reads, as "save again" is while it saves: the button turns, and a second press starts no second read.
-			setBusy(true);
+			setReading(true);
 			void model.read
 				.reload()
 				.then(() => setRefused(null))
-				.finally(() => setBusy(false));
+				.finally(() => setReading(false));
 		} else void save();
 	};
 
@@ -394,7 +396,7 @@ export function SettingsScreen({
 							{refused && !(plan && refusedInReview) ? (
 								// Its button goes with it once the save or the read goes through: the keyboard's focus is handed on as the save group's is.
 								<Banner ref={groupLeaving} tone="danger" title={refused.reason}>
-									<TextButton loading={busy} onClick={retry}>
+									<TextButton loading={busy || reading} onClick={retry}>
 										{t(refused.action === "reload" ? "settings.reload" : "settings.saveAgain")}
 									</TextButton>
 								</Banner>
