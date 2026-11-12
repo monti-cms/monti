@@ -1512,7 +1512,7 @@ function ReviewEntry({
 	change?: Marked;
 	included?: boolean;
 	muted?: boolean;
-	/** `end` in the warning ink: the entry changed since the proposal was made ("이 사이에 고쳐짐"). (cms-allow-korean: quotes the words) */
+	/** `end` in the warning ink: the entry changed since the proposal was made ("그 사이 고쳐짐"). (cms-allow-korean: quotes the words) */
 	endWarning?: boolean;
 }) {
 	const endWords = endWarning ? <span className="text-monti-warning">{end}</span> : end;

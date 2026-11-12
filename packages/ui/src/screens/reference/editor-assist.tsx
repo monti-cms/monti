@@ -162,7 +162,7 @@ export function EditorAssistScreen({ state }: { state: EditorAssistState }) {
 							anchor={() => moved.current}
 							open
 							onOpenChange={still}
-							where="이 사이에 고쳐짐"
+							where="그 사이 고쳐짐"
 							discardLabel="버리기"
 							onDiscard={still}
 							acceptLabel="다시 만들기"

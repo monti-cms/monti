@@ -267,7 +267,7 @@ export function ProposalReviewView({ side = false, stage = "review" }: { side?: 
 										) : (
 											<>
 												<Text variant="caption" tone="warning">
-													이 사이에 고쳐짐
+													그 사이 고쳐짐
 												</Text>{" "}
 												{looking || stage === "cut" ? (
 													<TextButton variant="underline" size="caption">

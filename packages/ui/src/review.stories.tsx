@@ -80,7 +80,7 @@ export const ChangedMeanwhile: Story = {
 				end={
 					<>
 						<Text variant="note" tone="warning">
-							이 사이에 고쳐짐
+							그 사이 고쳐짐
 						</Text>
 						<TextButton>다시 만들기</TextButton>
 					</>
