@@ -11,6 +11,7 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { useState } from "react";
+import { useUndo } from "../activity/use-undo";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation } from "../operations/use-operation";
 import { useLanguageName } from "../screens/list/column-menu";
@@ -39,7 +40,7 @@ export function useTrashMove() {
 	const languageName = useLanguageName();
 	const check = useOperation<TrashEffects>("trash.checkMove");
 	const move = useOperation<{ activityId: string; output: TrashMoved }>("trash.move");
-	const undo = useOperation("activity.undo");
+	const undo = useUndo();
 	const [asking, setAsking] = useState<{ ask: TrashAsk; effects: TrashEffects } | null>(null);
 
 	const run = async (ask: TrashAsk) => {
@@ -55,7 +56,7 @@ export function useTrashMove() {
 				{ action: { label: t("library.show"), onClick: () => ask.onKept?.(kept) } },
 			);
 		toast(t("trash.moved"), {
-			action: { label: t("settings.undo"), onClick: () => void undo.run({ id: activityId }) },
+			action: { label: t("settings.undo"), onClick: () => void undo.run(activityId) },
 		});
 	};
 	const start = async (ask: TrashAsk) => {
