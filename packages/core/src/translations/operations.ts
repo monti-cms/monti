@@ -8,7 +8,7 @@ import type { Entry } from "../entries/record";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext, type RecordRef } from "../operation";
 import { readSchemaState } from "../schema/apply";
-import { checkSchema, localeModeOf, type Schema } from "../schema/define";
+import { checkSchema, localeModeOf, type Schema, storedFields } from "../schema/define";
 import { AnswersInput, applyStructure, checkApply, heldByStructure, LocalesInput } from "../schema/operations";
 import { type Answers, planSchema } from "../schema/plan";
 import { changesSql, pendingSql, sourceJoin } from "./count";
@@ -186,7 +186,7 @@ export const translationOperations = [
 			};
 			// Per language: empty; from the source: the source's to start with; the same: never stored on a translation. A media field starts empty too: an empty one
 			// follows the source (doc 09), and a copy would stop following it.
-			const fields = schema.collections[source.collection]?.fields ?? {};
+			const fields = storedFields(schema.collections[source.collection]);
 			// The source as a translation follows it: what it copies and what it has seen are the same thing.
 			const following = (await followedFields(ctx.db, source)) ?? source;
 			const values = Object.fromEntries(

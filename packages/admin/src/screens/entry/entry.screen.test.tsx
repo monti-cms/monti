@@ -900,3 +900,108 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 		await saveCell("저장됨");
 	});
 });
+
+describe("a conditional field in the property panel (doc 19)", () => {
+	const field = (name: string) => page.getByRole("textbox", { name });
+	const stored = async ({ site, id }: Loaded) =>
+		((await site.monti.run("entries.get", { id }, entry.admin)) as { entry: { values: Record<string, unknown> } }).entry
+			.values;
+
+	it("19-6 shows the chosen option's fields under the choice; another choice swaps them and says what the save clears; saved, they are gone", async () => {
+		const made = on("conditional");
+		await made.run();
+		const loaded = made.loaded();
+		await opened();
+		await expect.element(field("동영상 주소")).toHaveValue("https://example.dev/talk.mp4");
+		await expect.element(field("링크 주소")).not.toBeInTheDocument();
+		await expect.element(page.getByText(/지워집니다/)).not.toBeInTheDocument();
+
+		await userEvent.click(page.getByRole("combobox", { name: "글 종류" }));
+		await userEvent.click(page.getByRole("option", { name: "링크" }));
+		await expect.element(field("링크 주소")).toBeVisible();
+		await expect.element(field("동영상 주소")).not.toBeInTheDocument();
+		const line = page.getByText("저장하면 동영상의 값 2개가 지워집니다");
+		await expect.element(line).toBeVisible();
+		// The line stands under the choice, over the option's first field.
+		const top = (element: Element) => element.getBoundingClientRect().top;
+		expect(top(line.element())).toBeGreaterThan(top(page.getByRole("combobox", { name: "글 종류" }).element()));
+		expect(top(line.element())).toBeLessThan(top(field("링크 주소").element()));
+
+		await userEvent.fill(field("링크 주소"), "https://example.dev/reading");
+		await save();
+		await saveCell("저장됨");
+		await expect.element(line).not.toBeInTheDocument();
+		expect(await stored(loaded)).toMatchObject({ format: "link", linkUrl: "https://example.dev/reading" });
+		expect(await stored(loaded)).not.toHaveProperty("videoUrl");
+		expect(await stored(loaded)).not.toHaveProperty("videoCredit");
+	});
+
+	it("19-14 a value typed in the old option's field, then the choice changed and saved: the save goes through, and the old option's values are gone as the line said", async () => {
+		const made = on("conditional");
+		await made.run();
+		await opened();
+		await userEvent.fill(field("동영상 주소"), "https://example.dev/changed.mp4");
+		await userEvent.click(page.getByRole("combobox", { name: "글 종류" }));
+		await userEvent.click(page.getByRole("option", { name: "링크" }));
+		await expect.element(page.getByText("저장하면 동영상의 값 2개가 지워집니다")).toBeVisible();
+		await save();
+		await saveCell("저장됨");
+		await expect.element(page.getByText(/지워집니다/)).not.toBeInTheDocument();
+		const values = await stored(made.loaded());
+		expect(values).toMatchObject({ format: "link" });
+		expect(values).not.toHaveProperty("videoUrl");
+		expect(values).not.toHaveProperty("videoCredit");
+	});
+
+	it("19-6 the choice put back before saving shows the values again, and nothing is said", async () => {
+		await on("conditional").run();
+		await opened();
+		await userEvent.click(page.getByRole("combobox", { name: "글 종류" }));
+		await userEvent.click(page.getByRole("option", { name: "링크" }));
+		await expect.element(page.getByText(/지워집니다/)).toBeVisible();
+		await userEvent.click(page.getByRole("combobox", { name: "글 종류" }));
+		await userEvent.click(page.getByRole("option", { name: "동영상" }));
+		await expect.element(field("동영상 주소")).toHaveValue("https://example.dev/talk.mp4");
+		await expect.element(page.getByText(/지워집니다/)).not.toBeInTheDocument();
+	});
+
+	it("19-11 a stored word the field no longer lists is shown as it is, marked as not an option, and no other option is shown in its place; picking one takes the mark away", async () => {
+		const made = on("strayOption");
+		await made.run();
+		await opened();
+		const choice = page.getByRole("combobox", { name: "글 종류" });
+		await expect.element(choice).toHaveTextContent("podcast");
+		await expect.element(page.getByText("podcast: 선택지에 없는 값")).toBeVisible();
+		// None of the listed options' fields is the entry's.
+		await expect.element(field("동영상 주소")).not.toBeInTheDocument();
+		await expect.element(field("링크 주소")).not.toBeInTheDocument();
+
+		await userEvent.click(choice);
+		await userEvent.click(page.getByRole("option", { name: "링크" }));
+		await expect.element(choice).toHaveTextContent("링크");
+		await expect.element(page.getByText(/선택지에 없는 값/)).not.toBeInTheDocument();
+		await expect.element(field("링크 주소")).toBeVisible();
+	});
+
+	it("19-5 the comparison of two sides that chose different options: each shows its choice by its label and the fields of its own option, and the choice is the one place counted", async () => {
+		const { ConditionalCompare } = composeStories(entry);
+		await ConditionalCompare.run();
+		await expect.element(page.getByText("다른 곳 1")).toBeVisible();
+		const sides = [...document.querySelectorAll<HTMLElement>("[data-slot=compare-side]")];
+		expect(sides).toHaveLength(2);
+		const [mine, server] = sides.map((side) => side.textContent ?? "");
+		expect(mine).toContain("링크");
+		expect(mine).toContain("https://example.dev/reading");
+		expect(mine).not.toContain("동영상 주소");
+		expect(server).toContain("동영상");
+		expect(server).toContain("https://example.dev/talk.mp4");
+		expect(server).toContain("다른 탭");
+		expect(server).not.toContain("링크 주소");
+		// One option has one field and the other two: the titles and bodies of the two sides still start at the same height.
+		const tops = (slot: string) =>
+			sides.map((side) =>
+				Math.round((side.querySelector(`[data-slot=${slot}]`) as HTMLElement).getBoundingClientRect().top),
+			);
+		for (const slot of ["compare-title", "compare-body"]) expect(tops(slot)[0]).toBe(tops(slot)[1]);
+	});
+});

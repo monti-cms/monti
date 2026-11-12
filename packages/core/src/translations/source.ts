@@ -3,7 +3,7 @@ import { asDoc, type Block, type Doc } from "../body/doc";
 import type { Database } from "../db/schema";
 import { type Entry, loadEntries } from "../entries/record";
 import { isEmptyValue } from "../json";
-import { localeModeOf, type Schema } from "../schema/define";
+import { localeModeOf, type Schema, storedFields } from "../schema/define";
 import { seenAfter, trackedFields } from "./fields";
 import { blockHash, blockHashes, marksOf } from "./links";
 
@@ -127,7 +127,7 @@ type Fields = { title: string; slug: string; values: Record<string, unknown> };
  */
 export function translatedFields(schema: Schema, collection: string, own: Fields, source: Fields | null): Fields {
 	if (!source) return own;
-	const fields = schema.collections[collection]?.fields ?? {};
+	const fields = storedFields(schema.collections[collection]);
 	const pick = (name: string, mine: unknown, theirs: unknown) => {
 		const definition = fields[name];
 		if (!definition) return mine;

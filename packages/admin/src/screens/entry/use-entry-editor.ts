@@ -86,7 +86,14 @@ const isEmpty = (value: unknown) =>
  * The editor's draft of one entry or template (doc 02, the screen pieces): the saved copy, my changes over it (kept in this browser until saved, and offered
  * back when the page opens again), the save with the version it read, and what a refused save means. The entry editor and the template editor use it.
  */
-export function useEntryEditor(source: EditorSource) {
+export function useEntryEditor(
+	source: EditorSource,
+	/**
+	 * The fields that are not the entry's with these values: those of a conditional field's options that are not chosen (doc 19). The save
+	 * sends them empty, so what the panel said the save clears is cleared, and a value typed before the choice was changed is not refused.
+	 */
+	notChosen?: (values: Record<string, unknown>, locale: string) => Set<string>,
+) {
 	const isEntry = source.kind === "entry";
 	const read = useRead<EntryRead | TemplateRead>(
 		isEntry ? "entries.get" : "templates.get",
@@ -192,6 +199,13 @@ export function useEntryEditor(source: EditorSource) {
 			if (!loaded || version === null) return null;
 			if (!draft.dirty && source.id !== null) return { id: source.id };
 			const changed = new Set(draft.changes.map((change) => change.path));
+			const hidden =
+				notChosen && "entry" in loaded
+					? notChosen(
+							Object.fromEntries(fields.map((field) => [field, draft.value(`values.${field}`)])),
+							loaded.entry.locale,
+						)
+					: new Set<string>();
 			const input = isEntry
 				? {
 						id: source.id,
@@ -206,7 +220,8 @@ export function useEntryEditor(source: EditorSource) {
 											.filter((path) => path.startsWith("values."))
 											.map((path) => {
 												const value = draft.value(path);
-												return [path.slice("values.".length), isEmpty(value) ? null : value];
+												const field = path.slice("values.".length);
+												return [field, isEmpty(value) || hidden.has(field) ? null : value];
 											}),
 									),
 								}
@@ -246,7 +261,7 @@ export function useEntryEditor(source: EditorSource) {
 			}
 			return { id: answer.body.output.id };
 		},
-		[loaded, version, written, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload, t],
+		[loaded, version, written, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload, t, fields, notChosen],
 	);
 
 	return {
