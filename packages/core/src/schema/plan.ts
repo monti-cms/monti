@@ -407,6 +407,15 @@ export function stepsFor(changes: SchemaChange[], answers: Answers): { steps: Ch
 	// A language leaves last. The collections' steps keep their place before the languages' (a renamed or moved field's values are under their
 	// new name by the time a new source language is made from the old one, which keeps only the fields the draft has), and the new source is made
 	// before the old one is taken out in the same change: the drafts the plan promises are made from it.
-	const last = (step: ChangeStep) => (step.do === "removeLocale" ? 1 : 0);
-	return { steps: [...steps].sort((a, b) => last(a) - last(b)), missing };
+	// A field's rename comes first (the option steps find the values under the new name), then the options' steps: a removed field's values
+	// moved into a field of an option go to the entries that have that option chosen by then (doc 19).
+	const order = (step: ChangeStep) =>
+		step.do === "removeLocale"
+			? 3
+			: step.do === "renameField"
+				? 0
+				: step.do === "renameOption" || step.do === "removeOption"
+					? 1
+					: 2;
+	return { steps: [...steps].sort((a, b) => order(a) - order(b)), missing };
 }

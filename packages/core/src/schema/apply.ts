@@ -126,11 +126,17 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 		case "removeField":
 			if (step.values === "clear")
 				await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field}`);
-			else if (typeof step.values === "object")
+			else if (typeof step.values === "object") {
+				// Into a field of a conditional field's option (doc 19), only the entries that chose that option take the value: for the others
+				// it would be a value of an option that is not theirs, and it is cleared.
+				const under = storedFields(schema.collections[step.collection])[step.values.move]?.under;
+				const theirs = under ? sql<boolean>`values->>${under.field} = ${under.option}` : sql<boolean>`true`;
 				await entries(
 					sql`(values - ${step.field}::text) || jsonb_build_object(${step.values.move}::text, coalesce(nullif(values->${step.values.move}, '""'::jsonb), values->${step.field}))`,
-					sql<boolean>`values ? ${step.field}`,
+					sql<boolean>`values ? ${step.field} and ${theirs}`,
 				);
+				await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field}`);
+			}
 			await followField(db, step.collection, step.field, null);
 			return;
 		case "removeOption":

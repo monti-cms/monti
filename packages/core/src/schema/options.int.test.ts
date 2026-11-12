@@ -281,4 +281,24 @@ describe("a conditional field's option taken out, its entries changed to another
 			expect.arrayContaining([expect.objectContaining({ code: "required", field: "linkUrl" })]),
 		);
 	});
+
+	it("19-10 a removed field's values moved into a field of an option go to the entries that have that option chosen (after the change's own answer); for the others they are cleared, never held unseen", async () => {
+		const video = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" }, true);
+		const noted = await newPost({ format: "article", note: "https://example.dev/n" }, true);
+		const format = post.fields.format as Extract<FieldDefinition, { kind: "conditional" }>;
+		const after = withFields({
+			format: { ...format, options: ["article", "link"], fields: { link: format.fields.link ?? {} } },
+			note: undefined,
+		});
+		await apply(after, {
+			"removeField:post.videoUrl": { do: "removeField", values: { move: "linkUrl" } },
+			"removeField:post.note": { do: "removeField", values: { move: "linkUrl" } },
+			"removeOption:post.format.video": { do: "removeOption", entries: { change: "link" } },
+		});
+		// The video post is a link post by the time its address is moved: a whole link post, on the site too.
+		expect(await publishedOf(video)).toEqual({ level: "easy", format: "link", linkUrl: "https://example.dev/v.mp4" });
+		expect(await draftOf(video)).toEqual({ level: "easy", format: "link", linkUrl: "https://example.dev/v.mp4" });
+		// The article is not a link post: the site is given no address of a kind it is not.
+		expect(await publishedOf(noted)).toEqual({ level: "easy", format: "article" });
+	});
 });
