@@ -45,7 +45,8 @@
 | [media.md](media.md) | Media "미디어", ImageInsert "이미지 넣기" |
 | [taxonomy.md](taxonomy.md) | Taxonomy "카테고리 · 항목 열기" |
 | [login.md](login.md) | Login "로그인" |
-| [tools.md](tools.md) | Templates, TemplateEditor, Data, ApiKeys, Events |
+| [activity.md](activity.md) | Events "활동 기록" |
+| [tools.md](tools.md) | Templates, TemplateEditor, Data, ApiKeys |
 | [settings.md](settings.md) | Settings, Locales, AdminSettings, SettingsProposal |
 
 Foundations "규칙 · 토큰"은 화면이 아니라 토큰 견본이라 지도가 없다. 토큰은 [tokens.md](../tokens.md)에 있다.

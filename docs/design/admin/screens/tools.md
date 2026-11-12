@@ -1,15 +1,15 @@
-# 도구 (Templates, TemplateEditor, Data, ApiKeys, Events)
+# 도구 (Templates, TemplateEditor, Data, ApiKeys)
 
-도구 화면 넷(템플릿, 데이터, 활동 기록, API 키)은 같은 틀을 쓴다. 템플릿 편집기는 도구 틀 밖의 따로 된 페이지다.
+도구 화면 셋(템플릿, 데이터, API 키)은 같은 틀을 쓴다. 템플릿 편집기는 도구 틀 밖의 따로 된 페이지다. 활동 기록은 도구의 탭이 아니라 사이드바에 제 행이 있는 화면이다(2026-11-12 소유자). 그 지도는 [activity.md](activity.md)에 있다.
 
-## 도구 틀 (네 화면 공통)
+## 도구 틀 (세 화면 공통)
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 사이드바 | 공통 틀([common.md](common.md)), 현재 위치 "도구" |  |
-| 페이지 단 | `PageColumn` | 템플릿, 데이터, API 키는 `width="content"`, 활동 기록은 `width="list"`. |
-| 제목 행 "도구" | `PageHeader` | 템플릿과 API 키 화면만 검은 알약 하나("+ 템플릿 추가", "+ 키 추가"). 데이터와 활동 기록은 머리에 알약이 없다. |
-| 탭 "템플릿 · 데이터 · 활동 기록 · API 키" | `PageToolbar` 안의 `TabLinks` + `TabLink` | 탭 하나가 페이지 하나다. 도구가 템플릿 하나뿐인 동안에는 탭 줄이 없다(설정의 탭 줄과 같다). 탭에 붙는 개수는 실패한 전송 수(`TabLink count`, `countTone="warning"`, "활동 기록 1")뿐이다. 열면 다 보이는 목록의 개수(템플릿 수)는 붙이지 않는다(원칙 8, 2026-11-05 소유자). 플러그인이 더한 도구 페이지도 탭이 된다. |
+| 사이드바 | 공통 틀([common.md](common.md)), 현재 위치 "도구" | "도구" 행에는 개수가 없다. 누르면 늘 템플릿이 열린다. |
+| 페이지 단 | `PageColumn` | `width="content"`. |
+| 제목 행 "도구" | `PageHeader` | 템플릿과 API 키 화면만 검은 알약 하나("+ 템플릿 추가", "+ 키 추가"). 데이터는 머리에 알약이 없다. |
+| 탭 "템플릿 · 데이터 · API 키" | `PageToolbar` 안의 `TabLinks` + `TabLink` | 탭 하나가 페이지 하나다. 도구가 템플릿 하나뿐인 동안에는 탭 줄이 없다(설정의 탭 줄과 같다). 탭에는 개수가 붙지 않는다. 열면 다 보이는 목록의 개수(템플릿 수)는 붙이지 않는다(원칙 8, 2026-11-05 소유자). 플러그인이 더한 도구 페이지도 탭이 된다. |
 | ✦ 어시스턴트 열기 | 공통 틀 | 사이드 패널이 열린 동안에는 가려진다. |
 
 ## 템플릿 (Templates)
@@ -184,83 +184,3 @@
 | "읽을 수 없음" | 10.14 | `Banner` "키 3개를 읽을 수 없습니다", 행마다 `metaTone="danger"` "읽을 수 없음" | Patterns/Frame/Banner |
 | "다시 넣기" | 10.14b | 편집 창: 키가 처음부터 `SecretInput`(포커스, `required`), `FormFieldDescription` "키를 다시 넣어 주세요." | Controls/Field/SecretInput, Controls/Field/Field |
 | "비밀값 없음" | 10.15 | `Banner` "키를 저장할 수 없습니다" 하나가 이유를 말한다. "+ 키 추가", 빠른 작업 행, 플러그인 키 표는 숨고, "AI 키"는 "없음" | Patterns/Frame/Banner, Controls/Menu/ModelMenu |
-
-## 활동 기록 (Events)
-
-- 보드: `Events.dc.html`. 상태와 흐름: [screens.md › Events](../screens.md#events), [흐름 12](../flows/12-activity-log.md).
-- 공통 틀: 도구 틀, 사이드 패널, 확인 질문, 알림 띠, 토스트, 메뉴.
-
-### 기본 틀
-
-#### 목록
-
-| 자리 | 부품 | 이렇게 쓴다 |
-|---|---|---|
-| 걸린 필터 | `Chip`(`onRemove`, `removeLabel` "필터 지우기"): "글: 첫 번째 글", "전송: 실패" | 탭 줄 오른쪽(`PageToolbarEnd`). ×로 그 필터만 뺀다. |
-| "종류 ▾" | `FilterButton`(값이 있으면 `filled`, "종류: AI 제안") + `DropdownMenu`: 종류마다 `DropdownMenuRadioItem`(앞 아이콘, AI 제안은 `Spark`), 구분선, "전송" `DropdownMenuSub`("대기" · "보냄" · "실패" · "취소됨", 끝에 개수 `MenuShortcut`) | 전송 값을 고르면 `Chip`이 된다. 보드의 행 메뉴 카드(`.mt-menu--ctx`)는 필터 버튼이 여는 메뉴이므로 `DropdownMenu`로 그린다. |
-| 실패 알림 | `PageBanner` 안의 `Banner tone="danger"`(`title` "전송 실패 N건", `meta` 날짜), 끝에 "보기" `TextButton variant="underline"`(실패 필터가 이미 걸렸으면 없다)과 "모두 다시 보내기" `TextButton` | 실패가 둘 이상일 때만 뜬다. 화면 맨 위, 틀의 띠 자리에 선다([common.md](common.md)의 "화면의 알림 띠"). 제목과 탭이 그 아래다. 실패 하나는 그 행이 상태와 "다시 보내기"로 말하므로 띠를 두지 않는다(원칙 8, 2026-11-05 소유자). 보내는 동안 "모두 다시 보내기"는 `TextButton loading` "보내는 중…"이고 다시 누를 수 없다. 실패는 빨강이다. |
-| 날짜 묶음 "오늘 · 10. 26" | `Text variant="meta" tone="subtle"`, 표 안쪽 12px에 맞춘다 |  |
-| 목록 | `Table` + `TableBody` + `TableRow` + `TableCell`, 아래 `ListFooter`와 `Pagination` | 행 어디를 눌러도 자세히 패널이 열린다(`RowLink`). 열린 행은 `selected`. |
-| 시각 | `TableCell` 안 `Count` |  |
-| 무엇 · 어디 | `Text`(잉크) 두 줄: 무엇 "“더 짧게 다듬어 줘…”", 아래 `Text variant="meta" tone="subtle" truncate` 어디서 "첫 번째 글 · 본문 5곳". AI 제안은 앞에 `Text tone="proposal"` 안의 `Icon icon={Spark}` | 아래 줄은 일이 일어난 곳만 말한다. ✦가 말하는 "어시스턴트 제안", 제목이 말하는 "글 발행" · "글 저장"은 되풀이하지 않는다(원칙 8). |
-| 끝 동작 | AI 제안: "대화" `TextButton variant="quiet" size="note"`(`href`), "되돌리기" `TextButton variant="underline" size="note"`. 결과 글 "되돌림 · 10:44" `Text variant="note" tone="subtle"`. 실패한 전송: 빨간 상태 하나 `EntryStatus status="failed"` "3번 실패", "다시 보내기" `TextButton variant="underline" size="note"`. 기다리는 전송: `Text variant="note"` "보내는 중". | 한 행에 할 수 있는 것만 보인다. |
-| 빈 목록 | 한 줄 `Text tone="subtle"`("실패한 전송이 없습니다", "아직 기록이 없습니다"), 거른 결과가 비었으면 뒤에 "필터 끄기" `TextButton variant="underline" size="note"` | 할 일이 없으므로 한 줄로 충분하다. |
-
-스토리: Patterns/Frame/PageHeader, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Primitives/AI mark, Patterns/Frame/Banner, Patterns/Frame/PageBanner, Controls/Button/TextButton, Primitives/Text, Patterns/List/Table, Patterns/List/Pagination, Controls/Status/Count, Primitives/Icon, Controls/Status/EntryStatus, Controls/Overlay/SidePanel, Patterns/Frame/DescriptionList, Controls/Button/Button, Controls/Overlay/AlertDialog.
-
-### 뜨는 자리
-
-흐름이 여는 자리다. 언제 열리는지는 아래 흐름 표가 적는다.
-
-#### 자세히 패널과 창
-
-| 자리 | 부품 | 이렇게 쓴다 |
-|---|---|---|
-| 자세히 패널 | `SidePanel width="side"`(`title` "\"첫 번째 글\" 발행", 머리 끝 닫기) | 목록 옆에 붙고 ✦ 버튼을 가린다. 목록을 보면서 쓰므로 시트가 아니라 사이드 패널이다. |
-| 묶음 "이벤트" · "항목" · "전송 · 2" | `Heading variant="label"`, 그 아래 `DescriptionList` + `DescriptionItem`("언제", "한 사람", "ID", "글", "컬렉션", "언어", "주소", "받는 곳", "상태", "시도 횟수", "마지막 오류") | 글 이름은 `TextButton variant="underline"`(`href`), 시각 · ID · 주소 · 오류는 `mono`. 전송 상태는 `EntryStatus`(`failed` "실패", `published` "보냄"). |
-| 전송 동작 | "다시 보내기" `TextButton variant="underline"`, "취소" `TextButton variant="quiet"` | 받는 곳마다 그 아래. |
-| 가져오기 자세히 | `SidePanel width="side"`(`title` "blog-export.zip 가져옴"), `DescriptionList`, "주소를 바꾼 글 · 2"(데이터와 같은 `ChangeLines`), `footer`에 "되돌리기" `TextButton`과 "목록에서 보기" `Button variant="primary"`(`href`) |  |
-| 전송 취소 확인 | `AlertDialog`(`AlertDialogTitle` "이 전송을 취소할까요?", `AlertDialogDescription`의 받는 곳 `mono`), `AlertDialogCancel` "닫기", `AlertDialogAction` `Button variant="danger"` "취소하기" | 버튼 이름이 하는 일을 말한다("닫기" · "취소하기"). |
-
-### 흐름 2 · 어시스턴트
-
-단계: 2.17, 2.18. 단계마다 보이는 것은 [flows/02-assistant.md](../flows/02-assistant.md)에 있다.
-
-| 상태 | 단계 | 더해지는 것 | 스토리 |
-|---|---|---|---|
-| `stage` "기본" | 2.17, 2.18 | 거르지 않은 목록, 실패한 행 하나(띠 없음), 탭 "활동 기록 1" |  |
-| `filter` "전체" · "전송 실패" · "글 하나" | 2.17, 2.18 | "전송 실패"는 "실패만"과 같다. "글 하나"는 `Chip` "글: 첫 번째 글", `FilterButton filled` "종류: AI 제안" | Patterns/List/FilterButton |
-
-### 흐름 9 · 데이터
-
-단계: 9.10. 단계마다 보이는 것은 [flows/09-data.md](../flows/09-data.md)에 있다.
-
-| 상태 | 단계 | 더해지는 것 | 스토리 |
-|---|---|---|---|
-| `stage` "기본" | 9.10 | 거르지 않은 목록, 실패한 행 하나(띠 없음), 탭 "활동 기록 1" |  |
-| `filter` "전체" · "전송 실패" · "글 하나" | 9.10 | "전송 실패"는 "실패만"과 같다. "글 하나"는 `Chip` "글: 첫 번째 글", `FilterButton filled` "종류: AI 제안" | Patterns/List/FilterButton |
-| `withImport` · `importDetail` | 9.10 | 가져오기 행, 가져오기 자세히 `SidePanel` | Controls/Overlay/SidePanel |
-
-### 흐름 12 · 활동 기록
-
-단계: 12.01, 12.01b, 12.02, 12.02b, 12.03, 12.04, 12.04b, 12.05, 12.06, 12.07, 12.08, 12.09, 12.09b, 12.10, 12.11. 단계마다 보이는 것은 [flows/12-activity-log.md](../flows/12-activity-log.md)에 있다.
-
-| 상태 | 단계 | 더해지는 것 | 스토리 |
-|---|---|---|---|
-| "실패만" | 12.01b | `Chip` "전송: 실패", 실패한 행만 |  |
-| "다시 보내는 중" | 12.02 | 그 행의 "다시 보내기"가 "보내는 중…"(다시 누를 수 없음) |  |
-| "다시 보냄" | 12.02b | 빈 목록 "실패한 전송이 없습니다" + "필터 끄기", `toast` "보냈습니다", 알림 없음 | Controls/Status/Toast |
-| "자세히" | 12.03 | 자세히 `SidePanel`(이벤트 · 항목 · 전송 · 2), 그 행 `selected`, ✦ 가려짐 | Controls/Overlay/SidePanel |
-| "취소 확인" | 12.04 | 자세히 패널 위 `AlertDialog` | Controls/Overlay/AlertDialog |
-| "취소됨" | 12.04b | 그 행의 결과 "취소됨"(흐림), `toast` "전송을 취소했습니다" | Controls/Status/Toast |
-| "실패 알림" | 12.01 | 실패한 행 하나: `EntryStatus` "3번 실패"와 "다시 보내기". 띠는 없다(실패가 하나라서) |  |
-| "실패 3건" | 12.05 | 실패한 행 셋(각 "N번 실패"), `Banner` "전송 실패 3건", 탭 개수 3 | Patterns/Frame/Banner |
-| "모두 보내는 중" | 12.06 | `Banner`의 "모두 다시 보내기"와 실패한 행들이 "보내는 중…" | Patterns/Frame/Banner |
-| "모두 보냄" | 12.07 | 알림 없음, `toast` "3건 보냈습니다" | Controls/Status/Toast |
-| "일부 실패" | 12.08 | 남은 실패 행 하나 "1번 실패"(띠는 사라진다), `toast` "2건 보냈습니다 · 1건 실패" | Controls/Status/Toast |
-| "필터 메뉴" | 12.09 | "종류" `DropdownMenu`와 "전송" `DropdownMenuSub`가 열림 | Controls/Menu/DropdownMenu |
-| "필터 걸림" | 12.09b | `Chip` "전송: 대기", 기다리는 행만 |  |
-| "구독자 없음" | 12.10 | 전송 열이 없는 행들(기록만), 알림 없음 |  |
-| "비어 있음" | 12.11 | 빈 목록 "아직 기록이 없습니다" |  |
-| `filter` "전체" · "전송 실패" · "글 하나" | 12.01, 12.01b, 12.02, 12.02b, 12.03, 12.04, 12.04b, 12.05, 12.06, 12.07, 12.08, 12.09, 12.09b, 12.10, 12.11 | "전송 실패"는 "실패만"과 같다. "글 하나"는 `Chip` "글: 첫 번째 글", `FilterButton filled` "종류: AI 제안" | Patterns/List/FilterButton |
-

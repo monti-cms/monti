@@ -1,4 +1,5 @@
 import type { ListColumn, ListRow } from "@monti-cms/core";
+import { clock } from "../entry/dates";
 
 const two = (value: number) => String(value).padStart(2, "0");
 
@@ -13,11 +14,8 @@ export function shortDate(value: Date | string | null, now = new Date()): string
 /** A moment as a log writes it: the list's date, then the hour and minute ("10. 26 10:58"). */
 export function shortTime(value: Date | string, now = new Date()): string {
 	const date = new Date(value);
-	return `${shortDate(date, now)} ${two(date.getHours())}:${two(date.getMinutes())}`;
+	return `${shortDate(date, now)} ${clock(date)}`;
 }
-
-/** The hour and minute of a moment ("10:58"). */
-export const clockTime = (value: Date | string) => shortTime(value).slice(-5);
 
 /** What a field's cell reads: relation titles or option labels joined, or the text. */
 export function fieldCell(row: ListRow, column: ListColumn): string {

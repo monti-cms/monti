@@ -29,8 +29,9 @@ import { type ReactNode, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
+import { clock } from "../entry/dates";
 import { useCoverCorner } from "../frame/admin-frame";
-import { clockTime, shortTime } from "../list/format";
+import { shortTime } from "../list/format";
 
 /** One group of the panel: a small heading and what is under it. */
 function Group({ title, children }: { title: string; children: ReactNode }) {
@@ -268,7 +269,7 @@ export function ActivityPanel({
 											)}
 											{delivery.nextAttemptAt && !isSending(delivery) && (
 												<DescriptionItem label={t("activity.nextAttempt")} mono>
-													{clockTime(delivery.nextAttemptAt)}
+													{clock(new Date(delivery.nextAttemptAt))}
 												</DescriptionItem>
 											)}
 										</DescriptionList>

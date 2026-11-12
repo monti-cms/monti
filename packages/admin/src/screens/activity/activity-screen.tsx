@@ -51,9 +51,10 @@ import { useUndo } from "../../activity/use-undo";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
+import { clock } from "../entry/dates";
 import { DateRows } from "../list/date-rows";
 import { toggled, ValueRow } from "../list/filter-rows";
-import { clockTime, shortDate, shortTime } from "../list/format";
+import { shortDate, shortTime } from "../list/format";
 import { ListPages } from "../list/list-pages";
 import { NoMatchRow } from "../list/no-match-row";
 import { SortRows } from "../list/sort-rows";
@@ -183,7 +184,7 @@ export function ActivityScreen({
 					? say(line.where)
 					: "",
 			line.actor === "cli" ? t("activity.actor.cli") : typeof line.actor === "object" ? line.actor.plugin : "",
-			line.undo.state === "done" ? t("activity.undone", { time: clockTime(line.undo.at) }) : "",
+			line.undo.state === "done" ? t("activity.undone", { time: clock(new Date(line.undo.at)) }) : "",
 		]
 			.filter(Boolean)
 			.join(" · ");
