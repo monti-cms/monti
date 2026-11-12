@@ -21,7 +21,17 @@ const MAINTENANCE = `Maintenance commands (not operations):
  */
 export async function main(config: MontiConfig, root: string, argv: string[]): Promise<number> {
 	const monti = openMonti(config, root);
-	const io = { out: (line: string) => console.log(line), err: (line: string) => console.error(line) };
+	const io = {
+		out: (line: string) => console.log(line),
+		err: (line: string) => console.error(line),
+		// One line of standard input, as `admin:reset-password` reads its password: typed at the prompt or piped in, never an argument.
+		secret: async (name: string) => {
+			const prompt = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
+			const value = await prompt.question(`${name}: `);
+			prompt.close();
+			return value;
+		},
+	};
 	try {
 		const [command] = argv;
 		if (command === "db:setup" || command === "db:migrate") {

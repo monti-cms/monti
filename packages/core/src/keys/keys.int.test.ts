@@ -1,11 +1,14 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { Kysely, PostgresDialect } from "kysely";
+import { Pool } from "pg";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { signedInApi } from "../__test__/admin";
 import { sql, testDatabase } from "../__test__/database";
+import type { Database } from "../db/schema";
 import { runCli } from "../entry/cli";
 import { agentTools, callAgentTool } from "../entry/tools";
 import { CheckError, ForbiddenError, UnknownOperationError } from "../errors";
 import { createMonti, definePlugin, type MontiOptions } from "../monti";
-import type { KeyList, ModelList } from "./operations";
+import { type KeyList, MODELS_RETRY_MS, type ModelList } from "./operations";
 import type { KeyService } from "./services";
 
 const db = await testDatabase();
@@ -550,7 +553,7 @@ describe("two changes of one key (review 2)", () => {
 			(error: unknown) => (error as { code?: string }).code ?? String(error),
 		);
 
-	it("14-4 a new address and a new key sent at once: the key is stored with an address it was checked with", async () => {
+	it("14-4 a new address and a new key sent at once: one wins, the other is a conflict, and the key stays with an address it was checked with", async () => {
 		const monti = site();
 		const servers = twoServers();
 		const { output } = await add(monti, {
@@ -559,43 +562,53 @@ describe("two changes of one key (review 2)", () => {
 			secret: A,
 			baseUrl: "http://x.test/v1",
 		});
-		// One change moves the key to server Y and waits for Y's answer; meanwhile another replaces the key itself.
-		const move = monti.run("keys.update", { id: output.id, baseUrl: "http://y.test/v1" }, admin);
+		// One change moves the key to server Y and waits for Y's answer; meanwhile another replaces the key itself and is done first.
+		const move = settled(monti.run("keys.update", { id: output.id, baseUrl: "http://y.test/v1" }, admin));
 		await servers.atY;
-		const replace = monti.run("keys.update", { id: output.id, secret: B }, admin);
-		await new Promise((resume) => setTimeout(resume, 150));
+		await monti.run("keys.update", { id: output.id, secret: B }, admin);
 		servers.letGo();
-		await Promise.all([move, replace]);
 
-		const stored = await monti.keys.open(output.id);
-		const host = stored?.baseUrl === "http://y.test/v1" ? "y" : "x";
-		expect(servers.checked).toContain(`${stored?.secret}@${host}`);
-		// The second change ran after the first, so it found the key at Y and was checked there.
-		expect(servers.checked).toEqual([`${A}@x`, `${A}@y`, `${B}@y`]);
-		expect((await list(monti)).keys[0].version).toBe(3);
+		// The move read the key before it was replaced: it does not put the old key back, and does not carry the new one to Y.
+		expect(await move).toBe("conflict");
+		expect(await monti.keys.open(output.id)).toMatchObject({ secret: B, baseUrl: "http://x.test/v1" });
+		expect(servers.checked).toEqual([`${A}@x`, `${B}@x`, `${A}@y`]);
+		expect((await list(monti)).keys[0]).toMatchObject({ version: 2, last4: "2222" });
 	});
 
-	it("14-4 a change made from an old reading of the key is a conflict: its key is sent nowhere", async () => {
+	it("14-4 two changes sent with the version the screen read: the later one is a conflict whichever way it was held up", async () => {
 		const monti = site();
-		const servers = twoServers();
+		twoServers().letGo();
 		const { output } = await add(monti, {
 			service: "openai-compatible",
 			name: "x.test",
 			secret: A,
 			baseUrl: "http://x.test/v1",
 		});
-		// Both screens read the key at version 1, as the admin API sends it.
 		const read = { actor: "admin", versions: { [`key:${output.id}`]: 1 } } as const;
-		const move = monti.run("keys.update", { id: output.id, baseUrl: "http://y.test/v1" }, read);
-		await servers.atY;
-		const replace = settled(monti.run("keys.update", { id: output.id, secret: B }, read));
-		await new Promise((resume) => setTimeout(resume, 150));
-		servers.letGo();
-		await move;
+		await monti.run("keys.update", { id: output.id, name: "renamed" }, read);
+		expect(await settled(monti.run("keys.update", { id: output.id, secret: B }, read))).toBe("conflict");
+		expect(await monti.keys.open(output.id)).toMatchObject({ secret: A, name: "renamed" });
+	});
 
-		expect(await replace).toBe("conflict");
-		expect(JSON.stringify(net.state.requests)).not.toContain(B);
-		expect(await monti.keys.open(output.id)).toMatchObject({ secret: A, baseUrl: "http://y.test/v1" });
+	it("14-4 ten changes of one key at once: each either lands on the version it read or is a conflict, never both lost and counted", async () => {
+		const monti = site();
+		twoServers().letGo();
+		const { output } = await add(monti, {
+			service: "openai-compatible",
+			name: "x.test",
+			secret: A,
+			baseUrl: "http://x.test/v1",
+		});
+		const results = await Promise.all(
+			Array.from({ length: 10 }, (_unused, index) =>
+				settled(monti.run("keys.update", { id: output.id, name: `name-${index}` }, admin)),
+			),
+		);
+		const landed = results.filter((result) => result === "done").length;
+		expect(results.filter((result) => result !== "done" && result !== "conflict")).toEqual([]);
+		// The version counts exactly the changes that landed.
+		expect((await list(monti)).keys[0].version).toBe(1 + landed);
+		expect(landed).toBeGreaterThan(0);
 	});
 
 	it("14-1 two keys added at once under one name: one is refused by name, and no error escapes", async () => {
@@ -725,6 +738,376 @@ describe("what a service answers is not trusted (reviews 5, 6, 7)", () => {
 	});
 });
 
+describe("a key on the command line (review K)", () => {
+	const io = (typed?: string) => {
+		const lines: string[] = [];
+		return {
+			lines,
+			io: {
+				out: (line: string) => lines.push(line),
+				err: (line: string) => lines.push(line),
+				...(typed === undefined ? {} : { secret: async () => typed }),
+			},
+		};
+	};
+
+	it("14-4 a key given as an argument is refused before anything runs: the shell would keep it", async () => {
+		const monti = site();
+		for (const args of [
+			["keys.add", "--service", "anthropic", "--name", "Anthropic", "--secret", ANTHROPIC],
+			["keys.add", "--service", "anthropic", "--name", "Anthropic", `--secret=${ANTHROPIC}`],
+			["keys.add", "--input", JSON.stringify({ service: "anthropic", name: "Anthropic", secret: ANTHROPIC })],
+		]) {
+			const { lines, io: terminal } = io(ANTHROPIC_NEW);
+			expect(await runCli(monti, args, terminal)).toBe(1);
+			expect(lines.join("\n")).toContain("write --secret - and give it on standard input");
+			expect(lines.join("\n")).not.toContain(ANTHROPIC);
+		}
+		expect(net.state.requests).toEqual([]);
+		expect((await list(monti)).keys).toEqual([]);
+	});
+
+	it("14-1 with `--secret -` the key is read from standard input, for a new key and for a changed one", async () => {
+		const monti = site();
+		const adding = io(ANTHROPIC);
+		expect(
+			await runCli(monti, ["keys.add", "--service", "anthropic", "--name", "Anthropic", "--secret", "-"], adding.io),
+		).toBe(0);
+		const { id } = (JSON.parse(adding.lines.join("")) as Added).output;
+		expect((await monti.keys.open(id))?.secret).toBe(ANTHROPIC);
+
+		const changing = io(ANTHROPIC_NEW);
+		expect(await runCli(monti, ["keys.update", "--id", id, "--secret", "-"], changing.io)).toBe(0);
+		expect((await monti.keys.open(id))?.secret).toBe(ANTHROPIC_NEW);
+		// A change that names no key asks for none.
+		const renaming = io();
+		expect(await runCli(monti, ["keys.update", "--id", id, "--name", "Renamed"], renaming.io)).toBe(0);
+		expect([...adding.lines, ...changing.lines, ...renaming.lines].join("\n")).not.toMatch(/sk-ant/);
+	});
+
+	it("14-4 where nothing can read standard input, `--secret -` is refused rather than stored as a dash", async () => {
+		const monti = site();
+		const { lines, io: terminal } = io();
+		expect(
+			await runCli(monti, ["keys.add", "--service", "anthropic", "--name", "Anthropic", "--secret", "-"], terminal),
+		).toBe(1);
+		expect(lines.join("\n")).toContain("standard input");
+		expect(net.state.requests).toEqual([]);
+	});
+});
+
+describe("a row changed behind the server's back (review A)", () => {
+	const KEY = "compatible-secret-key-3c3c";
+	const addCompatible = (monti: ReturnType<typeof site>, name = "x.test") => {
+		net.state.answer = (url) =>
+			/^http:\/\/(x|evil)\.test\/v1\/models$/.test(url) ? net.json(200, { data: [{ id: "a-model" }] }) : undefined;
+		return add(monti, { service: "openai-compatible", name, secret: KEY, baseUrl: "http://x.test/v1" });
+	};
+	const sentToEvil = () => net.state.requests.filter((request) => request.url.includes("evil.test"));
+
+	it("14-4 an address rewritten in the database opens no key: the server sends it nowhere", async () => {
+		const monti = site();
+		const { output } = await addCompatible(monti);
+		await db.updateTable("api_keys").set({ base_url: "http://evil.test/v1", models_at: null }).execute();
+
+		const listed = await models(monti, { refresh: true });
+		expect(listed.keys).toEqual([]);
+		expect(sentToEvil()).toEqual([]);
+		expect((await list(monti)).keys[0]).toMatchObject({ readable: false, baseUrl: "http://evil.test/v1" });
+		expect(await monti.keys.open(output.id)).toBeNull();
+		// The person who has the key enters it again, and it is checked with the address the row now shows.
+		await monti.run("keys.update", { id: output.id, secret: KEY, baseUrl: "http://x.test/v1" }, admin);
+		expect(await monti.keys.open(output.id)).toMatchObject({ secret: KEY, baseUrl: "http://x.test/v1" });
+	});
+
+	it("14-4 a service rewritten in the database opens no key either", async () => {
+		const monti = site();
+		const { output } = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		await db
+			.updateTable("api_keys")
+			.set({ service: "openai-compatible", base_url: "http://evil.test/v1", models_at: null })
+			.execute();
+		net.state.requests.length = 0;
+		await models(monti, { refresh: true });
+		expect(net.state.requests).toEqual([]);
+		expect(await monti.keys.open(output.id)).toBeNull();
+	});
+
+	it("14-4 a sealed key copied into another row does not open there", async () => {
+		const monti = site();
+		const first = await addCompatible(monti, "x.test");
+		clock = new Date(clock.getTime() + 1000);
+		const second = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		const { secret } = await db
+			.selectFrom("api_keys")
+			.select("secret")
+			.where("id", "=", second.output.id)
+			.executeTakeFirstOrThrow();
+		await db.updateTable("api_keys").set({ secret }).where("id", "=", first.output.id).execute();
+		expect(await monti.keys.open(first.output.id)).toBeNull();
+		expect((await monti.keys.open(second.output.id))?.secret).toBe(ANTHROPIC);
+	});
+
+	it("14-1 an address changed by its owner keeps the key: it is sealed again for the new address", async () => {
+		const monti = site();
+		const { output } = await addCompatible(monti);
+		net.state.answer = (url) =>
+			url === "http://y.test/v1/models" ? net.json(200, { data: [{ id: "y-model" }] }) : undefined;
+		await monti.run("keys.update", { id: output.id, baseUrl: "http://y.test/v1" }, admin);
+		expect(await monti.keys.open(output.id)).toMatchObject({ secret: KEY, baseUrl: "http://y.test/v1" });
+		expect(net.state.requests.at(-1)?.headers.authorization).toBe(`Bearer ${KEY}`);
+	});
+});
+
+describe("a service that is slow or down (review B)", () => {
+	const sleep = (ms: number) => new Promise((resume) => setTimeout(resume, ms));
+	const anthropicRequests = () => net.state.requests.filter((request) => request.url.includes("anthropic.com")).length;
+
+	it("14-1 a service that fails is left alone for a quarter of an hour: the model menu does not wait for it every time", async () => {
+		const monti = site();
+		await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		clock = new Date(clock.getTime() + 25 * 3_600_000);
+		// Down the slow way: it takes its time, then fails.
+		net.state.answer = async (url) => {
+			if (!url.includes("anthropic.com")) return undefined;
+			await sleep(300);
+			throw new TypeError("fetch failed");
+		};
+		const before = anthropicRequests();
+		const first = await models(monti);
+		expect(anthropicRequests()).toBe(before + 1);
+		expect(first.keys[0].models).toHaveLength(3);
+
+		clock = new Date(clock.getTime() + 60_000);
+		const started = Date.now();
+		const second = await models(monti);
+		expect(anthropicRequests()).toBe(before + 1);
+		expect(Date.now() - started).toBeLessThan(250);
+		expect(second).toEqual(first);
+
+		// After the wait it is asked again; and once it answers, the list is fresh and the failure forgotten.
+		clock = new Date(clock.getTime() + MODELS_RETRY_MS);
+		await models(monti);
+		expect(anthropicRequests()).toBe(before + 2);
+		net.state.answer = null;
+		clock = new Date(clock.getTime() + MODELS_RETRY_MS + 1000);
+		await models(monti);
+		expect(anthropicRequests()).toBe(before + 3);
+		await models(monti);
+		expect(anthropicRequests()).toBe(before + 3);
+		expect(await db.selectFrom("api_keys").select("models_failed_at").execute()).toEqual([{ models_failed_at: null }]);
+	});
+
+	it("14-1 asking now (`refresh`) asks even a service that just failed", async () => {
+		const monti = site();
+		await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		clock = new Date(clock.getTime() + 25 * 3_600_000);
+		net.state.down = true;
+		await models(monti);
+		const before = anthropicRequests();
+		await models(monti, { refresh: true });
+		expect(anthropicRequests()).toBe(before + 1);
+	});
+
+	it("14-1 calls that want the same stale list at the same moment share one check", async () => {
+		const monti = site();
+		await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		clock = new Date(clock.getTime() + 25 * 3_600_000);
+		net.state.answer = async (url) => {
+			if (url.includes("anthropic.com")) await sleep(200);
+			return undefined;
+		};
+		const before = anthropicRequests();
+		const [one, two, three] = await Promise.all([models(monti), models(monti), models(monti, { refresh: true })]);
+		expect(anthropicRequests()).toBe(before + 1);
+		expect(one).toEqual(two);
+		expect(two).toEqual(three);
+	});
+});
+
+describe("the database is not held while a service is asked (review E)", () => {
+	/** A site whose pool has one connection, as a serverless deploy gives each instance. */
+	async function singleConnection() {
+		const { rows } = await sql<{ schema: string }>`select current_schema() as schema`.execute(db);
+		const pool = new Pool({
+			connectionString: process.env.CMS_TEST_DATABASE_URL,
+			options: `-c search_path=${rows[0].schema}`,
+			max: 1,
+		});
+		const single = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
+		pools.push(single);
+		return site({ db: single });
+	}
+	const pools: Kysely<Database>[] = [];
+	afterAll(async () => {
+		for (const pool of pools) await pool.destroy();
+	});
+
+	/** Holds Anthropic's answer until let go, and tells when the question has arrived. */
+	function hold() {
+		let letGo = () => {};
+		const held = new Promise<void>((resolve) => {
+			letGo = resolve;
+		});
+		let arrived = () => {};
+		const asked = new Promise<void>((resolve) => {
+			arrived = resolve;
+		});
+		net.state.answer = async (url) => {
+			if (!url.includes("anthropic.com")) return undefined;
+			arrived();
+			await held;
+			return undefined;
+		};
+		return { letGo, asked };
+	}
+	const within = <Value>(work: Promise<Value>, ms: number) =>
+		Promise.race([work, new Promise<"waited">((resolve) => setTimeout(() => resolve("waited"), ms))]);
+
+	it("14-1 while a key to add waits for its service, the site's one connection still answers", async () => {
+		const monti = await singleConnection();
+		const service = hold();
+		const adding = add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		await service.asked;
+		const listed = await within(list(monti), 2000);
+		expect(listed).not.toBe("waited");
+		expect((listed as KeyList).keys).toEqual([]);
+		service.letGo();
+		expect((await adding).output.last4).toBe("a1b2");
+	});
+
+	it("14-1 the same while a changed key waits for its service", async () => {
+		const monti = await singleConnection();
+		const { output } = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		const service = hold();
+		const changing = monti.run("keys.update", { id: output.id, secret: ANTHROPIC_NEW }, admin);
+		await service.asked;
+		const listed = await within(list(monti), 2000);
+		expect(listed).not.toBe("waited");
+		expect((listed as KeyList).keys[0].last4).toBe("a1b2");
+		service.letGo();
+		await changing;
+		expect((await list(monti)).keys[0].last4).toBe("7c0e");
+	});
+
+	it("14-1 a name taken while the service was asked is still refused when the key goes in", async () => {
+		const monti = site();
+		const service = hold();
+		const slow = refusedFor(add(monti, { service: "anthropic", name: "Same", secret: ANTHROPIC }));
+		await service.asked;
+		// Another key takes the name meanwhile, through a service that answers at once.
+		await add(monti, { service: "openai", name: "Same", secret: OPENAI });
+		service.letGo();
+		expect(await slow).toBe("keys.nameTaken");
+		expect((await list(monti)).keys.map((key) => key.service)).toEqual(["openai"]);
+	});
+});
+
+describe("small things a key can be (reviews F, G, H, J)", () => {
+	it.each([
+		"x",
+		"ollama",
+		"none",
+	])("14-1 a placeholder key (%j) in front of a server whose models carry that word is taken", async (placeholder) => {
+		const monti = site();
+		net.state.answer = (url) =>
+			url === "http://proxy.test/v1/models"
+				? net.json(200, { data: [{ id: "ollama/llama3" }, { id: "none-such/x-large" }] })
+				: undefined;
+		await add(monti, {
+			service: "openai-compatible",
+			name: "proxy",
+			secret: placeholder,
+			baseUrl: "http://proxy.test/v1",
+		});
+		expect((await models(monti)).keys[0].models.map((model) => model.id)).toEqual([
+			"none-such/x-large",
+			"ollama/llama3",
+		]);
+		expect((await list(monti)).keys[0].last4).toBe("");
+	});
+
+	it("14-1 a key whose service left with its plugin gives no model: the next key's models are at work", async () => {
+		const house: KeyService = {
+			id: "house",
+			name: "House",
+			defaults: { assistant: ["house-large"], quick: ["house-small"] },
+			check: async () => ({
+				ok: true,
+				models: [
+					{ id: "house-large", thinking: true, images: true },
+					{ id: "house-small", thinking: false, images: false },
+				],
+			}),
+		};
+		const withPlugin = site({ plugins: [definePlugin({ name: "house", keyServices: [house] })] });
+		const first = await add(withPlugin, { service: "house", name: "House", secret: "house-key-0000-9d9d" });
+		clock = new Date(clock.getTime() + 1000);
+		const second = await add(withPlugin, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		await withPlugin.run("models.setQuick", { keyId: first.output.id, model: "house-small" }, admin);
+		expect(await models(withPlugin)).toMatchObject({
+			assistant: { keyId: first.output.id, model: "house-large" },
+			quick: { keyId: first.output.id, model: "house-small", chosen: true },
+		});
+
+		// The plugin is taken out of the site's config.
+		const without = site();
+		const listed = await models(without);
+		expect(listed.keys.map((key) => key.name)).toEqual(["Anthropic"]);
+		expect(listed).toMatchObject({
+			assistant: { keyId: second.output.id, model: "claude-sonnet-5-5" },
+			quick: { keyId: second.output.id, model: "claude-haiku-5-5", chosen: false },
+		});
+		const rows = (await list(without)).keys;
+		expect(rows[0]).toMatchObject({ name: "House", serviceName: "house", readable: true, uses: [] });
+		expect(
+			await refusedFor(without.run("models.setQuick", { keyId: first.output.id, model: "house-large" }, admin)),
+		).toBe("models.unknown");
+	});
+
+	it.each([
+		"http://10.0.0.5:8080/admin#",
+		"http://server.test/v1#models",
+		"http://server.test/v1?key=1",
+		"http://server.test/v1?",
+		"http://user:password@server.test/v1",
+		"http://user@server.test/v1",
+		"server.test/v1",
+		"file:///etc/passwd",
+	])("14-1 the address %j is refused as no address, and nothing is asked of it", async (baseUrl) => {
+		const monti = site();
+		expect(await refusedFor(add(monti, { service: "openai-compatible", name: "server", secret: "", baseUrl }))).toBe(
+			"keys.badAddress",
+		);
+		expect(net.state.requests).toEqual([]);
+	});
+
+	it("14-1 an address is stored as its origin and path: the check adds /models to exactly that", async () => {
+		const monti = site();
+		net.state.answer = (url) =>
+			url === "http://server.test:8080/api/v1/models" ? net.json(200, { data: [{ id: "m" }] }) : undefined;
+		await add(monti, {
+			service: "openai-compatible",
+			name: "server",
+			secret: "",
+			baseUrl: "  http://Server.test:8080/api/v1//  ",
+		});
+		expect((await list(monti)).keys[0].baseUrl).toBe("http://server.test:8080/api/v1");
+		expect(net.state.requests.at(-1)?.url).toBe("http://server.test:8080/api/v1/models");
+	});
+
+	it("a count that is no number counts nothing and fails nothing", async () => {
+		const monti = site();
+		const { output } = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		for (const tokens of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -5, 0])
+			await monti.keys.addUsage(output.id, tokens);
+		expect(await db.selectFrom("api_key_usage").selectAll().execute()).toEqual([]);
+		await monti.keys.addUsage(output.id, 10.4);
+		await monti.keys.addUsage(output.id, Number.MAX_VALUE);
+		expect((await list(monti)).keys[0].usage.tokens).toBe(10 + Number.MAX_SAFE_INTEGER);
+	});
+});
+
 /** Every row of every table of the test's database, as text: what a copy of the database would hold. */
 async function everythingStored(): Promise<string> {
 	const { rows } = await sql<{ name: string }>`
@@ -769,18 +1152,20 @@ describe("the key itself goes nowhere", () => {
 
 		const out: string[] = [];
 		expect(
-			await runCli(monti, ["keys.add", "--service", "openai", "--name", "OpenAI", "--secret", OPENAI], {
+			await runCli(monti, ["keys.add", "--service", "openai", "--name", "OpenAI", "--secret", "-"], {
 				out: (line) => out.push(line),
 				err: (line) => out.push(line),
+				secret: async () => OPENAI,
 			}),
 		).toBe(0);
 		expect(await runCli(monti, ["keys.list"], { out: (line) => out.push(line), err: (line) => out.push(line) })).toBe(
 			0,
 		);
 		expect(
-			await runCli(monti, ["keys.add", "--service", "openai", "--name", "Refused", "--secret", "sk-refused-key-8888"], {
+			await runCli(monti, ["keys.add", "--service", "openai", "--name", "Refused", "--secret", "-"], {
 				out: (line) => out.push(line),
 				err: (line) => out.push(line),
+				secret: async () => "sk-refused-key-8888",
 			}),
 		).toBe(1);
 

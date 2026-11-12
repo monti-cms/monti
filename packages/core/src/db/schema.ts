@@ -271,6 +271,8 @@ export interface ApiKeyTable {
 	/** The models the service listed for this key when it was last asked, and when that was. */
 	models: ColumnType<Model[], string | undefined, string>;
 	models_at: Date | null;
+	/** When its service last failed to give a list: it is not asked again for a while (doc 14). Cleared by a list that came. */
+	models_failed_at: Date | null;
 	/** Raised by every change: a change made from an old reading is a conflict. */
 	version: Generated<number>;
 	created_at: ColumnType<Date, Date | undefined, never>;

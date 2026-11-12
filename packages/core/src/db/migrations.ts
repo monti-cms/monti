@@ -379,6 +379,7 @@ const MIGRATIONS: Record<string, Migration> = {
 				.addColumn("last4", "text", (column) => column.notNull())
 				.addColumn("models", "jsonb", (column) => column.notNull().defaultTo(sql`'[]'::jsonb`))
 				.addColumn("models_at", "timestamptz")
+				.addColumn("models_failed_at", "timestamptz")
 				.addColumn("version", "integer", (column) => column.notNull().defaultTo(1))
 				.addColumn("created_at", "timestamptz", (column) => column.notNull().defaultTo(sql`now()`))
 				.execute();

@@ -49,6 +49,6 @@ export function openMonti(config: MontiConfig, root: string): Monti {
 		auth: config.auth,
 		marks: config.marks,
 		receivers: config.receivers,
-		secret: config.secret || process.env.MONTI_SECRET || null,
+		secret: config.secret?.trim() || process.env.MONTI_SECRET || null,
 	});
 }

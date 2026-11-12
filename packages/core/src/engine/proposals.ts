@@ -76,6 +76,9 @@ export async function proposeItem(
 
 	let baseVersions: Record<string, number> = {};
 	let preview: Preview | null = null;
+	// As a write does: before the transaction, so nothing is held while another service answers.
+	const prepared =
+		refs.size === 0 ? await operation.prepare?.(input, context(engine, engine.db, "assistant").ctx) : undefined;
 	await engine.db
 		.transaction()
 		.execute(async (trx) => {
@@ -86,7 +89,7 @@ export async function proposeItem(
 				[...states].flatMap(([key, state]) => (state === null ? [] : [[key, state.version]])),
 			);
 			// An input that points at a former item names records that do not exist yet, so its checks wait for the apply.
-			if (refs.size === 0) await operation.check?.(input, ctx);
+			if (refs.size === 0) await operation.check?.(input, ctx, prepared);
 			preview = (await operation.preview?.(input, ctx)) ?? null;
 			throw new Rollback();
 		})

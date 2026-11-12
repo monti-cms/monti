@@ -173,6 +173,49 @@ describe("one deadline for a whole check (review 10)", () => {
 });
 
 describe("what a check hands on", () => {
+	it.each([
+		["nothing", null],
+		["undefined", undefined],
+		["a word", "ok"],
+		["a number", 5],
+		["a list", []],
+		["an object that says neither yes nor no", { ok: "yes", models: [] }],
+		["a yes without its models", { ok: true }],
+	])("a plugin's check that answers %s is no answer, not a crash (review I)", async (_what, answer) => {
+		const odd: KeyService = { id: "odd", name: "Odd", check: (async () => answer) as never };
+		expect(await checkKey(odd, { secret: KEY, baseUrl: null }, globalThis.fetch)).toEqual({
+			ok: false,
+			reason: "unreachable",
+		});
+	});
+
+	it("a plugin's refusal is passed on as a refusal, and a reason it made up is no answer", async () => {
+		const refuses: KeyService = { id: "r", name: "R", check: async () => ({ ok: false, reason: "refused" }) };
+		expect(await checkKey(refuses, { secret: KEY, baseUrl: null }, globalThis.fetch)).toEqual({
+			ok: false,
+			reason: "refused",
+		});
+		const invents: KeyService = { id: "i", name: "I", check: (async () => ({ ok: false, reason: "busy" })) as never };
+		expect(await checkKey(invents, { secret: KEY, baseUrl: null }, globalThis.fetch)).toEqual({
+			ok: false,
+			reason: "unreachable",
+		});
+	});
+
+	it("a plugin's check that throws before it returns anything is no answer either", async () => {
+		const thrower: KeyService = {
+			id: "thrower",
+			name: "Thrower",
+			check: () => {
+				throw new Error("boom, before any promise");
+			},
+		};
+		expect(await checkKey(thrower, { secret: KEY, baseUrl: null }, globalThis.fetch)).toEqual({
+			ok: false,
+			reason: "unreachable",
+		});
+	});
+
 	it("a plugin's check that throws is no answer, not a crash", async () => {
 		const broken: KeyService = {
 			id: "broken",

@@ -2,19 +2,23 @@ import { type Kysely, type Selectable, sql, type Transaction } from "kysely";
 import { z } from "zod";
 import { randomUUID } from "../bytes";
 import type { ApiKeyTable, Database } from "../db/schema";
-import { CheckError } from "../errors";
+import { CheckError, ConflictError } from "../errors";
 import { defineOperation, type OperationContext } from "../operation";
 import { defineRecordKind, lockRecords } from "../records";
+import type { Site } from "../site";
 import { seal, unseal } from "./seal";
-import { checkKey, type KeyService, type Model } from "./services";
+import { checkKey, KEY_LENGTH_THAT_MATTERS, type KeyCheck, type KeyService, type Model } from "./services";
 
 type Db = Kysely<Database> | Transaction<Database>;
 type KeyRecord = Selectable<ApiKeyTable>;
 
 /** How long a key's model list is kept before the service is asked again. */
 const MODELS_FRESH_MS = 86_400_000;
-/** A key shorter than this shows no ending: four characters would be too much of it. */
-const SHOWS_ENDING = 12;
+/**
+ * How long a service that failed to give its list is left alone. Without it a service that is down would be asked, and waited ten seconds for,
+ * every time the model menu opens.
+ */
+export const MODELS_RETRY_MS = 15 * 60_000;
 
 /** Where a key is at work: the assistant's starting model comes from it, or the quick tasks' model does. */
 export type KeyUse = { for: "assistant" | "quick"; model: string };
@@ -67,12 +71,23 @@ export type ModelList = {
 /** `2026-11`: usage is counted per calendar month, in UTC. */
 const monthOf = (at: Date) => at.toISOString().slice(0, 7);
 
-const ending = (secret: string) => (secret.length >= SHOWS_ENDING ? secret.slice(-4) : "");
+/** A key too short to matter shows no ending: four characters would be most of it. */
+const ending = (secret: string) => (secret.length >= KEY_LENGTH_THAT_MATTERS ? secret.slice(-4) : "");
 
 const serviceOf = (ctx: OperationContext, id: string) => ctx.site.keyServices.find((service) => service.id === id);
 
 const keysInOrder = (db: Db): Promise<KeyRecord[]> =>
 	db.selectFrom("api_keys").selectAll().orderBy("created_at").orderBy("id").execute();
+
+/** Opens a stored key: only in the row it was sealed for, with the service and address it was sealed for. */
+const opened = (secret: string, key: KeyRecord) =>
+	unseal(secret, key.secret, { id: key.id, service: key.service, baseUrl: key.base_url });
+
+/** The server's secret, or the refusal every key write gives without one. */
+function secretOf(ctx: OperationContext): string {
+	if (ctx.site.secret === null) throw new CheckError({ key: "keys.noSecret" });
+	return ctx.site.secret;
+}
 
 /**
  * A key as the engine sees it: a record with a version, so two changes of one key run one after the other, and a change made from an old reading is
@@ -102,7 +117,7 @@ async function readKeys(ctx: OperationContext) {
 	return Promise.all(
 		(await keysInOrder(ctx.db)).map(async (key) => ({
 			...key,
-			readable: secret !== null && (await unseal(secret, key.secret)) !== null,
+			readable: secret !== null && (await opened(secret, key)) !== null,
 		})),
 	);
 }
@@ -111,13 +126,17 @@ async function readKeys(ctx: OperationContext) {
 const preferred = (models: Model[], wanted: string[] | undefined) =>
 	wanted?.find((id) => models.some((model) => model.id === id)) ?? models[0]?.id;
 
+/** Whether a key can give a model: the server reads it, and its service is still one the site has (a removed plugin's key gives none). */
+const usable = (ctx: OperationContext, key: KeyRecord & { readable: boolean }) =>
+	key.readable && serviceOf(ctx, key.service) !== undefined;
+
 /** The models at work before and after anyone picks (doc 10: a new conversation starts with the first key's service's default). */
 async function startingModels(
 	ctx: OperationContext,
 	keys: (KeyRecord & { readable: boolean })[],
 ): Promise<Pick<ModelList, "assistant" | "quick">> {
-	const usable = keys.filter((key) => key.readable && key.models.length > 0);
-	const first = usable[0];
+	const giving = keys.filter((key) => usable(ctx, key) && key.models.length > 0);
+	const first = giving[0];
 	const own = (role: "assistant" | "quick") => {
 		const model = first && preferred(first.models, serviceOf(ctx, first.service)?.defaults?.[role]);
 		return first && model ? { keyId: first.id, model } : null;
@@ -128,7 +147,7 @@ async function startingModels(
 		.where("role", "=", "quick")
 		.executeTakeFirst();
 	const stillThere =
-		picked && usable.some((key) => key.id === picked.key_id && key.models.some((model) => model.id === picked.model));
+		picked && giving.some((key) => key.id === picked.key_id && key.models.some((model) => model.id === picked.model));
 	const builtIn = own("quick");
 	return {
 		assistant: own("assistant"),
@@ -138,14 +157,27 @@ async function startingModels(
 	};
 }
 
-/** A service's address as it is stored: an http(s) address without the trailing slash. */
+/**
+ * A service's address as it is stored: its origin and path, without the trailing slash. A query, a fragment, or a user name and password in it are
+ * refused: the path the check adds (`/models`) would land inside the query or after the `#`, so the request would go somewhere else than the
+ * address reads, and `fetch` takes no address with credentials at all.
+ */
 function address(raw: string | undefined): string {
+	const given = (raw ?? "").trim();
 	let url: URL | null = null;
 	try {
-		url = new URL((raw ?? "").trim());
+		url = new URL(given);
 	} catch {}
-	if (!url || !["http:", "https:"].includes(url.protocol)) throw new CheckError({ key: "keys.badAddress" });
-	return url.toString().replace(/\/+$/, "");
+	if (
+		!url ||
+		!["http:", "https:"].includes(url.protocol) ||
+		url.username !== "" ||
+		url.password !== "" ||
+		given.includes("?") ||
+		given.includes("#")
+	)
+		throw new CheckError({ key: "keys.badAddress" });
+	return `${url.origin}${url.pathname}`.replace(/\/+$/, "");
 }
 
 /** Asks the service once whether it takes the key (doc 14: on add, and again whenever the key or its address changes). */
@@ -159,6 +191,23 @@ async function ask(ctx: OperationContext, service: KeyService, secret: string, b
 async function mustBeFree(ctx: OperationContext, name: string, except?: string) {
 	const taken = await ctx.db.selectFrom("api_keys").select("id").where("name", "=", name).executeTakeFirst();
 	if (taken && taken.id !== except) throw new CheckError({ key: "keys.nameTaken", values: { name } });
+}
+
+/** The checks of a site that are on their way, by key and its sealed value: calls that want the same list at the same moment share one. */
+const onTheirWay = new WeakMap<Site, Map<string, Promise<KeyCheck>>>();
+
+function sharedCheck(site: Site, key: KeyRecord, check: () => Promise<KeyCheck>): Promise<KeyCheck> {
+	let checks = onTheirWay.get(site);
+	if (!checks) {
+		checks = new Map();
+		onTheirWay.set(site, checks);
+	}
+	const name = `${key.id}\n${key.secret}`;
+	const running = checks.get(name);
+	if (running) return running;
+	const started = check().finally(() => checks.delete(name));
+	checks.set(name, started);
+	return started;
 }
 
 const Name = z.string().trim().min(1).max(60);
@@ -210,6 +259,7 @@ export const keyOperations = [
 		name: "keys.add",
 		kind: "write",
 		humanOnly: true,
+		secretInputs: ["secret"],
 		description:
 			"Add a service key. The service is asked once whether it takes the key; a key it refuses is not stored. Only a person does it: it needs the key itself.",
 		input: z.object({
@@ -220,26 +270,30 @@ export const keyOperations = [
 			/** The service's address, for a service that asks for one. */
 			baseUrl: z.string().optional(),
 		}),
-		async run(input, ctx) {
-			const secret = ctx.site.secret;
-			if (secret === null) throw new CheckError({ key: "keys.noSecret" });
+		// The service is asked before the write's transaction opens: nothing of the database is held while it answers.
+		async prepare(input, ctx) {
+			secretOf(ctx);
 			const service = serviceOf(ctx, input.service);
 			if (!service) throw new CheckError({ key: "keys.unknownService" });
-			await lockName(ctx, input.name);
 			await mustBeFree(ctx, input.name);
 			const baseUrl = service.address ? address(input.baseUrl) : null;
-			const models = await ask(ctx, service, input.secret, baseUrl);
+			return { service: service.id, baseUrl, models: await ask(ctx, service, input.secret, baseUrl) };
+		},
+		async run(input, ctx, asked) {
+			// The name was free when the service was asked; it is held and looked at again now that the key goes in.
+			await lockName(ctx, input.name);
+			await mustBeFree(ctx, input.name);
 			const id = randomUUID();
 			await ctx.db
 				.insertInto("api_keys")
 				.values({
 					id,
-					service: service.id,
+					service: asked.service,
 					name: input.name,
-					base_url: baseUrl,
-					secret: await seal(secret, input.secret),
+					base_url: asked.baseUrl,
+					secret: await seal(secretOf(ctx), input.secret, { id, service: asked.service, baseUrl: asked.baseUrl }),
 					last4: ending(input.secret),
-					models: JSON.stringify(models),
+					models: JSON.stringify(asked.models),
 					models_at: ctx.now(),
 					created_at: ctx.now(),
 				})
@@ -253,6 +307,7 @@ export const keyOperations = [
 		name: "keys.update",
 		kind: "write",
 		humanOnly: true,
+		secretInputs: ["secret"],
 		description:
 			"Change a key's name, its address, or the key itself. A new key or address is checked with the service again; a key the server can no longer read needs the key entered again. Only a person does it.",
 		input: z.object({
@@ -262,43 +317,65 @@ export const keyOperations = [
 			secret: z.string().trim().optional(),
 			baseUrl: z.string().optional(),
 		}),
-		// The engine holds the key from here to the end of the write: the key and the address read below are the ones this change is checked and
-		// stored with, whatever another change of the same key is doing.
-		touches: (input) => [{ kind: "key", id: input.id }],
-		async run(input, ctx) {
-			const secret = ctx.site.secret;
-			if (secret === null) throw new CheckError({ key: "keys.noSecret" });
+		// Reads the key and asks the service before the transaction opens. `run` then holds the key and goes on only if it is still at the version
+		// read here: the key and address that were checked together are the ones stored together, whatever another change did meanwhile.
+		async prepare(input, ctx) {
+			const secret = secretOf(ctx);
 			const key = await ctx.db.selectFrom("api_keys").selectAll().where("id", "=", input.id).executeTakeFirst();
 			if (!key) throw new CheckError({ key: "keys.unknown" });
 			const name = input.name ?? key.name;
-			if (name !== key.name) {
-				await lockName(ctx, name);
-				await mustBeFree(ctx, name, key.id);
-			}
+			if (name !== key.name) await mustBeFree(ctx, name, key.id);
 
 			const service = serviceOf(ctx, key.service);
 			const baseUrl = service?.address && input.baseUrl !== undefined ? address(input.baseUrl) : key.base_url;
-			const stored = await unseal(secret, key.secret);
+			const stored = await opened(secret, key);
 			const next = input.secret ?? stored;
 			// A key nobody can read any more is of no use until it is entered again.
 			if (next === null) throw new CheckError({ key: "keys.needsKey" });
 			const changed = next !== stored || baseUrl !== key.base_url;
 			if (changed && !service) throw new CheckError({ key: "keys.unknownService" });
-			const models = changed && service ? await ask(ctx, service, next, baseUrl) : null;
-			const sealed = next !== stored ? await seal(secret, next) : null;
-
-			await ctx.db
+			return {
+				version: key.version,
+				name,
+				baseUrl,
+				// The key to seal again: a new key, or the same one under its new address (a sealed key opens only at the address it was sealed for).
+				reseal: changed ? next : null,
+				models: changed && service ? await ask(ctx, service, next, baseUrl) : null,
+			};
+		},
+		touches: (input) => [{ kind: "key", id: input.id }],
+		async run(input, ctx, asked) {
+			const key = await ctx.db.selectFrom("api_keys").selectAll().where("id", "=", input.id).executeTakeFirst();
+			if (!key) throw new CheckError({ key: "keys.unknown" });
+			const changedSince = () =>
+				new ConflictError([{ ref: { kind: "key", id: key.id }, expected: asked.version, actual: key.version }]);
+			if (key.version !== asked.version) throw changedSince();
+			if (asked.name !== key.name) {
+				await lockName(ctx, asked.name);
+				await mustBeFree(ctx, asked.name, key.id);
+			}
+			const sealed =
+				asked.reseal === null
+					? null
+					: await seal(secretOf(ctx), asked.reseal, { id: key.id, service: key.service, baseUrl: asked.baseUrl });
+			// Written only onto the version that was read before the service was asked: the database itself refuses a change that lost the race.
+			const written = await ctx.db
 				.updateTable("api_keys")
 				.set((eb) => ({
-					name,
-					base_url: baseUrl,
+					name: asked.name,
+					base_url: asked.baseUrl,
 					version: eb("version", "+", 1),
-					...(models ? { models: JSON.stringify(models), models_at: ctx.now() } : {}),
-					...(sealed ? { secret: sealed, last4: ending(next) } : {}),
+					...(asked.models
+						? { models: JSON.stringify(asked.models), models_at: ctx.now(), models_failed_at: null }
+						: {}),
+					...(sealed !== null && asked.reseal !== null ? { secret: sealed, last4: ending(asked.reseal) } : {}),
 				}))
 				.where("id", "=", key.id)
-				.execute();
-			return { id: key.id, name, last4: next !== stored ? ending(next) : key.last4 };
+				.where("version", "=", asked.version)
+				.returning("id")
+				.executeTakeFirst();
+			if (!written) throw changedSince();
+			return { id: key.id, name: asked.name, last4: asked.reseal !== null ? ending(asked.reseal) : key.last4 };
 		},
 		summary: (_input, output) => ({ key: "keys.update", values: { name: output.name } }),
 	}),
@@ -330,22 +407,31 @@ export const keyOperations = [
 		async run(input, ctx): Promise<ModelList> {
 			const secret = ctx.site.secret;
 			const keys = await readKeys(ctx);
-			const stale = ctx.now().getTime() - MODELS_FRESH_MS;
+			const now = ctx.now();
 			await Promise.all(
 				keys.map(async (key) => {
 					const service = serviceOf(ctx, key.service);
 					if (!key.readable || !service || secret === null) return;
-					if (!input.refresh && key.models_at !== null && key.models_at.getTime() > stale) return;
-					const opened = await unseal(secret, key.secret);
-					if (opened === null) return;
-					const checked = await checkKey(service, { secret: opened, baseUrl: key.base_url }, ctx.site.fetch);
-					// A service that does not answer now, or answers what cannot be read, keeps the list it gave last.
-					if (!checked.ok) return;
-					// The list belongs to the key and address it was asked with: when the key was changed while the service answered, this answer is
-					// dropped, and the list the change stored stays.
+					const fresh = key.models_at !== null && key.models_at.getTime() > now.getTime() - MODELS_FRESH_MS;
+					// A service that failed a moment ago is not asked again yet: its last list serves meanwhile.
+					const failedLately =
+						key.models_failed_at !== null && key.models_failed_at.getTime() > now.getTime() - MODELS_RETRY_MS;
+					if (!input.refresh && (fresh || failedLately)) return;
+					const plain = await opened(secret, key);
+					if (plain === null) return;
+					const checked = await sharedCheck(ctx.site, key, () =>
+						checkKey(service, { secret: plain, baseUrl: key.base_url }, ctx.site.fetch),
+					);
+					// The answer belongs to the key and address it was asked with: when the key was changed while the service answered, the answer is
+					// dropped, and what the change stored stays.
 					await ctx.db
 						.updateTable("api_keys")
-						.set({ models: JSON.stringify(checked.models), models_at: ctx.now() })
+						.set(
+							checked.ok
+								? { models: JSON.stringify(checked.models), models_at: now, models_failed_at: null }
+								: // A service that does not answer, or answers what cannot be read, keeps the list it gave last.
+									{ models_failed_at: now },
+						)
 						.where("id", "=", key.id)
 						.where("secret", "=", key.secret)
 						.where("base_url", "is not distinct from", key.base_url)
@@ -356,7 +442,7 @@ export const keyOperations = [
 			const stored = await readKeys(ctx);
 			return {
 				keys: stored
-					.filter((key) => key.readable)
+					.filter((key) => usable(ctx, key))
 					.map((key) => ({ id: key.id, name: key.name, service: key.service, models: key.models })),
 				...(await startingModels(ctx, stored)),
 			};
@@ -370,7 +456,7 @@ export const keyOperations = [
 		input: z.object({ keyId: z.string(), model: z.string() }),
 		async check(input, ctx) {
 			const key = (await readKeys(ctx)).find((candidate) => candidate.id === input.keyId);
-			if (!key?.readable || !key.models.some((model) => model.id === input.model))
+			if (!key || !usable(ctx, key) || !key.models.some((model) => model.id === input.model))
 				throw new CheckError({ key: "models.unknown" });
 		},
 		async run(input, ctx) {
@@ -392,28 +478,27 @@ export type OpenKey = { id: string; service: string; name: string; secret: strin
 export async function openKey(db: Db, secret: string | null, id: string): Promise<OpenKey | null> {
 	if (secret === null) return null;
 	const key = await db.selectFrom("api_keys").selectAll().where("id", "=", id).executeTakeFirst();
-	const opened = key ? await unseal(secret, key.secret) : null;
-	return key && opened !== null
-		? { id: key.id, service: key.service, name: key.name, secret: opened, baseUrl: key.base_url }
+	const plain = key ? await opened(secret, key) : null;
+	return key && plain !== null
+		? { id: key.id, service: key.service, name: key.name, secret: plain, baseUrl: key.base_url }
 		: null;
 }
 
 /**
  * Counts tokens a call spent against its key, in the month the call was made (`at`). Each month has its own count, so a count that arrives late for
- * last month goes to last month and this month's stays. A key that is gone counts nothing.
+ * last month goes to last month and this month's stays. A key that is gone counts nothing, and so does a count that is no number (a service's
+ * answer without its usage).
  */
 export async function addKeyUsage(db: Db, id: string, tokens: number, at: Date): Promise<void> {
+	if (!Number.isFinite(tokens) || tokens <= 0) return;
+	const whole = Math.min(Math.round(tokens), Number.MAX_SAFE_INTEGER);
 	await db
 		.insertInto("api_key_usage")
 		.columns(["key_id", "month", "tokens"])
 		.expression((eb) =>
 			eb
 				.selectFrom("api_keys")
-				.select([
-					"id",
-					sql<string>`${monthOf(at)}::text`.as("month"),
-					sql<number>`${Math.max(0, Math.round(tokens))}::bigint`.as("tokens"),
-				])
+				.select(["id", sql<string>`${monthOf(at)}::text`.as("month"), sql<number>`${whole}::bigint`.as("tokens")])
 				.where("id", "=", id),
 		)
 		.onConflict((conflict) =>

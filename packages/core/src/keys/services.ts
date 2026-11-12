@@ -41,6 +41,12 @@ export type KeyService = {
 	check(credentials: KeyCredentials, tools: KeyCheckTools): Promise<KeyCheck>;
 };
 
+/**
+ * From this length on a key is treated as a secret worth guarding by its text: its last four characters are shown, and a model name that contains
+ * it is refused. Shorter ones are placeholders ("x", "none", "ollama") in front of servers that take no key.
+ */
+export const KEY_LENGTH_THAT_MATTERS = 12;
+
 /** How long a service gets to answer about a key: one deadline for the whole check, however many requests it makes. */
 export const CHECK_MS = 10_000;
 
@@ -164,6 +170,8 @@ const anthropic: KeyService = {
 	placeholder: "sk-ant-…",
 	defaults: { assistant: ["claude-sonnet-5-5", "claude-opus-5-5"], quick: ["claude-haiku-5-5"] },
 	async check({ secret }, tools) {
+		// The version Anthropic's API reference writes in its Models examples; the reference says the Models endpoint answers `2026-10-21` exactly as
+		// it answers `2023-06-01`. Not tried against the live API with a real key: without one it answers 401 before it looks at the version.
 		const listed = await get(tools, "https://api.anthropic.com/v1/models?limit=1000", {
 			"x-api-key": secret,
 			"anthropic-version": "2026-10-21",
@@ -319,7 +327,7 @@ function plain(model: unknown): Model | null {
  * - one deadline ({@link CHECK_MS}) for the whole check, after which its requests are ended;
  * - the models are kept by their four known parts only, in the order of their ids, and a list that is not one counts as unreachable;
  * - an answer that carries the key itself (a server that names a model after the key it was sent) is refused whole: model names go to the assistant
- *   and into the activity log, where a key must never be.
+ *   and into the activity log, where a key must never be. This holds for keys of {@link KEY_LENGTH_THAT_MATTERS} characters or more.
  */
 export async function checkKey(
 	service: KeyService,
@@ -335,12 +343,16 @@ export async function checkKey(
 		}, CHECK_MS);
 	});
 	try {
-		const checked = await Promise.race([
-			service.check(credentials, { fetch, signal: deadline.signal }).catch(() => UNREACHABLE),
+		const checked: unknown = await Promise.race([
+			// A plugin's check is someone else's code: it may throw before it returns a promise, or answer anything at all.
+			Promise.resolve()
+				.then(() => service.check(credentials, { fetch, signal: deadline.signal }))
+				.catch(() => UNREACHABLE),
 			late,
 		]);
-		if (!checked.ok) return checked;
-		if (!Array.isArray(checked.models)) return UNREACHABLE;
+		if (!isObject(checked)) return UNREACHABLE;
+		if (checked.ok === false) return checked.reason === "refused" ? { ok: false, reason: "refused" } : UNREACHABLE;
+		if (checked.ok !== true || !Array.isArray(checked.models)) return UNREACHABLE;
 		const models: Model[] = [];
 		for (const listed of checked.models) {
 			const model = plain(listed);
@@ -348,7 +360,11 @@ export async function checkKey(
 			models.push(model);
 		}
 		const { secret } = credentials;
-		if (secret !== "" && models.some((model) => model.id.includes(secret) || model.label?.includes(secret)))
+		// Only a key long enough to be one: "x" or "ollama" in front of a local server would be found in any model's name.
+		if (
+			secret.length >= KEY_LENGTH_THAT_MATTERS &&
+			models.some((model) => model.id.includes(secret) || model.label?.includes(secret))
+		)
 			return UNREACHABLE;
 		return { ok: true, models: models.sort((a, b) => a.id.localeCompare(b.id)) };
 	} finally {

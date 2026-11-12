@@ -1,7 +1,15 @@
 import { available, type Monti } from "../monti";
 import { describeError } from "./errors";
 
-export type CliIo = { out: (line: string) => void; err: (line: string) => void };
+export type CliIo = {
+	out: (line: string) => void;
+	err: (line: string) => void;
+	/** Reads one secret (a service key) from standard input, asked for by its input's name. Without it no command takes a secret. */
+	secret?: (name: string) => Promise<string>;
+};
+
+/** How a secret input is given on the command line: `--secret -`, then the secret on standard input. */
+const FROM_STANDARD_INPUT = "-";
 
 /** `--key value` pairs as an input object. A value that reads as JSON is JSON; a key given more than once is a list. */
 function parseFlags(args: string[]): Record<string, unknown> {
@@ -35,7 +43,23 @@ export async function runCli(monti: Monti, argv: string[], io: CliIo): Promise<n
 		return 0;
 	}
 	try {
-		const result = await monti.run(name, parseFlags(rest), { actor: "cli" });
+		const input = parseFlags(rest);
+		// A secret (a service key) is never an argument: the shell's history and the process list would keep it. `--secret -` reads it instead.
+		for (const secret of monti.operations.get(name)?.secretInputs ?? []) {
+			if (!(secret in input)) continue;
+			if (input[secret] !== FROM_STANDARD_INPUT || !io.secret) {
+				io.err(
+					JSON.stringify(
+						{ error: `--${secret} is not given as an argument: write --${secret} - and give it on standard input.` },
+						null,
+						2,
+					),
+				);
+				return 1;
+			}
+			input[secret] = await io.secret(secret);
+		}
+		const result = await monti.run(name, input, { actor: "cli" });
 		io.out(JSON.stringify(result, null, 2));
 		return 0;
 	} catch (error) {

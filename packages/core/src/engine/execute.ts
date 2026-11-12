@@ -83,7 +83,7 @@ export async function runRead(
 	actor: Actor,
 	session: Session | null = null,
 ): Promise<unknown> {
-	return operation.run(parseInput(operation, input), context(engine, engine.db, actor, session).ctx);
+	return operation.run(parseInput(operation, input), context(engine, engine.db, actor, session).ctx, undefined);
 }
 
 /** The current state of each record, `null` where it does not exist. */
@@ -122,6 +122,11 @@ export async function runWrite<Output>(
 		throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: operation.name } });
 	const input = parseInput(operation, rawInput);
 	const activityId = randomUUID();
+	// Before the transaction, with no connection held: a write that asks another service does it here (a key's check can take ten seconds).
+	const prepared = await operation.prepare?.(
+		input,
+		context(engine, engine.db, options.actor, options.session ?? null).ctx,
+	);
 	return engine.db.transaction().execute(async (trx) => {
 		const { ctx, events, created } = context(engine, trx, options.actor, options.session ?? null);
 		const touched = unique((await operation.touches?.(input, ctx)) ?? []);
@@ -135,8 +140,8 @@ export async function runWrite<Output>(
 		});
 		if (conflicts.length > 0) throw new ConflictError(conflicts);
 
-		await operation.check?.(input, ctx);
-		const output = (await operation.run(input, ctx)) as Output;
+		await operation.check?.(input, ctx, prepared);
+		const output = (await operation.run(input, ctx, prepared)) as Output;
 
 		const records = unique([...touched, ...created]);
 		// Whatever the write did to a body or a field, what uses which media file is read from the result, here and nowhere else (doc 09).
