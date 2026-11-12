@@ -135,8 +135,8 @@ export function useEntryEditor(
 			const found: MediaItem[] = [];
 			for (let start = 0; start < ids.length; start += MEDIA_QUERY_MOST) {
 				const part = ids.slice(start, start + MEDIA_QUERY_MOST);
-				const read = await readFiles({ ids: part, pageSize: part.length }).catch(() => null);
-				if (read?.ok) found.push(...read.body.items);
+				const read = await readFiles({ ids: part, pageSize: part.length });
+				if (read.ok) found.push(...read.body.items);
 			}
 			if (found.length > 0) setKeptFiles(found);
 		})();
@@ -247,9 +247,7 @@ export function useEntryEditor(
 					setConflict({ at: at ? new Date(at) : null });
 				} else if (answer.refusal.status !== 401)
 					// A check the save failed (a file the library does not have): the reason, or the save would just stay unsaved with no word.
-					toast.error(
-						t(answer.refusal.reason ?? { key: "errors.unexpected", values: { message: answer.refusal.error } }),
-					);
+					toast.error(t(answer.refusal.reason ?? "errors.unexpected"));
 				return null;
 			}
 			setConflict(null);
@@ -258,8 +256,10 @@ export function useEntryEditor(
 				draft.saved();
 				return { id: answer.body.output.id };
 			}
-			await reload();
-			draft.saved();
+			// The save went through. My changes are let go only once the screen has read what was saved: let go over the copy from before the save, the
+			// old text came back in their place and the next save was a conflict with my own.
+			if (await reload()) draft.saved();
+			else toast.error(t(isEntry ? "entry.savedNotRead" : "templates.savedNotRead"));
 			return { id: answer.body.output.id };
 		},
 		[loaded, version, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload, t],
@@ -288,13 +288,18 @@ export function useEntryEditor(
 		save,
 		conflict,
 		/** The conflict's way out: the server's latest goes in and my changes are dropped. */
+		/** Resolves to whether the latest was read: not read (refused, no answer), nothing is dropped and the conflict stands, and a toast says so. */
 		loadLatest: async (byKeys = false) => {
-			await reload();
+			if (!(await reload())) {
+				toast.error(t(isEntry ? "entry.loadFailed" : "templates.loadFailed"));
+				return false;
+			}
 			draft.revertAll();
 			setConflict(null);
 			// The body is made again: the new one takes the focus the button held.
 			focusNextBody.current = byKeys;
 			setBodyKey((key) => key + 1);
+			return true;
 		},
 		/** The other way out: my changes go over the server's latest. */
 		saveOver: async () => {

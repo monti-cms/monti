@@ -72,8 +72,8 @@ export function useBodyFiles(given: readonly MediaItem[] = NONE): BodyFiles {
 		async (ids: string[]) => {
 			const call = ++reads.current;
 			for (const id of ids) latest.current.set(id, call);
-			const result = await run({ ids, pageSize: ids.length }).catch(() => null);
-			const found = result?.ok ? new Map(result.body.items.map((item) => [item.id, item])) : null;
+			const result = await run({ ids, pageSize: ids.length });
+			const found = result.ok ? new Map(result.body.items.map((item) => [item.id, item])) : null;
 			const answered = ids.filter((id) => latest.current.get(id) === call);
 			setFiles(
 				(known) =>

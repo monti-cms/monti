@@ -231,7 +231,9 @@ export function EntryEditor({
 	// The assistant's body proposals (T32): the ones that can be drawn on the text now, the one the bubble points at, and taking or discarding it.
 	const [looking, setLooking] = useState(0);
 	const proposed = body.current ? drawable(body.current.state.doc, editor.bodyProposals) : editor.bodyProposals;
-	const walking = readOnly ? null : (proposed[Math.min(looking, proposed.length - 1)] ?? null);
+	// Not before the entry is read, nor after a read that failed: the bubble and its keys would take or discard proposals nobody has seen, on an
+	// entry that may be archived or in the trash.
+	const walking = !read || readOnly ? null : (proposed[Math.min(looking, proposed.length - 1)] ?? null);
 	const look = (direction: -1 | 1) => {
 		const next = (Math.min(looking, proposed.length - 1) + direction + proposed.length) % proposed.length;
 		setLooking(next);

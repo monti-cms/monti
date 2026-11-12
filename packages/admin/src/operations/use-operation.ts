@@ -6,8 +6,11 @@ import type { Answer, CallOptions } from "./transport";
 /** Why an operation did not go through, as the screen shows it. `conflict`: the record changed since it was read, so the screen reloads it. */
 export type Refusal = { status: number; error: string; reason: Message | null };
 
-/** What stands for an answer that never came, as the byte route does (`httpUploader`): status 0. */
-const NO_ANSWER: Answer = { status: 0, body: { error: "network" } };
+/**
+ * What stands for an answer that never came, as the byte route does (`httpUploader`): status 0. It carries its own words, so every screen that shows a
+ * refusal's reason says this one whole, with no code of ours in it.
+ */
+const NO_ANSWER: Answer = { status: 0, body: { error: "network", reason: { key: "errors.noAnswer" } } };
 
 const refusalOf = (answer: Answer): Refusal => {
 	const body = (answer.body ?? {}) as { error?: string; reason?: Message };
@@ -69,15 +72,17 @@ export function useRead<Output>(
 	const key = JSON.stringify(input);
 	const latest = useRef(0);
 	const skip = options.skip ?? false;
-	const reload = useCallback(async () => {
-		if (skip) return;
+	/** Reads again. Resolves to whether the read went through: a caller that goes on from the new read must not go on from the old one. */
+	const reload = useCallback(async (): Promise<boolean> => {
+		if (skip) return false;
 		const call = ++latest.current;
 		const result = await run(JSON.parse(key));
-		if (call !== latest.current) return;
+		if (call !== latest.current) return result.ok;
 		if (result.ok) {
 			setData(result.body);
 			setRefusal(null);
 		} else setRefusal(result.refusal);
+		return result.ok;
 	}, [run, key, skip]);
 	useEffect(() => {
 		void reload();

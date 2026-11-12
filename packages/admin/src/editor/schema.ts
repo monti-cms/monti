@@ -99,8 +99,8 @@ function draw(block: CatalogBlock, data: Data, boxLabel: (block: CatalogBlock, d
 				...WHOLE,
 				"data-box": "",
 				"data-box-label": boxLabel(block, data),
-				"data-block": block.type,
-				...(data ? { [HELD]: JSON.stringify(data) } : {}),
+				// With nothing to carry (a file still on its way up), it says no kind either: pasted, it is no block, not an empty one.
+				...(data ? { "data-block": block.type, [HELD]: JSON.stringify(data) } : {}),
 			},
 		];
 	return ["div", { "data-block": block.type }, 0];
@@ -123,7 +123,14 @@ function heldOf(element: HTMLElement): Data {
 function parse(block: CatalogBlock) {
 	const own = [
 		block.holds === "nothing"
-			? { tag: `div[data-block="${block.type}"]`, getAttrs: (element: HTMLElement) => ({ data: heldOf(element) }) }
+			? {
+					tag: `div[data-block="${block.type}"]`,
+					// A block that holds no text and carries nothing is no block: pasted from elsewhere without its attrs, it would be an empty picture.
+					getAttrs: (element: HTMLElement) => {
+						const data = heldOf(element);
+						return data ? { data } : false;
+					},
+				}
 			: { tag: `div[data-block="${block.type}"]` },
 	];
 	switch (block.type) {

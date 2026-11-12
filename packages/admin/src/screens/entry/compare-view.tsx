@@ -196,8 +196,8 @@ export function CompareView({
 						<>
 							<TextButton
 								onClick={async (event) => {
-									await editor.loadLatest(pressedWithKeys(event));
-									onBack();
+									// Not read: the comparison stays, with what it compares.
+									if (await editor.loadLatest(pressedWithKeys(event))) onBack();
 								}}
 							>
 								{t("compare.loadLatest")}
