@@ -5,6 +5,7 @@ import {
 	type CSSProperties,
 	type FormEventHandler,
 	type ReactNode,
+	useCallback,
 	useId,
 	useLayoutEffect,
 	useRef,
@@ -106,6 +107,17 @@ export function SidePanel({
 	});
 	const titleId = useId();
 	const panel = useRef<HTMLElement>(null);
+	// A screen's own ref (where the focus goes when a control of the panel goes) is given the same box, beside this one: taken alone,
+	// this one took its place and the screen's was never told.
+	const given = props.ref;
+	const box = useCallback(
+		(node: HTMLElement | null) => {
+			panel.current = node;
+			if (typeof given === "function") return given(node as never);
+			if (given) given.current = node as never;
+		},
+		[given],
+	);
 	/** What opened the panel, and the first thing that did. */
 	const from = useRef<HTMLElement | null>(null);
 	const first = useRef<HTMLElement | null>(null);
@@ -181,7 +193,7 @@ export function SidePanel({
 			)}
 			style={{ "--side-panel-width": `${resize.width}px`, ...style } as CSSProperties}
 			{...props}
-			ref={panel}
+			ref={box}
 			onKeyDownCapture={(event) => {
 				keys.current = true;
 				props.onKeyDownCapture?.(event);
