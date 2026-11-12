@@ -23,7 +23,7 @@ import {
 import { Add, Copy, Edit, RecentlyViewed, Renew } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { History } from "./history";
+import { History, HistoryFoot } from "./history";
 import { ProposalCardOf } from "./proposal-card";
 import { Prose } from "./prose";
 import { type Part, type Turn, useAssistant } from "./use-assistant";
@@ -92,6 +92,12 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 		thread.current?.scrollTo({ top: 0 });
 	}, [asked]);
 
+	// Words put back into the box (a queued message to edit, the last request to change) are there to be typed on: the caret goes with them.
+	const box = useRef<HTMLFormElement>(null);
+	const intoBox = (put: () => void) => {
+		put();
+		requestAnimationFrame(() => box.current?.querySelector("textarea")?.focus());
+	};
 	const send = (words: string) => {
 		assistant.setDraft("");
 		assistant.ask(words);
@@ -117,6 +123,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 	);
 	const composer = (
 		<ChatInput
+			ref={box}
 			value={assistant.draft}
 			onValueChange={assistant.setDraft}
 			onSubmit={send}
@@ -154,7 +161,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 								editLabel={t("panel.editQueued")}
 								cancelLabel={t("panel.cancelQueued")}
 								onSendNow={() => assistant.queueSendNow(index)}
-								onEdit={() => assistant.queueTake(index)}
+								onEdit={() => intoBox(() => assistant.queueTake(index))}
 								onCancel={() => assistant.queueCancel(index)}
 							>
 								{words}
@@ -286,7 +293,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 						<Copy />
 					</IconButton>
 					{isLast && !busy ? (
-						<IconButton label={t("panel.editAgain")} onClick={() => assistant.setDraft(turn.request)}>
+						<IconButton label={t("panel.editAgain")} onClick={() => intoBox(() => assistant.setDraft(turn.request))}>
 							<Edit />
 						</IconButton>
 					) : null}
@@ -393,6 +400,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 				)
 			}
 			composer={view === "chat" && connected ? composer : undefined}
+			footer={view === "history" ? <HistoryFoot /> : undefined}
 		>
 			{view === "history" ? (
 				<History />

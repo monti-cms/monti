@@ -25,7 +25,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { Document, Image, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FolderFilesProvider, useGiveFolderFiles } from "../../media/folder-files";
 import { useFolderDrop } from "../../media/use-file-drop";
 import { useMoveMedia } from "../../media/use-media-actions";
@@ -199,6 +199,14 @@ export function AdminFrame({
 	const schema = useRead<SchemaRead>("schema.read", {}, { afterWrites: true });
 	const [mode, setMode] = useScreenMode();
 	const [covered, setCovered] = useState(false);
+	// Closing the assistant's panel hands the focus back to the button that opened it, which is drawn again as the panel goes.
+	const corner = useRef<HTMLButtonElement>(null);
+	const assistantOpen = assistant?.open ?? false;
+	const wasOpen = useRef(assistantOpen);
+	useEffect(() => {
+		if (wasOpen.current && !assistantOpen) corner.current?.focus();
+		wasOpen.current = assistantOpen;
+	}, [assistantOpen]);
 	const cover = useMemo(() => (next: boolean) => setCovered(next), []);
 	const [rail, setRail] = useSidebarRail();
 	const collections = Object.entries(schema.data?.schema.collections ?? {});
@@ -295,7 +303,7 @@ export function AdminFrame({
 						// No assistant on the site: no button. Its panel open, or another docked at the edge: the button is under it.
 						corner={
 							covered || !assistant || assistant.open ? undefined : (
-								<IconButton label={t("frame.assistant")} onClick={assistant.onOpen}>
+								<IconButton ref={corner} label={t("frame.assistant")} onClick={assistant.onOpen}>
 									<Spark className="size-monti-icon-lg" />
 								</IconButton>
 							)

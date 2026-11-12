@@ -17,6 +17,8 @@ export type Loaded = {
 	site: StorySite;
 	model: ScriptedProvider;
 	ids: { first: string; second: string; third: string };
+	/** Lets a turn that waits on the story's gate go on. */
+	release: () => void;
 };
 
 const meta = {
@@ -56,7 +58,12 @@ const never = new Promise<never>(() => {});
 
 type Ids = Loaded["ids"];
 /** What the scripted model says, made once the entries have their ids. */
-type Script = (ids: Ids, version: (id: string) => Promise<number>) => Scripted[] | Promise<Scripted[]>;
+export type Script = (
+	ids: Ids,
+	version: (id: string) => Promise<number>,
+	/** Settles when the test lets go: a turn that holds on it is "the assistant still working". */
+	gate: Promise<void>,
+) => Scripted[] | Promise<Scripted[]>;
 
 /** "Find the entries with an empty summary": one read, then the answer that names them as links. */
 export const found: Script = (ids) => [
@@ -131,11 +138,14 @@ export const proposedKinds: Script = async (ids, version) => [
 export const site = ({
 	script = () => [],
 	key = true,
+	plugin = true,
 	limits,
 	at = "#/c/post",
 }: {
 	script?: Script;
 	key?: boolean;
+	/** `false`: a site that does not have the assistant at all. */
+	plugin?: boolean;
 	limits?: Partial<RunLimits>;
 	at?: string;
 } = {}) => [
@@ -149,7 +159,7 @@ export const site = ({
 			signedIn: true,
 			secret: "story-secret-for-the-assistant",
 			fetch: network,
-			plugins: [assistant({ provider: model.for, limits })],
+			plugins: plugin ? [assistant({ provider: model.for, limits })] : [],
 			setup: async (monti: Monti) => {
 				const create = async (title: string, slug: string, values?: Record<string, unknown>) =>
 					(
@@ -165,10 +175,20 @@ export const site = ({
 		});
 		const version = async (id: string) =>
 			((await made.monti.run("entries.get", { id }, admin)) as { entry: { version: number } }).entry.version;
-		model.add(...(await script(ids, version)));
-		return { site: made, model, ids };
+		let release = () => {};
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		model.add(...(await script(ids, version, gate)));
+		return { site: made, model, ids, release };
 	},
 ];
+
+/** Several scripts, one after another: what the model says to the requests of one story in turn. */
+export const scripts =
+	(...parts: Script[]): Script =>
+	async (ids, version, gate) =>
+		(await Promise.all(parts.map((part) => part(ids, version, gate)))).flat();
 
 const screen = async (canvasElement: HTMLElement) => {
 	const page = within(canvasElement.ownerDocument.body);
@@ -378,7 +398,8 @@ export const Models: Story = {
 /** The past conversations: what was asked first, when, and what came of it. */
 export const PastConversations: Story = {
 	loaders: site({
-		script: (ids, version) => Promise.all([found(ids, version), proposed(ids, version)]).then((all) => all.flat()),
+		script: (ids, version, gate) =>
+			Promise.all([found(ids, version, gate), proposed(ids, version, gate)]).then((all) => all.flat()),
 	}),
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
@@ -413,6 +434,6 @@ export const Review: Story = {
 		await say(page, "요약 채우고 제목도 다듬어 줘");
 		await userEvent.click(await page.findByRole("button", { name: "검토" }, wait));
 		await page.findByRole("heading", { name: "제안 검토" }, wait);
-		await page.findByText("첫 번째 글, 다시", {}, wait);
+		await within(await page.findByRole("main")).findByText("글, 다시", {}, wait);
 	},
 };

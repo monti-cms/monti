@@ -175,7 +175,14 @@ export function AssistantProvider({
 	const [requests, setRequests] = useState(0);
 	const [busy, setBusy] = useState(false);
 	const [draft, setDraft] = useState("");
-	const [queue, setQueue] = useState<string[]>([]);
+	const [queue, setQueueState] = useState<string[]>([]);
+	// What waits, as it is this instant: a run can end and the next one begin before the page is drawn again, and each must see the queue
+	// the one before left.
+	const queueNow = useRef<string[]>([]);
+	const setQueue = useCallback((next: string[] | ((waiting: string[]) => string[])) => {
+		queueNow.current = typeof next === "function" ? next(queueNow.current) : next;
+		setQueueState(queueNow.current);
+	}, []);
 	const [models, setModels] = useState<ModelList | null>(null);
 	const [picked, setPicked] = useState<ModelChoice | null>(null);
 	const [level, setLevel] = useState<Thinking | null>(null);
@@ -262,7 +269,12 @@ export function AssistantProvider({
 		[call, chipLabels],
 	);
 
-	const model = picked ?? models?.assistant ?? null;
+	// The conversation's model, while a key of the site still has it; a conversation whose key was removed goes on with the site's starting model.
+	const listed = (choice: ModelChoice | null) =>
+		choice !== null &&
+		(models?.keys.some((key) => key.id === choice.keyId && key.models.some((each) => each.id === choice.model)) ??
+			true);
+	const model = (listed(picked) ? picked : null) ?? models?.assistant ?? null;
 	const canThink =
 		models?.keys.find((key) => key.id === model?.keyId)?.models.find((each) => each.id === model?.model)?.thinking ??
 		false;
@@ -301,6 +313,8 @@ export function AssistantProvider({
 						const from = id;
 						id = event.runId;
 						setConversationId(event.conversationId);
+						// At once, for a request that follows before the page is drawn again: it is asked in this conversation.
+						live.current.conversationId = event.conversationId;
 						keep({ conversation: event.conversationId });
 						setTurns((all) => all.map((turn) => (turn.id === from ? { ...turn, id: event.runId } : turn)));
 					} else if (event.type === "text") {
@@ -405,14 +419,14 @@ export function AssistantProvider({
 			cuts.current = 0;
 			void readState();
 			if (end.status === "done") {
-				const [next, ...rest] = live.current.queue;
+				const [next, ...rest] = queueNow.current;
 				if (next !== undefined) {
 					setQueue(rest);
 					later.current.ask(next);
 				}
 			}
 		},
-		[streams, patchTurn, readState, t],
+		[streams, patchTurn, readState, t, setQueue],
 	);
 
 	/** Runs one screen tool in the browser and says what happened, as the model reads it. */
@@ -502,20 +516,25 @@ export function AssistantProvider({
 	const stop = useCallback(() => {
 		const last = live.current.turns.at(-1);
 		if (!last) return;
-		listening.current?.abort();
-		setBusy(false);
+		// It shows as stopped at once: what was still going has no result, and its line goes.
 		patchTurn(last.id, (turn) => ({
 			...turn,
 			status: "stopped",
 			end: { status: "stopped" },
 			parts: turn.parts.filter((part) => !(part.type === "tool" && part.state === "running")),
 		}));
-		// A run that has not said its id yet has nothing to stop on the server but its request, which the abort ended.
-		if (last.id.startsWith("local:")) return;
-		void call<{ untaken: string[] }>("assistant.stop", { run: last.id }).then((stopped) => {
-			if (stopped.ok && stopped.body.untaken.length > 0) setQueue((waiting) => [...stopped.body.untaken, ...waiting]);
+		// A run that has not said its id yet has nothing to stop on the server but its request.
+		if (last.id.startsWith("local:")) {
+			listening.current?.abort();
+			return setBusy(false);
+		}
+		// The run is told to stop and ends by itself: its request stays listened to, so the run ends as stopped and not as cut off, and a new
+		// request is taken once it has. What was said to it and not taken comes back with its end, or here when it was only waiting.
+		void call<{ output: { untaken: string[] } }>("assistant.stop", { run: last.id }).then((stopped) => {
+			const untaken = stopped.ok ? stopped.body.output.untaken : [];
+			if (untaken.length > 0) setQueue((waiting) => [...untaken, ...waiting]);
 		});
-	}, [call, patchTurn]);
+	}, [call, patchTurn, setQueue]);
 
 	const goOn = useCallback(
 		(more = false) => {
@@ -557,7 +576,7 @@ export function AssistantProvider({
 			const last = read.runs.at(-1);
 			if (last && (last.status === "running" || last.status === "waiting")) void watch(last.id);
 		},
-		[readConversation, watch],
+		[readConversation, watch, setQueue],
 	);
 	// The conversation that was open comes back with the page.
 	const restored = useRef(false);
@@ -583,7 +602,7 @@ export function AssistantProvider({
 		setLevel(null);
 		keep({ conversation: null });
 		setView("chat");
-	}, []);
+	}, [setQueue]);
 
 	const loadEarlier = useCallback(async () => {
 		const id = live.current.conversationId;

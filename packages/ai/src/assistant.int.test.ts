@@ -1654,6 +1654,29 @@ describe("what the first review of the core found (#472)", () => {
 		expect((await second).end.status).toBe("done");
 	});
 
+	it("10-4 a run gone on with after its key was removed ends for want of a key, in words a person reads; so does the conversation's next request", async () => {
+		const monti = site();
+		const keyId = await withKey(monti);
+		model.add({ text: "절반만 온 ", breaksOff: true });
+		const first = await ask(monti, { request: "설명해 줘" });
+		expect(first.end).toMatchObject({ status: "interrupted", reason: "connection" });
+		await monti.run("keys.remove", { id: keyId }, admin);
+
+		// The run's key is gone: it ends as failed for want of a key, not with an error nobody can read, and the model is not asked.
+		const second = await ask(monti, { resume: first.run });
+		expect(second.end).toMatchObject({ status: "failed", error: { kind: "no-key" } });
+		expect(model.turns).toHaveLength(1);
+		expect((await conversation(monti, first.conversation)).runs[0]).toMatchObject({
+			status: "failed",
+			end: { status: "failed", error: { kind: "no-key" } },
+		});
+		// A new request in the same conversation is refused before anything starts, with a reason the admin has words for.
+		await expect(ask(monti, { conversation: first.conversation, request: "다시" })).rejects.toMatchObject({
+			reason: { key: "assistant.noModel" },
+		});
+		expect(await monti.run("assistant.state", {}, admin)).toMatchObject({ connected: false });
+	});
+
 	it("10-4 an answer that breaks off after it began is no answer: nothing of it is kept, and the run goes on by asking for that turn again", async () => {
 		const monti = site();
 		await withKey(monti);
