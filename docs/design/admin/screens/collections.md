@@ -108,7 +108,7 @@
 | 변경 블록 | `ChangeGroup`(`kind` `new`·`edit`·`drop`, `tag` "추가" · "이름 변경" · "삭제" · "필수" · "주소 변경" · "변경"(미리보기 주소), `title`, `identifier` "summary → excerpt") | |
 | 값 처리 고르기 | `RadioGroup` + `RadioItem`(끝에 mono 개수 "148편", 답이 하나 더 필요한 선택은 `control`에 `Select`: "다른 필드로 옮기기" · "빈 글 148편 채우기", 글자 필드를 채우면 `Input size="sm"`) | 하나를 고른다. `RadioGroup height="md"`: 줄마다 32px, 4px 간격이라 고르기가 든 줄도 높이가 같고, 고르기와 입력 칸은 `md`다. 순서는 늘 값을 살리는 선택이 먼저, 비우는 선택이 나중이다(이름: 옮기기 → 빈 칸, 지움: 다른 필드로 옮기기 → 지우기, 필수: 채우기 → 그대로). 지움의 처음 선택은 그대로 "값 지우기"다(2026-11-05, 소유자). |
 | 한 줄 결과 | `ChangeNote`(되돌릴 수 없으면 `danger`) | "저장된 데이터는 바뀌지 않습니다." · "옛 주소는 404가 됩니다." · "값이 사라집니다. 되돌릴 수 없습니다." |
-| 영향 목록 | `ChangeLines` + `ChangeLine`(`what`, `then`) | 주소 변경은 전과 후를 보인다. "옛 주소는 404가 됩니다."는 있던 공개 주소가 바뀌거나 없어질 때만 붙는다. 미리보기 주소 변경도 전과 후를 보이고(없는 쪽은 "공개 주소에서"), 방문자가 보는 주소가 아니므로 "저장된 데이터는 바뀌지 않습니다."가 붙는다. |
+| 영향 목록 | `ChangeLines` + `ChangeLine`(`what`, `then`) | 주소 변경은 전과 후를 보인다. "옛 주소는 404가 됩니다."는 있던 공개 주소가 바뀌거나 없어질 때만 붙는다. 미리보기 주소 변경도 전과 후를 보이고(없는 쪽은 "공개 주소에서"), 방문자가 보는 주소가 아니므로 "저장된 데이터는 바뀌지 않습니다."가 붙는다. 새 컬렉션의 "추가" 블록은 공개 주소 줄 아래에 미리보기 주소 줄을 보인다(적었을 때만). |
 | 영향받는 글 (빠짐, 2026-11-05) | | 개발 데이터의 글이라 운영에서 영향받는 글과 다르다. 개수와 같은 이유로 뺐다. |
 | 파일 변경 | `Patch`(`file` "monti.schema.ts", `lines`) | 운영 검토에만 있다. 파일 변경이 보이는 내용은 `Patch` 한 곳에만 둔다. |
 
@@ -122,7 +122,7 @@
 | "새 컬렉션 오류" | 4.02 | 식별자 `aria-invalid`와 `FormFieldError`, "만들기" 비활성 | Controls/Field/Field |
 | "만든 직후" | 4.03 | 노트 컬렉션(`NavLink dot`), "기본" 탭 하나와 `FieldTree`(제목, 주소), 저장 묶음 변경 사항 1 | Patterns/Frame/NavLink, Patterns/List/FieldTree |
 | "노트 필드 추가" | 4.04 | 노트 컬렉션의 필드 `Sheet` | Controls/Overlay/Sheet |
-| "새 컬렉션 검토" | 4.05 | Review `Sheet`: `ChangeGroup kind="new"` and `ChangeLines`; the public-address line is omitted for an item without a public page. | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
+| "새 컬렉션 검토" | 4.05 | 검토 `Sheet`: `ChangeGroup kind="new"`와 `ChangeLines`. 줄은 공개 주소, 미리보기 주소(적었을 때만, 본문이 있는 글만), 필드 순서다. 공개 페이지가 없는 항목은 공개 주소 줄이 없다. | Controls/Overlay/Sheet, Monti/Change/ChangeGroup |
 | "만듦" | 4.06 | `toast` "노트를 만들었습니다"와 "보기" | Controls/Status/Toast |
 | "필드 바꿈" | 4.07 | `FieldRow` 셋: 이름 바꿈(`warning`, "← summary"), 지움(`faint`), 새 필수(`success`), 게시글 `NavLink dot`, 변경 사항 3 | Patterns/List/FieldTree, Patterns/Frame/NavLink |
 | "미리보기" | 4.08 | 미리보기 `SidePanel`, "속성 패널 미리보기" 눌림, ✦ 버튼 가려짐 | Controls/Overlay/SidePanel |
