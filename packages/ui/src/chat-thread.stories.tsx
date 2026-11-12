@@ -1,141 +1,93 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-	Box,
-	Button,
-	ChatAnswer,
-	ChatDate,
-	ChatMessage,
-	ChatThread,
-	ErrorNote,
-	ProposalActions,
-	ProposalCard,
-	ProposalRow,
-	ToolCallLine,
-	ToolCallLines,
-} from "./index";
-
-const noop = () => {};
+import { ChatMessage, ChatThread, ErrorNote, Stack, Text, TextButton, ToolCallLine } from "./index";
 
 /**
- * The conversation: messages 24px apart, sitting at the bottom of the panel over the box and stacking up. An answer holds its tool lines, text,
- * cards and error answers 12px apart. A conversation opened again on another day has its date at the top.
+ * The assistant's conversation: requests and what answered them, 24px apart, at the foot of the panel. Inside an answer the screen spaces its
+ * tool lines (no gap), its words and its card with `Stack`, 12px apart.
  */
 const meta = {
 	title: "Monti/Assistant/ChatThread",
 	component: ChatThread,
 	decorators: [
 		(Story) => (
-			<Box width="assistant" height="screen" background="tool">
+			<Stack width="assistant" height="screen" background="tool">
 				<Story />
-			</Box>
+			</Stack>
 		),
 	],
 } satisfies Meta<typeof ChatThread>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** A request, the tool lines of its answer, and the answer's words. */
 export const Conversation: Story = {
 	render: () => (
 		<ChatThread>
-			<ChatMessage author="user">요약이 빈 글에 요약을 채워 줘</ChatMessage>
-			<ChatAnswer>
-				<ToolCallLines>
-					<ToolCallLine status="done" statusLabel="완료">
-						글 목록 읽음 · 게시글 148편
+			<ChatMessage author="user" context="이 목록">
+				요약이 비어 있는 글 찾아 줘
+			</ChatMessage>
+			<Stack gap={12}>
+				<Stack gap={0}>
+					<ToolCallLine status="done" statusLabel="끝남">
+						글 목록 읽음 · 148편
 					</ToolCallLine>
-					<ToolCallLine status="done" statusLabel="완료">
-						글 11편 읽음
-					</ToolCallLine>
-				</ToolCallLines>
-				<ChatMessage>요약이 빈 글 11편에 요약을 채운 제안을 만들었어요.</ChatMessage>
-				<ProposalCard
-					title="제안"
-					summary="1묶음 · 11건"
-					status="검토 대기"
-					statusTone="warning"
-					footer={
-						<ProposalActions
-							reviewLabel="검토"
-							onReview={noop}
-							discardLabel="버리기"
-							onDiscard={noop}
-							applyLabel="11건 적용"
-							onApply={noop}
-						/>
-					}
-				>
-					<ProposalRow name="요약 채우기" detail="요약이 빈 글" count="11편" />
-				</ProposalCard>
-			</ChatAnswer>
+				</Stack>
+				<ChatMessage>요약이 비어 있는 글은 2편입니다.</ChatMessage>
+			</Stack>
 		</ChatThread>
 	),
 };
 
-/** Opened again on another day: the date at the top. */
-export const Reopened: Story = {
+/** The model no longer has the oldest requests: a quiet line stands over the first one it still has. */
+export const Remembered: Story = {
 	render: () => (
 		<ChatThread>
-			<ChatDate>10. 24 (금)</ChatDate>
-			<ChatMessage author="user">가을 여행 글에 태그 달아 줘</ChatMessage>
-			<ChatAnswer>
-				<ToolCallLines>
-					<ToolCallLine status="done" statusLabel="완료">
-						글 읽음 · 가을 여행 기록
-					</ToolCallLine>
-				</ToolCallLines>
-				<ChatMessage>“가을”, “산”, “걷기” 태그를 달았어요.</ChatMessage>
-			</ChatAnswer>
+			<ChatMessage author="user">지난주에 쓴 글 목록 보여 줘</ChatMessage>
+			<ChatMessage>세 편입니다.</ChatMessage>
+			<Text as="div" variant="micro" tone="subtle" align="center">
+				여기부터 기억합니다
+			</Text>
+			<ChatMessage author="user">그중에 초안만</ChatMessage>
+			<ChatMessage>초안은 한 편입니다.</ChatMessage>
 		</ChatThread>
 	),
 };
 
-/** Working: the running line, then the answer as it comes. */
+/** Working: a tool line that is going, and the caret where the answer's words will come. */
 export const Working: Story = {
 	render: () => (
 		<ChatThread>
-			<ChatMessage author="user" context="고른 글 2편">
-				이 글들을 다듬어 줘
-			</ChatMessage>
-			<ChatAnswer>
-				<ToolCallLines>
-					<ToolCallLine status="done" statusLabel="완료">
-						글 2편 읽음
+			<ChatMessage author="user">요약이 비어 있는 글 찾아 줘</ChatMessage>
+			<Stack gap={12}>
+				<Stack gap={0}>
+					<ToolCallLine status="done" statusLabel="끝남">
+						글 목록 읽음 · 148편
 					</ToolCallLine>
 					<ToolCallLine status="running" statusLabel="하는 중">
-						문장 다듬는 중
+						글 읽는 중 · 62 / 148
 					</ToolCallLine>
-				</ToolCallLines>
-				<ChatMessage streaming>첫 글의 문장 세 곳을</ChatMessage>
-			</ChatAnswer>
+				</Stack>
+			</Stack>
 		</ChatThread>
 	),
 };
 
-/** Stopped: the line that stopped is red, and the error answer offers to go on. */
+/** A run that did not finish: what was done stays, the call it stopped at says so, and a note holds what can be done. */
 export const Stopped: Story = {
 	render: () => (
 		<ChatThread>
-			<ChatMessage author="user">폴더 없는 글을 2024 폴더로 옮겨 줘</ChatMessage>
-			<ChatAnswer>
-				<ToolCallLines>
-					<ToolCallLine status="done" statusLabel="완료">
-						글 목록 읽음 · 폴더 없는 글 4편
+			<ChatMessage author="user">요약이 비어 있는 글 찾아 줘</ChatMessage>
+			<Stack gap={12}>
+				<Stack gap={0}>
+					<ToolCallLine status="done" statusLabel="끝남">
+						글 목록 읽음 · 148편
 					</ToolCallLine>
 					<ToolCallLine status="failed" statusLabel="실패">
-						글 옮기기 · 여기서 멈춤
+						글 · 여기서 멈춤
 					</ToolCallLine>
-				</ToolCallLines>
-				<ErrorNote
-					title="연결이 끊겼어요"
-					actions={
-						<Button variant="ghost" size="sm">
-							이어서 하기
-						</Button>
-					}
-				>
-					여기까지 한 일은 위에 남아 있어요.
-				</ErrorNote>
-			</ChatAnswer>
+				</Stack>
+				<ErrorNote title="연결이 끊겼습니다" actions={<TextButton variant="underline">이어서 하기</TextButton>} />
+			</Stack>
 		</ChatThread>
 	),
 };

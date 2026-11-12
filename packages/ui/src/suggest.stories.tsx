@@ -1,46 +1,48 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Box, Suggest, SuggestLabel, SuggestList } from "./index";
+import { ChatThread, Stack, Suggest } from "./index";
 
 /**
- * The assistant's empty panel: no explanation, only requests to start from at the bottom, over the box to type in. First this screen's default
- * requests (a spark), then "최근" (a clock).
+ * A request to start from, in the assistant's empty panel: the ones the open screen offers (a spark), then the ones asked before (a clock). The
+ * mark tells them apart: there are no group names. The rows stand at the foot of the `ChatThread`, just over the box to ask in.
  */
 const meta = {
 	title: "Monti/Assistant/Suggest",
 	component: Suggest,
-	args: { kind: "request", children: "요약이 빈 글 채우기" },
 	decorators: [
 		(Story) => (
-			<Box width="assistant" height="screen" background="tool">
+			<Stack width="assistant" height="screen" background="tool">
 				<Story />
-			</Box>
+			</Stack>
 		),
 	],
 } satisfies Meta<typeof Suggest>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** The empty panel on the post list: the screen's requests, then the last two asked. */
 export const EmptyPanel: Story = {
+	args: { kind: "request", children: "" },
 	render: () => (
-		<SuggestList>
-			<SuggestLabel>이 목록에서</SuggestLabel>
-			<Suggest kind="request">요약이 빈 글 채우기</Suggest>
-			<Suggest kind="request">발행 후 고친 글 다듬기</Suggest>
-			<Suggest kind="request">폴더 없는 글 정리하기</Suggest>
-			<SuggestLabel>최근</SuggestLabel>
-			<Suggest kind="recent">가을 여행 글에 태그 달아 줘</Suggest>
-			<Suggest kind="recent">대체 텍스트 없는 이미지 찾아 줘</Suggest>
-		</SuggestList>
+		<ChatThread>
+			<Stack gap={4}>
+				<Suggest kind="request">요약이 비어 있는 글 찾아 줘</Suggest>
+				<Suggest kind="request">한 달 넘게 안 고친 초안 찾아 줘</Suggest>
+				<Suggest kind="recent">둘 다 요약 채워 줘</Suggest>
+				<Suggest kind="recent">첫 번째 글 열어 줘</Suggest>
+			</Stack>
+		</ChatThread>
 	),
 };
 
-/** Nothing asked before: only the default requests. */
+/** Nothing asked yet on this site: the screen's requests alone. */
 export const WithoutRecent: Story = {
+	args: { kind: "request", children: "" },
 	render: () => (
-		<SuggestList>
-			<SuggestLabel>미디어에서</SuggestLabel>
-			<Suggest kind="request">대체 텍스트 채우기</Suggest>
-			<Suggest kind="request">쓰지 않는 파일 찾기</Suggest>
-		</SuggestList>
+		<ChatThread>
+			<Stack gap={4}>
+				<Suggest kind="request">요약이 비어 있는 글 찾아 줘</Suggest>
+				<Suggest kind="request">한 달 넘게 안 고친 초안 찾아 줘</Suggest>
+			</Stack>
+		</ChatThread>
 	),
 };

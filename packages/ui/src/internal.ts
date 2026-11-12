@@ -33,8 +33,8 @@ export { ChangeDot } from "./change-dot";
 export { ChangesGroup, type ChangesItem, type ProposalsItem } from "./changes-group";
 export { ChatMessageActions, ChatQueueItem } from "./chat-actions";
 export { ChatInput } from "./chat-input";
-export { ChatEntryLink, ChatEntryList, ChatMessage } from "./chat-message";
-export { ChatAnswer, ChatDate, ChatThread, ToolCallLines } from "./chat-thread";
+export { ChatMessage } from "./chat-message";
+export { ChatThread } from "./chat-thread";
 export { Checkbox } from "./checkbox";
 export { Chip } from "./chip";
 export { cn } from "./cn";
@@ -95,7 +95,6 @@ export {
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 } from "./context-menu";
-export { ConversationGroupLabel, ConversationList, ConversationRow, ConversationRowMore } from "./conversation-list";
 export { Count } from "./count";
 export { type CropCorner, type CropGrip, type CropRect, CropStage } from "./crop-stage";
 export { DangerBlock, DangerRow } from "./danger-block";
@@ -234,29 +233,13 @@ export { Progress } from "./progress";
 export { PropertyGroup, PropertyPanel } from "./property-list";
 export { ProposalBar } from "./proposal-bar";
 export { ProposalBubble, ProposalBubbleDock } from "./proposal-bubble";
-export {
-	ProposalActions,
-	ProposalCard,
-	ProposalEntry,
-	ProposalItem,
-	ProposalResult,
-	ProposalRow,
-} from "./proposal-card";
+export { ProposalCard } from "./proposal-card";
 export { CurrentProposal, Del, Fill, Highlight, Ins, PROPOSAL_MARK_CLASSES, RequestAnchor } from "./proposal-marks";
 export { RadioGroup, RadioItem } from "./radio-group";
 export { RailAction, RailLayout } from "./rail-layout";
 export { ReadValue } from "./read-value";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
-export {
-	ReviewCompare,
-	ReviewCompareHead,
-	ReviewGroup,
-	ReviewItem,
-	ReviewLine,
-	ReviewMore,
-	ReviewQuote,
-} from "./review";
 export { SearchBox, type SearchTarget, SearchToggle } from "./search-box";
 export { SavedValue, SecretInput } from "./secret-input";
 export { Section } from "./section";
@@ -316,7 +299,7 @@ export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
 export { StatusBarList, StatusBarListGroup } from "./status-bar-list";
-export { Suggest, SuggestLabel, SuggestList } from "./suggest";
+export { Suggest } from "./suggest";
 export { Switch } from "./switch";
 export {
 	ListScroll,
