@@ -156,11 +156,18 @@ describe("the entry editor: saving and coming back", () => {
 		await opened();
 		const blocks = within("p, h1, h2, h3").length;
 		await tabTo("버리기");
-		// Held: the key goes down, and repeats while it stays down.
+		// Held: the key goes down and stays down (the test's keyboard lets a key go before it presses it again, so the repeats are sent as
+		// events: they go to whatever holds the focus, as a held key's do, and the body's editor acts on them).
 		await userEvent.keyboard("{Enter>}");
 		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).not.toBeInTheDocument();
-		await userEvent.keyboard("{Enter>}");
-		await userEvent.keyboard("{Enter>}");
+		const repeat = () =>
+			(document.activeElement ?? document.body).dispatchEvent(
+				new KeyboardEvent("keydown", { key: "Enter", code: "Enter", repeat: true, bubbles: true, cancelable: true }),
+			);
+		// Long enough for a focus handed on too early to have arrived (it is given two frames after the banner goes).
+		for (let frame = 0; frame < 6; frame++) await new Promise((drawn) => requestAnimationFrame(drawn));
+		repeat();
+		repeat();
 		expect(document.activeElement).toBe(document.body);
 		expect(within("p, h1, h2, h3")).toHaveLength(blocks);
 		await userEvent.keyboard("{/Enter}");
