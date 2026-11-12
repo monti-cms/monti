@@ -16,11 +16,12 @@ import { loopbackProof } from "./dev-proof";
 export type MontiSite = { monti: Monti; reader: SiteReader };
 
 /**
- * The events that change nothing a visitor sees: a working copy saved, a file put in the library that no page uses yet. Every other event may
- * (an entry on or off the site, a live item's values, a file replaced, renamed, trashed or restored, and whatever a later feature adds), so the
- * list is of what is safe to skip, not of what to act on: an event nobody listed here refreshes the site.
+ * The events that change nothing a visitor sees: a working copy saved, a file put in the library that no page uses yet, the admin's own values
+ * saved (labels, layouts, the screen's language: doc 12). Every other event may (an entry on or off the site, a live item's values, a file
+ * replaced, renamed, trashed or restored, a structure change, and whatever a later feature adds), so the list is of what is safe to skip, not of
+ * what to act on: an event nobody listed here refreshes the site.
  */
-const UNSEEN = new Set(["entry.saved", "media.uploaded"]);
+const UNSEEN = new Set(["entry.saved", "media.uploaded", "settings.saved"]);
 
 /** Longer than a page takes to draw: the second mark after a change comes this much later (see `cacheReceiver`). */
 const SETTLE_MS = 2000;

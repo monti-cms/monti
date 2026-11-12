@@ -298,7 +298,7 @@ describe("reading an entry for a page", () => {
 });
 
 describe("the site's cache and which server this is", () => {
-	it("16-3 a change the site shows refreshes every cached page; a save alone and a new file refresh nothing; an event nobody knows refreshes", async () => {
+	it("16-3 a change the site shows refreshes every cached page; a save alone, a new file and the admin's own values refresh nothing; an event nobody knows refreshes", async () => {
 		const event = (type: string): MontiEvent => ({ type, ids: ["e1"] });
 		const shown = [
 			"entry.published",
@@ -309,7 +309,9 @@ describe("the site's cache and which server this is", () => {
 			"media.restored",
 		];
 		expect(shown.filter((type) => !cacheReceiver.accepts?.(event(type)))).toEqual([]);
-		expect(["entry.saved", "media.uploaded"].filter((type) => cacheReceiver.accepts?.(event(type)))).toEqual([]);
+		expect(
+			["entry.saved", "media.uploaded", "settings.saved"].filter((type) => cacheReceiver.accepts?.(event(type))),
+		).toEqual([]);
 		// A later feature's event is not one of the two that are safe to skip.
 		expect(cacheReceiver.accepts?.(event("schema.applied"))).toBe(true);
 		await cacheReceiver.send(event("entry.published"));
