@@ -783,3 +783,43 @@ export const OptionRemovedReview: Story = {
 		await body.findByText(/필수 필드가 비게 됩니다/, {}, wait);
 	},
 };
+
+/** Doc 19: the field sheet opened from an option's "+ 필드": a new field of that option, with whose it is beside the title. */
+export const OptionFieldSheet: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "글에 필드 추가" }, wait));
+		await within(canvasElement.ownerDocument.body).findByText(/게시글 · 글 종류 · 글/, {}, wait);
+	},
+};
+
+/**
+ * Doc 19: the review of a field moved into an option (the assistant proposed the video's address as the link option's): where it went, and how
+ * many entries lose its value because they chose another option.
+ */
+export const MovedFieldReview: Story = {
+	loaders: site({
+		schema: optionsSchema,
+		more: async (made) => {
+			await optionEntries(made);
+			const draft = structuredClone(optionsSchema);
+			const format = draft.collections.post.fields.format;
+			if (format?.kind !== "conditional") throw new Error("the story's posts have a conditional field");
+			format.fields = { link: { ...format.fields.link, ...format.fields.video } };
+			const proposal = await made.monti.proposals.create("conversation-1", "동영상 주소를 링크 글의 필드로 옮겨 줘");
+			await made.monti.proposals.add(proposal, "schema.apply", { draft, renames: [], answers: {} });
+		},
+	}),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		const body = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await body.findByRole("button", { name: "모두 받기" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }, wait));
+		await body.findByText("값을 잃는 글", {}, wait);
+	},
+};

@@ -997,5 +997,11 @@ describe("a conditional field in the property panel (doc 19)", () => {
 		expect(server).toContain("https://example.dev/talk.mp4");
 		expect(server).toContain("다른 탭");
 		expect(server).not.toContain("링크 주소");
+		// One option has one field and the other two: the titles and bodies of the two sides still start at the same height.
+		const tops = (slot: string) =>
+			sides.map((side) =>
+				Math.round((side.querySelector(`[data-slot=${slot}]`) as HTMLElement).getBoundingClientRect().top),
+			);
+		for (const slot of ["compare-title", "compare-body"]) expect(tops(slot)[0]).toBe(tops(slot)[1]);
 	});
 });

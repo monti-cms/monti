@@ -558,6 +558,9 @@ describe("settings › collections: the options of a choice in the review (docs 
 		// A band is not dragged, and neither are its fields: no grip button in them.
 		expect(band.querySelector("button[aria-label$='옮기기']")).toBeNull();
 		expect((rows()[at("videoUrl")] as HTMLElement).querySelector("button[aria-label$='옮기기']")).toBeNull();
+		// A band is one height, the group band's: 36.
+		for (const words of ["필드 없음", "동영상", "링크"])
+			expect(Math.round((rows()[at(words)] as HTMLElement).getBoundingClientRect().height)).toBe(36);
 		const left = (row: HTMLElement) =>
 			(row.querySelector("span:nth-child(2)") as HTMLElement).getBoundingClientRect().left;
 		expect(left(band)).toBeGreaterThan(left(rows()[at("format")] as HTMLElement));
@@ -609,5 +612,43 @@ describe("settings › collections: the options of a choice in the review (docs 
 			options: ["own", "quoted"],
 			fields: {},
 		});
+	});
+
+	it("19-16 '+ 선택지' puts the keyboard in the new row's value; a value left empty is flagged on the field's line and the save is refused until it is filled, for a choice and a conditional field alike", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		for (const name of ["format", "mood"]) {
+			await userEvent.click(page.getByRole("button", { name: `${name} 열기` }));
+			const rows = sheet().getByRole("textbox", { name: "값" });
+			const before = rows.elements().length;
+			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await expect.element(rows.nth(before)).toHaveFocus();
+			await saveSheet();
+		}
+		const line = (name: string) =>
+			[...document.querySelectorAll<HTMLElement>("[data-slot=field-row]")].find((row) =>
+				row.textContent?.startsWith(name),
+			)?.textContent;
+		await expect.poll(() => line("format")).toContain("빈 값");
+		await expect.poll(() => line("mood")).toContain("빈 값");
+		const sheetNow = await review();
+		await expect.element(sheetNow.getByText("값이 빈 선택지가 있습니다").first()).toBeVisible();
+		// Refused: whatever in the sheet says "적용" and can be pressed is pressed, the sheet stays, and the schema is as it was.
+		for (const button of sheetNow.element().querySelectorAll<HTMLButtonElement>("button"))
+			if (button.textContent?.includes("적용") && !button.disabled && button.getAttribute("aria-disabled") !== "true")
+				button.click();
+		await expect.element(sheet()).toBeVisible();
+		expect((await read(made.loaded()))?.mood).toEqual({ kind: "select", options: ["calm", "loud"] });
+	});
+
+	it("19-13 the review of a field moved into an option says where it went and how many entries lose its value, and applies with the red button", async () => {
+		const { MovedFieldReview } = composeStories(collections);
+		await MovedFieldReview.run();
+		const sheetNow = sheet();
+		await expect.element(sheetNow.getByText("videoUrl → format · link")).toBeVisible();
+		await expect.element(sheetNow.getByText("글 종류 · 링크")).toBeVisible();
+		await expect.element(sheetNow.getByText("1편 · 공개된 글 1편")).toBeVisible();
+		await expect.element(sheetNow.getByRole("button", { name: "지우고 적용" })).toBeVisible();
 	});
 });

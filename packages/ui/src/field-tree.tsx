@@ -104,7 +104,8 @@ function FieldRow({
 				depth === 1 && "pl-[28px]",
 				depth === 2 && "pl-[44px]",
 				depth === 3 && "pl-[60px]",
-				group && "bg-monti-muted py-monti-8",
+				// A band is one height whatever stands at its end (a group's name alone, an option's "+ field"): 36 with its rule.
+				group && "h-monti-control-lg bg-monti-muted py-0",
 				onOpen && !group && "hover:bg-monti-muted",
 				dragging && SLOT,
 				lifted && "border-0",

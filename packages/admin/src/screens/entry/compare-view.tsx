@@ -202,6 +202,14 @@ export function CompareView({
 									) : undefined}
 								</CompareProperty>
 							)),
+							// The side whose option has fewer fields keeps their places empty, so both bodies start at the same height.
+							...Array.from(
+								{ length: Math.max(own(mine, field).length, own(server, field).length) - own(copy, field).length },
+								(_, index) => (
+									// biome-ignore lint/suspicious/noArrayIndexKey: empty places in order; they never move.
+									<CompareProperty key={`${field}:blank:${index}`} label="·" empty="·" blank />
+								),
+							),
 						])
 					: undefined
 			}

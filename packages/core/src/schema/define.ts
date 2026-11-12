@@ -210,6 +210,7 @@ export type SchemaProblem = {
 		| "fixedOptional"
 		| "noOptions"
 		| "duplicateOption"
+		| "emptyOption"
 		| "unknownTarget"
 		| "badMax"
 		| "pathTaken"
@@ -294,6 +295,8 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 			if (field.kind === "select") {
 				if (field.options.length === 0) problems.push({ ...at, code: "noOptions" });
 				if (new Set(field.options).size !== field.options.length) problems.push({ ...at, code: "duplicateOption" });
+				// An option is the word entries store: one with no word could not be told from no choice.
+				if (field.options.some((option) => option.trim() === "")) problems.push({ ...at, code: "emptyOption" });
 			}
 			if (field.kind === "relation") {
 				if (!schema.collections[field.to]) {

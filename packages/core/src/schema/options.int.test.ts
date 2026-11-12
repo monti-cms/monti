@@ -4,7 +4,7 @@ import { testDatabase } from "../__test__/database";
 import { createReader } from "../entries/reader";
 import { createMonti } from "../monti";
 import { migrateContent } from "./apply";
-import { defineSchema, type FieldDefinition, type Schema } from "./define";
+import { checkSchema, defineSchema, type FieldDefinition, type Schema } from "./define";
 import { type Answers, planSchema, type Rename, stepsFor } from "./plan";
 
 const db = await testDatabase();
@@ -447,5 +447,17 @@ describe("a field of an option is its option's entries' only (doc 19)", () => {
 		await migrateContent(db, renamed, [{ id: "renamed-and-filled", steps }]);
 		expect(await publishedOf(video)).toMatchObject({ format: "clip", caption: "설명" });
 		expect(await publishedOf(link)).toEqual({ level: "easy", format: "clip" });
+	});
+});
+
+describe("an option with no word (docs 12 and 19)", () => {
+	it("19-16 is to fix, in a select and in a conditional field alike: it could not be told from no choice", () => {
+		const format = post.fields.format as Extract<FieldDefinition, { kind: "conditional" }>;
+		expect(checkSchema(withFields({ mood: { kind: "select", options: ["calm", ""] } }))).toEqual([
+			{ collection: "post", field: "mood", code: "emptyOption" },
+		]);
+		expect(checkSchema(withFields({ format: { ...format, options: [...format.options, " "] } }))).toEqual([
+			{ collection: "post", field: "format", code: "emptyOption" },
+		]);
 	});
 });

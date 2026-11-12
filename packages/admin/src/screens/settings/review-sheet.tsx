@@ -51,7 +51,7 @@ const firstPick = (change: SchemaChange): Pick | null => {
 		return { radio: "clear", move: moves[0] };
 	}
 	if (first.do === "addRequiredField") return { radio: "fill", fill: first.fill };
-	// An option taken out: emptying is the default where it is offered (not on a required field), else the first option that stays.
+	// An option taken out: changing to the first option that stays is the default (the plan lists it first); emptying is chosen.
 	if (first.do === "removeOption")
 		return first.entries === "empty" ? { radio: "empty" } : { radio: "change", move: first.entries.change };
 	return { radio: "confirm" };
@@ -502,18 +502,17 @@ function Body({
 						title={`${fieldLabel(c, field)} · ${optionLabel(c, field, option)}`}
 						identifier={`${field} · ${option}`}
 					>
-						<ChangeLines>
-							<ChangeLine what={t("settings.review.chose")} then={count(change.count) ?? ""} />
-						</ChangeLines>
 						<RadioGroup
 							height="md"
 							aria-label={t("settings.review.entriesOf", { name: option })}
 							value={current?.radio}
 							onValueChange={(radio) => pick(change.id, { radio: String(radio) })}
 						>
+							{/* The count stands beside the first choice, in the hint's letters, as beside a removed field's "clear" and a renamed field's "move". */}
 							<RadioItem
 								value="change"
 								label={t("settings.review.changeEntries")}
+								hint={count(change.count)}
 								control={
 									<PickOne
 										width="fit"

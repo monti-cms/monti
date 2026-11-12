@@ -55,7 +55,7 @@ type Form = {
 	required: boolean;
 	locale: LocaleMode;
 	/** `was` is the saved word of an option the field was saved with: the row keeps it while its value is edited, so the edit is a rename. */
-	options: { value: string; label: string; was?: string }[];
+	options: { value: string; label: string; was?: string; fresh?: boolean }[];
 	many: boolean;
 	ordered: boolean;
 	via: string;
@@ -457,6 +457,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 													mono
 													aria-label={t("settings.field.optionValue")}
 													placeholder={t("settings.field.optionValue")}
+													autoFocus={option.fresh}
 													value={option.value}
 													onChange={(event) =>
 														set({
@@ -504,7 +505,8 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 				) : null}
 				{structure ? (
 					<Inline gap={0}>
-						<TextButton onClick={() => set({ options: [...form.options, { value: "", label: "" }] })}>
+						{/* The new row's value takes the keyboard: it is what is typed next. */}
+						<TextButton onClick={() => set({ options: [...form.options, { value: "", label: "", fresh: true }] })}>
 							{t("settings.field.addOption")}
 						</TextButton>
 					</Inline>
