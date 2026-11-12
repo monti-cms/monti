@@ -52,7 +52,7 @@ import {
 } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useScreenContext } from "../../assistant/use-assistant";
+import { useOpenConversation, useScreenContext } from "../../assistant/use-assistant";
 import { download } from "../../download";
 import { useLeaveFiles, useLeaveGuard, useUploadsGoing } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
@@ -277,6 +277,7 @@ export function EntryEditor({
 	// browser's copy, load the latest, try again, confirm all, compare), and the save cell, a button only while there is something to save or
 	// to look at (saved, it is words). Nothing is remembered from the press: a save that fails leaves the cell, and the focus on it.
 	const handOff = useFocusHandOff(toText);
+	const openConversation = useOpenConversation();
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
 			if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "s") {
@@ -751,9 +752,10 @@ export function EntryEditor({
 						</Stack>
 					)}
 					{walking ? (
-						<ProposalBubbleDock>
+						<ProposalBubbleDock ref={handOff}>
 							<ProposalBubble
 								name={walking.request}
+								onOpen={openConversation ? () => openConversation(walking.conversationId) : undefined}
 								position={Math.min(looking, proposed.length - 1) + 1}
 								total={proposed.length}
 								previousLabel={t("bubble.previous")}

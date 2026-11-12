@@ -17,7 +17,7 @@
 |---|---|---|
 | 여는 버튼 | 틀의 모서리 `IconButton`(`label` "어시스턴트 열기", `Spark`) | 패널이 열려 있으면 없다. 패널을 닫으면 포커스가 이 버튼으로 돌아온다. |
 | 패널 | `SidePanel width="assistant"`(`title` "어시스턴트", `onClose`) | 폭은 끌어서 바꾸고 브라우저가 기억한다. 열려 있었는지와 지금 대화도 브라우저가 기억한다. |
-| 머리의 버튼 | `actions`에 `IconButton` "지난 대화"(`RecentlyViewed`), "새 대화"(`Add`) | "새 대화"는 대화가 있을 때만 있다. 돌던 실행은 계속 돌고 지난 대화에 있다(그 실행이 하는 말과 끝은 새 대화에 아무것도 바꾸지 않는다). 그 대화에서 기다리던 말은 함께 사라진다. 키가 없으면 둘 다 없다. |
+| 머리의 버튼 | `actions`에 `IconButton` "지난 대화"(`RecentlyViewed`), "새 대화"(`Add`) | "새 대화"는 대화가 있을 때만 있다. 돌던 실행은 계속 돌고 지난 대화에 있다(그 실행이 하는 말과 끝은 새 대화에 아무것도 바꾸지 않는다). 그 대화에서 기다리던 말은 함께 사라진다. 다른 대화를 읽는 동안에는 턴도 처음 요청도 보이지 않는다. 키가 없으면 둘 다 없다. |
 | 지난 대화의 머리 | `SidePanel`의 `back`("대화로 돌아가기"), `title` "지난 대화" | 패널 안의 다른 보기다. |
 
 ### 대화
@@ -57,7 +57,7 @@
 | 입력란 | `SidePanel composer`에 `ChatInput`(`label` "어시스턴트에게 묻기", `placeholder` "사이트에 대해 물어보세요", `aside`에 모델 버튼) | 흐린 글은 어느 화면에서나 같다. 무엇이 함께 가는지는 칩이 말한다. Enter로 보내고 Shift+Enter로 줄을 바꾼다. 비었으면 보내지 않는다. |
 | 칩 | `ChatInput context`에 `Chip onRemove` | 함께 가는 것 모두: 열린 것 하나("이 글" · "이 목록" · "미디어" · "설정")와 고른 것 하나("고른 글 2편" · "고른 파일 3개" · "고른 글자"). ×로 빼면 그것은 가지 않는다. 다른 글을 열거나 다른 행을 고르면 다시 생긴다. |
 | 일하는 동안 | `ChatInput busy`, `busyPlaceholder` "더 말하기" | 보내기가 멈추기가 된다. 더 보낸 말은 줄에 쌓인다. 멈추기를 누른 뒤에는 브라우저가 그 실행을 스스로 이어 가지 않고(화면 도구가 끝났을 때도, 요청 하나의 시간이 다 됐을 때도), 화면 도구는 화면을 옮기지 않는다. 한글을 조합하는 중의 Enter는 보내지 않는다. |
-| 기다리는 말 | `ChatInput queue`에 `ChatQueueItem`("지금 보내기" · "고치기" · "취소") | "지금 보내기"는 다음 턴에 들어간다. "고치기"는 말을 입력란으로 돌리고 포커스를 준다. 실행이 끝나면 남은 말이 차례로 간다. |
+| 기다리는 말 | `ChatInput queue`에 `ChatQueueItem`("지금 보내기" · "고치기" · "취소") | "지금 보내기"는 다음 턴에 들어간다. "고치기"는 말을 입력란으로 돌리고 포커스를 준다. 실행이 끝나면 남은 말이 차례로 간다. 키보드로 "지금 보내기"나 "취소"를 누르면 포커스는 다음 줄의 첫 버튼으로, 없으면 입력란으로 간다. 줄이 생기고 사라져도 입력란은 같은 요소다(치던 글의 커서가 그대로다). |
 | 모델 버튼 | `ModelMenuButton`(`label` "모델 고르기") | mono 모델 이름, 생각하는 모델이면 흐린 "· 생각 보통". 실행 중에도 눌린다. |
 | 모델 메뉴 | `ModelMenu layout="chat"`(검색 "모델 찾기", `groups` "최근" · 키 이름과 개수, 지금 모델 ✓, 처음 모델에 `hint` "기본", `thinking`의 "생각 ›" "끔" · "낮음" · "보통" · "높음") | 생각하지 않는 모델이면 `thinking`을 넘기지 않아 그 행이 없다. 새 대화는 처음 모델과 "보통"에서 시작한다. |
 | 키가 없을 때 | `Empty`(`title` "AI 연결이 없습니다") 안의 `EmptyStep`(`href` API 키 화면) "API 키 넣기" | 빈 목록과 같은 부품이다. 입력란과 머리의 버튼이 없다. |
@@ -74,7 +74,7 @@
 
 ### 제안의 상태 한 줄
 
-카드의 발과 검토 화면 머리 끝이 같은 한 줄이다(화면 코드 `ProposalState` 하나). 둘은 같은 제안을 읽으므로 수가 늘 같다.
+카드의 발과 검토 화면 머리 끝이 같은 한 줄이다(화면 코드 `ProposalState` 하나). 둘은 같은 제안을 읽으므로 수가 늘 같다. 이 줄의 버튼을 키보드로 눌러 그 버튼이 사라지면(적용 중에는 버튼이 없고, 버림과 되돌림 뒤에도 없다) 포커스는 줄에 남은 첫 버튼으로, 없으면 줄 다음의 첫 컨트롤로 간다(카드와 검토 화면이 같다).
 
 | 상태 | 보이는 것 |
 |---|---|
@@ -91,7 +91,7 @@
 |---|---|---|
 | 목록 | 공용 `Table container="none"`, `TableRow twoLine`. 열 이름 행은 없다 | API 키 목록, 템플릿 목록과 같은 줄이다. 날짜 묶음은 없다(활동 기록과 같다. 시각이 말한다). 50줄씩, 끝에 닿으면 더 읽는다. |
 | 한 줄 | 첫 줄 `RowLink`(버튼) 안의 `Text truncate` 처음 물은 말, 둘째 줄 `Text variant="note" tone="subtle"` "10:58 · 검토 대기" | 한 일은 "검토 대기" · "적용 16건" · "받음 5곳" · "되돌림" · "버림". 줄을 누르면 그 대화가 그때 그대로 열린다. 지금 열린 대화는 `TableRow selected`. |
-| 줄의 ⋯ | `RowActions` 안 `RowMore`(`label` "(말) 더 보기") + `DropdownMenu` "지우기" `variant="danger"` | 늘 보인다. 묻지 않고 줄이 사라진다. 그 대화의 대기 제안도 지워진다. |
+| 줄의 ⋯ | `RowActions` 안 `RowMore`(`label` "(말) 더 보기") + `DropdownMenu` "지우기" `variant="danger"` | 늘 보인다. 묻지 않고 줄이 사라진다. 그 대화의 대기 제안도 지워진다. 키보드로 지우면 포커스는 메뉴가 닫히며 다음 줄의 ⋯로, 없으면 앞 줄의 ⋯로 간다(`DropdownMenuContent finalFocus`). 줄이 하나도 남지 않으면 패널의 입력란(없으면 첫 컨트롤)으로 간다. |
 | 없을 때 | `Empty`(`title` "지난 대화가 없습니다") | |
 | 발 | `SidePanel footer`에 `Text variant="note"` "안 연 대화 지우기"와 `Select`(화면의 `PickOne`, `size="sm"`): "7일 뒤" · "30일 뒤" · "90일 뒤" · "지우지 않음" | 설정은 칸 부품으로 고른다. 고르는 대로 저장된다. |
 
@@ -129,7 +129,7 @@
 | "‹ 어시스턴트" | `PageHeader trail`에 `TextButton variant="quiet"` | 떠나온 화면으로 돌아가고 패널이 그 대화로 열린다. |
 | 제목 행 | `PageHeader`(`title` "제안 검토", `meta` 시각), 끝에 "제안의 상태 한 줄" | 넣은 줄만 적용한다. 버리면 떠나온 화면으로 돌아간다. |
 | 요청 | `PageBody` 안 `Stack gap={32}`의 첫 줄, `Text as="p" variant="title" tone="muted"` | 따옴표로 인용한 요청. |
-| 묶음 | `ListSection table`(`title` 묶음 이름, `count` "3건", `actions`) | 도구 화면의 제목 있는 목록과 같은 머리다. `actions`: 글이 바뀌는 묶음이면 보기 전환 `Tabs` + `TabsList variant="line"` "한 줄" · "나란히", 기다리는 줄이 둘 이상이면 `TextButton` "3건 모두 빼기"(다 빠졌으면 "모두 넣기"). |
+| 묶음 | `ListSection table`(`title` 묶음 이름, `count` "3건", `actions`) | 도구 화면의 제목 있는 목록과 같은 머리다. `actions`: 글이 바뀌는 묶음이면 보기 전환 `Tabs` + `TabsList variant="line"` "한 줄" · "나란히", 기다리는 줄이 둘 이상이면 `TextButton` "3건 모두 빼기"(하나라도 빠져 있으면 "3건 모두 넣기"). 보기 전환은 묶음마다 따로다: 한 묶음을 "나란히"로 바꿔도 다른 묶음은 그대로다. |
 | 줄 | 공용 `Table container="none"`의 `TableRow`(바뀌는 글이 있으면 `twoLine`): `Checkbox`(`aria-label` "(대상) 넣기"), `RowTitle`(`title` 대상, `address` 주소), 줄 끝에 결과 | 체크는 늘 보인다(목록의 여백 체크 `RowCheck`가 아니다: 거기서 체크는 "일괄 작업에 고름"이고 줄을 물들인다. 여기서는 모든 줄이 넣은 채로 시작한다). 누르는 대로 저장되고 알약과 카드의 수가 따라 바뀐다. 적용이 시작되면 `readOnly`다. |
 | 바뀌는 글 | 줄 안의 `CompareRows` + `CompareRow`(`name` 자리 이름: "제목" · "주소" · 필드 이름 · "블록 3" · "새 블록") | 번역 화면의 나란히 줄과 같은 부품이다. "한 줄"은 `CompareRow single`: 한 칸에 빠지는 말(`Del`)과 들어오는 말(`Ins`)이 제자리에. "나란히"는 두 칸: 지금(빠지는 말 표시) · 제안(들어오는 말 표시). 옛 값이 비었으면 새 값만 보인다. 본문 바꿈은 그 글의 지금 본문에 바꿈을 얹어 블록마다 견준다. |
 | 줄 끝의 결과 | `EntryStatus`: 적용 `status="published"` "적용", 되돌림 `status="archived" quiet` "되돌림", 못 함 `status="failed"` "못 함"과 `Text variant="note" tone="danger"` 까닭 | 활동 기록의 전송 칸과 같은 부품이다. |
@@ -137,3 +137,19 @@
 | "편집기에서 보기" | 기다리는 줄 끝의 `TextButton variant="underline"`(`href` 그 글) | 그 글의 편집기를 연다. |
 
 스토리: Screens/Assistant › Review, Patterns/Frame/PageHeader, Patterns/List/ListSection, Patterns/List/Table, Controls/Field/Checkbox, Monti/Translation/Compare, Monti/Proposal/Marks, Controls/Status/EntryStatus, Controls/Tabs/Tabs, Controls/Button/TextButton.
+
+
+## 누른 것이 사라질 때의 포커스
+
+키보드로 누른 컨트롤이 그 누름으로 사라지면 포커스를 넘긴다([tokens.md](../tokens.md) 상태, `useFocusHandOff`. 포인터로 누르면 아무것도 옮기지 않는다).
+
+| 누른 것 | 포커스가 가는 곳 |
+|---|---|
+| "새 대화", 처음 요청, "다시 하기", "다시 시도", "이어서 하기" | 입력란 |
+| 기다리는 말의 "지금 보내기" · "취소" | 다음 줄의 첫 버튼, 없으면 입력란 |
+| 제안의 상태 줄("버리기" · "n건 적용" · "되돌리기") | 줄에 남은 첫 버튼, 없으면 줄 다음의 첫 컨트롤 |
+| 검토 화면 줄의 "다시 만들기" | 그 줄의 체크 |
+| 지난 대화 ⋯의 "지우기" | 다음 줄의 ⋯, 없으면 앞 줄의 ⋯, 없으면 입력란(없으면 패널의 첫 컨트롤) |
+| 편집기와 설정의 제안 버블 "모두 받기" · "모두 버리기" | 버블이 덮고 있던 것: 편집기는 본문, 설정은 그 화면의 첫 컨트롤 |
+
+제안 버블의 이름(요청한 말)을 누르면 패널이 그 대화로 열린다([proposal.md](../components/proposal.md) 버블).

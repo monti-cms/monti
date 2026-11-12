@@ -49,4 +49,39 @@ describe("ChatInput", () => {
 		await userEvent.keyboard("{Enter}");
 		expect(sent).toEqual(["안녕"]);
 	});
+
+	it("the box is the same element when the card of waiting messages comes and goes: what is being typed keeps the keyboard", async () => {
+		function Busy() {
+			const [value, setValue] = useState("");
+			const [waiting, setWaiting] = useState<string[]>([]);
+			return (
+				<ChatInput
+					value={value}
+					onValueChange={setValue}
+					onSubmit={() => {}}
+					onStop={() => {}}
+					busy
+					onQueue={(words) => {
+						setWaiting((was) => [...was, words]);
+						setValue("");
+					}}
+					queue={waiting.length > 0 ? waiting.map((words) => <li key={words}>{words}</li>) : undefined}
+					label="Ask"
+					sendLabel="Send"
+					stopLabel="Stop"
+				/>
+			);
+		}
+		render(<Busy />);
+		const box = page.getByRole("textbox", { name: "Ask" });
+		await userEvent.click(box);
+		const typedIn = box.element();
+		await userEvent.keyboard("wait for me{Enter}");
+		await expect.element(page.getByText("wait for me")).toBeVisible();
+		expect(box.element()).toBe(typedIn);
+		expect(document.activeElement).toBe(typedIn);
+		// And what is typed next goes into it, with no press on the box in between.
+		await userEvent.keyboard("and this");
+		await expect.element(box).toHaveValue("and this");
+	});
 });

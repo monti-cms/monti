@@ -1,7 +1,7 @@
 import type { Message } from "@monti-cms/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAdmin } from "./admin-context";
-import type { Answer, CallOptions } from "./transport";
+import { type Answer, type CallOptions, NO_ANSWER } from "./transport";
 
 /** Why an operation did not go through, as the screen shows it. `conflict`: the record changed since it was read, so the screen reloads it. */
 export type Refusal = { status: number; error: string; reason: Message | null };
@@ -11,12 +11,6 @@ export type Refusal = { status: number; error: string; reason: Message | null };
  * The one place this fallback is made: its words take no values, so no screen can show an unfilled `{…}`.
  */
 export const reasonOf = (refusal: Refusal): Message => refusal.reason ?? { key: "errors.unexpected" };
-
-/**
- * What stands for an answer that never came, as the byte route does (`httpUploader`): status 0. It carries its own words, so every screen that shows a
- * refusal's reason says this one whole, with no code of ours in it.
- */
-const NO_ANSWER: Answer = { status: 0, body: { error: "network", reason: { key: "errors.noAnswer" } } };
 
 /** How a read made again went (`useRead`'s `reload`). */
 type Reread = { ok: true } | { ok: false; refusal: Refusal };

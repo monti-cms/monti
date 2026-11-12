@@ -2211,6 +2211,28 @@ describe("what the second review of the core found (#472)", () => {
 		expect(await db.selectFrom("monti_proposal").select("id").execute()).toEqual([]);
 	});
 
+	it("10-1 a page that takes up a run it found waiting on a screen answers what waited as not done, and the run goes on; what the run asks of the screen after that is asked as usual", async () => {
+		const monti = site();
+		await withKey(monti);
+		const show = (id: string) => ({ name: "list_show", input: { collection: "post", query: { filters: [] } }, id });
+		model.add({ calls: [show("long-ago")] }, { calls: [show("now")] });
+		const waiting = await ask(monti, { request: "목록 보여 줘", context: { screen: "list", collection: "post" } });
+		expect(waiting.end.status).toBe("waiting");
+		expect(waiting.of("screen")).toHaveLength(1);
+
+		const taken = await ask(monti, { resume: waiting.run, away: true });
+		// What waited is told to the model as not done, and no screen is asked for it.
+		expect(taken.of("tool").find((event) => event.id === "long-ago")).toMatchObject({
+			kind: "screen",
+			state: "failed",
+		});
+		expect(JSON.stringify(model.turns[1]?.messages)).toContain("Not done: the conversation was no longer open");
+		// The turn after it asks the screen for something new: that one is this page's to do.
+		expect(taken.of("screen").map((event) => event.calls.map((call) => call.id))).toEqual([["now"]]);
+		expect(taken.end.status).toBe("waiting");
+		await expect(ask(monti, { request: "다른 말", away: true })).rejects.toThrow(/Invalid input/);
+	});
+
 	it("10-1 a run stopped while it waits on the browser hands back what was said to it: no word is left behind", async () => {
 		const monti = site();
 		await withKey(monti);

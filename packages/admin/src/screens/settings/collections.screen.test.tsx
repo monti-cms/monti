@@ -282,3 +282,21 @@ describe("settings › collections: a refused save", () => {
 		expect(box(page.getByRole("button", { name: "어시스턴트 열기" }).element()).top).toBe(banner.bottom + 12);
 	});
 });
+
+describe("settings › collections: what the assistant proposed", () => {
+	it("focus: the bubble's '모두 버리기' pressed with the keyboard: the bubble goes, and the focus is on the first control of what it sat over", async () => {
+		const { Proposal } = composeStories(collections);
+		await Proposal.run();
+		const discard = page.getByRole("button", { name: "모두 버리기" });
+		await expect.element(discard).toBeVisible();
+		const over = discard.element().closest("[data-slot=proposal-bubble-dock]")?.parentElement as HTMLElement;
+		await userEvent.keyboard("{Tab}");
+		(discard.element() as HTMLElement).focus();
+		expect(discard.element().matches(":focus-visible")).toBe(true);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(discard).not.toBeInTheDocument();
+		await expect
+			.poll(() => document.activeElement !== document.body && over.contains(document.activeElement))
+			.toBe(true);
+	});
+});

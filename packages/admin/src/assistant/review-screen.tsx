@@ -27,6 +27,7 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { href, type Route } from "../route";
 import { shownBlocks } from "../screens/entry/compare-entries";
+import { useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { type DiffRun, inlineDiff } from "./diff";
 import { changeOf } from "./proposal-card";
 import { ProposalState } from "./proposal-state";
@@ -77,9 +78,14 @@ function marked(runs: DiffRun[], side: "both" | "before" | "after"): ReactNode {
 export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => void }) {
 	const { t, transport } = useAdmin();
 	const assistant = useAssistant();
+	// "Make again" goes once the change is made again; pressed with the keyboard, its focus goes to that row's check.
+	const toCheck = useFocusHandOff((gone) =>
+		gone.closest("tr")?.querySelector<HTMLElement>('[role="checkbox"], input[type="checkbox"]'),
+	);
 	const proposal = useProposal(id);
 	const view = proposal.view;
-	const [side, setSide] = useState(false);
+	// The kinds of change that are looked at side by side: each kind has its own switch.
+	const [sideBySide, setSideBySide] = useState<ReadonlySet<string>>(new Set());
 	const [entries, setEntries] = useState<Record<string, EntryNow>>({});
 
 	// The entries its changes are of, as they are now: what a change takes out is read from them.
@@ -212,7 +218,8 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 					applying={proposal.applying}
 					progress={proposal.progress}
 					busy={proposal.busy}
-					onDiscard={() => void proposal.discard().then(back)}
+					// Discarded, there is nothing left to look through: back. Refused, the page stays with what the refusal left.
+					onDiscard={() => void proposal.discard().then((discarded) => discarded && back())}
 					onApply={() => void proposal.apply()}
 					onRevert={() => void proposal.revert()}
 				/>
@@ -229,6 +236,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 						const texts = rows.some((item) =>
 							placesOf(item).some((place) => place.before !== "" && place.after !== ""),
 						);
+						const side = sideBySide.has(group.label);
 						return (
 							<ListSection
 								key={group.label}
@@ -238,7 +246,17 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 								actions={
 									<>
 										{texts ? (
-											<Tabs value={side ? "side" : "line"} onValueChange={(value) => setSide(value === "side")}>
+											<Tabs
+												value={side ? "side" : "line"}
+												onValueChange={(value) =>
+													setSideBySide((was) => {
+														const next = new Set(was);
+														if (value === "side") next.add(group.label);
+														else next.delete(group.label);
+														return next;
+													})
+												}
+											>
 												<TabsList variant="line" aria-label={t("review.view")}>
 													<TabsTrigger value="line">{t("review.oneLine")}</TabsTrigger>
 													<TabsTrigger value="side">{t("review.sideBySide")}</TabsTrigger>
@@ -305,7 +323,11 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 														<Inline gap={12} align="baseline" justify="end">
 															{resultOf(item)}
 															{item.stale && item.state !== "discarded" && !proposal.applying ? (
-																<TextButton variant="underline" onClick={() => void proposal.remake(item.id)}>
+																<TextButton
+																	ref={toCheck}
+																	variant="underline"
+																	onClick={() => void proposal.remake(item.id)}
+																>
 																	{t(proposal.remaking === item.id ? "card.remaking" : "card.remake")}
 																</TextButton>
 															) : null}

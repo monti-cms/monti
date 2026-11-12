@@ -29,6 +29,11 @@ export function firstStop() {
 	return [...document.querySelectorAll<HTMLElement>(FOCUSABLE)].find(stopsTab) ?? null;
 }
 
+/** The first thing the Tab key stops on inside a node: a panel's first control, the first field of what a bubble sat over. */
+export function firstStopIn(root: Element) {
+	return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].find(stopsTab) ?? null;
+}
+
 /** The first thing the Tab key stops on after a node, outside it: under a banner at the top of the page area, the page's first control. */
 export function nextStop(after: Element) {
 	return (

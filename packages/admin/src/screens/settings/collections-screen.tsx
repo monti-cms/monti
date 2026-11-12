@@ -21,11 +21,12 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
-import { useScreenContext } from "../../assistant/use-assistant";
+import { useOpenConversation, useScreenContext } from "../../assistant/use-assistant";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { type Place as FramePlace, useCoverCorner } from "../frame/admin-frame";
+import { firstStopIn, useFocusHandOff } from "../frame/focus-hand-off";
 import { BasicsTab } from "./basics-tab";
 import { EditorTab } from "./editor-tab";
 import { FieldSheet, type FieldSheetOpen } from "./field-sheet";
@@ -122,6 +123,9 @@ export function CollectionsScreen({
 	const current = active && live.includes(active) ? active : (live[0] ?? null);
 	// What goes along with a request to the assistant from here (doc 10, context): the settings, and the collection that is shown.
 	useScreenContext({ screen: "settings", ...(current ? { collection: current } : {}) });
+	const openConversation = useOpenConversation();
+	// The bubble goes once every proposed change is taken or left: with the keyboard, the focus goes to the first control of what it sat over.
+	const overBubble = useFocusHandOff((gone) => (gone.parentElement ? firstStopIn(gone.parentElement) : null));
 	const kind = current ? (model.shown(at.collection(current)) as { kind: "document" | "item" }).kind : "document";
 	const shownTab: Tab = tab === "editor" && kind !== "document" ? "fields" : tab;
 	const locked = data?.locked ?? true;
@@ -429,9 +433,10 @@ export function CollectionsScreen({
 							</RailLayout>
 						) : null}
 						{walking ? (
-							<ProposalBubbleDock>
+							<ProposalBubbleDock ref={overBubble}>
 								<ProposalBubble
 									name={walking.item.request}
+									onOpen={openConversation ? () => openConversation(walking.item.conversationId) : undefined}
 									position={Math.min(position, proposed.length - 1) + 1}
 									total={proposed.length}
 									previousLabel={t("bubble.previous")}

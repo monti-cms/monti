@@ -1,6 +1,8 @@
 import type { ProposalView } from "@monti-cms/core";
 import { Button, Count, Inline, Progress, Text } from "@monti-cms/ui";
+import type { ReactNode } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { nextStop, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { type ProposalStanding, standingOf } from "./use-proposal";
 
 /**
@@ -34,8 +36,22 @@ export function ProposalState({
 	const { t } = useAdmin();
 	const standing: ProposalStanding = standingOf(view, applying);
 	const { counts } = view;
+	// A button of the row pressed with the keyboard goes as the proposal moves on (applying has none, discarded has none). The focus goes to
+	// the first button the row still has, else to the first control after the row: one rule on the card and on the page.
+	const handed = useFocusHandOff((row) =>
+		// The row itself going (the page it is on was left) hands nothing on: what takes the page's place has its own first control.
+		row.contains(document.activeElement)
+			? null
+			: (row.querySelector<HTMLElement>("button:not(:disabled), a[href]") ?? nextStop(row)),
+	);
+	// One box for every state, so the row itself stays while its buttons come and go.
+	const row = (content: ReactNode) => (
+		<Inline ref={handed} gap={12} align="center" grow>
+			{content}
+		</Inline>
+	);
 	if (standing === "applying")
-		return (
+		return row(
 			<Inline gap={12} align="center" grow justify="end">
 				<Text variant="note">{t("card.applying")}</Text>
 				{progress ? (
@@ -50,11 +66,11 @@ export function ProposalState({
 						/>
 					</>
 				) : null}
-			</Inline>
+			</Inline>,
 		);
 	if (standing === "waiting")
-		return (
-			<Inline gap={12} align="center" grow>
+		return row(
+			<>
 				{onReview ? (
 					<Button variant="ghost" size={size} onClick={onReview}>
 						{t("card.review")}
@@ -69,11 +85,11 @@ export function ProposalState({
 						{t("card.apply", { count: counts.toApply })}
 					</Button>
 				</Inline>
-			</Inline>
+			</>,
 		);
 	if (standing === "applied")
-		return (
-			<Inline gap={12} align="center" grow>
+		return row(
+			<>
 				<Text variant="note" tone="success">
 					{t("card.applied", { count: counts.applied })}
 				</Text>
@@ -94,11 +110,11 @@ export function ProposalState({
 						</Button>
 					) : null}
 				</Inline>
-			</Inline>
+			</>,
 		);
-	return (
+	return row(
 		<Text variant="note" tone="subtle">
 			{t(standing === "reverted" ? "card.reverted" : "card.discarded")}
-		</Text>
+		</Text>,
 	);
 }

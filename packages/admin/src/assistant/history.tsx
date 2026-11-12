@@ -16,8 +16,9 @@ import {
 	TableRow,
 	Text,
 } from "@monti-cms/ui";
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { firstStopIn } from "../screens/frame/focus-hand-off";
 import { PickOne } from "../screens/settings/pick-one";
 import { useAssistant } from "./use-assistant";
 import { clock } from "./words";
@@ -33,6 +34,36 @@ const KEEP = ["7", "30", "90", "never"] as const;
 export function History() {
 	const { t } = useAdmin();
 	const { history, conversationId, openConversation, removeConversation, loadHistory } = useAssistant();
+	// A conversation deleted with the keyboard (its menu closes first, then its row goes): the focus goes to the "more" of the row after it,
+	// else of the row before, as the menu closes; with no row left, to the panel's box or its first control once the row is gone. A
+	// pointer's press moves nothing: the menu's own way.
+	const rows = useRef(new Map<string, HTMLElement>());
+	const root = useRef<HTMLElement>(null);
+	const deleting = useRef<{ beside: string | null } | null>(null);
+	const afterMenu = () => {
+		const beside = deleting.current?.beside;
+		const more = beside ? rows.current.get(beside)?.querySelector<HTMLElement>("td:last-child button") : null;
+		return more ?? true;
+	};
+	const remove = (id: string, byKeyboard: boolean) => {
+		const all = history?.rows ?? [];
+		const at = all.findIndex((row) => row.id === id);
+		const beside = all[at + 1]?.id ?? all[at - 1]?.id ?? null;
+		deleting.current = byKeyboard ? { beside } : null;
+		const panel = root.current?.closest("aside, [role=complementary]");
+		void removeConversation(id).then(() => {
+			deleting.current = null;
+			if (!byKeyboard || beside || !panel) return;
+			// Two frames on: what takes the list's place (the line that there are none, or the conversation's box) is drawn by then.
+			requestAnimationFrame(() =>
+				requestAnimationFrame(() => {
+					const on = document.activeElement;
+					if (on && on !== document.body && on.isConnected) return;
+					(panel.querySelector<HTMLElement>("textarea") ?? firstStopIn(panel))?.focus();
+				}),
+			);
+		});
+	};
 	// Nothing is drawn while it is read: the read is short.
 	if (!history) return null;
 	if (history.rows.length === 0)
@@ -49,6 +80,7 @@ export function History() {
 				: t(`history.${outcome.kind}`);
 	return (
 		<Stack
+			ref={root}
 			gap={0}
 			grow
 			minHeight={0}
@@ -65,7 +97,15 @@ export function History() {
 					{history.rows.map((row) => {
 						const outcome = outcomeOf(row.outcome);
 						return (
-							<TableRow key={row.id} twoLine selected={row.id === conversationId}>
+							<TableRow
+								key={row.id}
+								ref={(node: HTMLTableRowElement | null) => {
+									if (node) rows.current.set(row.id, node);
+									else rows.current.delete(row.id);
+								}}
+								twoLine
+								selected={row.id === conversationId}
+							>
 								<TableCell truncate>
 									<Stack gap={4} minWidth={0}>
 										<RowLink render={<button type="button" />} onClick={() => void openConversation(row.id)}>
@@ -83,8 +123,9 @@ export function History() {
 												label={t("history.more", { name: row.title })}
 												trigger={(button) => <DropdownMenuTrigger render={button} />}
 											/>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem variant="danger" onClick={() => void removeConversation(row.id)}>
+											<DropdownMenuContent align="end" finalFocus={afterMenu}>
+												{/* A key's press is a click that no pointer made (`detail` 0). */}
+												<DropdownMenuItem variant="danger" onClick={(event) => remove(row.id, event.detail === 0)}>
 													{t("history.remove")}
 												</DropdownMenuItem>
 											</DropdownMenuContent>

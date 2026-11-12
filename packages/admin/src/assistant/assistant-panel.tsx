@@ -23,6 +23,7 @@ import {
 import { Add, Copy, Edit, RecentlyViewed, Renew } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { History, HistoryFoot } from "./history";
 import { ProposalCardOf } from "./proposal-card";
 import { Prose } from "./prose";
@@ -94,6 +95,13 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 
 	// Words put back into the box (a queued message to edit, the last request to change) are there to be typed on: the caret goes with them.
 	const box = useRef<HTMLFormElement>(null);
+	// A control of the panel that goes when it is pressed with the keyboard (a new conversation, a request to start from, try again, go on)
+	// hands the focus to the box: the next thing a person does here is type. A waiting message's goes to the message after it, else the box.
+	const typing = () => box.current?.querySelector("textarea");
+	const toBox = useFocusHandOff(typing);
+	const toNextWaiting = useFocusHandOff(
+		(gone) => gone.nextElementSibling?.querySelector<HTMLElement>("button") ?? typing(),
+	);
 	const intoBox = (put: () => void) => {
 		put();
 		requestAnimationFrame(() => box.current?.querySelector("textarea")?.focus());
@@ -156,6 +164,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 					? assistant.queue.map((waiting) => (
 							<ChatQueueItem
 								key={waiting.id}
+								ref={toNextWaiting}
 								sendNowLabel={t("panel.sendNow")}
 								editLabel={t("panel.editQueued")}
 								cancelLabel={t("panel.cancelQueued")}
@@ -235,17 +244,25 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 	/** What can be done about a turn that did not finish; only the last turn can be gone on with. */
 	const noteOf = (turn: Turn, isLast: boolean): ReactNode => {
 		const end = turn.end;
+		// A run that waits on a screen while this page follows it is at work (the screen is doing its part).
 		if (!end || turn.status === "done" || turn.status === "stopped" || turn.status === "running") return null;
+		if (turn.status === "waiting" && busy) return null;
 		const act = (label: string, onClick: () => void) =>
 			// The note's own buttons (status.md): quiet and small.
 			isLast ? (
-				<Button variant="ghost" size="sm" onClick={onClick}>
+				<Button ref={toBox} variant="ghost" size="sm" onClick={onClick}>
 					{label}
 				</Button>
 			) : undefined;
 		if (turn.status === "failed") {
+			// It never began: the server's own reason when it gave one (another request is going, the model is gone, no answer came).
 			if (turn.unsent || !end.error)
-				return <ErrorNote title={t("panel.dropped")} actions={act(t("panel.retry"), assistant.again)} />;
+				return (
+					<ErrorNote
+						title={turn.refusal ? t(turn.refusal) : t("panel.dropped")}
+						actions={act(t("panel.retry"), assistant.again)}
+					/>
+				);
 			if (end.error.kind === "refused")
 				return (
 					<ErrorNote
@@ -268,7 +285,8 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 		}
 		if (turn.status === "interrupted" && (end.reason === "turns" || end.reason === "tokens"))
 			return <ErrorNote title={t("panel.limit")} actions={act(t("panel.goOn"), () => assistant.goOn(true))} />;
-		if (turn.status === "interrupted")
+		// Cut off, or left waiting on a screen that no page is doing it on any more: it can be gone on with.
+		if (turn.status === "interrupted" || turn.status === "waiting")
 			return <ErrorNote title={t("panel.dropped")} actions={act(t("panel.goOn"), () => assistant.goOn())} />;
 		return null;
 	};
@@ -349,7 +367,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 							<Copy />
 						</IconButton>
 						{isLast && !busy ? (
-							<IconButton label={t("panel.again")} onClick={assistant.again}>
+							<IconButton ref={toBox} label={t("panel.again")} onClick={assistant.again}>
 								<Renew />
 							</IconButton>
 						) : null}
@@ -392,7 +410,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 							<RecentlyViewed />
 						</IconButton>
 						{turns.length > 0 ? (
-							<IconButton label={t("panel.new")} onClick={assistant.fresh}>
+							<IconButton ref={toBox} label={t("panel.new")} onClick={assistant.fresh}>
 								<Add />
 							</IconButton>
 						) : null}
@@ -421,15 +439,16 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 							void assistant.loadEarlier();
 					}}
 				>
-					{turns.length === 0 ? (
+					{/* While a conversation that was opened is read, neither its requests nor the ones to start from are here yet. */}
+					{assistant.loading && turns.length === 0 ? null : turns.length === 0 ? (
 						<Stack gap={4} minWidth={0}>
 							{starts.map((words) => (
-								<Suggest key={words} kind="request" onClick={() => send(t(words))}>
+								<Suggest key={words} ref={toBox} kind="request" onClick={() => send(t(words))}>
 									{t(words)}
 								</Suggest>
 							))}
 							{(state?.recent ?? []).map((words) => (
-								<Suggest key={words} kind="recent" onClick={() => send(words)}>
+								<Suggest key={words} ref={toBox} kind="recent" onClick={() => send(words)}>
 									{words}
 								</Suggest>
 							))}

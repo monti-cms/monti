@@ -44,16 +44,27 @@ export function httpUploader(base: string): Uploader {
 		});
 }
 
+/**
+ * What stands for an answer that never came (the network is down, the server did not answer), as the byte route does: status 0. It carries its
+ * own words, so every place that shows a refusal's reason says this one whole. A transport answers with it and does not throw: whoever calls
+ * (a screen's read, the assistant's panel between two requests of a run) is told like any refusal and is never left waiting on nothing.
+ */
+export const NO_ANSWER: Answer = { status: 0, body: { error: "network", reason: { key: "errors.noAnswer" } } };
+
 /** The admin API over HTTP, at `base` (`/admin/api`). The session cookie goes with every request. */
 export function httpTransport(base: string): Transport {
 	return async (name, input, { versions, accepted } = {}) => {
-		const response = await fetch(`${base}/operations/${name}`, {
-			method: "POST",
-			credentials: "same-origin",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ input, versions, accepted }),
-		});
-		return { status: response.status, body: await response.json().catch(() => null) };
+		try {
+			const response = await fetch(`${base}/operations/${name}`, {
+				method: "POST",
+				credentials: "same-origin",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ input, versions, accepted }),
+			});
+			return { status: response.status, body: await response.json().catch(() => null) };
+		} catch {
+			return NO_ANSWER;
+		}
 	};
 }
 
@@ -104,7 +115,7 @@ export function httpStreams(base: string): StreamTransport {
 				signal,
 			});
 		} catch {
-			return { status: 0, body: null };
+			return NO_ANSWER;
 		}
 		if (response.status !== 200 || !response.body)
 			return { status: response.status, body: await response.json().catch(() => null) };

@@ -118,6 +118,11 @@ export const RunInput = z
 		screen: z
 			.array(z.object({ id: z.string(), output: z.unknown().optional(), error: z.string().max(2000).optional() }))
 			.optional(),
+		/**
+		 * With `resume`, from a page that takes up a run it found waiting on a screen: it was not the page that was asked (the conversation was
+		 * opened again later, or in another tab), so nothing is done on its screen. What waited is answered as not done, and the run goes on.
+		 */
+		away: z.boolean().optional(),
 		context: ScreenContext.optional(),
 		model: z.object({ keyId: z.string(), model: z.string() }).optional(),
 		thinking: z.enum(THINKING as [Thinking, ...Thinking[]]).optional(),
@@ -134,6 +139,9 @@ export const RunInput = z
 	})
 	.refine((input) => input.more === undefined || input.resume !== undefined, {
 		message: "Going on past a limit is said of a run to resume.",
+	})
+	.refine((input) => input.away === undefined || input.resume !== undefined, {
+		message: "Being away from the screen is said of a run to resume.",
 	});
 export type RunInput = z.infer<typeof RunInput>;
 
@@ -182,6 +190,10 @@ type Pending = { calls: ToolCall[]; answers: Record<string, ToolAnswer & { kind?
 type Db = Kysely<Database>;
 
 const randomId = () => globalThis.crypto.randomUUID();
+
+/** What a screen tool answers when the page that goes on with the run is not the page that was asked. */
+const NOT_ON_SCREEN =
+	"Not done: the conversation was no longer open on the person's screen when this was reached. Say so; do it again only if they ask.";
 
 /** Requests that are running a run in this process, so "stop" ends the model call that is in flight and does not wait for the turn to end. */
 const inFlight = new Map<string, AbortController>();
@@ -509,6 +521,8 @@ export async function* runAssistant(
 
 		const screenAnswers = new Map((input.screen ?? []).map((answer) => [answer.id, answer]));
 		let pending = run.pending as Pending | null;
+		// The turn that waited on a screen when a page that had not been asked took the run up (`away`).
+		const waitedAway = input.away ? pending : null;
 		const savePending = async () => {
 			whileMine(
 				await db
@@ -613,7 +627,9 @@ export async function* runAssistant(
 					if (turn.answers[call.id] || !tool) continue;
 					if (stopper.signal.aborted || (await stopRequested())) break;
 					if (tool.kind === "screen") {
-						const given = screenAnswers.get(call.id);
+						// A page that was not the one asked answers nothing itself: what waited when it took the run up was not done.
+						const given =
+							screenAnswers.get(call.id) ?? (turn === waitedAway ? { id: call.id, error: NOT_ON_SCREEN } : undefined);
 						if (given) {
 							turn.answers[call.id] = {
 								id: call.id,

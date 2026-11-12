@@ -2,7 +2,7 @@ import type { ApplyEvent, ProposalItemView, ProposalView } from "@monti-cms/core
 import { toast } from "@monti-cms/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { useOperation, useRead } from "../operations/use-operation";
+import { reasonOf, useOperation, useRead } from "../operations/use-operation";
 import { useAssistant } from "./use-assistant";
 
 /** How often a proposal that is being applied somewhere else (another tab, an apply whose listener went away) is read again. */
@@ -66,16 +66,18 @@ export function useProposal(id: string) {
 		touchProposals();
 	}, [streams, id, view?.counts.toApply, reload, wrote, touchProposals, t]);
 
-	const discard = useCallback(async () => {
+	/** Discards what still waits. `true` when it was discarded; a refusal is said, and the proposal is read again as it is. */
+	const discard = useCallback(async (): Promise<boolean> => {
 		const done = await discarding.run({ proposal: id });
-		if (!done.ok) toast.error(t(done.refusal.reason ?? "errors.unexpected"));
+		if (!done.ok) toast.error(t(reasonOf(done.refusal)));
 		await reload();
 		touchProposals();
+		return done.ok;
 	}, [discarding.run, id, reload, touchProposals, t]);
 
 	const revert = useCallback(async () => {
 		const done = await reverting.run({ id });
-		if (!done.ok) toast.error(t(done.refusal.reason ?? "errors.unexpected"));
+		if (!done.ok) toast.error(t(reasonOf(done.refusal)));
 		await reload();
 		touchProposals();
 	}, [reverting.run, id, reload, touchProposals, t]);
@@ -85,7 +87,7 @@ export function useProposal(id: string) {
 			const ids = items.filter((item) => item.state === "pending" && item.included !== included).map((item) => item.id);
 			if (ids.length === 0) return;
 			const done = await including.run({ ids, included });
-			if (!done.ok) toast.error(t(done.refusal.reason ?? "errors.unexpected"));
+			if (!done.ok) toast.error(t(reasonOf(done.refusal)));
 			await reload();
 			touchProposals();
 		},

@@ -13,6 +13,7 @@ import { toast } from "@monti-cms/ui";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useUnsavedChanges } from "../draft/leave-guard";
 import { useAdmin } from "../operations/admin-context";
+import { NO_ANSWER } from "../operations/transport";
 import type { Route } from "../route";
 import { type ContextChip, chipsOf, contextWithout, type ToolPart } from "./words";
 
@@ -33,6 +34,8 @@ export type Turn = {
 	at: string;
 	/** It never reached the server: there is no run to go on with, only the same words to send again. */
 	unsent?: boolean;
+	/** Why it never began, in the server's own words (another request is still going, the model is gone, no answer came). */
+	refusal?: Message | null;
 };
 
 /** Words that wait to be asked, with a name of their own: what is done to one finds it whatever was added or taken meanwhile. */
@@ -59,6 +62,12 @@ type Shown = {
 	/** Where the requests before the ones read begin, and whether they are being read now. */
 	earlier: Place | null;
 	loadingEarlier: boolean;
+	/** The turn a stream is writing now: a read of the conversation does not put its stored, shorter form over it. */
+	writing: string | null;
+	/** The requests made here since this conversation was opened: a read that was asked for before one of them does not take it away. */
+	asked: Set<string>;
+	/** What the screen answered for a run, when the request that carried it did not get through: it goes with the next one. */
+	unsent: { run: string; screen: unknown[] } | null;
 };
 const showing = (conversationId: string | null): Shown => ({
 	conversationId,
@@ -67,6 +76,9 @@ const showing = (conversationId: string | null): Shown => ({
 	cuts: 0,
 	earlier: null,
 	loadingEarlier: false,
+	writing: null,
+	asked: new Set(),
+	unsent: null,
 });
 const local = (id: string) => id.startsWith("local:");
 /** Whether a key of the site still has this model. A list not read yet says nothing against it. */
@@ -124,6 +136,8 @@ type AssistantValue = {
 	/** How many of the oldest requests the next request leaves out of what the model is sent, out of how many it has. */
 	forgotten: number;
 	requests: number;
+	/** The conversation that was opened is being read: its requests are not here yet. */
+	loading: boolean;
 	/** Which screen is open, as it registered itself (`list`, `entry`, `media`). */
 	screenKind: string | null;
 	hasEarlier: boolean;
@@ -173,6 +187,27 @@ export function useAssistant(): AssistantValue {
 	return value;
 }
 
+/**
+ * Opens the assistant's panel on a conversation, from a screen that shows what the conversation proposed (the proposal bubble's name).
+ * Nothing on a page without the assistant.
+ */
+export function useOpenConversation(): ((id: string) => void) | undefined {
+	const assistant = useContext(Context);
+	const there = assistant?.available === true;
+	const setOpen = there ? assistant.setOpen : undefined;
+	const openConversation = there ? assistant.openConversation : undefined;
+	return useMemo(
+		() =>
+			setOpen && openConversation
+				? (id: string) => {
+						setOpen(true);
+						void openConversation(id);
+					}
+				: undefined,
+		[setOpen, openConversation],
+	);
+}
+
 /** A screen says what it has open and what is picked in it (doc 10, context): it goes along with the next request, as chips over the input. */
 export function useScreenContext(context: ScreenContext | null) {
 	const setScreen = useContext(Context)?.setScreen;
@@ -211,6 +246,10 @@ export function AssistantProvider({
 	const [forgotten, setForgotten] = useState(0);
 	const [requests, setRequests] = useState(0);
 	const [busy, setBusy] = useState(false);
+	const [loading, setLoading] = useState(() => kept().conversation !== null);
+	// Words sent to a run with "send now" that the run ended without taking, in a conversation that was not open then: they wait here, and
+	// stand over the box again when that conversation is opened.
+	const leftWords = useRef(new Map<string, string[]>());
 	const [draft, setDraft] = useState("");
 	const [queue, setQueueState] = useState<Queued[]>([]);
 	// What waits, as it is this instant: a run can end and the next one begin before the page is drawn again, and each must see the queue
@@ -265,18 +304,20 @@ export function AssistantProvider({
 	const later = useRef<{
 		ask: (request: string) => void;
 		watch: (runId: string, here: Shown, mayGoOn?: boolean) => Promise<void>;
+		fresh: () => void;
 		runScreenTool: (
 			tool: ScreenCall,
 			called: () => boolean,
 		) => Promise<{ id: string; output?: unknown; error?: string }>;
-	}>({ ask: () => {}, watch: async () => {}, runScreenTool: async (tool) => ({ id: tool.id }) });
+	}>({ ask: () => {}, watch: async () => {}, fresh: () => {}, runScreenTool: async (tool) => ({ id: tool.id }) });
 
 	const call = useCallback(
 		async <Output,>(
 			name: string,
 			input: unknown = {},
 		): Promise<{ ok: true; body: Output } | { ok: false; reason: Message | null; status: number }> => {
-			const answer = await transport(name, input);
+			// A transport answers a lost network as a refusal; one that throws all the same is answered for here.
+			const answer = await transport(name, input).catch(() => NO_ANSWER);
 			if (answer.status === 200) return { ok: true, body: answer.body as Output };
 			const body = (answer.body ?? {}) as { reason?: Message };
 			return { ok: false, reason: body.reason ?? null, status: answer.status };
@@ -312,11 +353,14 @@ export function AssistantProvider({
 		setTurns((all) => all.map((turn) => (turn.id === id ? change(turn) : turn)));
 	}, []);
 
-	/** Reads a conversation and shows it, if it is still the one that is open (`here`) when the answer comes. */
+	/**
+	 * Reads a conversation and shows it, if it is still the one that is open (`here`) when the answer comes. `"gone"`: the server has no such
+	 * conversation any more; `null`: no answer, or a refusal.
+	 */
 	const readConversation = useCallback(
-		async (id: string, here: Shown): Promise<Conversation | null> => {
+		async (id: string, here: Shown): Promise<Conversation | "gone" | null> => {
 			const read = await call<Conversation>("conversations.get", { id });
-			if (!read.ok) return null;
+			if (!read.ok) return read.status === 404 || read.reason?.key === "assistant.noConversation" ? "gone" : null;
 			// Another conversation was opened meanwhile: this answer is not about what is on the page.
 			if (gone.current || shown.current !== here || here.conversationId !== id) return read.body;
 			setTurns((now) => {
@@ -325,9 +369,17 @@ export function AssistantProvider({
 				const last = now.at(-1);
 				const cut = last?.parts.at(-1);
 				const same = stored.at(-1);
-				if (last && same && same.id === last.id && cut?.type === "text" && cut.stale && same.status !== "done")
-					return [...stored.slice(0, -1), { ...same, parts: [...same.parts, cut] }];
-				return stored;
+				const read_ =
+					last && same && same.id === last.id && cut?.type === "text" && cut.stale && same.status !== "done"
+						? [...stored.slice(0, -1), { ...same, parts: [...same.parts, cut] }]
+						: stored;
+				// What happened since the read was asked for stays: a request made meanwhile is not in it, and the turn a stream is writing is
+				// further on here than in what was stored.
+				const known = new Set(read_.map((turn) => turn.id));
+				return [
+					...read_.map((turn) => (turn.id === here.writing ? (now.find((each) => each.id === turn.id) ?? turn) : turn)),
+					...now.filter((turn) => !known.has(turn.id) && here.asked.has(turn.id)),
+				];
 			});
 			here.earlier = read.body.earlier;
 			setEarlier(read.body.earlier);
@@ -377,8 +429,13 @@ export function AssistantProvider({
 		(runId: string, here: Shown) => {
 			void call<{ output: { untaken: string[] } }>("assistant.stop", { run: runId }).then((stopped) => {
 				const untaken = stopped.ok ? stopped.body.output.untaken : [];
-				if (untaken.length > 0 && !gone.current && shown.current === here)
-					setQueue((waiting) => [...untaken.map(named), ...waiting]);
+				if (untaken.length === 0 || gone.current) return;
+				if (shown.current === here) setQueue((waiting) => [...untaken.map(named), ...waiting]);
+				else if (here.conversationId)
+					leftWords.current.set(here.conversationId, [
+						...(leftWords.current.get(here.conversationId) ?? []),
+						...untaken,
+					]);
 			});
 		},
 		[call, setQueue],
@@ -399,40 +456,45 @@ export function AssistantProvider({
 			};
 			show(() => setBusy(true));
 			let id = turnId;
+			here.writing = id;
+			const written = () => {
+				if (here.writing === id) here.writing = null;
+				done();
+			};
 			let ended: (RunEnd & { untaken: string[] }) | null = null;
 			let screenCalls: ScreenCall[] = [];
 			let cut = false;
 			const answer = await streams("assistant.run", input, { signal: controller.signal });
 			if (!("events" in answer)) {
-				done();
+				written();
 				if (controller.signal.aborted || !mine()) return;
-				const reason = ((answer.body ?? {}) as { reason?: Message }).reason;
+				const reason = ((answer.body ?? {}) as { reason?: Message }).reason ?? null;
 				if ("resume" in input) {
-					// The run could not be taken up: it ended meanwhile (stopped from here or elsewhere), or another page has it. What the
-					// server has is read again, and nothing goes on by itself from this refusal.
+					// The run could not be taken up: no answer came, it ended meanwhile (stopped from here or elsewhere), or another page has
+					// it. What the screen had answered is kept for the next request, what the server has is read again, and nothing goes on
+					// by itself from this refusal.
+					if (Array.isArray(input.screen)) here.unsent = { run: id, screen: input.screen };
 					if (reason && byPerson) toast.error(t(reason));
 					return later.current.watch(id, here, false);
 				}
 				setBusy(false);
-				// It never began. With a reason the server said why (another request is still going); without one it was not reached.
-				if (reason?.key === "assistant.noModel") {
-					// The model went while the panel was open: the models are read again, and the panel says which one is used now.
-					const sent = (input.model ?? null) as ModelChoice | null;
-					if (has(await readState(), sent)) toast.error(t(reason));
-				} else if (reason) toast.error(t(reason));
-				show(() =>
-					patchTurn(id, (turn) =>
-						turn.status === "running" && turn.parts.length === 0
-							? { ...turn, status: "failed", unsent: true, end: { status: "failed" } }
-							: turn,
-					),
+				// It never began: the turn says why in the server's own words (another request is still going, the model is gone), or that
+				// no answer came, with the way to send the same words again.
+				patchTurn(id, (turn) =>
+					turn.status === "running" && turn.parts.length === 0
+						? { ...turn, status: "failed", unsent: true, refusal: reason, end: { status: "failed" } }
+						: turn,
 				);
+				// The model went while the panel was open: the models are read again, and the panel says which one is used now.
+				if (reason?.key === "assistant.noModel") void readState();
 				return;
 			}
 			try {
 				for await (const event of answer.events as AsyncIterable<RunEvent | { type: "error" }>) {
 					if (event.type === "run") {
 						const from = id;
+						if (here.writing === from) here.writing = event.runId;
+						here.asked.add(event.runId);
 						id = event.runId;
 						// At once, for a request that follows before the page is drawn again: it is asked in this conversation.
 						here.conversationId = event.conversationId;
@@ -511,7 +573,7 @@ export function AssistantProvider({
 			} catch {
 				cut = true;
 			}
-			done();
+			written();
 			if (controller.signal.aborted) return;
 			if (!ended) cut = true;
 
@@ -532,6 +594,13 @@ export function AssistantProvider({
 			// Where the request ended is a place the browser goes on from by itself, and the person had said stop: it does not go on.
 			const onward = end.status === "waiting" || (end.status === "interrupted" && end.reason === "time");
 			const halted = onward && here.stopAsked;
+			// Words sent with "send now" that the run did not take were said first: they stand first among what waits. In a conversation
+			// that is not open they are kept for when it is.
+			if (end.untaken.length > 0 && !mine() && !gone.current && here.conversationId)
+				leftWords.current.set(here.conversationId, [
+					...(leftWords.current.get(here.conversationId) ?? []),
+					...end.untaken,
+				]);
 			show(() => {
 				if (end.untaken.length > 0) setQueue((waiting) => [...end.untaken.map(named), ...waiting]);
 				patchTurn(id, (turn) => ({
@@ -567,7 +636,8 @@ export function AssistantProvider({
 				show(() => patchTurn(id, (turn) => ({ ...turn, status: "running", end: null })));
 				return listen({ resume: id }, id, here, false);
 			}
-			if (mine()) settle(here, halted ? "stopped" : end.status);
+			// The person said stop and the run finished all the same: what waits is not asked behind their back.
+			if (mine()) settle(here, here.stopAsked ? "stopped" : end.status);
 		},
 		[streams, patchTurn, readState, t, setQueue, follow, settle, tellStop],
 	);
@@ -578,9 +648,10 @@ export function AssistantProvider({
 	 */
 	const runScreenTool = useCallback(
 		async (tool: ScreenCall, called: () => boolean): Promise<{ id: string; output?: unknown; error?: string }> => {
+			// One guard for every screen tool: a screen with unsaved changes does not move, and nothing is asked. The assistant is told, and
+			// tells the person.
+			if (unsaved() > 0) return { id: tool.id, error: "The screen has unsaved changes, so it did not move." };
 			if (tool.name === "screen.openEntry") {
-				// A screen with unsaved changes does not move, and nothing is asked: the assistant is told, and tells the person.
-				if (unsaved() > 0) return { id: tool.id, error: "The screen has unsaved changes, so it did not move." };
 				const entryId = (tool.input as { id?: string } | null)?.id ?? "";
 				const read = await call<{ entry: { collection: string; title: string } }>("entries.get", { id: entryId });
 				if (!read.ok) return { id: tool.id, error: "There is no such entry." };
@@ -588,6 +659,7 @@ export function AssistantProvider({
 				go({ screen: "entry", collection: read.body.entry.collection, id: entryId });
 				return { id: tool.id, output: { opened: read.body.entry.title } };
 			}
+			if (!called()) return { id: tool.id, error: "The run was stopped before the screen moved." };
 			return screen.run(tool.name, tool.input)
 				? { id: tool.id, output: { done: true } }
 				: { id: tool.id, error: "The screen that is open cannot do that." };
@@ -609,11 +681,23 @@ export function AssistantProvider({
 				for (;;) {
 					const read = conversation ? await readConversation(conversation, here) : null;
 					if (controller.signal.aborted || !mine()) return;
+					// Deleted meanwhile (in another tab): a new conversation.
+					if (read === "gone") return later.current.fresh();
 					const run = read?.runs.find((each) => each.id === runId);
-					if (!run) return setBusy(false);
+					if (!run) {
+						// No answer (the network is down): the run may still be going, and this page cannot know. It shows as cut, with the
+						// way to go on.
+						patchTurn(runId, (turn) =>
+							turn.status === "running"
+								? { ...turn, status: "interrupted", end: { status: "interrupted", reason: "connection" } }
+								: turn,
+						);
+						return settle(here, null);
+					}
 					const resume = mayGoOn && !here.stopAsked;
 					// A run that waits on a screen is another page's for a moment (it runs the tool and goes on). One that still waits at the
-					// next look has no page: this one takes it up, and is given the screen's part again.
+					// next look has no page. This one takes it up as a page that was not asked (`away`): nothing moves on its screen for
+					// something asked before it was here, the model is told so, and the run goes on.
 					const pause = run.status === "running" || (run.status === "waiting" && resume && waited === 0);
 					if (pause) {
 						waited = run.status === "waiting" ? 1 : 0;
@@ -632,10 +716,11 @@ export function AssistantProvider({
 					const cutShort = run.status === "interrupted" && here.cuts > 0 && here.cuts < CUTS_BEFORE_ASKING;
 					if (resume && (run.status === "waiting" || cutShort)) {
 						patchTurn(runId, (turn) => ({ ...turn, status: "running", end: null }));
-						return listen({ resume: runId }, runId, here, false);
+						return listen({ resume: runId, ...(run.status === "waiting" ? { away: true } : {}) }, runId, here, false);
 					}
-					// It ended while nobody listened: as when its end is heard, the box is free and what waited behind a finished run is asked.
-					return settle(here, run.status);
+					// It ended while nobody listened: as when its end is heard, the box is free and what waited behind a finished run is asked
+					// (not behind a stop).
+					return settle(here, here.stopAsked ? "stopped" : run.status);
 				}
 			} finally {
 				done();
@@ -668,6 +753,7 @@ export function AssistantProvider({
 			]);
 			here.cuts = 0;
 			here.stopAsked = false;
+			here.asked.add(id);
 			// The model a request goes with is the conversation's from then on, as the server keeps it: if it goes, the panel can say so.
 			if (chosen) setPicked(chosen);
 			void listen(
@@ -685,7 +771,7 @@ export function AssistantProvider({
 		[listen, chipLabels],
 	);
 
-	later.current = { ask, watch, runScreenTool };
+	later.current = { ...later.current, ask, watch, runScreenTool };
 
 	const stop = useCallback(() => {
 		const here = shown.current;
@@ -714,8 +800,13 @@ export function AssistantProvider({
 			if (!last || local(last.id)) return;
 			here.cuts = 0;
 			here.stopAsked = false;
+			// A run that waits on a screen goes on with what this page's screen answered, if the request that carried it did not get
+			// through; otherwise as a page that was not asked (nothing moves, the model is told).
+			const answered = here.unsent?.run === last.id ? here.unsent.screen : null;
+			here.unsent = null;
+			const onScreen = answered ? { screen: answered } : last.status === "waiting" ? { away: true } : {};
 			patchTurn(last.id, (turn) => ({ ...turn, status: "running", end: null }));
-			void listen({ resume: last.id, ...(more ? { more: true } : {}) }, last.id, here);
+			void listen({ resume: last.id, ...(more ? { more: true } : {}), ...onScreen }, last.id, here);
 		},
 		[listen, patchTurn],
 	);
@@ -738,6 +829,12 @@ export function AssistantProvider({
 			shown.current = here;
 			setBusy(false);
 			setQueue([]);
+			// The requests of the one that was open go at once: what is asked while the next one is read stands by itself, and is kept.
+			setTurns([]);
+			setEarlier(null);
+			setForgotten(0);
+			setRequests(0);
+			setLoading(id !== null);
 			setConversationId(id);
 			keep({ conversation: id });
 			setView("chat");
@@ -749,26 +846,32 @@ export function AssistantProvider({
 	const fresh = useCallback(() => {
 		// A run that is going goes on; it is in the past conversations.
 		turnTo(null);
-		setTurns([]);
-		setEarlier(null);
-		setForgotten(0);
-		setRequests(0);
 		setPicked(null);
 		setLevel(null);
 	}, [turnTo]);
+
+	later.current.fresh = fresh;
 
 	const load = useCallback(
 		async (id: string) => {
 			const here = turnTo(id);
 			const read = await readConversation(id, here);
 			if (gone.current || shown.current !== here) return;
-			// It was deleted meanwhile (here or in another tab): a new one.
-			if (!read) return fresh();
+			setLoading(false);
+			// It was deleted meanwhile (here or in another tab): a new one. No answer: nothing to show of it, and it stays the open one.
+			if (read === "gone") return fresh();
+			if (!read) return;
+			// What was sent to its run with "send now" and never taken, while it was not open, stands over the box again.
+			const left = leftWords.current.get(id);
+			leftWords.current.delete(id);
+			if (left) setQueue((waiting) => [...left.map(named), ...waiting]);
 			// A run that is going elsewhere shows as going, and is read again until it is not.
 			const last = read.runs.at(-1);
-			if (last && (last.status === "running" || last.status === "waiting")) void watch(last.id, here);
+			if (last && (last.status === "running" || last.status === "waiting")) return void watch(last.id, here);
+			// Nothing is going in it: what was said to be sent now is asked.
+			if (left && !here.following) settle(here, "done");
 		},
-		[readConversation, watch, turnTo, fresh],
+		[readConversation, watch, turnTo, fresh, setQueue, settle],
 	);
 	const openConversation = useCallback(
 		async (id: string) => {
@@ -892,6 +995,7 @@ export function AssistantProvider({
 		forgotten,
 		// A request just asked is one more than the last read counted.
 		requests: Math.max(requests, turns.length),
+		loading,
 		screenKind: screenContext?.screen ?? null,
 		hasEarlier: earlier !== null,
 		loadEarlier,

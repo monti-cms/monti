@@ -12,7 +12,7 @@ import { useSyncExternalStore } from "react";
 import { userEvent, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../.storybook/pglite-site";
 import { MontiAdmin } from "../app";
-import type { StreamTransport, Transport } from "../operations/transport";
+import { NO_ANSWER, type StreamTransport, type Transport } from "../operations/transport";
 import { schema } from "../screens/story-schema";
 
 export type Loaded = {
@@ -31,6 +31,16 @@ export type Net = {
 	 * the function this gives is called.
 	 */
 	hold: (name: string, skip?: number) => () => void;
+	/**
+	 * From now on the answers of this operation are held back after the server gave them (what they say is as old as the asking), until the
+	 * function this gives is called.
+	 */
+	late: (name: string) => () => void;
+	/**
+	 * From now on the requests of this name get no answer, as when the network is down (after `skip` of them have gone through), until the
+	 * function this gives is called.
+	 */
+	lose: (name: string, skip?: number) => () => void;
 	/** The stream the page listens to breaks here, as when the network goes. The run goes on in the server. */
 	cut: () => void;
 	/** Every request the page made, in order; a stream's has the signal it was asked with. */
@@ -43,6 +53,17 @@ export type Net = {
 function netOf(made: StorySite): { net: Net; transport: Transport; streams: StreamTransport; left: Left } {
 	const holds = new Map<string, { skip: number; open: Promise<void> }>();
 	const sent: Net["sent"] = [];
+	const lost = new Map<string, { skip: number }>();
+	const lates = new Map<string, Promise<void>>();
+	const isLost = (name: string) => {
+		const losing = lost.get(name);
+		if (!losing) return false;
+		if (losing.skip > 0) {
+			losing.skip -= 1;
+			return false;
+		}
+		return true;
+	};
 	const cuts = new Set<() => void>();
 	const watchers = new Set<() => void>();
 	let gone = false;
@@ -55,11 +76,15 @@ function netOf(made: StorySite): { net: Net; transport: Transport; streams: Stre
 	const transport: Transport = async (name, input, options) => {
 		sent.push({ name, input });
 		await held(name);
-		return made.transport(name, input, options);
+		if (isLost(name)) return NO_ANSWER;
+		const answer = await made.transport(name, input, options);
+		await lates.get(name);
+		return answer;
 	};
 	const streams: StreamTransport = async (name, input, options) => {
 		sent.push({ name, input, signal: options?.signal });
 		await held(name);
+		if (isLost(name)) return NO_ANSWER;
 		const answer = await made.streams(name, input, options);
 		if (!("events" in answer)) return answer;
 		const events = answer.events[Symbol.asyncIterator]();
@@ -115,6 +140,23 @@ function netOf(made: StorySite): { net: Net; transport: Transport; streams: Stre
 					holds.delete(name);
 					release();
 				};
+			},
+			late: (name) => {
+				let release = () => {};
+				lates.set(
+					name,
+					new Promise<void>((resolve) => {
+						release = resolve;
+					}),
+				);
+				return () => {
+					lates.delete(name);
+					release();
+				};
+			},
+			lose: (name, skip = 0) => {
+				lost.set(name, { skip });
+				return () => lost.delete(name);
 			},
 			cut: () => {
 				for (const broke of [...cuts]) broke();
@@ -487,6 +529,33 @@ export const Applied: Story = {
 	},
 };
 
+/** Being applied: how far it is, in place of the buttons. */
+export const CardApplying: Story = {
+	loaders: site({ script: proposed }),
+	play: async ({ canvasElement, loaded }) => {
+		const page = await screen(canvasElement);
+		await openPanel(page);
+		await say(page, "둘 다 요약 채워 줘");
+		// The apply's first result is a long time coming.
+		(loaded as Loaded).net.hold("proposals.apply");
+		await userEvent.click(await page.findByRole("button", { name: "2건 적용" }, wait));
+		await page.findByText("적용 중", {}, wait);
+	},
+};
+
+/** Applied and undone: the card says so, with nothing left to press. */
+export const CardUndone: Story = {
+	loaders: site({ script: proposed }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await openPanel(page);
+		await say(page, "둘 다 요약 채워 줘");
+		await userEvent.click(await page.findByRole("button", { name: "2건 적용" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "되돌리기" }, wait));
+		await page.findByText("되돌림", {}, wait);
+	},
+};
+
 /** Discarded: the card goes faint and says so. */
 export const Discarded: Story = {
 	loaders: site({ script: proposed }),
@@ -550,5 +619,46 @@ export const Review: Story = {
 		await userEvent.click(await page.findByRole("button", { name: "검토" }, wait));
 		await page.findByRole("heading", { name: "제안 검토" }, wait);
 		await within(await page.findByRole("main")).findByText("글, 다시", {}, wait);
+	},
+};
+
+/** The review page with a kind of change looked at side by side: as it is, and as proposed. */
+export const ReviewSideBySide: Story = {
+	loaders: site({ script: proposedKinds }),
+	play: async (context) => {
+		await Review.play?.(context);
+		const page = within(context.canvasElement.ownerDocument.body);
+		await userEvent.click((await page.findAllByRole("tab", { name: "나란히" }))[0] as HTMLElement);
+		await page.findByRole("tab", { name: "나란히", selected: true });
+	},
+};
+
+/** The review page after its changes were applied: each row's result, and the way to undo them. */
+export const ReviewApplied: Story = {
+	loaders: site({ script: proposedKinds }),
+	play: async (context) => {
+		await Review.play?.(context);
+		const page = within(context.canvasElement.ownerDocument.body);
+		await userEvent.click((await page.findAllByRole("button", { name: "3건 적용" }))[0] as HTMLElement);
+		await page.findAllByText("✓ 3건 적용", {}, wait);
+	},
+};
+
+/** A change whose entry was edited after it was proposed: the row says so, is out of the count, and can be made again. */
+export const ReviewChangedMeanwhile: Story = {
+	loaders: site({ script: proposed }),
+	play: async ({ canvasElement, loaded }) => {
+		const page = await screen(canvasElement);
+		await openPanel(page);
+		await say(page, "둘 다 요약 채워 줘");
+		await page.findByRole("button", { name: "2건 적용" }, wait);
+		// The third post is edited elsewhere while its change waits.
+		const { site: made, ids } = loaded as Loaded;
+		const now = (await made.monti.run("entries.get", { id: ids.third }, admin)) as { entry: { version: number } };
+		await made.monti.run("entries.save", { id: ids.third, version: now.entry.version, title: "셋째 글, 고침" }, admin);
+		const [proposal] = await made.db.selectFrom("monti_proposal").select("id").execute();
+		window.location.hash = `#/ai/review/${proposal?.id}`;
+		await page.findByRole("heading", { name: "제안 검토" }, wait);
+		await page.findByRole("button", { name: "다시 만들기" }, wait);
 	},
 };

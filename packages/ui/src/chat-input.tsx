@@ -110,12 +110,15 @@ export function ChatInput({
 			</div>
 		</form>
 	);
-	if (!queue) return form;
+	// One tree with or without waiting messages: the box is the same element when the card over it comes and goes, so the words being
+	// typed keep their caret (a box made anew lost the focus each time a message was queued or taken).
 	return (
 		<div data-slot="chat-input-queue" className="flex flex-col">
-			<ul className="-mb-[24px] flex flex-col gap-monti-4 rounded-t-[24px] border border-monti-default border-b-0 bg-monti-selected pt-monti-6 pr-monti-12 pb-[30px] pl-[18px]">
-				{queue}
-			</ul>
+			{queue ? (
+				<ul className="-mb-[24px] flex flex-col gap-monti-4 rounded-t-[24px] border border-monti-default border-b-0 bg-monti-selected pt-monti-6 pr-monti-12 pb-[30px] pl-[18px]">
+					{queue}
+				</ul>
+			) : null}
 			{form}
 		</div>
 	);
