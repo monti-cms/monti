@@ -168,7 +168,9 @@ function FolderTabsBody({ className, ...props }: TabsPrimitive.Panel.Props) {
 		<TabsPrimitive.Panel
 			data-slot="folder-tabs-body"
 			className={cn(
-				"overflow-hidden rounded-monti-lg rounded-tl-none border border-monti-default outline-none [&>ul>li:first-child]:border-t-0 [&>ul>li:last-child]:border-b-0",
+				// The box is a stop of the Tab key. Its ring is inside it, on a layer over its rows: a ring on the box itself is painted under them, and a
+				// row with a ground (a group's) would cover it. The layer takes no press.
+				"relative overflow-hidden rounded-monti-lg rounded-tl-none border border-monti-default outline-none focus-visible:after:pointer-events-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:z-10 focus-visible:after:rounded-[inherit] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset focus-visible:after:content-[''] [&>ul>li:first-child]:border-t-0 [&>ul>li:last-child]:border-b-0",
 				className,
 			)}
 			{...props}

@@ -574,7 +574,9 @@ function TableCell({
 				// itself: there the cell clips as any other, and a first column dragged narrow keeps its words in.
 				// A piece of it that can shrink (a status, its mark kept) shrinks to the cell.
 				truncate &&
-					"max-w-0 truncate *:max-w-full has-[[data-slot=row-check]]:overflow-visible group-has-data-[slot=row-link]/row:has-[[data-slot=row-check]]:overflow-hidden",
+					// A text button in a cut cell is cut itself, with its own "…", so the keyboard's ring closes around what shows of it (its box would
+					// run on past the cell's edge, and the ring with it). Cut sideways only: its press layer reaches above and below it.
+					"max-w-0 truncate *:max-w-full has-[[data-slot=row-check]]:overflow-visible group-has-data-[slot=row-link]/row:has-[[data-slot=row-check]]:overflow-hidden *:data-[slot=text-button]:inline-block *:data-[slot=text-button]:overflow-x-clip *:data-[slot=text-button]:text-ellipsis",
 				// With a `title` it says its value whole when pointed at. A row's link covers the row, so the cell's pieces stand over the link for the
 				// pointer to find them; a press on them still opens the row (`TableRow`).
 				title !== undefined && "[&>:not([data-slot=row-check])]:relative [&>:not([data-slot=row-check])]:z-1",
