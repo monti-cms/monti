@@ -90,13 +90,42 @@ function draw(block: CatalogBlock, data: Data, boxLabel: (block: CatalogBlock, d
 		case "footnote":
 			return ["div", { "data-footnote": String(data?.id ?? "") }, 0];
 	}
-	if (block.holds === "nothing") return ["div", { ...WHOLE, "data-box": "", "data-box-label": boxLabel(block, data) }];
+	// A block that holds no text is all in its attrs: copied, it carries its kind and what it holds (which file, its alt text, its crop), so it is pasted
+	// as that block. Its id stays behind, as every block's does.
+	if (block.holds === "nothing")
+		return [
+			"div",
+			{
+				...WHOLE,
+				"data-box": "",
+				"data-box-label": boxLabel(block, data),
+				"data-block": block.type,
+				...(data ? { [HELD]: JSON.stringify(data) } : {}),
+			},
+		];
 	return ["div", { "data-block": block.type }, 0];
+}
+
+/** Where a copied block that holds no text carries what it holds. */
+const HELD = "data-block-attrs";
+
+/** What a pasted block holds, as it was copied: an object, or nothing when the clipboard says anything else. */
+function heldOf(element: HTMLElement): Data {
+	try {
+		const held: unknown = JSON.parse(element.getAttribute(HELD) ?? "null");
+		return held !== null && typeof held === "object" && !Array.isArray(held) ? (held as Record<string, unknown>) : null;
+	} catch {
+		return null;
+	}
 }
 
 /** How a pasted element becomes a block: the core's plain HTML, and any block by its `data-block`. */
 function parse(block: CatalogBlock) {
-	const own = [{ tag: `div[data-block="${block.type}"]` }];
+	const own = [
+		block.holds === "nothing"
+			? { tag: `div[data-block="${block.type}"]`, getAttrs: (element: HTMLElement) => ({ data: heldOf(element) }) }
+			: { tag: `div[data-block="${block.type}"]` },
+	];
 	switch (block.type) {
 		case "paragraph":
 			return [
@@ -219,7 +248,8 @@ export function bodyExtensions(
 				isolating: block.holds === "nothing",
 				addAttributes: blockAttributes,
 				parseHTML: () => parse(block),
-				renderHTML: ({ node }) => draw(block, node.attrs.data as Data, boxLabel),
+				// A file still on its way up has nothing to carry yet: copied, it is not a block.
+				renderHTML: ({ node }) => draw(block, node.attrs.upload ? null : (node.attrs.data as Data), boxLabel),
 				...(addNodeView ? { addNodeView } : {}),
 			});
 		});

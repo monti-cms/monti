@@ -2,7 +2,7 @@ import { toast } from "@monti-cms/ui";
 import { composeStories, composeStory } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { type Locator, page, userEvent } from "vitest/browser";
-import { middleOf, onTopOf, pointerPath, typeKorean } from "../../../../testing/input";
+import { dragPath, middleOf, onTopOf, pointerPath, typeKorean } from "../../../../testing/input";
 import type { StorySite } from "../../.storybook/pglite-site";
 import * as media from "../screens/entry/media.stories";
 
@@ -491,9 +491,14 @@ describe("an image in the text", () => {
 		// The rows end in a place that takes no room: nothing shows under the last block for it.
 		const end = body().element().querySelector("[data-pair=end]") as HTMLElement;
 		expect([end.offsetWidth, end.offsetHeight]).toEqual([0, 0]);
-		// The source's words are still text to pick (translation.md): only the blocks that are one thing are not.
-		const source = body().element().querySelector("[data-pair=source]") as HTMLElement;
-		expect(getComputedStyle(source).userSelect).not.toBe("none");
+		// The source's words are still text to pick (translation.md): a drag across them picks them, as a person does to copy them.
+		const words = body().element().querySelector("[data-pair=source] span") as HTMLElement;
+		const line = words.getBoundingClientRect();
+		await dragPath([
+			{ x: line.left + 2, y: line.top + line.height / 2 },
+			{ x: line.right - 2, y: line.top + line.height / 2 },
+		]);
+		expect(String(window.getSelection())).toContain("첫 문단");
 	});
 
 	it("[leave] picking something else takes its tools away", async () => {
@@ -1086,6 +1091,173 @@ function recorded({ refuse = false, bare = false }: { refuse?: boolean; bare?: b
 }
 
 const frames = () => [...body().element().querySelectorAll<HTMLElement>("[data-block=image] [data-slot=image]")];
+
+/** The body's blocks as the page shows them: a paragraph's words, "picture" for a picture that is drawn. */
+const shownBlocks = () =>
+	[...body().element().children]
+		.filter((block) => !block.hasAttribute("data-pair"))
+		.map((block) => (block.querySelector("[data-block=image] img") ? "picture" : (block.textContent ?? "")));
+
+type SliceBlock = { type: string; content?: { text?: string }[] };
+/** The blocks the selection holds, from the editor's own state: what a copy takes, which the page's highlight does not say of a picture. */
+function selectedBlocks() {
+	const { editor } = body().element() as unknown as {
+		editor: { state: { selection: { content: () => { content: { toJSON: () => SliceBlock[] | undefined } } } } };
+	};
+	return (editor.state.selection.content().content.toJSON() ?? []).map((block) =>
+		block.type === "image" ? "picture" : (block.content ?? []).map((inline) => inline.text ?? "").join(""),
+	);
+}
+
+/** What a copy or a cut of the selection hands the clipboard, as the browser asks the page for it (a real ⌘C is L5's). */
+function clip(type: "copy" | "cut") {
+	const clipboardData = new DataTransfer();
+	body()
+		.element()
+		.dispatchEvent(new ClipboardEvent(type, { bubbles: true, cancelable: true, clipboardData }));
+	return { html: clipboardData.getData("text/html"), text: clipboardData.getData("text/plain") };
+}
+
+/** Pastes what a copy handed the clipboard, at the cursor. */
+function pasteClip(copied: { html: string; text: string }) {
+	const clipboardData = new DataTransfer();
+	clipboardData.setData("text/html", copied.html);
+	clipboardData.setData("text/plain", copied.text);
+	body()
+		.element()
+		.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+}
+
+const selectAll = () =>
+	userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}a{/Meta}" : "{Control>}a{/Control}");
+
+describe("selecting, copying and cutting across a picture", () => {
+	const THREE = ["글의 첫 문단이에요.", "picture", "그림 뒤의 문단."];
+	/** Words, a picture, words: `WithImage` with a paragraph written under its picture. */
+	async function wordsPictureWords() {
+		await WithImage.run();
+		await userEvent.click(body().getByRole("img", { name: "아침 책상" }));
+		await userEvent.keyboard("{Enter}그림 뒤의 문단.");
+		await expect.poll(shownBlocks).toEqual(THREE);
+	}
+	const first = () => paragraph("글의 첫 문단이에요.");
+
+	it("09-1 T134 the keyboard picks across a picture: Shift+arrow goes over it in one press, and what is copied, cut and pasted is the words and the picture", async () => {
+		await wordsPictureWords();
+		await userEvent.click(first());
+		// From the end of the words before the picture, one press takes the picture and stands in the words after it.
+		await userEvent.keyboard("{End}{Shift>}{ArrowRight}{/Shift}");
+		expect(selectedBlocks()).toEqual(["", "picture", ""]);
+		// From the start of the body, down twice: all of it.
+		await userEvent.click(first());
+		await userEvent.keyboard("{Home}{Shift>}{ArrowDown}{ArrowDown}{/Shift}");
+		expect(selectedBlocks()).toEqual(THREE);
+		const copied = clip("copy");
+		expect(copied.text).toContain("글의 첫 문단이에요.");
+		expect(copied.text).toContain("그림 뒤의 문단.");
+		expect(copied.html).toContain('data-block="image"');
+		clip("cut");
+		await expect.poll(shownBlocks).toEqual([""]);
+		pasteClip(copied);
+		await expect.poll(shownBlocks).toEqual(THREE);
+		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
+	});
+
+	it("09-1 T134 'select all' takes the words and the picture: cut, the body is empty; pasted, they are back", async () => {
+		await wordsPictureWords();
+		await userEvent.click(first());
+		await selectAll();
+		expect(selectedBlocks()).toEqual(THREE);
+		const cut = clip("cut");
+		await expect.poll(shownBlocks).toEqual([""]);
+		pasteClip(cut);
+		await expect.poll(shownBlocks).toEqual(THREE);
+	});
+
+	it("09-1 T134 [dragging] [dropped] the pointer dragged from the words before a picture to the words after it picks the picture with them: copied, cut and pasted", async () => {
+		await wordsPictureWords();
+		const from = first().element().getBoundingClientRect();
+		const to = paragraph("그림 뒤의 문단.").element().getBoundingClientRect();
+		await dragPath([
+			{ x: from.left + 30, y: from.top + from.height / 2 },
+			{ x: from.left + 200, y: (from.bottom + to.top) / 2 },
+			{ x: to.left + 60, y: to.top + to.height / 2 },
+		]);
+		const picked = selectedBlocks();
+		expect(picked).toHaveLength(3);
+		expect(picked[1]).toBe("picture");
+		// Part of each paragraph: the drag began and ended inside the words.
+		expect(THREE[0]?.endsWith(picked[0] ?? "-")).toBe(true);
+		expect(THREE[2]?.startsWith(picked[2] ?? "-")).toBe(true);
+		expect(picked[0]).not.toBe("");
+		expect(picked[2]).not.toBe("");
+		const copied = clip("copy");
+		expect(copied.html).toContain('data-block="image"');
+		clip("cut");
+		// What was not picked is left, joined in one line.
+		const left = `${THREE[0]?.slice(0, -(picked[0] ?? "").length)}${THREE[2]?.slice((picked[2] ?? "").length)}`;
+		await expect.poll(shownBlocks).toEqual([left]);
+		pasteClip(copied);
+		await expect.poll(shownBlocks).toEqual(THREE);
+	});
+
+	it("09-1 a picture copied is pasted as that picture: in the same body, and in another entry's body", async () => {
+		const held: { site?: StorySite } = {};
+		const [load] = media.WithImage.loaders as [() => Promise<{ site: StorySite }>];
+		const story = composeStory(
+			{
+				...media.WithImage,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						held.site = loaded.site;
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		);
+		await story.run();
+		const picture = body().getByRole("img", { name: "아침 책상" });
+		await userEvent.click(picture);
+		const copied = clip("copy");
+		// The picture alone has no words to hand over: what it is goes in the clipboard's own kind.
+		expect(copied.html).toContain('data-block="image"');
+		await userEvent.click(paragraph("글의 첫 문단이에요."));
+		await userEvent.keyboard("{End}");
+		pasteClip(copied);
+		await expect.poll(shownBlocks).toEqual(["글의 첫 문단이에요.", "picture", "picture"]);
+		const sources = () =>
+			[...body().element().querySelectorAll("[data-block=image] img")].map((img) => img.getAttribute("src"));
+		expect(new Set(sources()).size).toBe(1);
+		// Each is a block of its own: the copy did not bring the first one's id.
+		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}s{/Meta}" : "{Control>}s{/Control}");
+		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
+
+		// Another entry of the same site.
+		const made = (await held.site?.monti.run(
+			"entries.create",
+			{
+				collection: "post",
+				locale: "ko",
+				title: "다른 글",
+				slug: "another",
+				doc: {
+					type: "doc",
+					blocks: [{ id: "p_o", type: "paragraph", content: [{ type: "text", text: "다른 글의 문단." }] }],
+				},
+			},
+			{ actor: "admin" },
+		)) as { output: { id: string } };
+		window.location.hash = `#/c/post/${made.output.id}`;
+		await expect.element(paragraph("다른 글의 문단.")).toBeVisible();
+		await userEvent.click(paragraph("다른 글의 문단."));
+		await userEvent.keyboard("{End}");
+		pasteClip(copied);
+		await expect.poll(shownBlocks).toEqual(["다른 글의 문단.", "picture"]);
+		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
+	});
+});
 
 describe("opening a body with files", () => {
 	it("09-1 T110 T126 the body's files come with the body: nothing reads them, and every picture's frame stands at its shape from the first draw", async () => {
