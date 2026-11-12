@@ -1016,9 +1016,14 @@ describe("opening a body with files", () => {
 		const column = () => document.querySelector<HTMLElement>("[data-slot=editor-body]");
 		await expect.poll(() => column()?.getAttribute("aria-busy")).toBe("true");
 		expect(column()?.textContent).toContain("글의 첫 문단이에요.");
-		expect(getComputedStyle(column() as HTMLElement).visibility).toBe("hidden");
+		const text = column()?.querySelector<HTMLElement>(".ProseMirror");
+		expect(getComputedStyle(text as HTMLElement).visibility).toBe("hidden");
+		// Grey lines stand in its place while it waits, and go with the wait.
+		const lines = () => column()?.querySelector<HTMLElement>("[data-slot=editor-body-wait]");
+		await expect.poll(() => lines() && getComputedStyle(lines() as HTMLElement).opacity).toBe("1");
 		answer();
 		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
+		expect(lines()).toBeFalsy();
 		// Shown, every picture's frame stands at its file's shape already, whether or not the picture is in: nothing under it will move.
 		const frames = [...body().element().querySelectorAll<HTMLElement>("[data-block=image] [data-slot=image]")];
 		expect(frames.length).toBeGreaterThan(0);

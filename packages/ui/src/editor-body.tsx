@@ -93,15 +93,20 @@ const PAIRED = cn(
 	"[&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:absolute [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:top-0 [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:left-full [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:-z-10 [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:h-full [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:w-[calc(100%+1px)] [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:bg-monti-block [&_.ProseMirror-focused>[data-pair=source]:has(+[data-pair-current])]:after:content-['']",
 );
 
+/** The lines that stand for a body not shown yet: three bars at the reading line's pitch, the last one short. */
+const WAIT_LINE = "h-monti-12 animate-pulse rounded-monti-full bg-monti-selected";
+
 /**
  * The editor's text column: what the editor engine draws goes inside, and takes the body's looks from here. `paired` lays the text out as rows beside
- * its source (a translation side by side). `settling` keeps the column unseen while its place is held: the pictures of an opened body are not
- * read yet, and drawn now the text would jump when their shapes come.
+ * its source (a translation side by side). `settling` keeps the text unseen while its place is held: the pictures of an opened body are not
+ * read yet, and drawn now the text would jump when their shapes come. Three grey lines stand in its place, and only once the wait is long enough
+ * to be seen (200ms): a body that is ready at once shows no flash of them.
  */
 function EditorBody({
 	paired = false,
 	settling = false,
 	className,
+	children,
 	...props
 }: ComponentProps<"div"> & { paired?: boolean; settling?: boolean }) {
 	return (
@@ -109,9 +114,27 @@ function EditorBody({
 			data-slot="editor-body"
 			data-paired={paired || undefined}
 			aria-busy={settling || undefined}
-			className={cn(EDITOR_BODY, paired && PAIRED, settling && "invisible", className)}
+			className={cn(
+				EDITOR_BODY,
+				paired && PAIRED,
+				settling && "[&>:not([data-slot=editor-body-wait])]:invisible",
+				className,
+			)}
 			{...props}
-		/>
+		>
+			{settling && (
+				<div
+					data-slot="editor-body-wait"
+					aria-hidden="true"
+					className="fade-in-0 pointer-events-none absolute inset-x-0 top-0 flex animate-in flex-col gap-monti-16 fill-mode-both py-monti-8 delay-(--monti-duration-slow)"
+				>
+					<span className={WAIT_LINE} />
+					<span className={WAIT_LINE} />
+					<span className={cn(WAIT_LINE, "w-3/5")} />
+				</div>
+			)}
+			{children}
+		</div>
 	);
 }
 
