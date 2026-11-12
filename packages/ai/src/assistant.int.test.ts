@@ -2008,6 +2008,117 @@ describe("what the second review of the core found (#472)", () => {
 		expect(read.runs[0]).toMatchObject({ status: "done", parts: [{ type: "text", text: "이어 받은 요청의 답" }] });
 	});
 
+	it("10-4 a request that hung in the middle of a turn's tools and comes back after the run was taken up adds nothing to it: not its tools' answers, not its own unfinished turn", async () => {
+		// A read that the first request to call it waits in, for as long as the test says.
+		let asked = 0;
+		let thaw = () => {};
+		const slow = definePlugin({
+			name: "slow",
+			operations: [
+				defineOperation({
+					name: "slow.read",
+					kind: "read",
+					description: "A read that takes its time.",
+					input: z.object({}),
+					async run() {
+						asked += 1;
+						if (asked === 1)
+							await new Promise<void>((resolve) => {
+								thaw = resolve;
+							});
+						return { rows: asked };
+					},
+				}),
+			],
+		});
+		const monti = site({ plugins: [slow] });
+		await withKey(monti);
+		model.add({ calls: [{ name: "slow_read", input: {}, id: "read-1" }] }, { text: "이어 받은 요청의 답" });
+		const hung = ask(monti, { request: "읽어 줘" });
+		while (asked < 1) await new Promise((resolve) => setTimeout(resolve, 5));
+		const [run] = await runs();
+		// The first request hangs in its tool past its hold; another takes the run up, runs the same call and finishes the run.
+		clock = new Date(clock.getTime() + 91_000);
+		const taken = await ask(monti, { resume: run.id });
+		expect(taken.end.status).toBe("done");
+		const stored = () =>
+			db.selectFrom("run_messages").select("message").where("run_id", "=", run.id).orderBy("position").execute();
+		const before = await stored();
+		expect(before.map((each) => (each.message as { role: string }).role)).toEqual([
+			"user",
+			"assistant",
+			"tools",
+			"assistant",
+		]);
+
+		// The first request's tool comes back. The run is not its own any more: it writes none of what it has.
+		thaw();
+		const late = await hung;
+		expect(late.end).toMatchObject({ status: "interrupted", reason: "connection" });
+		expect(await stored()).toEqual(before);
+		const [after] = await runs();
+		expect(after).toMatchObject({ status: "done", pending: null, turns: 2 });
+		// One answer for the one call: the conversation's next request is one a service takes.
+		model.add({ text: "다음 답" });
+		const next = await ask(monti, { conversation: taken.conversation, request: "다음" });
+		expect(next.end.status).toBe("done");
+		const sent = model.turns.at(-1)?.messages ?? [];
+		expect(sent.filter((message) => message.role === "tools")).toHaveLength(1);
+	});
+
+	it("10-1 a conversation being removed is not taken up beside the removal: the request waits, and then finds no run", async () => {
+		const monti = site();
+		await withKey(monti);
+		model.add({ text: "절반만 온 ", breaksOff: true }, { text: "이어서 온 답" });
+		const first = await ask(monti, { request: "설명해 줘" });
+		expect(first.end).toMatchObject({ status: "interrupted" });
+		let whileHeld: string | undefined;
+		let resumed: Promise<unknown> = Promise.resolve();
+		// A removal holds the conversation's row and has not looked for a live run yet; a request to go on comes meanwhile.
+		await db.transaction().execute(async (removal) => {
+			await removal.selectFrom("conversations").select("id").where("id", "=", first.conversation).forUpdate().execute();
+			resumed = ask(monti, { resume: first.run }).then(
+				(done) => done.end.status,
+				(error: { reason?: { key: string } }) => error.reason?.key ?? error,
+			);
+			await new Promise((resolve) => setTimeout(resolve, 300));
+			whileHeld = (await db.selectFrom("runs").select("status").where("id", "=", first.run).executeTakeFirst())?.status;
+			await removal.deleteFrom("conversations").where("id", "=", first.conversation).execute();
+		});
+		// It did not take the run from under the removal, and what it is told is that the run is gone.
+		expect(whileHeld).toBe("interrupted");
+		expect(await resumed).toBe("assistant.noRun");
+		expect(model.turns).toHaveLength(1);
+	});
+
+	it("10-1 what a run weighs counts a message once: the service's own copy of it when there is one, since that is what is sent", async () => {
+		const monti = site();
+		await withKey(monti);
+		const raw = { role: "assistant", content: [{ type: "text", text: "가".repeat(400) }] };
+		model.add({ text: "가".repeat(400), raw });
+		const asked = await ask(monti, { request: "길게 답해 줘" });
+		const [run] = await runs();
+		const messages = (
+			await db
+				.selectFrom("run_messages")
+				.select("message")
+				.where("run_id", "=", asked.run)
+				.orderBy("position")
+				.execute()
+		).map((each) => each.message as { role: string; raw?: unknown });
+		const answer = messages.find((message) => message.role === "assistant");
+		expect(answer?.raw).toEqual(raw);
+		const once = messages.reduce(
+			(sum, message) =>
+				sum +
+				estimateTokens(JSON.stringify(message.raw === undefined ? message : { role: message.role, raw: message.raw })),
+			0,
+		);
+		expect(run.size).toBe(once);
+		// Not the words and the copy of the words both.
+		expect(run.size).toBeLessThan(messages.reduce((sum, message) => sum + estimateTokens(JSON.stringify(message)), 0));
+	});
+
 	it("10-1 two conversations of the same moment are both listed when the list is read a page at a time", async () => {
 		const monti = site();
 		await withKey(monti);
