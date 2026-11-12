@@ -7,13 +7,23 @@ import { migrateContent } from "../schema/apply";
 import { readChangeFiles } from "../schema/files";
 import { secretReader } from "./secret-input";
 
+export { doctor } from "./doctor/command";
+export { storageCors } from "./doctor/run";
+export { loadEnvFiles, takeEnvFile } from "./env-files";
+export { init } from "./init/command";
+export { configFileOf } from "./site";
+
 const MAINTENANCE = `Maintenance commands (not operations):
   db:setup        create the tables and follow every change file
   db:migrate      follow the change files this database has not (run it on deploy)
   deliveries:run  send the webhook retries that are due
   trash:purge     delete what the trash has kept for 30 days, and the files nothing holds
   admin:reset-password [--email address]
-                  set the admin's password and sign every browser out`;
+                  set the admin's password and sign every browser out
+  init [-y] [--admin-path /admin] [--locale en] [--login password|github] [--storage local|s3|none] [--dry-run]
+                  add Monti to this Next.js site: writes the files it lacks, and says what is left
+  doctor [--json] [--origin address]
+                  check the site's set-up: its files, its environment, the database, the storage`;
 
 /**
  * `monti <command>`: the maintenance commands, and every operation as a command (`monti help` lists them). `config` is `monti.config.ts`, loaded by

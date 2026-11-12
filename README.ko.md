@@ -24,6 +24,7 @@ Monti는 설계부터 다시 만들고 있습니다. 이전 패키지는 지웠�
 | [`@monti-cms/admin`](packages/admin) | 관리자 화면. 기능으로만 서버에 닿는다 |
 | [`@monti-cms/next`](packages/next) | Next.js 사이트에 Monti 붙이기. 관리자 페이지, 관리자 API 라우트, 초안 모드의 미리보기, 발행할 때의 캐시 갱신 |
 | [`@monti-cms/ai`](packages/ai) | 어시스턴트. 사이트의 기능 위에서 모델을 돌리고, 검토할 제안을 돌려준다 |
+| [`@monti-cms/storage-s3`](packages/storage-s3) | S3와 그 API를 말하는 저장소(Cloudflare R2, MinIO)에 미디어 파일을 둡니다. 파일은 브라우저에서 버킷으로 곧장 올라갑니다 |
 
 [`examples/blog`](examples/blog)는 Monti를 붙인 Next.js 블로그다. 흐름 테스트(`pnpm test:e2e`)가 이 앱에서 돈다.
 
@@ -39,10 +40,17 @@ npm install \
   https://github.com/monti-cms/monti/releases/download/v<버전>/monti-cms-core-<버전>.tgz \
   https://github.com/monti-cms/monti/releases/download/v<버전>/monti-cms-admin-<버전>.tgz \
   https://github.com/monti-cms/monti/releases/download/v<버전>/monti-cms-next-<버전>.tgz
+npx monti init        # 사이트의 Monti 파일을 쓰고, .env.local에 없는 값을 더하고, 남은 일을 말한다
+npx monti doctor      # 설정 점검: 파일, 환경 값, 데이터베이스, 저장소
 ```
 
-그 뒤 사이트가 쓰는 것(작은 파일 넷)은 [`packages/next`](packages/next)에 있고, [`examples/blog`](examples/blog)는 사이트 하나 전체입니다.
-관리자 화면은 이미 만들어진 제 스타일시트를 가져옵니다. 그것 때문에 사이트에 Tailwind가 있어야 하지 않습니다.
+`monti init`은 넷을 묻습니다(관리자 주소, 사이트의 언어, 관리자가 로그인하는 법, 미디어 파일을 둘 곳). 저마다 명령줄 값이 있고,
+`-y`는 기본값을 씁니다. 사이트에 없는 파일만 쓰고 있는 파일은 덮어쓰지 않으므로 다시 돌려도 됩니다. 무엇을 쓰는지는
+[`packages/next`](packages/next)에 있고, [`examples/blog`](examples/blog)는 사이트 하나 전체입니다. 관리자 화면은 이미 만들어진 제
+스타일시트를 가져옵니다. 그것 때문에 사이트에 Tailwind가 있어야 하지 않습니다.
+
+`monti` 명령은 사이트의 환경 파일을 Next가 읽는 순서로 읽습니다. 환경에 이미 있는 값, 그다음 `.env.<mode>.local`, `.env.local`,
+`.env.<mode>`, `.env`입니다(`<mode>`는 `NODE_ENV`, 없으면 `development`). `--env-file <경로>`는 하나를 더 가리키고, 가장 먼저 읽습니다.
 
 ## 개발
 
@@ -92,7 +100,9 @@ const monti = createMonti({
 });
 ```
 
-`localFolderStorage`는 개발 서버용입니다. 파일을 디스크의 폴더에 두고 관리자 API로 내줍니다. 다른 곳에 두려면 `Storage`를 구현한 플러그인을 씁니다. S3 호환 어댑터는 만들 예정입니다.
+`localFolderStorage`는 개발 서버나 디스크가 있는 호스트용입니다. 파일을 폴더에 두고 관리자 API로 내줍니다. 디스크가 남지 않거나 작은 요청만 받는
+호스트는 [`@monti-cms/storage-s3`](packages/storage-s3)를 씁니다(`npx monti init --storage s3`가 써 줍니다). 파일은 브라우저에서 버킷으로 곧장
+올라가고, 서버는 도착한 파일을 확인한 뒤에야 항목이 그 파일을 가리키게 합니다. 다른 곳에 두려면 `Storage`를 구현한 플러그인을 씁니다.
 
 ## 라이선스
 

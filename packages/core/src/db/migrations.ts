@@ -520,7 +520,32 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0019_loose_tickets": {
+		async up(db) {
+			// The direct way up (doc 20): a loose key is one the server checked the bytes of (`sealed`), or one a browser was handed a signed address for,
+			// with the size that address was signed for (`ticket_size`). Only a sealed key becomes a file's on a storage that takes direct uploads.
+			await db.schema
+				.alterTable("loose_files")
+				.addColumn("sealed", "boolean", (column) => column.notNull().defaultTo(false))
+				.execute();
+			await db.schema.alterTable("loose_files").addColumn("ticket_size", "integer").execute();
+		},
+	},
 };
+
+/**
+ * The core's steps this database has not run, by name, in order (`monti doctor`): every step when the tables are not made yet. It reads only: no
+ * table is made and no step runs.
+ */
+export async function pendingMigrations(db: Kysely<Database>): Promise<string[]> {
+	const { rows } = await sql<{ schema: string; made: string | null }>`
+		select current_schema() as schema, to_regclass('monti_migration')::text as made`.execute(db);
+	if (rows[0].made === null) return Object.keys(MIGRATIONS);
+	const done = new Set(
+		(await sql<{ name: string }>`select name from monti_migration`.execute(db)).rows.map((row) => row.name),
+	);
+	return Object.keys(MIGRATIONS).filter((name) => !done.has(name));
+}
 
 /** How many times a migration is tried when it only lost a race with another schema's table changes. */
 const RACE_TRIES = 30;

@@ -4,7 +4,46 @@ Next.js 사이트(App Router, Next 16)에 Monti를 붙인다. 관리자 화면�
 모드로 열리고, 발행하면 사이트가 저장해 둔 페이지가 새로 그려진다. 예제 사이트 [`examples/blog`](../../examples/blog)가 여기 있는 것을 모두
 쓴다.
 
+## 사이트에 붙이기
+
+```sh
+npx monti init          # 사이트 폴더에서, @monti-cms/core · admin · next를 설치한 뒤
+```
+
+사이트를 먼저 읽고(Next 16, `app/`인지 `src/app/`인지, 루트 레이아웃의 언어), 넷을 묻고(`--admin-path`, `--locale`,
+`--login password|github`, `--storage local|s3|none`. `-y`는 기본값을 쓰고, 터미널에 사람이 없으면 아무것도 묻지 않는다),
+사이트에 없는 것을 쓴다.
+
+| 파일 | 무엇인가 |
+|---|---|
+| `monti.schema.ts` | 사이트의 구조: 언어, 시작용 컬렉션 `post` 하나 |
+| `monti.config.ts` | 데이터베이스, 관리자가 로그인하는 법, 미디어 파일을 둘 곳 |
+| `lib/monti.ts` | Monti를 한 번 연다(사이트에 `src/`가 있으면 그 아래) |
+| `app/admin/page.tsx`, `app/admin/api/[...path]/route.ts` | 관리자 화면과 그 API. 폴더 이름이 관리자 주소다 |
+| `app/admin/layout.tsx` | 관리자 화면의 제 틀. 사이트에 맨 위 `app/layout.tsx`가 없을 때만 |
+| `.env.example` | 사이트가 읽는 값의 이름 |
+
+있는 파일은 덮어쓰지 않는다. `.env`는 건드리지 않고, `.env.local`에는 두 파일 어디에도 없는 값만 더한다(`DATABASE_URL`, 새로 만든
+`MONTI_SECRET`). `.gitignore`와 `package.json`에는 없는 줄과 `db:` 스크립트 둘만 더한다. 그다음 데이터베이스가 답하면 표를 만들고,
+아래 점검을 돌리고, 남은 일을 적는다. 언제든 다시 돌려도 된다. 빠진 것만 쓴다.
+
+맨 위 `app/layout.tsx`가 있으면 관리자 화면은 사이트의 레이아웃 안에 그려진다. 사이트의 머리말이 관리자 화면에 보이면 사이트의
+페이지와 그 레이아웃을 `app/(site)/`로 옮기고 `monti init`을 다시 돌린다. 그때 관리자의 레이아웃을 쓴다.
+
+```sh
+npx monti doctor        # --json은 기계가 읽게, --origin https://example.com은 사이트의 주소
+```
+
+점검 하나가 한 줄이고(`ok`, `warn`, `FAIL`, `skip`), 틀린 것 아래에 고치는 법이 있고, 틀린 것이 있으면 1로 끝나서 배포를 멈출 수
+있다. Next와 패키지 버전, 설정과 구조 파일, 관리자 화면의 파일과 레이아웃, `MONTI_SECRET`, 데이터베이스(닿는지, 표, 따른 변경),
+저장소(있는지, 답하는지, 디스크 없는 호스트의 폴더가 아닌지), 로그인을 본다. 아무것도 쓰지 않고 비밀 값을 찍지 않는다.
+
+`monti` 명령은 사이트의 환경 파일을 Next처럼 읽는다. 환경이 먼저이고, 그다음 `.env.<mode>.local`, `.env.local`, `.env.<mode>`,
+`.env`다. `--env-file <경로>`는 하나를 더 가리키고, 가장 먼저 읽는다.
+
 ## 파일 세 개
+
+`monti init`이 쓰는 것을 손으로 쓰면 이렇다.
 
 ```ts
 // lib/monti.ts
