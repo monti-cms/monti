@@ -98,7 +98,7 @@ function nextSteps(
 		);
 	if (answers.storage === "s3")
 		steps.push(
-			"Fill the S3_* values in .env.local: the bucket, its region or endpoint, the keys, and the address files are read from.",
+			"Fill the S3_* values in .env.local: the bucket, its region (AWS) or endpoint (R2, MinIO), the keys, and the address files are read from. Then let the bucket take uploads from each address the admin is opened at (http://localhost:3000 too): `npx monti doctor --origin <address>` checks it and prints the CORS setting.",
 		);
 	if (site.topLayout)
 		steps.push(

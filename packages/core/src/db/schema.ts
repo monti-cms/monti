@@ -384,6 +384,10 @@ export interface ReservedPathTable {
 export interface LooseFileTable {
 	key: string;
 	remove_after: Date;
+	/** The server read this key's bytes and they are what the library takes (the byte route, or the seal of a direct upload). */
+	sealed: Generated<boolean>;
+	/** A key a browser holds a signed address for: the size the address was signed for. `null` once it was sealed, and for every other key. */
+	ticket_size: number | null;
 }
 
 /** One place a file is used: one field or one body block of an entry or a template. Written again whenever its owner changes (doc 09). */

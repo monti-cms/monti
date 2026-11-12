@@ -112,9 +112,33 @@ function storageOf(ctx: OperationContext) {
 	return ctx.site.storage;
 }
 
-/** A key must be one the byte route gave, with a file behind it, and no other file's. */
+/**
+ * Whether the server read this key's bytes: it is the item's own already, or a loose key marked sealed (the byte route's, or the seal's copy
+ * of a direct upload).
+ */
+async function sealedKey(ctx: OperationContext, key: string, self?: string) {
+	const own = self
+		? await ctx.db
+				.selectFrom("media")
+				.select("id")
+				.where("id", "=", self)
+				.where((eb) => eb.or([eb("original_key", "=", key), eb("web_key", "=", key)]))
+				.executeTakeFirst()
+		: undefined;
+	if (own) return true;
+	const loose = await ctx.db.selectFrom("loose_files").select("sealed").where("key", "=", key).executeTakeFirst();
+	return loose?.sealed === true;
+}
+
+/**
+ * A key must be one the server gave, with a file behind it, and no other file's. On a storage a browser sends files straight to (doc 20) it
+ * must also be one the server sealed: a key a ticket was signed for names bytes the server never read, and its address may still be written
+ * to. Such a key is as unknown as one that was never there.
+ */
 async function statOfKey(ctx: OperationContext, key: string, self?: string) {
-	const stat = isMediaKey(key) ? await storageOf(ctx).stat(key) : null;
+	const storage = storageOf(ctx);
+	const known = isMediaKey(key) && (!storage.ticket || (await sealedKey(ctx, key, self)));
+	const stat = known ? await storage.stat(key) : null;
 	if (!stat) throw new CheckError({ key: "media.unknownKey", values: { key } });
 	let taken = ctx.db
 		.selectFrom("media")

@@ -31,6 +31,8 @@ export type DoctorOptions = {
 	loadConfig: () => Promise<MontiConfig>;
 	/** The site's own address (`--origin`), for what a browser must be let do from it. */
 	origin?: string;
+	/** The `fetch` the storage's CORS is asked with (tests replace it). */
+	fetch?: typeof fetch;
 	/** How long a call outside this machine (the database, the storage) may take, in milliseconds. A check that waits longer fails. */
 	timeout?: number;
 };
@@ -245,7 +247,61 @@ async function databaseMigrations(db: Kysely<Database>, cwd: string, limit: numb
 	}
 }
 
-/** The storage's three checks, by id. The storage is the site's own (a plugin's): it is asked through the site, on the pool that is open. */
+const STORAGE_CHECKS = ["storage/configured", "storage/reachable", "storage/host", "storage/cors"];
+
+/** The CORS setting a bucket needs for a browser at `origin` to send it a file, as S3, R2 and MinIO take it. */
+const corsSetting = (origin: string, headers: string[]) =>
+	JSON.stringify(
+		[{ AllowedOrigins: [origin], AllowedMethods: ["PUT"], AllowedHeaders: headers, MaxAgeSeconds: 3600 }],
+		null,
+		2,
+	);
+
+/**
+ * Whether a storage that takes files straight from the browser lets the site's address send them (doc 20). It asks what a browser asks
+ * before a `PUT` from another address (the preflight), at an address signed for a key nothing has: nothing is written.
+ */
+export async function storageCors(
+	storage: Storage,
+	options: Pick<DoctorOptions, "origin" | "fetch">,
+	limit = TIMEOUT,
+): Promise<CheckOutcome> {
+	if (!storage.ticket) return skip("files go up through the site, not straight to the storage");
+	if (!options.origin)
+		return warn("Whether the storage takes uploads from the site's address was not checked: no address was given.", {
+			fix: "npx monti doctor --origin https://your.site (or set SITE_URL)",
+		});
+	const origin = options.origin;
+	try {
+		// A file that is not a picture: its upload carries every header a browser may send (a picture's has no disposition).
+		const ticket = await within(limit, storage.ticket(`${randomUUID()}.pdf`, { mime: "application/pdf", size: 1 }));
+		const headers = Object.keys(ticket.headers);
+		const answer = await within(
+			limit,
+			(options.fetch ?? fetch)(ticket.url, {
+				method: "OPTIONS",
+				headers: {
+					origin,
+					"access-control-request-method": "PUT",
+					"access-control-request-headers": headers.join(","),
+				},
+			}),
+		);
+		const allowed = answer.headers.get("access-control-allow-origin");
+		if (answer.ok && (allowed === "*" || allowed === origin)) return ok(`the storage takes uploads from ${origin}`);
+		return fail(`The storage does not take uploads from ${origin}: a file sent from the admin would be refused.`, {
+			where: "the bucket's CORS setting",
+			fix: `set it to:\n${corsSetting(origin, headers)}`,
+		});
+	} catch (error) {
+		return fail(`The storage's CORS setting could not be asked: ${firstLine(error)}`, {
+			where: "monti.config.ts (the storage's settings)",
+			fix: "check its address and keys",
+		});
+	}
+}
+
+/** The storage's checks, by id. The storage is the site's own (a plugin's): it is asked through the site, on the pool that is open. */
 async function storageChecks(
 	options: DoctorOptions,
 	config: MontiConfig,
@@ -260,6 +316,7 @@ async function storageChecks(
 			["storage/configured", fail(`The site does not open: ${firstLine(error)}`, { where: "monti.config.ts" })],
 			["storage/reachable", skip("the site did not open")],
 			["storage/host", skip("the site did not open")],
+			["storage/cors", skip("the site did not open")],
 		];
 	}
 	if (!storage)
@@ -273,6 +330,7 @@ async function storageChecks(
 			],
 			["storage/reachable", skip("there is no storage")],
 			["storage/host", skip("there is no storage")],
+			["storage/cors", skip("there is no storage")],
 		];
 	let reachable: CheckOutcome;
 	try {
@@ -289,7 +347,13 @@ async function storageChecks(
 	return [
 		[
 			"storage/configured",
-			ok(storage.kind === "folder" ? "files go to a folder on this machine" : "the site has a storage"),
+			ok(
+				storage.kind === "folder"
+					? "files go to a folder on this machine"
+					: storage.ticket
+						? "the site has a storage, and files go straight to it from the browser"
+						: "the site has a storage",
+			),
 		],
 		["storage/reachable", reachable],
 		[
@@ -305,6 +369,7 @@ async function storageChecks(
 							: "the storage is not this machine's disk",
 					),
 		],
+		["storage/cors", await storageCors(storage, options, limit)],
 	];
 }
 
@@ -397,7 +462,7 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
 				say("database/migrations", skip("the database is not reachable"));
 			}
 			if (reached) say("database/migrations", await databaseMigrations(db, cwd, limit));
-			if (!config) for (const id of ["storage/configured", "storage/reachable", "storage/host"]) say(id, noConfig);
+			if (!config) for (const id of STORAGE_CHECKS) say(id, noConfig);
 			else for (const [id, outcome] of await storageChecks(options, config, db, limit)) say(id, outcome);
 		} finally {
 			// A pool whose server never answers never closes: it is not waited for past the limit.
@@ -405,7 +470,7 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
 		}
 	}
 	if (!address || address.trim() === "")
-		for (const id of ["storage/configured", "storage/reachable", "storage/host"])
+		for (const id of STORAGE_CHECKS)
 			say(id, config ? skip("the site cannot open without a database address") : noConfig);
 
 	say("auth/login", config ? authLogin(options, config, adminFolder(cwd)) : noConfig);
