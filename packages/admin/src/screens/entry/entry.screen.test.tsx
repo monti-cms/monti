@@ -126,6 +126,39 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(title()).toHaveFocus();
 	});
 
+	/** Tab until the button has the keyboard's focus (a banner's actions are the first stops of the page). */
+	const tabTo = async (name: string) => {
+		for (let pressed = 0; pressed < 6 && document.activeElement !== button(name).element(); pressed++)
+			await userEvent.keyboard("{Tab}");
+		await expect.element(button(name)).toHaveFocus();
+		expect(button(name).element().matches(":focus-visible")).toBe(true);
+	};
+
+	it("a banner's own action that takes the banner away, pressed with the keyboard, hands the focus to the text: discard, and load after its wait", async () => {
+		await BrowserCopy.run();
+		await opened();
+		await tabTo("버리기");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).not.toBeInTheDocument();
+		await expect.element(body()).toHaveFocus();
+
+		// "Load" works for a while first: it keeps the focus while it does, and hands it on when the banner goes.
+		await BrowserCopy.run();
+		await opened();
+		await tabTo("불러오기");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).not.toBeInTheDocument();
+		await expect.element(body()).toHaveFocus();
+	});
+
+	it("the same action pressed with the pointer moves no focus", async () => {
+		await BrowserCopy.run();
+		await opened();
+		await userEvent.click(button("버리기"));
+		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).not.toBeInTheDocument();
+		await expect.element(body()).not.toHaveFocus();
+	});
+
 	it("[flow 1·19] input this browser kept is compared with the server's copy", async () => {
 		await BrowserCopy.run();
 		await userEvent.click(button("비교하기"));

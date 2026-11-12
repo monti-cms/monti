@@ -63,6 +63,7 @@ import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { usePurge, useRestore, useTrashMove } from "../../trash/use-trash";
+import { focusText, useFocusHandOff } from "../frame/focus-hand-off";
 import { SessionEndedBanner } from "../frame/session-ended";
 import { useLanguageName } from "../list/column-menu";
 import type { SchemaRead } from "../settings/schema-draft";
@@ -266,13 +267,16 @@ export function EntryEditor({
 	// section). A pointer's press moves nothing, and neither does a save after the person has gone elsewhere.
 	const savedByKeys = useRef(false);
 	const saveState = editor.saveState;
+	/** The focus to the text being written: the body, or the title when the body is not there. */
+	const toText = useCallback(() => focusText(() => body.current, fieldInputId("title")), []);
 	useEffect(() => {
 		if (saveState !== "saved" || !savedByKeys.current) return;
 		savedByKeys.current = false;
-		if (document.activeElement !== document.body) return;
-		if (body.current) body.current.commands.focus();
-		else document.getElementById(fieldInputId("title"))?.focus();
-	}, [saveState]);
+		if (document.activeElement === document.body) toText();
+	}, [saveState, toText]);
+	// A banner whose own action takes it away (discard or load this browser's copy, load the latest, try again, confirm all) had the
+	// keyboard's focus on that action: it goes to the text too.
+	const handOff = useFocusHandOff(toText);
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
 			if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "s") {
@@ -548,12 +552,13 @@ export function EntryEditor({
 				<>
 					<SessionEndedBanner />
 					{editor.loadRefusal ? (
-						<Banner tone="danger" title={t("entry.loadFailed")} plainMeta>
+						<Banner ref={handOff} tone="danger" title={t("entry.loadFailed")} plainMeta>
 							<TextButton onClick={() => void editor.reload()}>{t("entry.retry")}</TextButton>
 						</Banner>
 					) : null}
 					{editor.conflict ? (
 						<Banner
+							ref={handOff}
 							tone="danger"
 							title={
 								editor.conflict.at ? t("entry.conflict", { at: clock(editor.conflict.at) }) : t("entry.conflictNoTime")
@@ -569,6 +574,7 @@ export function EntryEditor({
 					) : null}
 					{editor.browserCopy ? (
 						<Banner
+							ref={handOff}
 							title={t("entry.browserCopy")}
 							meta={editor.browserCopy.savedAt ? dayTime(editor.browserCopy.savedAt, language) : undefined}
 						>
@@ -591,7 +597,7 @@ export function EntryEditor({
 						/>
 					) : null}
 					{compared && !readOnly ? (
-						<SourceChangedBanner compared={compared} onConfirmAll={() => void translation.confirmAll()} />
+						<SourceChangedBanner ref={handOff} compared={compared} onConfirmAll={() => void translation.confirmAll()} />
 					) : null}
 				</>
 			}
