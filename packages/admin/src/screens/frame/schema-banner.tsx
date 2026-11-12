@@ -1,6 +1,7 @@
 import { Banner, TextButton } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
+import { nextStop, useFocusHandOff } from "./focus-hand-off";
 
 type SchemaState = { locked: boolean; fileChanged: boolean; failedChange: string | null };
 
@@ -14,10 +15,12 @@ export function SchemaBanner({ onReview }: { onReview?: () => void }) {
 	const schema = useRead<SchemaState>("schema.read", {}, { afterWrites: true });
 	const retry = useOperation("schema.retry");
 	const state = schema.data;
+	// "Apply again" takes its line away when it works: the keyboard's focus it held goes to the page's first control, the next stop after the line.
+	const handOff = useFocusHandOff((banner) => nextStop(banner));
 	// The change file's name and the database's error are the developer's: the server's log has them (`schema.apply`), the line does not.
 	if (state?.failedChange)
 		return (
-			<Banner tone="danger" title={t("banner.failedChange")}>
+			<Banner key="failed" ref={handOff} tone="danger" title={t("banner.failedChange")}>
 				<TextButton
 					loading={retry.pending}
 					onClick={async () => {
@@ -30,7 +33,7 @@ export function SchemaBanner({ onReview }: { onReview?: () => void }) {
 		);
 	// Its review button opens the review in settings › collections, where the person says what the hand edit means for stored values (doc 01).
 	return state?.fileChanged && !state.locked ? (
-		<Banner title={t("banner.fileChanged")}>
+		<Banner key="changed" title={t("banner.fileChanged")}>
 			{onReview ? <TextButton onClick={onReview}>{t("banner.review")}</TextButton> : null}
 		</Banner>
 	) : null;

@@ -1974,11 +1974,12 @@ describe("undo from the log", () => {
 		await publish([id], monti);
 		const moved = await write("trash.move", { rows: [{ kind: "entry", id }] }, monti);
 		expect(await fromSite("first-post")).toBeNull();
-		expect(sent.map((delivery) => delivery.event.type)).toEqual([
-			"entry.saved",
+		// The move's two events are sent side by side, in no fixed order.
+		expect(sent.map((delivery) => delivery.event.type).sort()).toEqual([
 			"entry.published",
-			"entry.unpublished",
+			"entry.saved",
 			"entry.trashed",
+			"entry.unpublished",
 		]);
 		sent.length = 0;
 		await write("activity.undo", { id: moved.activityId }, monti);
