@@ -1,3 +1,4 @@
+import type { DevProof } from "./auth/dev-bypass";
 import type { AuthSettings } from "./auth/operations";
 import { type BlockKit, createBlockKit } from "./body/blocks";
 import type { PublishCheck } from "./entries/tasks";
@@ -26,6 +27,8 @@ export type Site = {
 	kit: BlockKit;
 	/** The ways to sign in (doc 15). */
 	auth: AuthSettings;
+	/** How a browser proves it runs on this machine, for the dev server's sign-in bypass (doc 16). The adapter brings it; without one nobody is let in. */
+	devProof: DevProof | null;
 	/** Where media files are, from a plugin (doc 09). Without one the library says there is no storage and takes no file. */
 	storage: Storage | null;
 };
@@ -38,6 +41,7 @@ export function createSite(
 		secret?: string | null;
 		kit?: BlockKit;
 		auth?: AuthSettings;
+		devProof?: DevProof | null;
 		storage?: Storage | null;
 		keyServices?: readonly KeyService[];
 		fetch?: typeof globalThis.fetch;
@@ -54,7 +58,8 @@ export function createSite(
 		// An empty secret is none: a link signed or a key sealed with "" is signed and sealed for anyone (MONTI_SECRET="" in a deploy's settings).
 		secret: extra.secret?.trim() ? extra.secret : null,
 		kit: extra.kit ?? createBlockKit([], []),
-		auth: extra.auth ?? { password: false, github: null },
+		auth: extra.auth ?? { password: false, github: null, devBypass: true },
+		devProof: extra.devProof ?? null,
 		storage: extra.storage ?? null,
 		keyServices: extra.keyServices ?? [],
 		fetch: extra.fetch ?? ((...args) => globalThis.fetch(...args)),

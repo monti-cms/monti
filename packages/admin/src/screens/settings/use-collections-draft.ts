@@ -123,6 +123,17 @@ export function useCollectionsDraft() {
 				add(`drop:${c}`, { collection: c, name, tag: t("changes.dropCollection"), tone: "danger" }, path);
 			else if (place.kind === "path")
 				add(`path:${c}`, { collection: c, name, tag: t("changes.path"), tone: "warning" }, path);
+			else if (place.kind === "preview")
+				add(
+					`preview:${c}`,
+					{
+						collection: c,
+						name: `${name} · ${t("settings.basics.previewPath")}`,
+						tag: t("changes.changed"),
+						tone: "warning",
+					},
+					path,
+				);
 			else if (place.kind === "field" || place.kind === "fieldValue") {
 				const saved = data.schema.collections[c]?.fields[place.key];
 				const field = draft.value(at.field(c, place.key)) as DraftField | null | undefined;

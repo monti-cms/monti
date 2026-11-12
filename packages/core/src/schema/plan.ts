@@ -25,6 +25,7 @@ export type SchemaChange = {
 		| "addCollection"
 		| "removeCollection"
 		| "changePath"
+		| "changePreviewPath"
 		| "addField"
 		| "removeField"
 		| "renameField"
@@ -37,7 +38,7 @@ export type SchemaChange = {
 	field?: string;
 	/** The language added or removed, or the new source language. */
 	locale?: string;
-	/** For a rename, the old name; for a path change, the old path. */
+	/** For a rename, the old name; for a path change, the old path. A preview path put in has no `from`, one taken out no `to`. */
 	from?: string;
 	to?: string;
 	/**
@@ -48,6 +49,9 @@ export type SchemaChange = {
 	/** What the review asks, with the default first. Absent when the change touches no stored value. */
 	choices?: Choice[];
 };
+
+const previewPathOf = (collection: CollectionDefinition) =>
+	collection.kind === "document" ? collection.previewPath : undefined;
 
 /** The same hash for the same schema, whatever the key order. */
 export function schemaHash(schema: Schema): string {
@@ -91,6 +95,16 @@ export async function planSchema(
 				collection: name,
 				from: before.path,
 				to: collection.path,
+			});
+		// The preview page's address (doc 16): put in, changed or taken out. It touches no stored value and no public address.
+		const [previewBefore, previewAfter] = [previewPathOf(before), previewPathOf(collection)];
+		if (previewBefore !== previewAfter)
+			changes.push({
+				id: `changePreviewPath:${name}`,
+				do: "changePreviewPath",
+				collection: name,
+				...(previewBefore === undefined ? {} : { from: previewBefore }),
+				...(previewAfter === undefined ? {} : { to: previewAfter }),
 			});
 		changes.push(...(await planFields(db, name, before, collection, renames)));
 	}

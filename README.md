@@ -21,6 +21,10 @@ until the rebuild reaches it.
 |---|---|
 | [`@monti-cms/core`](packages/core) | Operations (`defineOperation`), the engine that runs them (versions, undo snapshots, the activity log, deliveries, proposals) and the entry points they produce: the admin API, the agent tools and the CLI |
 | [`@monti-cms/ui`](packages/ui) | The design system: tokens, the components the admin is built from, and the reference screens |
+| [`@monti-cms/admin`](packages/admin) | The admin screens. They reach the server only through operations |
+| [`@monti-cms/next`](packages/next) | Monti on a Next.js site: the admin page, the admin API route, the preview in draft mode, the cache refreshed on publish |
+
+[`examples/blog`](examples/blog) is a blog on Next.js with Monti mounted on it; the flow tests (`pnpm test:e2e`) run on it.
 
 ## Development
 

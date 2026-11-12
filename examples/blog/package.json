@@ -1,0 +1,31 @@
+{
+	"name": "monti-example-blog",
+	"version": "0.0.0",
+	"private": true,
+	"description": "A blog on Next.js with Monti: posts, notes and categories in Korean, English and Japanese. The repo's flow tests run on it",
+	"license": "MIT",
+	"type": "module",
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"typecheck": "tsc --noEmit",
+		"db:setup": "monti db:setup",
+		"db:migrate": "monti db:migrate"
+	},
+	"dependencies": {
+		"@carbon/icons-react": "11.90.0",
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/core": "workspace:*",
+		"@monti-cms/next": "workspace:*",
+		"next": "16.4.6",
+		"react": "19.2.3",
+		"react-dom": "19.2.3"
+	},
+	"devDependencies": {
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"typescript": "^7.0.2"
+	}
+}

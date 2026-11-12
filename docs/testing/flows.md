@@ -4,7 +4,7 @@
 
 ## 미디어 흐름 (`testing/e2e/media.e2e.ts`)
 
-시험용 서버(`testing/e2e/site.ts`)가 진짜 관리자 API, Postgres, 디스크의 폴더를 띄운다. 파일은 CDP로 OS에서 끌어 놓고(`Input.dispatchDragEvent`), 그림은 클립보드에 넣고 실제 ⌘V로 붙여 넣는다.
+예제 앱(`examples/blog`, `testing/e2e/servers.ts`)이 진짜 관리자 API, Postgres, 디스크의 폴더를 띄운다. 파일은 CDP로 OS에서 끌어 놓고(`Input.dispatchDragEvent`), 그림은 클립보드에 넣고 실제 ⌘V로 붙여 넣는다.
 
 | 흐름 | 지키는 이음매 | 끊은 것과 결과 |
 |---|---|---|

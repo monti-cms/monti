@@ -39,7 +39,7 @@ export const HEADINGS = [2, 3, 4] as const;
  * The places of the collections screen's draft. A collection is keyed by its identifier, a field by the name it had when it entered the draft (so a
  * rename keeps its place):
  *
- * - `col:<c>` the collection (`{ kind }`, `null` once deleted) · `path:<c>` its public address
+ * - `col:<c>` the collection (`{ kind }`, `null` once deleted) · `path:<c>` its public address · `preview:<c>` its preview page's (doc 16)
  * - `field:<c>:<key>` a field (`DraftField`, `null` once removed)
  * - `ca:<c>:label|folders|layout` the collection's admin values · `fa:<c>:<key>:<value>` a field's
  * - `ed:<c>:block:<type>`, `ed:<c>:mark:<type>`, `ed:<c>:heading:<level>` what its editor allows
@@ -47,6 +47,7 @@ export const HEADINGS = [2, 3, 4] as const;
 export const at = {
 	collection: (c: string) => `col:${c}`,
 	path: (c: string) => `path:${c}`,
+	preview: (c: string) => `preview:${c}`,
 	field: (c: string, key: string) => `field:${c}:${key}`,
 	collectionValue: (c: string, value: "label" | "folders" | "layout") => `ca:${c}:${value}`,
 	fieldValue: (c: string, key: string, value: FieldValue) => `fa:${c}:${key}:${value}`,
@@ -57,6 +58,7 @@ export const at = {
 export type Place =
 	| { kind: "collection"; collection: string }
 	| { kind: "path"; collection: string }
+	| { kind: "preview"; collection: string }
 	| { kind: "field"; collection: string; key: string }
 	| { kind: "collectionValue"; collection: string; value: "label" | "folders" | "layout" }
 	| { kind: "fieldValue"; collection: string; key: string; value: FieldValue }
@@ -66,6 +68,7 @@ export function placeOf(path: Path): Place | null {
 	const [head, collection = "", a = "", b = ""] = path.split(":");
 	if (head === "col") return { kind: "collection", collection };
 	if (head === "path") return { kind: "path", collection };
+	if (head === "preview") return { kind: "preview", collection };
 	if (head === "field") return { kind: "field", collection, key: a };
 	if (head === "ca") return { kind: "collectionValue", collection, value: a as "label" };
 	if (head === "fa") return { kind: "fieldValue", collection, key: a, value: b as FieldValue };
@@ -83,6 +86,10 @@ const allows = (list: "all" | string[] | undefined, type: string) =>
 export const listedBlocks = (catalog: Catalog) =>
 	catalog.blocks.filter((block) => block.menu !== null && block.type !== "paragraph" && block.type !== "heading");
 
+/** A collection's preview page address: a document's, when the site made such a page (doc 16). */
+const previewOf = (collection: Schema["collections"][string]) =>
+	collection.kind === "document" ? (collection.previewPath ?? null) : null;
+
 /** The saved values, flattened to the draft's places. */
 export function flatten(read: SchemaRead, catalog: Catalog | null): Record<Path, unknown> {
 	const base: Record<Path, unknown> = {};
@@ -90,6 +97,7 @@ export function flatten(read: SchemaRead, catalog: Catalog | null): Record<Path,
 		const values = read.adminValues[c];
 		base[at.collection(c)] = { kind: collection.kind };
 		base[at.path(c)] = collection.path ?? null;
+		base[at.preview(c)] = previewOf(collection);
 		base[at.collectionValue(c, "label")] = values?.label;
 		base[at.collectionValue(c, "folders")] = values?.folders ?? false;
 		base[at.collectionValue(c, "layout")] = values?.layout;
@@ -161,9 +169,15 @@ export function build(read: SchemaRead, changed: Path[], value: Values, catalog:
 				renames.push({ collection: c, from: key, to: field.name });
 		}
 		const path = value(at.path(c));
+		const preview = value(at.preview(c));
 		schema.collections[c] =
 			collection.kind === "document"
-				? { kind: "document", path: typeof path === "string" ? path : "", fields }
+				? {
+						kind: "document",
+						path: typeof path === "string" ? path : "",
+						...(typeof preview === "string" ? { previewPath: preview } : {}),
+						fields,
+					}
 				: { kind: "item", ...(typeof path === "string" ? { path } : {}), fields };
 		adminValues[c] = collectionValues(read, c, collection.kind, keys, names, value, catalog);
 	}
@@ -297,6 +311,7 @@ export function proposalPaths(
 		if (!before) {
 			out[at.collection(c)] = { kind: collection.kind };
 			out[at.path(c)] = collection.path ?? null;
+			out[at.preview(c)] = previewOf(collection);
 			const label = input.adminValues?.[c]?.label;
 			if (label) out[at.collectionValue(c, "label")] = label;
 			for (const [name, def] of Object.entries(collection.fields)) {
@@ -306,6 +321,7 @@ export function proposalPaths(
 			continue;
 		}
 		if (before.path !== collection.path) out[at.path(c)] = collection.path ?? null;
+		if (previewOf(before) !== previewOf(collection)) out[at.preview(c)] = previewOf(collection);
 		const renamedTo = new Map(renames.filter((r) => r.collection === c).map((r) => [r.from, r.to]));
 		for (const [name, def] of Object.entries(before.fields)) {
 			const to = renamedTo.get(name);

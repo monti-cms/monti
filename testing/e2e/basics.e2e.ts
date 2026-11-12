@@ -1,8 +1,8 @@
-import { ADMIN } from "./account";
 import { expect, operation, test, unique } from "./fixtures";
+import { ADMIN } from "./servers";
 
 test("the login form signs in over HTTP and the session cookie stays after a reload", async ({ page }) => {
-	await page.goto("/");
+	await page.goto("/admin");
 	await page.getByLabel("이메일").fill(ADMIN.email);
 	await page.getByLabel("비밀번호", { exact: true }).fill(ADMIN.password);
 	await page.getByRole("button", { name: "로그인" }).click();
@@ -21,7 +21,7 @@ test("an entry written in the editor is on the server after a reload", async ({ 
 		title: "처음 쓰는 글",
 		slug,
 	});
-	await admin.goto(`/#/c/post/${made.output.id}`);
+	await admin.goto(`/admin#/c/post/${made.output.id}`);
 	const title = admin.getByRole("textbox", { name: "제목" });
 	await title.click();
 	await admin.keyboard.press("End");
