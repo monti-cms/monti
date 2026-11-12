@@ -200,6 +200,37 @@ describe("the entry editor: before the entry is there", () => {
 	});
 });
 
+describe("the entry editor: a read that gets no answer", () => {
+	it("00 a read the network cuts off is a refusal like any other: the screen says the entry did not load, and '다시 시도' reads it", async () => {
+		let cut = true;
+		const [load] = entry.site("draft") as [() => Promise<Loaded>];
+		const story = scene<Loaded>(
+			{
+				loaders: [
+					async () => {
+						const loaded = await load();
+						const { transport } = loaded.site;
+						loaded.site.transport = async (name, input, options) => {
+							// As `fetch` does when there is no network: it throws, it does not answer.
+							if (name === "entries.get" && cut) throw new TypeError("Failed to fetch");
+							return transport(name, input, options);
+						};
+						return loaded;
+					},
+				],
+			},
+			entry.default,
+		);
+		await story.run();
+		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
+		expect(title().elements()).toEqual([]);
+		cut = false;
+		await userEvent.click(button("다시 시도"));
+		await expect.element(title()).toHaveValue("첫 번째 글");
+		await expect.element(page.getByText("글을 불러오지 못했습니다")).not.toBeInTheDocument();
+	});
+});
+
 describe("the entry editor: tables", () => {
 	it("T62 '/' and '표' put in an empty table: three columns under a head row, the caret in its first cell", async () => {
 		await on("new").run();

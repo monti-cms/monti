@@ -6,6 +6,9 @@ import type { Answer, CallOptions } from "./transport";
 /** Why an operation did not go through, as the screen shows it. `conflict`: the record changed since it was read, so the screen reloads it. */
 export type Refusal = { status: number; error: string; reason: Message | null };
 
+/** What stands for an answer that never came, as the byte route does (`httpUploader`): status 0. */
+const NO_ANSWER: Answer = { status: 0, body: { error: "network" } };
+
 const refusalOf = (answer: Answer): Refusal => {
 	const body = (answer.body ?? {}) as { error?: string; reason?: Message };
 	return { status: answer.status, error: body.error ?? "unexpected", reason: body.reason ?? null };
@@ -27,7 +30,9 @@ export function useOperation<Output = unknown>(name: string) {
 		): Promise<{ ok: true; body: Output } | { ok: false; refusal: Refusal }> => {
 			setPending(true);
 			try {
-				const answer = await transport(name, input, options);
+				// No answer at all (the network, a transport that throws): a refusal like any other, so a screen's read shows its way to try again and a
+				// write says it did not go through. Thrown on, a first read left its screen empty for good, with nothing to press.
+				const answer = await transport(name, input, options).catch((): Answer => NO_ANSWER);
 				if (answer.status === 200) {
 					setRefusal(null);
 					// A write's answer names its activity row; a read's does not.
