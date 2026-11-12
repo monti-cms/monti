@@ -285,7 +285,14 @@ export function schemaFilesAt(
 				}
 				await pause();
 			}
-			return await work(async () => (await names()).includes(mine));
+			// Asked of the mark itself: only "it is not there" says it is gone. A folder that cannot be read just now does not make the files
+			// another's, and what this write left is still its own to clear.
+			return await work(() =>
+				io.access(path.join(changes, mine)).then(
+					() => true,
+					(error) => (error as { code?: string }).code !== "ENOENT",
+				),
+			);
 		} finally {
 			await drop(path.join(changes, mine));
 			atWork.delete(token);

@@ -15,4 +15,10 @@ const stopKey = (event: React.KeyboardEvent) => {
  * over (`render`, a router link) has handlers of its own that would run before the part's. These stop the press on the way down, before any of
  * them: nothing is run, a link does not go, a form is not sent.
  */
-export const BUSY_GUARD = { onClickCapture: stop, onKeyDownCapture: stopKey, onKeyUpCapture: stopKey };
+export const BUSY_GUARD = {
+	onClickCapture: stop,
+	// The middle button (and the other ones) presses with `auxclick`: on a link it opens the address in a new tab.
+	onAuxClickCapture: stop,
+	onKeyDownCapture: stopKey,
+	onKeyUpCapture: stopKey,
+};

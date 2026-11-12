@@ -136,6 +136,37 @@ describe("a button while it works", () => {
 			expect(window.location.hash).toBe(before);
 		});
 
+		it(`${part}: drawn as a link, a middle-button press opens nothing while it works`, async () => {
+			let ran = 0;
+			const link = (
+				// biome-ignore lint/a11y/useAnchorContent: the part's children go in the link.
+				<a
+					href="#/elsewhere"
+					onAuxClick={() => {
+						ran += 1;
+					}}
+				/>
+			);
+			render(
+				part === "button" ? (
+					<Button loading nativeButton={false} render={link}>
+						링크로 가는 중…
+					</Button>
+				) : (
+					<TextButton loading render={link}>
+						링크로 가는 중…
+					</TextButton>
+				),
+			);
+			const busy = page.getByText("링크로 가는 중…");
+			await expect.element(busy).toBeVisible();
+			// What the browser sends for the middle button: left alone, a link opens its address in a new tab.
+			const press = new MouseEvent("auxclick", { button: 1, bubbles: true, cancelable: true });
+			const allowed = (busy.element().closest("a") as HTMLElement).dispatchEvent(press);
+			expect(allowed).toBe(false);
+			expect(ran).toBe(0);
+		});
+
 		it(`${part}: the submit button of a form, it does not let Enter in a field send the form while it works`, async () => {
 			let sent = 0;
 			render(

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { dragPath, dropDrag, middleOf, scrollsSideways } from "../../../../../testing/input";
 import { scene } from "../../../test/scene";
+import { schema } from "../story-schema";
 import * as collections from "./collections.stories";
 
 const { NewItemCollection } = composeStories(collections);
@@ -192,6 +193,29 @@ describe("a collection's preview address", () => {
 		await userEvent.click(page.getByRole("menu").getByRole("menuitem", { name: /미리보기 주소/ }));
 		await expect.element(field()).toHaveValue("preview");
 		await expect.element(field()).toHaveFocus();
+	});
+
+	it("16-9 a preview address two collections share: the review opens the one whose address the draft changed, not the later one the schema names (T151)", async () => {
+		// The memos have a preview page saved; the posts, listed before them, are given the same address in this draft.
+		const saved = structuredClone(schema);
+		(saved.collections.memo as { previewPath?: string }).previewPath = "/preview/:slug";
+		await scene({ loaders: collections.site({ schema: saved }) }, collections.default).run();
+		await userEvent.click(page.getByRole("button", { name: "설정" }));
+		await userEvent.click(page.getByRole("link", { name: /컬렉션/ }));
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveValue("게시글");
+		await userEvent.click(field());
+		await userEvent.keyboard("preview");
+		await expect.element(page.getByRole("alert").filter({ hasText: "이미 쓰는 주소입니다" })).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: /^필드/ }));
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		const review = page.getByRole("dialog");
+		await userEvent.click(review.getByRole("button", { name: "열기" }));
+		await expect.element(review).not.toBeInTheDocument();
+		// The posts' basics, where the change and its undo are; the memos' address is as saved and nobody touched it.
+		await expect.element(page.getByRole("textbox", { name: "표시 이름" })).toHaveValue("게시글");
+		await expect.element(field()).toHaveFocus();
+		await expect.element(page.getByRole("button", { name: "되돌리기", exact: true })).toBeVisible();
 	});
 
 	it("16-9 an item collection has no preview address, and the live site reads a document's as words with its lock", async () => {

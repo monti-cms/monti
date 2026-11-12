@@ -361,6 +361,49 @@ describe("settings: a save that is refused", () => {
 		expect(title()).toBeLessThan(under);
 	});
 
+	it("12-4 a refused save's banner goes with the changes it was about: once they are undone there is no 다시 저장 left; one that asks to read again stays", async () => {
+		const server = { refuse: true };
+		const shown = withSite({
+			...stories.SiteChanged,
+			render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
+				<MontiAdmin
+					transport={(name, input, options) =>
+						name === "settings.save" && server.refuse
+							? Promise.resolve({ status: 500, body: { error: "unexpected" } })
+							: loaded.site.transport(name, input, options)
+					}
+					siteName="example.dev"
+				/>
+			),
+		});
+		await shown.run();
+		const banner = (words: string) => page.getByRole("status").filter({ hasText: words });
+		await userEvent.click(saveGroup());
+		await expect.element(banner("저장하지 못했습니다")).toBeVisible();
+		// Every change undone: nothing is left for "save again" to save, so the banner and its button go.
+		await userEvent.click(page.getByRole("button", { name: "모두 되돌리기" }));
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await expect.element(banner("저장하지 못했습니다")).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "다시 저장" })).not.toBeInTheDocument();
+
+		// The same with the one change undone on its own row.
+		await userEvent.fill(nameField(), "example.blog");
+		await userEvent.click(saveGroup());
+		await expect.element(banner("저장하지 못했습니다")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
+		await expect.element(banner("저장하지 못했습니다")).not.toBeInTheDocument();
+
+		// A banner that asks to read again is about what is saved elsewhere, not about my changes: it stays when they are undone.
+		server.refuse = false;
+		await userEvent.fill(nameField(), "example.blog");
+		await shown.loaded().site.monti.run("settings.save", { site: { writing: "다른 탭에서 고친 규칙" } }, admin);
+		await userEvent.click(saveGroup());
+		await expect.element(banner("다른 곳에서 바뀌었습니다")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "모두 되돌리기" }));
+		await expect.element(saveGroup()).not.toBeInTheDocument();
+		await expect.element(banner("다른 곳에서 바뀌었습니다")).toBeVisible();
+	});
+
 	it("12-2 a save over values changed elsewhere is refused at the top of the screen with 다시 불러오기: reading again keeps my change, and the next save goes", async () => {
 		const shown = withSite(stories.SiteChanged);
 		await shown.run();

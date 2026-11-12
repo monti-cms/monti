@@ -18,6 +18,10 @@ export type AuthState = {
 
 type Session = { state: AuthState | null; reload: () => Promise<void> };
 
+/** How long handing the dev ticket in is waited for: the bound the ticket's own fetch has (`devTicket`). */
+const DEV_SIGN_IN_WAIT_MS = 3000;
+const unanswered = (ms: number) => new Promise<null>((resolve) => setTimeout(() => resolve(null), ms));
+
 const SessionContext = createContext<Session | null>(null);
 
 /**
@@ -46,7 +50,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 		void (async () => {
 			try {
 				const ticket = await devTicket(proof);
-				if (ticket && (await letIn({ ticket })).ok) await reload();
+				// Handing it in is waited for as long as getting it was: a call that never answers must not keep the admin blank.
+				const answered = ticket ? await Promise.race([letIn({ ticket }), unanswered(DEV_SIGN_IN_WAIT_MS)]) : null;
+				if (answered?.ok) await reload();
 			} catch {
 				// The call did not come back (the connection dropped on the way): not let in. The sign-in screen is the way in.
 			} finally {

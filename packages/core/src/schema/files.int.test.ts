@@ -21,9 +21,12 @@ const schema = defineSchema({
 const other = defineSchema({ ...schema, locales: { ...schema.locales, prefix: "always" } });
 
 const checkout = () => mkdtemp(path.join(tmpdir(), "monti-change-files-"));
-/** What is in the changes folder. An owner mark (`.owner.<pid>.<token>.<host>`) reads as "(mark)": its name differs from run to run. */
+/** What is in the changes folder. An owner mark (`.owner.<pid>.<token>.<host>`) reads as "(mark)": its name differs from run to run. Sorted. */
 const changesOf = async (root: string) =>
-	(await readdir(path.join(root, "monti", "changes"))).map((name) => (name.startsWith(".owner.") ? "(mark)" : name));
+	(await readdir(path.join(root, "monti", "changes")))
+		.map((name) => (name.startsWith(".owner.") ? "(mark)" : name))
+		// In one order whatever the file system gives.
+		.sort();
 
 describe("schema change files", () => {
 	it("never overwrites an existing change file", async () => {
@@ -98,6 +101,30 @@ describe("schema change files", () => {
 		const files = schemaFilesAt(root, "monti.schema.ts", failing({ rename: (to) => to.endsWith("one.json") }));
 		await expect(files.write(db, other, { id: "one", steps: [] }, true)).rejects.toMatchObject({ code: "EIO" });
 		// Neither file changed: the new schema was in place for a moment and is gone again.
+		expect(await readFile(schemaPath, "utf8")).toBe("// as it was\n");
+		expect(await changesOf(root)).toEqual([]);
+		expect(await readdir(root)).toEqual(["monti", "monti.schema.ts"]);
+	});
+
+	it("12-4 a write that fails while the changes folder cannot be listed still clears what it left: its mark is asked for by name, and no part stays to be finished later", async () => {
+		const root = await checkout();
+		const schemaPath = path.join(root, "monti.schema.ts");
+		await writeFile(schemaPath, "// as it was\n");
+		// The schema file cannot be moved into place, and from that moment the folder cannot be listed either.
+		const broken = { listing: false };
+		const refusing = failing({
+			rename: (to) => {
+				if (to === schemaPath) broken.listing = true;
+				return to === schemaPath;
+			},
+		});
+		const files = schemaFilesAt(root, "monti.schema.ts", {
+			...refusing,
+			readdir: (dir) =>
+				broken.listing ? Promise.reject(Object.assign(new Error("EIO"), { code: "EIO" })) : readdir(dir),
+		});
+		await expect(files.write(db, other, { id: "one", steps: [] }, true)).rejects.toMatchObject({ code: "EIO" });
+		// "Not written" is true of everything: the schema file as it was, and neither the change's part nor the schema's left behind.
 		expect(await readFile(schemaPath, "utf8")).toBe("// as it was\n");
 		expect(await changesOf(root)).toEqual([]);
 		expect(await readdir(root)).toEqual(["monti", "monti.schema.ts"]);

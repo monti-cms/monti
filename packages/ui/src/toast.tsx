@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useLayoutEffect, useState, useSyncExternalStore } from "react";
-import { Toaster as Engine, toast as engine } from "sonner";
+import { Toaster as Engine, toast as engine, useSonner } from "sonner";
 import { dockShown, watchDock } from "./bottom-dock";
 import { cn } from "./cn";
 import { HIT_AREA } from "./hit-area";
@@ -117,6 +117,7 @@ const OVER_DOCK = 12;
  */
 export function Toaster({ duration }: { duration?: number }) {
 	const docked = useSyncExternalStore(watchDock, dockShown, () => null);
+	const { toasts } = useSonner();
 	const [bottom, setBottom] = useState(EDGE);
 	useLayoutEffect(() => {
 		if (!docked) {
@@ -132,14 +133,17 @@ export function Toaster({ duration }: { duration?: number }) {
 			);
 		};
 		measure();
+		// It moves without changing size when its column does (a bar comes in under the column): the column is watched too.
 		const watch = new ResizeObserver(measure);
 		watch.observe(docked);
+		if (docked.parentElement) watch.observe(docked.parentElement);
 		window.addEventListener("resize", measure);
 		return () => {
 			watch.disconnect();
 			window.removeEventListener("resize", measure);
 		};
-	}, [docked]);
+		// And measured again whenever a toast comes or goes: where it stands is right at the moment it matters, whatever moved it.
+	}, [docked, toasts.length]);
 	return (
 		<Engine
 			id={TOASTER_ID}

@@ -84,15 +84,16 @@ export function BasicsTab({
 	const foldersPlace = at.collectionValue(c, "folders");
 	// What is wrong with an address is told under its field, as a field's problem is told on its row: the review's "open" leads here.
 	const problemOf = (place: AddressPlace) => {
+		// Two collections with one address: the schema names the later one, and it is as wrong here as there.
+		const sharedWith = (other: string | undefined, code: SchemaProblem["code"]) =>
+			other !== undefined &&
+			((code === "pathTaken" && draft.value(at.path(other)) === pathValue) ||
+				(code === "previewPathTaken" && typeof preview === "string" && draft.value(at.preview(other)) === preview));
 		const problem = model.problems.find(
 			(each) =>
 				!each.field &&
 				addressOfProblem(each.code) === place &&
-				// Two collections with one public address: the schema names the later one, and it is as wrong here as there.
-				(each.collection === c ||
-					(each.code === "pathTaken" &&
-						each.collection !== undefined &&
-						draft.value(at.path(each.collection)) === pathValue)),
+				(each.collection === c || sharedWith(each.collection, each.code)),
 		);
 		return problem ? t(`settings.problem.${problem.code}`) : undefined;
 	};

@@ -357,6 +357,13 @@ export function SettingsScreen({
 		return () => clearTimeout(later);
 	}, [hasChanges]);
 
+	// A refused save's banner is about the changes that were not saved. Once they are gone (all undone, the last one undone) there is nothing
+	// for "save again" to save: the banner goes with them. One that asks to read again is about what is saved, and stays.
+	const refusedSave = refused?.action === "save";
+	useEffect(() => {
+		if (!hasChanges && refusedSave) setRefused(null);
+	}, [hasChanges, refusedSave]);
+
 	return (
 		<Inline align="stretch" gap={0} grow minHeight={0}>
 			<Stack gap={0} grow minWidth={0} minHeight={0} container>
@@ -444,16 +451,16 @@ export function SettingsScreen({
 					onTab("languages");
 				}}
 				onOpenAddress={(named, place) => {
-					// Two collections with one public address: the schema names the later one. The one to open is the one whose address this
-					// draft changed; when both or neither were, the first listed.
-					const sharing =
-						place === "path"
-							? model.collections.filter(
-									(each) =>
-										model.shown(at.collection(each)) && draft.value(at.path(each)) === draft.value(at.path(named)),
-								)
-							: [named];
-					const changed = sharing.filter((each) => model.changed.includes(at.path(each)));
+					// Two collections with one public address, or one preview address: the schema names the later one. The one to open is the one
+					// whose address this draft changed; when both or neither were, the first listed.
+					const address = place === "path" ? at.path : at.preview;
+					const shared = draft.value(address(named));
+					const sharing = model.collections.filter(
+						(each) =>
+							each === named ||
+							(typeof shared === "string" && model.shown(at.collection(each)) && draft.value(address(each)) === shared),
+					);
+					const changed = sharing.filter((each) => model.changed.includes(address(each)));
 					const c = (changed.length === 1 ? changed[0] : sharing[0]) ?? named;
 					setPlan(null);
 					onTab("collections");

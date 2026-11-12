@@ -65,27 +65,30 @@ describe("getting in on the dev server", () => {
 		}
 	});
 
-	it("16-5 when handing the ticket in never comes back (the connection drops), the login screen shows: the admin does not stay blank", async () => {
-		type Loaded = { site: { transport: Transport } };
-		const dev = devServer("good", {
-			render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
-				<MontiAdmin
-					transport={(name, input, options) =>
-						name === "auth.devSignIn"
-							? Promise.reject(new TypeError("Failed to fetch"))
-							: loaded.site.transport(name, input, options)
-					}
-					siteName="example.dev"
-				/>
-			),
+	for (const [how, call] of [
+		["is refused by the network", () => Promise.reject(new TypeError("Failed to fetch"))],
+		// Never settles: no answer and no error, for as long as the page lives.
+		["never answers", () => new Promise<never>(() => {})],
+	] as const)
+		it(`16-5 when handing the ticket in ${how}, the login screen shows: the admin does not stay blank`, async () => {
+			type Loaded = { site: { transport: Transport } };
+			const dev = devServer("good", {
+				render: (_args: unknown, { loaded }: { loaded: Loaded }) => (
+					<MontiAdmin
+						transport={(name, input, options) =>
+							name === "auth.devSignIn" ? call() : loaded.site.transport(name, input, options)
+						}
+						siteName="example.dev"
+					/>
+				),
+			});
+			try {
+				await dev.story.run();
+				await expect.element(page.getByLabelText("이메일")).toBeVisible();
+				await expect.element(menu()).not.toBeInTheDocument();
+				expect(dev.asked).toEqual([PROOF]);
+			} finally {
+				dev.restore();
+			}
 		});
-		try {
-			await dev.story.run();
-			await expect.element(page.getByLabelText("이메일")).toBeVisible();
-			await expect.element(menu()).not.toBeInTheDocument();
-			expect(dev.asked).toEqual([PROOF]);
-		} finally {
-			dev.restore();
-		}
-	});
 });
