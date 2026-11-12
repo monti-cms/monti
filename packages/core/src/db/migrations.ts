@@ -509,6 +509,55 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0017_activity_log": {
+		async up(db) {
+			// The activity log's lines (doc 13). A line is one write, or the writes one application of a proposal made: its first listed row is the
+			// line's head, and every row names its head in `line`. Listing walks the heads in their order and never groups the history; a row keeps
+			// the words it is found by (what it touched was called, and on a head the assistant's request).
+			await db.schema
+				.alterTable("monti_activity")
+				.addColumn("place", "jsonb")
+				.addColumn("kind", "text")
+				.addColumn("listed", "boolean", (column) => column.notNull().defaultTo(true))
+				.addColumn("proposal_id", "text")
+				.addColumn("line", "text", (column) => column.notNull().defaultTo(""))
+				.addColumn("words", "text", (column) => column.notNull().defaultTo(""))
+				// Two writes of the same instant keep the order they were made in: the log is newest first, and an undo goes back in that order.
+				.addColumn("seq", "bigint", (column) => column.generatedAlwaysAsIdentity().notNull())
+				.execute();
+			// A page of the log walks the heads in their order; a line's rows, and a proposal's, are found by name.
+			await sql`create index monti_activity_heads on monti_activity (seq desc) where listed and id = line`.execute(db);
+			await db.schema.createIndex("monti_activity_line").on("monti_activity").column("line").execute();
+			await db.schema.createIndex("monti_activity_proposal").on("monti_activity").column("proposal_id").execute();
+			// A snapshot's version before the write: undoing several writes together follows one record through them.
+			// And the version an undo left the record at when it put this snapshot back: the next undo of an older write reads that version as the
+			// one the older write left, so a record's writes can be undone one line after another.
+			await db.schema
+				.alterTable("monti_activity_snapshot")
+				.addColumn("before_version", "integer")
+				.addColumn("restored_version", "integer")
+				.execute();
+			// A delivery is held by one sender at a time (`sending_until`, and by whom when a person's send-again reserved it), and knows when it
+			// was last tried, so one run of "send all again" tries each once.
+			await db.schema
+				.alterTable("monti_delivery")
+				.addColumn("sending_until", "timestamptz")
+				.addColumn("held_by", "text")
+				.addColumn("attempted_at", "timestamptz")
+				.execute();
+			await db.schema.createIndex("monti_delivery_activity").on("monti_delivery").column("activity_id").execute();
+			// The deliveries still to be sent or failed are few; the ones that arrived are the table, and it only grows. The sidebar's count (every
+			// visit), the sweep for what is due and "send all again" read the open ones by this index and never the rest.
+			await sql`create index monti_delivery_open on monti_delivery (next_attempt_at, created_at)
+				where state in ('pending', 'failed')`.execute(db);
+			// An undo reads what earlier undos put back of the records it is about: by record, among the few snapshots that were put back.
+			await sql`create index monti_activity_snapshot_restored on monti_activity_snapshot (record_id)
+				where restored_version is not null`.execute(db);
+			// The 30-day clean-up finds the writes whose undo has run out.
+			await sql`create index monti_activity_undo_until on monti_activity (undo_until)
+				where undo_until is not null`.execute(db);
+		},
+	},
 	"0018_settings": {
 		async up(db) {
 			// The admin values of the settings screen (doc 12): one row for the site's (its name, how it writes), one for the admin's own (language, features).

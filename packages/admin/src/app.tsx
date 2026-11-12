@@ -12,6 +12,7 @@ import {
 import type { Transport, Uploader } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
 import { type Route, useRoute } from "./route";
+import { ActivityScreen } from "./screens/activity/activity-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
 import { KeysScreen } from "./screens/keys/keys-screen";
@@ -53,6 +54,8 @@ function placeOf(route: Route): Place | null {
 			return "media";
 		case "trash":
 			return "trash";
+		case "activity":
+			return "activity";
 		case "place":
 			return route.place;
 		// The entry and template editors are pages of their own, outside the frame: no row of the sidebar is theirs (doc 15).
@@ -73,7 +76,9 @@ const routeOf = (place: Place): Route =>
 				? { screen: "media", params: new URLSearchParams() }
 				: place === "trash"
 					? { screen: "trash", params: new URLSearchParams() }
-					: { screen: "place", place };
+					: place === "activity"
+						? { screen: "activity", params: new URLSearchParams() }
+						: { screen: "place", place };
 
 function Signed() {
 	const { screen, templates } = useAdmin();
@@ -83,6 +88,14 @@ function Signed() {
 	// Every move of the frame asks first when the open screen has unsaved changes (doc 05, flow 11 step 04).
 	const leave = useLeave();
 	const leaveFiles = useLeaveFiles();
+	// The counts follow this admin's own writes. What happens without one (a delivery that fails after its write answered, another tab's work) is
+	// read when the person comes back to the window, and by the activity log while it is open.
+	const recount = counts.reload;
+	useEffect(() => {
+		const again = () => void recount();
+		window.addEventListener("focus", again);
+		return () => window.removeEventListener("focus", again);
+	}, [recount]);
 	const first = Object.keys(counts.data?.collections ?? {})[0];
 	// A first visit with no last screen opens the first collection.
 	useEffect(() => {
@@ -183,6 +196,8 @@ function Signed() {
 				<MediaScreen params={route.params} go={go} />
 			) : route.screen === "trash" ? (
 				<TrashScreen params={route.params} go={go} />
+			) : route.screen === "activity" ? (
+				<ActivityScreen params={route.params} go={go} recount={recount} />
 			) : route.screen === "list" ? (
 				<ListScreen
 					key={route.collection}

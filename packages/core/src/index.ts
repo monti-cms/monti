@@ -1,3 +1,21 @@
+export {
+	ACTIVITY_FACETS,
+	ACTIVITY_FILTERS,
+	type ActivityDelivery,
+	type ActivityDetail,
+	type ActivityFacet,
+	type ActivityFilter,
+	type ActivityLine,
+	type ActivityList,
+	type ActivityQuery,
+	type ActivityRecord,
+	activityPageMark,
+	DELIVERY_STATES,
+	type DeliveryState,
+	type LineDelivery,
+	type LineUndo,
+} from "./activity/list";
+export type { DeliveriesRetried, DeliveryCounts, UndoPlanned } from "./activity/operations";
 export type { DevProof } from "./auth/dev-bypass";
 export type { AuthSettings } from "./auth/operations";
 export type { Session } from "./auth/session";
@@ -29,7 +47,14 @@ export { fingerprint } from "./bytes";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
 export { migrateToLatest } from "./db/migrations";
 export type { Database, ItemExchange, ProposalItemState, RunStatus } from "./db/schema";
-export { RETRY_MINUTES, type Receiver } from "./engine/deliveries";
+export {
+	RETRY_MINUTES,
+	type Receiver,
+	ReceiverAnswer,
+	SEND_TIMEOUT_MS,
+	SITE_CACHE_LABEL,
+	webhook,
+} from "./engine/deliveries";
 export { type RunOptions, UNDO_DAYS, type WriteResult } from "./engine/execute";
 export type {
 	ApplyProgress,
@@ -123,9 +148,13 @@ export {
 	type Plugin,
 } from "./monti";
 export {
+	ACTIVITY_KINDS,
+	type ActivityKind,
 	type Actor,
 	type AnyOperation,
 	defineOperation,
+	type EmittedEvent,
+	type LoggedRecord,
 	type Message,
 	type MontiEvent,
 	type Operation,
@@ -136,6 +165,7 @@ export {
 	type RecordRef,
 	recordKey,
 } from "./operation";
+export type { DateRange } from "./query";
 export { defineRecordKind, type RecordKind, type RecordState } from "./records";
 export {
 	type MergeResult,

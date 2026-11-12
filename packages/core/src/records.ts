@@ -1,6 +1,7 @@
 import { type Kysely, sql, type Transaction } from "kysely";
 import type { Database } from "./db/schema";
-import { type RecordRef, recordKey } from "./operation";
+import { type RecordLabel, type RecordRef, recordKey } from "./operation";
+import type { Site } from "./site";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -21,6 +22,10 @@ export type RecordKind = {
 	 * reversed by a new change, doc 00): its records are never in what an undo puts back.
 	 */
 	restore?(db: Db, id: string, data: unknown | null): Promise<void>;
+	/** Whether a record in this state (`data` as `load` returned it) is in the trash. A kind that never goes there leaves it out. */
+	inTrash?(data: unknown): boolean;
+	/** What the activity log calls a record in this state (`data` as `load` returned it): its title, and for an entry where it is on this site. */
+	label?(data: unknown, site: Site): RecordLabel;
 };
 
 export function defineRecordKind(kind: RecordKind): RecordKind {

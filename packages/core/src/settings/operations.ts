@@ -306,10 +306,12 @@ export const settingsOperations = [
 				},
 			};
 		},
+		log: "settings",
 		summary: (_input, output) =>
 			output.structure?.written && !output.structure.applied
 				? { key: "schema.applyFailed", values: { change: output.structure.changeId } }
 				: { key: "settings.saved" },
+		where: () => ({ key: "activity.where.settings" }),
 	}),
 	defineOperation({
 		name: "admin.setPreference",
@@ -326,6 +328,8 @@ export const settingsOperations = [
 			await writeSettings(ctx.db, "admin", next);
 			return AdminPreferences.parse(next);
 		},
+		// The admin's own screen, no change to the site: written, and not listed in the log (doc 13).
+		log: false,
 		summary: () => ({ key: "admin.setPreference" }),
 	}),
 ];

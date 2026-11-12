@@ -42,7 +42,7 @@ import {
 	TrashRowDate,
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, TrashCan, Undo } from "@monti-cms/ui/icons";
-import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -53,8 +53,10 @@ import { useLanguageName } from "../list/column-menu";
 import { FilterRows } from "../list/filter-rows";
 import { searchScopes } from "../list/folders";
 import { ListPages } from "../list/list-pages";
+import { NoMatchRow } from "../list/no-match-row";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
+import { useSearchWords } from "../list/use-search-words";
 import { TrashedFilePanel } from "../media/media-panel";
 import type { SchemaRead } from "../settings/schema-draft";
 import { readTrashState, TRASH_PAGE_SIZE, type TrashState, trashQueryOf, writeTrashState } from "./trash-query";
@@ -97,22 +99,12 @@ export function TrashScreen({
 		if (gone) go({ screen: "trash", params: new URLSearchParams() }, { replace: true });
 	}, [gone, go]);
 
-	// The search box keeps its words while they are typed; the address follows a moment later, in place.
-	const [words, setWords] = useState(state.search);
-	const typing = useRef<ReturnType<typeof setTimeout> | null>(null);
-	useEffect(() => setWords(state.search), [state.search]);
-	const search = (text: string) => {
-		setWords(text);
-		if (typing.current) clearTimeout(typing.current);
-		typing.current = setTimeout(
-			() =>
-				setState(
-					{ ...state, search: text, everywhere: text.trim() === "" ? false : state.everywhere, page: 1 },
-					{ replace: true },
-				),
-			250,
-		);
-	};
+	const box = useSearchWords(state.search, (text) =>
+		setState(
+			{ ...state, search: text, everywhere: text.trim() === "" ? false : state.everywhere, page: 1 },
+			{ replace: true },
+		),
+	);
 
 	// Picked rows belong to the page they were picked on.
 	const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
@@ -324,15 +316,12 @@ export function TrashScreen({
 					label={t("list.search")}
 					aria-label={t("list.search")}
 					placeholder={t("list.search")}
-					value={words}
-					onValueChange={search}
+					value={box.words}
+					onValueChange={box.type}
 					// Inside a folder the chip in the box says where it looks, as the lists' does.
 					scopes={place ? searchScopes(place.name, t) : undefined}
 					scope={state.everywhere ? "all" : "here"}
-					onScopeChange={(scope) => {
-						if (typing.current) clearTimeout(typing.current);
-						setState({ ...state, search: words, everywhere: scope === "all", page: 1 });
-					}}
+					onScopeChange={(scope) => setState({ ...state, search: box.settle(), everywhere: scope === "all", page: 1 })}
 					targetLabel={t("list.searchIn")}
 				/>
 			)}
@@ -406,20 +395,11 @@ export function TrashScreen({
 						)}
 						<TableBody>
 							{data && rows.length === 0 && looking && (
-								<TableRow>
-									<TableCell colSpan={colSpan}>
-										<Inline gap={12}>
-											<Text tone="subtle">{t("trash.noMatch")}</Text>
-											<TextButton
-												onClick={() =>
-													setState({ ...state, search: "", everywhere: false, kinds: [], locales: [], page: 1 })
-												}
-											>
-												{t("list.clearFilters")}
-											</TextButton>
-										</Inline>
-									</TableCell>
-								</TableRow>
+								<NoMatchRow
+									colSpan={colSpan}
+									words={t("trash.noMatch")}
+									onClear={() => setState({ ...state, search: "", everywhere: false, kinds: [], locales: [], page: 1 })}
+								/>
 							)}
 							{/* The way up is the lists' first row too, beside the trail (2026-11-11, the owner). Not while it searches: those rows are from anywhere. */}
 							{place && !looking && (

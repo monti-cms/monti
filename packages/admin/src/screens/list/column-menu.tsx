@@ -1,22 +1,16 @@
 import type { EntryState, Facet, ListColumn, ListFilter } from "@monti-cms/core";
 import {
-	Calendar,
 	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
 	DropdownMenuScroll,
 	DropdownMenuSearch,
 	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	MenuTick,
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
+import { DateRows } from "./date-rows";
 import { toggled, ValueRow } from "./filter-rows";
 import { filterColumn, type ListState, TRANSLATION_STATES } from "./list-query";
 import { SortRows } from "./sort-rows";
@@ -217,39 +211,12 @@ function TitleMenu({ state, setSort }: MenuProps) {
 	);
 }
 
-const iso = (date: Date) =>
-	`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-const fromIso = (value: string) => {
-	const [year, month, day] = value.split("-").map(Number);
-	return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
-};
-
 /**
- * A date column: sort newest or oldest first | all dates, today, 7 days, 30 days, one day, or a range (flow 7, steps 05–05c; 2026-11-06 owner,
- * after other products: a day and a range are separate rows, and "all dates" is the way out). One day is picked with one press on its calendar;
- * a range's first press starts it and the next one ends it and applies it. Both calendars stay open showing what is on.
+ * A date column: sort newest or oldest first | the days to filter by (`DateRows`) | hide (flow 7, steps 05–05c).
  */
 function DateMenu({ column, state, setFilter, setSort, onHide }: MenuProps) {
-	const { t, language } = useAdmin();
 	const field = column.id as "updatedAt" | "publishedAt" | "createdAt";
 	const current = filterOf(state, column.id);
-	const range = current?.on === "date" ? current.range : null;
-	const fixed = typeof range === "string" ? range : null;
-	const day = range !== null && typeof range !== "string" && range.from === range.to ? range.from : null;
-	const span = range !== null && typeof range !== "string" && range.from !== range.to ? range : null;
-	const [start, setStart] = useState<Date | null>(null);
-	const picked =
-		start !== null
-			? { from: start, to: undefined }
-			: span
-				? { from: fromIso(span.from), to: fromIso(span.to) }
-				: undefined;
-	const apply = (next: typeof range) => {
-		setStart(null);
-		setFilter(column.id, next === null ? null : { on: "date", field, range: next });
-	};
-	// Each row says which way of filtering is on; "all dates" is on when none is.
-	const on = fixed ?? (day ? "day" : span ? "range" : "all");
 	return (
 		<>
 			<SortRows
@@ -258,61 +225,10 @@ function DateMenu({ column, state, setFilter, setSort, onHide }: MenuProps) {
 				onChange={(dir) => setSort({ by: field, dir })}
 			/>
 			<DropdownMenuSeparator />
-			<DropdownMenuRadioGroup
-				value={on === "day" || on === "range" ? "" : on}
-				onValueChange={(value) => apply(value === "all" ? null : (value as "today" | "7d" | "30d"))}
-			>
-				<DropdownMenuRadioItem value="all" closeOnClick={false}>
-					{t("list.allDates")}
-				</DropdownMenuRadioItem>
-				<DropdownMenuRadioItem value="today" closeOnClick={false}>
-					{t("list.today")}
-				</DropdownMenuRadioItem>
-				<DropdownMenuRadioItem value="7d" closeOnClick={false}>
-					{t("list.last7")}
-				</DropdownMenuRadioItem>
-				<DropdownMenuRadioItem value="30d" closeOnClick={false}>
-					{t("list.last30")}
-				</DropdownMenuRadioItem>
-			</DropdownMenuRadioGroup>
-			<DropdownMenuSub>
-				<DropdownMenuSubTrigger chevron={false}>
-					{t("list.pickDay")}
-					{day && <MenuTick />}
-				</DropdownMenuSubTrigger>
-				<DropdownMenuSubContent bare>
-					<Calendar
-						mode="single"
-						language={language}
-						selected={day ? fromIso(day) : undefined}
-						defaultMonth={day ? fromIso(day) : undefined}
-						onSelect={(next) => {
-							if (next) apply({ from: iso(next), to: iso(next) });
-						}}
-					/>
-				</DropdownMenuSubContent>
-			</DropdownMenuSub>
-			<DropdownMenuSub>
-				<DropdownMenuSubTrigger chevron={false}>
-					{t("list.pickRange")}
-					{span && <MenuTick />}
-				</DropdownMenuSubTrigger>
-				<DropdownMenuSubContent bare>
-					<Calendar
-						mode="range"
-						language={language}
-						// The calendar follows `selected` only when it has `onSelect`; the days pressed are handled in `onDayClick`.
-						selected={picked}
-						onSelect={() => {}}
-						defaultMonth={picked?.from}
-						onDayClick={(pressed) => {
-							if (start === null) return setStart(pressed);
-							const [from, to] = pressed < start ? [pressed, start] : [start, pressed];
-							apply({ from: iso(from), to: iso(to) });
-						}}
-					/>
-				</DropdownMenuSubContent>
-			</DropdownMenuSub>
+			<DateRows
+				range={current?.on === "date" ? current.range : null}
+				onChange={(range) => setFilter(column.id, range === null ? null : { on: "date", field, range })}
+			/>
 			<HideRow onHide={onHide} />
 		</>
 	);

@@ -46,11 +46,52 @@ export function useModalFocus() {
  * key and no focus reach it. A key still held when it is told to close does nothing more either ({@link letHeldKeyGo}): its repeats would
  * press whatever the focus goes back to.
  */
-function ModalSurface({ closing, ...props }: React.ComponentProps<"div"> & { closing: boolean }) {
+function ModalSurface({ closing, onKeyDown, ...props }: React.ComponentProps<"div"> & { closing: boolean }) {
 	React.useLayoutEffect(() => {
 		if (closing) letHeldKeyGo();
 	}, [closing]);
-	return <div {...props} inert={closing} />;
+	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: the popup's role comes with its props (dialog, alertdialog).
+		<div
+			{...props}
+			inert={closing}
+			onKeyDown={(event) => {
+				onKeyDown?.(event);
+				keepTabInside(event);
+			}}
+		/>
+	);
+}
+
+/** What the Tab key can stop on, by what it is; whether it does is asked of each (`stopsTab`). */
+const TAB_STOPS = 'a[href], button, input, select, textarea, [contenteditable="true"], [tabindex]';
+const stopsTab = (element: HTMLElement) => {
+	const order = element.getAttribute("tabindex");
+	if (order !== null && Number(order) < 0) return false;
+	if (element.matches(':disabled, input[type="hidden"]') || element.closest("[inert]")) return false;
+	return element.getClientRects().length > 0 && getComputedStyle(element).visibility === "visible";
+};
+
+/**
+ * Tab at a modal's last stop goes to its first, and Shift+Tab at its first (or on the modal itself, where focus lands when it opens) to its
+ * last, in the same press. The primitive does this a frame later, from a stop of its own beside the box: a second Tab inside that frame
+ * (a held or a quick key) went on from there into the page behind, whose controls are hidden from a screen reader but not from the keyboard,
+ * and Enter pressed them under the question. Focus in something the modal opened elsewhere in the page (a menu of its own) is left alone.
+ */
+function keepTabInside(event: React.KeyboardEvent<HTMLDivElement>) {
+	if (event.key !== "Tab" || event.defaultPrevented) return;
+	const box = event.currentTarget;
+	const on = document.activeElement;
+	if (on !== box && !box.contains(on)) return;
+	const stops = [...box.querySelectorAll<HTMLElement>(TAB_STOPS)].filter(stopsTab);
+	const first = stops[0];
+	const last = stops.at(-1);
+	// Nothing to stop on: the focus stays on the modal.
+	if (!first || !last) return void event.preventDefault();
+	if (event.shiftKey ? on === first || on === box : on === last) {
+		event.preventDefault();
+		(event.shiftKey ? last : first).focus();
+	}
 }
 
 /** The `render` of every modal's and sheet's popup: {@link ModalSurface}, closing when the popup is no longer open. */

@@ -663,7 +663,7 @@ describe("what a structure change tells the site", () => {
 			db,
 			schema,
 			files: files(),
-			receivers: [{ destination: "test", send: async (event) => void sent.push(event) }],
+			receivers: [{ destination: "test", send: async ({ id: _id, at: _at, ...event }) => void sent.push(event) }],
 		});
 		return { monti, sent, of: (type: string) => sent.filter((event) => event.type === type) };
 	};
@@ -899,7 +899,7 @@ describe("a taken proposal when nothing of it is written", () => {
 			db,
 			schema: base,
 			files: files(),
-			receivers: [{ destination: "test", send: async (event) => void sent.push(event) }],
+			receivers: [{ destination: "test", send: async ({ id: _id, at: _at, ...event }) => void sent.push(event) }],
 		});
 		await save(monti, { site: { name: "example.dev" }, adminValues: { post: { label: "글" } } });
 		const before = await read(monti);
@@ -992,7 +992,7 @@ describe("an event's list of moved addresses", () => {
 			db,
 			schema: base,
 			files: files(),
-			receivers: [{ destination: "test", send: async (event) => void sent.push(event) }],
+			receivers: [{ destination: "test", send: async ({ id: _id, at: _at, ...event }) => void sent.push(event) }],
 		});
 		// Each published entry that moves gives two addresses (old and new): one more entry than half the limit goes past it.
 		const count = MOVED_PATHS_LIMIT / 2 + 1;

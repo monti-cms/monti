@@ -1,13 +1,16 @@
-import type { Kysely, Transaction } from "kysely";
+import { type Kysely, sql, type Transaction } from "kysely";
 import type { Session } from "../auth/session";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { ConflictError, ForbiddenError, InputError } from "../errors";
 import { rewriteUses } from "../media/uses";
 import {
+	type ActivityKind,
 	type Actor,
 	type AnyOperation,
-	type MontiEvent,
+	type EmittedEvent,
+	type LoggedRecord,
+	type Message,
 	type OperationContext,
 	type RecordRef,
 	recordKey,
@@ -15,7 +18,7 @@ import {
 import { lockRecords, type RecordKind, type RecordState } from "../records";
 import { markUnapplied } from "../schema/apply";
 import type { Site } from "../site";
-import { queueDeliveries, type Receiver } from "./deliveries";
+import { type QueuedEvent, queueDeliveries, type Receiver } from "./deliveries";
 import { acceptedItems, claimItem, type ItemClaim, lockProposals, markApplied, settleApplied } from "./proposals";
 
 /** How long a write can be undone. The trash keeps entries as long, and both are cleared together (doc 11). */
@@ -39,6 +42,13 @@ export type RunOptions = {
 	 * and the apply still holds the proposal) and, when the write is done, recorded as applied with what it gave: both or neither.
 	 */
 	applies?: ItemClaim;
+	/** The proposal the item is of: its line of the activity log quotes the proposal's request (doc 13). */
+	proposalId?: string;
+	/**
+	 * One application of a proposal, shared by its writes: they are one line of the activity log. The first listed write becomes the line's head and
+	 * puts its id here once it has committed; the writes after it join that line.
+	 */
+	batch?: { line?: string };
 	/** The admin API's session, for the operations that read or end it. */
 	session?: Session | null;
 	/** Proposal items the person took in the screen and saves with this write (doc 05): they become applied, tied to its activity row. */
@@ -67,13 +77,17 @@ export function context(
 	actor: Actor,
 	session: Session | null = null,
 ) {
-	const events: MontiEvent[] = [];
+	const events: QueuedEvent[] = [];
 	const created: RecordRef[] = [];
 	const flags: { structure: boolean; change: string | null } = { structure: false, change: null };
 	const ctx: OperationContext = {
 		db,
 		actor,
-		emit: (event) => events.push(event),
+		emit: (event, options) =>
+			events.push({
+				event: { ...event, id: randomUUID(), at: engine.now().toISOString() },
+				activity: options?.activity,
+			}),
 		created: (ref) => created.push(ref),
 		changedStructure: (changeId) => {
 			flags.structure = true;
@@ -164,7 +178,7 @@ export async function runWrite<Output>(
 	}
 	// The change file a structure write left on disk: files are not rolled back with the database.
 	const onDisk: { change: string | null } = { change: null };
-	return engine.db
+	const result = await engine.db
 		.transaction()
 		.execute((trx) => inTransaction(trx))
 		.catch(async (error) => {
@@ -173,8 +187,12 @@ export async function runWrite<Output>(
 			if (onDisk.change) await markUnapplied(engine.db, onDisk.change);
 			throw error;
 		});
+	// Only now that it has committed: a first write that fails begins no line.
+	const { line: began, ...answer } = result;
+	if (began !== null && options.batch && options.batch.line === undefined) options.batch.line = began;
+	return answer;
 
-	async function inTransaction(trx: Transaction<Database>): Promise<WriteResult<Output>> {
+	async function inTransaction(trx: Transaction<Database>): Promise<WriteResult<Output> & { line: string | null }> {
 		const { ctx, events, created, flags } = context(engine, trx, options.actor, options.session ?? null);
 		// A save that accepts proposal items decides about their proposals: those rows first, as a revert and a discard take them, then the
 		// records. Before `touches` too: some operations already hold a record there (a move holds its folder), and a write that held a
@@ -219,7 +237,7 @@ export async function runWrite<Output>(
 				from: Object.fromEntries(touched.map((ref) => [recordKey(ref), before.get(recordKey(ref))?.version ?? null])),
 			});
 		// The assistant's own books are not the site's history: no row, no snapshot, nothing sent.
-		if (activityId === null) return { output, activityId, versions: versions(), deliveryIds: [] };
+		if (activityId === null) return { output, activityId, versions: versions(), deliveryIds: [], line: null };
 		// The records whose version the write moved: a taken proposal aimed at one of them is applied, and a record the write only held joins
 		// its log and its undo when it is among them.
 		const written = new Set(
@@ -233,17 +251,37 @@ export async function runWrite<Output>(
 		const restorable = records.filter((ref) => engine.recordKinds.get(ref.kind)?.restore !== undefined);
 		const undoable = !operation.humanOnly && !operation.structure && !flags.structure && restorable.length > 0;
 		const now = engine.now();
+		// What each record was called, as the write left it (as it was, for one the write removed): the log names it even after it is gone.
+		const logged: LoggedRecord[] = records.map((ref) => {
+			const state = after.get(recordKey(ref)) ?? before.get(recordKey(ref)) ?? null;
+			return {
+				...ref,
+				version: after.get(recordKey(ref))?.version ?? null,
+				...(state ? engine.recordKinds.get(ref.kind)?.label?.(state.data, engine.site) : {}),
+			};
+		});
+		const log = typeof operation.log === "function" ? operation.log(input, logged) : operation.log;
+		const where = operation.where?.(input, output, logged) ?? null;
+		const listed = log !== false;
+		// A listed write of a proposal's application joins the line its first listed write began; any other write is a line of its own.
+		const line = listed ? (options.batch?.line ?? activityId) : activityId;
 		await trx
 			.insertInto("monti_activity")
 			.values({
 				id: activityId,
+				line,
+				words: wordsOf(logged),
 				at: now,
 				actor: JSON.stringify(options.actor),
 				operation: operation.name,
-				summary: JSON.stringify(operation.summary?.(input, output) ?? { key: operation.name }),
-				targets: JSON.stringify(records),
+				summary: JSON.stringify(operation.summary?.(input, output, logged) ?? { key: operation.name }),
+				place: where ? JSON.stringify(where) : null,
+				targets: JSON.stringify(logged),
+				kind: log === false ? null : (log ?? null),
+				listed,
 				conversation_id: options.conversationId ?? null,
 				proposal_item_id: options.applies?.itemId ?? null,
+				proposal_id: options.proposalId ?? null,
 				undo_until: undoable ? new Date(now.getTime() + UNDO_DAYS * 86_400_000) : null,
 				undone_at: null,
 			})
@@ -259,25 +297,98 @@ export async function runWrite<Output>(
 							kind: ref.kind,
 							record_id: ref.id,
 							before: old ? JSON.stringify(old.data) : null,
+							before_version: old?.version ?? null,
+							restored_version: null,
 							after_version: after.get(recordKey(ref))?.version ?? null,
 						};
 					}),
 				)
 				.execute();
-		// Taken proposals join this write: the row gets their conversation, so the log shows ✦ (doc 05). Only those the write wrote something of:
-		// an item all of whose records are as they were (its change of the schema, when the file could not be written) stays pending.
-		const conversation = await markApplied(
+		// Taken proposals join this write: the row gets their conversation and their proposal, so the log shows ✦ (doc 05). Only those the
+		// write wrote something of: an item all of whose records are as they were (its change of the schema, when the file could not be
+		// written) stays pending.
+		const applied = await markApplied(
 			trx,
 			taken.filter((item) => item.records.some((key) => written.has(key))),
 			activityId,
 		);
-		if (conversation && !options.conversationId)
+		if (applied && !options.conversationId)
 			await trx
 				.updateTable("monti_activity")
-				.set({ conversation_id: conversation })
+				.set({ conversation_id: applied.conversationId, proposal_id: applied.proposalId })
 				.where("id", "=", activityId)
 				.execute();
-		const deliveryIds = await queueDeliveries(trx, engine.receivers, activityId, events);
-		return { output, activityId, versions: versions(), deliveryIds };
+		// A line is found by the words of its request too: its head keeps them. Only its own row is written: a write never touches another write's
+		// row, so an undo that holds a line's rows and a write of the same line never wait for each other.
+		const proposalId = options.proposalId ?? applied?.proposalId;
+		if (line === activityId && proposalId)
+			await trx
+				.updateTable("monti_activity")
+				.set({
+					// The request first: a long list of titles does not push it out of the words kept.
+					words: sql`left(coalesce((select request from monti_proposal where id = ${proposalId}), '') || ' ' || words, ${WORDS_LENGTH})`,
+				})
+				.where("id", "=", activityId)
+				.execute();
+		const deliveryIds = await queueDeliveries(trx, engine.receivers, activityId, events, now);
+		return { output, activityId, versions: versions(), deliveryIds, line: listed ? activityId : null };
 	}
+}
+
+/** The most a row keeps of the words it is found by: a bulk write touches hundreds of records, and the first titles find it as well as all. */
+export const WORDS_LENGTH = 2000;
+
+/** The words a line is found by: what each record the write touched was called, up to `WORDS_LENGTH`. */
+const wordsOf = (records: LoggedRecord[]) =>
+	records
+		.flatMap((record) => record.title ?? [])
+		.join(" ")
+		.slice(0, WORDS_LENGTH);
+
+/**
+ * Logs something Monti did by itself, with the events it tells the receivers: the 30-day clean-up of the trash is no operation, and still the log
+ * has its line and a search index hears of what is gone (doc 13). It runs in the caller's transaction and returns the deliveries to send after the
+ * commit.
+ */
+export async function logOwnWork(
+	engine: Engine,
+	trx: Transaction<Database>,
+	work: {
+		actor: Actor;
+		operation: string;
+		summary: Message;
+		where: Message | null;
+		kind: ActivityKind;
+		events: EmittedEvent[];
+	},
+): Promise<string[]> {
+	const id = randomUUID();
+	const now = engine.now();
+	await trx
+		.insertInto("monti_activity")
+		.values({
+			id,
+			line: id,
+			at: now,
+			actor: JSON.stringify(work.actor),
+			operation: work.operation,
+			summary: JSON.stringify(work.summary),
+			place: work.where ? JSON.stringify(work.where) : null,
+			targets: JSON.stringify([]),
+			kind: work.kind,
+			listed: true,
+			conversation_id: null,
+			proposal_item_id: null,
+			proposal_id: null,
+			undo_until: null,
+			undone_at: null,
+		})
+		.execute();
+	return queueDeliveries(
+		trx,
+		engine.receivers,
+		id,
+		work.events.map((event) => ({ event: { ...event, id: randomUUID(), at: now.toISOString() } })),
+		now,
+	);
 }

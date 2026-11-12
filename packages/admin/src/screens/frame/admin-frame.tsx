@@ -25,7 +25,7 @@ import {
 	Stack,
 	Text,
 } from "@monti-cms/ui";
-import { Document, Image, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
+import { Document, Image, RecentlyViewed, SettingsAdjust, Spark, Tag, Tools, TrashCan } from "@monti-cms/ui/icons";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { FolderFilesProvider, useGiveFolderFiles } from "../../media/folder-files";
 import { useFolderDrop } from "../../media/use-file-drop";
@@ -39,7 +39,7 @@ import { SessionEndedBanner } from "./session-ended";
 import { useScreenMode, useSidebarRail } from "./use-screen-mode";
 
 /** A sidebar place: a collection by name, or one of the fixed rows. */
-export type Place = { collection: string } | "media" | "trash" | "tools" | "settings";
+export type Place = { collection: string } | "media" | "trash" | "activity" | "tools" | "settings";
 
 type SchemaRead = {
 	schema: { collections: Record<string, { kind: "document" | "item" }> };
@@ -69,6 +69,7 @@ function Row({
 	name,
 	count,
 	tone,
+	railDot,
 	onOpen,
 	children,
 }: {
@@ -79,6 +80,8 @@ function Row({
 	/** Only a number above zero shows: a new site has no counts (doc 15). */
 	count?: number;
 	tone?: "warning";
+	/** Folded, a count cannot show: a dot on the icon says there is something to look at, and these words name it. */
+	railDot?: string;
 	onOpen: (place: Place) => void;
 	/** Under the row while it is open: its folders (doc 07). */
 	children?: ReactNode;
@@ -91,6 +94,7 @@ function Row({
 				isActive={active}
 				tooltip={shown ? `${name} ${shown}` : name}
 				aria-current={active ? "page" : undefined}
+				railDot={shown ? railDot : undefined}
 				onClick={() => onOpen(place)}
 			>
 				{icon}
@@ -247,15 +251,18 @@ export function AdminFrame({
 									count={counts?.trash}
 									onOpen={onOpen}
 								/>
+								{/* Failed deliveries are counted on the log that shows them, in the warning tone (doc 13, 2026-11-12). */}
 								<Row
-									place="tools"
+									place="activity"
 									open={open}
-									icon={<Tools />}
-									name={t("frame.tools")}
+									icon={<RecentlyViewed />}
+									name={t("frame.activity")}
 									count={counts?.failedDeliveries}
 									tone="warning"
+									railDot={t("frame.failedDeliveries")}
 									onOpen={onOpen}
 								/>
+								<Row place="tools" open={open} icon={<Tools />} name={t("frame.tools")} onOpen={onOpen} />
 								<Row
 									place="settings"
 									open={open}

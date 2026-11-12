@@ -69,9 +69,11 @@ import {
 import { endsClosed, fieldCell, shortDate, widthsAfter } from "./format";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
+import { NoMatchRow } from "./no-match-row";
 import { RelationSubmenu } from "./relations-menu";
 import { type RowActions as Actions, allArchived, publishable, RowMenuItems, RowsMenuItems } from "./row-menu";
 import { TaxonomyScreen } from "./taxonomy-screen";
+import { useSearchWords } from "./use-search-words";
 
 type Columns = { columns: ListColumn[]; pageSize: number };
 type Page = { rows: ListRow[]; total: number };
@@ -168,28 +170,18 @@ function DocumentListScreen({
 	const setState = (next: ListState, options?: { replace?: boolean }) =>
 		go({ screen: "list", collection, params: writeState(next) }, options);
 
-	// The search box keeps its words while they are typed; the address follows a moment later, in place.
-	const [words, setWords] = useState(state.search.text);
-	const typing = useRef<ReturnType<typeof setTimeout> | null>(null);
-	useEffect(() => setWords(state.search.text), [state.search.text]);
-	const search = (text: string) => {
-		setWords(text);
-		if (typing.current) clearTimeout(typing.current);
-		typing.current = setTimeout(
-			// Emptied, the box starts over on the open folder.
-			() =>
-				setState(
-					{
-						...state,
-						page: 1,
-						search: { ...state.search, text },
-						everywhere: text.trim() === "" ? false : state.everywhere,
-					},
-					{ replace: true },
-				),
-			250,
-		);
-	};
+	// Emptied, the box starts over on the open folder.
+	const box = useSearchWords(state.search.text, (text) =>
+		setState(
+			{
+				...state,
+				page: 1,
+				search: { ...state.search, text },
+				everywhere: text.trim() === "" ? false : state.everywhere,
+			},
+			{ replace: true },
+		),
+	);
 
 	// Picked rows belong to the page they were picked on.
 	const [picked, setPicked] = useState<Picked>(new Map());
@@ -434,8 +426,8 @@ function DocumentListScreen({
 					label={t("list.search")}
 					aria-label={t("list.search")}
 					placeholder={t("list.search")}
-					value={words}
-					onValueChange={search}
+					value={box.words}
+					onValueChange={box.type}
 					targets={[
 						{ value: "all", label: t("list.searchAll") },
 						{ value: "title", label: t("list.searchTitle") },
@@ -445,16 +437,19 @@ function DocumentListScreen({
 					target={state.search.in}
 					onTargetChange={(target) => {
 						// The words still waiting to be applied go with the choice, so the wait cannot undo it.
-						if (typing.current) clearTimeout(typing.current);
-						setState({ ...state, page: 1, search: { text: words, in: target } });
+						setState({ ...state, page: 1, search: { text: box.settle(), in: target } });
 					}}
 					// Inside a folder the same chip says which folders it looks in (2026-11-10, owner: no row of its own).
 					scopes={openFolder ? searchScopes(openFolder.name, t) : undefined}
 					scope={state.everywhere ? "all" : "here"}
-					onScopeChange={(scope) => {
-						if (typing.current) clearTimeout(typing.current);
-						setState({ ...state, page: 1, search: { ...state.search, text: words }, everywhere: scope === "all" });
-					}}
+					onScopeChange={(scope) =>
+						setState({
+							...state,
+							page: 1,
+							search: { ...state.search, text: box.settle() },
+							everywhere: scope === "all",
+						})
+					}
 					targetLabel={t("list.searchIn")}
 				/>
 			)}
@@ -898,20 +893,13 @@ function DocumentListScreen({
 					<TableBody>
 						{folderLines}
 						{rows?.length === 0 && folderLines.every((line) => line === null) && (
-							<TableRow>
-								<TableCell colSpan={colSpan}>
-									<Inline gap={12}>
-										<Text tone="subtle">{t("list.noMatch")}</Text>
-										<TextButton
-											onClick={() =>
-												setState({ ...state, filters: [], ai: [], page: 1, search: { ...state.search, text: "" } })
-											}
-										>
-											{t("list.clearFilters")}
-										</TextButton>
-									</Inline>
-								</TableCell>
-							</TableRow>
+							<NoMatchRow
+								colSpan={colSpan}
+								words={t("list.noMatch")}
+								onClear={() =>
+									setState({ ...state, filters: [], ai: [], page: 1, search: { ...state.search, text: "" } })
+								}
+							/>
 						)}
 						{(rows ?? []).map((row) => {
 							const mine = picked.get(row.id);

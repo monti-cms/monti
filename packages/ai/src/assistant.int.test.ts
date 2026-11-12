@@ -1393,6 +1393,7 @@ describe("nothing changes without a person taking it", () => {
 			"items.saveGroup": { collection: "tag", locales: { ko: { title: "새 태그" } } },
 			"models.setQuick": { keyId: "x", model: "y" },
 			"activity.undo": { id: "x" },
+			"deliveries.retry": { ids: ["x"] },
 			"collections.updateAdminValues": { collection: "post", values: { label: "바뀐 이름" } },
 			"templates.save": { name: "새 템플릿", doc: { type: "doc", blocks: [] } },
 			"templates.duplicate": { id: "x" },

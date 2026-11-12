@@ -54,12 +54,15 @@ function PageColumn({
 		<div
 			data-slot="page-column"
 			data-width={width}
-			className={cn("flex min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 pb-monti-40 md:px-monti-48", className)}
+			className={cn("flex min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 md:px-monti-48", className)}
 			{...props}
 		>
+			{/* The room below the page is this box's own, not the column's: beside a docked panel the column is held to the page's height and what
+			    it holds runs out under it, and room that was the column's then ended above the last row, with the page's last control at the very
+			    edge of the scroll (its focus ring cut). */}
 			<div
 				className={cn(
-					"mx-auto flex w-full flex-1 flex-col",
+					"mx-auto flex w-full flex-1 flex-col pb-monti-40",
 					width === "list"
 						? "max-w-[clamp(var(--monti-width-content),calc(100cqw_-_480px),var(--monti-width-list))]"
 						: "max-w-monti-content",

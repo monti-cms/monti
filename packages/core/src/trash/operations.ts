@@ -1,14 +1,23 @@
 import type { Kysely, Transaction } from "kysely";
 import { z } from "zod";
+import { oneOrMany } from "../activity/words";
 import type { Database, TrashedBy } from "../db/schema";
 import { pathKept, publicPath } from "../entries/paths";
 import { CheckError } from "../errors";
 import { freeName, lockFolderScope, mediaRemoval, subtree } from "../folders/operations";
 import { usedOf } from "../media/uses";
-import { type Actor, defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
+import {
+	type Actor,
+	defineOperation,
+	type LoggedRecord,
+	type OperationContext,
+	type Preview,
+	placeEvents,
+	type RecordRef,
+} from "../operation";
 import { lockRecords } from "../records";
 import { listTrash, TrashQuery, trashedEntry, trashRowCount } from "./list";
-import { everyTrashRow, foldersUnder, purgeRows, type TrashRef } from "./purge";
+import { everyTrashRow, foldersUnder, purgeRows, sweepLooseFiles, type TrashRef } from "./purge";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -377,6 +386,24 @@ async function inTrash(db: Db, rows: TrashRef[]): Promise<void> {
 	}
 }
 
+/** The records of the rows a person asked for, for the log's first line: the folder, not everything in it. */
+const askedRecords = (rows: TrashRef[], records: LoggedRecord[]) =>
+	rows.flatMap((row) => records.find((record) => record.kind === row.kind && record.id === row.id) ?? []);
+
+/** Tells the receivers of entries thrown away, brought back or deleted for good: one event for each collection and language. */
+function emitByPlace(
+	ctx: OperationContext,
+	type: "entry.trashed" | "entry.restored" | "entry.purged",
+	entries: { id: string; collection: string; locale: string }[],
+) {
+	for (const event of placeEvents(type, entries)) ctx.emit(event);
+}
+
+/** A file deleted for good leaves the storage only once its row's delete has committed (doc 11): after the write, on the database itself. */
+async function sweepNow(_output: unknown, ctx: OperationContext): Promise<undefined> {
+	await sweepLooseFiles(ctx.db as Kysely<Database>, ctx.site.storage, ctx.now());
+}
+
 export const trashOperations = [
 	defineOperation({
 		name: "trash.list",
@@ -507,6 +534,8 @@ export const trashOperations = [
 						.execute();
 				}
 				await db.deleteFrom("entry_published").where("entry_id", "in", ids).execute();
+				// Whatever listens to saves (a search index) hears that they are gone; what the site showed left with `entry.unpublished` above.
+				emitByPlace(ctx, "entry.trashed", plan.entries);
 			}
 			if (plan.stamped.length > 0)
 				await db
@@ -538,7 +567,13 @@ export const trashOperations = [
 				kept: [...plan.kept.keys()].sort(),
 			};
 		},
-		summary: (_input, output) => ({ key: "trash.move", values: { count: output.rows, kept: output.kept.length } }),
+		log: "trash",
+		// Files in use that stayed are said with the count; otherwise one row is named and several are counted.
+		summary: (input, output, records) =>
+			output.kept.length > 0
+				? { key: "trash.move", values: { count: output.rows, kept: output.kept.length } }
+				: oneOrMany("trash.move", askedRecords(input.rows, records)),
+		where: () => ({ key: "activity.where.trash" }),
 	}),
 	defineOperation({
 		name: "trash.restore",
@@ -671,6 +706,7 @@ export const trashOperations = [
 					.where("id", "=", file.id)
 					.execute();
 			if (plan.media.length > 0) ctx.emit({ type: "media.restored", ids: plan.media.map((file) => file.id) });
+			emitByPlace(ctx, "entry.restored", plan.entries);
 
 			const [only] = input.rows;
 			const asked =
@@ -690,7 +726,9 @@ export const trashOperations = [
 				renamed,
 			};
 		},
-		summary: (_input, output) => ({ key: "trash.restore", values: { count: output.rows } }),
+		log: "trash",
+		summary: (input, _output, records) => oneOrMany("trash.restore", askedRecords(input.rows, records)),
+		where: () => ({ key: "activity.where.trash" }),
 	}),
 	defineOperation({
 		name: "trash.purge",
@@ -706,10 +744,13 @@ export const trashOperations = [
 			changes: input.rows.map((row) => ref(row.kind)(row.id)),
 		}),
 		async run(input, ctx) {
-			await purgeRows(ctx.db, ctx.site.schema(), input.rows, ctx.now());
+			emitByPlace(ctx, "entry.purged", await purgeRows(ctx.db, ctx.site.schema(), input.rows, ctx.now()));
 			return { purged: input.rows.length };
 		},
-		summary: (_input, output) => ({ key: "trash.purge", values: { count: output.purged } }),
+		afterCommit: sweepNow,
+		log: "trash",
+		summary: (input, _output, records) => oneOrMany("trash.purge", askedRecords(input.rows, records)),
+		where: () => ({ key: "activity.where.trash" }),
 	}),
 	defineOperation({
 		name: "trash.empty",
@@ -731,9 +772,16 @@ export const trashOperations = [
 		},
 		async run(_input, ctx) {
 			const purged = await trashRowCount(ctx.db, ctx.site.schema().locales.source);
-			await purgeRows(ctx.db, ctx.site.schema(), await everyTrashRow(ctx.db), ctx.now());
+			emitByPlace(
+				ctx,
+				"entry.purged",
+				await purgeRows(ctx.db, ctx.site.schema(), await everyTrashRow(ctx.db), ctx.now()),
+			);
 			return { purged };
 		},
+		afterCommit: sweepNow,
+		log: "trash",
 		summary: (_input, output) => ({ key: "trash.empty", values: { count: output.purged } }),
+		where: () => ({ key: "activity.where.trash" }),
 	}),
 ];

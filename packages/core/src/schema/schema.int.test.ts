@@ -418,7 +418,13 @@ describe("a failed apply", () => {
 			db,
 		);
 		await sql`create trigger refuse before update on entries for each row execute function refuse()`.execute(db);
-		const monti = dev();
+		const told: { type: string; ids: string[] }[] = [];
+		const monti = createMonti({
+			db,
+			schema: base,
+			files: schemaFilesAt(root),
+			receivers: [{ destination: "plugin:listening", send: async (event) => void told.push(event) }],
+		});
 		const result = (await monti.run(
 			"schema.apply",
 			{ draft: edited, renames, answers: reviewAnswers },
@@ -429,11 +435,17 @@ describe("a failed apply", () => {
 		const read = (await monti.run("schema.read", {}, { actor: "admin" })) as { failedChange: string | null };
 		expect(read.failedChange).toBe(result.output.changeId);
 		expect(await postValues()).toEqual([{ summary: "first", subtitle: "sub" }, { summary: "second" }]);
+		// Nothing was applied, so nobody is told it was.
+		expect(told.filter((event) => event.type === "schema.applied")).toEqual([]);
 
 		await sql`drop trigger refuse on entries`.execute(db);
 		await sql`drop function refuse`.execute(db);
 		await monti.run("schema.retry", {}, { actor: "admin" });
 		expect((await postValues())[0]).toEqual({ excerpt: "first", format: "memo" });
+		// The apply that got through on the second try tells the receivers, as one that got through at once does (doc 13).
+		expect(told.filter((event) => event.type === "schema.applied").map((event) => event.ids)).toEqual([
+			[result.output.changeId],
+		]);
 		expect((await monti.run("schema.read", {}, { actor: "admin" })) as { failedChange: null }).toMatchObject({
 			failedChange: null,
 			fileChanged: false,

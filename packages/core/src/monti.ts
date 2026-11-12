@@ -1,12 +1,13 @@
 import type { Kysely } from "kysely";
 import { z } from "zod";
+import { activityOperations } from "./activity/operations";
 import type { DevProof } from "./auth/dev-bypass";
 import { type AuthSettings, authOperations } from "./auth/operations";
 import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./body/blocks";
 import { bodyOperations, templateRecord } from "./body/operations";
 import type { Database, ItemExchange } from "./db/schema";
-import { type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
-import { type Engine, type RunOptions, runRead, runWrite } from "./engine/execute";
+import { BEFORE_ANSWER_MS, type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
+import { context, type Engine, logOwnWork, type RunOptions, runRead, runWrite } from "./engine/execute";
 import {
 	type ApplyProgress,
 	type ApplyResult,
@@ -22,7 +23,6 @@ import {
 	viewProposal,
 	type WriteHolder,
 } from "./engine/proposals";
-import { planUndo, undoWithEvents } from "./engine/undo";
 import { listOperations } from "./entries/list";
 import { entryOperations } from "./entries/operations";
 import { entryRecord } from "./entries/record";
@@ -34,17 +34,9 @@ import { aiServices, type KeyService } from "./keys/services";
 import { mediaOperations } from "./media/operations";
 import { mediaRecord } from "./media/record";
 import type { Storage } from "./media/storage";
-import {
-	type Actor,
-	type AnyOperation,
-	defineOperation,
-	type OperationKind,
-	type Preview,
-	recordKey,
-} from "./operation";
+import { type Actor, type AnyOperation, defineOperation, type OperationKind, recordKey } from "./operation";
 import type { RecordKind } from "./records";
 import { relationOperations } from "./relations/operations";
-import { keepSeenTracked } from "./schema/apply";
 import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
 import { schemaOperations, schemaRecordKinds } from "./schema/operations";
@@ -54,10 +46,7 @@ import { createSite } from "./site";
 import { type AnyStream, defineStream, type StreamContext } from "./stream";
 import { translationOperations } from "./translations/operations";
 import { trashOperations } from "./trash/operations";
-import { purgeDue, sweepLooseFiles } from "./trash/purge";
-
-/** The writes that delete media rows for good: their files leave the storage right after. */
-const PURGES = new Set(["trash.purge", "trash.empty"]);
+import { purgeDue, purgedEvents } from "./trash/purge";
 
 /** A site without a schema file yet: one language and no collections. */
 const EMPTY_SCHEMA: Schema = {
@@ -118,9 +107,10 @@ export type MontiOptions = {
 	fetch?: typeof globalThis.fetch;
 	now?: () => Date;
 	/**
-	 * Keeps the first send of a write's events going after the response (a serverless host's `waitUntil`). Without it the write waits for the send.
+	 * Keeps a write's first sends going after the response: the host is given the work to start, and starts it where it holds work open (a
+	 * serverless host's `waitUntil`, Next's `after`). Without it the write waits for the send.
 	 */
-	waitUntil?: (work: Promise<unknown>) => void;
+	waitUntil?: (work: () => Promise<unknown>) => void;
 };
 
 /** An operation as the agent and the CLI discover it. */
@@ -217,6 +207,7 @@ function engineOperations(
 			kind: "write",
 			humanOnly: true,
 			bookkeeping: true,
+			log: false,
 			description:
 				"Keep waiting proposal items in the proposal or leave them out (the review's checks). An item left out is not applied. Only a person does it.",
 			input: z.object({ ids: z.array(z.string()).min(1), included: z.boolean() }),
@@ -236,13 +227,16 @@ function engineOperations(
 			name: "proposals.revert",
 			kind: "write",
 			humanOnly: true,
+			// The lines it undoes say "undone" with when; a line of its own would say it twice (as `activity.undo`).
+			log: false,
 			description:
 				"Put back everything applying a proposal changed, as the activity log's undo does for each write. A record changed since is left alone and its item stays applied. Only a person does it.",
 			input: z.object({ id: z.string() }),
 			async run(input, ctx) {
-				const output = await revertProposal(engine, ctx.db, input.id, ctx.emit);
-				// What an entry saw back then may be of a field that has since left the schema.
-				await keepSeenTracked(ctx.db, ctx.site.schema());
+				// The deliveries of what it puts back show on the lines that were undone, as the log's own undo has them.
+				const output = await revertProposal(engine, ctx.db, input.id, (event, undone) =>
+					ctx.emit(event, { activity: undone }),
+				);
 				return output;
 			},
 			summary: (_input, output) => ({
@@ -281,30 +275,9 @@ function engineOperations(
 					await settleProposal(ctx.db, proposalId);
 				return { discarded: items.map((item) => item.id) };
 			},
+			// Nothing changed, so the log has no line for it (doc 00).
+			log: false,
 			summary: (_input, output) => ({ key: "proposals.discard", values: { count: output.discarded.length } }),
-		}),
-		defineOperation({
-			name: "activity.undo",
-			kind: "write",
-			description:
-				"Undo a write from the activity log. Records changed since that write are skipped, never overwritten. Works for 30 days.",
-			input: z.object({ id: z.string() }),
-			preview: async (input, ctx): Promise<Preview> => {
-				const plan = await planUndo(engine, ctx.db, input.id);
-				return {
-					summary: { key: "activity.undo", values: { count: plan.restore.length } },
-					changes: plan.restore,
-					blocked: plan.skip.map((ref) => ({ ref, reason: { key: "activity.changedSince" } })),
-				};
-			},
-			async run(input, ctx) {
-				// An undo that changes what the site shows says so, so the site's cache follows (T29).
-				const output = await undoWithEvents(engine, ctx.db, input.id, ctx.emit);
-				// What an entry saw back then may be of a field that has since left the schema.
-				await keepSeenTracked(ctx.db, ctx.site.schema());
-				return output;
-			},
-			summary: (_input, output) => ({ key: "activity.undo", values: { count: output.restore.length } }),
 		}),
 	];
 }
@@ -330,6 +303,12 @@ export function createMonti(options: MontiOptions) {
 		recordKinds.set(kind.kind, kind);
 	}
 	const receivers = [...(options.receivers ?? []), ...plugins.flatMap((plugin) => plugin.receivers ?? [])];
+	// A delivery finds its receiver by name: two under one name would both resolve to the first, which would get each event twice.
+	for (const receiver of receivers)
+		if (receivers.filter((other) => other.destination === receiver.destination).length > 1)
+			throw new Error(
+				`Two receivers are named "${receiver.destination}". Give one a name of its own: webhook(url, { name: "…" }).`,
+			);
 	const storages = plugins.filter((plugin) => plugin.storage);
 	if (storages.length > 1)
 		throw new Error(
@@ -370,6 +349,7 @@ export function createMonti(options: MontiOptions) {
 			() => [...operations.values()],
 			() => operations,
 		),
+		...activityOperations(engine),
 		...schemaOperations,
 		...settingsOperations,
 		...entryOperations,
@@ -388,6 +368,71 @@ export function createMonti(options: MontiOptions) {
 	for (const plugin of plugins)
 		for (const operation of plugin.operations ?? []) add(operation, `plugin ${plugin.name}`);
 
+	/**
+	 * A send that throws (the database went away) is logged and not passed on: the write it follows has committed, the delivery is still queued,
+	 * and the next visit or `monti deliveries:run` sends it.
+	 */
+	const quiet = (work: Promise<unknown>): Promise<void> =>
+		work.then(
+			() => {},
+			(error) => {
+				console.error("Monti: sending deliveries failed; they stay queued for the next try:", error);
+			},
+		);
+	/**
+	 * Sending whose result nobody reads. The host is given the work to start, and starts it where it keeps work going after the response
+	 * (`waitUntil`; Next's `after`): what a receiver does there is then inside the host's own scope, not in a promise that began in a request
+	 * and ends after it. Without a host's way the work starts now. The promise ends when the work does, for a caller that wants to wait.
+	 */
+	const background = (start: () => Promise<unknown>): Promise<void> => {
+		const keep = options.waitUntil;
+		if (!keep) return quiet(start());
+		return new Promise<void>((done) => keep(() => quiet(start()).then(done)));
+	};
+
+	/**
+	 * A write's first send. Without a host that keeps work going after the response, the write waits for all of it. With one, it waits only for
+	 * the receivers that ask to be done before the answer (the site's own cached pages: a publish that answered is on the site), and the rest
+	 * goes on after the response, so a webhook that does not answer never holds a save.
+	 *
+	 * The wait has one deadline for the whole write (`BEFORE_ANSWER_MS`), however many events it emitted: at the deadline no further send is
+	 * started, the write answers, and what is left is sent behind the answer.
+	 */
+	const firstSend = async (ids: string[]): Promise<void> => {
+		if (ids.length === 0) return;
+		const keep = options.waitUntil;
+		if (!keep) return quiet(sendDeliveries(engine.db, receivers, ids, now));
+		const first = receivers.filter((receiver) => receiver.beforeAnswer);
+		const rest = receivers.filter((receiver) => !receiver.beforeAnswer);
+		// Each pass leaves the other's deliveries untried: a delivery is sent by the pass that has its receiver.
+		if (first.length > 0) {
+			let over = false;
+
+			/** What the deadline kept from starting: these alone are sent behind the answer, each still once. */
+			const left: string[] = [];
+			const pass = quiet(
+				sendDeliveries(engine.db, first, ids, now, {
+					leaveUnknown: true,
+					stop: () => over,
+					notStarted: (id) => left.push(id),
+				}),
+			);
+			let timer: ReturnType<typeof setTimeout> | undefined;
+			const late = new Promise<"late">((resolve) => {
+				timer = setTimeout(() => {
+					over = true;
+					resolve("late");
+				}, BEFORE_ANSWER_MS);
+			});
+			const outcome = await Promise.race([pass.then(() => "done" as const), late]);
+			clearTimeout(timer);
+			// The sends under way end by themselves; what was never started is started behind the answer, in the host's own scope.
+			if (outcome === "late")
+				keep(() => pass.then(() => quiet(sendDeliveries(engine.db, first, left, now, { leaveUnknown: true }))));
+		}
+		if (rest.length > 0) void background(() => sendDeliveries(engine.db, rest, ids, now, { leaveUnknown: true }));
+	};
+
 	const get = (name: string, kinds: OperationKind[]) => {
 		const operation = operations.get(name);
 		if (!operation || !kinds.includes(operation.kind)) throw new UnknownOperationError(name);
@@ -396,12 +441,14 @@ export function createMonti(options: MontiOptions) {
 
 	const write = async <Output>(operation: AnyOperation, input: unknown, runOptions: RunOptions) => {
 		const result = await runWrite<Output>(engine, operation, input, runOptions);
-		const sending = sendDeliveries(engine.db, receivers, result.deliveryIds, now());
-		if (options.waitUntil) options.waitUntil(sending);
-		else await sending;
-		// A file deleted for good leaves the storage only now that its row's delete has committed (doc 11).
-		if (PURGES.has(operation.name)) await sweepLooseFiles(engine.db, site.storage, now());
-		return result;
+		await firstSend(result.deliveryIds);
+		if (!operation.afterCommit) return result;
+		// What waits for the commit and is waited for: a deleted file's bytes leave the storage, a failed delivery is sent again.
+		const settled = await operation.afterCommit(
+			result.output,
+			context(engine, engine.db, runOptions.actor, runOptions.session ?? null).ctx,
+		);
+		return settled === undefined ? result : { ...result, output: settled as Output };
 	};
 
 	const streams = new Map<string, AnyStream>();
@@ -473,8 +520,17 @@ export function createMonti(options: MontiOptions) {
 		},
 
 		deliveries: {
-			/** Sends the retries that are due (`monti deliveries:run`, and when the admin opens). */
-			sendDue: () => sendDueDeliveries(engine.db, receivers, now()),
+			/**
+			 * Sends the retries that are due, a sweep's worth, and waits for them (`monti deliveries:run`). With `leaveUnknown`, a delivery whose
+			 * receiver this process does not have is left untried and counted in `left`: the command line has no Next around it, and a try from
+			 * there would write a failure that is not one.
+			 */
+			sendDue: (sweep: { leaveUnknown?: boolean } = {}) => sendDueDeliveries(engine.db, receivers, now, sweep),
+			/**
+			 * Sends the retries that are due without holding the caller: the admin opening must not wait for a receiver that does not answer (T5). The
+			 * promise is for tests and for a host that wants to wait.
+			 */
+			sendDueInBackground: (): Promise<void> => background(() => sendDueDeliveries(engine.db, receivers, now)),
 		},
 
 		keys: {
@@ -485,8 +541,25 @@ export function createMonti(options: MontiOptions) {
 		},
 
 		trash: {
-			/** Deletes what the trash has kept for 30 days, with the snapshots and files nothing needs any more (`monti trash:purge`, and when the admin opens). */
-			purgeDue: () => purgeDue(engine.db, site.schema(), site.storage, now()),
+			/**
+			 * Deletes what the trash has kept for 30 days, with the snapshots and files nothing needs any more (`monti trash:purge`, and when the admin
+			 * opens). It is no operation, and still it is a line of the log that tells the receivers which entries are gone, in the purge's own
+			 * transaction (doc 13): `actor` is who set it going.
+			 */
+			async purgeDue(actor: "cli" | "admin" = "cli") {
+				const { deliveryIds, ...result } = await purgeDue(engine.db, site.schema(), site.storage, now(), (trx, gone) =>
+					logOwnWork(engine, trx, {
+						actor,
+						operation: "trash.purgeDue",
+						summary: { key: "trash.purgedDue", values: { count: gone.count } },
+						where: { key: "activity.where.trash" },
+						kind: "trash",
+						events: purgedEvents(gone.entries),
+					}),
+				);
+				await firstSend(deliveryIds);
+				return result;
+			},
 		},
 
 		/** The plugins' own clean-ups, run with the trash's (when the admin opens, and `monti trash:purge`). One that fails does not stop the others. */

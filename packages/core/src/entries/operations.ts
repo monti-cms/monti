@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { entryPlace, oneOrMany, recordsOf, titleOf } from "../activity/words";
 import { assertDoc } from "../body/check";
 import { asDoc, blockMap, type Doc, withNewIds } from "../body/doc";
 import { randomUUID } from "../bytes";
@@ -314,7 +315,12 @@ export const entryOperations = [
 			}
 			return { id };
 		},
-		summary: (input) => ({ key: "entries.create", values: { title: input.title ?? "" } }),
+		log: "save",
+		summary: (_input, output, records) => ({
+			key: "entries.create",
+			values: { title: titleOf(records, "entry", output.id) },
+		}),
+		where: (_input, output, records) => entryPlace(recordsOf(records, "entry", [output.id])),
 	}),
 	defineOperation({
 		name: "entries.get",
@@ -513,7 +519,12 @@ export const entryOperations = [
 			);
 			return saved;
 		},
-		summary: (input) => ({ key: "entries.save", values: { id: input.id } }),
+		log: "save",
+		summary: (input, _output, records) => ({
+			key: "entries.save",
+			values: { title: titleOf(records, "entry", input.id) },
+		}),
+		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),
 	defineOperation({
 		name: "entries.compare",
@@ -648,7 +659,9 @@ export const entryOperations = [
 			}
 			return { published, blocked: input.ids.filter((id) => !published.includes(id)) };
 		},
-		summary: (_input, output) => ({ key: "entries.publish", values: { count: output.published.length } }),
+		log: "publish",
+		summary: (_input, output, records) => oneOrMany("entries.publish", recordsOf(records, "entry", output.published)),
+		where: (_input, output, records) => entryPlace(recordsOf(records, "entry", output.published)),
 	}),
 	defineOperation({
 		name: "entries.archive",
@@ -686,7 +699,9 @@ export const entryOperations = [
 			}
 			return { archived };
 		},
-		summary: (_input, output) => ({ key: "entries.archive", values: { count: output.archived.length } }),
+		log: "publish",
+		summary: (_input, output, records) => oneOrMany("entries.archive", recordsOf(records, "entry", output.archived)),
+		where: (_input, output, records) => entryPlace(recordsOf(records, "entry", output.archived)),
 	}),
 	defineOperation({
 		name: "entries.unarchive",
@@ -713,7 +728,10 @@ export const entryOperations = [
 			}
 			return { unarchived };
 		},
-		summary: (_input, output) => ({ key: "entries.unarchive", values: { count: output.unarchived.length } }),
+		log: "publish",
+		summary: (_input, output, records) =>
+			oneOrMany("entries.unarchive", recordsOf(records, "entry", output.unarchived)),
+		where: (_input, output, records) => entryPlace(recordsOf(records, "entry", output.unarchived)),
 	}),
 	defineOperation({
 		name: "entries.duplicate",
@@ -757,7 +775,12 @@ export const entryOperations = [
 			ctx.created(ref(id));
 			return { id };
 		},
-		summary: (input) => ({ key: "entries.duplicate", values: { id: input.id } }),
+		log: "save",
+		summary: (_input, output, records) => ({
+			key: "entries.duplicate",
+			values: { title: titleOf(records, "entry", output.id) },
+		}),
+		where: (_input, output, records) => entryPlace(recordsOf(records, "entry", [output.id])),
 	}),
 	defineOperation({
 		name: "entries.export",

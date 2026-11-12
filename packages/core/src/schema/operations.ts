@@ -299,10 +299,12 @@ export const schemaOperations = [
 		holds: (input, ctx) => heldByStructure(ctx, input.draft),
 		check: (input, ctx) => checkApply(ctx, input.draft, input.renames, input.answers as Answers),
 		run: (input, ctx) => applyStructure(ctx, input.draft, input.renames, input.answers as Answers, input.adminValues),
+		log: "settings",
 		summary: (_input, output) => ({
 			key: output.applied ? "schema.applied" : "schema.applyFailed",
 			values: { change: output.changeId },
 		}),
+		where: () => ({ key: "activity.where.schema" }),
 	}),
 	defineOperation({
 		name: "schema.retry",
@@ -336,7 +338,9 @@ export const schemaOperations = [
 			);
 			return { applied: pending.map((change) => change.id) };
 		},
+		log: "settings",
 		summary: (_input, output) => ({ key: "schema.retried", values: { count: output.applied.length } }),
+		where: () => ({ key: "activity.where.schema" }),
 	}),
 	defineOperation({
 		name: "collections.updateAdminValues",
@@ -352,9 +356,13 @@ export const schemaOperations = [
 		async run(input, ctx) {
 			const { version: _version, ...saved } = (await adminValuesOf(ctx.db))[input.collection] ?? { version: 0 };
 			const next = mergeAdminValues(saved, input.values);
-			if (!sameJson(next, saved)) await writeAdminValues(ctx.db, input.collection, next);
+			if (sameJson(next, saved)) return;
+			await writeAdminValues(ctx.db, input.collection, next);
+			ctx.emit({ type: "settings.saved", ids: [input.collection], collection: input.collection });
 		},
+		log: "settings",
 		summary: (input) => ({ key: "collections.updateAdminValues", values: { collection: input.collection } }),
+		where: () => ({ key: "activity.where.settings" }),
 	}),
 	defineOperation({
 		name: "collections.export",

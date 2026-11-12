@@ -530,7 +530,9 @@ export const relationOperations = [
 
 			return { updatedGroups: targetGroups, count: targetGroups.length };
 		},
+		log: "save",
 		summary: (_input, output) => ({ key: "relations.edit", values: { count: output.count } }),
+		where: (input) => ({ key: "activity.where.collection", values: { collection: input.collection } }),
 	}),
 
 	defineOperation({
@@ -806,10 +808,12 @@ export const relationOperations = [
 				removedUrls,
 			};
 		},
+		log: "save",
 		summary: (_input, output) => ({
 			key: "relations.merge",
 			values: { count: output.affectedCount, intoTitle: output.intoTitle },
 		}),
+		where: (input) => ({ key: "activity.where.collection", values: { collection: input.collection } }),
 	}),
 
 	defineOperation({
@@ -1008,6 +1012,11 @@ export const relationOperations = [
 
 			return { id: group, group, locales: localesOutput };
 		},
-		summary: (_input, output) => ({ key: "items.saveGroup", values: { group: output.group } }),
+		log: "save",
+		summary: (_input, output) => ({
+			key: "items.saveGroup",
+			values: { title: Object.values(output.locales)[0]?.title ?? "" },
+		}),
+		where: (input) => ({ key: "activity.where.collection", values: { collection: input.collection } }),
 	}),
 ];
