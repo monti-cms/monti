@@ -96,7 +96,7 @@
 | T136 | 그림의 틀: "/"로 넣은 그림이 한 프레임 16:9로 섰다가 제 모양이 되고, 한 번 읽지 못한 틀은 주소가 바뀌어도 아이콘으로 남고, 그림이 오는 중에 연 편집 대화상자의 자르기 상자가 점으로 보인다. 미디어 필드의 20px 썸네일과 편집 대화상자의 그림은 `Image`가 아니라서 기다리는 동안 숨 쉬지 않는다 | 5단계 전 | #468 화면 확인 |
 | T151 | 설정의 검토에서 주소 문제(겹치는 주소, 모양이 틀린 주소)는 "고칠 곳" 블록에만 보인다. 그 블록에 "열기"가 없고 기본 탭의 주소 칸에는 표시가 없다. 공개 주소와 미리보기 주소가 같다. 필드 문제처럼 고칠 곳으로 가는 길을 둔다 | 12 | #470 화면 확인 |
 | T152 | 미리보기 주소를 적은 새 컬렉션의 검토를 보이는 스토리가 없다(`NewCollectionReview`에는 그 줄이 없고, 테스트가 `NewCollection`에서 만들어 본다). 설정의 스토리를 고칠 때 더한다 | 12 | #470 디자인 검토 |
-| T150 | 목업 묶음(`packages/ui/src/spec-pack`, `*.screen.json`)의 `Banner`도 화면 맨 위 자리에만 놓이게 한다. 지금 묶음의 `Banner`는 어디에나 놓을 수 있고, `check:design`의 `banner-place`는 코드(화면과 `screens/reference`)만 읽는다. 묶음에 틀의 띠 자리를 주고 `check:screens`가 그 밖의 `Banner`를 막는다 | 5단계 전 | #473 |
+| T150 | 목업 묶음(`packages/ui/src/spec-pack`, `*.screen.json`)의 `Banner`도 화면 맨 위 자리에만 놓이게 한다. 지금 묶음의 `Banner`는 어디에나 놓을 수 있고, `check:design`의 `banner-place`는 코드(화면과 `screens/reference`)만 읽는다. 묶음에 틀의 띠 자리를 주고 `check:screens`가 그 밖의 `Banner`를 막는다. 시안 묶음의 `Banner` 감싸개(`packages/ui/src/spec-pack/parts.tsx`)는 `title`이 없어도 그려진다: 꼭 있게 한다 | 5단계 전 | #473 |
 
 ## 끝낸 일
 
