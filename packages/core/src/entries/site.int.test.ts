@@ -5,6 +5,7 @@ import { createMonti } from "../monti";
 import { migrateContent } from "../schema/apply";
 import { checkSchema, defineSchema, type Schema } from "../schema/define";
 import { planSchema } from "../schema/plan";
+import { readPreviewToken } from "./preview";
 import { createReader } from "./reader";
 
 const db = await testDatabase();
@@ -339,6 +340,37 @@ describe("a collection's preview address", () => {
 		expect(await at("draft", "ko", `${token}x`)).toBeNull();
 		clock = new Date(clock.getTime() + 61 * 60_000);
 		expect(await at("draft")).toBeNull();
+	});
+
+	it("16-2 a secret that is empty or only spaces opens nothing: no link is made with it, and a ticket signed with it is refused", async () => {
+		const { id } = await write("entries.create", {
+			collection: "post",
+			locale: "ko",
+			title: "쓰는 중",
+			slug: "blank-secret",
+		});
+		for (const blank of ["", "   "]) {
+			const monti = createMonti({ db, schema, secret: blank, now: () => clock });
+			await expect(monti.run("entries.previewLink", { id }, { actor: "admin" })).rejects.toMatchObject({
+				reason: { key: "entries.noSecret" },
+			});
+			// What someone who guessed the blank secret would sign themselves.
+			const body = `${id}.${clock.getTime() + 60_000}`;
+			const key = await crypto.subtle.importKey(
+				"raw",
+				new TextEncoder().encode(blank || "\u0000"),
+				{ name: "HMAC", hash: "SHA-256" },
+				false,
+				["sign"],
+			);
+			const signature = Buffer.from(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body))).toString(
+				"base64url",
+			);
+			const forged = Buffer.from(`${body}.${signature}`).toString("base64url");
+			const site = createReader({ db, schema, secret: blank, now: () => clock });
+			expect(await site.entry({ collection: "post", locale: "ko", slug: "blank-secret", preview: forged })).toBeNull();
+			expect(await readPreviewToken(blank, forged, clock)).toBeNull();
+		}
 	});
 
 	it("16-9 a preview address has the shape of an address, belongs to a document, and is no page's address", () => {

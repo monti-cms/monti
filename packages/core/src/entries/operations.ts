@@ -21,7 +21,7 @@ import {
 	seenOf,
 } from "../translations/source";
 import { followerPaths, previewPath, previewSlug, publicPath, publicPaths, publishSlug, slugify } from "./paths";
-import { PREVIEW_MINUTES, previewToken } from "./preview";
+import { isSecret, PREVIEW_MINUTES, previewToken } from "./preview";
 import { type Entry, loadEntries, markChanges } from "./record";
 import { fieldValue, type PublishTask, publishTasks } from "./tasks";
 
@@ -729,7 +729,7 @@ export const entryOperations = [
 		input: z.object({ id: z.string() }),
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
-			if (!ctx.site.secret) throw new CheckError({ key: "entries.noSecret" });
+			if (!isSecret(ctx.site.secret)) throw new CheckError({ key: "entries.noSecret" });
 			if (entry.title === "" && (entry.doc === null || entry.doc === undefined))
 				throw new CheckError({ key: "entries.nothingToPreview" });
 			const expiresAt = new Date(ctx.now().getTime() + PREVIEW_MINUTES * 60_000);
