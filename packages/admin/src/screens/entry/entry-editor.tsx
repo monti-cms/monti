@@ -403,6 +403,7 @@ export function EntryEditor({
 				key={`${editor.bodyKey}:${addedKey}`}
 				added={translation.added}
 				doc={editor.doc}
+				files={editor.files}
 				catalogs={catalogs}
 				onChange={(doc) => editor.set("doc", doc)}
 				editable={!readOnly}
@@ -546,7 +547,9 @@ export function EntryEditor({
 					<TextButton variant="underline" onClick={() => onCompare("draft")}>
 						{t("entry.compare")}
 					</TextButton>
-					<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
+					<TextButton loading={editor.loadingCopy} onClick={() => void editor.loadBrowserCopy()}>
+						{t("entry.loadCopy")}
+					</TextButton>
 					<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
 						{t("entry.dropCopy")}
 					</TextButton>

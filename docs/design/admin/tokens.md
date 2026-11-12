@@ -280,11 +280,13 @@
 | `duration-fast` | 100ms | 메뉴 · 팝오버 · 툴팁이 열림, 컨트롤 자체의 바뀜(체크, 스위치). |
 | `duration-normal` | 150ms | 가리킬 때와 누를 때의 색, 대화상자의 흐려짐. 모든 `transition`의 기본값이라 따로 적지 않는다. |
 | `duration-slow` | 200ms | 화면을 가로지르는 것: 시트와 사이드바가 미끄러져 들어옴, 진행 막대가 늘어남. |
+| `duration-wait` | 1600ms | 내용을 기다리는 자리의 한 번 숨: 불투명도가 반으로 내려갔다 돌아오기를 되풀이한다(`animate-monti-wait`). |
 | `ease-standard` | `cubic-bezier(0.4, 0, 0.2, 1)` | 제자리에서 바뀌거나 들어오는 것 전부. 기본값. |
 | `ease-exit` | `cubic-bezier(0.4, 0, 1, 1)` | 아주 나가는 것(시트가 닫힘). 나갈 때는 한 단계 짧은 `duration-normal`이다. |
 
 - 클래스는 `duration-(--monti-duration-fast)`, `ease-monti-exit`이다. 숫자 클래스(`duration-200`)와 Tailwind의 `ease-in-out`은 `check:design`이 막는다.
 - 사람이 시스템에서 움직임 줄이기를 켜면 관리자 화면은 아무것도 미끄러지거나 흐려지거나 돌지 않는다(`admin.css`의 `prefers-reduced-motion`). 상태는 바뀌고, 옮겨 가는 모습만 없다.
+- 내용을 기다리는 자리(스켈레톤)는 내용과 같은 크기로 서서 `animate-monti-wait`로 숨 쉰다(2026-11-12, 소유자). 지금은 그림의 틀(`Image`)이 그렇다: 그림이 들어올 때까지 `bg-muted` 칸이 숨 쉬고, 들어오면 멈춘다. 그림이 없거나 읽지 못한 틀은 기다리는 것이 아니라 숨 쉬지 않는다. 움직임 줄이기를 켜면 가만히 있다. 크기를 모르는 자리에 줄 몇 개를 그려 흉내 내지 않는다. 내용의 크기를 먼저 알아 와서 그 크기로 선다.
 - 토스트(sonner)는 라이브러리의 400ms를 그대로 쓴다. 지금은 예외로 둔다.
 
 ## 상태

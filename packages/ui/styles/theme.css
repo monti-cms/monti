@@ -36,6 +36,13 @@
 @custom-variant monti-horizontal (&[data-orientation="horizontal"]);
 @custom-variant monti-vertical (&[data-orientation="vertical"]);
 
+/* A place that waits for its content (`animate-monti-wait`, tokens.md, motion): it dims to half and comes back. */
+@keyframes monti-wait {
+	50% {
+		opacity: 0.5;
+	}
+}
+
 /*
  * What Tailwind's own theme must not offer: its palette, text sizes, weights, tracking, line heights and shadows are cleared (`initial`), so a class outside
  * the system (`text-xs`, `bg-red-500`, `shadow-lg`) produces no CSS at all. Numbers stay for sizes (`h-8`, `size-4`), which share Tailwind's 4px base.
@@ -232,6 +239,7 @@
 	/* Motion: transitions take the normal duration and the standard ease by default; ease-monti-exit for leaving, duration-(--monti-duration-fast|slow) otherwise. */
 	--ease-monti-standard: var(--monti-ease-standard);
 	--ease-monti-exit: var(--monti-ease-exit);
+	--animate-monti-wait: monti-wait var(--monti-duration-wait) var(--monti-ease-standard) infinite;
 	--default-transition-duration: var(--monti-duration-normal);
 	--default-transition-timing-function: var(--monti-ease-standard);
 

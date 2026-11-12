@@ -967,8 +967,11 @@ type Call = { name: string; input: unknown };
 const bodyRead = (call: Call) =>
 	call.name === "media.query" && ((call.input as { ids?: string[] }).ids ?? []).length > 0;
 
-/** `ManyInBody` with the operations the page runs written down; `refuse` turns the body's reads of its files away, as a server error would. */
-function recorded({ refuse = false, hold }: { refuse?: boolean; hold?: Promise<void> } = {}) {
+/**
+ * `ManyInBody` with the operations the page runs written down. `bare` takes the body's files out of the entry's read, as for a body whose files
+ * did not come with it (a copy kept in this browser); `refuse` turns the body's reads of its files away, as a server error would.
+ */
+function recorded({ refuse = false, bare = false }: { refuse?: boolean; bare?: boolean } = {}) {
 	const calls: Call[] = [];
 	const [load] = media.ManyInBody.loaders as [() => Promise<{ site: StorySite }>];
 	const story = composeStory(
@@ -982,8 +985,10 @@ function recorded({ refuse = false, hold }: { refuse?: boolean; hold?: Promise<v
 						const call = { name, input };
 						calls.push(call);
 						if (refuse && bodyRead(call)) return { status: 500, body: { error: "unexpected" } };
-						if (hold && bodyRead(call)) await hold;
-						return transport(name, input, options);
+						const answer = await transport(name, input, options);
+						if (bare && name === "entries.get" && answer.status === 200)
+							return { ...answer, body: { ...(answer.body as object), media: [] } };
+						return answer;
 					};
 					return loaded;
 				},
@@ -994,35 +999,33 @@ function recorded({ refuse = false, hold }: { refuse?: boolean; hold?: Promise<v
 	return { run: () => story.run(), calls, reads: () => calls.filter(bodyRead) };
 }
 
+const frames = () => [...body().element().querySelectorAll<HTMLElement>("[data-block=image] [data-slot=image]")];
+
 describe("opening a body with files", () => {
-	it("09-1 T110 the body's pictures and files are read together, once", async () => {
+	it("09-1 T110 T126 the body's files come with the body: nothing reads them, and every picture's frame stands at its shape from the first draw", async () => {
 		const story = recorded();
 		await story.run();
+		await expect.element(body().getByText("글의 첫 문단이에요.")).toBeVisible();
+		// The text is shown, and the frames hold the pictures' places already: nothing under a picture moves when it comes in.
+		expect(frames().length).toBeGreaterThan(0);
+		expect(frames().filter((frame) => frame.style.aspectRatio === "")).toEqual([]);
+		const before = frames().map((frame) => Math.round(frame.getBoundingClientRect().height));
 		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
 		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
 		await expect.element(body().getByRole("img", { name: "화면에 뜬 코드" })).toBeVisible();
+		expect(frames().map((frame) => Math.round(frame.getBoundingClientRect().height))).toEqual(before);
+		expect(story.calls.filter((call) => call.name === "media.get")).toEqual([]);
+		expect(story.reads()).toEqual([]);
+	});
+
+	it("09-1 T110 files that did not come with the body are read together, once", async () => {
+		const story = recorded({ bare: true });
+		await story.run();
+		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
+		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
 		expect(story.calls.filter((call) => call.name === "media.get")).toEqual([]);
 		expect(story.reads()).toHaveLength(1);
 		expect((story.reads()[0]?.input as { ids: string[] }).ids).toHaveLength(3);
-	});
-
-	it("T126 an opened body is not shown until its files are read, and then every picture holds its place before it is in", async () => {
-		const held = Promise.withResolvers<void>();
-		const answer = () => held.resolve();
-		const story = recorded({ hold: held.promise });
-		await story.run();
-		// The read is asked and not answered: the text is there, unseen.
-		await expect.poll(() => story.reads().length).toBe(1);
-		const column = () => document.querySelector<HTMLElement>("[data-slot=editor-body]");
-		await expect.poll(() => column()?.getAttribute("aria-busy")).toBe("true");
-		expect(column()?.textContent).toContain("글의 첫 문단이에요.");
-		expect(getComputedStyle(column() as HTMLElement).visibility).toBe("hidden");
-		answer();
-		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
-		// Shown, every picture's frame stands at its file's shape already, whether or not the picture is in: nothing under it will move.
-		const frames = [...body().element().querySelectorAll<HTMLElement>("[data-block=image] [data-slot=image]")];
-		expect(frames.length).toBeGreaterThan(0);
-		expect(frames.filter((frame) => frame.style.aspectRatio === "")).toEqual([]);
 	});
 
 	it("09-1 T110 a block that comes back (undo) reads its file again, alone", async () => {
@@ -1040,12 +1043,27 @@ describe("opening a body with files", () => {
 		await expect.poll(() => fileBlocks().length).toBe(0);
 		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
 		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
-		await expect.poll(() => story.reads().length).toBe(2);
-		expect((story.reads()[1]?.input as { ids: string[] }).ids).toHaveLength(1);
+		await expect.poll(() => story.reads().length).toBe(1);
+		expect((story.reads()[0]?.input as { ids: string[] }).ids).toHaveLength(1);
+	});
+
+	it("09-1 a file that came with the body stays shown when its block comes back and the read is turned away", async () => {
+		await recorded({ refuse: true }).run();
+		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
+		const fileBlocks = () => body().element().querySelectorAll("[data-block=file]");
+		const [first] = fileBlocks();
+		if (!first) throw new Error("no file block");
+		await userEvent.click(page.elementLocator(first));
+		await expect.poll(() => first.closest(".ProseMirror-selectednode")).not.toBeNull();
+		await userEvent.keyboard("{Backspace}");
+		await expect.poll(() => fileBlocks().length).toBe(0);
+		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}");
+		await expect.element(body().getByText("notes-scan.pdf")).toBeVisible();
+		expect(body().element().textContent).not.toContain("파일 없음");
 	});
 
 	it("09-1 T110 a read turned away leaves no file blank: each says it is not there, as a block's own read did", async () => {
-		await recorded({ refuse: true }).run();
+		await recorded({ refuse: true, bare: true }).run();
 		await expect.element(body().getByText("파일 없음")).toBeVisible();
 	});
 });

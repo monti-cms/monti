@@ -8,7 +8,8 @@ import type { MontiIcon } from "./monti-icon";
 
 /**
  * A picture in a frame of a fixed shape: `cover` fills the frame and crops, `contain` shows all of it. When the source is missing or fails,
- * the frame shows `fallback` (a file-type icon) on the neutral fill instead of a broken image.
+ * the frame shows `fallback` (a file-type icon) on the neutral fill instead of a broken image. While the picture is on its way the frame waits:
+ * it breathes (`animate-monti-wait`, `data-waiting`), and is still once the picture is in.
  */
 const frameVariants = cva(
 	"relative flex shrink-0 items-center justify-center overflow-hidden bg-monti-muted text-monti-muted",
@@ -78,11 +79,19 @@ function Image({
 }) {
 	const [failed, setFailed] = useState(false);
 	const show = src && !failed;
+	// The address whose picture is in. Until it is, the frame is a place that waits (tokens.md, motion).
+	const [arrived, setArrived] = useState<string | null>(null);
+	const waiting = Boolean(show) && arrived !== src;
 	const thumb = size === "thumb" || size === "thumb-lg" || size === "icon";
 	return (
 		<span
 			data-slot="image"
-			className={cn(frameVariants({ ratio: thumb ? "square" : ratio, size, radius, border }), className)}
+			data-waiting={waiting || undefined}
+			className={cn(
+				frameVariants({ ratio: thumb ? "square" : ratio, size, radius, border }),
+				waiting && "animate-monti-wait",
+				className,
+			)}
 			style={frame ? { aspectRatio: frame.aspectRatio } : shape ? { aspectRatio: shape } : undefined}
 		>
 			{show ? (
@@ -90,8 +99,15 @@ function Image({
 					src={src}
 					alt={alt}
 					loading={loading}
+					// A picture the browser already has is in before any load event is heard.
+					ref={(img) => {
+						if (img?.complete && img.naturalWidth > 0) setArrived(src);
+					}}
 					onError={() => setFailed(true)}
-					onLoad={onLoad}
+					onLoad={(event) => {
+						setArrived(src);
+						onLoad?.(event);
+					}}
 					className={
 						frame ? "absolute max-w-none" : cn("size-full", fit === "cover" ? "object-cover" : "object-contain")
 					}

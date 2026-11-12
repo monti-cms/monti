@@ -95,21 +95,14 @@ const PAIRED = cn(
 
 /**
  * The editor's text column: what the editor engine draws goes inside, and takes the body's looks from here. `paired` lays the text out as rows beside
- * its source (a translation side by side). `settling` keeps the column unseen while its place is held: the pictures of an opened body are not
- * read yet, and drawn now the text would jump when their shapes come.
+ * its source (a translation side by side).
  */
-function EditorBody({
-	paired = false,
-	settling = false,
-	className,
-	...props
-}: ComponentProps<"div"> & { paired?: boolean; settling?: boolean }) {
+function EditorBody({ paired = false, className, ...props }: ComponentProps<"div"> & { paired?: boolean }) {
 	return (
 		<div
 			data-slot="editor-body"
 			data-paired={paired || undefined}
-			aria-busy={settling || undefined}
-			className={cn(EDITOR_BODY, paired && PAIRED, settling && "invisible", className)}
+			className={cn(EDITOR_BODY, paired && PAIRED, className)}
 			{...props}
 		/>
 	);

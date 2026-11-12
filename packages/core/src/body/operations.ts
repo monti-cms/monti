@@ -2,6 +2,7 @@ import { z } from "zod";
 import { randomUUID } from "../bytes";
 import { editableEntry, entryOf, saveWorking } from "../entries/operations";
 import { CheckError, ConflictError } from "../errors";
+import { mediaInDoc } from "../media/items";
 import { defineOperation, type OperationContext, type RecordRef } from "../operation";
 import { defineRecordKind } from "../records";
 import { keepLinks } from "../translations/links";
@@ -158,9 +159,12 @@ export const bodyOperations = [
 	defineOperation({
 		name: "templates.get",
 		kind: "read",
-		description: "Read one body template with its body.",
+		description: "Read one body template with its body and the media files the body shows.",
 		input: z.object({ id: z.string() }),
-		run: (input, ctx) => templateOf(ctx, input.id),
+		async run(input, ctx) {
+			const template = await templateOf(ctx, input.id);
+			return { ...template, media: await mediaInDoc(ctx, template.doc) };
+		},
 	}),
 	defineOperation({
 		name: "templates.save",

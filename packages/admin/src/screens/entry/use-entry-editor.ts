@@ -1,4 +1,5 @@
-import type { BodyOp, Doc, EntryState, PublishTask } from "@monti-cms/core";
+import type { Block, BodyOp, Doc, EntryState, MediaItem, MediaQueryResult, PublishTask } from "@monti-cms/core";
+import { MEDIA_QUERY_MOST } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
 import { useCallback, useMemo, useState } from "react";
 import { type Path, useDraft } from "../../draft/use-draft";
@@ -28,9 +29,21 @@ export type EntryRead = {
 	state: EntryState;
 	published: { slug: string; path: string | null; publishedAt: string; fromVersion: number } | null;
 	tasks: PublishTask[];
+	/** The library's files the body shows. */
+	media: MediaItem[];
 };
 
-type TemplateRead = { id: string; name: string; doc: Doc; version: number; updatedAt?: string };
+type TemplateRead = { id: string; name: string; doc: Doc; version: number; updatedAt?: string; media?: MediaItem[] };
+
+/** The library's files a body's blocks show, by id, each once. */
+function mediaOf(blocks: readonly Block[], ids = new Set<string>()): Set<string> {
+	for (const block of blocks) {
+		const media = block.attrs?.media;
+		if (typeof media === "string" && media !== "") ids.add(media);
+		if (block.children) mediaOf(block.children, ids);
+	}
+	return ids;
+}
 
 /** The save cell (doc 02, save): one of four, or "signed out" when the session ended (T39). */
 export type SaveState = "unsaved" | "saved" | "browser" | "conflict" | "signedOut";
@@ -82,6 +95,10 @@ export function useEntryEditor(source: EditorSource) {
 	);
 	const saveOp = useOperation<{ output: { id: string; version: number } }>(isEntry ? "entries.save" : "templates.save");
 	const latestOp = useOperation<EntryRead | TemplateRead>(isEntry ? "entries.get" : "templates.get");
+	const filesOp = useOperation<MediaQueryResult>("media.query");
+	/** The files of a kept copy's body that the server's body does not show: read before the copy goes in, so its pictures hold their places too. */
+	const [keptFiles, setKeptFiles] = useState<readonly MediaItem[]>([]);
+	const [loadingCopy, setLoadingCopy] = useState(false);
 	const { session, t } = useAdmin();
 	const signInAgain = useSignInAgain();
 	const loaded = source.id === null ? NEW_TEMPLATE : read.data;
@@ -96,6 +113,11 @@ export function useEntryEditor(source: EditorSource) {
 		restore: "ask",
 		leftSignedOut: session.ended,
 	});
+	const served = loaded?.media;
+	const files = useMemo(
+		() => (served && keptFiles.length > 0 ? [...keptFiles, ...served] : served),
+		[served, keptFiles],
+	);
 	/** Another save got in first: when, so the banner can say it. */
 	const [conflict, setConflict] = useState<{ at: Date | null } | null>(null);
 	/** Bumped when the body shown changes other than by typing (the latest loaded, a kept copy taken): the body editor mounts again. */
@@ -196,6 +218,8 @@ export function useEntryEditor(source: EditorSource) {
 	return {
 		/** The saved copy as the server gave it; `null` while it loads. */
 		loaded,
+		/** The library's files the saved body shows, for the body editor's first draw. */
+		files,
 		/** Reading it failed: the screen offers to try again. */
 		loadRefusal: read.data ? null : read.refusal,
 		reload,
@@ -227,11 +251,29 @@ export function useEntryEditor(source: EditorSource) {
 			return save("entry" in latest.body ? latest.body.entry.version : latest.body.version);
 		},
 		browserCopy: draft.browserCopy,
-		loadBrowserCopy: () => {
+		/** The kept copy is being read in: its button works and cannot be pressed again. */
+		loadingCopy,
+		loadBrowserCopy: async () => {
+			if (loadingCopy || !draft.browserCopy) return;
+			setLoadingCopy(true);
+			const kept = draft.browserCopy?.mine.find(([path]) => path === "doc")?.[1] as Doc | null | undefined;
+			const known = new Set(loaded?.media?.map((item) => item.id));
+			const ids = [...mediaOf(kept?.blocks ?? [])].filter((id) => !known.has(id));
+			const found: MediaItem[] = [];
+			for (let start = 0; start < ids.length; start += MEDIA_QUERY_MOST) {
+				const part = ids.slice(start, start + MEDIA_QUERY_MOST);
+				const read = await filesOp.run({ ids: part, pageSize: part.length }).catch(() => null);
+				if (read?.ok) found.push(...read.body.items);
+			}
+			if (found.length > 0) setKeptFiles(found);
 			draft.loadBrowserCopy();
 			setBodyKey((key) => key + 1);
+			setLoadingCopy(false);
 		},
-		dropBrowserCopy: draft.dropBrowserCopy,
+		/** Not while the copy is on its way in: it is no longer there to drop. */
+		dropBrowserCopy: () => {
+			if (!loadingCopy) draft.dropBrowserCopy();
+		},
 		/** The session ended: to the login screen, and back to this entry with what was typed (`restore`). */
 		signIn: signInAgain,
 		bodyKey,

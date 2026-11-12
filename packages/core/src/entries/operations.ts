@@ -4,6 +4,7 @@ import { asDoc, blockMap, type Doc, withNewIds } from "../body/doc";
 import { randomUUID } from "../bytes";
 import { CheckError, ConflictError } from "../errors";
 import { sameJson } from "../json";
+import { mediaInDoc } from "../media/items";
 import { checkMediaValues } from "../media/uses";
 import { cleanMediaValue, mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
@@ -299,7 +300,7 @@ export const entryOperations = [
 		name: "entries.get",
 		kind: "read",
 		description:
-			"Read an entry: its working copy (title, slug, field values, body), what the site shows (published slug and date), its version, state and publish to-do list.",
+			"Read an entry: its working copy (title, slug, field values, body), what the site shows (published slug and date), its version, state, publish to-do list and the media files its body shows.",
 		input: z.object({ id: z.string() }),
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);
@@ -337,6 +338,8 @@ export const entryOperations = [
 						}
 					: null,
 				tasks: (await tasksOf(ctx, entry)).tasks,
+				// The files its body shows, so the editor need not read them after it (their shapes hold the pictures' places).
+				media: await mediaInDoc(ctx, entry.doc),
 			};
 		},
 	}),
