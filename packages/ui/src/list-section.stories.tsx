@@ -107,7 +107,7 @@ export const ReviewSheet: Story = {
 	),
 };
 
-/** A plugin's key places: the plugin's name (and the place, when it has several), its code in mono under it, the key field at the end. */
+/** A plugin's key places: the plugin's name (and the place, when it has several), its code under it in mono (`metaMono`: it is written as it is typed), the key field at the end. */
 export const PluginKeys: Story = {
 	render: () => (
 		<ListSection title="플러그인" count={3} countTone="warning">
@@ -115,6 +115,7 @@ export const PluginKeys: Story = {
 				title="바른 맞춤법"
 				meta="bareun"
 				metaTone="subtle"
+				metaMono
 				labelId="slot-bareun"
 				control={<MenuField aria-labelledby="slot-bareun" placeholder="키 없음" warning />}
 			/>
@@ -123,6 +124,7 @@ export const PluginKeys: Story = {
 				detail="검색 키"
 				meta="algolia"
 				metaTone="subtle"
+				metaMono
 				labelId="slot-search"
 				control={<MenuField aria-labelledby="slot-search" placeholder="키 없음" warning />}
 			/>
@@ -131,8 +133,9 @@ export const PluginKeys: Story = {
 				detail="관리 키"
 				meta="algolia"
 				metaTone="subtle"
+				metaMono
 				labelId="slot-admin"
-				control={<MenuField aria-labelledby="slot-admin" value="Algolia" meta="··· 4410" />}
+				control={<MenuField aria-labelledby="slot-admin" value="Algolia" meta="··· 4410" metaMono />}
 			/>
 		</ListSection>
 	),

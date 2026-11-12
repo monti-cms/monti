@@ -129,7 +129,7 @@ API 키처럼 가려서 입력하는 값을 위한 필드. 밑줄 하나 위에 
 
 ### 코드
 
-`MenuField`: `value`, `meta`, `mono`, `placeholder`, `warning`(값이 없을 때 경고색), `size`(`SelectTrigger`와 같다. 기본은 `sm`)를 받는 버튼이다. 닫힌 `SelectTrigger`와 같은 모양(`SELECT_TRIGGER`)이다. `DropdownMenuTrigger`나 `ModelMenu`의 `trigger`로 쓰고, 고를 것이 없으면 그냥 `onClick`으로 창을 연다. 열린 동안(`aria-expanded`) 밑줄이 잉크다.
+`MenuField`: `value`, `meta`, `mono`, `metaMono`, `placeholder`, `warning`(값이 없을 때 경고색), `size`(`SelectTrigger`와 같다. 기본은 `sm`)를 받는 버튼이다. `meta`는 값 뒤의 조용한 덧말이다. 사람이 붙인 이름(모델의 키 이름)이면 sans 12(`text-caption`), 적힌 그대로인 것(키의 끝 글자 "··· 4410", 언어 코드)이면 `metaMono`로 mono 12다. 자리가 모자라면 `meta`가 먼저 줄어 "…"로 잘리고 값은 제 폭을 지킨다. 값만으로 칸을 넘을 때에야 값이 잘린다. 어느 쪽도 칸 밖으로 나가지 않는다. 닫힌 `SelectTrigger`와 같은 모양(`SELECT_TRIGGER`)이다. `DropdownMenuTrigger`나 `ModelMenu`의 `trigger`로 쓰고, 고를 것이 없으면 그냥 `onClick`으로 창을 연다. 열린 동안(`aria-expanded`) 밑줄이 잉크다.
 
 ## 필수 필드 (`.mt-label > .req`)
 

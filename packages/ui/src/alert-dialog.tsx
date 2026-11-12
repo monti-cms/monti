@@ -11,6 +11,7 @@ import {
 	DIALOG_HEADER,
 	DIALOG_SURFACE,
 	DIALOG_TITLE,
+	modalSurface,
 	useModalFocus,
 } from "./dialog";
 
@@ -35,7 +36,10 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
 /** `wide` (520px) is for a question that lists what it touches, with a choice per line (the review of a permanent delete). */
 const ALERT_WIDTH = { default: "", wide: "sm:max-w-[520px]" } as const;
 
-/** The same modal as `Dialog`: a question that must be answered before anything else, closed only by its own buttons or Escape. */
+/**
+ * The same modal as `Dialog`: a question that must be answered before anything else, closed only by its own buttons or Escape. Once answered it
+ * takes no second press while it fades (`modalSurface`).
+ */
 function AlertDialogContent({
 	className,
 	size = "default",
@@ -48,6 +52,7 @@ function AlertDialogContent({
 			<AlertDialogPrimitive.Popup
 				ref={popup}
 				initialFocus={initialFocus}
+				render={modalSurface}
 				data-slot="alert-dialog-content"
 				className={cn(DIALOG_SURFACE, ALERT_WIDTH[size], className)}
 				{...props}

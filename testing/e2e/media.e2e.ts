@@ -1002,7 +1002,7 @@ test.describe("while a file is on its way", () => {
 		// Any write of this page reads the file again.
 		await dropFromDisk(admin, [await picture(admin, info.outputDir, `${unique("other")}.jpg`)], main(admin));
 		await panel.getByRole("button", { name: "저장" }).click();
-		await expect(panel.getByText("다른 곳에서 먼저 바꿨습니다")).toBeVisible();
+		await expect(panel.getByText("다른 곳에서 먼저 저장했습니다")).toBeVisible();
 		await expect(panel.getByRole("textbox", { name: "파일 이름" })).toHaveValue("theirs");
 	});
 });
