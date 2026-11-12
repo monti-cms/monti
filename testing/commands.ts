@@ -8,6 +8,9 @@ import type { BrowserCommand, BrowserCommandContext } from "vitest/node";
  *   `userEvent` has no call for (a column's edge, a table's border).
  * - `typeKorean`: Hangul typed through an input method, syllable by syllable as a Korean keyboard composes it. `userEvent.keyboard` sends the
  *   finished letters, so code that runs while a word is still being composed is never reached.
+ * - `pressTwice` and `keyTwice`: the same press again a set time later, with nothing waited for in between. `userEvent` waits for its target
+ *   before each press, so it never presses what is on its way out (a window that fades for 150ms after its button was pressed).
+ * - `holdKey`: a key held down, repeating as a held key does, until `releaseKey`. `userEvent.keyboard` lets a held key go before it presses it again.
  *
  * Tests call them through `testing/input.ts`.
  */
@@ -80,6 +83,47 @@ export const dropPointer: BrowserCommand<[]> = async (context) => {
 	await playwright(context).page.mouse.up();
 };
 
+/** Presses the mouse at `point` (the frame's client coordinates), and again `gap` milliseconds later, on whatever is there by then. */
+export const pressTwice: BrowserCommand<[point: Point, gap: number]> = async (context, point, gap) => {
+	const page = playwright(context);
+	const frame = await frameBox(page);
+	const { mouse } = page.page;
+	await mouse.move(frame.x + point.x * frame.scale, frame.y + point.y * frame.scale);
+	await mouse.down();
+	await mouse.up();
+	await page.page.waitForTimeout(gap);
+	await mouse.down();
+	await mouse.up();
+};
+
+/** Presses `key`, and again `gap` milliseconds later, into whatever holds the focus by then. */
+export const keyTwice: BrowserCommand<[key: string, gap: number]> = async (context, key, gap) => {
+	const { page } = playwright(context);
+	await page.keyboard.press(key);
+	await page.waitForTimeout(gap);
+	await page.keyboard.press(key);
+};
+
+/** Holds `key` down: one press, then `repeats` repeats of it `every` milliseconds apart. It stays down until `releaseKey`. */
+export const holdKey: BrowserCommand<[key: string, options: { repeats: number; every: number }]> = async (
+	context,
+	key,
+	{ repeats, every },
+) => {
+	const { page } = playwright(context);
+	// A key that is already down goes down again as its repeat.
+	await page.keyboard.down(key);
+	for (let nth = 0; nth < repeats; nth += 1) {
+		await page.waitForTimeout(every);
+		await page.keyboard.down(key);
+	}
+};
+
+/** Lets go of a key `holdKey` holds. */
+export const releaseKey: BrowserCommand<[key: string]> = async (context, key) => {
+	await playwright(context).page.keyboard.up(key);
+};
+
 const INITIALS = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
 const FIRST = 0xac00;
 const LAST = 0xd7a3;
@@ -137,5 +181,9 @@ declare module "vitest/browser" {
 		dragPointer: (points: Point[], options?: { steps?: number; hold?: boolean }) => Promise<void>;
 		dropPointer: () => Promise<void>;
 		typeKorean: (text: string, options?: { commit?: boolean }) => Promise<void>;
+		pressTwice: (point: Point, gap: number) => Promise<void>;
+		keyTwice: (key: string, gap: number) => Promise<void>;
+		holdKey: (key: string, options: { repeats: number; every: number }) => Promise<void>;
+		releaseKey: (key: string) => Promise<void>;
 	}
 }

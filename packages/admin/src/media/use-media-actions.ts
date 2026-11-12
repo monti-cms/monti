@@ -1,7 +1,7 @@
 import { toast } from "@monti-cms/ui";
 import { useCallback } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { useOperation } from "../operations/use-operation";
+import { reasonOf, useOperation } from "../operations/use-operation";
 import { useTrashMove } from "../trash/use-trash";
 
 /** Moves files to a folder, or to the top level (`null`): from the bulk bar, a menu, or a tile dropped on a folder. It says something only when it cannot. */
@@ -12,7 +12,7 @@ export function useMoveMedia() {
 		async (ids: string[], folder: string | null) => {
 			if (ids.length === 0) return false;
 			const result = await run({ ids, folder });
-			if (!result.ok) toast.error(t(result.refusal.reason ?? "errors.unexpected"));
+			if (!result.ok) toast.error(t(reasonOf(result.refusal)));
 			return result.ok;
 		},
 		[run, t],

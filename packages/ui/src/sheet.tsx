@@ -3,7 +3,7 @@
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import * as React from "react";
 import { cn } from "./cn";
-import { BACKDROP, useModalFocus } from "./dialog";
+import { BACKDROP, modalSurface, useModalFocus } from "./dialog";
 import { IconButton } from "./icon-button";
 import { Close } from "./icons";
 import { useUiLabels } from "./labels";
@@ -43,6 +43,8 @@ function SheetContent({ className, children, ...props }: SheetPrimitive.Popup.Pr
 			<SheetPrimitive.Popup
 				ref={popup}
 				initialFocus={initialFocus}
+				// Told to close, it takes no press while it slides out.
+				render={modalSurface}
 				data-slot="sheet-content"
 				className={cn(
 					"fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-full flex-col border-monti-emphasis border-l bg-monti-tool text-monti-body text-monti-default shadow-monti-sheet outline-none transition duration-(--monti-duration-slow) ease-monti-standard data-ending-style:translate-x-10 data-starting-style:translate-x-10 data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:duration-(--monti-duration-normal) data-ending-style:ease-monti-exit",
