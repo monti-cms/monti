@@ -351,9 +351,12 @@ describe("Table rows with a link", () => {
 			</Table>,
 		);
 		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		// How long the tooltip is waited for. CI failed here twice (#468, #470) with the default second, on the first open, and it never failed
+		// on a developer's machine: with a longer wait, a failure means the tooltip does not open at all, not that the machine was slow.
+		const shown = { timeout: 5000 };
 		// Near their start: the words run on under the cut, past where they show.
 		await userEvent.hover(page.getByText(long), { position: { x: 12, y: 8 } });
-		await expect.poll(tip).toBe(long);
+		await expect.poll(tip, shown).toBe(long);
 		// Escape closes it, and it stays closed while the pointer stays on the words, however it moves there.
 		await userEvent.keyboard("{Escape}");
 		await expect.poll(tip).toBe(null);
@@ -364,7 +367,7 @@ describe("Table rows with a link", () => {
 		// and while it closes it keeps its words: it never shows empty.
 		await userEvent.hover(page.getByText("가운데"), { force: true });
 		await userEvent.hover(page.getByText(long), { position: { x: 12, y: 8 } });
-		await expect.poll(tip).toBe(long);
+		await expect.poll(tip, shown).toBe(long);
 		const seen: (string | null)[] = [];
 		const watch = setInterval(() => seen.push(tip()), 10);
 		await userEvent.hover(page.getByText("가운데"), { force: true });
@@ -379,7 +382,7 @@ describe("Table rows with a link", () => {
 		// The keyboard comes to the first link of the page, the long title's.
 		await userEvent.keyboard("{Tab}");
 		await expect.element(page.getByRole("link", { name: long })).toHaveFocus();
-		await expect.poll(tip).toBe(long);
+		await expect.poll(tip, shown).toBe(long);
 		// Opened from the keyboard and closed by hand with the pointer on the words, it stays closed too. A press closes it as Escape does.
 		await userEvent.hover(page.getByRole("link", { name: long }), { position: { x: 12, y: 8 } });
 		await userEvent.keyboard("{Escape}");
@@ -389,7 +392,7 @@ describe("Table rows with a link", () => {
 		expect(tip()).toBe(null);
 		await userEvent.hover(page.getByText("가운데"), { force: true });
 		await userEvent.hover(page.getByRole("link", { name: long }), { position: { x: 12, y: 8 } });
-		await expect.poll(tip).toBe(long);
+		await expect.poll(tip, shown).toBe(long);
 		const words = page.getByRole("link", { name: long }).element();
 		words.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse" }));
 		await expect.poll(tip).toBe(null);
