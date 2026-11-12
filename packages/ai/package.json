@@ -8,9 +8,14 @@
 	"exports": {
 		".": "./src/index.ts"
 	},
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"scripts": {
 		"typecheck": "tsc --noEmit -p .",
-		"test": "vitest run"
+		"test": "vitest run",
+		"build": "node ../../scripts/build-package.mjs"
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^4.0.102",
@@ -30,5 +35,13 @@
 		"typescript": "^7.0.2",
 		"vitest": "^4.0.0"
 	},
-	"sideEffects": false
+	"sideEffects": false,
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			}
+		}
+	}
 }

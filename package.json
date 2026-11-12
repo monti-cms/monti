@@ -15,7 +15,7 @@
 		"check:scenes": "node scripts/check-scenes.mjs",
 		"check:messages": "node scripts/check-messages.mjs",
 		"typecheck": "pnpm --filter \"./packages/*\" --filter \"./examples/*\" -r typecheck && tsc --noEmit -p testing/e2e",
-		"build": "pnpm --filter @monti-cms/core build && pnpm --filter @monti-cms/ui build",
+		"build": "pnpm --filter @monti-cms/core build && pnpm --filter @monti-cms/ui build && pnpm --filter @monti-cms/admin build && pnpm --filter @monti-cms/ai build && pnpm --filter @monti-cms/next build",
 		"prepare": "husky",
 		"knip": "knip --include files,exports,types,duplicates && knip --production --include exports,types",
 		"check:operations": "node scripts/check-operations.mjs",
