@@ -83,7 +83,7 @@ import {
 	usePairedRows,
 	useTranslation,
 } from "./translation";
-import { type EntryRead, type SaveState, useEntryEditor } from "./use-entry-editor";
+import { type EntryRead, pressedWithKeys, type SaveState, useEntryEditor } from "./use-entry-editor";
 import { usePublish } from "./use-publish";
 
 const STATUS: Record<EntryState, EntryStatusKind> = {
@@ -127,7 +127,7 @@ export function EntryEditor({
 	const { t, language, apiBase } = useAdmin();
 	const languageName = useLanguageName();
 	const source = useMemo(() => ({ kind: "entry" as const, id }), [id]);
-	const editor = useEntryEditor(source);
+	const editor = useEntryEditor(source, fieldInputId("title"));
 	const schema = useRead<SchemaRead>("schema.read");
 	const catalogs = useBodyCatalogs(collection);
 	const [panel, setPanel] = useState(true);
@@ -551,7 +551,9 @@ export function EntryEditor({
 							<TextButton variant="underline" onClick={() => onCompare("conflict")}>
 								{t("entry.compare")}
 							</TextButton>
-							<TextButton onClick={() => void editor.loadLatest()}>{t("entry.loadLatest")}</TextButton>
+							<TextButton onClick={(event) => void editor.loadLatest(pressedWithKeys(event))}>
+								{t("entry.loadLatest")}
+							</TextButton>
 						</Banner>
 					) : null}
 					{editor.browserCopy ? (
@@ -562,8 +564,10 @@ export function EntryEditor({
 							<TextButton variant="underline" onClick={() => onCompare("draft")}>
 								{t("entry.compare")}
 							</TextButton>
-							<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
-							<TextButton variant="quiet" onClick={editor.dropBrowserCopy}>
+							<TextButton onClick={(event) => editor.loadBrowserCopy(pressedWithKeys(event))}>
+								{t("entry.loadCopy")}
+							</TextButton>
+							<TextButton variant="quiet" onClick={(event) => editor.dropBrowserCopy(pressedWithKeys(event))}>
 								{t("entry.dropCopy")}
 							</TextButton>
 						</Banner>

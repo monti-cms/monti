@@ -26,7 +26,7 @@ import { SessionEndedBanner } from "../frame/session-ended";
 import type { SchemaRead } from "../settings/schema-draft";
 import { compareBodies, type Part, wordDiff } from "./compare-entries";
 import { clock, dayTime } from "./dates";
-import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
+import { type EntryEditorModel, type EntryRead, pressedWithKeys } from "./use-entry-editor";
 
 /** What is compared: my unsaved input against a save made elsewhere, or a copy this browser kept against the server's. */
 export type CompareMode = "conflict" | "draft";
@@ -195,8 +195,8 @@ export function CompareView({
 					{mode === "conflict" ? (
 						<>
 							<TextButton
-								onClick={async () => {
-									await editor.loadLatest();
+								onClick={async (event) => {
+									await editor.loadLatest(pressedWithKeys(event));
 									onBack();
 								}}
 							>
@@ -214,16 +214,16 @@ export function CompareView({
 					) : (
 						<>
 							<TextButton
-								onClick={() => {
-									editor.dropBrowserCopy();
+								onClick={(event) => {
+									editor.dropBrowserCopy(pressedWithKeys(event));
 									onBack();
 								}}
 							>
 								{t("compare.drop")}
 							</TextButton>
 							<Button
-								onClick={() => {
-									editor.loadBrowserCopy();
+								onClick={(event) => {
+									editor.loadBrowserCopy(pressedWithKeys(event));
 									onBack();
 								}}
 							>

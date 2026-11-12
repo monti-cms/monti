@@ -87,7 +87,11 @@ const isEmpty = (value: unknown) =>
  * The editor's draft of one entry or template (doc 02, the screen pieces): the saved copy, my changes over it (kept in this browser until saved, and offered
  * back when the page opens again), the save with the version it read, and what a refused save means. The entry editor and the template editor use it.
  */
-export function useEntryEditor(source: EditorSource) {
+export function useEntryEditor(
+	source: EditorSource,
+	/** The id of the screen's title field: where the focus goes after a banner's answer while there is no body yet. */
+	titleId: string,
+) {
 	const isEntry = source.kind === "entry";
 	const read = useRead<EntryRead | TemplateRead>(
 		isEntry ? "entries.get" : "templates.get",
@@ -147,17 +151,21 @@ export function useEntryEditor(source: EditorSource) {
 	const [bodyKey, setBodyKey] = useState(0);
 
 	/**
-	 * The body's editor. A banner's answer takes the banner away, and the button that was pressed with it: the cursor goes to the text, where the person
-	 * goes on, or the keyboard would be left on nothing (T135).
+	 * The body's editor. A banner's answer takes the banner away, and the button that was pressed with it. Pressed with the keyboard, that button held the
+	 * focus: it goes to what the answer was about, the text being written (the title while there is no body yet), not to the page (tokens.md, the states: a
+	 * control that goes when it is used, 2026-11-12). A pointer's press moves nothing (T135).
 	 */
 	const bodyEditor = useRef<Editor | null>(null);
 	const focusNextBody = useRef(false);
-	const focusBody = useCallback(() => {
+	const focusText = useCallback(() => {
 		const made = bodyEditor.current;
-		// The body is not on screen (the compare screen is), or it is about to be made again: the next one takes the cursor.
-		if (!made || made.isDestroyed) focusNextBody.current = true;
-		else made.commands.focus(null, { scrollIntoView: false });
-	}, []);
+		if (made && !made.isDestroyed) return void made.commands.focus(null, { scrollIntoView: false });
+		// No body on screen. With the title there, the body is not drawn yet and the title takes the focus; with neither (the compare screen is shown), the
+		// body that is made next does.
+		const title = document.getElementById(titleId);
+		if (title) title.focus();
+		else focusNextBody.current = true;
+	}, [titleId]);
 	const keepBody = useCallback((made: Editor | null) => {
 		bodyEditor.current = made;
 		if (!made || !focusNextBody.current) return;
@@ -280,11 +288,12 @@ export function useEntryEditor(source: EditorSource) {
 		save,
 		conflict,
 		/** The conflict's way out: the server's latest goes in and my changes are dropped. */
-		loadLatest: async () => {
+		loadLatest: async (byKeys = false) => {
 			await reload();
 			draft.revertAll();
 			setConflict(null);
-			focusNextBody.current = true;
+			// The body is made again: the new one takes the focus the button held.
+			focusNextBody.current = byKeys;
 			setBodyKey((key) => key + 1);
 		},
 		/** The other way out: my changes go over the server's latest. */
@@ -294,16 +303,19 @@ export function useEntryEditor(source: EditorSource) {
 			return save("entry" in latest.body ? latest.body.entry.version : latest.body.version);
 		},
 		browserCopy: draft.browserCopy,
-		/** The kept copy goes in, in one step, and the body is made again from it with the cursor in it. */
-		loadBrowserCopy: () => {
+		/**
+		 * The kept copy goes in, in one step, and the body is made again from it. `byKeys`: the button was pressed with the keyboard (`pressedWithKeys`), so
+		 * the focus it held goes to the text.
+		 */
+		loadBrowserCopy: (byKeys = false) => {
 			if (!draft.browserCopy) return;
 			draft.loadBrowserCopy();
-			focusNextBody.current = true;
+			focusNextBody.current = byKeys;
 			setBodyKey((key) => key + 1);
 		},
-		dropBrowserCopy: () => {
+		dropBrowserCopy: (byKeys = false) => {
 			draft.dropBrowserCopy();
-			focusBody();
+			if (byKeys) focusText();
 		},
 		/** Hands the body's editor over as it is made (`BodyEditor onEditor`). */
 		keepBody,
@@ -319,3 +331,9 @@ export function useEntryEditor(source: EditorSource) {
 }
 
 export type EntryEditorModel = ReturnType<typeof useEntryEditor>;
+
+/**
+ * Whether a button was pressed with the keyboard: it holds the keyboard's focus as it is pressed. A pointer's press does not, and moves no focus
+ * (tokens.md, the states).
+ */
+export const pressedWithKeys = (event: { currentTarget: Element }) => event.currentTarget.matches(":focus-visible");

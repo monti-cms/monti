@@ -1509,6 +1509,12 @@ describe("the edit dialog before its picture is in", () => {
 describe("a copy this browser kept, with a picture the saved body does not show", () => {
 	const banner = () => page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다");
 	const button = (name: string) => page.getByRole("button", { name, exact: true });
+	/** The keyboard's focus on a button, as Tab leaves it: a key first, so the focus set next is the keyboard's. */
+	async function byKeys(target: Locator) {
+		await userEvent.keyboard("{Shift}");
+		(target.element() as HTMLElement).focus();
+		expect(target.element().matches(":focus-visible")).toBe(true);
+	}
 
 	it("02 T135 [flow 1·18] '불러오기' takes the copy in one step, even while its picture's file is still being read: nothing is left to press, and what is typed next stays", async () => {
 		const story = keptCopy({ hold: true });
@@ -1520,6 +1526,8 @@ describe("a copy this browser kept, with a picture the saved body does not show"
 		// The read has not answered, and the copy is in: no banner with a button that does nothing, no button grown by a ring.
 		await expect.element(banner()).not.toBeInTheDocument();
 		await expect.element(paragraph("브라우저에 남은 첫 문단.")).toBeVisible();
+		// Pressed with the pointer: the focus is not moved for the person (tokens.md, the states).
+		await expect.element(body()).not.toHaveFocus();
 		await userEvent.click(paragraph("브라우저에 남은 첫 문단."));
 		await userEvent.keyboard("{End} 이어 쓴 말");
 		story.release();
@@ -1541,11 +1549,11 @@ describe("a copy this browser kept, with a picture the saved body does not show"
 		expect(story.reads()).toHaveLength(1);
 	});
 
-	it("02 T135 '불러오기' pressed with the keyboard leaves the cursor in the text, not nowhere", async () => {
+	it("02 T135 '불러오기' pressed with the keyboard leaves the focus in the text, not on the page", async () => {
 		const story = keptCopy();
 		await story.run();
 		await expect.element(banner()).toBeVisible();
-		button("불러오기").element().focus();
+		await byKeys(button("불러오기"));
 		await userEvent.keyboard("{Enter}");
 		await expect.element(banner()).not.toBeInTheDocument();
 		await expect.element(body()).toHaveFocus();
@@ -1557,7 +1565,7 @@ describe("a copy this browser kept, with a picture the saved body does not show"
 		const story = keptCopy();
 		await story.run();
 		await expect.element(banner()).toBeVisible();
-		button("버리기").element().focus();
+		await byKeys(button("버리기"));
 		await userEvent.keyboard("{Enter}");
 		await expect.element(banner()).not.toBeInTheDocument();
 		expect(story.stored()).toBeNull();

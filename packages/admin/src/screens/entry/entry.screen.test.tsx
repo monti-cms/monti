@@ -200,6 +200,46 @@ describe("the entry editor: before the entry is there", () => {
 	});
 });
 
+describe("the entry editor: a banner's answer and the focus", () => {
+	it("02 T135 '버리기' pressed with the keyboard while there is no body yet: the focus goes to the title, not to the page", async () => {
+		const held = { release: () => {} };
+		const gate = new Promise<void>((done) => {
+			held.release = done;
+		});
+		const [load] = entry.BrowserCopy.loaders as [() => Promise<Loaded>];
+		await scene<Loaded>(
+			{
+				loaders: [
+					async () => {
+						const loaded = await load();
+						const { transport } = loaded.site;
+						loaded.site.transport = async (name, input, options) => {
+							// The blocks the body is made of are not read yet: the entry is there, its body is not drawn.
+							if (name === "blocks.catalog") await gate;
+							return transport(name, input, options);
+						};
+						return loaded;
+					},
+				],
+			},
+			entry.default,
+		).run();
+		await expect.element(title()).toBeVisible();
+		expect(body().elements()).toEqual([]);
+		const drop = button("버리기");
+		await expect.element(drop).toBeVisible();
+		// The keyboard's focus, as Tab leaves it.
+		await userEvent.keyboard("{Shift}");
+		(drop.element() as HTMLElement).focus();
+		expect(drop.element().matches(":focus-visible")).toBe(true);
+		await userEvent.keyboard("{Enter}");
+		await expect.element(drop).not.toBeInTheDocument();
+		await expect.element(title()).toHaveFocus();
+		held.release();
+		await expect.element(body()).toBeVisible();
+	});
+});
+
 describe("the entry editor: a read that gets no answer", () => {
 	it("00 a read the network cuts off is a refusal like any other: the screen says the entry did not load, and '다시 시도' reads it", async () => {
 		let cut = true;
