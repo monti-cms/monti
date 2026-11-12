@@ -116,7 +116,7 @@
 
 | 번호 | 할 일 | PR |
 |---|---|---|
-| T14 | 릴리스 묶음: 다섯 패키지가 모두 빌드되고, 패키지마다 압축 파일 하나로 낸다(`scripts/pack-release.mjs`). 저장소 밖의 새 Next 앱이 묶음에서 설치해 도는 것(`scripts/try-release.mjs`), `publint`, `@arethetypeswrong/cli`가 릴리스의 관문이고 CI가 push마다 돌린다. `release.yml`은 태그에서 GitHub 릴리스를 만든다 | #PR |
+| T14 | 릴리스 묶음: 다섯 패키지가 모두 빌드되고, 패키지마다 압축 파일 하나로 낸다(`scripts/pack-release.mjs`). 저장소 밖의 새 Next 앱이 묶음에서 설치해 도는 것(`scripts/try-release.mjs`), `publint`, `@arethetypeswrong/cli`가 릴리스의 관문이고 CI가 push마다 돌린다. `release.yml`은 태그에서 GitHub 릴리스를 만든다 | #483 |
 | T155 | 자물쇠(`LockMark`)는 가리키면 잠긴 까닭을 툴팁으로 말한다(2026-11-12 만들며 정함). 변경 점(`ChangeDot`)은 툴팁 없이 그대로 둔다 | #474 |
 | T13 | 사이트에 붙이는 길: `@monti-cms/next`(관리자 페이지, 관리자 API 라우트, 초안 모드의 미리보기, 캐시 갱신)와 예제 앱 `examples/blog`. 흐름 테스트가 예제 앱에서 돌고 시험용 서버는 지웠다. 개발 서버는 관리자 API가 처음 불릴 때 구조 파일을 맞추고 한 줄 알리고, 운영 사이트는 `monti db:migrate`를 돌리라고 서버 로그에 남긴다 | #470 |
 | T81 | 제목 앵커와 목차: `renderDocument`가 제목에 `id`를 붙이고 `tocOf`가 같은 `id`로 목차를 준다. 한글 제목의 `id`는 한글이고, 같은 글자의 제목은 번호가 붙는다 | #470 |
