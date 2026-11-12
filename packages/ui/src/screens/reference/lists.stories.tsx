@@ -48,7 +48,7 @@ export const Trash: Story = { render: () => <TrashScreen /> };
 export const Templates: Story = { render: () => <TemplatesScreen /> };
 export const Taxonomy: Story = { render: () => <TaxonomyScreen /> };
 export const Empty: Story = { render: () => <EmptyScreen /> };
-/** The activity tab as it opens: the log as the lists' table, one failed delivery in its row's delivery cell, no banner (flow 12·01). */
+/** The activity log as it opens: a screen of its own, the log as the lists' table, one failed delivery in its row's delivery cell, no banner (flow 12·01). */
 export const Events: Story = { render: () => <EventsScreen /> };
 /** The menu of "what was done": the kinds to filter by, each with its count (12·09). */
 export const EventsWhatMenu: Story = {
@@ -86,7 +86,7 @@ export const EventsRetryingAll: Story = { render: () => <EventsScreen stage="ret
 export const EventsAllSent: Story = { render: () => <EventsScreen stage="allSent" /> };
 /** One failed again: its row is left, alone, so there is no banner (12·08). */
 export const EventsSomeFailed: Story = { render: () => <EventsScreen stage="someFailed" /> };
-/** Searched for an entry's name and filtered to the assistant: what the assistant changed in one entry (flow 2·18). */
+/** Searched for an entry's name: everything done to one entry, the assistant's work marked ✦ (flow 2·18). */
 export const EventsSearched: Story = { render: () => <EventsScreen stage="searched" /> };
 /** A site with no receiver: the log with no delivery column (12·10). */
 export const EventsNoReceivers: Story = { render: () => <EventsScreen stage="noReceivers" /> };

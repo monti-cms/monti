@@ -24,6 +24,7 @@ import {
 	Empty,
 	EntryStatus,
 	Heading,
+	Icon,
 	IconButton,
 	Inline,
 	LIST_COLUMN_SIZE,
@@ -34,7 +35,6 @@ import {
 	PageBanner,
 	PageColumn,
 	PageHeader,
-	PageToolbar,
 	Pagination,
 	PaginationContent,
 	PaginationItem,
@@ -48,8 +48,6 @@ import {
 	SearchToggle,
 	SidePanel,
 	Stack,
-	TabLink,
-	TabLinks,
 	Table,
 	TableBody,
 	TableCell,
@@ -62,8 +60,8 @@ import {
 import { AdminFrame } from "./frame";
 
 /**
- * The states of the activity tab (screens.md, Events; flow 12). `default` is the log as it opens with one failed delivery; the others are the steps of
- * the flow and the states the flow does not draw (many pages, filters with no match, a read that failed).
+ * The states of the activity log's screen (screens.md, Events; flow 12). `default` is the log as it opens with one failed delivery; the others are the
+ * steps of the flow and the states the flow does not draw (many pages, filters with no match, a read that failed).
  */
 export type EventsStage =
 	| "default"
@@ -97,8 +95,8 @@ type Line = {
 	request?: string;
 	what: string;
 	where?: string;
-	/** Who did it, when it was neither the admin nor the assistant: the command line, a plugin. */
-	who?: string;
+	/** Who did it, when it was neither the person nor the assistant: the command line, a plugin. It is said in the grey words after the sentence. */
+	by?: string;
 	/** `open`: it can be undone. A time: when it was undone. */
 	undo?: "open" | string;
 	delivery?: Delivery;
@@ -153,7 +151,7 @@ const LINES: readonly Line[] = [
 		time: "10. 26 10:12",
 		what: "스키마 적용",
 		where: "설정 · monti.schema.ts",
-		who: "명령줄",
+		by: "명령줄",
 		delivery: "sent",
 	},
 	{ id: "upload", time: "10. 26 09:15", what: "cover-react.png 올림", where: "미디어 · Blog Assets", delivery: "sent" },
@@ -220,7 +218,7 @@ function linesOf(stage: EventsStage): Line[] {
 				line.id === "f3" ? { failed: 1 } : isFailed(line) ? "sent" : line.delivery,
 			);
 		case "searched":
-			return LINES.filter((line) => line.id === "shorter" || line.id === "english");
+			return LINES.filter((line) => line.what.includes("첫 번째 글"));
 		case "noReceivers":
 			return withDelivery(LINES, () => undefined);
 		default:
@@ -528,15 +526,16 @@ function ValueRow({ name, count, checked = false }: { name: string; count: numbe
 }
 
 /**
- * The log's columns, as every list's: each name opens its menu. What was done is filtered by its kind, who did it and how the delivery went by their values, and the
- * time is sorted both ways and filtered by day as the lists' dates are. A site with no receiver has no delivery column.
+ * The log's columns, as every list's: each name opens its menu. The work is filtered by its kind, the delivery by how it went, and the time is sorted both
+ * ways and filtered by day as the lists' dates are. There is no column for who did it: one person uses the admin. A site with no receiver has no delivery
+ * column.
  */
 function columnsOf(stage: EventsStage): ListHeadColumn[] {
 	const failedOnly = stage === "failedOnly" || stage === "retrying" || stage === "retried";
 	return [
 		{
 			id: "what",
-			label: "한 일",
+			label: "작업",
 			menu: (
 				<>
 					<ValueRow name="글 저장" count={64} />
@@ -544,19 +543,6 @@ function columnsOf(stage: EventsStage): ListHeadColumn[] {
 					<ValueRow name="휴지통" count={9} />
 					<ValueRow name="설정" count={12} />
 					<ValueRow name="미디어" count={26} />
-				</>
-			),
-		},
-		{
-			id: "who",
-			label: "한 사람",
-			size: LIST_COLUMN_SIZE.one + 20,
-			filtered: stage === "searched",
-			menu: (
-				<>
-					<ValueRow name="관리자" count={98} />
-					<ValueRow name="어시스턴트" count={31} checked={stage === "searched"} />
-					<ValueRow name="명령줄" count={3} />
 				</>
 			),
 		},
@@ -615,9 +601,10 @@ function StageToast({ message }: { message: string }) {
 }
 
 /**
- * Tools, on its activity tab: the log as the lists' table, newest first. A row is one write, or the assistant's work for one request: what was done with where
- * after it, who did it, how its delivery went, and when. A row opens its details beside the list; what can be done with it is in its ⋯. Failed deliveries, from
- * two on, are a banner at the top of the page, where every screen's banner is, with the way to send them all.
+ * The activity log, a screen of its own as the trash is: its title, the search in the title's row, and the log as the lists' table right under it, newest
+ * first. A row is one write, or the assistant's work for one request (✦ before its words): what was done with where after it, how its delivery went, and
+ * when. A row opens its details beside the list; what can be done with it is in its ⋯. Failed deliveries, from two on, are a banner at the top of the page,
+ * where every screen's banner is, with the way to send them all.
  */
 export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 	const lines = linesOf(stage);
@@ -628,8 +615,8 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 	const noMatch = stage === "retried";
 	return (
 		<AdminFrame
-			open="tools"
-			counts={{ tools: failed > 0 ? String(failed) : undefined }}
+			open="activity"
+			counts={{ activity: failed > 0 ? String(failed) : undefined }}
 			corner={open === undefined}
 			panel={open ? <Details stage={stage} line={open} /> : undefined}
 		>
@@ -652,7 +639,7 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 				) : null}
 			</PageBanner>
 			<PageColumn width="list">
-				<PageHeader title="도구">
+				<PageHeader title="활동 기록">
 					{stage === "empty" || stage === "loadFailed" ? null : (
 						<SearchToggle
 							label="검색"
@@ -662,14 +649,6 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 						/>
 					)}
 				</PageHeader>
-				<PageToolbar inset>
-					<TabLinks variant="toolbar">
-						<TabLink href="#">템플릿</TabLink>
-						<TabLink href="#" current count={failed > 0 ? String(failed) : undefined} countTone="warning">
-							활동 기록
-						</TabLink>
-					</TabLinks>
-				</PageToolbar>
 				{stage === "empty" ? <Empty title="아직 기록이 없습니다." /> : null}
 				{stage === "empty" || stage === "loadFailed" ? null : (
 					<Table
@@ -694,30 +673,28 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 									<TableCell truncate>
 										<RowTitle
 											title={
-												<RowLink render={<button type="button" />}>
-													{line.request ? `“${line.request}”` : line.what}
-												</RowLink>
+												<>
+													{/* The assistant's work is marked before its words; there is no column for who. */}
+													{line.request ? (
+														<>
+															<Text tone="proposal">
+																<Icon icon={Spark} size="sm" label="어시스턴트" />
+															</Text>{" "}
+														</>
+													) : null}
+													<RowLink render={<button type="button" />}>
+														{line.request ? `“${line.request}”` : line.what}
+													</RowLink>
+												</>
 											}
 											address={[
 												line.request ? line.what : line.where,
+												line.by,
 												line.undo && line.undo !== "open" ? `되돌림 ${line.undo}` : null,
 											]
 												.filter(Boolean)
 												.join(" · ")}
 										/>
-									</TableCell>
-									<TableCell tone="subtle" truncate>
-										{/* The admin's own writes say nothing: who else would it be. The assistant, the command line and plugins are named. */}
-										{line.request ? (
-											<Text tone="proposal">
-												<Inline as="span" gap={4} align="center">
-													<Spark aria-hidden size={12} />
-													어시스턴트
-												</Inline>
-											</Text>
-										) : (
-											line.who
-										)}
 									</TableCell>
 									{stage === "noReceivers" ? null : (
 										<TableCell truncate>
