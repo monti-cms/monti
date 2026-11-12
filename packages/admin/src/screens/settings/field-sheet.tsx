@@ -34,7 +34,7 @@ import {
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "./pick-one";
-import { at, type DraftField, FIELD_VALUES, type FieldValue, newFieldKey } from "./schema-draft";
+import { at, conditionalWith, type DraftField, FIELD_VALUES, type FieldValue, newFieldKey } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 
 /** The four kinds a person makes (doc 01); `slug` is every collection's own and is never made here. */
@@ -47,6 +47,8 @@ const IDENTIFIER = /^[a-z][a-zA-Z0-9]*$/;
 
 type Form = {
 	kind: Kind;
+	/** A conditional field (doc 19): this sheet edits its choice, and its options' fields are kept as they are. */
+	conditional: boolean;
 	name: string;
 	label: string;
 	description: string;
@@ -65,6 +67,7 @@ type Form = {
 
 const blank = (to: string): Form => ({
 	kind: "text",
+	conditional: false,
 	name: "",
 	label: "",
 	description: "",
@@ -86,9 +89,9 @@ function formOf(field: DraftField, values: Partial<Record<FieldValue, unknown>>,
 	const labels = (values.optionLabels ?? {}) as Record<string, string>;
 	return {
 		...blank(to),
-		// A conditional field (doc 19) is shown as its choice until this sheet learns its groups (the screen piece of doc 19): saving it from
-		// here would write a plain select, so that piece comes before the kind is offered anywhere.
+		// A conditional field (doc 19) is edited here as its choice; `defOf` keeps it conditional, with its options' fields.
 		kind: def.kind === "conditional" ? "select" : def.kind,
+		conditional: def.kind === "conditional",
 		name: field.name,
 		label: String(values.label ?? ""),
 		description: String(values.description ?? ""),
@@ -97,7 +100,10 @@ function formOf(field: DraftField, values: Partial<Record<FieldValue, unknown>>,
 		required: Boolean(def.required),
 		// A field without a mode has its name's (doc 04): the title per language, the address from the source, the rest the same.
 		locale: localeModeOf(field.name, def),
-		options: def.kind === "select" ? def.options.map((value) => ({ value, label: labels[value] ?? "" })) : [],
+		options:
+			def.kind === "select" || def.kind === "conditional"
+				? def.options.map((value) => ({ value, label: labels[value] ?? "" }))
+				: [],
 		many: (def.kind === "select" || def.kind === "relation") && Boolean(def.many),
 		ordered: def.kind === "relation" && Boolean(def.ordered),
 		via: def.kind === "relation" && def.via ? def.via : "",
@@ -125,6 +131,12 @@ function defOf(form: Form, was: FieldDefinition | null): FieldDefinition {
 			max: form.max ? Number(form.max) : undefined,
 		});
 	if (form.kind === "slug") return clean({ ...(was as FieldDefinition), ...common, kind: "slug" });
+	if (was?.kind === "conditional")
+		return conditionalWith(
+			was,
+			form.options.map((option) => option.value),
+			common,
+		);
 	if (form.kind === "select")
 		return clean({ kind: "select", ...common, options: form.options.map((option) => option.value), many: form.many });
 	if (form.kind === "media")
@@ -350,7 +362,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 			{/* A saved field's kind first: it is what the field is, and it never changes (the add sheet picks it on the left). */}
 			{adding ? null : (
 				<ReadValue label={t("settings.field.kindLabel")} mono={false}>
-					{kindWord(form.kind)}
+					{form.conditional ? t("settings.field.kind.conditional") : kindWord(form.kind)}
 					{form.kind === "relation" ? ` → ${model.label(form.to)}` : ""}
 				</ReadValue>
 			)}
@@ -480,7 +492,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 					</Inline>
 				) : null}
 				{/* How many of the choices are picked belongs with the choices, not with the rules. */}
-				{switchRow(t("settings.field.many"), form.many, (many) => set({ many }))}
+				{form.conditional ? null : switchRow(t("settings.field.many"), form.many, (many) => set({ many }))}
 			</SheetSection>
 		) : null;
 

@@ -142,9 +142,6 @@ export function ConditionalFieldSheetScreen() {
 										+ 선택지 추가
 									</Button>
 								</Inline>
-								<Text as="p" variant="note" tone="subtle">
-									선택지의 필드는 필드 목록에서 그 선택지 아래에 더합니다.
-								</Text>
 							</Stack>
 						</SheetSection>
 						<SheetSection title="입력 규칙">

@@ -1,4 +1,11 @@
-import { cleanMediaValue, type EntryState, type PublishTask, publicPath, type TrashedEntry } from "@monti-cms/core";
+import {
+	cleanMediaValue,
+	type EntryState,
+	type PublishTask,
+	publicPath,
+	storedFields,
+	type TrashedEntry,
+} from "@monti-cms/core";
 import {
 	Banner,
 	Box,
@@ -293,8 +300,10 @@ export function EntryEditor({
 		if (taskPlace(task) === "panel" && task.field) {
 			setPanel(true);
 			const layout = panelLayout(schema.data, collection, t("entry.defaultTab"));
+			// A field of a conditional field's option sits under that field, in its tab (doc 19).
+			const under = storedFields(schema.data?.schema.collections[collection])[task.field]?.under?.field ?? task.field;
 			const index = layout.findIndex((each) =>
-				each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(task.field ?? "")),
+				each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(under)),
 			);
 			if (index >= 0) setTab(index);
 			// A picture's words are written in its settings card, as a body's image has them (flow 1·12).

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { schema } from "../story-schema";
-import { type SettingsRead, settingsVersion } from "./schema-draft";
+import { conditionalWith, type SettingsRead, settingsVersion } from "./schema-draft";
 
 const read: SettingsRead = {
 	site: { name: "example.dev", writingStyle: "", version: 3 },
@@ -55,5 +55,29 @@ describe("the settings draft's version", () => {
 		expect(
 			settingsVersion({ ...read, schema: { ...schema, locales: { ...schema.locales, prefix: "always" } } }),
 		).not.toBe(base);
+	});
+});
+
+describe("a conditional field edited through its choice", () => {
+	const format = {
+		kind: "conditional" as const,
+		options: ["article", "video", "link"],
+		fields: {
+			video: { videoUrl: { kind: "text" as const, required: true } },
+			link: { linkUrl: { kind: "text" as const } },
+		},
+	};
+
+	it("19-6 stays conditional and keeps its options' fields when a rule changes", () => {
+		expect(conditionalWith(format, format.options, { required: true })).toEqual({ ...format, required: true });
+		expect(conditionalWith({ ...format, required: true }, format.options, {})).toEqual(format);
+	});
+
+	it("19-6 loses only the fields of an option that was taken out", () => {
+		expect(conditionalWith(format, ["article", "link", "podcast"], {})).toEqual({
+			kind: "conditional",
+			options: ["article", "link", "podcast"],
+			fields: { link: format.fields.link },
+		});
 	});
 });

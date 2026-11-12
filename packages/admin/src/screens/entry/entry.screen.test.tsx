@@ -900,3 +900,51 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 		await saveCell("저장됨");
 	});
 });
+
+describe("a conditional field in the property panel (doc 19)", () => {
+	const field = (name: string) => page.getByRole("textbox", { name });
+	const stored = async ({ site, id }: Loaded) =>
+		((await site.monti.run("entries.get", { id }, entry.admin)) as { entry: { values: Record<string, unknown> } }).entry
+			.values;
+
+	it("19-6 shows the chosen option's fields under the choice; another choice swaps them and says what the save clears; saved, they are gone", async () => {
+		const made = on("conditional");
+		await made.run();
+		const loaded = made.loaded();
+		await opened();
+		await expect.element(field("동영상 주소")).toHaveValue("https://example.dev/talk.mp4");
+		await expect.element(field("링크 주소")).not.toBeInTheDocument();
+		await expect.element(page.getByText(/지워집니다/)).not.toBeInTheDocument();
+
+		await userEvent.click(page.getByRole("combobox", { name: "글 종류" }));
+		await userEvent.click(page.getByRole("option", { name: "링크" }));
+		await expect.element(field("링크 주소")).toBeVisible();
+		await expect.element(field("동영상 주소")).not.toBeInTheDocument();
+		const line = page.getByText("저장하면 동영상의 값 2개가 지워집니다");
+		await expect.element(line).toBeVisible();
+		// The line stands under the choice, over the option's first field.
+		const top = (element: Element) => element.getBoundingClientRect().top;
+		expect(top(line.element())).toBeGreaterThan(top(page.getByRole("combobox", { name: "글 종류" }).element()));
+		expect(top(line.element())).toBeLessThan(top(field("링크 주소").element()));
+
+		await userEvent.fill(field("링크 주소"), "https://example.dev/reading");
+		await save();
+		await saveCell("저장됨");
+		await expect.element(line).not.toBeInTheDocument();
+		expect(await stored(loaded)).toMatchObject({ format: "link", linkUrl: "https://example.dev/reading" });
+		expect(await stored(loaded)).not.toHaveProperty("videoUrl");
+		expect(await stored(loaded)).not.toHaveProperty("videoCredit");
+	});
+
+	it("19-6 the choice put back before saving shows the values again, and nothing is said", async () => {
+		await on("conditional").run();
+		await opened();
+		await userEvent.click(page.getByRole("combobox", { name: "글 종류" }));
+		await userEvent.click(page.getByRole("option", { name: "링크" }));
+		await expect.element(page.getByText(/지워집니다/)).toBeVisible();
+		await userEvent.click(page.getByRole("combobox", { name: "글 종류" }));
+		await userEvent.click(page.getByRole("option", { name: "동영상" }));
+		await expect.element(field("동영상 주소")).toHaveValue("https://example.dev/talk.mp4");
+		await expect.element(page.getByText(/지워집니다/)).not.toBeInTheDocument();
+	});
+});

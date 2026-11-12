@@ -1,4 +1,4 @@
-import { type FieldDefinition, type FieldMark, localeModeOf, slugify } from "@monti-cms/core";
+import { type FieldDefinition, type FieldMark, localeModeOf, slugify, storedFields } from "@monti-cms/core";
 import {
 	Combobox,
 	ComboboxChip,
@@ -38,11 +38,15 @@ import { FieldChange } from "./translation";
 import type { EntryEditorModel } from "./use-entry-editor";
 import { useRelationField } from "./use-relation-field";
 
+/** Whether a field holds something: an empty text or an empty list is no value. */
+const hasValue = (value: unknown) =>
+	value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0);
+
 /** The id of a field's input: a to-do row puts the cursor there. */
 export const fieldInputId = (field: string) => `monti-entry-${field}`;
 
 /** The kinds of field the panel holds. */
-const SHOWN = new Set<FieldDefinition["kind"]>(["text", "slug", "select", "relation", "media"]);
+const SHOWN = new Set<FieldDefinition["kind"]>(["text", "slug", "select", "relation", "media", "conditional"]);
 
 /** The fields of a collection the panel shows, in the schema's order. The title is the editor's heading, not a property (flow 1). */
 export function panelFields(schema: SchemaRead | null, collection: string) {
@@ -512,7 +516,9 @@ export function EntryProperties({
 }) {
 	const { t } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
-	const definitions = schema?.schema.collections[collection]?.fields ?? {};
+	const top = schema?.schema.collections[collection]?.fields ?? {};
+	// A conditional field (doc 19) is its choice and, under it, the fields of the chosen option: each is stored as a field of its own.
+	const definitions = storedFields(schema?.schema.collections[collection]);
 	const values = schema?.adminValues[collection]?.fields ?? {};
 	const layout = panelLayout(schema, collection, t("entry.defaultTab"));
 	const picked = layout[tab] ?? layout[0];
@@ -526,7 +532,7 @@ export function EntryProperties({
 	const currentLocale = entry?.locale;
 	const entryGroup = entry?.translationGroup;
 
-	const row = (key: string) => {
+	const row = (key: string, after?: React.ReactNode) => {
 		const def = definitions[key];
 		if (!def) return null;
 		const id = fieldInputId(key);
@@ -752,8 +758,37 @@ export function EntryProperties({
 					{values[key]?.label ?? key}
 				</FormFieldLabel>
 				{input()}
+				{after}
 			</FormField>
 		);
+	};
+
+	/** A field's rows: itself and, for a conditional field, the chosen option's fields directly under the choice. */
+	const rows = (key: string) => {
+		const field = top[key];
+		if (field?.kind !== "conditional") return [row(key)];
+		const sameAsSource = shared && localeModeOf(key, field) === "same";
+		const chosen = sameAsSource ? shared[key] : editor.value(`values.${key}`);
+		// The values the other options still hold are dropped by the save (doc 19): said under the choice until then.
+		const left = Object.entries(field.fields)
+			.filter(([option]) => option !== chosen)
+			.map(([option, group]) => ({
+				option,
+				count: Object.keys(group).filter((inner) => hasValue(editor.value(`values.${inner}`))).length,
+			}))
+			.filter((each) => each.count > 0);
+		const labels = values[key]?.optionLabels ?? {};
+		const lost =
+			left.length > 0 && !sameAsSource ? (
+				<Text variant="caption" tone="warning">
+					{t("entry.clearedOnSave", {
+						option: left.map((each) => labels[each.option] ?? each.option).join(", "),
+						count: left.reduce((sum, each) => sum + each.count, 0),
+					})}
+				</Text>
+			) : undefined;
+		const inner = typeof chosen === "string" ? Object.keys(field.fields[chosen] ?? {}) : [];
+		return [row(key, lost), ...inner.map((each) => row(each))];
 	};
 
 	if (!picked) return null;
@@ -766,7 +801,7 @@ export function EntryProperties({
 		>
 			{runs(picked.fields).map((run) => (
 				<PropertyGroup key={run.key} title={run.title}>
-					{run.fields.map(row)}
+					{run.fields.flatMap(rows)}
 				</PropertyGroup>
 			))}
 		</PropertyPanel>

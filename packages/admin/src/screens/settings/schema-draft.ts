@@ -3,6 +3,7 @@ import {
 	type AdminValues,
 	type AdminValuesPatch,
 	type CollectionDefinition,
+	type ConditionalField,
 	canonical,
 	type FieldDefinition,
 	fingerprint,
@@ -506,3 +507,22 @@ export const savedValues = (read: SchemaRead, c: string): AdminValues => {
 	const { version: _version, ...values } = read.adminValues[c] ?? { version: 0 };
 	return values;
 };
+
+/**
+ * A conditional field (doc 19) as a sheet that edits only its choice leaves it: the options as edited, and the fields of every option that is
+ * still listed. Written as a plain select it would lose them, and with them the values the entries hold.
+ */
+export function conditionalWith(
+	was: ConditionalField,
+	options: string[],
+	rules: Pick<ConditionalField, "required" | "locale">,
+): ConditionalField {
+	const { required: _required, locale: _locale, ...kept } = was;
+	return {
+		...kept,
+		...(rules.required ? { required: true } : {}),
+		...(rules.locale ? { locale: rules.locale } : {}),
+		options,
+		fields: Object.fromEntries(Object.entries(was.fields).filter(([option]) => options.includes(option))),
+	};
+}
