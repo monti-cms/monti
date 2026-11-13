@@ -7,7 +7,7 @@ import {
 	middleOf,
 	rowHeights,
 	spillingCells,
-	titleUnderPointer,
+	wholeUnderPointer,
 } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
@@ -40,8 +40,8 @@ describe("the list's column names", () => {
 		expect(spillingCells(main().getByRole("table").element())).toEqual([]);
 		// The row's link covers the row: the pointer still finds what a cut status, category and day say.
 		const row = main().getByRole("row").filter({ hasText: "발행 후 고친 글" });
-		expect(titleUnderPointer(row.getByText("수정 중").element())).toBe("수정 중");
-		expect(titleUnderPointer(row.getByText("개발", { exact: true }).element())).toBe("개발");
+		expect(wholeUnderPointer(row.getByText("수정 중").element())).toBe("수정 중");
+		expect(wholeUnderPointer(row.getByText("개발", { exact: true }).element())).toBe("개발");
 		// A press on them opens the row as a press anywhere on it does.
 		await userEvent.click(row.getByText("개발", { exact: true }));
 		await expect.poll(() => location.hash).toMatch(/^#\/c\/post\/[^?]+$/);

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { onTopOf, titleUnderPointer } from "../../../testing/input";
+import { onTopOf, wholeUnderPointer } from "../../../testing/input";
 import { render } from "../test/render";
 import {
 	ListScroll,
@@ -79,8 +79,8 @@ describe("Table rows with a link", () => {
 	it("the pointer finds what stands over the row's link: a titled cell's words, the address, the languages before the title", async () => {
 		render(rows(() => {}));
 		await expect.element(page.getByText("개발")).toBeVisible();
-		expect(titleUnderPointer(page.getByText("개발").element())).toBe("개발");
-		expect(titleUnderPointer(page.getByText("/posts/first-post").element())).toBe("/posts/first-post");
+		expect(wholeUnderPointer(page.getByText("개발").element())).toBe("개발");
+		expect(wholeUnderPointer(page.getByText("/posts/first-post").element())).toBe("/posts/first-post");
 		expect(onTopOf(page.getByText("KO +2").element())?.closest("[data-slot=locale-codes]")).not.toBeNull();
 	});
 
@@ -410,6 +410,42 @@ describe("Table rows with a link", () => {
 				clientY: box.top + 8,
 			}),
 		);
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(tip()).toBe(null);
+	});
+});
+
+describe("A cut cell", () => {
+	it("says its value whole in the tooltip every cut text has, while it is cut and not when it fits", async () => {
+		const value = "프런트엔드 개발 이야기";
+		const table = (width: number) => (
+			<Table container="none" layout="fixed" columns={[200, width, undefined]}>
+				<TableBody>
+					<TableRow>
+						<TableCell truncate>
+							<RowTitle title={<RowLink href="#/first">첫 번째 글</RowLink>} />
+						</TableCell>
+						<TableCell tone="subtle" truncate title={value}>
+							{value}
+						</TableCell>
+						<TableCell />
+					</TableRow>
+				</TableBody>
+			</Table>
+		);
+		// The words' own box in the cell.
+		const words = () => page.getByRole("cell", { name: value }).getByText(value);
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		const host = render(table(72));
+		// Over the row's link, so the pointer finds the words; no `title` of the browser's is left on the cell.
+		await userEvent.hover(words(), { position: { x: 6, y: 6 } });
+		await expect.poll(tip, { timeout: 5000 }).toBe(value);
+		expect(document.querySelector("td[title]")).toBeNull();
+		await userEvent.hover(page.getByText("첫 번째 글"));
+		await expect.poll(tip).toBe(null);
+		host.remove();
+		render(table(240));
+		await userEvent.hover(words(), { position: { x: 6, y: 6 } });
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		expect(tip()).toBe(null);
 	});

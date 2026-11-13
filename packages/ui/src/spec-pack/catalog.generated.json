@@ -11,7 +11,8 @@
 			"props": {
 				"border": {
 					"kind": "variant",
-					"enum": ["bottom", "bottom-contrast", "top"]
+					"enum": ["bottom", "bottom-contrast", "top"],
+					"required": true
 				}
 			},
 			"events": []
@@ -1722,6 +1723,7 @@
 			"bind": false,
 			"children": true,
 			"slots": [],
+			"only": ["PageFrame.banner"],
 			"props": {
 				"meta": {
 					"kind": "text",
@@ -1729,13 +1731,22 @@
 				},
 				"title": {
 					"kind": "text",
-					"type": "string"
+					"type": "string",
+					"required": true
 				},
 				"tone": {
 					"kind": "variant",
 					"enum": ["danger", "neutral", "warning"]
 				}
 			},
+			"events": []
+		},
+		"PageFrame": {
+			"kind": "part",
+			"bind": false,
+			"children": true,
+			"slots": ["banner"],
+			"props": {},
 			"events": []
 		},
 		"AffixField": {
@@ -2741,7 +2752,8 @@
 						"user--multiple",
 						"video",
 						"warning--alt"
-					]
+					],
+					"required": true
 				}
 			},
 			"events": []
@@ -2800,7 +2812,8 @@
 				},
 				"columns": {
 					"kind": "data",
-					"fields": ["id", "label", "sort", "filtered", "size", "align"]
+					"fields": ["id", "label", "sort", "filtered", "size", "align"],
+					"required": true
 				},
 				"end": {
 					"kind": "state"
@@ -2904,11 +2917,13 @@
 			"props": {
 				"checked": {
 					"kind": "flag",
-					"type": "boolean"
+					"type": "boolean",
+					"required": true
 				},
 				"label": {
 					"kind": "text",
-					"type": "string"
+					"type": "string",
+					"required": true
 				},
 				"proposal": {
 					"kind": "flag",
@@ -2958,7 +2973,8 @@
 				},
 				"status": {
 					"kind": "variant",
-					"enum": ["archived", "draft", "editing", "failed", "published"]
+					"enum": ["archived", "draft", "editing", "failed", "published"],
+					"required": true
 				}
 			},
 			"events": []
@@ -2984,7 +3000,8 @@
 			"props": {
 				"label": {
 					"kind": "text",
-					"type": "string"
+					"type": "string",
+					"required": true
 				},
 				"tone": {
 					"kind": "variant",
@@ -3001,11 +3018,13 @@
 			"props": {
 				"aria-label": {
 					"kind": "text",
-					"type": "string"
+					"type": "string",
+					"required": true
 				},
 				"label": {
 					"kind": "text",
-					"type": "string"
+					"type": "string",
+					"required": true
 				},
 				"placeholder": {
 					"kind": "text",
@@ -3034,11 +3053,13 @@
 			"props": {
 				"label": {
 					"kind": "text",
-					"type": "string"
+					"type": "string",
+					"required": true
 				},
 				"options": {
 					"kind": "data",
-					"fields": ["value", "label"]
+					"fields": ["value", "label"],
+					"required": true
 				}
 			},
 			"events": ["onValueChange"]

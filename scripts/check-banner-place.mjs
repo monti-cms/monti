@@ -23,7 +23,8 @@
 // - a banner component it cannot follow by name: exported under another name (`export { A as B }`, a default export, `export *`), or taken from a
 //   package other than `@monti-cms/ui`, or written under a namespace (`<ui.Banner>`).
 // - something that looks like a banner and is not one (a `Box` with the banner's ground). `drawing-only` keeps raw styling out of screens.
-// - the mockups of the spec pack (`*.screen.json`): they are not code (tracker T150).
+// - the mockups of the spec pack (`*.screen.json`): they are not code. `check:screens` holds them to the same place: the pack's `Banner` stands only
+//   in the `banner` of its `PageFrame` (`only` in the pack's `CATALOG`).
 import path from "node:path";
 
 let parseSync = () => {

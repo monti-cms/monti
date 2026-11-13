@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { BannerLive, BannerLiveLines, useSaid } from "./banner";
 import { Stack } from "./stack";
 
 /**
@@ -21,14 +22,19 @@ function PageBannerPlace({
 }: Omit<React.ComponentProps<"div">, "className"> & { banner?: React.ReactNode }) {
 	// State, not a ref: a page's banner is drawn into this node, so the page draws again once the node is there (in the same commit, before paint).
 	const [place, setPlace] = React.useState<HTMLElement | null>(null);
+	const [lines, say] = useSaid();
 	return (
 		<PageBannerContext.Provider value={place}>
-			<div className="shrink-0" {...props}>
-				{banner}
-				{/* A node of its own after the frame's banners: one of those shown later still lands above the page's. Each sender has its box in it. */}
-				<div ref={setPlace} data-slot="page-banner" className="contents" />
-			</div>
-			{children}
+			<BannerLive.Provider value={say}>
+				<div className="shrink-0" {...props}>
+					{/* The banners' live region is here before any of them, empty: what comes later is said (banner.tsx). */}
+					<BannerLiveLines lines={lines} />
+					{banner}
+					{/* A node of its own after the frame's banners: one of those shown later still lands above the page's. Each sender has its box in it. */}
+					<div ref={setPlace} data-slot="page-banner" className="contents" />
+				</div>
+				{children}
+			</BannerLive.Provider>
 		</PageBannerContext.Provider>
 	);
 }

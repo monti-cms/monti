@@ -4,6 +4,7 @@ import { type ComponentProps, useCallback, useEffect, useState } from "react";
 import { dock } from "./bottom-dock";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { HIT_AREA } from "./hit-area";
 import { Spark } from "./spark";
 import { TextButton } from "./text-button";
@@ -49,9 +50,7 @@ function ProposalBubble({
 	const who = (
 		<>
 			<Spark className="size-monti-icon-sm" />
-			<span title={name} className="max-w-60 truncate">
-				{name}
-			</span>
+			<CutWords className="max-w-60">{name}</CutWords>
 		</>
 	);
 	return (

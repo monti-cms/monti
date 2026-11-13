@@ -648,7 +648,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row(FAILED)).toBeVisible();
 		const cell = row(FAILED).element().querySelectorAll("td")[2];
 		expect(cell?.textContent).toMatch(/^\d\d\. \d\d \d\d:\d\d$/);
-		expect(cell?.getAttribute("title")).toBe(cell?.textContent);
+		expect(cell?.getAttribute("data-cut-words")).toBe(cell?.textContent);
 	});
 	it("[flow 12·03] the details closed with the keyboard give focus back to the row that opened them", async () => {
 		await draw(stories.Log).run();

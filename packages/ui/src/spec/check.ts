@@ -22,6 +22,8 @@ export interface CatalogProp {
 	readonly enum?: readonly (string | number)[];
 	readonly type?: string;
 	readonly fields?: readonly string[];
+	/** The part cannot be drawn without it (its type has no `?`): a spec that leaves it out is refused. */
+	readonly required?: boolean;
 }
 
 /** One entry of `screen-catalog.generated.json`: a part, or a layout container the screen arranges with. */
@@ -34,6 +36,11 @@ export interface CatalogPart {
 	readonly bind: boolean;
 	readonly children: boolean;
 	readonly slots: readonly string[];
+	/**
+	 * The only places it may stand, each a named place of another entry (`Frame.banner`): anywhere else it is refused. For a part whose place is
+	 * not its own to choose (a notice that stands at the very top of a screen). Without it a part stands wherever a spec puts it.
+	 */
+	readonly only?: readonly string[];
 	readonly props: Readonly<Record<string, CatalogProp>>;
 	readonly events: readonly string[];
 }
@@ -148,6 +155,10 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 				if (problem) problems.push(`${id}.props.${name}: ${problem}`);
 			}
 		}
+		for (const [name, rule] of Object.entries(part.props)) {
+			if (rule.required && element.props?.[name] === undefined)
+				problems.push(`${id}.props.${name}: ${element.type} is not drawn without it`);
+		}
 		if (element.bind !== undefined) {
 			if (!part.bind) problems.push(`${id}.bind: ${element.type} holds no data to bind`);
 			else if (typeof element.bind !== "string" || !element.bind.startsWith("/")) {
@@ -190,7 +201,17 @@ export function checkSpec(spec: ScreenSpecDocument, catalog: Catalog): string[] 
 			}
 		});
 	}
+	/** The place an element stands in, as its entry's `only` names one: the type of what holds it and the named place (`Frame.banner`). */
+	const placeOf = (id: string) => {
+		const [holder, kind, slot] = (used.get(id) ?? "").split(".");
+		const type = holder ? spec.elements[holder]?.type : undefined;
+		return type && kind === "slots" && slot ? `${type}.${slot}` : undefined;
+	};
 	for (const [id, element] of Object.entries(spec.elements)) {
+		const only = catalog.entries[element.type]?.only;
+		const place = placeOf(id);
+		if (only && used.has(id) && !(place && only.includes(place)))
+			problems.push(`${id}: ${element.type} stands only in ${only.join(" or ")}, not in ${used.get(id)}`);
 		if (!used.has(id)) problems.push(`${id}: placed nowhere`);
 		else if (catalog.entries[element.type]?.kind === "overlay" && !used.get(id)?.startsWith("overlays["))
 			problems.push(`${id}: ${element.type} opens over the screen; place it in overlays, not in ${used.get(id)}`);
