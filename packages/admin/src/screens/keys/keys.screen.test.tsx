@@ -864,7 +864,13 @@ describe("plugin keys (flow 10, 12)", () => {
 		const more = button("Algolia 검색 · 검색 키 더 보기");
 		more.element().focus();
 		await userEvent.keyboard("{Enter}");
-		await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+		// The menu opens on its first row ("편집"), and its two rows wrap: one step down is "지우기". The keys wait for the row the menu
+		// opened on. Pressed before the menu had picked it, two steps down happened to land on "지우기" (the first step only picked the
+		// first row), and on a slower machine they wrapped back to "편집" and opened the key window instead of the question.
+		await expect.element(page.getByRole("menuitem", { name: "편집" })).toHaveAttribute("data-highlighted");
+		await userEvent.keyboard("{ArrowDown}");
+		await expect.element(page.getByRole("menuitem", { name: "지우기" })).toHaveAttribute("data-highlighted");
+		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByRole("alertdialog")).toBeVisible();
 		page.getByRole("alertdialog").getByRole("button", { name: "지우기" }).element().focus();
 		await userEvent.keyboard("{Enter}");
