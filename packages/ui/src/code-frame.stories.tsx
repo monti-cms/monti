@@ -46,7 +46,7 @@ const head = (
 	</>
 );
 
-/** Every line look: plain, a mark, the effects' grounds, picked, lit, a wavy line, a linked line, a fold's button, folded lines. */
+/** Every line look: plain, a mark, the effects' grounds, picked, lit, a wavy line, a fold's button, folded lines. */
 export const Lines: Story = {
 	args: {
 		tab: (
@@ -64,8 +64,8 @@ export const Lines: Story = {
 				<CodeLine number={2} folds mark="›">
 					focus
 				</CodeLine>
-				<CodeLine number={3} folds tone="highlight" linked>
-					highlight, linked
+				<CodeLine number={3} folds tone="highlight">
+					highlight
 				</CodeLine>
 				<CodeLine number={4} folds tone="minus" mark="−">
 					removed

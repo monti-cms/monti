@@ -58,8 +58,8 @@ type CodeLineTone = "highlight" | "plus" | "minus" | "picked" | "lit";
 
 /**
  * One line of code: its number in the gutter (`fold` is the fold's button before it, on the first line of a fold), the line's mark in the code's left
- * margin (`+`, `−`, `›`: no column of its own), and its words. `linked` draws the 2px line a code link's line has on the gutter's edge. `numbersOff`:
- * the site does not show line numbers, so they are fainter.
+ * margin (`+`, `−`, `›`: no column of its own), and its words. `numbersOff`: the site does not show line numbers, so they are
+ * fainter. A line a code link points at has no standing mark: it is `lit` only while the pointer is on the link (doc 17).
  */
 function CodeLine({
 	number,
@@ -67,7 +67,6 @@ function CodeLine({
 	mark,
 	tone,
 	wavy,
-	linked = false,
 	numbersOff = false,
 	folds = false,
 	readOnly = false,
@@ -81,7 +80,6 @@ function CodeLine({
 	mark?: "+" | "−" | "›";
 	tone?: CodeLineTone;
 	wavy?: "warning" | "error";
-	linked?: boolean;
 	numbersOff?: boolean;
 	/** The block has a fold somewhere: the gutter keeps room for the fold's button on every line, so the numbers stay in a column. */
 	folds?: boolean;
@@ -109,7 +107,6 @@ function CodeLine({
 					readOnly ? undefined : "cursor-pointer hover:bg-monti-selected",
 					numbersOff ? "text-monti-faint" : "text-monti-subtle",
 					tone === "picked" ? "text-monti-default" : undefined,
-					linked ? "shadow-[inset_2px_0_0_var(--monti-border-contrast)]" : undefined,
 				)}
 			>
 				{folds ? <span className="flex size-5 shrink-0 items-center justify-center">{fold}</span> : null}

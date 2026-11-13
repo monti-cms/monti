@@ -168,14 +168,13 @@ type LineLook = {
 	mark?: "+" | "−" | "›";
 	tone?: "highlight" | "plus" | "minus" | "picked" | "lit";
 	wavy?: "warning" | "error";
-	linked?: boolean;
 	words?: React.ReactNode;
 };
 
-/** The effects of the example: line 3 focus, 4 highlighted and linked, 5 removed, 6 added, 7–11 a fold, 9 a warning. */
+/** The effects of the example: line 3 focus, 4 highlighted, 5 removed, 6 added, 7–11 a fold, 9 a warning. */
 const EFFECTS: Record<number, LineLook> = {
 	3: { mark: "›" },
-	4: { tone: "highlight", linked: true },
+	4: { tone: "highlight" },
 	5: { tone: "minus", mark: "−" },
 	6: { tone: "plus", mark: "+" },
 	9: { wavy: "warning" },
@@ -216,7 +215,6 @@ function Lines({
 				mark={look.mark}
 				tone={look.tone}
 				wavy={look.wavy}
-				linked={look.linked}
 				fold={
 					first ? (
 						<IconButton size="xs" label={fold === "open" ? "7번째 줄부터 접기" : "7번째 줄부터 펼치기"}>
@@ -499,32 +497,39 @@ const EFFECT_NAMES = ["강조", "포커스", "추가", "삭제", "경고", "오�
  * The line menu (owner's point 4): pressing or dragging on the line numbers picks the lines and, on release, opens the menu beside them (the old code's
  * own comment, `b612824d:…/code-block-view.tsx:58`). Each effect is a check box for all the picked lines: on all, on some (–, with how many), on none.
  */
-export function LineMenuScreen({ state }: { state: "picked" | "fold" }) {
-	const picked = state === "picked" ? [5, 6] : [7, 8, 9, 10, 11];
+export function LineMenuScreen({ state }: { state: "picked" | "fold" | "linked" }) {
+	const picked = state === "picked" ? [5, 6] : state === "linked" ? [4] : [7, 8, 9, 10, 11];
 	const looks: Record<number, LineLook> = { ...EFFECTS };
 	for (const line of picked) looks[line] = { ...looks[line], tone: "picked" };
-	const some: Record<string, string> = state === "picked" ? { 추가: "1/2", 삭제: "1/2" } : { 경고: "1/5" };
+	const some: Record<string, string> =
+		state === "picked" ? { 추가: "1/2", 삭제: "1/2" } : state === "linked" ? {} : { 경고: "1/5" };
+	const label = state === "picked" ? "5–6번째 줄 효과" : state === "linked" ? "4번째 줄 효과" : "7–11번째 줄 효과";
 	return (
 		<Page>
 			<Box position="relative">
 				<CodeFrame tab={<FileTab name="src/counter.tsx" />} head={<Head />}>
 					<Lines looks={looks} />
 				</CodeFrame>
-				<At top={state === "picked" ? 141 : 181} left={688}>
+				<At top={state === "picked" ? 141 : state === "linked" ? 121 : 181} left={688}>
 					<DropdownMenu open modal={false}>
 						<DropdownMenuTrigger render={<span />} />
 						<DropdownMenuContent side="right" align="start">
 							<DropdownMenuGroup>
-								<DropdownMenuLabel>{state === "picked" ? "5–6번째 줄 효과" : "7–11번째 줄 효과"}</DropdownMenuLabel>
+								<DropdownMenuLabel>{label}</DropdownMenuLabel>
 								{EFFECT_NAMES.map((name) => (
-									<DropdownMenuCheckboxItem key={name} box checked={false} mixed={!!some[name]}>
+									<DropdownMenuCheckboxItem
+										key={name}
+										box
+										checked={state === "linked" && name === "강조"}
+										mixed={!!some[name]}
+									>
 										{name}
 										{some[name] ? <MenuShortcut>{some[name]}</MenuShortcut> : null}
 									</DropdownMenuCheckboxItem>
 								))}
 							</DropdownMenuGroup>
 							<DropdownMenuSeparator />
-							{state === "picked" ? (
+							{state === "linked" ? null : state === "picked" ? (
 								<DropdownMenuItem>이 줄들 접기</DropdownMenuItem>
 							) : (
 								<>
@@ -532,8 +537,12 @@ export function LineMenuScreen({ state }: { state: "picked" | "fold" }) {
 									<DropdownMenuCheckboxItem checked={false}>처음부터 펼치기</DropdownMenuCheckboxItem>
 								</>
 							)}
-							<DropdownMenuSeparator />
-							<DropdownMenuItem>본문 연결</DropdownMenuItem>
+							{state === "linked" ? null : <DropdownMenuSeparator />}
+							{/* The link of the picked lines: checked, and the words that point here as its value (no standing mark on the line). */}
+							<DropdownMenuCheckboxItem checked={state === "linked"}>
+								본문 연결
+								{state === "linked" ? <MenuValue>본문 · 수를 하나 올린다</MenuValue> : null}
+							</DropdownMenuCheckboxItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</At>
@@ -625,10 +634,9 @@ export function FormatInCodeScreen({ state }: { state: "more" | "tooltip" | "fol
 									pressed
 									trigger={(button) => <PopoverTrigger render={button} />}
 								/>
-								<PopoverContent padding="menu">
-									<Command shouldFilter={false}>
-										<CommandInput value="바깥의 count를 읽는다" readOnly aria-label="툴팁 글" />
-									</Command>
+								{/* A plain field in a card: a tooltip's words are typed, not searched. */}
+								<PopoverContent>
+									<Input size="md" aria-label="툴팁 글" defaultValue="바깥의 count를 읽는다" />
 								</PopoverContent>
 							</Popover>
 						) : (
@@ -822,12 +830,12 @@ export function CodeLinkScreen({ state }: { state: "picking" | "ready" | "linked
 			빠르게 두 번 누르면 하나만 올랐다.
 		</>
 	);
-	const looks: Record<number, LineLook> = { ...EFFECTS, 4: { linked: true } };
+	const looks: Record<number, LineLook> = { ...EFFECTS, 4: {} };
 	if (state === "ready") {
 		looks[5] = { ...looks[5], tone: "picked" };
 		looks[6] = { ...looks[6], tone: "picked" };
 	}
-	if (state === "linked") looks[4] = { linked: true, tone: "lit" };
+	if (state === "linked") looks[4] = { tone: "lit" };
 	const statusBar =
 		state === "broken" ? (
 			<StatusBar>

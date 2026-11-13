@@ -40,9 +40,11 @@ export const LanguageUnknown: Story = { render: () => <LanguageScreen state="unk
 export const LineMenu: Story = { render: () => <LineMenuScreen state="picked" /> };
 /** The picked lines are a fold: 접기 해제 · 처음부터 펼치기. */
 export const LineMenuFold: Story = { render: () => <LineMenuScreen state="fold" /> };
+/** Line 4 picked, a code link's target: "본문 연결" checked, with the words that point here. */
+export const LineMenuLinked: Story = { render: () => <LineMenuScreen state="linked" /> };
 /** Words picked in code: the editor's format card, its ⋯ open on the code's own marks. */
 export const FormatInCode: Story = { render: () => <FormatInCodeScreen state="more" /> };
-/** ⋯ › 툴팁: doc 18's tooltip card, one field. */
+/** ⋯ › 툴팁: the tooltip's card, one plain field. */
 export const TooltipInCode: Story = { render: () => <FormatInCodeScreen state="tooltip" /> };
 /** ⋯ › 글자 접기: folded or open at first on the site. */
 export const FoldInCode: Story = { render: () => <FormatInCodeScreen state="fold" /> };
