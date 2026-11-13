@@ -723,4 +723,113 @@ describe("what the first trial against a real service showed (T161)", () => {
 		expect(cut).toBeInstanceOf(ProviderError);
 		expect((cut as ProviderError).usage).toEqual({ input: 43094, output: 1, cached: 43000 });
 	});
+
+	it("10-1 the same on Google, whose every chunk says what it counted so far", async () => {
+		const chunk = {
+			candidates: [{ content: { role: "model", parts: [{ text: "옛날 " }] }, index: 0 }],
+			usageMetadata: {
+				promptTokenCount: 30_373,
+				cachedContentTokenCount: 28_341,
+				candidatesTokenCount: 3,
+				thoughtsTokenCount: 120,
+			},
+		};
+		const control = new AbortController();
+		const fetch: typeof globalThis.fetch = async (_input, init) =>
+			new Response(
+				new ReadableStream<Uint8Array>({
+					start(stream) {
+						stream.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\r\n\r\n`));
+						init?.signal?.addEventListener("abort", () => stream.error(new DOMException("aborted", "AbortError")));
+					},
+				}),
+				{ status: 200, headers: { "content-type": "text/event-stream" } },
+			);
+		const cut = await (async () => {
+			for await (const event of aiSdkProvider({ fetch })({
+				...KEY,
+				service: "gemini",
+				secret: "AIza-provider-test",
+			}).turn(request([{ role: "user", text: "안녕" }], { model: "gemini-3.1-flash-lite", signal: control.signal })))
+				if (event.type === "text") control.abort();
+		})().catch((error: unknown) => error);
+		expect(cut).toBeInstanceOf(ProviderError);
+		expect((cut as ProviderError).usage).toEqual({ input: 30_373, output: 123, cached: 28_341 });
+	});
+
+	it("10-1 an OpenAI-compatible server is asked to say what a streamed answer spent, and what it says is the turn's usage", async () => {
+		// Unasked, Google's compatible address said nothing, and every turn counted as none.
+		const chunks = [
+			{
+				id: "c1",
+				object: "chat.completion.chunk",
+				choices: [{ index: 0, delta: { role: "assistant", content: "ok" } }],
+			},
+			{ id: "c1", object: "chat.completion.chunk", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
+			{
+				id: "c1",
+				object: "chat.completion.chunk",
+				choices: [],
+				usage: {
+					prompt_tokens: 30_000,
+					completion_tokens: 4,
+					total_tokens: 30_004,
+					prompt_tokens_details: { cached_tokens: 28_000 },
+				},
+			},
+		];
+		const net = network(
+			() =>
+				new Response(`${chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("")}data: [DONE]\n\n`, {
+					status: 200,
+					headers: { "content-type": "text/event-stream" },
+				}),
+		);
+		const compatible: OpenKey = {
+			...KEY,
+			service: "openai-compatible",
+			secret: "",
+			baseUrl: "https://compatible.example/v1",
+		};
+		const events = await turn(
+			aiSdkProvider({ fetch: net.fetch })(compatible),
+			request([{ role: "user", text: "안녕" }], { model: "some-model", thinks: false }),
+		);
+		expect(net.sent[0]?.body).toMatchObject({ stream: true, stream_options: { include_usage: true } });
+		expect(events.at(-1)).toMatchObject({ type: "end", usage: { input: 30_000, output: 4, cached: 28_000 } });
+	});
+
+	it("10-1 a compatible server that says what it counted with every chunk: an answer cut off keeps that", async () => {
+		const chunk = {
+			id: "c1",
+			object: "chat.completion.chunk",
+			choices: [{ index: 0, delta: { role: "assistant", content: "옛날 " } }],
+			usage: { prompt_tokens: 32_956, completion_tokens: 3, total_tokens: 32_959 },
+		};
+		const control = new AbortController();
+		const fetch: typeof globalThis.fetch = async (_input, init) =>
+			new Response(
+				new ReadableStream<Uint8Array>({
+					start(stream) {
+						stream.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`));
+						init?.signal?.addEventListener("abort", () => stream.error(new DOMException("aborted", "AbortError")));
+					},
+				}),
+				{ status: 200, headers: { "content-type": "text/event-stream" } },
+			);
+		const compatible: OpenKey = {
+			...KEY,
+			service: "openai-compatible",
+			secret: "",
+			baseUrl: "https://compatible.example/v1",
+		};
+		const cut = await (async () => {
+			for await (const event of aiSdkProvider({ fetch })(compatible).turn(
+				request([{ role: "user", text: "안녕" }], { model: "some-model", thinks: false, signal: control.signal }),
+			))
+				if (event.type === "text") control.abort();
+		})().catch((error: unknown) => error);
+		expect(cut).toBeInstanceOf(ProviderError);
+		expect((cut as ProviderError).usage).toEqual({ input: 32_956, output: 3 });
+	});
 });

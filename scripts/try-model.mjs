@@ -6,23 +6,27 @@
  *     node scripts/try-model.mjs
  *
  * A site with the assistant plugin is stood up in a schema of its own in `TRY_MODEL_DATABASE_URL`, dropped when the trial ends (the key is
- * stored there sealed, and goes with it). `MODEL_SERVICE` is a service the keys screen knows (`anthropic` for now: the items read Anthropic's
- * stream for what it spent), `MODEL_ID` the model to run on; left out, the models the key lists are printed and nothing is spent. Nothing
- * secret is printed: not the key, not a request's headers (only the version header's value).
+ * stored there sealed, and goes with it). `MODEL_SERVICE` is a service the keys screen knows whose stream the trial can read: `anthropic`,
+ * `gemini`, or `openai-compatible` with `MODEL_BASE_URL` (the server's address, …/v1). `MODEL_ID` is the model to run on; left out, the
+ * models the key lists are printed and nothing is spent. Nothing secret is printed: not the key, not a request's headers (only Anthropic's
+ * version header's value).
  *
  * Every call to the model is metered from the usage the service reports in its stream, at `MODEL_PRICES` (US$ per million tokens: input,
- * cache write, cache read, output; Claude Haiku 5.5's are built in), and the running total is printed after each. At `TRY_MODEL_BUDGET`
- * (US$, default 4) no further call is made, and what was not tried is said. Each call's output is capped (`max_tokens`), the cap per item; an
- * answer the trial cuts off itself is counted at its cap, since the service does not say what it wrote.
+ * cache write, cache read, output; some models' are built in), and the running total is printed after each. At `TRY_MODEL_BUDGET` (US$,
+ * default 4) no further call is made, and what was not tried is said. Each call's output is capped (`max_tokens` or its like), the cap per
+ * item (`TRY_MODEL_TOOL_CAP` for the tool call ② cuts); what a stream does not say is counted at the most it could be: an answer cut off at
+ * its cap, a stream with no usage at its cap and its request's length.
  *
  * Each line says what was tried, what the service and the run did, and whether that is what Monti counts on. It ends with 1 when something
  * is not. `TRY_MODEL_ONLY=4,6` runs only those items. The items (T161):
  *   ④ an OpenAI-compatible address with nothing listening ends the run as failed (unreachable); needs no key
- *   ⑤ models.list gives the model's input limit
- *   ⑥ the model id, each thinking level (off, low, medium, high) and the version header are accepted
- *   ⑦ the cache marks (system prompt, last tool, the whole request) are sent and taken; from the second turn some input is read from the cache
- *   ③ a run whose request goes away mid-answer ends interrupted, and going on with it (resume, "continue" on the panel) works; whether the cut answer's usage came
- *   ② an answer cut for length, and one cut inside a tool call: the run ends, and the next request in the conversation is not refused
+ *   ⑤ models.list gives the model's input limit (an OpenAI-compatible list gives none: said, not failed)
+ *   ⑥ the model id and each thinking level (off, low, medium, high) are accepted; one with no thinking is asked for none
+ *   ⑦ Anthropic: the cache marks are sent and taken, and the second turn reads from the cache; others: whether they cache by themselves
+ *   t  a turn with a tool call and its answer
+ *   ③ a run whose request goes away mid-answer ends interrupted, and going on with it (resume, "continue" on the panel) works; whether the
+ *     cut answer's usage came
+ *   ② an answer cut for length, and one cut while it writes a tool call: the run ends, and the next request in the conversation is taken
  *   ① a long think (high) on a hard prompt: when the service thinks over 2 minutes without a word, the turn is not cut
  *   ⑧ (a 429 limit) is not provoked here.
  */
@@ -51,7 +55,9 @@ const ONLY = process.env.TRY_MODEL_ONLY?.split(",").map((item) => item.trim());
 
 /** What must never be printed, wherever it turns up (a service's error may quote what it was sent). */
 const clean = (text) =>
-	(KEY ? String(text).split(KEY).join("***") : String(text)).replace(/sk-[A-Za-z0-9_-]{8,}/g, "sk-***");
+	(KEY ? String(text).split(KEY).join("***") : String(text))
+		.replace(/sk-[A-Za-z0-9_-]{8,}/g, "sk-***")
+		.replace(/AIza[A-Za-z0-9_-]{20,}/g, "AIza***");
 let failed = 0;
 function say(what, did, expected) {
 	if (!expected) failed += 1;
@@ -66,21 +72,129 @@ if (!DATABASE) {
 	);
 	process.exit(1);
 }
-if (SERVICE !== "anthropic") {
-	// The meter reads Anthropic's stream; another service's stream needs its own reading before its money can be counted.
-	console.error(`The trial meters only Anthropic's stream so far; "${SERVICE}" is not tried.`);
+const BASE_URL = process.env.MODEL_BASE_URL?.replace(/\/+$/, "");
+if (SERVICE === "openai-compatible" && !BASE_URL) {
+	console.error("Set MODEL_BASE_URL: the OpenAI-compatible server's address (…/v1).");
 	process.exit(1);
 }
 
 // --- The meter -----------------------------------------------------------------------------------------------------------------------
 
-/** US$ per million tokens: input, cache write (5 minutes), cache read, output; and the same over 100,000 tokens of prompt. */
+/**
+ * How each service's stream is read: which requests are calls to the model, how the trial caps their output, and what each event of the
+ * stream says (the usage, how it stopped, and the kind of what came: thinking, words, a tool call). A service not here is not tried: its
+ * money could not be counted.
+ */
+const METERS = {
+	anthropic: {
+		calls: (url) => url.startsWith("https://api.anthropic.com/v1/messages"),
+		cap(body, most) {
+			body.max_tokens = Math.min(body.max_tokens ?? most, most);
+		},
+		sent: (body) => ({
+			thinking: { thinking: body.thinking ?? null, effort: body.output_config?.effort ?? null },
+			marks: {
+				request: body.cache_control?.type === "ephemeral",
+				system: Array.isArray(body.system) && body.system.some((block) => block.cache_control?.type === "ephemeral"),
+				lastTool: body.tools?.at(-1)?.cache_control?.type === "ephemeral",
+			},
+		}),
+		length: "max_tokens",
+		read(event, seen) {
+			const take = (from) => {
+				if (!from) return;
+				if (typeof from.input_tokens === "number") seen.usage.input = from.input_tokens;
+				if (typeof from.cache_creation_input_tokens === "number") seen.usage.write = from.cache_creation_input_tokens;
+				if (typeof from.cache_read_input_tokens === "number") seen.usage.read = from.cache_read_input_tokens;
+				if (typeof from.output_tokens === "number") seen.usage.output = from.output_tokens;
+				seen.counted = true;
+			};
+			if (event.type === "message_start") take(event.message?.usage);
+			else if (event.type === "content_block_start")
+				seen.block(event.content_block?.type === "tool_use" ? "tool" : event.content_block?.type);
+			else if (event.type === "message_delta") {
+				take(event.usage);
+				seen.stop = event.delta?.stop_reason ?? seen.stop;
+			}
+		},
+	},
+	gemini: {
+		calls: (url) =>
+			url.startsWith("https://generativelanguage.googleapis.com/") && /:(stream)?[gG]enerateContent/.test(url),
+		cap(body, most) {
+			const given = body.generationConfig?.maxOutputTokens;
+			body.generationConfig = { ...body.generationConfig, maxOutputTokens: Math.min(given ?? most, most) };
+		},
+		sent: (body) => ({ thinking: body.generationConfig?.thinkingConfig ?? null }),
+		length: "MAX_TOKENS",
+		read(event, seen) {
+			// Each chunk's `usageMetadata` is the whole so far.
+			const usage = event.usageMetadata;
+			if (usage) {
+				const cached = usage.cachedContentTokenCount ?? 0;
+				seen.usage.input = (usage.promptTokenCount ?? 0) + (usage.toolUsePromptTokenCount ?? 0) - cached;
+				seen.usage.read = cached;
+				seen.usage.output = (usage.candidatesTokenCount ?? 0) + (usage.thoughtsTokenCount ?? 0);
+				seen.counted = true;
+			}
+			const candidate = event.candidates?.[0];
+			for (const part of candidate?.content?.parts ?? [])
+				seen.block(part.functionCall ? "tool" : part.thought ? "thinking" : part.text !== undefined ? "text" : "other");
+			seen.stop = candidate?.finishReason ?? seen.stop;
+		},
+	},
+	"openai-compatible": {
+		calls: (url) => url.startsWith(`${BASE_URL}/chat/completions`),
+		cap(body, most) {
+			if (body.max_completion_tokens !== undefined)
+				body.max_completion_tokens = Math.min(body.max_completion_tokens, most);
+			else body.max_tokens = Math.min(body.max_tokens ?? most, most);
+		},
+		sent: (body) => ({
+			thinking: body.reasoning_effort ?? null,
+			usageAsked: body.stream_options?.include_usage === true,
+		}),
+		length: "length",
+		read(event, seen) {
+			if (event.usage) {
+				const cached = event.usage.prompt_tokens_details?.cached_tokens ?? 0;
+				const prompt = event.usage.prompt_tokens ?? 0;
+				seen.usage.input = prompt - cached;
+				seen.usage.read = cached;
+				// The whole less the prompt: what it thought and wrote, whether or not `completion_tokens` counts the thinking.
+				seen.usage.output = (event.usage.total_tokens ?? prompt + (event.usage.completion_tokens ?? 0)) - prompt;
+				seen.counted = true;
+			}
+			const choice = event.choices?.[0];
+			const delta = choice?.delta ?? {};
+			if (delta.reasoning_content || delta.reasoning) seen.block("thinking");
+			if (delta.content) seen.block("text");
+			if (delta.tool_calls?.length) seen.block("tool");
+			seen.stop = choice?.finish_reason ?? seen.stop;
+		},
+	},
+};
+const METER = METERS[SERVICE];
+if (!METER) {
+	console.error(`The trial cannot count the money of "${SERVICE}" yet: its stream needs a reading in METERS first.`);
+	process.exit(1);
+}
+
+/**
+ * US$ per million tokens: input, cache write, cache read, output; and the same over a prompt length, where the price changes there. The
+ * compatible address is priced by its model, as its own service prices it.
+ */
 const PRICES = {
 	// https://platform.claude.com/docs/en/about-claude/pricing, read 2026-11-13.
 	"claude-haiku-5-5": { short: [0.1, 0.125, 0.01, 0.5], long: [0.5, 0.625, 0.05, 2.5], over: 100_000 },
+	// https://aistudio.google.com/docs/pricing (Standard tier), read 2026-11-14. Google writes no cache, so no write price.
+	"gemini-3.1-flash-lite": { short: [0.25, 0, 0.025, 1.5], long: [0.25, 0, 0.025, 1.5], over: Infinity },
+	"gemini-3.5-flash-lite": { short: [0.3, 0, 0.03, 2.5], long: [0.3, 0, 0.03, 2.5], over: Infinity },
+	"gemini-2.5-flash-lite": { short: [0.1, 0, 0.01, 0.4], long: [0.1, 0, 0.01, 0.4], over: Infinity },
 };
 const given = process.env.MODEL_PRICES?.split(",").map(Number);
-const prices = given?.length === 4 ? { short: given, long: given, over: Infinity } : PRICES[MODEL];
+const prices =
+	given?.length === 4 ? { short: given, long: given, over: Infinity } : PRICES[MODEL?.replace(/^models\//, "")];
 let spent = 0;
 let cap = 1024;
 /** Each call to the model, in order: what was sent and what the stream said. */
@@ -93,17 +207,23 @@ function cost(usage) {
 	return (usage.input * input + usage.write * write + usage.read * read + usage.output * output) / 1_000_000;
 }
 
-/** Reads a copy of Anthropic's stream: the usage, how it stopped, and when its thinking and its first words came. */
+/** Reads a copy of the service's stream: the usage, how it stopped, and when its thinking and its first words came. */
 async function meter(stream, call) {
 	const decoder = new TextDecoder();
 	let buffer = "";
-	const usage = { input: 0, write: 0, read: 0, output: 0 };
-	const take = (from) => {
-		if (!from) return;
-		if (typeof from.input_tokens === "number") usage.input = from.input_tokens;
-		if (typeof from.cache_creation_input_tokens === "number") usage.write = from.cache_creation_input_tokens;
-		if (typeof from.cache_read_input_tokens === "number") usage.read = from.cache_read_input_tokens;
-		if (typeof from.output_tokens === "number") usage.output = from.output_tokens;
+	const seen = {
+		usage: { input: 0, write: 0, read: 0, output: 0 },
+		counted: false,
+		stop: undefined,
+		block(kind) {
+			const at = Date.now() - call.started;
+			if (call.blocks.at(-1) !== kind) {
+				if (call.blocks.at(-1) === "thinking" && call.thinkingTo === undefined) call.thinkingTo = at;
+				call.blocks.push(kind);
+			}
+			if (kind === "thinking" && call.thinkingFrom === undefined) call.thinkingFrom = at;
+			if (kind === "text" && call.textAt === undefined) call.textAt = at;
+		},
 	};
 	let whole = false;
 	try {
@@ -119,58 +239,52 @@ async function meter(stream, call) {
 				} catch {
 					continue;
 				}
-				const at = Date.now() - call.started;
-				if (event.type === "message_start") take(event.message?.usage);
-				else if (event.type === "content_block_start") {
-					const kind = event.content_block?.type;
-					call.blocks.push(kind);
-					if (kind === "thinking" && call.thinkingFrom === undefined) call.thinkingFrom = at;
-					if (kind === "text" && call.textAt === undefined) call.textAt = at;
-				} else if (event.type === "content_block_stop" && call.blocks.at(-1) === "thinking") call.thinkingTo = at;
-				else if (event.type === "message_delta") {
-					take(event.usage);
-					call.stop = event.delta?.stop_reason ?? call.stop;
-				} else if (event.type === "message_stop") whole = true;
+				METER.read(event, seen);
 			}
 		}
+		whole = true;
 	} catch {
 		// The trial's own stop, or the connection: what came is what is known.
 	}
-	// An answer the trial cut off is counted at its cap: the service does not say what it wrote before the cut.
+	const usage = seen.usage;
+	call.stop = seen.stop;
+	call.counted = seen.counted;
+	// What the stream did not say is counted at the most it could be: an answer cut off at its cap, a stream with no usage at its cap and
+	// its request's length in characters (more than its tokens).
 	if (!whole) usage.output = Math.max(usage.output, call.cap);
+	if (!seen.counted) {
+		usage.input = call.length;
+		usage.output = call.cap;
+	}
 	call.usage = usage;
 	call.cost = cost(usage);
 	spent += call.cost;
 	console.log(
 		`      call ${calls.indexOf(call) + 1}: in ${usage.input}, cache write ${usage.write}, cache read ${usage.read}, out ${usage.output}` +
+			`${seen.counted ? "" : " (the stream said no usage: counted at most)"}` +
 			`${whole ? "" : " (cut off: counted at its cap)"}, ${money(call.cost)}; ${money(spent)} so far`,
 	);
 }
 
 const realFetch = globalThis.fetch;
-const MESSAGES = "https://api.anthropic.com/v1/messages";
 globalThis.fetch = async (input, init) => {
 	const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-	if (!url.startsWith(MESSAGES)) return realFetch(input, init);
+	if (!METER.calls(url)) return realFetch(input, init);
 	if (spent >= BUDGET) throw new Error(`The trial's budget (${money(BUDGET)}) is spent: no further call is made.`);
 	const sent = JSON.parse(init.body);
 	const call = {
 		started: Date.now(),
 		cap,
+		length: String(init.body).length,
 		blocks: [],
+		// Of the headers only the version, which is not secret.
 		version: new Headers(init.headers).get("anthropic-version"),
-		marks: {
-			request: sent.cache_control?.type === "ephemeral",
-			system: Array.isArray(sent.system) && sent.system.some((block) => block.cache_control?.type === "ephemeral"),
-			lastTool: sent.tools?.at(-1)?.cache_control?.type === "ephemeral",
-		},
-		thinking: sent.thinking ?? null,
-		effort: sent.output_config?.effort ?? null,
 		tools: sent.tools?.length ?? 0,
+		...METER.sent(sent),
 	};
 	calls.push(call);
 	// The output is capped for the trial's money: the only change made to what Monti sends.
-	sent.max_tokens = Math.min(sent.max_tokens ?? cap, cap);
+	METER.cap(sent, cap);
 	const answer = await realFetch(input, { ...init, body: JSON.stringify(sent) });
 	call.status = answer.status;
 	if (!answer.ok || !answer.body) {
@@ -309,7 +423,11 @@ async function main() {
 		console.log("\nskip  the rest needs MODEL_KEY");
 		return;
 	}
-	const added = await monti.run("keys.add", { service: SERVICE, name: "Trial", secret: KEY }, { actor: "admin" });
+	const added = await monti.run(
+		"keys.add",
+		{ service: SERVICE, name: "Trial", secret: KEY, ...(BASE_URL ? { baseUrl: BASE_URL } : {}) },
+		{ actor: "admin" },
+	);
 	const keyId = added.output?.id ?? added.id;
 	const listed = await monti.run("models.list", {}, { actor: "admin" });
 	const models = listed.keys.find((key) => key.id === keyId)?.models ?? [];
@@ -330,70 +448,94 @@ async function main() {
 	}
 	const model = { keyId, model: MODEL };
 
+	const found = models.find((each) => each.id === MODEL);
+	// A compatible server says nothing of what a model can do: Monti takes each to think not at all.
+	const thinks = found?.thinking === true;
+
 	await item("5", "the model list gives the input limit", 0, async () => {
-		const found = models.find((each) => each.id === MODEL);
-		say(
-			"the key's check and the model list (its version header accepted)",
-			`${models.length} models`,
-			models.length > 0,
-		);
+		say("the key's check and the model list", `${models.length} models`, models.length > 0);
 		say(`${MODEL} is listed`, JSON.stringify(found ?? null), found !== undefined);
-		say("its input limit", `${found?.context ?? "none"} tokens`, (found?.context ?? 0) > 0);
+		if (SERVICE === "openai-compatible")
+			note(`its input limit: ${found?.context ?? "none"} (an OpenAI-compatible list gives none)`);
+		else say("its input limit", `${found?.context ?? "none"} tokens`, (found?.context ?? 0) > 0);
 	});
 
-	let medium;
-	await item("6", "the model id, each thinking level and the version header", 256, async () => {
-		for (const thinking of ["off", "low", "medium", "high"]) {
+	let first;
+	await item("6", "the model id and each thinking level", 256, async () => {
+		for (const thinking of thinks ? ["off", "low", "medium", "high"] : ["off"]) {
 			const result = await run({ request: "Reply with the single word: ok", model, thinking });
 			const sent = result.calls[0];
 			say(
 				`thinking ${thinking}`,
-				`${ended(result)}, "${result.text.trim().slice(0, 40)}", sent thinking ${JSON.stringify(sent?.thinking)}, effort ${sent?.effort}, HTTP ${sent?.status}`,
+				`${ended(result)}, "${result.text.trim().slice(0, 40)}", sent ${JSON.stringify(sent?.thinking)}, HTTP ${sent?.status}`,
 				result.end?.status === "done" && sent?.status === 200,
 			);
-			if (thinking === "medium") medium = result;
+			first ??= result;
 		}
-		const versions = [...new Set(calls.map((call) => call.version))];
-		note(`the messages requests carried anthropic-version ${versions.join(", ")} (the AI SDK's own)`);
+		if (!thinks) note("the model is listed as not thinking, so the run asks for no thinking at any level");
+		const versions = [...new Set(calls.map((call) => call.version).filter(Boolean))];
+		if (versions.length > 0)
+			note(`the messages requests carried anthropic-version ${versions.join(", ")} (the AI SDK's own)`);
 	});
 
-	await item("7", "the cache marks, and the cache read from the second turn", 256, async () => {
-		const first = medium ?? (await run({ request: "Reply with the single word: ok", model, thinking: "medium" }));
-		const marks = first.calls[0]?.marks;
-		say("the marks sent", JSON.stringify(marks), marks?.request && marks?.system && marks?.lastTool);
+	await item("7", "the cache, from the second turn", 256, async () => {
+		first ??= await run({ request: "Reply with the single word: ok", model, thinking: "off" });
+		if (SERVICE === "anthropic") {
+			const marks = first.calls[0]?.marks;
+			say("the marks sent", JSON.stringify(marks), marks?.request && marks?.system && marks?.lastTool);
+		}
 		say("the first turn's request was taken", `HTTP ${first.calls[0]?.status}`, first.calls[0]?.status === 200);
 		const second = await run({
 			conversation: first.conversationId,
 			request: "And once more: reply with the single word: ok",
 			model,
-			thinking: "medium",
+			thinking: "off",
 		});
 		const call = second.calls[0];
-		say(
-			"the second turn, as the service counted it",
-			`input ${call?.usage?.input}, cache write ${call?.usage?.write}, cache read ${call?.usage?.read}`,
-			(call?.usage?.read ?? 0) > 0,
-		);
+		const read = call?.usage?.read ?? 0;
+		const counted = `input ${call?.usage?.input}, cache write ${call?.usage?.write}, cache read ${read}`;
+		// Anthropic caches what is marked, and must; a service that caches by itself may or may not, and says so when it does.
+		if (SERVICE === "anthropic") say("the second turn, as the service counted it", counted, read > 0);
+		else
+			note(
+				`the second turn, as the service counted it: ${counted}${read > 0 ? "" : " (it read nothing from a cache)"}`,
+			);
 		say(
 			"the second turn, as the run tells it (`cached`)",
 			JSON.stringify(second.usage),
-			(second.usage?.cached ?? 0) > 0 && second.usage.cached === call?.usage?.read,
+			(second.usage?.cached ?? 0) === read &&
+				second.usage?.input === (call?.usage?.input ?? 0) + (call?.usage?.write ?? 0) + read,
 		);
 	});
 
-	await item("3", "the request goes away mid-answer, then it is gone on with", 600, async () => {
+	await item("t", "a turn with a tool call and its answer", 512, async () => {
+		const result = await run({
+			request: "How many posts does the site have? Look it up with a tool, then answer in one short sentence.",
+			model,
+			thinking: "off",
+		});
+		const tools = result.events.filter((event) => event.type === "tool");
+		say(
+			"the run",
+			`${ended(result)}, tools ${tools.map((event) => `${event.name} ${event.state}`).join(", ") || "none"}, "${result.text.trim().slice(0, 60)}"`,
+			result.end?.status === "done" && tools.some((event) => event.state === "done") && result.text.length > 0,
+		);
+		say(
+			"the run's usage",
+			JSON.stringify(result.usage),
+			(result.usage?.input ?? 0) > 0 && (result.usage?.output ?? 0) > 0,
+		);
+	});
+
+	await item("3", "the request goes away mid-answer, then it is gone on with", 2000, async () => {
 		const cut = await run(
 			{ request: "Write a short story of about 250 words about a lighthouse keeper.", model, thinking: "off" },
 			{ abortAfterText: true },
 		);
 		say("the run whose request went away", ended(cut), cut.end?.status === "interrupted");
-		const stored = await db
-			.selectFrom("runs")
-			.select(["status", "ended", "usage"])
-			.where("id", "=", cut.runId)
-			.executeTakeFirst();
+		const stored = await db.selectFrom("runs").select(["usage"]).where("id", "=", cut.runId).executeTakeFirst();
 		note(
-			`the cut answer's usage: the stream gave input ${cut.calls[0]?.usage?.input} at its start and no output count; the run stored ${JSON.stringify(stored?.usage)}`,
+			`the cut answer's usage: the stream ${cut.calls[0]?.counted ? "said some" : "said none"} before the cut; the run stored ${JSON.stringify(stored?.usage)}`,
 		);
 		const resumed = await run({ resume: cut.runId });
 		say(
@@ -412,7 +554,7 @@ async function main() {
 		say(
 			"an answer cut by the output limit",
 			`${ended(long)}, stop ${long.calls.at(-1)?.stop}, ${long.text.length} characters kept`,
-			long.end?.status === "done" && long.calls.at(-1)?.stop === "max_tokens",
+			long.end?.status === "done" && long.calls.at(-1)?.stop === METER.length,
 		);
 		const after = await run({
 			conversation: long.conversationId,
@@ -426,7 +568,7 @@ async function main() {
 			after.end?.status === "done",
 		);
 
-		cap = 600;
+		cap = Number(process.env.TRY_MODEL_TOOL_CAP ?? 600);
 		const made = await monti.run(
 			"entries.create",
 			{ collection: "post", locale: "ko", title: "글" },
@@ -440,11 +582,12 @@ async function main() {
 		});
 		const last = inCall.calls.at(-1);
 		say(
-			"an answer cut inside a tool call",
-			`${ended(inCall)}, stop ${last?.stop}, blocks ${last?.blocks.join(" ")}`,
-			inCall.end?.status === "done" && last?.stop === "max_tokens",
+			"an answer cut while it writes a tool call",
+			`${ended(inCall)}, stop ${last?.stop}, what came: ${last?.blocks.join(" ") || "nothing"}`,
+			inCall.end?.status === "done" && last?.stop === METER.length,
 		);
-		if (last?.blocks.at(-1) !== "tool_use") note("the cut did not fall inside a tool call this time");
+		if (last?.blocks.at(-1) !== "tool")
+			note("the cut did not fall inside a tool call this time (or the service sends a call only whole)");
 		const next = await run({
 			conversation: inCall.conversationId,
 			request: "Reply with the single word: ok",
@@ -459,6 +602,10 @@ async function main() {
 	});
 
 	await item("1", "a long think on a hard prompt (high)", 64_000, async () => {
+		if (!thinks) {
+			note("the model is listed as not thinking: nothing to try");
+			return;
+		}
 		const result = await run({
 			request:
 				"Without using any tool, multiply exactly: 738294017365820194736501928374650192837465019283 × 918273645501928374655019283746501928374655012345. Do it digit by digit, check it a second way, then give only the product.",
@@ -473,7 +620,7 @@ async function main() {
 		const silent = (call?.textAt ?? call?.thinkingTo ?? 0) / 1000;
 		say(
 			"the turn",
-			`${ended(result)}, thought ${thought.toFixed(1)} s, first words after ${silent.toFixed(1)} s, ${result.seconds.toFixed(1)} s in all`,
+			`${ended(result)}, thinking shown for ${thought.toFixed(1)} s, first words after ${silent.toFixed(1)} s, ${result.seconds.toFixed(1)} s in all, out ${call?.usage?.output}`,
 			result.end?.status === "done",
 		);
 		if (silent <= 120) note("it did not go 2 minutes without a word: a turn kept through a long think stays untried");
