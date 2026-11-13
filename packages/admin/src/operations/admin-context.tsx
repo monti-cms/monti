@@ -9,6 +9,7 @@ import {
 } from "@monti-cms/core";
 import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { adminMessages } from "../messages";
+import type { AdminPlugin, FieldInputProps, FieldViewProps } from "../plugins";
 import { httpStreams, httpUploader, type StreamTransport, type Transport, type Uploader } from "./transport";
 
 export type Language = "ko" | "en";
@@ -71,6 +72,10 @@ type AdminContext = {
 	screen: ScreenChannel;
 	/** Runtime block components from the same definitions the site gives core. */
 	blocks: ReadonlyMap<string, AdminBlockDefinition>;
+	/** What the plugins' browser halves bring: inputs and views by name, tool page screens by `<plugin>/<page>` (doc 14). */
+	inputs: ReadonlyMap<string, ComponentType<FieldInputProps>>;
+	views: ReadonlyMap<string, ComponentType<FieldViewProps>>;
+	toolPages: ReadonlyMap<string, ComponentType>;
 	/** The admin's words in its language: a key of the admin's or the core's dictionary, with its values. */
 	t: (message: Message | string, values?: Message["values"]) => string;
 	/**
@@ -103,6 +108,7 @@ export function wordsOf(language: Language, message: Message | string, values?: 
 
 /** One list for "none": a new one on each render would make every screen read again whenever this one changes, as when the session ends. */
 const NO_BLOCKS: AdminBlockDefinition[] = [];
+const NO_PLUGINS: AdminPlugin[] = [];
 
 export function AdminProvider({
 	transport,
@@ -113,6 +119,7 @@ export function AdminProvider({
 	apiBase = "/admin/api",
 	screen,
 	blocks = NO_BLOCKS,
+	plugins = NO_PLUGINS,
 	children,
 }: {
 	transport: Transport;
@@ -128,6 +135,8 @@ export function AdminProvider({
 	/** The assistant's way to the screen; one of its own by default. */
 	screen?: ScreenChannel;
 	blocks?: AdminBlockDefinition[];
+	/** The plugins' browser halves (`defineAdminPlugin`). */
+	plugins?: AdminPlugin[];
 	children: ReactNode;
 }) {
 	const [face, setFace] = useState<Face>({ name: null, language: null, templates: true });
@@ -166,6 +175,14 @@ export function AdminProvider({
 			setFace,
 			apiBase,
 			blocks: new Map(blocks.map((block) => [block.type, block])),
+			// The first plugin to bring a name has it: a second one under the same name is not drawn in its place.
+			inputs: new Map(plugins.flatMap((plugin) => Object.entries(plugin.inputs ?? {})).reverse()),
+			views: new Map(plugins.flatMap((plugin) => Object.entries(plugin.views ?? {})).reverse()),
+			toolPages: new Map(
+				plugins.flatMap((plugin) =>
+					Object.entries(plugin.toolPages ?? {}).map(([id, screen]) => [`${plugin.name}/${id}`, screen] as const),
+				),
+			),
 			t: (message, values) => wordsOf(shownLanguage, message, values),
 		}),
 		[
@@ -180,6 +197,7 @@ export function AdminProvider({
 			channel,
 			writes,
 			blocks,
+			plugins,
 		],
 	);
 	// Apart from the rest, so the session ending does not make the write notices and the screens' reads anew.

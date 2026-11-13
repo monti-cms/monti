@@ -1,0 +1,91 @@
+import type { TextFinding } from "@monti-cms/core";
+import type { Editor } from "@tiptap/core";
+import type { Node as EditorNode } from "@tiptap/pm/model";
+import { TextSelection } from "@tiptap/pm/state";
+
+/** A block's words as a text check reads them, and where each run of them sits in the document. */
+type BlockText = { id: string; text: string; runs: { at: number; pos: number; length: number }[] };
+
+/**
+ * The text of every block that holds words, by block id: its text nodes run together, in order. What is not text (a footnote's mark, a line
+ * break) adds nothing, so an offset in the text is a place in the words alone; `runs` take it back to the document.
+ */
+export function blockTexts(doc: EditorNode): BlockText[] {
+	const blocks: BlockText[] = [];
+	doc.descendants((node, pos) => {
+		if (!node.isTextblock) return true;
+		const id = node.attrs.blockId as string | undefined;
+		if (!id) return false;
+		const block: BlockText = { id, text: "", runs: [] };
+		node.forEach((child, offset) => {
+			if (!child.isText || !child.text) return;
+			block.runs.push({ at: block.text.length, pos: pos + 1 + offset, length: child.text.length });
+			block.text += child.text;
+		});
+		if (block.text !== "") blocks.push(block);
+		return false;
+	});
+	return blocks;
+}
+
+/** A place in a block's text as a place in the document; `null` when the text has no such place. `end` reads it as where a range stops. */
+function positionOf(block: BlockText, at: number, end: boolean): number | null {
+	for (const run of block.runs) {
+		const inside = end ? at > run.at && at <= run.at + run.length : at >= run.at && at < run.at + run.length;
+		if (inside) return run.pos + (at - run.at);
+	}
+	return null;
+}
+
+/** A finding with the words it was found over: it is the same finding only while those words are still there. */
+export type Found = TextFinding & { was: string };
+
+/** Where a finding is in the document now; `null` once its block or its words have changed since the check. */
+function rangeOf(doc: EditorNode, found: Found): { from: number; to: number } | null {
+	const block = blockTexts(doc).find((each) => each.id === found.block);
+	if (!block || block.text.slice(found.from, found.to) !== found.was) return null;
+	const from = positionOf(block, found.from, false);
+	const to = positionOf(block, found.to, true);
+	return from === null || to === null ? null : { from, to };
+}
+
+/** Whether a finding still stands: its words are where the check found them. */
+export const stands = (doc: EditorNode, found: Found) => rangeOf(doc, found) !== null;
+
+/**
+ * Puts the findings' words in the body, in one step a single undo takes back. Each keeps the marks of the words it replaces. A finding
+ * whose words changed since the check is left out. Says how many went in.
+ */
+export function fixInEditor(editor: Editor, findings: readonly Found[]): number {
+	const { state } = editor;
+	const ranges = findings
+		.flatMap((found) => {
+			const range = rangeOf(state.doc, found);
+			return range ? [{ ...range, words: found.replacement }] : [];
+		})
+		// From the end, so a replacement does not move the ones before it; one that overlaps a later one is left for the next check.
+		.sort((a, b) => b.from - a.from);
+	const tr = state.tr;
+	let before = Number.POSITIVE_INFINITY;
+	let done = 0;
+	for (const range of ranges) {
+		if (range.to > before) continue;
+		if (range.words === "") tr.delete(range.from, range.to);
+		else tr.insertText(range.words, range.from, range.to);
+		before = range.from;
+		done += 1;
+	}
+	if (done > 0) editor.view.dispatch(tr);
+	return done;
+}
+
+/** Shows a finding in the body: its words selected and scrolled to. */
+export function showInEditor(editor: Editor, found: Found): boolean {
+	const range = rangeOf(editor.state.doc, found);
+	if (!range) return false;
+	editor.view.dispatch(
+		editor.state.tr.setSelection(TextSelection.create(editor.state.doc, range.from, range.to)).scrollIntoView(),
+	);
+	editor.view.focus();
+	return true;
+}

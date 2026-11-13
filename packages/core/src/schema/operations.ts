@@ -304,6 +304,12 @@ export const schemaOperations = [
 				adminValues: withPluginLabels(await adminValuesOf(ctx.db), pluginTabs),
 				/** Each collection's plugin tabs, with their fields: the property panel's locked tabs, after the collection's own. */
 				pluginTabs,
+				/** The plugins' text checks, with the languages each reads (`null`: all): the editor asks only where one reads its entry's. */
+				textChecks: ctx.site.plugins.flatMap((plugin) =>
+					plugin.textCheck
+						? [{ plugin: plugin.name, label: plugin.textCheck.label, locales: plugin.textCheck.locales ?? null }]
+						: [],
+				),
 				locked: ctx.site.files === null,
 				/** The file differs from what the database follows: a hand edit on the dev server, or `monti db:migrate` not run on the live site. */
 				fileChanged: state !== null && state.hash !== hash,

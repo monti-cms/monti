@@ -13,6 +13,7 @@ type Loaded = {
 	net: keys.Network;
 	letRead: () => void;
 	failing: Set<string>;
+	lost: Set<string>;
 	holdCall: (name: string) => () => void;
 	calls: string[];
 };

@@ -9,6 +9,7 @@ import {
 	type GroupField,
 	type LocalesDefinition,
 	mergeAdminValues,
+	type PluginTab,
 	type Rename,
 	type Schema,
 	sameJson,
@@ -24,6 +25,10 @@ export type SchemaRead = {
 	locked: boolean;
 	fileChanged: boolean;
 	failedChange: string | null;
+	/** Each collection's plugin tabs with their fields (doc 14): after the collection's own tabs, and never the admin's to change. */
+	pluginTabs?: Record<string, PluginTab[]>;
+	/** The plugins' text checks: a cell of the editor's status bar for each that reads the entry's language. */
+	textChecks?: { plugin: string; label: string; locales: readonly string[] | null }[];
 };
 
 /** What `settings.read` answers (doc 12): the schema's read and the two rows of admin values the settings screen holds. */
