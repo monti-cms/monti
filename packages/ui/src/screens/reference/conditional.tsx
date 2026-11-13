@@ -83,7 +83,7 @@ const ADD = (
  * here is drawn with parts the built screens already use.
  */
 const FIELDS: Field[] = [
-	{ name: "title !", label: "제목", note: "속성 패널에 안 나옴", kind: "text" },
+	{ name: "title !", label: "제목", kind: "text" },
 	{ name: "slug !", label: "주소", kind: "slug" },
 	{ name: "format !", label: "글 종류", kind: "conditional · 3" },
 	// Each option is a band under the choice, one step in, with no grip (the sheet orders the options) and its value after its name; its fields sit one step further in.
@@ -161,7 +161,7 @@ export function ConditionalFieldSheetScreen() {
 					</SheetBody>
 					<SheetFooter>
 						<Inline gap={12} grow minWidth={0}>
-							<Button variant="ghost-danger">필드 삭제</Button>
+							<Button variant="ghost-danger">지우기</Button>
 						</Inline>
 						<Button variant="ghost">취소</Button>
 						<Button>저장</Button>

@@ -159,13 +159,14 @@ function Body({
 						<RadioItem value="item" label={t("settings.new.item")} description={t("settings.new.itemHint")} />
 					</RadioGroup>
 				</FormFieldSet>
-				{/* The row's words and, for an item, the switch of its public page; the address under it (collections.md). */}
+				{/* The basics tab's 36px body-text row: its words and, for an item, the switch of its public page; the address under it
+				(collections.md). */}
 				<Stack gap={4}>
-					<Inline minHeight="control-xs" align="center" justify="between" gap={8}>
+					<Inline minHeight="control-lg" align="center" justify="between" gap={12}>
 						<Label
 							htmlFor={kind === "item" ? "collection-public-page" : "collection-address"}
-							size="caption"
-							tone="subtle"
+							size="body"
+							tone="default"
 						>
 							{t("settings.basics.path")}
 						</Label>

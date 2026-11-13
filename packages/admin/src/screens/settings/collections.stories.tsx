@@ -198,7 +198,7 @@ async function changeFields(canvasElement: HTMLElement) {
 	await userEvent.click(body.getByRole("button", { name: "저장" }));
 
 	await userEvent.click(await page.findByRole("button", { name: "subtitle 열기" }));
-	await userEvent.click(await body.findByRole("button", { name: "필드 삭제" }));
+	await userEvent.click(await body.findByRole("button", { name: "지우기" }));
 
 	await addField(screen, "고르기");
 	fill(body.getByLabelText("표시 이름"), "글 종류");
@@ -285,7 +285,7 @@ export const EditField: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, body } = await settings(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "summary 열기" }));
-		await body.findByRole("button", { name: "필드 삭제" });
+		await body.findByRole("button", { name: "지우기" });
 	},
 };
 
@@ -354,6 +354,18 @@ export const Basics: Story = {
 		const { page } = await settings(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "기본" }));
 		await page.findByText("컬렉션 지우기");
+	},
+};
+
+/** The basics tab with the name and "폴더 사용" changed: each row has the dot by its name and "되돌리기" at its end, as the addresses do. */
+export const BasicsChanged: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		fill(await page.findByLabelText("표시 이름"), "글");
+		await userEvent.click(page.getByRole("switch", { name: "폴더 사용" }));
+		await waitFor(() => expect(page.getAllByRole("button", { name: "되돌리기" })).toHaveLength(2));
 	},
 };
 
