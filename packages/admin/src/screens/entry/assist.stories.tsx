@@ -218,6 +218,21 @@ export const RequestAnswered: Story = {
 	},
 };
 
+/** A request on picked words the service refused: the card says why in one red line, the screen's own and not the assistant's words. */
+export const RequestFailed: Story = {
+	loaders: [assisted([{ fail: new ProviderError("refused", "Your credit balance is too low.") }]), ...site("draft")],
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		pick(body, "나머지는 필요할 때 꺼내 본다.");
+		await userEvent.click(await all.findByRole("button", { name: "요청" }, wait));
+		await userEvent.type(
+			await all.findByRole("textbox", { name: "어시스턴트에게 요청" }, wait),
+			"뒤 문장만 줄여 줘{Enter}",
+		);
+		await all.findByText(/Your credit balance is too low/, {}, wait);
+	},
+};
+
 /** A dimmed block's menu on a site with the assistant: "✦ 번역" for that block, over "원문 따르기". */
 export const BlockMenuTranslate: Story = {
 	loaders: [assisted(), ...translation.site("new", "english")],

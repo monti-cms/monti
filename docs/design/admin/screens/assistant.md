@@ -123,7 +123,7 @@
 | 제안 검토 | 2.12 | `Review` |
 | 그 사이 고쳐진 줄을 키보드로 "다시 만들기" (포커스가 그 줄의 체크로) | | `ReviewMadeAgainByKeyboard` |
 | 편집기 말풍선의 이름을 눌러 그 대화 열기 | | `BubbleOpensItsConversation` |
-| 편집기의 ✦(채우기, 고른 글자의 요청, 제안 하나의 카드, 번역, 그림의 채우기) | 2.08 ~ 2.10, 3.03, 6.06 | `Screens/Entry/Assist`의 `FieldFilled` · `FieldFilling` · `FieldFillFailed` · `RequestOpen` · `RequestWorking` · `RequestAnswered` · `ProposalCard` · `Translate` · `TranslateProposed` · `BlockMenuTranslate` · `RetranslateCard` · `PictureFill` · `CaptionFill` · `CaptionFillFailed`, `Screens/Entry/Editor`의 `ProposedChoice` · `ProposedSwitch` |
+| 편집기의 ✦(채우기, 고른 글자의 요청, 제안 하나의 카드, 번역, 그림의 채우기) | 2.08 ~ 2.10, 3.03, 6.06 | `Screens/Entry/Assist`의 `FieldFilled` · `FieldFilling` · `FieldFillFailed` · `RequestOpen` · `RequestWorking` · `RequestAnswered` · `RequestFailed` · `ProposalCard` · `Translate` · `TranslateProposed` · `BlockMenuTranslate` · `RetranslateCard` · `PictureFill` · `CaptionFill` · `CaptionFillFailed`, `Screens/Entry/Editor`의 `ProposedChoice` · `ProposedSwitch` |
 | 일괄 막대의 "✦ 요청" | 2.07 | `BulkRequest` |
 | 휴지통의 ✦가 대화를 엶 · 활동 기록 ⋯의 "대화" | 5.15 | `TrashOpensConversation`, `ActivityConversation` |
 | 번역을 만드는 묶음의 검토 | 3.13 | `ReviewTranslations` |
