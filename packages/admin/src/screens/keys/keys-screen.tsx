@@ -130,7 +130,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 	const slotId = (slot: KeySlotRow) => `slot:${slot.plugin}/${slot.slot}`;
 	const rowIds = [...keys.map((key) => key.id), ...slots.filter((slot) => slot.key).map(slotId)];
 	/**
-	 * The slot whose key was removed with the keyboard: its row stays, and once the list shows it empty the focus goes to its "키 넣기",
+	 * The slot whose key was removed with the keyboard: its row stays, and once the list shows it empty the focus goes to its "enter key" button,
 	 * which stands where the ⋯ that held the focus was.
 	 */
 	const emptied = useRef<string | null>(null);
@@ -438,7 +438,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 								// A click made with the keyboard counts no presses of a pointer (`detail` 0): only that has a focus to hand on.
 								const at = rowIds.indexOf(id);
 								const byKeyboard = event.detail === 0;
-								// A slot's row stays when its key goes (it turns to "키 넣기"): the focus stays on that row. A row that goes hands
+								// A slot's row stays when its key goes (it turns to its "enter key" button): the focus stays on that row. A row that goes hands
 								// the focus to the row after it, or before it.
 								const stays = "slot" in removing && !removing.slot.orphan && canStore;
 								emptied.current = byKeyboard && stays ? id : null;
