@@ -127,6 +127,9 @@ function TableRow({
 			data-drop-target={dropTarget || undefined}
 			className={cn(
 				props.onClick && "cursor-pointer not-data-selected:hover:bg-monti-muted",
+				// Cut words in a row whose link covers it stand over the link, so the pointer finds them and they say themselves whole (a row's
+				// second line under its title). Not the words that hold the link (their layer is the row's), and not a cell, which stays static.
+				"[&:has([data-slot=row-link])_:not(td)[data-cut-words]:not(:has([data-slot=row-link]))]:relative [&:has([data-slot=row-link])_:not(td)[data-cut-words]:not(:has([data-slot=row-link]))]:z-1",
 				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted not-data-selected:has-[[data-slot=row-link]:focus-visible]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
 				twoLine && "[&>td]:py-monti-16",
 				// An outline, not a ring: a table row draws no shadow of its own, and takes no rounded corners either (2026-11-11, owner: left square).

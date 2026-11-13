@@ -19,6 +19,7 @@ import {
 	TableHead,
 	TableHeader,
 	TableRow,
+	Text,
 } from "./index";
 
 function rows(opened: (held: { newTab: boolean }) => void, rowPressed?: () => void) {
@@ -708,5 +709,47 @@ describe("Cut words inside a link", () => {
 		await expect.poll(tip, { timeout: 5000 }).toBe(long);
 		(document.activeElement as HTMLElement).blur();
 		await expect.poll(tip).toBe(null);
+	});
+});
+
+describe("A cut line under a row's title", () => {
+	it("stands over the row's link: the pointer finds it, it says itself whole, and a press on it still opens the row", async () => {
+		const opened = vi.fn();
+		const line = "First section · Second section · Third section · Fourth section · Fifth section";
+		render(
+			<Table container="none" layout="fixed" columns={[220, undefined]}>
+				<TableBody>
+					<TableRow twoLine>
+						<TableCell truncate>
+							<Text as="div" truncate>
+								<RowLink render={<button type="button" onClick={opened} />}>Weekly note</RowLink>
+							</Text>
+							<Text as="div" variant="note" tone="subtle" truncate>
+								{line}
+							</Text>
+						</TableCell>
+						<TableCell />
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		await expect.element(page.getByText(line)).toBeVisible();
+		const words = page.getByText(line).element();
+		expect(onTopOf(words)).toBe(words);
+		const box = words.getBoundingClientRect();
+		await pointerPath(
+			[
+				{ x: box.left + 70, y: box.top + box.height / 2 },
+				{ x: box.left + 10, y: box.top + box.height / 2 },
+			],
+			{ steps: 5 },
+		);
+		await expect.poll(tip, { timeout: 5000 }).toBe(line);
+		await userEvent.click(page.getByText(line).first(), { position: { x: 10, y: 4 } });
+		expect(opened).toHaveBeenCalledTimes(1);
+		// The title's own words hold the link: their layer is still the whole row's.
+		const link = page.getByRole("button", { name: "Weekly note" }).element();
+		expect(getComputedStyle(link.parentElement as HTMLElement).position).toBe("static");
 	});
 });
