@@ -8,7 +8,7 @@ import type { AdminValues } from "./admin-values";
 import type { Schema } from "./define";
 import { storedFields } from "./define";
 import type { ChangeFile, ChangeStep } from "./files";
-import { hasOption, schemaHash, theirs } from "./plan";
+import { hasOption, schemaHash, theirs, type Where, whereOf } from "./plan";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -47,9 +47,24 @@ async function followField(db: Db, collection: string, from: string, to: string 
 	const rename = (names: string[]) => names.flatMap((name) => (name !== from ? [name] : to ? [to] : []));
 	const { [from]: moved, ...fields } = values.fields ?? {};
 	const { [from]: width, ...widths } = values.list?.widths ?? {};
+	// The order a conditional field keeps of its options' fields names fields too.
+	const ordered = (all: NonNullable<AdminValues["fields"]>) =>
+		Object.fromEntries(
+			Object.entries(all).map(([name, each]) => [
+				name,
+				each.optionFields
+					? {
+							...each,
+							optionFields: Object.fromEntries(
+								Object.entries(each.optionFields).map(([option, names]) => [option, rename(names)]),
+							),
+						}
+					: each,
+			]),
+		);
 	const next: AdminValues = {
 		...values,
-		...(values.fields ? { fields: moved && to ? { ...fields, [to]: moved } : fields } : {}),
+		...(values.fields ? { fields: ordered(moved && to ? { ...fields, [to]: moved } : fields) } : {}),
 		// The list's own look follows the field too: its place among the columns, whether it is hidden, the width it was dragged to (doc 06).
 		...(values.list
 			? {
@@ -79,7 +94,14 @@ async function followField(db: Db, collection: string, from: string, to: string 
 		.execute();
 }
 
-async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit) {
+async function applyStep(
+	db: Db,
+	step: ChangeStep,
+	schema: Schema,
+	kit: BlockKit,
+	/** The source language as the database has it when this step runs: before the change's own new source is made, the old one. */
+	source: string,
+) {
 	if (step.do === "removeLocale") {
 		// What the site shows and old paths go with the entries (cascade).
 		await db.deleteFrom("entries").where("locale", "=", step.locale).execute();
@@ -90,11 +112,11 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 		return;
 	}
 	// A field step changes the working copy and what the site shows alike (doc 02): the site's code changes with the schema.
-	const entries = async (set: ReturnType<typeof sql>, where: ReturnType<typeof sql<boolean>>) => {
-		await sql`update entries set values = ${set}, version = version + 1, updated_at = now() where collection = ${step.collection} and ${where}`.execute(
+	const entries = async (set: ReturnType<typeof sql>, where: Where) => {
+		await sql`update entries set values = ${set}, version = version + 1, updated_at = now() where collection = ${step.collection} and ${whereOf(where, "entries")}`.execute(
 			db,
 		);
-		await sql`update entry_published set values = ${set} where collection = ${step.collection} and ${where}`.execute(
+		await sql`update entry_published set values = ${set} where collection = ${step.collection} and ${whereOf(where, "entry_published")}`.execute(
 			db,
 		);
 	};
@@ -132,7 +154,7 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 				const under = storedFields(schema.collections[step.collection])[step.values.move]?.under;
 				await entries(
 					sql`(values - ${step.field}::text) || jsonb_build_object(${step.values.move}::text, coalesce(nullif(values->${step.values.move}, '""'::jsonb), values->${step.field}))`,
-					sql<boolean>`values ? ${step.field} and ${theirs(under)}`,
+					(table) => sql<boolean>`values ? ${step.field} and ${theirs(under, source)(table)}`,
 				);
 				await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field}`);
 			}
@@ -150,14 +172,18 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 		case "keepChosen": {
 			const under = storedFields(schema.collections[step.collection])[step.field]?.under;
 			if (under)
-				await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field} and not ${theirs(under)}`);
+				await entries(
+					sql`values - ${step.field}::text`,
+					(table) => sql<boolean>`values ? ${step.field} and not ${theirs(under, source)(table)}`,
+				);
 			return;
 		}
 		case "fillField":
 			// A field of a conditional field's option is filled where that option is chosen: it is no other entry's field (doc 19).
 			await entries(
 				sql`values || jsonb_build_object(${step.field}::text, ${JSON.stringify(step.value)}::jsonb)`,
-				sql<boolean>`${empty(step.field)} and ${theirs(storedFields(schema.collections[step.collection])[step.field]?.under)}`,
+				(table) =>
+					sql<boolean>`${empty(step.field)} and ${theirs(storedFields(schema.collections[step.collection])[step.field]?.under, source)(table)}`,
 			);
 			return;
 	}
@@ -199,7 +225,13 @@ export async function readSchemaState(db: Db): Promise<SchemaState | null> {
  * put in only where the database has none. What the database already has is never replaced: from then on the database owns those values.
  */
 async function followChange(db: Db, change: ChangeFile, schema: Schema, kit: BlockKit): Promise<void> {
-	for (const step of change.steps) await applyStep(db, step, schema, kit);
+	// A translation's choice is read from its entry in the source language (doc 19): until the change's own new source language is made,
+	// that is the language it changes from.
+	let source = change.steps.find((step) => step.do === "changeSource")?.from ?? schema.locales.source;
+	for (const step of change.steps) {
+		await applyStep(db, step, schema, kit, source);
+		if (step.do === "changeSource") source = step.to;
+	}
 	// A field renamed or removed moved what entries hold, with no entry as the write's record (doc 09).
 	await rewriteAllUses(db, schema);
 	for (const [collection, first] of Object.entries(change.firstAdminValues ?? {}))

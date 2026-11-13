@@ -560,7 +560,7 @@ describe("settings › collections: the options of a choice in the review (docs 
 			}
 		).schema.collections.post?.fields;
 
-	it("19-6 a conditional field's line has a band for each option under it, one step in, with no grip, the option's fields under the band, and an option with no fields keeps its band", async () => {
+	it("19-6 a conditional field's line has a band for each option under it, one step in, with no grip, the option's fields under the band, each with its grip, and an option with no fields keeps its band", async () => {
 		await options().run();
 		await opened();
 		const rows = () => [...document.querySelectorAll<HTMLElement>("[data-slot=field-row]")];
@@ -573,9 +573,11 @@ describe("settings › collections: the options of a choice in the review (docs 
 		const band = rows()[at("동영상")] as HTMLElement;
 		expect(band.dataset.group).toBe("true");
 		expect(band.textContent).toContain("video");
-		// A band is not dragged, and neither are its fields: no grip button in them.
+		// A band is not dragged (the sheet orders the options); its fields are, by their grips.
 		expect(band.querySelector("button[aria-label$='옮기기']")).toBeNull();
-		expect((rows()[at("videoUrl")] as HTMLElement).querySelector("button[aria-label$='옮기기']")).toBeNull();
+		expect(
+			(rows()[at("videoUrl")] as HTMLElement).querySelector("button[aria-label='videoUrl 옮기기']"),
+		).not.toBeNull();
 		// A band is one height, the group band's: 36.
 		for (const words of ["필드 없음", "동영상", "링크"])
 			expect(Math.round((rows()[at(words)] as HTMLElement).getBoundingClientRect().height)).toBe(36);
@@ -591,8 +593,6 @@ describe("settings › collections: the options of a choice in the review (docs 
 		await opened();
 		await userEvent.click(page.getByRole("button", { name: "글에 필드 추가" }));
 		await expect.element(sheet().getByText(/게시글 · 글 종류 · 글/)).toBeVisible();
-		// A field of an option is not itself conditional.
-		await expect.element(sheet().getByRole("option", { name: /^조건부/ })).not.toBeInTheDocument();
 		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "credit");
 		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
 		await expect.element(sheet()).not.toBeInTheDocument();
@@ -604,6 +604,222 @@ describe("settings › collections: the options of a choice in the review (docs 
 		expect((await read(made.loaded()))?.format).toMatchObject({
 			kind: "conditional",
 			fields: { article: { credit: { kind: "text" } }, video: { videoUrl: { kind: "text", required: true } } },
+		});
+	});
+
+	/** The grip of a field, and a drag of it onto the middle of another thing's row. */
+	const grip = (name: string) => page.getByRole("button", { name: `${name} 옮기기` }).element();
+	const rowOf = (words: string) =>
+		[...document.querySelectorAll<HTMLElement>("[role=tabpanel] [data-slot=field-row]")].find((row) =>
+			row.textContent?.includes(words),
+		) as HTMLElement;
+	const dragTo = async (name: string, onto: HTMLElement, part: "upper" | "lower" = "lower") => {
+		const from = middleOf(grip(name));
+		const box = onto.getBoundingClientRect();
+		const to = { x: from.x, y: box.top + box.height * (part === "upper" ? 0.25 : 0.75) };
+		await dragPath([from, { x: from.x, y: (from.y + to.y) / 2 }, to], { hold: true });
+		await dropDrag();
+		// The line in hand settles into its place for a moment after the drop, over the row it lands on, and the drag swallows a click
+		// for 50ms: no person presses again that soon.
+		await new Promise((done) => setTimeout(done, 400));
+	};
+	const adminValues = async ({ site }: Site) =>
+		(
+			(await site.monti.run("schema.read", {}, { actor: "admin" })) as {
+				adminValues: Record<string, { fields?: Record<string, { optionFields?: Record<string, string[]> }> }>;
+			}
+		).adminValues.post?.fields;
+
+	it("19-21 a field on its own dragged onto an option's band becomes that option's first field: the review says where it went and who loses its value, and the saved schema and the order kept have it there", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await dragTo("mood", rowOf("동영상"));
+		// Under the video's band, before the field the option had.
+		await expect
+			.poll(() => fieldOrder().filter((name) => ["mood", "videoUrl", "linkUrl"].includes(name ?? "")))
+			.toEqual(["mood", "videoUrl", "linkUrl"]);
+		await expect.poll(() => topOf("mood") - Math.round(rowOf("동영상").getBoundingClientRect().top)).toBeGreaterThan(0);
+		expect(topOf("videoUrl")).toBeGreaterThan(topOf("mood"));
+		const sheetNow = await review();
+		await expect.element(sheetNow.getByText("mood → format · video")).toBeVisible();
+		await expect.element(sheetNow.getByText("옮긴 곳")).toBeVisible();
+		// Two posts with a mood chose another option: the loud draft and the calm article, one of them on the site.
+		await expect.element(sheetNow.getByText("2편 · 공개된 글 1편")).toBeVisible();
+		await userEvent.click(sheetNow.getByRole("button", { name: "지우고 적용" }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		const fields = await read(made.loaded());
+		expect(fields).not.toHaveProperty("mood");
+		expect(Object.keys((fields?.format as { fields: { video: object } }).fields.video)).toEqual(["mood", "videoUrl"]);
+		expect((await adminValues(made.loaded()))?.format?.optionFields).toEqual({ video: ["mood", "videoUrl"] });
+		expect((await stored(made.loaded(), "entries"))["loud-video"]).toMatchObject({ mood: "loud" });
+		expect((await stored(made.loaded(), "entries"))["calm-article"]).not.toHaveProperty("mood");
+	});
+
+	it("19-21 a field of an option is dragged to another option, within its option, and out to the fields on their own; out, its values stay", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		// From the link to the video, before the video's field: the place it was dropped at is kept, though two options changed at once.
+		await dragTo("linkUrl", rowOf("videoUrl"), "upper");
+		await expect
+			.poll(() => fieldOrder().filter((name) => ["videoUrl", "linkUrl"].includes(name ?? "")))
+			.toEqual(["linkUrl", "videoUrl"]);
+		await expect.element(page.getByText("필드 없음").nth(1)).toBeVisible();
+		// Within the option: the first goes after the second.
+		await dragTo("linkUrl", rowOf("videoUrl"));
+		await expect
+			.poll(() => fieldOrder().filter((name) => ["videoUrl", "linkUrl"].includes(name ?? "")))
+			.toEqual(["videoUrl", "linkUrl"]);
+		// Out of the option, to stand on its own before the conditional field.
+		await dragTo("videoUrl", rowOf("mood"), "upper");
+		await expect.poll(() => topOf("videoUrl")).toBeLessThan(topOf("format"));
+		const sheetNow = await review();
+		// Into the video: asked of nobody, said. Out of it: no line of its own (the values stay where they are).
+		await expect.element(sheetNow.getByText("linkUrl → format · video")).toBeVisible();
+		await expect.element(sheetNow.getByText(/videoUrl →/)).not.toBeInTheDocument();
+		await userEvent.click(sheetNow.getByRole("button", { name: "지우고 적용" }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		const fields = await read(made.loaded());
+		expect(fields?.videoUrl).toMatchObject({ kind: "text" });
+		expect((fields?.format as { fields: object }).fields).toEqual({
+			video: { linkUrl: { kind: "text", required: true } },
+		});
+		expect((await stored(made.loaded(), "entry_published"))["loud-video"]).toMatchObject({
+			videoUrl: "https://example.dev/v.mp4",
+		});
+	});
+
+	it("19-21 a conditional field is not dropped into its own options, and the title and the address into none", async () => {
+		await options().run();
+		await opened();
+		const left = (name: string) =>
+			Math.round(
+				(
+					document.querySelector(`[role=tabpanel] button[aria-label='${name} 열기']`) as HTMLElement
+				).getBoundingClientRect().left,
+			);
+		const own = left("slug");
+		await dragTo("format", rowOf("동영상"));
+		// The title's grip in the outline, not the one of the line in hand.
+		const titleGrip = middleOf(
+			document.querySelector("[role=tabpanel] button[aria-label='title 옮기기']") as HTMLElement,
+		);
+		const link = rowOf("링크").getBoundingClientRect();
+		await dragPath([titleGrip, { x: titleGrip.x, y: link.top + link.height * 0.75 }], { hold: true });
+		await dropDrag();
+		// Wherever they were let go, both still stand on their own: as far in as the address, and the options keep their fields.
+		await expect.poll(() => left("title")).toBe(own);
+		expect(left("format")).toBe(own);
+		expect(left("videoUrl")).toBeGreaterThan(own);
+		expect(left("linkUrl")).toBeGreaterThan(own);
+	});
+
+	it("19-17 a field added to an option can be a conditional field: it stands under the band with bands of its own, and the saved schema has it inside the option", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await userEvent.click(page.getByRole("button", { name: "동영상에 필드 추가" }));
+		await userEvent.click(sheet().getByRole("option", { name: /^조건부/ }));
+		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "host");
+		for (const [index, value] of ["own", "embed"].entries()) {
+			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await userEvent.fill(sheet().getByRole("textbox", { name: "값" }).nth(index), value);
+		}
+		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		// Its own bands, further in than the band it stands under.
+		await userEvent.click(page.getByRole("button", { name: "embed에 필드 추가" }));
+		await expect.element(sheet().getByText(/host · embed/)).toBeVisible();
+		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "embedCode");
+		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		const left = (words: string) =>
+			(rowOf(words).querySelector("span:nth-child(2)") as HTMLElement).getBoundingClientRect().left;
+		expect(left("embedCode")).toBeGreaterThan(left("host"));
+		expect(left("host")).toBeGreaterThan(left("동영상"));
+		const sheetNow = await review();
+		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		expect(((await read(made.loaded()))?.format as { fields: { video: object } }).fields.video).toEqual({
+			videoUrl: { kind: "text", required: true },
+			host: { kind: "conditional", options: ["own", "embed"], fields: { embed: { embedCode: { kind: "text" } } } },
+		});
+	});
+
+	it("19-18 a conditional field turned on and off by a switch: the sheet keeps one option and offers no 필수, and the saved field says how it is chosen", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		await userEvent.click(page.getByRole("button", { name: "+ 필드 추가" }));
+		await userEvent.click(sheet().getByRole("option", { name: /^조건부/ }));
+		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "featured");
+		await expect.element(sheet().getByRole("switch", { name: /필수/ })).toBeVisible();
+		await userEvent.click(sheet().getByRole("switch", { name: "스위치로 켜고 끄기" }));
+		// One option, the word "on" stores, and nothing to add to it or require of it.
+		await expect.element(sheet().getByRole("textbox", { name: "값" })).toHaveValue("on");
+		await expect.element(sheet().getByRole("button", { name: "+ 선택지" })).not.toBeInTheDocument();
+		await expect.element(sheet().getByRole("switch", { name: /필수/ })).not.toBeInTheDocument();
+		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "on에 필드 추가" })).toBeVisible();
+		const sheetNow = await review();
+		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		expect((await read(made.loaded()))?.featured).toEqual({
+			kind: "conditional",
+			options: ["on"],
+			fields: {},
+			control: "toggle",
+		});
+	});
+
+	it("19-20 a removed field no entry holds a value of, moved into a field of an option: nothing is moved or deleted, so no count is said and the apply is the plain one", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		// The link's address: no post is a link, so none holds it.
+		await userEvent.click(page.getByRole("button", { name: "linkUrl 열기" }));
+		await userEvent.click(sheet().getByRole("button", { name: "필드 삭제" }));
+		const sheetNow = await review();
+		await userEvent.click(sheetNow.getByRole("radio", { name: "다른 필드로 옮기기" }));
+		await userEvent.click(sheetNow.getByRole("combobox", { name: "다른 필드로 옮기기" }));
+		await userEvent.click(page.getByRole("option", { name: "동영상 주소" }));
+		await expect
+			.element(sheetNow.getByRole("combobox", { name: "다른 필드로 옮기기" }))
+			.toHaveTextContent("동영상 주소");
+		await expect.element(sheetNow.getByText(/옮김 \d+편/)).not.toBeInTheDocument();
+		await expect.element(sheetNow.getByText(/지움 \d+편/)).not.toBeInTheDocument();
+		await expect.element(sheetNow.getByRole("button", { name: "적용", exact: true })).toBeVisible();
+		await expect.element(sheetNow.getByRole("button", { name: "지우고 적용" })).not.toBeInTheDocument();
+	});
+
+	it("19-20 a removed field's values moved into a field of an option: the review says how many are moved and how many deleted, counts again when an option taken out sends its entries there, and the apply is the red one while any are deleted", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		// The video option goes, and its field with it.
+		await userEvent.click(page.getByRole("button", { name: "format 열기" }));
+		await userEvent.click(sheet().getByRole("button", { name: "video 빼기" }));
+		await saveSheet();
+		const sheetNow = await review();
+		await userEvent.click(sheetNow.getByRole("radio", { name: "다른 필드로 옮기기" }));
+		await userEvent.click(sheetNow.getByRole("combobox", { name: "다른 필드로 옮기기" }));
+		await userEvent.click(page.getByRole("option", { name: "링크 주소" }));
+		// The video's post is changed to the first option left (글), which is not the link: its address would go.
+		await expect.element(sheetNow.getByText("지움 1편", { exact: true })).toBeVisible();
+		await expect.element(sheetNow.getByRole("button", { name: "지우고 적용" })).toBeVisible();
+		// Changed to the link instead, that post has the link's fields when the value moves.
+		await userEvent.click(sheetNow.getByRole("combobox", { name: "바꾸기" }));
+		await userEvent.click(page.getByRole("option", { name: "링크", exact: true }));
+		await expect.element(sheetNow.getByText("옮김 1편", { exact: true })).toBeVisible();
+		await expect.element(sheetNow.getByRole("button", { name: "적용", exact: true })).toBeVisible();
+		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
+		await expect.element(sheet()).not.toBeInTheDocument();
+		expect((await stored(made.loaded(), "entry_published"))["loud-video"]).toEqual({
+			mood: "loud",
+			format: "link",
+			linkUrl: "https://example.dev/v.mp4",
 		});
 	});
 

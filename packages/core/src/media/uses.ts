@@ -5,7 +5,7 @@ import { CheckError } from "../errors";
 import type { RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import type { FieldDefinition, Schema, StoredField } from "../schema/define";
-import { storedFields } from "../schema/define";
+import { choseIn, storedFields } from "../schema/define";
 import { type MediaPlace, mediaValueOf, placeKey } from "./value";
 
 type Db = Kysely<Database> | Transaction<Database>;
@@ -35,7 +35,7 @@ export function usesInValues(
 		if (definition.kind !== "media") return [];
 		// A picture in a field of an option that is not chosen is not shown anywhere: it is no use of the file (doc 19).
 		const under = (definition as StoredField).under;
-		if (under && !chosenBy.some((each) => each[under.field] === under.option)) return [];
+		if (under && !chosenBy.some((each) => choseIn(under, each))) return [];
 		const value = mediaValueOf(values[field]);
 		return value ? [{ media: value.media, place: { field } }] : [];
 	});

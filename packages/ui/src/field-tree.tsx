@@ -30,7 +30,7 @@ const REMOVED = "text-monti-faint line-through decoration-1";
 /**
  * One field. `name` is the key as written in the schema (a required field ends it with " !"), `label` what the admin sees, with the field's help text
  * after it in the faint ink (`description`) and a short note of what is special about it (`note`: "renamed from", "new", "not in the panel"); `kind` at the end
- * (mono; it can carry a mark such as "→ Tag"). `tone` colors the name for a change. `depth` indents a field that sits in a group (1), in a branch of one (2), or in a branch inside a group (3).
+ * (mono; it can carry a mark such as "→ Tag"). `tone` colors the name for a change. `depth` indents a field that sits in a group (1), in a branch of one (2), or in a branch inside a group (3); a conditional field in an option of another has its own branches one and two steps further (4, 5), and nothing is drawn deeper.
  * `group` makes the line a group's: a grey band with its name in sans, bold. A field that cannot be moved has no `grip`; its place stays empty so the names
  * line up. With `gripProps` the grip is the button the field is dragged by. `changed` is an unsaved change; `problems` (its name) puts a red dot after
  * the name for a field with something to fix before saving; `locked` (its name) puts a lock after the kind
@@ -69,7 +69,7 @@ function FieldRow({
 	description?: ReactNode;
 	note?: ReactNode;
 	kind?: ReactNode;
-	depth?: 0 | 1 | 2 | 3;
+	depth?: 0 | 1 | 2 | 3 | 4 | 5;
 	group?: boolean;
 	grip?: boolean;
 	gripProps?: ComponentProps<"button">;
@@ -104,6 +104,8 @@ function FieldRow({
 				depth === 1 && "pl-[28px]",
 				depth === 2 && "pl-[44px]",
 				depth === 3 && "pl-[60px]",
+				depth === 4 && "pl-[76px]",
+				depth === 5 && "pl-[92px]",
 				// A band is one height whatever stands at its end (a group's name alone, an option's "+ field"): 36 with its rule.
 				group && "h-monti-control-lg bg-monti-muted py-0",
 				onOpen && !group && "hover:bg-monti-muted",

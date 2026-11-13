@@ -1180,6 +1180,53 @@ describe("a conditional field in the property panel (doc 19)", () => {
 		expect(await stored(loaded)).not.toHaveProperty("videoCredit");
 	});
 
+	it("19-17 19-18 a choice inside a choice shows its option's fields under it, and the outer choice changed takes all of it away; a switch shows its field while it is on, and off stores nothing", async () => {
+		const made = on("nestedChoice");
+		await made.run();
+		const loaded = made.loaded();
+		await opened();
+		const order = (...names: string[]) =>
+			names.map((name) => Math.round(field(name).element().getBoundingClientRect().top));
+		// The option's fields in the order the fields list keeps for it (the inner choice first, not the schema's order), and the inner
+		// choice's own option's field right under it.
+		await expect.element(field("퍼가기 코드")).toBeVisible();
+		const inner = page.getByRole("combobox", { name: "영상 위치" });
+		const [url, code] = order("동영상 주소", "퍼가기 코드");
+		const choice = Math.round(inner.element().getBoundingClientRect().top);
+		expect(choice).toBeLessThan(code as number);
+		expect(code).toBeLessThan(url as number);
+
+		// The inner choice changed: its field goes, and the line under it says what the save clears.
+		await userEvent.click(inner);
+		await userEvent.click(page.getByRole("option", { name: "직접 올림" }));
+		await expect.element(field("퍼가기 코드")).not.toBeInTheDocument();
+		await expect.element(page.getByText("저장하면 퍼가기의 값 1개가 지워집니다")).toBeVisible();
+		// The outer choice changed: everything under it goes, the inner choice too, counted whole.
+		await userEvent.click(page.getByRole("combobox", { name: "글 종류" }));
+		await userEvent.click(page.getByRole("option", { name: "글", exact: true }));
+		await expect.element(inner).not.toBeInTheDocument();
+		await expect.element(page.getByText("저장하면 동영상의 값 3개가 지워집니다")).toBeVisible();
+
+		// The switch: on, with its field under it; off, the field goes.
+		const featured = page.getByRole("switch", { name: "첫 화면에 올리기" });
+		await expect.element(featured).toBeChecked();
+		await expect.element(field("첫 화면 문구")).toHaveValue("이번 주의 글");
+		await userEvent.click(featured);
+		await expect.element(field("첫 화면 문구")).not.toBeInTheDocument();
+		await expect.element(page.getByText("저장하면 첫 화면에 올리기의 값 1개가 지워집니다")).toBeVisible();
+		await save();
+		await saveCell("저장됨");
+		expect(await stored(loaded)).toMatchObject({ format: "article" });
+		for (const gone of ["videoUrl", "videoHost", "embedCode", "featured", "featuredNote"])
+			expect(await stored(loaded)).not.toHaveProperty(gone);
+		// On again: the option's word is stored.
+		await userEvent.click(featured);
+		await expect.element(field("첫 화면 문구")).toBeVisible();
+		await save();
+		await saveCell("저장됨");
+		expect(await stored(loaded)).toMatchObject({ featured: "on" });
+	});
+
 	it("19-14 a value typed in the old option's field, then the choice changed and saved: the save goes through, and the old option's values are gone as the line said", async () => {
 		const made = on("conditional");
 		await made.run();
