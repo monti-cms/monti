@@ -8,7 +8,7 @@ import { HIT_AREA } from "./hit-area";
 import { Add, ArrowDown, ArrowUp } from "./icons";
 import type { SelectAll } from "./page-header";
 import { ResizeHandle } from "./resize-handle";
-import { TableHead, TableHeader } from "./table";
+import { TABLE_TITLE_MIN, TableHead, TableHeader } from "./table";
 
 /** One column of a list as its head names it. */
 type ListHeadColumn = {
@@ -46,7 +46,7 @@ type ListColumnSize = keyof typeof LIST_COLUMN_SIZE;
 /** How narrow and how wide a column can be dragged (core's `list.savePrefs` keeps no more); the title, which takes the room left, keeps `TITLE_MIN`. */
 const LIST_COLUMN_MIN = 60;
 const LIST_COLUMN_MAX = 480;
-const TITLE_MIN = 200;
+const TITLE_MIN = TABLE_TITLE_MIN;
 
 /** The columns that are off, offered by the + at the end of the head row. */
 type ListHeadAdd = {

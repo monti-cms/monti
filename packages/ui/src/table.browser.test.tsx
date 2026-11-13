@@ -572,12 +572,12 @@ describe("Table rows with a link", () => {
 		expect(width(0)).toBe(both - kind());
 	});
 
-	it("a title already narrower than its least (a narrow window): a press that cannot move the edge changes nothing, and the edge still goes the way it can", async () => {
+	it("a title at its least in a narrow window (the table grows past its box): a press that cannot move the edge changes nothing, and the edge still goes the way it can", async () => {
 		const resized = vi.fn();
 		function Head() {
 			const [kind, setKind] = useState(84);
 			return (
-				// 300px: the title has 168 of them, under its 200.
+				// 300px: the title would have 168 of them; it keeps its 200, and the table is wider than its box.
 				<div className="w-[300px]">
 					<Table container="none" layout="fixed" columns={[undefined, kind, 48]}>
 						<ListHead
@@ -607,7 +607,8 @@ describe("Table rows with a link", () => {
 		const edge = page.getByRole("separator", { name: "제목 열 너비 조절" });
 		await expect.element(edge).toBeVisible();
 		const width = (nth: number) => Math.round(document.querySelectorAll("th")[nth]?.getBoundingClientRect().width ?? 0);
-		expect(width(0)).toBeLessThan(200);
+		expect(width(0)).toBe(200);
+		expect(document.querySelector("table")?.getBoundingClientRect().width).toBeGreaterThan(300);
 		const [title, kind] = [width(0), width(1)];
 		const unchanged = async () => {
 			// Whatever was reported, no width is other than it was.
@@ -627,12 +628,12 @@ describe("Table rows with a link", () => {
 		const from = middleOf(edge.element());
 		await dragPath([from, { x: from.x - 30, y: from.y }]);
 		await unchanged();
-		// The way it can go: the title widens by a step, and End takes the kind to its narrowest.
+		// The way it can go: the kind narrows by a step, and End takes it to its narrowest; the title keeps at least its 200.
 		await userEvent.keyboard("{ArrowRight}");
 		await expect.poll(() => width(1)).toBe(kind - 16);
 		await userEvent.keyboard("{End}");
 		await expect.poll(() => width(1)).toBe(60);
-		expect(width(0)).toBe(title + kind - 60);
+		expect(width(0)).toBeGreaterThanOrEqual(title);
 	});
 });
 

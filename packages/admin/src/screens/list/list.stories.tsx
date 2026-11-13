@@ -608,6 +608,14 @@ export const NarrowColumns: Story = {
 	play: ({ canvasElement }) => rowsShown(canvasElement),
 };
 
+/** The relation columns dragged to their widest: more than the page has room for. The title keeps its 200px, and the table scrolls sideways. */
+export const WideColumns: Story = {
+	loaders: site(async (made) => {
+		await made.monti.run("list.savePrefs", { collection: "post", widths: { category: 480, tags: 480 } }, admin);
+	}),
+	play: ({ canvasElement }) => rowsShown(canvasElement),
+};
+
 /** "25 per page ▾" under the table, opened upward: 25, 50, 100 (flow 7, step 02c). */
 export const PageSize: Story = {
 	loaders: site(),

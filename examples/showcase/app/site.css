@@ -1,0 +1,130 @@
+/*
+ * The showcase site's looks: enough to read every block. Every rule sits under `.site`: a bare `main { … }` would reach the admin's page
+ * too, which is a page of this same app. The admin brings its own stylesheet, which touches nothing outside the admin.
+ */
+.site {
+	max-width: 720px;
+	margin: 0 auto;
+	padding: 24px 20px 96px;
+	font:
+		17px / 1.75 system-ui,
+		sans-serif;
+	color: #1c1b19;
+}
+.site a {
+	color: inherit;
+}
+.site h1 {
+	font-size: 32px;
+	line-height: 1.3;
+	margin: 24px 0 8px;
+}
+.site .top,
+.site .top span,
+.site .meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+.site .top {
+	justify-content: space-between;
+	font-size: 14px;
+}
+.site .top [aria-current] {
+	font-weight: 600;
+}
+.site .meta,
+.site .quiet,
+.site .rows time,
+.site .subtitle {
+	color: #6f6b62;
+	font-size: 14px;
+}
+.site .rows {
+	list-style: none;
+	padding: 0;
+}
+.site .rows li {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 6px 0;
+	border-bottom: 1px solid #eae7e0;
+}
+.site .fields {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 4px 16px;
+	font-size: 15px;
+}
+.site .fields dt {
+	color: #6f6b62;
+}
+.site .fields dd {
+	margin: 0;
+}
+.site img,
+.site .toc ol,
+.site .pin {
+	border-radius: 6px;
+}
+.site .cover {
+	width: 100%;
+	height: auto;
+	max-height: 420px;
+	object-fit: cover;
+}
+/* A file block is a link of its own: one to a line. */
+.site .body > a[download] {
+	display: block;
+	margin: 8px 0;
+}
+.site .photo {
+	border-radius: 50%;
+}
+.site .pin,
+.site .toc ol {
+	padding: 8px 16px;
+	background: #f6f4ee;
+	font-size: 15px;
+}
+.site .toc ol {
+	list-style: none;
+}
+.site .toc li[data-depth="1"] {
+	padding-left: 16px;
+}
+.site .toc li[data-depth="2"] {
+	padding-left: 32px;
+}
+.site blockquote {
+	margin: 16px 0;
+	padding-left: 16px;
+	border-left: 3px solid #dcd8cf;
+	color: #4a4741;
+}
+.site table {
+	border-collapse: collapse;
+	width: 100%;
+}
+.site th,
+.site td {
+	border: 1px solid #dcd8cf;
+	padding: 6px 10px;
+	text-align: left;
+}
+.site [data-checklist] {
+	list-style: none;
+	padding-left: 4px;
+}
+.site [data-checklist] input {
+	margin-right: 8px;
+}
+.site figure {
+	margin: 24px 0;
+}
+.site figcaption,
+.site [data-footnotes] {
+	color: #6f6b62;
+	font-size: 14px;
+}

@@ -1,0 +1,40 @@
+{
+	"name": "monti-example-showcase",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Every Monti feature in one Next.js site, with a seed that fills it: the app to try each feature by hand and to QA a release on",
+	"license": "MIT",
+	"type": "module",
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"typecheck": "tsc --noEmit",
+		"db:setup": "monti db:setup",
+		"db:migrate": "monti db:migrate",
+		"seed": "tsx seed/seed.ts"
+	},
+	"dependencies": {
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/ai": "workspace:*",
+		"@monti-cms/core": "workspace:*",
+		"@monti-cms/mdx": "workspace:*",
+		"@monti-cms/next": "workspace:*",
+		"@monti-cms/seo": "workspace:*",
+		"@monti-cms/storage-s3": "workspace:*",
+		"katex": "^0.16.47",
+		"mermaid": "^11.17.2",
+		"next": "16.4.6",
+		"react": "19.2.3",
+		"react-dom": "19.2.3"
+	},
+	"devDependencies": {
+		"@monti-cms/blocks": "workspace:*",
+		"@next/env": "16.4.6",
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"tsx": "^4.21.0",
+		"typescript": "^7.0.2"
+	}
+}
