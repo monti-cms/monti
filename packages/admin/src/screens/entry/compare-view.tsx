@@ -10,6 +10,7 @@ import {
 	type CodeLineTone,
 	Compare,
 	CompareBody,
+	CompareCode,
 	CompareHeading,
 	CompareParagraph,
 	CompareProperty,
@@ -340,6 +341,11 @@ export function CompareView({
 						</CompareHeading>
 					) : block.look === "code" && block.code ? (
 						<CodeCompared key={block.id} block={block} />
+					) : block.look === "code" ? (
+						// A source written in a language of its own (a formula, a diagram, a chart, doc 18) reads as code too.
+						<CompareCode key={block.id}>
+							<Words parts={block.parts} />
+						</CompareCode>
 					) : (
 						<CompareParagraph key={block.id}>
 							<Words parts={block.parts} />

@@ -186,3 +186,39 @@ describe("a code block whose effects changed", () => {
 		expect(mine[0].changes.lines).toEqual([]);
 	});
 });
+
+describe("a code explorer's files in the comparison (doc 18 with doc 17)", () => {
+	const words: Record<string, string> = { "code.effect.plus": "더함", "code.effect.highlight": "강조" };
+	const names: BlockNames = {
+		block: (type) =>
+			type === "codeExplorer" ? { label: { ko: "코드 탐색기", en: "Code explorer" }, fields: {} } : undefined,
+		say: (label) => (typeof label === "string" ? label : "key" in label ? (words[label.key] ?? label.key) : label.ko),
+	};
+	const explorer = (lines: unknown[]): Doc => ({
+		type: "doc",
+		blocks: [
+			{
+				id: "e",
+				type: "codeExplorer",
+				children: [
+					{
+						id: "f",
+						type: "codeBlock",
+						attrs: { title: "src/app.ts", lines },
+						content: [{ type: "text", text: "a\nb" }],
+					},
+				],
+			} as Block,
+		],
+	});
+	it("18-8 a file says its path over its code, and a change of its line effects alone is a changed word", () => {
+		const { mine, server } = compareBodies(
+			explorer([{ name: "plus", start: 1, end: 2 }]),
+			explorer([{ name: "highlight", start: 0, end: 2 }]),
+			names,
+		);
+		expect(mine[0]?.text).toBe("src/app.ts\na\nb\n더함 2");
+		expect(server[0]?.text).toBe("src/app.ts\na\nb\n강조 1–2");
+		expect(mine[0]?.parts.filter((part) => part.changed).map((part) => part.text.trim())).toEqual(["더함 2"]);
+	});
+});

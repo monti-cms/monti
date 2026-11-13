@@ -234,10 +234,34 @@ function wordsOf(block: Block, names: BlockNames | undefined): string {
 	if (fence) return typeof block.attrs?.[fence.attr] === "string" ? String(block.attrs[fence.attr]) : "";
 	if (!block.children) return plainText(block.content);
 	return block.children
-		.flatMap((child) => [valuesOf(child, names), wordsOf(child, names)])
+		.flatMap((child) => [
+			// A file of a code explorer says its path over its code (doc 18): two files with the same code are told apart.
+			child.type === "codeBlock" && typeof child.attrs?.title === "string" ? child.attrs.title : undefined,
+			valuesOf(child, names),
+			wordsOf(child, names),
+			nestedEffects(child, names),
+		])
 		.filter((line): line is string => line !== undefined && line !== "")
 		.join("\n");
 }
+
+/**
+ * The line effects of a code block inside another block (a code explorer's file, doc 18), as one line under its code ("Plus 2–3 · Highlight 5"): its
+ * frame is not drawn there, so a change of effects alone reads as changed words (doc 17's effects, T196). A label a code link names is left out.
+ */
+function nestedEffects(block: Block, names: BlockNames | undefined): string | undefined {
+	if (block.type !== "codeBlock" || !names) return undefined;
+	const effects = ((block.attrs?.lines ?? []) as { name: string; start: number; end: number }[]).filter(
+		(effect) => effect.name !== "anchor",
+	);
+	if (effects.length === 0) return undefined;
+	const say = (name: string) =>
+		CORE_EFFECTS.has(name) ? names.say({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` }) : name;
+	return effects
+		.map((effect) => `${say(effect.name)} ${effect.start + 1}${effect.end - effect.start > 1 ? `–${effect.end}` : ""}`)
+		.join(" · ");
+}
+const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
 
 /** A block written as code of its own language (a formula, a diagram): it reads as code. */
 const isSource = (block: Block, names: BlockNames | undefined) => Boolean(names?.block(block.type)?.fence);
