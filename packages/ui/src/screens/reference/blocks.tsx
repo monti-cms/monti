@@ -2,15 +2,16 @@ import type * as React from "react";
 import { Grip } from "../../grip";
 import {
 	Add,
+	ChartColumn,
 	ChevronDown,
 	ChevronRight,
 	Idea,
 	Information,
-	OverflowMenuHorizontal,
-	Pen,
 	SplitScreen,
 	Star,
+	TextColor,
 	TrashCan,
+	View,
 	Warning,
 	WarningAlt,
 	WarningHex,
@@ -21,9 +22,11 @@ import {
 	BlockBox,
 	BlockHandle,
 	Box,
+	Button,
+	Command,
+	CommandInput,
 	DocCallout,
 	DocCode,
-	DocTable,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -37,7 +40,6 @@ import {
 	DropdownMenuTrigger,
 	DropLine,
 	FileTree,
-	FileTreeAdd,
 	FileTreeRow,
 	FloatingBar,
 	FloatingBarButton,
@@ -47,6 +49,7 @@ import {
 	FolderTabsAdd,
 	FolderTabsBody,
 	FolderTabsList,
+	FormatBarRequest,
 	FormatButton,
 	FormField,
 	FormFieldError,
@@ -56,6 +59,7 @@ import {
 	Image,
 	Inline,
 	Input,
+	MenuValue,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
@@ -142,7 +146,6 @@ export function CalloutScreen({ menu = true }: { menu?: boolean }) {
 						<DropdownMenu open={menu} modal={false}>
 							<FloatingBarButton
 								label="콜아웃 종류 · 경고"
-								pressed={menu}
 								trigger={(button) => <DropdownMenuTrigger render={button} />}
 							>
 								<WarningAlt aria-hidden />
@@ -174,17 +177,14 @@ export function CalloutScreen({ menu = true }: { menu?: boolean }) {
 
 // --- Tabs ----------------------------------------------------------------------------------------------------------------------------------
 
-/** Tabs: the picked tab's name typed where it reads (`rename`), its row's buttons, the + at the end of the tabs. */
-export function TabsScreen({ rename = false }: { rename?: boolean }) {
+/** Tabs: the picked tab's name typed where it reads, its row's buttons (first tab, remove), the + at the end of the tabs. */
+export function TabsScreen() {
 	return (
 		<Page>
 			<Box position="relative">
 				<Handle />
 				<BlockBarPlace>
 					<FloatingBar>
-						<FloatingBarButton label="탭 이름 바꾸기" pressed={rename}>
-							<Pen aria-hidden />
-						</FloatingBarButton>
 						<FloatingBarButton label="처음 열 탭" pressed>
 							<Star aria-hidden />
 						</FloatingBarButton>
@@ -196,15 +196,10 @@ export function TabsScreen({ rename = false }: { rename?: boolean }) {
 				</BlockBarPlace>
 				<FolderTabs value="npm">
 					<FolderTabsList>
-						{rename ? (
-							<FolderTabEdit>
-								<Input appearance="inline" size="inherit" aria-label="탭 이름" defaultValue="npm" autoFocus />
-							</FolderTabEdit>
-						) : (
-							<FolderTab value="npm" draggable>
-								npm
-							</FolderTab>
-						)}
+						{/* The picked tab's name is its input from the start (README, rule 4): pressing it puts the caret there. */}
+						<FolderTabEdit>
+							<Input appearance="inline" size="inherit" aria-label="탭 이름" defaultValue="npm" />
+						</FolderTabEdit>
 						<FolderTab value="pnpm" draggable>
 							pnpm
 						</FolderTab>
@@ -301,11 +296,11 @@ export function CollapsibleScreen({ open = true }: { open?: boolean }) {
 				<BlockBarPlace>
 					<FloatingBar>
 						<FloatingBarButton label="처음부터 펼쳐 두기" pressed>
-							<ChevronDown aria-hidden />
+							<View aria-hidden />
 						</FloatingBarButton>
 					</FloatingBar>
 				</BlockBarPlace>
-				<DocCallout source>
+				<DocCallout>
 					<Inline gap={8}>
 						<IconButton label={open ? "접기" : "펼치기"} size="xs">
 							{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
@@ -328,8 +323,8 @@ export function CollapsibleScreen({ open = true }: { open?: boolean }) {
 
 const FILES = ["src/app.ts", "src/db.ts", "package.json"];
 
-/** A code explorer: the tree built from the files' names, the picked file's code beside it, the row's "first file" menu or a file's ⋯ open. */
-export function CodeExplorerScreen({ state }: { state: "first" | "file" }) {
+/** A code explorer: the tree built from the files' names, the picked file's code beside it, its row's "first file" menu open (`first`). */
+export function CodeExplorerScreen({ state }: { state: "first" | "rest" }) {
 	return (
 		<Page>
 			<Box position="relative">
@@ -339,7 +334,6 @@ export function CodeExplorerScreen({ state }: { state: "first" | "file" }) {
 						<DropdownMenu open={state === "first"} modal={false}>
 							<FloatingBarButton
 								label="처음 보일 파일 · src/app.ts"
-								pressed={state === "first"}
 								trigger={(button) => <DropdownMenuTrigger render={button} />}
 							>
 								<Star aria-hidden />
@@ -366,27 +360,23 @@ export function CodeExplorerScreen({ state }: { state: "first" | "file" }) {
 									depth={1}
 									current
 									more={
-										<DropdownMenu open={state === "file"} modal={false}>
-											<IconButton
-												label="파일 메뉴"
-												size="xs"
-												trigger={(button) => <DropdownMenuTrigger render={button} />}
-											>
-												<OverflowMenuHorizontal aria-hidden />
-											</IconButton>
-											<DropdownMenuContent>
-												<DropdownMenuItem variant="danger">
-													<TrashCan aria-hidden />
-													지우기
-												</DropdownMenuItem>
-											</DropdownMenuContent>
-										</DropdownMenu>
+										<IconButton label="파일 지우기" size="xs" tone="danger">
+											<TrashCan aria-hidden />
+										</IconButton>
 									}
 								/>
 								<FileTreeRow name="db.ts" depth={1} />
 								<FileTreeRow name="package.json" />
-								<FileTreeAdd>파일</FileTreeAdd>
-								<FileTreeAdd>폴더</FileTreeAdd>
+								<Inline gap={4}>
+									<Button variant="ghost" size="sm">
+										<Add aria-hidden />
+										파일
+									</Button>
+									<Button variant="ghost" size="sm">
+										<Add aria-hidden />
+										폴더
+									</Button>
+								</Inline>
 							</FileTree>
 						</Box>
 						<Stack gap={8} grow minWidth={0} padding={12}>
@@ -410,8 +400,7 @@ type Source = {
 	name: string;
 	code: string;
 	preview: React.ReactNode;
-	/** The source does not read: the card over the field, and each line's problem under it. */
-	errorTitle?: string;
+	/** The source does not read: each line's problem under the field. */
 	errors?: string[];
 };
 
@@ -426,15 +415,7 @@ function SourcePanel({ source }: { source: Source }) {
 				<Handle />
 				<BlockBox selected>
 					<Stack gap={12}>
-						{source.errors ? (
-							<Box padding={16} background="muted" radius="md">
-								<Text variant="note" tone="subtle" align="center">
-									{source.errorTitle}
-								</Text>
-							</Box>
-						) : (
-							<Box paddingY={8}>{source.preview}</Box>
-						)}
+						<Box paddingY={8}>{source.preview}</Box>
 						<FormField>
 							<FormFieldLabel htmlFor="ref-source">{source.name}</FormFieldLabel>
 							<Textarea id="ref-source" mono rows={4} defaultValue={source.code} />
@@ -470,7 +451,6 @@ export function MermaidScreen() {
 				name: "다이어그램 · Mermaid",
 				code: "flowchart LR\n  A[글 쓰기] --> B[저장]\n  B --> C[발행\n  C --> D[사이트]",
 				preview: <Image src={null} alt="" ratio="banner" />,
-				errorTitle: "다이어그램을 그리지 못했습니다",
 				errors: ["3번째 줄: [ 를 닫지 않았습니다"],
 			}}
 		/>
@@ -497,12 +477,7 @@ export function ChartTextScreen({ error = false }: { error?: boolean }) {
 				name: "차트",
 				code: error ? CHART_TEXT.replace("chart bar", "chart bars") : CHART_TEXT,
 				preview: <Image src={null} alt="" ratio="banner" />,
-				...(error
-					? {
-							errorTitle: "차트를 그리지 못했습니다",
-							errors: ["1번째 줄: bars는 차트 종류가 아닙니다 (bar · line · area · pie)"],
-						}
-					: {}),
+				...(error ? { errors: ["1번째 줄: bars는 차트 종류가 아닙니다"] } : {}),
 			}}
 		/>
 	);
@@ -517,12 +492,8 @@ export function ChartTableScreen() {
 				<BlockBarPlace>
 					<FloatingBar>
 						<DropdownMenu open modal={false}>
-							<FloatingBarButton
-								label="차트 종류 · 막대"
-								pressed
-								trigger={(button) => <DropdownMenuTrigger render={button} />}
-							>
-								<Add aria-hidden />
+							<FloatingBarButton label="차트 종류 · 막대" trigger={(button) => <DropdownMenuTrigger render={button} />}>
+								<ChartColumn aria-hidden />
 							</FloatingBarButton>
 							<DropdownMenuContent>
 								<DropdownMenuRadioGroup value="bar" onValueChange={still}>
@@ -537,13 +508,26 @@ export function ChartTableScreen() {
 				</BlockBarPlace>
 				<Stack gap={12}>
 					<Image src={null} alt="" ratio="share" />
-					<DocTable
-						head={["월", "방문", "구독"]}
-						rows={[
-							["1월", "1200", "300"],
-							["2월", "1850", "420"],
-						]}
-					/>
+					{/* The editor's own table: a light grid, the head row only bolder (editor-tools.md, the table; as table-tools.tsx draws it). */}
+					<table className="w-full border-collapse text-monti-reading [&_td]:border [&_td]:border-monti-muted [&_td]:px-monti-8 [&_th]:border [&_th]:border-monti-muted [&_th]:px-monti-8 [&_th]:text-left [&_th]:font-semibold">
+						<tbody>
+							<tr>
+								<th>월</th>
+								<th>방문</th>
+								<th>구독</th>
+							</tr>
+							<tr>
+								<td>1월</td>
+								<td>1200</td>
+								<td>300</td>
+							</tr>
+							<tr>
+								<td>2월</td>
+								<td>1850</td>
+								<td>420</td>
+							</tr>
+						</tbody>
+					</table>
 				</Stack>
 			</Box>
 		</Page>
@@ -568,9 +552,10 @@ function HandleDrawing({ look, state }: { look: HandleLook; state: HandleState }
 		bar: "h-monti-control-xs w-monti-16 rounded-monti-sm",
 	}[look];
 	const ground = look === "pill" ? (on ? "bg-monti-selected" : "") : "bg-monti-selected";
+	// Today's part pointed at: the dots go dark, with no ground (block-handle.tsx).
 	return (
 		<span
-			className={`flex items-center justify-center ${shape} ${ground} ${on || look !== "pill" ? "text-monti-default" : "text-monti-subtle"} ${state === "drag" ? "cursor-grabbing" : "cursor-grab"}`}
+			className={`flex items-center justify-center ${shape} ${ground} text-monti-default ${state === "drag" ? "cursor-grabbing" : "cursor-grab"}`}
 		>
 			<Grip className={look === "bar" ? "scale-110" : undefined} />
 		</span>
@@ -582,7 +567,11 @@ function HandleCell({ look, state }: { look: HandleLook; state: HandleState }) {
 	return (
 		<Stack gap={8} grow minWidth={0}>
 			<Box position="relative">
-				{state === "drag" ? null : (
+				{state === "drag" ? null : look === "pill" && state === "open" ? (
+					<At top={3} left={-30}>
+						<BlockHandle gripLabel="블록 메뉴" active />
+					</At>
+				) : (
 					<At top={3} left={-30}>
 						<HandleDrawing look={look} state={state} />
 					</At>
@@ -609,7 +598,7 @@ function HandleCell({ look, state }: { look: HandleLook; state: HandleState }) {
 /** The three looks of the handle, each beside the same blocks in each state (at rest there is no handle, in all three). */
 export function HandleScreen() {
 	const looks: [HandleLook, string][] = [
-		["pill", "가: 지금 (24px 원, 메뉴가 열려야 바탕)"],
+		["pill", "가: 지금 부품의 모양 (24px 원, 가리키면 점만 진해짐)"],
 		["square", "나: 노션 · BlockNote (20 × 24 둥근 네모, 가리키면 바탕)"],
 		["bar", "다: 좁은 막대 (16 × 24, 가리키면 바탕)"],
 	];
@@ -618,7 +607,7 @@ export function HandleScreen() {
 			<Stack gap={32} padding={48}>
 				<Inline gap={48}>
 					<Box width="menu" />
-					{["가리킬 때", "메뉴가 열렸을 때", "끄는 동안"].map((name) => (
+					{["손잡이를 가리킬 때", "메뉴가 열렸을 때", "끄는 동안"].map((name) => (
 						<Box key={name} grow minWidth={0}>
 							<Text variant="label">{name}</Text>
 						</Box>
@@ -670,10 +659,12 @@ export function ColorScreen() {
 							/>
 							<DropdownMenuContent>
 								<DropdownMenuSub open>
-									<DropdownMenuSubTrigger>글자 색</DropdownMenuSubTrigger>
+									<DropdownMenuSubTrigger>
+										<TextColor aria-hidden />
+										글자 색<MenuValue>빨강</MenuValue>
+									</DropdownMenuSubTrigger>
 									<DropdownMenuSubContent>
 										<DropdownMenuRadioGroup value="빨강" onValueChange={still}>
-											<DropdownMenuLabel>글자 색</DropdownMenuLabel>
 											<DropdownMenuRadioItem value="">기본</DropdownMenuRadioItem>
 											{COLORS.map((color) => (
 												<DropdownMenuRadioItem key={color} value={color}>
@@ -687,15 +678,20 @@ export function ColorScreen() {
 											<DropdownMenuRadioItem value="">기본</DropdownMenuRadioItem>
 											{COLORS.map((color) => (
 												<DropdownMenuRadioItem key={color} value={color}>
-													{`${color} 바탕`}
+													{color}
 												</DropdownMenuRadioItem>
 											))}
 										</DropdownMenuRadioGroup>
 									</DropdownMenuSubContent>
 								</DropdownMenuSub>
-								<DropdownMenuItem>툴팁</DropdownMenuItem>
+								<DropdownMenuItem>
+									<Information aria-hidden />
+									툴팁
+								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
+						<Separator orientation="vertical" length="bar" />
+						<FormatBarRequest label="요청" />
 					</FloatingBar>
 				</At>
 				<Paragraph>그래서 서버 컴포넌트로 옮긴 페이지는 첫 화면이 비지 않는다.</Paragraph>
@@ -709,13 +705,30 @@ export function TooltipScreen() {
 	return (
 		<Page>
 			<Box position="relative">
-				<At top={36} left={300}>
-					<Popover open onOpenChange={still}>
-						<PopoverTrigger render={<span />} />
-						<PopoverContent align="start" padding="menu">
-							<Input size="md" aria-label="툴팁 글" defaultValue="React Server Components의 줄임말" />
-						</PopoverContent>
-					</Popover>
+				<At top={-46} left={40}>
+					<FloatingBar>
+						<FormatButton mark="bold" label="굵게" />
+						<FormatButton mark="italic" label="기울임" />
+						<FormatButton mark="underline" label="밑줄" />
+						<FormatButton mark="strike" label="취소선" />
+						<FormatButton mark="code" label="코드" />
+						<Separator orientation="vertical" length="bar" />
+						<FormatButton mark="superscript" label="위 첨자" />
+						<FormatButton mark="subscript" label="아래 첨자" />
+						<FormatButton mark="link" label="링크" />
+						<FormatButton mark="footnote" label="각주" />
+						<Popover open onOpenChange={still}>
+							<FormatButton mark="more" label="툴팁" pressed trigger={(button) => <PopoverTrigger render={button} />} />
+							<PopoverContent padding="menu">
+								{/* The link card's own field (link-card.tsx): one line, typed in place. */}
+								<Command shouldFilter={false}>
+									<CommandInput value="React Server Components의 줄임말" readOnly aria-label="툴팁 글" />
+								</Command>
+							</PopoverContent>
+						</Popover>
+						<Separator orientation="vertical" length="bar" />
+						<FormatBarRequest label="요청" />
+					</FloatingBar>
 				</At>
 				<Paragraph>그래서 서버 컴포넌트로 옮긴 페이지는 첫 화면이 비지 않는다. RSC라는 말은 쓰지 않았다.</Paragraph>
 			</Box>
