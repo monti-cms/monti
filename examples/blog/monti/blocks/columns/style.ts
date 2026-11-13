@@ -82,4 +82,54 @@ export const style = `/*
 .monti-block-column img {
 	max-width: 100%;
 }
+
+/* In the editor: the columns are the grid's cells through the editor's own wrappers; the table's tools stand over them. */
+.monti-block-columns-editor {
+	position: relative;
+}
+.monti-block-columns-content,
+.monti-block-columns-content > div {
+	display: contents;
+}
+.monti-block-columns-editor > .monti-block-columns-content > div > .node-column {
+	min-width: 0;
+}
+.monti-block-columns-tools {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+.monti-block-columns-border {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 9px;
+	transform: translateX(-50%);
+	pointer-events: auto;
+}
+.monti-block-columns-grip {
+	position: absolute;
+	top: -6px;
+	transform: translateX(-50%);
+	pointer-events: auto;
+	opacity: 0;
+}
+.monti-block-columns-editor:hover .monti-block-columns-grip,
+.monti-block-columns-grip[data-shown],
+.monti-block-columns-grip:focus-within {
+	opacity: 1;
+}
+.monti-block-columns-add {
+	position: absolute;
+	top: 0;
+	right: -20px;
+	bottom: 0;
+	width: 12px;
+	pointer-events: auto;
+	opacity: 0;
+}
+.monti-block-columns-editor:hover .monti-block-columns-add,
+.monti-block-columns-add:focus-within {
+	opacity: 1;
+}
 `;

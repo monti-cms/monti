@@ -13,12 +13,22 @@ import {
 	Template,
 	TextFootnote,
 } from "@monti-cms/ui/icons";
+import type { ComponentType } from "react";
 
 /**
  * The mark at the start of a block's row in the "/" menu and in "turn into" (editor-tools.md): a heading by its level (`HeadingIcon`), the others
- * by what they are. A site's own block has none; its name says it.
+ * by what they are. A site's own block brings its own (`Icon`), or has none and its name says it.
  */
-export function BlockIcon({ type, level }: { type: string; level?: number }) {
+export function BlockIcon({
+	type,
+	level,
+	Own,
+}: {
+	type: string;
+	level?: number;
+	/** A site's block's own icon (`BlockDefinition.Icon`). */
+	Own?: ComponentType<{ "aria-hidden"?: boolean }>;
+}) {
 	switch (type) {
 		case "paragraph":
 			return <Paragraph aria-hidden />;
@@ -47,5 +57,5 @@ export function BlockIcon({ type, level }: { type: string; level?: number }) {
 		case "template":
 			return <Template aria-hidden />;
 	}
-	return null;
+	return Own ? <Own aria-hidden /> : null;
 }

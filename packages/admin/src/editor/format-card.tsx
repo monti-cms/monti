@@ -67,9 +67,11 @@ export function FormatCard({
 	/** "✦ Request" (⌘J): asks the assistant about the picked words (doc 10, item 28). Left out where there is no assistant to ask. */
 	onRequest?: (picked: PickedText) => void;
 }) {
-	const { t } = useAdmin();
+	const { t, marks: markDefinitions } = useAdmin();
 	const [linking, setLinking] = useState(false);
 	const [more, setMore] = useState(false);
+	/** The site's mark whose own card is open (doc 18): a colour, a tooltip. */
+	const [editing, setEditing] = useState<string | null>(null);
 	const bar = useRef<HTMLDivElement>(null);
 	const state = useEditorState({
 		editor,
@@ -81,7 +83,7 @@ export function FormatCard({
 				!selection.empty &&
 				selection.$from.parent.type.name !== nodeName("codeBlock") &&
 				!inTableCell(selection.$from) &&
-				(current.isFocused || linking || more);
+				(current.isFocused || linking || more || editing !== null);
 			if (!shown) return null;
 			const start = current.view.coordsAtPos(selection.from);
 			const end = current.view.coordsAtPos(selection.to);
@@ -94,6 +96,12 @@ export function FormatCard({
 				clearable: hasClearableFormat(current.state),
 				inFootnote: selection.$from.parent.type.name === nodeName("footnote"),
 				requestable: pickedText(current.state) !== null,
+				values: Object.fromEntries(
+					catalogs.kit.marks.map(({ type }) => [
+						type,
+						current.isActive(markName(type)) ? current.getAttributes(markName(type)) : null,
+					]),
+				),
 			};
 		},
 	});
@@ -177,7 +185,13 @@ export function FormatCard({
 												key={mark.type}
 												value={mark.type}
 												checked={Boolean(state.active[mark.type])}
-												onSelect={() => toggle(mark.type)}
+												onSelect={() => {
+													// A mark with values opens its own card in place of the menu; one without is put on or off.
+													if (markDefinitions.get(mark.type)?.Editor) {
+														setMore(false);
+														setEditing(mark.type);
+													} else toggle(mark.type);
+												}}
 											>
 												{label(mark.type)}
 											</CommandItem>
@@ -188,6 +202,27 @@ export function FormatCard({
 						</PopoverContent>
 					</Popover>
 				) : null}
+				{editing !== null
+					? (() => {
+							const Card = markDefinitions.get(editing)?.Editor;
+							if (!Card) return null;
+							const name = markName(editing);
+							return (
+								<Popover open onOpenChange={(open) => (open ? null : setEditing(null))}>
+									<PopoverContent anchor={bar} side="bottom" align="end" width="md">
+										<Card
+											attrs={(state.values[editing] as Record<string, unknown> | null) ?? null}
+											apply={(attrs) => {
+												const chain = editor.chain().focus().extendMarkRange(name);
+												(attrs ? chain.unsetMark(name).setMark(name, attrs) : chain.unsetMark(name)).run();
+												setEditing(null);
+											}}
+										/>
+									</PopoverContent>
+								</Popover>
+							);
+						})()
+					: null}
 				{onRequest && state.requestable ? (
 					<>
 						<Separator orientation="vertical" length="bar" />

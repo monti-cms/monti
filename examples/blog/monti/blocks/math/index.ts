@@ -1,4 +1,6 @@
+import { Sigma } from "@monti-cms/admin/icons";
 import { defineBlock, z } from "@monti-cms/core";
+import { lazy } from "react";
 import { drawFormula, MathBlock } from "./site";
 import { words } from "./words";
 
@@ -17,4 +19,8 @@ export const math = defineBlock({
 			? [{ level: "warn", message: { ko: "읽지 못한 수식", en: "A formula that does not read" } }]
 			: [],
 	Site: MathBlock,
+	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
+	Editor: lazy(() => import("./editor")),
+	Icon: Sigma,
+	starter: () => ({ attrs: { source: "" } }),
 });

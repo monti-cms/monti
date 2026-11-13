@@ -36,10 +36,11 @@ export const marks: MarkDefinition[] = [
 const ADMIN = `"use client";
 
 // The blocks as the admin page gets them: from a "use client" module, so their components reach the admin in the browser (doc 16).
-import type { AdminBlockDefinition } from "@monti-cms/admin";
-import { blocks } from "./index";
+import type { AdminBlockDefinition, AdminMarkDefinition } from "@monti-cms/admin";
+import { blocks, marks } from "./index";
 
 export const adminBlocks = blocks as AdminBlockDefinition[];
+export const adminMarks = marks as AdminMarkDefinition[];
 `;
 
 /** The folder of an installed package, found the way Node finds it. */
@@ -154,18 +155,23 @@ function wire(cwd: string): Wiring {
 		}
 	}
 
-	// The admin page: <AdminPage blocks={adminBlocks} />
+	// The admin page: <AdminPage blocks={adminBlocks} marks={adminMarks} />
 	const page = adminFolder(cwd)?.page;
-	if (!page) byHand.push(`The admin page: <AdminPage blocks={adminBlocks} />, adminBlocks from ${BLOCKS_DIR}/admin`);
+	if (!page)
+		byHand.push(`The admin page: <AdminPage blocks={adminBlocks} marks={adminMarks} />, from ${BLOCKS_DIR}/admin`);
 	else if (!readFileSync(page, "utf8").includes("adminBlocks")) {
 		const source = readFileSync(page, "utf8");
 		if (!/<AdminPage\b/.test(source) || /<AdminPage\b[^>]*\bblocks=/.test(source))
 			byHand.push(
-				`${path.relative(cwd, page)}: <AdminPage blocks={adminBlocks} />, adminBlocks from ${importPath(page, admin)}`,
+				`${path.relative(cwd, page)}: <AdminPage blocks={adminBlocks} marks={adminMarks} />, from ${importPath(page, admin)}`,
 			);
 		else {
-			const edited = source.replace(/<AdminPage\b/, "<AdminPage blocks={adminBlocks}");
-			write(page, withImport(edited, `import { adminBlocks } from "${importPath(page, admin)}";`), "blocks");
+			const edited = source.replace(/<AdminPage\b/, "<AdminPage blocks={adminBlocks} marks={adminMarks}");
+			write(
+				page,
+				withImport(edited, `import { adminBlocks, adminMarks } from "${importPath(page, admin)}";`),
+				"blocks, marks",
+			);
 		}
 	}
 

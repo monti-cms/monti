@@ -1,4 +1,6 @@
+import { ChartColumn } from "@monti-cms/admin/icons";
 import { defineBlock, z } from "@monti-cms/core";
+import { lazy } from "react";
 import { normalizeChartDsl, parseChartDsl } from "./dsl";
 import { Chart } from "./site";
 import { errorLine, sample, words } from "./words";
@@ -28,4 +30,7 @@ export const chart = defineBlock({
 		return first ? [{ level: "warn", message: { ko: errorLine(first, "ko"), en: errorLine(first, "en") } }] : [];
 	},
 	Site: Chart,
+	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
+	Editor: lazy(() => import("./editor")),
+	Icon: ChartColumn,
 });

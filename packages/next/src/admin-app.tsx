@@ -1,6 +1,12 @@
 "use client";
 
-import { type AdminBlockDefinition, type AdminPlugin, httpTransport, MontiAdmin } from "@monti-cms/admin";
+import {
+	type AdminBlockDefinition,
+	type AdminMarkDefinition,
+	type AdminPlugin,
+	httpTransport,
+	MontiAdmin,
+} from "@monti-cms/admin";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -11,10 +17,12 @@ import { useEffect, useMemo, useState } from "react";
 export function AdminApp({
 	siteName,
 	blocks,
+	marks,
 	plugins,
 }: {
 	siteName: string;
 	blocks?: AdminBlockDefinition[];
+	marks?: AdminMarkDefinition[];
 	plugins?: AdminPlugin[];
 }) {
 	const apiBase = `${usePathname().replace(/\/$/, "")}/api`;
@@ -30,6 +38,7 @@ export function AdminApp({
 				apiBase={apiBase}
 				siteName={siteName}
 				blocks={blocks}
+				marks={marks}
 				plugins={plugins}
 				{...(denied ? { denied } : {})}
 			/>

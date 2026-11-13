@@ -6,6 +6,7 @@ import {
 	formatMessage,
 	type Label,
 	labelIn,
+	type MarkDefinition,
 	type Message,
 	type MessageBundle,
 } from "@monti-cms/core";
@@ -21,9 +22,22 @@ export type AdminBlockComponent = ComponentType<{
 	attrs: Record<string, unknown>;
 	children?: ReactNode;
 }>;
-export type AdminBlockDefinition = Omit<AnyBlockDefinition, "Site" | "Editor"> & {
+export type AdminBlockDefinition = Omit<AnyBlockDefinition, "Site" | "Editor" | "Icon"> & {
 	Site?: AdminBlockComponent;
 	Editor?: AdminBlockComponent;
+	/** Its mark in the "/" menu. */
+	Icon?: ComponentType<{ "aria-hidden"?: boolean }>;
+};
+
+/** What a mark's card (`MarkDefinition.Editor`) is given: the mark's values on the picked words (`null` when they do not have it), and the way to set them. */
+export type AdminMarkEditorProps = {
+	attrs: Record<string, unknown> | null;
+	/** Puts the mark on the picked words with these values, or takes it off (`null`), and closes the card. */
+	apply: (attrs: Record<string, unknown> | null) => void;
+};
+export type AdminMarkDefinition = Omit<MarkDefinition, "Site" | "Editor"> & {
+	Site?: ComponentType<{ mark: { type: string } & Record<string, unknown>; children?: ReactNode }>;
+	Editor?: ComponentType<AdminMarkEditorProps>;
 };
 
 type ScreenHandler = (input: unknown) => void;
@@ -77,6 +91,8 @@ type AdminContext = {
 	screen: ScreenChannel;
 	/** Runtime block components from the same definitions the site gives core. */
 	blocks: ReadonlyMap<string, AdminBlockDefinition>;
+	/** The site's marks' admin halves (doc 18): their cards. */
+	marks: ReadonlyMap<string, AdminMarkDefinition>;
 	/** What the plugins' browser halves bring: inputs and views by name, tool page screens by `<plugin>/<page>` (doc 14). */
 	inputs: ReadonlyMap<string, FieldInput>;
 	views: ReadonlyMap<string, ComponentType<FieldViewProps>>;
@@ -117,6 +133,7 @@ export function wordsOf(language: Language, message: Label, values?: Message["va
 
 /** One list for "none": a new one on each render would make every screen read again whenever this one changes, as when the session ends. */
 const NO_BLOCKS: AdminBlockDefinition[] = [];
+const NO_MARKS: AdminMarkDefinition[] = [];
 const NO_PLUGINS: AdminPlugin[] = [];
 
 export function AdminProvider({
@@ -128,6 +145,7 @@ export function AdminProvider({
 	apiBase = "/admin/api",
 	screen,
 	blocks = NO_BLOCKS,
+	marks = NO_MARKS,
 	plugins = NO_PLUGINS,
 	children,
 }: {
@@ -144,6 +162,7 @@ export function AdminProvider({
 	/** The assistant's way to the screen; one of its own by default. */
 	screen?: ScreenChannel;
 	blocks?: AdminBlockDefinition[];
+	marks?: AdminMarkDefinition[];
 	/** The plugins' browser halves (`defineAdminPlugin`). */
 	plugins?: AdminPlugin[];
 	children: ReactNode;
@@ -186,6 +205,7 @@ export function AdminProvider({
 			setFace,
 			apiBase,
 			blocks: new Map(blocks.map((block) => [block.type, block])),
+			marks: new Map(marks.map((mark) => [mark.type, mark])),
 			// The first plugin to bring a name has it: a second one under the same name is not drawn in its place.
 			inputs: new Map(plugins.flatMap((plugin) => Object.entries(plugin.inputs ?? {})).reverse()),
 			views: new Map(plugins.flatMap((plugin) => Object.entries(plugin.views ?? {})).reverse()),
@@ -212,6 +232,7 @@ export function AdminProvider({
 			reads,
 			writes,
 			blocks,
+			marks,
 			plugins,
 		],
 	);

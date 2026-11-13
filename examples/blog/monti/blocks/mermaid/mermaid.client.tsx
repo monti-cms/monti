@@ -24,13 +24,20 @@ function useDarkTheme() {
 	return dark;
 }
 
-type State = { readonly svg: string } | { readonly error: string } | null;
+type State = { readonly svg: string | null; readonly error: string | null } | null;
 
 /**
  * Mermaid diagram (` ```mermaid `). On the server and before loading it shows the source, then loads `mermaid` (optional dependency) in the browser and
  * turns it into a diagram. If loading fails or the syntax is wrong, the source and the error text stay as they are. Redrawn when the theme changes.
  */
-export function MermaidView({ source }: { source: string }) {
+export function MermaidView({
+	source,
+	onError,
+}: {
+	source: string;
+	/** In the editor: the reason the source does not read (or `null`), said under its field; the last drawing stays meanwhile (the old block's). */
+	onError?: (error: string | null) => void;
+}) {
 	const baseId = useId().replace(/[^\w-]/g, "");
 	const counter = useRef(0);
 	const dark = useDarkTheme();
@@ -45,18 +52,25 @@ export function MermaidView({ source }: { source: string }) {
 				mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "default" });
 				counter.current += 1;
 				const svg = await drawMermaid(mermaid, `cms-mermaid-${baseId}-${counter.current}`, source);
-				if (!disposed) setState({ svg });
+				if (!disposed) {
+					setState({ svg, error: null });
+					onError?.(null);
+				}
 			} catch (error) {
-				if (!disposed) setState({ error: error instanceof Error ? error.message : "Mermaid render error" });
+				const reason = error instanceof Error ? error.message : "Mermaid render error";
+				if (!disposed) {
+					setState((before) => ({ svg: onError ? (before?.svg ?? null) : null, error: reason }));
+					onError?.(reason);
+				}
 			}
 		})();
 		return () => {
 			disposed = true;
 		};
-	}, [source, dark, baseId]);
+	}, [source, dark, baseId, onError]);
 
-	const svg = state && "svg" in state ? state.svg : null;
-	const error = state && "error" in state ? state.error : null;
+	const svg = state?.svg ?? null;
+	const error = onError ? null : (state?.error ?? null);
 	return (
 		<figure className="monti-block-mermaid" data-state={svg ? "ready" : error ? "error" : "loading"}>
 			{svg ? (

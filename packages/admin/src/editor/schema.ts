@@ -12,8 +12,9 @@ import { Text } from "@tiptap/extension-text";
 import { Underline } from "@tiptap/extension-underline";
 import type { DOMOutputSpec } from "@tiptap/pm/model";
 import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps, ReactNodeViewRenderer } from "@tiptap/react";
-import { type ComponentType, createElement } from "react";
-import type { AdminBlockDefinition } from "../operations/admin-context";
+import { type ComponentType, createElement, Suspense } from "react";
+import type { AdminBlockComponent, AdminBlockDefinition } from "../operations/admin-context";
+import { BlockPlaceProvider } from "./block-api";
 import type { Catalog, CatalogBlock } from "./catalog";
 import { ENTRY_LINK } from "./link-targets";
 import { tableExtensions } from "./table";
@@ -213,26 +214,32 @@ export function bodyExtensions(
 				? () => ReactNodeViewRenderer(View, whole)
 				: Component
 					? () =>
-							ReactNodeViewRenderer(
-								({ node }) =>
+							ReactNodeViewRenderer((props: ReactNodeViewProps) => {
+								const attrs = (props.node.attrs.data as Record<string, unknown> | null) ?? {};
+								const drawn = (Drawn: AdminBlockComponent) =>
 									createElement(
-										NodeViewWrapper,
-										{ "data-block": block.type },
+										Drawn,
+										{ block: { id: String(props.node.attrs.blockId ?? ""), type: block.type, attrs }, attrs },
+										block.holds === "nothing" ? undefined : createElement(NodeViewContent),
+									);
+								// A block's own editor view reads and changes its block through `useBlock` (doc 18); it may load later (its
+								// folder's `editor.tsx` comes on first use), and until then the site's drawing stands in.
+								return createElement(
+									NodeViewWrapper,
+									{ "data-block": block.type },
+									createElement(
+										BlockPlaceProvider,
+										{
+											value: { node: props.node, editor: props.editor, getPos: props.getPos, selected: props.selected },
+										},
 										createElement(
-											Component,
-											{
-												block: {
-													id: String(node.attrs.blockId ?? ""),
-													type: block.type,
-													attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
-												},
-												attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
-											},
-											block.holds === "nothing" ? undefined : createElement(NodeViewContent),
+											Suspense,
+											{ fallback: definition?.Site ? drawn(definition.Site) : null },
+											drawn(Component),
 										),
 									),
-								whole,
-							)
+								);
+							}, whole)
 					: undefined;
 			return Node.create({
 				name: nodeName(block.type),
@@ -311,9 +318,21 @@ export function bodyExtensions(
 						},
 					},
 				],
+				// Drawn with the site's look (doc 18): the class `monti-<type>` and each value as `data-<name>` (a colour's `data-color`), as the mark's
+				// own stylesheet reads them; a `text` value (a tooltip's) is the words' hover title.
 				renderHTML: ({ HTMLAttributes }) => [
 					"span",
-					{ "data-monti-mark": mark.type, "data-monti-attrs": JSON.stringify(HTMLAttributes) },
+					{
+						"data-monti-mark": mark.type,
+						"data-monti-attrs": JSON.stringify(HTMLAttributes),
+						class: `monti-${mark.type}`,
+						...Object.fromEntries(
+							Object.entries(HTMLAttributes)
+								.filter(([, value]) => typeof value === "string")
+								.map(([name, value]) => [`data-${name}`, value]),
+						),
+						...(typeof HTMLAttributes.text === "string" ? { title: HTMLAttributes.text } : {}),
+					},
 					0,
 				],
 			});

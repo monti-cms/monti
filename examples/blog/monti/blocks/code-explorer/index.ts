@@ -1,4 +1,6 @@
+import { FolderTree } from "@monti-cms/admin/icons";
 import { defineBlock, z } from "@monti-cms/core";
+import { lazy } from "react";
 import { CodeExplorer } from "./site";
 import { buildTree, parsePath } from "./tree";
 import { words } from "./words";
@@ -33,4 +35,8 @@ export const codeExplorer = defineBlock({
 		];
 	},
 	Site: CodeExplorer,
+	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
+	Editor: lazy(() => import("./editor")),
+	Icon: FolderTree,
+	starter: () => ({ children: [{ type: "codeBlock", attrs: { language: "ts", title: "src/index.ts" } }] }),
 });

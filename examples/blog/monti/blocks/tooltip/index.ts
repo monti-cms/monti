@@ -1,4 +1,5 @@
 import { defineMark, z } from "@monti-cms/core";
+import { lazy } from "react";
 import { TooltipMark } from "./site";
 import { words } from "./words";
 
@@ -11,4 +12,6 @@ export const tooltip = defineMark({
 	attrs: z.object({ text: z.string().min(1) }),
 	fields: { text: { label: { ko: "툴팁 글", en: "Tooltip text" } } },
 	Site: TooltipMark,
+	// Its card in the format bar's ⋯, loaded in the admin the first time it opens.
+	Editor: lazy(() => import("./editor")),
 });

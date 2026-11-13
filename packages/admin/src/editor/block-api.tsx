@@ -1,0 +1,503 @@
+"use client";
+
+import type { BlockStarter, Label } from "@monti-cms/core";
+import {
+	BlockBarPlace,
+	BlockBox,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuTrigger,
+	FloatingBar,
+	FloatingBarButton,
+	FormFieldError,
+	Textarea,
+} from "@monti-cms/ui";
+import type { Editor } from "@tiptap/core";
+import type { Node as EditorNode, Schema } from "@tiptap/pm/model";
+import { NodeSelection, TextSelection } from "@tiptap/pm/state";
+import { NodeViewContent, useEditorState } from "@tiptap/react";
+import {
+	type ComponentProps,
+	createContext,
+	type ReactNode,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import { useAdmin } from "../operations/admin-context";
+
+/** The editor's node for a block type (as `schema.ts` names it). */
+const nodeName = (type: string) => type.replace(/[^A-Za-z0-9_]/g, "_");
+
+/** What a block's editor view is drawn in: its node, the editor, where it is, whether it is picked as a whole. Given by the editor's schema. */
+type BlockPlace = { node: EditorNode; editor: Editor; getPos: () => number | undefined; selected: boolean };
+
+const BlockPlaceContext = createContext<BlockPlace | null>(null);
+/** Whether the block's tool row stays up: a menu of it is open, or the keyboard is in it. */
+const HoldContext = createContext<(on: boolean) => void>(() => {});
+const FocusContext = createContext<(on: boolean) => void>(() => {});
+
+export function BlockPlaceProvider({ value, children }: { value: BlockPlace; children?: ReactNode }) {
+	return <BlockPlaceContext.Provider value={value}>{children}</BlockPlaceContext.Provider>;
+}
+
+/** An editor node made from a starter (`BlockDefinition.starter`, doc 18): the block as the "/" menu or a block's own + puts it in. */
+export function nodeFromStarter(schema: Schema, starter: { type: string } & BlockStarter): EditorNode | null {
+	const type = schema.nodes[nodeName(starter.type)];
+	if (!type) return null;
+	const inner = starter.children
+		? starter.children.map((child) => nodeFromStarter(schema, child)).filter((each) => each !== null)
+		: (starter.content ?? []).flatMap((part) => (part.type === "text" && part.text ? [schema.text(part.text)] : []));
+	const data = starter.attrs && Object.keys(starter.attrs).length > 0 ? starter.attrs : null;
+	return type.createAndFill({ data }, inner) ?? type.create({ data });
+}
+
+/** Attrs with a patch laid over: a value set to `undefined` is taken away; no attrs at all is `null`, as the editor keeps them. */
+const patched = (current: unknown, patch: Record<string, unknown>) => {
+	const next: Record<string, unknown> = { ...((current as Record<string, unknown> | null) ?? {}) };
+	for (const [key, value] of Object.entries(patch)) {
+		if (value === undefined) delete next[key];
+		else next[key] = value;
+	}
+	return Object.keys(next).length > 0 ? next : null;
+};
+
+/**
+ * A block's editor view reads and changes its block with this (doc 18, "블록 폴더와 꽂는 곳"): its values, its children, whether it can be changed
+ * here, whether it is picked or the cursor is in it, and the admin's language. Every change is one step of the editor's history, so undo takes it back.
+ */
+export function useBlock() {
+	const place = useContext(BlockPlaceContext);
+	if (!place) throw new Error("useBlock is for a block's editor view.");
+	const { node, editor, getPos, selected } = place;
+	const { language, t } = useAdmin();
+	const state = useEditorState({
+		editor,
+		selector: ({ editor: current }) => {
+			const pos = getPos();
+			const { from, to } = current.state.selection;
+			const at = pos === undefined ? null : current.state.doc.nodeAt(pos);
+			const inside = pos !== undefined && at !== null && from > pos && to < pos + at.nodeSize;
+			// Which child the cursor is in: a block that shows one child at a time (a tab, a file) shows that one.
+			let childAt: number | null = null;
+			if (inside && at && pos !== undefined) {
+				let start = pos + 1;
+				for (let index = 0; index < at.childCount; index++) {
+					const end = start + at.child(index).nodeSize;
+					if (from >= start && from < end) childAt = index;
+					start = end;
+				}
+			}
+			return { editable: current.isEditable, inside, childAt };
+		},
+	});
+	return useMemo(() => {
+		const pos = () => getPos() ?? -1;
+		const dispatch = (change: (tr: Editor["state"]["tr"]) => void) => {
+			const tr = editor.state.tr;
+			change(tr);
+			editor.view.dispatch(tr);
+		};
+		/** Where child `index` starts in the document. */
+		const childPos = (index: number) => {
+			const own = editor.state.doc.nodeAt(pos());
+			let at = pos() + 1;
+			for (let each = 0; each < index && own && each < own.childCount; each++) at += own.child(each).nodeSize;
+			return at;
+		};
+		const children = Array.from({ length: node.childCount }, (_, index) => ({
+			type: node.child(index).type.name,
+			attrs: ((node.child(index).attrs.data as Record<string, unknown> | null) ?? {}) as Record<string, unknown>,
+			text: node.child(index).textContent,
+			empty: node.child(index).content.size === 0 || node.child(index).textContent === "",
+		}));
+		return {
+			attrs: ((node.attrs.data as Record<string, unknown> | null) ?? {}) as Record<string, unknown>,
+			children,
+			editable: state.editable,
+			/** The block is picked as a whole (a block with no text: pressed, or reached by the arrows). */
+			selected,
+			/** The cursor or the selected words are inside the block. */
+			inside: state.inside,
+			/** The child the cursor is in, or `null`. */
+			childAt: state.childAt,
+			language,
+			/** A name in the admin's language: words in each language, or a key of the admin's dictionary. */
+			say: (label: Label) => t(label),
+			setAttrs: (patch: Record<string, unknown>) =>
+				dispatch((tr) =>
+					tr.setNodeAttribute(pos(), "data", patched(editor.state.doc.nodeAt(pos())?.attrs.data, patch)),
+				),
+			setChildAttrs: (index: number, patch: Record<string, unknown>) =>
+				dispatch((tr) => {
+					const at = childPos(index);
+					tr.setNodeAttribute(at, "data", patched(editor.state.doc.nodeAt(at)?.attrs.data, patch));
+				}),
+			/** Puts a child in at `index` (the end when left out) and the cursor in it. */
+			/** `patch` changes the block's own attrs in the same step (columns go back to equal widths). */
+			insertChild: (
+				starter: { type: string } & BlockStarter,
+				index = node.childCount,
+				patch?: Record<string, unknown>,
+			) => {
+				const made = nodeFromStarter(editor.schema, starter);
+				if (!made) return;
+				dispatch((tr) => {
+					const at = childPos(index);
+					tr.insert(at, made);
+					if (patch) tr.setNodeAttribute(pos(), "data", patched(tr.doc.nodeAt(pos())?.attrs.data, patch));
+					tr.setSelection(TextSelection.near(tr.doc.resolve(at + 1)));
+				});
+				editor.view.focus();
+			},
+			removeChild: (index: number) =>
+				dispatch((tr) => {
+					const at = childPos(index);
+					const child = editor.state.doc.nodeAt(at);
+					if (child) tr.delete(at, at + child.nodeSize);
+				}),
+			/** Takes child `from` out and puts it back before what is now child `to`. */
+			moveChild: (from: number, to: number) =>
+				dispatch((tr) => {
+					const at = childPos(from);
+					const child = editor.state.doc.nodeAt(at);
+					if (!child || from === to) return;
+					tr.delete(at, at + child.nodeSize);
+					const own = tr.doc.nodeAt(pos());
+					let place = pos() + 1;
+					for (let each = 0; each < to && own && each < own.childCount; each++) place += own.child(each).nodeSize;
+					tr.insert(place, child);
+				}),
+			/** Moves the blocks of child `from` to the end of child `to`, then takes child `from` out (a column removed keeps its words). */
+			mergeChild: (from: number, to: number, patch?: Record<string, unknown>) =>
+				dispatch((tr) => {
+					if (patch) tr.setNodeAttribute(pos(), "data", patched(tr.doc.nodeAt(pos())?.attrs.data, patch));
+					const source = editor.state.doc.nodeAt(childPos(from));
+					const target = editor.state.doc.nodeAt(childPos(to));
+					if (!source || !target) return;
+					const start = childPos(from);
+					tr.delete(start, start + source.nodeSize);
+					const own = tr.doc.nodeAt(pos());
+					let place = pos() + 1;
+					for (let each = 0; each < (to > from ? to - 1 : to) && own; each++) place += own.child(each).nodeSize;
+					const into = tr.doc.nodeAt(place);
+					if (into) tr.insert(place + into.nodeSize - 1, source.content);
+				}),
+			/** Puts the cursor at the start of child `index` (of the block itself when left out). */
+			focusChild: (index?: number) => {
+				const at = index === undefined ? pos() + 1 : childPos(index) + 1;
+				dispatch((tr) => tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(at, tr.doc.content.size)))));
+				editor.view.focus();
+			},
+			/** Picks the block as a whole. */
+			select: () => dispatch((tr) => tr.setSelection(NodeSelection.create(tr.doc, pos()))),
+			remove: () =>
+				dispatch((tr) => {
+					const own = editor.state.doc.nodeAt(pos());
+					if (own) tr.delete(pos(), pos() + own.nodeSize);
+				}),
+		};
+	}, [node, editor, getPos, selected, state.editable, state.inside, state.childAt, language, t]);
+}
+
+/**
+ * A block's own frame in the editor: what it draws, and its tool row (`bar`) over its top left (`BlockBarPlace`, the image's place), up while the pointer
+ * is over the block or the cursor is in it, and while a menu of the row is open (editor-tools.md, doc 18). A body that cannot be changed has no row.
+ */
+export function BlockFrame({
+	bar,
+	children,
+	...props
+}: { bar?: ReactNode; children: ReactNode } & Omit<ComponentProps<"div">, "children">) {
+	const { editable, inside, selected } = useBlock();
+	const [over, setOver] = useState(false);
+	const [held, setHeld] = useState(0);
+	const [focused, setFocused] = useState(false);
+	const up = editable && bar !== undefined && (over || inside || selected || held > 0 || focused);
+	return (
+		<HoldContext.Provider value={(on) => setHeld((count) => Math.max(0, count + (on ? 1 : -1)))}>
+			<FocusContext.Provider value={setFocused}>
+				<div
+					data-slot="monti-block-frame"
+					className="relative"
+					onPointerEnter={() => setOver(true)}
+					onPointerLeave={() => setOver(false)}
+					{...props}
+				>
+					{up && <BlockBarPlace>{bar}</BlockBarPlace>}
+					{children}
+				</div>
+			</FocusContext.Provider>
+		</HoldContext.Provider>
+	);
+}
+
+/** A block's tool row (`FloatingBar`): its buttons (`BlockBarButton`, `BlockBarMenu`), named for screen readers by `label`. */
+export function BlockBar({ label, children }: { label: string; children: ReactNode }) {
+	const focus = useContext(FocusContext);
+	return (
+		<FloatingBar aria-label={label} onFocus={() => focus(true)} onBlur={() => focus(false)}>
+			{children}
+		</FloatingBar>
+	);
+}
+
+/** A button of a block's tool row: 28px, its name in a tooltip; with words in it (`children`), its name is on it too. */
+export const BlockBarButton = FloatingBarButton;
+
+/**
+ * A tool row's button that picks one value from a few (a callout's kind): a menu of the options, the current one with a ✓ on its right (menu.md).
+ * The button shows the current option's icon, and its name when `named`.
+ */
+export function BlockBarMenu<Value extends string>({
+	label,
+	value,
+	options,
+	onChange,
+	named = false,
+}: {
+	label: string;
+	value: Value;
+	options: { value: Value; label: string; icon?: ReactNode }[];
+	onChange: (value: Value) => void;
+	named?: boolean;
+}) {
+	const hold = useContext(HoldContext);
+	const current = options.find((option) => option.value === value) ?? options[0];
+	return (
+		<DropdownMenu onOpenChange={(open) => hold(open)}>
+			<FloatingBarButton label={label} named={named} trigger={(button) => <DropdownMenuTrigger render={button} />}>
+				{current?.icon}
+				{named && current?.label}
+			</FloatingBarButton>
+			<DropdownMenuContent>
+				<DropdownMenuRadioGroup value={value} onValueChange={(next) => onChange(next as Value)}>
+					{options.map((option) => (
+						<DropdownMenuRadioItem key={option.value} value={option.value}>
+							{option.icon}
+							{option.label}
+						</DropdownMenuRadioItem>
+					))}
+				</DropdownMenuRadioGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+/** A tool row's button that turns one value on or off, named on itself with its icon (a fold's "open at first"). Pressed is on. */
+export function BlockBarToggle({
+	label,
+	icon,
+	pressed,
+	onPressedChange,
+}: {
+	label: string;
+	icon: ReactNode;
+	pressed: boolean;
+	onPressedChange: (pressed: boolean) => void;
+}) {
+	return (
+		<FloatingBarButton label={label} pressed={pressed} named onClick={() => onPressedChange(!pressed)}>
+			{icon}
+			{label}
+		</FloatingBarButton>
+	);
+}
+
+/**
+ * A block written in a language of its own (a formula, a diagram, a chart, doc 18): its drawing in a box, and, while the block is picked, its source in
+ * an area of its own under the drawing, set apart by a line and its own ground, named over the field. Empty, the box says what to write.
+ */
+export function SourceBlock({
+	label,
+	source,
+	empty,
+	placeholder,
+	errors,
+	onChange,
+	children,
+}: {
+	/** The source's name over its field ("원문 코드"). */
+	label: string;
+	source: string;
+	/** What the box says while there is no source ("수식 입력"). */
+	empty: string;
+	placeholder?: string;
+	errors?: string[];
+	onChange: (source: string) => void;
+	/** The drawing. */
+	children: ReactNode;
+}) {
+	const { selected } = useBlock();
+	return (
+		<BlockBox selected={selected}>
+			<div data-slot="source-block" contentEditable={false} className="rounded-monti-md border border-monti-default">
+				<div className="overflow-x-auto p-monti-16">
+					{source.trim() === "" ? <p className="m-0 text-monti-body text-monti-faint">{empty}</p> : children}
+				</div>
+				{selected && (
+					<div className="flex flex-col gap-monti-8 rounded-b-monti-md border-monti-default border-t bg-monti-muted p-monti-12">
+						<span className="font-medium text-monti-caption text-monti-muted">{label}</span>
+						<SourcePanel
+							label={label}
+							value={source}
+							placeholder={placeholder}
+							errors={errors}
+							onChange={onChange}
+							autoFocus
+						/>
+					</div>
+				)}
+			</div>
+		</BlockBox>
+	);
+}
+
+/** Holds the block's tool row up while something of it (a menu, a card) is open. */
+export const useBarHold = () => useContext(HoldContext);
+
+/**
+ * A name typed in the block itself (a callout's title, a fold's title, doc 18): a one-line field in the block's own letters, written as it is typed (after
+ * the composing of a Korean syllable ends). Enter goes to the block's words; Esc puts back the name it had and goes there too.
+ */
+export function BlockTitle({
+	value,
+	placeholder,
+	label,
+	onChange,
+	onDone,
+	className,
+}: {
+	value: string;
+	placeholder?: string;
+	label: string;
+	onChange: (value: string) => void;
+	/** Where Enter and Esc go: the block's words. */
+	onDone?: () => void;
+	className?: string;
+}) {
+	const { editable } = useBlock();
+	const [text, setText] = useState(value);
+	const composing = useRef(false);
+	const before = useRef(value);
+	useEffect(() => {
+		if (!composing.current) setText(value);
+	}, [value]);
+	return (
+		<input
+			data-slot="block-title"
+			aria-label={label}
+			className={className}
+			value={text}
+			placeholder={placeholder}
+			readOnly={!editable}
+			onFocus={() => {
+				before.current = value;
+			}}
+			onChange={(event) => {
+				setText(event.target.value);
+				if (!composing.current) onChange(event.target.value);
+			}}
+			onCompositionStart={() => {
+				composing.current = true;
+			}}
+			onCompositionEnd={(event) => {
+				composing.current = false;
+				onChange(event.currentTarget.value);
+			}}
+			onKeyDown={(event) => {
+				if (event.nativeEvent.isComposing) return;
+				if (event.key === "Enter") {
+					event.preventDefault();
+					onDone?.();
+				}
+				if (event.key === "Escape") {
+					event.preventDefault();
+					setText(before.current);
+					onChange(before.current);
+					onDone?.();
+				}
+			}}
+		/>
+	);
+}
+
+/** Where a block's children are written: the editor's own text, inside the block's view. */
+export function BlockContent(props: ComponentProps<"div">) {
+	return <NodeViewContent {...props} />;
+}
+
+/**
+ * The source of a block written in a language of its own (a formula, a diagram, a chart, doc 18): a fixed-width field of its own under the drawing,
+ * set apart from it. It writes 0.4s after typing stops, or on leaving (not while a Korean syllable is composed). Each reason it does not read is a line under it.
+ */
+export function SourcePanel({
+	label,
+	value,
+	placeholder,
+	errors = [],
+	onChange,
+	autoFocus = false,
+}: {
+	label: string;
+	value: string;
+	placeholder?: string;
+	errors?: string[];
+	onChange: (value: string) => void;
+	autoFocus?: boolean;
+}) {
+	const { editable } = useBlock();
+	const [text, setText] = useState(value);
+	const composing = useRef(false);
+	const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+	const latest = useRef(value);
+	latest.current = value;
+	useEffect(() => {
+		if (!composing.current && timer.current === undefined) setText(value);
+	}, [value]);
+	useEffect(() => () => clearTimeout(timer.current), []);
+	const write = (next: string) => {
+		clearTimeout(timer.current);
+		timer.current = undefined;
+		if (next !== latest.current) onChange(next);
+	};
+	const later = (next: string) => {
+		clearTimeout(timer.current);
+		timer.current = setTimeout(() => write(next), 400);
+	};
+	return (
+		<div data-slot="source-panel" contentEditable={false} className="flex flex-col gap-monti-4">
+			<Textarea
+				mono
+				size="sm"
+				rows={4}
+				aria-label={label}
+				value={text}
+				placeholder={placeholder}
+				readOnly={!editable}
+				autoFocus={autoFocus && editable}
+				aria-invalid={errors.length > 0 || undefined}
+				onChange={(event) => {
+					setText(event.target.value);
+					if (!composing.current) later(event.target.value);
+				}}
+				onCompositionStart={() => {
+					composing.current = true;
+				}}
+				onCompositionEnd={(event) => {
+					composing.current = false;
+					later(event.currentTarget.value);
+				}}
+				onBlur={(event) => write(event.currentTarget.value)}
+			/>
+			{errors.length > 0 && <FormFieldError errors={errors.map((message) => ({ message }))} />}
+		</div>
+	);
+}
+
+/** The admin's language, for a mark's card (which is not in a block). */
+export const useBlockLanguage = () => useAdmin().language;

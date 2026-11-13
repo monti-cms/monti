@@ -1,4 +1,6 @@
+import { ListBoxes } from "@monti-cms/admin/icons";
 import { defineBlock, z } from "@monti-cms/core";
+import { lazy } from "react";
 import { Tab, Tabs } from "./site";
 import { words } from "./words";
 
@@ -18,6 +20,15 @@ export const tabs = defineBlock({
 			? [{ level: "warn", message: { ko: "이름 없는 탭", en: "A tab with no name" } }]
 			: [],
 	Site: Tabs,
+	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
+	Editor: lazy(() => import("./editor")),
+	Icon: ListBoxes,
+	starter: (language) => ({
+		children: [
+			{ type: "tab", attrs: { label: words.firstTab[language] }, children: [{ type: "paragraph" }] },
+			{ type: "tab", attrs: { label: words.secondTab[language] }, children: [{ type: "paragraph" }] },
+		],
+	}),
 });
 
 /** One tab of `tabs`: its name and its blocks. */
@@ -30,4 +41,6 @@ export const tab = defineBlock({
 	holds: "blocks",
 	translate: { attrs: ["label"] },
 	Site: Tab,
+	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
+	Editor: lazy(() => import("./editor").then((module) => ({ default: module.TabEditor }))),
 });

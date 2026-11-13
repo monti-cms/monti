@@ -89,8 +89,8 @@ describe("monti add (doc 18)", () => {
 		expect(config).toContain('import schema from "./monti.schema";\nimport { blocks, marks } from "./monti/blocks";');
 		expect(config).toContain("defineConfig({\n\tblocks,\n\tmarks,\n\tschema,");
 		const page = read(root, "app/admin/page.tsx");
-		expect(page).toContain('import { adminBlocks } from "../../monti/blocks/admin";');
-		expect(page).toContain('<AdminPage blocks={adminBlocks} siteName="블로그" />');
+		expect(page).toContain('import { adminBlocks, adminMarks } from "../../monti/blocks/admin";');
+		expect(page).toContain('<AdminPage blocks={adminBlocks} marks={adminMarks} siteName="블로그" />');
 		// Each block loads its own look: no stylesheet goes into the layouts.
 		expect(read(root, "app/layout.tsx")).not.toContain("monti/blocks");
 		const post = read(root, "site/post.tsx");

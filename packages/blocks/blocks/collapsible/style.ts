@@ -111,4 +111,53 @@ export const style = `/*
 		transition: none;
 	}
 }
+
+/* In the editor: a title typed in the block keeps the block's own letters. */
+.monti-block-title-input {
+	width: 100%;
+	min-width: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	letter-spacing: inherit;
+	outline: none;
+}
+.monti-block-title-input::placeholder {
+	color: inherit;
+	opacity: 0.5;
+}
+.monti-block-collapsible-head {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+.monti-block-collapsible-head::before {
+	content: none;
+}
+.monti-block-collapsible[data-open] > .monti-block-collapsible-head {
+	border-bottom: 1px solid var(--monti-block-border);
+}
+.monti-block-collapsible-toggle {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	border: 0;
+	border-radius: 0.375rem;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+}
+.monti-block-collapsible-toggle:hover {
+	background: var(--monti-block-muted);
+}
+.monti-block-collapsible-toggle svg {
+	width: 1rem;
+	height: 1rem;
+}
 `;

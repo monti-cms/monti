@@ -55,10 +55,10 @@ export type BlockDefinition<Component = unknown> = {
 	 */
 	starter?: (language: "ko" | "en") => BlockStarter;
 	Site?: Component;
-	/** The editor's view; the site's component with editable children when left out. */
-	Editor?: Component;
+	/** The editor's view (the admin's to draw; typed by `@monti-cms/admin`); the site's component with editable children when left out. */
+	Editor?: unknown;
 	/** Its mark in the "/" menu (a 16px icon). */
-	Icon?: Component;
+	Icon?: unknown;
 	check?: (block: Block) => BlockCheck[];
 };
 
@@ -85,6 +85,8 @@ export type MarkDefinition<Component = unknown> = {
 	/** The names of its values and their options, by attr name (doc 18). */
 	fields?: Record<string, Field>;
 	Site?: Component;
+	/** The card the admin's format bar opens to put the mark on picked words or change it (its ⋯ row); toggled on and off when left out. */
+	Editor?: unknown;
 };
 
 export function defineMark<Component>(definition: MarkDefinition<Component>): MarkDefinition<Component> {

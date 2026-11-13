@@ -90,4 +90,21 @@ export const style = `/*
 .monti-block-callout-body > :last-child {
 	margin-bottom: 0;
 }
+
+/* In the editor: a title typed in the block keeps the block's own letters. */
+.monti-block-title-input {
+	width: 100%;
+	min-width: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	letter-spacing: inherit;
+	outline: none;
+}
+.monti-block-title-input::placeholder {
+	color: inherit;
+	opacity: 0.5;
+}
 `;

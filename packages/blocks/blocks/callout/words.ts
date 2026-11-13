@@ -2,6 +2,16 @@
 import type { Tone } from "./site";
 
 export const words = {
+	tools: { ko: "콜아웃 도구", en: "Callout tools" },
+	kind: { ko: "종류", en: "Kind" },
+	title: { ko: "제목", en: "Title" },
+	tones: {
+		note: { ko: "노트", en: "Note" },
+		tip: { ko: "팁", en: "Tip" },
+		info: { ko: "정보", en: "Info" },
+		warning: { ko: "경고", en: "Warning" },
+		danger: { ko: "위험", en: "Danger" },
+	},
 	callout: { ko: "콜아웃", en: "Callout" },
 };
 

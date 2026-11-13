@@ -1,4 +1,6 @@
+import { CollapseAll } from "@monti-cms/admin/icons";
 import { defineBlock, z } from "@monti-cms/core";
+import { lazy } from "react";
 import { Collapsible } from "./site";
 import { words } from "./words";
 
@@ -17,4 +19,7 @@ export const collapsible = defineBlock({
 	holds: "blocks",
 	translate: { attrs: ["title"] },
 	Site: Collapsible,
+	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
+	Editor: lazy(() => import("./editor")),
+	Icon: CollapseAll,
 });

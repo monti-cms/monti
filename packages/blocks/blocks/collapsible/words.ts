@@ -1,6 +1,11 @@
 /** The block's words (doc 18): its names in each admin language, and the words it shows readers in en / ko / ja. The site's own: change them here. */
 
 export const words = {
+	tools: { ko: "접기 도구", en: "Collapsible tools" },
+	title: { ko: "제목", en: "Title" },
+	openAtFirst: { ko: "처음부터 펼치기", en: "Open at first" },
+	open: { ko: "펼치기", en: "Open" },
+	close: { ko: "접기", en: "Close" },
 	collapsible: { ko: "접기", en: "Collapsible" },
 };
 
