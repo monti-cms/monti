@@ -3,6 +3,7 @@ import { page, userEvent } from "vitest/browser";
 import { onTopOf, wholeUnderPointer } from "../../../testing/input";
 import { render } from "../test/render";
 import {
+	FileUseRow,
 	ListScroll,
 	LocaleCodes,
 	RowActions,
@@ -526,5 +527,24 @@ describe("A row the keyboard comes to at a scrolled edge (T190)", () => {
 			expect(at.above, `row ${index + 1}, going up`).toBeGreaterThanOrEqual(0);
 			expect(at.below, `row ${index + 1}, going up`).toBeGreaterThanOrEqual(0);
 		}
+	});
+});
+
+describe("Cut words inside a link", () => {
+	it("are said when the keyboard comes to the link that holds them", async () => {
+		const long = "A very long title of an entry that uses this file and does not fit";
+		render(
+			// A file's use row: the title is a link that holds its cut words.
+			<div style={{ width: 200 }}>
+				<FileUseRow title={long} places="본문" href="#/entry" />
+			</div>,
+		);
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		await expect.element(page.getByRole("link")).toBeVisible();
+		await userEvent.keyboard("{Tab}");
+		await expect.element(page.getByRole("link")).toHaveFocus();
+		await expect.poll(tip, { timeout: 5000 }).toBe(long);
+		(document.activeElement as HTMLElement).blur();
+		await expect.poll(tip).toBe(null);
 	});
 });

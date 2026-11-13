@@ -39,6 +39,8 @@ function cutIn(box: HTMLElement) {
  *
  * - The pointer is asked for by its place, not by `pointerenter`: a row's link covers its whole row, so the pointer is "on the link"
  *   everywhere on the row, and the tooltip is for the pointer on the words themselves.
+ * - The keyboard: focus that comes to the words, to something inside them (a row's link) or to the button or link that holds them (a
+ *   file's use row) says them. With `stop` the words themselves are a stop while cut, with the system's focus ring drawn inside the box.
  * - Escape or a press closes it, and it then stays closed until the pointer has left the words.
  * - The tooltip is only made while it shows: a list of fifty rows holds no tooltip until one is asked for.
  */
@@ -105,6 +107,29 @@ function CutWords({
 		return () => observer.disconnect();
 	}, [stop, partial, node]);
 
+	// Words inside a button or a link (a file's use row, the proposal bubble's name): the keyboard comes to that control, not into the words,
+	// so the words listen to it. Words that hold the control themselves (a row's title and its link) hear the focus as it bubbles, below.
+	const sayRef = React.useRef(say);
+	sayRef.current = say;
+	const byRef = React.useRef(by);
+	byRef.current = by;
+	React.useEffect(() => {
+		const holder = box.current?.parentElement?.closest<HTMLElement>("a[href], button");
+		if (!holder) return;
+		const come = () => {
+			if (holder.matches(":focus-visible")) sayRef.current("keys");
+		};
+		const gone = () => {
+			if (byRef.current === "keys") setBy(null);
+		};
+		holder.addEventListener("focus", come);
+		holder.addEventListener("blur", gone);
+		return () => {
+			holder.removeEventListener("focus", come);
+			holder.removeEventListener("blur", gone);
+		};
+	}, []);
+
 	// Escape closes it wherever the focus is: the pointer's tooltip has no focus of its own.
 	const open = by !== null;
 	React.useEffect(() => {
@@ -133,7 +158,15 @@ function CutWords({
 			"data-slot": (own as { "data-slot"?: string })["data-slot"] ?? "cut-words",
 			"data-cut-words": whole ?? "",
 			tabIndex: stop && stops ? 0 : own.tabIndex,
-			className: cn(!render && "min-w-0 truncate", own.className, className),
+			className: cn(
+				!render && "min-w-0 truncate",
+				// While it is a stop it draws the keyboard's ring, inside its box: the box cuts what runs past it, a ring outside too.
+				stop &&
+					stops &&
+					"rounded-monti-sm outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset",
+				own.className,
+				className,
+			),
 			onPointerMove: (event: React.PointerEvent<HTMLElement>) => {
 				own.onPointerMove?.(event);
 				// A finger that starts a scroll here is not pointing.

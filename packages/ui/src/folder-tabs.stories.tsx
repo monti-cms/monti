@@ -55,6 +55,17 @@ export const Pages: Story = {
 };
 
 /** The picked tab while its name is edited in place. */
+/** A tab a plugin placed, come to with the keyboard: the tab says why it is locked in its tooltip. */
+export const LockedFocused: Story = {
+	render: Pages.render,
+	play: async () => {
+		const { userEvent, within } = await import("storybook/test");
+		await userEvent.tab();
+		await userEvent.keyboard("{ArrowRight}{ArrowRight}");
+		await within(document.body).findByRole("tooltip");
+	},
+};
+
 export const Rename: Story = {
 	render: () => (
 		<FolderTabs defaultValue="meta">

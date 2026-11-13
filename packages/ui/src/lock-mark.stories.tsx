@@ -56,3 +56,23 @@ export const PointedAt: Story = {
 		await within(document.body).findByRole("tooltip");
 	},
 };
+
+/** Come to with the keyboard: the lock is a stop, draws the focus ring, and says why in its tooltip. */
+export const Focused: Story = {
+	args: { label: "운영 사이트에서는 잠김" },
+	render: (args) => (
+		<div className="w-80 pt-monti-32">
+			<FormField>
+				<FormFieldLabel>
+					공개 주소
+					<LockMark {...args} />
+				</FormFieldLabel>
+				<Text mono>/posts/:slug</Text>
+			</FormField>
+		</div>
+	),
+	play: async () => {
+		await userEvent.tab();
+		await within(document.body).findByRole("tooltip");
+	},
+};

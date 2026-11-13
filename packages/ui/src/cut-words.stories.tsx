@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { Box, CutWords, Inline, Stack, Table, TableBody, TableCell, TableRow } from "./index";
+import { Box, CutWords, Inline, Stack, Table, TableBody, TableCell, TableRow, TextButton } from "./index";
 
 /** Words cut to their box with "…": pointed at, or come to with the keyboard, they say themselves whole in a tooltip. */
 const meta = {
-	title: "Primitives/CutWords",
+	title: "Controls/Overlay/CutWords",
 	component: CutWords,
 	tags: ["visual"],
 } satisfies Meta<typeof CutWords>;
@@ -55,6 +55,22 @@ export const KeyboardStop: Story = {
 		<Box width="menu">
 			<Inline minWidth={0}>
 				<CutWords stop>{LONG}</CutWords>
+			</Inline>
+		</Box>
+	),
+	play: async () => {
+		await userEvent.tab();
+	},
+};
+
+/** Inside a button, the words are said when the keyboard comes to the button. */
+export const InButton: Story = {
+	render: () => (
+		<Box width="menu">
+			<Inline minWidth={0}>
+				<TextButton>
+					<CutWords>{LONG}</CutWords>
+				</TextButton>
 			</Inline>
 		</Box>
 	),

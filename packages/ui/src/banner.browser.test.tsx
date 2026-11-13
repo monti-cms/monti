@@ -42,6 +42,8 @@ describe("Banner", () => {
 		await userEvent.keyboard("{Tab}");
 		expect(document.activeElement).toBe(words);
 		await expect.poll(tip).toBe(LONG);
+		// The stop draws the keyboard's ring, inside the box that cuts the words.
+		expect(getComputedStyle(words).boxShadow).toContain("inset");
 		await userEvent.keyboard("{Tab}");
 		await expect.element(page.getByRole("button", { name: "다시 저장" })).toHaveFocus();
 		await expect.poll(tip).toBe(null);
