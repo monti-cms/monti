@@ -17,7 +17,7 @@ function CodeFrame({ head, children, className, ...props }: React.ComponentProps
 				<div
 					data-slot="code-frame-head"
 					contentEditable={false}
-					className="flex min-h-monti-control-sm select-none items-center gap-monti-8 border-monti-default border-b px-monti-12"
+					className="flex min-h-monti-control-sm select-none items-center justify-between gap-monti-8 border-monti-default border-b px-monti-12"
 				>
 					{head}
 				</div>
@@ -136,10 +136,13 @@ function CodeNumber({
 	mark,
 	numbersOff = false,
 	readOnly = false,
+	changed,
 	className,
 	...props
 }: React.ComponentProps<"div"> & {
 	number: number;
+	/** In a comparison: the line's effects differ from the other side's (the change dot's name); `""` keeps the dot's place on a line that did not. */
+	changed?: string;
 	tone?: CodeLineTone;
 	fold?: React.ReactNode;
 	folds?: boolean;
@@ -179,6 +182,9 @@ function CodeNumber({
 					{fold}
 				</span>
 			) : null}
+			{changed === undefined ? null : (
+				<span className="flex w-monti-8 shrink-0 items-center">{changed ? <ChangeDot label={changed} /> : null}</span>
+			)}
 			<span className="min-w-[2ch] text-right">{number}</span>
 			<span
 				aria-hidden
@@ -192,12 +198,13 @@ function CodeNumber({
 }
 
 /**
- * One line of code as a read-only row (a comparison, a picture of the code): its number (`fold` the fold's button before it), the line's mark in the
- * code's left margin (`+`, `−`, `›`), and its words. `numbersOff`: the site does not show line numbers, so they are fainter.
+ * One line of code as a read-only row (a comparison, a picture of the code): its number with the same column as the editor's (`CodeNumber`: the fold's
+ * button and range line, the change dot, the effect's mark), its ground, and its words with a wavy line for a warning or an error.
  */
 function CodeLine({
 	number,
 	fold,
+	edge,
 	mark,
 	tone,
 	wavy,
@@ -209,19 +216,19 @@ function CodeLine({
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
-	/** In a comparison: the line's effects differ from the other side's. The words are the change dot's name for screen readers. */
-	changed?: string;
-	/** Left out on the row that stands for a fold's hidden lines (its "n lines folded" button). */
-	number?: number;
+	number: number;
 	fold?: React.ReactNode;
+	edge?: CodeFoldEdge;
 	mark?: "+" | "−" | "›";
 	tone?: CodeLineTone;
 	wavy?: "warning" | "error";
 	numbersOff?: boolean;
 	/** The block has a fold somewhere: the gutter keeps room for the fold's button on every line, so the numbers stay in a column. */
 	folds?: boolean;
-	/** Nothing to pick (an archived entry): the numbers are not pressable, so no pointer and no tint under it. */
+	/** Nothing to pick (an archived entry, a comparison): the numbers are not pressable, so no pointer and no tint under it. */
 	readOnly?: boolean;
+	/** In a comparison: the line's effects differ from the other side's. The words are the change dot's name for screen readers. */
+	changed?: string;
 	children?: React.ReactNode;
 }) {
 	return (
@@ -231,35 +238,19 @@ function CodeLine({
 			className={cn("group/line flex h-[20px] items-stretch font-mono text-monti-code", TONES, className)}
 			{...props}
 		>
-			<span
-				data-slot="code-line-number"
+			<CodeNumber
 				contentEditable={false}
-				className={cn(
-					"flex shrink-0 select-none items-center justify-end gap-monti-2 pr-monti-8 pl-monti-8 tabular-nums",
-					readOnly ? undefined : "cursor-pointer hover:bg-monti-selected",
-					numbersOff ? "text-monti-faint" : "text-monti-subtle",
-					tone === "picked" ? "text-monti-default" : undefined,
-				)}
-			>
-				{folds ? <span className="flex size-[20px] shrink-0 items-center justify-center">{fold}</span> : null}
-				{changed === undefined ? null : (
-					<span className="flex w-monti-8 shrink-0 items-center">{changed ? <ChangeDot label={changed} /> : null}</span>
-				)}
-				<span className="min-w-[2ch]">{number}</span>
-			</span>
+				number={number}
+				fold={fold}
+				folds={folds}
+				edge={edge}
+				mark={mark}
+				numbersOff={numbersOff}
+				readOnly={readOnly}
+				changed={changed}
+				className="select-none"
+			/>
 			<span className="relative flex flex-1 items-center whitespace-pre pr-monti-16 pl-monti-16 text-monti-default">
-				{mark ? (
-					<span
-						aria-hidden
-						contentEditable={false}
-						className={cn(
-							"absolute left-monti-4 select-none",
-							mark === "+" ? "text-monti-success" : mark === "−" ? "text-monti-danger" : "text-monti-subtle",
-						)}
-					>
-						{mark}
-					</span>
-				) : null}
 				<span
 					className={cn(
 						wavy && "underline decoration-1 decoration-wavy underline-offset-4",

@@ -30,9 +30,6 @@ import { useRead } from "../operations/use-operation";
 import { href, type Route, reachedFromInside } from "../route";
 import { codeChanges, shownBlocks } from "../screens/entry/compare-entries";
 
-/** The line effects whose names the core's messages have (doc 17). */
-const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
-
 import { useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { endsClosed } from "../screens/list/format";
 import type { SchemaRead } from "../screens/settings/schema-draft";
@@ -42,6 +39,9 @@ import { ProposalState } from "./proposal-state";
 import { useAssistant } from "./use-assistant";
 import { standingOf, useProposal } from "./use-proposal";
 import { clock } from "./words";
+
+/** The line effects whose names the core's messages have (doc 17). */
+const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
 
 type EntryNow = {
 	collection: string;
@@ -273,17 +273,17 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 									names.length ? names.map(effectName).join(", ") : "—"
 								}`;
 							})
-							.join("\n");
+							.join(" · ");
 					const head = (side: typeof block) => [side.code?.language, side.code?.title].filter(Boolean).join(" · ");
 					if (changed.lines.length || changed.language || changed.title)
 						places.push({
 							name: t("review.block", { number: index + 1 }),
 							before: [changed.language || changed.title ? head(was) : "", effects(was, changed.lines)]
 								.filter(Boolean)
-								.join("\n"),
+								.join(" · "),
 							after: [changed.language || changed.title ? head(block) : "", effects(block, changed.lines)]
 								.filter(Boolean)
-								.join("\n"),
+								.join(" · "),
 						});
 				}
 			});

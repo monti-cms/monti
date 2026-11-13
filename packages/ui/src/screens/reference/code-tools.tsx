@@ -7,6 +7,7 @@ import {
 	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
+	CodeReference,
 	CollapseAll,
 	Copy,
 	Document,
@@ -74,9 +75,9 @@ import {
 import { BodyBlock, EditorPage, EntryHeader, EntryTitle, LanguageTabs, Paragraph, still } from "./editor-notion";
 
 /**
- * The code block in the editor (doc 17), from the last code block the owner used (`b612824d`, doc 17 "옛 화면") with the owner's seven points
- * (2026-11-14): the box with its head row (the language on the left, the tools on the right), the file name as a tab on the box, the line numbers and
- * what pressing them opens, the editor's own format card in code, the rules card, and a code link's strip, look and card.
+ * The code block in the editor (doc 17), from the last code block the owner used (`b612824d`, doc 17 "옛 화면") with the owner's points
+ * (2026-11-14): the box with its head row (the language and the file name), the block's tool row over it, the line numbers and what pressing them
+ * opens, the editor's own format card in code, the rules card, and a code link's strip, look and card.
  */
 
 /** Something the editor floats at a measured point (the format card over picked words, the line menu beside picked lines). */
@@ -205,11 +206,15 @@ function Lines({
 		const number = index + 1;
 		const look = looks[number] ?? {};
 		const first = folds && number === 7;
+		const closed = first && fold === "closed";
+		// The open fold's range beside the numbers, from its first line to its last (line 11).
+		const edge = fold === "open" && number > 7 && number <= 11 ? (number === 11 ? "end" : "middle") : undefined;
 		rows.push(
 			<CodeLine
 				key={number}
 				number={number}
 				folds={folds}
+				edge={edge}
 				readOnly={readOnly}
 				numbersOff={numbersOff}
 				mark={look.mark}
@@ -224,16 +229,16 @@ function Lines({
 				}
 			>
 				{words[number] ?? paint(lines[index], plain)}
+				{/* A closed fold says what it hides at the end of its first line. */}
+				{closed ? (
+					<>
+						{"  "}
+						<TextButton size="caption">접힌 4줄</TextButton>
+					</>
+				) : null}
 			</CodeLine>,
 		);
-		if (first && fold === "closed") {
-			rows.push(
-				<CodeLine key="folded" folds>
-					<TextButton size="caption">접힌 4줄</TextButton>
-				</CodeLine>,
-			);
-			index = 10;
-		}
+		if (closed) index = 10;
 	}
 	return <>{rows}</>;
 }
@@ -253,21 +258,23 @@ function Head({
 	readOnly?: boolean;
 }) {
 	return (
-		<Inline gap={8} minWidth={0}>
-			<Text variant="caption" tone="muted">
-				{language}
-			</Text>
-			{name ? (
-				<Text variant="caption" mono truncate>
-					{name}
+		<>
+			<Inline gap={8} minWidth={0}>
+				<Text variant="caption" tone="muted">
+					{language}
 				</Text>
-			) : null}
+				{name ? (
+					<Text variant="caption" mono truncate>
+						{name}
+					</Text>
+				) : null}
+			</Inline>
 			{readOnly ? (
 				<IconButton size="xs" label={copied ? "복사함" : "코드 복사"}>
 					{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
 				</IconButton>
 			) : null}
-		</Inline>
+		</>
 	);
 }
 
@@ -436,8 +443,8 @@ function Page({
 // --- 1 The code box ---------------------------------------------------------------------------------------------------------------------------
 
 /**
- * The box (owner's point 1): the file name on a tab of its own over the box, the head row only the language and the tools, the gutter only the numbers
- * (and a fold's button where one starts); the line's mark sits in the code's left margin, so no empty column stands beside a number.
+ * The box: the head row says the language and the file name, the tools are the block's tool row over the box; the gutter has the numbers, a fold's
+ * button and its range line, and the line's mark after the number.
  */
 export function CodeBoxScreen({
 	state,
@@ -839,7 +846,7 @@ const RULE_WORDS: Record<number, React.ReactNode> = {
 /**
  * A code link (owner's point 7): while one is made, the editor's own strip stands at the top of the screen, edge to edge (`Banner`, as the old strip stood
  * alone over the editor, `b612824d:…/tiptap-editor.tsx:277-281`), its actions text buttons; "연결" comes once both sides are picked. The words
- * have a solid line under them; their card is the link card's, under the format card.
+ * have a dotted line under them; their card names the lines by the block's file name.
  */
 export function CodeLinkScreen({ state }: { state: "picking" | "ready" | "linked" | "card" | "broken" }) {
 	const words = (link: "linked" | "broken" | "picking") => (
@@ -876,11 +883,11 @@ export function CodeLinkScreen({ state }: { state: "picking" | "ready" | "linked
 		<Page
 			banner={
 				state === "picking" ? (
-					<Banner tone="neutral" title="‘수를 하나 올린다’에 연결할 코드 줄을 골라 주세요">
+					<Banner tone="neutral" title="연결할 코드 줄을 줄 번호에서 골라 주세요">
 						<TextButton>취소</TextButton>
 					</Banner>
 				) : state === "ready" ? (
-					<Banner tone="neutral" title="‘수를 하나 올린다’ · 코드 5–6번째 줄">
+					<Banner tone="neutral" title="고른 글자와 줄을 연결합니다">
 						<TextButton variant="underline">연결</TextButton>
 						<TextButton>취소</TextButton>
 					</Banner>
@@ -902,27 +909,29 @@ export function CodeLinkScreen({ state }: { state: "picking" | "ready" | "linked
 							<FormatButton mark="superscript" label="위 첨자" />
 							<FormatButton mark="subscript" label="아래 첨자" />
 							<FormatButton mark="link" label="링크" />
-							<FormatButton mark="footnote" label="각주" />
 							<Popover open onOpenChange={still}>
-								<FormatButton
-									mark="more"
+								<FloatingBarButton
 									label="코드 줄 링크"
 									pressed
 									trigger={(button) => <PopoverTrigger render={button} />}
-								/>
-								<PopoverContent padding="menu">
+								>
+									<CodeReference aria-hidden />
+								</FloatingBarButton>
+								<PopoverContent padding="menu" width="md">
 									<Command shouldFilter={false}>
 										<CommandList>
 											{state === "broken" ? (
-												<Box paddingX={8} paddingY={6}>
-													<Text variant="caption" tone="danger">
-														가리키던 줄 없음
-													</Text>
-												</Box>
+												<CommandItem value="broken" disabled>
+													<CodeReference aria-hidden />
+													<Text tone="danger">가리키던 줄 없음</Text>
+												</CommandItem>
 											) : (
 												<CommandItem value="go">
-													<ArrowRight aria-hidden />
-													코드 4번째 줄
+													<CodeReference aria-hidden />
+													<Text truncate>src/counter.tsx · 4번째 줄</Text>
+													<MenuValue>
+														<ArrowRight aria-hidden />
+													</MenuValue>
 												</CommandItem>
 											)}
 											<CommandSeparator />
@@ -934,6 +943,7 @@ export function CodeLinkScreen({ state }: { state: "picking" | "ready" | "linked
 									</Command>
 								</PopoverContent>
 							</Popover>
+							<FormatButton mark="footnote" label="각주" />
 							<Separator orientation="vertical" length="bar" />
 							<FormatBarRequest label="요청" />
 						</FloatingBar>

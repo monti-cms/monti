@@ -16,17 +16,17 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Writing: the file name's tab, the head row (language, then 줄 효과 · 정규식 규칙 · 줄 번호 · 코드 복사), effects on lines, a fold open. */
+/** Writing: the tool row over the box, the head row (language and file name), effects on lines, a fold open with its range line. */
 export const Box: Story = { render: () => <CodeBoxScreen state="writing" /> };
-/** The fold closed: one row "접힌 4줄" in place of its lines. */
+/** The fold closed: "접힌 4줄" at the end of its first line. */
 export const Folded: Story = { render: () => <CodeBoxScreen state="folded" /> };
 /** The site hides line numbers: 줄 번호 not pressed, the numbers fainter. */
 export const NumbersOff: Story = { render: () => <CodeBoxScreen state="numbersOff" /> };
-/** An archived entry: the language and file name as words, copy only. */
+/** An archived entry: no tool row, copy at the end of the head row. */
 export const ReadOnly: Story = { render: () => <CodeBoxScreen state="readOnly" /> };
 /** An imported block in a language the site does not list: its name as it is, plain code, nothing more. */
 export const UnknownLanguage: Story = { render: () => <CodeBoxScreen state="unknown" /> };
-/** A block with no file name: the tab's field, empty. */
+/** A block with no file name: the head row has the language only. */
 export const NoFileName: Story = { render: () => <CodeBoxScreen state="noName" /> };
 /** Just copied: the check mark. */
 export const Copied: Story = { render: () => <CodeBoxScreen state="copied" /> };
@@ -42,11 +42,11 @@ export const LineMenu: Story = { render: () => <LineMenuScreen state="picked" />
 export const LineMenuFold: Story = { render: () => <LineMenuScreen state="fold" /> };
 /** Line 4 picked, a code link's target: "본문 연결" checked, with the words that point here. */
 export const LineMenuLinked: Story = { render: () => <LineMenuScreen state="linked" /> };
-/** Words picked in code: the editor's format card, its ⋯ open on the code's own marks. */
+/** Words picked in code: the format card with the formats code takes, the tooltip and fold in the tool row. */
 export const FormatInCode: Story = { render: () => <FormatInCodeScreen state="more" /> };
-/** ⋯ › 툴팁: the tooltip's card, one plain field. */
+/** The tool row's 툴팁: its card, one plain field. */
 export const TooltipInCode: Story = { render: () => <FormatInCodeScreen state="tooltip" /> };
-/** ⋯ › 글자 접기: folded or open at first on the site. */
+/** Folded words: 글자 접기 pressed, and 처음부터 펼치기 beside it. */
 export const FoldInCode: Story = { render: () => <FormatInCodeScreen state="fold" /> };
 /** Words with a tooltip and folded words in code; the eraser takes marks off. */
 export const MarkedInCode: Story = { render: () => <FormatInCodeScreen state="marked" /> };

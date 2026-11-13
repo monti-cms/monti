@@ -4,6 +4,7 @@ import {
 	Command,
 	CommandItem,
 	CommandList,
+	CommandSeparator,
 	FloatingBarButton,
 	MenuValue,
 	Popover,
@@ -188,7 +189,7 @@ export function CodeRefButton({
 			<FloatingBarButton label={label} pressed trigger={(button) => <PopoverTrigger render={button} />}>
 				<CodeReference aria-hidden />
 			</FloatingBarButton>
-			<PopoverContent side="bottom" align="center" padding="menu" width="sm">
+			<PopoverContent side="bottom" align="center" padding="menu" width="md">
 				<Command shouldFilter={false}>
 					<CommandList>
 						{linked.target ? (
@@ -211,6 +212,7 @@ export function CodeRefButton({
 								<Text tone="danger">{t("editor.code.broken")}</Text>
 							</CommandItem>
 						)}
+						<CommandSeparator />
 						<CommandItem
 							value="unlink"
 							onSelect={() => {

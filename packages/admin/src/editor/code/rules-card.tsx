@@ -1,3 +1,4 @@
+import type { CodeBlockSettings } from "@monti-cms/core";
 import { CODE_TEXT_EFFECTS, type CodeRule, type CodeTextEffect, ruleRanges, ruleRegex } from "@monti-cms/core/code";
 import {
 	Affix,
@@ -49,8 +50,11 @@ export function RulesCard({
 	code,
 	lineCount,
 	picked,
+	tools,
 	onChange,
 }: {
+	/** The site's code tools: an effect or "Add rule" the site turned off is not offered (a rule that has it keeps it). */
+	tools: CodeBlockSettings["tools"];
 	anchor: React.RefObject<HTMLDivElement | null>;
 	rules: readonly CodeRule[];
 	code: string;
@@ -63,6 +67,8 @@ export function RulesCard({
 	/** The rule open in the card, as typed: it is stored once it reads (an empty or broken pattern is not a rule the save takes). */
 	const [open, setOpen] = useState<{ at: number; rule: CodeRule } | null>(null);
 	const effectLabel = (name: CodeTextEffect) => t(EFFECT_LABEL[name]);
+	const offered = (name: CodeTextEffect) =>
+		name === "codeTip" ? tools.tooltip : name === "codeFold" ? tools.fold : tools.textStyles;
 	const rule = open?.rule ?? null;
 	const put = (next: CodeRule) => {
 		if (!open) return;
@@ -73,7 +79,7 @@ export function RulesCard({
 
 	if (!rule || !open)
 		return (
-			<PopoverContent anchor={anchor} align="start" padding="menu" width="sm">
+			<PopoverContent anchor={anchor} align="start" padding="menu" width="md">
 				<Command shouldFilter={false}>
 					<CommandList>
 						{rules.map((each, at) => (
@@ -87,29 +93,32 @@ export function RulesCard({
 								<ChevronRight aria-hidden />
 							</CommandItem>
 						))}
-						{rules.length ? <CommandSeparator /> : null}
-						<CommandItem
-							value="add"
-							onSelect={() => {
-								const fresh: CodeRule = {
-									scope: "document",
-									name: "bold",
-									pattern: picked ? escaped(picked) : "",
-									flags: "g",
-								};
-								if (fresh.pattern) onChange([...rules, fresh]);
-								setOpen({ at: rules.length, rule: fresh });
-							}}
-						>
-							<Add aria-hidden />
-							{t("editor.code.addRule")}
-						</CommandItem>
+						{rules.length && tools.rules ? <CommandSeparator /> : null}
+						{tools.rules ? (
+							<CommandItem
+								value="add"
+								onSelect={() => {
+									const fresh: CodeRule = {
+										scope: "document",
+										name: "bold",
+										pattern: picked ? escaped(picked) : "",
+										flags: "g",
+									};
+									if (fresh.pattern) onChange([...rules, fresh]);
+									setOpen({ at: rules.length, rule: fresh });
+								}}
+							>
+								<Add aria-hidden />
+								{t("editor.code.addRule")}
+							</CommandItem>
+						) : null}
 					</CommandList>
 				</Command>
 			</PopoverContent>
 		);
 
 	const readable = rule.pattern === "" || ruleRegex(rule) !== null;
+	const effects = CODE_TEXT_EFFECTS.filter((name) => offered(name) || name === rule.name);
 	const found = readable && rule.pattern ? ruleRanges(rule, code).length : 0;
 	return (
 		<PopoverContent anchor={anchor} align="start" width="md" initialFocus={false}>
@@ -129,6 +138,7 @@ export function RulesCard({
 							suffix="/"
 							autoFocus
 							aria-label={t("editor.code.pattern")}
+							placeholder={t("editor.code.find")}
 							value={rule.pattern}
 							aria-invalid={!readable || undefined}
 							onChange={(event) => put({ ...rule, pattern: event.currentTarget.value })}
@@ -142,10 +152,8 @@ export function RulesCard({
 							onChange={(event) => put({ ...rule, flags: event.currentTarget.value.replace(/[^dgimsuy]/g, "") })}
 						/>
 					</Inline>
-					{readable ? (
-						<FormFieldDescription>
-							{rule.pattern ? t("editor.code.found", { n: found }) : t("editor.code.findHint")}
-						</FormFieldDescription>
+					{!rule.pattern ? null : readable ? (
+						<FormFieldDescription>{t("editor.code.found", { n: found })}</FormFieldDescription>
 					) : (
 						<FormFieldError>{t("editor.code.badPattern")}</FormFieldError>
 					)}
@@ -153,7 +161,7 @@ export function RulesCard({
 				<FormField>
 					<FormFieldLabel>{t("editor.code.effect")}</FormFieldLabel>
 					<Select
-						items={CODE_TEXT_EFFECTS.map((name) => ({ value: name, label: effectLabel(name) }))}
+						items={effects.map((name) => ({ value: name, label: effectLabel(name) }))}
 						value={rule.name}
 						onValueChange={(name) =>
 							name &&
@@ -169,7 +177,7 @@ export function RulesCard({
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							{CODE_TEXT_EFFECTS.map((name) => (
+							{effects.map((name) => (
 								<SelectItem key={name} value={name}>
 									{effectLabel(name)}
 								</SelectItem>

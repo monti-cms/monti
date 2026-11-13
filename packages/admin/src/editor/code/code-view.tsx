@@ -305,6 +305,7 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 									code={code}
 									lineCount={starts.length}
 									picked={view?.words ? code.slice(view.words.from, view.words.to) : ""}
+									tools={tools ?? { rules: true, fold: true, tooltip: true, textStyles: true, links: true }}
 									onChange={(rules) => set({ rules })}
 								/>
 							</Popover>
@@ -371,21 +372,24 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 			<CodeFrame
 				ref={frame}
 				head={
-					<Inline gap={8} minWidth={0}>
-						<Text variant="caption" tone="muted">
-							{languageLabel}
-						</Text>
-						{data.title ? (
-							<Text variant="caption" mono truncate>
-								{data.title}
+					<>
+						<Inline gap={8} minWidth={0}>
+							<Text variant="caption" tone="muted">
+								{languageLabel}
 							</Text>
-						) : null}
+							{data.title ? (
+								<Text variant="caption" mono truncate>
+									{data.title}
+								</Text>
+							) : null}
+						</Inline>
+						{/* Read-only has no tool row: copying stays, at the head row's end. */}
 						{editable ? null : (
 							<IconButton size="xs" label={copied ? t("editor.code.copied") : t("editor.code.copy")} onClick={copy}>
 								{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
 							</IconButton>
 						)}
-					</Inline>
+					</>
 				}
 			>
 				<CodeArea
@@ -492,7 +496,7 @@ function LanguageButton({
 			}}
 		>
 			<FloatingBarButton
-				label={t("editor.code.language")}
+				label={t("editor.code.languageIs", { name: label })}
 				pressed={open}
 				trigger={(button) => <PopoverTrigger render={button} />}
 			>

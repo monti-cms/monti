@@ -29,6 +29,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { AssistantButton } from "../../assistant/assistant-button";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
+import { CodeLinkBanner } from "../../editor/code/code-links";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
@@ -66,8 +67,11 @@ export function TemplateEditor({
 	// A banner whose own action takes it away (discard or load this browser's copy, load the latest, try again) had the keyboard's focus on that
 	// action: it goes to the text being written, the body, or the name when the body is not there (as in the entry editor).
 	const body = useRef<Editor | null>(null);
+	/** The body's editor as state too: the code link's strip at the top reads it (doc 17). */
+	const [bodyEditor, setBodyEditor] = useState<Editor | null>(null);
 	const keepBody = useCallback((made: Editor | null) => {
 		body.current = made;
+		setBodyEditor(made);
 	}, []);
 	const handOff = useFocusHandOff(() => () => focusText(() => body.current, "monti-template-name"));
 
@@ -101,6 +105,7 @@ export function TemplateEditor({
 							<TextButton onClick={() => void editor.loadLatest()}>{t("templates.loadLatest")}</TextButton>
 						</Banner>
 					) : null}
+					<CodeLinkBanner editor={bodyEditor} />
 					{editor.browserCopy ? (
 						<Banner ref={handOff} title={t("entry.browserCopy")}>
 							<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>

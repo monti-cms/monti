@@ -107,7 +107,12 @@ export function FormatCard({
 	if (!state) return null;
 	// In code (doc 17) the card has the formats code takes: bold, italic, underline, strike. Code, superscript and subscript would break the code's
 	// column, a link and a footnote are not drawn in code on the site. The code's own fold and tooltip are in the code block's tool row.
-	const inCode = new Set(catalogs.kit.marks.filter((mark) => mark.inCode === "also").map((mark) => mark.type));
+	// A site that turned the text styles in code off (`codeBlock.tools.textStyles`) offers none there.
+	const inCode = new Set(
+		catalogs.kit.code?.tools.textStyles === false
+			? []
+			: catalogs.kit.marks.filter((mark) => mark.inCode === "also").map((mark) => mark.type),
+	);
 	const offered = new Set(
 		catalogs.offered.marks.map((mark) => mark.type).filter((type) => !state.inCode || inCode.has(type)),
 	);
@@ -156,6 +161,10 @@ export function FormatCard({
 								/>
 							),
 						)}
+						{/* Right after the link: a code link (doc 17), for words of a body that has code. */}
+						{group.some(({ type }) => type === "link") && codeRef ? (
+							<CodeRefButton editor={editor} label={t(codeRef.label)} open={codeLink} onOpenChange={setCodeLink} />
+						) : null}
 						{/* After the link: a footnote for the picked words, its number after them and its text at the end of the body. */}
 						{group.some(({ type }) => type === "link") && footnote ? (
 							<FormatButton
@@ -167,9 +176,6 @@ export function FormatCard({
 									editor.commands.focus();
 								}}
 							/>
-						) : null}
-						{group.some(({ type }) => type === "link") && codeRef ? (
-							<CodeRefButton editor={editor} label={t(codeRef.label)} open={codeLink} onOpenChange={setCodeLink} />
 						) : null}
 						{/* After the text formats, and only while the words have one: takes them all off at once (a link stays). */}
 						{at === 0 && state.clearable ? (

@@ -391,6 +391,12 @@ export const CodeTools = Extension.create<{ settings: CodeBlockSettings | null }
 						const tools = codeToolsKey.getState(state);
 						return tools ? decorations(state, settings, tools) : null;
 					},
+					// Escape lets go of a code link being made, as the strip's "Cancel" does.
+					handleKeyDown(view, event) {
+						if (event.key !== "Escape" || !codeToolsKey.getState(view.state)?.linking) return false;
+						sendCode(view, { linking: null });
+						return true;
+					},
 					handleDOMEvents: {
 						mouseover(view, event) {
 							const pointed = refAt(event);

@@ -52,7 +52,7 @@ describe("the code block in the editor (doc 17)", () => {
 		await expect.element(page.getByRole("toolbar", { name: "코드 도구" })).not.toBeInTheDocument();
 		await intoCode("let count");
 		await expect.element(page.getByRole("toolbar", { name: "코드 도구" })).toBeVisible();
-		await userEvent.click(button("언어"));
+		await userEvent.click(button("언어: TypeScript"));
 		await userEvent.type(page.getByRole("combobox", { name: "언어 찾기" }), "pyth");
 		await userEvent.click(page.getByRole("option", { name: /Python/ }));
 		await expect.poll(() => code()?.querySelector("[data-slot=code-frame-head]")?.textContent).toContain("Python");
@@ -182,12 +182,12 @@ describe("the code block in the editor (doc 17)", () => {
 		await expect.poll(tones).toContain("5:lit");
 		await pickWords(body().element(), "다음 문단");
 		await userEvent.click(button("코드 줄 링크"));
-		await expect.element(page.getByText("연결할 코드 줄을 줄 번호에서 고르세요")).toBeVisible();
+		await expect.element(page.getByText("연결할 코드 줄을 줄 번호에서 골라 주세요")).toBeVisible();
 		const first = number(1);
 		if (!first) throw new Error("no line numbers");
 		await userEvent.click(first);
 		await userEvent.click(button("연결"));
-		await expect.element(page.getByText("연결할 코드 줄을 줄 번호에서 고르세요")).not.toBeInTheDocument();
+		await expect.element(page.getByText("연결할 코드 줄을 줄 번호에서 골라 주세요")).not.toBeInTheDocument();
 		await save();
 		const last = async () => (await kept(story.loaded())).at(-1)?.content;
 		await expect
