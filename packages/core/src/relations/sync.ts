@@ -314,6 +314,9 @@ export async function syncRelationsForEntry(
 				}
 			}
 		} else {
+			// A translation holds no value of a field all languages share: it is the source's, saved only there (doc 04). Its save leaves the
+			// group's links and the source's value alone; read from its own values, they would be emptied.
+			if (entry.locale !== schema.locales.source && localeModeOf(fieldName, fieldDef) === "same") continue;
 			// Normal relation field
 			const targets = fieldDef.many
 				? Array.isArray(values[fieldName])

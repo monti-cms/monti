@@ -13,7 +13,7 @@ import type { StorySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
 import * as list from "./list.stories";
 
-const { Main, NarrowColumns } = composeStories(list);
+const { Main, NarrowColumns, WideColumns } = composeStories(list);
 
 const main = () => page.getByRole("main");
 const columnName = (name: string) => main().getByRole("columnheader").getByRole("button", { name, exact: true });
@@ -32,6 +32,24 @@ describe("the list's column names", () => {
 		await Main.run();
 		await expect.element(columnName("수정일")).toBeVisible();
 		expect(rowHeights(main().getByRole("table").element())).toHaveLength(1);
+	});
+
+	it("06-1 columns wider than the page leave the title its 200px: titles stay readable and the table scrolls sideways", async () => {
+		await WideColumns.run();
+		await expect.element(columnName("수정일")).toBeInTheDocument();
+		const table = main().getByRole("table").element() as HTMLElement;
+		const title = [...table.querySelectorAll("thead th")].find((th) => th.textContent?.trim().startsWith("제목"));
+		expect(title?.getBoundingClientRect().width).toBeGreaterThanOrEqual(200);
+		const cell = page.getByText("발행 후 고친 글").element().closest("td") as HTMLElement;
+		expect(cell.getBoundingClientRect().width).toBeGreaterThanOrEqual(200);
+		// The table is wider than its column of the page, and the page scrolls sideways to its last column.
+		expect(table.getBoundingClientRect().width).toBeGreaterThan(
+			table.parentElement?.getBoundingClientRect().width ?? 0,
+		);
+		const last = columnName("수정일").element() as HTMLElement;
+		last.scrollIntoView({ inline: "end", block: "nearest" });
+		await expect.poll(() => last.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
+		expect(spillingCells(table)).toEqual([]);
 	});
 
 	it("06-1 columns dragged to their narrowest keep their words inside their cells", async () => {

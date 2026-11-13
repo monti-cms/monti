@@ -464,6 +464,28 @@ describe("08-2 reader resolution and localization", () => {
 		});
 	});
 
+	it("08-2 saving a translation keeps the source's relations that every language shares", async () => {
+		const tag = await newTag("리액트", "react");
+		const cat = await newCategory("개발", "dev");
+		const koPostId = await newPost("첫 번째 글", { category: cat.group, tags: [tag.group] }, "ko", "first-post-ko");
+		await write("entries.publish", { ids: [koPostId] });
+		const enPostId = (await write<{ id: string }>("translations.create", { source: koPostId, locale: "en" })).output.id;
+		// A save that gives values: only the translation's own, never a field the source holds for every language.
+		await write("entries.save", { id: enPostId, version: await version(enPostId), title: "First Post", values: {} });
+		await write("entries.save", { id: enPostId, version: await version(enPostId), slug: "first-post-en" });
+
+		const { values } = (await get(koPostId)).entry;
+		expect(values.category).toBe(cat.group);
+		expect(values.tags).toEqual([tag.group]);
+		const koGroup = (await get(koPostId)).entry.translationGroup;
+		const links = await db
+			.selectFrom("entry_links")
+			.select(["field", "to_group"])
+			.where("from_group", "=", koGroup)
+			.execute();
+		expect(links.map((link) => link.field).sort()).toEqual(["category", "tags"]);
+	});
+
 	it("08-2 relation falls back to source locale name when translation does not exist", async () => {
 		// Tag only has Korean title
 		const tagReact = await newTag("리액트", "react");

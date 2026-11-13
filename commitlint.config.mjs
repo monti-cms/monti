@@ -33,6 +33,7 @@ export default {
 				"mdx",
 				"blocks",
 				"examples",
+				"showcase",
 				"scripts",
 				"ci",
 				"deps",

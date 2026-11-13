@@ -29,6 +29,7 @@ Monti는 설계부터 다시 만들고 있습니다. 이전 패키지는 지웠�
 | [`@monti-cms/seo`](packages/seo) | SEO 플러그인. 검색과 공유 필드를 제 탭에 두고, 편집기에서 미리 보이고, 사이트 페이지는 `seoOf`로 값을 읽습니다 |
 
 [`examples/blog`](examples/blog)는 Monti를 붙인 Next.js 블로그다. 흐름 테스트(`pnpm test:e2e`)가 이 앱에서 돈다.
+[`examples/showcase`](examples/showcase)는 모든 기능을 쓰는 앱이다. 씨앗 명령(`pnpm seed`)이 채우고, QA 목록이 있다.
 
 ## 릴리스 설치하기
 

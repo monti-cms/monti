@@ -10,8 +10,8 @@ import {
 } from "@monti-cms/admin";
 import { type MediaDetail, mediaValueOf } from "@monti-cms/core";
 import { Image, Input, Stack, Switch, Text, Textarea } from "@monti-cms/ui";
-import { SEO_FIELDS, SEO_FOLLOWS, SEO_INPUTS, SEO_LIMITS, SEO_PREVIEW } from "./fields";
 import { seoWords } from "./messages";
+import { SEO_FIELDS, SEO_FOLLOWS, SEO_INPUTS, SEO_LIMITS, SEO_PREVIEW } from "./names";
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 const limitOf = (options: Record<string, unknown>, fallback: number) =>

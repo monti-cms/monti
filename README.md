@@ -29,6 +29,7 @@ rebuilt packages is being made ([doc 20](docs/design/features/20-release.md)); u
 | [`@monti-cms/seo`](packages/seo) | The SEO plugin: search and share fields in a tab of their own, their preview in the editor, and `seoOf` for the site's pages |
 
 [`examples/blog`](examples/blog) is a blog on Next.js with Monti mounted on it; the flow tests (`pnpm test:e2e`) run on it.
+[`examples/showcase`](examples/showcase) uses every feature, with a seed (`pnpm seed`) that fills it and a QA checklist.
 
 ## Installing a release
 

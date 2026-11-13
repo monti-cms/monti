@@ -202,13 +202,13 @@ export function drawCodeBlock<Node>(
 					h(
 						"details",
 						{ key: `c${line}`, "data-code-collapse": "", open: fold.attrs?.open ? true : undefined },
+						// No newline after the summary or after the fold: each is a block, which ends its line by itself; one more would draw an
+						// empty line in the code (a selection still copies one, at the block's edge).
 						h("summary", null, lineNode(line)),
-						"\n",
 						...range(line + 1, fold.end),
 					),
 				);
 				line = fold.end;
-				if (line < to) out.push("\n");
 				continue;
 			}
 			out.push(lineNode(line));
