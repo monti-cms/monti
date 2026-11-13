@@ -96,7 +96,7 @@ function ResizeHandle({
 	value: number;
 	/**
 	 * The width as it is laid out at this moment, for a pane whose `value` is a measurement and can be behind (a column that takes the room
-	 * left). A drag and a key start from it: started from a `value` not measured yet, a drag computes from nothing and moves nothing.
+	 * left). A drag and a key start from it: started from a `value` not measured yet, a drag is worked out from nothing and takes the edge the wrong way.
 	 * With it, Home and End report -Infinity and Infinity, and `onChange` keeps the width in its limits.
 	 */
 	measure?: () => number;
