@@ -153,7 +153,11 @@ export type ShownBlock = { id: string; look: "heading" | "code" | "text"; values
 /** What the comparison names blocks and their values with: the site's catalog, and the admin's words for a name. */
 export type BlockNames = {
 	/** A block type's name and its fields (`blocks.catalog`). */
-	block: (type: string) => { label: Label; fields?: Record<string, Field> | null } | undefined;
+	block: (
+		type: string,
+	) =>
+		| { label: Label; fields?: Record<string, Field> | null; fence?: { language: string; attr: string } | null }
+		| undefined;
 	/** A name in the admin's language: a site's words, or a key of the admin's dictionary. */
 	say: (label: Label) => string;
 	/** A library file's name, for a picture or a file. */
@@ -204,13 +208,12 @@ function valuesOf(block: Block, names: BlockNames | undefined): string | undefin
 		? core(attrs, names).flatMap(([key, value]): [string, string][] => (value === "" ? [] : [[names.say(key), value]]))
 		: Object.entries(known.fields ?? {}).flatMap(([key, field]): [string, string][] => {
 				const value = attrs[key];
-				if (field.input === "source" || value === undefined || value === null || value === "" || value === false)
+				if (key === known.fence?.attr || value === undefined || value === null || value === "" || value === false)
 					return [];
-				if (field.input === "switch") return [[names.say(field.label), ""]];
-				if (field.input === "choice") {
-					const option = field.options[String(value)];
-					return [[names.say(field.label), option ? names.say(option) : String(value)]];
-				}
+				// A value that is on is said by its name alone ("펼쳐 두기"); an option by its own name.
+				if (value === true) return [[names.say(field.label), ""]];
+				const option = field.options?.[String(value)];
+				if (option) return [[names.say(field.label), names.say(option)]];
 				return [[names.say(field.label), String(value)]];
 			});
 	return [names.say(known.label), ...pairs.map(([name, value]) => (value ? `${name} ${value}` : name))].join(" · ");
@@ -220,8 +223,8 @@ function valuesOf(block: Block, names: BlockNames | undefined): string | undefin
 function wordsOf(block: Block, names: BlockNames | undefined): string {
 	if (block.type === "table" && Array.isArray(block.attrs?.rows))
 		return (block.attrs.rows as unknown[][]).map((row) => row.map(String).join(" | ")).join("\n");
-	const source = Object.entries(names?.block(block.type)?.fields ?? {}).find(([, field]) => field.input === "source");
-	if (source) return typeof block.attrs?.[source[0]] === "string" ? String(block.attrs[source[0]]) : "";
+	const fence = names?.block(block.type)?.fence;
+	if (fence) return typeof block.attrs?.[fence.attr] === "string" ? String(block.attrs[fence.attr]) : "";
 	if (!block.children) return plainText(block.content);
 	return block.children
 		.flatMap((child) => [valuesOf(child, names), wordsOf(child, names)])
@@ -229,8 +232,8 @@ function wordsOf(block: Block, names: BlockNames | undefined): string {
 		.join("\n");
 }
 
-const isSource = (block: Block, names: BlockNames | undefined) =>
-	Object.values(names?.block(block.type)?.fields ?? {}).some((field) => field.input === "source");
+/** A block written as code of its own language (a formula, a diagram): it reads as code. */
+const isSource = (block: Block, names: BlockNames | undefined) => Boolean(names?.block(block.type)?.fence);
 
 /** The body's blocks as the comparison reads them. With `names`, a block with values has its name line, and a formula or a diagram reads as code. */
 export function shownBlocks(doc: Doc | null, names?: BlockNames): ShownBlock[] {

@@ -35,28 +35,31 @@ describe("blocks that hold values, in the comparison (doc 18, T197)", () => {
 	const fields = {
 		tone: {
 			label: { ko: "종류", en: "Kind" },
-			input: "choice" as const,
 			options: { note: { ko: "노트", en: "Note" }, warning: { ko: "경고", en: "Warning" } },
 		},
-		title: { label: { ko: "제목", en: "Title" }, input: "text" as const },
+		title: { label: { ko: "제목", en: "Title" } },
 	};
-	const catalog: Record<string, { label: Label; fields?: Record<string, Field> | null }> = {
+	const catalog: Record<
+		string,
+		{ label: Label; fields?: Record<string, Field> | null; fence?: { language: string; attr: string } }
+	> = {
 		paragraph: { label: { key: "blocks.paragraph" } },
 		image: { label: { key: "blocks.image" } },
 		table: { label: { key: "blocks.table" } },
 		callout: { label: { ko: "콜아웃", en: "Callout" }, fields },
 		collapsible: {
 			label: { ko: "접기", en: "Collapsible" },
-			fields: { defaultOpen: { label: { ko: "펼쳐 두기", en: "Open at first" }, input: "switch" } },
+			fields: { defaultOpen: { label: { ko: "펼쳐 두기", en: "Open at first" } } },
 		},
 		math: {
 			label: { ko: "수식", en: "Math" },
-			fields: { source: { label: "수식", input: "source", language: "latex" } },
+			fields: { source: { label: "수식" } },
+			fence: { language: "math", attr: "source" },
 		},
 		tabs: { label: { ko: "탭", en: "Tabs" }, fields: {} },
 		tab: {
 			label: { ko: "탭 하나", en: "Tab" },
-			fields: { label: { label: { ko: "탭 이름", en: "Tab name" }, input: "text" } },
+			fields: { label: { label: { ko: "탭 이름", en: "Tab name" } } },
 		},
 	};
 	const words: Record<string, string> = {

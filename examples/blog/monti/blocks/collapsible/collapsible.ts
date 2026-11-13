@@ -10,8 +10,8 @@ export const collapsible = defineBlock({
 	menu: "insert",
 	attrs: z.object({ title: z.string().optional(), defaultOpen: z.boolean().optional() }),
 	fields: {
-		title: { label: { ko: "제목", en: "Title" }, input: "text", placeholder: { ko: "펼치기", en: "Show more" } },
-		defaultOpen: { label: { ko: "펼쳐 두기", en: "Open at first" }, input: "switch" },
+		title: { label: { ko: "제목", en: "Title" } },
+		defaultOpen: { label: { ko: "펼쳐 두기", en: "Open at first" } },
 	},
 	holds: "blocks",
 	translate: { attrs: ["title"] },

@@ -13,7 +13,6 @@ export const chart = defineBlock({
 	fields: {
 		kind: {
 			label: { ko: "차트 종류", en: "Chart kind" },
-			input: "choice",
 			options: {
 				bar: { ko: "막대", en: "Bars" },
 				line: { ko: "선", en: "Lines" },
@@ -21,7 +20,7 @@ export const chart = defineBlock({
 				pie: { ko: "원", en: "Pie" },
 			},
 		},
-		title: { label: { ko: "제목", en: "Title" }, input: "text", placeholder: { ko: "제목 없음", en: "No title" } },
+		title: { label: { ko: "제목", en: "Title" } },
 	},
 	holds: "blocks",
 	children: ["table"],

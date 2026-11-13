@@ -15,21 +15,10 @@ export type Words = { ko: string; en: string };
 export type Label = string | Message | Words;
 
 /**
- * Where the admin changes one of a block's or a mark's values (doc 18, "fields"). The admin draws the place from it, so a block's source holds no
- * admin screen code; the compare and the review name the value by `label`.
- * - `choice`: a block's menu, one radio row per option (a mark's: the format bar's ⋯, one row per option).
- * - `switch`: a block's menu, a check row.
- * - `text`: an input inside the block itself (a mark's: a card like the link's).
- * - `source`: the block's tool row "edit" opens the source card, a field of code in `language`.
- * - `own`: the block's own editor changes it (the columns' widths by dragging their border, the file a code explorer shows first by its menu): named
- *   here so the compare and the review can say it.
+ * The name of one of a block's or a mark's values, and of its options (doc 18, "fields"): what the compare, the review and the assistant call it. How
+ * a person changes the value is the block's own editor (its tool row and settings), not this.
  */
-export type Field =
-	| { label: Label; input: "choice"; options: Record<string, Label> }
-	| { label: Label; input: "switch" }
-	| { label: Label; input: "text"; placeholder?: Label }
-	| { label: Label; input: "source"; language: string }
-	| { label: Label; input: "own" };
+export type Field = { label: Label; options?: Record<string, Label> };
 
 /**
  * A kind of block, defined once: the editor, the "/" menu, the site, the assistant's catalog and the publish check all come from it (doc 03,
@@ -53,7 +42,7 @@ export type BlockDefinition<Component = unknown> = {
 	 * with nothing to rewrite follows the source block in a translation.
 	 */
 	translate?: { attrs?: string[]; text?: false };
-	/** Where the admin changes each value, by attr name (doc 18). A value with no field is not changed on screen. */
+	/** The names of its values and their options, by attr name (doc 18): what the compare and the review call them. */
 	fields?: Record<string, Field>;
 	/**
 	 * A block whose value is one text in a language of its own (a formula, a diagram): Markdown writes it as a fenced code block of `language`, the
@@ -79,7 +68,7 @@ export type MarkDefinition<Component = unknown> = {
 	/** For the model: when to use the mark. */
 	description?: string;
 	attrs?: z.ZodType<Record<string, unknown>>;
-	/** Where the admin changes each value, by attr name (doc 18). */
+	/** The names of its values and their options, by attr name (doc 18). */
 	fields?: Record<string, Field>;
 	Site?: Component;
 };

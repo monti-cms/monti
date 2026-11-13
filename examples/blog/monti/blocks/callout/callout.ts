@@ -12,7 +12,6 @@ export const callout = defineBlock({
 	fields: {
 		tone: {
 			label: { ko: "종류", en: "Kind" },
-			input: "choice",
 			options: {
 				note: { ko: "노트", en: "Note" },
 				tip: { ko: "팁", en: "Tip" },
@@ -23,8 +22,6 @@ export const callout = defineBlock({
 		},
 		title: {
 			label: { ko: "제목", en: "Title" },
-			input: "text",
-			placeholder: { ko: "종류 이름", en: "The kind's name" },
 		},
 	},
 	holds: "blocks",

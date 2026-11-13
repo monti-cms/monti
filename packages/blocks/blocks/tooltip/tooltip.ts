@@ -8,6 +8,6 @@ export const tooltip = defineMark({
 	description:
 		"A short note on some words (`text`), shown when a reader points at them: an abbreviation spelled out, a term explained.",
 	attrs: z.object({ text: z.string().min(1) }),
-	fields: { text: { label: { ko: "툴팁 글", en: "Tooltip text" }, input: "text" } },
+	fields: { text: { label: { ko: "툴팁 글", en: "Tooltip text" } } },
 	Site: TooltipMark,
 });

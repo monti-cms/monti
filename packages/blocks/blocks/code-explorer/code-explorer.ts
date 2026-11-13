@@ -14,7 +14,7 @@ export const codeExplorer = defineBlock({
 		'Several files of a project as a file tree and the code of the picked file. Its children are codeBlock blocks whose `title` is the file\'s path ("src/app.ts"); a path ending in "/" with no code is a folder. `open` is the path of the file shown first (the first file when left out).',
 	menu: "insert",
 	attrs: z.object({ open: z.string().optional() }),
-	fields: { open: { label: { ko: "처음 보일 파일", en: "File shown first" }, input: "own" } },
+	fields: { open: { label: { ko: "처음 보일 파일", en: "File shown first" } } },
 	holds: "blocks",
 	children: ["codeBlock"],
 	check: (block) => {

@@ -8,7 +8,7 @@ export const math = defineBlock({
 	description: "A formula on a line of its own, in LaTeX (`source`, without $$), drawn by KaTeX.",
 	menu: "insert",
 	attrs: z.object({ source: z.string() }),
-	fields: { source: { label: { ko: "수식", en: "Formula" }, input: "source", language: "latex" } },
+	fields: { source: { label: { ko: "수식", en: "Formula" } } },
 	fence: { language: "math", attr: "source" },
 	holds: "nothing",
 	check: (block) =>

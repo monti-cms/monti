@@ -9,7 +9,7 @@ export const columns = defineBlock({
 		'Blocks side by side: two to four column blocks. `widths` is each column\'s share in percent, separated by commas ("60,40"); equal when left out. A narrow screen stacks them.',
 	menu: "insert",
 	attrs: z.object({ widths: z.string().optional() }),
-	fields: { widths: { label: { ko: "폭", en: "Widths" }, input: "own" } },
+	fields: { widths: { label: { ko: "폭", en: "Widths" } } },
 	holds: "blocks",
 	children: ["column"],
 	Site: Columns,
