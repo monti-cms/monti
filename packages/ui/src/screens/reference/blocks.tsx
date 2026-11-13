@@ -17,7 +17,6 @@ import {
 	Star,
 	TextColor,
 	TrashCan,
-	View,
 	Warning,
 	WarningAlt,
 	WarningHex,
@@ -29,8 +28,6 @@ import {
 	BlockHandle,
 	Box,
 	Button,
-	Command,
-	CommandInput,
 	DocCallout,
 	DocCode,
 	DropdownMenu,
@@ -140,6 +137,57 @@ const KINDS = [
 	{ value: "danger", name: "위험", Icon: WarningHex },
 ] as const;
 
+/**
+ * A callout as the block draws it in the editor: its own look (`callout.css`, the site's: the kind's accent mixed into the ground 10% and the
+ * border 40%, the old editor's mix), the kind's icon and the title typed in place, the title's empty text the kind's name.
+ */
+function CalloutBox({
+	tone,
+	title,
+	children,
+}: {
+	tone: (typeof KINDS)[number]["value"];
+	title: string;
+	children: React.ReactNode;
+}) {
+	const kind = KINDS.find((each) => each.value === tone) ?? KINDS[0];
+	return (
+		<div className="monti-block-callout" data-tone={tone} role="note">
+			<div className="monti-block-callout-title">
+				<Inline gap={8}>
+					<kind.Icon aria-hidden />
+					<Input
+						appearance="inline"
+						size="inherit"
+						aria-label="콜아웃 제목"
+						defaultValue={title}
+						placeholder={kind.name}
+					/>
+				</Inline>
+			</div>
+			<div className="monti-block-callout-body">
+				<Text variant="reading">{children}</Text>
+			</div>
+		</div>
+	);
+}
+
+/** The five kinds side by side, each in its accent (the old editor's colours, `styles/index.css:20-61` at 34d5adcd^). */
+export function CalloutKindsScreen() {
+	return (
+		<Page>
+			{/* Each callout keeps its own margin (callout.css). */}
+			<Stack gap={0}>
+				{KINDS.map(({ value, name }) => (
+					<CalloutBox key={value} tone={value} title={value === "note" ? "" : name}>
+						{`${name} 콜아웃의 본문.`}
+					</CalloutBox>
+				))}
+			</Stack>
+		</Page>
+	);
+}
+
 /** A callout with the caret in it: its row's kind button; `menu`: the kinds open from it upward (✓ on the one it is), the callout in sight. */
 export function CalloutScreen({ menu = false }: { menu?: boolean }) {
 	return (
@@ -169,13 +217,9 @@ export function CalloutScreen({ menu = false }: { menu?: boolean }) {
 						</DropdownMenu>
 					</FloatingBar>
 				</BlockBarPlace>
-				<DocCallout>
-					<Inline gap={8}>
-						<WarningAlt aria-hidden />
-						<Input appearance="inline" size="inherit" aria-label="콜아웃 제목" defaultValue="알아 두세요" />
-					</Inline>
-					<Text variant="reading">이 글은 React 19와 Next 16 기준이다.</Text>
-				</DocCallout>
+				<CalloutBox tone="warning" title="알아 두세요">
+					이 글은 React 19와 Next 16 기준이다.
+				</CalloutBox>
 			</Box>
 		</Page>
 	);
@@ -299,8 +343,9 @@ export function CollapsibleScreen({ open = true }: { open?: boolean }) {
 				<Handle />
 				<BlockBarPlace>
 					<FloatingBar>
-						<FloatingBarButton label="처음부터 펼쳐 두기" pressed>
-							<View aria-hidden />
+						{/* A word, not an icon: an icon would need its tooltip to be understood (the old block's switch "처음부터 펼치기"). */}
+						<FloatingBarButton label="처음부터 펼치기" pressed>
+							처음부터 펼치기
 						</FloatingBarButton>
 					</FloatingBar>
 				</BlockBarPlace>
@@ -309,7 +354,13 @@ export function CollapsibleScreen({ open = true }: { open?: boolean }) {
 						<IconButton label={open ? "접기" : "펼치기"} size="xs">
 							{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 						</IconButton>
-						<Input appearance="inline" size="inherit" aria-label="접기 제목" defaultValue="설치가 안 될 때" />
+						<Input
+							appearance="inline"
+							size="inherit"
+							aria-label="접기 제목"
+							defaultValue="설치가 안 될 때"
+							placeholder="펼치기"
+						/>
 					</Inline>
 					{open ? (
 						<Stack gap={12}>
@@ -337,13 +388,14 @@ export function CodeExplorerScreen({ state }: { state: "first" | "rest" }) {
 					<FloatingBar>
 						<DropdownMenu open={state === "first"} modal={false}>
 							<FloatingBarButton
-								label="처음 보일 파일 · src/app.ts"
+								label="처음 보여 줄 파일 · src/app.ts"
 								trigger={(button) => <DropdownMenuTrigger render={button} />}
 							>
 								<Star aria-hidden />
 							</FloatingBarButton>
 							<DropdownMenuContent>
 								<DropdownMenuRadioGroup value="src/app.ts" onValueChange={still}>
+									<DropdownMenuRadioItem value="">첫 파일</DropdownMenuRadioItem>
 									{FILES.map((file) => (
 										<DropdownMenuRadioItem key={file} value={file}>
 											{file}
@@ -401,6 +453,7 @@ export async function posts() {
 // --- Formula, diagram, chart: a source with its preview ------------------------------------------------------------------------------------
 
 type Source = {
+	/** The block's name, for its empty text ("수식 입력"). */
 	name: string;
 	code: string;
 	preview: React.ReactNode;
@@ -412,7 +465,25 @@ type Source = {
  * A block written as code (a formula, a diagram, a chart), as the old block was: one press on the drawing picks it, the drawing stays on top and its
  * source opens under it in the block itself, written to the body after a short pause; a source that does not read says each line's problem under it.
  */
-function SourcePanel({ source }: { source: Source }) {
+function SourcePanel({ source, closed = false }: { source: Source; closed?: boolean }) {
+	if (closed)
+		return (
+			<Page>
+				<Box position="relative">
+					<Handle />
+					{/* Not picked: only the drawing, in a thin box; an empty one says what goes in (the old block's "수식 입력"). */}
+					<Box border="all" radius="md" padding={16}>
+						{source.code ? (
+							source.preview
+						) : (
+							<Text variant="note" tone="faint" align="center">
+								{`${source.name} 입력`}
+							</Text>
+						)}
+					</Box>
+				</Box>
+			</Page>
+		);
 	return (
 		<Page>
 			<Box position="relative">
@@ -421,7 +492,7 @@ function SourcePanel({ source }: { source: Source }) {
 					<Stack gap={16} padding={16}>
 						<Box minHeight="control-lg">{source.preview}</Box>
 						<FormField>
-							<FormFieldLabel htmlFor="ref-source">{source.name}</FormFieldLabel>
+							<FormFieldLabel htmlFor="ref-source">원문 코드</FormFieldLabel>
 							<Textarea id="ref-source" mono rows={4} defaultValue={source.code} />
 							{source.errors ? <FormFieldError errors={source.errors.map((message) => ({ message }))} /> : null}
 						</FormField>
@@ -443,12 +514,13 @@ const blockOf = (type: string, attrs: Record<string, unknown>, children?: BodyBl
 const FORMULA = "f(x) = \\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}";
 const DIAGRAM = "flowchart LR\n  A[글 쓰기] --> B[저장]\n  B --> C[발행]\n  C --> D[사이트]";
 
-export function MathScreen() {
+export function MathScreen({ state = "open" }: { state?: "open" | "closed" | "empty" }) {
 	return (
 		<SourcePanel
+			closed={state !== "open"}
 			source={{
-				name: "수식 · LaTeX",
-				code: FORMULA,
+				name: "수식",
+				code: state === "empty" ? "" : FORMULA,
 				// KaTeX, as the site draws it.
 				preview: <MathBlock block={blockOf("math", { source: FORMULA })} attrs={{ source: FORMULA }} />,
 			}}
@@ -456,14 +528,15 @@ export function MathScreen() {
 	);
 }
 
-/** A diagram picked: Mermaid's drawing over its source; `error`: a line that does not read, the drawing left empty. */
+/** A diagram picked: Mermaid's drawing over its source; `error`: a line that does not read, the last good drawing kept. */
 export function MermaidScreen({ error = false }: { error?: boolean }) {
 	return (
 		<SourcePanel
 			source={{
-				name: "다이어그램 · Mermaid",
+				name: "다이어그램",
 				code: error ? DIAGRAM.replace("C[발행]", "C[발행") : DIAGRAM,
-				preview: error ? null : <Mermaid block={blockOf("mermaid", { source: DIAGRAM })} attrs={{ source: DIAGRAM }} />,
+				// A source that does not read keeps the last good drawing (the old block), its reason under the field.
+				preview: <Mermaid block={blockOf("mermaid", { source: DIAGRAM })} attrs={{ source: DIAGRAM }} />,
 				...(error ? { errors: ["3번째 줄: [ 를 닫지 않았습니다"] } : {}),
 			}}
 		/>
@@ -731,7 +804,7 @@ export function ColorScreen() {
 	);
 }
 
-/** "툴팁" from the ⋯: a card shaped like the link's, its one field. No "툴팁 떼기": clearing the formats takes a tooltip off, as it takes off a colour. */
+/** "툴팁" from the ⋯: a card with one plain field. No "툴팁 떼기": clearing the formats takes a tooltip off, as it takes off a colour. */
 export function TooltipScreen() {
 	return (
 		<Page>
@@ -750,11 +823,9 @@ export function TooltipScreen() {
 						<FormatButton mark="footnote" label="각주" />
 						<Popover open onOpenChange={still}>
 							<FormatButton mark="more" label="툴팁" pressed trigger={(button) => <PopoverTrigger render={button} />} />
-							<PopoverContent padding="menu">
-								{/* The link card's own field (link-card.tsx): one line, typed in place. */}
-								<Command shouldFilter={false}>
-									<CommandInput value="React Server Components의 줄임말" readOnly aria-label="툴팁 글" />
-								</Command>
+							<PopoverContent>
+								{/* One plain field: a tooltip's text is written, not searched (no magnifier, as doc 17's tooltip card). */}
+								<Input size="md" aria-label="툴팁 글" defaultValue="React Server Components의 줄임말" />
 							</PopoverContent>
 						</Popover>
 						<Separator orientation="vertical" length="bar" />
