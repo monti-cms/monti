@@ -108,7 +108,22 @@ export type Preview = {
 	/** Records that would change. */
 	changes: RecordRef[];
 	/** Records that would be left alone, with why. */
-	blocked?: { ref: RecordRef; reason: Message }[];
+	/**
+	 * `unless`: the places (as the operations' `places` name them) whose change by an earlier item of the same proposal may make this
+	 * write fit after all. A proposal's item that such a change precedes is not held back by this.
+	 */
+	blocked?: { ref: RecordRef; reason: Message; unless?: string[] }[];
+	/**
+	 * The words of the places it would change, as they are when it is proposed, by place (a body edit: by block id). Kept with the proposal
+	 * item: once the record has moved on, a screen shows what the change was made on beside what it proposed, and knows a place whose words
+	 * are no longer those.
+	 */
+	was?: Record<string, string>;
+	/**
+	 * The values it would take away without naming them, by field: a save that changes a conditional field's choice drops the values of the
+	 * option it leaves (doc 19). A proposal's review shows them beside the change.
+	 */
+	clears?: { field: string; value: unknown }[];
 };
 
 type Awaitable<T> = T | Promise<T>;

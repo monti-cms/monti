@@ -11,6 +11,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** The pointer on the words, at a place of the page: cut words ask where the pointer is, since a row's link covers its whole row. */
+const pointAt = (words: Element) => {
+	const box = words.getBoundingClientRect();
+	return userEvent.pointer({ target: words, coords: { clientX: box.left + 4, clientY: box.top + 4 } });
+};
+
 const rows = [
 	{ codes: ["ko"], names: "한국어" },
 	{ codes: ["ko", "en"], names: "한국어, 영어" },
@@ -62,7 +68,7 @@ export const Pointed: Story = {
 		</TooltipProvider>
 	),
 	play: async ({ canvasElement }) => {
-		await userEvent.hover(await within(canvasElement).findByText("KO +2"));
+		await pointAt(await within(canvasElement).findByText("KO +2"));
 		await within(document.body).findByRole("tooltip");
 	},
 };
@@ -87,7 +93,7 @@ export const Cut: Story = {
 	play: async ({ canvasElement }) => {
 		const cell = canvasElement.querySelector('[data-slot="locale-codes"]');
 		if (!cell) throw new Error("No language cell.");
-		await userEvent.hover(cell);
+		await pointAt(cell);
 		await within(document.body).findByRole("tooltip");
 	},
 };

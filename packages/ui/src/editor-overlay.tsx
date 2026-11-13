@@ -47,13 +47,22 @@ function EditorOverlay({
  * text) with 4px between, so the handle a pointer on the block shows never covers a mark it is going to press. It scrolls with the text. It draws no
  * surface of its own; what it holds does (`Marker`).
  */
-function EditorMargin({ top, children }: { top: number; children: ReactNode }) {
+function EditorMargin({
+	top,
+	beside = 0,
+	children,
+}: {
+	top: number;
+	/** How far left of its place it stands, in px: the width of another mark hung at the same block (measured), so the two do not overlap. */
+	beside?: number;
+	children: ReactNode;
+}) {
 	return (
 		<div
 			data-slot="editor-margin"
 			className="absolute right-[calc(100%+32px)] flex items-center gap-monti-4"
-			// design-allow: the block's top, measured in the editor
-			style={{ top }}
+			// design-allow: the block's top and the mark beside it, measured in the editor
+			style={{ top, marginRight: beside }}
 		>
 			{children}
 		</div>

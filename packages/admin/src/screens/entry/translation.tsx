@@ -97,9 +97,14 @@ export function useTranslation(id: string, schema: Schema | undefined, editor: E
 	const status = useRead<{ groups: GroupStatus[] }>(
 		"translations.status",
 		{ ids: [id] },
-		{ skip: !multilingual, afterWrites: true },
+		{ skip: !multilingual, afterWrites: true, quiet: true },
 	);
-	const compared = useRead<Compared>("translations.compare", { id }, { skip: !isTranslation, afterWrites: true });
+	// A refusal here is a state the editor knows: a translation whose source is gone (both in the trash) has nothing to compare with.
+	const compared = useRead<Compared>(
+		"translations.compare",
+		{ id },
+		{ skip: !isTranslation, afterWrites: true, quiet: true },
+	);
 	const create = useOperation<{ output: { id: string } }>("translations.create");
 	const setBlocks = useOperation("translations.setBlocks");
 	const confirmAll = useOperation("translations.confirmAll");
@@ -564,10 +569,13 @@ export function TranslationMargin({
 	editor,
 	marks,
 	onDecide,
+	onRetranslate,
 }: {
 	editor: Editor;
 	marks: TranslationMark[];
 	onDecide: (decision: Decision) => void;
+	/** "✦ Translate again" on a block whose source changed (doc 10, item 19): the assistant proposes it anew. Left out without an assistant. */
+	onRetranslate?: (block: string) => void;
 }) {
 	const { t } = useAdmin();
 	const [placed, setPlaced] = useState<Placed[]>([]);
@@ -665,7 +673,16 @@ export function TranslationMargin({
 				// A block whose source block is gone: confirm keeps it on its own, or remove it here too (doc 04, the marks).
 				{...(mark.kind === "removed"
 					? { acceptLabel: t("translation.remove"), onAccept: () => decide({ do: "remove", block: mark.block }) }
-					: {})}
+					: onRetranslate
+						? {
+								acceptLabel: t("translation.ai.again"),
+								acceptSpark: true,
+								onAccept: () => {
+									close();
+									onRetranslate(mark.block);
+								},
+							}
+						: {})}
 			>
 				<MemoDiff
 					beforeLabel={t("translation.before")}

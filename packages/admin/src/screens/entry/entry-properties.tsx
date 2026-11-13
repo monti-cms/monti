@@ -10,6 +10,7 @@ import {
 	storedFields,
 } from "@monti-cms/core";
 import {
+	ChangeDot,
 	Combobox,
 	ComboboxChip,
 	ComboboxChips,
@@ -21,10 +22,13 @@ import {
 	ComboboxList,
 	DragHandle,
 	FormField,
+	FormFieldError,
 	FormFieldLabel,
+	FormFieldWas,
 	IconButton,
 	Inline,
 	Input,
+	Label,
 	List,
 	Option,
 	OrderedRow,
@@ -36,11 +40,14 @@ import {
 	Switch,
 	Text,
 	Textarea,
+	TextButton,
 	useComboboxAnchor,
 	useSortableItem,
 } from "@monti-cms/ui";
-import { Close, Renew } from "@monti-cms/ui/icons";
+import { Close, Renew, Spark } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
+import type { Fills } from "../../assistant/use-fill";
+import { ALT_MAX } from "../../editor/alt-fields";
 import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import type { EntryView } from "../../plugins";
@@ -94,6 +101,9 @@ export function panelLayout(schema: SchemaRead | null, collection: string, defau
 	].filter((tab) => tab.fields.length > 0);
 }
 
+/** Where a field's value is in the editor's draft: the address is the entry's own, the rest are its values. */
+export const fieldPath = (field: string) => (field === "slug" ? "slug" : `values.${field}`);
+
 /** A tab's entries as the panel groups them: loose fields between groups run together, each group under its name. */
 function runs(entries: Layout[number]["fields"]) {
 	const out: { key: string; title?: string; fields: string[] }[] = [];
@@ -116,6 +126,7 @@ function PickMany({
 	onChange,
 	placeholder,
 	disabled,
+	proposal,
 }: {
 	id: string;
 	items: { value: string; label: string }[];
@@ -123,6 +134,8 @@ function PickMany({
 	onChange: (value: string[]) => void;
 	placeholder: string;
 	disabled: boolean;
+	/** The value shown is one the assistant proposed and nobody has taken or changed yet. */
+	proposal?: boolean;
 }) {
 	const { t } = useAdmin();
 	const anchor = useComboboxAnchor();
@@ -136,7 +149,7 @@ function PickMany({
 			itemToStringLabel={(option: string) => label(option)}
 			disabled={disabled}
 		>
-			<ComboboxChips ref={anchor} size="md">
+			<ComboboxChips ref={anchor} size="md" proposal={proposal}>
 				{value.map((option) => (
 					<ComboboxChip key={option}>{label(option)}</ComboboxChip>
 				))}
@@ -197,6 +210,7 @@ function SortableOrderedRow({
 	removeLabel,
 	moveLabel,
 	disabled,
+	proposal,
 }: {
 	id: string;
 	label: string;
@@ -204,6 +218,8 @@ function SortableOrderedRow({
 	removeLabel: string;
 	moveLabel: string;
 	disabled?: boolean;
+	/** The row is of a value the assistant proposed: its words are blue, as a proposed input's. */
+	proposal?: boolean;
 }) {
 	const item = useSortableItem(id, { disabled });
 	return (
@@ -219,7 +235,7 @@ function SortableOrderedRow({
 				)
 			}
 		>
-			<Text>{label}</Text>
+			<Text tone={proposal ? "proposal" : undefined}>{label}</Text>
 		</OrderedRow>
 	);
 }
@@ -236,6 +252,7 @@ function RelationSingleInput({
 	onChange,
 	placeholder,
 	disabled,
+	proposal,
 }: {
 	id: string;
 	collection: string;
@@ -248,6 +265,8 @@ function RelationSingleInput({
 	onChange: (value: string | null) => void;
 	placeholder: string;
 	disabled: boolean;
+	/** The value shown is one the assistant proposed and nobody has taken or changed yet. */
+	proposal?: boolean;
 }) {
 	const { t } = useAdmin();
 	const rel = useRelationField({ collection, field, locale, entryGroup, createMissing });
@@ -273,7 +292,13 @@ function RelationSingleInput({
 			}
 			disabled={disabled}
 		>
-			<ComboboxInput id={id} size="md" placeholder={placeholder} showClear={!required && Boolean(value)} />
+			<ComboboxInput
+				id={id}
+				size="md"
+				placeholder={placeholder}
+				showClear={!required && Boolean(value)}
+				proposal={proposal}
+			/>
 			<ComboboxContent>
 				<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
 				<ComboboxList>
@@ -316,6 +341,7 @@ function RelationManyInput({
 	onChange,
 	placeholder,
 	disabled,
+	proposal,
 }: {
 	id: string;
 	collection: string;
@@ -327,6 +353,8 @@ function RelationManyInput({
 	onChange: (value: string[]) => void;
 	placeholder: string;
 	disabled: boolean;
+	/** The value shown is one the assistant proposed and nobody has taken or changed yet. */
+	proposal?: boolean;
 }) {
 	const { t } = useAdmin();
 	const anchor = useComboboxAnchor();
@@ -354,7 +382,7 @@ function RelationManyInput({
 			}
 			disabled={disabled}
 		>
-			<ComboboxChips ref={anchor} size="md">
+			<ComboboxChips ref={anchor} size="md" proposal={proposal}>
 				{value.map((item) => (
 					// A field that cannot be changed offers no way to take a value out.
 					<ComboboxChip key={item} showRemove={!disabled}>
@@ -405,6 +433,7 @@ function RelationOrderedManyInput({
 	onChange,
 	placeholder,
 	disabled,
+	proposal,
 }: {
 	id: string;
 	collection: string;
@@ -416,6 +445,8 @@ function RelationOrderedManyInput({
 	onChange: (value: string[]) => void;
 	placeholder: string;
 	disabled: boolean;
+	/** The value shown is one the assistant proposed and nobody has taken or changed yet. */
+	proposal?: boolean;
 }) {
 	const { t } = useAdmin();
 	const rel = useRelationField({ collection, field, locale, entryGroup, createMissing });
@@ -444,7 +475,7 @@ function RelationOrderedManyInput({
 				}
 				disabled={disabled}
 			>
-				<ComboboxInput id={id} size="md" placeholder={placeholder} showClear={false} />
+				<ComboboxInput id={id} size="md" placeholder={placeholder} showClear={false} proposal={proposal} />
 				<ComboboxContent>
 					<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
 					<ComboboxList>
@@ -503,6 +534,7 @@ function RelationOrderedManyInput({
 									removeLabel={t("relations.remove")}
 									onRemove={() => onChange(value.filter((g) => g !== item))}
 									disabled={disabled}
+									proposal={proposal}
 								/>
 							))}
 						</List>
@@ -529,6 +561,8 @@ export function EntryProperties({
 	altCard,
 	onAltCard,
 	changes,
+	fills,
+	fillEntry,
 }: {
 	editor: EntryEditorModel;
 	schema: SchemaRead | null;
@@ -545,6 +579,10 @@ export function EntryProperties({
 	onAltCard: (field: string | null) => void;
 	/** In a translation: the fields whose source moved on (T111), and confirming one. */
 	changes?: { marks: readonly FieldMark[]; onConfirm: (field: string) => void };
+	/** The screen's "✦ fill" (doc 10, quick tasks); left out on a site that cannot fill, and no button is drawn. */
+	fills?: Fills;
+	/** The entry as the screen has it (title, values, the body in plain words): what a fill reads it by. */
+	fillEntry?: () => Record<string, unknown>;
 }) {
 	const { t, inputs, views, siteName } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
@@ -616,11 +654,89 @@ export function EntryProperties({
 		const def = definitions[key];
 		if (!def) return null;
 		const id = fieldInputId(key);
-		const path = key === "slug" ? "slug" : `values.${key}`;
-		const value = editor.value(path);
+		const path = fieldPath(key);
+		// A value the assistant proposed for this field and nobody has taken yet (doc 05; T86): it is in the input, blue, and what the
+		// entry holds is struck through under it. Changing it takes the proposal first; "discard" on the label row leaves the field as it is.
+		const state = readOnly ? null : editor.draft.cell(path);
+		const proposed = state?.kind === "proposed" ? state : null;
+		const held = editor.value(path);
+		const value = proposed ? proposed.value : held;
 		const text = typeof value === "string" ? value : "";
+		// "✦ Fill" (doc 10, quick tasks): the quick-task model writes this field's value, which goes in as if typed. A text, an address,
+		// a relation. Not while a proposal waits in the field: its label row is the proposal's alone.
+		const fillTask =
+			def.kind === "text" ? "text" : def.kind === "slug" ? "slug" : def.kind === "relation" ? "relation" : null;
+		const fillState = fills && fillTask && !readOnly && !proposed ? fills.of(path) : null;
+		// What a fill put in is blue until it is changed, as a proposal's value is (components/proposal.md, filling a field).
+		const filledNow =
+			fillState !== null &&
+			fillState.filled !== undefined &&
+			JSON.stringify(fillState.filled) === JSON.stringify(held ?? null);
+		const proposal = proposed !== null || filledNow;
+		const setField = (at: string, next: unknown) => {
+			fills?.forget(at);
+			editor.set(at, next);
+		};
+		const name = values[key]?.label ?? key;
+		const fillButton =
+			fills && fillTask && fillState ? (
+				<TextButton
+					tone="proposal"
+					size="micro"
+					loading={fillState.working}
+					aria-label={
+						fillState.working ? undefined : t(hasValue(held) ? "fill.againName" : "fill.name", { field: name })
+					}
+					// The press leaves the caret in the field: the row's button shows only while the field is pointed at or holds the focus.
+					onMouseDown={(event) => event.preventDefault()}
+					onClick={() =>
+						void fills.run(
+							path,
+							{
+								task: fillTask,
+								collection,
+								...(fillTask === "slug" ? {} : { field: key }),
+								...(currentLocale ? { locale: currentLocale } : {}),
+								entry: fillEntry?.() ?? {},
+							},
+							(answer) => {
+								const next =
+									"value" in answer
+										? answer.value
+										: def.kind === "relation" && def.many
+											? answer.values
+											: (answer.values[0] ?? null);
+								editor.set(path, next);
+								return next;
+							},
+						)
+					}
+				>
+					{fillState.working ? null : hasValue(held) ? <Renew aria-hidden /> : <Spark aria-hidden />}
+					{t(fillState.working ? "fill.working" : hasValue(held) ? "fill.again" : "fill.fill")}
+				</TextButton>
+			) : null;
+		const fillFailed = fillState?.failed ?? null;
+		const proposedLabel = proposed
+			? {
+					label: t("ui.proposal"),
+					tone: "proposal" as const,
+					undoLabel: t("settings.discard"),
+					undoName: t("entry.proposal.discard", { field: values[key]?.label ?? key }),
+					onUndo: () => void editor.draft.discard(proposed.item.id),
+				}
+			: undefined;
+		// What the field holds now, in words, when words say it: a text, an address, a pick. A file or a related item has no name here.
+		const heldWords =
+			def.kind === "select"
+				? pickNames(held, values[key]?.optionLabels)
+				: (def.kind === "text" || def.kind === "slug") && typeof held === "string"
+					? held
+					: "";
+		const was = proposed && heldWords ? <FormFieldWas>{heldWords}</FormFieldWas> : null;
 		const count =
-			def.kind === "text" && def.max !== undefined && focused === key ? (
+			// Not while a proposal waits in the field: its label row holds the proposal's dot and "discard" (screens/editor.md).
+			def.kind === "text" && def.max !== undefined && focused === key && !proposed ? (
 				<Text variant="micro" tone="subtle">
 					{t("entry.count", { count: text.length, max: def.max })}
 				</Text>
@@ -636,8 +752,9 @@ export function EntryProperties({
 			definition: def,
 			options: def.inputOptions ?? {},
 			value,
-			onChange: (next: unknown) => editor.set(path, next),
+			onChange: (next: unknown) => setField(path, next),
 			readOnly,
+			proposal,
 			entry: entryView(),
 		});
 		const note = own?.Note ? <own.Note {...ownProps()} /> : count;
@@ -710,30 +827,85 @@ export function EntryProperties({
 					required={marksRequired && required(key)}
 					accept={def.accept}
 					change={change}
+					proposed={proposedLabel}
 					value={value}
 					// A translation's empty field follows the source's (doc 09): what shows is that file, until it has its own.
 					source={localeModeOf(key, def) === "fromSource" ? shared?.[key] : undefined}
 					// × says what it does, as on any field: what follows (the source's file and the follows-source label) shows at once (2026-11-10, owner).
 					following={shared && localeModeOf(key, def) === "fromSource" ? t("translation.followsSource") : undefined}
 					readOnly={readOnly}
-					onChange={(next) => editor.set(path, next)}
+					onChange={(next) => setField(path, next)}
+					fill={
+						fills && !readOnly
+							? {
+									state: fills.of(`alt:${path}`),
+									forget: () => fills.forget(`alt:${path}`),
+									run: (file, put) =>
+										void fills.run(
+											`alt:${path}`,
+											{
+												task: "alt",
+												collection,
+												...(currentLocale ? { locale: currentLocale } : {}),
+												entry: fillEntry?.() ?? {},
+												image: { media: file },
+											},
+											(answer) => {
+												const words = "value" in answer ? answer.value : "";
+												put(words);
+												return words.slice(0, ALT_MAX);
+											},
+										),
+								}
+							: undefined
+					}
 				/>
 			);
 		// A choice with one option, on or off (doc 19): a switch at the end of the field's row, the way every switch stands. A field that
 		// names an input of its own is drawn with that one instead, as any other kind is.
 		if (!own && def.kind === "select" && def.control === "toggle") {
 			const [on] = def.options;
+			const toggle = (
+				<Switch
+					id={id}
+					checked={value === on}
+					disabled={readOnly}
+					proposal={proposed !== null}
+					onCheckedChange={(checked) => setField(path, checked ? on : null)}
+				/>
+			);
 			return (
 				<FormField key={key}>
-					<Option spread height="md">
-						{values[key]?.label ?? key}
-						<Switch
-							id={id}
-							checked={value === on}
-							disabled={readOnly}
-							onCheckedChange={(checked) => editor.set(path, checked ? on : null)}
-						/>
-					</Option>
+					{proposedLabel ? (
+						// A switch the assistant proposed, on or off, looks the same everywhere (the collection's, a plugin's): the
+						// proposal's dot by its name and "discard" before the switch, which stands as proposed. The bubble takes or
+						// discards it too, and pressing it takes it first.
+						<Inline minHeight="control-md" align="center" justify="between" gap={12}>
+							<Inline gap={8} align="center">
+								<Label htmlFor={id} size="body" tone="default">
+									{values[key]?.label ?? key}
+								</Label>
+								<ChangeDot tone="proposal" label={t("ui.proposal")} />
+							</Inline>
+							<Inline gap={12} align="center">
+								<TextButton
+									variant="underline"
+									quiet
+									size="caption"
+									aria-label={proposedLabel.undoName}
+									onClick={proposedLabel.onUndo}
+								>
+									{proposedLabel.undoLabel}
+								</TextButton>
+								{toggle}
+							</Inline>
+						</Inline>
+					) : (
+						<Option spread height="md">
+							{values[key]?.label ?? key}
+							{toggle}
+						</Option>
+					)}
 					{after}
 				</FormField>
 			);
@@ -753,13 +925,15 @@ export function EntryProperties({
 						id={id}
 						size="md"
 						mono
+						aria-invalid={fillFailed !== null || undefined}
 						value={text}
 						placeholder={empty}
 						disabled={readOnly}
-						onChange={(event) => editor.set(path, event.target.value)}
+						proposal={proposal}
+						onChange={(event) => setField(path, event.target.value)}
 						action={
 							readOnly || editor.title.trim() === "" ? undefined : (
-								<IconButton label={t("entry.slugAgain")} onClick={() => editor.set(path, slugify(editor.title))}>
+								<IconButton label={t("entry.slugAgain")} onClick={() => setField(path, slugify(editor.title))}>
 									<Renew aria-hidden />
 								</IconButton>
 							)
@@ -774,8 +948,10 @@ export function EntryProperties({
 						value={text}
 						placeholder={empty}
 						maxLength={def.max}
+						aria-invalid={fillFailed !== null || undefined}
 						disabled={readOnly}
-						onChange={(event) => editor.set(path, event.target.value)}
+						proposal={proposal}
+						onChange={(event) => setField(path, event.target.value)}
 						{...focus}
 					/>
 				) : (
@@ -785,8 +961,10 @@ export function EntryProperties({
 						value={text}
 						placeholder={empty}
 						maxLength={def.max}
+						aria-invalid={fillFailed !== null || undefined}
 						disabled={readOnly}
-						onChange={(event) => editor.set(path, event.target.value)}
+						proposal={proposal}
+						onChange={(event) => setField(path, event.target.value)}
 						{...focus}
 					/>
 				);
@@ -799,9 +977,10 @@ export function EntryProperties({
 						id={id}
 						items={items}
 						value={Array.isArray(value) ? (value as string[]) : []}
-						onChange={(next) => editor.set(path, next)}
+						onChange={(next) => setField(path, next)}
 						placeholder={empty}
 						disabled={readOnly}
+						proposal={proposal}
 					/>
 				) : (
 					<PickOne
@@ -809,9 +988,10 @@ export function EntryProperties({
 						size="md"
 						items={items}
 						value={typeof value === "string" ? value : null}
-						onChange={(next) => editor.set(path, next)}
+						onChange={(next) => setField(path, next)}
 						placeholder={empty}
 						disabled={readOnly}
+						proposal={proposal}
 					/>
 				);
 			}
@@ -826,9 +1006,10 @@ export function EntryProperties({
 							entryGroup={entryGroup}
 							createMissing={def.createMissing}
 							value={Array.isArray(value) ? (value as string[]) : []}
-							onChange={(next) => editor.set(path, next)}
+							onChange={(next) => setField(path, next)}
 							placeholder={empty}
 							disabled={readOnly}
+							proposal={proposal}
 						/>
 					);
 				}
@@ -842,9 +1023,10 @@ export function EntryProperties({
 							entryGroup={entryGroup}
 							createMissing={def.createMissing}
 							value={Array.isArray(value) ? (value as string[]) : []}
-							onChange={(next) => editor.set(path, next)}
+							onChange={(next) => setField(path, next)}
 							placeholder={empty}
 							disabled={readOnly}
+							proposal={proposal}
 						/>
 					);
 				}
@@ -858,9 +1040,10 @@ export function EntryProperties({
 						createMissing={def.createMissing}
 						required={def.required}
 						value={typeof value === "string" ? value : null}
-						onChange={(next) => editor.set(path, next)}
+						onChange={(next) => setField(path, next)}
 						placeholder={empty}
 						disabled={readOnly}
+						proposal={proposal}
 					/>
 				);
 			}
@@ -871,20 +1054,25 @@ export function EntryProperties({
 				<FormFieldLabel
 					htmlFor={id}
 					required={marksRequired && required(key)}
+					changed={proposedLabel}
+					// While a proposal waits the row is the proposal's alone: no count, no mark of the source's change beside "discard".
 					action={
-						change && note ? (
-							<Inline gap={8}>
+						proposedLabel ? undefined : [fillButton, note, change].filter(Boolean).length > 1 ? (
+							<Inline gap={8} align="baseline">
+								{fillButton}
 								{note}
 								{change}
 							</Inline>
 						) : (
-							(change ?? note)
+							(fillButton ?? change ?? note)
 						)
 					}
 				>
 					{values[key]?.label ?? key}
 				</FormFieldLabel>
 				{input()}
+				{was}
+				{fillFailed ? <FormFieldError>{fillFailed}</FormFieldError> : null}
 				{strays.length > 0 ? (
 					<Text variant="caption" tone="warning">
 						{t("entry.notAnOption", { option: strays.join(", ") })}
@@ -931,15 +1119,43 @@ export function EntryProperties({
 					})}
 				</Text>
 			) : undefined;
+		// A choice the assistant proposed and nobody has taken (decided while building, 2026-11-13): the entry is as it was until it is taken, so
+		// the fields under the choice stay those of the option it has now. What taking it would drop is said under the choice, as a
+		// changed choice says what the save drops.
+		const proposedCell = readOnly || sameAsSource ? null : editor.draft.cell(`values.${key}`);
+		const proposedChoice = proposedCell?.kind === "proposed" ? proposedCell.value : undefined;
+		const wouldGo =
+			proposedChoice !== undefined && proposedChoice !== chosen && typeof chosen === "string"
+				? allUnder(field.fields[chosen] ?? {}).filter((inner) => hasValue(editor.value(`values.${inner}`))).length
+				: 0;
+		const onTake =
+			wouldGo > 0 ? (
+				<Text variant="caption" tone="warning">
+					{t("entry.clearedOnTake", {
+						option:
+							field.control === "toggle" ? (values[key]?.label ?? key) : (labels[String(chosen)] ?? String(chosen)),
+						count: wouldGo,
+					})}
+				</Text>
+			) : undefined;
 		const group = typeof chosen === "string" ? (field.fields[chosen] ?? {}) : {};
 		// In the order the conditional field keeps for the option (the fields list's dragging), then the rest as the schema has them.
 		const inOrder = inOptionOrder(
 			Object.keys(group),
 			typeof chosen === "string" ? values[key]?.optionFields?.[chosen] : undefined,
 		);
-		return [row(key, lost), ...inOrder.flatMap((each) => rowsOf(each, group[each]))];
+		return [row(key, onTake ?? lost), ...inOrder.flatMap((each) => rowsOf(each, group[each]))];
 	};
 	const rows = (key: string) => rowsOf(key, top[key]);
+
+	/** The fields a tab can show: its own, and under a conditional field the fields of its options. */
+	const tabFields = (each: Layout[number]) =>
+		each.fields
+			.flatMap((entry) => (typeof entry === "string" ? [entry] : entry.fields))
+			.flatMap((key) => {
+				const field = top[key];
+				return field?.kind === "conditional" ? [key, ...Object.values(field.fields).flatMap(allUnder)] : [key];
+			});
 
 	if (!picked) return null;
 	return (
@@ -947,7 +1163,16 @@ export function EntryProperties({
 			label={t("entry.properties")}
 			value={String(layout.indexOf(picked))}
 			onValueChange={(next) => onTab(Number(next))}
-			tabs={layout.map((each, index) => ({ value: String(index), label: each.tab }))}
+			tabs={layout.map((each, index) => ({
+				value: String(index),
+				label: each.tab,
+				// A proposal waiting in a tab that is not the open one: a blue dot by its name (screens/editor.md).
+				...(each !== picked &&
+				!readOnly &&
+				tabFields(each).some((field) => editor.draft.cell(fieldPath(field)).kind === "proposed")
+					? { dot: "proposal" as const, dotLabel: t("entry.proposal.tab") }
+					: {}),
+			}))}
 		>
 			{runs(picked.fields).map((run) => (
 				<PropertyGroup key={run.key} title={run.title}>

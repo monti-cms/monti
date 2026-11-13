@@ -4,7 +4,8 @@
 //
 // Reads the pack's `parts.tsx`: its `parts`, its `CATALOG` (each entry's kind, role and props' kinds) and its `SCREEN` (the spacing steps and the layout
 // entry a group becomes). Writes the pack's `catalog.generated.json`: the spacing steps, the group, and for each entry its kind (`part` or `layout`), the props a spec may set with each prop's
-// kind and values, the named places (`slots`: its `ReactNode` props), its events and whether it takes children. Only the props `CATALOG` gives a kind are
+// kind and values (a prop its type cannot go without is `required`), the named places (`slots`: its `ReactNode` props), the only places it may stand
+// (`only`, from `CATALOG`), its events and whether it takes children. Only the props `CATALOG` gives a kind are
 // in (default deny), and each kind is checked against the prop's real type: a layout size on a part, or a variant whose type is not a list of choices,
 // stops the build.
 //
@@ -143,6 +144,7 @@ for (const part of checker.getTypeAtLocation(partsDeclaration.name).getPropertie
 		bind: declaration.bind === "yes",
 		children: false,
 		slots: [],
+		...(declaration.only ? { only: declaration.only } : {}),
 		props: {},
 		events: [],
 	};
@@ -177,12 +179,21 @@ for (const part of checker.getTypeAtLocation(partsDeclaration.name).getPropertie
 			kind,
 			checker.getTypeOfSymbolAtLocation(prop, partsDeclaration),
 		);
-		if (rule) entry.props[name] = rule;
+		// A prop the part's type cannot go without: a spec that leaves it out is refused before it is drawn.
+		if (rule) entry.props[name] = prop.flags & ts.SymbolFlags.Optional ? rule : { ...rule, required: true };
 	}
 	entry.slots.sort();
 	entry.events.sort();
 	entry.props = Object.fromEntries(Object.entries(entry.props).sort(([a], [b]) => a.localeCompare(b)));
 	catalog[part.name] = entry;
+}
+// A part that stands only in named places: each is a named place of an entry that is there.
+for (const [name, entry] of Object.entries(catalog)) {
+	for (const place of entry.only ?? []) {
+		const [holder, slot] = place.split(".");
+		if (!catalog[holder]?.slots.includes(slot))
+			problems.push(`${name}.only: "${place}" is not a named place of an entry (\`Part.slot\`)`);
+	}
 }
 for (const name of Object.keys(declared))
 	if (!(name in catalog) && !problems.some((p) => p.startsWith(name))) {

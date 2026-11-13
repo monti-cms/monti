@@ -4,6 +4,7 @@ import { type ComponentProps, useCallback, useEffect, useState } from "react";
 import { dock } from "./bottom-dock";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { HIT_AREA } from "./hit-area";
 import { Spark } from "./spark";
 import { TextButton } from "./text-button";
@@ -49,9 +50,7 @@ function ProposalBubble({
 	const who = (
 		<>
 			<Spark className="size-monti-icon-sm" />
-			<span title={name} className="max-w-60 truncate">
-				{name}
-			</span>
+			<CutWords className="max-w-60">{name}</CutWords>
 		</>
 	);
 	return (
@@ -99,7 +98,8 @@ function ProposalBubble({
 /**
  * Where the bubble floats: at the bottom of the scrolling column, centered, 12px over its end, staying there as the content scrolls under it; on a page
  * shorter than the window it still sits at the bottom. Put it last in the column; only the bubble takes the pointer. While it is shown the toasts
- * stand above it.
+ * stand above it. A screen whose proposals have no place of their own to hang a mark at (the settings: values in several tabs) puts the
+ * mark of the proposal the bubble points at before the bubble, 8px from it: it opens that proposal's card.
  */
 function ProposalBubbleDock({ className, ref, ...props }: ComponentProps<"div">) {
 	// Known to the toasts, which come up at the same place: while this is shown they stand above it (`Toaster`).
@@ -120,7 +120,7 @@ function ProposalBubbleDock({ className, ref, ...props }: ComponentProps<"div">)
 			ref={both}
 			data-slot="proposal-bubble-dock"
 			className={cn(
-				"pointer-events-none sticky bottom-monti-12 z-10 mt-auto flex justify-center px-monti-16 *:pointer-events-auto",
+				"pointer-events-none sticky bottom-monti-12 z-10 mt-auto flex items-center justify-center gap-monti-8 px-monti-16 *:pointer-events-auto",
 				className,
 			)}
 			{...props}

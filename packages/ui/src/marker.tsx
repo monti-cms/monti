@@ -16,7 +16,7 @@ function Untranslated({ className, ...props }: ComponentProps<"span">) {
 }
 
 const markerVariants = cva(
-	"inline-flex h-[18px] items-center gap-monti-2 whitespace-nowrap rounded-monti-full border-0 font-mono text-[10px] leading-none outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
+	"inline-flex h-[18px] items-center gap-monti-2 whitespace-nowrap rounded-monti-full border-0 font-mono text-[10px] leading-none outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset",
 	{
 		variants: {
 			/**
@@ -52,6 +52,9 @@ const markerVariants = cva(
 );
 
 /**
+ * Its focus ring is drawn inside it: it hangs at the edge of the text's scrolling column, where a ring drawn outside is cut once the column is narrow
+ * (the assistant's panel open beside the editor).
+ *
  * A small tag in the left margin of a block, 18px tall in mono 10px (the one text smaller than the micro role). `request` carries a count (or "…" while the assistant works) and opens the note's card; `changed`,
  * `removed` and `added` say a translated block's source changed ("Changed"), is gone ("Removed") or is new ("New"); `keep` says the block stays in the source language. Press it to open what it is about
  * (give it `onClick`). The words are the app's.

@@ -114,6 +114,41 @@ describe("a toast and what is docked at the bottom centre", () => {
 		await expect.poll(() => Math.round(bubble().top - toastBox().bottom)).toBe(12);
 	});
 
+	it("only a toast's pill takes the pointer: beside it, in the row the stack gives it, a press reaches what is under", async () => {
+		const pressed = { under: 0 };
+		render(
+			<>
+				{/* What a page has at its bottom, where a toast's row lies: the whole width takes a press. */}
+				<button
+					type="button"
+					className="fixed inset-x-0 bottom-0 h-[120px]"
+					onClick={() => {
+						pressed.under += 1;
+					}}
+				>
+					아래
+				</button>
+				<Toaster duration={Number.POSITIVE_INFINITY} />
+			</>,
+		);
+		toast("저장했습니다", { action: { label: "실행 취소", onClick: () => {} } });
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		const row = toastBox();
+		const pill = box(document.querySelector("[data-slot=toast]")?.firstElementChild ?? null);
+		// The row is wider than its pill: there is room beside it.
+		expect(pill.left - row.left).toBeGreaterThan(40);
+		const middle = row.top + row.height / 2;
+		const under = page.getByRole("button", { name: "아래" }).element();
+		expect(document.elementFromPoint(row.left + 8, middle)).toBe(under);
+		expect(document.elementFromPoint(row.right - 8, middle)).toBe(under);
+		await userEvent.click(under, { position: { x: row.left + 8, y: middle - box(under).top } });
+		expect(pressed.under).toBe(1);
+		// The pill itself still takes it: its action is pressed, not what is under.
+		const action = page.getByRole("button", { name: "실행 취소" });
+		const at = box(action.element());
+		expect(document.elementFromPoint(at.left + at.width / 2, at.top + at.height / 2)).toBe(action.element());
+	});
+
 	it("with nothing docked a toast stands 32px over the window's bottom edge", async () => {
 		render(<Toaster duration={Number.POSITIVE_INFINITY} />);
 		toast("저장했습니다");

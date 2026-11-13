@@ -48,6 +48,14 @@ const VALUE = {
 /** The longest body text a quick task sends: the start of a long entry says what it is about. */
 const MOST_TEXT = 12_000;
 
+/** A file's bytes as base64, the way a service takes a picture. No `Buffer`: the engine also runs where there is none (a worker, a browser). */
+function base64Of(bytes: Uint8Array): string {
+	let binary = "";
+	// In pieces: one call with every byte as an argument overflows the stack on a large picture.
+	for (let at = 0; at < bytes.length; at += 0x8000) binary += String.fromCharCode(...bytes.subarray(at, at + 0x8000));
+	return btoa(binary);
+}
+
 const answerOf = (value: unknown): string => {
 	const text = (value as { value?: unknown } | null)?.value;
 	if (typeof text !== "string") throw new CheckError({ key: "assistant.badAnswer" });
@@ -145,13 +153,13 @@ export async function quickFill(
 			.join("\n");
 		const prompt =
 			input.task === "alt"
-				? `Write alt text for this picture: what it shows, for someone who cannot see it, in one sentence of at most 125 characters. Do not start with "Image of".`
+				? `Write alt text for this picture: what it shows, for someone who cannot see it, in one sentence of at most 80 characters. Do not start with "Image of".`
 				: `Write a caption for this picture as it is used in this entry: one short sentence a reader sees under it.`;
 		return {
 			value: answerOf(
 				await ask(`${prompt}\n\n${around}\n\n${about}`, VALUE, {
 					mime: stored.mime,
-					base64: Buffer.from(stored.bytes).toString("base64"),
+					base64: base64Of(stored.bytes),
 				}),
 			),
 		};

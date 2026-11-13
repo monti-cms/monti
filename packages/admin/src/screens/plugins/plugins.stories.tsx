@@ -253,6 +253,35 @@ export const SeoWritten: Story = {
 	},
 };
 
+/**
+ * The assistant's proposals for two of a plugin's fields (doc 10 with doc 14): the SEO title, in the plugin's own input, and "hide from
+ * search", the plugin's switch. Each stands as proposed in the proposal's blue with the dot and "discard" on its label row; the plugin's
+ * tab has the blue dot while another tab is open, and the bubble walks to them. The preview is a view with no value: it carries no mark.
+ */
+export const SeoProposed: Story = {
+	loaders: [
+		async (): Promise<Loaded> => {
+			const [load] = site() as [() => Promise<Loaded>];
+			const made = await load();
+			const read = (await made.site.monti.run("entries.get", { id: made.id }, admin)) as { entry: { version: number } };
+			const at = { id: made.id, version: read.entry.version };
+			const proposal = await made.site.monti.proposals.create("conversation-1", "검색 제목 다듬고 검색에서 숨겨 줘");
+			await made.site.monti.proposals.add(proposal, "entries.save", {
+				...at,
+				values: { seoTitle: "블로그를 다시 만든 까닭" },
+			});
+			await made.site.monti.proposals.add(proposal, "entries.save", { ...at, values: { seoNoindex: "noindex" } });
+			return made;
+		},
+	],
+	play: async ({ canvasElement }) => {
+		const page = screen(canvasElement);
+		await page.findByText("1 / 2", {}, wait);
+		await userEvent.click(await page.findByRole("tab", { name: /SEO/ }, wait));
+		await page.findByRole("button", { name: "SEO 제목 제안 버리기" }, wait);
+	},
+};
+
 /** The status bar's plugin cell (flow 1, step 06): what the spelling check found in the body. */
 export const Spelling: Story = {
 	loaders: site(),

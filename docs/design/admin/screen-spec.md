@@ -61,6 +61,8 @@
 - `ref`: 명세 안의 다른 요소(`@emailInput`). 라벨이 가리키는 칸.
 - `state`: 상태에서만 오는 값(그림의 주소).
 - `action`: 화면이 하는 일의 이름(`{ "action": "signIn" }`).
+- 항목의 `only`: 그 항목이 설 수 있는 자리의 전부다. 다른 항목의 이름 붙은 칸으로 적는다(`["PageFrame.banner"]`). 자리가 화면이 정할 것이 아닌 부품에 준다. Monti의 팩에서는 `Banner`다: 틀(`PageFrame`)의 띠 자리(`banner`)에만 서고, 다른 곳(페이지의 `children`, 다른 부품의 칸, 화면의 `root`)에 적으면 `check:screens`가 막는다. 코드에서 `check:design`의 `banner-place`가 지키는 것과 같은 규칙이다(T150).
+- 필수 prop: 부품의 타입에서 `?`가 없는 prop은 명세에 꼭 있어야 한다(카탈로그의 `required`). `Banner`의 `title`이 그렇다: 문장 없는 띠는 그려지지 않는다.
 - 항목의 `bind: "yes"`: 그 항목은 요소의 `bind`(보내는 데이터)를 받는다. 입력칸, 검색, 쪽 크기 메뉴.
 
 생성 스크립트는 정한 종류를 실제 타입과 맞춰 본다. 선택지가 아닌 타입에 `variant`를 주거나, 부품에 `layout-number`를 주거나, 없는 prop을 적으면 멈춘다.
@@ -70,7 +72,7 @@
 ## 카탈로그와 검사
 
 - `pnpm gen:screen-catalog`가 `CATALOG`와 부품들의 실제 prop 타입을 읽어 팩의 `catalog.generated.json`을 만든다. 선택지는 타입의 유니언 그대로다.
-- `pnpm check:screens`(CI)는 모든 `*.screen.json`을 검사한다. 없는 부품, 없는 prop, 없는 값, 없는 칸, 토큰 밖 Spacing, 연달은 Spacing은 요소와 자리를 적고 실패한다.
+- `pnpm check:screens`(CI)는 모든 `*.screen.json`을 검사한다. 없는 부품, 없는 prop, 없는 값, 없는 칸, 빠진 필수 prop, 제자리(`only`) 밖에 선 부품, 토큰 밖 Spacing, 연달은 Spacing은 요소와 자리를 적고 실패한다.
 - `ScreenSpec`은 json-render처럼 브라우저에서만 그리거나 실행 중에 화면을 만들지 않는다. 그리기 전에 같은 검사를 하고, 문제가 있거나 사전에 없는 글자 키, 페이지가 주지 않은 동작이 나오면 멈춘다. 몰래 건너뛰지 않는다.
 
 ## 동작

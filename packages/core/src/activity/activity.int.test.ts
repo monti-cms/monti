@@ -2224,6 +2224,18 @@ describe("undo from the log", () => {
 			["첫 글 요약 더 짧게", "conversation-1", "assistant"],
 			["이 두 편 요약 채워 줘", "conversation-1", "assistant"],
 		]);
+		// T141: a line's conversation can be opened only while it is kept. The core alone keeps none; once there is one, the lines say so.
+		expect(lines.map((line) => line.conversationKept)).toEqual([false, false]);
+		const at = new Date();
+		await db
+			.insertInto("conversations")
+			.values({ id: "conversation-1", title: "요약", created_at: at, last_opened_at: at })
+			.execute();
+		expect((await list({ kinds: ["assistant"] }, monti)).lines.map((line) => line.conversationKept)).toEqual([
+			true,
+			true,
+		]);
+		await db.deleteFrom("conversations").where("id", "=", "conversation-1").execute();
 		const [, older] = lines;
 		expect(said(older)).toEqual(['"두 번째 글" 저장 · "첫 번째 글" 저장', null]);
 		expect(older.undo).toEqual({ state: "open" });

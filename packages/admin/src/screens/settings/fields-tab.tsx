@@ -680,7 +680,7 @@ export function FieldsTab({
 									key={pluginValue(index)}
 									value={pluginValue(index)}
 									count={String(each.fields.length)}
-									locked
+									locked={t("settings.fields.pluginTab", { plugin: each.plugin })}
 								>
 									{each.tab}
 								</FolderTab>

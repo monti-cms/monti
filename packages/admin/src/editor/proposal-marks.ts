@@ -11,10 +11,16 @@ import { docFromEditor, docToEditor } from "./convert";
  * The assistant's body proposals drawn over the text (doc 03 principle 5, doc 05; T32). A proposal is a `body.edit` item: block operations that name
  * blocks by id. Text it takes out is blue and struck through, text it puts in is on the pale blue ground, a block it removes is struck through whole,
  * and a block it puts in shows where it goes. The proposal being looked at has the blue line in the margin of its blocks. A proposal whose blocks
- * or text are no longer there to point at is not drawn (it is stale).
+ * or text are no longer there to point at, or whose block's words are no longer the ones it was made on, is not drawn over the text: it is
+ * stale, and hangs beside its block as "changed in the meantime" (`staleProposals`; T87).
  */
 
-export type BodyProposal = { id: string; ops: BodyOp[] };
+export type BodyProposal = {
+	id: string;
+	ops: BodyOp[];
+	/** The words of the blocks it changes as they were when it was proposed, by block id (the write's `preview.was`). */
+	was?: Record<string, string>;
+};
 type State = { items: BodyProposal[]; current: string | null };
 
 export const proposalMarksKey = new PluginKey<State>("montiProposalMarks");
@@ -88,17 +94,70 @@ const insertedBlocks = (blocks: NewBlock[], current: boolean) => () => {
 
 type Drawn = { decorations: Decoration[]; blocks: { pos: number; end: number; scrollOnly?: boolean }[] };
 
+/** Whether a block's words are still the ones the proposal was made on. A block that is not text, or a proposal that kept no words, says nothing against it. */
+const asItWas = (item: BodyProposal, id: string, node: EditorNode) =>
+	!node.isTextblock || item.was?.[id] === undefined || item.was[id] === blockText(node);
+
+/** The class of words that fill an empty place (the `Fill` part): blue letters, no ground. */
+const FILL = "text-monti-proposal";
+
+/**
+ * Whether a block is a translation's undecided text, emptied for the source's words to show as its placeholder (doc 04): the stored
+ * block still holds those words, which is what a proposal's offsets and its `was` are counted in. A proposal for it is the block's
+ * translation, drawn as the words that fill it.
+ */
+function emptied(doc: EditorNode, found: { pos: number; node: EditorNode }): boolean {
+	if (!found.node.isTextblock || found.node.content.size > 0) return false;
+	const $pos = doc.resolve(found.pos);
+	const top = $pos.depth === 0 ? found.node : $pos.node(1);
+	return (top.attrs.link as { state?: string } | null)?.state === "pending";
+}
+
+/**
+ * What a proposal's changes of an emptied block's text make of the words the block is stored with: every such change of that block,
+ * one after the other, as the core applies them. They are one filling of the block, drawn and taken once.
+ */
+const filledWith = (item: BodyProposal, block: string) => {
+	const changes = item.ops.filter(
+		(op): op is Extract<BodyOp, { op: "replaceText" }> => op.op === "replaceText" && op.block === block,
+	);
+	const was = item.was?.[block];
+	if (was === undefined) return changes.map((op) => op.text).join("");
+	return changes.reduce((words, op) => words.slice(0, op.from) + op.text + words.slice(op.to), was);
+};
+/** Whether this is the first of a proposal's text changes of a block: the one an emptied block's filling is drawn and taken at. */
+const firstOf = (item: BodyProposal, op: Extract<BodyOp, { op: "replaceText" }>) =>
+	item.ops.find((each) => each.op === "replaceText" && each.block === op.block) === op;
+
 /** One proposal's marks, or `null` when what it points at is not there as it expects (stale). */
 function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | null {
 	const decorations: Decoration[] = [];
 	const blocks: Drawn["blocks"] = [];
 	const touch = (pos: number, node: EditorNode) => blocks.push({ pos, end: pos + node.nodeSize });
+	// The blocks it changes hold the words it was made on: offsets counted in other words would strike the wrong ones.
+	for (const op of item.ops)
+		for (const id of op.op === "remove" ? op.blocks : op.op === "insert" ? [] : [op.block]) {
+			const found = findBlock(doc, id);
+			if (found && !emptied(doc, found) && !asItWas(item, id, found.node)) return null;
+		}
 	for (const [at, op] of item.ops.entries()) {
-		const key = `${item.id}:${at}:${current}`;
+		// A widget is kept by its key: a change made again at its place (the same item, other words) must be drawn anew.
+		const key = `${item.id}:${at}:${current}:${JSON.stringify(op)}`;
 		switch (op.op) {
 			case "replaceText": {
 				const found = findBlock(doc, op.block);
 				if (!found?.node.isTextblock) return null;
+				// An undecided block of a translation: the words that fill it, in blue, where its own words will stand.
+				if (emptied(doc, found)) {
+					if (!firstOf(item, op)) break;
+					const words = filledWith(item, op.block);
+					decorations.push(
+						Decoration.widget(found.pos + 1, () => element("span", FILL, words), { side: 1, key }),
+						Decoration.node(found.pos, found.pos + found.node.nodeSize, { "data-proposal-fill": "" }),
+					);
+					touch(found.pos, found.node);
+					break;
+				}
 				const text = blockText(found.node);
 				if (op.from > op.to || op.to > text.length) return null;
 				const from = textPos(found.node, found.pos, op.from);
@@ -126,6 +185,15 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 				const found = findBlock(doc, op.block);
 				if (!found) return null;
 				const end = found.pos + found.node.nodeSize;
+				if (op.op === "setBlock" && emptied(doc, found)) {
+					const words = newText(op.value);
+					decorations.push(
+						Decoration.widget(found.pos + 1, () => element("span", FILL, words), { side: 1, key }),
+						Decoration.node(found.pos, end, { "data-proposal-fill": "" }),
+					);
+					touch(found.pos, found.node);
+					break;
+				}
 				decorations.push(Decoration.node(found.pos, end, { class: PROPOSAL_MARK_CLASSES.del }));
 				touch(found.pos, found.node);
 				if (op.op === "setBlock") {
@@ -156,9 +224,63 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 	return { decorations, blocks };
 }
 
+/** The undecided blocks of a translation that a drawn proposal fills: their placeholder (the source's words) gives way to the proposal's. */
+export function filledBlocks(state: EditorState): Set<number> {
+	const shown = proposalMarksKey.getState(state);
+	const filled = new Set<number>();
+	for (const item of shown?.items ?? []) {
+		if (draw(state.doc, item) === null) continue;
+		for (const op of item.ops) {
+			if (op.op !== "replaceText" && op.op !== "setBlock") continue;
+			const found = findBlock(state.doc, op.block);
+			if (found && emptied(state.doc, found)) filled.add(found.pos);
+		}
+	}
+	return filled;
+}
+
 /** The proposals that can be drawn on this body now, in order: the bubble walks these. */
 export const drawable = <T extends BodyProposal>(doc: EditorNode, items: T[]): T[] =>
 	items.filter((item) => draw(doc, item) !== null);
+
+/** The block a proposal names first that is still in the body: where a stale one hangs. `null`: it has no place left. */
+export function anchorBlock(doc: EditorNode, item: BodyProposal): string | null {
+	for (const op of item.ops)
+		for (const id of op.op === "remove"
+			? op.blocks
+			: op.op === "insert"
+				? op.after === null
+					? []
+					: [op.after]
+				: [op.block])
+			if (findBlock(doc, id)) return id;
+	return null;
+}
+
+/**
+ * The proposals that cannot be drawn on this body any more and still have a block to hang beside (T87), each with that block: the text
+ * moved on since they were made. One whose blocks are all gone has no place in the editor; it waits on its conversation's card.
+ */
+export const staleProposals = <T extends BodyProposal>(doc: EditorNode, items: T[]): { item: T; block: string }[] =>
+	items.flatMap((item) => {
+		if (draw(doc, item) !== null) return [];
+		const block = anchorBlock(doc, item);
+		return block === null ? [] : [{ item, block }];
+	});
+
+/** What a stale proposal would have put in its block's place: the words after its change, or none when it takes the block out. */
+export function proposedWords(item: BodyProposal, block: string): string | null {
+	const was = item.was?.[block];
+	for (const op of item.ops) {
+		// Every change of the block's text, one after the other, as the core applies them.
+		if (op.op === "replaceText" && op.block === block) return filledWith(item, block);
+		if (op.op === "setBlock" && op.block === block) return newText(op.value);
+		if (op.op === "remove" && op.blocks.includes(block)) return null;
+		if (op.op === "insert" && op.after === block) return op.blocks.map(newText).join(" ");
+		if (op.op === "move" && op.block === block) return was ?? "";
+	}
+	return "";
+}
 
 /** Where a proposal's first block is, for scrolling to it. */
 export function proposalStart(doc: EditorNode, item: BodyProposal): number | null {
@@ -198,22 +320,48 @@ function replaceChanged(tr: Transaction, next: EditorNode) {
 }
 
 /**
+ * The body's last block when it is the empty paragraph that is only where the cursor was put under a block with no text of its own, and so
+ * is not in the stored body: `null` when the last block is stored like any other.
+ */
+function openLine(doc: EditorNode, stored: Doc): EditorNode | null {
+	const last = doc.lastChild;
+	if (!last || doc.childCount < 2 || last.type.name !== "paragraph" || last.content.size > 0) return null;
+	return stored.blocks.at(-1)?.id === last.attrs.blockId ? null : last;
+}
+
+/**
  * Takes a proposal into the body: a text change goes in exactly where it is (so a caret in that block stays put), and a block change replaces only
  * the blocks it changes. All in one transaction that undo takes back.
  */
 export function takeProposal(state: EditorState, item: BodyProposal, convert: Convert): Transaction {
 	const tr = state.tr;
+	// The emptied blocks whose filling went in whole at the first of their text changes: the rest of those changes are part of it.
+	const filled = new Set<string>();
 	for (const op of item.ops) {
 		if (op.op === "replaceText") {
 			const found = findBlock(tr.doc, op.block);
 			if (!found) continue;
+			// An undecided block of a translation holds nothing in the editor: its translation goes in whole (the block is then translated).
+			if (filled.has(op.block)) continue;
+			if (emptied(tr.doc, found)) {
+				const words = filledWith(item, op.block);
+				if (words) tr.insertText(words, found.pos + 1);
+				filled.add(op.block);
+				continue;
+			}
 			const from = textPos(found.node, found.pos, op.from);
 			const to = textPos(found.node, found.pos, op.to);
 			if (op.text) tr.insertText(op.text, from, to);
 			else tr.delete(from, to);
 			continue;
 		}
-		replaceChanged(tr, convert.toEditor(applyOps(convert.fromEditor(tr.doc), [op])));
+		const stored = convert.fromEditor(tr.doc);
+		const next = convert.toEditor(applyOps(stored, [op]));
+		// The empty paragraph a person just opened under a last picture or file is not stored (`docFromEditor`), so the body that comes
+		// back has none: put in as it came, the paragraph went, and the caret that stood in it with it (T121). It is the editor's own and
+		// stays where it is, whatever the proposal changed above it.
+		const open = openLine(tr.doc, stored);
+		replaceChanged(tr, open ? next.copy(next.content.addToEnd(open)) : next);
 	}
 	return tr;
 }

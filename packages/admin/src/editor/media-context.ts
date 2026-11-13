@@ -4,6 +4,7 @@ import type { Node as EditorNode } from "@tiptap/pm/model";
 import { NodeSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import type { FillState } from "../assistant/use-fill";
 import type { Upload } from "../media/upload-queue";
 import { useOperation } from "../operations/use-operation";
 import { caretPast, insertBlocks, inTableCell } from "./commands";
@@ -22,7 +23,26 @@ export type EditorMediaValue = {
 	setCard: (blockId: string | null) => void;
 	/** The body cannot be changed (an archived entry, one in the trash). Here, so that a block already drawn hears of it when the entry is archived. */
 	readOnly: boolean;
+	/** "✦ Fill" for a picture's words and its caption (doc 10, quick tasks); left out where the body has nobody to ask. */
+	fill?: PictureFill;
 } & BodyFiles;
+
+/**
+ * A body's way to have the quick-task model write of a picture. `place` names the box (`alt:<block>`, `caption:<block>`); `around` is the
+ * text right before and after the picture; `put` gets the answer.
+ */
+export type PictureFill = {
+	of: (place: string) => FillState;
+	/** The place was changed by hand: an answer still on its way is not put over it, and what the last fill said goes. */
+	forget: (place: string) => void;
+	run: (
+		place: string,
+		task: "alt" | "caption",
+		media: string,
+		around: { before: string; after: string },
+		put: (value: string) => void,
+	) => void;
+};
 
 export const EditorMedia = createContext<EditorMediaValue | null>(null);
 

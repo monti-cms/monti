@@ -1,10 +1,22 @@
-import { FormField, FormFieldError, FormFieldLabel, Input, Option, Switch, Text } from "@monti-cms/ui";
+import {
+	FormField,
+	FormFieldError,
+	FormFieldLabel,
+	Inline,
+	Input,
+	Option,
+	Switch,
+	Text,
+	TextButton,
+} from "@monti-cms/ui";
+import { Renew, Spark } from "@monti-cms/ui/icons";
 import { useId } from "react";
+import type { FillState } from "../assistant/use-fill";
 import { useAdmin } from "../operations/admin-context";
 import { useComposedValue } from "./use-composed-value";
 
 /** How long alt text runs (flow 1·12). */
-const ALT_MAX = 80;
+export const ALT_MAX = 80;
 
 /**
  * What an entry says of a picture, in a settings card (screens/editor.md): a body's image and a media field write it the same way. The box takes the cursor as the card opens.
@@ -20,6 +32,7 @@ export function AltFields({
 	onChange,
 	onDecorative,
 	onEnter,
+	fill,
 }: {
 	value: string;
 	decorative: boolean;
@@ -31,6 +44,11 @@ export function AltFields({
 	onChange: (next: string) => void;
 	onDecorative: (on: boolean) => void;
 	onEnter: () => void;
+	/**
+	 * "✦ Fill" (doc 10, quick tasks): the quick-task model looks at the picture and writes its words. On the label row before the count.
+	 * Left out where there is nothing to ask (no assistant, no key, a read-only entry).
+	 */
+	fill?: { state: FillState; onFill: () => void };
 }) {
 	const { t } = useAdmin();
 	const id = useId();
@@ -42,9 +60,24 @@ export function AltFields({
 					<FormFieldLabel
 						htmlFor={id}
 						action={
-							<Text variant="micro" tone="subtle">
-								{t("entry.count", { count: alt.value.length, max: ALT_MAX })}
-							</Text>
+							<Inline gap={8} align="baseline">
+								{fill && !readOnly ? (
+									<TextButton
+										tone="proposal"
+										size="micro"
+										loading={fill.state.working}
+										// The press leaves the caret in the box.
+										onMouseDown={(event) => event.preventDefault()}
+										onClick={fill.onFill}
+									>
+										{fill.state.working ? null : alt.value ? <Renew aria-hidden /> : <Spark aria-hidden />}
+										{t(fill.state.working ? "fill.working" : alt.value ? "fill.again" : "fill.fill")}
+									</TextButton>
+								) : null}
+								<Text variant="micro" tone="subtle">
+									{t("entry.count", { count: alt.value.length, max: ALT_MAX })}
+								</Text>
+							</Inline>
 						}
 					>
 						{t("editor.image.alt")}
@@ -56,6 +89,9 @@ export function AltFields({
 						disabled={readOnly}
 						maxLength={ALT_MAX}
 						placeholder={placeholder}
+						// What a fill wrote is blue until it is changed (components/proposal.md, filling a field).
+						proposal={fill !== undefined && alt.value !== "" && fill.state.filled === alt.value}
+						aria-invalid={Boolean(fill?.state.failed) || undefined}
 						value={alt.value}
 						onChange={(event) => alt.change(event.target.value)}
 						{...alt.composition}
@@ -66,7 +102,11 @@ export function AltFields({
 							}
 						}}
 					/>
-					{missing && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>}
+					{fill?.state.failed ? (
+						<FormFieldError>{fill.state.failed}</FormFieldError>
+					) : (
+						missing && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>
+					)}
 				</FormField>
 			)}
 			<Option spread>

@@ -60,3 +60,14 @@ export const LongSentence: Story = {
 	},
 	decorators: [(Story) => <Box width="sheet">{Story()}</Box>],
 };
+
+/** A cut sentence come to with the keyboard: it is a stop while it is cut, with the focus ring inside it, and says itself whole. */
+export const CutSentenceFocused: Story = {
+	args: LongSentence.args,
+	decorators: LongSentence.decorators,
+	play: async () => {
+		const { userEvent, within } = await import("storybook/test");
+		await userEvent.tab();
+		await within(document.body).findByRole("tooltip");
+	},
+};

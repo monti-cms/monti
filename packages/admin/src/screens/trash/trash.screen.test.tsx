@@ -7,7 +7,7 @@ import {
 	middleOf,
 	rowHeights,
 	spillingCells,
-	titleUnderPointer,
+	wholeUnderPointer,
 } from "../../../../../testing/input";
 import * as stories from "./trash.stories";
 
@@ -262,12 +262,12 @@ describe("the trash (doc 11, flow 5)", () => {
 		const kind = row("옛 소개 글").getByRole("cell", { name: "게시글" });
 		await expect.element(kind).toBeVisible();
 		// The row's link covers the row: the pointer still finds what each cut value says.
-		expect(titleUnderPointer(kind.getByText("게시글").element())).toBe("게시글");
-		expect(titleUnderPointer(row("옛 소개 글").getByText("23일 남음").element())).toBe("23일 남음");
+		expect(wholeUnderPointer(kind.getByText("게시글").element())).toBe("게시글");
+		expect(wholeUnderPointer(row("옛 소개 글").getByText("23일 남음").element())).toBe("23일 남음");
 		// No cell's words run over the next column: each is clipped at its own edge.
 		expect(spillingCells(table().element())).toEqual([]);
 		// What stands after a title is cut first, so it says itself whole too.
-		expect(titleUnderPointer(row("첫 번째 글").getByText("/posts/first-post").element())).toBe("/posts/first-post");
+		expect(wholeUnderPointer(row("첫 번째 글").getByText("/posts/first-post").element())).toBe("/posts/first-post");
 		// A cell that says its value keeps its row as tall as the others (the way up, in a folder, has none).
 		expect(rowHeights(table().element())).toHaveLength(1);
 		await InFolder.run();

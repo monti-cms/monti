@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import * as React from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { letHeldKeyGo } from "./held-key";
 import { useUiLabels } from "./labels";
 
@@ -230,13 +231,10 @@ function DialogTitle({ className, of, children, ...props }: DialogPrimitive.Titl
 			{/* Its own words give way only when they alone are wider than the window. */}
 			{of ? <span className="max-w-full shrink-0 truncate">{children}</span> : children}
 			{of && (
-				<span
-					className="min-w-0 truncate font-normal text-monti-subtle"
-					title={typeof of === "string" ? of : undefined}
-				>
+				<CutWords whole={typeof of === "string" ? of : undefined} className="font-normal text-monti-subtle">
 					{" · "}
 					{of}
-				</span>
+				</CutWords>
 			)}
 		</DialogPrimitive.Title>
 	);

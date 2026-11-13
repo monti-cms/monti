@@ -43,6 +43,7 @@ function following(field: (options: Record<string, unknown>) => string | null, l
 			value: own,
 			placeholder,
 			disabled: props.readOnly,
+			proposal: props.proposal,
 		};
 		return multiline ? (
 			<Textarea {...shared} onChange={(event) => props.onChange(event.target.value)} />
@@ -65,12 +66,13 @@ function following(field: (options: Record<string, unknown>) => string | null, l
 }
 
 /** "Hide from search" as a switch: on is `noindex`, off is no value. */
-function NoindexSwitch({ id, value, onChange, readOnly }: FieldInputProps) {
+function NoindexSwitch({ id, value, onChange, readOnly, proposal }: FieldInputProps) {
 	return (
 		<Switch
 			id={id}
 			checked={value === "noindex"}
 			disabled={readOnly}
+			proposal={proposal}
 			onCheckedChange={(on) => onChange(on ? "noindex" : null)}
 		/>
 	);
@@ -79,7 +81,8 @@ function NoindexSwitch({ id, value, onChange, readOnly }: FieldInputProps) {
 /** The picture a media value names, as the library has it; `null` while there is none. */
 function useImage(value: unknown): string | null {
 	const media = mediaValueOf(value)?.media ?? null;
-	const read = useRead<MediaDetail>("media.get", { id: media ?? "" }, { skip: media === null });
+	// A file that is gone (in the trash) is a state the preview knows: it draws no picture. Only a read that got no answer is said at the top.
+	const read = useRead<MediaDetail>("media.get", { id: media ?? "" }, { skip: media === null, quiet: true });
 	const file = read.data && read.data.id === media ? read.data : null;
 	return file && file.kind === "image" ? (file.web?.url ?? file.original.url) : null;
 }

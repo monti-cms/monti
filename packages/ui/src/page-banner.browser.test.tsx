@@ -198,7 +198,9 @@ describe("PageBanner", () => {
 		const own = banner("저장하지 못했습니다");
 		expect(place()?.contains(own)).toBe(true);
 		expect(precedes(own, page.getByRole("heading", { name: "설정" }).element())).toBe(true);
-		expect(own?.getAttribute("role")).toBe("status");
+		// Announced as they are: both stand in the top place, which is the live region; the banner itself is none.
+		expect(own?.getAttribute("role")).toBe("note");
+		expect(own?.closest("[aria-live]")?.getAttribute("aria-live")).toBe("polite");
 	});
 
 	it("stands under the frame's banner, whichever of the two came first", async () => {

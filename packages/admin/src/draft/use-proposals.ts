@@ -9,6 +9,10 @@ export type ProposalItem = {
 	conversationId: string;
 	operation: string;
 	input: unknown;
+	/** What its write said it would do when it was proposed; a body edit's has the words of the blocks it changes, as they were then. */
+	preview?: { was?: Record<string, string> } | null;
+	/** What was asked of it at its place since it was made, and what the assistant answered (doc 10, a request at its place). */
+	thread?: { request: string; answer: string; at: string }[];
 };
 
 /** A record a screen shows: `{ kind: "entry", id }`, `{ kind: "schema", id: "current" }`. */

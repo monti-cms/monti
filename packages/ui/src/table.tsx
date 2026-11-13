@@ -5,9 +5,9 @@ import { useRender } from "@base-ui/react/use-render";
 import * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { IconButton } from "./icon-button";
 import { Folder, OverflowMenuHorizontal, Spark } from "./icons";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 function Table({
 	className,
@@ -47,8 +47,10 @@ function Table({
 					// With no widths set, the columns take their content's width and a column that ends in "…" (the title) takes what is left.
 					layout === "auto" && !columns && "[&_[data-truncate]]:w-full",
 					// The row's rule does not stay with stuck cells: each cell draws it at its own foot, so the rows pass under a line.
+					// What the keyboard comes to in a row is scrolled out from under the stuck header, not left behind it: the head's 40px and the row's
+					// own room over its words. (The scroll box's own 8px only clears its edge, which the header covers.)
 					(stickyHeader ?? container === "none") &&
-						"[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)] [&_thead_tr]:border-b-transparent",
+						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)] [&_thead_tr]:border-b-transparent",
 					className,
 				)}
 				style={width === undefined ? style : { ...style, width }}
@@ -125,6 +127,9 @@ function TableRow({
 			data-drop-target={dropTarget || undefined}
 			className={cn(
 				props.onClick && "cursor-pointer not-data-selected:hover:bg-monti-muted",
+				// Cut words in a row whose link covers it stand over the link, so the pointer finds them and they say themselves whole (a row's
+				// second line under its title). Not the words that hold the link (their layer is the row's), and not a cell, which stays static.
+				"[&:has([data-slot=row-link])_:not(td)[data-cut-words]:not(:has([data-slot=row-link]))]:relative [&:has([data-slot=row-link])_:not(td)[data-cut-words]:not(:has([data-slot=row-link]))]:z-1",
 				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted not-data-selected:has-[[data-slot=row-link]:focus-visible]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
 				twoLine && "[&>td]:py-monti-16",
 				// An outline, not a ring: a table row draws no shadow of its own, and takes no rounded corners either (2026-11-11, owner: left square).
@@ -312,7 +317,9 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 			{
 				draggable: false,
 				className: cn(
-					"cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset",
+					// Its ring is the row's (the layer over the whole row), taller than its own words: scrolled to at the box's foot, it brings the
+					// rest of the row with it (a two-line row's second line too), so the ring's lower side is not cut.
+					"scroll-mb-8 cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset",
 					className,
 				),
 			},
@@ -357,7 +364,8 @@ function RowTitle({
 	const words = editing ? (
 		<span className="min-w-0 text-monti-body text-monti-default">{title}</span>
 	) : (
-		<RowTitleWords>{title}</RowTitleWords>
+		// Cut to the line with "…": while they are cut, the pointer on the words or the keyboard on the title's link says them whole.
+		<CutWords className="text-monti-body text-monti-default">{title}</CutWords>
 	);
 	return (
 		// Beside a picture the words stand at its middle, as the row's other cells do.
@@ -390,105 +398,17 @@ function RowTitle({
 				>
 					<span className="flex min-w-0 max-w-full shrink-0">{words}</span>
 					{/* It says itself whole when pointed at: it stands over the row's link for the pointer to find it. */}
-					<span
-						title={addressTitle ?? (typeof address === "string" ? address : undefined)}
-						className="relative z-1 min-w-0 max-w-max grow basis-[3ch] truncate font-mono text-monti-faint text-monti-meta"
+					<CutWords
+						whole={addressTitle}
+						className="relative z-1 max-w-max grow basis-[3ch] font-mono text-monti-faint text-monti-meta"
 					>
 						{address}
-					</span>
+					</CutWords>
 				</span>
 			) : (
 				words
 			)}
 		</span>
-	);
-}
-
-/**
- * A row title's words, cut to the line with "…". While they are cut, pointing at them (or coming to the title with the keyboard) says them whole in a tooltip,
- * as a language cell says its languages. The title's link covers the whole row, so the pointer is "on the title" everywhere on the row: the tooltip is for
- * the pointer on the words themselves, not on the rest of the row.
- */
-function RowTitleWords({ children }: { children: React.ReactNode }) {
-	const box = React.useRef<HTMLSpanElement>(null);
-	/** Open, and by what: the pointer on the words, or the keyboard on the title. */
-	const [by, setBy] = React.useState<"pointer" | "keys" | null>(null);
-	/** What it says. Kept while it closes, so the tooltip does not empty before it is gone. */
-	const [words, setWords] = React.useState("");
-	/** Whether the pointer is on the words now. */
-	const onWords = React.useRef(false);
-	/** Closed by hand (Escape, a press) with the pointer on the words, whatever opened it: it stays closed until the pointer has left them. */
-	const dismissed = React.useRef(false);
-	const dismiss = () => {
-		dismissed.current = onWords.current;
-		setBy(null);
-	};
-	/** The words, when they are cut: a fraction of a pixel short already ends them in "…". */
-	const cut = () => {
-		const node = box.current;
-		if (!node) return null;
-		const all = document.createRange();
-		all.selectNodeContents(node);
-		return all.getBoundingClientRect().width > node.getBoundingClientRect().width + 0.01 ? node.textContent : null;
-	};
-	const say = (how: "pointer" | "keys") => {
-		const whole = cut();
-		if (whole === null) return;
-		setWords(whole);
-		setBy(how);
-	};
-	/** The pointer is no longer on the words: what it opened closes, and what was closed by hand may open again. */
-	const left = () => {
-		onWords.current = false;
-		dismissed.current = false;
-		if (by === "pointer") setBy(null);
-	};
-	return (
-		<Tooltip
-			open={by !== null}
-			onOpenChange={(open, details) => {
-				// The pointer's coming and going is seen by its place (below): the trigger's own hover is the whole row's.
-				if (details.reason === "trigger-hover") return;
-				if (open) {
-					if (details.reason === "trigger-focus") say("keys");
-					return;
-				}
-				// Escape, a press, the keyboard moving on.
-				dismiss();
-			}}
-		>
-			<TooltipTrigger
-				render={
-					<span
-						ref={box}
-						className="min-w-0 truncate text-monti-body text-monti-default"
-						onPointerMove={(event) => {
-							// A finger that starts a scroll here is not pointing.
-							if (event.pointerType === "touch") return;
-							const edge = event.currentTarget.getBoundingClientRect();
-							const on =
-								event.clientX >= edge.left &&
-								event.clientX <= edge.right &&
-								event.clientY >= edge.top &&
-								event.clientY <= edge.bottom;
-							if (!on) return left();
-							onWords.current = true;
-							if (by === null && !dismissed.current) say("pointer");
-						}}
-						onPointerLeave={left}
-						onPointerDown={() => {
-							if (by !== null) dismiss();
-						}}
-					/>
-				}
-			>
-				{children}
-			</TooltipTrigger>
-			{/* A title can be long: it wraps in the tooltip instead of running off the window. */}
-			<TooltipContent align="start" className="max-w-monti-panel whitespace-normal break-words">
-				{words}
-			</TooltipContent>
-		</Tooltip>
 	);
 }
 
@@ -559,12 +479,15 @@ function TableCell({
 	title,
 	children,
 	...props
-}: Omit<React.ComponentProps<"td">, "align"> & CellOptions) {
-	return (
+}: Omit<React.ComponentProps<"td">, "align" | "title"> &
+	CellOptions & {
+		/** What the cell says whole while it is cut (`CutWords`): its value in words. Not the HTML attribute. */
+		title?: string;
+	}) {
+	const cell = (
 		<td
 			data-slot="table-cell"
 			data-truncate={truncate || undefined}
-			title={title}
 			className={cn(
 				// Its pieces sit on the middle of the line, not on their letters' baselines: pieces of two sizes on one baseline (a chip, a title) would
 				// make the line taller than either, and the row 2px taller than the design system's 42.
@@ -577,8 +500,8 @@ function TableCell({
 					// A text button in a cut cell is cut itself, with its own "…", so the keyboard's ring closes around what shows of it (its box would
 					// run on past the cell's edge, and the ring with it). Cut sideways only: its press layer reaches above and below it.
 					"max-w-0 truncate *:max-w-full has-[[data-slot=row-check]]:overflow-visible group-has-data-[slot=row-link]/row:has-[[data-slot=row-check]]:overflow-hidden *:data-[slot=text-button]:inline-block *:data-[slot=text-button]:overflow-x-clip *:data-[slot=text-button]:text-ellipsis",
-				// With a `title` it says its value whole when pointed at. A row's link covers the row, so the cell's pieces stand over the link for the
-				// pointer to find them; a press on them still opens the row (`TableRow`).
+				// With a `title` it says its value whole while it is cut (`CutWords`). A row's link covers the row, so the cell's pieces stand over the
+				// link for the pointer to find them; a press on them still opens the row (`TableRow`).
 				title !== undefined && "[&>:not([data-slot=row-check])]:relative [&>:not([data-slot=row-check])]:z-1",
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top *:align-top",
@@ -604,6 +527,7 @@ function TableCell({
 					)}
 		</td>
 	);
+	return title === undefined ? cell : <CutWords render={cell} whole={title} />;
 }
 
 export {

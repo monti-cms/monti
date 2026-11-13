@@ -106,12 +106,12 @@ export const Empty: Story = {
 	),
 };
 
-function ChipsExample({ open, invalid }: { open?: boolean; invalid?: boolean }) {
+function ChipsExample({ open, invalid, proposal }: { open?: boolean; invalid?: boolean; proposal?: boolean }) {
 	const anchor = useComboboxAnchor();
 	const [value, setValue] = useState<string[]>(["공지사항", "리뷰"]);
 	return (
 		<Combobox items={TAGS} multiple defaultOpen={open} value={value} onValueChange={setValue}>
-			<ComboboxChips ref={anchor}>
+			<ComboboxChips ref={anchor} proposal={proposal}>
 				{value.map((tag) => (
 					<ComboboxChip key={tag}>{tag}</ComboboxChip>
 				))}
@@ -131,12 +131,14 @@ function ChipsExample({ open, invalid }: { open?: boolean; invalid?: boolean }) 
 	);
 }
 
-/** Multiple selection as chips, closed, open and invalid. */
+/** Multiple selection as chips: closed, invalid, and with values the assistant proposed. */
 export const Chips: Story = {
 	render: () => (
 		<Stack className="max-w-sm" gap={16}>
 			<ChipsExample />
 			<ChipsExample invalid />
+			{/* Values the assistant chose and nobody has touched. */}
+			<ChipsExample proposal />
 		</Stack>
 	),
 };

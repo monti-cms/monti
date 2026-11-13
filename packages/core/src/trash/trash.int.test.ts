@@ -279,11 +279,34 @@ describe("into the trash", () => {
 		await monti.proposals.add(proposal, "trash.move", { rows: [entryRow(id)] });
 		await monti.proposals.apply(proposal);
 
-		expect(await row("정리할 글")).toMatchObject({ byAssistant: true });
+		// The conversation it was asked in is not kept here (the core alone makes none): the mark opens nothing.
+		expect(await row("정리할 글")).toMatchObject({ byAssistant: true, conversationId: null });
 		await expect(site().run("trash.purge", { rows: [entryRow(id)] }, { actor: "assistant" })).rejects.toBeInstanceOf(
 			ForbiddenError,
 		);
 		await expect(site().run("trash.empty", {}, { actor: "assistant" })).rejects.toBeInstanceOf(ForbiddenError);
+	});
+
+	it("11 T124 what the assistant threw away names the conversation it was asked in while that conversation is kept, and none once it is deleted", async () => {
+		const id = await post("대화로 버린 글", "by-talk");
+		const mine = await post("내가 버린 글", "by-me");
+		const monti = site();
+		const at = new Date();
+		await db
+			.insertInto("conversations")
+			.values({ id: "c-kept", title: "정리해 줘", created_at: at, last_opened_at: at })
+			.execute();
+		const proposal = await monti.proposals.create("c-kept", "정리해 줘");
+		await monti.proposals.add(proposal, "trash.move", { rows: [entryRow(id)] });
+		await monti.proposals.apply(proposal);
+		await monti.run("trash.move", { rows: [entryRow(mine)] }, { actor: "admin" });
+
+		expect(await row("대화로 버린 글")).toMatchObject({ byAssistant: true, conversationId: "c-kept" });
+		// What a person threw away has no conversation, whatever the log holds.
+		expect(await row("내가 버린 글")).toMatchObject({ byAssistant: false, conversationId: null });
+
+		await db.deleteFrom("conversations").where("id", "=", "c-kept").execute();
+		expect(await row("대화로 버린 글")).toMatchObject({ byAssistant: true, conversationId: null });
 	});
 
 	it("11-2 something already in the trash, or not there at all, is refused", async () => {

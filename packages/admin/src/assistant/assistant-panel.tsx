@@ -121,6 +121,11 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 	const toNextWaiting = useFocusHandOff(
 		(gone) => gone.nextElementSibling?.querySelector<HTMLElement>("button") ?? typing(),
 	);
+	// A screen's "✦ request" opened the panel to be typed in: the caret goes to the box once it is drawn.
+	const requested = assistant.requested;
+	useEffect(() => {
+		if (requested > 0) requestAnimationFrame(() => box.current?.querySelector("textarea")?.focus());
+	}, [requested]);
 	const intoBox = (put: () => void) => {
 		put();
 		requestAnimationFrame(() => box.current?.querySelector("textarea")?.focus());
@@ -203,7 +208,8 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 						open={menuOpen}
 						onOpenChange={(next) => {
 							setMenuOpen(next);
-							if (!next) resend.current = false;
+							if (next) assistant.refreshModels();
+							else resend.current = false;
 						}}
 						value={choice(model.keyId, model.model)}
 						onValueChange={(value) => {

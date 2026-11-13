@@ -38,6 +38,7 @@ jobs:
       - run: pnpm gen:tokens --check
       # Screen specs: the catalog is what scripts/gen-screen-catalog.mjs reads from the parts' prop types, and every *.screen.json stays inside it.
       - run: pnpm gen:screen-catalog --check
+      - run: node --test scripts/check-screens.test.mjs
       - run: pnpm check:screens
       # The message dictionaries: one file naming convention, the same keys in English and Korean, and no key that nothing uses.
       - run: pnpm check:messages
@@ -47,6 +48,9 @@ jobs:
       # alone under ".only" (docs/testing.md). The check's own tests first.
       - run: node --test scripts/check-scenes.test.mjs
       - run: pnpm check:scenes
+      # A browser test's failure leaves a picture named after the test: a name too long for a file leaves none. The check's own tests first.
+      - run: node --test scripts/check-test-titles.test.mjs
+      - run: pnpm check:titles
       - run: pnpm typecheck
       # Files and exports of the packages that nothing uses.
       - run: pnpm knip
@@ -129,6 +133,13 @@ jobs:
           cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
       # L3: one part of @monti-cms/ui; L4: admin screens on a site in the browser (PGlite), driven with real input (docs/testing.md).
       - run: pnpm test:browser
+      # The pictures of the page that failing tests left (git ignores them): without this they go with the runner.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-failures
+          path: packages/*/src/**/__screenshots__/**
+          if-no-files-found: ignore
 
   release:
     name: release proof

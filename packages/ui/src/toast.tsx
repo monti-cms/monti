@@ -151,12 +151,15 @@ export function Toaster({ duration }: { duration?: number }) {
 			offset={{ bottom }}
 			duration={duration}
 			// The engine gives a custom toast the width of its content, at the left of the stack: this puts the pill in the middle of it.
-			toastOptions={{ classNames: { toast: "flex! w-full justify-center" } }}
+			// Only the pill takes the pointer (`PILL`): the row is as wide as the stack, and what stands beside the pill or under the row's
+			// ends (the proposal bubble's buttons while a toast comes up over it) is pressed through it. A pointer beside the pill does not
+			// keep the toast open either.
+			toastOptions={{ classNames: { toast: "flex! w-full justify-center pointer-events-none!" } }}
 			visibleToasts={3}
 			// One over the other, each readable: a toast behind another would say nothing until pointed at.
 			expand
 			// Important: the engine's own stylesheet sets the width of the stack (`width: var(--width)`) and is not in a layer.
-			className="w-[min(560px,calc(100vw-32px))]!"
+			className="pointer-events-none! w-[min(560px,calc(100vw-32px))]!"
 		/>
 	);
 }

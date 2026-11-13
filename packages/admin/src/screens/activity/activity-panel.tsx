@@ -26,8 +26,9 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
-import { OverflowMenuHorizontal, Renew, Undo } from "@monti-cms/ui/icons";
+import { Chat, OverflowMenuHorizontal, Renew, Undo } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useOpenConversation } from "../../assistant/use-assistant";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
@@ -153,7 +154,8 @@ export function ActivityPanel({
 	go: (route: Route) => void;
 }) {
 	const { t, wrote } = useAdmin();
-	const read = useRead<ActivityDetail>("activity.get", { id }, { afterWrites: true });
+	const openConversation = useOpenConversation();
+	const read = useRead<ActivityDetail>("activity.get", { id }, { afterWrites: true, quiet: true });
 	const schema = useRead<{ adminValues: Record<string, { label?: string }> }>("schema.read");
 	const cancel = useOperation("deliveries.cancel");
 	const [asking, setAsking] = useState<ActivityDelivery | null>(null);
@@ -227,6 +229,8 @@ export function ActivityPanel({
 			</TextButton>
 		);
 	};
+	// The assistant's line: the conversation its request was made in, while that conversation is kept.
+	const conversation = openConversation && line.conversationKept ? line.conversationId : null;
 	const confirmCancel = (byKeys: boolean) => {
 		const delivery = asking;
 		canceled.current = byKeys ? (delivery?.id ?? null) : null;
@@ -256,7 +260,7 @@ export function ActivityPanel({
 				title={title}
 				onClose={onClose}
 				actions={
-					anyFailed || line.undo.state === "open" ? (
+					anyFailed || line.undo.state === "open" || conversation ? (
 						<DropdownMenu>
 							<IconButton
 								ref={moreHandOff}
@@ -266,6 +270,12 @@ export function ActivityPanel({
 								<OverflowMenuHorizontal aria-hidden />
 							</IconButton>
 							<DropdownMenuContent align="end">
+								{conversation && (
+									<DropdownMenuItem onClick={() => openConversation?.(conversation)}>
+										<Chat aria-hidden />
+										{t("activity.conversation")}
+									</DropdownMenuItem>
+								)}
 								{anyFailed && (
 									<DropdownMenuItem
 										disabled={busy || failed.length === 0}

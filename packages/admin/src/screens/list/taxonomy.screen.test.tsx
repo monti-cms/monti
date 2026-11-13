@@ -1,7 +1,7 @@
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { spillingCells, titleUnderPointer } from "../../../../../testing/input";
+import { spillingCells, wholeUnderPointer } from "../../../../../testing/input";
 import * as list from "./list.stories";
 
 const {
@@ -41,8 +41,8 @@ describe("taxonomy screen (doc 08)", () => {
 		await TaxonomyNarrowColumns.run();
 		const used = table().getByText("글 5", { exact: true });
 		await expect.element(used).toBeVisible();
-		expect(titleUnderPointer(used.element())).toBe("글 5");
-		expect(titleUnderPointer(table().getByText("react", { exact: true }).element())).toBe("react");
+		expect(wholeUnderPointer(used.element())).toBe("글 5");
+		expect(wholeUnderPointer(table().getByText("react", { exact: true }).element())).toBe("react");
 		// The count is a link to the entries that use the tag.
 		expect(used.element().closest("a")?.getAttribute("href")).toMatch(/^#\/c\/post\?tags=/);
 		expect(spillingCells(table().element())).toEqual([]);

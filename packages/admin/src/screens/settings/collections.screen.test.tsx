@@ -477,7 +477,8 @@ describe("settings › collections: the options of a choice in the review (docs 
 	/** The value field of the n-th option's row. */
 	const option = (index: number) => sheet().getByRole("textbox", { name: "값" }).nth(index);
 
-	it("19-8 an option's value edited in its row is a rename: the review names it with the entries that chose it and the published ones, asks nothing, and the applied word is on the site", async () => {
+	// The review names it with the entries that chose it and the published ones.
+	it("19-8 an option's value edited in its row is a rename: the review counts its entries, asks nothing, and the site has the new word", async () => {
 		const made = options();
 		await made.run();
 		await opened();
@@ -497,7 +498,8 @@ describe("settings › collections: the options of a choice in the review (docs 
 		expect((await stored(made.loaded(), "entry_published"))["calm-article"]).toMatchObject({ mood: "calm" });
 	});
 
-	it("19-9 an option taken out is asked about: 바꾸기 with the options that stay, or 비우기 (the red apply); changed, the entries hold the option picked, on the site too", async () => {
+	// 바꾸기 offers the options that stay; the change is on the site too.
+	it("19-9 an option taken out is asked about: 바꾸기 or 비우기 (the red apply); changed, the entries hold the option picked", async () => {
 		const made = options();
 		await made.run();
 		await opened();
@@ -520,7 +522,8 @@ describe("settings › collections: the options of a choice in the review (docs 
 		expect((await stored(made.loaded(), "entries"))["loud-draft"]).toMatchObject({ mood: "calm" });
 	});
 
-	it("19-10 a required conditional field's option taken out offers only 바꾸기; its fields are asked about as removed fields, and the review says the new option's required fields will be empty, with the published count", async () => {
+	// The review also says the new option's required fields will be empty, with the published count.
+	it("19-10 a required conditional field's option taken out offers only 바꾸기, and its fields are asked about as removed fields", async () => {
 		const made = options();
 		await made.run();
 		await opened();
@@ -560,7 +563,8 @@ describe("settings › collections: the options of a choice in the review (docs 
 			}
 		).schema.collections.post?.fields;
 
-	it("19-6 a conditional field's line has a band for each option under it, one step in, with no grip, the option's fields under the band, each with its grip, and an option with no fields keeps its band", async () => {
+	// A band stands one step in and has no grip; its fields have theirs; an option with no fields keeps its band.
+	it("19-6 a conditional field's line has a band for each option under it, with the option's fields under the band", async () => {
 		await options().run();
 		await opened();
 		const rows = () => [...document.querySelectorAll<HTMLElement>("[data-slot=field-row]")];
@@ -587,7 +591,8 @@ describe("settings › collections: the options of a choice in the review (docs 
 		expect(left(rows()[at("videoUrl")] as HTMLElement)).toBeGreaterThan(left(band));
 	});
 
-	it("19-6 '+ 필드' on an option's band adds a field to that option: the sheet says whose it is, the field stands under the band, and the saved schema has it in that option", async () => {
+	// The sheet says whose the field is, and the field stands under the band.
+	it("19-6 '+ 필드' on an option's band adds a field to that option, and the saved schema has it there", async () => {
 		const made = options();
 		await made.run();
 		await opened();
@@ -630,7 +635,8 @@ describe("settings › collections: the options of a choice in the review (docs 
 			}
 		).adminValues.post?.fields;
 
-	it("19-21 a field on its own dragged onto an option's band becomes that option's first field: the review says where it went and who loses its value, and the saved schema and the order kept have it there", async () => {
+	// The review says where it went and who loses its value, and the saved schema and the order kept have it there.
+	it("19-21 a field on its own dragged onto an option's band becomes that option's first field", async () => {
 		const made = options();
 		await made.run();
 		await opened();
@@ -794,7 +800,8 @@ describe("settings › collections: the options of a choice in the review (docs 
 		await expect.element(sheetNow.getByRole("button", { name: "지우고 적용" })).not.toBeInTheDocument();
 	});
 
-	it("19-20 a removed field's values moved into a field of an option: the review says how many are moved and how many deleted, counts again when an option taken out sends its entries there, and the apply is the red one while any are deleted", async () => {
+	// It counts again when an option taken out sends its entries there, and the apply is the red one while any are deleted.
+	it("19-20 a removed field's values moved into a field of an option: the review says how many are moved and how many deleted", async () => {
 		const made = options();
 		await made.run();
 		await opened();
@@ -848,7 +855,8 @@ describe("settings › collections: the options of a choice in the review (docs 
 		});
 	});
 
-	it("19-16 '+ 선택지' puts the keyboard in the new row's value; a value left empty is flagged on the field's line and the save is refused until it is filled, for a choice and a conditional field alike", async () => {
+	// The empty value is flagged on the field's line, for a choice and a conditional field alike.
+	it("19-16 '+ 선택지' puts the keyboard in the new row's value, and a value left empty keeps the save from applying", async () => {
 		const made = options();
 		await made.run();
 		await opened();

@@ -133,6 +133,8 @@ export type ActivityLine = {
 	/** The request the assistant's work came from. */
 	request: string | null;
 	conversationId: string | null;
+	/** That conversation is still kept, so it can be opened: one deleted since leaves its lines. */
+	conversationKept: boolean;
 	/** What was done, newest first: one message for a write, the first few for a proposal's writes. */
 	what: Message[];
 	/** How many more writes the line holds than `what` names. */
@@ -296,6 +298,12 @@ async function linesOf(
 		proposals.length === 0
 			? []
 			: await db.selectFrom("monti_proposal").select(["id", "request"]).where("id", "in", proposals).execute();
+	const talked = [...new Set(rows.flatMap((row) => row.conversation_id ?? []))];
+	const kept = new Set(
+		talked.length === 0
+			? []
+			: (await db.selectFrom("conversations").select("id").where("id", "in", talked).execute()).map((row) => row.id),
+	);
 	const labels = await collectionLabels(db);
 	return keys.flatMap((key) => {
 		const own = rows.filter((row) => row.line === key);
@@ -304,12 +312,14 @@ async function linesOf(
 		const head = own.at(-1);
 		if (!newest || !head) return [];
 		const ids = new Set(own.map((row) => row.id));
+		const conversationId = own.find((row) => row.conversation_id !== null)?.conversation_id ?? null;
 		const line: ActivityLine = {
 			id: key,
 			at: head.at,
 			actor: newest.actor,
 			request: requests.find((proposal) => proposal.id === newest.proposal_id)?.request ?? null,
-			conversationId: own.find((row) => row.conversation_id !== null)?.conversation_id ?? null,
+			conversationId,
+			conversationKept: conversationId !== null && kept.has(conversationId),
 			what: own.slice(0, WHAT_SHOWN).map((row) => named(row.summary, labels)),
 			more: Math.max(0, own.length - WHAT_SHOWN),
 			where: own.length === 1 && newest.place ? named(newest.place, labels) : null,

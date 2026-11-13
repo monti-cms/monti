@@ -15,11 +15,13 @@ import {
 	type EditorMediaValue,
 	fileBlock,
 	onImageCard,
+	type PictureFill,
 	placeFiles,
 	placeLibraryFile,
 	useBodyFiles,
 } from "./media-context";
 import { type BodyProposal, showProposals, takeInEditor } from "./proposal-marks";
+import { type PickedText, pickedText } from "./request-marks";
 import { nodeName } from "./schema";
 import { useSlashMenu } from "./slash-menu";
 import { useTableTools } from "./table-tools";
@@ -50,6 +52,8 @@ export function BodyEditor({
 	paired = null,
 	added,
 	files,
+	fill,
+	onRequest,
 }: {
 	doc: Doc;
 	/** The library's files the body shows, as its read brought them: their shapes hold the pictures' places from the first draw. */
@@ -74,6 +78,10 @@ export function BodyEditor({
 	paired?: PairedRows | null;
 	/** A translation's source blocks new since it was translated: each shows as one more undecided block where it goes (doc 04). */
 	added?: AddedBlock[];
+	/** "✦ Fill" for a picture's words and its caption (doc 10, quick tasks): an entry's body has it, on a site that can fill. */
+	fill?: PictureFill;
+	/** "✦ Request" on picked words (the format card's button, ⌘J): the screen opens the request's card (doc 10, item 28; T64). */
+	onRequest?: (picked: PickedText) => void;
 }) {
 	const editorRef = useRef<Editor | null>(null);
 	const latestProposals = useRef(proposals);
@@ -146,11 +154,29 @@ export function BodyEditor({
 			files: bodyFiles.files,
 			want: bodyFiles.want,
 			know: bodyFiles.know,
+			...(fill ? { fill } : {}),
 		}),
-		[upload.uploads, upload.retry, upload.holds, card, editable, bodyFiles.files, bodyFiles.want, bodyFiles.know],
+		[upload.uploads, upload.retry, upload.holds, card, editable, bodyFiles.files, bodyFiles.want, bodyFiles.know, fill],
 	);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);
+	// ⌘J asks the assistant about the picked words, as the format card's "✦ request" does.
+	const requested = useRef(onRequest);
+	requested.current = editable ? onRequest : undefined;
+	useEffect(() => {
+		if (!editor || editor.isDestroyed) return;
+		const dom = editor.view.dom;
+		const onKey = (event: KeyboardEvent) => {
+			if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "j")
+				return;
+			const picked = requested.current ? pickedText(editor.state) : null;
+			if (!picked) return;
+			event.preventDefault();
+			requested.current?.(picked);
+		};
+		dom.addEventListener("keydown", onKey);
+		return () => dom.removeEventListener("keydown", onKey);
+	}, [editor]);
 	useEffect(() => {
 		if (editor && !editor.isDestroyed && placeholders.texts.size > 0)
 			editor.view.dispatch(showPlaceholders(editor.state, placeholders.texts));
@@ -193,7 +219,9 @@ export function BodyEditor({
 				{handle.overlay}
 				{tables.overlay}
 				{slash.menu}
-				{editor ? <FormatCard editor={editor} catalogs={catalogs} /> : null}
+				{editor ? (
+					<FormatCard editor={editor} catalogs={catalogs} onRequest={editable ? onRequest : undefined} />
+				) : null}
 				{library && (
 					<MediaPickerDialog
 						kind={library}

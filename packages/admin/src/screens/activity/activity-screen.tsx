@@ -41,10 +41,11 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { Renew, RightPanelOpen, Undo } from "@monti-cms/ui/icons";
+import { Chat, Renew, RightPanelOpen, Undo } from "@monti-cms/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
+import { useOpenConversation } from "../../assistant/use-assistant";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -154,7 +155,7 @@ export function ActivityScreen({
 	/** Reads the sidebar's counts again: a delivery can fail after its write answered, when nothing else tells the frame. */
 	recount: () => void;
 }) {
-	const { t } = useAdmin();
+	const { t, reads } = useAdmin();
 	const state = useMemo(() => readActivityState(params), [params]);
 	const setState = (next: ActivityState, options?: { replace?: boolean }) =>
 		go({ screen: "activity", params: writeActivityState(next) }, options);
@@ -162,7 +163,7 @@ export function ActivityScreen({
 	const look = (change: Partial<ActivityState>, options?: { replace?: boolean }) =>
 		setState({ ...state, ...change, page: 1, asOf: null, from: null }, options);
 	const query = activityQueryOf(state);
-	const read = useRead<ActivityList>("activity.list", query, { afterWrites: true });
+	const read = useRead<ActivityList>("activity.list", query, { afterWrites: true, own: true });
 	const counts = useRead<DeliveryCounts>("deliveries.counts", {}, { afterWrites: true });
 	const data = read.data;
 	/** What is shown is the answer to this address: its search, filters, order and page, not the one before, still on screen while this reads. */
@@ -226,6 +227,7 @@ export function ActivityScreen({
 			.join(" · ");
 	const titleOf = (line: ActivityLine) =>
 		line.request !== null ? `“${line.request}”` : line.what[0] ? say(line.what[0]) : "";
+	const openConversation = useOpenConversation();
 	const open = (line: ActivityLine) => setState({ ...state, open: line.id });
 
 	const menuItems = (line: ActivityLine, context: boolean) => {
@@ -237,6 +239,13 @@ export function ActivityScreen({
 					<RightPanelOpen aria-hidden />
 					{t("activity.details")}
 				</Item>
+				{/* The assistant's line opens the conversation its request was made in, while that conversation is kept. */}
+				{openConversation && line.conversationId !== null && line.conversationKept && (
+					<Item onClick={() => openConversation(line.conversationId as string)}>
+						<Chat aria-hidden />
+						{t("activity.conversation")}
+					</Item>
+				)}
 				{failed.length > 0 && !isSending(line) && (
 					<Item disabled={busy} onClick={() => void again.send(failed)}>
 						<Renew aria-hidden />
@@ -356,7 +365,7 @@ export function ActivityScreen({
 			    rows, and they are not said to be the log as it is now. */}
 			{read.refusal ? (
 				<Banner ref={bannerHandOff} tone="danger" title={t("activity.loadFailed")} plainMeta>
-					<TextButton variant="underline" onClick={() => void read.reload()}>
+					<TextButton variant="underline" onClick={() => void reads.retry()}>
 						{t("activity.reload")}
 					</TextButton>
 				</Banner>

@@ -43,7 +43,7 @@
 |---|---|---|---|
 | 서비스가 거절 | "서비스가 거절했습니다" | 키 이름 · 서비스가 한 말 그대로 | "다른 모델로 보내기": 모델 메뉴가 열리고, 고르면 같은 말을 그 모델로 다시 보낸다 |
 | 서비스가 답하지 않음 | "서비스가 답하지 않습니다" | 키 이름 | "다시 시도": 같은 말을 다시 보낸다 |
-| 답이 오다 끊김 | "연결이 끊겼습니다" | 없음 | "이어서 하기": 새 말 없이 하던 곳에서 잇는다. 끊긴 답의 글은 다시 온 답이 대신한다 |
+| 답이 오다 끊김 | "연결이 끊겼습니다" | 없음 | "이어서 하기": 새 말 없이 하던 곳에서 잇는다. 끊긴 답의 글은 다시 온 답이 대신한다. 그 실행을 다른 화면이 이미 잇는 중이거나 그사이 끝났으면 토스트 없이 서버에 있는 대로 보인다: 일하는 중(멈추기)이거나 끝난 모습이다(T225, 2026-11-13) |
 | 턴이나 토큰 한도 | "한도에 닿아 멈췄습니다" | 없음 | "이어서 하기": 그만큼을 다시 준다 |
 | 우리 서버에 닿지 못함 | "연결이 끊겼습니다" | 없음 | "다시 시도" |
 | 실행의 키가 지워짐 | "AI 연결이 없습니다" | 없음 | 없음. 그 대화의 다음 요청은 사이트에 남은 키의 처음 모델로 간다. 패널이 열려 있을 때 쓰던 모델이 없어진 것을 알면 토스트로 한 번 말한다: "쓰던 모델이 없어졌습니다. 지금 모델: claude-sonnet-5-5" |
@@ -59,7 +59,7 @@
 | 일하는 동안 | `ChatInput busy`, `busyPlaceholder` "더 말하기" | 보내기가 멈추기가 된다. 더 보낸 말은 줄에 쌓인다. 멈추기를 누른 뒤에는 브라우저가 그 실행을 스스로 이어 가지 않고(화면 도구가 끝났을 때도, 요청 하나의 시간이 다 됐을 때도), 화면 도구는 화면을 옮기지 않는다. 한글을 조합하는 중의 Enter는 보내지 않는다. |
 | 기다리는 말 | `ChatInput queue`에 `ChatQueueItem`("지금 보내기" · "고치기" · "취소") | "지금 보내기"는 다음 턴에 들어간다. "고치기"는 말을 입력란으로 돌리고 포커스를 준다. 실행이 끝나면 남은 말이 차례로 간다. 키보드로 "지금 보내기"나 "취소"를 누르면 포커스는 다음 줄의 첫 버튼으로, 없으면 입력란으로 간다. 줄이 생기고 사라져도 입력란은 같은 요소다(치던 글의 커서가 그대로다). |
 | 모델 버튼 | `ModelMenuButton`(`label` "모델 고르기") | mono 모델 이름, 생각하는 모델이면 흐린 "· 생각 보통". 실행 중에도 눌린다. |
-| 모델 메뉴 | `ModelMenu layout="chat"`(검색 "모델 찾기", `groups` "최근" · 키 이름과 개수, 지금 모델 ✓, 처음 모델에 `hint` "기본", `thinking`의 "생각 ›" "끔" · "낮음" · "보통" · "높음") | 생각하지 않는 모델이면 `thinking`을 넘기지 않아 그 행이 없다. 새 대화는 처음 모델과 "보통"에서 시작한다. |
+| 모델 메뉴 | `ModelMenu layout="chat"`(검색 "모델 찾기", `groups` "최근" · 키 이름과 개수, 지금 모델 ✓, 처음 모델에 `hint` "기본", `thinking`의 "생각 ›" "끔" · "낮음" · "보통" · "높음") | 생각하지 않는 모델이면 `thinking`을 넘기지 않아 그 행이 없다. 새 대화는 처음 모델과 "보통"에서 시작한다. 메뉴를 열면 키의 서비스에 모델 목록을 다시 묻는다(5분에 한 번까지). 메뉴는 저장된 목록으로 바로 열리고, 답이 오면 바뀐다(T167, 2026-11-13). API 키 화면의 빠른 작업 모델 메뉴도 같다. |
 | 키가 없을 때 | `Empty`(`title` "AI 연결이 없습니다") 안의 `EmptyStep`(`href` API 키 화면) "API 키 넣기" | 빈 목록과 같은 부품이다. 입력란과 머리의 버튼이 없다. |
 
 ### 제안 카드
@@ -82,6 +82,8 @@
 | 적용 중 | `Text variant="note"` "적용 중", `Count` "2 / 3", `Progress inline` |
 | 적용됨 | `Text variant="note" tone="success"` "✓ 2건 적용", 못 한 것이 있으면 `tone="danger"` "1건 못 함", 끝에 "검토"(카드)와 "되돌리기". 되돌리기는 묻지 않는다. |
 | 되돌림 · 버림 | `Text variant="note" tone="subtle"` "되돌림" · "버림" |
+
+"버리기"나 "되돌리기"를 눌렀는데 할 것이 하나도 남아 있지 않았으면(다른 탭이 방금 버렸거나 적용했거나 되돌렸다) 빨간 토스트 한 줄이 그렇게 말하고("기다리는 제안이 없습니다" · "되돌릴 것이 없습니다"), 줄은 제안이 된 대로 보인다(T166, 2026-11-13). 편집기와 패널의 말풍선에서 버릴 때도 같다.
 
 카드의 버튼은 `size="sm"`, 검토 화면의 것은 페이지의 크기다.
 
@@ -119,6 +121,14 @@
 | 모델 고르기 | 2.23 | `Models` |
 | 지난 대화 | 2.25 | `PastConversations`, 없을 때 `NoPastConversations` |
 | 제안 검토 | 2.12 | `Review` |
+| 그 사이 고쳐진 줄을 키보드로 "다시 만들기" (포커스가 그 줄의 체크로) | | `ReviewMadeAgainByKeyboard` |
+| 편집기 말풍선의 이름을 눌러 그 대화 열기 | | `BubbleOpensItsConversation` |
+| 편집기의 ✦(채우기, 고른 글자의 요청, 제안 하나의 카드, 번역, 그림의 채우기) | 2.08 ~ 2.10, 3.03, 6.06 | `Screens/Entry/Assist`의 `FieldFilled` · `FieldFilling` · `FieldFillFailed` · `RequestOpen` · `RequestWorking` · `RequestAnswered` · `RequestFailed` · `ProposalCard` · `Translate` · `TranslateProposed` · `BlockMenuTranslate` · `RetranslateCard` · `PictureFill` · `CaptionFill` · `CaptionFillFailed`, `Screens/Entry/Editor`의 `ProposedChoice` · `ProposedSwitch` |
+| 일괄 막대의 "✦ 요청" | 2.07 | `BulkRequest` |
+| 휴지통의 ✦가 대화를 엶 · 활동 기록 ⋯의 "대화" | 5.15 | `TrashOpensConversation`, `ActivityConversation` |
+| 번역을 만드는 묶음의 검토 | 3.13 | `ReviewTranslations` |
+| 넣을 수 없는 줄 · 고르기를 바꾸는 줄 | | `Screens/Entry/Assist`의 `ReviewConditional` |
+| 설정의 제안 하나의 카드 · 제안된 스위치 | | `Screens/Settings/Collections`의 `ProposalCardOpen` · `ProposedFoldersSwitch`, 부품 `Monti/Proposal/ProposalBubble`의 `WithMark` |
 
 ## 제안 검토
 
@@ -126,7 +136,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| "‹ 어시스턴트" | `PageHeader trail`에 `TextButton variant="quiet"` | 떠나온 화면으로 돌아가고 패널이 그 대화로 열린다. |
+| "‹ 어시스턴트" | `PageHeader trail`에 `TextButton variant="quiet"` | 떠나온 화면으로 돌아가고 패널이 그 대화로 열린다. 관리자 화면 안에서 온 것이 아니면(주소를 붙여 넣었거나 바깥의 링크로 열었다) 브라우저의 "뒤로"가 관리자 화면 밖이므로, 처음 화면으로 간다(T226, 2026-11-13). |
 | 제목 행 | `PageHeader`(`title` "제안 검토", `meta` 시각), 끝에 "제안의 상태 한 줄" | 넣은 줄만 적용한다. 버리면 떠나온 화면으로 돌아간다. |
 | 요청 | `PageBody` 안 `Stack gap={32}`의 첫 줄, `Text as="p" variant="title" tone="muted"` | 따옴표로 인용한 요청. |
 | 묶음 | `ListSection table`(`title` 묶음 이름, `count` "3건", `actions`) | 도구 화면의 제목 있는 목록과 같은 머리다. `actions`: 글이 바뀌는 묶음이면 보기 전환 `Tabs` + `TabsList variant="line"` "한 줄" · "나란히", 기다리는 줄이 둘 이상이면 `TextButton` "3건 모두 빼기"(하나라도 빠져 있으면 "3건 모두 넣기"). 보기 전환은 묶음마다 따로다: 한 묶음을 "나란히"로 바꿔도 다른 묶음은 그대로다. |
@@ -135,6 +145,10 @@
 | 줄 끝의 결과 | `EntryStatus`: 적용 `status="published"` "적용", 되돌림 `status="archived" quiet` "되돌림", 못 함 `status="failed"` "못 함"과 `Text variant="note" tone="danger"` 까닭 | 활동 기록의 전송 칸과 같은 부품이다. |
 | 그 사이 고쳐진 줄 | 줄 끝에 `Text variant="note" tone="subtle"` "그 사이 고쳐짐"과 `TextButton variant="underline"` "다시 만들기" | 체크가 빠지고 수에서 빠진다. 누르면 "다시 만드는 중…" 뒤에 새 값이 오고 체크가 켜진다. |
 | "편집기에서 보기" | 기다리는 줄 끝의 `TextButton variant="underline"`(`href` 그 글) | 그 글의 편집기를 연다. |
+| 넣을 수 없는 줄 | `Checkbox`(빠져 있고 `readOnly`. 이미 넣어져 있던 줄은 체크가 켜진 채이고 뺄 수 있다), 줄 끝에 `Text variant="note" tone="subtle"` 까닭 | 쓰기가 제안될 때 그 대상을 그대로 둔다고 말한 항목이다: 고르지 않은 선택지의 필드("글 종류가 링크가 아님", 스위치면 "(이름)이 꺼져 있음"), 발행할 수 없는 글(그 까닭). 수에서 빠지고 "모두 빼기"도 세지 않는다. 기준 그림 Screens/Reference/Conditional › Proposal. |
+| 고르기를 바꾸는 줄 | `CompareRow`가 더 선다: 떠나는 선택지의 필드마다 지금 값이 `Del` | 받으면 지워지는 값이다(문서 19). 필드와 선택지는 관리자 화면의 이름(라벨)으로 적는다. |
+| 번역을 만드는 줄 | `RowTitle`(원문 글의 이름), 줄 끝에 `Text variant="note" tone="subtle"` "블록 8 · 원문 따름 1"과 `TextButton variant="underline"` "펼치기" · "접기", 펼치면 `CompareRows`: 머리 `CompareRow head`("원문 · 한국어", "번역 · English"), "제목", 블록마다 `CompareRow`(번역 쪽은 `Ins`, 제안이 없는 블록은 흐린 원문) | 흐름 3·13. 그 번역에 쓰는 항목은 따로 줄이 되지 않고 이 줄의 번역 쪽이다. 체크 하나가 함께 넣고 뺀다. 묶음 머리의 `TextButton` "모두 펼치기" · "모두 접기"가 그 묶음의 줄을 모두 연다. |
+| 끊긴 적용 | 적용된 줄은 `EntryStatus` "적용"과 굳은 체크, 남은 줄은 그대로 | 머리의 알약은 남은 수다. 다시 누르면 남은 것만 한다. |
 
 스토리: Screens/Assistant › Review, Patterns/Frame/PageHeader, Patterns/List/ListSection, Patterns/List/Table, Controls/Field/Checkbox, Monti/Translation/Compare, Monti/Proposal/Marks, Controls/Status/EntryStatus, Controls/Tabs/Tabs, Controls/Button/TextButton.
 

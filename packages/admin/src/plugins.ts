@@ -30,6 +30,12 @@ export type FieldInputProps = {
 	/** `null` empties the field. */
 	onChange: (value: unknown) => void;
 	readOnly: boolean;
+	/**
+	 * The value is one the assistant proposed and nobody has taken or changed yet (doc 05). The input shows it as its part's `proposal`
+	 * (`Input`, `Textarea`, `Switch` … take one); the field's label row already has the proposal's dot and "discard". Changing the value
+	 * takes the proposal first, as in any field.
+	 */
+	proposal: boolean;
 	entry: EntryView;
 };
 

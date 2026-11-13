@@ -43,6 +43,7 @@ import {
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, TrashCan, Undo } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useOpenConversation } from "../../assistant/use-assistant";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -83,12 +84,16 @@ export function TrashScreen({
 	go: (route: Route, options?: { replace?: boolean }) => void;
 }) {
 	const { t } = useAdmin();
+	const openConversation = useOpenConversation();
 	const state = useMemo(() => readTrashState(params), [params]);
 	const setState = (next: TrashState, options?: { replace?: boolean }) =>
 		go({ screen: "trash", params: writeTrashState(next) }, options);
 	const schema = useRead<SchemaRead>("schema.read");
 	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
-	const read = useRead<TrashList>("trash.list", trashQueryOf(state), { afterWrites: true });
+	const read = useRead<TrashList>("trash.list", trashQueryOf(state), {
+		afterWrites: true,
+		quiet: state.folder !== null,
+	});
 	const data = read.data;
 	const rows = data?.rows ?? [];
 	const place = state.folder ? (data?.place ?? null) : null;
@@ -517,7 +522,17 @@ export function TrashScreen({
 												<TrashRowDate
 													left={t("trash.left", { days })}
 													urgent={days < URGENT_DAYS}
-													byAssistant={row.byAssistant ? { label: t("trash.byAssistant") } : undefined}
+													byAssistant={
+														!row.byAssistant
+															? undefined
+															: // Its ✦ opens the conversation that threw it away; one deleted since leaves the mark alone.
+																row.conversationId !== null && openConversation
+																? {
+																		label: t("trash.openConversation"),
+																		onOpen: () => openConversation(row.conversationId as string),
+																	}
+																: { label: t("trash.byAssistant") }
+													}
 												/>
 											)}
 										</TableCell>

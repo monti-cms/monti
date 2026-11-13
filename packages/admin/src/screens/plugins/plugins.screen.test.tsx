@@ -36,6 +36,55 @@ const save = async () => {
 	await expect.element(page.getByText("저장됨", { exact: true }).first()).toBeVisible();
 };
 
+describe("the assistant's proposals for a plugin's fields (doc 10 with doc 14)", () => {
+	const states = async (loaded: Loaded) =>
+		(await loaded.site.db.selectFrom("monti_proposal_item").select("state").orderBy("position").execute()).map(
+			(item) => item.state,
+		);
+
+	it("10-1 a proposed value stands blue in the plugin's own input with its discard; the tab has the dot, the bubble walks there, the view has no mark", async () => {
+		const story = open({ loaders: plugins.SeoProposed.loaders });
+		await story.run();
+		// On the collection's own tab: the bubble counts both, and the plugin's tab says something waits in it.
+		await expect.element(page.getByText("1 / 2")).toBeVisible();
+		await expect.element(tab(/SEO/)).toBeVisible();
+		expect(tab(/SEO/).element().querySelector('[data-slot="change-dot"]')).not.toBeNull();
+		// The bubble's step goes to the field, in its tab.
+		await userEvent.click(button("다음"));
+		await userEvent.click(button("이전"));
+		await expect.poll(() => document.activeElement === field("SEO 제목").element()).toBe(true);
+		await expect.element(field("SEO 제목")).toHaveValue("블로그를 다시 만든 까닭");
+		expect(field("SEO 제목").element().hasAttribute("data-proposal")).toBe(true);
+		await expect.element(button("SEO 제목 제안 버리기")).toBeVisible();
+		// The plugin's switch stands as proposed, and can be discarded from its row too.
+		await expect.element(page.getByRole("switch", { name: /검색에서 숨기기/ })).toBeChecked();
+		await expect.element(button("검색에서 숨기기 제안 버리기")).toBeVisible();
+		// The preview shows what the entry holds, not what is proposed, and has nothing of a proposal on it.
+		await expect.element(search().getByText("첫 번째 글")).toBeVisible();
+		expect(search().element().closest("[data-slot=field]")?.querySelector("[data-slot=label-row]") ?? null).toBeNull();
+		expect(await states(story.loaded())).toEqual(["pending", "pending"]);
+	});
+
+	it("10-3 '버리기' on the row discards that one; '모두 받기' takes the other, and the save stores it and marks it applied", async () => {
+		const story = open({ loaders: plugins.SeoProposed.loaders });
+		await story.run();
+		await userEvent.click(tab(/SEO/));
+		await userEvent.click(button("검색에서 숨기기 제안 버리기"));
+		await expect.element(page.getByRole("switch", { name: /검색에서 숨기기/ })).not.toBeChecked();
+		await expect.element(page.getByText("1 / 1")).toBeVisible();
+		await userEvent.click(button("모두 받기"));
+		await expect.element(button("모두 받기")).not.toBeInTheDocument();
+		expect(field("SEO 제목").element().hasAttribute("data-proposal")).toBe(false);
+		// Taken, it is the entry's value in the editor: the preview follows it.
+		await expect.element(search().getByText("블로그를 다시 만든 까닭")).toBeVisible();
+		await save();
+		const saved = await entry(story.loaded());
+		expect(saved.values.seoTitle).toBe("블로그를 다시 만든 까닭");
+		expect(saved.values.seoNoindex ?? null).toBeNull();
+		await expect.poll(() => states(story.loaded())).toEqual(["applied", "discarded"]);
+	});
+});
+
 describe("the SEO tab in the editor (T84, T75; flow 1·08)", () => {
 	it("14-5 the plugin's tab stands after the collection's own, with the plugin's fields in the plugin's order", async () => {
 		await open(plugins.SeoTab).run();

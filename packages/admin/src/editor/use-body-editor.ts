@@ -1,6 +1,8 @@
 import type { Doc } from "@monti-cms/core";
 import { Dropcursor, Gapcursor, UndoRedo } from "@tiptap/extensions";
+import { GapCursor } from "@tiptap/pm/gapcursor";
 import type { Node as EditorNode } from "@tiptap/pm/model";
+import { NodeSelection } from "@tiptap/pm/state";
 import { type Editor, useEditor } from "@tiptap/react";
 import { useMemo, useRef } from "react";
 import { useAdmin } from "../operations/admin-context";
@@ -12,6 +14,8 @@ import { bodyKeys } from "./keys";
 import { MEDIA_VIEWS } from "./media-views";
 import { BlockIds, bodyStates } from "./plugins";
 import { ProposalMarks } from "./proposal-marks";
+import { nothingPicked, RangeOverWholeBlocks } from "./range-over-blocks";
+import { RequestMarks } from "./request-marks";
 import { bodyExtensions, nodeName } from "./schema";
 
 /** The site's blocks and the ones a collection's editor offers (`blocks.catalog`, doc 03). A template is written with every block the site has. */
@@ -78,9 +82,11 @@ export function useBodyEditor({
 			bodyKeys(() => latest.current.offered),
 			...(kit.blocks.some((block) => block.type === "footnote") ? [Footnotes] : []),
 			ProposalMarks.configure({ take: (id) => latest.current.onTakeProposal?.(id) }),
+			RequestMarks,
 			UndoRedo,
 			Dropcursor.configure({ width: 2 }),
 			Gapcursor,
+			RangeOverWholeBlocks,
 		];
 	}, [kit, blocks]);
 
@@ -109,6 +115,13 @@ export function useBodyEditor({
 					const at = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos ?? null;
 					return latest.current.onFiles?.(files, at, made.current) ?? false;
 				},
+			},
+			// A body that begins with a picture is given a selection that picks it: nothing is picked before the person picks it (T193).
+			onCreate: ({ editor: current }) => {
+				const { state, view } = current;
+				if (!(state.selection instanceof NodeSelection)) return;
+				const none = nothingPicked(state.doc, ($pos) => new GapCursor($pos));
+				view.dispatch(state.tr.setSelection(none).setMeta("addToHistory", false));
 			},
 			onUpdate: ({ editor: current }) => {
 				latest.current.onChange(docFromEditor(current.getJSON(), kit));

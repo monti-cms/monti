@@ -4,6 +4,7 @@ import type { Node as EditorNode } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { Catalog } from "./catalog";
+import { filledBlocks } from "./proposal-marks";
 
 /** A top-level block's translation link, when it has one (doc 04). */
 export const linkOf = (node: EditorNode): TranslationLink | null => (node.attrs.link as TranslationLink | null) ?? null;
@@ -277,11 +278,15 @@ export const TranslationBlocks = Extension.create({
 						const texts = placeholdersKey.getState(state);
 						if (!texts || texts.size === 0) return null;
 						const shown: Decoration[] = [];
+						// A block the assistant proposed a translation for shows the proposal's words where the source's stood.
+						const filled = filledBlocks(state);
 						state.doc.forEach((top, at) => {
 							if (linkOf(top)?.state !== "pending") return;
 							const visit = (node: EditorNode, pos: number) => {
 								const text =
-									node.isTextblock && node.content.size === 0 ? texts.get(String(node.attrs.blockId)) : undefined;
+									node.isTextblock && node.content.size === 0 && !filled.has(pos)
+										? texts.get(String(node.attrs.blockId))
+										: undefined;
 								if (text) shown.push(Decoration.node(pos, pos + node.nodeSize, { "data-source-placeholder": text }));
 							};
 							visit(top, at);

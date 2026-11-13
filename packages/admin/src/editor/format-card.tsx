@@ -8,6 +8,7 @@ import {
 	CommandSeparator,
 	EditorOverlay,
 	FloatingBar,
+	FormatBarRequest,
 	FormatButton,
 	type FormatMark,
 	Inline,
@@ -29,6 +30,7 @@ import type { BodyCatalogs } from "./catalog";
 import { clearFormats, hasClearableFormat, inTableCell } from "./commands";
 import { insertFootnote } from "./footnotes";
 import { addressOf, ENTRY_LINK, type LinkTarget, useLinkTargets } from "./link-targets";
+import { type PickedText, pickedText } from "./request-marks";
 import { markName, nodeName } from "./schema";
 
 /** The bar's two groups (editor-tools.md): the text formats, then the smaller ones and the link. */
@@ -55,7 +57,16 @@ const GAP = 8;
  * link opens a field for its address; the footnote button puts a footnote after the words. Formats a site adds (the ⋯) and the assistant's request
  * come with their own features.
  */
-export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: BodyCatalogs }) {
+export function FormatCard({
+	editor,
+	catalogs,
+	onRequest,
+}: {
+	editor: Editor;
+	catalogs: BodyCatalogs;
+	/** "✦ Request" (⌘J): asks the assistant about the picked words (doc 10, item 28). Left out where there is no assistant to ask. */
+	onRequest?: (picked: PickedText) => void;
+}) {
 	const { t } = useAdmin();
 	const [linking, setLinking] = useState(false);
 	const [more, setMore] = useState(false);
@@ -82,6 +93,7 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 				href: String(current.getAttributes("link").href ?? ""),
 				clearable: hasClearableFormat(current.state),
 				inFootnote: selection.$from.parent.type.name === nodeName("footnote"),
+				requestable: pickedText(current.state) !== null,
 			};
 		},
 	});
@@ -175,6 +187,18 @@ export function FormatCard({ editor, catalogs }: { editor: Editor; catalogs: Bod
 							</Command>
 						</PopoverContent>
 					</Popover>
+				) : null}
+				{onRequest && state.requestable ? (
+					<>
+						<Separator orientation="vertical" length="bar" />
+						<FormatBarRequest
+							label={t("format.request")}
+							onClick={() => {
+								const picked = pickedText(editor.state);
+								if (picked) onRequest(picked);
+							}}
+						/>
+					</>
 				) : null}
 			</FloatingBar>
 		</EditorOverlay>

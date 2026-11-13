@@ -89,6 +89,8 @@ export const Inline: Story = {
 			<Input size="title" defaultValue="기본 정보" aria-label="탭 이름" />
 			<Input size="display" defaultValue="처음 쓰는 블로그 글" aria-label="제목" />
 			<Input size="inherit" defaultValue="참고" aria-label="블록 제목" />
+			{/* A title the assistant proposed: read as text, it has no rule to turn blue, so the words are. */}
+			<Input size="display" proposal defaultValue="어시스턴트가 제안한 제목" aria-label="제안한 제목" />
 		</Stack>
 	),
 };

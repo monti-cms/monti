@@ -7,7 +7,7 @@ import {
 	middleOf,
 	rowHeights,
 	spillingCells,
-	titleUnderPointer,
+	wholeUnderPointer,
 } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
@@ -40,8 +40,8 @@ describe("the list's column names", () => {
 		expect(spillingCells(main().getByRole("table").element())).toEqual([]);
 		// The row's link covers the row: the pointer still finds what a cut status, category and day say.
 		const row = main().getByRole("row").filter({ hasText: "발행 후 고친 글" });
-		expect(titleUnderPointer(row.getByText("수정 중").element())).toBe("수정 중");
-		expect(titleUnderPointer(row.getByText("개발", { exact: true }).element())).toBe("개발");
+		expect(wholeUnderPointer(row.getByText("수정 중").element())).toBe("수정 중");
+		expect(wholeUnderPointer(row.getByText("개발", { exact: true }).element())).toBe("개발");
 		// A press on them opens the row as a press anywhere on it does.
 		await userEvent.click(row.getByText("개발", { exact: true }));
 		await expect.poll(() => location.hash).toMatch(/^#\/c\/post\/[^?]+$/);
@@ -55,7 +55,8 @@ const head = (id: string) => document.querySelector<HTMLElement>(`th[data-column
 const sidebar = (name: string | RegExp) => page.getByRole("navigation").getByRole("button", { name });
 
 describe("the list: what is kept, and what comes back", () => {
-	it("06 [dragging] [dropped] a column's edge held and dragged 80px stays under the pointer and moves no other edge; let go, the width is saved for the collection and is there when the list is read again", async () => {
+	// Saved for the collection: it is there when the list is read again.
+	it("06 [dragging] [dropped] a column's edge held and dragged 80px stays under the pointer and moves no other edge; let go, the width is saved", async () => {
 		const story = listAt();
 		await story.run();
 		await rowsShown();

@@ -10,7 +10,7 @@ import type { Monti } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useSyncExternalStore } from "react";
 import { userEvent, within } from "storybook/test";
-import { type StorySite, startAt, storySite } from "../../.storybook/pglite-site";
+import { nextStorySite, type StorySite, startAt, storySite } from "../../.storybook/pglite-site";
 import { MontiAdmin } from "../app";
 import { NO_ANSWER, type StreamTransport, type Transport } from "../operations/transport";
 import { schema } from "../screens/story-schema";
@@ -199,15 +199,45 @@ const GROUP = "_group";
 const json = (status: number, body: unknown) =>
 	new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 /** The one service of the stories, asked only for its models when the key is added. */
-const network: typeof globalThis.fetch = async (input) =>
-	String(input).startsWith("https://api.anthropic.com/")
-		? json(200, {
-				data: ["claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"].map((id) => ({
-					id,
-					capabilities: { thinking: { supported: id !== "claude-haiku-5-5" }, image_input: { supported: true } },
-				})),
-			})
-		: json(404, {});
+const serviceWith =
+	(pictures: boolean): typeof globalThis.fetch =>
+	async (input) =>
+		String(input).startsWith("https://api.anthropic.com/")
+			? json(200, {
+					data: ["claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"].map((id) => ({
+						id,
+						capabilities: { thinking: { supported: id !== "claude-haiku-5-5" }, image_input: { supported: pictures } },
+					})),
+				})
+			: json(404, {});
+const network = serviceWith(true);
+
+/**
+ * A loader for a test of another screen's story: the site that story makes next has the assistant, with a key and a model that says
+ * what `script` tells it (`answer` for the quick tasks). The model comes back with what the story loaded (`model`).
+ */
+export const assisted =
+	(
+		script: Scripted[] = [],
+		answer?: Parameters<typeof scriptedProvider>[1],
+		/** `key: false`: no AI key on the site. `pictures: false`: its models do not read pictures. */
+		options: { key?: boolean; pictures?: boolean } = {},
+	) =>
+	async (): Promise<{ model: ScriptedProvider }> => {
+		const model = scriptedProvider(script, answer);
+		nextStorySite({
+			plugins: [assistant({ provider: model.for })],
+			fetch: options.pictures === false ? serviceWith(false) : network,
+			secret: "story-secret-for-the-assistant",
+			after:
+				options.key === false
+					? undefined
+					: async (monti) => {
+							await monti.run("keys.add", { service: "anthropic", name: "Anthropic 개인", secret: KEY }, admin);
+						},
+		});
+		return { model };
+	};
 
 /** A turn that never ends: the moment a story shows is the one while it works. */
 const never = new Promise<never>(() => {});
@@ -696,5 +726,213 @@ export const ReviewChangedMeanwhile: Story = {
 		window.location.hash = `#/ai/review/${proposal?.id}`;
 		await page.findByRole("heading", { name: "제안 검토" }, wait);
 		await page.findByRole("button", { name: "다시 만들기" }, wait);
+	},
+};
+
+/** "Make again" for the third post's summary: the change made on the entry as it is now, then a line about it. */
+export const madeAgain: Script = async (ids, version) => [
+	{
+		calls: [
+			{
+				name: "entries_save",
+				input: {
+					id: ids.third,
+					version: (await version(ids.third)) + 1,
+					values: { summary: "다시 쓴 요약입니다." },
+					[GROUP]: "요약 채우기",
+				},
+			},
+		],
+	},
+	{ text: "다시 만들었습니다." },
+];
+
+/**
+ * "Make again" pressed with the keyboard on the review page (T241): the button goes once the change is made again, and the focus is on
+ * that row's check, not on the page.
+ */
+export const ReviewMadeAgainByKeyboard: Story = {
+	loaders: site({ script: scripts(proposed, madeAgain) }),
+	play: async (context) => {
+		await ReviewChangedMeanwhile.play?.(context);
+		const page = within(context.canvasElement.ownerDocument.body);
+		const again = await page.findByRole("button", { name: "다시 만들기" }, wait);
+		// As the Tab key leaves it: the keyboard's focus is on the button, and Enter presses it.
+		await userEvent.tab();
+		again.focus();
+		await userEvent.keyboard("{Enter}");
+		// The row with its new change; the focus is on its check. Where the focus lands is asserted by the screen test, with a real key:
+		// a story's keys are made by script, and whether a browser takes a focus set after them for the keyboard's depends on what was
+		// pressed in the page before.
+		await page.findAllByText("다시 쓴 요약입니다.", {}, wait);
+	},
+};
+
+/** "Polish the second post": one change of its first paragraph, made on the entry as it is when asked. */
+export const polished: Script = (ids, version) => [
+	async () => ({
+		calls: [
+			{
+				name: "body_edit",
+				input: {
+					id: ids.second,
+					version: await version(ids.second),
+					ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "첫" }],
+					[GROUP]: "다듬기",
+				},
+			},
+		],
+	}),
+	{ text: "첫 문단을 다듬었습니다." },
+];
+
+/** Gives the second post a body of one paragraph, as it is before the assistant is asked to polish it. */
+export const writeSecond = async ({ site: made, ids }: Loaded, words = "처음 문단입니다.") => {
+	const now = (await made.monti.run("entries.get", { id: ids.second }, admin)) as { entry: { version: number } };
+	await made.monti.run(
+		"entries.save",
+		{
+			id: ids.second,
+			version: now.entry.version,
+			doc: { type: "doc", blocks: [{ id: "b_1", type: "paragraph", content: [{ type: "text", text: words }] }] },
+		},
+		admin,
+	);
+};
+
+/**
+ * The name on a proposal's bubble in the editor (T241): pressed, it opens the panel on the conversation that proposed the change, whatever
+ * conversation the panel was on and though it was closed.
+ */
+export const BubbleOpensItsConversation: Story = {
+	loaders: site({ script: polished }),
+	play: async ({ canvasElement, loaded }) => {
+		const page = await screen(canvasElement);
+		await writeSecond(loaded as Loaded);
+		await openPanel(page);
+		await say(page, "둘째 글 다듬어 줘");
+		await page.findByText("첫 문단을 다듬었습니다.", {}, wait);
+		await page.findByRole("button", { name: "보내기" }, wait);
+		// Another conversation is open, and the panel is closed, when the person reads the entry.
+		await userEvent.click(await page.findByRole("button", { name: "새 대화" }));
+		await userEvent.click(await page.findByRole("button", { name: "닫기" }));
+		window.location.hash = `#/c/post/${(loaded as Loaded).ids.second}`;
+		await userEvent.click(await page.findByRole("button", { name: "둘째 글 다듬어 줘" }, wait));
+		await page.findByText("첫 문단을 다듬었습니다.", {}, wait);
+	},
+};
+
+/** Flow 2·07: rows picked on the list and "✦ request" pressed: the panel open with the picked entries as a chip, nothing sent. */
+export const BulkRequest: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await userEvent.click(await page.findByRole("checkbox", { name: /둘째 글/ }, wait));
+		await userEvent.click(await page.findByRole("checkbox", { name: /셋째 글/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "요청" }, wait));
+		await page.findByText("고른 글 2편", {}, wait);
+	},
+};
+
+/** "Throw the second post away": one move to the trash, proposed and applied from its card. */
+const thrownAway: Script = (ids) => [
+	{ calls: [{ name: "trash_move", input: { rows: [{ kind: "entry", id: ids.second }], [GROUP]: "휴지통으로" } }] },
+	{ text: "둘째 글을 휴지통으로 옮기자고 제안했습니다." },
+];
+const throwAway = async (page: Page) => {
+	await openPanel(page);
+	await say(page, "둘째 글 버려 줘");
+	await userEvent.click(await page.findByRole("button", { name: "1건 적용" }, wait));
+	await page.findByText("✓ 1건 적용", {}, wait);
+	await userEvent.click(await page.findByRole("button", { name: "닫기" }));
+};
+
+/** Flow 5·15: the trash, where the ✦ of what the assistant threw away is a button that opens the conversation it was asked in. */
+export const TrashOpensConversation: Story = {
+	loaders: site({ script: thrownAway }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await throwAway(page);
+		window.location.hash = "#/trash";
+		await page.findByRole("button", { name: "버린 대화 열기" }, wait);
+	},
+};
+
+/** The activity log's ⋯ on the assistant's line: "대화" opens the conversation of that request. */
+export const ActivityConversation: Story = {
+	loaders: site({ script: thrownAway }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await throwAway(page);
+		window.location.hash = "#/activity";
+		// The assistant's line quotes its request: its own ⋯.
+		const line = (await page.findByText(/둘째 글 버려 줘/, { selector: "a" }, wait)).closest("tr");
+		if (!line) throw new Error("the assistant's line is not a row");
+		await userEvent.click(await within(line as HTMLElement).findByRole("button", { name: "행 메뉴" }, wait));
+		await page.findByRole("menuitem", { name: "대화" }, wait);
+	},
+};
+
+/** Flow 3·13: a proposal that makes translations, reviewed entry by entry: the first row opened to its source beside the translation. */
+export const ReviewTranslations: Story = {
+	loaders: site(),
+	play: async ({ canvasElement, loaded }) => {
+		const page = await screen(canvasElement);
+		const { site: made, ids } = loaded as Loaded;
+		const version = async (id: string) =>
+			((await made.monti.run("entries.get", { id }, admin)) as { entry: { version: number } }).entry.version;
+		await made.monti.run(
+			"entries.save",
+			{
+				id: ids.second,
+				version: await version(ids.second),
+				doc: {
+					type: "doc",
+					blocks: [
+						{ id: "b1", type: "paragraph", content: [{ type: "text", text: "관리자 화면을 처음 엽니다." }] },
+						{ id: "b2", type: "codeBlock", content: [{ type: "text", text: "pnpm dev" }] },
+					],
+				},
+			},
+			admin,
+		);
+		const at = new Date();
+		await made.db
+			.insertInto("conversations")
+			.values({ id: "c-translate", title: "번역", created_at: at, last_opened_at: at })
+			.execute();
+		const proposal = await made.monti.proposals.create("c-translate", "이 두 편 영어로 번역해 줘.");
+		const second = await made.monti.proposals.add(
+			proposal,
+			"translations.create",
+			{ source: ids.second, locale: "en" },
+			"새 글",
+		);
+		await made.monti.proposals.add(proposal, "translations.create", { source: ids.third, locale: "en" }, "새 글");
+		await made.monti.proposals.add(
+			proposal,
+			"entries.save",
+			{
+				id: { $item: second.itemId },
+				version: 1,
+				title: "The second post",
+				doc: {
+					type: "doc",
+					blocks: [
+						{
+							id: "t1",
+							type: "paragraph",
+							link: { from: "b1", seen: "", state: "translated" },
+							content: [{ type: "text", text: "Opening the admin for the first time." }],
+						},
+					],
+				},
+			},
+			"새 글",
+		);
+		window.location.hash = `#/ai/review/${proposal}`;
+		const [open] = await page.findAllByRole("button", { name: "펼치기" }, wait);
+		if (open) await userEvent.click(open);
+		await page.findByText("Opening the admin for the first time.", {}, wait);
 	},
 };

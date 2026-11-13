@@ -68,13 +68,24 @@ export function useOperation<Output = unknown>(name: string) {
 /**
  * Reads with an operation when the screen opens, whenever `reload` is called, and with `afterWrites` after every write that goes through (the
  * sidebar's counts, doc 15). With `skip` it reads nothing (a new record has nothing to read yet).
+ *
+ * A read that is refused or gets no answer is said at the screen's top, with "try again" (`ReadFailedBanner`): the caller does nothing for
+ * that. Two kinds of read say otherwise:
+ * - `quiet`: a refusal with a reason is a state the screen knows and shows its own way (the line is gone, the file is in the trash). Only a
+ *   lost call (no answer, a server that failed) is said at the top.
+ * - `own`: the screen says this read's failures itself, and the shared banner waits while it does (no two banners for one matter):
+ *   - `true`: its own banner on every failure, over what it read before too (the activity log's list);
+ *   - `"empty"`: its own banner only while it has nothing to show (the compare view); a later failure is said at the top like any other;
+ *   - `"answered"`: its own banner while it has nothing, and once it has, the toast that answers the press which read again (an
+ *     editor's entry): nothing is said at the top a second time.
+ * An ended session is never said here: it has its own banner.
  */
 export function useRead<Output>(
 	name: string,
 	input: unknown = {},
-	options: { afterWrites?: boolean; skip?: boolean } = {},
+	options: { afterWrites?: boolean; skip?: boolean; quiet?: boolean; own?: true | "empty" | "answered" } = {},
 ) {
-	const { onWrite } = useAdmin();
+	const { onWrite, reads } = useAdmin();
 	const { run } = useOperation<Output>(name);
 	const [data, setData] = useState<Output | null>(null);
 	const [refusal, setRefusal] = useState<Refusal | null>(null);
@@ -104,5 +115,20 @@ export function useRead<Output>(
 		() => (options.afterWrites ? onWrite(() => void reload()) : undefined),
 		[options.afterWrites, onWrite, reload],
 	);
+	// What the screen's top says of this read. `me` is this read for its whole life; the newest `reload` is the one made again.
+	const me = useRef({}).current;
+	const again = useRef(reload);
+	again.current = reload;
+	const quiet = options.quiet ?? false;
+	const holds = data !== null;
+	/** The screen's own banner is speaking for this read. */
+	const own = options.own === true || (options.own !== undefined && !holds);
+	/** The screen has answered this failure already, in its own way. */
+	const answered = options.own === "answered" && holds;
+	useEffect(() => {
+		const said = refusal !== null && !skip && refusal.status !== 401 && (!quiet || isLost(refusal)) && !answered;
+		reads.set(me, said ? { refusal, own, reload: () => again.current() } : null);
+	}, [reads, me, refusal, skip, quiet, own, answered]);
+	useEffect(() => () => reads.set(me, null), [reads, me]);
 	return { data, refusal, reload };
 }

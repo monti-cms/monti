@@ -43,7 +43,7 @@ const undoFromMenu = async (words: string) => {
 };
 const sidebar = (name: RegExp) => page.getByRole("navigation").getByRole("button", { name });
 const sidebarLog = () => sidebar(/^활동 기록/);
-const banner = () => page.getByRole("status").filter({ hasText: /전송 \d+건 실패/ });
+const banner = () => page.getByRole("note").filter({ hasText: /전송 \d+건 실패/ });
 const panel = () => page.getByRole("complementary");
 /** What each row's delivery cell says, top to bottom. */
 const deliveryCells = () =>
@@ -235,7 +235,8 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(panel().getByRole("button", { name: "다시 보내기" })).not.toBeInTheDocument();
 	});
 
-	it("13-4 [flow 12·05] [flow 12·06] [flow 12·07] three failed deliveries: a banner at the very top says so with the sidebar's number; its 보기 filters to them; sending all again clears the banner and the count and says how many went", async () => {
+	// The banner stands at the very top with the sidebar's number; sending all again says how many went.
+	it("13-4 [flow 12·05] [flow 12·06] [flow 12·07] three failed deliveries: the top banner counts them, 보기 filters to them, and sending all again clears both", async () => {
 		const drawn = draw(stories.ThreeFailed);
 		await drawn.run();
 		await expect.element(banner()).toHaveTextContent("전송 3건 실패");
@@ -649,7 +650,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row(FAILED)).toBeVisible();
 		const cell = row(FAILED).element().querySelectorAll("td")[2];
 		expect(cell?.textContent).toMatch(/^\d\d\. \d\d \d\d:\d\d$/);
-		expect(cell?.getAttribute("title")).toBe(cell?.textContent);
+		expect(cell?.getAttribute("data-cut-words")).toBe(cell?.textContent);
 	});
 	it("[flow 12·03] the details closed with the keyboard give focus back to the row that opened them", async () => {
 		await draw(stories.Log).run();
@@ -1308,7 +1309,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await drawn.run();
 		const { site, hooks } = drawn.loaded();
 		await expect.element(row(FAILED)).toBeVisible();
-		const failedToRead = () => page.getByRole("status").filter({ hasText: "기록을 불러오지 못했습니다" });
+		const failedToRead = () => page.getByRole("note").filter({ hasText: "기록을 불러오지 못했습니다" });
 		await expect.element(failedToRead()).not.toBeInTheDocument();
 		// Something is written elsewhere and the log reads again: that read gets no answer.
 		hooks.lose.add("activity.list");

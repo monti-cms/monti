@@ -345,7 +345,7 @@ describe("settings: a save that is refused", () => {
 		});
 		await shown.run();
 		await userEvent.click(saveGroup());
-		const banner = page.getByRole("status").filter({ hasText: "저장하지 못했습니다" });
+		const banner = page.getByRole("note").filter({ hasText: "저장하지 못했습니다" });
 		await expect.element(banner).toBeVisible();
 		const title = () => Math.round(page.getByRole("heading", { name: "설정" }).element().getBoundingClientRect().top);
 		const under = title();
@@ -377,7 +377,7 @@ describe("settings: a save that is refused", () => {
 			),
 		});
 		await shown.run();
-		const banner = (words: string) => page.getByRole("status").filter({ hasText: words });
+		const banner = (words: string) => page.getByRole("note").filter({ hasText: words });
 		await userEvent.click(saveGroup());
 		await expect.element(banner("저장하지 못했습니다")).toBeVisible();
 		// Every change undone: nothing is left for "save again" to save, so the banner and its button go.

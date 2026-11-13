@@ -1,4 +1,4 @@
-import { Inline, Stack, Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
+import { Inline, Stack, StandalonePage, Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AssistantPanel } from "./assistant/assistant-panel";
 import { ReviewScreen } from "./assistant/review-screen";
@@ -20,6 +20,7 @@ import { ActivityScreen } from "./screens/activity/activity-screen";
 import { DataScreen } from "./screens/data/data-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
+import { ReadFailedBanner } from "./screens/frame/read-failed";
 import { KeysScreen } from "./screens/keys/keys-screen";
 import { filterColumn, type ListState, writeState } from "./screens/list/list-query";
 import { ListScreen } from "./screens/list/list-screen";
@@ -219,6 +220,14 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 					}
 					onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
 					onLanguages={() => leave(() => go({ screen: "settings", tab: "languages" }))}
+					onActivity={(title) =>
+						leave(() =>
+							go({
+								screen: "activity",
+								params: new URLSearchParams({ ...(title ? { q: title } : {}), kind: "assistant" }),
+							}),
+						)
+					}
 				/>
 			</BesideAssistant>
 		);
@@ -298,7 +307,8 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 function Gate({ denied }: { denied?: string }) {
 	const resume = useAdmin().session.resume;
 	const session = useSession();
-	if (!session.state) return null;
+	// Until the session is read there is nothing to draw. A read that did not come is said, with the way to try again: the admin is not left blank.
+	if (!session.state) return <StandalonePage banner={<ReadFailedBanner />} />;
 	if (!session.state.session)
 		return (
 			<LoginScreen

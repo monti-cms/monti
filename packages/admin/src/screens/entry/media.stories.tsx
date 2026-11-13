@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { MontiAdmin } from "../../app";
 import { addFile, fillLibrary } from "../media/media.stories";
@@ -74,7 +74,9 @@ const meta = {
 	title: "Screens/EditorMedia",
 	render: (_args, { loaded }) => {
 		const { site } = loaded as Loaded;
-		return <MontiAdmin transport={site.transport} uploader={site.uploader} siteName="example.dev" />;
+		return (
+			<MontiAdmin transport={site.transport} streams={site.streams} uploader={site.uploader} siteName="example.dev" />
+		);
 	},
 } satisfies Meta;
 export default meta;
@@ -165,6 +167,27 @@ export const ManyInBody: Story = {
 			{ id: "i_2", type: "image", attrs: { media: code, alt: "화면에 뜬 코드" } },
 		],
 	}),
+};
+
+/** A range picked from the text with Shift+↓ takes in the pictures and the file after it: each stands on the selection's ground (T194). */
+export const RangeOverPictures: Story = {
+	loaders: ManyInBody.loaders,
+	play: async ({ canvasElement }) => {
+		const words = await within(canvasElement).findByText("글의 첫 문단이에요.", {}, wait);
+		await within(canvasElement).findByRole("img", { name: "화면에 뜬 코드" }, wait);
+		await userEvent.click(words);
+		// The caret at the text's end, then Shift+↓ three times, as the keys themselves (the story's keyboard does not move a caret).
+		const text = words.firstChild as Text;
+		getSelection()?.collapse(text, text.length);
+		const editor = words.closest("[contenteditable]") as HTMLElement;
+		for (const _ of [1, 2, 3]) {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			editor.dispatchEvent(
+				new KeyboardEvent("keydown", { key: "ArrowDown", shiftKey: true, bubbles: true, cancelable: true }),
+			);
+		}
+		await waitFor(() => expect(canvasElement.querySelectorAll("[data-covered]")).toHaveLength(3), wait);
+	},
 };
 
 /** A translation whose body ends in a picture after a file: side by side, each block stands between cells the editor does not edit (T134). */

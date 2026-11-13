@@ -18,8 +18,9 @@ function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
 
 /**
  * The name of an icon button, a small black pill: 12px, one line, with its key combination after it in mono when it has one. Only names go in it (one or two
- * words), never a sentence; a text button needs no tooltip. It also says whole a value its cell shows cut: a row's languages (`LocaleCodes`), a row's title
- * (`RowTitle`, which lets a long one wrap). And on a lock (`LockMark`) it says why the value is locked.
+ * words), never a sentence; a text button needs no tooltip. It also says whole the words a box shows cut (`CutWords`: a row's title, a cut cell, a banner's
+ * sentence, a row's languages), which lets long ones wrap and stands against its box (`anchor`) with no trigger. And on a lock (`LockMark`) it says why the
+ * value is locked.
  */
 function TooltipContent({
 	className,
@@ -27,11 +28,12 @@ function TooltipContent({
 	sideOffset = 6,
 	align = "center",
 	alignOffset = 0,
+	anchor,
 	shortcut,
 	children,
 	...props
 }: TooltipPrimitive.Popup.Props &
-	Pick<TooltipPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> & {
+	Pick<TooltipPrimitive.Positioner.Props, "align" | "alignOffset" | "anchor" | "side" | "sideOffset"> & {
 		/** The keys that do the same (`["mod", "S"]`), written for the system: "⌘S" on a Mac, "Ctrl+S" elsewhere. */
 		shortcut?: ShortcutKeys;
 	}) {
@@ -40,6 +42,7 @@ function TooltipContent({
 			<TooltipPrimitive.Positioner
 				align={align}
 				alignOffset={alignOffset}
+				anchor={anchor}
 				side={side}
 				sideOffset={sideOffset}
 				className="isolate z-50"

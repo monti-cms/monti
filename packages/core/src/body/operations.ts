@@ -10,7 +10,7 @@ import { keepLinks } from "../translations/links";
 import { addSkips, followedHashes } from "../translations/source";
 import { blockOn, markOn } from "./blocks";
 import { assertDoc, editorOf } from "./check";
-import { asDoc, type Doc, DocShape, plainText, walk } from "./doc";
+import { asDoc, type Block, blockMap, type Doc, DocShape, plainText, walk } from "./doc";
 import { applyOps, BodyOpShape } from "./edit";
 import { bodyText } from "./text";
 
@@ -64,6 +64,15 @@ async function editedBody(
 	assertDoc(next, ctx.site.kit, (entry.doc as Doc | null) ?? null);
 	return { entry, next };
 }
+
+/** A block's words: its own text, or the text of the blocks it holds. */
+const wordsOf = (block: Block): string =>
+	block.children
+		? [...walk(block.children)]
+				.map((each) => plainText(each.block.content))
+				.filter(Boolean)
+				.join(" ")
+		: plainText(block.content);
 
 export const bodyOperations = [
 	defineOperation({
@@ -125,10 +134,22 @@ export const bodyOperations = [
 					(block) => `entry:${input.id}/body/${block}`,
 				),
 			),
-		preview: (input) => ({
-			summary: { key: "body.edit", values: { count: input.ops.length } },
-			changes: [{ kind: "entry", id: input.id }],
-		}),
+		async preview(input, ctx) {
+			// The words of the blocks it names, as they are now: a screen that meets the proposal after the text moved on shows them beside
+			// what was proposed, and does not draw the change over words it was not made on.
+			const blocks = blockMap(asDoc((await entryOf(ctx, input.id)).doc));
+			const named = input.ops.flatMap((op) => (op.op === "remove" ? op.blocks : op.op === "insert" ? [] : [op.block]));
+			return {
+				summary: { key: "body.edit", values: { count: input.ops.length } },
+				changes: [{ kind: "entry", id: input.id }],
+				was: Object.fromEntries(
+					named.flatMap((id) => {
+						const block = blocks.get(id);
+						return block ? [[id, wordsOf(block)]] : [];
+					}),
+				),
+			};
+		},
 		async check(input, ctx) {
 			await editedBody(ctx, input);
 		},
