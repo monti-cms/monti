@@ -1,5 +1,5 @@
 import { type SiteEntry, type SiteImage, siteImage } from "@monti-cms/core";
-import { SEO_FIELDS, SEO_FOLLOWS, type SeoFollows } from "./fields";
+import { SEO_FIELDS, SEO_FOLLOWS, type SeoFollows } from "./names";
 
 /** An entry's SEO values as a page's metadata takes them. What is empty is left out. */
 export type SeoValues = {
