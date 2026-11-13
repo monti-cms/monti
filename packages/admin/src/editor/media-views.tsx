@@ -151,14 +151,16 @@ function UploadInPlace({
 	// A file cut off says so in the box that stands for a file, and goes as any block goes (screens/editor.md).
 	if (upload.status === "failed")
 		return (
-			<FileBlock
-				name={upload.name}
-				meta={t("library.failed")}
-				tone="danger"
-				selected={selected}
-				// The entry cannot be changed (archived since the file was cut off): the file stays to be tried again later, with no way to try it now.
-				action={media.readOnly ? undefined : <RetryButton onRetry={() => media.retry(upload)} />}
-			/>
+			// Picked, the box's 2px line says so, as for a file or a picture: one line, the block's own border steps aside.
+			<BlockBox selected={selected}>
+				<FileBlock
+					name={upload.name}
+					meta={t("library.failed")}
+					tone="danger"
+					// The entry cannot be changed (archived since the file was cut off): the file stays to be tried again later, with no way to try it now.
+					action={media.readOnly ? undefined : <RetryButton onRetry={() => media.retry(upload)} />}
+				/>
+			</BlockBox>
 		);
 	return isImage ? (
 		<UploadingImage src={upload.preview} progress={upload.progress} label={t("editor.image.uploading")} />

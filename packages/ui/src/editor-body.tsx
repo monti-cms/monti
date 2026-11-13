@@ -22,7 +22,8 @@ import { cn } from "./cn";
  * - `data-covered`: a block that is one thing, inside a range picked from a text (a drag or Shift+arrow that went over it): it stands on the
  *   selection's ground, as picked words do.
  * - `data-check`, the box at the start of a checklist's item (`ul[data-checklist]`), and `data-checked` on the item: drawn like `Checkbox` (14px, the
- *   faint ring; ticked, the ink ring and fill with its ✓). Where the text is written (`contenteditable`) the box shows the hand and `Checkbox`'s hover.
+ *   faint ring; ticked, the ink ring and fill with its ✓). Where the text is written (`contenteditable`) the box shows the hand and `Checkbox`'s hover,
+ *   and with the keyboard's focus `Checkbox`'s line around it.
  */
 const EDITOR_BODY = cn(
 	"relative flex grow flex-col text-monti-reading text-monti-default outline-none [&_.ProseMirror]:outline-none",
@@ -40,7 +41,7 @@ const EDITOR_BODY = cn(
 	"[&_ul[data-checklist]>li]:relative [&_ul[data-checklist]>li]:pl-monti-24",
 	// A checklist item's box is the `data-check` the editor puts at the item's start: `Checkbox`'s 14px box, its ✓ drawn when the item is ticked. While the
 	// text is written it is pressed to tick and answers the pointer as `Checkbox` does (`CHECK_HOVER`); read only, it is a mark.
-	"[&_[data-check]]:absolute [&_[data-check]]:top-monti-8 [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:items-center [&_[data-check]]:justify-center [&_[data-check]]:rounded-monti-sm [&_[data-check]]:border-[1.5px] [&_[data-check]]:border-monti-faint [&_[data-check]]:text-monti-on-emphasis [&_[data-check]]:transition-colors [&_[data-check]_svg]:invisible",
+	"[&_[data-check]]:absolute [&_[data-check]]:top-monti-8 [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:items-center [&_[data-check]]:justify-center [&_[data-check]]:rounded-monti-sm [&_[data-check]]:border-[1.5px] [&_[data-check]]:border-monti-faint [&_[data-check]]:text-monti-on-emphasis [&_[data-check]]:transition-colors [&_[data-check]:focus-visible]:outline-2 [&_[data-check]:focus-visible]:outline-offset-2 [&_[data-check]:focus-visible]:outline-monti-contrast/50 [&_[data-check]_svg]:invisible",
 	"[&_li[data-checked]>[data-check]]:border-monti-contrast [&_li[data-checked]>[data-check]]:bg-monti-emphasis [&_li[data-checked]>[data-check]_svg]:visible",
 	"[&_[contenteditable=true]_[data-check]]:cursor-pointer [&_[contenteditable=true]_[data-check]:hover]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&_[contenteditable=true]_li:not([data-checked])>[data-check]:hover]:border-(color:--monti-fg-muted)",
 	// A quote, code, a table and the divider.

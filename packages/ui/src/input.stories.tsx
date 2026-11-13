@@ -22,7 +22,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-/** Placeholder, filled, disabled, invalid (the underline turns red), proposal (the assistant wrote it: blue), and the other input types. */
+/** Placeholder, filled, disabled, read-only, invalid (the underline turns red), proposal (the assistant wrote it: blue), and the other input types. */
 export const States: Story = {
 	render: () => (
 		<Stack gap={16}>
@@ -41,6 +41,12 @@ export const States: Story = {
 			<Stack gap={4}>
 				<StoryCaption>disabled, empty</StoryCaption>
 				<Input disabled placeholder="슬러그" />
+			</Stack>
+			<Stack gap={4}>
+				<StoryCaption>
+					read-only (a value to read: its line stays as it is under the pointer and the focus)
+				</StoryCaption>
+				<Input readOnly defaultValue="보관한 글의 대체 텍스트" />
 			</Stack>
 			<Stack gap={4}>
 				<StoryCaption>invalid</StoryCaption>

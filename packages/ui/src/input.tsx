@@ -22,7 +22,7 @@ const INLINE_SIZE = {
  * A one-line field drawn as an underline, never a box. The underline turns ink on focus and danger when `aria-invalid`; the placeholder is
  * faint. `proposal` marks a value the assistant wrote and nobody has touched: blue text and a 1.5px blue underline. `action` is a control at the
  * end of the line (a button that makes the value again from the body); the underline then runs under it too, like a select's caret. A `readOnly`
- * one is a value to read (a read-only entry's picture settings): it keeps its line and its text, takes the caret to select, and has no tint under the pointer.
+ * one is a value to read (a read-only entry's picture settings): it keeps its line and its text as they are (under the pointer and the focus too), and takes the caret to select.
  */
 function Input({
 	className,
@@ -83,7 +83,9 @@ function Input({
 							// With an action the wrapper below draws the rule, the tint and the room; the input inside keeps none.
 							// A read-only one is a value to read: nothing to type, so no tint under the pointer.
 							!action && !props.readOnly && FIELD_HOVER,
-							"border-0 border-monti-default border-b text-monti-default text-monti-reading focus-visible:border-monti-contrast aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal md:text-monti-body",
+							// Read-only, the line stays as it is under the focus too: nothing is being written (field.md).
+							!props.readOnly && "focus-visible:border-monti-contrast",
+							"border-0 border-monti-default border-b text-monti-default text-monti-reading aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal md:text-monti-body",
 							!action && FIELD_INSET,
 						),
 				inline ? INLINE_SIZE[size] : size === "sm" && "md:text-monti-note",
@@ -109,7 +111,8 @@ function Input({
 			className={cn(
 				cn(
 					!props.readOnly && FIELD_HOVER,
-					"flex w-full min-w-0 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+					!props.readOnly && "focus-within:border-monti-contrast",
+					"flex w-full min-w-0 border-monti-default border-b transition-colors has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
 					FIELD_INSET,
 				),
 				"items-center",

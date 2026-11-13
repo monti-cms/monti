@@ -1,4 +1,4 @@
-import { type Doc, defineSchema, type Schema } from "@monti-cms/core";
+import { type Doc, defineMark, defineSchema, type Schema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
@@ -193,6 +193,7 @@ type Kind =
 	| "checklist"
 	| "addressInTab"
 	| "related"
+	| "ownFormat"
 	| "proposed"
 	| "proposedFields"
 	| "proposedStale"
@@ -416,6 +417,8 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 							? withRelated
 							: schema,
 			auth: { password: true },
+			// A site with a text format of its own: the format bar's ⋯ lists it (editor-tools.md).
+			...(kind === "ownFormat" ? { marks: [defineMark({ type: "highlight", label: "형광펜" })] } : {}),
 			// A site signs its preview links: without a secret "Preview" has nothing to open.
 			secret: "story secret",
 			signedIn: true,
@@ -474,6 +477,9 @@ export const Draft: Story = {
 		await expect(page.getByRole("button", { name: "발행하기" })).toBeVisible();
 	},
 };
+
+/** A site with a text format of its own ("형광펜"): the format bar's ⋯ lists it, with the format mark before its name. */
+export const OwnFormat: Story = { loaders: site("ownFormat") };
 
 /** A checklist in the body: the ticked item's box has its ✓, and pressing a box ticks it. */
 export const Checklist: Story = {

@@ -3,7 +3,7 @@ import { CHECK_MARK_PATH } from "@monti-cms/ui";
 import { Extension } from "@tiptap/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey } from "@tiptap/pm/state";
-import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { nodeName, UNKNOWN } from "./schema";
 
 const blockIdsKey = new PluginKey("montiBlockIds");
@@ -49,14 +49,33 @@ export const BlockIds = Extension.create({
 
 const SVG = "http://www.w3.org/2000/svg";
 
-/** The box at a checklist item's start (`data-check`, drawn by `EditorBody`): its ✓ is always there, shown while the item is ticked. */
-function checkBox(checked: boolean, label: string) {
+/** Ticks or unticks the checklist item at `pos`. */
+function toggleItem(view: EditorView, pos: number) {
+	const node = view.state.doc.nodeAt(pos);
+	if (!node) return;
+	const { checked, ...rest } = (node.attrs.data ?? {}) as Record<string, unknown>;
+	const next = checked ? (Object.keys(rest).length > 0 ? rest : null) : { ...rest, checked: true };
+	view.dispatch(view.state.tr.setNodeAttribute(pos, "data", next));
+}
+
+/**
+ * The box at a checklist item's start (`data-check`, drawn by `EditorBody`): its ✓ is always there, shown while the item is ticked. Where the text
+ * is written it is a stop of the keyboard: Space ticks it, and the focus stays on it. A press with the main button ticks it too.
+ */
+function checkBox(
+	view: EditorView,
+	getPos: () => number | undefined,
+	checked: boolean,
+	label: string,
+	editable: boolean,
+) {
 	const box = document.createElement("span");
 	box.setAttribute("data-check", "");
 	box.contentEditable = "false";
 	box.setAttribute("role", "checkbox");
 	box.setAttribute("aria-checked", String(checked));
 	box.setAttribute("aria-label", label);
+	if (editable) box.tabIndex = 0;
 	const svg = document.createElementNS(SVG, "svg");
 	svg.setAttribute("viewBox", "0 0 14 14");
 	svg.setAttribute("fill", "none");
@@ -68,59 +87,63 @@ function checkBox(checked: boolean, label: string) {
 	path.setAttribute("d", CHECK_MARK_PATH);
 	svg.append(path);
 	box.append(svg);
+	/** The item stands one before the box's place, its own start. */
+	const item = () => {
+		const at = getPos();
+		return at === undefined ? null : at - 1;
+	};
+	box.addEventListener("mousedown", (event) => {
+		// The press is the box's: the caret does not move into the item. A right click opens the browser's menu and changes nothing.
+		event.preventDefault();
+		const pos = item();
+		if (event.button !== 0 || !view.editable || pos === null) return;
+		toggleItem(view, pos);
+	});
+	box.addEventListener("keydown", (event) => {
+		if (event.key !== " " || !view.editable) return;
+		event.preventDefault();
+		const pos = item();
+		if (pos === null) return;
+		toggleItem(view, pos);
+		// The box is drawn again in its new state: the focus goes to the new one.
+		(view.nodeDOM(pos) as HTMLElement | null)?.querySelector<HTMLElement>("[data-check]")?.focus();
+	});
 	return box;
 }
 
 /**
- * A checklist item's box (editor-tools.md, `EditorBody`): put at the start of each item of a checklist, pressed to tick or untick it where the text is
- * written. Read only, it is the mark of the item's state and nothing happens on a press.
+ * A checklist item's box (editor-tools.md, `EditorBody`): put at the start of each item of a checklist, pressed or Spaced to tick or untick it where the
+ * text is written. Read only, it is the mark of the item's state, no stop of the keyboard, and nothing happens on a press.
  */
 export function checklistBoxes(label: () => string) {
 	return Extension.create({
 		name: "montiChecklistBoxes",
 		addProseMirrorPlugins() {
+			const editor = this.editor;
 			const checklist = nodeName("checklist");
 			return [
 				new Plugin({
 					props: {
 						decorations: (state) => {
 							const decorations: Decoration[] = [];
+							const name = label();
+							const editable = editor.isEditable;
 							state.doc.descendants((node, pos, parent) => {
 								if (parent?.type.name !== checklist) return;
 								const checked = Boolean(node.attrs.data?.checked);
-								const name = label();
 								decorations.push(
-									Decoration.widget(pos + 1, () => checkBox(checked, name), {
+									Decoration.widget(pos + 1, (view, getPos) => checkBox(view, getPos, checked, name, editable), {
 										side: -1,
-										// Drawn again when its state or the admin's language changes.
-										key: `check-${checked}-${name}`,
+										// Drawn again when its state, the admin's language or whether the text is written changes.
+										key: `check-${checked}-${name}-${editable}`,
 										ignoreSelection: true,
+										// Its presses and keys are its own, not the text's.
+										stopEvent: () => true,
 									}),
 								);
 								return false;
 							});
 							return DecorationSet.create(state.doc, decorations);
-						},
-						handleDOMEvents: {
-							mousedown: (view, event) => {
-								// The main button only: a right click opens the browser's menu and changes nothing.
-								if (event.button !== 0) return false;
-								const box = (event.target as Element | null)?.closest?.("[data-check]");
-								if (!box) return false;
-								// The press is the box's: the caret does not move into the item.
-								event.preventDefault();
-								if (!view.editable) return true;
-								const item = box.parentElement;
-								if (!item) return true;
-								// The item's own start is just inside it; the item stands one before.
-								const pos = view.posAtDOM(item, 0) - 1;
-								const node = view.state.doc.nodeAt(pos);
-								if (!node) return true;
-								const { checked, ...rest } = (node.attrs.data ?? {}) as Record<string, unknown>;
-								const next = checked ? (Object.keys(rest).length > 0 ? rest : null) : { ...rest, checked: true };
-								view.dispatch(view.state.tr.setNodeAttribute(pos, "data", next));
-								return true;
-							},
 						},
 					},
 				}),

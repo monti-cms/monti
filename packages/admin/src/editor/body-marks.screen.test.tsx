@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { pickWords } from "../../../../testing/input";
 import { scene } from "../../test/scene";
 import * as entry from "../screens/entry/entry.stories";
 
 const Checklist = scene({ loaders: entry.site("checklist") }, entry.default);
 const Footnotes = scene({ loaders: entry.site("footnotes") }, entry.default);
+const OwnFormat = scene({ loaders: entry.site("ownFormat") }, entry.default);
 
 const body = () => page.getByRole("textbox", { name: "본문" });
 const box = (item: string) =>
@@ -49,6 +51,24 @@ describe("what is pressed in the text answers the pointer", () => {
 		await expect.element(box("곧 발행하기")).toHaveAttribute("aria-checked", "true");
 	});
 
+	it("a checklist's boxes are stops of the keyboard: Tab from the text reaches them in order, Space ticks and unticks one, and the focus stays on it", async () => {
+		await Checklist.run();
+		await userEvent.click(body().getByText("내보내기 전에 할 일."));
+		await userEvent.keyboard("{Tab}");
+		await expect.element(box("초안 쓰기")).toHaveFocus();
+		await userEvent.keyboard("{Tab}");
+		await expect.element(box("발행하기")).toHaveFocus();
+		await userEvent.keyboard(" ");
+		await expect.element(box("발행하기")).toHaveAttribute("aria-checked", "true");
+		await expect.element(box("발행하기")).toHaveFocus();
+		// The item's words did not take the space.
+		await expect.element(body().getByRole("listitem").filter({ hasText: "발행하기" })).toHaveTextContent(/^발행하기$/);
+		await userEvent.keyboard(" ");
+		await expect.element(box("발행하기")).toHaveAttribute("aria-checked", "false");
+		// The box draws the keyboard's line, as a checkbox does.
+		expect(getComputedStyle(box("발행하기").element()).outlineStyle).not.toBe("none");
+	});
+
 	it("a footnote's number in the text turns ink and underlined under the pointer", async () => {
 		await Footnotes.run();
 		await expect.poll(() => body().element().querySelector("[data-footnote-ref]")).not.toBeNull();
@@ -56,5 +76,18 @@ describe("what is pressed in the text answers the pointer", () => {
 		expect(getComputedStyle(ref).textDecorationLine).toBe("none");
 		await userEvent.hover(ref);
 		await expect.poll(() => getComputedStyle(ref).textDecorationLine).toBe("underline");
+	});
+
+	it("a site's own text format is a row of the format bar's ⋯, starting with an icon as every menu row does", async () => {
+		await OwnFormat.run();
+		await expect.element(body()).toBeVisible();
+		await pickWords(body().element(), "나머지는 필요할 때 꺼내 본다.");
+		await userEvent.click(page.getByRole("toolbar", { name: "서식" }).getByRole("button", { name: "다른 서식" }));
+		const row = page.getByRole("option", { name: "형광펜" });
+		await expect.element(row).toBeVisible();
+		expect(row.element().querySelector("svg")).not.toBeNull();
+		// Pressed, the format goes on the picked words.
+		await userEvent.click(row);
+		await expect.poll(() => body().element().querySelector(`span[data-monti-mark="highlight"]`)).not.toBeNull();
 	});
 });

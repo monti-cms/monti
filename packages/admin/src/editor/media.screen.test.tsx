@@ -1752,6 +1752,36 @@ describe("a file cut off, then the entry archived", () => {
 	});
 });
 
+describe("a file cut off, picked", () => {
+	it("a picked failed upload has the same one 2px line as a picked file or picture", async () => {
+		const [load] = media.Draft.loaders as [() => Promise<{ site: StorySite }>];
+		const story = composeStory(
+			{
+				...media.Draft,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						loaded.site.uploader = async () => ({ status: 500, body: { error: "unexpected" } });
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		);
+		await story.run();
+		await userEvent.click(body());
+		await paste(await canvasFile("cut.png"));
+		await expect.element(body().getByRole("button", { name: "다시 올리기" })).toBeVisible();
+		const failed = () => body().element().querySelector("[data-slot=file-block]") as HTMLElement;
+		await userEvent.click(page.elementLocator(failed()), { position: { x: 24, y: 16 } });
+		const box = () => failed().closest("[data-slot=block-box]");
+		await expect.poll(() => box()?.hasAttribute("data-selected")).toBe(true);
+		const line = box()?.querySelector("[data-slot=block-line]") as HTMLElement;
+		expect(getComputedStyle(line).outlineWidth).toBe("2px");
+		expect(getComputedStyle(failed()).borderTopColor).toBe("rgba(0, 0, 0, 0)");
+	});
+});
+
 describe("a picture picked, then the entry archived", () => {
 	it("02-6 a picture that is picked when its entry is archived loses its tools at once: only the settings stay, and nothing moves or sizes it", async () => {
 		const image = () => body().getByRole("img", { name: "아침 책상" });
