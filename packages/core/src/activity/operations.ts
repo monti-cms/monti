@@ -12,7 +12,7 @@ import { ACTIVITY_FACETS, ActivityQuery, activityFacets, getActivity, listActivi
  * What `deliveries.counts` answers: how many deliveries are failed, since when (the oldest of them), and how many a "send again" is sending at this
  * moment (the banner says "sending…" while there are some, in another tab or after a reload too).
  */
-export type DeliveryCounts = { failed: number; since: Date | null; sending: number };
+export type DeliveryCounts = { failed: number; since: Date | null; sending: number; onTheWay: number };
 
 /**
  * What one step of sending again came to: the deliveries it took, how many arrived and how many failed again, and how many of the run are left.

@@ -43,7 +43,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { MODELS_ASK_AGAIN_MS } from "../../operations/models";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
-import { nextStop } from "../frame/focus-hand-off";
+import { holdsKeyboardFocus, nextStop } from "../frame/focus-hand-off";
 import { KeyWindow, type KeyWindowState } from "./key-dialog";
 
 /** Tokens as the list writes them: as they are under a thousand, then in thousands, then in millions with two decimals ("812", "312K", "1.24M"). */
@@ -315,10 +315,11 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 							onClick={(event) => {
 								const key = removing;
 								if (!key) return;
-								// A click made with the keyboard counts no presses of a pointer (`detail` 0): only that has a focus to hand on.
+								// A press that held the keyboard's focus (the rule's one test, `holdsKeyboardFocus`): only that has a focus to hand on.
 								const at = keys.findIndex((each) => each.id === key.id);
-								beside.current =
-									event.detail === 0 ? [keys[at + 1]?.id, keys[at - 1]?.id].filter((id) => id !== undefined) : null;
+								beside.current = holdsKeyboardFocus(event.currentTarget)
+									? [keys[at + 1]?.id, keys[at - 1]?.id].filter((id) => id !== undefined)
+									: null;
 								setAsking(false);
 								void remove.run({ id: key.id }, { versions: { [`key:${key.id}`]: key.version } }).then((result) => {
 									if (result.ok) toast(t("apiKeys.removed"));

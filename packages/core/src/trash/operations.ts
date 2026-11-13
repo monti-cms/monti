@@ -17,7 +17,7 @@ import {
 } from "../operation";
 import { lockRecords } from "../records";
 import { listTrash, TrashQuery, trashedEntry, trashRowCount } from "./list";
-import { everyTrashRow, foldersUnder, purgeRows, sweepLooseFiles, type TrashRef } from "./purge";
+import { everyTrashRow, foldersUnder, lockForPurge, purgeRows, sweepLooseFiles, type TrashRef } from "./purge";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -737,7 +737,11 @@ export const trashOperations = [
 		description:
 			"Delete rows of the trash for good. Only a person does it; it is never an agent tool. A path the entry was published under stays taken, and relations that pointed at it are cut.",
 		input: Rows,
-		touches: (input) => input.rows.map((row) => ref(row.kind)(row.id)),
+		// Everything the delete will hold is taken here, in one go, before the engine takes the rows (`lockForPurge`).
+		async touches(input, ctx) {
+			await lockForPurge(ctx.db, input.rows);
+			return input.rows.map((row) => ref(row.kind)(row.id));
+		},
 		check: (input, ctx) => inTrash(ctx.db, input.rows),
 		preview: (input): Preview => ({
 			summary: { key: "trash.purge", values: { count: input.rows.length } },
@@ -759,7 +763,12 @@ export const trashOperations = [
 		description: "Delete everything in the trash for good. Only a person does it; it is never an agent tool.",
 		input: z.object({}),
 		// Every row is held, as a restore holds its own: one that comes back at this moment stays, and is not in what `run` reads next.
-		touches: async (_input, ctx) => (await everyTrashRow(ctx.db)).map((row) => ref(row.kind)(row.id)),
+		// With everything the delete will hold, in one go (`lockForPurge`).
+		async touches(_input, ctx) {
+			const rows = await everyTrashRow(ctx.db);
+			await lockForPurge(ctx.db, rows);
+			return rows.map((row) => ref(row.kind)(row.id));
+		},
 		async preview(_input, ctx): Promise<Preview> {
 			const rows = await everyTrashRow(ctx.db);
 			return {

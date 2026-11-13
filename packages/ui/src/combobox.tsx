@@ -250,7 +250,7 @@ function ComboboxChip({
 				CHIP,
 				CHIP_SM,
 				CHIP_REMOVABLE,
-				"has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-45",
+				"has-disabled:pointer-events-none has-disabled:cursor-default has-disabled:opacity-45",
 				className,
 			)}
 			{...props}
