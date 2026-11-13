@@ -26,6 +26,8 @@ export type ScriptedTurn = {
 	raw?: unknown;
 	/** After its words the answer breaks off: no calls, no end. */
 	breaksOff?: boolean;
+	/** What the service said it took in when it began (Anthropic does): told with the failure when the turn is cut off before its end. */
+	begun?: Usage;
 };
 
 /** A turn, or what makes one from the request the engine sent (to answer by what a tool returned). */
@@ -66,7 +68,7 @@ export function scriptedProvider(
 			const turn = typeof next === "function" ? await next(request) : next;
 			if (turn.fail) throw turn.fail;
 			for (const delta of typeof turn.text === "string" ? [turn.text] : (turn.text ?? [])) {
-				if (request.signal.aborted) throw new ProviderError("unreachable", "aborted");
+				if (request.signal.aborted) throw new ProviderError("unreachable", "aborted", undefined, turn.begun);
 				yield { type: "text", delta };
 			}
 			if (turn.alive) yield turn.alive === "thinking" ? { type: "alive", thinking: true } : { type: "alive" };

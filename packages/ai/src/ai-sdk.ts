@@ -219,6 +219,26 @@ function cacheMarks(
 	return null;
 }
 
+/**
+ * What Anthropic says it took in, in the first event of its stream (`message_start`): the input, with what it read from and wrote to its
+ * cache, and the output so far. The AI SDK tells usage only when the answer is whole; an answer cut off before that (the person stopped it,
+ * the request went away) was spent all the same, and this is what is known of it (T161: 43,000 tokens a cut turn, counted as none).
+ */
+function opened(raw: unknown): Usage | undefined {
+	const event = raw as { type?: unknown; message?: { usage?: Record<string, unknown> } } | null;
+	if (event?.type !== "message_start" || !event.message?.usage) return undefined;
+	const count = (name: string) => {
+		const value = event.message?.usage?.[name];
+		return typeof value === "number" ? value : 0;
+	};
+	const cached = count("cache_read_input_tokens");
+	return {
+		input: count("input_tokens") + cached + count("cache_creation_input_tokens"),
+		output: count("output_tokens"),
+		...(cached > 0 ? { cached } : {}),
+	};
+}
+
 /** Two sets of provider options as one: a service's options from both, the second's over the first's. */
 function merged(first: Marks | undefined, second: Marks | undefined): Marks | undefined {
 	if (!first || !second) return first ?? second;
@@ -240,6 +260,8 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 			async *turn(request: TurnRequest): AsyncGenerator<TurnEvent> {
 				if (!model) throw none();
 				let began = false;
+				// What the service said it took in when it began: told with a failure that comes before the answer's own count.
+				let begun: Usage | undefined;
 				const marks = cacheMarks(key.service, request.model);
 				const lastTool = request.tools.at(-1)?.name;
 				try {
@@ -261,6 +283,8 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 						// as it was sent, and the SDK would otherwise sort them by name.
 						toolOrder: request.tools.map((spec) => spec.name),
 						abortSignal: request.signal,
+						// Anthropic's first event says what the turn took in; the SDK tells it only with the end.
+						includeRawChunks: key.service === "anthropic",
 						// The run engine decides what happens after a failure; one retry covers a dropped connection.
 						maxRetries: 1,
 						providerOptions: merged(thinkingOptions(key.service, request.thinking, request.thinks), marks?.call),
@@ -272,7 +296,9 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 					let usage: Usage = { input: 0, output: 0 };
 					let cut: "length" | "refusal" | undefined;
 					for await (const part of result.fullStream) {
-						if (part.type === "text-delta") {
+						// The service's own events, beside the SDK's reading of them: only the count at the start is taken from them.
+						if (part.type === "raw") begun = opened(part.rawValue) ?? begun;
+						else if (part.type === "text-delta") {
 							began = true;
 							yield { type: "text", delta: part.text };
 						} else if (part.type === "tool-call")
@@ -293,7 +319,7 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 									began ? "interrupted" : "unreachable",
 									"The answer ended before it was whole.",
 									undefined,
-									usage.input + usage.output > 0 ? usage : undefined,
+									usage.input + usage.output > 0 ? usage : begun,
 								);
 							// The service ended the answer itself: out of room, or it declined to go on.
 							cut =
@@ -320,9 +346,11 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 					const failed = failure(error);
 					// The service had begun to answer: what went wrong after that (the stream cut, a last piece that cannot be read) broke the answer
 					// off. Before any word it is a service that did not answer.
-					throw began && failed.kind === "unreachable"
-						? new ProviderError("interrupted", failed.detail, failed.status, failed.usage)
-						: failed;
+					const kind = began && failed.kind === "unreachable" ? "interrupted" : failed.kind;
+					const usage = failed.usage ?? begun;
+					throw kind === failed.kind && usage === failed.usage
+						? failed
+						: new ProviderError(kind, failed.detail, failed.status, usage);
 				}
 			},
 			async answer(request) {

@@ -684,4 +684,43 @@ describe("what the first trial against a real service showed (T161)", () => {
 		const events = await turn(aiSdkProvider({ fetch: net.fetch })(KEY), request([{ role: "user", text: "안녕" }]));
 		expect(events.at(-1)).toMatchObject({ type: "end", usage: { input: 120, output: 31, cached: 100 } });
 	});
+
+	it("10-1 an answer cut off before its end (the person stopped it, the request went away) keeps what Anthropic said it took in at the start", async () => {
+		// Anthropic tells the input in its first event and the output only with its last: the cut turn's input was spent all the same.
+		const head = STREAM.split("\n\n")
+			.filter((event) => /message_start|"index":0/.test(event))
+			.slice(0, 3)
+			.map((event) =>
+				event.replace(
+					'"usage":{"input_tokens":120,"output_tokens":1}',
+					'"usage":{"input_tokens":4,"cache_read_input_tokens":43000,"cache_creation_input_tokens":90,"output_tokens":1}',
+				),
+			)
+			.join("\n\n");
+		expect(head).toContain("43000");
+		const control = new AbortController();
+		const fetch: typeof globalThis.fetch = async (_input, init) =>
+			new Response(
+				new ReadableStream<Uint8Array>({
+					start(stream) {
+						stream.enqueue(new TextEncoder().encode(`${head}\n\n`));
+						// The rest never comes: the stream ends only when the call is ended.
+						init?.signal?.addEventListener("abort", () => stream.error(new DOMException("aborted", "AbortError")));
+					},
+				}),
+				{ status: 200, headers: { "content-type": "text/event-stream" } },
+			);
+		const said: TurnEvent[] = [];
+		const cut = await (async () => {
+			for await (const event of aiSdkProvider({ fetch })(KEY).turn(
+				request([{ role: "user", text: "안녕" }], { signal: control.signal }),
+			)) {
+				said.push(event);
+				if (event.type === "text") control.abort();
+			}
+		})().catch((error: unknown) => error);
+		expect(said.filter((event) => event.type === "text")).toHaveLength(1);
+		expect(cut).toBeInstanceOf(ProviderError);
+		expect((cut as ProviderError).usage).toEqual({ input: 43094, output: 1, cached: 43000 });
+	});
 });

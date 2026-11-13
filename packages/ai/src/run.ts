@@ -789,6 +789,14 @@ export async function* runAssistant(
 					}
 				}
 			} catch (error) {
+				// What the service counted for a turn that broke off was spent all the same: stopped, its request gone, or the service's own
+				// failure.
+				if (error instanceof ProviderError && error.usage) {
+					usage.input += error.usage.input;
+					usage.output += error.usage.output;
+					if (error.usage.cached) usage.cached = (usage.cached ?? 0) + error.usage.cached;
+					await monti.keys.addUsage(key.id, error.usage.input + error.usage.output);
+				}
 				if (await stopRequested()) {
 					await finish({ status: "stopped" });
 					return;
@@ -798,12 +806,6 @@ export async function* runAssistant(
 					return;
 				}
 				if (!(error instanceof ProviderError)) throw error;
-				// What the service counted for a turn that broke off was spent all the same.
-				if (error.usage) {
-					usage.input += error.usage.input;
-					usage.output += error.usage.output;
-					await monti.keys.addUsage(key.id, error.usage.input + error.usage.output);
-				}
 				// The service said no (credits, a limit) or broke off: an answer in the conversation, with the key's name (doc 10, errors). An answer
 				// that began and broke off is no answer: nothing of it is kept, and the run can be gone on with, which asks for that turn again.
 				const detail = withoutKey(error.detail, key.secret);

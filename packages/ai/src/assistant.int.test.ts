@@ -682,6 +682,37 @@ describe("the model, per conversation (flow 2, 22–24)", () => {
 		const listed = (await monti.run("keys.list", {}, admin)) as { keys: { id: string; usage: { tokens: number } }[] };
 		expect(listed.keys.find((key) => key.id === keyId)?.usage.tokens).toBe(1500);
 	});
+
+	it("10-1 a turn cut off because its request went away still counts what the service said it took in (T161)", async () => {
+		const monti = site();
+		const keyId = await withKey(monti);
+		model.add({ text: ["옛날 ", "옛날에"], begun: { input: 43_000, output: 1, cached: 42_900 } });
+		const gone = new AbortController();
+		const events: RunEvent[] = [];
+		for await (const event of monti.stream(
+			"assistant.run",
+			{ request: "이야기 하나 써 줘" },
+			{ actor: "admin", session: null, signal: gone.signal },
+		)) {
+			events.push(event as RunEvent);
+			if ((event as RunEvent).type === "text") gone.abort();
+		}
+		expect(events.at(-1)).toMatchObject({ type: "end", status: "interrupted", reason: "connection" });
+		expect(events.findLast((event) => event.type === "usage")).toEqual({
+			type: "usage",
+			input: 43_000,
+			output: 1,
+			cached: 42_900,
+		});
+		const run = await db
+			.selectFrom("runs")
+			.select("usage")
+			.where("id", "=", (events[0] as Extract<RunEvent, { type: "run" }>).runId)
+			.executeTakeFirstOrThrow();
+		expect(run.usage).toEqual({ input: 43_000, output: 1, cached: 42_900 });
+		const listed = (await monti.run("keys.list", {}, admin)) as { keys: { id: string; usage: { tokens: number } }[] };
+		expect(listed.keys.find((key) => key.id === keyId)?.usage.tokens).toBe(43_001);
+	});
 });
 
 describe("what a tool answers (doc 10, 실행)", () => {
