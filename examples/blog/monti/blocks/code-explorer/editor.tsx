@@ -40,6 +40,11 @@ export default function CodeExplorerEditor() {
 	useEffect(() => {
 		if (block.childAt !== null) setCurrent(block.childAt);
 	}, [block.childAt]);
+	// A code link of the text pointed at one of its files (doc 17): that file shows, so its lines can be seen lit.
+	useEffect(() => {
+		const at = block.pointed ? block.children.findIndex((child) => child.id === block.pointed) : -1;
+		if (at >= 0) setCurrent(at);
+	}, [block.pointed, block.children]);
 	const files = paths.flatMap((path, index) => (path && !parsePath(path).folder ? [{ path, index }] : []));
 
 	const row = (node: TreeNode, depth: number): ReactNode => {

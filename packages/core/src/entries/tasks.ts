@@ -1,6 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import { asDoc, walk } from "../body/doc";
 import { linkedGroups } from "../body/links";
+import { brokenCodeRefs } from "../code/links";
 import type { Database } from "../db/schema";
 import { isEmptyValue } from "../json";
 import { altGaps } from "../media/alt";
@@ -68,7 +69,8 @@ export async function publishTasks(
 				message: { key: "entries.task.required", values: { field } },
 			});
 	// Images with nothing to say for them block the publish (doc 02, flow 1·10): one row, going to the first of them. `entries.missingAlt` lists them all.
-	const gaps = await altGaps(db, fields, read.values, await bodyAsRead(db, source, entry.doc));
+	const drawn = await bodyAsRead(db, source, entry.doc);
+	const gaps = await altGaps(db, fields, read.values, drawn);
 	const [firstGap] = gaps;
 	if (firstGap)
 		tasks.push({
@@ -128,6 +130,16 @@ export async function publishTasks(
 							: // A site's block says it in each language of the admin (doc 18): the admin reads its own.
 								{ key: "blocks.checkWords", values: { ko: row.message.ko, en: row.message.en } },
 			});
+	// Code links that go nowhere in the body the site draws: the reader would find no lines. They block (doc 17, 17-8).
+	const broken = brokenCodeRefs(asDoc(drawn));
+	if (broken.length > 0)
+		tasks.push({
+			code: "brokenCodeLink",
+			field: "doc",
+			block: broken[0].block,
+			blocking: true,
+			message: { key: "entries.task.brokenCodeLink", values: { count: broken.length } },
+		});
 	// Links to entries in this language that are not on the site: the reader would find nothing there. It only tells (doc 02).
 	const linked = linkedGroups(asDoc(entry.doc));
 	if (linked.length > 0) {

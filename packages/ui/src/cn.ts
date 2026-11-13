@@ -46,6 +46,7 @@ const twMerge = extendTailwindMerge({
 						"monti-caption",
 						"monti-meta",
 						"monti-micro",
+						"monti-code",
 					],
 				},
 			],

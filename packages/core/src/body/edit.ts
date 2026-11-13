@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type CodeRule, type LineEffect, moveLineEffects, moveLineRules } from "../code/shape";
 import { CheckError } from "../errors";
 import { sameJson } from "../json";
 import { type Block, type Doc, type Inline, type Mark, NewBlockShape, plainText, walk, withIds } from "./doc";
@@ -90,7 +91,19 @@ export function applyOps(doc: Doc, ops: BodyOp[]): Doc {
 		switch (op.op) {
 			case "replaceText": {
 				const { block } = find(next, op.block);
+				const before = plainText(block.content);
 				block.content = replaceText(block.content ?? [], op.from, op.to, op.text);
+				// A code block's line effects stay on their lines (doc 17, 17-2).
+				if (block.type === "codeBlock" && (Array.isArray(block.attrs?.lines) || Array.isArray(block.attrs?.rules)))
+					block.attrs = {
+						...block.attrs,
+						...(Array.isArray(block.attrs?.lines)
+							? { lines: moveLineEffects(block.attrs.lines as LineEffect[], before, op.from, op.to, op.text) }
+							: {}),
+						...(Array.isArray(block.attrs?.rules)
+							? { rules: moveLineRules(block.attrs.rules as CodeRule[], before, op.from, op.to, op.text) }
+							: {}),
+					};
 				break;
 			}
 			case "setBlock": {

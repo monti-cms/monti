@@ -112,6 +112,13 @@ shows, and the token ends after an hour.
 - A site with a preview page of its own names its address in the schema (`previewPath: "/preview/:slug"` on a document collection, also editable
   in the admin's settings) and reads the entry there with `previewPage`, which is not found for anyone who did not open the preview.
 
+## Code blocks
+
+`<CodeTools />` in the site's layout gives the code blocks `renderDocument` draws their copy button, folded words and code links: pointing at a link
+lights its lines (and shows them beside the words when they are off screen), pressing it goes there, and the linked line gets a button back to
+the words (`labels.back` names it). It draws nothing. A site that is not React calls `attachCodeTools(document)`. The look is
+`@monti-cms/core/render.css`.
+
 ## The site's cache
 
 A Next site keeps the pages it has drawn, so something must tell it when an entry is published. `openSite` does: Monti's events reach the

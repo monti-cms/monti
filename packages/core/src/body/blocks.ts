@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { type CodeBlockConfig, type CodeBlockSettings, codeBlockSettings } from "../code/settings";
+import { CodeBlockAttrsShape, codeProblems } from "../code/shape";
 import { sameJson } from "../json";
 import { ImageAttrsShape } from "../media/frame";
 import type { Message } from "../operation";
@@ -60,6 +62,8 @@ export type BlockDefinition<Component = unknown> = {
 	/** Its mark in the "/" menu (a 16px icon). */
 	Icon?: unknown;
 	check?: (block: Block) => BlockCheck[];
+	/** What a save refuses beyond the attrs' shape (a code block's line ranges against its code): a short detail, or `null` when it is fine. */
+	validate?: (block: Block) => string | null;
 };
 
 /** A block as the "/" menu puts it in: its attrs, its words, its children, with no ids (they are given when it goes in). */
@@ -84,6 +88,8 @@ export type MarkDefinition<Component = unknown> = {
 	attrs?: z.ZodType<Record<string, unknown>>;
 	/** The names of its values and their options, by attr name (doc 18). */
 	fields?: Record<string, Field>;
+	/** Whether the mark goes in a code block's text: `also` (bold, italic …), `only` (a fold, a tooltip of code). Left out: never in code. */
+	inCode?: "also" | "only";
 	Site?: Component;
 	/** The card the admin's format bar opens to put the mark on picked words or change it (its ⋯ row); toggled on and off when left out. */
 	Editor?: unknown;
@@ -149,10 +155,11 @@ export const coreBlocks: AnyBlockDefinition[] = [
 		holds: "text",
 	}),
 	defineBlock({ type: "quote", label: label("quote"), description: "A quotation.", menu: "text", holds: "blocks" }),
-	text("codeBlock", "Code, kept as written, with its language and, for a file, its name or path (`title`).", {
-		attrs: z.object({ language: z.string().optional(), title: z.string().optional() }),
-		translate: { text: false },
-	}),
+	text(
+		"codeBlock",
+		"Code, kept as written. `language` colours it; `title` is its file name; `lines` gives ranges of lines (from 0, `end` not included) an effect: highlight, focus, plus, minus, warning, error, collapse (a fold), anchor (a label `id` a code link names). `rules` give every match of a regex a text effect.",
+		{ attrs: CodeBlockAttrsShape, translate: { text: false }, validate: codeProblems },
+	),
 	defineBlock({
 		type: "table",
 		label: label("table"),
@@ -198,23 +205,50 @@ export const coreBlocks: AnyBlockDefinition[] = [
 ];
 
 export const coreMarks: MarkDefinition[] = [
-	defineMark({ type: "bold", label: { key: "marks.bold" } }),
-	defineMark({ type: "italic", label: { key: "marks.italic" } }),
-	defineMark({ type: "underline", label: { key: "marks.underline" } }),
-	defineMark({ type: "strike", label: { key: "marks.strike" } }),
+	defineMark({ type: "bold", label: { key: "marks.bold" }, inCode: "also" }),
+	defineMark({ type: "italic", label: { key: "marks.italic" }, inCode: "also" }),
+	defineMark({ type: "underline", label: { key: "marks.underline" }, inCode: "also" }),
+	defineMark({ type: "strike", label: { key: "marks.strike" }, inCode: "also" }),
 	defineMark({ type: "code", label: { key: "marks.code" } }),
 	defineMark({ type: "sup", label: { key: "marks.sup" } }),
 	defineMark({ type: "sub", label: { key: "marks.sub" } }),
 	defineMark({ type: "link", label: { key: "marks.link" }, attrs: z.object({ href: z.string().min(1) }) }),
+	// Doc 17: words of the text pointing at labelled lines of a code block, and a code block's own folds and tooltips.
+	defineMark({
+		type: "codeRef",
+		label: { key: "marks.codeRef" },
+		attrs: z.object({ block: z.string().min(1), anchor: z.string().min(1) }),
+	}),
+	defineMark({
+		type: "codeFold",
+		label: { key: "marks.codeFold" },
+		attrs: z.object({ open: z.literal(true).optional() }),
+		inCode: "only",
+	}),
+	defineMark({
+		type: "codeTip",
+		label: { key: "marks.codeTip" },
+		attrs: z.object({ text: z.string() }),
+		inCode: "only",
+	}),
 ];
+
+/** The marks the code tools draw in their own places (doc 17): the format card does not list them with the site's marks. */
+export const CODE_TOOL_MARKS: ReadonlySet<string> = new Set(["codeRef", "codeFold", "codeTip"]);
 
 /** The blocks and marks a site has: the core's, the site's and its plugins'. */
 export type BlockKit = {
 	blocks: ReadonlyMap<string, AnyBlockDefinition>;
 	marks: ReadonlyMap<string, MarkDefinition>;
+	/** The site's code block settings (doc 17). */
+	code: CodeBlockSettings;
 };
 
-export function createBlockKit(blocks: AnyBlockDefinition[], marks: MarkDefinition[]): BlockKit {
+export function createBlockKit(
+	blocks: AnyBlockDefinition[],
+	marks: MarkDefinition[],
+	code: CodeBlockConfig = {},
+): BlockKit {
 	const byType = <T extends { type: string }>(list: T[], what: string) => {
 		const map = new Map<string, T>();
 		for (const each of list) {
@@ -223,7 +257,11 @@ export function createBlockKit(blocks: AnyBlockDefinition[], marks: MarkDefiniti
 		}
 		return map;
 	};
-	return { blocks: byType([...coreBlocks, ...blocks], "Block"), marks: byType([...coreMarks, ...marks], "Mark") };
+	return {
+		blocks: byType([...coreBlocks, ...blocks], "Block"),
+		marks: byType([...coreMarks, ...marks], "Mark"),
+		code: codeBlockSettings(code),
+	};
 }
 
 type Editor = NonNullable<AdminValues["editor"]>;
@@ -267,6 +305,10 @@ export function checkDoc(doc: unknown, kit: BlockKit, previous: Doc | null): Bod
 			at("badChild");
 		const attrs = (definition.attrs ?? z.object({}).strict()).safeParse(block.attrs ?? {});
 		if (!attrs.success) at("badAttrs", attrs.error.issues[0]?.message);
+		else {
+			const bad = definition.validate?.(block);
+			if (bad) at("badBlock", bad);
+		}
 		// A mark the block already had may stay, like a block, even when the site no longer defines it.
 		const oldMarks = new Set(
 			(old?.content ?? [])
@@ -282,6 +324,8 @@ export function checkDoc(doc: unknown, kit: BlockKit, previous: Doc | null): Bod
 				}
 				const { type: _type, ...markAttrs } = mark;
 				if (!(markDefinition.attrs ?? z.object({}).strict()).safeParse(markAttrs).success) at("badMark", mark.type);
+				// A code block's own marks stay in code; the code block says which marks it takes (`validate`).
+				else if (markDefinition.inCode === "only" && block.type !== "codeBlock") at("badMark", mark.type);
 			}
 	}
 	return problems;

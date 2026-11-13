@@ -83,7 +83,7 @@ function LinkCard({ state }: { state: LinkCardState }) {
 						<CommandItem value="address">
 							<Link aria-hidden />
 							<Text truncate>react.dev/learn</Text>
-							<MenuShortcut>↵</MenuShortcut>
+							<MenuShortcut keys={["Enter"]} />
 						</CommandItem>
 					</CommandGroup>
 				) : null}

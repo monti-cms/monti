@@ -3,7 +3,7 @@ import { entryPage } from "@monti-cms/next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createElement, type ElementType, type ReactNode } from "react";
-import { reader } from "@/lib/monti";
+import { code, reader } from "@/lib/monti";
 import { blocks, marks } from "../monti/blocks/index";
 
 // The pages of the site, each for one language. The routes under `app/(site)` hand them the language of their address: none for Korean (the
@@ -106,11 +106,12 @@ export async function Entry({
 				? renderDocument(entry.doc, {
 						blocks,
 						marks,
-						// The blocks' own words (a callout's kind, "Show more") in the entry's language.
-						locale,
 						createElement: h,
 						media: entry.media,
 						entryPath: entry.entryPath,
+						code: await code,
+						// The blocks' own words (a callout's kind, "Show more") and the code block's in the entry's language.
+						locale,
 					})
 				: null}
 		</article>

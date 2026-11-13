@@ -1,4 +1,4 @@
-import type { Field, Label } from "@monti-cms/core";
+import type { CodeBlockSettings, Field, Label } from "@monti-cms/core";
 
 /** One block of `blocks.catalog` (doc 03): what the editor needs to draw it, offer it and check it. */
 export type CatalogBlock = {
@@ -16,16 +16,24 @@ export type CatalogBlock = {
 	fence?: { language: string; attr: string } | null;
 };
 
+/** One mark of `blocks.catalog`. `inCode`: whether it goes in a code block's text (doc 17): `also` (bold …), `only` (a code fold or tooltip), `null` never. */
 export type CatalogMark = {
 	type: string;
 	label: Label;
 	description?: string | null;
 	attrs: unknown;
 	fields?: Record<string, Field> | null;
+	inCode?: "also" | "only" | null;
 };
 
 /** What `blocks.catalog` answers. */
-export type Catalog = { blocks: CatalogBlock[]; marks: CatalogMark[]; headings: number[] };
+export type Catalog = {
+	blocks: CatalogBlock[];
+	marks: CatalogMark[];
+	headings: number[];
+	/** The site's code block settings (doc 17): the languages, the tools, the line effects and the colours' themes. */
+	code?: CodeBlockSettings;
+};
 
 /**
  * The body's two catalogs: `kit` is every block and mark the site has (the editor can draw all of them), `offered` is what this collection's editor

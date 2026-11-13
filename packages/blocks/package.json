@@ -27,7 +27,8 @@
 		"katex": ">=0.16",
 		"mermaid": ">=11",
 		"react": ">=19",
-		"@monti-cms/admin": "workspace:*"
+		"@monti-cms/admin": "workspace:*",
+		"react-dom": ">=19"
 	},
 	"peerDependenciesMeta": {
 		"katex": {

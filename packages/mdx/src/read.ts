@@ -1,4 +1,4 @@
-import { type Block, type Doc, type Inline, type Mark, newBlockId } from "@monti-cms/core";
+import { type Block, type Doc, type Inline, type Mark, newBlockId, readFence } from "@monti-cms/core";
 import type { Nodes, PhrasingContent, RootContent } from "mdast";
 import { directiveFromMarkdown } from "mdast-util-directive";
 import { fromMarkdown } from "mdast-util-from-markdown";
@@ -28,16 +28,6 @@ export type ReadOptions = {
 	fenced?: FencedBlocks;
 	marks?: KnownMarks;
 };
-
-/** A code fence's file name (`title="src/app.ts"`, doc 18) and the rest of its line, which stays its language (T79). */
-export function fenceInfo(info: string): { language?: string; title?: string } {
-	const found = /(?:^|\s)title=(?:"([^"]*)"|'([^']*)'|(\S+))/.exec(info);
-	const rest = (found ? info.slice(0, found.index) + info.slice(found.index + found[0].length) : info)
-		.trim()
-		.replace(/\s+/g, " ");
-	const title = found ? (found[1] ?? found[2] ?? found[3]) : undefined;
-	return { ...(rest ? { language: rest } : {}), ...(title !== undefined ? { title } : {}) };
-}
 
 export type ReadFile = {
 	/** The front matter, as loose values. */
@@ -151,12 +141,27 @@ export function readMarkdown(text: string, options: ReadOptions = {}): ReadFile 
 					push(node.alt ?? "", now);
 					break;
 				case "textDirective":
-					// A mark of the site's own (`:color[words]{color="red"}`); any other stays as it was written.
+					// The old code link, `:code-ref[words]{to="c1"}` (doc 17).
+					if (node.name === "code-ref" && typeof node.attributes?.to === "string") {
+						out.push(...inline(node.children, [...now, { type: "codeRef", block: "", anchor: node.attributes.to }]));
+						break;
+					}
+					// A mark of the site's own (`:color[words]{color="red"}`, doc 18); any other stays as it was written.
 					if (knownMark(node.name))
 						out.push(...inline(node.children, [...now, { type: node.name, ...attrsOf(node.attributes) }]));
 					else push(source(node), now);
 					break;
 				case "html": {
+					// A code link (doc 17): `<CodeRef to="c1">words</CodeRef>`, the label of lines in a code block of this body.
+					const codeRef = /^<CodeRef\s+to=(?:"([^"]*)"|'([^']*)')\s*>$/.exec(node.value.trim());
+					if (codeRef) {
+						open = [...open, { type: "codeRef", block: "", anchor: codeRef[1] ?? codeRef[2] ?? "" }];
+						break;
+					}
+					if (node.value.trim() === "</CodeRef>") {
+						open = open.filter((each) => each.type !== "codeRef");
+						break;
+					}
 					const tag = /^<(\/)?([a-z]+)\s*\/?>$/i.exec(node.value.trim());
 					const mark = tag ? TAGS[(tag[2] ?? "").toLowerCase()] : undefined;
 					if (tag && (tag[2] ?? "").toLowerCase() === "br") out.push({ type: "hardBreak" });
@@ -245,18 +250,13 @@ export function readMarkdown(text: string, options: ReadOptions = {}): ReadFile 
 				case "blockquote":
 					return [{ id: newBlockId(), type: "quote", children: blocks(node.children) }];
 				case "code": {
-					// A fence of a language one of the site's blocks is written in (```` ```mermaid ````) is that block.
+					// A fence of a language one of the site's blocks is written in (```` ```mermaid ````) is that block (doc 18).
 					const site = node.lang ? fenced(node.lang) : null;
 					if (site && !node.meta) return [{ id: newBlockId(), type: site.type, attrs: { [site.attr]: node.value } }];
-					// The text as it is written, whatever a highlighter would read in it (`// [!code ++]`): nothing of it is taken out. The fence line's
-					// `title="…"` is the file's name (doc 18, the code explorer); the rest of the line stays the language.
-					return [
-						textBlock(
-							"codeBlock",
-							node.value === "" ? [] : [{ type: "text", text: node.value }],
-							fenceInfo([node.lang, node.meta].filter(Boolean).join(" ")),
-						),
-					];
+					// Shiki's notation and the old Monti comments become the block's effects; the rest of the fence line is kept, its `title="…"`
+					// the file's name (doc 17, T79; doc 18, the code explorer).
+					const fence = readFence({ lang: node.lang, meta: node.meta, value: node.value });
+					return [textBlock("codeBlock", fence.content, fence.attrs)];
 				}
 				case "math": {
 					// `$$ … $$`: the site's formula block when it has one, else code in the language `math`.
@@ -325,5 +325,44 @@ export function readMarkdown(text: string, options: ReadOptions = {}): ReadFile 
 		});
 
 	const made = blocks(tree.children);
-	return { values, doc: { type: "doc", blocks: made }, unknown };
+	return { values, doc: { type: "doc", blocks: pointCodeLinks(made) }, unknown };
+}
+
+/**
+ * A code link names a label; the file has no block ids, so it goes to the first code block with that label (the old `:code-ref`'s rule). One whose
+ * label no code block has stays, broken (`-`): the publish check finds it (doc 17, 17-8).
+ */
+function pointCodeLinks(blocks: Block[]): Block[] {
+	const owner = new Map<string, string>();
+	const visit = (list: Block[]) => {
+		for (const block of list) {
+			if (block.type === "codeBlock")
+				for (const effect of (block.attrs?.lines ?? []) as { name: string; attrs?: { id?: string } }[])
+					if (effect.name === "anchor" && effect.attrs?.id && !owner.has(effect.attrs.id))
+						owner.set(effect.attrs.id, block.id);
+			if (block.children) visit(block.children);
+		}
+	};
+	visit(blocks);
+	const point = (block: Block): Block => ({
+		...block,
+		...(block.content
+			? {
+					content: block.content.map((part) =>
+						part.type === "text" && part.marks?.some((mark) => mark.type === "codeRef" && mark.block === "")
+							? {
+									...part,
+									marks: part.marks.map((mark) =>
+										mark.type === "codeRef" && mark.block === ""
+											? { ...mark, block: owner.get(String(mark.anchor)) ?? "-" }
+											: mark,
+									),
+								}
+							: part,
+					),
+				}
+			: {}),
+		...(block.children ? { children: block.children.map(point) } : {}),
+	});
+	return blocks.map(point);
 }

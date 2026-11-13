@@ -13,7 +13,7 @@ const on = (doc?: Doc | null) => scene<blocks.Loaded>({ loaders: blocks.site(doc
 
 const body = () => page.getByRole("textbox", { name: "본문" });
 const button = (name: string | RegExp) => page.getByRole("button", { name });
-const save = () => userEvent.keyboard("{Meta>}s{/Meta}");
+const save = () => userEvent.keyboard("{ControlOrMeta>}s{/ControlOrMeta}");
 const saved = () =>
 	expect
 		.poll(() => [...document.querySelectorAll("[data-slot=status-bar-cell]")].map((cell) => cell.textContent))
@@ -49,7 +49,7 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		await expect.element(body().getByRole("note")).toHaveAttribute("data-tone", "danger");
 		// Undo takes the kind back, as any change of the text.
 		await userEvent.click(body().getByText("안의 글"));
-		await userEvent.keyboard("{Meta>}z{/Meta}");
+		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
 		await expect.element(body().getByRole("note")).toHaveAttribute("data-tone", "note");
 		await userEvent.click(button("종류"));
 		await userEvent.click(page.getByRole("menuitemradio", { name: "경고" }));

@@ -34,6 +34,7 @@ import {
 	useState,
 } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { codeToolsKey } from "./code/code-state";
 
 /** The editor's node for a block type (as `schema.ts` names it). */
 const nodeName = (type: string) => type.replace(/[^A-Za-z0-9_]/g, "_");
@@ -103,7 +104,9 @@ export function useBlock() {
 					start = end;
 				}
 			}
-			return { editable: current.isEditable, inside, childAt };
+			// The code block a code link of the text is pointed at (doc 17): a block that hides it (a code explorer's file) shows it.
+			const pointed = codeToolsKey.getState(current.state)?.pointed?.block ?? null;
+			return { editable: current.isEditable, inside, childAt, pointed };
 		},
 	});
 	return useMemo(() => {
@@ -121,6 +124,7 @@ export function useBlock() {
 			return at;
 		};
 		const children = Array.from({ length: node.childCount }, (_, index) => ({
+			id: String(node.child(index).attrs.blockId ?? ""),
 			type: node.child(index).type.name,
 			attrs: ((node.child(index).attrs.data as Record<string, unknown> | null) ?? {}) as Record<string, unknown>,
 			text: node.child(index).textContent,
@@ -136,6 +140,8 @@ export function useBlock() {
 			inside: state.inside,
 			/** The child the cursor is in, or `null`. */
 			childAt: state.childAt,
+			/** The id of the code block a code link of the text points at while it is pointed at or pressed (doc 17), or `null`. */
+			pointed: state.pointed,
 			language,
 			/** The entry's language, as the site gets it (`renderDocument`'s `locale`); the admin's when the screen does not say. */
 			locale: locale ?? language,
@@ -230,7 +236,20 @@ export function useBlock() {
 					if (own) tr.delete(pos(), pos() + own.nodeSize);
 				}),
 		};
-	}, [node, editor, getPos, selected, state.editable, state.inside, state.childAt, language, locale, ask, t]);
+	}, [
+		node,
+		editor,
+		getPos,
+		selected,
+		state.editable,
+		state.inside,
+		state.childAt,
+		state.pointed,
+		language,
+		locale,
+		ask,
+		t,
+	]);
 }
 
 /**

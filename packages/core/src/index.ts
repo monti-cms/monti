@@ -30,6 +30,7 @@ export {
 	type BlockDefinition,
 	type BlockStarter,
 	type BodyProblem,
+	CODE_TOOL_MARKS,
 	checkDoc,
 	coreBlocks,
 	coreMarks,
@@ -55,6 +56,8 @@ export {
 export { applyOps, type BodyOp } from "./body/edit";
 export { ENTRY_LINK, entryLink } from "./body/links";
 export { fingerprint } from "./bytes";
+export { readFence, writeFence } from "./code/notation";
+export type { CodeBlockConfig, CodeBlockSettings, CodeLineEffectDefinition } from "./code/settings";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
 export type { BackupManifest, EntryLine } from "./data/backup";
 export type { Imported, ImportFile, Inspected } from "./data/import";

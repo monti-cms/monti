@@ -8,7 +8,9 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./cli": "./src/cli/main.ts",
-		"./render": "./src/render.ts"
+		"./render": "./src/render.ts",
+		"./code": "./src/code/index.ts",
+		"./render.css": "./render.css"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit -p .",
@@ -19,6 +21,7 @@
 		"jiti": "^2.7.0",
 		"kysely": "^0.29.6",
 		"pg": "^8.23.0",
+		"shiki": "^3.23.0",
 		"zod": "^4.2.1"
 	},
 	"devDependencies": {
@@ -31,7 +34,8 @@
 	"files": [
 		"bin",
 		"dist",
-		"README.md"
+		"README.md",
+		"render.css"
 	],
 	"publishConfig": {
 		"exports": {
@@ -46,7 +50,12 @@
 			"./render": {
 				"types": "./dist/render.d.ts",
 				"default": "./dist/render.js"
-			}
+			},
+			"./code": {
+				"types": "./dist/code/index.d.ts",
+				"default": "./dist/code/index.js"
+			},
+			"./render.css": "./render.css"
 		}
 	},
 	"sideEffects": false,

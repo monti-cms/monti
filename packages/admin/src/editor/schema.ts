@@ -254,7 +254,14 @@ export function bodyExtensions(
 								? `(${block.children.map(nodeName).join(" | ")})+`
 								: "block+"
 							: undefined,
-				marks: block.type === "codeBlock" ? "" : undefined,
+				// A code block's text takes the code's own marks only (doc 17): what an import brought stays through an edit.
+				marks:
+					block.type === "codeBlock"
+						? kit.marks
+								.filter((mark) => mark.inCode)
+								.map((mark) => markName(mark.type))
+								.join(" ")
+						: undefined,
 				code: block.type === "codeBlock",
 				atom: block.holds === "nothing",
 				selectable: block.holds === "nothing",

@@ -5,11 +5,13 @@ import {
 	type MouseEvent,
 	type ReactNode,
 	useCallback,
+	useEffect,
 	useId,
 	useMemo,
 	useRef,
 	useState,
 } from "react";
+import { flushSync } from "react-dom";
 import { ancestorsOf, filesOf, type TreeFile, type TreeNode } from "./tree";
 
 /** Fixed text of the explorer, in the entry's language (`site.tsx` picks it). */
@@ -123,6 +125,42 @@ export function CodeExplorerView({
 			return next;
 		});
 	}, []);
+
+	// A code link of the page (doc 17) that points into a file this explorer hides shows that file first, before the page goes to its lines: pressed
+	// (the capture runs before the page's own code tools scroll), or reached by the address (`#…` of a line).
+	useEffect(() => {
+		const element = root.current;
+		if (!element) return;
+		const fileOf = (block: string) => {
+			const figure = element.querySelector(`[data-code-explorer-panel] figure[data-block="${CSS.escape(block)}"]`);
+			const panel = figure?.closest<HTMLElement>("[data-code-explorer-panel]");
+			return panel ? files.find((file) => String(file.index) === panel.dataset.codeExplorerPanel) : undefined;
+		};
+		const onClick = (event: Event) => {
+			const link = (event.target as Element | null)?.closest?.("a[data-code-ref]");
+			const block = link?.getAttribute("data-code-ref")?.split(" ")[0];
+			const file = block ? fileOf(block) : undefined;
+			if (file && file.index !== current) flushSync(() => show(file));
+		};
+		const onHash = () => {
+			const line = window.location.hash
+				? document.getElementById(decodeURIComponent(window.location.hash.slice(1)))
+				: null;
+			const block = line?.closest("figure[data-block]")?.getAttribute("data-block");
+			const file = block ? fileOf(block) : undefined;
+			if (file && file.index !== current) {
+				flushSync(() => show(file));
+				line?.scrollIntoView({ block: "center" });
+			}
+		};
+		document.addEventListener("click", onClick, true);
+		window.addEventListener("hashchange", onHash);
+		onHash();
+		return () => {
+			document.removeEventListener("click", onClick, true);
+			window.removeEventListener("hashchange", onHash);
+		};
+	}, [files, current, show]);
 
 	const toggle = (path: string) =>
 		setCollapsed((previous) => {

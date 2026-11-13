@@ -46,6 +46,41 @@ const changelog = (widths?: number[]) =>
 		p("다음 버전은 아직 정하지 않았다."),
 	);
 
+/** An entry with a code block (doc 17): TypeScript, a file name, an added line, a fold over lines 2–4, a label on line 5 the text links to. */
+const withCode = (broken = false) =>
+	doc(
+		{
+			id: "b_text",
+			type: "paragraph",
+			content: [
+				{ type: "text", text: "버튼을 누를 때마다 " },
+				{
+					type: "text",
+					text: "수를 하나 올린다",
+					marks: [{ type: "codeRef", block: "b_code", anchor: broken ? "gone" : "l1" }],
+				},
+				{ type: "text", text: "." },
+			],
+		},
+		{
+			id: "b_code",
+			type: "codeBlock",
+			attrs: {
+				language: "ts",
+				title: "src/counter.ts",
+				lines: [
+					{ name: "plus", start: 0, end: 1 },
+					{ name: "collapse", start: 1, end: 4, attrs: { open: true } },
+					{ name: "anchor", start: 4, end: 5, attrs: { id: "l1" } },
+				],
+			},
+			content: text(
+				"let count = 0;\nfunction reset() {\n  count = 0;\n}\nconst add = () => count++;\nexport { add, reset };",
+			),
+		},
+		p("다음 문단."),
+	);
+
 /** An entry with two footnotes, stored out of order: "처음" is noted second in the text but kept first (T62). */
 const noted = () =>
 	doc(
@@ -178,6 +213,8 @@ type Kind =
 	| "archived"
 	| "table"
 	| "tableSized"
+	| "code"
+	| "codeBroken"
 	| "footnotes"
 	| "proposed"
 	| "proposedFields"
@@ -340,7 +377,9 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 								? changelog([20, 50, 30])
 								: kind === "footnotes"
 									? noted()
-									: firstPost(),
+									: kind === "code" || kind === "codeBroken"
+										? withCode(kind === "codeBroken")
+										: firstPost(),
 				},
 		admin,
 	)) as { output: { id: string } };

@@ -138,3 +138,51 @@ describe("blocks that hold values, in the comparison (doc 18, T197)", () => {
 		]);
 	});
 });
+
+describe("a code block whose effects changed", () => {
+	const code = (attrs: Record<string, unknown>): Doc => ({
+		type: "doc",
+		blocks: [
+			{
+				id: "b1",
+				type: "codeBlock",
+				attrs: { language: "ts", ...attrs },
+				content: [{ type: "text", text: "a\nb\nc" }],
+			} as Block,
+		],
+	});
+	it("17-11 the same code with other line effects is a change on the lines whose effects differ, and no word is marked", () => {
+		const { mine, server } = compareBodies(
+			code({ lines: [{ name: "plus", start: 1, end: 3 }] }),
+			code({
+				lines: [
+					{ name: "plus", start: 2, end: 3 },
+					{ name: "anchor", start: 0, end: 1, attrs: { id: "c1" } },
+				],
+			}),
+		);
+		expect(mine[0].parts.some((part) => part.changed)).toBe(false);
+		expect(mine[0].changes).toEqual({ lines: [1], language: false, title: false });
+		expect(server[0].changes.lines).toEqual([1]);
+		expect(mine[0].code?.lines).toEqual([[], ["plus"], ["plus"]]);
+	});
+	it("17-11 a language or a file name changed alone is a change too; the same block is none", () => {
+		expect(compareBodies(code({ title: "a.ts" }), code({ language: "js" })).mine[0].changes).toEqual({
+			lines: [],
+			language: true,
+			title: true,
+		});
+		expect(compareBodies(code({}), code({})).mine[0].changes).toEqual({ lines: [], language: false, title: false });
+	});
+	it("17-11 a line put in on one side pairs the rest by their words: only a line whose own effects differ is a change", () => {
+		const withLine = (text: string, lines: unknown[]): Doc => ({
+			type: "doc",
+			blocks: [{ id: "b1", type: "codeBlock", attrs: { lines }, content: [{ type: "text", text }] } as Block],
+		});
+		const { mine } = compareBodies(
+			withLine("new\na\nb\nc", [{ name: "plus", start: 2, end: 3 }]),
+			withLine("a\nb\nc", [{ name: "plus", start: 1, end: 2 }]),
+		);
+		expect(mine[0].changes.lines).toEqual([]);
+	});
+});

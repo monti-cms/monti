@@ -10,7 +10,6 @@ import { type FencedBlocks, type KnownBlocks, type KnownMarks, readMarkdown } fr
 export { KEPT, KEPT_HTML } from "./kept";
 export {
 	type FencedBlocks,
-	fenceInfo,
 	type KnownBlocks,
 	type KnownMarks,
 	type ReadFile,

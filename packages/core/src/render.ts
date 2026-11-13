@@ -1,6 +1,9 @@
 import type { AnyBlockDefinition, MarkDefinition } from "./body/blocks";
 import { type Block, type Doc, type Inline, type Mark, walk } from "./body/doc";
 import { linkedGroup } from "./body/links";
+import { codeLineId, drawCodeBlock } from "./code/draw";
+import type { CodeColors } from "./code/highlight";
+import { codeBlocksByRef, resolveCodeRef } from "./code/links";
 import { imageAlignOf } from "./media/frame";
 import { imageFrameStyle, type SiteImage, type SiteMedia, siteImage } from "./media/site-image";
 
@@ -44,7 +47,9 @@ export type RenderOptions<Node> = {
 	 * its text alone.
 	 */
 	entryPath?: (group: string) => string | undefined;
-	/** The entry's language: handed to the site's block and mark components, for the words they draw of their own. */
+	/** Code colours: the site's `codeHighlighter` (`@monti-cms/core/code`, doc 17). Without it code is drawn in one colour. */
+	code?: CodeColors;
+	/** The entry's language: handed to the site's block and mark components for the words they draw of their own, and the words the core draws itself (the code block's copy button). */
 	locale?: string;
 };
 
@@ -132,6 +137,7 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 	count(doc.blocks);
 	const anchored = new Set<string>();
 	const anchors = headingIds(doc);
+	const codeBlocks = codeBlocksByRef(doc);
 
 	const inline = (part: Inline, key: number): Node | string => {
 		if (part.type === "hardBreak") return h("br", { key });
@@ -153,6 +159,21 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 			const props = index === 0 ? { key } : null;
 			const Site = marks.get(mark.type)?.Site;
 			if (Site) return h(Site, { ...props, mark, ...(options.locale ? { locale: options.locale } : {}) }, inner);
+			if (mark.type === "codeRef") {
+				// A code link goes to its lines (`CodeTools` lights them up); one that goes nowhere is its words (doc 17, 17-8).
+				const to = resolveCodeRef(codeBlocks, mark as { block?: string; anchor?: string });
+				return to
+					? h(
+							"a",
+							{
+								...props,
+								href: `#${codeLineId(to.block, to.anchor)}`,
+								"data-code-ref": `${to.block} ${to.anchor}`,
+							},
+							inner,
+						)
+					: inner;
+			}
 			if (mark.type === "link") {
 				const group = linkedGroup(mark.href);
 				const href = group === null ? text(mark.href) : options.entryPath?.(group);
@@ -193,11 +214,11 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 			case "quote":
 				return h("blockquote", { key }, ...inner);
 			case "codeBlock":
-				return h(
-					"pre",
-					{ key },
-					h("code", { className: attrs.language ? `language-${attrs.language}` : undefined }, ...inner),
-				);
+				return drawCodeBlock(h, block, {
+					colors: options.code,
+					locale: options.locale,
+					lineClasses: options.code?.lineClasses,
+				});
 			case "divider":
 				return h("hr", { key });
 			case "footnote":

@@ -1,4 +1,4 @@
-import type { Block, Doc, Inline } from "@monti-cms/core";
+import { type Block, type Doc, type Inline, writeFence } from "@monti-cms/core";
 import { KEPT, KEPT_HTML } from "./kept";
 
 export type WriteOptions = {
@@ -31,6 +31,7 @@ const codeSpan = (text: string) => {
 
 /** Marks from the outside in, so the same body always writes the same text. */
 const WRAP: Record<string, (inner: string, mark: Record<string, unknown>) => string> = {
+	codeRef: (inner, mark) => `<CodeRef to=${JSON.stringify(String(mark.anchor ?? ""))}>${inner}</CodeRef>`,
 	link: (inner, mark) => `[${inner}](${String(mark.href ?? "")})`,
 	bold: (inner) => `**${inner}**`,
 	italic: (inner) => `*${inner}*`,
@@ -132,9 +133,10 @@ function block(each: Block, options: WriteOptions, depth: number): string {
 			const language = typeof attrs.language === "string" ? attrs.language : "";
 			// What was kept as written (a component no block is known for, raw HTML) goes back as it was.
 			if (language === KEPT || language === KEPT_HTML) return text;
-			// A file's name goes on the fence line (doc 18, the code explorer): `title="src/app.ts"`.
-			const title = typeof attrs.title === "string" && attrs.title !== "" ? ` title=${quoted(attrs.title)}` : "";
-			return fenced(`${language}${title}`, text);
+			// The effects as Shiki's notation and Monti comments, the file name on the fence line (doc 17, T79).
+			const written = writeFence(each);
+			const fence = "`".repeat(Math.max(3, ...[...written.value.matchAll(/`+/g)].map((run) => run[0].length + 1)));
+			return `${fence}${[written.lang, written.meta].filter(Boolean).join(" ")}\n${written.value}\n${fence}`;
 		}
 		case "table": {
 			const rows = (Array.isArray(attrs.rows) ? attrs.rows : []) as string[][];
