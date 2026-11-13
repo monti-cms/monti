@@ -5,10 +5,14 @@ import type * as React from "react";
 import { createContext, useContext } from "react";
 
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 
 /**
  * Text in one of the design system's roles. `variant` is the role: size, line height and weight together (styles/theme.css); `tone` sets the color by meaning.
  * `weight` only emphasizes a run inside its role. Controls (buttons, inputs, menus) already carry their role and take plain text.
+ *
+ * `truncate` cuts the text to one line with "…", and cut text says itself whole as all cut words do (`CutWords`): to a pointer on it, and to
+ * the keyboard on the link or button that holds it.
  */
 export const textVariants = cva("", {
 	variants: {
@@ -80,28 +84,27 @@ function Text({
 }: TextProps) {
 	const inside = useContext(InsideRole);
 	const role = variant === undefined && inside ? null : variant;
-	return (
-		<InsideRole.Provider value={true}>
-			<Tag
-				className={cn(
-					textVariants({
-						variant: role,
-						tone,
-						weight,
-						mono,
-						truncate,
-						srOnly,
-						lines,
-						italic,
-						preserveLines,
-						align,
-					}),
-					className,
-				)}
-				{...props}
-			/>
-		</InsideRole.Provider>
+	const text = (
+		<Tag
+			className={cn(
+				textVariants({
+					variant: role,
+					tone,
+					weight,
+					mono,
+					truncate,
+					srOnly,
+					lines,
+					italic,
+					preserveLines,
+					align,
+				}),
+				className,
+			)}
+			{...props}
+		/>
 	);
+	return <InsideRole.Provider value={true}>{truncate ? <CutWords render={text} /> : text}</InsideRole.Provider>;
 }
 
 /** A heading in a heading role (`variant`): `title` for sections, panels and dialogs (the default), `page` for the screen's title, `heading` for a heading in a text, `display` for the post title. */
@@ -119,11 +122,8 @@ function Heading({
 	tone?: VariantProps<typeof textVariants>["tone"];
 	truncate?: boolean;
 }) {
-	return (
-		<InsideRole.Provider value={true}>
-			<Tag className={cn(textVariants({ variant, tone, truncate }), className)} {...props} />
-		</InsideRole.Provider>
-	);
+	const heading = <Tag className={cn(textVariants({ variant, tone, truncate }), className)} {...props} />;
+	return <InsideRole.Provider value={true}>{truncate ? <CutWords render={heading} /> : heading}</InsideRole.Provider>;
 }
 
 export { Heading, Text };
