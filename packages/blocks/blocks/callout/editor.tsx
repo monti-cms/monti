@@ -45,7 +45,6 @@ export default function CalloutEditor() {
 			<div className="monti-block-callout" data-tone={tone} role="note">
 				<div className="monti-block-callout-title" contentEditable={false}>
 					<BlockTitle
-						className="monti-block-title-input"
 						label={say(words.title)}
 						value={typeof block.attrs.title === "string" ? block.attrs.title : ""}
 						placeholder={wordsIn(block.language)[tone]}

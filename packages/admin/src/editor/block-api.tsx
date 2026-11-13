@@ -3,7 +3,8 @@
 import type { BlockStarter, Label } from "@monti-cms/core";
 import {
 	BlockBarPlace,
-	BlockBox,
+	BlockFrameBox,
+	BlockTitleField,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuRadioGroup,
@@ -12,6 +13,8 @@ import {
 	FloatingBar,
 	FloatingBarButton,
 	FormFieldError,
+	SourceBox,
+	Stack,
 	Textarea,
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
@@ -221,16 +224,10 @@ export function BlockFrame({
 	return (
 		<HoldContext.Provider value={(on) => setHeld((count) => Math.max(0, count + (on ? 1 : -1)))}>
 			<FocusContext.Provider value={setFocused}>
-				<div
-					data-slot="monti-block-frame"
-					className="relative"
-					onPointerEnter={() => setOver(true)}
-					onPointerLeave={() => setOver(false)}
-					{...props}
-				>
+				<BlockFrameBox onPointerEnter={() => setOver(true)} onPointerLeave={() => setOver(false)} {...props}>
 					{up && <BlockBarPlace>{bar}</BlockBarPlace>}
 					{children}
-				</div>
+				</BlockFrameBox>
 			</FocusContext.Provider>
 		</HoldContext.Provider>
 	);
@@ -334,26 +331,23 @@ export function SourceBlock({
 }) {
 	const { selected } = useBlock();
 	return (
-		<BlockBox selected={selected}>
-			<div data-slot="source-block" contentEditable={false} className="rounded-monti-md border border-monti-default">
-				<div className="overflow-x-auto p-monti-16">
-					{source.trim() === "" ? <p className="m-0 text-monti-body text-monti-faint">{empty}</p> : children}
-				</div>
-				{selected && (
-					<div className="flex flex-col gap-monti-8 rounded-b-monti-md border-monti-default border-t bg-monti-muted p-monti-12">
-						<span className="font-medium text-monti-caption text-monti-muted">{label}</span>
-						<SourcePanel
-							label={label}
-							value={source}
-							placeholder={placeholder}
-							errors={errors}
-							onChange={onChange}
-							autoFocus
-						/>
-					</div>
-				)}
-			</div>
-		</BlockBox>
+		<SourceBox
+			selected={selected}
+			empty={source.trim() === "" ? empty : undefined}
+			label={label}
+			source={
+				<SourcePanel
+					label={label}
+					value={source}
+					placeholder={placeholder}
+					errors={errors}
+					onChange={onChange}
+					autoFocus
+				/>
+			}
+		>
+			{children}
+		</SourceBox>
 	);
 }
 
@@ -370,7 +364,6 @@ export function BlockTitle({
 	label,
 	onChange,
 	onDone,
-	className,
 }: {
 	value: string;
 	placeholder?: string;
@@ -378,7 +371,6 @@ export function BlockTitle({
 	onChange: (value: string) => void;
 	/** Where Enter and Esc go: the block's words. */
 	onDone?: () => void;
-	className?: string;
 }) {
 	const { editable } = useBlock();
 	const [text, setText] = useState(value);
@@ -388,10 +380,8 @@ export function BlockTitle({
 		if (!composing.current) setText(value);
 	}, [value]);
 	return (
-		<input
-			data-slot="block-title"
+		<BlockTitleField
 			aria-label={label}
-			className={className}
 			value={text}
 			placeholder={placeholder}
 			readOnly={!editable}
@@ -470,7 +460,7 @@ export function SourcePanel({
 		timer.current = setTimeout(() => write(next), 400);
 	};
 	return (
-		<div data-slot="source-panel" contentEditable={false} className="flex flex-col gap-monti-4">
+		<Stack gap={4} contentEditable={false}>
 			<Textarea
 				mono
 				size="sm"
@@ -495,7 +485,7 @@ export function SourcePanel({
 				onBlur={(event) => write(event.currentTarget.value)}
 			/>
 			{errors.length > 0 && <FormFieldError errors={errors.map((message) => ({ message }))} />}
-		</div>
+		</Stack>
 	);
 }
 

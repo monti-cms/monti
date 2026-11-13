@@ -297,6 +297,7 @@ export {
 	useSidebar,
 } from "./sidebar";
 export { Sortable, type SortableEvent, SortableList, type SortableRef, useSortableItem } from "./sortable";
+export { BlockFrameBox, BlockTitleField, SourceBox } from "./source-box";
 export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
