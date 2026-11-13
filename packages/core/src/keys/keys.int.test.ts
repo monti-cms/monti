@@ -145,6 +145,9 @@ describe("adding a key (flow 10, 01–06)", () => {
 			address: false,
 			keyOptional: false,
 			placeholder: "sk-ant-…",
+			// The core's own, and one "add key" offers.
+			plugin: null,
+			addable: true,
 		});
 		expect(services.find((service) => service.id === "openai-compatible")).toMatchObject({
 			address: true,

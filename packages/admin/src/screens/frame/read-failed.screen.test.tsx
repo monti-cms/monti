@@ -110,3 +110,93 @@ describe("a screen whose first read does not come back", () => {
 		expect(banners()).toHaveLength(1);
 	});
 });
+
+// The plugins' screens (doc 14) read as every screen does: a read that does not come back is said at the top (T154).
+describe("the plugins' screens", () => {
+	type PluginSite = { site: StorySite; id: string };
+	/** The plugins' site, with the operations in `lost` getting no answer. */
+	const pluginSite = async (
+		options: Parameters<typeof import("../plugins/plugins.stories").site>[0],
+		lost: Set<string>,
+	) => {
+		const plugins = await import("../plugins/plugins.stories");
+		const story = scene<PluginSite>(
+			{
+				loaders: plugins.site(options).map((load) => async () => {
+					const made = await load();
+					const transport: StorySite["transport"] = async (name, ...rest) => {
+						if (lost.has(name)) throw new TypeError("Failed to fetch");
+						return made.site.transport(name, ...rest);
+					};
+					return { ...made, site: { ...made.site, transport } };
+				}),
+			},
+			plugins.default,
+		);
+		await story.run();
+		return story;
+	};
+
+	it("[T154] the tools' tabs: the plugin list that gets no answer is said at the top, and 'try again' brings the plugin's tab", async () => {
+		const lost = new Set(["plugins.list"]);
+		await pluginSite({ at: "tools" }, lost);
+		await expect.element(failed()).toBeVisible();
+		expect(await page.getByRole("link", { name: "검색 색인" }).elements()).toHaveLength(0);
+		lost.clear();
+		await userEvent.click(failed().getByRole("button", { name: "다시 시도" }));
+		await expect.element(page.getByRole("link", { name: "검색 색인" })).toBeVisible();
+		await expect.element(failed()).not.toBeInTheDocument();
+	});
+
+	it("[T154] the keys and the plugins' key slots: the list that gets no answer is said at the top, and 'try again' reads it", async () => {
+		const lost = new Set(["keys.list"]);
+		await pluginSite({ at: "tools" }, lost);
+		await userEvent.click(page.getByRole("link", { name: "API 키" }));
+		await expect.element(failed()).toBeVisible();
+		lost.clear();
+		await userEvent.click(failed().getByRole("button", { name: "다시 시도" }));
+		await expect.element(failed()).not.toBeInTheDocument();
+	});
+
+	it("[T154] a plugin's own read of a file that is gone is a state it knows: the SEO preview draws no picture and nothing is said at the top", async () => {
+		const plugins = await import("../plugins/plugins.stories");
+		const { addFile } = await import("../media/media.stories");
+		const asked: string[] = [];
+		const story = scene<PluginSite>(
+			{
+				loaders: plugins.site({ at: "entry" }).map((load) => async () => {
+					const made = await load();
+					const { monti } = made.site;
+					// The entry's share image is a file of the library, and the library then says it has no such file, in the server's own
+					// words for one that went to the trash.
+					const file = await addFile(made.site, {
+						name: "share.jpg",
+						from: "#335577",
+						to: "#112233",
+						width: 120,
+						height: 63,
+					});
+					await monti.run(
+						"entries.save",
+						{ id: made.id, version: 1, values: { seoImage: { media: file } } },
+						plugins.admin,
+					);
+					const transport: StorySite["transport"] = async (name, ...rest) => {
+						if (name !== "media.get") return made.site.transport(name, ...rest);
+						asked.push("refused");
+						return { status: 422, body: { error: "check", reason: { key: "media.unknown", values: { id: file } } } };
+					};
+					return { ...made, site: { ...made.site, transport } };
+				}),
+			},
+			plugins.default,
+		);
+		await story.run();
+		await userEvent.click(page.getByRole("tab", { name: "SEO" }));
+		await expect.element(page.getByRole("region", { name: "공유 카드" })).toBeVisible();
+		// The file was asked for and refused.
+		await expect.poll(() => asked.length).toBeGreaterThan(0);
+		await new Promise((resolve) => setTimeout(resolve, 200));
+		expect(banners().some((words) => words?.includes("불러오지 못했습니다"))).toBe(false);
+	});
+});

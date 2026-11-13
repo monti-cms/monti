@@ -14,6 +14,7 @@ import {
 } from "./operations/admin-context";
 import type { StreamTransport, Transport, Uploader } from "./operations/transport";
 import { useRead } from "./operations/use-operation";
+import type { AdminPlugin } from "./plugins";
 import { href, parseRoute, type Route, useRoute } from "./route";
 import { ActivityScreen } from "./screens/activity/activity-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
@@ -27,7 +28,7 @@ import { MediaScreen } from "./screens/media/media-screen";
 import { SettingsScreen } from "./screens/settings/settings-screen";
 import { TemplateEditor } from "./screens/templates/template-editor";
 import { TemplatesScreen } from "./screens/templates/templates-screen";
-import { ToolsTabs } from "./screens/tools/tools-tabs";
+import { ToolPageScreen, ToolsTabs } from "./screens/tools/tools-tabs";
 import { TrashScreen } from "./screens/trash/trash-screen";
 import { SessionProvider, useSession } from "./session";
 
@@ -122,7 +123,7 @@ const COUNT_AGAIN_MS = 3000;
 const COUNT_LOOKS = 20;
 
 function Screens({ route, go }: { route: Route; go: (route: Route, options?: { replace?: boolean }) => void }) {
-	const { screen, templates, onWrite } = useAdmin();
+	const { screen, templates, toolPages, onWrite } = useAdmin();
 	const assistant = useAssistant();
 	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
 	const [review, setReview] = useState(0);
@@ -262,8 +263,11 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 			) : route.screen === "place" && route.place === "tools" ? (
 				// Body templates turned off (settings › admin, doc 03): the tools have one tab left, so no tab row, and every way to the tools
 				// (the sidebar, the templates' own address) opens the keys.
-				route.tab === "keys" || !templates ? (
-					<KeysScreen tabs={templates ? <ToolsTabs current="keys" go={go} /> : null} />
+				// A plugin's page, while its browser half brings the screen; an address for one it does not bring opens the tools as usual.
+				route.page && toolPages.has(`${route.page.plugin}/${route.page.id}`) ? (
+					<ToolPageScreen page={route.page} tabs={<ToolsTabs current={route.page} go={go} />} />
+				) : route.tab === "keys" || !templates ? (
+					<KeysScreen tabs={<ToolsTabs current="keys" go={go} />} />
 				) : (
 					<TemplatesScreen
 						tabs={<ToolsTabs current="templates" go={go} />}
@@ -322,6 +326,7 @@ export function MontiAdmin({
 	denied,
 	screen,
 	blocks,
+	plugins,
 }: {
 	transport: Transport;
 	/** How streams are listened to (the assistant's run, an apply); over HTTP at `apiBase` when left out. */
@@ -337,6 +342,8 @@ export function MontiAdmin({
 	screen?: ScreenChannel;
 	/** The same site block definitions passed to core; their Editor (or Site fallback) renders custom blocks here. */
 	blocks?: AdminBlockDefinition[];
+	/** The plugins' browser halves (`defineAdminPlugin`): their inputs, views and tool pages (doc 14). */
+	plugins?: AdminPlugin[];
 }) {
 	return (
 		<AdminProvider
@@ -348,6 +355,7 @@ export function MontiAdmin({
 			apiBase={apiBase}
 			screen={screen}
 			blocks={blocks}
+			plugins={plugins}
 		>
 			<AdminUiLabels>
 				<TooltipProvider>

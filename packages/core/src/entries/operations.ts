@@ -104,6 +104,52 @@ function keepChosen(
 	return Object.fromEntries(Object.entries(values).filter(([field]) => !others.has(field)));
 }
 
+/**
+ * The plugins' say before an entry is saved (doc 14, `beforeSave`): each in the plugins' order, given the working copy as the one before it
+ * left it. What a hook returns is laid over the copy after passing a save's own checks; one that throws a `CheckError` stops the save.
+ */
+async function beforeSaving(
+	ctx: OperationContext,
+	entry: { id: string | null; collection: string; locale: string },
+	working: Pick<Entry, "title" | "slug" | "values" | "doc">,
+	previous: Entry | null,
+) {
+	const schema = ctx.site.schema();
+	let next = working;
+	for (const plugin of ctx.site.plugins) {
+		if (!plugin.beforeSave) continue;
+		const changed = await plugin.beforeSave(
+			{ ...entry, title: next.title, slug: next.slug, values: { ...next.values }, doc: next.doc },
+			{ db: ctx.db, schema, previous, actor: ctx.actor },
+		);
+		if (!changed) continue;
+		// Only what the hook changed is its say: a hook that hands back every value it was given changes none of them, and what an
+		// entry still holds from before (a value of a plugin since taken out) is not held against it.
+		const values = Object.fromEntries(
+			Object.entries(changed.values ?? {}).filter(
+				([field, value]) => !sameJson(value ?? null, next.values[field] ?? null),
+			),
+		);
+		const fields = storedFields(schema.collections[entry.collection]);
+		for (const field of Object.keys(values)) {
+			const definition = fields[field];
+			// A translation's `same` fields are its source's (doc 04), for a hook as for a person.
+			if (definition && isTranslation(schema, entry) && localeModeOf(field, definition) === "same")
+				throw new CheckError({ key: "entries.sameField", values: { field } });
+			// The far side of such a relation is other entries, which the write did not take hold of before it ran.
+			if (definition?.kind === "relation" && definition.via !== undefined)
+				throw new Error(
+					`Plugin ${plugin.name}: beforeSave cannot set "${field}", a relation edited from its other side.`,
+				);
+		}
+		const patch = { title: changed.title, slug: changed.slug, values };
+		checkDraft(schema, entry.collection, patch);
+		await checkMediaValues(ctx.db, schema, entry.collection, patch.values);
+		next = applyDraft(next, patch);
+	}
+	return next;
+}
+
 /** The media fields of these values as they are kept (`cleanMediaValue`). */
 function cleanMediaFields(schema: Schema, collection: string, values: Record<string, unknown>) {
 	const fields = storedFields(schema.collections[collection]);
@@ -263,12 +309,7 @@ export const entryOperations = [
 			const isItem = ctx.site.schema().collections[input.collection]?.kind === "item";
 			let values = input.values ? { ...input.values } : {};
 			values = await resolveInlineCreation(ctx, input.collection, values);
-			const working = applyDraft({ title: "", slug: "", values: {}, doc: null }, { ...input, values });
-			working.values = keepChosen(ctx.site.schema(), { collection: input.collection, locale }, working.values, input);
-			working.values = cleanMediaFields(ctx.site.schema(), input.collection, working.values);
-			if (isItem && working.slug === "" && working.title !== "") {
-				working.slug = await generateUniqueSlug(ctx.db, input.collection, locale, working.title, undefined, id);
-			}
+			const drafted = applyDraft({ title: "", slug: "", values: {}, doc: null }, { ...input, values });
 			if (input.template !== undefined) {
 				const template = await ctx.db
 					.selectFrom("templates")
@@ -278,8 +319,15 @@ export const entryOperations = [
 				if (!template) throw new CheckError({ key: "templates.unknown", values: { id: input.template } });
 				// New ids, and the blocks go in as the template has them, even ones the site no longer defines (doc 03, decisions).
 				const doc = template.doc as Doc;
-				working.doc = { type: "doc", blocks: doc.blocks.map(withNewIds) };
-				await checkBodyOf(ctx, working.doc, working.doc);
+				drafted.doc = { type: "doc", blocks: doc.blocks.map(withNewIds) };
+				await checkBodyOf(ctx, drafted.doc, drafted.doc);
+			}
+			// The plugins see the entry as it will be saved, its template's body included.
+			const working = await beforeSaving(ctx, { id: null, collection: input.collection, locale }, drafted, null);
+			working.values = keepChosen(ctx.site.schema(), { collection: input.collection, locale }, working.values, input);
+			working.values = cleanMediaFields(ctx.site.schema(), input.collection, working.values);
+			if (isItem && working.slug === "" && working.title !== "") {
+				working.slug = await generateUniqueSlug(ctx.db, input.collection, locale, working.title, undefined, id);
 			}
 			const translationGroup = randomUUID();
 			const now = ctx.now();
@@ -464,7 +512,7 @@ export const entryOperations = [
 			if (values) {
 				values = await resolveInlineCreation(ctx, entry.collection, values);
 			}
-			const working = applyDraft(entry, { ...input, values });
+			const working = await beforeSaving(ctx, entry, applyDraft(entry, { ...input, values }), entry);
 			const schema = ctx.site.schema();
 			working.values = keepChosen(
 				schema,

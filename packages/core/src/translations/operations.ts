@@ -403,8 +403,9 @@ export const translationOperations = [
 			"Compare a draft of the site's languages (the list, the source language, how addresses show the language) with the applied one: the languages added and removed and a source change, with what the review must confirm. Removing a language deletes its translations.",
 		input: z.object({ locales: LocalesInput }),
 		async run(input, ctx) {
-			const current = (await readSchemaState(ctx.db))?.schema ?? ctx.site.schema();
-			const draft: Schema = { ...ctx.site.schema(), locales: input.locales };
+			// The file's schema: the plugins' fields are not the file's, and a draft made of them would write them into it (doc 14).
+			const current = (await readSchemaState(ctx.db))?.schema ?? ctx.site.fileSchema();
+			const draft: Schema = { ...ctx.site.fileSchema(), locales: input.locales };
 			return {
 				problems: checkSchema(draft).filter((problem) => problem.collection === undefined),
 				changes: (await planSchema(ctx.db, current, draft)).filter((change) => change.collection === undefined),
@@ -421,9 +422,9 @@ export const translationOperations = [
 		touches: () => [{ kind: "schema", id: "current" }],
 		holds: (_input, ctx) => heldByStructure(ctx),
 		check: (input, ctx) =>
-			checkApply(ctx, { ...ctx.site.schema(), locales: input.locales }, [], input.answers as Answers),
+			checkApply(ctx, { ...ctx.site.fileSchema(), locales: input.locales }, [], input.answers as Answers),
 		run: (input, ctx) =>
-			applyStructure(ctx, { ...ctx.site.schema(), locales: input.locales }, [], input.answers as Answers),
+			applyStructure(ctx, { ...ctx.site.fileSchema(), locales: input.locales }, [], input.answers as Answers),
 		log: "settings",
 		summary: (_input, output) => ({
 			key: output.applied ? "schema.applied" : "schema.applyFailed",

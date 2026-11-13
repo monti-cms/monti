@@ -37,6 +37,7 @@ import {
 	StatusBarCell,
 	StatusBarList,
 	StatusBarListGroup,
+	StatusBarPluginCell,
 	StatusBarSpacer,
 	Text,
 	TextButton,
@@ -96,6 +97,7 @@ import {
 } from "./translation";
 import { type EntryRead, type SaveState, useEntryEditor } from "./use-entry-editor";
 import { usePublish } from "./use-publish";
+import { useTextChecks } from "./use-text-checks";
 
 const STATUS: Record<EntryState, EntryStatusKind> = {
 	draft: "draft",
@@ -195,6 +197,14 @@ export function EntryEditor({
 	const trash = useTrashMove();
 	const restore = useRestore();
 	const purge = usePurge();
+	// What the plugins' text checks find in the body (doc 03): a cell of the status bar for each.
+	const textChecks = useTextChecks({
+		body: bodyEditor,
+		checks: schema.data?.textChecks,
+		collection,
+		locale: read?.entry.locale,
+		off: readOnly,
+	});
 	const fieldLabels = schema.data?.adminValues[collection]?.fields ?? {};
 	const fieldLabel = (field: string) => fieldLabels[field]?.label ?? field;
 	const slug = String(editor.value("slug") ?? "");
@@ -865,6 +875,22 @@ export function EntryEditor({
 							</StatusBarListGroup>
 						) : null}
 					</StatusBarList>
+					{/* A plugin fills its cell and brings no UI of its own (status-bar.md): what it found, each with one thing to do, and all at once. */}
+					{textChecks.cells.map((cell) => (
+						<StatusBarPluginCell
+							key={cell.plugin}
+							label={cell.label}
+							findings={cell.findings.map((found, index) => ({
+								id: `${found.block}:${found.from}:${found.to}:${index}`,
+								title: found.replacement === "" ? found.was : `${found.was} → ${found.replacement}`,
+								detail: [found.note, t("entry.todo.body")].filter(Boolean).join(" · "),
+								actionLabel: t("entry.check.fix"),
+								onAction: () => textChecks.fix(cell.plugin, [found]),
+								onOpen: () => void textChecks.show(found),
+							}))}
+							fixAll={{ label: t("entry.check.fixAll"), onClick: () => textChecks.fix(cell.plugin, cell.findings) }}
+						/>
+					))}
 					<StatusBarSpacer />
 					<StatusBarCell end render={<span />}>
 						{t("entry.chars", { count: docLength(decidedOnly(editor.doc)) })}
