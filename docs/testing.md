@@ -60,6 +60,7 @@ L3, L4의 브라우저 테스트는 Vitest 브라우저 모드로 Chromium에서
 |---|---|---|
 | [`testing/scenes.ts`](../testing/scenes.ts) | 부품 종류마다 써 볼 장면의 목록. 빠져나간 결함은 장면이 된다 | 써 볼 길을 그때그때 떠올리면 같은 길을 또 빠뜨린다 |
 | `pnpm check:scenes` | 화면 코드가 쓴 부품 종류의 장면 테스트가 그 폴더에 있는지(`it("[reach] …")`), 부품 자체의 장면이 ui에 있는지, `it.todo` · `.only` · 진행 기록 번호 없는 `skip`이 없는지 | 장면을 빼거나 건너뛴 채로 push하지 못하게 한다. `.husky/pre-push`, CI, Claude hook(`git push`와 `gh pr create` 앞)에서 돈다 |
+| `pnpm check:titles` | 브라우저 테스트(`*.screen.test.tsx`, `*.browser.test.tsx`)의 이름(`describe`들과 제목을 이은 것)이 240자를 넘지 않는지 | 실패한 브라우저 테스트는 그때의 화면 그림을 테스트 이름으로 된 파일에 남긴다. 이름이 파일 이름 한도(255바이트)를 넘으면 그림이 남지 않는다(2026-11-13, #490의 CI에서 그림 없이 실패한 테스트). 제목에서 뺀 말은 테스트 위 주석에 적는다. `.husky/pre-push`와 CI에서 돈다. CI는 실패한 테스트의 그림을 `browser-test-failures`로 올린다. 실행할 때 만들어지는 제목(`it.each`)은 보지 못한다 |
 | `testing/input.ts` | 실제 입력: `pointerPath`(손이 가는 길), `dragPath`와 `dropDrag`(끌기의 중간과 놓기), `typeKorean`(조합 중인 한글), `pickWords` · `caretAfter`(글자 고르기와 커서 놓기) | 이벤트를 직접 쏘면 사람이 지나는 틈을 지나지 않는다. 가짜 클릭은 본문 이미지를 고르지 못했다 |
 | `testing/measure.ts` (`measure.browser.test.tsx`, `measure.screen.test.tsx`) | 모든 스토리를 띄워 누르는 것마다 높이(24 · 28 · 32 · 36), 누르는 높이(24px 이상), 모서리(알약 · 6px · 없음), 포커스 고리가 잘리는지 잰다 | `check:design`은 클래스만 읽어서 여백으로 만든 높이와 스크롤 상자에 잘린 고리를 못 본다. 처음 켰을 때 24px보다 낮은 누르는 곳이 부품 11개에서, 잘린 고리가 자르기 화면에서 나왔다 |
 | `packages/admin/test/scene.ts`의 `scene` | 스토리에 없는 상태를 테스트가 만들고, 그 사이트의 기능을 테스트가 읽는다 | 검사만 하려고 스토리를 늘리지 않는다. 화면에 보인 것과 저장된 것을 함께 본다 |
