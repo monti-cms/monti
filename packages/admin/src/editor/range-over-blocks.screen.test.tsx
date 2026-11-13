@@ -73,27 +73,26 @@ describe("T194 a body whose text is followed only by pictures and files", () => 
 		await expect.poll(() => getSelection()?.toString()).toBe(".");
 	});
 
-	it("a drag that starts in the text and ends on the last picture takes every picture and file between, and they stay taken when the mouse is let go", async () => {
+	it("a drag that starts in the text and goes down over the pictures and the file takes each one it comes over, and they stay taken when the mouse is let go", async () => {
 		await ManyInBody.run();
-		const last = body().getByRole("img", { name: "화면에 뜬 코드" });
-		await expect.element(last).toBeVisible();
+		await expect.element(body().getByRole("img", { name: "화면에 뜬 코드" })).toBeVisible();
+		paragraph().element().scrollIntoView({ block: "start" });
 		const words = paragraph().element().getBoundingClientRect();
-		const file = body().element().querySelector("[data-block=file]") as HTMLElement;
-		// Through the file on the way, as a hand goes.
-		await dragPath(
-			[{ x: words.left + 40, y: words.top + words.height / 2 }, middleOf(file), middleOf(last.element())],
-			{
-				steps: 12,
-			},
-		);
-		await expect.poll(covered).toEqual(["picture", "file", "picture"]);
+		// As far down as the window shows: the mouse cannot go where the page is not drawn (a short window shows fewer of the three).
+		const all = [...body().element().querySelectorAll<HTMLElement>("[data-block=image], [data-block=file]")];
+		const kinds = ["picture", "file", "picture"];
+		const reached = all.filter((block) => middleOf(block).y < window.innerHeight - 4);
+		expect(reached.length).toBeGreaterThan(0);
+		// Through each on the way, as a hand goes.
+		await dragPath([{ x: words.left + 40, y: words.top + words.height / 2 }, ...reached.map(middleOf)], { steps: 12 });
+		await expect.poll(covered).toEqual(kinds.slice(0, reached.length));
 		// After the browser has said its own selection again.
 		await new Promise((resolve) => setTimeout(resolve, 200));
-		expect(covered()).toEqual(["picture", "file", "picture"]);
+		expect(covered()).toEqual(kinds.slice(0, reached.length));
 		expect(picked()).toBeNull();
-		// Part of the paragraph and all three: Backspace takes them out, and the words before the drag's start stay.
+		// Part of the paragraph and what the drag took: Backspace takes them out, and the words before the drag's start stay.
 		await userEvent.keyboard("{Backspace}");
-		await expect.poll(blocks).toBe(0);
+		await expect.poll(blocks).toBe(all.length - reached.length);
 		const left = body().element().querySelector("p")?.textContent ?? "";
 		expect(left.length).toBeGreaterThan(0);
 		expect(FIRST.startsWith(left)).toBe(true);
