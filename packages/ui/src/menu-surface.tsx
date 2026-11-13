@@ -22,7 +22,7 @@ const SAME_SPOT = 6;
 
 /** Where the pointer last pressed, and when: the press that closes a menu is the one just before it is told to close. */
 let pressed: { x: number; y: number; at: number } | null = null;
-if (typeof window !== "undefined")
+if (typeof window !== "undefined") {
 	window.addEventListener(
 		"pointerdown",
 		(event) => {
@@ -30,6 +30,15 @@ if (typeof window !== "undefined")
 		},
 		true,
 	);
+	// A press ends when the pointer comes up, and it is from then that the menu fades: one held for a while is the closing press all the same.
+	window.addEventListener(
+		"pointerup",
+		(event) => {
+			if (pressed) pressed.at = event.timeStamp;
+		},
+		true,
+	);
+}
 
 /**
  * The card of a menu, which swallows the second press of a double press while it closes. A menu told to close stays in the page while it
