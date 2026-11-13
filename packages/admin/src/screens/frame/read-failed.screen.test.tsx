@@ -79,3 +79,14 @@ describe("a read that does not come back", () => {
 		expect(banners().some((words) => words?.includes("불러오지 못했습니다"))).toBe(false);
 	});
 });
+
+describe("a screen whose first read does not come back", () => {
+	it("[T154] the list says so at its top instead of standing empty with nothing said", async () => {
+		const { composeStories } = await import("@storybook/react-vite");
+		const frame = await import("./frame.stories");
+		await composeStories(frame).ReadFailed.run();
+		await expect.element(failed()).toBeVisible();
+		await expect.element(failed().getByRole("button", { name: "다시 시도" })).toBeVisible();
+		expect(banners()).toHaveLength(1);
+	});
+});

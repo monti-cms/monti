@@ -50,6 +50,28 @@ export const signedIn = (
 /** Flow 8, step 03: the first admin is in, and the first collection is empty. A new site has no counts. */
 export const Fresh: Story = { loaders: signedIn() };
 
+/**
+ * The list's read gets no answer (the network is gone once the admin is in): the banner at the screen's top says so, with the way to try
+ * again, and the page under it stays as it is before its read (T154).
+ */
+export const ReadFailed: Story = {
+	loaders: [
+		async () => {
+			startAt();
+			const site = await storySite({ schema, auth: { password: true }, signedIn: true, setup: labelCollections });
+			return {
+				site: {
+					...site,
+					transport: (async (name, ...rest) => {
+						if (name === "entries.query") throw new TypeError("Failed to fetch");
+						return site.transport(name, ...rest);
+					}) as StorySite["transport"],
+				},
+			};
+		},
+	],
+};
+
 /** The sidebar's numbers: entries per collection, the trash, failed deliveries (doc 15). */
 export const Counts: Story = {
 	loaders: signedIn(async (monti) => {
