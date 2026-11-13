@@ -97,7 +97,7 @@ export function TrashScreen() {
 								</TableCell>
 								<TableCell align="end">
 									<RowActions>
-										<RowMore label="행 메뉴" />
+										<RowMore label="더 보기" />
 									</RowActions>
 								</TableCell>
 							</TableRow>

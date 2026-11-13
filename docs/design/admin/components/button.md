@@ -107,7 +107,9 @@ DS README는 이 부품을 `TextLink`라고 부른다. 그런 export는 없다. 
 
 ### 코드
 
-`SplitButton`: `label`, `menu`(항목들, `DropdownMenuItem`으로), `menuLabel`(캐럿 쪽 반의 스크린 리더 이름이자 툴팁), `loading`과 `disabled`(둘 다 양쪽 반에 적용). `disabled`는 지금 정말 할 수 없을 때만 쓰고, 그때 `label`이 까닭을 말한다("발행됨", 원칙 7). 메뉴는 알약 전체 아래에 달린다. 로딩 중인 알약은 채움을 지킨다.
+`SplitButton`: `label`, `menu`(항목들, `DropdownMenuItem`으로), `menuLabel`(캐럿 쪽 반의 스크린 리더 이름이자 툴팁), `loading`과 `disabled`(둘 다 양쪽 반에 적용). `disabled`는 지금 정말 할 수 없을 때만 쓰고, 그때 `label`이 까닭을 말한다("발행됨", 원칙 7). 메뉴는 알약 전체 아래에 달린다. 로딩 중인 알약은 채움을 지킨다. 라벨 앞에 아이콘을 둘 수 있다(글 목록의 "새 게시글" 앞 `Add`): `Button`처럼 16px이고 왼쪽 여백 안으로 2px 당기며, 일하는 동안에는 고리가 그 자리에 선다(만들며 정함 (2026-11-14)).
+
+**+는 아이콘이다.** 더하는 알약과 메뉴 행("새 게시글", "태그 추가", "새 폴더", "템플릿 추가")은 앞에 `Add`(폴더는 `FolderAdd`) 아이콘을 두고, 라벨에 "+ "를 치지 않는다. 버튼에 브라우저의 `title`을 달지 않는다: 버튼의 툴팁은 `Tooltip`이다(`IconButton`은 `label`로 스스로 단다). `check:design`의 `typed-glyph`와 `button-title`이 막는다(만들며 정함 (2026-11-14)).
 
 ## 스피너
 

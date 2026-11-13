@@ -283,8 +283,15 @@ const screen = async (canvasElement: HTMLElement) => {
 	await page.findByRole("link", { name: "API 키" }, wait);
 	return page;
 };
+/** The ⋯ of the key row named `name`. */
+const dots = async (page: Awaited<ReturnType<typeof screen>>, name: string) => {
+	const rows = await page.findAllByRole("row", {}, wait);
+	const row = rows.find((one) => one.textContent?.includes(name));
+	if (!row) throw new Error(`No key row "${name}"`);
+	return within(row).getByRole("button", { name: "더 보기" });
+};
 const more = async (page: Awaited<ReturnType<typeof screen>>, name: string, item: string) => {
-	await userEvent.click(await page.findByRole("button", { name: `${name} 더 보기` }, wait));
+	await userEvent.click(await dots(page, name));
 	await userEvent.click(await page.findByRole("menuitem", { name: item }));
 };
 
@@ -320,7 +327,7 @@ export const RowMenu: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
-		await userEvent.click(await page.findByRole("button", { name: "Anthropic 개인 더 보기" }, wait));
+		await userEvent.click(await dots(page, "Anthropic 개인"));
 		await page.findByRole("menuitem", { name: "지우기" });
 	},
 };
@@ -504,7 +511,7 @@ export const NoSecretWithKeys: Story = {
 	loaders: site({ secret: null }),
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
-		await userEvent.click(await page.findByRole("button", { name: "Anthropic 개인 더 보기" }, wait));
+		await userEvent.click(await dots(page, "Anthropic 개인"));
 		await page.findByRole("menuitem", { name: "지우기" });
 	},
 };

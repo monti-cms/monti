@@ -16,7 +16,7 @@ const table = () => main().getByRole("table");
 const row = (words: string) => table().getByRole("row").filter({ hasText: words });
 const columnName = (name: string) => table().getByRole("button", { name, exact: true });
 const menuOf = async (words: string) => {
-	await userEvent.click(row(words).getByRole("button", { name: "행 메뉴" }));
+	await userEvent.click(row(words).getByRole("button", { name: "더 보기" }));
 	return page.getByRole("menu");
 };
 /** The newest toast that says this: earlier tests' toasts may still be on the page, and the newest is first. */
@@ -481,7 +481,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row(FAILED)).toBeVisible();
 		main().getByRole("button", { name: "검색" }).element().focus();
 		const reached: string[] = [];
-		for (let step = 0; step < 9 && reached.at(-1) !== "행 메뉴"; step++) {
+		for (let step = 0; step < 9 && reached.at(-1) !== "더 보기"; step++) {
 			await userEvent.keyboard("{Tab}");
 			reached.push(document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent ?? "");
 		}
@@ -491,7 +491,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 			"전송",
 			"시각",
 			'"고친 글" 저장',
-			"행 메뉴",
+			"더 보기",
 		]);
 		(row('"고친 글" 저장').getByRole("link").element() as HTMLElement).focus();
 		await userEvent.keyboard("{Enter}");
@@ -542,7 +542,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.poll(() => rows().length).toBe(3);
 	});
 
-	it("while one send runs, no other can be started: the banner's button says so and cannot be pressed, and another row's send is off", async () => {
+	it("while one send runs, no other can be started: the banner's button says so and cannot be pressed, and another row's ⋯ has no send", async () => {
 		const drawn = draw(stories.ThreeFailed);
 		await drawn.run();
 		const { hooks } = drawn.loaded();
@@ -553,8 +553,10 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await userEvent.click((await menuOf('"서울의 밤" 발행')).getByRole("menuitem", { name: "다시 보내기" }));
 		await expect.element(row('"서울의 밤" 발행')).toHaveTextContent("보내는 중");
 		await expect.element(banner().getByRole("button", { name: "보내는 중…" })).toBeDisabled();
-		const other = (await menuOf('"가을 사진 정리" 발행')).getByRole("menuitem", { name: "다시 보내기" });
-		await expect.element(other).toHaveAttribute("aria-disabled", "true");
+		const other = await menuOf('"가을 사진 정리" 발행');
+		// What cannot be done now is not in the menu (menu.md).
+		await expect.element(other.getByRole("menuitem", { name: "자세히" })).toBeVisible();
+		await expect.element(other.getByRole("menuitem", { name: "다시 보내기" })).not.toBeInTheDocument();
 		await userEvent.keyboard("{Escape}");
 		hooks.hold = null;
 		arrive();
@@ -710,7 +712,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await userEvent.click(dialog().getByRole("button", { name: "취소" }));
 		await expect.element(dialog()).not.toBeInTheDocument();
 		await expect.element(row('"고친 글" 저장')).not.toHaveTextContent("되돌림");
-		await expect.element(row('"고친 글" 저장').getByRole("button", { name: "행 메뉴" })).toHaveFocus();
+		await expect.element(row('"고친 글" 저장').getByRole("button", { name: "더 보기" })).toHaveFocus();
 
 		// A create: its undo deletes what was made, for good. The confirming button is the dangerous one, as "영구 삭제" has it.
 		await ask("Blog Assets 폴더 만듦");
@@ -802,7 +804,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		hooks.hold = new Promise((resolve) => {
 			arrive = resolve;
 		});
-		const more = () => row(FAILED).getByRole("button", { name: "행 메뉴" });
+		const more = () => row(FAILED).getByRole("button", { name: "더 보기" });
 		await tabTo(() => more().element());
 		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
@@ -828,7 +830,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		hooks.hold = new Promise((resolve) => {
 			arrive = resolve;
 		});
-		const more = () => first.querySelector<HTMLElement>('button[aria-label="행 메뉴"]') as HTMLElement;
+		const more = () => first.querySelector<HTMLElement>('button[aria-label="더 보기"]') as HTMLElement;
 		await tabTo(more);
 		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
@@ -968,7 +970,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await drawn.run();
 		const { hooks } = drawn.loaded();
 		hooks.lose.add("activity.undoPlan");
-		const more = () => row('"고친 글" 저장').getByRole("button", { name: "행 메뉴" });
+		const more = () => row('"고친 글" 저장').getByRole("button", { name: "더 보기" });
 		await tabTo(() => more().element());
 		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByRole("menuitem", { name: "되돌리기" })).toBeVisible();
@@ -991,7 +993,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const drawn = draw(stories.Log);
 		await drawn.run();
 		const { hooks } = drawn.loaded();
-		const more = () => row(FAILED).getByRole("button", { name: "행 메뉴" });
+		const more = () => row(FAILED).getByRole("button", { name: "더 보기" });
 		await tabTo(() => more().element());
 		// The network drops the call: no answer comes at all. It carries words of its own ("no answer"), and is an error all the same.
 		hooks.drop.add("deliveries.retry");
@@ -1136,7 +1138,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 	it("a row's 다시 보내기 from its ⋯ with the keyboard, answered at once: the row is gone before its menu has closed, and the menu gives the focus to what the list offers in its place", async () => {
 		toasts.dismiss();
 		await draw(stories.FailedOnly).run();
-		await tabTo(() => row(FAILED).getByRole("button", { name: "행 메뉴" }).element());
+		await tabTo(() => row(FAILED).getByRole("button", { name: "더 보기" }).element());
 		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
 		await userEvent.keyboard("{ArrowDown}{Enter}");
@@ -1151,7 +1153,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.poll(() => rows().length).toBe(3);
 		const [first, second] = [...table().element().querySelectorAll("tbody tr")];
 		if (!first || !second) throw new Error("No two failed rows.");
-		await tabTo(() => first.querySelector<HTMLElement>('button[aria-label="행 메뉴"]') as HTMLElement);
+		await tabTo(() => first.querySelector<HTMLElement>('button[aria-label="더 보기"]') as HTMLElement);
 		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
 		await userEvent.keyboard("{ArrowDown}{Enter}");
@@ -1330,7 +1332,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row('"그 사이 쓴 글" 만듦')).toBeVisible();
 	});
 
-	it("while an undo runs, a row's ⋯ keeps 되돌리기 and it cannot be pressed, as in the panel's ⋯", async () => {
+	it("while an undo runs, a row's ⋯ has no 되돌리기, as the panel's ⋯ has none (menu.md: what cannot be done is hidden)", async () => {
 		toasts.dismiss();
 		const drawn = draw(stories.Log);
 		await drawn.run();
@@ -1338,12 +1340,17 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const answer = held();
 		hooks.slow.set("activity.undo", answer.until);
 		await undoFromMenu('"고친 글" 저장');
-		const item = (await menuOf("템플릿 기본 틀 저장")).getByRole("menuitem", { name: "되돌리기" });
-		await expect.element(item).toHaveAttribute("aria-disabled", "true");
+		const menu = await menuOf("템플릿 기본 틀 저장");
+		await expect.element(menu.getByRole("menuitem", { name: "자세히" })).toBeVisible();
+		await expect.element(menu.getByRole("menuitem", { name: "되돌리기" })).not.toBeInTheDocument();
 		await userEvent.keyboard("{Escape}");
 		hooks.slow.clear();
 		answer.letGo();
 		await expect.element(row('"고친 글" 저장')).toHaveTextContent(/되돌림 \d\d:\d\d/);
+		// Words a person reads are in sans; mono is for what is typed or copied, as an address (tokens.md).
+		const note = row('"고친 글" 저장').element().querySelector<HTMLElement>("[data-slot=row-title-note]");
+		expect(note?.textContent).toMatch(/되돌림/);
+		expect(getComputedStyle(note as HTMLElement).fontFamily).not.toMatch(/mono/i);
 	});
 
 	it("a second delivery's 취소 confirmed while the first is on its way is sent when that one has answered: both are canceled", async () => {

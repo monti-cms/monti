@@ -158,19 +158,11 @@ function DropdownMenuSub({ ...props }: MenuPrimitive.SubmenuRoot.Props) {
  * A row that picks a further value: its name, the current value in a `MenuValue` if there is one, and a ›. Pointing at it, or pressing →,
  * opens the second level at its side; ← closes it. The row keeps the selected background while the second level is open.
  */
-function DropdownMenuSubTrigger({
-	className,
-	children,
-	chevron = true,
-	...props
-}: MenuPrimitive.SubmenuTrigger.Props & {
-	/** The › at the end. Off for a row that opens a card with no rows in it (a calendar), where the row says its current value with a `MenuTick` instead. */
-	chevron?: boolean;
-}) {
+function DropdownMenuSubTrigger({ className, children, ...props }: MenuPrimitive.SubmenuTrigger.Props) {
 	return (
 		<MenuPrimitive.SubmenuTrigger data-slot="dropdown-menu-sub-trigger" className={cn(MENU_ITEM, className)} {...props}>
 			{children}
-			{chevron && <ChevronRight aria-hidden className={MENU_SUB_MARK} />}
+			<ChevronRight aria-hidden className={MENU_SUB_MARK} />
 		</MenuPrimitive.SubmenuTrigger>
 	);
 }

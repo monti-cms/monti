@@ -1,27 +1,28 @@
 import type { ListColumn, ListRow, RelationOptionsResult } from "@monti-cms/core";
 import {
-	ContextMenuGroup,
-	ContextMenuItem,
 	ContextMenuSub,
 	ContextMenuSubContent,
 	ContextMenuSubTrigger,
 	DropdownMenuCheckboxItem,
-	DropdownMenuGroup,
-	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuSearch,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	MenuShortcut,
-	MenuTick,
 	toast,
 } from "@monti-cms/ui";
 import { Tag } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { useUndo } from "../../activity/use-undo";
 import { useAdmin } from "../../operations/admin-context";
-import { useOperation, useRead } from "../../operations/use-operation";
+import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { endsClosed } from "./format";
+
+/** The radio values of "none" and of rows that hold different values: no group id looks like these. */
+const NONE = "\u0000none";
+const MIXED = "\u0000mixed";
 
 export type RelationSubmenuProps = {
 	collection: string;
@@ -73,56 +74,41 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 		return Array.isArray(v) ? v.length === 0 : !v;
 	};
 
-	const handleSet = async (val: string | null, isCurrentlySelected: boolean) => {
-		const targetVal = isCurrentlySelected ? null : val;
-		const res = await editOp.run({
-			collection,
-			entryIds,
-			field: fieldName,
-			set: targetVal,
-		});
-		if (res.ok) {
-			const count = res.body.output?.count ?? rows.length;
-			toast(t("relations.edited", { count, fieldObject }), {
-				action: res.body.activityId
-					? {
-							label: t("common.undo"),
-							onClick: () => void (res.body.activityId && undo.run(res.body.activityId)),
-						}
-					: undefined,
-			});
-			onDone?.();
+	/** Says the change with the activity log's undo, or why it did not go through (status.md: a failed write says so). */
+	const told = (res: Awaited<ReturnType<typeof editOp.run>>) => {
+		if (!res.ok) {
+			toast.error(t(reasonOf(res.refusal)));
+			return false;
 		}
+		const count = res.body.output?.count ?? rows.length;
+		const activity = res.body.activityId;
+		toast(t("relations.edited", { count, fieldObject }), {
+			action: activity ? { label: t("common.undo"), onClick: () => void undo.run(activity) } : undefined,
+		});
+		return true;
+	};
+
+	/** One value for every row, or none (`null`). */
+	const handleSet = async (val: string | null) => {
+		if (told(await editOp.run({ collection, entryIds, field: fieldName, set: val }))) onDone?.();
 	};
 
 	const handleToggle = async (group: string, isAllSelected: boolean) => {
-		const res = isAllSelected
-			? await editOp.run({
-					collection,
-					entryIds,
-					field: fieldName,
-					remove: [group],
-				})
-			: await editOp.run({
-					collection,
-					entryIds,
-					field: fieldName,
-					add: [group],
-				});
-		if (res.ok) {
-			const count = res.body.output?.count ?? rows.length;
-			toast(t("relations.edited", { count, fieldObject }), {
-				action: res.body.activityId
-					? {
-							label: t("common.undo"),
-							onClick: () => void (res.body.activityId && undo.run(res.body.activityId)),
-						}
-					: undefined,
-			});
-		}
+		told(
+			await editOp.run({
+				collection,
+				entryIds,
+				field: fieldName,
+				...(isAllSelected ? { remove: [group] } : { add: [group] }),
+			}),
+		);
 	};
 
 	const allNone = rows.length > 0 && rows.every(isEmpty);
+	/** The value every row holds; with rows that differ, none is ticked. */
+	const current = allNone
+		? NONE
+		: (options.find((opt) => rows.length > 0 && rows.every((r) => hasGroup(r, opt.group)))?.group ?? MIXED);
 
 	const menuItems = column.many ? (
 		<>
@@ -147,36 +133,20 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 			})}
 		</>
 	) : (
-		<>
-			{context ? (
-				<ContextMenuItem onClick={() => void handleSet(null, allNone)}>
-					{t("list.relationNone")}
-					{allNone && <MenuTick />}
-				</ContextMenuItem>
-			) : (
-				<DropdownMenuItem onClick={() => void handleSet(null, allNone)}>
-					{t("list.relationNone")}
-					{allNone && <MenuTick />}
-				</DropdownMenuItem>
-			)}
-			{options.map((opt) => {
-				const all = rows.length > 0 && rows.every((r) => hasGroup(r, opt.group));
-				if (context) {
-					return (
-						<ContextMenuItem key={opt.group} onClick={() => void handleSet(opt.group, all)}>
-							{opt.title}
-							{all && <MenuTick />}
-						</ContextMenuItem>
-					);
-				}
-				return (
-					<DropdownMenuItem key={opt.group} onClick={() => void handleSet(opt.group, all)}>
-						{opt.title}
-						{all && <MenuTick />}
-					</DropdownMenuItem>
-				);
-			})}
-		</>
+		// One value: the rows' shared value has its ✓, and picking it again changes nothing (menu.md). A required field offers no "none".
+		<DropdownMenuRadioGroup
+			value={current}
+			onValueChange={(value: string) => {
+				if (value !== current) void handleSet(value === NONE ? null : value);
+			}}
+		>
+			{!column.required && <DropdownMenuRadioItem value={NONE}>{t("list.relationNone")}</DropdownMenuRadioItem>}
+			{options.map((opt) => (
+				<DropdownMenuRadioItem key={opt.group} value={opt.group}>
+					{opt.title}
+				</DropdownMenuRadioItem>
+			))}
+		</DropdownMenuRadioGroup>
 	);
 
 	if (context) {
@@ -186,9 +156,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 					{icon && <Tag aria-hidden />}
 					{fieldLabel}
 				</ContextMenuSubTrigger>
-				<ContextMenuSubContent>
-					{column.many ? menuItems : <ContextMenuGroup>{menuItems}</ContextMenuGroup>}
-				</ContextMenuSubContent>
+				<ContextMenuSubContent>{menuItems}</ContextMenuSubContent>
 			</ContextMenuSub>
 		);
 	}
@@ -199,9 +167,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 				{icon && <Tag aria-hidden />}
 				{fieldLabel}
 			</DropdownMenuSubTrigger>
-			<DropdownMenuSubContent>
-				{column.many ? menuItems : <DropdownMenuGroup>{menuItems}</DropdownMenuGroup>}
-			</DropdownMenuSubContent>
+			<DropdownMenuSubContent>{menuItems}</DropdownMenuSubContent>
 		</DropdownMenuSub>
 	);
 }

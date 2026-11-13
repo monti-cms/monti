@@ -196,7 +196,7 @@ export const RowMenu: Story = {
 	loaders: log(),
 	play: async ({ canvasElement }) => {
 		const row = await rowOf(canvasElement, '"리액트 19 마이그레이션" 발행');
-		await userEvent.click(within(row).getByRole("button", { name: "행 메뉴" }));
+		await userEvent.click(within(row).getByRole("button", { name: "더 보기" }));
 		await within(document.body).findByRole("menu", {}, wait);
 	},
 };

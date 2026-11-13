@@ -2,6 +2,13 @@ import type { UsageItem, UsageResult } from "@monti-cms/core";
 import {
 	BulkBar,
 	Button,
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuGroup,
+	ContextMenuItem,
+	ContextMenuLabel,
+	ContextMenuSeparator,
+	ContextMenuTrigger,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -41,17 +48,17 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
-import { Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
+import { Add, Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
-import { useRead } from "../../operations/use-operation";
+import { reasonOf, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { useCoverCorner } from "../frame/admin-frame";
 import { useLanguageName } from "./column-menu";
 import { ValueRow } from "./filter-rows";
-import { endsClosed } from "./format";
 import { MergeDialog } from "./merge-dialog";
+import { NoMatchRow } from "./no-match-row";
 import { SortRows } from "./sort-rows";
 import { useColumnWidths } from "./use-column-widths";
 import { useItemPanel } from "./use-item-panel";
@@ -103,10 +110,14 @@ function TaxonomySidePanel({
 	 */
 	const [saveAsked, setSaveAsked] = useState(false);
 	const nameInput = useRef<HTMLInputElement>(null);
+	/** The address the save was refused for, and why; it goes once the address is changed or another item opens. */
+	const [slugRefused, setSlugRefused] = useState<{ slug: string; reason: string } | null>(null);
+	const slugInput = useRef<HTMLInputElement>(null);
 	const [askedIn, setAskedIn] = useState(group);
 	if (askedIn !== group) {
 		setAskedIn(group);
 		setSaveAsked(false);
+		setSlugRefused(null);
 	}
 
 	const panel = useItemPanel({
@@ -129,6 +140,8 @@ function TaxonomySidePanel({
 		if (c.kind === "proposed") return String(c.value ?? "");
 		return String(panel.draft.value(path) ?? "");
 	};
+
+	const slugError = slugRefused && slugRefused.slug === shownValue(slugPath) ? slugRefused.reason : null;
 
 	const labelChanged = (path: string) => {
 		const c = panel.draft.cell(path);
@@ -217,18 +230,14 @@ function TaxonomySidePanel({
 										nameInput.current?.focus();
 										return;
 									}
-									const savedTitle = String(panel.draft.value(`locales.${sourceLocale}.title`) ?? "");
 									const res = await panel.save();
-									if (res) {
-										const finalTitle = res.locales[sourceLocale]?.title || savedTitle;
-										toast(
-											t("taxonomy.savedToast", {
-												titleObject: t(endsClosed(finalTitle) ? "list.objectFinal" : "list.objectOpen", {
-													name: finalTitle,
-												}),
-											}),
-										);
-									}
+									// Saved: the panel's own line says so, no toast repeats it (status.md). Refused: the field that caused it says why under
+									// itself (an address a deleted item had), anything else in a toast.
+									if (res.ok) return;
+									if (res.refusal.reason?.key === "items.pathKept") {
+										setSlugRefused({ slug: shownValue(slugPath), reason: t(res.refusal.reason) });
+										slugInput.current?.focus();
+									} else toast.error(t(reasonOf(res.refusal)));
 								}}
 							>
 								{t("common.save")}
@@ -270,13 +279,16 @@ function TaxonomySidePanel({
 					{t(hasPublicPage ? "taxonomy.field.slug" : "taxonomy.field.identifier")}
 				</FormFieldLabel>
 				<Input
+					ref={slugInput}
 					id="item-slug"
 					size="md"
 					mono
 					proposal={panel.draft.cell(slugPath).kind === "proposed"}
 					value={shownValue(slugPath)}
+					aria-invalid={slugError ? true : undefined}
 					onChange={(e) => panel.draft.set(slugPath, e.target.value)}
 				/>
+				{slugError && <FormFieldError>{slugError}</FormFieldError>}
 				{wasLine(slugPath)}
 			</FormField>
 			<FormField>
@@ -408,6 +420,47 @@ export function TaxonomyScreen({
 		params: new URLSearchParams([[item.firstRef?.field ?? collection, item.group]]),
 	});
 	const onFilterUsage = (item: UsageItem) => go(usageRoute(item));
+	/** One item's menu, the same from its ⋯ and from a right click (menu.md, row menu). */
+	const menuItems = (item: UsageItem, context: boolean) => {
+		const Item = context ? ContextMenuItem : DropdownMenuItem;
+		const Separator = context ? ContextMenuSeparator : DropdownMenuSeparator;
+		return (
+			<>
+				<Item onClick={() => setOpenGroup(item.group)}>
+					<Edit aria-hidden />
+					{t("taxonomy.edit")}
+				</Item>
+				<Item onClick={() => setMergeGroups([item.group])}>
+					<Merge aria-hidden />
+					{t("taxonomy.mergeWith")}
+				</Item>
+				{item.firstRef && item.usageCount > 0 && (
+					<Item onClick={() => onFilterUsage(item)}>
+						<List aria-hidden />
+						{t("taxonomy.viewUsage")}
+					</Item>
+				)}
+				<Separator />
+				<Item variant="danger" onClick={() => trashItems([item])}>
+					<TrashCan aria-hidden />
+					{t("trash.toTrash")}
+				</Item>
+			</>
+		);
+	};
+	/** A right click on one of several picked items: the bulk bar's actions, by the same names, without icons. */
+	const pickedMenuItems = () => (
+		<>
+			<ContextMenuGroup>
+				<ContextMenuLabel>{t("list.items", { count: picked.size })}</ContextMenuLabel>
+			</ContextMenuGroup>
+			<ContextMenuItem onClick={() => setMergeGroups([...picked])}>{t("taxonomy.merge")}</ContextMenuItem>
+			<ContextMenuSeparator />
+			<ContextMenuItem variant="danger" onClick={() => trashItems(allItems.filter((one) => picked.has(one.group)))}>
+				{t("trash.toTrash")}
+			</ContextMenuItem>
+		</>
+	);
 
 	const selectAll = {
 		state:
@@ -463,6 +516,7 @@ export function TaxonomyScreen({
 						onValueChange={setSearch}
 					/>
 					<Button variant="secondary" onClick={() => setOpenGroup("__new__")}>
+						<Add aria-hidden />
 						{t("taxonomy.add", { label: collectionName })}
 					</Button>
 				</PageHeader>
@@ -493,6 +547,16 @@ export function TaxonomyScreen({
 							</BulkBar>
 						)}
 						<TableBody>
+							{allItems.length > 0 && filteredItems.length === 0 && (search.trim() || filterUnused) && (
+								<NoMatchRow
+									colSpan={3}
+									words={t("taxonomy.noMatch")}
+									onClear={() => {
+										setSearch("");
+										setFilterUnused(false);
+									}}
+								/>
+							)}
 							{filteredItems.map((item) => {
 								const missingLocale = item.missingLocales[0];
 								const hasMissing = Boolean(isMultilingual && missingLocale);
@@ -502,8 +566,8 @@ export function TaxonomyScreen({
 									? t("taxonomy.missingLocale", { locale: languageName(missingLocale) })
 									: undefined;
 
-								return (
-									<TableRow key={item.group} selected={openGroup === item.group || picked.has(item.group)}>
+								const line = (
+									<TableRow selected={openGroup === item.group || picked.has(item.group)}>
 										<TableCell truncate>
 											<RowCheck
 												checked={picked.has(item.group)}
@@ -516,17 +580,13 @@ export function TaxonomyScreen({
 														{item.title || t("list.untitled")}
 													</RowLink>
 												}
-												address={
-													shownAddress || hasMissing ? (
-														<>
-															{shownAddress}
-															{missing && (
-																<Text variant="note" tone="warning">
-																	{shownAddress ? " · " : ""}
-																	{missing}
-																</Text>
-															)}
-														</>
+												address={shownAddress}
+												// A language that has no name yet is said in words, in the warning's color (tokens.md: mono only for an address).
+												note={
+													missing ? (
+														<Text variant="caption" tone="warning">
+															{missing}
+														</Text>
 													) : undefined
 												}
 												addressTitle={[shownAddress, missing].filter(Boolean).join(" · ") || undefined}
@@ -556,34 +616,22 @@ export function TaxonomyScreen({
 											<RowActions>
 												<DropdownMenu>
 													<RowMore
-														label={t("list.rowMenu")}
+														label={t("list.more")}
 														trigger={(button) => <DropdownMenuTrigger render={button} />}
 													/>
-													<DropdownMenuContent align="end">
-														<DropdownMenuItem onClick={() => setOpenGroup(item.group)}>
-															<Edit aria-hidden />
-															{t("taxonomy.edit")}
-														</DropdownMenuItem>
-														<DropdownMenuItem onClick={() => setMergeGroups([item.group])}>
-															<Merge aria-hidden />
-															{t("taxonomy.mergeWith")}
-														</DropdownMenuItem>
-														{item.firstRef && item.usageCount > 0 && (
-															<DropdownMenuItem onClick={() => onFilterUsage(item)}>
-																<List aria-hidden />
-																{t("taxonomy.viewUsage")}
-															</DropdownMenuItem>
-														)}
-														<DropdownMenuSeparator />
-														<DropdownMenuItem variant="danger" onClick={() => trashItems([item])}>
-															<TrashCan aria-hidden />
-															{t("trash.toTrash")}
-														</DropdownMenuItem>
-													</DropdownMenuContent>
+													<DropdownMenuContent align="end">{menuItems(item, false)} </DropdownMenuContent>
 												</DropdownMenu>
 											</RowActions>
 										</TableCell>
 									</TableRow>
+								);
+								// A right click opens the row's ⋯ rows; on one of several picked rows, what the bulk bar does (menu.md, row menu).
+								const several = picked.has(item.group) && picked.size > 1;
+								return (
+									<ContextMenu key={item.group}>
+										<ContextMenuTrigger render={line} />
+										<ContextMenuContent>{several ? pickedMenuItems() : menuItems(item, true)}</ContextMenuContent>
+									</ContextMenu>
 								);
 							})}
 						</TableBody>

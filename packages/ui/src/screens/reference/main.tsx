@@ -1,4 +1,4 @@
-import { Archive, Copy, Folder, FolderAdd, Launch, Tag, TrashCan, Upload } from "../../icons";
+import { Add, Archive, Copy, Document, Folder, FolderAdd, Launch, Tag, TrashCan, Upload } from "../../icons";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -167,7 +167,7 @@ const more = (
 );
 
 /** A list's one black pill. Its caret holds the other ways to add: a folder, or posts from a file. They are rare, so they are not buttons of their own. */
-export function NewPostButton({ label = "+ 새 글 쓰기" }: { label?: string } = {}) {
+export function NewPostButton({ label = "새 글 쓰기" }: { label?: string } = {}) {
 	return (
 		<SplitButton
 			menuLabel="더 만들기"
@@ -183,6 +183,7 @@ export function NewPostButton({ label = "+ 새 글 쓰기" }: { label?: string }
 				</>
 			}
 		>
+			<Add aria-hidden />
 			{label}
 		</SplitButton>
 	);
@@ -213,7 +214,7 @@ function PostRowMenu() {
 	return (
 		<ContextMenuContent>
 			<ContextMenuItem>
-				<Launch />
+				<Document />
 				열기
 			</ContextMenuItem>
 			<ContextMenuItem>
@@ -250,7 +251,7 @@ function PostRowMenu() {
 			<ContextMenuItem variant="danger">
 				<TrashCan />
 				휴지통으로
-				<MenuShortcut>Del</MenuShortcut>
+				<MenuShortcut keys={["Delete"]} />
 			</ContextMenuItem>
 		</ContextMenuContent>
 	);

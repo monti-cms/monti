@@ -868,7 +868,7 @@ export const ActivityConversation: Story = {
 		// The assistant's line quotes its request: its own ⋯.
 		const line = (await page.findByText(/둘째 글 버려 줘/, { selector: "a" }, wait)).closest("tr");
 		if (!line) throw new Error("the assistant's line is not a row");
-		await userEvent.click(await within(line as HTMLElement).findByRole("button", { name: "행 메뉴" }, wait));
+		await userEvent.click(await within(line as HTMLElement).findByRole("button", { name: "더 보기" }, wait));
 		await page.findByRole("menuitem", { name: "대화" }, wait);
 	},
 };

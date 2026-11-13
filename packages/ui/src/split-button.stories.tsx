@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { DropdownMenuItem } from "./dropdown-menu";
-import { CalendarSettings } from "./icons";
+import { Add, CalendarSettings } from "./icons";
 import { SplitButton } from "./split-button";
 
 const meta = {
@@ -24,6 +24,36 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {};
 
 export const Disabled: Story = { args: { disabled: true } };
+
+/** A leading icon, as the list's "New post" has its +: 16px, pulled 2px into the left padding as on a `Button`. */
+export const WithIcon: Story = {
+	args: {
+		children: (
+			<>
+				<Add aria-hidden />새 게시글
+			</>
+		),
+		menuLabel: "다른 방법으로 추가",
+	},
+	play: async ({ canvasElement }) => {
+		const icon = within(canvasElement).getByRole("button", { name: "새 게시글" }).querySelector("svg");
+		await expect(icon?.getBoundingClientRect().width).toBe(16);
+	},
+};
+
+/** Working with a leading icon: the spinner stands in the icon's place. */
+export const WithIconLoading: Story = {
+	args: {
+		loading: true,
+		children: (
+			<>
+				<Add aria-hidden />
+				만드는 중
+			</>
+		),
+		menuLabel: "다른 방법으로 추가",
+	},
+};
 
 /** Working on the main action: a spinner comes first in the main half, the label says what is happening, the pill keeps its fill, and neither half can be pressed. */
 export const Loading: Story = { args: { loading: true, children: "발행 중" } };

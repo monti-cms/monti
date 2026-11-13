@@ -1090,7 +1090,7 @@ describe("settings › admin", () => {
 		await expect.element(page.getByText("회고")).not.toBeInTheDocument();
 		// The memos' new-entry menu keeps its import (doc 14) and offers no template.
 		await userEvent.click(page.getByRole("button", { name: /메모/ }));
-		await expect.element(page.getByRole("button", { name: "+ 새 메모" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "새 메모" })).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: MORE_NEW }));
 		await expect.element(page.getByRole("menuitem", { name: "가져오기" })).toBeVisible();
 		await expect.element(page.getByRole("menuitem", { name: "템플릿으로 쓰기" })).not.toBeInTheDocument();

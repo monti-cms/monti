@@ -331,7 +331,8 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 }
 
 /**
- * The title cell of a row, on one line: the title in ink, then its address in mono, faint (`/first-post`; a folder's count, "글 2"). The other columns (cms-allow-korean)
+ * The title cell of a row, on one line: the title in ink, then its address in mono, faint (`/first-post`), and after it any words a person reads in sans
+ * (`note`: a folder's count "글 2", where a log line happened, "되돌림 10:44"; tokens.md: mono only for what is typed or copied). The other columns (cms-allow-korean)
  * are gray, so the ink alone makes the title the emphasis. Short of room, the address gives way first. A folder row has its folder icon before the title; a media row its
  * {@link RowThumb}, in the same column as the title so a head's name stands over both. A row of the assistant's work (the activity log) has the ✦ there, in
  * the proposal's blue: the mark leads the line and is never cut with the words.
@@ -339,6 +340,7 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 function RowTitle({
 	title,
 	address,
+	note,
 	addressTitle,
 	folder = false,
 	byAssistant,
@@ -348,9 +350,11 @@ function RowTitle({
 	...props
 }: Omit<React.ComponentProps<"span">, "title"> & {
 	title: React.ReactNode;
-	/** After the title: `/first-post`, or what a folder holds ("글 2"). (cms-allow-korean: quotes the words) */
+	/** After the title, in mono: what is typed or copied as it stands (`/first-post`, `post/first-post`). */
 	address?: React.ReactNode;
-	/** The address in words, when `address` is more than a string: what it says when it is cut and pointed at. */
+	/** After the address, in sans: words a person reads ("글 2", "명령줄 · 되돌림 10:44"), set off from the address by " · ". (cms-allow-korean: quotes the words) */
+	note?: React.ReactNode;
+	/** The address and note in words, when they are more than strings: what they say when they are cut and pointed at. */
 	addressTitle?: string;
 	/** The row is a folder: its icon leads the line. */
 	folder?: boolean;
@@ -384,7 +388,7 @@ function RowTitle({
 				/>
 			)}
 			{thumb && <span className="mr-monti-4 flex shrink-0 self-center">{thumb}</span>}
-			{address ? (
+			{address || note ? (
 				/*
 				 * One line of two: the title, then its address 12px after. The title does not give way while the address has room: the address is cut first, down to
 				 * a letter and its "…" (3ch). With less room than that it would be cut through a letter, so it goes to a second line, which this one line's height
@@ -400,9 +404,15 @@ function RowTitle({
 					{/* It says itself whole when pointed at: it stands over the row's link for the pointer to find it. */}
 					<CutWords
 						whole={addressTitle}
-						className="relative z-1 max-w-max grow basis-[3ch] font-mono text-monti-faint text-monti-meta"
+						className="relative z-1 max-w-max grow basis-[3ch] text-monti-faint text-monti-meta"
 					>
 						{address}
+						{address && note ? " · " : null}
+						{note ? (
+							<span data-slot="row-title-note" className="text-monti-caption">
+								{note}
+							</span>
+						) : null}
 					</CutWords>
 				</span>
 			) : (

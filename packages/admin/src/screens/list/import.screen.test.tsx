@@ -166,7 +166,7 @@ describe("exporting picked entries (flow 9, 04; T57)", () => {
 		await userEvent.click(page.getByRole("checkbox", { name: "서울의 밤 고르기" }));
 		await userEvent.click(page.getByRole("toolbar").getByRole("button", { name: "더 보기" }));
 		await userEvent.click(page.getByRole("menuitem", { name: "내보내기" }));
-		await expect.element(page.getByText("2편을 내보냈습니다.")).toBeVisible();
+		await expect.element(page.getByText("2편을 내보냈습니다")).toBeVisible();
 		expect(saved).toHaveLength(1);
 		expect(saved[0]?.name).toMatch(/^monti-export-\d{4}-\d{2}-\d{2}\.zip$/);
 		// The same file, chosen for an import: it is read as a Monti file, and both entries are here already.

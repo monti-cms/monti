@@ -28,6 +28,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
+	Empty,
 	FilePreview,
 	FilterButton,
 	FolderTile,
@@ -36,10 +37,11 @@ import {
 	Image,
 	Inline,
 	LIST_COLUMN_SIZE,
+	ListFooter,
 	ListHead,
 	type ListHeadColumn,
 	ListScroll,
-	MenuShortcut,
+	MenuValue,
 	PageColumn,
 	PageHeader,
 	PageToolbar,
@@ -70,6 +72,7 @@ import {
 	Folder,
 	FolderAdd,
 	Information,
+	List,
 	OverflowMenuHorizontal,
 	TrashCan,
 	Upload as UploadIcon,
@@ -101,6 +104,8 @@ import {
 } from "../list/folders";
 import { shortDate } from "../list/format";
 import { ListPages } from "../list/list-pages";
+import { NoMatchRow } from "../list/no-match-row";
+import { isDeleteKey } from "../list/row-menu";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
 import { MediaPanel, useFileUses } from "./media-panel";
@@ -328,7 +333,10 @@ function FileMenuItems({
 			</Item>
 			{item.uses > 0 && (
 				<Sub>
-					<Trigger>{t("library.uses")}</Trigger>
+					<Trigger>
+						<List aria-hidden />
+						{t("library.uses")}
+					</Trigger>
 					<Content>
 						<FileUsesRows context={context} id={item.id} go={go} />
 					</Content>
@@ -354,7 +362,7 @@ function FileUsesRows({ context, id, go }: { context: boolean; id: string; go: G
 			{uses.map((use) => (
 				<Item key={use.key} onClick={() => go(use.route)}>
 					{use.title}
-					<MenuShortcut>{use.places}</MenuShortcut>
+					<MenuValue>{use.places}</MenuValue>
 				</Item>
 			))}
 		</>
@@ -586,7 +594,10 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 						}}
 					/>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem onClick={() => naming.start()}>{`+ ${t("folders.new")}`}</DropdownMenuItem>
+					<DropdownMenuItem onClick={() => naming.start()}>
+						<FolderAdd aria-hidden />
+						{t("folders.new")}
+					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<TextButton
@@ -742,7 +753,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 										}}
 										onClick={() => openFile(item.id)}
 										onKeyDown={(event: React.KeyboardEvent) => {
-											if (event.key !== "Delete" && event.key !== "Backspace") return;
+											if (!isDeleteKey(event.key)) return;
 											event.preventDefault();
 											void trash(idsOfDrag(item));
 											setPicked(new Set());
@@ -755,11 +766,20 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					))}
 				</Grid>
 			)}
-			{nothing && (
-				<Text variant="note" tone="subtle">
-					{looking ? t("library.nothingFound") : t("library.empty")}
-				</Text>
-			)}
+			{/* Nothing here yet is the list's empty state; nothing found says so and takes the search and filters off, as every list does. */}
+			{nothing &&
+				(looking ? (
+					<Inline gap={12}>
+						<Text tone="subtle">{t("library.nothingFound")}</Text>
+						<TextButton
+							onClick={() => setState({ ...state, search: "", everywhere: false, kinds: [], used: [], page: 1 })}
+						>
+							{t("list.clearFilters")}
+						</TextButton>
+					</Inline>
+				) : (
+					<Empty title={t("library.empty")} />
+				))}
 		</Stack>
 	);
 	// With a file open beside the list there is room for its name and when: the panel says the rest of the open file.
@@ -939,17 +959,16 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 							<ContextMenuContent>{fileItems(true, item)}</ContextMenuContent>
 						</ContextMenu>
 					))}
-					{nothing && (
-						<TableRow>
-							<TableCell colSpan={head.length + 1}>
-								<Text variant="note" tone="subtle">
-									{looking ? t("library.nothingFound") : t("library.empty")}
-								</Text>
-							</TableCell>
-						</TableRow>
+					{nothing && looking && (
+						<NoMatchRow
+							colSpan={head.length + 1}
+							words={t("library.nothingFound")}
+							onClear={() => setState({ ...state, search: "", everywhere: false, kinds: [], used: [], page: 1 })}
+						/>
 					)}
 				</TableBody>
 			</Table>
+			{nothing && !looking && <Empty title={t("library.empty")} />}
 		</ListScroll>
 	);
 	const pages = data ? Math.ceil(data.total / data.pageSize) : 1;
@@ -1016,7 +1035,19 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 						)}
 					</ContextMenuContent>
 				</ContextMenu>
-				<ListPages page={state.page} pages={pages} hrefOf={(page) => hrefOf({ ...state, page })} />
+				{/* Under the files, as under every table: the range shown, and the pages (components/list.md, pages). */}
+				{data && pages > 1 && (
+					<ListFooter>
+						<Count>
+							{t("list.range", {
+								from: (state.page - 1) * data.pageSize + 1,
+								to: Math.min(state.page * data.pageSize, data.total),
+								total: data.total,
+							})}
+						</Count>
+						<ListPages page={state.page} pages={pages} hrefOf={(page) => hrefOf({ ...state, page })} />
+					</ListFooter>
+				)}
 			</PageColumn>
 			{removeFolder.dialog}
 			{state.file && (
