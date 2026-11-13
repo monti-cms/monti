@@ -131,16 +131,56 @@ describe("reading a markdown file (T34)", () => {
 		]);
 	});
 
-	it("14-1 a code block keeps its text as written, a highlighter's line notations included (T79)", () => {
+	it("17-10 a code block's Shiki notation becomes its line effects, and is written back so it reads the same (T79)", () => {
 		const code = ["const a = 1; // [!code --]", "const a = 2; // [!code ++]", "// [!code highlight:2]", "run(a);"].join(
 			"\n",
 		);
 		const read = readMarkdown(`\`\`\`ts {1,3} title="a.ts"\n${code}\n\`\`\`\n`);
 		expect(bare(read.doc)).toEqual([
-			{ type: "codeBlock", attrs: { language: 'ts {1,3} title="a.ts"' }, content: [text(code)] },
+			{
+				type: "codeBlock",
+				attrs: {
+					language: "ts",
+					title: "a.ts",
+					meta: "{1,3}",
+					lines: [
+						{ name: "minus", start: 0, end: 1 },
+						{ name: "plus", start: 1, end: 2 },
+						{ name: "highlight", start: 2, end: 3 },
+					],
+				},
+				content: [text("const a = 1;\nconst a = 2;\nrun(a);")],
+			},
 		]);
-		// And written back, the same file.
-		expect(toMdx(read.doc)).toBe(`\`\`\`ts {1,3} title="a.ts"\n${code}\n\`\`\`\n`);
+		const written = toMdx(read.doc);
+		expect(written).toBe(
+			'```ts title="a.ts" {1,3}\nconst a = 1; // [!code --]\nconst a = 2; // [!code ++]\nrun(a); // [!code highlight]\n```\n',
+		);
+		expect(bare(readMarkdown(written).doc)).toEqual(bare(read.doc));
+	});
+
+	it("17-10 a code link names a label: it goes to the code block with it, and is written back as CodeRef", () => {
+		const file = [
+			'See <CodeRef to="c1">this line</CodeRef> and :code-ref[that one]{to="c9"}.',
+			"",
+			"```ts",
+			'// @line anchor {0-0} id="c1"',
+			"const a = 1;",
+			"```",
+			"",
+		].join("\n");
+		const read = readMarkdown(file);
+		const [paragraph, codeBlock] = read.doc.blocks;
+		expect(paragraph.content).toEqual([
+			text("See "),
+			{ type: "text", text: "this line", marks: [{ type: "codeRef", block: codeBlock.id, anchor: "c1" }] },
+			text(" and "),
+			{ type: "text", text: "that one", marks: [{ type: "codeRef", block: "-", anchor: "c9" }] },
+			text("."),
+		]);
+		expect(toMdx({ type: "doc", blocks: [paragraph] })).toBe(
+			'See <CodeRef to="c1">this line</CodeRef> and <CodeRef to="c9">that one</CodeRef>.\n',
+		);
 	});
 
 	it("14-1 a directive that names one of the site's blocks becomes that block; one that names none, and a component, are kept as written and named", () => {

@@ -109,6 +109,12 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
 - 미리보기 페이지를 따로 만든 사이트는 그 주소를 구조에 적고(본문이 있는 컬렉션의 `previewPath: "/preview/:slug"`. 관리자 화면의 설정에서도
   고친다), 그 페이지에서 `previewPage`로 글을 읽는다. 미리보기를 열지 않은 사람에게는 없는 페이지다.
 
+## 코드 블록
+
+사이트의 레이아웃에 `<CodeTools />`를 넣으면 `renderDocument`가 그린 코드 블록에 복사 버튼, 접힌 글자, 코드 링크가 생긴다. 링크를 가리키면
+그 줄이 밝아지고(화면 밖이면 글 옆에 그 줄을 보인다), 누르면 그 줄로 가며, 링크된 줄에는 글로 돌아가는 버튼이 붙는다(이름은
+`labels.back`). 아무것도 그리지 않는다. React가 아닌 사이트는 `attachCodeTools(document)`를 부른다. 모양은 `@monti-cms/core/render.css`다.
+
 ## 사이트의 캐시
 
 Next 사이트는 그린 페이지를 저장해 두고 쓴다. 그래서 글이 발행되면 누군가 사이트에 알려야 한다. `openSite`가 그 일을 한다. Monti의

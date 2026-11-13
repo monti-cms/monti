@@ -3,11 +3,13 @@ import { Dropcursor, Gapcursor, UndoRedo } from "@tiptap/extensions";
 import { GapCursor } from "@tiptap/pm/gapcursor";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { NodeSelection } from "@tiptap/pm/state";
-import { type Editor, useEditor } from "@tiptap/react";
-import { useMemo, useRef } from "react";
+import { type Editor, type ReactNodeViewProps, useEditor } from "@tiptap/react";
+import { type ComponentType, useMemo, useRef } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import type { BodyCatalogs, Catalog, CatalogBlock } from "./catalog";
+import { CodeTools } from "./code/code-state";
+import { CodeBlockView } from "./code/code-view";
 import { docFromEditor, docToEditor } from "./convert";
 import { Footnotes } from "./footnotes";
 import { bodyKeys } from "./keys";
@@ -17,6 +19,9 @@ import { ProposalMarks } from "./proposal-marks";
 import { nothingPicked, RangeOverWholeBlocks } from "./range-over-blocks";
 import { RequestMarks } from "./request-marks";
 import { bodyExtensions, nodeName } from "./schema";
+
+/** How the core's own blocks draw in the editor: a picture, a file, a code block (doc 17). */
+const VIEWS = new Map<string, ComponentType<ReactNodeViewProps>>([...MEDIA_VIEWS, ["codeBlock", CodeBlockView]]);
 
 /** The site's blocks and the ones a collection's editor offers (`blocks.catalog`, doc 03). A template is written with every block the site has. */
 export function useBodyCatalogs(collection?: string): BodyCatalogs | null {
@@ -73,7 +78,8 @@ export function useBodyEditor({
 			return block.type !== "heading" || now.headings.includes(Number(node.attrs.data?.level ?? 2));
 		};
 		return [
-			...bodyExtensions(kit, boxLabel, blocks, MEDIA_VIEWS),
+			...bodyExtensions(kit, boxLabel, blocks, VIEWS),
+			CodeTools.configure({ settings: kit.code ?? null }),
 			BlockIds,
 			bodyStates({
 				labels: () => ({ placeholder: latest.current.t("editor.placeholder"), off: latest.current.t("editor.off") }),

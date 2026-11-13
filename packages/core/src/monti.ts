@@ -5,6 +5,7 @@ import type { DevProof } from "./auth/dev-bypass";
 import { type AuthSettings, authOperations } from "./auth/operations";
 import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./body/blocks";
 import { bodyOperations, templateRecord } from "./body/operations";
+import type { CodeBlockConfig } from "./code/settings";
 import { dataOperations } from "./data/operations";
 import type { Database, ItemExchange } from "./db/schema";
 import { BEFORE_ANSWER_MS, type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
@@ -150,6 +151,8 @@ export type MontiOptions = {
 	/** The site's own body blocks and marks (`defineBlock`), next to the core's. */
 	blocks?: AnyBlockDefinition[];
 	marks?: MarkDefinition[];
+	/** The site's code block settings: themes, languages, tools, line effects (doc 17). */
+	codeBlock?: CodeBlockConfig;
 	/** The ways to sign in that `monti init` chose. Without one, the admin says sign-in is not set up. */
 	auth?: Partial<AuthSettings>;
 	/** How a browser proves it runs on this machine (the dev server's sign-in bypass, doc 16). */
@@ -429,6 +432,7 @@ export function createMonti(options: MontiOptions) {
 		kit: createBlockKit(
 			[...(options.blocks ?? []), ...plugins.flatMap((plugin) => plugin.blocks ?? [])],
 			[...(options.marks ?? []), ...plugins.flatMap((plugin) => plugin.marks ?? [])],
+			options.codeBlock,
 		),
 	});
 	const engine: Engine = { db: options.db, recordKinds, receivers, site, now };

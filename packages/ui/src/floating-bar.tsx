@@ -1,7 +1,7 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import type { ComponentProps, ReactElement, ReactNode } from "react";
+import { type ComponentProps, cloneElement, type ReactElement, type ReactNode } from "react";
 import { cn } from "./cn";
 import type { ShortcutKeys } from "./shortcut";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -36,10 +36,13 @@ function FloatingBarButton({
 	pressed,
 	tone,
 	trigger,
+	named = false,
 	className,
 	children,
 	...props
 }: Omit<ButtonPrimitive.Props, "aria-label" | "aria-pressed" | "children"> & {
+	/** Its name is written on it beside its icon (a block's labelled toggle): 8px inside, 4px between the icon and the words. */
+	named?: boolean;
 	/** The name of the button: its screen reader name and its tooltip. */
 	label: string;
 	/** The key combination that does the same (`["mod", "B"]`), shown in the tooltip. */
@@ -59,10 +62,15 @@ function FloatingBarButton({
 			data-tone={tone}
 			// Do not take the selection or the focus from the text on press.
 			onMouseDown={(event) => event.preventDefault()}
-			className={cn(BAR_BUTTON, "min-w-7 px-monti-4 text-monti-body", className)}
+			className={cn(BAR_BUTTON, "min-w-7 px-monti-4 text-monti-body", named && "gap-monti-4 px-monti-8", className)}
 			{...props}
 		/>
 	);
+	// A button with its name on it says it once: no tooltip with the same words.
+	if (named) {
+		const own = trigger ? trigger(button) : button;
+		return cloneElement(own, undefined, children);
+	}
 	return (
 		<Tooltip>
 			<TooltipTrigger render={trigger ? trigger(button) : button}>{children}</TooltipTrigger>

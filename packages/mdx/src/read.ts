@@ -1,4 +1,4 @@
-import { type Block, type Doc, type Inline, type Mark, newBlockId } from "@monti-cms/core";
+import { type Block, type Doc, type Inline, type Mark, newBlockId, readFence } from "@monti-cms/core";
 import type { Nodes, PhrasingContent, RootContent } from "mdast";
 import { directiveFromMarkdown } from "mdast-util-directive";
 import { fromMarkdown } from "mdast-util-from-markdown";
@@ -113,6 +113,16 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 					push(node.alt ?? "", now);
 					break;
 				case "html": {
+					// A code link (doc 17): `<CodeRef to="c1">words</CodeRef>`, the label of lines in a code block of this body.
+					const codeRef = /^<CodeRef\s+to=(?:"([^"]*)"|'([^']*)')\s*>$/.exec(node.value.trim());
+					if (codeRef) {
+						open = [...open, { type: "codeRef", block: "", anchor: codeRef[1] ?? codeRef[2] ?? "" }];
+						break;
+					}
+					if (node.value.trim() === "</CodeRef>") {
+						open = open.filter((each) => each.type !== "codeRef");
+						break;
+					}
 					const tag = /^<(\/)?([a-z]+)\s*\/?>$/i.exec(node.value.trim());
 					const mark = tag ? TAGS[(tag[2] ?? "").toLowerCase()] : undefined;
 					if (tag && (tag[2] ?? "").toLowerCase() === "br") out.push({ type: "hardBreak" });
@@ -121,6 +131,14 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 					else push(node.value, now);
 					break;
 				}
+				case "textDirective":
+					// The old code link, `:code-ref[words]{to="c1"}`.
+					if (node.name === "code-ref" && typeof node.attributes?.to === "string") {
+						out.push(...inline(node.children, [...now, { type: "codeRef", block: "", anchor: node.attributes.to }]));
+						break;
+					}
+					push(source(node), now);
+					break;
 				default:
 					// What has no inline of its own (a text directive, a reference) stays as it was written.
 					push(source(node), now);
@@ -200,13 +218,11 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 				}
 				case "blockquote":
 					return [{ id: newBlockId(), type: "quote", children: blocks(node.children) }];
-				case "code":
-					// The text as it is written, whatever a highlighter would read in it (`// [!code ++]`): nothing of it is taken out.
-					return [
-						textBlock("codeBlock", node.value === "" ? [] : [{ type: "text", text: node.value }], {
-							...(node.lang ? { language: [node.lang, node.meta].filter(Boolean).join(" ") } : {}),
-						}),
-					];
+				case "code": {
+					// Shiki's notation and the old Monti comments become the block's effects; the rest of the fence line is kept (doc 17, T79).
+					const fence = readFence({ lang: node.lang, meta: node.meta, value: node.value });
+					return [textBlock("codeBlock", fence.content, fence.attrs)];
+				}
 				case "table": {
 					const cell = (nodes: readonly PhrasingContent[]) =>
 						inline(nodes)
@@ -268,5 +284,44 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 		});
 
 	const made = blocks(tree.children);
-	return { values, doc: { type: "doc", blocks: made }, unknown };
+	return { values, doc: { type: "doc", blocks: pointCodeLinks(made) }, unknown };
+}
+
+/**
+ * A code link names a label; the file has no block ids, so it goes to the first code block with that label (the old `:code-ref`'s rule). One whose
+ * label no code block has stays, broken (`-`): the publish check finds it (doc 17, 17-8).
+ */
+function pointCodeLinks(blocks: Block[]): Block[] {
+	const owner = new Map<string, string>();
+	const visit = (list: Block[]) => {
+		for (const block of list) {
+			if (block.type === "codeBlock")
+				for (const effect of (block.attrs?.lines ?? []) as { name: string; attrs?: { id?: string } }[])
+					if (effect.name === "anchor" && effect.attrs?.id && !owner.has(effect.attrs.id))
+						owner.set(effect.attrs.id, block.id);
+			if (block.children) visit(block.children);
+		}
+	};
+	visit(blocks);
+	const point = (block: Block): Block => ({
+		...block,
+		...(block.content
+			? {
+					content: block.content.map((part) =>
+						part.type === "text" && part.marks?.some((mark) => mark.type === "codeRef" && mark.block === "")
+							? {
+									...part,
+									marks: part.marks.map((mark) =>
+										mark.type === "codeRef" && mark.block === ""
+											? { ...mark, block: owner.get(String(mark.anchor)) ?? "-" }
+											: mark,
+									),
+								}
+							: part,
+					),
+				}
+			: {}),
+		...(block.children ? { children: block.children.map(point) } : {}),
+	});
+	return blocks.map(point);
 }

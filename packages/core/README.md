@@ -194,6 +194,33 @@ A link to an entry is `monti:entry/<translation group>` (`entryLink`), so it hol
 Every heading is drawn with an `id` made of its words (letters of any language kept, the same words again numbered), and
 `tocOf(doc, { min, max })` gives the table of contents with those ids: `{ id, text, level, depth }` for levels 2 and 3 unless said.
 
+### Code blocks
+
+A code block holds its code as text, with its language, file name (`title`), whether the site shows line numbers, line effects over ranges of lines
+(`highlight`, `focus`, `plus`, `minus`, `warning`, `error`, `collapse`, and `anchor`, a label a code link names) and regex rules. Bold, italic,
+strike, underline, a fold (`codeFold`) and a tooltip (`codeTip`) go inside the code as marks. A code link in the text is the mark
+`codeRef { block, anchor }`; one whose lines are gone blocks the publish.
+
+`codeBlock` in `monti.config.ts` sets the two Shiki themes, the languages the editor offers, the editor's tools and the line effects:
+
+```ts
+codeBlock: {
+	themes: { light: "github-light", dark: "github-dark" },
+	languages: ["ts", "tsx", "bash", "json"],
+	tools: { rules: false }, // rules, fold, tooltip, textStyles, links: all on unless false
+	lineEffects: [{ name: "info", label: "Info", class: "line-info", editor: { tone: "neutral", marker: "i" } }],
+},
+```
+
+The site opens the same colours once and hands them to `renderDocument`; `@monti-cms/core/render.css` is the default look (plain CSS), and
+`<CodeTools />` of `@monti-cms/next` does the pressing (copy, code links):
+
+```ts
+import { codeHighlighter } from "@monti-cms/core/code";
+export const code = codeHighlighter(config.codeBlock); // a promise: pages `await code`
+renderDocument(entry.doc, { createElement, code: await code, locale: entry.locale });
+```
+
 ## Plugins
 
 A plugin is code in `monti.config.ts` (`plugins: [seo(), …]`): `definePlugin({ name, … })`. What it can add:
