@@ -172,9 +172,10 @@ export const releaseRequests: BrowserCommand<[]> = async (context) => {
 	const hold = held.get(page);
 	if (!hold) return;
 	held.delete(page);
-	// Let the held ones go first: taking the route away first hands them on to the network itself.
-	for (const go of hold.waiting.splice(0)) go();
+	// The route goes first, so no request comes into it after the held ones are let go; then each held one is let go (taken by the route,
+	// it waits for its own `continue`).
 	await page.unroute(hold.pattern);
+	for (const go of hold.waiting.splice(0)) go();
 };
 
 /**

@@ -115,8 +115,9 @@ export function SettingsScreen({
 
 	// A removal's toast undoes it in the draft; once the draft is saved there is nothing left for it to undo.
 	const undoToasts = useRef<(string | number)[]>([]);
-	const saved = () => {
-		draft.saved();
+	/** After a save that went through: what it sent leaves the draft, and a change made while it was on its way stays (as T230). */
+	const saved = (sent: ReturnType<typeof draft.sending>) => {
+		draft.saved(sent);
 		for (const id of undoToasts.current.splice(0)) toast.dismiss(id);
 	};
 
@@ -142,6 +143,9 @@ export function SettingsScreen({
 		// A collection with no admin values yet is at version 0: a row another tab made since is a conflict, not something to write over.
 		for (const c of Object.keys(model.changedValues))
 			if (data.schema.collections[c]) versions[`collectionAdminValues:${c}`] = data.adminValues[c]?.version ?? 0;
+		// What this save sends: the draft as this render drew it, which the request is made from. A change made later (while the review's
+		// plan was asked for, or while this save is on its way) is not part of it and stays.
+		const sent = draft.drawnChanges();
 		const result = await saveOp.run(
 			{
 				...(siteChanged ? { site } : {}),
@@ -178,7 +182,7 @@ export function SettingsScreen({
 			setRefusedInReview(false);
 		} else {
 			await model.read.reload();
-			saved();
+			saved(sent);
 			setPlan(null);
 			setRefused(null);
 			// Files saved but not applied: the frame's line over every screen says so, with "apply again" (flow 11, step 20).
