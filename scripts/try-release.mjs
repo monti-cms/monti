@@ -246,7 +246,7 @@ try {
 	cpSync(path.join(root, "testing", "release", "app"), site, { recursive: true });
 	// By address, as a person installs a release: what a site uses itself, and the packages no page of this site imports (the assistant,
 	// the S3 storage, the SEO plugin).
-	const named = ["core", "admin", "next", "ai", "storage-s3", "seo"];
+	const named = ["core", "admin", "next", "ai", "storage-s3", "seo", "mdx"];
 	inSite("npm", [
 		"install",
 		"--no-audit",
@@ -254,7 +254,7 @@ try {
 		...named.map((name) => `${address}/${tarballName(`@monti-cms/${name}`, version)}`),
 	]);
 	// Each package resolves and loads in Node from the site's own node_modules (the admin and the adapter are loaded by the build below).
-	for (const name of ["core", "core/render", "ai", "storage-s3", "seo"])
+	for (const name of ["core", "core/render", "ai", "storage-s3", "seo", "mdx"])
 		inSite(process.execPath, ["--input-type=module", "-e", `await import("@monti-cms/${name}");`]);
 
 	step(`a database of its own (${database})`);

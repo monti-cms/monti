@@ -30,6 +30,7 @@ export default {
 				"next",
 				"storage-s3",
 				"seo",
+				"mdx",
 				"examples",
 				"scripts",
 				"ci",
