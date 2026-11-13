@@ -1127,6 +1127,33 @@ describe("what goes along from each screen (doc 10, context)", () => {
 		});
 });
 
+describe("what is not saved yet goes along (T229; doc 10, context)", () => {
+	it("10-1 asked from an entry with unsaved changes, the request carries them: the title as it is on the screen, not as it was saved; with the chip off, nothing of them goes", async () => {
+		const story = on({ script: () => [{ text: "첫 답." }, { text: "둘째 답." }, { text: "셋째 답." }] });
+		await story.run();
+		const { model, ids } = story.loaded();
+		await openPanel();
+		window.location.hash = `#/c/post/${ids.second}`;
+		const title = page.getByRole("textbox", { name: "제목" });
+		await expect.element(title).toHaveValue("둘째 글");
+		const asked = (turn: number) => JSON.stringify(model.turns[turn]?.messages.at(-1)).replaceAll('\\"', '"');
+		// Nothing unsaved: nothing of a draft is sent.
+		await say("첫 질문");
+		await expect.element(panel().getByText("첫 답.")).toBeVisible();
+		expect(asked(0)).not.toContain('"draft"');
+		await userEvent.fill(title, "둘째 글, 고치는 중");
+		await say("이 글 요약해 줘");
+		await expect.element(panel().getByText("둘째 답.")).toBeVisible();
+		expect(asked(1)).toContain('"draft":{"title":"둘째 글, 고치는 중"}');
+		// The entry as it was read is still named beside it.
+		expect(asked(1)).toContain('"title":"둘째 글"');
+		await userEvent.click(button("이 글 빼기"));
+		await say("셋째 질문");
+		await expect.element(panel().getByText("셋째 답.")).toBeVisible();
+		expect(asked(2)).not.toContain("고치는 중");
+	});
+});
+
 describe("what the second review of #480 found", () => {
 	const gate = () => {
 		let open = () => {};
@@ -1368,9 +1395,54 @@ describe("what the second review of #480 found", () => {
 			stories.ReviewSideBySide,
 			stories.ReviewApplied,
 			stories.ReviewChangedMeanwhile,
+			// What a still story cannot show, played to its end (T241).
+			stories.ReviewMadeAgainByKeyboard,
+			stories.BubbleOpensItsConversation,
 		])
 			await open(story).run();
-		await expect.element(page.getByText("그 사이 고쳐짐").first()).toBeVisible();
+	});
+
+	it("10-1 [T87] a change of the body the text moved away from, in the editor: '다시 만들기' on its card has the assistant make it again on the entry as it is, and it is drawn over the text", async () => {
+		const story = on({
+			script: stories.scripts(stories.polished, (ids, version) => [
+				async () => ({
+					calls: [
+						{
+							name: "body_edit",
+							input: {
+								id: ids.second,
+								version: await version(ids.second),
+								ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "새로" }],
+								_group: "다듬기",
+							},
+						},
+					],
+				}),
+				{ text: "다시 만들었습니다." },
+			]),
+		});
+		await story.run();
+		const loaded = story.loaded();
+		await stories.writeSecond(loaded);
+		await openPanel();
+		await say("둘째 글 다듬어 줘");
+		await expect.element(panel().getByText("첫 문단을 다듬었습니다.")).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		// The paragraph is written again elsewhere before anyone took the change.
+		await stories.writeSecond(loaded, "고쳐 쓴 문단입니다.");
+		await userEvent.click(page.getByRole("button", { name: "닫기" }));
+		window.location.hash = `#/c/post/${loaded.ids.second}`;
+		const mark = page.getByRole("button", { name: "그 사이 고쳐짐" });
+		await expect.element(mark).toBeVisible();
+		const text = page.getByRole("textbox", { name: "본문" });
+		expect(text.element().querySelectorAll("ins")).toHaveLength(0);
+		await userEvent.click(mark);
+		await expect.element(page.getByText("처음 문단입니다.")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "다시 만들기", exact: true }));
+		// Made again on the paragraph as it is now: drawn over its words, and no longer hung beside it.
+		await expect.poll(() => text.element().querySelector("ins")?.textContent, { timeout: 15_000 }).toBe("새로");
+		await expect.element(mark).not.toBeInTheDocument();
+		expect(loaded.model.turns).toHaveLength(4);
 	});
 
 	it("10-1 each kind of change has its own switch between one line and side by side", async () => {

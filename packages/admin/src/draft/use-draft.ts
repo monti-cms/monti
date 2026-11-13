@@ -187,6 +187,11 @@ export function useDraft({
 
 	const saved = useCallback((path: Path) => base?.[path], [base]);
 	const value = useCallback((path: Path) => (mine.has(path) ? mine.get(path) : saved(path)), [mine, saved]);
+	// A place is drawn as proposed when the proposal would change what the screen shows there (`cell`).
+	const drawn = useMemo(
+		() => pending.filter(({ values }) => Object.keys(values).some((path) => !sameJson(values[path], value(path)))),
+		[pending, value],
+	);
 
 	const cell = useCallback(
 		(path: Path): CellState => {
@@ -276,12 +281,13 @@ export function useDraft({
 	);
 
 	const discard = useCallback(
-		async (ids: string[]) => {
+		async (ids: string[], { quiet = false } = {}) => {
 			if (ids.length === 0) return;
 			const done = await discardOp.run({ ids });
 			if (!done.ok) return;
 			// None of them waited any more (discarded or applied elsewhere a moment ago): one line says so, and the marks go with the read.
-			if (done.body.output.discarded.length === 0) toast.error(t("card.nothingWaiting"));
+			// `quiet`: the screen discarded them by itself (a proposal left without a place), and nobody pressed for an answer.
+			if (done.body.output.discarded.length === 0 && !quiet) toast.error(t("card.nothingWaiting"));
 			await proposals.reload();
 		},
 		[discardOp, proposals, t],
@@ -309,6 +315,20 @@ export function useDraft({
 		},
 		discard: (id: string) => discard([id]),
 		discardAll: () => discard(pending.map(({ item }) => item.id)),
+		/** Discards these items: the ones a screen's bubble walks, or (`quiet`) ones the screen lets go of by itself. */
+		discardThese: discard,
+		/** Reads the pending proposals again: one of them was made again. */
+		reloadProposals: proposals.reload,
+		/**
+		 * The pending proposals that write a place this screen draws: what a screen's bubble walks, takes and discards. An item aimed at the
+		 * screen's record that changes nothing drawn here (a file's move to another folder, its way to the trash) is the conversation's card's
+		 * and the review page's: a bubble that counted it offered an "accept" that did nothing (doc 10, item 17; T108).
+		 */
+		drawn,
+		acceptDrawn: () => {
+			for (const { item } of drawn) take(item);
+		},
+		discardDrawn: () => discard(drawn.map(({ item }) => item.id)),
 		/**
 		 * Counts an item as taken whose change the screen put in itself (the body editor applies a body proposal's block operations to its own text).
 		 * The save sends it with the others.

@@ -65,14 +65,19 @@ function basePaths(read: EntryRead | TemplateRead): Record<Path, unknown> {
 	return { title: read.name, doc: read.doc };
 }
 
-/** The places an `entries.save` proposal writes (doc 05): the screen draws them over the entry. */
+/**
+ * The places an `entries.save` proposal writes (doc 05): the screen draws them over the entry, the title in the title and each field's value
+ * in its field (T86). A save that brings a whole body is not drawn here: the editor draws a body's changes block by block (`body.edit`),
+ * and a whole body taken into the draft would stand in the save without ever having stood on the screen. It waits on its conversation's
+ * card and review page.
+ */
 function entryProposal(item: ProposalItem): Record<Path, unknown> {
 	if (item.operation !== "entries.save") return {};
 	const input = item.input as { title?: string; slug?: string; values?: Record<string, unknown>; doc?: unknown };
+	if (input.doc !== undefined) return {};
 	return {
 		...(input.title === undefined ? {} : { title: input.title }),
 		...(input.slug === undefined ? {} : { slug: input.slug }),
-		...(input.doc === undefined ? {} : { doc: input.doc }),
 		...Object.fromEntries(Object.entries(input.values ?? {}).map(([field, value]) => [`values.${field}`, value])),
 	};
 }
@@ -175,8 +180,29 @@ export function useEntryEditor(
 					request: item.request,
 					conversationId: item.conversationId,
 					ops: (item.input as { ops: BodyOp[] }).ops,
+					was: item.preview?.was,
 				})),
 		[draft.proposals],
+	);
+
+	/**
+	 * The assistant's proposals for the title and the fields not yet taken (`entries.save` items, T86), each with the places it would change
+	 * on what the screen shows now: the title and the property panel draw them, and the bubble walks them with the body's.
+	 */
+	const fieldProposals = useMemo(
+		() =>
+			draft.drawn
+				.filter(({ item }) => item.operation === "entries.save")
+				.map(({ item, values }) => ({
+					id: item.id,
+					request: item.request,
+					conversationId: item.conversationId,
+					paths: Object.keys(values).filter((path) => {
+						const cell = draft.cell(path);
+						return cell.kind === "proposed" && cell.item.id === item.id;
+					}),
+				})),
+		[draft.drawn, draft.cell],
 	);
 
 	const title = String(draft.value("title") ?? "");
@@ -328,6 +354,7 @@ export function useEntryEditor(
 		signIn: signInAgain,
 		bodyKey,
 		bodyProposals,
+		fieldProposals,
 		/** A body proposal the body editor put in: counted as taken, and sent with the next save. */
 		takeBody: draft.markTaken,
 		discardProposal: draft.discard,

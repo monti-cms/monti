@@ -45,6 +45,7 @@ export type Queued = { id: string; text: string };
 /** Why a screen tool did not move the screen: the open screen has unsaved changes, the entry is not there, or the screen cannot do it. */
 export type MoveRefusal = "unsaved" | "noEntry" | "cannot";
 
+type UnsavedOf = () => Record<string, unknown> | undefined;
 type Place = NonNullable<Conversation["earlier"]>;
 type ScreenCall = { id: string; name: string; input: unknown };
 type ModelChoice = { keyId: string; model: string };
@@ -181,6 +182,8 @@ type AssistantValue = {
 	chips: ContextChip[];
 	removeChip: (id: ContextChip["id"]) => void;
 	setScreen: (context: ScreenContext | null) => void;
+	/** The open screen's way to say its unsaved values when a request is made; `null` takes away the one named (the screen went). */
+	setScreenUnsaved: (read: UnsavedOf | null, of?: UnsavedOf) => void;
 	/** The assistant asked the screen to move and it did not, for its unsaved changes, which can be saved from here. */
 	blockedMove: boolean;
 	/** Saves the open screen and then does what the assistant had asked of it (flow 2·05). `true` only when the screen moved. */
@@ -223,14 +226,58 @@ export function useOpenConversation(): ((id: string) => void) | undefined {
 	);
 }
 
-/** A screen says what it has open and what is picked in it (doc 10, context): it goes along with the next request, as chips over the input. */
-export function useScreenContext(context: ScreenContext | null) {
-	const setScreen = useContext(Context)?.setScreen;
+/**
+ * Asks the assistant to make one proposed change again on its record as it is now (a small run of its own, read to its end), from a screen
+ * that shows the change where it applies: the editor's "make again" on a proposal the text moved away from. A refusal is said. Nothing on
+ * a page without the assistant.
+ */
+export function useRemakeItem(): ((item: string) => Promise<void>) | undefined {
+	const assistant = useContext(Context);
+	const { streams, t } = useAdmin();
+	const there = assistant?.available === true;
+	const touch = assistant?.touchProposals;
+	return useMemo(
+		() =>
+			there
+				? async (item: string) => {
+						const answer = await streams("assistant.run", { again: item });
+						if ("events" in answer) {
+							try {
+								for await (const _event of answer.events) {
+									// Nothing of it is shown but its result: the change as it was made again.
+								}
+							} catch {
+								// The connection went: the change is read again as it stands.
+							}
+						} else toast.error(t(((answer.body ?? {}) as { reason?: Message }).reason ?? "errors.unexpected"));
+						touch?.();
+					}
+				: undefined,
+		[there, streams, t, touch],
+	);
+}
+
+/**
+ * A screen says what it has open and what is picked in it (doc 10, context): it goes along with the next request, as chips over the input.
+ * `unsaved` gives the screen's unsaved values (`draftContext`). It is asked when a request is made, not kept: a body being typed does not
+ * draw the page again for the assistant's sake. The values go with the screen's chip, and not without it.
+ */
+export function useScreenContext(context: ScreenContext | null, unsaved?: () => Record<string, unknown> | undefined) {
+	const assistant = useContext(Context);
+	const setScreen = assistant?.setScreen;
+	const setUnsaved = assistant?.setScreenUnsaved;
 	const key = JSON.stringify(context);
 	useEffect(() => {
 		setScreen?.(JSON.parse(key) as ScreenContext | null);
 		return () => setScreen?.(null);
 	}, [setScreen, key]);
+	const latest = useRef(unsaved);
+	latest.current = unsaved;
+	useEffect(() => {
+		const read = () => latest.current?.();
+		setUnsaved?.(read);
+		return () => setUnsaved?.(null, read);
+	}, [setUnsaved]);
 }
 
 /**
@@ -303,8 +350,14 @@ export function AssistantProvider({
 	const [recent, setRecent] = useState<ModelChoice[]>(() => kept().recent);
 	const [history, setHistory] = useState<{ rows: ConversationRow[]; earlier: Place | null } | null>(null);
 	const [screenContext, setScreen] = useState<ScreenContext | null>(null);
+	const unsavedOf = useRef<UnsavedOf | null>(null);
+	const setScreenUnsaved = useCallback((read: UnsavedOf | null, of?: UnsavedOf) => {
+		// A screen that goes takes away its own only: the one that took its place may have said its own first.
+		if (read !== null || unsavedOf.current === of) unsavedOf.current = read;
+	}, []);
 	const [removed, setRemoved] = useState<ReadonlySet<ContextChip["id"]>>(new Set());
 	const [proposalTick, setProposalTick] = useState(0);
+	const touchProposals = useCallback(() => setProposalTick((tick) => tick + 1), []);
 
 	// What the page shows as it is now, not as it was when a request began.
 	const live = useRef({ turns, busy });
@@ -834,7 +887,10 @@ export function AssistantProvider({
 			if (words === "") return;
 			const here = shown.current;
 			const { model: chosen, thinking: think, screenContext: on, removed: off } = sending.current;
-			const context = contextWithout(on, off);
+			const screenGoes = contextWithout(on, off);
+			// What is not saved yet goes with the screen (its chip): the request is about what the person sees, not what was saved last.
+			const draftNow = screenGoes && !off.has("screen") ? unsavedOf.current?.() : undefined;
+			const context = screenGoes && draftNow ? { ...screenGoes, draft: draftNow } : screenGoes;
 			const id = `local:${Date.now()}:${Math.random().toString(36).slice(2)}`;
 			setView("chat");
 			setTurns((all) => [
@@ -1145,11 +1201,12 @@ export function AssistantProvider({
 		chips,
 		removeChip: (id) => setRemoved((was) => new Set([...was, id])),
 		setScreen,
+		setScreenUnsaved,
 		blockedMove: blocked !== null,
 		saveAndOpen,
 		moveRefused,
 		proposalTick,
-		touchProposals: () => setProposalTick((tick) => tick + 1),
+		touchProposals,
 		openReview: (id) => leave(() => go({ screen: "review", id })),
 	};
 	return <Context.Provider value={value}>{children}</Context.Provider>;

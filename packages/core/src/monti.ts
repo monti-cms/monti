@@ -163,7 +163,7 @@ function engineOperations(
 			name: "proposals.forTarget",
 			kind: "read",
 			description:
-				"The assistant's pending proposal items aimed at one record (an entry, the schema, a collection's admin values): what a screen draws as blue pencil. Each has its operation, input and the request it came from. `also` names more records for a screen that shows several at once (the settings: the site's values, the schema and every collection's admin values); an item aimed at any of them is listed once.",
+				"The assistant's pending proposal items aimed at one record (an entry, the schema, a collection's admin values): what a screen draws as blue pencil. Each has its operation, input, the request it came from and what its write said it would do when it was proposed (`preview`: a body edit's has the words of the blocks it changes, as they were then). `also` names more records for a screen that shows several at once (the settings: the site's values, the schema and every collection's admin values); an item aimed at any of them is listed once.",
 			input: z.object({
 				kind: z.string(),
 				id: z.string(),
@@ -179,6 +179,7 @@ function engineOperations(
 						"monti_proposal_item.operation",
 						"monti_proposal_item.input",
 						"monti_proposal_item.base_versions as baseVersions",
+						"monti_proposal_item.preview",
 						"monti_proposal.request",
 						"monti_proposal.conversation_id as conversationId",
 					])

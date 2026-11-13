@@ -204,18 +204,30 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
 
 function ComboboxChips({
 	size = "default",
+	proposal = false,
 	className,
 	...props
 }: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
 	ComboboxPrimitive.Chips.Props & {
 		/** `sm` stands 28px high, as a small `ComboboxInput` does. */
 		size?: "sm" | "md" | "default";
+		/**
+		 * The picked values are ones the assistant chose and nobody has touched: the 1.5px blue line of `Input proposal`, and each chip in the
+		 * proposal colors (as `Chip proposal`, without its spark: the label row says whose they are).
+		 */
+		proposal?: boolean;
 	}) {
 	return (
 		<ComboboxPrimitive.Chips
 			data-slot="combobox-chips"
 			data-size={size}
-			className={cn(CHIPS_FIELD, className)}
+			data-proposal={proposal || undefined}
+			className={cn(
+				CHIPS_FIELD,
+				// The proposal's line keeps its color under the pointer and with the focus, as a proposed `Input`'s does.
+				"data-proposal:border-monti-proposal! data-proposal:border-b-[1.5px] data-proposal:**:data-[slot=combobox-chip]:bg-monti-proposal-muted data-proposal:**:data-[slot=combobox-chip]:text-monti-proposal",
+				className,
+			)}
 			{...props}
 		/>
 	);

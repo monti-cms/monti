@@ -931,6 +931,157 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 	});
 });
 
+describe("the entry editor: the assistant's proposals for the title and the fields (T86)", () => {
+	const summary = () => page.getByRole("textbox", { name: "요약" });
+	const items = async (made: ReturnType<typeof on>) =>
+		made
+			.loaded()
+			.site.db.selectFrom("monti_proposal_item")
+			.select(["operation", "state"])
+			.orderBy("position")
+			.execute();
+	const values = async ({ site, id }: Loaded) =>
+		(
+			(await site.monti.run("entries.get", { id }, entry.admin)) as {
+				entry: { title: string; values: { summary?: string } };
+			}
+		).entry;
+	async function proposed() {
+		const made = on("proposedFields");
+		await made.run();
+		await opened();
+		await expect.element(summary()).toHaveValue("덜어낸 것과 남긴 것.");
+		return made;
+	}
+
+	it("10-1 a proposed title and a proposed summary are in their inputs, blue, the summary's saved words struck through under it; the bubble walks them with the body's change", async () => {
+		await proposed();
+		await expect.element(title()).toHaveValue("블로그를 다시 만든 까닭");
+		expect(title().element().hasAttribute("data-proposal")).toBe(true);
+		expect(summary().element().hasAttribute("data-proposal")).toBe(true);
+		await expect.element(page.getByText("리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.")).toBeVisible();
+		await expect.element(page.getByText("1 / 3")).toBeVisible();
+		// Nothing is changed by being shown.
+		await saveCell("저장됨");
+		// The bubble's steps go to each in turn: the title, the summary's field, then the change in the text.
+		await userEvent.click(button("다음"));
+		await expect.element(page.getByText("2 / 3")).toBeVisible();
+		await expect.poll(() => document.activeElement === summary().element()).toBe(true);
+	});
+
+	it("10-3 '모두 받기' takes them into the draft: nothing is saved until the person saves, and the save marks all three applied", async () => {
+		const made = await proposed();
+		await userEvent.click(button("모두 받기"));
+		await expect.element(button("모두 받기")).not.toBeInTheDocument();
+		await saveCell("저장 전 변경사항");
+		expect(summary().element().hasAttribute("data-proposal")).toBe(false);
+		expect((await values(made.loaded())).title).toBe("첫 번째 글");
+		await save();
+		await saveCell("저장됨");
+		expect(await values(made.loaded())).toMatchObject({
+			title: "블로그를 다시 만든 까닭",
+			values: { summary: "덜어낸 것과 남긴 것." },
+		});
+		expect((await items(made)).map((item) => item.state)).toEqual(["applied", "applied", "applied"]);
+	});
+
+	it("10-1 '버리기' on the field's label row discards that proposal alone: the field shows what the entry holds, and the bubble counts one fewer", async () => {
+		const made = await proposed();
+		await userEvent.click(button("요약 제안 버리기"));
+		await expect.element(summary()).toHaveValue("리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.");
+		expect(summary().element().hasAttribute("data-proposal")).toBe(false);
+		await expect.element(page.getByText("1 / 2")).toBeVisible();
+		expect((await items(made)).map((item) => item.state)).toEqual(["pending", "discarded", "pending"]);
+		await saveCell("저장됨");
+	});
+
+	it("10-1 typing in a proposed field takes the proposal first, and the typing goes over it", async () => {
+		const made = await proposed();
+		await userEvent.click(summary());
+		await userEvent.keyboard("{End} 그리고 고친 것.");
+		await expect.element(summary()).toHaveValue("덜어낸 것과 남긴 것. 그리고 고친 것.");
+		expect(summary().element().hasAttribute("data-proposal")).toBe(false);
+		await save();
+		await saveCell("저장됨");
+		expect((await values(made.loaded())).values.summary).toBe("덜어낸 것과 남긴 것. 그리고 고친 것.");
+		// The summary's item went with the save; the title's and the body's still wait.
+		expect((await items(made)).map((item) => item.state)).toEqual(["pending", "applied", "pending"]);
+	});
+});
+
+describe("the entry editor: a body proposal the text moved away from (T87)", () => {
+	const mark = () => page.getByRole("button", { name: "그 사이 고쳐짐" });
+	async function stale() {
+		const made = on("proposedStale");
+		await made.run();
+		await opened();
+		await expect.poll(() => within("ins")).toHaveLength(1);
+		return made;
+	}
+
+	it("10-1 it is not drawn over the words that were written again: a mark hangs beside its paragraph, and the bubble counts it", async () => {
+		await stale();
+		// Only the first change is drawn over its words (`stale` waited for its one put-in word); the second would have struck words it
+		// was not made on, and puts nothing in the text.
+		expect(body().element().textContent).not.toContain("같다");
+		await expect.element(mark()).toBeVisible();
+		await expect.element(page.getByText("1 / 2")).toBeVisible();
+		// The mark stands level with the paragraph it is about.
+		const paragraph = within("p").find((each) => each.textContent?.includes("지금 상태뿐이다")) as HTMLElement;
+		const at = mark().element().getBoundingClientRect();
+		const beside = paragraph.getBoundingClientRect();
+		expect(at.top).toBeGreaterThanOrEqual(beside.top - 2);
+		expect(at.bottom).toBeLessThanOrEqual(beside.bottom + 2);
+		expect(at.right).toBeLessThan(beside.left);
+	});
+
+	it("10-1 its card says it was changed in the meantime, with the paragraph as it was then and what was proposed; '모두 받기' takes the other change and leaves this one", async () => {
+		await stale();
+		await userEvent.click(mark());
+		const card = page.getByText("그때");
+		await expect.element(card).toBeVisible();
+		await expect
+			.element(page.getByText("편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다."))
+			.toBeVisible();
+		await expect.element(page.getByText("편집기도 같다. 글을 쓰는 동안 보이는 건 글뿐이다.")).toBeVisible();
+		// A site without the assistant has nobody to make it again: the card has the one way out.
+		await expect.element(page.getByRole("button", { name: "다시 만들기", exact: true })).not.toBeInTheDocument();
+		await userEvent.keyboard("{Escape}");
+		await userEvent.click(button("모두 받기"));
+		await expect.poll(() => body().element().textContent).toContain("블로그를 다시 만든 건");
+		// The stale one cannot go in as it is: it still waits, and the bubble is still there for it.
+		await expect.element(page.getByText("1 / 1")).toBeVisible();
+		expect(body().element().textContent).toContain("지금 상태뿐이다");
+	});
+
+	it("10-1 '버리기' on its card discards it: the mark goes, and the text is as it was", async () => {
+		const made = await stale();
+		await userEvent.click(mark());
+		await userEvent.click(page.getByRole("button", { name: "버리기", exact: true }));
+		await expect.element(mark()).not.toBeInTheDocument();
+		await expect.element(page.getByText("1 / 1")).toBeVisible();
+		const states = await made
+			.loaded()
+			.site.db.selectFrom("monti_proposal_item")
+			.select("state")
+			.orderBy("position")
+			.execute();
+		expect(states.map((item) => item.state)).toEqual(["pending", "discarded"]);
+		await saveCell("저장됨");
+	});
+
+	it("10-1 typing in a paragraph a drawn proposal touches, in another paragraph of the same request, makes nothing stale; writing the proposal's own paragraph again by taking it does not leave a mark", async () => {
+		await stale();
+		await userEvent.click(title());
+		await userEvent.click(body());
+		await userEvent.keyboard("{Meta>}{Enter}{/Meta}");
+		await expect.poll(() => body().element().textContent).toContain("블로그를 다시 만든 건");
+		// The change that was taken is not then shown as one the text moved away from.
+		expect(mark().elements()).toHaveLength(1);
+		await expect.element(page.getByText("1 / 1")).toBeVisible();
+	});
+});
+
 describe("a conditional field in the property panel (doc 19)", () => {
 	const field = (name: string) => page.getByRole("textbox", { name });
 	const stored = async ({ site, id }: Loaded) =>

@@ -71,7 +71,8 @@ function Input({
 				"w-full min-w-0 rounded-none bg-transparent outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45",
 				inline
 					? cn(
-							"h-auto border-0 px-0 focus-visible:rounded-monti-sm",
+							// A proposed value read as text is blue text: an inline input has no rule to turn blue.
+							"h-auto border-0 px-0 focus-visible:rounded-monti-sm data-proposal:text-monti-proposal",
 							size !== "title" &&
 								size !== "display" &&
 								size !== "inherit" &&
