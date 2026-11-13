@@ -38,7 +38,7 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
  */
 export const SELECT_TRIGGER = cn(
 	FIELD_HOVER,
-	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger aria-invalid:focus-visible:ring-2 aria-invalid:focus-visible:ring-monti-contrast/50 data-[size=default]:h-monti-control-lg data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
+	"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast aria-expanded:border-monti-contrast disabled:cursor-default disabled:opacity-45 aria-invalid:border-monti-danger aria-invalid:focus-visible:ring-2 aria-invalid:focus-visible:ring-monti-contrast/50 data-[size=default]:h-monti-control-lg data-[size=md]:h-monti-control-md data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-note [&_svg]:pointer-events-none [&_svg]:shrink-0",
 	FIELD_INSET,
 );
 

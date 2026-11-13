@@ -215,12 +215,28 @@ function DialogFooter({
 	);
 }
 
-/** The title of the dialog. `of` is what it is about, after a dot in the regular weight and the subtle ink ("New language · tlh"). */
+/**
+ * The title of the dialog. `of` is what it is about, after a dot in the regular weight and the subtle ink ("New language · tlh"). The title
+ * is one line: its own words stay whole, and a long `of` (a name a person typed, with no place to break) is cut with "…" and says itself
+ * whole when pointed at, as a table's cut cell does.
+ */
 function DialogTitle({ className, of, children, ...props }: DialogPrimitive.Title.Props & { of?: React.ReactNode }) {
 	return (
-		<DialogPrimitive.Title data-slot="dialog-title" className={cn(DIALOG_TITLE, className)} {...props}>
-			{children}
-			{of && <span className="font-normal text-monti-subtle"> · {of}</span>}
+		<DialogPrimitive.Title
+			data-slot="dialog-title"
+			className={cn(DIALOG_TITLE, of && "flex min-w-0 whitespace-pre", className)}
+			{...props}
+		>
+			{of ? <span className="shrink-0">{children}</span> : children}
+			{of && (
+				<span
+					className="min-w-0 truncate font-normal text-monti-subtle"
+					title={typeof of === "string" ? of : undefined}
+				>
+					{" · "}
+					{of}
+				</span>
+			)}
 		</DialogPrimitive.Title>
 	);
 }

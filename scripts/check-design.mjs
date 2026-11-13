@@ -51,6 +51,7 @@
  *                       is drawn only in the `banner` of `SidebarInset` or `StandalonePage`, or inside `PageBanner`. Screens and the reference
  *                       screens of `packages/ui/src/screens`; the rule and what it cannot see are in `check-banner-place.mjs`. No list of
  *                       exceptions, and a `design-allow` marker does not skip it.
+ *   forbidden-cursor    No `cursor-not-allowed`: what is off takes no pointer, and what is at work keeps the plain cursor (tokens.md).
  *   design-allow        A `design-allow` marker without a reason.
  *
  * A value that is measured or computed at runtime (a position under the pointer, a width the user dragged) ends its line with
@@ -400,6 +401,8 @@ function checkClasses(file, kind, lexed, allowed) {
 					"raw-palette",
 					`\`${token}\` is Tailwind's type size; use a type role (\`text-monti-body\`, \`text-monti-note\`, …)`,
 				);
+			} else if (utility === "cursor-not-allowed") {
+				add(file, line, "forbidden-cursor", `\`${token}\`: nothing shows the forbidden cursor (tokens.md, the states)`);
 			}
 		}
 	}
@@ -1337,6 +1340,8 @@ const HINTS = {
 	"icon-list": "Icons come from the one list, packages/ui/src/icons.ts; add a new icon there first.",
 	"banner-place":
 		"A screen's banner stands at the very top: <PageBanner> inside the frame, the `banner` of <StandalonePage> outside it.",
+	"forbidden-cursor":
+		"What is off takes no pointer (`pointer-events-none`); a button at work shows the plain cursor (`cursor-default`).",
 	"design-allow": "A marker states why the value cannot be a token.",
 };
 
