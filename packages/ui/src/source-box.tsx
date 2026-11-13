@@ -48,14 +48,15 @@ function BlockFrameBox({ ref, ...props }: ComponentProps<"div"> & { ref?: Ref<HT
 }
 
 /**
- * A name typed in a site block itself (a callout's title, a tab's name): a one-line field with no line or ground of its own, in the block's own letters.
+ * A name typed in a site block itself (a callout's title, a tab's name): a one-line field 28px high (the small control height) with no line or ground
+ * of its own, in the block's own letters.
  * The block's stylesheet draws it by `[data-slot="block-title"]`.
  */
 function BlockTitleField(props: Omit<ComponentProps<"input">, "className" | "style">) {
 	return (
 		<input
 			data-slot="block-title"
-			className="w-full min-w-0 border-0 bg-transparent p-0 text-inherit outline-none [font:inherit] placeholder:text-current placeholder:opacity-50"
+			className="h-monti-control-sm w-full min-w-0 border-0 bg-transparent p-0 text-inherit outline-none [font:inherit] placeholder:text-current placeholder:opacity-50"
 			{...props}
 		/>
 	);

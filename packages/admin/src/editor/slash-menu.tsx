@@ -173,7 +173,11 @@ export function useSlashMenu({
 						? nodeFromStarter(editor.schema, { type: block.type, ...starter })
 						: (type.createAndFill() ?? type.create());
 					if (!node) return;
-					putIn(editor, open, block.holds === "nothing" ? placeBefore(node, true) : (tr) => insertBlocks(tr, [node]));
+					putIn(
+						editor,
+						open,
+						block.holds === "nothing" ? placeBefore(node, Boolean(starter)) : (tr) => insertBlocks(tr, [node]),
+					);
 				},
 			}));
 		const shown = templates
