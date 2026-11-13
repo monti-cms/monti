@@ -9,7 +9,7 @@ export const MOST_DRAFT = 150_000;
 const size = (value: unknown) => JSON.stringify(value)?.length ?? 0;
 
 /**
- * The open screen's unsaved values as they go along with a request to the assistant (doc 10, context: "저장 전 값"): each changed place of the
+ * The open screen's unsaved values as they go along with a request to the assistant (doc 10, the context table's unsaved values): each changed place of the
  * draft with its value now (`title`, `slug`, `doc`, `values.<field>`). "Summarize this entry" then works from what is on the screen, not
  * from what was saved last.
  *

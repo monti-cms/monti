@@ -43,7 +43,7 @@ const server = (port: number, schema: string, mode: Server["mode"], env: Record<
 });
 
 /**
- * The first of the four ports. `MONTI_E2E_PORT` moves them, and with them the database schemas, so two checkouts on one machine can run their
+ * The first of the five ports. `MONTI_E2E_PORT` moves them, and with them the database schemas, so two checkouts on one machine can run their
  * flows at the same time.
  */
 const FIRST = Number(process.env.MONTI_E2E_PORT ?? 4173);
@@ -67,3 +67,6 @@ export const DEV = `http://localhost:${FIRST + 2}`;
 /** The webhook's other end: its port, and where a test reaches it. */
 export const HOOK_PORT = FIRST + 3;
 export const HOOK = `http://localhost:${HOOK_PORT}`;
+/** The model service the assistant's key is added with (`model.ts`): its port, and the address the key window is given. */
+export const MODEL_PORT = FIRST + 4;
+export const MODEL = `http://localhost:${MODEL_PORT}/v1`;

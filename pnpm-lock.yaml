@@ -126,6 +126,9 @@ importers:
       '@monti-cms/admin':
         specifier: workspace:*
         version: link:../../packages/admin
+      '@monti-cms/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@monti-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
