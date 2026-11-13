@@ -1790,7 +1790,8 @@ describe("a read-only body with the keyboard (T133)", () => {
 	/** The archived entry's two pictures, as the story's loaders make them: the test presses the keys itself. */
 	const archivedPictures = () => composeStory({ loaders: media.ArchivedPictures.loaders }, media.default);
 
-	it("02-6 T133 Tab stops at each picture in turn with the keyboard's focus mark; Enter picks it and opens its bar with the focus in it, its alt text is read, and Escape unpicks it, the focus still on the picture", async () => {
+	// The bar opens with the focus in it and its alt text is read; after Escape the focus is still on the picture.
+	it("02-6 T133 Tab stops at each picture in turn with the keyboard's focus mark; Enter picks it and opens its bar, and Escape unpicks it", async () => {
 		await archivedPictures().run();
 		await expect.element(body().getByRole("img", { name: "화면에 뜬 코드" })).toBeVisible();
 		await expect.poll(() => blocks().length).toBe(2);

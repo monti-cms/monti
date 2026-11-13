@@ -9,5 +9,6 @@ pnpm check:design
 pnpm gen:tokens --check
 pnpm check:messages
 pnpm check:scenes
+pnpm check:titles
 pnpm typecheck
 pnpm knip
