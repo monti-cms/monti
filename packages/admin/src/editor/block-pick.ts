@@ -5,7 +5,7 @@ import { type EditorState, Plugin, PluginKey, type Selection, TextSelection, typ
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { canMove, deleteBlock } from "./commands";
 import { type Drop, moveBlockTo, spots } from "./drag";
-import { nodeName } from "./schema";
+import { nodeName } from "./names";
 
 /**
  * Blocks picked whole (doc 03, editor-tools.md, picking several blocks, T80), apart from a text selection: a box dragged from the margin outside the text, a

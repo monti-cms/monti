@@ -17,26 +17,11 @@ import type { AdminBlockComponent, AdminBlockDefinition } from "../operations/ad
 import { BlockPlaceProvider } from "./block-api";
 import type { Catalog, CatalogBlock } from "./catalog";
 import { ENTRY_LINK } from "./link-targets";
+import { CORE_MARKS, KEPT_MARK, markName, nodeName, UNKNOWN } from "./names";
 import { tableExtensions } from "./table";
 import { TranslationBlocks } from "./translation";
 
-/** The editor's node for a block type: a block type may hold `:` or `-` (`component:PostCard`), an editor name may not. */
-export const nodeName = (type: string) => type.replace(/[^A-Za-z0-9_]/g, "_");
-
-/** A block whose type the site no longer defines: kept whole in one attr, drawn as a box, never changed (doc 03, 03-5). */
-export const UNKNOWN = "unknownBlock";
-/** A mark the site no longer defines, kept whole on its text. */
-export const KEPT_MARK = "keptMark";
-
-/** The core marks whose editor name differs from their stored name. */
-export const MARK_NAMES: Record<string, string> = { sup: "superscript", sub: "subscript" };
-const CORE_MARKS = new Set(["bold", "italic", "underline", "strike", "code", "link", "sup", "sub"]);
-export const markName = (type: string) =>
-	MARK_NAMES[type] ?? (CORE_MARKS.has(type) ? type : `monti_${type.replace(/[^A-Za-z0-9_]/g, "_")}`);
-export const markType = (name: string, kit?: Catalog) =>
-	kit?.marks.find((mark) => markName(mark.type) === name)?.type ??
-	Object.entries(MARK_NAMES).find(([, editor]) => editor === name)?.[0] ??
-	name;
+export { KEPT_MARK, MARK_NAMES, markName, markType, nodeName, UNKNOWN } from "./names";
 
 /** Every block node carries its block's id and its attrs. Neither is drawn into the page, so a copied block never brings its id along. */
 const blockAttributes = () => ({
