@@ -116,8 +116,9 @@ describe("the MDX plugin on a site (T34)", () => {
 			["codeBlock", "mdx-kept"],
 			["codeBlock", "ts"],
 		]);
-		// The highlighter's notation is still in the code, as it was written (T79).
-		expect(blocks[3].content?.[0].text).toBe("const a = 1; // [!code ++]");
+		// The highlighter's notation is the block's line effect, out of the code (doc 17, T79).
+		expect(blocks[3].content?.[0].text).toBe("const a = 1;");
+		expect(blocks[3].attrs?.lines).toEqual([{ name: "plus", start: 0, end: 1 }]);
 
 		// The kept component is a to-do on its entry that does not stop a publish.
 		const read = await run<{ tasks: { code: string; blocking: boolean; message: { values: { text: string } } }[] }>(

@@ -21,8 +21,15 @@ function blockLines(block: Block): string[] {
 			return [`${tag}${"#".repeat(Number(block.attrs?.level ?? 2))} ${body}`];
 		case "listItem":
 			return [`${tag}- ${block.attrs?.checked === undefined ? "" : block.attrs.checked ? "[x] " : "[ ] "}${body}`];
-		case "codeBlock":
-			return [`${tag}\`\`\`${block.attrs?.language ?? ""}`, body, "```"];
+		case "codeBlock": {
+			// Its other values (file name, line effects, rules) beside the language; the code stays as it is so offsets count in it (doc 17).
+			const { language, ...rest } = block.attrs ?? {};
+			return [
+				`${tag}\`\`\`${typeof language === "string" ? language : ""}${Object.keys(rest).length ? ` ${attrList(rest)}` : ""}`,
+				body,
+				"```",
+			];
+		}
 		case "divider":
 			return [`${tag}---`];
 	}

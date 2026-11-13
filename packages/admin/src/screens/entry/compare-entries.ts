@@ -144,23 +144,92 @@ export function readableWordDiff(mine: string, server: string): { mine: Part[]; 
 	return { mine: side("-"), server: side("+") };
 }
 
-/** How a block reads in the comparison: a heading, code, or text (a paragraph, a list, a quote: their text, line by line). */
-export type ShownBlock = { id: string; look: "heading" | "code" | "text"; text: string };
+/**
+ * How a block reads in the comparison: a heading, code, or text (a paragraph, a list, a quote: their text, line by line). A code block also gives
+ * its language, file name and each line's effects (doc 17, T196): two sides with the same code may still differ there.
+ */
+export type ShownBlock = {
+	id: string;
+	look: "heading" | "code" | "text";
+	text: string;
+	code?: { language: string | null; title: string | null; lines: string[][] };
+};
 
 const textOf = (block: Block): string =>
 	block.children ? block.children.map(textOf).join("\n") : plainText(block.content);
+
+/** Each line's effects, by name, in a stable order. A label a code link names is not something the reader sees: it is left out. */
+const lineEffects = (block: Block): string[][] => {
+	const lines: string[][] = textOf(block)
+		.split("\n")
+		.map(() => []);
+	for (const effect of (block.attrs?.lines ?? []) as { name: string; start: number; end: number }[])
+		if (effect.name !== "anchor")
+			for (let line = effect.start; line < effect.end && line < lines.length; line++) lines[line].push(effect.name);
+	return lines.map((names) => [...new Set(names)].sort());
+};
 
 export function shownBlocks(doc: Doc | null): ShownBlock[] {
 	return (doc?.blocks ?? []).map((block) => ({
 		id: block.id,
 		look: block.type === "heading" ? "heading" : block.type === "codeBlock" ? "code" : "text",
 		text: textOf(block),
+		...(block.type === "codeBlock"
+			? {
+					code: {
+						language: typeof block.attrs?.language === "string" ? block.attrs.language : null,
+						title: typeof block.attrs?.title === "string" ? block.attrs.title : null,
+						lines: lineEffects(block),
+					},
+				}
+			: {}),
 	}));
+}
+
+/** The lines of two codes paired by their words (the longest run of equal lines in order): a line put in on one side moves no pair. */
+function pairedLines(mine: string[], theirs: string[]): Map<number, number> {
+	const table = Array.from({ length: mine.length + 1 }, () => new Array<number>(theirs.length + 1).fill(0));
+	for (let a = mine.length - 1; a >= 0; a--)
+		for (let b = theirs.length - 1; b >= 0; b--)
+			(table[a] as number[])[b] =
+				mine[a] === theirs[b]
+					? ((table[a + 1] as number[])[b + 1] ?? 0) + 1
+					: Math.max((table[a + 1] as number[])[b] ?? 0, (table[a] as number[])[b + 1] ?? 0);
+	const pairs = new Map<number, number>();
+	let a = 0;
+	let b = 0;
+	while (a < mine.length && b < theirs.length) {
+		if (mine[a] === theirs[b]) {
+			pairs.set(a++, b++);
+			continue;
+		}
+		if (((table[a + 1] as number[])[b] ?? 0) >= ((table[a] as number[])[b + 1] ?? 0)) a++;
+		else b++;
+	}
+	return pairs;
+}
+
+/**
+ * Where two sides of a code block differ besides their words: the lines whose effects differ (counted on this side), and whether the language or the
+ * file name does. Lines are paired by their words; a line the other side does not have is the words' change, not the effects'.
+ */
+export function codeChanges(block: ShownBlock, other: ShownBlock | undefined) {
+	if (!block.code || !other?.code) return { lines: [] as number[], language: false, title: false };
+	const theirs = other.code.lines;
+	const pairs = pairedLines(block.text.split("\n"), other.text.split("\n"));
+	return {
+		lines: block.code.lines.flatMap((names, line) => {
+			const paired = pairs.get(line);
+			return paired !== undefined && names.join(" ") !== (theirs[paired] ?? []).join(" ") ? [line] : [];
+		}),
+		language: block.code.language !== other.code.language,
+		title: block.code.title !== other.code.title,
+	};
 }
 
 /**
  * Each side's blocks with their words marked (screens.md, EditorCompare: `compareEntries`). Blocks pair by their id: a block the other side does not
- * have is marked whole, a block both have is compared word by word.
+ * have is marked whole, a block both have is compared word by word, and a code block's effects line by line (`changes`).
  */
 export function compareBodies(mine: Doc | null, server: Doc | null) {
 	const ours = shownBlocks(mine);
@@ -168,9 +237,14 @@ export function compareBodies(mine: Doc | null, server: Doc | null) {
 	const side = (blocks: ShownBlock[], other: ShownBlock[], pick: "mine" | "server") =>
 		blocks.map((block) => {
 			const match = other.find((each) => each.id === block.id);
-			if (!match) return { ...block, parts: [{ text: block.text, changed: block.text !== "" }] };
+			if (!match)
+				return {
+					...block,
+					parts: [{ text: block.text, changed: block.text !== "" }],
+					changes: codeChanges(block, undefined),
+				};
 			const diff = pick === "mine" ? wordDiff(block.text, match.text) : wordDiff(match.text, block.text);
-			return { ...block, parts: diff[pick] };
+			return { ...block, parts: diff[pick], changes: codeChanges(block, match) };
 		});
 	return { mine: side(ours, theirs, "mine"), server: side(theirs, ours, "server") };
 }

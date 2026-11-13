@@ -154,10 +154,16 @@ export async function bodyAsRead(db: Db, source: Entry | null, doc: unknown): Pr
 
 /**
  * A translation's body as the site draws it (doc 04): pending blocks left out, a `followSource` block replaced by its source block as published.
- * Links are the admin's; the site gets none.
+ * Links are the admin's; the site gets none. A code link copied from the source names the source's code block: it is pointed at the block this
+ * translation draws in its place (doc 17).
  */
 export function siteDoc(doc: Doc, source: Doc | null): Doc {
 	const sourceBlocks = new Map((source?.blocks ?? []).map((block) => [block.id, block]));
+	const drawnFor = new Map(
+		doc.blocks.flatMap((block) =>
+			block.link && block.link.state !== "pending" ? [[block.link.from, block.id] as const] : [],
+		),
+	);
 	const blocks = doc.blocks.flatMap(({ link, ...block }): Block[] => {
 		if (link?.state === "pending") return [];
 		if (link?.state === "followSource") {
@@ -169,5 +175,26 @@ export function siteDoc(doc: Doc, source: Doc | null): Doc {
 		}
 		return [block];
 	});
-	return { ...doc, blocks };
+	return { ...doc, blocks: drawnFor.size > 0 ? blocks.map((block) => pointCodeRefs(block, drawnFor)) : blocks };
+}
+
+/** A block with its code links naming the drawn block where they named the source's. */
+function pointCodeRefs(block: Block, drawnFor: ReadonlyMap<string, string>): Block {
+	const content = block.content?.map((part) =>
+		part.type === "text" && part.marks?.some((mark) => mark.type === "codeRef")
+			? {
+					...part,
+					marks: part.marks.map((mark) =>
+						mark.type === "codeRef" && typeof mark.block === "string" && drawnFor.has(mark.block)
+							? { ...mark, block: drawnFor.get(mark.block) }
+							: mark,
+					),
+				}
+			: part,
+	);
+	return {
+		...block,
+		...(content ? { content } : {}),
+		...(block.children ? { children: block.children.map((child) => pointCodeRefs(child, drawnFor)) } : {}),
+	};
 }

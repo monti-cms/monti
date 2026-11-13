@@ -1,10 +1,15 @@
 import { type Doc, type FieldDefinition, inOptionOrder, storedFields } from "@monti-cms/core";
+import { languageName } from "@monti-cms/core/code";
 import {
 	Banner,
+	Box,
 	Button,
+	ChangeDot,
+	CodeFrame,
+	CodeLine,
+	type CodeLineTone,
 	Compare,
 	CompareBody,
-	CompareCode,
 	CompareHeading,
 	CompareParagraph,
 	CompareProperty,
@@ -61,6 +66,76 @@ const Words = ({ parts }: { parts: Part[] }) =>
 			{part.text}
 		</CompareText>
 	));
+
+/** The parts of a text cut at its line ends: one list of parts per line. */
+function partsByLine(parts: Part[]): Part[][] {
+	const lines: Part[][] = [[]];
+	for (const part of parts)
+		part.text.split("\n").forEach((text, at) => {
+			if (at > 0) lines.push([]);
+			if (text) lines[lines.length - 1]?.push({ text, changed: part.changed });
+		});
+	return lines;
+}
+
+/** What a core line effect draws on a read-only line (doc 17): its ground, its mark, its wavy line. A site's own effect shows by its change dot only. */
+const LOOKS: Record<string, { tone?: CodeLineTone; mark?: "+" | "−" | "›"; wavy?: "warning" | "error" }> = {
+	highlight: { tone: "highlight" },
+	focus: { mark: "›" },
+	plus: { tone: "plus", mark: "+" },
+	minus: { tone: "minus", mark: "−" },
+	warning: { wavy: "warning" },
+	error: { wavy: "error" },
+};
+
+/**
+ * A code block in the comparison (doc 17, T196): its lines with their effects drawn, and a change dot before the number of each line whose effects
+ * differ from the other side's (two sides with the same code may differ only there). The head row's dot: the language or the file name differs.
+ */
+function CodeCompared({ block }: { block: ReturnType<typeof compareBodies>["mine"][number] }) {
+	const { t } = useAdmin();
+	const code = block.code;
+	if (!code) return null;
+	const changedLines = new Set(block.changes.lines);
+	const lines = partsByLine(block.parts);
+	return (
+		<CodeFrame
+			head={
+				<Inline gap={8} minWidth={0}>
+					<Text variant="caption" tone="muted">
+						{code.language ? languageName(code.language) : t("editor.code.plain")}
+					</Text>
+					{code.title ? (
+						<Text variant="caption" mono truncate>
+							{code.title}
+						</Text>
+					) : null}
+					{block.changes.language || block.changes.title ? <ChangeDot label={t("compare.codeHead")} /> : null}
+				</Inline>
+			}
+		>
+			<Box paddingY={8}>
+				{lines.map((parts, line) => {
+					const look = Object.assign({}, ...(code.lines[line] ?? []).map((name) => LOOKS[name] ?? {}));
+					return (
+						<CodeLine
+							// biome-ignore lint/suspicious/noArrayIndexKey: the lines of one code, in order
+							key={line}
+							number={line + 1}
+							readOnly
+							changed={changedLines.size ? (changedLines.has(line) ? t("compare.codeEffects") : "") : undefined}
+							tone={look.tone}
+							mark={look.mark}
+							wavy={look.wavy}
+						>
+							<Words parts={parts} />
+						</CodeLine>
+					);
+				})}
+			</Box>
+		</CodeFrame>
+	);
+}
 
 const shown = (value: unknown) =>
 	value === undefined || value === null || value === ""
@@ -255,10 +330,8 @@ export function CompareView({
 						<CompareHeading key={block.id}>
 							<Words parts={block.parts} />
 						</CompareHeading>
-					) : block.look === "code" ? (
-						<CompareCode key={block.id}>
-							<Words parts={block.parts} />
-						</CompareCode>
+					) : block.look === "code" && block.code ? (
+						<CodeCompared key={block.id} block={block} />
 					) : (
 						<CompareParagraph key={block.id}>
 							<Words parts={block.parts} />

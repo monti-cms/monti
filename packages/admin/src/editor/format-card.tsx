@@ -1,3 +1,4 @@
+import { CODE_TOOL_MARKS } from "@monti-cms/core";
 import {
 	Command,
 	CommandEmpty,
@@ -27,6 +28,8 @@ import { type Editor, useEditorState } from "@tiptap/react";
 import { useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import type { BodyCatalogs } from "./catalog";
+import { CodeRefButton, pickedWords } from "./code/code-links";
+import { codeToolsKey } from "./code/code-state";
 import { clearFormats, hasClearableFormat, inTableCell } from "./commands";
 import { insertFootnote } from "./footnotes";
 import { addressOf, ENTRY_LINK, type LinkTarget, useLinkTargets } from "./link-targets";
@@ -70,6 +73,7 @@ export function FormatCard({
 	const { t } = useAdmin();
 	const [linking, setLinking] = useState(false);
 	const [more, setMore] = useState(false);
+	const [codeLink, setCodeLink] = useState(false);
 	const bar = useRef<HTMLDivElement>(null);
 	const state = useEditorState({
 		editor,
@@ -79,9 +83,10 @@ export function FormatCard({
 				current.isEditable &&
 				selection instanceof TextSelection &&
 				!selection.empty &&
-				selection.$from.parent.type.name !== nodeName("codeBlock") &&
 				!inTableCell(selection.$from) &&
-				(current.isFocused || linking || more);
+				// Lines picked by their numbers have the line menu, not the card.
+				!codeToolsKey.getState(current.state)?.picked &&
+				(current.isFocused || linking || more || codeLink);
 			if (!shown) return null;
 			const start = current.view.coordsAtPos(selection.from);
 			const end = current.view.coordsAtPos(selection.to);
@@ -93,18 +98,44 @@ export function FormatCard({
 				href: String(current.getAttributes("link").href ?? ""),
 				clearable: hasClearableFormat(current.state),
 				inFootnote: selection.$from.parent.type.name === nodeName("footnote"),
+				inCode: selection.$from.parent.type.name === nodeName("codeBlock"),
+				codeBlocks: current.state.doc.content.content.some((node) => node.type.name === nodeName("codeBlock")),
+				// A code link joins words of one block to lines: over two blocks it cannot be made, so it is not offered.
+				oneBlock: pickedWords(current) !== null || current.isActive(markName("codeRef")),
 				requestable: pickedText(current.state) !== null,
 			};
 		},
 	});
 	if (!state) return null;
-	const offered = new Set(catalogs.offered.marks.map((mark) => mark.type));
+	// In code (doc 17) the card has the formats code takes: bold, italic, underline, strike. Code, superscript and subscript would break the code's
+	// column, a link and a footnote are not drawn in code on the site. The code's own fold and tooltip are in the code block's tool row.
+	// A site that turned the text styles in code off (`codeBlock.tools.textStyles`) offers none there.
+	const inCode = new Set(
+		catalogs.kit.code?.tools.textStyles === false
+			? []
+			: catalogs.kit.marks.filter((mark) => mark.inCode === "also").map((mark) => mark.type),
+	);
+	const offered = new Set(
+		catalogs.offered.marks.map((mark) => mark.type).filter((type) => !state.inCode || inCode.has(type)),
+	);
 	const groups = GROUPS.map((group) => group.filter(({ type }) => offered.has(type))).filter((group) => group.length);
 	const builtIn = new Set(GROUPS.flat().map(({ type }) => type));
-	const custom = catalogs.offered.marks.filter((mark) => !builtIn.has(mark.type));
+	// The code tools' marks have their own places (doc 17): a code link, a fold and a tooltip in code are not the site's marks.
+	const custom = catalogs.offered.marks.filter(
+		(mark) => !builtIn.has(mark.type) && !CODE_TOOL_MARKS.has(mark.type) && offered.has(mark.type),
+	);
+	// A code link starts from words of the text, in a body that has a code block to point at.
+	const codeRef =
+		!state.inCode &&
+		state.codeBlocks &&
+		state.oneBlock &&
+		catalogs.offered.marks.some((mark) => mark.type === "codeRef")
+			? catalogs.kit.marks.find((mark) => mark.type === "codeRef")
+			: undefined;
 	const label = (type: string) => t(catalogs.kit.marks.find((mark) => mark.type === type)?.label ?? type);
 	// A footnote's own text has no footnote of its own.
-	const footnote = state.inFootnote ? undefined : catalogs.offered.blocks.find((block) => block.type === "footnote");
+	const footnote =
+		state.inFootnote || state.inCode ? undefined : catalogs.offered.blocks.find((block) => block.type === "footnote");
 	const toggle = (type: string) => editor.chain().focus().toggleMark(markName(type)).run();
 
 	return (
@@ -135,6 +166,10 @@ export function FormatCard({
 								/>
 							),
 						)}
+						{/* Right after the link: a code link (doc 17), for words of a body that has code. */}
+						{group.some(({ type }) => type === "link") && codeRef ? (
+							<CodeRefButton editor={editor} label={t(codeRef.label)} open={codeLink} onOpenChange={setCodeLink} />
+						) : null}
 						{/* After the link: a footnote for the picked words, its number after them and its text at the end of the body. */}
 						{group.some(({ type }) => type === "link") && footnote ? (
 							<FormatButton
@@ -287,7 +322,7 @@ function LinkButton({
 								<CommandItem value="address" onSelect={() => apply(address)}>
 									<Link aria-hidden />
 									<Text truncate>{address.replace(/^https?:\/\//, "")}</Text>
-									<MenuShortcut>↵</MenuShortcut>
+									<MenuShortcut keys={["Enter"]} />
 								</CommandItem>
 							</CommandGroup>
 						) : current && linked ? (

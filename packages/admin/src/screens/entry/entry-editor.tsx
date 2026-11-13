@@ -73,6 +73,7 @@ import { saveBackup } from "../../download";
 import { useLeaveFiles, useLeaveGuard, useUploadsGoing } from "../../draft/leave-guard";
 import { ALT_MAX } from "../../editor/alt-fields";
 import { BodyEditor } from "../../editor/body-editor";
+import { CodeLinkBanner } from "../../editor/code/code-links";
 import { openImageCard, type PictureFill } from "../../editor/media-context";
 import { ProposalMargin, proposalMarks, requestMarks, staleMarks } from "../../editor/proposal-margin";
 import {
@@ -1085,6 +1086,7 @@ export function EntryEditor({
 							meta={inTrash ? t("trash.left", { days: inTrash.daysLeft }) : undefined}
 						/>
 					) : null}
+					<CodeLinkBanner editor={bodyEditor} />
 					{compared && !readOnly ? (
 						<SourceChangedBanner ref={handOff} compared={compared} onConfirmAll={() => void translation.confirmAll()} />
 					) : null}

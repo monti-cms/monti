@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import type { DevProof } from "./auth/dev-bypass";
 import type { AuthSettings } from "./auth/operations";
 import type { AnyBlockDefinition, MarkDefinition } from "./body/blocks";
+import type { CodeBlockConfig } from "./code/settings";
 import type { Database } from "./db/schema";
 import type { Receiver } from "./engine/deliveries";
 import { createMonti, type Monti, type Plugin } from "./monti";
@@ -18,6 +19,8 @@ export type MontiConfig = {
 	/** The site's body blocks and marks: the same definitions the site renders with. */
 	blocks?: AnyBlockDefinition[];
 	marks?: MarkDefinition[];
+	/** Code blocks: the themes and languages the site and the editor colour with, the editor's tools and line effects (doc 17). */
+	codeBlock?: CodeBlockConfig;
 	/** Webhooks and other places events go after a write. */
 	receivers?: Receiver[];
 	/**
@@ -75,6 +78,7 @@ export function openMonti(
 		auth: config.auth,
 		devProof: dev ? config.devProof : null,
 		marks: config.marks,
+		codeBlock: config.codeBlock,
 		receivers: config.receivers,
 		waitUntil: reuse.waitUntil,
 		// Blank is none (and falls through to the environment); a set secret is used byte for byte, spaces included: what was signed and sealed with
