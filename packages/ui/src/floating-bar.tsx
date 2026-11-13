@@ -10,9 +10,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 export const BAR =
 	"inline-flex items-center gap-monti-2 rounded-monti-lg border border-monti-emphasis bg-monti-page p-[3px] shadow-monti-floating";
 
-/** A 28px button of a bar; the width is the bar's part to set. */
+/**
+ * A 28px button of a bar; the width is the bar's part to set. Pointed at it takes `bg-muted` (a ghost button's ground), while pressed and while on
+ * (a format that is on, a card it opened) `bg-selected` (tokens.md, the pointer's states): pointing never looks like on.
+ */
 export const BAR_BUTTON =
-	"inline-flex h-monti-control-sm cursor-pointer items-center justify-center rounded-monti-md border-0 bg-transparent p-0 text-monti-muted outline-none transition-colors not-disabled:hover:bg-monti-selected not-disabled:hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 disabled:pointer-events-none disabled:opacity-45 aria-expanded:bg-monti-selected aria-expanded:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default data-[tone=danger]:text-monti-danger data-[tone=danger]:not-disabled:hover:bg-monti-danger-muted data-[tone=danger]:not-disabled:hover:text-monti-danger [&_svg:not([class*='size-'])]:size-4";
+	"inline-flex h-monti-control-sm cursor-pointer items-center justify-center rounded-monti-md border-0 bg-transparent p-0 text-monti-muted outline-none transition-colors not-disabled:not-aria-pressed:not-aria-expanded:hover:bg-monti-muted not-disabled:hover:text-monti-default not-disabled:active:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/50 disabled:pointer-events-none disabled:opacity-45 aria-expanded:bg-monti-selected aria-expanded:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default data-[tone=danger]:text-monti-danger data-[tone=danger]:not-disabled:hover:bg-monti-danger-muted data-[tone=danger]:not-disabled:hover:text-monti-danger [&_svg:not([class*='size-'])]:size-4";
 
 /**
  * A small row of tools that floats over the text: above selected words (the inline formats, then the assistant's request) or at the top left of a block

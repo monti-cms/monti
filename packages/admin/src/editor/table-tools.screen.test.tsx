@@ -48,4 +48,18 @@ describe("a table's tools", () => {
 		expect(box.right).toBeLessThanOrEqual(edge.right + 1);
 		expect(scrollsSideways(table().element())).toEqual([]);
 	});
+
+	it("the + strips and the grips say their names in a tooltip, and a grip goes a step darker when pointed at", async () => {
+		await TableGrips.run();
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		await toRightStrip();
+		await userEvent.hover(addColumn());
+		await expect.poll(tip).toBe("열 더하기");
+		await userEvent.click(body().getByRole("cell", { name: "편집기 다시 만들기" }));
+		const grip = page.getByRole("button", { name: "2번째 열", exact: true });
+		const resting = getComputedStyle(grip.element()).backgroundColor;
+		await userEvent.hover(grip);
+		await expect.poll(tip).toBe("2번째 열");
+		await expect.poll(() => getComputedStyle(grip.element()).backgroundColor).not.toBe(resting);
+	});
 });

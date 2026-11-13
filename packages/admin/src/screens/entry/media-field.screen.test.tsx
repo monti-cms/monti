@@ -29,7 +29,9 @@ describe("a read-only entry", () => {
 		await ArchivedImage.run();
 		// The story has picked the picture and opened its settings.
 		await expect.element(alt()).toHaveValue("아침 책상");
-		await expect.element(alt()).toBeDisabled();
+		// Read-only, not off: the words stay in their ink, to read and select (screens/editor.md).
+		await expect.element(alt()).toHaveAttribute("readonly");
+		await expect.element(alt()).toBeEnabled();
 		const bar = page.getByRole("toolbar");
 		await expect.element(bar.getByRole("button", { name: "설정" })).toBeVisible();
 		// Nothing that changes the picture: no alignment, no edit.
@@ -51,8 +53,13 @@ describe("a cover in the property panel", () => {
 		await ArchivedCover.run();
 		// The story has opened the card: what the entry says of the picture is there to read, and cannot be typed in.
 		await expect.element(alt()).toHaveValue("아침 책상");
-		await expect.element(alt()).toBeDisabled();
-		await expect.element(page.getByRole("switch", { name: "장식 이미지" })).toBeDisabled();
+		await expect.element(alt()).toHaveAttribute("readonly");
+		await expect.element(alt()).toBeEnabled();
+		const decorative = page.getByRole("switch", { name: "장식 이미지" });
+		await expect.element(decorative).toHaveAttribute("aria-readonly", "true");
+		await expect.element(decorative).toBeEnabled();
+		await userEvent.click(decorative);
+		await expect.element(decorative).not.toBeChecked();
 		await closeCard();
 		// The field is named by its label, shows the file, and is not something to press.
 		const field = page.getByRole("group", { name: "대표 이미지" });
@@ -167,6 +174,7 @@ describe("in a translation", () => {
 		await TranslationCover.run();
 		await properties();
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
+		await expect.element(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" })).not.toBeInTheDocument();
 		await expect.element(page.getByRole("button", { name: "대표 이미지 빼기" })).not.toBeInTheDocument();
 		await openCard();
 		await expect.element(alt()).toHaveAttribute("placeholder", "아침 책상");
@@ -217,7 +225,7 @@ describe("in a translation", () => {
 		await openCard();
 		await userEvent.fill(alt(), "A desk in the morning");
 		await expect.element(note).not.toBeInTheDocument();
-		await userEvent.click(page.getByRole("button", { name: "대표 이미지 빼기" }));
+		await userEvent.click(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" }));
 		await expect.element(note).toBeVisible();
 	});
 
@@ -226,9 +234,9 @@ describe("in a translation", () => {
 		await properties();
 		await openCard();
 		await userEvent.fill(alt(), "A desk");
-		await expect.element(page.getByRole("button", { name: "대표 이미지 빼기" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" })).toBeVisible();
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
-		await userEvent.click(page.getByRole("button", { name: "대표 이미지 빼기" }));
+		await userEvent.click(page.getByRole("button", { name: "대표 이미지 원문으로 되돌리기" }));
 		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
 		await openCard();
 		await expect.element(alt()).toHaveValue("");

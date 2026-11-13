@@ -49,7 +49,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 	toast,
-	useShortcut,
 } from "@monti-cms/ui";
 import {
 	Archive,
@@ -215,7 +214,6 @@ export function EntryEditor({
 	const uploadsGoing = useUploadsGoing();
 	const unarchive = useOperation("entries.unarchive");
 	const exporter = useOperation<BackupOutput>("data.export");
-	const saveKeys = useShortcut(SAVE_KEYS);
 	useLeaveGuard({
 		changes: editor.draft.changes,
 		revertAll: editor.draft.revertAll,
@@ -985,7 +983,10 @@ export function EntryEditor({
 						</TextButton>
 					}
 				/>
-				<TooltipContent side="bottom">{saveKeys}</TooltipContent>
+				{/* Its name with its keys after it, as every tooltip with a shortcut (overlay.md). */}
+				<TooltipContent side="bottom" shortcut={SAVE_KEYS}>
+					{t("entry.saveAction")}
+				</TooltipContent>
 			</Tooltip>
 			{hasContent ? (
 				<Button

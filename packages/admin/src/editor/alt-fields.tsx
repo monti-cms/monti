@@ -86,7 +86,7 @@ export function AltFields({
 						id={id}
 						size="md"
 						autoFocus
-						disabled={readOnly}
+						readOnly={readOnly}
 						maxLength={ALT_MAX}
 						placeholder={placeholder}
 						// What a fill wrote is blue until it is changed (components/proposal.md, filling a field).
@@ -111,7 +111,7 @@ export function AltFields({
 			)}
 			<Option spread>
 				{t("editor.image.decorative")}
-				<Switch checked={decorative} disabled={readOnly} onCheckedChange={onDecorative} />
+				<Switch checked={decorative} readOnly={readOnly} onCheckedChange={onDecorative} />
 			</Option>
 		</>
 	);

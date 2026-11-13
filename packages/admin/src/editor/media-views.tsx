@@ -48,6 +48,7 @@ import {
 import {
 	Edit,
 	Image as ImageIcon,
+	Renew,
 	Reset,
 	RotateClockwise,
 	RotateCounterclockwise,
@@ -150,14 +151,16 @@ function UploadInPlace({
 	// A file cut off says so in the box that stands for a file, and goes as any block goes (screens/editor.md).
 	if (upload.status === "failed")
 		return (
-			<FileBlock
-				name={upload.name}
-				meta={t("library.failed")}
-				tone="danger"
-				selected={selected}
-				// The entry cannot be changed (archived since the file was cut off): the file stays to be tried again later, with no way to try it now.
-				action={media.readOnly ? undefined : <RetryButton onRetry={() => media.retry(upload)} />}
-			/>
+			// Picked, the box's 2px line says so, as for a file or a picture: one line, the block's own border steps aside.
+			<BlockBox selected={selected}>
+				<FileBlock
+					name={upload.name}
+					meta={t("library.failed")}
+					tone="danger"
+					// The entry cannot be changed (archived since the file was cut off): the file stays to be tried again later, with no way to try it now.
+					action={media.readOnly ? undefined : <RetryButton onRetry={() => media.retry(upload)} />}
+				/>
+			</BlockBox>
 		);
 	return isImage ? (
 		<UploadingImage src={upload.preview} progress={upload.progress} label={t("editor.image.uploading")} />
@@ -584,7 +587,9 @@ function EditDialog({
 				<DialogFooter>
 					<Inline gap={8} grow>
 						{changed && (
-							<TextButton
+							// A ghost button with its icon: it stands alone in the footer's row, beside "Cancel" (button.md).
+							<Button
+								variant="ghost"
 								onClick={() => {
 									setTurn(0);
 									setPart(WHOLE);
@@ -596,7 +601,7 @@ function EditDialog({
 							>
 								<Reset aria-hidden />
 								{t("editor.crop.reset")}
-							</TextButton>
+							</Button>
 						)}
 					</Inline>
 					<DialogClose render={<Button variant="ghost" />}>{t("settings.cancel")}</DialogClose>
@@ -767,7 +772,8 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	// With a fill the line keeps one shape whatever it shows (the caption stays the same box while its button comes and goes with the caret).
 	const captionField =
 		(editable || data.caption) &&
-		(fill && captionFill ? (
+		// A picture whose file is gone has nothing to look at: a fill could only fail, so its caption has no button.
+		(fill && captionFill && !file.missing ? (
 			<Stack gap={4}>
 				{/* The button is there while the keyboard is in the line, the button itself included: Tab from the caption reaches it. */}
 				<Inline
@@ -781,7 +787,8 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 					<Box grow minWidth={0}>
 						{captionInput}
 					</Box>
-					{caption.value === "" && (inCaption || captionFill.working) ? (
+					{/* Empty, "✦ Fill"; with words, "↻ Again", as the alt text's (screens/common.md). */}
+					{inCaption || captionFill.working ? (
 						<TextButton
 							tone="proposal"
 							size="micro"
@@ -794,12 +801,12 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 								)
 							}
 						>
-							{captionFill.working ? null : <Spark aria-hidden />}
-							{t(captionFill.working ? "fill.working" : "fill.fill")}
+							{captionFill.working ? null : caption.value ? <Renew aria-hidden /> : <Spark aria-hidden />}
+							{t(captionFill.working ? "fill.working" : caption.value ? "fill.again" : "fill.fill")}
 						</TextButton>
 					) : null}
 				</Inline>
-				{captionFill.failed && caption.value === "" ? (
+				{captionFill.failed ? (
 					<Text as="div" variant="caption" tone="danger" align={CAPTION_ALIGN[align]}>
 						{captionFill.failed}
 					</Text>
@@ -974,14 +981,18 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 								// The whole picture, whatever the file says of its size: a size that is off leaves a sliver of ground, not a cut picture.
 								fit="contain"
 							/>
-						) : (
-							// While it loads, and for a file the library does not have: the frame with nothing in it (editor-tools.md).
-							<Image
-								src={null}
-								alt={file.missing ? t("editor.image.notFound") : ""}
-								fallback={ImageIcon}
-								ratio="wide"
+						) : file.missing ? (
+							// A file the library does not have is said, as a file's is: not an empty frame that reads as one still loading (principle 7).
+							<FileBlock
+								// What the entry says of it; with nothing said, what it is.
+								name={data.alt || t({ key: "blocks.image" })}
+								icon={<ImageIcon aria-hidden />}
+								tone="danger"
+								meta={t("editor.image.notFound")}
 							/>
+						) : (
+							// While it loads: the frame with nothing in it (editor-tools.md).
+							<Image src={null} alt="" fallback={ImageIcon} ratio="wide" />
 						)}
 						{picked && !editable && url && (
 							// Read-only (an archived entry, one in the trash): nothing changes the picture, but what the entry says of it can still be read. The
@@ -1132,7 +1143,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 	const { item } = file;
 	return (
 		<NodeViewWrapper data-block="file">
-			<BlockBox>
+			<BlockBox selected={selected}>
 				{selected && (media ? !media.readOnly : editor.isEditable) && (
 					<BlockBarPlace>
 						<FloatingBar ref={bar} aria-label={t("editor.file.tools")}>
@@ -1161,9 +1172,9 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 						</FloatingBar>
 					</BlockBarPlace>
 				)}
+				{/* Picked, the box's 2px line says so, as a picture's does: the block draws no second one. */}
 				<FileBlock
 					name={shownName.value || item?.name || ""}
-					selected={selected}
 					tone={file.missing ? "danger" : "default"}
 					meta={
 						file.missing

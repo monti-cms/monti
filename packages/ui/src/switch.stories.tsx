@@ -21,7 +21,7 @@ export const Playground: Story = {
 	),
 };
 
-/** Off, on, AI-turned-on (blue) and disabled. Off is a `border-default` track with a page-colored knob, as the design system draws it. */
+/** Off, on, AI-turned-on (blue), disabled and read-only (gray when on, not dimmed). Off is a `border-default` track with a page-colored knob, as the design system draws it. */
 export const States: Story = {
 	render: () => (
 		<Stack gap={12}>
@@ -31,6 +31,8 @@ export const States: Story = {
 				{ name: "proposal · on", props: { defaultChecked: true, proposal: true } },
 				{ name: "disabled", props: { disabled: true } },
 				{ name: "disabled · on", props: { disabled: true, defaultChecked: true } },
+				{ name: "read-only", props: { readOnly: true } },
+				{ name: "read-only · on", props: { readOnly: true, defaultChecked: true } },
 			].map(({ name, props }) => (
 				<Stack key={name} direction="row" gap={8} align="center">
 					<Switch id={name} {...props} />

@@ -5,6 +5,9 @@ import { cn } from "./cn";
 import { CHECK_HOVER } from "./hover";
 import { useProposalDescription } from "./proposal-cue";
 
+/** The ✓ of a ticked box, in its 14px view box: `Checkbox` and a checklist's box in the editor (`EditorBody`, `data-check`) draw the same mark. */
+const CHECK_MARK_PATH = "M2.3 6.9 5.1 9.7 10.7 4.1";
+
 /**
  * A checkbox: 14px, a ✓ when on and a bar when only some are on (`indeterminate`, the select-all of a list with part of it picked). The mark
  * is drawn, so the state never rests on color alone. The root is a `span`, not a `button`, so a disabled one is dimmed through `data-disabled`.
@@ -48,7 +51,7 @@ function Checkbox({
 							className="size-3.5"
 							aria-hidden="true"
 						>
-							<path className="group-data-indeterminate/check:hidden" d="M2.3 6.9 5.1 9.7 10.7 4.1" />
+							<path className="group-data-indeterminate/check:hidden" d={CHECK_MARK_PATH} />
 							<path className="hidden group-data-indeterminate/check:block" d="M4 7h6" />
 						</svg>
 					</span>
@@ -58,4 +61,4 @@ function Checkbox({
 	);
 }
 
-export { Checkbox };
+export { CHECK_MARK_PATH, Checkbox };

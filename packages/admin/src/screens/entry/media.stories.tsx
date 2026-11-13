@@ -24,11 +24,17 @@ const entry = (
 		archived?: true;
 		/** No first paragraph: the body is what `body` gives, and nothing else. */
 		bare?: true;
+		/**
+		 * A file of the library taken out of its database after the entry is written, as a restore from an older backup leaves it: the body's block
+		 * for it finds nothing (the operations never let a used file go).
+		 */
+		gone?: (ids: Library) => string;
 	} = {},
 ) => [
 	async (): Promise<Loaded> => {
 		startAt("#/");
 		let id = "";
+		let gone: string | null = null;
 		const made = await storySite({
 			schema,
 			auth: { password: true },
@@ -59,10 +65,15 @@ const entry = (
 						blocks: [...(options.bare ? [] : [paragraph]), ...(ids && options.body ? options.body(ids) : [])],
 					},
 				});
+				if (ids && options.gone) gone = options.gone(ids);
 				if (options.translate) id = await run("translations.create", { source: id, locale: options.translate });
 				if (options.archived) await monti.run("entries.archive", { ids: [id] }, { actor: "admin" });
 			},
 		});
+		if (gone) {
+			// Its uses go with it (`media_uses` cascades).
+			await made.db.deleteFrom("media").where("id", "=", gone).execute();
+		}
 		window.location.hash = `#/c/post/${id}`;
 		return { site: made };
 	},
@@ -155,6 +166,14 @@ export const SizedImages: Story = {
 export const FileInBody: Story = {
 	loaders: entry({
 		body: ({ notes }) => [{ id: "f_1", type: "file", attrs: { media: notes } }],
+	}),
+};
+
+/** A picture whose file the library no longer has: said as a file is, not drawn as one still loading. */
+export const MissingImage: Story = {
+	loaders: entry({
+		gone: ({ desk }) => desk,
+		body: ({ desk }) => [{ id: "i_1", type: "image", attrs: { media: desk, alt: "지운 그림" } }],
 	}),
 };
 

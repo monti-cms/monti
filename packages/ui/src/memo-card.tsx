@@ -39,7 +39,8 @@ function WithShortcut({
  * (words just selected to ask about) has no head, and opens on its reply row with the caret in it (`reply.focus`). While the assistant works on what
  * was sent, the reply row's button stops it (`reply.stop`). There is no close
  * button; pressing outside, Esc, or the mark again closes it. The body is a `MemoThread` of messages or a `MemoDiff`. `reply` adds the row at the
- * bottom where the note goes on ("Continue"). The key combinations show as tooltips on the head's buttons.
+ * bottom where the note goes on ("Continue"): its send button is the black ↑, or a ghost one when the head has the black "Accept" (one black control
+ * on a surface). The key combinations show as tooltips on the head's buttons.
  */
 function MemoCard({
 	where,
@@ -79,6 +80,8 @@ function MemoCard({
 	children?: ReactNode;
 }) {
 	const blank = reply ? reply.value.trim() === "" : true;
+	// One black control on a surface (button.md): with the black "Accept" in the head, the reply row's send and stop are ghost icon buttons.
+	const replyVariant = acceptLabel && onAccept ? "ghost" : "primary";
 	const send = () => {
 		if (reply && !blank) reply.onSend(reply.value.trim());
 	};
@@ -123,11 +126,11 @@ function MemoCard({
 						className="min-w-0 grow border-0 bg-transparent p-0 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
 					/>
 					{reply.stop ? (
-						<IconButton variant="primary" size="sm" label={reply.stop.label} onClick={reply.stop.onStop}>
+						<IconButton variant={replyVariant} size="sm" label={reply.stop.label} onClick={reply.stop.onStop}>
 							<StopFilledAlt aria-hidden className="size-3" />
 						</IconButton>
 					) : (
-						<IconButton variant="primary" size="sm" label={reply.sendLabel} disabled={blank} onClick={send}>
+						<IconButton variant={replyVariant} size="sm" label={reply.sendLabel} disabled={blank} onClick={send}>
 							<ArrowUp aria-hidden className="size-3.5" />
 						</IconButton>
 					)}

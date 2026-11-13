@@ -1,5 +1,6 @@
 import { HeadingIcon } from "@monti-cms/ui";
 import {
+	Box,
 	Code,
 	Document,
 	Image,
@@ -17,7 +18,8 @@ import type { ComponentType } from "react";
 
 /**
  * The mark at the start of a block's row in the "/" menu and in "turn into" (editor-tools.md): a heading by its level (`HeadingIcon`), the others
- * by what they are. A site's own block brings its own (`Icon`), or has none and its name says it.
+ * by what they are. A site's own block brings its own (`Icon`); one that brings none takes the component mark (`Box`), as a row of a menu starts
+ * with its icon (menu.md), and its name says which.
  */
 export function BlockIcon({
 	type,
@@ -57,5 +59,6 @@ export function BlockIcon({
 		case "template":
 			return <Template aria-hidden />;
 	}
-	return Own ? <Own aria-hidden /> : null;
+	// A block that names no icon takes the component mark: a row of a menu starts with its icon (menu.md).
+	return Own ? <Own aria-hidden /> : <Box aria-hidden />;
 }
