@@ -24,6 +24,8 @@ describe("taxonomy screen (doc 08)", () => {
 		await TaxonomyTags.run();
 		await expect.element(table().getByText("리액트", { exact: true })).toBeVisible();
 		await expect.element(table().getByText("react", { exact: true })).toBeVisible();
+		// The address is typed as it stands: mono (tokens.md).
+		expect(getComputedStyle(table().getByText("react", { exact: true }).element()).fontFamily).toMatch(/mono/i);
 		expect(table().element().textContent).not.toContain("/tag/react");
 		await expect.element(table().getByText("React", { exact: true })).toBeVisible();
 		await expect.element(table().getByText("글 5", { exact: true })).toBeVisible();

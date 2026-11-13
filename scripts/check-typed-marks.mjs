@@ -12,6 +12,7 @@
 // - a mark that reaches the words as a value from somewhere else: a dictionary outside the checked files, a value built at runtime ("+" joined to
 //   a label in two pieces), an icon font, a character typed in an image.
 // - a "+" that is not followed by a space ("+1", "+언어"), or a key spelled out in words ("Delete key").
+// - a key's name ("Del") in a value that reaches JSX from a variable or a function; glyphs ("⌘") are found anywhere.
 // - a `title` reaching a button through a spread (`{...props}`) or through a part that renders a button (`render={<Button />}` passes it on).
 // - a row without its › drawn some other way than `chevron={false}`.
 let parseSync = () => {
@@ -29,6 +30,13 @@ const KEY_WORD = /^(?:Del|Backspace|Esc)$/;
 /** A close mark typed as a letter. */
 const CLOSE_MARK = /^[×✕✖]$/;
 const BUTTONS = new Set(["Button", "TextButton", "IconButton"]);
+/** Type syntax around a value: the value inside is read. */
+const VALUE_WRAPPERS = new Set([
+	"TSAsExpression",
+	"TSSatisfiesExpression",
+	"TSNonNullExpression",
+	"TSInstantiationExpression",
+]);
 
 /**
  * What is wrong with these words, or `null`. `shown`: the words are surely on the screen (JSX text, a JSX value, a dictionary's word), so a key's
@@ -70,26 +78,38 @@ export function problems(sources) {
 			const wrong = typeof value === "string" ? glyphOf(value, shown) : null;
 			if (wrong) say(node, "typed-glyph", `${JSON.stringify(value.trim())}: ${wrong}`);
 		};
-		const walk = (node, parent = null) => {
+		/** The nodes whose value is drawn: a JSX value, and through it `&&`, `||`, `??`, a condition's branches and value wrappers. */
+		const drawn = new Set();
+		const shown = (node) => {
+			if (!node || typeof node !== "object") return;
+			drawn.add(node);
+			if (node.type === "LogicalExpression") shown(node.right);
+			else if (node.type === "ConditionalExpression") {
+				shown(node.consequent);
+				shown(node.alternate);
+			} else if (VALUE_WRAPPERS.has(node.type) || node.type === "ParenthesizedExpression") shown(node.expression);
+		};
+		const walk = (node) => {
 			if (!node || typeof node !== "object") return;
 			if (Array.isArray(node)) {
-				for (const each of node) walk(each, parent);
+				for (const each of node) walk(each);
 				return;
 			}
 			if (typeof node.type !== "string") return;
-			// What is checked is what a person reads: a module name or a type is not.
-			if (node.type === "ImportDeclaration" || node.type === "ExportAllDeclaration" || node.type.startsWith("TS"))
-				return;
-			const inJsx = parent?.type === "JSXExpressionContainer" || parent?.type === "JSXAttribute";
-			if (node.type === "Literal") words(node, node.value, dictionary || inJsx);
+			// What is checked is what a person reads: a module name or a type is not. A value inside `as`, `satisfies` or `!` is read.
+			if (node.type === "ImportDeclaration" || node.type === "ExportAllDeclaration") return;
+			if (node.type.startsWith("TS") && !VALUE_WRAPPERS.has(node.type)) return;
+			// A key named for assistive technology is not drawn: it names the key, as code does.
+			if (node.type === "JSXAttribute" && node.name?.name === "aria-keyshortcuts") return;
+			// Words reach the screen through a condition too (`{open && "Del"}`, `{a ? "Esc" : null}`).
+			if (node.type === "JSXExpressionContainer") shown(node.expression);
+			if (node.type === "JSXAttribute") shown(node.value);
+			const isShown = dictionary || drawn.has(node);
+			if (node.type === "Literal") words(node, node.value, isShown);
 			// A template is read whole, a value standing for each `${…}`: "+ ${label}" is a typed "+" all the same.
 			else if (node.type === "TemplateLiteral") {
-				words(
-					node,
-					node.quasis.map((quasi) => quasi.value?.cooked ?? quasi.value?.raw ?? "").join("…"),
-					dictionary || inJsx,
-				);
-				for (const expression of node.expressions) walk(expression, node);
+				words(node, node.quasis.map((quasi) => quasi.value?.cooked ?? quasi.value?.raw ?? "").join("…"), isShown);
+				for (const expression of node.expressions) walk(expression);
 				return;
 			} else if (node.type === "JSXText") words(node, node.value, true);
 			else if (node.type === "JSXOpeningElement") {
@@ -112,7 +132,7 @@ export function problems(sources) {
 						say(attribute, "chevron-off", "`chevron={false}`: a row that opens a second level keeps its › (menu.md)");
 				}
 			}
-			for (const [key, value] of Object.entries(node)) if (key !== "parent") walk(value, node);
+			for (const [key, value] of Object.entries(node)) if (key !== "parent") walk(value);
 		};
 		walk(program);
 	}

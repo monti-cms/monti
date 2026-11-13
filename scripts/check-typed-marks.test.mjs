@@ -78,3 +78,10 @@ test("comments and imports are not read", () => {
 		[],
 	);
 });
+
+test("values inside `as const` and `satisfies` are read, a key's name through a condition is shown, and aria-keyshortcuts is not", () => {
+	const found = problems({
+		[SCREEN]: `${UI}const ITEMS = [{ label: "+ 새 글" }] as const;\nconst KEYS = { open: "⌘K" } satisfies Record<string, string>;\nexport function Screen({ open }) {\n\treturn (\n<>\n\t<MenuShortcut>{open && "Del"}</MenuShortcut>\n\t<MenuShortcut>{open ? "Esc" : null}</MenuShortcut>\n\t<button aria-keyshortcuts="Backspace" />\n</>\n\t);\n}\n`,
+	}).map(({ line, message }) => `${line}: ${message.split(":")[0]}`);
+	assert.deepEqual(found, ['2: "+ 새 글"', '3: "⌘K"', '7: "Del"', '8: "Esc"']);
+});

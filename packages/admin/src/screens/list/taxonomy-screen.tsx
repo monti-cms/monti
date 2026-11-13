@@ -234,9 +234,13 @@ function TaxonomySidePanel({
 									// Saved: the panel's own line says so, no toast repeats it (status.md). Refused: the field that caused it says why under
 									// itself (an address a deleted item had), anything else in a toast.
 									if (res.ok) return;
-									if (res.refusal.reason?.key === "items.pathKept") {
-										setSlugRefused({ slug: shownValue(slugPath), reason: t(res.refusal.reason) });
-										slugInput.current?.focus();
+									const reason = res.refusal.reason;
+									// The address refused is said under the address field while it holds that address: in the language shown, or once
+									// the person turns to the language whose address it is.
+									if (reason?.key === "items.pathKept" && typeof reason.values?.slug === "string") {
+										setSlugRefused({ slug: reason.values.slug, reason: t(reason) });
+										if (shownValue(slugPath) === reason.values.slug) slugInput.current?.focus();
+										else toast.error(t(reason));
 									} else toast.error(t(reasonOf(res.refusal)));
 								}}
 							>
