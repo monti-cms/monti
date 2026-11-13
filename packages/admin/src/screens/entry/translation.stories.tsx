@@ -245,6 +245,10 @@ export const SharedSwitch: Story = {
 	loaders: site("new", "english", withSwitch),
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
+		// The translation alone, with its property panel.
+		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
+		const panel = await page.findByRole("button", { name: "속성" }, wait);
+		if (panel.getAttribute("aria-pressed") !== "true") await userEvent.click(panel);
 		await page.findByText("꺼짐", undefined, wait);
 	},
 };

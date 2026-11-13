@@ -743,7 +743,10 @@ export const ConditionalFields: Story = {
 	},
 };
 
-/** The same posts with a choice inside the video's fields and a field turned on and off by a switch (doc 19). */
+/**
+ * The same posts with a choice inside the video's fields (doc 19). The link has no field here, so the whole outline fits the window: a row
+ * cut by the window's edge would be measured as too small to press.
+ */
 const nestedSchema = defineSchema({
 	...optionsSchema,
 	collections: {
@@ -765,9 +768,22 @@ const nestedSchema = defineSchema({
 								fields: { embed: { embedCode: { kind: "text" } } },
 							},
 						},
-						link: { linkUrl: { kind: "text", required: true } },
 					},
 				},
+			},
+		},
+	},
+});
+
+/** The same posts with a field turned on and off by a switch, and a field of its own for "on" (doc 19). */
+const toggleSchema = defineSchema({
+	...optionsSchema,
+	collections: {
+		...optionsSchema.collections,
+		post: {
+			...optionsSchema.collections.post,
+			fields: {
+				...optionsSchema.collections.post.fields,
 				featured: {
 					kind: "conditional",
 					control: "toggle",
@@ -779,10 +795,7 @@ const nestedSchema = defineSchema({
 	},
 });
 
-/**
- * Doc 19: a conditional field inside an option of another has bands of its own, further in; a field turned on and off by a switch has the
- * one band of its option. Every field of an option has its grip.
- */
+/** Doc 19: a conditional field inside an option of another has bands of its own, further in. Every field of an option has its grip. */
 export const ConditionalNestedFields: Story = {
 	loaders: site({ schema: nestedSchema, more: optionEntries }),
 	play: async ({ canvasElement }) => {
@@ -790,13 +803,12 @@ export const ConditionalNestedFields: Story = {
 		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
 		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
 		await page.findByRole("button", { name: "embedCode 열기" }, wait);
-		await page.findByRole("button", { name: "featuredNote 열기" }, wait);
 	},
 };
 
 /** Doc 19: the field sheet of a conditional field turned on and off by a switch: its one option, nothing to add or take, and no "필수". */
 export const ToggleFieldSheet: Story = {
-	loaders: site({ schema: nestedSchema, more: optionEntries }),
+	loaders: site({ schema: toggleSchema, more: optionEntries }),
 	play: async ({ canvasElement }) => {
 		const page = within(canvasElement);
 		const body = within(canvasElement.ownerDocument.body);
