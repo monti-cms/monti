@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
+	CalloutKindsScreen,
 	CalloutScreen,
 	ChartTableScreen,
 	ChartTextScreen,
@@ -23,6 +24,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** The caret in a callout: its row's kind button open on the five kinds, ✓ on the one it is. */
+/** The five kinds of callout, each in its accent. */
+export const CalloutKinds: Story = { render: () => <CalloutKindsScreen /> };
 export const CalloutKind: Story = { render: () => <CalloutScreen /> };
 /** Tabs: the picked tab's name typed where it reads, its row (first tab, remove), the + at the end of the tabs. */
 export const Tabs: Story = { render: () => <TabsScreen /> };
