@@ -7,7 +7,19 @@ export const FieldAdminValues = z.object({
 	/** For the assistant: how to fill the field. The screen does not show it. */
 	description: z.string().optional(),
 	optionLabels: z.record(z.string(), z.string()).optional(),
+	/**
+	 * Of a conditional field: for an option, its fields in the order the panel shows them (doc 19). A field it does not name comes after
+	 * the ones it does, in the schema's order; a name that is no field of the option is passed over.
+	 */
+	optionFields: z.record(z.string(), z.array(z.string())).optional(),
 });
+
+/** An option's fields in the order its conditional field's admin values give (`optionFields`): the named ones first, then the rest. */
+export function inOptionOrder(names: string[], order: string[] | undefined): string[] {
+	if (!order) return names;
+	const named = order.filter((name) => names.includes(name));
+	return [...named, ...names.filter((name) => !named.includes(name))];
+}
 
 /**
  * How a collection's list looks (doc 06): the column order, the hidden columns, the widths the admin dragged and the page size. Filters and sorting live
@@ -55,6 +67,7 @@ const FieldAdminValuesPatch = z.object({
 	label: z.string().nullable().optional(),
 	description: z.string().nullable().optional(),
 	optionLabels: z.record(z.string(), z.string()).nullable().optional(),
+	optionFields: z.record(z.string(), z.array(z.string())).nullable().optional(),
 });
 
 /**

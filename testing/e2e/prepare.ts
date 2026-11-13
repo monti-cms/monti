@@ -13,7 +13,7 @@ import { createMonti, type Database, migrateContent, migrateToLatest } from "@mo
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 import schema from "../../examples/blog/monti.schema";
-import { ADMIN, databaseOf, SERVERS, testDatabase } from "./servers";
+import { ADMIN, databaseOf, REFRESH_DOWN, SERVERS, testDatabase } from "./servers";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const app = path.join(root, "examples", "blog");
@@ -115,6 +115,8 @@ if (seedAt > 0) {
 		await database(server.schema, false);
 		rmSync(server.env.MONTI_FILES ?? "", { recursive: true, force: true });
 	}
+	// A run that was stopped mid-test may have left the flag that fails the second live site's cache refresh: every run starts without it.
+	rmSync(REFRESH_DOWN, { force: true });
 	styles();
 	// Built once as a live site, against the first server's database; the other live server takes a copy, so each keeps its own cached pages.
 	const [first, ...rest] = SERVERS.filter((server) => server.mode === "start");

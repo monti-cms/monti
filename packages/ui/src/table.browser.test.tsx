@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { onTopOf, pointerPath, wholeUnderPointer } from "../../../testing/input";
+import { dragPath, dropDrag, middleOf, onTopOf, pointerPath, wholeUnderPointer } from "../../../testing/input";
 import { render } from "../test/render";
 import {
 	FileUseRow,
+	ListHead,
 	ListScroll,
 	LocaleCodes,
 	RowActions,
@@ -450,6 +452,131 @@ describe("Table rows with a link", () => {
 		);
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		expect(tip()).toBe(null);
+	});
+
+	it("[dragging] [dropped] an edge dragged before the title's width was ever measured still moves: the drag starts from the width laid out at the press", async () => {
+		// The observer that tells the head its title's width never speaks: as on a page too busy to have run it yet, or after a change of
+		// layout it has not told of. The press comes all the same.
+		const Observer = window.ResizeObserver;
+		window.ResizeObserver = class {
+			observe() {}
+			unobserve() {}
+			disconnect() {}
+		} as typeof ResizeObserver;
+		onTestFinished(() => {
+			window.ResizeObserver = Observer;
+		});
+		function Head() {
+			const [kind, setKind] = useState(84);
+			const columns = [
+				{ id: "title", label: "제목" },
+				{ id: "kind", label: "종류", size: kind, kindSize: 84 },
+			];
+			return (
+				<Table container="none" layout="fixed" columns={[undefined, kind, 48]}>
+					<ListHead
+						columns={columns}
+						end={48}
+						onResize={(changes) => typeof changes.kind === "number" && setKind(changes.kind)}
+						resizeLabel={(label) => `${label} 열 너비 조절`}
+					/>
+					<TableBody>
+						<TableRow>
+							<TableCell>첫 번째 글</TableCell>
+							<TableCell>게시글</TableCell>
+							<TableCell />
+						</TableRow>
+					</TableBody>
+				</Table>
+			);
+		}
+		render(<Head />);
+		const edge = page.getByRole("separator", { name: "제목 열 너비 조절" });
+		await expect.element(edge).toBeVisible();
+		const rights = () => [...document.querySelectorAll("th")].map((th) => Math.round(th.getBoundingClientRect().right));
+		const before = rights();
+		const from = middleOf(edge.element());
+		await dragPath([from, { x: from.x - 40, y: from.y }], { hold: true });
+		const moved = [(before[0] as number) - 40, ...before.slice(1)];
+		await expect.poll(rights).toEqual(moved);
+		await dropDrag();
+		await expect.poll(rights).toEqual(moved);
+		// The keys start from the same width: End takes the title to its widest, where the kind is at its narrowest; an arrow gives a step
+		// back; Home takes the title to its narrowest (200px), where the kind has the rest, up to its widest (480px).
+		edge.element().focus();
+		const width = (nth: number) => Math.round(document.querySelectorAll("th")[nth]?.getBoundingClientRect().width ?? 0);
+		const kind = () => width(1);
+		const both = width(0) + width(1);
+		await userEvent.keyboard("{End}");
+		await expect.poll(kind).toBe(60);
+		await userEvent.keyboard("{ArrowLeft}");
+		await expect.poll(kind).toBe(76);
+		await userEvent.keyboard("{Home}");
+		await expect.poll(kind).toBe(Math.min(480, both - 200));
+		expect(width(0)).toBe(both - kind());
+	});
+
+	it("a title already narrower than its least (a narrow window): a press that cannot move the edge changes nothing, and the edge still goes the way it can", async () => {
+		const resized = vi.fn();
+		function Head() {
+			const [kind, setKind] = useState(84);
+			return (
+				// 300px: the title has 168 of them, under its 200.
+				<div className="w-[300px]">
+					<Table container="none" layout="fixed" columns={[undefined, kind, 48]}>
+						<ListHead
+							columns={[
+								{ id: "title", label: "제목" },
+								{ id: "kind", label: "종류", size: kind, kindSize: 84 },
+							]}
+							end={48}
+							onResize={(changes) => {
+								resized(changes);
+								if (changes.kind !== undefined) setKind(changes.kind ?? 84);
+							}}
+							resizeLabel={(label) => `${label} 열 너비 조절`}
+						/>
+						<TableBody>
+							<TableRow>
+								<TableCell>첫 번째 글</TableCell>
+								<TableCell>게시글</TableCell>
+								<TableCell />
+							</TableRow>
+						</TableBody>
+					</Table>
+				</div>
+			);
+		}
+		render(<Head />);
+		const edge = page.getByRole("separator", { name: "제목 열 너비 조절" });
+		await expect.element(edge).toBeVisible();
+		const width = (nth: number) => Math.round(document.querySelectorAll("th")[nth]?.getBoundingClientRect().width ?? 0);
+		expect(width(0)).toBeLessThan(200);
+		const [title, kind] = [width(0), width(1)];
+		const unchanged = async () => {
+			// Whatever was reported, no width is other than it was.
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			expect([width(0), width(1)]).toEqual([title, kind]);
+		};
+		// A press with no movement.
+		await userEvent.click(edge);
+		await unchanged();
+		// The ways that would narrow the title further: an arrow, and Home.
+		edge.element().focus();
+		await userEvent.keyboard("{ArrowLeft}");
+		await unchanged();
+		await userEvent.keyboard("{Home}");
+		await unchanged();
+		// Dragged toward the title: the same.
+		const from = middleOf(edge.element());
+		await dragPath([from, { x: from.x - 30, y: from.y }]);
+		await unchanged();
+		// The way it can go: the title widens by a step, and End takes the kind to its narrowest.
+		await userEvent.keyboard("{ArrowRight}");
+		await expect.poll(() => width(1)).toBe(kind - 16);
+		await userEvent.keyboard("{End}");
+		await expect.poll(() => width(1)).toBe(60);
+		expect(width(0)).toBe(title + kind - 60);
 	});
 });
 

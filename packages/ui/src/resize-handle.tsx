@@ -82,6 +82,7 @@ type ResizeEdge = "start" | "end";
  */
 function ResizeHandle({
 	value,
+	measure,
 	min,
 	max,
 	onChange,
@@ -93,6 +94,12 @@ function ResizeHandle({
 	...props
 }: Omit<React.ComponentProps<"div">, "onChange"> & {
 	value: number;
+	/**
+	 * The width as it is laid out at this moment, for a pane whose `value` is a measurement and can be behind (a column that takes the room
+	 * left). A drag and a key start from it: started from a `value` not measured yet, a drag is worked out from nothing and takes the edge the wrong way.
+	 * With it, Home and End report -Infinity and Infinity, and `onChange` keeps the width in its limits.
+	 */
+	measure?: () => number;
 	min: number;
 	max: number;
 	/** Called with the new width; `commit` is false while the pointer is still down. */
@@ -129,7 +136,7 @@ function ResizeHandle({
 			)}
 			onPointerDown={(event) => {
 				if (event.button !== 0) return;
-				drag.current = { startX: event.clientX, startValue: value };
+				drag.current = { startX: event.clientX, startValue: measure?.() ?? value };
 				event.preventDefault();
 				// The pointer may already be gone (a pen lifted, a synthetic press); the drag still follows the moves the handle hears.
 				try {
@@ -158,15 +165,22 @@ function ResizeHandle({
 				const step = event.shiftKey ? KEY_STEP_LARGE : KEY_STEP;
 				const widen = edge === "end" ? "ArrowRight" : "ArrowLeft";
 				const narrow = edge === "end" ? "ArrowLeft" : "ArrowRight";
+				const now = measure?.() ?? value;
 				const next =
 					event.key === widen
-						? value + step
+						? now + step
 						: event.key === narrow
-							? value - step
-							: event.key === "Home"
-								? min
+							? now - step
+							: // With `measure`, `min` and `max` were worked out from a `value` that can be behind: the limits are the owner's
+								// to apply to "as far as it goes".
+								event.key === "Home"
+								? measure
+									? Number.NEGATIVE_INFINITY
+									: min
 								: event.key === "End"
-									? max
+									? measure
+										? Number.POSITIVE_INFINITY
+										: max
 									: null;
 				if (next === null) return;
 				event.preventDefault();

@@ -9,7 +9,8 @@
  *   3. `npm install`s core, admin, next and ai from those addresses (no workspace links: the least forgiving way), and loads each in Node;
  *   4. makes a database of its own, and runs `monti init --yes`: it writes the site's Monti files and makes the tables. A second run writes
  *      nothing, and `monti doctor` finds no failure;
- *   5. `tsc --noEmit`, `next build`;
+ *   5. `tsc --noEmit` as the site runs it, then once more over every declaration file Monti ships, checked and not skipped (a new Next
+ *      app skips the insides of libraries' declarations: `skipLibCheck`), then `next build`;
  *   6. `next start`, and a browser opens `/admin`: the admin is drawn with its own styles, the console is clean, the admin's API answers,
  *      and the site's own page looks as it did.
  *
@@ -22,7 +23,7 @@
  * address (a redirect) and a repository that is not public are not tried here. Only npm installs; pnpm and yarn are untried.
  */
 import { execFileSync, spawn } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -279,6 +280,49 @@ try {
 
 	step("tsc");
 	inSite("npx", ["tsc", "--noEmit"]);
+
+	step("tsc, over Monti's own declarations");
+	// The site's check skips what is inside a library's declaration files, so a declaration of Monti's that is wrong (a type it names and does
+	// not bring, a file it points at and did not ship) passes it, and fails in a site that checks its libraries. Every declaration file Monti
+	// ships is checked here with the site's own TypeScript and settings. Other libraries' declarations are read on the way and theirs to
+	// answer for: only what is wrong in Monti's files counts.
+	writeFileSync(
+		path.join(site, "tsconfig.monti.json"),
+		`${JSON.stringify({
+			extends: "./tsconfig.json",
+			compilerOptions: { skipLibCheck: false, incremental: false },
+			include: ["node_modules/@monti-cms/*/dist/**/*.d.ts"],
+			exclude: [],
+		})}\n`,
+	);
+	let said = "";
+	let ended = 0;
+	try {
+		said = execFileSync("npx", ["tsc", "--noEmit", "--pretty", "false", "-p", "tsconfig.monti.json"], {
+			cwd: site,
+			env,
+			encoding: "utf8",
+			stdio: ["ignore", "pipe", "inherit"],
+		});
+	} catch (error) {
+		// tsc ends with a failure on any error, another library's too: what it said decides.
+		if (typeof error.stdout !== "string") throw error;
+		said = error.stdout;
+		ended = error.status ?? 1;
+	}
+	const lines = said.split("\n").filter((line) => /\berror TS\d+/.test(line));
+	// It failed and named no error: it did not get to check (it ran out of memory, it crashed). That is no pass.
+	if (ended !== 0 && lines.length === 0)
+		throw new Error(`tsc stopped (exit ${ended}) before it checked Monti's declarations:\n${said}`);
+	// Another library's errors start with its path under node_modules. Everything else counts: Monti's own files, and an error with no
+	// file of a library to it (the settings, no file found to check).
+	const monti = lines.filter(
+		(line) => /^node_modules[\\/]@monti-cms[\\/]/.test(line) || !/^node_modules[\\/]/.test(line),
+	);
+	if (monti.length > 0)
+		throw new Error(`Monti's declaration files do not pass the site's TypeScript:\n${monti.join("\n")}`);
+	console.log(`Monti's declarations pass (${lines.length} errors in other libraries' declarations, not counted).`);
+	rmSync(path.join(site, "tsconfig.monti.json"));
 
 	step("next build");
 	inSite("npx", ["next", "build"], { env: live });

@@ -1,6 +1,10 @@
 # The release (docs/design/features/20-release.md). Pushing a `v*` tag checks the version, builds the packages, proves them (a fresh Next app
 # installs the packed tarballs and runs; publint and arethetypeswrong pass on every tarball), and makes a GitHub release that holds one tarball
 # for each package and the lines a site installs them by: a draft until every tarball is up. Nothing goes to npm: the packages stay `private` until that is decided.
+#
+# This job's token can write to the repository (it makes the release), so each action is named by its commit, with the version that commit is
+# as a note: a tag can be moved to other code, a commit cannot. And a tag releases only a commit that is on the release branch: a `v*` tag
+# pushed on any other commit stops here, before anything is built.
 name: Release
 
 on:
@@ -13,6 +17,10 @@ concurrency:
 
 permissions:
   contents: write
+
+env:
+  # The branch releases are made from.
+  RELEASE_BRANCH: main
 
 jobs:
   release:
@@ -27,9 +35,19 @@ jobs:
         ports: ["5432:5432"]
         options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # The whole history: the next step asks whether the tag's commit is on the release branch.
+          fetch-depth: 0
+      - name: Check that the tag's commit is on the release branch
+        run: |
+          git fetch --no-tags origin "+refs/heads/$RELEASE_BRANCH:refs/remotes/origin/$RELEASE_BRANCH"
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$RELEASE_BRANCH"; then
+            echo "The tag $GITHUB_REF_NAME names $GITHUB_SHA, which is not on $RELEASE_BRANCH: a release is made from $RELEASE_BRANCH only."
+            exit 1
+          fi
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           cache: pnpm
