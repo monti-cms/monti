@@ -156,14 +156,15 @@ export function checklistBoxes(label: () => string) {
 	});
 }
 
-type Marked = { menuOpen: number | null; held: number | null };
+type Marked = { menuOpen: number | null; held: number[] };
 const statesKey = new PluginKey<Marked>("montiBodyStates");
 
 /** Marks the block whose menu is open (`data-menu-open`), or none. */
 export const markMenuOpen = (state: EditorState, pos: number | null) => state.tr.setMeta(statesKey, { menuOpen: pos });
 
-/** Marks the block being dragged (`data-held`): its place stays as a gap while its copy follows the pointer. */
-export const markHeld = (state: EditorState, pos: number | null) => state.tr.setMeta(statesKey, { held: pos });
+/** Marks the blocks being dragged (`data-held`): their places stay as gaps while a card of them follows the pointer. */
+export const markHeld = (state: EditorState, held: readonly number[]) =>
+	state.tr.setMeta(statesKey, { held: [...held] });
 
 export type BodyStateLabels = { placeholder: string; off: string };
 
@@ -187,13 +188,13 @@ export function bodyStates({
 				new Plugin({
 					key: statesKey,
 					state: {
-						init: (): Marked => ({ menuOpen: null, held: null }),
+						init: (): Marked => ({ menuOpen: null, held: [] }),
 						apply: (transaction, value) => {
 							const meta = transaction.getMeta(statesKey) as Partial<Marked> | undefined;
 							if (meta) return { ...value, ...meta };
 							if (!transaction.docChanged) return value;
 							const map = (pos: number | null) => (pos === null ? null : transaction.mapping.map(pos));
-							return { menuOpen: map(value.menuOpen), held: map(value.held) };
+							return { menuOpen: map(value.menuOpen), held: value.held.map((pos) => transaction.mapping.map(pos)) };
 						},
 					},
 					props: {
@@ -224,7 +225,7 @@ export function bodyStates({
 							const marked = statesKey.getState(state);
 							for (const [pos, attribute] of [
 								[marked?.menuOpen, "data-menu-open"],
-								[marked?.held, "data-held"],
+								...(marked?.held ?? []).map((pos) => [pos, "data-held"] as const),
 							] as const) {
 								const node = pos === null || pos === undefined ? null : doc.nodeAt(pos);
 								if (node && pos !== null && pos !== undefined)

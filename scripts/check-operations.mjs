@@ -23,6 +23,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+/** A "나온 곳" without its dates: "2026-11-06" names no doc 11. */
+const withoutDates = (text) => text.replace(/\d{4}-\d{2}-\d{2}/g, "");
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const docsDir = path.join(root, "docs/design/features");
 const rel = (file) => path.relative(root, file);
@@ -141,7 +144,10 @@ for (const item of openItems) {
 		);
 }
 for (const [number, state] of status)
-	if (state === "통합 대기" && !openItems.some((item) => new RegExp(`(^|\\D)${number}(\\D|$)`).test(item.from)))
+	if (
+		state === "통합 대기" &&
+		!openItems.some((item) => new RegExp(`(^|\\D)${number}(\\D|$)`).test(withoutDates(item.from)))
+	)
 		findings.push(`${rel(trackerFile)}: [unblocked] doc ${number} is 통합 대기, but no open item's 나온 곳 names it`);
 for (const doc of docs)
 	if (!status.has(doc.number))
