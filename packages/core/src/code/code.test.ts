@@ -214,6 +214,9 @@ describe("17-9 the site's code block", () => {
 			'<details data-code-collapse=""><summary><span className="line" data-line="2">b</span></summary>',
 		);
 		expect(out).toContain('id="code-b_code-c1"');
+		// The summary and the fold are blocks that end their lines: a newline after either would draw an empty line.
+		expect(out).not.toMatch(/<\/summary>\n|<\/details>\n/);
+		expect(out).toContain('</summary><span className="line" data-line="3">c</span></details><span');
 	});
 
 	it("17-9 a fold over the whole code, and one inside another to its end, are drawn", () => {
