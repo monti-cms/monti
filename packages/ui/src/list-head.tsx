@@ -180,6 +180,13 @@ function ListHead({
 		return () => observer.disconnect();
 	}, [fluid?.id]);
 	const widthOf = (column: ListHeadColumn) => column.size ?? fluidWidth;
+	/**
+	 * A column's width at this moment. The fluid column's is read from the page, not from `fluidWidth`: that is what the observer last
+	 * said, nothing until it first speaks and behind after each change of layout. An edge dragged from it took 0 for the title's width, found
+	 * no room between the two columns' limits, and moved nothing.
+	 */
+	const widthNow = (column: ListHeadColumn) =>
+		column.size ?? Math.round(cellOf(column.id)?.getBoundingClientRect().width ?? fluidWidth);
 	const limits = (column: ListHeadColumn) =>
 		column.size === undefined
 			? { min: TITLE_MIN, max: Number.POSITIVE_INFINITY }
@@ -193,7 +200,7 @@ function ListHead({
 	// The two widths when the drag of an edge started; the handle reports the left one moved by the pointer.
 	const edgeStart = React.useRef<{ a: number; b: number } | null>(null);
 	const resize = (left: ListHeadColumn, right: ListHeadColumn, width: number, commit: boolean) => {
-		edgeStart.current ??= { a: widthOf(left), b: widthOf(right) };
+		edgeStart.current ??= { a: widthNow(left), b: widthNow(right) };
 		const { a, b } = edgeStart.current;
 		if (commit) edgeStart.current = null;
 		setResizing(commit ? null : left.id);
@@ -401,6 +408,7 @@ function ListHead({
 							{onResize && next && !drag && (
 								<ResizeHandle
 									value={widthOf(column)}
+									measure={() => widthNow(column)}
 									{...edgeRange(column, next, widthOf(column), widthOf(next))}
 									onChange={(width, commit) => resize(column, next, width, commit)}
 									onReset={() => {

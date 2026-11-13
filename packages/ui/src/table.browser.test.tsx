@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { onTopOf, pointerPath, titleUnderPointer } from "../../../testing/input";
+import { dragPath, dropDrag, middleOf, onTopOf, pointerPath, titleUnderPointer } from "../../../testing/input";
 import { render } from "../test/render";
 import {
+	ListHead,
 	ListScroll,
 	LocaleCodes,
 	RowActions,
@@ -447,5 +449,54 @@ describe("Table rows with a link", () => {
 		);
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		expect(tip()).toBe(null);
+	});
+
+	it("[dragging] [dropped] an edge dragged before the title's width was ever measured still moves: the drag starts from the width laid out at the press", async () => {
+		// The observer that tells the head its title's width never speaks: as on a page too busy to have run it yet, or after a change of
+		// layout it has not told of. The press comes all the same.
+		const Observer = window.ResizeObserver;
+		window.ResizeObserver = class {
+			observe() {}
+			unobserve() {}
+			disconnect() {}
+		} as typeof ResizeObserver;
+		onTestFinished(() => {
+			window.ResizeObserver = Observer;
+		});
+		function Head() {
+			const [kind, setKind] = useState(84);
+			const columns = [
+				{ id: "title", label: "제목" },
+				{ id: "kind", label: "종류", size: kind, kindSize: 84 },
+			];
+			return (
+				<Table container="none" layout="fixed" columns={[undefined, kind, 48]}>
+					<ListHead
+						columns={columns}
+						end={48}
+						onResize={(changes) => typeof changes.kind === "number" && setKind(changes.kind)}
+						resizeLabel={(label) => `${label} 열 너비 조절`}
+					/>
+					<TableBody>
+						<TableRow>
+							<TableCell>첫 번째 글</TableCell>
+							<TableCell>게시글</TableCell>
+							<TableCell />
+						</TableRow>
+					</TableBody>
+				</Table>
+			);
+		}
+		render(<Head />);
+		const edge = page.getByRole("separator", { name: "제목 열 너비 조절" });
+		await expect.element(edge).toBeVisible();
+		const rights = () => [...document.querySelectorAll("th")].map((th) => Math.round(th.getBoundingClientRect().right));
+		const before = rights();
+		const from = middleOf(edge.element());
+		await dragPath([from, { x: from.x - 40, y: from.y }], { hold: true });
+		const moved = [(before[0] as number) - 40, ...before.slice(1)];
+		await expect.poll(rights).toEqual(moved);
+		await dropDrag();
+		await expect.poll(rights).toEqual(moved);
 	});
 });

@@ -366,11 +366,14 @@ describe("into the trash (doc 11, principle 2)", () => {
 		await expect.element(dialog()).toHaveTextContent("‘여름 여행기’의 공개가 끝납니다. 영어 번역도 함께 옮깁니다.");
 		await userEvent.click(dialog().getByRole("button", { name: "휴지통으로" }));
 		await expect.element(row("여름 여행기")).not.toBeInTheDocument();
+		// The first question is gone, fade and all, before the undo is pressed: while it fades it is still a question window in the page, and
+		// "the undo asks nothing" read at that moment found it.
+		await expect.element(dialog()).not.toBeInTheDocument();
 		await userEvent.click(toast("휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
-		// A toast's undo takes back what was done a moment ago: it runs at once and asks nothing (only the activity log's undo asks).
-		expect(document.querySelector("[role=alertdialog]")).toBeNull();
 		// Taken back, it is as it was: published.
 		await expect.element(row("여름 여행기")).toHaveTextContent("발행됨");
+		// A toast's undo takes back what was done a moment ago: it ran at once and asked nothing (only the activity log's undo asks).
+		expect(document.querySelector("[role=alertdialog]")).toBeNull();
 	});
 
 	it("11-2 an item that published entries point at asks first: the site loses it there", async () => {
@@ -384,6 +387,8 @@ describe("into the trash (doc 11, principle 2)", () => {
 	it("[dragging] [dropped] a column's edge held and dragged stays under the pointer and moves no other edge; let go, the column keeps its width", async () => {
 		await Top.run();
 		await expect.element(row("첫 번째 글")).toBeVisible();
+		// The language column comes with the schema's read, after the rows': the edges are measured once every column is there.
+		await expect.element(table().getByRole("columnheader", { name: "언어" })).toBeVisible();
 		const heads = () =>
 			[...table().element().querySelectorAll("th")].map((th) => Math.round(th.getBoundingClientRect().right));
 		const edge = table().getByRole("separator").first().element();
