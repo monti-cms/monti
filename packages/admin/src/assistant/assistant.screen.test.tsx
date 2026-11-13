@@ -1389,18 +1389,35 @@ describe("what the second review of #480 found", () => {
 		await expect.element(panel().getByText("첫 문단을 다듬었습니다.")).toBeVisible();
 	});
 
-	it("10-1 the states drawn as stories are reached: the card being applied and undone, the review side by side, applied, and with a change made stale", async () => {
-		for (const story of [
-			stories.CardApplying,
-			stories.CardUndone,
-			stories.ReviewSideBySide,
-			stories.ReviewApplied,
-			stories.ReviewChangedMeanwhile,
-			// What a still story cannot show, played to its end (T241).
-			stories.ReviewMadeAgainByKeyboard,
-			stories.BubbleOpensItsConversation,
-		])
-			await open(story).run();
+	// The states drawn as stories, one test each: each has its own time, and a failure names its story. Played in one loop, the loop
+	// came near its time on CI's slower machines.
+	it("10-1 the story of the card being applied is reached", async () => {
+		await open(stories.CardApplying).run();
+	});
+
+	it("10-1 the story of the card applied and undone is reached", async () => {
+		await open(stories.CardUndone).run();
+	});
+
+	it("10-1 the story of the review side by side is reached", async () => {
+		await open(stories.ReviewSideBySide).run();
+	});
+
+	it("10-1 the story of the review applied is reached", async () => {
+		await open(stories.ReviewApplied).run();
+	});
+
+	it("10-1 the story of the review with a change made stale is reached", async () => {
+		await open(stories.ReviewChangedMeanwhile).run();
+	});
+
+	// What a still story cannot show, played to its end (T241).
+	it("10-1 the story of a stale change made again with the keyboard is played to its end (T241)", async () => {
+		await open(stories.ReviewMadeAgainByKeyboard).run();
+	});
+
+	it("10-1 the story of a bubble that opens its conversation is reached", async () => {
+		await open(stories.BubbleOpensItsConversation).run();
 	});
 
 	it("10-1 [T87] a change of the body the text moved away from, in the editor: '다시 만들기' on its card has the assistant make it again on the entry as it is, and it is drawn over the text", async () => {
@@ -2109,8 +2126,7 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 		release();
 	});
 
-	// The audit's states drawn as stories, one test each: played in one loop with the other stories, they took a single test past its
-	// time on CI's slower machines.
+	// The audit's states drawn as stories, one test each, as the other stories are.
 	it("the story of 버리기 on its way is reached", async () => {
 		await open(stories.CardDiscarding).run();
 	});
