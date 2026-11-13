@@ -198,6 +198,24 @@ export const FilePanel: Story = {
 	},
 };
 
+/**
+ * A file the assistant proposed changes for (doc 10, item 17): the proposed name is blue in its field and the bubble walks it. Its proposed
+ * move to another folder is not drawn here, so the bubble does not count it: that one is on the conversation's card and its review page.
+ */
+export const FilePanelProposedName: Story = {
+	loaders: library("#/media", {
+		also: async (monti, { code, covers }) => {
+			const proposal = await monti.proposals.create("conversation-1", "파일 이름 정리해 줘");
+			await monti.proposals.add(proposal, "media.update", { id: code, name: "code-on-screen.jpg" });
+			await monti.proposals.add(proposal, "media.moveToFolder", { ids: [code], folder: covers });
+		},
+	}),
+	play: async (context) => {
+		await FilePanel.play?.(context);
+		await within(context.canvasElement.ownerDocument.body).findByRole("button", { name: "모두 받기" }, wait);
+	},
+};
+
 /** Flow 6·16: a file used in many places. The list grows with them, and a long title is cut before its places. */
 export const FilePanelManyUses: Story = {
 	loaders: library("#/media", {

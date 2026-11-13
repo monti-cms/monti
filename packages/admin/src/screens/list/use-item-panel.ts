@@ -115,6 +115,7 @@ export function useItemPanel({ collection, group, item, locales, sourceLocale, o
 				};
 			}
 		}
+		const sent = draft.sending();
 		const res = await saveGroupOp.run(
 			{
 				collection,
@@ -125,7 +126,7 @@ export function useItemPanel({ collection, group, item, locales, sourceLocale, o
 		);
 		if (res.ok) {
 			const out = res.body.output;
-			draft.saved();
+			draft.saved(sent);
 			if (out?.group) onSaved?.(out.group);
 			return out;
 		}

@@ -109,6 +109,12 @@ export type Preview = {
 	changes: RecordRef[];
 	/** Records that would be left alone, with why. */
 	blocked?: { ref: RecordRef; reason: Message }[];
+	/**
+	 * The words of the places it would change, as they are when it is proposed, by place (a body edit: by block id). Kept with the proposal
+	 * item: once the record has moved on, a screen shows what the change was made on beside what it proposed, and knows a place whose words
+	 * are no longer those.
+	 */
+	was?: Record<string, string>;
 };
 
 type Awaitable<T> = T | Promise<T>;

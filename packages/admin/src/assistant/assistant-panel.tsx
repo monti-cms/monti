@@ -203,7 +203,8 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 						open={menuOpen}
 						onOpenChange={(next) => {
 							setMenuOpen(next);
-							if (!next) resend.current = false;
+							if (next) assistant.refreshModels();
+							else resend.current = false;
 						}}
 						value={choice(model.keyId, model.model)}
 						onValueChange={(value) => {

@@ -43,6 +43,7 @@ import {
 import { Add } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
+import { MODELS_ASK_AGAIN_MS } from "../../operations/models";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { holdsKeyboardFocus, nextStop } from "../frame/focus-hand-off";
 import { KeyWindow, type KeyWindowState, slotName } from "./key-dialog";
@@ -81,6 +82,19 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 	const list = useRead<KeyList>("keys.list", {}, { afterWrites: true });
 	const models = useRead<ModelList>("models.list", {}, { afterWrites: true });
 	const setQuick = useOperation("models.setQuick");
+	// Opening the model menu asks the keys' services for their lists again, not more than once in a while (doc 10: the panel's model menu
+	// does the same). The menu shows what is stored at once.
+	const askModels = useOperation<ModelList>("models.list");
+	const modelsAsked = useRef(0);
+	const refreshModels = () => {
+		const now = Date.now();
+		if (now - modelsAsked.current < MODELS_ASK_AGAIN_MS) return;
+		modelsAsked.current = now;
+		void askModels.run({ refresh: true }).then((asked) => {
+			if (asked.ok) void models.reload();
+			else modelsAsked.current = 0;
+		});
+	};
 	const remove = useOperation("keys.remove");
 	const setSlot = useOperation("plugins.setKey");
 	/** The key window: what it is open for, and whether it is open. It stays in the page while it fades out, and each opening is a new one (`nth`). */
@@ -256,6 +270,9 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 										quick && quickKey ? (
 											<ModelMenu
 												layout="field"
+												onOpenChange={(open) => {
+													if (open) refreshModels();
+												}}
 												value={choice(quick.keyId, quick.model)}
 												onValueChange={(value) => {
 													const [keyId, model] = JSON.parse(value) as [string, string];

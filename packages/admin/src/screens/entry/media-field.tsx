@@ -12,7 +12,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { Settings } from "@monti-cms/ui/icons";
-import { type ReactNode, useRef, useState } from "react";
+import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { AltFields } from "../../editor/alt-fields";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
@@ -36,6 +36,7 @@ export function MediaField({
 	required,
 	accept,
 	change,
+	proposed,
 	value,
 	source,
 	following,
@@ -52,6 +53,8 @@ export function MediaField({
 	accept?: "image" | "any";
 	/** The mark on a translation's own value when the source's moved on: in the place of whose value it is. */
 	change?: ReactNode;
+	/** The file is one the assistant proposed and nobody has taken yet: the label row says so and discards it, and the file's name is blue. */
+	proposed?: ComponentProps<typeof FormFieldLabel>["changed"];
 	value: unknown;
 	/** What it follows while empty. */
 	source?: unknown;
@@ -86,8 +89,10 @@ export function MediaField({
 					id={`${id}-label`}
 					htmlFor={readOnly ? undefined : id}
 					required={required}
+					changed={going ? undefined : proposed}
+					// While a proposal waits the row is the proposal's alone (as any field's).
 					action={
-						change && !going ? (
+						proposed && !going ? undefined : change && !going ? (
 							change
 						) : following && !own && !going ? (
 							<Text variant="micro" tone="faint">
@@ -103,6 +108,7 @@ export function MediaField({
 					id={id}
 					size="md"
 					following={followed !== null && !going}
+					proposal={proposed !== undefined && !going}
 					value={going ? { name: going.name, thumbnail: going.preview } : shownFile(file)}
 					placeholder={t("entry.empty")}
 					readOnly={readOnly}

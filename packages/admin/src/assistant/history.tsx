@@ -18,6 +18,7 @@ import {
 } from "@monti-cms/ui";
 import { useId, useRef } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { holdsKeyboardFocus } from "../screens/frame/focus-hand-off";
 import { PickOne } from "../screens/settings/pick-one";
 import { useAssistant } from "./use-assistant";
 import { clock } from "./words";
@@ -126,8 +127,11 @@ export function History() {
 												trigger={(button) => <DropdownMenuTrigger render={button} />}
 											/>
 											<DropdownMenuContent align="end" finalFocus={afterMenu}>
-												{/* A key's press is a click that no pointer made (`detail` 0). */}
-												<DropdownMenuItem variant="danger" onClick={(event) => remove(row.id, event.detail === 0)}>
+												{/* Pressed with the keyboard: the rule's one test (`holdsKeyboardFocus`), not the click's `detail`. */}
+												<DropdownMenuItem
+													variant="danger"
+													onClick={(event) => remove(row.id, holdsKeyboardFocus(event.currentTarget))}
+												>
 													{t("history.remove")}
 												</DropdownMenuItem>
 											</DropdownMenuContent>

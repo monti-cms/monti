@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
-import { HOOK, HOOK_PORT, LIVE, SERVERS } from "./servers";
+import { HOOK, HOOK_PORT, LIVE, MODEL, MODEL_PORT, SERVERS } from "./servers";
 
 const app = fileURLToPath(new URL("../../examples/blog", import.meta.url));
 
@@ -38,6 +38,13 @@ export default defineConfig({
 		{
 			command: `pnpm exec tsx ${fileURLToPath(new URL("./hook.ts", import.meta.url))} ${HOOK_PORT}`,
 			url: HOOK,
+			reuseExistingServer: false,
+			timeout: 30_000,
+		},
+		// The model service the assistant's key is added with (doc 10): no flow calls a real model.
+		{
+			command: `pnpm exec tsx ${fileURLToPath(new URL("./model.ts", import.meta.url))} ${MODEL_PORT}`,
+			url: `${MODEL}/models`,
 			reuseExistingServer: false,
 			timeout: 30_000,
 		},

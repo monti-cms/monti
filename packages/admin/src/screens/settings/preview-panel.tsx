@@ -167,6 +167,7 @@ export function PreviewPanel({
 										value={typed[field.name]}
 										onChange={(next) => setTyped((was) => ({ ...was, [field.name]: next }))}
 										readOnly={false}
+										proposal={false}
 										entry={emptyEntry}
 									/>
 								) : (

@@ -1,6 +1,7 @@
 import {
 	cleanMediaValue,
 	type EntryState,
+	localeModeOf,
 	notChosenFields,
 	type PublishTask,
 	publicPath,
@@ -61,12 +62,21 @@ import {
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AssistantButton } from "../../assistant/assistant-button";
-import { useOpenConversation, useScreenContext } from "../../assistant/use-assistant";
+import { draftContext } from "../../assistant/draft-context";
+import { useOpenConversation, useRemakeItem, useScreenContext } from "../../assistant/use-assistant";
 import { download } from "../../download";
 import { useLeaveFiles, useLeaveGuard, useUploadsGoing } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { openImageCard } from "../../editor/media-context";
-import { drawable, scrollToProposal, takeInEditor } from "../../editor/proposal-marks";
+import { StaleProposalMargin } from "../../editor/proposal-margin";
+import {
+	anchorBlock,
+	drawable,
+	findBlock,
+	scrollToProposal,
+	staleProposals,
+	takeInEditor,
+} from "../../editor/proposal-marks";
 import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useFieldUploads } from "../../media/use-field-uploads";
@@ -80,7 +90,7 @@ import { useLanguageName } from "../list/column-menu";
 import type { SchemaRead } from "../settings/schema-draft";
 import { type CompareMode, CompareView } from "./compare-view";
 import { clock, day, dayTime } from "./dates";
-import { EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
+import { EntryProperties, fieldInputId, fieldPath, panelFields, panelLayout } from "./entry-properties";
 import {
 	decidedOnly,
 	FieldChange,
@@ -107,6 +117,20 @@ const STATUS: Record<EntryState, EntryStatusKind> = {
 };
 
 const SAVE_KEYS = ["mod", "s"] as const;
+
+/**
+ * The field of the panel's layout a stored field sits under: itself, or the conditional field at the top of the options it is in, however
+ * deep (a conditional field may sit in another's option, doc 19).
+ */
+function topField(stored: ReturnType<typeof storedFields>, field: string) {
+	let at = field;
+	const seen = new Set<string>();
+	while (stored[at]?.under && !seen.has(at)) {
+		seen.add(at);
+		at = stored[at]?.under?.field ?? at;
+	}
+	return at;
+}
 
 /** Where a to-do row points, in the panel or the body (editor.md: the row's detail says only the place). */
 const taskPlace = (task: PublishTask) => (task.field && task.field !== "doc" ? "panel" : "body");
@@ -185,9 +209,11 @@ export function EntryEditor({
 	});
 
 	const read = editor.loaded as EntryRead | null;
-	// What goes along with a request to the assistant from here (doc 10, context): this entry as it was read.
+	// What goes along with a request to the assistant from here (doc 10, context): this entry as it was read, and what is not saved yet.
+	const unsavedNow = editor.draft.changes;
 	useScreenContext(
 		read ? { screen: "entry", collection, entry: { id, version: read.entry.version, title: read.entry.title } } : null,
+		() => draftContext(unsavedNow),
 	);
 	const archived = read?.state === "archived";
 	const trashed = Boolean(read?.entry.trashedAt);
@@ -268,45 +294,171 @@ export function EntryEditor({
 			</Inline>
 		) : null;
 
-	// The assistant's body proposals (T32): the ones that can be drawn on the text now, the one the bubble points at, and taking or discarding it.
+	// The assistant's proposals on this entry that the editor shows where they apply, in the order they were made: a change of the body
+	// drawn over the text (T32), one the text has moved away from, hung beside its block (T87), and a change of the title or a field,
+	// blue in its input (T86). One bubble walks them all. What the editor does not draw (a move, a publish, a whole body, a field the
+	// panel does not show) is not counted: it waits on its conversation's card.
 	const [looking, setLooking] = useState(0);
-	const proposed = body.current ? drawable(body.current.state.doc, editor.bodyProposals) : editor.bodyProposals;
+	const [staleOpen, setStaleOpen] = useState<string | null>(null);
+	const [remaking, setRemaking] = useState<ReadonlySet<string>>(new Set());
+	const remakeItem = useRemakeItem();
+	const bodyNow = body.current?.state.doc;
+	const drawn = bodyNow ? drawable(bodyNow, editor.bodyProposals) : editor.bodyProposals;
+	// A stale change hangs in the text's margin: side by side the margin is not drawn, and it is not walked there.
+	const stale = bodyNow && !paired ? staleProposals(bodyNow, editor.bodyProposals) : [];
+	const translated = translation.isTranslation;
+	const shownPaths = useMemo(() => {
+		const paths = new Set(["title"]);
+		const definition = structure?.collections[collection];
+		if (!definition || !read) return paths;
+		const stored = storedFields(definition);
+		// The collection's own fields and the ones in a plugin's tab (doc 14). A plugin's view field holds no value: nothing is proposed
+		// for it and nothing is drawn on it.
+		const inPanel = new Set([
+			...panelFields(schema.data, collection),
+			...(schema.data?.pluginTabs?.[collection] ?? []).flatMap((each) =>
+				each.fields.filter((field) => field.view === undefined).map((field) => field.name),
+			),
+		]);
+		const hidden = notChosen(
+			Object.fromEntries(Object.keys(stored).map((field) => [field, editor.value(fieldPath(field))])),
+			read.entry.locale,
+		);
+		for (const [field, each] of Object.entries(stored)) {
+			if (!inPanel.has(topField(stored, field)) || hidden.has(field)) continue;
+			// In a translation a field that is the same in every language is the source's, read only: nothing is drawn in it.
+			if (translated && localeModeOf(field, each) === "same") continue;
+			paths.add(fieldPath(field));
+		}
+		return paths;
+	}, [structure, collection, read, schema.data, notChosen, editor.value, translated]);
+	type Walked =
+		| { kind: "body"; id: string; item: (typeof drawn)[number] }
+		| { kind: "stale"; id: string; item: (typeof drawn)[number]; block: string }
+		| { kind: "fields"; id: string; item: (typeof editor.fieldProposals)[number]; paths: string[] };
+	const made = new Map(editor.draft.proposals.map(({ item }, index) => [item.id, index]));
+	const walk: Walked[] = [
+		...drawn.map((item) => ({ kind: "body" as const, id: item.id, item })),
+		...stale.map(({ item, block }) => ({ kind: "stale" as const, id: item.id, item, block })),
+		...editor.fieldProposals
+			.map((item) => ({
+				kind: "fields" as const,
+				id: item.id,
+				item,
+				paths: item.paths.filter((path) => shownPaths.has(path)),
+			}))
+			.filter((each) => each.paths.length > 0),
+	].sort((one, other) => (made.get(one.id) ?? 0) - (made.get(other.id) ?? 0));
 	// Not before the entry is read, nor after a read that failed: the bubble and its keys would take or discard proposals nobody has seen, on an
 	// entry that may be archived or in the trash.
-	const walking = !read || readOnly ? null : (proposed[Math.min(looking, proposed.length - 1)] ?? null);
-	const look = (direction: -1 | 1) => {
-		const next = (Math.min(looking, proposed.length - 1) + direction + proposed.length) % proposed.length;
-		setLooking(next);
-		const item = proposed[next];
-		if (item && body.current) scrollToProposal(body.current.view, item);
+	const at = Math.min(looking, walk.length - 1);
+	const walking = !read || readOnly ? null : (walk[at] ?? null);
+	/** Takes the screen to a field: its tab, then its input. */
+	const toField = (path: string) => {
+		if (path === "title") return document.getElementById(fieldInputId("title"))?.focus();
+		const field = path === "slug" ? "slug" : path.slice("values.".length);
+		setPanel(true);
+		const layout = panelLayout(schema.data, collection, t("entry.defaultTab"));
+		const under = topField(storedFields(structure?.collections[collection]), field);
+		const index = layout.findIndex((each) =>
+			each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(under)),
+		);
+		if (index >= 0) setTab(index);
+		requestAnimationFrame(() => document.getElementById(fieldInputId(field))?.focus());
 	};
-	const take = (item: (typeof proposed)[number]) => {
+	/** Brings what the bubble points at into view: the change in the text, the stale one's card, the field. */
+	const show = (walked: Walked) => {
+		setStaleOpen(walked.kind === "stale" ? walked.id : null);
+		if (walked.kind === "fields") return toField(walked.paths[0] ?? "title");
+		const view = body.current;
+		if (!view) return;
+		if (walked.kind === "body") return scrollToProposal(view.view, walked.item);
+		const found = findBlock(view.state.doc, walked.block);
+		const dom = found ? view.view.nodeDOM(found.pos) : null;
+		if (dom instanceof HTMLElement) dom.scrollIntoView({ block: "center", behavior: "smooth" });
+	};
+	const look = (direction: -1 | 1) => {
+		const next = (at + direction + walk.length) % walk.length;
+		setLooking(next);
+		const walked = walk[next];
+		if (walked) show(walked);
+	};
+	const take = (walked: Walked) => {
+		if (walked.kind === "fields") return editor.draft.accept(walked.id);
+		// A change the text moved away from cannot go in as it is: its card has the two ways out.
+		if (walked.kind === "stale") return show(walked);
 		if (!body.current || !catalogs) return;
-		takeInEditor(body.current, item, catalogs.kit);
-		editor.takeBody(item.id);
+		takeInEditor(body.current, walked.item, catalogs.kit);
+		editor.takeBody(walked.id);
 	};
 	const takeAll = () => {
-		for (const item of proposed) take(item);
+		for (const walked of walk) if (walked.kind !== "stale") take(walked);
 	};
+	const discardWalked = () => editor.draft.discardThese(walk.map((walked) => walked.id));
+	/**
+	 * "Make again": the assistant makes the change again on the entry as it is. It reads what is saved, so what is on the screen is saved
+	 * first; a save that is refused says so itself, and nothing is made again.
+	 */
+	const remake = remakeItem
+		? async (item: string) => {
+				if (editor.dirty && (await editor.save()) === null) return;
+				setRemaking((now) => new Set(now).add(item));
+				await remakeItem(item);
+				await editor.draft.reloadProposals();
+				setRemaking((now) => new Set([...now].filter((each) => each !== item)));
+			}
+		: undefined;
 	// ⌘↵ takes the proposal the bubble points at and ⌘⌫ discards it (components/proposal.md, the bubble).
 	const keyed = useRef({ walking, take, discard: editor.discardProposal });
 	keyed.current = { walking, take, discard: editor.discardProposal };
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
-			const { walking: item, take: takeIt, discard } = keyed.current;
-			if (!item || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return;
+			const { walking: walked, take: takeIt, discard } = keyed.current;
+			if (!walked || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return;
 			if (event.key === "Enter") {
 				event.preventDefault();
-				takeIt(item);
+				takeIt(walked);
 			} else if (event.key === "Backspace") {
 				event.preventDefault();
-				void discard(item.id);
+				void discard(walked.id);
 			}
 		};
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
 	}, []);
 
+	// A body change none of whose blocks is in the saved text any more has no place to hang (doc 10, item 18): it is let go once the
+	// text is saved without them, whichever way it was saved (the save itself, publishing, the question on leaving, a translation's
+	// decision). Before the save the blocks may still come back (an undo), and it only stays undrawn. "Saved" is read off the entry: a
+	// version this screen has not looked at yet, with nothing unsaved over it, so the body on the screen is the saved one.
+	const placeless = () => {
+		const now = body.current?.state.doc;
+		return now
+			? editor.bodyProposals
+					.filter((item) => drawable(now, [item]).length === 0 && anchorBlock(now, item) === null)
+					.map((item) => item.id)
+			: null;
+	};
+	const placelessNow = useRef(placeless);
+	placelessNow.current = placeless;
+	const letGo = editor.draft.discardThese;
+	const savedVersion = read?.entry.version ?? null;
+	const lookedAt = useRef<number | null>(null);
+	const stillUnsaved = editor.dirty;
+	useEffect(() => {
+		if (savedVersion === null || stillUnsaved || readOnly) return;
+		// The version the entry opened with is not a save of this screen's.
+		if (lookedAt.current === null) {
+			lookedAt.current = savedVersion;
+			return;
+		}
+		if (lookedAt.current === savedVersion) return;
+		const gone = placelessNow.current();
+		// The body is being made again (a kept copy went in): looked at when it is there.
+		if (gone === null) return;
+		lookedAt.current = savedVersion;
+		void letGo(gone, { quiet: true });
+	}, [savedVersion, stillUnsaved, readOnly, letGo]);
 	const save = editor.save;
 	/** The focus to the text being written: the body, or the title when the body is not there; to the comparison's first control when it took the editor's place. */
 	const toText = useCallback(() => () => focusText(() => body.current, fieldInputId("title")), []);
@@ -333,7 +485,7 @@ export function EntryEditor({
 			setPanel(true);
 			const layout = panelLayout(schema.data, collection, t("entry.defaultTab"));
 			// A field of a conditional field's option sits under that field, in its tab (doc 19).
-			const under = storedFields(schema.data?.schema.collections[collection])[task.field]?.under?.field ?? task.field;
+			const under = topField(storedFields(schema.data?.schema.collections[collection]), task.field);
 			const index = layout.findIndex((each) =>
 				each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(under)),
 			);
@@ -438,6 +590,8 @@ export function EntryEditor({
 	// The title and the body, the same in the text alone and side by side (where the title takes the size of its row, and the body the rows).
 	// Like the body, the title is not there before the entry is read: an empty title to type into would read as an untitled entry, and what was typed
 	// in it stood over the saved title when that came (T153). Keys pressed before then go nowhere, as there is nothing to take them.
+	const titleCell = readOnly ? null : editor.draft.cell("title");
+	const titleProposed = titleCell?.kind === "proposed" ? titleCell : null;
 	const titleField = (size: "display" | "inherit") =>
 		read ? (
 			<FormField>
@@ -446,7 +600,9 @@ export function EntryEditor({
 				</FormFieldLabel>
 				<Input
 					id={fieldInputId("title")}
-					value={editor.title}
+					// A title the assistant proposed is in the title, blue, until it is taken, changed or discarded (T86).
+					value={titleProposed ? String(titleProposed.value ?? "") : editor.title}
+					proposal={titleProposed !== null}
 					placeholder={compared?.source.title || t("entry.title")}
 					size={size}
 					appearance="inline"
@@ -472,21 +628,36 @@ export function EntryEditor({
 				onEditor={keepEditor}
 				proposals={{
 					items: editor.bodyProposals,
-					current: walking?.id ?? null,
+					current: walking?.kind === "body" ? walking.id : null,
 					onTaken: editor.takeBody,
 				}}
 				translation={translation.isTranslation && !readOnly ? translation.blockMenu : undefined}
 				paired={rows}
 				margin={
-					translation.isTranslation && !rows
-						? (made) => (
-								<TranslationMargin
-									editor={made}
-									marks={compared?.marks ?? []}
-									onDecide={(decision) => void translation.decide([decision])}
-								/>
+					rows
+						? undefined
+						: (made) => (
+								<>
+									{translation.isTranslation ? (
+										<TranslationMargin
+											editor={made}
+											marks={compared?.marks ?? []}
+											onDecide={(decision) => void translation.decide([decision])}
+										/>
+									) : null}
+									{readOnly ? null : (
+										<StaleProposalMargin
+											editor={made}
+											stale={stale}
+											open={staleOpen}
+											onOpen={setStaleOpen}
+											onDiscard={(item) => void editor.discardProposal(item)}
+											onRemake={remake}
+											remaking={remaking}
+										/>
+									)}
+								</>
 							)
-						: undefined
 				}
 			/>
 		) : null;
@@ -792,16 +963,16 @@ export function EntryEditor({
 					{walking ? (
 						<ProposalBubbleDock ref={handOff}>
 							<ProposalBubble
-								name={walking.request}
-								onOpen={openConversation ? () => openConversation(walking.conversationId) : undefined}
-								position={Math.min(looking, proposed.length - 1) + 1}
-								total={proposed.length}
+								name={walking.item.request}
+								onOpen={openConversation ? () => openConversation(walking.item.conversationId) : undefined}
+								position={at + 1}
+								total={walk.length}
 								previousLabel={t("bubble.previous")}
 								nextLabel={t("bubble.next")}
 								onPrevious={() => look(-1)}
 								onNext={() => look(1)}
 								discardAllLabel={t("bubble.discardAll")}
-								onDiscardAll={() => void editor.discardProposals()}
+								onDiscardAll={() => void discardWalked()}
 								acceptAllLabel={t("bubble.acceptAll")}
 								onAcceptAll={takeAll}
 							/>

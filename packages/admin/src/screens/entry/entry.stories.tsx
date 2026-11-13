@@ -91,6 +91,66 @@ async function proposeBody(monti: Monti, id: string) {
 	await edit([{ op: "remove", blocks: [last.id] }]);
 }
 
+/**
+ * One request's proposals for the title, a field and the body (T86): a new title, a shorter summary, and a shorter phrase in the first
+ * paragraph. The title and the summary are blue in their inputs; the bubble walks all three.
+ */
+async function proposeFields(monti: Monti, id: string) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
+	const [first] = read.entry.doc.blocks;
+	if (!first) throw new Error("the reference entry has a first block");
+	const proposal = await monti.proposals.create("conversation-1", "제목과 요약도 다듬어 줘");
+	const at = { id, version: read.entry.version };
+	await monti.proposals.add(proposal, "entries.save", { ...at, title: "블로그를 다시 만든 까닭" });
+	await monti.proposals.add(proposal, "entries.save", { ...at, values: { summary: "덜어낸 것과 남긴 것." } });
+	await monti.proposals.add(proposal, "body.edit", {
+		...at,
+		ops: [{ op: "replaceText", block: first.id, from: 8, to: 14, text: "만든" }],
+	});
+}
+
+/**
+ * A body proposal the text moved away from (T87): two changes were proposed, and the last paragraph was written again before anyone took
+ * them. The first is drawn over its words; the second hangs beside its paragraph as "changed in the meantime".
+ */
+async function proposeThenEdit(monti: Monti, id: string, twice = false) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
+	const [first, , , last] = read.entry.doc.blocks;
+	if (!first || !last) throw new Error("the reference entry has four blocks");
+	const proposal = await monti.proposals.create("conversation-1", "더 짧게 다듬기");
+	const edit = (ops: unknown[]) => monti.proposals.add(proposal, "body.edit", { id, version: read.entry.version, ops });
+	await edit([{ op: "replaceText", block: first.id, from: 8, to: 14, text: "만든" }]);
+	await edit([{ op: "replaceText", block: last.id, from: 5, to: 17, text: "같다" }]);
+	// Another request's change of the same paragraph: two marks then hang at one block.
+	if (twice) {
+		const other = await monti.proposals.create("conversation-2", "문장 끝 다듬기");
+		await monti.proposals.add(other, "body.edit", {
+			id,
+			version: read.entry.version,
+			ops: [{ op: "replaceText", block: last.id, from: 31, to: 36, text: "글이다" }],
+		});
+	}
+	await monti.run(
+		"entries.save",
+		{
+			id,
+			version: read.entry.version,
+			doc: {
+				...read.entry.doc,
+				blocks: read.entry.doc.blocks.map((block) =>
+					block.id === last.id
+						? {
+								...block,
+								content: text("편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글과 지금 상태뿐이다."),
+							}
+						: block,
+				),
+			},
+		},
+		admin,
+	);
+}
+
 async function templates(monti: Monti) {
 	await monti.run(
 		"templates.save",
@@ -120,6 +180,9 @@ type Kind =
 	| "tableSized"
 	| "footnotes"
 	| "proposed"
+	| "proposedFields"
+	| "proposedStale"
+	| "proposedStaleTwice"
 	| "conditional"
 	| "nestedChoice"
 	| "strayOption";
@@ -295,6 +358,9 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 		await monti.run("entries.save", { id, version: 2, values: { subtitle: "도구보다 글" } }, admin);
 	if (kind === "archived") await monti.run("entries.archive", { ids: [id] }, admin);
 	if (kind === "proposed") await proposeBody(monti, id);
+	if (kind === "proposedFields") await proposeFields(monti, id);
+	if (kind === "proposedStale") await proposeThenEdit(monti, id);
+	if (kind === "proposedStaleTwice") await proposeThenEdit(monti, id, true);
 	return id;
 }
 
@@ -402,6 +468,32 @@ export const ConditionalSwitchOff: Story = {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("switch", { name: /첫 화면에 올리기/ }, wait));
 		await page.findByText("저장하면 첫 화면에 올리기의 값 1개가 지워집니다", {}, wait);
+	},
+};
+
+/**
+ * A switch the assistant proposed to turn off (T86 with doc 19's switch): the switch stands as proposed, with the proposal's dot by its
+ * name, and the bubble walks to it.
+ */
+export const ProposedSwitch: Story = {
+	loaders: [
+		async (): Promise<Loaded> => {
+			const [load] = site("nestedChoice") as [() => Promise<Loaded>];
+			const made = await load();
+			const read = (await made.site.monti.run("entries.get", { id: made.id }, admin)) as { entry: { version: number } };
+			const proposal = await made.site.monti.proposals.create("conversation-1", "첫 화면에서 내려 줘");
+			await made.site.monti.proposals.add(proposal, "entries.save", {
+				id: made.id,
+				version: read.entry.version,
+				values: { featured: null },
+			});
+			return made;
+		},
+	],
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await waitFor(() => expect(page.getByRole("switch", { name: /첫 화면에 올리기/ })).not.toBeChecked(), wait);
+		await all.findByText("1 / 1", {}, wait);
 	},
 };
 
@@ -754,5 +846,43 @@ export const BodyProposals: Story = {
 		await expect(body.querySelector("ins")?.textContent).toBe("만든");
 		await all.findByText("더 짧게 다듬기", {}, wait);
 		await all.findByRole("button", { name: "모두 받기" }, wait);
+	},
+};
+
+/**
+ * The assistant's proposals for the title and a field (T86): each is in its input, blue, the field's saved value struck through under it
+ * and "discard" on its label row. The bubble walks them with the body's change.
+ */
+export const FieldProposals: Story = {
+	loaders: site("proposedFields"),
+	play: async ({ canvasElement }) => {
+		const { title, all } = await opened(canvasElement);
+		await waitFor(() => expect(title).toHaveValue("블로그를 다시 만든 까닭"), wait);
+		await waitFor(() => expect(all.getByRole("textbox", { name: "요약" })).toHaveValue("덜어낸 것과 남긴 것."), wait);
+		await all.findByText("1 / 3", {}, wait);
+	},
+};
+
+/**
+ * A body proposal the text moved away from (T87): its paragraph was written again since. It is not drawn over the words; a mark hangs
+ * beside the paragraph, and its card says what the paragraph was then and what was proposed, with the way to discard it.
+ */
+export const StaleProposal: Story = {
+	loaders: site("proposedStale"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await waitFor(() => expect(body.querySelectorAll("ins")).toHaveLength(1), wait);
+		await all.findByText("1 / 2", {}, wait);
+		await userEvent.click(await all.findByRole("button", { name: "다음" }, wait));
+		await all.findByText("그때", {}, wait);
+	},
+};
+
+/** Two requests' stale proposals of one paragraph: their marks hang side by side at the paragraph, 4px apart, each with its own card. */
+export const StaleProposalsSideBySide: Story = {
+	loaders: site("proposedStaleTwice"),
+	play: async ({ canvasElement }) => {
+		const { all } = await opened(canvasElement);
+		await waitFor(() => expect(all.getAllByRole("button", { name: "그 사이 고쳐짐" })).toHaveLength(2), wait);
 	},
 };

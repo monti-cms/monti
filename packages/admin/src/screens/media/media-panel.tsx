@@ -347,6 +347,7 @@ export function MediaPanel({
 	const folder = String(draft.value("folder") ?? TOP);
 	const save = async () => {
 		setRefused(null);
+		const sent = draft.sending();
 		const done = await update.run(
 			{
 				id,
@@ -355,7 +356,7 @@ export function MediaPanel({
 			},
 			{ versions: { [`media:${id}`]: madeOn.current ?? item.version }, accepted: draft.accepted },
 		);
-		if (done.ok) return draft.saved();
+		if (done.ok) return draft.saved(sent);
 		if (done.refusal.status === 409) {
 			draft.revertAll();
 			void read.reload();
@@ -363,7 +364,9 @@ export function MediaPanel({
 		}
 		setRefused(t(reasonOf(done.refusal)));
 	};
-	const proposal = draft.proposals[Math.min(proposalAt, Math.max(0, draft.proposals.length - 1))];
+	// Only what this panel draws (a proposed name): a proposed folder or a way to the trash is on the conversation's card (T108).
+	const proposals = draft.drawn;
+	const proposal = proposals[Math.min(proposalAt, Math.max(0, proposals.length - 1))];
 	const copy = async (text: string) => {
 		await navigator.clipboard.writeText(text);
 		toast(t("library.copied"));
@@ -480,16 +483,16 @@ export function MediaPanel({
 				<ProposalBubbleDock>
 					<ProposalBubble
 						name={proposal.item.request}
-						position={proposalAt + 1}
-						total={draft.proposals.length}
+						position={Math.min(proposalAt, proposals.length - 1) + 1}
+						total={proposals.length}
 						previousLabel={t("bubble.previous")}
 						nextLabel={t("bubble.next")}
-						onPrevious={() => setProposalAt((at) => (at - 1 + draft.proposals.length) % draft.proposals.length)}
-						onNext={() => setProposalAt((at) => (at + 1) % draft.proposals.length)}
+						onPrevious={() => setProposalAt((at) => (at - 1 + proposals.length) % proposals.length)}
+						onNext={() => setProposalAt((at) => (at + 1) % proposals.length)}
 						discardAllLabel={t("bubble.discardAll")}
 						acceptAllLabel={t("bubble.acceptAll")}
-						onDiscardAll={() => void draft.discardAll()}
-						onAcceptAll={() => draft.acceptAll()}
+						onDiscardAll={() => void draft.discardDrawn()}
+						onAcceptAll={() => draft.acceptDrawn()}
 					/>
 				</ProposalBubbleDock>
 			)}

@@ -43,6 +43,47 @@ async function openAssets() {
 	await expect.element(heading()).toHaveTextContent("Blog Assets");
 }
 
+describe("the assistant's proposals for a file (doc 10, item 17; T108)", () => {
+	it("10-1 the bubble counts only what the panel draws: the proposed name, not the proposed move; taken and saved, the name is the file's and the move still waits", async () => {
+		let site: StorySite | undefined;
+		const [load] = media.FilePanelProposedName.loaders as [() => Promise<{ site: StorySite }>];
+		await composeStory(
+			{
+				...media.FilePanelProposedName,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						site = loaded.site;
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		).run();
+		const panel = page.getByRole("complementary");
+		const name = panel.getByRole("textbox", { name: "파일 이름" });
+		// One proposal to walk, though two wait for this file.
+		await expect.element(page.getByText("1 / 1")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "모두 받기" }));
+		await expect.element(name).toHaveValue("code-on-screen");
+		await expect.element(page.getByRole("button", { name: "모두 받기" })).not.toBeInTheDocument();
+		await userEvent.click(panel.getByRole("button", { name: "저장" }));
+		await expect.element(tile("code-on-screen.jpg")).toBeVisible();
+		const made = site as StorySite;
+		const states = await made.db
+			.selectFrom("monti_proposal_item")
+			.select(["operation", "state"])
+			.orderBy("position")
+			.execute();
+		expect(states).toEqual([
+			{ operation: "media.update", state: "applied" },
+			{ operation: "media.moveToFolder", state: "pending" },
+		]);
+		// The move that waits draws no bubble here.
+		await expect.element(page.getByText("1 / 1")).not.toBeInTheDocument();
+	});
+});
+
 describe("browsing", () => {
 	it("09-1 [flow 6·07] the top shows the folders and the files in no folder, with how many", async () => {
 		await Top.run();

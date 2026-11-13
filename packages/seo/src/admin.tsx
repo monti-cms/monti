@@ -43,6 +43,7 @@ function following(field: (options: Record<string, unknown>) => string | null, l
 			value: own,
 			placeholder,
 			disabled: props.readOnly,
+			proposal: props.proposal,
 		};
 		return multiline ? (
 			<Textarea {...shared} onChange={(event) => props.onChange(event.target.value)} />
@@ -65,12 +66,13 @@ function following(field: (options: Record<string, unknown>) => string | null, l
 }
 
 /** "Hide from search" as a switch: on is `noindex`, off is no value. */
-function NoindexSwitch({ id, value, onChange, readOnly }: FieldInputProps) {
+function NoindexSwitch({ id, value, onChange, readOnly, proposal }: FieldInputProps) {
 	return (
 		<Switch
 			id={id}
 			checked={value === "noindex"}
 			disabled={readOnly}
+			proposal={proposal}
 			onCheckedChange={(on) => onChange(on ? "noindex" : null)}
 		/>
 	);
