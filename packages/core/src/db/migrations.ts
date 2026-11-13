@@ -580,6 +580,19 @@ const MIGRATIONS: Record<string, Migration> = {
 			await db.schema.alterTable("loose_files").addColumn("ticket_size", "integer").execute();
 		},
 	},
+	"0020_activity_words": {
+		async up(db) {
+			// The log's search reads `words` with `ilike` (doc 13): a trigram index, as the lists' search has (`0006_list`), so a long log is not
+			// read whole. The extension is where `0006_list` found or put it.
+			const found = await sql<{
+				schema: string;
+			}>`select extnamespace::regnamespace::text as schema from pg_extension where extname = 'pg_trgm'`.execute(db);
+			const trgm = found.rows[0]?.schema ?? "public";
+			await sql`create index monti_activity_words_trgm on monti_activity using gin (words ${sql.id(trgm, "gin_trgm_ops")})`.execute(
+				db,
+			);
+		},
+	},
 };
 
 /**

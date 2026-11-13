@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { testDatabase } from "../__test__/database";
 import { CheckError } from "../errors";
 import { createMonti, definePlugin } from "../monti";
+import { defineOperation, type RecordRef } from "../operation";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
 import type { TrashMoved } from "../trash/operations";
@@ -29,6 +31,7 @@ const schema = defineSchema({
 				slug: { kind: "slug", required: true },
 				cover: { kind: "media", accept: "image" },
 				attachment: { kind: "media", accept: "any" },
+				writer: { kind: "relation", to: "author" },
 				format: {
 					kind: "conditional",
 					options: ["article", "video"],
@@ -536,6 +539,115 @@ describe("a file in use stays out of the trash", () => {
 		expect((error as CheckError).reason.key).toBe("entries.badMediaKind");
 		await expect(post({ values: { attachment: { media: pdf } } })).resolves.toMatchObject({
 			output: { id: expect.any(String) },
+		});
+	});
+
+	describe("the order the locks are taken in (doc 00)", () => {
+		/** A write that touches the records it is given and stays in its run until it is let go. */
+		const holding = () => {
+			let entered = () => {};
+			let release = () => {};
+			const inRun = new Promise<void>((resolve) => {
+				entered = resolve;
+			});
+			const gate = new Promise<void>((resolve) => {
+				release = resolve;
+			});
+			const operation = defineOperation({
+				name: "probe.hold",
+				kind: "write",
+				description: "Touch records, and wait in the run when told to.",
+				input: z.object({ refs: z.array(z.object({ kind: z.string(), id: z.string() })), wait: z.boolean() }),
+				touches: (input) => input.refs as RecordRef[],
+				async run(input) {
+					if (!input.wait) return {};
+					entered();
+					await gate;
+					return {};
+				},
+				log: "save",
+				summary: () => ({ key: "probe.hold" }),
+			});
+			const monti = createMonti({
+				db,
+				schema,
+				plugins: [definePlugin({ name: "files", storage }), definePlugin({ name: "probe", operations: [operation] })],
+			});
+			const run = (refs: RecordRef[], wait = false) => monti.run("probe.hold", { refs, wait }, { actor: "admin" });
+			return { run, inRun, release };
+		};
+		/** Long enough for a write to have taken the locks it can and be waiting for the next. */
+		const settled = () => new Promise((resolve) => setTimeout(resolve, 300));
+
+		it("09-4 a template's write that comes to lock its file, and a write that touches the file and the template, do not wait on each other", async () => {
+			const cover = await file();
+			const template = (await write("templates.save", { name: "회고", doc: doc(image("b1", cover)) })).output.id;
+			const { run, inRun, release } = holding();
+			// The first holds the template and, after its run, comes for the file its template names (`rewriteUses`).
+			const first = run([{ kind: "template", id: template }], true);
+			await inRun;
+			// The second touches both: taken file first, it would hold the file and wait for the template, and neither would end.
+			const second = run([
+				{ kind: "media", id: cover },
+				{ kind: "template", id: template },
+			]);
+			await settled();
+			release();
+			await expect(Promise.all([first, second])).resolves.toHaveLength(2);
+		});
+
+		it("09-4 a permanent delete that cuts a relation and deletes a file, and a save of the entry that pointed, do not wait on each other", async () => {
+			const [photo, other] = [await file(), await file("other.jpg")];
+			const writer = await write<{ group: string; locales: Record<string, { id: string }> }>("items.saveGroup", {
+				collection: "author",
+				locales: { ko: { title: "글쓴이", slug: `w-${++slugs}`, values: { photo: { media: photo, alt: "얼굴" } } } },
+			});
+			// The post points at the author and uses the same picture.
+			const made = await post({ values: { cover: { media: photo, alt: "표지" } } });
+			await write("relations.edit", {
+				collection: "post",
+				entryIds: [made.output.id],
+				field: "writer",
+				set: writer.output.group,
+			});
+			const rows = [
+				{ kind: "entry", id: writer.output.locales.ko?.id },
+				{ kind: "media", id: other },
+			];
+			await write("trash.move", { rows });
+			const { run, inRun, release } = holding();
+			// The first holds the post and, after its run, comes for the picture the post names.
+			const first = run([{ kind: "entry", id: made.output.id }], true);
+			await inRun;
+			// The delete holds the author and a file, and comes for the post to cut its relation: with the files held first (the author's
+			// picture among them), it would hold the picture and wait for the post.
+			const second = write("trash.purge", { rows });
+			await settled();
+			release();
+			await expect(Promise.all([first, second])).resolves.toHaveLength(2);
+		});
+
+		it("09-4 a write that touches a file and a record naming another file holds both files from the start", async () => {
+			const [low, high] = [await file(), await file("other.jpg")].sort();
+			const made = await post({ values: { cover: { media: low, alt: "표지" } } });
+			const { run, inRun, release } = holding();
+			// The first touches the higher file and the entry, which names the lower one: taken late, the lower file would be asked for while the
+			// higher is held, against the order of a write that touches both files.
+			const first = run(
+				[
+					{ kind: "media", id: high },
+					{ kind: "entry", id: made.output.id },
+				],
+				true,
+			);
+			await inRun;
+			const second = run([
+				{ kind: "media", id: low },
+				{ kind: "media", id: high },
+			]);
+			await settled();
+			release();
+			await expect(Promise.all([first, second])).resolves.toHaveLength(2);
 		});
 	});
 });

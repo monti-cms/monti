@@ -418,4 +418,5 @@ export {
 	useSidebar,
 	useSortableItem,
 	useUiLabels,
+	whenKeysAreUp,
 } from "./internal";

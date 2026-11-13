@@ -100,7 +100,7 @@ export function useEntryEditor(
 		{ id: source.id ?? "" },
 		// The editor says every failure of this read itself: its own banner while it has nothing to show, and once it has, the toast
 		// that answers the press which read again (a save, "load the latest").
-		{ skip: source.id === null, own: "always" },
+		{ skip: source.id === null, own: "answered" },
 	);
 	const saveOp = useOperation<{ output: { id: string; version: number } }>(isEntry ? "entries.save" : "templates.save");
 	const latestOp = useOperation<EntryRead | TemplateRead>(isEntry ? "entries.get" : "templates.get");

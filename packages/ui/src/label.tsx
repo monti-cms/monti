@@ -36,7 +36,7 @@ function Label({
 			data-slot="label"
 			className={cn(
 				// A lock after the words stands 6px from them (field.md): its own 6px less the row's gap.
-				"flex select-none items-center gap-monti-8 peer-disabled:cursor-not-allowed peer-disabled:opacity-45 *:data-[slot=lock-mark]:ml-[-2px] group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-45",
+				"flex select-none items-center gap-monti-8 peer-disabled:cursor-default peer-disabled:opacity-45 *:data-[slot=lock-mark]:ml-[-2px] group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-45",
 				SIZE[size],
 				tone === "default" && "text-monti-default",
 				tone === "muted" && "text-monti-muted",

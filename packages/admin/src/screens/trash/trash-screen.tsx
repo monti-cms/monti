@@ -42,18 +42,20 @@ import {
 	TrashRowDate,
 } from "@monti-cms/ui";
 import { OverflowMenuHorizontal, TrashCan, Undo } from "@monti-cms/ui/icons";
-import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { URGENT_DAYS } from "../../trash/days-left";
 import { usePurge, useRestore } from "../../trash/use-trash";
 import type { FrameCounts } from "../frame/admin-frame";
+import { firstStop } from "../frame/focus-hand-off";
 import { useLanguageName } from "../list/column-menu";
 import { FilterRows } from "../list/filter-rows";
 import { searchScopes } from "../list/folders";
 import { ListPages } from "../list/list-pages";
 import { NoMatchRow } from "../list/no-match-row";
+import { HandedRowActions, HandedRowLink, listStartOf, rowActionsOf } from "../list/row-hand-off";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
 import { useSearchWords } from "../list/use-search-words";
@@ -153,11 +155,35 @@ export function TrashScreen({
 	const restoreRows = async (list: TrashRow[]) => {
 		if (await restore.run(list.map(refOf))) close(list);
 	};
+	const table = useRef<HTMLTableElement>(null);
+	/** Where the list begins for the keyboard; with no list left (its last row went), the page's first control. */
+	const listStart = () => listStartOf(table.current) ?? firstStop();
+	/**
+	 * Where the focus goes when rows deleted for good are gone before their question has closed: nowhere of its own while a ⋯ of theirs is
+	 * still there (the question gives the focus back to it, and it hands it on when its row goes); else the row that stood after the first
+	 * of them, then the one before it, then the list's start (tokens.md, the states).
+	 */
+	const afterPurge = (list: TrashRef[]) => {
+		const going = new Set(list.map(keyOf));
+		const at = rows.findIndex((row) => going.has(keyOf(row)));
+		const beside = [...rows.slice(at + 1), ...rows.slice(0, Math.max(at, 0)).reverse()]
+			.map(keyOf)
+			.filter((key) => !going.has(key));
+		return () => {
+			if ([...going].some((key) => rowActionsOf(table.current, key))) return null;
+			for (const key of beside) {
+				const more = rowActionsOf(table.current, key);
+				if (more) return more;
+			}
+			return listStart();
+		};
+	};
 	const purgeRows = (list: TrashRow[]) =>
 		purge.start({
 			rows: list.map(refOf),
 			reserves: list.flatMap((row) => row.reserves),
 			onPurged: () => close(list),
+			whenGone: afterPurge(list),
 		});
 	/** The rows an action on this row is about: every picked row when it is one of them. */
 	const rowsFor = (row: TrashRow) => (picked.has(keyOf(row)) && pickedRows.length > 1 ? pickedRows : [row]);
@@ -373,7 +399,12 @@ export function TrashScreen({
 			<PageColumn width="list">
 				{header}
 				<ListScroll>
-					<Table container="none" layout="fixed" columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}>
+					<Table
+						ref={table}
+						container="none"
+						layout="fixed"
+						columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}
+					>
 						{pickedRows.length > 0 ? (
 							<BulkBar
 								label={t("list.selected", { count: pickedRows.length })}
@@ -457,11 +488,17 @@ export function TrashScreen({
 											<RowTitle
 												title={
 													link ? (
-														<RowLink href={link}>{row.title || t("list.untitled")}</RowLink>
-													) : (
-														<RowLink render={<button type="button" />} onClick={() => open(row)}>
+														<HandedRowLink href={link} listStart={listStart}>
 															{row.title || t("list.untitled")}
-														</RowLink>
+														</HandedRowLink>
+													) : (
+														<HandedRowLink
+															render={<button type="button" />}
+															onClick={() => open(row)}
+															listStart={listStart}
+														>
+															{row.title || t("list.untitled")}
+														</HandedRowLink>
 													)
 												}
 												address={addressOf(row)}
@@ -488,7 +525,8 @@ export function TrashScreen({
 											)}
 										</TableCell>
 										<TableCell align="end">
-											<RowActions>
+											{/* A row restored or deleted for good leaves the list: the focus its ⋯ held goes to the row after it. */}
+											<HandedRowActions row={key} listStart={listStart}>
 												<DropdownMenu>
 													<RowMore
 														label={t("list.rowMenu")}
@@ -496,7 +534,7 @@ export function TrashScreen({
 													/>
 													<DropdownMenuContent align="end">{menuItems(row, false)}</DropdownMenuContent>
 												</DropdownMenu>
-											</RowActions>
+											</HandedRowActions>
 										</TableCell>
 									</TableRow>
 								);
@@ -535,7 +573,7 @@ export function TrashScreen({
 					go={go}
 					onClose={() => setState({ ...state, open: null })}
 					onRestore={() => void restore.run([panel]).then((done) => done && close([panel]))}
-					onPurge={() => purge.start({ rows: [panel], onPurged: () => close([panel]) })}
+					onPurge={() => purge.start({ rows: [panel], onPurged: () => close([panel]), whenGone: afterPurge([panel]) })}
 				/>
 			)}
 			{panel?.kind === "entry" && (
@@ -551,6 +589,7 @@ export function TrashScreen({
 							rows: [panel],
 							reserves: rows.find((row) => keyOf(row) === keyOf(panel))?.reserves,
 							onPurged: () => close([panel]),
+							whenGone: afterPurge([panel]),
 						})
 					}
 				/>

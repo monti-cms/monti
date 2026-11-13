@@ -68,7 +68,7 @@ function Input({
 			data-proposal={proposal || undefined}
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
-				"w-full min-w-0 rounded-none bg-transparent outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45",
+				"w-full min-w-0 rounded-none bg-transparent outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-default disabled:opacity-45",
 				inline
 					? cn(
 							"h-auto border-0 px-0 focus-visible:rounded-monti-sm",

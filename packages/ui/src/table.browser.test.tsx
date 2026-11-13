@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { onTopOf, wholeUnderPointer } from "../../../testing/input";
+import { onTopOf, pointerPath, wholeUnderPointer } from "../../../testing/input";
 import { render } from "../test/render";
 import {
 	FileUseRow,
@@ -354,11 +354,46 @@ describe("Table rows with a link", () => {
 			</Table>,
 		);
 		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
-		// How long the tooltip is waited for. CI failed here twice (#468, #470) with the default second, on the first open, and it never failed
-		// on a developer's machine: with a longer wait, a failure means the tooltip does not open at all, not that the machine was slow.
+		// How long the tooltip is waited for. CI failed here three times (#468, #470, #478) on the first open, the last time with these five
+		// seconds, and never on a developer's machine (nor under load there): the tooltip did not open at all. It opens when a pointer's move
+		// reaches words that are cut, so the test now waits on each of those by name before it looks for the tooltip: the next failure says
+		// which did not hold.
 		const shown = { timeout: 5000 };
-		// Near their start: the words run on under the cut, past where they show.
-		await userEvent.hover(page.getByText(long), { position: { x: 12, y: 8 } });
+		/** The box the words are cut in. */
+		await expect.element(page.getByRole("link", { name: long })).toBeVisible();
+		const title = page.getByRole("link", { name: long }).element();
+		const cutBox = title.closest<HTMLElement>(".truncate") as HTMLElement;
+		const cut = () => {
+			const all = document.createRange();
+			all.selectNodeContents(cutBox);
+			return all.getBoundingClientRect().width > cutBox.getBoundingClientRect().width + 0.01;
+		};
+		/** The pointer's moves that reached the words. */
+		let reached = 0;
+		const count = (event: PointerEvent) => {
+			if (event.target instanceof Node && cutBox.contains(event.target)) reached += 1;
+		};
+		document.addEventListener("pointermove", count, true);
+		onTestFinished(() => document.removeEventListener("pointermove", count, true));
+		/**
+		 * Points at the words as a hand does: the pointer comes along their line to a place near their start (the words run on under the
+		 * cut, past where they show), in several moves and not in one jump. One jump is one move, and whatever that one move misses is never
+		 * made up for while the pointer rests.
+		 */
+		const pointAtWords = async (x = 12, y = 8) => {
+			const box = title.getBoundingClientRect();
+			const before = reached;
+			await pointerPath(
+				[
+					{ x: box.left + x + 60, y: box.top + y },
+					{ x: box.left + x, y: box.top + y },
+				],
+				{ steps: 5 },
+			);
+			await expect.poll(() => reached, shown).toBeGreaterThan(before);
+		};
+		await expect.poll(cut, shown).toBe(true);
+		await pointAtWords();
 		await expect.poll(tip, shown).toBe(long);
 		// Escape closes it, and it stays closed while the pointer stays on the words, however it moves there.
 		await userEvent.keyboard("{Escape}");
@@ -369,7 +404,7 @@ describe("Table rows with a link", () => {
 		// The link covers the row: over another cell the pointer is still on the link, and the title is not said. Back on the words it is said again,
 		// and while it closes it keeps its words: it never shows empty.
 		await userEvent.hover(page.getByText("가운데"), { force: true });
-		await userEvent.hover(page.getByText(long), { position: { x: 12, y: 8 } });
+		await pointAtWords();
 		await expect.poll(tip, shown).toBe(long);
 		const seen: (string | null)[] = [];
 		const watch = setInterval(() => seen.push(tip()), 10);

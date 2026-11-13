@@ -46,7 +46,13 @@ type SchemaRead = {
 	schema: { collections: Record<string, { kind: "document" | "item" }> };
 	adminValues: Record<string, { label?: string; folders?: boolean }>;
 };
-export type FrameCounts = { collections: Record<string, number>; trash: number; failedDeliveries: number };
+export type FrameCounts = {
+	collections: Record<string, number>;
+	trash: number;
+	failedDeliveries: number;
+	/** Deliveries queued and not tried yet: while any is, the counts are read again (a delivery fails after its write has answered). */
+	deliveriesOnTheWay: number;
+};
 
 const CornerContext = createContext<((covered: boolean) => void) | null>(null);
 

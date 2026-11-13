@@ -73,16 +73,17 @@ export function useOperation<Output = unknown>(name: string) {
  * that. Two kinds of read say otherwise:
  * - `quiet`: a refusal with a reason is a state the screen knows and shows its own way (the line is gone, the file is in the trash). Only a
  *   lost call (no answer, a server that failed) is said at the top.
- * - `own`: the screen has its own banner for this read while it has nothing to show (the activity log's list). The shared banner waits
- *   meanwhile; once the read has data, a later failure is said at the top like any other.
- * - `own: "always"`: the screen answers every failure of this read itself (an editor's entry: its own banner while it has nothing, then
- *   the toast that answers the press which read again). Nothing is said at the top a second time.
+ * - `own`: the screen says this read's failures itself, and the shared banner waits while it does (no two banners for one matter):
+ *   - `true`: its own banner on every failure, over what it read before too (the activity log's list);
+ *   - `"empty"`: its own banner only while it has nothing to show (the compare view); a later failure is said at the top like any other;
+ *   - `"answered"`: its own banner while it has nothing, and once it has, the toast that answers the press which read again (an
+ *     editor's entry): nothing is said at the top a second time.
  * An ended session is never said here: it has its own banner.
  */
 export function useRead<Output>(
 	name: string,
 	input: unknown = {},
-	options: { afterWrites?: boolean; skip?: boolean; quiet?: boolean; own?: boolean | "always" } = {},
+	options: { afterWrites?: boolean; skip?: boolean; quiet?: boolean; own?: true | "empty" | "answered" } = {},
 ) {
 	const { onWrite, reads } = useAdmin();
 	const { run } = useOperation<Output>(name);
@@ -121,9 +122,9 @@ export function useRead<Output>(
 	const quiet = options.quiet ?? false;
 	const holds = data !== null;
 	/** The screen's own banner is speaking for this read. */
-	const own = Boolean(options.own) && !holds;
+	const own = options.own === true || (options.own !== undefined && !holds);
 	/** The screen has answered this failure already, in its own way. */
-	const answered = options.own === "always" && holds;
+	const answered = options.own === "answered" && holds;
 	useEffect(() => {
 		const said = refusal !== null && !skip && refusal.status !== 401 && (!quiet || isLost(refusal)) && !answered;
 		reads.set(me, said ? { refusal, own, reload: () => again.current() } : null);

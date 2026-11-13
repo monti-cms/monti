@@ -32,8 +32,17 @@ export function defineRecordKind(kind: RecordKind): RecordKind {
 	return kind;
 }
 
-/** Serializes writes that touch the same records until their transaction ends. Sorted keys keep multi-record writes from deadlocking each other. */
+/** Whether a lock's key is a file's: those are taken last (`lockRecords`). */
+const ofFile = (key: string) => key.startsWith("media:");
+
+/**
+ * Serializes writes that touch the same records until their transaction ends. One order keeps multi-record writes from stopping each other:
+ * every record that is no file by its key, then the files by theirs. The files come last because a write comes for the files its records
+ * name only once it has run (`rewriteUses`), holding those records: a write that held a file and then asked for a template would wait on a
+ * template's save that holds the template and asks for the file.
+ */
 export async function lockRecords(trx: Db, refs: RecordRef[]): Promise<void> {
-	for (const key of refs.map(recordKey).sort())
+	const keys = refs.map(recordKey).sort();
+	for (const key of [...keys.filter((each) => !ofFile(each)), ...keys.filter(ofFile)])
 		await sql`select pg_advisory_xact_lock(hashtext(${`monti:record:${key}`}))`.execute(trx);
 }

@@ -81,7 +81,7 @@ describe("a read that does not come back", () => {
 });
 
 describe("a list that has rows and is read again", () => {
-	it("[T154] a later read that fails says so at the top over the rows it read before: the screen's own banner is only for a list with nothing read", async () => {
+	it("[T154] a later read that fails is said once, by the screen's own banner over the rows it read before, and its 'try again' reads again", async () => {
 		const drawn = draw(activity.Log);
 		await drawn.run();
 		await expect.poll(() => rows().all().length).toBeGreaterThan(1);
@@ -89,12 +89,14 @@ describe("a list that has rows and is read again", () => {
 		hooks.drop.add("activity.list");
 		// Searching reads the list again.
 		location.hash = "#/activity?q=first";
-		await expect.element(failed()).toBeVisible();
-		expect(banners().filter((words) => words?.includes("기록을 불러오지 못했습니다"))).toHaveLength(0);
+		const own = page.getByRole("note").filter({ hasText: "기록을 불러오지 못했습니다" });
+		await expect.element(own).toBeVisible();
+		// One banner for the one matter: the shared one waits while the screen's own speaks.
+		expect(banners().filter((words) => words?.includes("불러오지 못했습니다"))).toHaveLength(1);
 		expect(rows().all().length).toBeGreaterThan(1);
 		hooks.drop.clear();
-		await userEvent.click(failed().getByRole("button", { name: "다시 시도" }));
-		await expect.element(failed()).not.toBeInTheDocument();
+		await userEvent.click(own.getByRole("button", { name: "다시 시도" }));
+		await expect.element(own).not.toBeInTheDocument();
 	});
 });
 
