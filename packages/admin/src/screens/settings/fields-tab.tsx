@@ -246,6 +246,14 @@ export function FieldsTab({
 	const [preview, setPreview] = useState<Lists | null>(null);
 	const [renaming, setRenaming] = useState<number | null>(null);
 	const shown = layout;
+	// The plugins' tabs stand after the collection's own (doc 14): theirs to fill, so nothing in one is moved, opened or added to.
+	const pluginTabs = data?.pluginTabs?.[c] ?? [];
+	// Which of them is open is this tab's own to know, apart from the index of the collection's tabs: adding, removing or dragging one of
+	// those while a plugin's tab is open leaves it open.
+	const [pluginOpen, setPluginOpen] = useState<{ collection: string; index: number } | null>(null);
+	const pluginIndex = pluginOpen?.collection === c && pluginOpen.index < pluginTabs.length ? pluginOpen.index : null;
+	const pluginTab = pluginIndex === null ? null : (pluginTabs[pluginIndex] ?? null);
+	const pluginValue = (index: number) => `plugin:${index}`;
 	const current = Math.min(tab, shown.length - 1);
 	const entries = shown[current]?.fields ?? [];
 	const ids = entryIds(entries);
@@ -571,6 +579,7 @@ export function FieldsTab({
 
 	const addTab = () => {
 		setLayout([...layout, { tab: t("settings.fields.newTab"), fields: [] }]);
+		setPluginOpen(null);
 		onTab(layout.length);
 		setRenaming(layout.length);
 	};
@@ -615,7 +624,15 @@ export function FieldsTab({
 				}}
 				overlay={lifted}
 			>
-				<FolderTabs value={String(current)} onValueChange={(value) => onTab(Number(value))}>
+				<FolderTabs
+					value={pluginIndex === null ? String(current) : pluginValue(pluginIndex)}
+					onValueChange={(value) => {
+						if (String(value).startsWith("plugin:"))
+							return setPluginOpen({ collection: c, index: Number(String(value).slice(7)) });
+						setPluginOpen(null);
+						onTab(Number(value));
+					}}
+				>
 					<SortableList
 						id={TABS}
 						direction="horizontal"
@@ -658,26 +675,60 @@ export function FieldsTab({
 									/>
 								),
 							)}
+							{pluginTabs.map((each, index) => (
+								<FolderTab
+									key={pluginValue(index)}
+									value={pluginValue(index)}
+									count={String(each.fields.length)}
+									locked
+								>
+									{each.tab}
+								</FolderTab>
+							))}
 						</FolderTabsList>
 					</SortableList>
-					<FolderTabsBody value={String(current)}>{tree}</FolderTabsBody>
+					{pluginTab ? (
+						<FolderTabsBody value={pluginValue(pluginIndex ?? 0)}>
+							<FieldTree>
+								{pluginTab.fields.map((field) => (
+									<FieldRow
+										key={field.name}
+										grip={false}
+										name={field.name}
+										label={field.label}
+										kind={field.kind}
+										locked={t("settings.fields.pluginTab", { plugin: pluginTab.plugin })}
+									/>
+								))}
+							</FieldTree>
+						</FolderTabsBody>
+					) : (
+						<FolderTabsBody value={String(current)}>{tree}</FolderTabsBody>
+					)}
 				</FolderTabs>
 			</Sortable>
-			<Stack gap={12}>
-				<Inline gap={4}>
-					{locked ? null : (
-						<Button variant="ghost" size="sm" onClick={() => onAddField()}>
-							{t("settings.fields.addField")}
-						</Button>
-					)}
-					<Button variant="ghost" size="sm" onClick={addGroup}>
-						{t("settings.fields.addGroup")}
-					</Button>
-				</Inline>
+			{pluginTab ? (
+				// Why nothing here is changed: the tab is a plugin's, set in the site's code.
 				<Text as="p" variant="meta" tone="subtle">
-					{t("settings.fields.legend")}
+					{t("settings.fields.pluginTab", { plugin: pluginTab.plugin })}
 				</Text>
-			</Stack>
+			) : (
+				<Stack gap={12}>
+					<Inline gap={4}>
+						{locked ? null : (
+							<Button variant="ghost" size="sm" onClick={() => onAddField()}>
+								{t("settings.fields.addField")}
+							</Button>
+						)}
+						<Button variant="ghost" size="sm" onClick={addGroup}>
+							{t("settings.fields.addGroup")}
+						</Button>
+					</Inline>
+					<Text as="p" variant="meta" tone="subtle">
+						{t("settings.fields.legend")}
+					</Text>
+				</Stack>
+			)}
 		</Stack>
 	);
 }

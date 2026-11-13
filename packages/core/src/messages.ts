@@ -21,6 +21,11 @@ export const coreMessages = defineMessages({
 	namespace: "core",
 	messages: {
 		en: {
+			"plugins.says": "{text}",
+			"plugins.unknownSlot": "There is no such key slot.",
+			"plugins.slotEmpty": "The slot has no key.",
+			"plugins.setKey.set": "Put a key in {plugin}",
+			"plugins.setKey.removed": "Took the key out of {plugin}",
 			"activity.allChanged": "It was changed again since.",
 			"activity.changedSince": "Changed since",
 			"activity.nothingToUndo": "Nothing to undo",
@@ -256,6 +261,11 @@ export const coreMessages = defineMessages({
 			"templates.unknown": "There is no such template.",
 		},
 		ko: {
+			"plugins.says": "{text}",
+			"plugins.unknownSlot": "그런 키 자리가 없습니다.",
+			"plugins.slotEmpty": "자리에 키가 없습니다.",
+			"plugins.setKey.set": "{plugin} 키 넣음",
+			"plugins.setKey.removed": "{plugin} 키 뺌",
 			"activity.allChanged": "그 사이 다시 고쳐졌습니다.",
 			"activity.changedSince": "그 사이 고쳐짐",
 			"activity.nothingToUndo": "되돌릴 것 없음",

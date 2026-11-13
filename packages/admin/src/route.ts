@@ -16,8 +16,8 @@ export type Route =
 	| { screen: "trash"; params: URLSearchParams }
 	/** The activity log (doc 13): what it is searched and filtered by, its order, its page and the open line are in the address. */
 	| { screen: "activity"; params: URLSearchParams }
-	/** Tools: its templates, or with `tab` another of its tabs (`#/tools/keys`). */
-	| { screen: "place"; place: "tools"; tab?: "keys" }
+	/** Tools: its templates, with `tab` another of its tabs (`#/tools/keys`), or with `page` a plugin's tool page (`#/tools/p/<plugin>/<id>`). */
+	| { screen: "place"; place: "tools"; tab?: "keys"; page?: { plugin: string; id: string } }
 	/** One proposal of the assistant's, to look through and take or leave change by change (doc 10; screens/assistant.md). */
 	| { screen: "review"; id: string }
 	/** The template editor, a page of its own outside the frame (tools.md); `id` is `null` for a new template. */
@@ -55,8 +55,11 @@ export function parseRoute(hash: string): Route {
 	if (parts[0] === "trash") return { screen: "trash", params: new URLSearchParams(search) };
 	if (parts[0] === "ai" && parts[1] === "review" && parts[2]) return { screen: "review", id: parts[2] };
 	if (parts[0] === "activity") return { screen: "activity", params: new URLSearchParams(search) };
-	if (parts[0] && PLACES.has(parts[0]))
+	if (parts[0] && PLACES.has(parts[0])) {
+		if (parts[1] === "p" && parts[2] && parts[3])
+			return { screen: "place", place: "tools", page: { plugin: parts[2], id: parts[3] } };
 		return { screen: "place", place: "tools", ...(parts[1] === "keys" ? { tab: "keys" as const } : {}) };
+	}
 	return { screen: "home" };
 }
 
@@ -99,6 +102,8 @@ export function href(route: Route): string {
 			return `#/activity${search ? `?${search}` : ""}`;
 		}
 		case "place":
+			if (route.page)
+				return `#/${route.place}/p/${encodeURIComponent(route.page.plugin)}/${encodeURIComponent(route.page.id)}`;
 			return `#/${route.place}${route.tab ? `/${route.tab}` : ""}`;
 		case "review":
 			return `#/ai/review/${encodeURIComponent(route.id)}`;

@@ -24,6 +24,9 @@
 		"packages/storage-s3": {
 			"entry": ["src/**/*.test.ts"]
 		},
+		"packages/seo": {
+			"entry": ["src/**/*.test.ts"]
+		},
 		"packages/ui": {
 			"entry": ["src/spec-pack/pack.mjs"],
 			"ignoreIssues": {
