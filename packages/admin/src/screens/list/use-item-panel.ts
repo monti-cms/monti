@@ -128,9 +128,9 @@ export function useItemPanel({ collection, group, item, locales, sourceLocale, o
 			const out = res.body.output;
 			draft.saved(sent);
 			if (out?.group) onSaved?.(out.group);
-			return out;
+			return { ok: true as const, out };
 		}
-		return null;
+		return { ok: false as const, refusal: res.refusal };
 	};
 
 	return {

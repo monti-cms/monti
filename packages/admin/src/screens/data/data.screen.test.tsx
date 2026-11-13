@@ -49,6 +49,23 @@ describe("tools › data: the backup (flow 9, 01–03)", () => {
 		expect(names).toContain("media/00000000-0000-4000-8000-000000000001.jpg");
 	});
 
+	it("14-1 a backup that could not hold a media file says so on the page too, until the next backup", async () => {
+		const story = at();
+		await story.run();
+		const { site } = story.loaded();
+		const files = await site.db.selectFrom("media").select("original_key").execute();
+		for (const file of files) await site.storage?.remove(file.original_key);
+		await userEvent.click(main().getByRole("checkbox", { name: /미디어 파일도 담기/ }));
+		await userEvent.click(main().getByRole("button", { name: "백업 받기" }));
+		const line = main().getByText(/미디어 파일 \d+개를 읽지 못해 담지 못했습니다/);
+		// Under the pill, not only in the toast that goes away.
+		await expect.element(line).toBeVisible();
+		await userEvent.click(main().getByRole("checkbox", { name: /미디어 파일도 담기/ }));
+		await userEvent.click(main().getByRole("button", { name: "백업 받기" }));
+		await expect.element(page.getByText("백업을 저장했습니다")).toBeVisible();
+		await expect.element(line).not.toBeInTheDocument();
+	});
+
 	it("14-1 a library with no file offers no media to take", async () => {
 		await at({ picture: false }).run();
 		await expect.element(main().getByRole("button", { name: "백업 받기" })).toBeVisible();

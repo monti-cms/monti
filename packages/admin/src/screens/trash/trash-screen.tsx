@@ -1,6 +1,7 @@
 import { MEDIA_KIND, type TrashList, type TrashRef, type TrashRow } from "@monti-cms/core";
 import {
 	BulkBar,
+	Button,
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuGroup,
@@ -57,6 +58,7 @@ import { searchScopes } from "../list/folders";
 import { ListPages } from "../list/list-pages";
 import { NoMatchRow } from "../list/no-match-row";
 import { HandedRowActions, HandedRowLink, listStartOf, rowActionsOf } from "../list/row-hand-off";
+import { DELETE_KEYS, isDeleteKey } from "../list/row-menu";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
 import { useSearchWords } from "../list/use-search-words";
@@ -203,9 +205,9 @@ export function TrashScreen({
 			: undefined;
 
 	/** What stands after a row's title, as after a list's: an entry's address, what a folder holds, and where it sat. */
-	const addressOf = (row: TrashRow): string | undefined => {
+	/** What follows a row's title: its address in mono, as typed; then words a person reads, in sans (tokens.md). */
+	const noteOf = (row: TrashRow): string | undefined => {
 		const parts: string[] = [];
-		if (row.address) parts.push(row.address);
 		if (row.kind === "folder")
 			parts.push(t(row.collection === null ? "trash.holdsFiles" : "trash.holdsEntries", { count: row.holds ?? 0 }));
 		// A search found it inside a thrown-away folder other than the open one: it says which. A folder still alive is named as it is.
@@ -236,14 +238,14 @@ export function TrashScreen({
 				<Item variant="danger" onClick={() => purgeRows(list)}>
 					{!several && <TrashCan aria-hidden />}
 					{t("trash.purge")}
-					{context && <MenuShortcut>Del</MenuShortcut>}
+					{context && <MenuShortcut keys={DELETE_KEYS} />}
 				</Item>
 			</>
 		);
 	};
 	const onRowKey = (row: TrashRow) => (event: KeyboardEvent<HTMLTableRowElement>) => {
 		const target = event.target as HTMLElement;
-		if (event.key !== "Delete" || target.closest("input, textarea, [role=menu]")) return;
+		if (!isDeleteKey(event.key) || target.closest("input, textarea, [role=menu]")) return;
 		event.preventDefault();
 		purgeRows(rowsFor(row));
 	};
@@ -358,9 +360,10 @@ export function TrashScreen({
 			)}
 			{place ? (
 				<>
-					<TextButton onClick={() => void restore.run([{ kind: "folder", id: place.id }])}>
+					{/* A button where a button fits: the page head holds pills, not words (button.md). */}
+					<Button variant="ghost" onClick={() => void restore.run([{ kind: "folder", id: place.id }])}>
 						{t("trash.restoreFolder")}
-					</TextButton>
+					</Button>
 					<DropdownMenu>
 						<IconButton label={t("trash.more")} trigger={(button) => <DropdownMenuTrigger render={button} />}>
 							<OverflowMenuHorizontal aria-hidden />
@@ -378,9 +381,9 @@ export function TrashScreen({
 				</>
 			) : (
 				inTrash > 0 && (
-					<TextButton variant="danger" onClick={() => purge.startEmpty(inTrash)}>
+					<Button variant="ghost-danger" onClick={() => purge.startEmpty(inTrash)}>
 						{t("trash.empty")}
-					</TextButton>
+					</Button>
 				)
 			)}
 		</PageHeader>
@@ -503,7 +506,8 @@ export function TrashScreen({
 														</HandedRowLink>
 													)
 												}
-												address={addressOf(row)}
+												address={row.address || undefined}
+												note={noteOf(row)}
 												folder={row.kind === "folder"}
 											/>
 										</TableCell>
@@ -541,7 +545,7 @@ export function TrashScreen({
 											<HandedRowActions row={key} listStart={listStart}>
 												<DropdownMenu>
 													<RowMore
-														label={t("list.rowMenu")}
+														label={t("list.more")}
 														trigger={(button) => <DropdownMenuTrigger render={button} />}
 													/>
 													<DropdownMenuContent align="end">{menuItems(row, false)}</DropdownMenuContent>

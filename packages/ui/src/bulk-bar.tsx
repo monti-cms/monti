@@ -1,7 +1,6 @@
 "use client";
 
 import type * as React from "react";
-import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
@@ -85,9 +84,10 @@ function BulkBar({
 					</DropdownMenu>
 				</>
 			)}
-			<Button variant="ghost" size="sm" onClick={onClear} className="ml-auto">
+			{/* A quiet text button: letting go is not one of the actions on the picked rows (components/list.md, bulk bar). */}
+			<TextButton variant="quiet" onClick={onClear} className="ml-auto">
 				{clearLabel}
-			</Button>
+			</TextButton>
 		</>
 	);
 	if (colSpan === undefined)

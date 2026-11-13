@@ -9,7 +9,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 	Banner,
-	Box,
 	Button,
 	Count,
 	DescriptionItem,
@@ -20,7 +19,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	Empty,
-	Heading,
 	Inline,
 	ListSection,
 	ListSectionRow,
@@ -40,7 +38,7 @@ import {
 	Text,
 	toast,
 } from "@monti-cms/ui";
-import { Add } from "@monti-cms/ui/icons";
+import { Add, Edit, TrashCan } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { MODELS_ASK_AGAIN_MS } from "../../operations/models";
@@ -53,17 +51,6 @@ export function tokenAmount(tokens: number): string {
 	if (tokens < 1000) return String(tokens);
 	if (tokens < 1_000_000) return `${Math.round(tokens / 1000)}K`;
 	return `${(tokens / 1_000_000).toFixed(2)}M`;
-}
-
-/** The name over a list when the page has more than one (tools.md): one list needs none, its tab has said it. */
-function ListTitle({ children }: { children: string }) {
-	return (
-		<Box paddingX={12} paddingBottom={12} border="bottom">
-			<Heading as="h2" variant="label">
-				{children}
-			</Heading>
-		</Box>
-	);
 }
 
 /** What the delete question is about: a key a person named, or the key in a plugin's slot. */
@@ -194,21 +181,20 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 									}}
 								>
 									<DropdownMenu>
-										<RowMore
-											label={t("apiKeys.more", { name: key.name })}
-											trigger={(button) => <DropdownMenuTrigger render={button} />}
-										/>
+										<RowMore label={t("apiKeys.more")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
 										<DropdownMenuContent align="end">
 											{/* A site that cannot store keys cannot store a changed one either: it only removes. */}
 											{canStore ? (
 												<>
 													<DropdownMenuItem onClick={() => openWindow({ mode: "edit", key })}>
+														<Edit aria-hidden />
 														{t("apiKeys.edit")}
 													</DropdownMenuItem>
 													<DropdownMenuSeparator />
 												</>
 											) : null}
 											<DropdownMenuItem variant="danger" onClick={() => ask({ key })}>
+												<TrashCan aria-hidden />
 												{t("apiKeys.remove")}
 											</DropdownMenuItem>
 										</DropdownMenuContent>
@@ -252,10 +238,9 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 					<Stack gap={40} paddingTop={twoLists ? 32 : 0}>
 						{/* No name over nothing: a site that cannot store keys and has no AI key shows no first list at all. */}
 						{twoLists && aiKeys ? (
-							<Stack gap={0}>
-								<ListTitle>{t("apiKeys.aiKeys")}</ListTitle>
+							<ListSection table title={t("apiKeys.aiKeys")}>
 								{aiKeys}
-							</Stack>
+							</ListSection>
 						) : (
 							aiKeys
 						)}
@@ -314,8 +299,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 						) : null}
 						{/* A plugin's slot is a key row like the AI keys: the same window fills and changes it, its service already set. */}
 						{twoLists ? (
-							<Stack gap={0}>
-								<ListTitle>{t("apiKeys.pluginKeys")}</ListTitle>
+							<ListSection table title={t("apiKeys.pluginKeys")}>
 								<Table container="none" aria-label={t("apiKeys.pluginKeys")}>
 									<TableBody>
 										{slots.map((slot) => (
@@ -362,7 +346,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 														{slot.key ? (
 															<DropdownMenu>
 																<RowMore
-																	label={t("apiKeys.more", { name: slotName(slot) })}
+																	label={t("apiKeys.more")}
 																	trigger={(button) => <DropdownMenuTrigger render={button} />}
 																/>
 																<DropdownMenuContent align="end">
@@ -370,12 +354,14 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 																	{canStore && !slot.orphan ? (
 																		<>
 																			<DropdownMenuItem onClick={() => openWindow({ mode: "slot", slot })}>
+																				<Edit aria-hidden />
 																				{t("apiKeys.edit")}
 																			</DropdownMenuItem>
 																			<DropdownMenuSeparator />
 																		</>
 																	) : null}
 																	<DropdownMenuItem variant="danger" onClick={() => ask({ slot })}>
+																		<TrashCan aria-hidden />
 																		{t("apiKeys.remove")}
 																	</DropdownMenuItem>
 																</DropdownMenuContent>
@@ -396,7 +382,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 										))}
 									</TableBody>
 								</Table>
-							</Stack>
+							</ListSection>
 						) : null}
 					</Stack>
 				</PageBody>

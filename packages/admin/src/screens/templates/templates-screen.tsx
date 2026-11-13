@@ -18,11 +18,13 @@ import {
 	TableCell,
 	TableRow,
 	Text,
+	toast,
 } from "@monti-cms/ui";
-import { Add } from "@monti-cms/ui/icons";
+import { Add, Copy, TrashCan } from "@monti-cms/ui/icons";
 import type { ReactNode } from "react";
+import { useUndo } from "../../activity/use-undo";
 import { useAdmin } from "../../operations/admin-context";
-import { useOperation, useRead } from "../../operations/use-operation";
+import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 
 type TemplateRow = { id: string; name: string; sections: string[]; updatedAt: string };
 
@@ -42,7 +44,24 @@ export function TemplatesScreen({ tabs, onOpen }: { tabs: ReactNode; onOpen: (te
 	const { t, language } = useAdmin();
 	const list = useRead<TemplateRow[]>("templates.list", {}, { afterWrites: true });
 	const duplicate = useOperation("templates.duplicate");
-	const remove = useOperation("templates.remove");
+	const remove = useOperation<{ activityId?: string | null }>("templates.remove");
+	const undo = useUndo();
+	const copy = async (id: string) => {
+		const result = await duplicate.run({ id });
+		if (!result.ok) toast.error(t(reasonOf(result.refusal)));
+	};
+	/** Gone at once, with the activity log's undo on the toast (overlay.md: what can be undone does not ask first). */
+	const drop = async (id: string) => {
+		const result = await remove.run({ id });
+		if (!result.ok) {
+			toast.error(t(reasonOf(result.refusal)));
+			return;
+		}
+		const activity = result.body.activityId;
+		toast(t("templates.removed"), {
+			action: activity ? { label: t("common.undo"), onClick: () => void undo.run(activity) } : undefined,
+		});
+	};
 	return (
 		<PageColumn width="content">
 			<PageHeader title={t("tools.title")}>
@@ -83,11 +102,13 @@ export function TemplatesScreen({ tabs, onOpen }: { tabs: ReactNode; onOpen: (te
 												trigger={(button) => <DropdownMenuTrigger render={button} />}
 											/>
 											<DropdownMenuContent align="end">
-												<DropdownMenuItem onClick={() => void duplicate.run({ id: template.id })}>
+												<DropdownMenuItem onClick={() => void copy(template.id)}>
+													<Copy aria-hidden />
 													{t("templates.duplicate")}
 												</DropdownMenuItem>
 												<DropdownMenuSeparator />
-												<DropdownMenuItem variant="danger" onClick={() => void remove.run({ id: template.id })}>
+												<DropdownMenuItem variant="danger" onClick={() => void drop(template.id)}>
+													<TrashCan aria-hidden />
 													{t("templates.remove")}
 												</DropdownMenuItem>
 											</DropdownMenuContent>

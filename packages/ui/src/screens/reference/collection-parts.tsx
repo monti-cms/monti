@@ -1,3 +1,4 @@
+import { Add } from "../../icons";
 import { NavLink, PageColumn, PageHeader, PageToolbar, RailAction, RailLayout, TabLink, TabLinks } from "../../index";
 
 const collections = [
@@ -42,7 +43,9 @@ export function CollectionSettings({
 								{collection.label}
 							</NavLink>
 						))}
-						<RailAction>+ 새 컬렉션</RailAction>
+						<RailAction>
+							<Add aria-hidden />새 컬렉션
+						</RailAction>
 					</>
 				}
 			>

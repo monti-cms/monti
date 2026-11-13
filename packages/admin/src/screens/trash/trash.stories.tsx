@@ -202,7 +202,7 @@ const rowOf = async (canvas: HTMLElement, title: string) => {
 const openRowMenu = async (canvas: HTMLElement, title: string) => {
 	const row = await rowOf(canvas, title);
 	await userEvent.hover(row);
-	await userEvent.click(within(row).getByRole("button", { name: "행 메뉴" }));
+	await userEvent.click(within(row).getByRole("button", { name: "더 보기" }));
 };
 
 /** The widths this browser keeps for a table (`useColumnWidths`), for one story: put there before it draws, taken away after. */
@@ -269,7 +269,9 @@ export const InUrgentFolder: Story = {
 export const FolderMenu: Story = {
 	loaders: trash((ids) => `#/trash?folder=${ids.series}`),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await within(canvasElement).findByRole("button", { name: "더 보기" }, wait));
+		// The page head's ⋯ comes first; every row's ⋯ has the same name.
+		const [head] = await within(canvasElement).findAllByRole("button", { name: "더 보기" }, wait);
+		if (head) await userEvent.click(head);
 	},
 };
 
