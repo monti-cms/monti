@@ -65,7 +65,9 @@ describe("settings: four tabs over one draft", () => {
 	it("12-1 a change on the site tab is counted on the other tabs, its tab carries the dot from there, and moving between tabs asks nothing", async () => {
 		await SiteChanged.run();
 		await userEvent.click(tab(/언어/));
-		await expect.element(page.getByRole("button", { name: "+ 언어 추가" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "언어 추가", exact: true })).toBeVisible();
+		// The + is the Add icon, not typed (button.md).
+		expect(page.getByRole("button", { name: "언어 추가", exact: true }).element().querySelector("svg")).not.toBeNull();
 		await expect.element(saveGroup()).toBeVisible();
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
 		// The dot is on the tab that holds the change, and only while another tab is open.
@@ -114,7 +116,7 @@ describe("settings: four tabs over one draft", () => {
 describe("settings › languages", () => {
 	it("12-1 [flow 11·05] '+ 언어 추가' finds codes as they are typed, and does not offer a language the site has", async () => {
 		await Languages.run();
-		await userEvent.click(page.getByRole("button", { name: "+ 언어 추가" }));
+		await userEvent.click(page.getByRole("button", { name: "언어 추가", exact: true }));
 		await userEvent.type(page.getByRole("combobox"), "zh");
 		await expect.element(page.getByRole("option", { name: /zh-Hans/ })).toBeVisible();
 		await expect.element(page.getByRole("option", { name: /zh-HK/ })).toBeVisible();
@@ -280,7 +282,7 @@ describe("settings › languages", () => {
 	it("12-3 [flow 11·16] on the live site the languages are read-only: a lock on every row, and nothing to move, take out, change or add", async () => {
 		await LanguagesLive.run();
 		expect(languages()).toEqual(["한국어", "English", "日本語"]);
-		for (const name of ["English 옮기기", "English 빼기", "바꾸기", "+ 언어 추가"])
+		for (const name of ["English 옮기기", "English 빼기", "바꾸기", "언어 추가"])
 			await expect.element(page.getByRole("button", { name })).not.toBeInTheDocument();
 		// The address mark of the site tab is the file's too: text with its lock, no select.
 		await userEvent.click(tab(/사이트/));
@@ -482,7 +484,8 @@ describe("settings › collections inside the one draft", () => {
 	it("12-2 a collection name longer than the database keeps is told in the sheet, before it is made", async () => {
 		const shown = withSite({ loaders: stories.settingsAt("collections") });
 		await shown.run();
-		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
+		expect(page.getByRole("button", { name: "새 컬렉션", exact: true }).element().querySelector("svg")).not.toBeNull();
+		await userEvent.click(page.getByRole("button", { name: "새 컬렉션", exact: true }));
 		const sheet = page.getByRole("dialog");
 		await userEvent.fill(sheet.getByLabelText(/^식별자/), `a${"b".repeat(57)}`);
 		await expect.element(sheet.getByText("이름이 너무 깁니다")).toBeVisible();

@@ -34,15 +34,16 @@ test('a "+" typed before a label, in JSX text, a string or a template, is found'
 	);
 });
 
-test("a typed close mark and typed keys are found; a key compared in code is not", () => {
+test("a close mark typed as a button's words and typed keys are found; a size's × and a key compared in code are not", () => {
 	assert.deepEqual(
 		check(`<>
 	<TextButton>×</TextButton>
+	<span aria-hidden>×</span>
 	<MenuShortcut>Del</MenuShortcut>
 	<MenuShortcut>{"⇧⌘D"}</MenuShortcut>
 	<span onKeyDown={(event) => event.key === "Backspace" || event.key === "Delete"} />
 </>`),
-		['5 typed-glyph: "×"', '6 typed-glyph: "Del"', '7 typed-glyph: "⇧⌘D"'],
+		['5 typed-glyph: "×"', '7 typed-glyph: "Del"', '8 typed-glyph: "⇧⌘D"'],
 	);
 });
 

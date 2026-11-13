@@ -1,6 +1,6 @@
 import type * as React from "react";
 import { ChangesBar } from "../../changes-group";
-import { ChevronLeft, Close } from "../../icons";
+import { Add, ChevronLeft, Close } from "../../icons";
 import {
 	Button,
 	ChangeGroup,
@@ -74,7 +74,8 @@ type Field = React.ComponentProps<typeof FieldRow>;
 // An option's band ends with the way to add a field to it; an option with no fields keeps its band, so there is a place to add the first.
 const ADD = (
 	<TextButton variant="quiet" size="note">
-		+ 필드
+		<Add aria-hidden />
+		필드
 	</TextButton>
 );
 
@@ -148,7 +149,8 @@ export function ConditionalFieldSheetScreen() {
 								</OptionTable>
 								<Inline>
 									<Button variant="ghost" size="sm">
-										+ 선택지 추가
+										<Add aria-hidden />
+										선택지 추가
 									</Button>
 								</Inline>
 							</Stack>

@@ -317,8 +317,8 @@ describe("the entry editor: before the entry is there", () => {
 		// Nothing that writes is there: no title to type into (it would read as an untitled entry), no save, no publish, no menu of the entry's actions.
 		expect(title().elements()).toEqual([]);
 		for (const name of ["저장", "발행하기", "더 보기", "속성"]) expect(button(name).elements()).toEqual([]);
-		// Nor the languages: "+ 언어" made a translation of an entry nobody had read, and the tabs moved when the entry came.
-		for (const name of ["한국어", "+ 언어"]) expect(button(name).elements()).toEqual([]);
+		// Nor the languages: "언어" made a translation of an entry nobody had read, and the tabs moved when the entry came.
+		for (const name of ["한국어", "언어"]) expect(button(name).elements()).toEqual([]);
 		// No status bar either: nothing is said of an entry that is not there.
 		expect(document.querySelector("[data-slot=status-bar]")).toBeNull();
 		// The site's structure is read by now (the way back is named from it), so the properties could be drawn, empty: they are not. No field of theirs
@@ -337,7 +337,7 @@ describe("the entry editor: before the entry is there", () => {
 		expect(at.x > box.left && at.x < box.right && at.y > box.top && at.y < box.bottom).toBe(true);
 		await expect.element(title()).toHaveValue("첫 번째 글");
 		await expect.element(button("속성")).toBeVisible();
-		await expect.element(button("+ 언어")).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "언어", exact: true })).toBeVisible();
 		await expect.element(property("요약")).toHaveValue("리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.");
 		await expect.element(property("대표 이미지")).toBeVisible();
 		await saveCell("저장됨");
@@ -763,7 +763,7 @@ describe("the entry editor: a read that gets no answer", () => {
 		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
 		expect(title().elements()).toEqual([]);
 		// As before the read: none of the entry's controls, the properties button among them (it stood pressed and opened nothing), nor the languages.
-		for (const name of ["저장", "발행하기", "더 보기", "속성", "한국어", "+ 언어"])
+		for (const name of ["저장", "발행하기", "더 보기", "속성", "한국어", "언어"])
 			expect(button(name).elements()).toEqual([]);
 		cut = false;
 		await userEvent.click(button("다시 시도"));

@@ -1,4 +1,4 @@
-import { Spark } from "../../icons";
+import { Add, Spark } from "../../icons";
 import {
 	Box,
 	CurrentProposal,
@@ -112,7 +112,10 @@ export function EditorTranslateScreen({ stage = "new" }: { stage?: "new" | "tran
 						<TabLinks>
 							<TabLink>한국어</TabLink>
 							<TabLink current>English</TabLink>
-							<TabLink render={<button type="button" />}>+ 언어</TabLink>
+							<TabLink render={<button type="button" />}>
+								<Add aria-hidden />
+								언어
+							</TabLink>
 						</TabLinks>
 					</Box>
 					<Inline gap={12}>

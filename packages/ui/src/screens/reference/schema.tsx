@@ -1,4 +1,5 @@
 import type * as React from "react";
+import { Add } from "../../icons";
 import {
 	Button,
 	FieldRow,
@@ -97,7 +98,9 @@ export function SchemaPage({
 									{label}
 								</NavLink>
 							))}
-							<RailAction>+ 새 컬렉션</RailAction>
+							<RailAction>
+								<Add aria-hidden />새 컬렉션
+							</RailAction>
 						</>
 					}
 				>
@@ -138,10 +141,12 @@ export function SchemaPage({
 							<Stack gap={12}>
 								<Inline gap={4}>
 									<Button variant="ghost" size="sm">
-										+ 필드 추가
+										<Add aria-hidden />
+										필드 추가
 									</Button>
 									<Button variant="ghost" size="sm">
-										+ 묶음 추가
+										<Add aria-hidden />
+										묶음 추가
 									</Button>
 								</Inline>
 								<Text as="p" variant="meta" tone="subtle">

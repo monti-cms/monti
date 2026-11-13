@@ -31,7 +31,7 @@ import {
 	Textarea,
 	useSortableItem,
 } from "@monti-cms/ui";
-import { Close } from "@monti-cms/ui/icons";
+import { Add, Close } from "@monti-cms/ui/icons";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "./pick-one";
@@ -541,6 +541,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 							size="sm"
 							onClick={() => set({ options: [...form.options, { value: "", label: "", fresh: true }] })}
 						>
+							<Add aria-hidden />
 							{t("settings.field.addOption")}
 						</Button>
 					</Inline>

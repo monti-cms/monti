@@ -148,16 +148,16 @@ export const SaveRefused: Story = {
 export const Languages: Story = {
 	loaders: settingsAt("languages"),
 	play: async ({ canvasElement }) => {
-		await screen(canvasElement).page.findByRole("button", { name: "+ 언어 추가" }, wait);
+		await screen(canvasElement).page.findByRole("button", { name: "언어 추가" }, wait);
 	},
 };
 
-/** Flow 11, step 05: "+ 언어 추가" open on "zh". */
+/** Flow 11, step 05: "언어 추가" open on "zh". */
 export const LanguageSearch: Story = {
 	loaders: settingsAt("languages"),
 	play: async ({ canvasElement }) => {
 		const { page, body } = screen(canvasElement);
-		await userEvent.click(await page.findByRole("button", { name: "+ 언어 추가" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "언어 추가" }, wait));
 		await userEvent.type(await body.findByRole("combobox", {}, wait), "zh");
 		await body.findByRole("option", { name: /zh-Hans/ }, wait);
 	},
@@ -168,16 +168,16 @@ export const LanguageSearchEmpty: Story = {
 	loaders: settingsAt("languages"),
 	play: async ({ canvasElement }) => {
 		const { page, body } = screen(canvasElement);
-		await userEvent.click(await page.findByRole("button", { name: "+ 언어 추가" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "언어 추가" }, wait));
 		await userEvent.type(await body.findByRole("combobox", {}, wait), "klingon");
 		await body.findByText("맞는 언어가 없습니다.", {}, wait);
 	},
 };
 
-/** Picks a language in "+ 언어 추가". */
+/** Picks a language in "언어 추가". */
 async function addLanguage(canvasElement: HTMLElement, query: string, option: RegExp) {
 	const { page, body } = screen(canvasElement);
-	await userEvent.click(await page.findByRole("button", { name: "+ 언어 추가" }, wait));
+	await userEvent.click(await page.findByRole("button", { name: "언어 추가" }, wait));
 	await userEvent.type(await body.findByRole("combobox", {}, wait), query);
 	await userEvent.click(await body.findByRole("option", { name: option }, wait));
 	await waitFor(() => {
@@ -286,7 +286,7 @@ export const OneReview: Story = {
 		await userEvent.click(await page.findByRole("combobox", { name: "주소에 언어 표시" }, wait));
 		await userEvent.click(await body.findByRole("option", { name: "항상" }, wait));
 		await userEvent.click(page.getByRole("link", { name: /컬렉션/ }));
-		await userEvent.click(await page.findByRole("button", { name: "+ 필드 추가" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "필드 추가" }, wait));
 		await userEvent.click(await body.findByRole("option", { name: /^글자/ }, wait));
 		await userEvent.type(await body.findByLabelText(/^식별자/, {}, wait), "kicker");
 		await userEvent.click(body.getByRole("button", { name: "필드 추가" }));

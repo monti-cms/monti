@@ -1,7 +1,7 @@
 // Marks a part draws are not typed into words (docs/design/admin/components/button.md, menu.md). `check:design` runs this over the screens (the
 // admin's, the plugins' and the reference screens of `packages/ui/src/screens`) and the message dictionaries, as three rules:
 //
-// - `typed-glyph`: a word that starts with "+ " ("+ 새 글": the button takes the `Add` icon), a lone "×" or "✕" (the part draws its close mark), a
+// - `typed-glyph`: a word that starts with "+ " ("+ 새 글": the button takes the `Add` icon), a "×" or "✕" that is all a button says (the part draws its close mark; a "×" between two numbers is a size sign), a
 //   key typed as text ("Del", "⌫", "⌦", or "⌘", "⇧", "⌥" anywhere in it: `MenuShortcut keys` and `TooltipContent shortcut` write keys for the
 //   system the admin runs on). Read in string literals, template literals and JSX text; comments are not read.
 // - `button-title`: a `title` attribute on `Button`, `TextButton` or `IconButton`. The browser's own tooltip comes late, looks like no part of the
@@ -30,6 +30,8 @@ const KEY_WORD = /^(?:Del|Backspace|Esc)$/;
 /** A close mark typed as a letter. */
 const CLOSE_MARK = /^[×✕✖]$/;
 const BUTTONS = new Set(["Button", "TextButton", "IconButton"]);
+/** What a typed close mark would stand in: a button of the parts, or a plain one. */
+const CLOSERS = new Set([...BUTTONS, "button"]);
 /** Type syntax around a value: the value inside is read. */
 const VALUE_WRAPPERS = new Set([
 	"TSAsExpression",
@@ -40,13 +42,15 @@ const VALUE_WRAPPERS = new Set([
 
 /**
  * What is wrong with these words, or `null`. `shown`: the words are surely on the screen (JSX text, a JSX value, a dictionary's word), so a key's
- * name alone ("Del") is a typed key; elsewhere it is code comparing a key (`event.key === "Backspace"`).
+ * name alone ("Del") is a typed key; elsewhere it is code comparing a key (`event.key === "Backspace"`). `inButton`: the words are a button's
+ * own content, where a lone "×" is a close mark typed.
  */
-export function glyphOf(words, shown = true) {
+export function glyphOf(words, shown = true, inButton = false) {
 	const text = words.trim();
 	if (text === "") return null;
 	if (/^\+ \S/.test(text)) return 'a "+" typed before a label: give the button the `Add` icon (button.md)';
-	if (CLOSE_MARK.test(text)) return 'a typed "×": the part draws its own close mark (`Close` icon)';
+	// A "×" between two numbers (a size: 800 × 600) is a sign of its own; one that is all a button says is the close mark typed.
+	if (inButton && CLOSE_MARK.test(text)) return 'a typed "×": the part draws its own close mark (`Close` icon)';
 	if (KEY_GLYPH.test(text) || (shown && KEY_WORD.test(text)))
 		return "a key typed as text: pass the keys to `MenuShortcut keys` or `TooltipContent shortcut` (menu.md)";
 	return null;
@@ -74,8 +78,10 @@ export function problems(sources) {
 		}
 		const say = (node, rule, message) => found.push({ file, line: lineOf(text, node.start), rule, message });
 		const dictionary = file.endsWith("/messages.ts");
+		/** The JSX elements inside a button: a lone "×" in their text is the close mark typed. */
+		const inButtons = new Set();
 		const words = (node, value, shown) => {
-			const wrong = typeof value === "string" ? glyphOf(value, shown) : null;
+			const wrong = typeof value === "string" ? glyphOf(value, shown, inButtons.has(node)) : null;
 			if (wrong) say(node, "typed-glyph", `${JSON.stringify(value.trim())}: ${wrong}`);
 		};
 		/** The nodes whose value is drawn: a JSX value, and through it `&&`, `||`, `??`, a condition's branches and value wrappers. */
@@ -112,7 +118,11 @@ export function problems(sources) {
 				for (const expression of node.expressions) walk(expression);
 				return;
 			} else if (node.type === "JSXText") words(node, node.value, true);
-			else if (node.type === "JSXOpeningElement") {
+			else if (node.type === "JSXElement" && CLOSERS.has(nameOf(node.openingElement.name))) {
+				// The button's own words: its text, and the strings of its `{…}` children.
+				for (const child of node.children)
+					inButtons.add(child.type === "JSXExpressionContainer" ? child.expression : child);
+			} else if (node.type === "JSXOpeningElement") {
 				const name = nameOf(node.name);
 				for (const attribute of node.attributes) {
 					if (attribute.type !== "JSXAttribute") continue;
