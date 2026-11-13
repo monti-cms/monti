@@ -29,7 +29,7 @@
 | 언어 칸 | `LocaleCodes`(`codes`, `names`) | 글과 항목의 줄에만: 휴지통에 든 그 글의 언어. 기본 너비에서는 "KO +1", 열을 넓히면 "KO · EN". 세기만 한 언어가 있거나 좁아서 잘렸으면 가리킬 때 툴팁이 이름으로 말한다("한국어, 영어"). 게시글 목록의 언어 칸과 같은 부품이다. 언어가 하나인 사이트에는 열이 없다. 처음 폭은 `LIST_COLUMN_SIZE.locale`. |
 | 종류 칸 | `TableCell tone="subtle" truncate`(`title`) | 컬렉션의 이름("게시글", "메모", "태그")과 "미디어". 좁히면 "…"로 잘리고 `title`이 온전히 말한다. 폭은 `LIST_COLUMN_SIZE.one`. |
 | 남은 날 칸 | `TableCell align="end" truncate`(`title`) 안의 `TrashRowDate`(`left`, `urgent`, `byAssistant`. `date`는 주지 않는다) | 남은 날("30일 남음")만. 버린 날은 남은 날과 같은 것을 말하므로 두지 않는다(2026-11-05 소유자, 원칙 8). 7일 아래면 `urgent`로 경고 색(2026-11-11 소유자). 폴더 안의 행은 폴더와 남은 날이 같으면 비운다. 폭은 `LIST_COLUMN_SIZE.measure`. 좁히면 "…"로 잘리고 `title`이 온전히 말한다. |
-| 행 동작 | `RowActions` 안의 `RowMore` + `DropdownMenu`: "복원" │ "영구 삭제"(`variant="danger"`), 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. 보이는 "복원" 버튼은 없다(2026-11-11 소유자). 글의 줄은 휴지통에 든 그 글의 언어 모두를 함께 복원하고 함께 지운다. 영구 삭제는 `AlertDialog`로 묻는다. |
+| 행 동작 | `HandedRowActions`(`RowActions`에 포커스 넘김을 단 것) 안의 `RowMore` + `DropdownMenu`: "복원" │ "영구 삭제"(`variant="danger"`), 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. 보이는 "복원" 버튼은 없다(2026-11-11 소유자). 글의 줄은 휴지통에 든 그 글의 언어 모두를 함께 복원하고 함께 지운다. 영구 삭제는 `AlertDialog`로 묻는다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "복원" │ "영구 삭제"(`variant="danger"`, `MenuShortcut` Del) | ⋯와 같은 행이다. 고른 행 중 하나에서 열면 `ContextMenuLabel` "2개 항목"으로 시작하고 아이콘 없이 고른 행 모두에 한다(게시글 목록과 같다). 행에서 Delete를 눌러도 영구 삭제를 묻는다. |
 | 빈 휴지통 | `Empty`(`title` "휴지통이 비었습니다.") | 열 이름 행과 표 대신 이 한 줄. 도구 화면의 빈 목록과 같은 부품이다. |
 | 맞는 것이 없음 | `TableRow` 한 줄: `Text tone="subtle"` "맞는 것이 없습니다."와 `TextButton` "필터 해제" | 찾거나 걸렀는데 없을 때. 게시글 목록과 같다. |
@@ -69,7 +69,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 영구 삭제 확인 | `AlertDialog`(`AlertDialogTitle` "영구 삭제할까요?", `AlertDialogDescription`), `AlertDialogCancel` "취소", `AlertDialogAction variant="danger"` "영구 삭제" | 되돌릴 수 없으므로 매번 묻는다. 발행된 적이 있으면 남길 주소를 적는다("되돌릴 수 없습니다. 주소 /posts/about-old는 다시 쓸 수 없습니다."). 여럿이면 몇 개인지("2개를 영구 삭제합니다."), 폴더면 안의 것도 간다고("폴더 안의 것도 함께 삭제합니다.") 먼저 말한다. 가리키는 글이 있어도 막지 않는다(2026-11-11 소유자). |
+| 영구 삭제 확인 | `AlertDialog`(`AlertDialogTitle` "영구 삭제할까요?", `AlertDialogDescription`), `AlertDialogCancel` "취소", `AlertDialogAction variant="danger"` "영구 삭제" | 되돌릴 수 없으므로 매번 묻는다. 키보드로 확인해 줄이 사라지면 포커스는 다음 줄, 없으면 앞 줄, 없으면 목록의 시작(줄이 하나도 없으면 페이지의 첫 컨트롤)으로 간다. 줄의 ⋯에서 "복원"을 키보드로 눌러 줄이 사라질 때도 다음 줄로 간다. 포인터로 누른 것은 옮기지 않는다(tokens.md 상태, 만들며 정함 2026-11-13). 발행된 적이 있으면 남길 주소를 적는다("되돌릴 수 없습니다. 주소 /posts/about-old는 다시 쓸 수 없습니다."). 여럿이면 몇 개인지("2개를 영구 삭제합니다."), 폴더면 안의 것도 간다고("폴더 안의 것도 함께 삭제합니다.") 먼저 말한다. 가리키는 글이 있어도 막지 않는다(2026-11-11 소유자). |
 | 휴지통 비우기 확인 | `AlertDialog`(`AlertDialogTitle` "휴지통을 비울까요?", "9개를 영구 삭제합니다."), `AlertDialogAction variant="danger"` "비우기" | |
 
 ## 흐름 5 · 휴지통
