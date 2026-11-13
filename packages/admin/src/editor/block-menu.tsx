@@ -30,11 +30,11 @@ import { BlockIcon } from "./block-icon";
 import {
 	blocksBetween,
 	canMovePicked,
-	deletePicked,
 	duplicatePicked,
 	movePicked,
 	movePickedBy,
 	pickedBlocks,
+	removePicked,
 	setPick,
 } from "./block-pick";
 import { alignable, type BodyCatalogs } from "./catalog";
@@ -389,7 +389,8 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 							</DropdownMenuItem>
 							<DropdownMenuItem
 								onClick={() => {
-									runPicked(deletePicked);
+									removePicked(editor.view, picked);
+									editor.commands.focus();
 									setSpot(null);
 								}}
 							>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { dragPath, dropDrag, middleOf, pickWords, pointerPath } from "../../../../testing/input";
+import { caretAfter, dragPath, dropDrag, middleOf, pickWords, pointerPath } from "../../../../testing/input";
 import { scene } from "../../test/scene";
 import * as entry from "../screens/entry/entry.stories";
 
@@ -66,6 +66,8 @@ describe("T80 picking several blocks whole", () => {
 		await expect.poll(blocks).toEqual([FIRST, LAST]);
 		await userEvent.keyboard("{Meta>}z{/Meta}");
 		await expect.poll(blocks).toEqual([FIRST, HEADING, THIRD, LAST]);
+		// Back with a caret, not with words picked across the blocks that the next Backspace would run together.
+		expect(getSelection()?.isCollapsed).toBe(true);
 	});
 
 	it("the handle of a picked block opens the menu of them all: '블록 2개' with 위로, 아래로, 복제, 삭제", async () => {
@@ -121,5 +123,32 @@ describe("T80 picking several blocks whole", () => {
 		await dropDrag();
 		await expect.poll(blocks).toEqual([THIRD, LAST, FIRST, HEADING]);
 		await expect.poll(picked).toEqual([FIRST, HEADING]);
+	});
+
+	it("[dragging] [dropped] picked blocks dropped between two list items cut the list there, and every one of them lands, none other", async () => {
+		await opened();
+		await caretAfter(body().element(), "글뿐이다.");
+		await userEvent.keyboard("{Enter}- 하나{Enter}둘{Enter}셋");
+		await expect.poll(blocks).toEqual([FIRST, HEADING, THIRD, LAST, "하나둘셋"]);
+		await boxOver(FIRST, HEADING);
+		await expect.poll(picked).toEqual([FIRST, HEADING]);
+		const grip = (await handleOf(HEADING)).element();
+		const one = body().getByText("하나", { exact: true }).element().getBoundingClientRect();
+		await dragPath([middleOf(grip), { x: one.left + 20, y: one.bottom - 3 }], { steps: 12 });
+		await expect.poll(blocks).toEqual([THIRD, LAST, "하나", FIRST, HEADING, "둘셋"]);
+		await expect.poll(picked).toEqual([FIRST, HEADING]);
+	});
+
+	it("⌘X puts the picked blocks themselves on the clipboard and takes them out; pasting brings them back", async () => {
+		await opened();
+		await boxOver(HEADING, THIRD);
+		await expect.poll(picked).toEqual([HEADING, THIRD]);
+		await userEvent.keyboard("{Meta>}x{/Meta}");
+		await expect.poll(blocks).toEqual([FIRST, LAST]);
+		await caretAfter(body().element(), "글뿐이다.");
+		await userEvent.keyboard("{Enter}");
+		await userEvent.keyboard("{Meta>}v{/Meta}");
+		await expect.poll(blocks).toEqual([FIRST, LAST, HEADING, THIRD]);
+		expect(body().element().querySelector("h2")?.textContent).toBe(HEADING);
 	});
 });

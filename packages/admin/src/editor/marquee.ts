@@ -35,11 +35,20 @@ export function useMarquee(editor: Editor | null) {
 
 	useEffect(() => {
 		if (!editor) return;
+		/** Ends a box being drawn: its listeners and its scrolling go with the editor. */
+		let stop = () => {};
 		const down = (event: MouseEvent) => {
 			if (event.button !== 0 || !editor.isEditable || editor.isDestroyed) return;
 			const { view } = editor;
 			const target = event.target instanceof Element ? event.target : null;
 			if (!target || view.dom.contains(target) || target.closest(OWN)) return;
+			// A press on a scrollbar is the scrollbar's.
+			const scrolls =
+				target instanceof HTMLElement &&
+				(target.scrollHeight > target.clientHeight ||
+					target.scrollWidth > target.clientWidth ||
+					target === document.documentElement);
+			if (scrolls && (event.offsetX >= target.clientWidth || event.offsetY >= target.clientHeight)) return;
 			const body = view.dom.getBoundingClientRect();
 			// Beside the text, from its top to a little under its end; within the area that scrolls with it (not a panel next to it).
 			if (event.clientX >= body.left && event.clientX <= body.right) return;
@@ -59,6 +68,7 @@ export function useMarquee(editor: Editor | null) {
 			let frame = 0;
 
 			const draw = () => {
+				if (editor.isDestroyed) return;
 				// The start stays on the page where it was pressed, however far the area has scrolled since.
 				const anchorY = startY - (scroller.scrollTop - startScroll);
 				const top = Math.min(anchorY, y);
@@ -94,12 +104,16 @@ export function useMarquee(editor: Editor | null) {
 				}
 				draw();
 			};
-			const up = () => {
+			const end = () => {
 				window.removeEventListener("mousemove", move);
 				window.removeEventListener("mouseup", up);
 				cancelAnimationFrame(frame);
+				stop = () => {};
+			};
+			const up = () => {
+				end();
 				setBox(null);
-				if (!drawing) return;
+				if (!drawing || editor.isDestroyed) return;
 				// The click the mouse's release makes is not a press under the text (which would put the caret at the end).
 				const swallow = (click: MouseEvent) => {
 					click.stopPropagation();
@@ -109,11 +123,15 @@ export function useMarquee(editor: Editor | null) {
 				setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
 				if (pickedBlocks(view.state)) view.focus();
 			};
+			stop = end;
 			window.addEventListener("mousemove", move);
 			window.addEventListener("mouseup", up);
 		};
 		document.addEventListener("mousedown", down);
-		return () => document.removeEventListener("mousedown", down);
+		return () => {
+			document.removeEventListener("mousedown", down);
+			stop();
+		};
 	}, [editor]);
 
 	return { box };

@@ -1,9 +1,10 @@
 import { Extension } from "@tiptap/core";
-import type { Node as EditorNode } from "@tiptap/pm/model";
+import { type Node as EditorNode, Fragment, Slice } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { canMove, deleteBlock } from "./commands";
 import { type Drop, moveBlockTo, spots } from "./drag";
+import { nodeName } from "./schema";
 
 /**
  * Blocks picked whole (doc 03, editor-tools.md, picking several blocks, T80), apart from a text selection: a box dragged from the margin outside the text, a
@@ -86,6 +87,16 @@ export function blocksOfRange(view: EditorView, from: number, to: number): numbe
 	return smallest(touched);
 }
 
+/**
+ * Takes the picked blocks out of the body (the menu's row, Backspace, Delete, cut). First the caret goes to the first of them, outside the undo
+ * history: undo then brings the blocks back with a caret, not the text selection laid over them, which Backspace would merge.
+ */
+export function removePicked(view: EditorView, picked: readonly number[]) {
+	const caret = TextSelection.near(view.state.doc.resolve(Math.min((picked[0] ?? 0) + 1, view.state.doc.content.size)));
+	view.dispatch(view.state.tr.setSelection(caret).setMeta(key, picked).setMeta("addToHistory", false));
+	view.dispatch(deletePicked(view.state.tr, picked).scrollIntoView());
+}
+
 /** Takes the picked blocks out, last first; a list or quote left with nothing goes too, and an emptied body keeps one empty line. */
 export function deletePicked(tr: Transaction, picked: readonly number[]): Transaction {
 	for (const pos of [...picked].sort((a, b) => b - a)) deleteBlock(tr, pos);
@@ -99,20 +110,46 @@ export function deletePicked(tr: Transaction, picked: readonly number[]): Transa
  * with them, and they stay picked where they land.
  */
 export function movePicked(tr: Transaction, picked: readonly number[], drop: Pick<Drop, "pos" | "side">): Transaction {
+	// Each block is found again by its id before it moves: a move that cuts a list in two replaces the list whole, and a place read through that
+	// change would point at the block after it.
+	const ids = picked.map((pos) => idAt(tr.doc, pos));
 	const start = tr.steps.length;
+	const placeOf = (index: number) => {
+		const id = ids[index];
+		return id ? findBlock(tr.doc, id) : tr.mapping.slice(start).map(picked[index] ?? 0);
+	};
 	let anchor: Pick<Drop, "pos" | "side"> = drop;
-	const landed: { pos: number; steps: number }[] = [];
-	for (const from of picked) {
-		const at = moveBlockTo(tr, tr.mapping.slice(start).map(from), anchor);
-		if (at === null) continue;
-		landed.push({ pos: at, steps: tr.steps.length });
-		anchor = { pos: at, side: "after" };
+	const moved: number[] = [];
+	for (let index = 0; index < picked.length; index++) {
+		const from = placeOf(index);
+		if (from === null) continue;
+		if (index > 0) {
+			const before = moved.length > 0 ? placeOf(moved[moved.length - 1] ?? 0) : null;
+			if (before !== null) anchor = { pos: before, side: "after" };
+		}
+		if (moveBlockTo(tr, from, anchor) !== null) moved.push(index);
 	}
-	// Each one's place moved with the ones that came after it: read them in the body as it is now.
 	return setPick(
 		tr,
-		landed.map(({ pos, steps }) => tr.mapping.slice(steps).map(pos)),
+		moved.map(placeOf).filter((pos): pos is number => pos !== null),
 	);
+}
+
+/** The id a block keeps through moves (doc 03), or `null` for one without. */
+const idAt = (doc: EditorNode, pos: number): string | null => {
+	const id = doc.nodeAt(pos)?.attrs.blockId;
+	return typeof id === "string" && id !== "" ? id : null;
+};
+
+/** Where the block with this id is now. */
+function findBlock(doc: EditorNode, id: string): number | null {
+	let found: number | null = null;
+	doc.descendants((node, pos) => {
+		if (found !== null) return false;
+		if (node.attrs.blockId === id) found = pos;
+		return found === null && !node.isTextblock;
+	});
+	return found;
 }
 
 /** Moves the picked blocks one place up (before the block above the first) or down (after the block under the last). */
@@ -162,6 +199,12 @@ export function duplicatePicked(tr: Transaction, picked: readonly number[]): Tra
 	return setPick(tr, null);
 }
 
+/** Lets the pick go, with a caret where the picked blocks began: nothing typed next can write over all of them. */
+function letGo(view: EditorView) {
+	const { selection } = view.state;
+	view.dispatch(setPick(view.state.tr, null).setSelection(TextSelection.near(selection.$from)));
+}
+
 /** A key pressed while blocks are picked: Backspace, Delete and cut take them out; Esc, an arrow or a click lets them go; typing does not overwrite them. */
 function pickKey(view: EditorView, event: KeyboardEvent): boolean {
 	const picked = pickedBlocks(view.state);
@@ -169,30 +212,68 @@ function pickKey(view: EditorView, event: KeyboardEvent): boolean {
 		// Esc on picked words picks the blocks they run over.
 		const { selection } = view.state;
 		if (event.key !== "Escape" || selection.empty || event.shiftKey || event.metaKey || event.ctrlKey) return false;
+		if (view.composing || event.isComposing) return false;
 		const blocks = blocksOfRange(view, selection.from, selection.to);
 		if (blocks.length === 0) return false;
 		view.dispatch(setPick(view.state.tr, blocks));
 		return true;
 	}
+	// A syllable starting (Korean comes through composition): the caret goes first, so the syllable is written there, not over every block.
+	if (view.composing || event.isComposing || event.keyCode === 229) {
+		letGo(view);
+		return false;
+	}
 	const mod = event.metaKey || event.ctrlKey;
 	if (event.key === "Backspace" || event.key === "Delete") {
-		view.dispatch(deletePicked(view.state.tr, picked).scrollIntoView());
+		removePicked(view, picked);
 		return true;
 	}
 	if (mod && event.key.toLowerCase() === "x") {
-		// The copy is the browser's, of the selection laid over the blocks; the blocks go whole.
+		// The clipboard gets the picked blocks themselves (the `cut` handler below); then they go whole.
 		document.execCommand("copy");
-		view.dispatch(deletePicked(view.state.tr, picked).scrollIntoView());
+		removePicked(view, picked);
 		return true;
 	}
 	if (mod || ["Shift", "Alt", "Meta", "Control"].includes(event.key)) return false;
-	if (event.key === "Escape") {
-		view.dispatch(setPick(view.state.tr, null).setSelection(TextSelection.near(view.state.selection.$from)));
-		return true;
+	if (event.key.startsWith("Arrow")) {
+		// The arrow moves the caret on from where the picked blocks began.
+		letGo(view);
+		return false;
 	}
-	view.dispatch(view.state.tr.setMeta(key, null));
-	// An arrow moves the caret from where it is; any other key would write over several blocks at once, and is not taken.
-	return !event.key.startsWith("Arrow");
+	// Esc, Enter, a letter: the pick goes, and the key does nothing more (a letter would write over several blocks at once).
+	letGo(view);
+	return true;
+}
+
+/** The picked blocks as a slice for the clipboard: list items in a list of their kind, so they paste as list items. */
+function pickedSlice(state: EditorState, picked: readonly number[]): Slice {
+	const item = nodeName("listItem");
+	const nodes: EditorNode[] = [];
+	for (const pos of picked) {
+		const node = state.doc.nodeAt(pos);
+		if (!node) continue;
+		if (node.type.name !== item) {
+			nodes.push(node);
+			continue;
+		}
+		const list = state.doc.resolve(pos).parent;
+		const last = nodes[nodes.length - 1];
+		if (last?.type === list.type) nodes[nodes.length - 1] = last.copy(last.content.addToEnd(node));
+		else nodes.push(list.type.create({ ...list.attrs, blockId: null }, node));
+	}
+	return new Slice(Fragment.from(nodes), 0, 0);
+}
+
+/** Puts the picked blocks on the clipboard, as the editor puts any of its content there. */
+function copyPicked(view: EditorView, event: ClipboardEvent): boolean {
+	const picked = pickedBlocks(view.state);
+	if (!picked || !event.clipboardData) return false;
+	const { dom, text } = view.serializeForClipboard(pickedSlice(view.state, picked));
+	event.preventDefault();
+	event.clipboardData.clearData();
+	event.clipboardData.setData("text/html", dom.innerHTML);
+	event.clipboardData.setData("text/plain", text);
+	return true;
 }
 
 export const BlockPick = Extension.create({
@@ -212,9 +293,13 @@ export const BlockPick = Extension.create({
 						// Another selection lets the pick go.
 						if (tr.selectionSet) return null;
 						if (!tr.docChanged) return value;
+						// A picked block the change took out leaves the pick; it does not hand its place to the block after it.
 						const mapped = normalize(
 							tr.doc,
-							value.map((pos) => tr.mapping.map(pos, 1)),
+							value.flatMap((pos) => {
+								const result = tr.mapping.mapResult(pos, 1);
+								return result.deletedAfter ? [] : [result.pos];
+							}),
 						);
 						return mapped.length > 0 ? mapped : null;
 					},
@@ -238,6 +323,13 @@ export const BlockPick = Extension.create({
 							// A press in the text starts a caret or picked words of its own.
 							if (pickedBlocks(view.state)) view.dispatch(view.state.tr.setMeta(key, null));
 							return false;
+						},
+						copy: copyPicked,
+						cut(view, event) {
+							const picked = pickedBlocks(view.state);
+							if (!picked || !copyPicked(view, event)) return false;
+							removePicked(view, picked);
+							return true;
 						},
 					},
 				},
