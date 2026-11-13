@@ -86,7 +86,11 @@ function checkBox(
 	const path = document.createElementNS(SVG, "path");
 	path.setAttribute("d", CHECK_MARK_PATH);
 	svg.append(path);
-	box.append(svg);
+	// What takes the press is the box's 24px place; the drawn box, with its corners, is inside it.
+	const drawn = document.createElement("span");
+	drawn.setAttribute("data-check-box", "");
+	drawn.append(svg);
+	box.append(drawn);
 	/** The item stands one before the box's place, its own start. */
 	const item = () => {
 		const at = getPos();

@@ -21,7 +21,8 @@ import { cn } from "./cn";
  *   caption) still take text.
  * - `data-covered`: a block that is one thing, inside a range picked from a text (a drag or Shift+arrow that went over it): it stands on the
  *   selection's ground, as picked words do.
- * - `data-check`, the box at the start of a checklist's item (`ul[data-checklist]`), and `data-checked` on the item: drawn like `Checkbox` (14px, the
+ * - `data-check`, the box at the start of a checklist's item (`ul[data-checklist]`), pressable over 24px, with `data-check-box` inside it that draws the
+ *   box; and `data-checked` on the item: drawn like `Checkbox` (14px, the
  *   faint ring; ticked, the ink ring and fill with its ✓). Where the text is written (`contenteditable`) the box shows the hand and `Checkbox`'s hover,
  *   and with the keyboard's focus `Checkbox`'s line around it.
  */
@@ -39,11 +40,13 @@ const EDITOR_BODY = cn(
 	"[&_li]:my-0 [&_li]:pl-monti-4",
 	"[&_ul[data-checklist]]:list-none [&_ul[data-checklist]]:pl-monti-4",
 	"[&_ul[data-checklist]>li]:relative [&_ul[data-checklist]>li]:pl-monti-24",
-	// A checklist item's box is the `data-check` the editor puts at the item's start: `Checkbox`'s 14px box, its ✓ drawn when the item is ticked. While the
-	// text is written it is pressed to tick and answers the pointer as `Checkbox` does (`CHECK_HOVER`); read only, it is a mark.
-	"[&_[data-check]]:absolute [&_[data-check]]:top-monti-8 [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:items-center [&_[data-check]]:justify-center [&_[data-check]]:rounded-monti-sm [&_[data-check]]:border-[1.5px] [&_[data-check]]:border-monti-faint [&_[data-check]]:text-monti-on-emphasis [&_[data-check]]:transition-colors [&_[data-check]:focus-visible]:outline-2 [&_[data-check]:focus-visible]:outline-monti-contrast/50 [&_[data-check]_svg]:invisible",
-	"[&_li[data-checked]>[data-check]]:border-monti-contrast [&_li[data-checked]>[data-check]]:bg-monti-emphasis [&_li[data-checked]>[data-check]_svg]:visible",
-	"[&_[contenteditable=true]_[data-check]]:cursor-pointer [&_[contenteditable=true]_[data-check]:hover]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&_[contenteditable=true]_li:not([data-checked])>[data-check]:hover]:border-(color:--monti-fg-muted)",
+	// A checklist item's box: the `data-check` the editor puts at the item's start is what takes the press, 14px with a layer that reaches 24px around it
+	// (`height-control-xs`, the least pressable size), and draws nothing itself; `Checkbox`'s 14px box with its corners and its ✓ is `data-check-box` inside it.
+	// While the text is written it is pressed (or Spaced) to tick and answers the pointer as `Checkbox` does (`CHECK_HOVER`); read only, it is a mark.
+	"[&_[data-check]]:absolute [&_[data-check]]:top-monti-8 [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:outline-none [&_[data-check]]:after:absolute [&_[data-check]]:after:top-1/2 [&_[data-check]]:after:left-1/2 [&_[data-check]]:after:size-(--monti-height-control-xs) [&_[data-check]]:after:-translate-x-1/2 [&_[data-check]]:after:-translate-y-1/2 [&_[data-check]]:after:content-['']",
+	"[&_[data-check-box]]:flex [&_[data-check-box]]:size-full [&_[data-check-box]]:items-center [&_[data-check-box]]:justify-center [&_[data-check-box]]:rounded-monti-sm [&_[data-check-box]]:border-[1.5px] [&_[data-check-box]]:border-monti-faint [&_[data-check-box]]:text-monti-on-emphasis [&_[data-check-box]]:transition-colors [&_[data-check]:focus-visible>[data-check-box]]:outline-2 [&_[data-check]:focus-visible>[data-check-box]]:outline-monti-contrast/50 [&_[data-check-box]_svg]:invisible",
+	"[&_li[data-checked]>[data-check]>[data-check-box]]:border-monti-contrast [&_li[data-checked]>[data-check]>[data-check-box]]:bg-monti-emphasis [&_li[data-checked]>[data-check]_svg]:visible",
+	"[&_[contenteditable=true]_[data-check]]:cursor-pointer [&_[contenteditable=true]_[data-check]:hover>[data-check-box]]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&_[contenteditable=true]_li:not([data-checked])>[data-check]:hover>[data-check-box]]:border-(color:--monti-fg-muted)",
 	// A quote, code, a table and the divider.
 	"[&_blockquote]:mt-0 [&_blockquote]:mb-monti-20 [&_blockquote]:border-l-2 [&_blockquote]:border-monti-strong [&_blockquote]:pl-monti-16 [&_blockquote]:text-monti-muted [&_blockquote>*:last-child]:mb-0",
 	"[&_pre]:mt-0 [&_pre]:mb-monti-20 [&_pre]:overflow-x-auto [&_pre]:rounded-monti-lg [&_pre]:bg-monti-muted [&_pre]:px-monti-16 [&_pre]:py-monti-12 [&_pre]:font-mono [&_pre]:text-monti-code",

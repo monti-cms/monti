@@ -10,19 +10,21 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The box the editor puts at a checklist item's start (`data-check`), as the editor draws it. */
+/** The box the editor puts at a checklist item's start (`data-check`, the pressable place, with the drawn `data-check-box`), as the editor draws it. */
 const CheckBox = () => (
 	<span data-check="" contentEditable={false}>
-		<svg
-			viewBox="0 0 14 14"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="1.5"
-			className="size-3.5"
-			aria-hidden="true"
-		>
-			<path d={CHECK_MARK_PATH} />
-		</svg>
+		<span data-check-box="">
+			<svg
+				viewBox="0 0 14 14"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="1.5"
+				className="size-3.5"
+				aria-hidden="true"
+			>
+				<path d={CHECK_MARK_PATH} />
+			</svg>
+		</span>
 	</span>
 );
 

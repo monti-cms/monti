@@ -28,7 +28,10 @@ describe("what is pressed in the text answers the pointer", () => {
 		const open = box("발행하기");
 		expect(getComputedStyle(open.element()).cursor).toBe("pointer");
 		await userEvent.hover(open);
-		await expect.poll(() => getComputedStyle(open.element()).boxShadow).not.toBe("none");
+		// The drawn box answers; what takes the press is 24px around it (HIT_AREA).
+		const drawn = open.element().querySelector("[data-check-box]") as Element;
+		await expect.poll(() => getComputedStyle(drawn).boxShadow).not.toBe("none");
+		expect(getComputedStyle(open.element(), "::after").height).toBe("24px");
 		await userEvent.click(open);
 		await expect.element(box("발행하기")).toHaveAttribute("aria-checked", "true");
 		await userEvent.click(box("발행하기"));
@@ -66,7 +69,9 @@ describe("what is pressed in the text answers the pointer", () => {
 		await userEvent.keyboard(" ");
 		await expect.element(box("발행하기")).toHaveAttribute("aria-checked", "false");
 		// The box draws the keyboard's line, as a checkbox does.
-		expect(getComputedStyle(box("발행하기").element()).outlineStyle).not.toBe("none");
+		expect(
+			getComputedStyle(box("발행하기").element().querySelector("[data-check-box]") as Element).outlineStyle,
+		).not.toBe("none");
 	});
 
 	it("a footnote's number in the text turns ink and underlined under the pointer", async () => {
