@@ -1192,7 +1192,9 @@ export function EntryEditor({
 								<DropdownMenuItem
 									onClick={async () => {
 										const file = await exporter.run({ ids: [id] });
-										if (file.ok) await saveBackup(file.body, { media: true });
+										if (!file.ok) return;
+										const { missing } = await saveBackup(file.body, { media: true });
+										if (missing > 0) toast.error(t("data.backup.missing", { count: missing }));
 									}}
 								>
 									<Export aria-hidden />

@@ -20,6 +20,8 @@ export type BackupManifest = {
 	kind: "backup" | "export";
 	createdAt: string;
 	schemaHash: string;
+	/** An export's picked entries, by translation group: what it was asked for, apart from what those point at. */
+	picked?: string[];
 	counts: { entries: number; published: number; folders: number; media: number; templates: number };
 };
 
@@ -137,6 +139,7 @@ export async function readBackup(db: Db, schema: Schema, now: Date, groups?: rea
 		kind: whole ? "backup" : "export",
 		createdAt: now.toISOString(),
 		schemaHash: schemaHash(schema),
+		...(picked === null ? {} : { picked }),
 		counts: {
 			entries: entries.length,
 			published: published.size,

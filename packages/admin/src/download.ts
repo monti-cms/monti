@@ -19,16 +19,18 @@ export function download(name: string, file: Blob) {
 export async function saveBackup(
 	backup: BackupOutput,
 	options: { media: boolean; onProgress?: (share: number) => void },
-): Promise<void> {
+): Promise<{ missing: number }> {
 	const encoder = new TextEncoder();
 	const total = options.media ? backup.media.reduce((sum, file) => sum + file.size, 0) : 0;
 	let done = 0;
+	let missing = 0;
 	async function* files(): AsyncGenerator<ZipFile> {
 		for (const [name, text] of Object.entries(backup.files)) yield { name, bytes: encoder.encode(text) };
 		if (!options.media) return;
 		for (const file of backup.media) {
 			const bytes = await readBytes(file.url);
 			if (bytes) yield { name: `media/${file.key}`, bytes };
+			else missing += 1;
 			done += file.size;
 			options.onProgress?.(total === 0 ? 1 : Math.min(1, done / total));
 		}
@@ -36,4 +38,5 @@ export async function saveBackup(
 	const parts: BlobPart[] = [];
 	for await (const part of zipStream(files())) parts.push(part as Uint8Array<ArrayBuffer>);
 	download(backup.name, new Blob(parts, { type: "application/zip" }));
+	return { missing };
 }

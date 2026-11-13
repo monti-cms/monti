@@ -200,7 +200,7 @@ describe("reading a markdown file (T34)", () => {
 				"",
 				"![cover][c]",
 				"",
-				"[run](javascript:alert(1)) it",
+				"[run](javascript:alert(1)) [it](java&#x09;script:alert(1))",
 				"",
 				"[d]: https://example.com/docs",
 				'[c]: ./img/cover.png "The cover"',
@@ -217,7 +217,9 @@ describe("reading a markdown file (T34)", () => {
 			type: "image",
 			attrs: { src: "./img/cover.png", alt: "cover", caption: "The cover" },
 		});
-		expect(last?.content).toEqual([{ type: "text", text: "run it" }]);
+		// Neither is a link: the words stay, with no mark.
+		expect(last?.content?.map((each) => ("text" in each ? each.text : "")).join("")).toBe("run it");
+		expect(JSON.stringify(last?.content)).not.toContain("link");
 		expect(doc.blocks).toHaveLength(3);
 	});
 

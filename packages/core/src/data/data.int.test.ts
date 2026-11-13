@@ -260,7 +260,7 @@ describe("monti restore (14-3)", () => {
 		);
 	});
 
-	it("14-3 it runs only on an empty database, and with one problem writes nothing and says every problem", async () => {
+	it("14-3 it runs only on an empty database, and with a problem writes nothing and says what is wrong", async () => {
 		const monti = site();
 		await fill(monti);
 		const dir = await mkdtemp(path.join(tmpdir(), "monti-backup-"));
@@ -322,7 +322,9 @@ describe("an export imported into another site (flow 9, 04–09)", () => {
 		expect(seen).toMatchObject({ kind: "monti", found: 3, same: 0, unfit: 0 });
 		expect(seen.keys.find((key) => key.key === "tags")).toMatchObject({ field: "tags", creates: 1, createsIn: "tag" });
 		// The picture is in the upload and not in this library: it is sent up first, then named to the import.
-		expect(seen.pictures).toEqual([{ name: made.cover, file: `media/${exported.media[0].key}` }]);
+		expect(seen.pictures).toEqual([
+			{ name: `media/${exported.media[0].key}`, file: `media/${exported.media[0].key}`, label: "cover.jpg" },
+		]);
 		const cover = await picture(to, otherStorage, "cover.jpg");
 
 		const done = await run<{ output: Imported; activityId: string }>(to, "data.import", {
@@ -501,7 +503,7 @@ describe("files a plugin reads (flow 9, 05–07)", () => {
 		]);
 		expect(seen.fields.map((field) => field.name)).toEqual(["title", "slug", "summary", "cover", "tags", "format"]);
 		expect(seen.fields.find((field) => field.name === "summary")?.label).toBe("요약");
-		expect(seen.pictures).toEqual([{ name: "./img/a.png", file: "posts/img/a.png" }]);
+		expect(seen.pictures).toEqual([{ name: "posts/img/a.png", file: "posts/img/a.png" }]);
 		expect(seen.unknown).toEqual([{ name: "Tweet", entries: 1 }]);
 		// Nothing maps to the required summary yet: both entries would lack it.
 		expect(seen.emptyRequired).toEqual([{ field: "summary", label: "요약", entries: 2 }]);
@@ -587,6 +589,56 @@ describe("files a plugin reads (flow 9, 05–07)", () => {
 		await run(monti, "activity.undo", { id: done.activityId });
 		expect(await db.selectFrom("entries").select("id").where("trashed_at", "is", null).execute()).toEqual([]);
 		expect(await db.selectFrom("media").select("id").where("trashed_at", "is", null).execute()).toEqual([]);
+	});
+
+	it("14-1 posts kept as folders each get their own picture of the same name and their folder's name as address; a name with a bare % is just a name; a trashed folder of imported pictures is not used", async () => {
+		const monti = site([text]);
+		const bundles = [
+			{ name: "one/index.txt", text: "하나\n하나의 본문.\n![./cover.png" },
+			{ name: "two/index.txt", text: "둘\n둘의 본문.\n![./cover.png\n![50%off.png" },
+		];
+		const inUpload = ["one/cover.png", "two/cover.png"];
+		const seen = await run<Extract<Inspected, { kind: "files" }>>(monti, "data.inspect", {
+			collection: "post",
+			files: bundles,
+			has: inUpload,
+		});
+		expect(seen.pictures.map((picture) => picture.name).sort()).toEqual(inUpload);
+		expect(seen.missingPictures).toBe(1);
+		// The folder of an earlier import is in the trash: a new one is made beside it.
+		const old = await write<{ id: string }>(monti, "folders.create", {
+			scope: "media",
+			parentId: null,
+			name: "가져온 이미지",
+		});
+		await db.updateTable("folders").set({ trashed_at: new Date() }).where("id", "=", old.id).execute();
+		const uploaded: Record<string, unknown> = {};
+		for (const [index, name] of inUpload.entries()) {
+			const key = `00000000-0000-4000-8000-0000000000b${index}.png`;
+			await storage.put(key, new Uint8Array([7, index]), { mime: "image/png" });
+			uploaded[name] = { name: `cover-${index}.png`, original: { key, width: 4, height: 4 } };
+		}
+		await write<Imported>(monti, "data.import", {
+			collection: "post",
+			name: "bundles.zip",
+			files: bundles,
+			has: inUpload,
+			uploaded,
+			mediaFolder: "가져온 이미지",
+		});
+		const rows = await db
+			.selectFrom("entries")
+			.select(["slug", "doc"])
+			.where("collection", "=", "post")
+			.orderBy("slug")
+			.execute();
+		expect(rows.map((row) => row.slug)).toEqual(["one", "two"]);
+		const media = await db.selectFrom("media").select(["id", "name", "folder_id"]).orderBy("name").execute();
+		expect(media.map((file) => file.name)).toEqual(["cover-0.png", "cover-1.png"]);
+		expect(media.every((file) => file.folder_id !== old.id && file.folder_id !== null)).toBe(true);
+		expect(JSON.stringify(rows[0].doc)).toContain(media[0].id);
+		expect(JSON.stringify(rows[0].doc)).not.toContain(media[1].id);
+		expect(JSON.stringify(rows[1].doc)).toContain(media[1].id);
 	});
 
 	it("14-2 a site with no plugin for them does not read .md and .mdx, and says which plugin does; other files are just not read", async () => {

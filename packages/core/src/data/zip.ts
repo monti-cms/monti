@@ -23,11 +23,46 @@ function crc32(bytes: Uint8Array): number {
 	return (crc ^ 0xffffffff) >>> 0;
 }
 
-async function through(bytes: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> {
+/**
+ * Bytes through a stream that packs or unpacks them. With `most`, reading stops with an error once more than that has come out: a packed
+ * file says how large it is, and one that unpacks to more is not what it says (a file made to fill the memory).
+ */
+async function through(
+	bytes: Uint8Array,
+	stream: CompressionStream | DecompressionStream,
+	most?: number,
+): Promise<Uint8Array> {
 	const writer = stream.writable.getWriter();
-	void writer.write(bytes as Uint8Array<ArrayBuffer>).then(() => writer.close());
-	return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+	// A broken stream fails the read below, which is where it is caught: the write's own failure must not go unheard beside it.
+	void writer
+		.write(bytes as Uint8Array<ArrayBuffer>)
+		.then(() => writer.close())
+		.catch(() => {});
+	const reader = stream.readable.getReader();
+	const parts: Uint8Array[] = [];
+	let length = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		length += value.length;
+		if (most !== undefined && length > most) {
+			await reader.cancel().catch(() => {});
+			throw new Error("The file unpacks to more than it says.");
+		}
+		parts.push(value);
+	}
+	const whole = new Uint8Array(length);
+	let at = 0;
+	for (const part of parts) {
+		whole.set(part, at);
+		at += part.length;
+	}
+	return whole;
 }
+
+/** What the plain zip format holds: sizes and offsets in 32 bits, the count of files in 16. */
+const MOST_BYTES = 0xffffffff;
+const MOST_FILES = 0xffff;
 
 /** What is already compressed gains nothing from deflate: it is stored as it is. */
 const PACKED = /\.(png|jpe?g|gif|webp|avif|zip|gz|mp4|mov|mp3|pdf|woff2?)$/i;
@@ -57,6 +92,9 @@ export async function* zipStream(files: AsyncIterable<ZipFile> | Iterable<ZipFil
 		const packed = deflated && deflated.length < file.bytes.length ? deflated : file.bytes;
 		const method = packed === file.bytes ? 0 : 8;
 		const crc = crc32(file.bytes);
+		// Past these the numbers of the format wrap, and the file would be one nothing can read: it is refused, not written wrong.
+		if (written.length >= MOST_FILES || offset + 30 + name.length + packed.length > MOST_BYTES)
+			throw new Error("The archive is larger than a zip holds (4 GB, 65,535 files).");
 		const local = header(0x04034b50, 30);
 		local.view.setUint16(4, 20, true);
 		local.view.setUint16(6, 0x0800, true); // names are UTF-8
@@ -130,7 +168,8 @@ export function unzip(
 	for (let index = 0; index < count; index++) {
 		if (at + 46 > bytes.length || view.getUint32(at, true) !== 0x02014b50) return null;
 		const nameLength = view.getUint16(at + 28, true);
-		const name = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength));
+		// One spelling of a name: a zip made on a Mac writes its accented and Korean letters taken apart.
+		const name = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength)).normalize("NFC");
 		// A folder's own entry holds nothing.
 		if (!name.endsWith("/"))
 			files.set(name, {
@@ -151,7 +190,7 @@ export function unzip(
 			if (file.method === 0) return packed;
 			if (file.method !== 8) return null;
 			try {
-				return await through(packed, new DecompressionStream("deflate-raw"));
+				return await through(packed, new DecompressionStream("deflate-raw"), file.size);
 			} catch {
 				return null;
 			}

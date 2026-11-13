@@ -54,10 +54,18 @@ type Upload =
 			lines: EntryLine[];
 			/** The file's own name for a file of the site it came from, by id. */
 			mediaNames: Map<string, string>;
+			/** What a file of the upload was called in the library it came from, by its name in the upload. */
+			mediaLabels: Map<string, string>;
 	  };
 
 const extension = (name: string) => /\.[^./]+$/.exec(name)?.[0].toLowerCase() ?? "";
 const baseName = (name: string) => (name.split("/").at(-1) ?? name).replace(/\.[^.]+$/, "");
+/** What a file is called for its address: its own name, or its folder's when it is the folder's `index` (a post kept as a folder). */
+const fileSlug = (name: string) => {
+	const own = baseName(name);
+	const folder = name.split("/").at(-2);
+	return own.toLowerCase() === "index" && folder ? folder : own;
+};
 
 /** The text of a body, block after block: what "the same body" is told by. */
 function docText(doc: Doc | null): string {
@@ -86,8 +94,11 @@ async function readUpload(ctx: OperationContext, input: ImportInput): Promise<Up
 	const schema = ctx.site.schema();
 	const byName = new Map(input.files.map((file) => [file.name, file.text]));
 	if (byName.has("manifest.json") || byName.has("entries.jsonl")) {
-		const lines = readManifest(byName.get("manifest.json")) ? readLines<EntryLine>(byName.get("entries.jsonl")) : null;
+		const manifest = readManifest(byName.get("manifest.json"));
+		const lines = manifest ? readLines<EntryLine>(byName.get("entries.jsonl")) : null;
 		if (lines === null) return { kind: "unreadable", reason: { key: "data.unreadable" } };
+		// An export also holds what its entries point at, to be found by address: only the entries it was asked for come in as entries.
+		const picked = manifest?.picked ? new Set(manifest.picked) : null;
 		const folders = new Map(
 			(readLines<{ id: string; parent_id: string | null; name: string }>(byName.get("folders.jsonl")) ?? []).map(
 				(row) => [row.id, row],
@@ -104,18 +115,23 @@ async function readUpload(ctx: OperationContext, input: ImportInput): Promise<Up
 			return names;
 		};
 		const locales = new Set(schema.locales.list.map((locale) => locale.code));
-		const mediaNames = new Map(
-			(readLines<{ id: string; original_key: string }>(byName.get("media.jsonl")) ?? []).map((row) => [
-				row.id,
-				`media/${row.original_key}`,
-			]),
+		const mediaRows = readLines<{ id: string; original_key: string; name?: string }>(byName.get("media.jsonl")) ?? [];
+		const mediaNames = new Map(mediaRows.map((row) => [row.id, `media/${row.original_key}`]));
+		const mediaLabels = new Map(
+			mediaRows.flatMap((row) => (row.name ? [[`media/${row.original_key}`, row.name] as const] : [])),
 		);
 		return {
 			kind: "monti",
 			lines,
 			mediaNames,
+			mediaLabels,
 			candidates: lines
-				.filter((line) => line.entry.collection === input.collection && locales.has(line.entry.locale))
+				.filter(
+					(line) =>
+						line.entry.collection === input.collection &&
+						locales.has(line.entry.locale) &&
+						(picked === null || picked.has(line.entry.translation_group)),
+				)
 				.map((line) => ({
 					source: line.entry.title || line.entry.slug || line.entry.id,
 					locale: line.entry.locale,
@@ -155,8 +171,8 @@ async function readUpload(ctx: OperationContext, input: ImportInput): Promise<Up
 			source: file.name,
 			locale: schema.locales.source,
 			group: randomUUID(),
-			title: title || firstHeading(doc) || baseName(file.name),
-			slug: typeof read.values.slug === "string" ? read.values.slug : baseName(file.name),
+			title: title || firstHeading(doc) || fileSlug(file.name),
+			slug: typeof read.values.slug === "string" ? read.values.slug : fileSlug(file.name),
 			raw: read.values,
 			doc,
 			folder: [],
@@ -164,7 +180,7 @@ async function readUpload(ctx: OperationContext, input: ImportInput): Promise<Up
 		});
 	}
 	if (candidates.length === 0) return { kind: "unreadable", reason: { key: "data.unreadable" } };
-	return { kind: "files", candidates, lines: [], mediaNames: new Map() };
+	return { kind: "files", candidates, lines: [], mediaNames: new Map(), mediaLabels: new Map() };
 }
 
 /** The keys of the upload that can go to a field, each with a value to show and where it goes unless a person says otherwise. */
@@ -207,10 +223,10 @@ type Fitted = {
 type ItemOf = (collection: string, item: { title: string; slug?: string }) => Promise<string | null>;
 
 /** What the library has of the pictures an upload names: by the name or old id they were given under, the id here. */
-type MediaOf = (name: string) => string | null;
+type MediaOf = (name: string, from: string) => string | null;
 
 /** A body with its pictures and files pointed at this site's library; what the library does not have is taken out, a picture as its words. */
-function fitDoc(doc: Doc | null, mediaOf: MediaOf, count: { missing: number }): Doc | null {
+function fitDoc(doc: Doc | null, mediaOf: (name: string) => string | null, count: { missing: number }): Doc | null {
 	if (!doc) return null;
 	const fitBlocks = (blocks: Block[]): Block[] =>
 		blocks.flatMap((block): Block[] => {
@@ -247,8 +263,10 @@ async function fitEntry(
 	candidate: Candidate,
 	mapping: Record<string, string | null>,
 	itemOf: ItemOf,
-	mediaOf: MediaOf,
+	libraryOf: MediaOf,
 ): Promise<Fitted> {
+	// A path is read from the file that wrote it: two posts may each have a `./cover.png` of their own.
+	const mediaOf = (name: string) => libraryOf(name, candidate.source);
 	const fields = storedFields(ctx.site.schema().collections[collection]);
 	const count = { missing: 0 };
 	const values: Record<string, unknown> = {};
@@ -314,33 +332,40 @@ function namedPictures(
 	fields: Record<string, StoredField>,
 	leftOut: (candidate: Candidate) => boolean,
 ) {
-	const names = new Set<string>();
-	const visit = (blocks: Block[]) => {
-		for (const block of blocks) {
-			if (block.type === "image" || block.type === "file") {
-				const named = block.attrs?.src ?? block.attrs?.media;
-				if (typeof named === "string" && named !== "") names.add(named);
-			}
-			if (block.children) visit(block.children);
-		}
-	};
+	const pairs = new Map<string, { name: string; from: string }>();
 	for (const candidate of upload.candidates) {
 		if (leftOut(candidate)) continue;
+		const add = (name: unknown) => {
+			if (typeof name === "string" && name !== "")
+				pairs.set(`${candidate.source}\n${name}`, { name, from: candidate.source });
+		};
+		const visit = (blocks: Block[]) => {
+			for (const block of blocks) {
+				if (block.type === "image" || block.type === "file") add(block.attrs?.src ?? block.attrs?.media);
+				if (block.children) visit(block.children);
+			}
+		};
 		visit(candidate.doc?.blocks ?? []);
 		for (const [key, raw] of Object.entries(candidate.raw)) {
 			const field = mapping[key];
 			if (!field || fields[field]?.kind !== "media") continue;
-			const named = typeof raw === "string" ? raw : (mediaValueOf(raw)?.media ?? "");
-			if (named) names.add(named);
+			add(typeof raw === "string" ? raw : (mediaValueOf(raw)?.media ?? ""));
 		}
 	}
-	return [...names];
+	return [...pairs.values()];
 }
 
 /** A path as a body writes it (`./images/a.png`, `/images/a.png`) against the upload's file names: the file it means, when the upload has it. */
 function inUpload(name: string, has: readonly string[], from: string): string | null {
 	if (/^[a-z]+:\/\//i.test(name)) return null;
-	const clean = decodeURIComponent(name.split(/[?#]/)[0] ?? "").replace(/^\.?\//, "");
+	const written = name.split(/[?#]/)[0] ?? "";
+	let decoded = written;
+	try {
+		decoded = decodeURIComponent(written);
+	} catch {
+		// A name with a bare "%" is that name.
+	}
+	const clean = decoded.normalize("NFC").replace(/^\.?\//, "");
 	const dir = from.includes("/") ? from.slice(0, from.lastIndexOf("/") + 1) : "";
 	const parts: string[] = [];
 	for (const part of `${dir}${clean}`.split("/")) {
@@ -348,7 +373,12 @@ function inUpload(name: string, has: readonly string[], from: string): string | 
 		else if (part !== "." && part !== "") parts.push(part);
 	}
 	const exact = parts.join("/");
-	return has.find((each) => each === exact) ?? has.find((each) => each.endsWith(`/${clean}`) || each === clean) ?? null;
+	const found = has.find((each) => each === exact) ?? has.find((each) => each.endsWith(`/${clean}`) || each === clean);
+	if (found) return found;
+	// Files chosen one by one have no folders: a path names the one file of that name, when there is just one.
+	const last = clean.split("/").at(-1);
+	const alike = has.filter((each) => each.split("/").at(-1) === last);
+	return alike.length === 1 ? (alike[0] as string) : null;
 }
 
 export type Inspected =
@@ -366,7 +396,8 @@ export type Inspected =
 			/** `role` marks the two every collection has (the entry's title and its address): a screen calls them by its own words. */
 			fields: { name: string; label: string; kind: string; role?: "title" | "slug" }[];
 			/** Pictures the upload carries that the entries name: sent up first, each then given to the import by this name. */
-			pictures: { name: string; file: string }[];
+			/** `label` is what the file was called in the library it came from, when the upload says. */
+			pictures: { name: string; file: string; label?: string }[];
 			/** Pictures named that are neither in the upload nor in the library. */
 			missingPictures: number;
 			/** Components no block is known for, with how many entries have each: kept as written, a to-do on those entries. */
@@ -439,7 +470,8 @@ async function prepare(ctx: OperationContext, input: ImportInput) {
 		return sameAs(bodies, first) ? "same" : null;
 	};
 	// The pictures the entries that go in name; among them the library's own files, when the upload came from this site.
-	const named = namedPictures(upload, mapping, fields, (candidate) => outOf(candidate) !== null);
+	const pairs = namedPictures(upload, mapping, fields, (candidate) => outOf(candidate) !== null);
+	const named = [...new Set(pairs.map((pair) => pair.name))];
 	const here = new Set(
 		named.length === 0
 			? []
@@ -453,15 +485,32 @@ async function prepare(ctx: OperationContext, input: ImportInput) {
 				).map((row) => row.id),
 	);
 	const given = input.media ?? {};
-	const mediaOf: MediaOf = (name) => given[name] ?? (here.has(name) ? name : null);
-	return { unreadable: null, upload, fields, labels, keys, mapping, named, mediaOf, outOf, given, here } as const;
+	/** The file of the upload a name means: a Monti file carries it under its key, other files name it by a path beside themselves. */
+	const fileOf = (name: string, from: string): string | null => {
+		const key = upload.mediaNames.get(name);
+		return key ? (input.has.includes(key) ? key : null) : inUpload(name, input.has, from);
+	};
+	const mediaOf: MediaOf = (name, from) =>
+		given[fileOf(name, from) ?? ""] ?? given[name] ?? (here.has(name) ? name : null);
+	return {
+		unreadable: null,
+		upload,
+		fields,
+		labels,
+		keys,
+		mapping,
+		pairs,
+		fileOf,
+		mediaOf,
+		outOf,
+	} as const;
 }
 
 /** What the upload holds for a collection and what importing it would do (doc 14, `data.inspect`). Nothing is written. */
 export async function inspectUpload(ctx: OperationContext, input: ImportInput): Promise<Inspected> {
 	const ready = await prepare(ctx, input);
 	if (ready.unreadable !== null) return { kind: "unreadable", reason: ready.unreadable };
-	const { upload, fields, labels, keys, mapping, named, mediaOf, outOf, given, here } = ready;
+	const { upload, fields, labels, keys, mapping, pairs, fileOf, mediaOf, outOf } = ready;
 	const creates = new Map<string, Set<string>>();
 	const itemOf: ItemOf = async (collection, item) => {
 		const target = ctx.site.schema().collections[collection];
@@ -502,17 +551,17 @@ export async function inspectUpload(ctx: OperationContext, input: ImportInput): 
 				)
 					empty.set(field, (empty.get(field) ?? 0) + 1);
 	}
-	const pictures = named.flatMap((name) => {
-		if (given[name] || here.has(name)) return [];
-		// A Monti file carries a picture under its key; other files name it by a path beside themselves.
-		const key = upload.mediaNames.get(name);
-		const from =
-			upload.candidates.find((candidate) => JSON.stringify([candidate.doc, candidate.raw]).includes(name))?.source ??
-			"";
-		const file = key ? (input.has.includes(key) ? key : null) : inUpload(name, input.has, from);
-		return file ? [{ name, file }] : [];
-	});
-	const sent = new Set(pictures.map((picture) => picture.name));
+	// Each file of the upload once, by its own name in it: that name is what the import is given it back under.
+	const pictures = new Map<string, { name: string; file: string; label?: string }>();
+	const missing = new Set<string>();
+	for (const { name, from } of pairs) {
+		if (mediaOf(name, from)) continue;
+		const file = fileOf(name, from);
+		const label = file ? upload.mediaLabels.get(file) : undefined;
+		if (file) pictures.set(file, { name: file, file, ...(label ? { label } : {}) });
+		// A picture at an address of its own is not one to find: it stays a link.
+		else if (!/^[a-z]+:\/\//i.test(name)) missing.add(`${from}\n${name}`);
+	}
 	return {
 		kind: upload.kind,
 		found: upload.candidates.length,
@@ -534,8 +583,8 @@ export async function inspectUpload(ctx: OperationContext, input: ImportInput): 
 				)
 				.map(([name, definition]) => ({ name, label: labels[name] ?? name, kind: definition.kind })),
 		],
-		pictures,
-		missingPictures: named.filter((name) => !given[name] && !here.has(name) && !sent.has(name)).length,
+		pictures: [...pictures.values()],
+		missingPictures: missing.size,
 		unknown: [...unknown].map(([name, entries]) => ({ name, entries })),
 		emptyRequired: [...empty].map(([field, entries]) => ({ field, label: labels[field] ?? field, entries })),
 	};

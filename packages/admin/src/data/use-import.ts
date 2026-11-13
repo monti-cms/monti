@@ -103,9 +103,11 @@ export function useImport(collection: string) {
 			const [first] = chosen;
 			if (!first) return;
 			const name = chosen.length === 1 ? first.name : t("import.many", { name: first.name, count: chosen.length - 1 });
-			turn.current += 1;
 			setState({ step: "reading", name });
+			const mine = ++turn.current;
 			const read = await readChosen(chosen).catch(() => null);
+			// The sheet was closed, or another file chosen, while this one was read.
+			if (mine !== turn.current) return;
 			upload.current = read;
 			if (!read) return setState({ step: "unreadable", name, reason: { key: "data.unreadable" } });
 			await look(name, undefined);
@@ -125,14 +127,26 @@ export function useImport(collection: string) {
 	const go = async (): Promise<Refusal | null> => {
 		const at = upload.current;
 		if (state?.step !== "ready" || !at) return null;
-		const { name, inspected, mapping } = state;
+		const { name, mapping } = state;
+		// From here no earlier answer counts: one that came now would put the sheet back before the import, with its button to press again.
+		const mine = ++turn.current;
+		setState({ step: "importing", name, inspected: state.inspected, mapping, sent: 0 });
+		// What the import would do with the fields as they are picked now: a field picked a moment ago may not have been answered yet.
+		const fresh = await inspect.run({ collection, files: at.files, has: at.has, mapping });
+		if (mine !== turn.current) return null;
+		if (!fresh.ok || fresh.body.kind === "unreadable") {
+			setState({ step: "ready", name, inspected: state.inspected, mapping });
+			return fresh.ok ? { status: 400, error: "unreadable", reason: { key: "data.unreadable" } } : fresh.refusal;
+		}
+		const inspected = fresh.body;
 		setState({ step: "importing", name, inspected, mapping, sent: 0 });
 		// The upload's pictures first: their bytes go up as any file's do, and the import makes the library's files of them.
 		const uploaded: Record<string, PutFile & { name: string }> = {};
 		for (const [index, picture] of inspected.pictures.entries()) {
 			const bytes = await at.read(picture.file);
 			if (bytes) {
-				const file = new File([bytes as Uint8Array<ArrayBuffer>], baseName(picture.file));
+				// A Monti file keeps a picture under its key: it is called what it was called in the library it came from.
+				const file = new File([bytes as Uint8Array<ArrayBuffer>], picture.label ?? baseName(picture.file));
 				const put = await putFile(file, uploader);
 				// A picture the library will not take is left out, as one the upload does not have.
 				if (put.ok)

@@ -44,4 +44,20 @@ describe("the backup's zip", () => {
 		expect(unzip(text("not a zip at all, only words"))).toBeNull();
 		expect(unzip(new Uint8Array())).toBeNull();
 	});
+
+	it("14-1 a packed file that is cut short, or unpacks to more than it says, reads as nothing and breaks nothing", async () => {
+		const whole = await zip([{ name: "entries.jsonl", bytes: text("a line of words ".repeat(400)) }]);
+		// The size the list at the end gives for the file, made smaller than what it unpacks to.
+		const lying = whole.slice();
+		const view = new DataView(lying.buffer);
+		let central = -1;
+		for (let at = lying.length - 4; at >= 0 && central < 0; at--)
+			if (view.getUint32(at, true) === 0x02014b50) central = at;
+		view.setUint32(central + 24, 10, true);
+		expect(await unzip(lying)?.read("entries.jsonl")).toBeNull();
+		// Its packed bytes spoiled.
+		const broken = whole.slice();
+		broken.fill(0xff, 60, 90);
+		expect(await unzip(broken)?.read("entries.jsonl")).toBeNull();
+	});
 });

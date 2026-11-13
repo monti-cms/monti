@@ -80,6 +80,8 @@ async function takePictures(
 			.where("collection", "is", null)
 			.where("parent_id", "is", null)
 			.where("name", "=", folderName)
+			// One in the trash is not a folder to put files in: a new one is made beside it.
+			.where("trashed_at", "is", null)
 			.executeTakeFirst();
 		const made = { scope: "media", parentId: null, name: folderName };
 		folderId = found?.id ?? ((await makeFolder.run(made as never, ctx, undefined)) as { id: string }).id;
@@ -213,7 +215,8 @@ export const dataOperations = [
 			key: "data.import",
 			values: {
 				count: output.imported,
-				name: output.name,
+				// An import with no file name given (a call from a script) is named by its collection.
+				name: output.name || output.collection,
 				collection: output.collection,
 				skipped: output.skipped,
 				items: output.items,

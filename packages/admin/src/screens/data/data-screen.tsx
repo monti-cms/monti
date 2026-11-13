@@ -49,9 +49,16 @@ export function DataScreen({ tabs }: { tabs: ReactNode }) {
 		try {
 			const read = await backup.run({});
 			if (!read.ok) return void toast.error(t(reasonOf(read.refusal)));
-			await saveBackup(read.body, { media, onProgress: (share) => setMaking(Math.round(share * 100)) });
+			const { missing } = await saveBackup(read.body, {
+				media,
+				onProgress: (share) => setMaking(Math.round(share * 100)),
+			});
+			// A backup that lacks files is saved and said to lack them; it is not the site's last backup.
+			if (missing > 0) return void toast.error(t("data.backup.missing", { count: missing }));
 			await note.run({});
 			toast(t("data.backup.saved"));
+		} catch {
+			toast.error(t({ key: "errors.unexpected" }));
 		} finally {
 			setMaking(null);
 		}

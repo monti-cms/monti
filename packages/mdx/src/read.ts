@@ -52,7 +52,9 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 	};
 	collect(tree.children);
 	/** A link's address when a body may hold it: a script address is not one, and its words stay as plain text. */
-	const safe = (url: string) => !/^\s*(javascript|vbscript|data):/i.test(url);
+	// Read as a browser reads it: spaces, tabs and line ends anywhere in the address are not part of it.
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are exactly what is taken out.
+	const safe = (url: string) => !/^(javascript|vbscript|data):/i.test(url.replace(/[\u0000-\u0020]/g, ""));
 	const linked = (children: readonly PhrasingContent[], url: string | undefined, marks: Mark[]) =>
 		inline(children, url !== undefined && safe(url) ? [...marks, { type: "link", href: url }] : marks);
 	/** The picture a paragraph is, when it holds nothing else: written in place, or by the name of a defined address. */

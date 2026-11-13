@@ -341,8 +341,9 @@ function DocumentListScreen({
 			const result = await run.exportRows.run(ids(list));
 			if (!result.ok) return;
 			// The picked entries in the backup's own shape (doc 14): a file an import reads, here or on another site.
-			await saveBackup(result.body, { media: true });
-			toast(t("list.exported", { count: list.length }));
+			const { missing } = await saveBackup(result.body, { media: true });
+			if (missing > 0) toast.error(t("data.backup.missing", { count: missing }));
+			else toast(t("list.exported", { count: list.length }));
 		},
 		trash: (list) =>
 			void trash.start({
