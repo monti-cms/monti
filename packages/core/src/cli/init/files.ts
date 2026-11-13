@@ -45,29 +45,35 @@ export default defineSchema({
 });
 `;
 
+/** How a plugin is named in the config and on the admin page: its package, the function the config calls, its half for the admin page. */
+const PLUGIN_CODE: Record<string, { call: string; admin: string }> = {
+	seo: { call: "seo", admin: "seoAdmin" },
+	mdx: { call: "mdx", admin: "mdxAdmin" },
+};
+
 function configFile(answers: Answers): string {
 	const imports = ["defineConfig"];
 	const lines: string[] = [];
-	let storage = "";
+	/** The plugins' lines, each with the comment that says what it is. */
+	const plugins: string[] = [];
 	if (answers.storage === "local") {
 		imports.push("definePlugin", "localFolderStorage");
 		lines.push('import path from "node:path";');
-		storage = `	// Media files in a folder on this machine, served by the admin's API. A host that keeps no disk needs a storage plugin instead.
-	plugins: [
+		plugins.push(`		// Media files in a folder on this machine, served by the admin's API. A host that keeps no disk needs a storage plugin instead.
 		definePlugin({
 			name: "files",
 			storage: localFolderStorage({ dir: path.join(process.cwd(), ".monti", "files"), base: "${answers.adminPath.replace(/\/$/, "")}/api" }),
-		}),
-	],
-`;
+		}),`);
 	} else if (answers.storage === "s3") {
 		imports.push("definePlugin");
-		storage = `	// Media files in an S3-compatible storage: its values are the S3_* names in the environment. Files go straight to it from the browser.
-	plugins: [definePlugin({ name: "files", storage: s3Storage() })],
-`;
-	} else
-		storage =
-			"	// No storage: the media library says so, and no file can be uploaded until a plugin brings one.\n	plugins: [],\n";
+		plugins.push(`		// Media files in an S3-compatible storage: its values are the S3_* names in the environment. Files go straight to it from the browser.
+		definePlugin({ name: "files", storage: s3Storage() }),`);
+	}
+	for (const name of answers.plugins) plugins.push(`		${PLUGIN_CODE[name]?.call ?? name}(),`);
+	const storage =
+		plugins.length > 0
+			? `	plugins: [\n${plugins.join("\n")}\n	],\n`
+			: "	// No storage: the media library says so, and no file can be uploaded until a plugin brings one.\n	plugins: [],\n";
 	const auth =
 		answers.login === "github"
 			? `	// The admin signs in with GitHub: the OAuth app's id and secret, and the one GitHub account that is the admin.
@@ -81,14 +87,30 @@ function configFile(answers: Answers): string {
 	},
 `
 			: "	// The admin signs in with an email and a password. The first visit to the live site makes the admin.\n	auth: { password: true },\n";
+	const packages = [
+		...answers.plugins.map((name) => `import { ${PLUGIN_CODE[name]?.call ?? name} } from "@monti-cms/${name}";\n`),
+		...(answers.storage === "s3" ? ['import { s3Storage } from "@monti-cms/storage-s3";\n'] : []),
+	].join("");
 	return `${lines.join("\n")}${lines.length > 0 ? "\n" : ""}import { ${imports.sort().join(", ")} } from "@monti-cms/core";
-${answers.storage === "s3" ? 'import { s3Storage } from "@monti-cms/storage-s3";\n' : ""}import schema from "./monti.schema";
+${packages}import schema from "./monti.schema";
 
-// How the site runs Monti: its database, how the admin signs in, where media files go.
+// How the site runs Monti: its database, how the admin signs in, where media files go, and its plugins.
 export default defineConfig({
 	schema,
 	database: process.env.DATABASE_URL,
 ${auth}${storage}});
+`;
+}
+
+/** The admin page: the plugins' browser halves are handed to it, as the config has their server halves. */
+function adminPage(site: Site, answers: Answers): string {
+	const halves = answers.plugins.map((name) => PLUGIN_CODE[name]?.admin ?? `${name}Admin`);
+	return `import { AdminPage } from "@monti-cms/next/admin";
+${answers.plugins.map((name, at) => `import { ${halves[at]} } from "@monti-cms/${name}/admin";\n`).join("")}
+// The admin. This folder's name is its address: \`${answers.adminPath}\`.
+export default function Admin() {
+	return <AdminPage siteName=${JSON.stringify(site.name)}${halves.length > 0 ? ` plugins={[${halves.join(", ")}]}` : ""} />;
+}
 `;
 }
 
@@ -168,13 +190,7 @@ export const { monti, reader } = openSite(config);
 		},
 		{
 			file: page,
-			text: `import { AdminPage } from "@monti-cms/next/admin";
-
-// The admin. This folder's name is its address: \`${answers.adminPath}\`.
-export default function Admin() {
-	return <AdminPage siteName=${JSON.stringify(site.name)} />;
-}
-`,
+			text: adminPage(site, answers),
 		},
 		{
 			file: route,

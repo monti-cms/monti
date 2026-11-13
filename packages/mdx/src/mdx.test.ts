@@ -193,6 +193,34 @@ describe("reading a markdown file (T34)", () => {
 		expect(readMarkdown(source).unknown).toEqual(["callout", "note", "chart", "tabs", "Tweet"]);
 	});
 
+	it("14-1 a link and a picture by the name of an address the file defines get that address, and a script address is no link", () => {
+		const { doc } = readMarkdown(
+			[
+				"See the [docs][d] and [nothing][none].",
+				"",
+				"![cover][c]",
+				"",
+				"[run](javascript:alert(1)) it",
+				"",
+				"[d]: https://example.com/docs",
+				'[c]: ./img/cover.png "The cover"',
+			].join("\n"),
+		);
+		const [first, picture, last] = doc.blocks;
+		expect(first?.content).toEqual([
+			{ type: "text", text: "See the " },
+			{ type: "text", text: "docs", marks: [{ type: "link", href: "https://example.com/docs" }] },
+			// A name the file defines no address for is just the words it was written as.
+			{ type: "text", text: " and [nothing][none]." },
+		]);
+		expect(picture).toMatchObject({
+			type: "image",
+			attrs: { src: "./img/cover.png", alt: "cover", caption: "The cover" },
+		});
+		expect(last?.content).toEqual([{ type: "text", text: "run it" }]);
+		expect(doc.blocks).toHaveLength(3);
+	});
+
 	it("14-1 an .mdx file's own lines of code are not the entry's words", () => {
 		const source = 'import Chart from "./chart"\n\nexport const meta = {}\n\n글의 시작.\n';
 		expect(bare(readMarkdown(source, { mdx: true }).doc)).toEqual([

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { adminFolder, appFolder, configFileOf, fileUpward, installedPackage, readJson, sourceIn } from "../site";
 
@@ -20,7 +20,9 @@ export type Site = {
 	/** The top-level layout (`app/layout.tsx`): with one, the admin's page is drawn inside it. */
 	topLayout: string | null;
 	/** The Monti packages that are installed, by short name. */
-	packages: Record<"core" | "admin" | "next" | "storage-s3", string | null>;
+	packages: Record<"core" | "admin" | "next" | "storage-s3" | "seo" | "mdx", string | null>;
+	/** Posts the site already has as files (`.md`, `.mdx`): the folder that holds the most, and how many. `null` when it has none. */
+	posts: { folder: string; count: number } | null;
 	/**
 	 * Where the admin is mounted already, when a route of the site exports its API: its folder, wherever in the app it is, and the address it
 	 * answers at (`app/(cms)/admin` is `/admin`).
@@ -39,6 +41,42 @@ const LOCKFILES = {
 	"bun.lock": "bun",
 	"bun.lockb": "bun",
 } as const;
+
+/** Where a site's posts usually are when it keeps them as files. */
+const POST_FOLDERS = ["content", "posts", "_posts", "blog", "data", "src/content", "src/posts", "src/data"];
+
+const isPost = (name: string) => /\.mdx?$/i.test(name) && !/^readme\./i.test(name);
+
+/** How many posts a folder holds, itself and below: at most a few levels down, never into packages or build output. */
+function countPosts(dir: string, depth = 0): number {
+	let count = 0;
+	let entries: Dirent[];
+	try {
+		entries = readdirSync(dir, { withFileTypes: true });
+	} catch {
+		return 0;
+	}
+	for (const entry of entries) {
+		if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+		if (entry.isDirectory()) count += depth < 4 ? countPosts(path.join(dir, entry.name), depth + 1) : 0;
+		else if (isPost(entry.name)) count += 1;
+	}
+	return count;
+}
+
+/**
+ * The posts a site already has as files (T198): the usual folders, and pages written as MDX in the app folder are not posts to import (they
+ * are the site's pages). The folder with the most wins; a tie goes to the first.
+ */
+function findPosts(cwd: string, app: string | null): Site["posts"] {
+	let best: Site["posts"] = null;
+	for (const folder of POST_FOLDERS) {
+		if (app !== null && (folder === app || folder.startsWith(`${app}/`))) continue;
+		const count = countPosts(path.join(cwd, folder));
+		if (count > (best?.count ?? 0)) best = { folder, count };
+	}
+	return best;
+}
 
 export function detectSite(cwd: string): Site {
 	const manifest = readJson(path.join(cwd, "package.json"));
@@ -70,7 +108,10 @@ export function detectSite(cwd: string): Site {
 			admin: installed("@monti-cms/admin"),
 			next: installed("@monti-cms/next"),
 			"storage-s3": installed("@monti-cms/storage-s3"),
+			seo: installed("@monti-cms/seo"),
+			mdx: installed("@monti-cms/mdx"),
 		},
+		posts: findPosts(cwd, app),
 		admin: admin ? { folder: admin.folder, address: admin.address } : null,
 		config: configFileOf(cwd),
 	};

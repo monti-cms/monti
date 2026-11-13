@@ -42,6 +42,25 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 	const source = (node: Nodes) => text.slice(node.position?.start.offset ?? 0, node.position?.end.offset ?? 0);
 	const unknown: string[] = [];
 	let values: Record<string, unknown> = {};
+	/** The addresses the file defines apart from where it uses them (`[docs]: https://…`), by their name. */
+	const defined = new Map<string, { url: string; title?: string | null }>();
+	const collect = (nodes: readonly Nodes[]) => {
+		for (const node of nodes) {
+			if (node.type === "definition") defined.set(node.identifier, { url: node.url, title: node.title });
+			if ("children" in node) collect(node.children as Nodes[]);
+		}
+	};
+	collect(tree.children);
+	/** A link's address when a body may hold it: a script address is not one, and its words stay as plain text. */
+	const safe = (url: string) => !/^\s*(javascript|vbscript|data):/i.test(url);
+	const linked = (children: readonly PhrasingContent[], url: string | undefined, marks: Mark[]) =>
+		inline(children, url !== undefined && safe(url) ? [...marks, { type: "link", href: url }] : marks);
+	/** The picture a paragraph is, when it holds nothing else: written in place, or by the name of a defined address. */
+	const pictureOf = (node: PhrasingContent | undefined) => {
+		if (node?.type === "image") return { url: node.url, alt: node.alt, title: node.title };
+		const found = node?.type === "imageReference" ? defined.get(node.identifier) : undefined;
+		return found && node?.type === "imageReference" ? { url: found.url, alt: node.alt, title: found.title } : null;
+	};
 
 	/** The inline content of a paragraph, a heading, a cell: marks carried down, raw tags the body has a mark for turned into it. */
 	const inline = (nodes: readonly PhrasingContent[], marks: Mark[] = []): Inline[] => {
@@ -73,7 +92,14 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 					push(node.value, [...now, { type: "code" }]);
 					break;
 				case "link":
-					out.push(...inline(node.children, [...now, { type: "link", href: node.url }]));
+					out.push(...linked(node.children, node.url, now));
+					break;
+				case "linkReference":
+					// A link by the name of an address the file defines; with no such address its words stay.
+					out.push(...linked(node.children, defined.get(node.identifier)?.url, now));
+					break;
+				case "imageReference":
+					push(node.alt ?? "", now);
 					break;
 				case "break":
 					out.push({ type: "hardBreak" });
@@ -124,9 +150,9 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 				case "heading":
 					return [textBlock("heading", inline(node.children), { level: Math.min(4, Math.max(2, node.depth)) })];
 				case "paragraph": {
-					const [only] = node.children;
 					// A picture on a line of its own is a picture block: named by the address the file gives it.
-					if (node.children.length === 1 && only?.type === "image")
+					const only = node.children.length === 1 ? pictureOf(node.children[0]) : null;
+					if (only)
 						return [
 							{
 								id: newBlockId(),
