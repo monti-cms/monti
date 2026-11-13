@@ -364,6 +364,11 @@ export function useDraft({
 		 */
 		sending: (): Sent => ({ mine: new Map(mineNow.current), accepted: [...acceptedNow.current] }),
 		/**
+		 * My changes as this render holds them: for a save whose request is made from what this render drew, after something else was awaited
+		 * first (the settings' review plan). A change made during that wait is in neither the request nor this, so the save keeps it.
+		 */
+		drawnChanges: (): Sent => ({ mine: new Map(mine), accepted: [...accepted] }),
+		/**
 		 * After the save went through: the server's values are the new base, so my changes are gone. With what the save sent (`sending`),
 		 * only that goes: a place changed again while the save was under way holds a value the server does not have, and stays mine (T230:
 		 * letters typed into the title during a slow save were wiped when it ended). An item taken meanwhile stays taken.

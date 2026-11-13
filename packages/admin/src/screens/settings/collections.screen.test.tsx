@@ -531,10 +531,10 @@ describe("settings › collections: the options of a choice in the review (docs 
 		const made = options();
 		await made.run();
 		await opened();
-		// No part of the sheet or the review comes on demand: with every module's download held, they still work (T260 asked whether a part
+		// No part of the sheet or the review comes on demand: with the downloads of the modules (with their `?v=` too) held, they still work (T260 asked whether a part
 		// arriving late remounted the sheet's form).
 		onTestFinished(releaseRequests);
-		await holdRequests("**/*.{ts,tsx,js,mjs}");
+		await holdRequests("**/*.{ts,tsx,js,mjs}*");
 		await userEvent.click(page.getByRole("button", { name: "mood 열기" }));
 		await userEvent.click(sheet().getByRole("button", { name: "loud 빼기" }));
 		await takenOut("loud");
@@ -1054,11 +1054,11 @@ describe("settings: a save takes only what it sent", () => {
 		const folders = () => page.getByRole("switch", { name: "폴더 사용" });
 		const before = folders().element().getAttribute("aria-checked");
 		await folders().click();
-		await expect.element(changes()).toHaveTextContent(/2/);
+		await expect.element(changes()).toHaveTextContent(/(^|\D)2$/);
 		release();
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
 		// The name went; the folders did not, and are still a change of this draft.
 		await expect.element(folders()).toHaveAttribute("aria-checked", before === "true" ? "false" : "true");
-		await expect.element(changes()).toHaveTextContent(/1/);
+		await expect.element(changes()).toHaveTextContent(/(^|\D)1$/);
 	});
 });

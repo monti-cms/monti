@@ -143,8 +143,9 @@ export function SettingsScreen({
 		// A collection with no admin values yet is at version 0: a row another tab made since is a conflict, not something to write over.
 		for (const c of Object.keys(model.changedValues))
 			if (data.schema.collections[c]) versions[`collectionAdminValues:${c}`] = data.adminValues[c]?.version ?? 0;
-		// What this save sends, as it is now: a change made while it is on its way is not part of it.
-		const sent = draft.sending();
+		// What this save sends: the draft as this render drew it, which the request is made from. A change made later (while the review's
+		// plan was asked for, or while this save is on its way) is not part of it and stays.
+		const sent = draft.drawnChanges();
 		const result = await saveOp.run(
 			{
 				...(siteChanged ? { site } : {}),

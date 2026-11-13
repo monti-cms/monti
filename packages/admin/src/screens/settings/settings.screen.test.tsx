@@ -245,6 +245,44 @@ describe("settings › languages", () => {
 		expect(activity.filter((row) => row.operation === "settings.save")).toHaveLength(2);
 	});
 
+	it("12-1 a name typed while an order change's save is asked about stays after it, still unsaved", async () => {
+		// The save first asks the server what a review would show; it is held there while the site's name is typed.
+		let release = () => {};
+		const held = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		await withSite({
+			...stories.Languages,
+			render: (_args: unknown, { loaded }: { loaded: unknown }) => {
+				const { site } = loaded as Loaded;
+				return (
+					<MontiAdmin
+						transport={async (name, input, options) => {
+							if (name === "schema.plan") await held;
+							return site.transport(name, input, options);
+						}}
+						streams={site.streams}
+						siteName="example.dev"
+					/>
+				);
+			},
+		}).run();
+		(page.getByRole("button", { name: "English 옮기기" }).element() as HTMLElement).focus();
+		await userEvent.keyboard(" ");
+		await expect.poll(said).toContain("English");
+		await userEvent.keyboard("{ArrowDown}");
+		await userEvent.keyboard(" ");
+		await expect.poll(languages).toEqual(["한국어", "日本語", "English"]);
+		await userEvent.click(saveGroup());
+		await userEvent.click(tab(/^사이트/));
+		await userEvent.fill(page.getByRole("textbox", { name: "사이트 이름" }), "새 이름");
+		release();
+		await expect.element(page.getByText("적용했습니다")).toBeVisible();
+		// The order went; the name was not part of that save, and is still a change of this draft.
+		await expect.element(page.getByRole("textbox", { name: "사이트 이름" })).toHaveValue("새 이름");
+		await expect.element(page.getByRole("button", { name: "변경 사항", exact: true })).toHaveTextContent(/(^|\D)1$/);
+	});
+
 	it("[keys-move] 12-1 languages reordered with the keyboard alone, and an order change by itself is saved without a review", async () => {
 		const shown = withSite(stories.Languages);
 		await shown.run();
