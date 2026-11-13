@@ -8,8 +8,10 @@ dist
 next-env.d.ts
 *.tsbuildinfo
 
-# Env files (the example `.env.example` is committed)
-.env*.local
+# Env files hold secrets: none is committed but the examples (`.env.example`)
+.env
+.env.*
+!.env.example
 
 # Tests
 coverage
