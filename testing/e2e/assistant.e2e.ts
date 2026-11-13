@@ -26,7 +26,8 @@ test.describe("the assistant (doc 10; flow 2)", () => {
 		const key = unique("E2E 모델");
 		await admin.goto("/admin#/tools/keys");
 		await admin.getByRole("button", { name: "키 추가" }).click();
-		await admin.getByRole("button", { name: "OpenAI 호환 주소" }).click();
+		// The services are the options of a list.
+		await admin.getByRole("option", { name: "OpenAI 호환 주소" }).click();
 		const window = admin.getByRole("dialog");
 		await window.getByLabel("주소").fill(MODEL);
 		await window.getByLabel("이름").fill(key);
