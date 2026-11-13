@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { codeHighlighter } from "@monti-cms/core/code";
 import { openSite, refreshSite } from "@monti-cms/next";
 import config from "../monti.config";
 
@@ -14,3 +15,6 @@ const refresh = down
 
 // The site's Monti (the admin API runs on it) and the reader its pages read published entries with.
 export const { monti, reader } = openSite(config, { refresh });
+
+// The code blocks' colours: the site's themes and languages, opened once (doc 17). Pages wait for it and hand it to `renderDocument`.
+export const code = codeHighlighter(config.codeBlock);

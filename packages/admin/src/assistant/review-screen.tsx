@@ -28,7 +28,8 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { href, type Route, reachedFromInside } from "../route";
-import { shownBlocks } from "../screens/entry/compare-entries";
+import { codeChanges, shownBlocks } from "../screens/entry/compare-entries";
+
 import { useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { endsClosed } from "../screens/list/format";
 import type { SchemaRead } from "../screens/settings/schema-draft";
@@ -38,6 +39,9 @@ import { ProposalState } from "./proposal-state";
 import { useAssistant } from "./use-assistant";
 import { standingOf, useProposal } from "./use-proposal";
 import { clock } from "./words";
+
+/** The line effects whose names the core's messages have (doc 17). */
+const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
 
 type EntryNow = {
 	collection: string;
@@ -255,6 +259,33 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 				if (!was) places.push({ name: t("review.newBlock"), before: "", after: block.text });
 				else if (was.text !== block.text)
 					places.push({ name: t("review.block", { number: index + 1 }), before: was.text, after: block.text });
+				else {
+					// The same code with other effects (doc 17, T196): the lines whose effects change, with their effects on each side. A core effect
+					// says its name; a site's own effect, which has no words in the admin, says its stored name.
+					const effectName = (name: string) =>
+						CORE_EFFECTS.has(name) ? t({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` }) : name;
+					const changed = codeChanges(block, was);
+					const effects = (side: typeof block, lines: number[]) =>
+						lines
+							.map((line) => {
+								const names = side.code?.lines[line] ?? [];
+								return `${t("editor.code.line", { n: line + 1 })}: ${
+									names.length ? names.map(effectName).join(", ") : "—"
+								}`;
+							})
+							.join(" · ");
+					const head = (side: typeof block) => [side.code?.language, side.code?.title].filter(Boolean).join(" · ");
+					if (changed.lines.length || changed.language || changed.title)
+						places.push({
+							name: t("review.block", { number: index + 1 }),
+							before: [changed.language || changed.title ? head(was) : "", effects(was, changed.lines)]
+								.filter(Boolean)
+								.join(" · "),
+							after: [changed.language || changed.title ? head(block) : "", effects(block, changed.lines)]
+								.filter(Boolean)
+								.join(" · "),
+						});
+				}
 			});
 			before.forEach((block, index) => {
 				if (!after.some((each) => each.id === block.id))

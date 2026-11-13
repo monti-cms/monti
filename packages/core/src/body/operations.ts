@@ -101,8 +101,11 @@ export const bodyOperations = [
 						type: mark.type,
 						label: mark.label,
 						attrs: mark.attrs ? z.toJSONSchema(mark.attrs, { io: "input", unrepresentable: "any" }) : null,
+						inCode: mark.inCode ?? null,
 					})),
 				headings: editor?.headings ?? [2, 3, 4],
+				// The site's code block settings (doc 17): the editor's languages, tools and line effects, and the colours' themes.
+				code: ctx.site.kit.code,
 			};
 		},
 	}),
