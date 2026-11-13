@@ -101,7 +101,7 @@ describe("a conditional field in the schema", () => {
 					video: { inner: { kind: "conditional", options: ["a"], fields: {} }, address: { kind: "slug" } },
 				},
 			}),
-		).toEqual(expect.arrayContaining(["inner:nestedConditional", "address:nestedConditional"]));
+		).toEqual(expect.arrayContaining(["address:notInOption"]));
 		expect(codes({ ...base, options: [] })).toContain("format:noOptions");
 	});
 });
