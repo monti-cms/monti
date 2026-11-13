@@ -270,6 +270,8 @@ function RelationSingleInput({
 }) {
 	const { t } = useAdmin();
 	const rel = useRelationField({ collection, field, locale, entryGroup, createMissing });
+	// The input shows the chosen item's name, and what the person types while they type: the search alone would leave it empty.
+	const [typing, setTyping] = useState(false);
 
 	const items = useMemo(() => {
 		const list = rel.options.map((o) => o.group);
@@ -284,9 +286,18 @@ function RelationSingleInput({
 			onValueChange={(next) => {
 				onChange(next ? String(next) : null);
 				rel.setSearch("");
+				setTyping(false);
 			}}
-			inputValue={rel.search}
-			onInputValueChange={rel.setSearch}
+			inputValue={typing ? rel.search : value ? rel.labelOf(value) : ""}
+			onInputValueChange={(next) => {
+				setTyping(true);
+				rel.setSearch(next);
+			}}
+			onOpenChange={(open) => {
+				if (open) return;
+				setTyping(false);
+				rel.setSearch("");
+			}}
 			itemToStringLabel={(item) =>
 				item === null ? "" : item === rel.createToken ? (rel.createLabel ?? item) : rel.labelOf(item)
 			}

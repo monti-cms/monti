@@ -308,6 +308,32 @@ function heldRead() {
 	return { ...made, release: () => held.release() };
 }
 
+describe("the entry editor: a field that points at one item", () => {
+	it("08-1 a relation to one item shows the item's name; typing searches, and a pick puts the new name in its place", async () => {
+		const story = on("draft");
+		await story.run();
+		await opened();
+		const { site, id } = story.loaded();
+		const categoryOf = async () =>
+			((await site.monti.run("entries.get", { id }, entry.admin)) as { entry: { values: { category?: string } } }).entry
+				.values.category;
+		const before = await categoryOf();
+		const category = page.getByRole("combobox", { name: "카테고리" });
+		await expect.element(category).toHaveValue("개발");
+		await userEvent.click(category);
+		await userEvent.clear(category);
+		await userEvent.type(category, "일");
+		await expect.element(page.getByRole("option", { name: "일상" })).toBeVisible();
+		await expect.element(page.getByRole("option", { name: "회고" })).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("option", { name: "일상" }));
+		await expect.element(category).toHaveValue("일상");
+		await save();
+		await saveCell("저장됨");
+		expect(await categoryOf()).not.toBe(before);
+		await expect.element(category).toHaveValue("일상");
+	});
+});
+
 describe("the entry editor: before the entry is there", () => {
 	it("02 T153 nothing of the entry can be changed before it is read: keys pressed where the title stands are not taken, and the saved title comes with no change counted", async () => {
 		const story = heldRead();
