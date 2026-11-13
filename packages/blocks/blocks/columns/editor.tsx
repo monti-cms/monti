@@ -48,6 +48,8 @@ export default function ColumnsEditor() {
 	const grid = useRef<HTMLDivElement>(null);
 	const [edges, setEdges] = useState<{ left: number; width: number }[]>([]);
 	const [menu, setMenu] = useState<number | null>(null);
+	/** The column the pointer is over: its grip shows, as the cursor's column's does. */
+	const [pointed, setPointed] = useState<number | null>(null);
 	const hold = useBarHold();
 
 	// Where each column stands in the frame, for the borders and grips over them: again after each drawing and when the frame's width changes.
@@ -105,6 +107,14 @@ export default function ColumnsEditor() {
 			</style>
 			<div
 				ref={grid}
+				onPointerMove={(event) => {
+					const box = grid.current?.getBoundingClientRect();
+					if (!box) return;
+					const x = event.clientX - box.left;
+					const at = edges.findIndex((edge) => x >= edge.left && x <= edge.left + edge.width);
+					setPointed(at < 0 ? null : at);
+				}}
+				onPointerLeave={() => setPointed(null)}
 				className="monti-block-columns monti-block-columns-editor"
 				style={{ "--monti-columns": columnsGridTemplate(widths, count) } as CSSProperties}
 			>
@@ -159,7 +169,7 @@ export default function ColumnsEditor() {
 								// biome-ignore lint/suspicious/noArrayIndexKey: a grip is its column's place
 								key={index}
 								className="monti-block-columns-grip"
-								data-shown={menu === index || block.childAt === index || undefined}
+								data-shown={menu === index || block.childAt === index || pointed === index || undefined}
 								style={{ left: edge.left + edge.width / 2 }}
 							>
 								<DropdownMenu

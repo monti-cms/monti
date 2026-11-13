@@ -114,7 +114,6 @@ export const style = `/*
 	pointer-events: auto;
 	opacity: 0;
 }
-.monti-block-columns-editor:hover .monti-block-columns-grip,
 .monti-block-columns-grip[data-shown],
 .monti-block-columns-grip:focus-within {
 	opacity: 1;

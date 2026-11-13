@@ -17,6 +17,7 @@ export default function ChartEditor() {
 	return (
 		<SourceBlock
 			label={say(words.source)}
+			tools={say(words.tools)}
 			source={source}
 			empty={say(words.empty)}
 			placeholder={say(words.placeholder)}

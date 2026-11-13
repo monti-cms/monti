@@ -41,7 +41,6 @@ export default function TooltipEditor({ attrs, apply }: AdminMarkEditorProps) {
 					rows={2}
 					autoFocus
 					value={text}
-					placeholder={say(words.placeholder)}
 					aria-invalid={empty || undefined}
 					onChange={(event) => {
 						setText(event.target.value);

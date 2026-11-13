@@ -5,6 +5,7 @@ import type { ChartDslErrorCode, ChartDslParseError } from "./types";
  * are in `site.tsx`. Change them here.
  */
 export const words = {
+	tools: { ko: "차트 도구", en: "Chart tools" },
 	label: { ko: "차트", en: "Chart" },
 	source: { ko: "소스", en: "Source" },
 	empty: { ko: "차트 입력", en: "Enter a chart" },

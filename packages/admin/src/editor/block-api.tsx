@@ -349,6 +349,7 @@ export function BlockBarToggle({
  */
 export function SourceBlock({
 	label,
+	tools,
 	source,
 	empty,
 	placeholder,
@@ -358,6 +359,8 @@ export function SourceBlock({
 }: {
 	/** The source's name over its field ("Source"). */
 	label: string;
+	/** Its tool row's name for screen readers ("Formula tools"). */
+	tools?: string;
 	source: string;
 	/** What the box says while there is no source ("Enter a formula"). */
 	empty: string;
@@ -392,7 +395,7 @@ export function SourceBlock({
 	return request ? (
 		<BlockFrame
 			bar={
-				<BlockBar label={label}>
+				<BlockBar label={tools ?? label}>
 					<FormatBarRequest label={t("format.request")} onClick={request} />
 				</BlockBar>
 			}

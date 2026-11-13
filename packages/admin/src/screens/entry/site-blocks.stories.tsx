@@ -162,7 +162,7 @@ export const ColorCard: Story = {
 		const { body, all } = await opened(canvasElement);
 		await pick(body, "하나씩");
 		await userEvent.click(await all.findByRole("button", { name: "다른 서식" }, wait));
-		await userEvent.click(await all.findByRole("option", { name: "글자 색" }, wait));
+		await userEvent.click(await all.findByRole("option", { name: "글자색" }, wait));
 		await all.findByText("배경색", {}, wait);
 	},
 };

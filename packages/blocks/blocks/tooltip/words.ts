@@ -5,7 +5,6 @@ export const words = {
 	add: { ko: "툴팁 넣기", en: "Add a tooltip" },
 	edit: { ko: "툴팁 수정", en: "Edit the tooltip" },
 	text: { ko: "설명", en: "Note" },
-	placeholder: { ko: "글자에 올리면 보일 설명", en: "Shown when a reader points at the words" },
 	cancel: { ko: "취소", en: "Cancel" },
 	empty: { ko: "설명이 비어 있음", en: "The note is empty" },
 	save: { ko: "넣기", en: "Add" },

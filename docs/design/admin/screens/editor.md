@@ -48,7 +48,7 @@
 | 단 나누기 (18) | 표의 부품: `TableColumnBorder`(경계, 끌기와 ←→ 5%), `TableGrip along="column"` + `DropdownMenu`("왼쪽에 단 넣기" · "오른쪽에 단 넣기" · "단 지우기" `variant="danger"`), 오른쪽 `TableAddStrip`, 끄는 동안 `BlockBox measure`("60 : 40") | 단은 2~4개. 할 수 없는 행과 띠는 숨긴다. 지운 단의 블록은 옆 단 끝으로 간다. 도구 행에는 폭을 정했을 때만 "고르게"(`FloatingBarButton named`). |
 | 코드 탐색기 (18) | `FileTree` · `FileTreeRow`(`more`에 `IconButton size="xs" tone="danger"` "… 지우기") · `Button variant="ghost" size="sm"` "+ 파일" · "+ 폴더" · 고른 파일의 경로 `BlockTitleField` | 파일 줄을 누르면 그 파일의 코드가 옆에 보인다(코드 블록은 17의 것). |
 | 글로 쓰는 블록 (18) | `SourceBox`(그림 칸, 골라진 동안 그 아래 "소스" 칸: `Textarea mono size="sm"`, 까닭은 줄마다 `FormFieldError`) | 수식 · 다이어그램 · 차트. 누르면 열리고 소스 칸에 포커스가 간다. 0.4초 쉬거나 떠나면 쓴다. 비면 그림 칸에 "수식 입력" 같은 말. |
-| 글자 색 카드 (18) | 서식 카드 ⋯의 "글자 색" 행이 여는 `Popover`: `Stack` 안 "글자색" · "배경색" 줄(`Label`), 줄마다 `IconButton size="sm"` 아홉(기본과 여덟 색, 칸은 그 색의 "가", 지금 것은 `pressed`와 ✓, 이름은 툴팁) | 누르면 걸리고 카드가 닫힌다. 글자색과 배경색은 따로 정한다. |
+| 글자색 카드 (18) | 서식 카드 ⋯의 "글자색" 행이 여는 `Popover`: `Stack` 안 "글자색" · "배경색" 줄(`Label`), 줄마다 `IconButton size="sm"` 아홉(기본과 여덟 색, 칸은 그 색의 "가", 지금 것은 `pressed`와 ✓, 이름은 툴팁) | 누르면 걸리고 카드가 닫힌다. 글자색과 배경색은 따로 정한다. |
 | 툴팁 카드 (18) | 서식 카드 ⋯의 "툴팁" 행이 여는 `Popover`: `PopoverHeader` · `PopoverTitle`("툴팁 넣기" / "툴팁 수정") · `Label` "설명" + `Textarea size="sm" rows={2}` · `Button variant="ghost" size="sm"` "취소" · `Button variant="primary" size="sm"` "넣기" / "저장" | Enter가 넣고 Shift+Enter가 줄을 바꾼다. 빈 설명은 누른 그때 칸 아래 `FormFieldError` "설명이 비어 있음". 떼기는 서식 지우기다. |
 
 ### 속성 패널

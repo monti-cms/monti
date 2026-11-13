@@ -15,5 +15,5 @@ export const words = {
 		purple: { ko: "보라", en: "Purple" },
 		pink: { ko: "분홍", en: "Pink" },
 	},
-	color: { ko: "글자 색", en: "Text colour" },
+	color: { ko: "글자색", en: "Text colour" },
 };

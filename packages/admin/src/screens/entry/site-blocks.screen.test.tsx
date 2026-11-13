@@ -168,7 +168,7 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		await made.run();
 		await pickWords(body().element(), "하나씩");
 		await userEvent.click(button("다른 서식"));
-		await userEvent.click(page.getByRole("option", { name: "글자 색" }));
+		await userEvent.click(page.getByRole("option", { name: "글자색" }));
 		await expect.element(page.getByText("글자색")).toBeVisible();
 		await expect.element(page.getByText("배경색")).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "빨강" }).first());
