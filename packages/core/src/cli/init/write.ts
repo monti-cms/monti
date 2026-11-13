@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { isDeepStrictEqual, parseEnv } from "node:util";
+import { isDeepStrictEqual } from "node:util";
+import { parseEnvFile } from "../env-files";
 import type { Answers } from "./answers";
 import type { Site } from "./detect";
 import { envValues, planFiles } from "./files";
@@ -133,7 +134,7 @@ export function writeSite(
 			.map(([name]) => name),
 	);
 	for (const name of envFiles(cwd))
-		for (const key of Object.keys(parseEnv(readFileSync(path.join(cwd, name), "utf8")))) held.add(key);
+		for (const key of Object.keys(parseEnvFile(readFileSync(path.join(cwd, name), "utf8")))) held.add(key);
 	const lacking = envValues(site, answers, options.secret).filter(({ name }) => !held.has(name));
 	// Its secrets are the site owner's alone: a new file is made for them only (an existing one keeps its own mode).
 	const local =

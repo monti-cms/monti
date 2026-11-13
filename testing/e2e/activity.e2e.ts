@@ -1,6 +1,8 @@
+import { rmSync, writeFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
+import { test as raw } from "@playwright/test";
 import { expect, operation, test, unique } from "./fixtures";
-import { HOOK } from "./servers";
+import { ADMIN, BARE, HOOK, REFRESH_DOWN } from "./servers";
 
 // The activity log on the example app (doc 13): the live site posts its events to a webhook (`hook.ts`) that a test takes down and brings back.
 
@@ -98,4 +100,66 @@ test.describe("the activity log", () => {
 			.poll(async () => (await arrivedFor(admin, post.id)).map((each) => each.event.type))
 			.toEqual(expect.arrayContaining(["entry.published", "entry.unpublished"]));
 	});
+});
+
+raw.describe("the site's cached pages, when refreshing them failed", () => {
+	raw.afterEach(() => rmSync(REFRESH_DOWN, { force: true }));
+
+	// The retry is due a minute after the failure, and an admin's visit starts the sends once a minute: the real times, not moved.
+	raw.setTimeout(240_000);
+
+	raw(
+		"13-4 16-3 a refresh that failed leaves the old page; an admin's visit after its retry is due sends it again behind the answer, and the page is drawn anew",
+		async ({ browser }) => {
+			// The second live site: its refresh can be failed (`REFRESH_DOWN`).
+			const context = await browser.newContext({ baseURL: BARE, locale: "ko-KR" });
+			const page = await context.newPage();
+			const signedIn = await page.request.post("/admin/api/operations/auth.signIn", {
+				data: { input: { email: ADMIN.email, password: ADMIN.password } },
+			});
+			expect(signedIn.status()).toBe(200);
+			const visitor = await browser.newContext({ baseURL: BARE });
+			const shown = async (path: string) => (await visitor.request.get(path)).text();
+
+			const post = await draft(page, "cache");
+			await operation(page, "entries.publish", { ids: [post.id] });
+			// A change marks the pages twice, the second time two seconds later: after it, the page a visitor gets is the kept one.
+			await page.waitForTimeout(3000);
+			await expect.poll(() => shown(`/posts/${post.slug}`)).toContain(post.title);
+
+			const before = await failedCount(page);
+			writeFileSync(REFRESH_DOWN, "");
+			const retitled = `${post.title} 고친 제목`;
+			const { entry } = (await (
+				await page.request.post("/admin/api/operations/entries.get", { data: { input: { id: post.id } } })
+			).json()) as { entry: { version: number } };
+			await operation(page, "entries.save", { id: post.id, version: entry.version, title: retitled });
+			await operation(page, "entries.publish", { ids: [post.id] });
+			// The publish answered, the refresh failed: the delivery is counted, and the visitor still gets the page as it was kept.
+			await expect.poll(() => failedCount(page)).toBe(before + 1);
+			expect(await shown(`/posts/${post.slug}`)).not.toContain(retitled);
+
+			// The cache is back. Nothing sends the delivery yet: its retry is not due, and no admin has visited.
+			rmSync(REFRESH_DOWN, { force: true });
+			await page.waitForTimeout(20_000);
+			expect(await failedCount(page)).toBe(before + 1);
+			expect(await shown(`/posts/${post.slug}`)).not.toContain(retitled);
+
+			// An admin's frame opening (`frame.counts`) starts the due sends behind its answer, at most once a minute. The delivery is sent from
+			// there, with no request of its own around it, and the page must still be drawn anew.
+			await page.waitForTimeout(41_000);
+			await expect
+				.poll(
+					async () => {
+						await page.request.post("/admin/api/operations/frame.counts", { data: { input: {} } });
+						return shown(`/posts/${post.slug}`);
+					},
+					{ timeout: 130_000, intervals: [3000] },
+				)
+				.toContain(retitled);
+			await expect.poll(() => failedCount(page)).toBe(before);
+			await context.close();
+			await visitor.close();
+		},
+	);
 });
