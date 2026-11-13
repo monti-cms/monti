@@ -1,13 +1,23 @@
 // The release bundle (docs/design/features/20-release.md): what `pack-release.mjs` makes of a small workspace, and what it refuses to make.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	utimesSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import {
 	builtSideEffects,
 	bundleReadme,
+	packedBytes,
 	packRelease,
 	saysClient,
 	tarballName,
@@ -247,4 +257,80 @@ test("20-1 a file named as having side effects is named by its built file in the
 	} finally {
 		for (const root of [named, lost]) rmSync(root, { recursive: true, force: true });
 	}
+});
+
+test("20-1 the same files pack to the same bytes: whenever they were written, in whatever order the folder gives them", () => {
+	const root = workspace();
+	try {
+		const first = pack(root);
+		const bytes = (out) => ["core", "admin"].map((name) => readFileSync(path.join(out, `monti-cms-${name}-1.2.3.tgz`)));
+		const before = bytes(first.out);
+		// The same sources built again later: every file has a new time, and one was written anew.
+		const later = new Date("2031-05-06T07:08:09Z");
+		for (const file of ["packages/core/dist/index.js", "packages/core/README.md", "packages/admin/dist/styles.css"])
+			utimesSync(path.join(root, file), later, later);
+		rmSync(path.join(root, "packages/admin/dist/index.js"));
+		writeFileSync(path.join(root, "packages/admin/dist/index.js"), 'export { Screen } from "./screen.js";\n');
+		const after = bytes(pack(root).out);
+		assert.ok(before.every((tgz, at) => tgz.equals(after[at])));
+		// And a changed file is a changed tarball.
+		writeFileSync(path.join(root, "packages/core/dist/index.js"), "export const one = 2;\n");
+		assert.ok(!bytes(pack(root).out)[0].equals(before[0]));
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test("20-1 a tarball's entries are in the order of their names, carry no time or owner of the machine, and keep what may be run", () => {
+	const dir = mkdtempSync(path.join(tmpdir(), "monti-tar-test-"));
+	try {
+		const deep = `dist/${"a-long-folder-name/".repeat(6)}a-file-with-a-long-name.js`;
+		for (const [file, text] of [
+			["package.json", "{}\n"],
+			["bin/monti.mjs", "#!/usr/bin/env node\n"],
+			[deep, "export {};\n"],
+			["dist/b.js", "b"],
+			["dist/Z.js", "Z"],
+		]) {
+			mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+			writeFileSync(path.join(dir, file), text);
+		}
+		chmodSync(path.join(dir, "bin/monti.mjs"), 0o700);
+		chmodSync(path.join(dir, "package.json"), 0o600);
+		const file = path.join(dir, "..", `${path.basename(dir)}.tgz`);
+		writeFileSync(file, packedBytes(dir));
+		try {
+			// The system's tar reads it: the names whole (the long one too), the times and owners fixed.
+			const listed = execFileSync("tar", ["-tvzf", file], { encoding: "utf8", env: { ...process.env, TZ: "UTC" } })
+				.trim()
+				.split("\n");
+			assert.deepEqual(
+				listed.map((line) => line.split(/\s+/).at(-1)),
+				["package/bin/monti.mjs", "package/dist/Z.js", `package/${deep}`, "package/dist/b.js", "package/package.json"],
+			);
+			assert.deepEqual(
+				listed.map((line) => line.split(/\s+/)[0]),
+				["-rwxr-xr-x", "-rw-r--r--", "-rw-r--r--", "-rw-r--r--", "-rw-r--r--"],
+			);
+			for (const line of listed) assert.match(line, /1985/);
+			assert.equal(execFileSync("tar", ["-xzOf", file, `package/${deep}`], { encoding: "utf8" }), "export {};\n");
+		} finally {
+			rmSync(file, { force: true });
+		}
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("20-4 the release job names every action by a commit, and checks the tag's commit against the release branch before it builds", () => {
+	const workflow = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
+	const used = [...workflow.matchAll(/^\s*-?\s*uses:\s*(\S+)/gm)].map(([, action]) => action);
+	assert.ok(used.length > 0);
+	// A tag (`@v5`) can be moved to other code, and this job's token writes to the repository.
+	assert.deepEqual(
+		used.filter((action) => !/@[0-9a-f]{40}$/.test(action)),
+		[],
+	);
+	const branch = workflow.indexOf('git merge-base --is-ancestor "$GITHUB_SHA" "origin/$RELEASE_BRANCH"');
+	assert.ok(branch > 0 && branch < workflow.indexOf("pnpm install"));
 });
