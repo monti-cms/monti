@@ -149,16 +149,34 @@ export async function zip(files: Iterable<ZipFile>): Promise<Uint8Array> {
 }
 
 /**
- * A file's name as its zip wrote it. A zip that says its names are UTF-8 is taken at its word. One that does not say (Windows' own zip, and
- * older tools) wrote them in the system's encoding: bytes that are valid UTF-8 are read as UTF-8, and the rest as CP949, the encoding a
- * Korean Windows writes (`euc-kr` reads it), so a picture's Korean name still matches the path a post names it by.
+ * A file's name as its zip wrote it.
+ * - A "Unicode path" in the entry's extra field (0x7075, what tools add beside a name in an old encoding) is the name, when it is of the
+ *   name it stands beside (it carries that name's sum).
+ * - A zip that says its names are UTF-8 is taken at its word.
+ * - One that does not say (Windows' own zip, and older tools) wrote them in the system's encoding: bytes that are valid UTF-8 are read as
+ *   UTF-8, and the rest as CP949, the encoding a Korean Windows writes (`euc-kr` reads it), so a picture's Korean name still matches the
+ *   path a post names it by. The rule cannot tell every name: a CP949 name whose bytes happen to be valid UTF-8 too (C7 A1 alone) is read
+ *   as UTF-8. Where the runtime has no `euc-kr`, the name is read as UTF-8 with what it cannot read marked: the zip still opens.
  */
-function nameOf(bytes: Uint8Array, utf8: boolean): string {
+function nameOf(bytes: Uint8Array, utf8: boolean, extra: Uint8Array): string {
+	const view = new DataView(extra.buffer, extra.byteOffset, extra.byteLength);
+	for (let at = 0; at + 4 <= extra.length; ) {
+		const size = view.getUint16(at + 2, true);
+		if (view.getUint16(at, true) === 0x7075 && size >= 5 && at + 4 + size <= extra.length) {
+			if (extra[at + 4] === 1 && view.getUint32(at + 5, true) === crc32(bytes))
+				return new TextDecoder().decode(extra.subarray(at + 9, at + 4 + size));
+		}
+		at += 4 + size;
+	}
 	if (utf8) return new TextDecoder().decode(bytes);
 	try {
 		return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 	} catch {
-		return new TextDecoder("euc-kr").decode(bytes);
+		try {
+			return new TextDecoder("euc-kr").decode(bytes);
+		} catch {
+			return new TextDecoder().decode(bytes);
+		}
 	}
 }
 
@@ -185,6 +203,7 @@ export function unzip(
 		const name = nameOf(
 			bytes.subarray(at + 46, at + 46 + nameLength),
 			(view.getUint16(at + 8, true) & 0x0800) !== 0,
+			bytes.subarray(at + 46 + nameLength, at + 46 + nameLength + view.getUint16(at + 30, true)),
 		).normalize("NFC");
 		// A folder's own entry holds nothing.
 		if (!name.endsWith("/"))

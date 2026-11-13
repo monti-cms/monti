@@ -91,6 +91,11 @@ export function context(
 			}),
 		created: (ref) => created.push(ref),
 		async attempt(work) {
+			// A part is taken back with a savepoint, which only a transaction has: a read and a write's `prepare` run outside one.
+			if (!db.isTransaction)
+				throw new Error(
+					"ctx.attempt is for the run of a write: a read or a prepare has no transaction to take a part back in.",
+				);
 			const marks = { events: events.length, created: created.length };
 			const name = `attempt_${++attempts}`;
 			await sql.raw(`savepoint ${name}`).execute(db);

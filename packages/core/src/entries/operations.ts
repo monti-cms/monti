@@ -167,6 +167,37 @@ async function checkBodyOf(ctx: OperationContext, doc: unknown, previous: unknow
 	assertDoc(doc, ctx.site.kit, (previous as Doc | null) ?? null);
 }
 
+/**
+ * The writes whose save keeps the links its body is given (an import of a Monti file, whose translations come with the pairing they had).
+ * It is the core's own to say, by the context: no input of `entries.save` can ask for it, so a person's or the assistant's save cannot
+ * pair a block by hand.
+ */
+const givenLinkWrites = new WeakSet<OperationContext>();
+const keepsGivenLinks = (ctx: OperationContext) => givenLinkWrites.has(ctx);
+
+/** Runs a part of a write whose saves keep the links they are given. Everything else of a save (its checks, the plugins' hooks) runs as ever. */
+export async function withGivenLinks<Value>(ctx: OperationContext, work: () => Promise<Value>): Promise<Value> {
+	givenLinkWrites.add(ctx);
+	try {
+		return await work();
+	} finally {
+		givenLinkWrites.delete(ctx);
+	}
+}
+
+/** A body with the links it came with, each kept only when it points at a block the source has, and at most one per source block. */
+function givenLinks(doc: Doc, hashes: Record<string, string>): Doc {
+	const used = new Set<string>();
+	return {
+		...doc,
+		blocks: doc.blocks.map(({ link, ...block }) => {
+			if (!link || !(link.from in hashes) || used.has(link.from)) return block;
+			used.add(link.from);
+			return { ...block, link };
+		}),
+	};
+}
+
 /** Writes a new working copy: one version up, "changed" set again, and an `entry.saved` event. Saving and block edits both end here. */
 export async function saveWorking(
 	ctx: OperationContext,
@@ -583,7 +614,9 @@ export const entryOperations = [
 				const added = await addedSourceBlocks(ctx, entry);
 				// A block whose words change takes in what its source block says now (2026-11-10, owner).
 				const hashes = await followedHashes(ctx.db, ctx.site.schema(), entry);
-				const { doc, skipped } = keepLinks(asDoc(entry.doc), working.doc as Doc, hashes, new Set(), added);
+				const { doc, skipped } = keepsGivenLinks(ctx)
+					? { doc: givenLinks(working.doc as Doc, hashes), skipped: [] }
+					: keepLinks(asDoc(entry.doc), working.doc as Doc, hashes, new Set(), added);
 				saved = await saveWorking(ctx, entry, { ...working, doc, translationSeen });
 				await addSkips(ctx.db, entry, skipped);
 			}

@@ -2,11 +2,13 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { sql, testDatabase } from "../__test__/database";
 import { agentTools } from "../entry/tools";
 import { CheckError, ForbiddenError } from "../errors";
 import { memoryStorage } from "../media/storage";
 import { createMonti, definePlugin, type Plugin } from "../monti";
+import { defineOperation } from "../operation";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
 import type { EntryLine } from "./backup";
@@ -321,6 +323,29 @@ describe("monti restore (14-3)", () => {
 	});
 });
 
+describe("a part of a write taken back (ctx.attempt)", () => {
+	it("14-1 it is a write's own: a read that asks for it is told so, and nothing is tried", async () => {
+		let tried = false;
+		const probe: Plugin = definePlugin({
+			name: "probe",
+			operations: [
+				defineOperation({
+					name: "probe.read",
+					kind: "read",
+					description: "Tries a part outside a write.",
+					input: z.object({}),
+					run: (_input, ctx) =>
+						ctx.attempt(async () => {
+							tried = true;
+						}),
+				}),
+			],
+		});
+		await expect(run(site([probe]), "probe.read")).rejects.toThrow("ctx.attempt is for the run of a write");
+		expect(tried).toBe(false);
+	});
+});
+
 describe("an export imported into another site (flow 9, 04–09)", () => {
 	const upload = (backup: BackupOutput) => ({
 		collection: "post",
@@ -412,12 +437,45 @@ describe("an export imported into another site (flow 9, 04–09)", () => {
 		const from = site();
 		const made = await fill(from);
 		const english = await run<{ entry: { version: number } }>(from, "entries.get", { id: made.translated });
+		// The translation's one block is translated: it stays paired with the source's block, seen as the source had it.
+		const pending = (english.entry as unknown as { doc: { blocks: { id: string; type: string; link?: unknown }[] } })
+			.doc;
 		await write(from, "entries.save", {
 			id: made.translated,
 			version: english.entry.version,
 			title: "Memo",
 			slug: "memo-en",
+			doc: body(
+				...pending.blocks.map((block) => ({ ...block, content: [{ type: "text", text: "The memo's body." }] })),
+			),
 		});
+		const stateOf = async (database: typeof db, id: string) => {
+			const row = await database
+				.selectFrom("entries")
+				.select(["doc", "translation_seen", "translation_skips"])
+				.where("locale", "=", "en")
+				.where("collection", "=", "post")
+				.executeTakeFirstOrThrow();
+			const status = await (database === db ? from : second()).run(
+				"translations.status",
+				{ ids: [id] },
+				{ actor: "admin" },
+			);
+			return {
+				links: (row.doc as { blocks: { link?: unknown }[] }).blocks.map((block) => block.link),
+				seen: row.translation_seen,
+				skips: row.translation_skips,
+				counts: (
+					status as { groups: { locales: { locale: string; changes: number; pending: number }[] }[] }
+				).groups[0].locales.map(({ locale, changes, pending: left }) => ({ locale, changes, pending: left })),
+			};
+		};
+		const before = await stateOf(db, made.second);
+		expect(before.links).toEqual([{ from: "m1", seen: expect.any(String), state: "translated" }]);
+		expect(before.counts).toEqual([
+			{ locale: "ko", changes: 0, pending: 0 },
+			{ locale: "en", changes: 0, pending: 0 },
+		]);
 		const exported = await run<BackupOutput>(from, "data.export", { ids: [made.second] });
 		const seen: string[] = [];
 		const hook = (refuse: boolean): Plugin => ({
@@ -453,6 +511,13 @@ describe("an export imported into another site (flow 9, 04–09)", () => {
 		expect(taken).toMatchObject({ imported: 2, skipped: 0 });
 		expect(seen).toEqual(expect.arrayContaining(["ko:메모", "en:Memo"]));
 		expect(await entriesOf()).toEqual(["en:Memo:memo-en:draft", "ko:메모:memo:draft"]);
+		// The pair is as it was before the export: the block still paired and translated, nothing "added", what was seen and left out the same.
+		const imported = await other
+			.selectFrom("entries")
+			.select("id")
+			.where("locale", "=", "ko")
+			.executeTakeFirstOrThrow();
+		expect(await stateOf(other, imported.id)).toEqual(before);
 	});
 
 	it("14-1 an entry whose body the collection already has is left out, and a taken address gets -2 and is named in the result", async () => {

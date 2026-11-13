@@ -1,6 +1,7 @@
 import { checkDoc } from "../body/blocks";
 import { type Block, type Doc, DocShape, newBlockId } from "../body/doc";
 import { randomUUID } from "../bytes";
+import { withGivenLinks } from "../entries/operations";
 import { slugify } from "../entries/paths";
 import { CheckError } from "../errors";
 import { isEmptyValue } from "../json";
@@ -770,11 +771,15 @@ export async function importUpload(
 					...(translated.doc ? { doc: translated.doc } : {}),
 				};
 				await operations.save.check?.(saving, ctx, undefined);
-				await operations.save.run(saving, ctx, undefined);
-				// The blocks it chose not to follow its source in, as they were.
+				// Its blocks come paired with the source's as they were (the source's blocks keep their ids): the save keeps those links.
+				await withGivenLinks(ctx, () => operations.save.run(saving, ctx, undefined) as Promise<unknown>);
+				// What it had seen of its source's fields, and the blocks it chose not to follow, as they were.
 				await ctx.db
 					.updateTable("entries")
-					.set({ translation_skips: JSON.stringify(member.line?.entry.translation_skips ?? []) })
+					.set({
+						translation_seen: JSON.stringify(member.line?.entry.translation_seen ?? {}),
+						translation_skips: JSON.stringify(member.line?.entry.translation_skips ?? []),
+					})
 					.where("id", "=", started.id)
 					.execute();
 				return started.id;
