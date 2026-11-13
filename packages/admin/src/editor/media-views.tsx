@@ -981,9 +981,9 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 						) : file.missing ? (
 							// A file the library does not have is said, as a file's is: not an empty frame that reads as one still loading (principle 7).
 							<FileBlock
-								name={data.alt ?? ""}
+								// What the entry says of it; with nothing said, what it is.
+								name={data.alt || t({ key: "blocks.image" })}
 								icon={<ImageIcon aria-hidden />}
-								selected={picked}
 								tone="danger"
 								meta={t("editor.image.notFound")}
 							/>
@@ -1169,9 +1169,9 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 						</FloatingBar>
 					</BlockBarPlace>
 				)}
+				{/* Picked, the box's 2px line says so, as a picture's does: the block draws no second one. */}
 				<FileBlock
 					name={shownName.value || item?.name || ""}
-					selected={selected}
 					tone={file.missing ? "danger" : "default"}
 					meta={
 						file.missing

@@ -88,10 +88,12 @@ export function checklistBoxes(label: () => string) {
 							state.doc.descendants((node, pos, parent) => {
 								if (parent?.type.name !== checklist) return;
 								const checked = Boolean(node.attrs.data?.checked);
+								const name = label();
 								decorations.push(
-									Decoration.widget(pos + 1, () => checkBox(checked, label()), {
+									Decoration.widget(pos + 1, () => checkBox(checked, name), {
 										side: -1,
-										key: `check-${checked}`,
+										// Drawn again when its state or the admin's language changes.
+										key: `check-${checked}-${name}`,
 										ignoreSelection: true,
 									}),
 								);
@@ -101,6 +103,8 @@ export function checklistBoxes(label: () => string) {
 						},
 						handleDOMEvents: {
 							mousedown: (view, event) => {
+								// The main button only: a right click opens the browser's menu and changes nothing.
+								if (event.button !== 0) return false;
 								const box = (event.target as Element | null)?.closest?.("[data-check]");
 								if (!box) return false;
 								// The press is the box's: the caret does not move into the item.

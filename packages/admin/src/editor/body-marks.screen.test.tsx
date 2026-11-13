@@ -33,6 +33,22 @@ describe("what is pressed in the text answers the pointer", () => {
 		await expect.element(box("발행하기")).toHaveAttribute("aria-checked", "false");
 	});
 
+	it("a right click on a checklist's box changes nothing; a press beside the box puts the caret before the item's words, and typed words go there", async () => {
+		await Checklist.run();
+		await userEvent.click(box("발행하기"), { button: "right" });
+		await expect.element(box("발행하기")).toHaveAttribute("aria-checked", "false");
+		await userEvent.keyboard("{Escape}");
+		const item = body().getByRole("listitem").filter({ hasText: "발행하기" });
+		// In the gap between the box (14px) and the words (24px in).
+		await userEvent.click(item, { position: { x: 19, y: 15 } });
+		await userEvent.keyboard("곧 ");
+		await expect.element(item).toHaveTextContent("곧 발행하기");
+		// The box still stands first in the item, and still ticks.
+		expect(item.element().firstElementChild?.hasAttribute("data-check")).toBe(true);
+		await userEvent.click(box("곧 발행하기"));
+		await expect.element(box("곧 발행하기")).toHaveAttribute("aria-checked", "true");
+	});
+
 	it("a footnote's number in the text turns ink and underlined under the pointer", async () => {
 		await Footnotes.run();
 		await expect.poll(() => body().element().querySelector("[data-footnote-ref]")).not.toBeNull();
