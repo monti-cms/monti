@@ -170,7 +170,7 @@ describe("the row's menu (menu.md)", () => {
 		await userEvent.click(row("가을 사진 정리").getByText("일상", { exact: true }), { button: "right" });
 		const trash = page.getByRole("menuitem", { name: /휴지통으로/ });
 		await expect.element(trash).toBeVisible();
-		expect(trash.element().querySelector("[data-slot=menu-shortcut]")?.textContent).toMatch(/^(Del|⌦)$/);
+		expect(trash.element().querySelector("[data-slot=menu-shortcut]")?.textContent).toMatch(/^(Delete|⌫)$/);
 		// "Open" and "open in a new tab" do not share a mark.
 		const icon = (name: string) =>
 			page.getByRole("menuitem", { name, exact: true }).element().querySelector("svg")?.innerHTML;

@@ -404,12 +404,17 @@ function RowTitle({
 					{/* It says itself whole when pointed at: it stands over the row's link for the pointer to find it. */}
 					<CutWords
 						whole={addressTitle}
-						className="relative z-1 max-w-max grow basis-[3ch] text-monti-faint text-monti-meta"
+						className="relative z-1 max-w-max grow basis-[3ch] text-monti-caption text-monti-faint"
 					>
-						{address}
-						{address && note ? " · " : null}
+						{/* One slot, one font: the address in its own mono span, the words after it in their own sans one (tokens.md). */}
+						{address ? (
+							<span data-slot="row-title-address" className="text-monti-meta">
+								{address}
+							</span>
+						) : null}
 						{note ? (
-							<span data-slot="row-title-note" className="text-monti-caption">
+							<span data-slot="row-title-note">
+								{address ? " · " : null}
 								{note}
 							</span>
 						) : null}

@@ -1351,6 +1351,11 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const note = row('"고친 글" 저장').element().querySelector<HTMLElement>("[data-slot=row-title-note]");
 		expect(note?.textContent).toMatch(/되돌림/);
 		expect(getComputedStyle(note as HTMLElement).fontFamily).not.toMatch(/mono/i);
+		// One slot, one font: the address has its own mono span, and the words never share it.
+		const address = row('"고친 글" 저장').element().querySelector<HTMLElement>("[data-slot=row-title-address]");
+		expect(address?.textContent).toBe("post/edited-post");
+		expect(getComputedStyle(address as HTMLElement).fontFamily).toMatch(/mono/i);
+		expect(note?.textContent).not.toContain("post/edited-post");
 	});
 
 	it("a second delivery's 취소 confirmed while the first is on its way is sent when that one has answered: both are canceled", async () => {
