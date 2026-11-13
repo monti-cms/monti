@@ -32,7 +32,16 @@ const counted = (node: EditorNode) => {
 };
 
 /** The picked words as a request names them: their block, where they stand in its text, and the words. */
-export type PickedText = { block: string; from: number; to: number; text: string; start: number; end: number };
+export type PickedText = {
+	block: string;
+	from: number;
+	to: number;
+	text: string;
+	start: number;
+	end: number;
+	/** The whole block was picked (its own ✦, doc 18), not words in it. */
+	whole?: boolean;
+};
 
 /** The words between two places of the text, as a request names them: cut at the end of the block they start in. */
 function wordsBetween(state: EditorState, start: number, to: number): PickedText | null {

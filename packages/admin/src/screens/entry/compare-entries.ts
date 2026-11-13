@@ -1,4 +1,4 @@
-import { type Block, type Doc, plainText } from "@monti-cms/core";
+import { type Block, type Doc, type Field, type Label, plainText } from "@monti-cms/core";
 
 /** A run of words, marked when the other side does not have it. */
 export type Part = { text: string; changed: boolean };
@@ -145,22 +145,134 @@ export function readableWordDiff(mine: string, server: string): { mine: Part[]; 
 }
 
 /**
- * How a block reads in the comparison: a heading, code, or text (a paragraph, a list, a quote: their text, line by line). A code block also gives
- * its language, file name and each line's effects (doc 17, T196): two sides with the same code may still differ there.
+ * How a block reads in the comparison: a heading, code, or text (a paragraph, a list, a quote: their text, line by line). A block with values has a
+ * name line (`values`) above its words: "Callout · Kind Warning · Title Read this" (doc 18, T197). A code block also gives its language, file name
+ * and each line's effects (doc 17, T196): two sides with the same code may still differ there.
  */
 export type ShownBlock = {
 	id: string;
 	look: "heading" | "code" | "text";
+	values?: string;
 	text: string;
 	code?: { language: string | null; title: string | null; lines: string[][] };
 };
 
-const textOf = (block: Block): string =>
-	block.children ? block.children.map(textOf).join("\n") : plainText(block.content);
+/** What the comparison names blocks and their values with: the site's catalog, and the admin's words for a name. */
+export type BlockNames = {
+	/** A block type's name and its fields (`blocks.catalog`). */
+	block: (
+		type: string,
+	) =>
+		| { label: Label; fields?: Record<string, Field> | null; fence?: { language: string; attr: string } | null }
+		| undefined;
+	/** A name in the admin's language: a site's words, or a key of the admin's dictionary. */
+	say: (label: Label) => string;
+	/** A library file's name, for a picture or a file. */
+	file?: (media: string) => string | undefined;
+};
+
+/** The words of a core block that holds values, by the admin's dictionary keys, in the order they are said. */
+const CORE_VALUES: Record<string, (attrs: Record<string, unknown>, names: BlockNames) => [string, string][]> = {
+	image: (attrs, names) => [
+		[
+			"compare.value.file",
+			typeof attrs.media === "string" ? (names.file?.(attrs.media) ?? attrs.media) : String(attrs.src ?? ""),
+		],
+		["compare.value.alt", typeof attrs.alt === "string" ? attrs.alt : ""],
+		["compare.value.caption", typeof attrs.caption === "string" ? attrs.caption : ""],
+		[
+			"compare.value.width",
+			typeof attrs.width === "number"
+				? `${attrs.width}px`
+				: typeof attrs.widthPercent === "number"
+					? `${attrs.widthPercent}%`
+					: "",
+		],
+	],
+	file: (attrs, names) => [
+		[
+			"compare.value.file",
+			typeof attrs.name === "string" && attrs.name !== ""
+				? attrs.name
+				: typeof attrs.media === "string"
+					? (names.file?.(attrs.media) ?? attrs.media)
+					: "",
+		],
+	],
+	table: () => [],
+	divider: () => [],
+};
+
+/** A block's name line: its name and the values it has, each by its field's name. `undefined` for a block that is only its words. */
+function valuesOf(block: Block, names: BlockNames | undefined): string | undefined {
+	if (!names) return undefined;
+	const attrs = block.attrs ?? {};
+	const known = names.block(block.type);
+	const core = CORE_VALUES[block.type];
+	if (!known || (!core && !known.fields)) return undefined;
+	// A core block says only the values it has; a site's switch that is on is said by its name alone.
+	const pairs: [string, string][] = core
+		? core(attrs, names).flatMap(([key, value]): [string, string][] => (value === "" ? [] : [[names.say(key), value]]))
+		: Object.entries(known.fields ?? {}).flatMap(([key, field]): [string, string][] => {
+				const value = attrs[key];
+				if (key === known.fence?.attr || value === undefined || value === null || value === "" || value === false)
+					return [];
+				// A value that is on is said by its name alone ("Open at first"); an option by its own name.
+				if (value === true) return [[names.say(field.label), ""]];
+				const option = field.options?.[String(value)];
+				if (option) return [[names.say(field.label), names.say(option)]];
+				return [[names.say(field.label), String(value)]];
+			});
+	return [names.say(known.label), ...pairs.map(([name, value]) => (value ? `${name} ${value}` : name))].join(" · ");
+}
+
+/** A block's own words: its text, a table's rows, a source (a formula, a diagram), or the lines of the blocks it holds with their name lines. */
+function wordsOf(block: Block, names: BlockNames | undefined): string {
+	if (block.type === "table" && Array.isArray(block.attrs?.rows))
+		return (block.attrs.rows as unknown[][]).map((row) => row.map(String).join(" | ")).join("\n");
+	const fence = names?.block(block.type)?.fence;
+	if (fence) return typeof block.attrs?.[fence.attr] === "string" ? String(block.attrs[fence.attr]) : "";
+	if (!block.children) return plainText(block.content);
+	return block.children
+		.flatMap((child) => [
+			// A file of a code explorer says its path over its code (doc 18): two files with the same code are told apart.
+			child.type === "codeBlock" && typeof child.attrs?.title === "string" ? child.attrs.title : undefined,
+			valuesOf(child, names),
+			wordsOf(child, names),
+			nestedEffects(child, names),
+		])
+		.filter((line): line is string => line !== undefined && line !== "")
+		.join("\n");
+}
+
+/**
+ * The line effects of a code block inside another block (a code explorer's file, doc 18), as one line under its code ("Plus 2–3 · Highlight 5"): its
+ * frame is not drawn there, so a change of effects alone reads as changed words (doc 17's effects, T196). A label a code link names is left out.
+ */
+function nestedEffects(block: Block, names: BlockNames | undefined): string | undefined {
+	if (block.type !== "codeBlock" || !names) return undefined;
+	const effects = ((block.attrs?.lines ?? []) as { name: string; start: number; end: number }[]).filter(
+		(effect) => effect.name !== "anchor",
+	);
+	if (effects.length === 0) return undefined;
+	const say = (name: string) =>
+		CORE_EFFECTS.has(name) ? names.say({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` }) : name;
+	return effects
+		.map((effect) => `${say(effect.name)} ${effect.start + 1}${effect.end - effect.start > 1 ? `–${effect.end}` : ""}`)
+		.join(" · ");
+}
+const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
+
+/** A block whose children are all code (a code explorer's files): it reads as code, its indentation kept. */
+const holdsOnlyCode = (block: Block) =>
+	(block.children?.length ?? 0) > 0 && (block.children ?? []).every((child) => child.type === "codeBlock");
+
+/** A block written as code of its own language (a formula, a diagram): it reads as code. */
+const isSource = (block: Block, names: BlockNames | undefined) => Boolean(names?.block(block.type)?.fence);
 
 /** Each line's effects, by name, in a stable order. A label a code link names is not something the reader sees: it is left out. */
 const lineEffects = (block: Block): string[][] => {
-	const lines: string[][] = textOf(block)
+	const lines: string[][] = plainText(block.content)
 		.split("\n")
 		.map(() => []);
 	for (const effect of (block.attrs?.lines ?? []) as { name: string; start: number; end: number }[])
@@ -169,21 +281,31 @@ const lineEffects = (block: Block): string[][] => {
 	return lines.map((names) => [...new Set(names)].sort());
 };
 
-export function shownBlocks(doc: Doc | null): ShownBlock[] {
-	return (doc?.blocks ?? []).map((block) => ({
-		id: block.id,
-		look: block.type === "heading" ? "heading" : block.type === "codeBlock" ? "code" : "text",
-		text: textOf(block),
-		...(block.type === "codeBlock"
-			? {
-					code: {
-						language: typeof block.attrs?.language === "string" ? block.attrs.language : null,
-						title: typeof block.attrs?.title === "string" ? block.attrs.title : null,
-						lines: lineEffects(block),
-					},
-				}
-			: {}),
-	}));
+/** The body's blocks as the comparison reads them. With `names`, a block with values has its name line, and a formula or a diagram reads as code. */
+export function shownBlocks(doc: Doc | null, names?: BlockNames): ShownBlock[] {
+	return (doc?.blocks ?? []).map((block) => {
+		const values = valuesOf(block, names);
+		return {
+			id: block.id,
+			look:
+				block.type === "heading"
+					? "heading"
+					: block.type === "codeBlock" || isSource(block, names) || holdsOnlyCode(block)
+						? "code"
+						: "text",
+			...(values !== undefined ? { values } : {}),
+			text: wordsOf(block, names),
+			...(block.type === "codeBlock"
+				? {
+						code: {
+							language: typeof block.attrs?.language === "string" ? block.attrs.language : null,
+							title: typeof block.attrs?.title === "string" ? block.attrs.title : null,
+							lines: lineEffects(block),
+						},
+					}
+				: {}),
+		};
+	});
 }
 
 /** The lines of two codes paired by their words (the longest run of equal lines in order): a line put in on one side moves no pair. */
@@ -231,9 +353,11 @@ export function codeChanges(block: ShownBlock, other: ShownBlock | undefined) {
  * Each side's blocks with their words marked (screens.md, EditorCompare: `compareEntries`). Blocks pair by their id: a block the other side does not
  * have is marked whole, a block both have is compared word by word, and a code block's effects line by line (`changes`).
  */
-export function compareBodies(mine: Doc | null, server: Doc | null) {
-	const ours = shownBlocks(mine);
-	const theirs = shownBlocks(server);
+export function compareBodies(mine: Doc | null, server: Doc | null, names?: BlockNames) {
+	const ours = shownBlocks(mine, names);
+	const theirs = shownBlocks(server, names);
+	const diff = (a: string, b: string, pick: "mine" | "server") =>
+		(pick === "mine" ? wordDiff(a, b) : wordDiff(b, a))[pick];
 	const side = (blocks: ShownBlock[], other: ShownBlock[], pick: "mine" | "server") =>
 		blocks.map((block) => {
 			const match = other.find((each) => each.id === block.id);
@@ -241,10 +365,16 @@ export function compareBodies(mine: Doc | null, server: Doc | null) {
 				return {
 					...block,
 					parts: [{ text: block.text, changed: block.text !== "" }],
+					...(block.values !== undefined ? { valueParts: [{ text: block.values, changed: true }] } : {}),
 					changes: codeChanges(block, undefined),
 				};
-			const diff = pick === "mine" ? wordDiff(block.text, match.text) : wordDiff(match.text, block.text);
-			return { ...block, parts: diff[pick], changes: codeChanges(block, match) };
+			// A value is compared word by word, like the words: "Kind Note" against "Kind Warning" marks the kind's name (doc 18).
+			return {
+				...block,
+				parts: diff(block.text, match.text, pick),
+				...(block.values !== undefined ? { valueParts: diff(block.values, match.values ?? "", pick) } : {}),
+				changes: codeChanges(block, match),
+			};
 		});
 	return { mine: side(ours, theirs, "mine"), server: side(theirs, ours, "server") };
 }

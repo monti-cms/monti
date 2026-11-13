@@ -12,30 +12,16 @@ import { Text } from "@tiptap/extension-text";
 import { Underline } from "@tiptap/extension-underline";
 import type { DOMOutputSpec } from "@tiptap/pm/model";
 import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps, ReactNodeViewRenderer } from "@tiptap/react";
-import { type ComponentType, createElement } from "react";
-import type { AdminBlockDefinition } from "../operations/admin-context";
+import { type ComponentType, createElement, Suspense } from "react";
+import type { AdminBlockComponent, AdminBlockDefinition } from "../operations/admin-context";
+import { BlockPlaceProvider } from "./block-api";
 import type { Catalog, CatalogBlock } from "./catalog";
 import { ENTRY_LINK } from "./link-targets";
+import { CORE_MARKS, KEPT_MARK, markName, nodeName, UNKNOWN } from "./names";
 import { tableExtensions } from "./table";
 import { TranslationBlocks } from "./translation";
 
-/** The editor's node for a block type: a block type may hold `:` or `-` (`component:PostCard`), an editor name may not. */
-export const nodeName = (type: string) => type.replace(/[^A-Za-z0-9_]/g, "_");
-
-/** A block whose type the site no longer defines: kept whole in one attr, drawn as a box, never changed (doc 03, 03-5). */
-export const UNKNOWN = "unknownBlock";
-/** A mark the site no longer defines, kept whole on its text. */
-export const KEPT_MARK = "keptMark";
-
-/** The core marks whose editor name differs from their stored name. */
-export const MARK_NAMES: Record<string, string> = { sup: "superscript", sub: "subscript" };
-const CORE_MARKS = new Set(["bold", "italic", "underline", "strike", "code", "link", "sup", "sub"]);
-export const markName = (type: string) =>
-	MARK_NAMES[type] ?? (CORE_MARKS.has(type) ? type : `monti_${type.replace(/[^A-Za-z0-9_]/g, "_")}`);
-export const markType = (name: string, kit?: Catalog) =>
-	kit?.marks.find((mark) => markName(mark.type) === name)?.type ??
-	Object.entries(MARK_NAMES).find(([, editor]) => editor === name)?.[0] ??
-	name;
+export { KEPT_MARK, markName, markType, nodeName, UNKNOWN } from "./names";
 
 /** Every block node carries its block's id and its attrs. Neither is drawn into the page, so a copied block never brings its id along. */
 const blockAttributes = () => ({
@@ -213,26 +199,32 @@ export function bodyExtensions(
 				? () => ReactNodeViewRenderer(View, whole)
 				: Component
 					? () =>
-							ReactNodeViewRenderer(
-								({ node }) =>
+							ReactNodeViewRenderer((props: ReactNodeViewProps) => {
+								const attrs = (props.node.attrs.data as Record<string, unknown> | null) ?? {};
+								const drawn = (Drawn: AdminBlockComponent) =>
 									createElement(
-										NodeViewWrapper,
-										{ "data-block": block.type },
+										Drawn,
+										{ block: { id: String(props.node.attrs.blockId ?? ""), type: block.type, attrs }, attrs },
+										block.holds === "nothing" ? undefined : createElement(NodeViewContent),
+									);
+								// A block's own editor view reads and changes its block through `useBlock` (doc 18); it may load later (its
+								// folder's `editor.tsx` comes on first use), and until then the site's drawing stands in.
+								return createElement(
+									NodeViewWrapper,
+									{ "data-block": block.type },
+									createElement(
+										BlockPlaceProvider,
+										{
+											value: { node: props.node, editor: props.editor, getPos: props.getPos, selected: props.selected },
+										},
 										createElement(
-											Component,
-											{
-												block: {
-													id: String(node.attrs.blockId ?? ""),
-													type: block.type,
-													attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
-												},
-												attrs: (node.attrs.data as Record<string, unknown> | null) ?? {},
-											},
-											block.holds === "nothing" ? undefined : createElement(NodeViewContent),
+											Suspense,
+											{ fallback: definition?.Site ? drawn(definition.Site) : null },
+											drawn(Component),
 										),
 									),
-								whole,
-							)
+								);
+							}, whole)
 					: undefined;
 			return Node.create({
 				name: nodeName(block.type),
@@ -318,12 +310,29 @@ export function bodyExtensions(
 						},
 					},
 				],
-				// The mark's own attrs (not rendered one by one): a copy keeps them, and a code link's words say where they point (doc 17).
-				renderHTML: ({ mark: made }) => [
-					"span",
-					{ "data-monti-mark": mark.type, "data-monti-attrs": JSON.stringify(made.attrs) },
-					0,
-				],
+				// Drawn with the site's look (doc 18): the class `monti-<type>` and each value as `data-<name>` (a colour's `data-color`), as the mark's
+				// own stylesheet reads them; a `text` value (a tooltip's) is the words' hover title.
+				// The values are not attributes Tiptap renders (each is `rendered: false`), so they are read off the mark itself.
+				renderHTML: ({ mark: on }) => {
+					const values = Object.fromEntries(
+						Object.entries(on.attrs).filter(([, value]) => value !== null && value !== undefined),
+					);
+					return [
+						"span",
+						{
+							"data-monti-mark": mark.type,
+							"data-monti-attrs": JSON.stringify(values),
+							class: `monti-${mark.type}`,
+							...Object.fromEntries(
+								Object.entries(values)
+									.filter(([, value]) => typeof value === "string")
+									.map(([name, value]) => [`data-${name}`, value]),
+							),
+							...(typeof values.text === "string" ? { title: values.text } : {}),
+						},
+						0,
+					];
+				},
 			});
 		});
 	return [

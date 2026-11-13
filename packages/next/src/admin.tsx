@@ -1,5 +1,5 @@
 import "@monti-cms/admin/styles.css";
-import type { AdminBlockDefinition, AdminPlugin } from "@monti-cms/admin";
+import type { AdminBlockDefinition, AdminMarkDefinition, AdminPlugin } from "@monti-cms/admin";
 import { AdminApp } from "./admin-app";
 
 /**
@@ -9,11 +9,14 @@ import { AdminApp } from "./admin-app";
 export function AdminPage({
 	siteName = "Monti",
 	blocks,
+	marks,
 	plugins,
 }: {
 	siteName?: string;
 	/** The site's block definitions, from a `"use client"` module: their editor components draw the site's own blocks in the admin. */
 	blocks?: AdminBlockDefinition[];
+	/** The site's mark definitions, from the same module: their cards in the format bar. */
+	marks?: AdminMarkDefinition[];
 	/**
 	 * The browser halves of the site's plugins (`defineAdminPlugin`), from `"use client"` modules: a field's own input, a view in the property
 	 * panel, a tool page's screen (doc 14).
@@ -23,7 +26,7 @@ export function AdminPage({
 	return (
 		<>
 			<meta name="robots" content="noindex, nofollow" />
-			<AdminApp siteName={siteName} blocks={blocks} plugins={plugins} />
+			<AdminApp siteName={siteName} blocks={blocks} marks={marks} plugins={plugins} />
 		</>
 	);
 }

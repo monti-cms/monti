@@ -1,3 +1,8 @@
+/**
+ * The schema library the core checks a block's and a field's values with: a site's own blocks (and the ones `monti add` copies in) describe their
+ * values with it, so the core reads them with the same library and version (doc 18).
+ */
+export { z } from "zod";
 export {
 	ACTIVITY_FACETS,
 	ACTIVITY_FILTERS,
@@ -23,14 +28,20 @@ export {
 	type AnyBlockDefinition,
 	type BlockCheck,
 	type BlockDefinition,
+	type BlockStarter,
 	type BodyProblem,
 	CODE_TOOL_MARKS,
 	checkDoc,
 	coreBlocks,
 	coreMarks,
+	createBlockKit,
 	defineBlock,
 	defineMark,
+	type Field,
+	type Label,
+	labelIn,
 	type MarkDefinition,
+	type Words,
 } from "./body/blocks";
 export {
 	type Block,

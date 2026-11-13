@@ -6,7 +6,9 @@ import { MediaPickerDialog } from "../media/media-picker-dialog";
 import { useAcceptFiles } from "../media/upload-problem";
 import { useKeepFilesInPage } from "../media/use-file-drop";
 import { useUpload } from "../media/use-upload";
+import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
+import { BlockRequestContext, EntryLocaleContext } from "./block-api";
 import { type BlockTranslation, useBlockHandle } from "./block-menu";
 import type { BodyCatalogs } from "./catalog";
 import { FormatCard } from "./format-card";
@@ -54,7 +56,10 @@ export function BodyEditor({
 	files,
 	fill,
 	onRequest,
+	locale,
 }: {
+	/** The entry's language: a site block's empty title shows its kind in it, as the site will (doc 18). */
+	locale?: string;
 	doc: Doc;
 	/** The library's files the body shows, as its read brought them: their shapes hold the pictures' places from the first draw. */
 	files?: readonly MediaItem[];
@@ -160,6 +165,18 @@ export function BodyEditor({
 	);
 
 	useEffect(() => onEditor?.(editor), [editor, onEditor]);
+	/** A block's own ✦ (a formula's, doc 18): the request names the whole block. */
+	const askAbout = (block: string) => {
+		if (!editor || !onRequest) return;
+		let found: { start: number; end: number } | null = null;
+		editor.state.doc.descendants((node, at) => {
+			if (found) return false;
+			if (node.attrs.blockId === block) found = { start: at, end: at + node.nodeSize };
+			return !found;
+		});
+		if (found)
+			onRequest({ block, from: 0, to: 0, text: "", whole: true, ...(found as { start: number; end: number }) });
+	};
 	// ⌘J asks the assistant about the picked words, as the format card's "✦ request" does.
 	const requested = useRef(onRequest);
 	requested.current = editable ? onRequest : undefined;
@@ -214,7 +231,12 @@ export function BodyEditor({
 					else editor.chain().focus("end").run();
 				}}
 			>
-				<EditorContent editor={editor} />
+				<EntryLocaleContext.Provider value={locale}>
+					<BlockRequestContext.Provider value={editable && onRequest && editor ? askAbout : undefined}>
+						<EditorContent editor={editor} />
+					</BlockRequestContext.Provider>
+				</EntryLocaleContext.Provider>
+				<MarkLooks />
 				{editor && margin ? margin(editor) : null}
 				{handle.overlay}
 				{tables.overlay}
@@ -242,5 +264,16 @@ export function BodyEditor({
 				)}
 			</EditorBody>
 		</EditorMedia.Provider>
+	);
+}
+
+/**
+ * The site's marks' looks (doc 18): each mark's site component loads its own stylesheet (`<style href precedence>`, once), so the editor draws a colour
+ * or a tooltip's words as the site does. They are drawn here once, out of sight, for that.
+ */
+function MarkLooks() {
+	const { marks } = useAdmin();
+	return (
+		<div hidden>{[...marks.values()].map(({ type, Site }) => (Site ? <Site key={type} mark={{ type }} /> : null))}</div>
 	);
 }

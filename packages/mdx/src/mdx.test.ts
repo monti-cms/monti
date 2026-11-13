@@ -372,3 +372,129 @@ describe("writing a body as MDX (T34)", () => {
 		expect(toMdx(null)).toBe("");
 	});
 });
+
+describe("the blocks package's notations (doc 18)", () => {
+	const known = (type: string) =>
+		(({ callout: "blocks", tabs: "blocks", tab: "blocks", math: "nothing", mermaid: "nothing" })[type] as
+			| "blocks"
+			| "nothing"
+			| undefined) ?? null;
+	const fences = { math: { language: "math", attr: "source" }, mermaid: { language: "mermaid", attr: "source" } };
+	const fenced = (language: string) => {
+		const found = Object.entries(fences).find(([, fence]) => fence.language === language);
+		return found ? { type: found[0], attr: found[1].attr } : null;
+	};
+	const marks = (name: string) => name === "color" || name === "tooltip";
+	const site = { known, fenced, marks };
+
+	it("18-3 a value with quote marks, an ampersand or a line end is written so it reads back as it was", () => {
+		const doc: Doc = {
+			type: "doc",
+			blocks: [
+				{
+					id: "a",
+					type: "callout",
+					attrs: { tone: "warning", title: '그가 "네"라고 & 말했다' },
+					children: [{ id: "b", type: "paragraph", content: [text("본문")] }],
+				},
+				{
+					id: "c",
+					type: "paragraph",
+					content: [text("RSC", { type: "tooltip", text: 'React "Server"\nComponents' })],
+				},
+			],
+		};
+		const written = toMdx(doc);
+		expect(written).toContain('title="그가 &quot;네&quot;라고 &amp; 말했다"');
+		expect(bare(readMarkdown(written, site).doc)).toEqual(bare(doc));
+	});
+
+	it("18-3 a formula and a diagram are fenced code of their language, read into the site's block and written back", () => {
+		const source = [
+			"```math",
+			"f(x) = \\int e^{-x^2} dx",
+			"```",
+			"",
+			"```mermaid",
+			"flowchart LR",
+			"  A --> B",
+			"```",
+		].join("\n");
+		const read = readMarkdown(source, site);
+		expect(bare(read.doc)).toEqual([
+			{ type: "math", attrs: { source: "f(x) = \\int e^{-x^2} dx" } },
+			{ type: "mermaid", attrs: { source: "flowchart LR\n  A --> B" } },
+		]);
+		const written = toMdx(read.doc, { fences });
+		expect(written).toBe(`${source}\n`);
+		// A site without those blocks keeps them as code of that language: nothing is lost.
+		expect(bare(readMarkdown(source).doc)).toEqual([
+			{ type: "codeBlock", attrs: { language: "math" }, content: [text("f(x) = \\int e^{-x^2} dx")] },
+			{ type: "codeBlock", attrs: { language: "mermaid" }, content: [text("flowchart LR\n  A --> B")] },
+		]);
+	});
+
+	it("18-3 $$ … $$ is a formula; a single $ is a price and stays words", () => {
+		const read = readMarkdown(["$$", "a^2 + b^2 = c^2", "$$", "", "커피는 $5, 빵은 $3이다."].join("\n"), site);
+		expect(bare(read.doc)).toEqual([
+			{ type: "math", attrs: { source: "a^2 + b^2 = c^2" } },
+			{ type: "paragraph", content: [text("커피는 $5, 빵은 $3이다.")] },
+		]);
+		expect(toMdx(read.doc, { fences })).toBe("```math\na^2 + b^2 = c^2\n```\n\n커피는 $5, 빵은 $3이다.\n");
+	});
+
+	it("18-3 the site's marks are text directives; one the site does not have stays as it was written", () => {
+		const source =
+			'빨간 :color[말]{color="red"}과 :tooltip[**RSC**]{text="React Server Components"}, 그리고 :badge[새]{tone="new"}.';
+		const read = readMarkdown(source, site);
+		expect(bare(read.doc)).toEqual([
+			{
+				type: "paragraph",
+				content: [
+					text("빨간 "),
+					text("말", { type: "color", color: "red" }),
+					text("과 "),
+					text("RSC", { type: "tooltip", text: "React Server Components" }, { type: "bold" }),
+					text(', 그리고 :badge[새]{tone="new"}.'),
+				],
+			},
+		]);
+		const written = toMdx(read.doc);
+		expect(bare(readMarkdown(written, site).doc)).toEqual(bare(read.doc));
+		expect(written).toContain(':color[말]{color="red"}');
+		expect(written).toContain(':tooltip[**RSC**]{text="React Server Components"}');
+	});
+
+	it("18-3 a code fence's title is the file's name; the rest of its line is kept (doc 17's meta)", () => {
+		const source = [
+			':::code-explorer{open="src/app.ts"}',
+			'```ts title="src/app.ts" {1}',
+			"export const a = 1;",
+			"```",
+			"",
+			'``` title="README"',
+			"읽어 보세요",
+			"```",
+			":::",
+		].join("\n");
+		const read = readMarkdown(source, { known: (type) => (type === "code-explorer" ? "blocks" : null) });
+		expect(bare(read.doc)).toEqual([
+			{
+				type: "code-explorer",
+				attrs: { open: "src/app.ts" },
+				children: [
+					{
+						type: "codeBlock",
+						attrs: { language: "ts", title: "src/app.ts", meta: "{1}" },
+						content: [text("export const a = 1;")],
+					},
+					{ type: "codeBlock", attrs: { title: "README" }, content: [text("읽어 보세요")] },
+				],
+			},
+		]);
+		const written = toMdx(read.doc);
+		expect(bare(readMarkdown(written, { known: (type) => (type === "code-explorer" ? "blocks" : null) }).doc)).toEqual(
+			bare(read.doc),
+		);
+	});
+});

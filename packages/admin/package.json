@@ -7,6 +7,8 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./blocks": "./src/blocks.ts",
+		"./icons": "./src/icons.ts",
 		"./styles.css": "./dist/styles.css"
 	},
 	"files": [
@@ -50,6 +52,7 @@
 	"devDependencies": {
 		"@electric-sql/pglite": "0.5.15",
 		"@fontsource/ibm-plex-mono": "^5.3.0",
+		"@monti-cms/blocks": "workspace:*",
 		"@monti-cms/mdx": "workspace:*",
 		"@monti-cms/seo": "workspace:*",
 		"@storybook/addon-themes": "10.6.1",
@@ -72,6 +75,14 @@
 			".": {
 				"types": "./dist/index.d.ts",
 				"default": "./dist/index.js"
+			},
+			"./blocks": {
+				"types": "./dist/blocks.d.ts",
+				"default": "./dist/blocks.js"
+			},
+			"./icons": {
+				"types": "./dist/icons.d.ts",
+				"default": "./dist/icons.js"
 			},
 			"./styles.css": "./dist/styles.css"
 		}

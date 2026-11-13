@@ -19,6 +19,8 @@ const roots = targets.length
 	? targets.map((target) => path.resolve(target))
 	: readdirSync(path.join(root, "packages"))
 			.map((name) => path.join(root, "packages", name, "src"))
+			// A site block's source (`@monti-cms/blocks`, doc 18) is runtime code too; its words are in its folder's `words.ts`.
+			.concat(path.join(root, "packages", "blocks", "blocks"))
 			.filter((dir) => {
 				try {
 					return statSync(dir).isDirectory();
@@ -28,7 +30,9 @@ const roots = targets.length
 			});
 
 const SKIP_DIRS = new Set(["__test__", "node_modules", "dist", "test"]);
-const isMessages = (file) => /(^|[./])messages\.tsx?$/.test(path.basename(file));
+const isMessages = (file) =>
+	/(^|[./])messages\.tsx?$/.test(path.basename(file)) ||
+	(path.basename(file) === "words.ts" && file.includes(`${path.sep}blocks${path.sep}blocks${path.sep}`));
 const isTest = (file) => /\.(test|stories)\.tsx?$/.test(file);
 /** The reference screens are sample screens drawn from design-system parts, as stories are: their Korean is the sample's words. */
 const isSample = (dir) => dir.endsWith(`${path.sep}screens${path.sep}reference`);
