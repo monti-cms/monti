@@ -1993,6 +1993,9 @@ describe("a picture or file that is gone, or picked", () => {
 		await expect.poll(() => block.querySelector("[data-slot=file-block]")?.textContent).toContain("파일 없음");
 		expect(block.querySelector("[data-slot=file-block]")?.textContent).toContain("지운 그림");
 		expect(block.querySelector("[data-slot=image]")).toBeNull();
+		// Nothing to look at, so nothing to fill: the caption line has no "채우기".
+		await userEvent.click(body().getByRole("textbox", { name: "캡션" }));
+		await expect.element(page.getByRole("button", { name: "채우기" })).not.toBeInTheDocument();
 	});
 
 	it("a picked file has the same 2px line as a picked picture", async () => {
@@ -2003,5 +2006,8 @@ describe("a picture or file that is gone, or picked", () => {
 		await expect.poll(() => file().querySelector("[data-slot=block-box]")?.hasAttribute("data-selected")).toBe(true);
 		const line = file().querySelector("[data-slot=block-line]") as HTMLElement;
 		expect(getComputedStyle(line).outlineWidth).toBe("2px");
+		// One line: the block's own border steps aside under the box's.
+		const own = file().querySelector("[data-slot=file-block]") as HTMLElement;
+		expect(getComputedStyle(own).borderTopColor).toBe("rgba(0, 0, 0, 0)");
 	});
 });

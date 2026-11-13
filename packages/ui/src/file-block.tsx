@@ -38,6 +38,8 @@ function FileBlock({
 			className={cn(
 				"flex items-center gap-monti-12 rounded-monti-lg border bg-monti-page px-monti-16 py-monti-12",
 				selected ? "border-monti-contrast" : "border-monti-default",
+				// In a picked block's box (`BlockBox selected`) the box's 2px line says it: the block's own border steps aside, so there is one line.
+				"group-data-selected/block-box:border-transparent",
 				className,
 			)}
 			{...props}

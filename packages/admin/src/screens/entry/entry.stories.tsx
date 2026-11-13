@@ -475,6 +475,34 @@ export const Draft: Story = {
 	},
 };
 
+/** A checklist in the body: the ticked item's box has its ✓, and pressing a box ticks it. */
+export const Checklist: Story = {
+	loaders: site("checklist"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByRole("checkbox", { name: "완료", checked: true }, wait);
+	},
+};
+
+/** The address in a tab of its own and empty: that tab's name has the orange dot of a publish to-do. */
+export const ToDoInTab: Story = {
+	loaders: site("addressInTab"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByRole("tab", { name: /할 일 있음/ }, wait);
+	},
+};
+
+/** A relation to posts, its list open: the drafts say "초안" at their row's end. */
+export const RelationDrafts: Story = {
+	loaders: site("related"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("combobox", { name: "관련 글" }, wait));
+		await all.findByRole("option", { name: /리액트 다시 만들기 1편/ }, wait);
+	},
+};
+
 /** A post with a conditional field (doc 19): the fields of the kind it is stand directly under the choice. */
 export const Conditional: Story = {
 	loaders: site("conditional"),

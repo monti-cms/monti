@@ -770,7 +770,8 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	// With a fill the line keeps one shape whatever it shows (the caption stays the same box while its button comes and goes with the caret).
 	const captionField =
 		(editable || data.caption) &&
-		(fill && captionFill ? (
+		// A picture whose file is gone has nothing to look at: a fill could only fail, so its caption has no button.
+		(fill && captionFill && !file.missing ? (
 			<Stack gap={4}>
 				{/* The button is there while the keyboard is in the line, the button itself included: Tab from the caption reaches it. */}
 				<Inline
