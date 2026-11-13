@@ -67,7 +67,7 @@ const patched = (current: unknown, patch: Record<string, unknown>) => {
 };
 
 /**
- * A block's editor view reads and changes its block with this (doc 18, "블록 폴더와 꽂는 곳"): its values, its children, whether it can be changed
+ * A block's editor view reads and changes its block with this (doc 18, the block folder): its values, its children, whether it can be changed
  * here, whether it is picked or the cursor is in it, and the admin's language. Every change is one step of the editor's history, so undo takes it back.
  */
 export function useBlock() {
@@ -321,10 +321,10 @@ export function SourceBlock({
 	onChange,
 	children,
 }: {
-	/** The source's name over its field ("원문 코드"). */
+	/** The source's name over its field ("Source"). */
 	label: string;
 	source: string;
-	/** What the box says while there is no source ("수식 입력"). */
+	/** What the box says while there is no source ("Enter a formula"). */
 	empty: string;
 	placeholder?: string;
 	errors?: string[];

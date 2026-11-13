@@ -233,6 +233,9 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: ^5.3.0
         version: 5.3.0
+      '@monti-cms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
       '@monti-cms/mdx':
         specifier: workspace:*
         version: link:../mdx
@@ -330,12 +333,18 @@ importers:
 
   packages/blocks:
     devDependencies:
+      '@monti-cms/admin':
+        specifier: workspace:*
+        version: link:../admin
       '@monti-cms/core':
         specifier: workspace:*
         version: link:../core
       '@monti-cms/mdx':
         specifier: workspace:*
         version: link:../mdx
+      '@monti-cms/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@types/katex':
         specifier: ^0.16.8
         version: 0.16.8
