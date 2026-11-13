@@ -324,6 +324,12 @@ export const BlockBox = open.BlockBox;
 export const Section = close(open.Section);
 export const Untranslated = close(open.Untranslated);
 export const CodeBlock = close(open.CodeBlock);
+export const CodeFrame = close(open.CodeFrame);
+export const CodeFileTab = close(open.CodeFileTab);
+export const CodeLine = close(open.CodeLine);
+export const CodeMark = close(open.CodeMark);
+export const CodeRefText = close(open.CodeRefText);
+export const CodeToken = close(open.CodeToken);
 export const HeadingIcon = close(open.HeadingIcon);
 /** The heading glyphs by level (2, 3, 4), as icon components: they go where an `icon` goes (a slash menu item, a toolbar entry). */
 export const headingIcons = open.headingIcons;
