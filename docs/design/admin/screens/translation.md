@@ -103,6 +103,7 @@
 | 제목 행 | `CompareRow title` 안에 `Heading variant="page"` 둘 | 번역 제목은 그 자리에서 고친다(`Input size="inherit"`). |
 | 여백의 상태 "변경" · "삭제" · "추가" | 행의 블록 종류 칸 메모(`data-pair-note`) | 변경 주황, 삭제 빨강, 추가 초록(여백 표시와 같은 낱말과 색). 원문 쪽 바뀐 말은 주황 밑줄. |
 | 이미지 블록의 캡션과 대체 텍스트 | 원문 칸은 `Label` + `Text`, 번역 칸은 `FormField` 안에 `Input`(번역 안 한 값은 플레이스홀더 "번역 전") | 번역 칸은 늘 입력 칸이다. 그림은 원문과 같은 파일. |
+| 원문의 값 가진 블록 (18) | `CompareBlock` 안 이름 줄 `CompareValues`("콜아웃 · 종류 경고 · 제목 …", 사진과 파일은 파일 이름) 아래 그 글 | 수식 · 다이어그램 · 차트는 그 소스가 `CompareCode`로 보인다. |
 | 코드 블록의 번역 칸 | `CompareShared`(children 원문 블록 `CompareCode`, `action` `TextButton variant="underline"` "따로 고치기") | 원문 블록이 흐린 글자로 보인다. 누르는 순간 이 언어용 사본을 만든다. |
 | 흐린 블록 | `Untranslated` | EditorTranslate와 같다. |
 | 상태 표시줄 | "할 일 1", 글자 수 | EditorTranslate와 같다. |

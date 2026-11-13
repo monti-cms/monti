@@ -117,6 +117,20 @@ export function namedFiles(manifest) {
 	return found.map((file) => file.replace(/^\.\//, ""));
 }
 
+/**
+ * The names `exports` and `bin` give that no file of the tarball answers. A subpath pattern (`./blocks/*.tsx`, a package whose files are copied whole,
+ * doc 18) is answered by any file it matches, its `*` standing for any part of a path as Node reads it; a plain name only by that file.
+ */
+export function missingFiles(named, files) {
+	return named.filter((name) => {
+		if (!name.includes("*")) return !files.includes(name);
+		const [head, tail] = name.split("*");
+		return !files.some(
+			(file) => file.startsWith(head) && file.endsWith(tail) && file.length > head.length + tail.length,
+		);
+	});
+}
+
 /** What must not ship: sources, tests and stories. The names of the files of a package that are one of them. */
 export const unwanted = (files) =>
 	files.filter((file) => /^src\/|\.test\.[cm]?[jt]sx?$|\.stories\.[jt]sx?$|(^|\/)__screenshots__\//.test(file));
@@ -245,7 +259,7 @@ export function packRelease({ root, out, base }) {
 			const manifestFile = path.join(unpacked, "package.json");
 			const manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
 			const files = filesUnder(unpacked);
-			const lost = namedFiles(manifest).filter((file) => !files.includes(file));
+			const lost = missingFiles(namedFiles(manifest), files);
 			if (lost.length > 0)
 				throw new Error(`${pkg.name}: the tarball has no ${lost.join(", ")} (build the packages first: pnpm build)`);
 			const extra = unwanted(files);

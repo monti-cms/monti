@@ -1,0 +1,65 @@
+{
+	"$comment": "What `monti add` copies (doc 18): each item is a folder of blocks/ whose index.ts exports the names in `blocks` or `marks`. `needs` are the packages the site installs for it.",
+	"items": [
+		{
+			"name": "callout",
+			"blocks": ["callout"],
+			"needs": [],
+			"summary": "A box for a note, a tip or a warning"
+		},
+		{
+			"name": "tabs",
+			"blocks": ["tabs", "tab"],
+			"needs": [],
+			"summary": "The same thing a few ways, one at a time"
+		},
+		{
+			"name": "columns",
+			"blocks": ["columns", "column"],
+			"needs": [],
+			"summary": "Blocks side by side"
+		},
+		{
+			"name": "collapsible",
+			"blocks": ["collapsible"],
+			"needs": [],
+			"summary": "A part a reader opens by its title"
+		},
+		{
+			"name": "code-explorer",
+			"blocks": ["codeExplorer"],
+			"needs": [],
+			"summary": "Files of a project as a tree with their code"
+		},
+		{
+			"name": "math",
+			"blocks": ["math"],
+			"needs": ["katex"],
+			"summary": "A formula in LaTeX"
+		},
+		{
+			"name": "mermaid",
+			"blocks": ["mermaid"],
+			"needs": ["mermaid"],
+			"summary": "A Mermaid diagram"
+		},
+		{
+			"name": "chart",
+			"blocks": ["chart"],
+			"needs": [],
+			"summary": "A table's numbers as a chart"
+		},
+		{
+			"name": "tooltip",
+			"marks": ["tooltip"],
+			"needs": [],
+			"summary": "A note on some words"
+		},
+		{
+			"name": "color",
+			"marks": ["color"],
+			"needs": [],
+			"summary": "Words in a colour"
+		}
+	]
+}

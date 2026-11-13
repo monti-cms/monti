@@ -10,9 +10,16 @@ type Compose = (module: never) => Record<string, unknown>;
  * One test for each story file: every story is drawn and brought to its state, and what is on the page is measured (`testing/measure.ts`). A story
  * whose `play` cannot reach its state fails here too: a state nobody can be brought to is not looked at by anyone.
  */
-export function measureStories(files: Record<string, unknown>, composeStories: Compose) {
+export function measureStories(
+	files: Record<string, unknown>,
+	composeStories: Compose,
+	part?: { index: number; of: number },
+) {
+	// `part` takes every `of`-th story file from the `index`-th (1 to `of`): the screen stories measured in one file take longer than any other test
+	// file, and CI's runners share test files, not tests, so the admin measures them in a few files.
+	const entries = Object.entries(files).filter((_, at) => !part || at % part.of === part.index - 1);
 	describe("every story, measured: control heights, pressable heights, corners and focus rings", () => {
-		for (const [file, module] of Object.entries(files)) {
+		for (const [file, module] of entries) {
 			it(file, async () => {
 				const found: string[] = [];
 				for (const [name, story] of Object.entries(composeStories(module as never)) as [string, Composed][]) {

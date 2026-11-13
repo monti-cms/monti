@@ -17,6 +17,7 @@ import { test } from "node:test";
 import {
 	builtSideEffects,
 	bundleReadme,
+	missingFiles,
 	packedBytes,
 	packRelease,
 	saysClient,
@@ -333,4 +334,10 @@ test("20-4 the release job names every action by a commit, and checks the tag's 
 	);
 	const branch = workflow.indexOf('git merge-base --is-ancestor "$GITHUB_SHA" "origin/$RELEASE_BRANCH"');
 	assert.ok(branch > 0 && branch < workflow.indexOf("pnpm install"));
+});
+
+test("20-1 an export by pattern (a package copied whole, as the blocks are) is answered by any file it matches, at any depth", () => {
+	const files = ["blocks/index.ts", "blocks/callout/index.ts", "blocks/callout/site.tsx", "registry.json"];
+	assert.deepEqual(missingFiles(["blocks/index.ts", "blocks/*.ts", "blocks/*.tsx", "registry.json"], files), []);
+	assert.deepEqual(missingFiles(["blocks/*.css", "blocks/gone.ts"], files), ["blocks/*.css", "blocks/gone.ts"]);
 });

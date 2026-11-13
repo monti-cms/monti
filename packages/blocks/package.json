@@ -1,0 +1,57 @@
+{
+	"name": "@monti-cms/blocks",
+	"version": "0.2.0-next.16",
+	"private": true,
+	"description": "Monti's blocks and marks (callout, tabs, columns, collapsible, code explorer, math, chart, Mermaid diagram, tooltip, text colour): `monti add` copies their source into a site, which then owns it.",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./blocks/index.ts",
+		"./registry.json": "./registry.json",
+		"./*.ts": "./blocks/*.ts",
+		"./*": "./blocks/*.tsx"
+	},
+	"files": [
+		"blocks",
+		"!blocks/**/*.test.ts",
+		"!blocks/**/*.test.tsx",
+		"registry.json",
+		"README.md"
+	],
+	"scripts": {
+		"typecheck": "tsc --noEmit -p .",
+		"test": "vitest run"
+	},
+	"peerDependencies": {
+		"@monti-cms/core": "workspace:*",
+		"katex": ">=0.16",
+		"mermaid": ">=11",
+		"react": ">=19",
+		"@monti-cms/admin": "workspace:*",
+		"react-dom": ">=19"
+	},
+	"peerDependenciesMeta": {
+		"katex": {
+			"optional": true
+		},
+		"mermaid": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@monti-cms/core": "workspace:*",
+		"@monti-cms/mdx": "workspace:*",
+		"@types/katex": "^0.16.8",
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"katex": "^0.16.47",
+		"mermaid": "^11.17.2",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
+		"typescript": "^7.0.2",
+		"vitest": "^4.0.0",
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/ui": "workspace:*"
+	}
+}

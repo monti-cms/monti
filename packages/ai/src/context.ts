@@ -16,6 +16,8 @@ export const ScreenContext = z
 		selection: z
 			.union([
 				z.object({ kind: z.literal("rows"), ids: z.array(z.string()).max(500) }),
+				/** A whole block picked by its own ✦ (a formula, a diagram, a chart: doc 18): the request is about that block. */
+				z.object({ kind: z.literal("block"), block: z.string() }),
 				z.object({
 					kind: z.literal("text"),
 					block: z.string(),

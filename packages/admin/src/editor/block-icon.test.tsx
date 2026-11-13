@@ -13,4 +13,9 @@ describe("BlockIcon", () => {
 	it("a site's own block, which names no mark, has the component mark: no row of the menu goes without", () => {
 		expect(BlockIcon({ type: "callout" })).not.toBeNull();
 	});
+
+	it("a site's own block that brings its icon has that icon, not the component mark", () => {
+		const Own = () => null;
+		expect(BlockIcon({ type: "callout", Own })?.type).toBe(Own);
+	});
 });

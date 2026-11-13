@@ -10,12 +10,14 @@ import {
 	type CodeLineTone,
 	Compare,
 	CompareBody,
+	CompareCode,
 	CompareHeading,
 	CompareParagraph,
 	CompareProperty,
 	CompareSide,
 	CompareText,
 	CompareTitle,
+	CompareValues,
 	EditorHeader,
 	Inline,
 	Separator,
@@ -33,6 +35,7 @@ import { SessionEndedBanner } from "../frame/session-ended";
 import type { SchemaRead } from "../settings/schema-draft";
 import { compareBodies, type Part, wordDiff } from "./compare-entries";
 import { clock, dayTime } from "./dates";
+import { useBlockNames } from "./use-block-names";
 import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
 
 /** What is compared: my unsaved input against a save made elsewhere, or a copy this browser kept against the server's. */
@@ -175,6 +178,7 @@ export function CompareView({
 	const { t, language, reads } = useAdmin();
 	const id = (editor.loaded as EntryRead | null)?.entry.id ?? "";
 	const latest = useRead<EntryRead>("entries.get", { id }, { own: "empty" });
+	const names = useBlockNames([...(latest.data?.media ?? []), ...(editor.files ?? [])]);
 	const server = latest.data ? copyOf(latest.data) : null;
 	const mine = useMemo(() => {
 		if (!server) return null;
@@ -244,7 +248,7 @@ export function CompareView({
 		.filter((place) => place === "slug" || place.startsWith("values."))
 		.map((place) => (place === "slug" ? "slug" : place.slice("values.".length)));
 	const title = wordDiff(mine.title, server.title);
-	const bodies = compareBodies(mine.doc, server.doc);
+	const bodies = compareBodies(mine.doc, server.doc, names);
 	const fieldValue = (copy: Copy, field: string) => (field === "slug" ? copy.slug : copy.values[field]);
 	const stored = storedFields(schema?.schema.collections[collection]);
 	/** A value as the side shows it: a choice by its option's label. */
@@ -325,19 +329,29 @@ export function CompareView({
 				<Words parts={title[pick]} />
 			</CompareTitle>
 			<CompareBody>
-				{bodies[pick].map((block) =>
+				{bodies[pick].map((block) => [
+					block.valueParts ? (
+						<CompareValues key={`${block.id}:values`}>
+							<Words parts={block.valueParts} />
+						</CompareValues>
+					) : null,
 					block.look === "heading" ? (
 						<CompareHeading key={block.id}>
 							<Words parts={block.parts} />
 						</CompareHeading>
 					) : block.look === "code" && block.code ? (
 						<CodeCompared key={block.id} block={block} />
+					) : block.look === "code" ? (
+						// A source written in a language of its own (a formula, a diagram, a chart, doc 18) reads as code too.
+						<CompareCode key={block.id}>
+							<Words parts={block.parts} />
+						</CompareCode>
 					) : (
 						<CompareParagraph key={block.id}>
 							<Words parts={block.parts} />
 						</CompareParagraph>
 					),
-				)}
+				])}
 			</CompareBody>
 		</CompareSide>
 	);

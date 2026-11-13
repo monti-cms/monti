@@ -1,13 +1,21 @@
 "use client";
 
-import { type DocumentViewProps, defineAdminPlugin } from "@monti-cms/admin";
+import { type DocumentViewProps, defineAdminPlugin, useRead } from "@monti-cms/admin";
 import { CodeBlock } from "@monti-cms/ui";
 import { mdxWords } from "./messages";
 import { toMdx } from "./write";
 
 /** The body as the MDX it would be written as, with the title as front matter: it follows what is typed. A picture is named by its library file. */
 function MdxView({ doc, title }: DocumentViewProps) {
-	return <CodeBlock>{toMdx(doc, { values: title ? { title } : {} })}</CodeBlock>;
+	// The site's blocks written as fenced code (a formula as ```math, doc 18), from the site's catalog.
+	const catalog = useRead<{ blocks: { type: string; fence: { language: string; attr: string } | null }[] }>(
+		"blocks.catalog",
+		{},
+	);
+	const fences = Object.fromEntries(
+		(catalog.data?.blocks ?? []).flatMap((block) => (block.fence ? [[block.type, block.fence]] : [])),
+	);
+	return <CodeBlock>{toMdx(doc, { values: title ? { title } : {}, fences })}</CodeBlock>;
 }
 
 /**

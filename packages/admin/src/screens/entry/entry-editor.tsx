@@ -646,17 +646,19 @@ export function EntryEditor({
 							screen: "entry",
 							collection,
 							entry: await entryForRequest(),
-							...(picked
-								? {
-										selection: {
-											kind: "text",
-											block: picked.block,
-											from: picked.from,
-											to: picked.to,
-											text: picked.text,
-										},
-									}
-								: {}),
+							...(picked?.whole
+								? { selection: { kind: "block", block: picked.block } }
+								: picked
+									? {
+											selection: {
+												kind: "text",
+												block: picked.block,
+												from: picked.from,
+												to: picked.to,
+												text: picked.text,
+											},
+										}
+									: {}),
 						},
 					};
 				}),
@@ -897,6 +899,7 @@ export function EntryEditor({
 				key={`${editor.bodyKey}:${addedKey}`}
 				added={translation.added}
 				doc={editor.doc}
+				locale={read?.entry.locale}
 				files={editor.files}
 				catalogs={catalogs}
 				onChange={(doc) => editor.set("doc", doc)}

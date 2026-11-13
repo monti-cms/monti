@@ -3,6 +3,8 @@ export { adminMessages } from "./messages";
 export {
 	type AdminBlockComponent,
 	type AdminBlockDefinition,
+	type AdminMarkDefinition,
+	type AdminMarkEditorProps,
 	AdminProvider,
 	createScreenChannel,
 	type Language,

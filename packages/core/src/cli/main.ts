@@ -8,6 +8,7 @@ import { migrateContent } from "../schema/apply";
 import { readChangeFiles } from "../schema/files";
 import { secretReader } from "./secret-input";
 
+export { add } from "./add/command";
 export { doctor } from "./doctor/command";
 export { storageCors } from "./doctor/run";
 export { loadEnvFiles, takeEnvFile } from "./env-files";
@@ -28,7 +29,8 @@ const MAINTENANCE = `Maintenance commands (not operations):
   init [-y] [--admin-path /admin] [--locale en] [--login password|github] [--storage local|s3|none] [--dry-run]
                   add Monti to this Next.js site: writes the files it lacks, and says what is left
   doctor [--json] [--origin address]
-                  check the site's set-up: its files, its environment, the database, the storage`;
+                  check the site's set-up: its files, its environment, the database, the storage
+  add [name …]    copy blocks of @monti-cms/blocks into monti/blocks/, where they are the site's own; with no name, list them`;
 
 /**
  * `monti <command>`: the maintenance commands, and every operation as a command (`monti help` lists them). `config` is `monti.config.ts`, loaded by

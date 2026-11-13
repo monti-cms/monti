@@ -5,7 +5,7 @@ import { type EditorState, Plugin, PluginKey, type Selection, TextSelection, typ
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { canMove, deleteBlock } from "./commands";
 import { type Drop, moveBlockTo, spots } from "./drag";
-import { nodeName } from "./schema";
+import { nodeName } from "./names";
 
 /**
  * Blocks picked whole (doc 03, editor-tools.md, picking several blocks, T80), apart from a text selection: a box dragged from the margin outside the text, a
@@ -67,31 +67,54 @@ export function setPick(tr: Transaction, positions: readonly number[] | null): T
 }
 
 /**
- * The blocks with a handle among `found`, keeping the smallest: a block that holds another of them (a list, a quote) is left for the ones it holds,
- * so a box over two list items picks those items, not their whole list.
+ * The blocks with a handle among `found`: a list or a quote that holds others of them is left for the ones it holds, so a box over two list items
+ * picks those items, not their whole list; any other block that holds blocks (a site's callout or tabs, doc 18) is picked whole, its blocks with it.
  */
-function smallest(found: { pos: number; size: number }[]): number[] {
+function smallest(doc: EditorNode, found: { pos: number; size: number }[]): number[] {
+	// A quote and a list are read through: their blocks are picked. Any other block that holds blocks (a site's callout, tabs, columns, doc 18) is one
+	// block: it is picked whole, and what it holds goes with it.
+	const throughOnly = (pos: number) => SEE_THROUGH.has(doc.nodeAt(pos)?.type.name ?? "");
+	const holds = (outer: { pos: number; size: number }, inner: { pos: number }) =>
+		inner.pos > outer.pos && inner.pos < outer.pos + outer.size;
 	return found
-		.filter(
-			(outer) => !found.some((inner) => inner !== outer && inner.pos > outer.pos && inner.pos < outer.pos + outer.size),
-		)
+		.filter((outer) => !throughOnly(outer.pos) || !found.some((inner) => inner !== outer && holds(outer, inner)))
+		.filter((inner) => !found.some((outer) => outer !== inner && !throughOnly(outer.pos) && holds(outer, inner)))
 		.map((each) => each.pos);
 }
+/** The blocks a pick reads through to the blocks they hold. */
+const SEE_THROUGH = new Set(["quote", "bulletList", "orderedList", "checklist", "listItem"].map(nodeName));
 
 /** The blocks a box from `top` to `bottom` (viewport px) touches: every one from the first it touches to the last. */
 export function blocksInBox(view: EditorView, top: number, bottom: number): number[] {
 	const touched = spots(view).filter((spot) => spot.rect.bottom >= top && spot.rect.top <= bottom);
-	return smallest(touched.map((spot) => ({ pos: spot.pos, size: view.state.doc.nodeAt(spot.pos)?.nodeSize ?? 0 })));
+	return smallest(
+		view.state.doc,
+		touched.map((spot) => ({ pos: spot.pos, size: view.state.doc.nodeAt(spot.pos)?.nodeSize ?? 0 })),
+	);
+}
+
+/** The block a pick takes for the block at `pos`: the outermost one holding it that a pick does not read through (a quote and a list are read through). */
+export function wholeOf(doc: EditorNode, pos: number): number {
+	const $pos = doc.resolve(pos);
+	for (let depth = 1; depth <= $pos.depth; depth++)
+		if (!SEE_THROUGH.has($pos.node(depth).type.name)) return $pos.before(depth);
+	return pos;
 }
 
 /** The blocks from one block to another, both included, in the body's order (Shift on a handle). */
 export function blocksBetween(view: EditorView, a: number, b: number): number[] {
 	const { doc } = view.state;
+	// An end inside a site block that holds blocks (a callout, tabs) is that whole block, as a box over it is.
+	a = wholeOf(doc, a);
+	b = wholeOf(doc, b);
 	const from = Math.min(a, b);
 	const endOf = (pos: number) => pos + (doc.nodeAt(pos)?.nodeSize ?? 0);
 	const to = Math.max(endOf(a), endOf(b));
 	const inside = spots(view).filter((spot) => spot.pos >= from && endOf(spot.pos) <= to);
-	return smallest(inside.map((spot) => ({ pos: spot.pos, size: endOf(spot.pos) - spot.pos })));
+	return smallest(
+		doc,
+		inside.map((spot) => ({ pos: spot.pos, size: endOf(spot.pos) - spot.pos })),
+	);
 }
 
 /** The blocks a text selection runs over (Esc on picked words). */
@@ -100,7 +123,7 @@ export function blocksOfRange(view: EditorView, from: number, to: number): numbe
 	const touched = spots(view)
 		.map((spot) => ({ pos: spot.pos, size: doc.nodeAt(spot.pos)?.nodeSize ?? 0 }))
 		.filter((spot) => spot.pos < to && spot.pos + spot.size > from);
-	return smallest(touched);
+	return smallest(doc, touched);
 }
 
 /**

@@ -8,7 +8,19 @@ import type { AdminValues } from "../schema/admin-values";
 import { type Block, blockMap, type Doc, DocShape, walk } from "./doc";
 
 /** A row a block adds to the publish to-do list. `block` stops the publish; `warn` only tells. */
-export type BlockCheck = { level: "warn" | "block"; message: string | Message };
+export type BlockCheck = { level: "warn" | "block"; message: string | Message | Words };
+
+/** Words in each language of the admin: a block's or a mark's name, a field's, an option's (doc 18). A site's block brings its own words. */
+export type Words = { ko: string; en: string };
+
+/** A name: the site's own words in one language, a message key (the core's blocks), or words in each language of the admin. */
+export type Label = string | Message | Words;
+
+/**
+ * The name of one of a block's or a mark's values, and of its options (doc 18, "fields"): what the compare, the review and the assistant call it. How
+ * a person changes the value is the block's own editor (its tool row and settings), not this.
+ */
+export type Field = { label: Label; options?: Record<string, Label> };
 
 /**
  * A kind of block, defined once: the editor, the "/" menu, the site, the assistant's catalog and the publish check all come from it (doc 03,
@@ -17,8 +29,8 @@ export type BlockCheck = { level: "warn" | "block"; message: string | Message };
 export type BlockDefinition<Component = unknown> = {
 	/** `paragraph`, `callout`, `component:PostCard`. */
 	type: string;
-	/** What the "/" menu shows: the site's own words, or a message key (the core's blocks). */
-	label: string | Message;
+	/** What the "/" menu shows: the site's own words, a message key (the core's blocks), or words in each admin language. */
+	label: Label;
 	/** For the model: when to use the block. */
 	description: string;
 	/** The "/" menu group. Blocks without one are not offered there (a list item comes with its list). */
@@ -32,12 +44,33 @@ export type BlockDefinition<Component = unknown> = {
 	 * with nothing to rewrite follows the source block in a translation.
 	 */
 	translate?: { attrs?: string[]; text?: false };
+	/** The names of its values and their options, by attr name (doc 18): what the compare and the review call them. */
+	fields?: Record<string, Field>;
+	/**
+	 * A block whose value is one text in a language of its own (a formula, a diagram): Markdown writes it as a fenced code block of `language`, the
+	 * code being its `attr` (doc 18, MDX).
+	 */
+	fence?: { language: string; attr: string };
+	/**
+	 * What the block is when put in from the "/" menu, in the admin's language (doc 18): its first attrs and children (a chart's sample, two tabs). Without
+	 * one it comes empty, and a block whose attrs are required is not offered there.
+	 */
+	starter?: (language: "ko" | "en") => BlockStarter;
 	Site?: Component;
-	/** The editor's view; the site's component with editable children when left out. */
-	Editor?: Component;
+	/** The editor's view (the admin's to draw; typed by `@monti-cms/admin`); the site's component with editable children when left out. */
+	Editor?: unknown;
+	/** Its mark in the "/" menu (a 16px icon). */
+	Icon?: unknown;
 	check?: (block: Block) => BlockCheck[];
 	/** What a save refuses beyond the attrs' shape (a code block's line ranges against its code): a short detail, or `null` when it is fine. */
 	validate?: (block: Block) => string | null;
+};
+
+/** A block as the "/" menu puts it in: its attrs, its words, its children, with no ids (they are given when it goes in). */
+export type BlockStarter = {
+	attrs?: Record<string, unknown>;
+	content?: Block["content"];
+	children?: ({ type: string } & BlockStarter)[];
 };
 
 export type AnyBlockDefinition = BlockDefinition<unknown>;
@@ -49,15 +82,27 @@ export function defineBlock<Component>(definition: BlockDefinition<Component>): 
 
 export type MarkDefinition<Component = unknown> = {
 	type: string;
-	label: string | Message;
+	label: Label;
+	/** For the model: when to use the mark. */
+	description?: string;
 	attrs?: z.ZodType<Record<string, unknown>>;
+	/** The names of its values and their options, by attr name (doc 18). */
+	fields?: Record<string, Field>;
 	/** Whether the mark goes in a code block's text: `also` (bold, italic …), `only` (a fold, a tooltip of code). Left out: never in code. */
 	inCode?: "also" | "only";
 	Site?: Component;
+	/** The card the admin's format bar opens to put the mark on picked words or change it (its ⋯ row); toggled on and off when left out. */
+	Editor?: unknown;
 };
 
 export function defineMark<Component>(definition: MarkDefinition<Component>): MarkDefinition<Component> {
+	if (!/^[a-zA-Z][\w-]*$/.test(definition.type)) throw new Error(`Mark type "${definition.type}" is not a name.`);
 	return definition;
+}
+
+/** A name in the admin's language: a site's own string as it is, words in that language. A message key is the admin's to read. */
+export function labelIn(label: Label, language: "ko" | "en"): string | Message {
+	return typeof label === "object" && "ko" in label && "en" in label ? label[language] : label;
 }
 
 /** A core block's label: a key of the admin's message dictionaries. */

@@ -4,6 +4,9 @@ import {
 	type Block,
 	coreMessages,
 	formatMessage,
+	type Label,
+	labelIn,
+	type MarkDefinition,
 	type Message,
 	type MessageBundle,
 } from "@monti-cms/core";
@@ -19,9 +22,22 @@ export type AdminBlockComponent = ComponentType<{
 	attrs: Record<string, unknown>;
 	children?: ReactNode;
 }>;
-export type AdminBlockDefinition = Omit<AnyBlockDefinition, "Site" | "Editor"> & {
+export type AdminBlockDefinition = Omit<AnyBlockDefinition, "Site" | "Editor" | "Icon"> & {
 	Site?: AdminBlockComponent;
 	Editor?: AdminBlockComponent;
+	/** Its mark in the "/" menu. */
+	Icon?: ComponentType<{ "aria-hidden"?: boolean }>;
+};
+
+/** What a mark's card (`MarkDefinition.Editor`) is given: the mark's values on the picked words (`null` when they do not have it), and the way to set them. */
+export type AdminMarkEditorProps = {
+	attrs: Record<string, unknown> | null;
+	/** Puts the mark on the picked words with these values, or takes it off (`null`), and closes the card. */
+	apply: (attrs: Record<string, unknown> | null) => void;
+};
+export type AdminMarkDefinition = Omit<MarkDefinition, "Site" | "Editor"> & {
+	Site?: ComponentType<{ mark: { type: string } & Record<string, unknown>; children?: ReactNode }>;
+	Editor?: ComponentType<AdminMarkEditorProps>;
 };
 
 type ScreenHandler = (input: unknown) => void;
@@ -75,6 +91,8 @@ type AdminContext = {
 	screen: ScreenChannel;
 	/** Runtime block components from the same definitions the site gives core. */
 	blocks: ReadonlyMap<string, AdminBlockDefinition>;
+	/** The site's marks' admin halves (doc 18): their cards. */
+	marks: ReadonlyMap<string, AdminMarkDefinition>;
 	/** What the plugins' browser halves bring: inputs and views by name, tool page screens by `<plugin>/<page>` (doc 14). */
 	inputs: ReadonlyMap<string, FieldInput>;
 	views: ReadonlyMap<string, ComponentType<FieldViewProps>>;
@@ -82,7 +100,8 @@ type AdminContext = {
 	/** The plugins' views of the document, in the plugins' order; `key` is `<plugin>/<view>`. */
 	documentViews: readonly (DocumentView & { key: string })[];
 	/** The admin's words in its language: a key of the admin's or the core's dictionary, with its values. */
-	t: (message: Message | string, values?: Message["values"]) => string;
+	/** A label of a site's block or mark may be words in each language (doc 18): the admin's language is read from it. */
+	t: (message: Label, values?: Message["values"]) => string;
 	/**
 	 * The session ended while the admin was open (a call came back without one, doc 15): every screen shows the banner at its top until the person
 	 * signs in again (`resume`).
@@ -105,14 +124,16 @@ const SERVER_BUNDLES: MessageBundle[] = [coreMessages, assistantMessages, adminM
  * operation (a refusal's reason, a line of the activity log) and is read from the core's first. The two dictionaries name things alike
  * (`templates.save` is the editor's "Save" button here and "Saved template {name}" in the log), so which one speaks is decided by who said it.
  */
-export function wordsOf(language: Language, message: Message | string, values?: Message["values"]): string {
-	return typeof message === "string"
-		? formatMessage(BUNDLES, language, { key: message, values })
-		: formatMessage(SERVER_BUNDLES, language, message);
+export function wordsOf(language: Language, message: Label, values?: Message["values"]): string {
+	const said = labelIn(message, language);
+	return typeof said === "string"
+		? formatMessage(BUNDLES, language, { key: said, values })
+		: formatMessage(SERVER_BUNDLES, language, said);
 }
 
 /** One list for "none": a new one on each render would make every screen read again whenever this one changes, as when the session ends. */
 const NO_BLOCKS: AdminBlockDefinition[] = [];
+const NO_MARKS: AdminMarkDefinition[] = [];
 const NO_PLUGINS: AdminPlugin[] = [];
 
 export function AdminProvider({
@@ -124,6 +145,7 @@ export function AdminProvider({
 	apiBase = "/admin/api",
 	screen,
 	blocks = NO_BLOCKS,
+	marks = NO_MARKS,
 	plugins = NO_PLUGINS,
 	children,
 }: {
@@ -140,6 +162,7 @@ export function AdminProvider({
 	/** The assistant's way to the screen; one of its own by default. */
 	screen?: ScreenChannel;
 	blocks?: AdminBlockDefinition[];
+	marks?: AdminMarkDefinition[];
 	/** The plugins' browser halves (`defineAdminPlugin`). */
 	plugins?: AdminPlugin[];
 	children: ReactNode;
@@ -182,6 +205,7 @@ export function AdminProvider({
 			setFace,
 			apiBase,
 			blocks: new Map(blocks.map((block) => [block.type, block])),
+			marks: new Map(marks.map((mark) => [mark.type, mark])),
 			// The first plugin to bring a name has it: a second one under the same name is not drawn in its place.
 			inputs: new Map(plugins.flatMap((plugin) => Object.entries(plugin.inputs ?? {})).reverse()),
 			views: new Map(plugins.flatMap((plugin) => Object.entries(plugin.views ?? {})).reverse()),
@@ -208,6 +232,7 @@ export function AdminProvider({
 			reads,
 			writes,
 			blocks,
+			marks,
 			plugins,
 		],
 	);

@@ -15,7 +15,7 @@ import { Extension } from "@tiptap/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
-import { markName, nodeName } from "../schema";
+import { markName, nodeName } from "../names";
 
 /** A code block's attrs as the editor keeps them (`node.attrs.data`, the stored shape of doc 17). */
 export type CodeData = {

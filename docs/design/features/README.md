@@ -45,7 +45,7 @@
 | 15 | [로그인과 틀](15-login-and-frame.md) | 비밀번호·GitHub, 첫 관리자, 사이드바, 테마, 화면 언어 | 로그인, 공통 틀 |
 | 16 | [사이트에 붙이기](16-site.md) | Next 어댑터, 사이트에서 읽기, 예제 앱 (범위만) | 사이트 코드 |
 | 17 | [코드 블록 도구](17-code-tools.md) | 언어와 줄 효과, 코드 링크, 사이트의 문법 색 (범위만) | 편집기, 사이트 |
-| 18 | [블록 패키지](18-blocks-package.md) | `@monti-cms/blocks`와 `monti add`, 여러 블록 고르기 (범위만) | 편집기, 사이트 |
+| 18 | [블록 패키지](18-blocks-package.md) | `@monti-cms/blocks`와 `monti add`, 여러 블록 고르기, 값만 가진 블록의 비교 (설계) | 편집기, 사이트 |
 | 19 | [조건부 필드](19-conditional-fields.md) | 고른 값에 따라 보이는 필드 (범위만) | 필드 시트, 속성 패널 |
 | 20 | [설치와 릴리스](20-release.md) | `monti init`, S3 저장소, 릴리스 묶음 (범위만) | CLI |
 

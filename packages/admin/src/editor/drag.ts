@@ -2,7 +2,7 @@ import type { Node as EditorNode } from "@tiptap/pm/model";
 import { NodeSelection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { handleTarget } from "./commands";
-import { nodeName } from "./schema";
+import { nodeName } from "./names";
 
 /** A block that has a handle, and where it is on screen. */
 type Spot = { pos: number; rect: DOMRect; element: HTMLElement };

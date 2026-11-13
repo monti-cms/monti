@@ -11,11 +11,12 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import type { Node as EditorNode } from "@tiptap/pm/model";
-import { TextSelection, type Transaction } from "@tiptap/pm/state";
+import { NodeSelection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation, useRead } from "../operations/use-operation";
+import { nodeFromStarter } from "./block-api";
 import { BlockIcon } from "./block-icon";
 import { type BodyCatalogs, FROM_LIBRARY, needsAttrs } from "./catalog";
 import { insertBlocks, inTableCell, KIND_SHORTCUTS, type Kind, kindKey, offeredKinds, turnInto } from "./commands";
@@ -82,11 +83,16 @@ const turnLine = (kind: Kind) => (tr: Transaction) => {
 	}
 };
 
-const placeBefore = (node: EditorNode) => (tr: Transaction) => {
-	const { $from } = tr.selection;
-	if ($from.parent.content.size === 0) tr.insert($from.before(), node);
-	else insertBlocks(tr, [node]);
-};
+/** `pick`: the block is picked once it is in, so a block written in a source opens its field (doc 18). */
+const placeBefore =
+	(node: EditorNode, pick = false) =>
+	(tr: Transaction) => {
+		const { $from } = tr.selection;
+		const at = $from.parent.content.size === 0 ? $from.before() : $from.after();
+		if ($from.parent.content.size === 0) tr.insert(at, node);
+		else insertBlocks(tr, [node]);
+		if (pick && tr.doc.nodeAt(at)?.type === node.type) tr.setSelection(NodeSelection.create(tr.doc, at));
+	};
 
 /**
  * The "/" menu (doc 03, menu.md): one level, under a "/" typed anywhere in a line, the focus kept in the text (arrows, Enter and Esc work from
@@ -106,7 +112,7 @@ export function useSlashMenu({
 	/** Opens the library's window for an image or a file, to go where the "/" was (doc 09). Without it (a site with no storage) the menu has no such rows. */
 	onLibrary?: (kind: "image" | "file") => void;
 }) {
-	const { t } = useAdmin();
+	const { t, blocks: definitions, language } = useAdmin();
 	const [open, setOpen] = useState<Open | null>(null);
 	const [index, setIndex] = useState(0);
 	const dismissed = useRef<number | null>(null);
@@ -135,7 +141,11 @@ export function useSlashMenu({
 				(block) =>
 					block.menu !== null &&
 					(FROM_LIBRARY[block.type] ? onLibrary !== undefined : true) &&
-					(block.type === "table" || block.type === "footnote" || FROM_LIBRARY[block.type] || !needsAttrs(block)) &&
+					(block.type === "table" ||
+						block.type === "footnote" ||
+						FROM_LIBRARY[block.type] ||
+						!needsAttrs(block) ||
+						definitions.get(block.type)?.starter) &&
 					!["paragraph", "heading", "bulletList", "orderedList", "checklist", "quote", "codeBlock"].includes(
 						block.type,
 					),
@@ -145,7 +155,7 @@ export function useSlashMenu({
 				group: block.type === "divider" ? "text" : block.menu === "component" ? "component" : "insert",
 				label: t(block.label),
 				words: [block.type, block.type === "divider" ? "---" : ""],
-				icon: <BlockIcon type={block.type} />,
+				icon: <BlockIcon type={block.type} Own={definitions.get(block.type)?.Icon} />,
 				typed: block.type === "divider" ? "---" : undefined,
 				run: (editor) => {
 					if (!open) return;
@@ -157,8 +167,17 @@ export function useSlashMenu({
 					if (library) return putIn(editor, open, () => onLibrary?.(library));
 					const type = editor.schema.nodes[nodeName(block.type)];
 					if (!type) return;
-					const node = type.createAndFill() ?? type.create();
-					putIn(editor, open, block.holds === "nothing" ? placeBefore(node) : (tr) => insertBlocks(tr, [node]));
+					// A site's block comes as its starter says (doc 18): a chart with its sample, tabs with two tabs.
+					const starter = definitions.get(block.type)?.starter?.(language);
+					const node = starter
+						? nodeFromStarter(editor.schema, { type: block.type, ...starter })
+						: (type.createAndFill() ?? type.create());
+					if (!node) return;
+					putIn(
+						editor,
+						open,
+						block.holds === "nothing" ? placeBefore(node, Boolean(starter)) : (tr) => insertBlocks(tr, [node]),
+					);
 				},
 			}));
 		const shown = templates
@@ -181,7 +200,7 @@ export function useSlashMenu({
 		// In the order the menu shows them, group by group: the arrow keys step through the index, so a row drawn in another group (the divider is
 		// a text row) must not sit elsewhere in it.
 		return [...text, ...others, ...shown].sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group));
-	}, [catalogs, templates, list.data, t, open, get, onLibrary]);
+	}, [catalogs, templates, list.data, t, open, get, onLibrary, definitions, language]);
 
 	const shownItems = useMemo(() => {
 		if (!open) return [];

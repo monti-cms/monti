@@ -122,7 +122,13 @@ export async function publishTasks(
 				field: "doc",
 				block: block.id,
 				blocking: row.level === "block",
-				message: typeof row.message === "string" ? { key: "blocks.check", values: { text: row.message } } : row.message,
+				message:
+					typeof row.message === "string"
+						? { key: "blocks.check", values: { text: row.message } }
+						: "key" in row.message
+							? row.message
+							: // A site's block says it in each language of the admin (doc 18): the admin reads its own.
+								{ key: "blocks.checkWords", values: { ko: row.message.ko, en: row.message.en } },
 			});
 	// Code links that go nowhere in the body the site draws: the reader would find no lines. They block (doc 17, 17-8).
 	const broken = brokenCodeRefs(asDoc(drawn));

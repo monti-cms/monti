@@ -2,7 +2,7 @@ import { getMarkRange } from "@tiptap/core";
 import { type Node as EditorNode, Fragment, type ResolvedPos, type Schema } from "@tiptap/pm/model";
 import { type EditorState, NodeSelection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { Catalog } from "./catalog";
-import { KEPT_MARK, markName, nodeName } from "./schema";
+import { KEPT_MARK, markName, nodeName } from "./names";
 
 /** A kind a text block can be turned into (the block menu's "turn into", the markdown shortcuts, the "/" menu's text blocks). */
 export type Kind =
