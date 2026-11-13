@@ -18,14 +18,24 @@ const numbers = () => [...(code()?.querySelectorAll<HTMLElement>("[data-slot=cod
 /** The line number row of line `n` (from 1). */
 const number = (n: number) => numbers().find((row) => row.dataset.line === String(n - 1));
 const tones = () => numbers().map((row) => `${Number(row.dataset.line) + 1}:${row.dataset.tone ?? ""}`);
-const save = () => userEvent.keyboard("{Meta>}s{/Meta}");
+const save = () => userEvent.keyboard("{ControlOrMeta>}s{/ControlOrMeta}");
 const kept = async ({ site, id }: Loaded) =>
 	((await site.monti.run("entries.get", { id }, entry.admin)) as { entry: { doc: Doc } }).entry.doc.blocks;
 const keptCode = async (loaded: Loaded) => (await kept(loaded)).find((block) => block.type === "codeBlock");
 
+/**
+ * The pointer off the code block, and its tool row gone: the row the pointer shows stands over the paragraph above the block, where a press meant
+ * for the paragraph's words would land on it (the pointer stays where the last test left it). Every test starts from here.
+ */
+async function pointerOff() {
+	await userEvent.hover(page.getByRole("textbox", { name: "제목" }));
+	await expect.element(page.getByRole("toolbar", { name: "코드 도구" })).not.toBeInTheDocument();
+}
+
 async function opened() {
 	await expect.element(body()).toBeVisible();
 	await expect.poll(() => numbers().length).toBe(6);
+	await pointerOff();
 }
 
 /** Puts the caret in the code, after these words. */
@@ -134,7 +144,7 @@ describe("the code block in the editor (doc 17)", () => {
 		const box = code();
 		if (!box) throw new Error("no code block");
 		await caretAfter(box, "let count");
-		await userEvent.keyboard("{Meta>}a{/Meta}");
+		await userEvent.keyboard("{ControlOrMeta>}a{/ControlOrMeta}");
 		await expect.poll(() => numbers().length).toBe(6);
 		expect(box.querySelectorAll("[data-code-hidden]").length).toBe(0);
 	});
