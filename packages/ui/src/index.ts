@@ -37,6 +37,7 @@ export const CompareBody = close(open.CompareBody);
 export const CompareCode = close(open.CompareCode);
 export const CompareHeading = close(open.CompareHeading);
 export const CompareParagraph = close(open.CompareParagraph);
+export const CompareValues = close(open.CompareValues);
 export const CompareProperty = close(open.CompareProperty);
 export const CompareRow = close(open.CompareRow);
 export const CompareRows = close(open.CompareRows);

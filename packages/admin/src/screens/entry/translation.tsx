@@ -10,6 +10,7 @@ import {
 	CompareRow,
 	CompareRows,
 	CompareText,
+	CompareValues,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
@@ -45,6 +46,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { type Part, readableWordDiff, shownBlocks } from "./compare-entries";
 import { day } from "./dates";
+import { useBlockNames } from "./use-block-names";
 import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
 
 /** `translations.status` for one group (doc 04): each language's entry, its state, its marks and its pending blocks. */
@@ -260,14 +262,26 @@ function changedWords(compared: Compared): Map<string, Part[]> {
 
 /** A block read only, in the looks of the comparison, its changed words marked when `parts` are given. */
 function ReadBlock({ block, parts }: { block: Block; parts?: Part[] }) {
-	const shown = shownBlocks({ type: "doc", blocks: [block] })[0];
+	const names = useBlockNames();
+	const shown = shownBlocks({ type: "doc", blocks: [block] }, names)[0];
 	const words = parts ? <Words parts={parts} /> : shown?.text;
-	return shown?.look === "heading" ? (
-		<CompareHeading>{words}</CompareHeading>
-	) : shown?.look === "code" ? (
-		<CompareCode>{words}</CompareCode>
+	// A block with values says them in its name line over its words (doc 18).
+	const values = shown?.values ? <CompareValues>{shown.values}</CompareValues> : null;
+	const drawn =
+		shown?.look === "heading" ? (
+			<CompareHeading>{words}</CompareHeading>
+		) : shown?.look === "code" ? (
+			<CompareCode>{words}</CompareCode>
+		) : (
+			<CompareParagraph>{words}</CompareParagraph>
+		);
+	return values ? (
+		<>
+			{values}
+			{drawn}
+		</>
 	) : (
-		<CompareParagraph>{words}</CompareParagraph>
+		drawn
 	);
 }
 

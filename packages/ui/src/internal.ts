@@ -82,6 +82,7 @@ export {
 	CompareSide,
 	CompareText,
 	CompareTitle,
+	CompareValues,
 } from "./compare";
 export {
 	ContextMenu,

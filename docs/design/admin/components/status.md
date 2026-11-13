@@ -108,7 +108,7 @@
 
 "비교하기"는 비교 화면을 연다. 두 버전을 사이 틈 없이 선 하나를 두고 두 단으로 나란히 놓는다. 각 단 안쪽에 48px의 여백을 두고, 높이는 상태 표시줄까지 채운다. 각 쪽은 위의 작은 mono 줄에 이름이 붙고("내 입력 · 저장 안 됨", "서버 최신본 · v9 · 10:41 저장"), 다른 속성만 나열한 다음, 글을 읽히는 모양 그대로 보여 준다(제목은 페이지 크기, 블록은 읽기 크기). 다른 말은 양쪽 모두 같은 강조 바탕 위에 놓인다.
 
-`Compare`는 `CompareSide` 둘을 담는다(`label`, `properties`, children으로 글). `CompareProperty`는 다른 속성이고(값이 없을 때의 말은 `empty`. `blank`를 주면 보이지 않고 자리만 차지한다: 고른 선택지의 필드 수가 양쪽에서 다를 때 두 쪽 본문이 같은 높이에서 시작하게 한다), `CompareTitle`은 글의 제목, `CompareBody`는 글의 블록이다. 블록에는 `CompareHeading`, `CompareParagraph`, `CompareCode`를 쓰고, 이어진 말에는 `CompareText`를 쓴다(`changed`를 주면 강조 바탕에 놓인다).
+`Compare`는 `CompareSide` 둘을 담는다(`label`, `properties`, children으로 글). `CompareProperty`는 다른 속성이고(값이 없을 때의 말은 `empty`. `blank`를 주면 보이지 않고 자리만 차지한다: 고른 선택지의 필드 수가 양쪽에서 다를 때 두 쪽 본문이 같은 높이에서 시작하게 한다), `CompareTitle`은 글의 제목, `CompareBody`는 글의 블록이다. 블록에는 `CompareHeading`, `CompareParagraph`, `CompareCode`를 쓰고, 값을 가진 블록(사이트의 블록, 이미지, 파일, 18)은 그 위에 이름 줄 `CompareValues`("콜아웃 · 종류 경고 · 제목 …", 작은 흐린 글자, 낱말로 견주어 바뀐 값이 표시된다)를 둔다, 이어진 말에는 `CompareText`를 쓴다(`changed`를 주면 강조 바탕에 놓인다).
 
 ## 오류 상자와 오류 알림
 

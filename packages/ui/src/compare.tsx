@@ -107,6 +107,20 @@ function CompareParagraph({ className, ...props }: React.ComponentProps<"p">) {
 	return <p data-slot="compare-paragraph" className={cn("mb-monti-20 whitespace-pre-line", className)} {...props} />;
 }
 
+/**
+ * A block's name line (doc 18): its kind and its values in one small faint line over its words ("Callout · Kind Warning · Title Note well"), compared word
+ * by word as the words are. Blocks that are only their words have none.
+ */
+function CompareValues({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="compare-values"
+			className={cn("mb-monti-4 text-monti-caption text-monti-subtle", className)}
+			{...props}
+		/>
+	);
+}
+
 /** A block that is code, or text the screen has no look for: fixed-width, in the inner box. */
 function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
 	return (
@@ -299,4 +313,5 @@ export {
 	CompareSide,
 	CompareText,
 	CompareTitle,
+	CompareValues,
 };

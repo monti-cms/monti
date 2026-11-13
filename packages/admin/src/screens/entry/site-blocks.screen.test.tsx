@@ -184,4 +184,34 @@ describe("the site's blocks in the editor (doc 18)", () => {
 			]),
 		});
 	});
+
+	it("18-8 a change of a block's values only (a callout's kind) is a row of the review, its name line before and after", async () => {
+		const made = on();
+		await made.run();
+		await expect.element(body()).toBeVisible();
+		const { site, id } = made.loaded();
+		const at = new Date();
+		await site.db
+			.insertInto("conversations")
+			.values({ id: "c-blocks", title: "검토", created_at: at, last_opened_at: at })
+			.execute();
+		const proposal = await site.monti.proposals.create("c-blocks", "콜아웃을 경고로");
+		const read = (await site.monti.run("entries.get", { id }, blocks.admin)) as {
+			entry: { version: number; doc: Doc };
+		};
+		const callout = find(read.entry.doc.blocks, "callout");
+		await site.monti.proposals.add(proposal, "body.edit", {
+			id,
+			version: read.entry.version,
+			ops: [
+				{ op: "setBlock", block: "callout", value: { ...callout, attrs: { tone: "warning", title: "알아 두세요" } } },
+			],
+		});
+		window.location.hash = `#/ai/review/${proposal}`;
+		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
+		// One line, the kind's old and new names marked in it: "콜아웃 · 종류 팁 경고 · 제목 알아 두세요".
+		const line = page.getByText(/콜아웃 · 종류/).first();
+		await expect.element(line).toBeVisible();
+		await expect.poll(() => line.element().textContent).toMatch(/종류 ?팁 ?경고/);
+	});
 });

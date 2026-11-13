@@ -27,7 +27,8 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { href, type Route, reachedFromInside } from "../route";
-import { shownBlocks } from "../screens/entry/compare-entries";
+import { type ShownBlock, shownBlocks } from "../screens/entry/compare-entries";
+import { useBlockNames } from "../screens/entry/use-block-names";
 import { useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { endsClosed } from "../screens/list/format";
 import type { SchemaRead } from "../screens/settings/schema-draft";
@@ -94,6 +95,7 @@ function marked(runs: DiffRun[], side: "both" | "before" | "after"): ReactNode {
 export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => void }) {
 	const { t, transport } = useAdmin();
 	const assistant = useAssistant();
+	const names = useBlockNames();
 	// Left with the keyboard (discard, the way back): the page goes, and the focus goes to the panel's box beside the screen that
 	// takes its place, two frames on, when that is drawn.
 	const leaving = useFocusHandOff(
@@ -246,18 +248,20 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 				// The body moved on so far that the edit no longer fits: the row says it changed in the meantime.
 				return [];
 			}
-			const before = shownBlocks(now.doc);
-			const after = shownBlocks(next);
+			const before = shownBlocks(now.doc, names);
+			const after = shownBlocks(next, names);
 			const places: Place[] = [];
+			// A block with values is said with its name line (doc 18): a change of its kind alone is a row too.
+			const said = (block: ShownBlock) => [block.values, block.text].filter((line) => line).join("\n");
 			after.forEach((block, index) => {
 				const was = before.find((each) => each.id === block.id);
-				if (!was) places.push({ name: t("review.newBlock"), before: "", after: block.text });
-				else if (was.text !== block.text)
-					places.push({ name: t("review.block", { number: index + 1 }), before: was.text, after: block.text });
+				if (!was) places.push({ name: t("review.newBlock"), before: "", after: said(block) });
+				else if (said(was) !== said(block))
+					places.push({ name: t("review.block", { number: index + 1 }), before: said(was), after: said(block) });
 			});
 			before.forEach((block, index) => {
 				if (!after.some((each) => each.id === block.id))
-					places.push({ name: t("review.block", { number: index + 1 }), before: block.text, after: "" });
+					places.push({ name: t("review.block", { number: index + 1 }), before: said(block), after: "" });
 			});
 			return places;
 		}
