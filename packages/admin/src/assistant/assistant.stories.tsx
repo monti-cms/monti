@@ -698,3 +698,96 @@ export const ReviewChangedMeanwhile: Story = {
 		await page.findByRole("button", { name: "다시 만들기" }, wait);
 	},
 };
+
+/** "Make again" for the third post's summary: the change made on the entry as it is now, then a line about it. */
+export const madeAgain: Script = async (ids, version) => [
+	{
+		calls: [
+			{
+				name: "entries_save",
+				input: {
+					id: ids.third,
+					version: (await version(ids.third)) + 1,
+					values: { summary: "다시 쓴 요약입니다." },
+					[GROUP]: "요약 채우기",
+				},
+			},
+		],
+	},
+	{ text: "다시 만들었습니다." },
+];
+
+/**
+ * "Make again" pressed with the keyboard on the review page (T241): the button goes once the change is made again, and the focus is on
+ * that row's check, not on the page.
+ */
+export const ReviewMadeAgainByKeyboard: Story = {
+	loaders: site({ script: scripts(proposed, madeAgain) }),
+	play: async (context) => {
+		await ReviewChangedMeanwhile.play?.(context);
+		const page = within(context.canvasElement.ownerDocument.body);
+		const again = await page.findByRole("button", { name: "다시 만들기" }, wait);
+		// As the Tab key leaves it: the keyboard's focus is on the button, and Enter presses it.
+		await userEvent.tab();
+		again.focus();
+		await userEvent.keyboard("{Enter}");
+		// The row with its new change; the focus is on its check. Where the focus lands is asserted by the screen test, with a real key:
+		// a story's keys are made by script, and whether a browser takes a focus set after them for the keyboard's depends on what was
+		// pressed in the page before.
+		await page.findAllByText("다시 쓴 요약입니다.", {}, wait);
+	},
+};
+
+/** "Polish the second post": one change of its first paragraph, made on the entry as it is when asked. */
+export const polished: Script = (ids, version) => [
+	async () => ({
+		calls: [
+			{
+				name: "body_edit",
+				input: {
+					id: ids.second,
+					version: await version(ids.second),
+					ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "첫" }],
+					[GROUP]: "다듬기",
+				},
+			},
+		],
+	}),
+	{ text: "첫 문단을 다듬었습니다." },
+];
+
+/** Gives the second post a body of one paragraph, as it is before the assistant is asked to polish it. */
+export const writeSecond = async ({ site: made, ids }: Loaded, words = "처음 문단입니다.") => {
+	const now = (await made.monti.run("entries.get", { id: ids.second }, admin)) as { entry: { version: number } };
+	await made.monti.run(
+		"entries.save",
+		{
+			id: ids.second,
+			version: now.entry.version,
+			doc: { type: "doc", blocks: [{ id: "b_1", type: "paragraph", content: [{ type: "text", text: words }] }] },
+		},
+		admin,
+	);
+};
+
+/**
+ * The name on a proposal's bubble in the editor (T241): pressed, it opens the panel on the conversation that proposed the change, whatever
+ * conversation the panel was on and though it was closed.
+ */
+export const BubbleOpensItsConversation: Story = {
+	loaders: site({ script: polished }),
+	play: async ({ canvasElement, loaded }) => {
+		const page = await screen(canvasElement);
+		await writeSecond(loaded as Loaded);
+		await openPanel(page);
+		await say(page, "둘째 글 다듬어 줘");
+		await page.findByText("첫 문단을 다듬었습니다.", {}, wait);
+		await page.findByRole("button", { name: "보내기" }, wait);
+		// Another conversation is open, and the panel is closed, when the person reads the entry.
+		await userEvent.click(await page.findByRole("button", { name: "새 대화" }));
+		await userEvent.click(await page.findByRole("button", { name: "닫기" }));
+		window.location.hash = `#/c/post/${(loaded as Loaded).ids.second}`;
+		await userEvent.click(await page.findByRole("button", { name: "둘째 글 다듬어 줘" }, wait));
+		await page.findByText("첫 문단을 다듬었습니다.", {}, wait);
+	},
+};

@@ -25,7 +25,7 @@ import {
 } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { href, type Route } from "../route";
+import { href, type Route, reachedFromInside } from "../route";
 import { shownBlocks } from "../screens/entry/compare-entries";
 import { useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { type DiffRun, inlineDiff } from "./diff";
@@ -182,7 +182,9 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 		// Back to where the person came from, with the panel on the conversation this proposal was made in.
 		assistant.setOpen(true);
 		void assistant.openConversation(view.conversationId);
-		if (window.history.length > 1) window.history.back();
+		// Only when that is a screen of the admin: a review opened by its address (pasted, a link from elsewhere) has the browser's
+		// own past behind it, and goes to the admin's first screen instead.
+		if (reachedFromInside()) window.history.back();
 		else go({ screen: "home" });
 	};
 

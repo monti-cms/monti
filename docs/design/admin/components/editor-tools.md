@@ -115,4 +115,4 @@
 
 `CodeBlock`은 다른 부품이다. 안쪽 상자(`bg-muted`, `radius-lg`, 테두리 없음)에 글자를 있는 그대로(고정폭, 줄바꿈 유지) 보이며, JSON 값, 오류의 세부 내용, 모델의 답에 쓴다.
 
-`EditorMarginLine`은 본문 위의 한 줄(제목)을 담고, `margin`을 블록의 표시와 같은 왼쪽 여백에 건다(`EditorMargin`과 같은 세로선, 줄의 가운데).
+`EditorMargin`의 `beside`(px)는 같은 블록에 걸린 다른 표시의 폭만큼 왼쪽으로 물러선 자리다: 표시 둘이 겹치지 않고 나란히 선다(화면이 재서 준다. 2026-11-13). `EditorMarginLine`은 본문 위의 한 줄(제목)을 담고, `margin`을 블록의 표시와 같은 왼쪽 여백에 건다(`EditorMargin`과 같은 세로선, 줄의 가운데).

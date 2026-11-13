@@ -18,8 +18,8 @@ export function useProposal(id: string) {
 	const { proposalTick, touchProposals } = useAssistant();
 	const read = useRead<ProposalView>("proposals.get", { id });
 	const reload = read.reload;
-	const discarding = useOperation("proposals.discard");
-	const reverting = useOperation<{ reverted: string[]; kept: string[] }>("proposals.revert");
+	const discarding = useOperation<{ output: { discarded: string[] } }>("proposals.discard");
+	const reverting = useOperation<{ output: { reverted: string[]; kept: string[] } }>("proposals.revert");
 	const including = useOperation("proposals.include");
 	/** How far an apply this page started has come. */
 	const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -66,18 +66,27 @@ export function useProposal(id: string) {
 		touchProposals();
 	}, [streams, id, view?.counts.toApply, reload, wrote, touchProposals, t]);
 
-	/** Discards what still waits. `true` when it was discarded; a refusal is said, and the proposal is read again as it is. */
+	/**
+	 * Discards what still waits. `true` when something was discarded; a refusal is said, and the proposal is read again as it is. When
+	 * nothing waited any more (another tab discarded it, or applied it, a moment ago) the server answers with an empty list: one line says
+	 * so, and the card shows what became of the proposal (doc 10, T166).
+	 */
 	const discard = useCallback(async (): Promise<boolean> => {
 		const done = await discarding.run({ proposal: id });
+		const discarded = done.ok && done.body.output.discarded.length > 0;
 		if (!done.ok) toast.error(t(reasonOf(done.refusal)));
+		else if (!discarded) toast.error(t("card.nothingWaiting"));
 		await reload();
 		touchProposals();
-		return done.ok;
+		return discarded;
 	}, [discarding.run, id, reload, touchProposals, t]);
 
+	/** Undoes what was applied. When there was nothing left to undo (undone elsewhere a moment ago) one line says so; what stayed says why on its row. */
 	const revert = useCallback(async () => {
 		const done = await reverting.run({ id });
 		if (!done.ok) toast.error(t(reasonOf(done.refusal)));
+		else if (done.body.output.reverted.length === 0 && done.body.output.kept.length === 0)
+			toast.error(t("card.nothingToUndo"));
 		await reload();
 		touchProposals();
 	}, [reverting.run, id, reload, touchProposals, t]);

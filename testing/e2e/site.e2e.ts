@@ -311,7 +311,9 @@ raw.describe("the dev server and the live site", () => {
 			});
 			const page = await context.newPage();
 			await page.goto("/admin");
-			await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+			// The dev server compiles the admin's API on its first call, the site's whole config with it (the assistant and its model
+			// providers too): the first screen is given that time.
+			await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible({ timeout: 30_000 });
 			await expect(page.getByLabel("이메일")).toBeHidden();
 			const state = await page.request.post("/admin/api/operations/auth.state", { data: { input: {} } });
 			expect(((await state.json()) as { session: unknown }).session).toEqual({ who: "dev", bypass: true });
@@ -329,7 +331,9 @@ raw.describe("the dev server and the live site", () => {
 			});
 			const page = await context.newPage();
 			await page.goto("/admin");
-			await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+			// The dev server compiles the admin's API on its first call, the site's whole config with it (the assistant and its model
+			// providers too): the first screen is given that time.
+			await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible({ timeout: 30_000 });
 			await expect(page.getByLabel("이메일")).toBeHidden();
 			await context.close();
 		},

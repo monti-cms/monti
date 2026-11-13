@@ -1,5 +1,7 @@
 import { sameJson } from "@monti-cms/core";
+import { toast } from "@monti-cms/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAdmin } from "../operations/admin-context";
 import { useOperation } from "../operations/use-operation";
 import { type ProposalItem, type Target, useProposals } from "./use-proposals";
 
@@ -14,6 +16,9 @@ export type CellState =
 	| { kind: "proposed"; item: ProposalItem; value: unknown };
 
 export type Change = { path: Path; before: unknown; after: unknown };
+
+/** What a save sent: my changes and the items taken, as they were then (`sending`). */
+export type Sent = { mine: ReadonlyMap<Path, unknown>; accepted: readonly string[] };
 
 type Stored = {
 	version: number | string;
@@ -114,7 +119,8 @@ export function useDraft({
 	leftSignedOut?: boolean;
 }) {
 	const proposals = useProposals(target, also);
-	const discardOp = useOperation("proposals.discard");
+	const { t } = useAdmin();
+	const discardOp = useOperation<{ output: { discarded: string[] } }>("proposals.discard");
 	const [mine, setMineState] = useState<Map<Path, unknown>>(new Map());
 	// My changes as they are this instant. A handler may change several places in a row (the undo of one line of the changes list puts back a
 	// field's rename and its label): each step starts from what the step before left, not from the map this render captured.
@@ -125,6 +131,8 @@ export function useDraft({
 	}, []);
 	const [quick, setQuick] = useState<Set<Path>>(new Set());
 	const [accepted, setAccepted] = useState<string[]>([]);
+	const acceptedNow = useRef(accepted);
+	acceptedNow.current = accepted;
 	const [restoredFor, setRestoredFor] = useState<number | string | null>(null);
 	const [offered, setOffered] = useState<Stored | null>(null);
 	// `ask` looks at the browser's copy once, when the screen first has the server's values: later versions are the person's own saves.
@@ -179,6 +187,11 @@ export function useDraft({
 
 	const saved = useCallback((path: Path) => base?.[path], [base]);
 	const value = useCallback((path: Path) => (mine.has(path) ? mine.get(path) : saved(path)), [mine, saved]);
+	// A place is drawn as proposed when the proposal would change what the screen shows there (`cell`).
+	const drawn = useMemo(
+		() => pending.filter(({ values }) => Object.keys(values).some((path) => !sameJson(values[path], value(path)))),
+		[pending, value],
+	);
 
 	const cell = useCallback(
 		(path: Path): CellState => {
@@ -268,11 +281,16 @@ export function useDraft({
 	);
 
 	const discard = useCallback(
-		async (ids: string[]) => {
+		async (ids: string[], { quiet = false } = {}) => {
 			if (ids.length === 0) return;
-			if ((await discardOp.run({ ids })).ok) await proposals.reload();
+			const done = await discardOp.run({ ids });
+			if (!done.ok) return;
+			// None of them waited any more (discarded or applied elsewhere a moment ago): one line says so, and the marks go with the read.
+			// `quiet`: the screen discarded them by itself (a proposal left without a place), and nobody pressed for an answer.
+			if (done.body.output.discarded.length === 0 && !quiet) toast.error(t("card.nothingWaiting"));
+			await proposals.reload();
 		},
-		[discardOp, proposals],
+		[discardOp, proposals, t],
 	);
 
 	const changes: Change[] = useMemo(
@@ -297,6 +315,20 @@ export function useDraft({
 		},
 		discard: (id: string) => discard([id]),
 		discardAll: () => discard(pending.map(({ item }) => item.id)),
+		/** Discards these items: the ones a screen's bubble walks, or (`quiet`) ones the screen lets go of by itself. */
+		discardThese: discard,
+		/** Reads the pending proposals again: one of them was made again. */
+		reloadProposals: proposals.reload,
+		/**
+		 * The pending proposals that write a place this screen draws: what a screen's bubble walks, takes and discards. An item aimed at the
+		 * screen's record that changes nothing drawn here (a file's move to another folder, its way to the trash) is the conversation's card's
+		 * and the review page's: a bubble that counted it offered an "accept" that did nothing (doc 10, item 17; T108).
+		 */
+		drawn,
+		acceptDrawn: () => {
+			for (const { item } of drawn) take(item);
+		},
+		discardDrawn: () => discard(drawn.map(({ item }) => item.id)),
 		/**
 		 * Counts an item as taken whose change the screen put in itself (the body editor applies a body proposal's block operations to its own text).
 		 * The save sends it with the others.
@@ -326,12 +358,31 @@ export function useDraft({
 			} catch {}
 			setOffered(null);
 		},
-		/** After the save went through: the server's values are the new base, so my changes are gone. */
-		saved: () => {
-			setMine(new Map());
-			setQuick(new Set());
-			setAccepted([]);
-			void proposals.reload();
+		/**
+		 * My changes as they are when a save is sent: given back to `saved`, so the save lets go of what it sent and of nothing a person did
+		 * while it was under way.
+		 */
+		sending: (): Sent => ({ mine: new Map(mineNow.current), accepted: [...acceptedNow.current] }),
+		/**
+		 * After the save went through: the server's values are the new base, so my changes are gone. With what the save sent (`sending`),
+		 * only that goes: a place changed again while the save was under way holds a value the server does not have, and stays mine (T230:
+		 * letters typed into the title during a slow save were wiped when it ended). An item taken meanwhile stays taken.
+		 */
+		saved: (sent?: Sent) => {
+			const left = sent
+				? new Map(
+						[...mineNow.current].filter(
+							([path, value]) => !(sent.mine.has(path) && sameJson(sent.mine.get(path), value)),
+						),
+					)
+				: new Map<Path, unknown>();
+			setMine(left);
+			setQuick((current) => new Set([...current].filter((path) => left.has(path))));
+			// The items that went with the save stay counted as taken until the proposals are read again: let go before, each would be
+			// pending once more for a moment, over a screen that already holds its change (a body change would hang as "changed in the
+			// meantime" beside the words it just put in).
+			const letGo = () => setAccepted((ids) => (sent ? ids.filter((id) => !sent.accepted.includes(id)) : []));
+			void proposals.reload().then(letGo, letGo);
 		},
 		/**
 		 * After a save that went through in part (settings: the admin values saved, the schema file not written): given the values the server has

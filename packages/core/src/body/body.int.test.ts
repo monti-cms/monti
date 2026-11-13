@@ -340,6 +340,12 @@ describe("one check", () => {
 			ops: [{ op: "replaceText", block: "b_1", from: 6, to: 11, text: "there" }],
 		});
 		expect(preview?.changes).toEqual([{ kind: "entry", id }]);
+		// The words it was made on stay with the item: the screen that draws it reads them after the text has moved on.
+		expect(preview?.was).toEqual({ b_1: "Hello world" });
+		const waiting = (await site().run("proposals.forTarget", { kind: "entry", id }, { actor: "admin" })) as {
+			preview: { was?: Record<string, string> } | null;
+		}[];
+		expect(waiting.map((each) => each.preview?.was)).toEqual([{ b_1: "Hello world" }]);
 		expect((await get(id)).entry.doc).toEqual(doc(p("b_1", "Hello world")));
 		await write("entries.save", { id, version: await version(id), title: "Saved first" });
 		const [item] = await monti.proposals.apply(proposalId);

@@ -157,7 +157,8 @@ function TaxonomySidePanel({
 		return before ? <FormFieldWas>{before}</FormFieldWas> : null;
 	};
 
-	const activeProposals = panel.draft.proposals;
+	// Only what this panel draws: a proposal that changes none of its fields (the item's way to the trash) is on the conversation's card.
+	const activeProposals = panel.draft.drawn;
 	const currentProposal = activeProposals[Math.min(proposalIndex, Math.max(0, activeProposals.length - 1))];
 
 	return (
@@ -296,7 +297,7 @@ function TaxonomySidePanel({
 				<ProposalBubbleDock>
 					<ProposalBubble
 						name={currentProposal.item.request}
-						position={proposalIndex + 1}
+						position={Math.min(proposalIndex, activeProposals.length - 1) + 1}
 						total={activeProposals.length}
 						previousLabel={t("bubble.previous")}
 						nextLabel={t("bubble.next")}
@@ -304,8 +305,8 @@ function TaxonomySidePanel({
 						onNext={() => setProposalIndex((i) => (i + 1) % activeProposals.length)}
 						discardAllLabel={t("bubble.discardAll")}
 						acceptAllLabel={t("bubble.acceptAll")}
-						onDiscardAll={() => void panel.draft.discardAll()}
-						onAcceptAll={() => panel.draft.acceptAll()}
+						onDiscardAll={() => void panel.draft.discardDrawn()}
+						onAcceptAll={() => panel.draft.acceptDrawn()}
 					/>
 				</ProposalBubbleDock>
 			)}

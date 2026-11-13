@@ -1,4 +1,5 @@
 import path from "node:path";
+import { assistant } from "@monti-cms/ai";
 import { defineConfig, definePlugin, localFolderStorage, webhook } from "@monti-cms/core";
 import schema from "./monti.schema";
 
@@ -18,7 +19,8 @@ export default defineConfig({
 	schema,
 	database: process.env.DATABASE_URL,
 	auth: { password: true },
-	plugins: files,
+	// The assistant (✦ in the admin): it works once a key of a model service is added under Tools › API keys.
+	plugins: [...files, assistant()],
 	// What else hears of a publish, a save, the trash: a search index, a deploy hook. A delivery that fails is in the admin's activity log.
 	receivers: process.env.MONTI_WEBHOOK ? [webhook(process.env.MONTI_WEBHOOK)] : [],
 });
