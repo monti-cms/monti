@@ -26,9 +26,11 @@ export type BlockProps = {
 	image?: SiteImage | null;
 	/** A heading's `id`, the one `tocOf` gives for it: the site's own heading component puts it on its element. */
 	anchor?: string;
+	/** The entry's language (`ko`, `en-US`), when the site gave it: the words a block draws of its own (a callout's kind) are in it. */
+	locale?: string;
 };
-/** What a mark's `Site` component gets: the mark, with the text it wraps as `children`. */
-export type MarkProps = { mark: Mark };
+/** What a mark's `Site` component gets: the mark, with the text it wraps as `children`, and the entry's language when the site gave it. */
+export type MarkProps = { mark: Mark; locale?: string };
 
 export type RenderOptions<Node> = {
 	createElement: CreateElement<Node>;
@@ -42,6 +44,8 @@ export type RenderOptions<Node> = {
 	 * its text alone.
 	 */
 	entryPath?: (group: string) => string | undefined;
+	/** The entry's language: handed to the site's block and mark components, for the words they draw of their own. */
+	locale?: string;
 };
 
 const text = (value: unknown) => (typeof value === "string" ? value : undefined);
@@ -148,7 +152,7 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 		const wrapped = (part.marks ?? []).reduceRight<Node | string>((inner, mark, index) => {
 			const props = index === 0 ? { key } : null;
 			const Site = marks.get(mark.type)?.Site;
-			if (Site) return h(Site, { ...props, mark }, inner);
+			if (Site) return h(Site, { ...props, mark, ...(options.locale ? { locale: options.locale } : {}) }, inner);
 			if (mark.type === "link") {
 				const group = linkedGroup(mark.href);
 				const href = group === null ? text(mark.href) : options.entryPath?.(group);
@@ -268,6 +272,7 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 				attrs,
 				...(block.type === "image" ? { image: siteImage(attrs, options.media) } : {}),
 				...(block.type === "heading" ? { anchor: anchors.get(block.id) } : {}),
+				...(options.locale ? { locale: options.locale } : {}),
 			};
 			return h(Site, { key: block.id, ...props }, ...inner);
 		}

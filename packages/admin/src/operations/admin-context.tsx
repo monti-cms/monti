@@ -4,6 +4,8 @@ import {
 	type Block,
 	coreMessages,
 	formatMessage,
+	type Label,
+	labelIn,
 	type Message,
 	type MessageBundle,
 } from "@monti-cms/core";
@@ -82,7 +84,8 @@ type AdminContext = {
 	/** The plugins' views of the document, in the plugins' order; `key` is `<plugin>/<view>`. */
 	documentViews: readonly (DocumentView & { key: string })[];
 	/** The admin's words in its language: a key of the admin's or the core's dictionary, with its values. */
-	t: (message: Message | string, values?: Message["values"]) => string;
+	/** A label of a site's block or mark may be words in each language (doc 18): the admin's language is read from it. */
+	t: (message: Label, values?: Message["values"]) => string;
 	/**
 	 * The session ended while the admin was open (a call came back without one, doc 15): every screen shows the banner at its top until the person
 	 * signs in again (`resume`).
@@ -105,10 +108,11 @@ const SERVER_BUNDLES: MessageBundle[] = [coreMessages, assistantMessages, adminM
  * operation (a refusal's reason, a line of the activity log) and is read from the core's first. The two dictionaries name things alike
  * (`templates.save` is the editor's "Save" button here and "Saved template {name}" in the log), so which one speaks is decided by who said it.
  */
-export function wordsOf(language: Language, message: Message | string, values?: Message["values"]): string {
-	return typeof message === "string"
-		? formatMessage(BUNDLES, language, { key: message, values })
-		: formatMessage(SERVER_BUNDLES, language, message);
+export function wordsOf(language: Language, message: Label, values?: Message["values"]): string {
+	const said = labelIn(message, language);
+	return typeof said === "string"
+		? formatMessage(BUNDLES, language, { key: said, values })
+		: formatMessage(SERVER_BUNDLES, language, said);
 }
 
 /** One list for "none": a new one on each render would make every screen read again whenever this one changes, as when the session ends. */

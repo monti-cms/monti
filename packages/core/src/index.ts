@@ -29,7 +29,11 @@ export {
 	coreMarks,
 	defineBlock,
 	defineMark,
+	type Field,
+	type Label,
+	labelIn,
 	type MarkDefinition,
+	type Words,
 } from "./body/blocks";
 export {
 	type Block,

@@ -8,6 +8,26 @@ import { type Block, blockMap, type Doc, DocShape, walk } from "./doc";
 /** A row a block adds to the publish to-do list. `block` stops the publish; `warn` only tells. */
 export type BlockCheck = { level: "warn" | "block"; message: string | Message };
 
+/** Words in each language of the admin: a block's or a mark's name, a field's, an option's (doc 18). A site's block brings its own words. */
+export type Words = { ko: string; en: string };
+
+/** A name: the site's own words in one language, a message key (the core's blocks), or words in each language of the admin. */
+export type Label = string | Message | Words;
+
+/**
+ * Where the admin changes one of a block's or a mark's values (doc 18, "fields"). The admin draws the place from it, so a block's source holds no
+ * admin screen code; the compare and the review name the value by `label`.
+ * - `choice`: a block's menu, one radio row per option (a mark's: the format bar's ⋯, one row per option).
+ * - `switch`: a block's menu, a check row.
+ * - `text`: an input inside the block itself (a mark's: a card like the link's).
+ * - `source`: the block's tool row "edit" opens the source card, a field of code in `language`.
+ */
+export type Field =
+	| { label: Label; input: "choice"; options: Record<string, Label> }
+	| { label: Label; input: "switch" }
+	| { label: Label; input: "text"; placeholder?: Label }
+	| { label: Label; input: "source"; language: string };
+
 /**
  * A kind of block, defined once: the editor, the "/" menu, the site, the assistant's catalog and the publish check all come from it (doc 03,
  * principle 3). `Component` is the site's component type (a React component for a React site); core never calls it except through `renderDocument`.
@@ -15,8 +35,8 @@ export type BlockCheck = { level: "warn" | "block"; message: string | Message };
 export type BlockDefinition<Component = unknown> = {
 	/** `paragraph`, `callout`, `component:PostCard`. */
 	type: string;
-	/** What the "/" menu shows: the site's own words, or a message key (the core's blocks). */
-	label: string | Message;
+	/** What the "/" menu shows: the site's own words, a message key (the core's blocks), or words in each admin language. */
+	label: Label;
 	/** For the model: when to use the block. */
 	description: string;
 	/** The "/" menu group. Blocks without one are not offered there (a list item comes with its list). */
@@ -30,6 +50,13 @@ export type BlockDefinition<Component = unknown> = {
 	 * with nothing to rewrite follows the source block in a translation.
 	 */
 	translate?: { attrs?: string[]; text?: false };
+	/** Where the admin changes each value, by attr name (doc 18). A value with no field is not changed on screen. */
+	fields?: Record<string, Field>;
+	/**
+	 * A block whose value is one text in a language of its own (a formula, a diagram): Markdown writes it as a fenced code block of `language`, the
+	 * code being its `attr` (doc 18, MDX).
+	 */
+	fence?: { language: string; attr: string };
 	Site?: Component;
 	/** The editor's view; the site's component with editable children when left out. */
 	Editor?: Component;
@@ -45,13 +72,23 @@ export function defineBlock<Component>(definition: BlockDefinition<Component>): 
 
 export type MarkDefinition<Component = unknown> = {
 	type: string;
-	label: string | Message;
+	label: Label;
+	/** For the model: when to use the mark. */
+	description?: string;
 	attrs?: z.ZodType<Record<string, unknown>>;
+	/** Where the admin changes each value, by attr name (doc 18). */
+	fields?: Record<string, Field>;
 	Site?: Component;
 };
 
 export function defineMark<Component>(definition: MarkDefinition<Component>): MarkDefinition<Component> {
+	if (!/^[a-zA-Z][\w-]*$/.test(definition.type)) throw new Error(`Mark type "${definition.type}" is not a name.`);
 	return definition;
+}
+
+/** A name in the admin's language: a site's own string as it is, words in that language. A message key is the admin's to read. */
+export function labelIn(label: Label, language: "ko" | "en"): string | Message {
+	return typeof label === "object" && "ko" in label && "en" in label ? label[language] : label;
 }
 
 /** A core block's label: a key of the admin's message dictionaries. */
@@ -104,8 +141,8 @@ export const coreBlocks: AnyBlockDefinition[] = [
 		holds: "text",
 	}),
 	defineBlock({ type: "quote", label: label("quote"), description: "A quotation.", menu: "text", holds: "blocks" }),
-	text("codeBlock", "Code, kept as written, with its language.", {
-		attrs: z.object({ language: z.string().optional() }),
+	text("codeBlock", "Code, kept as written, with its language and, for a file, its name or path (`title`).", {
+		attrs: z.object({ language: z.string().optional(), title: z.string().optional() }),
 		translate: { text: false },
 	}),
 	defineBlock({

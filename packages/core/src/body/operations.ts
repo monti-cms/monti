@@ -94,13 +94,17 @@ export const bodyOperations = [
 						holds: block.holds,
 						children: block.children ?? null,
 						attrs: block.attrs ? z.toJSONSchema(block.attrs, { io: "input", unrepresentable: "any" }) : null,
+						fields: block.fields ?? null,
+						fence: block.fence ?? null,
 					})),
 				marks: [...ctx.site.kit.marks.values()]
 					.filter((mark) => markOn(editor, mark.type))
 					.map((mark) => ({
 						type: mark.type,
 						label: mark.label,
+						description: mark.description ?? null,
 						attrs: mark.attrs ? z.toJSONSchema(mark.attrs, { io: "input", unrepresentable: "any" }) : null,
+						fields: mark.fields ?? null,
 					})),
 				headings: editor?.headings ?? [2, 3, 4],
 			};

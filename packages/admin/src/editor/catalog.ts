@@ -1,18 +1,28 @@
-import type { Message } from "@monti-cms/core";
+import type { Field, Label } from "@monti-cms/core";
 
 /** One block of `blocks.catalog` (doc 03): what the editor needs to draw it, offer it and check it. */
 export type CatalogBlock = {
 	type: string;
-	label: string | Message;
+	label: Label;
 	description: string;
 	menu: "text" | "insert" | "component" | null;
 	holds: "text" | "blocks" | "nothing";
 	children: string[] | null;
 	/** The attrs' JSON schema, or `null` when the block has none. */
 	attrs: { properties?: Record<string, unknown>; required?: string[] } | null;
+	/** Where the admin changes each value (doc 18), by attr name. */
+	fields?: Record<string, Field> | null;
+	/** Written in Markdown as a fenced code block of this language (doc 18). */
+	fence?: { language: string; attr: string } | null;
 };
 
-export type CatalogMark = { type: string; label: string | Message; attrs: unknown };
+export type CatalogMark = {
+	type: string;
+	label: Label;
+	description?: string | null;
+	attrs: unknown;
+	fields?: Record<string, Field> | null;
+};
 
 /** What `blocks.catalog` answers. */
 export type Catalog = { blocks: CatalogBlock[]; marks: CatalogMark[]; headings: number[] };
