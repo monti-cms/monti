@@ -250,7 +250,11 @@ export async function runWrite<Output>(
 		// What an undo puts back: the records of kinds that can be put back. The schema is versioned only, so a write that named it and left it
 		// alone still undoes the rest.
 		const restorable = records.filter((ref) => engine.recordKinds.get(ref.kind)?.restore !== undefined);
-		const undoable = !operation.humanOnly && !operation.structure && !flags.structure && restorable.length > 0;
+		const undoable =
+			(!operation.humanOnly || operation.undoable === true) &&
+			!operation.structure &&
+			!flags.structure &&
+			restorable.length > 0;
 		const now = engine.now();
 		// What each record was called, as the write left it (as it was, for one the write removed): the log names it even after it is gone.
 		const logged: LoggedRecord[] = records.map((ref) => {

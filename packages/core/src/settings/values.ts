@@ -27,7 +27,7 @@ export const AdminPreferences = z.object({
 export type AdminPreferences = z.infer<typeof AdminPreferences>;
 
 /** The two rows of `monti_settings`. */
-export type SettingsId = "site" | "admin";
+export type SettingsId = "site" | "admin" | "data";
 
 export async function readSettings(
 	db: Db,

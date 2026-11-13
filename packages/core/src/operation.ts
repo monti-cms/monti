@@ -120,6 +120,11 @@ export type OperationDefinition<Input, Output, Prepared = undefined> = {
 	/** Only a person may run it (permanent delete, emptying the trash). It is never an agent tool. */
 	humanOnly?: boolean;
 	/**
+	 * A write only a person does that is undone like any other (an import: it needs the files, and it is taken back as a whole, doc 14). Left
+	 * out, what only a person does has no undo: deleting for good, a key.
+	 */
+	undoable?: boolean;
+	/**
 	 * It writes structure values (`monti.schema.ts`), so it runs only on the dev server: on the live site no entry point offers it. It has no undo; a
 	 * structure change is reversed by a new change (doc 00).
 	 */
@@ -226,6 +231,7 @@ export function defineOperation<Input, Output, Prepared = undefined>(
 			definition.holds ||
 			definition.preview ||
 			definition.humanOnly ||
+			definition.undoable ||
 			definition.structure ||
 			definition.prepare ||
 			definition.afterCommit ||

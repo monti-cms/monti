@@ -21,6 +21,11 @@ export const coreMessages = defineMessages({
 	namespace: "core",
 	messages: {
 		en: {
+			"data.unreadable": "Could not be read.",
+			"data.needsMdx": "Reading it needs the MDX plugin.",
+			"data.nothingToImport": "Nothing to import.",
+			"data.import": "Imported {count} entries from {name}",
+			"data.backedUp": "Took a backup",
 			"plugins.says": "{text}",
 			"plugins.unknownSlot": "There is no such key slot.",
 			"plugins.slotEmpty": "The slot has no key.",
@@ -261,6 +266,11 @@ export const coreMessages = defineMessages({
 			"templates.unknown": "There is no such template.",
 		},
 		ko: {
+			"data.unreadable": "읽지 못했습니다.",
+			"data.needsMdx": "MDX 플러그인이 있어야 읽을 수 있습니다",
+			"data.nothingToImport": "가져올 글이 없습니다.",
+			"data.import": "{name}에서 {count}편 가져옴",
+			"data.backedUp": "백업 받음",
 			"plugins.says": "{text}",
 			"plugins.unknownSlot": "그런 키 자리가 없습니다.",
 			"plugins.slotEmpty": "자리에 키가 없습니다.",

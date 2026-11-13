@@ -868,28 +868,6 @@ export const entryOperations = [
 		where: (_input, output, records) => entryPlace(recordsOf(records, "entry", [output.id])),
 	}),
 	defineOperation({
-		name: "entries.export",
-		kind: "read",
-		description: "Export entries as JSON: each working copy with what the site shows of it.",
-		input: Ids,
-		async run(input, ctx) {
-			const entries = await loadEntries(ctx.db, input.ids);
-			const published = await ctx.db
-				.selectFrom("entry_published")
-				.selectAll()
-				.where("entry_id", "in", input.ids)
-				.execute();
-			return {
-				format: "monti.entries",
-				version: 1,
-				entries: entries.map((entry) => ({
-					...entry,
-					published: published.find((copy) => copy.entry_id === entry.id) ?? null,
-				})),
-			};
-		},
-	}),
-	defineOperation({
 		name: "entries.previewLink",
 		kind: "read",
 		description:

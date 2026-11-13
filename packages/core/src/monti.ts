@@ -5,6 +5,7 @@ import type { DevProof } from "./auth/dev-bypass";
 import { type AuthSettings, authOperations } from "./auth/operations";
 import { type AnyBlockDefinition, createBlockKit, type MarkDefinition } from "./body/blocks";
 import { bodyOperations, templateRecord } from "./body/operations";
+import { dataOperations } from "./data/operations";
 import type { Database, ItemExchange } from "./db/schema";
 import { BEFORE_ANSWER_MS, type Receiver, sendDeliveries, sendDueDeliveries } from "./engine/deliveries";
 import { context, type Engine, logOwnWork, type RunOptions, runRead, runWrite } from "./engine/execute";
@@ -453,6 +454,7 @@ export function createMonti(options: MontiOptions) {
 		...trashOperations,
 		...keyOperations,
 		...pluginOperations,
+		...dataOperations,
 		...bodyOperations,
 		...authOperations,
 	])
