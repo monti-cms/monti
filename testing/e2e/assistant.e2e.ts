@@ -60,8 +60,17 @@ test.describe("the assistant (doc 10; flow 2)", () => {
 		await expect(panel.getByRole("button", { name: "1건 적용" })).toBeVisible();
 		expect(await summary()).toBeNull();
 
-		// Reviewed: the change is a row of its kind, with the entry's name and the words proposed.
-		await panel.getByRole("button", { name: "검토" }).click();
+		// Reviewed: the change is a row of its kind, with the entry's name and the words proposed. A card of one change has no "검토" of
+		// its own (there is nothing more to see than it shows), so the review is opened by its address. The panel is closed first: it
+		// stands in the same page area, with the same row of state as the review's head.
+		const [waiting] = (await operation<never>(admin, "proposals.forTarget", {
+			kind: "entry",
+			id: output.id,
+		})) as unknown as { proposalId: string }[];
+		expect(waiting).toBeDefined();
+		await panel.getByRole("button", { name: "닫기" }).click();
+		await expect(panel).toBeHidden();
+		await admin.goto(`/admin#/ai/review/${waiting?.proposalId}`);
 		const review = admin.getByRole("main");
 		await expect(review.getByRole("heading", { name: "제안 검토" })).toBeVisible();
 		await expect(review.getByText(title).first()).toBeVisible();
@@ -72,7 +81,9 @@ test.describe("the assistant (doc 10; flow 2)", () => {
 		await expect(review.getByText("✓ 1건 적용")).toBeVisible();
 		expect(await summary()).toBe(SUMMARY);
 
-		// Undone: the entry is as it was, and the page says so.
+		// Undone: the entry is as it was, and the page says so. The row of state takes no press for 0.4 seconds after the proposal moved
+		// on (so the second press of a double click on "apply" is not an "undo"): a person reads the result first.
+		await admin.waitForTimeout(800);
 		await review.getByRole("button", { name: "되돌리기" }).click();
 		await expect(review.getByText(/^되돌림/).first()).toBeVisible();
 		expect(await summary()).toBeNull();

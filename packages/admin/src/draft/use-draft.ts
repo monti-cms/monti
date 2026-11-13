@@ -378,8 +378,11 @@ export function useDraft({
 				: new Map<Path, unknown>();
 			setMine(left);
 			setQuick((current) => new Set([...current].filter((path) => left.has(path))));
-			setAccepted((ids) => (sent ? ids.filter((id) => !sent.accepted.includes(id)) : []));
-			void proposals.reload();
+			// The items that went with the save stay counted as taken until the proposals are read again: let go before, each would be
+			// pending once more for a moment, over a screen that already holds its change (a body change would hang as "changed in the
+			// meantime" beside the words it just put in).
+			const letGo = () => setAccepted((ids) => (sent ? ids.filter((id) => !sent.accepted.includes(id)) : []));
+			void proposals.reload().then(letGo, letGo);
 		},
 		/**
 		 * After a save that went through in part (settings: the admin values saved, the schema file not written): given the values the server has

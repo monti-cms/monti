@@ -1070,6 +1070,26 @@ describe("the entry editor: a body proposal the text moved away from (T87)", () 
 		await saveCell("저장됨");
 	});
 
+	it("10-1 its paragraph taken out: it is not shown and still waits; saved without the paragraph, it is discarded", async () => {
+		const made = await stale();
+		const states = async () =>
+			(await made.loaded().site.db.selectFrom("monti_proposal_item").select("state").orderBy("position").execute()).map(
+				(item) => item.state,
+			);
+		// From the end of the paragraph before it to the end of the text: the whole last paragraph goes (an undo would bring it back).
+		await caretAfter(body().element(), "꺼내 본다.");
+		await userEvent.keyboard("{Shift>}{Meta>}{ArrowDown}{/Meta}{/Shift}{Backspace}");
+		await expect.poll(() => body().element().textContent).not.toContain("지금 상태뿐이다");
+		await expect.element(mark()).not.toBeInTheDocument();
+		await expect.element(page.getByText("1 / 1")).toBeVisible();
+		expect(await states()).toEqual(["pending", "pending"]);
+		await save();
+		await saveCell("저장됨");
+		await expect.poll(states).toEqual(["pending", "discarded"]);
+		// Nobody pressed for it: nothing is said.
+		expect(document.querySelector("[data-sonner-toast]")).toBeNull();
+	});
+
 	it("10-1 typing in a paragraph a drawn proposal touches, in another paragraph of the same request, makes nothing stale; writing the proposal's own paragraph again by taking it does not leave a mark", async () => {
 		await stale();
 		await userEvent.click(title());

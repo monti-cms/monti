@@ -396,25 +396,38 @@ export function EntryEditor({
 	}, []);
 
 	// A body change none of whose blocks is in the saved text any more has no place to hang (doc 10, item 18): it is let go once the
-	// text is saved without them. Before the save the blocks may still come back (an undo), and it only stays undrawn.
+	// text is saved without them, whichever way it was saved (the save itself, publishing, the question on leaving, a translation's
+	// decision). Before the save the blocks may still come back (an undo), and it only stays undrawn. "Saved" is read off the entry: a
+	// version this screen has not looked at yet, with nothing unsaved over it, so the body on the screen is the saved one.
 	const placeless = () => {
 		const now = body.current?.state.doc;
 		return now
 			? editor.bodyProposals
 					.filter((item) => drawable(now, [item]).length === 0 && anchorBlock(now, item) === null)
 					.map((item) => item.id)
-			: [];
+			: null;
 	};
-	const saveEntry = editor.save;
-	const letGo = editor.draft.discardThese;
 	const placelessNow = useRef(placeless);
 	placelessNow.current = placeless;
-	const save = useCallback(async () => {
-		const saved = await saveEntry();
-		if (saved) void letGo(placelessNow.current(), { quiet: true });
-		return saved;
-	}, [saveEntry, letGo]);
-
+	const letGo = editor.draft.discardThese;
+	const savedVersion = read?.entry.version ?? null;
+	const lookedAt = useRef<number | null>(null);
+	const stillUnsaved = editor.dirty;
+	useEffect(() => {
+		if (savedVersion === null || stillUnsaved || readOnly) return;
+		// The version the entry opened with is not a save of this screen's.
+		if (lookedAt.current === null) {
+			lookedAt.current = savedVersion;
+			return;
+		}
+		if (lookedAt.current === savedVersion) return;
+		const gone = placelessNow.current();
+		// The body is being made again (a kept copy went in): looked at when it is there.
+		if (gone === null) return;
+		lookedAt.current = savedVersion;
+		void letGo(gone, { quiet: true });
+	}, [savedVersion, stillUnsaved, readOnly, letGo]);
+	const save = editor.save;
 	/** The focus to the text being written: the body, or the title when the body is not there; to the comparison's first control when it took the editor's place. */
 	const toText = useCallback(() => () => focusText(() => body.current, fieldInputId("title")), []);
 	// What goes away by its own action had the keyboard's focus on that action, and hands it to the text: a banner (discard or load this
