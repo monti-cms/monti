@@ -3,9 +3,12 @@
 # packed tarballs.
 name: CI
 
-# Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
+# Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice. Not on `overhaul`:
+# a pull request is merged into it only when its head holds `overhaul` as it is and CI passed on that head (the merge hook in
+# scripts/check-review.mjs), so the merged commit is what CI already checked.
 on:
   push:
+    branches-ignore: [overhaul]
 
 concurrency:
   group: ci-${{ github.ref }}
