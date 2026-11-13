@@ -288,7 +288,8 @@ function RelationSingleInput({
 				rel.setSearch("");
 				setTyping(false);
 			}}
-			inputValue={typing ? rel.search : value ? rel.labelOf(value) : ""}
+			// Empty until the options are read: the name is not known before, and the stored id is no name.
+			inputValue={typing ? rel.search : value && rel.read.data ? rel.labelOf(value) : ""}
 			onInputValueChange={(next) => {
 				setTyping(true);
 				rel.setSearch(next);
