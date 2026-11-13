@@ -9,7 +9,8 @@ import { useProposalDescription } from "./proposal-cue";
  * A checkbox: 14px, a ✓ when on and a bar when only some are on (`indeterminate`, the select-all of a list with part of it picked). The mark
  * is drawn, so the state never rests on color alone. The root is a `span`, not a `button`, so a disabled one is dimmed through `data-disabled`.
  * The keyboard's focus is a line around the box, where a ring would be (2px, half ink): a line, not a ring's shadow, so an invalid one can keep its red ring on or off, under the
- * pointer and the keyboard too, with the focus's line outside it (2px off). The line is never unset here (no `outline-none`). `proposal` marks a choice the assistant made and nobody has touched: the same mark in blue. A `readOnly` one
+ * pointer and the keyboard too, with the focus's line outside it: 4px off, so 2px of paper part the red ring (0 to 2px) from the line (4 to 6px) and the two do
+ * not read as one band of two colours. The line is never unset here (no `outline-none`). `proposal` marks a choice the assistant made and nobody has touched: the same mark in blue. A `readOnly` one
  * shows a choice that can no longer change (an applied proposal): gray when on, a light border when off.
  */
 function Checkbox({
@@ -28,7 +29,7 @@ function Checkbox({
 			className={cn(
 				cn(
 					CHECK_HOVER,
-					"group/check peer data-checked:data-proposal:border-(color:--monti-fg-proposal) data-indeterminate:data-proposal:border-(color:--monti-fg-proposal) data-checked:data-readonly:border-(color:--monti-fg-faint) relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint bg-transparent transition-colors after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:outline-2 focus-visible:outline-monti-contrast/50 aria-invalid:border-monti-danger aria-invalid:ring-2 aria-invalid:ring-monti-danger aria-invalid:focus-visible:outline-offset-2 data-checked:data-proposal:bg-(--monti-fg-proposal) data-checked:data-readonly:bg-(--monti-fg-faint) data-indeterminate:data-proposal:bg-(--monti-fg-proposal) data-disabled:cursor-default data-readonly:cursor-default data-checked:border-monti-contrast data-indeterminate:border-monti-contrast data-readonly:border-monti-muted data-checked:bg-monti-emphasis data-indeterminate:bg-monti-emphasis data-disabled:opacity-45",
+					"group/check peer data-checked:data-proposal:border-(color:--monti-fg-proposal) data-indeterminate:data-proposal:border-(color:--monti-fg-proposal) data-checked:data-readonly:border-(color:--monti-fg-faint) relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint bg-transparent transition-colors after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:outline-2 focus-visible:outline-monti-contrast/50 aria-invalid:border-monti-danger aria-invalid:ring-2 aria-invalid:ring-monti-danger aria-invalid:focus-visible:outline-offset-4 data-checked:data-proposal:bg-(--monti-fg-proposal) data-checked:data-readonly:bg-(--monti-fg-faint) data-indeterminate:data-proposal:bg-(--monti-fg-proposal) data-disabled:cursor-default data-readonly:cursor-default data-checked:border-monti-contrast data-indeterminate:border-monti-contrast data-readonly:border-monti-muted data-checked:bg-monti-emphasis data-indeterminate:bg-monti-emphasis data-disabled:opacity-45",
 				),
 				className,
 			)}

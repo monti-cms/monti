@@ -58,6 +58,7 @@ import { MemoCard, MemoMessage, MemoThread } from "../memo-card";
 import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_SEPARATOR, MENU_SUB_MARK, MenuShortcut } from "../menu-parts";
 import { NavLink } from "../nav-link";
 import { Option } from "../option";
+import { PageBannerPlace } from "../page-banner";
 import { PageColumn, PageHeader, PageToolbar, PageToolbarEnd } from "../page-header";
 import {
 	ListFooter,
@@ -744,14 +745,29 @@ function Filter({ label, filled }: { label?: string; filled?: boolean }) {
 	return <FilterButton filled={filled}>{label}</FilterButton>;
 }
 
-/** A line across a page that says what needs knowing: its title, a detail, and an action at its end. */
+/**
+ * A screen's frame: the top place its banners stand in, edge to edge over the page, and the page under it. A `Banner` stands nowhere else
+ * (`CATALOG`'s `only`), as in the admin's code, where `check:design` (`banner-place`) holds it to `SidebarInset`, `StandalonePage` and `PageBanner`.
+ */
+function PageFrame({ banner, children }: { banner?: React.ReactNode; children?: React.ReactNode }) {
+	return (
+		<main data-slot="page-frame" className="relative flex min-w-0 flex-1 flex-col bg-monti-page">
+			<PageBannerPlace data-slot="page-frame-banner" banner={banner}>
+				{children}
+			</PageBannerPlace>
+		</main>
+	);
+}
+
+/** A line across the very top of a screen that says what needs knowing: its sentence, a detail, and an action at its end. Only in a `PageFrame`'s `banner`. */
 function Banner({
 	title,
 	meta,
 	tone,
 	children,
 }: {
-	title?: string;
+	/** The sentence. A banner always has one. */
+	title: string;
 	meta?: string;
 	tone?: "warning" | "danger" | "neutral";
 	children?: React.ReactNode;
@@ -1116,7 +1132,8 @@ function FolderTabItem({
 }: {
 	label?: string;
 	count?: string;
-	locked?: boolean;
+	/** Why it cannot be moved or removed: the lock's name. */
+	locked?: string;
 	fixed?: boolean;
 }) {
 	return (
@@ -2604,6 +2621,7 @@ export const parts = {
 	SelectBox,
 	Filter,
 	Banner,
+	PageFrame,
 	AffixField,
 	VerticalRule,
 	Section,
@@ -2700,6 +2718,9 @@ export const parts = {
  * - `ref`: another element of the spec (`@emailInput`), for a label's field; the real ids are made when drawn.
  * - `state`: a value only the state gives (a picture's address).
  * - `action`: a thing the screen does, by name (`{ "action": "signIn" }`).
+ *
+ * `only` names the only places an entry may stand, each a named place of another entry (`PageFrame.banner`): `check:screens` refuses it anywhere
+ * else. A prop whose type has no `?` is required: a spec that leaves it out is refused.
  *
  * `role` says what the renderer does for an entry beyond drawing it: a `form` makes a `button` inside it its submit.
  *
@@ -2877,7 +2898,7 @@ export const CATALOG = {
 	SheetSplit: { kind: "part", props: {} },
 	Folder: { kind: "part", props: { open: "text" } },
 	FolderTabRow: { kind: "part", props: { add: "text" } },
-	FolderTabItem: { kind: "part", props: { label: "text", count: "text", locked: "flag", fixed: "flag" } },
+	FolderTabItem: { kind: "part", props: { label: "text", count: "text", locked: "text", fixed: "flag" } },
 	FolderBody: { kind: "part", props: {} },
 	FieldTree: { kind: "part", props: {} },
 	FieldLine: {
@@ -2945,7 +2966,9 @@ export const CATALOG = {
 		props: { value: "text", size: "variant", width: "variant", proposal: "flag", warning: "flag" },
 	},
 	Filter: { kind: "part", props: { label: "text", filled: "flag" } },
-	Banner: { kind: "part", props: { title: "text", meta: "text", tone: "variant" } },
+	// A banner's place is not a screen's to choose: the top place of the frame, and nowhere else.
+	Banner: { kind: "part", only: ["PageFrame.banner"], props: { title: "text", meta: "text", tone: "variant" } },
+	PageFrame: { kind: "part", props: {} },
 	AffixField: {
 		kind: "part",
 		props: { value: "state", prefix: "text", suffix: "text", placeholder: "text", proposal: "flag" },

@@ -26,7 +26,7 @@
 | 사이드 패널 | `SidePanel`(`width` `side`·`panel`·`assistant`) | 화면 옆에서 함께 보는 것(파일, 활동 자세히, 항목, 어시스턴트). 머리 끝의 ×로 닫는다. 저장할 것이 있으면 `footer`에 알약 하나. |
 | 결과 한 줄 | `toast`(`Toaster`가 그린다), 실패는 `toast.error` | 동작 직후의 한 줄과, 있으면 `action` 하나("되돌리기", "보기"). 꼭 봐야 하는 것은 할 일이나 상태 줄에도 남긴다. |
 | 그릴 수 없는 미리보기 | `ErrorBox` | 블록 미리보기가 오류로 그려지지 않을 때. 줄바꿈을 지키고 `role="alert"`. |
-| 화면의 알림 띠 | `Banner`(`tone` `warning`·`danger`·`neutral`) | 화면에 대한 띠는 모두 화면 맨 위 한 자리에, 가장자리에서 가장자리까지 선다. 사이드바 틀이 있는 화면은 틀의 띠 자리다(사이트 전체의 일은 틀의 `SidebarInset banner`, 그 페이지의 일은 페이지가 `PageBanner`로 준다). 편집기처럼 틀 밖의 화면은 머리 줄보다 위다(`StandalonePage banner`). 여럿이면 위아래로 쌓고 넓은 일이 위다(로그인 풀림 › 스키마 변경 › 이 글의 충돌 · 임시 저장본 · 휴지통). 오른쪽 끝에 `TextButton` 동작. 경고도 실패도 아닌 상태(휴지통에 있는 글)는 `neutral`. 칸 하나, 행 하나의 문제는 띠가 아니라 그 옆 한 줄이다(status.md). 2026-11-06 소유자: 머리 위와 아래를 나누지 않는다. 맨 위가 가장 잘 보인다. 2026-11-12 소유자: 목록에 대해 일하는 띠도 탭 아래나 목록 위가 아니라 맨 위다. `pnpm check:design`(`banner-place`)이 지킨다(status.md). |
+| 화면의 알림 띠 | `Banner`(`tone` `warning`·`danger`·`neutral`) | 화면에 대한 띠는 모두 화면 맨 위 한 자리에, 가장자리에서 가장자리까지 선다. 사이드바 틀이 있는 화면은 틀의 띠 자리다(사이트 전체의 일은 틀의 `SidebarInset banner`, 그 페이지의 일은 페이지가 `PageBanner`로 준다). 편집기처럼 틀 밖의 화면은 머리 줄보다 위다(`StandalonePage banner`). 여럿이면 위아래로 쌓고 넓은 일이 위다(로그인 풀림 › 스키마 변경 › 이 글의 충돌 · 임시 저장본 · 휴지통). 오른쪽 끝에 `TextButton` 동작. 경고도 실패도 아닌 상태(휴지통에 있는 글)는 `neutral`. 칸 하나, 행 하나의 문제는 띠가 아니라 그 옆 한 줄이다(status.md). 화면의 읽기가 거절되거나 답이 없으면 어느 화면이든 맨 위에 "불러오지 못했습니다 · 다시 시도" 띠 하나가 선다(`ReadFailedBanner`. status.md의 "읽지 못한 화면", T154). 2026-11-06 소유자: 머리 위와 아래를 나누지 않는다. 맨 위가 가장 잘 보인다. 2026-11-12 소유자: 목록에 대해 일하는 띠도 탭 아래나 목록 위가 아니라 맨 위다. `pnpm check:design`(`banner-place`)이 지킨다(status.md). |
 | 아이콘만 있는 버튼의 이름 | `Tooltip`(`TooltipTrigger`, `TooltipContent`) — `IconButton`의 `label`이 이미 그린다 | 한두 낱말과 단축키. |
 
 ### 고른 글 내보내기 (Dialogs)

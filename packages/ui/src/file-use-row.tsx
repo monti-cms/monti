@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { CutWords } from "./cut-words";
 import { Text } from "./text";
 import { TextButton } from "./text-button";
 
@@ -24,8 +25,8 @@ function FileUseRow({
 	return (
 		<div data-slot="file-use-row" className="flex min-w-0 items-center justify-between gap-monti-8">
 			{/* The words are cut inside the button, so what cuts them does not also cut its pressable room. */}
-			<TextButton size="note" href={href} title={title} onClick={onClick} className="flex min-w-0">
-				<span className="truncate">{title}</span>
+			<TextButton size="note" href={href} onClick={onClick} className="flex min-w-0">
+				<CutWords>{title}</CutWords>
 			</TextButton>
 			<Text variant="caption" tone="subtle" className="shrink-0 whitespace-nowrap">
 				{places}

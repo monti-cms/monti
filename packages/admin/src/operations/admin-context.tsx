@@ -10,6 +10,7 @@ import {
 import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { adminMessages } from "../messages";
 import type { AdminPlugin, FieldInput, FieldViewProps } from "../plugins";
+import { createFailedReads, type FailedReads } from "./failed-reads";
 import { httpStreams, httpUploader, type StreamTransport, type Transport, type Uploader } from "./transport";
 
 export type Language = "ko" | "en";
@@ -69,6 +70,8 @@ type AdminContext = {
 	/** Tells the screens a write went through, so what they show from other reads (the sidebar's counts) is read again. */
 	wrote: () => void;
 	onWrite: (listener: () => void) => () => void;
+	/** The open screen's reads that failed, for the banner at its top (`ReadFailedBanner`). */
+	reads: FailedReads;
 	screen: ScreenChannel;
 	/** Runtime block components from the same definitions the site gives core. */
 	blocks: ReadonlyMap<string, AdminBlockDefinition>;
@@ -161,9 +164,11 @@ export function AdminProvider({
 		};
 	}, []);
 	const channel = useMemo(() => screen ?? createScreenChannel(), [screen]);
+	const reads = useMemo(createFailedReads, []);
 	const base = useMemo<Omit<AdminContext, "session">>(
 		() => ({
 			screen: channel,
+			reads,
 			...writes,
 			transport,
 			streams: streams ?? httpStreams(apiBase),
@@ -195,6 +200,7 @@ export function AdminProvider({
 			face.templates,
 			apiBase,
 			channel,
+			reads,
 			writes,
 			blocks,
 			plugins,

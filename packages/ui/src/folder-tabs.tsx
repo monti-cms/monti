@@ -8,6 +8,7 @@ import { cn } from "./cn";
 import { Count } from "./count";
 import { Add, Draggable, Locked } from "./icons";
 import { HELD, SLOT } from "./sortable";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /**
  * Tabs that sit on a box like folder tabs, for a list of fields split into pages. The picked tab has the box's background and is open at the
@@ -57,13 +58,14 @@ export interface TabMotion {
 
 /**
  * One tab: a grip to drag it by, its name, and how many fields it holds. `locked` marks a tab a plugin placed, which cannot be moved or
- * removed. `motion` moves the tab while it makes room for another; `dragging` is the gap the tab in hand left. `dropTarget` is the tab a field or
+ * removed, and is why ("placed by the SEO plugin"): the lock is named by it, and the tab says it in a tooltip to a pointer on the tab and to the
+ * keyboard on it (the lock is inside the tab's button, so it cannot be a stop of its own). `motion` moves the tab while it makes room for another; `dragging` is the gap the tab in hand left. `dropTarget` is the tab a field or
  * group is held over: dropped there, it goes to the end of this tab. The tab in hand itself is {@link FolderTabLifted}.
  */
 function FolderTab({
 	children,
 	count,
-	locked = false,
+	locked,
 	draggable = true,
 	motion,
 	dragging = false,
@@ -72,7 +74,8 @@ function FolderTab({
 	...props
 }: Omit<TabsPrimitive.Tab.Props, "style"> & {
 	count?: React.ReactNode;
-	locked?: boolean;
+	/** Why the tab cannot be moved or removed: the lock's name and the tab's tooltip. */
+	locked?: string;
 	/** Shows the grip. Off for a tab that stays where it is. */
 	draggable?: boolean;
 	motion?: TabMotion;
@@ -80,7 +83,7 @@ function FolderTab({
 	/** A field or group is held over this tab. */
 	dropTarget?: boolean;
 }) {
-	return (
+	const tab = (
 		<TabsPrimitive.Tab
 			data-slot="folder-tab"
 			data-held={dragging || undefined}
@@ -98,8 +101,15 @@ function FolderTab({
 			{draggable && !locked && <Draggable aria-hidden className="size-3.5 text-monti-faint" />}
 			{children}
 			{count !== undefined && <Count>{count}</Count>}
-			{locked && <Locked aria-hidden className="size-3 text-monti-faint" />}
+			{locked && <Locked role="img" aria-label={locked} className="size-3 text-monti-faint" />}
 		</TabsPrimitive.Tab>
+	);
+	if (!locked) return tab;
+	return (
+		<Tooltip>
+			<TooltipTrigger render={tab} />
+			<TooltipContent>{locked}</TooltipContent>
+		</Tooltip>
 	);
 }
 

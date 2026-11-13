@@ -34,6 +34,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { useEntryEditor } from "../entry/use-entry-editor";
 import { focusText, useFocusHandOff } from "../frame/focus-hand-off";
+import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
 
 /**
@@ -53,7 +54,7 @@ export function TemplateEditor({
 	/** A new template was saved, or a copy made: the page goes on as that template's. */
 	onSaved: (id: string) => void;
 }) {
-	const { t } = useAdmin();
+	const { t, reads } = useAdmin();
 	const catalogs = useBodyCatalogs();
 	const source = useMemo(() => ({ kind: "template" as const, id }), [id]);
 	const editor = useEntryEditor(source);
@@ -87,9 +88,10 @@ export function TemplateEditor({
 			banner={
 				<>
 					<SessionEndedBanner />
+					<ReadFailedBanner />
 					{editor.loadRefusal ? (
 						<Banner ref={handOff} tone="danger" title={t("templates.loadFailed")} plainMeta>
-							<TextButton onClick={() => void editor.reload()}>{t("templates.retry")}</TextButton>
+							<TextButton onClick={() => void reads.retry()}>{t("templates.retry")}</TextButton>
 						</Banner>
 					) : null}
 					{editor.conflict ? (

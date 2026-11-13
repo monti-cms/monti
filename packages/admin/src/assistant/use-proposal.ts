@@ -16,7 +16,7 @@ const POLL_MS = 2000;
 export function useProposal(id: string) {
 	const { streams, t, wrote } = useAdmin();
 	const { proposalTick, touchProposals } = useAssistant();
-	const read = useRead<ProposalView>("proposals.get", { id });
+	const read = useRead<ProposalView>("proposals.get", { id }, { quiet: true });
 	const reload = read.reload;
 	const discarding = useOperation<{ output: { discarded: string[] } }>("proposals.discard");
 	const reverting = useOperation<{ output: { reverted: string[]; kept: string[] } }>("proposals.revert");

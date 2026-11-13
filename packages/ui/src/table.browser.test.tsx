@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { dragPath, dropDrag, middleOf, onTopOf, pointerPath, titleUnderPointer } from "../../../testing/input";
+import { dragPath, dropDrag, middleOf, onTopOf, pointerPath, wholeUnderPointer } from "../../../testing/input";
 import { render } from "../test/render";
 import {
+	FileUseRow,
 	ListHead,
 	ListScroll,
 	LocaleCodes,
@@ -15,7 +16,10 @@ import {
 	Table,
 	TableBody,
 	TableCell,
+	TableHead,
+	TableHeader,
 	TableRow,
+	Text,
 } from "./index";
 
 function rows(opened: (held: { newTab: boolean }) => void, rowPressed?: () => void) {
@@ -81,8 +85,8 @@ describe("Table rows with a link", () => {
 	it("the pointer finds what stands over the row's link: a titled cell's words, the address, the languages before the title", async () => {
 		render(rows(() => {}));
 		await expect.element(page.getByText("개발")).toBeVisible();
-		expect(titleUnderPointer(page.getByText("개발").element())).toBe("개발");
-		expect(titleUnderPointer(page.getByText("/posts/first-post").element())).toBe("/posts/first-post");
+		expect(wholeUnderPointer(page.getByText("개발").element())).toBe("개발");
+		expect(wholeUnderPointer(page.getByText("/posts/first-post").element())).toBe("/posts/first-post");
 		expect(onTopOf(page.getByText("KO +2").element())?.closest("[data-slot=locale-codes]")).not.toBeNull();
 	});
 
@@ -574,5 +578,178 @@ describe("Table rows with a link", () => {
 		await userEvent.keyboard("{End}");
 		await expect.poll(() => width(1)).toBe(60);
 		expect(width(0)).toBe(title + kind - 60);
+	});
+});
+
+describe("A cut cell", () => {
+	it("says its value whole in the tooltip every cut text has, while it is cut and not when it fits", async () => {
+		const value = "프런트엔드 개발 이야기";
+		const table = (width: number) => (
+			<Table container="none" layout="fixed" columns={[200, width, undefined]}>
+				<TableBody>
+					<TableRow>
+						<TableCell truncate>
+							<RowTitle title={<RowLink href="#/first">첫 번째 글</RowLink>} />
+						</TableCell>
+						<TableCell tone="subtle" truncate title={value}>
+							{value}
+						</TableCell>
+						<TableCell />
+					</TableRow>
+				</TableBody>
+			</Table>
+		);
+		// The words' own box in the cell.
+		const words = () => page.getByRole("cell", { name: value }).getByText(value);
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		const host = render(table(72));
+		// Over the row's link, so the pointer finds the words; no `title` of the browser's is left on the cell.
+		await userEvent.hover(words(), { position: { x: 6, y: 6 } });
+		await expect.poll(tip, { timeout: 5000 }).toBe(value);
+		expect(document.querySelector("td[title]")).toBeNull();
+		await userEvent.hover(page.getByText("첫 번째 글"));
+		await expect.poll(tip).toBe(null);
+		host.remove();
+		render(table(240));
+		await userEvent.hover(words(), { position: { x: 6, y: 6 } });
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(tip()).toBe(null);
+	});
+});
+
+describe("A cut cell that holds the row's check", () => {
+	it("is not cut by the check that hangs outside it: a value that fits says nothing", async () => {
+		render(
+			<Table container="none" layout="fixed" columns={[160, undefined]}>
+				<TableBody>
+					<TableRow>
+						<TableCell truncate title="draft">
+							<RowCheck checked={false} onCheckedChange={() => {}} label="pick" />
+							draft
+						</TableCell>
+						<TableCell truncate>
+							<RowTitle title={<RowLink href="#/first">first</RowLink>} />
+						</TableCell>
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		await userEvent.hover(page.getByRole("cell", { name: "draft" }).getByText("draft"), { position: { x: 4, y: 4 } });
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(tip()).toBe(null);
+	});
+});
+
+describe("A row the keyboard comes to at a scrolled edge (T190)", () => {
+	const list = (
+		// A box that scrolls its rows under the table's stuck header, as the page does, with the 8px every scrolling box keeps.
+		<div data-testid="scroll" style={{ height: 240, overflowY: "auto", scrollPaddingBlock: 8 }}>
+			<Table container="none">
+				<TableHeader>
+					<TableRow>
+						<TableHead>제목</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{Array.from({ length: 24 }, (_, index) => (
+						<TableRow key={index}>
+							<TableCell>
+								<RowTitle title={<RowLink href={`#/${index}`}>{`글 ${index + 1}`}</RowLink>} />
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
+		</div>
+	);
+	const edges = () => {
+		const link = document.activeElement as HTMLElement;
+		const row = (link.closest("tr") as HTMLElement).getBoundingClientRect();
+		const box = page.getByTestId("scroll").element().getBoundingClientRect();
+		const head = (document.querySelector("thead th") as HTMLElement).getBoundingClientRect();
+		return { link: link.textContent, above: row.top - head.bottom, below: box.bottom - row.bottom };
+	};
+
+	it("going down, the whole row is in the box, its ring's lower side too; going up, the row is out from under the stuck header", async () => {
+		render(list);
+		await expect.element(page.getByRole("link", { name: "글 1", exact: true })).toBeVisible();
+		// Down past the fold, one row at a time.
+		for (let index = 0; index < 12; index++) {
+			await userEvent.keyboard("{Tab}");
+			const at = edges();
+			expect(at.link).toBe(`글 ${index + 1}`);
+			expect(at.below, `row ${index + 1}, going down`).toBeGreaterThanOrEqual(0);
+			expect(at.above, `row ${index + 1}, going down`).toBeGreaterThanOrEqual(0);
+		}
+		// And back up: each row the keyboard comes to stands whole under the header.
+		for (let index = 10; index >= 0; index--) {
+			await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+			const at = edges();
+			expect(at.link).toBe(`글 ${index + 1}`);
+			expect(at.above, `row ${index + 1}, going up`).toBeGreaterThanOrEqual(0);
+			expect(at.below, `row ${index + 1}, going up`).toBeGreaterThanOrEqual(0);
+		}
+	});
+});
+
+describe("Cut words inside a link", () => {
+	it("are said when the keyboard comes to the link that holds them", async () => {
+		const long = "A very long title of an entry that uses this file and does not fit";
+		render(
+			// A file's use row: the title is a link that holds its cut words.
+			<div style={{ width: 200 }}>
+				<FileUseRow title={long} places="본문" href="#/entry" />
+			</div>,
+		);
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		await expect.element(page.getByRole("link")).toBeVisible();
+		await userEvent.keyboard("{Tab}");
+		await expect.element(page.getByRole("link")).toHaveFocus();
+		await expect.poll(tip, { timeout: 5000 }).toBe(long);
+		(document.activeElement as HTMLElement).blur();
+		await expect.poll(tip).toBe(null);
+	});
+});
+
+describe("A cut line under a row's title", () => {
+	it("stands over the row's link: the pointer finds it, it says itself whole, and a press on it still opens the row", async () => {
+		const opened = vi.fn();
+		const line = "First section · Second section · Third section · Fourth section · Fifth section";
+		render(
+			<Table container="none" layout="fixed" columns={[220, undefined]}>
+				<TableBody>
+					<TableRow twoLine>
+						<TableCell truncate>
+							<Text as="div" truncate>
+								<RowLink render={<button type="button" onClick={opened} />}>Weekly note</RowLink>
+							</Text>
+							<Text as="div" variant="note" tone="subtle" truncate>
+								{line}
+							</Text>
+						</TableCell>
+						<TableCell />
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		await expect.element(page.getByText(line)).toBeVisible();
+		const words = page.getByText(line).element();
+		expect(onTopOf(words)).toBe(words);
+		const box = words.getBoundingClientRect();
+		await pointerPath(
+			[
+				{ x: box.left + 70, y: box.top + box.height / 2 },
+				{ x: box.left + 10, y: box.top + box.height / 2 },
+			],
+			{ steps: 5 },
+		);
+		await expect.poll(tip, { timeout: 5000 }).toBe(line);
+		await userEvent.click(page.getByText(line).first(), { position: { x: 10, y: 4 } });
+		expect(opened).toHaveBeenCalledTimes(1);
+		// The title's own words hold the link: their layer is still the whole row's.
+		const link = page.getByRole("button", { name: "Weekly note" }).element();
+		expect(getComputedStyle(link.parentElement as HTMLElement).position).toBe("static");
 	});
 });

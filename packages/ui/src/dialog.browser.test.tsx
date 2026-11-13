@@ -248,7 +248,12 @@ describe("a window that was told to close", () => {
 		expect(heading.getBoundingClientRect().right).toBeLessThanOrEqual(
 			(heading.closest("[role=dialog]") as HTMLElement).getBoundingClientRect().right,
 		);
-		expect(of.title).toBe(name);
+		// Cut, it says itself whole as every cut text does: the name without the dot before it, in the tooltip.
+		expect(of.getAttribute("data-cut-words")).toBe(name);
+		await userEvent.hover(page.elementLocator(of), { position: { x: 20, y: 6 } });
+		await expect
+			.poll(() => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null, { timeout: 5000 })
+			.toBe(name);
 		expect(of.textContent).toBe(` · ${name}`);
 	});
 });

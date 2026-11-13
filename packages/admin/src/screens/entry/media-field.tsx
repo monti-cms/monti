@@ -74,7 +74,7 @@ export function MediaField({
 	const own = mediaValueOf(value);
 	const followed = own ? null : mediaValueOf(source);
 	const shown = own ?? followed;
-	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown });
+	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown, quiet: true });
 	const file = read.data?.id === shown?.media ? read.data : null;
 	// A read-only entry shows what it has saved: a file that was still going up when it was archived is not its value, and has no place here.
 	const going = readOnly ? undefined : uploads.of(field);
@@ -202,7 +202,7 @@ export function SharedMediaValue({
 }) {
 	const { t } = useAdmin();
 	const shown = mediaValueOf(value);
-	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown });
+	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown, quiet: true });
 	const name = read.data?.id === shown?.media ? read.data?.name : undefined;
 	const words = shown?.decorative ? t("editor.image.decorative") : shown?.alt;
 	return (

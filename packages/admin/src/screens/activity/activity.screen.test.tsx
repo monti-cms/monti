@@ -43,7 +43,7 @@ const undoFromMenu = async (words: string) => {
 };
 const sidebar = (name: RegExp) => page.getByRole("navigation").getByRole("button", { name });
 const sidebarLog = () => sidebar(/^활동 기록/);
-const banner = () => page.getByRole("status").filter({ hasText: /전송 \d+건 실패/ });
+const banner = () => page.getByRole("note").filter({ hasText: /전송 \d+건 실패/ });
 const panel = () => page.getByRole("complementary");
 /** What each row's delivery cell says, top to bottom. */
 const deliveryCells = () =>
@@ -649,7 +649,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row(FAILED)).toBeVisible();
 		const cell = row(FAILED).element().querySelectorAll("td")[2];
 		expect(cell?.textContent).toMatch(/^\d\d\. \d\d \d\d:\d\d$/);
-		expect(cell?.getAttribute("title")).toBe(cell?.textContent);
+		expect(cell?.getAttribute("data-cut-words")).toBe(cell?.textContent);
 	});
 	it("[flow 12·03] the details closed with the keyboard give focus back to the row that opened them", async () => {
 		await draw(stories.Log).run();
@@ -1308,7 +1308,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await drawn.run();
 		const { site, hooks } = drawn.loaded();
 		await expect.element(row(FAILED)).toBeVisible();
-		const failedToRead = () => page.getByRole("status").filter({ hasText: "기록을 불러오지 못했습니다" });
+		const failedToRead = () => page.getByRole("note").filter({ hasText: "기록을 불러오지 못했습니다" });
 		await expect.element(failedToRead()).not.toBeInTheDocument();
 		// Something is written elsewhere and the log reads again: that read gets no answer.
 		hooks.lose.add("activity.list");

@@ -122,7 +122,7 @@ export function SchemaPage({
 									<FolderTab value="기본" count="7" draggable>
 										기본
 									</FolderTab>
-									<FolderTab value="SEO" count="3" locked draggable>
+									<FolderTab value="SEO" count="3" locked="SEO 플러그인이 둔 탭" draggable>
 										SEO
 									</FolderTab>
 								</FolderTabsList>

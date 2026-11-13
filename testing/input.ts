@@ -132,11 +132,12 @@ export function onTopOf(element: Element): Element | null {
 }
 
 /**
- * What the browser's tooltip would say with the pointer at the middle of `element`: the `title` of what is on top there, or of what holds it. A `title` under
- * something that covers it (a row's link covers its row) is never said, and this is `null`.
+ * What a pointer at the middle of `element` would be told while the words there are cut: what the box of cut words (`CutWords`) on top there, or
+ * around what is on top, says whole. Words under something that covers them (a row's link covers its row) are never said, and this is `null`.
  */
-export function titleUnderPointer(element: Element): string | null {
-	return onTopOf(element)?.closest("[title]")?.getAttribute("title") ?? null;
+export function wholeUnderPointer(element: Element): string | null {
+	const box = onTopOf(element)?.closest("[data-cut-words]");
+	return box ? box.getAttribute("data-cut-words") || box.textContent : null;
 }
 
 /** The heights of a table's body rows that hold something, each once: one height when every row is as tall as the others. */

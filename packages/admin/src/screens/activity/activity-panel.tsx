@@ -135,7 +135,7 @@ export function ActivityPanel({
 	go: (route: Route) => void;
 }) {
 	const { t, wrote } = useAdmin();
-	const read = useRead<ActivityDetail>("activity.get", { id }, { afterWrites: true });
+	const read = useRead<ActivityDetail>("activity.get", { id }, { afterWrites: true, quiet: true });
 	const schema = useRead<{ adminValues: Record<string, { label?: string }> }>("schema.read");
 	const cancel = useOperation("deliveries.cancel");
 	const [asking, setAsking] = useState<ActivityDelivery | null>(null);

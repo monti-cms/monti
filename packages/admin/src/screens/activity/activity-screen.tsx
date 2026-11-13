@@ -154,7 +154,7 @@ export function ActivityScreen({
 	/** Reads the sidebar's counts again: a delivery can fail after its write answered, when nothing else tells the frame. */
 	recount: () => void;
 }) {
-	const { t } = useAdmin();
+	const { t, reads } = useAdmin();
 	const state = useMemo(() => readActivityState(params), [params]);
 	const setState = (next: ActivityState, options?: { replace?: boolean }) =>
 		go({ screen: "activity", params: writeActivityState(next) }, options);
@@ -162,7 +162,7 @@ export function ActivityScreen({
 	const look = (change: Partial<ActivityState>, options?: { replace?: boolean }) =>
 		setState({ ...state, ...change, page: 1, asOf: null, from: null }, options);
 	const query = activityQueryOf(state);
-	const read = useRead<ActivityList>("activity.list", query, { afterWrites: true });
+	const read = useRead<ActivityList>("activity.list", query, { afterWrites: true, own: true });
 	const counts = useRead<DeliveryCounts>("deliveries.counts", {}, { afterWrites: true });
 	const data = read.data;
 	/** What is shown is the answer to this address: its search, filters, order and page, not the one before, still on screen while this reads. */
@@ -356,7 +356,7 @@ export function ActivityScreen({
 			    rows, and they are not said to be the log as it is now. */}
 			{read.refusal ? (
 				<Banner ref={bannerHandOff} tone="danger" title={t("activity.loadFailed")} plainMeta>
-					<TextButton variant="underline" onClick={() => void read.reload()}>
+					<TextButton variant="underline" onClick={() => void reads.retry()}>
 						{t("activity.reload")}
 					</TextButton>
 				</Banner>

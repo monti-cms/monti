@@ -23,7 +23,12 @@ function PageBannerPlace({
 	const [place, setPlace] = React.useState<HTMLElement | null>(null);
 	return (
 		<PageBannerContext.Provider value={place}>
-			<div className="shrink-0" {...props}>
+			{/*
+			 * The live region of every banner that stands here: in the page from the place's first drawing, empty, so a banner that comes later is
+			 * an addition to it and is read (a region that arrives with its words in it may not be). Only what is added or changed is read, each
+			 * banner alone; one that leaves is not.
+			 */}
+			<div className="shrink-0" aria-live="polite" aria-atomic="false" aria-relevant="additions text" {...props}>
 				{banner}
 				{/* A node of its own after the frame's banners: one of those shown later still lands above the page's. Each sender has its box in it. */}
 				<div ref={setPlace} data-slot="page-banner" className="contents" />

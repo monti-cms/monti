@@ -100,7 +100,7 @@ function useUseRows(rows: readonly MediaUseRow[]) {
 
 /** Where a file is used, for the menus of a tile: read when its sub-menu opens. */
 export function useFileUses(id: string) {
-	return useUseRows(useRead<MediaDetail>("media.get", { id }).data?.useRows ?? []);
+	return useUseRows(useRead<MediaDetail>("media.get", { id }, { quiet: true }).data?.useRows ?? []);
 }
 
 /** "Replace this file?" (flow 6·19): the file now and the one chosen, what stays, and what the server said if it refused. */
@@ -251,7 +251,7 @@ export function TrashedFilePanel({
 	go: (route: Route) => void;
 }) {
 	const { t } = useAdmin();
-	const read = useRead<MediaDetail>("media.get", { id }, { afterWrites: true });
+	const read = useRead<MediaDetail>("media.get", { id }, { afterWrites: true, quiet: true });
 	const item = read.data;
 	const uses = useUseRows(item?.useRows ?? []);
 	useCoverCorner(true);
@@ -316,7 +316,7 @@ export function MediaPanel({
 	go: (route: Route) => void;
 }) {
 	const { t } = useAdmin();
-	const read = useRead<MediaDetail>("media.get", { id }, { afterWrites: true });
+	const read = useRead<MediaDetail>("media.get", { id }, { afterWrites: true, quiet: true });
 	const item = read.data;
 	const update = useOperation("media.update");
 	const [replacing, setReplacing] = useState<File | null>(null);

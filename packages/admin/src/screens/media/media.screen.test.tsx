@@ -2,7 +2,7 @@ import { toast as toastApi } from "@monti-cms/ui";
 import { composeStories, composeStory } from "@storybook/react-vite";
 import { describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { scrollsSideways, spillingCells, titleUnderPointer } from "../../../../../testing/input";
+import { scrollsSideways, spillingCells, wholeUnderPointer } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
 import * as media from "./media.stories";
 import { samplePhoto } from "./media.stories";
@@ -260,7 +260,7 @@ describe("browsing", () => {
 		// Use, type, size, dimensions and the day: each clips at its own edge, whatever it holds, and the pointer finds what it says.
 		const cells = [...row.element().querySelectorAll("td")].slice(1, 6);
 		expect(cells.map((cell) => getComputedStyle(cell).overflowX)).toEqual(cells.map(() => "hidden"));
-		expect(cells.map((cell) => titleUnderPointer(cell.firstElementChild ?? cell))).toEqual(
+		expect(cells.map((cell) => wholeUnderPointer(cell.firstElementChild ?? cell))).toEqual(
 			cells.map((cell) => cell.textContent),
 		);
 		expect(spillingCells(main().getByRole("table").element())).toEqual([]);

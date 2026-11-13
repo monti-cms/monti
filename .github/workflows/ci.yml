@@ -38,6 +38,7 @@ jobs:
       - run: pnpm gen:tokens --check
       # Screen specs: the catalog is what scripts/gen-screen-catalog.mjs reads from the parts' prop types, and every *.screen.json stays inside it.
       - run: pnpm gen:screen-catalog --check
+      - run: node --test scripts/check-screens.test.mjs
       - run: pnpm check:screens
       # The message dictionaries: one file naming convention, the same keys in English and Korean, and no key that nothing uses.
       - run: pnpm check:messages

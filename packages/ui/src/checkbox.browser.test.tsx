@@ -40,20 +40,21 @@ it("a wrong check stays red under the pointer and the keyboard at once, and the 
 	await expect.element(check).toHaveFocus();
 	expect(box.matches(":focus-visible")).toBe(true);
 	await settled();
-	// The focus: a line around, outside the red ring. The red line and the red ring are still there.
-	expect(drawn()).toEqual({ line: red, redRing: true, around: "solid 2px 2px" });
+	// The focus: a line around, outside the red ring with 2px of paper between them (the ring ends at 2px, the line starts at 4px): two
+	// marks, not one band of two colours (T191). The red line and the red ring are still there.
+	expect(drawn()).toEqual({ line: red, redRing: true, around: "solid 2px 4px" });
 
 	await userEvent.hover(page.getByText("약관에 동의"));
 	expect(box.closest("label")?.matches(":hover")).toBe(true);
 	// The line's colour fades to where it is going: read it there.
 	await settled();
-	expect(drawn()).toEqual({ line: red, redRing: true, around: "solid 2px 2px" });
+	expect(drawn()).toEqual({ line: red, redRing: true, around: "solid 2px 4px" });
 
 	// The pointer on the box itself, not only on its row's words.
 	await userEvent.hover(check);
 	expect(box.matches(":hover")).toBe(true);
 	await settled();
-	expect(drawn()).toEqual({ line: red, redRing: true, around: "solid 2px 2px" });
+	expect(drawn()).toEqual({ line: red, redRing: true, around: "solid 2px 4px" });
 	// And with the keyboard gone elsewhere: the pointer alone does not take the red.
 	(box as HTMLElement).blur();
 	await settled();
