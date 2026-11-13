@@ -430,7 +430,16 @@ test.describe("the preview", () => {
 			"color",
 		])
 			expect(page).toContain(`monti-block-${look}`);
-		// What a tab or a closed part holds is in the page's HTML, not only after a script.
+		// What a tab or a closed part holds is in the page's HTML, not only after a script. Read as the page's text: code is drawn as coloured
+		// spans (doc 17), so its words are split by tags in the HTML.
+		const text = page
+			.replace(/<(style|script)[^>]*>[\s\S]*?<\/\1>/g, "")
+			.replace(/<[^>]+>/g, "")
+			.replace(/&amp;/g, "&")
+			.replace(/&lt;/g, "<")
+			.replace(/&gt;/g, ">")
+			.replace(/&quot;/g, '"')
+			.replace(/&#x27;|&#39;/g, "'");
 		for (const words of [
 			"콜아웃 본문",
 			"pnpm 본문",
@@ -439,7 +448,9 @@ test.describe("the preview", () => {
 			"export const app = 1;",
 			"React Server Components",
 		])
-			expect(page).toContain(words);
+			expect(text).toContain(words);
+		// The code explorer's file is the site's code block, coloured by the site's highlighter.
+		expect(page).toMatch(/data-code-explorer-panel="0"><figure data-code=""[\s\S]*?<span style="--shiki-light:/);
 		expect(page).toContain("<math");
 		expect(page).toContain('<svg class="monti-block-chart-frame"');
 	});
