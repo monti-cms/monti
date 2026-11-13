@@ -9,12 +9,23 @@ import { Tooltip, TooltipContent } from "./tooltip";
  * it ends in its own "…" (a text button or a status in a cut cell).
  */
 function cutIn(box: HTMLElement) {
-	const all = document.createRange();
-	all.selectNodeContents(box);
+	// The words' own width: every piece in the box's flow, from the first one's left to the last one's right. A piece that stands out of the
+	// flow is not the box's words (a row's check hangs in the margin outside its cell).
+	let left = Number.POSITIVE_INFINITY;
+	let right = Number.NEGATIVE_INFINITY;
+	const piece = document.createRange();
+	for (const child of box.childNodes) {
+		if (child instanceof Element && ["absolute", "fixed"].includes(getComputedStyle(child).position)) continue;
+		piece.selectNode(child);
+		const at = piece.getBoundingClientRect();
+		if (at.width === 0 && at.height === 0) continue;
+		left = Math.min(left, at.left);
+		right = Math.max(right, at.right);
+	}
 	const style = getComputedStyle(box);
 	const sides = ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"] as const;
 	const room = box.getBoundingClientRect().width - sides.reduce((sum, side) => sum + Number.parseFloat(style[side]), 0);
-	if (all.getBoundingClientRect().width > room + 0.01) return true;
+	if (right - left > room + 0.01) return true;
 	for (const piece of box.querySelectorAll<HTMLElement>("*")) {
 		if (piece.scrollWidth > piece.clientWidth && getComputedStyle(piece).textOverflow === "ellipsis") return true;
 	}
@@ -54,6 +65,8 @@ function CutWords({
 	children?: React.ReactNode;
 }) {
 	const box = React.useRef<HTMLElement | null>(null);
+	/** The box as it is in the page now: measured again when another element takes its place (a banner's detail that changes its kind). */
+	const [node, setNode] = React.useState<HTMLElement | null>(null);
 	/** Open, and by what: the pointer on the words, or the keyboard on them. */
 	const [by, setBy] = React.useState<"pointer" | "keys" | null>(null);
 	/** What it says. Kept while it closes, so the tooltip does not empty before it is gone. */
@@ -69,9 +82,9 @@ function CutWords({
 		setBy(null);
 	};
 	const say = (how: "pointer" | "keys") => {
-		const node = box.current;
-		if (!node || !(partial || cutIn(node))) return;
-		const said = whole ?? node.textContent ?? "";
+		const words = box.current;
+		if (!words || !(partial || cutIn(words))) return;
+		const said = whole ?? words.textContent ?? "";
 		if (said === "") return;
 		setWords(said);
 		setBy(how);
@@ -84,14 +97,13 @@ function CutWords({
 	};
 
 	React.useLayoutEffect(() => {
-		const node = box.current;
 		if (!stop || !node) return;
 		const measure = () => setStops(partial || cutIn(node));
 		measure();
 		const observer = new ResizeObserver(measure);
 		observer.observe(node);
 		return () => observer.disconnect();
-	}, [stop, partial]);
+	}, [stop, partial, node]);
 
 	// Escape closes it wherever the focus is: the pointer's tooltip has no focus of its own.
 	const open = by !== null;
@@ -112,10 +124,11 @@ function CutWords({
 	const cutBox = React.cloneElement(
 		element,
 		{
-			ref: (node: HTMLElement | null) => {
-				box.current = node;
-				if (typeof given === "function") given(node);
-				else if (given) (given as React.RefObject<HTMLElement | null>).current = node;
+			ref: (made: HTMLElement | null) => {
+				box.current = made;
+				if (stop) setNode(made);
+				if (typeof given === "function") given(made);
+				else if (given) (given as React.RefObject<HTMLElement | null>).current = made;
 			},
 			"data-slot": (own as { "data-slot"?: string })["data-slot"] ?? "cut-words",
 			"data-cut-words": whole ?? "",

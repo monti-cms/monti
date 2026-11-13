@@ -41,7 +41,7 @@ describe("a read that does not come back", () => {
 		await expect.poll(() => document.activeElement !== document.body && document.activeElement !== null).toBe(true);
 	});
 
-	it("[T154] a server that fails without a reason says the same, with nothing after it; a read whose refusal is a state the screen knows says nothing", async () => {
+	it("[T154] a server that fails without a reason says the same, with nothing after it", async () => {
 		const drawn = draw(activity.Log);
 		await drawn.run();
 		await expect.element(sidebar()).toBeVisible();

@@ -145,6 +145,8 @@ export const RangeOverWholeBlocks = Extension.create({
 		 * change of it (a mouse that moves on, the mouse let go), and that reading ends in text: while this is held, it is the reading.
 		 */
 		let held: Selection | null = null;
+		/** Lets go of the drag being followed, if there is one: its listeners leave the document. */
+		let endDrag = () => {};
 		const set = (view: EditorView, anchor: number, head: number) => {
 			const next = RangeOverBlocks.at(view.state.doc, anchor, head);
 			held = next instanceof RangeOverBlocks ? next : null;
@@ -153,6 +155,7 @@ export const RangeOverWholeBlocks = Extension.create({
 		return [
 			new Plugin({
 				key,
+				view: () => ({ destroy: () => endDrag() }),
 				props: {
 					handleKeyDown(view, event) {
 						if (["Shift", "Meta", "Control", "Alt"].includes(event.key)) return false;
@@ -178,7 +181,11 @@ export const RangeOverWholeBlocks = Extension.create({
 							const pressed = view.posAtCoords({ left: event.clientX, top: event.clientY });
 							if (!pressed || !view.state.doc.resolve(pressed.pos).parent.inlineContent) return false;
 							const anchor = pressed.pos;
+							endDrag();
 							const move = (moved: MouseEvent) => {
+								// The button is up though no `mouseup` came (the press became a drag of the picked words, which ends in a drop): a
+								// pointer that only moves picks nothing.
+								if ((moved.buttons & 1) === 0 || view.isDestroyed) return end();
 								const { doc } = view.state;
 								// The body changed under the drag: this is no longer the place it began.
 								if (anchor > doc.content.size || !doc.resolve(anchor).parent.inlineContent) return end();
@@ -209,9 +216,16 @@ export const RangeOverWholeBlocks = Extension.create({
 							const end = () => {
 								root.removeEventListener("mousemove", move);
 								root.removeEventListener("mouseup", end);
+								endDrag = () => {};
 							};
+							endDrag = end;
 							root.addEventListener("mousemove", move);
 							root.addEventListener("mouseup", end);
+							return false;
+						},
+						// The picked words are being dragged to another place: that is the browser's drag, not a selection being made.
+						dragstart() {
+							endDrag();
 							return false;
 						},
 						blur() {

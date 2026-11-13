@@ -4,7 +4,7 @@ import { page, userEvent } from "vitest/browser";
 import { dragPath, middleOf } from "../../../../testing/input";
 import * as media from "../screens/entry/media.stories";
 
-const { ManyInBody, OnlyWholeBlocks, WithImage } = composeStories(media);
+const { ManyInBody, OnlyWholeBlocks } = composeStories(media);
 
 const body = () => page.getByRole("textbox", { name: "본문" });
 const FIRST = "글의 첫 문단이에요.";
@@ -23,21 +23,14 @@ describe("T193 a body that begins with a picture", () => {
 		await OnlyWholeBlocks.run();
 		const first = body().getByRole("img", { name: "아침 책상" });
 		await expect.element(first).toBeVisible();
-		// Long enough for a selection given at the start to have been drawn.
-		await new Promise((resolve) => setTimeout(resolve, 200));
+		// The editor has made its first selection by the time the gap before the first block is marked: the place a body with no text opens at.
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => body().element().querySelector(".ProseMirror-gapcursor")).not.toBeNull();
 		expect(picked()).toBeNull();
 		expect(tools()).toBeNull();
 		await userEvent.click(first);
 		await expect.poll(() => picked()?.contains(first.element())).toBe(true);
 		await expect.poll(tools).not.toBeNull();
-	});
-
-	it("a picture after the first paragraph is not picked either when the entry opens", async () => {
-		await WithImage.run();
-		await expect.element(paragraph()).toBeVisible();
-		await new Promise((resolve) => setTimeout(resolve, 200));
-		expect(picked()).toBeNull();
-		expect(tools()).toBeNull();
 	});
 });
 

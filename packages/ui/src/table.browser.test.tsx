@@ -453,6 +453,30 @@ describe("A cut cell", () => {
 	});
 });
 
+describe("A cut cell that holds the row's check", () => {
+	it("is not cut by the check that hangs outside it: a value that fits says nothing", async () => {
+		render(
+			<Table container="none" layout="fixed" columns={[160, undefined]}>
+				<TableBody>
+					<TableRow>
+						<TableCell truncate title="draft">
+							<RowCheck checked={false} onCheckedChange={() => {}} label="pick" />
+							draft
+						</TableCell>
+						<TableCell truncate>
+							<RowTitle title={<RowLink href="#/first">first</RowLink>} />
+						</TableCell>
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
+		await userEvent.hover(page.getByRole("cell", { name: "draft" }).getByText("draft"), { position: { x: 4, y: 4 } });
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(tip()).toBe(null);
+	});
+});
+
 describe("A row the keyboard comes to at a scrolled edge (T190)", () => {
 	const list = (
 		// A box that scrolls its rows under the table's stuck header, as the page does, with the 8px every scrolling box keeps.

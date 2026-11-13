@@ -73,8 +73,9 @@ export function useOperation<Output = unknown>(name: string) {
  * that. Two kinds of read say otherwise:
  * - `quiet`: a refusal with a reason is a state the screen knows and shows its own way (the line is gone, the file is in the trash). Only a
  *   lost call (no answer, a server that failed) is said at the top.
- * - `own`: the screen has its own banner for this read while it has nothing to show (an editor's entry). The shared banner waits meanwhile;
- *   once the read has data, a later failure is said at the top like any other.
+ * - `own`: the screen says this read's failures itself: with its own banner while it has nothing to show (an editor's entry), and the
+ *   shared banner waits meanwhile; once it has data, in the answer to the press that read again (the editor's toast), and nothing is said
+ *   at the top a second time.
  * An ended session is never said here: it has its own banner.
  */
 export function useRead<Output>(
@@ -117,11 +118,12 @@ export function useRead<Output>(
 	const again = useRef(reload);
 	again.current = reload;
 	const quiet = options.quiet ?? false;
-	const own = (options.own ?? false) && data === null;
+	const own = options.own ?? false;
+	const holds = data !== null;
 	useEffect(() => {
-		const said = refusal !== null && !skip && refusal.status !== 401 && (!quiet || isLost(refusal));
+		const said = refusal !== null && !skip && refusal.status !== 401 && (!quiet || isLost(refusal)) && !(own && holds);
 		reads.set(me, said ? { refusal, own, reload: () => again.current() } : null);
-	}, [reads, me, refusal, skip, quiet, own]);
+	}, [reads, me, refusal, skip, quiet, own, holds]);
 	useEffect(() => () => reads.set(me, null), [reads, me]);
 	return { data, refusal, reload };
 }

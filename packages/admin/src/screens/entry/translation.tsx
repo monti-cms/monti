@@ -97,9 +97,14 @@ export function useTranslation(id: string, schema: Schema | undefined, editor: E
 	const status = useRead<{ groups: GroupStatus[] }>(
 		"translations.status",
 		{ ids: [id] },
-		{ skip: !multilingual, afterWrites: true },
+		{ skip: !multilingual, afterWrites: true, quiet: true },
 	);
-	const compared = useRead<Compared>("translations.compare", { id }, { skip: !isTranslation, afterWrites: true });
+	// A refusal here is a state the editor knows: a translation whose source is gone (both in the trash) has nothing to compare with.
+	const compared = useRead<Compared>(
+		"translations.compare",
+		{ id },
+		{ skip: !isTranslation, afterWrites: true, quiet: true },
+	);
 	const create = useOperation<{ output: { id: string } }>("translations.create");
 	const setBlocks = useOperation("translations.setBlocks");
 	const confirmAll = useOperation("translations.confirmAll");
