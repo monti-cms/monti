@@ -255,12 +255,17 @@ test.describe("the site", () => {
 		};
 		const post = await draft(admin, unique("코드 블록"), [linked, code]);
 		await publish(admin, post.id);
-		const context = await admin
-			.context()
-			.browser()
-			?.newContext({ baseURL: LIVE, permissions: ["clipboard-read", "clipboard-write"] });
+		const context = await admin.context().browser()?.newContext({ baseURL: LIVE });
 		if (!context) throw new Error("no browser");
 		const page = await context.newPage();
+		// What the copy button hands the clipboard, written down: a headless browser's own clipboard waits on a focus it does not have.
+		await page.addInitScript(() => {
+			const copied: string[] = [];
+			Object.assign(window, { copied });
+			Object.defineProperty(navigator, "clipboard", {
+				value: { writeText: async (text: string) => void copied.push(text) },
+			});
+		});
 		await page.goto(post.path);
 		const figure = page.locator("figure[data-code]");
 		await expect(figure.locator("figcaption")).toHaveText("src/count.ts");
@@ -271,7 +276,9 @@ test.describe("the site", () => {
 		await figure.hover();
 		await figure.getByRole("button", { name: "복사" }).click();
 		await expect(figure.getByRole("button", { name: "복사함" })).toBeVisible();
-		expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("let count = 0;\ncount += 1;");
+		expect(await page.evaluate(() => (window as unknown as { copied: string[] }).copied)).toEqual([
+			"let count = 0;\ncount += 1;",
+		]);
 
 		const link = page.getByRole("link", { name: "하나를 더한다" });
 		await link.hover();
