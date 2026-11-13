@@ -75,7 +75,7 @@ function CodeLine({
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
-	/** Left out on the row that stands for a fold's hidden lines ("접힌 4줄"). */
+	/** Left out on the row that stands for a fold's hidden lines (its "n lines folded" button). */
 	number?: number;
 	fold?: React.ReactNode;
 	mark?: "+" | "−" | "›";
