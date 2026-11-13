@@ -120,7 +120,13 @@ export async function publishTasks(
 				field: "doc",
 				block: block.id,
 				blocking: row.level === "block",
-				message: typeof row.message === "string" ? { key: "blocks.check", values: { text: row.message } } : row.message,
+				message:
+					typeof row.message === "string"
+						? { key: "blocks.check", values: { text: row.message } }
+						: "key" in row.message
+							? row.message
+							: // A site's block says it in each language of the admin (doc 18): the admin reads its own.
+								{ key: "blocks.checkWords", values: { ko: row.message.ko, en: row.message.en } },
 			});
 	// Links to entries in this language that are not on the site: the reader would find nothing there. It only tells (doc 02).
 	const linked = linkedGroups(asDoc(entry.doc));

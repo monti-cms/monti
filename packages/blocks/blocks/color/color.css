@@ -1,0 +1,111 @@
+/* Text and background colours by name (`:color`). The site's own: change each name's light and dark shade here (doc 18). */
+:where(:root) {
+	--monti-color-gray: #6b7280;
+	--monti-background-gray: #f1f2f4;
+	--monti-color-red: #dc2626;
+	--monti-background-red: #fee2e2;
+	--monti-color-orange: #ea580c;
+	--monti-background-orange: #ffedd5;
+	--monti-color-yellow: #b45309;
+	--monti-background-yellow: #fef3c7;
+	--monti-color-green: #16a34a;
+	--monti-background-green: #dcfce7;
+	--monti-color-blue: #2563eb;
+	--monti-background-blue: #dbeafe;
+	--monti-color-purple: #9333ea;
+	--monti-background-purple: #f3e8ff;
+	--monti-color-pink: #db2777;
+	--monti-background-pink: #fce7f3;
+}
+:where(.dark, [data-theme="dark"]) {
+	--monti-color-gray: #9ca3af;
+	--monti-background-gray: #2f3237;
+	--monti-color-red: #f87171;
+	--monti-background-red: #4a1f1f;
+	--monti-color-orange: #fb923c;
+	--monti-background-orange: #4a2a14;
+	--monti-color-yellow: #facc15;
+	--monti-background-yellow: #453a12;
+	--monti-color-green: #4ade80;
+	--monti-background-green: #173d2a;
+	--monti-color-blue: #60a5fa;
+	--monti-background-blue: #172f4d;
+	--monti-color-purple: #c084fc;
+	--monti-background-purple: #33224d;
+	--monti-color-pink: #f472b6;
+	--monti-background-pink: #4a1d38;
+}
+@media (prefers-color-scheme: dark) {
+	:where(:root:not(.light, [data-theme="light"])) {
+		--monti-color-gray: #9ca3af;
+		--monti-background-gray: #2f3237;
+		--monti-color-red: #f87171;
+		--monti-background-red: #4a1f1f;
+		--monti-color-orange: #fb923c;
+		--monti-background-orange: #4a2a14;
+		--monti-color-yellow: #facc15;
+		--monti-background-yellow: #453a12;
+		--monti-color-green: #4ade80;
+		--monti-background-green: #173d2a;
+		--monti-color-blue: #60a5fa;
+		--monti-background-blue: #172f4d;
+		--monti-color-purple: #c084fc;
+		--monti-background-purple: #33224d;
+		--monti-color-pink: #f472b6;
+		--monti-background-pink: #4a1d38;
+	}
+}
+.monti-color[data-background] {
+	border-radius: 0.25em;
+	padding: 0.05em 0.2em;
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
+}
+.monti-color[data-color="gray"] {
+	color: var(--monti-color-gray);
+}
+.monti-color[data-background="gray"] {
+	background-color: var(--monti-background-gray);
+}
+.monti-color[data-color="red"] {
+	color: var(--monti-color-red);
+}
+.monti-color[data-background="red"] {
+	background-color: var(--monti-background-red);
+}
+.monti-color[data-color="orange"] {
+	color: var(--monti-color-orange);
+}
+.monti-color[data-background="orange"] {
+	background-color: var(--monti-background-orange);
+}
+.monti-color[data-color="yellow"] {
+	color: var(--monti-color-yellow);
+}
+.monti-color[data-background="yellow"] {
+	background-color: var(--monti-background-yellow);
+}
+.monti-color[data-color="green"] {
+	color: var(--monti-color-green);
+}
+.monti-color[data-background="green"] {
+	background-color: var(--monti-background-green);
+}
+.monti-color[data-color="blue"] {
+	color: var(--monti-color-blue);
+}
+.monti-color[data-background="blue"] {
+	background-color: var(--monti-background-blue);
+}
+.monti-color[data-color="purple"] {
+	color: var(--monti-color-purple);
+}
+.monti-color[data-background="purple"] {
+	background-color: var(--monti-background-purple);
+}
+.monti-color[data-color="pink"] {
+	color: var(--monti-color-pink);
+}
+.monti-color[data-background="pink"] {
+	background-color: var(--monti-background-pink);
+}

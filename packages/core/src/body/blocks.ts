@@ -6,7 +6,7 @@ import type { AdminValues } from "../schema/admin-values";
 import { type Block, blockMap, type Doc, DocShape, walk } from "./doc";
 
 /** A row a block adds to the publish to-do list. `block` stops the publish; `warn` only tells. */
-export type BlockCheck = { level: "warn" | "block"; message: string | Message };
+export type BlockCheck = { level: "warn" | "block"; message: string | Message | Words };
 
 /** Words in each language of the admin: a block's or a mark's name, a field's, an option's (doc 18). A site's block brings its own words. */
 export type Words = { ko: string; en: string };
