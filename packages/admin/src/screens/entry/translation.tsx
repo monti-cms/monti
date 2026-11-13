@@ -44,7 +44,7 @@ import { nodeName } from "../../editor/schema";
 import { linkOf, type PairedRows, type PairedSourceBlock } from "../../editor/translation";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
-import { type Part, readableWordDiff, shownBlocks } from "./compare-entries";
+import { type BlockNames, type Part, readableWordDiff, shownBlocks } from "./compare-entries";
 import { day } from "./dates";
 import { useBlockNames } from "./use-block-names";
 import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
@@ -250,11 +250,11 @@ const Words = ({ parts, removed = false }: { parts: Part[]; removed?: boolean })
 	));
 
 /** The source's changed blocks with the words that changed on the highlight: what the translation saw before, against the source now. */
-function changedWords(compared: Compared): Map<string, Part[]> {
+function changedWords(compared: Compared, names?: BlockNames): Map<string, Part[]> {
 	return new Map(
 		compared.marks.flatMap((mark) =>
 			mark.kind === "changed"
-				? [[mark.from, readableWordDiff(textOf(mark.before), textOf(mark.after)).server] as const]
+				? [[mark.from, readableWordDiff(textOf(mark.before, names), textOf(mark.after, names)).server] as const]
 				: [],
 		),
 	);
@@ -312,6 +312,7 @@ export function SourcePane({
 	current: string | null;
 }) {
 	const { t } = useAdmin();
+	const names = useBlockNames();
 	const pane = useRef<HTMLElement>(null);
 	useEffect(() => {
 		if (!current) return;
@@ -346,7 +347,7 @@ export function SourcePane({
 						<EditorTitleRule />
 					</Stack>
 					<Text tone="muted">
-						<ReadBody doc={compared.source.doc} changed={changedWords(compared)} current={current} />
+						<ReadBody doc={compared.source.doc} changed={changedWords(compared, names)} current={current} />
 					</Text>
 				</Box>
 			</Box>
@@ -354,8 +355,10 @@ export function SourcePane({
 	);
 }
 
-function textOf(block: Block | null | undefined) {
-	return block ? (shownBlocks({ type: "doc", blocks: [block] })[0]?.text ?? "") : "";
+/** A block's words as the comparison reads them: with the site's names, a block with values leads with its name line, and a formula is its source. */
+function textOf(block: Block | null | undefined, names?: BlockNames) {
+	const shown = block ? shownBlocks({ type: "doc", blocks: [block] }, names)[0] : undefined;
+	return shown ? [shown.values, shown.text].filter((line) => line).join("\n") : "";
 }
 
 /** Each mark's word in the colors the changes lists use for the same words: changed, removed, new (translation.md, 2026-11-06 owner). */
@@ -387,6 +390,7 @@ export function SourceChangeRows({
 	onDecide: (decision: Decision) => void;
 }) {
 	const { t } = useAdmin();
+	const names = useBlockNames();
 	const { marks, fields } = compared;
 	const blocks = new Map(doc.blocks.map((block) => [block.id, block]));
 	// A block new in the source is the to-do list's own row above (it stops publishing until decided): its "leave out" is on its card.
@@ -407,7 +411,7 @@ export function SourceChangeRows({
 			{moved.map((mark) => (
 				<TodoItem
 					key={mark.block}
-					title={textOf(blocks.get(mark.block) ?? mark.before)}
+					title={textOf(blocks.get(mark.block) ?? mark.before, names)}
 					tag={t(`translation.mark.${mark.kind}`)}
 					tagTone={MARK_TONE[mark.kind]}
 					actionLabel={t(mark.kind === "changed" ? "translation.confirm" : "translation.remove")}
@@ -425,14 +429,15 @@ export function SourceChangeRows({
  */
 export function usePairedRows(compared: Compared | null, catalogs: BodyCatalogs | null): PairedRows | null {
 	const { t } = useAdmin();
+	const names = useBlockNames();
 	return useMemo(() => {
 		if (!compared) return null;
-		const changed = changedWords(compared);
+		const changed = changedWords(compared, names);
 		const shown = (block: Block): PairedSourceBlock => {
-			const look = shownBlocks({ type: "doc", blocks: [block] })[0]?.look;
+			const look = shownBlocks({ type: "doc", blocks: [block] }, names)[0]?.look;
 			return {
 				look: look === "heading" ? "heading" : look === "code" ? "code" : "text",
-				parts: changed.get(block.id) ?? [{ text: textOf(block), changed: false }],
+				parts: changed.get(block.id) ?? [{ text: textOf(block, names), changed: false }],
 			};
 		};
 		return {
@@ -445,7 +450,7 @@ export function usePairedRows(compared: Compared | null, catalogs: BodyCatalogs 
 				]),
 			),
 		};
-	}, [compared, catalogs, t]);
+	}, [compared, catalogs, t, names]);
 }
 
 /**
@@ -592,6 +597,7 @@ export function TranslationMargin({
 	onRetranslate?: (block: string) => void;
 }) {
 	const { t } = useAdmin();
+	const names = useBlockNames();
 	const [placed, setPlaced] = useState<Placed[]>([]);
 	const [open, setOpen] = useState<string | null>(null);
 
@@ -674,10 +680,10 @@ export function TranslationMargin({
 					discardLabel={t("translation.skip")}
 					onDiscard={() => decide({ do: "skip", from: mark.from })}
 				>
-					<MemoDiff afterLabel={t("translation.source")} after={textOf(mark.source)} />
+					<MemoDiff afterLabel={t("translation.source")} after={textOf(mark.source, names)} />
 				</MemoCardPopover>
 			);
-		const diff = readableWordDiff(textOf(mark.before), textOf(mark.after));
+		const diff = readableWordDiff(textOf(mark.before, names), textOf(mark.after, names));
 		return (
 			<MemoCardPopover
 				{...shared}

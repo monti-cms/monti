@@ -320,21 +320,27 @@ export function bodyExtensions(
 				],
 				// Drawn with the site's look (doc 18): the class `monti-<type>` and each value as `data-<name>` (a colour's `data-color`), as the mark's
 				// own stylesheet reads them; a `text` value (a tooltip's) is the words' hover title.
-				renderHTML: ({ HTMLAttributes }) => [
-					"span",
-					{
-						"data-monti-mark": mark.type,
-						"data-monti-attrs": JSON.stringify(HTMLAttributes),
-						class: `monti-${mark.type}`,
-						...Object.fromEntries(
-							Object.entries(HTMLAttributes)
-								.filter(([, value]) => typeof value === "string")
-								.map(([name, value]) => [`data-${name}`, value]),
-						),
-						...(typeof HTMLAttributes.text === "string" ? { title: HTMLAttributes.text } : {}),
-					},
-					0,
-				],
+				// The values are not attributes Tiptap renders (each is `rendered: false`), so they are read off the mark itself.
+				renderHTML: ({ mark: on }) => {
+					const values = Object.fromEntries(
+						Object.entries(on.attrs).filter(([, value]) => value !== null && value !== undefined),
+					);
+					return [
+						"span",
+						{
+							"data-monti-mark": mark.type,
+							"data-monti-attrs": JSON.stringify(values),
+							class: `monti-${mark.type}`,
+							...Object.fromEntries(
+								Object.entries(values)
+									.filter(([, value]) => typeof value === "string")
+									.map(([name, value]) => [`data-${name}`, value]),
+							),
+							...(typeof values.text === "string" ? { title: values.text } : {}),
+						},
+						0,
+					];
+				},
 			});
 		});
 	return [

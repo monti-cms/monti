@@ -64,8 +64,9 @@ export default function CodeExplorerEditor() {
 								tone="danger"
 								label={fill(say(words.remove), node.name)}
 								onClick={() => {
-									block.removeChild(index);
-									setCurrent(Math.max(0, Math.min(shown, paths.length - 2)));
+									const opened = parsePath(paths[index] ?? "").segments.join("/") === wanted && wanted !== "";
+									block.removeChild(index, opened ? { open: undefined } : undefined);
+									setCurrent(index < shown ? shown - 1 : Math.max(0, Math.min(shown, paths.length - 2)));
 								}}
 							>
 								<TrashCan aria-hidden />
@@ -131,12 +132,21 @@ export default function CodeExplorerEditor() {
 							<BlockTitle
 								label={say(words.path)}
 								value={paths[shown] ?? ""}
-								onChange={(title) => block.setChildAttrs(shown, { title })}
+								onChange={(title) =>
+									block.setChildAttrs(
+										shown,
+										{ title },
+										// The file shown first is named by its path: moved, it stays the one.
+										shown === first && wanted !== "" ? { open: title } : undefined,
+									)
+								}
 								onDone={() => block.focusChild(shown)}
 							/>
 						</div>
 					)}
-					<div className="monti-block-code-explorer-files" data-current={shown}>
+					{/* Only the picked file's code shows, however many files there are. */}
+					<style>{`[data-explorer-files="${shown}"] > [data-node-view-content] > div > :not(:nth-child(${shown + 1})) { display: none; }`}</style>
+					<div className="monti-block-code-explorer-files" data-explorer-files={shown}>
 						<BlockContent />
 					</div>
 				</div>

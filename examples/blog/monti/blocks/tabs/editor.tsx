@@ -58,7 +58,8 @@ export default function TabsEditor() {
 							label={say(words.remove)}
 							tone="danger"
 							onClick={() => {
-								block.removeChild(shown);
+								// The tab shown first goes: the first tab is shown first then.
+								block.removeChild(shown, shown === first ? { defaultValue: undefined } : undefined);
 								setCurrent(Math.max(0, shown - 1));
 							}}
 						>
@@ -99,7 +100,16 @@ export default function TabsEditor() {
 											label={say(words.name)}
 											value={label}
 											placeholder={say(words.unnamed)}
-											onChange={(name) => block.setChildAttrs(index, { label: name })}
+											onChange={(name) =>
+												block.setChildAttrs(
+													index,
+													{ label: name },
+													// The tab shown first is named by its name: renamed, it stays the one.
+													index === first && typeof block.attrs.defaultValue === "string"
+														? { defaultValue: name }
+														: undefined,
+												)
+											}
 											onDone={() => block.focusChild(index)}
 										/>
 									</FolderTabEdit>
@@ -113,7 +123,9 @@ export default function TabsEditor() {
 						</FolderTabsList>
 					</div>
 					<FolderTabsBody value={shown} keepMounted>
-						<div className="monti-block-tabs-content" data-current={shown}>
+						{/* Only the picked tab's blocks show. */}
+						<style>{`[data-tab-panels="${shown}"] > [data-node-view-content] > div > :not(:nth-child(${shown + 1})) { display: none; }`}</style>
+						<div className="monti-block-tabs-content" data-tab-panels={shown}>
 							<BlockContent />
 						</div>
 					</FolderTabsBody>

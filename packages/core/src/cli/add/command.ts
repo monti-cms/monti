@@ -102,7 +102,10 @@ function withEntries(source: string, list: "blocks" | "marks", names: string[]):
 	const [whole, head, inside, tail] = found as unknown as [string, string, string, string];
 	const fresh = names.filter((name) => !new RegExp(`\\b${name}\\b`).test(inside));
 	if (fresh.length === 0) return source;
-	const body = `${inside.replace(/\s*$/, "")}${fresh.map((name) => `\n\t${name},`).join("")}`;
+	const kept = inside.replace(/\s*$/, "");
+	// A list written on one line or by hand may end without a comma (\`[tooltip, color]\`): one goes after its last name first.
+	const joined = kept.trim() === "" || kept.endsWith(",") ? kept : `${kept},`;
+	const body = `${joined}${fresh.map((name) => `\n\t${name},`).join("")}`;
 	return `${source.slice(0, found.index)}${head}${body}${tail.startsWith("\n") ? tail : `\n${tail}`}${source.slice(found.index + whole.length)}`;
 }
 

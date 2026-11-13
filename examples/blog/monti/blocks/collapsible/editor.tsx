@@ -45,6 +45,8 @@ export default function CollapsibleEditor() {
 						onClick={() => {
 							setOpen(!open);
 							if (!open) block.focusChild(0);
+							// Closed over the cursor: the cursor goes after the fold, so nothing is typed where it cannot be seen.
+							else if (block.childAt !== null) block.leave();
 						}}
 					>
 						<Chevron aria-hidden />

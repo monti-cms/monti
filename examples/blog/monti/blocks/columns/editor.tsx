@@ -39,7 +39,10 @@ export default function ColumnsEditor() {
 	const block = useBlock();
 	const say = (label: { ko: string; en: string }) => label[block.language];
 	const count = block.children.length;
-	const saved = parseColumnWidths(block.attrs.widths, count);
+	// Shares of 100, however they were written ("2,1" is "67,33").
+	const parsed = parseColumnWidths(block.attrs.widths, count);
+	const total = parsed?.reduce((sum, width) => sum + width, 0) ?? 0;
+	const saved = parsed && total > 0 ? parsed.map((width) => (width / total) * 100) : null;
 	const [dragging, setDragging] = useState<number[] | null>(null);
 	const widths = dragging ?? saved ?? Array.from({ length: count }, () => 100 / count);
 	const grid = useRef<HTMLDivElement>(null);
@@ -122,19 +125,24 @@ export default function ColumnsEditor() {
 										event.currentTarget.setPointerCapture(event.pointerId);
 										const box = element.getBoundingClientRect();
 										const share = (x: number) => ((x - box.left) / box.width) * 100 - startOf(border);
-										let last = widths;
+										let last: number[] | null = null;
 										const move = (moved: PointerEvent) => {
 											last = traded(border, share(moved.clientX));
 											setDragging(last);
 										};
-										const up = () => {
+										const end = (keep: boolean) => () => {
 											window.removeEventListener("pointermove", move);
 											window.removeEventListener("pointerup", up);
+											window.removeEventListener("pointercancel", cancel);
 											setDragging(null);
-											write(last);
+											// A press with no move changes nothing.
+											if (keep && last) write(last);
 										};
+										const up = end(true);
+										const cancel = end(false);
 										window.addEventListener("pointermove", move);
 										window.addEventListener("pointerup", up);
+										window.addEventListener("pointercancel", cancel);
 									}}
 									onKeyDown={(event) => {
 										if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;

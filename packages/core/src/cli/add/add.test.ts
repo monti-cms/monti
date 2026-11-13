@@ -235,4 +235,19 @@ describe("monti add (doc 18)", () => {
 			for (const file of tree(own)) expect(read(own, file), file).toBe(read(theirs, file));
 		}
 	});
+
+	it("18-1 a list on one line, with no comma after its last name, still reads after a name is added to it", async () => {
+		const root = site();
+		await run(root, "callout", "tooltip");
+		const index = path.join(root, "monti/blocks/index.ts");
+		writeFileSync(
+			index,
+			readFileSync(index, "utf8").replace(
+				/marks: MarkDefinition\[\] = \[[\s\S]*?\];/,
+				"marks: MarkDefinition[] = [tooltip];",
+			),
+		);
+		await run(root, "color");
+		expect(read(root, "monti/blocks/index.ts")).toContain("marks: MarkDefinition[] = [tooltip,\n\tcolor,\n];");
+	});
 });

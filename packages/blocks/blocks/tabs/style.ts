@@ -123,30 +123,6 @@ export const style = `/*
 	color: inherit;
 	opacity: 0.5;
 }
-.monti-block-tabs-content[data-current="0"] > [data-node-view-content] > div > :not(:nth-child(1)) {
-	display: none;
-}
-.monti-block-tabs-content[data-current="1"] > [data-node-view-content] > div > :not(:nth-child(2)) {
-	display: none;
-}
-.monti-block-tabs-content[data-current="2"] > [data-node-view-content] > div > :not(:nth-child(3)) {
-	display: none;
-}
-.monti-block-tabs-content[data-current="3"] > [data-node-view-content] > div > :not(:nth-child(4)) {
-	display: none;
-}
-.monti-block-tabs-content[data-current="4"] > [data-node-view-content] > div > :not(:nth-child(5)) {
-	display: none;
-}
-.monti-block-tabs-content[data-current="5"] > [data-node-view-content] > div > :not(:nth-child(6)) {
-	display: none;
-}
-.monti-block-tabs-content[data-current="6"] > [data-node-view-content] > div > :not(:nth-child(7)) {
-	display: none;
-}
-.monti-block-tabs-content[data-current="7"] > [data-node-view-content] > div > :not(:nth-child(8)) {
-	display: none;
-}
 .monti-block-tabs-content {
 	padding: 0.75rem 1rem;
 }

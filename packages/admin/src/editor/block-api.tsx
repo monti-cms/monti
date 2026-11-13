@@ -135,10 +135,12 @@ export function useBlock() {
 				dispatch((tr) =>
 					tr.setNodeAttribute(pos(), "data", patched(editor.state.doc.nodeAt(pos())?.attrs.data, patch)),
 				),
-			setChildAttrs: (index: number, patch: Record<string, unknown>) =>
+			/** `own` changes the block's own attrs in the same step (a tab renamed that was the one shown first). */
+			setChildAttrs: (index: number, patch: Record<string, unknown>, own?: Record<string, unknown>) =>
 				dispatch((tr) => {
 					const at = childPos(index);
 					tr.setNodeAttribute(at, "data", patched(editor.state.doc.nodeAt(at)?.attrs.data, patch));
+					if (own) tr.setNodeAttribute(pos(), "data", patched(tr.doc.nodeAt(pos())?.attrs.data, own));
 				}),
 			/** Puts a child in at `index` (the end when left out) and the cursor in it. */
 			/** `patch` changes the block's own attrs in the same step (columns go back to equal widths). */
@@ -157,12 +159,21 @@ export function useBlock() {
 				});
 				editor.view.focus();
 			},
-			removeChild: (index: number) =>
+			removeChild: (index: number, own?: Record<string, unknown>) =>
 				dispatch((tr) => {
 					const at = childPos(index);
 					const child = editor.state.doc.nodeAt(at);
 					if (child) tr.delete(at, at + child.nodeSize);
+					if (own) tr.setNodeAttribute(pos(), "data", patched(tr.doc.nodeAt(pos())?.attrs.data, own));
 				}),
+			/** Puts the cursor just after the block (a fold closed over the cursor: what is typed must not go where it cannot be seen). */
+			leave: () => {
+				dispatch((tr) => {
+					const own = tr.doc.nodeAt(pos());
+					if (own) tr.setSelection(TextSelection.near(tr.doc.resolve(pos() + own.nodeSize)));
+				});
+				editor.view.focus();
+			},
 			/** Takes child `from` out and puts it back before what is now child `to`. */
 			moveChild: (from: number, to: number) =>
 				dispatch((tr) => {

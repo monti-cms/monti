@@ -169,6 +169,10 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		await expect.element(page.getByText("글자색")).toBeVisible();
 		await expect.element(page.getByText("배경색")).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "빨강" }).first());
+		// The editor draws it as the site does: its words in the colour.
+		await expect
+			.poll(() => body().element().querySelector('.monti-color[data-color="red"]')?.textContent)
+			.toBe("하나씩");
 		await pickWords(body().element(), "하나씩");
 		await userEvent.click(button("다른 서식"));
 		await userEvent.click(page.getByRole("option", { name: "툴팁" }));
