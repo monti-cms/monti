@@ -4,15 +4,50 @@ import { type BlockKit, createBlockKit } from "./body/blocks";
 import type { PublishCheck } from "./entries/tasks";
 import type { KeyService } from "./keys/services";
 import type { Storage } from "./media/storage";
+import {
+	type BeforeSave,
+	type Importer,
+	type KeySlot,
+	type NamedFieldSet,
+	type PluginTab,
+	pluginTabsOf,
+	type TextCheck,
+	type ToolPage,
+	withPluginFields,
+} from "./plugins/define";
 import type { Schema } from "./schema/define";
 import type { SchemaFiles } from "./schema/files";
 
+/** A plugin as the site knows it: its name and what it adds besides operations. */
+export type SitePlugin = {
+	name: string;
+	/** Its name as a person reads it; the code name when it gives none. */
+	label: string;
+	keys: readonly KeySlot[];
+	textCheck: TextCheck | null;
+	beforeSave: BeforeSave | null;
+	toolPages: readonly ToolPage[];
+	importers: readonly Importer[];
+	/** What it adds, by kind, for the plugin list (`plugins.list`). */
+	adds: readonly string[];
+};
+
 /** What operations know about the site they run in. */
 export type Site = {
-	/** The schema the site runs with: `monti.schema.ts` as last applied. */
+	/**
+	 * The schema the site runs with: `monti.schema.ts` as last applied, and the value fields its plugins add (doc 14). Everything that
+	 * reads or writes entries goes by this one.
+	 */
 	schema(): Schema;
-	/** Replaces it after `schema.apply` wrote the file, until the host reloads the file itself. */
+	/** `monti.schema.ts` alone, without the plugins' fields: what the structure operations plan, compare and write. */
+	fileSchema(): Schema;
+	/** Replaces the file's schema after `schema.apply` wrote the file, until the host reloads the file itself. */
 	setSchema(schema: Schema): void;
+	/** The plugins' tabs of a collection's property panel, with their fields (doc 01, the locked tab). */
+	pluginTabs(collection: string): PluginTab[];
+	/** The plugins' field sets, as they were given. */
+	fieldSets: readonly NamedFieldSet[];
+	plugins: readonly SitePlugin[];
 	/** The way to `monti.schema.ts` and the change files: only on the dev server; `null` on the live site, where structure values are locked. */
 	files: SchemaFiles | null;
 	/** Checks plugins add to the publish to-do list (doc 02). */
@@ -45,14 +80,23 @@ export function createSite(
 		storage?: Storage | null;
 		keyServices?: readonly KeyService[];
 		fetch?: typeof globalThis.fetch;
+		fieldSets?: readonly NamedFieldSet[];
+		plugins?: readonly SitePlugin[];
 	} = {},
 ): Site {
-	let current = schema;
+	const fieldSets = extra.fieldSets ?? [];
+	let file = schema;
+	let current = withPluginFields(file, fieldSets);
 	return {
 		schema: () => current,
+		fileSchema: () => file,
 		setSchema: (next) => {
-			current = next;
+			file = next;
+			current = withPluginFields(file, fieldSets);
 		},
+		pluginTabs: (collection) => pluginTabsOf(file, fieldSets, collection),
+		fieldSets,
+		plugins: extra.plugins ?? [],
 		files,
 		publishChecks: extra.publishChecks ?? [],
 		// An empty secret is none: a link signed or a key sealed with "" is signed and sealed for anyone (MONTI_SECRET="" in a deploy's settings).

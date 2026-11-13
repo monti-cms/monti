@@ -6,6 +6,7 @@ import { CheckError } from "../errors";
 import { sameJson } from "../json";
 import { checkMediaValues } from "../media/uses";
 import { defineOperation, type OperationContext, type RecordRef } from "../operation";
+import { type PluginTab, withoutPluginFields } from "../plugins/define";
 import { defineRecordKind } from "../records";
 import { addressesBefore, movedAddresses } from "./addresses";
 import { AdminValues, AdminValuesPatch, mergeAdminValues } from "./admin-values";
@@ -18,7 +19,12 @@ type Db = Kysely<Database> | Transaction<Database>;
 
 // Zod shapes of the schema, for the operations' inputs (and so the agent's tools describe them).
 const LocaleMode = z.enum(["same", "perLocale", "fromSource"]);
-const FieldBase = { required: z.boolean().optional(), locale: LocaleMode.optional() };
+const FieldBase = {
+	required: z.boolean().optional(),
+	locale: LocaleMode.optional(),
+	input: z.string().optional(),
+	inputOptions: z.record(z.string(), z.unknown()).optional(),
+};
 const GroupFieldShapes = [
 	z.object({
 		kind: z.literal("text"),
@@ -85,11 +91,18 @@ const ChoiceInput = z.discriminatedUnion("do", [
 ]);
 export const AnswersInput = z.record(z.string(), z.union([ChoiceInput, z.array(ChoiceInput)])).default({});
 
+/**
+ * A draft as `monti.schema.ts` holds it: without the fields that are a plugin's. A draft made from what `schema.read` gave (the assistant's)
+ * carries them; they are not the file's to keep (doc 01).
+ */
+export const own = (ctx: OperationContext, draft: Schema): Schema =>
+	withoutPluginFields(ctx.site.fileSchema(), ctx.site.fieldSets, draft);
+
 /** Refuses a draft that has problems or leaves a change that touches stored values unanswered. */
 export async function checkApply(ctx: OperationContext, draft: Schema, renames: FieldRename[], answers: Answers) {
 	if (checkSchema(draft).length > 0) throw new CheckError({ key: "schema.hasProblems" });
 	const state = await readSchemaState(ctx.db);
-	const changes = await planSchema(ctx.db, state?.schema ?? ctx.site.schema(), draft, renames);
+	const changes = await planSchema(ctx.db, state?.schema ?? ctx.site.fileSchema(), draft, renames);
 	const { missing, steps } = stepsFor(changes, answers);
 	if (missing.length > 0)
 		throw new CheckError({ key: "schema.choicesMissing", values: { changes: missing.join(", ") } });
@@ -113,7 +126,7 @@ export async function applySchema(
 	const files = ctx.site.files;
 	if (!files) throw new Error("Structure is locked on the live site.");
 	const state = await readSchemaState(ctx.db);
-	const changes = await planSchema(ctx.db, state?.schema ?? ctx.site.schema(), draft, renames);
+	const changes = await planSchema(ctx.db, state?.schema ?? ctx.site.fileSchema(), draft, renames);
 	const { steps } = stepsFor(changes, answers);
 	const now = ctx.now();
 	const label = [...new Set(changes.map((change) => change.collection ?? "locales"))].join("-") || "schema";
@@ -123,7 +136,7 @@ export async function applySchema(
 		...(Object.keys(adminValues).length > 0 ? { firstAdminValues: adminValues } : {}),
 	};
 	try {
-		await files.write(ctx.db, draft, change, schemaHash(draft) !== schemaHash(ctx.site.schema()));
+		await files.write(ctx.db, draft, change, schemaHash(draft) !== schemaHash(ctx.site.fileSchema()));
 	} catch (error) {
 		// The files are out of step and could not be put back: nothing here may call that "not written". The whole write fails.
 		// Held by another process for longer than the wait: not a file that cannot be written, and the same save goes through a moment later.
@@ -139,7 +152,7 @@ export async function applySchema(
 	const addresses = await addressesBefore(ctx.db, state?.schema ?? draft, draft);
 	await sql`savepoint schema_apply`.execute(ctx.db);
 	try {
-		await applyChange(ctx.db, change, draft, ctx.site.kit);
+		await applyChange(ctx.db, change, draft, ctx.site.kit, ctx.site.fieldSets);
 	} catch (error) {
 		// The screen says only that applying failed; the developer finds the change file and the reason here.
 		console.error(`Monti: change ${change.id} was saved to monti/changes but the database step failed:`, error);
@@ -157,7 +170,11 @@ export async function applySchema(
  * addresses were under the schema the database followed until now.
  */
 async function emitApplied(ctx: OperationContext, changeIds: string[], before: Map<string, string> | null) {
-	ctx.emit({ type: "schema.applied", ids: changeIds, ...(await movedAddresses(ctx.db, before, ctx.site.schema())) });
+	ctx.emit({
+		type: "schema.applied",
+		ids: changeIds,
+		...(await movedAddresses(ctx.db, before, ctx.site.fileSchema())),
+	});
 }
 
 /** `applySchema` for the operations that change structure alone: a file that could not be written refuses the write. */
@@ -175,7 +192,7 @@ export async function applyStructure(...args: Parameters<typeof applySchema>) {
 export async function heldByStructure(ctx: OperationContext, draft?: Schema): Promise<RecordRef[]> {
 	const followed = (await readSchemaState(ctx.db))?.schema;
 	const collections = new Set(
-		[ctx.site.schema(), draft, followed].flatMap((schema) => Object.keys(schema?.collections ?? {})),
+		[ctx.site.fileSchema(), draft, followed].flatMap((schema) => Object.keys(schema?.collections ?? {})),
 	);
 	return [...collections].sort().map((id) => ({ kind: "collectionAdminValues", id }));
 }
@@ -234,6 +251,31 @@ export async function adminValuesOf(db: Db): Promise<Record<string, AdminValues 
 	return Object.fromEntries(rows.map((row) => [row.collection, { ...row.values, version: row.version }]));
 }
 
+/**
+ * The admin values as the screens and the assistant read them: a plugin's field is called what its plugin calls it, until the database has a
+ * name of its own for it. Nothing here is stored: it is laid under what is.
+ */
+export function withPluginLabels<Values extends AdminValues>(
+	values: Record<string, Values>,
+	pluginTabs: Record<string, PluginTab[]>,
+): Record<string, Values> {
+	const out: Record<string, Values> = { ...values };
+	for (const [collection, tabs] of Object.entries(pluginTabs)) {
+		const fields: NonNullable<AdminValues["fields"]> = {};
+		for (const field of tabs.flatMap((tab) => tab.fields)) {
+			const { label, description, optionLabels } = field;
+			fields[field.name] = {
+				...(label === undefined ? {} : { label }),
+				...(description === undefined ? {} : { description }),
+				...(optionLabels === undefined ? {} : { optionLabels }),
+				...values[collection]?.fields?.[field.name],
+			};
+		}
+		out[collection] = { ...(values[collection] as Values), fields: { ...values[collection]?.fields, ...fields } };
+	}
+	return out;
+}
+
 /** A change file id: when, then what, then enough entropy for two saves in the same millisecond. */
 const changeId = (now: Date, label: string, id: string) =>
 	`${now.toISOString().replace("T", "-").replace(/[:.]/g, "").replace("Z", "")}-${label}-${id.slice(0, 8)}`;
@@ -246,14 +288,22 @@ export const schemaOperations = [
 			"Read every collection and field with its admin values: labels and, for each field, its description (how to fill it). Also says whether structure is locked (live site) and whether the schema file changed since it was applied.",
 		input: z.object({}),
 		async run(_input, ctx) {
-			const schema = ctx.site.schema();
+			const file = ctx.site.fileSchema();
 			const state = await readSchemaState(ctx.db);
-			const hash = schemaHash(schema);
+			const hash = schemaHash(file);
+			const pluginTabs = Object.fromEntries(
+				Object.keys(file.collections)
+					.map((collection) => [collection, ctx.site.pluginTabs(collection)] as const)
+					.filter(([, tabs]) => tabs.length > 0),
+			);
 			return {
-				schema,
+				// With the plugins' fields: an entry holds and shows them like the file's own. A draft sent back leaves them out again.
+				schema: ctx.site.schema(),
 				hash,
 				version: state?.version ?? 0,
-				adminValues: await adminValuesOf(ctx.db),
+				adminValues: withPluginLabels(await adminValuesOf(ctx.db), pluginTabs),
+				/** Each collection's plugin tabs, with their fields: the property panel's locked tabs, after the collection's own. */
+				pluginTabs,
 				locked: ctx.site.files === null,
 				/** The file differs from what the database follows: a hand edit on the dev server, or `monti db:migrate` not run on the live site. */
 				fileChanged: state !== null && state.hash !== hash,
@@ -267,7 +317,7 @@ export const schemaOperations = [
 		description:
 			"List what a draft schema must fix before it can be applied (a select without options, a relation to no collection…).",
 		input: z.object({ draft: SchemaInput }),
-		run: (input) => checkSchema(input.draft),
+		run: (input, ctx) => checkSchema(own(ctx, input.draft)),
 	}),
 	defineOperation({
 		name: "schema.plan",
@@ -278,8 +328,8 @@ export const schemaOperations = [
 		async run(input, ctx) {
 			const state = await readSchemaState(ctx.db);
 			return {
-				problems: checkSchema(input.draft),
-				changes: await planSchema(ctx.db, state?.schema ?? ctx.site.schema(), input.draft, input.renames),
+				problems: checkSchema(own(ctx, input.draft)),
+				changes: await planSchema(ctx.db, state?.schema ?? ctx.site.fileSchema(), own(ctx, input.draft), input.renames),
 			};
 		},
 	}),
@@ -296,9 +346,10 @@ export const schemaOperations = [
 			adminValues: z.record(z.string(), AdminValues).default({}),
 		}),
 		touches: () => [{ kind: "schema", id: "current" }],
-		holds: (input, ctx) => heldByStructure(ctx, input.draft),
-		check: (input, ctx) => checkApply(ctx, input.draft, input.renames, input.answers as Answers),
-		run: (input, ctx) => applyStructure(ctx, input.draft, input.renames, input.answers as Answers, input.adminValues),
+		holds: (input, ctx) => heldByStructure(ctx, own(ctx, input.draft)),
+		check: (input, ctx) => checkApply(ctx, own(ctx, input.draft), input.renames, input.answers as Answers),
+		run: (input, ctx) =>
+			applyStructure(ctx, own(ctx, input.draft), input.renames, input.answers as Answers, input.adminValues),
 		log: "settings",
 		summary: (_input, output) => ({
 			key: output.applied ? "schema.applied" : "schema.applyFailed",
@@ -321,14 +372,14 @@ export const schemaOperations = [
 			const pending = await pendingChanges(ctx.db, await files.readChanges(ctx.db));
 			// The addresses as the database last followed them: what the site was serving while the change waited.
 			const state = await readSchemaState(ctx.db);
-			const addresses = await addressesBefore(ctx.db, state?.schema ?? ctx.site.schema(), ctx.site.schema());
+			const addresses = await addressesBefore(ctx.db, state?.schema ?? ctx.site.fileSchema(), ctx.site.fileSchema());
 			// Each change brings the database to the schema it was written for, and that is the schema recorded as followed: not the schema file
 			// as it is now. A field taken out of the file by hand after the change was saved is no part of it, and is planned and reviewed apart
 			// (the file then differs from what the database follows, as after any hand edit).
-			let followed = state?.schema ?? ctx.site.schema();
+			let followed = state?.schema ?? ctx.site.fileSchema();
 			for (const change of pending) {
-				followed = change.schema ?? ctx.site.schema();
-				await applyChange(ctx.db, change, followed, ctx.site.kit);
+				followed = change.schema ?? ctx.site.fileSchema();
+				await applyChange(ctx.db, change, followed, ctx.site.kit, ctx.site.fieldSets);
 			}
 			await setSchemaState(ctx.db, followed, null);
 			await emitApplied(
@@ -350,7 +401,7 @@ export const schemaOperations = [
 		input: z.object({ collection: z.string(), values: AdminValuesPatch }),
 		touches: (input) => [{ kind: "collectionAdminValues", id: input.collection }],
 		check(input, ctx) {
-			if (!ctx.site.schema().collections[input.collection])
+			if (!ctx.site.fileSchema().collections[input.collection])
 				throw new CheckError({ key: "collections.unknown", values: { collection: input.collection } });
 		},
 		async run(input, ctx) {
@@ -370,7 +421,7 @@ export const schemaOperations = [
 		description: "Export one collection: its definition, admin values and every entry (trashed ones included) as JSON.",
 		input: z.object({ collection: z.string() }),
 		async run(input, ctx) {
-			const definition = ctx.site.schema().collections[input.collection];
+			const definition = ctx.site.fileSchema().collections[input.collection];
 			if (!definition) throw new CheckError({ key: "collections.unknown", values: { collection: input.collection } });
 			return {
 				collection: input.collection,

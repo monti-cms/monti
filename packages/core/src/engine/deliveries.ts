@@ -140,9 +140,9 @@ export function webhook(
 		async send(event, signal, delivery) {
 			const body = JSON.stringify(event);
 			const at = Math.floor((options.now?.() ?? new Date()).getTime() / 1000);
-			let response: Response;
-			try {
-				response = await (options.fetch ?? fetch)(url, {
+			const response = await receiverFetch(
+				url,
+				{
 					method: "POST",
 					headers: {
 						"content-type": "application/json",
@@ -155,22 +155,45 @@ export function webhook(
 						...options.headers,
 					},
 					body,
-					// A redirect is an answer that is no success: the event is not posted again somewhere the config did not name.
-					redirect: "manual",
 					signal,
-				});
-			} catch (error) {
-				// The other side was not reached: the network's own word for why (`ECONNREFUSED`, `ENOTFOUND`) is what is kept. An error with no
-				// such word is passed on, and stored as a failure with none of its text: the platform's messages quote the address.
-				const code = networkCode(error);
-				if (code !== null) throw new NoAnswer(code);
-				throw error;
-			}
+				},
+				options.fetch,
+			);
 			// Nothing reads the answer's body: it is let go, so the connection is free at once.
 			await response.body?.cancel().catch(() => {});
-			if (!response.ok) throw new ReceiverAnswer(`${response.status} ${response.statusText}`.trim());
 		},
 	};
+}
+
+/**
+ * A receiver's request to its other side, with a send's own answers (doc 13): a status that is no success is thrown as a `ReceiverAnswer`
+ * ("503 Service Unavailable"), and a side that was not reached as "no answer" with the network's word for why. A plugin's receiver sends
+ * with this, and the log then says what the other side said instead of "could not be sent". Pass the send's `signal` in `init`.
+ *
+ * A redirect is an answer that is no success: the request is not made again somewhere the receiver did not name. The answer is given back
+ * for a receiver that reads it; one that does not lets its body go.
+ */
+export async function receiverFetch(
+	url: string,
+	init: RequestInit = {},
+	fetchWith: typeof fetch = fetch,
+): Promise<Response> {
+	let response: Response;
+	try {
+		response = await fetchWith(url, { ...init, redirect: "manual" });
+	} catch (error) {
+		// The other side was not reached: the network's own word for why (`ECONNREFUSED`, `ENOTFOUND`) is what is kept. An error with no
+		// such word is passed on, and stored as a failure with none of its text: the platform's messages quote the address.
+		const code = networkCode(error);
+		if (code !== null) throw new NoAnswer(code);
+		throw error;
+	}
+	if (!response.ok) {
+		// Nothing reads a refusal's body: it is let go, so the connection is free at once.
+		await response.body?.cancel().catch(() => {});
+		throw new ReceiverAnswer(`${response.status} ${response.statusText}`.trim());
+	}
+	return response;
 }
 
 /**
@@ -405,6 +428,10 @@ export async function sendDeliveries(
 			await sendOnce(receiver, held.event, { id: held.id, attempt: attempts });
 		} catch (error) {
 			failure = failureOf(error);
+			// "Could not be sent" keeps none of the error's words (they can quote an address with its token), so the log cannot say what went
+			// wrong in a receiver's own code. The server's console can: it is the site's own, like the rest of what the server prints.
+			if (failure === "failed")
+				console.error(`Monti: the receiver ${held.destination} threw; its delivery is stored as failed:`, error);
 		}
 		// The first send is not a retry, so the retries run out on attempt RETRY_MINUTES.length + 1.
 		const wait = failure === null ? undefined : RETRY_MINUTES[attempts - 1];

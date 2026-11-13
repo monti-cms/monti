@@ -9,6 +9,12 @@ export type LocaleMode = "same" | "perLocale" | "fromSource";
 type FieldBase = {
 	required?: boolean;
 	locale?: LocaleMode;
+	/**
+	 * The input the property panel draws the field with, in place of its kind's own: the name of a component the site's or a plugin's admin half
+	 * brings (`defineAdminPlugin`'s `inputs`). Without that component the kind's own input stands. `inputOptions` are handed to it as they are.
+	 */
+	input?: string;
+	inputOptions?: Record<string, unknown>;
 };
 
 export type TextField = FieldBase & {

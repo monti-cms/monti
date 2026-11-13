@@ -2,6 +2,7 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import { type BlockKit, createBlockKit } from "../body/blocks";
 import type { Database } from "../db/schema";
 import { rewriteAllUses } from "../media/uses";
+import { type NamedFieldSet, withPluginFields } from "../plugins/define";
 import { trackedFields } from "../translations/fields";
 import { changeSource } from "../translations/source-change";
 import type { AdminValues } from "./admin-values";
@@ -198,10 +199,16 @@ export async function readSchemaState(db: Db): Promise<SchemaState | null> {
  * Follows one change file: its steps, then the admin values it brings for what it created (a new collection's row, a new field of an existing one),
  * put in only where the database has none. What the database already has is never replaced: from then on the database owns those values.
  */
-async function followChange(db: Db, change: ChangeFile, schema: Schema, kit: BlockKit): Promise<void> {
+async function followChange(
+	db: Db,
+	change: ChangeFile,
+	schema: Schema,
+	kit: BlockKit,
+	sets: readonly NamedFieldSet[],
+): Promise<void> {
 	for (const step of change.steps) await applyStep(db, step, schema, kit);
-	// A field renamed or removed moved what entries hold, with no entry as the write's record (doc 09).
-	await rewriteAllUses(db, schema);
+	// A field renamed or removed moved what entries hold, with no entry as the write's record (doc 09). The plugins' fields hold files too.
+	await rewriteAllUses(db, withPluginFields(schema, sets));
 	for (const [collection, first] of Object.entries(change.firstAdminValues ?? {}))
 		await sql`insert into collection_admin_values (collection, values) values (${collection}, ${JSON.stringify(first)}::jsonb)
 			on conflict (collection) do update set
@@ -211,10 +218,19 @@ async function followChange(db: Db, change: ChangeFile, schema: Schema, kit: Blo
 	await db.insertInto("schema_changes").values({ id: change.id }).execute();
 }
 
-/** Applies one change file and records the schema it leaves. Run inside the write's transaction, so a failed step leaves the database as it was. */
-export async function applyChange(db: Db, change: ChangeFile, schema: Schema, kit: BlockKit): Promise<void> {
-	await followChange(db, change, schema, kit);
-	await keepSeenTracked(db, schema);
+/**
+ * Applies one change file and records the schema it leaves. Run inside the write's transaction, so a failed step leaves the database as it was.
+ * `schema` is the file's; `sets` are the plugins' fields the site runs with beside it, whose values a change of the file leaves alone.
+ */
+export async function applyChange(
+	db: Db,
+	change: ChangeFile,
+	schema: Schema,
+	kit: BlockKit,
+	sets: readonly NamedFieldSet[] = [],
+): Promise<void> {
+	await followChange(db, change, schema, kit, sets);
+	await keepSeenTracked(db, withPluginFields(schema, sets));
 	await setSchemaState(db, schema, null);
 }
 
@@ -257,11 +273,12 @@ export async function migrateContent(
 	schema: Schema,
 	changes: ChangeFile[],
 	kit: BlockKit = createBlockKit([], []),
+	sets: readonly NamedFieldSet[] = [],
 ): Promise<string[]> {
 	return db.transaction().execute(async (trx) => {
 		const pending = await pendingChanges(trx, changes);
-		for (const change of pending) await followChange(trx, change, schema, kit);
-		await keepSeenTracked(trx, schema);
+		for (const change of pending) await followChange(trx, change, schema, kit, sets);
+		await keepSeenTracked(trx, withPluginFields(schema, sets));
 		await setSchemaState(trx, schema, null);
 		return pending.map((change) => change.id);
 	});

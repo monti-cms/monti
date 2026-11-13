@@ -13,6 +13,7 @@ import {
 	checkApply,
 	heldByStructure,
 	LocalesInput,
+	own,
 	RenameInput,
 	writeAdminValues,
 } from "../schema/operations";
@@ -36,15 +37,16 @@ type SaveInput = z.infer<typeof SaveInput>;
 /** The schema a save asks for: what it names over what the site runs with. `null` when it names no structure. */
 function draftOf(input: SaveInput, ctx: OperationContext): Schema | null {
 	if (input.locales === undefined && input.collections === undefined) return null;
-	const current = ctx.site.schema();
-	return { locales: input.locales ?? current.locales, collections: input.collections ?? current.collections };
+	const current = ctx.site.fileSchema();
+	const draft = { locales: input.locales ?? current.locales, collections: input.collections ?? current.collections };
+	return own(ctx, draft);
 }
 
 /** Whether the draft differs from the file or from what the database follows: only then is there a structure change to write. */
 async function differs(ctx: OperationContext, draft: Schema, renames: Rename[]) {
 	const hash = schemaHash(draft);
 	const state = await readSchemaState(ctx.db);
-	return renames.length > 0 || hash !== schemaHash(ctx.site.schema()) || (state !== null && hash !== state.hash);
+	return renames.length > 0 || hash !== schemaHash(ctx.site.fileSchema()) || (state !== null && hash !== state.hash);
 }
 
 /**
@@ -147,7 +149,7 @@ async function adminWrites(
 	input: SaveInput,
 	ctx: OperationContext,
 ): Promise<{ collection: string; next: AdminValues }[]> {
-	const applied = ctx.site.schema();
+	const applied = ctx.site.fileSchema();
 	const draft = draftOf(input, ctx);
 	const saved = await adminValuesOf(ctx.db);
 	const writes: { collection: string; next: AdminValues }[] = [];
@@ -190,7 +192,7 @@ export const settingsOperations = [
 			"Read the settings: the site's name and how it writes (the tone and rules to follow), the admin's preferences, the languages, every collection with its admin values, where each value lives (the database, or the schema file) and whether it is locked (structure values on the live site), with the versions a save names.",
 		input: z.object({}),
 		async run(_input, ctx) {
-			const schema = ctx.site.schema();
+			const schema = ctx.site.fileSchema();
 			const state = await readSchemaState(ctx.db);
 			const hash = schemaHash(schema);
 			const locked = ctx.site.files === null;
@@ -208,6 +210,12 @@ export const settingsOperations = [
 				hash,
 				version: state?.version ?? 0,
 				adminValues: await adminValuesOf(ctx.db),
+				/** Each collection's plugin tabs, with their fields: shown locked after the collection's own tabs, and never part of a save. */
+				pluginTabs: Object.fromEntries(
+					Object.keys(schema.collections)
+						.map((collection) => [collection, ctx.site.pluginTabs(collection)] as const)
+						.filter(([, tabs]) => tabs.length > 0),
+				),
 				locked,
 				places: PLACES.map((place) => ({ ...place, locked: place.where === "file" && locked })),
 				/** The file differs from what the database follows: a hand edit on the dev server, or `monti db:migrate` not run on the live site. */
@@ -228,7 +236,7 @@ export const settingsOperations = [
 			const refs: RecordRef[] = [];
 			if (Object.keys(input.site ?? {}).length > 0) refs.push({ kind: "settings", id: "site" });
 			for (const collection of Object.keys(input.adminValues))
-				if (ctx.site.schema().collections[collection]) refs.push({ kind: "collectionAdminValues", id: collection });
+				if (ctx.site.fileSchema().collections[collection]) refs.push({ kind: "collectionAdminValues", id: collection });
 			if (draftOf(input, ctx)) refs.push({ kind: "schema", id: "current" });
 			return refs;
 		},
@@ -242,9 +250,9 @@ export const settingsOperations = [
 			// Named, not compared: on the live site no entry point takes a structure value, changed or not (doc 12).
 			if (draft && ctx.site.files === null)
 				throw new ForbiddenError({ key: "errors.structureLocked", values: { operation: "settings.save" } });
-			const collections = draft?.collections ?? ctx.site.schema().collections;
+			const collections = draft?.collections ?? ctx.site.fileSchema().collections;
 			for (const collection of Object.keys(input.adminValues))
-				if (!collections[collection] && !ctx.site.schema().collections[collection])
+				if (!collections[collection] && !ctx.site.fileSchema().collections[collection])
 					throw new CheckError({ key: "collections.unknown", values: { collection } });
 			const structure = draft !== null && (await differs(ctx, draft, input.renames));
 			if (draft && structure) await checkApply(ctx, draft, input.renames, input.answers as Answers);
@@ -253,7 +261,7 @@ export const settingsOperations = [
 				throw new CheckError({ key: "settings.nothingToSave" });
 		},
 		async run(input, ctx) {
-			const applied = ctx.site.schema();
+			const applied = ctx.site.fileSchema();
 			const draft = draftOf(input, ctx);
 
 			// Admin values first (doc 12): whatever happens to the structure after, they are saved.

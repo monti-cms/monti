@@ -97,6 +97,33 @@ function keepChosen(
 	return Object.fromEntries(Object.entries(values).filter(([field]) => !others.has(field)));
 }
 
+/**
+ * The plugins' say before an entry is saved (doc 14, `beforeSave`): each in the plugins' order, given the working copy as the one before it
+ * left it. What a hook returns is laid over the copy after passing a save's own checks; one that throws a `CheckError` stops the save.
+ */
+async function beforeSaving(
+	ctx: OperationContext,
+	entry: { id: string | null; collection: string; locale: string },
+	working: Pick<Entry, "title" | "slug" | "values" | "doc">,
+	previous: Entry | null,
+) {
+	const schema = ctx.site.schema();
+	let next = working;
+	for (const plugin of ctx.site.plugins) {
+		if (!plugin.beforeSave) continue;
+		const changed = await plugin.beforeSave(
+			{ ...entry, title: next.title, slug: next.slug, values: { ...next.values }, doc: next.doc },
+			{ db: ctx.db, schema, previous, actor: ctx.actor },
+		);
+		if (!changed) continue;
+		const patch = { title: changed.title, slug: changed.slug, values: changed.values };
+		checkDraft(schema, entry.collection, patch);
+		await checkMediaValues(ctx.db, schema, entry.collection, patch.values);
+		next = applyDraft(next, patch);
+	}
+	return next;
+}
+
 /** The media fields of these values as they are kept (`cleanMediaValue`). */
 function cleanMediaFields(schema: Schema, collection: string, values: Record<string, unknown>) {
 	const fields = storedFields(schema.collections[collection]);
@@ -246,7 +273,12 @@ export const entryOperations = [
 			const isItem = ctx.site.schema().collections[input.collection]?.kind === "item";
 			let values = input.values ? { ...input.values } : {};
 			values = await resolveInlineCreation(ctx, input.collection, values);
-			const working = applyDraft({ title: "", slug: "", values: {}, doc: null }, { ...input, values });
+			const working = await beforeSaving(
+				ctx,
+				{ id: null, collection: input.collection, locale },
+				applyDraft({ title: "", slug: "", values: {}, doc: null }, { ...input, values }),
+				null,
+			);
 			working.values = keepChosen(ctx.site.schema(), { collection: input.collection, locale }, working.values, input);
 			working.values = cleanMediaFields(ctx.site.schema(), input.collection, working.values);
 			if (isItem && working.slug === "" && working.title !== "") {
@@ -447,7 +479,7 @@ export const entryOperations = [
 			if (values) {
 				values = await resolveInlineCreation(ctx, entry.collection, values);
 			}
-			const working = applyDraft(entry, { ...input, values });
+			const working = await beforeSaving(ctx, entry, applyDraft(entry, { ...input, values }), entry);
 			working.values = keepChosen(ctx.site.schema(), entry, working.values, input);
 			working.values = cleanMediaFields(ctx.site.schema(), entry.collection, working.values);
 			if (isItem && working.slug === "" && working.title !== "") {

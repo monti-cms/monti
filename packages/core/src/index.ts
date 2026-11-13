@@ -51,6 +51,7 @@ export {
 	RETRY_MINUTES,
 	type Receiver,
 	ReceiverAnswer,
+	receiverFetch,
 	SEND_TIMEOUT_MS,
 	SITE_CACHE_LABEL,
 	webhook,
@@ -99,7 +100,16 @@ export {
 } from "./errors";
 export type { FolderNode } from "./folders/operations";
 export { canonical, sameJson } from "./json";
-export type { KeyList, KeyRow, KeyServiceRow, KeyUse, ModelChoice, ModelList, OpenKey } from "./keys/operations";
+export type {
+	KeyList,
+	KeyRow,
+	KeyServiceRow,
+	KeySlotRow,
+	KeyUse,
+	ModelChoice,
+	ModelList,
+	OpenKey,
+} from "./keys/operations";
 export { KEY_NAME_MAX } from "./keys/operations";
 export type { KeyCheck, KeyCheckTools, KeyCredentials, KeyService, Model } from "./keys/services";
 export { SERVICE_URLS, withoutRedirects } from "./keys/services";
@@ -165,6 +175,22 @@ export {
 	type RecordRef,
 	recordKey,
 } from "./operation";
+export {
+	type BeforeSave,
+	type Importer,
+	type KeySlot,
+	type PluginField,
+	type PluginFieldSet,
+	type PluginTab,
+	type PluginValueField,
+	type PluginViewField,
+	type SavingEntry,
+	says,
+	type TextCheck,
+	type TextFinding,
+	type ToolPage,
+} from "./plugins/define";
+export type { PluginRow, TextCheckResult } from "./plugins/operations";
 export type { DateRange } from "./query";
 export { defineRecordKind, type RecordKind, type RecordState } from "./records";
 export {
@@ -203,7 +229,7 @@ export { type ChangeFile, type ChangeStep, readChangeFiles, type SchemaFiles, sc
 export type { Answers, Choice, Rename, SchemaChange } from "./schema/plan";
 export { type SyncResult, syncSchemaFile } from "./schema/sync";
 export { ADMIN_LANGUAGES, type AdminLanguage } from "./settings/values";
-export type { Site } from "./site";
+export type { Site, SitePlugin } from "./site";
 export { type AnyStream, defineStream, type Stream, type StreamContext, type StreamDefinition } from "./stream";
 export type { FieldMark } from "./translations/fields";
 export { MEDIA_KIND, type TrashedEntry, type TrashList, type TrashQuery, type TrashRow } from "./trash/list";
