@@ -11,7 +11,7 @@ const bare = (doc: Doc) => {
 	return doc.blocks.map(strip);
 };
 const text = (value: string, ...marks: { type: string; [key: string]: unknown }[]) => ({
-	type: "text",
+	type: "text" as const,
 	text: value,
 	...(marks.length > 0 ? { marks } : {}),
 });
