@@ -1,4 +1,10 @@
 import type * as React from "react";
+// The blocks' own looks (the site's, not the admin's): the drawings below are the package's components as a site draws them.
+import "@monti-cms/blocks/looks";
+import { Chart } from "@monti-cms/blocks/chart/site";
+import { MathBlock } from "@monti-cms/blocks/math/site";
+import { Mermaid } from "@monti-cms/blocks/mermaid/site";
+import type { Block as BodyBlockValue } from "@monti-cms/core";
 import { Grip } from "../../grip";
 import {
 	Add,
@@ -56,7 +62,6 @@ import {
 	FormFieldLabel,
 	HeldBlock,
 	IconButton,
-	Image,
 	Inline,
 	Input,
 	MenuValue,
@@ -135,8 +140,8 @@ const KINDS = [
 	{ value: "danger", name: "위험", Icon: WarningHex },
 ] as const;
 
-/** A callout with the caret in it: its row's kind button, and the kinds open from it (✓ on the one it is). */
-export function CalloutScreen({ menu = true }: { menu?: boolean }) {
+/** A callout with the caret in it: its row's kind button; `menu`: the kinds open from it upward (✓ on the one it is), the callout in sight. */
+export function CalloutScreen({ menu = false }: { menu?: boolean }) {
 	return (
 		<Page>
 			<Box position="relative">
@@ -150,7 +155,8 @@ export function CalloutScreen({ menu = true }: { menu?: boolean }) {
 							>
 								<WarningAlt aria-hidden />
 							</FloatingBarButton>
-							<DropdownMenuContent>
+							{/* Up from the row, over the text before the callout: the callout itself stays in sight. */}
+							<DropdownMenuContent side="top">
 								<DropdownMenuRadioGroup value="warning" onValueChange={still}>
 									{KINDS.map(({ value, name, Icon }) => (
 										<DropdownMenuRadioItem key={value} value={value}>
@@ -414,8 +420,8 @@ function SourcePanel({ source }: { source: Source }) {
 			<Box position="relative">
 				<Handle />
 				<BlockBox selected>
-					<Stack gap={12}>
-						<Box paddingY={8}>{source.preview}</Box>
+					<Stack gap={16} padding={16}>
+						<Box minHeight="control-lg">{source.preview}</Box>
 						<FormField>
 							<FormFieldLabel htmlFor="ref-source">{source.name}</FormFieldLabel>
 							<Textarea id="ref-source" mono rows={4} defaultValue={source.code} />
@@ -428,30 +434,39 @@ function SourcePanel({ source }: { source: Source }) {
 	);
 }
 
+/** A body block as the drawing components take it. */
+const blockOf = (type: string, attrs: Record<string, unknown>, children?: BodyBlockValue[]): BodyBlockValue => ({
+	id: `ref-${type}`,
+	type,
+	attrs,
+	...(children ? { children } : {}),
+});
+
+const FORMULA = "f(x) = \\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}";
+const DIAGRAM = "flowchart LR\n  A[글 쓰기] --> B[저장]\n  B --> C[발행]\n  C --> D[사이트]";
+
 export function MathScreen() {
 	return (
 		<SourcePanel
 			source={{
 				name: "수식 · LaTeX",
-				code: "f(x) = \\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}",
-				preview: (
-					<Text variant="reading" align="center">
-						f(x) = ∫ e^(−x²) dx = √π
-					</Text>
-				),
+				code: FORMULA,
+				// KaTeX, as the site draws it.
+				preview: <MathBlock block={blockOf("math", { source: FORMULA })} attrs={{ source: FORMULA }} />,
 			}}
 		/>
 	);
 }
 
-export function MermaidScreen() {
+/** A diagram picked: Mermaid's drawing over its source; `error`: a line that does not read, the drawing left empty. */
+export function MermaidScreen({ error = false }: { error?: boolean }) {
 	return (
 		<SourcePanel
 			source={{
 				name: "다이어그램 · Mermaid",
-				code: "flowchart LR\n  A[글 쓰기] --> B[저장]\n  B --> C[발행\n  C --> D[사이트]",
-				preview: <Image src={null} alt="" ratio="banner" />,
-				errors: ["3번째 줄: [ 를 닫지 않았습니다"],
+				code: error ? DIAGRAM.replace("C[발행]", "C[발행") : DIAGRAM,
+				preview: error ? null : <Mermaid block={blockOf("mermaid", { source: DIAGRAM })} attrs={{ source: DIAGRAM }} />,
+				...(error ? { errors: ["3번째 줄: [ 를 닫지 않았습니다"] } : {}),
 			}}
 		/>
 	);
@@ -469,6 +484,23 @@ month | views | subs
 2월 | 1850 | 420
 3월 | 2400 | 610`;
 
+const CHART_ROWS = [
+	["월", "방문", "구독"],
+	["1월", "1200", "300"],
+	["2월", "1850", "420"],
+	["3월", "2400", "610"],
+];
+/** The chart's drawing: the package's chart component (SVG, drawn on the server), from the numbers the text or the table holds. */
+const chartDrawing = (
+	<Chart
+		block={blockOf("chart", { kind: "bar", title: "월별 방문" }, [
+			{ id: "ref-table", type: "table", attrs: { header: true, rows: CHART_ROWS } },
+		])}
+		attrs={{ kind: "bar", title: "월별 방문" }}
+		locale="ko"
+	/>
+);
+
 /** The chart as the old block wrote it: its own text, with the drawing over it (option A); `error`: a line that does not read. */
 export function ChartTextScreen({ error = false }: { error?: boolean }) {
 	return (
@@ -476,7 +508,7 @@ export function ChartTextScreen({ error = false }: { error?: boolean }) {
 			source={{
 				name: "차트",
 				code: error ? CHART_TEXT.replace("chart bar", "chart bars") : CHART_TEXT,
-				preview: <Image src={null} alt="" ratio="banner" />,
+				preview: error ? null : chartDrawing,
 				...(error ? { errors: ["1번째 줄: bars는 차트 종류가 아닙니다"] } : {}),
 			}}
 		/>
@@ -507,7 +539,7 @@ export function ChartTableScreen() {
 					</FloatingBar>
 				</BlockBarPlace>
 				<Stack gap={12}>
-					<Image src={null} alt="" ratio="share" />
+					{chartDrawing}
 					{/* The editor's own table: a light grid, the head row only bolder (editor-tools.md, the table; as table-tools.tsx draws it). */}
 					<table className="w-full border-collapse text-monti-reading [&_td]:border [&_td]:border-monti-muted [&_td]:px-monti-8 [&_th]:border [&_th]:border-monti-muted [&_th]:px-monti-8 [&_th]:text-left [&_th]:font-semibold">
 						<tbody>

@@ -7,7 +7,9 @@
 	"type": "module",
 	"exports": {
 		".": "./blocks/index.ts",
-		"./registry.json": "./registry.json"
+		"./registry.json": "./registry.json",
+		"./*.css": "./blocks/*.css",
+		"./*": "./blocks/*.tsx"
 	},
 	"files": [
 		"blocks",
