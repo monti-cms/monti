@@ -10,8 +10,8 @@ type Loaded = { site: StorySite; saved: ReturnType<typeof catchDownloads> };
 const wait = { timeout: 15000 };
 
 /** The blog with a file in its library, on the tools' data tab; what the page saves is kept at hand. */
-export const site = (options: { picture?: boolean } = { picture: true }) => [
-	...blog({ hash: "#/tools/data", picture: options.picture }),
+export const site = (options: { picture?: boolean; hold?: string } = { picture: true }) => [
+	...blog({ hash: "#/tools/data", picture: options.picture, hold: options.hold }),
 	async () => ({ saved: catchDownloads() }),
 ];
 
@@ -34,6 +34,16 @@ export const Default: Story = {
 	loaders: site(),
 	play: ({ canvasElement }) =>
 		waitFor(() => expect(within(canvasElement).getByRole("button", { name: "백업 받기" })).toBeTruthy(), wait),
+};
+
+/** Flow 9, 02: the backup is being made. The pill works and says how far it is. */
+export const Making: Story = {
+	loaders: site({ picture: true, hold: "data.backup" }),
+	play: async (context) => {
+		await Default.play?.(context);
+		await userEvent.click(within(context.canvasElement).getByRole("button", { name: "백업 받기" }));
+		await waitFor(() => expect(within(context.canvasElement).getByText("만드는 중 0%")).toBeTruthy(), wait);
+	},
 };
 
 /** Flow 9, 03: the backup was taken. The toast says so and the last backup is today's. */

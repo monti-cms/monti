@@ -113,7 +113,7 @@ export function catchDownloads(): { name: string; file: Blob }[] {
 }
 
 /** The stories' blog with a few posts and categories, with or without the MDX plugin. */
-export const site = (options: { mdx?: boolean; hash?: string; picture?: boolean } = {}) => [
+export const site = (options: { mdx?: boolean; hash?: string; picture?: boolean; hold?: string } = {}) => [
 	async (): Promise<Loaded> => {
 		startAt(options.hash ?? "#/c/post");
 		const made = await storySite({
@@ -167,6 +167,11 @@ export const site = (options: { mdx?: boolean; hash?: string; picture?: boolean 
 					});
 			},
 		});
+		// An operation whose answer never comes: the moment the screen is busy with it stays to be seen.
+		const { transport } = made;
+		if (options.hold)
+			made.transport = (name, input, more) =>
+				name === options.hold ? new Promise(() => {}) : transport(name, input, more);
 		return { site: made };
 	},
 ];
@@ -205,6 +210,16 @@ export const Read: Story = {
 	},
 };
 
+/** Flow 9, 08: importing. The sheet cannot be left, the fields are held, and the pill says what it is doing. */
+export const Importing: Story = {
+	loaders: site({ hold: "data.import" }),
+	play: async (context) => {
+		await Read.play?.(context);
+		await userEvent.click(within(await sheet()).getByRole("button", { name: "3편 가져오기" }));
+		await waitFor(async () => expect(within(await sheet()).getByText("가져오는 중…")).toBeTruthy(), wait);
+	},
+};
+
 /** Flow 9, 09: imported. The count, what came with it, the entries whose address was taken, and the way back. */
 export const Done: Story = {
 	loaders: site(),
@@ -221,7 +236,7 @@ export const NeedsPlugin: Story = {
 	play: async ({ canvasElement }) => {
 		await importFrom(canvasElement, [await blogZip()]);
 		await waitFor(
-			async () => expect(within(await sheet()).getByText("MDX 플러그인이 있어야 읽을 수 있습니다")).toBeTruthy(),
+			async () => expect(within(await sheet()).getByText("MDX 플러그인이 있어야 읽을 수 있습니다.")).toBeTruthy(),
 			wait,
 		);
 	},

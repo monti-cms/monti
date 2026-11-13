@@ -54,4 +54,14 @@ describe("tools › data: the backup (flow 9, 01–03)", () => {
 		await expect.element(main().getByRole("button", { name: "백업 받기" })).toBeVisible();
 		await expect.element(main().getByRole("checkbox")).not.toBeInTheDocument();
 	});
+
+	it("14-1 while the backup is made the pill works and says how far it is, and a second press starts nothing", async () => {
+		const story = scene<Loaded>(stories.Making, stories.default);
+		await story.run();
+		const pill = main().getByRole("button", { name: /만드는 중 0%/ });
+		await expect.element(pill).toBeVisible();
+		await userEvent.click(pill, { force: true });
+		expect(story.loaded().saved).toEqual([]);
+		await expect.element(main().getByRole("checkbox", { name: /미디어 파일도 담기/ })).toBeDisabled();
+	});
 });

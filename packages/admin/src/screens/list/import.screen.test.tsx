@@ -37,7 +37,7 @@ describe("importing into a list (flow 9, 05–09)", () => {
 		await userEvent.click(page.getByRole("option", { name: "요약" }));
 		await expect.element(sheet().getByRole("combobox", { name: "description" })).toHaveTextContent("요약");
 		// 07: the picture, the unknown component.
-		await expect.element(sheet().getByText('이미지 1개가 미디어 폴더 "가져온 이미지"로 갑니다.')).toBeVisible();
+		await expect.element(sheet().getByText('이미지 1개가 미디어 폴더 "가져온 이미지"로 갑니다')).toBeVisible();
 		await expect.element(sheet().getByText("Tweet")).toBeVisible();
 		// 08–09: imported.
 		await userEvent.click(sheet().getByRole("button", { name: "3편 가져오기" }));
@@ -75,11 +75,21 @@ describe("importing into a list (flow 9, 05–09)", () => {
 		await expect.element(main().getByText("다시 쓰는 블로그")).toBeVisible();
 	});
 
+	it("14-1 while it imports the sheet cannot be left: no close button, cancel and the fields held, the pill working", async () => {
+		await scene(stories.Importing, stories.default).run();
+		await expect.element(sheet().getByText("가져오는 중…")).toBeVisible();
+		await expect.element(sheet().getByRole("button", { name: "닫기" })).not.toBeInTheDocument();
+		await expect.element(sheet().getByRole("button", { name: "취소" })).toBeDisabled();
+		await expect.element(sheet().getByRole("combobox", { name: "title" })).toBeDisabled();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(sheet().getByText("가져오는 중…")).toBeVisible();
+	});
+
 	it("14-2 without the MDX plugin a .md upload is not read, and the sheet says which plugin reads it", async () => {
 		const story = at({ mdx: false });
 		await story.run();
 		await stories.importFrom(document.body, [await stories.blogZip()]);
-		await expect.element(sheet().getByText("MDX 플러그인이 있어야 읽을 수 있습니다")).toBeVisible();
+		await expect.element(sheet().getByText("MDX 플러그인이 있어야 읽을 수 있습니다.")).toBeVisible();
 		await expect.element(sheet().getByRole("button", { name: /가져오기/ })).not.toBeInTheDocument();
 	});
 
@@ -164,6 +174,8 @@ describe("exporting picked entries (flow 9, 04; T57)", () => {
 		await stories.importFrom(document.body, [file]);
 		await expect.element(sheet().getByText("글 2편을 찾았습니다")).toBeVisible();
 		await expect.element(sheet().getByText("이미 있는 글 2편은 건너뜁니다")).toBeVisible();
-		await expect.element(sheet().getByRole("button", { name: "0편 가져오기" })).toBeDisabled();
+		// Nothing is left to import: no pill, only the way out.
+		await expect.element(sheet().getByRole("button", { name: /가져오기/ })).not.toBeInTheDocument();
+		await expect.element(sheet().getByRole("button", { name: "닫기" }).last()).toBeVisible();
 	});
 });

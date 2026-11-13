@@ -97,7 +97,10 @@ export function ImportSheet({
 											<ChangeLine
 												key={entry.id}
 												what={
-													<TextButton {...linkTo({ screen: "entry", collection, id: entry.id }, go)}>
+													<TextButton
+														variant="underline"
+														{...linkTo({ screen: "entry", collection, id: entry.id }, go)}
+													>
 														{entry.title}
 													</TextButton>
 												}
@@ -125,12 +128,12 @@ export function ImportSheet({
 								</Button>
 								<Button onClick={importing.close}>{t("import.toList")}</Button>
 							</>
-						) : state.step === "ready" || state.step === "importing" ? (
+						) : state.step === "importing" || (state.step === "ready" && toImport(state.inspected) > 0) ? (
 							<>
 								<Button variant="ghost" disabled={busy} onClick={importing.close}>
 									{t("ui.cancel")}
 								</Button>
-								<Button loading={busy} disabled={toImport(state.inspected) === 0} onClick={() => void run()}>
+								<Button loading={busy} onClick={() => void run()}>
 									{state.step === "ready"
 										? t("import.go", { count: toImport(state.inspected) })
 										: state.sent < state.inspected.pictures.length
@@ -139,6 +142,7 @@ export function ImportSheet({
 								</Button>
 							</>
 						) : (
+							// Nothing to import (unread, unreadable, or every entry is here already): the sheet says why, and only closes.
 							<Button variant="ghost" onClick={importing.close}>
 								{t("ui.close")}
 							</Button>

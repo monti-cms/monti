@@ -268,7 +268,7 @@ export const coreMessages = defineMessages({
 		},
 		ko: {
 			"data.unreadable": "읽지 못했습니다.",
-			"data.needsMdx": "MDX 플러그인이 있어야 읽을 수 있습니다",
+			"data.needsMdx": "MDX 플러그인이 있어야 읽을 수 있습니다.",
 			"data.nothingToImport": "가져올 글이 없습니다.",
 			"data.import": "{name}에서 {count}편 가져옴",
 			"data.backedUp": "백업 받음",

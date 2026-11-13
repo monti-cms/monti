@@ -29,7 +29,7 @@ export function DataScreen() {
 						<TabLink href="#">API 키</TabLink>
 					</TabLinks>
 				</PageToolbar>
-				<Section title="백업">
+				<Section title="백업" last>
 					<Stack gap={12}>
 						{/* What goes into the backup is chosen before the pill that takes it. */}
 						<Option>
