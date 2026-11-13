@@ -21,7 +21,7 @@ import {
 	type ShortcutKeys,
 	Text,
 } from "@monti-cms/ui";
-import { Document, Link, Unlink } from "@monti-cms/ui/icons";
+import { Document, Link, Pen, Unlink } from "@monti-cms/ui/icons";
 import { TextSelection } from "@tiptap/pm/state";
 import { type Editor, useEditorState } from "@tiptap/react";
 import { useRef, useState } from "react";
@@ -179,6 +179,8 @@ export function FormatCard({
 												checked={Boolean(state.active[mark.type])}
 												onSelect={() => toggle(mark.type)}
 											>
+												{/* A site's mark names no icon of its own: each row takes the format mark, as a menu's rows start with an icon (menu.md). */}
+												<Pen aria-hidden />
 												{label(mark.type)}
 											</CommandItem>
 										))}

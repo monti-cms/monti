@@ -142,6 +142,10 @@ describe("flow 3, a translation", () => {
 		await open(NewTranslation);
 		await expect.poll(faint).toBe(4);
 		await blockMenu("무엇을 덜어냈나");
+		await expect.element(page.getByRole("menuitem", { name: "원문 따르기" })).toBeVisible();
+		// Every row of the menu starts with its icon (menu.md).
+		const rows = [...document.querySelectorAll("[role=menu] [role=menuitem]")];
+		expect(rows.filter((row) => !row.querySelector("svg")).map((row) => row.textContent)).toEqual([]);
 		await userEvent.click(page.getByRole("menuitem", { name: "원문 따르기" }));
 		await expect.poll(faint).toBe(3);
 		await expect.poll(() => document.querySelector("[data-slot=editor-margin]")?.textContent).toBe("원문 따름");

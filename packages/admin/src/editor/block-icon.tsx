@@ -1,5 +1,6 @@
 import { HeadingIcon } from "@monti-cms/ui";
 import {
+	Box,
 	Code,
 	Document,
 	Image,
@@ -16,7 +17,7 @@ import {
 
 /**
  * The mark at the start of a block's row in the "/" menu and in "turn into" (editor-tools.md): a heading by its level (`HeadingIcon`), the others
- * by what they are. A site's own block has none; its name says it.
+ * by what they are. A site's own block takes the component mark: a row of a menu starts with its icon (menu.md), and its name says which.
  */
 export function BlockIcon({ type, level }: { type: string; level?: number }) {
 	switch (type) {
@@ -47,5 +48,5 @@ export function BlockIcon({ type, level }: { type: string; level?: number }) {
 		case "template":
 			return <Template aria-hidden />;
 	}
-	return null;
+	return <Box aria-hidden />;
 }

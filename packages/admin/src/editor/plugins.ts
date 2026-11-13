@@ -1,4 +1,5 @@
 import { newBlockId } from "@monti-cms/core";
+import { CHECK_MARK_PATH } from "@monti-cms/ui";
 import { Extension } from "@tiptap/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey } from "@tiptap/pm/state";
@@ -45,6 +46,84 @@ export const BlockIds = Extension.create({
 		];
 	},
 });
+
+const SVG = "http://www.w3.org/2000/svg";
+
+/** The box at a checklist item's start (`data-check`, drawn by `EditorBody`): its ✓ is always there, shown while the item is ticked. */
+function checkBox(checked: boolean, label: string) {
+	const box = document.createElement("span");
+	box.setAttribute("data-check", "");
+	box.contentEditable = "false";
+	box.setAttribute("role", "checkbox");
+	box.setAttribute("aria-checked", String(checked));
+	box.setAttribute("aria-label", label);
+	const svg = document.createElementNS(SVG, "svg");
+	svg.setAttribute("viewBox", "0 0 14 14");
+	svg.setAttribute("fill", "none");
+	svg.setAttribute("stroke", "currentColor");
+	svg.setAttribute("stroke-width", "1.5");
+	svg.setAttribute("aria-hidden", "true");
+	svg.setAttribute("class", "size-3.5");
+	const path = document.createElementNS(SVG, "path");
+	path.setAttribute("d", CHECK_MARK_PATH);
+	svg.append(path);
+	box.append(svg);
+	return box;
+}
+
+/**
+ * A checklist item's box (editor-tools.md, `EditorBody`): put at the start of each item of a checklist, pressed to tick or untick it where the text is
+ * written. Read only, it is the mark of the item's state and nothing happens on a press.
+ */
+export function checklistBoxes(label: () => string) {
+	return Extension.create({
+		name: "montiChecklistBoxes",
+		addProseMirrorPlugins() {
+			const checklist = nodeName("checklist");
+			return [
+				new Plugin({
+					props: {
+						decorations: (state) => {
+							const decorations: Decoration[] = [];
+							state.doc.descendants((node, pos, parent) => {
+								if (parent?.type.name !== checklist) return;
+								const checked = Boolean(node.attrs.data?.checked);
+								decorations.push(
+									Decoration.widget(pos + 1, () => checkBox(checked, label()), {
+										side: -1,
+										key: `check-${checked}`,
+										ignoreSelection: true,
+									}),
+								);
+								return false;
+							});
+							return DecorationSet.create(state.doc, decorations);
+						},
+						handleDOMEvents: {
+							mousedown: (view, event) => {
+								const box = (event.target as Element | null)?.closest?.("[data-check]");
+								if (!box) return false;
+								// The press is the box's: the caret does not move into the item.
+								event.preventDefault();
+								if (!view.editable) return true;
+								const item = box.parentElement;
+								if (!item) return true;
+								// The item's own start is just inside it; the item stands one before.
+								const pos = view.posAtDOM(item, 0) - 1;
+								const node = view.state.doc.nodeAt(pos);
+								if (!node) return true;
+								const { checked, ...rest } = (node.attrs.data ?? {}) as Record<string, unknown>;
+								const next = checked ? (Object.keys(rest).length > 0 ? rest : null) : { ...rest, checked: true };
+								view.dispatch(view.state.tr.setNodeAttribute(pos, "data", next));
+								return true;
+							},
+						},
+					},
+				}),
+			];
+		},
+	});
+}
 
 type Marked = { menuOpen: number | null; held: number | null };
 const statesKey = new PluginKey<Marked>("montiBodyStates");

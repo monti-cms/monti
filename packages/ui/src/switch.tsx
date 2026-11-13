@@ -7,7 +7,8 @@ import { useProposalDescription } from "./proposal-cue";
 /**
  * An on/off setting that takes effect at once. 34 by 20: the knob sits left when off and right when on. `proposal` marks a setting the assistant
  * turned on and nobody has touched: the track is blue. The larger hit area reaches out to the left only: a switch ends its row, and an area past its
- * right side would give the scrolling box around the row a sideways scroll.
+ * right side would give the scrolling box around the row a sideways scroll. A `readOnly` one shows a setting that cannot change here (an archived
+ * entry's picture settings), as `Checkbox` does: gray when on, the light track when off, not dimmed, no answer to the pointer.
  */
 function Switch({
 	className,
@@ -23,7 +24,7 @@ function Switch({
 			data-proposal={proposal || undefined}
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
-				"peer group/switch relative inline-flex h-5 w-[34px] shrink-0 items-center rounded-monti-full bg-(--monti-border-default) outline-none transition-colors after:absolute after:-inset-y-2 after:right-0 after:-left-3 hover:not-data-checked:not-data-disabled:bg-(--monti-border-strong) focus-visible:ring-2 focus-visible:ring-monti-contrast/50 data-checked:data-proposal:bg-(--monti-fg-proposal) data-disabled:cursor-default data-checked:bg-monti-emphasis data-disabled:opacity-45",
+				"peer group/switch relative inline-flex h-5 w-[34px] shrink-0 items-center rounded-monti-full bg-(--monti-border-default) outline-none transition-colors after:absolute after:-inset-y-2 after:right-0 after:-left-3 hover:not-data-checked:not-data-disabled:not-data-readonly:bg-(--monti-border-strong) focus-visible:ring-2 focus-visible:ring-monti-contrast/50 data-checked:data-proposal:bg-(--monti-fg-proposal) data-checked:data-readonly:bg-(--monti-fg-faint) data-disabled:cursor-default data-readonly:cursor-default data-checked:bg-monti-emphasis data-disabled:opacity-45",
 				className,
 			)}
 			{...props}

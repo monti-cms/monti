@@ -16,7 +16,7 @@
 | 주소 `/en/first-post` | `Text variant="meta" tone="faint"` | 번역 글의 주소. 읽기만 한다. |
 | 발행 상태 | `EntryStatus` | 이 언어 글의 상태(초안 · 발행됨 · 수정 중). |
 | "저장" · "미리보기" · "발행하기 ▾" · 속성 | [editor.md](editor.md)의 머리 줄과 같다 | 발행은 흐린 블록이 남아 있으면 막힌다(할 일로 알린다). 라벨은 "저장". 단축키는 툴팁에만 있다. 보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다. 원문 옆 창이나 나란히 보기처럼 속성 패널이 열려 있지 않으면 속성 `IconButton`은 눌리지 않은 바탕이다. |
-| ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록"(활동 기록으로 간다) · "내보내기" │ "이 번역 휴지통으로"(`variant="danger"`, `icon`, 아래 줄 `caption` "한국어 원문은 그대로"). 보드는 "이 번역 휴지통으로"를 보통 행으로 그렸다. 메뉴 규칙을 따라 맨 아래 위험 행으로 둔다. |
+| ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록"(활동 기록으로 간다) · "내보내기" │ 문서 도구([editor.md](editor.md)의 ⋯와 같은 묶음: 플러그인의 보기 스위치 "MDX로 보기"(앞 아이콘 `DocumentView`), "본문 폭". 코드대로 적었다, 만들며 정함 (2026-11-14)) │ "이 번역 휴지통으로"(`variant="danger"`, `icon`, 아래 줄 `caption` "한국어 원문은 그대로"). 보드는 "이 번역 휴지통으로"를 보통 행으로 그렸다. 메뉴 규칙을 따라 맨 아래 위험 행으로 둔다. |
 
 #### 글 단
 
@@ -27,7 +27,7 @@
 | 원문 보기 "끔 · 옆 창 · 나란히" | 앞에 `Text variant="note"` "원문", 그 뒤 `Segmented size="sm" inline` | "나란히"는 나란히 보기(TranslatePaired)로 바꾼다. 파일이 올라가는 동안에는 먼저 묻는다(editor.md, "올리는 중에 묻기"). |
 | 제목 | [editor.md](editor.md)의 제목 칸 | 흐린 동안에는 `Untranslated` 안의 원문 글. 치면 흐림이 사라진다. |
 | 흐린 블록 | `Untranslated`(편집기 본문에서는 `EditorBody`의 `data-untranslated`와 `data-source-placeholder`) | 아직 정하지 않은 블록. 비어 있고 원문은 자리 표시 글로만 깔려 있다. 발행되지 않는다. 블록마다 보고 정한다. 글자를 치면 자리 표시가 사라지고 친 글만 남는다. |
-| 흐린 블록의 메뉴 | `BlockHandle` + `DropdownMenu`: `DropdownMenuItem` "✦ 번역"(`Spark`) · "원문 따르기" │ `DropdownMenuSeparator` │ "지우기" | 블록마다 셋 중 하나를 고른다. |
+| 흐린 블록의 메뉴 | `BlockHandle` + `DropdownMenu`: `DropdownMenuItem` "✦ 번역"(`Spark`) · "원문 따르기"(`Link`) │ `DropdownMenuSeparator` │ "지우기"(`TrashCan`) | 블록마다 셋 중 하나를 고른다. 행마다 앞에 아이콘이 있다([menu.md](../components/menu.md), "원문 따르기"의 `Link`는 만들며 정함 (2026-11-14)). |
 | "원문 따름" 표시 | `EditorMargin` 안의 `Marker tone="keep"` "원문 따름" | 왼쪽 여백에 붙는다. 필드가 원문 값을 보일 때의 라벨과 같은 말이다(2026-11-10 소유자). 원문을 따르는 블록(코드처럼 옮길 글자가 없는 블록)에도 같은 표시가 붙는다. |
 | 원문을 따르는 블록의 메뉴 | 블록 메뉴 맨 위 `DropdownMenuItem` "따로 고치기" | 이 언어에서만 따로 고친다(`translations.setBlocks`의 `detach`). 블록 끝에 버튼을 두지 않는다. 글자를 치면 따로 고친 것이 된다(2026-11-06). |
 | 번역 제안 (블록이 비었을 때 채운 것) | `Fill` | 바탕 없는 파란 글자. 받거나 버리기는 버블에서. |

@@ -16,6 +16,9 @@ describe("the editor's document tools (doc 14, T71)", () => {
 	it("14-5 the MDX plugin's \"MDX로 보기\" is a switch in the editor's ⋯: on, the body stands beside the text as MDX and follows what is typed; off, it goes", async () => {
 		await at().run();
 		await userEvent.click(more());
+		// A row starts with its icon, as the menu's others do (menu.md).
+		await expect.element(page.getByRole("menuitemcheckbox", { name: "MDX로 보기" })).toBeVisible();
+		expect(page.getByRole("menuitemcheckbox", { name: "MDX로 보기" }).element().querySelector("svg")).not.toBeNull();
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: "MDX로 보기" }));
 		await userEvent.keyboard("{Escape}");
 		const pane = page.getByRole("complementary", { name: "MDX로 보기" });

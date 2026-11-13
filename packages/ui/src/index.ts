@@ -396,6 +396,7 @@ export type {
 /** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */
 export {
 	Calendar,
+	CHECK_MARK_PATH,
 	Combobox,
 	cn,
 	DEFAULT_UI_LABELS,

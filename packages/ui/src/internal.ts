@@ -35,7 +35,7 @@ export { ChatMessageActions, ChatQueueItem } from "./chat-actions";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { ChatThread } from "./chat-thread";
-export { Checkbox } from "./checkbox";
+export { CHECK_MARK_PATH, Checkbox } from "./checkbox";
 export { Chip } from "./chip";
 export { cn } from "./cn";
 export { CodeBlock } from "./code-block";

@@ -46,6 +46,17 @@ const changelog = (widths?: number[]) =>
 		p("다음 버전은 아직 정하지 않았다."),
 	);
 
+/** An entry with a checklist: one item ticked, one not. */
+const todo = () =>
+	doc(p("내보내기 전에 할 일."), {
+		id: `b_${++count}`,
+		type: "checklist",
+		children: [
+			{ id: `b_${++count}`, type: "listItem", attrs: { checked: true }, content: text("초안 쓰기") },
+			{ id: `b_${++count}`, type: "listItem", content: text("발행하기") },
+		],
+	});
+
 /** An entry with two footnotes, stored out of order: "처음" is noted second in the text but kept first (T62). */
 const noted = () =>
 	doc(
@@ -179,6 +190,9 @@ type Kind =
 	| "table"
 	| "tableSized"
 	| "footnotes"
+	| "checklist"
+	| "addressInTab"
+	| "related"
 	| "proposed"
 	| "proposedFields"
 	| "proposedStale"
@@ -186,6 +200,18 @@ type Kind =
 	| "conditional"
 	| "nestedChoice"
 	| "strayOption";
+
+/** The blog whose posts point at other posts: a relation to documents, some of them drafts. */
+const withRelated = defineSchema({
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			...schema.collections.post,
+			fields: { ...schema.collections.post?.fields, related: { kind: "relation", to: "post" } },
+		},
+	},
+});
 
 /** The blog with a conditional field on its posts (doc 19): what a post is, and what each kind of post asks for. */
 const withFormat = defineSchema({
@@ -258,6 +284,15 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 			collection: "post",
 			values: {
 				label: "게시글",
+				// The address in a tab of its own: a to-do for it marks that tab (screens/editor.md).
+				...(kind === "addressInTab"
+					? {
+							layout: [
+								{ tab: "기본", fields: ["summary", "subtitle", "cover", "category"] },
+								{ tab: "주소", fields: ["slug"] },
+							],
+						}
+					: {}),
 				fields: {
 					title: { label: "제목" },
 					slug: { label: "주소" },
@@ -265,6 +300,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					subtitle: { label: "부제" },
 					cover: { label: "대표 이미지" },
 					category: { label: "카테고리" },
+					...(kind === "related" ? { related: { label: "관련 글" } } : {}),
 					...(kind === "nestedChoice"
 						? {
 								videoHost: { label: "영상 위치", optionLabels: { own: "직접 올림", embed: "퍼가기" } },
@@ -315,7 +351,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					collection: "post",
 					locale: "ko",
 					title: kind === "untitled" ? "" : "첫 번째 글",
-					...(kind === "untitled" ? {} : { slug: "first-post" }),
+					...(kind === "untitled" || kind === "addressInTab" ? {} : { slug: "first-post" }),
 					values: {
 						summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.",
 						...(devCategoryGroup ? { category: devCategoryGroup } : {}),
@@ -340,7 +376,9 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 								? changelog([20, 50, 30])
 								: kind === "footnotes"
 									? noted()
-									: firstPost(),
+									: kind === "checklist"
+										? todo()
+										: firstPost(),
 				},
 		admin,
 	)) as { output: { id: string } };
@@ -370,7 +408,13 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 		let id = "";
 		const made = await storySite({
 			schema:
-				kind === "nestedChoice" ? withNested : kind === "conditional" || kind === "strayOption" ? withFormat : schema,
+				kind === "nestedChoice"
+					? withNested
+					: kind === "conditional" || kind === "strayOption"
+						? withFormat
+						: kind === "related"
+							? withRelated
+							: schema,
 			auth: { password: true },
 			// A site signs its preview links: without a secret "Preview" has nothing to open.
 			secret: "story secret",
@@ -545,7 +589,7 @@ export const PublishBlocked: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, all } = await opened(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "발행하기" }));
-		await all.findByText("발행할 수 없습니다 · 할 일 2개를 먼저 해 주세요", {}, wait);
+		await all.findByText("할 일 2개가 남았습니다", {}, wait);
 		await all.findByRole("button", { name: /제목 쓰기/ }, wait);
 	},
 };

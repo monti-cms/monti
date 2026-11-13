@@ -14,6 +14,7 @@ const {
 	NoStorage,
 	LibraryWindow,
 	FileInBody,
+	MissingImage,
 	ManyInBody,
 	TranslationEndsInPicture,
 	OnlyWholeBlocks,
@@ -905,6 +906,11 @@ describe("an image in the text", () => {
 		// The shape is measured on the picture's size as the body frames it (the story's file is drawn at another shape, so the body is what is checked).
 		await userEvent.click(dialog.getByRole("button", { name: "1:1" }));
 		await expect.element(dialog.getByRole("button", { name: "처음으로" })).toBeVisible();
+		// A ghost button beside "취소", as tall as it (button.md): not a text button.
+		const reset = dialog.getByRole("button", { name: "처음으로" }).element();
+		const cancel = dialog.getByRole("button", { name: "취소" }).element();
+		expect(reset.getAttribute("data-slot")).toBe("button");
+		expect(reset.getBoundingClientRect().height).toBe(cancel.getBoundingClientRect().height);
 		await userEvent.click(dialog.getByRole("button", { name: "오른쪽으로 돌리기" }));
 		await userEvent.click(dialog.getByRole("button", { name: "처음으로" }));
 		await expect.element(dialog.getByRole("button", { name: "처음으로" })).not.toBeInTheDocument();
@@ -1358,7 +1364,10 @@ describe("opening a body with files", () => {
 
 	it("09-1 T110 a read turned away leaves no file blank: each says it is not there, as a block's own read did", async () => {
 		await recorded({ refuse: true, bare: true }).run();
-		await expect.element(body().getByText("파일 없음")).toBeVisible();
+		// Every picture and file says it in words, the pictures as a file does (none is an empty frame that reads as loading).
+		const blocks = () => [...body().element().querySelectorAll("[data-block=image], [data-block=file]")];
+		await expect.poll(() => blocks().length).toBeGreaterThan(0);
+		await expect.poll(() => blocks().every((block) => block.textContent?.includes("파일 없음"))).toBe(true);
 	});
 });
 
@@ -1828,7 +1837,7 @@ describe("a read-only body with the keyboard (T133)", () => {
 		const alt = page.getByRole("textbox", { name: "대체 텍스트" });
 		await expect.element(alt).toHaveValue("화면에 뜬 코드");
 		// To read, not to write: the field is the one a click shows in a read-only body (T130).
-		await expect.element(alt).toBeDisabled();
+		await expect.element(alt).toHaveAttribute("readonly");
 
 		// Escape: the card first; then the bar, and the picture is unpicked with the focus still on it.
 		await userEvent.keyboard("{Escape}");
@@ -1974,5 +1983,25 @@ describe("a save the server refuses", () => {
 		await userEvent.keyboard("{End} 더");
 		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
 		await expect.element(page.getByText("없는 파일입니다.")).toBeVisible();
+	});
+});
+
+describe("a picture or file that is gone, or picked", () => {
+	it("a picture whose file the library no longer has says so in red, as a file does, instead of a frame that reads as loading", async () => {
+		await MissingImage.run();
+		const block = body().element().querySelector("[data-block=image]") as HTMLElement;
+		await expect.poll(() => block.querySelector("[data-slot=file-block]")?.textContent).toContain("파일 없음");
+		expect(block.querySelector("[data-slot=file-block]")?.textContent).toContain("지운 그림");
+		expect(block.querySelector("[data-slot=image]")).toBeNull();
+	});
+
+	it("a picked file has the same 2px line as a picked picture", async () => {
+		await FileInBody.run();
+		const file = () => body().element().querySelector("[data-block=file]") as HTMLElement;
+		await expect.poll(() => file()?.querySelector("[data-slot=file-block]")).not.toBeNull();
+		await userEvent.click(page.elementLocator(file().querySelector("[data-slot=file-block]") as HTMLElement));
+		await expect.poll(() => file().querySelector("[data-slot=block-box]")?.hasAttribute("data-selected")).toBe(true);
+		const line = file().querySelector("[data-slot=block-line]") as HTMLElement;
+		expect(getComputedStyle(line).outlineWidth).toBe("2px");
 	});
 });

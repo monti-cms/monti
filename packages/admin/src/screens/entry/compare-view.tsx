@@ -284,9 +284,8 @@ export function CompareView({
 				{start}
 				<Inline ref={toText} gap={16} justify="end" paddingX={12}>
 					{places.data ? (
-						<Text variant="note" tone="subtle">
-							{t("compare.places", { count: differing.length })}
-						</Text>
+						// The count of what differs is the screen's news: plain words, not a quiet label (screens/editor-more.md).
+						<Text variant="note">{t("compare.places", { count: differing.length })}</Text>
 					) : null}
 					<Separator orientation="vertical" length="control" flush />
 					{mode === "conflict" ? (

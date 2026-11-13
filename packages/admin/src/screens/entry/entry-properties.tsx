@@ -30,6 +30,7 @@ import {
 	Input,
 	Label,
 	List,
+	MenuValue,
 	Option,
 	OrderedRow,
 	PropertyGroup,
@@ -55,7 +56,7 @@ import { PickOne } from "../settings/pick-one";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
 import { MediaField, SharedMediaValue } from "./media-field";
 import { FieldChange } from "./translation";
-import type { EntryEditorModel } from "./use-entry-editor";
+import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
 import { useRelationField } from "./use-relation-field";
 
 /** Whether a field holds something: an empty text or an empty list is no value. */
@@ -316,11 +317,8 @@ function RelationSingleInput({
 						return (
 							<ComboboxItem key={group} value={group}>
 								{rel.labelOf(group)}
-								{unpublished && (
-									<Text variant="micro" tone="subtle">
-										({t("relations.unpublished")})
-									</Text>
-								)}
+								{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
+								{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
 							</ComboboxItem>
 						);
 					}}
@@ -408,11 +406,8 @@ function RelationManyInput({
 						return (
 							<ComboboxItem key={group} value={group}>
 								{rel.labelOf(group)}
-								{unpublished && (
-									<Text variant="micro" tone="subtle">
-										({t("relations.unpublished")})
-									</Text>
-								)}
+								{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
+								{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
 							</ComboboxItem>
 						);
 					}}
@@ -493,11 +488,8 @@ function RelationOrderedManyInput({
 							return (
 								<ComboboxItem key={group} value={group}>
 									{rel.labelOf(group)}
-									{unpublished && (
-										<Text variant="micro" tone="subtle">
-											({t("relations.unpublished")})
-										</Text>
-									)}
+									{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
+									{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
 								</ComboboxItem>
 							);
 						}}
@@ -1157,22 +1149,31 @@ export function EntryProperties({
 				return field?.kind === "conditional" ? [key, ...Object.values(field.fields).flatMap(allUnder)] : [key];
 			});
 
+	/** The publish to-dos (doc 02): those that point at a field mark its tab. */
+	const tasks = (editor.loaded as EntryRead | null)?.tasks;
+
 	if (!picked) return null;
 	return (
 		<PropertyPanel
 			label={t("entry.properties")}
 			value={String(layout.indexOf(picked))}
 			onValueChange={(next) => onTab(Number(next))}
-			tabs={layout.map((each, index) => ({
-				value: String(index),
-				label: each.tab,
-				// A proposal waiting in a tab that is not the open one: a blue dot by its name (screens/editor.md).
-				...(each !== picked &&
-				!readOnly &&
-				tabFields(each).some((field) => editor.draft.cell(fieldPath(field)).kind === "proposed")
-					? { dot: "proposal" as const, dotLabel: t("entry.proposal.tab") }
-					: {}),
-			}))}
+			tabs={layout.map((each, index) => {
+				const fields = each === picked || readOnly ? [] : tabFields(each);
+				// Of a tab that is not the open one (screens/editor.md): a field a publish to-do points at gives an orange dot by its name; else a
+				// proposal waiting in it, a blue one. What blocks publishing comes first.
+				const toFix = (tasks ?? []).some((task) => task.field !== undefined && fields.includes(task.field));
+				const proposed = fields.some((field) => editor.draft.cell(fieldPath(field)).kind === "proposed");
+				return {
+					value: String(index),
+					label: each.tab,
+					...(toFix
+						? { dot: "warning" as const, dotLabel: t("entry.todo.tab") }
+						: proposed
+							? { dot: "proposal" as const, dotLabel: t("entry.proposal.tab") }
+							: {}),
+				};
+			})}
 		>
 			{runs(picked.fields).map((run) => (
 				<PropertyGroup key={run.key} title={run.title}>

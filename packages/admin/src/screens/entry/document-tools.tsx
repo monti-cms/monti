@@ -13,7 +13,7 @@ import {
 	ResizablePane,
 	Text,
 } from "@monti-cms/ui";
-import { FitToWidth } from "@monti-cms/ui/icons";
+import { DocumentView, FitToWidth } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 
@@ -67,6 +67,7 @@ export function DocumentToolRows({ tools, onView }: { tools: Tools; onView?: (vi
 						onView?.(next);
 					}}
 				>
+					<DocumentView aria-hidden />
 					{each.label[language]}
 				</DropdownMenuCheckboxItem>
 			))}

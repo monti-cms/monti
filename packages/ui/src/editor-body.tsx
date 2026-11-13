@@ -21,7 +21,8 @@ import { cn } from "./cn";
  *   caption) still take text.
  * - `data-covered`: a block that is one thing, inside a range picked from a text (a drag or Shift+arrow that went over it): it stands on the
  *   selection's ground, as picked words do.
- * - `data-checked` on a checklist's item (`ul[data-checklist]`): its box is ticked, drawn like `Checkbox` (14px, the faint ring; ticked, the ink ring and fill).
+ * - `data-check`, the box at the start of a checklist's item (`ul[data-checklist]`), and `data-checked` on the item: drawn like `Checkbox` (14px, the
+ *   faint ring; ticked, the ink ring and fill with its ✓). Where the text is written (`contenteditable`) the box shows the hand and `Checkbox`'s hover.
  */
 const EDITOR_BODY = cn(
 	"relative flex grow flex-col text-monti-reading text-monti-default outline-none [&_.ProseMirror]:outline-none",
@@ -37,8 +38,11 @@ const EDITOR_BODY = cn(
 	"[&_li]:my-0 [&_li]:pl-monti-4",
 	"[&_ul[data-checklist]]:list-none [&_ul[data-checklist]]:pl-monti-4",
 	"[&_ul[data-checklist]>li]:relative [&_ul[data-checklist]>li]:pl-monti-24",
-	"[&_ul[data-checklist]>li]:before:absolute [&_ul[data-checklist]>li]:before:top-monti-8 [&_ul[data-checklist]>li]:before:left-0 [&_ul[data-checklist]>li]:before:size-3.5 [&_ul[data-checklist]>li]:before:cursor-pointer [&_ul[data-checklist]>li]:before:rounded-monti-sm [&_ul[data-checklist]>li]:before:border-[1.5px] [&_ul[data-checklist]>li]:before:border-monti-faint [&_ul[data-checklist]>li]:before:content-['']",
-	"[&_ul[data-checklist]>li[data-checked]]:text-monti-subtle [&_ul[data-checklist]>li[data-checked]]:line-through [&_ul[data-checklist]>li[data-checked]]:before:border-monti-contrast [&_ul[data-checklist]>li[data-checked]]:before:bg-monti-emphasis",
+	// A checklist item's box is the `data-check` the editor puts at the item's start: `Checkbox`'s 14px box, its ✓ drawn when the item is ticked. While the
+	// text is written it is pressed to tick and answers the pointer as `Checkbox` does (`CHECK_HOVER`); read only, it is a mark.
+	"[&_[data-check]]:absolute [&_[data-check]]:top-monti-8 [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:items-center [&_[data-check]]:justify-center [&_[data-check]]:rounded-monti-sm [&_[data-check]]:border-[1.5px] [&_[data-check]]:border-monti-faint [&_[data-check]]:text-monti-on-emphasis [&_[data-check]]:transition-colors [&_[data-check]_svg]:invisible",
+	"[&_li[data-checked]>[data-check]]:border-monti-contrast [&_li[data-checked]>[data-check]]:bg-monti-emphasis [&_li[data-checked]>[data-check]_svg]:visible",
+	"[&_[contenteditable=true]_[data-check]]:cursor-pointer [&_[contenteditable=true]_[data-check]:hover]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&_[contenteditable=true]_li:not([data-checked])>[data-check]:hover]:border-(color:--monti-fg-muted)",
 	// A quote, code, a table and the divider.
 	"[&_blockquote]:mt-0 [&_blockquote]:mb-monti-20 [&_blockquote]:border-l-2 [&_blockquote]:border-monti-strong [&_blockquote]:pl-monti-16 [&_blockquote]:text-monti-muted [&_blockquote>*:last-child]:mb-0",
 	"[&_pre]:mt-0 [&_pre]:mb-monti-20 [&_pre]:overflow-x-auto [&_pre]:rounded-monti-lg [&_pre]:bg-monti-muted [&_pre]:px-monti-16 [&_pre]:py-monti-12 [&_pre]:font-mono [&_pre]:text-monti-code",
@@ -51,7 +55,7 @@ const EDITOR_BODY = cn(
 	"[&_a]:underline [&_a]:decoration-monti-strong [&_a]:underline-offset-4",
 	"[&_:not(pre)>code]:rounded-monti-sm [&_:not(pre)>code]:bg-monti-muted [&_:not(pre)>code]:px-monti-4 [&_:not(pre)>code]:font-mono",
 	// A footnote's number in the text (its order, `data-n`), and the footnotes together at the end under a rule, each with its number in the margin.
-	"[&_[data-footnote-ref]]:cursor-pointer [&_[data-footnote-ref]]:px-px [&_[data-footnote-ref]]:align-super [&_[data-footnote-ref]]:text-monti-caption [&_[data-footnote-ref]]:text-monti-muted [&_[data-footnote-ref]]:after:content-[attr(data-n)]",
+	"[&_[data-footnote-ref]]:cursor-pointer [&_[data-footnote-ref]]:px-px [&_[data-footnote-ref]]:align-super [&_[data-footnote-ref]]:text-monti-caption [&_[data-footnote-ref]]:text-monti-muted [&_[data-footnote-ref]]:after:content-[attr(data-n)] [&_[data-footnote-ref]:hover]:text-monti-default [&_[data-footnote-ref]:hover]:underline [&_[data-footnote-ref]:hover]:underline-offset-2",
 	"[&_[data-footnote]]:relative [&_[data-footnote]]:mb-monti-4 [&_[data-footnote]]:pl-monti-24 [&_[data-footnote]]:text-monti-body [&_[data-footnote]]:text-monti-muted [&_[data-footnote]]:before:absolute [&_[data-footnote]]:before:left-0 [&_[data-footnote]]:before:cursor-pointer [&_[data-footnote]]:before:content-[attr(data-n)_'.']",
 	"[&_[data-footnotes-start]]:mt-monti-32 [&_[data-footnotes-start]]:border-monti-default [&_[data-footnotes-start]]:border-t [&_[data-footnotes-start]]:pt-monti-16",
 	// States.

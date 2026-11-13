@@ -19,7 +19,18 @@ import {
 	HeldBlock,
 	MenuShortcut,
 } from "@monti-cms/ui";
-import { ArrowDown, ArrowUp, Copy, Repeat, Spark, TextAlignLeft, TrashCan } from "@monti-cms/ui/icons";
+import {
+	ArrowDown,
+	ArrowUp,
+	Copy,
+	Link,
+	Repeat,
+	Row,
+	Spark,
+	TextAlignLeft,
+	TrashCan,
+	Unlink,
+} from "@monti-cms/ui/icons";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
@@ -308,6 +319,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 									</DropdownMenuItem>
 								) : null}
 								<DropdownMenuItem onClick={() => decide((id) => translation.keep(id, link.from))}>
+									<Link aria-hidden />
 									{t("translation.keepSource")}
 								</DropdownMenuItem>
 							</DropdownMenuGroup>
@@ -341,6 +353,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 							{name ? <DropdownMenuLabel>{name}</DropdownMenuLabel> : null}
 							{link?.state === "followSource" && translation ? (
 								<DropdownMenuItem onClick={() => decide(translation.detach)}>
+									<Unlink aria-hidden />
 									{t("translation.detach")}
 								</DropdownMenuItem>
 							) : null}
@@ -403,6 +416,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 									checked={hasHeaderRow(node)}
 									onCheckedChange={() => run((tr, pos) => toggleHeaderRow(tr, pos))}
 								>
+									<Row aria-hidden />
 									{t("table.headerRow")}
 								</DropdownMenuCheckboxItem>
 							) : null}

@@ -9,4 +9,8 @@ describe("BlockIcon", () => {
 		const unmarked = [...offered, "template"].filter((type) => BlockIcon({ type }) === null);
 		expect(unmarked).toEqual([]);
 	});
+
+	it("[site-block] a site's own block, which names no mark, has the component mark: no row of the menu goes without", () => {
+		expect(BlockIcon({ type: "callout" })).not.toBeNull();
+	});
 });
