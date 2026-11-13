@@ -1132,7 +1132,8 @@ function FolderTabItem({
 }: {
 	label?: string;
 	count?: string;
-	locked?: boolean;
+	/** Why it cannot be moved or removed: the lock's name. */
+	locked?: string;
 	fixed?: boolean;
 }) {
 	return (
@@ -2897,7 +2898,7 @@ export const CATALOG = {
 	SheetSplit: { kind: "part", props: {} },
 	Folder: { kind: "part", props: { open: "text" } },
 	FolderTabRow: { kind: "part", props: { add: "text" } },
-	FolderTabItem: { kind: "part", props: { label: "text", count: "text", locked: "flag", fixed: "flag" } },
+	FolderTabItem: { kind: "part", props: { label: "text", count: "text", locked: "text", fixed: "flag" } },
 	FolderBody: { kind: "part", props: {} },
 	FieldTree: { kind: "part", props: {} },
 	FieldLine: {

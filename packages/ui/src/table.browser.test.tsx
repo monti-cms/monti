@@ -13,6 +13,8 @@ import {
 	Table,
 	TableBody,
 	TableCell,
+	TableHead,
+	TableHeader,
 	TableRow,
 } from "./index";
 
@@ -448,5 +450,57 @@ describe("A cut cell", () => {
 		await userEvent.hover(words(), { position: { x: 6, y: 6 } });
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		expect(tip()).toBe(null);
+	});
+});
+
+describe("A row the keyboard comes to at a scrolled edge (T190)", () => {
+	const list = (
+		// A box that scrolls its rows under the table's stuck header, as the page does, with the 8px every scrolling box keeps.
+		<div data-testid="scroll" style={{ height: 240, overflowY: "auto", scrollPaddingBlock: 8 }}>
+			<Table container="none">
+				<TableHeader>
+					<TableRow>
+						<TableHead>제목</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{Array.from({ length: 24 }, (_, index) => (
+						<TableRow key={index}>
+							<TableCell>
+								<RowTitle title={<RowLink href={`#/${index}`}>{`글 ${index + 1}`}</RowLink>} />
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
+		</div>
+	);
+	const edges = () => {
+		const link = document.activeElement as HTMLElement;
+		const row = (link.closest("tr") as HTMLElement).getBoundingClientRect();
+		const box = page.getByTestId("scroll").element().getBoundingClientRect();
+		const head = (document.querySelector("thead th") as HTMLElement).getBoundingClientRect();
+		return { link: link.textContent, above: row.top - head.bottom, below: box.bottom - row.bottom };
+	};
+
+	it("going down, the whole row is in the box, its ring's lower side too; going up, the row is out from under the stuck header", async () => {
+		render(list);
+		await expect.element(page.getByRole("link", { name: "글 1", exact: true })).toBeVisible();
+		// Down past the fold, one row at a time.
+		for (let index = 0; index < 12; index++) {
+			await userEvent.keyboard("{Tab}");
+			const at = edges();
+			expect(at.link).toBe(`글 ${index + 1}`);
+			expect(at.below, `row ${index + 1}, going down`).toBeGreaterThanOrEqual(0);
+			expect(at.above, `row ${index + 1}, going down`).toBeGreaterThanOrEqual(0);
+		}
+		// And back up: each row the keyboard comes to stands whole under the header.
+		for (let index = 10; index >= 0; index--) {
+			await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+			const at = edges();
+			expect(at.link).toBe(`글 ${index + 1}`);
+			expect(at.above, `row ${index + 1}, going up`).toBeGreaterThanOrEqual(0);
+			expect(at.below, `row ${index + 1}, going up`).toBeGreaterThanOrEqual(0);
+		}
 	});
 });

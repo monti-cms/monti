@@ -34,7 +34,7 @@ const REMOVED = "text-monti-faint line-through decoration-1";
  * `group` makes the line a group's: a grey band with its name in sans, bold. A field that cannot be moved has no `grip`; its place stays empty so the names
  * line up. With `gripProps` the grip is the button the field is dragged by. `changed` is an unsaved change; `problems` (its name) puts a red dot after
  * the name for a field with something to fix before saving; `locked` (its name) puts a lock after the kind
- * for a field a plugin placed. `onOpen` makes the line open the field: its name is the button, and the whole line is its target. `children` sit at the end of
+ * for a field a plugin placed. The dots and the lock stand over the line's button, so a pointer finds them (the lock's tooltip says why). `onOpen` makes the line open the field: its name is the button, and the whole line is its target. `children` sit at the end of
  * the line, over the kind (the row's own buttons). `motion` moves the line while it makes room for another; `dragging` is the gap the line in hand left;
  * `lifted` is the line in hand itself, drawn by the `Sortable` overlay: the whole line floats on the page ground with the floating shadow (list.md, section
  * on dragging).
@@ -62,6 +62,7 @@ function FieldRow({
 	lifted = false,
 	className,
 	children,
+	onClick,
 	...props
 }: Omit<ComponentProps<"li">, "children" | "style"> & {
 	name: ReactNode;
@@ -112,6 +113,11 @@ function FieldRow({
 				lifted && HELD,
 				className,
 			)}
+			onClick={(event) => {
+				onClick?.(event);
+				// The marks stand over the line's button: a press on one still opens the line, as a press anywhere else on it does.
+				if (onOpen && (event.target as Element).closest("[data-slot=change-dot], [data-slot=lock-mark]")) onOpen();
+			}}
 			{...props}
 		>
 			<span className="flex text-monti-faint">
@@ -147,8 +153,9 @@ function FieldRow({
 				) : (
 					name
 				)}
-				{changed && <ChangeDot label={changedLabel} />}
-				{problems && <ChangeDot tone="danger" label={problems} />}
+				{/* The row's button covers the row: its marks stand over that layer, where a pointer finds them. */}
+				{changed && <ChangeDot label={changedLabel} className="relative z-1" />}
+				{problems && <ChangeDot tone="danger" label={problems} className="relative z-1" />}
 			</span>
 			<span className="min-w-0 truncate text-monti-note text-monti-subtle">
 				{label}
@@ -157,7 +164,8 @@ function FieldRow({
 			</span>
 			<span className="flex items-center justify-end gap-monti-6 font-mono text-monti-meta text-monti-muted">
 				{kind}
-				{locked && <LockMark label={locked} flush className="size-[11px]" />}
+				{/* Over the row's button, so the pointer finds the lock and its tooltip says why; the keyboard stops on it after the row's name. */}
+				{locked && <LockMark label={locked} flush className="relative z-1 size-[11px]" />}
 			</span>
 			{children}
 		</Root>

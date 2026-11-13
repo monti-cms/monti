@@ -47,8 +47,10 @@ function Table({
 					// With no widths set, the columns take their content's width and a column that ends in "…" (the title) takes what is left.
 					layout === "auto" && !columns && "[&_[data-truncate]]:w-full",
 					// The row's rule does not stay with stuck cells: each cell draws it at its own foot, so the rows pass under a line.
+					// What the keyboard comes to in a row is scrolled out from under the stuck header, not left behind it: the head's 40px and the row's
+					// own room over its words. (The scroll box's own 8px only clears its edge, which the header covers.)
 					(stickyHeader ?? container === "none") &&
-						"[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)] [&_thead_tr]:border-b-transparent",
+						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)] [&_thead_tr]:border-b-transparent",
 					className,
 				)}
 				style={width === undefined ? style : { ...style, width }}
@@ -312,7 +314,9 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 			{
 				draggable: false,
 				className: cn(
-					"cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset",
+					// Its ring is the row's (the layer over the whole row), taller than its own words: scrolled to at the box's foot, it brings the
+					// rest of the row with it (a two-line row's second line too), so the ring's lower side is not cut.
+					"scroll-mb-8 cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset",
 					className,
 				),
 			},

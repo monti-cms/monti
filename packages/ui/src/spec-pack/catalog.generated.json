@@ -1100,8 +1100,8 @@
 					"type": "string"
 				},
 				"locked": {
-					"kind": "flag",
-					"type": "boolean"
+					"kind": "text",
+					"type": "string"
 				}
 			},
 			"events": []

@@ -38,7 +38,7 @@ export const Pages: Story = {
 				<FolderTab value="meta" count={3}>
 					분류
 				</FolderTab>
-				<FolderTab value="seo" count={2} locked draggable={false}>
+				<FolderTab value="seo" count={2} locked="SEO 플러그인이 둔 탭" draggable={false}>
 					검색 노출
 				</FolderTab>
 			</FolderTabsList>

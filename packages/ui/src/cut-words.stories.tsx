@@ -17,7 +17,7 @@ const LONG = "리액트 19 마이그레이션에서 서버 컴포넌트와 액�
 export const Widths: Story = {
 	render: () => (
 		<Stack gap={8}>
-			<Box width="field">
+			<Box width="menu">
 				<Inline minWidth={0}>
 					<CutWords>{LONG}</CutWords>
 				</Inline>
@@ -32,7 +32,7 @@ export const Widths: Story = {
 /** Pointed at while cut: the tooltip says the words whole, and wraps them. */
 export const Pointed: Story = {
 	render: () => (
-		<Box width="field">
+		<Box width="menu">
 			<Inline minWidth={0}>
 				<CutWords>{LONG}</CutWords>
 			</Inline>
@@ -46,7 +46,7 @@ export const Pointed: Story = {
 /** With `stop`, the words are a stop of the Tab key while they are cut: the keyboard alone reads them whole (a banner's sentence). */
 export const KeyboardStop: Story = {
 	render: () => (
-		<Box width="field">
+		<Box width="menu">
 			<Inline minWidth={0}>
 				<CutWords stop>{LONG}</CutWords>
 			</Inline>
