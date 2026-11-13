@@ -115,6 +115,20 @@ const STATUS: Record<EntryState, EntryStatusKind> = {
 
 const SAVE_KEYS = ["mod", "s"] as const;
 
+/**
+ * The field of the panel's layout a stored field sits under: itself, or the conditional field at the top of the options it is in, however
+ * deep (a conditional field may sit in another's option, doc 19).
+ */
+function topField(stored: ReturnType<typeof storedFields>, field: string) {
+	let at = field;
+	const seen = new Set<string>();
+	while (stored[at]?.under && !seen.has(at)) {
+		seen.add(at);
+		at = stored[at]?.under?.field ?? at;
+	}
+	return at;
+}
+
 /** Where a to-do row points, in the panel or the body (editor.md: the row's detail says only the place). */
 const taskPlace = (task: PublishTask) => (task.field && task.field !== "doc" ? "panel" : "body");
 
@@ -293,7 +307,7 @@ export function EntryEditor({
 			read.entry.locale,
 		);
 		for (const [field, each] of Object.entries(stored)) {
-			if (!inPanel.has(each.under?.field ?? field) || hidden.has(field)) continue;
+			if (!inPanel.has(topField(stored, field)) || hidden.has(field)) continue;
 			// In a translation a field that is the same in every language is the source's, read only: nothing is drawn in it.
 			if (translated && localeModeOf(field, each) === "same") continue;
 			paths.add(fieldPath(field));
@@ -327,7 +341,7 @@ export function EntryEditor({
 		const field = path === "slug" ? "slug" : path.slice("values.".length);
 		setPanel(true);
 		const layout = panelLayout(schema.data, collection, t("entry.defaultTab"));
-		const under = storedFields(structure?.collections[collection])[field]?.under?.field ?? field;
+		const under = topField(storedFields(structure?.collections[collection]), field);
 		const index = layout.findIndex((each) =>
 			each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(under)),
 		);
@@ -453,7 +467,7 @@ export function EntryEditor({
 			setPanel(true);
 			const layout = panelLayout(schema.data, collection, t("entry.defaultTab"));
 			// A field of a conditional field's option sits under that field, in its tab (doc 19).
-			const under = storedFields(schema.data?.schema.collections[collection])[task.field]?.under?.field ?? task.field;
+			const under = topField(storedFields(schema.data?.schema.collections[collection]), task.field);
 			const index = layout.findIndex((each) =>
 				each.fields.some((entry) => (typeof entry === "string" ? entry : entry.fields).includes(under)),
 			);

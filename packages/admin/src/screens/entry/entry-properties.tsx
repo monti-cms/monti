@@ -696,6 +696,8 @@ export function EntryProperties({
 							id={id}
 							checked={value === on}
 							disabled={readOnly}
+							// A choice the assistant proposed and nobody has taken: the switch stands as proposed, in the proposal's blue.
+							proposal={proposal}
 							onCheckedChange={(checked) => editor.set(path, checked ? on : null)}
 						/>
 					</Option>
@@ -921,9 +923,7 @@ export function EntryProperties({
 			.flatMap((entry) => (typeof entry === "string" ? [entry] : entry.fields))
 			.flatMap((key) => {
 				const field = top[key];
-				return field?.kind === "conditional"
-					? [key, ...Object.values(field.fields).flatMap((group) => Object.keys(group))]
-					: [key];
+				return field?.kind === "conditional" ? [key, ...Object.values(field.fields).flatMap(allUnder)] : [key];
 			});
 
 	if (!picked) return null;
