@@ -32,6 +32,7 @@ export default {
 				"seo",
 				"mdx",
 				"examples",
+				"showcase",
 				"scripts",
 				"ci",
 				"deps",
