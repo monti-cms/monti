@@ -1,4 +1,5 @@
 import type { Block } from "../body/doc";
+import { coreMessages, formatMessage } from "../messages";
 import type { CodeColors, CodeToken } from "./highlight";
 import {
 	ANCHOR,
@@ -14,8 +15,14 @@ import {
 
 type H<Node> = (type: unknown, props: Record<string, unknown> | null, ...children: unknown[]) => Node;
 
-/** The words of the copy button, in the entry's language (doc 17). */
-const COPY = { ko: ["복사", "복사함"], en: ["Copy", "Copied"] } as const;
+/** The words of the copy button, in the entry's language (doc 17): Korean for a Korean entry, English otherwise. */
+const copyWords = (locale: string | undefined) => {
+	const language = locale?.startsWith("ko") ? "ko" : "en";
+	return [
+		formatMessage([coreMessages], language, { key: "code.copy" }),
+		formatMessage([coreMessages], language, { key: "code.copied" }),
+	];
+};
 
 /** The element id of a code link's lines: `code-<block>-<label>`. */
 export const codeLineId = (block: string, anchor: string) => `code-${block}-${anchor}`;
@@ -66,7 +73,7 @@ export function drawCodeBlock<Node>(
 	const effects = effectsOf(block);
 	const text = textEffects(block, code);
 	const notes: { text: string; number: number }[] = [];
-	const [copy, copied] = COPY[options.locale?.startsWith("ko") ? "ko" : "en"];
+	const [copy, copied] = copyWords(options.locale);
 
 	const lineNode = (index: number): Node => {
 		const tokens: CodeToken[] = lines[index] ?? [];

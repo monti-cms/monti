@@ -6,7 +6,7 @@ export type CodeRef = { block: string; anchor: string };
 
 /**
  * The code blocks a body draws, by the ids a code link may name: a block's own id, and in a translation the id of the source block it came from
- * (`link.from`), since a link copied from the source names that one (doc 17, "끊김").
+ * (`link.from`), since a link copied from the source names that one (doc 17, broken links).
  */
 export function codeBlocksByRef(doc: Doc) {
 	const byId = new Map<string, { id: string; labels: Map<string, { start: number; end: number }> }>();
