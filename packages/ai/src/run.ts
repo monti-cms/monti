@@ -789,6 +789,14 @@ export async function* runAssistant(
 					}
 				}
 			} catch (error) {
+				// What the service counted for a turn that broke off was spent all the same: stopped, its request gone, or the service's own
+				// failure.
+				if (error instanceof ProviderError && error.usage) {
+					usage.input += error.usage.input;
+					usage.output += error.usage.output;
+					if (error.usage.cached) usage.cached = (usage.cached ?? 0) + error.usage.cached;
+					await monti.keys.addUsage(key.id, error.usage.input + error.usage.output);
+				}
 				if (await stopRequested()) {
 					await finish({ status: "stopped" });
 					return;
@@ -798,12 +806,6 @@ export async function* runAssistant(
 					return;
 				}
 				if (!(error instanceof ProviderError)) throw error;
-				// What the service counted for a turn that broke off was spent all the same.
-				if (error.usage) {
-					usage.input += error.usage.input;
-					usage.output += error.usage.output;
-					await monti.keys.addUsage(key.id, error.usage.input + error.usage.output);
-				}
 				// The service said no (credits, a limit) or broke off: an answer in the conversation, with the key's name (doc 10, errors). An answer
 				// that began and broke off is no answer: nothing of it is kept, and the run can be gone on with, which asks for that turn again.
 				const detail = withoutKey(error.detail, key.secret);
@@ -883,6 +885,9 @@ export function withoutKey(detail: string, secret: string): string {
 	return secret === "" ? detail : detail.split(secret).join("•••");
 }
 
+/** How long a call that was ended for its silence is given to say what it had counted. */
+const ENDED_MS = 250;
+
 /**
  * A turn's events for as long as the service keeps saying something. When nothing comes for `idleMs` (`thinkingIdleMs` while the service has
  * said it is thinking) the call is ended (`stop`) and the turn is given up: as a service that never answered when nothing had come yet, as an
@@ -907,12 +912,26 @@ async function* whileAlive(
 			const next = await Promise.race([coming, silent]);
 			clearTimeout(timer);
 			if (next === "silent") {
-				// What the call still gives after it is ended is nobody's.
-				coming.catch(() => {});
 				stop();
+				// The call, ended, fails with what the service had counted for it (Anthropic says its input at the start): that was spent. Waited
+				// for only a moment; anything else the call still gives is nobody's.
+				let wait: ReturnType<typeof setTimeout> | undefined;
+				const ended = await Promise.race([
+					coming.then(
+						() => undefined,
+						(error: unknown) => error,
+					),
+					new Promise<undefined>((resolve) => {
+						wait = setTimeout(() => resolve(undefined), ENDED_MS);
+					}),
+				]);
+				clearTimeout(wait);
+				coming.catch(() => {});
 				throw new ProviderError(
 					any ? "interrupted" : "unreachable",
 					`The service said nothing for ${Math.round(idleMs / 1000)} seconds.`,
+					undefined,
+					ended instanceof ProviderError ? ended.usage : undefined,
 				);
 			}
 			if (next.done) return;

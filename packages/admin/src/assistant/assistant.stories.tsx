@@ -85,7 +85,13 @@ function netOf(made: StorySite): { net: Net; transport: Transport; streams: Stre
 		sent.push({ name, input, signal: options?.signal });
 		await held(name);
 		if (isLost(name)) return NO_ANSWER;
-		const answer = await made.streams(name, input, options);
+		// The server hears the page end its request only while the connection holds: once the network went, the page letting go of its
+		// request (as it does when it reads the run again) reaches nobody.
+		const server = new AbortController();
+		const ended = () => server.abort();
+		if (options?.signal?.aborted) server.abort();
+		else options?.signal?.addEventListener("abort", ended, { once: true });
+		const answer = await made.streams(name, input, { ...options, signal: server.signal });
 		if (!("events" in answer)) return answer;
 		const events = answer.events[Symbol.asyncIterator]();
 		return {
@@ -101,6 +107,7 @@ function netOf(made: StorySite): { net: Net; transport: Transport; streams: Stre
 						const next = events.next();
 						const got = await Promise.race([next, broken]);
 						if (got === "cut") {
+							options?.signal?.removeEventListener("abort", ended);
 							// Read on without the page: only the page's connection went, and the server's run is not cut.
 							void (async () => {
 								await next;
