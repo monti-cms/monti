@@ -77,3 +77,33 @@ export const file = (id: string, media: string, name?: string): NewBlock => ({
 	attrs: { media, ...(name ? { name } : {}) },
 });
 export const doc = (...blocks: NewBlock[]) => ({ type: "doc" as const, blocks });
+
+/** Words of a code block that carry a mark (a fold, a tooltip, bold): the first place they stand in the code. */
+type CodeMark = { words: string; mark: Mark };
+
+/**
+ * A code block with its file name, line numbers, line effects and regex rules (doc 17). `marks` puts a mark on the first place each of
+ * its words stands in the code; the rest is plain text.
+ */
+export function codeWithTools(
+	id: string,
+	language: string,
+	source: string,
+	attrs: { title?: string; lineNumbers?: true; lines?: unknown[]; rules?: unknown[] } = {},
+	marks: CodeMark[] = [],
+): NewBlock {
+	const spans = marks
+		.map(({ words, mark }) => ({ at: source.indexOf(words), words, mark }))
+		.filter((span) => span.at >= 0)
+		.sort((a, b) => a.at - b.at);
+	const content: Inline[] = [];
+	let from = 0;
+	for (const span of spans) {
+		if (span.at < from) continue;
+		if (span.at > from) content.push(t(source.slice(from, span.at)));
+		content.push(t(span.words, span.mark));
+		from = span.at + span.words.length;
+	}
+	if (from < source.length) content.push(t(source.slice(from)));
+	return { id, type: "codeBlock", attrs: { language, ...attrs }, content };
+}

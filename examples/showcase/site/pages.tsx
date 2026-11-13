@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createElement, type ElementType, type ReactNode } from "react";
-import { monti, reader } from "@/lib/monti";
+import { code, monti, reader } from "@/lib/monti";
 
 // The pages of the site, each for one language. The routes under `app/(site)` hand them no language (the source language, Korean); those
 // under `app/[locale]` hand them the one in their address.
@@ -202,7 +202,7 @@ function Format({ entry }: { entry: PageEntry }) {
 	);
 }
 
-function Body({ entry }: { entry: PageEntry }) {
+async function Body({ entry }: { entry: PageEntry }) {
 	if (!entry.doc) return null;
 	const toc = tocOf(entry.doc);
 	return (
@@ -219,7 +219,13 @@ function Body({ entry }: { entry: PageEntry }) {
 				</nav>
 			) : null}
 			<div className="body">
-				{renderDocument(entry.doc, { createElement: h, media: entry.media, entryPath: entry.entryPath })}
+				{renderDocument(entry.doc, {
+					createElement: h,
+					media: entry.media,
+					entryPath: entry.entryPath,
+					code: await code,
+					locale: entry.locale,
+				})}
 			</div>
 		</>
 	);

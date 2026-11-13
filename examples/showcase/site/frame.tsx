@@ -1,4 +1,5 @@
-import { PreviewBar } from "@monti-cms/next";
+import { CodeTools, PreviewBar } from "@monti-cms/next";
+import "@monti-cms/core/render.css";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import "../app/site.css";
@@ -30,6 +31,8 @@ export function SiteFrame({ lang, children }: { lang: string; children: ReactNod
 					</nav>
 					<main>{children}</main>
 				</div>
+				{/* The code blocks' copy button, folded words and code links. */}
+				<CodeTools labels={{ back: "글로 돌아가기" }} />
 				{/* One line while a preview is open, with the way out of it. */}
 				<PreviewBar labels={{ preview: "미리보기", exit: "끝내기" }} />
 			</body>

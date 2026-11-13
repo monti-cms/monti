@@ -24,6 +24,7 @@ import {
 	checklist,
 	code,
 	codeBlock,
+	codeWithTools,
 	divider,
 	doc,
 	file,
@@ -43,6 +44,7 @@ import {
 	table,
 	underline,
 } from "./body";
+import { codeBasics, codeLines, codeText, mediaBlocks, tableBlocks, textBlocks } from "./variants";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 // The env files the way `monti` and Next read them, before the config reads the environment.
@@ -591,6 +593,95 @@ await article({
 // No address yet: an empty slug is a to-do too.
 await article({ title: "주소 없는 초안", slug: "", values: { topic: "guide" } });
 
+// Code blocks (doc 17): every line effect, regex rules, folds over lines and over words, a tooltip in code, a file name, line
+// numbers, the site's languages, and code links from the text.
+const counterCode = codeWithTools(
+	"c-ts",
+	"ts",
+	`import { log } from "./log";
+const LIMIT = 10;
+export function counter(start = 0) {
+  let count = start;
+  const increment = () => {
+    count++;
+    count += 1;
+    if (count > LIMIT) console.warn("over the limit, slow down please");
+    if (Number.isNaN(count)) throw new Error("not a number");
+    log("count", count);
+    return count;
+  };
+  return { increment };
+}`,
+	{
+		title: "src/counter.ts",
+		lineNumbers: true,
+		lines: [
+			{ name: "highlight", start: 2, end: 3 },
+			{ name: "minus", start: 5, end: 6 },
+			{ name: "plus", start: 6, end: 7 },
+			{ name: "warning", start: 7, end: 8 },
+			{ name: "error", start: 8, end: 9 },
+			{ name: "focus", start: 12, end: 13 },
+			// A fold over the function's body, closed, with the line a code link names inside it.
+			{ name: "collapse", start: 4, end: 12 },
+			{ name: "anchor", start: 6, end: 7, attrs: { id: "c1" } },
+		],
+		rules: [
+			// Every "count" in bold, a tooltip on "log" in the first line, and long strings folded.
+			{ scope: "document", name: "bold", pattern: "\\bcount\\b", flags: "g" },
+			{ scope: "line", line: 0, name: "codeTip", pattern: "log", flags: "", attrs: { text: "기록을 남기는 함수" } },
+			{ scope: "document", name: "codeFold", pattern: '"[^"\\n]{20,}"', flags: "g" },
+		],
+	},
+	[
+		{ words: "LIMIT = 10", mark: { type: "codeTip", text: "한 번에 셀 수 있는 가장 큰 수" } },
+		{ words: '"not a number"', mark: { type: "codeFold" } },
+	],
+);
+const codeArticle = await article({
+	title: "코드 블록 도구를 모두 쓴 글",
+	slug: "code-tools",
+	values: { summary: "줄 효과, 정규식 규칙, 접기, 코드 안의 툴팁, 코드 링크.", topic: "guide", format: "text" },
+	doc: doc(
+		p(
+			"k-p1",
+			t("카운터는 "),
+			t("한 번에 하나씩 더한다", { type: "codeRef", block: "c-ts", anchor: "c1" }),
+			t(". 이 글자를 가리키면 코드의 그 줄이 밝아지고, 누르면 접힌 곳을 펴고 그 줄로 간다."),
+		),
+		counterCode,
+		heading("k-h1", 2, "언어마다 하나씩"),
+		codeWithTools(
+			"c-tsx",
+			"tsx",
+			'export function Button({ label }: { label: string }) {\n  return <button type="button">{label}</button>;\n}',
+			{ title: "Button.tsx" },
+		),
+		codeWithTools("c-js", "js", "const total = [1, 2, 3].reduce((sum, n) => sum + n, 0);\nconsole.log(total);"),
+		codeWithTools("c-json", "json", '{\n  "name": "monti-example-showcase",\n  "private": true\n}', {
+			title: "package.json",
+		}),
+		codeWithTools("c-bash", "bash", "pnpm db:setup\npnpm seed\npnpm dev"),
+		codeWithTools("c-css", "css", ".site {\n  max-width: 720px;\n  margin: 0 auto;\n}"),
+		codeWithTools("c-html", "html", '<figure>\n  <img src="/cover.png" alt="표지" />\n</figure>'),
+		codeWithTools("c-py", "python", 'def greet(name):\n    return f"안녕하세요, {name}"\n\nprint(greet("Monti"))', {
+			lineNumbers: true,
+			lines: [{ name: "collapse", start: 0, end: 2, attrs: { open: true } }],
+		}),
+	),
+});
+
+// A code link whose line is gone: the publish to-do lists it, and the editor draws it as broken.
+await article({
+	title: "끊긴 코드 링크가 있는 초안",
+	slug: "broken-code-link",
+	values: { topic: "guide" },
+	doc: doc(
+		p("z-p1", t("이 링크는 "), t("없는 줄", { type: "codeRef", block: "z-code", anchor: "c9" }), t("을 가리킨다.")),
+		codeWithTools("z-code", "ts", "const answer = 42;"),
+	),
+});
+
 // ── Relations from both sides, then states ──────────────────────────────────────────────────────────────────────────────────────────
 
 await save(every.id, { values: { related: [video.group, gallery.group] } });
@@ -598,8 +689,8 @@ await save(video.id, { values: { related: [every.group] } });
 // The person's side of `authors`: this save links the gallery and the link article to Lee, on their `authors`.
 await save(people.lee.id, { values: { articles: [video.group, every.group, gallery.group, external.group] } });
 
-const published = [every.id, video.id, gallery.id, external.id, archived.id, everyEn, videoEn];
-for (const ids of [published.slice(0, 5), published.slice(5)]) {
+const published = [every.id, video.id, gallery.id, external.id, archived.id, codeArticle.id, everyEn, videoEn];
+for (const ids of [published.slice(0, 6), published.slice(6)]) {
 	const { blocked } = await publish(...ids);
 	if (blocked.length > 0) throw new Error(`Publishing was blocked for ${blocked.join(", ")}.`);
 }
@@ -634,11 +725,86 @@ await write("entries.moveToFolder", { ids: [every.id, gallery.id], folder: guide
 await write("entries.moveToFolder", { ids: [internal.id], folder: domestic });
 await write("entries.moveToFolder", { ids: [video.id, archived.id], folder: news });
 
+// ── Variants: each block and mark used in its different ways, one entry per family, with a heading over each example ──────────
+
+const examples = await articleFolder("보기 모음");
+const variant = async (title: string, slug: string, body: unknown, summary: string) =>
+	article({ title, slug, values: { topic: "guide", format: "text", summary }, doc: body });
+const codeBasicsEntry = await variant(
+	"보기 모음 · 코드의 머리와 언어",
+	"examples-code-basics",
+	codeBasics(),
+	"파일 이름, 줄 번호, 언어, 긴 코드.",
+);
+const variants = [
+	await variant(
+		"보기 모음 · 글자와 목록",
+		"examples-text",
+		textBlocks(entryLink(video.group)),
+		"제목, 서식, 링크, 목록, 인용.",
+	),
+	await variant("보기 모음 · 표와 각주", "examples-tables", tableBlocks(), "표의 여러 모양과 각주."),
+	...(media
+		? [
+				await variant(
+					"보기 모음 · 그림과 파일",
+					"examples-media",
+					mediaBlocks(media),
+					"그림의 크기, 맞춤, 자르기, 돌리기, 파일.",
+				),
+			]
+		: []),
+	codeBasicsEntry,
+	await variant(
+		"보기 모음 · 코드의 줄 효과와 접기",
+		"examples-code-lines",
+		codeLines(),
+		"줄 효과 하나씩과 함께, 접기.",
+	),
+	await variant(
+		"보기 모음 · 코드의 규칙, 서식, 링크",
+		"examples-code-text",
+		codeText(),
+		"정규식 규칙, 코드 안의 서식, 툴팁, 코드 링크.",
+	),
+];
+for (const { id } of variants) {
+	const { blocked } = await publish(id);
+	if (blocked.length > 0) throw new Error(`The example ${id} was not published.`);
+}
+await write("entries.moveToFolder", { ids: variants.map(({ id }) => id), folder: examples });
+
+// A code entry in English (its code follows the source; its words are translated), and one archived: read only.
+const basicsEn = await translate(codeBasicsEntry.id, "en", {
+	title: "Examples · the code's head and languages",
+	values: { summary: "File names, line numbers, languages, long code." },
+	blocks: {
+		"cb-head": words(t("The head line")),
+		"cb-numbers": words(t("Line numbers")),
+		"cb-langs": words(t("Languages")),
+		"cb-size": words(t("Length")),
+	},
+	rest: "keepSource",
+});
+if ((await publish(basicsEn)).blocked.length > 0) throw new Error("The English code example was not published.");
+const archivedCode = await article({
+	title: "보관된 코드 글",
+	slug: "archived-code",
+	values: { topic: "guide" },
+	doc: doc(
+		p("ac-p", t("보관된 글의 코드는 읽기만 된다.")),
+		codeWithTools("ac-c", "ts", "export const archived = true;", { title: "archived.ts", lineNumbers: true }),
+	),
+});
+await publish(archivedCode.id);
+await write("entries.archive", { ids: [archivedCode.id] });
+
 const failed = await read<number>("deliveries.counts", {});
 console.log(
 	[
 		"Seeded: 4 media folders and 8 files (2 more in the trash), 6 tags, 2 people, 2 series, 1 template,",
-		"10 articles (published, changed, draft, blocked, archived, in the trash, a copy) with English and Japanese translations.",
+		"19 articles (published, changed, draft, blocked, archived, in the trash, a copy, code tools, six example entries)",
+		"with English and Japanese translations.",
 		`Deliveries: ${JSON.stringify(failed)} (the broken hook fails on purpose).`,
 	].join("\n"),
 );

@@ -22,6 +22,11 @@ export default defineConfig({
 	schema,
 	database: process.env.DATABASE_URL,
 	auth: { password: true },
+	// Code blocks: the two themes the site and the editor colour code with, and the languages the editor offers (doc 17).
+	codeBlock: {
+		themes: { light: "github-light", dark: "github-dark" },
+		languages: ["ts", "tsx", "js", "json", "bash", "css", "html", "python"],
+	},
 	plugins: [
 		...(storage ? [definePlugin({ name: "files", storage })] : []),
 		// The assistant (✦ in the admin): it works once a model service's key is added under Tools › API keys.

@@ -64,7 +64,6 @@
 	margin: 0;
 }
 .site img,
-.site pre,
 .site .toc ol,
 .site .pin {
 	border-radius: 6px;
@@ -97,12 +96,6 @@
 }
 .site .toc li[data-depth="2"] {
 	padding-left: 32px;
-}
-.site pre {
-	overflow-x: auto;
-	padding: 12px 16px;
-	background: #f1efe9;
-	font-size: 14px;
 }
 .site blockquote {
 	margin: 16px 0;

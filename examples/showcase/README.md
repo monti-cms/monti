@@ -35,6 +35,7 @@ What to connect yourself:
 |---|---|
 | `monti.schema.ts` | The structure: four collections, every field kind and option, three languages |
 | `monti.config.ts` | The storage (S3 when set, else a folder), the plugins (assistant, SEO, MDX), the hooks |
+| `seed/variants.ts` | The 보기 모음 entries: each block used in its different ways, one heading per example |
 | `seed/seed.ts` | `pnpm seed`: everything below, through the core's operations (`monti.run`) |
 | `seed/files/` | The seed's pictures and files; `seed/import/walking-notes.mdx` is a file to import by hand |
 | `app/hooks/[name]/route.ts` | Two hooks of the site's own: `/hooks/ok` keeps what it gets, `/hooks/broken` always answers 503 |
@@ -69,6 +70,10 @@ here: the switch (`pinned`) is the core's yes/no.
 | 주소 없는 초안 | draft, blocked | No address |
 | 지난 봄 소식 (보관됨) (`last-spring`) | archived | Off the site |
 | 휴지통에 넣은 글 | in the trash | Restore it |
+| 코드 블록 도구를 모두 쓴 글 (`code-tools`) | published | Line effects, regex rules, line and word folds, tooltips in code, code links and several languages in one entry |
+| 끊긴 코드 링크가 있는 초안 (`broken-code-link`) | draft, blocked | A code link whose line is gone: a publish to-do |
+| 보관된 코드 글 (`archived-code`) | archived | A code block that can only be read |
+| The six entries of the 보기 모음 folder | published | Each block used in its different ways: text and lists, tables and footnotes, pictures and files, the code's head and languages (with an English translation), the code's line effects and folds, the code's rules, marks and links. Each example has a heading that says what it shows |
 
 Also: folders 안내 › 국내 and 소식 for articles; media folders 표지 › 2026, 인물, 문서 with five pictures, a PDF and a CSV, a picture used
 nowhere at the top, and in the trash a picture and the folder 지난 행사 with a file in it; six tags (English for all, Japanese for two; 겨울 used by
@@ -241,8 +246,24 @@ Each feature as a person using Monti would recognise it. Tick what you have trie
 
 ### Code blocks
 
-To be filled after #499/#500 merge.
+- [ ] Pick a code block's language
+- [ ] Add and remove a file name
+- [ ] Turn line numbers on and off
+- [ ] Pick lines by their numbers and set a line effect: highlight, focus, added, removed, warning, error
+- [ ] Fold lines, leave a fold open from the start, fold inside a fold
+- [ ] Set bold, italic, underline, strike, a tooltip or a fold on words by a regex rule: over the whole code, on one line
+- [ ] Put a tooltip on words in code
+- [ ] Fold words in code
+- [ ] Link words of the text to lines of code (code line link), and go to those lines
+- [ ] A broken code link is a to-do before publishing (끊긴 코드 링크가 있는 초안)
+- [ ] Copy the code
+- [ ] Code in a language not on the list shows as it is
+- [ ] On the site, code is coloured, and its line effects and folds show
+- [ ] On the site, open folded lines and folded words, and see the tooltips
+- [ ] On the site, pointing at a code link lights its lines, and pressing it goes there
+- [ ] On the site, copy the code
+- [ ] The different uses are in the three code entries of the 보기 모음 folder
 
 ### Blocks package
 
-To be filled after #499/#500 merge.
+To be filled after #499 merges.
