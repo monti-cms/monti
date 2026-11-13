@@ -219,4 +219,29 @@ describe("T80 a pick that takes in a code block (doc 17)", () => {
 		await expect.poll(kinds).toEqual([BELOW, ABOVE, "code"]);
 		await expect.poll(() => codeBox()?.querySelectorAll("[data-slot=code-number]").length ?? 0).toBe(6);
 	});
+
+	it("a code block picked alone is a block: its tool row has no tools for words or lines, and the format card stays down", async () => {
+		await scene({ loaders: entry.site("code") }, entry.default).run();
+		await expect.poll(() => codeBox()?.querySelectorAll("[data-slot=code-number]").length ?? 0).toBe(6);
+		const text = body().element().getBoundingClientRect();
+		const code = codeBox()?.getBoundingClientRect();
+		if (!code) throw new Error("no code block");
+		await dragPath(
+			[
+				{ x: text.left - 56, y: code.top + 30 },
+				{ x: text.left + 64, y: code.top + 60 },
+			],
+			{ steps: 10 },
+		);
+		await expect.poll(pickedKinds).toEqual(["code"]);
+		// The pointer on the code block brings its row: the block's own tools only.
+		await pointerPath([{ x: code.left + 80, y: code.top + 40 }]);
+		const row = page.getByRole("toolbar", { name: "코드 도구" });
+		await expect.element(row).toBeVisible();
+		await expect.element(row.getByRole("button", { name: "줄 효과" })).not.toBeInTheDocument();
+		await expect.element(row.getByRole("button", { name: "글자 접기" })).not.toBeInTheDocument();
+		expect(document.querySelector("[data-slot=floating-bar] [aria-label='굵게']")).toBeNull();
+		await userEvent.keyboard("{Delete}");
+		await expect.poll(kinds).toEqual([ABOVE, BELOW]);
+	});
 });
