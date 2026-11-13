@@ -47,14 +47,22 @@ export function ChatMessage({
 			className={cn(
 				chatMessageVariants({ author, streaming: streaming || undefined }),
 				context !== undefined && "flex flex-col items-start gap-monti-8",
-				request && "flex items-center gap-monti-6",
 				className,
 			)}
 			{...props}
 		>
 			{context !== undefined && <span className="text-monti-micro text-monti-subtle">{context}</span>}
-			{request && <Spark className="size-[13px] shrink-0 text-monti-proposal" />}
-			{context !== undefined || request ? <span>{children}</span> : children}
+			{/* The spark stays on the words' line, under the context line when there is one. */}
+			{request ? (
+				<span className="flex items-center gap-monti-6">
+					<Spark className="size-[13px] shrink-0 text-monti-proposal" />
+					<span>{children}</span>
+				</span>
+			) : context !== undefined ? (
+				<span>{children}</span>
+			) : (
+				children
+			)}
 		</div>
 	);
 }

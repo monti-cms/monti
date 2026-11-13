@@ -12,7 +12,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { LogoGithub } from "@monti-cms/ui/icons";
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { type FormEvent, Fragment, type ReactNode, useEffect, useState } from "react";
 import pkg from "../../../package.json";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
@@ -60,7 +60,24 @@ export function LoginScreen({
 								<Text as="p" variant="title">
 									{title}
 								</Text>
-								<Text as="p">{t("login.setUpAuth", { file: "monti.config.ts" })}</Text>
+								{/* The file and its key read in code's letters, as they are typed (login.md). */}
+								<Text as="p">
+									{t("login.setUpAuth", { file: "{file}", key: "{key}" })
+										.split(/(\{file\}|\{key\})/)
+										.map((part) =>
+											part === "{file}" ? (
+												<Text key="file" mono>
+													monti.config.ts
+												</Text>
+											) : part === "{key}" ? (
+												<Text key="key" mono>
+													auth
+												</Text>
+											) : (
+												<Fragment key={part}>{part}</Fragment>
+											),
+										)}
+								</Text>
 							</Stack>
 						) : (
 							<Stack gap={24}>

@@ -277,18 +277,15 @@ export function ActivityPanel({
 										{t("activity.conversation")}
 									</DropdownMenuItem>
 								)}
-								{anyFailed && (
-									<DropdownMenuItem
-										disabled={busy || failed.length === 0}
-										onClick={() => onRetry(failed.map((delivery) => delivery.id))}
-									>
+								{/* Hidden, as in the row's ⋯, while it cannot be done (menu.md); the ⋯ itself stays, so the focus it holds stays. */}
+								{anyFailed && !busy && failed.length > 0 && (
+									<DropdownMenuItem onClick={() => onRetry(failed.map((delivery) => delivery.id))}>
 										<Renew aria-hidden />
 										{t("activity.retry")}
 									</DropdownMenuItem>
 								)}
-								{line.undo.state === "open" && (
+								{line.undo.state === "open" && !undoing && (
 									<DropdownMenuItem
-										disabled={undoing}
 										onClick={() =>
 											onUndo(() => {
 												const [first, ...more] = document.querySelectorAll<HTMLElement>(

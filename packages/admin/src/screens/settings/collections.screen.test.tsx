@@ -550,7 +550,7 @@ describe("settings › collections: the options of a choice in the review (docs 
 		await made.run();
 		await opened();
 		await userEvent.click(page.getByRole("button", { name: "mood 열기" }));
-		await userEvent.click(sheet().getByRole("button", { name: "필드 삭제" }));
+		await userEvent.click(sheet().getByRole("button", { name: "지우기" }));
 		const sheetNow = await review();
 		await expect.element(sheetNow.getByRole("radio", { name: /값 지우기/ })).toBeVisible();
 		await expect.element(sheetNow.getByText("3편 · 공개된 글 2편")).toBeVisible();
@@ -596,6 +596,7 @@ describe("settings › collections: the options of a choice in the review (docs 
 		const made = options();
 		await made.run();
 		await opened();
+		expect(page.getByRole("button", { name: "글에 필드 추가" }).element().querySelector("svg")).not.toBeNull();
 		await userEvent.click(page.getByRole("button", { name: "글에 필드 추가" }));
 		await expect.element(sheet().getByText(/게시글 · 글 종류 · 글/)).toBeVisible();
 		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "credit");
@@ -729,7 +730,7 @@ describe("settings › collections: the options of a choice in the review (docs 
 		await userEvent.click(sheet().getByRole("option", { name: /^조건부/ }));
 		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "host");
 		for (const [index, value] of ["own", "embed"].entries()) {
-			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await userEvent.click(sheet().getByRole("button", { name: "선택지", exact: true }));
 			await userEvent.fill(sheet().getByRole("textbox", { name: "값" }).nth(index), value);
 		}
 		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
@@ -757,14 +758,14 @@ describe("settings › collections: the options of a choice in the review (docs 
 		const made = options();
 		await made.run();
 		await opened();
-		await userEvent.click(page.getByRole("button", { name: "+ 필드 추가" }));
+		await userEvent.click(page.getByRole("button", { name: "필드 추가", exact: true }));
 		await userEvent.click(sheet().getByRole("option", { name: /^조건부/ }));
 		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "featured");
 		await expect.element(sheet().getByRole("switch", { name: /필수/ })).toBeVisible();
 		await userEvent.click(sheet().getByRole("switch", { name: "스위치로 켜고 끄기" }));
 		// One option, the word "on" stores, and nothing to add to it or require of it.
 		await expect.element(sheet().getByRole("textbox", { name: "값" })).toHaveValue("on");
-		await expect.element(sheet().getByRole("button", { name: "+ 선택지" })).not.toBeInTheDocument();
+		await expect.element(sheet().getByRole("button", { name: "선택지", exact: true })).not.toBeInTheDocument();
 		await expect.element(sheet().getByRole("switch", { name: /필수/ })).not.toBeInTheDocument();
 		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
 		await expect.element(sheet()).not.toBeInTheDocument();
@@ -786,7 +787,7 @@ describe("settings › collections: the options of a choice in the review (docs 
 		await opened();
 		// The link's address: no post is a link, so none holds it.
 		await userEvent.click(page.getByRole("button", { name: "linkUrl 열기" }));
-		await userEvent.click(sheet().getByRole("button", { name: "필드 삭제" }));
+		await userEvent.click(sheet().getByRole("button", { name: "지우기" }));
 		const sheetNow = await review();
 		await userEvent.click(sheetNow.getByRole("radio", { name: "다른 필드로 옮기기" }));
 		await userEvent.click(sheetNow.getByRole("combobox", { name: "다른 필드로 옮기기" }));
@@ -834,11 +835,11 @@ describe("settings › collections: the options of a choice in the review (docs 
 		const made = options();
 		await made.run();
 		await opened();
-		await userEvent.click(page.getByRole("button", { name: "+ 필드 추가" }));
+		await userEvent.click(page.getByRole("button", { name: "필드 추가", exact: true }));
 		await userEvent.click(sheet().getByRole("option", { name: /^조건부/ }));
 		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "source");
 		for (const [index, value] of ["own", "quoted"].entries()) {
-			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await userEvent.click(sheet().getByRole("button", { name: "선택지", exact: true }));
 			await userEvent.fill(sheet().getByRole("textbox", { name: "값" }).nth(index), value);
 		}
 		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
@@ -864,7 +865,7 @@ describe("settings › collections: the options of a choice in the review (docs 
 			await userEvent.click(page.getByRole("button", { name: `${name} 열기` }));
 			const rows = sheet().getByRole("textbox", { name: "값" });
 			const before = rows.elements().length;
-			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await userEvent.click(sheet().getByRole("button", { name: "선택지", exact: true }));
 			await expect.element(rows.nth(before)).toHaveFocus();
 			await saveSheet();
 		}
@@ -892,5 +893,87 @@ describe("settings › collections: the options of a choice in the review (docs 
 		await expect.element(sheetNow.getByText("글 종류 · 링크")).toBeVisible();
 		await expect.element(sheetNow.getByText("1편 · 공개된 글 1편")).toBeVisible();
 		await expect.element(sheetNow.getByRole("button", { name: "지우고 적용" })).toBeVisible();
+	});
+});
+
+describe("the collection screens follow the design rules (design audit, 2026-11-14)", () => {
+	const { AddSelectField, Basics, EditField, Fields, FixFirst, NewCollection } = composeStories(collections);
+	const dialog = () => page.getByRole("dialog");
+	const underlined = (element: Element) => getComputedStyle(element).textDecorationLine.includes("underline");
+
+	it("every changed value of the basics tab has the dot by its name and the undo at its row's end", async () => {
+		await Basics.run();
+		// The dot by the row's name: its label row holds the dot and the undo.
+		const marked = (name: string) => {
+			const row = [...document.querySelectorAll<HTMLElement>("label")].find((label) => label.textContent === name)
+				?.parentElement?.parentElement;
+			return Boolean(row?.querySelector("[data-slot=change-dot]")) && Boolean(row?.textContent?.includes("되돌리기"));
+		};
+		await userEvent.click(page.getByRole("textbox", { name: "표시 이름" }));
+		await userEvent.keyboard("x");
+		await expect.poll(() => marked("표시 이름")).toBe(true);
+		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
+		await expect.poll(() => marked("표시 이름")).toBe(false);
+		await page.getByRole("switch", { name: "폴더 사용" }).click();
+		await expect.poll(() => marked("폴더 사용")).toBe(true);
+		await userEvent.click(page.getByRole("button", { name: "되돌리기", exact: true }));
+		await expect.poll(() => marked("폴더 사용")).toBe(false);
+	});
+
+	it("the story of the changed basics tab is reached: both rows marked", async () => {
+		await composeStories(collections).BasicsChanged.run();
+	});
+
+	it("the new collection sheet's address row is the basics tab's: 36px, in body text", async () => {
+		await NewCollection.run();
+		const label = dialog().getByText("공개 주소", { exact: true }).element();
+		expect(getComputedStyle(label).fontSize).toBe(getComputedStyle(dialog().getByText("문서").element()).fontSize);
+		expect(label.parentElement?.getBoundingClientRect().height).toBe(36);
+	});
+
+	it("the title's row carries no label, and the add-tab button is the part's own icon", async () => {
+		await Fields.run();
+		const title = [...document.querySelectorAll<HTMLElement>("[data-slot=field-row]")].find((row) =>
+			row.textContent?.startsWith("title"),
+		);
+		expect(title?.textContent).not.toContain("속성 패널");
+		const add = page.getByRole("button", { name: "탭 추가" }).element();
+		expect(add.textContent).toBe("");
+		expect(add.querySelector("svg")).not.toBeNull();
+	});
+
+	it("a saved field's sheet: 지우기 stands alone at the footer's left, and 필수 is its word alone", async () => {
+		await EditField.run();
+		const remove = dialog().getByRole("button", { name: "지우기" }).element();
+		const cancel = dialog().getByRole("button", { name: "취소" }).element();
+		expect(remove.getBoundingClientRect().right).toBeLessThan(cancel.getBoundingClientRect().left);
+		await expect.element(dialog().getByText("필수", { exact: true })).toBeVisible();
+		expect(dialog().getByText("!", { exact: true }).elements()).toHaveLength(0);
+	});
+
+	it("a choice's row ends in the icon button ×, and + 선택지 is a ghost button", async () => {
+		await AddSelectField.run();
+		const remove = dialog().getByRole("button", { name: "memo 빼기" }).element();
+		expect(remove.getAttribute("data-slot")).toBe("icon-button");
+		expect(remove.textContent).toBe("");
+		// One step under its 32px row, as a button inside a field is.
+		expect(remove.getBoundingClientRect().height).toBe(28);
+		expect(remove.closest("[data-slot=option-row]")?.getBoundingClientRect().height).toBe(32);
+		expect(dialog().getByRole("button", { name: "선택지", exact: true }).element().getAttribute("data-slot")).toBe(
+			"button",
+		);
+		expect(dialog().getByRole("button", { name: "선택지", exact: true }).element().querySelector("svg")).not.toBeNull();
+	});
+
+	it("the schema banner's 검토 is underlined: it opens the review", async () => {
+		await scene({ loaders: collections.HandEditReview.loaders }, collections.default).run();
+		await expect.element(page.getByText("스키마 파일을 직접 고쳤습니다")).toBeVisible();
+		expect(underlined(page.getByRole("button", { name: "검토" }).element())).toBe(true);
+	});
+
+	it("the review's 열기 is underlined: it goes to the field", async () => {
+		await FixFirst.run();
+		const open = dialog().getByRole("button", { name: "열기" }).first().element();
+		expect(underlined(open)).toBe(true);
 	});
 });

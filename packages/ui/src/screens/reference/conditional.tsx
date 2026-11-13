@@ -1,6 +1,6 @@
 import type * as React from "react";
 import { ChangesBar } from "../../changes-group";
-import { ChevronLeft, Close } from "../../icons";
+import { Add, ChevronLeft, Close } from "../../icons";
 import {
 	Button,
 	ChangeGroup,
@@ -74,7 +74,8 @@ type Field = React.ComponentProps<typeof FieldRow>;
 // An option's band ends with the way to add a field to it; an option with no fields keeps its band, so there is a place to add the first.
 const ADD = (
 	<TextButton variant="quiet" size="note">
-		+ 필드
+		<Add aria-hidden />
+		필드
 	</TextButton>
 );
 
@@ -83,7 +84,7 @@ const ADD = (
  * here is drawn with parts the built screens already use.
  */
 const FIELDS: Field[] = [
-	{ name: "title !", label: "제목", note: "속성 패널에 안 나옴", kind: "text" },
+	{ name: "title !", label: "제목", kind: "text" },
 	{ name: "slug !", label: "주소", kind: "slug" },
 	{ name: "format !", label: "글 종류", kind: "conditional · 3" },
 	// Each option is a band under the choice, one step in, with no grip (the sheet orders the options) and its value after its name; its fields sit one step further in.
@@ -148,7 +149,8 @@ export function ConditionalFieldSheetScreen() {
 								</OptionTable>
 								<Inline>
 									<Button variant="ghost" size="sm">
-										+ 선택지 추가
+										<Add aria-hidden />
+										선택지 추가
 									</Button>
 								</Inline>
 							</Stack>
@@ -161,7 +163,7 @@ export function ConditionalFieldSheetScreen() {
 					</SheetBody>
 					<SheetFooter>
 						<Inline gap={12} grow minWidth={0}>
-							<Button variant="ghost-danger">필드 삭제</Button>
+							<Button variant="ghost-danger">지우기</Button>
 						</Inline>
 						<Button variant="ghost">취소</Button>
 						<Button>저장</Button>

@@ -37,4 +37,4 @@
 
 ### 코드
 
-`OptionTable`(머리 없음)과 `OptionRow` 행(`value`, `label`, `DragHandle`이 든 `handle`, `action`, 정렬 가능한 목록의 변환, 손에 든 행이 떠난 빈자리(`active`), 뜬 행(`lifted`)에 쓰는 `drag`). 끄는 법은 [list.md](list.md) "끌어서 옮기기"를 따른다(`Sortable`, `SortableList`, `useSortableItem`).
+`OptionTable`(머리 없음)과 `OptionRow` 행(`value`, `label`, `DragHandle`이 든 `handle`, `action`, 정렬 가능한 목록의 변환, 손에 든 행이 떠난 빈자리(`active`), 뜬 행(`lifted`)에 쓰는 `drag`). `action`은 선택지를 빼는 `IconButton`(`Close`)이다. 행이 `IconButtonContext`로 28px(`sm`)를 알려 줘 32px 행보다 한 단계 작다(입력 칸 안의 버튼과 같다. 만들며 정함 (2026-11-14). 전에는 글자 "×"였다). 끄는 법은 [list.md](list.md) "끌어서 옮기기"를 따른다(`Sortable`, `SortableList`, `useSortableItem`).

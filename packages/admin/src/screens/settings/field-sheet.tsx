@@ -5,6 +5,7 @@ import {
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
+	IconButton,
 	Inline,
 	Input,
 	LockMark,
@@ -28,9 +29,9 @@ import {
 	Switch,
 	Text,
 	Textarea,
-	TextButton,
 	useSortableItem,
 } from "@monti-cms/ui";
+import { Add, Close } from "@monti-cms/ui/icons";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "./pick-one";
@@ -517,13 +518,12 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 										}
 										action={
 											structure && !form.toggle ? (
-												<TextButton
-													variant="quiet"
-													aria-label={t("settings.field.removeOption", { value: option.value })}
+												<IconButton
+													label={t("settings.field.removeOption", { value: option.value })}
 													onClick={() => set({ options: form.options.filter((_, at) => at !== index) })}
 												>
-													×
-												</TextButton>
+													<Close aria-hidden />
+												</IconButton>
 											) : undefined
 										}
 									/>
@@ -536,9 +536,14 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 				{structure && !form.toggle ? (
 					<Inline gap={0}>
 						{/* The new row's value takes the keyboard: it is what is typed next. */}
-						<TextButton onClick={() => set({ options: [...form.options, { value: "", label: "", fresh: true }] })}>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => set({ options: [...form.options, { value: "", label: "", fresh: true }] })}
+						>
+							<Add aria-hidden />
 							{t("settings.field.addOption")}
-						</TextButton>
+						</Button>
 					</Inline>
 				) : null}
 				{/* How many of the choices are picked belongs with the choices, not with the rules. */}
@@ -614,15 +619,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 			</SheetSection>
 		) : null;
 
-	// One child, so the spread row keeps the "!" beside its word.
-	const requiredLabel = (
-		<span>
-			{t("settings.field.required")}{" "}
-			<Text tone="faint" mono>
-				!
-			</Text>
-		</span>
-	);
+	const requiredLabel = t("settings.field.required");
 	// The title and the slug are always required (doc 01): their row reads as text with the lock, on the dev server too.
 	const required = fixedName ? (
 		<Option spread height="md">
@@ -747,6 +744,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 			{head}
 			<SheetBody>{sections}</SheetBody>
 			<SheetFooter>
+				{/* A sheet's destructive action stands alone at the footer's left, away from the pill (overlay.md, sheet). */}
 				{structure && !fixedName ? (
 					<Inline gap={12} grow minWidth={0}>
 						<Button variant="ghost-danger" onClick={remove}>

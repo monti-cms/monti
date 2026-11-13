@@ -1,5 +1,5 @@
 import { MEDIA_QUERY_MOST, type MediaItem, type MediaQueryResult } from "@monti-cms/core";
-import { FolderTile, MediaPicker, Text, TextButton, Tile } from "@monti-cms/ui";
+import { Empty, FolderTile, MediaPicker, Text, TextButton, Tile } from "@monti-cms/ui";
 import { useEffect, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
@@ -116,10 +116,15 @@ export function MediaPickerDialog({
 					: undefined
 			}
 			notice={
+				// Nothing here yet is the library's empty state, as on its page (components/list.md, empty); nothing found is one quiet line.
 				read.data && settled && items.length === 0 && subfolders.length === 0 ? (
-					<Text variant="note" tone="subtle">
-						{t(looking ? "library.nothingFound" : "library.picker.none")}
-					</Text>
+					looking ? (
+						<Text variant="note" tone="subtle">
+							{t("library.nothingFound")}
+						</Text>
+					) : (
+						<Empty title={t("library.picker.none")} />
+					)
 				) : undefined
 			}
 		>

@@ -6,10 +6,11 @@ import {
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-	MenuTick,
+	MenuValue,
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
+import { shortDate } from "./format";
 
 const iso = (date: Date) =>
 	`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -22,7 +23,7 @@ const fromIso = (value: string) => {
  * The days a date column is filtered by, in every table's column menu (the entry list's dates, the activity log's time): all dates, today, 7 days,
  * 30 days, one day, or a range (2026-11-06 owner, after other products: a day and a range are separate rows, and "all dates" is the way out). One
  * day is picked with one press on its calendar; a range's first press starts it and the next one ends it and applies it. Both calendars stay open
- * showing what is on.
+ * showing what is on. Like every row with a ›, the day or range that is on is written before it (menu.md).
  */
 export function DateRows({
 	range,
@@ -68,9 +69,9 @@ export function DateRows({
 				</DropdownMenuRadioItem>
 			</DropdownMenuRadioGroup>
 			<DropdownMenuSub>
-				<DropdownMenuSubTrigger chevron={false}>
+				<DropdownMenuSubTrigger>
 					{t("list.pickDay")}
-					{day && <MenuTick />}
+					{day && <MenuValue>{shortDate(fromIso(day))}</MenuValue>}
 				</DropdownMenuSubTrigger>
 				<DropdownMenuSubContent bare>
 					<Calendar
@@ -85,9 +86,9 @@ export function DateRows({
 				</DropdownMenuSubContent>
 			</DropdownMenuSub>
 			<DropdownMenuSub>
-				<DropdownMenuSubTrigger chevron={false}>
+				<DropdownMenuSubTrigger>
 					{t("list.pickRange")}
-					{span && <MenuTick />}
+					{span && <MenuValue>{`${shortDate(fromIso(span.from))} – ${shortDate(fromIso(span.to))}`}</MenuValue>}
 				</DropdownMenuSubTrigger>
 				<DropdownMenuSubContent bare>
 					<Calendar

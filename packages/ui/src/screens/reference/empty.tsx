@@ -8,7 +8,7 @@ export function EmptyScreen() {
 		<AdminFrame open="memos">
 			<PageColumn width="list">
 				<PageHeader title="메모" meta="/notes/:slug">
-					<NewPostButton label="+ 새 메모 쓰기" />
+					<NewPostButton label="새 메모 쓰기" />
 				</PageHeader>
 				<Empty title="아직 메모가 없습니다.">
 					<EmptyStep number="01">첫 메모 쓰기</EmptyStep>

@@ -136,3 +136,33 @@ describe("the template editor: before the template is there", () => {
 		expect(page.getByRole("button", { name: "저장", exact: true }).elements()).toEqual([]);
 	});
 });
+
+describe("tools › templates (tools.md)", () => {
+	const list = () => scene<{ site: StorySite }>(templates.Templates, templates.default);
+	const row = (name: string) => page.getByRole("row").filter({ hasText: name });
+	const rowMenu = async (name: string) => {
+		await userEvent.click(row(name).getByRole("button", { name: "더 보기" }));
+		return page.getByRole("menu");
+	};
+
+	it("deleting a template asks nothing, says so with the log's undo, and the undo brings it back; every row of its ⋯ has an icon", async () => {
+		await list().run();
+		const menu = await rowMenu("기본 글");
+		for (const name of ["복제", "지우기"])
+			expect(menu.getByRole("menuitem", { name }).element().querySelector("svg")).not.toBeNull();
+		await userEvent.click(menu.getByRole("menuitem", { name: "지우기" }));
+		await expect.element(page.getByText("템플릿을 지웠습니다")).toBeVisible();
+		await expect.element(row("기본 글")).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "되돌리기" }));
+		await expect.element(row("기본 글")).toBeVisible();
+	});
+
+	it("a delete that does not go through says why: the template was gone already", async () => {
+		const story = list();
+		await story.run();
+		await expect.element(row("기본 글")).toBeVisible();
+		await story.loaded().site.db.deleteFrom("templates").where("name", "=", "기본 글").execute();
+		await userEvent.click((await rowMenu("기본 글")).getByRole("menuitem", { name: "지우기" }));
+		await expect.poll(() => document.querySelector("[data-sonner-toast] .bg-monti-danger-emphasis")).not.toBeNull();
+	});
+});

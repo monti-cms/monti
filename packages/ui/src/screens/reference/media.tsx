@@ -1,4 +1,4 @@
-import { FolderAdd, Upload } from "../../icons";
+import { FolderAdd, OverflowMenuHorizontal, Upload } from "../../icons";
 import {
 	DropArea,
 	DropdownMenuItem,
@@ -100,7 +100,11 @@ export function MediaScreen() {
 									key={file.name}
 									title={file.name}
 									detail={file.detail}
-									action={<IconButton label="더 보기">⋯</IconButton>}
+									action={
+										<IconButton label="더 보기">
+											<OverflowMenuHorizontal aria-hidden />
+										</IconButton>
+									}
 									onSelectedChange={() => {}}
 									selectLabel={`${file.name} 고르기`}
 									preview={

@@ -152,8 +152,9 @@ function FolderTabEdit({ children, className, ...props }: Omit<React.ComponentPr
 	);
 }
 
-/** The button after the last tab that adds one: a 16px plus icon, named by its `aria-label`. */
-function FolderTabsAdd({ className, children, ...props }: ButtonPrimitive.Props) {
+/** The button after the last tab that adds one: its own 16px plus icon, named by its `aria-label`. It takes no children: a screen's "+" in its place
+ * was a typed glyph, not the icon. */
+function FolderTabsAdd({ className, ...props }: Omit<ButtonPrimitive.Props, "children">) {
 	return (
 		<ButtonPrimitive
 			data-slot="folder-tabs-add"
@@ -164,7 +165,7 @@ function FolderTabsAdd({ className, children, ...props }: ButtonPrimitive.Props)
 			)}
 			{...props}
 		>
-			{children ?? <Add aria-hidden className="size-monti-icon-md" />}
+			<Add aria-hidden className="size-monti-icon-md" />
 		</ButtonPrimitive>
 	);
 }

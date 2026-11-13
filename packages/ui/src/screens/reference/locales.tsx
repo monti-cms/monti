@@ -1,4 +1,4 @@
-import { Close } from "../../icons";
+import { Add, Close } from "../../icons";
 import {
 	Box,
 	Button,
@@ -50,7 +50,8 @@ export function LocalesScreen() {
 							</Box>
 							<Box paddingTop={12}>
 								<Button variant="ghost" size="sm">
-									+ 언어 추가
+									<Add aria-hidden />
+									언어 추가
 								</Button>
 							</Box>
 						</Stack>

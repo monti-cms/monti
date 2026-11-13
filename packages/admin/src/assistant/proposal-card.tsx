@@ -58,7 +58,7 @@ export function ProposalCardOf({ id }: { id: string }) {
 					applying={proposal.applying}
 					progress={proposal.progress}
 					size="sm"
-					busy={proposal.busy}
+					pending={proposal.pending}
 					// Few enough to read here: there is nothing more to see on the review page.
 					onReview={view.groups.length > 1 || rest > 0 || standing !== "waiting" ? () => openReview(id) : undefined}
 					onDiscard={() => void proposal.discard()}

@@ -2,6 +2,8 @@ import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { spillingCells, wholeUnderPointer } from "../../../../../testing/input";
+import type { StorySite } from "../../../.storybook/pglite-site";
+import { scene } from "../../../test/scene";
 import * as list from "./list.stories";
 
 const {
@@ -22,6 +24,8 @@ describe("taxonomy screen (doc 08)", () => {
 		await TaxonomyTags.run();
 		await expect.element(table().getByText("리액트", { exact: true })).toBeVisible();
 		await expect.element(table().getByText("react", { exact: true })).toBeVisible();
+		// The address is typed as it stands: mono (tokens.md).
+		expect(getComputedStyle(table().getByText("react", { exact: true }).element()).fontFamily).toMatch(/mono/i);
 		expect(table().element().textContent).not.toContain("/tag/react");
 		await expect.element(table().getByText("React", { exact: true })).toBeVisible();
 		await expect.element(table().getByText("글 5", { exact: true })).toBeVisible();
@@ -59,7 +63,7 @@ describe("taxonomy screen (doc 08)", () => {
 
 	it("08-1 T112 saving a new item with no name is not greyed out: the name field says what is missing, and typing a name takes it away", async () => {
 		await TaxonomyTags.run();
-		await userEvent.click(main().getByRole("button", { name: "+ 태그 추가" }));
+		await userEvent.click(main().getByRole("button", { name: "태그 추가" }));
 		const name = page.getByRole("textbox", { name: "이름" });
 		await expect.element(name).toBeVisible();
 		const save = page.getByRole("button", { name: "저장", exact: true });
@@ -76,7 +80,7 @@ describe("taxonomy screen (doc 08)", () => {
 		await expect.element(page.getByText("이 칸을 채워 주세요.")).not.toBeInTheDocument();
 		await expect.element(name).not.toHaveAttribute("aria-invalid");
 		// Back on a new item it is said again only when save is pressed again, and a name takes it away.
-		await userEvent.click(main().getByRole("button", { name: "+ 태그 추가" }));
+		await userEvent.click(main().getByRole("button", { name: "태그 추가" }));
 		await expect.element(name).toHaveValue("");
 		await expect.element(page.getByText("이 칸을 채워 주세요.")).not.toBeInTheDocument();
 		await userEvent.click(save);
@@ -190,5 +194,79 @@ describe("taxonomy screen (doc 08)", () => {
 		// Saving updates the item
 		await userEvent.click(saveButton);
 		await expect.element(saveButton).not.toBeInTheDocument();
+	});
+
+	it("a search that finds no item says so in the table, and its button takes the search off (every table's no-match row)", async () => {
+		await TaxonomyTags.run();
+		await userEvent.click(main().getByRole("button", { name: "검색" }));
+		await userEvent.fill(main().getByRole("searchbox"), "없는말");
+		await expect.element(table().getByText("맞는 항목이 없습니다.")).toBeVisible();
+		await userEvent.click(table().getByRole("button", { name: "필터 해제" }));
+		await expect.element(table().getByText("리액트", { exact: true })).toBeVisible();
+	});
+
+	it("a right click on a row opens its ⋯ rows, with their icons; on one of several picked rows, the bulk bar's actions", async () => {
+		await TaxonomyTags.run();
+		await userEvent.click(table().getByText("리액트", { exact: true }), { button: "right" });
+		const menu = page.getByRole("menu");
+		await expect.element(menu.getByRole("menuitem", { name: "편집" })).toBeVisible();
+		expect(menu.getByRole("menuitem", { name: "편집" }).element().querySelector("svg")).not.toBeNull();
+		await expect.element(menu.getByRole("menuitem", { name: "휴지통으로" })).toBeVisible();
+		await userEvent.keyboard("{Escape}");
+		await userEvent.click(page.getByRole("checkbox", { name: "리액트 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "React 고르기" }));
+		await userEvent.click(table().getByText("React", { exact: true }), { button: "right" });
+		await expect.element(page.getByRole("menu").getByText("2개 항목")).toBeVisible();
+		await expect.element(page.getByRole("menuitem", { name: "합치기" })).toBeVisible();
+		await userEvent.keyboard("{Escape}");
+	});
+
+	it("merging with nothing picked to keep: 합치기 stays pressable and the choices say what is missing; 취소 is a pill like every dialog's", async () => {
+		await TaxonomyTags.run();
+		const sourceRow = table().getByText("리액트", { exact: true }).element().closest("tr");
+		await userEvent.click(sourceRow?.querySelector('[data-slot="row-more"]') as HTMLElement);
+		await userEvent.click(page.getByRole("menuitem", { name: "다른 항목과 합치기…" }));
+		const merge = dialog().getByRole("button", { name: "합치기" });
+		await expect.element(merge).toBeEnabled();
+		// A ghost pill: the height and the sides of every dialog's 취소, where a text button has neither.
+		const cancel = getComputedStyle(dialog().getByRole("button", { name: "취소" }).element());
+		expect([cancel.height, cancel.paddingLeft]).toEqual(["36px", "12px"]);
+		await userEvent.click(merge);
+		await expect.element(dialog().getByRole("alert")).toBeVisible();
+		await userEvent.click(dialog().getByRole("radio", { name: /^React/ }));
+		await expect.element(dialog().getByRole("alert")).not.toBeInTheDocument();
+	});
+
+	it("a save refused for a deleted item's address says so under the address, not in a toast; a saved item shows no toast", async () => {
+		const story = scene<{ site: StorySite }>(
+			{
+				loaders: list.site(
+					async ({ monti }) => {
+						const made = await list.run<{ output: { locales: { ko: { id: string } } } }>(monti, "items.saveGroup", {
+							collection: "tag",
+							locales: { ko: { title: "옛 태그", slug: "old-tag" } },
+						});
+						const rows = [{ kind: "entry", id: made.output.locales.ko.id }];
+						await list.run(monti, "trash.move", { rows });
+						await list.run(monti, "trash.purge", { rows });
+					},
+					"#/c/tag",
+					{ schema: list.oneLanguage },
+				),
+			},
+			list.default,
+		);
+		await story.run();
+		await userEvent.click(await table().getByText("리액트", { exact: true }));
+		const slug = page.getByRole("textbox", { name: "주소" });
+		await userEvent.fill(slug, "old-tag");
+		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
+		await expect.element(page.getByText("주소 old-tag는 지운 항목이 쓰던 주소입니다.")).toBeVisible();
+		await expect.element(slug).toHaveAttribute("aria-invalid", "true");
+		await userEvent.fill(slug, "react-new");
+		await expect.element(page.getByText("주소 old-tag는 지운 항목이 쓰던 주소입니다.")).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
+		await expect.element(page.getByRole("button", { name: "저장", exact: true })).not.toBeInTheDocument();
+		expect(document.body.textContent).not.toContain("저장했습니다");
 	});
 });

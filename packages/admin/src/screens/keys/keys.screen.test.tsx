@@ -40,8 +40,14 @@ async function addFor(service: string) {
 	await userEvent.click(page.getByRole("option", { name: service }));
 	await expect.element(dialog().getByRole("heading", { name: "키 추가" })).toBeVisible();
 }
+/** The ⋯ of the key row named `name` ("Algolia 검색 · 검색 키": a slot's row holds both parts). */
+const more = (name: string) =>
+	name
+		.split(" · ")
+		.reduce((rows, part) => rows.filter({ hasText: part }), page.getByRole("row"))
+		.getByRole("button", { name: "더 보기" });
 async function menu(name: string, item: string) {
-	await userEvent.click(button(`${name} 더 보기`));
+	await userEvent.click(more(name));
 	await userEvent.click(page.getByRole("menuitem", { name: item }));
 }
 
@@ -341,7 +347,7 @@ describe("one press does one thing", () => {
 describe("where the focus is afterwards", () => {
 	/** Opens a row's ⋯ and its question with the keyboard, and stands on the question's "지우기". */
 	async function askByKeyboard(name: string) {
-		button(`${name} 더 보기`).element().focus();
+		more(name).element().focus();
 		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByRole("menuitem", { name: "지우기" })).toBeVisible();
 		await userEvent.keyboard("{End}{Enter}");
@@ -362,12 +368,12 @@ describe("where the focus is afterwards", () => {
 		await askByKeyboard(first);
 		await userEvent.keyboard("{Enter}");
 		await gone(first);
-		await expect.poll(focused).toBe(button(`${second} 더 보기`).element());
+		await expect.poll(focused).toBe(more(second).element());
 
 		await askByKeyboard(third);
 		await userEvent.keyboard("{Enter}");
 		await gone(third);
-		await expect.poll(focused).toBe(button(`${second} 더 보기`).element());
+		await expect.poll(focused).toBe(more(second).element());
 
 		await askByKeyboard(second);
 		await userEvent.keyboard("{Enter}");
@@ -405,7 +411,7 @@ describe("where the focus is afterwards", () => {
 		await askByKeyboard("OpenAI 회사");
 		await userEvent.keyboard("{Escape}");
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
-		await expect.poll(focused).toBe(button("OpenAI 회사 더 보기").element());
+		await expect.poll(focused).toBe(more("OpenAI 회사").element());
 	});
 
 	it("14-1 a server that fails while the service is asked: a toast, and the caret is in the key as after a refusal", async () => {
@@ -520,8 +526,8 @@ describe("changing and removing a key (flow 10, 07–11)", () => {
 
 	it("14-1 a row's ⋯ by the keyboard: Enter opens it, the arrows move through '편집' and '지우기', Esc closes it and the focus is back on the ⋯", async () => {
 		await open(keys.Keys).run();
-		const more = button("Anthropic 개인 더 보기");
-		more.element().focus();
+		const dots = more("Anthropic 개인");
+		dots.element().focus();
 		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByRole("menuitem", { name: "편집" })).toBeVisible();
 		// Opened with the keyboard, the first row has the focus; one arrow down is the last.
@@ -530,7 +536,7 @@ describe("changing and removing a key (flow 10, 07–11)", () => {
 		expect(focused()).toBe(page.getByRole("menuitem", { name: "지우기" }).element());
 		await userEvent.keyboard("{Escape}");
 		await expect.element(page.getByRole("menuitem", { name: "편집" })).not.toBeInTheDocument();
-		expect(focused()).toBe(more.element());
+		expect(focused()).toBe(dots.element());
 	});
 });
 
@@ -628,9 +634,9 @@ describe("a long name", () => {
 		const long = page.getByRole("cell", { name: /^블로그초안/ }).first();
 		const name = long.getByText(keys.longName).element();
 		const tail = () => long.getByText("··· a1b2").element().getBoundingClientRect();
-		const more = () => button(`${keys.longName} 더 보기`).element().getBoundingClientRect();
+		const dots = () => more(keys.longName).element().getBoundingClientRect();
 		// As tall as the others to half a pixel: a name with no Latin letter sits on another baseline than one with some.
-		expect(tail().right).toBeLessThanOrEqual(more().left);
+		expect(tail().right).toBeLessThanOrEqual(dots().left);
 		expect(Math.abs(row(/블로그초안/).height - row(/OpenAI 회사/).height)).toBeLessThanOrEqual(0.5);
 		// A smaller window, where the row is shorter than the name.
 		const { innerWidth, innerHeight } = window;
@@ -638,7 +644,7 @@ describe("a long name", () => {
 		try {
 			expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
 			expect(tail().width).toBeGreaterThan(0);
-			expect(tail().right).toBeLessThanOrEqual(more().left);
+			expect(tail().right).toBeLessThanOrEqual(dots().left);
 			expect(Math.abs(row(/블로그초안/).height - row(/OpenAI 회사/).height)).toBeLessThanOrEqual(0.5);
 		} finally {
 			await page.viewport(innerWidth, innerHeight);
@@ -751,11 +757,23 @@ describe("plugin keys (flow 10, 12)", () => {
 		await expect.element(page.getByText("바른 맞춤법에 키를 넣었습니다")).toBeVisible();
 		await expect.element(dialog()).not.toBeInTheDocument();
 		await expect.element(pluginTable().getByRole("row").nth(0)).toHaveTextContent(/바른 맞춤법··· 4410/);
-		await expect.element(button("바른 맞춤법 더 보기")).toBeVisible();
+		await expect.element(more("바른 맞춤법")).toBeVisible();
 		expect(await slotButton("바른 맞춤법").elements()).toHaveLength(0);
 		const stored = await list(story.loaded().site);
 		expect(stored.keys.map((key) => key.name)).toEqual(["Anthropic 개인", "OpenAI 회사", "예전 Gemini 키"]);
 		expect(stored.slots[0].key).toMatchObject({ last4: "4410", readable: true });
+	});
+
+	it("the two lists' names are section heads, the same part and weight as the model's head; a row's ⋯ rows each have an icon", async () => {
+		await open(keys.PluginKeys).run();
+		const head = (name: string) => page.getByRole("heading", { name, level: 2 });
+		await expect.element(head("AI 키")).toBeVisible();
+		const weight = (name: string) => getComputedStyle(head(name).element()).fontWeight;
+		expect([weight("AI 키"), weight("플러그인 키")]).toEqual([weight("모델"), weight("모델")]);
+		await userEvent.click(more("Anthropic 개인"));
+		for (const name of ["편집", "지우기"])
+			expect(page.getByRole("menuitem", { name }).element().querySelector("svg")).not.toBeNull();
+		await userEvent.keyboard("{Escape}");
 	});
 
 	it("14-1 [flow 10·12] a key the slot's service refuses: one line under the key, the window open with what was typed, the slot still empty", async () => {
@@ -834,7 +852,7 @@ describe("plugin keys (flow 10, 12)", () => {
 		await expect.element(page.getByText("키를 저장할 수 없습니다")).toBeVisible();
 		await expect.poll(() => pluginTable().getByRole("row").elements().length).toBe(1);
 		expect(await slotButton("바른 맞춤법").elements()).toHaveLength(0);
-		await userEvent.click(button("Algolia 검색 · 검색 키 더 보기"));
+		await userEvent.click(more("Algolia 검색 · 검색 키"));
 		await expect.element(page.getByRole("menuitem", { name: "지우기" })).toBeVisible();
 		expect(await page.getByRole("menuitem", { name: "편집" }).elements()).toHaveLength(0);
 		await userEvent.click(page.getByRole("menuitem", { name: "지우기" }));
@@ -848,7 +866,7 @@ describe("plugin keys (flow 10, 12)", () => {
 		await story.run();
 		const orphan = pluginTable().getByRole("row").filter({ hasText: "old-search" });
 		await expect.element(orphan).toHaveTextContent(/old-searchkey··· 52ab플러그인 없음/);
-		await userEvent.click(button("old-search · key 더 보기"));
+		await userEvent.click(more("old-search · key"));
 		expect(await page.getByRole("menuitem", { name: "편집" }).elements()).toHaveLength(0);
 		await userEvent.click(page.getByRole("menuitem", { name: "지우기" }));
 		// Nothing uses it: the question says only that it cannot be undone.
@@ -861,8 +879,8 @@ describe("plugin keys (flow 10, 12)", () => {
 
 	it("14-1 a slot's key removed with the keyboard: the row stays, and the focus is on its '키 넣기'", async () => {
 		await open(keys.PluginKeys).run();
-		const more = button("Algolia 검색 · 검색 키 더 보기");
-		more.element().focus();
+		const dots = more("Algolia 검색 · 검색 키");
+		dots.element().focus();
 		await userEvent.keyboard("{Enter}");
 		// The menu opens on its first row ("편집"), and its two rows wrap: one step down is "지우기". The keys wait for the row the menu
 		// opened on. Pressed before the menu had picked it, two steps down happened to land on "지우기" (the first step only picked the

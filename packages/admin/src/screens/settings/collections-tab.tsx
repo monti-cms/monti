@@ -1,4 +1,5 @@
 import { Button, NavLink, PageToolbar, PageToolbarEnd, RailAction, RailLayout, TabLink, TabLinks } from "@monti-cms/ui";
+import { Add } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { type AddressPlace, BasicsTab } from "./basics-tab";
@@ -91,7 +92,10 @@ export function CollectionsTab({
 							</NavLink>
 						))}
 						{model.locked ? null : (
-							<RailAction onClick={() => view.setMaking(true)}>{t("settings.newCollection")}</RailAction>
+							<RailAction onClick={() => view.setMaking(true)}>
+								<Add aria-hidden />
+								{t("settings.newCollection")}
+							</RailAction>
 						)}
 					</>
 				}
