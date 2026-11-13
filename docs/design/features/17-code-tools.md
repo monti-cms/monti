@@ -1,6 +1,6 @@
 # 17 코드 블록 도구
 
-상태: 설계 (2026-11-13). 화면 승인 전이다. 아래 "화면에서 정할 것"을 목업으로 소유자에게 묻는다.
+상태: 만드는 중 (2026-11-14). core, 사이트 그리기, MDX, 비교의 core를 만들었다. 화면은 승인 전이다. 아래 "화면에서 정할 것"을 목업으로 소유자에게 묻는다.
 
 소유자 (2026-11-13): "코드블록은 기존에 잘 만들어뒀다가 지금 제거된거라 이전거를 살펴보면 좋을 듯". 그래서 이 문서는 `main`의 옛 코드 블록(#50 · #51 · #52 · #55)에서 시작한다. 옛 코드가 하던 일과 움직임을 그대로 두고, 지금의 본문 모양(03), 관리자 화면 규칙(`docs/design/admin`), 기능과 플러그인 자리에 맞게 옮긴다. 부분마다 "옛 코드 그대로"인지, 무엇을 왜 바꿨는지 적는다. 아래에서 "만들며 정함"이라고 적지 않은 결정은 없다: 바꾼 것은 모두 만들며 정함 (2026-11-13)이다.
 
@@ -42,7 +42,7 @@
 | 사이트의 링크 | 가리키면 그 줄만 또렷하고 나머지가 흐려진다. 누르면 그 줄로 가서(접힌 곳은 펼침) 잠시 강조. 줄이 화면 밖이면 글 옆에 줄 미리보기. 처음 가리킨 글로 돌아가는 단추가 줄 끝에 | 옛 코드 그대로 | |
 | 사이트 그리기 | remark/rehype와 Shiki를 비동기로 거치는 사슬 | `renderDocument`(동기)에 사이트가 미리 연 칠하기 도구를 넘긴다 | 지금의 `renderDocument`는 프레임워크도 비동기도 모른다(03) |
 | 사이트의 스타일 | `@monti-cms/core/render.css`, Tailwind 4 안에서 읽는다 | 같은 파일 이름, 일반 CSS | 예제 앱과 다른 사이트가 Tailwind 없이 쓴다 |
-| 사이트의 움직임(복사, 링크) | `blocks`의 React 클라이언트 부품 | core의 `attachCodeTools(root)`와 `@monti-cms/next`의 `<CodeTools />` | `renderDocument`가 그리는 HTML에 붙는다. React가 아닌 사이트도 쓴다 |
+| 사이트의 움직임(복사, 링크) | `blocks`의 React 클라이언트 부품 | `@monti-cms/next`의 `attachCodeTools(root)`(DOM만 쓴다)와 `<CodeTools />` | `renderDocument`가 그리는 HTML에 붙는다. React가 아닌 사이트도 쓴다. core는 브라우저 타입을 싣지 않아 함수는 `next`에 있다(만들며 정함 2026-11-14) |
 | 들여쓰기 선, 포커스 흐림, 터치 화면의 툴팁 목록 | 사이트 CSS | 옛 코드 그대로 | |
 | Shiki 표기 | `@monti-cms/syntax-shiki`가 읽기만 했다. 내보낼 때는 언제나 Monti 주석(`// @line plus {0-0}`) | 읽기는 옛 코드 그대로(MDX 플러그인 안으로). 내보낼 때 Shiki에 표기가 있는 효과는 Shiki 표기로, 나머지는 옛 Monti 주석으로 | 14의 MDX 플러그인이 하나뿐인 읽고 쓰는 곳이다. 내보낸 MDX를 Shiki로 그리는 다른 도구가 효과를 그대로 그린다 |
 | 문서 버전 올리기, 마이그레이션 | 버전 2와 `0015_code_annotations` | 없다 | 사용자가 없다(build.md 규칙 8) |
@@ -58,6 +58,7 @@
 		language?: string;            // a language of the site's list ("ts"). Absent: plain text
 		title?: string;               // file name shown above the code ("src/app.ts")
 		lineNumbers?: true;           // the site shows line numbers
+		meta?: string;                // what an imported fence line held that Monti does not read, written back as it was
 		lines?: LineEffect[];
 		rules?: CodeRule[];
 	},
@@ -141,7 +142,7 @@ codeBlock: {
 
 - **모양.** 본문 글자에 걸린 서식 `codeRef { block, anchor }`. 편집기에서는 점선 밑줄이다(링크의 실선 밑줄과 다르게). 가리키면 그 줄이 강조되고, 누르면 링크 카드가 뜬다: "코드 3–5번째 줄" · "보기"(그 줄로 간다) · "빼기".
 - **만들기 (옛 코드 그대로).** 본문 글자를 고르고 서식 카드의 ⋯ › "코드 줄 링크"를 누르면, 서식 카드 자리에 안내 행이 선다: "‘고른 글자’에 연결할 코드 줄을 고르세요" · "취소". 코드 블록의 줄 번호를 누르거나 끌면 행이 "코드 3–5번째 줄"과 "연결"이 된다. 거꾸로 줄 메뉴의 "본문 연결"에서 시작하면 안내 행이 "코드 3–5번째 줄에 연결할 본문 글자를 고르세요"다. Esc나 "취소"가 끝낸다.
-- **라벨.** "연결"은 고른 줄에 `anchor` 효과를 걸고(그 줄에 이미 있으면 그것을 쓴다) 라벨 `c1`, `c2`…를 준다. 링크를 빼서 아무 링크도 가리키지 않는 라벨은 지운다(옛 코드 그대로).
+- **라벨.** "연결"은 고른 줄에 `anchor` 효과를 걸고(그 줄에 이미 있으면 그것을 쓴다) 라벨 `c1`, `c2`…를 준다. 새 라벨은 그 글의 어느 블록도 쓰지 않은 것이다(옛 코드 그대로): MDX로 나간 링크는 라벨만 가지므로 다시 읽을 때 블록을 가린다. 저장 검사는 블록 안에서만 하나인지 본다. 링크를 빼서 아무 링크도 가리키지 않는 라벨은 지운다(옛 코드 그대로).
 - **코드에서 되짚어 가기.** 링크가 걸린 줄은 줄 번호 칸 왼쪽에 선이 있다. 그 선이나 줄 번호를 가리키면 툴팁 "본문과 연결된 줄"이 뜨고, 줄 메뉴에 "연결된 글로 가기"가 생겨 그 글자를 고른다(여럿이면 글에 나오는 차례대로 다음 것).
 - **끊김.** 링크가 이 글에 그려지는 코드 블록의 라벨을 찾지 못하면 끊긴 것이다: 블록이 지워졌거나, 라벨의 줄이 모두 지워졌거나, 다른 글에서 붙여 넣은 링크다. 번역 글에서는 그 글의 블록 가운데 링크의 블록 id이거나 그 블록에서 온 것(`link.from`)을 찾는다. 끊긴 링크는 편집기에서 빨간 점선 밑줄이고 카드가 "가리키던 줄이 없습니다" · "빼기"를 보인다. 발행 전 할 일 "끊긴 코드 링크"가 발행을 막는다(옛 코드 그대로. 02의 할 일 표에 더한다). 사이트는 끊긴 링크를 글자로만 그린다.
 - **복제와 붙여넣기.** 코드 블록을 복제하면 새 id라서 링크는 원래 블록을 그대로 가리킨다. 다른 글로 옮긴 링크는 끊긴다(검사가 찾는다). 옛 코드의 라벨 다시 짓기는 없다.
@@ -151,10 +152,10 @@ codeBlock: {
 ```tsx
 // lib/monti.ts
 import { codeHighlighter } from "@monti-cms/core/code";
-export const code = await codeHighlighter(config.codeBlock);
+export const code = codeHighlighter(config.codeBlock); // a promise, opened once
 
 // a page
-renderDocument(post.doc, { createElement, media: post.media, entryPath: post.entryPath, code, locale: post.locale });
+renderDocument(post.doc, { createElement, media: post.media, entryPath: post.entryPath, code: await code, locale: post.locale });
 
 // app/(site)/layout.tsx
 import { CodeTools } from "@monti-cms/next";
@@ -164,7 +165,7 @@ import "@monti-cms/core/render.css";
 
 - **`renderDocument`가 그리는 코드 블록.** `<figure data-code>` 안에 파일 이름(`<figcaption>`), 복사 버튼(`<button data-code-copy>`, 글자는 글의 언어로 "복사" · "Copy"), `<pre data-language data-line-numbers>`, 줄마다 `<span class="line" data-line="3">`과 그 줄의 효과 이름(`data-effect="plus"`), 사이트 효과의 `class`. 글자 조각은 테마 둘의 색을 CSS 변수로 가진다(`--shiki-light`, `--shiki-dark`). 접기는 `<details>`, 글자 접기는 누르면 펴지는 `…`, 툴팁은 가리키거나 포커스하면 뜨는 설명(터치 화면에서는 코드 아래 번호 목록). `code`를 주지 않은 사이트는 색 없이 같은 모양으로 그린다.
 - **`render.css`.** 줄 효과의 바탕과 줄 앞 표시, 어두운 테마(`.dark`, `[data-theme="dark"]`), 포커스 흐림, 링크가 가리키는 줄, 복사 버튼(코드 위에 포인터가 있거나 포커스가 있을 때), 접기, 툴팁, 들여쓰기 선. 옛 `render.css` 그대로이고 Tailwind 없이 읽힌다. 사이트는 이것을 싣거나 베껴 고친다.
-- **`<CodeTools />`(`attachCodeTools(document)`).** 복사(누르면 2초 동안 "복사함" · "Copied"), 코드 링크(가리키면 그 줄 강조와 다른 줄 흐림, 누르면 그 줄로 가서 접힌 곳을 펴고 잠시 강조, 줄이 화면 밖이면 글 옆에 줄 미리보기, 줄 끝의 "글로 돌아가기" 단추)를 문서 하나에 한 번 건다. 옛 코드의 움직임 그대로다.
+- **`<CodeTools />`(`@monti-cms/next`의 `attachCodeTools(document)`).** 복사(누르면 2초 동안 "복사함" · "Copied"), 코드 링크(가리키면 그 줄 강조와 다른 줄 흐림, 누르면 그 줄로 가서 접힌 곳을 펴고 잠시 강조, 줄이 화면 밖이면 글 옆에 줄 미리보기, 줄 끝의 "글로 돌아가기" 단추)를 문서 하나에 한 번 건다. 옛 코드의 움직임 그대로다.
 - **예제 앱.** `examples/blog`가 `codeBlock` 설정, `CodeTools`, `render.css`를 쓴다. 흐름 테스트가 예제 앱에서 복사 버튼과 코드 링크를 눌러 본다.
 
 ## MDX (T79)
@@ -174,10 +175,10 @@ import "@monti-cms/core/render.css";
 | 효과 | 읽기 | 쓰기 |
 |---|---|---|
 | 추가 · 삭제 · 강조 · 포커스 · 오류 · 경고 | Shiki 표기 `// [!code ++]`, `--`, `highlight`(`hl`), `focus`, `error`, `warning`, 수(`[!code ++:3]`). 옛 Monti 주석도 | Shiki 표기 |
-| 낱말 강조 `[!code word:x]` | 그 낱말을 찾는 굵게 규칙(코드 전체, 수가 있으면 그 줄들) | 굵게 규칙이 낱말 하나(정규식 기호 없음)면 Shiki 표기, 아니면 Monti 주석 |
+| 낱말 강조 `[!code word:x]` | 그 낱말을 찾는 굵게 규칙(코드 전체) | Monti 주석(`@document bold {re:/x/g}`). 굵게와 Shiki의 낱말 강조는 다른 효과라 Shiki 표기로 되돌리지 않는다(만들며 정함 2026-11-14) |
 | 접기, 앵커, 사이트 효과, 글자 효과, 그 밖의 규칙 | 옛 Monti 주석(`// @line collapse {2-6} open`, `// @char …`, `// @document … {re:/…/g}`) | 옛 Monti 주석 그대로 |
 | 파일 이름, 줄 번호 | 울타리 줄 meta `title="…"`, `showLineNumbers` | 같다 |
-| 코드 링크 | `<CodeRef block="b_6" to="c1">글</CodeRef>`, 지시문 `:code-ref[글]{to="c1"}`(옛 것, 그 글에서 라벨을 가진 첫 블록) | `<CodeRef block to>` |
+| 코드 링크 | `<CodeRef to="c1">글</CodeRef>`, 옛 지시문 `:code-ref[글]{to="c1"}`. 파일에는 블록 id가 없으므로 그 라벨을 가진 첫 코드 블록으로 간다(옛 규칙). 라벨을 가진 블록이 없으면 끊긴 링크(`block: "-"`)로 남아 발행 검사가 찾는다 | `<CodeRef to="c1">` |
 
 - 주석 글자는 그 언어의 주석 문법으로 쓴다(`#`, `--`, `<!-- -->` 등. 옛 코드 그대로). 표기만 있는 줄은 표기를 빼면 빈 줄이라 줄째 뺀다(Shiki와 같다).
 - 가져온 글에서 쓰고 다시 내보내면 효과가 같은 표기로 돌아온다(읽기와 쓰기의 짝). 지금 14가 언어 값에 남기는 울타리 줄의 나머지는 위의 meta만 읽고, 모르는 meta는 그대로 `meta`로 둔다(잃지 않는다).

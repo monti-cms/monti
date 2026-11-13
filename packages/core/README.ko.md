@@ -190,6 +190,33 @@ export function Picture({ image }: { image: SiteImage }) {
 제목은 글자로 만든 `id`와 함께 그린다(어느 언어의 글자든 남고, 같은 글자가 또 나오면 번호가 붙는다). `tocOf(doc, { min, max })`는 그
 `id`로 목차를 준다. 따로 말하지 않으면 2 · 3단계 제목의 `{ id, text, level, depth }`다.
 
+### 코드 블록
+
+코드 블록은 코드를 글자로 가지고, 언어, 파일 이름(`title`), 사이트에서 줄 번호를 보일지, 줄 범위에 건 줄 효과(`highlight`, `focus`, `plus`,
+`minus`, `warning`, `error`, `collapse`, 그리고 코드 링크가 가리키는 라벨 `anchor`), 정규식 규칙을 가진다. 굵게, 기울임, 취소선, 밑줄,
+접기(`codeFold`), 툴팁(`codeTip`)은 코드 안의 서식이다. 본문의 코드 링크는 서식 `codeRef { block, anchor }`이고, 가리키던 줄이 없으면
+발행을 막는다.
+
+`monti.config.ts`의 `codeBlock`이 Shiki 테마 둘, 편집기가 내놓는 언어, 편집기의 도구, 줄 효과를 정한다:
+
+```ts
+codeBlock: {
+	themes: { light: "github-light", dark: "github-dark" },
+	languages: ["ts", "tsx", "bash", "json"],
+	tools: { rules: false }, // rules, fold, tooltip, textStyles, links: false가 아니면 켜져 있다
+	lineEffects: [{ name: "info", label: "정보", class: "line-info", editor: { tone: "neutral", marker: "i" } }],
+},
+```
+
+사이트는 같은 색을 한 번 열어 `renderDocument`에 넘긴다. `@monti-cms/core/render.css`가 기본 모양(일반 CSS)이고, `@monti-cms/next`의
+`<CodeTools />`가 누르는 일(복사, 코드 링크)을 한다:
+
+```ts
+import { codeHighlighter } from "@monti-cms/core/code";
+export const code = codeHighlighter(config.codeBlock); // 약속(promise)이다: 페이지가 `await code`
+renderDocument(entry.doc, { createElement, code: await code, locale: entry.locale });
+```
+
 ## 플러그인
 
 플러그인은 `monti.config.ts`의 코드다(`plugins: [seo(), …]`): `definePlugin({ name, … })`. 더할 수 있는 것:
