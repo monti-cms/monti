@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Block, BlockHandle, Stack, Text } from "./index";
+import { Block, BlockHandle, PickBox, Stack, Text } from "./index";
 
-/** The grip in the left margin of a block. While the block menu is open the grip stays pressed and the block takes the block background. */
+/**
+ * The grip in the left margin of a block: a 20 × 24 rounded square, a light ground when pointed at. While the block menu is open the grip stays
+ * pressed and the block takes the block background.
+ */
 const meta = {
 	title: "Monti/EditorTools/BlockHandle",
 	component: BlockHandle,
@@ -34,5 +37,15 @@ export const MenuOpen: Story = {
 			<BlockHandle {...args} active />
 			<Paragraph active />
 		</Stack>
+	),
+};
+
+/** The box a drag from the margin draws to pick blocks: a thin line only, the blocks under it on their own picked ground. */
+export const Box: Story = {
+	render: () => (
+		// design-allow: the size the editor gives the box as the mouse goes
+		<div style={{ width: 320, height: 96 }}>
+			<PickBox />
+		</div>
 	),
 };

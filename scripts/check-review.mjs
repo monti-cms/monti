@@ -10,7 +10,7 @@
  *   node scripts/check-review.mjs --hook     # Claude Code PreToolUse hook (.claude/settings.json): refuses a merge of an unread head, and one
  *                                            # not bound to the head it checked (`--match-head-commit`). `merge-commands.mjs` reads the command.
  *
- * The admin UI is the files of `PATHS` without their tests (stories count: they are the states the review looks at). The record holds one hash
+ * The admin UI is the files of `PATHS` (with the blocks package's sources) without their tests (stories count: they are the states the review looks at). The record holds one hash
  * of those files' paths and contents, so a commit that only adds the record, or changes other code, keeps it valid, and a squash merge
  * carries it to the shared branch.
  *
@@ -32,6 +32,8 @@ const PATHS = [
 	"packages/ui/tokens",
 	"packages/admin/src",
 	"packages/admin/styles",
+	// A site block's own editor view, tool row and look (`@monti-cms/blocks`, doc 18): admin UI a site copies, drawn with the admin's parts.
+	"packages/blocks/blocks",
 ];
 const TEST = /(^|\/)__test__\/|\.test\.[^/]+$/;
 

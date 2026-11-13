@@ -21,6 +21,8 @@ import { cn } from "./cn";
  *   caption) still take text.
  * - `data-covered`: a block that is one thing, inside a range picked from a text (a drag or Shift+arrow that went over it): it stands on the
  *   selection's ground, as picked words do.
+ * - `data-picked`: a block picked whole (a box from the margin, Shift on a handle, Esc on picked words): the same selection ground, out to 4px around
+ *   it. While blocks are picked the text carries `data-picking`, and the browser's own highlight of the words under them is not drawn.
  * - `data-checked` on a checklist's item (`ul[data-checklist]`): its box is ticked, drawn like `Checkbox` (14px, the faint ring; ticked, the ink ring and fill).
  */
 const EDITOR_BODY = cn(
@@ -75,6 +77,9 @@ const EDITOR_BODY = cn(
 	"[&_[data-whole]]:select-none",
 	// Taken in by a range that began in a text: nothing in it is text for the browser to paint, so it stands on the selection's own ground, out to 4px around it.
 	"[&_[data-covered]]:bg-(--monti-bg-selection) [&_[data-covered]]:shadow-[0_0_0_4px_var(--monti-bg-selection)]",
+	// Blocks picked whole stand on the same ground; the selection laid over them for copy is not drawn a second time.
+	"[&_[data-picked]]:bg-(--monti-bg-selection) [&_[data-picked]]:shadow-[0_0_0_4px_var(--monti-bg-selection)]",
+	"[&_[data-picking]]:selection:bg-transparent",
 	"[&_[data-held]]:opacity-40",
 	"[&_[data-untranslated]]:text-monti-faint",
 	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-meta [&_[data-off]]:after:content-[attr(data-off-label)]",

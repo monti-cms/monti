@@ -22,7 +22,7 @@ export {
 } from "./alert-dialog";
 export { Banner } from "./banner";
 export { BlockBarPlace, BlockBox, ResizeCorner } from "./block-bar";
-export { Block, BlockHandle } from "./block-handle";
+export { Block, BlockHandle, PickBox } from "./block-handle";
 export { Box } from "./box";
 export { BulkBar } from "./bulk-bar";
 export { Button } from "./button";
@@ -95,6 +95,7 @@ export {
 	CompareSide,
 	CompareText,
 	CompareTitle,
+	CompareValues,
 } from "./compare";
 export {
 	ContextMenu,
@@ -168,6 +169,7 @@ export {
 export { FieldGroup, FieldRow, FieldTree } from "./field-tree";
 export { FileBlock } from "./file-block";
 export { FilePreview } from "./file-preview";
+export { FileTree, FileTreeRow } from "./file-tree";
 export { FileUseList, FileUseRow } from "./file-use-row";
 export { FilterButton } from "./filter-button";
 export { FloatingBar, FloatingBarButton } from "./floating-bar";
@@ -309,6 +311,7 @@ export {
 	useSidebar,
 } from "./sidebar";
 export { Sortable, type SortableEvent, SortableList, type SortableRef, useSortableItem } from "./sortable";
+export { BlockFrameBox, BlockTitleField, SourceBox } from "./source-box";
 export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";

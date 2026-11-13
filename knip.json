@@ -30,6 +30,10 @@
 		"packages/mdx": {
 			"entry": ["src/**/*.test.ts"]
 		},
+		"packages/blocks": {
+			"entry": ["blocks/**/*.test.tsx"],
+			"project": ["blocks/**/*.{ts,tsx}"]
+		},
 		"packages/ui": {
 			"entry": ["src/spec-pack/pack.mjs"],
 			"ignoreIssues": {

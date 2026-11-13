@@ -4,14 +4,30 @@ import { directiveFromMarkdown } from "mdast-util-directive";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { frontmatterFromMarkdown } from "mdast-util-frontmatter";
 import { gfmFromMarkdown } from "mdast-util-gfm";
+import { mathFromMarkdown } from "mdast-util-math";
 import { directive } from "micromark-extension-directive";
 import { frontmatter } from "micromark-extension-frontmatter";
 import { gfm } from "micromark-extension-gfm";
+import { math } from "micromark-extension-math";
 import { parse as parseYaml } from "yaml";
 import { KEPT, KEPT_HTML } from "./kept";
 
 /** What a block type of the site holds, for a `:::directive` that names it: its words, other blocks, or nothing. */
 export type KnownBlocks = (type: string) => "text" | "blocks" | "nothing" | null;
+
+/** The site's block a fenced code block of a language is (doc 18: ```` ```math ````, ```` ```mermaid ````), with the attr its code goes in. */
+export type FencedBlocks = (language: string) => { type: string; attr: string } | null;
+
+/** Whether a name is one of the site's own marks: `:name[words]{…}` becomes that mark (doc 18). */
+export type KnownMarks = (name: string) => boolean;
+
+export type ReadOptions = {
+	/** An `.mdx` file: its `import` and `export` lines are not words. */
+	mdx?: boolean;
+	known?: KnownBlocks;
+	fenced?: FencedBlocks;
+	marks?: KnownMarks;
+};
 
 export type ReadFile = {
 	/** The front matter, as loose values. */
@@ -28,16 +44,28 @@ const coerce = (value: string | null | undefined): unknown => {
 	return /^-?\d+(\.\d+)?$/.test(value) ? Number(value) : value;
 };
 
+/** A directive's attributes as a block's or a mark's values: `open` alone is true, digits are a number. */
+const attrsOf = (attributes: Record<string, string | null | undefined> | null | undefined): Record<string, unknown> =>
+	Object.fromEntries(Object.entries(attributes ?? {}).map(([key, value]) => [key, coerce(value)]));
+
 /**
  * Reads a `.md` or `.mdx` file into a body (doc 14, the MDX plugin): its front matter as values, its text as blocks. A `:::name{…}` directive
  * that names one of the site's blocks becomes that block; a component (`<Tweet />`), or a directive no block is known for, is kept as
  * written in a code block and named in `unknown`. A fenced code block keeps its text as it is, notations in its lines included.
  */
-export function readMarkdown(text: string, options: { mdx?: boolean; known?: KnownBlocks } = {}): ReadFile {
+export function readMarkdown(text: string, options: ReadOptions = {}): ReadFile {
 	const known = options.known ?? (() => null);
+	const fenced = options.fenced ?? (() => null);
+	const knownMark = options.marks ?? (() => false);
 	const tree = fromMarkdown(text, {
-		extensions: [frontmatter(["yaml"]), gfm(), directive()],
-		mdastExtensions: [frontmatterFromMarkdown(["yaml"]), gfmFromMarkdown(), directiveFromMarkdown()],
+		// `$$ … $$` is a formula (remark-math writes it so); one `$` is a price, not math (`singleDollarTextMath: false`).
+		extensions: [frontmatter(["yaml"]), gfm(), directive(), math({ singleDollarTextMath: false })],
+		mdastExtensions: [
+			frontmatterFromMarkdown(["yaml"]),
+			gfmFromMarkdown(),
+			directiveFromMarkdown(),
+			mathFromMarkdown(),
+		],
 	});
 	const source = (node: Nodes) => text.slice(node.position?.start.offset ?? 0, node.position?.end.offset ?? 0);
 	const unknown: string[] = [];
@@ -112,6 +140,17 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 				case "image":
 					push(node.alt ?? "", now);
 					break;
+				case "textDirective":
+					// The old code link, `:code-ref[words]{to="c1"}` (doc 17).
+					if (node.name === "code-ref" && typeof node.attributes?.to === "string") {
+						out.push(...inline(node.children, [...now, { type: "codeRef", block: "", anchor: node.attributes.to }]));
+						break;
+					}
+					// A mark of the site's own (`:color[words]{color="red"}`, doc 18); any other stays as it was written.
+					if (knownMark(node.name))
+						out.push(...inline(node.children, [...now, { type: node.name, ...attrsOf(node.attributes) }]));
+					else push(source(node), now);
+					break;
 				case "html": {
 					// A code link (doc 17): `<CodeRef to="c1">words</CodeRef>`, the label of lines in a code block of this body.
 					const codeRef = /^<CodeRef\s+to=(?:"([^"]*)"|'([^']*)')\s*>$/.exec(node.value.trim());
@@ -131,14 +170,6 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 					else push(node.value, now);
 					break;
 				}
-				case "textDirective":
-					// The old code link, `:code-ref[words]{to="c1"}`.
-					if (node.name === "code-ref" && typeof node.attributes?.to === "string") {
-						out.push(...inline(node.children, [...now, { type: "codeRef", block: "", anchor: node.attributes.to }]));
-						break;
-					}
-					push(source(node), now);
-					break;
 				default:
 					// What has no inline of its own (a text directive, a reference) stays as it was written.
 					push(source(node), now);
@@ -219,9 +250,21 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 				case "blockquote":
 					return [{ id: newBlockId(), type: "quote", children: blocks(node.children) }];
 				case "code": {
-					// Shiki's notation and the old Monti comments become the block's effects; the rest of the fence line is kept (doc 17, T79).
+					// A fence of a language one of the site's blocks is written in (```` ```mermaid ````) is that block (doc 18).
+					const site = node.lang ? fenced(node.lang) : null;
+					if (site && !node.meta) return [{ id: newBlockId(), type: site.type, attrs: { [site.attr]: node.value } }];
+					// Shiki's notation and the old Monti comments become the block's effects; the rest of the fence line is kept, its `title="…"`
+					// the file's name (doc 17, T79; doc 18, the code explorer).
 					const fence = readFence({ lang: node.lang, meta: node.meta, value: node.value });
 					return [textBlock("codeBlock", fence.content, fence.attrs)];
+				}
+				case "math": {
+					// `$$ … $$`: the site's formula block when it has one, else code in the language `math`.
+					const site = fenced("math");
+					if (site) return [{ id: newBlockId(), type: site.type, attrs: { [site.attr]: node.value } }];
+					return [
+						textBlock("codeBlock", node.value === "" ? [] : [{ type: "text", text: node.value }], { language: "math" }),
+					];
 				}
 				case "table": {
 					const cell = (nodes: readonly PhrasingContent[]) =>
@@ -261,9 +304,7 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 						unknown.push(node.name);
 						return [kept(node, KEPT)];
 					}
-					const attrs = Object.fromEntries(
-						Object.entries(node.attributes ?? {}).map(([key, value]) => [key, coerce(value)]),
-					);
+					const attrs = attrsOf(node.attributes);
 					const children = node.type === "containerDirective" ? node.children : [];
 					const [first] = children;
 					return [

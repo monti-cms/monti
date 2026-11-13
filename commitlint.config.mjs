@@ -31,6 +31,7 @@ export default {
 				"storage-s3",
 				"seo",
 				"mdx",
+				"blocks",
 				"examples",
 				"showcase",
 				"scripts",

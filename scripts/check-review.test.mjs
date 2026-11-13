@@ -180,3 +180,16 @@ test("the hook lets other calls through, and refuses what it cannot bind or read
 		assert.match(refused.stderr, says);
 	}
 });
+
+test("a site block's editor view in the blocks package is admin UI too; its tests are not", () => {
+	const { run, review, write, commit } = repository();
+	review();
+	write("packages/blocks/blocks/callout/callout.test.tsx", "test\n");
+	commit("a block's test");
+	assert.equal(run().status, 0);
+	write("packages/blocks/blocks/callout/editor.tsx", "export const editor = 1;\n");
+	commit("a block's editor view");
+	const failed = run();
+	assert.equal(failed.status, 1);
+	assert.match(failed.stderr, /packages\/blocks\/blocks\/callout\/editor\.tsx/);
+});

@@ -1,5 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Edit, Settings, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight, TrashCan } from "./icons";
+import {
+	ArrowsHorizontal,
+	Edit,
+	Settings,
+	SettingsAdjust,
+	TextAlignCenter,
+	TextAlignLeft,
+	TextAlignRight,
+	TrashCan,
+	View,
+} from "./icons";
 import { FloatingBar, FloatingBarButton, Separator } from "./index";
 
 /** The small floating row of tools: 3px inside, 2px between 28px buttons, a rule between groups, the floating shadow. */
@@ -55,6 +65,22 @@ export const Disabled: Story = {
 			</FloatingBarButton>
 			<FloatingBarButton label="설정">
 				<Settings aria-hidden />
+			</FloatingBarButton>
+		</FloatingBar>
+	),
+};
+
+/** A button named on itself (`named`: its icon and its name, 8px inside): a site block's labelled toggle, pressed while on. No tooltip repeats it. */
+export const Named: Story = {
+	render: () => (
+		<FloatingBar aria-label="접기 도구">
+			<FloatingBarButton label="처음부터 펼치기" named pressed>
+				<View aria-hidden />
+				처음부터 펼치기
+			</FloatingBarButton>
+			<FloatingBarButton label="고르게" named>
+				<ArrowsHorizontal aria-hidden />
+				고르게
 			</FloatingBarButton>
 		</FloatingBar>
 	),

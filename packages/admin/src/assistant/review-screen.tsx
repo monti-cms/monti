@@ -28,8 +28,8 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { href, type Route, reachedFromInside } from "../route";
-import { codeChanges, shownBlocks } from "../screens/entry/compare-entries";
-
+import { codeChanges, type ShownBlock, shownBlocks } from "../screens/entry/compare-entries";
+import { useBlockNames } from "../screens/entry/use-block-names";
 import { useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { endsClosed } from "../screens/list/format";
 import type { SchemaRead } from "../screens/settings/schema-draft";
@@ -50,6 +50,8 @@ type EntryNow = {
 	slug: string;
 	values: Record<string, unknown>;
 	doc: Doc | null;
+	/** The library's files its body shows (`entries.get`'s `media`), to name a picture by its file. */
+	media?: { id: string; name: string }[];
 };
 
 /** An id a former item of the same proposal makes (`{ $item }`): the item that makes it, or `null` for a plain id. */
@@ -120,6 +122,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 	// The kinds of change that are looked at side by side: each kind has its own switch.
 	const [sideBySide, setSideBySide] = useState<ReadonlySet<string>>(new Set());
 	const [entries, setEntries] = useState<Record<string, EntryNow>>({});
+	const names = useBlockNames(Object.values(entries).flatMap((entry) => entry.media ?? []));
 	// The translations a proposal makes (flow 3·13) that are opened to read the source beside the translation.
 	const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
 	// What the site calls its fields, their options and its languages: a change is named as the editor names it.
@@ -151,8 +154,8 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 				const answer = await transport("entries.get", { id: entryId });
 				if (gone) return;
 				if (answer.status !== 200) continue;
-				const entry = (answer.body as { entry: EntryNow }).entry;
-				setEntries((known) => ({ ...known, [entryId]: entry }));
+				const { entry, media } = answer.body as { entry: EntryNow; media?: { id: string; name: string }[] };
+				setEntries((known) => ({ ...known, [entryId]: { ...entry, media: media ?? [] } }));
 			}
 		})();
 		return () => {
@@ -251,45 +254,56 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 				// The body moved on so far that the edit no longer fits: the row says it changed in the meantime.
 				return [];
 			}
-			const before = shownBlocks(now.doc);
-			const after = shownBlocks(next);
+			const before = shownBlocks(now.doc, names);
+			const after = shownBlocks(next, names);
 			const places: Place[] = [];
+			// A block with values is named by its kind ("Block 4 · Callout", doc 18), and a change of its values alone is a row of its own: its values
+			// before and after, apart from its words.
+			const kind = (block: ShownBlock) => block.values?.split(" · ")[0];
+			const valuesOnly = (block: ShownBlock) => block.values?.split(" · ").slice(1).join(" · ") ?? "";
+			const named = (block: ShownBlock, index: number) =>
+				[t("review.block", { number: index + 1 }), kind(block)].filter((part) => part).join(" · ");
 			after.forEach((block, index) => {
 				const was = before.find((each) => each.id === block.id);
-				if (!was) places.push({ name: t("review.newBlock"), before: "", after: block.text });
-				else if (was.text !== block.text)
-					places.push({ name: t("review.block", { number: index + 1 }), before: was.text, after: block.text });
+				if (!was) places.push({ name: t("review.newBlock"), before: "", after: block.text || (block.values ?? "") });
 				else {
-					// The same code with other effects (doc 17, T196): the lines whose effects change, with their effects on each side. A core effect
-					// says its name; a site's own effect, which has no words in the admin, says its stored name.
-					const effectName = (name: string) =>
-						CORE_EFFECTS.has(name) ? t({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` }) : name;
-					const changed = codeChanges(block, was);
-					const effects = (side: typeof block, lines: number[]) =>
-						lines
-							.map((line) => {
-								const names = side.code?.lines[line] ?? [];
-								return `${t("editor.code.line", { n: line + 1 })}: ${
-									names.length ? names.map(effectName).join(", ") : "—"
-								}`;
-							})
-							.join(" · ");
-					const head = (side: typeof block) => [side.code?.language, side.code?.title].filter(Boolean).join(" · ");
-					if (changed.lines.length || changed.language || changed.title)
-						places.push({
-							name: t("review.block", { number: index + 1 }),
-							before: [changed.language || changed.title ? head(was) : "", effects(was, changed.lines)]
-								.filter(Boolean)
-								.join(" · "),
-							after: [changed.language || changed.title ? head(block) : "", effects(block, changed.lines)]
-								.filter(Boolean)
-								.join(" · "),
-						});
+					if (valuesOnly(was) !== valuesOnly(block))
+						places.push({ name: named(block, index), before: valuesOnly(was), after: valuesOnly(block) });
+					if (was.text !== block.text) places.push({ name: named(block, index), before: was.text, after: block.text });
+					else {
+						// The same code with other effects (doc 17, T196): the lines whose effects change, with their effects on each side. A core effect
+						// says its name; a site's own effect, which has no words in the admin, says its stored name.
+						const effectName = (name: string) =>
+							CORE_EFFECTS.has(name)
+								? t({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` })
+								: name;
+						const changed = codeChanges(block, was);
+						const effects = (side: typeof block, lines: number[]) =>
+							lines
+								.map((line) => {
+									const names = side.code?.lines[line] ?? [];
+									return `${t("editor.code.line", { n: line + 1 })}: ${
+										names.length ? names.map(effectName).join(", ") : "—"
+									}`;
+								})
+								.join(" · ");
+						const head = (side: typeof block) => [side.code?.language, side.code?.title].filter(Boolean).join(" · ");
+						if (changed.lines.length || changed.language || changed.title)
+							places.push({
+								name: named(block, index),
+								before: [changed.language || changed.title ? head(was) : "", effects(was, changed.lines)]
+									.filter(Boolean)
+									.join(" · "),
+								after: [changed.language || changed.title ? head(block) : "", effects(block, changed.lines)]
+									.filter(Boolean)
+									.join(" · "),
+							});
+					}
 				}
 			});
 			before.forEach((block, index) => {
 				if (!after.some((each) => each.id === block.id))
-					places.push({ name: t("review.block", { number: index + 1 }), before: block.text, after: "" });
+					places.push({ name: named(block, index), before: block.text || (block.values ?? ""), after: "" });
 			});
 			return places;
 		}
@@ -575,18 +589,20 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 															<RowTitle title={change.title} address={change.address ?? undefined} />
 															{places.length > 0 ? (
 																<CompareRows>
-																	{places.map((place) => {
+																	{places.map((place, at) => {
 																		const runs = inlineDiff(place.before, place.after);
 																		return side && place.before !== "" && place.after !== "" ? (
 																			<CompareRow
-																				key={place.name}
+																				// biome-ignore lint/suspicious/noArrayIndexKey: a block's values and its words are two rows of one name
+																				key={`${place.name}:${at}`}
 																				name={place.name}
 																				source={marked(runs, "before")}
 																				translation={marked(runs, "after")}
 																			/>
 																		) : (
 																			<CompareRow
-																				key={place.name}
+																				// biome-ignore lint/suspicious/noArrayIndexKey: a block's values and its words are two rows of one name
+																				key={`${place.name}:${at}`}
 																				single
 																				name={place.name}
 																				translation={marked(runs, "both")}

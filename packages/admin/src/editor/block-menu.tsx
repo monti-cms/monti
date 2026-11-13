@@ -18,14 +18,25 @@ import {
 	EditorOverlay,
 	HeldBlock,
 	MenuShortcut,
+	PickBox,
 } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, Copy, Repeat, Spark, TextAlignLeft, TrashCan } from "@monti-cms/ui/icons";
 import type { Node as EditorNode } from "@tiptap/pm/model";
-import type { Transaction } from "@tiptap/pm/state";
-import type { Editor } from "@tiptap/react";
+import { TextSelection, type Transaction } from "@tiptap/pm/state";
+import { type Editor, useEditorState } from "@tiptap/react";
 import { type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { BlockIcon } from "./block-icon";
+import {
+	blocksBetween,
+	canMovePicked,
+	duplicatePicked,
+	movePicked,
+	movePickedBy,
+	pickedBlocks,
+	removePicked,
+	setPick,
+} from "./block-pick";
 import { alignable, type BodyCatalogs } from "./catalog";
 import {
 	canMove,
@@ -39,16 +50,17 @@ import {
 	turnInto,
 } from "./commands";
 import { blockAtLine, type Drop, dropAt, moveTo } from "./drag";
+import { useMarquee } from "./marquee";
 import { markHeld, markMenuOpen } from "./plugins";
 import { nodeName } from "./schema";
 import { hasHeaderRow, toggleHeaderRow } from "./table";
 import { linkOf } from "./translation";
 
-/** Where the handle floats: 28px left of the block (the 24px grip, then 4 to the text: its glyph sits mid-grip, so it reads about 11px off), centred on the block's first line. */
+/** Where the handle floats: 24px left of the block (the 20px grip, then 4 to the text: its glyph sits mid-grip, so it reads about 10px off), centred on the block's first line. */
 type Spot = { pos: number; top: number; left: number };
 
 const HANDLE = 24;
-const LEFT = 28;
+const LEFT = 24;
 /** How far left of the text the pointer still counts as on a block's line: the margin the handle sits in, and some room to reach it. */
 const REACH = 64;
 
@@ -61,8 +73,11 @@ function spotOf(element: HTMLElement, pos: number): Spot {
 	return { pos, top: rect.top + Math.max(0, (line - HANDLE) / 2), left: left - LEFT };
 }
 
-/** A drag in progress: the block in hand (its kind and text for the card), the pointer, and where it would land. */
-type Held = { from: number; kind: string; text: string; x: number; y: number; drop: Drop | null };
+/**
+ * A drag in progress: the block in hand (its kind and text for the card), the pointer, and where it would land. `with` are the other picked blocks
+ * that go with it.
+ */
+type Held = { from: number; with: number[]; kind: string; text: string; x: number; y: number; drop: Drop | null };
 
 /** The pointer moves this far (px) before a press on the grip becomes a drag, so a press still opens the menu (list.md, `Sortable`). */
 const DRAG_AFTER = 4;
@@ -106,10 +121,17 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 	const letGo = useRef<(() => void) | null>(null);
 	useEffect(() => () => letGo.current?.(), []);
 	const element = useRef<HTMLElement | null>(null);
+	// The blocks picked whole (block-pick.ts), drawn again when the pick changes.
+	const picked = useEditorState({
+		editor,
+		selector: ({ editor: current }) => (current ? pickedBlocks(current.state) : null),
+		equalityFn: (a, b) => (a ?? []).join() === (b ?? []).join(),
+	});
+	const marquee = useMarquee(editor);
 
 	const point = useCallback(
 		(_x: number, y: number) => {
-			if (!editor?.isEditable || open || held) return;
+			if (!editor?.isEditable || open || held || marquee.box) return;
 			const found = blockAtLine(editor.view, y);
 			if (!found) return;
 			element.current = found.element;
@@ -118,7 +140,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 				current && current.pos === next.pos && current.top === next.top && current.left === next.left ? current : next,
 			);
 		},
-		[editor, open, held],
+		[editor, open, held, marquee.box],
 	);
 
 	// The pointer is watched over the text and over the margin left of it where the handle sits (as Notion does): reaching for the handle from the
@@ -143,7 +165,9 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 			if (!current?.isConnected) return setSpot(null);
 			setSpot((now) => (now ? spotOf(current, now.pos) : now));
 		};
-		const typing = () => !open && setSpot(null);
+		// A modifier held alone is no typing: Shift is held to reach a handle and add its block to the pick.
+		const typing = (event: KeyboardEvent) =>
+			!open && !["Shift", "Meta", "Control", "Alt"].includes(event.key) && setSpot(null);
 		// A change of the body moves its blocks: the place the handle knew is another block's now, or none's. It goes, as when a key is pressed, unless its
 		// menu is open or its block is in hand (those changes are its own, and it is put away when they end).
 		const changed = () => !open && !held && setSpot(null);
@@ -167,9 +191,10 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 		editor.commands.focus();
 	};
 
-	const changeOpen = (next: boolean) => {
-		// A press that became a drag does not open the menu.
+	const changeOpen = (next: boolean, details?: { event?: Event }) => {
+		// A press that became a drag does not open the menu; nor does one with Shift, which adds to the pick.
 		if (next && dragging.current) return;
+		if (next && details?.event instanceof MouseEvent && details.event.shiftKey) return;
 		setOpen(next);
 		if (editor) editor.view.dispatch(markMenuOpen(editor.state, next && spot ? spot.pos : null));
 	};
@@ -182,6 +207,22 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 		if (!editor || !spot || event.button !== 0 || !element.current) return;
 		const { view } = editor;
 		const from = spot.pos;
+		if (event.shiftKey) {
+			// Shift on a handle picks from the first picked block (or the one the caret is in) to this one.
+			event.preventDefault();
+			const now = pickedBlocks(view.state);
+			const caret = blockAtLine(view, view.coordsAtPos(view.state.selection.from).top + 1)?.pos ?? from;
+			const ends = now ? [Math.min(now[0] ?? from, from), Math.max(now[now.length - 1] ?? from, from)] : [caret, from];
+			view.dispatch(setPick(view.state.tr, blocksBetween(view, ends[0] ?? from, ends[1] ?? from)));
+			view.focus();
+			return;
+		}
+		// The handle of a picked block takes all of them; another one's lets them go, with the caret in its block.
+		const together = picked && picked.length > 1 && picked.includes(from) ? picked.filter((pos) => pos !== from) : [];
+		if (picked && together.length === 0) {
+			const caret = TextSelection.near(view.state.doc.resolve(Math.min(from + 1, view.state.doc.content.size)));
+			view.dispatch(setPick(view.state.tr, null).setSelection(caret));
+		}
 		const startX = event.clientX;
 		const startY = event.clientY;
 		let lifted: Held | null = null;
@@ -193,15 +234,21 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 				const node = view.state.doc.nodeAt(from);
 				lifted = {
 					from,
-					kind: node ? kindName(node, view.state.doc.resolve(from).parent) : "",
+					with: together,
+					kind:
+						together.length > 0
+							? t("editor.blocksPicked", { count: together.length + 1 })
+							: node
+								? kindName(node, view.state.doc.resolve(from).parent)
+								: "",
 					text: (node?.textContent ?? "").slice(0, 120),
 					x: moved.clientX,
 					y: moved.clientY,
 					drop: null,
 				};
-				view.dispatch(markHeld(view.state, from));
+				view.dispatch(markHeld(view.state, [from, ...together]));
 			}
-			lifted = { ...lifted, x: moved.clientX, y: moved.clientY, drop: dropAt(view, from, moved.clientY) };
+			lifted = { ...lifted, x: moved.clientX, y: moved.clientY, drop: dropAt(view, from, moved.clientY, together) };
 			setHeld(lifted);
 		};
 		const unlisten = () => {
@@ -213,8 +260,16 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 		const finish = (put: boolean) => {
 			unlisten();
 			if (!lifted) return;
-			const tr = markHeld(view.state, null);
-			if (put && lifted.drop) moveTo(tr, from, lifted.drop);
+			const tr = markHeld(view.state, []);
+			if (put && lifted.drop) {
+				if (lifted.with.length > 0)
+					movePicked(
+						tr,
+						[from, ...lifted.with].sort((a, b) => a - b),
+						lifted.drop,
+					);
+				else moveTo(tr, from, lifted.drop);
+			}
 			view.dispatch(tr.scrollIntoView());
 			view.focus();
 			setHeld(null);
@@ -244,6 +299,17 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 	};
 
 	const overlay = () => {
+		if (marquee.box)
+			return (
+				<EditorOverlay
+					top={marquee.box.top}
+					left={marquee.box.left}
+					width={marquee.box.width}
+					height={marquee.box.height}
+				>
+					<PickBox />
+				</EditorOverlay>
+			);
 		if (held)
 			return (
 				<>
@@ -286,6 +352,61 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 			setSpot(null);
 			action(blockId);
 		};
+
+		// The handle of one of several picked blocks: the menu of them all (editor-tools.md, picking several blocks).
+		if (picked && picked.length > 1 && picked.includes(spot.pos)) {
+			const runPicked = (make: (tr: Transaction, blocks: number[]) => unknown) => {
+				const tr = editor.state.tr;
+				make(tr, picked);
+				editor.view.dispatch(tr.scrollIntoView());
+				editor.commands.focus();
+			};
+			return (
+				<EditorOverlay top={spot.top} left={spot.left}>
+					<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
+						<BlockHandle
+							gripLabel={t("editor.blockMenu")}
+							active={open}
+							onPointerDown={pressGrip}
+							trigger={(grip) => <DropdownMenuTrigger render={grip} />}
+						/>
+						<DropdownMenuContent side="bottom" align="start" alignOffset={-18} sideOffset={6}>
+							<DropdownMenuGroup>
+								<DropdownMenuLabel>{t("editor.blocksPicked", { count: picked.length })}</DropdownMenuLabel>
+							</DropdownMenuGroup>
+							<DropdownMenuSeparator />
+							{canMovePicked(doc, picked, -1) ? (
+								<DropdownMenuItem onClick={() => runPicked((tr, blocks) => movePickedBy(tr, blocks, -1))}>
+									<ArrowUp aria-hidden />
+									{t("editor.moveUp")}
+								</DropdownMenuItem>
+							) : null}
+							{canMovePicked(doc, picked, 1) ? (
+								<DropdownMenuItem onClick={() => runPicked((tr, blocks) => movePickedBy(tr, blocks, 1))}>
+									<ArrowDown aria-hidden />
+									{t("editor.moveDown")}
+								</DropdownMenuItem>
+							) : null}
+							<DropdownMenuItem onClick={() => runPicked(duplicatePicked)}>
+								<Copy aria-hidden />
+								{t("editor.duplicate")}
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								onClick={() => {
+									removePicked(editor.view, picked);
+									editor.commands.focus();
+									setSpot(null);
+								}}
+							>
+								<TrashCan aria-hidden />
+								{t("editor.delete")}
+								<MenuShortcut keys={["Backspace"]} />
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</EditorOverlay>
+			);
+		}
 
 		// A block still in the source's words: decide what it becomes, block by block (translation.md: the dimmed block's menu).
 		if (link?.state === "pending" && translation)

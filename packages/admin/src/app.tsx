@@ -7,6 +7,7 @@ import { LeaveGuardProvider, useLeave, useLeaveFiles } from "./draft/leave-guard
 import { adminMessages } from "./messages";
 import {
 	type AdminBlockDefinition,
+	type AdminMarkDefinition,
 	AdminProvider,
 	type Language,
 	type ScreenChannel,
@@ -337,6 +338,7 @@ export function MontiAdmin({
 	denied,
 	screen,
 	blocks,
+	marks,
 	plugins,
 }: {
 	transport: Transport;
@@ -353,6 +355,8 @@ export function MontiAdmin({
 	screen?: ScreenChannel;
 	/** The same site block definitions passed to core; their Editor (or Site fallback) renders custom blocks here. */
 	blocks?: AdminBlockDefinition[];
+	/** The site's mark definitions, from the same module: their cards in the format bar (doc 18). */
+	marks?: AdminMarkDefinition[];
 	/** The plugins' browser halves (`defineAdminPlugin`): their inputs, views and tool pages (doc 14). */
 	plugins?: AdminPlugin[];
 }) {
@@ -366,6 +370,7 @@ export function MontiAdmin({
 			apiBase={apiBase}
 			screen={screen}
 			blocks={blocks}
+			marks={marks}
 			plugins={plugins}
 		>
 			<AdminUiLabels>
