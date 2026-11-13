@@ -1399,11 +1399,6 @@ describe("what the second review of #480 found", () => {
 			// What a still story cannot show, played to its end (T241).
 			stories.ReviewMadeAgainByKeyboard,
 			stories.BubbleOpensItsConversation,
-			// The states of the design audit (2026-11-14).
-			stories.CardDiscarding,
-			stories.ReviewUndoing,
-			stories.ReviewMakingAgain,
-			stories.SentRequest,
 		])
 			await open(story).run();
 	});
@@ -2112,6 +2107,24 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 		await userEvent.click(undo);
 		await expect.element(button("되돌리는 중…").first()).toHaveAttribute("aria-busy", "true");
 		release();
+	});
+
+	// The audit's states drawn as stories, one test each: played in one loop with the other stories, they took a single test past its
+	// time on CI's slower machines.
+	it("the story of 버리기 on its way is reached", async () => {
+		await open(stories.CardDiscarding).run();
+	});
+
+	it("the story of 되돌리기 on its way on the review page is reached", async () => {
+		await open(stories.ReviewUndoing).run();
+	});
+
+	it("the story of 다시 만들기 on its way is reached", async () => {
+		await open(stories.ReviewMakingAgain).run();
+	});
+
+	it("the story of a sent default request with its spark is reached", async () => {
+		await open(stories.SentRequest).run();
 	});
 
 	it("the review page's way back is the editor's: a quiet text button with the chevron icon, no typed ‹", async () => {
