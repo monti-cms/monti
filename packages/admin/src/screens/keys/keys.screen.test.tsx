@@ -898,6 +898,8 @@ describe("plugin keys (flow 10, 12)", () => {
 		await expect.element(dialog().getByText("··· 9c1e")).toBeVisible();
 		await expect.element(button("바꾸기")).toBeVisible();
 		expect(await dialog().getByText("키를 다시 넣어 주세요.").elements()).toHaveLength(0);
+		// The caret stays where the person is typing: the key field closing takes no focus with it.
+		expect(focused()).toBe(address.element());
 		await userEvent.click(button("저장"));
 		await expect.element(dialog()).not.toBeInTheDocument();
 		expect(await page.getByText("이 칸을 채워 주세요.").elements()).toHaveLength(0);
