@@ -30,4 +30,4 @@ first page and the list of posts, so it needs the database.
 | `site/pages.tsx` | What those pages draw |
 | `app/site.css` | The site's looks, all under `.site` so they do not reach the admin's page |
 
-Media files go to `.monti/files` on this machine (`MONTI_FILES` moves it); `MONTI_STORAGE=off` runs the site with no storage. `MONTI_WEBHOOK` names an address every event is posted to (a search index, a deploy hook); a delivery that fails is in the admin's activity log, to send again.
+Media files go to `.monti/files` on this machine (`MONTI_FILES` moves it); `MONTI_STORAGE=off` runs the site with no storage. `MONTI_WEBHOOK` names an address every event is posted to (a search index, a deploy hook); a delivery that fails is in the admin's activity log, to send again. `MONTI_REFRESH_DOWN` is the flow tests' own: while the file it names is there, refreshing the cached pages fails (`lib/monti.ts`).

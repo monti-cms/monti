@@ -11,6 +11,8 @@
  *
  * It stops when the versions differ, when a package's `exports` name a file the tarball does not hold, when sources, tests or stories got in,
  * or when a file that says `"use client"` in the source no longer starts with it in the tarball (a Next site tells server from browser by it).
+ *
+ * The same built files make the same tarballs, byte for byte (`packedBytes` below): packing a tag a second time gives the files of the first.
  */
 import { execFileSync } from "node:child_process";
 import {
@@ -21,11 +23,13 @@ import {
 	readdirSync,
 	readFileSync,
 	rmSync,
+	statSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 
 const SCOPE = "@monti-cms/";
 
@@ -141,6 +145,64 @@ export function lostClient(packageDir, unpacked) {
 		);
 }
 
+/** The time every entry of a tarball carries: the one npm gives its own tarballs' entries. */
+const PACKED_AT = Date.parse("1985-10-26T08:15:00.000Z") / 1000;
+
+/** A tar header's name fields for a path: `name` holds 100 bytes, and a longer path puts its leading folders in `prefix` (155 bytes). */
+function headerName(file) {
+	if (Buffer.byteLength(file) <= 100) return { name: file, prefix: "" };
+	for (let at = file.indexOf("/"); at >= 0; at = file.indexOf("/", at + 1)) {
+		const [prefix, name] = [file.slice(0, at), file.slice(at + 1)];
+		if (Buffer.byteLength(prefix) <= 155 && Buffer.byteLength(name) <= 100) return { name, prefix };
+	}
+	throw new Error(`${file}: the path is too long for a tarball`);
+}
+
+/**
+ * A gzipped tar of a folder's files, each under `package/`, that is the same bytes whenever the files are the same: the entries are in the
+ * order of their names, and none carries what differs from one run to the next (the time, the owner, the folder's own order, the machine's
+ * permission mask). The system's `tar` writes all of those. A file is 0644, or 0755 when it may be run (the `monti` command).
+ * The bytes also rest on Node's zlib: the same Node packs the same tarball, another may compress differently.
+ */
+export function packedBytes(dir) {
+	const blocks = [];
+	const field = (header, text, at, length) => header.write(text, at, length, "utf8");
+	const octal = (value, length) => value.toString(8).padStart(length - 1, "0");
+	// By code unit, not by the machine's language: the same order everywhere.
+	for (const file of filesUnder(dir).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
+		const body = readFileSync(path.join(dir, file));
+		const header = Buffer.alloc(512);
+		const { name, prefix } = headerName(`package/${file}`);
+		field(header, name, 0, 100);
+		field(header, octal(statSync(path.join(dir, file)).mode & 0o111 ? 0o755 : 0o644, 8), 100, 8);
+		field(header, octal(0, 8), 108, 8);
+		field(header, octal(0, 8), 116, 8);
+		field(header, octal(body.length, 12), 124, 12);
+		field(header, octal(PACKED_AT, 12), 136, 12);
+		// The checksum is counted with its own field as spaces.
+		field(header, "        ", 148, 8);
+		field(header, "0", 156, 1);
+		field(header, "ustar\u000000", 257, 8);
+		field(header, prefix, 345, 155);
+		field(
+			header,
+			`${octal(
+				header.reduce((sum, byte) => sum + byte, 0),
+				7,
+			)}\u0000 `,
+			148,
+			8,
+		);
+		blocks.push(header, body, Buffer.alloc((512 - (body.length % 512)) % 512));
+	}
+	// Two empty blocks end a tar.
+	blocks.push(Buffer.alloc(1024));
+	const zipped = gzipSync(Buffer.concat(blocks), { level: 9 });
+	// The header's byte for the system that made it: "unknown", on every system. (Its time is already zero.)
+	zipped[9] = 255;
+	return zipped;
+}
+
 function filesUnder(dir, prefix = "") {
 	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
 		entry.isDirectory()
@@ -204,10 +266,8 @@ export function packRelease({ root, out, base }) {
 			// The license lives once at the repo root: every package carries a copy.
 			copyFileSync(path.join(root, "LICENSE"), path.join(unpacked, "LICENSE"));
 			const name = tarballName(pkg.name, version);
-			// macOS's tar adds a `._name` entry for each file's extended attributes unless told not to: a tarball must hold the package's files only.
-			execFileSync("tar", ["-czf", path.join(out, name), "-C", packed, "package"], {
-				env: { ...process.env, COPYFILE_DISABLE: "1" },
-			});
+			// Written here and not by the system's tar: the package's files only (a Mac's tar adds `._name` entries), and the same bytes each time.
+			writeFileSync(path.join(out, name), packedBytes(unpacked));
 			// The entries that are not code (a stylesheet): a check of types leaves them out.
 			const notCode = Object.entries(manifest.exports ?? {})
 				.filter(([, target]) => typeof target === "string" && !/\.[cm]?js$/.test(target))

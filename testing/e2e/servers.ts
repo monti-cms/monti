@@ -51,13 +51,23 @@ if (!Number.isInteger(FIRST) || FIRST < 1024 || FIRST > 65000) throw new Error("
 const schemaOf = (name: string) => (FIRST === 4173 ? name : `${name}_${FIRST}`);
 
 /**
+ * While this file is there, the second live site fails to refresh its cached pages (`examples/blog/lib/monti.ts`): a test makes it and takes
+ * it away to see a failed refresh sent again (doc 13). The first live site refreshes the stock way, with nothing in between.
+ */
+export const REFRESH_DOWN = path.join(tmpdir(), `monti-e2e-refresh-down-${FIRST + 1}`);
+
+/**
  * The servers the flows run on (docs/testing.md, L5), all the example app (`examples/blog`): the live site, a live site with no media storage
- * (flow 6·31), and the dev server, for what only the dev server does (getting in without signing in). The live site also posts its events to a
- * webhook (`HOOK`, `hook.ts`), which a test takes down to see a delivery fail (doc 13).
+ * (flow 6·31) whose refresh of its cached pages a test can fail (`REFRESH_DOWN`), and the dev server, for what only the dev server does
+ * (getting in without signing in). The live site also posts its events to a webhook (`HOOK`, `hook.ts`), which a test takes down to see a
+ * delivery fail (doc 13).
  */
 export const SERVERS: Server[] = [
 	server(FIRST, schemaOf("monti_site_e2e"), "start", { MONTI_WEBHOOK: `http://localhost:${FIRST + 3}/hook` }),
-	server(FIRST + 1, schemaOf("monti_site_e2e_bare"), "start", { MONTI_STORAGE: "off" }),
+	server(FIRST + 1, schemaOf("monti_site_e2e_bare"), "start", {
+		MONTI_STORAGE: "off",
+		MONTI_REFRESH_DOWN: REFRESH_DOWN,
+	}),
 	server(FIRST + 2, schemaOf("monti_site_e2e_dev"), "dev"),
 ];
 
