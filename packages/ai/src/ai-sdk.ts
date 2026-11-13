@@ -274,6 +274,17 @@ function countedSoFar(service: string, raw: unknown): Usage | undefined {
 	return undefined;
 }
 
+/** Two counts as one. */
+function plus(first: Usage | undefined, second: Usage): Usage {
+	if (!first) return second;
+	const cached = (first.cached ?? 0) + (second.cached ?? 0);
+	return { input: first.input + second.input, output: first.output + second.output, ...(cached > 0 ? { cached } : {}) };
+}
+
+/** Whether a Google chunk ends its request for the answer to go on in another (`CONTINUATION`), which counts from nothing again. */
+const continued = (raw: unknown) =>
+	(raw as { candidates?: { finishReason?: unknown }[] } | null)?.candidates?.[0]?.finishReason === "CONTINUATION";
+
 /** The services whose own stream events say what they counted before the end (`countedSoFar`). */
 const COUNT_AS_THEY_GO = new Set(["anthropic", "gemini", "openai-compatible"]);
 
@@ -298,8 +309,10 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 			async *turn(request: TurnRequest): AsyncGenerator<TurnEvent> {
 				if (!model) throw none();
 				let began = false;
-				// What the service has said it counted so far: told with a failure that comes before the answer's own count.
+				// What the service has said it counted so far: told with a failure that comes before the answer's own count. A long answer
+				// Google goes on with in a new request (`CONTINUATION`) counts again from nothing: what the requests before counted is carried.
 				let counted: Usage | undefined;
+				let carried: Usage | undefined;
 				const marks = cacheMarks(key.service, request.model);
 				const lastTool = request.tools.at(-1)?.name;
 				try {
@@ -335,8 +348,11 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 					let cut: "length" | "refusal" | undefined;
 					for await (const part of result.fullStream) {
 						// The service's own events, beside the SDK's reading of them: only what they say was counted is taken from them.
-						if (part.type === "raw") counted = countedSoFar(key.service, part.rawValue) ?? counted;
-						else if (part.type === "text-delta") {
+						if (part.type === "raw") {
+							const now = countedSoFar(key.service, part.rawValue);
+							if (now) counted = plus(carried, now);
+							if (now && continued(part.rawValue)) carried = counted;
+						} else if (part.type === "text-delta") {
 							began = true;
 							yield { type: "text", delta: part.text };
 						} else if (part.type === "tool-call")

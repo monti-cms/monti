@@ -757,6 +757,52 @@ describe("what the first trial against a real service showed (T161)", () => {
 		expect((cut as ProviderError).usage).toEqual({ input: 30_373, output: 123, cached: 28_341 });
 	});
 
+	it("10-1 a long Google answer gone on with in a second request and cut there counts both requests", async () => {
+		const first = {
+			candidates: [
+				{
+					content: { role: "model", parts: [{ text: "옛날 " }] },
+					finishReason: "CONTINUATION",
+					continuationToken: "go-on",
+					index: 0,
+				},
+			],
+			usageMetadata: { promptTokenCount: 30_000, candidatesTokenCount: 8_000 },
+		};
+		const second = {
+			candidates: [{ content: { role: "model", parts: [{ text: "옛날에" }] }, index: 0 }],
+			usageMetadata: { promptTokenCount: 30_000, candidatesTokenCount: 500 },
+		};
+		const control = new AbortController();
+		let asked = 0;
+		const fetch: typeof globalThis.fetch = async (_input, init) => {
+			asked += 1;
+			const chunk = asked === 1 ? first : second;
+			return new Response(
+				new ReadableStream<Uint8Array>({
+					start(stream) {
+						stream.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\r\n\r\n`));
+						if (asked === 1) stream.close();
+						else init?.signal?.addEventListener("abort", () => stream.error(new DOMException("aborted", "AbortError")));
+					},
+				}),
+				{ status: 200, headers: { "content-type": "text/event-stream" } },
+			);
+		};
+		let texts = 0;
+		const cut = await (async () => {
+			for await (const event of aiSdkProvider({ fetch })({
+				...KEY,
+				service: "gemini",
+				secret: "AIza-provider-test",
+			}).turn(request([{ role: "user", text: "안녕" }], { model: "gemini-4-hydrogen", signal: control.signal })))
+				if (event.type === "text" && ++texts === 2) control.abort();
+		})().catch((error: unknown) => error);
+		expect(asked).toBe(2);
+		expect(cut).toBeInstanceOf(ProviderError);
+		expect((cut as ProviderError).usage).toEqual({ input: 60_000, output: 8_500 });
+	});
+
 	it("10-1 an OpenAI-compatible server is asked to say what a streamed answer spent, and what it says is the turn's usage", async () => {
 		// Unasked, Google's compatible address said nothing, and every turn counted as none.
 		const chunks = [
