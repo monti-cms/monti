@@ -4,7 +4,7 @@
 
 ## 한 문장
 
-core에 없는 블록과 서식을 `@monti-cms/blocks`로 내놓고, `monti add`가 그 소스를 사이트에 넣어 사이트가 고쳐 쓴다. 편집기는 여러 블록을 한꺼번에 고르고 옮긴다.
+core에 없는 블록과 서식을 `@monti-cms/blocks`로 내놓고, `monti add`가 그 소스를 사이트에 넣어 사이트가 고쳐 쓴다. 여러 블록을 한꺼번에 고르고 옮기는 일(T80)은 편집기(03)에서 끝냈다.
 
 ## 범위
 
@@ -13,7 +13,6 @@ core에 없는 블록과 서식을 `@monti-cms/blocks`로 내놓고, `monti add`
 | 번호 | 무엇 |
 |---|---|
 | T35 | 콜아웃, 탭, 단 나누기, 접기, 코드 탐색기, 수식, 차트, 다이어그램, 툴팁, 글자 색을 `defineBlock`으로 다시 만들고 `monti add`로 사이트 소스에 넣는다([03](03-body-editor.md#어떤-블록이-어디에-있나)) |
-| T80 | 여러 블록을 상자로 끌어 고르고, 고른 블록을 함께 옮기고 지운다 |
 
 ## 설계에서 정할 것
 
@@ -23,7 +22,7 @@ core에 없는 블록과 서식을 `@monti-cms/blocks`로 내놓고, `monti add`
 
 ## 옛 코드
 
-`9c69629f` 이전의 `packages/blocks`, `editor/drag/block-selection.ts`.
+`9c69629f` 이전의 `packages/blocks`.
 
 ## 끝 조건
 

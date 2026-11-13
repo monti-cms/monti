@@ -46,6 +46,7 @@ import { TextSelection } from "@tiptap/pm/state";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, useEditorState } from "@tiptap/react";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
+import { pickedBlocks } from "../block-pick";
 import { EditorMedia } from "../media-context";
 import { markName } from "../schema";
 import {
@@ -123,7 +124,8 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 			const tools = codeToolsKey.getState(current.state);
 			if (typeof at !== "number" || !tools) return null;
 			const { from, to, empty } = current.state.selection;
-			const inside = from > at && to < at + node.nodeSize;
+			// Blocks picked whole (block-pick.ts) are acted on by their handle: the selection laid over them is not the caret or words in the code.
+			const inside = !pickedBlocks(current.state) && from > at && to < at + node.nodeSize;
 			const picked = tools.picked?.pos === at ? tools.picked : null;
 			const linking = tools.linking?.lines?.pos === at ? tools.linking.lines : null;
 			const pointed = tools.pointed?.block === blockId ? tools.pointed.anchor : null;

@@ -1262,7 +1262,10 @@ const SIX_PX = new Map([
 		"ui/src/floating-bar.tsx",
 		"the editor's tool row is a rounded box, and its buttons follow its corners (2026-11-09, owner)",
 	],
-	["ui/src/block-handle.tsx", "the block in hand is a block of the body, not the handle (the handle is a pill)"],
+	[
+		"ui/src/block-handle.tsx",
+		"the block handle is Notion's 20 × 24 rounded square, the one exception to the pill (2026-11-14, owner)",
+	],
 ]);
 
 /** A check box is a square mark, not a ground: its 4px corner (`rounded-monti-sm`) stays. Keyed by file, with the class. */

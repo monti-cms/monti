@@ -27,6 +27,7 @@ import { TextSelection } from "@tiptap/pm/state";
 import { type Editor, useEditorState } from "@tiptap/react";
 import { useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { pickedBlocks } from "./block-pick";
 import type { BodyCatalogs } from "./catalog";
 import { CodeRefButton, pickedWords } from "./code/code-links";
 import { codeToolsKey } from "./code/code-state";
@@ -86,6 +87,8 @@ export function FormatCard({
 				!inTableCell(selection.$from) &&
 				// Lines picked by their numbers have the line menu, not the card.
 				!codeToolsKey.getState(current.state)?.picked &&
+				// Blocks picked whole are acted on by their handle, not the card (editor-tools.md, picking several blocks).
+				!pickedBlocks(current.state) &&
 				(current.isFocused || linking || more || codeLink);
 			if (!shown) return null;
 			const start = current.view.coordsAtPos(selection.from);
