@@ -78,6 +78,7 @@ export const Named: Story = {
 				처음부터 펼치기
 			</FloatingBarButton>
 			<FloatingBarButton label="고르게" named>
+				<ArrowsHorizontal aria-hidden />
 				고르게
 			</FloatingBarButton>
 		</FloatingBar>

@@ -15,6 +15,7 @@ import {
 	useBarHold,
 	useBlock,
 } from "@monti-cms/admin/blocks";
+import { ArrowsHorizontal } from "@monti-cms/admin/icons";
 import { type CSSProperties, useLayoutEffect, useRef, useState } from "react";
 import { columnsGridTemplate, parseColumnWidths } from "./layout";
 import { style } from "./style";
@@ -96,6 +97,7 @@ export default function ColumnsEditor() {
 				saved ? (
 					<BlockBar label={say(words.tools)}>
 						<BlockBarButton label={say(words.even)} named onClick={() => write(null)}>
+							<ArrowsHorizontal aria-hidden />
 							{say(words.even)}
 						</BlockBarButton>
 					</BlockBar>

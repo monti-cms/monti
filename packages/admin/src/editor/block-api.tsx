@@ -292,7 +292,10 @@ export function BlockBarMenu<Value extends string>({
 	onChange,
 	named = false,
 	icon,
+	title,
 }: {
+	/** With `named`: the words on the button whatever is picked ("File shown first"); the current option's name when left out. */
+	title?: string;
 	label: string;
 	/** The button's own icon whatever is picked (★ for "the file shown first"); the current option's icon when left out. */
 	icon?: ReactNode;
@@ -307,7 +310,7 @@ export function BlockBarMenu<Value extends string>({
 		<DropdownMenu onOpenChange={(open) => hold(open)}>
 			<FloatingBarButton label={label} named={named} trigger={(button) => <DropdownMenuTrigger render={button} />}>
 				{icon ?? current?.icon}
-				{named && current?.label}
+				{named && (title ?? current?.label)}
 			</FloatingBarButton>
 			<DropdownMenuContent>
 				<DropdownMenuRadioGroup value={value} onValueChange={(next) => onChange(next as Value)}>

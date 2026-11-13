@@ -87,6 +87,8 @@ export default function CodeExplorerEditor() {
 						<BlockBarMenu
 							label={say(words.first)}
 							icon={<Star aria-hidden />}
+							named
+							title={say(words.first)}
 							value={typeof block.attrs.open === "string" ? block.attrs.open : ""}
 							options={[
 								{ value: "", label: say(words.firstFile), icon: <Star aria-hidden /> },

@@ -3,6 +3,7 @@
 import {
 	BlockBar,
 	BlockBarButton,
+	BlockBarToggle,
 	BlockContent,
 	BlockFrame,
 	BlockTitle,
@@ -46,17 +47,18 @@ export default function TabsEditor() {
 		<BlockFrame
 			bar={
 				<BlockBar label={say(words.tools)}>
-					<BlockBarButton
+					<BlockBarToggle
 						label={say(words.first)}
+						icon={<Star aria-hidden />}
 						pressed={isFirst}
-						onClick={() => block.setAttrs({ defaultValue: shown === 0 ? undefined : labels[shown] })}
-					>
-						<Star aria-hidden />
-					</BlockBarButton>
+						// Pressed again it lets go: the first tab is shown first.
+						onPressedChange={(on) => block.setAttrs({ defaultValue: on && shown !== 0 ? labels[shown] : undefined })}
+					/>
 					{labels.length > FEWEST && (
 						<BlockBarButton
 							label={say(words.remove)}
 							tone="danger"
+							named
 							onClick={() => {
 								// The tab shown first goes: the first tab is shown first then.
 								block.removeChild(shown, shown === first ? { defaultValue: undefined } : undefined);
@@ -64,6 +66,7 @@ export default function TabsEditor() {
 							}}
 						>
 							<TrashCan aria-hidden />
+							{say(words.remove)}
 						</BlockBarButton>
 					)}
 				</BlockBar>
