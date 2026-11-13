@@ -512,12 +512,16 @@ describe("an export imported into another site (flow 9, 04–09)", () => {
 		expect(seen).toEqual(expect.arrayContaining(["ko:메모", "en:Memo"]));
 		expect(await entriesOf()).toEqual(["en:Memo:memo-en:draft", "ko:메모:memo:draft"]);
 		// The pair is as it was before the export: the block still paired and translated, nothing "added", what was seen and left out the same.
+		// The imported post (the import made its tag first, so the post is asked for by its collection).
 		const imported = await other
 			.selectFrom("entries")
-			.select("id")
+			.select(["id", "values"])
 			.where("locale", "=", "ko")
+			.where("collection", "=", "post")
 			.executeTakeFirstOrThrow();
 		expect(await stateOf(other, imported.id)).toEqual(before);
+		// Saving its translation left the source's tag alone: a field every language shares is the source's.
+		expect((imported.values as { tags?: unknown[] }).tags).toHaveLength(1);
 	});
 
 	it("14-1 an entry whose body the collection already has is left out, and a taken address gets -2 and is named in the result", async () => {
