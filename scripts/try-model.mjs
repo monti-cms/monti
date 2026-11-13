@@ -188,6 +188,7 @@ const PRICES = {
 	// https://platform.claude.com/docs/en/about-claude/pricing, read 2026-11-13.
 	"claude-haiku-5-5": { short: [0.1, 0.125, 0.01, 0.5], long: [0.5, 0.625, 0.05, 2.5], over: 100_000 },
 	// https://aistudio.google.com/docs/pricing (Standard tier), read 2026-11-14. Google writes no cache, so no write price.
+	"gemini-3.8-flash": { short: [0.75, 0, 0.075, 3.75], long: [0.75, 0, 0.075, 3.75], over: Infinity },
 	"gemini-3.1-flash-lite": { short: [0.25, 0, 0.025, 1.5], long: [0.25, 0, 0.025, 1.5], over: Infinity },
 	"gemini-3.5-flash-lite": { short: [0.3, 0, 0.03, 2.5], long: [0.3, 0, 0.03, 2.5], over: Infinity },
 	"gemini-2.5-flash-lite": { short: [0.1, 0, 0.01, 0.4], long: [0.1, 0, 0.01, 0.4], over: Infinity },
@@ -239,6 +240,12 @@ async function meter(stream, call) {
 				} catch {
 					continue;
 				}
+				// The longest the stream said nothing before its first words: whether a long think shows itself as it goes.
+				const now = Date.now() - call.started;
+				if (call.textAt === undefined)
+					call.longestQuiet = Math.max(call.longestQuiet ?? 0, now - (call.lastHeard ?? 0));
+				call.lastHeard = now;
+				call.events = (call.events ?? 0) + 1;
 				METER.read(event, seen);
 			}
 		}
@@ -620,7 +627,7 @@ async function main() {
 		const silent = (call?.textAt ?? call?.thinkingTo ?? 0) / 1000;
 		say(
 			"the turn",
-			`${ended(result)}, thinking shown for ${thought.toFixed(1)} s, first words after ${silent.toFixed(1)} s, ${result.seconds.toFixed(1)} s in all, out ${call?.usage?.output}`,
+			`${ended(result)}, thinking shown for ${thought.toFixed(1)} s, first words after ${silent.toFixed(1)} s, ${result.seconds.toFixed(1)} s in all, out ${call?.usage?.output}; before the words the stream was quiet ${((call?.longestQuiet ?? 0) / 1000).toFixed(1)} s at most, ${call?.events} events in all`,
 			result.end?.status === "done",
 		);
 		if (silent <= 120) note("it did not go 2 minutes without a word: a turn kept through a long think stays untried");
