@@ -1,8 +1,11 @@
+import type { ScriptedProvider } from "@monti-cms/ai";
 import type { Block, Doc } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { caretAfter, pickWords } from "../../../../../testing/input";
 import { scene } from "../../../test/scene";
+import { assisted } from "../../assistant/assistant.stories";
+import { addFile } from "../media/media.stories";
 import * as blocks from "./site-blocks.stories";
 
 /** The editor on a post with every block of `@monti-cms/blocks` (or on the body given), with its site at hand. */
@@ -101,7 +104,7 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		const made = on();
 		await made.run();
 		await expect.element(body().getByText("접힌 본문")).not.toBeVisible();
-		await userEvent.click(page.getByRole("button", { name: "펼치기" }));
+		await userEvent.click(page.getByRole("button", { name: "펼치기", exact: true }));
 		await expect.element(body().getByText("접힌 본문")).toBeVisible();
 		await hover("collapsible");
 		const toggle = page.getByRole("button", { name: "처음부터 펼치기" });
@@ -217,5 +220,79 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		await expect.element(page.getByText("블록 2 · 콜아웃").first()).toBeVisible();
 		const line = page.getByText(/종류 /).first();
 		await expect.poll(() => line.element().textContent).toMatch(/종류 ?팁 ?경고/);
+	});
+
+	it("18-4 a formula's tool row ends with the assistant's ✦: it opens the request card on that block, and the request names the whole block", async () => {
+		const made = scene<blocks.Loaded & { model: ScriptedProvider }>(
+			{ loaders: [assisted([]), ...blocks.site()] },
+			blocks.default,
+		);
+		await made.run();
+		const formula = element("math");
+		if (!formula) throw new Error("no formula");
+		await userEvent.click(formula);
+		await userEvent.click(page.getByRole("button", { name: "요청" }));
+		const box = page.getByRole("textbox", { name: "어시스턴트에게 요청" });
+		await expect.element(box).toBeVisible();
+		await userEvent.fill(box, "피타고라스 정리로 바꿔 줘");
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => made.loaded().model.turns.length).toBe(1);
+		const asked = JSON.stringify(made.loaded().model.turns[0]?.messages.at(-1));
+		expect(asked).toContain("피타고라스 정리로 바꿔 줘");
+		expect(asked).toMatch(/\\?"kind\\?":\\?"block\\?",\\?"block\\?":\\?"math\\?"/);
+	});
+
+	it("18-4 each state the stories draw comes up: a tool row with its menu, a source with its reason, the colour and tooltip cards, the review's name line", async () => {
+		for (const story of [
+			blocks.ToolRow,
+			blocks.SourceWithError,
+			blocks.ColorCard,
+			blocks.TooltipCard,
+			blocks.ReviewNameLine,
+		])
+			await scene(story, blocks.default).run();
+	});
+
+	it("18-8 a picture's name line in the review names its file, as the media field does, not its library id", async () => {
+		const made = on();
+		await made.run();
+		await expect.element(body()).toBeVisible();
+		const { site, id } = made.loaded();
+		const picture = await addFile(site, { name: "cat.jpg", from: "#888", to: "#ccc", width: 320, height: 200 });
+		const read = (await site.monti.run("entries.get", { id }, blocks.admin)) as {
+			entry: { version: number; doc: Doc };
+		};
+		await site.monti.run(
+			"entries.save",
+			{
+				id,
+				version: read.entry.version,
+				doc: {
+					type: "doc",
+					blocks: [...read.entry.doc.blocks, { id: "pic", type: "image", attrs: { media: picture, alt: "고양이" } }],
+				},
+			},
+			blocks.admin,
+		);
+		const saved = (await site.monti.run("entries.get", { id }, blocks.admin)) as {
+			entry: { version: number; doc: Doc };
+		};
+		const image = find(saved.entry.doc.blocks, "pic");
+		const at = new Date();
+		await site.db
+			.insertInto("conversations")
+			.values({ id: "c-pic", title: "검토", created_at: at, last_opened_at: at })
+			.execute();
+		const proposal = await site.monti.proposals.create("c-pic", "대체 텍스트");
+		await site.monti.proposals.add(proposal, "body.edit", {
+			id,
+			version: saved.entry.version,
+			ops: [{ op: "setBlock", block: "pic", value: { ...image, attrs: { ...image?.attrs, alt: "누운 고양이" } } }],
+		});
+		window.location.hash = `#/ai/review/${proposal}`;
+		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
+		const line = page.getByText(/파일 cat\.jpg/).first();
+		await expect.element(line).toBeVisible();
+		expect(line.element().textContent).not.toContain(picture);
 	});
 });

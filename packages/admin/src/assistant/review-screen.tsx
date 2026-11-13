@@ -47,6 +47,8 @@ type EntryNow = {
 	slug: string;
 	values: Record<string, unknown>;
 	doc: Doc | null;
+	/** The library's files its body shows (`entries.get`'s `media`), to name a picture by its file. */
+	media?: { id: string; name: string }[];
 };
 
 /** An id a former item of the same proposal makes (`{ $item }`): the item that makes it, or `null` for a plain id. */
@@ -96,7 +98,6 @@ function marked(runs: DiffRun[], side: "both" | "before" | "after"): ReactNode {
 export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => void }) {
 	const { t, transport } = useAdmin();
 	const assistant = useAssistant();
-	const names = useBlockNames();
 	// Left with the keyboard (discard, the way back): the page goes, and the focus goes to the panel's box beside the screen that
 	// takes its place, two frames on, when that is drawn.
 	const leaving = useFocusHandOff(
@@ -118,6 +119,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 	// The kinds of change that are looked at side by side: each kind has its own switch.
 	const [sideBySide, setSideBySide] = useState<ReadonlySet<string>>(new Set());
 	const [entries, setEntries] = useState<Record<string, EntryNow>>({});
+	const names = useBlockNames(Object.values(entries).flatMap((entry) => entry.media ?? []));
 	// The translations a proposal makes (flow 3·13) that are opened to read the source beside the translation.
 	const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
 	// What the site calls its fields, their options and its languages: a change is named as the editor names it.
@@ -149,8 +151,8 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 				const answer = await transport("entries.get", { id: entryId });
 				if (gone) return;
 				if (answer.status !== 200) continue;
-				const entry = (answer.body as { entry: EntryNow }).entry;
-				setEntries((known) => ({ ...known, [entryId]: entry }));
+				const { entry, media } = answer.body as { entry: EntryNow; media?: { id: string; name: string }[] };
+				setEntries((known) => ({ ...known, [entryId]: { ...entry, media: media ?? [] } }));
 			}
 		})();
 		return () => {

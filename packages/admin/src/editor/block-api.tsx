@@ -13,6 +13,7 @@ import {
 	DropdownMenuTrigger,
 	FloatingBar,
 	FloatingBarButton,
+	FormatBarRequest,
 	FormFieldError,
 	SourceBox,
 	Stack,
@@ -41,6 +42,8 @@ const nodeName = (type: string) => type.replace(/[^A-Za-z0-9_]/g, "_");
 type BlockPlace = { node: EditorNode; editor: Editor; getPos: () => number | undefined; selected: boolean };
 
 const BlockPlaceContext = createContext<BlockPlace | null>(null);
+/** Asks the assistant about a whole block (doc 10's request card, from the block's own ✦); missing where there is no assistant to ask. */
+export const BlockRequestContext = createContext<((block: string) => void) | undefined>(undefined);
 /** The entry's language (`ko`, `en-US`): what a block's empty title stands in for, as the site draws it. */
 export const EntryLocaleContext = createContext<string | undefined>(undefined);
 /** Whether the block's tool row stays up: a menu of it is open, or the keyboard is in it. */
@@ -82,6 +85,7 @@ export function useBlock() {
 	const { node, editor, getPos, selected } = place;
 	const { language, t } = useAdmin();
 	const locale = useContext(EntryLocaleContext);
+	const ask = useContext(BlockRequestContext);
 	const state = useEditorState({
 		editor,
 		selector: ({ editor: current }) => {
@@ -135,6 +139,11 @@ export function useBlock() {
 			language,
 			/** The entry's language, as the site gets it (`renderDocument`'s `locale`); the admin's when the screen does not say. */
 			locale: locale ?? language,
+			/** Opens the assistant's request card on this block (its ✦); `undefined` with no assistant, or before the block has an id. */
+			request:
+				ask && typeof node.attrs.blockId === "string" && node.attrs.blockId !== ""
+					? () => ask(String(node.attrs.blockId))
+					: undefined,
 			/** A name in the admin's language: words in each language, or a key of the admin's dictionary. */
 			say: (label: Label) => t(label),
 			setAttrs: (patch: Record<string, unknown>) =>
@@ -221,7 +230,7 @@ export function useBlock() {
 					if (own) tr.delete(pos(), pos() + own.nodeSize);
 				}),
 		};
-	}, [node, editor, getPos, selected, state.editable, state.inside, state.childAt, language, locale, t]);
+	}, [node, editor, getPos, selected, state.editable, state.inside, state.childAt, language, locale, ask, t]);
 }
 
 /**
@@ -358,8 +367,9 @@ export function SourceBlock({
 	/** The drawing. */
 	children: ReactNode;
 }) {
-	const { selected } = useBlock();
-	return (
+	const { selected, request } = useBlock();
+	const { t } = useAdmin();
+	const box = (
 		<SourceBox
 			selected={selected}
 			empty={source.trim() === "" ? empty : undefined}
@@ -377,6 +387,20 @@ export function SourceBlock({
 		>
 			{children}
 		</SourceBox>
+	);
+	// Its tool row has the assistant's ✦ at its end (doc 18): a request about this block, as on picked words.
+	return request ? (
+		<BlockFrame
+			bar={
+				<BlockBar label={label}>
+					<FormatBarRequest label={t("format.request")} onClick={request} />
+				</BlockBar>
+			}
+		>
+			{box}
+		</BlockFrame>
+	) : (
+		box
 	);
 }
 

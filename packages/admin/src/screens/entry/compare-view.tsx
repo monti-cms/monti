@@ -100,9 +100,9 @@ export function CompareView({
 	toText: React.RefCallback<HTMLElement>;
 }) {
 	const { t, language, reads } = useAdmin();
-	const names = useBlockNames();
 	const id = (editor.loaded as EntryRead | null)?.entry.id ?? "";
 	const latest = useRead<EntryRead>("entries.get", { id }, { own: "empty" });
+	const names = useBlockNames([...(latest.data?.media ?? []), ...(editor.files ?? [])]);
 	const server = latest.data ? copyOf(latest.data) : null;
 	const mine = useMemo(() => {
 		if (!server) return null;

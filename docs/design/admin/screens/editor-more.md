@@ -78,7 +78,7 @@
 | 다른 속성 "요약" | `CompareSide`의 `properties`에 `CompareProperty`(값이 없으면 `empty` "비어 있음") | 서로 다른 속성만 나열한다. |
 | 두 쪽이 다른 선택지를 고른 조건부 필드(문서 19) | 같은 `CompareProperty`: 고르기(선택지 라벨로), 그 아래 그 쪽이 고른 선택지의 필드들 | 쪽마다 제 선택지의 필드만 보이고 통째로 다른 것으로 칠한다. "다른 곳"은 고르기 하나로 센다. 필드가 적은 쪽은 모자란 줄만큼 빈 자리(`CompareProperty blank`: 보이지 않고 자리만 차지한다)를 두어, 두 쪽의 제목과 본문이 같은 높이에서 시작한다. 만들며 정함 (2026-11-13). |
 | 제목 | `CompareTitle` | 페이지 크기 글자. |
-| 본문 | `CompareBody` 안 `CompareHeading`, `CompareParagraph`, 코드 블록은 `CompareCode` | 읽히는 모양 그대로(읽기 크기). |
+| 본문 | `CompareBody` 안 `CompareHeading`, `CompareParagraph`, 코드 블록은 `CompareCode`, 값을 가진 블록은 그 위에 이름 줄 `CompareValues`("콜아웃 · 종류 경고", 18) | 읽히는 모양 그대로(읽기 크기). 이름 줄도 낱말로 견주어 바뀐 값이 표시된다. |
 | 다른 말 | `CompareText changed` | 양쪽 모두 같은 강조 바탕. 한쪽에만 있는 블록은 그 블록 전체가 `changed`다. |
 
 스토리: Controls/Button/TextButton, Primitives/Text, Primitives/Separator, Controls/Button/Button, Monti/Change/Compare.

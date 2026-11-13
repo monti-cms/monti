@@ -647,17 +647,19 @@ export function EntryEditor({
 							screen: "entry",
 							collection,
 							entry: await entryForRequest(),
-							...(picked
-								? {
-										selection: {
-											kind: "text",
-											block: picked.block,
-											from: picked.from,
-											to: picked.to,
-											text: picked.text,
-										},
-									}
-								: {}),
+							...(picked?.whole
+								? { selection: { kind: "block", block: picked.block } }
+								: picked
+									? {
+											selection: {
+												kind: "text",
+												block: picked.block,
+												from: picked.from,
+												to: picked.to,
+												text: picked.text,
+											},
+										}
+									: {}),
 						},
 					};
 				}),

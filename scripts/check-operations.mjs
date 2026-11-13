@@ -12,7 +12,7 @@
  *                   merged, so nothing would pick the item up.
  *   late-item       An open item is to be done before a stage ("4단계 전") and a doc of that stage or a later one is marked 끝 or 통합 대기.
  *                   It cannot stop a stage from starting; it stops its first doc from being finished.
- *   unblocked       A doc marked 통합 대기 has no open item whose 나온 곳 names that doc.
+ *   unblocked       A doc marked 통합 대기 has no open item whose 나온 곳 names that doc (a date such as 2026-11-06 names no doc).
  *   bad-item        An item's id repeats (open, finished or dropped), or an open item's "할 때" is neither a doc number nor a stage ("4단계 전").
  *                   There is no "before the release": an item without a time is picked up by nobody (2026-11-11).
  *   unknown-id      A test title starts with a done-criterion id (`00-1 …`) that no doc's "끝 조건" lists.
@@ -141,7 +141,7 @@ for (const item of openItems) {
 		);
 }
 for (const [number, state] of status)
-	if (state === "통합 대기" && !openItems.some((item) => new RegExp(`(^|\\D)${number}(\\D|$)`).test(item.from)))
+	if (state === "통합 대기" && !openItems.some((item) => new RegExp(`(^|[^\\d-])${number}([^\\d-]|$)`).test(item.from)))
 		findings.push(`${rel(trackerFile)}: [unblocked] doc ${number} is 통합 대기, but no open item's 나온 곳 names it`);
 for (const doc of docs)
 	if (!status.has(doc.number))
