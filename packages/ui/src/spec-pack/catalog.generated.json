@@ -2944,7 +2944,7 @@
 			"kind": "part",
 			"bind": false,
 			"children": true,
-			"slots": ["address", "thumb", "title"],
+			"slots": ["address", "note", "thumb", "title"],
 			"props": {
 				"folder": {
 					"kind": "flag",
