@@ -11,6 +11,7 @@ import {
 	movePointer,
 	pressTwice,
 	releaseKey,
+	slowCpu,
 	typeKorean,
 } from "./commands";
 
@@ -60,7 +61,17 @@ export function browserProject({
 				provider: playwright({ contextOptions: { timezoneId: "UTC", locale: "ko-KR" } }),
 				instances: [{ browser: "chromium" }],
 				viewport: { width: 1440, height: 900 },
-				commands: { dragPointer, dropPointer, holdKey, keyTwice, movePointer, pressTwice, releaseKey, typeKorean },
+				commands: {
+					dragPointer,
+					dropPointer,
+					holdKey,
+					keyTwice,
+					movePointer,
+					pressTwice,
+					releaseKey,
+					slowCpu,
+					typeKorean,
+				},
 			},
 		},
 	};

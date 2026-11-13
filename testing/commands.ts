@@ -11,6 +11,8 @@ import type { BrowserCommand, BrowserCommandContext } from "vitest/node";
  * - `pressTwice` and `keyTwice`: the same press again a set time later, with nothing waited for in between. `userEvent` waits for its target
  *   before each press, so it never presses what is on its way out (a window that fades for 150ms after its button was pressed).
  * - `holdKey`: a key held down, repeating as a held key does, until `releaseKey`. `userEvent.keyboard` lets a held key go before it presses it again.
+ * - `slowCpu`: the page runs `rate` times slower (Chrome's own CPU throttling), as on a busy CI runner; `1` is full speed again. A test that waits
+ *   right on a fast machine and races on a slow one fails here too.
  *
  * Tests call them through `testing/input.ts`.
  */
@@ -138,6 +140,16 @@ function stages(char: string): string[] | null {
 	return offset % 28 === 0 ? [initial, open] : [initial, open, char];
 }
 
+export const slowCpu: BrowserCommand<[rate: number]> = async (context, rate) => {
+	const page = playwright(context);
+	const session = await page.page.context().newCDPSession(page.page);
+	try {
+		await session.send("Emulation.setCPUThrottlingRate", { rate });
+	} finally {
+		await session.detach();
+	}
+};
+
 /**
  * Types `text` into the focused element as a Korean input method does (Chrome DevTools Protocol `Input.imeSetComposition`): each syllable is
  * composed in steps and committed when the next one starts. Other characters are inserted as they are and commit the syllable before them.
@@ -185,5 +197,6 @@ declare module "vitest/browser" {
 		keyTwice: (key: string, gap: number) => Promise<void>;
 		holdKey: (key: string, options: { repeats: number; every: number }) => Promise<void>;
 		releaseKey: (key: string) => Promise<void>;
+		slowCpu: (rate: number) => Promise<void>;
 	}
 }

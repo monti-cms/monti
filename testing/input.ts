@@ -96,6 +96,9 @@ export const keyTwice = (key: string, gap: number) => commands.keyTwice(key, gap
 /** Holds `key` down as a hand does: one press and then `repeats` repeats, `every` milliseconds apart. `releaseKey` lets it go. */
 export const holdKey = (key: string, options: { repeats: number; every: number }) => commands.holdKey(key, options);
 
+/** Runs the page `rate` times slower (`1`: full speed), as a busy CI runner does (`testing/commands.ts`). */
+export const slowCpu = (rate: number) => commands.slowCpu(rate);
+
 /** Lets go of a key that `holdKey` holds. */
 export const releaseKey = (key: string) => commands.releaseKey(key);
 
