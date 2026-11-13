@@ -674,7 +674,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 							t("settings.field.locale"),
 							"field-locale",
 							// A conditional field is chosen once, on the source: not per language (doc 19).
-							LOCALES.filter((value) => !(form.kind === "conditional" && value === "perLocale")).map((value) => ({
+							LOCALES.filter((value) => !(form.kind === "conditional" && value !== "same")).map((value) => ({
 								value,
 								label: t(`settings.field.locale.${value}`),
 							})),

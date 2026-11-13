@@ -433,12 +433,12 @@ describe("a translation follows its source's choice (T184)", () => {
 });
 
 describe("an item's languages keep to the choice too", () => {
-	it("19-19 saved as a group, each language holds the chosen option's values only: the source's by its own choice, another language's by the source's", async () => {
+	it("19-19 saved as a group, each language holds the chosen option's values only, by the source language's choice; a value given for another option's field is refused, and a language the save does not name is kept to the choice too", async () => {
 		const made = await write<{ group: string }>("items.saveGroup", {
 			collection: "author",
 			locales: {
-				ko: { title: "손님", slug: "guest", values: { role: "guest", from: "밖에서", desk: "남는 값" } },
-				en: { title: "Guest", slug: "guest", values: { from: "Outside", desk: "Stray" } },
+				ko: { title: "손님", slug: "guest", values: { role: "guest", from: "밖에서" } },
+				en: { title: "Guest", slug: "guest", values: { from: "Outside" } },
 			},
 		});
 		const held = async () =>
@@ -452,13 +452,85 @@ describe("an item's languages keep to the choice too", () => {
 				).map((row) => [row.locale, row.values]),
 			);
 		expect(await held()).toEqual({ ko: { role: "guest", from: "밖에서" }, en: { from: "Outside" } });
-		// The choice changed on the source: both languages lose the old option's value.
+		// A value for the other option's field, in either language: refused by name, nothing written.
+		for (const locales of [{ ko: { values: { desk: "편집부" } } }, { en: { values: { desk: "Desk" } } }])
+			expect(
+				await refusal(write("items.saveGroup", { collection: "author", group: made.output.group, locales })),
+			).toEqual({ key: "entries.notChosen", values: { field: "desk" } });
+		// The choice changed on the source alone: the language the save does not name loses the old option's value too.
 		await write("items.saveGroup", {
 			collection: "author",
 			group: made.output.group,
-			locales: { ko: { values: { role: "staff", desk: "편집부" } }, en: {} },
+			locales: { ko: { values: { role: "staff", desk: "편집부" } } },
 		});
 		expect(await held()).toEqual({ ko: { role: "staff", desk: "편집부" }, en: {} });
+		const site = await db
+			.selectFrom("entry_published")
+			.select(["locale", "values"])
+			.where("collection", "=", "author")
+			.execute();
+		expect(Object.fromEntries(site.map((row) => [row.locale, row.values]))).toEqual({
+			ko: { role: "staff", desk: "편집부" },
+			en: {},
+		});
+	});
+});
+
+describe("what the review of the first build missed (#494 code review)", () => {
+	it("19-19 a source on the site whose working copy has no choice any more: a structure change still reads its translations by what the site shows", async () => {
+		const source = await newPost({ format: "video" });
+		await write("entries.publish", { ids: [source] });
+		const en = await translate(source);
+		await save(en, { note: "kept" });
+		// The working copy drops the choice; the site still shows the video.
+		await save(source, { format: null });
+		const { note, format, ...rest } = post.fields;
+		const groups = (format as { fields: Record<string, object> }).fields;
+		const plan = await follow(
+			changed({ ...rest, format: { ...format, fields: { ...groups, video: { ...groups.video, note } } } as never }),
+		);
+		expect(plan.map((change) => [change.do, change.field, change.count])).toEqual([["moveField", "note", 0]]);
+		expect((await stored(en)).values.note).toBe("kept");
+	});
+
+	it("19-19 a source and its translation published in one call: the translation goes on the site without the old option's values, and is not left changed", async () => {
+		const source = await newPost({ format: "video", videoUrl: "v.mp4" });
+		await write("entries.publish", { ids: [source] });
+		const en = await translate(source);
+		await write("entries.save", {
+			id: en,
+			version: (await stored(en)).version,
+			title: "Post",
+			values: { caption: "A caption" },
+		});
+		await save(source, { format: "link", linkUrl: "https://example.dev" });
+		await write("entries.publish", { ids: [source, en] });
+		expect(await shown(source)).toEqual({ format: "link", linkUrl: "https://example.dev" });
+		expect((await stored(en)).values).toEqual({});
+		expect(await shown(en)).toEqual({});
+		expect((await stored(en)).has_unpublished_changes).toBe(false);
+	});
+
+	it("19-1 a conditional field that follows the source with a choice of its own where it has one is to fix, like one chosen per language", () => {
+		for (const locale of ["perLocale", "fromSource"] as const)
+			expect(
+				checkSchema(changed({ ...post.fields, format: { ...post.fields.format, locale } as never })).map(
+					(problem) => `${problem.field}:${problem.code}`,
+				),
+			).toEqual(["format:choicePerLocale"]);
+	});
+
+	it("19-20 a conditional field renamed with its values left behind has nobody in its options: nothing moved into an option's field is kept", async () => {
+		await newPost({ format: "link", summary: "링크" });
+		const { summary: _summary, format, ...rest } = post.fields;
+		const renamed = changed({ ...rest, kind: format } as never);
+		const renames = [{ collection: "post", from: "format", to: "kind" }];
+		const moved = await planSchema(db, schema, renamed, renames);
+		expect(moved.find((each) => each.do === "removeField")?.kept).toMatchObject({ linkUrl: 1 });
+		const emptied = await planSchema(db, schema, renamed, renames, {
+			"renameField:post.format": { do: "renameField", values: "empty" },
+		});
+		expect(emptied.find((each) => each.do === "removeField")?.kept).toMatchObject({ linkUrl: 0 });
 	});
 });
 

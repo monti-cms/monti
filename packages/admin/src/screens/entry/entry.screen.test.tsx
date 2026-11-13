@@ -953,13 +953,14 @@ describe("a conditional field in the property panel (doc 19)", () => {
 		await opened();
 		const order = (...names: string[]) =>
 			names.map((name) => Math.round(field(name).element().getBoundingClientRect().top));
-		// The outer choice's field, then the inner choice with its own option's field under it.
+		// The option's fields in the order the fields list keeps for it (the inner choice first, not the schema's order), and the inner
+		// choice's own option's field right under it.
 		await expect.element(field("퍼가기 코드")).toBeVisible();
 		const inner = page.getByRole("combobox", { name: "영상 위치" });
 		const [url, code] = order("동영상 주소", "퍼가기 코드");
 		const choice = Math.round(inner.element().getBoundingClientRect().top);
-		expect(url).toBeLessThan(choice);
 		expect(choice).toBeLessThan(code as number);
+		expect(code).toBeLessThan(url as number);
 
 		// The inner choice changed: its field goes, and the line under it says what the save clears.
 		await userEvent.click(inner);

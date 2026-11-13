@@ -634,8 +634,10 @@ export const entryOperations = [
 			const schema = ctx.site.schema();
 			const now = ctx.now();
 			const published: string[] = [];
-			for (const { entry, blocked } of await planPublish(ctx, input.ids)) {
+			for (const { entry: planned, blocked } of await planPublish(ctx, input.ids)) {
 				if (blocked) continue;
+				// As it is now: a source published earlier in this loop may have taken an old option's values out of this translation.
+				const [entry = planned] = await loadEntries(ctx.db, [planned.id]);
 				// Again per entry: an entry published earlier in this loop may have taken the slug.
 				const { slug, taken } = await publishSlug(ctx.db, entry);
 				if (taken || slug === "") continue;
@@ -709,8 +711,10 @@ export const entryOperations = [
 		touches: (input, ctx) => withTranslations(ctx, input.ids),
 		async run(input, ctx) {
 			const archived: string[] = [];
-			for (const entry of await loadEntries(ctx.db, input.ids)) {
-				if (entry.status === "archived") continue;
+			for (const id of input.ids) {
+				// As it is now: a source archived earlier in this loop may have changed this translation.
+				const [entry] = await loadEntries(ctx.db, [id]);
+				if (!entry || entry.status === "archived") continue;
 				const previous = await oldSlug(ctx, entry);
 				await ctx.db.deleteFrom("entry_published").where("entry_id", "=", entry.id).execute();
 				await ctx.db

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { randomUUID } from "../bytes";
 import { pathKept, publicPath, publicPaths } from "../entries/paths";
 import { CheckError } from "../errors";
+import { isEmptyValue } from "../json";
 import { checkMediaValues } from "../media/uses";
 import { defineOperation, type Preview, type RecordRef } from "../operation";
 import { notChosenFields, placesOf, storedFields } from "../schema/define";
@@ -898,10 +899,14 @@ export const relationOperations = [
 				if (data.description !== undefined) {
 					values.description = data.description;
 				}
-				// Only the chosen option's values are an item's too (doc 19). The choice is the source language's: another language goes by it
-				// unless it holds one of its own.
-				for (const field of notChosenFields(definition, locale === sourceLocale ? values : { ...choices, ...values }))
+				// Only the chosen option's values are an item's too (doc 19), and the choice is the source language's. A value given for a field
+				// of an option that is not chosen is refused with the field's name, as a save of an entry refuses it; what the language held
+				// of another option goes.
+				for (const field of notChosenFields(definition, locale === sourceLocale ? values : { ...values, ...choices })) {
+					if (!isEmptyValue(data.values?.[field]) && !hosts.has(field))
+						throw new CheckError({ key: "entries.notChosen", values: { field } });
 					delete values[field];
+				}
 
 				if (existing) {
 					const slug =
@@ -1022,6 +1027,22 @@ export const relationOperations = [
 					});
 					localesOutput[locale] = { id, title: data.title, slug };
 				}
+			}
+
+			// The languages this save did not name go by the source's choice as it is now too: what they held of another option goes,
+			// from the item and from what the site shows of it (an item is live on save). They are records of this save (`touches`).
+			for (const row of existingRows) {
+				if (row.locale in input.locales || row.locale === sourceLocale) continue;
+				const held = row.values as Record<string, unknown>;
+				const others = notChosenFields(definition, { ...held, ...choices });
+				if (!Object.keys(held).some((field) => others.has(field))) continue;
+				const kept = JSON.stringify(Object.fromEntries(Object.entries(held).filter(([field]) => !others.has(field))));
+				await ctx.db
+					.updateTable("entries")
+					.set({ values: kept, version: row.version + 1, updated_at: now })
+					.where("id", "=", row.id)
+					.execute();
+				await ctx.db.updateTable("entry_published").set({ values: kept }).where("entry_id", "=", row.id).execute();
 			}
 
 			return { id: group, group, locales: localesOutput };

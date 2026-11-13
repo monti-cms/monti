@@ -660,17 +660,17 @@ describe("settings › collections: the options of a choice in the review (docs 
 		const made = options();
 		await made.run();
 		await opened();
-		// From the link to the video, after the video's field.
-		await dragTo("linkUrl", rowOf("videoUrl"));
-		await expect
-			.poll(() => fieldOrder().filter((name) => ["videoUrl", "linkUrl"].includes(name ?? "")))
-			.toEqual(["videoUrl", "linkUrl"]);
-		await expect.element(page.getByText("필드 없음").nth(1)).toBeVisible();
-		// Within the option: the second takes the first's place.
+		// From the link to the video, before the video's field: the place it was dropped at is kept, though two options changed at once.
 		await dragTo("linkUrl", rowOf("videoUrl"), "upper");
 		await expect
 			.poll(() => fieldOrder().filter((name) => ["videoUrl", "linkUrl"].includes(name ?? "")))
 			.toEqual(["linkUrl", "videoUrl"]);
+		await expect.element(page.getByText("필드 없음").nth(1)).toBeVisible();
+		// Within the option: the first goes after the second.
+		await dragTo("linkUrl", rowOf("videoUrl"));
+		await expect
+			.poll(() => fieldOrder().filter((name) => ["videoUrl", "linkUrl"].includes(name ?? "")))
+			.toEqual(["videoUrl", "linkUrl"]);
 		// Out of the option, to stand on its own before the conditional field.
 		await dragTo("videoUrl", rowOf("mood"), "upper");
 		await expect.poll(() => topOf("videoUrl")).toBeLessThan(topOf("format"));

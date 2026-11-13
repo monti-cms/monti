@@ -1,4 +1,4 @@
-import { type Doc, type FieldDefinition, storedFields } from "@monti-cms/core";
+import { type Doc, type FieldDefinition, inOptionOrder, storedFields } from "@monti-cms/core";
 import {
 	Banner,
 	Button,
@@ -189,13 +189,16 @@ export function CompareView({
 			}
 			return undefined;
 		};
-		const under = (name: string, definition: FieldDefinition | undefined): string[] =>
-			definition?.kind === "conditional"
-				? Object.entries(definition.fields[String(copy.values[name])] ?? {}).flatMap(([inner, each]) => [
-						inner,
-						...under(inner, each),
-					])
-				: [];
+		const under = (name: string, definition: FieldDefinition | undefined): string[] => {
+			if (definition?.kind !== "conditional") return [];
+			const chosen = String(copy.values[name]);
+			const group = definition.fields[chosen] ?? {};
+			// In the order the panel shows them: the one the conditional field keeps for the option.
+			return inOptionOrder(Object.keys(group), labels[name]?.optionFields?.[chosen]).flatMap((inner) => [
+				inner,
+				...under(inner, group[inner]),
+			]);
+		};
 		return under(field, find(schema?.schema.collections[collection]?.fields ?? {}));
 	};
 

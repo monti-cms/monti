@@ -252,8 +252,11 @@ function Body({
 	// answers about the options taken out decide that (doc 19): counted again whenever one of those answers changes.
 	const optionAnswers = JSON.stringify(
 		plan.changes.flatMap((change) => {
+			// An option taken out, and a field renamed (a conditional field renamed with its values left behind has nobody in its options).
 			const given =
-				change.do === "removeOption" && picks[change.id] ? answerOf(change, picks[change.id] as Pick) : null;
+				(change.do === "removeOption" || change.do === "renameField") && picks[change.id]
+					? answerOf(change, picks[change.id] as Pick)
+					: null;
 			return given ? [[change.id, given]] : [];
 		}),
 	);

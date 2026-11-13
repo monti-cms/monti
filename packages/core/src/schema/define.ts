@@ -305,7 +305,9 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 		const names = new Set(Object.keys(collection.fields));
 		const checkChoice = (fieldName: string, field: ConditionalField) => {
 			// One choice per entry, made on the source: a translation is the same kind of entry as its source.
-			if (field.locale === "perLocale") problems.push({ collection: name, field: fieldName, code: "choicePerLocale" });
+			// Following the source with a choice of its own where it has one is a choice of its own too.
+			if (field.locale !== undefined && field.locale !== "same")
+				problems.push({ collection: name, field: fieldName, code: "choicePerLocale" });
 			// A switch is one option, on or off: with more there is nothing to tell them apart by, and a required one could never be off.
 			if (field.control === "toggle" && (field.options.length !== 1 || field.required))
 				problems.push({ collection: name, field: fieldName, code: "badToggle" });

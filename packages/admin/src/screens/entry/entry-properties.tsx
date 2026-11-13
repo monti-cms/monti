@@ -2,6 +2,7 @@ import {
 	type ConditionalField,
 	type FieldDefinition,
 	type FieldMark,
+	inOptionOrder,
 	localeModeOf,
 	slugify,
 	storedFields,
@@ -843,7 +844,12 @@ export function EntryProperties({
 				</Text>
 			) : undefined;
 		const group = typeof chosen === "string" ? (field.fields[chosen] ?? {}) : {};
-		return [row(key, lost), ...Object.entries(group).flatMap(([each, inner]) => rowsOf(each, inner))];
+		// In the order the conditional field keeps for the option (the fields list's dragging), then the rest as the schema has them.
+		const inOrder = inOptionOrder(
+			Object.keys(group),
+			typeof chosen === "string" ? values[key]?.optionFields?.[chosen] : undefined,
+		);
+		return [row(key, lost), ...inOrder.flatMap((each) => rowsOf(each, group[each]))];
 	};
 	const rows = (key: string) => rowsOf(key, top[key]);
 

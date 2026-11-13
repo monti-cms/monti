@@ -94,7 +94,14 @@ async function followField(db: Db, collection: string, from: string, to: string 
 		.execute();
 }
 
-async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit) {
+async function applyStep(
+	db: Db,
+	step: ChangeStep,
+	schema: Schema,
+	kit: BlockKit,
+	/** The source language as the database has it when this step runs: before the change's own new source is made, the old one. */
+	source: string,
+) {
 	if (step.do === "removeLocale") {
 		// What the site shows and old paths go with the entries (cascade).
 		await db.deleteFrom("entries").where("locale", "=", step.locale).execute();
@@ -147,7 +154,7 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 				const under = storedFields(schema.collections[step.collection])[step.values.move]?.under;
 				await entries(
 					sql`(values - ${step.field}::text) || jsonb_build_object(${step.values.move}::text, coalesce(nullif(values->${step.values.move}, '""'::jsonb), values->${step.field}))`,
-					(table) => sql<boolean>`values ? ${step.field} and ${theirs(under)(table)}`,
+					(table) => sql<boolean>`values ? ${step.field} and ${theirs(under, source)(table)}`,
 				);
 				await entries(sql`values - ${step.field}::text`, sql<boolean>`values ? ${step.field}`);
 			}
@@ -167,7 +174,7 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 			if (under)
 				await entries(
 					sql`values - ${step.field}::text`,
-					(table) => sql<boolean>`values ? ${step.field} and not ${theirs(under)(table)}`,
+					(table) => sql<boolean>`values ? ${step.field} and not ${theirs(under, source)(table)}`,
 				);
 			return;
 		}
@@ -176,7 +183,7 @@ async function applyStep(db: Db, step: ChangeStep, schema: Schema, kit: BlockKit
 			await entries(
 				sql`values || jsonb_build_object(${step.field}::text, ${JSON.stringify(step.value)}::jsonb)`,
 				(table) =>
-					sql<boolean>`${empty(step.field)} and ${theirs(storedFields(schema.collections[step.collection])[step.field]?.under)(table)}`,
+					sql<boolean>`${empty(step.field)} and ${theirs(storedFields(schema.collections[step.collection])[step.field]?.under, source)(table)}`,
 			);
 			return;
 	}
@@ -218,7 +225,13 @@ export async function readSchemaState(db: Db): Promise<SchemaState | null> {
  * put in only where the database has none. What the database already has is never replaced: from then on the database owns those values.
  */
 async function followChange(db: Db, change: ChangeFile, schema: Schema, kit: BlockKit): Promise<void> {
-	for (const step of change.steps) await applyStep(db, step, schema, kit);
+	// A translation's choice is read from its entry in the source language (doc 19): until the change's own new source language is made,
+	// that is the language it changes from.
+	let source = change.steps.find((step) => step.do === "changeSource")?.from ?? schema.locales.source;
+	for (const step of change.steps) {
+		await applyStep(db, step, schema, kit, source);
+		if (step.do === "changeSource") source = step.to;
+	}
 	// A field renamed or removed moved what entries hold, with no entry as the write's record (doc 09).
 	await rewriteAllUses(db, schema);
 	for (const [collection, first] of Object.entries(change.firstAdminValues ?? {}))

@@ -275,6 +275,8 @@ export function FieldsTab({
 	 * field, like the layout). `toTab` is a field of an option dropped on another tab's header: it goes to that tab's end.
 	 */
 	const keep = (next: Lists, toTab?: { tab: number; key: string }) => {
+		// The orders of a conditional field's options are one value: every option this drag changed is written into it together.
+		const orders = new Map<string, Record<string, string[]>>();
 		for (const [list, items] of Object.entries(next)) {
 			if (!isOptionList(list)) continue;
 			const { host, option } = optionOf(list);
@@ -289,10 +291,11 @@ export function FieldsTab({
 			}
 			if (!sameJson(items, saved[list] ?? [])) {
 				const place = at.fieldValue(c, host, "optionFields");
-				const order = (model.shown(place) ?? {}) as Record<string, string[]>;
-				draft.set(place, { ...order, [option]: items.map((id) => id.slice(2)) });
+				const order = orders.get(place) ?? ((model.shown(place) ?? {}) as Record<string, string[]>);
+				orders.set(place, { ...order, [option]: items.map((id) => id.slice(2)) });
 			}
 		}
+		for (const [place, order] of orders) draft.set(place, order);
 		// A field that left an option for the top level or a group stands on its own.
 		for (const [list, items] of Object.entries(saved)) {
 			if (!isOptionList(list)) continue;
@@ -363,14 +366,15 @@ export function FieldsTab({
 			return;
 		}
 		if (over.list === TABS) {
-			const from = listIn(base, active.id);
+			// Where it was before the drag began: on the way to the tabs it may have passed through other lists.
+			const from = listIn(saved, active.id);
 			// A field of an option leaves the option for the other tab; anything else moves as the layout has it.
 			if (from !== null && isOptionList(from))
 				keep(
-					{ ...base, [from]: (base[from] as string[]).filter((id) => id !== active.id) },
+					{ ...saved, [from]: (saved[from] as string[]).filter((id) => id !== active.id) },
 					{ tab: tabIndex(over.id), key: active.id.slice(2) },
 				);
-			else setLayout(moveToTab(withTab(layout, entriesOf(base, entries)), current, active.id, tabIndex(over.id)));
+			else setLayout(moveToTab(layout, current, active.id, tabIndex(over.id)));
 			return;
 		}
 		const moved = moveAcross(base, active.id, over.id, below);

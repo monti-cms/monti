@@ -205,6 +205,12 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					...(kind === "nestedChoice"
 						? {
 								videoHost: { label: "영상 위치", optionLabels: { own: "직접 올림", embed: "퍼가기" } },
+								// The order the fields list was dragged to: where the video is comes before its address.
+								format: {
+									label: "글 종류",
+									optionLabels: { article: "글", video: "동영상", link: "링크" },
+									optionFields: { video: ["videoHost", "videoUrl"] },
+								},
 								embedCode: { label: "퍼가기 코드" },
 								featured: { label: "첫 화면에 올리기" },
 								featuredNote: { label: "첫 화면 문구" },
@@ -212,7 +218,9 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 						: {}),
 					...(kind === "conditional" || kind === "nestedChoice" || kind === "strayOption"
 						? {
-								format: { label: "글 종류", optionLabels: { article: "글", video: "동영상", link: "링크" } },
+								...(kind === "nestedChoice"
+									? {}
+									: { format: { label: "글 종류", optionLabels: { article: "글", video: "동영상", link: "링크" } } }),
 								videoUrl: { label: "동영상 주소" },
 								videoCredit: { label: "출처" },
 								linkUrl: { label: "링크 주소" },
