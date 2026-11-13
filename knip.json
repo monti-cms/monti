@@ -27,6 +27,9 @@
 		"packages/seo": {
 			"entry": ["src/**/*.test.ts"]
 		},
+		"packages/mdx": {
+			"entry": ["src/**/*.test.ts"]
+		},
 		"packages/ui": {
 			"entry": ["src/spec-pack/pack.mjs"],
 			"ignoreIssues": {

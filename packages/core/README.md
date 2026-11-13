@@ -118,6 +118,8 @@ monti db:migrate        # on deploy: follow the change files this database has n
 monti deliveries:run    # send webhook retries that are due
 monti trash:purge       # delete what the trash has kept for 30 days, and files nothing holds
 monti admin:reset-password  # set the admin's password, sign every browser out
+monti backup [--media] [--out file.zip]  # the whole site as one zip; --media puts the media files in it
+monti restore file.zip  # an empty database only: everything back as it was, or every problem and nothing written
 monti help              # every operation, each one a command
 monti schema.read
 ```
@@ -209,8 +211,22 @@ A plugin is code in `monti.config.ts` (`plugins: [seo(), …]`): `definePlugin({
 | `toolPages`, `importers` | Tabs of the tools page; file formats the import reads |
 | `storage` | Where media files are |
 
-What a plugin draws in the admin (a field's input, a view, a tool page's screen) comes from its browser half, `defineAdminPlugin` of
-`@monti-cms/admin`, handed to the admin page (`<AdminPage plugins={[…]} />`). `@monti-cms/seo` is a plugin built on these.
+What a plugin draws in the admin (a field's input, a view, a tool page's screen, a view of the document in the editors' ⋯) comes from its
+browser half, `defineAdminPlugin` of `@monti-cms/admin`, handed to the admin page (`<AdminPage plugins={[…]} />`). `@monti-cms/seo` and
+`@monti-cms/mdx` are plugins built on these.
+
+## Backup, export and import
+
+- `data.backup` gives the site as the text files of a backup (entries with their published copies and relations, folders, media records,
+  addresses, templates, the admin's values) and the address of each media file; the admin zips them in the browser, and `monti backup` writes
+  the same zip. The trash, the activity log, conversations and keys are not in it. `data.export` gives picked entries in the same shape,
+  with what they point at. As a tool of the assistant both answer with a summary only.
+- `monti restore` puts a backup into an empty database row for row. It checks the whole file first and writes nothing when anything is
+  wrong.
+- `data.inspect` reads an upload for one collection and writes nothing; `data.import` brings its entries in as drafts (the same body is
+  skipped, a taken address gets `-2`, a relation value with no item makes one, the upload's pictures become files of the library). One
+  import is one line of the activity log and is undone as a whole. Core reads Monti's own files; other formats come from a plugin's
+  `importers` (`.md` and `.mdx` from `@monti-cms/mdx`).
 
 ## Tests
 

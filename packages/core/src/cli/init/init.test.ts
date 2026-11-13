@@ -193,7 +193,7 @@ describe("monti init", () => {
 		]);
 		expect(text).toContain("Its callback address: <the site's address>/studio/api/auth/github");
 		// The S3 storage is written as its own package gives it, with what is left for it: its values, and the bucket's CORS.
-		expect(after["monti.config.ts"]).toContain('plugins: [definePlugin({ name: "files", storage: s3Storage() })]');
+		expect(after["monti.config.ts"]).toContain('definePlugin({ name: "files", storage: s3Storage() }),');
 		expect(text).toContain("`npx monti doctor --origin <address>` checks it and prints the CORS setting.");
 		// A flag's value that is not one, and a flag it does not know, stop it before anything is read or written.
 		const other = site();
@@ -588,5 +588,76 @@ describe("monti init", () => {
 		// A lockfile above the repository is not the site's.
 		const repo = site({ "../../yarn.lock": "", ".git/HEAD": "ref: refs/heads/main\n" }, "code/site");
 		expect((await run(repo, ["-y"])).text).toContain("App Router (app/), npm");
+	});
+
+	const PLUGINS = {
+		"node_modules/@monti-cms/seo/package.json": '{ "version": "0.2.0" }',
+		"node_modules/@monti-cms/mdx/package.json": '{ "version": "0.2.0" }',
+	};
+
+	it("14 (T198) the plugins that are installed go into the config and onto the admin page; a person picks among them, and --plugins names them", async () => {
+		// Nobody asked: the installed ones.
+		const taken = site(PLUGINS);
+		const first = await run(taken, ["-y"]);
+		expect(first.code).toBe(0);
+		expect(first.text).toContain("plugins seo, mdx");
+		const config = tree(taken)["monti.config.ts"] as string;
+		expect(config).toContain('import { mdx } from "@monti-cms/mdx";');
+		expect(config).toContain('import { seo } from "@monti-cms/seo";');
+		expect(config).toMatch(/plugins: \[[\s\S]*localFolderStorage[\s\S]*\n\t\tseo\(\),\n\t\tmdx\(\),\n\t\],/);
+		const page = tree(taken)["app/admin/page.tsx"] as string;
+		expect(page).toContain('import { seoAdmin } from "@monti-cms/seo/admin";');
+		expect(page).toContain('import { mdxAdmin } from "@monti-cms/mdx/admin";');
+		expect(page).toContain('<AdminPage siteName="my-site" plugins={[seoAdmin, mdxAdmin]} />');
+
+		// A person is asked a fifth question, about the installed ones only; a name that is no plugin is asked again.
+		const asked = site(PLUGINS);
+		const second = await run(asked, [], { typed: ["", "", "", "", "search", "mdx"] });
+		expect(second.code).toBe(0);
+		expect(second.asked).toContain("Which plugins? (seo, mdx; with commas, or none) [seo,mdx]: ");
+		expect(second.asked).toContain("seo, mdx (with commas), or none.");
+		expect(tree(asked)["monti.config.ts"]).not.toContain("seo()");
+		expect(tree(asked)["app/admin/page.tsx"]).toContain("plugins={[mdxAdmin]}");
+
+		// The flag: none, and with no storage either the list is empty.
+		const none = site(PLUGINS);
+		expect((await run(none, ["-y", "--plugins", "none", "--storage", "none"])).code).toBe(0);
+		expect(tree(none)["monti.config.ts"]).toContain("plugins: [],");
+		expect(tree(none)["app/admin/page.tsx"]).toContain('<AdminPage siteName="my-site" />');
+	});
+
+	it("14 (T198) with no plugin installed nothing is asked about plugins, and one that is named but not installed is refused with what to install", async () => {
+		const dir = site();
+		const { asked, text } = await run(dir, [], { typed: ["", "", "", ""] });
+		expect(asked).not.toContain("Which plugins?");
+		expect(text).toContain("plugins none");
+		const refused = site();
+		const answer = await run(refused, ["-y", "--plugins", "mdx"]);
+		expect(answer.code).toBe(1);
+		expect(answer.text).toContain("@monti-cms/mdx is not installed: a plugin is its own package.");
+		expect(existsSync(path.join(refused, "monti.config.ts"))).toBe(false);
+		expect((await run(site(), ["--plugins", "search"])).text).toContain(
+			"--plugins search: seo, mdx (with commas), or none.",
+		);
+	});
+
+	it("14 (T198) posts the site already has as files are found and counted, and what is left says how to bring them in", async () => {
+		const posts = {
+			"content/posts/hello.md": "# Hello\n",
+			"content/posts/2026/second.mdx": "# Second\n",
+			"content/README.md": "about this folder\n",
+			"posts/one.md": "# One\n",
+			// A page of the site written as MDX is not a post.
+			"app/about/page.mdx": "# About\n",
+		};
+		const withPlugin = await run(site({ ...posts, ...PLUGINS }), ["-y"]);
+		expect(withPlugin.text).toContain(
+			'Found 2 posts in content/ (.md, .mdx). To bring them in: zip that folder, and in the admin open the posts list and choose Import from the menu of its "new" button.',
+		);
+		const without = await run(site(posts), ["-y"]);
+		expect(without.text).toContain(
+			"Found 2 posts in content/ (.md, .mdx). Reading them needs the MDX plugin: install @monti-cms/mdx from the same release, add mdx() to the plugins of monti.config.ts and mdxAdmin to the admin page (app/admin/page.tsx)",
+		);
+		expect((await run(site(), ["-y"])).text).not.toContain("Found ");
 	});
 });

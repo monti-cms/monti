@@ -2,6 +2,7 @@ import type { Kysely, Transaction } from "kysely";
 import type { z } from "zod";
 import type { Session } from "./auth/session";
 import type { Database } from "./db/schema";
+import type { CheckError } from "./errors";
 import type { Site } from "./site";
 
 /**
@@ -87,6 +88,12 @@ export interface OperationContext {
 	/** Marks a record the write creates, so undoing the write removes it. */
 	created(ref: RecordRef): void;
 	/**
+	 * Tries one part of a write that may be refused without the whole write failing (an import leaves out the entry an operation refuses).
+	 * When `work` throws a `CheckError`, everything it wrote, queued and marked as created is taken back, and the refusal is the answer; any
+	 * other error fails the write as it would anywhere.
+	 */
+	attempt<Value>(work: () => Promise<Value>): Promise<{ ok: true; value: Value } | { ok: false; refusal: CheckError }>;
+	/**
 	 * Says the write has written structure (the schema file and the change file `changeId`), for a write that does so only sometimes
 	 * (`settings.save`). Such a write has no undo: a structure change is reversed by a new change (doc 00), and putting back only its admin values
 	 * would leave them out of step with the structure. If the write then fails and the database rolls back, the files stay: the engine records the
@@ -134,6 +141,11 @@ export type OperationDefinition<Input, Output, Prepared = undefined> = {
 	kind: OperationKind;
 	/** Only a person may run it (permanent delete, emptying the trash). It is never an agent tool. */
 	humanOnly?: boolean;
+	/**
+	 * A write only a person does that is undone like any other (an import: it needs the files, and it is taken back as a whole, doc 14). Left
+	 * out, what only a person does has no undo: deleting for good, a key.
+	 */
+	undoable?: boolean;
 	/**
 	 * It writes structure values (`monti.schema.ts`), so it runs only on the dev server: on the live site no entry point offers it. It has no undo; a
 	 * structure change is reversed by a new change (doc 00).
@@ -241,6 +253,7 @@ export function defineOperation<Input, Output, Prepared = undefined>(
 			definition.holds ||
 			definition.preview ||
 			definition.humanOnly ||
+			definition.undoable ||
 			definition.structure ||
 			definition.prepare ||
 			definition.afterCommit ||

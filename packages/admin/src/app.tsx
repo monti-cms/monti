@@ -17,6 +17,7 @@ import { useRead } from "./operations/use-operation";
 import type { AdminPlugin } from "./plugins";
 import { href, parseRoute, type Route, useRoute } from "./route";
 import { ActivityScreen } from "./screens/activity/activity-screen";
+import { DataScreen } from "./screens/data/data-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
 import { ReadFailedBanner } from "./screens/frame/read-failed";
@@ -269,13 +270,15 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 					review={review}
 				/>
 			) : route.screen === "place" && route.place === "tools" ? (
-				// Body templates turned off (settings › admin, doc 03): the tools have one tab left, so no tab row, and every way to the tools
-				// (the sidebar, the templates' own address) opens the keys.
+				// Body templates turned off (settings › admin, doc 03): the tools keep their other tabs, and every way to the tools (the sidebar,
+				// the templates' own address) opens the first of them, the data.
 				// A plugin's page, while its browser half brings the screen; an address for one it does not bring opens the tools as usual.
 				route.page && toolPages.has(`${route.page.plugin}/${route.page.id}`) ? (
 					<ToolPageScreen page={route.page} tabs={<ToolsTabs current={route.page} go={go} />} />
-				) : route.tab === "keys" || !templates ? (
+				) : route.tab === "keys" ? (
 					<KeysScreen tabs={<ToolsTabs current="keys" go={go} />} />
+				) : route.tab === "data" || !templates ? (
+					<DataScreen tabs={<ToolsTabs current="data" go={go} />} />
 				) : (
 					<TemplatesScreen
 						tabs={<ToolsTabs current="templates" go={go} />}

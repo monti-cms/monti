@@ -1,4 +1,4 @@
-import type { StoredField } from "@monti-cms/core";
+import type { Doc, StoredField } from "@monti-cms/core";
 import type { ComponentType } from "react";
 
 /** The entry a plugin's input or view is drawn in, as the editor holds it now: what is typed, saved or not. */
@@ -55,6 +55,20 @@ export type FieldViewProps = {
 	entry: EntryView;
 };
 
+/** What a view of the document is given: the body as it is typed now, saved or not, and the entry's (or the template's) title. */
+export type DocumentViewProps = { doc: Doc; title: string };
+
+/**
+ * A view of the document a plugin brings to the editors' ⋯ (doc 14, the document tools): a switch row by its name; on, the view stands
+ * beside the body and shows something of it (the body as MDX). It reads and changes nothing.
+ */
+export type DocumentView = {
+	id: string;
+	/** The row's name and the pane's, in each language of the admin. */
+	label: { ko: string; en: string };
+	View: ComponentType<DocumentViewProps>;
+};
+
 /**
  * A plugin's half in the browser (doc 14): the components its server half names. It comes from a `"use client"` module and is handed to the
  * admin page (`<AdminPage plugins={[…]} />`), as a site's own blocks are.
@@ -68,6 +82,8 @@ export type AdminPlugin = {
 	views?: Record<string, ComponentType<FieldViewProps>>;
 	/** The screens of its tool pages, by the page's id. */
 	toolPages?: Record<string, ComponentType>;
+	/** Views of the document, each a switch in the editors' ⋯. */
+	documentViews?: DocumentView[];
 };
 
 export function defineAdminPlugin(plugin: AdminPlugin): AdminPlugin {

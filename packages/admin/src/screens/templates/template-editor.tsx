@@ -32,6 +32,7 @@ import { BodyEditor } from "../../editor/body-editor";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
+import { DocumentToolRows, DocumentViewPane, useDocumentTools } from "../entry/document-tools";
 import { useEntryEditor } from "../entry/use-entry-editor";
 import { focusText, useFocusHandOff } from "../frame/focus-hand-off";
 import { ReadFailedBanner } from "../frame/read-failed";
@@ -61,6 +62,7 @@ export function TemplateEditor({
 	const duplicate = useOperation<{ output: { id: string } }>("templates.duplicate");
 	const remove = useOperation("templates.remove");
 	const [nameMissing, setNameMissing] = useState(false);
+	const tools = useDocumentTools();
 	// A banner whose own action takes it away (discard or load this browser's copy, load the latest, try again) had the keyboard's focus on that
 	// action: it goes to the text being written, the body, or the name when the body is not there (as in the entry editor).
 	const body = useRef<Editor | null>(null);
@@ -148,6 +150,7 @@ export function TemplateEditor({
 									{t("templates.duplicate")}
 								</DropdownMenuItem>
 								<DropdownMenuSeparator />
+								<DocumentToolRows tools={tools} />
 								<DropdownMenuItem
 									variant="danger"
 									onClick={async () => {
@@ -162,46 +165,56 @@ export function TemplateEditor({
 					<AssistantButton />
 				</Inline>
 			</EditorHeader>
-			<Stack gap={0} grow minHeight={0} overflow="y" paddingX={48} paddingTop={16}>
-				<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
-					{/* Like the body, the name is not there before the template is read: what was typed in an empty name stood over the saved one (T153). */}
-					{editor.loaded ? (
-						<Stack gap={0} paddingTop={16} paddingBottom={32}>
-							<FormField>
-								<FormFieldLabel htmlFor="monti-template-name" hidden>
-									{t("templates.name")}
-								</FormFieldLabel>
-								<Input
-									id="monti-template-name"
-									value={name}
-									placeholder={t("templates.name")}
-									size="display"
-									appearance="inline"
-									aria-invalid={nameMissing && name.trim() === "" ? true : undefined}
-									onChange={(event) => {
-										editor.set("title", event.target.value);
-										setNameMissing(false);
-									}}
-								/>
-								{nameMissing && name.trim() === "" ? (
-									<FormFieldError>{t("templates.nameMissing")}</FormFieldError>
-								) : null}
-							</FormField>
-							<EditorTitleRule />
-						</Stack>
-					) : null}
-					{editor.loaded && catalogs ? (
-						<BodyEditor
-							key={editor.bodyKey}
-							doc={editor.doc}
-							files={editor.files}
-							catalogs={catalogs}
-							onChange={(doc) => editor.set("doc", doc)}
-							onEditor={keepBody}
-						/>
-					) : null}
+			<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+				<Stack gap={0} grow minWidth={0} overflow="y" paddingX={48} paddingTop={16}>
+					<Stack
+						gap={0}
+						grow
+						width="full"
+						maxWidth={tools.width === "full" ? undefined : "reading"}
+						centered
+						paddingBottom={48}
+					>
+						{/* Like the body, the name is not there before the template is read: what was typed in an empty name stood over the saved one (T153). */}
+						{editor.loaded ? (
+							<Stack gap={0} paddingTop={16} paddingBottom={32}>
+								<FormField>
+									<FormFieldLabel htmlFor="monti-template-name" hidden>
+										{t("templates.name")}
+									</FormFieldLabel>
+									<Input
+										id="monti-template-name"
+										value={name}
+										placeholder={t("templates.name")}
+										size="display"
+										appearance="inline"
+										aria-invalid={nameMissing && name.trim() === "" ? true : undefined}
+										onChange={(event) => {
+											editor.set("title", event.target.value);
+											setNameMissing(false);
+										}}
+									/>
+									{nameMissing && name.trim() === "" ? (
+										<FormFieldError>{t("templates.nameMissing")}</FormFieldError>
+									) : null}
+								</FormField>
+								<EditorTitleRule />
+							</Stack>
+						) : null}
+						{editor.loaded && catalogs ? (
+							<BodyEditor
+								key={editor.bodyKey}
+								doc={editor.doc}
+								files={editor.files}
+								catalogs={catalogs}
+								onChange={(doc) => editor.set("doc", doc)}
+								onEditor={keepBody}
+							/>
+						) : null}
+					</Stack>
 				</Stack>
-			</Stack>
+				{editor.loaded ? <DocumentViewPane tools={tools} doc={editor.doc} title={name} /> : null}
+			</Inline>
 			{/* As the entry editor: no status bar for a template that is not read yet. */}
 			{editor.loaded ? (
 				<StatusBar>

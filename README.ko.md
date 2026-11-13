@@ -25,6 +25,7 @@ Monti는 설계부터 다시 만들고 있습니다. 이전 패키지는 지웠�
 | [`@monti-cms/next`](packages/next) | Next.js 사이트에 Monti 붙이기. 관리자 페이지, 관리자 API 라우트, 초안 모드의 미리보기, 발행할 때의 캐시 갱신 |
 | [`@monti-cms/ai`](packages/ai) | 어시스턴트. 사이트의 기능 위에서 모델을 돌리고, 검토할 제안을 돌려준다 |
 | [`@monti-cms/storage-s3`](packages/storage-s3) | S3와 그 API를 말하는 저장소(Cloudflare R2, MinIO)에 미디어 파일을 둡니다. 파일은 브라우저에서 버킷으로 곧장 올라갑니다 |
+| [`@monti-cms/mdx`](packages/mdx) | MDX 플러그인. 가져올 때 `.md`, `.mdx` 파일을 본문으로 읽고, 편집기에 "MDX로 보기"를 더합니다 |
 | [`@monti-cms/seo`](packages/seo) | SEO 플러그인. 검색과 공유 필드를 제 탭에 두고, 편집기에서 미리 보이고, 사이트 페이지는 `seoOf`로 값을 읽습니다 |
 
 [`examples/blog`](examples/blog)는 Monti를 붙인 Next.js 블로그다. 흐름 테스트(`pnpm test:e2e`)가 이 앱에서 돈다.

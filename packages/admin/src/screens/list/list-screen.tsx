@@ -1,7 +1,6 @@
-import type { ListColumn, ListRow } from "@monti-cms/core";
+import type { BackupOutput, ListColumn, ListRow } from "@monti-cms/core";
 import {
 	BulkBar,
-	Button,
 	Caret,
 	Chip,
 	ContextMenu,
@@ -49,10 +48,12 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
-import { FolderAdd, Template } from "@monti-cms/ui/icons";
+import { FolderAdd, Template, Upload } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useRequest, useScreenContext } from "../../assistant/use-assistant";
-import { download } from "../../download";
+import { useImport } from "../../data/use-import";
+import { saveBackup } from "../../download";
+import { chooseFiles } from "../../media/choose-files";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -68,6 +69,7 @@ import {
 	useRemoveFolder,
 } from "./folders";
 import { endsClosed, fieldCell, shortDate, widthsAfter } from "./format";
+import { ImportSheet } from "./import-sheet";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
 import { NoMatchRow } from "./no-match-row";
@@ -287,7 +289,7 @@ function DocumentListScreen({
 		archive: useOperation("entries.archive"),
 		unarchive: useOperation("entries.unarchive"),
 		publish: useOperation<{ output: { published: string[]; blocked: string[] } }>("entries.publish"),
-		exportRows: useOperation<unknown>("entries.export"),
+		exportRows: useOperation<BackupOutput>("data.export"),
 		moveToFolder: useOperation("entries.moveToFolder"),
 		moveFolder: useOperation("folders.move"),
 	};
@@ -338,8 +340,10 @@ function DocumentListScreen({
 		exportRows: async (list) => {
 			const result = await run.exportRows.run(ids(list));
 			if (!result.ok) return;
-			download(`${collection}-${new Date().toISOString().slice(0, 10)}.json`, result.body);
-			toast(t("list.exported", { count: list.length }));
+			// The picked entries in the backup's own shape (doc 14): a file an import reads, here or on another site.
+			const { missing } = await saveBackup(result.body, { media: true });
+			if (missing > 0) toast.error(t("data.backup.missing", { count: missing }));
+			else toast(t("list.exported", { count: list.length }));
 		},
 		trash: (list) =>
 			void trash.start({
@@ -387,32 +391,41 @@ function DocumentListScreen({
 				</DropdownMenuSubContent>
 			</DropdownMenuSub>
 		) : null;
-	// The one black pill; its menu holds the rarer ways to add, and it is a plain pill when the menu would be empty (screens/list.md).
-	const newButton =
-		foldersOn || fromTemplate ? (
-			<SplitButton
-				onClick={() => void create()}
-				loading={run.create.pending}
-				menuLabel={t("list.moreNew")}
-				menu={
-					<>
-						{foldersOn && (
-							<DropdownMenuItem onClick={startNewFolder}>
-								<FolderAdd aria-hidden />
-								{t("folders.new")}
-							</DropdownMenuItem>
-						)}
-						{fromTemplate}
-					</>
-				}
-			>
-				{newLabel}
-			</SplitButton>
-		) : (
-			<Button onClick={() => void create()} loading={run.create.pending}>
-				{newLabel}
-			</Button>
-		);
+	// The one black pill; its menu holds the rarer ways to add (screens/list.md).
+	const importing = useImport(collection);
+	const chooseImport = () => chooseFiles({ accept: "", onFiles: (files) => void importing.open(files) });
+	const importSheet = (
+		<ImportSheet
+			collection={collection}
+			labelOf={(name) => schema.data?.adminValues[name]?.label ?? name}
+			go={go}
+			importing={importing}
+		/>
+	);
+	const newButton = (
+		<SplitButton
+			onClick={() => void create()}
+			loading={run.create.pending}
+			menuLabel={t("list.moreNew")}
+			menu={
+				<>
+					{foldersOn && (
+						<DropdownMenuItem onClick={startNewFolder}>
+							<FolderAdd aria-hidden />
+							{t("folders.new")}
+						</DropdownMenuItem>
+					)}
+					<DropdownMenuItem onClick={chooseImport}>
+						<Upload aria-hidden />
+						{t("list.import")}
+					</DropdownMenuItem>
+					{fromTemplate}
+				</>
+			}
+		>
+			{newLabel}
+		</SplitButton>
+	);
 
 	const header = (
 		<PageHeader
@@ -479,9 +492,12 @@ function DocumentListScreen({
 					<EmptyStep number="01" onClick={() => void create()}>
 						{t("list.first", { label: name })}
 					</EmptyStep>
+					<EmptyStep number="02" onClick={chooseImport}>
+						{t("list.importOwn")}
+					</EmptyStep>
 					{templateList.length > 0 && (
 						<DropdownMenu>
-							<DropdownMenuTrigger render={<EmptyStep number="02" />}>{t("list.fromTemplate")}</DropdownMenuTrigger>
+							<DropdownMenuTrigger render={<EmptyStep number="03" />}>{t("list.fromTemplate")}</DropdownMenuTrigger>
 							<DropdownMenuContent align="start">
 								{templateList.map((template) => (
 									<DropdownMenuItem key={template.id} onClick={() => void create(template.id)}>
@@ -492,6 +508,7 @@ function DocumentListScreen({
 						</DropdownMenu>
 					)}
 				</Empty>
+				{importSheet}
 			</PageColumn>
 		);
 
@@ -791,6 +808,7 @@ function DocumentListScreen({
 		<PageColumn width="list">
 			{removeFolder.dialog}
 			{trash.dialog}
+			{importSheet}
 			{header}
 			{aiChips.length > 0 && (
 				<PageToolbar inset>

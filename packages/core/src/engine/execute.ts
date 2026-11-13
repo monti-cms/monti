@@ -2,7 +2,7 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import type { Session } from "../auth/session";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
-import { ConflictError, ForbiddenError, InputError } from "../errors";
+import { CheckError, ConflictError, ForbiddenError, InputError } from "../errors";
 import { lockWithFiles, rewriteUses } from "../media/uses";
 import {
 	type ActivityKind,
@@ -79,6 +79,7 @@ export function context(
 ) {
 	const events: QueuedEvent[] = [];
 	const created: RecordRef[] = [];
+	let attempts = 0;
 	const flags: { structure: boolean; change: string | null } = { structure: false, change: null };
 	const ctx: OperationContext = {
 		db,
@@ -89,6 +90,29 @@ export function context(
 				activity: options?.activity,
 			}),
 		created: (ref) => created.push(ref),
+		async attempt(work) {
+			// A part is taken back with a savepoint, which only a transaction has: a read and a write's `prepare` run outside one.
+			if (!db.isTransaction)
+				throw new Error(
+					"ctx.attempt is for the run of a write: a read or a prepare has no transaction to take a part back in.",
+				);
+			const marks = { events: events.length, created: created.length };
+			const name = `attempt_${++attempts}`;
+			await sql.raw(`savepoint ${name}`).execute(db);
+			try {
+				const value = await work();
+				await sql.raw(`release savepoint ${name}`).execute(db);
+				return { ok: true, value };
+			} catch (error) {
+				await sql.raw(`rollback to savepoint ${name}`).execute(db);
+				await sql.raw(`release savepoint ${name}`).execute(db);
+				// What the part queued and marked goes with what it wrote.
+				events.length = marks.events;
+				created.length = marks.created;
+				if (!(error instanceof CheckError)) throw error;
+				return { ok: false, refusal: error };
+			}
+		},
 		changedStructure: (changeId) => {
 			flags.structure = true;
 			flags.change = changeId;
@@ -250,7 +274,11 @@ export async function runWrite<Output>(
 		// What an undo puts back: the records of kinds that can be put back. The schema is versioned only, so a write that named it and left it
 		// alone still undoes the rest.
 		const restorable = records.filter((ref) => engine.recordKinds.get(ref.kind)?.restore !== undefined);
-		const undoable = !operation.humanOnly && !operation.structure && !flags.structure && restorable.length > 0;
+		const undoable =
+			(!operation.humanOnly || operation.undoable === true) &&
+			!operation.structure &&
+			!flags.structure &&
+			restorable.length > 0;
 		const now = engine.now();
 		// What each record was called, as the write left it (as it was, for one the write removed): the log names it even after it is gone.
 		const logged: LoggedRecord[] = records.map((ref) => {

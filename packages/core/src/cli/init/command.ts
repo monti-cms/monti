@@ -18,7 +18,7 @@ import { adminDir } from "./files";
 import { WriteFailed, type Written, writeSite } from "./write";
 
 /**
- * `monti init` (docs/design/features/20-release.md): takes a Next.js site to a running admin. It reads the site, settles four things (each has
+ * `monti init` (docs/design/features/20-release.md): takes a Next.js site to a running admin. It reads the site, settles a few things (each has
  * a flag; `--yes` or a run with nobody at the terminal takes the defaults and asks nothing), writes the Monti files the site lacks, adds what
  * the site's own files lack, makes the tables when the database answers, runs the doctor, and ends with what is left for a person to do.
  * A file that is there is never written over, so it can be run again.
@@ -84,7 +84,7 @@ const script = (site: Site, name: string) =>
 function nextSteps(
 	site: Site,
 	answers: Answers,
-	state: { tables: boolean; admin: string; byHand: Written["byHand"] },
+	state: { tables: boolean; admin: string; config: string; byHand: Written["byHand"] },
 ): string[] {
 	const steps: string[] = [];
 	if (state.byHand.length > 0)
@@ -105,6 +105,14 @@ function nextSteps(
 		steps.push(
 			`The admin is drawn inside the site's own layout (${site.topLayout}). If the site's header or styles show in the admin: move the site's pages and that layout into ${site.app}/(site)/, then run monti init again (it writes ${state.admin}/layout.tsx).`,
 		);
+	if (site.posts) {
+		const found = `${site.posts.count} ${site.posts.count === 1 ? "post" : "posts"} in ${site.posts.folder}/ (.md, .mdx)`;
+		steps.push(
+			answers.plugins.includes("mdx")
+				? `Found ${found}. To bring them in: zip that folder, and in the admin open the posts list and choose Import from the menu of its "new" button.`
+				: `Found ${found}. Reading them needs the MDX plugin: install @monti-cms/mdx from the same release, add mdx() to the plugins of ${state.config} and mdxAdmin to the admin page (${state.admin}/page.tsx), then import the zipped folder from the posts list in the admin.`,
+		);
+	}
 	steps.push(`Start the site (${script(site, "dev")}) and open http://localhost:3000${answers.adminPath}`);
 	steps.push(
 		"On the host: set DATABASE_URL and MONTI_SECRET in its environment, and run `monti db:migrate` on every deploy. `monti doctor` checks a set-up.",
@@ -133,7 +141,7 @@ export async function init(options: InitOptions): Promise<number> {
 	}
 	out(`Monti for ${site.name}: Next ${site.next}, App Router (${site.app}/), ${site.packageManager}`);
 
-	// Every answer first: nothing is written until all four are settled, so leaving a question leaves the site as it was.
+	// Every answer first: nothing is written until all are settled, so leaving a question leaves the site as it was.
 	const ask = input.isTTY && !flags.yes ? terminalAsk(input, options.output ?? process.stdout) : null;
 	let answers: Answers;
 	try {
@@ -143,7 +151,7 @@ export async function init(options: InitOptions): Promise<number> {
 		return error instanceof Cancelled ? 130 : 1;
 	}
 	out(
-		`  admin ${answers.adminPath} · language ${answers.locale} · sign-in ${answers.login} · media files ${answers.storage}`,
+		`  admin ${answers.adminPath} · language ${answers.locale} · sign-in ${answers.login} · media files ${answers.storage} · plugins ${answers.plugins.join(", ") || "none"}`,
 	);
 
 	let written: Written;
@@ -219,7 +227,7 @@ export async function init(options: InitOptions): Promise<number> {
 	});
 	out(`\n${formatReport(report)}`);
 	out(
-		`\nWhat is left:\n${nextSteps(site, answers, { tables, admin, byHand: written.byHand })
+		`\nWhat is left:\n${nextSteps(site, answers, { tables, admin, config: configName, byHand: written.byHand })
 			.map((step, at) => `  ${at + 1}. ${step}`)
 			.join("\n")}`,
 	);

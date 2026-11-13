@@ -63,6 +63,87 @@ function extractNewTitle(raw: unknown): string | null {
 	return null;
 }
 
+/**
+ * The item of a collection that is called `title` in the source language, made when there is none: live at once, as an item is (doc 08). The
+ * entry point of every "a name that is not in the list becomes a new item": a relation field that takes new names, and an import.
+ */
+export async function findOrCreateItem(ctx: OperationContext, collection: string, title: string): Promise<string> {
+	const schema = ctx.site.schema();
+	const existing = await ctx.db
+		.selectFrom("entries")
+		.select(["id", "translation_group"])
+		.where("collection", "=", collection)
+		.where("locale", "=", schema.locales.source)
+		.where("title", "=", title)
+		.where("trashed_at", "is", null)
+		.executeTakeFirst();
+
+	if (existing) {
+		return existing.translation_group;
+	}
+
+	// Create a new item
+	const newId = randomUUID();
+	const newGroup = randomUUID();
+	const locale = schema.locales.source;
+	const slug = await generateUniqueSlug(ctx.db, collection, locale, title, undefined, newId);
+	const maxRow = await ctx.db
+		.selectFrom("entries")
+		.select((eb) => eb.fn.max("position").as("max"))
+		.where("collection", "=", collection)
+		.executeTakeFirst();
+	const position = (Number(maxRow?.max) || 0) + 1;
+	const now = ctx.now();
+
+	await ctx.db
+		.insertInto("entries")
+		.values({
+			id: newId,
+			collection: collection,
+			translation_group: newGroup,
+			locale,
+			title: title,
+			slug,
+			position,
+			status: "published",
+			has_unpublished_changes: false,
+			version: 1,
+			values: JSON.stringify({}),
+			doc: null,
+			created_at: now,
+			updated_at: now,
+		})
+		.execute();
+
+	await ctx.db
+		.insertInto("entry_published")
+		.values({
+			entry_id: newId,
+			collection: collection,
+			locale,
+			title: title,
+			slug,
+			values: JSON.stringify({}),
+			doc: null,
+			published_at: now,
+			from_version: 1,
+			block_hashes: JSON.stringify({}),
+		})
+		.execute();
+
+	ctx.created(ref(newId));
+	ctx.emit({ type: "entry.saved", ids: [newId], collection: collection, locale, version: 1 });
+	ctx.emit({
+		type: "entry.published",
+		ids: [newId],
+		collection: collection,
+		locale,
+		paths: publicPaths(ctx.site.schema(), collection, locale, [slug]),
+	});
+
+	return newGroup;
+}
+
 /** Resolves inline item creation ("new:<title>") for relation fields with `createMissing: true`. */
 export async function resolveInlineCreation(
 	ctx: OperationContext,
@@ -82,80 +163,7 @@ export async function resolveInlineCreation(
 			const newTitle = extractNewTitle(val);
 			if (!newTitle) return val;
 
-			// Check if active item with this title already exists in target collection and source locale
-			const existing = await ctx.db
-				.selectFrom("entries")
-				.select(["id", "translation_group"])
-				.where("collection", "=", fieldDef.to)
-				.where("locale", "=", schema.locales.source)
-				.where("title", "=", newTitle)
-				.where("trashed_at", "is", null)
-				.executeTakeFirst();
-
-			if (existing) {
-				return existing.translation_group;
-			}
-
-			// Create a new item
-			const newId = randomUUID();
-			const newGroup = randomUUID();
-			const locale = schema.locales.source;
-			const slug = await generateUniqueSlug(ctx.db, fieldDef.to, locale, newTitle, undefined, newId);
-			const maxRow = await ctx.db
-				.selectFrom("entries")
-				.select((eb) => eb.fn.max("position").as("max"))
-				.where("collection", "=", fieldDef.to)
-				.executeTakeFirst();
-			const position = (Number(maxRow?.max) || 0) + 1;
-			const now = ctx.now();
-
-			await ctx.db
-				.insertInto("entries")
-				.values({
-					id: newId,
-					collection: fieldDef.to,
-					translation_group: newGroup,
-					locale,
-					title: newTitle,
-					slug,
-					position,
-					status: "published",
-					has_unpublished_changes: false,
-					version: 1,
-					values: JSON.stringify({}),
-					doc: null,
-					created_at: now,
-					updated_at: now,
-				})
-				.execute();
-
-			await ctx.db
-				.insertInto("entry_published")
-				.values({
-					entry_id: newId,
-					collection: fieldDef.to,
-					locale,
-					title: newTitle,
-					slug,
-					values: JSON.stringify({}),
-					doc: null,
-					published_at: now,
-					from_version: 1,
-					block_hashes: JSON.stringify({}),
-				})
-				.execute();
-
-			ctx.created(ref(newId));
-			ctx.emit({ type: "entry.saved", ids: [newId], collection: fieldDef.to, locale, version: 1 });
-			ctx.emit({
-				type: "entry.published",
-				ids: [newId],
-				collection: fieldDef.to,
-				locale,
-				paths: publicPaths(ctx.site.schema(), fieldDef.to, locale, [slug]),
-			});
-
-			return newGroup;
+			return findOrCreateItem(ctx, fieldDef.to, newTitle);
 		};
 
 		if (fieldDef.many && Array.isArray(rawVal)) {

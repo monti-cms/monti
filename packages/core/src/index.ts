@@ -45,6 +45,10 @@ export { applyOps, type BodyOp } from "./body/edit";
 export { ENTRY_LINK, entryLink } from "./body/links";
 export { fingerprint } from "./bytes";
 export { defineConfig, type MontiConfig, openMonti } from "./config";
+export type { BackupManifest, EntryLine } from "./data/backup";
+export type { Imported, ImportFile, Inspected } from "./data/import";
+export type { BackupOutput, BackupSummary } from "./data/operations";
+export { unzip, type ZipFile, zip, zipStream } from "./data/zip";
 export { migrateToLatest } from "./db/migrations";
 export type { Database, ItemExchange, ProposalItemState, RunStatus } from "./db/schema";
 export {

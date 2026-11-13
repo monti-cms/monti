@@ -130,7 +130,12 @@ export type Importer = {
 	label: string;
 	/** With the dot: `.md`, `.mdx`. */
 	extensions: readonly string[];
-	/** One file as one entry: its front matter as loose values for the field mapping, and its body as a document. */
+	/**
+	 * One file as one entry: its front matter as loose values for the field mapping, and its body as a document. A picture or a file the body
+	 * shows is an `image` or `file` block that names it by `src` (as the file writes it: a path beside the file, or an address) where a stored
+	 * one has `media`: the import points it at the library's file, or leaves it out when the library has none. A component the importer knows
+	 * no block for is kept as written (a code block) and named in `unknown`.
+	 */
 	read: (file: { name: string; text: string }) => Awaitable<{
 		values: Record<string, unknown>;
 		doc: unknown;
