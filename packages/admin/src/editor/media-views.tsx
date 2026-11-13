@@ -729,6 +729,8 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		if (!now || now.media !== asked) return;
 		updateAttributes({ data: { ...now, ...next } });
 	};
+	/** What is typed in a box a fill may be on its way to: the late answer is the person's to ask for again, not put over it. */
+	const typed = (place: string) => media?.fill?.forget(place);
 	const fileId = data.media || null;
 	const fill = editable && fileId ? media?.fill : undefined;
 	const altPlace = `alt:${blockId}`;
@@ -755,7 +757,10 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			// What a fill wrote is blue until it is changed.
 			proposal={captionFill !== undefined && caption.value !== "" && captionFill.filled === caption.value}
 			value={caption.value}
-			onChange={(event) => caption.change(event.target.value)}
+			onChange={(event) => {
+				typed(captionPlace);
+				caption.change(event.target.value);
+			}}
 			{...caption.composition}
 		/>
 	);
@@ -1041,7 +1046,10 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 														decorative={data.decorative === true}
 														missing={blank}
 														fill={altFill}
-														onChange={(value) => set({ alt: value })}
+														onChange={(value) => {
+															typed(altPlace);
+															set({ alt: value });
+														}}
 														onDecorative={(on) => set({ decorative: on })}
 														onEnter={next}
 													/>

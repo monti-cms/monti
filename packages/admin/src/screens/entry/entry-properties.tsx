@@ -839,6 +839,7 @@ export function EntryProperties({
 						fills && !readOnly
 							? {
 									state: fills.of(`alt:${path}`),
+									forget: () => fills.forget(`alt:${path}`),
 									run: (file, put) =>
 										void fills.run(
 											`alt:${path}`,

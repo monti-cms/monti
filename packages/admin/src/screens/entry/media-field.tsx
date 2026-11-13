@@ -69,7 +69,7 @@ export function MediaField({
 	onCard: (open: boolean) => void;
 	onChange: (next: MediaValue | null) => void;
 	/** "✦ Fill" for the picture's words, in its settings card (doc 10, quick tasks); left out where there is nobody to ask. */
-	fill?: { state: FillState; run: (media: string, put: (alt: string) => void) => void };
+	fill?: { state: FillState; run: (media: string, put: (alt: string) => void) => void; forget: () => void };
 }) {
 	const { t } = useAdmin();
 	const acceptFiles = useAcceptFiles();
@@ -162,11 +162,12 @@ export function MediaField({
 														}
 													: undefined
 											}
-											onChange={(alt) =>
-												going
-													? uploads.say(field, { alt })
-													: onChange(cleanMediaValue({ ...own, media: shown.media, alt }))
-											}
+											onChange={(alt) => {
+												// Typed by hand: an answer still on its way is not put over it.
+												fill?.forget();
+												if (going) uploads.say(field, { alt });
+												else onChange(cleanMediaValue({ ...own, media: shown.media, alt }));
+											}}
 											onDecorative={(decorative) =>
 												going
 													? uploads.say(field, { decorative })

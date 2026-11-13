@@ -303,6 +303,28 @@ describe("the assistant and the comparison keep to the choice (T195)", () => {
 		expect((await stored(id)).values).toEqual({ format: "link", linkUrl: "https://example.dev" });
 	});
 
+	it("19-5 only a change of the choice that will run lifts the block: another change of the entry does not, nor one of the choice that is left out", async () => {
+		const id = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" });
+		const monti = site();
+		const version = (await stored(id)).version;
+		const other = await monti.proposals.create("c1", "제목을 고치고 링크 주소를 채워 줘");
+		await monti.proposals.add(other, "entries.save", { id, version, title: "새 제목" });
+		await monti.proposals.add(other, "entries.save", { id, version, values: { linkUrl: "https://example.dev" } });
+		expect((await monti.proposals.view(other))?.items.map((item) => item.included)).toEqual([true, false]);
+
+		const proposal = await monti.proposals.create("c1", "링크 글로 바꾸고 주소를 채워 줘");
+		const choice = await monti.proposals.add(proposal, "entries.save", { id, version, values: { format: "link" } });
+		await monti.proposals.add(proposal, "entries.save", { id, version, values: { linkUrl: "https://example.dev" } });
+		// The person takes the change of the choice out: the field's change says why it does not fit, though its check is still in.
+		await monti.run("proposals.include", { ids: [choice.itemId], included: false }, { actor: "admin" });
+		expect(
+			(await monti.proposals.view(proposal))?.items.map((item) => [item.included, item.blocked?.key ?? null]),
+		).toEqual([
+			[false, null],
+			[true, "entries.optionNotChosen"],
+		]);
+	});
+
 	it("19-5 the comparison counts the choice as the place that differs, not the fields of the option the draft no longer has chosen", async () => {
 		const id = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" });
 		const compared = (await site().run(

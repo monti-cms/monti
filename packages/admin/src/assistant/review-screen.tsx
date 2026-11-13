@@ -190,15 +190,23 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 		});
 	};
 	/** The items that write into what another item of the proposal makes (a translation's words): they go with that item's row. */
-	const followers = (parent: string) =>
-		(view?.items ?? []).filter((each) => madeBy((each.input as { id?: unknown } | null)?.id) === parent);
 	const follows = (item: ProposalItemView) => {
 		const parent = madeBy((item.input as { id?: unknown } | null)?.id);
+		// Only the words of the translation, which its row shows (its title and its body): anything else written into it (a field, an
+		// address, a block edit) is a row of its own, so nothing is applied unseen.
+		const wordsOnly =
+			item.operation === "entries.save" &&
+			Object.keys((item.input ?? {}) as object).every((key) => ["id", "version", "title", "doc"].includes(key));
 		return (
+			wordsOnly &&
 			parent !== null &&
 			(view?.items ?? []).some((each) => each.id === parent && each.operation === "translations.create")
 		);
 	};
+	const followers = (parent: string) =>
+		(view?.items ?? []).filter(
+			(each) => follows(each) && madeBy((each.input as { id?: unknown } | null)?.id) === parent,
+		);
 
 	/** The places of an entry one change touches, each as it is and as proposed. A change the page has no words for has none: its row names it. */
 	const placesOf = (item: ProposalItemView): Place[] => {
@@ -328,7 +336,9 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 							// What is written into a translation the proposal makes is read in that translation's row.
 							.filter((item) => !follows(item));
 						if (rows.length === 0) return null;
-						const waiting = rows.filter((item) => item.state === "pending" && !item.stale && item.blocked === null);
+						const waiting = rows.filter(
+							(item) => item.state === "pending" && !item.stale && (item.blocked === null || item.included),
+						);
 						const making = rows.filter((item) => item.operation === "translations.create");
 						const allOpen = making.length > 0 && making.every((item) => opened.has(item.id));
 						const allIn = waiting.every((item) => item.included);
@@ -410,12 +420,14 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 													: change.title;
 											const check = (
 												<Checkbox
-													checked={item.included && !item.stale && item.state !== "discarded" && blocked === null}
+													checked={item.included && !item.stale && item.state !== "discarded"}
 													onCheckedChange={(checked) =>
 														void proposal.include([item, ...followers(item.id)], checked === true)
 													}
 													aria-label={t("card.include", { name: named })}
-													readOnly={!open || blocked !== null}
+													// One that does not fit and is left out cannot be put in. One that is in (the change that made it fit was
+													// taken out since) can still be taken out.
+													readOnly={!open || (blocked !== null && !item.included)}
 												/>
 											);
 											if (item.operation === "translations.create") {

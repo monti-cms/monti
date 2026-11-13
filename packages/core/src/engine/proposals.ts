@@ -61,17 +61,19 @@ export const MOST_ITEMS = 500;
  * Why a write said it would leave this item's record alone (its preview's `blocked`), if it did. An item of a write split by record
  * (`each`) is about the one record its input names; any other is about the records it touches.
  *
- * The preview was made on the record as it was, without the changes that wait before it in the same proposal. So it says nothing once
- * an earlier change of the proposal (`earlier`: waiting, or applied since) writes that record: that change may be what makes this one
- * fit (a choice changed, then the new option's field filled; a summary filled in, then the entry published). Such an item stays in, and
- * the write itself answers when it is applied.
+ * The preview was made on the record as it was, without the changes that wait before it in the same proposal. A write can say which
+ * places, changed first, may make it fit (`unless`: the choice a field belongs to; anything of an entry that cannot be published yet).
+ * When an earlier change of the proposal that will run (applied, or waiting and kept in) writes one of them, the preview says nothing
+ * any more: the item stays in, and the write itself answers when it is applied. An earlier change that is left out, discarded or
+ * failed lifts nothing.
  */
 function blockedOf(
+	operations: ReadonlyMap<string, AnyOperation>,
 	operation: AnyOperation | undefined,
 	rawInput: unknown,
 	preview: Preview | null,
 	records: Record<string, unknown>,
-	earlier: readonly Pick<Item, "state" | "base_versions">[],
+	earlier: readonly Pick<Item, "state" | "included" | "operation" | "input">[],
 ): Message | null {
 	if (!preview?.blocked?.length) return null;
 	const list = operation?.each ? (rawInput as Record<string, unknown> | null)?.[operation.each] : undefined;
@@ -82,11 +84,17 @@ function blockedOf(
 		found = preview.blocked.find((each) => each.ref.id === id);
 	} else found = preview.blocked.find((each) => recordKey(each.ref) in records);
 	if (!found) return null;
-	const key = recordKey(found.ref);
-	const changedBefore = earlier.some(
-		(item) => (item.state === "pending" || item.state === "applied") && key in item.base_versions,
-	);
-	return changedBefore ? null : found.reason;
+	const lifting = found.unless ?? [];
+	const lifted =
+		lifting.length > 0 &&
+		earlier.some(
+			(item) =>
+				(item.state === "applied" || (item.state === "pending" && item.included)) &&
+				(placesOf(operations, item) ?? []).some((place) =>
+					lifting.some((each) => place === each || overlap(place, each)),
+				),
+		);
+	return lifted ? null : found.reason;
 }
 
 /** Makes a proposal. A run has one: asked for again by the same run (cut between making it and noting it), it gives the one it made. */
@@ -265,7 +273,9 @@ export async function proposeItem(
 			origin: options.call ?? null,
 			preview: whole.preview === null ? null : JSON.stringify(whole.preview),
 			// A change its own write says it would leave the record alone for starts left out: applying it would only be refused.
-			...(blockedOf(operation, part, whole.preview, baseVersions, known) !== null ? { included: false } : {}),
+			...(blockedOf(operations, operation, part, whole.preview, baseVersions, known) !== null
+				? { included: false }
+				: {}),
 		});
 	}
 	await engine.db.transaction().execute(async (trx) => {
@@ -321,7 +331,7 @@ export async function replaceItem(
 				base_versions: JSON.stringify(baseVersions),
 				state: "pending",
 				reason: null,
-				included: blockedOf(operation, rawInput, preview, baseVersions, before) === null,
+				included: blockedOf(operations, operation, rawInput, preview, baseVersions, before) === null,
 				made_by: options.call ?? null,
 				preview: preview === null ? null : JSON.stringify(preview),
 			})
@@ -1060,6 +1070,7 @@ export async function viewProposal(
 			blocked:
 				item.state === "pending"
 					? blockedOf(
+							operations,
 							operation,
 							item.input,
 							item.preview as Preview | null,

@@ -1,7 +1,33 @@
-import { MemoCardPopover, MemoMessage, MemoThread } from "@monti-cms/ui";
+import { Marker, MemoCardPopover, MemoMessage, MemoThread } from "@monti-cms/ui";
+import { type ComponentProps, useRef } from "react";
 import type { Exchange } from "./use-place-requests";
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
+
+/**
+ * A mark that opens and closes its card. The press that closes an open card is first heard by the card as a press outside it, which
+ * closes it; the click that follows would open it again. So what the click does is settled when the press begins.
+ */
+export function CardMark({
+	open,
+	onToggle,
+	...props
+}: Omit<ComponentProps<typeof Marker>, "active" | "onClick"> & { open: boolean; onToggle: (open: boolean) => void }) {
+	const wasOpen = useRef(false);
+	return (
+		<Marker
+			active={open}
+			onPointerDown={() => {
+				wasOpen.current = open;
+			}}
+			onClick={(event) => {
+				// A key press has no pointer before it: it toggles what is there now.
+				onToggle(event.detail === 0 ? !open : !wasOpen.current);
+			}}
+			{...props}
+		/>
+	);
+}
 
 /** What a card's reply row does, when the site has the assistant: sends what was written, and stops the work on it. */
 export type CardReply = {

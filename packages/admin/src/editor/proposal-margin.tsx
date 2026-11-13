@@ -1,7 +1,7 @@
-import { EditorMargin, Marker, MemoCardPopover, MemoDiff, MemoMessage, MemoThread } from "@monti-cms/ui";
+import { EditorMargin, MemoCardPopover, MemoDiff, MemoMessage, MemoThread } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/react";
-import { type ComponentProps, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { type CardReply, MemoThreadOf, ProposalMemo, replyOf } from "../assistant/proposal-memo";
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { CardMark, type CardReply, MemoThreadOf, ProposalMemo, replyOf } from "../assistant/proposal-memo";
 import type { Exchange } from "../assistant/use-place-requests";
 import { type BodyProposal, findBlock, proposedWords } from "./proposal-marks";
 
@@ -89,31 +89,6 @@ export function ProposalMargin({ editor, marks }: { editor: Editor; marks: reado
 			</EditorMargin>
 		);
 	});
-}
-
-/**
- * A mark that opens and closes its card. The press that closes an open card is first heard by the card as a press outside it, which
- * closes it; the click that follows would open it again. So what the click does is settled when the press begins.
- */
-function CardMark({
-	open,
-	onToggle,
-	...props
-}: Omit<ComponentProps<typeof Marker>, "active" | "onClick"> & { open: boolean; onToggle: (open: boolean) => void }) {
-	const wasOpen = useRef(false);
-	return (
-		<Marker
-			active={open}
-			onPointerDown={() => {
-				wasOpen.current = open;
-			}}
-			onClick={(event) => {
-				// A key press has no pointer before it: it toggles what is there now.
-				onToggle(event.detail === 0 ? !open : !wasOpen.current);
-			}}
-			{...props}
-		/>
-	);
 }
 
 type Shared = {

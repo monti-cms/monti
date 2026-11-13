@@ -79,6 +79,25 @@ describe("the entry editor: '✦ fill' for a picture (T104)", () => {
 		expect(caption().element().hasAttribute("data-proposal")).toBe(false);
 	});
 
+	it("10-1 a caption typed while its fill is on the way stays: the answer that comes late is not put over it", async () => {
+		let answerNow = (_value: unknown) => {};
+		const made = on(
+			media.WithImage,
+			() =>
+				new Promise((resolve) => {
+					answerNow = resolve;
+				}),
+		);
+		await made.run();
+		await userEvent.click(caption());
+		await userEvent.click(button("채우기"));
+		await expect.element(page.getByText("쓰는 중…")).toBeVisible();
+		await userEvent.keyboard("내가 쓴 캡션");
+		answerNow({ value: "늦게 온 캡션" });
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		await expect.element(caption()).toHaveValue("내가 쓴 캡션");
+	});
+
 	it("10-1 a media field's settings card has the same '채우기': the cover's words are filled from its picture", async () => {
 		const made = on({ loaders: media.MissingAlt.loaders }, () => ({ value: "아침 책상" }));
 		await made.run();

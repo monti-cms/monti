@@ -3,7 +3,6 @@ import {
 	Banner,
 	ChangesGroup,
 	Inline,
-	Marker,
 	PageBanner,
 	PageBody,
 	PageColumn,
@@ -18,7 +17,7 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
-import { ProposalMemo } from "../../assistant/proposal-memo";
+import { CardMark, ProposalMemo } from "../../assistant/proposal-memo";
 import { useOpenConversation, useScreenContext } from "../../assistant/use-assistant";
 import { usePlaceRequests } from "../../assistant/use-place-requests";
 import { useLeaveGuard } from "../../draft/leave-guard";
@@ -304,11 +303,17 @@ export function SettingsScreen({
 	const places = usePlaceRequests(() => draft.reloadProposals());
 	const [card, setCard] = useState<string | null>(null);
 	const [replyDraft, setReplyDraft] = useState("");
-	const cardMark = useRef<HTMLButtonElement>(null);
+	const cardMark = useRef<HTMLSpanElement>(null);
 	const openCard = (next: string | null) => {
 		setCard(next);
 		setReplyDraft("");
 	};
+	// The bubble moved to another proposal: the card that was open was the other one's, and so was what was being written in it.
+	const pointedAt = walking?.item.id ?? null;
+	useEffect(() => {
+		setCard((open) => (open !== null && open !== pointedAt ? null : open));
+		setReplyDraft("");
+	}, [pointedAt]);
 	const waiting = places?.requests ?? [];
 	const asked =
 		(walking &&
@@ -452,14 +457,15 @@ export function SettingsScreen({
 							<ProposalBubbleDock ref={overBubble}>
 								{/* The card of the one proposal the bubble points at (doc 05, "one by one"; T41): its mark stands by the bubble,
 								    since the places it changes are in several tabs. */}
-								<Marker
-									ref={cardMark}
-									active={card === walking.item.id}
-									aria-label={t(asked ? "memo.markWorking" : "memo.mark", { request: walking.item.request })}
-									onClick={() => openCard(card === walking.item.id ? null : walking.item.id)}
-								>
-									{asked ? "…" : 1 + (walking.item.thread?.length ?? 0)}
-								</Marker>
+								<span ref={cardMark}>
+									<CardMark
+										open={card === walking.item.id}
+										aria-label={t(asked ? "memo.markWorking" : "memo.mark", { request: walking.item.request })}
+										onToggle={(next) => openCard(next ? walking.item.id : null)}
+									>
+										{asked ? "…" : 1 + (walking.item.thread?.length ?? 0)}
+									</CardMark>
+								</span>
 								<ProposalMemo
 									t={t}
 									anchor={() => cardMark.current}

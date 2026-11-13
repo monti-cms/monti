@@ -140,7 +140,7 @@
 | 줄 끝의 결과 | `EntryStatus`: 적용 `status="published"` "적용", 되돌림 `status="archived" quiet` "되돌림", 못 함 `status="failed"` "못 함"과 `Text variant="note" tone="danger"` 까닭 | 활동 기록의 전송 칸과 같은 부품이다. |
 | 그 사이 고쳐진 줄 | 줄 끝에 `Text variant="note" tone="subtle"` "그 사이 고쳐짐"과 `TextButton variant="underline"` "다시 만들기" | 체크가 빠지고 수에서 빠진다. 누르면 "다시 만드는 중…" 뒤에 새 값이 오고 체크가 켜진다. |
 | "편집기에서 보기" | 기다리는 줄 끝의 `TextButton variant="underline"`(`href` 그 글) | 그 글의 편집기를 연다. |
-| 넣을 수 없는 줄 | `Checkbox`(빠져 있고 `readOnly`), 줄 끝에 `Text variant="note" tone="subtle"` 까닭 | 쓰기가 제안될 때 그 대상을 그대로 둔다고 말한 항목이다: 고르지 않은 선택지의 필드("글 종류가 링크가 아님", 스위치면 "(이름)이 꺼져 있음"), 발행할 수 없는 글(그 까닭). 수에서 빠지고 "모두 빼기"도 세지 않는다. 기준 그림 Screens/Reference/Conditional › Proposal. |
+| 넣을 수 없는 줄 | `Checkbox`(빠져 있고 `readOnly`. 이미 넣어져 있던 줄은 체크가 켜진 채이고 뺄 수 있다), 줄 끝에 `Text variant="note" tone="subtle"` 까닭 | 쓰기가 제안될 때 그 대상을 그대로 둔다고 말한 항목이다: 고르지 않은 선택지의 필드("글 종류가 링크가 아님", 스위치면 "(이름)이 꺼져 있음"), 발행할 수 없는 글(그 까닭). 수에서 빠지고 "모두 빼기"도 세지 않는다. 기준 그림 Screens/Reference/Conditional › Proposal. |
 | 고르기를 바꾸는 줄 | `CompareRow`가 더 선다: 떠나는 선택지의 필드마다 지금 값이 `Del` | 받으면 지워지는 값이다(문서 19). 필드와 선택지는 관리자 화면의 이름(라벨)으로 적는다. |
 | 번역을 만드는 줄 | `RowTitle`(원문 글의 이름), 줄 끝에 `Text variant="note" tone="subtle"` "블록 8 · 원문 따름 1"과 `TextButton variant="underline"` "펼치기" · "접기", 펼치면 `CompareRows`: 머리 `CompareRow head`("원문 · 한국어", "번역 · English"), "제목", 블록마다 `CompareRow`(번역 쪽은 `Ins`, 제안이 없는 블록은 흐린 원문) | 흐름 3·13. 그 번역에 쓰는 항목은 따로 줄이 되지 않고 이 줄의 번역 쪽이다. 체크 하나가 함께 넣고 뺀다. 묶음 머리의 `TextButton` "모두 펼치기" · "모두 접기"가 그 묶음의 줄을 모두 연다. |
 | 끊긴 적용 | 적용된 줄은 `EntryStatus` "적용"과 굳은 체크, 남은 줄은 그대로 | 머리의 알약은 남은 수다. 다시 누르면 남은 것만 한다. |

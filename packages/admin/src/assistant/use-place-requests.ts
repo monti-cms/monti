@@ -33,6 +33,7 @@ type Going = {
 
 /** What a request on picked words sends along: the screen it is on and the words (`ScreenContext`). */
 export type PlaceContext = Record<string, unknown>;
+type About = { item: string } | { context: PlaceContext };
 
 /**
  * The requests left at places of one screen. `undefined` on a site without the assistant: nothing of it is drawn. `settled` is called
@@ -85,10 +86,20 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 	 * at that place; words alone stay in the card.
 	 */
 	const send = useCallback(
-		async (id: string, words: string, about: { item: string } | { context: PlaceContext }) => {
-			const item = "item" in about ? about.item : null;
+		async (
+			id: string,
+			words: string,
+			/** What it is about; a request on picked words may make it when it is ready (the entry read again), or give `null` to call it off. */
+			of: About | (() => Promise<About | null>),
+			/** What must be done first (the screen saved); `false` calls the request off. */
+			ready?: () => Promise<boolean>,
+		) => {
+			// A request on a proposed change is named by the change.
+			const item = typeof of === "function" ? null : "item" in of ? of.item : null;
+			let before: PlaceRequest | undefined;
 			setRequests((all) => {
 				const was = all.find((each) => each.id === id);
+				before = was;
 				const next: PlaceRequest = {
 					id,
 					item,
@@ -98,6 +109,15 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 				};
 				return was ? all.map((each) => (each.id === id ? next : each)) : [...all, next];
 			});
+			// What it is about may have to be made ready first (the screen saved, the entry read): the request says "working" from the
+			// press, so its card cannot be taken for one nothing was sent from. Not ready after all (the save was refused): as it was.
+			const set = ready ? await ready().catch(() => false) : true;
+			const about = !set ? null : typeof of === "function" ? await of().catch(() => null) : of;
+			if (about === null) {
+				if (!gone.current)
+					setRequests((all) => all.flatMap((each) => (each.id === id ? (before ? [before] : []) : [each])));
+				return;
+			}
 			const stop = new AbortController();
 			const conversation = conversations.current.get(id) ?? null;
 			const mine: Going = { run: null, stop, conversation, stopWanted: false };
@@ -140,7 +160,8 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 			if (going.current.get(id) === mine) going.current.delete(id);
 			if (gone.current) return;
 			touch?.();
-			await after.current(proposed);
+			// Whatever the screen's own reading meets, the request ends.
+			await Promise.resolve(after.current(proposed)).catch(() => {});
 			// Asked again at this place while the screen read its proposals: the place is the newer request's now.
 			if (gone.current || going.current.has(id)) return;
 			change(id, (request) => {

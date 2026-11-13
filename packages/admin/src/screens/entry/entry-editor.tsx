@@ -123,6 +123,8 @@ const STATUS: Record<EntryState, EntryStatusKind> = {
 };
 
 const SAVE_KEYS = ["mod", "s"] as const;
+/** The most blocks a request names (`ScreenContext.blocks`). */
+const MOST_BLOCKS_NAMED = 500;
 
 /**
  * The field of the panel's layout a stored field sits under: itself, or the conditional field at the top of the options it is in, however
@@ -238,11 +240,13 @@ export function EntryEditor({
 	localeNow.current = read?.entry.locale;
 	const runFill = fills?.run;
 	const fillOf = fills?.of;
+	const forgetFill = fills?.forget;
 	const pictureFill = useMemo<PictureFill | undefined>(
 		() =>
-			runFill && fillOf
+			runFill && fillOf && forgetFill
 				? {
 						of: fillOf,
+						forget: forgetFill,
 						run: (place, task, file, around, put) =>
 							void runFill(
 								place,
@@ -261,7 +265,7 @@ export function EntryEditor({
 							),
 					}
 				: undefined,
-		[runFill, fillOf, collection],
+		[runFill, fillOf, forgetFill, collection],
 	);
 	// What goes along with a request to the assistant from here (doc 10, context): this entry as it was read, and what is not saved yet.
 	const unsavedNow = editor.draft.changes;
@@ -546,39 +550,41 @@ export function EntryEditor({
 				.map((block) => block.id)
 		: [];
 	const translating = waiting.some((request) => request.id.startsWith("translate:") && request.status === "working");
-	const translate = async (blocks?: string[], again = false) => {
-		if (!places || translateSending.current) return;
-		translateSending.current = true;
-		try {
-			// The blocks it is for, as they are when it is pressed: the tabs' button means the ones nothing is proposed for yet.
-			const meant = blocks ?? untranslated;
-			if (!(await savedForRequest())) return;
-			void places.send(
-				`translate:${Date.now().toString(36)}`,
+	const translate = (blocks?: string[], again = false) => {
+		// The tabs' button is for every block nothing is proposed for yet: pressed twice while its save is under way, it asks once. A
+		// block's own "translate" is its own request.
+		if (!places || (blocks === undefined && translateSending.current)) return;
+		if (blocks === undefined) translateSending.current = true;
+		// The blocks it is for, as they are when it is pressed. More than a request names (500) are not named: the set request then
+		// means every undecided block.
+		const meant = blocks ?? untranslated;
+		void places
+			.send(
+				`translate:${Date.now().toString(36)}:${blocks?.[0] ?? "all"}`,
 				t(again ? "translation.ai.again" : "translation.ai.translate"),
-				{
+				async () => ({
 					context: {
 						screen: "entry",
 						collection,
 						entry: await entryForRequest(),
 						task: again ? "retranslate" : "translate",
-						blocks: meant,
+						...(meant.length > 0 && meant.length <= MOST_BLOCKS_NAMED ? { blocks: meant } : {}),
 					},
-				},
-			);
-		} finally {
-			translateSending.current = false;
-		}
+				}),
+				savedForRequest,
+			)
+			.finally(() => {
+				if (blocks === undefined) translateSending.current = false;
+			});
 	};
 	type About = Parameters<NonNullable<typeof places>["send"]>[2];
-	const replyTo = (card: string, about: () => About | Promise<About>) => ({
+	const replyTo = (card: string, about: About) => ({
 		draft: replyDraft,
 		onDraft: setReplyDraft,
 		onSend: (words: string) => {
 			setReplyDraft("");
-			void savedForRequest().then(async (saved) => {
-				if (saved) void places?.send(card, words, await about());
-			});
+			// The request says "working" from the press; what is on the screen is saved before it goes.
+			void places?.send(card, words, about, savedForRequest);
 		},
 		onStop: () => places?.stop(card),
 	});
@@ -612,7 +618,7 @@ export function EntryEditor({
 				const asked = waiting.find((request) => request.id === `item:${item}` && request.status === "working");
 				return asked?.thread.at(-1) ?? null;
 			},
-			reply: places ? (item) => replyTo(`item:${item}`, () => ({ item })) : undefined,
+			reply: places ? (item) => replyTo(`item:${item}`, { item }) : undefined,
 		}),
 		...requestMarks({
 			t,

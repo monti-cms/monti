@@ -33,6 +33,8 @@ export type EditorMediaValue = {
  */
 export type PictureFill = {
 	of: (place: string) => FillState;
+	/** The place was changed by hand: an answer still on its way is not put over it, and what the last fill said goes. */
+	forget: (place: string) => void;
 	run: (
 		place: string,
 		task: "alt" | "caption",

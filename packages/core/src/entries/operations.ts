@@ -528,6 +528,8 @@ export const entryOperations = [
 							{
 								ref: me,
 								reason: { key: "entries.optionNotChosen", values: { field: missing.field, option: missing.option } },
+								// A change of that choice, made first, is what would make the field the entry's.
+								unless: [`entry:${input.id}/field/${missing.field}`],
 							},
 						],
 					};
@@ -705,7 +707,18 @@ export const entryOperations = [
 					values: { count: ready.length, movedPaths: ready.filter((plan, index) => moved[index] !== plan.slug).length },
 				},
 				changes: ready.map((plan) => ref(plan.entry.id)),
-				blocked: plans.flatMap((plan) => (plan.blocked ? [{ ref: ref(plan.entry.id), reason: plan.blocked }] : [])),
+				blocked: plans.flatMap((plan) =>
+					plan.blocked
+						? [
+								{
+									ref: ref(plan.entry.id),
+									reason: plan.blocked,
+									// What blocks it is a to-do of the entry: a change of the entry made first may clear it (a summary filled in).
+									...(plan.blocked.key === "entries.publishBlocked" ? { unless: [`entry:${plan.entry.id}`] } : {}),
+								},
+							]
+						: [],
+				),
 			};
 		},
 		async check(input, ctx) {

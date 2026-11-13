@@ -593,6 +593,15 @@ const MIGRATIONS: Record<string, Migration> = {
 			);
 		},
 	},
+	"0021_activity_trash_moves": {
+		async up(db) {
+			// The trash reads which conversation threw a thing away from the log's moves to the trash (doc 11): only those rows, newest
+			// first, so a long log is not read whole for it.
+			await sql`create index monti_activity_trash_moves on monti_activity (seq desc) where operation = 'trash.move'`.execute(
+				db,
+			);
+		},
+	},
 };
 
 /**

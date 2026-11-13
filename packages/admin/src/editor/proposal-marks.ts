@@ -272,8 +272,8 @@ export const staleProposals = <T extends BodyProposal>(doc: EditorNode, items: T
 export function proposedWords(item: BodyProposal, block: string): string | null {
 	const was = item.was?.[block];
 	for (const op of item.ops) {
-		if (op.op === "replaceText" && op.block === block)
-			return was === undefined ? op.text : was.slice(0, op.from) + op.text + was.slice(op.to);
+		// Every change of the block's text, one after the other, as the core applies them.
+		if (op.op === "replaceText" && op.block === block) return filledWith(item, block);
 		if (op.op === "setBlock" && op.block === block) return newText(op.value);
 		if (op.op === "remove" && op.blocks.includes(block)) return null;
 		if (op.op === "insert" && op.after === block) return op.blocks.map(newText).join(" ");
