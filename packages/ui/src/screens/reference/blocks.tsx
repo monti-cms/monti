@@ -408,7 +408,7 @@ export function CodeExplorerScreen({ state }: { state: "first" | "rest" }) {
 				</BlockBarPlace>
 				<Box border="all" radius="lg" overflow="hidden">
 					<Inline align="stretch" gap={0}>
-						<Box width="menu" background="tool" padding={8} border="right">
+						<Box width="menu" padding={8} border="right">
 							<FileTree aria-label="파일">
 								<FileTreeRow name="src" folder />
 								<FileTreeRow
