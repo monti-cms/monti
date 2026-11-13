@@ -44,7 +44,7 @@ import {
 } from "@monti-cms/ui/icons";
 import { TextSelection } from "@tiptap/pm/state";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, useEditorState } from "@tiptap/react";
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { EditorMedia } from "../media-context";
 import { markName } from "../schema";
@@ -100,6 +100,21 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 	const [copied, setCopied] = useState(false);
 	const [foldPointed, setFoldPointed] = useState<number | null>(null);
 	const [hovered, setHovered] = useState(false);
+	// The tool row stands 8px over the box: the pointer crossing that gap to reach it leaves the block for a moment, so the row waits before it goes.
+	const leaving = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const enter = () => {
+		if (leaving.current) clearTimeout(leaving.current);
+		setHovered(true);
+	};
+	const leave = () => {
+		leaving.current = setTimeout(() => setHovered(false), 300);
+	};
+	useEffect(
+		() => () => {
+			if (leaving.current) clearTimeout(leaving.current);
+		},
+		[],
+	);
 
 	const view = useEditorState({
 		editor,
@@ -258,11 +273,7 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 	};
 
 	return (
-		<NodeViewWrapper
-			data-block="codeBlock"
-			onPointerEnter={() => setHovered(true)}
-			onPointerLeave={() => setHovered(false)}
-		>
+		<NodeViewWrapper data-block="codeBlock" onPointerEnter={enter} onPointerLeave={leave}>
 			{showBar ? (
 				<BlockBarPlace>
 					<FloatingBar ref={bar} aria-label={t("editor.code.tools")}>
@@ -293,7 +304,8 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 						>
 							<ListNumbered aria-hidden />
 						</FloatingBarButton>
-						{offeredEffects.length || tools?.fold || tools?.links ? (
+						{/* Line effects go to the lines picked or the caret's: with neither in this block (the row shown by the pointer), none. */}
+						{(view?.inside || view?.picked) && (offeredEffects.length || tools?.fold || tools?.links) ? (
 							<FloatingBarButton label={t("editor.code.lineEffects")} pressed={menu !== null} onClick={openMenu}>
 								<Row aria-hidden />
 							</FloatingBarButton>

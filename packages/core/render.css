@@ -154,6 +154,8 @@ a[data-code-ref][data-lit] {
 /* The copy button: shown while the pointer or the keyboard is on the code. */
 figure[data-code] > [data-code-copy] {
 	position: absolute;
+	/* Over the lines: each line is positioned too (its marks and the way back), and they come after the button. */
+	z-index: 1;
 	top: 0.5rem;
 	right: 0.5rem;
 	padding: 0.25rem 0.5rem;
