@@ -40,6 +40,7 @@ import {
 	ResizeCorner,
 	Segmented,
 	Separator,
+	Shortcut,
 	Stack,
 	Text,
 	TextButton,
@@ -1054,7 +1055,9 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 														onEnter={next}
 													/>
 													{nextBlankImage(editor, blockId) && (
-														<TextButton onClick={next}>{t("editor.image.next")}</TextButton>
+														<TextButton onClick={next}>
+															{t("editor.image.next")} <Shortcut keys={["Enter"]} />
+														</TextButton>
 													)}
 												</Stack>
 											</PopoverContent>

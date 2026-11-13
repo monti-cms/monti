@@ -42,8 +42,16 @@ test("a close mark typed as a button's words and typed keys are found; a size's 
 	<MenuShortcut>Del</MenuShortcut>
 	<MenuShortcut>{"⇧⌘D"}</MenuShortcut>
 	<span onKeyDown={(event) => event.key === "Backspace" || event.key === "Delete"} />
+	<MenuShortcut>↵</MenuShortcut>
+	<TextButton>{"다음 이미지 ⏎"}</TextButton>
 </>`),
-		['5 typed-glyph: "×"', '7 typed-glyph: "Del"', '8 typed-glyph: "⇧⌘D"'],
+		[
+			'5 typed-glyph: "×"',
+			'7 typed-glyph: "Del"',
+			'8 typed-glyph: "⇧⌘D"',
+			'10 typed-glyph: "↵"',
+			'11 typed-glyph: "다음 이미지 ⏎"',
+		],
 	);
 });
 
