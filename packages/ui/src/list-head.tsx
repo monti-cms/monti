@@ -180,25 +180,42 @@ function ListHead({
 		return () => observer.disconnect();
 	}, [fluid?.id]);
 	const widthOf = (column: ListHeadColumn) => column.size ?? fluidWidth;
+	/**
+	 * A column's width at this moment. The fluid column's is read from the page, not from `fluidWidth`: that is what the observer last
+	 * said, nothing until it first speaks and behind after each change of layout. An edge dragged from it took 0 for the title's width:
+	 * the room between the two columns' limits came out wrong, and whichever way it was dragged the edge went toward the title, as far as the
+	 * column beside it could narrow (up to 24px for a kind's column, not at all for one already at its 60px).
+	 */
+	const widthNow = (column: ListHeadColumn) =>
+		column.size ?? Math.round(cellOf(column.id)?.getBoundingClientRect().width ?? fluidWidth);
 	const limits = (column: ListHeadColumn) =>
 		column.size === undefined
 			? { min: TITLE_MIN, max: Number.POSITIVE_INFINITY }
 			: { min: LIST_COLUMN_MIN, max: LIST_COLUMN_MAX };
-	/** The range of the left column's width at the edge between `left` and `right`: both stay in their limits, and together they keep their width. */
+	/**
+	 * The range of the left column's width at the edge between `left` and `right`: both stay in their limits, and together they keep their
+	 * width. Where it stands now (`a`) is always in the range: a column already past a limit (the title under its 200px in a narrow window)
+	 * can come back toward it and go no further out. Without that the range turned inside out (its least above its most), and any press on
+	 * the edge, one that moved nothing included, threw the other column to its narrowest.
+	 */
 	const edgeRange = (left: ListHeadColumn, right: ListHeadColumn, a: number, b: number) => {
 		const l = limits(left);
 		const r = limits(right);
-		return { min: Math.max(l.min, a + b - r.max), max: Math.min(l.max, a + b - r.min) };
+		return {
+			min: Math.min(a, Math.max(l.min, a + b - r.max)),
+			max: Math.max(a, Math.min(l.max, a + b - r.min)),
+		};
 	};
 	// The two widths when the drag of an edge started; the handle reports the left one moved by the pointer.
 	const edgeStart = React.useRef<{ a: number; b: number } | null>(null);
 	const resize = (left: ListHeadColumn, right: ListHeadColumn, width: number, commit: boolean) => {
-		edgeStart.current ??= { a: widthOf(left), b: widthOf(right) };
+		edgeStart.current ??= { a: widthNow(left), b: widthNow(right) };
 		const { a, b } = edgeStart.current;
 		if (commit) edgeStart.current = null;
 		setResizing(commit ? null : left.id);
 		const range = edgeRange(left, right, a, b);
-		const next = Math.min(range.max, Math.max(range.min, Math.round(width)));
+		// Kept in the range here, whatever the handle asks for (Home and End ask for as far as it goes).
+		const next = Math.min(range.max, Math.max(range.min, Number.isFinite(width) ? Math.round(width) : width));
 		const changes: Record<string, number | null> = {};
 		const set = (column: ListHeadColumn, value: number) => {
 			// The title takes what is left; a kind's own width is kept as none.
@@ -401,6 +418,7 @@ function ListHead({
 							{onResize && next && !drag && (
 								<ResizeHandle
 									value={widthOf(column)}
+									measure={() => widthNow(column)}
 									{...edgeRange(column, next, widthOf(column), widthOf(next))}
 									onChange={(width, commit) => resize(column, next, width, commit)}
 									onReset={() => {
