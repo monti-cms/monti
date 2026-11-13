@@ -67,7 +67,10 @@ const EDITOR_BODY = cn(
 	"[&_.ProseMirror-selectednode:not(:focus-within)_[data-block=image]]:selection:bg-transparent!",
 	"[&_.ProseMirror-selectednode:not(:focus-within)_[data-block=file]]:selection:bg-transparent!",
 	// A picture and a file stand off the next block as a paragraph does (2026-11-10, owner: 20px above them, none under, read as stuck to what follows).
-	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20",
+	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20 [&_[data-block=codeBlock]]:relative [&_[data-block=codeBlock]]:mb-monti-20",
+	// Doc 17: words pointing at code lines (a dotted line under them), one whose lines are gone (red), the words picked first while a link is made.
+	"[&_[data-monti-mark=codeRef]]:underline [&_[data-monti-mark=codeRef]]:decoration-(--monti-fg-subtle) [&_[data-monti-mark=codeRef]]:decoration-dotted [&_[data-monti-mark=codeRef]]:underline-offset-4",
+	"[&_[data-code-ref-broken]]:underline [&_[data-code-ref-broken]]:decoration-(--monti-fg-danger) [&_[data-code-ref-broken]]:decoration-dotted [&_[data-code-ref-broken]]:underline-offset-4 [&_[data-code-ref-picking]]:rounded-monti-sm [&_[data-code-ref-picking]]:bg-monti-selected",
 	// A block that is one thing is picked whole, never as text: see `data-whole` above.
 	"[&_[data-whole]]:select-none",
 	// Taken in by a range that began in a text: nothing in it is text for the browser to paint, so it stands on the selection's own ground, out to 4px around it.

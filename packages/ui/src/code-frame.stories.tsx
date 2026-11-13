@@ -1,21 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ChevronDown, Copy, ListNumbered, Row, TypePattern } from "./icons";
+import { ChevronDown, ChevronRight } from "./icons";
 import {
-	Caret,
-	CodeFileTab,
+	CodeArea,
 	CodeFrame,
+	CodeGround,
 	CodeLine,
 	CodeMark,
+	CodeNumber,
 	CodeRefText,
 	CodeToken,
 	IconButton,
-	Inline,
-	Input,
 	Text,
 	TextButton,
 } from "./index";
 
-/** A code block in the editor (doc 17): the box, its head row, the file name's tab, lines with their effects and marks. */
+/** A code block in the editor (doc 17): the box, its head row (language and file name), the numbers' column, the lines' grounds and the code. */
 const meta = {
 	title: "Monti/EditorTools/CodeFrame",
 	component: CodeFrame,
@@ -25,103 +24,116 @@ type Story = StoryObj<typeof meta>;
 
 const head = (
 	<>
-		<TextButton size="caption">
+		<Text variant="caption" tone="muted">
 			TypeScript
-			<Caret />
-		</TextButton>
-		<Inline gap={2}>
-			<IconButton size="xs" label="줄 효과">
-				<Row aria-hidden />
-			</IconButton>
-			<IconButton size="xs" label="정규식 규칙">
-				<TypePattern aria-hidden />
-			</IconButton>
-			<IconButton size="xs" label="줄 번호" pressed>
-				<ListNumbered aria-hidden />
-			</IconButton>
-			<IconButton size="xs" label="코드 복사">
-				<Copy aria-hidden />
-			</IconButton>
-		</Inline>
+		</Text>
+		<Text variant="caption" mono>
+			src/counter.ts
+		</Text>
 	</>
 );
 
-/** Every line look: plain, a mark, the effects' grounds, picked, lit, a wavy line, a fold's button, folded lines. */
-export const Lines: Story = {
+const LINES = [
+	"function count(list: number[]) {",
+	"  let total = 0;",
+	"  for (const n of list) {",
+	"    total += n;",
+	"  }",
+	"  return total;",
+	"}",
+];
+
+/**
+ * The code being written: lines 2–3 picked (one ground, no gap between them), a fold over lines 3–5 with its bracket, line 6 added, line 7 a warning.
+ */
+export const Editing: Story = {
 	args: {
-		tab: (
-			<CodeFileTab>
-				<Input appearance="inline" size="sm" mono width="fit" aria-label="파일 이름" defaultValue="src/counter.ts" />
-			</CodeFileTab>
-		),
 		head,
 		children: (
-			<>
-				<CodeLine number={1} folds>
-					<CodeToken light="#d73a49">const</CodeToken> a = <CodeToken light="#005cc5">1</CodeToken>
-					{";"}
-				</CodeLine>
-				<CodeLine number={2} folds mark="›">
-					focus
-				</CodeLine>
-				<CodeLine number={3} folds tone="highlight">
-					highlight
-				</CodeLine>
-				<CodeLine number={4} folds tone="minus" mark="−">
-					removed
-				</CodeLine>
-				<CodeLine number={5} folds tone="plus" mark="+">
-					added
-				</CodeLine>
-				<CodeLine number={6} folds tone="picked">
-					picked by its number
-				</CodeLine>
-				<CodeLine number={7} folds tone="lit">
-					lit by a code link
-				</CodeLine>
-				<CodeLine number={8} folds wavy="warning">
-					a warning
-				</CodeLine>
-				<CodeLine number={9} folds wavy="error">
-					an error
-				</CodeLine>
-				<CodeLine
-					number={10}
-					folds
-					fold={
-						<IconButton size="xs" label="10번째 줄부터 접기">
-							<ChevronDown aria-hidden />
-						</IconButton>
-					}
-				>
-					<CodeMark kind="tip">a tooltip</CodeMark> <CodeMark kind="fold">folded words</CodeMark>{" "}
-					<CodeMark kind="bold">bold</CodeMark> <CodeMark kind="picked">picked</CodeMark>
-				</CodeLine>
-				<CodeLine folds>
-					<TextButton size="caption">접힌 3줄</TextButton>
-				</CodeLine>
-			</>
+			<CodeArea
+				picking
+				gutter={LINES.map((_, line) => (
+					<CodeNumber
+						key={LINES[line]}
+						number={line + 1}
+						folds
+						tone={line === 1 || line === 2 ? "picked" : line === 5 ? "plus" : undefined}
+						mark={line === 5 ? "+" : undefined}
+						edge={line === 2 ? "start" : line === 3 ? "middle" : line === 4 ? "end" : undefined}
+						fold={
+							line === 2 ? (
+								<IconButton size="xs" label="3번째 줄부터 접기">
+									<ChevronDown aria-hidden />
+								</IconButton>
+							) : undefined
+						}
+					/>
+				))}
+				grounds={LINES.map((text, line) => (
+					<CodeGround key={text} tone={line === 1 || line === 2 ? "picked" : line === 5 ? "plus" : undefined} />
+				))}
+			>
+				<div>
+					<span data-token="" style={{ "--shiki-light": "#d73a49" } as React.CSSProperties}>
+						function
+					</span>
+					{` count(list: number[]) {\n  let total = 0;\n  for (const n of list) {\n    total += n;\n  }\n  return total;\n`}
+					<span data-wavy="warning">{"}"}</span>
+				</div>
+			</CodeArea>
 		),
 	},
 };
 
-/** Read-only, numbers hidden on the site: no pointer on the numbers, fainter numbers. */
-export const ReadOnly: Story = {
+/** A closed fold: its first line stays with its button turned, the summary of what is hidden after it. */
+export const Folded: Story = {
 	args: {
-		head: (
-			<Text variant="caption" tone="muted">
-				TypeScript
-			</Text>
-		),
+		head,
 		children: (
-			<>
+			<CodeArea
+				gutter={[0, 1, 2, 5, 6].map((line) => (
+					<CodeNumber
+						key={line}
+						number={line + 1}
+						folds
+						fold={
+							line === 2 ? (
+								<IconButton size="xs" label="3번째 줄부터 펼치기">
+									<ChevronRight aria-hidden />
+								</IconButton>
+							) : undefined
+						}
+					/>
+				))}
+				grounds={[0, 1, 2, 5, 6].map((line) => <CodeGround key={line} />)}
+			>
+				<div>
+					{`function count(list: number[]) {\n  let total = 0;\n  for (const n of list) { `}
+					<TextButton size="caption">접힌 2줄</TextButton>
+					{"\n  return total;\n}"}
+				</div>
+			</CodeArea>
+		),
+	},
+};
+
+/** Read-only rows (a comparison): numbers fainter where the site hides them, a fold's button, the code's own marks. */
+export const Rows: Story = {
+	args: {
+		head,
+		children: (
+			<div className="py-monti-8">
 				<CodeLine number={1} readOnly numbersOff>
-					const a = 1;
+					<CodeToken light="#d73a49">const</CodeToken> a = <CodeToken light="#005cc5">1</CodeToken>;
 				</CodeLine>
-				<CodeLine number={2} readOnly numbersOff>
-					const b = 2;
+				<CodeLine number={2} readOnly numbersOff tone="highlight" wavy="error">
+					<CodeMark kind="tip">a tooltip</CodeMark> <CodeMark kind="fold">folded words</CodeMark>{" "}
+					<CodeMark kind="bold">bold</CodeMark>
 				</CodeLine>
-			</>
+				<CodeLine number={3} readOnly numbersOff tone="minus" mark="−">
+					removed
+				</CodeLine>
+			</div>
 		),
 	},
 };

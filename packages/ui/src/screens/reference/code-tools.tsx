@@ -2,27 +2,27 @@ import type * as React from "react";
 import {
 	Add,
 	ArrowRight,
+	Chat,
 	Checkmark,
 	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
+	CollapseAll,
 	Copy,
-	Information,
+	Document,
 	ListNumbered,
-	OverflowMenuHorizontal,
 	Row,
 	TrashCan,
 	TypePattern,
 	Unlink,
-	View,
 } from "../../icons";
 import {
 	Affix,
 	Banner,
+	BlockBarPlace,
 	Box,
 	Button,
 	Caret,
-	CodeFileTab,
 	CodeFrame,
 	CodeLine,
 	CodeMark,
@@ -43,6 +43,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	FloatingBar,
+	FloatingBarButton,
 	FormatBarRequest,
 	FormatButton,
 	FormField,
@@ -240,104 +241,152 @@ function Lines({
 
 // --- The box ----------------------------------------------------------------------------------------------------------------------------------
 
-/** The box's head row: the language on the left, the tools on the right (the old order, `b612824d:…/code-block-view.tsx:277-331`). */
+/** The box's head row: the language and the file name, as text (doc 17, 2026-11-14: the name is set from the tool row, not typed on the box). */
 function Head({
 	language = "TypeScript",
-	languageOpen,
-	numbers = true,
-	effectsOpen = false,
-	rulesOpen,
+	name,
 	copied = false,
 	readOnly = false,
 }: {
 	language?: string;
-	/** The language's list, open under its button. */
-	languageOpen?: React.ReactNode;
-	numbers?: boolean;
-	effectsOpen?: boolean;
-	rulesOpen?: React.ReactNode;
+	name?: string;
 	copied?: boolean;
 	readOnly?: boolean;
 }) {
-	const copy = (
-		<IconButton size="xs" label={copied ? "복사했습니다" : "코드 복사"}>
-			{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
-		</IconButton>
-	);
-	if (readOnly)
-		return (
-			<>
-				<Text variant="caption" tone="muted">
-					{language}
-				</Text>
-				{copy}
-			</>
-		);
 	return (
-		<>
-			{languageOpen ? (
-				<Popover open onOpenChange={still}>
-					<PopoverTrigger
-						render={
-							<TextButton size="caption">
-								{language}
-								<Caret />
-							</TextButton>
-						}
-					/>
-					{languageOpen}
-				</Popover>
-			) : (
-				<TextButton size="caption">
-					{language}
-					<Caret />
-				</TextButton>
-			)}
-			<Inline gap={2}>
-				<IconButton size="xs" label="줄 효과" pressed={effectsOpen}>
-					<Row aria-hidden />
+		<Inline gap={8} minWidth={0}>
+			<Text variant="caption" tone="muted">
+				{language}
+			</Text>
+			{name ? (
+				<Text variant="caption" mono truncate>
+					{name}
+				</Text>
+			) : null}
+			{readOnly ? (
+				<IconButton size="xs" label={copied ? "복사함" : "코드 복사"}>
+					{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
 				</IconButton>
-				{rulesOpen ? (
-					<Popover open onOpenChange={still}>
-						<IconButton size="xs" label="정규식 규칙" pressed trigger={(button) => <PopoverTrigger render={button} />}>
-							<TypePattern aria-hidden />
-						</IconButton>
-						{rulesOpen}
-					</Popover>
-				) : (
-					<IconButton size="xs" label="정규식 규칙">
-						<TypePattern aria-hidden />
-					</IconButton>
-				)}
-				<IconButton size="xs" label="줄 번호" pressed={numbers}>
-					<ListNumbered aria-hidden />
-				</IconButton>
-				{copy}
-			</Inline>
-		</>
+			) : null}
+		</Inline>
 	);
 }
 
-/** The file name's tab on the box: its field from the start (a name can be typed at once); empty, it says what goes there. */
-function FileTab({ name, readOnly = false }: { name?: string; readOnly?: boolean }) {
+/**
+ * The code block's own tool row, over the box while the caret is in it (the image block's row, `BlockBarPlace` + `FloatingBar`): language, file name,
+ * line numbers, line effects, rules; with words picked in the code, the tooltip and the folded words (and "처음부터 펼치기" once folded); copy.
+ */
+function Tools({
+	language = "TypeScript",
+	languageOpen,
+	nameOpen,
+	numbers = true,
+	effectsOpen = false,
+	rulesOpen,
+	words,
+	tipOpen,
+	copied = false,
+}: {
+	language?: string;
+	/** The language's list, open under its button. */
+	languageOpen?: React.ReactNode;
+	nameOpen?: React.ReactNode;
+	numbers?: boolean;
+	effectsOpen?: boolean;
+	rulesOpen?: React.ReactNode;
+	/** Words picked in the code: `tip` they have a tooltip, `fold` they are folded. */
+	words?: "picked" | "tip" | "fold";
+	tipOpen?: React.ReactNode;
+	copied?: boolean;
+}) {
+	const opened = (open: React.ReactNode, label: string, icon: React.ReactNode) => (
+		<Popover open onOpenChange={still}>
+			<FloatingBarButton label={label} pressed trigger={(button) => <PopoverTrigger render={button} />}>
+				{icon}
+			</FloatingBarButton>
+			{open}
+		</Popover>
+	);
 	return (
-		<CodeFileTab>
-			{readOnly ? (
-				<Text variant="caption" tone="muted" mono>
-					{name}
-				</Text>
-			) : (
-				<Input
-					appearance="inline"
-					size="sm"
-					mono
-					width="fit"
-					aria-label="파일 이름"
-					placeholder="파일 이름"
-					defaultValue={name}
-				/>
-			)}
-		</CodeFileTab>
+		<BlockBarPlace>
+			<FloatingBar aria-label="코드 도구">
+				{languageOpen ? (
+					opened(
+						languageOpen,
+						"언어",
+						<>
+							{language}
+							<Caret />
+						</>,
+					)
+				) : (
+					<FloatingBarButton label="언어">
+						{language}
+						<Caret />
+					</FloatingBarButton>
+				)}
+				{nameOpen ? (
+					opened(nameOpen, "파일 이름", <Document aria-hidden />)
+				) : (
+					<FloatingBarButton label="파일 이름" pressed>
+						<Document aria-hidden />
+					</FloatingBarButton>
+				)}
+				<Separator orientation="vertical" length="bar" />
+				<FloatingBarButton label="줄 번호" pressed={numbers}>
+					<ListNumbered aria-hidden />
+				</FloatingBarButton>
+				<FloatingBarButton label="줄 효과" pressed={effectsOpen}>
+					<Row aria-hidden />
+				</FloatingBarButton>
+				{rulesOpen ? (
+					opened(rulesOpen, "정규식 규칙", <TypePattern aria-hidden />)
+				) : (
+					<FloatingBarButton label="정규식 규칙">
+						<TypePattern aria-hidden />
+					</FloatingBarButton>
+				)}
+				{words ? (
+					<>
+						<Separator orientation="vertical" length="bar" />
+						{tipOpen ? (
+							opened(tipOpen, "툴팁", <Chat aria-hidden />)
+						) : (
+							<FloatingBarButton label="툴팁" pressed={words === "tip"}>
+								<Chat aria-hidden />
+							</FloatingBarButton>
+						)}
+						<FloatingBarButton label="글자 접기" pressed={words === "fold"}>
+							<CollapseAll aria-hidden />
+						</FloatingBarButton>
+						{words === "fold" ? <FloatingBarButton label="처음부터 펼치기">처음부터 펼치기</FloatingBarButton> : null}
+					</>
+				) : null}
+				<Separator orientation="vertical" length="bar" />
+				<FloatingBarButton label={copied ? "복사함" : "코드 복사"}>
+					{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
+				</FloatingBarButton>
+			</FloatingBar>
+		</BlockBarPlace>
+	);
+}
+
+/** The block: its tool row over it while it is being written (none when read-only), the box with its head row. */
+function Code({
+	name,
+	language,
+	readOnly = false,
+	copied = false,
+	children,
+	...tools
+}: React.ComponentProps<typeof Tools> & { name?: string; readOnly?: boolean; children: React.ReactNode }) {
+	return (
+		<Box position="relative">
+			{readOnly ? null : <Tools language={language} copied={copied} {...tools} />}
+			<CodeFrame head={<Head language={language} name={name} readOnly={readOnly} copied={copied} />}>
+				<Box paddingY={8}>{children}</Box>
+			</CodeFrame>
+		</Box>
 	);
 }
 
@@ -399,32 +448,33 @@ export function CodeBoxScreen({
 	if (state === "readOnly")
 		return (
 			<Page archived>
-				<CodeFrame tab={<FileTab name="src/counter.tsx" readOnly />} head={<Head readOnly />}>
+				<Code name="src/counter.tsx" readOnly>
 					<Lines readOnly />
-				</CodeFrame>
+				</Code>
 			</Page>
 		);
 	if (state === "unknown")
 		return (
 			<Page>
-				<CodeFrame tab={<FileTab name="lib/counter.ex" />} head={<Head language="elixir" />}>
+				<Code name="lib/counter.ex" language="elixir">
 					<Lines
 						fold="none"
 						looks={{}}
 						lines={[["defmodule Counter do"], ["  def add(n), do: n + 1"], ["end"]]}
 						plain
 					/>
-				</CodeFrame>
+				</Code>
 			</Page>
 		);
 	return (
 		<Page>
-			<CodeFrame
-				tab={<FileTab name={state === "noName" ? undefined : "src/counter.tsx"} />}
-				head={<Head numbers={state !== "numbersOff"} copied={state === "copied"} />}
+			<Code
+				name={state === "noName" ? undefined : "src/counter.tsx"}
+				numbers={state !== "numbersOff"}
+				copied={state === "copied"}
 			>
 				<Lines fold={state === "folded" ? "closed" : "open"} numbersOff={state === "numbersOff"} />
-			</CodeFrame>
+			</Code>
 		</Page>
 	);
 }
@@ -482,9 +532,9 @@ export function LanguageScreen({ state }: { state: "open" | "typed" | "none" | "
 	);
 	return (
 		<Page>
-			<CodeFrame tab={<FileTab name="src/counter.tsx" />} head={<Head language={current} languageOpen={list} />}>
+			<Code name="src/counter.tsx" language={current} languageOpen={list}>
 				<Lines />
-			</CodeFrame>
+			</Code>
 		</Page>
 	);
 }
@@ -507,9 +557,9 @@ export function LineMenuScreen({ state }: { state: "picked" | "fold" | "linked" 
 	return (
 		<Page>
 			<Box position="relative">
-				<CodeFrame tab={<FileTab name="src/counter.tsx" />} head={<Head />}>
+				<Code name="src/counter.tsx">
 					<Lines looks={looks} />
-				</CodeFrame>
+				</Code>
 				<At top={state === "picked" ? 141 : state === "linked" ? 121 : 181} left={688}>
 					<DropdownMenu open modal={false}>
 						<DropdownMenuTrigger render={<span />} />
@@ -606,71 +656,40 @@ const MARKED: Record<number, React.ReactNode> = {
 };
 
 /**
- * The editor's own format card, in code (owner's point 5): the same card as in the text, with what does not apply in code left out (code, superscript,
- * subscript, link, footnote). The code's own marks — a tooltip and folded words — are rows of its ⋯, as the site's marks are in the text (doc 18). The
- * tooltip's card is doc 18's: one field, no "remove" (the eraser takes it off).
+ * Words picked in code (owner, 2026-11-14): the format card keeps every format that works in code — bold, italic, underline, strike — and leaves out what
+ * cannot (inline code, superscript and subscript break the code's column; a link and a footnote are not drawn in code on the site). The code's own
+ * marks are in the code block's tool row: the tooltip (a plain field in its card) and the folded words, with "처음부터 펼치기" once they are folded.
  */
 export function FormatInCodeScreen({ state }: { state: "more" | "tooltip" | "fold" | "marked" }) {
-	const more = state === "more" || state === "fold";
 	return (
 		<Page>
 			<Box position="relative">
-				<CodeFrame tab={<FileTab name="src/counter.tsx" />} head={<Head />}>
+				<Code
+					name="src/counter.tsx"
+					words={state === "fold" ? "fold" : state === "marked" ? "tip" : "picked"}
+					tipOpen={
+						state === "tooltip" ? (
+							<PopoverContent align="start" width="sm">
+								<Input size="md" aria-label="툴팁 글" defaultValue="바깥의 count를 읽는다" />
+							</PopoverContent>
+						) : undefined
+					}
+				>
 					<Lines looks={{}} fold="none" words={state === "marked" ? MARKED : state === "fold" ? FOLDED : PICKED} />
-				</CodeFrame>
-				<At top={state === "fold" ? 30 : 110} left={state === "fold" ? 40 : 140}>
-					<FloatingBar>
-						<FormatButton mark="bold" label="굵게" />
-						<FormatButton mark="italic" label="기울임" />
-						<FormatButton mark="underline" label="밑줄" />
-						<FormatButton mark="strike" label="취소선" />
-						{state === "marked" ? <FormatButton mark="clear" label="서식 지우기" /> : null}
-						<Separator orientation="vertical" length="bar" />
-						{state === "tooltip" ? (
-							<Popover open onOpenChange={still}>
-								<FormatButton
-									mark="more"
-									label="툴팁"
-									pressed
-									trigger={(button) => <PopoverTrigger render={button} />}
-								/>
-								{/* A plain field in a card: a tooltip's words are typed, not searched. */}
-								<PopoverContent>
-									<Input size="md" aria-label="툴팁 글" defaultValue="바깥의 count를 읽는다" />
-								</PopoverContent>
-							</Popover>
-						) : (
-							<DropdownMenu open={more} modal={false}>
-								<FormatButton
-									mark="more"
-									label="코드의 서식"
-									pressed={more}
-									trigger={(button) => <DropdownMenuTrigger render={button} />}
-								/>
-								<DropdownMenuContent>
-									<DropdownMenuItem>
-										<Information aria-hidden />
-										툴팁
-									</DropdownMenuItem>
-									<DropdownMenuItem>
-										<OverflowMenuHorizontal aria-hidden />
-										글자 접기
-										{state === "fold" ? <MenuTick /> : null}
-									</DropdownMenuItem>
-									{/* Only words already folded can start open on the site: the row stands when it can apply (menu.md). */}
-									{state === "fold" ? (
-										<DropdownMenuItem>
-											<View aria-hidden />
-											처음부터 펼치기
-										</DropdownMenuItem>
-									) : null}
-								</DropdownMenuContent>
-							</DropdownMenu>
-						)}
-						<Separator orientation="vertical" length="bar" />
-						<FormatBarRequest label="요청" />
-					</FloatingBar>
-				</At>
+				</Code>
+				{state === "tooltip" ? null : (
+					<At top={state === "fold" ? 30 : 110} left={state === "fold" ? 40 : 140}>
+						<FloatingBar>
+							<FormatButton mark="bold" label="굵게" />
+							<FormatButton mark="italic" label="기울임" />
+							<FormatButton mark="underline" label="밑줄" />
+							<FormatButton mark="strike" label="취소선" />
+							{state === "marked" ? <FormatButton mark="clear" label="서식 지우기" /> : null}
+							<Separator orientation="vertical" length="bar" />
+							<FormatBarRequest label="요청" />
+						</FloatingBar>
+					</At>
+				)}
 			</Box>
 		</Page>
 	);
@@ -784,9 +803,9 @@ export function RulesScreen({ state }: { state: "list" | "rule" | "tooltip" | "e
 		);
 	return (
 		<Page>
-			<CodeFrame tab={<FileTab name="src/counter.tsx" />} head={<Head rulesOpen={card} />}>
+			<Code name="src/counter.tsx" rulesOpen={card}>
 				<Lines looks={{}} fold="none" words={state === "list" ? RULE_WORDS : {}} />
-			</CodeFrame>
+			</Code>
 		</Page>
 	);
 }
@@ -921,13 +940,13 @@ export function CodeLinkScreen({ state }: { state: "picking" | "ready" | "linked
 						</FloatingBar>
 					</At>
 				) : null}
-				<CodeFrame tab={<FileTab name="src/counter.tsx" />} head={<Head />}>
+				<Code name="src/counter.tsx">
 					<Lines
 						looks={state === "broken" ? {} : looks}
 						fold="none"
 						lines={state === "broken" ? [...CODE.slice(0, 3), ...CODE.slice(4)] : CODE}
 					/>
-				</CodeFrame>
+				</Code>
 			</Box>
 		</Page>
 	);

@@ -15,6 +15,8 @@ export type CodeColors = {
 	lines: (code: string, language: string | undefined) => CodeToken[][];
 	/** Whether the language is loaded. */
 	has: (language: string | undefined) => boolean;
+	/** Loads a language Shiki has (the editor loads a block's language when it first draws it); `false` for a name Shiki does not know. */
+	load: (language: string) => Promise<boolean>;
 	themes: { light: string; dark: string };
 	/** The classes the site's own line effects put on their lines (`codeBlock.lineEffects`' `class`). */
 	lineClasses: Readonly<Record<string, string>>;
@@ -43,6 +45,7 @@ export function colorsOf(
 		themes,
 		lineClasses,
 		has,
+		load: (language) => loadLanguage(highlighter, language).catch(() => false),
 		lines(code, language) {
 			if (!language || !has(language)) return plain(code);
 			return highlighter
@@ -71,7 +74,11 @@ export async function loadLanguage(highlighter: HighlighterCore, language: strin
  * The site's code colours (doc 17): Shiki with the JavaScript regex engine, the site's two themes and only its languages. Open it once on the server and
  * give it to `renderDocument` as `code`. The editor uses the same themes and loads the same languages one by one.
  */
-export async function codeHighlighter(config: CodeBlockConfig = {}): Promise<CodeColors> {
+export async function codeHighlighter(
+	config: CodeBlockConfig = {},
+	/** `lazy`: no language up front; `load` brings each one when a block needs it (the editor). */
+	{ lazy = false }: { lazy?: boolean } = {},
+): Promise<CodeColors> {
 	const settings = codeBlockSettings(config);
 	const theme = (name: string) => bundledThemes[name as keyof typeof bundledThemes];
 	const themes = {
@@ -81,7 +88,7 @@ export async function codeHighlighter(config: CodeBlockConfig = {}): Promise<Cod
 	const highlighter = await createHighlighterCore({
 		engine: createJavaScriptRegexEngine({ forgiving: true }),
 		themes: [theme(themes.light)(), theme(themes.dark)()],
-		langs: settings.languages
+		langs: (lazy ? [] : settings.languages)
 			.map((name) => bundledLanguages[name as keyof typeof bundledLanguages])
 			.filter((load) => load !== undefined)
 			.map((load) => load()),

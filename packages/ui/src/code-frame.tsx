@@ -1,65 +1,199 @@
 import type * as React from "react";
+import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
 
 /**
- * A code block in the editor (doc 17): the box (`bg-muted`, `radius-lg`, as the body's other boxes), its head row (the language on the left, the
- * block's tools on the right, a hairline under it), and the code as rows, one per line. `tab` is the file name's tab on the box's top edge.
+ * A code block in the editor (doc 17): the box (`bg-muted`, `radius-lg`, as the body's other boxes), its head row (the language and the file name, a
+ * hairline under it), and the code. The block's tools are not in the box: they stand in the block's tool row over it (`BlockBarPlace`).
  */
-function CodeFrame({
-	tab,
-	head,
-	children,
-	className,
-	...props
-}: React.ComponentProps<"div"> & { tab?: React.ReactNode; head?: React.ReactNode }) {
+function CodeFrame({ head, children, className, ...props }: React.ComponentProps<"div"> & { head?: React.ReactNode }) {
 	return (
-		<div data-slot="code-frame" className={cn("relative flex flex-col", className)} {...props}>
-			{tab}
-			<div
-				className={cn("flex flex-col rounded-monti-lg bg-monti-muted", tab ? "rounded-tl-none" : undefined)}
-				data-tabbed={tab ? "" : undefined}
-			>
-				{head ? (
+		<div
+			data-slot="code-frame"
+			className={cn("relative flex flex-col rounded-monti-lg bg-monti-muted", className)}
+			{...props}
+		>
+			{head ? (
+				<div
+					data-slot="code-frame-head"
+					contentEditable={false}
+					className="flex min-h-monti-control-sm select-none items-center gap-monti-8 border-monti-default border-b px-monti-12"
+				>
+					{head}
+				</div>
+			) : null}
+			{children}
+		</div>
+	);
+}
+
+/**
+ * The code being written: the line numbers' column (`gutter`, rows of `CodeNumber`), and the text with the lines' grounds behind it (`grounds`, rows of
+ * `CodeGround`, one per line as the text shows it). Every row is one 20px line, so the grounds of lines next to each other meet with no gap. The text is
+ * the editor's own (`children`): what the highlighter, a rule or a closed fold put on it is styled here by its `data-` attribute.
+ */
+function CodeArea({
+	gutter,
+	grounds,
+	aside,
+	picking = false,
+	children,
+}: {
+	gutter: React.ReactNode;
+	grounds: React.ReactNode;
+	/** What stands over the code at a line's place (`CodeAside`): a closed fold's summary. */
+	aside?: React.ReactNode;
+	/** Lines are picked by their numbers: the text's caret is hidden, the picked lines' ground shows where the action goes. */
+	picking?: boolean;
+	children: React.ReactNode;
+}) {
+	return (
+		<div data-slot="code-area" className="flex py-monti-8">
+			<div data-slot="code-gutter" contentEditable={false} className="flex shrink-0 select-none flex-col">
+				{gutter}
+			</div>
+			<div className="relative min-w-0 flex-1 overflow-x-auto">
+				<div className="relative w-max min-w-full">
 					<div
-						data-slot="code-frame-head"
+						aria-hidden
 						contentEditable={false}
-						className="flex min-h-monti-control-md items-center justify-between gap-monti-8 border-monti-default border-b px-monti-8"
+						className="pointer-events-none absolute inset-x-0 top-0 flex select-none flex-col"
 					>
-						{head}
+						{grounds}
 					</div>
-				) : null}
-				<div data-slot="code-frame-body" className="overflow-x-auto py-monti-8">
-					<div className="flex w-max min-w-full flex-col">{children}</div>
+					<div
+						data-slot="code-text"
+						data-picking={picking ? "" : undefined}
+						className={cn(
+							"relative whitespace-pre pr-monti-16 pl-monti-16 font-mono text-monti-code text-monti-default",
+							"data-picking:caret-transparent [&>*]:outline-none [&_.ProseMirror-trailingBreak]:hidden",
+							// The site's two themes colour each piece (`--shiki-light`, `--shiki-dark` set on it by the highlighter).
+							"[&_[data-token]]:text-(--shiki-light) monti-dark:[&_[data-token]]:text-(--shiki-dark)",
+							// A closed fold's lines and words are hidden; its summary stands in their place.
+							"[&_[data-code-hidden]]:hidden",
+							"[&_[data-effect=bold]]:font-semibold [&_[data-effect=italic]]:italic [&_[data-effect=strike]]:line-through [&_[data-effect=underline]]:underline",
+							"[&_[data-effect=codeTip]]:underline [&_[data-effect=codeTip]]:decoration-(--monti-fg-subtle) [&_[data-effect=codeTip]]:decoration-dotted [&_[data-effect=codeTip]]:underline-offset-4",
+							"[&_[data-monti-mark=codeTip]]:underline [&_[data-monti-mark=codeTip]]:decoration-(--monti-fg-subtle) [&_[data-monti-mark=codeTip]]:decoration-dotted [&_[data-monti-mark=codeTip]]:underline-offset-4",
+							"[&_[data-effect=codeFold]]:rounded-monti-sm [&_[data-effect=codeFold]]:outline-dashed [&_[data-effect=codeFold]]:outline-(--monti-border-strong) [&_[data-effect=codeFold]]:outline-1 [&_[data-effect=codeFold]]:-outline-offset-1",
+							"[&_[data-monti-mark=codeFold]]:rounded-monti-sm [&_[data-monti-mark=codeFold]]:outline-dashed [&_[data-monti-mark=codeFold]]:outline-(--monti-border-strong) [&_[data-monti-mark=codeFold]]:outline-1 [&_[data-monti-mark=codeFold]]:-outline-offset-1",
+							"[&_[data-wavy]]:underline [&_[data-wavy]]:decoration-1 [&_[data-wavy]]:decoration-wavy [&_[data-wavy]]:underline-offset-4",
+							"[&_[data-wavy=error]]:decoration-(--monti-fg-danger) [&_[data-wavy=warning]]:decoration-(--monti-bg-warning-emphasis)",
+						)}
+					>
+						{children}
+					</div>
+					{aside}
 				</div>
 			</div>
 		</div>
 	);
 }
 
-/** The file name's tab: the box's own ground on its top-left edge, holding the name's field (`Input appearance="inline" mono size="sm"`). */
-function CodeFileTab({ className, ...props }: React.ComponentProps<"div">) {
+/** Something that stands at the right end of a line of the code being written (`row`: the line's place among the lines shown, from 0). */
+function CodeAside({ row, children }: { row: number; children: React.ReactNode }) {
 	return (
 		<div
-			data-slot="code-file-tab"
-			className={cn(
-				"inline-flex h-monti-control-sm max-w-full items-center self-start rounded-t-monti-md bg-monti-muted px-monti-12",
-				className,
-			)}
-			{...props}
-		/>
+			data-slot="code-aside"
+			contentEditable={false}
+			className="absolute right-monti-8 flex h-[20px] select-none items-center"
+			// design-allow: the line's place, from its row among the lines shown (20px each)
+			style={{ top: row * 20 }}
+		>
+			{children}
+		</div>
 	);
 }
 
 /**
  * What a line carries: its ground — an effect's (`highlight` the text-emphasis ground, `plus`, `minus`), `picked` by the line numbers (the selection's ground),
- * `lit` while a code link to it is pointed at (the block ground) — its mark, a wavy line under its words.
+ * `lit` while a code link to it or its fold's button is pointed at (the block ground) — its mark, a wavy line under its words.
  */
 type CodeLineTone = "highlight" | "plus" | "minus" | "picked" | "lit";
 
+const TONES =
+	"data-[tone=highlight]:bg-monti-highlight data-[tone=minus]:bg-monti-danger-muted data-[tone=plus]:bg-monti-success-muted data-[tone=lit]:bg-monti-block data-[tone=picked]:bg-monti-selection";
+
+/** One line's ground behind the text being written: one 20px row, so picked lines next to each other are one ground. */
+function CodeGround({ tone }: { tone?: CodeLineTone }) {
+	return <div data-slot="code-ground" data-tone={tone} className={cn("h-[20px] shrink-0", TONES)} />;
+}
+
+/** Where a line stands in a fold that spans lines: its first line, a line inside it, its last line. The fold's column draws the extent as a bracket. */
+type CodeFoldEdge = "start" | "middle" | "end";
+
 /**
- * One line of code: its number in the gutter (`fold` is the fold's button before it, on the first line of a fold), the line's mark in the code's left
- * margin (`+`, `−`, `›`: no column of its own), and its words. `numbersOff`: the site does not show line numbers, so they are
- * fainter. A line a code link points at has no standing mark: it is `lit` only while the pointer is on the link (doc 17).
+ * One line's number in the code's left column, pressable to pick lines (doc 17). `fold` is the fold's button on its first line; `edge` draws the fold's
+ * extent beside the numbers (a bracket from its first to its last line), `foldLit` while the fold's button is pointed at. `mark` is the effect's
+ * character (`+`, `−`, `›`), in a column of its own after the number.
+ */
+function CodeNumber({
+	number,
+	tone,
+	fold,
+	folds = false,
+	edge,
+	foldLit = false,
+	mark,
+	numbersOff = false,
+	readOnly = false,
+	className,
+	...props
+}: React.ComponentProps<"div"> & {
+	number: number;
+	tone?: CodeLineTone;
+	fold?: React.ReactNode;
+	folds?: boolean;
+	edge?: CodeFoldEdge;
+	foldLit?: boolean;
+	mark?: string;
+	numbersOff?: boolean;
+	readOnly?: boolean;
+}) {
+	return (
+		<div
+			data-slot="code-number"
+			data-tone={tone}
+			className={cn(
+				"flex h-[20px] shrink-0 items-center gap-monti-2 pr-monti-4 pl-monti-8 font-mono text-monti-code tabular-nums",
+				TONES,
+				readOnly ? undefined : "cursor-pointer hover:bg-monti-selected",
+				numbersOff ? "text-monti-faint" : "text-monti-subtle",
+				tone === "picked" ? "text-monti-default" : undefined,
+				className,
+			)}
+			{...props}
+		>
+			{folds ? (
+				<span className="relative flex size-[20px] shrink-0 items-center justify-center self-stretch">
+					{edge && !fold ? (
+						<span
+							aria-hidden
+							data-edge={edge}
+							data-lit={foldLit ? "" : undefined}
+							className={cn(
+								"absolute left-1/2 border-monti-strong border-l data-lit:border-monti-emphasis",
+								edge === "end" ? "top-0 h-1/2 w-1/4 border-b" : "inset-y-0",
+							)}
+						/>
+					) : null}
+					{fold}
+				</span>
+			) : null}
+			<span className="min-w-[2ch] text-right">{number}</span>
+			<span
+				aria-hidden
+				className="w-[1ch] text-center data-[mark=+]:text-monti-success data-[mark=−]:text-monti-danger"
+				data-mark={mark}
+			>
+				{mark}
+			</span>
+		</div>
+	);
+}
+
+/**
+ * One line of code as a read-only row (a comparison, a picture of the code): its number (`fold` the fold's button before it), the line's mark in the
+ * code's left margin (`+`, `−`, `›`), and its words. `numbersOff`: the site does not show line numbers, so they are fainter.
  */
 function CodeLine({
 	number,
@@ -70,10 +204,13 @@ function CodeLine({
 	numbersOff = false,
 	folds = false,
 	readOnly = false,
+	changed,
 	children,
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
+	/** In a comparison: the line's effects differ from the other side's. The words are the change dot's name for screen readers. */
+	changed?: string;
 	/** Left out on the row that stands for a fold's hidden lines (its "n lines folded" button). */
 	number?: number;
 	fold?: React.ReactNode;
@@ -91,12 +228,7 @@ function CodeLine({
 		<div
 			data-slot="code-line"
 			data-tone={tone}
-			className={cn(
-				"group/line flex min-h-5 items-stretch font-mono text-monti-code",
-				"data-[tone=highlight]:bg-monti-highlight data-[tone=minus]:bg-monti-danger-muted data-[tone=plus]:bg-monti-success-muted",
-				"data-[tone=lit]:bg-monti-block data-[tone=picked]:bg-monti-selection",
-				className,
-			)}
+			className={cn("group/line flex h-[20px] items-stretch font-mono text-monti-code", TONES, className)}
 			{...props}
 		>
 			<span
@@ -109,10 +241,13 @@ function CodeLine({
 					tone === "picked" ? "text-monti-default" : undefined,
 				)}
 			>
-				{folds ? <span className="flex size-5 shrink-0 items-center justify-center">{fold}</span> : null}
+				{folds ? <span className="flex size-[20px] shrink-0 items-center justify-center">{fold}</span> : null}
+				{changed === undefined ? null : (
+					<span className="flex w-monti-8 shrink-0 items-center">{changed ? <ChangeDot label={changed} /> : null}</span>
+				)}
 				<span className="min-w-[2ch]">{number}</span>
 			</span>
-			<span className="relative flex-1 whitespace-pre pr-monti-16 pl-monti-16 text-monti-default">
+			<span className="relative flex flex-1 items-center whitespace-pre pr-monti-16 pl-monti-16 text-monti-default">
 				{mark ? (
 					<span
 						aria-hidden
@@ -203,4 +338,16 @@ function CodeRefText({
 	);
 }
 
-export { CodeFileTab, CodeFrame, CodeLine, type CodeLineTone, CodeMark, CodeRefText, CodeToken };
+export {
+	CodeArea,
+	CodeAside,
+	type CodeFoldEdge,
+	CodeFrame,
+	CodeGround,
+	CodeLine,
+	type CodeLineTone,
+	CodeMark,
+	CodeNumber,
+	CodeRefText,
+	CodeToken,
+};

@@ -28,6 +28,8 @@ import { type Editor, useEditorState } from "@tiptap/react";
 import { useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import type { BodyCatalogs } from "./catalog";
+import { CodeRefButton } from "./code/code-links";
+import { codeToolsKey } from "./code/code-state";
 import { clearFormats, hasClearableFormat, inTableCell } from "./commands";
 import { insertFootnote } from "./footnotes";
 import { addressOf, ENTRY_LINK, type LinkTarget, useLinkTargets } from "./link-targets";
@@ -80,8 +82,9 @@ export function FormatCard({
 				current.isEditable &&
 				selection instanceof TextSelection &&
 				!selection.empty &&
-				selection.$from.parent.type.name !== nodeName("codeBlock") &&
 				!inTableCell(selection.$from) &&
+				// Lines picked by their numbers have the line menu, not the card.
+				!codeToolsKey.getState(current.state)?.picked &&
 				(current.isFocused || linking || more);
 			if (!shown) return null;
 			const start = current.view.coordsAtPos(selection.from);
@@ -94,19 +97,34 @@ export function FormatCard({
 				href: String(current.getAttributes("link").href ?? ""),
 				clearable: hasClearableFormat(current.state),
 				inFootnote: selection.$from.parent.type.name === nodeName("footnote"),
+				inCode: selection.$from.parent.type.name === nodeName("codeBlock"),
+				codeBlocks: current.state.doc.content.content.some((node) => node.type.name === nodeName("codeBlock")),
 				requestable: pickedText(current.state) !== null,
 			};
 		},
 	});
 	if (!state) return null;
-	const offered = new Set(catalogs.offered.marks.map((mark) => mark.type));
+	// In code (doc 17) the card has the formats code takes: bold, italic, underline, strike. Code, superscript and subscript would break the code's
+	// column, a link and a footnote are not drawn in code on the site. The code's own fold and tooltip are in the code block's tool row.
+	const inCode = new Set(catalogs.kit.marks.filter((mark) => mark.inCode === "also").map((mark) => mark.type));
+	const offered = new Set(
+		catalogs.offered.marks.map((mark) => mark.type).filter((type) => !state.inCode || inCode.has(type)),
+	);
 	const groups = GROUPS.map((group) => group.filter(({ type }) => offered.has(type))).filter((group) => group.length);
 	const builtIn = new Set(GROUPS.flat().map(({ type }) => type));
 	// The code tools' marks have their own places (doc 17): a code link, a fold and a tooltip in code are not the site's marks.
-	const custom = catalogs.offered.marks.filter((mark) => !builtIn.has(mark.type) && !CODE_TOOL_MARKS.has(mark.type));
+	const custom = catalogs.offered.marks.filter(
+		(mark) => !builtIn.has(mark.type) && !CODE_TOOL_MARKS.has(mark.type) && offered.has(mark.type),
+	);
+	// A code link starts from words of the text, in a body that has a code block to point at.
+	const codeRef =
+		!state.inCode && state.codeBlocks && catalogs.offered.marks.some((mark) => mark.type === "codeRef")
+			? catalogs.kit.marks.find((mark) => mark.type === "codeRef")
+			: undefined;
 	const label = (type: string) => t(catalogs.kit.marks.find((mark) => mark.type === type)?.label ?? type);
 	// A footnote's own text has no footnote of its own.
-	const footnote = state.inFootnote ? undefined : catalogs.offered.blocks.find((block) => block.type === "footnote");
+	const footnote =
+		state.inFootnote || state.inCode ? undefined : catalogs.offered.blocks.find((block) => block.type === "footnote");
 	const toggle = (type: string) => editor.chain().focus().toggleMark(markName(type)).run();
 
 	return (
@@ -148,6 +166,9 @@ export function FormatCard({
 									editor.commands.focus();
 								}}
 							/>
+						) : null}
+						{group.some(({ type }) => type === "link") && codeRef ? (
+							<CodeRefButton editor={editor} label={t(codeRef.label)} />
 						) : null}
 						{/* After the text formats, and only while the words have one: takes them all off at once (a link stays). */}
 						{at === 0 && state.clearable ? (

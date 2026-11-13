@@ -118,13 +118,16 @@
 
 ### 코드 블록 (`CodeFrame`)
 
-본문의 코드 블록이다(문서 17, 화면 승인 전). 상자는 다른 본문 상자와 같은 `bg-muted` · `radius-lg`이고, 맨 위에 머리 줄, 그 아래 코드가 줄마다 한 행이다.
+본문의 코드 블록이다(문서 17). 상자는 다른 본문 상자와 같은 `bg-muted` · `radius-lg`이고, 맨 위에 머리 줄, 그 아래 코드다. 블록의 도구는 상자 안이 아니라 **블록의 도구 행**(이미지 블록과 같은 `BlockBarPlace` + `FloatingBar` + `FloatingBarButton`)에 있다. 커서가 코드 안에 있거나 줄을 고른 동안 상자 위 왼쪽에 뜬다.
 
-- **머리 줄.** 왼쪽에 언어(`TextButton size="caption"` + `Caret`, 열면 링크 칸과 같은 검색 목록), 오른쪽에 둥근 `IconButton size="xs"` 넷: 줄 효과 · 정규식 규칙 · 줄 번호(눌림: 사이트가 줄 번호를 보인다) · 코드 복사. 아래에 옅은 선 하나. 읽기 전용이면 언어는 글자, 도구는 복사만이다.
-- **파일 이름 탭.** 상자 위 왼쪽 가장자리의 탭(`CodeFileTab`, 상자와 같은 바탕). 처음부터 이름 칸(`Input appearance="inline" size="sm" mono`)이 들어 있다. 비면 placeholder "파일 이름".
-- **줄.** `CodeLine`: 줄 번호 칸(번호만, 접기가 시작되는 줄에는 번호 앞에 접기 단추. 블록에 접기가 있으면 모든 줄이 그 자리를 비워 번호가 한 열로 선다), 코드의 왼쪽 여백에 그 줄의 표시(`+` · `−` · `›`, 열이 따로 없다), 글자. 바탕: 강조 `bg-highlight`, 추가 `bg-success-muted`, 삭제 `bg-danger-muted`, 줄 번호로 고른 줄 `bg-selection`, 코드 링크가 가리키는 동안 `bg-block`. 경고 · 오류는 글자 아래 물결(`bg-warning-emphasis`, `fg-danger`). 코드 링크가 가리키는 줄에는 늘 서 있는 표시가 없다(문서 17): 본문의 링크를 가리키는 동안만 `lit`이다. 줄 번호는 누르는 곳이라 손가락 커서와 `bg-selected` 바탕이 있고, 읽기 전용(`readOnly`)에서는 없다. 사이트가 줄 번호를 숨기면(`numbersOff`) 번호가 `fg-faint`다. 접은 줄들 대신에는 번호 없는 한 행에 `TextButton size="caption"` "접힌 n줄".
-- **글자.** `CodeToken`은 사이트의 Shiki 테마가 칠한 조각(두 테마의 색을 `--shiki-light` · `--shiki-dark`로). `CodeMark`는 코드 안의 표시: `tip` 툴팁(점선 밑줄), `fold` 접은 글자(점선 테두리, 편집기에서는 펼친 채), `picked` 고른 글자, `bold` 규칙이 굵게 한 글자.
-- **본문의 코드 링크.** `CodeRefText`: 점선 밑줄(링크의 실선과 다르게), 가리키던 줄이 없으면 빨간 점선, 링크를 만드는 동안 먼저 고른 글자는 `bg-selected`.
+- **머리 줄.** 언어(`Text variant="caption" tone="muted"`)와 파일 이름(`Text variant="caption" mono`)을 글자로 보인다. 이름이 없으면 언어만. 아래에 옅은 선 하나. 읽기 전용이면 끝에 코드 복사(`IconButton size="xs"`)가 있다(읽기 전용에는 도구 행이 없다).
+- **도구 행.** 차례로 언어(이름 + `Caret`, 열면 링크 칸과 같은 검색 목록), 파일 이름(`Document`, 열면 이름 칸 `Input size="md" mono` 하나), 구분선, 줄 번호(눌림: 사이트가 줄 번호를 보인다), 줄 효과(`Row`, 줄 메뉴), 정규식 규칙(`TypePattern`, 규칙 카드), 코드 안의 글자를 고른 동안만 구분선 뒤에 툴팁(`Chat`, 글 칸 하나의 카드)과 글자 접기(`CollapseAll`), 접은 글자면 글자 단추 "처음부터 펼치기", 구분선, 코드 복사.
+- **코드 칸(`CodeArea`).** 왼쪽에 줄 번호 열(`CodeNumber` 행들), 오른쪽에 편집기의 글자와 그 뒤의 줄 바탕(`CodeGround` 행들). 모든 행이 20px 한 줄이라 이웃한 줄의 바탕이 틈 없이 이어진다(여러 줄을 골라도 사이에 흰 선이 없다). 글자에 붙은 것은 `data-` 속성으로 칠한다: `data-token`(Shiki 조각, `--shiki-light` · `--shiki-dark`), `data-effect`(규칙의 효과), `data-wavy`(경고 · 오류 물결), `data-code-hidden`(닫힌 접기가 숨긴 글자). `picking`이면 글자의 커서를 숨긴다(줄을 번호로 고른 동안).
+- **줄 번호(`CodeNumber`).** 누르는 곳이라 손가락 커서와 `bg-selected` 바탕이 있고, 읽기 전용(`readOnly`)에서는 없다. 사이트가 줄 번호를 숨기면(`numbersOff`) 번호가 `fg-faint`다. 번호 뒤 한 글자 칸에 그 줄의 표시(`+` · `−` · `›`). 블록에 접기가 있으면 번호 앞에 접기 칸이 있고, 접기의 첫 줄에 단추(펼침 `ChevronDown`, 접힘 `ChevronRight`), 열린 접기의 나머지 줄에는 **범위 선**(`edge`: 첫 줄에서 끝 줄까지 세로선, 끝 줄에서 꺾임)이 선다. 단추를 가리키는 동안 선이 진해지고(`foldLit`) 그 줄들의 바탕이 `bg-block`이 된다.
+- **줄 바탕(`CodeGround`).** 강조 `bg-highlight`, 추가 `bg-success-muted`, 삭제 `bg-danger-muted`, 줄 번호로 고른 줄 `bg-selection`, 코드 링크나 접기 단추를 가리키는 동안 `bg-block`(`lit`). 코드 링크가 가리키는 줄에는 늘 서 있는 표시가 없다.
+- **닫힌 접기(`CodeAside`).** 첫 줄만 남고, 그 줄 오른쪽 끝에 `TextButton size="caption"` "접힌 n줄"(누르면 펼친다). 커서가 숨은 곳에 들어가면 그동안 펼쳐 보인다.
+- **읽기용 행(`CodeLine`).** 비교 화면과 기준 화면이 쓰는 한 줄: 번호, 표시, 글자, 바탕(위와 같은 색). `CodeToken`은 두 테마의 색을 가진 조각, `CodeMark`는 코드 안의 표시(`tip` 점선 밑줄, `fold` 점선 테두리, `picked`, `bold`).
+- **본문의 코드 링크.** `CodeRefText`(편집기에서는 `EditorBody`가 같은 모양을 입힌다): 점선 밑줄(링크의 실선과 다르게), 가리키던 줄이 없으면 빨간 점선, 링크를 만드는 동안 먼저 고른 글자는 `bg-selected`.
 
 `CodeBlock`은 다른 부품이다. 안쪽 상자(`bg-muted`, `radius-lg`, 테두리 없음)에 글자를 있는 그대로(고정폭, 줄바꿈 유지) 보이며, JSON 값, 오류의 세부 내용, 모델의 답에 쓴다.
 

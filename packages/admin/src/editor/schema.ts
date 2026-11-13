@@ -318,9 +318,10 @@ export function bodyExtensions(
 						},
 					},
 				],
-				renderHTML: ({ HTMLAttributes }) => [
+				// The mark's own attrs (not rendered one by one): a copy keeps them, and a code link's words say where they point (doc 17).
+				renderHTML: ({ mark: made }) => [
 					"span",
-					{ "data-monti-mark": mark.type, "data-monti-attrs": JSON.stringify(HTMLAttributes) },
+					{ "data-monti-mark": mark.type, "data-monti-attrs": JSON.stringify(made.attrs) },
 					0,
 				],
 			});
