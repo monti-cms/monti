@@ -74,6 +74,7 @@
 | "백업" 절 | `Section` | 왼쪽 제목, 오른쪽 내용. "가져오기" 절은 빠졌다(2026-11-05 소유자: 가져오기는 컬렉션 목록의 "+ 새 글 쓰기 ▾" 메뉴로). |
 | "미디어 파일도 담기 2.1 GB" | `Option` + `Checkbox`, 크기는 그 메모 | 기본은 꺼짐. 바로 적용되는 설정이 아니라 이번 백업의 선택이라 체크박스다. 무엇을 담을지 먼저 고르고 받으므로 알약 위에 둔다. |
 | "백업 받기" | `Button variant="primary"` | 누르면 그 선택대로 바로 만든다. 만드는 동안 `loading`, 라벨은 "만드는 중 64%". |
+| (만들며 정함 2026-11-13) |  | 저장소가 없거나 미디어 파일이 없는 사이트에는 "미디어 파일도 담기"가 없다. 탭은 "템플릿" · "데이터" · "API 키" 순이고 주소는 `#/tools/data`다. 마지막 백업은 오늘이면 시각("09:12"), 아니면 날짜("10. 20")다. 스토리: Screens/Tools/Data. |
 | "마지막 백업 10. 20" | `Text variant="note" tone="subtle"`, 날짜는 `mono` | 알약 옆. 없으면 "없음". |
 
 스토리: Patterns/Frame/Section, Controls/Button/Button, Primitives/Text, Controls/Choice/Option, Controls/Choice/Checkbox, Controls/Field/Input, Controls/Overlay/Sheet, Controls/Field/Field, Patterns/List/MapRow, Controls/Field/Select, Controls/Choice/Segmented, Controls/Choice/Switch, Controls/Button/TextButton, Patterns/Frame/DescriptionList.
@@ -87,6 +88,8 @@
 > 바뀜 (2026-11-05, 소유자): 가져오기는 도구 › 데이터가 아니라 컬렉션 목록의 "+ 새 글 쓰기 ▾" 메뉴 › "가져오기"에서 그 컬렉션 하나에 한다. 들어갈 곳을 고르는 단계가 없다. `.md`, `.mdx`는 MDX 플러그인이 있을 때만 받는다. 도구 › 데이터에는 백업 받기만 남는다. [기능 설계 14](../../features/14-data-keys-plugins.md#가져오기) 참고. 이 시트는 목록에서 열리고, "들어갈 곳" 칸이 없다.
 
 > 빠짐 (2026-11-05, 소유자): 통째로 되살리기는 관리자 화면에서 빠지고 `monti restore` 명령이 한다. 화면은 백업 받기와 가져오기만 있다. [기능 설계 14](../../features/14-data-keys-plugins.md#통째로-되살리기) 참고. 아래의 복원 행과 상태는 빠진다.
+
+> 만들며 정함 (2026-11-13): 만든 시트는 아래 표에서 이렇게 다르다. 파일을 고르면 바로 열려 `Text tone="subtle"` "읽는 중…"을 보이고, 읽지 못하면 이유 한 줄(`Text`)과 발의 "닫기"만 있다. "들어갈 곳", "발행", "바깥 이미지 … 옮기기" 칸은 없다(모두 초안은 요약 아래 한 줄이 말한다). 묶음의 이름은 `FormFieldSet` + `FormFieldLegend variant="field"`다(입력 하나의 라벨이 아니라 여러 줄의 이름이다). 필드 고르기는 `Select size="sm"`이고 어시스턴트가 맞추지 않으므로 `proposal`이 없다. "알아 두세요"의 줄은 있는 것만: "원문 그대로 남는 컴포넌트: `Tweet`"(이름은 `mono`), "이미 있는 글 n편은 건너뜁니다", "읽을 수 없는 글 n편은 건너뜁니다", "요약 없는 글 n편", "찾을 수 없는 이미지 n개는 빠집니다". 발의 "취소" · "되돌리기" · "닫기"는 다른 시트처럼 `Button variant="ghost"`이고, 알약은 "3편 가져오기"(가져올 글이 없으면 `disabled`), 일하는 동안 `loading` "이미지 올리는 중 1/3" 뒤 "가져오는 중…", 가져온 뒤 "목록에서 보기"(시트를 닫는다). 결과의 둘째 줄은 "모두 초안 · 새 항목 2개 · 이미지 1개 · 1편 건너뜀" 가운데 있는 것만이다. 스토리: Screens/List/Import(Read, Done, NeedsPlugin, Unreadable).
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|

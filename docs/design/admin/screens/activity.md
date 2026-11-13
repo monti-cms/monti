@@ -99,7 +99,7 @@
 
 ## 흐름 9 · 데이터
 
-단계: 9.10. 단계마다 보이는 것은 [flows/09-data.md](../flows/09-data.md)에 있다. 가져오기의 줄과 그 자세히 패널은 가져오기를 만드는 14번에서 더한다(T142).
+단계: 9.10. 단계마다 보이는 것은 [flows/09-data.md](../flows/09-data.md)에 있다. 가져오기의 줄은 종류 "가져오기"로 거른다. 그 자세히 패널에는 "가져오기" 묶음(`Heading as="h3" variant="label"`)이 "항목" 묶음 위에 선다: 결과 한 줄 `Text variant="note" tone="muted"`("모두 초안 · 새 항목 2개 · 1편 건너뜀" 가운데 있는 것만), "주소를 바꾼 글 · 1" `Text variant="note" tone="subtle"` 아래 `ChangeLines`(`what` 글 이름 `TextButton variant="underline"`, `then` mono "first-post → first-post-2"), 끝에 "목록에서 보기" `TextButton variant="underline"`(그 컬렉션의 목록으로). "되돌리기"는 다른 줄처럼 머리의 ⋯에 있다. 바닥 버튼은 없다(만들며 정함 2026-11-13, T142). 스토리: Screens/List/Import › Logged.
 
 ## 흐름 12 · 활동 기록
 

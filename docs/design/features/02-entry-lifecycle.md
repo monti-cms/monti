@@ -182,7 +182,7 @@ erDiagram
 | `entries.publish` | write · preview | 여러 글을 발행. 발행일 "그대로" 또는 "오늘" |
 | `entries.archive` · `entries.unarchive` | write | 보관, 보관 풀기 |
 | `entries.duplicate` | write | 고치는 본을 새 초안으로 복제 |
-| `entries.export` | read | 글을 내보내기 파일로 |
+| `data.export` | read | 글을 내보내기 파일로(14번의 기능이다. `entries.export`는 없앴다, 만들며 정함 2026-11-13) |
 | `entries.previewLink` | read | 미리보기 주소 |
 
 - `entries.publish`의 `preview`는 글마다 할 일과 새로 생길 옛 주소를 돌려준다. 목록에서 여러 글을 발행할 때 막힌 글을 미리 보인다.

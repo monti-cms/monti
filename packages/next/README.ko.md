@@ -10,8 +10,9 @@ Next.js 사이트(App Router, Next 16)에 Monti를 붙인다. 관리자 화면�
 npx monti init          # 사이트 폴더에서, @monti-cms/core · admin · next를 설치한 뒤
 ```
 
-사이트를 먼저 읽고(Next 16, `app/`인지 `src/app/`인지, 루트 레이아웃의 언어), 넷을 묻고(`--admin-path`, `--locale`,
-`--login password|github`, `--storage local|s3|none`. `-y`는 기본값을 쓰고, 터미널에 사람이 없으면 아무것도 묻지 않는다),
+사이트를 먼저 읽고(Next 16, `app/`인지 `src/app/`인지, 루트 레이아웃의 언어), 몇 가지를 묻고(`--admin-path`, `--locale`,
+`--login password|github`, `--storage local|s3|none`, 플러그인이 설치되어 있으면 `--plugins seo,mdx|none`. `-y`는 기본값을 쓰고, 터미널에
+사람이 없으면 아무것도 묻지 않는다), 사이트가 `.md`, `.mdx` 파일로 가지고 있던 글을 찾아 가져오는 법을 말하고,
 사이트에 없는 것을 쓴다.
 
 | 파일 | 무엇인가 |

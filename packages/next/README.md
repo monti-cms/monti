@@ -9,8 +9,10 @@ site's cached pages refreshed when something is published. The example site in [
 npx monti init          # in the site's folder, after installing @monti-cms/core, admin and next
 ```
 
-It reads the site (Next 16, `app/` or `src/app/`, the language of its root layout), asks four things (`--admin-path`, `--locale`,
-`--login password|github`, `--storage local|s3|none`; `-y` takes the defaults, and nothing is asked when nobody is at the terminal) and
+It reads the site (Next 16, `app/` or `src/app/`, the language of its root layout), asks a few things (`--admin-path`, `--locale`,
+`--login password|github`, `--storage local|s3|none`, and `--plugins seo,mdx|none` when a plugin is installed; `-y` takes the defaults,
+and nothing is asked when nobody is at the terminal). It also finds posts the site keeps as `.md` and `.mdx` files and says how to import
+them. It
 writes what the site lacks:
 
 | File | What it is |

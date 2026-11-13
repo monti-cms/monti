@@ -180,6 +180,33 @@ describe("the backup (flow 9, 01–03)", () => {
 		expect((await run<BackupOutput>(monti, "data.backup")).lastBackup).toBe(clock.toISOString());
 	});
 
+	it("14-4 a stored key is in no file of the backup: not its sealed value, not its last characters, not its name", async () => {
+		const monti = site();
+		await fill(monti);
+		await db
+			.insertInto("api_keys")
+			.values({
+				id: "key-1",
+				service: "anthropic",
+				name: "글쓰기용 키 이름",
+				base_url: null,
+				secret: "sealed:9f2c-the-sealed-value",
+				last4: "x7Qz",
+				models: "[]",
+				models_at: null,
+				models_failed_at: null,
+			})
+			.execute();
+		try {
+			const backup = await run<BackupOutput>(monti, "data.backup");
+			const all = Object.values(backup.files).join("\n");
+			for (const part of ["sealed:9f2c-the-sealed-value", "x7Qz", "글쓰기용 키 이름", "api_keys"])
+				expect(all).not.toContain(part);
+		} finally {
+			await db.deleteFrom("api_keys").execute();
+		}
+	});
+
 	it("14-1 as the assistant's tool it says what the backup holds and not its contents; an export does the same", async () => {
 		const monti = site();
 		const made = await fill(monti);

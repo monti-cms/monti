@@ -37,7 +37,7 @@ describe("the editor's document tools (doc 14, T71)", () => {
 		await expect.element(page.getByRole("menuitemcheckbox")).not.toBeInTheDocument();
 	});
 
-	it("[kept] the body's width picked \"꽉 차게\" widens the writing column, shows as the row's value, and is the width when the editor is opened again", async () => {
+	it("14-5 the body's width picked \"꽉 차게\" widens the writing column, shows as the row's value, and is the width when the editor is opened again", async () => {
 		const story = at({ mdx: false });
 		await story.run();
 		await expect.element(body()).toBeVisible();

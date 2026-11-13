@@ -114,6 +114,8 @@ monti db:migrate        # 배포할 때: 이 데이터베이스가 아직 안 �
 monti deliveries:run    # 때가 된 웹훅 다시 보내기
 monti trash:purge       # 휴지통에 30일 있던 것과 주인 없는 파일 지우기
 monti admin:reset-password  # 관리자 비밀번호를 바꾸고 모든 브라우저를 로그아웃
+monti backup [--media] [--out file.zip]  # 사이트 전체를 zip 하나로. --media는 미디어 파일도 담는다
+monti restore file.zip  # 빈 데이터베이스에서만: 있던 그대로 되살리거나, 문제를 모두 말하고 아무것도 쓰지 않는다
 monti help              # 모든 기능, 기능마다 명령 하나
 monti schema.read
 ```
@@ -206,7 +208,18 @@ export function Picture({ image }: { image: SiteImage }) {
 | `storage` | 미디어 파일을 두는 곳 |
 
 플러그인이 관리자 화면에 그리는 것(필드의 입력, 화면, 도구 페이지의 화면)은 브라우저 쪽 절반에서 온다. `@monti-cms/admin`의
-`defineAdminPlugin`으로 만들어 관리자 페이지에 넘긴다(`<AdminPage plugins={[…]} />`). `@monti-cms/seo`가 이 위에 만든 플러그인이다.
+`defineAdminPlugin`으로 만들어 관리자 페이지에 넘긴다(`<AdminPage plugins={[…]} />`). 편집기 ⋯에 서는 문서 보기(`documentViews`)도 여기서 온다.
+`@monti-cms/seo`와 `@monti-cms/mdx`가 이 위에 만든 플러그인이다.
+
+## 백업, 내보내기, 가져오기
+
+- `data.backup`은 사이트를 백업의 글자 파일들(글과 발행본과 관계, 폴더, 미디어 기록, 주소, 템플릿, 관리자 값)과 미디어 파일마다의 주소로
+  준다. 관리자 화면이 브라우저에서 zip으로 묶고, `monti backup`이 같은 zip을 쓴다. 휴지통, 활동 기록, 대화, 키는 담지 않는다.
+  `data.export`는 고른 글과 그 글이 가리키는 것을 같은 모양으로 준다. 어시스턴트의 도구로서는 둘 다 요약만 답한다.
+- `monti restore`는 백업을 빈 데이터베이스에 행 그대로 넣는다. 먼저 파일 전체를 검사하고, 문제가 하나라도 있으면 아무것도 쓰지 않는다.
+- `data.inspect`는 올린 파일을 컬렉션 하나에 대해 읽고 아무것도 쓰지 않는다. `data.import`는 그 글을 초안으로 가져온다(본문이 같으면
+  건너뛰고, 겹치는 주소에는 `-2`를 붙이고, 관계 값에 없는 항목은 만들고, 파일 안의 그림은 미디어 파일이 된다). 가져오기 한 번은 활동 기록의
+  한 줄이고 통째로 되돌린다. core는 Monti의 파일만 읽고, 다른 형식은 플러그인의 `importers`가 더한다(`.md`, `.mdx`는 `@monti-cms/mdx`).
 
 ## 테스트
 
