@@ -1,3 +1,4 @@
+import { whenKeysAreUp } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useRef } from "react";
 
@@ -130,47 +131,6 @@ export function focusText(body: () => Editor | null, titleId: string) {
 	);
 }
 
-/**
- * The key that is held down now: the last one pressed, until it comes up. The focus is handed on only once it is up: a held key repeats, and
- * would repeat into what the focus was given to (Enter held on "discard" wrote empty paragraphs into the body; on "apply again" it would press
- * the next button). Only the last key matters, as only it repeats; and a key whose coming up is never told (macOS tells none for a key pressed
- * with Command; another window took the keyboard) is forgotten at the next press, so nothing waits on it for long.
- */
-let heldKey: string | null = null;
-if (typeof window !== "undefined") {
-	addEventListener(
-		"keydown",
-		(event) => {
-			if (!event.repeat) heldKey = event.metaKey ? null : event.code;
-		},
-		true,
-	);
-	addEventListener(
-		"keyup",
-		(event) => {
-			if (event.code === heldKey || event.key === "Meta") heldKey = null;
-		},
-		true,
-	);
-	addEventListener("blur", () => {
-		heldKey = null;
-	});
-}
-
-/** Runs it now, or when the held key comes up. */
-function whenKeysAreUp(run: () => void) {
-	if (heldKey === null) return run();
-	const up = () => {
-		if (heldKey !== null) return;
-		removeEventListener("keyup", up);
-		removeEventListener("blur", up);
-		run();
-	};
-	// After the listeners above (capture, at the window) have forgotten the key.
-	addEventListener("keyup", up);
-	addEventListener("blur", up);
-}
-
 /** Keys that press nothing by themselves. */
 const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph", "Fn"]);
 
@@ -193,8 +153,8 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 		const hand = () => {
 			const next = latest.current(node);
 			if (!next) return;
-			const waited = heldKey !== null;
-			whenKeysAreUp(() => {
+			// Once no key is down (`whenKeysAreUp`, the one place that knows the held key): a held key would repeat into what takes the focus.
+			whenKeysAreUp((waited) => {
 				if (typeof next === "function") return next();
 				// After a wait the person may have gone elsewhere with another key: then nothing is moved under them.
 				if (!waited || document.activeElement === document.body) next.focus();

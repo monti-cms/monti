@@ -173,6 +173,7 @@ export {
 } from "./format-bar";
 export { Grid } from "./grid";
 export { HeadingIcon, headingIcons } from "./heading-icon";
+export { whenKeysAreUp } from "./held-key";
 export { Icon } from "./icon";
 export { IconButton } from "./icon-button";
 export { Image } from "./image";

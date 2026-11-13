@@ -396,4 +396,56 @@ describe("into the trash (doc 11, principle 2)", () => {
 		await dropDrag();
 		await expect.poll(heads).toEqual(moved);
 	});
+
+	it("영구 삭제 confirmed with the keyboard takes its row away, and the focus goes to the row after it, not to the page; with a pointer nothing is moved", async () => {
+		await Top.run();
+		await expect.element(row("옛 소개 글")).toBeVisible();
+		const lines = () => [...table().element().querySelectorAll<HTMLElement>("tbody tr")];
+		const at = lines().findIndex((line) => line.textContent?.includes("옛 소개 글"));
+		const after = lines()[at + 1];
+		if (!after) throw new Error("no row after it");
+		const more = () => row("옛 소개 글").getByRole("button", { name: "행 메뉴" }).element() as HTMLElement;
+		for (let presses = 0; presses < 80 && document.activeElement !== more(); presses++) await userEvent.tab();
+		expect(document.activeElement).toBe(more());
+		await userEvent.keyboard("{Enter}");
+		const purge = () => page.getByRole("menuitem", { name: "영구 삭제" }).element();
+		await expect.element(page.getByRole("menuitem", { name: "영구 삭제" })).toBeVisible();
+		for (let presses = 0; presses < 6 && document.activeElement !== purge(); presses++)
+			await userEvent.keyboard("{ArrowDown}");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(dialog()).toHaveTextContent("영구 삭제할까요?");
+		const confirm = () => dialog().getByRole("button", { name: "영구 삭제" }).element();
+		for (let presses = 0; presses < 4 && document.activeElement !== confirm(); presses++) await userEvent.tab();
+		expect(document.activeElement).toBe(confirm());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(toast("영구 삭제했습니다")).toBeVisible();
+		await expect.element(row("옛 소개 글")).not.toBeInTheDocument();
+		await expect.poll(() => after.contains(document.activeElement)).toBe(true);
+
+		// With a pointer: the row goes, and nothing takes the focus.
+		const next = after.textContent ?? "";
+		await userEvent.click(after.querySelector('button[aria-label="행 메뉴"]') as HTMLElement);
+		await userEvent.click(page.getByRole("menuitem", { name: "영구 삭제" }));
+		await userEvent.click(dialog().getByRole("button", { name: "영구 삭제" }));
+		await expect.poll(() => lines().some((line) => line.textContent === next)).toBe(false);
+		expect(table().element().contains(document.activeElement)).toBe(false);
+	});
+
+	it("복원 from a row's ⋯ with the keyboard takes its row away, and the focus goes to the row after it", async () => {
+		await Top.run();
+		await expect.element(row("옛 소개 글")).toBeVisible();
+		const lines = () => [...table().element().querySelectorAll<HTMLElement>("tbody tr")];
+		const after = lines()[lines().findIndex((line) => line.textContent?.includes("옛 소개 글")) + 1];
+		if (!after) throw new Error("no row after it");
+		const more = () => row("옛 소개 글").getByRole("button", { name: "행 메뉴" }).element() as HTMLElement;
+		for (let presses = 0; presses < 80 && document.activeElement !== more(); presses++) await userEvent.tab();
+		await userEvent.keyboard("{Enter}");
+		const restore = () => page.getByRole("menuitem", { name: "복원" }).element();
+		await expect.element(page.getByRole("menuitem", { name: "복원" })).toBeVisible();
+		for (let presses = 0; presses < 6 && document.activeElement !== restore(); presses++)
+			await userEvent.keyboard("{ArrowDown}");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(row("옛 소개 글")).not.toBeInTheDocument();
+		await expect.poll(() => after.contains(document.activeElement)).toBe(true);
+	});
 });

@@ -31,7 +31,6 @@ import {
 	PageBanner,
 	PageColumn,
 	PageHeader,
-	RowActions,
 	RowLink,
 	RowMore,
 	RowTitle,
@@ -51,12 +50,13 @@ import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { clock } from "../entry/dates";
-import { firstStopIn, nextStop, useFocusHandOff } from "../frame/focus-hand-off";
+import { nextStop, useFocusHandOff } from "../frame/focus-hand-off";
 import { DateRows } from "../list/date-rows";
 import { toggled, ValueRow } from "../list/filter-rows";
 import { shortDate, shortTime } from "../list/format";
 import { ListPages } from "../list/list-pages";
 import { NoMatchRow } from "../list/no-match-row";
+import { afterRow, HandedRowActions, listStartOf } from "../list/row-hand-off";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
 import { useSearchWords } from "../list/use-search-words";
@@ -101,22 +101,6 @@ function FacetRows<Value extends string>({
 			))}
 		</>
 	);
-}
-
-/**
- * Where the keyboard's focus goes when a row leaves the list by its own action (its failed delivery is sent again while the list shows only
- * failed ones): to the row that follows, or with none left to the list's start (`listStart`), not to the page. What stands after the list (the
- * corner's button, a panel) is not what the row's action was about.
- */
-const afterRow = (listStart: () => HTMLElement | null) => (gone: HTMLElement) => {
-	const next = gone.closest("tr")?.nextElementSibling;
-	return (next && firstStopIn(next)) || (() => requestAnimationFrame(() => listStart()?.focus()));
-};
-
-/** A row's ⋯: the focus it holds when the row goes is handed on ({@link afterRow}). */
-function LogRowActions({ listStart, children }: { listStart: () => HTMLElement | null; children: ReactNode }) {
-	const handOff = useFocusHandOff(afterRow(listStart));
-	return <RowActions ref={handOff}>{children}</RowActions>;
 }
 
 /**
@@ -347,10 +331,7 @@ export function ActivityScreen({
 	const failedOnly = state.deliveries.length === 1 && state.deliveries[0] === "failed";
 	const table = useRef<HTMLTableElement>(null);
 	/** Where the list begins for the keyboard: its first row, or what a list with no match offers in its place, or its first column's name. */
-	const listStart = () =>
-		table.current?.querySelector<HTMLElement>("tbody [data-slot=row-link], tbody button") ??
-		table.current?.querySelector<HTMLElement>("thead button") ??
-		null;
+	const listStart = () => listStartOf(table.current);
 	// A banner's action takes its own control away, and the keyboard's focus it held goes to what it acted on. "Show" goes once the list is
 	// filtered while the banner stays: to the delivery column's name, where that filter now is (the rows under it are about to change). "Send
 	// again" goes with the banner when nothing is failed any more, "try again" when the log is read: to the list's first row.
@@ -481,7 +462,7 @@ export function ActivityScreen({
 										</Text>
 									</TableCell>
 									<TableCell align="end">
-										<LogRowActions listStart={listStart}>
+										<HandedRowActions listStart={listStart}>
 											<DropdownMenu>
 												<RowMore
 													label={t("list.rowMenu")}
@@ -489,7 +470,7 @@ export function ActivityScreen({
 												/>
 												<DropdownMenuContent align="end">{menuItems(line, false)}</DropdownMenuContent>
 											</DropdownMenu>
-										</LogRowActions>
+										</HandedRowActions>
 									</TableCell>
 								</TableRow>
 							);

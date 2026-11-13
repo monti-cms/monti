@@ -10,10 +10,11 @@ import {
 	AlertDialogTitle,
 	toast,
 } from "@monti-cms/ui";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useUndo } from "../activity/use-undo";
 import { useAdmin } from "../operations/admin-context";
 import { reasonOf, useOperation } from "../operations/use-operation";
+import { holdsKeyboardFocus } from "../screens/frame/focus-hand-off";
 import { useLanguageName } from "../screens/list/column-menu";
 import { endsClosed } from "../screens/list/format";
 
@@ -162,7 +163,16 @@ export function useRestore({
 }
 
 /** What a permanent delete asks about: the rows, and for a row of the list the paths it would keep from other entries. */
-type PurgeAsk = { rows: TrashRef[]; reserves?: TrashRow["reserves"]; onPurged?: () => void };
+type PurgeAsk = {
+	rows: TrashRef[];
+	reserves?: TrashRow["reserves"];
+	onPurged?: () => void;
+	/**
+	 * Where the focus goes when what opened the question is gone by the time it closes (the delete answered first); `null` from it leaves
+	 * the question's own way, back to what opened it. Used only for a delete confirmed with the keyboard: a pointer's press holds no focus.
+	 */
+	whenGone?: () => HTMLElement | null;
+};
 
 /** Deletes rows of the trash for good, after asking every time: it cannot be undone (doc 11). Emptying the trash asks the same way. */
 export function usePurge() {
@@ -170,7 +180,10 @@ export function usePurge() {
 	const purge = useOperation("trash.purge");
 	const empty = useOperation<{ output: { purged: number } }>("trash.empty");
 	const [asking, setAsking] = useState<PurgeAsk | { all: number } | null>(null);
-	const run = async () => {
+	/** Where the focus goes if the rows are gone before the question has closed, for a delete confirmed with the keyboard (`whenGone`). */
+	const gone = useRef<(() => HTMLElement | null) | null>(null);
+	const run = async (byKeys: boolean) => {
+		gone.current = byKeys && asking && !("all" in asking) ? (asking.whenGone ?? null) : null;
 		const ask = asking;
 		setAsking(null);
 		if (!ask) return;
@@ -208,14 +221,16 @@ export function usePurge() {
 	const all = asking !== null && "all" in asking;
 	const dialog = (
 		<AlertDialog open={asking !== null} onOpenChange={(open) => !open && setAsking(null)}>
-			<AlertDialogContent>
+			{/* The question gives the focus back to what opened it; a row's ⋯ that then goes with its row hands it on (`HandedRowActions`).
+			    When the delete has answered before the question has closed, there is nothing to give it back to: `whenGone` says where. */}
+			<AlertDialogContent finalFocus={() => gone.current?.() ?? null}>
 				<AlertDialogHeader>
 					<AlertDialogTitle>{t(all ? "trash.emptyTitle" : "trash.purgeTitle")}</AlertDialogTitle>
 					<AlertDialogDescription>{text}</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel>{t("ui.cancel")}</AlertDialogCancel>
-					<AlertDialogAction variant="danger" onClick={() => void run()}>
+					<AlertDialogAction variant="danger" onClick={(event) => void run(holdsKeyboardFocus(event.currentTarget))}>
 						{t(all ? "trash.empty" : "trash.purge")}
 					</AlertDialogAction>
 				</AlertDialogFooter>
@@ -223,7 +238,10 @@ export function usePurge() {
 		</AlertDialog>
 	);
 	return {
-		start: (ask: PurgeAsk) => ask.rows.length > 0 && setAsking(ask),
+		start: (ask: PurgeAsk) => {
+			gone.current = null;
+			return ask.rows.length > 0 && setAsking(ask);
+		},
 		/** Asks to empty the trash of its `count` rows. */
 		startEmpty: (count: number) => setAsking({ all: count }),
 		dialog,
