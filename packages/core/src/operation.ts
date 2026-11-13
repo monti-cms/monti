@@ -115,6 +115,11 @@ export type Preview = {
 	 * are no longer those.
 	 */
 	was?: Record<string, string>;
+	/**
+	 * The values it would take away without naming them, by field: a save that changes a conditional field's choice drops the values of the
+	 * option it leaves (doc 19). A proposal's review shows them beside the change.
+	 */
+	clears?: { field: string; value: unknown }[];
 };
 
 type Awaitable<T> = T | Promise<T>;

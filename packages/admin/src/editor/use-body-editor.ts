@@ -15,6 +15,7 @@ import { MEDIA_VIEWS } from "./media-views";
 import { BlockIds, bodyStates } from "./plugins";
 import { ProposalMarks } from "./proposal-marks";
 import { nothingPicked, RangeOverWholeBlocks } from "./range-over-blocks";
+import { RequestMarks } from "./request-marks";
 import { bodyExtensions, nodeName } from "./schema";
 
 /** The site's blocks and the ones a collection's editor offers (`blocks.catalog`, doc 03). A template is written with every block the site has. */
@@ -81,6 +82,7 @@ export function useBodyEditor({
 			bodyKeys(() => latest.current.offered),
 			...(kit.blocks.some((block) => block.type === "footnote") ? [Footnotes] : []),
 			ProposalMarks.configure({ take: (id) => latest.current.onTakeProposal?.(id) }),
+			RequestMarks,
 			UndoRedo,
 			Dropcursor.configure({ width: 2 }),
 			Gapcursor,

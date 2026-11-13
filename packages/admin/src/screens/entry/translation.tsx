@@ -569,10 +569,13 @@ export function TranslationMargin({
 	editor,
 	marks,
 	onDecide,
+	onRetranslate,
 }: {
 	editor: Editor;
 	marks: TranslationMark[];
 	onDecide: (decision: Decision) => void;
+	/** "✦ Translate again" on a block whose source changed (doc 10, item 19): the assistant proposes it anew. Left out without an assistant. */
+	onRetranslate?: (block: string) => void;
 }) {
 	const { t } = useAdmin();
 	const [placed, setPlaced] = useState<Placed[]>([]);
@@ -670,7 +673,16 @@ export function TranslationMargin({
 				// A block whose source block is gone: confirm keeps it on its own, or remove it here too (doc 04, the marks).
 				{...(mark.kind === "removed"
 					? { acceptLabel: t("translation.remove"), onAccept: () => decide({ do: "remove", block: mark.block }) }
-					: {})}
+					: onRetranslate
+						? {
+								acceptLabel: t("translation.ai.again"),
+								acceptSpark: true,
+								onAccept: () => {
+									close();
+									onRetranslate(mark.block);
+								},
+							}
+						: {})}
 			>
 				<MemoDiff
 					beforeLabel={t("translation.before")}

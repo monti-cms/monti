@@ -81,7 +81,7 @@
 | "보통" | 5.11 | 표와 행 | Top |
 | "종류 메뉴" | 5.11 | "종류" 열의 `DropdownMenuCheckboxItem`과 개수 | KindMenu |
 | "행 메뉴" | 5.16 | 행의 ⋯ `DropdownMenu`("복원" · "영구 삭제"), 고른 행의 `ContextMenu` | RowMenu, PickedRightClick |
-| "어시스턴트" | 5.15 | 어시스턴트가 버린 행은 `TrashRowDate byAssistant`: 남은 날이 파란 ✦와 함께 선다 | ByAssistant |
+| "어시스턴트" | 5.15 | 어시스턴트가 버린 행은 `TrashRowDate byAssistant`: 남은 날이 파란 ✦와 함께 선다. 그 대화가 남아 있으면 `onOpen`이 있는 버튼이고(이름 "버린 대화 열기"), 누르면 어시스턴트 패널이 그 대화로 열린다. 지워졌으면 표시다(이름 "어시스턴트가 버림") | ByAssistant |
 | "미디어" | 5.17 | "종류" 열 `filtered`, 미디어 행만. 칩 줄은 없다 | OnlyMedia |
 | "항목 열기" | 5.19 | 태그 행 `selected`와 항목 `SidePanel`("가리키는 글 · 4") | ItemPanel |
 | "미디어 열기" | 5.20 | 파일 행 `selected`와 미디어 `SidePanel`(미리보기, "쓰는 곳 · 0") | FilePanel |

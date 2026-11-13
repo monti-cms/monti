@@ -13,7 +13,8 @@ import {
 } from "@monti-cms/ui";
 import { Settings } from "@monti-cms/ui/icons";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
-import { AltFields } from "../../editor/alt-fields";
+import type { FillState } from "../../assistant/use-fill";
+import { ALT_MAX, AltFields } from "../../editor/alt-fields";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
 import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
@@ -45,6 +46,7 @@ export function MediaField({
 	card,
 	onCard,
 	onChange,
+	fill,
 }: {
 	id: string;
 	field: string;
@@ -66,6 +68,8 @@ export function MediaField({
 	card: boolean;
 	onCard: (open: boolean) => void;
 	onChange: (next: MediaValue | null) => void;
+	/** "✦ Fill" for the picture's words, in its settings card (doc 10, quick tasks); left out where there is nobody to ask. */
+	fill?: { state: FillState; run: (media: string, put: (alt: string) => void) => void };
 }) {
 	const { t } = useAdmin();
 	const acceptFiles = useAcceptFiles();
@@ -139,6 +143,18 @@ export function MediaField({
 											decorative={(going ? said.decorative : shown.decorative) === true}
 											readOnly={readOnly}
 											placeholder={(!going && followed?.alt) || t("entry.empty")}
+											// Of a file the library has: one still going up has nothing to look at yet.
+											fill={
+												fill && !going
+													? {
+															state: fill.state,
+															onFill: () =>
+																fill.run(shown.media, (alt) =>
+																	onChange(cleanMediaValue({ ...own, media: shown.media, alt: alt.slice(0, ALT_MAX) })),
+																),
+														}
+													: undefined
+											}
 											onChange={(alt) =>
 												going
 													? uploads.say(field, { alt })

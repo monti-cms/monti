@@ -11,7 +11,7 @@ import { cleanMediaValue, mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import { generateUniqueSlug, resolveInlineCreation, syncRelationsForEntry } from "../relations/sync";
-import { localeModeOf, notChosenFields, placesOf, type Schema, storedFields } from "../schema/define";
+import { choseIn, localeModeOf, notChosenFields, placesOf, type Schema, storedFields } from "../schema/define";
 import { dropUnfollowed, translationsOf, unfollowed } from "../translations/chosen";
 import { blockHashes, keepLinks } from "../translations/links";
 import {
@@ -504,6 +504,43 @@ export const entryOperations = [
 						throw new CheckError({ key: "entries.sameField", values: { field } });
 				}
 			await checkBodyOf(ctx, input.doc, entry.doc);
+		},
+		// What the save would do with the entry's conditional fields (doc 19), for a proposal that waits: a value for a field of an option
+		// that is not chosen leaves the entry alone, with why (the save refuses it when applied); a changed choice says which values go
+		// with the option it leaves. A translation's choice is its source's: nothing is said of it here.
+		async preview(input, ctx) {
+			const [entry] = await loadEntries(ctx.db, [input.id]);
+			const me = ref(input.id);
+			const summary = { key: "entries.save", values: { title: input.title ?? entry?.title ?? "" } };
+			const schema = ctx.site.schema();
+			if (!entry || !input.values || isTranslation(schema, entry)) return { summary, changes: [me] };
+			const fields = storedFields(schema.collections[entry.collection]);
+			const next = { ...entry.values, ...input.values };
+			for (const [field, value] of Object.entries(input.values)) {
+				const missing = isEmptyValue(value)
+					? undefined
+					: placesOf(fields[field]?.under).find((place) => next[place.field] !== place.option);
+				if (missing)
+					return {
+						summary,
+						changes: [],
+						blocked: [
+							{
+								ref: me,
+								reason: { key: "entries.optionNotChosen", values: { field: missing.field, option: missing.option } },
+							},
+						],
+					};
+			}
+			const cleared = Object.entries(fields).flatMap(([field, definition]) =>
+				definition.under &&
+				!isEmptyValue(entry.values[field]) &&
+				choseIn(definition.under, entry.values) &&
+				!choseIn(definition.under, next)
+					? [{ field, value: entry.values[field] }]
+					: [],
+			);
+			return { summary, changes: [me], ...(cleared.length > 0 ? { clears: cleared } : {}) };
 		},
 		async run(input, ctx) {
 			const entry = await entryOf(ctx, input.id);

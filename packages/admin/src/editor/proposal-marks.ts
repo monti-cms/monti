@@ -98,6 +98,27 @@ type Drawn = { decorations: Decoration[]; blocks: { pos: number; end: number; sc
 const asItWas = (item: BodyProposal, id: string, node: EditorNode) =>
 	!node.isTextblock || item.was?.[id] === undefined || item.was[id] === blockText(node);
 
+/** The class of words that fill an empty place (the `Fill` part): blue letters, no ground. */
+const FILL = "text-monti-proposal";
+
+/**
+ * Whether a block is a translation's undecided text, emptied for the source's words to show as its placeholder (doc 04): the stored
+ * block still holds those words, which is what a proposal's offsets and its `was` are counted in. A proposal for it is the block's
+ * translation, drawn as the words that fill it.
+ */
+function emptied(doc: EditorNode, found: { pos: number; node: EditorNode }): boolean {
+	if (!found.node.isTextblock || found.node.content.size > 0) return false;
+	const $pos = doc.resolve(found.pos);
+	const top = $pos.depth === 0 ? found.node : $pos.node(1);
+	return (top.attrs.link as { state?: string } | null)?.state === "pending";
+}
+
+/** What a change of an emptied block's text makes of the words the block is stored with. */
+const filledWith = (item: BodyProposal, op: Extract<BodyOp, { op: "replaceText" }>) => {
+	const was = item.was?.[op.block];
+	return was === undefined ? op.text : was.slice(0, op.from) + op.text + was.slice(op.to);
+};
+
 /** One proposal's marks, or `null` when what it points at is not there as it expects (stale). */
 function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | null {
 	const decorations: Decoration[] = [];
@@ -107,14 +128,25 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 	for (const op of item.ops)
 		for (const id of op.op === "remove" ? op.blocks : op.op === "insert" ? [] : [op.block]) {
 			const found = findBlock(doc, id);
-			if (found && !asItWas(item, id, found.node)) return null;
+			if (found && !emptied(doc, found) && !asItWas(item, id, found.node)) return null;
 		}
 	for (const [at, op] of item.ops.entries()) {
-		const key = `${item.id}:${at}:${current}`;
+		// A widget is kept by its key: a change made again at its place (the same item, other words) must be drawn anew.
+		const key = `${item.id}:${at}:${current}:${JSON.stringify(op)}`;
 		switch (op.op) {
 			case "replaceText": {
 				const found = findBlock(doc, op.block);
 				if (!found?.node.isTextblock) return null;
+				// An undecided block of a translation: the words that fill it, in blue, where its own words will stand.
+				if (emptied(doc, found)) {
+					const words = filledWith(item, op);
+					decorations.push(
+						Decoration.widget(found.pos + 1, () => element("span", FILL, words), { side: 1, key }),
+						Decoration.node(found.pos, found.pos + found.node.nodeSize, { "data-proposal-fill": "" }),
+					);
+					touch(found.pos, found.node);
+					break;
+				}
 				const text = blockText(found.node);
 				if (op.from > op.to || op.to > text.length) return null;
 				const from = textPos(found.node, found.pos, op.from);
@@ -142,6 +174,15 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 				const found = findBlock(doc, op.block);
 				if (!found) return null;
 				const end = found.pos + found.node.nodeSize;
+				if (op.op === "setBlock" && emptied(doc, found)) {
+					const words = newText(op.value);
+					decorations.push(
+						Decoration.widget(found.pos + 1, () => element("span", FILL, words), { side: 1, key }),
+						Decoration.node(found.pos, end, { "data-proposal-fill": "" }),
+					);
+					touch(found.pos, found.node);
+					break;
+				}
 				decorations.push(Decoration.node(found.pos, end, { class: PROPOSAL_MARK_CLASSES.del }));
 				touch(found.pos, found.node);
 				if (op.op === "setBlock") {
@@ -170,6 +211,21 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 		}
 	}
 	return { decorations, blocks };
+}
+
+/** The undecided blocks of a translation that a drawn proposal fills: their placeholder (the source's words) gives way to the proposal's. */
+export function filledBlocks(state: EditorState): Set<number> {
+	const shown = proposalMarksKey.getState(state);
+	const filled = new Set<number>();
+	for (const item of shown?.items ?? []) {
+		if (draw(state.doc, item) === null) continue;
+		for (const op of item.ops) {
+			if (op.op !== "replaceText" && op.op !== "setBlock") continue;
+			const found = findBlock(state.doc, op.block);
+			if (found && emptied(state.doc, found)) filled.add(found.pos);
+		}
+	}
+	return filled;
 }
 
 /** The proposals that can be drawn on this body now, in order: the bubble walks these. */
@@ -272,6 +328,12 @@ export function takeProposal(state: EditorState, item: BodyProposal, convert: Co
 		if (op.op === "replaceText") {
 			const found = findBlock(tr.doc, op.block);
 			if (!found) continue;
+			// An undecided block of a translation holds nothing in the editor: its translation goes in whole (the block is then translated).
+			if (emptied(tr.doc, found)) {
+				const words = filledWith(item, op);
+				if (words) tr.insertText(words, found.pos + 1);
+				continue;
+			}
 			const from = textPos(found.node, found.pos, op.from);
 			const to = textPos(found.node, found.pos, op.to);
 			if (op.text) tr.insertText(op.text, from, to);

@@ -10,7 +10,7 @@ import type { Monti } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useSyncExternalStore } from "react";
 import { userEvent, within } from "storybook/test";
-import { type StorySite, startAt, storySite } from "../../.storybook/pglite-site";
+import { nextStorySite, type StorySite, startAt, storySite } from "../../.storybook/pglite-site";
 import { MontiAdmin } from "../app";
 import { NO_ANSWER, type StreamTransport, type Transport } from "../operations/transport";
 import { schema } from "../screens/story-schema";
@@ -199,15 +199,45 @@ const GROUP = "_group";
 const json = (status: number, body: unknown) =>
 	new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 /** The one service of the stories, asked only for its models when the key is added. */
-const network: typeof globalThis.fetch = async (input) =>
-	String(input).startsWith("https://api.anthropic.com/")
-		? json(200, {
-				data: ["claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"].map((id) => ({
-					id,
-					capabilities: { thinking: { supported: id !== "claude-haiku-5-5" }, image_input: { supported: true } },
-				})),
-			})
-		: json(404, {});
+const serviceWith =
+	(pictures: boolean): typeof globalThis.fetch =>
+	async (input) =>
+		String(input).startsWith("https://api.anthropic.com/")
+			? json(200, {
+					data: ["claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"].map((id) => ({
+						id,
+						capabilities: { thinking: { supported: id !== "claude-haiku-5-5" }, image_input: { supported: pictures } },
+					})),
+				})
+			: json(404, {});
+const network = serviceWith(true);
+
+/**
+ * A loader for a test of another screen's story: the site that story makes next has the assistant, with a key and a model that says
+ * what `script` tells it (`answer` for the quick tasks). The model comes back with what the story loaded (`model`).
+ */
+export const assisted =
+	(
+		script: Scripted[] = [],
+		answer?: Parameters<typeof scriptedProvider>[1],
+		/** `key: false`: no AI key on the site. `pictures: false`: its models do not read pictures. */
+		options: { key?: boolean; pictures?: boolean } = {},
+	) =>
+	async (): Promise<{ model: ScriptedProvider }> => {
+		const model = scriptedProvider(script, answer);
+		nextStorySite({
+			plugins: [assistant({ provider: model.for })],
+			fetch: options.pictures === false ? serviceWith(false) : network,
+			secret: "story-secret-for-the-assistant",
+			after:
+				options.key === false
+					? undefined
+					: async (monti) => {
+							await monti.run("keys.add", { service: "anthropic", name: "Anthropic 개인", secret: KEY }, admin);
+						},
+		});
+		return { model };
+	};
 
 /** A turn that never ends: the moment a story shows is the one while it works. */
 const never = new Promise<never>(() => {});

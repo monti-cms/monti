@@ -84,11 +84,16 @@ function TrashRowDate({
 				className={cn(
 					MARK,
 					HIT_LAYER,
-					"relative z-10 cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
+					"group/open relative z-10 cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
 				)}
 			>
 				<Spark aria-hidden className="size-monti-icon-xs shrink-0" />
-				<span className="truncate">{words}</span>
+				{/* The days keep the warning tone when the purge is near, as on the mark that opens nothing. */}
+				<span
+					className={cn("truncate group-hover/open:underline", urgent && date === undefined && "text-monti-warning")}
+				>
+					{words}
+				</span>
 			</button>
 		) : (
 			<span data-slot="trash-row-left" className={MARK}>

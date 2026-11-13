@@ -266,13 +266,34 @@ export function BasicsTab({
 					</FormField>
 				)}
 				{/* At the height of the inputs above it (36px): one group, one control height. */}
-				<Option spread height="lg">
-					<Inline gap={8} align="center">
-						{t("settings.basics.folders")}
-						{folders.proposal ? <ChangeDot tone="proposal" label={t("settings.proposed")} /> : null}
+				{folders.proposal && folders.changed ? (
+					// A proposed switch looks the same everywhere (the entry's, a plugin's): the proposal's dot by its name and
+					// "discard" before the switch, which stands as proposed.
+					<Inline minHeight="control-lg" align="center" justify="between" gap={12}>
+						<Inline gap={8} align="center">
+							<Label htmlFor="collection-folders" size="body" tone="default">
+								{t("settings.basics.folders")}
+							</Label>
+							<ChangeDot tone="proposal" label={t("settings.proposed")} />
+						</Inline>
+						<Inline gap={12} align="center">
+							<TextButton variant="underline" quiet size="caption" onClick={folders.changed.onUndo}>
+								{folders.changed.undoLabel}
+							</TextButton>
+							<Switch
+								id="collection-folders"
+								checked={Boolean(folders.value)}
+								proposal
+								onCheckedChange={(checked) => draft.set(foldersPlace, checked)}
+							/>
+						</Inline>
 					</Inline>
-					<Switch checked={Boolean(folders.value)} onCheckedChange={(checked) => draft.set(foldersPlace, checked)} />
-				</Option>
+				) : (
+					<Option spread height="lg">
+						{t("settings.basics.folders")}
+						<Switch checked={Boolean(folders.value)} onCheckedChange={(checked) => draft.set(foldersPlace, checked)} />
+					</Option>
+				)}
 			</Stack>
 			{locked ? null : (
 				<DangerBlock title={t("settings.basics.delete")}>

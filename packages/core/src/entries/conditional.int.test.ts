@@ -248,15 +248,42 @@ describe("the assistant and the comparison keep to the choice (T195)", () => {
 		const id = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" });
 		const monti = site();
 		const proposal = await monti.proposals.create("c1", "링크를 채워 줘");
-		await monti.proposals.add(proposal, "entries.save", {
+		const { itemId } = await monti.proposals.add(proposal, "entries.save", {
 			id,
 			version: (await stored(id)).version,
 			values: { linkUrl: "https://example.dev" },
 		});
+		// It starts left out (its own write said it would be refused); put in all the same, the save still refuses it.
+		await monti.run("proposals.include", { ids: [itemId], included: true }, { actor: "admin" });
 		await monti.proposals.apply(proposal);
 		const items = await db.selectFrom("monti_proposal_item").select(["state", "reason"]).execute();
 		expect(items).toEqual([{ state: "failed", reason: { key: "entries.notChosen", values: { field: "linkUrl" } } }]);
 		expect((await stored(id)).values).toEqual({ format: "video", videoUrl: "https://example.dev/v.mp4" });
+	});
+
+	it("19-5 T187 a proposal for a field of an option that is not chosen starts left out, with why; one that changes the choice says which values go with the option it leaves", async () => {
+		const id = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" });
+		const monti = site();
+		const version = (await stored(id)).version;
+		const proposal = await monti.proposals.create("c1", "링크를 채워 줘");
+		await monti.proposals.add(proposal, "entries.save", { id, version, values: { linkUrl: "https://example.dev" } });
+		const view = await monti.proposals.view(proposal);
+		expect(view?.items.map((item) => [item.included, item.blocked])).toEqual([
+			[false, { key: "entries.optionNotChosen", values: { field: "format", option: "link" } }],
+		]);
+		// Left out, it is not counted among what applying would run, and applying does not try it.
+		expect(view?.counts.toApply).toBe(0);
+
+		const other = await monti.proposals.create("c1", "링크 글로 바꿔 줘");
+		// The choice and the new option's field in one change: the field belongs to the option the change itself chooses.
+		await monti.proposals.add(other, "entries.save", {
+			id,
+			version,
+			values: { format: "link", linkUrl: "https://example.dev" },
+		});
+		const changed = await monti.proposals.view(other);
+		expect(changed?.items.map((item) => [item.included, item.blocked])).toEqual([[true, null]]);
+		expect(changed?.items[0]?.preview?.clears).toEqual([{ field: "videoUrl", value: "https://example.dev/v.mp4" }]);
 	});
 
 	it("19-5 the comparison counts the choice as the place that differs, not the fields of the option the draft no longer has chosen", async () => {

@@ -1,4 +1,4 @@
-import { applyOps, type BodyOp, type Doc, type ProposalItemView } from "@monti-cms/core";
+import { applyOps, type BodyOp, type Doc, type Message, type ProposalItemView, storedFields } from "@monti-cms/core";
 import {
 	Checkbox,
 	CompareRow,
@@ -25,9 +25,12 @@ import {
 } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { useRead } from "../operations/use-operation";
 import { href, type Route, reachedFromInside } from "../route";
 import { shownBlocks } from "../screens/entry/compare-entries";
 import { useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { endsClosed } from "../screens/list/format";
+import type { SchemaRead } from "../screens/settings/schema-draft";
 import { type DiffRun, inlineDiff } from "./diff";
 import { changeOf } from "./proposal-card";
 import { ProposalState } from "./proposal-state";
@@ -35,7 +38,20 @@ import { useAssistant } from "./use-assistant";
 import { standingOf, useProposal } from "./use-proposal";
 import { clock } from "./words";
 
-type EntryNow = { collection: string; title: string; slug: string; values: Record<string, unknown>; doc: Doc | null };
+type EntryNow = {
+	collection: string;
+	locale: string;
+	title: string;
+	slug: string;
+	values: Record<string, unknown>;
+	doc: Doc | null;
+};
+
+/** An id a former item of the same proposal makes (`{ $item }`): the item that makes it, or `null` for a plain id. */
+const madeBy = (id: unknown): string | null =>
+	typeof id === "object" && id !== null && typeof (id as { $item?: unknown }).$item === "string"
+		? (id as { $item: string }).$item
+		: null;
 
 /** One place a change touches, as it is now and as proposed. */
 type Place = { name: string; before: string; after: string };
@@ -99,14 +115,24 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 	// The kinds of change that are looked at side by side: each kind has its own switch.
 	const [sideBySide, setSideBySide] = useState<ReadonlySet<string>>(new Set());
 	const [entries, setEntries] = useState<Record<string, EntryNow>>({});
+	// The translations a proposal makes (flow 3·13) that are opened to read the source beside the translation.
+	const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
+	// What the site calls its fields, their options and its languages: a change is named as the editor names it.
+	const schema = useRead<SchemaRead>("schema.read").data;
 
 	// The entries its changes are of, as they are now: what a change takes out is read from them.
 	const entryIds = useMemo(
 		() => [
 			...new Set(
-				(view?.items ?? []).flatMap((item) =>
-					item.targets.filter((target) => target.startsWith("entry:")).map((target) => target.slice("entry:".length)),
-				),
+				(view?.items ?? []).flatMap((item) => [
+					...item.targets
+						.filter((target) => target.startsWith("entry:"))
+						.map((target) => target.slice("entry:".length)),
+					// A translation to make: its source, read beside what is proposed for it.
+					...(item.operation === "translations.create"
+						? [String((item.input as { source?: unknown }).source ?? "")].filter(Boolean)
+						: []),
+				]),
 			),
 		],
 		[view?.items],
@@ -134,6 +160,46 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 	const settled = standing !== "waiting";
 	const items = new Map(view.items.map((item) => [item.id, item]));
 
+	const fieldsOf = (collection: string | undefined) =>
+		collection ? (schema?.adminValues[collection]?.fields ?? {}) : {};
+	const fieldName = (collection: string | undefined, field: string) => fieldsOf(collection)[field]?.label ?? field;
+	/** A field's value in words: a choice by its option's label. */
+	const valueWords = (collection: string | undefined, field: string, value: unknown) => {
+		const labels = fieldsOf(collection)[field]?.optionLabels ?? {};
+		return Array.isArray(value)
+			? value.map((each) => (typeof each === "string" ? (labels[each] ?? each) : said(each))).join(", ")
+			: typeof value === "string"
+				? (labels[value] ?? value)
+				: said(value);
+	};
+	const languageName = (code: string) => schema?.schema.locales.list.find((each) => each.code === code)?.name ?? code;
+	/** Why a change cannot be put in, in the screen's words: the field it writes belongs to an option the entry has not chosen. */
+	const blockedWords = (reason: Message, collection: string | undefined) => {
+		if (reason.key !== "entries.optionNotChosen") return t(reason);
+		const field = String(reason.values?.field ?? "");
+		const option = String(reason.values?.option ?? "");
+		const definition = collection ? storedFields(schema?.schema.collections[collection])[field] : undefined;
+		const name = fieldName(collection, field);
+		// A choice made by a switch has one option: the switch is off.
+		if (definition?.kind === "select" && definition.control === "toggle")
+			return t(endsClosed(name) ? "review.switchOffFinal" : "review.switchOffOpen", { field: name });
+		const chosen = valueWords(collection, field, option);
+		return t("review.notChosen", {
+			field: t(endsClosed(name) ? "list.subjectFinal" : "list.subjectOpen", { name }),
+			option: t(endsClosed(chosen) ? "list.subjectFinal" : "list.subjectOpen", { name: chosen }),
+		});
+	};
+	/** The items that write into what another item of the proposal makes (a translation's words): they go with that item's row. */
+	const followers = (parent: string) =>
+		(view?.items ?? []).filter((each) => madeBy((each.input as { id?: unknown } | null)?.id) === parent);
+	const follows = (item: ProposalItemView) => {
+		const parent = madeBy((item.input as { id?: unknown } | null)?.id);
+		return (
+			parent !== null &&
+			(view?.items ?? []).some((each) => each.id === parent && each.operation === "translations.create")
+		);
+	};
+
 	/** The places of an entry one change touches, each as it is and as proposed. A change the page has no words for has none: its row names it. */
 	const placesOf = (item: ProposalItemView): Place[] => {
 		const entryId = item.targets.find((target) => target.startsWith("entry:"))?.slice("entry:".length);
@@ -148,7 +214,19 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 			if (input.slug !== undefined)
 				places.push({ name: t("review.slug.field"), before: applied ? "" : (now?.slug ?? ""), after: input.slug });
 			for (const [field, value] of Object.entries(input.values ?? {}))
-				places.push({ name: field, before: applied ? "" : said(now?.values[field]), after: said(value) });
+				places.push({
+					name: fieldName(now?.collection, field),
+					before: applied ? "" : valueWords(now?.collection, field, now?.values[field]),
+					after: valueWords(now?.collection, field, value),
+				});
+			// A changed choice takes the values of the option it leaves with it (doc 19): each is shown going out.
+			if (!applied)
+				for (const cleared of item.preview?.clears ?? [])
+					places.push({
+						name: fieldName(now?.collection, cleared.field),
+						before: valueWords(now?.collection, cleared.field, cleared.value),
+						after: "",
+					});
 			return places;
 		}
 		if (item.operation === "body.edit" && now && !applied) {
@@ -244,8 +322,15 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 						“{view.request}”
 					</Text>
 					{view.groups.map((group) => {
-						const rows = group.itemIds.map((item) => items.get(item)).filter((item) => item !== undefined);
-						const waiting = rows.filter((item) => item.state === "pending" && !item.stale);
+						const rows = group.itemIds
+							.map((item) => items.get(item))
+							.filter((item) => item !== undefined)
+							// What is written into a translation the proposal makes is read in that translation's row.
+							.filter((item) => !follows(item));
+						if (rows.length === 0) return null;
+						const waiting = rows.filter((item) => item.state === "pending" && !item.stale && item.blocked === null);
+						const making = rows.filter((item) => item.operation === "translations.create");
+						const allOpen = making.length > 0 && making.every((item) => opened.has(item.id));
 						const allIn = waiting.every((item) => item.included);
 						const texts = rows.some((item) =>
 							placesOf(item).some((place) => place.before !== "" && place.after !== ""),
@@ -277,8 +362,28 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 												</TabsList>
 											</Tabs>
 										) : null}
+										{making.length > 0 ? (
+											<TextButton
+												onClick={() =>
+													setOpened((was) => {
+														const next = new Set(was);
+														for (const item of making) allOpen ? next.delete(item.id) : next.add(item.id);
+														return next;
+													})
+												}
+											>
+												{t(allOpen ? "review.closeAll" : "review.openAll")}
+											</TextButton>
+										) : null}
 										{!settled && waiting.length > 1 ? (
-											<TextButton onClick={() => void proposal.include(waiting, !allIn)}>
+											<TextButton
+												onClick={() =>
+													void proposal.include(
+														waiting.flatMap((item) => [item, ...followers(item.id)]),
+														!allIn,
+													)
+												}
+											>
 												{t(allIn ? "review.leaveOutAll" : "review.putInAll", { count: waiting.length })}
 											</TextButton>
 										) : null}
@@ -295,14 +400,122 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 												?.slice("entry:".length);
 											const entry = entryId ? entries[entryId] : undefined;
 											const open = item.state === "pending" && !item.stale && !settled;
+											// A change of a field the entry does not have now (an option that is not chosen): left out, and
+											// it cannot be put in; the row's end says why (doc 19; reference Conditional › Proposal).
+											const blocked = open ? item.blocked : null;
+											// A translation to make is named by its source: the entry it will be does not exist yet.
+											const named =
+												item.operation === "translations.create"
+													? (entries[String((item.input as { source?: unknown }).source ?? "")]?.title ?? change.title)
+													: change.title;
 											const check = (
 												<Checkbox
-													checked={item.included && !item.stale && item.state !== "discarded"}
-													onCheckedChange={(checked) => void proposal.include([item], checked === true)}
-													aria-label={t("card.include", { name: change.title })}
-													readOnly={!open}
+													checked={item.included && !item.stale && item.state !== "discarded" && blocked === null}
+													onCheckedChange={(checked) =>
+														void proposal.include([item, ...followers(item.id)], checked === true)
+													}
+													aria-label={t("card.include", { name: named })}
+													readOnly={!open || blocked !== null}
 												/>
 											);
+											if (item.operation === "translations.create") {
+												const input = item.input as { source: string; locale: string };
+												const source = entries[input.source];
+												const words = followers(item.id);
+												const proposedDoc = words
+													.map((each) => (each.input as { doc?: Doc }).doc)
+													.find((doc) => doc !== undefined);
+												const proposedTitle = words
+													.map((each) => (each.input as { title?: string }).title)
+													.find((title) => title !== undefined);
+												const blocks = shownBlocks(source?.doc ?? null);
+												const worded = blocks.filter((block) => block.look !== "code" && block.text.trim() !== "");
+												const translated = (block: (typeof blocks)[number], index: number) => {
+													const match =
+														proposedDoc?.blocks.find((each) => each.link?.from === block.id) ??
+														proposedDoc?.blocks[index];
+													return match ? (shownBlocks({ type: "doc", blocks: [match] })[0]?.text ?? "") : null;
+												};
+												const shown = opened.has(item.id);
+												return (
+													<TableRow key={item.id} twoLine={shown}>
+														<TableCell>{check}</TableCell>
+														<TableCell truncate>
+															<Stack gap={8} minWidth={0}>
+																<RowTitle title={named} address={change.address ?? undefined} />
+																{shown && source ? (
+																	<CompareRows>
+																		<CompareRow
+																			head
+																			source={t("review.source", { language: languageName(source.locale) })}
+																			translation={t("review.translation", { language: languageName(input.locale) })}
+																		/>
+																		<CompareRow
+																			name={t("review.title.field")}
+																			source={source.title}
+																			translation={
+																				proposedTitle !== undefined ? (
+																					<Ins>{proposedTitle}</Ins>
+																				) : (
+																					<Text tone="faint">{source.title}</Text>
+																				)
+																			}
+																		/>
+																		{blocks.map((block, index) => {
+																			const words = translated(block, index);
+																			return (
+																				<CompareRow
+																					key={block.id}
+																					name={t("review.block", { number: index + 1 })}
+																					source={block.text}
+																					translation={
+																						words !== null && words !== block.text ? (
+																							<Ins>{words}</Ins>
+																						) : (
+																							// Nothing proposed for it: it starts in the source's words, to be decided in the editor.
+																							<Text tone="faint">{block.text}</Text>
+																						)
+																					}
+																				/>
+																			);
+																		})}
+																	</CompareRows>
+																) : null}
+															</Stack>
+														</TableCell>
+														<TableCell align="end">
+															<Inline gap={12} align="baseline" justify="end">
+																{source ? (
+																	<Text variant="note" tone="subtle">
+																		{[
+																			t("review.blocks", { count: worded.length }),
+																			blocks.length > worded.length
+																				? t("review.followSource", { count: blocks.length - worded.length })
+																				: null,
+																		]
+																			.filter(Boolean)
+																			.join(" · ")}
+																	</Text>
+																) : null}
+																{resultOf(item)}
+																<TextButton
+																	variant="underline"
+																	aria-expanded={shown}
+																	onClick={() =>
+																		setOpened((was) => {
+																			const next = new Set(was);
+																			shown ? next.delete(item.id) : next.add(item.id);
+																			return next;
+																		})
+																	}
+																>
+																	{t(shown ? "review.close" : "review.open")}
+																</TextButton>
+															</Inline>
+														</TableCell>
+													</TableRow>
+												);
+											}
 											return (
 												<TableRow key={item.id} twoLine={places.length > 0}>
 													<TableCell>{check}</TableCell>
@@ -336,6 +549,11 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 													<TableCell align="end">
 														<Inline gap={12} align="baseline" justify="end">
 															{resultOf(item)}
+															{blocked !== null && !item.stale ? (
+																<Text variant="note" tone="subtle">
+																	{blockedWords(blocked, entry?.collection)}
+																</Text>
+															) : null}
 															{item.stale && item.state !== "discarded" && !proposal.applying ? (
 																<TextButton
 																	ref={toCheck}

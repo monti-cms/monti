@@ -74,7 +74,9 @@ const meta = {
 	title: "Screens/EditorMedia",
 	render: (_args, { loaded }) => {
 		const { site } = loaded as Loaded;
-		return <MontiAdmin transport={site.transport} uploader={site.uploader} siteName="example.dev" />;
+		return (
+			<MontiAdmin transport={site.transport} streams={site.streams} uploader={site.uploader} siteName="example.dev" />
+		);
 	},
 } satisfies Meta;
 export default meta;

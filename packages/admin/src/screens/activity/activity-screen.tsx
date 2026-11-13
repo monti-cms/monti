@@ -41,10 +41,11 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { Renew, RightPanelOpen, Undo } from "@monti-cms/ui/icons";
+import { Chat, Renew, RightPanelOpen, Undo } from "@monti-cms/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
+import { useOpenConversation } from "../../assistant/use-assistant";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -226,6 +227,7 @@ export function ActivityScreen({
 			.join(" · ");
 	const titleOf = (line: ActivityLine) =>
 		line.request !== null ? `“${line.request}”` : line.what[0] ? say(line.what[0]) : "";
+	const openConversation = useOpenConversation();
 	const open = (line: ActivityLine) => setState({ ...state, open: line.id });
 
 	const menuItems = (line: ActivityLine, context: boolean) => {
@@ -237,6 +239,13 @@ export function ActivityScreen({
 					<RightPanelOpen aria-hidden />
 					{t("activity.details")}
 				</Item>
+				{/* The assistant's line opens the conversation its request was made in, while that conversation is kept. */}
+				{openConversation && line.conversationId !== null && line.conversationKept && (
+					<Item onClick={() => openConversation(line.conversationId as string)}>
+						<Chat aria-hidden />
+						{t("activity.conversation")}
+					</Item>
+				)}
 				{failed.length > 0 && !isSending(line) && (
 					<Item disabled={busy} onClick={() => void again.send(failed)}>
 						<Renew aria-hidden />

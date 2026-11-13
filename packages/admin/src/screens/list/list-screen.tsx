@@ -51,7 +51,7 @@ import {
 } from "@monti-cms/ui";
 import { FolderAdd, Template } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { useScreenContext } from "../../assistant/use-assistant";
+import { useRequest, useScreenContext } from "../../assistant/use-assistant";
 import { download } from "../../download";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
@@ -205,6 +205,7 @@ function DocumentListScreen({
 	);
 	const pickedRows = (rows ?? []).filter((row) => picked.has(row.id));
 	// What goes along with a request to the assistant from here (doc 10, context): this list as it is asked for, and the rows picked in it.
+	const request = useRequest();
 	useScreenContext({
 		screen: "list",
 		collection,
@@ -814,6 +815,7 @@ function DocumentListScreen({
 							clearLabel={t("list.clearSelection")}
 							onClear={() => setPicked(new Map())}
 							colSpan={colSpan}
+							request={request ? { label: t("list.request"), onClick: request } : undefined}
 							more={{
 								label: t("list.more"),
 								children: (

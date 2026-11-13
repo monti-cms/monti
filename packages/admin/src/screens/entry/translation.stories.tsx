@@ -162,7 +162,10 @@ const meta = {
 	excludeStories: /^[a-z]/,
 	tags: ["visual"],
 	title: "Screens/Entry/Translation",
-	render: (_args, { loaded }) => <MontiAdmin transport={(loaded as Loaded).site.transport} siteName="example.dev" />,
+	render: (_args, { loaded }) => {
+		const { site: made } = loaded as Loaded;
+		return <MontiAdmin transport={made.transport} streams={made.streams} siteName="example.dev" />;
+	},
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
