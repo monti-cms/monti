@@ -680,18 +680,18 @@ describe("the review page (flow 2, 12–15)", () => {
 		await expect.element(page.getByRole("button", { name: "2건 적용" }).first()).toBeVisible();
 	});
 
-	it("10-1 '‹ 어시스턴트' goes back to where the person came from, with the panel on the proposal's conversation", async () => {
+	it("10-1 '어시스턴트' goes back to where the person came from, with the panel on the proposal's conversation", async () => {
 		const story = on({ script: stories.proposedKinds });
 		await toReview(story);
 		await userEvent.click(page.getByRole("button", { name: "닫기" }));
-		await userEvent.click(button("‹ 어시스턴트"));
+		await userEvent.click(button("어시스턴트"));
 		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
 		await expect.element(panel().getByRole("button", { name: "3건 적용" })).toBeVisible();
 	});
 });
 
 describe("the review page opened by its address (T226)", () => {
-	it("10-1 '‹ 어시스턴트' on a review that was not reached from inside the admin goes to the admin's first screen, not back out of it", async () => {
+	it("10-1 '어시스턴트' on a review that was not reached from inside the admin goes to the admin's first screen, not back out of it", async () => {
 		const story = on({ script: stories.proposedKinds });
 		await story.run();
 		const loaded = story.loaded();
@@ -704,7 +704,7 @@ describe("the review page opened by its address (T226)", () => {
 		window.dispatchEvent(new PopStateEvent("popstate"));
 		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
 		const back = vi.spyOn(window.history, "back");
-		await userEvent.click(button("‹ 어시스턴트"));
+		await userEvent.click(button("어시스턴트"));
 		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
 		expect(back).not.toHaveBeenCalled();
 		back.mockRestore();
@@ -838,7 +838,7 @@ describe("which run and which conversation the page follows (the first review of
 		await expect.element(panel().getByText("연결이 끊겼습니다")).not.toBeInTheDocument();
 	});
 
-	it("10-1 '‹ 어시스턴트' on the review page while the run works: the run goes on, and what waits behind it is asked when it ends", async () => {
+	it("10-1 '어시스턴트' on the review page while the run works: the run goes on, and what waits behind it is asked when it ends", async () => {
 		const more = gate();
 		const story = on({
 			script: async (ids, version, held) => {
@@ -855,7 +855,7 @@ describe("which run and which conversation the page follows (the first review of
 		await expect.element(button("지금 보내기")).toBeVisible();
 		await userEvent.click(button("검토"));
 		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
-		await userEvent.click(button("‹ 어시스턴트"));
+		await userEvent.click(button("어시스턴트"));
 		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
 		await beat();
 		await expect.element(button("멈추기")).toBeVisible();
@@ -1399,6 +1399,11 @@ describe("what the second review of #480 found", () => {
 			// What a still story cannot show, played to its end (T241).
 			stories.ReviewMadeAgainByKeyboard,
 			stories.BubbleOpensItsConversation,
+			// The states of the design audit (2026-11-14).
+			stories.CardDiscarding,
+			stories.ReviewUndoing,
+			stories.ReviewMakingAgain,
+			stories.SentRequest,
 		])
 			await open(story).run();
 	});
@@ -2107,6 +2112,13 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 		await userEvent.click(undo);
 		await expect.element(button("되돌리는 중…").first()).toHaveAttribute("aria-busy", "true");
 		release();
+	});
+
+	it("the review page's way back is the editor's: a quiet text button with the chevron icon, no typed ‹", async () => {
+		await open(stories.Review).run();
+		const back = button("어시스턴트").element();
+		expect(back.querySelector("svg")).not.toBeNull();
+		expect(back.textContent).toBe("어시스턴트");
 	});
 
 	it("다시 만들기 shows that it is making the change again while it does", async () => {

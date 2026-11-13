@@ -357,6 +357,18 @@ export const Basics: Story = {
 	},
 };
 
+/** The basics tab with the name and "폴더 사용" changed: each row has the dot by its name and "되돌리기" at its end, as the addresses do. */
+export const BasicsChanged: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const { page } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		fill(await page.findByLabelText("표시 이름"), "글");
+		await userEvent.click(page.getByRole("switch", { name: "폴더 사용" }));
+		await waitFor(() => expect(page.getAllByRole("button", { name: "되돌리기" })).toHaveLength(2));
+	},
+};
+
 /** Flow 4, steps 13–14: the public address changed, and its review (before and after, old addresses 404). */
 export const AddressReview: Story = {
 	loaders: site(),

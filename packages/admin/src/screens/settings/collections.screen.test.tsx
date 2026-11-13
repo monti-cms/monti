@@ -919,6 +919,10 @@ describe("the collection screens follow the design rules (design audit, 2026-11-
 		await expect.poll(() => marked("폴더 사용")).toBe(false);
 	});
 
+	it("the story of the changed basics tab is reached: both rows marked", async () => {
+		await composeStories(collections).BasicsChanged.run();
+	});
+
 	it("the new collection sheet's address row is the basics tab's: 36px, in body text", async () => {
 		await NewCollection.run();
 		const label = dialog().getByText("공개 주소", { exact: true }).element();
