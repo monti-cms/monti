@@ -103,7 +103,7 @@ await write("collections.updateAdminValues", {
 				galleryPoster: "대표 사진",
 				linkKind: "링크 종류",
 				linkUrl: "주소",
-				linkTarget: "글",
+				linkTarget: "가리키는 글",
 				pinNote: "고정 메모",
 			}),
 			summary: { label: "요약", description: "목록과 검색 결과에 보이는 한두 문장" },
@@ -114,12 +114,21 @@ await write("collections.updateAdminValues", {
 		layout: [
 			{
 				tab: "기본",
-				fields: ["slug", "summary", "subtitle", { group: "분류", fields: ["topic", "seasons", "series", "tags"] }],
+				fields: [
+					"title",
+					"slug",
+					"summary",
+					"subtitle",
+					{ group: "분류", fields: ["topic", "seasons", "series", "tags"] },
+				],
 			},
 			{ tab: "미디어", fields: ["cover", "attachment"] },
 			{ tab: "관계", fields: ["authors", "related"] },
 			{ tab: "형식", fields: ["format", "pinned"] },
 		],
+		// The list's columns: the relations to people and articles are a column to add ("Add column"); all of them at once leave the
+		// title no room.
+		list: { hidden: ["authors", "related", "linkTarget"] },
 	},
 });
 await write("collections.updateAdminValues", {
@@ -610,6 +619,15 @@ await save(video.id, {
 	),
 });
 await publish(video.id);
+
+// One Japanese page on the site: the link article, all its blocks translated and published.
+const externalJa = await translate(external.id, "ja", {
+	title: "砂漠の夜空（外部リンク）",
+	values: { summary: "ほかのサイトの星の写真を紹介する。" },
+	blocks: { "x-p1": words(t("夜空がいちばん澄んでいるのは砂漠だ。")) },
+	rest: "keepSource",
+});
+if ((await publish(externalJa)).blocked.length > 0) throw new Error("The Japanese translation was not published.");
 
 await write("entries.archive", { ids: [archived.id] });
 await write("trash.move", { rows: [{ kind: "entry", id: trashed.id }] });

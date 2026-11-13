@@ -72,6 +72,13 @@
 .site .cover {
 	width: 100%;
 	height: auto;
+	max-height: 420px;
+	object-fit: cover;
+}
+/* A file block is a link of its own: one to a line. */
+.site .body > a[download] {
+	display: block;
+	margin: 8px 0;
 }
 .site .photo {
 	border-radius: 50%;

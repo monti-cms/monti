@@ -63,7 +63,7 @@ here: the switch (`pinned`) is the core's yes/no.
 | 블록과 서식을 모두 쓴 글 (`every-block`) | published, pinned | Every core block and mark, footnotes, pictures (width %, px, cropped and turned, decorative), files, an entry link; SEO fields; English published, Japanese a draft with 15 blocks to translate |
 | 항구를 걷는 영상 (`harbor-video`) | published | Format "video"; its English was published, then the source changed: the English is 2 changes behind |
 | 숲 사진첩 (`forest-gallery`) | changed | Format "gallery"; saved after publishing, so the site shows the published copy |
-| 사막의 밤하늘 (바깥 링크) (`desert-night-link`) | published, and a copy | Format "link", external; the copy is a draft |
+| 사막의 밤하늘 (바깥 링크) (`desert-night-link`) | published, and a copy | Format "link", external; Japanese published (the one Japanese page); the copy is a draft |
 | 안내서에서 시작한 초안 (안쪽 링크) (`from-template`) | draft | Started from the template; format "link", internal, pointing at the first article |
 | 영상 주소가 빠진 초안 (`missing-video-url`) | draft, blocked | The option's required field is empty, and a picture has no alt text: two to-dos |
 | 주소 없는 초안 | draft, blocked | No address |
@@ -109,7 +109,7 @@ One line per feature, by feature doc (`docs/design/features`). "Admin" is where 
 
 ### 04 · Languages
 
-- [ ] Translation done: the first article's English (`/en/articles/every-block`).
+- [ ] Translation done: the first article's English (`/en/articles/every-block`); in Japanese, `/ja/articles/desert-night-link`.
 - [ ] Partly done: its Japanese draft; each pending block, keep the source's words or translate; publishing waits for all.
 - [ ] Stale: 항구를 걷는 영상 in English shows the changed and added blocks; update or confirm them.
 - [ ] Fields per language: summary (own), subtitle (from the source), cover (from the source), topic (one for all).
