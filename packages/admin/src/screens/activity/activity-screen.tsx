@@ -51,7 +51,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { clock } from "../entry/dates";
-import { nextStop, useFocusHandOff } from "../frame/focus-hand-off";
+import { firstStopIn, nextStop, useFocusHandOff } from "../frame/focus-hand-off";
 import { DateRows } from "../list/date-rows";
 import { toggled, ValueRow } from "../list/filter-rows";
 import { shortDate, shortTime } from "../list/format";
@@ -104,17 +104,41 @@ function FacetRows<Value extends string>({
 }
 
 /**
- * A row's ⋯. The row's own action can take the row out of the list (its failed delivery is sent again while the list shows only failed ones):
- * the keyboard's focus the ⋯ held then goes to the row that follows, or with none left to the list's start (`listStart`), not to the page.
+ * Where the keyboard's focus goes when a row leaves the list by its own action (its failed delivery is sent again while the list shows only
+ * failed ones): to the row that follows, or with none left to the list's start (`listStart`), not to the page. What stands after the list (the
+ * corner's button, a panel) is not what the row's action was about.
  */
+const afterRow = (listStart: () => HTMLElement | null) => (gone: HTMLElement) => {
+	const next = gone.closest("tr")?.nextElementSibling;
+	return (next && firstStopIn(next)) || (() => requestAnimationFrame(() => listStart()?.focus()));
+};
+
+/** A row's ⋯: the focus it holds when the row goes is handed on ({@link afterRow}). */
 function LogRowActions({ listStart, children }: { listStart: () => HTMLElement | null; children: ReactNode }) {
-	const handOff = useFocusHandOff((gone) => {
-		// The next row, when there is one: what stands after the list (the corner's button, a panel) is not what the row's action was about.
-		const next = nextStop(gone);
-		if (next && gone.closest("table")?.contains(next)) return next;
-		return () => requestAnimationFrame(() => listStart()?.focus());
-	});
+	const handOff = useFocusHandOff(afterRow(listStart));
 	return <RowActions ref={handOff}>{children}</RowActions>;
+}
+
+/**
+ * A row's title, the way into its details: a link with the address that opens them, as every list's title is (a middle press or a press with
+ * Command opens the log there in a new tab). It holds the focus when the row's menu was opened on it with the keyboard (Shift+F10) and gives
+ * it back there: when the row then goes, that focus is handed on as the ⋯'s is.
+ */
+function LogRowLink({
+	href,
+	listStart,
+	children,
+}: {
+	href: string;
+	listStart: () => HTMLElement | null;
+	children: ReactNode;
+}) {
+	const handOff = useFocusHandOff(afterRow(listStart));
+	return (
+		<RowLink ref={handOff} href={href}>
+			{children}
+		</RowLink>
+	);
 }
 
 /**
@@ -258,9 +282,9 @@ export function ActivityScreen({
 						{t("activity.retry")}
 					</Item>
 				)}
-				{/* Not offered while an undo runs: a second press would be refused right after the first went through. */}
-				{line.undo.state === "open" && !undo.pending && (
-					<Item onClick={() => void undo.ask(line.id)}>
+				{/* Off while an undo runs, as in the panel's ⋯: a second press would be refused right after the first went through. */}
+				{line.undo.state === "open" && (
+					<Item disabled={undo.pending} onClick={() => void undo.ask(line.id)}>
 						<Undo aria-hidden />
 						{t("activity.undo")}
 					</Item>
@@ -341,7 +365,9 @@ export function ActivityScreen({
 		return listStart() ?? nextStop(banner) ?? (() => requestAnimationFrame(() => listStart()?.focus()));
 	});
 	const total = data?.total ?? 0;
-	const empty = data !== null && total === 0 && !looking && state.page === 1;
+	// Only of this address's own answer: right after the search and the filters are taken off, the rows are still the old answer's (none),
+	// and a log that has lines would say for a moment that nothing is logged yet, with its table gone.
+	const empty = answered && total === 0 && !looking && state.page === 1;
 	const panel = state.open;
 
 	const banners = (
@@ -368,7 +394,9 @@ export function ActivityScreen({
 					</TextButton>
 				</Banner>
 			) : null}
-			{read.refusal && !data ? (
+			{/* Also over a list read before: a read made again that fails (after a change elsewhere, while a delivery is watched) leaves the old
+			    rows, and they are not said to be the log as it is now. */}
+			{read.refusal ? (
 				<Banner ref={bannerHandOff} tone="danger" title={t("activity.loadFailed")} plainMeta>
 					<TextButton variant="underline" onClick={() => void read.reload()}>
 						{t("activity.reload")}
@@ -432,9 +460,12 @@ export function ActivityScreen({
 										<RowTitle
 											byAssistant={line.request !== null ? t("activity.actor.assistant") : undefined}
 											title={
-												<RowLink render={<button type="button" />} onClick={() => open(line)}>
+												<LogRowLink
+													href={href({ screen: "activity", params: writeActivityState({ ...state, open: line.id }) })}
+													listStart={listStart}
+												>
 													{title}
-												</RowLink>
+												</LogRowLink>
 											}
 											address={afterOf(line) || undefined}
 										/>

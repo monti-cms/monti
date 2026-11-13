@@ -165,7 +165,7 @@ export const authOperations = [
 		name: "frame.counts",
 		kind: "read",
 		description:
-			"How many entries each collection has (translation groups not in the trash), how many rows the trash shows (entries, folders and media files), and how many deliveries failed.",
+			"How many entries each collection has (translation groups not in the trash), how many rows the trash shows (entries, folders and media files), how many deliveries failed and how many are still on their way.",
 		input: z.object({}),
 		async run(_input, ctx) {
 			const groups = await ctx.db
@@ -174,6 +174,7 @@ export const authOperations = [
 				.where("trashed_at", "is", null)
 				.groupBy("collection")
 				.execute();
+			const deliveries = await deliveryCounts(ctx.db, ctx.now());
 			return {
 				collections: Object.fromEntries(
 					Object.keys(ctx.site.schema().collections).map((name) => [
@@ -183,7 +184,10 @@ export const authOperations = [
 				),
 				trash: await trashRowCount(ctx.db, ctx.site.schema().locales.source),
 				// The one count the activity tab and its banner show too (13-4).
-				failedDeliveries: (await deliveryCounts(ctx.db, ctx.now())).failed,
+				failedDeliveries: deliveries.failed,
+				// Queued and not tried yet: the frame reads the counts again until none is, so a delivery that fails after its write answered
+				// is counted without another write (doc 13).
+				deliveriesOnTheWay: deliveries.onTheWay,
 			};
 		},
 	}),

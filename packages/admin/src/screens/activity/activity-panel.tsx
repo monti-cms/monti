@@ -139,8 +139,10 @@ export function ActivityPanel({
 	const schema = useRead<{ adminValues: Record<string, { label?: string }> }>("schema.read");
 	const cancel = useOperation("deliveries.cancel");
 	const [asking, setAsking] = useState<ActivityDelivery | null>(null);
-	/** The delivery whose cancel is on its way: its "cancel" works and cannot be pressed again until the answer is in. */
-	const [canceling, setCanceling] = useState<string | null>(null);
+	/** The deliveries whose cancel is on its way or waits its turn: each one's "cancel" works and cannot be pressed again until its answer is in. */
+	const [canceling, setCanceling] = useState<readonly string[]>([]);
+	/** The cancels confirmed, one after the other: a second delivery's cancel confirmed while the first is on its way is sent when that one has answered. */
+	const turn = useRef<Promise<void>>(Promise.resolve());
 	/** The delivery whose cancel was confirmed by a press that held the keyboard's focus. */
 	const canceled = useRef<string | null>(null);
 	// The head's ⋯ goes when nothing is left to do with the line (sent again, undone): its focus goes to the next control of the head, the ×.
@@ -191,22 +193,24 @@ export function ActivityPanel({
 		);
 	};
 	const [only] = line.records;
-	const confirmCancel = async (byKeys: boolean) => {
+	const confirmCancel = (byKeys: boolean) => {
 		const delivery = asking;
 		canceled.current = byKeys ? (delivery?.id ?? null) : null;
 		setAsking(null);
-		if (!delivery || canceling !== null) return;
-		setCanceling(delivery.id);
-		try {
-			const result = await cancel.run({ id: delivery.id });
-			if (result.ok) return void toast(t("activity.canceled"));
-			// What the panel shows is behind (the delivery went by itself, or was canceled in another tab): everything reads again, as when a
-			// send is refused.
-			wrote();
-			toast.error(t(reasonOf(result.refusal)));
-		} finally {
-			setCanceling(null);
-		}
+		if (!delivery || canceling.includes(delivery.id)) return;
+		setCanceling((ids) => [...ids, delivery.id]);
+		turn.current = turn.current.then(async () => {
+			try {
+				const result = await cancel.run({ id: delivery.id });
+				if (result.ok) return void toast(t("activity.canceled"));
+				// What the panel shows is behind (the delivery went by itself, or was canceled in another tab): everything reads again, as when a
+				// send is refused.
+				wrote();
+				toast.error(t(reasonOf(result.refusal)));
+			} finally {
+				setCanceling((ids) => ids.filter((id) => id !== delivery.id));
+			}
+		});
 	};
 	return (
 		<>
@@ -364,7 +368,7 @@ export function ActivityPanel({
 												{!isSending(delivery) && (
 													<TextButton
 														variant="quiet"
-														loading={canceling === delivery.id}
+														loading={canceling.includes(delivery.id)}
 														onClick={() => {
 															canceled.current = null;
 															setAsking(delivery);
@@ -406,7 +410,7 @@ export function ActivityPanel({
 						<AlertDialogCancel>{t("activity.cancelClose")}</AlertDialogCancel>
 						<AlertDialogAction
 							variant="danger"
-							onClick={(event) => void confirmCancel(holdsKeyboardFocus(event.currentTarget))}
+							onClick={(event) => confirmCancel(holdsKeyboardFocus(event.currentTarget))}
 						>
 							{t("activity.cancelConfirm")}
 						</AlertDialogAction>

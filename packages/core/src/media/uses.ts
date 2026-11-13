@@ -78,6 +78,52 @@ export async function checkMediaValues(
 	}
 }
 
+/** Every file a state names, however deep: the `media` of a block's attrs or of a field's value. */
+function filesNamedIn(value: unknown, into: Set<string>): Set<string> {
+	if (Array.isArray(value)) for (const each of value) filesNamedIn(each, into);
+	else if (value !== null && typeof value === "object")
+		for (const [key, each] of Object.entries(value)) {
+			if (key === "media" && typeof each === "string") into.add(each);
+			else filesNamedIn(each, into);
+		}
+	return into;
+}
+
+/**
+ * Takes the locks of the records a write touches, in the engine's one order (`lockRecords`: the files last), and with them the files it will
+ * come for later. A write asks for files twice: for the ones it touches, here, and after its run for the ones its entries and templates name
+ * (`rewriteUses`). Asked for in two goes, a file is asked for while another is held, against the order of a write that touches both. So a
+ * write that touches a file takes, in the same go, every file its entries and templates name now (read once those are held), and every file
+ * named in `willHold` (what an undo is about to put back). A write that touches no file asks for files once, after its run, and needs
+ * nothing here.
+ */
+export async function lockWithFiles(
+	db: Db,
+	schema: Schema,
+	refs: RecordRef[],
+	{ willHold = [] }: { willHold?: unknown[] } = {},
+): Promise<void> {
+	const files = refs.filter((ref) => ref.kind === "media");
+	await lockRecords(
+		db,
+		refs.filter((ref) => ref.kind !== "media"),
+	);
+	if (files.length === 0) return;
+	const named = filesNamedIn(willHold, new Set<string>());
+	const uses = await usesNow(
+		db,
+		schema,
+		refs.filter((ref) => ref.kind === "entry").map((ref) => ref.id),
+		refs.filter((ref) => ref.kind === "template").map((ref) => ref.id),
+	);
+	for (const use of uses.values()) named.add(use.media);
+	for (const file of files) named.add(file.id);
+	await lockRecords(
+		db,
+		[...named].map((id) => ({ kind: "media", id })),
+	);
+}
+
 type Owner = { entry_id: string; template_id: null } | { entry_id: null; template_id: string };
 
 /**

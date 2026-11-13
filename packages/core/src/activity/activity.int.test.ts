@@ -1677,6 +1677,8 @@ describe("the log", () => {
 				"monti_activity_line",
 				"monti_activity_proposal",
 				"monti_activity_undo_until",
+				// The search's (`words ilike`): a trigram index, so a long log is not read whole.
+				"monti_activity_words_trgm",
 				"monti_delivery_activity",
 				"monti_delivery_open",
 			]),

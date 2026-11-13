@@ -20,6 +20,7 @@ import {
 	SUB_ALIGN_OFFSET,
 	SUB_SIDE_OFFSET,
 } from "./menu-parts";
+import { menuSurface } from "./menu-surface";
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
 	return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -63,6 +64,7 @@ function DropdownMenuContent({
 				anchor={anchor}
 			>
 				<MenuPrimitive.Popup
+					render={menuSurface}
 					data-slot="dropdown-menu-content"
 					className={cn(
 						MENU_CARD,

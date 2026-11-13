@@ -1,5 +1,5 @@
 import { Inline, Stack, Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AssistantPanel } from "./assistant/assistant-panel";
 import { ReviewScreen } from "./assistant/review-screen";
 import { AssistantProvider, useAssistant } from "./assistant/use-assistant";
@@ -115,8 +115,13 @@ function BesideAssistant({ panel, children }: { panel: ReactNode; children: Reac
 	);
 }
 
+/** How long after an answer the frame's counts are read again while a delivery is on its way (the log's own pace, `WATCH_MS`). */
+const COUNT_AGAIN_MS = 3000;
+/** How many times in a row: a minute, more than a receiver is waited for and tried again at once. */
+const COUNT_LOOKS = 20;
+
 function Screens({ route, go }: { route: Route; go: (route: Route, options?: { replace?: boolean }) => void }) {
-	const { screen, templates } = useAdmin();
+	const { screen, templates, onWrite } = useAdmin();
 	const assistant = useAssistant();
 	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
 	const [review, setReview] = useState(0);
@@ -131,6 +136,32 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 		window.addEventListener("focus", again);
 		return () => window.removeEventListener("focus", again);
 	}, [recount]);
+	// A delivery is sent after its write has answered, and fails then: while any is on its way the counts are read again, so the sidebar's
+	// failed number comes without another write, on whatever screen is open (doc 13). Not for ever: a host that never sends what it queued
+	// (nothing keeps it alive after the answer) would be asked every few seconds for as long as the admin is open.
+	const onTheWay = counts.data?.deliveriesOnTheWay ?? 0;
+	const looks = useRef(0);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: each answer of the counts (`counts.data`) starts the next look.
+	useEffect(() => {
+		if (onTheWay === 0) {
+			looks.current = 0;
+			return;
+		}
+		if (looks.current >= COUNT_LOOKS) return;
+		const timer = setTimeout(() => {
+			looks.current += 1;
+			void recount();
+		}, COUNT_AGAIN_MS);
+		return () => clearTimeout(timer);
+	}, [onTheWay, counts.data, recount]);
+	// A write queues new deliveries: the looks start over with it.
+	useEffect(
+		() =>
+			onWrite(() => {
+				looks.current = 0;
+			}),
+		[onWrite],
+	);
 	const first = Object.keys(counts.data?.collections ?? {})[0];
 	// A first visit with no last screen opens the first collection.
 	useEffect(() => {

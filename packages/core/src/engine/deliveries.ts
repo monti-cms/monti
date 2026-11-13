@@ -491,13 +491,15 @@ export async function sendDueDeliveries(
 }
 
 /**
- * How many deliveries are failed, since when (the oldest of them), and how many a person's "send again" is sending at this moment: one reading, so
- * the number and the day never disagree. The sidebar's row, and the banner over the log, show this number (doc 13).
+ * How many deliveries are failed, since when, and how many a person's "send again" is sending at this moment: one reading, so the number and
+ * the day never disagree. The sidebar's row, and the banner over the log, show this number (doc 13). "Since" is the day the oldest failed
+ * delivery's write was made, not the day its sending failed (decided while building, 2026-11-13): it says from which change on the receiver
+ * is behind, and it stays where it is however often the delivery is tried again.
  */
 export async function deliveryCounts(
 	db: Db,
 	now: Date,
-): Promise<{ failed: number; since: Date | null; sending: number }> {
+): Promise<{ failed: number; since: Date | null; sending: number; onTheWay: number }> {
 	const row = await db
 		.selectFrom("monti_delivery")
 		// Only what is still open, which the table's partial index holds: the deliveries that arrived, most of the table, are not read.
@@ -509,9 +511,19 @@ export async function deliveryCounts(
 				.count<string>("id")
 				.filterWhere((inner) => inner.and([inner("held_by", "is not", null), inner("sending_until", ">=", now)]))
 				.as("sending"),
+			// Not tried yet: queued by a write and sent once it has answered. Whoever shows the failed number looks again while any is.
+			eb.fn
+				.count<string>("id")
+				.filterWhere("state", "=", "pending")
+				.as("onTheWay"),
 		])
 		.executeTakeFirstOrThrow();
-	return { failed: Number(row.failed), since: row.since ?? null, sending: Number(row.sending) };
+	return {
+		failed: Number(row.failed),
+		since: row.since ?? null,
+		sending: Number(row.sending),
+		onTheWay: Number(row.onTheWay),
+	};
 }
 
 /**

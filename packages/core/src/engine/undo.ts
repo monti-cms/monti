@@ -3,9 +3,8 @@ import type { Database } from "../db/schema";
 import { followerPaths, publicPaths } from "../entries/paths";
 import { CheckError, ForbiddenError } from "../errors";
 import { sameJson } from "../json";
-import { leaveNoFileInAGoneFolder, rewriteUses } from "../media/uses";
+import { leaveNoFileInAGoneFolder, lockWithFiles, rewriteUses } from "../media/uses";
 import { type EmittedEvent, placeEvents, type RecordRef, recordKey } from "../operation";
-import { lockRecords } from "../records";
 import { keepSeenTracked } from "../schema/apply";
 import { type Engine, loadRecords } from "./execute";
 
@@ -124,7 +123,9 @@ export async function planUndo(
 	];
 	// The locks every write takes on the records it touches (`runWrite`): a save that is under way finishes first and is seen here, and one that
 	// starts now waits until the undo is done. Without them an undo could read a version, lose the race, and put its snapshot over the save.
-	if (options.lock) await lockRecords(db, refs);
+	// With the files the records it puts back name, as they were: the undo comes for those once they are back (`rewriteUses`).
+	if (options.lock)
+		await lockWithFiles(db, engine.site.schema(), refs, { willHold: snapshots.map((snapshot) => snapshot.before) });
 	const current = await loadRecords(engine, db, refs);
 	// What earlier undos put back: the version each left a record at stands for the version whose content it brought back.
 	const putBack =
