@@ -23,6 +23,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
+import { ChevronLeft } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
@@ -308,8 +309,10 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 				title={t("review.title")}
 				meta={clock(view.createdAt)}
 				trail={
+					// The way back as the editor's and the templates' are: a quiet text button with the chevron icon before its name.
 					<TextButton variant="quiet" onClick={back}>
-						‹ {t("review.back")}
+						<ChevronLeft aria-hidden />
+						{t("review.back")}
 					</TextButton>
 				}
 			>
@@ -317,7 +320,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 					view={view}
 					applying={proposal.applying}
 					progress={proposal.progress}
-					busy={proposal.busy}
+					pending={proposal.pending}
 					// Discarded, there is nothing left to look through: back. Refused, the page stays with what the refusal left.
 					onDiscard={() => void proposal.discard().then((discarded) => discarded && back())}
 					onApply={() => void proposal.apply()}
@@ -575,6 +578,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																<TextButton
 																	ref={toCheck}
 																	variant="underline"
+																	loading={proposal.remaking === item.id}
 																	onClick={() => void proposal.remake(item.id)}
 																>
 																	{t(proposal.remaking === item.id ? "card.remaking" : "card.remake")}

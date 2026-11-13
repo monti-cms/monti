@@ -35,6 +35,8 @@ export type Turn = {
 	at: string;
 	/** It never reached the server: there is no run to go on with, only the same words to send again. */
 	unsent?: boolean;
+	/** Sent with a screen's default request (a `Suggest`): its bubble keeps the blue spark (assistant.md, conversation). */
+	suggested?: boolean;
 	/** Why it never began, in the server's own words (another request is still going, the model is gone, no answer came). */
 	refusal?: Message | null;
 };
@@ -118,9 +120,16 @@ const keep = (change: Partial<Kept>) => {
 	}
 };
 
+/**
+ * The words sent with a default request while this page is open: a run read back from the server is one of them when its words are. The server
+ * keeps no mark of how the words were sent, and a default request's words are the screen's own.
+ */
+const SUGGESTED = new Set<string>();
+
 const turnOf = (run: TranscriptRun, chips: (context: ScreenContext | null) => string[]): Turn => ({
 	id: run.id,
 	request: run.request,
+	suggested: SUGGESTED.has(run.request) || undefined,
 	chips: chips((run.context as ScreenContext | null) ?? null),
 	parts: run.parts.map((part) =>
 		part.type === "tool" ? { ...part, state: part.failed ? ("failed" as const) : ("done" as const) } : part,
@@ -159,7 +168,8 @@ type AssistantValue = {
 	queueTake: (id: string) => void;
 	queueCancel: (id: string) => void;
 	queueSendNow: (id: string) => void;
-	ask: (request: string) => void;
+	/** `suggested`: the words are a screen's default request, pressed. */
+	ask: (request: string, suggested?: boolean) => void;
 	stop: () => void;
 	/** Goes on with the last run where it stopped; `more` past a turn or token limit. */
 	goOn: (more?: boolean) => void;
@@ -941,9 +951,12 @@ export function AssistantProvider({
 	);
 
 	const ask = useCallback(
-		(request: string) => {
+		(request: string, suggested?: boolean) => {
 			const words = request.trim();
 			if (words === "") return;
+			if (suggested) SUGGESTED.add(words);
+			// The same rule as a turn read back: the words of a default request pressed while this page is open.
+			const marked = SUGGESTED.has(words);
 			const here = shown.current;
 			const { model: chosen, thinking: think, screenContext: on, removed: off } = sending.current;
 			const screenGoes = contextWithout(on, off);
@@ -958,6 +971,7 @@ export function AssistantProvider({
 					id,
 					request: words,
 					chips: chipLabels(context),
+					suggested: marked || undefined,
 					parts: [],
 					proposalId: null,
 					status: "running",
@@ -1032,7 +1046,7 @@ export function AssistantProvider({
 		if (!last) return;
 		// Words that never reached the server are sent as the same turn, not as a second one under it.
 		if (last.unsent) setTurns((all) => all.slice(0, -1));
-		ask(last.request);
+		ask(last.request, last.suggested);
 	}, [ask]);
 
 	/**

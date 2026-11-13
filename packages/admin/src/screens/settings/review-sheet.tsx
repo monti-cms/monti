@@ -209,7 +209,9 @@ function Body({
 				>
 					<Inline gap={12} align="baseline">
 						<ChangeNote danger>{t(`settings.problem.${problem.code}`)}</ChangeNote>
-						<TextButton onClick={onOpenLanguages}>{t("settings.review.open")}</TextButton>
+						<TextButton variant="underline" onClick={onOpenLanguages}>
+							{t("settings.review.open")}
+						</TextButton>
 					</Inline>
 				</ChangeGroup>
 			);
@@ -229,9 +231,11 @@ function Body({
 				<Inline gap={12} align="baseline">
 					<ChangeNote danger>{t(`settings.problem.${problem.code}`)}</ChangeNote>
 					{key ? (
-						<TextButton onClick={() => onOpenField(problem.collection, key)}>{t("settings.review.open")}</TextButton>
+						<TextButton variant="underline" onClick={() => onOpenField(problem.collection, key)}>
+							{t("settings.review.open")}
+						</TextButton>
 					) : address ? (
-						<TextButton onClick={() => onOpenAddress(problem.collection, address)}>
+						<TextButton variant="underline" onClick={() => onOpenAddress(problem.collection, address)}>
 							{t("settings.review.open")}
 						</TextButton>
 					) : null}

@@ -1,6 +1,9 @@
 import type * as React from "react";
 import { cn } from "./cn";
+import { IconButtonContext } from "./icon-button";
 import { HELD, SLOT } from "./sortable";
+
+const SMALL = { size: "sm" } as const;
 
 const COLUMNS = "grid grid-cols-[14px_minmax(0,1fr)_minmax(0,1fr)_32px] items-center gap-monti-8";
 
@@ -61,7 +64,10 @@ function OptionRow({
 			<span className="flex text-monti-faint">{handle}</span>
 			<span className="min-w-0 font-mono">{value}</span>
 			<span className="min-w-0">{label}</span>
-			<span className="flex justify-end">{action}</span>
+			{/* The × is one step under the 32px row (28px), as a button inside a field is (field.md): it does not fill the row. */}
+			<span className="flex justify-end">
+				<IconButtonContext.Provider value={SMALL}>{action}</IconButtonContext.Provider>
+			</span>
 		</Root>
 	);
 }

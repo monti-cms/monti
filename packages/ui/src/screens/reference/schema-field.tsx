@@ -59,7 +59,7 @@ export function SchemaFieldScreen() {
 					</SheetBody>
 					<SheetFooter>
 						<Inline gap={12} grow minWidth={0}>
-							<Button variant="ghost-danger">필드 삭제</Button>
+							<Button variant="ghost-danger">지우기</Button>
 						</Inline>
 						<Button variant="ghost">취소</Button>
 						<Button>저장</Button>

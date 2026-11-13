@@ -139,7 +139,8 @@ export function useProposal(id: string) {
 		discard,
 		revert,
 		include,
-		busy: discarding.pending || reverting.pending,
+		/** The request that runs: its button is loading, and no button of the row starts another meanwhile. */
+		pending: discarding.pending ? ("discard" as const) : reverting.pending ? ("revert" as const) : null,
 	};
 }
 

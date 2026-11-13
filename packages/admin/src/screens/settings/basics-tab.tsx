@@ -13,7 +13,6 @@ import {
 	Input,
 	Label,
 	LockMark,
-	Option,
 	ReadValue,
 	Stack,
 	Switch,
@@ -120,6 +119,10 @@ export function BasicsTab({
 	);
 	const previewUndo = useFocusHandOff(() => document.getElementById("collection-preview-path"));
 	const labelUndo = useFocusHandOff(() => document.getElementById("collection-label"));
+	const foldersUndo = useFocusHandOff(() => document.getElementById("collection-folders"));
+	// Every value of the tab marks its change the same way: the dot by its name and the undo at the row's end (settings.md, the site name).
+	const labelChanged = marked(label);
+	const foldersChanged = marked(folders);
 	return (
 		<>
 			<Stack gap={24} paddingY={24}>
@@ -133,10 +136,11 @@ export function BasicsTab({
 					</ReadValue>
 				</Grid>
 				<FormField>
-					{/* A name the assistant proposed is blue, with its discard on the label row and the saved name struck under it (doc 05). */}
+					{/* A changed name has the dot and its undo on the label row; a proposed one is blue, with its discard there and the saved
+					name struck under it (doc 05). */}
 					<FormFieldLabel
 						htmlFor="collection-label"
-						changed={label.proposal && label.changed ? { ...label.changed, undoRef: labelUndo } : undefined}
+						changed={labelChanged ? { ...labelChanged, undoRef: labelUndo } : undefined}
 					>
 						{t("settings.basics.label")}
 					</FormFieldLabel>
@@ -265,35 +269,29 @@ export function BasicsTab({
 						</FormFieldError>
 					</FormField>
 				)}
-				{/* At the height of the inputs above it (36px): one group, one control height. */}
-				{folders.proposal && folders.changed ? (
-					// A proposed switch looks the same everywhere (the entry's, a plugin's): the proposal's dot by its name and
-					// "discard" before the switch, which stands as proposed.
-					<Inline minHeight="control-lg" align="center" justify="between" gap={12}>
-						<Inline gap={8} align="center">
-							<Label htmlFor="collection-folders" size="body" tone="default">
-								{t("settings.basics.folders")}
-							</Label>
-							<ChangeDot tone="proposal" label={t("settings.proposed")} />
-						</Inline>
-						<Inline gap={12} align="center">
-							<TextButton variant="underline" quiet size="caption" onClick={folders.changed.onUndo}>
-								{folders.changed.undoLabel}
-							</TextButton>
-							<Switch
-								id="collection-folders"
-								checked={Boolean(folders.value)}
-								proposal
-								onCheckedChange={(checked) => draft.set(foldersPlace, checked)}
-							/>
-						</Inline>
+				{/* At the height of the inputs above it (36px): one group, one control height. A changed or proposed switch has the dot by its
+				name and the undo (or "discard") before the switch, which stands as changed. */}
+				<Inline minHeight="control-lg" align="center" justify="between" gap={12}>
+					<Inline gap={8} align="center">
+						<Label htmlFor="collection-folders" size="body" tone="default">
+							{t("settings.basics.folders")}
+						</Label>
+						{foldersChanged ? <ChangeDot tone={foldersChanged.tone} label={foldersChanged.label} /> : null}
 					</Inline>
-				) : (
-					<Option spread height="lg">
-						{t("settings.basics.folders")}
-						<Switch checked={Boolean(folders.value)} onCheckedChange={(checked) => draft.set(foldersPlace, checked)} />
-					</Option>
-				)}
+					<Inline gap={12} align="center">
+						{foldersChanged ? (
+							<TextButton variant="underline" quiet size="caption" ref={foldersUndo} onClick={foldersChanged.onUndo}>
+								{foldersChanged.undoLabel}
+							</TextButton>
+						) : null}
+						<Switch
+							id="collection-folders"
+							checked={Boolean(folders.value)}
+							proposal={folders.proposal}
+							onCheckedChange={(checked) => draft.set(foldersPlace, checked)}
+						/>
+					</Inline>
+				</Inline>
 			</Stack>
 			{locked ? null : (
 				<DangerBlock title={t("settings.basics.delete")}>
