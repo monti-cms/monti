@@ -232,7 +232,8 @@ function KeyWindow({
 	fixedService?: boolean;
 	address?: string;
 	addressError?: string;
-	name: string;
+	/** Left out for a plugin's slot: its row is called by its plugin, so the window asks for no name. */
+	name?: string;
 	nameNote?: string;
 	nameError?: string;
 	keyField: ReactNode;
@@ -278,14 +279,16 @@ function KeyWindow({
 							{addressError && <FormFieldError>{addressError}</FormFieldError>}
 						</FormField>
 					)}
-					<FormField>
-						<FormFieldLabel htmlFor="key-name" required={keyOptional}>
-							이름
-						</FormFieldLabel>
-						<Input id="key-name" required defaultValue={name} aria-invalid={nameError !== undefined} />
-						{nameNote && <FormFieldDescription>{nameNote}</FormFieldDescription>}
-						{nameError && <FormFieldError>{nameError}</FormFieldError>}
-					</FormField>
+					{name !== undefined && (
+						<FormField>
+							<FormFieldLabel htmlFor="key-name" required={keyOptional}>
+								이름
+							</FormFieldLabel>
+							<Input id="key-name" required defaultValue={name} aria-invalid={nameError !== undefined} />
+							{nameNote && <FormFieldDescription>{nameNote}</FormFieldDescription>}
+							{nameError && <FormFieldError>{nameError}</FormFieldError>}
+						</FormField>
+					)}
 					<FormField>
 						<FormFieldLabel htmlFor="key-secret">키</FormFieldLabel>
 						{keyField}
@@ -445,7 +448,6 @@ function Floating({ stage }: { stage: ApiKeysStage }) {
 					of="바른 맞춤법"
 					service="bareun"
 					fixedService
-					name="바른 맞춤법"
 					keyField={secret({ placeholder: "", autoFocus: true })}
 				/>
 			);

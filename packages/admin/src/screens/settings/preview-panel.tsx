@@ -51,8 +51,12 @@ export function PreviewPanel({
 		keys,
 		t("settings.fields.defaultTab"),
 	);
+	// The plugins' tabs come after the collection's own, as the editor has them (doc 14): their fields, drawn empty like the rest.
+	const pluginTabs = model.data?.pluginTabs?.[c] ?? [];
+	const tabs = [...layout.map((each) => each.tab), ...pluginTabs.map((each) => each.tab)];
 	const [tab, setTab] = useState("0");
-	const picked = layout[Number(tab)] ?? layout[0];
+	const picked = layout[Number(tab)] ?? (Number(tab) < tabs.length ? undefined : layout[0]);
+	const pluginTab = pluginTabs[Number(tab) - layout.length];
 
 	// The editor's rule for required fields (components/field.md): a red * after the label, but only in a panel that also has fields left empty.
 	const defs = keys
@@ -124,8 +128,34 @@ export function PreviewPanel({
 			onClose={onClose}
 			value={tab}
 			onValueChange={setTab}
-			tabs={layout.map((each, index) => ({ value: String(index), label: each.tab }))}
+			tabs={tabs.map((each, index) => ({ value: String(index), label: each }))}
 		>
+			{pluginTab ? (
+				<PropertyGroup>
+					{pluginTab.fields.map((field) => {
+						// A view holds no value: it is the plugin's to draw, in the editor.
+						if (field.kind === "view") return null;
+						const id = `preview-${field.name}`;
+						const empty = t("settings.preview.empty");
+						return (
+							<FormField key={field.name}>
+								<FormFieldLabel htmlFor={id}>{field.label ?? field.name}</FormFieldLabel>
+								{field.kind === "media" ? (
+									<MediaInput id={id} size="md" placeholder={empty} />
+								) : field.kind === "select" ? (
+									<PickOne id={id} size="md" items={[]} value={null} onChange={() => {}} placeholder={empty} />
+								) : field.kind === "relation" ? (
+									<Combobox items={[]}>
+										<ComboboxInput id={id} size="md" placeholder={t("settings.preview.none")} />
+									</Combobox>
+								) : (
+									<Input id={id} size="md" placeholder={empty} />
+								)}
+							</FormField>
+						);
+					})}
+				</PropertyGroup>
+			) : null}
 			{runs(picked?.fields ?? []).map((run) => (
 				<PropertyGroup key={run.key} title={run.title}>
 					{run.fields.map(row)}

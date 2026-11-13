@@ -33,7 +33,7 @@ const entry = async (loaded: Loaded) =>
 	).entry;
 const save = async () => {
 	await userEvent.click(button("저장"));
-	await expect.element(page.getByText("저장됨", { exact: true })).toBeVisible();
+	await expect.element(page.getByText("저장됨", { exact: true }).first()).toBeVisible();
 };
 
 describe("the SEO tab in the editor (T84, T75; flow 1·08)", () => {
@@ -61,7 +61,7 @@ describe("the SEO tab in the editor (T84, T75; flow 1·08)", () => {
 		await expect.element(search().getByText("example.dev › posts › first-post")).toBeVisible();
 		await expect.element(share().getByText("첫 번째 글")).toBeVisible();
 		// The title is the editor's own heading: typed there, the field's hint and the preview follow at once.
-		await userEvent.fill(page.getByRole("textbox", { name: "제목" }), "다시 쓴 제목");
+		await userEvent.fill(page.getByRole("textbox", { name: "제목", exact: true }), "다시 쓴 제목");
 		await expect.element(field("SEO 제목")).toHaveAttribute("placeholder", "제목과 같음 · 7/60");
 		await expect.element(search().getByText("다시 쓴 제목")).toBeVisible();
 	});
