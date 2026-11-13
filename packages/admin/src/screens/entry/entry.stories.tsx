@@ -761,3 +761,12 @@ export const StaleProposal: Story = {
 		await all.findByText("그때", {}, wait);
 	},
 };
+
+/** Two requests' stale proposals of one paragraph: their marks hang side by side at the paragraph, 4px apart, each with its own card. */
+export const StaleProposalsSideBySide: Story = {
+	loaders: site("proposedStaleTwice"),
+	play: async ({ canvasElement }) => {
+		const { all } = await opened(canvasElement);
+		await waitFor(() => expect(all.getAllByRole("button", { name: "그 사이 고쳐짐" })).toHaveLength(2), wait);
+	},
+};

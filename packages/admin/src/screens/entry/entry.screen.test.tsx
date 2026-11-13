@@ -1073,9 +1073,7 @@ describe("the entry editor: a body proposal the text moved away from (T87)", () 
 	});
 
 	it("10-1 two stale proposals of one paragraph hang side by side, not one over the other; each opens its own card", async () => {
-		const made = on("proposedStaleTwice");
-		await made.run();
-		await opened();
+		await from(entry.StaleProposalsSideBySide).run();
 		await expect.poll(() => mark().elements().length).toBe(2);
 		await expect
 			.poll(() => {

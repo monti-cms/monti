@@ -68,5 +68,9 @@ describe("Combobox", () => {
 		expect(color(remove)).toBe(color(chip));
 		expect(color(chip)).not.toBe(color(plain.querySelector("[data-slot=combobox-chip]")));
 		expect(color(remove)).not.toBe(color(plain.querySelector("[data-slot=combobox-chip-remove]")));
+		// Under the pointer too: a plain chip's × turns ink there, a proposed one's stays blue.
+		const blue = color(chip);
+		await userEvent.hover(remove as Element);
+		expect(color(remove)).toBe(blue);
 	});
 });
