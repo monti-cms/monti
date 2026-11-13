@@ -955,6 +955,8 @@ export function AssistantProvider({
 			const words = request.trim();
 			if (words === "") return;
 			if (suggested) SUGGESTED.add(words);
+			// The same rule as a turn read back: the words of a default request pressed while this page is open.
+			const marked = SUGGESTED.has(words);
 			const here = shown.current;
 			const { model: chosen, thinking: think, screenContext: on, removed: off } = sending.current;
 			const screenGoes = contextWithout(on, off);
@@ -969,7 +971,7 @@ export function AssistantProvider({
 					id,
 					request: words,
 					chips: chipLabels(context),
-					suggested: suggested || undefined,
+					suggested: marked || undefined,
 					parts: [],
 					proposalId: null,
 					status: "running",
@@ -1044,7 +1046,7 @@ export function AssistantProvider({
 		if (!last) return;
 		// Words that never reached the server are sent as the same turn, not as a second one under it.
 		if (last.unsent) setTurns((all) => all.slice(0, -1));
-		ask(last.request);
+		ask(last.request, last.suggested);
 	}, [ask]);
 
 	/**

@@ -2063,7 +2063,12 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 		await userEvent.click(button("요약이 비어 있는 글 찾아 줘"));
 		await expect.element(panel().getByText("글 목록 읽음 · 3편")).toBeVisible();
 		const bubbles = () => panel().element().querySelectorAll("[data-slot=chat-message][data-author=user]");
-		expect(bubbles()[0]?.querySelector("svg")).not.toBeNull();
+		// On the words' line, under the line of what went along ("이 목록"), not on a line of its own.
+		const spark = bubbles()[0]?.querySelector("svg")?.getBoundingClientRect();
+		const words = [...(bubbles()[0]?.querySelectorAll("span") ?? [])]
+			.find((span) => span.textContent === "요약이 비어 있는 글 찾아 줘")
+			?.getBoundingClientRect();
+		expect(spark && words && Math.abs(spark.top + spark.height / 2 - (words.top + words.height / 2))).toBeLessThan(4);
 		await say("고마워");
 		await expect.element(panel().getByText("네.")).toBeVisible();
 		expect(bubbles()[1]?.querySelector("svg")).toBeNull();
