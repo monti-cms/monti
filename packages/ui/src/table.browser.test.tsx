@@ -498,5 +498,13 @@ describe("Table rows with a link", () => {
 		await expect.poll(rights).toEqual(moved);
 		await dropDrag();
 		await expect.poll(rights).toEqual(moved);
+		// The keys start from the same width: Home takes the title to its narrowest, where the kind is at its widest, and End back to where
+		// the kind is at its narrowest.
+		edge.element().focus();
+		const kind = () => Math.round(document.querySelectorAll("th")[1]?.getBoundingClientRect().width ?? 0);
+		await userEvent.keyboard("{End}");
+		await expect.poll(kind).toBe(60);
+		await userEvent.keyboard("{ArrowLeft}");
+		await expect.poll(kind).toBe(76);
 	});
 });

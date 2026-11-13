@@ -205,7 +205,8 @@ function ListHead({
 		if (commit) edgeStart.current = null;
 		setResizing(commit ? null : left.id);
 		const range = edgeRange(left, right, a, b);
-		const next = Math.min(range.max, Math.max(range.min, Math.round(width)));
+		// Kept in the range here, whatever the handle asks for (Home and End ask for as far as it goes).
+		const next = Math.min(range.max, Math.max(range.min, Number.isFinite(width) ? Math.round(width) : width));
 		const changes: Record<string, number | null> = {};
 		const set = (column: ListHeadColumn, value: number) => {
 			// The title takes what is left; a kind's own width is kept as none.

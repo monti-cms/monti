@@ -97,6 +97,7 @@ function ResizeHandle({
 	/**
 	 * The width as it is laid out at this moment, for a pane whose `value` is a measurement and can be behind (a column that takes the room
 	 * left). A drag and a key start from it: started from a `value` not measured yet, a drag computes from nothing and moves nothing.
+	 * With it, Home and End report -Infinity and Infinity, and `onChange` keeps the width in its limits.
 	 */
 	measure?: () => number;
 	min: number;
@@ -170,10 +171,16 @@ function ResizeHandle({
 						? now + step
 						: event.key === narrow
 							? now - step
-							: event.key === "Home"
-								? min
+							: // With `measure`, `min` and `max` were worked out from a `value` that can be behind: the limits are the owner's
+								// to apply to "as far as it goes".
+								event.key === "Home"
+								? measure
+									? Number.NEGATIVE_INFINITY
+									: min
 								: event.key === "End"
-									? max
+									? measure
+										? Number.POSITIVE_INFINITY
+										: max
 									: null;
 				if (next === null) return;
 				event.preventDefault();
