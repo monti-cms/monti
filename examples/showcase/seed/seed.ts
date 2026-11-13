@@ -126,9 +126,6 @@ await write("collections.updateAdminValues", {
 			{ tab: "관계", fields: ["authors", "related"] },
 			{ tab: "형식", fields: ["format", "pinned"] },
 		],
-		// The list's columns: the relations to people and articles are a column to add ("Add column"); all of them at once leave the
-		// title no room.
-		list: { hidden: ["authors", "related", "linkTarget"] },
 	},
 });
 await write("collections.updateAdminValues", {
