@@ -5,7 +5,8 @@ import path from "node:path";
 import { createJiti } from "jiti";
 
 const root = process.cwd();
-const jiti = createJiti(import.meta.url);
+// The site's blocks are TSX (doc 18: `monti add` copies them in, and the config imports them): React's automatic runtime, as Next uses.
+const jiti = createJiti(import.meta.url, { jsx: { runtime: "automatic" } });
 const cli = await jiti.import("@monti-cms/core/cli");
 
 // `--env-file <path>` (or `--env-file=<path>`) names one more env file, read before the site's own.
@@ -36,6 +37,7 @@ if (command === "init")
 			loadConfig: () => jiti.import(configFile ?? path.join(root, "monti.config.ts"), { default: true }),
 		}),
 	);
+if (command === "add") process.exit(await cli.add({ cwd: root, argv: rest }));
 if (command === "doctor")
 	process.exit(await cli.doctor({ cwd: root, argv: rest, env: process.env, envFrom, configFile, loadConfig }));
 if (!configFile) {

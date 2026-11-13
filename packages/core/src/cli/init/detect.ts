@@ -33,7 +33,7 @@ export type Site = {
 };
 
 /** Each package manager's lockfile. A workspace keeps one at its root, above the site's folder. */
-const LOCKFILES = {
+export const LOCKFILES = {
 	"package-lock.json": "npm",
 	"npm-shrinkwrap.json": "npm",
 	"pnpm-lock.yaml": "pnpm",
