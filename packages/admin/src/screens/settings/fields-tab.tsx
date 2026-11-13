@@ -1,4 +1,4 @@
-import type { FieldDefinition, SchemaProblem } from "@monti-cms/core";
+import { type FieldDefinition, type SchemaProblem, sameJson } from "@monti-cms/core";
 import {
 	Button,
 	ContextMenu,
@@ -27,27 +27,43 @@ import {
 	useSortableItem,
 } from "@monti-cms/ui";
 import { Edit, TrashCan } from "@monti-cms/ui/icons";
-import { type ComponentProps, type ReactNode, useState } from "react";
+import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import {
+	bandId,
+	entriesOf,
 	entryIds,
 	fieldId,
+	isBand,
 	isField,
 	isGroup,
+	isOptionList,
 	isTab,
-	itemsOf,
-	listOf,
+	type Lists,
+	listIn,
+	listsOf,
+	moveAcross,
 	moveTab,
 	moveToTab,
-	relocate,
+	moveWithin,
+	optionList,
+	optionOf,
 	removeTab,
-	reorder,
 	TABS,
 	TOP,
 	tabId,
 	tabIndex,
 } from "./layout-moves";
-import { at, type DraftField, FIELD_VALUES, type Layout, savedField, shownLayout } from "./schema-draft";
+import {
+	at,
+	type DraftField,
+	FIELD_VALUES,
+	isUnder,
+	type Layout,
+	savedField,
+	savedOption,
+	shownLayout,
+} from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 
 /** The kind at the end of a field's line, as the schema says it: "text · 120", "[] → tag". */
@@ -98,6 +114,18 @@ function SortableBranch({
 		</FieldGroup>
 	);
 }
+
+/**
+ * An option's band (doc 19): the first thing of the option's list. It is not dragged (the field's sheet orders the options), and a field
+ * dropped on it becomes the option's first.
+ */
+function OptionBand({ id, ...row }: RowProps & { id: string }) {
+	const item = useSortableItem(id);
+	return <FieldRow ref={item.ref} group grip={false} {...row} />;
+}
+
+/** How deep a line is drawn: the outline has six steps, and anything deeper stands at the last. */
+const stepIn = (depth: number) => Math.min(depth, 5) as 0 | 1 | 2 | 3 | 4 | 5;
 
 /** A group with its fields, dragged by its band's grip as one block; its fields are a list of their own. */
 function SortableGroup({
@@ -214,10 +242,10 @@ export function FieldsTab({
 	// A layout the assistant proposed is the one shown until it is taken or discarded.
 	const layout = shownLayout(model.shown(layoutPath) as Layout | undefined, keys, t("settings.fields.defaultTab"));
 	const [held, setHeld] = useState<SortableRef | null>(null);
-	// While a field is held, the layout as it is shown: it may already sit in another group on the way.
-	const [preview, setPreview] = useState<Layout | null>(null);
+	// While a field is held, the lists as they are shown: it may already sit in another group or option on the way.
+	const [preview, setPreview] = useState<Lists | null>(null);
 	const [renaming, setRenaming] = useState<number | null>(null);
-	const shown = preview ?? layout;
+	const shown = layout;
 	// The plugins' tabs stand after the collection's own (doc 14): theirs to fill, so nothing in one is moved, opened or added to.
 	const pluginTabs = data?.pluginTabs?.[c] ?? [];
 	// Which of them is open is this tab's own to know, apart from the index of the collection's tabs: adding, removing or dragging one of
@@ -229,6 +257,19 @@ export function FieldsTab({
 	const current = Math.min(tab, shown.length - 1);
 	const entries = shown[current]?.fields ?? [];
 	const ids = entryIds(entries);
+	const fieldAt = (key: string) => model.shown(at.field(c, key)) as DraftField | null | undefined;
+	const optionsOf = (key: string) => {
+		const field = fieldAt(key);
+		return field?.def.kind === "conditional" ? field.def.options.filter((option) => option !== "") : [];
+	};
+	// The tab as lists: its top level, its groups, and every option's fields of every conditional field (doc 19).
+	const saved: Lists = listsOf(entries);
+	for (const key of model.fields(c))
+		for (const option of optionsOf(key))
+			saved[optionList(key, option)] = model.optionFields(c, key, option).map(fieldId);
+	const lists = preview ?? saved;
+	/** How deep each line stands, as it was last drawn: the line in hand floats at its own depth. */
+	const depths = useRef(new Map<string, number>());
 
 	const setLayout = (next: Layout) => {
 		if (JSON.stringify(next) !== JSON.stringify(layout)) draft.set(layoutPath, next);
@@ -236,55 +277,123 @@ export function FieldsTab({
 	const withTab = (base: Layout, fields: Layout[number]["fields"]) =>
 		base.map((each, index) => (index === current ? { ...each, fields } : each));
 
+	/**
+	 * Keeps what a drag left: the tab's layout, whose option each moved field is (a field put into an option is that option's, one taken out
+	 * stands on its own: structure, so not on the live site), and the order of each option's fields (an admin value of the conditional
+	 * field, like the layout). `toTab` is a field of an option dropped on another tab's header: it goes to that tab's end.
+	 */
+	const keep = (next: Lists, toTab?: { tab: number; key: string }) => {
+		// The orders of a conditional field's options are one value: every option this drag changed is written into it together.
+		const orders = new Map<string, Record<string, string[]>>();
+		for (const [list, items] of Object.entries(next)) {
+			if (!isOptionList(list)) continue;
+			const { host, option } = optionOf(list);
+			for (const id of items) {
+				if (listIn(saved, id) === list) continue;
+				const field = fieldAt(id.slice(2));
+				if (field)
+					draft.set(at.field(c, id.slice(2)), {
+						...field,
+						under: { field: host, option: savedOption(fieldAt(host), option) },
+					} satisfies DraftField);
+			}
+			if (!sameJson(items, saved[list] ?? [])) {
+				const place = at.fieldValue(c, host, "optionFields");
+				const order = orders.get(place) ?? ((model.shown(place) ?? {}) as Record<string, string[]>);
+				orders.set(place, { ...order, [option]: items.map((id) => id.slice(2)) });
+			}
+		}
+		for (const [place, order] of orders) draft.set(place, order);
+		// A field that left an option for the top level or a group stands on its own.
+		for (const [list, items] of Object.entries(saved)) {
+			if (!isOptionList(list)) continue;
+			for (const id of items) {
+				const now = listIn(next, id);
+				const field = fieldAt(id.slice(2));
+				if (!field || (now !== null && isOptionList(now))) continue;
+				const { under: _, ...alone } = field;
+				draft.set(at.field(c, id.slice(2)), alone satisfies DraftField);
+			}
+		}
+		const tabs = withTab(layout, entriesOf(next, entries));
+		setLayout(
+			toTab
+				? tabs.map((each, index) => (index === toTab.tab ? { ...each, fields: [...each.fields, toTab.key] } : each))
+				: tabs,
+		);
+	};
+
 	const nameOfField = (key: string) => {
 		const field = model.shown(at.field(c, key)) as DraftField | null | undefined;
 		return field?.name ?? key;
 	};
+	const optionLabel = (host: string, option: string) =>
+		((model.shown(at.fieldValue(c, host, "optionLabels")) ?? {}) as Record<string, string>)[option] || option;
 	const nameOf = (id: string) => {
 		if (isField(id)) return nameOfField(id.slice(2));
 		if (isTab(id)) return shown[tabIndex(id)]?.tab ?? "";
+		if (isBand(id)) {
+			const { host, option } = optionOf(`o:${id.slice(2)}`);
+			return optionLabel(host, option);
+		}
 		const entry = entries[ids.indexOf(id)];
 		return entry && typeof entry !== "string" ? entry.group : "";
 	};
 	const accepts = (active: SortableRef, target: SortableRef) => {
 		if (target.list === TABS) return active.list === TABS || target.id !== tabId(current);
 		if (active.list === TABS) return false;
-		return isGroup(active.id) ? target.list === TOP : true;
+		if (isGroup(active.id)) return target.list === TOP;
+		if (!isOptionList(target.list)) return !(locked && isOptionList(active.list));
+		// Into an option: a structure change (not on the live site, where only the order within an option moves), never for the title and
+		// the address (every entry has them), and never a conditional field into its own options.
+		const key = active.id.slice(2);
+		const { host } = optionOf(target.list);
+		if (locked && target.list !== active.list) return false;
+		if (key === "title" || key === "slug") return false;
+		return host !== key && !isUnder((path) => model.shown(path), c, host, key);
 	};
 	const onOver = ({ active, over, below }: SortableEvent) => {
 		if (!over || over.list === TABS || !isField(active.id)) return;
-		const next = relocate(entries, active.id, over.id, below);
-		if (next !== entries) setPreview(withTab(shown, next));
+		const next = moveAcross(lists, active.id, over.id, below);
+		if (next !== lists) setPreview(next);
 	};
 	const onDrop = ({ active, over, below }: SortableEvent) => {
-		const base = shown;
+		const base = lists;
 		setHeld(null);
 		setPreview(null);
 		if (!over) {
-			if (preview) setLayout(preview);
+			if (preview) keep(preview);
 			return;
 		}
 		if (active.list === TABS) {
 			const from = tabIndex(active.id);
 			const to = tabIndex(over.id);
 			if (from === to) return;
-			setLayout(moveTab(base, from, to));
-			onTab(moveTab([...base.keys()], from, to).indexOf(current));
+			setLayout(moveTab(layout, from, to));
+			onTab(moveTab([...layout.keys()], from, to).indexOf(current));
 			return;
 		}
 		if (over.list === TABS) {
-			setLayout(moveToTab(base, current, active.id, tabIndex(over.id)));
+			// Where it was before the drag began: on the way to the tabs it may have passed through other lists.
+			const from = listIn(saved, active.id);
+			// A field of an option leaves the option for the other tab; anything else moves as the layout has it.
+			if (from !== null && isOptionList(from))
+				keep(
+					{ ...saved, [from]: (saved[from] as string[]).filter((id) => id !== active.id) },
+					{ tab: tabIndex(over.id), key: active.id.slice(2) },
+				);
+			else setLayout(moveToTab(layout, current, active.id, tabIndex(over.id)));
 			return;
 		}
-		const moved = relocate(entries, active.id, over.id, below);
-		setLayout(withTab(base, moved !== entries ? moved : reorder(entries, active.id, over.id)));
+		const moved = moveAcross(base, active.id, over.id, below);
+		keep(moved !== base ? moved : moveWithin(base, active.id, over.id));
 	};
 
 	const problemsOf = (key: string): SchemaProblem[] =>
 		model.problems.filter((problem) => problem.collection === c && problem.field === model.fieldName(c, key));
 
 	/** What a field's line shows: its name, label, kind and what changed. */
-	const rowProps = (key: string, depth: 0 | 1 | 2 | 3) => {
+	const rowProps = (key: string, depth: number) => {
 		const path = at.field(c, key);
 		const saved = data ? savedField(data, c, key)?.def : undefined;
 		const cell = draft.cell(path);
@@ -316,7 +425,7 @@ export function FieldsTab({
 			label: (model.shown(at.fieldValue(c, key, "label")) as string | undefined) || undefined,
 			description: (model.shown(at.fieldValue(c, key, "description")) as string | undefined) || undefined,
 			kind: kindText(def),
-			depth,
+			depth: stepIn(depth),
 			changed: mine && Boolean(saved) && !removed,
 			changedLabel: t("settings.changed"),
 			removed,
@@ -326,59 +435,65 @@ export function FieldsTab({
 	/**
 	 * What hangs under a conditional field (doc 19): a band for each option, one step in, then that option's fields one step further. A band has
 	 * no grip (the field's sheet orders the options, and a band cannot leave its field), its value after its name, and the way to add a field
-	 * to it; an option with no fields keeps its band. The options' fields are not dragged (T186). `still` draws it for the block in hand.
+	 * to it; an option with no fields keeps its band. Each option's fields are a list: they are dragged within it, into another option, and
+	 * out to the fields that stand on their own, and one of them may be a conditional field with bands of its own. `still` draws it for the
+	 * block in hand: the same lines, none of them a place to drop on.
 	 */
-	const bands = (key: string, depth: 0 | 1, still = false) => {
-		const field = model.shown(at.field(c, key)) as DraftField | null | undefined;
+	const bands = (key: string, depth: number, still = false): ReactNode[] | null => {
+		const field = fieldAt(key);
 		if (field?.def.kind !== "conditional") return null;
-		const labels = (model.shown(at.fieldValue(c, key, "optionLabels")) ?? {}) as Record<string, string>;
-		return field.def.options
-			.filter((option) => option !== "")
-			.flatMap((option) => {
-				const inner = model.optionFields(c, key, option);
-				const label = labels[option];
-				const word = inner.length > 0 ? option : `${option} · ${t("settings.fields.noFields")}`;
+		return optionsOf(key).map((option) => {
+			const list = optionList(key, option);
+			const inner = (lists[list] ?? []).map((id) => id.slice(2));
+			const label = optionLabel(key, option);
+			const named = label !== option;
+			const band = {
+				depth: stepIn(depth + 1),
+				name: label,
+				note: named
+					? inner.length > 0
+						? option
+						: `${option} · ${t("settings.fields.noFields")}`
+					: inner.length > 0
+						? undefined
+						: t("settings.fields.noFields"),
+				kind:
+					locked || still ? undefined : (
+						<TextButton
+							variant="quiet"
+							size="note"
+							aria-label={t("settings.fields.addToOption", { option: label })}
+							onClick={() => onAddField({ field: key, option })}
+						>
+							{t("settings.fields.addOptionField")}
+						</TextButton>
+					),
+			};
+			if (still)
 				return [
-					<FieldRow
-						key={`band:${option}`}
-						group
-						grip={false}
-						depth={(depth + 1) as 1 | 2}
-						name={label || option}
-						note={label ? word : inner.length > 0 ? undefined : t("settings.fields.noFields")}
-						kind={
-							locked || still ? undefined : (
-								<TextButton
-									variant="quiet"
-									size="note"
-									aria-label={t("settings.fields.addToOption", { option: label || option })}
-									onClick={() => onAddField({ field: key, option })}
-								>
-									{t("settings.fields.addOptionField")}
-								</TextButton>
-							)
-						}
-					/>,
-					...inner.map((each) => {
-						const props = rowProps(each, (depth + 2) as 2 | 3);
-						if (!props) return null;
-						const { fieldName, removed, ...shownRow } = props;
-						return (
-							<FieldRow
-								key={each}
-								grip={false}
-								onOpen={removed || still ? undefined : () => onOpenField(each)}
-								openLabel={t("settings.fields.open", { name: fieldName })}
-								{...shownRow}
-							/>
-						);
-					}),
+					<FieldRow key={`band:${option}`} group grip={false} {...band} />,
+					...inner.map((each) => stillRow(each, depth + 2)),
 				];
-			});
+			return (
+				<SortableList key={list} id={list} items={[bandId(list), ...inner.map(fieldId)]}>
+					<OptionBand id={bandId(list)} {...band} />
+					{inner.map((each) => row(each, depth + 2))}
+				</SortableList>
+			);
+		});
 	};
-	const row = (key: string, depth: 0 | 1) => {
+	/** A field's line as it floats in the block in hand: with what hangs under it, and nothing to press or drop on. */
+	const stillRow = (key: string, depth: number): ReactNode => {
 		const props = rowProps(key, depth);
 		if (!props) return null;
+		const { fieldName: _, removed, ...shownRow } = props;
+		const under = removed ? null : bands(key, depth, true);
+		return [<FieldRow key={key} {...shownRow} />, ...(under ?? [])];
+	};
+	const row = (key: string, depth: number): ReactNode => {
+		const props = rowProps(key, depth);
+		if (!props) return null;
+		depths.current.set(key, depth);
 		const { fieldName, removed, ...shownRow } = props;
 		const under = removed ? null : bands(key, depth);
 		if (under)
@@ -411,18 +526,14 @@ export function FieldsTab({
 			const index = tabIndex(active.id);
 			return <FolderTabLifted count={String(count(index))}>{shown[index]?.tab}</FolderTabLifted>;
 		}
-		const still = (key: string, depth: 0 | 1) => {
+		if (isField(active.id)) {
+			const key = active.id.slice(2);
+			const depth = depths.current.get(key) ?? 0;
 			const props = rowProps(key, depth);
 			if (!props) return null;
 			const { fieldName: _, removed: __, ...shownRow } = props;
-			return shownRow;
-		};
-		if (isField(active.id)) {
-			const depth = listOf(entries, active.id) === TOP ? 0 : 1;
-			const shownRow = still(active.id.slice(2), depth);
-			if (!shownRow) return null;
 			// A conditional field floats with its options' bands and their fields.
-			const under = bands(active.id.slice(2), depth, true);
+			const under = bands(key, depth, true);
 			return under ? (
 				<FieldGroup lifted head={<FieldRow {...shownRow} />}>
 					{under}
@@ -435,33 +546,33 @@ export function FieldsTab({
 		if (!entry || typeof entry === "string") return null;
 		return (
 			<FieldGroup lifted name={entry.group}>
-				{entry.fields.map((key) => {
-					const shownRow = still(key, 1);
-					return shownRow ? <FieldRow key={key} {...shownRow} /> : null;
-				})}
+				{(lists[active.id] ?? []).map((id) => stillRow(id.slice(2), 1))}
 			</FieldGroup>
 		);
 	};
 
+	const groupName = (id: string) => {
+		const entry = entries[ids.indexOf(id)];
+		return entry && typeof entry !== "string" ? entry.group : "";
+	};
 	const tree = (
-		<SortableList id={TOP} items={ids}>
+		<SortableList id={TOP} items={lists[TOP] ?? []}>
 			<FieldTree>
-				{entries.map((entry, index) => {
-					const id = ids[index] as string;
-					return typeof entry === "string" ? (
-						row(entry, 0)
+				{(lists[TOP] ?? []).map((id) =>
+					isField(id) ? (
+						row(id.slice(2), 0)
 					) : (
 						<SortableGroup
 							key={id}
 							id={id}
-							name={entry.group}
-							items={itemsOf(entries, id)}
-							moveLabel={t("settings.fields.move", { name: entry.group })}
+							name={groupName(id)}
+							items={lists[id] ?? []}
+							moveLabel={t("settings.fields.move", { name: groupName(id) })}
 						>
-							{entry.fields.map((key) => row(key, 1))}
+							{(lists[id] ?? []).map((field) => row(field.slice(2), 1))}
 						</SortableGroup>
-					);
-				})}
+					),
+				)}
 			</FieldTree>
 		</SortableList>
 	);

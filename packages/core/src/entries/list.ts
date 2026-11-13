@@ -8,9 +8,12 @@ import { DateRange, dateRangeSql, likePattern } from "../query";
 import { type AdminValues, ListPrefs } from "../schema/admin-values";
 import {
 	type CollectionDefinition,
+	choseIn,
 	chosenValues,
 	type FieldDefinition,
 	type LocalesDefinition,
+	placesOf,
+	type StoredField,
 	storedFields,
 	translates,
 } from "../schema/define";
@@ -143,12 +146,16 @@ const stateSql = sql`case when rep.status = 'published' and rep.has_unpublished_
  * A field's value as the list reads it: of a conditional field's option, only where that option is chosen (doc 19). A value a stored copy still
  * holds for another option is no value: it is not filtered on, counted or shown.
  */
-const valueSql = (definition: CollectionDefinition, field: string) => {
-	const under = storedFields(definition)[field]?.under;
-	return under
-		? sql`(case when rep.values ->> ${under.field} = ${under.option} then rep.values -> ${field} end)`
+const valueSql = (definition: CollectionDefinition, field: string) =>
+	chosenValueSql(storedFields(definition)[field], field);
+/** The same of a stored field: the value where every choice above the field is made (a conditional field in an option of another). */
+const chosenValueSql = (stored: StoredField | undefined, field: string) =>
+	stored?.under
+		? sql`(case when ${sql.join(
+				placesOf(stored.under).map((place) => sql`rep.values ->> ${place.field} = ${place.option}`),
+				sql` and `,
+			)} then rep.values -> ${field} end)`
 		: sql`(rep.values -> ${field})`;
-};
 const emptySql = (definition: CollectionDefinition, field: string) =>
 	sql`(${valueSql(definition, field)} is null or ${valueSql(definition, field)} in ('null'::jsonb, '""'::jsonb, '[]'::jsonb))`;
 const list = (values: readonly unknown[]) => sql.join(values.map((value) => sql`${value}`));
@@ -327,10 +334,7 @@ export async function runListQuery(
 	// A row shows the chosen option's values only (doc 19), whatever its stored copy still holds.
 	for (const row of rows) row.values = chosenValues(definition, row.values);
 	const stored = storedFields(definition);
-	const shownIn = (values: Record<string, unknown>, field: string) => {
-		const under = stored[field]?.under;
-		return !under || values[under.field] === under.option;
-	};
+	const shownIn = (values: Record<string, unknown>, field: string) => choseIn(stored[field]?.under, values);
 	const links =
 		relationFields.length && groups.length
 			? await ctx.db
@@ -471,9 +475,7 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 	}
 	if (field.kind === "select") {
 		// Of a conditional field's option, only where that option is chosen (doc 19).
-		const value = field.under
-			? sql`(case when rep.values ->> ${field.under.field} = ${field.under.option} then rep.values -> ${column} end)`
-			: sql`(rep.values -> ${column})`;
+		const value = chosenValueSql(field, column);
 		const { rows } = await sql<{ option: string | null; count: string }>`
 			select o.option, count(*) as count from ${from}
 			left join lateral (

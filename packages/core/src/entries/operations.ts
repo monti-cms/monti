@@ -11,15 +11,18 @@ import { cleanMediaValue, mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext, type Preview, type RecordRef } from "../operation";
 import { lockRecords } from "../records";
 import { generateUniqueSlug, resolveInlineCreation, syncRelationsForEntry } from "../relations/sync";
-import { localeModeOf, notChosenFields, type Schema, storedFields } from "../schema/define";
+import { localeModeOf, notChosenFields, placesOf, type Schema, storedFields } from "../schema/define";
+import { dropUnfollowed, translationsOf, unfollowed } from "../translations/chosen";
 import { blockHashes, keepLinks } from "../translations/links";
 import {
 	addedSourceBlocks,
 	addSkips,
+	followedFields,
 	followedHashes,
 	isTranslation,
 	rememberBlocks,
 	seenOf,
+	sourceEntryOf,
 } from "../translations/source";
 import { followerPaths, previewPath, previewSlug, publicPath, publicPaths, publishSlug, slugify } from "./paths";
 import { isSecret, PREVIEW_MINUTES, previewToken } from "./preview";
@@ -82,16 +85,20 @@ function applyDraft(entry: Pick<Entry, "title" | "slug" | "values" | "doc">, dra
  * Only the chosen option's values are an entry's (doc 19). Of the working copy a save leaves, the values of a conditional field's other
  * options are dropped; a value the draft itself gives for such a field is refused, with the field's name, so nothing a caller meant to write is
  * dropped unsaid (the assistant's proposal for a field of an option that is not chosen ends here, when it is applied). A translation's choice
- * is its source's, which this copy does not hold: its values are left as they are.
+ * is its source's, which this copy does not hold: it goes by the source's fields as it follows them (`followed`), and with no source to
+ * follow its values are left as they are.
  */
 function keepChosen(
 	schema: Schema,
 	entry: { collection: string; locale: string },
 	values: Record<string, unknown>,
 	draft: DraftInput,
+	followed: Parameters<typeof unfollowed>[3] = null,
 ) {
-	if (entry.locale !== schema.locales.source) return values;
-	const others = notChosenFields(schema.collections[entry.collection], values);
+	const others =
+		entry.locale !== schema.locales.source
+			? new Set(unfollowed(schema, entry.collection, values, followed))
+			: notChosenFields(schema.collections[entry.collection], values);
 	for (const field of others)
 		if (!isEmptyValue(draft.values?.[field])) throw new CheckError({ key: "entries.notChosen", values: { field } });
 	return Object.fromEntries(Object.entries(values).filter(([field]) => !others.has(field)));
@@ -261,6 +268,16 @@ function docPlaces(mine: unknown, server: unknown) {
 			server: topIds(server).filter((id) => ours.has(id)),
 		},
 	];
+}
+
+/**
+ * These entries, and the translations of those that are sources in a collection with a conditional field: a change of what the site shows of
+ * a source may take values out of its translations (`dropUnfollowed`), so they are records of the write, locked and put back by an undo.
+ */
+async function withTranslations(ctx: Pick<OperationContext, "db" | "site">, ids: string[]): Promise<RecordRef[]> {
+	const all = new Set(ids);
+	for (const entry of await loadEntries(ctx.db, ids)) for (const id of await translationsOf(ctx, entry)) all.add(id);
+	return [...all].map(ref);
 }
 
 export const entryOperations = [
@@ -496,7 +513,16 @@ export const entryOperations = [
 				values = await resolveInlineCreation(ctx, entry.collection, values);
 			}
 			const working = await beforeSaving(ctx, entry, applyDraft(entry, { ...input, values }), entry);
-			working.values = keepChosen(ctx.site.schema(), entry, working.values, input);
+			const schema = ctx.site.schema();
+			working.values = keepChosen(
+				schema,
+				entry,
+				working.values,
+				input,
+				isTranslation(schema, entry)
+					? await followedFields(ctx.db, await sourceEntryOf(ctx.db, schema, entry.translationGroup))
+					: null,
+			);
 			working.values = cleanMediaFields(ctx.site.schema(), entry.collection, working.values);
 			if (isItem && working.slug === "" && working.title !== "") {
 				working.slug = await generateUniqueSlug(
@@ -565,6 +591,9 @@ export const entryOperations = [
 				working.values,
 				entry.values,
 			);
+			// A source whose choice changed where its translations follow it (it is not on the site, or it is an item, live on save): the
+			// translations lose what was the other option's (doc 19). They are records of this save (`touches`).
+			await dropUnfollowed(ctx, await translationsOf(ctx, entry));
 			return saved;
 		},
 		log: "save",
@@ -589,7 +618,7 @@ export const entryOperations = [
 			const others = notChosenFields(collection, mine.values);
 			for (const field of others) delete mine.values[field];
 			for (const [field, definition] of Object.entries(storedFields(collection)))
-				if (definition.under && !sameJson(mine.values[definition.under.field], entry.values[definition.under.field]))
+				if (placesOf(definition.under).some((place) => !sameJson(mine.values[place.field], entry.values[place.field])))
 					others.add(field);
 			const places = [
 				...(["title", "slug"] as const).map((place) => ({ place, mine: mine[place], server: entry[place] })),
@@ -628,7 +657,7 @@ export const entryOperations = [
 		// follows as it is. What it changes is what the site shows of the entry: two of these on one entry do not wait side by side.
 		follows: (input) => input,
 		places: (input) => input.ids.map((id) => `entry:${id}/site`),
-		touches: (input) => input.ids.map(ref),
+		touches: (input, ctx) => withTranslations(ctx, input.ids),
 		async preview(input, ctx) {
 			const plans = await planPublish(ctx, input.ids);
 			const ready = plans.filter((plan) => !plan.blocked);
@@ -653,8 +682,10 @@ export const entryOperations = [
 			const schema = ctx.site.schema();
 			const now = ctx.now();
 			const published: string[] = [];
-			for (const { entry, blocked } of await planPublish(ctx, input.ids)) {
+			for (const { entry: planned, blocked } of await planPublish(ctx, input.ids)) {
 				if (blocked) continue;
+				// As it is now: a source published earlier in this loop may have taken an old option's values out of this translation.
+				const [entry = planned] = await loadEntries(ctx.db, [planned.id]);
 				// Again per entry: an entry published earlier in this loop may have taken the slug.
 				const { slug, taken } = await publishSlug(ctx.db, entry);
 				if (taken || slug === "") continue;
@@ -704,6 +735,8 @@ export const entryOperations = [
 					paths,
 				});
 				published.push(entry.id);
+				// What its translations follow of it is what the site shows now: they lose what was another option's (doc 19).
+				await dropUnfollowed(ctx, await translationsOf(ctx, entry));
 			}
 			return { published, blocked: input.ids.filter((id) => !published.includes(id)) };
 		},
@@ -723,11 +756,13 @@ export const entryOperations = [
 		// follows as it is. What it changes is what the site shows of the entry: two of these on one entry do not wait side by side.
 		follows: (input) => input,
 		places: (input) => input.ids.map((id) => `entry:${id}/site`),
-		touches: (input) => input.ids.map(ref),
+		touches: (input, ctx) => withTranslations(ctx, input.ids),
 		async run(input, ctx) {
 			const archived: string[] = [];
-			for (const entry of await loadEntries(ctx.db, input.ids)) {
-				if (entry.status === "archived") continue;
+			for (const id of input.ids) {
+				// As it is now: a source archived earlier in this loop may have changed this translation.
+				const [entry] = await loadEntries(ctx.db, [id]);
+				if (!entry || entry.status === "archived") continue;
 				const previous = await oldSlug(ctx, entry);
 				await ctx.db.deleteFrom("entry_published").where("entry_id", "=", entry.id).execute();
 				await ctx.db
@@ -744,6 +779,8 @@ export const entryOperations = [
 						paths: [publicPath(ctx.site.schema(), entry.collection, previous.slug, entry.locale) ?? []].flat(),
 					});
 				archived.push(entry.id);
+				// Off the site, its translations follow its working copy, which may have another option chosen (doc 19).
+				await dropUnfollowed(ctx, await translationsOf(ctx, entry));
 			}
 			return { archived };
 		},

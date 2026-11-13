@@ -14,8 +14,11 @@ import {
 
 type Awaitable<T> = T | Promise<T>;
 
+/** The kinds of field a plugin adds: a text, a select, a media or a relation field, never a conditional one (its options' fields are the schema file's). */
+export type PluginFieldKind = Exclude<GroupField, { kind: "conditional" }>;
+
 /** A field a plugin adds that holds a value: any kind a group can hold, with the name the admin shows it under (doc 14). */
-export type PluginValueField = GroupField & {
+export type PluginValueField = PluginFieldKind & {
 	label: string;
 	/** For the assistant: how to fill the field. */
 	description?: string;
@@ -151,7 +154,7 @@ export type PluginTab = {
 		view?: string;
 		options?: Record<string, unknown>;
 		/** A value field as the schema holds it: what a draft's field of the same name is held against. */
-		definition?: GroupField;
+		definition?: PluginFieldKind;
 		/** A list offers it as a column. */
 		column: boolean;
 	}[];
@@ -217,9 +220,9 @@ function taken(schema: Schema, collection: CollectionDefinition, set: PluginFiel
 }
 
 /** The value field as the schema holds it: without what only the admin reads. */
-function structureOf(field: PluginValueField): GroupField {
+function structureOf(field: PluginValueField): PluginFieldKind {
 	const { label: _label, description: _description, optionLabels: _optionLabels, ...structure } = field;
-	return structure as GroupField;
+	return structure as PluginFieldKind;
 }
 
 /**
@@ -230,7 +233,7 @@ export function withPluginFields(schema: Schema, sets: readonly NamedFieldSet[])
 	if (sets.length === 0) return schema;
 	const collections: Schema["collections"] = {};
 	for (const [name, collection] of Object.entries(schema.collections)) {
-		const added: Record<string, GroupField> = {};
+		const added: Record<string, PluginFieldKind> = {};
 		for (const { set } of setsOf(sets, name, collection))
 			for (const [field, definition] of taken(schema, collection, set))
 				if (definition.kind !== "view") added[field] = structureOf(definition);
@@ -282,10 +285,10 @@ export function withoutPluginFields(file: Schema, sets: readonly NamedFieldSet[]
 	const collections: Schema["collections"] = {};
 	for (const [name, collection] of Object.entries(draft.collections)) {
 		const before = file.collections[name];
-		const theirs = new Map<string, GroupField>(
+		const theirs = new Map<string, PluginFieldKind>(
 			before
 				? setsOf(sets, name, before).flatMap(({ set }) =>
-						taken(file, before, set).flatMap(([field, definition]): [string, GroupField][] =>
+						taken(file, before, set).flatMap(([field, definition]): [string, PluginFieldKind][] =>
 							definition.kind === "view" ? [] : [[field, structureOf(definition)]],
 						),
 					)

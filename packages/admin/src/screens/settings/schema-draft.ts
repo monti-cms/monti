@@ -7,6 +7,7 @@ import {
 	type FieldDefinition,
 	fingerprint,
 	type GroupField,
+	inOptionOrder,
 	type LocalesDefinition,
 	mergeAdminValues,
 	type PluginTab,
@@ -71,16 +72,18 @@ function optionRenames(saved: DraftField | undefined, field: DraftField): [strin
 /** A collection's fields as the draft holds them, in the order shown: a conditional field, then its options' fields. */
 export function draftFields(collection: Pick<CollectionDefinition, "fields"> | undefined): Record<string, DraftField> {
 	const out: Record<string, DraftField> = {};
-	for (const [name, def] of Object.entries(collection?.fields ?? {})) {
-		if (def.kind !== "conditional") {
-			out[name] = { name, def };
-			continue;
+	const put = (fields: Record<string, FieldDefinition>, under?: DraftField["under"]) => {
+		for (const [name, def] of Object.entries(fields)) {
+			if (def.kind !== "conditional") {
+				out[name] = { name, def, ...(under ? { under } : {}) };
+				continue;
+			}
+			// A conditional field in an option of another is a field of that option, and has options with fields of its own.
+			out[name] = { name, def: { ...def, fields: {} }, ...(under ? { under } : {}) };
+			for (const option of def.options) put(def.fields[option] ?? {}, { field: name, option });
 		}
-		out[name] = { name, def: { ...def, fields: {} } };
-		for (const option of def.options)
-			for (const [inner, innerDef] of Object.entries(def.fields[option] ?? {}))
-				out[inner] = { name: inner, def: innerDef, under: { field: name, option } };
-	}
+	};
+	put(collection?.fields ?? {});
 	return out;
 }
 
@@ -89,7 +92,7 @@ export const savedField = (read: SchemaRead, c: string, key: string): DraftField
 	draftFields(read.schema.collections[c])[key];
 
 /** The admin values of a field the screen edits. */
-export const FIELD_VALUES = ["label", "description", "optionLabels"] as const;
+export const FIELD_VALUES = ["label", "description", "optionLabels", "optionFields"] as const;
 export type FieldValue = (typeof FIELD_VALUES)[number];
 
 /** The heading levels a body can have (doc 03): the editor tab turns each on or off. */
@@ -359,10 +362,29 @@ export function fieldKeys(read: SchemaRead, changed: Path[], c: string): string[
  */
 export function optionFields(keys: string[], value: Values, c: string, host: string, option: string): string[] {
 	const hostField = value(at.field(c, host)) as DraftField | null | undefined;
-	return keys.filter((key) => {
+	const theirs = keys.filter((key) => {
 		const field = value(at.field(c, key)) as DraftField | null | undefined;
 		return field?.under?.field === host && optionNow(hostField, field.under.option) === option;
 	});
+	// The order the conditional field keeps for the option (by the fields' places), then the rest as the schema has them.
+	const order = value(at.fieldValue(c, host, "optionFields")) as Record<string, string[]> | undefined;
+	return inOptionOrder(theirs, order?.[option]);
+}
+
+/** The option a field of `host` is under, as the draft names it: the word the option was saved with (`DraftField.under`), from its word now. */
+export function savedOption(host: DraftField | null | undefined, option: string): string {
+	return Object.entries(host?.renamed ?? {}).find(([, now]) => now === option)?.[0] ?? option;
+}
+
+/** Whether the field at `key` hangs under the field at `host`, however deep: a conditional field cannot be put into its own options. */
+export function isUnder(value: Values, c: string, key: string, host: string): boolean {
+	for (let at_ = key, steps = 0; steps < 32; steps++) {
+		const field = value(at.field(c, at_)) as DraftField | null | undefined;
+		if (!field?.under) return false;
+		if (field.under.field === host) return true;
+		at_ = field.under.field;
+	}
+	return false;
 }
 
 /** Whether the field at a place stands in the list on its own: not a field of an option. A removed field is judged by what it was. */
@@ -396,25 +418,50 @@ export function build(read: SchemaRead, changed: Path[], value: Values, catalog:
 		});
 		// A conditional field's options' fields, by the conditional field's place: put into its definition under each option still listed.
 		const groups = new Map<string, Record<string, Record<string, GroupField>>>();
+		const made = new Map<string, FieldDefinition>();
 		for (const [key, field] of drafted) {
-			if (field.under) continue;
-			fields[field.name] = field.def.kind === "conditional" ? { ...field.def, fields: {} } : field.def;
+			made.set(key, field.def.kind === "conditional" ? { ...field.def, fields: {} } : field.def);
 			if (field.def.kind === "conditional")
 				groups.set(key, Object.fromEntries(field.def.options.map((option) => [option, {}])));
-			names.set(key, field.name);
 		}
 		for (const [key, field] of drafted) {
-			// A field of an option that is gone, or of a conditional field that is, goes with it: the review asks about its values.
-			const host = field.under ? (value(at.field(c, field.under.field)) as DraftField | null | undefined) : null;
-			const group = field.under ? groups.get(field.under.field)?.[optionNow(host, field.under.option)] : undefined;
-			if (!group) continue;
-			group[field.name] = field.def as GroupField;
+			if (field.under) continue;
+			fields[field.name] = made.get(key) as FieldDefinition;
 			names.set(key, field.name);
 		}
+		// A field of an option goes in once its conditional field is in (it may itself stand in an option of another), in the order the
+		// conditional field keeps for the option. A field of an option that is gone, or of a conditional field that is, goes with it: the
+		// review asks about its values.
+		const waiting = new Set(drafted.filter(([, field]) => field.under).map(([key]) => key));
+		const byKey = new Map(drafted);
+		for (let placed = true; placed; ) {
+			placed = false;
+			for (const [host, options] of groups) {
+				if (!names.has(host)) continue;
+				const hostField = byKey.get(host);
+				const order = value(at.fieldValue(c, host, "optionFields")) as Record<string, string[]> | undefined;
+				for (const option of Object.keys(options)) {
+					const theirs = [...waiting].filter((key) => {
+						const under = byKey.get(key)?.under;
+						return under?.field === host && optionNow(hostField, under.option) === option;
+					});
+					for (const key of inOptionOrder(theirs, order?.[option])) {
+						(options[option] as Record<string, GroupField>)[(byKey.get(key) as DraftField).name] = made.get(
+							key,
+						) as GroupField;
+						names.set(key, (byKey.get(key) as DraftField).name);
+						waiting.delete(key);
+						placed = true;
+					}
+				}
+			}
+		}
 		for (const [host, options] of groups) {
-			const made = fields[names.get(host) as string];
-			if (made?.kind === "conditional")
-				made.fields = Object.fromEntries(Object.entries(options).filter(([, group]) => Object.keys(group).length > 0));
+			const definition = made.get(host);
+			if (definition?.kind === "conditional")
+				definition.fields = Object.fromEntries(
+					Object.entries(options).filter(([, group]) => Object.keys(group).length > 0),
+				);
 		}
 		for (const [key, name] of names)
 			if (savedField(read, c, key) && name !== key) renames.push({ collection: c, from: key, to: name });
@@ -458,7 +505,17 @@ function collectionValues(
 		const one: Record<string, unknown> = {};
 		for (const each of FIELD_VALUES) {
 			const v = value(at.fieldValue(c, key, each));
-			if (v !== undefined && v !== "") one[each] = v;
+			if (v === undefined || v === "") continue;
+			// The order of an option's fields is kept by their places: saved, it names them as they are named now.
+			one[each] =
+				each === "optionFields"
+					? Object.fromEntries(
+							Object.entries(v as Record<string, string[]>).map(([option, keys]) => [
+								option,
+								keys.flatMap((inner) => names.get(inner) ?? []),
+							]),
+						)
+					: v;
 		}
 		if (Object.keys(one).length > 0) fields[name] = one;
 	}

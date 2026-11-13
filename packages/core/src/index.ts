@@ -202,12 +202,19 @@ export {
 	type UsageResult,
 	unlinkTargetGroup,
 } from "./relations/operations";
-export { type AdminValues, type AdminValuesPatch, diffAdminValues, mergeAdminValues } from "./schema/admin-values";
+export {
+	type AdminValues,
+	type AdminValuesPatch,
+	diffAdminValues,
+	inOptionOrder,
+	mergeAdminValues,
+} from "./schema/admin-values";
 export { migrateContent } from "./schema/apply";
 export {
 	type CollectionDefinition,
 	type ConditionalField,
 	checkSchema,
+	choseIn,
 	defineSchema,
 	type FieldDefinition,
 	type FieldKind,
@@ -219,6 +226,8 @@ export {
 	MAX_COLLECTION_NAME,
 	MAX_FIELD_NAME,
 	notChosenFields,
+	type OptionPlace,
+	placesOf,
 	type Schema,
 	type SchemaProblem,
 	type StoredField,

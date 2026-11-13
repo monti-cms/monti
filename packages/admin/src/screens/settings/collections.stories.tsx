@@ -743,6 +743,122 @@ export const ConditionalFields: Story = {
 	},
 };
 
+/**
+ * The same posts with a choice inside the video's fields (doc 19). The link has no field here, so the whole outline fits the window: a row
+ * cut by the window's edge would be measured as too small to press.
+ */
+const nestedSchema = defineSchema({
+	...optionsSchema,
+	collections: {
+		...optionsSchema.collections,
+		post: {
+			...optionsSchema.collections.post,
+			fields: {
+				...optionsSchema.collections.post.fields,
+				format: {
+					kind: "conditional",
+					required: true,
+					options: ["article", "video", "link"],
+					fields: {
+						video: {
+							videoUrl: { kind: "text", required: true },
+							videoHost: {
+								kind: "conditional",
+								options: ["own", "embed"],
+								fields: { embed: { embedCode: { kind: "text" } } },
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+});
+
+/** The same posts with a field turned on and off by a switch, and a field of its own for "on" (doc 19). */
+const toggleSchema = defineSchema({
+	...optionsSchema,
+	collections: {
+		...optionsSchema.collections,
+		post: {
+			...optionsSchema.collections.post,
+			fields: {
+				...optionsSchema.collections.post.fields,
+				featured: {
+					kind: "conditional",
+					control: "toggle",
+					options: ["on"],
+					fields: { on: { featuredNote: { kind: "text" } } },
+				},
+			},
+		},
+	},
+});
+
+/** Doc 19: a conditional field inside an option of another has bands of its own, further in. Every field of an option has its grip. */
+export const ConditionalNestedFields: Story = {
+	loaders: site({ schema: nestedSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await page.findByRole("button", { name: "embedCode 열기" }, wait);
+	},
+};
+
+/** Doc 19: the field sheet of a conditional field turned on and off by a switch: its one option, nothing to add or take, and no "필수". */
+export const ToggleFieldSheet: Story = {
+	loaders: site({ schema: toggleSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		const body = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "featured 열기" }, wait));
+		await body.findByRole("switch", { name: "스위치로 켜고 끄기" }, wait);
+	},
+};
+
+/** The review after the video option is taken out and its field's values are sent to the link's field (doc 19). */
+async function movedIntoOption(canvasElement: HTMLElement) {
+	const page = within(canvasElement);
+	const body = within(canvasElement.ownerDocument.body);
+	await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+	await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+	await userEvent.click(await page.findByRole("button", { name: "format 열기" }, wait));
+	await userEvent.click(await body.findByRole("button", { name: "video 빼기" }, wait));
+	await userEvent.click(body.getByRole("button", { name: "저장" }));
+	await sheetGone(body);
+	await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }));
+	await userEvent.click(await body.findByRole("radio", { name: "다른 필드로 옮기기" }, wait));
+	await userEvent.click(body.getByRole("combobox", { name: "다른 필드로 옮기기" }));
+	await userEvent.click(await body.findByRole("option", { name: "링크 주소" }, wait));
+	return body;
+}
+
+/**
+ * Doc 19: a removed field's values moved into a field of an option nobody who holds them has: the note under the choice says how many are
+ * deleted, in red, and the apply is the red one.
+ */
+export const MovedIntoOptionDeleted: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const body = await movedIntoOption(canvasElement);
+		await body.findByText("지움 1편", {}, wait);
+	},
+};
+
+/** The same with the option's entries changed to the link: they take the value, and the note says how many are moved. */
+export const MovedIntoOptionKept: Story = {
+	loaders: site({ schema: optionsSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const body = await movedIntoOption(canvasElement);
+		await userEvent.click(body.getByRole("combobox", { name: "바꾸기" }));
+		await userEvent.click(await body.findByRole("option", { name: "링크" }, wait));
+		await body.findByText("옮김 1편", {}, wait);
+	},
+};
+
 /** Doc 19: the field sheet of a conditional field: its options, each a value and a label. */
 export const ConditionalFieldSheet: Story = {
 	loaders: site({ schema: optionsSchema, more: optionEntries }),

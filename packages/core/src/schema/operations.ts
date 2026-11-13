@@ -11,7 +11,7 @@ import { defineRecordKind } from "../records";
 import { addressesBefore, movedAddresses } from "./addresses";
 import { AdminValues, AdminValuesPatch, mergeAdminValues } from "./admin-values";
 import { applyChange, pendingChanges, readSchemaState, setSchemaState } from "./apply";
-import { checkSchema, type Schema } from "./define";
+import { type ConditionalField, checkSchema, type GroupField as GroupFieldDefinition, type Schema } from "./define";
 import { type ChangeFile, PartialSchemaWrite, SchemaFilesBusy } from "./files";
 import { type Answers, type Rename as FieldRename, planSchema, schemaHash, stepsFor } from "./plan";
 
@@ -44,17 +44,30 @@ const GroupFieldShapes = [
 		via: z.string().optional(),
 	}),
 ] as const;
-const GroupField = z.discriminatedUnion("kind", [...GroupFieldShapes]);
-const Field = z.discriminatedUnion("kind", [
-	...GroupFieldShapes,
-	z.object({ kind: z.literal("slug"), ...FieldBase, from: z.string().optional() }),
-	// A choice with a group of fields for each option (doc 19).
-	z.object({
-		kind: z.literal("conditional"),
-		...FieldBase,
-		options: z.array(z.string()),
-		fields: z.record(z.string(), z.record(z.string(), GroupField)),
-	}),
+// A choice with a group of fields for each option (doc 19). A group may hold another: the shape names itself.
+const Conditional: z.ZodType<ConditionalField> = z.object({
+	kind: z.literal("conditional"),
+	...FieldBase,
+	options: z.array(z.string()),
+	fields: z.record(
+		z.string(),
+		z.record(
+			z.string(),
+			z.lazy(() => GroupField),
+		),
+	),
+	control: z.literal("toggle").optional(),
+});
+const GroupField: z.ZodType<GroupFieldDefinition> = z.union([
+	z.discriminatedUnion("kind", [...GroupFieldShapes]),
+	Conditional,
+]);
+const Field = z.union([
+	z.discriminatedUnion("kind", [
+		...GroupFieldShapes,
+		z.object({ kind: z.literal("slug"), ...FieldBase, from: z.string().optional() }),
+	]),
+	Conditional,
 ]);
 export const LocalesInput = z.object({
 	source: z.string(),
@@ -329,13 +342,19 @@ export const schemaOperations = [
 		name: "schema.plan",
 		kind: "read",
 		description:
-			"Compare a draft schema with the applied one: each change, how many entries it touches, and what the review must choose for changes that touch stored values. Renamed fields must be named in renames, and a renamed option of a select too (with of: the field): its stored word is rewritten.",
-		input: z.object({ draft: SchemaInput, renames: z.array(Rename).default([]) }),
+			"Compare a draft schema with the applied one: each change, how many entries it touches, and what the review must choose for changes that touch stored values. Renamed fields must be named in renames, and a renamed option of a select too (with of: the field): its stored word is rewritten. A removed field whose values can move into a field of a conditional field's option says how many entries keep the value there (kept), by the answers given for the options taken out.",
+		input: z.object({ draft: SchemaInput, renames: z.array(Rename).default([]), answers: AnswersInput }),
 		async run(input, ctx) {
 			const state = await readSchemaState(ctx.db);
 			return {
 				problems: checkSchema(own(ctx, input.draft)),
-				changes: await planSchema(ctx.db, state?.schema ?? ctx.site.fileSchema(), own(ctx, input.draft), input.renames),
+				changes: await planSchema(
+					ctx.db,
+					state?.schema ?? ctx.site.fileSchema(),
+					own(ctx, input.draft),
+					input.renames,
+					input.answers as Answers,
+				),
 			};
 		},
 	}),

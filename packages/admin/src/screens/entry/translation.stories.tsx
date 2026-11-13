@@ -225,6 +225,34 @@ export const SourceChanged: Story = {
 	},
 };
 
+/** The posts with a field turned on and off by a switch (doc 19): the same in every language, so a translation reads it. */
+const withSwitch = {
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			...schema.collections.post,
+			fields: {
+				...schema.collections.post?.fields,
+				featured: { kind: "conditional", control: "toggle", options: ["on"], fields: {} },
+			},
+		},
+	},
+} as Schema;
+
+/** A translation shows the source's switch as words, "꺼짐" here: it is the source's to turn (doc 19). */
+export const SharedSwitch: Story = {
+	loaders: site("new", "english", withSwitch),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		// The translation alone, with its property panel.
+		await userEvent.click(await page.findByRole("button", { name: "끔" }, wait));
+		const panel = await page.findByRole("button", { name: "속성" }, wait);
+		if (panel.getAttribute("aria-pressed") !== "true") await userEvent.click(panel);
+		await page.findByText("꺼짐", undefined, wait);
+	},
+};
+
 /** The source's title and summary changed: the mark in the title's margin, and on the summary's label row (T111). */
 export const FieldsChanged: Story = {
 	loaders: site("fieldsChanged", "english"),

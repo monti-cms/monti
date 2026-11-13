@@ -57,6 +57,8 @@ type Form = {
 	/** `was` is the saved word of an option the field was saved with: the row keeps it while its value is edited, so the edit is a rename. */
 	options: { value: string; label: string; was?: string; fresh?: boolean }[];
 	many: boolean;
+	/** Of a conditional field: one option, turned on and off by a switch (doc 19). */
+	toggle: boolean;
 	ordered: boolean;
 	via: string;
 	accept: "image" | "any";
@@ -75,6 +77,7 @@ const blank = (to: string): Form => ({
 	locale: "same",
 	options: [],
 	many: false,
+	toggle: false,
 	ordered: false,
 	via: "",
 	accept: "image",
@@ -109,6 +112,7 @@ function formOf(
 				? def.options.map((value) => ({ value, label: labels[value] ?? "", was: wasOf(value) }))
 				: [],
 		many: (def.kind === "select" || def.kind === "relation") && Boolean(def.many),
+		toggle: def.kind === "conditional" && def.control === "toggle",
 		ordered: def.kind === "relation" && Boolean(def.ordered),
 		via: def.kind === "relation" && def.via ? def.via : "",
 		accept: def.kind === "media" ? (def.accept ?? "image") : "image",
@@ -137,7 +141,15 @@ function defOf(form: Form, was: FieldDefinition | null): FieldDefinition {
 	if (form.kind === "slug") return clean({ ...(was as FieldDefinition), ...common, kind: "slug" });
 	// A conditional field's options (doc 19); the fields of each are fields of their own in the draft, added in the fields list.
 	if (form.kind === "conditional")
-		return clean({ kind: "conditional", ...common, options: form.options.map((option) => option.value), fields: {} });
+		return clean({
+			kind: "conditional",
+			...common,
+			// A switch is never required: it could then never be off.
+			...(form.toggle ? { required: false } : {}),
+			options: form.options.map((option) => option.value),
+			fields: {},
+			control: form.toggle ? ("toggle" as const) : undefined,
+		});
 	if (form.kind === "select")
 		return clean({ kind: "select", ...common, options: form.options.map((option) => option.value), many: form.many });
 	if (form.kind === "media")
@@ -153,7 +165,10 @@ function defOf(form: Form, was: FieldDefinition | null): FieldDefinition {
 	});
 }
 
-const adminOf = (form: Form): Record<FieldValue, unknown> => {
+/** The admin values the sheet edits. The order of an option's fields is the fields list's to keep (dragging). */
+const SHEET_VALUES = FIELD_VALUES.filter((each) => each !== "optionFields") as Exclude<FieldValue, "optionFields">[];
+
+const adminOf = (form: Form): Record<Exclude<FieldValue, "optionFields">, unknown> => {
 	const labels = Object.fromEntries(
 		form.options.filter((option) => option.label).map((option) => [option.value, option.label]),
 	);
@@ -282,11 +297,25 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 				...(Object.keys(renamedOptions).length > 0 ? { renamed: renamedOptions } : {}),
 			} satisfies DraftField);
 		const values = adminOf(form);
-		for (const each of FIELD_VALUES) {
+		for (const each of SHEET_VALUES) {
 			const place = at.fieldValue(c, key, each);
 			// A new field's empty values are not changes of their own.
 			if (values[each] !== undefined || draft.value(place) !== undefined) draft.set(place, values[each]);
 		}
+		// The order kept for an option's fields goes by the option's word: it follows a word edited here.
+		const orderPlace = at.fieldValue(c, key, "optionFields");
+		const order = model.shown(orderPlace) as Record<string, string[]> | undefined;
+		const edited = Object.fromEntries(
+			form.options.flatMap((option) => {
+				const before = option.was ? (existing?.renamed?.[option.was] ?? option.was) : undefined;
+				return before && option.value && before !== option.value ? [[before, option.value]] : [];
+			}),
+		);
+		if (order && Object.keys(edited).some((word) => word in order))
+			draft.set(
+				orderPlace,
+				Object.fromEntries(Object.entries(order).map(([word, fields]) => [edited[word] ?? word, fields])),
+			);
 		onClose();
 	};
 	const remove = () => {
@@ -487,7 +516,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 											/>
 										}
 										action={
-											structure ? (
+											structure && !form.toggle ? (
 												<TextButton
 													variant="quiet"
 													aria-label={t("settings.field.removeOption", { value: option.value })}
@@ -503,7 +532,8 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 						</OptionTable>
 					</Sortable>
 				) : null}
-				{structure ? (
+				{/* A switch has its one option: nothing to add to it or take from it. */}
+				{structure && !form.toggle ? (
 					<Inline gap={0}>
 						{/* The new row's value takes the keyboard: it is what is typed next. */}
 						<TextButton onClick={() => set({ options: [...form.options, { value: "", label: "", fresh: true }] })}>
@@ -513,6 +543,20 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 				) : null}
 				{/* How many of the choices are picked belongs with the choices, not with the rules. */}
 				{form.kind === "select" ? switchRow(t("settings.field.many"), form.many, (many) => set({ many })) : null}
+				{/* How the choice is made belongs with the choices too: a switch keeps the first option as what "on" stores. */}
+				{form.kind === "conditional"
+					? switchRow(t("settings.field.toggle"), form.toggle, (toggle) =>
+							set({
+								toggle,
+								...(toggle
+									? {
+											required: false,
+											options: [form.options.find((option) => option.value) ?? { value: "on", label: "" }],
+										}
+									: {}),
+							}),
+						)
+					: null}
 			</SheetSection>
 		) : null;
 
@@ -588,7 +632,8 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 			</Inline>
 			<Text tone="subtle">{t("settings.field.on")}</Text>
 		</Option>
-	) : (
+	) : form.kind === "conditional" && form.toggle ? null : (
+		// A switch is on or off: there is no "required" to turn on for it.
 		switchRow(requiredLabel, form.required, (required) => set({ required }))
 	);
 
@@ -629,7 +674,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 							t("settings.field.locale"),
 							"field-locale",
 							// A conditional field is chosen once, on the source: not per language (doc 19).
-							LOCALES.filter((value) => !(form.kind === "conditional" && value === "perLocale")).map((value) => ({
+							LOCALES.filter((value) => !(form.kind === "conditional" && value !== "same")).map((value) => ({
 								value,
 								label: t(`settings.field.locale.${value}`),
 							})),
@@ -680,8 +725,7 @@ function FieldSheetBody({ model, open, onClose }: { model: SettingsDraft; open: 
 				<SheetSplit
 					list={
 						<PickList aria-label={t("settings.field.kinds")}>
-							{/* A field of an option is not itself conditional (doc 19: no nesting). */}
-							{KINDS.filter((kind) => !(under && kind === "conditional")).map((kind) => (
+							{KINDS.map((kind) => (
 								<PickListItem key={kind} selected={form.kind === kind} onClick={() => set({ kind })}>
 									{kindWord(kind)}
 								</PickListItem>
