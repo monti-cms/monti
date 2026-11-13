@@ -694,3 +694,170 @@ describe("the tools' tabs", () => {
 		expect([812, 1000, 312_400, 1_240_000].map(tokenAmount)).toEqual(["812", "1K", "312K", "1.24M"]);
 	});
 });
+
+describe("plugin keys (flow 10, 12)", () => {
+	const slotButton = (name: string) => button(`${name} 키 넣기`);
+	const pluginTable = () => page.getByRole("table", { name: "플러그인 키" });
+
+	it("14-5 a site whose plugins keep keys has two lists, each named; one without has the AI keys alone and no name over them", async () => {
+		await open(keys.PluginKeys).run();
+		await expect.element(page.getByRole("heading", { name: "AI 키" })).toBeVisible();
+		await expect.element(page.getByRole("heading", { name: "플러그인 키" })).toBeVisible();
+		// One row per slot, in the plugins' order: the plugin's name, what the key is for when it keeps two, its code under them.
+		const rows = pluginTable().getByRole("row");
+		await expect.element(rows.nth(0)).toHaveTextContent(/^바른 맞춤법bareun/);
+		await expect.element(rows.nth(1)).toHaveTextContent(/^Algolia 검색검색 키··· 9c1ealgolia/);
+		await expect.element(rows.nth(2)).toHaveTextContent(/^Algolia 검색관리 키algolia/);
+
+		await open(keys.Keys).run();
+		await expect.element(page.getByText("이번 달 1.24M 토큰")).toBeVisible();
+		expect(await page.getByRole("heading", { name: "AI 키" }).elements()).toHaveLength(0);
+		expect(await page.getByRole("heading", { name: "플러그인 키" }).elements()).toHaveLength(0);
+	});
+
+	it("14-1 [flow 10·12, 12b] an empty slot's '키 넣기' opens the key window with the service as words and no name to give; the key goes in, the row shows its last four and a ⋯, and the AI keys stay as they were", async () => {
+		const story = open(keys.PluginKeys);
+		await story.run();
+		await userEvent.click(slotButton("바른 맞춤법"));
+		await expect.element(dialog().getByRole("heading", { name: "키 넣기 · 바른 맞춤법" })).toBeVisible();
+		await expect.element(dialog().getByText("bareun")).toBeVisible();
+		expect(await dialog().getByRole("combobox").elements()).toHaveLength(0);
+		expect(await field(/이름/).elements()).toHaveLength(0);
+		expect(focused()).toBe(keyField().element());
+
+		story.loaded().net.hold("held");
+		await userEvent.type(keyField(), `${keys.sample.spelling}{Enter}`);
+		await expect.element(button("확인하는 중…")).toBeVisible();
+		story.loaded().net.hold(null);
+		await expect.element(page.getByText("바른 맞춤법에 키를 넣었습니다")).toBeVisible();
+		await expect.element(dialog()).not.toBeInTheDocument();
+		await expect.element(pluginTable().getByRole("row").nth(0)).toHaveTextContent(/바른 맞춤법··· 4410/);
+		await expect.element(button("바른 맞춤법 더 보기")).toBeVisible();
+		expect(await slotButton("바른 맞춤법").elements()).toHaveLength(0);
+		const stored = await list(story.loaded().site);
+		expect(stored.keys.map((key) => key.name)).toEqual(["Anthropic 개인", "OpenAI 회사", "예전 Gemini 키"]);
+		expect(stored.slots[0].key).toMatchObject({ last4: "4410", readable: true });
+	});
+
+	it("14-1 [flow 10·12] a key the slot's service refuses: one line under the key, the window open with what was typed, the slot still empty", async () => {
+		const story = open(keys.PluginKeys);
+		await story.run();
+		await userEvent.click(slotButton("바른 맞춤법"));
+		await userEvent.type(keyField(), keys.sample.refused);
+		await userEvent.click(button("추가"));
+		await expect.element(page.getByText("맞지 않는 키입니다.")).toBeVisible();
+		await expect.element(keyField()).toHaveValue(keys.sample.refused);
+		expect((await list(story.loaded().site)).slots[0].key).toBeNull();
+		// An empty key is not sent at all.
+		await userEvent.clear(keyField());
+		const before = called(story.loaded(), "plugins.setKey");
+		await userEvent.click(button("추가"));
+		await expect.element(page.getByText("이 칸을 채워 주세요.")).toBeVisible();
+		expect(called(story.loaded(), "plugins.setKey")).toBe(before);
+	});
+
+	it("14-1 a filled slot's ⋯ › '편집' shows the stored key's ending; saved untouched it asks nothing, and a new key replaces the old one", async () => {
+		const story = open(keys.PluginKeys);
+		await story.run();
+		await menu("Algolia 검색 · 검색 키", "편집");
+		await expect.element(dialog().getByRole("heading", { name: "편집 · Algolia 검색 · 검색 키" })).toBeVisible();
+		await expect.element(dialog().getByText("··· 9c1e")).toBeVisible();
+		await userEvent.click(button("저장"));
+		await expect.element(dialog()).not.toBeInTheDocument();
+		expect(called(story.loaded(), "plugins.setKey")).toBe(0);
+
+		await menu("Algolia 검색 · 검색 키", "편집");
+		await userEvent.click(button("바꾸기"));
+		expect(focused()).toBe(keyField().element());
+		await userEvent.type(keyField(), `${keys.sample.searchNew}{Enter}`);
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		await expect.element(pluginTable().getByRole("row").nth(1)).toHaveTextContent(/··· 52ab/);
+	});
+
+	it("14-1 a slot's key is removed after the question, which names the slot; the slot is empty again and offers '키 넣기'", async () => {
+		const story = open(keys.PluginKeys);
+		await story.run();
+		await menu("Algolia 검색 · 검색 키", "지우기");
+		const asking = page.getByRole("alertdialog");
+		await expect.element(asking.getByText("되돌릴 수 없습니다. 이 키를 쓰는 곳이 멈춥니다.")).toBeVisible();
+		await expect.element(asking.getByText("Algolia 검색 · 검색 키")).toBeVisible();
+		await userEvent.click(asking.getByRole("button", { name: "취소" }));
+		expect((await list(story.loaded().site)).slots[1].key).not.toBeNull();
+
+		await menu("Algolia 검색 · 검색 키", "지우기");
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
+		await expect.element(page.getByText("키를 지웠습니다")).toBeVisible();
+		await expect.element(slotButton("Algolia 검색 · 검색 키")).toBeVisible();
+		expect((await list(story.loaded().site)).slots[1].key).toBeNull();
+	});
+
+	it("14-1 '+ 키 추가' does not offer a service that is only a slot's: its key goes in at the slot", async () => {
+		await open(keys.PluginKeys).run();
+		await userEvent.click(button("키 추가"));
+		await expect.element(page.getByRole("option", { name: "Anthropic" })).toBeVisible();
+		expect(await page.getByRole("option", { name: "Algolia" }).elements()).toHaveLength(0);
+		expect(await page.getByRole("option", { name: "bareun" }).elements()).toHaveLength(0);
+	});
+
+	it("14-1 [flow 10·14, 15] a slot's key the server can no longer read is counted in the banner and says so in its row; without a secret the slots are not shown", async () => {
+		await open(keys.PluginKeysUnreadable).run();
+		await expect.element(page.getByText("키 4개를 읽을 수 없습니다")).toBeVisible();
+		await expect.element(pluginTable().getByRole("row").nth(1)).toHaveTextContent(/읽을 수 없음/);
+
+		const story = open({ loaders: keys.site({ slots: true, secret: null }) });
+		await story.run();
+		await expect.element(page.getByText("키를 저장할 수 없습니다")).toBeVisible();
+		expect(await page.getByRole("heading", { name: "플러그인 키" }).elements()).toHaveLength(0);
+		expect(await page.getByRole("table", { name: "플러그인 키" }).elements()).toHaveLength(0);
+	});
+
+	it("14-4 a slot's key is nowhere in the page once it is in", async () => {
+		const story = open(keys.PluginKeys);
+		await story.run();
+		await userEvent.click(slotButton("바른 맞춤법"));
+		await userEvent.type(keyField(), `${keys.sample.spelling}{Enter}`);
+		await expect.element(page.getByText("바른 맞춤법에 키를 넣었습니다")).toBeVisible();
+		await menu("바른 맞춤법", "편집");
+		await expect.element(dialog().getByText("··· 4410")).toBeVisible();
+		const fields = [...document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea")];
+		for (const text of [document.documentElement.outerHTML, ...fields.map((each) => each.value)])
+			expect(text).not.toContain(keys.sample.spelling);
+	});
+});
+
+describe("a call no answer comes back for (T163)", () => {
+	it("14-1 '추가' with the network gone: a toast says so, the pill is back and the window keeps what was typed; sent again with the network back, the key is added", async () => {
+		const story = open(keys.NoKeys);
+		await story.run();
+		await addFor("Anthropic");
+		story.loaded().lost.add("keys.add");
+		await userEvent.type(keyField(), keys.sample.anthropic);
+		await userEvent.click(button("추가"));
+		await expect.element(page.getByText("서버가 답하지 않았습니다")).toBeVisible();
+		// The window is as it was before the press: open, the key still typed, the pill no longer busy and pressable again.
+		await expect.element(button("추가")).toBeEnabled();
+		expect(await button("확인하는 중…").elements()).toHaveLength(0);
+		await expect.element(keyField()).toHaveValue(keys.sample.anthropic);
+		expect(focused()).toBe(keyField().element());
+		expect((await list(story.loaded().site)).keys).toEqual([]);
+
+		story.loaded().lost.delete("keys.add");
+		await userEvent.click(button("추가"));
+		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
+		expect((await list(story.loaded().site)).keys).toMatchObject([{ name: "Anthropic" }]);
+	});
+
+	it("14-1 '지우기' with the network gone: a toast says so, the list is read again and the key is still in it", async () => {
+		const story = open(keys.Keys);
+		await story.run();
+		await expect.element(page.getByText("이번 달 1.24M 토큰")).toBeVisible();
+		story.loaded().lost.add("keys.remove");
+		const reads = called(story.loaded(), "keys.list");
+		await menu("예전 Gemini 키", "지우기");
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
+		await expect.element(page.getByText("서버가 답하지 않았습니다")).toBeVisible();
+		await expect.poll(() => called(story.loaded(), "keys.list")).toBeGreaterThan(reads);
+		await expect.element(page.getByText("예전 Gemini 키", { exact: true })).toBeVisible();
+		expect((await list(story.loaded().site)).keys).toHaveLength(3);
+	});
+});

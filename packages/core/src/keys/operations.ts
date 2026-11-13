@@ -56,6 +56,13 @@ export type KeyServiceRow = {
 	address: boolean;
 	keyOptional: boolean;
 	placeholder: string | null;
+	/** The plugin that brings it; `null` for the AI services the core knows. */
+	plugin: string | null;
+	/**
+	 * Whether "add key" offers it. A service that only a plugin's key slot is for is not offered: its key goes in at the slot, and one added
+	 * beside the AI keys would be used by nothing.
+	 */
+	addable: boolean;
 };
 
 /** A plugin's key slot as the keys screen draws its row (doc 14, "plugin keys"). */
@@ -285,12 +292,15 @@ export const keyOperations = [
 					await ctx.db.selectFrom("api_key_usage").select(["key_id", "tokens"]).where("month", "=", month).execute()
 				).map((row) => [row.key_id, Number(row.tokens)]),
 			);
+			const forSlots = new Set(ctx.site.plugins.flatMap((plugin) => plugin.keys.map((slot) => slot.service)));
 			const services = ctx.site.keyServices.map((service) => ({
 				id: service.id,
 				name: service.name,
 				address: service.address ?? false,
 				keyOptional: service.keyOptional ?? false,
 				placeholder: service.placeholder ?? null,
+				plugin: ctx.site.plugins.find((plugin) => plugin.services.includes(service.id))?.name ?? null,
+				addable: !forSlots.has(service.id),
 			}));
 			const secret = ctx.site.secret;
 			const inSlots = new Map((await slotKeys(ctx.db)).map((key) => [key.id, key]));

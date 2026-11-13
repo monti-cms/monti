@@ -24,6 +24,8 @@ export type SitePlugin = {
 	/** Its name as a person reads it; the code name when it gives none. */
 	label: string;
 	keys: readonly KeySlot[];
+	/** The key services it brings, by id. */
+	services: readonly string[];
 	textCheck: TextCheck | null;
 	beforeSave: BeforeSave | null;
 	toolPages: readonly ToolPage[];

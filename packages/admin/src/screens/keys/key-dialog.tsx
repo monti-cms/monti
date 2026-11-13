@@ -1,4 +1,4 @@
-import { KEY_NAME_MAX, type KeyList, type KeyRow } from "@monti-cms/core";
+import { KEY_NAME_MAX, type KeyList, type KeyRow, type KeySlotRow } from "@monti-cms/core";
 import {
 	Button,
 	Dialog,
@@ -14,6 +14,8 @@ import {
 	Input,
 	PickList,
 	PickListItem,
+	PickListLabel,
+	PickListSeparator,
 	SavedValue,
 	SecretInput,
 	Stack,
@@ -27,8 +29,19 @@ import { PickOne } from "../settings/pick-one";
 
 type Service = KeyList["services"][number];
 
-/** What the key window is open for: to pick the service of a new key, to add a key of a service, or to change a key. */
-export type KeyWindowState = { mode: "pick" } | { mode: "add"; service: string } | { mode: "edit"; key: KeyRow };
+/**
+ * What the key window is open for: to pick the service of a new key, to add a key of a service, to change a key, or to fill or change a
+ * plugin's key slot.
+ */
+export type KeyWindowState =
+	| { mode: "pick" }
+	| { mode: "add"; service: string }
+	| { mode: "edit"; key: KeyRow }
+	| { mode: "slot"; slot: KeySlotRow };
+
+/** A slot's name on the screen: its plugin, and what the key is for when the plugin has more than one. */
+export const slotName = (slot: KeySlotRow) =>
+	slot.oneOfMany ? `${slot.pluginLabel} · ${slot.label}` : slot.pluginLabel;
 type KeyFormState = Exclude<KeyWindowState, { mode: "pick" }>;
 
 type Field = "address" | "name" | "secret";
@@ -86,6 +99,15 @@ export function KeyWindow({
 }) {
 	const { t } = useAdmin();
 	const nameOf = useServiceName();
+	// A service that is only a plugin's slot's is filled at the slot. The rest are the core's AI services, then the plugins' own.
+	const addable = services.filter((service) => service.addable);
+	const ai = addable.filter((service) => service.plugin === null);
+	const fromPlugins = addable.filter((service) => service.plugin !== null);
+	const pick = (service: Service) => (
+		<PickListItem key={service.id} onClick={() => onPick(service.id)}>
+			{nameOf(service)}
+		</PickListItem>
+	);
 	return (
 		<Dialog
 			open={open}
@@ -99,11 +121,18 @@ export function KeyWindow({
 							<DialogTitle>{t("apiKeys.add")}</DialogTitle>
 						</DialogHeader>
 						<PickList aria-label={t("apiKeys.service")}>
-							{services.map((service) => (
-								<PickListItem key={service.id} onClick={() => onPick(service.id)}>
-									{nameOf(service)}
-								</PickListItem>
-							))}
+							{/* One group needs no name; with plugins' services there are two, each named. */}
+							{fromPlugins.length === 0 ? (
+								ai.map(pick)
+							) : (
+								<>
+									<PickListLabel>{t("apiKeys.group.ai")}</PickListLabel>
+									{ai.map(pick)}
+									<PickListSeparator />
+									<PickListLabel>{t("apiKeys.group.plugins")}</PickListLabel>
+									{fromPlugins.map(pick)}
+								</>
+							)}
 						</PickList>
 						<DialogFooter>
 							<Button variant="ghost" onClick={() => onClose(nth)}>
@@ -152,7 +181,12 @@ function KeyForm({
 	const nameOf = useServiceName();
 	const add = useOperation("keys.add");
 	const update = useOperation("keys.update");
-	const editing = state.mode === "edit" ? state.key : null;
+	const setSlot = useOperation("plugins.setKey");
+	/** A plugin's slot: its service is the slot's and it has no name of its own (the row is called by its plugin). */
+	const slot = state.mode === "slot" ? state.slot : null;
+	/** The stored key the window changes: a named key, or the one in the slot. */
+	const editing = state.mode === "edit" ? state.key : (slot?.key ?? null);
+	const namedKey = state.mode === "edit" ? state.key : null;
 	const ids = { service: useId(), address: useId(), name: useId(), secret: useId() };
 	const inputs = {
 		address: useRef<HTMLInputElement>(null),
@@ -160,19 +194,21 @@ function KeyForm({
 		secret: useRef<HTMLInputElement>(null),
 	};
 
-	const [serviceId, setServiceId] = useState(state.mode === "edit" ? state.key.service : state.service);
+	const [serviceId, setServiceId] = useState(
+		state.mode === "edit" ? state.key.service : state.mode === "slot" ? state.slot.service : state.service,
+	);
 	/** Until the service is changed in the window: the caret goes to the first empty field only as the window opens, never away from the service just picked. */
 	const [asOpened, setAsOpened] = useState(true);
 	const service = services.find((each) => each.id === serviceId);
-	const serviceName = service ? nameOf(service) : (editing?.serviceName ?? serviceId);
-	const others = editing ? names.filter((name) => name !== editing.name) : names;
+	const serviceName = service ? nameOf(service) : (namedKey?.serviceName ?? slot?.serviceName ?? serviceId);
+	const others = namedKey ? names.filter((name) => name !== namedKey.name) : names;
 	/** What a new key is called until the person says otherwise: its service, or the host of its address, with a number when that is taken. */
 	const suggested = (ofService: Service | undefined, ofAddress: string) => {
 		const base = (ofService?.address ? hostOf(ofAddress) : null) ?? (ofService ? nameOf(ofService) : "");
 		return { base, name: freeName(base, others) };
 	};
 	const [address, setAddress] = useState(editing?.baseUrl ?? "");
-	const [name, setName] = useState(editing ? editing.name : suggested(service, "").name);
+	const [name, setName] = useState(namedKey ? namedKey.name : suggested(service, "").name);
 	const [named, setNamed] = useState(false);
 	const [secret, setSecret] = useState("");
 	/** Editing a key the server reads: the stored key shows until "Replace" opens the field. One it cannot read is entered again from the start. */
@@ -189,7 +225,7 @@ function KeyForm({
 		},
 		[],
 	);
-	const pending = add.pending || update.pending;
+	const pending = add.pending || update.pending || setSlot.pending;
 	// The form is on its way, known at once: `pending` is known only when the window is drawn again, and a second Enter that comes before
 	// that (a busy page) would send the form a second time.
 	const sending = useRef(false);
@@ -206,12 +242,29 @@ function KeyForm({
 		const baseUrl = address.trim();
 		// A field that must be filled says so itself, and the service is not asked.
 		if (service?.address && baseUrl === "") return fix("address", t("settings.fillIn"));
-		if (name.trim() === "") return fix("name", t("settings.fillIn"));
+		if (!slot && name.trim() === "") return fix("name", t("settings.fillIn"));
 		const needsKey = replacing && !service?.keyOptional;
 		if (needsKey && secret.trim() === "") return fix("secret", t("settings.fillIn"));
 
 		let result: Awaited<ReturnType<typeof add.run>>;
-		if (editing) {
+		if (slot) {
+			// A slot holds a key and, for a service that asks for one, its address: with neither changed there is nothing to store.
+			if (!replacing && (!service?.address || baseUrl === (slot.key?.baseUrl ?? ""))) return onClose();
+			if (!replacing) {
+				// A new address is checked with the key, which the server does not hand back: it is entered again.
+				setReplacing(true);
+				return setErrors({ secret: t("apiKeys.enterAgain") });
+			}
+			setChecking(true);
+			sending.current = true;
+			result = await setSlot.run({
+				plugin: slot.plugin,
+				slot: slot.slot,
+				secret,
+				...(service?.address ? { baseUrl } : {}),
+			});
+		} else if (namedKey) {
+			const editing = namedKey;
 			const changed = {
 				...(name.trim() !== editing.name ? { name: name.trim() } : {}),
 				...(replacing ? { secret } : {}),
@@ -236,7 +289,11 @@ function KeyForm({
 			});
 		}
 		if (result.ok) {
-			toast(t(editing ? "apiKeys.saved" : "apiKeys.added"));
+			toast(
+				slot && !slot.key
+					? t("apiKeys.slotSet", { plugin: slot.pluginLabel })
+					: t(editing ? "apiKeys.saved" : "apiKeys.added"),
+			);
 			if (shown.current) onClose();
 			return;
 		}
@@ -302,11 +359,13 @@ function KeyForm({
 	return (
 		<Stack as="form" gap={16} onSubmit={(event) => void submit(event as FormEvent)}>
 			<DialogHeader>
-				<DialogTitle of={editing ? editing.name : undefined}>{t(editing ? "apiKeys.edit" : "apiKeys.add")}</DialogTitle>
+				<DialogTitle of={slot ? slotName(slot) : namedKey ? namedKey.name : undefined}>
+					{t(editing ? "apiKeys.edit" : slot ? "apiKeys.slotAdd" : "apiKeys.add")}
+				</DialogTitle>
 			</DialogHeader>
 			<FormField>
-				<FormFieldLabel htmlFor={editing ? undefined : ids.service}>{t("apiKeys.service")}</FormFieldLabel>
-				{editing ? (
+				<FormFieldLabel htmlFor={editing || slot ? undefined : ids.service}>{t("apiKeys.service")}</FormFieldLabel>
+				{editing || slot ? (
 					<Text>{serviceName}</Text>
 				) : (
 					<PickOne
@@ -348,29 +407,31 @@ function KeyForm({
 					{errors.address ? <FormFieldError>{errors.address}</FormFieldError> : null}
 				</FormField>
 			) : null}
-			<FormField>
-				<FormFieldLabel htmlFor={ids.name} required={service?.keyOptional}>
-					{t("apiKeys.name")}
-				</FormFieldLabel>
-				<Input
-					ref={inputs.name}
-					id={ids.name}
-					maxLength={KEY_NAME_MAX}
-					value={name}
-					onChange={(event) => {
-						setName(event.target.value);
-						setNamed(true);
-					}}
-					aria-invalid={errors.name !== undefined || undefined}
-					autoFocus={editing?.readable}
-				/>
-				{errors.name ? (
-					<FormFieldError>{errors.name}</FormFieldError>
-				) : !editing && !named && name !== hint.base ? (
-					// The name was taken, so the window put a number after it: it says which name that was.
-					<FormFieldDescription>{t("apiKeys.nameTaken", { name: hint.base })}</FormFieldDescription>
-				) : null}
-			</FormField>
+			{slot ? null : (
+				<FormField>
+					<FormFieldLabel htmlFor={ids.name} required={service?.keyOptional}>
+						{t("apiKeys.name")}
+					</FormFieldLabel>
+					<Input
+						ref={inputs.name}
+						id={ids.name}
+						maxLength={KEY_NAME_MAX}
+						value={name}
+						onChange={(event) => {
+							setName(event.target.value);
+							setNamed(true);
+						}}
+						aria-invalid={errors.name !== undefined || undefined}
+						autoFocus={editing?.readable}
+					/>
+					{errors.name ? (
+						<FormFieldError>{errors.name}</FormFieldError>
+					) : !editing && !named && name !== hint.base ? (
+						// The name was taken, so the window put a number after it: it says which name that was.
+						<FormFieldDescription>{t("apiKeys.nameTaken", { name: hint.base })}</FormFieldDescription>
+					) : null}
+				</FormField>
+			)}
 			<FormField>
 				<FormFieldLabel htmlFor={replacing ? ids.secret : undefined}>{t("apiKeys.key")}</FormFieldLabel>
 				{editing && !replacing ? (

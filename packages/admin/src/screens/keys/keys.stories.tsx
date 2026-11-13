@@ -1,4 +1,4 @@
-import { createMonti } from "@monti-cms/core";
+import { createMonti, type KeyService, type Plugin } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
@@ -11,6 +11,8 @@ type Loaded = {
 	letRead: () => void;
 	/** Operations the server breaks on. */
 	failing: Set<string>;
+	/** Operations no answer comes back for: the network went away. */
+	lost: Set<string>;
 	/** Holds an operation's answer back until the function it gives is called. */
 	holdCall: (name: string) => () => void;
 	/** The operations the screen called, in order. */
@@ -39,6 +41,10 @@ export const sample = {
 	openai: "sk-proj-story-key-of-the-company-77de",
 	gemini: "AIzaSy-story-key-of-old-gemini-9f0c",
 	refused: "sk-ant-api03-a-key-the-service-refuses",
+	/** Keys the plugins' own services take. */
+	spelling: "bareun-story-key-of-the-spelling-4410",
+	search: "algolia-story-key-for-searching-9c1e",
+	searchNew: "algolia-story-key-entered-new-52ab",
 	unanswered: "sk-ant-api03-a-key-nobody-answers-for",
 };
 /** A name longer than a row: as long as a key's name may be (60 characters), with no room to break at. */
@@ -51,6 +57,8 @@ export type Network = {
 	requests: { url: string; headers: Record<string, string> }[];
 	/** Held, the services answer nothing until it is let go (`null`): the moment the window says "확인하는 중…". */
 	hold: (until: "held" | null) => void;
+	/** Ends when the network is not held: a plugin's own service waits on it like the others. */
+	waiting: () => Promise<void>;
 };
 
 /** The services as the stories' network: which keys each takes and the models it lists. No story reaches a real service. */
@@ -107,8 +115,44 @@ export function network(): Network {
 			letGo();
 			held = until === null ? null : gate();
 		},
+		waiting: async () => {
+			if (held) await held;
+		},
 	};
 }
+
+/** A plugin's own key service, as the stories have it: it takes the keys named and lists no model. */
+const pluginService = (id: string, name: string, taken: string[], net: () => Network): KeyService => ({
+	id,
+	name,
+	async check({ secret }) {
+		// Held with the rest of the network: the moment the window says "확인하는 중…".
+		await net().waiting();
+		return taken.includes(secret) ? { ok: true, models: [] } : { ok: false, reason: "refused" };
+	},
+});
+
+/**
+ * Two plugins that keep keys of their own (tools.md, the plugin key rows): a spelling check with one slot, and a search with two. Each brings
+ * the service its slots are for.
+ */
+export const slotPlugins = (net: () => Network): Plugin[] => [
+	{
+		name: "bareun",
+		label: "바른 맞춤법",
+		keyServices: [pluginService("bareun", "bareun", [sample.spelling], net)],
+		keys: [{ id: "key", label: "키", service: "bareun" }],
+	},
+	{
+		name: "algolia",
+		label: "Algolia 검색",
+		keyServices: [pluginService("algolia", "Algolia", [sample.search, sample.searchNew], net)],
+		keys: [
+			{ id: "search", label: "검색 키", service: "algolia" },
+			{ id: "admin", label: "관리 키", service: "algolia" },
+		],
+	},
+];
 
 /** The reference screen's three keys, with what they used this month. */
 async function threeKeys(monti: Monti) {
@@ -130,24 +174,31 @@ export const site = ({
 	keys = "three",
 	secret = siteSecret,
 	reading = false,
+	slots = false,
 }: {
 	keys?: "three" | "none" | "named" | "long";
+	/** Two plugins keep keys of their own: the page has a second list, one row per slot, the search's first one filled. */
+	slots?: boolean;
 	secret?: string | null | "other";
 	reading?: boolean;
 } = {}) => [
 	async (): Promise<Loaded> => {
 		startAt("#/tools/keys");
 		const net = network();
+		const plugins = slots ? slotPlugins(() => net) : [];
 		const made = await storySite({
 			schema,
+			plugins,
 			auth: { password: true },
 			signedIn: true,
 			secret: secret === "other" ? "another-secret-than-the-keys-were-stored-with" : secret,
 			fetch: net.fetch,
 			setup: async (monti) => {
-				if (keys === "none") return;
 				// The keys are stored by a server that has the first secret, on the same database.
-				const first = createMonti({ db: monti.db, schema, files: null, secret: siteSecret, fetch: net.fetch });
+				const first = createMonti({ db: monti.db, schema, files: null, secret: siteSecret, fetch: net.fetch, plugins });
+				if (slots)
+					await first.run("plugins.setKey", { plugin: "algolia", slot: "search", secret: sample.search }, admin);
+				if (keys === "none") return;
 				if (keys === "named")
 					await first.run("keys.add", { service: "anthropic", name: "Anthropic", secret: sample.anthropic }, admin);
 				else if (keys === "long") {
@@ -165,6 +216,7 @@ export const site = ({
 				})
 			: null;
 		const failing = new Set<string>();
+		const lost = new Set<string>();
 		const gates = new Map<string, Promise<void>>();
 		const holdCall = (name: string) => {
 			let release = () => {};
@@ -186,9 +238,11 @@ export const site = ({
 			await gates.get(name);
 			// A server that breaks on this operation: an answer with no reason in it.
 			if (failing.has(name)) return { status: 500, body: { error: "unexpected" } };
+			// The network went away: the call ends with no answer at all.
+			if (lost.has(name)) throw new TypeError("Failed to fetch");
 			return made.transport(name, ...rest);
 		};
-		return { site: { ...made, transport }, net, letRead, failing, holdCall, calls };
+		return { site: { ...made, transport }, net, letRead, failing, lost, holdCall, calls };
 	},
 ];
 
@@ -420,5 +474,62 @@ export const NoSecretWithKeys: Story = {
 		const page = await screen(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "Anthropic 개인 더 보기" }, wait));
 		await page.findByRole("menuitem", { name: "지우기" });
+	},
+};
+
+/** A site whose plugins keep keys of their own: a second list, one row per slot (flow 10, the plugin keys). */
+export const PluginKeys: Story = {
+	loaders: site({ slots: true }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await page.findByRole("heading", { name: "플러그인 키" }, wait);
+	},
+};
+
+/** An empty slot's "키 넣기": the same key window, its service set and no name to give (step 12). */
+export const SlotAdd: Story = {
+	loaders: site({ slots: true }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "바른 맞춤법 키 넣기" }, wait));
+		await page.findByLabelText("키");
+	},
+};
+
+/** A filled slot's ⋯ › "편집": the stored key's ending, and "바꾸기". */
+export const SlotEdit: Story = {
+	loaders: site({ slots: true }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await more(page, "Algolia 검색 · 검색 키", "편집");
+		await page.findByRole("button", { name: "바꾸기" });
+	},
+};
+
+/** Removing a slot's key: its plugin stops. */
+export const SlotRemove: Story = {
+	loaders: site({ slots: true }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await more(page, "Algolia 검색 · 검색 키", "지우기");
+		await page.findByRole("alertdialog");
+	},
+};
+
+/** The slots with no AI key yet: the first list says so, and the slots stand under the model. */
+export const PluginKeysNoKeys: Story = {
+	loaders: site({ slots: true, keys: "none" }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await page.findByText("아직 키가 없습니다.", {}, wait);
+	},
+};
+
+/** A server whose secret changed: the slot's key cannot be read either, and is counted in the banner. */
+export const PluginKeysUnreadable: Story = {
+	loaders: site({ slots: true, secret: "other" }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await page.findByText("키 4개를 읽을 수 없습니다", {}, wait);
 	},
 };

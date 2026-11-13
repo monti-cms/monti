@@ -394,6 +394,7 @@ export function createMonti(options: MontiOptions) {
 		name: plugin.name,
 		label: plugin.label ?? plugin.name,
 		keys: plugin.keys ?? [],
+		services: (plugin.keyServices ?? []).map((service) => service.id),
 		textCheck: plugin.textCheck ?? null,
 		beforeSave: plugin.beforeSave ?? null,
 		toolPages: plugin.toolPages ?? [],
