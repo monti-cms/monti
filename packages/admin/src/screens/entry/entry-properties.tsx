@@ -1,4 +1,11 @@
-import { type FieldDefinition, type FieldMark, localeModeOf, slugify, storedFields } from "@monti-cms/core";
+import {
+	type ConditionalField,
+	type FieldDefinition,
+	type FieldMark,
+	localeModeOf,
+	slugify,
+	storedFields,
+} from "@monti-cms/core";
 import {
 	Combobox,
 	ComboboxChip,
@@ -16,12 +23,14 @@ import {
 	Inline,
 	Input,
 	List,
+	Option,
 	OrderedRow,
 	PropertyGroup,
 	PropertyPanel,
 	Sortable,
 	SortableList,
 	Stack,
+	Switch,
 	Text,
 	Textarea,
 	useComboboxAnchor,
@@ -588,7 +597,11 @@ export function EntryProperties({
 					</FormField>
 				);
 			}
-			const shown = pickNames(shared[key], values[key]?.optionLabels);
+			// A choice made by a switch reads as what the switch says: on or off, never the option's word.
+			const shown =
+				def.kind === "select" && def.control === "toggle"
+					? t(shared[key] === def.options[0] ? "entry.toggleOn" : "entry.toggleOff")
+					: pickNames(shared[key], values[key]?.optionLabels);
 			return (
 				<FormField key={key}>
 					<FormFieldLabel action={sourceNote}>{values[key]?.label ?? key}</FormFieldLabel>
@@ -620,6 +633,24 @@ export function EntryProperties({
 					onChange={(next) => editor.set(path, next)}
 				/>
 			);
+		// A choice with one option, on or off (doc 19): a switch at the end of the field's row, the way every switch stands.
+		if (def.kind === "select" && def.control === "toggle") {
+			const [on] = def.options;
+			return (
+				<FormField key={key}>
+					<Option spread height="md">
+						{values[key]?.label ?? key}
+						<Switch
+							id={id}
+							checked={value === on}
+							disabled={readOnly}
+							onCheckedChange={(checked) => editor.set(path, checked ? on : null)}
+						/>
+					</Option>
+					{after}
+				</FormField>
+			);
+		}
 		const strays =
 			def.kind === "select"
 				? (Array.isArray(value) ? value : typeof value === "string" ? [value] : []).filter(
@@ -775,9 +806,17 @@ export function EntryProperties({
 		);
 	};
 
-	/** A field's rows: itself and, for a conditional field, the chosen option's fields directly under the choice. */
-	const rows = (key: string) => {
-		const field = top[key];
+	/** Every field under an option, however deep: the fields of its conditional fields' options too. */
+	const allUnder = (group: ConditionalField["fields"][string]): string[] =>
+		Object.entries(group).flatMap(([name, inner]) => [
+			name,
+			...(inner.kind === "conditional" ? Object.values(inner.fields).flatMap(allUnder) : []),
+		]);
+	/**
+	 * A field's rows: itself and, for a conditional field, the chosen option's fields directly under the choice. One of those may be a
+	 * conditional field too: its chosen option's fields follow it the same way.
+	 */
+	const rowsOf = (key: string, field: FieldDefinition | undefined): React.ReactNode[] => {
 		if (field?.kind !== "conditional") return [row(key)];
 		const sameAsSource = shared && localeModeOf(key, field) === "same";
 		const chosen = sameAsSource ? shared[key] : editor.value(`values.${key}`);
@@ -786,22 +825,27 @@ export function EntryProperties({
 			.filter(([option]) => option !== chosen)
 			.map(([option, group]) => ({
 				option,
-				count: Object.keys(group).filter((inner) => hasValue(editor.value(`values.${inner}`))).length,
+				count: allUnder(group).filter((inner) => hasValue(editor.value(`values.${inner}`))).length,
 			}))
 			.filter((each) => each.count > 0);
 		const labels = values[key]?.optionLabels ?? {};
 		const lost =
 			left.length > 0 && !sameAsSource ? (
 				<Text variant="caption" tone="warning">
+					{/* A switch has one option: what goes is that field's own, named by the field. */}
 					{t("entry.clearedOnSave", {
-						option: left.map((each) => labels[each.option] ?? each.option).join(", "),
+						option:
+							field.control === "toggle"
+								? (values[key]?.label ?? key)
+								: left.map((each) => labels[each.option] ?? each.option).join(", "),
 						count: left.reduce((sum, each) => sum + each.count, 0),
 					})}
 				</Text>
 			) : undefined;
-		const inner = typeof chosen === "string" ? Object.keys(field.fields[chosen] ?? {}) : [];
-		return [row(key, lost), ...inner.map((each) => row(each))];
+		const group = typeof chosen === "string" ? (field.fields[chosen] ?? {}) : {};
+		return [row(key, lost), ...Object.entries(group).flatMap(([each, inner]) => rowsOf(each, inner))];
 	};
+	const rows = (key: string) => rowsOf(key, top[key]);
 
 	if (!picked) return null;
 	return (

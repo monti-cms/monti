@@ -5,7 +5,7 @@ import { pathKept, publicPath, publicPaths } from "../entries/paths";
 import { CheckError } from "../errors";
 import { checkMediaValues } from "../media/uses";
 import { defineOperation, type Preview, type RecordRef } from "../operation";
-import { storedFields } from "../schema/define";
+import { notChosenFields, placesOf, storedFields } from "../schema/define";
 import {
 	generateUniqueSlug,
 	resolveInlineCreation,
@@ -879,6 +879,16 @@ export const relationOperations = [
 
 			const now = ctx.now();
 			const localesOutput: Record<string, { id: string; title: string; slug: string }> = {};
+			const definition = ctx.site.schema().collections[input.collection];
+			const sourceLocale = ctx.site.schema().locales.source;
+			const hosts = new Set(
+				Object.values(storedFields(definition)).flatMap((field) => placesOf(field.under).map((place) => place.field)),
+			);
+			const sourceValues = {
+				...((existingRows.find((row) => row.locale === sourceLocale)?.values ?? {}) as Record<string, unknown>),
+				...(input.locales[sourceLocale]?.values ?? {}),
+			};
+			const choices = Object.fromEntries(Object.entries(sourceValues).filter(([field]) => hosts.has(field)));
 
 			for (const [locale, data] of Object.entries(input.locales)) {
 				const existing = existingRows.find((r) => r.locale === locale);
@@ -888,6 +898,10 @@ export const relationOperations = [
 				if (data.description !== undefined) {
 					values.description = data.description;
 				}
+				// Only the chosen option's values are an item's too (doc 19). The choice is the source language's: another language goes by it
+				// unless it holds one of its own.
+				for (const field of notChosenFields(definition, locale === sourceLocale ? values : { ...choices, ...values }))
+					delete values[field];
 
 				if (existing) {
 					const slug =

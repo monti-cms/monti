@@ -743,6 +743,57 @@ export const ConditionalFields: Story = {
 	},
 };
 
+/** The same posts with a choice inside the video's fields and a field turned on and off by a switch (doc 19). */
+const nestedSchema = defineSchema({
+	...optionsSchema,
+	collections: {
+		...optionsSchema.collections,
+		post: {
+			...optionsSchema.collections.post,
+			fields: {
+				...optionsSchema.collections.post.fields,
+				format: {
+					kind: "conditional",
+					required: true,
+					options: ["article", "video", "link"],
+					fields: {
+						video: {
+							videoUrl: { kind: "text", required: true },
+							videoHost: {
+								kind: "conditional",
+								options: ["own", "embed"],
+								fields: { embed: { embedCode: { kind: "text" } } },
+							},
+						},
+						link: { linkUrl: { kind: "text", required: true } },
+					},
+				},
+				featured: {
+					kind: "conditional",
+					control: "toggle",
+					options: ["on"],
+					fields: { on: { featuredNote: { kind: "text" } } },
+				},
+			},
+		},
+	},
+});
+
+/**
+ * Doc 19: a conditional field inside an option of another has bands of its own, further in; a field turned on and off by a switch has the
+ * one band of its option. Every field of an option has its grip.
+ */
+export const ConditionalNestedFields: Story = {
+	loaders: site({ schema: nestedSchema, more: optionEntries }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "설정" }, wait));
+		await userEvent.click(await page.findByRole("link", { name: /^컬렉션/ }, wait));
+		await page.findByRole("button", { name: "embedCode 열기" }, wait);
+		await page.findByRole("button", { name: "featuredNote 열기" }, wait);
+	},
+};
+
 /** Doc 19: the field sheet of a conditional field: its options, each a value and a label. */
 export const ConditionalFieldSheet: Story = {
 	loaders: site({ schema: optionsSchema, more: optionEntries }),

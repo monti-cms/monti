@@ -1,4 +1,4 @@
-import { type Doc, storedFields } from "@monti-cms/core";
+import { type Doc, type FieldDefinition, storedFields } from "@monti-cms/core";
 import {
 	Banner,
 	Button,
@@ -176,8 +176,27 @@ export function CompareView({
 	 * choice, whole: they are what that kind of entry has, and the choice is the one place counted.
 	 */
 	const own = (copy: Copy, field: string) => {
-		const definition = schema?.schema.collections[collection]?.fields[field];
-		return definition?.kind === "conditional" ? Object.keys(definition.fields[String(copy.values[field])] ?? {}) : [];
+		// The conditional field may itself stand in an option of another, and one of its option's fields may be a conditional field:
+		// that one's chosen option's fields follow it.
+		const find = (fields: Record<string, FieldDefinition>): FieldDefinition | undefined => {
+			if (fields[field]) return fields[field];
+			for (const each of Object.values(fields)) {
+				if (each.kind !== "conditional") continue;
+				for (const group of Object.values(each.fields)) {
+					const found = find(group);
+					if (found) return found;
+				}
+			}
+			return undefined;
+		};
+		const under = (name: string, definition: FieldDefinition | undefined): string[] =>
+			definition?.kind === "conditional"
+				? Object.entries(definition.fields[String(copy.values[name])] ?? {}).flatMap(([inner, each]) => [
+						inner,
+						...under(inner, each),
+					])
+				: [];
+		return under(field, find(schema?.schema.collections[collection]?.fields ?? {}));
 	};
 
 	const side = (copy: Copy, pick: "mine" | "server", label: string) => (

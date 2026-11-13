@@ -33,8 +33,8 @@ export type RelationField = FieldBase & {
 	via?: string;
 };
 
-/** A field that can stand in a conditional field's group: any kind but the address and another conditional field. */
-export type GroupField = TextField | SelectField | MediaField | RelationField;
+/** A field that can stand in a conditional field's group: any kind but the address. A conditional field may: its fields are its option's. */
+export type GroupField = TextField | SelectField | MediaField | RelationField | ConditionalField;
 /**
  * A choice with fields of its own for each option (doc 19): the entry holds the chosen option under this field's name, and only the chosen
  * option's fields are shown and kept. An option with no group has no fields. Its fields are stored flat, beside the collection's other
@@ -44,18 +44,46 @@ export type ConditionalField = FieldBase & {
 	kind: "conditional";
 	options: string[];
 	fields: Record<string, Record<string, GroupField>>;
+	/**
+	 * How the choice is made in the editor. `toggle`: the field has one option, and a switch turns it on and off (on is the option
+	 * chosen, off is no choice). Left out, a menu of the options.
+	 */
+	control?: "toggle";
 };
 
 export type FieldDefinition = TextField | SlugField | SelectField | MediaField | RelationField | ConditionalField;
 export type FieldKind = FieldDefinition["kind"];
 
 /**
- * A field as an entry stores it: every kind but `conditional`, which is stored as the choice it is (a select) with its groups' fields beside
- * it. `under` names the conditional field and the option a field belongs to.
+ * A field's place in a conditional field: the field and the option it belongs to. `above` is that conditional field's own place, when it
+ * stands in an option of another: the field is the entry's only where every choice up the chain is made.
  */
-export type StoredField = (TextField | SlugField | SelectField | MediaField | RelationField) & {
-	under?: { field: string; option: string };
+export type OptionPlace = { field: string; option: string; above?: OptionPlace };
+
+/**
+ * A field as an entry stores it: every kind but `conditional`, which is stored as the choice it is (a select) with its groups' fields beside
+ * it. `under` names the conditional field and the option a field belongs to. A choice made by a switch says so (`control`).
+ */
+export type StoredField = (
+	| TextField
+	| SlugField
+	| (SelectField & { control?: "toggle" })
+	| MediaField
+	| RelationField
+) & {
+	under?: OptionPlace;
 };
+
+/** A place and the places above it, the field's own first. */
+export function placesOf(under: OptionPlace | undefined): OptionPlace[] {
+	const places: OptionPlace[] = [];
+	for (let place = under; place; place = place.above) places.push(place);
+	return places;
+}
+
+/** Whether these values have a place's option chosen, and every option above it. A field on its own is always the entry's. */
+export const choseIn = (under: OptionPlace | undefined, values: Record<string, unknown>) =>
+	placesOf(under).every((place) => values[place.field] === place.option);
 
 /**
  * The fields an entry's values are stored and read by, in the order the schema writes them: a conditional field as its choice, then each
@@ -66,17 +94,19 @@ export function storedFields(
 	collection: Pick<CollectionDefinition, "fields"> | undefined,
 ): Record<string, StoredField> {
 	const stored: Record<string, StoredField> = {};
-	for (const [name, field] of Object.entries(collection?.fields ?? {})) {
-		if (field.kind !== "conditional") {
-			stored[name] = field;
-			continue;
+	const put = (fields: Record<string, FieldDefinition>, under?: OptionPlace) => {
+		for (const [name, field] of Object.entries(fields)) {
+			if (field.kind !== "conditional") {
+				stored[name] = under ? { ...field, under } : field;
+				continue;
+			}
+			const { fields: groups, kind: _kind, ...choice } = field;
+			stored[name] = { ...choice, kind: "select", ...(under ? { under } : {}) };
+			for (const [option, group] of Object.entries(groups ?? {}))
+				put(group, { field: name, option, ...(under ? { above: under } : {}) });
 		}
-		const { fields, kind: _kind, ...choice } = field;
-		stored[name] = { ...choice, kind: "select" };
-		for (const [option, group] of Object.entries(fields))
-			for (const [inner, definition] of Object.entries(group))
-				stored[inner] = { ...definition, under: { field: name, option } };
-	}
+	};
+	put(collection?.fields ?? {});
 	return stored;
 }
 
@@ -90,7 +120,7 @@ export function notChosenFields(
 ): Set<string> {
 	const hidden = new Set<string>();
 	for (const [name, field] of Object.entries(storedFields(collection)))
-		if (field.under && values[field.under.field] !== field.under.option) hidden.add(name);
+		if (!choseIn(field.under, values)) hidden.add(name);
 	return hidden;
 }
 
@@ -219,8 +249,9 @@ export type SchemaProblem = {
 		| "invalidVia"
 		| "unknownOption"
 		| "duplicateField"
-		| "nestedConditional"
-		| "choicePerLocale";
+		| "notInOption"
+		| "choicePerLocale"
+		| "badToggle";
 };
 
 export function checkSchema(schema: Schema): SchemaProblem[] {
@@ -269,25 +300,29 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 		for (const fixed of ["title", "slug"] as const)
 			if (collection.fields[fixed] && collection.fields[fixed].required !== true)
 				problems.push({ collection: name, field: fixed, code: "fixedOptional" });
-		// A conditional field's own shape (doc 19): a group for a listed option only, no conditional field or address inside one, and no name
-		// used twice in the collection (the fields are stored side by side).
+		// A conditional field's own shape (doc 19): a group for a listed option only, no address inside one, and no name used twice in the
+		// collection (the fields are stored side by side). A conditional field in a group is checked the same way, as deep as it goes.
 		const names = new Set(Object.keys(collection.fields));
-		for (const [fieldName, field] of Object.entries(collection.fields)) {
-			if (field.kind !== "conditional") continue;
+		const checkChoice = (fieldName: string, field: ConditionalField) => {
 			// One choice per entry, made on the source: a translation is the same kind of entry as its source.
 			if (field.locale === "perLocale") problems.push({ collection: name, field: fieldName, code: "choicePerLocale" });
+			// A switch is one option, on or off: with more there is nothing to tell them apart by, and a required one could never be off.
+			if (field.control === "toggle" && (field.options.length !== 1 || field.required))
+				problems.push({ collection: name, field: fieldName, code: "badToggle" });
 			for (const [option, group] of Object.entries(field.fields ?? {})) {
 				if (!field.options.includes(option))
 					problems.push({ collection: name, field: fieldName, code: "unknownOption" });
 				for (const [inner, definition] of Object.entries(group)) {
-					const kind = (definition as { kind: string }).kind;
-					if (kind === "conditional" || kind === "slug")
-						problems.push({ collection: name, field: inner, code: "nestedConditional" });
+					if ((definition as { kind: string }).kind === "slug")
+						problems.push({ collection: name, field: inner, code: "notInOption" });
 					if (names.has(inner)) problems.push({ collection: name, field: inner, code: "duplicateField" });
 					names.add(inner);
+					if (definition.kind === "conditional") checkChoice(inner, definition);
 				}
 			}
-		}
+		};
+		for (const [fieldName, field] of Object.entries(collection.fields))
+			if (field.kind === "conditional") checkChoice(fieldName, field);
 		for (const [fieldName, field] of Object.entries(storedFields(collection))) {
 			const at = { collection: name, field: fieldName };
 			if (!IDENTIFIER.test(fieldName)) problems.push({ ...at, code: "badIdentifier" });

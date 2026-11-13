@@ -20,7 +20,7 @@ import {
 	Stack,
 	TextButton,
 } from "@monti-cms/ui";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { type AddressPlace, addressOfProblem } from "./basics-tab";
 import { PickOne } from "./pick-one";
@@ -78,11 +78,20 @@ const answerOf = (change: SchemaChange, pick: Pick): Choice | null => {
 		: { do: "removeCollection", confirm: true };
 };
 
+/**
+ * Of a removed field's values moved to `pick.move`: how many entries lose the value all the same, because the field it moves to is another
+ * option's than theirs (doc 19). None when the target stands on its own.
+ */
+const clearedByMove = (change: SchemaChange, pick: Pick | undefined, kept = change.kept) => {
+	const stay = pick?.radio === "move" && pick.move ? kept?.[pick.move] : undefined;
+	return stay === undefined ? 0 : Math.max(0, (change.count ?? 0) - stay);
+};
+
 /** A pick that throws stored values away: the apply pill turns into the red delete-and-apply (change.md). */
-const deletes = (change: SchemaChange, pick: Pick | undefined) =>
+const deletes = (change: SchemaChange, pick: Pick | undefined, kept = change.kept) =>
 	change.do === "removeCollection" ||
 	change.do === "removeLocale" ||
-	(change.do === "removeField" && pick?.radio !== "move") ||
+	(change.do === "removeField" && (pick?.radio !== "move" || clearedByMove(change, pick, kept) > 0)) ||
 	(change.do === "removeOption" && pick?.radio === "empty") ||
 	// A field moved into an option is cleared where another option is chosen: here, and on the live site that follows the same change.
 	change.do === "moveField" ||
@@ -106,6 +115,7 @@ export function ReviewSheet({
 	onOpenAddress,
 	onOpenLanguages,
 	afterApply,
+	onCount,
 }: {
 	model: SettingsDraft;
 	plan: Plan | null;
@@ -124,6 +134,8 @@ export function ReviewSheet({
 	onOpenLanguages: () => void;
 	/** Where the keyboard's focus goes once an apply made with it has closed the sheet (the open tab's name). */
 	afterApply?: () => HTMLElement | null;
+	/** Plans the same draft again with these answers, for the counts that depend on them; `null` when it could not be asked. */
+	onCount?: (answers: Answers) => Promise<SchemaChange[] | null>;
 }) {
 	return (
 		<Sheet open={plan !== null} onOpenChange={(next) => !next && !applying && onClose()}>
@@ -139,6 +151,7 @@ export function ReviewSheet({
 					onApply={onApply}
 					onOpenField={onOpenField}
 					onOpenAddress={onOpenAddress}
+					onCount={onCount}
 					onOpenLanguages={onOpenLanguages}
 					afterApply={afterApply}
 				/>
@@ -160,6 +173,7 @@ function Body({
 	onOpenAddress,
 	onOpenLanguages,
 	afterApply,
+	onCount,
 }: {
 	model: SettingsDraft;
 	plan: Plan;
@@ -175,6 +189,7 @@ function Body({
 	onOpenAddress: (collection: string, place: AddressPlace) => void;
 	onOpenLanguages: () => void;
 	afterApply?: () => HTMLElement | null;
+	onCount?: (answers: Answers) => Promise<SchemaChange[] | null>;
 }) {
 	const { t } = useAdmin();
 	// What must be fixed before the change can be applied: told here, when saving, each line opening its field (flow 4, step 09).
@@ -233,6 +248,33 @@ function Body({
 	);
 	const pick = (id: string, patch: Partial<Pick>) =>
 		setPicks((current) => ({ ...current, [id]: { ...(current[id] as Pick), ...patch } }));
+	// How many entries keep a removed field's values in an option's field depends on who has that option when the values move, and the
+	// answers about the options taken out decide that (doc 19): counted again whenever one of those answers changes.
+	const optionAnswers = JSON.stringify(
+		plan.changes.flatMap((change) => {
+			const given =
+				change.do === "removeOption" && picks[change.id] ? answerOf(change, picks[change.id] as Pick) : null;
+			return given ? [[change.id, given]] : [];
+		}),
+	);
+	const countsKept = plan.changes.some((change) => change.kept);
+	const [kept, setKept] = useState<Record<string, SchemaChange["kept"]>>({});
+	// The plan was counted with the first answers (the defaults): asked again only once an answer differs from the last one counted.
+	const counted = useRef(optionAnswers);
+	const ask = useRef(onCount);
+	ask.current = onCount;
+	useEffect(() => {
+		if (!countsKept || optionAnswers === counted.current) return;
+		counted.current = optionAnswers;
+		let stale = false;
+		void ask.current?.(Object.fromEntries(JSON.parse(optionAnswers) as [string, Choice][])).then((changes) => {
+			if (!stale && changes) setKept(Object.fromEntries(changes.map((change) => [change.id, change.kept])));
+		});
+		return () => {
+			stale = true;
+		};
+	}, [optionAnswers, countsKept]);
+	const keptOf = (change: SchemaChange) => kept[change.id] ?? change.kept;
 	const draftSchema = model.built?.schema;
 	// By the fields as they are stored: a conditional field is its choice here, and its options' fields are fields (doc 19).
 	const definition = (change: CollectionChange): FieldDefinition | undefined =>
@@ -253,7 +295,7 @@ function Body({
 		return model.fieldLabel(collection, key);
 	};
 	const unchanged = <ChangeNote>{t("settings.review.dataSame")}</ChangeNote>;
-	const danger = plan.changes.some((change) => deletes(change, picks[change.id]));
+	const danger = plan.changes.some((change) => deletes(change, picks[change.id], keptOf(change)));
 	// What the sheet is about: the languages when one of them changes, then each collection that does.
 	const subjects = [
 		...(plan.changes.some((change) => !ofCollection(change)) ? [t("settings.tab.languages")] : []),
@@ -432,7 +474,17 @@ function Body({
 							) : null}
 							<RadioItem value="clear" label={t("settings.review.clearValues")} hint={count(change.count)} />
 						</RadioGroup>
-						{current?.radio !== "move" ? <ChangeNote danger>{t("settings.review.valuesGo")}</ChangeNote> : null}
+						{current?.radio !== "move" ? (
+							<ChangeNote danger>{t("settings.review.valuesGo")}</ChangeNote>
+						) : current.move && keptOf(change)?.[current.move] !== undefined ? (
+							// Into a field of an option only the entries that have that option take the value: the rest lose it (doc 19).
+							<ChangeNote danger={clearedByMove(change, current, keptOf(change)) > 0}>
+								{t("settings.review.movedAndCleared", {
+									moved: keptOf(change)?.[current.move] ?? 0,
+									cleared: clearedByMove(change, current, keptOf(change)),
+								})}
+							</ChangeNote>
+						) : null}
 					</ChangeGroup>
 				);
 			}

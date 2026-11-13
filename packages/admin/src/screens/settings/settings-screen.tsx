@@ -456,6 +456,11 @@ export function SettingsScreen({
 				}}
 				onClose={() => setPlan(null)}
 				onApply={(answers) => void send(answers)}
+				onCount={async (answers) => {
+					if (!built) return null;
+					const planned = await planOp.run({ draft: built.schema, renames: built.renames, answers });
+					return planned.ok ? planned.body.changes : null;
+				}}
 				afterApply={() => openTab.current}
 				onOpenLanguages={() => {
 					setPlan(null);

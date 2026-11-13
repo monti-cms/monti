@@ -6,6 +6,8 @@ import {
 	type CollectionDefinition,
 	type FieldDefinition,
 	type LocalesDefinition,
+	type OptionPlace,
+	placesOf,
 	type Schema,
 	type StoredField,
 	storedFields,
@@ -72,6 +74,12 @@ export type SchemaChange = {
 	count?: number;
 	/** Of those entries, how many are on the site now: their published version is changed with the draft (doc 02). Trashed ones are not counted. */
 	published?: number;
+	/**
+	 * For a removed field, by each field of a conditional field's option its values can be moved to: how many of the counted entries keep the
+	 * value there. Those are the entries that have that option chosen when the move runs, which the answers to the options taken out in the
+	 * same change decide (`planSchema`'s `answers`); the rest lose the value, as they would lose any value of an option that is not theirs.
+	 */
+	kept?: Record<string, number>;
 	/** What the review asks, with the default first. Absent when the change touches no stored value. */
 	choices?: Choice[];
 };
@@ -87,23 +95,23 @@ export function schemaHash(schema: Schema): string {
 /** Entries of a collection whose value for `field` is not empty. Trashed entries count: their values come back with them. */
 const hasValue = (field: string) => sql<boolean>`coalesce(values->>${field}, '') <> ''`;
 
-async function countEntries(db: Db, collection: string, where: ReturnType<typeof sql<boolean>>) {
+async function countEntries(db: Db, collection: string, where: Where) {
 	const row = await db
 		.selectFrom("entries")
 		.select((eb) => eb.fn.countAll<string>().as("all"))
 		.where("collection", "=", collection)
-		.where(where)
+		.where(whereOf(where, "entries"))
 		.executeTakeFirstOrThrow();
 	return Number(row.all);
 }
 
 /** The count of a data change: the entries it touches, and how many of them are on the site now, by their published version's values. */
-async function counts(db: Db, collection: string, where: ReturnType<typeof sql<boolean>>) {
+async function counts(db: Db, collection: string, where: Where) {
 	const row = await db
 		.selectFrom("entry_published")
 		.select((eb) => eb.fn.countAll<string>().as("all"))
 		.where("collection", "=", collection)
-		.where(where)
+		.where(whereOf(where, "entry_published"))
 		.where("entry_id", "in", (eb) =>
 			eb.selectFrom("entries").select("id").where("status", "=", "published").where("trashed_at", "is", null),
 		)
@@ -111,9 +119,42 @@ async function counts(db: Db, collection: string, where: ReturnType<typeof sql<b
 	return { count: await countEntries(db, collection, where), published: Number(row.all) };
 }
 
-/** Entries for which a field of a conditional field's option is theirs: those that chose that option. Any entry, for a field on its own. */
-export const theirs = (under: StoredField["under"]) =>
-	under ? sql<boolean>`coalesce(values->>${under.field} = ${under.option}, false)` : sql<boolean>`true`;
+/** The table a condition is asked of: an entry's working copy, or what the site shows of it. */
+export type Copies = "entries" | "entry_published";
+
+/**
+ * The choice a copy of an entry goes by for a conditional field: its own, or, where it holds none, the one its translation group's source
+ * holds (a translation never stores the choice: it is the source's, doc 19), as a translation follows it: what the site shows of the
+ * source while it is there, its working copy until then. The source is the entry of the group that holds the choice.
+ */
+const choiceOf = (table: Copies, field: string) => {
+	const [own, id] =
+		table === "entries"
+			? [sql`entries.values`, sql`entries.id`]
+			: [sql`entry_published.values`, sql`entry_published.entry_id`];
+	return sql`coalesce(${own}->>${field}, (
+		select coalesce(shown.values, source.values)->>${field} from entries source
+		left join entry_published shown on shown.entry_id = source.id
+		where source.translation_group = (select me.translation_group from entries me where me.id = ${id})
+			and source.id <> ${id} and source.values ? ${field}
+		order by source.created_at, source.id limit 1))`;
+};
+
+/**
+ * Entries for which a field of a conditional field's option is theirs: those that chose that option, and every option above it (a
+ * translation by its source's choice). Any entry, for a field on its own.
+ */
+export const theirs = (under: StoredField["under"]) => (table: Copies) =>
+	under
+		? sql<boolean>`(${sql.join(
+				placesOf(under).map((place) => sql`coalesce(${choiceOf(table, place.field)} = ${place.option}, false)`),
+				sql` and `,
+			)})`
+		: sql<boolean>`true`;
+
+/** A condition on a copy of an entry: the same for both copies, or one that reads the copy's own table (`theirs`). */
+export type Where = ReturnType<typeof sql<boolean>> | ((table: Copies) => ReturnType<typeof sql<boolean>>);
+export const whereOf = (where: Where, table: Copies) => (typeof where === "function" ? where(table) : where);
 
 /** Entries that have this option of a select chosen: the one value of a single select, or one of a many's. */
 export const hasOption = (field: string, option: string) =>
@@ -128,6 +169,8 @@ export async function planSchema(
 	current: Schema,
 	draft: Schema,
 	renames: Rename[] = [],
+	/** The review's answers so far: they decide who has an option chosen when a removed field's values are moved into it (`kept`). */
+	answers: Answers = {},
 ): Promise<SchemaChange[]> {
 	const changes: SchemaChange[] = [];
 	for (const [name, collection] of Object.entries(draft.collections)) {
@@ -154,7 +197,7 @@ export async function planSchema(
 				...(previewBefore === undefined ? {} : { from: previewBefore }),
 				...(previewAfter === undefined ? {} : { to: previewAfter }),
 			});
-		changes.push(...(await planFields(db, name, before, collection, renames)));
+		changes.push(...(await planFields(db, name, before, collection, renames, answers)));
 	}
 	for (const name of Object.keys(current.collections))
 		if (!draft.collections[name])
@@ -217,6 +260,7 @@ async function planFields(
 	beforeCollection: CollectionDefinition,
 	afterCollection: CollectionDefinition,
 	renames: Rename[],
+	answers: Answers,
 ): Promise<SchemaChange[]> {
 	// By the fields as they are stored (doc 19): a field moved into a conditional field's group, or from one group to another, keeps its
 	// name and its values; an option taken out takes its group's fields with it, and they are asked about as any removed field is.
@@ -322,11 +366,10 @@ async function planFields(
 				collection,
 				field,
 				option: definition.under.option,
-				...(await counts(
-					db,
-					collection,
-					sql<boolean>`${hasValue(fromName.get(field) ?? field)} and not ${theirs(underBefore(definition.under))}`,
-				)),
+				...(await counts(db, collection, (table) => {
+					const place = definition.under ? underBefore(definition.under) : undefined;
+					return sql<boolean>`${hasValue(fromName.get(field) ?? field)} and not ${theirs(place)(table)}`;
+				})),
 			});
 		if (old.kind !== "select" || definition.kind !== "select") continue;
 		const renamedOptions = optionRenames(field, old, definition);
@@ -359,7 +402,52 @@ async function planFields(
 				],
 			});
 	}
+	// A removed field's values moved into a field of an option reach only the entries that have that option by then (doc 19): the steps
+	// before the move (a field's rename, an option's rename, an option taken out and its entries changed or emptied) have run, the fills of
+	// fields on their own have not. Counted on the database as it is now, by the words that will have become that option.
+	for (const change of changes) {
+		if (change.do !== "removeField") continue;
+		const kept: Record<string, number> = {};
+		for (const choice of change.choices ?? []) {
+			if (choice.do !== "removeField" || typeof choice.values !== "object") continue;
+			const under = after.fields[choice.values.move]?.under;
+			if (!under) continue;
+			const chosen = placesOf(under).map((place) => {
+				const host = fromName.get(place.field) ?? place.field;
+				const words = wordsBecoming(place.field, place.option);
+				return words.length > 0 && before.fields[host]
+					? sql<boolean>`coalesce(${choiceOf("entries", host)} in (${sql.join(words)}), false)`
+					: sql<boolean>`false`;
+			});
+			kept[choice.values.move] = await countEntries(
+				db,
+				collection,
+				sql<boolean>`${hasValue(String(change.field))} and ${sql.join(chosen, sql` and `)}`,
+			);
+		}
+		if (Object.keys(kept).length > 0) change.kept = kept;
+	}
 	return changes;
+
+	/**
+	 * The words entries hold now for a conditional field's choice that are `option` by the time a removed field's values move: the option
+	 * itself where it stays, the word it was renamed from, and each option taken out whose entries are changed to it (by the answer given, or
+	 * by the default, which is the first: to change).
+	 */
+	function wordsBecoming(field: string, option: string): string[] {
+		const [old, now] = [before.fields[fromName.get(field) ?? field], after.fields[field]];
+		if (!old || !now || old.kind !== "select" || now.kind !== "select") return [];
+		const renamedOptions = optionRenames(field, old, now);
+		return old.options.filter((word) => {
+			const renamedTo = renamedOptions.find((rename) => rename.from === word)?.to;
+			if (renamedTo !== undefined) return renamedTo === option;
+			if (now.options.includes(word)) return word === option;
+			const id = `removeOption:${collection}.${field}.${word}`;
+			const given = ([] as Choice[]).concat(answers[id] ?? []).find((choice) => choice.do === "removeOption");
+			const entries = given?.do === "removeOption" ? given.entries : { change: now.options[0] };
+			return typeof entries === "object" && entries.change === option;
+		});
+	}
 
 	/** A field's place in a conditional field as the database names it now (`underBefore`); none for a field on its own. */
 	function placeBefore(definition: StoredField) {
@@ -375,11 +463,11 @@ async function planFields(
 	 * The place a field has after the change, as the entries name it before the change's steps: the conditional field under its old name
 	 * and the option under its old word. The count reads the database as it is now.
 	 */
-	function underBefore(under: NonNullable<StoredField["under"]>) {
+	function underBefore(under: OptionPlace): OptionPlace {
 		const host = fromName.get(under.field) ?? under.field;
 		const [was, now] = [before.fields[host], after.fields[under.field]];
 		const word = was && now ? optionRenames(under.field, was, now).find((r) => r.to === under.option)?.from : undefined;
-		return { field: host, option: word ?? under.option };
+		return { field: host, option: word ?? under.option, ...(under.above ? { above: underBefore(under.above) } : {}) };
 	}
 
 	/** Whether an option of the field was renamed or taken out. */
@@ -390,12 +478,16 @@ async function planFields(
 
 	/** A field of a conditional field's option as it is after the option's own rename: the group follows its option, which is no change of the field. */
 	function underRenamed(old: StoredField): StoredField {
-		if (!old.under) return old;
-		const host = renamed.find((rename) => rename.from === old.under?.field)?.to ?? old.under.field;
-		const [was, now] = [before.fields[old.under.field], after.fields[host]];
+		return old.under ? { ...old, under: placeAfter(old.under) } : old;
+	}
+
+	/** A place as the entries name it after the change's renames: the conditional field under its new name, the option under its new word. */
+	function placeAfter(under: OptionPlace): OptionPlace {
+		const host = renamed.find((rename) => rename.from === under.field)?.to ?? under.field;
+		const [was, now] = [before.fields[under.field], after.fields[host]];
 		const to =
-			was && now ? optionRenames(host, was, now).find((rename) => rename.from === old.under?.option)?.to : undefined;
-		return to ? { ...old, under: { ...old.under, option: to } } : old;
+			was && now ? optionRenames(host, was, now).find((rename) => rename.from === under.option)?.to : undefined;
+		return { field: host, option: to ?? under.option, ...(under.above ? { above: placeAfter(under.above) } : {}) };
 	}
 }
 
@@ -414,7 +506,10 @@ async function planNewField(
 		// chosen now. Its fill runs before the same change gives any entry that option (`stepsFor`), so the count is what the fill writes.
 		const under = (definition as StoredField).under;
 		if (under) change.option = under.option;
-		Object.assign(change, await counts(db, collection, sql<boolean>`not ${hasValue(field)} and ${theirs(place)}`));
+		Object.assign(
+			change,
+			await counts(db, collection, (table) => sql<boolean>`not ${hasValue(field)} and ${theirs(place)(table)}`),
+		);
 		change.choices = [
 			{ do: "addRequiredField", fill: defaultFill(definition) },
 			{ do: "addRequiredField", fill: null },

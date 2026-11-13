@@ -16,6 +16,7 @@ import {
 	type RecordRef,
 } from "../operation";
 import { lockRecords } from "../records";
+import { dropUnfollowed } from "../translations/chosen";
 import { listTrash, TrashQuery, trashedEntry, trashRowCount } from "./list";
 import { everyTrashRow, foldersUnder, purgeRows, sweepLooseFiles, type TrashRef } from "./purge";
 
@@ -694,6 +695,11 @@ export const trashOperations = [
 					paths: [publicPath(schema, entry.collection, slug, entry.locale) ?? []].flat(),
 				});
 			}
+			// A translation that comes back goes by its source's choice as it is now (doc 19): what was another option's is not brought back.
+			await dropUnfollowed(
+				ctx,
+				plan.entries.map((entry) => entry.id),
+			);
 			for (const file of plan.media)
 				await db
 					.updateTable("media")

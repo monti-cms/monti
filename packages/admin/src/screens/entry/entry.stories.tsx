@@ -121,6 +121,7 @@ type Kind =
 	| "footnotes"
 	| "proposed"
 	| "conditional"
+	| "nestedChoice"
 	| "strayOption";
 
 /** The blog with a conditional field on its posts (doc 19): what a post is, and what each kind of post asks for. */
@@ -146,6 +147,45 @@ const withFormat = defineSchema({
 	},
 } as Schema);
 
+/**
+ * The same with a choice inside the video's fields (where the video is), and a field turned on and off by a switch with a field of its
+ * own for "on" (doc 19).
+ */
+const withNested = defineSchema({
+	...withFormat,
+	collections: {
+		...withFormat.collections,
+		post: {
+			...withFormat.collections.post,
+			fields: {
+				...withFormat.collections.post?.fields,
+				format: {
+					kind: "conditional",
+					required: true,
+					options: ["article", "video", "link"],
+					fields: {
+						video: {
+							videoUrl: { kind: "text", required: true },
+							videoHost: {
+								kind: "conditional",
+								options: ["own", "embed"],
+								fields: { embed: { embedCode: { kind: "text" } } },
+							},
+						},
+						link: { linkUrl: { kind: "text", required: true } },
+					},
+				},
+				featured: {
+					kind: "conditional",
+					control: "toggle",
+					options: ["on"],
+					fields: { on: { featuredNote: { kind: "text" } } },
+				},
+			},
+		},
+	},
+} as Schema);
+
 /** Makes the story's entry and returns its id. */
 async function entry(monti: Monti, kind: Kind): Promise<string> {
 	await templates(monti);
@@ -162,7 +202,15 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					subtitle: { label: "부제" },
 					cover: { label: "대표 이미지" },
 					category: { label: "카테고리" },
-					...(kind === "conditional" || kind === "strayOption"
+					...(kind === "nestedChoice"
+						? {
+								videoHost: { label: "영상 위치", optionLabels: { own: "직접 올림", embed: "퍼가기" } },
+								embedCode: { label: "퍼가기 코드" },
+								featured: { label: "첫 화면에 올리기" },
+								featuredNote: { label: "첫 화면 문구" },
+							}
+						: {}),
+					...(kind === "conditional" || kind === "nestedChoice" || kind === "strayOption"
 						? {
 								format: { label: "글 종류", optionLabels: { article: "글", video: "동영상", link: "링크" } },
 								videoUrl: { label: "동영상 주소" },
@@ -203,6 +251,16 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 						...(kind === "conditional"
 							? { format: "video", videoUrl: "https://example.dev/talk.mp4", videoCredit: "example.dev" }
 							: {}),
+						...(kind === "nestedChoice"
+							? {
+									format: "video",
+									videoUrl: "https://example.dev/talk.mp4",
+									videoHost: "embed",
+									embedCode: "<iframe src='https://example.dev/talk'></iframe>",
+									featured: "on",
+									featuredNote: "이번 주의 글",
+								}
+							: {}),
 					},
 					doc:
 						kind === "table"
@@ -237,7 +295,8 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 	async (): Promise<Loaded> => {
 		let id = "";
 		const made = await storySite({
-			schema: kind === "conditional" || kind === "strayOption" ? withFormat : schema,
+			schema:
+				kind === "nestedChoice" ? withNested : kind === "conditional" || kind === "strayOption" ? withFormat : schema,
 			auth: { password: true },
 			// A site signs its preview links: without a secret "Preview" has nothing to open.
 			secret: "story secret",
@@ -312,6 +371,19 @@ export const ConditionalChanged: Story = {
 		await userEvent.click(await page.findByRole("combobox", { name: "글 종류" }, wait));
 		await userEvent.click(await all.findByRole("option", { name: "링크" }, wait));
 		await page.findByRole("textbox", { name: /링크 주소/ }, wait);
+	},
+};
+
+/**
+ * A choice inside a choice, and a field turned on and off by a switch (doc 19): the inner choice's fields stand under it as the outer
+ * one's do, and the switch's field under the switch while it is on.
+ */
+export const ConditionalNested: Story = {
+	loaders: site("nestedChoice"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByRole("textbox", { name: /퍼가기 코드/ }, wait);
+		await page.findByRole("switch", { name: /첫 화면에 올리기/ }, wait);
 	},
 };
 
