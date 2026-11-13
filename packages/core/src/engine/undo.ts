@@ -124,8 +124,7 @@ export async function planUndo(
 	// The locks every write takes on the records it touches (`runWrite`): a save that is under way finishes first and is seen here, and one that
 	// starts now waits until the undo is done. Without them an undo could read a version, lose the race, and put its snapshot over the save.
 	// With the files the records it puts back name, as they were: the undo comes for those once they are back (`rewriteUses`).
-	if (options.lock)
-		await lockWithFiles(db, engine.site.schema(), refs, { willHold: snapshots.map((snapshot) => snapshot.before) });
+	if (options.lock) await lockWithFiles(db, refs, { willHold: snapshots.map((snapshot) => snapshot.before) });
 	const current = await loadRecords(engine, db, refs);
 	// What earlier undos put back: the version each left a record at stands for the version whose content it brought back.
 	const putBack =

@@ -141,7 +141,7 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 	// (nothing keeps it alive after the answer) would be asked every few seconds for as long as the admin is open.
 	const onTheWay = counts.data?.deliveriesOnTheWay ?? 0;
 	const looks = useRef(0);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: each answer of the counts (`counts.data`) starts the next look.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: each answer of the counts, read or not, starts the next look.
 	useEffect(() => {
 		if (onTheWay === 0) {
 			looks.current = 0;
@@ -153,7 +153,7 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 			void recount();
 		}, COUNT_AGAIN_MS);
 		return () => clearTimeout(timer);
-	}, [onTheWay, counts.data, recount]);
+	}, [onTheWay, counts.data, counts.refusal, recount]);
 	// A write queues new deliveries: the looks start over with it.
 	useEffect(
 		() =>

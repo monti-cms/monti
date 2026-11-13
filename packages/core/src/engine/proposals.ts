@@ -758,7 +758,6 @@ export async function revertProposal(
 		// And the files those records will name once they are back, in the same go (`lockWithFiles`).
 		await lockWithFiles(
 			db,
-			engine.site.schema(),
 			[
 				...new Map(
 					snapshots.map((snapshot) => {
@@ -767,7 +766,8 @@ export async function revertProposal(
 					}),
 				).values(),
 			],
-			{ willHold: snapshots.map((snapshot) => snapshot.before) },
+			// Each item is put back by a write of its own, and each comes for its files: all of them now.
+			{ willHold: snapshots.map((snapshot) => snapshot.before), files: "always" },
 		);
 	}
 	const reverted: string[] = [];

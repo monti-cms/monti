@@ -89,35 +89,50 @@ function filesNamedIn(value: unknown, into: Set<string>): Set<string> {
 	return into;
 }
 
+/** Every file these entries and templates name in their working and published copies, read as they are stored. */
+async function filesNamedBy(db: Db, entryIds: string[], templateIds: string[]): Promise<Set<string>> {
+	const named = new Set<string>();
+	if (entryIds.length > 0) {
+		filesNamedIn(await db.selectFrom("entries").select(["values", "doc"]).where("id", "in", entryIds).execute(), named);
+		filesNamedIn(
+			await db.selectFrom("entry_published").select(["values", "doc"]).where("entry_id", "in", entryIds).execute(),
+			named,
+		);
+	}
+	if (templateIds.length > 0)
+		filesNamedIn(await db.selectFrom("templates").select("doc").where("id", "in", templateIds).execute(), named);
+	return named;
+}
+
 /**
  * Takes the locks of the records a write touches, in the engine's one order (`lockRecords`: the files last), and with them the files it will
  * come for later. A write asks for files twice: for the ones it touches, here, and after its run for the ones its entries and templates name
  * (`rewriteUses`). Asked for in two goes, a file is asked for while another is held, against the order of a write that touches both. So a
  * write that touches a file takes, in the same go, every file its entries and templates name now (read once those are held), and every file
- * named in `willHold` (what an undo is about to put back). A write that touches no file asks for files once, after its run, and needs
- * nothing here.
+ * named in `willHold` (what an undo is about to put back). The names are read as stored, every `media` however deep: more than the uses the
+ * write will count (a conditional field's unchosen option names files too), never fewer. A write that touches no file asks for files once,
+ * after its run, and needs nothing here; one that will ask several times all the same (a revert of several items, each written on its own)
+ * says so with `files: "always"`.
  */
 export async function lockWithFiles(
 	db: Db,
-	schema: Schema,
 	refs: RecordRef[],
-	{ willHold = [] }: { willHold?: unknown[] } = {},
+	{ willHold = [], files = "whenTouched" }: { willHold?: unknown[]; files?: "whenTouched" | "always" } = {},
 ): Promise<void> {
-	const files = refs.filter((ref) => ref.kind === "media");
+	const touched = refs.filter((ref) => ref.kind === "media");
 	await lockRecords(
 		db,
 		refs.filter((ref) => ref.kind !== "media"),
 	);
-	if (files.length === 0) return;
+	if (touched.length === 0 && files !== "always") return;
 	const named = filesNamedIn(willHold, new Set<string>());
-	const uses = await usesNow(
+	const now = await filesNamedBy(
 		db,
-		schema,
 		refs.filter((ref) => ref.kind === "entry").map((ref) => ref.id),
 		refs.filter((ref) => ref.kind === "template").map((ref) => ref.id),
 	);
-	for (const use of uses.values()) named.add(use.media);
-	for (const file of files) named.add(file.id);
+	for (const id of now) named.add(id);
+	for (const file of touched) named.add(file.id);
 	await lockRecords(
 		db,
 		[...named].map((id) => ({ kind: "media", id })),

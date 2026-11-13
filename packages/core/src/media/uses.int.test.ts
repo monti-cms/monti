@@ -31,6 +31,7 @@ const schema = defineSchema({
 				slug: { kind: "slug", required: true },
 				cover: { kind: "media", accept: "image" },
 				attachment: { kind: "media", accept: "any" },
+				writer: { kind: "relation", to: "author" },
 				format: {
 					kind: "conditional",
 					options: ["article", "video"],
@@ -590,6 +591,37 @@ describe("a file in use stays out of the trash", () => {
 				{ kind: "media", id: cover },
 				{ kind: "template", id: template },
 			]);
+			await settled();
+			release();
+			await expect(Promise.all([first, second])).resolves.toHaveLength(2);
+		});
+
+		it("09-4 a permanent delete that cuts a relation and deletes a file, and a save of the entry that pointed, do not wait on each other", async () => {
+			const [photo, other] = [await file(), await file("other.jpg")];
+			const writer = await write<{ group: string; locales: Record<string, { id: string }> }>("items.saveGroup", {
+				collection: "author",
+				locales: { ko: { title: "글쓴이", slug: `w-${++slugs}`, values: { photo: { media: photo, alt: "얼굴" } } } },
+			});
+			// The post points at the author and uses the same picture.
+			const made = await post({ values: { cover: { media: photo, alt: "표지" } } });
+			await write("relations.edit", {
+				collection: "post",
+				entryIds: [made.output.id],
+				field: "writer",
+				set: writer.output.group,
+			});
+			const rows = [
+				{ kind: "entry", id: writer.output.locales.ko?.id },
+				{ kind: "media", id: other },
+			];
+			await write("trash.move", { rows });
+			const { run, inRun, release } = holding();
+			// The first holds the post and, after its run, comes for the picture the post names.
+			const first = run([{ kind: "entry", id: made.output.id }], true);
+			await inRun;
+			// The delete holds the author and a file, and comes for the post to cut its relation: with the files held first (the author's
+			// picture among them), it would hold the picture and wait for the post.
+			const second = write("trash.purge", { rows });
 			await settled();
 			release();
 			await expect(Promise.all([first, second])).resolves.toHaveLength(2);

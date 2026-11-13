@@ -199,18 +199,21 @@ export function ActivityPanel({
 		setAsking(null);
 		if (!delivery || canceling.includes(delivery.id)) return;
 		setCanceling((ids) => [...ids, delivery.id]);
-		turn.current = turn.current.then(async () => {
-			try {
-				const result = await cancel.run({ id: delivery.id });
-				if (result.ok) return void toast(t("activity.canceled"));
-				// What the panel shows is behind (the delivery went by itself, or was canceled in another tab): everything reads again, as when a
-				// send is refused.
-				wrote();
-				toast.error(t(reasonOf(result.refusal)));
-			} finally {
-				setCanceling((ids) => ids.filter((id) => id !== delivery.id));
-			}
-		});
+		turn.current = turn.current
+			.then(async () => {
+				try {
+					const result = await cancel.run({ id: delivery.id });
+					if (result.ok) return void toast(t("activity.canceled"));
+					// What the panel shows is behind (the delivery went by itself, or was canceled in another tab): everything reads again, as when a
+					// send is refused.
+					wrote();
+					toast.error(t(reasonOf(result.refusal)));
+				} finally {
+					setCanceling((ids) => ids.filter((id) => id !== delivery.id));
+				}
+			})
+			// Whatever one cancel met, the next one confirmed is still sent.
+			.catch(() => {});
 	};
 	return (
 		<>

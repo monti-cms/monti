@@ -2466,7 +2466,7 @@ describe("counts and sites without receivers", () => {
 		await newPost("둘", "two", monti);
 		expect(await everywhere()).toEqual([4, 4, 4]);
 		const counts = await read<DeliveryCounts>("deliveries.counts", {}, monti);
-		expect(counts).toEqual({ failed: 4, since: START, sending: 0 });
+		expect(counts).toEqual({ failed: 4, since: START, sending: 0, onTheWay: 0 });
 
 		// One receiver is back: sending all again leaves the other's two.
 		down.delete(SITE);
@@ -2483,7 +2483,12 @@ describe("counts and sites without receivers", () => {
 		later(DAY);
 		await monti.deliveries.sendDue();
 		expect(await everywhere()).toEqual([0, 0, 0]);
-		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toEqual({ failed: 0, since: null, sending: 0 });
+		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toEqual({
+			failed: 0,
+			since: null,
+			sending: 0,
+			onTheWay: 0,
+		});
 	});
 
 	it("13-5 a site with no receiver logs every write and shows no delivery anywhere", async () => {
@@ -2503,7 +2508,12 @@ describe("counts and sites without receivers", () => {
 		expect(await facet("delivery", {}, monti)).toEqual({ pending: 0, sent: 0, failed: 0, canceled: 0 });
 		expect(await deliveries()).toEqual([]);
 		expect((await detail(log.lines[1].id, monti)).deliveries).toEqual([]);
-		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toEqual({ failed: 0, since: null, sending: 0 });
+		expect(await read<DeliveryCounts>("deliveries.counts", {}, monti)).toEqual({
+			failed: 0,
+			since: null,
+			sending: 0,
+			onTheWay: 0,
+		});
 
 		// A receiver the site had and took out: its deliveries are still shown, and trying one says the receiver is gone.
 		const withOne = site();

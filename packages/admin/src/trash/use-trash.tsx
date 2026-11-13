@@ -243,7 +243,11 @@ export function usePurge() {
 			return ask.rows.length > 0 && setAsking(ask);
 		},
 		/** Asks to empty the trash of its `count` rows. */
-		startEmpty: (count: number) => setAsking({ all: count }),
+		startEmpty: (count: number) => {
+			// Nothing of an earlier delete's: closed without emptying, the question gives the focus back to what opened it.
+			gone.current = null;
+			setAsking({ all: count });
+		},
 		dialog,
 	};
 }

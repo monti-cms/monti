@@ -204,7 +204,7 @@ export async function runWrite<Output>(
 		const held = unique((await operation.holds?.(input, ctx)) ?? []).filter((ref) => !named.has(recordKey(ref)));
 		const locked = [...touched, ...held];
 		// In the one order (doc 00): the records, then the files, and with the files the ones the write's records name (`lockWithFiles`).
-		await lockWithFiles(trx, engine.site.schema(), locked);
+		await lockWithFiles(trx, locked);
 		// After the records' locks, as a screen's save takes them (records, then the items it accepts): the item is held until this write ends, so
 		// nothing discards it, changes it or applies it a second time meanwhile.
 		if (options.applies) await claimItem(trx, options.applies, true);

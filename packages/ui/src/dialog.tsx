@@ -227,7 +227,8 @@ function DialogTitle({ className, of, children, ...props }: DialogPrimitive.Titl
 			className={cn(DIALOG_TITLE, of && "flex min-w-0 whitespace-pre", className)}
 			{...props}
 		>
-			{of ? <span className="shrink-0">{children}</span> : children}
+			{/* Its own words give way only when they alone are wider than the window. */}
+			{of ? <span className="max-w-full shrink-0 truncate">{children}</span> : children}
 			{of && (
 				<span
 					className="min-w-0 truncate font-normal text-monti-subtle"
