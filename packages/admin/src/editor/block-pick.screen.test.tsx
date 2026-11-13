@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { caretAfter, dragPath, dropDrag, middleOf, pickWords, pointerPath } from "../../../../testing/input";
+import { caretAfter, dragPath, dropDrag, middleOf, onTopOf, pickWords, pointerPath } from "../../../../testing/input";
 import { scene } from "../../test/scene";
 import * as entry from "../screens/entry/entry.stories";
 
@@ -160,5 +160,63 @@ describe("T80 picking several blocks whole", () => {
 		await userEvent.keyboard("{ControlOrMeta>}v{/ControlOrMeta}");
 		await expect.poll(blocks).toEqual([FIRST, LAST, HEADING, THIRD]);
 		expect(body().element().querySelector("h2")?.textContent).toBe(HEADING);
+	});
+});
+
+describe("T80 a pick that takes in a code block (doc 17)", () => {
+	const ABOVE = "버튼을 누를 때마다 수를 하나 올린다.";
+	const BELOW = "다음 문단.";
+	/** The body's blocks, top to bottom: a code block as "code", any other by its words. */
+	const kinds = () =>
+		[...body().element().querySelectorAll(":scope > *")].map((each) =>
+			each.matches("[data-block=codeBlock]") || each.querySelector("[data-block=codeBlock]")
+				? "code"
+				: each.textContent,
+		);
+	const pickedKinds = () =>
+		[...body().element().querySelectorAll("[data-picked]")].map((each) =>
+			each.matches("[data-block=codeBlock]") || each.querySelector("[data-block=codeBlock]")
+				? "code"
+				: each.textContent,
+		);
+	const codeBox = () => body().element().querySelector<HTMLElement>("[data-block=codeBlock]");
+
+	it("[dragging] [dropped] a box over a paragraph and the code block picks both; the code block's handle moves them whole, Backspace takes them out, undo brings them back", async () => {
+		await scene({ loaders: entry.site("code") }, entry.default).run();
+		await expect.poll(() => codeBox()?.querySelectorAll("[data-slot=code-number]").length ?? 0).toBe(6);
+		const text = body().element().getBoundingClientRect();
+		const above = block(ABOVE).element().getBoundingClientRect();
+		const code = codeBox()?.getBoundingClientRect();
+		if (!code) throw new Error("no code block");
+		await dragPath(
+			[
+				{ x: text.left - 56, y: above.top + 2 },
+				{ x: text.left + 64, y: code.top + code.height / 2 },
+			],
+			{ steps: 10 },
+		);
+		await expect.poll(pickedKinds).toEqual([ABOVE, "code"]);
+
+		// The code block's handle: on top where it is pressed, whatever tool row the block shows.
+		await pointerPath([
+			{ x: code.left + 80, y: code.top + 12 },
+			{ x: code.left - 14, y: code.top + 12 },
+		]);
+		await expect.element(handle()).toBeVisible();
+		const grip = handle().element();
+		expect(grip.contains(onTopOf(grip))).toBe(true);
+		const below = block(BELOW).element().getBoundingClientRect();
+		await dragPath([middleOf(grip), { x: below.left + 40, y: below.bottom - 3 }], { steps: 12 });
+		await expect.poll(kinds).toEqual([BELOW, ABOVE, "code"]);
+		await expect.poll(pickedKinds).toEqual([ABOVE, "code"]);
+		// The code came whole: its six lines and its language.
+		expect(codeBox()?.querySelectorAll("[data-slot=code-number]").length).toBe(6);
+		expect(codeBox()?.querySelector("[data-slot=code-frame-head]")?.textContent).toContain("TypeScript");
+
+		await userEvent.keyboard("{Backspace}");
+		await expect.poll(kinds).toEqual([BELOW]);
+		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
+		await expect.poll(kinds).toEqual([BELOW, ABOVE, "code"]);
+		await expect.poll(() => codeBox()?.querySelectorAll("[data-slot=code-number]").length ?? 0).toBe(6);
 	});
 });

@@ -1,6 +1,7 @@
 import { Extension } from "@tiptap/core";
+import { closeHistory } from "@tiptap/pm/history";
 import { type Node as EditorNode, Fragment, Slice } from "@tiptap/pm/model";
-import { type EditorState, Plugin, PluginKey, TextSelection, type Transaction } from "@tiptap/pm/state";
+import { type EditorState, Plugin, PluginKey, type Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { canMove, deleteBlock } from "./commands";
 import { type Drop, moveBlockTo, spots } from "./drag";
@@ -31,6 +32,21 @@ function normalize(doc: EditorNode, positions: readonly number[]): number[] {
 		coveredUntil = pos + node.nodeSize;
 	}
 	return result;
+}
+
+/** Whether a selection is still the one laid over the pick: inside it, from its first block to its last. */
+function spansPick(doc: EditorNode, selection: Selection, picked: readonly number[]): boolean {
+	const first = picked[0];
+	const last = picked[picked.length - 1];
+	const lastNode = last === undefined ? null : doc.nodeAt(last);
+	const firstNode = first === undefined ? null : doc.nodeAt(first);
+	if (first === undefined || last === undefined || !lastNode || !firstNode || selection.empty) return false;
+	return (
+		selection.from >= first &&
+		selection.from < first + firstNode.nodeSize &&
+		selection.to > last &&
+		selection.to <= last + lastNode.nodeSize
+	);
 }
 
 /** Picks the blocks at `positions` (none: `null` or empty), with the body's selection over them for copy. */
@@ -99,6 +115,8 @@ export function removePicked(view: EditorView, picked: readonly number[]) {
 
 /** Takes the picked blocks out, last first; a list or quote left with nothing goes too, and an emptied body keeps one empty line. */
 export function deletePicked(tr: Transaction, picked: readonly number[]): Transaction {
+	// Its own step of undo: a move, copy or delete made right after another is not undone with it.
+	closeHistory(tr);
 	for (const pos of [...picked].sort((a, b) => b - a)) deleteBlock(tr, pos);
 	tr.setMeta(key, null);
 	const at = Math.min(tr.mapping.map(picked[0] ?? 0), tr.doc.content.size);
@@ -110,6 +128,8 @@ export function deletePicked(tr: Transaction, picked: readonly number[]): Transa
  * with them, and they stay picked where they land.
  */
 export function movePicked(tr: Transaction, picked: readonly number[], drop: Pick<Drop, "pos" | "side">): Transaction {
+	// Its own step of undo: a move, copy or delete made right after another is not undone with it.
+	closeHistory(tr);
 	// Each block is found again by its id before it moves: a move that cuts a list in two replaces the list whole, and a place read through that
 	// change would point at the block after it.
 	const ids = picked.map((pos) => idAt(tr.doc, pos));
@@ -171,6 +191,8 @@ export function movePickedBy(tr: Transaction, picked: readonly number[], directi
 
 /** A copy of the picked blocks: after the last of them when they stand together in one parent, else each after itself. */
 export function duplicatePicked(tr: Transaction, picked: readonly number[]): Transaction {
+	// Its own step of undo: a move, copy or delete made right after another is not undone with it.
+	closeHistory(tr);
 	const nodes = picked.map((pos) => tr.doc.nodeAt(pos));
 	const $first = tr.doc.resolve(picked[0] ?? 0);
 	const together =
@@ -290,8 +312,9 @@ export const BlockPick = Extension.create({
 						const meta = tr.getMeta(key) as number[] | null | undefined;
 						if (meta !== undefined) return meta;
 						if (!value) return null;
-						// Another selection lets the pick go.
-						if (tr.selectionSet) return null;
+						// Another selection lets the pick go. The same one read back from the page does not: a block drawn by its own view (a code
+						// block) can hand the browser's reading of the selection laid over the pick back a step off.
+						if (tr.selectionSet && (tr.docChanged || !spansPick(tr.doc, tr.selection, value))) return null;
 						if (!tr.docChanged) return value;
 						// A picked block the change took out leaves the pick; it does not hand its place to the block after it.
 						const mapped = normalize(
