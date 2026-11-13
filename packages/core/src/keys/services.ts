@@ -193,7 +193,7 @@ const anthropic: KeyService = {
 	defaults: { assistant: ["claude-sonnet-5-5", "claude-opus-5-5"], quick: ["claude-haiku-5-5"] },
 	async check({ secret }, tools) {
 		// The version Anthropic's API reference writes in its Models examples; the reference says the Models endpoint answers `2026-10-21` exactly as
-		// it answers `2023-06-01`. Not tried against the live API with a real key: without one it answers 401 before it looks at the version.
+		// it answers `2023-06-01`. Taken by the live API with a real key (T161, 2026-11-13).
 		const listed = await get(tools, `${SERVICE_URLS.anthropic}/models?limit=1000`, {
 			"x-api-key": secret,
 			"anthropic-version": "2026-10-21",
@@ -210,7 +210,7 @@ const anthropic: KeyService = {
 						label: text(row.display_name),
 						thinking: supported(row.capabilities, "thinking"),
 						images: supported(row.capabilities, "image_input"),
-						// The field the Models API's model object names; read when it is there. Not confirmed against the live API.
+						// The field the Models API's model object names; read when it is there (the live API gave it for every model, T161).
 						context: tokens(row.max_input_tokens),
 					};
 				}),

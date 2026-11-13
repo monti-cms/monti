@@ -24,10 +24,17 @@ export type DeliveriesRetried = { ids: string[]; sent: number; failed: number; r
 /** What `activity.undoPlan` answers: the undo's plan, and the collections of the entries it would put in the trash (to call them by name). */
 export type UndoPlanned = UndoPlan & { trashedCollections: string[] };
 
-/** What the undo takes back: a line of the log, or every write applied from a proposal. */
-const Undo = z.union([z.object({ id: z.string() }), z.object({ proposal: z.string() })]);
+/**
+ * What the undo takes back: a line of the log (`id`), or every write applied from a proposal (`proposal`), one of them. One object and not a
+ * union of two: a tool's input is an object, and a model service refuses a tool whose schema is not one at the top (Anthropic did, T161).
+ */
+const Undo = z
+	.object({ id: z.string().optional(), proposal: z.string().optional() })
+	.refine((input) => (input.id === undefined) !== (input.proposal === undefined), {
+		message: "Give the line (`id`) or the proposal (`proposal`): one of them.",
+	});
 const undoOf = (input: z.infer<typeof Undo>): UndoOf =>
-	"id" in input ? { line: input.id } : { proposal: input.proposal };
+	input.id !== undefined ? { line: input.id } : { proposal: input.proposal as string };
 
 /**
  * The activity log and the deliveries (doc 13). They are made with the engine, not a plain list: undo reads the snapshots, and sending again sends
@@ -114,14 +121,20 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			log: false,
 			description:
 				"Send failed deliveries again now: the ones named by `ids` (a line's `delivery.failedIds`, or one delivery of activity.get), or with `all` every failed one (only a person sends all; the assistant names ids). The tries are counted from the start, so automatic retries follow again if it fails. One call takes a batch and answers how many arrived, how many failed again and how many are left (`remaining`); while some are left, call again with the `run` it answered.",
-			input: z.union([
-				z.object({ ids: z.array(z.string()).min(1), run: z.iso.datetime().optional() }),
-				z.object({ all: z.literal(true), run: z.iso.datetime().optional() }),
-			]),
+			// One object and not a union: a tool's input is an object at the top (as `Undo`).
+			input: z
+				.object({
+					ids: z.array(z.string()).min(1).optional(),
+					all: z.literal(true).optional(),
+					run: z.iso.datetime().optional(),
+				})
+				.refine((input) => (input.ids === undefined) !== (input.all === undefined), {
+					message: "Name the deliveries (`ids`) or send them all (`all`): one of them.",
+				}),
 			// A delivery that is not there is refused before anything is reserved, and before the assistant can propose it.
 			async check(input, ctx) {
 				// Every failed delivery at once is a person's to send: as a proposal's item it would run one batch and stop.
-				if (!("ids" in input)) {
+				if (input.ids === undefined) {
 					if (ctx.actor === "assistant")
 						throw new ForbiddenError({ key: "errors.humanOnly", values: { operation: "deliveries.retry" } });
 					return;
@@ -133,7 +146,7 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 				// Reserved under a name of this call's own: from the commit on, no scheduled sender takes them before this call sends them.
 				const holder = randomUUID();
 				const run = input.run === undefined ? ctx.now() : new Date(input.run);
-				const reserved = await reserveFailedDeliveries(ctx.db, "ids" in input ? input.ids : "all", {
+				const reserved = await reserveFailedDeliveries(ctx.db, input.ids ?? "all", {
 					now: ctx.now(),
 					holder,
 					run: input.run === undefined ? null : run,
