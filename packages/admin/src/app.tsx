@@ -117,7 +117,7 @@ function BesideAssistant({ panel, children }: { panel: ReactNode; children: Reac
 }
 
 function Screens({ route, go }: { route: Route; go: (route: Route, options?: { replace?: boolean }) => void }) {
-	const { screen, templates } = useAdmin();
+	const { screen, templates, toolPages } = useAdmin();
 	const assistant = useAssistant();
 	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
 	const [review, setReview] = useState(0);
@@ -231,7 +231,8 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 			) : route.screen === "place" && route.place === "tools" ? (
 				// Body templates turned off (settings › admin, doc 03): the tools have one tab left, so no tab row, and every way to the tools
 				// (the sidebar, the templates' own address) opens the keys.
-				route.page ? (
+				// A plugin's page, while its browser half brings the screen; an address for one it does not bring opens the tools as usual.
+				route.page && toolPages.has(`${route.page.plugin}/${route.page.id}`) ? (
 					<ToolPageScreen page={route.page} tabs={<ToolsTabs current={route.page} go={go} />} />
 				) : route.tab === "keys" || !templates ? (
 					<KeysScreen tabs={<ToolsTabs current="keys" go={go} />} />

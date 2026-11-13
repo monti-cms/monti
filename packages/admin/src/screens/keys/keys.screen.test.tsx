@@ -798,6 +798,11 @@ describe("plugin keys (flow 10, 12)", () => {
 		await expect.element(page.getByRole("option", { name: "Anthropic" })).toBeVisible();
 		expect(await page.getByRole("option", { name: "Algolia" }).elements()).toHaveLength(0);
 		expect(await page.getByRole("option", { name: "bareun" }).elements()).toHaveLength(0);
+		// A service a plugin brings for keys of its own kind is offered, under the plugins' group: the list then names its two groups.
+		const services = page.getByRole("listbox", { name: "서비스" });
+		await expect.element(services.getByText("AI", { exact: true })).toBeVisible();
+		await expect.element(services.getByText("플러그인", { exact: true })).toBeVisible();
+		await expect.element(page.getByRole("option", { name: "Mistral" })).toBeVisible();
 	});
 
 	it("14-1 [flow 10·14, 15] a slot's key the server can no longer read is counted in the banner and says so in its row; without a secret a filled slot can only be removed", async () => {
@@ -828,6 +833,8 @@ describe("plugin keys (flow 10, 12)", () => {
 		await userEvent.click(button("old-search · key 더 보기"));
 		expect(await page.getByRole("menuitem", { name: "편집" }).elements()).toHaveLength(0);
 		await userEvent.click(page.getByRole("menuitem", { name: "지우기" }));
+		// Nothing uses it: the question says only that it cannot be undone.
+		await expect.element(page.getByRole("alertdialog").getByText("되돌릴 수 없습니다.", { exact: true })).toBeVisible();
 		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
 		await expect.element(page.getByText("키를 지웠습니다")).toBeVisible();
 		await expect.poll(() => pluginTable().getByRole("row").elements().length).toBe(3);

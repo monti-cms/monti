@@ -236,7 +236,8 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 			{list.data ? (
 				<PageBody>
 					<Stack gap={40} paddingTop={twoLists ? 32 : 0}>
-						{twoLists ? (
+						{/* No name over nothing: a site that cannot store keys and has no AI key shows no first list at all. */}
+						{twoLists && aiKeys ? (
 							<Stack gap={0}>
 								<ListTitle>{t("apiKeys.aiKeys")}</ListTitle>
 								{aiKeys}
@@ -405,9 +406,9 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t("apiKeys.removeTitle")}</AlertDialogTitle>
 						<AlertDialogDescription>
-							{/* A slot's key is always in use: its plugin stops. */}
+							{/* A slot's key is in use while a plugin has the slot: that plugin stops. */}
 							{t(
-								removing && ("slot" in removing || removing.key.uses.length > 0)
+								removing && ("slot" in removing ? !removing.slot.orphan : removing.key.uses.length > 0)
 									? "apiKeys.removeTextInUse"
 									: "apiKeys.removeText",
 							)}

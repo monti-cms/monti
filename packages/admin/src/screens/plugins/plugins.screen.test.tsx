@@ -225,6 +225,25 @@ describe("the plugin's tab in the settings (doc 01, the locked tab)", () => {
 	});
 });
 
+describe("the plugin's tab in the settings' preview (collections.md, the preview panel)", () => {
+	it("14-5 the preview draws the plugin's fields as the editor does: the plugin's own inputs on an empty entry, and no view", async () => {
+		await open(plugins.LockedTab).run();
+		await userEvent.click(button("속성 패널 미리보기"));
+		// The panel's own tab is named "SEO" alone; the field list's carries its count.
+		await userEvent.click(page.getByRole("tab", { name: "SEO", exact: true }));
+		const preview = page.getByRole("tabpanel").last();
+		await expect
+			.element(preview.getByLabelText("SEO 제목", { exact: true }))
+			.toHaveAttribute("placeholder", "제목과 같음 · 0/60");
+		await expect
+			.element(preview.getByLabelText("SEO 설명", { exact: true }))
+			.toHaveAttribute("placeholder", "요약과 같음 · 0/160");
+		expect(preview.getByLabelText("SEO 설명", { exact: true }).element().tagName).toBe("TEXTAREA");
+		await expect.element(preview.getByRole("switch", { name: "검색에서 숨기기" })).toBeVisible();
+		expect(await preview.getByRole("region", { name: "검색 결과" }).elements()).toHaveLength(0);
+	});
+});
+
 describe("the plugin's list columns (T53; doc 06)", () => {
 	const main = () => page.getByRole("main");
 

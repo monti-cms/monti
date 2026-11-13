@@ -100,8 +100,12 @@ function SeoPreview({ entry, options }: FieldViewProps) {
 	const image = own ?? cover;
 	const place = [entry.siteName, ...(entry.address ?? "").split("/").filter(Boolean).map(decodeURIComponent)];
 	return (
-		<Stack gap={12}>
-			<Stack as="section" aria-label={words.searchPreview} gap={4} padding={12} border="all" radius="md">
+		// Two pictures in the panel's own column, set apart by space and a name each: a border is for what floats (README, principle 3).
+		<Stack gap={16}>
+			<Stack as="section" aria-label={words.searchPreview} gap={4}>
+				<Text variant="micro" tone="faint">
+					{words.searchPreview}
+				</Text>
 				<Text variant="micro" tone="subtle" truncate>
 					{place.join(" › ")}
 				</Text>
@@ -117,9 +121,12 @@ function SeoPreview({ entry, options }: FieldViewProps) {
 					</Text>
 				) : null}
 			</Stack>
-			<Stack as="section" aria-label={words.sharePreview} gap={0} border="all" radius="md" overflow="hidden">
-				{image ? <Image src={image} alt="" ratio="share" radius="none" /> : null}
-				<Stack gap={4} padding={12}>
+			<Stack as="section" aria-label={words.sharePreview} gap={8}>
+				<Text variant="micro" tone="faint">
+					{words.sharePreview}
+				</Text>
+				{image ? <Image src={image} alt="" ratio="share" /> : null}
+				<Stack gap={4}>
 					<Text variant="micro" tone="subtle" truncate>
 						{entry.siteName}
 					</Text>

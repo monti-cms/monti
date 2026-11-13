@@ -152,6 +152,8 @@ export const slotPlugins = (net: () => Network): Plugin[] => [
 			{ id: "admin", label: "관리 키", service: "algolia" },
 		],
 	},
+	// A plugin that brings a service of its own with no slot: a key of it is added like an AI key, under the plugins' own group.
+	{ name: "mistral", label: "Mistral", keyServices: [pluginService("mistral", "Mistral", [sample.search], net)] },
 ];
 
 /** The reference screen's three keys, with what they used this month. */
@@ -553,5 +555,15 @@ export const PluginKeysOrphan: Story = {
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
 		await page.findByText("플러그인 없음", {}, wait);
+	},
+};
+
+/** "+ 키 추가" on a site whose plugin brings a service of its own: the services in two named groups. */
+export const PickServiceGroups: Story = {
+	loaders: site({ slots: true }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "키 추가" }, wait));
+		await page.findByRole("option", { name: "Mistral" });
 	},
 };

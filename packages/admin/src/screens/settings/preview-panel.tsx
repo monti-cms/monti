@@ -13,6 +13,7 @@ import {
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
+import type { EntryView } from "../../plugins";
 import { PickOne } from "./pick-one";
 import { at, type DraftField, type Layout, shownLayout } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
@@ -44,7 +45,7 @@ export function PreviewPanel({
 	collection: string;
 	onClose: () => void;
 }) {
-	const { t } = useAdmin();
+	const { t, inputs, siteName } = useAdmin();
 	const keys = model.topFields(c).filter((key) => model.shown(at.field(c, key)));
 	const layout = shownLayout(
 		model.draft.value(at.collectionValue(c, "layout")) as Layout | undefined,
@@ -54,6 +55,17 @@ export function PreviewPanel({
 	// The plugins' tabs come after the collection's own, as the editor has them (doc 14): their fields, drawn empty like the rest.
 	const pluginTabs = model.data?.pluginTabs?.[c] ?? [];
 	const tabs = [...layout.map((each) => each.tab), ...pluginTabs.map((each) => each.tab)];
+	/** An entry with nothing in it, for the plugins' inputs: the collection's fields by name, each empty. */
+	const emptyEntry: EntryView = {
+		collection: c,
+		locale: null,
+		title: "",
+		slug: "",
+		values: Object.fromEntries(keys.map((key) => [key, undefined])),
+		address: null,
+		labels: Object.fromEntries(keys.map((key) => [key, model.fieldLabel(c, key)])),
+		siteName,
+	};
 	const [tab, setTab] = useState("0");
 	const picked = layout[Number(tab)] ?? (Number(tab) < tabs.length ? undefined : layout[0]);
 	const pluginTab = pluginTabs[Number(tab) - layout.length];
@@ -133,23 +145,30 @@ export function PreviewPanel({
 			{pluginTab ? (
 				<PropertyGroup>
 					{pluginTab.fields.map((field) => {
+						const definition = field.definition;
 						// A view holds no value: it is the plugin's to draw, in the editor.
-						if (field.kind === "view") return null;
+						if (!definition) return null;
 						const id = `preview-${field.name}`;
-						const empty = t("settings.preview.empty");
+						// As the editor draws it (collections.md, the preview): the input its plugin brought, on an entry with nothing in it;
+						// the kind's own input when none is brought.
+						const brought = definition.input ? inputs.get(definition.input) : undefined;
+						const Own = brought === undefined ? null : "Input" in brought ? brought.Input : brought;
 						return (
 							<FormField key={field.name}>
 								<FormFieldLabel htmlFor={id}>{field.label ?? field.name}</FormFieldLabel>
-								{field.kind === "media" ? (
-									<MediaInput id={id} size="md" placeholder={empty} />
-								) : field.kind === "select" ? (
-									<PickOne id={id} size="md" items={[]} value={null} onChange={() => {}} placeholder={empty} />
-								) : field.kind === "relation" ? (
-									<Combobox items={[]}>
-										<ComboboxInput id={id} size="md" placeholder={t("settings.preview.none")} />
-									</Combobox>
+								{Own ? (
+									<Own
+										id={id}
+										field={field.name}
+										definition={definition}
+										options={definition.inputOptions ?? {}}
+										value={undefined}
+										onChange={() => {}}
+										readOnly={false}
+										entry={emptyEntry}
+									/>
 								) : (
-									<Input id={id} size="md" placeholder={empty} />
+									input(definition, id, t("settings.preview.empty"), field.name)
 								)}
 							</FormField>
 						);

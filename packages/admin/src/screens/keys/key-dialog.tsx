@@ -215,6 +215,8 @@ function KeyForm({
 	const [replacing, setReplacing] = useState(editing ? !editing.readable : true);
 	const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
 	const [checking, setChecking] = useState(false);
+	/** The key is asked for again though nothing is wrong with it: a slot's new address is checked with the key. A hint, not an error. */
+	const [again, setAgain] = useState(false);
 	// The window as it is when an answer comes, not as it was when the question went: closed by "Cancel", by Esc, by a press outside, or gone
 	// from the page since. There is then no field left to say anything under, and nothing of this form's to close.
 	const shown = useRef(open);
@@ -253,7 +255,8 @@ function KeyForm({
 			if (!replacing) {
 				// A new address is checked with the key, which the server does not hand back: it is entered again.
 				setReplacing(true);
-				return setErrors({ secret: t("apiKeys.enterAgain") });
+				setErrors({});
+				return setAgain(true);
 			}
 			setChecking(true);
 			sending.current = true;
@@ -444,7 +447,7 @@ function KeyForm({
 				)}
 				{errors.secret ? (
 					<FormFieldError>{errors.secret}</FormFieldError>
-				) : editing && !editing.readable ? (
+				) : editing && (!editing.readable || again) ? (
 					<FormFieldDescription>{t("apiKeys.enterAgain")}</FormFieldDescription>
 				) : null}
 			</FormField>
