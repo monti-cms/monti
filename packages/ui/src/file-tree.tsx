@@ -7,7 +7,7 @@ import { DocumentBlank, Folder, FolderOpen } from "./icons";
 
 /**
  * A code explorer's file tree in the editor (editor-tools.md, the code explorer): the files of the block, by their paths, one row each, folders
- * first where their first file is. Rows are `FileTreeRow`; the ghost "+ file" button ends it (button.md: a list's "+ add").
+ * first where their first file is. Rows are `FileTreeRow`; the ghost "file" button with its add icon ends it (button.md: a list's "add").
  */
 function FileTree({ className, ...props }: ComponentProps<"div">) {
 	return <div data-slot="file-tree" role="tree" className={cn("flex flex-col", className)} {...props} />;

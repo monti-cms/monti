@@ -12,7 +12,7 @@ import {
 	IconButton,
 	useBlock,
 } from "@monti-cms/admin/blocks";
-import { Add, Star, TrashCan } from "@monti-cms/admin/icons";
+import { Add, FolderAdd, Star, TrashCan } from "@monti-cms/admin/icons";
 import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { style } from "./style";
 import { buildTree, parsePath, type TreeNode } from "./tree";
@@ -22,7 +22,7 @@ const fill = (text: string, name: string) => text.replace("{name}", name);
 
 /**
  * The code explorer in the editor (doc 18): the tree made from its files' paths, the picked file's path and code beside it (each file is an ordinary code
- * block of doc 17). "+ File" and "+ Folder" under the tree add one; a file's row deletes it; the tool row's ★ menu says which file shows first (✓).
+ * block of doc 17). "File" and "Folder" under the tree (with their add icons) add one; a file's row deletes it; the tool row's ★ menu says which file shows first (✓).
  */
 export default function CodeExplorerEditor() {
 	const block = useBlock();
@@ -88,10 +88,10 @@ export default function CodeExplorerEditor() {
 							label={say(words.first)}
 							icon={<Star aria-hidden />}
 							named
-							title={say(words.first)}
+							text={say(words.first)}
 							value={typeof block.attrs.open === "string" ? block.attrs.open : ""}
 							options={[
-								{ value: "", label: say(words.firstFile), icon: <Star aria-hidden /> },
+								{ value: "", label: say(words.firstFile) },
 								...files.map((file) => ({ value: file.path, label: file.path })),
 							]}
 							onChange={(open) => block.setAttrs({ open: open === "" ? undefined : open })}
@@ -123,7 +123,7 @@ export default function CodeExplorerEditor() {
 								size="sm"
 								onClick={() => block.insertChild({ type: "codeBlock", attrs: { title: say(words.newFolder) } })}
 							>
-								<Add aria-hidden />
+								<FolderAdd aria-hidden />
 								{say(words.addFolder)}
 							</Button>
 						</div>
