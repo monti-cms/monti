@@ -54,7 +54,6 @@ import {
 	Inline,
 	Input,
 	MenuShortcut,
-	MenuTick,
 	MenuValue,
 	Popover,
 	PopoverContent,

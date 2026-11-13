@@ -57,7 +57,7 @@ import {
 	lineAt,
 	sendCode,
 } from "./code-state";
-import { LineMenu, linesLabel } from "./line-menu";
+import { LineMenu } from "./line-menu";
 import { RulesCard } from "./rules-card";
 
 /** What a line's effects draw in the editor: its ground and its mark (doc 17). */

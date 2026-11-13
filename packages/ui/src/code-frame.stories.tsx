@@ -124,7 +124,8 @@ export const Rows: Story = {
 		children: (
 			<div className="py-monti-8">
 				<CodeLine number={1} readOnly numbersOff>
-					<CodeToken light="#d73a49">const</CodeToken> a = <CodeToken light="#005cc5">1</CodeToken>;
+					<CodeToken light="#d73a49">const</CodeToken> a = <CodeToken light="#005cc5">1</CodeToken>
+					{";"}
 				</CodeLine>
 				<CodeLine number={2} readOnly numbersOff tone="highlight" wavy="error">
 					<CodeMark kind="tip">a tooltip</CodeMark> <CodeMark kind="fold">folded words</CodeMark>{" "}

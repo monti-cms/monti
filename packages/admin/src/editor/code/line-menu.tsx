@@ -16,7 +16,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { markName } from "../schema";
 import { sendCode } from "./code-state";
 
-/** The words of a range of lines, counted from 1 ("4번째 줄", "4–6번째 줄"). */
+/** The words of a range of lines, counted from 1 ("Line 4", "Lines 4–6"). */
 export function linesLabel(t: ReturnType<typeof useAdmin>["t"], start: number, end: number) {
 	return end - start <= 1
 		? t("editor.code.line", { n: start + 1 })
