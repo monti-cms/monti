@@ -118,6 +118,15 @@ describe("17-2 line effects follow the lines", () => {
 		expect(move([effect(1, 5)], 4, 8, "")).toEqual([[1, 3]]);
 	});
 
+	it("17-2 two folds that met at a line do not cross when the line between them is joined: the later one goes", () => {
+		const folds: LineEffect[] = [
+			{ name: "collapse", start: 0, end: 2 },
+			{ name: "collapse", start: 2, end: 4 },
+		];
+		// Backspace at the start of line c (offset 4) joins it to line b.
+		expect(moveLineEffects(folds, SIX, 3, 4, "")).toEqual([{ name: "collapse", start: 0, end: 2 }]);
+	});
+
 	it("17-2 an effect whose lines are all taken out is gone", () => {
 		expect(move([effect(2, 4)], 4, 8, "")).toEqual([]);
 		expect(move([effect(5, 6)], 9, 11, "")).toEqual([[4, 5]]);
@@ -130,6 +139,14 @@ describe("17-2 the assistant's edits", () => {
 			{ op: "replaceText", block: "b_code", from: 0, to: 0, text: "x\ny\n" },
 		]);
 		expect(next.blocks[0].attrs?.lines).toEqual([{ name: "plus", start: 4, end: 5 }]);
+	});
+
+	it("17-2 replaceText moves a rule of one line with its line, and a rule whose line goes goes with it", () => {
+		const rule = (line: number) => ({ scope: "line", line, name: "bold", pattern: "x", flags: "g" });
+		const next = applyOps(doc(code(SIX, { rules: [rule(2), rule(0)] })), [
+			{ op: "replaceText", block: "b_code", from: 0, to: 2, text: "" },
+		]);
+		expect(next.blocks[0].attrs?.rules).toEqual([rule(1)]);
 	});
 
 	it("17-2 body.read shows a code block's other values on its fence line and its code as it is", () => {
@@ -197,6 +214,21 @@ describe("17-9 the site's code block", () => {
 			'<details data-code-collapse=""><summary><span className="line" data-line="2">b</span></summary>',
 		);
 		expect(out).toContain('id="code-b_code-c1"');
+	});
+
+	it("17-9 a fold over the whole code, and one inside another to its end, are drawn", () => {
+		const out = renderDocument(
+			doc(
+				code("a\nb\nc", {
+					lines: [
+						{ name: "collapse", start: 0, end: 3 },
+						{ name: "collapse", start: 1, end: 3 },
+					],
+				}),
+			),
+			{ createElement: html, locale: "ko" },
+		).join("");
+		expect(out.match(/<details/g)?.length).toBe(2);
 	});
 
 	it("17-9 marks and rules in code become styles, folds and tooltips with a list of notes", () => {
@@ -343,5 +375,23 @@ describe("17-10 notation in MDX", () => {
 			[...(lines as LineEffect[])].sort((a, b) => a.start - b.start || a.name.localeCompare(b.name));
 		expect(sorted(read.attrs.lines)).toEqual(sorted(block.attrs.lines));
 		expect(read.attrs.rules).toEqual(block.attrs.rules);
+	});
+
+	it("17-10 a fence with a file name and no language, and a rule with braces in it, read back the same", () => {
+		const block = {
+			attrs: {
+				title: "a.txt",
+				rules: [{ scope: "document", name: "bold", pattern: "\\d{3}", flags: "g" }],
+			},
+			content: [{ type: "text", text: "123" }] as Block["content"],
+		};
+		const fence = writeFence(block);
+		// A markdown reader takes the fence's first word as the language.
+		const [lang, ...meta] = [fence.lang, fence.meta].filter(Boolean).join(" ").split(" ");
+		const read = readFence({ lang, meta: meta.join(" ") || null, value: fence.value });
+		expect(read.attrs.language).toBeUndefined();
+		expect(read.attrs.title).toBe("a.txt");
+		expect(read.attrs.rules).toEqual(block.attrs.rules);
+		expect(read.content).toEqual(block.content);
 	});
 });

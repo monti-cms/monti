@@ -126,6 +126,19 @@ describe("the code block in the editor (doc 17)", () => {
 		await expect.poll(() => numbers().length).toBe(6);
 	});
 
+	it("a selection over a closed fold shows its lines, and their numbers with them, level with the code", async () => {
+		await on("code").run();
+		await opened();
+		await userEvent.click(button("2번째 줄부터 접기"));
+		await expect.poll(() => numbers().length).toBe(4);
+		const box = code();
+		if (!box) throw new Error("no code block");
+		await caretAfter(box, "let count");
+		await userEvent.keyboard("{Meta>}a{/Meta}");
+		await expect.poll(() => numbers().length).toBe(6);
+		expect(box.querySelectorAll("[data-code-hidden]").length).toBe(0);
+	});
+
 	it("a rule added in the rules card finds every `count` and makes it bold", async () => {
 		const story = on("code");
 		await story.run();

@@ -66,4 +66,15 @@ describe("a code block whose effects changed", () => {
 		});
 		expect(compareBodies(code({}), code({})).mine[0].changes).toEqual({ lines: [], language: false, title: false });
 	});
+	it("17-11 a line put in on one side pairs the rest by their words: only a line whose own effects differ is a change", () => {
+		const withLine = (text: string, lines: unknown[]): Doc => ({
+			type: "doc",
+			blocks: [{ id: "b1", type: "codeBlock", attrs: { lines }, content: [{ type: "text", text }] } as Block],
+		});
+		const { mine } = compareBodies(
+			withLine("new\na\nb\nc", [{ name: "plus", start: 2, end: 3 }]),
+			withLine("a\nb\nc", [{ name: "plus", start: 1, end: 2 }]),
+		);
+		expect(mine[0].changes.lines).toEqual([]);
+	});
 });

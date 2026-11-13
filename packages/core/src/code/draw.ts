@@ -196,7 +196,8 @@ export function drawCodeBlock<Node>(
 			const fold: LineEffect | undefined = folds.find(
 				(each) => each.start === line && each.end <= to && each.end - each.start > 1,
 			);
-			if (fold && !(fold.start === from && fold.end === to)) {
+			// The inner range starts after the fold's first line, so a fold over the whole range is drawn too (the whole code, or an outer fold's rest).
+			if (fold) {
 				out.push(
 					h(
 						"details",

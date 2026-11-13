@@ -125,16 +125,18 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 				foldOpen: words ? current.getAttributes(markName("codeFold")).open === true : false,
 				version: tools.version,
 				folds: tools.folds,
+				around: { pos: at, from, to },
 			};
 		},
 	});
 	const folds = view?.folds ?? new Map<string, boolean>();
-	const hidden = hiddenLines(node, folds);
+	// The same folds the text hides: one the caret is in shows its lines, so the numbers stay level with the code.
+	const hidden = hiddenLines(node, folds, view?.around);
 	const rows = starts.map((_, line) => line).filter((line) => !hidden.has(line));
-	const blockFolds = foldsOf(node, folds);
+	const blockFolds = foldsOf(node, folds, view?.around);
 	const foldOf = (line: number) => blockFolds.find(({ effect }) => effect.start === line);
 	const edgeOf = (line: number): { edge?: CodeFoldEdge; lit: boolean } => {
-		const around = blockFolds.find(({ effect, open }) => open && effect.start <= line && line < effect.end);
+		const around = blockFolds.find(({ effect, shown }) => shown && effect.start <= line && line < effect.end);
 		if (!around) return { lit: false };
 		const { effect } = around;
 		return {
@@ -389,7 +391,8 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 				<CodeArea
 					picking={Boolean(view?.picked)}
 					aside={blockFolds
-						.filter(({ open }) => !open)
+						// A closed fold inside another closed fold has its first line hidden too: only the outer one says what it hides.
+						.filter(({ shown, effect }) => !shown && rows.includes(effect.start))
 						.map(({ effect }) => (
 							<CodeAside key={effect.start} row={rows.indexOf(effect.start)}>
 								<TextButton size="caption" onClick={() => toggleFold(effect.start, true)}>

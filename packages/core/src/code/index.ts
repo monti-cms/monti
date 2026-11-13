@@ -35,6 +35,7 @@ export {
 	type LineEffect,
 	lineStarts,
 	moveLineEffects,
+	moveLineRules,
 	ruleRanges,
 	ruleRegex,
 } from "./shape";

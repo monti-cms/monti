@@ -8,6 +8,7 @@ import {
 	type LineEffect,
 	lineStarts,
 	moveLineEffects,
+	moveLineRules,
 	ruleRanges,
 } from "@monti-cms/core/code";
 import { Extension } from "@tiptap/core";
@@ -79,22 +80,34 @@ export const lineEnd = (code: string, starts: readonly number[], line: number) =
 /** The fold's key in the editor's state: the block and the fold's first line. */
 export const foldKey = (blockId: string, start: number) => `${blockId}:${start}`;
 
-/** The folds over lines of a block and whether each is open in the editor now. */
-export function foldsOf(node: EditorNode, folds: ReadonlyMap<string, boolean>) {
+/** Where the selection is, for a fold it touches: `pos` is the block's place. */
+type Around = { pos: number; from: number; to: number };
+
+/**
+ * The folds over lines of a block: `open` whether each is open in the editor now, `shown` whether its lines show (open, or closed with the caret or the
+ * selection in what it hides: the caret is never out of sight).
+ */
+export function foldsOf(node: EditorNode, folds: ReadonlyMap<string, boolean>, around?: Around) {
 	const blockId = String(node.attrs.blockId ?? "");
+	const code = node.textContent;
+	const starts = lineStarts(code);
 	return (dataOf(node).lines ?? [])
-		.filter((effect) => effect.name === COLLAPSE && effect.end - effect.start >= 2)
-		.map((effect) => ({
-			effect,
-			open: folds.get(foldKey(blockId, effect.start)) ?? effect.attrs?.open === true,
-		}));
+		.filter((effect) => effect.name === COLLAPSE && effect.end - effect.start >= 2 && effect.end <= starts.length)
+		.map((effect) => {
+			const open = folds.get(foldKey(blockId, effect.start)) ?? effect.attrs?.open === true;
+			const base = (around?.pos ?? 0) + 1;
+			const from = base + lineEnd(code, starts, effect.start);
+			const to = base + lineEnd(code, starts, effect.end - 1);
+			const touched = around ? around.to > from && around.from <= to : false;
+			return { effect, open, shown: open || touched, from, to };
+		});
 }
 
-/** Lines a closed fold hides: every line of it after the first. */
-export function hiddenLines(node: EditorNode, folds: ReadonlyMap<string, boolean>) {
+/** Lines a closed fold hides: every line of it after the first, while the fold is not shown. */
+export function hiddenLines(node: EditorNode, folds: ReadonlyMap<string, boolean>, around?: Around) {
 	const hidden = new Set<number>();
-	for (const { effect, open } of foldsOf(node, folds))
-		if (!open) for (let line = effect.start + 1; line < effect.end; line++) hidden.add(line);
+	for (const { effect, shown } of foldsOf(node, folds, around))
+		if (!shown) for (let line = effect.start + 1; line < effect.end; line++) hidden.add(line);
 	return hidden;
 }
 
@@ -155,11 +168,11 @@ export function anchorsByBlock(doc: EditorNode) {
 	const anchors = new Map<string, { pos: number; node: EditorNode; effects: LineEffect[] }>();
 	doc.descendants((node, pos) => {
 		if (node.type.name !== nodeName("codeBlock")) return true;
-		anchors.set(String(node.attrs.blockId ?? ""), {
-			pos,
-			node,
-			effects: (dataOf(node).lines ?? []).filter((effect) => effect.name === ANCHOR),
-		});
+		const entry = { pos, node, effects: (dataOf(node).lines ?? []).filter((effect) => effect.name === ANCHOR) };
+		anchors.set(String(node.attrs.blockId ?? ""), entry);
+		// A translation's block answers to the source block it came from too: a link copied from the source names that one (`links.ts`).
+		const from = (node.attrs.link as { from?: string } | null)?.from;
+		if (from && !anchors.has(from)) anchors.set(from, entry);
 		return false;
 	});
 	return anchors;
@@ -200,14 +213,8 @@ function decorations(state: EditorState, settings: CodeBlockSettings, tools: Cod
 						out.push(Decoration.inline(from, to, { "data-wavy": wavy.tone === "danger" ? "error" : "warning" }));
 				}
 			}
-			for (const { effect, open } of foldsOf(node, tools.folds)) {
-				if (open || effect.end > starts.length) continue;
-				const from = base + lineEnd(code, starts, effect.start);
-				const to = base + lineEnd(code, starts, effect.end - 1);
-				// The caret inside a closed fold would be out of sight: the fold shows while the caret is in it.
-				if (caretTo > from && caretFrom <= to) continue;
-				out.push(Decoration.inline(from, to, { "data-code-hidden": "" }));
-			}
+			for (const { shown, from, to } of foldsOf(node, tools.folds, { pos, from: caretFrom, to: caretTo }))
+				if (!shown) out.push(Decoration.inline(from, to, { "data-code-hidden": "" }));
 			return false;
 		}
 		if (node.isText && codeRef) {
@@ -255,44 +262,52 @@ function changed(before: string, after: string) {
 /** A block's line effects and line rules after its code changed (doc 17, 17-2): a line keeps its effects as it moves. */
 export function movedData(data: CodeData, before: string, after: string): CodeData {
 	const { from, to, inserted } = changed(before, after);
-	const lines = moveLineEffects(data.lines ?? [], before, from, to, inserted);
-	const lineRules = (data.rules ?? []).map((rule, at) =>
-		rule.scope === "line" ? { name: `rule-${at}`, start: rule.line ?? 0, end: (rule.line ?? 0) + 1 } : null,
-	);
-	const movedRules = moveLineEffects(
-		lineRules.filter((each) => each !== null),
-		before,
-		from,
-		to,
-		inserted,
-	);
-	const rules = (data.rules ?? []).flatMap((rule, at) => {
-		if (rule.scope !== "line") return [rule];
-		const now = movedRules.find((each) => each.name === `rule-${at}`);
-		return now ? [{ ...rule, line: now.start }] : [];
-	});
-	return { ...data, lines, rules };
+	return {
+		...data,
+		lines: moveLineEffects(data.lines ?? [], before, from, to, inserted),
+		rules: moveLineRules(data.rules ?? [], before, from, to, inserted),
+	};
 }
 
-function follow(transactions: readonly Transaction[], before: EditorState, after: EditorState) {
-	if (!transactions.some((tr) => tr.docChanged)) return null;
-	const old = new Map<string, EditorNode>();
-	before.doc.descendants((node) => {
+/** Each code block's code and attrs in a body, by id. */
+function codeBlocks(doc: EditorNode) {
+	const out = new Map<string, { code: string; data: CodeData }>();
+	doc.descendants((node) => {
 		if (node.type.name !== nodeName("codeBlock")) return true;
-		old.set(String(node.attrs.blockId ?? ""), node);
+		out.set(String(node.attrs.blockId ?? ""), { code: node.textContent, data: dataOf(node) });
 		return false;
 	});
+	return out;
+}
+
+/**
+ * Moves the line effects of every code block whose code changed, step by step: one step replaces one range, so several edits in one transaction (a
+ * proposal taken whole) each move only their own lines. A block whose attrs a step set is left as it is: an undo puts back code and attrs together.
+ */
+function follow(transactions: readonly Transaction[], _before: EditorState, after: EditorState) {
+	const docs: EditorNode[] = [];
+	for (const tr of transactions) if (tr.docChanged) docs.push(...tr.docs);
+	if (docs.length === 0) return null;
+	docs.push(after.doc);
+	const steps = docs.map(codeBlocks);
+	const same = (a: CodeData, b: CodeData) => JSON.stringify(cleanData(a)) === JSON.stringify(cleanData(b));
+	const tracked = new Map<string, CodeData>();
+	const set = new Set<string>();
+	for (let at = 1; at < steps.length; at++)
+		for (const [id, now] of steps[at] ?? []) {
+			const was = steps[at - 1]?.get(id);
+			if (!was) continue;
+			if (!same(was.data, now.data)) set.add(id);
+			else if (was.code !== now.code) tracked.set(id, movedData(tracked.get(id) ?? was.data, was.code, now.code));
+		}
 	let tr: Transaction | null = null;
 	after.doc.descendants((node, pos) => {
 		if (node.type.name !== nodeName("codeBlock")) return true;
-		const was = old.get(String(node.attrs.blockId ?? ""));
-		if (!was || was.textContent === node.textContent) return false;
-		const data = dataOf(node);
-		if (!data.lines?.length && !data.rules?.some((rule) => rule.scope === "line")) return false;
-		// Attrs changed in the same step (an undo puts back both): they are already where they belong.
-		if (JSON.stringify(dataOf(was)) !== JSON.stringify(data)) return false;
-		const next = cleanData(movedData(data, was.textContent, node.textContent));
-		if (JSON.stringify(next) !== JSON.stringify(cleanData(data))) {
+		const id = String(node.attrs.blockId ?? "");
+		const want = tracked.get(id);
+		if (!want || set.has(id)) return false;
+		const next = cleanData(want);
+		if (JSON.stringify(next) !== JSON.stringify(cleanData(dataOf(node)))) {
 			tr ??= after.tr;
 			tr.setNodeAttribute(pos, "data", next);
 		}
@@ -307,6 +322,13 @@ const mapPick = (pick: LinePick | null, tr: Transaction): LinePick | null => {
 	if (!pick) return null;
 	const pos = tr.mapping.mapResult(pick.pos);
 	return pos.deleted ? null : { ...pick, pos: pos.pos };
+};
+
+/** A pick through a change that left its code as it was (an effect set from the line menu); one whose code changed is let go. */
+const keepPick = (pick: LinePick | null, tr: Transaction): LinePick | null => {
+	const mapped = mapPick(pick, tr);
+	if (!pick || !mapped) return null;
+	return tr.before.nodeAt(pick.pos)?.textContent === tr.doc.nodeAt(mapped.pos)?.textContent ? mapped : null;
 };
 
 /**
@@ -344,8 +366,12 @@ export const CodeTools = Extension.create<{ settings: CodeBlockSettings | null }
 										...(value.linking.lines ? { lines: mapPick(value.linking.lines, tr) ?? undefined } : {}),
 									}
 								: null;
-							// A pick by the numbers lasts until the text's selection moves by other means.
-							next = { ...value, picked: tr.docChanged || meta ? mapPick(value.picked, tr) : null, linking };
+							// A pick by the numbers lasts until the text's selection moves by other means, or its code is typed over.
+							next = {
+								...value,
+								picked: meta ? mapPick(value.picked, tr) : tr.docChanged ? keepPick(value.picked, tr) : null,
+								linking,
+							};
 						}
 						if (!meta) return next;
 						if ("picked" in meta) return { ...next, picked: meta.picked, version: next.version + 1 };

@@ -28,6 +28,10 @@ import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { href, type Route, reachedFromInside } from "../route";
 import { codeChanges, shownBlocks } from "../screens/entry/compare-entries";
+
+/** The line effects whose names the core's messages have (doc 17). */
+const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
+
 import { useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { endsClosed } from "../screens/list/format";
 import type { SchemaRead } from "../screens/settings/schema-draft";
@@ -255,14 +259,17 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 				else if (was.text !== block.text)
 					places.push({ name: t("review.block", { number: index + 1 }), before: was.text, after: block.text });
 				else {
-					// The same code with other effects (doc 17, T196): the lines whose effects change, with their effects on each side.
+					// The same code with other effects (doc 17, T196): the lines whose effects change, with their effects on each side. A core effect
+					// says its name; a site's own effect, which has no words in the admin, says its stored name.
+					const effectName = (name: string) =>
+						CORE_EFFECTS.has(name) ? t({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` }) : name;
 					const changed = codeChanges(block, was);
 					const effects = (side: typeof block, lines: number[]) =>
 						lines
 							.map((line) => {
 								const names = side.code?.lines[line] ?? [];
 								return `${t("editor.code.line", { n: line + 1 })}: ${
-									names.length ? names.map((name) => t({ key: `code.effect.${name}` })).join(", ") : "—"
+									names.length ? names.map(effectName).join(", ") : "—"
 								}`;
 							})
 							.join("\n");

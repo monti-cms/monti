@@ -176,5 +176,41 @@ export function moveLineEffects(
 		if (now.length === 0) continue;
 		out.push({ ...effect, start: Math.min(...now), end: Math.max(...now) + 1 });
 	}
-	return out;
+	// Two folds that met at a line can cross once the line between them goes (a joined line): the later one goes, so the body still saves.
+	const folds: LineEffect[] = [];
+	return out.filter((effect) => {
+		if (effect.name !== COLLAPSE) return true;
+		const clash = folds.some(
+			(fold) =>
+				fold.start === effect.start ||
+				(fold.start < effect.start && effect.start < fold.end && fold.end < effect.end) ||
+				(effect.start < fold.start && fold.start < effect.end && effect.end < fold.end),
+		);
+		if (!clash) folds.push(effect);
+		return !clash;
+	});
+}
+
+/** Line rules after the code changed as `moveLineEffects` reads it: a rule keeps its line as it moves, and goes with its line. */
+export function moveLineRules(
+	rules: readonly CodeRule[],
+	before: string,
+	from: number,
+	to: number,
+	inserted: string,
+): CodeRule[] {
+	const moved = moveLineEffects(
+		rules.flatMap((rule, at) =>
+			rule.scope === "line" ? [{ name: `rule-${at}`, start: rule.line ?? 0, end: (rule.line ?? 0) + 1 }] : [],
+		),
+		before,
+		from,
+		to,
+		inserted,
+	);
+	return rules.flatMap((rule, at) => {
+		if (rule.scope !== "line") return [rule];
+		const now = moved.find((each) => each.name === `rule-${at}`);
+		return now ? [{ ...rule, line: now.start }] : [];
+	});
 }

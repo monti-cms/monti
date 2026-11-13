@@ -186,17 +186,42 @@ export function shownBlocks(doc: Doc | null): ShownBlock[] {
 	}));
 }
 
+/** The lines of two codes paired by their words (the longest run of equal lines in order): a line put in on one side moves no pair. */
+function pairedLines(mine: string[], theirs: string[]): Map<number, number> {
+	const table = Array.from({ length: mine.length + 1 }, () => new Array<number>(theirs.length + 1).fill(0));
+	for (let a = mine.length - 1; a >= 0; a--)
+		for (let b = theirs.length - 1; b >= 0; b--)
+			(table[a] as number[])[b] =
+				mine[a] === theirs[b]
+					? ((table[a + 1] as number[])[b + 1] ?? 0) + 1
+					: Math.max((table[a + 1] as number[])[b] ?? 0, (table[a] as number[])[b + 1] ?? 0);
+	const pairs = new Map<number, number>();
+	let a = 0;
+	let b = 0;
+	while (a < mine.length && b < theirs.length) {
+		if (mine[a] === theirs[b]) {
+			pairs.set(a++, b++);
+			continue;
+		}
+		if (((table[a + 1] as number[])[b] ?? 0) >= ((table[a] as number[])[b + 1] ?? 0)) a++;
+		else b++;
+	}
+	return pairs;
+}
+
 /**
  * Where two sides of a code block differ besides their words: the lines whose effects differ (counted on this side), and whether the language or the
- * file name does. Lines are paired by their place; a line one side does not have is the words' change, not the effects'.
+ * file name does. Lines are paired by their words; a line the other side does not have is the words' change, not the effects'.
  */
 export function codeChanges(block: ShownBlock, other: ShownBlock | undefined) {
 	if (!block.code || !other?.code) return { lines: [] as number[], language: false, title: false };
 	const theirs = other.code.lines;
+	const pairs = pairedLines(block.text.split("\n"), other.text.split("\n"));
 	return {
-		lines: block.code.lines.flatMap((names, line) =>
-			line < theirs.length && names.join(" ") !== theirs[line].join(" ") ? [line] : [],
-		),
+		lines: block.code.lines.flatMap((names, line) => {
+			const paired = pairs.get(line);
+			return paired !== undefined && names.join(" ") !== (theirs[paired] ?? []).join(" ") ? [line] : [];
+		}),
 		language: block.code.language !== other.code.language,
 		title: block.code.title !== other.code.title,
 	};

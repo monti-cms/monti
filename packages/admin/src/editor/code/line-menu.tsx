@@ -104,7 +104,8 @@ export function LineMenu({
 		(effect) =>
 			effect.name === COLLAPSE &&
 			effect !== fold &&
-			((effect.start < start && start < effect.end && effect.end < end) ||
+			(effect.start === start ||
+				(effect.start < start && start < effect.end && effect.end < end) ||
 				(start < effect.start && effect.start < end && end < effect.end)),
 	);
 	const anchor = effects.find((effect) => effect.name === ANCHOR && effect.start === start && effect.end === end);

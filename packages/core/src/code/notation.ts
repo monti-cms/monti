@@ -176,12 +176,15 @@ export function readFence(fence: { lang?: string | null; meta?: string | null; v
 	attrs: CodeBlockAttrs;
 	content: Inline[];
 } {
-	const language = fence.lang ?? undefined;
+	// A fence with no language but a meta (```title="app.ts") reads its first word as the language: it is the meta's.
+	const metaFirst = !!fence.lang && (/[={]/.test(fence.lang) || fence.lang === "showLineNumbers");
+	const language = metaFirst ? undefined : (fence.lang ?? undefined);
+	const meta = metaFirst ? [fence.lang, fence.meta].filter(Boolean).join(" ") : fence.meta;
 	const syntaxes = readSyntaxes(language);
 	const monti = syntaxes.map(
 		(syntax) =>
 			new RegExp(
-				`^\\s*${escapeRegex(syntax.prefix)}\\s*@(line|char|document)\\s+(\\S+)\\s+\\{([^}]*)\\}\\s*(.*?)\\s*${syntax.postfix ? escapeRegex(syntax.postfix) : ""}\\s*$`,
+				`^\\s*${escapeRegex(syntax.prefix)}\\s*@(line|char|document)\\s+(\\S+)\\s+\\{(re:\\/.*\\/[dgimsuy]*|[^}]*)\\}\\s*(.*?)\\s*${syntax.postfix ? escapeRegex(syntax.postfix) : ""}\\s*$`,
 			),
 	);
 	const shiki = syntaxes.map(
@@ -270,7 +273,7 @@ export function readFence(fence: { lang?: string | null; meta?: string | null; v
 	const starts = lineStarts(code);
 	const attrs: CodeBlockAttrs = {
 		...(language ? { language } : {}),
-		...readMeta(fence.meta),
+		...readMeta(meta),
 	};
 	const fitted = lines
 		.map((effect) => ({ ...effect, end: Math.min(effect.end, count) }))
