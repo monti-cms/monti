@@ -22,7 +22,7 @@ export {
 } from "./alert-dialog";
 export { Banner } from "./banner";
 export { BlockBarPlace, BlockBox, ResizeCorner } from "./block-bar";
-export { Block, BlockHandle } from "./block-handle";
+export { Block, BlockHandle, PickBox } from "./block-handle";
 export { Box } from "./box";
 export { BulkBar } from "./bulk-bar";
 export { Button } from "./button";

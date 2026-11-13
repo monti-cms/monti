@@ -13,7 +13,7 @@ export type Drop = { pos: number; side: "before" | "after"; line: { top: number;
 const LISTS = ["bulletList", "orderedList", "checklist"].map(nodeName);
 
 /** Every block with a handle (the top-level blocks, list items, blocks inside a quote), with its element. */
-function spots(view: EditorView): Spot[] {
+export function spots(view: EditorView): Spot[] {
 	const found: Spot[] = [];
 	view.state.doc.descendants((node, pos) => {
 		if (!node.isBlock) return false;
@@ -41,12 +41,15 @@ export function blockAtLine(view: EditorView, y: number): Spot | null {
 const margin = (element: HTMLElement, side: "top" | "bottom") =>
 	Number.parseFloat(getComputedStyle(element)[side === "top" ? "marginTop" : "marginBottom"]) || 0;
 
-/** Where a block dragged from `from` would land with the pointer at `y`, or `null` over the block itself. */
-export function dropAt(view: EditorView, from: number, y: number): Drop | null {
-	const dragged = view.state.doc.nodeAt(from);
-	if (!dragged) return null;
-	const end = from + dragged.nodeSize;
-	const all = spots(view).filter((spot) => spot.pos < from || spot.pos >= end);
+/**
+ * Where a block dragged from `from` would land with the pointer at `y`, or `null` over the block itself. `alsoHeld` are the other blocks in hand (picked
+ * blocks dragged together): none of them is a place to land either.
+ */
+export function dropAt(view: EditorView, from: number, y: number, alsoHeld: readonly number[] = []): Drop | null {
+	const { doc } = view.state;
+	if (!doc.nodeAt(from)) return null;
+	const held = [from, ...alsoHeld].map((pos) => [pos, pos + (doc.nodeAt(pos)?.nodeSize ?? 0)] as const);
+	const all = spots(view).filter((spot) => !held.some(([start, end]) => spot.pos >= start && spot.pos < end));
 	if (all.length === 0) return null;
 	// The block whose line the pointer is on, or else the nearest one.
 	const containing = all.filter((spot) => y >= spot.rect.top && y <= spot.rect.bottom);
@@ -71,9 +74,17 @@ export function dropAt(view: EditorView, from: number, y: number): Drop | null {
  * left with nothing goes too.
  */
 export function moveTo(tr: Transaction, from: number, drop: Pick<Drop, "pos" | "side">) {
+	moveBlockTo(tr, from, drop);
+	return tr;
+}
+
+/** {@link moveTo}, saying where the block now is (inside the list it was put in, if it was), or `null` when it did not move. */
+export function moveBlockTo(tr: Transaction, from: number, drop: Pick<Drop, "pos" | "side">): number | null {
 	const node = tr.doc.nodeAt(from);
 	const anchor = tr.doc.nodeAt(drop.pos);
-	if (!node || !anchor || (drop.pos >= from && drop.pos < from + node.nodeSize)) return tr;
+	if (!node || !anchor || (drop.pos >= from && drop.pos < from + node.nodeSize)) return null;
+	// Places are read in the body as it is when this starts: the transaction may hold earlier steps (other picked blocks moved before this one).
+	const steps = tr.steps.length;
 	const $from = tr.doc.resolve(from);
 	const sourceList = node.type.name === nodeName("listItem") ? $from.parent.type : null;
 
@@ -88,9 +99,9 @@ export function moveTo(tr: Transaction, from: number, drop: Pick<Drop, "pos" | "
 	}
 	tr.delete(cut, cut + size);
 
-	const anchorPos = tr.mapping.map(drop.pos);
+	const anchorPos = tr.mapping.slice(steps).map(drop.pos);
 	const at = tr.doc.nodeAt(anchorPos);
-	if (!at) return tr;
+	if (!at) return null;
 	const $at = tr.doc.resolve(anchorPos);
 	const parent = $at.parent;
 	const index = $at.index();
@@ -119,10 +130,12 @@ export function moveTo(tr: Transaction, from: number, drop: Pick<Drop, "pos" | "
 		block = sourceList.create(null, node);
 		tr.insert(place, block);
 		inserted = place;
-	} else return tr;
+	} else return null;
 
 	const landed = tr.doc.nodeAt(inserted);
 	if (landed?.isTextblock || landed?.firstChild?.isTextblock)
-		return tr.setSelection(TextSelection.near(tr.doc.resolve(inserted + (landed.isTextblock ? 1 : 2))));
-	return landed ? tr.setSelection(NodeSelection.create(tr.doc, inserted)) : tr;
+		tr.setSelection(TextSelection.near(tr.doc.resolve(inserted + (landed.isTextblock ? 1 : 2))));
+	else if (landed) tr.setSelection(NodeSelection.create(tr.doc, inserted));
+	// A list item put in a list of its own kind is the list's first item.
+	return block === node ? inserted : inserted + 1;
 }

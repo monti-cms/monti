@@ -301,6 +301,7 @@ export const ProposalCard = close(open.ProposalCard);
 export const Suggest = close(open.Suggest);
 export const Block = close(open.Block);
 export const BlockHandle = close(open.BlockHandle);
+export const PickBox = close(open.PickBox);
 export const TableGrip = close(open.TableGrip);
 export const TableAddStrip = close(open.TableAddStrip);
 export const TableColumnBorder = close(open.TableColumnBorder);

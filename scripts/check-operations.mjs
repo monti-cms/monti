@@ -12,7 +12,7 @@
  *                   merged, so nothing would pick the item up.
  *   late-item       An open item is to be done before a stage ("4단계 전") and a doc of that stage or a later one is marked 끝 or 통합 대기.
  *                   It cannot stop a stage from starting; it stops its first doc from being finished.
- *   unblocked       A doc marked 통합 대기 has no open item whose 나온 곳 names that doc (a date such as 2026-11-06 names no doc).
+ *   unblocked       A doc marked 통합 대기 has no open item whose 나온 곳 names that doc.
  *   bad-item        An item's id repeats (open, finished or dropped), or an open item's "할 때" is neither a doc number nor a stage ("4단계 전").
  *                   There is no "before the release": an item without a time is picked up by nobody (2026-11-11).
  *   unknown-id      A test title starts with a done-criterion id (`00-1 …`) that no doc's "끝 조건" lists.
@@ -23,16 +23,18 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const docsDir = path.join(root, "docs/design/features");
-const rel = (file) => path.relative(root, file);
+/** A "나온 곳" without its dates: "2026-11-06" names no doc 11. */
+const withoutDates = (text) => text.replace(/\d{4}-\d{2}-\d{2}/g, "");
 
 /**
  * Whether an item's 나온 곳 names a doc by its number: the number on its own, not a part of a longer number or of a date ("2026-11-06" names no
  * doc 11).
  */
-export const namesDoc = (from, number) => new RegExp(`(^|[^\\d-])${number}([^\\d-]|$)`).test(from);
+export const namesDoc = (from, number) => new RegExp(`(^|\\D)${number}(\\D|$)`).test(withoutDates(from));
 
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const docsDir = path.join(root, "docs/design/features");
+const rel = (file) => path.relative(root, file);
 function main() {
 	function walk(dir, out = []) {
 		for (const entry of readdirSync(dir, { withFileTypes: true })) {

@@ -2,7 +2,7 @@ import type { ScriptedProvider } from "@monti-cms/ai";
 import type { Block, Doc } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { caretAfter, pickWords } from "../../../../../testing/input";
+import { caretAfter, dragPath, pickWords } from "../../../../../testing/input";
 import { scene } from "../../../test/scene";
 import { assisted } from "../../assistant/assistant.stories";
 import { addFile } from "../media/media.stories";
@@ -294,5 +294,45 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		const line = page.getByText(/파일 cat\.jpg/).first();
 		await expect.element(line).toBeVisible();
 		expect(line.element().textContent).not.toContain(picture);
+	});
+
+	it("18-7 a box over a paragraph and a callout picks the callout whole, its tool row stays down; Backspace takes it with its words, undo brings it back; tabs go whole too", async () => {
+		const made = on();
+		await made.run();
+		await expect.element(body().getByText("콜아웃 본문")).toBeVisible();
+		const picked = () => [...body().element().querySelectorAll<HTMLElement>("[data-picked]")];
+		/** A box from the margin left of the text, from the top of one block to the bottom of another. */
+		const box = async (top: Element, bottom: Element) => {
+			const text = body().element().getBoundingClientRect();
+			const start = { x: text.left - 56, y: top.getBoundingClientRect().top + 2 };
+			await dragPath([start, { x: start.x + 120, y: bottom.getBoundingClientRect().bottom - 2 }], { steps: 10 });
+		};
+		const first = body().getByText("블록을 하나씩 넣은 글.").element();
+		const callout = element("callout");
+		if (!callout) throw new Error("no callout");
+		await box(first, callout);
+		// Two blocks: the paragraph and the callout, not the callout's own paragraph.
+		await expect.poll(() => picked().length).toBe(2);
+		expect(
+			picked()[1]?.querySelector('[data-block="callout"]') ?? picked()[1]?.closest('[data-block="callout"]'),
+		).not.toBeNull();
+		await expect.element(page.getByRole("toolbar", { name: "콜아웃 도구" })).not.toBeInTheDocument();
+		await userEvent.keyboard("{Backspace}");
+		let stored = await kept(made);
+		expect(find(stored, "callout")).toBeUndefined();
+		expect(find(stored, "s1")).toBeUndefined();
+		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
+		await expect.element(body().getByText("콜아웃 본문")).toBeVisible();
+		stored = await kept(made);
+		expect(find(stored, "callout")?.children?.[0]?.content).toEqual([{ type: "text", text: "콜아웃 본문" }]);
+		// Tabs, with a tab hidden: picked as one block, and taken out with both tabs.
+		const tabs = element("tabs");
+		if (!tabs) throw new Error("no tabs");
+		await box(tabs, tabs);
+		await expect.poll(() => picked().length).toBe(1);
+		await userEvent.keyboard("{Backspace}");
+		stored = await kept(made);
+		expect(find(stored, "tabs")).toBeUndefined();
+		expect(JSON.stringify(stored)).not.toContain("pnpm add monti");
 	});
 });

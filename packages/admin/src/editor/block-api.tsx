@@ -34,6 +34,7 @@ import {
 	useState,
 } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { pickedBlocks } from "./block-pick";
 import { codeToolsKey } from "./code/code-state";
 
 /** The editor's node for a block type (as `schema.ts` names it). */
@@ -106,7 +107,9 @@ export function useBlock() {
 			}
 			// The code block a code link of the text is pointed at (doc 17): a block that hides it (a code explorer's file) shows it.
 			const pointed = codeToolsKey.getState(current.state)?.pointed?.block ?? null;
-			return { editable: current.isEditable, inside, childAt, pointed };
+			// Picked whole among several blocks (T80): the handle and its menu act on the pick, not the block's own tool row.
+			const picked = pos !== undefined && (pickedBlocks(current.state)?.includes(pos) ?? false);
+			return { editable: current.isEditable, inside, childAt, pointed, picked };
 		},
 	});
 	return useMemo(() => {
@@ -138,6 +141,8 @@ export function useBlock() {
 			selected,
 			/** The cursor or the selected words are inside the block. */
 			inside: state.inside,
+			/** Picked whole with other blocks (T80): its tool row stays down while the pick lasts. */
+			picked: state.picked,
 			/** The child the cursor is in, or `null`. */
 			childAt: state.childAt,
 			/** The id of the code block a code link of the text points at while it is pointed at or pressed (doc 17), or `null`. */
@@ -244,6 +249,7 @@ export function useBlock() {
 		state.editable,
 		state.inside,
 		state.childAt,
+		state.picked,
 		state.pointed,
 		language,
 		locale,
@@ -267,11 +273,11 @@ export function BlockFrame({
 	measure?: string;
 	children: ReactNode;
 } & Omit<ComponentProps<"div">, "children">) {
-	const { editable, inside, selected } = useBlock();
+	const { editable, inside, selected, picked } = useBlock();
 	const [over, setOver] = useState(false);
 	const [held, setHeld] = useState(0);
 	const [focused, setFocused] = useState(false);
-	const up = editable && bar !== undefined && (over || inside || selected || held > 0 || focused);
+	const up = editable && !picked && bar !== undefined && (over || inside || selected || held > 0 || focused);
 	return (
 		<HoldContext.Provider value={(on) => setHeld((count) => Math.max(0, count + (on ? 1 : -1)))}>
 			<FocusContext.Provider value={setFocused}>
