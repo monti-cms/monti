@@ -403,6 +403,8 @@ function KeyForm({
 						value={address}
 						onChange={(event) => {
 							setAddress(event.target.value);
+							// Back at the stored address, the key need not be entered again after all.
+							if (slot && event.target.value.trim() === (slot.key?.baseUrl ?? "")) setAgain(false);
 							if (!editing && !named) setName(suggested(service, event.target.value).name);
 						}}
 						aria-invalid={errors.address !== undefined || undefined}

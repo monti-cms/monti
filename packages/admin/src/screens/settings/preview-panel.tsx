@@ -66,6 +66,8 @@ export function PreviewPanel({
 		labels: Object.fromEntries(keys.map((key) => [key, model.fieldLabel(c, key)])),
 		siteName,
 	};
+	/** What was tried in the plugins' inputs: the preview's inputs take typing like the editor's, and keep none of it. */
+	const [typed, setTyped] = useState<Record<string, unknown>>({});
 	const [tab, setTab] = useState("0");
 	const picked = layout[Number(tab)] ?? (Number(tab) < tabs.length ? undefined : layout[0]);
 	const pluginTab = pluginTabs[Number(tab) - layout.length];
@@ -162,8 +164,8 @@ export function PreviewPanel({
 										field={field.name}
 										definition={definition}
 										options={definition.inputOptions ?? {}}
-										value={undefined}
-										onChange={() => {}}
+										value={typed[field.name]}
+										onChange={(next) => setTyped((was) => ({ ...was, [field.name]: next }))}
 										readOnly={false}
 										entry={emptyEntry}
 									/>
