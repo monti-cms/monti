@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { checkDoc, createBlockKit } from "../body/blocks";
 import type { Block, Doc } from "../body/doc";
+import { applyOps } from "../body/edit";
+import { bodyText } from "../body/text";
 import { type CreateElement, renderDocument } from "../render";
 import { siteDoc } from "../translations/source";
 import { codeHighlighter } from "./highlight";
@@ -119,6 +121,21 @@ describe("17-2 line effects follow the lines", () => {
 	it("17-2 an effect whose lines are all taken out is gone", () => {
 		expect(move([effect(2, 4)], 4, 8, "")).toEqual([]);
 		expect(move([effect(5, 6)], 9, 11, "")).toEqual([[4, 5]]);
+	});
+});
+
+describe("17-2 the assistant's edits", () => {
+	it("17-2 replaceText in a code block moves its line effects with the lines", () => {
+		const next = applyOps(doc(code(SIX, { lines: [{ name: "plus", start: 2, end: 3 }] })), [
+			{ op: "replaceText", block: "b_code", from: 0, to: 0, text: "x\ny\n" },
+		]);
+		expect(next.blocks[0].attrs?.lines).toEqual([{ name: "plus", start: 4, end: 5 }]);
+	});
+
+	it("17-2 body.read shows a code block's other values on its fence line and its code as it is", () => {
+		expect(bodyText(doc(code("a\nb", { title: "a.ts", lines: [{ name: "plus", start: 0, end: 1 }] })))).toBe(
+			'{#b_code} ```ts {title=a.ts lines=[{"name":"plus","start":0,"end":1}]}\na\nb\n```',
+		);
 	});
 });
 

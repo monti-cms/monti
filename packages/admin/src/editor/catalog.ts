@@ -12,7 +12,8 @@ export type CatalogBlock = {
 	attrs: { properties?: Record<string, unknown>; required?: string[] } | null;
 };
 
-export type CatalogMark = { type: string; label: string | Message; attrs: unknown };
+/** `inCode`: whether the mark goes in a code block's text (doc 17): `also` (bold …), `only` (a code fold or tooltip), `null` never. */
+export type CatalogMark = { type: string; label: string | Message; attrs: unknown; inCode?: "also" | "only" | null };
 
 /** What `blocks.catalog` answers. */
 export type Catalog = { blocks: CatalogBlock[]; marks: CatalogMark[]; headings: number[] };

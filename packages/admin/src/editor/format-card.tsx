@@ -1,3 +1,4 @@
+import { CODE_TOOL_MARKS } from "@monti-cms/core";
 import {
 	Command,
 	CommandEmpty,
@@ -101,7 +102,8 @@ export function FormatCard({
 	const offered = new Set(catalogs.offered.marks.map((mark) => mark.type));
 	const groups = GROUPS.map((group) => group.filter(({ type }) => offered.has(type))).filter((group) => group.length);
 	const builtIn = new Set(GROUPS.flat().map(({ type }) => type));
-	const custom = catalogs.offered.marks.filter((mark) => !builtIn.has(mark.type));
+	// The code tools' marks have their own places (doc 17): a code link, a fold and a tooltip in code are not the site's marks.
+	const custom = catalogs.offered.marks.filter((mark) => !builtIn.has(mark.type) && !CODE_TOOL_MARKS.has(mark.type));
 	const label = (type: string) => t(catalogs.kit.marks.find((mark) => mark.type === type)?.label ?? type);
 	// A footnote's own text has no footnote of its own.
 	const footnote = state.inFootnote ? undefined : catalogs.offered.blocks.find((block) => block.type === "footnote");

@@ -470,6 +470,33 @@ describe("templates", () => {
 	});
 });
 
+describe("code links", () => {
+	const code: Block = {
+		id: "b_code",
+		type: "codeBlock",
+		attrs: { language: "ts", lines: [{ name: "anchor", start: 1, end: 2, attrs: { id: "c1" } }] },
+		content: [{ type: "text", text: "const a = 1;\nconst b = 2;" }],
+	};
+	const pointing = (anchor: string) =>
+		p("b_1", "", {
+			content: [{ type: "text", text: "this line", marks: [{ type: "codeRef", block: "b_code", anchor }] }],
+		});
+
+	it("17-8 a code link whose lines are gone is a to-do row that blocks the publish; one that goes somewhere is none", async () => {
+		const id = await newPost(doc(pointing("c1"), code));
+		expect((await get(id)).tasks).toEqual([]);
+		await write("entries.save", {
+			id,
+			version: await version(id),
+			doc: doc(pointing("c1"), { ...code, attrs: { language: "ts" } }),
+		});
+		expect((await get(id)).tasks).toEqual([
+			expect.objectContaining({ code: "brokenCodeLink", block: "b_1", blocking: true }),
+		]);
+		await expect(write("entries.publish", { ids: [id] })).rejects.toBeTruthy();
+	});
+});
+
 describe("links to entries", () => {
 	const linkTo = (group: string): Block =>
 		p("b_1", "", { content: [{ type: "text", text: "see this", marks: [{ type: "link", href: entryLink(group) }] }] });
