@@ -55,7 +55,8 @@ const head = (id: string) => document.querySelector<HTMLElement>(`th[data-column
 const sidebar = (name: string | RegExp) => page.getByRole("navigation").getByRole("button", { name });
 
 describe("the list: what is kept, and what comes back", () => {
-	it("06 [dragging] [dropped] a column's edge held and dragged 80px stays under the pointer and moves no other edge; let go, the width is saved for the collection and is there when the list is read again", async () => {
+	// Saved for the collection: it is there when the list is read again.
+	it("06 [dragging] [dropped] a column's edge held and dragged 80px stays under the pointer and moves no other edge; let go, the width is saved", async () => {
 		const story = listAt();
 		await story.run();
 		await rowsShown();

@@ -703,7 +703,8 @@ describe("which run and which conversation the page follows (the first review of
 		);
 	});
 
-	it("10-1 a past conversation opened while a run works: pressing the one that is open changes nothing; opening another lets the run go on to its end, and it is there when opened again", async () => {
+	// The run's conversation is there, finished, when it is opened again.
+	it("10-1 a past conversation opened while a run works: the open one changes nothing, and another lets the run go on to its end", async () => {
 		const long = gate();
 		const story = on({
 			script: () => [{ text: "옛 답." }, { hold: long.wait, text: "긴 답의 앞." }, { text: "기다린 말의 답." }],
