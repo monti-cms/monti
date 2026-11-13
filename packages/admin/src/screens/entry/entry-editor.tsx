@@ -56,19 +56,24 @@ import {
 	Copy,
 	Export,
 	OverflowMenuHorizontal,
+	RecentlyViewed,
 	RightPanelOpen,
+	Spark,
 	TrashCan,
 } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AssistantButton } from "../../assistant/assistant-button";
 import { draftContext } from "../../assistant/draft-context";
-import { useOpenConversation, useRemakeItem, useScreenContext } from "../../assistant/use-assistant";
+import { useHasAssistant, useOpenConversation, useRemakeItem, useScreenContext } from "../../assistant/use-assistant";
+import { useFills } from "../../assistant/use-fill";
+import { usePlaceRequests } from "../../assistant/use-place-requests";
 import { download } from "../../download";
 import { useLeaveFiles, useLeaveGuard, useUploadsGoing } from "../../draft/leave-guard";
+import { ALT_MAX } from "../../editor/alt-fields";
 import { BodyEditor } from "../../editor/body-editor";
-import { openImageCard } from "../../editor/media-context";
-import { StaleProposalMargin } from "../../editor/proposal-margin";
+import { openImageCard, type PictureFill } from "../../editor/media-context";
+import { ProposalMargin, proposalMarks, requestMarks, staleMarks } from "../../editor/proposal-margin";
 import {
 	anchorBlock,
 	drawable,
@@ -77,6 +82,7 @@ import {
 	staleProposals,
 	takeInEditor,
 } from "../../editor/proposal-marks";
+import { anchorRequest, type PickedText, releaseRequest, requestWords } from "../../editor/request-marks";
 import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useFieldUploads } from "../../media/use-field-uploads";
@@ -117,6 +123,8 @@ const STATUS: Record<EntryState, EntryStatusKind> = {
 };
 
 const SAVE_KEYS = ["mod", "s"] as const;
+/** The most blocks a request names (`ScreenContext.blocks`). */
+const MOST_BLOCKS_NAMED = 500;
 
 /**
  * The field of the panel's layout a stored field sits under: itself, or the conditional field at the top of the options it is in, however
@@ -150,6 +158,7 @@ export function EntryEditor({
 	onCompare,
 	onOpen,
 	onLanguages,
+	onActivity,
 }: {
 	collection: string;
 	id: string;
@@ -163,8 +172,10 @@ export function EntryEditor({
 	onOpen: (id: string) => void;
 	/** To settings › languages, from the "+ Language" menu. */
 	onLanguages: () => void;
+	/** Opens the activity log on what the assistant changed in the entry of this title (⋯ › "what the AI changed"). */
+	onActivity: (title: string) => void;
 }) {
-	const { t, language, apiBase, templates: templatesOn, reads } = useAdmin();
+	const { t, language, apiBase, templates: templatesOn, reads, transport } = useAdmin();
 	const languageName = useLanguageName();
 	const source = useMemo(() => ({ kind: "entry" as const, id }), [id]);
 	const schema = useRead<SchemaRead>("schema.read");
@@ -209,6 +220,53 @@ export function EntryEditor({
 	});
 
 	const read = editor.loaded as EntryRead | null;
+	// "✦ Fill" on a field, a picture's words and a caption (doc 10, quick tasks): one call each, the answer put where it was asked.
+	const fills = useFills();
+	const hasAssistant = useHasAssistant();
+	/** The entry as the screen has it, what is not saved included: what a fill reads it by. */
+	const fillEntry = () => ({
+		title: editor.title,
+		values: Object.fromEntries(
+			Object.keys(storedFields(structure?.collections[collection])).map((field) => [
+				field,
+				editor.value(fieldPath(field)),
+			]),
+		),
+		text: (bodyEditor?.getText({ blockSeparator: "\n" }) ?? "").slice(0, 200_000),
+	});
+	const fillEntryNow = useRef(fillEntry);
+	fillEntryNow.current = fillEntry;
+	const localeNow = useRef<string | undefined>(undefined);
+	localeNow.current = read?.entry.locale;
+	const runFill = fills?.run;
+	const fillOf = fills?.of;
+	const forgetFill = fills?.forget;
+	const pictureFill = useMemo<PictureFill | undefined>(
+		() =>
+			runFill && fillOf && forgetFill
+				? {
+						of: fillOf,
+						forget: forgetFill,
+						run: (place, task, file, around, put) =>
+							void runFill(
+								place,
+								{
+									task,
+									collection,
+									...(localeNow.current ? { locale: localeNow.current } : {}),
+									entry: fillEntryNow.current(),
+									image: { media: file, ...around },
+								},
+								(answer) => {
+									const words = "value" in answer ? answer.value : "";
+									put(words);
+									return task === "alt" ? words.slice(0, ALT_MAX) : words;
+								},
+							),
+					}
+				: undefined,
+		[runFill, fillOf, forgetFill, collection],
+	);
 	// What goes along with a request to the assistant from here (doc 10, context): this entry as it was read, and what is not saved yet.
 	const unsavedNow = editor.draft.changes;
 	useScreenContext(
@@ -276,7 +334,8 @@ export function EntryEditor({
 	const pairedRows = usePairedRows(paired ? compared : null, catalogs);
 	// With the entry's other controls: before the read, and after one that failed, "+ language" made a translation of an entry nobody had read, and the
 	// tabs stood elsewhere than where they stay.
-	const languages =
+	// Drawn once everything below is made: its "✦ translate" reads what the requests further down hold.
+	const languagesRow = () =>
 		read && translation.multilingual && schema.data ? (
 			<Inline minHeight="control-md" justify="between" gap={12}>
 				<LocaleTabs
@@ -290,7 +349,21 @@ export function EntryEditor({
 					}}
 					onManage={onLanguages}
 				/>
-				{translation.isTranslation ? <SourceViewPicker value={view} onChange={showView} /> : null}
+				{translation.isTranslation ? (
+					<Inline gap={12}>
+						{/* While undecided blocks are left: the assistant proposes a translation for each (doc 10, item 19). */}
+						{canTranslate && !readOnly && (untranslated.length > 0 || translating) ? (
+							<>
+								<TextButton tone="proposal" loading={translating} onClick={() => void translate()}>
+									{translating ? null : <Spark aria-hidden />}
+									{t(translating ? "translation.ai.working" : "translation.ai.translate")}
+								</TextButton>
+								<Separator orientation="vertical" length="control" />
+							</>
+						) : null}
+						<SourceViewPicker value={view} onChange={showView} />
+					</Inline>
+				) : null}
 			</Inline>
 		) : null;
 
@@ -408,6 +481,203 @@ export function EntryEditor({
 				setRemaking((now) => new Set([...now].filter((each) => each !== item)));
 			}
 		: undefined;
+	// A request left at a place (doc 10, a request at its place): on picked words (T64), or on one proposed change from its own card
+	// (T41). Each is a small run of its own; what it proposes is read with the entry's other proposals.
+	const places = usePlaceRequests(() => editor.draft.reloadProposals());
+	const [replyDraft, setReplyDraft] = useState("");
+	const openCard = (next: string | null) => {
+		setStaleOpen(next);
+		setReplyDraft("");
+	};
+	/** The words each request on picked words was left on. */
+	const pickedOf = useRef(new Map<string, PickedText>());
+	const entryNow = useRef({ version: 0, title: "" });
+	entryNow.current = { version: read?.entry.version ?? 0, title: read?.entry.title ?? "" };
+	const startRequest = (picked: PickedText) => {
+		const view = body.current;
+		if (!places || !view) return;
+		const request = `request:${Date.now().toString(36)}`;
+		pickedOf.current.set(request, picked);
+		view.view.dispatch(anchorRequest(view.state, { id: request, from: picked.start, to: picked.end }));
+		places.begin(request);
+		openCard(request);
+	};
+	const waiting = places?.requests ?? [];
+	// A request that is over (let go, or become a proposed change) gives up its underline.
+	const waitingIds = waiting.map((request) => request.id).join(" ");
+	useEffect(() => {
+		const view = body.current;
+		const still = new Set(waitingIds.split(" "));
+		for (const request of [...pickedOf.current.keys()]) {
+			if (still.has(request)) continue;
+			pickedOf.current.delete(request);
+			if (view && !view.isDestroyed) view.view.dispatch(releaseRequest(view.state, request));
+		}
+	}, [waitingIds]);
+	// A request on a proposed change that did not go through says why, once: its card shows the change as it stands.
+	const dismissRequest = places?.dismiss;
+	useEffect(() => {
+		for (const request of waiting)
+			if ((request.item !== null || request.id.startsWith("translate:")) && request.status === "answered") {
+				// A translation that proposed nothing and said why not (the answer's words) is over: only a failure is said.
+				if (request.failed || request.item !== null) toast.error(request.failed ?? t("errors.unexpected"));
+				dismissRequest?.(request.id);
+			}
+	}, [waiting, dismissRequest, t]);
+	/** The assistant reads what is saved: what is on the screen is saved before it is asked. `false`: the save was refused. */
+	const savedForRequest = async () => !editor.dirty || (await editor.save()) !== null;
+	/** The entry as it is saved now, for a request's context: the version this page drew may be the one before the save just made. */
+	const entryForRequest = async () => {
+		const answer = await transport("entries.get", { id }).catch(() => null);
+		const saved = answer?.status === 200 ? (answer.body as { entry: { version: number; title: string } }).entry : null;
+		return { id, version: saved?.version ?? entryNow.current.version, title: saved?.title ?? entryNow.current.title };
+	};
+	/** A press of "translate" is being sent (its save, then its request): a second press meanwhile sends nothing. */
+	const translateSending = useRef(false);
+	// "✦ Translate" (doc 10, item 19; T94): a set request that goes to a conversation of its own without opening the panel. The
+	// translations come as proposals, drawn where each block's own words will stand; the bubble is named by the request.
+	const canTranslate = Boolean(places) && translation.isTranslation;
+	const storedBlocks = new Set((read?.entry.doc?.blocks ?? []).map((block) => block.id));
+	const proposedBlocks = new Set(
+		editor.bodyProposals.flatMap((item) => item.ops.flatMap((op) => ("block" in op ? [op.block] : []))),
+	);
+	/** The undecided blocks nothing is proposed for yet: what "translate" is still for. */
+	const untranslated = translation.isTranslation
+		? editor.doc.blocks
+				.filter(
+					(block) => block.link?.state === "pending" && storedBlocks.has(block.id) && !proposedBlocks.has(block.id),
+				)
+				.map((block) => block.id)
+		: [];
+	const translating = waiting.some((request) => request.id.startsWith("translate:") && request.status === "working");
+	const translate = (blocks?: string[], again = false) => {
+		// The tabs' button is for every block nothing is proposed for yet: pressed twice while its save is under way, it asks once. A
+		// block's own "translate" is its own request.
+		if (!places || (blocks === undefined && translateSending.current)) return;
+		if (blocks === undefined) translateSending.current = true;
+		// The blocks it is for, as they are when it is pressed. More than a request names (500) are not named: the set request then
+		// means every undecided block.
+		const meant = blocks ?? untranslated;
+		void places
+			.send(
+				`translate:${Date.now().toString(36)}:${blocks?.[0] ?? "all"}`,
+				t(again ? "translation.ai.again" : "translation.ai.translate"),
+				async () => ({
+					context: {
+						screen: "entry",
+						collection,
+						entry: await entryForRequest(),
+						task: again ? "retranslate" : "translate",
+						...(meant.length > 0 && meant.length <= MOST_BLOCKS_NAMED ? { blocks: meant } : {}),
+					},
+				}),
+				savedForRequest,
+			)
+			.finally(() => {
+				if (blocks === undefined) translateSending.current = false;
+			});
+	};
+	type About = Parameters<NonNullable<typeof places>["send"]>[2];
+	const replyTo = (card: string, about: About) => ({
+		draft: replyDraft,
+		onDraft: setReplyDraft,
+		onSend: (words: string) => {
+			setReplyDraft("");
+			// The request says "working" from the press; what is on the screen is saved before it goes.
+			void places?.send(card, words, about, savedForRequest);
+		},
+		onStop: () => places?.stop(card),
+	});
+	const liveMarks = bodyNow
+		? drawn.flatMap((item) => {
+				const block = anchorBlock(bodyNow, item);
+				return block === null ? [] : [{ item, block }];
+			})
+		: [];
+	const marks = [
+		...staleMarks({
+			t,
+			open: staleOpen,
+			onOpen: openCard,
+			stale,
+			onDiscard: (item) => void editor.discardProposal(item),
+			onRemake: remake,
+			remaking,
+		}),
+		...proposalMarks({
+			t,
+			open: staleOpen,
+			onOpen: openCard,
+			items: liveMarks,
+			onDiscard: (item) => void editor.discardProposal(item),
+			onTake: (item) => {
+				const walked = walk.find((each) => each.id === item);
+				if (walked) take(walked);
+			},
+			working: (item) => {
+				const asked = waiting.find((request) => request.id === `item:${item}` && request.status === "working");
+				return asked?.thread.at(-1) ?? null;
+			},
+			reply: places ? (item) => replyTo(`item:${item}`, { item }) : undefined,
+		}),
+		...requestMarks({
+			t,
+			open: staleOpen,
+			onOpen: openCard,
+			requests: waiting.flatMap((request) => {
+				const picked = pickedOf.current.get(request.id);
+				return picked ? [{ ...request, block: picked.block }] : [];
+			}),
+			onDismiss: (request) => places?.dismiss(request),
+			reply: (request) =>
+				replyTo(request, async () => {
+					// The words as they stand now: what was typed before them since they were picked moved them.
+					const view = body.current;
+					const picked = (view ? requestWords(view.state, request) : null) ?? pickedOf.current.get(request);
+					return {
+						context: {
+							screen: "entry",
+							collection,
+							entry: await entryForRequest(),
+							...(picked
+								? {
+										selection: {
+											kind: "text",
+											block: picked.block,
+											from: picked.from,
+											to: picked.to,
+											text: picked.text,
+										},
+									}
+								: {}),
+						},
+					};
+				}),
+		}),
+	];
+	// The status bar's "requests 1 · working 1" (screens/editor-more.md): the requests left at places of this text, and how many the
+	// assistant is at now. Pressing it opens the next one's card.
+	const askedPlaces = [
+		...waiting
+			.filter((request) => request.status !== "writing" && !request.id.startsWith("translate:"))
+			.map((request) => ({
+				id: request.item ?? request.id,
+				working: request.status === "working",
+			})),
+		...liveMarks
+			.filter(({ item }) => item.thread.length > 0 && !waiting.some((request) => request.item === item.id))
+			.map(({ item }) => ({ id: item.id, working: false })),
+	];
+	const atWork = askedPlaces.filter((each) => each.working).length;
+	const nextRequest = () => {
+		const at = askedPlaces.findIndex((each) => each.id === staleOpen);
+		const next = askedPlaces[(at + 1) % askedPlaces.length];
+		if (!next) return;
+		openCard(next.id);
+		document
+			.querySelector(`[data-margin-mark="${CSS.escape(next.id)}"]`)
+			?.scrollIntoView({ block: "center", behavior: "smooth" });
+	};
 	// ⌘↵ takes the proposal the bubble points at and ⌘⌫ discards it (components/proposal.md, the bubble).
 	const keyed = useRef({ walking, take, discard: editor.discardProposal });
 	keyed.current = { walking, take, discard: editor.discardProposal };
@@ -626,12 +896,27 @@ export function EntryEditor({
 				editable={!readOnly}
 				templates={templatesOn}
 				onEditor={keepEditor}
+				fill={readOnly ? undefined : pictureFill}
+				onRequest={places && !readOnly && !rows ? startRequest : undefined}
 				proposals={{
 					items: editor.bodyProposals,
 					current: walking?.kind === "body" ? walking.id : null,
 					onTaken: editor.takeBody,
 				}}
-				translation={translation.isTranslation && !readOnly ? translation.blockMenu : undefined}
+				translation={
+					translation.isTranslation && !readOnly
+						? {
+								...translation.blockMenu,
+								...(canTranslate
+									? {
+											translate: (block: string) => void translate([block]),
+											// A block new in the source is not in the stored body yet: there is nothing for the assistant to change.
+											translatable: (block: string) => storedBlocks.has(block),
+										}
+									: {}),
+							}
+						: undefined
+				}
 				paired={rows}
 				margin={
 					rows
@@ -643,19 +928,10 @@ export function EntryEditor({
 											editor={made}
 											marks={compared?.marks ?? []}
 											onDecide={(decision) => void translation.decide([decision])}
+											onRetranslate={canTranslate && !readOnly ? (block) => void translate([block], true) : undefined}
 										/>
 									) : null}
-									{readOnly ? null : (
-										<StaleProposalMargin
-											editor={made}
-											stale={stale}
-											open={staleOpen}
-											onOpen={setStaleOpen}
-											onDiscard={(item) => void editor.discardProposal(item)}
-											onRemake={remake}
-											remaking={remaking}
-										/>
-									)}
+									{readOnly ? null : <ProposalMargin editor={made} marks={marks} />}
 								</>
 							)
 				}
@@ -870,6 +1146,13 @@ export function EntryEditor({
 								<OverflowMenuHorizontal aria-hidden />
 							</IconButton>
 							<DropdownMenuContent align="end">
+								{/* What the assistant changed in this entry: the activity log, searched by its title and filtered to the assistant's lines. */}
+								{hasAssistant ? (
+									<DropdownMenuItem onClick={() => onActivity(editor.title)}>
+										<RecentlyViewed aria-hidden />
+										{t("entry.assistantLog")}
+									</DropdownMenuItem>
+								) : null}
 								{/* A translation is not copied (its source is) and has no rows of its own here (screens/translation.md, ⋯). */}
 								{translation.isTranslation ? null : (
 									<>
@@ -938,7 +1221,7 @@ export function EntryEditor({
 				<Stack gap={0} grow minWidth={0} overflow="y" paddingX={48} paddingTop={16}>
 					{paired && compared ? (
 						<Stack gap={0} grow width="full" maxWidth="list" centered paddingBottom={48}>
-							<Box paddingBottom={16}>{languages}</Box>
+							<Box paddingBottom={16}>{languagesRow()}</Box>
 							<PairedView
 								compared={compared}
 								translationUpdatedAt={read?.entry.updatedAt ?? null}
@@ -950,7 +1233,7 @@ export function EntryEditor({
 						</Stack>
 					) : (
 						<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
-							{languages}
+							{languagesRow()}
 							{read ? (
 								<Stack gap={0} paddingTop={16} paddingBottom={32}>
 									<EditorMarginLine margin={titleChange}>{titleField("display")}</EditorMarginLine>
@@ -994,6 +1277,8 @@ export function EntryEditor({
 						altCard={altCard}
 						onAltCard={setAltCard}
 						changes={compared && !readOnly ? { marks: compared.fields, onConfirm: confirmField } : undefined}
+						fills={fills}
+						fillEntry={fillEntry}
 					/>
 				) : null}
 			</Inline>
@@ -1046,6 +1331,19 @@ export function EntryEditor({
 							</StatusBarListGroup>
 						) : null}
 					</StatusBarList>
+					{askedPlaces.length > 0 && !readOnly ? (
+						<StatusBarCell
+							onClick={nextRequest}
+							// What is being worked on is said only while something is: the usual state has no label (README, principle 6).
+							aria-label={t(atWork > 0 ? "entry.requests.name" : "entry.requests.nameIdle", {
+								count: askedPlaces.length,
+								working: atWork,
+							})}
+						>
+							{t("entry.requests", { count: askedPlaces.length })}
+							{atWork > 0 ? <Text>{t("entry.requests.working", { count: atWork })}</Text> : null}
+						</StatusBarCell>
+					) : null}
 					{/* A plugin fills its cell and brings no UI of its own (status-bar.md): what it found, each with one thing to do, and all at once. */}
 					{textChecks.cells.map((cell) => (
 						<StatusBarPluginCell

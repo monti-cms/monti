@@ -121,6 +121,11 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 	const toNextWaiting = useFocusHandOff(
 		(gone) => gone.nextElementSibling?.querySelector<HTMLElement>("button") ?? typing(),
 	);
+	// A screen's "✦ request" opened the panel to be typed in: the caret goes to the box once it is drawn.
+	const requested = assistant.requested;
+	useEffect(() => {
+		if (requested > 0) requestAnimationFrame(() => box.current?.querySelector("textarea")?.focus());
+	}, [requested]);
 	const intoBox = (put: () => void) => {
 		put();
 		requestAnimationFrame(() => box.current?.querySelector("textarea")?.focus());

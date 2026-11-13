@@ -54,6 +54,8 @@ export type TrashRow = TrashRef & {
 	/** Days until it is deleted for good. */
 	daysLeft: number;
 	byAssistant: boolean;
+	/** The conversation in which the assistant threw it away, while that conversation is still kept: what its ✦ opens. */
+	conversationId: string | null;
 	/** Public paths a permanent delete keeps from every other entry: the ones it was published under. */
 	reserves: string[];
 };
@@ -211,6 +213,7 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 		trashedAt: new Date(trashedAt).toISOString(),
 		daysLeft: daysLeft(trashedAt, now),
 		byAssistant: by === "assistant",
+		conversationId: null as string | null,
 		reserves: [],
 	});
 
@@ -341,6 +344,24 @@ export async function listTrash(ctx: OperationContext, query: TrashQuery): Promi
 				path: pathOf(file.folder_id),
 				inTrashedFolder: inTrash(file.folder_id),
 			});
+		}
+	}
+
+	// What the assistant threw away opens the conversation it was asked in: the newest move to the trash of each such row, as the log has
+	// it. A conversation deleted since opens nothing.
+	const assistants = [...rows.values()].filter((row) => row.byAssistant);
+	if (assistants.length > 0) {
+		const moves = await sql<{ kind: string; id: string; conversation: string | null }>`
+			select distinct on (target.value->>'kind', target.value->>'id')
+				target.value->>'kind' as kind, target.value->>'id' as id, talk.id as conversation
+			from monti_activity as act
+			cross join lateral jsonb_array_elements(act.targets) as target(value)
+			left join conversations as talk on talk.id = act.conversation_id
+			where act.operation = 'trash.move' and target.value->>'id' in (${list(assistants.map((row) => row.id))})
+			order by target.value->>'kind', target.value->>'id', act.seq desc`.execute(db);
+		for (const move of moves.rows) {
+			const row = rows.get(`${move.kind}:${move.id}`);
+			if (row?.byAssistant) row.conversationId = move.conversation;
 		}
 	}
 

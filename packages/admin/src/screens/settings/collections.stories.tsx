@@ -14,7 +14,10 @@ const meta = {
 	excludeStories: /^[a-z]/,
 	tags: ["visual"],
 	title: "Screens/Settings/Collections",
-	render: (_args, { loaded }) => <MontiAdmin transport={(loaded as Loaded).site.transport} siteName="example.dev" />,
+	render: (_args, { loaded }) => {
+		const { site: made } = loaded as Loaded;
+		return <MontiAdmin transport={made.transport} streams={made.streams} siteName="example.dev" />;
+	},
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -945,5 +948,42 @@ export const MovedFieldReview: Story = {
 		await userEvent.click(await body.findByRole("button", { name: "모두 받기" }, wait));
 		await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }, wait));
 		await body.findByText("값을 잃는 글", {}, wait);
+	},
+};
+
+/** Two requests' proposals on the settings: a field for the posts, and the posts' folders turned off. */
+const twoProposals = async ({ monti }: StorySite) => {
+	const draft = structuredClone(schema);
+	(draft.collections.post as { fields: Record<string, unknown> }).fields.readingTime = { kind: "text", max: 10 };
+	const field = await monti.proposals.create("conversation-1", "읽는 시간 필드 더해 줘");
+	await monti.proposals.add(field, "schema.apply", { draft, renames: [], answers: {} });
+	const folders = await monti.proposals.create("conversation-2", "게시글 폴더는 꺼 줘");
+	await monti.proposals.add(folders, "collections.updateAdminValues", {
+		collection: "post",
+		values: { folders: false },
+	});
+};
+
+/**
+ * One proposal's own card in the settings (doc 05, "one by one"; T41): the mark before the bubble opens the card of the proposal the
+ * bubble points at, with discard, take and what was asked.
+ */
+export const ProposalCardOpen: Story = {
+	loaders: site({ more: twoProposals }),
+	play: async ({ canvasElement }) => {
+		const { page, body } = await settings(canvasElement);
+		await page.findByRole("button", { name: "readingTime 열기" }, wait);
+		await userEvent.click(await body.findByRole("button", { name: "제안: 읽는 시간 필드 더해 줘" }, wait));
+		await body.findByRole("button", { name: "받기" }, wait);
+	},
+};
+
+/** A collection's switch the assistant proposed: the proposal's dot by its name and "discard" before the switch, which stands as proposed. */
+export const ProposedFoldersSwitch: Story = {
+	loaders: site({ more: twoProposals }),
+	play: async ({ canvasElement }) => {
+		const { page } = await settings(canvasElement);
+		await userEvent.click(page.getByRole("button", { name: "기본" }));
+		await page.findByRole("switch", { name: "폴더 사용" }, wait);
 	},
 };

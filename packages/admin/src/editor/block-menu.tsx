@@ -19,7 +19,7 @@ import {
 	HeldBlock,
 	MenuShortcut,
 } from "@monti-cms/ui";
-import { ArrowDown, ArrowUp, Copy, Repeat, TextAlignLeft, TrashCan } from "@monti-cms/ui/icons";
+import { ArrowDown, ArrowUp, Copy, Repeat, Spark, TextAlignLeft, TrashCan } from "@monti-cms/ui/icons";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
@@ -87,6 +87,12 @@ export type BlockTranslation = {
 	keep: (blockId: string, from: string) => void;
 	detach: (blockId: string) => void;
 	remove: (blockId: string, from: string) => boolean;
+	/**
+	 * "✦ Translate" for one undecided block (doc 10, item 19): the assistant proposes its translation. Left out where there is no
+	 * assistant; `false` for a block the stored body does not hold yet (one new in the source), which has no row.
+	 */
+	translate?: (blockId: string) => void;
+	translatable?: (blockId: string) => boolean;
 };
 
 export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, translation?: BlockTranslation) {
@@ -295,6 +301,12 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 						<DropdownMenuContent side="bottom" align="start" alignOffset={-18} sideOffset={6}>
 							<DropdownMenuGroup>
 								{name ? <DropdownMenuLabel>{name}</DropdownMenuLabel> : null}
+								{translation.translate && translation.translatable?.(blockId) !== false ? (
+									<DropdownMenuItem onClick={() => decide((id) => translation.translate?.(id))}>
+										<Spark aria-hidden />
+										{t("translation.ai.translate")}
+									</DropdownMenuItem>
+								) : null}
 								<DropdownMenuItem onClick={() => decide((id) => translation.keep(id, link.from))}>
 									{t("translation.keepSource")}
 								</DropdownMenuItem>

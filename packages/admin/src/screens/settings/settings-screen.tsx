@@ -17,7 +17,9 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
+import { CardMark, ProposalMemo } from "../../assistant/proposal-memo";
 import { useOpenConversation, useScreenContext } from "../../assistant/use-assistant";
+import { usePlaceRequests } from "../../assistant/use-place-requests";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import type { ProposalItem } from "../../draft/use-proposals";
 import { useAdmin } from "../../operations/admin-context";
@@ -297,6 +299,37 @@ export function SettingsScreen({
 		}
 	};
 	const walking = stops[Math.min(position, stops.length - 1)];
+	// One proposal's own card (T41), and what is asked of the proposal at its place from it (doc 10, a request at its place).
+	const places = usePlaceRequests(() => draft.reloadProposals());
+	const [card, setCard] = useState<string | null>(null);
+	const [replyDraft, setReplyDraft] = useState("");
+	const cardMark = useRef<HTMLSpanElement>(null);
+	const openCard = (next: string | null) => {
+		setCard(next);
+		setReplyDraft("");
+	};
+	// The bubble moved to another proposal: the card that was open was the other one's, and so was what was being written in it.
+	const pointedAt = walking?.item.id ?? null;
+	useEffect(() => {
+		setCard((open) => (open !== null && open !== pointedAt ? null : open));
+		setReplyDraft("");
+	}, [pointedAt]);
+	const waiting = places?.requests ?? [];
+	const asked =
+		(walking &&
+			waiting
+				.find((request) => request.id === `item:${walking.item.id}` && request.status === "working")
+				?.thread.at(-1)) ||
+		null;
+	// A request that did not go through says why, once: the card shows the proposal as it stands.
+	const dismissRequest = places?.dismiss;
+	useEffect(() => {
+		for (const request of waiting)
+			if (request.status === "answered") {
+				toast.error(request.failed ?? t("errors.unexpected"));
+				dismissRequest?.(request.id);
+			}
+	}, [waiting, dismissRequest, t]);
 	const step = (by: number) => {
 		const next = (position + by + stops.length) % stops.length;
 		setPosition(next);
@@ -422,6 +455,41 @@ export function SettingsScreen({
 						)}
 						{walking ? (
 							<ProposalBubbleDock ref={overBubble}>
+								{/* The card of the one proposal the bubble points at (doc 05, "one by one"; T41): its mark stands by the bubble,
+								    since the places it changes are in several tabs. */}
+								<span ref={cardMark}>
+									<CardMark
+										open={card === walking.item.id}
+										aria-label={t(asked ? "memo.markWorking" : "memo.mark", { request: walking.item.request })}
+										onToggle={(next) => openCard(next ? walking.item.id : null)}
+									>
+										{asked ? "…" : 1 + (walking.item.thread?.length ?? 0)}
+									</CardMark>
+								</span>
+								<ProposalMemo
+									t={t}
+									anchor={() => cardMark.current}
+									open={card === walking.item.id}
+									onClose={() => openCard(null)}
+									request={walking.item.request}
+									thread={walking.item.thread ?? []}
+									asked={asked}
+									onDiscard={() => void draft.discard(walking.item.id)}
+									onTake={() => draft.accept(walking.item.id)}
+									reply={
+										places
+											? {
+													draft: replyDraft,
+													onDraft: setReplyDraft,
+													onSend: (words) => {
+														setReplyDraft("");
+														void places.send(`item:${walking.item.id}`, words, { item: walking.item.id });
+													},
+													onStop: () => places.stop(`item:${walking.item.id}`),
+												}
+											: undefined
+									}
+								/>
 								<ProposalBubble
 									name={walking.item.request}
 									onOpen={openConversation ? () => openConversation(walking.item.conversationId) : undefined}

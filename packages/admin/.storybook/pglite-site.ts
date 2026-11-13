@@ -18,6 +18,19 @@ import type { StreamTransport, Transport, Uploader } from "../src/operations/tra
 /** The Postgres of the story on the page. */
 let open: PGlite | null = null;
 
+/** What the next story site gets besides what its story gives it (`nextStorySite`). */
+type Extras = Pick<MontiOptions, "plugins" | "fetch" | "secret"> & { after?: (monti: Monti) => Promise<void> };
+let extras: Extras | null = null;
+
+/**
+ * The next story site made on this page gets more than its story gives it: plugins (the assistant with a scripted model), the network
+ * they call, and what is done once the story's own data is in (`after`: a key). Taken once. A test calls it in a loader before the
+ * story's own, to try a story's screen on a site that has the assistant, without every story file knowing of it.
+ */
+export function nextStorySite(more: Extras) {
+	extras = more;
+}
+
 /** Kysely on PGlite: one connection, so a query waits for the one before it (a transaction holds it until it ends). */
 function pgliteDialect(pg: PGlite) {
 	let queue = Promise.resolve();
@@ -78,6 +91,8 @@ export async function storySite({
 	signedIn?: boolean;
 	storage?: Storage | null;
 }): Promise<StorySite> {
+	const more = extras;
+	extras = null;
 	// One story shows at a time, and a Postgres left open holds its memory until the page goes: the last story's goes first (T116).
 	const last = open;
 	open = null;
@@ -91,10 +106,13 @@ export async function storySite({
 		db,
 		schema,
 		files: null,
-		plugins: storage ? [...plugins, { name: "story-files", storage }] : plugins,
+		plugins: [...plugins, ...(more?.plugins ?? []), ...(storage ? [{ name: "story-files", storage }] : [])],
 		...options,
+		...(more?.fetch ? { fetch: more.fetch } : {}),
+		...(more?.secret && !options.secret ? { secret: more.secret } : {}),
 	});
 	await setup?.(monti, storage);
+	await more?.after?.(monti);
 	const api = createAdminApi(monti);
 	let token: string | null = null;
 	// A story is its own machine: a session the dev server's bypass gave holds here (the admin API asks the same of a request's address).

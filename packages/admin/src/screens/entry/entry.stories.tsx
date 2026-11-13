@@ -400,7 +400,10 @@ const meta = {
 	excludeStories: /^[a-z]/,
 	tags: ["visual"],
 	title: "Screens/Entry/Editor",
-	render: (_args, { loaded }) => <MontiAdmin transport={(loaded as Loaded).site.transport} siteName="example.dev" />,
+	render: (_args, { loaded }) => {
+		const { site: made } = loaded as Loaded;
+		return <MontiAdmin transport={made.transport} streams={made.streams} siteName="example.dev" />;
+	},
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -473,7 +476,7 @@ export const ConditionalSwitchOff: Story = {
 
 /**
  * A switch the assistant proposed to turn off (T86 with doc 19's switch): the switch stands as proposed, with the proposal's dot by its
- * name, and the bubble walks to it.
+ * name and "discard" before it; under it, what taking it would clear. The bubble walks to it.
  */
 export const ProposedSwitch: Story = {
 	loaders: [
@@ -884,5 +887,30 @@ export const StaleProposalsSideBySide: Story = {
 	play: async ({ canvasElement }) => {
 		const { all } = await opened(canvasElement);
 		await waitFor(() => expect(all.getAllByRole("button", { name: "그 사이 고쳐짐" })).toHaveLength(2), wait);
+	},
+};
+
+/**
+ * Another choice the assistant proposed for a conditional field (doc 19): the choice is blue with its discard, the fields under it are
+ * still those of the option the entry has, and the line under the choice says what taking it would clear.
+ */
+export const ProposedChoice: Story = {
+	loaders: [
+		async (): Promise<Loaded> => {
+			const [load] = site("nestedChoice") as [() => Promise<Loaded>];
+			const made = await load();
+			const read = (await made.site.monti.run("entries.get", { id: made.id }, admin)) as { entry: { version: number } };
+			const proposal = await made.site.monti.proposals.create("conversation-1", "링크 글로 바꿔 줘");
+			await made.site.monti.proposals.add(proposal, "entries.save", {
+				id: made.id,
+				version: read.entry.version,
+				values: { format: "link" },
+			});
+			return made;
+		},
+	],
+	play: async ({ canvasElement }) => {
+		const { all } = await opened(canvasElement);
+		await all.findByText("받으면 동영상의 값 3개가 지워집니다", {}, wait);
 	},
 };

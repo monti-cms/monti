@@ -219,6 +219,14 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 					}
 					onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
 					onLanguages={() => leave(() => go({ screen: "settings", tab: "languages" }))}
+					onActivity={(title) =>
+						leave(() =>
+							go({
+								screen: "activity",
+								params: new URLSearchParams({ ...(title ? { q: title } : {}), kind: "assistant" }),
+							}),
+						)
+					}
 				/>
 			</BesideAssistant>
 		);

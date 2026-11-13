@@ -195,9 +195,17 @@ type AssistantValue = {
 	touchProposals: () => void;
 	/** Opens a proposal's review page. */
 	openReview: (id: string) => void;
+	/**
+	 * A screen's "✦ request" on what is picked in it: the panel opens on its conversation with that chip over the box (back, if it was
+	 * taken off) and the caret in the box. Nothing is sent. `requested` counts the presses, for the panel to take the caret.
+	 */
+	request: () => void;
+	requested: number;
 };
 
 const Context = createContext<AssistantValue | null>(null);
+/** The assistant as the admin holds it, for the hooks of this folder that read it where it may be missing. */
+export const AssistantContext = Context;
 
 export function useAssistant(): AssistantValue {
 	const value = useContext(Context);
@@ -223,6 +231,56 @@ export function useOpenConversation(): ((id: string) => void) | undefined {
 					}
 				: undefined,
 		[setOpen, openConversation],
+	);
+}
+
+/**
+ * A screen's "✦ request" (the list's bulk bar): opens the panel with what is picked as its chip, ready to be typed in. Nothing on a page
+ * without the assistant. A site with no key gets the panel's "add an API key", as from the ✦ in the corner.
+ */
+export function useRequest(): (() => void) | undefined {
+	const assistant = useContext(Context);
+	return assistant?.available === true ? assistant.request : undefined;
+}
+
+/** Whether the site has the assistant: a screen's row or button about it is not drawn on a site without one. */
+export function useHasAssistant(): boolean {
+	return useContext(Context)?.available === true;
+}
+
+/** What a quick task answers a field with: its value, or in the field's own line why there is none. */
+export type Filled = { ok: true; value: string } | { ok: true; values: string[] } | { ok: false; why: string };
+
+/**
+ * "✦ Fill" (doc 10, quick tasks): one call of the quick-task model for one field's value. Nothing is stored: the screen puts the
+ * answer in the field. Nothing on a site without the assistant, or with no model for the quick tasks (no key): the button is not drawn.
+ */
+export function useQuickFill(): ((input: Record<string, unknown>) => Promise<Filled>) | undefined {
+	const assistant = useContext(Context);
+	const { transport, t } = useAdmin();
+	const there = assistant?.available === true && Boolean(assistant.models?.quick);
+	return useMemo(
+		() =>
+			there
+				? async (input: Record<string, unknown>): Promise<Filled> => {
+						const answer = await transport("assistant.fill", input).catch(() => NO_ANSWER);
+						if (answer.status === 200)
+							return { ok: true, ...(answer.body as { value: string } | { values: string[] }) };
+						const reason = ((answer.body ?? {}) as { reason?: Message }).reason;
+						const name = String(reason?.values?.name ?? "");
+						// The field's line names the key, and not what the service said: one reason, in a few words.
+						const why =
+							reason?.key === "assistant.refused"
+								? t("fill.refused", { name })
+								: reason?.key === "assistant.unreachable"
+									? t("fill.unreachable", { name })
+									: reason?.key === "assistant.noImages"
+										? t("fill.noImages")
+										: t(reason ?? "errors.noAnswer");
+						return { ok: false, why };
+					}
+				: undefined,
+		[there, transport, t],
 	);
 }
 
@@ -356,6 +414,7 @@ export function AssistantProvider({
 		if (read !== null || unsavedOf.current === of) unsavedOf.current = read;
 	}, []);
 	const [removed, setRemoved] = useState<ReadonlySet<ContextChip["id"]>>(new Set());
+	const [requested, setRequested] = useState(0);
 	const [proposalTick, setProposalTick] = useState(0);
 	const touchProposals = useCallback(() => setProposalTick((tick) => tick + 1), []);
 
@@ -1208,6 +1267,13 @@ export function AssistantProvider({
 		proposalTick,
 		touchProposals,
 		openReview: (id) => leave(() => go({ screen: "review", id })),
+		request: () => {
+			setOpen(true);
+			setView("chat");
+			setRemoved((was) => (was.has("selection") ? new Set([...was].filter((id) => id !== "selection")) : was));
+			setRequested((count) => count + 1);
+		},
+		requested,
 	};
 	return <Context.Provider value={value}>{children}</Context.Provider>;
 }

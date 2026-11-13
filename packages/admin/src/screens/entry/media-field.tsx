@@ -13,7 +13,8 @@ import {
 } from "@monti-cms/ui";
 import { Settings } from "@monti-cms/ui/icons";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
-import { AltFields } from "../../editor/alt-fields";
+import type { FillState } from "../../assistant/use-fill";
+import { ALT_MAX, AltFields } from "../../editor/alt-fields";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
 import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
@@ -45,6 +46,7 @@ export function MediaField({
 	card,
 	onCard,
 	onChange,
+	fill,
 }: {
 	id: string;
 	field: string;
@@ -66,6 +68,8 @@ export function MediaField({
 	card: boolean;
 	onCard: (open: boolean) => void;
 	onChange: (next: MediaValue | null) => void;
+	/** "✦ Fill" for the picture's words, in its settings card (doc 10, quick tasks); left out where there is nobody to ask. */
+	fill?: { state: FillState; run: (media: string, put: (alt: string) => void) => void; forget: () => void };
 }) {
 	const { t } = useAdmin();
 	const acceptFiles = useAcceptFiles();
@@ -74,6 +78,8 @@ export function MediaField({
 	const own = mediaValueOf(value);
 	const followed = own ? null : mediaValueOf(source);
 	const shown = own ?? followed;
+	const latest = useRef({ own, shown });
+	latest.current = { own, shown };
 	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown, quiet: true });
 	const file = read.data?.id === shown?.media ? read.data : null;
 	// A read-only entry shows what it has saved: a file that was still going up when it was archived is not its value, and has no place here.
@@ -139,11 +145,29 @@ export function MediaField({
 											decorative={(going ? said.decorative : shown.decorative) === true}
 											readOnly={readOnly}
 											placeholder={(!going && followed?.alt) || t("entry.empty")}
-											onChange={(alt) =>
-												going
-													? uploads.say(field, { alt })
-													: onChange(cleanMediaValue({ ...own, media: shown.media, alt }))
+											// Of a file the library has: one still going up has nothing to look at yet.
+											fill={
+												fill && !going
+													? {
+															state: fill.state,
+															onFill: () =>
+																fill.run(shown.media, (alt) => {
+																	// As the field is when the answer comes, and only if it still holds the picture that was asked about.
+																	const now = latest.current;
+																	if (now.shown?.media !== shown.media) return;
+																	onChange(
+																		cleanMediaValue({ ...now.own, media: shown.media, alt: alt.slice(0, ALT_MAX) }),
+																	);
+																}),
+														}
+													: undefined
 											}
+											onChange={(alt) => {
+												// Typed by hand: an answer still on its way is not put over it.
+												fill?.forget();
+												if (going) uploads.say(field, { alt });
+												else onChange(cleanMediaValue({ ...own, media: shown.media, alt }));
+											}}
 											onDecorative={(decorative) =>
 												going
 													? uploads.say(field, { decorative })

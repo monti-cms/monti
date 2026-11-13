@@ -57,6 +57,46 @@ export const APPLY_LEASE_MS = 60_000;
 /** The most items one proposal holds: the card, the review and an apply read them all at once. The assistant is told to ask for fewer. */
 export const MOST_ITEMS = 500;
 
+/**
+ * Why a write said it would leave this item's record alone (its preview's `blocked`), if it did. An item of a write split by record
+ * (`each`) is about the one record its input names; any other is about the records it touches.
+ *
+ * The preview was made on the record as it was, without the changes that wait before it in the same proposal. A write can say which
+ * places, changed first, may make it fit (`unless`: the choice a field belongs to; anything of an entry that cannot be published yet).
+ * When an earlier change of the proposal that will run (applied, or waiting and kept in) writes one of them, the preview says nothing
+ * any more: the item stays in, and the write itself answers when it is applied. An earlier change that is left out, discarded or
+ * failed lifts nothing.
+ */
+function blockedOf(
+	operations: ReadonlyMap<string, AnyOperation>,
+	operation: AnyOperation | undefined,
+	rawInput: unknown,
+	preview: Preview | null,
+	records: Record<string, unknown>,
+	earlier: readonly Pick<Item, "state" | "included" | "operation" | "input">[],
+): Message | null {
+	if (!preview?.blocked?.length) return null;
+	const list = operation?.each ? (rawInput as Record<string, unknown> | null)?.[operation.each] : undefined;
+	let found: NonNullable<Preview["blocked"]>[number] | undefined;
+	if (Array.isArray(list)) {
+		const [own] = list;
+		const id = typeof own === "string" ? own : (own as { id?: unknown } | null)?.id;
+		found = preview.blocked.find((each) => each.ref.id === id);
+	} else found = preview.blocked.find((each) => recordKey(each.ref) in records);
+	if (!found) return null;
+	const lifting = found.unless ?? [];
+	const lifted =
+		lifting.length > 0 &&
+		earlier.some(
+			(item) =>
+				(item.state === "applied" || (item.state === "pending" && item.included)) &&
+				(placesOf(operations, item) ?? []).some((place) =>
+					lifting.some((each) => place === each || overlap(place, each)),
+				),
+		);
+	return lifted ? null : found.reason;
+}
+
 /** Makes a proposal. A run has one: asked for again by the same run (cut between making it and noting it), it gives the one it made. */
 export async function createProposal(
 	engine: Engine,
@@ -232,6 +272,10 @@ export async function proposeItem(
 			made_by: options.call ?? null,
 			origin: options.call ?? null,
 			preview: whole.preview === null ? null : JSON.stringify(whole.preview),
+			// A change its own write says it would leave the record alone for starts left out: applying it would only be refused.
+			...(blockedOf(operations, operation, part, whole.preview, baseVersions, known) !== null
+				? { included: false }
+				: {}),
 		});
 	}
 	await engine.db.transaction().execute(async (trx) => {
@@ -270,7 +314,9 @@ export async function replaceItem(
 	// into a change of something else.
 	if (operation.name !== item.operation) throw new CheckError({ key: "proposals.otherChange" });
 	const input = parseInput(operation, withPlaceholders(rawInput));
-	mustNotOverlap(operations, operation, input, await itemsOf(engine.db, item.proposal_id), itemId);
+	const siblings = await itemsOf(engine.db, item.proposal_id);
+	mustNotOverlap(operations, operation, input, siblings, itemId);
+	const before = siblings.filter((each) => each.position < item.position);
 	const { baseVersions, preview } = await rehearse(engine, operation, input, refsIn(rawInput).size === 0);
 	const [was, is] = [Object.keys(item.base_versions).sort(), Object.keys(baseVersions).sort()];
 	if (was.length !== is.length || was.some((key, index) => key !== is[index]))
@@ -285,7 +331,7 @@ export async function replaceItem(
 				base_versions: JSON.stringify(baseVersions),
 				state: "pending",
 				reason: null,
-				included: true,
+				included: blockedOf(operations, operation, rawInput, preview, baseVersions, before) === null,
 				made_by: options.call ?? null,
 				preview: preview === null ? null : JSON.stringify(preview),
 			})
@@ -951,6 +997,13 @@ export type ProposalItemView = {
 	reason: Message | null;
 	/** The records it would change (or changed), by `recordKey`. */
 	targets: string[];
+	/**
+	 * Waiting, and its own write said when it was proposed that it would leave the record alone, with why (a field of an option the
+	 * entry has not chosen): it starts left out and cannot be put in.
+	 */
+	blocked: Message | null;
+	/** What its write said it would do when it was proposed (`Preview`): the values a changed choice drops, the words it was made on. */
+	preview: Preview | null;
 	thread: ItemExchange[];
 	activityId: string | null;
 };
@@ -1014,6 +1067,18 @@ export async function viewProposal(
 			included: item.included,
 			reason: item.reason,
 			targets: Object.keys(item.after_versions ?? item.base_versions),
+			blocked:
+				item.state === "pending"
+					? blockedOf(
+							operations,
+							operation,
+							item.input,
+							item.preview as Preview | null,
+							item.base_versions,
+							items.filter((each) => each.position < item.position),
+						)
+					: null,
+			preview: (item.preview as Preview | null) ?? null,
 			thread: item.thread,
 			activityId: item.activity_id,
 		};

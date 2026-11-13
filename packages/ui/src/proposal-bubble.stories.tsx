@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Box, ProposalBubble, ProposalBubbleDock, Stack, Text } from "./index";
+import { Box, Marker, ProposalBubble, ProposalBubbleDock, Stack, Text } from "./index";
 
 const noop = () => {};
 
@@ -66,4 +66,28 @@ export const InDock: Story = {
 			</Box>
 		);
 	},
+};
+
+/**
+ * A screen whose proposals have no one place to hang a mark at (the settings): the mark of the proposal the bubble points at stands
+ * before the bubble, and opens that proposal's card.
+ */
+export const WithMark: Story = {
+	render: (args) => (
+		<Box maxHeight="half" overflow="auto" border="all" width="reading">
+			<Stack gap={20} padding={24}>
+				{Array.from({ length: 6 }, (_, index) => (
+					<Text key={index} as="p" variant="reading">
+						단풍이 시작된 산길을 하루 동안 걸었습니다. 바람이 차가워지고 있었습니다.
+					</Text>
+				))}
+			</Stack>
+			<ProposalBubbleDock>
+				<Marker aria-label="제안: 요약이 빈 글에 요약 채우기" onClick={noop}>
+					1
+				</Marker>
+				<ProposalBubble {...args} />
+			</ProposalBubbleDock>
+		</Box>
+	),
 };

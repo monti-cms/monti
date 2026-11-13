@@ -14,6 +14,7 @@ import {
 	BlockBox,
 	type BlockCorner,
 	type BlockWidth,
+	Box,
 	Button,
 	type CropCorner,
 	type CropGrip,
@@ -51,6 +52,7 @@ import {
 	RotateClockwise,
 	RotateCounterclockwise,
 	Settings,
+	Spark,
 	TextAlignCenter,
 	TextAlignLeft,
 	TextAlignRight,
@@ -62,7 +64,7 @@ import { type ComponentType, useContext, useEffect, useId, useRef, useState } fr
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
 import { RetryButton } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
-import { AltFields } from "./alt-fields";
+import { ALT_MAX, AltFields } from "./alt-fields";
 import { EditorMedia, fileBlock, nextBlankImage, openImageCard, useBodyFile } from "./media-context";
 import { useComposedValue } from "./use-composed-value";
 
@@ -77,6 +79,8 @@ const ALIGNS = [
 ] as const;
 /** The caption stands where its picture stands. */
 const CAPTION_ALIGN = { left: "start", center: "center", right: "end" } as const;
+/** How much of the text on each side of a picture goes along with a fill of its words. */
+const AROUND = 1000;
 /** The smallest a picture is pulled to, in px on the screen: an icon's size. */
 const MIN_WIDTH = 24;
 /** A picture's width as the writer gives it: in px, or a share of the body (doc 09). */
@@ -702,7 +706,47 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		return () => document.removeEventListener("keydown", onEscape, true);
 	}, [barOpen, editor]);
 
-	const captionField = (editable || data.caption) && (
+	/** The text right before and after the picture: what a fill reads the picture's place by. */
+	const around = () => {
+		const at = getPos();
+		if (typeof at !== "number") return { before: "", after: "" };
+		const { doc } = editor.state;
+		const end = at + node.nodeSize;
+		return {
+			before: doc.textBetween(Math.max(0, at - AROUND), at, "\n").slice(-AROUND),
+			after: doc.textBetween(end, Math.min(doc.content.size, end + AROUND), "\n").slice(0, AROUND),
+		};
+	};
+	// "✦ Fill" (doc 10, quick tasks): the picture's words in its settings card, and its caption at the end of the empty caption line
+	// while the caret is in it. Only of a file the library has, in a body that can be written in.
+	/**
+	 * Writes into the picture's data as it is when the answer comes, and only while it is still the picture that was asked about: the
+	 * person may have written a caption, resized it or picked another file while the model was at it.
+	 */
+	const setLater = (asked: string, next: Partial<ImageData>) => {
+		const at = getPos();
+		const now = typeof at === "number" ? (editor.state.doc.nodeAt(at)?.attrs.data as ImageData | undefined) : undefined;
+		if (!now || now.media !== asked) return;
+		updateAttributes({ data: { ...now, ...next } });
+	};
+	/** What is typed in a box a fill may be on its way to: the late answer is the person's to ask for again, not put over it. */
+	const typed = (place: string) => media?.fill?.forget(place);
+	const fileId = data.media || null;
+	const fill = editable && fileId ? media?.fill : undefined;
+	const altPlace = `alt:${blockId}`;
+	const captionPlace = `caption:${blockId}`;
+	const altFill = fill
+		? {
+				state: fill.of(altPlace),
+				onFill: () =>
+					fill.run(altPlace, "alt", fileId ?? "", around(), (value) =>
+						setLater(fileId ?? "", { alt: value.slice(0, ALT_MAX) }),
+					),
+			}
+		: undefined;
+	const captionFill = fill?.of(captionPlace);
+	const [inCaption, setInCaption] = useState(false);
+	const captionInput = (
 		<Input
 			appearance="inline"
 			size="sm"
@@ -710,11 +754,60 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			aria-label={t("editor.image.caption")}
 			placeholder={t("editor.image.caption")}
 			readOnly={!editable}
+			// What a fill wrote is blue until it is changed.
+			proposal={captionFill !== undefined && caption.value !== "" && captionFill.filled === caption.value}
 			value={caption.value}
-			onChange={(event) => caption.change(event.target.value)}
+			onChange={(event) => {
+				typed(captionPlace);
+				caption.change(event.target.value);
+			}}
 			{...caption.composition}
 		/>
 	);
+	// With a fill the line keeps one shape whatever it shows (the caption stays the same box while its button comes and goes with the caret).
+	const captionField =
+		(editable || data.caption) &&
+		(fill && captionFill ? (
+			<Stack gap={4}>
+				{/* The button is there while the keyboard is in the line, the button itself included: Tab from the caption reaches it. */}
+				<Inline
+					gap={8}
+					minHeight="control-sm"
+					onFocus={() => setInCaption(true)}
+					onBlur={(event) => {
+						if (!event.currentTarget.contains(event.relatedTarget)) setInCaption(false);
+					}}
+				>
+					<Box grow minWidth={0}>
+						{captionInput}
+					</Box>
+					{caption.value === "" && (inCaption || captionFill.working) ? (
+						<TextButton
+							tone="proposal"
+							size="micro"
+							loading={captionFill.working}
+							// The press leaves the caret in the caption: the button is there only while the caret is.
+							onMouseDown={(event) => event.preventDefault()}
+							onClick={() =>
+								fill.run(captionPlace, "caption", fileId ?? "", around(), (value) =>
+									setLater(fileId ?? "", { caption: value }),
+								)
+							}
+						>
+							{captionFill.working ? null : <Spark aria-hidden />}
+							{t(captionFill.working ? "fill.working" : "fill.fill")}
+						</TextButton>
+					) : null}
+				</Inline>
+				{captionFill.failed && caption.value === "" ? (
+					<Text as="div" variant="caption" tone="danger" align={CAPTION_ALIGN[align]}>
+						{captionFill.failed}
+					</Text>
+				) : null}
+			</Stack>
+		) : (
+			captionInput
+		));
 
 	if (uploading)
 		return (
@@ -952,7 +1045,11 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 														value={data.alt ?? ""}
 														decorative={data.decorative === true}
 														missing={blank}
-														onChange={(value) => set({ alt: value })}
+														fill={altFill}
+														onChange={(value) => {
+															typed(altPlace);
+															set({ alt: value });
+														}}
 														onDecorative={(on) => set({ decorative: on })}
 														onEnter={next}
 													/>

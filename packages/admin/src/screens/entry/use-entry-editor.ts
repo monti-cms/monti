@@ -183,6 +183,7 @@ export function useEntryEditor(
 					conversationId: item.conversationId,
 					ops: (item.input as { ops: BodyOp[] }).ops,
 					was: item.preview?.was,
+					thread: item.thread ?? [],
 				})),
 		[draft.proposals],
 	);
