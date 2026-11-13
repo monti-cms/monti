@@ -4,6 +4,7 @@ import { defineConfig, definePlugin, localFolderStorage, type MontiEvent, webhoo
 import { mdx } from "@monti-cms/mdx";
 import { seo } from "@monti-cms/seo";
 import { s3Storage } from "@monti-cms/storage-s3";
+import { blocks, marks } from "./monti/blocks";
 import schema from "./monti.schema";
 
 // Media files: in S3 or R2 when the bucket's values are set (see `.env.example`), else in a folder on this machine, served by the admin
@@ -19,6 +20,8 @@ const storage =
 const site = process.env.SHOWCASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
+	blocks,
+	marks,
 	schema,
 	database: process.env.DATABASE_URL,
 	auth: { password: true },

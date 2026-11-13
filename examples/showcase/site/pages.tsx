@@ -7,6 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createElement, type ElementType, type ReactNode } from "react";
 import { code, monti, reader } from "@/lib/monti";
+import { blocks, marks } from "../monti/blocks/index";
 
 // The pages of the site, each for one language. The routes under `app/(site)` hand them no language (the source language, Korean); those
 // under `app/[locale]` hand them the one in their address.
@@ -220,6 +221,8 @@ async function Body({ entry }: { entry: PageEntry }) {
 			) : null}
 			<div className="body">
 				{renderDocument(entry.doc, {
+					blocks,
+					marks,
 					createElement: h,
 					media: entry.media,
 					entryPath: entry.entryPath,

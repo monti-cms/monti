@@ -22,11 +22,14 @@
 		"@monti-cms/next": "workspace:*",
 		"@monti-cms/seo": "workspace:*",
 		"@monti-cms/storage-s3": "workspace:*",
+		"katex": "^0.16.47",
+		"mermaid": "^11.17.2",
 		"next": "16.4.6",
 		"react": "19.2.3",
 		"react-dom": "19.2.3"
 	},
 	"devDependencies": {
+		"@monti-cms/blocks": "workspace:*",
 		"@next/env": "16.4.6",
 		"@types/node": "^20",
 		"@types/react": "^19",

@@ -35,6 +35,8 @@ What to connect yourself:
 |---|---|
 | `monti.schema.ts` | The structure: four collections, every field kind and option, three languages |
 | `monti.config.ts` | The storage (S3 when set, else a folder), the plugins (assistant, SEO, MDX), the hooks |
+| `monti/blocks/` | The ten blocks and marks `monti add` copied in (the site owns them) |
+| `seed/blocks.ts` | The 보기 모음 entries for those blocks |
 | `seed/variants.ts` | The 보기 모음 entries: each block used in its different ways, one heading per example |
 | `seed/seed.ts` | `pnpm seed`: everything below, through the core's operations (`monti.run`) |
 | `seed/files/` | The seed's pictures and files; `seed/import/walking-notes.mdx` is a file to import by hand |
@@ -73,7 +75,7 @@ here: the switch (`pinned`) is the core's yes/no.
 | 코드 블록 도구를 모두 쓴 글 (`code-tools`) | published | Line effects, regex rules, line and word folds, tooltips in code, code links and several languages in one entry |
 | 끊긴 코드 링크가 있는 초안 (`broken-code-link`) | draft, blocked | A code link whose line is gone: a publish to-do |
 | 보관된 코드 글 (`archived-code`) | archived | A code block that can only be read |
-| The six entries of the 보기 모음 folder | published | Each block used in its different ways: text and lists, tables and footnotes, pictures and files, the code's head and languages (with an English translation), the code's line effects and folds, the code's rules, marks and links. Each example has a heading that says what it shows |
+| The ten entries of the 보기 모음 folder | published | Each block used in its different ways: text and lists, tables and footnotes, pictures and files, the code's head and languages (with an English translation), the code's line effects and folds, the code's rules, marks and links, callouts and collapsibles, tabs and columns, formulas, diagrams and charts (unreadable ones too), the code explorer with text colours and tooltips. Each example has a heading that says what it shows |
 
 Also: folders 안내 › 국내 and 소식 for articles; media folders 표지 › 2026, 인물, 문서 with five pictures, a PDF and a CSV, a picture used
 nowhere at the top, and in the trash a picture and the folder 지난 행사 with a file in it; six tags (English for all, Japanese for two; 겨울 used by
@@ -112,7 +114,8 @@ Each feature as a person using Monti would recognise it. Tick what you have trie
 - [ ] Add a picture and set its size, alignment, crop, rotation, caption and alt text
 - [ ] Mark a picture as decorative
 - [ ] Add a file to download
-- [ ] Drag a block to move it
+- [ ] Drag a block by its handle to move it
+- [ ] Drag a box over several blocks to pick them, then move or delete them together
 - [ ] View as MDX
 
 ### Fields
@@ -266,4 +269,24 @@ Each feature as a person using Monti would recognise it. Tick what you have trie
 
 ### Blocks package
 
-To be filled after #499 merges.
+- [ ] Add a callout and set its kind (note, tip, info, warning, danger) and title
+- [ ] Put a list, code, a table or a picture inside a callout
+- [ ] Add tabs; add, remove and rename tabs
+- [ ] Set which tab shows first
+- [ ] Add columns; add a column, drag a column's width, make them even
+- [ ] Put a picture, code or a callout inside a column
+- [ ] Add a collapsible, write its title, and set whether it starts open
+- [ ] Put collapsibles and callouts inside each other
+- [ ] Write a formula and see it drawn
+- [ ] A formula that does not read shows why and is a to-do before publishing
+- [ ] Write a diagram and see it drawn: flowchart, sequence, state, entity, class, Gantt, pie, mind map
+- [ ] A diagram that does not read shows why
+- [ ] Add a chart, change its kind (bar, line, area, pie) and edit its data
+- [ ] A chart that does not read shows why and is a to-do before publishing
+- [ ] Add files and folders to a code explorer, and set the file it opens first
+- [ ] Link text to a hidden file of a code explorer
+- [ ] Give words a colour and a background colour
+- [ ] Put a tooltip on words
+- [ ] On the site, switch tabs, open collapsibles, pick a code explorer's file and see tooltips
+- [ ] The compare and the review show where a block's values changed
+- [ ] The different uses are in the four block entries of the 보기 모음 folder

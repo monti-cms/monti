@@ -17,6 +17,7 @@ import {
 	openMonti,
 } from "@monti-cms/core";
 import { loadEnvFiles } from "@monti-cms/core/cli";
+import { calloutsAndCollapsibles, explorersAndMarks, formulasDiagramsCharts, tabsAndColumns } from "./blocks";
 import {
 	aligned,
 	bold,
@@ -774,6 +775,39 @@ for (const { id } of variants) {
 }
 await write("entries.moveToFolder", { ids: variants.map(({ id }) => id), folder: examples });
 
+// The blocks `monti add` copied in (doc 18), each in its different ways: four more entries in the same folder.
+const blockEntries = [
+	await variant(
+		"보기 모음 · 콜아웃과 접기",
+		"examples-callouts",
+		calloutsAndCollapsibles(media?.forest),
+		"콜아웃 종류마다, 접기 열림과 닫힘.",
+	),
+	await variant(
+		"보기 모음 · 탭과 단",
+		"examples-tabs-columns",
+		tabsAndColumns(media?.forest),
+		"탭 둘에서 여덟, 단 둘에서 넷.",
+	),
+	await variant(
+		"보기 모음 · 수식, 다이어그램, 차트",
+		"examples-diagrams",
+		formulasDiagramsCharts(),
+		"수식, Mermaid 다이어그램, 차트: 읽히지 않는 것까지.",
+	),
+	await variant(
+		"보기 모음 · 코드 탐색기와 글자 표시",
+		"examples-explorer-marks",
+		explorersAndMarks(),
+		"코드 탐색기, 글자 색, 툴팁.",
+	),
+];
+for (const { id } of blockEntries) {
+	const { blocked } = await publish(id);
+	if (blocked.length > 0) throw new Error(`The block example ${id} was not published.`);
+}
+await write("entries.moveToFolder", { ids: blockEntries.map(({ id }) => id), folder: examples });
+
 // A code entry in English (its code follows the source; its words are translated), and one archived: read only.
 const basicsEn = await translate(codeBasicsEntry.id, "en", {
 	title: "Examples · the code's head and languages",
@@ -803,7 +837,7 @@ const failed = await read<number>("deliveries.counts", {});
 console.log(
 	[
 		"Seeded: 4 media folders and 8 files (2 more in the trash), 6 tags, 2 people, 2 series, 1 template,",
-		"19 articles (published, changed, draft, blocked, archived, in the trash, a copy, code tools, six example entries)",
+		"23 articles (published, changed, draft, blocked, archived, in the trash, a copy, code tools, ten example entries)",
 		"with English and Japanese translations.",
 		`Deliveries: ${JSON.stringify(failed)} (the broken hook fails on purpose).`,
 	].join("\n"),
