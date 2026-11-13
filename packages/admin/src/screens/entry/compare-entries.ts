@@ -263,6 +263,10 @@ function nestedEffects(block: Block, names: BlockNames | undefined): string | un
 }
 const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
 
+/** A block whose children are all code (a code explorer's files): it reads as code, its indentation kept. */
+const holdsOnlyCode = (block: Block) =>
+	(block.children?.length ?? 0) > 0 && (block.children ?? []).every((child) => child.type === "codeBlock");
+
 /** A block written as code of its own language (a formula, a diagram): it reads as code. */
 const isSource = (block: Block, names: BlockNames | undefined) => Boolean(names?.block(block.type)?.fence);
 
@@ -284,7 +288,11 @@ export function shownBlocks(doc: Doc | null, names?: BlockNames): ShownBlock[] {
 		return {
 			id: block.id,
 			look:
-				block.type === "heading" ? "heading" : block.type === "codeBlock" || isSource(block, names) ? "code" : "text",
+				block.type === "heading"
+					? "heading"
+					: block.type === "codeBlock" || isSource(block, names) || holdsOnlyCode(block)
+						? "code"
+						: "text",
 			...(values !== undefined ? { values } : {}),
 			text: wordsOf(block, names),
 			...(block.type === "codeBlock"

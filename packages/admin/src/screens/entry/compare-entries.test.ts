@@ -218,6 +218,8 @@ describe("a code explorer's files in the comparison (doc 18 with doc 17)", () =>
 			names,
 		);
 		expect(mine[0]?.text).toBe("src/app.ts\na\nb\n더함 2");
+		// Its files are code: it reads as code, its indentation kept.
+		expect(mine[0]?.look).toBe("code");
 		expect(server[0]?.text).toBe("src/app.ts\na\nb\n강조 1–2");
 		expect(mine[0]?.parts.filter((part) => part.changed).map((part) => part.text.trim())).toEqual(["더함 2"]);
 	});
