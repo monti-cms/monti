@@ -44,18 +44,22 @@ const GroupFieldShapes = [
 		via: z.string().optional(),
 	}),
 ] as const;
-// A choice with a group of fields for each option (doc 19). A group may hold another: the shape names itself.
+// A choice with a group of fields for each option (doc 19). A group may hold another: the shape names itself. Its groups may be left out
+// (an option with no group has no fields): a model service takes a shape that names itself only through a part that can be left out
+// (Google refused every turn while it was required, T161).
 const Conditional: z.ZodType<ConditionalField> = z.object({
 	kind: z.literal("conditional"),
 	...FieldBase,
 	options: z.array(z.string()),
-	fields: z.record(
-		z.string(),
-		z.record(
+	fields: z
+		.record(
 			z.string(),
-			z.lazy(() => GroupField),
-		),
-	),
+			z.record(
+				z.string(),
+				z.lazy(() => GroupField),
+			),
+		)
+		.default({}),
 	control: z.literal("toggle").optional(),
 });
 const GroupField: z.ZodType<GroupFieldDefinition> = z.union([

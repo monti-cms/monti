@@ -56,6 +56,9 @@ function languageModel(key: OpenKey, given: Fetch | undefined): ((model: string)
 					name: "compatible",
 					baseURL: key.baseUrl ?? "",
 					...(key.secret ? { apiKey: key.secret } : {}),
+					// Asked for, a streamed answer ends with what it spent (`stream_options.include_usage`); unasked, such a server tells nothing
+					// and every turn counts as none (Google's compatible address did, T161).
+					includeUsage: true,
 					fetch,
 				})(model);
 		default:
@@ -219,6 +222,72 @@ function cacheMarks(
 	return null;
 }
 
+/**
+ * What the service has counted so far, from one of its own stream events, where it says: Anthropic in its first event (`message_start`:
+ * the input, with what it read from and wrote to its cache, and the output so far), Google in every chunk (`usageMetadata`, the whole so
+ * far), an OpenAI-compatible server in a chunk's `usage` (at the end, or with every chunk as Google's compatible address does). The AI SDK tells usage only when the answer is whole; an answer cut off before that (the person stopped it, the request went away,
+ * the service went silent) was spent all the same, and this is what is known of it (T161: 43,000 tokens a cut turn, counted as none).
+ */
+function countedSoFar(service: string, raw: unknown): Usage | undefined {
+	const number = (from: Record<string, unknown> | undefined, name: string) => {
+		const value = from?.[name];
+		return typeof value === "number" ? value : 0;
+	};
+	const told = (input: number, output: number, cached: number): Usage => ({
+		input,
+		output,
+		...(cached > 0 ? { cached } : {}),
+	});
+	if (service === "anthropic") {
+		const event = raw as { type?: unknown; message?: { usage?: Record<string, unknown> } } | null;
+		const usage = event?.type === "message_start" ? event.message?.usage : undefined;
+		if (!usage) return undefined;
+		const cached = number(usage, "cache_read_input_tokens");
+		return told(
+			number(usage, "input_tokens") + cached + number(usage, "cache_creation_input_tokens"),
+			number(usage, "output_tokens"),
+			cached,
+		);
+	}
+	if (service === "gemini") {
+		const usage = (raw as { usageMetadata?: Record<string, unknown> } | null)?.usageMetadata;
+		if (!usage) return undefined;
+		// As the SDK reads it at the end: the prompt with what tools added to it, and the words with the thoughts.
+		return told(
+			number(usage, "promptTokenCount") + number(usage, "toolUsePromptTokenCount"),
+			number(usage, "candidatesTokenCount") + number(usage, "thoughtsTokenCount"),
+			number(usage, "cachedContentTokenCount"),
+		);
+	}
+	if (service === "openai-compatible") {
+		const usage = (
+			raw as { usage?: Record<string, unknown> & { prompt_tokens_details?: Record<string, unknown> } } | null
+		)?.usage;
+		if (!usage) return undefined;
+		// As the SDK reads it at the end.
+		return told(
+			number(usage, "prompt_tokens"),
+			number(usage, "completion_tokens"),
+			number(usage.prompt_tokens_details, "cached_tokens"),
+		);
+	}
+	return undefined;
+}
+
+/** Two counts as one. */
+function plus(first: Usage | undefined, second: Usage): Usage {
+	if (!first) return second;
+	const cached = (first.cached ?? 0) + (second.cached ?? 0);
+	return { input: first.input + second.input, output: first.output + second.output, ...(cached > 0 ? { cached } : {}) };
+}
+
+/** Whether a Google chunk ends its request for the answer to go on in another (`CONTINUATION`), which counts from nothing again. */
+const continued = (raw: unknown) =>
+	(raw as { candidates?: { finishReason?: unknown }[] } | null)?.candidates?.[0]?.finishReason === "CONTINUATION";
+
+/** The services whose own stream events say what they counted before the end (`countedSoFar`). */
+const COUNT_AS_THEY_GO = new Set(["anthropic", "gemini", "openai-compatible"]);
+
 /** Two sets of provider options as one: a service's options from both, the second's over the first's. */
 function merged(first: Marks | undefined, second: Marks | undefined): Marks | undefined {
 	if (!first || !second) return first ?? second;
@@ -240,6 +309,10 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 			async *turn(request: TurnRequest): AsyncGenerator<TurnEvent> {
 				if (!model) throw none();
 				let began = false;
+				// What the service has said it counted so far: told with a failure that comes before the answer's own count. A long answer
+				// Google goes on with in a new request (`CONTINUATION`) counts again from nothing: what the requests before counted is carried.
+				let counted: Usage | undefined;
+				let carried: Usage | undefined;
 				const marks = cacheMarks(key.service, request.model);
 				const lastTool = request.tools.at(-1)?.name;
 				try {
@@ -261,6 +334,8 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 						// as it was sent, and the SDK would otherwise sort them by name.
 						toolOrder: request.tools.map((spec) => spec.name),
 						abortSignal: request.signal,
+						// The service's own events say what it counted before the end; the SDK tells it only with the end.
+						includeRawChunks: COUNT_AS_THEY_GO.has(key.service),
 						// The run engine decides what happens after a failure; one retry covers a dropped connection.
 						maxRetries: 1,
 						providerOptions: merged(thinkingOptions(key.service, request.thinking, request.thinks), marks?.call),
@@ -272,7 +347,12 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 					let usage: Usage = { input: 0, output: 0 };
 					let cut: "length" | "refusal" | undefined;
 					for await (const part of result.fullStream) {
-						if (part.type === "text-delta") {
+						// The service's own events, beside the SDK's reading of them: only what they say was counted is taken from them.
+						if (part.type === "raw") {
+							const now = countedSoFar(key.service, part.rawValue);
+							if (now) counted = plus(carried, now);
+							if (now && continued(part.rawValue)) carried = counted;
+						} else if (part.type === "text-delta") {
 							began = true;
 							yield { type: "text", delta: part.text };
 						} else if (part.type === "tool-call")
@@ -293,7 +373,7 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 									began ? "interrupted" : "unreachable",
 									"The answer ended before it was whole.",
 									undefined,
-									usage.input + usage.output > 0 ? usage : undefined,
+									usage.input + usage.output > 0 ? usage : counted,
 								);
 							// The service ended the answer itself: out of room, or it declined to go on.
 							cut =
@@ -320,9 +400,11 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 					const failed = failure(error);
 					// The service had begun to answer: what went wrong after that (the stream cut, a last piece that cannot be read) broke the answer
 					// off. Before any word it is a service that did not answer.
-					throw began && failed.kind === "unreachable"
-						? new ProviderError("interrupted", failed.detail, failed.status, failed.usage)
-						: failed;
+					const kind = began && failed.kind === "unreachable" ? "interrupted" : failed.kind;
+					const usage = failed.usage ?? counted;
+					throw kind === failed.kind && usage === failed.usage
+						? failed
+						: new ProviderError(kind, failed.detail, failed.status, usage);
 				}
 			},
 			async answer(request) {
