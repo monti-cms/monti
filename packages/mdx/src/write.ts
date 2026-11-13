@@ -4,6 +4,8 @@ import { KEPT, KEPT_HTML } from "./kept";
 export type WriteOptions = {
 	/** The address of a library file, for pictures and files; a body's own name for it (`media:<id>`) when left out. */
 	mediaUrl?: (id: string) => string;
+	/** The site's blocks written as a fenced code block (doc 18: a formula as ```` ```math ````), by block type. */
+	fences?: Readonly<Record<string, { language: string; attr: string }>>;
 };
 
 /** Words with nothing in them read as markup: the marks' own characters, a `!` that would make the link after it a picture, a `{` of MDX. */
@@ -38,6 +40,15 @@ const WRAP: Record<string, (inner: string, mark: Record<string, unknown>) => str
 	sub: (inner) => `<sub>${inner}</sub>`,
 };
 const ORDER = Object.keys(WRAP);
+/** The core's marks: any other is the site's, written as a text directive (`:color[words]{color="red"}`, doc 18). */
+const CORE_MARKS = new Set([...ORDER, "code"]);
+
+/**
+ * A directive's attribute value, quoted. A directive reads character references in it and no backslash escapes, so a `"` is written `&quot;` (and `&`,
+ * a line end, as theirs): the value reads back as it was.
+ */
+const quoted = (value: string) =>
+	`"${value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/\n/g, "&#10;").replace(/\r/g, "&#13;")}"`;
 
 function inline(content: readonly Inline[] = []): string {
 	return content
@@ -52,6 +63,13 @@ function inline(content: readonly Inline[] = []): string {
 				const mark = marks.find((one) => one.type === type);
 				if (mark) text = (WRAP[type] as (typeof WRAP)[string])(text, mark);
 			}
+			// The site's marks outside the core's, by name, so the same body always writes the same text.
+			for (const mark of marks
+				.filter((one) => !CORE_MARKS.has(one.type))
+				.sort((a, b) => a.type.localeCompare(b.type))) {
+				const { type, ...values } = mark;
+				text = `:${type}[${text}]${attributes(values)}`;
+			}
 			return text;
 		})
 		.join("");
@@ -62,7 +80,7 @@ const attributes = (attrs: Record<string, unknown> | undefined) => {
 		([, value]) => value !== undefined && value !== null && typeof value !== "object",
 	);
 	if (pairs.length === 0) return "";
-	return `{${pairs.map(([key, value]) => (value === true ? key : `${key}=${JSON.stringify(String(value))}`)).join(" ")}}`;
+	return `{${pairs.map(([key, value]) => (value === true ? key : `${key}=${quoted(String(value))}`)).join(" ")}}`;
 };
 
 const indent = (text: string, by: string) =>
@@ -114,8 +132,9 @@ function block(each: Block, options: WriteOptions, depth: number): string {
 			const language = typeof attrs.language === "string" ? attrs.language : "";
 			// What was kept as written (a component no block is known for, raw HTML) goes back as it was.
 			if (language === KEPT || language === KEPT_HTML) return text;
-			const fence = "`".repeat(Math.max(3, ...[...text.matchAll(/`+/g)].map((run) => run[0].length + 1)));
-			return `${fence}${language}\n${text}\n${fence}`;
+			// A file's name goes on the fence line (doc 18, the code explorer): `title="src/app.ts"`.
+			const title = typeof attrs.title === "string" && attrs.title !== "" ? ` title=${quoted(attrs.title)}` : "";
+			return fenced(`${language}${title}`, text);
 		}
 		case "table": {
 			const rows = (Array.isArray(attrs.rows) ? attrs.rows : []) as string[][];
@@ -138,6 +157,9 @@ function block(each: Block, options: WriteOptions, depth: number): string {
 		case "listItem":
 			return inline(each.content);
 		default: {
+			// A block of the site's own written as code of its language (```` ```mermaid ````).
+			const fence = options.fences?.[each.type];
+			if (fence) return fenced(fence.language, typeof attrs[fence.attr] === "string" ? String(attrs[fence.attr]) : "");
 			// A block of the site's own: a directive, with more colons than any it holds.
 			const colons = ":".repeat(3 + depthOf(each));
 			if (each.children)
@@ -146,6 +168,12 @@ function block(each: Block, options: WriteOptions, depth: number): string {
 			return `::${each.type}${attributes(attrs)}`;
 		}
 	}
+}
+
+/** Code in a fence longer than any run of backticks it holds. */
+function fenced(info: string, text: string): string {
+	const fence = "`".repeat(Math.max(3, ...[...text.matchAll(/`+/g)].map((run) => run[0].length + 1)));
+	return `${fence}${info}\n${text}\n${fence}`;
 }
 
 /** How many of the site's own blocks stand inside one another under this block: an outer directive's fence is longer than an inner one's. */
