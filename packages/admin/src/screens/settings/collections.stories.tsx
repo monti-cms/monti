@@ -185,7 +185,7 @@ async function addField(
 	{ page, body }: Awaited<ReturnType<typeof settings>>,
 	kind: "글자" | "고르기" | "미디어" | "관계",
 ) {
-	await userEvent.click(page.getByRole("button", { name: "+ 필드 추가" }));
+	await userEvent.click(page.getByRole("button", { name: "필드 추가" }));
 	await userEvent.click(await body.findByRole("option", { name: new RegExp(`^${kind}`) }));
 }
 
@@ -203,8 +203,8 @@ async function changeFields(canvasElement: HTMLElement) {
 	await addField(screen, "고르기");
 	fill(body.getByLabelText("표시 이름"), "글 종류");
 	fill(body.getByLabelText(/^식별자/), "format");
-	await userEvent.click(body.getByRole("button", { name: "+ 선택지" }));
-	await userEvent.click(body.getByRole("button", { name: "+ 선택지" }));
+	await userEvent.click(body.getByRole("button", { name: "선택지" }));
+	await userEvent.click(body.getByRole("button", { name: "선택지" }));
 	const values = body.getAllByLabelText("값");
 	const labels = body.getAllByLabelText("라벨");
 	fill(values[0] as HTMLElement, "memo");
@@ -249,7 +249,7 @@ export const AddSelectField: Story = {
 		const screen = await settings(canvasElement);
 		await addField(screen, "고르기");
 		fill(screen.body.getByLabelText(/^식별자/), "format");
-		await userEvent.click(screen.body.getByRole("button", { name: "+ 선택지" }));
+		await userEvent.click(screen.body.getByRole("button", { name: "선택지" }));
 		fill(screen.body.getAllByLabelText("값")[0] as HTMLElement, "memo");
 		fill(screen.body.getAllByLabelText("라벨")[0] as HTMLElement, "메모");
 	},
@@ -445,7 +445,7 @@ export const NewCollection: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const { page, body } = await settings(canvasElement);
-		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
+		await userEvent.click(page.getByRole("button", { name: "새 컬렉션" }));
 		fill(await body.findByLabelText(/^이름/), "노트");
 		fill(body.getByLabelText(/^식별자/), "note");
 	},
@@ -456,7 +456,7 @@ export const NewItemCollection: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const { page, body } = await settings(canvasElement);
-		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
+		await userEvent.click(page.getByRole("button", { name: "새 컬렉션" }));
 		await userEvent.click(body.getByRole("radio", { name: /항목/ }));
 		await expect(body.queryByRole("textbox", { name: "공개 주소" })).toBeNull();
 	},
@@ -467,7 +467,7 @@ export const NewCollectionTaken: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const { page, body } = await settings(canvasElement);
-		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
+		await userEvent.click(page.getByRole("button", { name: "새 컬렉션" }));
 		// The create button is never greyed out: pressed with both empty, each says so and the first takes the focus (README principle 7).
 		await userEvent.click(await body.findByRole("button", { name: "만들기" }));
 		await expect(await body.findAllByText("이 칸을 채워 주세요.")).toHaveLength(2);
@@ -483,7 +483,7 @@ export const NewCollectionReview: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const { page, body } = await settings(canvasElement);
-		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
+		await userEvent.click(page.getByRole("button", { name: "새 컬렉션" }));
 		fill(await body.findByLabelText(/^이름/), "노트");
 		fill(body.getByLabelText(/^식별자/), "note");
 		await userEvent.click(body.getByRole("button", { name: "만들기" }));
@@ -499,7 +499,7 @@ export const NewCollectionPreviewReview: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const { page, body } = await settings(canvasElement);
-		await userEvent.click(page.getByRole("button", { name: "+ 새 컬렉션" }));
+		await userEvent.click(page.getByRole("button", { name: "새 컬렉션" }));
 		fill(await body.findByLabelText(/^이름/), "노트");
 		fill(body.getByLabelText(/^식별자/), "note");
 		await userEvent.click(body.getByRole("button", { name: "만들기" }));

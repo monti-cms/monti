@@ -48,14 +48,14 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
-import { FolderAdd, Template, Upload } from "@monti-cms/ui/icons";
+import { Add, FolderAdd, Template, Upload } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useRequest, useScreenContext } from "../../assistant/use-assistant";
 import { useImport } from "../../data/use-import";
 import { saveBackup } from "../../download";
 import { chooseFiles } from "../../media/choose-files";
 import { useAdmin } from "../../operations/admin-context";
-import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
+import { type Refusal, reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { ColumnMenu, useLanguageName } from "./column-menu";
@@ -74,7 +74,14 @@ import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
 import { NoMatchRow } from "./no-match-row";
 import { RelationSubmenu } from "./relations-menu";
-import { type RowActions as Actions, allArchived, publishable, RowMenuItems, RowsMenuItems } from "./row-menu";
+import {
+	type RowActions as Actions,
+	allArchived,
+	isDeleteKey,
+	publishable,
+	RowMenuItems,
+	RowsMenuItems,
+} from "./row-menu";
 import { TaxonomyScreen } from "./taxonomy-screen";
 import { useSearchWords } from "./use-search-words";
 
@@ -320,12 +327,17 @@ function DocumentListScreen({
 	};
 	const entryRoute = (row: ListRow): Route => ({ screen: "entry", collection, id: row.id });
 	const ids = (list: ListRow[]) => ({ ids: list.map((row) => row.id) });
+	/** A write that did not go through says why (status.md); one that did lets go of the picked rows when it asks to. */
+	const said = (result: { ok: true } | { ok: false; refusal: Refusal }, unpick = false) => {
+		if (!result.ok) toast.error(t(reasonOf(result.refusal)));
+		else if (unpick) setPicked(new Map());
+	};
 	const actions: Actions = {
 		open: (row) => go(entryRoute(row)),
 		openNewTab: (row) => window.open(href(entryRoute(row)), "_blank", "noopener"),
-		duplicate: (row) => void run.duplicate.run({ id: row.id }),
-		archive: (list) => void run.archive.run(ids(list)).then(() => setPicked(new Map())),
-		unarchive: (list) => void run.unarchive.run(ids(list)).then(() => setPicked(new Map())),
+		duplicate: (row) => void run.duplicate.run({ id: row.id }).then((result) => said(result)),
+		archive: (list) => void run.archive.run(ids(list)).then((result) => said(result, true)),
+		unarchive: (list) => void run.unarchive.run(ids(list)).then((result) => said(result, true)),
 		publish: async (list) => {
 			const result = await run.publish.run(ids(publishable(list)));
 			if (!result.ok) return void toast.error(t(reasonOf(result.refusal)));
@@ -339,7 +351,7 @@ function DocumentListScreen({
 		},
 		exportRows: async (list) => {
 			const result = await run.exportRows.run(ids(list));
-			if (!result.ok) return;
+			if (!result.ok) return said(result);
 			// The picked entries in the backup's own shape (doc 14): a file an import reads, here or on another site.
 			const { missing } = await saveBackup(result.body, { media: true });
 			if (missing > 0) toast.error(t("data.backup.missing", { count: missing }));
@@ -354,16 +366,16 @@ function DocumentListScreen({
 	};
 	/** Delete on a row puts it in the trash, with the other picked rows when it is one of them (flow 5·07, 5·08). */
 	const onRowKey = (row: ListRow) => (event: KeyboardEvent<HTMLTableRowElement>) => {
-		if (event.key !== "Delete" || (event.target as HTMLElement).closest("input, textarea, [role=menu]")) return;
+		if (!isDeleteKey(event.key) || (event.target as HTMLElement).closest("input, textarea, [role=menu]")) return;
 		event.preventDefault();
 		actions.trash(picked.has(row.id) && pickedRows.length > 1 ? pickedRows : [row]);
 	};
 	const create = async (template?: string) => {
 		const result = await run.create.run({ collection, locale: language, ...(template ? { template } : {}) });
-		if (!result.ok) return;
+		if (!result.ok) return said(result);
 		const id = result.body.output.id;
-		// A post written inside a folder belongs to it.
-		if (openFolder) await run.moveToFolder.run({ ids: [id], folder: openFolder.id });
+		// A post written inside a folder belongs to it; one that could not be put there opens anyway, and says so.
+		if (openFolder) said(await run.moveToFolder.run({ ids: [id], folder: openFolder.id }));
 		go({ screen: "entry", collection, id });
 	};
 
@@ -423,6 +435,7 @@ function DocumentListScreen({
 				</>
 			}
 		>
+			<Add aria-hidden />
 			{newLabel}
 		</SplitButton>
 	);
@@ -785,12 +798,12 @@ function DocumentListScreen({
 					<RowTitle
 						folder
 						title={<RowLink href={folderHref(folder.id)}>{folder.name}</RowLink>}
-						address={t("folders.holds", { count: folder.count })}
+						note={t("folders.holds", { count: folder.count })}
 					/>
 				),
 				<RowActions>
 					<DropdownMenu>
-						<RowMore label={t("list.rowMenu")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
+						<RowMore label={t("list.more")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
 						<DropdownMenuContent align="end">{items(false)}</DropdownMenuContent>
 					</DropdownMenu>
 				</RowActions>,
@@ -942,10 +955,7 @@ function DocumentListScreen({
 									<TableCell align="end">
 										<RowActions>
 											<DropdownMenu>
-												<RowMore
-													label={t("list.rowMenu")}
-													trigger={(button) => <DropdownMenuTrigger render={button} />}
-												/>
+												<RowMore label={t("list.more")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
 												<DropdownMenuContent align="end">
 													<RowMenuItems
 														row={row}

@@ -34,6 +34,7 @@ import {
 	TextButton,
 	TodoItem,
 } from "@monti-cms/ui";
+import { Add } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { BlockTranslation } from "../../editor/block-menu";
@@ -190,7 +191,14 @@ export function LocaleTabs({
 					</TabLink>
 				))}
 				<DropdownMenu modal={false}>
-					<DropdownMenuTrigger render={<TabLink render={<button type="button" />}>{t("translation.add")}</TabLink>} />
+					<DropdownMenuTrigger
+						render={
+							<TabLink render={<button type="button" />}>
+								<Add aria-hidden />
+								{t("translation.add")}
+							</TabLink>
+						}
+					/>
 					<DropdownMenuContent side="bottom" align="start">
 						{missing.length > 0 ? (
 							<>

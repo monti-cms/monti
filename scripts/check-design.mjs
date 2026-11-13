@@ -51,6 +51,11 @@
  *                       is drawn only in the `banner` of `SidebarInset` or `StandalonePage`, or inside `PageBanner`. Screens and the reference
  *                       screens of `packages/ui/src/screens`; the rule and what it cannot see are in `check-banner-place.mjs`. No list of
  *                       exceptions, and a `design-allow` marker does not skip it.
+ *   typed-glyph         No mark a part draws typed into words, in the screens, the reference screens and the message dictionaries: a label
+ *                       starting with "+ " (the `Add` icon), a lone "×", a key ("Del", "⌘", "⇧", "⌥"; `keys` on `MenuShortcut` and
+ *                       `TooltipContent`). `check-typed-marks.mjs` says what it cannot see.
+ *   button-title        No `title` attribute on `Button`, `TextButton` or `IconButton`: a button's tooltip is a `Tooltip`.
+ *   chevron-off         No `chevron={false}`: a row that opens a second level keeps its › and shows its value in `MenuValue`.
  *   forbidden-cursor    No `cursor-not-allowed`: what is off takes no pointer, and what is at work keeps the plain cursor (tokens.md).
  *   design-allow        A `design-allow` marker without a reason.
  *
@@ -62,6 +67,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { problems as bannerPlaces } from "./check-banner-place.mjs";
+import { problems as typedMarks } from "./check-typed-marks.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rel = (file) => path.relative(root, file).split(path.sep).join("/");
@@ -1322,6 +1328,25 @@ function checkBannerPlaces() {
 }
 checkBannerPlaces();
 
+/** The dictionaries of words the admin shows: read by `typed-glyph` with the screens. */
+const MESSAGE_FILES = ["admin", "ai", "seo", "mdx", "core"].map((name) => `packages/${name}/src/messages.ts`);
+
+/**
+ * Marks a part draws, typed into words; a button's `title`; a row's › turned off (`check-typed-marks.mjs` says what each rule cannot see). The
+ * screens, the reference screens of `packages/ui/src/screens` and the message dictionaries.
+ */
+function checkTypedMarks() {
+	const read = [
+		...files
+			.filter(({ file, kind }) => kind === "screen" || rel(file).startsWith("packages/ui/src/screens/"))
+			.map(({ file }) => rel(file)),
+		...MESSAGE_FILES.filter((file) => existsSync(path.join(root, file))),
+	].filter((file, at, all) => all.indexOf(file) === at && inTargets(path.join(root, file)));
+	const sources = Object.fromEntries(read.map((file) => [file, readFileSync(path.join(root, file), "utf8")]));
+	for (const { file, line, rule, message } of typedMarks(sources)) add(path.join(root, file), line, rule, message);
+}
+checkTypedMarks();
+
 const HINTS = {
 	"css-file": "Admin UI is styled with token utilities, not stylesheets.",
 	"admin-css-rule": "admin.css holds document-wide base rules only; style the element with token utilities.",
@@ -1343,6 +1368,9 @@ const HINTS = {
 	"icon-list": "Icons come from the one list, packages/ui/src/icons.ts; add a new icon there first.",
 	"banner-place":
 		"A screen's banner stands at the very top: <PageBanner> inside the frame, the `banner` of <StandalonePage> outside it.",
+	"typed-glyph": "A part draws its marks: the Add icon for +, its own ×, and keys from `keys` (MenuShortcut, Tooltip).",
+	"button-title": "A button's tooltip is a Tooltip (an IconButton has one from its label), not the title attribute.",
+	"chevron-off": "A row that opens a second level keeps its ›; its current value goes in a MenuValue.",
 	"forbidden-cursor":
 		"What is off takes no pointer (`pointer-events-none`); a button at work shows the plain cursor (`cursor-default`).",
 	"design-allow": "A marker states why the value cannot be a token.",

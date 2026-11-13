@@ -38,7 +38,7 @@ import {
 	Tile,
 	toast,
 } from "@monti-cms/ui";
-import { OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
+import { Copy, Launch, Link, OverflowMenuHorizontal, TrashCan, Upload } from "@monti-cms/ui/icons";
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { type Path, useDraft } from "../../draft/use-draft";
@@ -171,16 +171,17 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 				<AlertDialogDescription>{t("library.replace.text", { count: item.uses })}</AlertDialogDescription>
 				{refused && <FormFieldError>{refused}</FormFieldError>}
 				<AlertDialogFooter>
+					{/* Dimmed while the file goes up: the pill beside it says what is happening (button.md, loading). */}
 					<AlertDialogCancel disabled={going}>{t("settings.cancel")}</AlertDialogCancel>
 					<AlertDialogAction
-						disabled={going}
+						loading={going}
 						onClick={(event: React.MouseEvent) => {
 							// It closes itself when the file has gone up: the dialog is where a refusal shows.
 							event.preventDefault();
 							void go();
 						}}
 					>
-						{t("library.replace.action")}
+						{going ? t("library.replace.going") : t("library.replace.action")}
 					</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
@@ -385,9 +386,11 @@ export function MediaPanel({
 					</IconButton>
 					<DropdownMenuContent align="end">
 						<DropdownMenuItem onClick={() => window.open(url, "_blank", "noopener")}>
+							<Launch aria-hidden />
 							{t("library.openTab")}
 						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => void copy(new URL(url, window.location.href).href)}>
+							<Link aria-hidden />
 							{t("library.copyUrl")}
 						</DropdownMenuItem>
 						<DropdownMenuItem
@@ -403,9 +406,13 @@ export function MediaPanel({
 								})
 							}
 						>
+							<Upload aria-hidden />
 							{t("library.replace")}
 						</DropdownMenuItem>
-						<DropdownMenuItem onClick={() => void copy(item.id)}>{t("library.copyId")}</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => void copy(item.id)}>
+							<Copy aria-hidden />
+							{t("library.copyId")}
+						</DropdownMenuItem>
 						<DropdownMenuItem variant="danger" onClick={() => onTrash(item.id)}>
 							<TrashCan aria-hidden />
 							{t("trash.toTrash")}

@@ -8,7 +8,7 @@ import {
 	DropdownMenuSeparator,
 	MenuShortcut,
 } from "@monti-cms/ui";
-import { Archive, Copy, Launch, TrashCan } from "@monti-cms/ui/icons";
+import { Archive, Copy, Document, Launch, TrashCan } from "@monti-cms/ui/icons";
 import type { ReactNode } from "react";
 import { useAdmin } from "../../operations/admin-context";
 
@@ -24,6 +24,12 @@ export type RowActions = {
 	/** To the trash (doc 11): it asks first when a published entry goes off the site. */
 	trash: (rows: ListRow[]) => void;
 };
+
+/** The key a row's menu shows for "to the trash"; a row takes Backspace too (`isDeleteKey`), as a Mac's delete key sends it. */
+export const DELETE_KEYS = ["Delete"] as const;
+
+/** A press that puts the row (or tile) in the trash: Delete, or Backspace, the same in every list (menu.md, row menu). */
+export const isDeleteKey = (key: string) => key === "Delete" || key === "Backspace";
 
 /** Only drafts and entries edited since publishing have something to publish (components/list.md, bulk bar). */
 export const publishable = (rows: ListRow[]) => rows.filter((row) => row.state === "draft" || row.state === "changed");
@@ -56,8 +62,9 @@ export function RowMenuItems({
 	const Separator = context ? ContextMenuSeparator : DropdownMenuSeparator;
 	return (
 		<>
+			{/* Launch is the new tab's mark only: one icon, one meaning. */}
 			<Item onClick={() => actions.open(row)}>
-				<Launch aria-hidden />
+				<Document aria-hidden />
 				{t("list.open")}
 			</Item>
 			<Item onClick={() => actions.openNewTab(row)}>
@@ -88,7 +95,7 @@ export function RowMenuItems({
 			<Item variant="danger" onClick={() => actions.trash([row])}>
 				<TrashCan aria-hidden />
 				{t("trash.toTrash")}
-				{context && <MenuShortcut>Del</MenuShortcut>}
+				{context && <MenuShortcut keys={DELETE_KEYS} />}
 			</Item>
 		</>
 	);
@@ -130,7 +137,7 @@ export function RowsMenuItems({
 			<ContextMenuSeparator />
 			<ContextMenuItem variant="danger" onClick={() => actions.trash(rows)}>
 				{t("trash.toTrash")}
-				<MenuShortcut>Del</MenuShortcut>
+				<MenuShortcut keys={DELETE_KEYS} />
 			</ContextMenuItem>
 		</>
 	);

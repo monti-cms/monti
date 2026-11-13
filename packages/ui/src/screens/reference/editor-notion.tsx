@@ -1,4 +1,5 @@
 import {
+	Add,
 	ArrowDown,
 	ArrowUp,
 	ChevronLeft,
@@ -109,12 +110,8 @@ export function EntryHeader({
 			<Inline gap={wide ? 16 : 12} justify="end">
 				{publish ? (
 					<>
-						<Button variant="ghost">
-							저장{" "}
-							<Text variant="micro" tone="faint">
-								⌘S
-							</Text>
-						</Button>
+						{/* A button shows no shortcut (button.md); ⌘S is in its tooltip. */}
+						<Button variant="ghost">저장</Button>
 						<Button variant="secondary">미리보기</Button>
 						<SplitButton menuLabel="발행 방식" menu={null}>
 							발행하기
@@ -149,7 +146,10 @@ export function LanguageTabs({ english = "English", englishDot }: { english?: st
 			<TabLinks>
 				<TabLink current>한국어</TabLink>
 				<TabLink dot={englishDot ? "warning" : undefined}>{english}</TabLink>
-				<TabLink render={<button type="button" />}>+ 언어</TabLink>
+				<TabLink render={<button type="button" />}>
+					<Add aria-hidden />
+					언어
+				</TabLink>
 			</TabLinks>
 		</Box>
 	);
@@ -367,22 +367,22 @@ function BlockMenu() {
 			<DropdownMenuItem>
 				<ArrowUp aria-hidden />
 				위로
-				<MenuShortcut>⌥↑</MenuShortcut>
+				<MenuShortcut keys={["alt", "ArrowUp"]} />
 			</DropdownMenuItem>
 			<DropdownMenuItem>
 				<ArrowDown aria-hidden />
 				아래로
-				<MenuShortcut>⌥↓</MenuShortcut>
+				<MenuShortcut keys={["alt", "ArrowDown"]} />
 			</DropdownMenuItem>
 			<DropdownMenuItem>
 				<Copy aria-hidden />
 				복제
-				<MenuShortcut>⇧⌘D</MenuShortcut>
+				<MenuShortcut keys={["mod", "shift", "D"]} />
 			</DropdownMenuItem>
 			<DropdownMenuItem>
 				<TrashCan aria-hidden />
 				삭제
-				<MenuShortcut>⇧⌘⌫</MenuShortcut>
+				<MenuShortcut keys={["mod", "shift", "Backspace"]} />
 			</DropdownMenuItem>
 		</DropdownMenuContent>
 	);

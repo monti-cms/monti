@@ -36,7 +36,7 @@
 |---|---|---|
 | 막대 | `BulkBar`(`colSpan` 없이, `label` "2개 선택", `selectAll`, `clearLabel` "선택 해제") | 고르는 동안 도구 행을 대신한다. 모두 선택 체크는 일부만 골랐으면 `some`이다. 미디어 격자에는 열 이름 행이 없으므로 이 막대가 도구 행 자리에 온다. |
 | (빠짐, 2026-11-05) "✦ 대체 텍스트" | `BulkBar`의 `request` | 고른 파일의 대체 텍스트를 어시스턴트에게 맡긴다. |
-| "폴더로 ▾" | `TextButton` + `Caret` + `DropdownMenu`(`DropdownMenuItem`: "최상위" · 폴더들, 구분선, "+ 새 폴더") | 고른 파일이 모두 한 폴더에 있으면 그 행에 `MenuTick`. 고르면 옮기고 닫힌다. 글 목록의 메뉴와 같은 메뉴다(2026-11-09 소유자). |
+| "폴더로 ▾" | `TextButton` + `Caret` + `DropdownMenu`(`DropdownMenuItem`: "최상위" · 폴더들, 구분선, "새 폴더"(여러 파일에 하는 메뉴라 행에 아이콘이 없다. "+"도 글자로 치지 않는다, 만들며 정함 (2026-11-14))) | 고른 파일이 모두 한 폴더에 있으면 그 행에 `MenuTick`. 고르면 옮기고 닫힌다. 글 목록의 메뉴와 같은 메뉴다(2026-11-09 소유자). |
 | "휴지통으로" | `TextButton` | 곧바로 옮기고 `toast`에 "되돌리기". 쓰는 곳이 있는 파일은 남기고 `toast`에 "보기". |
 
 #### 제안 줄 (대체 텍스트 제안이 있는 동안 도구 행 자리) (빠짐, 2026-11-05)
@@ -79,8 +79,8 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 쪽 | `Pagination`(목록 화면의 `ListPages`와 같다) | 한 쪽에 100개다. 격자와 목록 아래에 있고 한 쪽뿐이면 없다. |
-| 비었을 때 | `Text variant="note" tone="subtle"` 한 줄(목록에서는 표의 한 행) | "아직 파일이 없습니다.", 거른 결과가 없으면 "맞는 파일이 없습니다." 상자도 안내도 없다. |
+| 쪽 | `ListFooter`(왼쪽 범위 `Count` "1–100 / 240", 오른쪽 `ListPages`) | 한 쪽에 100개다. 격자와 목록 아래에 있고 한 쪽뿐이면 없다. 휴지통과 활동 기록의 표 아래 행과 같다(만들며 정함 (2026-11-14)). |
+| 비었을 때 | `Empty`(`title` "아직 파일이 없습니다.") | 다른 목록 화면의 빈 상태와 같다. 격자와 목록 보기 모두다. 찾거나 걸러서 없으면 빈 상태가 아니다: 목록 보기는 `NoMatchRow`("맞는 파일이 없습니다." · "필터 해제"), 격자는 같은 말과 `TextButton` "필터 해제" 한 줄이다([list.md](../components/list.md)의 빈 상태, 만들며 정함 (2026-11-14)). |
 
 #### 오른쪽 클릭과 확인
 
@@ -88,8 +88,8 @@
 |---|---|---|
 | 폴더 오른쪽 클릭 | `ContextMenu`: "열기" · "이름 바꾸기" · "옮기기"(`ContextMenuSub`) │ "폴더 지우기"(`variant="danger"`) | 열린 동안 그 타일은 선택 바탕을 유지한다. 폴더 지우기는 곧바로 옮기고 `toast`에 "되돌리기", 쓰는 곳이 있는 파일이 남으면 "보기". |
 | 빈 곳 오른쪽 클릭 | `ContextMenu`: "올리기" · "새 폴더" | |
-| 파일 오른쪽 클릭 | `ContextMenu`: "상세"(옆 패널을 연다. 다른 화면으로 가는 글 목록의 "열기"와 다르다) · "쓰는 곳"(`ContextMenuSub`, 글마다 끝에 자리) · "폴더로"(`ContextMenuSub`) | 휴지통으로 옮기기는 패널의 ⋯, 일괄 막대, Del 키에 있다. Del 키는 타일의 버튼, 체크, ⋯에 포커스가 있을 때 듣고, 고른 파일이 있으면 고른 것 모두에 적용한다. 타일이 연 메뉴 안의 키는 메뉴의 것이다. |
-| 파일 바꾸기 확인 | `AlertDialog`: `AlertDialogTitle` "파일을 바꿀까요?", 옛 파일과 새 파일은 `Grid columns="compare"` 안 `Tile` 둘, `AlertDialogDescription`, `AlertDialogCancel` · `AlertDialogAction` "바꾸기" | 쓰는 곳이 모두 새 파일을 쓴다. 이름, 대체 텍스트, 캡션은 그대로다. |
+| 파일 오른쪽 클릭 | `ContextMenu`: "상세"(옆 패널을 연다. 다른 화면으로 가는 글 목록의 "열기"와 다르다) · "쓰는 곳"(`ContextMenuSub`, 행 앞에 `List` 아이콘, 글마다 끝에 자리를 `MenuValue`로: 자리는 말이라 sans다, 만들며 정함 (2026-11-14)) · "폴더로"(`ContextMenuSub`) | 휴지통으로 옮기기는 패널의 ⋯, 일괄 막대, Delete · Backspace 키에 있다. 이 키는 타일의 버튼, 체크, ⋯에 포커스가 있을 때 듣고, 고른 파일이 있으면 고른 것 모두에 적용한다. 타일이 연 메뉴 안의 키는 메뉴의 것이다. |
+| 파일 바꾸기 확인 | `AlertDialog`: `AlertDialogTitle` "파일을 바꿀까요?", 옛 파일과 새 파일은 `Grid columns="compare"` 안 `Tile` 둘, `AlertDialogDescription`, `AlertDialogCancel` · `AlertDialogAction` "바꾸기"(올리는 동안 `loading`, 라벨 "올리는 중…". 옆의 "취소"는 그동안 흐리다: 알약이 까닭을 말한다, 만들며 정함 (2026-11-14)) | 쓰는 곳이 모두 새 파일을 쓴다. 이름, 대체 텍스트, 캡션은 그대로다. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/FilterButton, Controls/Menu/DropdownMenu, Controls/Choice/Segmented, Patterns/List/BulkBar, Patterns/List/FileUseRow, Controls/Field/Caret, Controls/Status/Toast, Primitives/Text, Primitives/AI mark, Patterns/List/DropArea, Primitives/Grid, Patterns/List/Tile, Patterns/List/RenameField, Patterns/List/FilePreview, Monti/Proposal/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBar, Patterns/List/Table, Controls/Status/Count, Controls/Menu/ContextMenu, Controls/Overlay/AlertDialog, Controls/Overlay/SidePanel, Controls/Button/IconButton, Patterns/Frame/Image, Controls/Field/Field, Controls/Field/Affix, Controls/Field/Select, Controls/Field/Textarea, Controls/Field/Input, Patterns/Frame/DescriptionList, Primitives/Stack.
 
@@ -102,7 +102,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 패널 | `SidePanel width="side"`(`title` 파일 이름, `onClose`, `actions`에 ⋯, `footer`에 "저장") | 격자 옆에 열리고, 열린 동안 ✦ 모서리 버튼은 가려진다. 패널의 필드는 모두 `md`(32px, 원칙 10). 그림 · 이름과 폴더 · 정보 · 쓰는 곳은 구분선 없이 32px로 떨어진다(입력칸의 밑줄이 이미 나누는 선이다, 2026-11-09 소유자). |
-| ⋯ | `IconButton` + `DropdownMenu`("새 탭에서 열기" · "주소 복사" · "파일 바꾸기" · "ID 복사" · "휴지통으로" `variant="danger"`) | 이미지와 파일(PDF) 모두 같은 ⋯다. 보드의 메뉴 그림에는 휴지통 행이 빠졌지만 버튼 이름과 [screens.md](../screens.md#media)에 있으므로 둔다. |
+| ⋯ | `IconButton` + `DropdownMenu`("새 탭에서 열기"(`Launch`) · "주소 복사"(`Link`) · "파일 바꾸기"(`Upload`) · "ID 복사"(`Copy`) · "휴지통으로"(`TrashCan`) `variant="danger"`. 한 메뉴의 행은 모두 아이콘이 있다, 만들며 정함 (2026-11-14)) | 이미지와 파일(PDF) 모두 같은 ⋯다. 보드의 메뉴 그림에는 휴지통 행이 빠졌지만 버튼 이름과 [screens.md](../screens.md#media)에 있으므로 둔다. |
 | 미리보기 | `Image`(이미지), `FilePreview framed`(파일) | |
 | 파일 이름 | `FormField` + `FormFieldLabel` + `Affix size="md" suffix=".jpg"` | 늘 입력 칸이다. 확장자는 고칠 수 없는 흐린 글자다. |
 | 폴더 | `FormField` + `Select`(`SelectTrigger size="md" width="full"`) | 고른 폴더로 옮긴다(저장으로 적용). |
@@ -177,7 +177,7 @@
 | 찾는 곳 칩 "Blog Assets ▾" | `MediaPicker`의 `scopes` · `scope` · `onScopeChange` · `scopeLabel` "찾는 곳" | 폴더 안에서 검색 칸 앞에 있다. 메뉴에서 "모든 폴더"로 넓힌다. 라이브러리 화면과 같다. |
 | 경로 "미디어 / Blog Assets / covers" | `MediaPicker`가 `folders`(`depth`), `folder`, `topLabel` "미디어"로 그린다(`pathLabel` "경로"). 위 폴더마다 `TextButton variant="underline" quiet`, 연 곳은 글자 | 늘 타일 위에 있다. 최상위에서는 "미디어" 글자 하나라 폴더를 드나들어도 타일이 뛰지 않는다. 누르면 그 폴더로 간다. 키보드는 새 곳의 첫 카드나 파일에서 이어진다. 라이브러리 화면의 경로와 같이 위로 가는 길이다. "상위 폴더로" 타일은 두지 않는다(2026-11-10 소유자). |
 | 폴더 카드 | `MediaPicker`의 `subfolders`에 `FolderTile`(`name`) | 연 곳의 폴더가 파일 위에 네 열로 온다. 누르면 들어간다. 찾는 동안에는 없다. |
-| 빈 곳 | `MediaPicker`의 `notice`에 `Text variant="note" tone="subtle"` | 폴더도 파일도 없으면 "여기에는 파일이 없습니다.", 찾은 것이 없으면 "맞는 파일이 없습니다." |
+| 빈 곳 | `MediaPicker`의 `notice` | 폴더도 파일도 없으면 `Empty`(`title` "여기에는 파일이 없습니다."): 보관함의 빈 상태는 보관함 화면과 같다(만들며 정함 (2026-11-14)). 찾은 것이 없으면 `Text variant="note" tone="subtle"` "맞는 파일이 없습니다." 한 줄. |
 | 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 연 곳에 바로 든 파일이다. 이미지 자리에서는 이미지만, 파일 자리에서는 파일만 있다. 찾는 동안 세부 줄이 하위 폴더 경로부터 말한다("covers · 2000×1333 · 사용 안 함"). 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
 | "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). 1000개까지 읽고, 그보다 많으면 `Text variant="note" tone="subtle"` "더 있습니다. 검색으로 찾아 주세요."가 대신한다. |
 | "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 ghost 버튼이다(`button.md`). 고른 파일은 붙여넣기처럼 페이지에 넘기고, 연 폴더로 올라간다. |

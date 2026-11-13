@@ -596,6 +596,7 @@ describe("settings › collections: the options of a choice in the review (docs 
 		const made = options();
 		await made.run();
 		await opened();
+		expect(page.getByRole("button", { name: "글에 필드 추가" }).element().querySelector("svg")).not.toBeNull();
 		await userEvent.click(page.getByRole("button", { name: "글에 필드 추가" }));
 		await expect.element(sheet().getByText(/게시글 · 글 종류 · 글/)).toBeVisible();
 		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "credit");
@@ -729,7 +730,7 @@ describe("settings › collections: the options of a choice in the review (docs 
 		await userEvent.click(sheet().getByRole("option", { name: /^조건부/ }));
 		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "host");
 		for (const [index, value] of ["own", "embed"].entries()) {
-			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await userEvent.click(sheet().getByRole("button", { name: "선택지", exact: true }));
 			await userEvent.fill(sheet().getByRole("textbox", { name: "값" }).nth(index), value);
 		}
 		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
@@ -757,14 +758,14 @@ describe("settings › collections: the options of a choice in the review (docs 
 		const made = options();
 		await made.run();
 		await opened();
-		await userEvent.click(page.getByRole("button", { name: "+ 필드 추가" }));
+		await userEvent.click(page.getByRole("button", { name: "필드 추가", exact: true }));
 		await userEvent.click(sheet().getByRole("option", { name: /^조건부/ }));
 		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "featured");
 		await expect.element(sheet().getByRole("switch", { name: /필수/ })).toBeVisible();
 		await userEvent.click(sheet().getByRole("switch", { name: "스위치로 켜고 끄기" }));
 		// One option, the word "on" stores, and nothing to add to it or require of it.
 		await expect.element(sheet().getByRole("textbox", { name: "값" })).toHaveValue("on");
-		await expect.element(sheet().getByRole("button", { name: "+ 선택지" })).not.toBeInTheDocument();
+		await expect.element(sheet().getByRole("button", { name: "선택지", exact: true })).not.toBeInTheDocument();
 		await expect.element(sheet().getByRole("switch", { name: /필수/ })).not.toBeInTheDocument();
 		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
 		await expect.element(sheet()).not.toBeInTheDocument();
@@ -834,11 +835,11 @@ describe("settings › collections: the options of a choice in the review (docs 
 		const made = options();
 		await made.run();
 		await opened();
-		await userEvent.click(page.getByRole("button", { name: "+ 필드 추가" }));
+		await userEvent.click(page.getByRole("button", { name: "필드 추가", exact: true }));
 		await userEvent.click(sheet().getByRole("option", { name: /^조건부/ }));
 		await userEvent.fill(sheet().getByRole("textbox", { name: /^식별자/ }), "source");
 		for (const [index, value] of ["own", "quoted"].entries()) {
-			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await userEvent.click(sheet().getByRole("button", { name: "선택지", exact: true }));
 			await userEvent.fill(sheet().getByRole("textbox", { name: "값" }).nth(index), value);
 		}
 		await userEvent.click(sheet().getByRole("button", { name: "필드 추가", exact: true }));
@@ -864,7 +865,7 @@ describe("settings › collections: the options of a choice in the review (docs 
 			await userEvent.click(page.getByRole("button", { name: `${name} 열기` }));
 			const rows = sheet().getByRole("textbox", { name: "값" });
 			const before = rows.elements().length;
-			await userEvent.click(sheet().getByRole("button", { name: "+ 선택지" }));
+			await userEvent.click(sheet().getByRole("button", { name: "선택지", exact: true }));
 			await expect.element(rows.nth(before)).toHaveFocus();
 			await saveSheet();
 		}
@@ -958,7 +959,10 @@ describe("the collection screens follow the design rules (design audit, 2026-11-
 		// One step under its 32px row, as a button inside a field is.
 		expect(remove.getBoundingClientRect().height).toBe(28);
 		expect(remove.closest("[data-slot=option-row]")?.getBoundingClientRect().height).toBe(32);
-		expect(dialog().getByRole("button", { name: "+ 선택지" }).element().getAttribute("data-slot")).toBe("button");
+		expect(dialog().getByRole("button", { name: "선택지", exact: true }).element().getAttribute("data-slot")).toBe(
+			"button",
+		);
+		expect(dialog().getByRole("button", { name: "선택지", exact: true }).element().querySelector("svg")).not.toBeNull();
 	});
 
 	it("the schema banner's 검토 is underlined: it opens the review", async () => {

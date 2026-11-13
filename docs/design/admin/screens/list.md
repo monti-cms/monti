@@ -13,7 +13,7 @@
 |---|---|---|
 | 제목 행 | `PageHeader`(`title` "게시글", `meta` "/posts/:slug") | 폴더 안에서는 `title`이 폴더 이름이고 `meta`가 없다. |
 | 폴더 경로 "게시글 /" | `PageHeader`의 `trail`에 `TextButton variant="underline"` | 지나온 폴더마다 버튼 하나. 누르면 그 폴더로 간다. |
-| "+ 새 게시글 ▾" | `SplitButton`(`menuLabel` "더 만들기", `menu`에 `DropdownMenuItem` "새 폴더"(`FolderAdd`) · "가져오기"(`Upload`) · `DropdownMenuSub` "템플릿으로 쓰기"(`Template`, 둘째 단계에 템플릿마다 한 줄)) | 화면의 검은 알약 하나. 왼쪽은 새 글 편집기로 간다. "새 폴더"는 그 자리에서 맨 위 폴더 행에 새 폴더를 만들고 이름 칸을 연다(아래 "새 폴더"). 검색이나 필터가 걸려 있으면 먼저 지운다. "폴더 사용"을 끈 컬렉션에는 "새 폴더"가 없다. "가져오기"는 파일 고르기를 열고, 고른 파일로 이 컬렉션에 글을 가져오는 시트를 연다([tools.md](tools.md)의 가져오기 시트). 가져오기가 늘 있으므로 알약은 늘 나뉜 알약이다. 항목 컬렉션(태그, 카테고리)의 목록에는 없다(만들며 정함 2026-11-13). "템플릿으로 쓰기"는 고른 템플릿으로 새 글을 만들어 편집기로 간다(T40).(2026-11-05 소유자: 드물게 쓰는 일이라 버튼 대신 검은 알약의 메뉴에 둔다.) |
+| "+ 새 게시글 ▾" | `SplitButton`(앞에 `Add` 아이콘, 라벨 "새 게시글". "+"는 아이콘이고 글자로 치지 않는다, 만들며 정함 (2026-11-14). `menuLabel` "더 만들기", `menu`에 `DropdownMenuItem` "새 폴더"(`FolderAdd`) · "가져오기"(`Upload`) · `DropdownMenuSub` "템플릿으로 쓰기"(`Template`, 둘째 단계에 템플릿마다 한 줄)) | 화면의 검은 알약 하나. 왼쪽은 새 글 편집기로 간다. "새 폴더"는 그 자리에서 맨 위 폴더 행에 새 폴더를 만들고 이름 칸을 연다(아래 "새 폴더"). 검색이나 필터가 걸려 있으면 먼저 지운다. "폴더 사용"을 끈 컬렉션에는 "새 폴더"가 없다. "가져오기"는 파일 고르기를 열고, 고른 파일로 이 컬렉션에 글을 가져오는 시트를 연다([tools.md](tools.md)의 가져오기 시트). 가져오기가 늘 있으므로 알약은 늘 나뉜 알약이다. 항목 컬렉션(태그, 카테고리)의 목록에는 없다(만들며 정함 2026-11-13). "템플릿으로 쓰기"는 고른 템플릿으로 새 글을 만들어 편집기로 간다(T40).(2026-11-05 소유자: 드물게 쓰는 일이라 버튼 대신 검은 알약의 메뉴에 둔다.) |
 | "검색" | `SearchToggle`(`label` "검색", `targets` 전체 · 제목 · 주소 · 본문, 처음 값은 전체) | 누르면 그 자리에서 `SearchBox`가 열리고 검색어에 포커스. 비우고 벗어나거나 비우고 Esc면 다시 버튼. 검색어는 상자 안에만 있다. |
 | 찾을 곳 "전체 ▾" | `SearchBox`의 `targets` · `target` · `onTargetChange`, 폴더 안에서는 `scopes` · `scope` · `onScopeChange`도 | 상자 앞부분에 있다. 고르면 바로 적용, 지금 값에 ✓. 폴더 안에서는 한 메뉴에 찾는 폴더("시리즈 원고" · "모든 폴더")와 찾을 곳이 선으로 나뉘어 있고, 칩은 폴더를 말하며 찾을 곳이 "전체"가 아니면 뒤에 붙인다("모든 폴더 · 제목"). "모든 폴더"는 주소에 `scope=all`이고 검색어가 있을 때만 쓰인다. 필터만 걸면 그 폴더에서 거른다(모든 폴더는 맨 위에서). 검색어를 비우면 연 폴더로 돌아간다(2026-11-10 소유자: 찾는 곳 행을 없앴다). |
 
@@ -25,7 +25,7 @@
 | 모두 선택 | `ListHead`의 `selectAll`(`state` `none`·`some`·`all`) | 포인터가 머리 위에 있을 때 보인다. 지금 쪽만 고른다. |
 | 열 메뉴의 정렬 (제목, 날짜) | `SortRows`(`DropdownMenuRadioGroup` + `DropdownMenuRadioItem`) | 제목은 "오름차순 · 내림차순", 날짜는 "최근부터 · 오래전부터". 고르면 닫힌다. |
 | 열 메뉴의 거를 값 | `DropdownMenuCheckboxItem box`, 끝에 개수 `MenuShortcut` | 상태: 발행됨 · 수정 중 · 초안 · 보관됨. 관계(카테고리, 태그): 맨 위 `DropdownMenuSearch`, "없음", `DropdownMenuSeparator`, 항목(많으면 `DropdownMenuScroll`). 언어: 관리자 화면 언어로 된 언어 이름들("한국어", "영어"), 구분선, `DropdownMenuLabel` "번역", 번역 없음 · 원문 변경 · 최신. 텍스트 필드(검색 설명): "비어 있음" 하나. 골라도 메뉴는 열려 있다. |
-| 날짜 열의 거를 값 | `DropdownMenuRadioItem`(모든 날짜 · 오늘 · 최근 7일 · 최근 30일), `DropdownMenuSub` "하루 고르기" · "기간 고르기" | 한 번에 하나, 지금 것에 ✓. 거르기가 없으면 "모든 날짜"에 ✓가 있고, 그것을 누르면 거르기가 풀린다(2026-11-06 소유자). |
+| 날짜 열의 거를 값 | `DropdownMenuRadioItem`(모든 날짜 · 오늘 · 최근 7일 · 최근 30일), `DropdownMenuSub` "하루 고르기" · "기간 고르기" | 한 번에 하나, 지금 것에 ✓. "하루 고르기"와 "기간 고르기"는 다른 둘째 단계 행처럼 ›로 끝나고, 켜져 있으면 › 앞에 그날이나 기간을 `MenuValue`로 흐리게 적는다("10. 05 – 10. 26"). ✓ 대신이다([menu.md](../components/menu.md), 만들며 정함 (2026-11-14)). 거르기가 없으면 "모든 날짜"에 ✓가 있고, 그것을 누르면 거르기가 풀린다(2026-11-06 소유자). |
 | 하루 달력 | "하루 고르기"의 `DropdownMenuSubContent bare` 안에 `Calendar`(하루) | 한 번 누르면 그 하루로 거르고, 달력은 그날을 보이며 열려 있다. |
 | 기간 달력 | "기간 고르기"의 `DropdownMenuSubContent bare` 안에 `Calendar`(기간) | 처음 누른 날이 시작, 다음 날이 끝. 끝을 누르면 적용하고, 달력은 기간을 보이며 열려 있다. |
 | "열 숨기기" | `DropdownMenuItem` | 거를 값 아래, 구분선 뒤. 제목 열에는 없다. |
@@ -42,11 +42,11 @@
 | 제목 칸 | `RowLink` 안의 `RowTitle`(`title`, `address`) | 제목 뒤 같은 줄에 주소. 행 어디를 눌러도 글이 열린다. |
 | 카테고리 · 태그 · 텍스트 필드 칸 | `TableCell tone="subtle" truncate`, 셀 `title`에 전부 | 끝은 늘 "…". 값 여럿은 " · "로 잇는다. |
 | 언어 · 수정일 칸 | 언어는 `LocaleCodes`, 날짜는 `Text mono variant="meta"`(`tone="muted"`, 칸은 `align="end"`) | 언어는 기본 너비에서 "KO +1", 열을 넓히면 "KO · EN"이고, 세기만 한 언어는 가리킬 때 툴팁이 이름으로 말한다(2026-11-11 소유자). 좁아서 잘렸을 때도 말한다. 날짜는 올해면 "10. 26", 지난해면 "25. 10. 26". 기준 화면(`Screens/Reference/Lists` › Main)과 같다. |
-| 행 ⋯ | `RowActions` 안의 `IconButton`(`label` "행 메뉴") + `DropdownMenu` | 늘 보인다. 항목은 오른쪽 클릭과 같다. 보드는 글자 버튼으로 그렸지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. |
-| 행 오른쪽 클릭 | `ContextMenu`: "열기" · "새 탭에서 열기" · "복제" │ `ContextMenuSub` "폴더로" · "카테고리" · "태그" │ "보관" · "휴지통으로"(`variant="danger"`, `MenuShortcut` Del) | 행마다 앞에 아이콘. 둘째 단계까지. 행의 ⋯ 메뉴도 같은 행이고 Del 표시만 없다. 행에서 Delete를 누르면 휴지통으로 간다(고른 행 중 하나면 고른 행 모두). |
-| 여러 행 오른쪽 클릭 | `ContextMenu`: `ContextMenuLabel` "2개 항목" · "발행" · "보관" · `ContextMenuSub` "폴더로" │ "카테고리" · "태그" │ "내보내기" │ "휴지통으로"(`variant="danger"`, `MenuShortcut` Del) | 일괄 막대와 같은 이름. 관계 필드가 바로 놓인다. 아이콘은 없다. 여러 행에 되는 것만 담는다. |
+| 행 ⋯ | `RowActions` 안의 `RowMore`(`label` "더 보기", 툴팁도 같은 말) + `DropdownMenu` | 늘 보인다. 항목은 오른쪽 클릭과 같다. 보드는 글자 버튼으로 그렸지만 [button.md](../components/button.md)의 아이콘 버튼을 따른다. |
+| 행 오른쪽 클릭 | `ContextMenu`: "열기" · "새 탭에서 열기" · "복제" │ `ContextMenuSub` "폴더로" · "카테고리" · "태그" │ "보관" · "휴지통으로"(`variant="danger"`, `MenuShortcut keys={["Delete"]}`) | 행마다 앞에 아이콘: "열기"는 `Document`, "새 탭에서 열기"는 `Launch`(새 탭의 표시는 그 하나에만, 만들며 정함 (2026-11-14)). 둘째 단계까지. 행의 ⋯ 메뉴도 같은 행이고 키 표시만 없다. 행에서 Delete나 Backspace를 누르면 휴지통으로 간다(고른 행 중 하나면 고른 행 모두). 휴지통과 미디어도 같은 두 키다(만들며 정함 (2026-11-14)). |
+| 여러 행 오른쪽 클릭 | `ContextMenu`: `ContextMenuLabel` "2개 항목" · "발행" · "보관" · `ContextMenuSub` "폴더로" │ "카테고리" · "태그" │ "내보내기" │ "휴지통으로"(`variant="danger"`, `MenuShortcut keys={["Delete"]}`) | 일괄 막대와 같은 이름. 관계 필드가 바로 놓인다. 아이콘은 없다. 여러 행에 되는 것만 담는다. 복제, 보관, 보관 풀기, 내보내기, 새 글 만들기가 거절되면 `toast.error`가 까닭을 말한다([status.md](../components/status.md), 만들며 정함 (2026-11-14)). |
 | 미디어 필드 칸 (대표 이미지) | `RowThumb` 안 `Image size="row" ratio="photo"`, 그림이 아닌 파일은 이름 | 빈 필드는 비어 있다. 열 메뉴는 글자 필드처럼 "비어 있음"이다(T59). |
-| 폴더 행 | `RowTitle folder`(`title` 폴더 이름, `address` "글 2"), 끝에 `IconButton` ⋯ | 상태 칸은 비운다. 누르면 폴더 안으로. "상위 폴더로" 행도 같다. |
+| 폴더 행 | `RowTitle folder`(`title` 폴더 이름, `note` "글 2": 사람이 읽는 말이라 sans, 만들며 정함 (2026-11-14)), 끝에 `IconButton` ⋯ | 상태 칸은 비운다. 누르면 폴더 안으로. "상위 폴더로" 행도 같다. |
 | 폴더 오른쪽 클릭 | `ContextMenu`: "열기" · "이름 바꾸기" · `ContextMenuSub` "옮기기" │ "폴더 지우기"(`variant="danger"`) | |
 | 새 폴더 · 이름 바꾸기 | `RenameField`(`value`, `onValueChange`, `onCommit`, `onCancel`, `label` "폴더 이름") | 행 안에서 "새 폴더"가 선택된 채 열린다. Enter나 벗어나면 지키고 Esc는 버린다. 행 높이가 변하지 않는다. |
 | "상위 폴더로" | 폴더 행 모양 | 폴더 안의 첫 행. |
@@ -58,7 +58,7 @@
 | 행 | `ListFooter` | 왼쪽 범위, 오른쪽 페이지 나누기. |
 | 범위 "1–25 / 148" | `Count` | |
 | "25개씩 ▾" | `PageSizeMenu`(`label`, `value`, `options` 25 · 50 · 100, `onValueChange`) | 위로 열리고 고르면 닫힌다. |
-| 맞는 글 없음 | 표 안의 한 행: `Text tone="subtle"` "맞는 글이 없습니다." 뒤에 `TextButton` "거르기 풀기" | 거르기나 찾기 때문에 행이 없을 때. 빈 컬렉션(아래 Empty)과 다르다(06번 문서, 빈 목록). "거르기 풀기"는 찾기와 거르기를 모두 푼다. |
+| 맞는 글 없음 | `NoMatchRow`: 표 안의 한 행 `Text tone="subtle"` "맞는 글이 없습니다." 뒤에 `TextButton` "필터 해제" | 거르기나 찾기 때문에 행이 없을 때. 빈 컬렉션(아래 Empty)과 다르다(06번 문서, 빈 목록). "필터 해제"는 찾기와 거르기를 모두 푼다. 모든 표가 같은 말이다(만들며 정함 (2026-11-14): 이 지도는 "거르기 풀기"라 했지만 만든 표는 모두 "필터 해제"였다). |
 | 페이지 나누기 | `Pagination`(`PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`) | 늘 버튼 7개. 첫 쪽의 이전, 마지막 쪽의 다음은 흐리고 누를 수 없다. 쪽이 하나뿐이면 페이지 나누기가 없다. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/ListHead, Controls/Menu/DropdownMenu, Controls/Field/Calendar, Patterns/List/Table, Controls/Status/EntryStatus, Primitives/Text, Controls/Button/IconButton, Controls/Menu/ContextMenu, Patterns/List/RenameField, Patterns/List/Pagination, Controls/Status/Count, Controls/Choice/Segmented, Primitives/Separator, Patterns/List/BulkBar, Controls/Field/Caret.
@@ -83,7 +83,7 @@
 | "발행" | `TextButton` | 고른 행 중 발행할 것(초안, 수정 중)이 있을 때만 보인다. |
 | "보관" / "보관 풀기" | `TextButton` | 모두 보관됐으면 "보관 풀기". |
 | "폴더로 ▾" | `TextButton` + `Caret`, `DropdownMenu`(최상위와 폴더 트리, 지금 값 `MenuTick`) | 고르면 옮기고 닫힌다. |
-| "바꾸기 ▾" | `TextButton` + `Caret`, `DropdownMenu` 첫 단계는 관계 필드마다 `DropdownMenuSub` | 스키마의 관계 필드는 모두 이 메뉴 하나에 있다. 값 여럿(태그): `DropdownMenuSearch`와 `DropdownMenuCheckboxItem box`(모두 가짐은 켬, 일부는 `mixed`와 끝의 "1/2" `MenuShortcut`), 메뉴는 열려 있다. 값 하나(카테고리): `DropdownMenuRadioGroup`, 필수가 아니면 맨 위 "없음", 고르면 닫힌다. |
+| "바꾸기 ▾" | `TextButton` + `Caret`, `DropdownMenu` 첫 단계는 관계 필드마다 `DropdownMenuSub` | 스키마의 관계 필드는 모두 이 메뉴 하나에 있다. 값 여럿(태그): `DropdownMenuSearch`와 `DropdownMenuCheckboxItem box`(모두 가짐은 켬, 일부는 `mixed`와 끝의 "1/2" `MenuShortcut`), 메뉴는 열려 있다. 값 하나(카테고리): `DropdownMenuRadioGroup`, 필수가 아니면 맨 위 "없음", 고르면 닫힌다. 고른 행이 모두 가진 값을 다시 누르면 아무것도 바뀌지 않는다(만들며 정함 (2026-11-14)). 바꾸지 못하면 `toast.error`가 까닭을 말한다. |
 | ⋯ | `BulkBar`의 `more` | "내보내기", 구분선, "휴지통으로"(`variant="danger"`). |
 
 ### 흐름 1 · 글 쓰고 발행하기

@@ -39,7 +39,7 @@ const todo = () => page.getByRole("button", { name: /^할 일/ });
 
 /** A language's tab: its name, and "원문 변경" after it when it has a dot. */
 const tab = (name: string) => tabs().getByRole("button").filter({ hasText: name });
-const addLanguage = () => tabs().getByRole("button", { name: "+ 언어" });
+const addLanguage = () => tabs().getByRole("button", { name: "언어", exact: true });
 const faint = () => body().element().querySelectorAll("[data-untranslated]").length;
 
 /** Opens the editor at the story's entry and waits for its body. */
@@ -84,6 +84,7 @@ describe("the language tabs", () => {
 		await expect.element(tab("한국어")).toHaveAttribute("aria-current", "page");
 		await expect.element(tab("English")).not.toHaveAttribute("aria-current");
 		await expect.element(addLanguage()).toBeVisible();
+		expect(addLanguage().element().querySelector("svg")).not.toBeNull();
 	});
 
 	it("T68 a tab opens that language's entry of the group", async () => {

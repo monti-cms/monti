@@ -27,7 +27,7 @@ import {
 	TextButton,
 	useSortableItem,
 } from "@monti-cms/ui";
-import { Close } from "@monti-cms/ui/icons";
+import { Add, Close } from "@monti-cms/ui/icons";
 import { type ComponentProps, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { findLanguages, languageName } from "./language-catalog";
@@ -70,6 +70,7 @@ function AddLanguage({ taken, onAdd }: { taken: string[]; onAdd: (code: string, 
 			<PopoverTrigger
 				render={
 					<Button variant="ghost" size="sm">
+						<Add aria-hidden />
 						{t("settings.locales.add")}
 					</Button>
 				}
