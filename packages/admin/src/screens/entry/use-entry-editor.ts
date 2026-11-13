@@ -204,6 +204,11 @@ export function useEntryEditor(
 			if (!loaded || version === null) return null;
 			if (!draft.dirty && source.id !== null) return { id: source.id };
 			const changed = new Set(draft.changes.map((change) => change.path));
+			// What this save sends: when it ends, only that is let go. What is typed while it is under way stays unsaved (T230).
+			const sent = {
+				mine: new Map(draft.changes.map((change) => [change.path, change.after])),
+				accepted: draft.accepted,
+			};
 			const hidden =
 				notChosen && "entry" in loaded
 					? notChosen(
@@ -252,13 +257,14 @@ export function useEntryEditor(
 			setConflict(null);
 			// A new template becomes a page of its own; the screen moves to it.
 			if (source.id === null) {
+				// All of it: the screen moves to the template's own page, and nothing typed meanwhile is kept for a page that is gone.
 				draft.saved();
 				return { id: answer.body.output.id };
 			}
 			// The save went through. My changes are let go only once the screen has read what was saved: let go over the copy from before the save, the
 			// old text came back in their place and the next save was a conflict with my own.
 			const again = await reload();
-			if (again.ok) draft.saved();
+			if (again.ok) draft.saved(sent);
 			else {
 				setWritten(answer.body.output.version);
 				// An ended session says so in its own banner, as for the save itself.

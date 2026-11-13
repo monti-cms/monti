@@ -109,6 +109,16 @@ export function href(route: Route): string {
 	}
 }
 
+/** What a history entry made by a move inside the admin carries. */
+const INSIDE = { monti: "inside" };
+
+/**
+ * Whether the screen that is open was reached by a move inside the admin (`go`), so the browser's "back" leads to another screen of the
+ * admin. An address that was pasted, or opened from a link elsewhere, was not: back from it leaves the admin. A reload keeps what the
+ * entry said.
+ */
+export const reachedFromInside = () => (window.history.state as { monti?: string } | null)?.monti === INSIDE.monti;
+
 const read = () => {
 	try {
 		return localStorage.getItem(LAST);
@@ -150,8 +160,9 @@ export function useRoute() {
 	const go = useCallback((route: Route, options: { replace?: boolean } = {}) => {
 		const next = href(route);
 		if (next === window.location.hash) return;
-		if (options.replace) window.history.replaceState(null, "", next);
-		else window.history.pushState(null, "", next);
+		// A move adds an entry that says it was made here; a change in place keeps what its entry said.
+		if (options.replace) window.history.replaceState(window.history.state, "", next);
+		else window.history.pushState(INSIDE, "", next);
 		setHash(next);
 	}, []);
 	return { route: parseRoute(hash), go };

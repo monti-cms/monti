@@ -967,6 +967,13 @@ const isBusy = (error: unknown) =>
 	(error as { code?: string }).code === "23505" &&
 	String((error as { constraint?: string }).constraint ?? (error as Error).message).includes("runs_one_chat");
 
+/** A run put in for a conversation that is no longer there (the runs' foreign key). */
+const isGone = (error: unknown) =>
+	typeof error === "object" &&
+	error !== null &&
+	(error as { code?: string }).code === "23503" &&
+	(error as { constraint?: string }).constraint === "runs_conversation_id_fkey";
+
 /**
  * Takes up a run that stopped and can go on: cut by a limit or a lost connection, waiting on the browser, or left by a request that died. Of a
  * conversation's requests only the newest can be gone on with: an older one, in a tab that was left open, is refused with that reason.
@@ -1171,6 +1178,9 @@ async function open(monti: Monti, input: RunInput, until: Date): Promise<RunRow>
 		.executeTakeFirstOrThrow()
 		.catch((error: unknown) => {
 			if (isBusy(error)) throw new CheckError({ key: "assistant.busy" });
+			// The conversation was read a moment ago and is gone now: a removal (a person's, or the clean-up of unopened ones) held its row
+			// while this request waited, and the run has no conversation to stand in.
+			if (isGone(error)) throw new CheckError({ key: "assistant.noConversation" });
 			throw error;
 		});
 	await append(db, run.id, { role: "user", text: `${requestWith(request, input.context ?? null)}${about}` }, now);

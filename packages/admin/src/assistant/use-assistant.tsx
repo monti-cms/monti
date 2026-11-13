@@ -13,6 +13,7 @@ import { toast } from "@monti-cms/ui";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useSaveUnsaved, useUnsavedChanges } from "../draft/leave-guard";
 import { useAdmin } from "../operations/admin-context";
+import { MODELS_ASK_AGAIN_MS } from "../operations/models";
 import { NO_ANSWER } from "../operations/transport";
 import type { Route } from "../route";
 import { type ContextChip, chipsOf, contextWithout, type ToolPart } from "./words";
@@ -97,6 +98,9 @@ const POLL_MS = 3000;
 /** How many times in a row the browser goes on by itself with a run whose request was cut, before it says so. */
 const CUTS_BEFORE_ASKING = 2;
 
+/** Why a run could not be gone on with when the server knows more of it than this page does: it is at work elsewhere, over, or not the newest. */
+const AHEAD: ReadonlySet<string> = new Set(["assistant.busy", "assistant.ended", "assistant.notNewest"]);
+
 function kept(): Kept {
 	try {
 		const stored = JSON.parse(localStorage.getItem(KEPT) ?? "null") as Partial<Kept> | null;
@@ -165,6 +169,8 @@ type AssistantValue = {
 	thinking: Thinking;
 	recent: ModelChoice[];
 	pickModel: (choice: ModelChoice) => void;
+	/** Asks the keys' services for their model lists again (the model menu was opened): not more than once in a while. */
+	refreshModels: () => void;
 	setThinking: (level: Thinking) => void;
 	history: { rows: ConversationRow[]; more: boolean } | null;
 	loadHistory: (more?: boolean) => Promise<void>;
@@ -371,6 +377,21 @@ export function AssistantProvider({
 		void readState();
 	}, [readState]);
 
+	// A service's models change without the key changing (OpenRouter's free ones, weekly), and the server asks only once a day by itself:
+	// opening the model menu asks now, as Open WebUI and LibreChat ask when the list is called for. The menu shows what is stored at once,
+	// and what comes takes its place.
+	const modelsAsked = useRef(0);
+	const refreshModels = useCallback(() => {
+		const now = Date.now();
+		if (now - modelsAsked.current < MODELS_ASK_AGAIN_MS) return;
+		modelsAsked.current = now;
+		void call<ModelList>("models.list", { refresh: true }).then((listed) => {
+			if (listed.ok && !gone.current) setModels(listed.body);
+			// No answer: the next opening asks again.
+			else if (!listed.ok) modelsAsked.current = 0;
+		});
+	}, [call]);
+
 	const setOpen = useCallback(
 		(next: boolean) => {
 			setOpenState(next);
@@ -506,7 +527,10 @@ export function AssistantProvider({
 					// it. What the screen had answered is kept for the next request, what the server has is read again, and nothing goes on
 					// by itself from this refusal.
 					if (Array.isArray(input.screen)) here.unsent = { run: id, screen: input.screen };
-					if (reason && byPerson) toast.error(t(reason));
+					// Another page has the run by now (an old tab pressed "go on" for a run the browser went on with elsewhere), it ended
+					// meanwhile, or a newer request stands after it: the server is ahead of this page. Nothing is said: the run is read as
+					// it stands and shown so (at work with its stop button, or with its end). Any other reason is the person's to hear.
+					if (reason && byPerson && !AHEAD.has(reason.key)) toast.error(t(reason));
 					return later.current.watch(id, here, false);
 				}
 				setBusy(false);
@@ -1110,6 +1134,7 @@ export function AssistantProvider({
 		thinking,
 		recent,
 		pickModel,
+		refreshModels,
 		setThinking: setLevel,
 		history: history ? { rows: history.rows, more: history.earlier !== null } : null,
 		loadHistory,

@@ -464,6 +464,26 @@ describe("the entry editor: an answer that does not come", () => {
 		await saveCell("저장 전 변경사항");
 	});
 
+	it("02 T230 letters typed while a save is under way stay: the save lets go of what it sent, and what came after is still unsaved", async () => {
+		const story = wired("draft");
+		await story.run();
+		await opened();
+		await titleEnd();
+		await userEvent.keyboard(" 저장한 말");
+		story.wire.cut = (name) => (name === "entries.save" ? "held" : undefined);
+		await save();
+		await userEvent.keyboard(" 그 뒤에 친 말");
+		story.wire.release();
+		await expect.poll(() => savedTitle(story)).toBe("첫 번째 글 저장한 말");
+		await expect.poll(() => story.wire.calls.filter((name) => name === "entries.get").length).toBeGreaterThan(1);
+		// The save is over: what it sent is saved, and the letters typed meanwhile are on the screen, counted as unsaved.
+		await saveCell("저장 전 변경사항");
+		await expect.element(title()).toHaveValue("첫 번째 글 저장한 말 그 뒤에 친 말");
+		await save();
+		await saveCell("저장됨");
+		expect(await savedTitle(story)).toBe("첫 번째 글 저장한 말 그 뒤에 친 말");
+	});
+
 	it("02 after a save that was not read again, the next save is mine: it goes through, with no conflict against my own save", async () => {
 		const story = wired("draft");
 		await story.run();

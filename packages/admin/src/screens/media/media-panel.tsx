@@ -347,6 +347,7 @@ export function MediaPanel({
 	const folder = String(draft.value("folder") ?? TOP);
 	const save = async () => {
 		setRefused(null);
+		const sent = draft.sending();
 		const done = await update.run(
 			{
 				id,
@@ -355,7 +356,7 @@ export function MediaPanel({
 			},
 			{ versions: { [`media:${id}`]: madeOn.current ?? item.version }, accepted: draft.accepted },
 		);
-		if (done.ok) return draft.saved();
+		if (done.ok) return draft.saved(sent);
 		if (done.refusal.status === 409) {
 			draft.revertAll();
 			void read.reload();

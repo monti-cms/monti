@@ -1,7 +1,7 @@
 import { ProviderError } from "@monti-cms/ai";
 import type { ProposalView } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { holdKey, pressTwice, releaseKey } from "../../../../testing/input";
 import { scene } from "../../test/scene";
@@ -218,6 +218,40 @@ describe("a run that did not finish (flow 2, 06 · 24)", () => {
 		// One read, asked for once: the third turn went on from its result.
 		expect(panel().getByText("글 목록 읽음 · 3편").elements()).toHaveLength(1);
 		expect(story.loaded().model.turns).toHaveLength(3);
+	});
+
+	it("10-4 'go on' pressed for a run another page already went on with: nothing is refused aloud; the run shows at work, with its stop, and its answer comes (T225)", async () => {
+		let open = () => {};
+		const held = new Promise<void>((resolve) => {
+			open = resolve;
+		});
+		const story = on({
+			script: () => [READ, { text: "요약이 비어 있는 글은", breaksOff: true }, { hold: held, text: "2편입니다." }],
+		});
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("요약이 비어 있는 글 찾아 줘");
+		await expect.element(panel().getByText("연결이 끊겼습니다")).toBeVisible();
+		// Another page (a tab that was left open) goes on with the run, and its turn is under way.
+		const run = await loaded.site.db.selectFrom("runs").select("id").executeTakeFirstOrThrow();
+		const elsewhere = (async () => {
+			const answer = await loaded.site.streams("assistant.run", { resume: run.id });
+			if ("events" in answer) for await (const _event of answer.events);
+		})();
+		await expect.poll(() => loaded.model.turns.length).toBe(3);
+		toast.dismiss();
+		await userEvent.click(button("이어서 하기"));
+		// The server refused it (the run is at work). The page says so by showing the run at work: no toast, and the way to stop it.
+		await expect.element(button("멈추기")).toBeVisible();
+		await expect.element(panel().getByText("연결이 끊겼습니다")).not.toBeInTheDocument();
+		expect(document.querySelector("[data-sonner-toast]")).toBeNull();
+		expect(loaded.model.turns).toHaveLength(3);
+		open();
+		await elsewhere;
+		await expect.element(panel().getByText("2편입니다."), { timeout: 15_000 }).toBeVisible();
+		await expect.element(button("보내기")).toBeVisible();
+		expect(document.querySelector("[data-sonner-toast]")).toBeNull();
 	});
 
 	it("10-4 a request that reached its time limit is gone on with by the browser: the answer comes to its end and nobody presses anything", async () => {
@@ -502,6 +536,40 @@ describe("a proposal in the conversation (flow 2, 11 · 16)", () => {
 	});
 });
 
+describe("a proposal another tab got to first (T166)", () => {
+	it("10-1 '버리기' on a card whose changes were discarded elsewhere a moment ago: one line says nothing waits, and the card says it was discarded", async () => {
+		const story = on({ script: stories.proposed });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("둘 다 요약 채워 줘");
+		await expect.element(button("2건 적용")).toBeVisible();
+		const [proposal] = await proposalsOf(loaded);
+		await loaded.site.monti.run("proposals.discard", { proposal: proposal?.id }, stories.admin);
+		await userEvent.click(button("버리기"));
+		await expect.element(page.getByText("기다리는 제안이 없습니다")).toBeVisible();
+		await expect.element(panel().getByText("버림")).toBeVisible();
+	});
+
+	it("10-1 '되돌리기' on a card whose changes were undone elsewhere a moment ago: one line says there is nothing to undo, and the card says undone", async () => {
+		const story = on({ script: stories.proposed });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("둘 다 요약 채워 줘");
+		await userEvent.click(button("2건 적용"));
+		await expect.element(panel().getByText("✓ 2건 적용")).toBeVisible();
+		const [proposal] = await proposalsOf(loaded);
+		await loaded.site.monti.run("proposals.revert", { id: proposal?.id }, stories.admin);
+		// The card still offers it: it has not read the proposal since.
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		await userEvent.click(button("되돌리기"));
+		await expect.element(page.getByText("되돌릴 것이 없습니다")).toBeVisible();
+		await expect.element(panel().getByText(/^되돌림/)).toBeVisible();
+		expect(await summaryOf(loaded, loaded.ids.second)).toBeNull();
+	});
+});
+
 describe("the review page (flow 2, 12–15)", () => {
 	async function toReview(story: ReturnType<typeof on>) {
 		await story.run();
@@ -618,6 +686,28 @@ describe("the review page (flow 2, 12–15)", () => {
 		await userEvent.click(page.getByRole("button", { name: "닫기" }));
 		await userEvent.click(button("‹ 어시스턴트"));
 		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
+		await expect.element(panel().getByRole("button", { name: "3건 적용" })).toBeVisible();
+	});
+});
+
+describe("the review page opened by its address (T226)", () => {
+	it("10-1 '‹ 어시스턴트' on a review that was not reached from inside the admin goes to the admin's first screen, not back out of it", async () => {
+		const story = on({ script: stories.proposedKinds });
+		await story.run();
+		const loaded = story.loaded();
+		await openPanel();
+		await say("요약 채우고 제목도 다듬어 줘");
+		await expect.element(button("3건 적용")).toBeVisible();
+		const [proposal] = await proposalsOf(loaded);
+		// As a pasted address or a link from elsewhere arrives: an entry of the browser's history the admin did not make.
+		window.history.pushState(null, "", `#/ai/review/${proposal?.id}`);
+		window.dispatchEvent(new PopStateEvent("popstate"));
+		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
+		const back = vi.spyOn(window.history, "back");
+		await userEvent.click(button("‹ 어시스턴트"));
+		await expect.element(page.getByRole("heading", { name: "post" })).toBeVisible();
+		expect(back).not.toHaveBeenCalled();
+		back.mockRestore();
 		await expect.element(panel().getByRole("button", { name: "3건 적용" })).toBeVisible();
 	});
 });
@@ -1267,10 +1357,6 @@ describe("what the second review of #480 found", () => {
 		window.location.hash = `#/c/post/${loaded.ids.second}`;
 		const name = page.getByRole("button", { name: "둘째 글 다듬어 줘", exact: true });
 		await expect.element(name).toBeVisible();
-		// A toast left from the story before stands over the bubble (its row takes presses across the page's width, and stays while the
-		// pointer is on it: T227): it is put away first.
-		toast.dismiss();
-		await new Promise((resolve) => setTimeout(resolve, 500));
 		await userEvent.click(name);
 		await expect.element(panel().getByText("첫 문단을 다듬었습니다.")).toBeVisible();
 	});

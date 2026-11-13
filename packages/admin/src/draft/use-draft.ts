@@ -1,5 +1,7 @@
 import { sameJson } from "@monti-cms/core";
+import { toast } from "@monti-cms/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAdmin } from "../operations/admin-context";
 import { useOperation } from "../operations/use-operation";
 import { type ProposalItem, type Target, useProposals } from "./use-proposals";
 
@@ -14,6 +16,9 @@ export type CellState =
 	| { kind: "proposed"; item: ProposalItem; value: unknown };
 
 export type Change = { path: Path; before: unknown; after: unknown };
+
+/** What a save sent: my changes and the items taken, as they were then (`sending`). */
+export type Sent = { mine: ReadonlyMap<Path, unknown>; accepted: readonly string[] };
 
 type Stored = {
 	version: number | string;
@@ -114,7 +119,8 @@ export function useDraft({
 	leftSignedOut?: boolean;
 }) {
 	const proposals = useProposals(target, also);
-	const discardOp = useOperation("proposals.discard");
+	const { t } = useAdmin();
+	const discardOp = useOperation<{ output: { discarded: string[] } }>("proposals.discard");
 	const [mine, setMineState] = useState<Map<Path, unknown>>(new Map());
 	// My changes as they are this instant. A handler may change several places in a row (the undo of one line of the changes list puts back a
 	// field's rename and its label): each step starts from what the step before left, not from the map this render captured.
@@ -125,6 +131,8 @@ export function useDraft({
 	}, []);
 	const [quick, setQuick] = useState<Set<Path>>(new Set());
 	const [accepted, setAccepted] = useState<string[]>([]);
+	const acceptedNow = useRef(accepted);
+	acceptedNow.current = accepted;
 	const [restoredFor, setRestoredFor] = useState<number | string | null>(null);
 	const [offered, setOffered] = useState<Stored | null>(null);
 	// `ask` looks at the browser's copy once, when the screen first has the server's values: later versions are the person's own saves.
@@ -270,9 +278,13 @@ export function useDraft({
 	const discard = useCallback(
 		async (ids: string[]) => {
 			if (ids.length === 0) return;
-			if ((await discardOp.run({ ids })).ok) await proposals.reload();
+			const done = await discardOp.run({ ids });
+			if (!done.ok) return;
+			// None of them waited any more (discarded or applied elsewhere a moment ago): one line says so, and the marks go with the read.
+			if (done.body.output.discarded.length === 0) toast.error(t("card.nothingWaiting"));
+			await proposals.reload();
 		},
-		[discardOp, proposals],
+		[discardOp, proposals, t],
 	);
 
 	const changes: Change[] = useMemo(
@@ -326,11 +338,27 @@ export function useDraft({
 			} catch {}
 			setOffered(null);
 		},
-		/** After the save went through: the server's values are the new base, so my changes are gone. */
-		saved: () => {
-			setMine(new Map());
-			setQuick(new Set());
-			setAccepted([]);
+		/**
+		 * My changes as they are when a save is sent: given back to `saved`, so the save lets go of what it sent and of nothing a person did
+		 * while it was under way.
+		 */
+		sending: (): Sent => ({ mine: new Map(mineNow.current), accepted: [...acceptedNow.current] }),
+		/**
+		 * After the save went through: the server's values are the new base, so my changes are gone. With what the save sent (`sending`),
+		 * only that goes: a place changed again while the save was under way holds a value the server does not have, and stays mine (T230:
+		 * letters typed into the title during a slow save were wiped when it ended). An item taken meanwhile stays taken.
+		 */
+		saved: (sent?: Sent) => {
+			const left = sent
+				? new Map(
+						[...mineNow.current].filter(
+							([path, value]) => !(sent.mine.has(path) && sameJson(sent.mine.get(path), value)),
+						),
+					)
+				: new Map<Path, unknown>();
+			setMine(left);
+			setQuick((current) => new Set([...current].filter((path) => left.has(path))));
+			setAccepted((ids) => (sent ? ids.filter((id) => !sent.accepted.includes(id)) : []));
 			void proposals.reload();
 		},
 		/**
