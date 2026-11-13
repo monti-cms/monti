@@ -21,12 +21,15 @@ export type Label = string | Message | Words;
  * - `switch`: a block's menu, a check row.
  * - `text`: an input inside the block itself (a mark's: a card like the link's).
  * - `source`: the block's tool row "edit" opens the source card, a field of code in `language`.
+ * - `own`: the block's own editor changes it (the columns' widths by dragging their border, the file a code explorer shows first by its menu): named
+ *   here so the compare and the review can say it.
  */
 export type Field =
 	| { label: Label; input: "choice"; options: Record<string, Label> }
 	| { label: Label; input: "switch" }
 	| { label: Label; input: "text"; placeholder?: Label }
-	| { label: Label; input: "source"; language: string };
+	| { label: Label; input: "source"; language: string }
+	| { label: Label; input: "own" };
 
 /**
  * A kind of block, defined once: the editor, the "/" menu, the site, the assistant's catalog and the publish check all come from it (doc 03,

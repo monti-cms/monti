@@ -9,6 +9,7 @@ export const tabs = defineBlock({
 		"Tabs: the same thing for a few cases (npm, pnpm, yarn; macOS, Windows), one shown at a time. Its children are tab blocks, two to eight; `defaultValue` is the label of the tab shown first (the first when left out).",
 	menu: "insert",
 	attrs: z.object({ defaultValue: z.string().optional() }),
+	fields: { defaultValue: { label: { ko: "처음 보일 탭", en: "Tab shown first" }, input: "own" } },
 	holds: "blocks",
 	children: ["tab"],
 	check: (block) =>
