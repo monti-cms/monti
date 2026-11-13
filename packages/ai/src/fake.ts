@@ -72,7 +72,16 @@ export function scriptedProvider(
 				yield { type: "text", delta };
 			}
 			if (turn.alive) yield turn.alive === "thinking" ? { type: "alive", thinking: true } : { type: "alive" };
-			if (turn.hold) await turn.hold;
+			// Held as a real call is: ended by its signal, it fails, with what the service had counted when it began.
+			if (turn.hold)
+				await Promise.race([
+					turn.hold,
+					new Promise((_resolve, reject) => {
+						const fail = () => reject(new ProviderError("unreachable", "aborted", undefined, turn.begun));
+						if (request.signal.aborted) fail();
+						else request.signal.addEventListener("abort", fail, { once: true });
+					}),
+				]);
 			// The answer breaks off after what it said so far, as a stream that closes without its ending.
 			if (turn.breaksOff) throw new ProviderError("interrupted", "The answer ended before it was whole.");
 			for (const call of turn.calls ?? []) {

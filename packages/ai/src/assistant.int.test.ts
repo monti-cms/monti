@@ -713,6 +713,21 @@ describe("the model, per conversation (flow 2, 22–24)", () => {
 		const listed = (await monti.run("keys.list", {}, admin)) as { keys: { id: string; usage: { tokens: number } }[] };
 		expect(listed.keys.find((key) => key.id === keyId)?.usage.tokens).toBe(43_001);
 	});
+
+	it("10-1 a turn given up for the service's silence also counts what the service said it took in (T161)", async () => {
+		const monti = site({ limits: { idleMs: 80 } });
+		const keyId = await withKey(monti);
+		model.add({
+			text: "생각하다가 ",
+			hold: new Promise(() => {}),
+			begun: { input: 40_000, output: 1, cached: 39_000 },
+		});
+		const asked = await ask(monti, { request: "길게 생각해 줘" });
+		expect(asked.end).toMatchObject({ status: "interrupted", reason: "connection" });
+		expect(asked.of("usage").at(-1)).toMatchObject({ input: 40_000, output: 1, cached: 39_000 });
+		const listed = (await monti.run("keys.list", {}, admin)) as { keys: { id: string; usage: { tokens: number } }[] };
+		expect(listed.keys.find((key) => key.id === keyId)?.usage.tokens).toBe(40_001);
+	});
 });
 
 describe("what a tool answers (doc 10, 실행)", () => {
