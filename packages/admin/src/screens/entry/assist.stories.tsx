@@ -202,3 +202,119 @@ export const CaptionFill: Story = {
 		await page.findByRole("button", { name: "채우기" }, wait);
 	},
 };
+
+/** A request on picked words that the assistant answered in words alone: the answer stays in the card, with "discard" and a box to go on. */
+export const RequestAnswered: Story = {
+	loaders: [assisted([{ text: "이 문장은 이미 짧아서 그대로 두는 편이 좋습니다." }]), ...site("draft")],
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		pick(body, "나머지는 필요할 때 꺼내 본다.");
+		await userEvent.click(await all.findByRole("button", { name: "요청" }, wait));
+		await userEvent.type(
+			await all.findByRole("textbox", { name: "어시스턴트에게 요청" }, wait),
+			"더 줄일 수 있어?{Enter}",
+		);
+		await all.findByText("이 문장은 이미 짧아서 그대로 두는 편이 좋습니다.", {}, wait);
+	},
+};
+
+/** A dimmed block's menu on a site with the assistant: "✦ 번역" for that block, over "원문 따르기". */
+export const BlockMenuTranslate: Story = {
+	loaders: [assisted(), ...translation.site("new", "english")],
+	play: async ({ canvasElement }) => {
+		await opened(canvasElement);
+		const heading = await waitFor(() => {
+			const found = canvasElement.querySelector<HTMLElement>("h2[data-source-placeholder*='무엇을 덜어냈나']");
+			if (!found) throw new Error("no undecided heading yet");
+			return found;
+		}, wait);
+		const line = heading.getBoundingClientRect();
+		fireEvent.mouseMove(heading, { clientX: line.left + 8, clientY: line.top + 8 });
+		const all = within(canvasElement.ownerDocument.body);
+		await userEvent.click(await all.findByRole("button", { name: "블록 메뉴" }, wait));
+		await all.findByRole("menuitem", { name: "번역" }, wait);
+	},
+};
+
+/** Flow 3·11: the card of a block whose source changed, with "✦ 다시 번역" beside "번역 유지". */
+export const RetranslateCard: Story = {
+	loaders: [assisted(), ...translation.site("changed", "english")],
+	play: async ({ canvasElement }) => {
+		const { all } = await opened(canvasElement);
+		const [changed] = await all.findAllByRole("button", { name: "변경" }, wait);
+		if (changed) await userEvent.click(changed);
+		await all.findByRole("button", { name: "다시 번역" }, wait);
+	},
+};
+
+/** A caption the model could not write (it does not read pictures): the line under the caption says so. */
+export const CaptionFillFailed: Story = {
+	loaders: [assisted([], () => ({ value: "" }), { pictures: false }), ...(media.WithImage.loaders as [])],
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement.ownerDocument.body);
+		const caption = await page.findByRole("textbox", { name: "캡션" }, wait);
+		await userEvent.click(caption);
+		await userEvent.click(await page.findByRole("button", { name: "채우기" }, wait));
+		await page.findByText("이 모델은 그림을 읽지 못합니다", {}, wait);
+	},
+};
+
+/**
+ * The review page on the blog with a kind of post (doc 19; T187, T195): a change of a field of an option the entry has not chosen, left
+ * out with why at its row's end, and a change of the choice with the values it drops struck out under it.
+ */
+export const ReviewConditional: Story = {
+	loaders: site("conditional"),
+	play: async ({ canvasElement, loaded }) => {
+		await opened(canvasElement);
+		const { site: made, id } = loaded as Loaded;
+		const run = <Output,>(name: string, input: unknown) => made.monti.run(name, input, admin) as Promise<Output>;
+		const link = (
+			await run<{ output: { id: string } }>("entries.create", {
+				collection: "post",
+				locale: "ko",
+				title: "읽을거리 모음",
+				slug: "reading-list",
+				values: { format: "link", linkUrl: "https://example.dev/old" },
+			})
+		).output.id;
+		await run("entries.save", { id, version: 1, title: "발표 영상" });
+		const at = new Date();
+		await made.db
+			.insertInto("conversations")
+			.values({ id: "c-links", title: "링크", created_at: at, last_opened_at: at })
+			.execute();
+		const proposal = await made.monti.proposals.create("c-links", "링크 주소가 빈 글에 주소를 채워 줘.");
+		const add = made.monti.proposals.add;
+		await add(
+			proposal,
+			"entries.save",
+			{ id: link, version: 1, values: { linkUrl: "https://example.dev/reading" } },
+			"링크 주소 채우기",
+		);
+		await add(
+			proposal,
+			"entries.save",
+			{ id, version: 2, values: { linkUrl: "https://example.dev/talk" } },
+			"링크 주소 채우기",
+		);
+		const third = (
+			await run<{ output: { id: string } }>("entries.create", {
+				collection: "post",
+				locale: "ko",
+				title: "지난 발표",
+				slug: "old-talk",
+				values: { format: "video", videoUrl: "https://example.dev/old.mp4", videoCredit: "example.dev" },
+			})
+		).output.id;
+		await add(
+			proposal,
+			"entries.save",
+			{ id: third, version: 1, values: { format: "link", linkUrl: "https://example.dev/old-talk" } },
+			"링크 글로 바꾸기",
+		);
+		window.location.hash = `#/ai/review/${proposal}`;
+		const all = within(canvasElement.ownerDocument.body);
+		await all.findByText("글 종류가 링크가 아님", {}, wait);
+	},
+};

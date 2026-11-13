@@ -668,6 +668,7 @@ export function EntryEditor({
 			.filter(({ item }) => item.thread.length > 0 && !waiting.some((request) => request.item === item.id))
 			.map(({ item }) => ({ id: item.id, working: false })),
 	];
+	const atWork = askedPlaces.filter((each) => each.working).length;
 	const nextRequest = () => {
 		const at = askedPlaces.findIndex((each) => each.id === staleOpen);
 		const next = askedPlaces[(at + 1) % askedPlaces.length];
@@ -1333,13 +1334,14 @@ export function EntryEditor({
 					{askedPlaces.length > 0 && !readOnly ? (
 						<StatusBarCell
 							onClick={nextRequest}
-							aria-label={t("entry.requests.name", {
+							// What is being worked on is said only while something is: the usual state has no label (README, principle 6).
+							aria-label={t(atWork > 0 ? "entry.requests.name" : "entry.requests.nameIdle", {
 								count: askedPlaces.length,
-								working: askedPlaces.filter((each) => each.working).length,
+								working: atWork,
 							})}
 						>
 							{t("entry.requests", { count: askedPlaces.length })}
-							<Text>{t("entry.requests.working", { count: askedPlaces.filter((each) => each.working).length })}</Text>
+							{atWork > 0 ? <Text>{t("entry.requests.working", { count: atWork })}</Text> : null}
 						</StatusBarCell>
 					) : null}
 					{/* A plugin fills its cell and brings no UI of its own (status-bar.md): what it found, each with one thing to do, and all at once. */}

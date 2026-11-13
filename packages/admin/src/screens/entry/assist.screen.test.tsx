@@ -384,8 +384,8 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		expect(items[0]?.input.ops[0]?.text).toBe("고친");
 		await expect.element(page.getByText("'만든'을 '고친'으로 바꿨습니다.")).toBeVisible();
 		await expect.element(page.getByText("'고친'으로 해 줘")).toBeVisible();
-		// Asked once at this place: the status bar still counts it, and nothing is at work.
-		await expect.poll(cells).toContain("요청 1· 고치는 중 0");
+		// Asked once at this place: the status bar still counts it, and says nothing of work while there is none.
+		await expect.poll(cells).toContain("요청 1");
 	});
 	it("10-1 the box's button stops the work on a request: the run is told to stop, the change stays as it was, and its card can take or discard it again", async () => {
 		let release = () => {};

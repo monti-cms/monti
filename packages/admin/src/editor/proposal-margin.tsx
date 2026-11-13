@@ -1,4 +1,4 @@
-import { EditorMargin, MemoCardPopover, MemoDiff, MemoMessage, MemoThread } from "@monti-cms/ui";
+import { EditorMargin, MemoCardPopover, MemoDiff, MemoThread, Text } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { CardMark, type CardReply, MemoThreadOf, ProposalMemo, replyOf } from "../assistant/proposal-memo";
@@ -292,10 +292,11 @@ export function requestMarks({
 					>
 						<MemoThreadOf t={t} thread={request.thread} working={working} />
 						{request.failed ? (
+							// Why the request did not go through: the screen's line, not the assistant's words.
 							<MemoThread>
-								<MemoMessage author={t("memo.assistant")} ai>
+								<Text variant="note" tone="danger">
 									{request.failed}
-								</MemoMessage>
+								</Text>
 							</MemoThread>
 						) : null}
 					</MemoCardPopover>

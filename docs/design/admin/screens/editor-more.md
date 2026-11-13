@@ -19,7 +19,7 @@
 | 메모 카드 (기다리는 제안) | `MemoCardPopover`(`anchor` 그 블록, `onDiscard` "버리기", `onAccept` "받기", `reply` "이어서 요청"), 안에 `MemoThread` + `MemoMessage`("나", 어시스턴트는 `ai`) | 머리에 "버리기"와 검은 알약 "받기"가 늘 있고 그 제안 하나만 다룬다. 대화는 그 요청의 말과, 이 자리에서 이어 한 요청과 답이다. 카드는 그 글자 바로 아래에 붙으므로 `where`는 비운다. 바깥, Esc, 표시를 다시 누르면 닫힌다. 열려도 포커스는 글에 남는다. 어시스턴트가 없는 사이트에는 입력 줄이 없다. |
 | 메모 카드 (보내기 전) | `MemoCardPopover`(`reply` "어시스턴트에게 요청", `reply.focus`) | 방금 고른 글자에 대한 요청이다(서식 카드의 "✦ 요청", ⌘J). 머리와 대화 없이 입력 줄 하나만 있고 커서가 그 안에 있다. 아무것도 보내지 않고 닫으면 표시와 밑줄이 사라진다. |
 | 메모 카드 (고치는 중) | `MemoCardPopover`(머리 없음), `MemoThread` + `MemoMessage ai`("고치는 중…"), `reply.stop` "멈추기" | 어시스턴트가 일하는 동안 보내기 버튼이 멈추기가 된다. |
-| 메모 카드 (말뿐인 답) | `MemoCardPopover`(`onDiscard` "버리기", `reply` "이어서 요청"), `MemoThread` | 고른 글자의 요청에 어시스턴트가 제안 없이 말로만 답했을 때다. 그 말이 카드에 남고, 버리면 표시와 밑줄이 사라진다. |
+| 메모 카드 (말뿐인 답) | `MemoCardPopover`(`onDiscard` "버리기", `reply` "이어서 요청"), `MemoThread`(가지 못한 요청은 그 아래 `Text variant="note" tone="danger"` 까닭 한 줄) | 고른 글자의 요청에 어시스턴트가 제안 없이 말로만 답했을 때다. 그 말이 카드에 남고, 버리면 표시와 밑줄이 사라진다. |
 | 버블 | `ProposalBubbleDock` 안 `ProposalBubble`(`name` "더 짧게 다듬기", `position` 1, `total` 5, `previousLabel` · `nextLabel`, `discardAllLabel` "모두 버리기", `acceptAllLabel` "모두 받기") | 상태 표시줄 12px 위 가운데에 뜬다. 이름을 누르면 그 대화로 간다. 하나씩 받기와 버리기는 메모 카드에서 한다. |
 
 #### 속성 패널의 제안
@@ -35,7 +35,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | "할 일 2" | [editor.md](editor.md)의 "할 일 N" 칸 | |
-| "요청 1 · 고치는 중 1" | `StatusBarCell` | 이 글의 자리에 남긴 요청 수(아직 제안이 되지 않은 요청, 답을 기다리는 "이어서 요청", 이 자리에서 한 요청이 있는 제안)와 고치는 중인 수. 남긴 요청이 없으면 칸이 없다. 누르면 다음 요청으로 가서 그 메모 카드를 연다. 스크린 리더 이름은 "요청 1개, 고치는 중 1개, 다음 요청 열기". |
+| "요청 1 · 고치는 중 1" | `StatusBarCell` | 이 글의 자리에 남긴 요청 수(아직 제안이 되지 않은 요청, 답을 기다리는 "이어서 요청", 이 자리에서 한 요청이 있는 제안)와 고치는 중인 수. 남긴 요청이 없으면 칸이 없다. 고치는 중인 것이 없으면 "요청 1"만 선다. 누르면 다음 요청으로 가서 그 메모 카드를 연다. 스크린 리더 이름은 "요청 1개, 고치는 중 1개, 다음 요청 열기"(고치는 중이 없으면 "요청 1개, 다음 요청 열기"). |
 | 글자 수 | `StatusBarSpacer` 뒤 `StatusBarCell end` | |
 
 스토리: Monti/Proposal/Marks, Monti/Translation/Marks, Monti/Proposal/MemoCard, Monti/Proposal/ProposalBubble, Monti/Proposal/PropertyPanel, Controls/Field/Textarea, Patterns/Frame/StatusBar.
