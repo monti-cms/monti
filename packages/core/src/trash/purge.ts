@@ -3,8 +3,8 @@ import type { Database } from "../db/schema";
 import { UNDO_DAYS } from "../engine/execute";
 import { freeName, lockFolderScope } from "../folders/operations";
 import type { Storage } from "../media/storage";
+import { lockWithFiles } from "../media/uses";
 import { placeEvents } from "../operation";
-import { lockRecords } from "../records";
 import { unlinkTargetGroup } from "../relations/sync";
 import type { Schema } from "../schema/define";
 
@@ -137,12 +137,8 @@ export async function lockFileKeys(trx: Db, keys: string[]): Promise<void> {
 /** A key the byte route just wrote: loose until `media.upload` or `media.replace` makes it a file's. */
 export const looseUntil = (now: Date) => new Date(now.getTime() + LOOSE_DAYS * DAY);
 
-/**
- * Deletes rows of the trash for good (doc 11): entries with the paths they were published under kept from other entries and the relations that pointed at them
- * cut (doc 08), files with their bytes handed to the clean-up, folders with everything in them. Whatever a folder still holds outside the trash moves to the top
- * level. It returns the entries it deleted, for the event that tells the receivers.
- */
-export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: Date): Promise<PurgedEntry[]> {
+/** What deleting these rows for good takes: the entries and files named, and those in the thrown-away folders under the folders named. */
+async function purgeScope(db: Db, rows: TrashRef[]) {
 	const ids = (kind: TrashRef["kind"]) => rows.filter((row) => row.kind === kind).map((row) => row.id);
 	const folders = new Set<string>();
 	for (const id of ids("folder")) for (const each of await trashedUnder(db, id)) folders.add(each);
@@ -165,6 +161,47 @@ export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: D
 			.execute();
 		for (const row of files) mediaIds.add(row.id);
 	}
+	return { folders, entryIds, mediaIds };
+}
+
+/**
+ * Takes everything a permanent delete will hold, in the engine's one order and in one go (doc 00), before it deletes anything: the rows, what
+ * their folders hold, the entries that point at the entries going (their relation is cut, `unlinkTargetGroup`), and the files. Taken as the
+ * delete came to them (the pointing entries after the files), a save of a pointing entry that holds it and comes for a file would wait on a
+ * delete that holds the file and comes for the entry.
+ */
+export async function lockForPurge(db: Db, rows: TrashRef[]): Promise<void> {
+	const { entryIds, mediaIds } = await purgeScope(db, rows);
+	const going = [...entryIds];
+	const groups =
+		going.length === 0
+			? []
+			: (await db.selectFrom("entries").select("translation_group").where("id", "in", going).execute()).map(
+					(row) => row.translation_group,
+				);
+	const pointing =
+		groups.length === 0
+			? []
+			: await db
+					.selectFrom("entry_links")
+					.innerJoin("entries", "entries.translation_group", "entry_links.from_group")
+					.select("entries.id")
+					.where("entry_links.to_group", "in", groups)
+					.execute();
+	const refs = new Map<string, { kind: string; id: string }>();
+	for (const row of rows) refs.set(`${row.kind}:${row.id}`, { kind: row.kind, id: row.id });
+	for (const id of [...going, ...pointing.map((row) => row.id)]) refs.set(`entry:${id}`, { kind: "entry", id });
+	for (const id of mediaIds) refs.set(`media:${id}`, { kind: "media", id });
+	await lockWithFiles(db, [...refs.values()]);
+}
+
+/**
+ * Deletes rows of the trash for good (doc 11): entries with the paths they were published under kept from other entries and the relations that pointed at them
+ * cut (doc 08), files with their bytes handed to the clean-up, folders with everything in them. Whatever a folder still holds outside the trash moves to the top
+ * level. It returns the entries it deleted, for the event that tells the receivers.
+ */
+export async function purgeRows(db: Db, schema: Schema, rows: TrashRef[], now: Date): Promise<PurgedEntry[]> {
+	const { folders, entryIds, mediaIds } = await purgeScope(db, rows);
 
 	const entries = await entriesToPurge(db, [...entryIds]);
 	if (entries.length > 0) {
@@ -321,7 +358,7 @@ export async function purgeDue(
 	const { purged, deliveryIds } = await db.transaction().execute(async (trx) => {
 		const due = new Date(now.getTime() - TRASH_DAYS * DAY);
 		// Held as a restore holds them, then read again: a row that came back at this moment stays.
-		await lockRecords(trx, await everyTrashRow(trx, due));
+		await lockForPurge(trx, await everyTrashRow(trx, due));
 		const rows = await everyTrashRow(trx, due);
 		const entries = rows.length > 0 ? await purgeRows(trx, schema, rows, now) : [];
 		// Nothing was due: no line, no event.

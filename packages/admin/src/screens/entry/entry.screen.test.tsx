@@ -491,10 +491,15 @@ describe("the entry editor: an answer that does not come", () => {
 		await userEvent.click(button("비교하기"));
 		await expect.element(page.getByText("글을 불러오지 못했습니다")).toBeVisible();
 		await expect.element(button("편집기로")).toBeVisible();
+		// The head says which entry this is before the read is in, as after it.
+		const address = () => document.querySelector("header")?.textContent?.match(/\/posts\/[\w-]+/)?.[0] ?? null;
+		const unread = address();
+		expect(unread).not.toBeNull();
 		story.wire.cut = () => undefined;
 		await userEvent.click(button("다시 시도"));
 		await expect.element(page.getByText("서버 최신본과 비교")).toBeVisible();
 		await expect.element(page.getByText("글을 불러오지 못했습니다")).not.toBeInTheDocument();
+		expect(address()).toBe(unread);
 		// And back to the editor from a comparison that never came.
 		story.wire.cut = (name) => (name === "entries.get" ? "refused" : undefined);
 		await userEvent.click(button("편집기로"));
@@ -625,6 +630,24 @@ describe("the entry editor: the focus after a read that did not come", () => {
 		await userEvent.keyboard("{Enter}");
 		await expect.element(page.getByText("서버 최신본과 비교")).toBeVisible();
 		await expect.element(button("편집기로")).toHaveFocus();
+	});
+
+	it("02 편집기로 pressed with the keyboard takes the comparison away, and the focus goes to the text; pressed with the pointer it moves none", async () => {
+		await BrowserCopy.run();
+		await opened();
+		await userEvent.click(button("비교하기"));
+		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
+		await byKeys("편집기로");
+		await userEvent.keyboard("{Enter}");
+		await opened();
+		await expect.element(body()).toHaveFocus();
+		// The kept input was not answered: its banner is still there.
+		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).toBeVisible();
+		await userEvent.click(button("비교하기"));
+		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
+		await userEvent.click(button("편집기로"));
+		await opened();
+		expect(document.activeElement).not.toBe(body().element());
 	});
 
 	it("02 an answer given in the comparison with the keyboard takes it away, and the focus goes to the text", async () => {

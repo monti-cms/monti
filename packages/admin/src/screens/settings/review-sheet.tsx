@@ -22,6 +22,7 @@ import {
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
+import { holdsKeyboardFocus } from "../frame/focus-hand-off";
 import { type AddressPlace, addressOfProblem } from "./basics-tab";
 import { PickOne } from "./pick-one";
 import { at } from "./schema-draft";
@@ -656,8 +657,8 @@ function Body({
 						variant={danger ? "danger" : "primary"}
 						loading={applying}
 						onClick={(event) => {
-							// A press made by a key carries no pointer's count.
-							byKeys.current = event.detail === 0;
+							// A press that held the keyboard's focus: the rule's one test of a press with the keyboard.
+							byKeys.current = holdsKeyboardFocus(event.currentTarget);
 							apply();
 						}}
 					>

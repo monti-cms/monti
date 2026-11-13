@@ -124,6 +124,22 @@ export function CompareView({
 		{ skip: !mine },
 	);
 
+	// The head's start, the same with or without the read: the way back, the screen's name and the entry's address. "Back to the editor"
+	// takes the comparison away like the answers do: pressed with the keyboard, its focus goes to the text (`toText`).
+	const start = (
+		<Inline ref={toText} gap={16} minWidth={0} paddingX={12}>
+			<TextButton variant="quiet" onClick={onBack}>
+				<ChevronLeft aria-hidden />
+				{t("compare.back")}
+			</TextButton>
+			<Text variant="title">{t(mode === "conflict" ? "compare.conflictTitle" : "compare.draftTitle")}</Text>
+			{address ? (
+				<Text variant="meta" tone="faint" truncate>
+					{address}
+				</Text>
+			) : null}
+		</Inline>
+	);
 	// Without its read there is nothing to compare: the way back stays, and a read that did not come says so at the top with a way to try again (an
 	// ended session has its own banner). Drawn as nothing, only the browser's Back left this screen.
 	if (!server || !mine || !latest.data)
@@ -140,15 +156,7 @@ export function CompareView({
 					</>
 				}
 			>
-				<EditorHeader>
-					<Inline gap={16} minWidth={0} paddingX={12}>
-						<TextButton variant="quiet" onClick={onBack}>
-							<ChevronLeft aria-hidden />
-							{t("compare.back")}
-						</TextButton>
-						<Text variant="title">{t(mode === "conflict" ? "compare.conflictTitle" : "compare.draftTitle")}</Text>
-					</Inline>
-				</EditorHeader>
+				<EditorHeader>{start}</EditorHeader>
 			</StandalonePage>
 		);
 	const updatedAt = new Date(latest.data.entry.updatedAt);
@@ -244,18 +252,7 @@ export function CompareView({
 			banner={<SessionEndedBanner />}
 		>
 			<EditorHeader>
-				<Inline gap={16} minWidth={0} paddingX={12}>
-					<TextButton variant="quiet" onClick={onBack}>
-						<ChevronLeft aria-hidden />
-						{t("compare.back")}
-					</TextButton>
-					<Text variant="title">{t(mode === "conflict" ? "compare.conflictTitle" : "compare.draftTitle")}</Text>
-					{address ? (
-						<Text variant="meta" tone="faint" truncate>
-							{address}
-						</Text>
-					) : null}
-				</Inline>
+				{start}
 				<Inline ref={toText} gap={16} justify="end" paddingX={12}>
 					{places.data ? (
 						<Text variant="note" tone="subtle">
