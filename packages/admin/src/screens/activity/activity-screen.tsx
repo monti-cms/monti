@@ -212,19 +212,24 @@ export function ActivityScreen({
 		if (again.sending === "all" || elsewhere) return true;
 		return again.sending !== null && failed.some((id) => again.sending?.includes(id));
 	};
-	/** What stands after a line's words, in grey: where it happened (for the assistant's line, what it did), who if not the admin, and its undo. */
-	const afterOf = (line: ActivityLine) =>
+	/**
+	 * What stands after a line's words, in grey: where it happened, in mono only when that is an entry's address ("post/first-post"); the rest
+	 * are words, in sans (tokens.md): a place ("Media · Blog Assets"), the assistant's work, who if not the admin, and its undo.
+	 */
+	const addressOf = (line: ActivityLine) =>
+		line.request === null && line.where?.key === "activity.where.address" ? say(line.where) : undefined;
+	const noteOf = (line: ActivityLine) =>
 		[
 			line.request !== null
 				? [...line.what.map(say), ...(line.more > 0 ? [t("activity.andMore", { count: line.more })] : [])].join(" · ")
-				: line.where
+				: line.where && line.where.key !== "activity.where.address"
 					? say(line.where)
 					: "",
 			line.actor === "cli" ? t("activity.actor.cli") : typeof line.actor === "object" ? line.actor.plugin : "",
 			line.undo.state === "done" ? t("activity.undone", { time: clock(new Date(line.undo.at)) }) : "",
 		]
 			.filter(Boolean)
-			.join(" · ");
+			.join(" · ") || undefined;
 	const titleOf = (line: ActivityLine) =>
 		line.request !== null ? `“${line.request}”` : line.what[0] ? say(line.what[0]) : "";
 	const openConversation = useOpenConversation();
@@ -246,15 +251,15 @@ export function ActivityScreen({
 						{t("activity.conversation")}
 					</Item>
 				)}
-				{failed.length > 0 && !isSending(line) && (
-					<Item disabled={busy} onClick={() => void again.send(failed)}>
+				{/* What cannot be done now is not in the menu (menu.md): no "send again" while another send runs, no "undo" while one runs. */}
+				{failed.length > 0 && !isSending(line) && !busy && (
+					<Item onClick={() => void again.send(failed)}>
 						<Renew aria-hidden />
 						{t("activity.retry")}
 					</Item>
 				)}
-				{/* Off while an undo runs, as in the panel's ⋯: a second press would be refused right after the first went through. */}
-				{line.undo.state === "open" && (
-					<Item disabled={undo.pending} onClick={() => void undo.ask(line.id)}>
+				{line.undo.state === "open" && !undo.pending && (
+					<Item onClick={() => void undo.ask(line.id)}>
 						<Undo aria-hidden />
 						{t("activity.undo")}
 					</Item>
@@ -436,7 +441,8 @@ export function ActivityScreen({
 													{title}
 												</HandedRowLink>
 											}
-											address={afterOf(line) || undefined}
+											address={addressOf(line)}
+											note={noteOf(line)}
 										/>
 									</TableCell>
 									{data.deliveries && (
@@ -452,10 +458,7 @@ export function ActivityScreen({
 									<TableCell align="end">
 										<HandedRowActions listStart={listStart}>
 											<DropdownMenu>
-												<RowMore
-													label={t("list.rowMenu")}
-													trigger={(button) => <DropdownMenuTrigger render={button} />}
-												/>
+												<RowMore label={t("list.more")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
 												<DropdownMenuContent align="end">{menuItems(line, false)}</DropdownMenuContent>
 											</DropdownMenu>
 										</HandedRowActions>

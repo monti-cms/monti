@@ -29,7 +29,7 @@ function SplitButton({
 	menu,
 	align = "end",
 }: {
-	/** The main action's label. */
+	/** The main action's label, with its leading icon first if it has one (`<Add aria-hidden />`). */
 	children: ReactNode;
 	onClick?: () => void;
 	/** The main button's `id`, for a skip link or a keyboard shortcut to find it. */
@@ -67,7 +67,12 @@ function SplitButton({
 				aria-busy={loading || undefined}
 				onClick={onClick}
 				{...(loading && !disabled ? BUSY_GUARD : {})}
-				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px]", loading && "gap-[7px] pl-[13px]")}
+				// A leading icon ("+" of "New post") is 16px and pulled 2px into the left padding, as on a `Button`; while it works the spinner takes its place.
+				className={cn(
+					HALF,
+					"gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px] [&>svg:first-child]:-ml-[2px] [&_svg]:size-4 [&_svg]:shrink-0",
+					loading && "gap-[7px] pl-[13px] [&>[data-slot=spinner]+svg]:hidden",
+				)}
 			>
 				{loading && <Spinner />}
 				{children}

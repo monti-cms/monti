@@ -1,4 +1,4 @@
-import { OverflowMenuHorizontal } from "../../icons";
+import { Add, OverflowMenuHorizontal } from "../../icons";
 import {
 	Button,
 	DragHandle,
@@ -51,7 +51,10 @@ export function TaxonomyScreen() {
 					<Stack gap={0} grow minHeight={0} paddingX={20}>
 						<PageHeader title="카테고리" meta="/category/:slug">
 							<SearchToggle label="검색" value="" aria-label="검색" placeholder="이름·주소 검색" />
-							<Button variant="secondary">+ 카테고리 추가</Button>
+							<Button variant="secondary">
+								<Add aria-hidden />
+								카테고리 추가
+							</Button>
 						</PageHeader>
 						<PageToolbar inset>
 							<TabLinks variant="toolbar">

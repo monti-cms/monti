@@ -288,11 +288,11 @@ describe("the plugin's tab in the settings (doc 01, the locked tab)", () => {
 				expect.stringContaining("seoCanonical"),
 			]);
 		expect(await page.getByRole("tabpanel").getByRole("button").elements()).toHaveLength(0);
-		expect(await button("+ 필드 추가").elements()).toHaveLength(0);
-		expect(await button("+ 묶음 추가").elements()).toHaveLength(0);
+		expect(await button("필드 추가").elements()).toHaveLength(0);
+		expect(await button("묶음 추가").elements()).toHaveLength(0);
 		// The collection's own tab still has its ways to add, and none of the plugin's fields.
 		await userEvent.click(tab(/기본/));
-		await expect.element(button("+ 묶음 추가")).toBeVisible();
+		await expect.element(button("묶음 추가")).toBeVisible();
 		expect(await page.getByText("seoTitle").elements()).toHaveLength(0);
 	});
 });

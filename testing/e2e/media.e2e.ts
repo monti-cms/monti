@@ -714,7 +714,7 @@ test.describe("a translation's cover", () => {
 		await expect(alt).toBeHidden();
 
 		// On the site with no cover, and the cover only saved: a translation follows what the site shows (doc 04, principle 5).
-		await admin.getByRole("button", { name: "+ 언어" }).click();
+		await admin.getByRole("button", { name: "언어", exact: true }).click();
 		await admin.getByRole("menuitem", { name: /English/ }).click();
 		await expect(admin).toHaveURL(/#\/c\/post\//);
 		await expect(admin.getByRole("button", { name: "English" })).toBeVisible();

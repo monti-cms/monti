@@ -94,6 +94,8 @@ export type ListColumn = {
 	/** A relation's target collection, and whether it holds many values. */
 	to?: string;
 	many?: boolean;
+	/** A relation that must hold a value: picking one for it offers no "none". */
+	required?: boolean;
 	/** A select field's options, with their labels. */
 	options?: { value: string; label: string }[];
 };
@@ -545,7 +547,9 @@ function schemaColumns(
 				filter: field.kind === "relation" ? "relation" : field.kind === "select" ? "select" : "empty",
 				hidden: false,
 				shown: field.kind === "relation" && !plugin,
-				...(field.kind === "relation" ? { to: field.to, many: field.many ?? false } : {}),
+				...(field.kind === "relation"
+					? { to: field.to, many: field.many ?? false, ...(field.required ? { required: true } : {}) }
+					: {}),
 				...(field.kind === "select"
 					? {
 							many: field.many ?? false,
