@@ -67,7 +67,7 @@ function link(editor: Editor) {
 	const same = effects.find(
 		(effect) => effect.name === ANCHOR && effect.start === lines.start && effect.end === lines.end,
 	);
-	const anchor = same?.attrs?.id ?? freshAnchor(effects);
+	const anchor = same?.attrs?.id ?? freshAnchor(editor.state.doc);
 	const tr = editor.state.tr;
 	if (!same)
 		tr.setNodeAttribute(
@@ -82,6 +82,26 @@ function link(editor: Editor) {
 	tr.setMeta(codeToolsKey, { linking: null });
 	editor.view.dispatch(tr);
 	editor.commands.focus();
+}
+
+/** Takes the code link off the words; a label no other words name any more goes with it (doc 17). */
+function unlink(editor: Editor, block: string, anchor: string) {
+	editor.chain().focus().extendMarkRange(markName("codeRef")).unsetMark(markName("codeRef")).run();
+	const type = editor.state.schema.marks[markName("codeRef")];
+	let named = false;
+	editor.state.doc.descendants((node) => {
+		if (
+			node.isText &&
+			node.marks.some((mark) => mark.type === type && mark.attrs.block === block && mark.attrs.anchor === anchor)
+		)
+			named = true;
+		return !named;
+	});
+	const target = anchorsByBlock(editor.state.doc).get(block);
+	if (named || !target) return;
+	const data = dataOf(target.node);
+	const lines = (data.lines ?? []).filter((effect) => !(effect.name === ANCHOR && effect.attrs?.id === anchor));
+	editor.view.dispatch(editor.state.tr.setNodeAttribute(target.pos, "data", cleanData({ ...data, lines })));
 }
 
 /**
@@ -127,7 +147,18 @@ export function CodeLinkBanner({ editor }: { editor: Editor | null }) {
  * The format card's code link button (doc 17): on words with no code link it starts one (the strip asks for the lines); on words that have one it opens
  * the link's card: where it points (pressing it goes there) and "Remove link". A link whose lines are gone says so.
  */
-export function CodeRefButton({ editor, label }: { editor: Editor; label: string }) {
+export function CodeRefButton({
+	editor,
+	label,
+	open,
+	onOpenChange,
+}: {
+	editor: Editor;
+	label: string;
+	/** The card is open: the format card stays while the focus is in it. */
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+}) {
 	const { t } = useAdmin();
 	const state = useEditorState({
 		editor,
@@ -153,7 +184,7 @@ export function CodeRefButton({ editor, label }: { editor: Editor; label: string
 			</FloatingBarButton>
 		);
 	return (
-		<Popover>
+		<Popover open={open} onOpenChange={onOpenChange}>
 			<FloatingBarButton label={label} pressed trigger={(button) => <PopoverTrigger render={button} />}>
 				<CodeReference aria-hidden />
 			</FloatingBarButton>
@@ -161,7 +192,13 @@ export function CodeRefButton({ editor, label }: { editor: Editor; label: string
 				<Command shouldFilter={false}>
 					<CommandList>
 						{linked.target ? (
-							<CommandItem value="follow" onSelect={() => followCodeRef(editor.view, linked.block, linked.anchor)}>
+							<CommandItem
+								value="follow"
+								onSelect={() => {
+									onOpenChange(false);
+									followCodeRef(editor.view, linked.block, linked.anchor);
+								}}
+							>
 								<CodeReference aria-hidden />
 								<Text truncate>{linked.target}</Text>
 								<MenuValue>
@@ -176,9 +213,10 @@ export function CodeRefButton({ editor, label }: { editor: Editor; label: string
 						)}
 						<CommandItem
 							value="unlink"
-							onSelect={() =>
-								editor.chain().focus().extendMarkRange(markName("codeRef")).unsetMark(markName("codeRef")).run()
-							}
+							onSelect={() => {
+								onOpenChange(false);
+								unlink(editor, linked.block, linked.anchor);
+							}}
 						>
 							<Unlink aria-hidden />
 							{t("editor.code.unlink")}

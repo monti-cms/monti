@@ -51,8 +51,8 @@ export type CodeToolsState = {
 	/** Folds opened or closed in the editor, by block id and the fold's first line; not stored (the site starts from `open`). */
 	folds: ReadonlyMap<string, boolean>;
 	linking: LinkDraft | null;
-	/** The code link the pointer is on: its lines are lit. */
-	pointed: { block: string; anchor: string } | null;
+	/** The code link the pointer is on, or the one just followed (`held`, for a moment): its lines are lit. */
+	pointed: { block: string; anchor: string; held?: true } | null;
 	/** The highlighter has coloured more code: draw again. */
 	version: number;
 };
@@ -369,6 +369,8 @@ export const CodeTools = Extension.create<{ settings: CodeBlockSettings | null }
 						mouseover(view, event) {
 							const pointed = refAt(event);
 							const now = codeToolsKey.getState(view.state)?.pointed ?? null;
+							// Lines just followed to stay lit for their moment while the pointer moves elsewhere.
+							if (!pointed && now?.held) return false;
 							if (JSON.stringify(now) !== JSON.stringify(pointed)) sendCode(view, { pointed });
 							return false;
 						},
@@ -400,7 +402,7 @@ export function followCodeRef(view: EditorView, block: string, anchor: string) {
 	for (const { effect: fold, open } of foldsOf(target.node, tools?.folds ?? new Map()))
 		if (!open && fold.start < effect.start && effect.start < fold.end)
 			sendCode(view, { fold: foldKey(block, fold.start), open: true });
-	sendCode(view, { pointed: { block, anchor } });
+	sendCode(view, { pointed: { block, anchor, held: true } });
 	const dom = view.nodeDOM(target.pos) as HTMLElement | null;
 	dom?.querySelector(`[data-slot=code-number][data-line="${effect.start}"]`)?.scrollIntoView({ block: "center" });
 	setTimeout(() => {

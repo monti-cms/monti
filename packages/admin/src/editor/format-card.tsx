@@ -73,6 +73,7 @@ export function FormatCard({
 	const { t } = useAdmin();
 	const [linking, setLinking] = useState(false);
 	const [more, setMore] = useState(false);
+	const [codeLink, setCodeLink] = useState(false);
 	const bar = useRef<HTMLDivElement>(null);
 	const state = useEditorState({
 		editor,
@@ -85,7 +86,7 @@ export function FormatCard({
 				!inTableCell(selection.$from) &&
 				// Lines picked by their numbers have the line menu, not the card.
 				!codeToolsKey.getState(current.state)?.picked &&
-				(current.isFocused || linking || more);
+				(current.isFocused || linking || more || codeLink);
 			if (!shown) return null;
 			const start = current.view.coordsAtPos(selection.from);
 			const end = current.view.coordsAtPos(selection.to);
@@ -168,7 +169,7 @@ export function FormatCard({
 							/>
 						) : null}
 						{group.some(({ type }) => type === "link") && codeRef ? (
-							<CodeRefButton editor={editor} label={t(codeRef.label)} />
+							<CodeRefButton editor={editor} label={t(codeRef.label)} open={codeLink} onOpenChange={setCodeLink} />
 						) : null}
 						{/* After the text formats, and only while the words have one: takes them all off at once (a link stays). */}
 						{at === 0 && state.clearable ? (

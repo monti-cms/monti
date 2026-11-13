@@ -14,7 +14,7 @@ import {
 import type { Editor } from "@tiptap/react";
 import { useAdmin } from "../../operations/admin-context";
 import { markName } from "../schema";
-import { sendCode } from "./code-state";
+import { anchorsByBlock, sendCode } from "./code-state";
 
 /** The words of a range of lines, counted from 1 ("Line 4", "Lines 4–6"). */
 export function linesLabel(t: ReturnType<typeof useAdmin>["t"], start: number, end: number) {
@@ -39,14 +39,14 @@ function covered(effects: readonly LineEffect[], name: string, start: number, en
 	return count;
 }
 
-/** A new label for a code link's lines: the next free `l1`, `l2` … of the block. */
-export function freshAnchor(effects: readonly LineEffect[]) {
-	const used = new Set(
-		effects.flatMap((effect) => (effect.name === ANCHOR && effect.attrs?.id ? [effect.attrs.id] : [])),
-	);
+/** A new label for a code link's lines: the next `c1`, `c2` … no code block of the body uses (a file's link names only its label, doc 17). */
+export function freshAnchor(doc: import("@tiptap/pm/model").Node) {
+	const used = new Set<string>();
+	for (const { effects } of anchorsByBlock(doc).values())
+		for (const effect of effects) if (effect.attrs?.id) used.add(effect.attrs.id);
 	let n = 1;
-	while (used.has(`l${n}`)) n++;
-	return `l${n}`;
+	while (used.has(`c${n}`)) n++;
+	return `c${n}`;
 }
 
 /** The words of the text that point at a label of this block. */

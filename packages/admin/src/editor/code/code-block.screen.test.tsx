@@ -179,10 +179,28 @@ describe("the code block in the editor (doc 17)", () => {
 		const last = async () => (await kept(story.loaded())).at(-1)?.content;
 		await expect
 			.poll(last)
-			.toContainEqual({ type: "text", text: "다음 문단", marks: [{ type: "codeRef", block: "b_code", anchor: "l2" }] });
+			.toContainEqual({ type: "text", text: "다음 문단", marks: [{ type: "codeRef", block: "b_code", anchor: "c1" }] });
 		await expect
 			.poll(async () => (await keptCode(story.loaded()))?.attrs?.lines)
-			.toContainEqual({ name: "anchor", start: 0, end: 1, attrs: { id: "l2" } });
+			.toContainEqual({ name: "anchor", start: 0, end: 1, attrs: { id: "c1" } });
+	});
+
+	it("a code link's card names its lines by the file name; pressing it lights them, and removing the link takes the unused label too", async () => {
+		const story = on("code");
+		await story.run();
+		await opened();
+		await pickWords(body().element(), "수를 하나 올린다");
+		await userEvent.click(button("코드 줄 링크"));
+		await userEvent.click(page.getByRole("option", { name: "src/counter.ts · 5번째 줄" }));
+		await expect.poll(tones).toContain("5:lit");
+		await pickWords(body().element(), "수를 하나 올린다");
+		await userEvent.click(button("코드 줄 링크"));
+		await userEvent.click(page.getByRole("option", { name: "링크 떼기" }));
+		await save();
+		await expect.poll(async () => JSON.stringify(await kept(story.loaded()))).not.toContain("codeRef");
+		await expect
+			.poll(async () => (await keptCode(story.loaded()))?.attrs?.lines)
+			.not.toContainEqual({ name: "anchor", start: 4, end: 5, attrs: { id: "l1" } });
 	});
 
 	it("words pointing at lines that are gone have the broken line, and the publish to-do counts them", async () => {
