@@ -1,3 +1,4 @@
+import type { Editor } from "@tiptap/core";
 import { type AnyExtension, Mark, Node } from "@tiptap/core";
 import { Bold } from "@tiptap/extension-bold";
 import { Code } from "@tiptap/extension-code";
@@ -12,7 +13,7 @@ import { Text } from "@tiptap/extension-text";
 import { Underline } from "@tiptap/extension-underline";
 import type { DOMOutputSpec } from "@tiptap/pm/model";
 import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps, ReactNodeViewRenderer } from "@tiptap/react";
-import { type ComponentType, createElement, Suspense } from "react";
+import { type ComponentType, createElement, Suspense, useLayoutEffect } from "react";
 import type { AdminBlockComponent, AdminBlockDefinition } from "../operations/admin-context";
 import { BlockPlaceProvider } from "./block-api";
 import type { Catalog, CatalogBlock } from "./catalog";
@@ -172,6 +173,18 @@ function parse(block: CatalogBlock) {
 }
 
 /**
+ * Puts the browser's caret back where the editor's selection is, once a block's own view has taken the place of the site's drawing that stood in
+ * while it loaded. The block's words move from the one to the other, and the browser loses its caret in the move: what was typed next went to the
+ * start of the line (a callout typed into right after "/" put it in).
+ */
+function CaretBack({ editor }: { editor: Editor }) {
+	useLayoutEffect(() => {
+		if (!editor.isDestroyed && editor.view.hasFocus()) editor.view.focus();
+	}, [editor]);
+	return null;
+}
+
+/**
  * The editor's schema, made from the site's blocks and marks (doc 03, principle 3): one node per block type, the core marks, and a keeper each
  * for blocks and marks the site no longer defines. A block that only another block holds (a list item) is not offered at the top.
  */
@@ -221,6 +234,8 @@ export function bodyExtensions(
 											Suspense,
 											{ fallback: definition?.Site ? drawn(definition.Site) : null },
 											drawn(Component),
+											// Mounted with the block's own view, after the site's drawing stood in for it.
+											createElement(CaretBack, { editor: props.editor }),
 										),
 									),
 								);

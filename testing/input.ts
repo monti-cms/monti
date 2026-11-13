@@ -96,6 +96,19 @@ export const keyTwice = (key: string, gap: number) => commands.keyTwice(key, gap
 /** Holds `key` down as a hand does: one press and then `repeats` repeats, `every` milliseconds apart. `releaseKey` lets it go. */
 export const holdKey = (key: string, options: { repeats: number; every: number }) => commands.holdKey(key, options);
 
+/**
+ * Runs the page `rate` times slower (`1`: full speed), as a busy CI runner does (`testing/commands.ts`). It lasts until set again: a test sets it
+ * back with `onTestFinished(() => slowCpu(1))`, which runs even when the test times out.
+ */
+export const slowCpu = (rate: number) => commands.slowCpu(rate);
+
+/**
+ * Holds the page's requests to addresses matching `pattern` (a Playwright glob) until `releaseRequests`: a module loaded on first use arrives when
+ * the test says. A test lets them go with `onTestFinished(releaseRequests)` too, so a timeout does not leave them held.
+ */
+export const holdRequests = (pattern: string) => commands.holdRequests(pattern);
+export const releaseRequests = () => commands.releaseRequests();
+
 /** Lets go of a key that `holdKey` holds. */
 export const releaseKey = (key: string) => commands.releaseKey(key);
 
