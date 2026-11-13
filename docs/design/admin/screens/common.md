@@ -8,7 +8,7 @@
 |---|---|---|
 | 왼쪽 내비게이션 | `Sidebar`와 그 가족(`SidebarProvider`, `SidebarHeader`, `SidebarContent`, `SidebarGroup`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarScreenMode`, `SidebarRailToggle`) | 자리마다의 쓰임은 [sidebar.md](sidebar.md). 현재 위치는 `SidebarMenuButton`의 활성 상태다. |
 | 페이지 단 | `PageColumn` | 목록 화면(글, 미디어, 휴지통, 활동 기록, 도구의 표)은 `width="list"`, 설정과 입력 화면은 `width="content"`. 페이지 전체가 하나로 스크롤한다. 틀의 페이지 자리(사이드바 옆, 붙은 패널이 있으면 그 옆)가 스크롤하고, 스크롤바는 그 오른쪽 끝에 위에서 아래까지 하나뿐이다. 머리(제목, 검색, 새 글)는 위로 같이 올라가고, 표의 열 이름 줄만 위에 붙어 남는다. 페이지 번호는 목록 끝에 온다. 단 안의 상자(`PageBody`, `ListScroll`)는 스크롤하지 않는다(2026-11-06 소유자: 단 가운데에 선 표의 스크롤바는 이상하다. GitHub 이슈 목록, WordPress 관리자 목록과 같은 방식). |
-| 제목 행 | `PageHeader` | `title`은 화면 이름, `meta`는 목록의 주소 규칙(`/posts/:slug`, mono), `trail`은 폴더 경로나 "‹ 어시스턴트" 같은 돌아가는 길, `children`은 오른쪽 동작(보조 알약 먼저, 검은 알약 하나 마지막). |
+| 제목 행 | `PageHeader` | `title`은 화면 이름, `meta`는 목록의 주소 규칙(`/posts/:slug`, mono), `trail`은 폴더 경로(밑줄 `TextButton`)나 검토 화면의 "어시스턴트"(`TextButton variant="quiet"`, 앞에 `ChevronLeft` 아이콘) 같은 돌아가는 길, `children`은 오른쪽 동작(보조 알약 먼저, 검은 알약 하나 마지막). |
 | 제목 아래 탭 (설정, 도구) | `PageToolbar` 안의 `TabLinks`와 `TabLink` | 탭 하나가 페이지 하나다(주소가 바뀐다). 고른 탭은 굵기만 다르다(밑줄 없음). 저장하지 않은 것이 있는 다른 탭은 이름 뒤에 `ChangeDot`. 열린 탭에는 점을 붙이지 않는다. 그 바뀐 곳은 페이지와 저장 묶음이 이미 보인다(원칙 8). |
 | 설정 한 절 | `Section` | 왼쪽에 제목, 오른쪽에 필드. 절마다 위아래 24px과 아래 가는 선, 마지막 절은 `last`로 선이 없다. `stacked`·`dense` 절은 선 없이 여백만으로 나뉜다(원칙 10). 절 이름은 사람이 하는 일이다(원칙 9). 잠긴 값은 절 제목이 아니라 그 줄에 `LockMark`를 붙인다(라벨 뒤, 또는 식별자처럼 값 뒤). 잠긴 스위치는 스위치 대신 글 "켜짐" · "꺼짐"으로 읽히고 그 줄에 자물쇠가 있다. |
 | 저장 묶음 (설정) | `ChangesGroup` | "변경 사항 N ▾" · "모두 되돌리기" · "저장하고 적용". 바뀐 것이 없으면 나타나지 않는다. 저장이 가는 동안 알약은 흐려지지 않고 돌아가는 표시와 "저장 중…"을 보인다(`saving`). 포커스는 알약에 그대로 있고, 다시 눌러도 아무 일도 없다. 막는 것(칸의 오류)이 있어도 알약은 흐리지 않고 누를 수 있다. 누르면 무엇을 고칠지 보인다: 설정 › 컬렉션처럼 검토 맨 위의 "고칠 곳"이, 시트가 없는 탭에서는 그 칸으로 포커스가 가고 칸 아래 오류 줄이 보인다(원칙 7). |
@@ -22,7 +22,7 @@
 |---|---|---|
 | 확인 질문 | `AlertDialog`(`AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel`, `AlertDialogAction`) | 몇 초 안에 끝나는 결정에만 쓴다. 되돌릴 수 없는 것과 발행된 글을 내리는 것만 묻는다. 위험하면 `AlertDialogAction`이 `Button variant="danger"`다. 휴지통으로 옮기기(초안, 메모, 미디어, 폴더)는 묻지 않고 토스트의 "되돌리기"를 준다. |
 | 작은 폼 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter`)와 `DialogFormFooter` | 입력이 한두 개인 창(고른 글 내보내기, 언어 직접 입력). 포커스는 첫 텍스트 필드로 간다. 입력이 여럿이거나 길면 시트를 쓴다. |
-| 시트 | `Sheet`(`SheetContent`, `SheetHeader`, `SheetTitle`, `SheetBody`, `SheetSection`, `SheetSplit`, `SheetFooter`) | 만드는 일(필드 추가, 저장 검토, 가져오기). 오른쪽에서 열리고 뒤를 흐린다. 발에는 "취소"(`TextButton`)와 알약 하나. 일하는 동안 `SheetHeader closable={false}`. |
+| 시트 | `Sheet`(`SheetContent`, `SheetHeader`, `SheetTitle`, `SheetBody`, `SheetSection`, `SheetSplit`, `SheetFooter`) | 만드는 일(필드 추가, 저장 검토, 가져오기). 오른쪽에서 열리고 뒤를 흐린다. 발에는 "취소"(`Button variant="ghost"`)와 알약 하나. 시트에 위험한 동작(필드 지우기)이 있으면 발의 왼쪽 끝에 `Button variant="ghost-danger"`로 홀로 선다([overlay.md](../components/overlay.md) "시트"). 일하는 동안 `SheetHeader closable={false}`. |
 | 사이드 패널 | `SidePanel`(`width` `side`·`panel`·`assistant`) | 화면 옆에서 함께 보는 것(파일, 활동 자세히, 항목, 어시스턴트). 머리 끝의 ×로 닫는다. 저장할 것이 있으면 `footer`에 알약 하나. |
 | 결과 한 줄 | `toast`(`Toaster`가 그린다), 실패는 `toast.error` | 동작 직후의 한 줄과, 있으면 `action` 하나("되돌리기", "보기"). 꼭 봐야 하는 것은 할 일이나 상태 줄에도 남긴다. |
 | 그릴 수 없는 미리보기 | `ErrorBox` | 블록 미리보기가 오류로 그려지지 않을 때. 줄바꿈을 지키고 `role="alert"`. |

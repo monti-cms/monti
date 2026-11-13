@@ -11,7 +11,7 @@
 - 사이드바에는 열린 컬렉션의 최상위 폴더만 한 줄씩 보인다. 폴더 안의 폴더는 사이드바에 펼치지 않고, 그 폴더를 열었을 때 목록 화면(경로 줄과 폴더 줄)에서 찾는다. 하위 폴더가 열려 있으면 그것이 속한 최상위 폴더가 열린 행이다.
 - 트리 행(`.mt-nav-sub a`)도 둥근 행이고, 호버하면 `bg-selected`다. 폴더 행에는 가는 나무 선(`border-strong`, 1px)이 있다. 꺾지 않는 세로선 하나가 위 행의 아이콘(하위 폴더면 위 폴더 이름의 첫 글자) 아래로 그 폴더들 옆을 지나간다. 첫 폴더 위에는 4px 여유를 두고, 선은 마지막 폴더 줄의 아래 끝에서 4px 위에서 끝난다. 첫 폴더 위의 4px과 짝이다(2026-11-05 소유자: 가운데에서 끊은 끝과 줄 끝까지 닿은 선 둘 다 어색했다). 줄 사이 4px 간격에서는 끊기지 않는다. 폴더 이름은 모든 단계에서 가장 가까운 선에서 20px 뒤에 선다(맨 위 단계 38px, 한 단계에 22px씩 더). 아래 깊이의 행을 지나는 위 깊이의 선은 끊기지 않는다. 화면은 폴더의 깊이 목록을 `folderTree`에 넣어 행마다 `tree`를 준다. 38px 들여쓰기는 행 안의 안쪽 여백이다. 그래서 배경은 위의 행과 같은 너비로 칠해지고 글자만 안으로 들어간다.
 - 숫자는 mono이고 오른쪽 끝에 있다.
-- 행은 높이 36px, 양옆 안쪽 여백 10px, `radius-md` 모양이다.
+- 행은 높이 36px, 양옆 안쪽 여백 16px, 알약(`radius-full`) 모양이다([button.md](button.md) "모양 기준").
 
 ### 코드
 
@@ -19,7 +19,7 @@
 
 부품: `SidebarProvider`, `SidebarHeader`(머리 줄. 사이트 이름은 `Text`(span)로 넣으면 남는 폭을 차지해 접기 버튼이 줄 끝에 오고, 레일로 접으면 숨는다), `SidebarContent`, `SidebarGroup`, `SidebarGroupContent`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarFoot`, `SidebarInset`(`corner`: 오른쪽 위 ✦ 자리. `banner`: 사이트 전체에 관한 알림 띠. 페이지 위에 가장자리에서 가장자리까지 걸리고, ✦를 포함한 페이지 전체가 그 아래로 내려간다. 페이지가 `PageBanner`로 주는 그 페이지의 띠도 같은 자리에, 사이트의 띠 아래에 선다. [status.md](status.md)의 "알림 띠"), `SidebarTrigger`, `SidebarRailToggle`, `SidebarScreenMode`, 그리고 `useSidebar`. 레일은 도구 바탕이고, 위 12px, 양옆 14px, 아래 16px이며, 행 사이는 2px다. 머리 줄 아래는 6px다. 위쪽 값은 펼쳐도 접어도 같아서 접기 버튼이 제자리에 있다. 접으면 양옆이 6px · 5px(오른쪽 1px 선 포함)라서 36px 행이 48px 레일을 딱 채우고 옆으로 스크롤되지 않는다.
 
-`SidebarMenuButton`의 행은 설정 화면의 `NavLink`와 같은 행(`NAV_ROW`)이다. 호버 바탕도 같은 `bg-selected`다(디자인 시스템의 색 규칙이 설정의 컬렉션 열을 이 목록에 넣는다). `SidebarMenuBadge`와 `NavLink`의 끝 식별자도 같은 모양(`NAV_ROW_END`)이다.
+`SidebarMenuButton`의 행은 설정 화면의 `NavLink`와 같은 행(`NAV_ROW`)이다. 모양과 높이가 같고, 바탕만 놓인 곳을 따른다: 사이드바(도구 바탕)는 가리키면 `bg-selected`, 현재는 `bg-current`이고, 종이 위의 `NavLink`는 한 단계씩 옅다(가리키면 `bg-muted`, 열린 것은 `bg-selected`. [button.md](button.md)). `SidebarMenuBadge`와 `NavLink`의 끝 식별자도 같은 모양(`NAV_ROW_END`)이다.
 
 ## 머리 행
 

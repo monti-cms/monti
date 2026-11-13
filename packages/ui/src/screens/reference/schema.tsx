@@ -28,7 +28,7 @@ import { SettingsTabs } from "./settings";
 type Field = React.ComponentProps<typeof FieldRow>;
 
 const START: Field[] = [
-	{ name: "title !", label: "제목", note: "속성 패널에 안 나옴", kind: "text" },
+	{ name: "title !", label: "제목", kind: "text" },
 	{ name: "slug !", label: "주소", kind: "slug" },
 ];
 const SUMMARY: Field = {
@@ -118,7 +118,7 @@ export function SchemaPage({
 						</PageToolbar>
 						<Stack gap={12} paddingTop={4}>
 							<FolderTabs value="기본">
-								<FolderTabsList add={<FolderTabsAdd aria-label="탭 추가">+</FolderTabsAdd>}>
+								<FolderTabsList add={<FolderTabsAdd aria-label="탭 추가" />}>
 									<FolderTab value="기본" count="7" draggable>
 										기본
 									</FolderTab>

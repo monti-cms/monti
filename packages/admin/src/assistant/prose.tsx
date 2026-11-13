@@ -92,7 +92,6 @@ function inline(text: string, onOpen: (address: string) => void): ReactNode[] {
 						target="_blank"
 						// `noreferrer`: the page it opens is not told where the person came from.
 						rel="noopener noreferrer"
-						title={address}
 					>
 						{label}
 					</TextButton>,

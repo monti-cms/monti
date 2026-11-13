@@ -418,7 +418,7 @@ export function FieldsTab({
 						? { tone: "success" as const, note: t("settings.fields.new") }
 						: name !== key
 							? { tone: "warning" as const, note: `← ${key}` }
-							: { tone: "default" as const, note: key === "title" ? t("settings.fields.notInPanel") : undefined };
+							: { tone: "default" as const, note: undefined };
 		return {
 			fieldName: name,
 			name: def.required ? `${name} !` : name,
@@ -639,13 +639,7 @@ export function FieldsTab({
 						items={shown.flatMap((_, index) => (index === renaming ? [] : [tabId(index)]))}
 					>
 						<FolderTabsList
-							add={
-								locked ? undefined : (
-									<FolderTabsAdd aria-label={t("settings.fields.addTab")} onClick={addTab}>
-										+
-									</FolderTabsAdd>
-								)
-							}
+							add={locked ? undefined : <FolderTabsAdd aria-label={t("settings.fields.addTab")} onClick={addTab} />}
 						>
 							{shown.map((each, index) =>
 								renaming === index ? (

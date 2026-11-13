@@ -3,9 +3,17 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import * as login from "./login.stories";
 
-const { Closed, FirstAdminErrors, Locked, Wrong } = composeStories(login);
+const { Closed, FirstAdminErrors, Locked, NoLogin, Wrong } = composeStories(login);
 
 describe("the login screen", () => {
+	it("with no sign-in set up, the file and its key are in code's letters, as they are typed", async () => {
+		await NoLogin.run();
+		for (const name of ["monti.config.ts", "auth"]) {
+			const word = page.getByText(name, { exact: true }).element();
+			expect(getComputedStyle(word).fontFamily).toMatch(/mono/i);
+		}
+	});
+
 	it("[flow 8·04] after 'there is an admin already', the way to sign in keeps knowing it: the first-admin form never shows again", async () => {
 		await Closed.run();
 		await userEvent.click(page.getByRole("button", { name: "로그인하기" }));
