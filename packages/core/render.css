@@ -1,0 +1,250 @@
+/*
+ * @monti-cms/core/render.css: the default look of what `renderDocument` draws for code blocks (doc 17). Plain CSS: import it, or copy and change it.
+ * Code colours come from the site's two Shiki themes as `--shiki-light` and `--shiki-dark` on each piece; the dark one is used under `.dark`,
+ * `[data-theme="dark"]` or, with neither, a dark system setting. `CodeTools` of `@monti-cms/next` does the pressing (copy, code links).
+ */
+
+figure[data-code] {
+	--monti-code-border: color-mix(in srgb, currentColor 15%, transparent);
+	--monti-code-tint: color-mix(in srgb, currentColor 8%, transparent);
+	position: relative;
+	margin: 1.5rem 0;
+	border: 1px solid var(--monti-code-border);
+	border-radius: 0.375rem;
+	overflow: hidden;
+}
+figure[data-code] > figcaption {
+	padding: 0.375rem 0.75rem;
+	border-bottom: 1px solid var(--monti-code-border);
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	opacity: 0.8;
+}
+figure[data-code] > pre {
+	margin: 0;
+	padding: 1rem 0;
+	overflow-x: auto;
+	white-space: pre;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.875rem;
+	line-height: 1.6;
+}
+figure[data-code] code {
+	display: block;
+	min-width: fit-content;
+}
+figure[data-code] code span[style] {
+	color: var(--shiki-light);
+}
+:where(.dark, [data-theme="dark"]) figure[data-code] code span[style] {
+	color: var(--shiki-dark);
+}
+@media (prefers-color-scheme: dark) {
+	:root:not(.light):not([data-theme="light"]) figure[data-code] code span[style] {
+		color: var(--shiki-dark);
+	}
+}
+
+/* Lines: each `span.line` is a row; the core's effects by `data-effect`, a site's own by its class. */
+figure[data-code] .line {
+	display: inline-block;
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0 1.25rem;
+	position: relative;
+}
+figure[data-code] pre[data-line-numbers] .line::before {
+	content: attr(data-line);
+	display: inline-block;
+	width: 2ch;
+	margin-right: 1rem;
+	text-align: right;
+	opacity: 0.45;
+	user-select: none;
+}
+figure[data-code] .line[data-effect~="highlight"] {
+	background: var(--monti-code-tint);
+}
+figure[data-code] .line[data-effect~="plus"] {
+	background: color-mix(in srgb, #2da44e 14%, transparent);
+}
+figure[data-code] .line[data-effect~="minus"] {
+	background: color-mix(in srgb, #cf222e 12%, transparent);
+}
+figure[data-code] .line[data-effect~="plus"]::after,
+figure[data-code] .line[data-effect~="minus"]::after {
+	position: absolute;
+	left: 0.4rem;
+	opacity: 0.6;
+	user-select: none;
+}
+figure[data-code] .line[data-effect~="plus"]::after {
+	content: "+";
+}
+figure[data-code] .line[data-effect~="minus"]::after {
+	content: "−";
+}
+figure[data-code] .line[data-effect~="warning"] > *,
+figure[data-code] .line[data-effect~="error"] > * {
+	text-decoration: underline wavy;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+figure[data-code] .line[data-effect~="warning"] > * {
+	text-decoration-color: #bf8700;
+}
+figure[data-code] .line[data-effect~="error"] > * {
+	text-decoration-color: #cf222e;
+}
+
+/* Focus: the other lines are dim until the reader points at or into the code. */
+figure[data-code]:has(.line[data-effect~="focus"]) .line:not([data-effect~="focus"]) {
+	opacity: 0.4;
+	transition: opacity 150ms ease;
+}
+figure[data-code]:has(.line[data-effect~="focus"]):is(:hover, :focus-within) .line {
+	opacity: 1;
+}
+
+/* A code link the reader points at: its lines stay sharp, the others dim (`CodeTools` sets `data-lit`). */
+figure[data-code][data-lit] .line {
+	opacity: 0.35;
+	transition:
+		opacity 150ms ease,
+		background-color 150ms ease;
+}
+figure[data-code][data-lit] .line[data-lit] {
+	opacity: 1;
+	background: color-mix(in srgb, #f2cc60 35%, transparent);
+}
+a[data-code-ref] {
+	color: inherit;
+	text-decoration: underline dotted;
+	text-underline-offset: 0.25em;
+}
+a[data-code-ref][data-lit] {
+	background: color-mix(in srgb, #f2cc60 35%, transparent);
+}
+[data-code-back] {
+	position: absolute;
+	right: 0.75rem;
+	font: inherit;
+	font-size: 0.75rem;
+	border: 0;
+	background: none;
+	opacity: 0.7;
+	cursor: pointer;
+}
+[data-code-preview] {
+	position: absolute;
+	z-index: 10;
+	max-width: 32rem;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--monti-code-border, #ddd);
+	border-radius: 0.375rem;
+	background: Canvas;
+	color: CanvasText;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.8125rem;
+	white-space: pre;
+	box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+/* The copy button: shown while the pointer or the keyboard is on the code. */
+figure[data-code] > [data-code-copy] {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	padding: 0.25rem 0.5rem;
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 0.25rem;
+	background: Canvas;
+	color: inherit;
+	font: inherit;
+	font-size: 0.75rem;
+	cursor: pointer;
+	opacity: 0;
+}
+figure[data-code] > figcaption ~ [data-code-copy] {
+	top: 2.5rem;
+}
+figure[data-code]:hover > [data-code-copy],
+figure[data-code] > [data-code-copy]:focus-visible {
+	opacity: 1;
+}
+
+/* Folded lines: a `details` whose summary is its first line. */
+figure[data-code] details[data-code-collapse] > summary {
+	list-style: none;
+	cursor: pointer;
+}
+figure[data-code] details[data-code-collapse] > summary::-webkit-details-marker {
+	display: none;
+}
+figure[data-code] details[data-code-collapse]:not([open]) > summary .line::after {
+	content: " …";
+	opacity: 0.6;
+}
+
+/* Folded words: `…` until pressed. */
+[data-code-fold] > button {
+	padding: 0 0.25rem;
+	border: 0;
+	border-radius: 0.2rem;
+	background: var(--monti-code-tint);
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+[data-code-fold]:not([data-open]) > [data-code-folded],
+[data-code-fold][data-open] > button {
+	display: none;
+}
+
+/* Tooltips in code: shown on pointing or focus; where there is no pointer, as a numbered list under the code. */
+[data-code-tip] {
+	position: relative;
+	text-decoration: underline dashed;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+	cursor: help;
+}
+[data-code-tip]:is(:hover, :focus-visible)::after {
+	content: attr(data-code-tip);
+	position: absolute;
+	left: 0;
+	top: 100%;
+	z-index: 10;
+	width: max-content;
+	max-width: 24rem;
+	padding: 0.375rem 0.5rem;
+	border-radius: 0.25rem;
+	background: #1c1b18;
+	color: #faf9f5;
+	font-size: 0.75rem;
+	white-space: normal;
+}
+figure[data-code] > [data-code-notes] {
+	display: none;
+	margin: 0;
+	padding: 0.75rem 1rem 0.75rem 2.25rem;
+	border-top: 1px solid var(--monti-code-border);
+	font-size: 0.875rem;
+}
+@media (hover: none), (pointer: coarse) {
+	figure[data-code] > [data-code-notes] {
+		display: block;
+	}
+	[data-code-tip]::before {
+		content: attr(data-note);
+		font-size: 0.65em;
+		vertical-align: super;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	figure[data-code] .line {
+		transition: none;
+	}
+}
