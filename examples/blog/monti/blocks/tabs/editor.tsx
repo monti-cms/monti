@@ -96,7 +96,6 @@ export default function TabsEditor() {
 									// biome-ignore lint/suspicious/noArrayIndexKey: two tabs may share a name; a tab is its place
 									<FolderTabEdit key={index}>
 										<BlockTitle
-											className="monti-block-title-input"
 											label={say(words.name)}
 											value={label}
 											placeholder={say(words.unnamed)}

@@ -217,4 +217,22 @@ describe("monti add (doc 18)", () => {
 		expect(names.map((name) => read(root, name))).toEqual(before.site);
 		expect(files(root)).toEqual(before.files);
 	});
+
+	it("18-2 the example app's blocks are the package's folders as monti add copies them", () => {
+		const example = path.resolve(__dirname, "../../../../../examples/blog/monti/blocks");
+		const tree = (dir: string): string[] =>
+			readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+				entry.isDirectory()
+					? tree(path.join(dir, entry.name)).map((name) => `${entry.name}/${name}`)
+					: /\.test\./.test(entry.name)
+						? []
+						: [entry.name],
+			);
+		for (const name of readdirSync(example, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
+			const own = path.join(example, name.name);
+			const theirs = path.join(FROM, "blocks", name.name);
+			expect(tree(own)).toEqual(tree(theirs));
+			for (const file of tree(own)) expect(read(own, file), file).toBe(read(theirs, file));
+		}
+	});
 });

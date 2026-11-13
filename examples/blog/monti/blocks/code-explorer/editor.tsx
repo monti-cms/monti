@@ -129,7 +129,6 @@ export default function CodeExplorerEditor() {
 					{paths[shown] !== undefined && (
 						<div className="monti-block-code-explorer-path" contentEditable={false}>
 							<BlockTitle
-								className="monti-block-title-input"
 								label={say(words.path)}
 								value={paths[shown] ?? ""}
 								onChange={(title) => block.setChildAttrs(shown, { title })}

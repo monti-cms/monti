@@ -50,7 +50,6 @@ export default function CollapsibleEditor() {
 						<Chevron aria-hidden />
 					</button>
 					<BlockTitle
-						className="monti-block-title-input"
 						label={say(words.title)}
 						value={typeof block.attrs.title === "string" ? block.attrs.title : ""}
 						placeholder={wordsIn(block.language)}

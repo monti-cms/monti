@@ -92,7 +92,7 @@ export const style = `/*
 }
 
 /* In the editor: a title typed in the block keeps the block's own letters. */
-.monti-block-title-input {
+[data-slot="block-title"] {
 	width: 100%;
 	min-width: 0;
 	padding: 0;
@@ -103,7 +103,7 @@ export const style = `/*
 	letter-spacing: inherit;
 	outline: none;
 }
-.monti-block-title-input::placeholder {
+[data-slot="block-title"]::placeholder {
 	color: inherit;
 	opacity: 0.5;
 }
