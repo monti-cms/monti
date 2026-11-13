@@ -239,11 +239,6 @@ export function ColumnsScreen({ state }: { state: "drag" | "menu" }) {
 				<Handle />
 				<BlockBarPlace>
 					<FloatingBar>
-						<Box paddingX={8}>
-							<Text variant="caption" tone="subtle">
-								60 : 40
-							</Text>
-						</Box>
 						<FloatingBarButton label="고르게">
 							<SplitScreen aria-hidden />
 						</FloatingBarButton>
@@ -264,20 +259,23 @@ export function ColumnsScreen({ state }: { state: "drag" | "menu" }) {
 						</DropdownMenu>
 					</At>
 				) : null}
-				<Inline align="start" gap={32}>
-					<Stack gap={8} grow minWidth={0}>
-						<Text variant="reading">
-							<b>전</b>
-						</Text>
-						<Text variant="reading">페이지마다 데이터를 효과 안에서 읽었다. 첫 화면이 비어 있다가 채워졌다.</Text>
-					</Stack>
-					<Stack gap={8} grow minWidth={0}>
-						<Text variant="reading">
-							<b>뒤</b>
-						</Text>
-						<Text variant="reading">서버 컴포넌트가 읽는다. 첫 화면에 글이 있다.</Text>
-					</Stack>
-				</Inline>
+				{/* While the border is dragged, the widths at the block's top right, as the image's size (BlockBox `measure`). */}
+				<BlockBox measure={state === "drag" ? "60 : 40" : undefined}>
+					<Inline align="start" gap={32}>
+						<Stack gap={8} grow minWidth={0}>
+							<Text variant="reading">
+								<b>전</b>
+							</Text>
+							<Text variant="reading">페이지마다 데이터를 효과 안에서 읽었다. 첫 화면이 비어 있다가 채워졌다.</Text>
+						</Stack>
+						<Stack gap={8} grow minWidth={0}>
+							<Text variant="reading">
+								<b>뒤</b>
+							</Text>
+							<Text variant="reading">서버 컴포넌트가 읽는다. 첫 화면에 글이 있다.</Text>
+						</Stack>
+					</Inline>
+				</BlockBox>
 				{/* design-allow: the border between the two columns and the + band at the right edge, where the editor measures them (as the table's) */}
 				<div style={{ position: "absolute", top: 0, bottom: 0, left: "calc(50% - 6px)", width: 12 }}>
 					<TableColumnBorder label="단 1과 2의 폭" active={state === "drag"} />
@@ -498,6 +496,7 @@ const chartDrawing = (
 		])}
 		attrs={{ kind: "bar", title: "월별 방문" }}
 		locale="ko"
+		seeData={false}
 	/>
 );
 
@@ -527,7 +526,7 @@ export function ChartTableScreen() {
 							<FloatingBarButton label="차트 종류 · 막대" trigger={(button) => <DropdownMenuTrigger render={button} />}>
 								<ChartColumn aria-hidden />
 							</FloatingBarButton>
-							<DropdownMenuContent>
+							<DropdownMenuContent side="top">
 								<DropdownMenuRadioGroup value="bar" onValueChange={still}>
 									<DropdownMenuRadioItem value="bar">막대</DropdownMenuRadioItem>
 									<DropdownMenuRadioItem value="line">선</DropdownMenuRadioItem>

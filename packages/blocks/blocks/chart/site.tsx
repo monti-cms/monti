@@ -146,7 +146,17 @@ function Pie({ data }: { data: ChartData }) {
  * A chart, drawn on the server as SVG from the table it holds (doc 18): bars, lines, areas, or a pie of the first series. The table itself stays in
  * the page under "See the data", so the numbers are there for a reader who cannot see the picture, a search engine and a feed.
  */
-export function Chart({ block, attrs, locale, children }: BlockProps & { children?: ReactNode }) {
+export function Chart({
+	block,
+	attrs,
+	locale,
+	children,
+	seeData = true,
+}: BlockProps & {
+	children?: ReactNode;
+	/** "See the data" under the drawing: the reader's way to the numbers. The editor leaves it out (its own table or text holds them). */
+	seeData?: boolean;
+}) {
 	const kind = KINDS.find((each) => each === attrs.kind) ?? "bar";
 	const data = chartData(block);
 	const title = typeof attrs.title === "string" ? attrs.title.trim() : "";
@@ -178,10 +188,12 @@ export function Chart({ block, attrs, locale, children }: BlockProps & { childre
 					</svg>
 				</>
 			) : null}
-			<details className="monti-block-chart-data">
-				<summary>{wordsIn(locale).data}</summary>
-				{children}
-			</details>
+			{seeData ? (
+				<details className="monti-block-chart-data">
+					<summary>{wordsIn(locale).data}</summary>
+					{children}
+				</details>
+			) : null}
 		</figure>
 	);
 }
