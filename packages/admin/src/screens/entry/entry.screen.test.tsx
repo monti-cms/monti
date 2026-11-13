@@ -967,6 +967,8 @@ describe("the entry editor: the assistant's proposals for the title and the fiel
 		await userEvent.click(button("다음"));
 		await expect.element(page.getByText("2 / 3")).toBeVisible();
 		await expect.poll(() => document.activeElement === summary().element()).toBe(true);
+		// While the proposal waits the label row is the proposal's: no count of letters beside "discard", though the field has the focus.
+		await expect.element(page.getByText(/\d+ \/ 120/)).not.toBeInTheDocument();
 	});
 
 	it("10-3 '모두 받기' takes them into the draft: nothing is saved until the person saves, and the save marks all three applied", async () => {

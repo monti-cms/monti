@@ -578,10 +578,15 @@ export function EntryProperties({
 			: undefined;
 		// What the field holds now, in words, when words say it: a text, an address, a pick. A file or a related item has no name here.
 		const heldWords =
-			def.kind === "select" ? pickNames(held, values[key]?.optionLabels) : typeof held === "string" ? held : "";
+			def.kind === "select"
+				? pickNames(held, values[key]?.optionLabels)
+				: (def.kind === "text" || def.kind === "slug") && typeof held === "string"
+					? held
+					: "";
 		const was = proposed && heldWords ? <FormFieldWas>{heldWords}</FormFieldWas> : null;
 		const count =
-			def.kind === "text" && def.max !== undefined && focused === key ? (
+			// Not while a proposal waits in the field: its label row holds the proposal's dot and "discard" (screens/editor.md).
+			def.kind === "text" && def.max !== undefined && focused === key && !proposed ? (
 				<Text variant="micro" tone="subtle">
 					{t("entry.count", { count: text.length, max: def.max })}
 				</Text>
