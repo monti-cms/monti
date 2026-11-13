@@ -22,7 +22,7 @@ import {
 } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, Copy, Repeat, Spark, TextAlignLeft, TrashCan } from "@monti-cms/ui/icons";
 import type { Node as EditorNode } from "@tiptap/pm/model";
-import type { Transaction } from "@tiptap/pm/state";
+import { TextSelection, type Transaction } from "@tiptap/pm/state";
 import { type Editor, useEditorState } from "@tiptap/react";
 import { type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
@@ -217,8 +217,12 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 			view.focus();
 			return;
 		}
-		// The handle of a picked block takes all of them; another one's lets them go.
-		const together = picked?.includes(from) ? picked.filter((pos) => pos !== from) : [];
+		// The handle of a picked block takes all of them; another one's lets them go, with the caret in its block.
+		const together = picked && picked.length > 1 && picked.includes(from) ? picked.filter((pos) => pos !== from) : [];
+		if (picked && together.length === 0) {
+			const caret = TextSelection.near(view.state.doc.resolve(Math.min(from + 1, view.state.doc.content.size)));
+			view.dispatch(setPick(view.state.tr, null).setSelection(caret));
+		}
 		const startX = event.clientX;
 		const startY = event.clientY;
 		let lifted: Held | null = null;

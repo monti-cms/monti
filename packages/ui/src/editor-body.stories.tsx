@@ -67,7 +67,10 @@ export const Blocks: Story = {
 	),
 };
 
-/** The states the editor marks: the empty line under the cursor, the block whose menu is open, a block turned off, a block shown as a box. */
+/**
+ * The states the editor marks: the empty line under the cursor, the block whose menu is open, a block turned off, a block shown as a box, and two
+ * blocks picked whole.
+ */
 export const States: Story = {
 	render: () => (
 		<Column>
@@ -81,6 +84,10 @@ export const States: Story = {
 			</h4>
 			<div data-box="" data-box-label="알 수 없는 블록 · callout" />
 			<p data-empty="" data-placeholder="/ 를 눌러 블록 넣기" />
+			<div data-picking="">
+				<p data-picked="">통째로 고른 문단 하나.</p>
+				<p data-picked="">함께 고른 다음 문단.</p>
+			</div>
 		</Column>
 	),
 };

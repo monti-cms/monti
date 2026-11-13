@@ -92,6 +92,16 @@ describe("T80 picking several blocks whole", () => {
 		await expect.poll(blocks).toEqual([FIRST, LAST, HEADING, THIRD]);
 	});
 
+	it("the handle of a block that is not picked lets the pick go and opens that block's own menu", async () => {
+		await opened();
+		await boxOver(FIRST, HEADING);
+		await expect.poll(picked).toEqual([FIRST, HEADING]);
+		await userEvent.click(await handleOf(LAST));
+		await expect.poll(picked).toEqual([]);
+		await expect.element(page.getByRole("menu").getByText("문단")).toBeVisible();
+		await expect.element(page.getByRole("menu").getByText("블록 2개")).not.toBeInTheDocument();
+	});
+
 	it("Shift with a press on another block's handle picks every block from the first picked one to it", async () => {
 		await opened();
 		await boxOver(FIRST, FIRST);
