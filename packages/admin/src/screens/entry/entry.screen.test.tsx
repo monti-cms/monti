@@ -1020,6 +1020,30 @@ describe("the entry editor: the assistant's proposals for the title and the fiel
 		await saveCell("저장됨");
 	});
 
+	it("10-1 a switch the assistant proposed to turn off stands off with the proposal's mark by its name; nothing is changed until it is taken, and taken and saved it is off", async () => {
+		const made = from(entry.ProposedSwitch);
+		await made.run();
+		const featured = page.getByRole("switch", { name: /첫 화면에 올리기/ });
+		await expect.element(featured).not.toBeChecked();
+		await expect
+			.element(page.getByRole("img", { name: "AI 제안" }).or(page.getByLabelText("AI 제안")).first())
+			.toBeVisible();
+		await saveCell("저장됨");
+		const stored = async () => {
+			const { site, id } = made.loaded();
+			return (
+				((await site.monti.run("entries.get", { id }, entry.admin)) as { entry: { values: { featured?: string } } })
+					.entry.values.featured ?? null
+			);
+		};
+		expect(await stored()).toBe("on");
+		await userEvent.click(button("모두 받기"));
+		await saveCell("저장 전 변경사항");
+		await save();
+		await saveCell("저장됨");
+		expect(await stored()).toBeNull();
+	});
+
 	it("10-1 typing in a proposed field takes the proposal first, and the typing goes over it", async () => {
 		const made = await proposed();
 		await userEvent.click(summary());

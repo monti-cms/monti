@@ -8,6 +8,7 @@ import {
 	storedFields,
 } from "@monti-cms/core";
 import {
+	ChangeDot,
 	Combobox,
 	ComboboxChip,
 	ComboboxChips,
@@ -691,12 +692,20 @@ export function EntryProperties({
 			return (
 				<FormField key={key}>
 					<Option spread height="md">
-						{values[key]?.label ?? key}
+						{/* A switch the assistant proposed, on or off: the proposal's dot by its name, as a changed switch has its dot
+						    (field.md). The switch stands as proposed; the bubble takes or discards it, and pressing it takes it first. */}
+						{proposal ? (
+							<Inline gap={8}>
+								{values[key]?.label ?? key}
+								<ChangeDot tone="proposal" label={t("ui.proposal")} />
+							</Inline>
+						) : (
+							(values[key]?.label ?? key)
+						)}
 						<Switch
 							id={id}
 							checked={value === on}
 							disabled={readOnly}
-							// A choice the assistant proposed and nobody has taken: the switch stands as proposed, in the proposal's blue.
 							proposal={proposal}
 							onCheckedChange={(checked) => editor.set(path, checked ? on : null)}
 						/>

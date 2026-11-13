@@ -471,6 +471,32 @@ export const ConditionalSwitchOff: Story = {
 	},
 };
 
+/**
+ * A switch the assistant proposed to turn off (T86 with doc 19's switch): the switch stands as proposed, with the proposal's dot by its
+ * name, and the bubble walks to it.
+ */
+export const ProposedSwitch: Story = {
+	loaders: [
+		async (): Promise<Loaded> => {
+			const [load] = site("nestedChoice") as [() => Promise<Loaded>];
+			const made = await load();
+			const read = (await made.site.monti.run("entries.get", { id: made.id }, admin)) as { entry: { version: number } };
+			const proposal = await made.site.monti.proposals.create("conversation-1", "첫 화면에서 내려 줘");
+			await made.site.monti.proposals.add(proposal, "entries.save", {
+				id: made.id,
+				version: read.entry.version,
+				values: { featured: null },
+			});
+			return made;
+		},
+	],
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await waitFor(() => expect(page.getByRole("switch", { name: /첫 화면에 올리기/ })).not.toBeChecked(), wait);
+		await all.findByText("1 / 1", {}, wait);
+	},
+};
+
 /** A stored word the field no longer lists: the choice shows it as it is, marked, never as another option. */
 export const StrayOption: Story = {
 	loaders: site("strayOption"),
