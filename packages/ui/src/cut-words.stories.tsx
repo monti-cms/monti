@@ -11,6 +11,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** The pointer on the words, at a place of the page: cut words ask where the pointer is, since a row's link covers its whole row. */
+const pointAt = (words: Element) => {
+	const box = words.getBoundingClientRect();
+	return userEvent.pointer({ target: words, coords: { clientX: box.left + 4, clientY: box.top + 4 } });
+};
+
 const LONG = "리액트 19 마이그레이션에서 서버 컴포넌트와 액션을 옮기며 배운 것";
 
 /** In a narrow box the words end in "…"; in a wide one they are whole and say nothing more. */
@@ -39,7 +45,7 @@ export const Pointed: Story = {
 		</Box>
 	),
 	play: async ({ canvasElement }) => {
-		await userEvent.hover(within(canvasElement).getByText(LONG));
+		await pointAt(within(canvasElement).getByText(LONG));
 	},
 };
 
@@ -72,6 +78,6 @@ export const Cell: Story = {
 		</Table>
 	),
 	play: async ({ canvasElement }) => {
-		await userEvent.hover(within(canvasElement).getByText("프런트엔드 개발 이야기"));
+		await pointAt(within(canvasElement).getByText("프런트엔드 개발 이야기"));
 	},
 };

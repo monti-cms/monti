@@ -8,7 +8,6 @@ const LONG =
 	"저장하지 못했습니다. 게시글 컬렉션의 공개 주소 /posts/:slug 를 메모 컬렉션이 이미 쓰고 있고, 미리보기 주소 /preview/:slug 는 다른 컬렉션의 미리보기 주소와 같아서 구조를 적용할 수 없습니다.";
 
 const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
-const live = () => document.querySelector("[data-slot=banner-live]") as HTMLElement;
 const banner = () => page.getByTestId("banner");
 
 describe("Banner", () => {
@@ -66,7 +65,7 @@ describe("Banner", () => {
 
 	// T157. What a screen reader does with this was not listened to: this is the contract of the page that readers are known to follow. A live
 	// region is read when its content changes, so it is in the page, empty, before the words; a region that arrives with its words may be skipped.
-	it("is said through a live region that was in the page before it: empty first, the sentence put in afterwards, one line for each banner", async () => {
+	it("is said through a live region that was in the page before it: the top place, empty first, the banner added to it afterwards", async () => {
 		function Screen() {
 			const [failed, setFailed] = React.useState(0);
 			const [refused, setRefused] = React.useState(false);
@@ -86,43 +85,39 @@ describe("Banner", () => {
 		}
 		render(<Screen />);
 		await expect.element(page.getByRole("button", { name: "실패" })).toBeVisible();
-		// The region is there with no banner, polite and empty, and it is not what shows.
-		expect(live()).not.toBeNull();
-		expect(live().getAttribute("aria-live")).toBe("polite");
-		expect(live().textContent).toBe("");
-		const seen: string[] = [];
-		const region = live();
-		const watch = new MutationObserver(() => seen.push(region.textContent ?? ""));
+		// The region is there with no banner: polite, holding no words, and only what is added or changed in it is read.
+		const region = document.querySelector("[aria-live]") as HTMLElement;
+		expect(region).not.toBeNull();
+		expect(region.getAttribute("aria-live")).toBe("polite");
+		expect(region.getAttribute("aria-atomic")).toBe("false");
+		expect(region.getAttribute("aria-relevant")).toBe("additions text");
+		expect(region.textContent).toBe("");
+		expect(region.contains(page.getByRole("button", { name: "실패" }).element())).toBe(false);
+		/** What was added to the region, as a reader is told of it: each added node's words. */
+		const added: string[] = [];
+		const watch = new MutationObserver((changes) => {
+			for (const change of changes)
+				for (const node of change.addedNodes) if (node.textContent) added.push(node.textContent);
+		});
 		watch.observe(region, { childList: true, subtree: true, characterData: true });
 
 		await userEvent.click(page.getByRole("button", { name: "실패" }));
-		await expect.poll(() => seen).toContain("전송 1건 실패, 10. 26부터");
-		// The same region as before the banner, and the banner's own box is no live region: its words are said once.
-		expect(live()).toBe(region);
-		expect(document.querySelectorAll("[data-slot=banner-live]").length).toBe(1);
+		await expect.poll(() => added.some((words) => words.includes("전송 1건 실패"))).toBe(true);
+		// The same region as before the banner; the banner is in it, is no live region itself, and its words are in the page once.
+		expect(document.querySelectorAll("[aria-live]").length).toBe(1);
 		const box = document.querySelector("[data-slot=banner]") as HTMLElement;
+		expect(region.contains(box)).toBe(true);
 		expect(box.getAttribute("role")).toBe("note");
 		expect(box.hasAttribute("aria-live")).toBe(false);
-		expect(box.contains(region)).toBe(false);
-		// The line leaves the region once it is handed over: the visible banner is what a reader finds in the page.
-		await expect.poll(() => region.textContent, { timeout: 3000 }).toBe("");
-		await expect.element(page.getByText("전송 1건 실패")).toBeVisible();
+		expect(document.body.textContent?.split("전송 1건 실패").length).toBe(2);
 
-		// Changed words are said again; a page's own banner is said in the same region, as a line of its own.
+		// Changed words are a change inside the region; a page's own banner is drawn into the same region, as an addition of its own.
 		await userEvent.click(page.getByRole("button", { name: "실패" }));
-		await expect.poll(() => seen).toContain("전송 2건 실패, 10. 26부터");
+		await expect.element(page.getByText("전송 2건 실패")).toBeVisible();
+		expect(region.contains(page.getByText("전송 2건 실패").element())).toBe(true);
 		await userEvent.click(page.getByRole("button", { name: "거절" }));
-		await expect.poll(() => seen.some((words) => words.includes("저장하지 못했습니다"))).toBe(true);
-		expect([...region.querySelectorAll("p")].every((line) => !line.textContent?.includes("전송 1건"))).toBe(true);
+		await expect.poll(() => added.some((words) => words.includes("저장하지 못했습니다"))).toBe(true);
+		expect(region.contains(page.getByText("저장하지 못했습니다").element())).toBe(true);
 		watch.disconnect();
-	});
-
-	it("with no top place around it, it holds its own region: in the page empty, then filled", async () => {
-		render(<Banner title="한국어 원문 변경" />);
-		await expect.element(page.getByText("한국어 원문 변경")).toBeVisible();
-		const region = live();
-		expect(region.closest("[data-slot=banner]")).not.toBeNull();
-		await expect.poll(() => region.textContent).toBe("한국어 원문 변경");
-		await expect.poll(() => region.textContent, { timeout: 3000 }).toBe("");
 	});
 });
