@@ -905,6 +905,8 @@ describe("the library's states (components/list.md)", () => {
 		await at("#/media?view=list", clear);
 		await expect.element(main().getByText("아직 파일이 없습니다.")).toBeVisible();
 		expect(main().getByText("아직 파일이 없습니다.").element().closest("[data-slot=empty]")).not.toBeNull();
+		// In place of the column names and the table, as the trash's empty state.
+		expect(main().getByRole("columnheader").elements()).toHaveLength(0);
 	});
 
 	it("a search that finds nothing in the list says so in the table, and its button takes the search off", async () => {

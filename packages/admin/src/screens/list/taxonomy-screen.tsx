@@ -623,7 +623,7 @@ export function TaxonomyScreen({
 														label={t("list.more")}
 														trigger={(button) => <DropdownMenuTrigger render={button} />}
 													/>
-													<DropdownMenuContent align="end">{menuItems(item, false)} </DropdownMenuContent>
+													<DropdownMenuContent align="end">{menuItems(item, false)}</DropdownMenuContent>
 												</DropdownMenu>
 											</RowActions>
 										</TableCell>

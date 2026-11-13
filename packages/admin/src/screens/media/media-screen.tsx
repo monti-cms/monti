@@ -594,10 +594,8 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 						}}
 					/>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem onClick={() => naming.start()}>
-						<FolderAdd aria-hidden />
-						{t("folders.new")}
-					</DropdownMenuItem>
+					{/* A menu for several files has no icons (menu.md), this row too. */}
+					<DropdownMenuItem onClick={() => naming.start()}>{t("folders.new")}</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<TextButton
@@ -968,7 +966,6 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					)}
 				</TableBody>
 			</Table>
-			{nothing && !looking && <Empty title={t("library.empty")} />}
 		</ListScroll>
 	);
 	const pages = data ? Math.ceil(data.total / data.pageSize) : 1;
@@ -1018,7 +1015,8 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					<ContextMenuTrigger
 						render={
 							<DropArea fill flush={state.view === "list"} over={areaDrop.over && !folderTarget} {...areaDrop.handlers}>
-								{state.view === "list" ? table : grid}
+								{/* Nothing here yet: the lists' empty state stands in place of the column names and the table, as the trash's does. */}
+								{state.view === "list" ? nothing && !looking ? <Empty title={t("library.empty")} /> : table : grid}
 							</DropArea>
 						}
 					/>
