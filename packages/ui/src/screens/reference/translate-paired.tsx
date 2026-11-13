@@ -1,3 +1,4 @@
+import { Add } from "../../icons";
 import {
 	Box,
 	CompareBody,
@@ -55,7 +56,10 @@ export function TranslatePairedScreen() {
 					<TabLinks>
 						<TabLink>한국어</TabLink>
 						<TabLink current>English</TabLink>
-						<TabLink render={<button type="button" />}>+ 언어</TabLink>
+						<TabLink render={<button type="button" />}>
+							<Add aria-hidden />
+							언어
+						</TabLink>
 					</TabLinks>
 				</Inline>
 				<Inline minHeight="panebar" gap={8} paddingX={24} shrink={false}>

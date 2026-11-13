@@ -119,12 +119,12 @@ describe("the trash and the activity log open the conversation (T124, T141)", ()
 		await go("#/activity");
 		const line = row("둘째 글 버려 줘");
 		await expect.element(line).toBeVisible();
-		await userEvent.click(line.getByRole("button", { name: "행 메뉴" }));
+		await userEvent.click(line.getByRole("button", { name: "더 보기" }));
 		await userEvent.click(page.getByRole("menuitem", { name: "대화" }));
 		await expect.element(panel().getByText("둘째 글을 휴지통으로 옮기자고 제안했습니다.")).toBeVisible();
 		await userEvent.click(button("닫기"));
 		const mine = row("첫 번째 글, 손으로");
-		await userEvent.click(mine.getByRole("button", { name: "행 메뉴" }));
+		await userEvent.click(mine.getByRole("button", { name: "더 보기" }));
 		await expect.element(page.getByRole("menuitem", { name: "자세히" })).toBeVisible();
 		await expect.element(page.getByRole("menuitem", { name: "대화" })).not.toBeInTheDocument();
 	});

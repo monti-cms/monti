@@ -5,7 +5,7 @@ const main = (page: Page) => page.getByRole("main");
 const row = (page: Page, title: string) => main(page).getByRole("row").filter({ hasText: title });
 const rowMenu = async (page: Page, title: string) => {
 	await row(page, title).hover();
-	await row(page, title).getByRole("button", { name: "행 메뉴" }).click();
+	await row(page, title).getByRole("button", { name: "더 보기" }).click();
 	return page.getByRole("menu");
 };
 const toast = (page: Page, text: string) => page.getByRole("listitem").filter({ hasText: text }).first();

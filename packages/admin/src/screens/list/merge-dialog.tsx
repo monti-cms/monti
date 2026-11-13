@@ -8,16 +8,16 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	FormFieldError,
 	RadioGroup,
 	RadioItem,
 	Text,
-	TextButton,
 	toast,
 } from "@monti-cms/ui";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useUndo } from "../../activity/use-undo";
 import { useAdmin } from "../../operations/admin-context";
-import { useOperation } from "../../operations/use-operation";
+import { reasonOf, useOperation } from "../../operations/use-operation";
 import { endsClosed, endsDirectionClosed } from "./format";
 
 export type MergeDialogProps = {
@@ -68,8 +68,15 @@ export function MergeDialog({
 
 	const [intoGroup, setIntoGroup] = useState<string>(defaultInto);
 
+	/** "Merge" was pressed with nothing picked to keep: the choices say so (button.md: the button stays pressable). */
+	const [unpicked, setUnpicked] = useState(false);
+	const errorId = useId();
+
 	useEffect(() => {
-		if (open) setIntoGroup(defaultInto);
+		if (open) {
+			setIntoGroup(defaultInto);
+			setUnpicked(false);
+		}
 	}, [open, defaultInto]);
 
 	const intoItem = items.find((item) => item.group === intoGroup);
@@ -103,13 +110,14 @@ export function MergeDialog({
 		: t("taxonomy.mergeTargetDescription", { from: sourceItem?.title ?? "" });
 
 	const handleMerge = async () => {
-		if (!intoGroup || fromGroups.length === 0) return;
+		if (!intoGroup || fromGroups.length === 0) return setUnpicked(true);
 		const res = await mergeOp.run({
 			collection,
 			intoGroup,
 			fromGroups,
 		});
-		if (res.ok) {
+		if (!res.ok) toast.error(t(reasonOf(res.refusal)));
+		else {
 			const out = res.body.output;
 			const finalCount = out?.affectedCount ?? affectedCount;
 			const finalTitle = out?.intoTitle ?? intoTitle;
@@ -149,7 +157,12 @@ export function MergeDialog({
 						</Text>
 					)}
 				</DialogHeader>
-				<RadioGroup value={intoGroup} onValueChange={(val) => setIntoGroup(val)}>
+				<RadioGroup
+					value={intoGroup}
+					aria-invalid={unpicked && !intoGroup ? true : undefined}
+					aria-describedby={unpicked && !intoGroup ? errorId : undefined}
+					onValueChange={(val) => setIntoGroup(val)}
+				>
 					{choices.map((item) => {
 						const slug = Object.values(item.locales)[0]?.slug;
 						return (
@@ -162,14 +175,10 @@ export function MergeDialog({
 						);
 					})}
 				</RadioGroup>
+				{unpicked && !intoGroup && <FormFieldError id={errorId}>{t("taxonomy.mergePick")}</FormFieldError>}
 				<DialogFooter>
-					<DialogClose render={<TextButton onClick={onClose} />}>{t("ui.cancel")}</DialogClose>
-					<Button
-						variant="primary"
-						loading={mergeOp.pending}
-						disabled={!intoGroup || fromGroups.length === 0}
-						onClick={() => void handleMerge()}
-					>
+					<DialogClose render={<Button variant="ghost" />}>{t("ui.cancel")}</DialogClose>
+					<Button variant="primary" loading={mergeOp.pending} onClick={() => void handleMerge()}>
 						{t("taxonomy.mergeAction")}
 					</Button>
 				</DialogFooter>

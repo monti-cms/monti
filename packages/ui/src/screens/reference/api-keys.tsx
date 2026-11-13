@@ -9,7 +9,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 	Banner,
-	Box,
 	Button,
 	Count,
 	DescriptionItem,
@@ -30,7 +29,6 @@ import {
 	FormFieldDescription,
 	FormFieldError,
 	FormFieldLabel,
-	Heading,
 	Inline,
 	Input,
 	ListSection,
@@ -148,11 +146,11 @@ function Said({ children }: { children: string }) {
 }
 
 /** A key row's ⋯: change it (the key window) and remove it. A site that cannot store keys only removes. */
-function KeyMenu({ name, edit = true, open }: { name: string; edit?: boolean; open?: boolean }) {
+function KeyMenu({ edit = true, open }: { edit?: boolean; open?: boolean }) {
 	return (
 		<RowActions>
 			<DropdownMenu {...(open ? { open } : {})}>
-				<RowMore label={`${name} 더 보기`} trigger={(button) => <DropdownMenuTrigger render={button} />} />
+				<RowMore label="더 보기" trigger={(button) => <DropdownMenuTrigger render={button} />} />
 				<DropdownMenuContent align="end">
 					{edit && (
 						<>
@@ -522,7 +520,7 @@ function KeyTable({ keys, edit, menu }: { keys: readonly Key[]; edit: boolean; m
 							<KeyName name={key.name} tail={key.tail} meta={key.meta} tone={key.tone} />
 						</TableCell>
 						<TableCell align="end">
-							<KeyMenu name={key.name} edit={edit} open={menu && index === 0} />
+							<KeyMenu edit={edit} open={menu && index === 0} />
 						</TableCell>
 					</TableRow>
 				))}
@@ -543,7 +541,7 @@ function SlotTable({ slots }: { slots: readonly Slot[] }) {
 						</TableCell>
 						<TableCell align="end">
 							{slot.tail ? (
-								<KeyMenu name={slot.title} />
+								<KeyMenu />
 							) : (
 								<Button variant="ghost" size="sm">
 									키 넣기
@@ -634,10 +632,9 @@ export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: Ap
 				<PageBody>
 					<Stack gap={40} paddingTop={named ? 32 : 0}>
 						{named ? (
-							<Stack gap={0}>
-								<ListTitle>AI 키</ListTitle>
+							<ListSection table title="AI 키">
 								{list}
-							</Stack>
+							</ListSection>
 						) : (
 							list
 						)}
@@ -677,26 +674,14 @@ export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: Ap
 						)}
 						{/* A plugin's slot is a key row like the AI keys: the same window adds and changes it, with its service already set. */}
 						{named && (
-							<Stack gap={0}>
-								<ListTitle>플러그인 키</ListTitle>
+							<ListSection table title="플러그인 키">
 								<SlotTable slots={slots} />
-							</Stack>
+							</ListSection>
 						)}
 					</Stack>
 				</PageBody>
 			</PageColumn>
 			<Floating stage={stage} />
 		</AdminFrame>
-	);
-}
-
-/** The name over a list when the page has more than one: label type, bold, 12px in with the rows' words, the rule under it the table's first. */
-function ListTitle({ children }: { children: string }) {
-	return (
-		<Box paddingX={12} paddingBottom={12} border="bottom">
-			<Heading as="h2" variant="label">
-				{children}
-			</Heading>
-		</Box>
 	);
 }

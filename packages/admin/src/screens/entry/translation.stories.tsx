@@ -170,12 +170,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The source after it was published again: its languages over the title, a dot on English, and "+ 언어" open with Japanese (flow 3, 01 and 08). */
+/** The source after it was published again: its languages over the title, a dot on English, and "언어" open with Japanese (flow 3, 01 and 08). */
 export const LanguageMenu: Story = {
 	loaders: site("changed", "korean"),
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
-		await userEvent.click(await page.findByRole("button", { name: "+ 언어" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "언어" }, wait));
 	},
 };
 

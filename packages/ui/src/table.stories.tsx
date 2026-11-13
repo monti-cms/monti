@@ -142,7 +142,7 @@ export const Folder: Story = {
 			<TableRow>
 				<TableCell />
 				<TableCell truncate>
-					<RowTitle folder title={<RowLink href="#">시리즈 원고</RowLink>} address="글 2" />
+					<RowTitle folder title={<RowLink href="#">시리즈 원고</RowLink>} note="글 2" />
 				</TableCell>
 				<TableCell />
 				<TableCell>
@@ -163,7 +163,7 @@ export const FolderDropTarget: Story = {
 			<TableRow dropTarget>
 				<TableCell />
 				<TableCell truncate>
-					<RowTitle folder title={<RowLink href="#">시리즈 원고</RowLink>} address="글 2" />
+					<RowTitle folder title={<RowLink href="#">시리즈 원고</RowLink>} note="글 2" />
 				</TableCell>
 				<TableCell />
 				<TableCell>

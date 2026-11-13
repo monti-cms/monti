@@ -13,7 +13,7 @@ import {
 	MenuTick,
 	toast,
 } from "@monti-cms/ui";
-import { Edit, Folder, Launch, TrashCan } from "@monti-cms/ui/icons";
+import { Edit, Folder, FolderOpen, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
@@ -176,7 +176,7 @@ export function FolderMenuItems({
 	return (
 		<>
 			<Item onClick={onOpen}>
-				<Launch aria-hidden />
+				<FolderOpen aria-hidden />
 				{t("list.open")}
 			</Item>
 			<Item onClick={onRename}>

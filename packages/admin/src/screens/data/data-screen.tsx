@@ -42,10 +42,13 @@ export function DataScreen({ tabs }: { tabs: ReactNode }) {
 	const [media, setMedia] = useState(false);
 	/** How far the file is, 0 to 100, while it is made. */
 	const [making, setMaking] = useState<number | null>(null);
+	/** How many media files the backup just saved could not hold: said on the page until the next backup, not only in a toast (status.md). */
+	const [lacked, setLacked] = useState(0);
 
 	const take = async () => {
 		if (making !== null) return;
 		setMaking(0);
+		setLacked(0);
 		try {
 			const read = await backup.run({});
 			if (!read.ok) return void toast.error(t(reasonOf(read.refusal)));
@@ -54,7 +57,10 @@ export function DataScreen({ tabs }: { tabs: ReactNode }) {
 				onProgress: (share) => setMaking(Math.round(share * 100)),
 			});
 			// A backup that lacks files is saved and said to lack them; it is not the site's last backup.
-			if (missing > 0) return void toast.error(t("data.backup.missing", { count: missing }));
+			if (missing > 0) {
+				setLacked(missing);
+				return void toast.error(t("data.backup.missing", { count: missing }));
+			}
 			await note.run({});
 			toast(t("data.backup.saved"));
 		} catch {
@@ -99,6 +105,11 @@ export function DataScreen({ tabs }: { tabs: ReactNode }) {
 									)}
 								</Text>
 							</Inline>
+							{lacked > 0 ? (
+								<Text variant="note" tone="danger">
+									{t("data.backup.missing", { count: lacked })}
+								</Text>
+							) : null}
 						</Stack>
 					</Section>
 				</PageBody>
