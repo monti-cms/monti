@@ -1330,14 +1330,25 @@ const MESSAGE_FILES = ["admin", "ai", "seo", "mdx", "core"].map((name) => `packa
 
 /**
  * Marks a part draws, typed into words; a button's `title`; a row's › turned off (`check-typed-marks.mjs` says what each rule cannot see). The
- * screens, the reference screens of `packages/ui/src/screens` and the message dictionaries.
+ * screens, the reference screens of `packages/ui/src/screens`, the message dictionaries, and the site blocks' editor views and words.
  */
+function blockEditorFiles() {
+	const dir = path.join(root, "packages/blocks/blocks");
+	if (!existsSync(dir)) return [];
+	return readdirSync(dir, { withFileTypes: true })
+		.filter((entry) => entry.isDirectory())
+		.flatMap((entry) => ["editor.tsx", "words.ts"].map((name) => `packages/blocks/blocks/${entry.name}/${name}`))
+		.filter((file) => existsSync(path.join(root, file)));
+}
+
 function checkTypedMarks() {
 	const read = [
 		...files
 			.filter(({ file, kind }) => kind === "screen" || rel(file).startsWith("packages/ui/src/screens/"))
 			.map(({ file }) => rel(file)),
 		...MESSAGE_FILES.filter((file) => existsSync(path.join(root, file))),
+		// A site block's editor view and its words (`@monti-cms/blocks`, doc 18) are admin UI a site copies: the same marks are not typed there.
+		...blockEditorFiles(),
 	].filter((file, at, all) => all.indexOf(file) === at && inTargets(path.join(root, file)));
 	const sources = Object.fromEntries(read.map((file) => [file, readFileSync(path.join(root, file), "utf8")]));
 	for (const { file, line, rule, message } of typedMarks(sources)) add(path.join(root, file), line, rule, message);
