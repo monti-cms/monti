@@ -951,6 +951,9 @@ describe("the collection screens follow the design rules (design audit, 2026-11-
 		const remove = dialog().getByRole("button", { name: "memo 빼기" }).element();
 		expect(remove.getAttribute("data-slot")).toBe("icon-button");
 		expect(remove.textContent).toBe("");
+		// One step under its 32px row, as a button inside a field is.
+		expect(remove.getBoundingClientRect().height).toBe(28);
+		expect(remove.closest("[data-slot=option-row]")?.getBoundingClientRect().height).toBe(32);
 		expect(dialog().getByRole("button", { name: "+ 선택지" }).element().getAttribute("data-slot")).toBe("button");
 	});
 

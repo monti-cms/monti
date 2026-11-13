@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "./button";
 import { DragHandle } from "./drag-handle";
+import { IconButton } from "./icon-button";
+import { Close } from "./icons";
 import { Input } from "./input";
 import { OptionRow, OptionTable } from "./option-table";
 
@@ -39,9 +41,9 @@ export const Playground: Story = {
 						value={<Input appearance="inline" mono aria-label="값" defaultValue={row.value} />}
 						label={<Input appearance="inline" aria-label="라벨" defaultValue={row.label} />}
 						action={
-							<Button variant="ghost" size="xs" aria-label={`${row.value} 빼기`}>
-								×
-							</Button>
+							<IconButton label={`${row.value} 빼기`}>
+								<Close aria-hidden />
+							</IconButton>
 						}
 					/>
 				))}
