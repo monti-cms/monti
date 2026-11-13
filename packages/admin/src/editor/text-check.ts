@@ -49,9 +49,6 @@ function rangeOf(doc: EditorNode, found: Found): { from: number; to: number } | 
 	return from === null || to === null ? null : { from, to };
 }
 
-/** Whether a finding still stands: its words are where the check found them. */
-export const stands = (doc: EditorNode, found: Found) => rangeOf(doc, found) !== null;
-
 /**
  * Puts the findings' words in the body, in one step a single undo takes back. Each keeps the marks of the words it replaces. A finding
  * whose words changed since the check is left out. Says how many went in.
