@@ -78,6 +78,8 @@ export function MediaField({
 	const own = mediaValueOf(value);
 	const followed = own ? null : mediaValueOf(source);
 	const shown = own ?? followed;
+	const latest = useRef({ own, shown });
+	latest.current = { own, shown };
 	const read = useRead<MediaDetail>("media.get", { id: shown?.media ?? "" }, { skip: !shown, quiet: true });
 	const file = read.data?.id === shown?.media ? read.data : null;
 	// A read-only entry shows what it has saved: a file that was still going up when it was archived is not its value, and has no place here.
@@ -149,9 +151,14 @@ export function MediaField({
 													? {
 															state: fill.state,
 															onFill: () =>
-																fill.run(shown.media, (alt) =>
-																	onChange(cleanMediaValue({ ...own, media: shown.media, alt: alt.slice(0, ALT_MAX) })),
-																),
+																fill.run(shown.media, (alt) => {
+																	// As the field is when the answer comes, and only if it still holds the picture that was asked about.
+																	const now = latest.current;
+																	if (now.shown?.media !== shown.media) return;
+																	onChange(
+																		cleanMediaValue({ ...now.own, media: shown.media, alt: alt.slice(0, ALT_MAX) }),
+																	);
+																}),
 														}
 													: undefined
 											}

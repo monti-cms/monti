@@ -60,21 +60,33 @@ export const MOST_ITEMS = 500;
 /**
  * Why a write said it would leave this item's record alone (its preview's `blocked`), if it did. An item of a write split by record
  * (`each`) is about the one record its input names; any other is about the records it touches.
+ *
+ * The preview was made on the record as it was, without the changes that wait before it in the same proposal. So it says nothing once
+ * an earlier change of the proposal (`earlier`: waiting, or applied since) writes that record: that change may be what makes this one
+ * fit (a choice changed, then the new option's field filled; a summary filled in, then the entry published). Such an item stays in, and
+ * the write itself answers when it is applied.
  */
 function blockedOf(
 	operation: AnyOperation | undefined,
 	rawInput: unknown,
 	preview: Preview | null,
 	records: Record<string, unknown>,
+	earlier: readonly Pick<Item, "state" | "base_versions">[],
 ): Message | null {
 	if (!preview?.blocked?.length) return null;
 	const list = operation?.each ? (rawInput as Record<string, unknown> | null)?.[operation.each] : undefined;
+	let found: NonNullable<Preview["blocked"]>[number] | undefined;
 	if (Array.isArray(list)) {
 		const [own] = list;
 		const id = typeof own === "string" ? own : (own as { id?: unknown } | null)?.id;
-		return preview.blocked.find((each) => each.ref.id === id)?.reason ?? null;
-	}
-	return preview.blocked.find((each) => recordKey(each.ref) in records)?.reason ?? null;
+		found = preview.blocked.find((each) => each.ref.id === id);
+	} else found = preview.blocked.find((each) => recordKey(each.ref) in records);
+	if (!found) return null;
+	const key = recordKey(found.ref);
+	const changedBefore = earlier.some(
+		(item) => (item.state === "pending" || item.state === "applied") && key in item.base_versions,
+	);
+	return changedBefore ? null : found.reason;
 }
 
 /** Makes a proposal. A run has one: asked for again by the same run (cut between making it and noting it), it gives the one it made. */
@@ -253,7 +265,7 @@ export async function proposeItem(
 			origin: options.call ?? null,
 			preview: whole.preview === null ? null : JSON.stringify(whole.preview),
 			// A change its own write says it would leave the record alone for starts left out: applying it would only be refused.
-			...(blockedOf(operation, part, whole.preview, baseVersions) !== null ? { included: false } : {}),
+			...(blockedOf(operation, part, whole.preview, baseVersions, known) !== null ? { included: false } : {}),
 		});
 	}
 	await engine.db.transaction().execute(async (trx) => {
@@ -292,7 +304,9 @@ export async function replaceItem(
 	// into a change of something else.
 	if (operation.name !== item.operation) throw new CheckError({ key: "proposals.otherChange" });
 	const input = parseInput(operation, withPlaceholders(rawInput));
-	mustNotOverlap(operations, operation, input, await itemsOf(engine.db, item.proposal_id), itemId);
+	const siblings = await itemsOf(engine.db, item.proposal_id);
+	mustNotOverlap(operations, operation, input, siblings, itemId);
+	const before = siblings.filter((each) => each.position < item.position);
 	const { baseVersions, preview } = await rehearse(engine, operation, input, refsIn(rawInput).size === 0);
 	const [was, is] = [Object.keys(item.base_versions).sort(), Object.keys(baseVersions).sort()];
 	if (was.length !== is.length || was.some((key, index) => key !== is[index]))
@@ -307,7 +321,7 @@ export async function replaceItem(
 				base_versions: JSON.stringify(baseVersions),
 				state: "pending",
 				reason: null,
-				included: blockedOf(operation, rawInput, preview, baseVersions) === null,
+				included: blockedOf(operation, rawInput, preview, baseVersions, before) === null,
 				made_by: options.call ?? null,
 				preview: preview === null ? null : JSON.stringify(preview),
 			})
@@ -1045,7 +1059,13 @@ export async function viewProposal(
 			targets: Object.keys(item.after_versions ?? item.base_versions),
 			blocked:
 				item.state === "pending"
-					? blockedOf(operation, item.input, item.preview as Preview | null, item.base_versions)
+					? blockedOf(
+							operation,
+							item.input,
+							item.preview as Preview | null,
+							item.base_versions,
+							items.filter((each) => each.position < item.position),
+						)
 					: null,
 			preview: (item.preview as Preview | null) ?? null,
 			thread: item.thread,

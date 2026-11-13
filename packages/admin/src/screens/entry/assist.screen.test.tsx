@@ -112,6 +112,41 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 		await expect.element(subtitle()).toHaveValue("도구보다 글");
 	});
 
+	it("10-1 a relation field asked to be filled again when nothing of the site fits keeps its value, and its line says there is nothing to fill it with", async () => {
+		const made = on("draft", [], () => ({ values: [] }));
+		await made.run();
+		await opened();
+		const before = (await stored(made.loaded())).values.category;
+		expect(before).toBeTruthy();
+		await userEvent.hover(page.getByText("카테고리", { exact: true }));
+		await userEvent.click(button("카테고리 다시 채우기"));
+		await expect.element(page.getByText("채울 값이 없습니다")).toBeVisible();
+		// The field keeps its category: nothing is unsaved (an emptied field would be a change).
+		await saveCell("저장됨");
+	});
+
+	it("10-1 what is typed in a field while its fill is on the way stays: the answer that comes late is not put over it", async () => {
+		let answerNow = (_value: unknown) => {};
+		const made = on(
+			"draft",
+			[],
+			() =>
+				new Promise((resolve) => {
+					answerNow = resolve;
+				}),
+		);
+		await made.run();
+		await opened();
+		await userEvent.click(subtitle());
+		await userEvent.click(button("부제 채우기"));
+		await expect.element(page.getByText("쓰는 중…")).toBeVisible();
+		await userEvent.type(subtitle(), "내가 쓴 부제");
+		answerNow({ value: "늦게 온 답" });
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		await expect.element(subtitle()).toHaveValue("내가 쓴 부제");
+		await expect.element(page.getByText("쓰는 중…")).not.toBeInTheDocument();
+	});
+
 	it("10-1 a site with no AI key has no '채우기'; a site without the assistant has none either, and no 'AI가 바꾼 기록'", async () => {
 		const keyless = on("draft", [], undefined, { key: false });
 		await keyless.run();
@@ -308,7 +343,7 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		await saveCell("저장됨");
 	});
 
-	it("10-1 [flow 2·09] '이어서 요청' has that change made differently: the mark says '…', the box's button stops it, and the change is replaced where it stood", async () => {
+	it("10-1 [flow 2·09] '이어서 요청' has that change made differently: the mark says '…' meanwhile, and the change is replaced where it stood", async () => {
 		let release = () => {};
 		const gate = new Promise<void>((resolve) => {
 			release = resolve;
@@ -351,5 +386,31 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		await expect.element(page.getByText("'고친'으로 해 줘")).toBeVisible();
 		// Asked once at this place: the status bar still counts it, and nothing is at work.
 		await expect.poll(cells).toContain("요청 1· 고치는 중 0");
+	});
+	it("10-1 the box's button stops the work on a request: the run is told to stop, the change stays as it was, and its card can take or discard it again", async () => {
+		let release = () => {};
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const made = await proposed();
+		made.loaded().model.add({ hold: gate, text: "생각 중" });
+		await userEvent.click(mark(MARK).first());
+		await userEvent.fill(page.getByRole("textbox", { name: "이어서 요청" }), "더 짧게");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(button("멈추기")).toBeVisible();
+		await userEvent.click(button("멈추기"));
+		await expect
+			.poll(async () =>
+				(await made.loaded().site.db.selectFrom("runs").select("stop_requested").execute()).map(
+					(each) => each.stop_requested,
+				),
+			)
+			.toEqual([true]);
+		release();
+		await expect.element(mark(MARK).first()).toBeVisible();
+		await expect.element(mark("고치는 중인 제안: 더 짧게 다듬기")).not.toBeInTheDocument();
+		const items = await pending(made.loaded());
+		expect(items).toHaveLength(3);
+		expect(items[0]?.input.ops[0]?.text).toBe("만든");
 	});
 });

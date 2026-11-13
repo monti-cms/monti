@@ -497,7 +497,12 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																			.join(" · ")}
 																	</Text>
 																) : null}
-																{resultOf(item)}
+																{/* What became of the row: of the translation, or of the words written into it when those went wrong. */}
+																{resultOf(
+																	words.find((each) => each.state === "failed" || each.state === "skipped") ??
+																		words.find((each) => each.stale) ??
+																		item,
+																)}
 																<TextButton
 																	variant="underline"
 																	aria-expanded={shown}

@@ -34,14 +34,9 @@ const counted = (node: EditorNode) => {
 /** The picked words as a request names them: their block, where they stand in its text, and the words. */
 export type PickedText = { block: string; from: number; to: number; text: string; start: number; end: number };
 
-/**
- * The words picked in the body, when a request can be left on them: a selection of text inside one block that has an id. A selection
- * that runs into the next block is cut at the end of the block it starts in.
- */
-export function pickedText(state: EditorState): PickedText | null {
-	const { selection } = state;
-	if (!(selection instanceof TextSelection) || selection.empty) return null;
-	const { $from } = selection;
+/** The words between two places of the text, as a request names them: cut at the end of the block they start in. */
+function wordsBetween(state: EditorState, start: number, to: number): PickedText | null {
+	const $from = state.doc.resolve(start);
 	const parent = $from.parent;
 	if (!parent.isTextblock) return null;
 	let block: string | null = null;
@@ -50,11 +45,29 @@ export function pickedText(state: EditorState): PickedText | null {
 		if (typeof id === "string" && id !== "") block = id;
 	}
 	if (block === null) return null;
-	const end = Math.min(selection.to, $from.end());
+	const end = Math.min(to, $from.end());
 	const from = counted(parent.cut(0, $from.parentOffset)).length;
 	const text = counted(parent.cut($from.parentOffset, end - $from.start()));
 	if (text.trim() === "") return null;
-	return { block, from, to: from + text.length, text, start: selection.from, end };
+	return { block, from, to: from + text.length, text, start, end };
+}
+
+/**
+ * The words picked in the body, when a request can be left on them: a selection of text inside one block that has an id. A selection
+ * that runs into the next block is cut at the end of the block it starts in.
+ */
+export function pickedText(state: EditorState): PickedText | null {
+	const { selection } = state;
+	if (!(selection instanceof TextSelection) || selection.empty) return null;
+	return wordsBetween(state, selection.from, selection.to);
+}
+
+/**
+ * A request's words as they stand now: where its underline is after what was typed around it since. `null` when the words are gone.
+ */
+export function requestWords(state: EditorState, id: string): PickedText | null {
+	const anchor = requestMarksKey.getState(state)?.find((each) => each.id === id);
+	return anchor && anchor.to > anchor.from ? wordsBetween(state, anchor.from, anchor.to) : null;
 }
 
 export const RequestMarks = Extension.create({

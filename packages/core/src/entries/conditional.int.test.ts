@@ -286,6 +286,23 @@ describe("the assistant and the comparison keep to the choice (T195)", () => {
 		expect(changed?.items[0]?.preview?.clears).toEqual([{ field: "videoUrl", value: "https://example.dev/v.mp4" }]);
 	});
 
+	it("19-5 a field of the option an earlier change of the same proposal chooses stays in: applied in order, the choice changes and the field is filled", async () => {
+		const id = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" });
+		const monti = site();
+		const version = (await stored(id)).version;
+		const proposal = await monti.proposals.create("c1", "링크 글로 바꾸고 주소를 채워 줘");
+		await monti.proposals.add(proposal, "entries.save", { id, version, values: { format: "link" } });
+		// Rehearsed on the entry as it is (a video), its own write would refuse it: the change before it is what makes it fit.
+		await monti.proposals.add(proposal, "entries.save", { id, version, values: { linkUrl: "https://example.dev" } });
+		const view = await monti.proposals.view(proposal);
+		expect(view?.items.map((item) => [item.included, item.blocked])).toEqual([
+			[true, null],
+			[true, null],
+		]);
+		await monti.proposals.apply(proposal);
+		expect((await stored(id)).values).toEqual({ format: "link", linkUrl: "https://example.dev" });
+	});
+
 	it("19-5 the comparison counts the choice as the place that differs, not the fields of the option the draft no longer has chosen", async () => {
 		const id = await newPost({ format: "video", videoUrl: "https://example.dev/v.mp4" });
 		const compared = (await site().run(

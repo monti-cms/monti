@@ -82,7 +82,7 @@ import {
 	staleProposals,
 	takeInEditor,
 } from "../../editor/proposal-marks";
-import { anchorRequest, type PickedText, releaseRequest } from "../../editor/request-marks";
+import { anchorRequest, type PickedText, releaseRequest, requestWords } from "../../editor/request-marks";
 import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
 import { useFieldUploads } from "../../media/use-field-uploads";
@@ -173,7 +173,7 @@ export function EntryEditor({
 	/** Opens the activity log on what the assistant changed in the entry of this title (⋯ › "what the AI changed"). */
 	onActivity: (title: string) => void;
 }) {
-	const { t, language, apiBase, templates: templatesOn, reads } = useAdmin();
+	const { t, language, apiBase, templates: templatesOn, reads, transport } = useAdmin();
 	const languageName = useLanguageName();
 	const source = useMemo(() => ({ kind: "entry" as const, id }), [id]);
 	const schema = useRead<SchemaRead>("schema.read");
@@ -522,6 +522,14 @@ export function EntryEditor({
 	}, [waiting, dismissRequest, t]);
 	/** The assistant reads what is saved: what is on the screen is saved before it is asked. `false`: the save was refused. */
 	const savedForRequest = async () => !editor.dirty || (await editor.save()) !== null;
+	/** The entry as it is saved now, for a request's context: the version this page drew may be the one before the save just made. */
+	const entryForRequest = async () => {
+		const answer = await transport("entries.get", { id }).catch(() => null);
+		const saved = answer?.status === 200 ? (answer.body as { entry: { version: number; title: string } }).entry : null;
+		return { id, version: saved?.version ?? entryNow.current.version, title: saved?.title ?? entryNow.current.title };
+	};
+	/** A press of "translate" is being sent (its save, then its request): a second press meanwhile sends nothing. */
+	const translateSending = useRef(false);
 	// "✦ Translate" (doc 10, item 19; T94): a set request that goes to a conversation of its own without opening the panel. The
 	// translations come as proposals, drawn where each block's own words will stand; the bubble is named by the request.
 	const canTranslate = Boolean(places) && translation.isTranslation;
@@ -539,28 +547,37 @@ export function EntryEditor({
 		: [];
 	const translating = waiting.some((request) => request.id.startsWith("translate:") && request.status === "working");
 	const translate = async (blocks?: string[], again = false) => {
-		if (!places || !(await savedForRequest())) return;
-		void places.send(
-			`translate:${Date.now().toString(36)}`,
-			t(again ? "translation.ai.again" : "translation.ai.translate"),
-			{
-				context: {
-					screen: "entry",
-					collection,
-					entry: { id, ...entryNow.current },
-					task: again ? "retranslate" : "translate",
-					...(blocks ? { blocks } : {}),
+		if (!places || translateSending.current) return;
+		translateSending.current = true;
+		try {
+			// The blocks it is for, as they are when it is pressed: the tabs' button means the ones nothing is proposed for yet.
+			const meant = blocks ?? untranslated;
+			if (!(await savedForRequest())) return;
+			void places.send(
+				`translate:${Date.now().toString(36)}`,
+				t(again ? "translation.ai.again" : "translation.ai.translate"),
+				{
+					context: {
+						screen: "entry",
+						collection,
+						entry: await entryForRequest(),
+						task: again ? "retranslate" : "translate",
+						blocks: meant,
+					},
 				},
-			},
-		);
+			);
+		} finally {
+			translateSending.current = false;
+		}
 	};
-	const replyTo = (card: string, about: () => Parameters<NonNullable<typeof places>["send"]>[2]) => ({
+	type About = Parameters<NonNullable<typeof places>["send"]>[2];
+	const replyTo = (card: string, about: () => About | Promise<About>) => ({
 		draft: replyDraft,
 		onDraft: setReplyDraft,
 		onSend: (words: string) => {
 			setReplyDraft("");
-			void savedForRequest().then((saved) => {
-				if (saved) void places?.send(card, words, about());
+			void savedForRequest().then(async (saved) => {
+				if (saved) void places?.send(card, words, await about());
 			});
 		},
 		onStop: () => places?.stop(card),
@@ -607,13 +624,15 @@ export function EntryEditor({
 			}),
 			onDismiss: (request) => places?.dismiss(request),
 			reply: (request) =>
-				replyTo(request, () => {
-					const picked = pickedOf.current.get(request);
+				replyTo(request, async () => {
+					// The words as they stand now: what was typed before them since they were picked moved them.
+					const view = body.current;
+					const picked = (view ? requestWords(view.state, request) : null) ?? pickedOf.current.get(request);
 					return {
 						context: {
 							screen: "entry",
 							collection,
-							entry: { id, ...entryNow.current },
+							entry: await entryForRequest(),
 							...(picked
 								? {
 										selection: {

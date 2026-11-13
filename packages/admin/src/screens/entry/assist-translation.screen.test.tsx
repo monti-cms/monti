@@ -188,6 +188,39 @@ describe("a translation: '✦ translate' (T94; doc 10, item 19)", () => {
 		expect(asked).toContain(`\\"blocks\\":[\\"${first?.id}\\"]`);
 	});
 
+	it("10-1 several changes of one undecided block's words are one filling of it: drawn once, and taken as the block's whole translation", async () => {
+		const made = on("new");
+		await open(made);
+		const read = await english(made.loaded());
+		const heading = read.doc.blocks[1];
+		const words = (heading?.content ?? []).map((part) => ("text" in part ? part.text : "")).join("");
+		made.loaded().model.add(
+			{
+				calls: [
+					{
+						name: "body_edit",
+						input: {
+							id: made.loaded().ids.english,
+							version: read.version,
+							ops: [
+								{ op: "replaceText", block: heading?.id, from: 0, to: words.length, text: "What" },
+								{ op: "replaceText", block: heading?.id, from: 4, to: 4, text: " I took out" },
+							],
+							[GROUP]: "번역",
+						},
+					},
+				],
+			},
+			{ text: "제목을 번역했습니다." },
+		);
+		await blockMenu("무엇을 덜어냈나");
+		await userEvent.click(page.getByRole("menuitem", { name: "번역" }));
+		await expect.poll(filled).toEqual(["What I took out"]);
+		await userEvent.click(button("모두 받기"));
+		await expect.poll(filled).toEqual([]);
+		await expect.poll(() => body().element().querySelector("h2")?.textContent).toBe("What I took out");
+	});
+
 	it("10-1 a site without the assistant has no '번역' by the tabs, in the block menu or on the change's card", async () => {
 		const plain = on("new", false);
 		await open(plain);

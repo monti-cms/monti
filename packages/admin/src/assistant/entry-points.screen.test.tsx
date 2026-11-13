@@ -226,10 +226,16 @@ describe("the review page: states not tried before (T165)", () => {
 		await expect.element(blocked).not.toBeChecked();
 		await userEvent.click(blocked, { force: true });
 		await expect.element(blocked).not.toBeChecked();
+		// Why, in the words its own write gave when it was proposed.
+		const why = (await view(loaded, proposal)).items.find((item) => item.blocked !== null)?.blocked;
+		expect(why).toBeTruthy();
+		const end = blocked.element().closest("tr")?.querySelector("td:last-child")?.textContent ?? "";
+		expect(end.trim().length).toBeGreaterThan(0);
 		expect((await view(loaded, proposal)).counts.toApply).toBe(4);
 		await expect.element(button("4건 적용")).toBeVisible();
-		// "Leave all out" is about the rows that can go in.
+		// "Leave all out" counts the rows that can go in: the two that move have it, the publish with one such row has none.
 		await expect.element(button("2건 모두 빼기")).toBeVisible();
+		expect(page.getByRole("button", { name: /모두 빼기/ }).elements()).toHaveLength(1);
 	});
 
 	it("10-1 [flow 3·13] a bundle that makes translations: each entry is a row that opens to its source beside the translation, with how many blocks it has; '모두 펼치기' opens them all", async () => {

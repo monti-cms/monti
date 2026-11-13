@@ -719,6 +719,16 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	};
 	// "✦ Fill" (doc 10, quick tasks): the picture's words in its settings card, and its caption at the end of the empty caption line
 	// while the caret is in it. Only of a file the library has, in a body that can be written in.
+	/**
+	 * Writes into the picture's data as it is when the answer comes, and only while it is still the picture that was asked about: the
+	 * person may have written a caption, resized it or picked another file while the model was at it.
+	 */
+	const setLater = (asked: string, next: Partial<ImageData>) => {
+		const at = getPos();
+		const now = typeof at === "number" ? (editor.state.doc.nodeAt(at)?.attrs.data as ImageData | undefined) : undefined;
+		if (!now || now.media !== asked) return;
+		updateAttributes({ data: { ...now, ...next } });
+	};
 	const fileId = data.media || null;
 	const fill = editable && fileId ? media?.fill : undefined;
 	const altPlace = `alt:${blockId}`;
@@ -727,7 +737,9 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		? {
 				state: fill.of(altPlace),
 				onFill: () =>
-					fill.run(altPlace, "alt", fileId ?? "", around(), (value) => set({ alt: value.slice(0, ALT_MAX) })),
+					fill.run(altPlace, "alt", fileId ?? "", around(), (value) =>
+						setLater(fileId ?? "", { alt: value.slice(0, ALT_MAX) }),
+					),
 			}
 		: undefined;
 	const captionFill = fill?.of(captionPlace);
@@ -744,8 +756,6 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			proposal={captionFill !== undefined && caption.value !== "" && captionFill.filled === caption.value}
 			value={caption.value}
 			onChange={(event) => caption.change(event.target.value)}
-			onFocus={() => setInCaption(true)}
-			onBlur={() => setInCaption(false)}
 			{...caption.composition}
 		/>
 	);
@@ -754,7 +764,15 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 		(editable || data.caption) &&
 		(fill && captionFill ? (
 			<Stack gap={4}>
-				<Inline gap={8} minHeight="control-sm">
+				{/* The button is there while the keyboard is in the line, the button itself included: Tab from the caption reaches it. */}
+				<Inline
+					gap={8}
+					minHeight="control-sm"
+					onFocus={() => setInCaption(true)}
+					onBlur={(event) => {
+						if (!event.currentTarget.contains(event.relatedTarget)) setInCaption(false);
+					}}
+				>
 					<Box grow minWidth={0}>
 						{captionInput}
 					</Box>
@@ -766,7 +784,9 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 							// The press leaves the caret in the caption: the button is there only while the caret is.
 							onMouseDown={(event) => event.preventDefault()}
 							onClick={() =>
-								fill.run(captionPlace, "caption", fileId ?? "", around(), (value) => set({ caption: value }))
+								fill.run(captionPlace, "caption", fileId ?? "", around(), (value) =>
+									setLater(fileId ?? "", { caption: value }),
+								)
 							}
 						>
 							{captionFill.working ? null : <Spark aria-hidden />}

@@ -23,7 +23,13 @@ export type PlaceRequest = {
 	failed: string | null;
 };
 
-type Going = { run: string | null; stop: AbortController; conversation: string | null };
+type Going = {
+	run: string | null;
+	stop: AbortController;
+	conversation: string | null;
+	/** Stop was pressed before the run said its id: it is stopped as soon as it does. */
+	stopWanted: boolean;
+};
 
 /** What a request on picked words sends along: the screen it is on and the words (`ScreenContext`). */
 export type PlaceContext = Record<string, unknown>;
@@ -94,7 +100,7 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 			});
 			const stop = new AbortController();
 			const conversation = conversations.current.get(id) ?? null;
-			const mine: Going = { run: null, stop, conversation };
+			const mine: Going = { run: null, stop, conversation, stopWanted: false };
 			going.current.set(id, mine);
 			const input =
 				"item" in about
@@ -118,6 +124,7 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 						if (event.type === "run") {
 							mine.run = event.runId ?? null;
 							if (event.conversationId) conversations.current.set(id, event.conversationId);
+							if (mine.stopWanted && mine.run) void transport("assistant.stop", { run: mine.run }).catch(() => {});
 						} else if (event.type === "text") answer += event.delta ?? "";
 						else if (event.type === "proposal") proposed = true;
 						else if (event.type === "end" && event.status === "failed")
@@ -134,7 +141,8 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 			if (gone.current) return;
 			touch?.();
 			await after.current(proposed);
-			if (gone.current) return;
+			// Asked again at this place while the screen read its proposals: the place is the newer request's now.
+			if (gone.current || going.current.has(id)) return;
 			change(id, (request) => {
 				// A request on a proposed change ends with the change: its card shows what was asked from the change's own thread.
 				if (item !== null && failed === null) return null;
@@ -146,7 +154,7 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 				return { ...request, status: "answered", thread, failed };
 			});
 		},
-		[streams, t, touch, change],
+		[streams, transport, t, touch, change],
 	);
 
 	/** Stops the assistant's work on a request: what it proposed by then stays. */
@@ -154,8 +162,9 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 		(id: string) => {
 			const mine = going.current.get(id);
 			if (!mine) return;
+			// The run goes on in the server whether or not the page listens: it is told to stop, now or as soon as it says which run it is.
 			if (mine.run) void transport("assistant.stop", { run: mine.run }).catch(() => {});
-			else mine.stop.abort();
+			else mine.stopWanted = true;
 		},
 		[transport],
 	);

@@ -113,11 +113,21 @@ function emptied(doc: EditorNode, found: { pos: number; node: EditorNode }): boo
 	return (top.attrs.link as { state?: string } | null)?.state === "pending";
 }
 
-/** What a change of an emptied block's text makes of the words the block is stored with. */
-const filledWith = (item: BodyProposal, op: Extract<BodyOp, { op: "replaceText" }>) => {
-	const was = item.was?.[op.block];
-	return was === undefined ? op.text : was.slice(0, op.from) + op.text + was.slice(op.to);
+/**
+ * What a proposal's changes of an emptied block's text make of the words the block is stored with: every such change of that block,
+ * one after the other, as the core applies them. They are one filling of the block, drawn and taken once.
+ */
+const filledWith = (item: BodyProposal, block: string) => {
+	const changes = item.ops.filter(
+		(op): op is Extract<BodyOp, { op: "replaceText" }> => op.op === "replaceText" && op.block === block,
+	);
+	const was = item.was?.[block];
+	if (was === undefined) return changes.map((op) => op.text).join("");
+	return changes.reduce((words, op) => words.slice(0, op.from) + op.text + words.slice(op.to), was);
 };
+/** Whether this is the first of a proposal's text changes of a block: the one an emptied block's filling is drawn and taken at. */
+const firstOf = (item: BodyProposal, op: Extract<BodyOp, { op: "replaceText" }>) =>
+	item.ops.find((each) => each.op === "replaceText" && each.block === op.block) === op;
 
 /** One proposal's marks, or `null` when what it points at is not there as it expects (stale). */
 function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | null {
@@ -139,7 +149,8 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 				if (!found?.node.isTextblock) return null;
 				// An undecided block of a translation: the words that fill it, in blue, where its own words will stand.
 				if (emptied(doc, found)) {
-					const words = filledWith(item, op);
+					if (!firstOf(item, op)) break;
+					const words = filledWith(item, op.block);
 					decorations.push(
 						Decoration.widget(found.pos + 1, () => element("span", FILL, words), { side: 1, key }),
 						Decoration.node(found.pos, found.pos + found.node.nodeSize, { "data-proposal-fill": "" }),
@@ -324,14 +335,18 @@ function openLine(doc: EditorNode, stored: Doc): EditorNode | null {
  */
 export function takeProposal(state: EditorState, item: BodyProposal, convert: Convert): Transaction {
 	const tr = state.tr;
+	// The emptied blocks whose filling went in whole at the first of their text changes: the rest of those changes are part of it.
+	const filled = new Set<string>();
 	for (const op of item.ops) {
 		if (op.op === "replaceText") {
 			const found = findBlock(tr.doc, op.block);
 			if (!found) continue;
 			// An undecided block of a translation holds nothing in the editor: its translation goes in whole (the block is then translated).
+			if (filled.has(op.block)) continue;
 			if (emptied(tr.doc, found)) {
-				const words = filledWith(item, op);
+				const words = filledWith(item, op.block);
 				if (words) tr.insertText(words, found.pos + 1);
+				filled.add(op.block);
 				continue;
 			}
 			const from = textPos(found.node, found.pos, op.from);
