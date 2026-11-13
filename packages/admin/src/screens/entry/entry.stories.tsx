@@ -1,4 +1,4 @@
-import { type Doc, defineSchema, type Schema } from "@monti-cms/core";
+import { type Doc, defineMark, defineSchema, type Schema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
@@ -45,6 +45,17 @@ const changelog = (widths?: number[]) =>
 		},
 		p("다음 버전은 아직 정하지 않았다."),
 	);
+
+/** An entry with a checklist: one item ticked, one not. */
+const todo = () =>
+	doc(p("내보내기 전에 할 일."), {
+		id: `b_${++count}`,
+		type: "checklist",
+		children: [
+			{ id: `b_${++count}`, type: "listItem", attrs: { checked: true }, content: text("초안 쓰기") },
+			{ id: `b_${++count}`, type: "listItem", content: text("발행하기") },
+		],
+	});
 
 /** An entry with a code block (doc 17): TypeScript, a file name, an added line, a fold over lines 2–4, a label on line 5 the text links to. */
 const withCode = (broken = false) =>
@@ -216,6 +227,10 @@ type Kind =
 	| "code"
 	| "codeBroken"
 	| "footnotes"
+	| "checklist"
+	| "addressInTab"
+	| "related"
+	| "ownFormat"
 	| "proposed"
 	| "proposedFields"
 	| "proposedStale"
@@ -223,6 +238,18 @@ type Kind =
 	| "conditional"
 	| "nestedChoice"
 	| "strayOption";
+
+/** The blog whose posts point at other posts: a relation to documents, some of them drafts. */
+const withRelated = defineSchema({
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			...schema.collections.post,
+			fields: { ...schema.collections.post?.fields, related: { kind: "relation", to: "post" } },
+		},
+	},
+});
 
 /** The blog with a conditional field on its posts (doc 19): what a post is, and what each kind of post asks for. */
 const withFormat = defineSchema({
@@ -295,6 +322,15 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 			collection: "post",
 			values: {
 				label: "게시글",
+				// The address in a tab of its own: a to-do for it marks that tab (screens/editor.md).
+				...(kind === "addressInTab"
+					? {
+							layout: [
+								{ tab: "기본", fields: ["summary", "subtitle", "cover", "category"] },
+								{ tab: "주소", fields: ["slug"] },
+							],
+						}
+					: {}),
 				fields: {
 					title: { label: "제목" },
 					slug: { label: "주소" },
@@ -302,6 +338,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					subtitle: { label: "부제" },
 					cover: { label: "대표 이미지" },
 					category: { label: "카테고리" },
+					...(kind === "related" ? { related: { label: "관련 글" } } : {}),
 					...(kind === "nestedChoice"
 						? {
 								videoHost: { label: "영상 위치", optionLabels: { own: "직접 올림", embed: "퍼가기" } },
@@ -352,7 +389,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					collection: "post",
 					locale: "ko",
 					title: kind === "untitled" ? "" : "첫 번째 글",
-					...(kind === "untitled" ? {} : { slug: "first-post" }),
+					...(kind === "untitled" || kind === "addressInTab" ? {} : { slug: "first-post" }),
 					values: {
 						summary: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.",
 						...(devCategoryGroup ? { category: devCategoryGroup } : {}),
@@ -379,7 +416,9 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 									? noted()
 									: kind === "code" || kind === "codeBroken"
 										? withCode(kind === "codeBroken")
-										: firstPost(),
+										: kind === "checklist"
+											? todo()
+											: firstPost(),
 				},
 		admin,
 	)) as { output: { id: string } };
@@ -409,8 +448,16 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 		let id = "";
 		const made = await storySite({
 			schema:
-				kind === "nestedChoice" ? withNested : kind === "conditional" || kind === "strayOption" ? withFormat : schema,
+				kind === "nestedChoice"
+					? withNested
+					: kind === "conditional" || kind === "strayOption"
+						? withFormat
+						: kind === "related"
+							? withRelated
+							: schema,
 			auth: { password: true },
+			// A site with a text format of its own: the format bar's ⋯ lists it (editor-tools.md).
+			...(kind === "ownFormat" ? { marks: [defineMark({ type: "highlight", label: "형광펜" })] } : {}),
 			// A site signs its preview links: without a secret "Preview" has nothing to open.
 			secret: "story secret",
 			signedIn: true,
@@ -467,6 +514,37 @@ export const Draft: Story = {
 		await saveCell(page, "저장됨");
 		await expect(page.getByText("초안")).toBeVisible();
 		await expect(page.getByRole("button", { name: "발행하기" })).toBeVisible();
+	},
+};
+
+/** A site with a text format of its own ("형광펜"): the format bar's ⋯ lists it, with the format mark before its name. */
+export const OwnFormat: Story = { loaders: site("ownFormat") };
+
+/** A checklist in the body: the ticked item's box has its ✓, and pressing a box ticks it. */
+export const Checklist: Story = {
+	loaders: site("checklist"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByRole("checkbox", { name: "완료", checked: true }, wait);
+	},
+};
+
+/** The address in a tab of its own and empty: that tab's name has the orange dot of a publish to-do. */
+export const ToDoInTab: Story = {
+	loaders: site("addressInTab"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByRole("tab", { name: /할 일 있음/ }, wait);
+	},
+};
+
+/** A relation to posts, its list open: the drafts say "초안" at their row's end. */
+export const RelationDrafts: Story = {
+	loaders: site("related"),
+	play: async ({ canvasElement }) => {
+		const { page, all } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("combobox", { name: "관련 글" }, wait));
+		await all.findByRole("option", { name: /리액트 다시 만들기 1편/ }, wait);
 	},
 };
 
@@ -584,7 +662,7 @@ export const PublishBlocked: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, all } = await opened(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "발행하기" }));
-		await all.findByText("발행할 수 없습니다 · 할 일 2개를 먼저 해 주세요", {}, wait);
+		await all.findByText("할 일 2개가 남았습니다", {}, wait);
 		await all.findByRole("button", { name: /제목 쓰기/ }, wait);
 	},
 };

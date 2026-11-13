@@ -15,7 +15,7 @@ import { docFromEditor, docToEditor } from "./convert";
 import { Footnotes } from "./footnotes";
 import { bodyKeys } from "./keys";
 import { MEDIA_VIEWS } from "./media-views";
-import { BlockIds, bodyStates } from "./plugins";
+import { BlockIds, bodyStates, checklistBoxes } from "./plugins";
 import { ProposalMarks } from "./proposal-marks";
 import { nothingPicked, RangeOverWholeBlocks } from "./range-over-blocks";
 import { RequestMarks } from "./request-marks";
@@ -86,6 +86,7 @@ export function useBodyEditor({
 				labels: () => ({ placeholder: latest.current.t("editor.placeholder"), off: latest.current.t("editor.off") }),
 				offered: () => isOffered,
 			}),
+			checklistBoxes(() => latest.current.t("editor.checklist.done")),
 			bodyKeys(() => latest.current.offered),
 			...(kit.blocks.some((block) => block.type === "footnote") ? [Footnotes] : []),
 			ProposalMarks.configure({ take: (id) => latest.current.onTakeProposal?.(id) }),

@@ -94,6 +94,16 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(title()).toHaveValue("첫 번째 글 다시 쓰기");
 	});
 
+	it("the head's '저장' says its name with its keys in its tooltip, not the keys alone", async () => {
+		await on("draft").run();
+		await opened();
+		await userEvent.hover(button("저장"));
+		const tip = () => document.querySelector('[data-slot="tooltip-content"]');
+		await expect.poll(() => tip()?.textContent ?? "").toMatch(/^저장/);
+		// The name, then the keys in the tooltip's faint shortcut place.
+		expect(tip()?.querySelector("span")?.textContent).toMatch(/S$/);
+	});
+
 	it("16-2 'Preview' opens the site's preview address in a new tab, with the entry's ticket and the page to go on to", async () => {
 		const story = on("draft");
 		await story.run();
@@ -257,6 +267,12 @@ describe("the entry editor: saving and coming back", () => {
 		await userEvent.click(button("비교하기"));
 		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
 		await expect.element(page.getByText(/다른 곳 \d/)).toBeVisible();
+		// The count is in the ink of plain words (screens/editor-more.md: \`Text variant="note"\`), not a quiet label's.
+		const ink = document.createElement("span");
+		ink.className = "text-monti-default";
+		document.body.append(ink);
+		expect(getComputedStyle(page.getByText(/다른 곳 \d/).element()).color).toBe(getComputedStyle(ink).color);
+		ink.remove();
 	});
 
 	it("15 (T39) signing in again brings back the same entry with what was typed, ready to save", async () => {
@@ -1195,6 +1211,37 @@ describe("the entry editor: a body proposal the text moved away from (T87)", () 
 		// The change that was taken is not then shown as one the text moved away from.
 		expect(mark().elements()).toHaveLength(1);
 		await expect.element(page.getByText("1 / 1")).toBeVisible();
+	});
+});
+
+describe("the entry editor: a refused publish", () => {
+	it("02-4 the toast says what is left, one short reason, not what to do about it", async () => {
+		await from(entry.PublishBlocked).run();
+		await expect.element(page.getByText("할 일 2개가 남았습니다")).toBeVisible();
+		await expect.element(page.getByText(/먼저 해 주세요/)).not.toBeInTheDocument();
+	});
+});
+
+describe("the entry editor: the property panel's tabs", () => {
+	it("a tab holding a field a publish to-do points at has the orange dot by its name, and loses it once open", async () => {
+		await on("addressInTab").run();
+		await opened();
+		const tab = (name: string) => page.getByRole("complementary").getByRole("tab", { name: new RegExp(`^${name}`) });
+		await expect.element(tab("주소")).toBeVisible();
+		await expect.element(tab("주소")).toHaveAccessibleName(/할 일 있음/);
+		await expect.element(tab("기본")).not.toHaveAccessibleName(/할 일 있음/);
+		await userEvent.click(tab("주소"));
+		await expect.element(tab("주소")).not.toHaveAccessibleName(/할 일 있음/);
+	});
+
+	it("a relation's draft says '초안' at its row's end, as the link card's rows do, with no brackets", async () => {
+		await on("related").run();
+		await opened();
+		await userEvent.click(page.getByRole("combobox", { name: "관련 글" }));
+		const row = page.getByRole("option", { name: /리액트 다시 만들기 1편/ });
+		await expect.element(row).toBeVisible();
+		expect(row.element().querySelector("[data-slot=menu-value]")?.textContent).toBe("초안");
+		expect(row.element().textContent).not.toContain("(");
 	});
 });
 

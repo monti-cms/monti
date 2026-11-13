@@ -122,7 +122,10 @@ export function MediaField({
 					onOpen={() => setPicking(true)}
 					// On a file going up or stopped, × takes out that file: the field goes back to what it had.
 					onClear={going ? () => uploads.clear(field) : readOnly || !own ? undefined : () => onChange(null)}
-					clearLabel={t("library.field.clear", { label })}
+					// In a translation × on its own file does not empty the field: it follows the source again, and says so (screens/editor.md).
+					clearLabel={t(following !== undefined && own && !going ? "library.field.restore" : "library.field.clear", {
+						label,
+					})}
 					action={
 						// Read-only the settings stay, to read what the entry says of its picture: the card's fields are read-only there (2026-11-11, owner).
 						going?.status === "failed" ? (

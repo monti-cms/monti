@@ -90,8 +90,9 @@ function BlockBox({
 			)}
 			<div
 				aria-hidden="true"
+				// Its own box's state only (the parent): a picture or a file inside a picked block draws no line of its own.
 				data-slot="block-line"
-				className="pointer-events-none absolute inset-0 hidden rounded-monti-md outline-offset-0 group-focus-visible/block-box:block group-focus-visible/block-box:ring-2 group-focus-visible/block-box:ring-monti-contrast/50 group-data-selected/block-box:block group-data-selected/block-box:outline-2 group-data-selected/block-box:outline-monti-contrast"
+				className="pointer-events-none absolute inset-0 hidden rounded-monti-md outline-offset-0 [:focus-visible>&]:block [:focus-visible>&]:ring-2 [:focus-visible>&]:ring-monti-contrast/50 [[data-selected]>&]:block [[data-selected]>&]:outline-2 [[data-selected]>&]:outline-monti-contrast"
 			/>
 		</div>
 	);

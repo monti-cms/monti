@@ -59,7 +59,7 @@ describe("the entry editor: '✦ fill' for a picture (T104)", () => {
 		expect(made.loaded().model.answers).toHaveLength(0);
 	});
 
-	it("10-1 the empty caption line has '채우기' at its end while the caret is in it: the caption comes in blue, and a line with words has no button", async () => {
+	it("10-1 the empty caption line has '채우기' at its end while the caret is in it: the caption comes in blue, and a line with words has '다시' instead", async () => {
 		const made = on(media.WithImage, (request) => ({
 			value: request.prompt.includes("caption") ? "책상에서 시작한 아침" : "다른 답",
 		}));
@@ -71,9 +71,10 @@ describe("the entry editor: '✦ fill' for a picture (T104)", () => {
 		await userEvent.click(button("채우기"));
 		await expect.element(caption()).toHaveValue("책상에서 시작한 아침");
 		expect(caption().element().hasAttribute("data-proposal")).toBe(true);
-		// The caret stayed in the caption through the press; with words in it the button is gone.
+		// The caret stayed in the caption through the press; with words in it the button asks again, as the alt text's does (screens/common.md).
 		expect(document.activeElement).toBe(caption().element());
 		await expect.element(button("채우기")).not.toBeInTheDocument();
+		await expect.element(button("다시")).toBeVisible();
 		await userEvent.keyboard("!");
 		await expect.element(caption()).toHaveValue("책상에서 시작한 아침!");
 		expect(caption().element().hasAttribute("data-proposal")).toBe(false);

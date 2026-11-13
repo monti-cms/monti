@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { EditorBody } from "./index";
+import { CHECK_MARK_PATH, EditorBody } from "./index";
 
 /** The editor's text column: the plain elements the editor engine draws, in the body's looks, with its states. */
 const meta = {
@@ -9,6 +9,24 @@ const meta = {
 } satisfies Meta<typeof EditorBody>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** The box the editor puts at a checklist item's start (`data-check`, the pressable place, with the drawn `data-check-box`), as the editor draws it. */
+const CheckBox = () => (
+	<span data-check="" contentEditable={false}>
+		<span data-check-box="">
+			<svg
+				viewBox="0 0 14 14"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="1.5"
+				className="size-3.5"
+				aria-hidden="true"
+			>
+				<path d={CHECK_MARK_PATH} />
+			</svg>
+		</span>
+	</span>
+);
 
 const Column = ({ children }: { children: React.ReactNode }) => (
 	<div className="max-w-monti-reading">
@@ -38,8 +56,14 @@ export const Blocks: Story = {
 				<li>단계</li>
 			</ol>
 			<ul data-checklist="">
-				<li data-checked="">초안 쓰기</li>
-				<li>발행하기</li>
+				<li data-checked="">
+					<CheckBox />
+					초안 쓰기
+				</li>
+				<li>
+					<CheckBox />
+					발행하기
+				</li>
 			</ul>
 			<h4>인용과 코드</h4>
 			<blockquote>
