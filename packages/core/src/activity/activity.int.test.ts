@@ -1,9 +1,11 @@
 import { createHmac } from "node:crypto";
-import { sql } from "kysely";
+import { Kysely, PostgresDialect, sql } from "kysely";
+import { Pool } from "pg";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { signedInApi } from "../__test__/admin";
 import { testDatabase } from "../__test__/database";
+import type { Database } from "../db/schema";
 import {
 	BEFORE_ANSWER_MS,
 	RETRY_BATCH,
@@ -930,6 +932,46 @@ describe("sending", () => {
 		await reserveFailedDeliveries(db, [other.id], { now: clock, holder: "gone", run: null });
 		later(MINUTE);
 		expect(await monti.deliveries.sendDue()).toEqual({ sent: 1, failed: 0, left: 0 });
+	});
+
+	it("13-1 a batch is picked once, in a step of its own, before it is updated: however the database plans it, a step takes no more than a batch", async () => {
+		const failing: Receiver = {
+			destination: SITE,
+			send: async () => {
+				throw new ReceiverAnswer("503");
+			},
+		};
+		const monti = site({ receivers: [failing] });
+		for (let index = 0; index < 23; index++) await newPost(`글 ${index}`, `post-${index}`, monti);
+		later(MINUTE);
+		// Written inside the update's `where id in (select … limit … for update skip locked)`, the pick is a subquery the planner may run
+		// again for each row (a nested loop with nothing kept between rows): each run leaves out the rows the statement has updated and
+		// takes the next, so a step took 17 of 23 on CI, and 21 of 23 in plain SQL under that plan. Which plan a database chooses cannot
+		// be asked for here, so the statement itself is looked at: the pick stands in a `with … as materialized`, which runs once.
+		const { rows } = await sql<{ schema: string }>`select current_schema() as schema`.execute(db);
+		const statements: string[] = [];
+		const watched = new Kysely<Database>({
+			dialect: new PostgresDialect({
+				pool: new Pool({
+					connectionString: process.env.CMS_TEST_DATABASE_URL,
+					options: `-c search_path=${rows[0].schema}`,
+					max: 1,
+				}),
+			}),
+			log: (event) => void statements.push(event.query.sql),
+		});
+		try {
+			const reserved = await reserveFailedDeliveries(watched, "all", { now: clock, holder: "the-person", run: null });
+			expect(reserved.ids).toHaveLength(RETRY_BATCH);
+			expect(reserved.remaining).toBe(23 - RETRY_BATCH);
+		} finally {
+			await watched.destroy();
+		}
+		const update = statements.find((statement) => statement.includes('update "monti_delivery"'));
+		expect(update).toMatch(
+			/^with "picked" as materialized \(select .* limit \$\d+ for update skip locked\) update "monti_delivery"/,
+		);
+		expect(update).toContain('where "id" in (select "picked"."id" from "picked")');
 	});
 
 	it("13-1 sending all again goes a batch at a time, several at once, and tries each delivery once however often it is asked", async () => {

@@ -4,6 +4,8 @@ import {
 	type FieldMark,
 	inOptionOrder,
 	localeModeOf,
+	notChosenFields,
+	publicPath,
 	slugify,
 	storedFields,
 } from "@monti-cms/core";
@@ -43,6 +45,7 @@ import { Close, Renew } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
 import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
+import type { EntryView } from "../../plugins";
 import { PickOne } from "../settings/pick-one";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
 import { MediaField, SharedMediaValue } from "./media-field";
@@ -60,18 +63,37 @@ export const fieldInputId = (field: string) => `monti-entry-${field}`;
 /** The kinds of field the panel holds. */
 const SHOWN = new Set<FieldDefinition["kind"]>(["text", "slug", "select", "relation", "media", "conditional"]);
 
-/** The fields of a collection the panel shows, in the schema's order. The title is the editor's heading, not a property (flow 1). */
+/** The fields the plugins add to a collection, each in its plugin's tab: the collection's own layout does not place them. */
+const pluginFieldsOf = (schema: SchemaRead | null, collection: string) =>
+	new Map(
+		(schema?.pluginTabs?.[collection] ?? []).flatMap((tab) => tab.fields.map((field) => [field.name, field] as const)),
+	);
+
+/**
+ * The fields of a collection its own tabs show, in the schema's order. The title is the editor's heading, not a property (flow 1), and a
+ * plugin's fields stand in the plugin's tab.
+ */
 export function panelFields(schema: SchemaRead | null, collection: string) {
 	const fields = schema?.schema.collections[collection]?.fields ?? {};
+	const theirs = pluginFieldsOf(schema, collection);
 	return Object.entries(fields)
-		.filter(([key, def]) => key !== "title" && SHOWN.has(def.kind))
+		.filter(([key, def]) => key !== "title" && SHOWN.has(def.kind) && !theirs.has(key))
 		.map(([key]) => key);
 }
 
-/** The tabs of the panel: the collection's layout (doc 01), the fields it leaves out in its first tab. */
+/**
+ * The tabs of the panel: the collection's layout (doc 01), the fields it leaves out in its first tab, and after them each plugin's tab with
+ * the plugin's fields in the plugin's order (doc 14).
+ */
 export function panelLayout(schema: SchemaRead | null, collection: string, defaultTab: string): Layout {
 	const layout = schema?.adminValues[collection]?.layout as Layout | undefined;
-	return shownLayout(layout, panelFields(schema, collection), defaultTab).filter((tab) => tab.fields.length > 0);
+	return [
+		...shownLayout(layout, panelFields(schema, collection), defaultTab),
+		...(schema?.pluginTabs?.[collection] ?? []).map((tab) => ({
+			tab: tab.tab,
+			fields: tab.fields.map((each) => each.name),
+		})),
+	].filter((tab) => tab.fields.length > 0);
 }
 
 /** Where a field's value is in the editor's draft: the address is the entry's own, the rest are its values. */
@@ -551,9 +573,10 @@ export function EntryProperties({
 	/** In a translation: the fields whose source moved on (T111), and confirming one. */
 	changes?: { marks: readonly FieldMark[]; onConfirm: (field: string) => void };
 }) {
-	const { t } = useAdmin();
+	const { t, inputs, views, siteName } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
 	const top = schema?.schema.collections[collection]?.fields ?? {};
+	const theirs = pluginFieldsOf(schema, collection);
 	// A conditional field (doc 19) is its choice and, under it, the fields of the chosen option: each is stored as a field of its own.
 	const definitions = storedFields(schema?.schema.collections[collection]);
 	const values = schema?.adminValues[collection]?.fields ?? {};
@@ -569,7 +592,54 @@ export function EntryProperties({
 	const currentLocale = entry?.locale;
 	const entryGroup = entry?.translationGroup;
 
+	/** The entry as a plugin's input or view reads it: what the editor holds now, the source's value where a field is the source's. */
+	const entryView = (): EntryView => {
+		const slug = String(editor.value("slug") ?? "");
+		const held = Object.fromEntries(
+			Object.entries(definitions)
+				.filter(([name]) => name !== "title" && name !== "slug")
+				.map(([name, definition]) => {
+					const own = editor.value(`values.${name}`);
+					const mode = localeModeOf(name, definition);
+					// In a translation: the source's value where the field is the source's, and where an empty one follows it (doc 04).
+					const sources = shared && (mode === "same" || (mode === "fromSource" && !hasValue(own)));
+					return [name, sources ? shared[name] : own];
+				}),
+		);
+		// Only the chosen option's values are the entry's (doc 19): what another option still holds until the save drops it is not shown
+		// to a plugin as a value.
+		const others = notChosenFields(schema?.schema.collections[collection], held);
+		return {
+			collection,
+			locale: currentLocale ?? null,
+			title: editor.title,
+			slug,
+			values: Object.fromEntries(
+				Object.entries(held).map(([name, value]) => [name, others.has(name) ? undefined : value]),
+			),
+			address: schema && slug ? publicPath(schema.schema, collection, slug, currentLocale) : null,
+			labels: Object.fromEntries(
+				Object.entries(values).flatMap(([name, each]) => (each.label ? [[name, each.label]] : [])),
+			),
+			siteName,
+		};
+	};
+
 	const row = (key: string, after?: React.ReactNode) => {
+		// A field with no value (doc 14): the view its plugin's browser half brings, under its name when it has one. Without that half
+		// there is nothing to draw.
+		const view = theirs.get(key)?.view;
+		if (view !== undefined) {
+			const View = views.get(view);
+			if (!View) return null;
+			const label = theirs.get(key)?.label;
+			return (
+				<FormField key={key}>
+					{label ? <FormFieldLabel>{label}</FormFieldLabel> : null}
+					<View field={key} options={theirs.get(key)?.options ?? {}} entry={entryView()} />
+				</FormField>
+			);
+		}
 		const def = definitions[key];
 		if (!def) return null;
 		const id = fieldInputId(key);
@@ -607,6 +677,22 @@ export function EntryProperties({
 				</Text>
 			) : undefined;
 		const focus = { onFocus: () => setFocused(key), onBlur: () => setFocused(null) };
+		// The field's own input, when the site or a plugin brought one under the name the field gives (doc 14): the input part, and
+		// what it says at the end of the label row.
+		const brought = def.input ? inputs.get(def.input) : undefined;
+		const own = brought === undefined ? null : "Input" in brought ? brought : { Input: brought, Note: undefined };
+		const ownProps = () => ({
+			id,
+			field: key,
+			definition: def,
+			options: def.inputOptions ?? {},
+			value,
+			onChange: (next: unknown) => editor.set(path, next),
+			readOnly,
+			proposal,
+			entry: entryView(),
+		});
+		const note = own?.Note ? <own.Note {...ownProps()} /> : count;
 		const changeMark = changes?.marks.find((mark) => mark.field === key);
 		const shownInCard = (shownValue: unknown) =>
 			def.kind === "media" ? (
@@ -686,8 +772,9 @@ export function EntryProperties({
 					onChange={(next) => editor.set(path, next)}
 				/>
 			);
-		// A choice with one option, on or off (doc 19): a switch at the end of the field's row, the way every switch stands.
-		if (def.kind === "select" && def.control === "toggle") {
+		// A choice with one option, on or off (doc 19): a switch at the end of the field's row, the way every switch stands. A field that
+		// names an input of its own is drawn with that one instead, as any other kind is.
+		if (!own && def.kind === "select" && def.control === "toggle") {
 			const [on] = def.options;
 			return (
 				<FormField key={key}>
@@ -721,6 +808,8 @@ export function EntryProperties({
 					)
 				: [];
 		const input = () => {
+			// The field's own input (doc 14). A media field keeps its own: it is drawn above, with its window and its picture's words.
+			if (own) return <own.Input {...ownProps()} />;
 			if (def.kind === "slug")
 				return (
 					<Input
@@ -856,13 +945,13 @@ export function EntryProperties({
 					changed={proposedLabel}
 					// While a proposal waits the row is the proposal's alone: no count, no mark of the source's change beside "discard".
 					action={
-						proposedLabel ? undefined : change && count ? (
+						proposedLabel ? undefined : change && note ? (
 							<Inline gap={8}>
-								{count}
+								{note}
 								{change}
 							</Inline>
 						) : (
-							(change ?? count)
+							(change ?? note)
 						)
 					}
 				>

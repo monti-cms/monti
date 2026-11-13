@@ -17,7 +17,7 @@ export type SyncResult =
  */
 export async function syncSchemaFile(monti: Monti): Promise<SyncResult> {
 	const state = await readSchemaState(monti.db);
-	const schema = monti.site.schema();
+	const schema = monti.site.fileSchema();
 	if (!state) return { status: "fresh" };
 	if (state.hash === schemaHash(schema)) return { status: "same" };
 	if (!monti.site.files) return { status: "migrate" };

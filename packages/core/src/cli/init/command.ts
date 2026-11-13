@@ -67,6 +67,7 @@ const realDatabase: NonNullable<InitOptions["database"]> = {
 				config.schema,
 				await readChangeFiles(path.join(cwd, "monti", "changes")),
 				monti.site.kit,
+				monti.site.fieldSets,
 			);
 		} finally {
 			await monti.db.destroy();

@@ -22,7 +22,21 @@ export default {
 			2,
 			"always",
 			// The packages that exist, and the repo's own areas. A new package adds its scope here.
-			["core", "ui", "admin", "ai", "next", "storage-s3", "examples", "scripts", "ci", "deps", "release", "repo"],
+			[
+				"core",
+				"ui",
+				"admin",
+				"ai",
+				"next",
+				"storage-s3",
+				"seo",
+				"examples",
+				"scripts",
+				"ci",
+				"deps",
+				"release",
+				"repo",
+			],
 		],
 	},
 };

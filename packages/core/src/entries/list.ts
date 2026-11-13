@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CheckError } from "../errors";
 import { mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext } from "../operation";
+import type { PluginTab } from "../plugins/define";
 import { DateRange, dateRangeSql, likePattern } from "../query";
 import { type AdminValues, ListPrefs } from "../schema/admin-values";
 import {
@@ -517,11 +518,23 @@ function schemaColumns(
 	definition: CollectionDefinition,
 	values: AdminValues,
 	multilingual: boolean,
+	pluginTabs: readonly PluginTab[],
 ): (ListColumn & { shown: boolean })[] {
+	const theirs = new Map(pluginTabs.flatMap((tab) => tab.fields.map((field) => [field.name, field] as const)));
 	const fields = Object.entries(storedFields(definition)).flatMap(([name, field]) => {
 		const kind = KIND_OF[field.kind];
 		if (!kind || name === "title" || name === "slug") return [];
-		const labels = values.fields?.[name];
+		// A plugin's field is a column when its plugin says so (doc 06, plugin columns), named as the plugin names it until the admin's
+		// values have a name for it, and hidden until a person adds it.
+		const plugin = theirs.get(name);
+		if (plugin && !plugin.column) return [];
+		const saved = values.fields?.[name];
+		const labels = plugin
+			? {
+					label: saved?.label ?? plugin.label,
+					optionLabels: { ...plugin.optionLabels, ...saved?.optionLabels },
+				}
+			: saved;
 		return [
 			{
 				id: name,
@@ -531,7 +544,7 @@ function schemaColumns(
 				sortable: false,
 				filter: field.kind === "relation" ? "relation" : field.kind === "select" ? "select" : "empty",
 				hidden: false,
-				shown: field.kind === "relation",
+				shown: field.kind === "relation" && !plugin,
 				...(field.kind === "relation" ? { to: field.to, many: field.many ?? false } : {}),
 				...(field.kind === "select"
 					? {
@@ -575,8 +588,9 @@ export function listColumns(
 	definition: CollectionDefinition,
 	values: AdminValues,
 	multilingual: boolean,
+	pluginTabs: readonly PluginTab[] = [],
 ): { columns: ListColumn[]; pageSize: number } {
-	const all = schemaColumns(definition, values, multilingual);
+	const all = schemaColumns(definition, values, multilingual, pluginTabs);
 	const prefs = values.list ?? {};
 	const order = prefs.order ?? [];
 	const known = new Set(order);
@@ -628,6 +642,7 @@ export const listOperations = [
 				collectionOf(ctx, input.collection),
 				await adminValues(ctx, input.collection),
 				translates(ctx.site.schema()),
+				ctx.site.pluginTabs(input.collection),
 			);
 		},
 	}),
@@ -640,9 +655,12 @@ export const listOperations = [
 		touches: (input) => [{ kind: "collectionAdminValues", id: input.collection }],
 		async check(input, ctx) {
 			const ids = new Set(
-				listColumns(collectionOf(ctx, input.collection), {}, translates(ctx.site.schema())).columns.map(
-					(column) => column.id,
-				),
+				listColumns(
+					collectionOf(ctx, input.collection),
+					{},
+					translates(ctx.site.schema()),
+					ctx.site.pluginTabs(input.collection),
+				).columns.map((column) => column.id),
 			);
 			const widths = Object.keys(input.widths ?? {});
 			for (const id of [...(input.order ?? []), ...(input.hidden ?? []), ...widths])

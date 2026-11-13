@@ -35,6 +35,18 @@ import { mediaOperations } from "./media/operations";
 import { mediaRecord } from "./media/record";
 import type { Storage } from "./media/storage";
 import { type Actor, type AnyOperation, defineOperation, type OperationKind, recordKey } from "./operation";
+import {
+	type BeforeSave,
+	checkFieldSets,
+	fieldSetsOf,
+	type Importer,
+	type KeySlot,
+	type NamedFieldSet,
+	type PluginFieldSet,
+	type TextCheck,
+	type ToolPage,
+} from "./plugins/define";
+import { openSlotKey, pluginOperations } from "./plugins/operations";
 import type { RecordKind } from "./records";
 import { relationOperations } from "./relations/operations";
 import type { Schema } from "./schema/define";
@@ -42,7 +54,7 @@ import type { SchemaFiles } from "./schema/files";
 import { schemaOperations, schemaRecordKinds } from "./schema/operations";
 import { settingsOperations } from "./settings/operations";
 import { settingsRecord } from "./settings/values";
-import { createSite } from "./site";
+import { createSite, type SitePlugin } from "./site";
 import { type AnyStream, defineStream, type StreamContext } from "./stream";
 import { translationOperations } from "./translations/operations";
 import { trashOperations } from "./trash/operations";
@@ -56,7 +68,10 @@ const EMPTY_SCHEMA: Schema = {
 
 /** A plugin adds operations (and the records and receivers they need) the same way the core does, so they become API routes, tools and commands too. */
 export type Plugin = {
+	/** Its code name: lower-case letters, digits and dashes. Keys, deliveries and the log name it by this. */
 	name: string;
+	/** Its name as a person reads it on the keys screen and in the plugin list; the code name when left out. */
+	label?: string;
 	operations?: AnyOperation[];
 	recordKinds?: RecordKind[];
 	receivers?: Receiver[];
@@ -69,6 +84,18 @@ export type Plugin = {
 	storage?: Storage;
 	/** Services it brings that a key can be added for (doc 14). */
 	keyServices?: KeyService[];
+	/** The places it keeps keys of its own: each is a row of the keys screen, filled there and opened with `monti.plugins.key` (doc 14). */
+	keys?: KeySlot[];
+	/** Fields it adds to collections, in a tab of the property panel that is its own (docs 01 and 14). */
+	fields?: PluginFieldSet[];
+	/** Changes or refuses an entry's values before they are saved (doc 14). */
+	beforeSave?: BeforeSave;
+	/** Its check of the body's words, shown in a cell of the editor's status bar (doc 03). */
+	textCheck?: TextCheck;
+	/** Tabs it adds to the tools page; the screens come from its admin half. */
+	toolPages?: ToolPage[];
+	/** File formats it lets the import read (doc 14). */
+	importers?: Importer[];
 	/** Work it streams (doc 10: the assistant's run). */
 	streams?: AnyStream[];
 	/** Its own clean-up, run with the trash's (when the admin opens, and `monti trash:purge`): what it keeps for a time and then removes. */
@@ -80,8 +107,33 @@ export type Plugin = {
 	attach?: (monti: Monti) => void;
 };
 
+const PLUGIN_NAME = /^[a-z][a-z0-9-]*$/;
+
 export function definePlugin(plugin: Plugin): Plugin {
+	if (!PLUGIN_NAME.test(plugin.name))
+		throw new Error(`Plugin name "${plugin.name}" is not lower-case letters, digits and dashes.`);
 	return plugin;
+}
+
+/** What a plugin adds, by the names doc 14 gives the kinds: the plugin list says them. */
+function addsOf(plugin: Plugin): string[] {
+	const has = (list: readonly unknown[] | undefined) => (list?.length ?? 0) > 0;
+	return [
+		...(has(plugin.operations) ? ["operations"] : []),
+		...(has(plugin.blocks) || has(plugin.marks) ? ["blocks"] : []),
+		...(has(plugin.fields) ? ["fields"] : []),
+		...(plugin.fields?.some((set) => has(set.columns)) ? ["columns"] : []),
+		...(has(plugin.publishChecks) ? ["publishChecks"] : []),
+		...(plugin.beforeSave ? ["beforeSave"] : []),
+		...(plugin.textCheck ? ["textCheck"] : []),
+		...(has(plugin.receivers) ? ["receivers"] : []),
+		...(has(plugin.importers) ? ["importers"] : []),
+		...(has(plugin.toolPages) ? ["toolPages"] : []),
+		...(has(plugin.keys) ? ["keys"] : []),
+		...(has(plugin.keyServices) ? ["keyServices"] : []),
+		...(plugin.storage ? ["storage"] : []),
+		...(has(plugin.streams) ? ["streams"] : []),
+	];
 }
 
 export type MontiOptions = {
@@ -288,6 +340,14 @@ export type Monti = ReturnType<typeof createMonti>;
 /** Builds a site's Monti: its operations, plugins included, and the engine every entry point runs them through. */
 export function createMonti(options: MontiOptions) {
 	const plugins = options.plugins ?? [];
+	// A plugin's name is part of its slots' ids and of its tool pages' addresses, whether or not it was made with `definePlugin`. Two
+	// plugins under one name would share their key slots and their place in the log.
+	for (const plugin of plugins) {
+		if (!PLUGIN_NAME.test(plugin.name))
+			throw new Error(`Plugin name "${plugin.name}" is not lower-case letters, digits and dashes.`);
+		if (plugins.filter((other) => other.name === plugin.name).length > 1)
+			throw new Error(`Two plugins are named "${plugin.name}".`);
+	}
 	const recordKinds = new Map<string, RecordKind>();
 	for (const kind of [
 		...schemaRecordKinds,
@@ -319,12 +379,44 @@ export function createMonti(options: MontiOptions) {
 	for (const service of keyServices)
 		if (keyServices.filter((other) => other.id === service.id).length > 1)
 			throw new Error(`Key service "${service.id}" is defined twice.`);
+	for (const plugin of plugins) {
+		const ids = (plugin.keys ?? []).map((slot) => slot.id);
+		if (new Set(ids).size !== ids.length || ids.some((id) => !PLUGIN_NAME.test(id)))
+			throw new Error(
+				`Plugin ${plugin.name}'s key slots need ids of their own, in lower-case letters, digits and dashes.`,
+			);
+		for (const slot of plugin.keys ?? [])
+			if (!keyServices.some((service) => service.id === slot.service))
+				throw new Error(
+					`Plugin ${plugin.name}'s key slot "${slot.id}" is for the service "${slot.service}", which the site does not have. A plugin brings its service with keyServices.`,
+				);
+		const pages = (plugin.toolPages ?? []).map((page) => page.id);
+		if (new Set(pages).size !== pages.length || pages.some((id) => !PLUGIN_NAME.test(id)))
+			throw new Error(
+				`Plugin ${plugin.name}'s tool pages need ids of their own, in lower-case letters, digits and dashes.`,
+			);
+	}
+	const fieldSets: NamedFieldSet[] = fieldSetsOf(plugins);
+	checkFieldSets(fieldSets);
+	const sitePlugins: SitePlugin[] = plugins.map((plugin) => ({
+		name: plugin.name,
+		label: plugin.label ?? plugin.name,
+		keys: plugin.keys ?? [],
+		services: (plugin.keyServices ?? []).map((service) => service.id),
+		textCheck: plugin.textCheck ?? null,
+		beforeSave: plugin.beforeSave ?? null,
+		toolPages: plugin.toolPages ?? [],
+		importers: plugin.importers ?? [],
+		adds: addsOf(plugin),
+	}));
 	const now = options.now ?? (() => new Date());
 	const site = createSite(options.schema ?? EMPTY_SCHEMA, options.files ?? null, {
 		publishChecks: plugins.flatMap((plugin) => plugin.publishChecks ?? []),
 		secret: options.secret,
 		storage: storages[0]?.storage ?? null,
 		keyServices,
+		fieldSets,
+		plugins: sitePlugins,
 		fetch: options.fetch,
 		auth: {
 			password: options.auth?.password ?? false,
@@ -361,6 +453,7 @@ export function createMonti(options: MontiOptions) {
 		...mediaOperations,
 		...trashOperations,
 		...keyOperations,
+		...pluginOperations,
 		...bodyOperations,
 		...authOperations,
 	])
@@ -539,6 +632,14 @@ export function createMonti(options: MontiOptions) {
 			open: (id: string) => openKey(engine.db, site.secret, id),
 			/** Counts the tokens a call spent against its key, in the month of `at`, the time the call was made (doc 14: tokens per month, no money). */
 			addUsage: (id: string, tokens: number, at: Date = now()) => addKeyUsage(engine.db, id, tokens, at),
+		},
+
+		plugins: {
+			/**
+			 * The key in a plugin's slot, opened for the server to call its service with; `null` while the slot is empty or the server's secret
+			 * does not open it. No operation returns it.
+			 */
+			key: (plugin: string, slot: string) => openSlotKey(engine.db, site.secret, plugin, slot),
 		},
 
 		trash: {

@@ -13,6 +13,7 @@ import {
 } from "@monti-cms/ui";
 import { useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
+import type { EntryView } from "../../plugins";
 import { PickOne } from "./pick-one";
 import { at, type DraftField, type Layout, shownLayout } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
@@ -44,15 +45,32 @@ export function PreviewPanel({
 	collection: string;
 	onClose: () => void;
 }) {
-	const { t } = useAdmin();
+	const { t, inputs, siteName } = useAdmin();
 	const keys = model.topFields(c).filter((key) => model.shown(at.field(c, key)));
 	const layout = shownLayout(
 		model.draft.value(at.collectionValue(c, "layout")) as Layout | undefined,
 		keys,
 		t("settings.fields.defaultTab"),
 	);
+	// The plugins' tabs come after the collection's own, as the editor has them (doc 14): their fields, drawn empty like the rest.
+	const pluginTabs = model.data?.pluginTabs?.[c] ?? [];
+	const tabs = [...layout.map((each) => each.tab), ...pluginTabs.map((each) => each.tab)];
+	/** An entry with nothing in it, for the plugins' inputs: the collection's fields by name, each empty. */
+	const emptyEntry: EntryView = {
+		collection: c,
+		locale: null,
+		title: "",
+		slug: "",
+		values: Object.fromEntries(keys.map((key) => [key, undefined])),
+		address: null,
+		labels: Object.fromEntries(keys.map((key) => [key, model.fieldLabel(c, key)])),
+		siteName,
+	};
+	/** What was tried in the plugins' inputs: the preview's inputs take typing like the editor's, and keep none of it. */
+	const [typed, setTyped] = useState<Record<string, unknown>>({});
 	const [tab, setTab] = useState("0");
-	const picked = layout[Number(tab)] ?? layout[0];
+	const picked = layout[Number(tab)] ?? (Number(tab) < tabs.length ? undefined : layout[0]);
+	const pluginTab = pluginTabs[Number(tab) - layout.length];
 
 	// The editor's rule for required fields (components/field.md): a red * after the label, but only in a panel that also has fields left empty.
 	const defs = keys
@@ -124,8 +142,42 @@ export function PreviewPanel({
 			onClose={onClose}
 			value={tab}
 			onValueChange={setTab}
-			tabs={layout.map((each, index) => ({ value: String(index), label: each.tab }))}
+			tabs={tabs.map((each, index) => ({ value: String(index), label: each }))}
 		>
+			{pluginTab ? (
+				<PropertyGroup>
+					{pluginTab.fields.map((field) => {
+						const definition = field.definition;
+						// A view holds no value: it is the plugin's to draw, in the editor.
+						if (!definition) return null;
+						const id = `preview-${field.name}`;
+						// As the editor draws it (collections.md, the preview): the input its plugin brought, on an entry with nothing in it;
+						// the kind's own input when none is brought.
+						const brought = definition.input ? inputs.get(definition.input) : undefined;
+						const Own = brought === undefined ? null : "Input" in brought ? brought.Input : brought;
+						return (
+							<FormField key={field.name}>
+								<FormFieldLabel htmlFor={id}>{field.label ?? field.name}</FormFieldLabel>
+								{Own ? (
+									<Own
+										id={id}
+										field={field.name}
+										definition={definition}
+										options={definition.inputOptions ?? {}}
+										value={typed[field.name]}
+										onChange={(next) => setTyped((was) => ({ ...was, [field.name]: next }))}
+										readOnly={false}
+										proposal={false}
+										entry={emptyEntry}
+									/>
+								) : (
+									input(definition, id, t("settings.preview.empty"), field.name)
+								)}
+							</FormField>
+						);
+					})}
+				</PropertyGroup>
+			) : null}
 			{runs(picked?.fields ?? []).map((run) => (
 				<PropertyGroup key={run.key} title={run.title}>
 					{run.fields.map(row)}
