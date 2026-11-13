@@ -77,136 +77,172 @@ again under `pnpm dev`, they fail with its 503).
 
 ## QA checklist
 
-One line per feature, by feature doc (`docs/design/features`). "Admin" is where to try it, "site" where to see it.
+Each feature as a person using Monti would recognise it. Tick what you have tried.
 
-### 00 · Foundation
+### Writing
 
-- [ ] Every operation as a command: `pnpm exec monti help`, then e.g. `pnpm exec monti entries.checkPublish --id <id>`.
-- [ ] Plugin operations and tools: `pnpm exec monti help` lists the SEO, MDX and assistant ones.
+- [ ] Make a new entry
+- [ ] Start a new entry from a template (template: 여행 안내서)
+- [ ] Write a title and a body and save
+- [ ] See the unsaved changes and undo them
+- [ ] Be asked when leaving with unsaved changes
+- [ ] Compare what differs when the same entry was changed elsewhere
+- [ ] Publish: with the publish date kept, or published again with today's date
+- [ ] See the to-dos before publishing and go to each (영상 주소가 빠진 초안, 주소 없는 초안)
+- [ ] An entry changed after publishing shows as changed (숲 사진첩)
+- [ ] Preview an entry on the site before publishing
+- [ ] Duplicate an entry
+- [ ] Archive and unarchive an entry (지난 봄 소식)
+- [ ] An archived entry can only be read
+- [ ] After changing an address and publishing again, the old address goes to the new one
 
-### 01 · Content structure
+### Body editor
 
-- [ ] Field kinds and options: admin › Settings › Collections › 글 › Fields lists each; the site's article page shows each value.
-- [ ] Changing structure: add a field in Settings, save, review the plan, apply; `monti.schema.ts` and `monti/changes/` are written.
-- [ ] Admin values: rename a field's label (works on the live site too); the panel's tabs and group come from `layout`.
-- [ ] Export a collection with its definition: `pnpm exec monti collections.export --collection article`.
+- [ ] Add a paragraph, headings (three sizes), a bulleted list, a numbered list, a checklist, a quote, code, a table and a divider
+- [ ] Set bold, italic, underline, strike, code, superscript and subscript
+- [ ] Link to another site, and to another entry of this site
+- [ ] Add a footnote
+- [ ] Align a paragraph to the center or the right
+- [ ] Add rows and columns to a table, and change a column's width
+- [ ] Add a picture and set its size, alignment, crop, rotation, caption and alt text
+- [ ] Mark a picture as decorative
+- [ ] Add a file to download
+- [ ] Drag a block to move it
+- [ ] View as MDX
 
-### 02 · Entry lifecycle
+### Fields
 
-- [ ] Create, save, publish with the date kept or today: admin › 글 › + New; site › the article's page.
-- [ ] Conflict: open one article in two tabs, save in both; the second shows what differs (Compare).
-- [ ] To-dos block publishing: 영상 주소가 빠진 초안 and 주소 없는 초안.
-- [ ] Archive and unarchive: 지난 봄 소식; its page is gone from the site.
-- [ ] Duplicate: More › Duplicate (the seed made one of 사막의 밤하늘).
-- [ ] Preview: Preview on any draft opens `/preview/articles/<slug>` with the preview bar; the bar's exit ends it.
+- [ ] Write in a text field, a multi-line one, and one with a character limit
+- [ ] Pick in a one-choice field and a many-choice field
+- [ ] Pick a cover picture and an attached file
+- [ ] Pick one series
+- [ ] Pick several tags and reorder them
+- [ ] Type a tag name that does not exist and make it there
+- [ ] Pick an author and see the entry under that person's articles too (이바다)
+- [ ] Pick a format and see that format's fields: video, gallery, link
+- [ ] Inside the link format, pick external or internal
+- [ ] Changing the format says the other format's values will go
+- [ ] Turn on 맨 위에 고정 and write its note
+- [ ] In the SEO tab, set the search title, description, share image, hide from search and canonical address, and see the preview
 
-### 03 · Body editor
+### Lists
 
-- [ ] Every block and mark: open 블록과 서식을 모두 쓴 글; the slash menu and the toolbar add each; the site draws each.
-- [ ] Footnotes, table column widths, aligned paragraphs, a hard break: in the same article.
-- [ ] Templates: Tools › Templates (여행 안내서); + New › from a template; 안내서에서 시작한 초안 was made from it.
-- [ ] Table of contents: the site's article page lists its headings.
+- [ ] Filter by state, topic, season, tag and language
+- [ ] Search
+- [ ] Sort by pressing a column's name
+- [ ] Add, hide, reorder and resize columns
+- [ ] With many columns the titles stay, and the table scrolls sideways
+- [ ] Change how many rows a page shows, and turn pages
+- [ ] Pick several rows and publish, archive, change tags, move to a folder or put them in the trash at once
+- [ ] Open a row's menu with a right click or its ⋯
+- [ ] Export the picked entries
+- [ ] An empty list says what to do
 
-### 04 · Languages
+### Folders
 
-- [ ] Translation done: the first article's English (`/en/articles/every-block`); in Japanese, `/ja/articles/desert-night-link`.
-- [ ] Partly done: its Japanese draft; each pending block, keep the source's words or translate; publishing waits for all.
-- [ ] Stale: 항구를 걷는 영상 in English shows the changed and added blocks; update or confirm them.
-- [ ] Fields per language: summary (own), subtitle (from the source), cover (from the source), topic (one for all).
-- [ ] The list's language column and filter; + Language on an entry; the site's language line.
-- [ ] Items in languages: a tag's side panel saves all its languages at once; Japanese has only 海 and 森.
-- [ ] Change the site's languages or address prefix: Settings › Languages, with its review; the site's pages follow the prefix.
+- [ ] Make an entry folder, rename it, move it into another (안내, 국내, 소식)
+- [ ] Move entries into a folder
+- [ ] Deleting a folder puts it in the trash with its entries
 
-### 05 · Changes and proposals
+### Tags and items
 
-- [ ] Unsaved changes: edit a field, see the changed mark, undo it; leave the page and be asked.
-- [ ] Proposals in the editor's fields and body: ask the assistant to change a field, then take or leave it in place.
+- [ ] See how many entries use each tag
+- [ ] Filter the tags no entry uses (겨울)
+- [ ] Merge two tags
+- [ ] Edit a tag's name in every language in one panel
 
-### 06 · List
+### Media
 
-- [ ] Filters, sort, search, page size: admin › 글; filter by state (draft, published, changed, archived), topic, season, tag.
-- [ ] Add column (summary, SEO fields), reorder, hide, resize; kept per collection.
-- [ ] Select rows and act on them: publish, archive, change tags, move, to the trash.
+- [ ] Upload by dragging files in or with Upload
+- [ ] Make folders and move files into them (표지, 2026, 인물, 문서)
+- [ ] Switch between the grid and the list
+- [ ] Filter by kind and by not used, search and sort (쓰지 않는 그림)
+- [ ] Rename a file and see where it is used
+- [ ] Replace a file: every place that uses it shows the new one
+- [ ] A picture with no alt text is a to-do before publishing
+- [ ] Without a storage, the admin says what cannot be done
 
-### 07 · Folders
+### Translations
 
-- [ ] Article folders 안내 › 국내 and 소식: create, rename, move (not into itself), move entries in.
-- [ ] Delete a folder: it goes to the trash with what is in it.
+- [ ] Add a language and start a translation
+- [ ] For each block left, translate it or keep the source's words (블록과 서식을 모두 쓴 글 in Japanese)
+- [ ] A translation can be published only when every block is decided
+- [ ] A translation whose source changed shows the changed and added blocks, to update or keep (항구를 걷는 영상 in English)
+- [ ] Fields written per language, fields that follow the source and fields shared by all languages look different
+- [ ] See in the list's language column which languages an entry has
+- [ ] Add or remove the site's languages, and change how an address shows the language
 
-### 08 · Relations
+### Assistant
 
-- [ ] One (series), many ordered (tags, related), made on the fly (type a new tag), to its own collection (related).
-- [ ] Both sides: 이바다's `articles` (person panel) and the articles' `authors` are the same links.
-- [ ] Usage: admin › 태그 shows how many entries use each tag; the "Unused" filter finds one no entry uses.
-- [ ] Merge tags; bulk change a relation from the list.
-- [ ] Site: the article's series, authors, tags and related, each linked (a fallback to Korean says so).
+- [ ] With an API key in, ✦ opens
+- [ ] Ask for a change, get a proposal, include or leave out each item, and apply
+- [ ] Undo an applied proposal whole
+- [ ] In the editor, have it fill a field, translate, or redo one proposal
+- [ ] Hand work to ✦ from the list, the trash, the activity log and settings
+- [ ] Reopen and delete past conversations
+- [ ] Pick the model and the quick-task model
 
-### 09 · Media
+### Trash
 
-- [ ] Upload (drag in, or the button), folders, search, kind, "Not used" (쓰지 않는 그림.png), sort.
-- [ ] A file's side panel: rename, move, where it is used, replace (with the count of uses).
-- [ ] Alt text: 영상 주소가 빠진 초안's picture has none; its to-do opens the picture's alt text, and publishing waits for it.
-- [ ] Pictures in the body: width in %, in px, crop, turn, align, caption, decorative; the site draws each.
-- [ ] Storage: with `S3_*` set, upload and see the file at `S3_PUBLIC_URL`; `MONTI_STORAGE=off` shows what the admin says without one.
+- [ ] Restore an entry, a picture and a folder from the trash (휴지통에 넣은 글, 지운 배너, 지난 행사)
+- [ ] Delete for good, and empty the trash
+- [ ] A published entry put in the trash leaves the site, with its translations
+- [ ] An entry in the trash can only be read
+- [ ] See the days left
 
-### 10 · Assistant
+### Activity log and deliveries
 
-- [ ] Needs a key: Tools › API keys. Then ✦ in the frame opens the panel.
-- [ ] Ask for a change; the proposal card; review; apply; undo all of it.
-- [ ] ✦ in the editor (fill a field, translate, a request on one proposal), in the list, the trash, the activity log and settings.
-- [ ] Past conversations; the model menu; the quick-task model.
+- [ ] Everything done is a line in the log
+- [ ] Filter by kind, delivery state, date and entry, and search
+- [ ] Undo something done
+- [ ] Failed deliveries show in the sidebar and in the banner at the top
+- [ ] Send again, send all again, cancel a delivery
+- [ ] A delivery reaches a working webhook (see `/hooks/ok`)
 
-### 11 · Trash
+### Settings
 
-- [ ] The trash has an article, a picture and a folder with a file: restore each; delete for good; empty.
-- [ ] Move a published article to the trash: its page leaves the site, and its translations go with it.
+- [ ] Change the site's name and its writing rules
+- [ ] Make a collection; add, remove and move fields; make a group
+- [ ] Make a field required, many-valued or per language
+- [ ] Add, remove and rename a format's options
+- [ ] Review what changes before saving, then save and apply
+- [ ] Preview the property panel
+- [ ] Pick the blocks and marks the editor offers, per collection
+- [ ] A plugin's tab is locked
+- [ ] Change the screen's language
+- [ ] Switch the screen mode: light, dark or system
 
-### 12 · Settings
+### Tools
 
-- [ ] Tabs: Site, Languages, Collections (Basics, Fields, Editor), Admin.
-- [ ] The editor's allowed blocks and marks per collection.
-- [ ] Admin: the screen's language (Korean, English). Screen mode (light, dark) is in the frame's menu.
+- [ ] Make, edit, duplicate and delete templates
+- [ ] Add, rename and remove API keys, and see their use
+- [ ] Take a backup, with or without the media files
+- [ ] Restore a backup into an empty site with a command
+- [ ] Import what you wrote: an MDX file (`seed/import/walking-notes.mdx`), matched to fields
 
-### 13 · Activity and delivery
+### Sign-in and frame
 
-- [ ] Every seed write is a line; filter by kind, by delivery state, by date, by entry.
-- [ ] Failed deliveries: the sidebar count, the banner, each line's deliveries to `broken`; Send again (fails again), Send all again,
-      Cancel.
-- [ ] A working delivery: set `MONTI_WEBHOOK`, publish, open `/hooks/ok`.
-- [ ] Undo a line (publish, trash, a template's removal), with what it skips.
+- [ ] Make the admin on the first visit, sign in and sign out
+- [ ] Reset a forgotten password with a command
+- [ ] See each collection's count, the trash's and the failed deliveries in the sidebar
+- [ ] Collapse and expand the sidebar
+- [ ] On the live site the structure cannot be changed
 
-### 14 · Data, keys and plugins
+### The site
 
-- [ ] Backup with and without media files: Tools › Data › Backup; restore into an empty database: `pnpm exec monti restore file.zip`.
-- [ ] Import: a list's + New ▾ › Import, `seed/import/walking-notes.mdx`; match its front matter to fields; `<Tweet />` is kept with a
-      to-do.
-- [ ] Export some entries: select rows › More › Export, or a row's menu › Export.
-- [ ] View as MDX: the editor's More.
-- [ ] API keys: add, rename, remove; models per key.
-- [ ] SEO: the article's SEO tab (preview, title and description counts, share image, hide from search, canonical); the site's `<head>`.
-- [ ] Plugins: Settings shows each plugin's tab and slots locked.
+- [ ] The first page shows articles, tags, people and series
+- [ ] An article's page draws its fields and every block of its body
+- [ ] Move between the Korean, English and Japanese pages (Japanese: 사막의 밤하늘)
+- [ ] An item with no translation shows in Korean instead
+- [ ] Tag pages and people pages
+- [ ] Publishing changes the site at once
+- [ ] End a preview from its bar
+- [ ] Search results and shared links use the SEO values
 
-### 15 · Sign-in and frame
+### Code blocks
 
-- [ ] The dev server lets this machine in without signing in; `pnpm build && pnpm start` asks, and the first visit makes the admin.
-- [ ] `pnpm exec monti admin:reset-password`.
-- [ ] The frame: counts per collection, the trash's count, failed deliveries.
+To be filled after #499/#500 merge.
 
-### 16 · The site
+### Blocks package
 
-- [ ] Every collection's page in each language: `/`, `/en`, `/ja`, `/articles/…`, `/tags/…`, `/people/…`; series have no page.
-- [ ] Publishing refreshes the cached pages (`pnpm build && pnpm start`): publish, reload.
-- [ ] An old address goes to the new one after the slug changes and the entry is published again.
-- [ ] The site's own preview page (`previewPath`).
-
-### 19 · Conditional fields
-
-- [ ] Format: each option shows its own fields; 영상 needs its address; 링크 has a choice inside it (바깥 · 안쪽).
-- [ ] The switch 맨 위에 고정 and its note.
-- [ ] Changing the option drops the other option's values, and the editor says so; the site reads only the chosen option's fields.
-- [ ] Remove or rename an option in Settings, with its review.
-
-### 20 · Release
-
-- [ ] `pnpm exec monti doctor` (with `--origin http://localhost:3000` when S3 is set).
-- [ ] Direct upload to the bucket when S3 is set (the browser sends the file to the bucket, not the site).
+To be filled after #499/#500 merge.
