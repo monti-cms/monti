@@ -21,7 +21,7 @@ import { CORE_MARKS, KEPT_MARK, markName, nodeName, UNKNOWN } from "./names";
 import { tableExtensions } from "./table";
 import { TranslationBlocks } from "./translation";
 
-export { KEPT_MARK, MARK_NAMES, markName, markType, nodeName, UNKNOWN } from "./names";
+export { KEPT_MARK, markName, markType, nodeName, UNKNOWN } from "./names";
 
 /** Every block node carries its block's id and its attrs. Neither is drawn into the page, so a copied block never brings its id along. */
 const blockAttributes = () => ({
