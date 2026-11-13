@@ -99,3 +99,71 @@ describe("importing into a list (flow 9, 05–09)", () => {
 		await expect.element(sheet().getByText("글 3편을 찾았습니다")).toBeVisible();
 	});
 });
+
+describe("an import in the activity log (flow 9, 10; T142)", () => {
+	const logged = () => scene<{ site: StorySite }>({ loaders: stories.logged() }, stories.default);
+	const panel = () => page.getByRole("complementary");
+	const table = () => main().getByRole("table");
+
+	it("14-1 one import is one line of the log, found under its own kind; its details name the entries whose address changed and lead to the list", async () => {
+		await logged().run();
+		await expect.element(table().getByText("blog-export.zip에서 3편 가져옴")).toBeVisible();
+		// Its own kind in the first column's menu.
+		await userEvent.click(table().getByRole("button", { name: "작업", exact: true }));
+		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /가져오기/ }));
+		await expect.poll(() => location.hash).toBe("#/activity?kind=import");
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(() => table().getByRole("row").elements().length).toBe(2);
+		await userEvent.click(table().getByText("blog-export.zip에서 3편 가져옴"));
+		await expect.element(panel().getByText("first-post → first-post-2")).toBeVisible();
+		await expect.element(panel().getByText("모두 초안 · 새 항목 2개")).toBeVisible();
+		// The renamed entry opens from its name; the list from the link under it.
+		await expect.element(panel().getByRole("link", { name: "목록에서 보기" })).toHaveAttribute("href", "#/c/post");
+		await userEvent.click(panel().getByRole("link", { name: "첫 번째 글" }).first());
+		await expect.poll(() => location.hash).toMatch(/^#\/c\/post\/[^?]+$/);
+	});
+
+	it('14-1 the line\'s "되돌리기" takes the whole import back: its entries and the items it made', async () => {
+		const story = logged();
+		await story.run();
+		const { site } = story.loaded();
+		await userEvent.click(table().getByText("blog-export.zip에서 3편 가져옴"));
+		await userEvent.click(panel().getByRole("button", { name: "더 보기" }));
+		await userEvent.click(page.getByRole("menuitem", { name: "되돌리기" }));
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "되돌리기" }));
+		await expect.poll(async () => (await posts(site)).map((row) => row.slug)).toEqual(["first-post", "seoul-night"]);
+		await expect
+			.poll(async () =>
+				(
+					await site.db
+						.selectFrom("entries")
+						.select("title")
+						.where("collection", "=", "category")
+						.where("trashed_at", "is", null)
+						.execute()
+				).map((row) => row.title),
+			)
+			.toEqual(["개발"]);
+	});
+});
+
+describe("exporting picked entries (flow 9, 04; T57)", () => {
+	it("14-1 the bulk bar's ⋯ › \"내보내기\" saves the picked entries as a zip in the backup's shape, which an import reads as a Monti file", async () => {
+		const story = at();
+		await story.run();
+		const saved = stories.catchDownloads();
+		await userEvent.click(page.getByRole("checkbox", { name: "첫 번째 글 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "서울의 밤 고르기" }));
+		await userEvent.click(page.getByRole("toolbar").getByRole("button", { name: "더 보기" }));
+		await userEvent.click(page.getByRole("menuitem", { name: "내보내기" }));
+		await expect.element(page.getByText("2편을 내보냈습니다.")).toBeVisible();
+		expect(saved).toHaveLength(1);
+		expect(saved[0]?.name).toMatch(/^monti-export-\d{4}-\d{2}-\d{2}\.zip$/);
+		// The same file, chosen for an import: it is read as a Monti file, and both entries are here already.
+		const file = new File([(saved[0] as { file: Blob }).file], saved[0]?.name ?? "");
+		await stories.importFrom(document.body, [file]);
+		await expect.element(sheet().getByText("글 2편을 찾았습니다")).toBeVisible();
+		await expect.element(sheet().getByText("이미 있는 글 2편은 건너뜁니다")).toBeVisible();
+		await expect.element(sheet().getByRole("button", { name: "0편 가져오기" })).toBeDisabled();
+	});
+});

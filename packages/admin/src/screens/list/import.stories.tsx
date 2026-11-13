@@ -1,4 +1,4 @@
-import { zip } from "@monti-cms/core";
+import { unzip, zip } from "@monti-cms/core";
 import { mdx } from "@monti-cms/mdx";
 import { mdxAdmin } from "@monti-cms/mdx/admin";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -55,6 +55,28 @@ export async function blogZip(): Promise<File> {
 	return new File([bytes as Uint8Array<ArrayBuffer>], "blog-export.zip", { type: "application/zip" });
 }
 
+/** The blog imported already (its posts alone), on the activity log: the import is one line there (flow 9, 10). */
+export const logged = (hash = "#/activity") => [
+	async (): Promise<Loaded> => {
+		const [load] = site();
+		const loaded = await (load as () => Promise<Loaded>)();
+		const upload = await blogZip();
+		const opened = unzip(new Uint8Array(await upload.arrayBuffer()));
+		const files: { name: string; text: string }[] = [];
+		for (const name of opened?.names.filter((each) => each.endsWith(".md")) ?? [])
+			files.push({ name, text: new TextDecoder().decode((await opened?.read(name)) ?? new Uint8Array()) });
+		await run(loaded.site.monti, "data.import", {
+			collection: "post",
+			name: upload.name,
+			files,
+			has: [],
+			mapping: { description: "summary" },
+		});
+		startAt(hash);
+		return loaded;
+	},
+];
+
 /**
  * The next file chooser the page opens answers with these files: a story and a test cannot press the system's own window. It is undone once
  * it has answered.
@@ -71,8 +93,27 @@ export function chooseNext(files: File[]) {
 	};
 }
 
+/** The files the page handed the browser to save, from now on: a story and a test keep them instead of the downloads folder. */
+export function catchDownloads(): { name: string; file: Blob }[] {
+	const saved: { name: string; file: Blob }[] = [];
+	const made = new Map<string, Blob>();
+	const create = URL.createObjectURL;
+	URL.createObjectURL = (file: Blob | MediaSource) => {
+		const url = create.call(URL, file);
+		if (file instanceof Blob) made.set(url, file);
+		return url;
+	};
+	const click = HTMLAnchorElement.prototype.click;
+	HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+		const file = made.get(this.href);
+		if (!this.download || !file) return click.call(this);
+		saved.push({ name: this.download, file });
+	};
+	return saved;
+}
+
 /** The stories' blog with a few posts and categories, with or without the MDX plugin. */
-export const site = (options: { mdx?: boolean; hash?: string } = {}) => [
+export const site = (options: { mdx?: boolean; hash?: string; picture?: boolean } = {}) => [
 	async (): Promise<Loaded> => {
 		startAt(options.hash ?? "#/c/post");
 		const made = await storySite({
@@ -80,7 +121,13 @@ export const site = (options: { mdx?: boolean; hash?: string } = {}) => [
 			auth: { password: true },
 			signedIn: true,
 			plugins: options.mdx === false ? [] : [mdx()],
-			setup: async (monti) => {
+			setup: async (monti, storage) => {
+				// A file in the library: what a backup may take with it.
+				if (options.picture && storage) {
+					const key = "00000000-0000-4000-8000-000000000001.jpg";
+					await storage.put(key, await samplePhoto("#8a6f4d", "#d9c3a0"), { mime: "image/jpeg" });
+					await run(monti, "media.upload", { name: "desk.jpg", original: { key, width: 320, height: 180 } });
+				}
 				for (const [collection, label] of [
 					["post", "게시글"],
 					["memo", "메모"],
@@ -186,5 +233,18 @@ export const Unreadable: Story = {
 	play: async ({ canvasElement }) => {
 		await importFrom(canvasElement, [new File([text("not a zip")], "broken.zip")]);
 		await waitFor(async () => expect(within(await sheet()).getByText("읽지 못했습니다.")).toBeTruthy(), wait);
+	},
+};
+
+/** Flow 9, 10: after the sheet is closed, the import's line of the activity log opens its result: the changed addresses and the way back. */
+export const Logged: Story = {
+	loaders: logged(),
+	play: async ({ canvasElement }) => {
+		const line = await within(canvasElement).findByText("blog-export.zip에서 3편 가져옴", {}, wait);
+		await userEvent.click(line);
+		await waitFor(
+			() => expect(within(canvasElement).getByRole("complementary").textContent).toContain("first-post-2"),
+			wait,
+		);
 	},
 };
