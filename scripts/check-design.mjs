@@ -1253,6 +1253,10 @@ const SIX_PX = new Map([
 	["ui/src/tile.tsx", "a media or folder tile is a card"],
 	["ui/src/todo-item.tsx", "a to-do is a two-line block"],
 	[
+		"ui/src/file-tree.tsx",
+		"a code explorer's file tree is a list inside the block's box: its rows follow the box's corners, as a menu's rows do",
+	],
+	[
 		"ui/src/floating-bar.tsx",
 		"the editor's tool row is a rounded box, and its buttons follow its corners (2026-11-09, owner)",
 	],
