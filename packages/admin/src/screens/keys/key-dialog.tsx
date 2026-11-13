@@ -370,7 +370,8 @@ function KeyForm({
 				) : (
 					<PickOne
 						id={ids.service}
-						items={services.map((each) => ({ value: each.id, label: nameOf(each) }))}
+						// The services "add key" offers: one that is only a plugin's slot's takes its key at the slot.
+						items={services.filter((each) => each.addable).map((each) => ({ value: each.id, label: nameOf(each) }))}
 						value={serviceId}
 						onChange={(next) => {
 							setServiceId(next);

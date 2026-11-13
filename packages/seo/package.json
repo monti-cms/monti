@@ -18,16 +18,17 @@
 		"test": "vitest run",
 		"build": "node ../../scripts/build-package.mjs"
 	},
-	"dependencies": {
+	"peerDependencies": {
 		"@monti-cms/admin": "workspace:*",
 		"@monti-cms/core": "workspace:*",
-		"@monti-cms/ui": "workspace:*"
-	},
-	"peerDependencies": {
+		"@monti-cms/ui": "workspace:*",
 		"react": ">=19",
 		"react-dom": ">=19"
 	},
 	"devDependencies": {
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/core": "workspace:*",
+		"@monti-cms/ui": "workspace:*",
 		"@types/node": "^20",
 		"@types/pg": "^8.23.1",
 		"@types/react": "^19",

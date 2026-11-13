@@ -177,8 +177,11 @@ export const site = ({
 	slots = false,
 }: {
 	keys?: "three" | "none" | "named" | "long";
-	/** Two plugins keep keys of their own: the page has a second list, one row per slot, the search's first one filled. */
-	slots?: boolean;
+	/**
+	 * Two plugins keep keys of their own: the page has a second list, one row per slot, the search's first one filled. `"orphan"`: a third
+	 * plugin was since taken out of the site's code, and the key it had is still stored.
+	 */
+	slots?: boolean | "orphan";
 	secret?: string | null | "other";
 	reading?: boolean;
 } = {}) => [
@@ -198,6 +201,16 @@ export const site = ({
 				const first = createMonti({ db: monti.db, schema, files: null, secret: siteSecret, fetch: net.fetch, plugins });
 				if (slots)
 					await first.run("plugins.setKey", { plugin: "algolia", slot: "search", secret: sample.search }, admin);
+				if (slots === "orphan") {
+					// Stored while the site still had the plugin.
+					const gone: Plugin = {
+						name: "old-search",
+						keyServices: [pluginService("old-search", "Old search", [sample.searchNew], () => net)],
+						keys: [{ id: "key", label: "키", service: "old-search" }],
+					};
+					const before = createMonti({ db: monti.db, schema, files: null, secret: siteSecret, plugins: [gone] });
+					await before.run("plugins.setKey", { plugin: "old-search", slot: "key", secret: sample.searchNew }, admin);
+				}
 				if (keys === "none") return;
 				if (keys === "named")
 					await first.run("keys.add", { service: "anthropic", name: "Anthropic", secret: sample.anthropic }, admin);
@@ -531,5 +544,14 @@ export const PluginKeysUnreadable: Story = {
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
 		await page.findByText("키 4개를 읽을 수 없습니다", {}, wait);
+	},
+};
+
+/** The key of a plugin since taken out of the site's code: its row says so, and it can only be removed. */
+export const PluginKeysOrphan: Story = {
+	loaders: site({ slots: "orphan" }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await page.findByText("플러그인 없음", {}, wait);
 	},
 };

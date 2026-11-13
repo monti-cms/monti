@@ -150,6 +150,8 @@ export type PluginTab = {
 		/** For a field with no value: the view to draw, and what it is handed. */
 		view?: string;
 		options?: Record<string, unknown>;
+		/** A value field as the schema holds it: what a draft's field of the same name is held against. */
+		definition?: GroupField;
 		/** A list offers it as a column. */
 		column: boolean;
 	}[];
@@ -259,6 +261,7 @@ export function pluginTabsOf(schema: Schema, sets: readonly NamedFieldSet[], nam
 					: {
 							name: field,
 							kind: definition.kind,
+							definition: structureOf(definition),
 							label: definition.label,
 							...(definition.description ? { description: definition.description } : {}),
 							...(definition.optionLabels ? { optionLabels: definition.optionLabels } : {}),

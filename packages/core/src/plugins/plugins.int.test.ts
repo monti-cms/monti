@@ -4,6 +4,7 @@ import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sql, testDatabase } from "../__test__/database";
 import { receiverFetch } from "../engine/deliveries";
+import { runCli } from "../entry/cli";
 import { agentTools } from "../entry/tools";
 import { CheckError, ForbiddenError } from "../errors";
 import type { KeyList } from "../keys/operations";
@@ -148,9 +149,27 @@ describe("a plugin's fields", () => {
 					tab: "SEO",
 					fields: [
 						{ name: "seoPreview", kind: "view", view: "seo.preview", column: false },
-						{ name: "seoTitle", kind: "text", label: "검색 제목", column: true },
-						{ name: "seoImage", kind: "media", label: "공유 이미지", column: true },
-						{ name: "seoNoindex", kind: "select", label: "검색에서 숨기기", column: false },
+						{
+							name: "seoTitle",
+							kind: "text",
+							label: "검색 제목",
+							column: true,
+							definition: { kind: "text", input: "seo.title", inputOptions: { limit: 60 } },
+						},
+						{
+							name: "seoImage",
+							kind: "media",
+							label: "공유 이미지",
+							column: true,
+							definition: { kind: "media", accept: "image" },
+						},
+						{
+							name: "seoNoindex",
+							kind: "select",
+							label: "검색에서 숨기기",
+							column: false,
+							definition: { kind: "select", options: ["index", "noindex"] },
+						},
 					],
 				},
 			],
@@ -407,10 +426,10 @@ describe("plugin keys (T144)", () => {
 		await setKey(monti, { secret: OTHER_KEY });
 		expect((await list(monti)).slots[0].key?.last4).toBe("9f3c");
 		expect((await monti.plugins.key("algolia", "search"))?.secret).toBe(OTHER_KEY);
-		const removed = await setKey(monti, { secret: null });
+		const removed = await setKey(monti, { remove: true });
 		expect(removed.output.did).toBe("removed");
 		expect((await list(monti)).slots[0].key).toBeNull();
-		await expect(setKey(monti, { secret: null })).rejects.toMatchObject({ reason: { key: "plugins.slotEmpty" } });
+		await expect(setKey(monti, { remove: true })).rejects.toMatchObject({ reason: { key: "plugins.slotEmpty" } });
 	});
 
 	it("a slot's key is changed only as a slot: the key operations do not know it", async () => {
@@ -440,23 +459,67 @@ describe("plugin keys (T144)", () => {
 			slot: "search",
 			label: "검색 키",
 			serviceName: "Algolia",
+			orphan: false,
 			filled: true,
 		});
 	});
 
-	it("a key cannot be named as a slot's row is, and the key of a slot no plugin has any more goes with the clean-up", async () => {
+	it("a key cannot be named as a slot's row is, nor added for a service that is only a slot's", async () => {
+		const monti = site([algolia()]);
+		await expect(
+			run(monti, "keys.add", { service: "anthropic", name: "slot:algolia/admin", secret: OTHER_KEY }),
+		).rejects.toThrow(/slot:/);
+		await expect(
+			run(monti, "keys.add", { service: "algolia", name: "Search", secret: OTHER_KEY }),
+		).rejects.toMatchObject({
+			reason: { key: "keys.unknownService" },
+		});
+		const { services } = await list(monti);
+		expect(services.find((service) => service.id === "algolia")).toMatchObject({ plugin: "algolia", addable: false });
+	});
+
+	it("a slot for one of the core's AI services leaves that service to add keys for", async () => {
+		const embeds: Plugin = { name: "embeds", keys: [{ id: "embed", label: "Embeddings", service: "openai" }] };
+		const { services } = await list(site([embeds]));
+		expect(services.find((service) => service.id === "openai")).toMatchObject({ plugin: null, addable: true });
+	});
+
+	it("the key of a slot no plugin has any more stays until a person takes it out: it is listed for that, and never removed for them", async () => {
 		const monti = site([algolia()]);
 		await setKey(monti, { secret: SEARCH_KEY });
-		await expect(
-			run(monti, "keys.add", { service: "algolia", name: "slot:algolia/admin", secret: OTHER_KEY }),
-		).rejects.toThrow(/slot:/);
-		// The plugin still has the slot: the clean-up leaves its key.
-		await monti.cleanUp();
-		expect((await monti.plugins.key("algolia", "search"))?.secret).toBe(SEARCH_KEY);
-		// The plugin is taken out of the site's code: nothing shows the key or could remove it, so the clean-up does.
+		// The plugin is taken out of the site's code. Another deploy on the same database may still run it: the key is left alone.
 		const without = site([]);
 		await without.cleanUp();
+		const { slots } = await list(without);
+		expect(slots).toEqual([
+			expect.objectContaining({
+				plugin: "algolia",
+				slot: "search",
+				orphan: true,
+				key: expect.objectContaining({ last4: "4410" }),
+			}),
+		]);
+		await expect(setKey(without, { secret: OTHER_KEY })).rejects.toMatchObject({
+			reason: { key: "plugins.unknownSlot" },
+		});
+		// It is taken out without the plugin, and without the server's secret.
+		const bare = site([], { secret: null });
+		await setKey(bare, { remove: true });
+		expect((await list(bare)).slots).toEqual([]);
 		expect(await db.selectFrom("api_keys").select("id").execute()).toEqual([]);
+	});
+
+	it("the command line takes a slot's key out with --remove true: a key is never an argument there", async () => {
+		const monti = site([algolia()]);
+		await setKey(monti, { secret: SEARCH_KEY });
+		const out: string[] = [];
+		const io = { out: (line: string) => out.push(line), err: (line: string) => out.push(line) };
+		expect(
+			await runCli(monti, ["plugins.setKey", "--plugin", "algolia", "--slot", "search", "--remove", "true"], io),
+		).toBe(0);
+		expect((await list(monti)).slots[0].key).toBeNull();
+		await expect(setKey(monti, {})).rejects.toThrow(/secret, or remove/);
+		await expect(setKey(monti, { secret: SEARCH_KEY, remove: true })).rejects.toThrow(/secret, or remove/);
 	});
 
 	it("there is no slot a plugin did not name, and no key without the server's secret", async () => {

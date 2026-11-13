@@ -800,16 +800,60 @@ describe("plugin keys (flow 10, 12)", () => {
 		expect(await page.getByRole("option", { name: "bareun" }).elements()).toHaveLength(0);
 	});
 
-	it("14-1 [flow 10·14, 15] a slot's key the server can no longer read is counted in the banner and says so in its row; without a secret the slots are not shown", async () => {
+	it("14-1 [flow 10·14, 15] a slot's key the server can no longer read is counted in the banner and says so in its row; without a secret a filled slot can only be removed", async () => {
 		await open(keys.PluginKeysUnreadable).run();
 		await expect.element(page.getByText("키 4개를 읽을 수 없습니다")).toBeVisible();
 		await expect.element(pluginTable().getByRole("row").nth(1)).toHaveTextContent(/읽을 수 없음/);
 
+		// Without a secret a filled slot stays, as an AI key does, with only "지우기"; an empty one has nothing to offer and is not shown.
 		const story = open({ loaders: keys.site({ slots: true, secret: null }) });
 		await story.run();
 		await expect.element(page.getByText("키를 저장할 수 없습니다")).toBeVisible();
-		expect(await page.getByRole("heading", { name: "플러그인 키" }).elements()).toHaveLength(0);
-		expect(await page.getByRole("table", { name: "플러그인 키" }).elements()).toHaveLength(0);
+		await expect.poll(() => pluginTable().getByRole("row").elements().length).toBe(1);
+		expect(await slotButton("바른 맞춤법").elements()).toHaveLength(0);
+		await userEvent.click(button("Algolia 검색 · 검색 키 더 보기"));
+		await expect.element(page.getByRole("menuitem", { name: "지우기" })).toBeVisible();
+		expect(await page.getByRole("menuitem", { name: "편집" }).elements()).toHaveLength(0);
+		await userEvent.click(page.getByRole("menuitem", { name: "지우기" }));
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
+		await expect.element(page.getByText("키를 지웠습니다")).toBeVisible();
+		expect((await list(story.loaded().site)).slots.every((slot) => slot.key === null)).toBe(true);
+	});
+
+	it("14-1 the key of a plugin since taken out of the site's code has a row that says so, with only '지우기'; removed, the row is gone", async () => {
+		const story = open(keys.PluginKeysOrphan);
+		await story.run();
+		const orphan = pluginTable().getByRole("row").filter({ hasText: "old-search" });
+		await expect.element(orphan).toHaveTextContent(/old-searchkey··· 52ab플러그인 없음/);
+		await userEvent.click(button("old-search · key 더 보기"));
+		expect(await page.getByRole("menuitem", { name: "편집" }).elements()).toHaveLength(0);
+		await userEvent.click(page.getByRole("menuitem", { name: "지우기" }));
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
+		await expect.element(page.getByText("키를 지웠습니다")).toBeVisible();
+		await expect.poll(() => pluginTable().getByRole("row").elements().length).toBe(3);
+		expect((await list(story.loaded().site)).slots.some((slot) => slot.orphan)).toBe(false);
+	});
+
+	it("14-1 a slot's key removed with the keyboard: the row stays, and the focus is on its '키 넣기'", async () => {
+		await open(keys.PluginKeys).run();
+		const more = button("Algolia 검색 · 검색 키 더 보기");
+		more.element().focus();
+		await userEvent.keyboard("{Enter}");
+		await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+		await expect.element(page.getByRole("alertdialog")).toBeVisible();
+		page.getByRole("alertdialog").getByRole("button", { name: "지우기" }).element().focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("키를 지웠습니다")).toBeVisible();
+		await expect.poll(() => focused()).toBe(slotButton("Algolia 검색 · 검색 키").element());
+	});
+
+	it("14-1 in the key window the service can be changed only to one 'add key' offers", async () => {
+		await open(keys.PluginKeys).run();
+		await addFor("Anthropic");
+		await userEvent.click(dialog().getByRole("combobox"));
+		await expect.element(page.getByRole("option", { name: "OpenAI", exact: true })).toBeVisible();
+		expect(await page.getByRole("option", { name: "Algolia" }).elements()).toHaveLength(0);
+		expect(await page.getByRole("option", { name: "bareun" }).elements()).toHaveLength(0);
 	});
 
 	it("14-4 a slot's key is nowhere in the page once it is in", async () => {

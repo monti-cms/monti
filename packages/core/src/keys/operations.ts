@@ -79,10 +79,19 @@ export type KeySlotRow = {
 	serviceName: string;
 	/** The key in the slot; `null` while it is empty. */
 	key: Pick<KeyRow, "last4" | "baseUrl" | "readable" | "hasKey"> | null;
+	/**
+	 * No plugin of the site has this slot any more (the plugin was taken out of the site's code, or dropped the slot), and its key is still
+	 * stored. The row is there so a person can remove the key: nothing uses it, and it is never removed for them (another deploy on the same
+	 * database may still run the plugin).
+	 */
+	orphan: boolean;
 };
 
 /** A slot as the assistant is told of it: which plugin, what for, and whether a key is in it. */
-export type AssistantKeySlotRow = Pick<KeySlotRow, "plugin" | "pluginLabel" | "slot" | "label" | "serviceName"> & {
+export type AssistantKeySlotRow = Pick<
+	KeySlotRow,
+	"plugin" | "pluginLabel" | "slot" | "label" | "serviceName" | "orphan"
+> & {
 	filled: boolean;
 };
 
@@ -133,16 +142,10 @@ const keysInOrder = (db: Db): Promise<KeyRecord[]> =>
 		.orderBy("id")
 		.execute();
 
-/**
- * Removes the keys of slots no plugin has any more (the plugin was taken out of the site's code, or dropped the slot): no screen shows such a
- * key and nothing could use or remove it, and a secret is not kept for nobody. Run with the site's clean-up.
- */
-export async function removeOrphanSlotKeys(db: Db, slots: readonly string[]): Promise<void> {
-	await db
-		.deleteFrom("api_keys")
-		.where("id", "like", `${SLOT_ID}%`)
-		.$if(slots.length > 0, (query) => query.where("id", "not in", [...slots]))
-		.execute();
+/** The plugin and the slot a slot key's id names; `null` for an id that is no slot's. */
+export function slotOfKeyId(id: string): { plugin: string; slot: string } | null {
+	const [plugin, slot] = id.startsWith(SLOT_ID) ? id.slice(SLOT_ID.length).split("/") : [];
+	return plugin && slot ? { plugin, slot } : null;
 }
 
 /** The keys in the plugins' slots. */
@@ -177,6 +180,14 @@ export const keyRecord = defineRecordKind({
 		throw new Error("A service key is not restored: adding, changing and removing one cannot be undone.");
 	},
 });
+
+/**
+ * Whether a service is only for plugins' key slots: a plugin brings it, and a slot is for it. An AI service of the core that a slot also
+ * uses still gives models to a named key, so it is never one.
+ */
+const slotOnly = (ctx: OperationContext, service: string) =>
+	ctx.site.plugins.some((plugin) => plugin.services.includes(service)) &&
+	ctx.site.plugins.some((plugin) => plugin.keys.some((slot) => slot.service === service));
 
 /** Holds a key name until the write ends, so two keys cannot take one name at the same moment. */
 const lockName = (ctx: OperationContext, name: string) => lockRecords(ctx.db, [{ kind: "key-name", id: name }]);
@@ -310,7 +321,6 @@ export const keyOperations = [
 					await ctx.db.selectFrom("api_key_usage").select(["key_id", "tokens"]).where("month", "=", month).execute()
 				).map((row) => [row.key_id, Number(row.tokens)]),
 			);
-			const forSlots = new Set(ctx.site.plugins.flatMap((plugin) => plugin.keys.map((slot) => slot.service)));
 			const services = ctx.site.keyServices.map((service) => ({
 				id: service.id,
 				name: service.name,
@@ -318,7 +328,7 @@ export const keyOperations = [
 				keyOptional: service.keyOptional ?? false,
 				placeholder: service.placeholder ?? null,
 				plugin: ctx.site.plugins.find((plugin) => plugin.services.includes(service.id))?.name ?? null,
-				addable: !forSlots.has(service.id),
+				addable: !slotOnly(ctx, service.id),
 			}));
 			const secret = ctx.site.secret;
 			const inSlots = new Map((await slotKeys(ctx.db)).map((key) => [key.id, key]));
@@ -338,10 +348,29 @@ export const keyOperations = [
 							key: key
 								? { last4: key.last4, baseUrl: key.base_url, readable: plain !== null, hasKey: plain !== "" }
 								: null,
+							orphan: false,
 						};
 					}),
 				),
 			);
+			// The keys of slots no plugin has any more, after the slots that are: each is a row a person can remove.
+			const living = new Set(slots.map((slot) => slotKeyId(slot.plugin, slot.slot)));
+			for (const [id, key] of inSlots) {
+				const named = slotOfKeyId(id);
+				if (living.has(id) || !named) continue;
+				const plain = secret !== null ? await opened(secret, key) : null;
+				slots.push({
+					plugin: named.plugin,
+					pluginLabel: named.plugin,
+					slot: named.slot,
+					label: named.slot,
+					oneOfMany: true,
+					service: key.service,
+					serviceName: serviceOf(ctx, key.service)?.name ?? key.service,
+					key: { last4: key.last4, baseUrl: key.base_url, readable: plain !== null, hasKey: plain !== "" },
+					orphan: true,
+				});
+			}
 			const usesOf = (keyId: string): KeyUse[] => [
 				...(assistant?.keyId === keyId ? [{ for: "assistant" as const, model: assistant.model }] : []),
 				...(quick?.keyId === keyId ? [{ for: "quick" as const, model: quick.model }] : []),
@@ -359,12 +388,13 @@ export const keyOperations = [
 						readable: key.readable,
 						uses: usesOf(key.id),
 					})),
-					slots: slots.map(({ plugin, pluginLabel, slot, label, serviceName, key }) => ({
+					slots: slots.map(({ plugin, pluginLabel, slot, label, serviceName, key, orphan }) => ({
 						plugin,
 						pluginLabel,
 						slot,
 						label,
 						serviceName,
+						orphan,
 						filled: key !== null,
 					})),
 					services,
@@ -408,7 +438,8 @@ export const keyOperations = [
 		async prepare(input, ctx) {
 			secretOf(ctx);
 			const service = serviceOf(ctx, input.service);
-			if (!service) throw new CheckError({ key: "keys.unknownService" });
+			// A service that is only a plugin's slot's takes its key at the slot (`plugins.setKey`): a named key of it would be used by nothing.
+			if (!service || slotOnly(ctx, service.id)) throw new CheckError({ key: "keys.unknownService" });
 			await mustBeFree(ctx, input.name);
 			const baseUrl = service.address ? address(input.baseUrl) : null;
 			return { service: service.id, baseUrl, models: await ask(ctx, service, input.secret, baseUrl) };

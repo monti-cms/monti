@@ -29,7 +29,7 @@ import { entryRecord } from "./entries/record";
 import type { PublishCheck } from "./entries/tasks";
 import { CheckError, InputError, UnknownOperationError } from "./errors";
 import { folderOperations, folderRecord } from "./folders/operations";
-import { addKeyUsage, keyOperations, keyRecord, openKey, removeOrphanSlotKeys, slotKeyId } from "./keys/operations";
+import { addKeyUsage, keyOperations, keyRecord, openKey } from "./keys/operations";
 import { aiServices, type KeyService } from "./keys/services";
 import { mediaOperations } from "./media/operations";
 import { mediaRecord } from "./media/record";
@@ -339,6 +339,14 @@ export type Monti = ReturnType<typeof createMonti>;
 /** Builds a site's Monti: its operations, plugins included, and the engine every entry point runs them through. */
 export function createMonti(options: MontiOptions) {
 	const plugins = options.plugins ?? [];
+	// A plugin's name is part of its slots' ids and of its tool pages' addresses, whether or not it was made with `definePlugin`. Two
+	// plugins under one name would share their key slots and their place in the log.
+	for (const plugin of plugins) {
+		if (!PLUGIN_NAME.test(plugin.name))
+			throw new Error(`Plugin name "${plugin.name}" is not lower-case letters, digits and dashes.`);
+		if (plugins.filter((other) => other.name === plugin.name).length > 1)
+			throw new Error(`Two plugins are named "${plugin.name}".`);
+	}
 	const recordKinds = new Map<string, RecordKind>();
 	for (const kind of [
 		...schemaRecordKinds,
@@ -370,13 +378,12 @@ export function createMonti(options: MontiOptions) {
 	for (const service of keyServices)
 		if (keyServices.filter((other) => other.id === service.id).length > 1)
 			throw new Error(`Key service "${service.id}" is defined twice.`);
-	// Two plugins under one name would share their key slots and their place in the log.
-	for (const plugin of plugins)
-		if (plugins.filter((other) => other.name === plugin.name).length > 1)
-			throw new Error(`Two plugins are named "${plugin.name}".`);
 	for (const plugin of plugins) {
 		const ids = (plugin.keys ?? []).map((slot) => slot.id);
-		if (new Set(ids).size !== ids.length) throw new Error(`Plugin ${plugin.name} has two key slots under one id.`);
+		if (new Set(ids).size !== ids.length || ids.some((id) => !PLUGIN_NAME.test(id)))
+			throw new Error(
+				`Plugin ${plugin.name}'s key slots need ids of their own, in lower-case letters, digits and dashes.`,
+			);
 		for (const slot of plugin.keys ?? [])
 			if (!keyServices.some((service) => service.id === slot.service))
 				throw new Error(
@@ -658,14 +665,6 @@ export function createMonti(options: MontiOptions) {
 
 		/** The plugins' own clean-ups, run with the trash's (when the admin opens, and `monti trash:purge`). One that fails does not stop the others. */
 		async cleanUp(): Promise<void> {
-			try {
-				await removeOrphanSlotKeys(
-					engine.db,
-					sitePlugins.flatMap((plugin) => plugin.keys.map((slot) => slotKeyId(plugin.name, slot.id))),
-				);
-			} catch (error) {
-				console.error("Monti: removing the keys of slots no plugin has failed; the next clean-up tries again:", error);
-			}
 			for (const plugin of plugins) {
 				try {
 					await plugin.cleanUp?.(monti);

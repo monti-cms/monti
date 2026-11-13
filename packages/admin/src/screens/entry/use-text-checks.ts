@@ -44,30 +44,54 @@ export function useTextChecks({
 			return;
 		}
 		let timer: ReturnType<typeof setTimeout> | undefined;
+		// The words each block had when it was last checked: only a block that changed since is sent again, and what was found in the
+		// others stands. A long body is not handed whole to the plugin's service after every pause.
+		const checked = new Map<string, string>();
 		const ask = async () => {
 			turn.current += 1;
 			const mine = turn.current;
 			const blocks = blockTexts(body.state.doc);
 			const texts = new Map(blocks.map((block) => [block.id, block.text]));
+			const changed = blocks.filter((block) => checked.get(block.id) !== block.text);
+			/** What was found before, in the blocks that are still there as they were. */
+			const kept = (cells: TextCheckCell[], again: ReadonlySet<string>) =>
+				cells.map((cell) => ({
+					...cell,
+					findings: cell.findings.filter((found) => texts.has(found.block) && !again.has(found.block)),
+				}));
+			if (changed.length === 0)
+				return setCells((was) => kept(was, new Set()).filter((cell) => cell.findings.length > 0));
 			const answer = await run({
 				collection,
 				locale,
-				blocks: blocks.map(({ id, text }) => ({ id, text })),
+				blocks: changed.map(({ id, text }) => ({ id, text })),
 			});
 			if (mine !== turn.current) return;
-			// A check that failed, or the call itself, leaves no cell: there is nothing a person could do about it here.
-			setCells(
-				answer.ok
-					? answer.body.checks.map((check) => ({
-							plugin: check.plugin,
-							label: check.label,
-							findings: check.findings
+			// A check that failed, or the call itself, says nothing new: what stood stands, and the blocks are asked about again next time.
+			if (!answer.ok) return;
+			for (const id of [...checked.keys()]) if (!texts.has(id)) checked.delete(id);
+			const again = new Set(changed.map((block) => block.id));
+			// Checked, unless a plugin's check failed: then the same blocks are asked about again after the next change.
+			if (answer.body.checks.every((check) => !check.failed))
+				for (const block of changed) checked.set(block.id, block.text);
+			const place = new Map(blocks.map((block, index) => [block.id, index]));
+			setCells((was) => {
+				const before = kept(was, again);
+				return answer.body.checks
+					.map((check) => ({
+						plugin: check.plugin,
+						label: check.label,
+						findings: [
+							...(before.find((cell) => cell.plugin === check.plugin)?.findings ?? []),
+							...check.findings
 								.map((found) => ({ ...found, was: (texts.get(found.block) ?? "").slice(found.from, found.to) }))
 								// What cannot be put in (it reaches over a line break or a footnote's mark) is no row: its "fix" would do nothing.
 								.filter((found) => stands(body.state.doc, found)),
-						}))
-					: [],
-			);
+							// In the body's order, as a person reads it.
+						].sort((a, b) => (place.get(a.block) ?? 0) - (place.get(b.block) ?? 0) || a.from - b.from),
+					}))
+					.filter((cell) => cell.findings.length > 0);
+			});
 		};
 		const later = () => {
 			// The body changed: an answer still on its way is about the body as it was, and must not bring back a row just fixed.

@@ -78,12 +78,15 @@ function ownCollections<Collections extends SettingsRead["schema"]["collections"
 	if (!collections || !data.pluginTabs) return collections;
 	return Object.fromEntries(
 		Object.entries(collections).map(([c, collection]) => {
-			const theirs = new Map((data.pluginTabs?.[c] ?? []).flatMap((tab) => tab.fields.map((f) => [f.name, f.kind])));
+			const theirs = new Map(
+				(data.pluginTabs?.[c] ?? []).flatMap((tab) => tab.fields.map((each) => [each.name, each.definition] as const)),
+			);
+			// Exactly the plugin's own field, as the server takes it out; one of the same name that says something else is the proposal's.
 			const fields = Object.fromEntries(
-				Object.entries(collection.fields).filter(
-					([name, field]) =>
-						!(theirs.get(name) === field.kind && !(name in (data.schema.collections[c]?.fields ?? {}))),
-				),
+				Object.entries(collection.fields).filter(([name, field]) => {
+					const plugin = theirs.get(name);
+					return plugin === undefined || !sameJson(plugin, field);
+				}),
 			);
 			return [c, { ...collection, fields }];
 		}),

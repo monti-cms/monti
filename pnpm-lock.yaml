@@ -377,6 +377,10 @@ importers:
 
   packages/seo:
     dependencies:
+      react-dom:
+        specifier: '>=19'
+        version: 19.2.3(react@19.2.3)
+    devDependencies:
       '@monti-cms/admin':
         specifier: workspace:*
         version: link:../admin
@@ -386,10 +390,6 @@ importers:
       '@monti-cms/ui':
         specifier: workspace:*
         version: link:../ui
-      react-dom:
-        specifier: '>=19'
-        version: 19.2.3(react@19.2.3)
-    devDependencies:
       '@types/node':
         specifier: ^20
         version: 20.19.43

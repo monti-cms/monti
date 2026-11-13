@@ -41,7 +41,7 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { Add } from "@monti-cms/ui/icons";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { nextStop } from "../frame/focus-hand-off";
@@ -120,7 +120,8 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 				: { text: t("apiKeys.usage", { amount: tokenAmount(key.usage.tokens) }), tone: "subtle" };
 
 	// The plugins' slots are there only where a key can be stored: without the server's secret nothing can be put in one.
-	const slots = canStore ? (list.data?.slots ?? []) : [];
+	// (A slot with a key in it stays on a site that cannot store keys, as the AI keys do: the key can still be removed.)
+	const slots = (list.data?.slots ?? []).filter((slot) => canStore || slot.key !== null);
 	/** Two lists on the page: each then says which it is. */
 	const twoLists = slots.length > 0;
 	const unreadable =
@@ -128,6 +129,19 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 	/** A row's id among the rows the focus moves between: a named key's id, or its slot. */
 	const slotId = (slot: KeySlotRow) => `slot:${slot.plugin}/${slot.slot}`;
 	const rowIds = [...keys.map((key) => key.id), ...slots.filter((slot) => slot.key).map(slotId)];
+	/**
+	 * The slot whose key was removed with the keyboard: its row stays, and once the list shows it empty the focus goes to its "키 넣기",
+	 * which stands where the ⋯ that held the focus was.
+	 */
+	const emptied = useRef<string | null>(null);
+	useEffect(() => {
+		const id = emptied.current;
+		if (id === null || !list.data) return;
+		const slot = list.data.slots.find((each) => slotId(each) === id);
+		if (slot?.key) return;
+		emptied.current = null;
+		rowEnds.current.get(id)?.querySelector("button")?.focus();
+	});
 	const ask = (what: Removing) => {
 		beside.current = null;
 		setRemoving(what);
@@ -304,7 +318,12 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 																</Count>
 															) : null}
 														</Inline>
-														{slot.key && !slot.key.readable ? (
+														{slot.orphan ? (
+															// No plugin of the site has the slot any more: nothing uses the key, and it is here to be removed.
+															<Text as="div" variant="note" tone="faint" truncate>
+																{t("apiKeys.noPlugin")}
+															</Text>
+														) : slot.key && !slot.key.readable ? (
 															<Text as="div" variant="note" tone="danger" truncate>
 																{t("apiKeys.unreadable")}
 															</Text>
@@ -316,39 +335,44 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 													</Stack>
 												</TableCell>
 												<TableCell align="end">
-													{slot.key ? (
-														<RowActions
-															ref={(node) => {
-																if (node) rowEnds.current.set(slotId(slot), node);
-																return () => void rowEnds.current.delete(slotId(slot));
-															}}
-														>
+													<RowActions
+														ref={(node) => {
+															if (node) rowEnds.current.set(slotId(slot), node);
+															return () => void rowEnds.current.delete(slotId(slot));
+														}}
+													>
+														{slot.key ? (
 															<DropdownMenu>
 																<RowMore
 																	label={t("apiKeys.more", { name: slotName(slot) })}
 																	trigger={(button) => <DropdownMenuTrigger render={button} />}
 																/>
 																<DropdownMenuContent align="end">
-																	<DropdownMenuItem onClick={() => openWindow({ mode: "slot", slot })}>
-																		{t("apiKeys.edit")}
-																	</DropdownMenuItem>
-																	<DropdownMenuSeparator />
+																	{/* A key that cannot be stored again, or that no plugin has a slot for, is only removed. */}
+																	{canStore && !slot.orphan ? (
+																		<>
+																			<DropdownMenuItem onClick={() => openWindow({ mode: "slot", slot })}>
+																				{t("apiKeys.edit")}
+																			</DropdownMenuItem>
+																			<DropdownMenuSeparator />
+																		</>
+																	) : null}
 																	<DropdownMenuItem variant="danger" onClick={() => ask({ slot })}>
 																		{t("apiKeys.remove")}
 																	</DropdownMenuItem>
 																</DropdownMenuContent>
 															</DropdownMenu>
-														</RowActions>
-													) : (
-														<Button
-															variant="ghost"
-															size="sm"
-															aria-label={t("apiKeys.slotAddFor", { name: slotName(slot) })}
-															onClick={() => openWindow({ mode: "slot", slot })}
-														>
-															{t("apiKeys.slotAdd")}
-														</Button>
-													)}
+														) : (
+															<Button
+																variant="ghost"
+																size="sm"
+																aria-label={t("apiKeys.slotAddFor", { name: slotName(slot) })}
+																onClick={() => openWindow({ mode: "slot", slot })}
+															>
+																{t("apiKeys.slotAdd")}
+															</Button>
+														)}
+													</RowActions>
 												</TableCell>
 											</TableRow>
 										))}
@@ -413,12 +437,20 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 								const id = "slot" in removing ? slotId(removing.slot) : removing.key.id;
 								// A click made with the keyboard counts no presses of a pointer (`detail` 0): only that has a focus to hand on.
 								const at = rowIds.indexOf(id);
-								beside.current =
-									event.detail === 0 ? [rowIds[at + 1], rowIds[at - 1]].filter((each) => each !== undefined) : null;
+								const byKeyboard = event.detail === 0;
+								// A slot's row stays when its key goes (it turns to "키 넣기"): the focus stays on that row. A row that goes hands
+								// the focus to the row after it, or before it.
+								const stays = "slot" in removing && !removing.slot.orphan && canStore;
+								emptied.current = byKeyboard && stays ? id : null;
+								beside.current = !byKeyboard
+									? null
+									: stays
+										? [id]
+										: [rowIds[at + 1], rowIds[at - 1]].filter((each) => each !== undefined);
 								setAsking(false);
 								const sent =
 									"slot" in removing
-										? setSlot.run({ plugin: removing.slot.plugin, slot: removing.slot.slot, secret: null })
+										? setSlot.run({ plugin: removing.slot.plugin, slot: removing.slot.slot, remove: true })
 										: remove.run(
 												{ id: removing.key.id },
 												{ versions: { [`key:${removing.key.id}`]: removing.key.version } },

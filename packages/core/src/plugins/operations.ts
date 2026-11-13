@@ -119,21 +119,33 @@ export const pluginOperations = [
 		humanOnly: true,
 		secretInputs: ["secret"],
 		description:
-			"Put a key in a plugin's key slot, replace the one there, or (with `secret: null`) take it out. The slot's service is asked once whether it takes the key; a key it refuses is not stored. Only a person does it: it needs the key itself.",
-		input: z.object({
-			plugin: z.string(),
-			slot: z.string(),
-			/** The key itself; `null` takes the slot's key out. */
-			secret: z.string().trim().nullable(),
-			/** The service's address, for a service that asks for one. */
-			baseUrl: z.string().optional(),
-		}),
+			"Put a key in a plugin's key slot, replace the one there, or (with `remove: true` and no key) take it out. The slot's service is asked once whether it takes the key; a key it refuses is not stored. A key left in a slot no plugin has any more can only be taken out. Only a person does it: it needs the key itself.",
+		input: z
+			.object({
+				plugin: z.string(),
+				slot: z.string(),
+				/** The key itself. Left out when the slot's key is taken out. */
+				secret: z.string().trim().optional(),
+				/** Takes the slot's key out. Its own word, so the command line removes one too: a secret is never an argument there. */
+				remove: z.boolean().optional(),
+				/** The service's address, for a service that asks for one. */
+				baseUrl: z.string().optional(),
+			})
+			.refine((input) => (input.secret !== undefined) !== (input.remove === true), {
+				message: "Give secret, or remove: true.",
+			}),
 		// The service is asked before the write's transaction opens, as for any key (doc 14).
 		async prepare(input, ctx) {
+			if (input.secret === undefined) {
+				// Taking a key out needs no secret and no plugin: the key of a slot nobody has any more goes this way too.
+				const id = slotKeyId(input.plugin, input.slot);
+				const stored = await ctx.db.selectFrom("api_keys").select("version").where("id", "=", id).executeTakeFirst();
+				const label = ctx.site.plugins.find((plugin) => plugin.name === input.plugin)?.label ?? input.plugin;
+				return { id, version: stored?.version ?? null, label, set: null };
+			}
 			const { plugin, slot, service } = slotOf(ctx, input.plugin, input.slot);
 			const id = slotKeyId(plugin.name, slot.id);
 			const stored = await ctx.db.selectFrom("api_keys").select("version").where("id", "=", id).executeTakeFirst();
-			if (input.secret === null) return { id, version: stored?.version ?? null, label: plugin.label, set: null };
 			const secret = secretOf(ctx);
 			const baseUrl = service.address ? address(input.baseUrl) : null;
 			const models = await ask(ctx, service, input.secret, baseUrl);

@@ -220,7 +220,11 @@ export function FieldsTab({
 	const shown = preview ?? layout;
 	// The plugins' tabs stand after the collection's own (doc 14): theirs to fill, so nothing in one is moved, opened or added to.
 	const pluginTabs = data?.pluginTabs?.[c] ?? [];
-	const pluginTab = tab >= shown.length ? (pluginTabs[tab - shown.length] ?? null) : null;
+	// Which of them is open is this tab's own to know, apart from the index of the collection's tabs: adding, removing or dragging one of
+	// those while a plugin's tab is open leaves it open.
+	const [pluginOpen, setPluginOpen] = useState<{ collection: string; index: number } | null>(null);
+	const pluginIndex = pluginOpen?.collection === c && pluginOpen.index < pluginTabs.length ? pluginOpen.index : null;
+	const pluginTab = pluginIndex === null ? null : (pluginTabs[pluginIndex] ?? null);
 	const pluginValue = (index: number) => `plugin:${index}`;
 	const current = Math.min(tab, shown.length - 1);
 	const entries = shown[current]?.fields ?? [];
@@ -464,6 +468,7 @@ export function FieldsTab({
 
 	const addTab = () => {
 		setLayout([...layout, { tab: t("settings.fields.newTab"), fields: [] }]);
+		setPluginOpen(null);
 		onTab(layout.length);
 		setRenaming(layout.length);
 	};
@@ -509,10 +514,13 @@ export function FieldsTab({
 				overlay={lifted}
 			>
 				<FolderTabs
-					value={pluginTab ? pluginValue(tab - shown.length) : String(current)}
-					onValueChange={(value) =>
-						onTab(String(value).startsWith("plugin:") ? shown.length + Number(String(value).slice(7)) : Number(value))
-					}
+					value={pluginIndex === null ? String(current) : pluginValue(pluginIndex)}
+					onValueChange={(value) => {
+						if (String(value).startsWith("plugin:"))
+							return setPluginOpen({ collection: c, index: Number(String(value).slice(7)) });
+						setPluginOpen(null);
+						onTab(Number(value));
+					}}
 				>
 					<SortableList
 						id={TABS}
@@ -569,7 +577,7 @@ export function FieldsTab({
 						</FolderTabsList>
 					</SortableList>
 					{pluginTab ? (
-						<FolderTabsBody value={pluginValue(tab - shown.length)}>
+						<FolderTabsBody value={pluginValue(pluginIndex ?? 0)}>
 							<FieldTree>
 								{pluginTab.fields.map((field) => (
 									<FieldRow
