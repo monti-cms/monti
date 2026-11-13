@@ -188,6 +188,26 @@ export function Picture({ image }: { image: SiteImage }) {
 제목은 글자로 만든 `id`와 함께 그린다(어느 언어의 글자든 남고, 같은 글자가 또 나오면 번호가 붙는다). `tocOf(doc, { min, max })`는 그
 `id`로 목차를 준다. 따로 말하지 않으면 2 · 3단계 제목의 `{ id, text, level, depth }`다.
 
+## 플러그인
+
+플러그인은 `monti.config.ts`의 코드다(`plugins: [seo(), …]`): `definePlugin({ name, … })`. 더할 수 있는 것:
+
+| 키 | 더하는 것 |
+|---|---|
+| `operations`, `recordKinds`, `streams` | core의 것과 같은 기능: 관리자 API 경로, 에이전트 도구, CLI 명령 |
+| `blocks`, `marks` | 본문 블록과 서식 |
+| `fields` | 문서 컬렉션의 필드. 속성 패널에서 플러그인의 탭에 선다(`{ tab, collections?, fields, columns? }`). `monti.schema.ts`에 적히지 않는다. `columns`는 목록이 열로 내놓을 필드다. 필드는 제 입력(`input`)을 가리킬 수 있고, `{ kind: "view" }` 필드는 값 없이 화면 하나를 그린다 |
+| `publishChecks` | 발행 전 할 일의 줄 |
+| `beforeSave` | 글이 저장될 값을 바꾸거나(돌려준다) 저장을 막는다(`CheckError`를 던진다. `says("…")`가 말을 그대로 싣는다) |
+| `textCheck` | 본문 글자의 검사. 편집기 상태 표시줄의 칸에 보인다 |
+| `receivers` | 쓰기 뒤에 이벤트가 가는 곳. `receiverFetch(url, init)`로 보내면 기록이 상대의 답을 말한다 |
+| `keyServices`, `keys` | 키를 넣을 수 있는 서비스와 플러그인의 키 자리. 자리는 키 화면의 줄이고 서버에서 `monti.plugins.key(plugin, slot)`로 연다 |
+| `toolPages`, `importers` | 도구 페이지의 탭, 가져오기가 읽는 파일 형식 |
+| `storage` | 미디어 파일을 두는 곳 |
+
+플러그인이 관리자 화면에 그리는 것(필드의 입력, 화면, 도구 페이지의 화면)은 브라우저 쪽 절반에서 온다. `@monti-cms/admin`의
+`defineAdminPlugin`으로 만들어 관리자 페이지에 넘긴다(`<AdminPage plugins={[…]} />`). `@monti-cms/seo`가 이 위에 만든 플러그인이다.
+
 ## 테스트
 
 ```sh

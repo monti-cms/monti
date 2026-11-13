@@ -192,6 +192,26 @@ A link to an entry is `monti:entry/<translation group>` (`entryLink`), so it hol
 Every heading is drawn with an `id` made of its words (letters of any language kept, the same words again numbered), and
 `tocOf(doc, { min, max })` gives the table of contents with those ids: `{ id, text, level, depth }` for levels 2 and 3 unless said.
 
+## Plugins
+
+A plugin is code in `monti.config.ts` (`plugins: [seo(), …]`): `definePlugin({ name, … })`. What it can add:
+
+| Key | What it adds |
+|---|---|
+| `operations`, `recordKinds`, `streams` | Operations like the core's: admin API routes, agent tools, CLI commands |
+| `blocks`, `marks` | Body blocks and marks |
+| `fields` | Fields on document collections, in a tab of the property panel that is the plugin's (`{ tab, collections?, fields, columns? }`). They are not written to `monti.schema.ts`; `columns` names the ones a list offers as columns. A field may name its own `input`, and a `{ kind: "view" }` field draws a view and holds no value |
+| `publishChecks` | Rows of the publish to-do list |
+| `beforeSave` | Changes the values an entry is saved with (return them), or refuses the save (throw a `CheckError`; `says("…")` carries plain words) |
+| `textCheck` | A check of the body's words, shown in a cell of the editor's status bar |
+| `receivers` | Where events go after a write. Send with `receiverFetch(url, init)` so the log says what the other side answered |
+| `keyServices`, `keys` | Services a key can be for, and the plugin's own key slots: rows of the keys screen, opened on the server with `monti.plugins.key(plugin, slot)` |
+| `toolPages`, `importers` | Tabs of the tools page; file formats the import reads |
+| `storage` | Where media files are |
+
+What a plugin draws in the admin (a field's input, a view, a tool page's screen) comes from its browser half, `defineAdminPlugin` of
+`@monti-cms/admin`, handed to the admin page (`<AdminPage plugins={[…]} />`). `@monti-cms/seo` is a plugin built on these.
+
 ## Tests
 
 ```sh
