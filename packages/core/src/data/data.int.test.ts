@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -13,6 +13,7 @@ import type { EntryLine } from "./backup";
 import { restoreFrom, writeBackup } from "./files";
 import type { Imported, Inspected } from "./import";
 import type { BackupOutput, BackupSummary } from "./operations";
+import { zip } from "./zip";
 
 // Two sites: the one the backup is taken from, and an empty one it is restored or imported into.
 const db = await testDatabase();
@@ -295,6 +296,25 @@ describe("monti restore (14-3)", () => {
 			});
 			expect(await rowsOf(other, "entries")).toEqual([]);
 			expect(await restoreFrom(second(), path.join(dir, "nowhere.zip")).catch(() => "no file")).toBe("no file");
+			// An export is not a site: it is not restored. A backup with a file taken out is not one either.
+			const exported = await run<BackupOutput>(monti, "data.export", {
+				ids: (await db.selectFrom("entries").select("id").where("collection", "=", "post").limit(1).execute()).map(
+					(row) => row.id,
+				),
+			});
+			const packed = (files: Record<string, string>) =>
+				zip(Object.entries(files).map(([name, text]) => ({ name, bytes: new TextEncoder().encode(text) })));
+			await writeFile(path.join(dir, "export.zip"), await packed(exported.files));
+			expect(await restoreFrom(second(), path.join(dir, "export.zip"))).toEqual({
+				problems: [{ problem: "unreadable", file: "manifest.json" }],
+			});
+			const whole = await run<BackupOutput>(monti, "data.backup");
+			const { "entries.jsonl": _entries, ...rest } = whole.files;
+			await writeFile(path.join(dir, "cut.zip"), await packed(rest));
+			expect(await restoreFrom(second(), path.join(dir, "cut.zip"))).toMatchObject({
+				problems: [{ problem: "unreadable", file: "entries.jsonl" }],
+			});
+			expect(await other.selectFrom("entries").select("id").execute()).toEqual([]);
 		} finally {
 			await rm(dir, { recursive: true, force: true });
 		}
@@ -598,7 +618,7 @@ describe("files a plugin reads (flow 9, 05–07)", () => {
 			{ name: "two/index.txt", text: "둘\n둘의 본문.\n![./cover.png\n![50%off.png" },
 		];
 		const inUpload = ["one/cover.png", "two/cover.png"];
-		const seen = await run<Extract<Inspected, { kind: "files" }>>(monti, "data.inspect", {
+		const seen = await run<Exclude<Inspected, { kind: "unreadable" }>>(monti, "data.inspect", {
 			collection: "post",
 			files: bundles,
 			has: inUpload,
@@ -639,6 +659,39 @@ describe("files a plugin reads (flow 9, 05–07)", () => {
 		expect(JSON.stringify(rows[0].doc)).toContain(media[0].id);
 		expect(JSON.stringify(rows[0].doc)).not.toContain(media[1].id);
 		expect(JSON.stringify(rows[1].doc)).toContain(media[1].id);
+	});
+
+	it("14-1 a file whose body this site cannot hold is counted before the import and left out of it; the rest comes in", async () => {
+		const odd: Plugin = definePlugin({
+			name: "odd",
+			importers: [
+				{
+					id: "odd",
+					label: "Odd",
+					extensions: [".odd"],
+					read: (file) => ({
+						values: { title: file.text },
+						doc: body(
+							file.text === "이상한 글" ? { id: "x1", type: "noSuchBlock", attrs: {} } : p("p1", `${file.text}의 본문`),
+						),
+					}),
+				},
+			],
+		});
+		const monti = site([odd]);
+		const upload = {
+			collection: "post",
+			files: [
+				{ name: "good.odd", text: "멀쩡한 글" },
+				{ name: "bad.odd", text: "이상한 글" },
+			],
+			has: [],
+		};
+		expect(await run(monti, "data.inspect", upload)).toMatchObject({ found: 2, unfit: 1, same: 0 });
+		expect(await write<Imported>(monti, "data.import", upload)).toMatchObject({ imported: 1, skipped: 1 });
+		expect(await db.selectFrom("entries").select("title").where("collection", "=", "post").execute()).toEqual([
+			{ title: "멀쩡한 글" },
+		]);
 	});
 
 	it("14-2 a site with no plugin for them does not read .md and .mdx, and says which plugin does; other files are just not read", async () => {

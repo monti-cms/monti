@@ -231,10 +231,14 @@ export async function restoreBackup(
 	const problems: RestoreProblem[] = [];
 	const any = await db.selectFrom("entries").select("id").limit(1).executeTakeFirst();
 	if (any) problems.push({ problem: "notEmpty" });
-	if (!readManifest(await text("manifest.json")))
+	const manifest = readManifest(await text("manifest.json"));
+	// An export is some of a site's entries, not a site: it is imported, not restored.
+	if (!manifest || manifest.kind !== "backup")
 		return { problems: [...problems, { problem: "unreadable", file: "manifest.json" }] };
 	const read = async <Line>(name: string) => {
-		const found = readLines<Line>(await text(name));
+		// A file the backup always has: one that is missing or damaged is not an empty one.
+		const written = await text(name);
+		const found = written === undefined ? null : readLines<Line>(written);
 		if (found === null) problems.push({ problem: "unreadable", file: name });
 		return found ?? [];
 	};
@@ -305,8 +309,11 @@ export async function restoreBackup(
 		let left = folders;
 		while (left.length > 0) {
 			const now = left.filter((row) => row.parent_id === null || placed.has(String(row.parent_id)));
-			// A folder whose parent is not in the file (it was in the trash) stands at the top.
-			const batch: Row[] = now.length > 0 ? now : left.map((row) => ({ ...row, parent_id: null }));
+			// A folder whose parent is not in the file (it was in the trash) stands at the top; what is under it stays under it.
+			const known = new Set(folders.map((row) => String(row.id)));
+			const orphans = left.filter((row) => !known.has(String(row.parent_id)));
+			const batch: Row[] =
+				now.length > 0 ? now : (orphans.length > 0 ? orphans : left).map((row) => ({ ...row, parent_id: null }));
 			await insertRows(trx, "folders", batch);
 			for (const row of batch) placed.add(String(row.id));
 			left = left.filter((row) => !placed.has(String(row.id)));

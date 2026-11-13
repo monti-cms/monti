@@ -69,7 +69,8 @@ function importOf(what: Message | undefined) {
 	const values = what.values ?? {};
 	let renamed: { id: string; title: string; from: string; to: string }[] = [];
 	try {
-		renamed = JSON.parse(String(values.renamed ?? "[]"));
+		const read: unknown = JSON.parse(String(values.renamed ?? "[]"));
+		if (Array.isArray(read)) renamed = read;
 	} catch {}
 	return {
 		collection: String(values.collection ?? ""),

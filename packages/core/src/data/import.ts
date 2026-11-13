@@ -422,6 +422,20 @@ const sameAs = (bodies: ReadonlySet<string>, candidate: Candidate) => {
 	return text !== "" && bodies.has(`${candidate.title}\n${text}`);
 };
 
+/**
+ * Whether this site can hold a body of the upload, as a new entry's body is checked. Its pictures and files are looked at apart: they
+ * are fitted to the library first (a path becomes a file here), and one the library does not have is taken out.
+ */
+function holds(ctx: OperationContext, doc: Doc): boolean {
+	const without = (blocks: Block[]): Block[] =>
+		blocks.flatMap((block) =>
+			block.type === "image" || block.type === "file"
+				? []
+				: [block.children ? { ...block, children: without(block.children) } : block],
+		);
+	return checkDoc({ type: "doc", blocks: without(doc.blocks) }, ctx.site.kit, null).length === 0;
+}
+
 async function prepare(ctx: OperationContext, input: ImportInput) {
 	const schema = ctx.site.schema();
 	const collection = schema.collections[input.collection];
@@ -466,7 +480,7 @@ async function prepare(ctx: OperationContext, input: ImportInput) {
 	 */
 	const outOf = (candidate: Candidate): "unfit" | "same" | null => {
 		const first = sourceOf.get(candidate.group);
-		if (!first || (first.doc && checkDoc(first.doc, ctx.site.kit, first.doc).length > 0)) return "unfit";
+		if (!first || (first.doc && !holds(ctx, first.doc))) return "unfit";
 		return sameAs(bodies, first) ? "same" : null;
 	};
 	// The pictures the entries that go in name; among them the library's own files, when the upload came from this site.
@@ -688,7 +702,14 @@ export async function importUpload(ctx: OperationContext, input: ImportInput, cr
 			values: fitted.values,
 			...(fitted.doc ? { doc: fitted.doc } : {}),
 		};
-		await create.check?.(made, ctx, undefined);
+		// What the entry operation itself refuses (a value a field cannot hold) leaves that one entry out, not the import.
+		try {
+			await create.check?.(made, ctx, undefined);
+		} catch (error) {
+			if (!(error instanceof CheckError)) throw error;
+			out.skipped += members.length;
+			continue;
+		}
 		const { id } = (await create.run(made, ctx, undefined)) as { id: string };
 		const folder = await folderOf(first.folder);
 		if (folder) await ctx.db.updateTable("entries").set({ folder_id: folder }).where("id", "=", id).execute();
@@ -702,11 +723,7 @@ export async function importUpload(ctx: OperationContext, input: ImportInput, cr
 			.executeTakeFirstOrThrow();
 		// Its translations, as they were: the same group, each a draft in its language.
 		for (const member of members) {
-			if (
-				member === first ||
-				!member.line ||
-				(member.doc && checkDoc(member.doc, ctx.site.kit, member.doc).length > 0)
-			) {
+			if (member === first || !member.line || (member.doc && !holds(ctx, member.doc))) {
 				if (member !== first) out.skipped += 1;
 				continue;
 			}

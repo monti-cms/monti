@@ -113,7 +113,7 @@ describe("the MDX plugin on a site (T34)", () => {
 		expect(blocks.map((block) => [block.type, block.attrs?.language ?? block.attrs?.tone])).toEqual([
 			["paragraph", undefined],
 			["callout", "info"],
-			["codeBlock", "mdx"],
+			["codeBlock", "mdx-kept"],
 			["codeBlock", "ts"],
 		]);
 		// The highlighter's notation is still in the code, as it was written (T79).

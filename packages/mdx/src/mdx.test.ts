@@ -185,8 +185,8 @@ describe("reading a markdown file (T34)", () => {
 			},
 			{ type: "note", content: [text("한 줄.")] },
 			{ type: "chart", attrs: { data: "a.csv", height: 240 } },
-			{ type: "codeBlock", attrs: { language: "mdx" }, content: [text(":::tabs\n모르는 것.\n:::")] },
-			{ type: "codeBlock", attrs: { language: "mdx" }, content: [text('<Tweet id="123" />')] },
+			{ type: "codeBlock", attrs: { language: "mdx-kept" }, content: [text(":::tabs\n모르는 것.\n:::")] },
+			{ type: "codeBlock", attrs: { language: "mdx-kept" }, content: [text('<Tweet id="123" />')] },
 		]);
 		expect(read.unknown).toEqual(["tabs", "Tweet"]);
 		// Without the site's blocks, every directive is kept as written.
@@ -283,6 +283,38 @@ describe("writing a body as MDX (T34)", () => {
 		expect(toMdx(readMarkdown(written, { known }).doc)).toBe(written);
 		expect(written).toContain("````js\nconst fence = '```';\n````");
 		expect(written).toContain('<Tweet id="1" />');
+	});
+
+	it("14-1 words that look like markup are written so they read back as the same words: a line starting like a list or a heading, a ! before a link, backticks in code, marks in a table cell, a code block in html", () => {
+		const doc: Doc = {
+			type: "doc",
+			blocks: [
+				{ id: "a", type: "paragraph", content: [text("1. 서론이 아니라 문장")] },
+				{ id: "b", type: "paragraph", content: [text("# 해시로 시작하는 문장")] },
+				{ id: "c", type: "paragraph", content: [text("- 줄표로 시작 > 그리고 {중괄호}")] },
+				{
+					id: "d",
+					type: "paragraph",
+					content: [text("와!"), text("여기", { type: "link", href: "https://example.com" })],
+				},
+				{ id: "e", type: "paragraph", content: [text("a `b` c", { type: "code" })] },
+				{
+					id: "f",
+					type: "table",
+					attrs: {
+						header: true,
+						rows: [
+							["a*b*c", "x|y"],
+							["1", "2"],
+						],
+					},
+				},
+				{ id: "g", type: "codeBlock", attrs: { language: "html" }, content: [text("<p>코드로 쓴 것</p>")] },
+			],
+		};
+		const written = toMdx(doc);
+		expect(written).toContain("```html\n<p>코드로 쓴 것</p>\n```");
+		expect(bare(readMarkdown(written).doc)).toEqual(bare(doc));
 	});
 
 	it("14-1 a picture is named by the library's address when one is given, and values go first as front matter", () => {

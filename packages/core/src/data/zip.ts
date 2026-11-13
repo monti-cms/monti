@@ -164,7 +164,7 @@ export function unzip(
 	const count = view.getUint16(end + 10, true);
 	let at = view.getUint32(end + 16, true);
 	const decoder = new TextDecoder();
-	const files = new Map<string, { method: number; packed: number; size: number; offset: number }>();
+	const files = new Map<string, { crc: number; method: number; packed: number; size: number; offset: number }>();
 	for (let index = 0; index < count; index++) {
 		if (at + 46 > bytes.length || view.getUint32(at, true) !== 0x02014b50) return null;
 		const nameLength = view.getUint16(at + 28, true);
@@ -173,6 +173,7 @@ export function unzip(
 		// A folder's own entry holds nothing.
 		if (!name.endsWith("/"))
 			files.set(name, {
+				crc: view.getUint32(at + 16, true),
 				method: view.getUint16(at + 10, true),
 				packed: view.getUint32(at + 20, true),
 				size: view.getUint32(at + 24, true),
@@ -187,13 +188,19 @@ export function unzip(
 			if (!file || file.offset + 30 > bytes.length) return null;
 			const start = file.offset + 30 + view.getUint16(file.offset + 26, true) + view.getUint16(file.offset + 28, true);
 			const packed = bytes.subarray(start, start + file.packed);
-			if (file.method === 0) return packed;
-			if (file.method !== 8) return null;
-			try {
-				return await through(packed, new DecompressionStream("deflate-raw"), file.size);
-			} catch {
-				return null;
-			}
+			// Deflate packs at most about a thousand to one: a file that says it unpacks to more is made to fill the memory.
+			if (file.size > file.packed * 1100 + 1024) return null;
+			let whole: Uint8Array;
+			if (file.method === 0) whole = packed;
+			else if (file.method === 8)
+				try {
+					whole = await through(packed, new DecompressionStream("deflate-raw"), file.size);
+				} catch {
+					return null;
+				}
+			else return null;
+			// Damaged bytes are no file: the sum the zip keeps of each file says so.
+			return whole.length === file.size && crc32(whole) === file.crc ? whole : null;
 		},
 	};
 }

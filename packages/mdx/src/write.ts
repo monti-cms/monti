@@ -1,12 +1,31 @@
 import type { Block, Doc, Inline } from "@monti-cms/core";
-import { KEPT } from "./kept";
+import { KEPT, KEPT_HTML } from "./kept";
 
 export type WriteOptions = {
 	/** The address of a library file, for pictures and files; a body's own name for it (`media:<id>`) when left out. */
 	mediaUrl?: (id: string) => string;
 };
 
-const escaped = (text: string) => text.replace(/([\\`*_[\]<])/g, "\\$1");
+/** Words with nothing in them read as markup: the marks' own characters, a `!` that would make the link after it a picture, a `{` of MDX. */
+const escaped = (text: string) => text.replace(/([\\`*_[\]<>{}~|!])/g, "\\$1");
+
+/** A line that would start a heading, a list, a quote or a rule keeps its first character as a character. */
+const lineStart = (text: string) =>
+	text
+		.split("\n")
+		.map((line) =>
+			line
+				.replace(/^(\s*)(#{1,6}(?=\s|$)|[-+](?=\s|$)|:{2,}|={3,}|-{3,})/, "$1\\$2")
+				.replace(/^(\s*\d+)([.)])(?=\s|$)/, "$1\\$2"),
+		)
+		.join("\n");
+
+/** Code inside a line, in a run of backticks longer than any it holds. */
+const codeSpan = (text: string) => {
+	const fence = "`".repeat(Math.max(1, ...[...text.matchAll(/`+/g)].map((run) => run[0].length + 1)));
+	const pad = text.startsWith("`") || text.endsWith("`") ? " " : "";
+	return `${fence}${pad}${text}${pad}${fence}`;
+};
 
 /** Marks from the outside in, so the same body always writes the same text. */
 const WRAP: Record<string, (inner: string, mark: Record<string, unknown>) => string> = {
@@ -28,7 +47,7 @@ function inline(content: readonly Inline[] = []): string {
 			const marks = each.marks ?? [];
 			// Code is written as it is: nothing in it is markup.
 			const code = marks.some((mark) => mark.type === "code");
-			let text = code ? `\`${each.text}\`` : escaped(each.text);
+			let text = code ? codeSpan(each.text) : escaped(each.text);
 			for (const type of [...ORDER].reverse()) {
 				const mark = marks.find((one) => one.type === type);
 				if (mark) text = (WRAP[type] as (typeof WRAP)[string])(text, mark);
@@ -74,9 +93,10 @@ function block(each: Block, options: WriteOptions, depth: number): string {
 	const url = (id: unknown) => (typeof id === "string" && id !== "" ? (options.mediaUrl?.(id) ?? `media:${id}`) : "");
 	switch (each.type) {
 		case "paragraph":
-			return inline(each.content);
+			return lineStart(inline(each.content));
 		case "heading":
-			return `${"#".repeat(Number(attrs.level ?? 2))} ${inline(each.content)}`;
+			// A heading is one line: a break in it is a space.
+			return `${"#".repeat(Number(attrs.level ?? 2))} ${inline(each.content).replace(/\\\n/g, " ")}`;
 		case "bulletList":
 			return (each.children ?? []).map((item) => `- ${inline(item.content)}`).join("\n");
 		case "orderedList": {
@@ -93,7 +113,7 @@ function block(each: Block, options: WriteOptions, depth: number): string {
 			const text = (each.content ?? []).map((part) => (part.type === "text" ? part.text : "")).join("");
 			const language = typeof attrs.language === "string" ? attrs.language : "";
 			// What was kept as written (a component no block is known for, raw HTML) goes back as it was.
-			if (language === KEPT || language === "html") return text;
+			if (language === KEPT || language === KEPT_HTML) return text;
 			const fence = "`".repeat(Math.max(3, ...[...text.matchAll(/`+/g)].map((run) => run[0].length + 1)));
 			return `${fence}${language}\n${text}\n${fence}`;
 		}
@@ -101,7 +121,7 @@ function block(each: Block, options: WriteOptions, depth: number): string {
 			const rows = (Array.isArray(attrs.rows) ? attrs.rows : []) as string[][];
 			const [head = [], ...rest] = rows;
 			const line = (cells: string[]) =>
-				`| ${cells.map((cell) => String(cell).replace(/\|/g, "\\|").replace(/\n/g, " ")).join(" | ")} |`;
+				`| ${cells.map((cell) => escaped(String(cell)).replace(/\n/g, " ")).join(" | ")} |`;
 			return [line(head), line(head.map(() => "---")), ...rest.map(line)].join("\n");
 		}
 		case "divider":

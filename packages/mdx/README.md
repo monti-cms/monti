@@ -42,7 +42,7 @@ Monti keeps a body as a JSON document. MDX is read into it once, on import; it i
 | A fenced code block | A code block: its text as written, the rest of the fence line kept in its language |
 | A picture on a line of its own | A picture block. A picture the upload carries goes to the media library |
 | `:::callout{tone="warn"}` naming a block of the site | That block, with the attributes given |
-| A component (`<Tweet />`), an unknown directive, a chunk of HTML | Kept as written in a code block, with a to-do "Unknown component Tweet" on the entry (it does not block publishing) |
+| A component (`<Tweet />`), an unknown directive, a chunk of HTML | Kept as written in a code block (language `mdx-kept` or `html-kept`), with a to-do "Unknown component Tweet" on the entry (it does not block publishing) |
 | `import` and `export` lines of an `.mdx` file | Left out |
 
 A link by the name of an address the file defines (`[docs][d]`) gets that address; a script address is no link.

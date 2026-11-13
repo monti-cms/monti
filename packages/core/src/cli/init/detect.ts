@@ -43,7 +43,7 @@ const LOCKFILES = {
 } as const;
 
 /** Where a site's posts usually are when it keeps them as files. */
-const POST_FOLDERS = ["content", "posts", "_posts", "blog", "data", "src/content", "src/posts", "src/data"];
+const POST_FOLDERS = ["content", "posts", "_posts", "blog", "data"].flatMap((name) => [name, `src/${name}`]);
 
 const isPost = (name: string) => /\.mdx?$/i.test(name) && !/^readme\./i.test(name);
 

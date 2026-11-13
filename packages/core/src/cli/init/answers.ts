@@ -21,13 +21,20 @@ export type Answers = {
 export const PLUGINS = ["seo", "mdx"] as const;
 
 /** A plugin list as it is typed: names with commas, or `none`. */
-const pluginsOf = (value: string) =>
-	value.trim() === "none" || value.trim() === ""
-		? []
-		: value
-				.split(",")
-				.map((name) => name.trim())
-				.filter(Boolean);
+const pluginsOf = (value: string) => {
+	const named =
+		value.trim() === "none" || value.trim() === ""
+			? []
+			: value
+					.split(",")
+					.map((name) => name.trim())
+					.filter(Boolean);
+	// Each once, in the order they are written in the config; a name that is no plugin stays, for the check to refuse.
+	return [
+		...PLUGINS.filter((name) => named.includes(name)),
+		...new Set(named.filter((name) => !(PLUGINS as readonly string[]).includes(name))),
+	];
+};
 
 export type InitFlags = Partial<Answers> & { yes: boolean; dryRun: boolean };
 

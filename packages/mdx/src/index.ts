@@ -7,7 +7,7 @@ import { KEPT } from "./kept";
 import { type MdxLanguage, mdxWords } from "./messages";
 import { type KnownBlocks, readMarkdown } from "./read";
 
-export { KEPT } from "./kept";
+export { KEPT, KEPT_HTML } from "./kept";
 export { type KnownBlocks, type ReadFile, readMarkdown } from "./read";
 export { toMdx, type WriteOptions } from "./write";
 

@@ -8,7 +8,7 @@ import { directive } from "micromark-extension-directive";
 import { frontmatter } from "micromark-extension-frontmatter";
 import { gfm } from "micromark-extension-gfm";
 import { parse as parseYaml } from "yaml";
-import { KEPT } from "./kept";
+import { KEPT, KEPT_HTML } from "./kept";
 
 /** What a block type of the site holds, for a `:::directive` that names it: its words, other blocks, or nothing. */
 export type KnownBlocks = (type: string) => "text" | "blocks" | "nothing" | null;
@@ -236,7 +236,7 @@ export function readMarkdown(text: string, options: { mdx?: boolean; known?: Kno
 					if (name) unknown.push(name);
 					// A comment says nothing to a reader.
 					if (/^<!--[\s\S]*-->$/.test(node.value.trim())) return [];
-					return [kept(node, name ? KEPT : "html")];
+					return [kept(node, name ? KEPT : KEPT_HTML)];
 				}
 				case "containerDirective":
 				case "leafDirective": {
