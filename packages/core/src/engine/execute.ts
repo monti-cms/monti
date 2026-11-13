@@ -3,7 +3,7 @@ import type { Session } from "../auth/session";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { ConflictError, ForbiddenError, InputError } from "../errors";
-import { rewriteUses } from "../media/uses";
+import { lockWithFiles, rewriteUses } from "../media/uses";
 import {
 	type ActivityKind,
 	type Actor,
@@ -15,7 +15,7 @@ import {
 	type RecordRef,
 	recordKey,
 } from "../operation";
-import { lockRecords, type RecordKind, type RecordState } from "../records";
+import type { RecordKind, RecordState } from "../records";
 import { markUnapplied } from "../schema/apply";
 import type { Site } from "../site";
 import { type QueuedEvent, queueDeliveries, type Receiver } from "./deliveries";
@@ -203,7 +203,8 @@ export async function runWrite<Output>(
 		const named = new Set(touched.map(recordKey));
 		const held = unique((await operation.holds?.(input, ctx)) ?? []).filter((ref) => !named.has(recordKey(ref)));
 		const locked = [...touched, ...held];
-		await lockRecords(trx, locked);
+		// In the one order (doc 00): the records, then the files, and with the files the ones the write's records name (`lockWithFiles`).
+		await lockWithFiles(trx, locked);
 		// After the records' locks, as a screen's save takes them (records, then the items it accepts): the item is held until this write ends, so
 		// nothing discards it, changes it or applies it a second time meanwhile.
 		if (options.applies) await claimItem(trx, options.applies, true);

@@ -35,7 +35,7 @@ function Label({
 		<label
 			data-slot="label"
 			className={cn(
-				"flex select-none items-center gap-monti-8 peer-disabled:cursor-not-allowed peer-disabled:opacity-45 group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-45",
+				"flex select-none items-center gap-monti-8 peer-disabled:cursor-default peer-disabled:opacity-45 group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-45",
 				SIZE[size],
 				tone === "default" && "text-monti-default",
 				tone === "muted" && "text-monti-muted",

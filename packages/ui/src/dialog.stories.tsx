@@ -65,3 +65,24 @@ export const Of: Story = {
 		</Dialog>
 	),
 };
+
+/** A long name with no place to break is cut on the title's one line; the title's own words stay whole. */
+export const OfLongName: Story = {
+	render: () => (
+		<Dialog defaultOpen>
+			<DialogContent form>
+				<DialogHeader>
+					<DialogTitle of="anthropic-production-key-for-the-editorial-team-2026-rotation">키 편집</DialogTitle>
+				</DialogHeader>
+				<FormField>
+					<FormFieldLabel htmlFor="key-long">API 키</FormFieldLabel>
+					<Input id="key-long" placeholder="sk-ant-…" />
+				</FormField>
+				<DialogFooter>
+					<Button variant="ghost">취소</Button>
+					<Button>저장</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	),
+};

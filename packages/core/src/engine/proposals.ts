@@ -3,6 +3,7 @@ import { randomUUID } from "../bytes";
 import type { Database, ItemExchange, ProposalItemState, ProposalItemTable, ProposalTable } from "../db/schema";
 import { publicPath } from "../entries/paths";
 import { CheckError, ConflictError, ForbiddenError, isMontiError } from "../errors";
+import { lockWithFiles } from "../media/uses";
 import {
 	type AnyOperation,
 	type EmittedEvent,
@@ -12,7 +13,6 @@ import {
 	type RecordRef,
 	recordKey,
 } from "../operation";
-import { lockRecords } from "../records";
 import { context, type Engine, loadRecords, parseInput, type RunOptions, type WriteResult } from "./execute";
 import { planUndo, undoWithEvents } from "./undo";
 
@@ -752,17 +752,23 @@ export async function revertProposal(
 			.execute();
 		const snapshots = await db
 			.selectFrom("monti_activity_snapshot")
-			.select(["kind", "record_id"])
+			.select(["kind", "record_id", "before"])
 			.where("activity_id", "in", writes)
 			.execute();
-		await lockRecords(db, [
-			...new Map(
-				snapshots.map((snapshot) => {
-					const ref = { kind: snapshot.kind, id: snapshot.record_id };
-					return [recordKey(ref), ref] as const;
-				}),
-			).values(),
-		]);
+		// And the files those records will name once they are back, in the same go (`lockWithFiles`).
+		await lockWithFiles(
+			db,
+			[
+				...new Map(
+					snapshots.map((snapshot) => {
+						const ref = { kind: snapshot.kind, id: snapshot.record_id };
+						return [recordKey(ref), ref] as const;
+					}),
+				).values(),
+			],
+			// Each item is put back by a write of its own, and each comes for its files: all of them now.
+			{ willHold: snapshots.map((snapshot) => snapshot.before), files: "always" },
+		);
 	}
 	const reverted: string[] = [];
 	const kept: string[] = [];

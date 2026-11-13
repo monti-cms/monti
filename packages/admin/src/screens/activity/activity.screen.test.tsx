@@ -92,7 +92,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const line = row(ASSISTANT).element().getBoundingClientRect();
 		const mark = row(ASSISTANT).getByRole("img", { name: "어시스턴트" }).element().getBoundingClientRect();
 		const words = row(ASSISTANT)
-			.getByRole("button", { name: /이 두 편 요약/ })
+			.getByRole("link", { name: /이 두 편 요약/ })
 			.element();
 		const [first] = words.getClientRects();
 		if (!first) throw new Error("the request has no line");
@@ -491,7 +491,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 			'"고친 글" 저장',
 			"행 메뉴",
 		]);
-		row('"고친 글" 저장').getByRole("button").first().element().focus();
+		(row('"고친 글" 저장').getByRole("link").element() as HTMLElement).focus();
 		await userEvent.keyboard("{Enter}");
 		await expect.element(panel().getByRole("heading", { name: '"고친 글" 저장' })).toBeVisible();
 	});
@@ -652,7 +652,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 	});
 	it("[flow 12·03] the details closed with the keyboard give focus back to the row that opened them", async () => {
 		await draw(stories.Log).run();
-		const link = row(FAILED).getByRole("button").first();
+		const link = row(FAILED).getByRole("link");
 		await expect.element(link).toBeVisible();
 		(link.element() as HTMLElement).focus();
 		await userEvent.keyboard("{Enter}");
@@ -752,7 +752,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(banner()).not.toBeInTheDocument();
 		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록$/);
 		// The focus is on the list's first row, not on the page.
-		await expect.element(row('"고친 글" 저장').getByRole("button").first()).toHaveFocus();
+		await expect.element(row('"고친 글" 저장').getByRole("link")).toHaveFocus();
 	});
 
 	it("the banner's 다시 보내기 pressed with the pointer moves no focus", async () => {
@@ -1238,5 +1238,178 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await userEvent.click(row('"고친 글" 저장').getByText("post/edited-post"));
 		await expect.element(panel()).toBeVisible();
 		expect(under()).toBe(40);
+	});
+
+	it("a row's title is a link with the address that opens its details, as every list's title is", async () => {
+		const drawn = draw(stories.Log);
+		await drawn.run();
+		const { ids } = drawn.loaded();
+		const title = row(FAILED).getByRole("link");
+		await expect.element(title).toHaveAttribute("href", `#/activity?open=${ids.failed[0]?.line}`);
+		// The address keeps what the list is looked at by.
+		location.hash = "#/activity?delivery=failed";
+		await expect.poll(() => rows().length).toBe(1);
+		await expect.element(title).toHaveAttribute("href", `#/activity?delivery=failed&open=${ids.failed[0]?.line}`);
+		await userEvent.click(title);
+		await expect.element(panel().getByRole("heading", { name: FAILED })).toBeVisible();
+	});
+
+	it("a row's 다시 보내기 from the menu opened on the row with the keyboard (Shift+F10), in a list of failed rows only: the row goes, and the focus goes to what the list offers in its place", async () => {
+		toasts.dismiss();
+		const drawn = draw(stories.FailedOnly);
+		await drawn.run();
+		const { hooks } = drawn.loaded();
+		let arrive = () => {};
+		hooks.hold = new Promise((resolve) => {
+			arrive = resolve;
+		});
+		const title = () => row(FAILED).getByRole("link");
+		await tabTo(() => title().element());
+		// The keyboard's own way to a context menu: the menu opens on the row the focus is in, not on its ⋯.
+		title()
+			.element()
+			.dispatchEvent(
+				new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 0, clientX: 0, clientY: 0 }),
+			);
+		await expect.element(page.getByRole("menuitem", { name: "다시 보내기" })).toBeVisible();
+		const sendAgain = () => page.getByRole("menuitem", { name: "다시 보내기" }).element();
+		for (let presses = 0; presses < 4 && document.activeElement !== sendAgain(); presses++)
+			await userEvent.keyboard("{ArrowDown}");
+		expect(document.activeElement).toBe(sendAgain());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+		hooks.hold = null;
+		arrive();
+		await expect.element(toast("보냈습니다")).toBeVisible();
+		await expect.element(table().getByText("맞는 기록이 없습니다.")).toBeVisible();
+		await expect.element(table().getByRole("button", { name: "필터 해제" })).toHaveFocus();
+	});
+
+	it("필터 해제 pressed with the keyboard goes with its row once the list has rows again, and the focus goes to the list's first row", async () => {
+		await draw(stories.NoMatch).run();
+		const clear = () => table().getByRole("button", { name: "필터 해제" });
+		await expect.element(clear()).toBeVisible();
+		await tabTo(() => clear().element());
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => location.hash).toBe("#/activity");
+		await expect.element(row('"고친 글" 저장').getByRole("link")).toHaveFocus();
+	});
+
+	it("필터 해제 pressed with the pointer moves no focus", async () => {
+		await draw(stories.NoMatch).run();
+		await userEvent.click(table().getByRole("button", { name: "필터 해제" }));
+		await expect.element(row(FAILED)).toBeVisible();
+		expect(row('"고친 글" 저장').getByRole("link").element()).not.toBe(document.activeElement);
+	});
+
+	it("a read made again that fails leaves the rows and says so in a banner over them; read again, the banner goes", async () => {
+		const drawn = draw(stories.Log);
+		await drawn.run();
+		const { site, hooks } = drawn.loaded();
+		await expect.element(row(FAILED)).toBeVisible();
+		const failedToRead = () => page.getByRole("status").filter({ hasText: "기록을 불러오지 못했습니다" });
+		await expect.element(failedToRead()).not.toBeInTheDocument();
+		// Something is written elsewhere and the log reads again: that read gets no answer.
+		hooks.lose.add("activity.list");
+		await site.monti.run(
+			"entries.create",
+			{ collection: "post", locale: "ko", title: "그 사이 쓴 글", slug: "meanwhile" },
+			{ actor: "admin" },
+		);
+		window.dispatchEvent(new Event("focus"));
+		await userEvent.click(columnName("시각"));
+		await userEvent.click(page.getByRole("menuitemradio", { name: "오래전부터" }));
+		await expect.element(failedToRead()).toBeVisible();
+		// The rows read before are still there, under the banner.
+		await expect.element(row(FAILED)).toBeVisible();
+		hooks.lose.clear();
+		await userEvent.click(failedToRead().getByRole("button", { name: "다시 시도" }));
+		await expect.element(failedToRead()).not.toBeInTheDocument();
+		await expect.element(row('"그 사이 쓴 글" 만듦')).toBeVisible();
+	});
+
+	it("while an undo runs, a row's ⋯ keeps 되돌리기 and it cannot be pressed, as in the panel's ⋯", async () => {
+		toasts.dismiss();
+		const drawn = draw(stories.Log);
+		await drawn.run();
+		const { hooks } = drawn.loaded();
+		const answer = held();
+		hooks.slow.set("activity.undo", answer.until);
+		await undoFromMenu('"고친 글" 저장');
+		const item = (await menuOf("템플릿 기본 틀 저장")).getByRole("menuitem", { name: "되돌리기" });
+		await expect.element(item).toHaveAttribute("aria-disabled", "true");
+		await userEvent.keyboard("{Escape}");
+		hooks.slow.clear();
+		answer.letGo();
+		await expect.element(row('"고친 글" 저장')).toHaveTextContent(/되돌림 \d\d:\d\d/);
+	});
+
+	it("a second delivery's 취소 confirmed while the first is on its way is sent when that one has answered: both are canceled", async () => {
+		toasts.dismiss();
+		const drawn = draw(stories.TwoOnOneRow);
+		await drawn.run();
+		const { hooks } = drawn.loaded();
+		await userEvent.click(row('"두 곳에 못 간 글" 발행').getByText("post/two-failed"));
+		await expect.element(panel()).toHaveTextContent("받는 곳search.example.dev");
+		const answer = held();
+		hooks.slow.set("deliveries.cancel", answer.until);
+		const cancels = () => panel().getByRole("button", { name: "취소", exact: true });
+		await userEvent.click(cancels().first());
+		await userEvent.click(dialog().getByRole("button", { name: "취소하기" }));
+		await expect.element(dialog()).not.toBeInTheDocument();
+		await expect.element(cancels().first()).toHaveAttribute("aria-busy", "true");
+		// The other delivery's cancel is confirmed too: it is at work as well, and nothing is dropped.
+		await userEvent.click(cancels().nth(1));
+		await userEvent.click(dialog().getByRole("button", { name: "취소하기" }));
+		await expect.element(dialog()).not.toBeInTheDocument();
+		await expect.element(cancels().nth(1)).toHaveAttribute("aria-busy", "true");
+		// One at a time: the second is not sent before the first has answered.
+		expect(hooks.calls.filter((name) => name === "deliveries.cancel")).toHaveLength(1);
+		hooks.slow.clear();
+		answer.letGo();
+		await expect.poll(() => hooks.calls.filter((name) => name === "deliveries.cancel")).toHaveLength(2);
+		await expect.element(cancels()).not.toBeInTheDocument();
+		await expect.poll(() => (panel().element().textContent ?? "").match(/취소됨/g)?.length).toBe(2);
+	});
+
+	it("the sidebar's count follows a delivery that fails after the counts were read, on another screen: the frame reads again while one is on its way", async () => {
+		const drawn = draw({ ...stories.Log, loaders: stories.log("#/trash") });
+		await drawn.run();
+		const { site, hooks } = drawn.loaded();
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록1$/);
+		const made = (await site.monti.run(
+			"entries.create",
+			{ collection: "post", locale: "ko", title: "늦게 실패한 글", slug: "late-failure" },
+			{ actor: "admin" },
+		)) as { output: { id: string } };
+		// The receiver is down and slow to say so: the write of this admin's answers first, with its delivery still on its way.
+		const answer = held();
+		hooks.hold = answer.until;
+		hooks.down.add(stories.SITE);
+		const publishing = site.monti.run("entries.publish", { ids: [made.output.id] }, { actor: "admin" });
+		// The frame reads its counts once (as after a write of this admin's own): the delivery is on its way, and nothing is failed yet.
+		window.dispatchEvent(new Event("focus"));
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록1$/);
+		hooks.hold = null;
+		answer.letGo();
+		await publishing;
+		hooks.down.clear();
+		// Nothing is pressed and the window is not come back to: the frame looked again while the delivery was on its way.
+		await expect.element(sidebarLog()).toHaveTextContent(/^활동 기록2$/);
+	});
+
+	it("다시 보내기 pressed twice in a row's menu sends once, and the second press does not land on the row under the closing menu", async () => {
+		toasts.dismiss();
+		const drawn = draw(stories.Log);
+		await drawn.run();
+		const { hooks } = drawn.loaded();
+		const item = (await menuOf(FAILED)).getByRole("menuitem", { name: "다시 보내기" });
+		await userEvent.dblClick(item);
+		await expect.element(toast("보냈습니다")).toBeVisible();
+		expect(hooks.calls.filter((name) => name === "deliveries.retry")).toHaveLength(1);
+		// The menu stood over other rows: none of them was opened beside the list.
+		await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+		expect(location.hash).toBe("#/activity");
+		await expect.element(panel()).not.toBeInTheDocument();
 	});
 });
