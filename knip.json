@@ -30,9 +30,6 @@
 		"packages/mdx": {
 			"entry": ["src/**/*.test.ts"]
 		},
-		"examples/showcase": {
-			"entry": ["seed/seed.ts"]
-		},
 		"packages/ui": {
 			"entry": ["src/spec-pack/pack.mjs"],
 			"ignoreIssues": {
