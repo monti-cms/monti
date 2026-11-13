@@ -90,8 +90,9 @@ export function MediaField({
 					htmlFor={readOnly ? undefined : id}
 					required={required}
 					changed={going ? undefined : proposed}
+					// While a proposal waits the row is the proposal's alone (as any field's).
 					action={
-						change && !going ? (
+						proposed && !going ? undefined : change && !going ? (
 							change
 						) : following && !own && !going ? (
 							<Text variant="micro" tone="faint">

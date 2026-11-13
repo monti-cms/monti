@@ -1072,6 +1072,24 @@ describe("the entry editor: a body proposal the text moved away from (T87)", () 
 		await saveCell("저장됨");
 	});
 
+	it("10-1 two stale proposals of one paragraph hang side by side, not one over the other; each opens its own card", async () => {
+		const made = on("proposedStaleTwice");
+		await made.run();
+		await opened();
+		await expect.poll(() => mark().elements().length).toBe(2);
+		await expect
+			.poll(() => {
+				const [one, other] = mark()
+					.elements()
+					.map((each) => each.getBoundingClientRect())
+					.sort((a, b) => a.left - b.left);
+				// Level with each other, and 4px apart.
+				return one && other ? [Math.round(Math.abs(one.top - other.top)), Math.round(other.left - one.right)] : null;
+			})
+			.toEqual([0, 4]);
+		await expect.element(page.getByText("1 / 3")).toBeVisible();
+	});
+
 	it("10-1 its paragraph taken out: it is not shown and still waits; saved without the paragraph, it is discarded", async () => {
 		const made = await stale();
 		const states = async () =>
@@ -1079,8 +1097,10 @@ describe("the entry editor: a body proposal the text moved away from (T87)", () 
 				(item) => item.state,
 			);
 		// From the end of the paragraph before it to the end of the text: the whole last paragraph goes (an undo would bring it back).
+		// Line by line, as any keyboard does it (the key that jumps to the text's end differs by system): past the last line the
+		// selection stops at the end of the text.
 		await caretAfter(body().element(), "꺼내 본다.");
-		await userEvent.keyboard("{Shift>}{Meta>}{ArrowDown}{/Meta}{/Shift}{Backspace}");
+		await userEvent.keyboard("{Shift>}{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}{/Shift}{Backspace}");
 		await expect.poll(() => body().element().textContent).not.toContain("지금 상태뿐이다");
 		await expect.element(mark()).not.toBeInTheDocument();
 		await expect.element(page.getByText("1 / 1")).toBeVisible();

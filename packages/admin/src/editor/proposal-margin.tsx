@@ -34,6 +34,9 @@ export function StaleProposalMargin({
 }) {
 	const { t } = useAdmin();
 	const [tops, setTops] = useState<Record<string, number>>({});
+	// Another mark hung at the same block (a translation's "changed" or "source", another stale proposal): this one stands to its left,
+	// 4px off.
+	const [besides, setBesides] = useState<Record<string, number>>({});
 
 	const blockOf = useCallback(
 		(block: string): HTMLElement | null => {
@@ -49,17 +52,37 @@ export function StaleProposalMargin({
 		if (!body) return;
 		const origin = body.getBoundingClientRect().top;
 		const next: Record<string, number> = {};
+		const taken: Record<string, number> = {};
+		const others = [...body.querySelectorAll<HTMLElement>("[data-slot=editor-margin]")].filter(
+			(margin) => !margin.querySelector("[data-stale-proposal]") && margin.offsetWidth > 0,
+		);
 		for (const { item, block } of stale) {
 			const element = blockOf(block);
-			if (element) next[item.id] = element.getBoundingClientRect().top - origin;
+			if (!element) continue;
+			const top = element.getBoundingClientRect().top - origin;
+			next[item.id] = top;
+			const other = others.find((margin) => Math.abs(margin.getBoundingClientRect().top - origin - top) < 2);
+			// The stale marks before this one at the same block, as wide as they are drawn (none yet on the first pass: measured again
+			// once they are).
+			const before = stale
+				.slice(0, stale.indexOf(stale.find((each) => each.item.id === item.id) ?? stale[0]))
+				.filter((each) => each.block === block)
+				.reduce((sum, each) => {
+					const drawn = body.querySelector<HTMLElement>(`[data-stale-proposal="${each.item.id}"]`);
+					return sum + (drawn ? drawn.offsetWidth + 4 : 0);
+				}, 0);
+			taken[item.id] = (other ? other.offsetWidth + 4 : 0) + before;
 		}
-		setTops((was) =>
-			Object.keys(next).length === Object.keys(was).length && Object.entries(next).every(([id, top]) => was[id] === top)
-				? was
-				: next,
-		);
+		const same = (now: Record<string, number>, was: Record<string, number>) =>
+			Object.keys(now).length === Object.keys(was).length &&
+			Object.entries(now).every(([id, value]) => was[id] === value);
+		setTops((was) => (same(next, was) ? was : next));
+		setBesides((was) => (same(taken, was) ? was : taken));
 	}, [editor, stale, blockOf]);
 	useLayoutEffect(() => measure(), [measure]);
+	// Once the marks are drawn their widths are known: measured once more, which changes nothing when they already stand right.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: it follows what was last measured
+	useLayoutEffect(() => measure(), [tops, besides]);
 	useEffect(() => {
 		// The text's lines move with its width and with what is typed: measured again whenever either changes.
 		const resized = new ResizeObserver(() => measure());
@@ -78,7 +101,7 @@ export function StaleProposalMargin({
 		const was = item.was?.[block];
 		const working = remaking.has(item.id);
 		return (
-			<EditorMargin key={item.id} top={top}>
+			<EditorMargin key={item.id} top={top} beside={besides[item.id] ?? 0}>
 				<span data-stale-proposal={item.id}>
 					<Marker
 						active={open === item.id}

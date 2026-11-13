@@ -172,6 +172,7 @@ function SortableOrderedRow({
 	removeLabel,
 	moveLabel,
 	disabled,
+	proposal,
 }: {
 	id: string;
 	label: string;
@@ -179,6 +180,8 @@ function SortableOrderedRow({
 	removeLabel: string;
 	moveLabel: string;
 	disabled?: boolean;
+	/** The row is of a value the assistant proposed: its words are blue, as a proposed input's. */
+	proposal?: boolean;
 }) {
 	const item = useSortableItem(id, { disabled });
 	return (
@@ -194,7 +197,7 @@ function SortableOrderedRow({
 				)
 			}
 		>
-			<Text>{label}</Text>
+			<Text tone={proposal ? "proposal" : undefined}>{label}</Text>
 		</OrderedRow>
 	);
 }
@@ -493,6 +496,7 @@ function RelationOrderedManyInput({
 									removeLabel={t("relations.remove")}
 									onRemove={() => onChange(value.filter((g) => g !== item))}
 									disabled={disabled}
+									proposal={proposal}
 								/>
 							))}
 						</List>
@@ -807,8 +811,9 @@ export function EntryProperties({
 					htmlFor={id}
 					required={marksRequired && required(key)}
 					changed={proposedLabel}
+					// While a proposal waits the row is the proposal's alone: no count, no mark of the source's change beside "discard".
 					action={
-						change && count ? (
+						proposedLabel ? undefined : change && count ? (
 							<Inline gap={8}>
 								{count}
 								{change}

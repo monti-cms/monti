@@ -213,7 +213,7 @@ function ComboboxChips({
 		size?: "sm" | "md" | "default";
 		/**
 		 * The picked values are ones the assistant chose and nobody has touched: the 1.5px blue line of `Input proposal`, and each chip in the
-		 * proposal colors (as `Chip proposal`, without its spark: the label row says whose they are).
+		 * proposal colors, its × in the same blue (as `Chip proposal`, without its spark: the label row says whose they are).
 		 */
 		proposal?: boolean;
 	}) {
@@ -225,7 +225,7 @@ function ComboboxChips({
 			className={cn(
 				CHIPS_FIELD,
 				// The proposal's line keeps its color under the pointer and with the focus, as a proposed `Input`'s does.
-				"data-proposal:border-monti-proposal! data-proposal:border-b-[1.5px] data-proposal:**:data-[slot=combobox-chip]:bg-monti-proposal-muted data-proposal:**:data-[slot=combobox-chip]:text-monti-proposal",
+				"data-proposal:border-monti-proposal! data-proposal:border-b-[1.5px] data-proposal:**:data-[slot=combobox-chip]:bg-monti-proposal-muted data-proposal:**:data-[slot=combobox-chip-remove]:text-monti-proposal data-proposal:**:data-[slot=combobox-chip]:text-monti-proposal",
 				className,
 			)}
 			{...props}

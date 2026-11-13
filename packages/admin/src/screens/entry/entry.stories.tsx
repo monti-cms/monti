@@ -113,7 +113,7 @@ async function proposeFields(monti: Monti, id: string) {
  * A body proposal the text moved away from (T87): two changes were proposed, and the last paragraph was written again before anyone took
  * them. The first is drawn over its words; the second hangs beside its paragraph as "changed in the meantime".
  */
-async function proposeThenEdit(monti: Monti, id: string) {
+async function proposeThenEdit(monti: Monti, id: string, twice = false) {
 	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
 	const [first, , , last] = read.entry.doc.blocks;
 	if (!first || !last) throw new Error("the reference entry has four blocks");
@@ -121,6 +121,15 @@ async function proposeThenEdit(monti: Monti, id: string) {
 	const edit = (ops: unknown[]) => monti.proposals.add(proposal, "body.edit", { id, version: read.entry.version, ops });
 	await edit([{ op: "replaceText", block: first.id, from: 8, to: 14, text: "만든" }]);
 	await edit([{ op: "replaceText", block: last.id, from: 5, to: 17, text: "같다" }]);
+	// Another request's change of the same paragraph: two marks then hang at one block.
+	if (twice) {
+		const other = await monti.proposals.create("conversation-2", "문장 끝 다듬기");
+		await monti.proposals.add(other, "body.edit", {
+			id,
+			version: read.entry.version,
+			ops: [{ op: "replaceText", block: last.id, from: 31, to: 36, text: "글이다" }],
+		});
+	}
 	await monti.run(
 		"entries.save",
 		{
@@ -173,6 +182,7 @@ type Kind =
 	| "proposed"
 	| "proposedFields"
 	| "proposedStale"
+	| "proposedStaleTwice"
 	| "conditional"
 	| "strayOption";
 
@@ -284,6 +294,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 	if (kind === "proposed") await proposeBody(monti, id);
 	if (kind === "proposedFields") await proposeFields(monti, id);
 	if (kind === "proposedStale") await proposeThenEdit(monti, id);
+	if (kind === "proposedStaleTwice") await proposeThenEdit(monti, id, true);
 	return id;
 }
 
