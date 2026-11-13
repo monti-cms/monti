@@ -19,6 +19,8 @@ import { cn } from "./cn";
  * - `data-whole`: a block that is one thing (a picture, a file, a divider, a boxed block): nothing in it is text to pick. Chrome drops the selection of
  *   such a block standing between two others as soon as the mouse moves, unless their contents cannot be picked as text (T134). Its own fields (a
  *   caption) still take text.
+ * - `data-covered`: a block that is one thing, inside a range picked from a text (a drag or Shift+arrow that went over it): it stands on the
+ *   selection's ground, as picked words do.
  * - `data-checked` on a checklist's item (`ul[data-checklist]`): its box is ticked, drawn like `Checkbox` (14px, the faint ring; ticked, the ink ring and fill).
  */
 const EDITOR_BODY = cn(
@@ -68,6 +70,8 @@ const EDITOR_BODY = cn(
 	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20",
 	// A block that is one thing is picked whole, never as text: see `data-whole` above.
 	"[&_[data-whole]]:select-none",
+	// Taken in by a range that began in a text: nothing in it is text for the browser to paint, so it stands on the selection's own ground, out to 4px around it.
+	"[&_[data-covered]]:bg-(--monti-bg-selection) [&_[data-covered]]:shadow-[0_0_0_4px_var(--monti-bg-selection)]",
 	"[&_[data-held]]:opacity-40",
 	"[&_[data-untranslated]]:text-monti-faint",
 	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-meta [&_[data-off]]:after:content-[attr(data-off-label)]",

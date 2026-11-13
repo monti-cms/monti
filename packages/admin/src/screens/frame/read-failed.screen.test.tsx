@@ -58,8 +58,8 @@ describe("a read that does not come back", () => {
 	it("[T154] nothing read at all: the screen's own banner says it alone, and its 'try again' makes every failed read again", async () => {
 		const drawn = draw({
 			...activity.Log,
-			loaders: activity.Log.loaders?.map((load) => async (...args: never[]) => {
-				const made = (await (load as (...all: never[]) => Promise<Loaded>)(...args)) as Loaded;
+			loaders: ([] as unknown[]).concat(activity.Log.loaders ?? []).map((load) => async (...args: never[]) => {
+				const made = await (load as (...all: never[]) => Promise<Loaded>)(...args);
 				// Signed in, and then the network goes before the log's screen reads anything.
 				for (const name of ["activity.list", "deliveries.counts", "frame.counts", "schema.read"])
 					made.hooks.drop.add(name);
