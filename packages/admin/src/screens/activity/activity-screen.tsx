@@ -31,8 +31,6 @@ import {
 	PageBanner,
 	PageColumn,
 	PageHeader,
-	RowActions,
-	RowLink,
 	RowMore,
 	RowTitle,
 	SearchToggle,
@@ -44,7 +42,7 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { Renew, RightPanelOpen, Undo } from "@monti-cms/ui/icons";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
 import { useAdmin } from "../../operations/admin-context";
@@ -57,6 +55,7 @@ import { toggled, ValueRow } from "../list/filter-rows";
 import { shortDate, shortTime } from "../list/format";
 import { ListPages } from "../list/list-pages";
 import { NoMatchRow } from "../list/no-match-row";
+import { HandedRowActions, HandedRowLink, listStartOf } from "../list/row-hand-off";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
 import { useSearchWords } from "../list/use-search-words";
@@ -101,20 +100,6 @@ function FacetRows<Value extends string>({
 			))}
 		</>
 	);
-}
-
-/**
- * A row's ⋯. The row's own action can take the row out of the list (its failed delivery is sent again while the list shows only failed ones):
- * the keyboard's focus the ⋯ held then goes to the row that follows, or with none left to the list's start (`listStart`), not to the page.
- */
-function LogRowActions({ listStart, children }: { listStart: () => HTMLElement | null; children: ReactNode }) {
-	const handOff = useFocusHandOff((gone) => {
-		// The next row, when there is one: what stands after the list (the corner's button, a panel) is not what the row's action was about.
-		const next = nextStop(gone);
-		if (next && gone.closest("table")?.contains(next)) return next;
-		return () => requestAnimationFrame(() => listStart()?.focus());
-	});
-	return <RowActions ref={handOff}>{children}</RowActions>;
 }
 
 /**
@@ -258,9 +243,9 @@ export function ActivityScreen({
 						{t("activity.retry")}
 					</Item>
 				)}
-				{/* Not offered while an undo runs: a second press would be refused right after the first went through. */}
-				{line.undo.state === "open" && !undo.pending && (
-					<Item onClick={() => void undo.ask(line.id)}>
+				{/* Off while an undo runs, as in the panel's ⋯: a second press would be refused right after the first went through. */}
+				{line.undo.state === "open" && (
+					<Item disabled={undo.pending} onClick={() => void undo.ask(line.id)}>
 						<Undo aria-hidden />
 						{t("activity.undo")}
 					</Item>
@@ -323,10 +308,7 @@ export function ActivityScreen({
 	const failedOnly = state.deliveries.length === 1 && state.deliveries[0] === "failed";
 	const table = useRef<HTMLTableElement>(null);
 	/** Where the list begins for the keyboard: its first row, or what a list with no match offers in its place, or its first column's name. */
-	const listStart = () =>
-		table.current?.querySelector<HTMLElement>("tbody [data-slot=row-link], tbody button") ??
-		table.current?.querySelector<HTMLElement>("thead button") ??
-		null;
+	const listStart = () => listStartOf(table.current);
 	// A banner's action takes its own control away, and the keyboard's focus it held goes to what it acted on. "Show" goes once the list is
 	// filtered while the banner stays: to the delivery column's name, where that filter now is (the rows under it are about to change). "Send
 	// again" goes with the banner when nothing is failed any more, "try again" when the log is read: to the list's first row.
@@ -341,7 +323,9 @@ export function ActivityScreen({
 		return listStart() ?? nextStop(banner) ?? (() => requestAnimationFrame(() => listStart()?.focus()));
 	});
 	const total = data?.total ?? 0;
-	const empty = data !== null && total === 0 && !looking && state.page === 1;
+	// Only of this address's own answer: right after the search and the filters are taken off, the rows are still the old answer's (none),
+	// and a log that has lines would say for a moment that nothing is logged yet, with its table gone.
+	const empty = answered && total === 0 && !looking && state.page === 1;
 	const panel = state.open;
 
 	const banners = (
@@ -368,7 +352,9 @@ export function ActivityScreen({
 					</TextButton>
 				</Banner>
 			) : null}
-			{read.refusal && !data ? (
+			{/* Also over a list read before: a read made again that fails (after a change elsewhere, while a delivery is watched) leaves the old
+			    rows, and they are not said to be the log as it is now. */}
+			{read.refusal ? (
 				<Banner ref={bannerHandOff} tone="danger" title={t("activity.loadFailed")} plainMeta>
 					<TextButton variant="underline" onClick={() => void read.reload()}>
 						{t("activity.reload")}
@@ -432,9 +418,14 @@ export function ActivityScreen({
 										<RowTitle
 											byAssistant={line.request !== null ? t("activity.actor.assistant") : undefined}
 											title={
-												<RowLink render={<button type="button" />} onClick={() => open(line)}>
+												// A link with the address that opens the details, as every list's title is (a middle press or a press with
+												// Command opens the log there in a new tab); it hands its focus on when its row goes.
+												<HandedRowLink
+													href={href({ screen: "activity", params: writeActivityState({ ...state, open: line.id }) })}
+													listStart={listStart}
+												>
 													{title}
-												</RowLink>
+												</HandedRowLink>
 											}
 											address={afterOf(line) || undefined}
 										/>
@@ -450,7 +441,7 @@ export function ActivityScreen({
 										</Text>
 									</TableCell>
 									<TableCell align="end">
-										<LogRowActions listStart={listStart}>
+										<HandedRowActions listStart={listStart}>
 											<DropdownMenu>
 												<RowMore
 													label={t("list.rowMenu")}
@@ -458,7 +449,7 @@ export function ActivityScreen({
 												/>
 												<DropdownMenuContent align="end">{menuItems(line, false)}</DropdownMenuContent>
 											</DropdownMenu>
-										</LogRowActions>
+										</HandedRowActions>
 									</TableCell>
 								</TableRow>
 							);

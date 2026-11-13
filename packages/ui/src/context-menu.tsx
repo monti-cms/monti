@@ -14,6 +14,7 @@ import {
 	SUB_ALIGN_OFFSET,
 	SUB_SIDE_OFFSET,
 } from "./menu-parts";
+import { menuSurface } from "./menu-surface";
 
 function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props) {
 	return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
@@ -52,6 +53,7 @@ function ContextMenuContent({
 				sideOffset={sideOffset}
 			>
 				<ContextMenuPrimitive.Popup
+					render={menuSurface}
 					data-slot="context-menu-content"
 					className={cn(
 						MENU_CARD,

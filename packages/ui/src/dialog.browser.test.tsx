@@ -224,4 +224,31 @@ describe("a window that was told to close", () => {
 		await userEvent.keyboard("{Enter}");
 		expect(behind).not.toHaveBeenCalled();
 	});
+
+	it("a title is one line: a long name after it is cut and says itself whole when pointed at, and the title's own words stay", async () => {
+		const name = "anthropic-production-key-for-the-editorial-team-2026-rotation";
+		render(
+			<Dialog defaultOpen>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle of={name}>키 편집</DialogTitle>
+					</DialogHeader>
+				</DialogContent>
+			</Dialog>,
+		);
+		const title = page.getByRole("heading", { name: /키 편집/ });
+		await expect.element(title).toBeVisible();
+		const heading = title.element();
+		const [own, of] = [...heading.children] as HTMLElement[];
+		if (!own || !of) throw new Error("the title has no two parts");
+		// One line: as high as its own words, inside the window.
+		expect(heading.getBoundingClientRect().height).toBeLessThan(own.getBoundingClientRect().height * 1.5 + 14);
+		expect(of.scrollWidth).toBeGreaterThan(of.clientWidth);
+		expect(own.scrollWidth).toBeLessThanOrEqual(own.clientWidth);
+		expect(heading.getBoundingClientRect().right).toBeLessThanOrEqual(
+			(heading.closest("[role=dialog]") as HTMLElement).getBoundingClientRect().right,
+		);
+		expect(of.title).toBe(name);
+		expect(of.textContent).toBe(` · ${name}`);
+	});
 });

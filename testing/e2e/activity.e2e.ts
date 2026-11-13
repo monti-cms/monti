@@ -100,6 +100,65 @@ test.describe("the activity log", () => {
 			.poll(async () => (await arrivedFor(admin, post.id)).map((each) => each.event.type))
 			.toEqual(expect.arrayContaining(["entry.published", "entry.unpublished"]));
 	});
+
+	test("13-3 the log's undo says what the row cannot show before it is done: what a line made is deleted for good, and an item put back in the trash leaves the published posts that point at it", async ({
+		admin,
+	}) => {
+		const question = admin.getByRole("alertdialog");
+		const undoOf = async (words: string) => {
+			await (await rowMenu(admin, words)).getByRole("menuitem", { name: "되돌리기" }).click();
+			await expect(question).toContainText("되돌릴까요?");
+		};
+
+		// A memo made: undoing its line deletes the memo for good, and the question says so with the dangerous button.
+		const slug = unique("undo-made");
+		const memo = await operation<{ id: string }>(admin, "entries.create", {
+			collection: "memo",
+			locale: "ko",
+			title: `메모 ${slug}`,
+			slug,
+		});
+		await admin.goto(`/admin#/activity?q=${encodeURIComponent(slug)}`);
+		const made = `"메모 ${slug}" 만듦`;
+		await undoOf(made);
+		await expect(question).toContainText("이 작업으로 만든 것을 영구 삭제합니다.");
+		await expect(question).not.toContainText("되돌리면 다시 돌릴 수 없습니다.");
+		await question.getByRole("button", { name: "되돌리기" }).click();
+		await expect(row(admin, made)).toContainText(/되돌림 \d\d:\d\d/);
+		const gone = await admin.request.post("/admin/api/operations/entries.get", {
+			data: { input: { id: memo.output.id } },
+		});
+		expect(gone.status()).not.toBe(200);
+
+		// A category a published post points at, thrown away and restored: undoing the restore throws it away again, and the question
+		// says what the site loses, in the words throwing it away by hand says. Closed without undoing, nothing changes.
+		const word = unique("undo-category");
+		const name = `분류 ${word}`;
+		const category = await operation<{ group: string; locales: Record<string, { id: string }> }>(
+			admin,
+			"items.saveGroup",
+			{ collection: "category", locales: { ko: { title: name, slug: word } } },
+		);
+		const post = await draft(admin, "undo-item");
+		await operation(admin, "relations.edit", {
+			collection: "post",
+			entryIds: [post.id],
+			field: "category",
+			set: category.output.group,
+		});
+		await operation(admin, "entries.publish", { ids: [post.id] });
+		const item = { kind: "entry", id: category.output.locales.ko?.id };
+		await operation(admin, "trash.move", { rows: [item] });
+		await operation(admin, "trash.restore", { rows: [item] });
+		await admin.goto(`/admin#/activity?q=${encodeURIComponent(word)}&kind=trash`);
+		const restored = `"${name}" 복원`;
+		await undoOf(restored);
+		await expect(question).toContainText(/발행된 글 1편에서 이 .+ 빠집니다\./);
+		await expect(question).not.toContainText("영구 삭제");
+		await question.getByRole("button", { name: "취소" }).click();
+		await expect(question).toBeHidden();
+		await expect(row(admin, restored)).not.toContainText("되돌림");
+	});
 });
 
 raw.describe("the site's cached pages, when refreshing them failed", () => {
