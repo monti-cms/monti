@@ -172,7 +172,14 @@ function hook() {
 			const view = JSON.parse(
 				execFileSync(
 					"gh",
-					["pr", "view", merge.pull, ...(merge.repo ? ["--repo", merge.repo] : []), "--json", "headRefOid,url"],
+					[
+						"pr",
+						"view",
+						merge.pull,
+						...(merge.repo ? ["--repo", merge.repo] : []),
+						"--json",
+						"headRefOid,baseRefName,url",
+					],
 					{ cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
 				),
 			);
@@ -183,6 +190,12 @@ function hook() {
 			if (attempt(() => git("cat-file", "-e", `${head}^{commit}`)) === undefined) git("fetch", "-q", "origin", head);
 			const problem = problemOf(head);
 			if (problem) refuse(problem);
+			// CI does not run again on the base branch after a merge (ci.yml): what lands must be what CI checked, so the head holds the base as it is now.
+			git("fetch", "-q", "origin", view.baseRefName);
+			if (attempt(() => git("merge-base", "--is-ancestor", "FETCH_HEAD", head)) === undefined)
+				refuse(
+					`${short(head)} does not hold ${view.baseRefName} as it is now. Merge ${view.baseRefName} into the branch and let CI run on that commit: CI does not run again after the merge, so what it checked must be what lands.`,
+				);
 			// The head can move between this check and the merge: GitHub refuses the merge when it has.
 			if (merge.head !== head)
 				refuse(
