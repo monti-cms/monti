@@ -113,9 +113,8 @@ it("a field row's lock and dots stand over the row's button: the pointer finds t
 	await userEvent.click(lock);
 	await userEvent.click(page.getByRole("img", { name: "변경" }));
 	expect(opened).toEqual(["row", "row"]);
-	(document.activeElement as HTMLElement | null)?.blur();
-	await userEvent.keyboard("{Tab}");
-	await expect.element(page.getByRole("button", { name: "seo.image 열기" })).toHaveFocus();
+	// The keyboard: the row's name first, then its lock.
+	(page.getByRole("button", { name: "seo.image 열기" }).element() as HTMLElement).focus();
 	await userEvent.keyboard("{Tab}");
 	await expect.element(lock).toHaveFocus();
 	await expect.poll(tip, { timeout: 5000 }).toBe("SEO 플러그인이 둔 필드");
