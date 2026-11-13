@@ -175,8 +175,8 @@ export const algolia = (options: AlgoliaOptions) =>
 - **값은 글에 남는다.** 플러그인을 빼면 탭과 필드가 사라지고, 글의 `values`에 든 값은 그대로 남는다. 사이트와 목록은 스키마에 없는 값을 주지 않으므로 보이지 않고, 플러그인을 다시 꽂으면 돌아온다. 지우는 단계는 없다(구조 변경이 아니다).
 - **이름이 겹치면 파일이 이긴다.** 파일의 스키마에 같은 이름의 필드가 있으면 그 필드가 서고 플러그인의 것은 빠진다. 두 플러그인이 한 컬렉션에 같은 이름을 더하면 사이트를 만들 때 거절한다.
 - **읽기용 뷰.** 데이터베이스의 `monti_<컬렉션>` 뷰는 파일의 필드만 열로 둔다(뷰는 파일의 스키마가 바뀔 때 다시 만든다). 플러그인의 값은 `entries.values`에서 읽는다.
-- **필드의 입력 바꾸기(T75).** 어느 필드든 `input`(이름)과 `inputOptions`를 가질 수 있다. 파일의 필드도 같다(`monti.schema.ts`에 적는다. 값이라 파일에 적힌다). 속성 패널은 그 이름의 입력을 브라우저 쪽에서 찾아 값 자리에 그린다. 입력은 값 자리의 부품만 그린다(`@monti-cms/ui`의 부품으로): 행과 라벨은 패널의 것이다. 라벨 줄 끝에 한마디(`Note`: 글자 수)를 둘 수 있다. 미디어 필드의 입력은 바꾸지 않는다(파일 창, 올리기, 대체 텍스트가 한 몸이다). 번역 글에서 원문의 것인 필드(`same`)는 원문 값을 읽기만 하므로 입력을 그리지 않는다.
-- **값 없는 화면 필드(T75).** `{ kind: "view", view, options? }`는 플러그인의 탭에만 선다. 값이 없어 저장도 목록도 모른다. 사이트 자신의 화면이 필요하면 설정 파일에 플러그인 하나를 적는다(`definePlugin`, `files` 플러그인처럼). 화면은 지금 편집기가 든 값(저장 전 값 포함)을 받는다.
+- **필드의 입력 바꾸기(T75).** 어느 필드든 `input`(이름)과 `inputOptions`를 가질 수 있다. 파일의 필드도 같다(`monti.schema.ts`에 적는다. 값이라 파일에 적힌다). 속성 패널은 그 이름의 입력을 브라우저 쪽에서 찾아 값 자리에 그린다. 입력은 값 자리의 부품만 그린다(`@monti-cms/ui`의 부품으로): 행과 라벨은 패널의 것이다. 라벨 줄 끝에 한마디(`Note`: 글자 수)를 둘 수 있다. 미디어 필드의 입력은 바꾸지 않는다(파일 창, 올리기, 대체 텍스트가 한 몸이다). 스위치로 고르는 조건부 필드(19)도 입력을 가리키면 스위치 대신 그 입력으로 그린다. 번역 글에서 원문의 것인 필드(`same`)는 원문 값을 읽기만 하므로 입력을 그리지 않는다.
+- **값 없는 화면 필드(T75).** `{ kind: "view", view, options? }`는 플러그인의 탭에만 선다. 값이 없어 저장도 목록도 모른다. 사이트 자신의 화면이 필요하면 설정 파일에 플러그인 하나를 적는다(`definePlugin`, `files` 플러그인처럼). 화면은 지금 편집기가 든 값(저장 전 값 포함)을 받는다. 고르지 않은 선택지의 값(저장이 지울 값, 19)은 받지 않는다.
 - **목록 열(T53).** 플러그인의 필드 가운데 `columns`에 적은 것만 열이 된다. 처음에는 숨어 있고 "열 추가"에 나온다. 거르기는 종류를 따른다(글자와 미디어는 "비어 있음"). 따로 만든 것이 없다: 열은 스키마의 필드에서 나오므로 플러그인 필드도 같은 길이다.
 - **이름은 플러그인이 준다.** 플러그인 필드의 라벨, 에이전트용 설명, 선택지 이름은 플러그인의 글자다. 관리자 값에 같은 필드의 이름이 있으면 그것이 이긴다(`schema.read`가 플러그인의 것을 아래에 깐다). 설정 화면은 플러그인의 탭을 잠가 보여 주므로 지금은 고칠 길이 없다.
 - **저장 전 고리(T85).** `beforeSave(entry, { db, schema, previous, actor })`는 `entries.create`와 `entries.save`의 쓰기 안에서, 초안을 얹은 작업본을 받고 돈다. 바꿀 것을 돌려주면(`{ title?, slug?, values? }`) 그 값이 저장된다. 돌려준 값 가운데 바뀐 것만 고리의 말이고(받은 값을 그대로 돌려주면 아무것도 바꾸지 않은 것이다), 그것은 사람의 값과 같은 검사를 지난다(없는 필드, 없는 선택지, 없는 파일은 거절. 번역 글에서 원문의 것인 필드는 `entries.sameField`). 반대쪽에서 고치는 관계(`via`)는 고리가 정할 수 없다: 그 쓰기가 미리 잡지 않은 다른 글을 고치게 된다(플러그인의 오류로 던진다). 새 글은 템플릿의 본문이 들어간 뒤에 고리를 지난다. 막으려면 `CheckError`를 던진다(`says("…")`로 사이트 말을 그대로 실을 수 있다): 저장은 거절되고 아무것도 쓰이지 않는다. 플러그인이 여럿이면 적힌 순서로 돌고 앞의 것이 남긴 값을 본다. 본문은 바꾸지 않는다(본문은 블록 연산과 블록의 검사가 다룬다). 본문만 고치는 기능(`body.edit`), 번역의 결정, 관계 일괄 바꾸기는 이 고리를 지나지 않는다: 값이 아니라 본문이나 묶음을 다루는 다른 쓰기다.
@@ -343,7 +343,7 @@ export const algolia = (options: AlgoliaOptions) =>
 
 만든 화면의 상태는 `Screens/Tools/ApiKeys`의 이야기다(진짜 사이트 위에서 돈다): `Keys`, `NoKeys`, `LongName`, `RowMenu`, `PickService`, `AddKey`, `AddAddress`, `Checking`, `Refused`, `NoAnswer`, `NameTaken`, `MissingField`, `EditKey`, `ReplaceKey`, `RemoveKey`, `RemoveUnusedKey`, `PickModel`, `Unreadable`, `EnterAgain`, `NoSecret`, `NoSecretWithKeys`, 그리고 플러그인 키의 `PluginKeys`, `SlotAdd`, `SlotEdit`, `SlotRemove`, `PluginKeysNoKeys`, `PluginKeysUnreadable`, `PluginKeysOrphan`, `SlotWithAddress`.
 
-플러그인이 그리는 자리의 상태는 `Screens/Plugins`의 이야기다(SEO 플러그인, 맞춤법 검사, 도구 페이지를 가진 사이트): `SeoTab`, `SeoWritten`, `Spelling`, `SpellingOpen`, `LockedTab`, `ListColumns`, `ToolPage`. 써 보는 장면은 `packages/admin/src/screens/plugins/plugins.screen.test.tsx`에 있다.
+플러그인이 그리는 자리의 상태는 `Screens/Plugins`의 이야기다(SEO 플러그인, 맞춤법 검사, 도구 페이지를 가진 사이트): `SeoTab`, `SeoWritten`, `Spelling`, `SpellingOpen`, `LockedTab`, `ListColumns`, `ToolPage`, `OwnInput`(파일의 필드가 제 입력을 가리키는 사이트). 써 보는 장면은 `packages/admin/src/screens/plugins/plugins.screen.test.tsx`에 있다.
 
 ### 써 볼 장면
 

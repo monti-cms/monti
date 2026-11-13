@@ -129,6 +129,29 @@ describe("the SEO tab in the editor (T84, T75; flow 1·08)", () => {
 	});
 });
 
+describe("a field of the site's own schema with an input of its own (T75)", () => {
+	it("14-5 the input the field names is drawn in place of its kind's own, a switch included; a plugin is handed the chosen option's values and no other's", async () => {
+		const story = open(plugins.OwnInput);
+		await story.run();
+		// The field is a choice of one, which its kind draws as a switch: named an input, it is drawn with that.
+		const promo = page.getByRole("checkbox", { name: "promo" });
+		await expect.element(promo).not.toBeChecked();
+		expect(await page.getByRole("switch", { name: "promo" }).elements()).toHaveLength(0);
+		await userEvent.click(promo);
+		await userEvent.fill(field("promoLine"), "이번 주 추천");
+		await save();
+		expect((await entry(story.loaded())).values).toMatchObject({ promo: "on", promoLine: "이번 주 추천" });
+		await userEvent.click(tab("값"));
+		await expect.element(page.getByText(/promo=on promoLine=이번 주 추천/)).toBeVisible();
+		// Turned off, the option's value is still held until the save drops it: it is not the entry's any more, and the plugin is not shown it.
+		await userEvent.click(tab("기본"));
+		await userEvent.click(promo);
+		await userEvent.click(tab("값"));
+		await expect.poll(() => page.getByText(/promoLine=/).elements().length).toBe(0);
+		expect(await page.getByText(/promo=on/).elements()).toHaveLength(0);
+	});
+});
+
 describe("the status bar's plugin cell (T70; flow 1·06)", () => {
 	const cell = (count: number) => button(`맞춤법 ${count}`);
 	/** A finding's row: the button over it that goes to its words. Its "고치기" is the row's own button, in the rows' order. */

@@ -1,7 +1,7 @@
-import { type Doc, definePlugin, type Plugin } from "@monti-cms/core";
+import { type Doc, definePlugin, defineSchema, type Plugin, type Schema } from "@monti-cms/core";
 import { seo } from "@monti-cms/seo";
 import { seoAdmin } from "@monti-cms/seo/admin";
-import { Stack, Text } from "@monti-cms/ui";
+import { Checkbox, Stack, Text } from "@monti-cms/ui";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
@@ -60,6 +60,62 @@ const searchAdmin = defineAdminPlugin({
 	},
 });
 
+/**
+ * The blog with a field of its own schema that names its input (doc 14: a site's field takes an input as a plugin's does): whether a post
+ * is promoted, a choice of one with a field under it, drawn by the site's own input and not by the switch its kind has.
+ */
+const withPromo = defineSchema({
+	...schema,
+	collections: {
+		...schema.collections,
+		post: {
+			...schema.collections.post,
+			fields: {
+				...schema.collections.post?.fields,
+				promo: {
+					kind: "conditional",
+					options: ["on"],
+					control: "toggle",
+					input: "site.promo",
+					fields: { on: { promoLine: { kind: "text" } } },
+				},
+			},
+		},
+	},
+} as Schema);
+
+/** The site's own plugin: a tab with a view that lists the values the entry has, as a plugin is handed them. */
+export const site_ = (): Plugin =>
+	definePlugin({
+		name: "site",
+		fields: [{ tab: "값", collections: ["post"], fields: { heldValues: { kind: "view", view: "site.values" } } }],
+	});
+
+/** Its browser half: the promo field's input (a checkbox, to tell it from the kind's switch) and the view. */
+const siteAdmin = defineAdminPlugin({
+	name: "site",
+	inputs: {
+		"site.promo": ({ id, value, onChange, readOnly }) => (
+			<Checkbox
+				id={id}
+				checked={value === "on"}
+				disabled={readOnly}
+				onCheckedChange={(on) => onChange(on ? "on" : null)}
+			/>
+		),
+	},
+	views: {
+		"site.values": ({ entry }) => (
+			<Text variant="note" mono>
+				{Object.entries(entry.values)
+					.filter(([, value]) => typeof value === "string" && value !== "")
+					.map(([name, value]) => `${name}=${String(value)}`)
+					.join(" ")}
+			</Text>
+		),
+	},
+});
+
 const meta = {
 	excludeStories: /^[a-z]/,
 	tags: ["visual"],
@@ -68,7 +124,7 @@ const meta = {
 		<MontiAdmin
 			transport={(loaded as Loaded).site.transport}
 			siteName="example.dev"
-			plugins={[seoAdmin, searchAdmin]}
+			plugins={[seoAdmin, searchAdmin, siteAdmin]}
 		/>
 	),
 } satisfies Meta;
@@ -98,7 +154,10 @@ export const site = ({
 	at = "entry",
 	seoValues = {},
 	locale = "ko",
+	ownInput = false,
 }: {
+	/** The posts have a field of the site's own that names its input, and a plugin's view that lists the entry's values. */
+	ownInput?: boolean;
 	at?: "entry" | "list" | "settings" | "tools";
 	seoValues?: Record<string, unknown>;
 	/** The entry's language: the spelling check reads Korean alone. */
@@ -108,10 +167,10 @@ export const site = ({
 		const checked: Loaded["checked"] = [];
 		let id = "";
 		const made = await storySite({
-			schema,
+			schema: ownInput ? withPromo : schema,
 			auth: { password: true },
 			signedIn: true,
-			plugins: [seo(), spelling(checked), search()],
+			plugins: ownInput ? [seo(), spelling(checked), search(), site_()] : [seo(), spelling(checked), search()],
 			setup: async (monti) => {
 				await monti.run(
 					"collections.updateAdminValues",
@@ -239,5 +298,14 @@ export const ToolPage: Story = {
 	play: async ({ canvasElement }) => {
 		const page = screen(canvasElement);
 		await page.findByText("글 128편이 색인에 있습니다.", {}, wait);
+	},
+};
+
+/** A field of the site's own schema drawn with the input it names, and a plugin's view of the entry's values beside it. */
+export const OwnInput: Story = {
+	loaders: site({ ownInput: true }),
+	play: async ({ canvasElement }) => {
+		const page = screen(canvasElement);
+		await page.findByRole("checkbox", { name: "promo" }, wait);
 	},
 };

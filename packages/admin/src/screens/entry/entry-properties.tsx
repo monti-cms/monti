@@ -4,6 +4,7 @@ import {
 	type FieldMark,
 	inOptionOrder,
 	localeModeOf,
+	notChosenFields,
 	publicPath,
 	slugify,
 	storedFields,
@@ -567,21 +568,27 @@ export function EntryProperties({
 	/** The entry as a plugin's input or view reads it: what the editor holds now, the source's value where a field is the source's. */
 	const entryView = (): EntryView => {
 		const slug = String(editor.value("slug") ?? "");
+		const held = Object.fromEntries(
+			Object.entries(definitions)
+				.filter(([name]) => name !== "title" && name !== "slug")
+				.map(([name, definition]) => {
+					const own = editor.value(`values.${name}`);
+					const mode = localeModeOf(name, definition);
+					// In a translation: the source's value where the field is the source's, and where an empty one follows it (doc 04).
+					const sources = shared && (mode === "same" || (mode === "fromSource" && !hasValue(own)));
+					return [name, sources ? shared[name] : own];
+				}),
+		);
+		// Only the chosen option's values are the entry's (doc 19): what another option still holds until the save drops it is not shown
+		// to a plugin as a value.
+		const others = notChosenFields(schema?.schema.collections[collection], held);
 		return {
 			collection,
 			locale: currentLocale ?? null,
 			title: editor.title,
 			slug,
 			values: Object.fromEntries(
-				Object.entries(definitions)
-					.filter(([name]) => name !== "title" && name !== "slug")
-					.map(([name, definition]) => {
-						const own = editor.value(`values.${name}`);
-						const mode = localeModeOf(name, definition);
-						// In a translation: the source's value where the field is the source's, and where an empty one follows it (doc 04).
-						const sources = shared && (mode === "same" || (mode === "fromSource" && !hasValue(own)));
-						return [name, sources ? shared[name] : own];
-					}),
+				Object.entries(held).map(([name, value]) => [name, others.has(name) ? undefined : value]),
 			),
 			address: schema && slug ? publicPath(schema.schema, collection, slug, currentLocale) : null,
 			labels: Object.fromEntries(
@@ -712,8 +719,9 @@ export function EntryProperties({
 					onChange={(next) => editor.set(path, next)}
 				/>
 			);
-		// A choice with one option, on or off (doc 19): a switch at the end of the field's row, the way every switch stands.
-		if (def.kind === "select" && def.control === "toggle") {
+		// A choice with one option, on or off (doc 19): a switch at the end of the field's row, the way every switch stands. A field that
+		// names an input of its own is drawn with that one instead, as any other kind is.
+		if (!own && def.kind === "select" && def.control === "toggle") {
 			const [on] = def.options;
 			return (
 				<FormField key={key}>
