@@ -77,7 +77,9 @@ The bucket must take a `PUT` from each address the admin is opened at, `http://l
 
 The tests run against a stand-in bucket in this package (`src/__test__/fake-s3.ts`). It works every request's signature out again the way
 S3 documents it, refuses an address that has run out or carries a parameter it was not signed with, and takes a second `PUT` to a used
-address, as S3 does. No real bucket has been used yet: AWS S3, R2 and MinIO are untried, and so is a browser's upload across origins.
+address, as S3 does. On a real bucket it has been
+tried on Cloudflare R2 (2026-11-13, with `scripts/try-s3.mjs`): everything below held, the bucket's CORS answer included. AWS S3 and MinIO
+are untried, and so is an upload from a browser itself (the trial asks the bucket what a browser would ask first).
 
 `node scripts/try-s3.mjs` (in the repo) tries the same things against a real bucket, with the settings above from the environment and
 `TRY_S3_ORIGIN` for the CORS check. It prints no key and no signed address, and removes what it made.
