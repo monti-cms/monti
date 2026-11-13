@@ -64,7 +64,7 @@ describe("T80 picking several blocks whole", () => {
 		expect(picked()).toEqual([HEADING, THIRD]);
 		await userEvent.keyboard("{Backspace}");
 		await expect.poll(blocks).toEqual([FIRST, LAST]);
-		await userEvent.keyboard("{Meta>}z{/Meta}");
+		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
 		await expect.poll(blocks).toEqual([FIRST, HEADING, THIRD, LAST]);
 		// Back with a caret, not with words picked across the blocks that the next Backspace would run together.
 		expect(getSelection()?.isCollapsed).toBe(true);
@@ -153,11 +153,11 @@ describe("T80 picking several blocks whole", () => {
 		await opened();
 		await boxOver(HEADING, THIRD);
 		await expect.poll(picked).toEqual([HEADING, THIRD]);
-		await userEvent.keyboard("{Meta>}x{/Meta}");
+		await userEvent.keyboard("{ControlOrMeta>}x{/ControlOrMeta}");
 		await expect.poll(blocks).toEqual([FIRST, LAST]);
 		await caretAfter(body().element(), "글뿐이다.");
 		await userEvent.keyboard("{Enter}");
-		await userEvent.keyboard("{Meta>}v{/Meta}");
+		await userEvent.keyboard("{ControlOrMeta>}v{/ControlOrMeta}");
 		await expect.poll(blocks).toEqual([FIRST, LAST, HEADING, THIRD]);
 		expect(body().element().querySelector("h2")?.textContent).toBe(HEADING);
 	});
