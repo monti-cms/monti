@@ -251,7 +251,8 @@ export type SchemaProblem = {
 		| "duplicateField"
 		| "notInOption"
 		| "choicePerLocale"
-		| "badToggle";
+		| "toggleOptions"
+		| "toggleRequired";
 };
 
 export function checkSchema(schema: Schema): SchemaProblem[] {
@@ -309,8 +310,10 @@ export function checkSchema(schema: Schema): SchemaProblem[] {
 			if (field.locale !== undefined && field.locale !== "same")
 				problems.push({ collection: name, field: fieldName, code: "choicePerLocale" });
 			// A switch is one option, on or off: with more there is nothing to tell them apart by, and a required one could never be off.
-			if (field.control === "toggle" && (field.options.length !== 1 || field.required))
-				problems.push({ collection: name, field: fieldName, code: "badToggle" });
+			if (field.control === "toggle" && field.options.length !== 1)
+				problems.push({ collection: name, field: fieldName, code: "toggleOptions" });
+			if (field.control === "toggle" && field.required)
+				problems.push({ collection: name, field: fieldName, code: "toggleRequired" });
 			for (const [option, group] of Object.entries(field.fields ?? {})) {
 				if (!field.options.includes(option))
 					problems.push({ collection: name, field: fieldName, code: "unknownOption" });

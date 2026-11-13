@@ -787,12 +787,12 @@ describe("settings › collections: the options of a choice in the review (docs 
 		await userEvent.click(sheetNow.getByRole("combobox", { name: "다른 필드로 옮기기" }));
 		await userEvent.click(page.getByRole("option", { name: "링크 주소" }));
 		// The video's post is changed to the first option left (글), which is not the link: its address would go.
-		await expect.element(sheetNow.getByText("옮김 0편 · 지움 1편")).toBeVisible();
+		await expect.element(sheetNow.getByText("지움 1편", { exact: true })).toBeVisible();
 		await expect.element(sheetNow.getByRole("button", { name: "지우고 적용" })).toBeVisible();
 		// Changed to the link instead, that post has the link's fields when the value moves.
 		await userEvent.click(sheetNow.getByRole("combobox", { name: "바꾸기" }));
 		await userEvent.click(page.getByRole("option", { name: "링크", exact: true }));
-		await expect.element(sheetNow.getByText("옮김 1편 · 지움 0편")).toBeVisible();
+		await expect.element(sheetNow.getByText("옮김 1편", { exact: true })).toBeVisible();
 		await expect.element(sheetNow.getByRole("button", { name: "적용", exact: true })).toBeVisible();
 		await userEvent.click(sheetNow.getByRole("button", { name: "적용", exact: true }));
 		await expect.element(sheet()).not.toBeInTheDocument();

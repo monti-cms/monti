@@ -395,6 +395,16 @@ export const ConditionalNested: Story = {
 	},
 };
 
+/** The switch turned off and not yet saved: its field is gone, and under the switch what the save takes away. */
+export const ConditionalSwitchOff: Story = {
+	loaders: site("nestedChoice"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("switch", { name: /첫 화면에 올리기/ }, wait));
+		await page.findByText("저장하면 첫 화면에 올리기의 값 1개가 지워집니다", {}, wait);
+	},
+};
+
 /** A stored word the field no longer lists: the choice shows it as it is, marked, never as another option. */
 export const StrayOption: Story = {
 	loaders: site("strayOption"),

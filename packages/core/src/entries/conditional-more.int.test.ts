@@ -298,8 +298,8 @@ describe("a choice made by a switch (T183)", () => {
 				(problem) => `${problem.field}:${problem.code}`,
 			);
 		const base = post.fields.featured as object;
-		expect(codes({ ...base, options: ["yes", "no"] })).toEqual(["featured:badToggle"]);
-		expect(codes({ ...base, required: true })).toEqual(["featured:badToggle"]);
+		expect(codes({ ...base, options: ["yes", "no"] })).toEqual(["featured:toggleOptions"]);
+		expect(codes({ ...base, required: true })).toEqual(["featured:toggleRequired"]);
 		// Inside an option of another it is checked the same.
 		expect(
 			checkSchema(
@@ -312,7 +312,7 @@ describe("a choice made by a switch (T183)", () => {
 					},
 				}),
 			).map((problem) => `${problem.field}:${problem.code}`),
-		).toEqual(["loud:badToggle"]);
+		).toEqual(["loud:toggleOptions"]);
 	});
 });
 

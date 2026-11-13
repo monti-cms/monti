@@ -482,10 +482,15 @@ function Body({
 						) : current.move && keptOf(change)?.[current.move] !== undefined ? (
 							// Into a field of an option only the entries that have that option take the value: the rest lose it (doc 19).
 							<ChangeNote danger={clearedByMove(change, current, keptOf(change)) > 0}>
-								{t("settings.review.movedAndCleared", {
-									moved: keptOf(change)?.[current.move] ?? 0,
-									cleared: clearedByMove(change, current, keptOf(change)),
-								})}
+								{/* Each side that has entries, the moved first: a side with none is not said (README principle 8). */}
+								{[
+									...((keptOf(change)?.[current.move] ?? 0) > 0
+										? [t("settings.review.movedIn", { count: keptOf(change)?.[current.move] ?? 0 })]
+										: []),
+									...(clearedByMove(change, current, keptOf(change)) > 0
+										? [t("settings.review.clearedIn", { count: clearedByMove(change, current, keptOf(change)) })]
+										: []),
+								].join(" · ") || t("settings.review.movedIn", { count: 0 })}
 							</ChangeNote>
 						) : null}
 					</ChangeGroup>
