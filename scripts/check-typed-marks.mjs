@@ -2,7 +2,7 @@
 // admin's, the plugins' and the reference screens of `packages/ui/src/screens`) and the message dictionaries, as three rules:
 //
 // - `typed-glyph`: a word that starts with "+ " ("+ 새 글": the button takes the `Add` icon), a "×" or "✕" that is all a button says (the part draws its close mark; a "×" between two numbers is a size sign), a
-//   key typed as text ("Del", "⌫", "⌦", or "⌘", "⇧", "⌥" anywhere in it: `MenuShortcut keys` and `TooltipContent shortcut` write keys for the
+//   key typed as text ("Del", "⌫", "⌦", or "⌘", "⇧", "⌥", "↵", "⏎" anywhere in it: `MenuShortcut keys` and `TooltipContent shortcut` write keys for the
 //   system the admin runs on). Read in string literals, template literals and JSX text; comments are not read.
 // - `button-title`: a `title` attribute on `Button`, `TextButton` or `IconButton`. The browser's own tooltip comes late, looks like no part of the
 //   admin and is not read on focus; a button says more in a `Tooltip` (an `IconButton` has one from its `label`).
@@ -25,7 +25,7 @@ try {
 }
 
 /** The keys a person presses, typed as glyphs or as their short names. */
-const KEY_GLYPH = /[⌘⇧⌥⌫⌦]/;
+const KEY_GLYPH = /[⌘⇧⌥⌫⌦↵⏎]/;
 const KEY_WORD = /^(?:Del|Backspace|Esc)$/;
 /** A close mark typed as a letter. */
 const CLOSE_MARK = /^[×✕✖]$/;

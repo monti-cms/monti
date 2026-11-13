@@ -3,7 +3,7 @@ import { entryPage } from "@monti-cms/next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createElement, type ElementType, type ReactNode } from "react";
-import { reader } from "@/lib/monti";
+import { code, reader } from "@/lib/monti";
 
 // The pages of the site, each for one language. The routes under `app/(site)` hand them the language of their address: none for Korean (the
 // source language), `/en` and `/ja` for the translations.
@@ -102,7 +102,13 @@ export async function Entry({
 				</nav>
 			) : null}
 			{entry.doc
-				? renderDocument(entry.doc, { createElement: h, media: entry.media, entryPath: entry.entryPath })
+				? renderDocument(entry.doc, {
+						createElement: h,
+						media: entry.media,
+						entryPath: entry.entryPath,
+						code: await code,
+						locale,
+					})
 				: null}
 		</article>
 	);

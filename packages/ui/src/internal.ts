@@ -39,6 +39,19 @@ export { Checkbox } from "./checkbox";
 export { Chip } from "./chip";
 export { cn } from "./cn";
 export { CodeBlock } from "./code-block";
+export {
+	CodeArea,
+	CodeAside,
+	type CodeFoldEdge,
+	CodeFrame,
+	CodeGround,
+	CodeLine,
+	type CodeLineTone,
+	CodeMark,
+	CodeNumber,
+	CodeRefText,
+	CodeToken,
+} from "./code-frame";
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
 export {
 	Combobox,

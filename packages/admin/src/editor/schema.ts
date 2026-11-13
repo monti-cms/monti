@@ -247,7 +247,14 @@ export function bodyExtensions(
 								? `(${block.children.map(nodeName).join(" | ")})+`
 								: "block+"
 							: undefined,
-				marks: block.type === "codeBlock" ? "" : undefined,
+				// A code block's text takes the code's own marks only (doc 17): what an import brought stays through an edit.
+				marks:
+					block.type === "codeBlock"
+						? kit.marks
+								.filter((mark) => mark.inCode)
+								.map((mark) => markName(mark.type))
+								.join(" ")
+						: undefined,
 				code: block.type === "codeBlock",
 				atom: block.holds === "nothing",
 				selectable: block.holds === "nothing",
@@ -311,9 +318,10 @@ export function bodyExtensions(
 						},
 					},
 				],
-				renderHTML: ({ HTMLAttributes }) => [
+				// The mark's own attrs (not rendered one by one): a copy keeps them, and a code link's words say where they point (doc 17).
+				renderHTML: ({ mark: made }) => [
 					"span",
-					{ "data-monti-mark": mark.type, "data-monti-attrs": JSON.stringify(HTMLAttributes) },
+					{ "data-monti-mark": mark.type, "data-monti-attrs": JSON.stringify(made.attrs) },
 					0,
 				],
 			});

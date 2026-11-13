@@ -1,5 +1,5 @@
 import type { Doc } from "@monti-cms/core";
-import { Node as TiptapNode } from "@tiptap/core";
+import { getSchema, Node as TiptapNode } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
 import type { AdminBlockDefinition } from "../operations/admin-context";
 import type { Catalog } from "./catalog";
@@ -92,5 +92,48 @@ describe("the body as it is saved", () => {
 			blocks: [divider, { id: "b2", type: "paragraph", link: { from: "s2", seen: "h", state: "pending" } }],
 		};
 		expect(docFromEditor(docToEditor(paired, kit), kit).blocks).toHaveLength(2);
+	});
+});
+
+describe("code blocks in the editor", () => {
+	const codeKit: Catalog = {
+		blocks: [
+			{
+				type: "codeBlock",
+				label: "Code",
+				description: "",
+				menu: "text",
+				holds: "text",
+				children: null,
+				attrs: { properties: { language: {}, lines: {} } },
+			},
+		],
+		marks: [
+			{ type: "bold", label: "Bold", attrs: null, inCode: "also" },
+			{ type: "link", label: "Link", attrs: { properties: { href: {} } }, inCode: null },
+			{ type: "codeTip", label: "Tooltip", attrs: { properties: { text: {} } }, inCode: "only" },
+		],
+		headings: [2, 3, 4],
+	};
+	it("17-1 a code block's text keeps the code's own marks and its line effects through the editor", () => {
+		const doc: Doc = {
+			type: "doc",
+			blocks: [
+				{
+					id: "b1",
+					type: "codeBlock",
+					attrs: { language: "ts", lines: [{ name: "plus", start: 0, end: 1 }] },
+					content: [
+						{ type: "text", text: "use", marks: [{ type: "bold" }, { type: "codeTip", text: "a hook" }] },
+						{ type: "text", text: "State" },
+					],
+				},
+			],
+		};
+		const schema = getSchema(bodyExtensions(codeKit, () => "Code"));
+		const node = schema.nodeFromJSON(docToEditor(doc, codeKit));
+		expect(() => node.check()).not.toThrow();
+		expect(schema.nodes[nodeName("codeBlock")].allowsMarkType(schema.marks[markName("link")])).toBe(false);
+		expect(docFromEditor(node.toJSON(), codeKit)).toEqual(doc);
 	});
 });

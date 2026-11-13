@@ -228,6 +228,65 @@ test.describe("the site", () => {
 		await expect(admin).toHaveURL(/#%EB%AC%B4%EC%97%87%EC%9D%B4-%EB%8B%AC%EB%9D%BC%EC%A1%8C%EB%82%98$/);
 		await expect(admin.locator("article h3")).toBeInViewport();
 	});
+
+	test("17-9 a code block on the site: colours, the copy button, and a code link that lights its lines", async ({
+		admin,
+	}) => {
+		const code = {
+			id: "c1",
+			type: "codeBlock",
+			attrs: {
+				language: "ts",
+				title: "src/count.ts",
+				lines: [
+					{ name: "plus", start: 1, end: 2 },
+					{ name: "anchor", start: 1, end: 2, attrs: { id: "c1" } },
+				],
+			},
+			content: [{ type: "text", text: "let count = 0;\ncount += 1;" }],
+		};
+		const linked = {
+			id: "p1",
+			type: "paragraph",
+			content: [
+				{ type: "text", text: "누를 때마다 " },
+				{ type: "text", text: "하나를 더한다", marks: [{ type: "codeRef", block: "c1", anchor: "c1" }] },
+			],
+		};
+		const post = await draft(admin, unique("코드 블록"), [linked, code]);
+		await publish(admin, post.id);
+		const context = await admin.context().browser()?.newContext({ baseURL: LIVE });
+		if (!context) throw new Error("no browser");
+		const page = await context.newPage();
+		// What the copy button hands the clipboard, written down: a headless browser's own clipboard waits on a focus it does not have.
+		await page.addInitScript(() => {
+			const copied: string[] = [];
+			Object.assign(window, { copied });
+			Object.defineProperty(navigator, "clipboard", {
+				value: { writeText: async (text: string) => void copied.push(text) },
+			});
+		});
+		await page.goto(post.path);
+		const figure = page.locator("figure[data-code]");
+		await expect(figure.locator("figcaption")).toHaveText("src/count.ts");
+		// Coloured with the site's two themes.
+		await expect(figure.locator("code span[style*='--shiki-dark']").first()).toBeVisible();
+		await expect(figure.locator('.line[data-effect~="plus"]')).toContainText("count += 1;");
+
+		await figure.hover();
+		await figure.getByRole("button", { name: "복사" }).click();
+		await expect(figure.getByRole("button", { name: "복사함" })).toBeVisible();
+		expect(await page.evaluate(() => (window as unknown as { copied: string[] }).copied)).toEqual([
+			"let count = 0;\ncount += 1;",
+		]);
+
+		const link = page.getByRole("link", { name: "하나를 더한다" });
+		await link.hover();
+		await expect(figure).toHaveAttribute("data-lit", "");
+		await expect(figure.locator('.line[data-line="2"]')).toHaveAttribute("data-lit", "");
+		await expect(figure.locator('.line[data-line="1"]')).not.toHaveAttribute("data-lit", "");
+		await context.close();
+	});
 });
 
 test.describe("the preview", () => {

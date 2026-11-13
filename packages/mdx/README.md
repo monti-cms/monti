@@ -47,7 +47,7 @@ Monti keeps a body as a JSON document. MDX is read into it once, on import; it i
 
 A link by the name of an address the file defines (`[docs][d]`) gets that address; a script address is no link.
 
-A highlighter's line notations (`// [!code ++]`) stay in the code as text, in and out: nothing is lost, and nothing is drawn from them yet.
+A code fence's Shiki notations (`// [!code ++]`, `--`, `highlight`, `focus`, `error`, `warning`, `word:`) become the code block's line effects on import, and the fence line's `title="…"` and `showLineNumbers` its file name and line numbers. On export the effects Shiki has go back as its notation and the rest (folds, labels, text effects, rules) as Monti comments (`// @line collapse {0-4}`), so a file read back gives the same block. A code link is `<CodeRef to="c1">words</CodeRef>`: it goes to the first code block with that label.
 
 ## Writing
 
