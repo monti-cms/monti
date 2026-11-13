@@ -402,22 +402,32 @@ function RowTitle({
 				>
 					<span className="flex min-w-0 max-w-full shrink-0">{words}</span>
 					{/* It says itself whole when pointed at: it stands over the row's link for the pointer to find it. */}
+					{/*
+					 * One slot, one font (tokens.md). An address alone is the cut box itself, in mono: its letters are what is cut to one and its "…".
+					 * With words after it, the box is sans and the address keeps a mono span of its own; the words are cut first, after it.
+					 */}
 					<CutWords
 						whole={addressTitle}
-						className="relative z-1 max-w-max grow basis-[3ch] text-monti-caption text-monti-faint"
+						className={cn(
+							"relative z-1 max-w-max grow basis-[3ch] text-monti-faint",
+							note ? "text-monti-caption" : "text-monti-meta",
+						)}
 					>
-						{/* One slot, one font: the address in its own mono span, the words after it in their own sans one (tokens.md). */}
-						{address ? (
-							<span data-slot="row-title-address" className="text-monti-meta">
-								{address}
-							</span>
-						) : null}
 						{note ? (
-							<span data-slot="row-title-note">
-								{address ? " · " : null}
-								{note}
-							</span>
-						) : null}
+							<>
+								{address ? (
+									<span data-slot="row-title-address" className="text-monti-meta">
+										{address}
+									</span>
+								) : null}
+								<span data-slot="row-title-note">
+									{address ? " · " : null}
+									{note}
+								</span>
+							</>
+						) : (
+							address
+						)}
 					</CutWords>
 				</span>
 			) : (
