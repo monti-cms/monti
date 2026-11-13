@@ -1,6 +1,7 @@
 import path from "node:path";
 import { assistant } from "@monti-cms/ai";
 import { defineConfig, definePlugin, localFolderStorage, webhook } from "@monti-cms/core";
+import { blocks, marks } from "./monti/blocks";
 import schema from "./monti.schema";
 
 // Media files in a folder on this machine, served by the admin API. A site on a host with no disk uses a storage plugin instead.
@@ -16,6 +17,8 @@ const files =
 			];
 
 export default defineConfig({
+	blocks,
+	marks,
 	schema,
 	database: process.env.DATABASE_URL,
 	auth: { password: true },

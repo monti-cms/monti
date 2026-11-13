@@ -135,6 +135,12 @@ importers:
       '@monti-cms/next':
         specifier: workspace:*
         version: link:../../packages/next
+      katex:
+        specifier: ^0.16.47
+        version: 0.16.47
+      mermaid:
+        specifier: ^11.17.2
+        version: 11.17.2
       next:
         specifier: 16.4.6
         version: 16.4.6(@playwright/test@1.64.1)(@types/node@20.19.43)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -145,6 +151,9 @@ importers:
         specifier: 19.2.3
         version: 19.2.3(react@19.2.3)
     devDependencies:
+      '@monti-cms/blocks':
+        specifier: workspace:*
+        version: link:../../packages/blocks
       '@types/node':
         specifier: ^20
         version: 20.19.43
