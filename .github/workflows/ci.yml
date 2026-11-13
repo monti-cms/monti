@@ -106,13 +106,13 @@ jobs:
           CMS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/monti_test
 
   browser:
-    # The screen tests take about 18 minutes in one runner; four runners take a quarter each. Vitest splits the test files between them.
-    name: browser tests (${{ matrix.shard }}/4)
+    # The screen tests take about 18 minutes in one runner; eight runners take an eighth each. Vitest splits the test files between them.
+    name: browser tests (${{ matrix.shard }}/8)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -137,8 +137,8 @@ jobs:
           mkdir -p ~/.cache/playwright-apt
           cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
       # L3: one part of @monti-cms/ui; L4: admin screens on a site in the browser (PGlite), driven with real input (docs/testing.md).
-      - run: pnpm --filter @monti-cms/ui test:browser --shard=${{ matrix.shard }}/4
-      - run: pnpm --filter @monti-cms/admin test:screen --shard=${{ matrix.shard }}/4
+      - run: pnpm --filter @monti-cms/ui test:browser --shard=${{ matrix.shard }}/8
+      - run: pnpm --filter @monti-cms/admin test:screen --shard=${{ matrix.shard }}/8
       # The pictures of the page that failing tests left (git ignores them): without this they go with the runner.
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -147,7 +147,7 @@ jobs:
           path: packages/*/src/**/__screenshots__/**
           if-no-files-found: ignore
 
-  # One check named "browser tests" for the four runners, so a pull request shows one result for them.
+  # One check named "browser tests" for the eight runners, so a pull request shows one result for them.
   browser-tests:
     name: browser tests
     needs: browser
