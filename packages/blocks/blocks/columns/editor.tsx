@@ -88,6 +88,8 @@ export default function ColumnsEditor() {
 
 	return (
 		<BlockFrame
+			// While a border is dragged, the widths it makes ("60 : 40"), as a picture says its size.
+			measure={dragging ? dragging.map((width) => Math.round(width)).join(" : ") : undefined}
 			bar={
 				saved ? (
 					<BlockBar label={say(words.tools)}>

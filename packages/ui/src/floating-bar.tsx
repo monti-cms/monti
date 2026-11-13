@@ -1,7 +1,7 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import type { ComponentProps, ReactElement, ReactNode } from "react";
+import { type ComponentProps, cloneElement, type ReactElement, type ReactNode } from "react";
 import { cn } from "./cn";
 import type { ShortcutKeys } from "./shortcut";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -63,6 +63,11 @@ function FloatingBarButton({
 			{...props}
 		/>
 	);
+	// A button with its name on it says it once: no tooltip with the same words.
+	if (named) {
+		const own = trigger ? trigger(button) : button;
+		return cloneElement(own, undefined, children);
+	}
 	return (
 		<Tooltip>
 			<TooltipTrigger render={trigger ? trigger(button) : button}>{children}</TooltipTrigger>

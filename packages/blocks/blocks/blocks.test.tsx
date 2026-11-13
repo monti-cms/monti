@@ -125,7 +125,7 @@ describe("the blocks' values (doc 18)", () => {
 			{
 				level: "warn",
 				message: {
-					ko: "7줄: 숫자 필드 views 는 숫자여야 해요.",
+					ko: "7줄: 숫자가 아닌 칸: views",
 					en: "Line 7: The number field views must be a number.",
 				},
 			},

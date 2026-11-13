@@ -1,6 +1,8 @@
 /** The block's words (doc 18): its names in each admin language, and the words it shows readers in en / ko / ja. The site's own: change them here. */
 
 export const words = {
+	aFileWithNo: { ko: "이름 없는 파일", en: "A file with no name" },
+	filesWithTheSame: { ko: "경로가 겹치는 파일", en: "Files with the same path" },
 	tools: { ko: "코드 탐색기 도구", en: "Code explorer tools" },
 	first: { ko: "처음 보일 파일", en: "File shown first" },
 	firstFile: { ko: "첫 파일", en: "The first file" },

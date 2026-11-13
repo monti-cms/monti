@@ -54,7 +54,7 @@ export default function CollapsibleEditor() {
 					<BlockTitle
 						label={say(words.title)}
 						value={typeof block.attrs.title === "string" ? block.attrs.title : ""}
-						placeholder={wordsIn(block.language)}
+						placeholder={wordsIn(block.locale)}
 						onChange={(title) => block.setAttrs({ title: title === "" ? undefined : title })}
 						onDone={() => {
 							setOpen(true);

@@ -15,6 +15,7 @@ export {
 	FolderTabsAdd,
 	FolderTabsBody,
 	FolderTabsList,
+	FormFieldError,
 	IconButton,
 	Inline,
 	Label,

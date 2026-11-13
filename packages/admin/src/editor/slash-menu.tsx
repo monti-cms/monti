@@ -155,7 +155,7 @@ export function useSlashMenu({
 				group: block.type === "divider" ? "text" : block.menu === "component" ? "component" : "insert",
 				label: t(block.label),
 				words: [block.type, block.type === "divider" ? "---" : ""],
-				icon: <BlockIcon type={block.type} />,
+				icon: <BlockIcon type={block.type} Own={definitions.get(block.type)?.Icon} />,
 				typed: block.type === "divider" ? "---" : undefined,
 				run: (editor) => {
 					if (!open) return;

@@ -138,7 +138,7 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		if (!formula) throw new Error("no formula");
 		await expect.poll(() => formula.querySelector("math")).not.toBeNull();
 		await userEvent.click(formula);
-		const source = page.getByRole("textbox", { name: "원문 코드" });
+		const source = page.getByRole("textbox", { name: "소스" });
 		await expect.element(source).toHaveValue("a^2 + b^2 = c^2");
 		await userEvent.clear(source);
 		await userEvent.type(source, "\\frac{{1}{{");
@@ -213,9 +213,9 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		});
 		window.location.hash = `#/ai/review/${proposal}`;
 		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
-		// One line, the kind's old and new names marked in it: "콜아웃 · 종류 팁 경고 · 제목 알아 두세요".
-		const line = page.getByText(/콜아웃 · 종류/).first();
-		await expect.element(line).toBeVisible();
+		// The row is named by the block and its kind; its values before and after, the kind's names marked.
+		await expect.element(page.getByText("블록 2 · 콜아웃").first()).toBeVisible();
+		const line = page.getByText(/종류 /).first();
 		await expect.poll(() => line.element().textContent).toMatch(/종류 ?팁 ?경고/);
 	});
 });

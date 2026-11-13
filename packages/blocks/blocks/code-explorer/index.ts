@@ -17,7 +17,7 @@ export const codeExplorer = defineBlock({
 		'Several files of a project as a file tree and the code of the picked file. Its children are codeBlock blocks whose `title` is the file\'s path ("src/app.ts"); a path ending in "/" with no code is a folder. `open` is the path of the file shown first (the first file when left out).',
 	menu: "insert",
 	attrs: z.object({ open: z.string().optional() }),
-	fields: { open: { label: { ko: "처음 보일 파일", en: "File shown first" } } },
+	fields: { open: { label: words.first } },
 	holds: "blocks",
 	children: ["codeBlock"],
 	check: (block) => {
@@ -28,10 +28,8 @@ export const codeExplorer = defineBlock({
 		const unnamed = entries.some((entry) => parsePath(entry.path).segments.length === 0);
 		const { rejected } = buildTree(entries.filter((entry) => parsePath(entry.path).segments.length > 0));
 		return [
-			...(unnamed ? [{ level: "warn" as const, message: { ko: "이름 없는 파일", en: "A file with no name" } }] : []),
-			...(rejected.length > 0
-				? [{ level: "warn" as const, message: { ko: "경로가 겹치는 파일", en: "Files with the same path" } }]
-				: []),
+			...(unnamed ? [{ level: "warn" as const, message: words.aFileWithNo }] : []),
+			...(rejected.length > 0 ? [{ level: "warn" as const, message: words.filesWithTheSame }] : []),
 		];
 	},
 	Site: CodeExplorer,

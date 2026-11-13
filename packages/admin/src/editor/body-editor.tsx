@@ -8,6 +8,7 @@ import { useKeepFilesInPage } from "../media/use-file-drop";
 import { useUpload } from "../media/use-upload";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
+import { EntryLocaleContext } from "./block-api";
 import { type BlockTranslation, useBlockHandle } from "./block-menu";
 import type { BodyCatalogs } from "./catalog";
 import { FormatCard } from "./format-card";
@@ -55,7 +56,10 @@ export function BodyEditor({
 	files,
 	fill,
 	onRequest,
+	locale,
 }: {
+	/** The entry's language: a site block's empty title shows its kind in it, as the site will (doc 18). */
+	locale?: string;
 	doc: Doc;
 	/** The library's files the body shows, as its read brought them: their shapes hold the pictures' places from the first draw. */
 	files?: readonly MediaItem[];
@@ -215,7 +219,9 @@ export function BodyEditor({
 					else editor.chain().focus("end").run();
 				}}
 			>
-				<EditorContent editor={editor} />
+				<EntryLocaleContext.Provider value={locale}>
+					<EditorContent editor={editor} />
+				</EntryLocaleContext.Provider>
 				<MarkLooks />
 				{editor && margin ? margin(editor) : null}
 				{handle.overlay}

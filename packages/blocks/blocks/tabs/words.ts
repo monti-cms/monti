@@ -1,6 +1,7 @@
 /** The block's words (doc 18): its names in each admin language, and the words it shows readers in en / ko / ja. The site's own: change them here. */
 
 export const words = {
+	aTabWithNo: { ko: "이름 없는 탭", en: "A tab with no name" },
 	tools: { ko: "탭 도구", en: "Tabs tools" },
 	add: { ko: "탭 더하기", en: "Add a tab" },
 	first: { ko: "처음 열 탭", en: "Open first" },

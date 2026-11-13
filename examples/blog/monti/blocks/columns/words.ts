@@ -1,6 +1,7 @@
 /** The block's words (doc 18): its names in each admin language, and the words it shows readers in en / ko / ja. The site's own: change them here. */
 
 export const words = {
+	widths: { ko: "폭", en: "Widths" },
 	tools: { ko: "단 나누기 도구", en: "Columns tools" },
 	even: { ko: "고르게", en: "Even widths" },
 	addColumn: { ko: "단 더하기", en: "Add a column" },

@@ -898,6 +898,7 @@ export function EntryEditor({
 				key={`${editor.bodyKey}:${addedKey}`}
 				added={translation.added}
 				doc={editor.doc}
+				locale={read?.entry.locale}
 				files={editor.files}
 				catalogs={catalogs}
 				onChange={(doc) => editor.set("doc", doc)}

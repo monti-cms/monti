@@ -10,7 +10,7 @@ export const tooltip = defineMark({
 	description:
 		"A short note on some words (`text`), shown when a reader points at them: an abbreviation spelled out, a term explained.",
 	attrs: z.object({ text: z.string().min(1) }),
-	fields: { text: { label: { ko: "툴팁 글", en: "Tooltip text" } } },
+	fields: { text: { label: words.tooltipText } },
 	Site: TooltipMark,
 	// Its card in the format bar's ⋯, loaded in the admin the first time it opens.
 	Editor: lazy(() => import("./editor")),

@@ -14,17 +14,11 @@ export const callout = defineBlock({
 	attrs: z.object({ tone: z.enum(TONES).optional(), title: z.string().optional() }),
 	fields: {
 		tone: {
-			label: { ko: "종류", en: "Kind" },
-			options: {
-				note: { ko: "노트", en: "Note" },
-				tip: { ko: "팁", en: "Tip" },
-				info: { ko: "정보", en: "Info" },
-				warning: { ko: "경고", en: "Warning" },
-				danger: { ko: "위험", en: "Danger" },
-			},
+			label: words.kind,
+			options: words.tones,
 		},
 		title: {
-			label: { ko: "제목", en: "Title" },
+			label: words.title,
 		},
 	},
 	holds: "blocks",

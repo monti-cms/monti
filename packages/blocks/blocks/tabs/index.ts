@@ -12,12 +12,12 @@ export const tabs = defineBlock({
 		"Tabs: the same thing for a few cases (npm, pnpm, yarn; macOS, Windows), one shown at a time. Its children are tab blocks, two to eight; `defaultValue` is the label of the tab shown first (the first when left out).",
 	menu: "insert",
 	attrs: z.object({ defaultValue: z.string().optional() }),
-	fields: { defaultValue: { label: { ko: "처음 보일 탭", en: "Tab shown first" } } },
+	fields: { defaultValue: { label: words.first } },
 	holds: "blocks",
 	children: ["tab"],
 	check: (block) =>
 		(block.children ?? []).some((tab) => typeof tab.attrs?.label !== "string" || tab.attrs.label.trim() === "")
-			? [{ level: "warn", message: { ko: "이름 없는 탭", en: "A tab with no name" } }]
+			? [{ level: "warn", message: words.aTabWithNo }]
 			: [],
 	Site: Tabs,
 	// The editor's view (its own tool row and settings), loaded in the admin the first time it is drawn.
@@ -37,7 +37,7 @@ export const tab = defineBlock({
 	label: words.tab,
 	description: "One tab of a tabs block: its `label` and the blocks it shows.",
 	attrs: z.object({ label: z.string() }),
-	fields: { label: { label: { ko: "탭 이름", en: "Tab name" } } },
+	fields: { label: { label: words.name } },
 	holds: "blocks",
 	translate: { attrs: ["label"] },
 	Site: Tab,

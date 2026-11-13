@@ -252,17 +252,24 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 			const before = shownBlocks(now.doc, names);
 			const after = shownBlocks(next, names);
 			const places: Place[] = [];
-			// A block with values is said with its name line (doc 18): a change of its kind alone is a row too.
-			const said = (block: ShownBlock) => [block.values, block.text].filter((line) => line).join("\n");
+			// A block with values is named by its kind ("Block 4 · Callout", doc 18), and a change of its values alone is a row of its own: its values
+			// before and after, apart from its words.
+			const kind = (block: ShownBlock) => block.values?.split(" · ")[0];
+			const valuesOnly = (block: ShownBlock) => block.values?.split(" · ").slice(1).join(" · ") ?? "";
+			const named = (block: ShownBlock, index: number) =>
+				[t("review.block", { number: index + 1 }), kind(block)].filter((part) => part).join(" · ");
 			after.forEach((block, index) => {
 				const was = before.find((each) => each.id === block.id);
-				if (!was) places.push({ name: t("review.newBlock"), before: "", after: said(block) });
-				else if (said(was) !== said(block))
-					places.push({ name: t("review.block", { number: index + 1 }), before: said(was), after: said(block) });
+				if (!was) places.push({ name: t("review.newBlock"), before: "", after: block.text || (block.values ?? "") });
+				else {
+					if (valuesOnly(was) !== valuesOnly(block))
+						places.push({ name: named(block, index), before: valuesOnly(was), after: valuesOnly(block) });
+					if (was.text !== block.text) places.push({ name: named(block, index), before: was.text, after: block.text });
+				}
 			});
 			before.forEach((block, index) => {
 				if (!after.some((each) => each.id === block.id))
-					places.push({ name: t("review.block", { number: index + 1 }), before: said(block), after: "" });
+					places.push({ name: named(block, index), before: block.text || (block.values ?? ""), after: "" });
 			});
 			return places;
 		}
@@ -548,18 +555,20 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 															<RowTitle title={change.title} address={change.address ?? undefined} />
 															{places.length > 0 ? (
 																<CompareRows>
-																	{places.map((place) => {
+																	{places.map((place, at) => {
 																		const runs = inlineDiff(place.before, place.after);
 																		return side && place.before !== "" && place.after !== "" ? (
 																			<CompareRow
-																				key={place.name}
+																				// biome-ignore lint/suspicious/noArrayIndexKey: a block's values and its words are two rows of one name
+																				key={`${place.name}:${at}`}
 																				name={place.name}
 																				source={marked(runs, "before")}
 																				translation={marked(runs, "after")}
 																			/>
 																		) : (
 																			<CompareRow
-																				key={place.name}
+																				// biome-ignore lint/suspicious/noArrayIndexKey: a block's values and its words are two rows of one name
+																				key={`${place.name}:${at}`}
 																				single
 																				name={place.name}
 																				translation={marked(runs, "both")}

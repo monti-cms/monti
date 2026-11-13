@@ -98,6 +98,7 @@ export default function TabsEditor() {
 									<FolderTabEdit key={index}>
 										<BlockTitle
 											label={say(words.name)}
+											required
 											value={label}
 											placeholder={say(words.unnamed)}
 											onChange={(name) =>

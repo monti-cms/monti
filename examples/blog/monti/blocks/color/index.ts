@@ -12,8 +12,8 @@ export const color = defineMark({
 		.object({ color: z.enum(COLORS).optional(), background: z.enum(COLORS).optional() })
 		.refine((value) => value.color !== undefined || value.background !== undefined, "A colour or a background"),
 	fields: {
-		color: { label: { ko: "글자 색", en: "Text colour" }, options: words.names },
-		background: { label: { ko: "바탕색", en: "Background" }, options: words.names },
+		color: { label: words.text, options: words.names },
+		background: { label: words.background, options: words.names },
 	},
 	Site: ColorMark,
 	// Its card in the format bar's ⋯, loaded in the admin the first time it opens.

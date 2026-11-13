@@ -3,6 +3,7 @@
 import type { BlockStarter, Label } from "@monti-cms/core";
 import {
 	BlockBarPlace,
+	BlockBox,
 	BlockFrameBox,
 	BlockTitleField,
 	DropdownMenu,
@@ -40,6 +41,8 @@ const nodeName = (type: string) => type.replace(/[^A-Za-z0-9_]/g, "_");
 type BlockPlace = { node: EditorNode; editor: Editor; getPos: () => number | undefined; selected: boolean };
 
 const BlockPlaceContext = createContext<BlockPlace | null>(null);
+/** The entry's language (`ko`, `en-US`): what a block's empty title stands in for, as the site draws it. */
+export const EntryLocaleContext = createContext<string | undefined>(undefined);
 /** Whether the block's tool row stays up: a menu of it is open, or the keyboard is in it. */
 const HoldContext = createContext<(on: boolean) => void>(() => {});
 const FocusContext = createContext<(on: boolean) => void>(() => {});
@@ -78,6 +81,7 @@ export function useBlock() {
 	if (!place) throw new Error("useBlock is for a block's editor view.");
 	const { node, editor, getPos, selected } = place;
 	const { language, t } = useAdmin();
+	const locale = useContext(EntryLocaleContext);
 	const state = useEditorState({
 		editor,
 		selector: ({ editor: current }) => {
@@ -129,6 +133,8 @@ export function useBlock() {
 			/** The child the cursor is in, or `null`. */
 			childAt: state.childAt,
 			language,
+			/** The entry's language, as the site gets it (`renderDocument`'s `locale`); the admin's when the screen does not say. */
+			locale: locale ?? language,
 			/** A name in the admin's language: words in each language, or a key of the admin's dictionary. */
 			say: (label: Label) => t(label),
 			setAttrs: (patch: Record<string, unknown>) =>
@@ -215,7 +221,7 @@ export function useBlock() {
 					if (own) tr.delete(pos(), pos() + own.nodeSize);
 				}),
 		};
-	}, [node, editor, getPos, selected, state.editable, state.inside, state.childAt, language, t]);
+	}, [node, editor, getPos, selected, state.editable, state.inside, state.childAt, language, locale, t]);
 }
 
 /**
@@ -224,9 +230,15 @@ export function useBlock() {
  */
 export function BlockFrame({
 	bar,
+	measure,
 	children,
 	...props
-}: { bar?: ReactNode; children: ReactNode } & Omit<ComponentProps<"div">, "children">) {
+}: {
+	bar?: ReactNode;
+	/** What a drag makes of the block, shown at its top right while it lasts ("60 : 40"). */
+	measure?: string;
+	children: ReactNode;
+} & Omit<ComponentProps<"div">, "children">) {
 	const { editable, inside, selected } = useBlock();
 	const [over, setOver] = useState(false);
 	const [held, setHeld] = useState(0);
@@ -236,8 +248,11 @@ export function BlockFrame({
 		<HoldContext.Provider value={(on) => setHeld((count) => Math.max(0, count + (on ? 1 : -1)))}>
 			<FocusContext.Provider value={setFocused}>
 				<BlockFrameBox onPointerEnter={() => setOver(true)} onPointerLeave={() => setOver(false)} {...props}>
-					{up && <BlockBarPlace>{bar}</BlockBarPlace>}
-					{children}
+					{/* Picked as a whole, it has the picked line around it, as a picture has. */}
+					<BlockBox selected={selected} measure={measure}>
+						{up && <BlockBarPlace>{bar}</BlockBarPlace>}
+						{children}
+					</BlockBox>
 				</BlockFrameBox>
 			</FocusContext.Provider>
 		</HoldContext.Provider>
@@ -267,8 +282,11 @@ export function BlockBarMenu<Value extends string>({
 	options,
 	onChange,
 	named = false,
+	icon,
 }: {
 	label: string;
+	/** The button's own icon whatever is picked (★ for "the file shown first"); the current option's icon when left out. */
+	icon?: ReactNode;
 	value: Value;
 	options: { value: Value; label: string; icon?: ReactNode }[];
 	onChange: (value: Value) => void;
@@ -279,7 +297,7 @@ export function BlockBarMenu<Value extends string>({
 	return (
 		<DropdownMenu onOpenChange={(open) => hold(open)}>
 			<FloatingBarButton label={label} named={named} trigger={(button) => <DropdownMenuTrigger render={button} />}>
-				{current?.icon}
+				{icon ?? current?.icon}
 				{named && current?.label}
 			</FloatingBarButton>
 			<DropdownMenuContent>
@@ -375,7 +393,10 @@ export function BlockTitle({
 	label,
 	onChange,
 	onDone,
+	required = false,
 }: {
+	/** A name that cannot be empty (a tab's): left empty, it goes back to the name it had. */
+	required?: boolean;
 	value: string;
 	placeholder?: string;
 	label: string;
@@ -398,6 +419,12 @@ export function BlockTitle({
 			readOnly={!editable}
 			onFocus={() => {
 				before.current = value;
+			}}
+			onBlur={(event) => {
+				if (required && event.currentTarget.value.trim() === "") {
+					setText(before.current);
+					onChange(before.current);
+				}
 			}}
 			onChange={(event) => {
 				setText(event.target.value);

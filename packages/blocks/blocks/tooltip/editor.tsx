@@ -3,6 +3,7 @@
 import type { AdminMarkEditorProps } from "@monti-cms/admin";
 import {
 	Button,
+	FormFieldError,
 	Inline,
 	Label,
 	PopoverHeader,
@@ -24,7 +25,9 @@ export default function TooltipEditor({ attrs, apply }: AdminMarkEditorProps) {
 	const editing = typeof attrs?.text === "string";
 	const [text, setText] = useState(editing ? String(attrs?.text) : "");
 	const id = useId();
-	const put = () => (text.trim() === "" ? apply(attrs) : apply({ text: text.trim() }));
+	const [empty, setEmpty] = useState(false);
+	// An empty note is said at the press, under the field; the button stays (a dim button says nothing).
+	const put = () => (text.trim() === "" ? setEmpty(true) : apply({ text: text.trim() }));
 	return (
 		<Stack gap={12}>
 			<PopoverHeader>
@@ -39,7 +42,11 @@ export default function TooltipEditor({ attrs, apply }: AdminMarkEditorProps) {
 					autoFocus
 					value={text}
 					placeholder={say(words.placeholder)}
-					onChange={(event) => setText(event.target.value)}
+					aria-invalid={empty || undefined}
+					onChange={(event) => {
+						setText(event.target.value);
+						setEmpty(false);
+					}}
 					onKeyDown={(event) => {
 						if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
 							event.preventDefault();
@@ -47,12 +54,13 @@ export default function TooltipEditor({ attrs, apply }: AdminMarkEditorProps) {
 						}
 					}}
 				/>
+				{empty && <FormFieldError errors={[{ message: say(words.empty) }]} />}
 			</Stack>
 			<Inline gap={8} justify="end">
 				<Button variant="ghost" size="sm" onClick={() => apply(attrs)}>
 					{say(words.cancel)}
 				</Button>
-				<Button variant="primary" size="sm" disabled={text.trim() === ""} onClick={put}>
+				<Button variant="primary" size="sm" onClick={put}>
 					{say(editing ? words.saveEdit : words.save)}
 				</Button>
 			</Inline>
