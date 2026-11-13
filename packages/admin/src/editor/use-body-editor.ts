@@ -7,6 +7,7 @@ import { type Editor, useEditor } from "@tiptap/react";
 import { useMemo, useRef } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
+import { BlockPick } from "./block-pick";
 import type { BodyCatalogs, Catalog, CatalogBlock } from "./catalog";
 import { docFromEditor, docToEditor } from "./convert";
 import { Footnotes } from "./footnotes";
@@ -87,6 +88,7 @@ export function useBodyEditor({
 			Dropcursor.configure({ width: 2 }),
 			Gapcursor,
 			RangeOverWholeBlocks,
+			BlockPick,
 		];
 	}, [kit, blocks]);
 

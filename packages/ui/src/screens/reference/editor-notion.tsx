@@ -442,8 +442,8 @@ export function EditorNotionScreen() {
 		>
 			<EntryTitle>첫 번째 글</EntryTitle>
 			<Box position="relative">
-				{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (32px left, 3px down: the 24px handle centred on the 30px line) */}
-				<div style={{ position: "absolute", top: 3, left: -32 }}>
+				{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (28px left, 3px down: the 20 × 24 handle centred on the 30px line) */}
+				<div style={{ position: "absolute", top: 3, left: -28 }}>
 					<DropdownMenu open modal={false}>
 						<BlockHandle gripLabel="블록 메뉴" active trigger={(grip) => <DropdownMenuTrigger render={grip} />} />
 						<BlockMenu />
