@@ -75,7 +75,10 @@ describe("adding a key (flow 10, 01–06)", () => {
 		await expect.element(keyField()).toHaveAttribute("aria-invalid", "true");
 		expect((await list(story.loaded().site)).keys).toEqual([]);
 
+		// The line is about the key that was sent: typed over, it goes at once, before the form is sent again.
 		await userEvent.fill(keyField(), keys.sample.anthropic);
+		await expect.element(page.getByText("맞지 않는 키입니다.")).not.toBeInTheDocument();
+		await expect.element(keyField()).not.toHaveAttribute("aria-invalid");
 		await userEvent.click(button("추가"));
 		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
 		expect((await list(story.loaded().site)).keys).toMatchObject([{ name: "Anthropic", last4: "a1b2" }]);
@@ -689,6 +692,21 @@ describe("the tools' tabs", () => {
 		await userEvent.click(page.getByRole("link", { name: "API 키" }));
 		await expect.element(page.getByText("이번 달 1.24M 토큰")).toBeVisible();
 		expect(window.location.hash).toBe("#/tools/keys");
+	});
+
+	it("a tab opened with Enter keeps the keyboard's focus: it is on the same tab of the page that opened, not on the page; a pointer's press moves none", async () => {
+		await open(keys.Keys).run();
+		const tab = (name: string) => page.getByRole("link", { name });
+		await expect.element(tab("템플릿")).toBeVisible();
+		for (let presses = 0; presses < 60 && focused() !== tab("템플릿").element(); presses++) await userEvent.tab();
+		expect(focused()).toBe(tab("템플릿").element());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(button("템플릿 추가")).toBeVisible();
+		await expect.element(tab("템플릿")).toHaveAttribute("aria-current", "page");
+		await expect.element(tab("템플릿")).toHaveFocus();
+		await userEvent.click(tab("API 키"));
+		await expect.element(page.getByText("이번 달 1.24M 토큰")).toBeVisible();
+		expect(focused()).not.toBe(tab("API 키").element());
 	});
 
 	it("14-1 how much a key used reads short: as it is under a thousand, then in thousands, then in millions", () => {

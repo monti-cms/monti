@@ -42,7 +42,7 @@ function Textarea({
 			className={cn(
 				cn(
 					!action && FIELD_HOVER,
-					"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-default border-b bg-transparent text-monti-default outline-none transition-colors placeholder:text-monti-faint focus-visible:border-monti-contrast disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
+					"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-default border-b bg-transparent text-monti-default outline-none transition-colors placeholder:text-monti-faint focus-visible:border-monti-contrast disabled:pointer-events-none disabled:cursor-default disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
 					!action && FIELD_INSET,
 				),
 				// The design system's textarea sets lines 1.6 times its size; the type role's own line height comes first, so the rule follows it.

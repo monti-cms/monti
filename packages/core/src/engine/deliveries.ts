@@ -518,13 +518,15 @@ export async function sendDueDeliveries(
 }
 
 /**
- * How many deliveries are failed, since when (the oldest of them), and how many a person's "send again" is sending at this moment: one reading, so
- * the number and the day never disagree. The sidebar's row, and the banner over the log, show this number (doc 13).
+ * How many deliveries are failed, since when, and how many a person's "send again" is sending at this moment: one reading, so the number and
+ * the day never disagree. The sidebar's row, and the banner over the log, show this number (doc 13). "Since" is the day the oldest failed
+ * delivery's write was made, not the day its sending failed (decided while building, 2026-11-13): it says from which change on the receiver
+ * is behind, and it stays where it is however often the delivery is tried again.
  */
 export async function deliveryCounts(
 	db: Db,
 	now: Date,
-): Promise<{ failed: number; since: Date | null; sending: number }> {
+): Promise<{ failed: number; since: Date | null; sending: number; onTheWay: number }> {
 	const row = await db
 		.selectFrom("monti_delivery")
 		// Only what is still open, which the table's partial index holds: the deliveries that arrived, most of the table, are not read.
@@ -536,9 +538,19 @@ export async function deliveryCounts(
 				.count<string>("id")
 				.filterWhere((inner) => inner.and([inner("held_by", "is not", null), inner("sending_until", ">=", now)]))
 				.as("sending"),
+			// Not tried yet: queued by a write and sent once it has answered. Whoever shows the failed number looks again while any is.
+			eb.fn
+				.count<string>("id")
+				.filterWhere("state", "=", "pending")
+				.as("onTheWay"),
 		])
 		.executeTakeFirstOrThrow();
-	return { failed: Number(row.failed), since: row.since ?? null, sending: Number(row.sending) };
+	return {
+		failed: Number(row.failed),
+		since: row.since ?? null,
+		sending: Number(row.sending),
+		onTheWay: Number(row.onTheWay),
+	};
 }
 
 /**
@@ -576,7 +588,22 @@ export async function reserveFailedDeliveries(
 ): Promise<{ ids: string[]; remaining: number }> {
 	const { now, holder, run } = options;
 	const only = options.only ?? null;
+	// The batch is picked once, in a step of its own, and then updated. Picked inside the update's `where id in (…)`, the pick is a subquery
+	// the planner may run again for every row it looks at (a nested loop with no hash over it, as a database with no statistics yet may
+	// plan it): each run leaves out the rows this same statement has already updated and takes the next ones in their place, so the "batch"
+	// grew past its limit (23 failed deliveries, a limit of ten, 17 taken in one step on CI).
 	const reserved = await db
+		.with(
+			(cte) => cte("picked").materialized(),
+			() =>
+				retryable(db, ids, now, run, only)
+					.select("id")
+					.orderBy("created_at")
+					.orderBy("id")
+					.limit(RETRY_BATCH)
+					.forUpdate()
+					.skipLocked(),
+		)
 		.updateTable("monti_delivery")
 		.set({
 			state: "pending",
@@ -585,18 +612,8 @@ export async function reserveFailedDeliveries(
 			held_by: holder,
 			sending_until: new Date(now.getTime() + HOLD_MS),
 		})
-		.where(
-			"id",
-			"in",
-			retryable(db, ids, now, run, only)
-				.select("id")
-				.orderBy("created_at")
-				.orderBy("id")
-				.limit(RETRY_BATCH)
-				.forUpdate()
-				.skipLocked(),
-		)
-		.returning("id")
+		.where("id", "in", (eb) => eb.selectFrom("picked").select("picked.id"))
+		.returning("monti_delivery.id")
 		.execute();
 	if (ids !== "all" && reserved.length === 0 && run === null) {
 		const asked = await db

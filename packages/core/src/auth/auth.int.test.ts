@@ -234,7 +234,12 @@ describe("the frame's counts", () => {
 	it("15-2 the counts follow the schema's collections, with no screen code naming them", async () => {
 		const me = browser();
 		await me.call("auth.createFirstAdmin", first);
-		expect((await me.call("frame.counts")).body).toEqual({ collections: { post: 0 }, trash: 0, failedDeliveries: 0 });
+		expect((await me.call("frame.counts")).body).toEqual({
+			collections: { post: 0 },
+			trash: 0,
+			failedDeliveries: 0,
+			deliveriesOnTheWay: 0,
+		});
 		const withNotes = defineSchema({
 			locales: { source: "ko", list: [{ code: "ko", name: "한국어" }], prefix: "never" },
 			collections: { ...schema.collections, note: { ...schema.collections.post, path: "/notes/:slug" } },
@@ -260,6 +265,13 @@ describe("the frame's counts", () => {
 			collections: { post: 2 },
 			trash: 1,
 			failedDeliveries: failed.length,
+			deliveriesOnTheWay: 0,
+		});
+		// One not tried yet is on its way, and no failure.
+		await db.updateTable("monti_delivery").set({ state: "pending" }).where("id", "=", failed[0].id).execute();
+		expect((await me.call("frame.counts")).body).toMatchObject({
+			failedDeliveries: failed.length - 1,
+			deliveriesOnTheWay: 1,
 		});
 	});
 });

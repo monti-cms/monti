@@ -44,7 +44,7 @@ import { Add } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
-import { nextStop } from "../frame/focus-hand-off";
+import { holdsKeyboardFocus, nextStop } from "../frame/focus-hand-off";
 import { KeyWindow, type KeyWindowState, slotName } from "./key-dialog";
 
 /** Tokens as the list writes them: as they are under a thousand, then in thousands, then in millions with two decimals ("812", "312K", "1.24M"). */
@@ -436,9 +436,9 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 							onClick={(event) => {
 								if (!removing) return;
 								const id = "slot" in removing ? slotId(removing.slot) : removing.key.id;
-								// A click made with the keyboard counts no presses of a pointer (`detail` 0): only that has a focus to hand on.
+								// A press that held the keyboard's focus (the rule's one test, `holdsKeyboardFocus`): only that has a focus to hand on.
 								const at = rowIds.indexOf(id);
-								const byKeyboard = event.detail === 0;
+								const byKeyboard = holdsKeyboardFocus(event.currentTarget);
 								// A slot's row stays when its key goes (it turns to its "enter key" button): the focus stays on that row. A row that goes hands
 								// the focus to the row after it, or before it.
 								const stays = "slot" in removing && !removing.slot.orphan && canStore;

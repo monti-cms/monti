@@ -232,6 +232,11 @@ function KeyForm({
 	// that (a busy page) would send the form a second time.
 	const sending = useRef(false);
 
+	/**
+	 * A field's line under it is about the value that was sent: once that value is typed over, the line goes (decided while building,
+	 * 2026-11-13, for every form's line under a field). The others stay.
+	 */
+	const retyped = (field: Field) => setErrors(({ [field]: _gone, ...rest }) => rest);
 	const hint = suggested(service, address);
 	const fix = (field: Field, message: string) => {
 		setErrors({ [field]: message });
@@ -335,7 +340,10 @@ function KeyForm({
 			ref={inputs.secret}
 			id={ids.secret}
 			value={secret}
-			onChange={(event) => setSecret(event.target.value)}
+			onChange={(event) => {
+				setSecret(event.target.value);
+				retyped("secret");
+			}}
 			showLabel={t("apiKeys.show")}
 			hideLabel={t("apiKeys.hide")}
 			placeholder={
@@ -405,6 +413,7 @@ function KeyForm({
 							setAddress(event.target.value);
 							// Back at the stored address, the key need not be entered again after all.
 							if (slot && event.target.value.trim() === (slot.key?.baseUrl ?? "")) setAgain(false);
+							retyped("address");
 							if (!editing && !named) setName(suggested(service, event.target.value).name);
 						}}
 						aria-invalid={errors.address !== undefined || undefined}
@@ -426,6 +435,7 @@ function KeyForm({
 						onChange={(event) => {
 							setName(event.target.value);
 							setNamed(true);
+							retyped("name");
 						}}
 						aria-invalid={errors.name !== undefined || undefined}
 						autoFocus={editing?.readable}

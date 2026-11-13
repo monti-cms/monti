@@ -115,6 +115,10 @@ function SignIn({ state, denied, onSignedIn }: { state: AuthState; denied?: stri
 		return () => clearTimeout(timer);
 	}, [locked, signIn.clear]);
 	const passwordError = key === "auth.locked" || key === "auth.wrong" ? t(key) : undefined;
+	// "Wrong" is about what was sent: typed over, the line goes. A lock is about the minute, and stays.
+	const retyped = () => {
+		if (key === "auth.wrong") signIn.clear();
+	};
 	const other = signIn.refusal !== null && passwordError === undefined;
 	const submit = async (event: FormEvent) => {
 		event.preventDefault();
@@ -135,7 +139,10 @@ function SignIn({ state, denied, onSignedIn }: { state: AuthState; denied?: stri
 										type="email"
 										autoComplete="username"
 										value={email}
-										onChange={(event) => setEmail(event.target.value)}
+										onChange={(event) => {
+											setEmail(event.target.value);
+											retyped();
+										}}
 									/>
 									<FormFieldError reserve />
 								</FormField>
@@ -148,7 +155,10 @@ function SignIn({ state, denied, onSignedIn }: { state: AuthState; denied?: stri
 										id="password"
 										autoComplete="current-password"
 										value={password}
-										onChange={(event) => setPassword(event.target.value)}
+										onChange={(event) => {
+											setPassword(event.target.value);
+											retyped();
+										}}
 										aria-invalid={passwordError ? true : undefined}
 									/>
 									<FormFieldError reserve>{passwordError}</FormFieldError>
@@ -194,6 +204,10 @@ function FirstAdmin({ onMade, onClosed }: { onMade: () => void; onClosed: () => 
 	const [password, setPassword] = useState("");
 	const [confirm, setConfirm] = useState("");
 	const [shown, setShown] = useState<{ email?: string; password?: string; confirm?: string; form?: string }>({});
+	/** A field's line is about the value that was sent: typed over, it goes (its place stays, `reserve`). */
+	const retyped = (field: "email" | "password" | "confirm") =>
+		// "The passwords differ" stands under the second and is about both.
+		setShown(({ [field]: _gone, ...rest }) => (field === "password" ? { ...rest, confirm: undefined } : rest));
 	const submit = async (event: FormEvent) => {
 		event.preventDefault();
 		// Both rules show at once, before anything is sent; the server checks them again.
@@ -225,7 +239,10 @@ function FirstAdmin({ onMade, onClosed }: { onMade: () => void; onClosed: () => 
 								type="email"
 								autoComplete="username"
 								value={email}
-								onChange={(event) => setEmail(event.target.value)}
+								onChange={(event) => {
+									setEmail(event.target.value);
+									retyped("email");
+								}}
 								aria-invalid={shown.email ? true : undefined}
 							/>
 							<FormFieldError reserve>{shown.email}</FormFieldError>
@@ -239,7 +256,10 @@ function FirstAdmin({ onMade, onClosed }: { onMade: () => void; onClosed: () => 
 								id="password"
 								autoComplete="new-password"
 								value={password}
-								onChange={(event) => setPassword(event.target.value)}
+								onChange={(event) => {
+									setPassword(event.target.value);
+									retyped("password");
+								}}
 								aria-invalid={shown.password ? true : undefined}
 							/>
 							<FormFieldError reserve hint={t("login.passwordHint", { min: MIN_PASSWORD })}>
@@ -255,7 +275,10 @@ function FirstAdmin({ onMade, onClosed }: { onMade: () => void; onClosed: () => 
 								id="confirm"
 								autoComplete="new-password"
 								value={confirm}
-								onChange={(event) => setConfirm(event.target.value)}
+								onChange={(event) => {
+									setConfirm(event.target.value);
+									retyped("confirm");
+								}}
 								aria-invalid={shown.confirm ? true : undefined}
 							/>
 							<FormFieldError reserve>{shown.confirm}</FormFieldError>

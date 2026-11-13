@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
+import { useFocusHandOff } from "../frame/focus-hand-off";
 
 /** A plugin's tool page: which plugin, and the page's id there. */
 export type ToolPageRef = { plugin: string; id: string };
@@ -25,6 +26,9 @@ function usePluginPages(): (ToolPageRef & { label: string })[] {
 /**
  * The tools' tab row (tools.md, the tools frame): one tab is one page, and each is a link with its own address. The templates (unless they
  * are turned off), the keys, then the plugins' pages. With one tab there is no row.
+ *
+ * A tab pressed with the keyboard opens another page, which draws this row anew: the focus the pressed tab held goes to the same tab in the
+ * new row, now the open one, as on a page whose tab row stays (settings). Decided while building, 2026-11-13.
  */
 export function ToolsTabs({
 	current,
@@ -35,10 +39,18 @@ export function ToolsTabs({
 }) {
 	const { t, templates } = useAdmin();
 	const pages = usePluginPages();
+	const handOff = useFocusHandOff(
+		() => () =>
+			// A frame on: the page that takes this one's place draws its row with it.
+			requestAnimationFrame(() => {
+				if (document.activeElement !== document.body) return;
+				document.querySelector<HTMLElement>('[data-slot=tab-links] [aria-current="page"]')?.focus();
+			}),
+	);
 	if (!templates && pages.length === 0) return null;
 	return (
 		<PageToolbar inset>
-			<TabLinks variant="toolbar">
+			<TabLinks ref={handOff} variant="toolbar">
 				{templates ? (
 					<TabLink current={current === "templates"} {...linkTo({ screen: "place", place: "tools" }, go)}>
 						{t("tools.templates")}
