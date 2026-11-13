@@ -108,7 +108,12 @@ export function useBlock() {
 			// The code block a code link of the text is pointed at (doc 17): a block that hides it (a code explorer's file) shows it.
 			const pointed = codeToolsKey.getState(current.state)?.pointed?.block ?? null;
 			// Picked whole among several blocks (T80): the handle and its menu act on the pick, not the block's own tool row.
-			const picked = pos !== undefined && (pickedBlocks(current.state)?.includes(pos) ?? false);
+			// A block inside a picked one (a callout in picked columns) is picked with it.
+			const picked =
+				pos !== undefined &&
+				(pickedBlocks(current.state) ?? []).some(
+					(at) => pos >= at && pos < at + (current.state.doc.nodeAt(at)?.nodeSize ?? 0),
+				);
 			return { editable: current.isEditable, inside, childAt, pointed, picked };
 		},
 	});

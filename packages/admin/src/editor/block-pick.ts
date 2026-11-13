@@ -93,9 +93,20 @@ export function blocksInBox(view: EditorView, top: number, bottom: number): numb
 	);
 }
 
+/** The block a pick takes for the block at `pos`: the outermost one holding it that a pick does not read through (a quote and a list are read through). */
+export function wholeOf(doc: EditorNode, pos: number): number {
+	const $pos = doc.resolve(pos);
+	for (let depth = 1; depth <= $pos.depth; depth++)
+		if (!SEE_THROUGH.has($pos.node(depth).type.name)) return $pos.before(depth);
+	return pos;
+}
+
 /** The blocks from one block to another, both included, in the body's order (Shift on a handle). */
 export function blocksBetween(view: EditorView, a: number, b: number): number[] {
 	const { doc } = view.state;
+	// An end inside a site block that holds blocks (a callout, tabs) is that whole block, as a box over it is.
+	a = wholeOf(doc, a);
+	b = wholeOf(doc, b);
 	const from = Math.min(a, b);
 	const endOf = (pos: number) => pos + (doc.nodeAt(pos)?.nodeSize ?? 0);
 	const to = Math.max(endOf(a), endOf(b));

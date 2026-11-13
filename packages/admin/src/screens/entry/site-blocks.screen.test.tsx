@@ -2,7 +2,7 @@ import type { ScriptedProvider } from "@monti-cms/ai";
 import type { Block, Doc } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { caretAfter, dragPath, pickWords } from "../../../../../testing/input";
+import { caretAfter, dragPath, pickWords, pointerPath } from "../../../../../testing/input";
 import { scene } from "../../../test/scene";
 import { assisted } from "../../assistant/assistant.stories";
 import { addFile } from "../media/media.stories";
@@ -334,5 +334,29 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		stored = await kept(made);
 		expect(find(stored, "tabs")).toBeUndefined();
 		expect(JSON.stringify(stored)).not.toContain("pnpm add monti");
+	});
+
+	it("18-7 Shift with a press on the handle of a block inside a callout picks the whole callout, from the caret's block to it", async () => {
+		const made = on();
+		await made.run();
+		await caretAfter(body().element(), "하나씩");
+		// The handle of the callout's own paragraph: the pointer over the words, then into the margin.
+		const words = body().getByText("콜아웃 본문").element().getBoundingClientRect();
+		await pointerPath([
+			{ x: words.left + 40, y: words.top + 8 },
+			{ x: words.left - 14, y: words.top + 12 },
+		]);
+		const handle = page.getByRole("button", { name: "블록 메뉴" });
+		await expect.element(handle).toBeVisible();
+		await userEvent.click(handle, { modifiers: ["Shift"] });
+		const picked = () => [...body().element().querySelectorAll<HTMLElement>("[data-picked]")];
+		await expect.poll(() => picked().length).toBe(2);
+		expect(
+			picked()[1]?.querySelector('[data-block="callout"]') ?? picked()[1]?.closest('[data-block="callout"]'),
+		).not.toBeNull();
+		await userEvent.keyboard("{Backspace}");
+		const stored = await kept(made);
+		expect(find(stored, "callout")).toBeUndefined();
+		expect(find(stored, "s1")).toBeUndefined();
 	});
 });
