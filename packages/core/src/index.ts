@@ -28,6 +28,7 @@ export {
 	type AnyBlockDefinition,
 	type BlockCheck,
 	type BlockDefinition,
+	type BlockStarter,
 	type BodyProblem,
 	checkDoc,
 	coreBlocks,

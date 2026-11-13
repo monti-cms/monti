@@ -298,6 +298,92 @@ test.describe("the preview", () => {
 		);
 		expect(away.status()).toBe(400);
 	});
+
+	test("18-2 every block and mark of the example's monti/blocks is drawn on the published page, with its look and no script for what it holds", async ({
+		admin,
+	}) => {
+		const title = unique("블록이 든 글");
+		const p = (id: string, text: string) => ({ id, type: "paragraph", content: [{ type: "text", text }] });
+		const tab = (id: string, label: string, text: string) => ({
+			id,
+			type: "tab",
+			attrs: { label },
+			children: [p(`${id}p`, text)],
+		});
+		const post = await draft(admin, title, [
+			{
+				id: "b1",
+				type: "callout",
+				attrs: { tone: "warning", title: "알아 두세요" },
+				children: [p("b1p", "콜아웃 본문")],
+			},
+			{ id: "b2", type: "tabs", children: [tab("t1", "npm", "npm 본문"), tab("t2", "pnpm", "pnpm 본문")] },
+			{
+				id: "b3",
+				type: "columns",
+				attrs: { widths: "60,40" },
+				children: [
+					{ id: "c1", type: "column", children: [p("c1p", "왼쪽")] },
+					{ id: "c2", type: "column", children: [p("c2p", "오른쪽")] },
+				],
+			},
+			{ id: "b4", type: "collapsible", attrs: { title: "자세히" }, children: [p("b4p", "접힌 본문")] },
+			{
+				id: "b5",
+				type: "codeExplorer",
+				children: [
+					{
+						id: "f1",
+						type: "codeBlock",
+						attrs: { language: "ts", title: "src/app.ts" },
+						content: [{ type: "text", text: "export const app = 1;" }],
+					},
+				],
+			},
+			{ id: "b6", type: "math", attrs: { source: "a^2 + b^2 = c^2" } },
+			{ id: "b7", type: "mermaid", attrs: { source: "flowchart LR\n  A --> B" } },
+			{
+				id: "b8",
+				type: "chart",
+				attrs: { source: "chart bar\nx month\nseries views | 방문 | chart-1\n\ndata\nmonth | views\nJan | 1200" },
+			},
+			{
+				id: "b9",
+				type: "paragraph",
+				content: [
+					{ type: "text", text: "빨간", marks: [{ type: "color", color: "red" }] },
+					{ type: "text", text: "RSC", marks: [{ type: "tooltip", text: "React Server Components" }] },
+				],
+			},
+		]);
+		await publish(admin, post.id);
+		const page = (await visit(admin, post.path)).text;
+		for (const look of [
+			"callout",
+			"tabs",
+			"columns",
+			"collapsible",
+			"code-explorer",
+			"math",
+			"mermaid",
+			"chart",
+			"tooltip",
+			"color",
+		])
+			expect(page).toContain(`monti-block-${look}`);
+		// What a tab or a closed part holds is in the page's HTML, not only after a script.
+		for (const words of [
+			"콜아웃 본문",
+			"pnpm 본문",
+			"오른쪽",
+			"접힌 본문",
+			"export const app = 1;",
+			"React Server Components",
+		])
+			expect(page).toContain(words);
+		expect(page).toContain("<math");
+		expect(page).toContain('<svg class="monti-block-chart-frame"');
+	});
 });
 
 raw.describe("the dev server and the live site", () => {

@@ -1,7 +1,6 @@
 import { PreviewBar } from "@monti-cms/next";
 import type { ReactNode } from "react";
 import "../app/site.css";
-import "../monti/blocks/blocks.css";
 
 /**
  * The frame of every page of the site, in one language: the document's language, the site's styles (under `.site`, so they do not reach the

@@ -1,58 +1,65 @@
 {
-	"$comment": "What `monti add` copies (doc 18): each item is a folder of blocks/, whose definition file is <folder>/<folder>.ts and exports the names in `blocks` or `marks`. `css` is the item's stylesheet, `needs` the packages the site installs for it.",
-	"base": "base.css",
+	"$comment": "What `monti add` copies (doc 18): each item is a folder of blocks/ whose index.ts exports the names in `blocks` or `marks`. `needs` are the packages the site installs for it.",
 	"items": [
 		{
 			"name": "callout",
 			"blocks": ["callout"],
-			"css": "callout.css",
 			"needs": [],
 			"summary": "A box for a note, a tip or a warning"
 		},
 		{
 			"name": "tabs",
 			"blocks": ["tabs", "tab"],
-			"css": "tabs.css",
 			"needs": [],
 			"summary": "The same thing a few ways, one at a time"
 		},
 		{
 			"name": "columns",
 			"blocks": ["columns", "column"],
-			"css": "columns.css",
 			"needs": [],
 			"summary": "Blocks side by side"
 		},
 		{
 			"name": "collapsible",
 			"blocks": ["collapsible"],
-			"css": "collapsible.css",
 			"needs": [],
 			"summary": "A part a reader opens by its title"
 		},
 		{
 			"name": "code-explorer",
 			"blocks": ["codeExplorer"],
-			"css": "code-explorer.css",
 			"needs": [],
 			"summary": "Files of a project as a tree with their code"
 		},
-		{ "name": "math", "blocks": ["math"], "css": "math.css", "needs": ["katex"], "summary": "A formula in LaTeX" },
+		{
+			"name": "math",
+			"blocks": ["math"],
+			"needs": ["katex"],
+			"summary": "A formula in LaTeX"
+		},
 		{
 			"name": "mermaid",
 			"blocks": ["mermaid"],
-			"css": "mermaid.css",
 			"needs": ["mermaid"],
 			"summary": "A Mermaid diagram"
 		},
 		{
 			"name": "chart",
 			"blocks": ["chart"],
-			"css": "chart.css",
 			"needs": [],
 			"summary": "A table's numbers as a chart"
 		},
-		{ "name": "tooltip", "marks": ["tooltip"], "css": "tooltip.css", "needs": [], "summary": "A note on some words" },
-		{ "name": "color", "marks": ["color"], "css": "color.css", "needs": [], "summary": "Words in a colour" }
+		{
+			"name": "tooltip",
+			"marks": ["tooltip"],
+			"needs": [],
+			"summary": "A note on some words"
+		},
+		{
+			"name": "color",
+			"marks": ["color"],
+			"needs": [],
+			"summary": "Words in a colour"
+		}
 	]
 }

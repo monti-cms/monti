@@ -1,10 +1,9 @@
-import type * as React from "react";
-// The blocks' own looks (the site's, not the admin's): the drawings below are the package's components as a site draws them.
-import "@monti-cms/blocks/looks";
+import { style as calloutStyle } from "@monti-cms/blocks/callout/style.ts";
 import { Chart } from "@monti-cms/blocks/chart/site";
 import { MathBlock } from "@monti-cms/blocks/math/site";
 import { Mermaid } from "@monti-cms/blocks/mermaid/site";
 import type { Block as BodyBlockValue } from "@monti-cms/core";
+import type * as React from "react";
 import { Grip } from "../../grip";
 import {
 	Add,
@@ -153,6 +152,9 @@ function CalloutBox({
 	const kind = KINDS.find((each) => each.value === tone) ?? KINDS[0];
 	return (
 		<div className="monti-block-callout" data-tone={tone} role="note">
+			<style href="monti-block-callout" precedence="monti-blocks">
+				{calloutStyle}
+			</style>
 			<div className="monti-block-callout-title">
 				<Inline gap={8}>
 					<kind.Icon aria-hidden />
@@ -562,16 +564,16 @@ const CHART_ROWS = [
 	["3월", "2400", "610"],
 ];
 /** The chart's drawing: the package's chart component (SVG, drawn on the server), from the numbers the text or the table holds. */
-const chartDrawing = (
-	<Chart
-		block={blockOf("chart", { kind: "bar", title: "월별 방문" }, [
-			{ id: "ref-table", type: "table", attrs: { header: true, rows: CHART_ROWS } },
-		])}
-		attrs={{ kind: "bar", title: "월별 방문" }}
-		locale="ko"
-		seeData={false}
-	/>
-);
+const CHART_SOURCE = [
+	"chart bar",
+	"x month",
+	"series views | 방문 | chart-1",
+	"",
+	"data",
+	"month | views",
+	...CHART_ROWS.slice(1).map((row) => `${row[0]} | ${row[1]}`),
+].join("\n");
+const chartDrawing = <Chart block={blockOf("chart", { source: CHART_SOURCE })} attrs={{ source: CHART_SOURCE }} />;
 
 /** The chart as the old block wrote it: its own text, with the drawing over it (option A); `error`: a line that does not read. */
 export function ChartTextScreen({ error = false }: { error?: boolean }) {

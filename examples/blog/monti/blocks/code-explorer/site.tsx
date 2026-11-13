@@ -2,15 +2,9 @@ import type { Block } from "@monti-cms/core";
 import type { BlockProps } from "@monti-cms/core/render";
 import { Children, type ReactNode } from "react";
 import { CodeExplorerView } from "./code-explorer.client";
+import { style } from "./style";
 import { buildTree, filesOf, parsePath } from "./tree";
-
-/** The explorer's own words, in the entry's language (English when the site gives none). The site's own: change them. */
-const WORDS: Record<string, { files: string; toggle: string }> = {
-	en: { files: "Files", toggle: "Show or hide the file list" },
-	ko: { files: "파일", toggle: "파일 목록 열기 또는 닫기" },
-	ja: { files: "ファイル", toggle: "ファイル一覧を開閉" },
-};
-const wordsIn = (locale?: string) => WORDS[(locale ?? "").toLowerCase().split(/[-_]/)[0] ?? ""] ?? WORDS.en;
+import { wordsIn } from "./words";
 
 /** A child that is a file: a code block with a path in its `title`, and whether it has code. */
 function fileOf(block: Block): { path: string; code: boolean } | undefined {
@@ -31,7 +25,7 @@ function fileOf(block: Block): { path: string; code: boolean } | undefined {
  *   path taken already (the first wins) or both a file and a folder, and a folder entry with code. One with no code holds nothing and is dropped.
  * - With no code block that has a path, the children are drawn as they are.
  */
-export function CodeExplorer({ block, attrs, locale, children }: BlockProps & { children?: ReactNode }) {
+function CodeExplorerDrawing({ block, attrs, locale, children }: BlockProps & { children?: ReactNode }) {
 	const items = Children.toArray(children);
 	const files = (block.children ?? []).map(fileOf);
 	const entries = files.flatMap((file, index) => (file ? [{ item: index, ...file }] : []));
@@ -50,6 +44,18 @@ export function CodeExplorer({ block, attrs, locale, children }: BlockProps & { 
 		<>
 			<CodeExplorerView tree={nodes} panels={panels} initial={initial} labels={wordsIn(locale)} />
 			{rest}
+		</>
+	);
+}
+
+/** CodeExplorer with its look (`style.ts`): React puts it into the page once, however many of the block there are. */
+export function CodeExplorer(props: Parameters<typeof CodeExplorerDrawing>[0]) {
+	return (
+		<>
+			<style href="monti-block-code-explorer" precedence="monti-blocks">
+				{style}
+			</style>
+			<CodeExplorerDrawing {...props} />
 		</>
 	);
 }

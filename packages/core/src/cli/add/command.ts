@@ -5,8 +5,8 @@ import { type Ask, Cancelled, terminalAsk } from "../prompt";
 import { adminFolder, configFileOf, fileUpward, installedPackage, readJson } from "../site";
 
 /** One thing `monti add` copies (the blocks package's `registry.json`, doc 18). */
-type Item = { name: string; blocks?: string[]; marks?: string[]; css: string; needs: string[]; summary: string };
-type Registry = { base: string; items: Item[] };
+type Item = { name: string; blocks?: string[]; marks?: string[]; needs: string[]; summary: string };
+type Registry = { items: Item[] };
 
 export type AddOptions = {
 	cwd: string;
@@ -108,7 +108,7 @@ function withEntries(source: string, list: "blocks" | "marks", names: string[]):
 type Wiring = { done: string[]; byHand: string[] };
 
 /**
- * The site's own files that need the blocks: the config, the admin page, what draws `<html>` (the stylesheet) and the calls of `renderDocument`. Each
+ * The site's own files that need the blocks: the config, the admin page and the calls of `renderDocument` (each block loads its own look). Each
  * is changed only where it lacks the blocks, and only by adding: an import, a value. A file this cannot change surely is left alone, and its line is
  * said for a person to add.
  */
@@ -118,7 +118,6 @@ function wire(cwd: string): Wiring {
 	const blocksDir = path.join(cwd, BLOCKS_DIR);
 	const index = path.join(blocksDir, "index.ts");
 	const admin = path.join(blocksDir, "admin.ts");
-	const css = path.join(blocksDir, "blocks.css");
 	const write = (file: string, text: string, what: string) => {
 		writeFileSync(file, text);
 		done.push(`${path.relative(cwd, file)} (${what})`);
@@ -169,18 +168,6 @@ function wire(cwd: string): Wiring {
 			write(page, withImport(edited, `import { adminBlocks } from "${importPath(page, admin)}";`), "blocks");
 		}
 	}
-
-	// What draws the pages' <html> (the root layouts, or a frame they share; the admin's own too): the blocks' stylesheet, under every page.
-	const frames = sourceFiles(cwd, cwd).filter(
-		(file) => /\.(tsx|jsx)$/.test(file) && /<html\b/.test(readFileSync(file, "utf8")),
-	);
-	for (const frame of frames) {
-		const source = readFileSync(frame, "utf8");
-		if (source.includes("blocks.css")) continue;
-		write(frame, withImport(source, `import "${importPath(frame, css)}";`), "blocks.css");
-	}
-	if (frames.length === 0)
-		byHand.push(`What draws the site's <html>: import "${BLOCKS_DIR.split(path.sep).join("/")}/blocks.css"`);
 
 	// The calls of renderDocument: blocks, marks in their options
 	for (const file of sourceFiles(cwd, cwd)) {
@@ -266,10 +253,6 @@ export async function add(options: AddOptions): Promise<number> {
 	const index = path.join(target, "index.ts");
 	if (!existsSync(index)) writeFileSync(index, INDEX);
 	if (!existsSync(path.join(target, "admin.ts"))) writeFileSync(path.join(target, "admin.ts"), ADMIN);
-	if (!existsSync(path.join(target, registry.base)))
-		cpSync(path.join(source, registry.base), path.join(target, registry.base));
-	const css = path.join(target, "blocks.css");
-	if (!existsSync(css)) writeFileSync(css, `@import "./${registry.base}";\n`);
 
 	const added: Item[] = [];
 	for (const name of [...new Set(names)]) {
@@ -287,7 +270,7 @@ export async function add(options: AddOptions): Promise<number> {
 		});
 		let text = readFileSync(index, "utf8");
 		const exported = [...(item.blocks ?? []), ...(item.marks ?? [])];
-		text = withImport(text, `import { ${exported.join(", ")} } from "./${name}/${name}";`);
+		text = withImport(text, `import { ${exported.join(", ")} } from "./${name}";`);
 		const withBlocks = item.blocks?.length ? withEntries(text, "blocks", item.blocks) : text;
 		const withMarks = withBlocks && item.marks?.length ? withEntries(withBlocks, "marks", item.marks) : withBlocks;
 		if (withMarks === null) {
@@ -296,9 +279,6 @@ export async function add(options: AddOptions): Promise<number> {
 			);
 			writeFileSync(index, text);
 		} else writeFileSync(index, withMarks);
-		const stylesheet = readFileSync(css, "utf8");
-		const line = `@import "./${name}/${item.css}";`;
-		if (!stylesheet.includes(line)) writeFileSync(css, `${stylesheet.replace(/\n*$/, "\n")}${line}\n`);
 		added.push(item);
 		out(`Added ${name}: ${path.join(BLOCKS_DIR, name)}${path.sep}`);
 	}

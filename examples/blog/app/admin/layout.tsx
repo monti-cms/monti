@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import "../../monti/blocks/blocks.css";
 
 export const metadata = { title: "Monti" };
 

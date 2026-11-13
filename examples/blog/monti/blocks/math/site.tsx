@@ -1,10 +1,11 @@
 import type { BlockProps } from "@monti-cms/core/render";
 import katex from "katex";
+import { style } from "./style";
 
 /** A formula drawn by KaTeX, or the reason it is not one. */
 export function drawFormula(source: string): { html: string } | { error: string } {
 	try {
-		return { html: katex.renderToString(source, { displayMode: true, throwOnError: true, output: "htmlAndMathml" }) };
+		return { html: katex.renderToString(source, { displayMode: true, throwOnError: true, output: "mathml" }) };
 	} catch (error) {
 		return { error: error instanceof Error ? error.message.replace(/^KaTeX parse error: /, "") : String(error) };
 	}
@@ -14,7 +15,7 @@ export function drawFormula(source: string): { html: string } | { error: string 
  * A formula (` ```math `): drawn on the server by KaTeX, so the page needs no script for it. One that does not read stays its source, with the reason
  * under it. KaTeX's own stylesheet comes with `math.css`.
  */
-export function MathBlock({ attrs }: BlockProps) {
+function MathBlockDrawing({ attrs }: BlockProps) {
 	const source = typeof attrs.source === "string" ? attrs.source : "";
 	if (source.trim() === "") return null;
 	const drawn = drawFormula(source);
@@ -28,5 +29,17 @@ export function MathBlock({ attrs }: BlockProps) {
 			</pre>
 			<figcaption className="monti-block-math-error">{drawn.error}</figcaption>
 		</figure>
+	);
+}
+
+/** MathBlock with its look (`style.ts`): React puts it into the page once, however many of the block there are. */
+export function MathBlock(props: Parameters<typeof MathBlockDrawing>[0]) {
+	return (
+		<>
+			<style href="monti-block-math" precedence="monti-blocks">
+				{style}
+			</style>
+			<MathBlockDrawing {...props} />
+		</>
 	);
 }

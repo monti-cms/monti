@@ -49,10 +49,24 @@ export type BlockDefinition<Component = unknown> = {
 	 * code being its `attr` (doc 18, MDX).
 	 */
 	fence?: { language: string; attr: string };
+	/**
+	 * What the block is when put in from the "/" menu, in the admin's language (doc 18): its first attrs and children (a chart's sample, two tabs). Without
+	 * one it comes empty, and a block whose attrs are required is not offered there.
+	 */
+	starter?: (language: "ko" | "en") => BlockStarter;
 	Site?: Component;
 	/** The editor's view; the site's component with editable children when left out. */
 	Editor?: Component;
+	/** Its mark in the "/" menu (a 16px icon). */
+	Icon?: Component;
 	check?: (block: Block) => BlockCheck[];
+};
+
+/** A block as the "/" menu puts it in: its attrs, its words, its children, with no ids (they are given when it goes in). */
+export type BlockStarter = {
+	attrs?: Record<string, unknown>;
+	content?: Block["content"];
+	children?: ({ type: string } & BlockStarter)[];
 };
 
 export type AnyBlockDefinition = BlockDefinition<unknown>;

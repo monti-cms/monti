@@ -1,20 +1,11 @@
 import type { BlockProps } from "@monti-cms/core/render";
-import type { ReactNode } from "react";
-import { type ChartData, type ChartKind, chartData, KINDS } from "./data";
-
-/** The chart's own words, in the entry's language (English when the site gives none). The site's own: change them. */
-const WORDS: Record<string, { data: string }> = {
-	en: { data: "See the data" },
-	ko: { data: "자료 보기" },
-	ja: { data: "データを見る" },
-};
-const wordsIn = (locale?: string) => WORDS[(locale ?? "").toLowerCase().split(/[-_]/)[0] ?? ""] ?? WORDS.en;
+import { normalizeChartDsl, parseChartDsl } from "./dsl";
+import { style } from "./style";
+import { type CartesianChartSpec, chartColor, type NormalizedChartSpec, type PieChartSpec } from "./types";
 
 const W = 640;
 const H = 320;
-const PAD = { top: 16, right: 16, bottom: 36, left: 48 };
-/** A series' colour: the site's `--chart-1` … `--chart-5`, again from the first after the fifth. */
-const colour = (index: number) => `var(--chart-${(index % 5) + 1})`;
+const PAD = { top: 20, right: 16, bottom: 36, left: 48 };
 
 /** Round steps for the value axis: 1, 2 or 5 times a power of ten, about five of them from 0 (or the lowest value below 0) to the highest. */
 function ticks(low: number, high: number): number[] {
@@ -28,27 +19,46 @@ function ticks(low: number, high: number): number[] {
 	return out;
 }
 
-function Cartesian({ data, kind }: { data: ChartData; kind: Exclude<ChartKind, "pie"> }) {
-	const values = data.series.flatMap((series) => series.values).filter((value): value is number => value !== null);
-	const marks = ticks(Math.min(...values, 0), Math.max(...values, 0));
-	const low = marks[0] ?? 0;
-	const high = marks.at(-1) ?? 1;
-	const plotW = W - PAD.left - PAD.right;
+const numberOf = (value: unknown) => (typeof value === "number" ? value : Number(value));
+
+/** Bars, lines or areas of each series over the x field's points, with the options the chart's text gives (values, grid, y-axis, y-range). */
+function Cartesian({ spec }: { spec: CartesianChartSpec }) {
+	const values = spec.data.flatMap((row) => spec.series.map((series) => numberOf(row[series.key])));
+	const marks = spec.options.yRange
+		? ticks(spec.options.yRange.min, spec.options.yRange.max).filter(
+				(mark) => mark >= (spec.options.yRange?.min ?? 0) && mark <= (spec.options.yRange?.max ?? 0),
+			)
+		: ticks(Math.min(...values, 0), Math.max(...values, 0));
+	const low = spec.options.yRange?.min ?? marks[0] ?? 0;
+	const high = spec.options.yRange?.max ?? marks.at(-1) ?? 1;
+	const left = spec.options.hideYAxis ? 12 : PAD.left;
+	const plotW = W - left - PAD.right;
 	const plotH = H - PAD.top - PAD.bottom;
-	const y = (value: number) => PAD.top + plotH - ((value - low) / (high - low || 1)) * plotH;
-	const band = plotW / Math.max(1, data.categories.length);
-	const x = (index: number) => PAD.left + band * index + band / 2;
+	const y = (value: number) =>
+		PAD.top + plotH - ((Math.min(Math.max(value, low), high) - low) / (high - low || 1)) * plotH;
+	const band = plotW / Math.max(1, spec.data.length);
+	const x = (index: number) => left + band * index + band / 2;
+	const label = (value: number, px: number, py: number) =>
+		spec.options.showValues ? (
+			<text className="monti-block-chart-value" x={px} y={py - 6} textAnchor="middle">
+				{value.toLocaleString()}
+			</text>
+		) : null;
 	return (
 		<>
 			{marks.map((mark) => (
 				<g key={mark}>
-					<line className="monti-block-chart-grid" x1={PAD.left} x2={W - PAD.right} y1={y(mark)} y2={y(mark)} />
-					<text className="monti-block-chart-tick" x={PAD.left - 8} y={y(mark) + 4} textAnchor="end">
-						{mark.toLocaleString()}
-					</text>
+					{spec.options.hideGrid ? null : (
+						<line className="monti-block-chart-grid" x1={left} x2={W - PAD.right} y1={y(mark)} y2={y(mark)} />
+					)}
+					{spec.options.hideYAxis ? null : (
+						<text className="monti-block-chart-tick" x={left - 8} y={y(mark) + 4} textAnchor="end">
+							{mark.toLocaleString()}
+						</text>
+					)}
 				</g>
 			))}
-			{data.categories.map((name, index) => (
+			{spec.data.map((row, index) => (
 				<text
 					// biome-ignore lint/suspicious/noArrayIndexKey: two points may share a name; they are told apart by place
 					key={index}
@@ -57,63 +67,60 @@ function Cartesian({ data, kind }: { data: ChartData; kind: Exclude<ChartKind, "
 					y={H - PAD.bottom + 18}
 					textAnchor="middle"
 				>
-					{name}
+					{String(row[spec.xKey] ?? "")}
 				</text>
 			))}
-			{kind === "bar"
-				? data.series.map((series, at) => {
-						const width = (band * 0.7) / data.series.length;
-						return series.values.map((value, index) =>
-							value === null ? null : (
-								<rect
-									// biome-ignore lint/suspicious/noArrayIndexKey: one bar per series and point, in the table's order
-									key={`${at}:${index}`}
-									x={PAD.left + band * index + band * 0.15 + width * at}
-									y={Math.min(y(value), y(0))}
-									width={Math.max(1, width - 2)}
-									height={Math.abs(y(value) - y(0))}
-									rx={2}
-									fill={colour(at)}
-								>
-									<title>{`${series.name} · ${data.categories[index] ?? ""}: ${value.toLocaleString()}`}</title>
-								</rect>
-							),
-						);
-					})
-				: data.series.map((series, at) => {
-						// A gap (an empty or not-a-number cell) breaks the line.
-						const runs: [number, number][][] = [[]];
-						series.values.forEach((value, index) => {
-							if (value === null) runs.push([]);
-							else runs.at(-1)?.push([x(index), y(value)]);
+			{spec.type === "bar"
+				? spec.series.map((series, at) => {
+						const width = (band * 0.7) / spec.series.length;
+						return spec.data.map((row, index) => {
+							const value = numberOf(row[series.key]);
+							const px = left + band * index + band * 0.15 + width * at;
+							return (
+								<g key={`${series.key}:${index}`}>
+									<rect
+										x={px}
+										y={Math.min(y(value), y(0))}
+										width={Math.max(1, width - 2)}
+										height={Math.abs(y(value) - y(0))}
+										rx={4}
+										fill={chartColor(series.colorToken)}
+									>
+										<title>{`${series.label} · ${String(row[spec.xKey] ?? "")}: ${value.toLocaleString()}`}</title>
+									</rect>
+									{label(value, px + width / 2, Math.min(y(value), y(0)))}
+								</g>
+							);
 						});
-						return runs
-							.filter((run) => run.length > 0)
-							.map((run, part) => {
-								const line = run.map(([px, py], index) => `${index === 0 ? "M" : "L"}${px},${py}`).join(" ");
-								const first = run[0] as [number, number];
-								const last = run.at(-1) as [number, number];
-								return (
-									// biome-ignore lint/suspicious/noArrayIndexKey: the parts of one line, in order
-									<g key={`${at}:${part}`}>
-										{kind === "area" ? (
-											<path d={`${line} L${last[0]},${y(0)} L${first[0]},${y(0)} Z`} fill={colour(at)} opacity={0.18} />
-										) : null}
-										<path d={line} fill="none" stroke={colour(at)} strokeWidth={2} />
-										{run.map(([px, py]) => (
-											<circle key={`${px}`} cx={px} cy={py} r={3} fill={colour(at)} />
-										))}
-									</g>
-								);
-							});
+					})
+				: spec.series.map((series) => {
+						const points = spec.data.map((row, index) => [x(index), y(numberOf(row[series.key]))] as const);
+						const line = points.map(([px, py], index) => `${index === 0 ? "M" : "L"}${px},${py}`).join(" ");
+						const first = points[0] ?? [left, y(0)];
+						const last = points.at(-1) ?? first;
+						return (
+							<g key={series.key}>
+								{spec.type === "area" ? (
+									<path
+										d={`${line} L${last[0]},${y(0)} L${first[0]},${y(0)} Z`}
+										fill={chartColor(series.colorToken)}
+										opacity={0.24}
+									/>
+								) : null}
+								<path d={line} fill="none" stroke={chartColor(series.colorToken)} strokeWidth={2} />
+								{spec.data.map((row, index) =>
+									label(numberOf(row[series.key]), x(index), y(numberOf(row[series.key]))),
+								)}
+							</g>
+						);
 					})}
 		</>
 	);
 }
 
-/** A pie of the first series: its slices in order from the top, clockwise. Values at or below 0 are no slice. */
-function Pie({ data }: { data: ChartData }) {
-	const values = (data.series[0]?.values ?? []).map((value) => Math.max(0, value ?? 0));
+/** A pie of the value field, one slice per row, in order from the top, clockwise. */
+function Pie({ spec }: { spec: PieChartSpec }) {
+	const values = spec.data.map((row) => Math.max(0, numberOf(row[spec.valueKey])));
 	const total = values.reduce((sum, value) => sum + value, 0);
 	if (total === 0) return null;
 	const cx = W / 2;
@@ -132,9 +139,9 @@ function Pie({ data }: { data: ChartData }) {
 						? `M${cx - r},${cy} a${r},${r} 0 1,0 ${r * 2},0 a${r},${r} 0 1,0 ${-r * 2},0`
 						: `M${cx},${cy} L${point(start)} A${r},${r} 0 ${angle - start > Math.PI ? 1 : 0},1 ${point(angle)} Z`;
 				return (
-					// biome-ignore lint/suspicious/noArrayIndexKey: slices in the table's order
-					<path key={index} d={d} fill={colour(index)}>
-						<title>{`${data.categories[index] ?? ""}: ${value.toLocaleString()}`}</title>
+					// biome-ignore lint/suspicious/noArrayIndexKey: slices in the data's order
+					<path key={index} d={d} fill={`var(--monti-chart-${(index % 5) + 1}, var(--chart-${(index % 5) + 1}))`}>
+						<title>{`${String(spec.data[index]?.[spec.labelKey] ?? "")}: ${value.toLocaleString()}`}</title>
 					</path>
 				);
 			})}
@@ -142,58 +149,59 @@ function Pie({ data }: { data: ChartData }) {
 	);
 }
 
-/**
- * A chart, drawn on the server as SVG from the table it holds (doc 18): bars, lines, areas, or a pie of the first series. The table itself stays in
- * the page under "See the data", so the numbers are there for a reader who cannot see the picture, a search engine and a feed.
- */
-export function Chart({
-	block,
-	attrs,
-	locale,
-	children,
-	seeData = true,
-}: BlockProps & {
-	children?: ReactNode;
-	/** "See the data" under the drawing: the reader's way to the numbers. The editor leaves it out (its own table or text holds them). */
-	seeData?: boolean;
-}) {
-	const kind = KINDS.find((each) => each === attrs.kind) ?? "bar";
-	const data = chartData(block);
-	const title = typeof attrs.title === "string" ? attrs.title.trim() : "";
-	const named = kind === "pie" ? data.categories : data.series.map((series) => series.name);
-	const drawable = data.categories.length > 0 && data.series.length > 0;
+/** The legend: each series (each slice of a pie) by its name and colour. */
+function Legend({ spec }: { spec: NormalizedChartSpec }) {
+	const items =
+		spec.type === "pie"
+			? spec.data.map((row, index) => ({
+					name: String(row[spec.labelKey] ?? ""),
+					color: `var(--monti-chart-${(index % 5) + 1}, var(--chart-${(index % 5) + 1}))`,
+				}))
+			: spec.series.map((series) => ({ name: series.label, color: chartColor(series.colorToken) }));
+	if (items.length < 2) return null;
 	return (
-		<figure className="monti-block-chart" data-kind={kind}>
-			{title ? <figcaption className="monti-block-chart-title">{title}</figcaption> : null}
-			{drawable ? (
+		<ul className="monti-block-chart-legend">
+			{items.map((item, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: two series may share a name
+				<li key={index}>
+					<span className="monti-block-chart-swatch" style={{ background: item.color }} />
+					{item.name}
+				</li>
+			))}
+		</ul>
+	);
+}
+
+/**
+ * A chart (` ```chart `): the old block's text read by its own parser (`dsl.ts`) and drawn on the server as SVG, with no script. Text that does not
+ * read stays its source on the page; the editor says why under its field, and the publish to-do list too.
+ */
+export function Chart({ attrs }: BlockProps) {
+	const source = typeof attrs.source === "string" ? attrs.source : "";
+	if (source.trim() === "") return null;
+	const { spec } = normalizeChartDsl(parseChartDsl(source));
+	return (
+		<figure className="monti-block-chart" data-kind={spec?.type}>
+			<style href="monti-block-chart" precedence="monti-blocks">
+				{style}
+			</style>
+			{spec ? (
 				<>
-					{named.length > 1 ? (
-						<ul className="monti-block-chart-legend">
-							{named.map((name, index) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: two series may share a name
-								<li key={index}>
-									<span className="monti-block-chart-swatch" style={{ background: colour(index) }} />
-									{name}
-								</li>
-							))}
-						</ul>
-					) : null}
-					<svg
-						className="monti-block-chart-frame"
-						viewBox={`0 0 ${W} ${H}`}
-						role="img"
-						aria-label={title || named.join(", ")}
-					>
-						{kind === "pie" ? <Pie data={data} /> : <Cartesian data={data} kind={kind} />}
+					<Legend spec={spec} />
+					<svg className="monti-block-chart-frame" viewBox={`0 0 ${W} ${H}`} role="img">
+						<title>
+							{spec.type === "pie"
+								? spec.data.map((row) => String(row[spec.labelKey] ?? "")).join(", ")
+								: spec.series.map((series) => series.label).join(", ")}
+						</title>
+						{spec.type === "pie" ? <Pie spec={spec} /> : <Cartesian spec={spec} />}
 					</svg>
 				</>
-			) : null}
-			{seeData ? (
-				<details className="monti-block-chart-data">
-					<summary>{wordsIn(locale).data}</summary>
-					{children}
-				</details>
-			) : null}
+			) : (
+				<pre className="monti-block-chart-source">
+					<code>{source}</code>
+				</pre>
+			)}
 		</figure>
 	);
 }

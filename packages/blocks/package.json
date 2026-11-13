@@ -8,7 +8,7 @@
 	"exports": {
 		".": "./blocks/index.ts",
 		"./registry.json": "./registry.json",
-		"./*.css": "./blocks/*.css",
+		"./*.ts": "./blocks/*.ts",
 		"./*": "./blocks/*.tsx"
 	},
 	"files": [
@@ -26,7 +26,8 @@
 		"@monti-cms/core": "workspace:*",
 		"katex": ">=0.16",
 		"mermaid": ">=11",
-		"react": ">=19"
+		"react": ">=19",
+		"@monti-cms/admin": "workspace:*"
 	},
 	"peerDependenciesMeta": {
 		"katex": {
@@ -48,9 +49,8 @@
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",
 		"typescript": "^7.0.2",
-		"vitest": "^4.0.0"
-	},
-	"sideEffects": [
-		"*.css"
-	]
+		"vitest": "^4.0.0",
+		"@monti-cms/admin": "workspace:*",
+		"@monti-cms/ui": "workspace:*"
+	}
 }

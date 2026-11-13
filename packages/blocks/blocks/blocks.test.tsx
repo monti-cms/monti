@@ -17,14 +17,25 @@ const code = (title: string, text: string, language = "ts"): Block => ({
 	attrs: { language, title },
 	...(text ? { content: [{ type: "text", text }] } : {}),
 });
-const table = (rows: string[][]): Block => ({ id: id(), type: "table", attrs: { header: true, rows } });
 /** React's `createElement` in the shape the core's drawing asks for, as a site hands it in. */
 const h = (type: unknown, props: Record<string, unknown> | null, ...children: unknown[]) =>
 	createElement(type as ElementType, props, ...(children as ReactNode[]));
-const html = (body: Doc, locale?: string) =>
+/** The page's HTML without the blocks' looks (each block's `<style>`, checked on its own below). */
+const html = (body: Doc, locale?: string) => withLooks(body, locale).replace(/<style[^>]*>[\s\S]*?<\/style>/g, "");
+const withLooks = (body: Doc, locale?: string) =>
 	renderToStaticMarkup(
 		createElement("div", null, ...renderDocument(body, { createElement: h, blocks, marks, locale })),
 	);
+const CHART = [
+	"chart line",
+	"x month",
+	"series views | 방문 | chart-1",
+	"",
+	"data",
+	"month | views",
+	"1월 | 1200",
+	"2월 | 1850",
+].join("\n");
 const tasks = (block: Block) => kit.blocks.get(block.type)?.check?.(block) ?? [];
 
 /** One of each, with the values a person gives them. */
@@ -62,18 +73,7 @@ const sample = () =>
 		},
 		{ id: id(), type: "math", attrs: { source: "a^2 + b^2 = c^2" } },
 		{ id: id(), type: "mermaid", attrs: { source: "flowchart LR\n  A --> B" } },
-		{
-			id: id(),
-			type: "chart",
-			attrs: { kind: "line", title: "방문" },
-			children: [
-				table([
-					["월", "방문"],
-					["1월", "1200"],
-					["2월", "1,850"],
-				]),
-			],
-		},
+		{ id: id(), type: "chart", attrs: { source: CHART } },
 		{
 			id: id(),
 			type: "paragraph",
@@ -119,16 +119,18 @@ describe("the blocks' values (doc 18)", () => {
 		const numbers = (cell: string): Block => ({
 			id: "c",
 			type: "chart",
-			children: [
-				table([
-					["월", "방문"],
-					["1월", cell],
-				]),
-			],
+			attrs: { source: CHART.replace("1200", cell) },
 		});
-		expect(tasks(numbers("많음")).map((row) => row.level)).toEqual(["warn"]);
-		expect(tasks(numbers("12.5%"))).toEqual([]);
-		expect(tasks(numbers(""))).toEqual([]);
+		expect(tasks(numbers("많음"))).toEqual([
+			{
+				level: "warn",
+				message: {
+					ko: "7줄: 숫자 필드 views 는 숫자여야 해요.",
+					en: "Line 7: The number field views must be a number.",
+				},
+			},
+		]);
+		expect(tasks(numbers("12.5"))).toEqual([]);
 		expect(
 			tasks({ id: "t", type: "tabs", children: [{ id: "u", type: "tab", attrs: { label: " " }, children: [p("a")] }] }),
 		).toHaveLength(1);
@@ -216,7 +218,7 @@ describe("the blocks on the site (doc 18)", () => {
 	});
 
 	it("18-2 a formula is drawn on the server; one that does not read is its source with the reason", () => {
-		expect(html(sample())).toContain('class="katex-display"');
+		expect(html(sample())).toContain('<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">');
 		const bad = html(doc({ id: "m", type: "math", attrs: { source: "\\frac{1}{" } }));
 		expect(bad).toContain('data-state="error"');
 		expect(bad).toContain("\\frac{1}{");
@@ -228,30 +230,33 @@ describe("the blocks on the site (doc 18)", () => {
 		);
 	});
 
-	it("18-2 a chart is drawn from its table as SVG, the table kept under it; a pie draws the first series", () => {
+	it("18-2 a chart is drawn from its text as SVG on the server; a pie draws a slice per row; text that does not read stays its source", () => {
 		const out = html(sample());
-		expect(out).toContain(
-			'<figure class="monti-block-chart" data-kind="line"><figcaption class="monti-block-chart-title">방문</figcaption>',
-		);
-		expect(out).toMatch(/<svg[^>]*role="img"[^>]*aria-label="방문"/);
+		expect(out).toContain('<figure class="monti-block-chart" data-kind="line">');
+		expect(out).toMatch(/<svg[^>]*role="img"/);
 		expect(out).toContain('<path d="M');
-		expect(out).toContain('<details class="monti-block-chart-data"><summary>See the data</summary><table>');
 		const pie = html(
 			doc({
 				id: "c",
 				type: "chart",
-				attrs: { kind: "pie" },
-				children: [
-					table([
-						["언어", "글"],
-						["TS", "3"],
-						["Go", "1"],
-					]),
-				],
+				attrs: {
+					source: ["chart pie", "label lang", "value posts", "", "data", "lang | posts", "TS | 3", "Go | 1"].join("\n"),
+				},
 			}),
 		);
 		expect(pie.match(/<path d="M320,160 L/g)).toHaveLength(2);
 		expect(pie).toContain("<title>TS: 3</title>");
+		const bad = html(doc({ id: "c", type: "chart", attrs: { source: "chart wave" } }));
+		expect(bad).toContain('<pre class="monti-block-chart-source"><code>chart wave</code></pre>');
+	});
+
+	it("18-4 each block brings its own look, once however many of it there are", () => {
+		const out = withLooks(
+			doc({ id: "a", type: "callout", children: [p("a")] }, { id: "b", type: "callout", children: [p("b")] }),
+		);
+		expect(
+			out.match(/<style[^>]*href="monti-block-callout"/g) ?? out.match(/data-href="monti-block-callout"/g),
+		).toHaveLength(1);
 	});
 
 	it("18-2 a tooltip and a colour are marks on the words: a note in the page, a colour by its name", () => {

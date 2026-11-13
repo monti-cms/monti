@@ -61,38 +61,38 @@ const run = async (cwd: string, ...argv: string[]) => {
 const read = (root: string, name: string) => readFileSync(path.join(root, name), "utf8");
 
 describe("monti add (doc 18)", () => {
-	it("18-1 copies each block's folder into monti/blocks, lists it, and wires the config, the admin page, what draws <html> and renderDocument", async () => {
+	it("18-1 copies each block's folder into monti/blocks, lists it, and wires the config, the admin page and renderDocument", async () => {
 		const root = site();
 		const { code, out } = await run(root, "callout", "math", "color");
 		expect(code).toBe(0);
 		expect(readdirSync(path.join(root, "monti/blocks")).sort()).toEqual(
-			["admin.ts", "base.css", "blocks.css", "callout", "color", "index.ts", "math"].sort(),
+			["admin.ts", "callout", "color", "index.ts", "math"].sort(),
 		);
+		// One folder holds the whole block: its definition, its site drawing, its editor view, its words and its look.
 		expect(readdirSync(path.join(root, "monti/blocks/callout")).sort()).toEqual([
-			"callout.css",
-			"callout.ts",
+			"editor.tsx",
+			"index.ts",
 			"site.tsx",
+			"style.ts",
+			"words.ts",
 		]);
 		// A package's tests are not the site's.
 		expect(existsSync(path.join(root, "monti/blocks/blocks.test.tsx"))).toBe(false);
 
 		const index = read(root, "monti/blocks/index.ts");
-		expect(index).toContain('import { callout } from "./callout/callout";');
-		expect(index).toContain('import { color } from "./color/color";');
+		expect(index).toContain('import { callout } from "./callout";');
+		expect(index).toContain('import { color } from "./color";');
 		expect(index).toMatch(/export const blocks: AnyBlockDefinition\[\] = \[\n\tcallout,\n\tmath,\n\];/);
 		expect(index).toMatch(/export const marks: MarkDefinition\[\] = \[\n\tcolor,\n\];/);
-		expect(read(root, "monti/blocks/blocks.css")).toBe(
-			'@import "./base.css";\n@import "./callout/callout.css";\n@import "./math/math.css";\n@import "./color/color.css";\n',
-		);
 
 		const config = read(root, "monti.config.ts");
 		expect(config).toContain('import schema from "./monti.schema";\nimport { blocks, marks } from "./monti/blocks";');
 		expect(config).toContain("defineConfig({\n\tblocks,\n\tmarks,\n\tschema,");
 		const page = read(root, "app/admin/page.tsx");
 		expect(page).toContain('import { adminBlocks } from "../../monti/blocks/admin";');
-		expect(page).not.toContain("blocks.css");
 		expect(page).toContain('<AdminPage blocks={adminBlocks} siteName="블로그" />');
-		expect(read(root, "app/layout.tsx")).toContain('import "./site.css";\nimport "../monti/blocks/blocks.css";');
+		// Each block loads its own look: no stylesheet goes into the layouts.
+		expect(read(root, "app/layout.tsx")).not.toContain("monti/blocks");
 		const post = read(root, "site/post.tsx");
 		expect(post).toContain('import { blocks, marks } from "../monti/blocks/index";');
 		expect(post).toContain("renderDocument(doc, { blocks, marks, createElement: h, media: {} })");
@@ -171,7 +171,7 @@ describe("monti add (doc 18)", () => {
 		});
 		expect(code).toBe(0);
 		expect(asked).toEqual(["Which? (names with commas, or none)", "There is no carousel."]);
-		expect(existsSync(path.join(root, "monti/blocks/chart/chart.ts"))).toBe(true);
+		expect(existsSync(path.join(root, "monti/blocks/chart/index.ts"))).toBe(true);
 	});
 
 	it("18-1 a file it cannot change surely is left alone, and the line is said for a person to add", async () => {
@@ -189,5 +189,32 @@ describe("monti add (doc 18)", () => {
 		expect(out).toContain(
 			"Left for you: site/other.tsx: renderDocument(…, { blocks, marks, … }), from ../monti/blocks/index",
 		);
+	});
+
+	it("18-4 a block is removed by deleting its folder and its line in the list: nothing else of it is left", async () => {
+		const root = site();
+		await run(root, "callout", "color");
+		const files = (dir: string): string[] =>
+			readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+				entry.isDirectory() ? files(path.join(dir, entry.name)).map((name) => `${entry.name}/${name}`) : [entry.name],
+			);
+		const names = ["monti.config.ts", "app/admin/page.tsx", "app/layout.tsx", "site/post.tsx"];
+		const before = {
+			index: read(root, "monti/blocks/index.ts"),
+			site: names.map((name) => read(root, name)),
+			files: files(root),
+		};
+
+		await run(root, "tabs");
+		const index = read(root, "monti/blocks/index.ts");
+		expect(index).toContain('import { tabs, tab } from "./tabs";');
+		rmSync(path.join(root, "monti/blocks/tabs"), { recursive: true });
+		writeFileSync(
+			path.join(root, "monti/blocks/index.ts"),
+			index.replace('import { tabs, tab } from "./tabs";\n', "").replace("\ttabs,\n\ttab,\n", ""),
+		);
+		expect(read(root, "monti/blocks/index.ts")).toBe(before.index);
+		expect(names.map((name) => read(root, name))).toEqual(before.site);
+		expect(files(root)).toEqual(before.files);
 	});
 });
