@@ -2,7 +2,7 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import type { Session } from "../auth/session";
 import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
-import { ConflictError, ForbiddenError, InputError } from "../errors";
+import { CheckError, ConflictError, ForbiddenError, InputError } from "../errors";
 import { lockWithFiles, rewriteUses } from "../media/uses";
 import {
 	type ActivityKind,
@@ -79,6 +79,7 @@ export function context(
 ) {
 	const events: QueuedEvent[] = [];
 	const created: RecordRef[] = [];
+	let attempts = 0;
 	const flags: { structure: boolean; change: string | null } = { structure: false, change: null };
 	const ctx: OperationContext = {
 		db,
@@ -89,6 +90,24 @@ export function context(
 				activity: options?.activity,
 			}),
 		created: (ref) => created.push(ref),
+		async attempt(work) {
+			const marks = { events: events.length, created: created.length };
+			const name = `attempt_${++attempts}`;
+			await sql.raw(`savepoint ${name}`).execute(db);
+			try {
+				const value = await work();
+				await sql.raw(`release savepoint ${name}`).execute(db);
+				return { ok: true, value };
+			} catch (error) {
+				await sql.raw(`rollback to savepoint ${name}`).execute(db);
+				await sql.raw(`release savepoint ${name}`).execute(db);
+				// What the part queued and marked goes with what it wrote.
+				events.length = marks.events;
+				created.length = marks.created;
+				if (!(error instanceof CheckError)) throw error;
+				return { ok: false, refusal: error };
+			}
+		},
 		changedStructure: (changeId) => {
 			flags.structure = true;
 			flags.change = changeId;

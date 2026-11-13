@@ -2,6 +2,7 @@ import type { Kysely, Transaction } from "kysely";
 import type { z } from "zod";
 import type { Session } from "./auth/session";
 import type { Database } from "./db/schema";
+import type { CheckError } from "./errors";
 import type { Site } from "./site";
 
 /**
@@ -86,6 +87,12 @@ export interface OperationContext {
 	emit(event: EmittedEvent, options?: { activity?: string }): void;
 	/** Marks a record the write creates, so undoing the write removes it. */
 	created(ref: RecordRef): void;
+	/**
+	 * Tries one part of a write that may be refused without the whole write failing (an import leaves out the entry an operation refuses).
+	 * When `work` throws a `CheckError`, everything it wrote, queued and marked as created is taken back, and the refusal is the answer; any
+	 * other error fails the write as it would anywhere.
+	 */
+	attempt<Value>(work: () => Promise<Value>): Promise<{ ok: true; value: Value } | { ok: false; refusal: CheckError }>;
 	/**
 	 * Says the write has written structure (the schema file and the change file `changeId`), for a write that does so only sometimes
 	 * (`settings.save`). Such a write has no undo: a structure change is reversed by a new change (doc 00), and putting back only its admin values

@@ -148,6 +148,20 @@ export async function zip(files: Iterable<ZipFile>): Promise<Uint8Array> {
 	return whole;
 }
 
+/**
+ * A file's name as its zip wrote it. A zip that says its names are UTF-8 is taken at its word. One that does not say (Windows' own zip, and
+ * older tools) wrote them in the system's encoding: bytes that are valid UTF-8 are read as UTF-8, and the rest as CP949, the encoding a
+ * Korean Windows writes (`euc-kr` reads it), so a picture's Korean name still matches the path a post names it by.
+ */
+function nameOf(bytes: Uint8Array, utf8: boolean): string {
+	if (utf8) return new TextDecoder().decode(bytes);
+	try {
+		return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+	} catch {
+		return new TextDecoder("euc-kr").decode(bytes);
+	}
+}
+
 /** A zip's files as they are listed at its end: each read (and inflated) when it is asked for. `null` when the bytes are no zip. */
 export function unzip(
 	bytes: Uint8Array,
@@ -163,13 +177,15 @@ export function unzip(
 	if (end < 0) return null;
 	const count = view.getUint16(end + 10, true);
 	let at = view.getUint32(end + 16, true);
-	const decoder = new TextDecoder();
 	const files = new Map<string, { crc: number; method: number; packed: number; size: number; offset: number }>();
 	for (let index = 0; index < count; index++) {
 		if (at + 46 > bytes.length || view.getUint32(at, true) !== 0x02014b50) return null;
 		const nameLength = view.getUint16(at + 28, true);
 		// One spelling of a name: a zip made on a Mac writes its accented and Korean letters taken apart.
-		const name = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength)).normalize("NFC");
+		const name = nameOf(
+			bytes.subarray(at + 46, at + 46 + nameLength),
+			(view.getUint16(at + 8, true) & 0x0800) !== 0,
+		).normalize("NFC");
 		// A folder's own entry holds nothing.
 		if (!name.endsWith("/"))
 			files.set(name, {

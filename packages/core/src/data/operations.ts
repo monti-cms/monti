@@ -5,8 +5,9 @@ import { folderOperations } from "../folders/operations";
 import { mediaOperations } from "../media/operations";
 import { defineOperation, type OperationContext } from "../operation";
 import { readSettings, writeSettings } from "../settings/values";
+import { translationOperations } from "../translations/operations";
 import { type BackupManifest, readBackup } from "./backup";
-import { type ImportInput, importUpload, inspectUpload } from "./import";
+import { type ImportInput, type ImportOperations, importUpload, inspectUpload } from "./import";
 
 /** The backup or export as the screen is handed it: the text files, and the media files to fetch and put beside them (`media/<key>`). */
 export type BackupOutput = {
@@ -94,11 +95,14 @@ async function takePictures(
 	return ids;
 }
 
-/** The operation that makes an entry: an imported entry is made by it, check and all. */
-const createEntry = () => {
-	const create = entryOperations.find((operation) => operation.name === "entries.create");
-	if (!create) throw new Error("entries.create is not defined.");
-	return create;
+/** The operations that make an entry, a translation and a save: an imported entry is made by them, checks and hooks and all. */
+const importOperations = (): ImportOperations => {
+	const named = (name: string) => {
+		const found = [...entryOperations, ...translationOperations].find((operation) => operation.name === name);
+		if (!found) throw new Error(`${name} is a core operation`);
+		return found as ImportOperations["create"];
+	};
+	return { create: named("entries.create"), translate: named("translations.create"), save: named("entries.save") };
 };
 
 export const dataOperations = [
@@ -204,7 +208,7 @@ export const dataOperations = [
 			const imported = await importUpload(
 				ctx,
 				{ ...(input as ImportInput), media: { ...input.media, ...taken } },
-				createEntry(),
+				importOperations(),
 			);
 			if (imported.imported === 0) throw new CheckError({ key: "data.nothingToImport" });
 			ctx.emit({ type: "import.done", ids: imported.ids, collection: input.collection });

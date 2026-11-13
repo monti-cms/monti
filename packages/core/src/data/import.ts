@@ -8,7 +8,7 @@ import { mediaValueOf } from "../media/value";
 import type { AnyOperation, Message, OperationContext } from "../operation";
 import type { Importer } from "../plugins/define";
 import { findOrCreateItem, generateUniqueSlug } from "../relations/sync";
-import { type StoredField, storedFields } from "../schema/define";
+import { localeModeOf, type StoredField, storedFields } from "../schema/define";
 import { type EntryLine, readLines, readManifest } from "./backup";
 
 /** A text file of an upload, as the browser read it out of the zip (or the one file that was chosen). */
@@ -606,10 +606,17 @@ export async function inspectUpload(ctx: OperationContext, input: ImportInput): 
 
 /**
  * Imports the upload's entries into a collection as new drafts (doc 14, `data.import`): an entry whose body the collection has is left out,
- * a taken address gets `-2`, a relation value with no item makes one, folders are made by name. `create` is the entry operation that makes
- * an entry, so an imported entry passes what a written one does.
+ * a taken address gets `-2`, a relation value with no item makes one, folders are made by name. `operations` are the ones that make
+ * an entry, a translation and a save, so an imported entry passes what a written one does.
  */
-export async function importUpload(ctx: OperationContext, input: ImportInput, create: AnyOperation): Promise<Imported> {
+/** The operations an import makes its entries with: an entry, a translation of it, and the save that fills the translation. */
+export type ImportOperations = { create: AnyOperation; translate: AnyOperation; save: AnyOperation };
+
+export async function importUpload(
+	ctx: OperationContext,
+	input: ImportInput,
+	operations: ImportOperations,
+): Promise<Imported> {
 	const ready = await prepare(ctx, input);
 	if (ready.unreadable !== null) throw new CheckError(ready.unreadable);
 	const { upload, mapping, mediaOf, outOf } = ready;
@@ -685,84 +692,100 @@ export async function importUpload(ctx: OperationContext, input: ImportInput, cr
 			out.skipped += members.length;
 			continue;
 		}
-		const fitted = await fitEntry(ctx, input.collection, upload, first, mapping, itemOf, mediaOf);
-		const wanted = slugify(fitted.slug) || slugify(fitted.title);
-		const slug = await generateUniqueSlug(
-			ctx.db,
-			input.collection,
-			source,
-			wanted || fitted.title,
-			undefined,
-			randomUUID(),
-		);
-		const made = {
-			collection: input.collection,
-			title: fitted.title,
-			slug,
-			values: fitted.values,
-			...(fitted.doc ? { doc: fitted.doc } : {}),
-		};
-		// What the entry operation itself refuses (a value a field cannot hold) leaves that one entry out, not the import.
-		try {
-			await create.check?.(made, ctx, undefined);
-		} catch (error) {
-			if (!(error instanceof CheckError)) throw error;
+		// What an operation refuses (a value a field cannot hold, a plugin's hook that says no) leaves that one entry out, not the import:
+		// the entry, the items it would have made and its events are taken back together.
+		const itemsBefore = items;
+		const made = await ctx.attempt(async () => {
+			const fitted = await fitEntry(ctx, input.collection, upload, first, mapping, itemOf, mediaOf);
+			const wanted = slugify(fitted.slug) || slugify(fitted.title);
+			const slug = await generateUniqueSlug(
+				ctx.db,
+				input.collection,
+				source,
+				wanted || fitted.title,
+				undefined,
+				randomUUID(),
+			);
+			const entry = {
+				collection: input.collection,
+				title: fitted.title,
+				slug,
+				values: fitted.values,
+				...(fitted.doc ? { doc: fitted.doc } : {}),
+			};
+			await operations.create.check?.(entry, ctx, undefined);
+			const { id } = (await operations.create.run(entry, ctx, undefined)) as { id: string };
+			const folder = await folderOf(first.folder);
+			if (folder) await ctx.db.updateTable("entries").set({ folder_id: folder }).where("id", "=", id).execute();
+			return { id, title: fitted.title, wanted, slug };
+		});
+		if (!made.ok) {
+			items = itemsBefore;
 			out.skipped += members.length;
 			continue;
 		}
-		const { id } = (await create.run(made, ctx, undefined)) as { id: string };
-		const folder = await folderOf(first.folder);
-		if (folder) await ctx.db.updateTable("entries").set({ folder_id: folder }).where("id", "=", id).execute();
+		const { id, wanted, slug } = made.value;
 		out.imported += 1;
 		out.ids.push(id);
-		if (wanted !== "" && slug !== wanted) out.renamed.push({ id, title: fitted.title, from: wanted, to: slug });
-		const row = await ctx.db
-			.selectFrom("entries")
-			.select("translation_group")
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
-		// Its translations, as they were: the same group, each a draft in its language.
+		if (wanted !== "" && slug !== wanted) out.renamed.push({ id, title: made.value.title, from: wanted, to: slug });
+		// Its translations: each made as a translation is made and saved as an entry is saved, so the checks and the plugins' save hooks
+		// see it like any other (doc 14). One that is refused is left out alone.
+		const fields = storedFields(schema.collections[input.collection]);
 		for (const member of members) {
-			if (member === first || !member.line || (member.doc && !holds(ctx, member.doc))) {
-				if (member !== first) out.skipped += 1;
+			if (member === first) continue;
+			if (!member.line || (member.doc && !holds(ctx, member.doc))) {
+				out.skipped += 1;
 				continue;
 			}
-			const translated = await fitEntry(ctx, input.collection, upload, member, mapping, itemOf, mediaOf);
-			const translationId = randomUUID();
-			const translationSlug = await generateUniqueSlug(
-				ctx.db,
-				input.collection,
-				member.locale,
-				slugify(translated.slug) || translated.title,
-				undefined,
-				translationId,
-			);
-			await ctx.db
-				.insertInto("entries")
-				.values({
-					id: translationId,
-					collection: input.collection,
-					translation_group: row.translation_group,
-					locale: member.locale,
+			const before = items;
+			const translation = await ctx.attempt(async () => {
+				const starting = { source: id, locale: member.locale };
+				await operations.translate.check?.(starting, ctx, undefined);
+				const started = (await operations.translate.run(starting, ctx, undefined)) as { id: string };
+				const translated = await fitEntry(ctx, input.collection, upload, member, mapping, itemOf, mediaOf);
+				const row = await ctx.db
+					.selectFrom("entries")
+					.select("version")
+					.where("id", "=", started.id)
+					.executeTakeFirstOrThrow();
+				const saving = {
+					id: started.id,
+					version: row.version,
 					title: translated.title,
-					slug: translationSlug,
-					folder_id: folder,
-					values: JSON.stringify(translated.values),
-					doc: translated.doc === null ? null : JSON.stringify(translated.doc),
-					translation_seen: JSON.stringify(member.line.entry.translation_seen ?? {}),
-					translation_skips: JSON.stringify(member.line.entry.translation_skips ?? []),
-				})
-				.execute();
-			ctx.created({ kind: "entry", id: translationId });
-			ctx.emit({
-				type: "entry.saved",
-				ids: [translationId],
-				collection: input.collection,
-				locale: member.locale,
-				version: 1,
+					slug: await generateUniqueSlug(
+						ctx.db,
+						input.collection,
+						member.locale,
+						slugify(translated.slug) || translated.title,
+						undefined,
+						started.id,
+					),
+					// A field that is the same in every language is the source's: a translation holds none of its own.
+					values: Object.fromEntries(
+						Object.entries(translated.values).filter(([name]) => {
+							const definition = fields[name];
+							return definition !== undefined && localeModeOf(name, definition) !== "same";
+						}),
+					),
+					...(translated.doc ? { doc: translated.doc } : {}),
+				};
+				await operations.save.check?.(saving, ctx, undefined);
+				await operations.save.run(saving, ctx, undefined);
+				// The blocks it chose not to follow its source in, as they were.
+				await ctx.db
+					.updateTable("entries")
+					.set({ translation_skips: JSON.stringify(member.line?.entry.translation_skips ?? []) })
+					.where("id", "=", started.id)
+					.execute();
+				return started.id;
 			});
+			if (!translation.ok) {
+				items = before;
+				out.skipped += 1;
+				continue;
+			}
 			out.imported += 1;
-			out.ids.push(translationId);
+			out.ids.push(translation.value);
 		}
 	}
 	out.items = items;

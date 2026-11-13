@@ -594,6 +594,7 @@ describe("replacing", () => {
 					actor: "admin",
 					emit: () => {},
 					created: () => {},
+					attempt: async (work) => ({ ok: true, value: await work() }),
 					changedStructure: () => {},
 					site: site().site,
 					now: () => new Date(),

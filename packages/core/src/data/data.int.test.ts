@@ -4,7 +4,7 @@ import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { sql, testDatabase } from "../__test__/database";
 import { agentTools } from "../entry/tools";
-import { ForbiddenError } from "../errors";
+import { CheckError, ForbiddenError } from "../errors";
 import { memoryStorage } from "../media/storage";
 import { createMonti, definePlugin, type Plugin } from "../monti";
 import { migrateContent } from "../schema/apply";
@@ -13,7 +13,7 @@ import type { EntryLine } from "./backup";
 import { restoreFrom, writeBackup } from "./files";
 import type { Imported, Inspected } from "./import";
 import type { BackupOutput, BackupSummary } from "./operations";
-import { zip } from "./zip";
+import { unzip, zip } from "./zip";
 
 // Two sites: the one the backup is taken from, and an empty one it is restored or imported into.
 const db = await testDatabase();
@@ -408,6 +408,53 @@ describe("an export imported into another site (flow 9, 04–09)", () => {
 		).toEqual([]);
 	});
 
+	it("14-1 an imported translation is made and saved as any entry is: a plugin's save hook sees it, and one the hook refuses is left out and counted while its source comes in", async () => {
+		const from = site();
+		const made = await fill(from);
+		const english = await run<{ entry: { version: number } }>(from, "entries.get", { id: made.translated });
+		await write(from, "entries.save", {
+			id: made.translated,
+			version: english.entry.version,
+			title: "Memo",
+			slug: "memo-en",
+		});
+		const exported = await run<BackupOutput>(from, "data.export", { ids: [made.second] });
+		const seen: string[] = [];
+		const hook = (refuse: boolean): Plugin => ({
+			name: "watching",
+			beforeSave(saving) {
+				seen.push(`${saving.locale}:${saving.title}`);
+				if (refuse && saving.locale === "en") throw new CheckError({ key: "errors.unexpected" });
+				return undefined;
+			},
+		});
+		const entriesOf = async () =>
+			(
+				await other
+					.selectFrom("entries")
+					.select(["locale", "title", "slug", "status"])
+					.where("collection", "=", "post")
+					.orderBy("locale")
+					.execute()
+			).map((row) => `${row.locale}:${row.title}:${row.slug}:${row.status}`);
+		// Refused: the translation alone stays out, with nothing of it left behind (no row, no event of its own).
+		const refused = await write<Imported>(second([hook(true)]), "data.import", upload(exported));
+		expect(refused).toMatchObject({ imported: 1, skipped: 1 });
+		expect(seen).toContain("en:Memo");
+		expect(await entriesOf()).toEqual(["ko:메모:memo:draft"]);
+		expect(
+			(await other.selectFrom("monti_delivery").select("id").execute()).length +
+				(await other.selectFrom("entries").select("id").where("locale", "=", "en").execute()).length,
+		).toBe(0);
+		// Taken: both come in, and the hook saw each.
+		await sql`truncate entries, entry_links, monti_activity cascade`.execute(other);
+		seen.length = 0;
+		const taken = await write<Imported>(second([hook(false)]), "data.import", upload(exported));
+		expect(taken).toMatchObject({ imported: 2, skipped: 0 });
+		expect(seen).toEqual(expect.arrayContaining(["ko:메모", "en:Memo"]));
+		expect(await entriesOf()).toEqual(["en:Memo:memo-en:draft", "ko:메모:memo:draft"]);
+	});
+
 	it("14-1 an entry whose body the collection already has is left out, and a taken address gets -2 and is named in the result", async () => {
 		const from = site();
 		const made = await fill(from);
@@ -692,6 +739,58 @@ describe("files a plugin reads (flow 9, 05–07)", () => {
 		expect(await db.selectFrom("entries").select("title").where("collection", "=", "post").execute()).toEqual([
 			{ title: "멀쩡한 글" },
 		]);
+	});
+
+	it("14-1 a zip made on a Korean Windows names its files in CP949: a picture's Korean name is read, and matches the path the post names it by", async () => {
+		// The zip as this code writes it, then made into what such a tool writes: the name's bytes in CP949, and no word that names are UTF-8.
+		const placeholder = "posts/AAAA.png";
+		const made = await zip([
+			{ name: "posts/hello.txt", bytes: new TextEncoder().encode("첫 글\n본문 한 줄.\n![./사진.png") },
+			{ name: placeholder, bytes: new Uint8Array([1, 2, 3]) },
+		]);
+		const view = new DataView(made.buffer, made.byteOffset, made.byteLength);
+		const cp949 = [0xbb, 0xe7, 0xc1, 0xf8]; // "사진"
+		const ascii = new TextEncoder().encode(placeholder);
+		let patched = 0;
+		for (let at = 0; at + ascii.length <= made.length; at++) {
+			if (!ascii.every((byte, index) => made[at + index] === byte)) continue;
+			made.set(cp949, at + "posts/".length);
+			patched += 1;
+		}
+		expect(patched).toBe(2);
+		for (let at = 0; at + 4 <= made.length; at++) {
+			const signature = view.getUint32(at, true);
+			if (signature === 0x04034b50) view.setUint16(at + 6, 0, true);
+			if (signature === 0x02014b50) view.setUint16(at + 8, 0, true);
+		}
+		const opened = unzip(made);
+		expect(opened?.names).toEqual(["posts/hello.txt", "posts/사진.png"]);
+		expect(await opened?.read("posts/사진.png")).toEqual(new Uint8Array([1, 2, 3]));
+		const monti = site([text]);
+		const upload = {
+			collection: "post",
+			files: [
+				{
+					name: "posts/hello.txt",
+					text: new TextDecoder().decode((await opened?.read("posts/hello.txt")) ?? undefined),
+				},
+			],
+			has: ["posts/사진.png"],
+		};
+		expect(await run(monti, "data.inspect", upload)).toMatchObject({
+			pictures: [{ name: "posts/사진.png", file: "posts/사진.png" }],
+			missingPictures: 0,
+		});
+		const key = "00000000-0000-4000-8000-0000000000c1.png";
+		await storage.put(key, new Uint8Array([1, 2, 3]), { mime: "image/png" });
+		await write<Imported>(monti, "data.import", {
+			...upload,
+			uploaded: { "posts/사진.png": { name: "사진.png", original: { key, width: 4, height: 4 } } },
+		});
+		const media = await db.selectFrom("media").select(["id", "name"]).executeTakeFirstOrThrow();
+		expect(media.name).toBe("사진.png");
+		const entry = await db.selectFrom("entries").select("doc").where("slug", "=", "hello").executeTakeFirstOrThrow();
+		expect(JSON.stringify(entry.doc)).toContain(media.id);
 	});
 
 	it("14-2 a site with no plugin for them does not read .md and .mdx, and says which plugin does; other files are just not read", async () => {
