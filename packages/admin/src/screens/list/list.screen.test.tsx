@@ -109,6 +109,16 @@ describe("the list: what is kept, and what comes back", () => {
 		await expect.element(page.getByRole("grid")).toBeVisible();
 	});
 
+	it("the day and range rows end in a › and write the day or range that is on before it (menu.md)", async () => {
+		await listAt("#/c/post?updatedAt=2026-10-05..2026-10-26").run();
+		await userEvent.click(columnName("수정일"));
+		const range = page.getByRole("menuitem", { name: "기간 고르기" });
+		await expect.element(range).toHaveTextContent(/10\. 05 – 10\. 26/);
+		expect(range.element().querySelector("[data-slot=menu-tick]")).toBeNull();
+		expect(range.element().querySelector("svg")).not.toBeNull();
+		await expect.element(page.getByRole("menuitem", { name: "하루 고르기" })).toHaveTextContent("하루 고르기");
+	});
+
 	it("opened again on a day picked before: the day's calendar shows that day picked", async () => {
 		await listAt("#/c/post?updatedAt=2026-10-26..2026-10-26").run();
 		await userEvent.click(columnName("수정일"));
@@ -136,5 +146,57 @@ describe("the list: what is kept, and what comes back", () => {
 		await userEvent.keyboard("{Enter}");
 		await rowsShown();
 		await expect.poll(() => document.activeElement).toBe(main().element().querySelector("tbody [data-slot=row-link]"));
+	});
+});
+
+describe("the row's menu (menu.md)", () => {
+	const row = (title: string) => main().getByRole("row").filter({ hasText: title });
+	const rowMenu = async (title: string) => {
+		await userEvent.click(row(title).getByRole("button", { name: "더 보기" }));
+		return page.getByRole("menu");
+	};
+	/** A toast on the danger ground: what an error toast is (`toast.error`). */
+	const errorToast = () => document.querySelector("[data-sonner-toast] .bg-monti-danger-emphasis");
+
+	it("the category is a pick-one list: the rows' value is ticked, and picking it again changes nothing", async () => {
+		const story = listAt();
+		await story.run();
+		await rowsShown();
+		await rowMenu("가을 사진 정리");
+		await userEvent.hover(page.getByRole("menuitem", { name: "카테고리" }));
+		const daily = page.getByRole("menuitemradio", { name: "일상" });
+		await expect.element(daily).toHaveAttribute("aria-checked", "true");
+		await expect.element(page.getByRole("menuitemradio", { name: "없음" })).toBeVisible();
+		await userEvent.click(daily);
+		await expect.element(row("가을 사진 정리").getByText("일상", { exact: true })).toBeVisible();
+		// Nothing was written: no toast says it changed.
+		expect(document.body.textContent).not.toContain("바꿨습니다");
+	});
+
+	it("a write that does not go through says why: duplicating an entry gone behind the screen", async () => {
+		const story = listAt();
+		await story.run();
+		await rowsShown();
+		await story.loaded().site.db.deleteFrom("entries").where("title", "=", "가을 사진 정리").execute();
+		await userEvent.click((await rowMenu("가을 사진 정리")).getByRole("menuitem", { name: "복제" }));
+		await expect.poll(errorToast).not.toBeNull();
+	});
+
+	it("Backspace on a row puts it in the trash, as Delete does; the menu writes the key as a key, not typed", async () => {
+		await listAt().run();
+		await rowsShown();
+		await userEvent.click(row("가을 사진 정리").getByText("일상", { exact: true }), { button: "right" });
+		const trash = page.getByRole("menuitem", { name: /휴지통으로/ });
+		await expect.element(trash).toBeVisible();
+		expect(trash.element().querySelector("[data-slot=menu-shortcut]")?.textContent).toMatch(/^(Delete|⌫)$/);
+		// "Open" and "open in a new tab" do not share a mark.
+		const icon = (name: string) =>
+			page.getByRole("menuitem", { name, exact: true }).element().querySelector("svg")?.innerHTML;
+		expect(icon("열기")).not.toBe(icon("새 탭에서 열기"));
+		await userEvent.keyboard("{Escape}");
+		(row("가을 사진 정리").getByRole("link").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Backspace}");
+		await expect.element(page.getByText("휴지통으로 옮겼습니다")).toBeVisible();
+		await expect.element(main().getByText("가을 사진 정리")).not.toBeInTheDocument();
 	});
 });

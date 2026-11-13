@@ -26,7 +26,7 @@ import {
 	TextButton,
 	useSortableItem,
 } from "@monti-cms/ui";
-import { Edit, TrashCan } from "@monti-cms/ui/icons";
+import { Add, Edit, TrashCan } from "@monti-cms/ui/icons";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import {
@@ -465,6 +465,7 @@ export function FieldsTab({
 							aria-label={t("settings.fields.addToOption", { option: label })}
 							onClick={() => onAddField({ field: key, option })}
 						>
+							<Add aria-hidden />
 							{t("settings.fields.addOptionField")}
 						</TextButton>
 					),
@@ -711,10 +712,12 @@ export function FieldsTab({
 					<Inline gap={4}>
 						{locked ? null : (
 							<Button variant="ghost" size="sm" onClick={() => onAddField()}>
+								<Add aria-hidden />
 								{t("settings.fields.addField")}
 							</Button>
 						)}
 						<Button variant="ghost" size="sm" onClick={addGroup}>
+							<Add aria-hidden />
 							{t("settings.fields.addGroup")}
 						</Button>
 					</Inline>

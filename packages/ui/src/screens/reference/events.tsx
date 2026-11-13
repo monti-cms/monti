@@ -704,13 +704,17 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 													{line.request ? `“${line.request}”` : line.what}
 												</RowLink>
 											}
-											address={[
-												line.request ? line.what : line.where,
-												line.by,
-												line.undo && line.undo !== "open" ? `되돌림 ${line.undo}` : null,
-											]
-												.filter(Boolean)
-												.join(" · ")}
+											// Only an entry's address is typed as it stands (mono); the place, who and the undo are words (sans).
+											address={!line.request && /^[a-z-]+\/[a-z0-9-]+$/.test(line.where ?? "") ? line.where : undefined}
+											note={
+												[
+													line.request ? line.what : /^[a-z-]+\/[a-z0-9-]+$/.test(line.where ?? "") ? null : line.where,
+													line.by,
+													line.undo && line.undo !== "open" ? `되돌림 ${line.undo}` : null,
+												]
+													.filter(Boolean)
+													.join(" · ") || undefined
+											}
 										/>
 									</TableCell>
 									{stage === "noReceivers" ? null : (

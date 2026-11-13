@@ -597,6 +597,13 @@ describe("a file", () => {
 		await userEvent.click(tile("desk-morning.jpg"), { button: "right" });
 		await userEvent.click(page.getByRole("menuitem", { name: "쓰는 곳" }));
 		await expect.element(page.getByRole("menuitem", { name: /아침 책상/ })).toHaveTextContent("대표 이미지");
+		// The places are words: sans, as the row's name (tokens.md), not a key's mono.
+		const places = page
+			.getByRole("menuitem", { name: /아침 책상/ })
+			.element()
+			.querySelector<HTMLElement>("[data-slot=menu-value]");
+		expect(places?.textContent).toBe("대표 이미지");
+		expect(page.getByRole("menuitem", { name: "쓰는 곳" }).element().querySelector("svg")).not.toBeNull();
 		await userEvent.keyboard("{Escape}");
 		await userEvent.keyboard("{Escape}");
 		await userEvent.click(tile("seoul-night.jpg"), { button: "right" });
@@ -613,6 +620,9 @@ describe("a file", () => {
 		await userEvent.click(panel.getByRole("button", { name: "더 보기" }));
 		await expect.element(page.getByRole("menuitem", { name: "파일 바꾸기" })).toBeVisible();
 		await expect.element(page.getByRole("menuitem", { name: "휴지통으로" })).toBeVisible();
+		// One menu, one way: every row has its icon (menu.md).
+		for (const name of ["새 탭에서 열기", "주소 복사", "파일 바꾸기", "ID 복사", "휴지통으로"])
+			expect(page.getByRole("menuitem", { name }).element().querySelector("svg")).not.toBeNull();
 		await userEvent.keyboard("{Escape}");
 	});
 });
@@ -860,3 +870,112 @@ describe("the sidebar", () => {
 		await expect.element(main().getByText("to-assets.jpg")).not.toBeInTheDocument();
 	});
 });
+
+describe("the library's states (components/list.md)", () => {
+	/** The library at an address, after `also` changed what the site holds; `uploader` stands in for the site's when given. */
+	const at = (
+		hash: string,
+		also: (site: StorySite) => Promise<void>,
+		uploader?: (real: StorySite["uploader"]) => StorySite["uploader"],
+	) => {
+		const [load] = media.library(hash) as [() => Promise<{ site: StorySite }>];
+		return composeStory(
+			{
+				loaders: [
+					async () => {
+						const loaded = await load();
+						await also(loaded.site);
+						if (uploader) loaded.site.uploader = uploader(loaded.site.uploader);
+						return loaded;
+					},
+				],
+			},
+			media.default,
+		).run();
+	};
+
+	it("a library with nothing in it is the lists' empty state, in the grid and in the list", async () => {
+		const clear = async ({ db }: StorySite) => {
+			await db.deleteFrom("media").execute();
+			await db.deleteFrom("folders").execute();
+		};
+		await at("#/media", clear);
+		await expect.element(main().getByText("아직 파일이 없습니다.")).toBeVisible();
+		expect(main().getByText("아직 파일이 없습니다.").element().closest("[data-slot=empty]")).not.toBeNull();
+		await at("#/media?view=list", clear);
+		await expect.element(main().getByText("아직 파일이 없습니다.")).toBeVisible();
+		expect(main().getByText("아직 파일이 없습니다.").element().closest("[data-slot=empty]")).not.toBeNull();
+		// In place of the column names and the table, as the trash's empty state.
+		expect(main().getByRole("columnheader").elements()).toHaveLength(0);
+	});
+
+	it("a search that finds nothing in the list says so in the table, and its button takes the search off", async () => {
+		await at("#/media?view=list&q=없는파일", async () => {});
+		await expect.element(main().getByText("맞는 파일이 없습니다.")).toBeVisible();
+		await userEvent.click(main().getByRole("button", { name: "필터 해제" }));
+		await expect.element(main().getByText("맞는 파일이 없습니다.")).not.toBeInTheDocument();
+	});
+
+	it("more files than a page: under them the range shown and the pages, as under every table", async () => {
+		await at("#/media", async ({ db }) => {
+			const one = await db.selectFrom("media").selectAll().where("trashed_at", "is", null).executeTakeFirstOrThrow();
+			const copies = Array.from({ length: 100 }, (_, n) => ({
+				...one,
+				id: `copy-${n}`,
+				name: `copy-${n}.jpg`,
+				folder_id: null,
+				original_key: `copy-${n}-original`,
+				web_key: one.web_key === null ? null : `copy-${n}-web`,
+			}));
+			await db.insertInto("media").values(copies).execute();
+		});
+		await expect.element(main().getByText(/^1–100 \/ \d+$/)).toBeVisible();
+		// The range and the pages stand on one row, as the trash's and the log's do.
+		const range = main()
+			.getByText(/^1–100 \/ \d+$/)
+			.element();
+		expect(range.closest("[data-slot=list-footer]")?.querySelector('a[href*="page=2"]')).not.toBeNull();
+	});
+
+	it("replacing a file: while it goes up the pill says so, and pressing again does nothing", async () => {
+		let letGo = () => {};
+		const held = new Promise<void>((resolve) => {
+			letGo = resolve;
+		});
+		await at(
+			"#/media",
+			async () => {},
+			(real) => async (file, options) => {
+				await held;
+				return real(file, options);
+			},
+		);
+		await openFolderAssets();
+		await userEvent.click(tile("cybersecurity-code.jpg"));
+		const chosen = await jpeg("new-code.jpg");
+		const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(function (this: HTMLInputElement) {
+			const files = new DataTransfer();
+			files.items.add(chosen);
+			Object.defineProperty(this, "files", { value: files.files });
+			this.dispatchEvent(new Event("change"));
+		});
+		try {
+			await userEvent.click(page.getByRole("complementary").getByRole("button", { name: "더 보기" }));
+			await userEvent.click(page.getByRole("menuitem", { name: "파일 바꾸기" }));
+		} finally {
+			click.mockRestore();
+		}
+		const question = page.getByRole("alertdialog");
+		await userEvent.click(question.getByRole("button", { name: "바꾸기" }));
+		const going = question.getByRole("button", { name: "올리는 중…" });
+		await expect.element(going).toBeVisible();
+		await expect.element(going).toHaveAttribute("aria-busy", "true");
+		letGo();
+		await expect.element(question).not.toBeInTheDocument();
+	});
+});
+
+async function openFolderAssets() {
+	await userEvent.click(folder("Blog Assets"));
+	await expect.element(heading()).toHaveTextContent("Blog Assets");
+}

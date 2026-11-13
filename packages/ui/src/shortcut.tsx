@@ -20,7 +20,9 @@ const MAC: Readonly<Record<string, string>> = {
 	ArrowLeft: "←",
 	ArrowRight: "→",
 	Backspace: "⌫",
-	Delete: "⌦",
+	// A Mac keyboard's delete key is ⌫ (it sends Backspace, which the rows take too); few Macs have a forward delete, so "Delete" draws as ⌫
+	// there (made while building, 2026-11-14).
+	Delete: "⌫",
 	Enter: "↵",
 	Escape: "⎋",
 };
@@ -33,7 +35,7 @@ const OTHER: Readonly<Record<string, string>> = {
 	ArrowLeft: "←",
 	ArrowRight: "→",
 	Backspace: "Backspace",
-	Delete: "Del",
+	Delete: "Delete",
 	Enter: "Enter",
 	Escape: "Esc",
 };

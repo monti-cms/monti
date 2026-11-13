@@ -1,3 +1,4 @@
+import { Add } from "../../icons";
 import {
 	Button,
 	Count,
@@ -30,7 +31,10 @@ export function TemplatesScreen() {
 		<AdminFrame open="tools">
 			<PageColumn width="list">
 				<PageHeader title="도구">
-					<Button variant="primary">+ 템플릿 추가</Button>
+					<Button variant="primary">
+						<Add aria-hidden />
+						템플릿 추가
+					</Button>
 				</PageHeader>
 				<PageToolbar inset>
 					<TabLinks variant="toolbar">

@@ -217,6 +217,61 @@ describe("Table rows with a link", () => {
 		for (const count of Object.values(seen)) expect(count).toBeGreaterThan(0);
 	});
 
+	it("with words after the address, the box of both cuts as an address alone does (T127): a letter and its … or off the line, the title whole while it fits; the address is mono and the words sans", async () => {
+		const host = render(
+			<Table container="none" layout="fixed">
+				<TableBody>
+					<TableRow>
+						<TableCell truncate>
+							<RowTitle
+								title={<RowLink href="#">CMS elements: details</RowLink>}
+								address="post/cms-elements-details"
+								note="명령줄 · 되돌림 10:44"
+							/>
+						</TableCell>
+					</TableRow>
+				</TableBody>
+			</Table>,
+		);
+		await expect.element(page.getByText("CMS elements: details")).toBeVisible();
+		const title = page.getByText("CMS elements: details").element().closest(".truncate") as HTMLElement;
+		const address = host.querySelector("[data-slot=row-title-address]") as HTMLElement;
+		const note = host.querySelector("[data-slot=row-title-note]") as HTMLElement;
+		expect(getComputedStyle(address).fontFamily).toMatch(/mono/i);
+		expect(getComputedStyle(note).fontFamily).not.toMatch(/mono/i);
+		const box = address.parentElement as HTMLElement;
+		const line = box.parentElement as HTMLElement;
+		const wide = (node: HTMLElement) => {
+			const all = document.createRange();
+			all.selectNodeContents(node);
+			return all.getBoundingClientRect().width;
+		};
+		// A letter and its "…" in the address's own letters: less than this is a letter cut through.
+		const least = address.cloneNode(false) as HTMLElement;
+		least.textContent = "p…";
+		least.style.cssText = "position:absolute";
+		line.append(least);
+		const letter = least.getBoundingClientRect().width;
+		least.remove();
+		const seen = { shown: 0, gone: 0, whole: 0, cut: 0 };
+		for (let width = 420; width >= 60; width--) {
+			host.style.width = `${width}px`;
+			const room = line.getBoundingClientRect();
+			const at = `at ${width}px`;
+			if (box.getBoundingClientRect().top < room.bottom - 1) {
+				seen.shown++;
+				expect(box.getBoundingClientRect().width, at).toBeGreaterThanOrEqual(letter - 0.01);
+				expect(box.getBoundingClientRect().right, at).toBeLessThanOrEqual(room.right + 0.01);
+			} else seen.gone++;
+			if (wide(title) <= room.width + 0.01) {
+				seen.whole++;
+				expect(title.getBoundingClientRect().width, at).toBeGreaterThanOrEqual(wide(title) - 0.01);
+			} else seen.cut++;
+			expect(title.getBoundingClientRect().right, at).toBeLessThanOrEqual(room.right + 0.01);
+		}
+		for (const count of Object.values(seen)) expect(count).toBeGreaterThan(0);
+	});
+
 	it("a row that opens a panel has no address: the middle button there is left to the browser", async () => {
 		const opened = vi.fn();
 		render(

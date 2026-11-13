@@ -34,7 +34,7 @@ const main = () => page.getByRole("main");
 const table = () => main().getByRole("table");
 const row = (title: string) => table().getByRole("row").filter({ hasText: title });
 const menuOf = async (title: string) => {
-	await userEvent.click(row(title).getByRole("button", { name: "행 메뉴" }));
+	await userEvent.click(row(title).getByRole("button", { name: "더 보기" }));
 	return page.getByRole("menu");
 };
 /** The newest toast that says this: earlier tests' toasts may still be on the page, and the newest is first. */
@@ -52,6 +52,10 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(table().getByText("React 19 migration")).not.toBeInTheDocument();
 		await expect.element(row("시리즈 원고")).toHaveTextContent("글 2");
 		await expect.element(row("diagrams")).toHaveTextContent("파일 3 · Blog Assets");
+		// What a folder holds and where it was are words, in sans: mono is for an address (tokens.md).
+		const note = row("diagrams").element().querySelector<HTMLElement>("[data-slot=row-title-note]");
+		expect(note?.textContent).toBe("파일 3 · Blog Assets");
+		expect(getComputedStyle(note as HTMLElement).fontFamily).not.toMatch(/mono/i);
 		await expect.element(row("winter-01.jpg")).toHaveTextContent("미디어");
 		await expect.element(row("연습장")).toHaveTextContent("메모");
 		await expect.element(row("임시")).toHaveTextContent("태그");
@@ -96,6 +100,8 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(main().getByRole("heading", { name: "시리즈 원고" })).toBeVisible();
 		await expect.element(main().getByRole("button", { name: "휴지통 /" })).toBeVisible();
 		await expect.element(main().getByRole("button", { name: "폴더 복원" })).toBeVisible();
+		// The page head holds pills: a ghost one, as tall as the head's other controls (button.md).
+		expect(getComputedStyle(main().getByRole("button", { name: "폴더 복원" }).element()).height).toBe("36px");
 		await expect.element(row("시리즈 1: 시작")).toBeVisible();
 		// Inside the folder a row does not repeat the folder's days.
 		await expect.element(row("시리즈 1: 시작").getByText("30일 남음")).not.toBeInTheDocument();
@@ -241,6 +247,7 @@ describe("the trash (doc 11, flow 5)", () => {
 
 	it("11-1 [flow 5·26, 5·28] emptying asks with how many go, and an empty trash is one line with nothing to do", async () => {
 		await Top.run();
+		expect(getComputedStyle(main().getByRole("button", { name: "비우기" }).element()).height).toBe("36px");
 		await userEvent.click(main().getByRole("button", { name: "비우기" }));
 		await expect.element(dialog()).toHaveTextContent("휴지통을 비울까요?");
 		await expect.element(dialog()).toHaveTextContent("8개를 영구 삭제합니다.");
@@ -409,7 +416,7 @@ describe("into the trash (doc 11, principle 2)", () => {
 		const at = lines().findIndex((line) => line.textContent?.includes("옛 소개 글"));
 		const after = lines()[at + 1];
 		if (!after) throw new Error("no row after it");
-		const more = () => row("옛 소개 글").getByRole("button", { name: "행 메뉴" }).element() as HTMLElement;
+		const more = () => row("옛 소개 글").getByRole("button", { name: "더 보기" }).element() as HTMLElement;
 		for (let presses = 0; presses < 80 && document.activeElement !== more(); presses++) await userEvent.tab();
 		expect(document.activeElement).toBe(more());
 		await userEvent.keyboard("{Enter}");
@@ -429,7 +436,7 @@ describe("into the trash (doc 11, principle 2)", () => {
 
 		// With a pointer: the row goes, and nothing takes the focus.
 		const next = after.textContent ?? "";
-		await userEvent.click(after.querySelector('button[aria-label="행 메뉴"]') as HTMLElement);
+		await userEvent.click(after.querySelector('button[aria-label="더 보기"]') as HTMLElement);
 		await userEvent.click(page.getByRole("menuitem", { name: "영구 삭제" }));
 		await userEvent.click(dialog().getByRole("button", { name: "영구 삭제" }));
 		await expect.poll(() => lines().some((line) => line.textContent === next)).toBe(false);
@@ -442,7 +449,7 @@ describe("into the trash (doc 11, principle 2)", () => {
 		const lines = () => [...table().element().querySelectorAll<HTMLElement>("tbody tr")];
 		const after = lines()[lines().findIndex((line) => line.textContent?.includes("옛 소개 글")) + 1];
 		if (!after) throw new Error("no row after it");
-		const more = () => row("옛 소개 글").getByRole("button", { name: "행 메뉴" }).element() as HTMLElement;
+		const more = () => row("옛 소개 글").getByRole("button", { name: "더 보기" }).element() as HTMLElement;
 		for (let presses = 0; presses < 80 && document.activeElement !== more(); presses++) await userEvent.tab();
 		await userEvent.keyboard("{Enter}");
 		const restore = () => page.getByRole("menuitem", { name: "복원" }).element();
