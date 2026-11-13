@@ -322,7 +322,7 @@ function LinkButton({
 								<CommandItem value="address" onSelect={() => apply(address)}>
 									<Link aria-hidden />
 									<Text truncate>{address.replace(/^https?:\/\//, "")}</Text>
-									<MenuShortcut>↵</MenuShortcut>
+									<MenuShortcut keys={["Enter"]} />
 								</CommandItem>
 							</CommandGroup>
 						) : current && linked ? (
