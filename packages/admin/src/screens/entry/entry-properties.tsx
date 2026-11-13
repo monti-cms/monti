@@ -588,7 +588,7 @@ export function EntryProperties({
 			return (
 				<FormField key={key}>
 					{label ? <FormFieldLabel>{label}</FormFieldLabel> : null}
-					<View field={key} entry={entryView()} />
+					<View field={key} options={theirs.get(key)?.options ?? {}} entry={entryView()} />
 				</FormField>
 			);
 		}
@@ -605,6 +605,21 @@ export function EntryProperties({
 				</Text>
 			) : undefined;
 		const focus = { onFocus: () => setFocused(key), onBlur: () => setFocused(null) };
+		// The field's own input, when the site or a plugin brought one under the name the field gives (doc 14): the input part, and
+		// what it says at the end of the label row.
+		const brought = def.input ? inputs.get(def.input) : undefined;
+		const own = brought === undefined ? null : "Input" in brought ? brought : { Input: brought, Note: undefined };
+		const ownProps = () => ({
+			id,
+			field: key,
+			definition: def,
+			options: def.inputOptions ?? {},
+			value,
+			onChange: (next: unknown) => editor.set(path, next),
+			readOnly,
+			entry: entryView(),
+		});
+		const note = own?.Note ? <own.Note {...ownProps()} /> : count;
 		const changeMark = changes?.marks.find((mark) => mark.field === key);
 		const shownInCard = (shownValue: unknown) =>
 			def.kind === "media" ? (
@@ -686,22 +701,8 @@ export function EntryProperties({
 					)
 				: [];
 		const input = () => {
-			// The field's own input, when the site or a plugin brought one under the name the field gives (doc 14). In a translation a field
-			// that is the source's is drawn above, as the source's value: nothing is typed here.
-			const Own = def.input ? inputs.get(def.input) : undefined;
-			if (Own)
-				return (
-					<Own
-						id={id}
-						field={key}
-						definition={def}
-						options={def.inputOptions ?? {}}
-						value={value}
-						onChange={(next) => editor.set(path, next)}
-						readOnly={readOnly}
-						entry={entryView()}
-					/>
-				);
+			// In a translation a field that is the source's is drawn above, as the source's value: nothing is typed here.
+			if (own) return <own.Input {...ownProps()} />;
 			if (def.kind === "slug")
 				return (
 					<Input
@@ -827,13 +828,13 @@ export function EntryProperties({
 					htmlFor={id}
 					required={marksRequired && required(key)}
 					action={
-						change && count ? (
+						change && note ? (
 							<Inline gap={8}>
-								{count}
+								{note}
 								{change}
 							</Inline>
 						) : (
-							(change ?? count)
+							(change ?? note)
 						)
 					}
 				>

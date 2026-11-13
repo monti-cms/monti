@@ -22,6 +22,7 @@ export {
 	type AdminPlugin,
 	defineAdminPlugin,
 	type EntryView,
+	type FieldInput,
 	type FieldInputProps,
 	type FieldViewProps,
 } from "./plugins";

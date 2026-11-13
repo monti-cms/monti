@@ -33,8 +33,21 @@ export type FieldInputProps = {
 	entry: EntryView;
 };
 
+/**
+ * An input a plugin brings: the input part itself, or that with a `Note` drawn at the end of the field's label row (a character count).
+ * Both are given the same props.
+ */
+export type FieldInput =
+	| ComponentType<FieldInputProps>
+	| { Input: ComponentType<FieldInputProps>; Note?: ComponentType<FieldInputProps> };
+
 /** What a view field's component is given: it shows something of the entry and holds no value. */
-export type FieldViewProps = { field: string; entry: EntryView };
+export type FieldViewProps = {
+	field: string;
+	/** The view field's `options`, as the plugin gave them. */
+	options: Record<string, unknown>;
+	entry: EntryView;
+};
 
 /**
  * A plugin's half in the browser (doc 14): the components its server half names. It comes from a `"use client"` module and is handed to the
@@ -44,7 +57,7 @@ export type AdminPlugin = {
 	/** The plugin's code name, as `definePlugin` has it. */
 	name: string;
 	/** Inputs by the name a field's `input` gives. */
-	inputs?: Record<string, ComponentType<FieldInputProps>>;
+	inputs?: Record<string, FieldInput>;
 	/** Views by the name a view field's `view` gives. */
 	views?: Record<string, ComponentType<FieldViewProps>>;
 	/** The screens of its tool pages, by the page's id. */

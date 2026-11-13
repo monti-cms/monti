@@ -26,7 +26,13 @@ export type PluginValueField = GroupField & {
  * A field with no value: one view drawn in the property panel (a search result preview, a share card). `view` names the component the
  * plugin's admin half brings (`defineAdminPlugin`'s `views`).
  */
-export type PluginViewField = { kind: "view"; view: string; label?: string };
+export type PluginViewField = {
+	kind: "view";
+	view: string;
+	label?: string;
+	/** Handed to the view as they are. */
+	options?: Record<string, unknown>;
+};
 
 export type PluginField = PluginValueField | PluginViewField;
 
@@ -140,8 +146,9 @@ export type PluginTab = {
 		label?: string;
 		description?: string;
 		optionLabels?: Record<string, string>;
-		/** For a field with no value: the view to draw. */
+		/** For a field with no value: the view to draw, and what it is handed. */
 		view?: string;
+		options?: Record<string, unknown>;
 		/** A list offers it as a column. */
 		column: boolean;
 	}[];
@@ -245,6 +252,7 @@ export function pluginTabsOf(schema: Schema, sets: readonly NamedFieldSet[], nam
 							kind: "view",
 							view: definition.view,
 							...(definition.label ? { label: definition.label } : {}),
+							...(definition.options ? { options: definition.options } : {}),
 							column: false,
 						}
 					: {

@@ -9,7 +9,7 @@ import {
 } from "@monti-cms/core";
 import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { adminMessages } from "../messages";
-import type { AdminPlugin, FieldInputProps, FieldViewProps } from "../plugins";
+import type { AdminPlugin, FieldInput, FieldViewProps } from "../plugins";
 import { httpStreams, httpUploader, type StreamTransport, type Transport, type Uploader } from "./transport";
 
 export type Language = "ko" | "en";
@@ -73,7 +73,7 @@ type AdminContext = {
 	/** Runtime block components from the same definitions the site gives core. */
 	blocks: ReadonlyMap<string, AdminBlockDefinition>;
 	/** What the plugins' browser halves bring: inputs and views by name, tool page screens by `<plugin>/<page>` (doc 14). */
-	inputs: ReadonlyMap<string, ComponentType<FieldInputProps>>;
+	inputs: ReadonlyMap<string, FieldInput>;
 	views: ReadonlyMap<string, ComponentType<FieldViewProps>>;
 	toolPages: ReadonlyMap<string, ComponentType>;
 	/** The admin's words in its language: a key of the admin's or the core's dictionary, with its values. */
