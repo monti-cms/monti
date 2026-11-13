@@ -26,6 +26,39 @@ const arrivedFor = async (page: Page, id: string) =>
 const failedCount = async (page: Page) =>
 	(await (await page.request.post("/admin/api/operations/deliveries.counts", { data: { input: {} } })).json())
 		.failed as number;
+/** How many of one entry's deliveries are failed: what this flow did, whatever else the site's count holds. */
+const failedFor = async (page: Page, entry: string) =>
+	(
+		(
+			await (
+				await page.request.post("/admin/api/operations/activity.facets", {
+					data: { input: { entry, column: "delivery" } },
+				})
+			).json()
+		).values as { value: string; count: number }[]
+	).find((each) => each.value === "failed")?.count ?? 0;
+/**
+ * Waits until the site has sent everything it had on the way. Making a draft posts its own event to the webhook after the answer: taken down
+ * before that send, the hook fails it too, and the count is one more than the flow made (#500's CI, 13-1).
+ */
+const settled = (page: Page) =>
+	expect
+		.poll(
+			async () =>
+				(await (await page.request.post("/admin/api/operations/deliveries.counts", { data: { input: {} } })).json())
+					.onTheWay as number,
+		)
+		.toBe(0);
+/** The sidebar's "activity log" says the site's failed count as the server has it now. */
+const sidebarSaysCount = async (page: Page) => {
+	await expect
+		.poll(async () => {
+			const count = await failedCount(page);
+			const text = (await sidebarLog(page).textContent()) ?? "";
+			return count === 0 ? text === "활동 기록" : text.includes(String(count));
+		})
+		.toBe(true);
+};
 
 /** A draft post with a title no other test has. */
 async function draft(page: Page, word: string) {
@@ -50,16 +83,17 @@ test.describe("the activity log", () => {
 		admin,
 	}) => {
 		const post = await draft(admin, "hook");
-		const before = await failedCount(admin);
+		await settled(admin);
 		await admin.request.post(`${HOOK}/down`);
 		await operation(admin, "entries.publish", { ids: [post.id] });
 		// The site's own pages heard of it; the webhook did not.
 		await expect.poll(() => onSite(admin, post.slug)).toBe(200);
-		await expect.poll(() => failedCount(admin)).toBe(before + 1);
+		await expect.poll(() => failedFor(admin, post.id)).toBe(1);
 		expect((await arrivedFor(admin, post.id)).filter((each) => each.event.type === "entry.published")).toHaveLength(0);
 
 		await admin.goto("/admin#/c/post");
-		await expect(sidebarLog(admin)).toContainText(String(before + 1));
+		await expect(sidebarLog(admin)).toContainText(/\d/);
+		await sidebarSaysCount(admin);
 		await sidebarLog(admin).click();
 		await expect(admin.getByRole("heading", { level: 1 })).toHaveText("활동 기록");
 		const words = `"${post.title}" 발행`;
@@ -69,9 +103,8 @@ test.describe("the activity log", () => {
 		await (await rowMenu(admin, words)).getByRole("menuitem", { name: "다시 보내기" }).click();
 		await expect(toast(admin, "보냈습니다")).toBeVisible();
 		await expect(row(admin, words)).not.toContainText("실패");
-		await expect.poll(() => failedCount(admin)).toBe(before);
-		if (before === 0) await expect(sidebarLog(admin)).toHaveText("활동 기록");
-		else await expect(sidebarLog(admin)).toContainText(String(before));
+		await expect.poll(() => failedFor(admin, post.id)).toBe(0);
+		await sidebarSaysCount(admin);
 		// It arrived once, as the event of that publish, counted from one again (a person's send starts the count over).
 		const published = (await arrivedFor(admin, post.id)).filter((each) => each.event.type === "entry.published");
 		expect(published).toHaveLength(1);
