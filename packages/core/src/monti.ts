@@ -29,7 +29,7 @@ import { entryRecord } from "./entries/record";
 import type { PublishCheck } from "./entries/tasks";
 import { CheckError, InputError, UnknownOperationError } from "./errors";
 import { folderOperations, folderRecord } from "./folders/operations";
-import { addKeyUsage, keyOperations, keyRecord, openKey } from "./keys/operations";
+import { addKeyUsage, keyOperations, keyRecord, openKey, removeOrphanSlotKeys, slotKeyId } from "./keys/operations";
 import { aiServices, type KeyService } from "./keys/services";
 import { mediaOperations } from "./media/operations";
 import { mediaRecord } from "./media/record";
@@ -658,6 +658,14 @@ export function createMonti(options: MontiOptions) {
 
 		/** The plugins' own clean-ups, run with the trash's (when the admin opens, and `monti trash:purge`). One that fails does not stop the others. */
 		async cleanUp(): Promise<void> {
+			try {
+				await removeOrphanSlotKeys(
+					engine.db,
+					sitePlugins.flatMap((plugin) => plugin.keys.map((slot) => slotKeyId(plugin.name, slot.id))),
+				);
+			} catch (error) {
+				console.error("Monti: removing the keys of slots no plugin has failed; the next clean-up tries again:", error);
+			}
 			for (const plugin of plugins) {
 				try {
 					await plugin.cleanUp?.(monti);

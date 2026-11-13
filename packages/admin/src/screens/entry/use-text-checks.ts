@@ -1,7 +1,7 @@
 import type { TextCheckResult } from "@monti-cms/core";
 import type { Editor } from "@tiptap/core";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { blockTexts, type Found, fixInEditor, showInEditor } from "../../editor/text-check";
+import { blockTexts, type Found, fixInEditor, showInEditor, stands } from "../../editor/text-check";
 import { useOperation } from "../../operations/use-operation";
 import type { SchemaRead } from "../settings/schema-draft";
 
@@ -61,15 +61,17 @@ export function useTextChecks({
 					? answer.body.checks.map((check) => ({
 							plugin: check.plugin,
 							label: check.label,
-							findings: check.findings.map((found) => ({
-								...found,
-								was: (texts.get(found.block) ?? "").slice(found.from, found.to),
-							})),
+							findings: check.findings
+								.map((found) => ({ ...found, was: (texts.get(found.block) ?? "").slice(found.from, found.to) }))
+								// What cannot be put in (it reaches over a line break or a footnote's mark) is no row: its "fix" would do nothing.
+								.filter((found) => stands(body.state.doc, found)),
 						}))
 					: [],
 			);
 		};
 		const later = () => {
+			// The body changed: an answer still on its way is about the body as it was, and must not bring back a row just fixed.
+			turn.current += 1;
 			clearTimeout(timer);
 			timer = setTimeout(() => void ask(), REST_MS);
 		};

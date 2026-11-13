@@ -1,3 +1,6 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sql, testDatabase } from "../__test__/database";
 import { receiverFetch } from "../engine/deliveries";
@@ -8,6 +11,7 @@ import type { KeyService } from "../keys/services";
 import { createMonti, definePlugin, type Plugin } from "../monti";
 import { migrateContent } from "../schema/apply";
 import { defineSchema, type Schema } from "../schema/define";
+import { schemaFilesAt } from "../schema/files";
 import { says } from "./define";
 import type { PluginRow, TextCheckResult } from "./operations";
 
@@ -163,6 +167,44 @@ describe("a plugin's fields", () => {
 		expect(plan).toEqual({ problems: [], changes: [] });
 	});
 
+	it("adding a language on the dev server writes the file's own fields, never the plugin's", async () => {
+		const root = await mkdtemp(path.join(tmpdir(), "monti-plugins-"));
+		try {
+			const monti = createMonti({ db, schema, plugins: [seo()], files: schemaFilesAt(root) });
+			const locales = { ...schema.locales, list: [...schema.locales.list, { code: "en", name: "English" }] };
+			const plan = await run<{ changes: { do: string }[] }>(monti, "locales.plan", { locales });
+			expect(plan.changes.map((change) => change.do)).toEqual(["addLocale"]);
+			await run(monti, "locales.apply", { locales, answers: {} });
+			const written = await readFile(path.join(root, "monti.schema.ts"), "utf8");
+			expect(written).toContain('"en"');
+			expect(written).not.toContain("seoTitle");
+			expect(monti.site.fileSchema().collections.post.fields).not.toHaveProperty("seoTitle");
+			// The plugin's fields are still the plugin's: in its tab, on the schema the site runs with.
+			expect(monti.site.pluginTabs("post")[0].fields.map((field) => field.name)).toContain("seoTitle");
+			expect(monti.site.schema().collections.post.fields).toHaveProperty("seoTitle");
+		} finally {
+			await rm(root, { recursive: true, force: true });
+			await migrateContent(db, schema, []);
+		}
+	});
+
+	it("a draft's field of a plugin's name that says something else is the draft's own: it is planned as a new field", async () => {
+		const monti = site();
+		const read = await run<{ schema: Schema }>(monti, "schema.read");
+		const draft: Schema = {
+			...read.schema,
+			collections: {
+				...read.schema.collections,
+				post: {
+					...read.schema.collections.post,
+					fields: { ...read.schema.collections.post.fields, seoTitle: { kind: "text", max: 70 } },
+				},
+			},
+		};
+		const plan = await run<{ changes: { do: string; field?: string }[] }>(monti, "schema.plan", { draft });
+		expect(plan.changes).toMatchObject([{ do: "addField", field: "seoTitle" }]);
+	});
+
 	it("a name the schema file already has stays the file's field", async () => {
 		const own: Schema = {
 			...schema,
@@ -272,6 +314,17 @@ describe("before a save (T85)", () => {
 		const wild: Plugin = { name: "wild", beforeSave: () => ({ values: { nowhere: 1 } }) };
 		const monti = site([wild]);
 		await expect(create(monti, "x")).rejects.toMatchObject({ reason: { key: "entries.unknownField" } });
+	});
+
+	it("a hook that hands back all it was given changes nothing, whatever the entry still holds from a plugin since taken out", async () => {
+		const before = site();
+		const id = await create(before, "Kept", { seoTitle: "left behind" });
+		// The SEO plugin is gone; another plugin's hook returns every value it sees, with one of its own.
+		const echo: Plugin = { name: "echo", beforeSave: (saving) => ({ values: { ...saving.values, summary: "set" } }) };
+		const after = site([echo]);
+		const read = await entry(after, id);
+		await run(after, "entries.save", { id, version: read.version, title: "Kept on" });
+		expect((await entry(after, id)).values).toEqual({ seoTitle: "left behind", summary: "set" });
 	});
 
 	it("each plugin sees what the one before it left", async () => {
@@ -389,6 +442,21 @@ describe("plugin keys (T144)", () => {
 			serviceName: "Algolia",
 			filled: true,
 		});
+	});
+
+	it("a key cannot be named as a slot's row is, and the key of a slot no plugin has any more goes with the clean-up", async () => {
+		const monti = site([algolia()]);
+		await setKey(monti, { secret: SEARCH_KEY });
+		await expect(
+			run(monti, "keys.add", { service: "algolia", name: "slot:algolia/admin", secret: OTHER_KEY }),
+		).rejects.toThrow(/slot:/);
+		// The plugin still has the slot: the clean-up leaves its key.
+		await monti.cleanUp();
+		expect((await monti.plugins.key("algolia", "search"))?.secret).toBe(SEARCH_KEY);
+		// The plugin is taken out of the site's code: nothing shows the key or could remove it, so the clean-up does.
+		const without = site([]);
+		await without.cleanUp();
+		expect(await db.selectFrom("api_keys").select("id").execute()).toEqual([]);
 	});
 
 	it("there is no slot a plugin did not name, and no key without the server's secret", async () => {

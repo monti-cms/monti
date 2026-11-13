@@ -116,7 +116,26 @@ async function beforeSaving(
 			{ db: ctx.db, schema, previous, actor: ctx.actor },
 		);
 		if (!changed) continue;
-		const patch = { title: changed.title, slug: changed.slug, values: changed.values };
+		// Only what the hook changed is its say: a hook that hands back every value it was given changes none of them, and what an
+		// entry still holds from before (a value of a plugin since taken out) is not held against it.
+		const values = Object.fromEntries(
+			Object.entries(changed.values ?? {}).filter(
+				([field, value]) => !sameJson(value ?? null, next.values[field] ?? null),
+			),
+		);
+		const fields = storedFields(schema.collections[entry.collection]);
+		for (const field of Object.keys(values)) {
+			const definition = fields[field];
+			// A translation's `same` fields are its source's (doc 04), for a hook as for a person.
+			if (definition && isTranslation(schema, entry) && localeModeOf(field, definition) === "same")
+				throw new CheckError({ key: "entries.sameField", values: { field } });
+			// The far side of such a relation is other entries, which the write did not take hold of before it ran.
+			if (definition?.kind === "relation" && definition.via !== undefined)
+				throw new Error(
+					`Plugin ${plugin.name}: beforeSave cannot set "${field}", a relation edited from its other side.`,
+				);
+		}
+		const patch = { title: changed.title, slug: changed.slug, values };
 		checkDraft(schema, entry.collection, patch);
 		await checkMediaValues(ctx.db, schema, entry.collection, patch.values);
 		next = applyDraft(next, patch);
@@ -273,17 +292,7 @@ export const entryOperations = [
 			const isItem = ctx.site.schema().collections[input.collection]?.kind === "item";
 			let values = input.values ? { ...input.values } : {};
 			values = await resolveInlineCreation(ctx, input.collection, values);
-			const working = await beforeSaving(
-				ctx,
-				{ id: null, collection: input.collection, locale },
-				applyDraft({ title: "", slug: "", values: {}, doc: null }, { ...input, values }),
-				null,
-			);
-			working.values = keepChosen(ctx.site.schema(), { collection: input.collection, locale }, working.values, input);
-			working.values = cleanMediaFields(ctx.site.schema(), input.collection, working.values);
-			if (isItem && working.slug === "" && working.title !== "") {
-				working.slug = await generateUniqueSlug(ctx.db, input.collection, locale, working.title, undefined, id);
-			}
+			const drafted = applyDraft({ title: "", slug: "", values: {}, doc: null }, { ...input, values });
 			if (input.template !== undefined) {
 				const template = await ctx.db
 					.selectFrom("templates")
@@ -293,8 +302,15 @@ export const entryOperations = [
 				if (!template) throw new CheckError({ key: "templates.unknown", values: { id: input.template } });
 				// New ids, and the blocks go in as the template has them, even ones the site no longer defines (doc 03, decisions).
 				const doc = template.doc as Doc;
-				working.doc = { type: "doc", blocks: doc.blocks.map(withNewIds) };
-				await checkBodyOf(ctx, working.doc, working.doc);
+				drafted.doc = { type: "doc", blocks: doc.blocks.map(withNewIds) };
+				await checkBodyOf(ctx, drafted.doc, drafted.doc);
+			}
+			// The plugins see the entry as it will be saved, its template's body included.
+			const working = await beforeSaving(ctx, { id: null, collection: input.collection, locale }, drafted, null);
+			working.values = keepChosen(ctx.site.schema(), { collection: input.collection, locale }, working.values, input);
+			working.values = cleanMediaFields(ctx.site.schema(), input.collection, working.values);
+			if (isItem && working.slug === "" && working.title !== "") {
+				working.slug = await generateUniqueSlug(ctx.db, input.collection, locale, working.title, undefined, id);
 			}
 			const translationGroup = randomUUID();
 			const now = ctx.now();

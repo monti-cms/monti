@@ -87,6 +87,8 @@ export function seo(options: SeoOptions = {}): Plugin {
 		},
 		[SEO_FIELDS.canonical]: {
 			kind: "text",
+			// A translation repeats its own original, not its source's.
+			locale: "perLocale",
 			label: words.canonical,
 			description: "The address of the page this one repeats, when it was first published elsewhere. Usually empty.",
 		},

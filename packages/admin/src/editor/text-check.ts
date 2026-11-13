@@ -6,23 +6,32 @@ import { TextSelection } from "@tiptap/pm/state";
 /** A block's words as a text check reads them, and where each run of them sits in the document. */
 type BlockText = { id: string; text: string; runs: { at: number; pos: number; length: number }[] };
 
+/** What stands in a block's text for something that is not words: a line break as itself, anything else (a footnote's mark) as one sign. */
+const BREAK = "\n";
+const NOT_WORDS = "\uFFFC";
+
+/** The most blocks one check is handed (`plugins.checkText` takes no more): a longer body is checked up to there. */
+const MOST_BLOCKS = 2000;
+
 /**
- * The text of every block that holds words, by block id: its text nodes run together, in order. What is not text (a footnote's mark, a line
- * break) adds nothing, so an offset in the text is a place in the words alone; `runs` take it back to the document.
+ * The text of every block that holds prose, by block id: its text nodes in order, a line break as a line break and any other inline thing
+ * as one sign, so the words on either side of one are never read as one word. `runs` take a place in the words back to the document.
+ * Code is not prose and is left out. A table's cells have no block of their own and are not checked.
  */
 export function blockTexts(doc: EditorNode): BlockText[] {
 	const blocks: BlockText[] = [];
 	doc.descendants((node, pos) => {
 		if (!node.isTextblock) return true;
 		const id = node.attrs.blockId as string | undefined;
-		if (!id) return false;
+		if (!id || node.type.spec.code || blocks.length >= MOST_BLOCKS) return false;
 		const block: BlockText = { id, text: "", runs: [] };
 		node.forEach((child, offset) => {
-			if (!child.isText || !child.text) return;
-			block.runs.push({ at: block.text.length, pos: pos + 1 + offset, length: child.text.length });
-			block.text += child.text;
+			if (child.isText && child.text) {
+				block.runs.push({ at: block.text.length, pos: pos + 1 + offset, length: child.text.length });
+				block.text += child.text;
+			} else block.text += child.type.name === "hardBreak" ? BREAK : NOT_WORDS;
 		});
-		if (block.text !== "") blocks.push(block);
+		if (block.runs.length > 0) blocks.push(block);
 		return false;
 	});
 	return blocks;
@@ -44,10 +53,15 @@ export type Found = TextFinding & { was: string };
 function rangeOf(doc: EditorNode, found: Found): { from: number; to: number } | null {
 	const block = blockTexts(doc).find((each) => each.id === found.block);
 	if (!block || block.text.slice(found.from, found.to) !== found.was) return null;
+	// Words alone are replaced: a finding that reaches over a line break or a footnote's mark would take it out with them.
+	if (found.was.includes(BREAK) || found.was.includes(NOT_WORDS)) return null;
 	const from = positionOf(block, found.from, false);
 	const to = positionOf(block, found.to, true);
 	return from === null || to === null ? null : { from, to };
 }
+
+/** Whether a finding can be put in: its words are where the check found them, and are words alone. */
+export const stands = (doc: EditorNode, found: Found) => rangeOf(doc, found) !== null;
 
 /**
  * Puts the findings' words in the body, in one step a single undo takes back. Each keeps the marks of the words it replaces. A finding

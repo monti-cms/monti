@@ -1,6 +1,7 @@
 import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/schema";
 import type { Entry } from "../entries/record";
+import { sameJson } from "../json";
 import type { Actor, Message } from "../operation";
 import {
 	type CollectionDefinition,
@@ -268,16 +269,31 @@ export function pluginTabsOf(schema: Schema, sets: readonly NamedFieldSet[], nam
 		.filter((tab) => tab.fields.length > 0);
 }
 
-/** A draft schema without the fields that are a plugin's: what `monti.schema.ts` holds. A draft made from what `schema.read` gave carries them. */
+/**
+ * A draft schema without the fields that are a plugin's: what `monti.schema.ts` holds. A draft made from what `schema.read` gave carries
+ * them, exactly as the plugin defines them; those are taken out again. A field of the same name that says something else is the draft's
+ * own (a person adding a field of that name: the file's field stands in the plugin's place), and stays.
+ */
 export function withoutPluginFields(file: Schema, sets: readonly NamedFieldSet[], draft: Schema): Schema {
 	if (sets.length === 0) return draft;
 	const collections: Schema["collections"] = {};
 	for (const [name, collection] of Object.entries(draft.collections)) {
 		const before = file.collections[name];
-		const theirs = new Set(
-			before ? setsOf(sets, name, before).flatMap(({ set }) => taken(file, before, set).map(([field]) => field)) : [],
+		const theirs = new Map<string, GroupField>(
+			before
+				? setsOf(sets, name, before).flatMap(({ set }) =>
+						taken(file, before, set).flatMap(([field, definition]): [string, GroupField][] =>
+							definition.kind === "view" ? [] : [[field, structureOf(definition)]],
+						),
+					)
+				: [],
 		);
-		const fields = Object.fromEntries(Object.entries(collection.fields).filter(([field]) => !theirs.has(field)));
+		const fields = Object.fromEntries(
+			Object.entries(collection.fields).filter(([field, definition]) => {
+				const plugin = theirs.get(field);
+				return plugin === undefined || !sameJson(plugin, definition);
+			}),
+		);
 		collections[name] = { ...collection, fields } as CollectionDefinition;
 	}
 	return { ...draft, collections };

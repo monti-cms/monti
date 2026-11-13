@@ -66,9 +66,41 @@ type SaveProposal = {
 	adminValues?: Record<string, AdminValuesPatch>;
 };
 
+/**
+ * A proposal's collections as the settings read them: without the plugins' fields. The assistant drafts from what `schema.read` gave, which
+ * has them; the server takes them out again when the proposal is applied (doc 14), so the screen does not show them as fields it adds. A
+ * field of a plugin's name that says something else is the proposal's own.
+ */
+function ownCollections<Collections extends SettingsRead["schema"]["collections"] | undefined>(
+	data: SettingsRead,
+	collections: Collections,
+): Collections {
+	if (!collections || !data.pluginTabs) return collections;
+	return Object.fromEntries(
+		Object.entries(collections).map(([c, collection]) => {
+			const theirs = new Map((data.pluginTabs?.[c] ?? []).flatMap((tab) => tab.fields.map((f) => [f.name, f.kind])));
+			const fields = Object.fromEntries(
+				Object.entries(collection.fields).filter(
+					([name, field]) =>
+						!(theirs.get(name) === field.kind && !(name in (data.schema.collections[c]?.fields ?? {}))),
+				),
+			);
+			return [c, { ...collection, fields }];
+		}),
+	) as Collections;
+}
+
 /** The places a pending proposal item writes, as the settings screen reads its input. */
 function proposalPlaces(data: SettingsRead, catalog: Catalog | null, item: ProposalItem): Record<Path, unknown> {
-	if (item.operation === "schema.apply") return proposalPaths(data, item.input as Parameters<typeof proposalPaths>[1]);
+	if (item.operation === "schema.apply") {
+		const input = item.input as Parameters<typeof proposalPaths>[1];
+		return proposalPaths(
+			data,
+			input.draft
+				? { ...input, draft: { ...input.draft, collections: ownCollections(data, input.draft.collections) } }
+				: input,
+		);
+	}
 	if (item.operation === "locales.apply")
 		return localeProposalPaths(data, (item.input as { locales?: SettingsRead["schema"]["locales"] }).locales);
 	if (item.operation === "collections.updateAdminValues") {
@@ -89,7 +121,10 @@ function proposalPlaces(data: SettingsRead, catalog: Catalog | null, item: Propo
 		...out,
 		...(input.collections
 			? proposalPaths(data, {
-					draft: { locales: input.locales ?? data.schema.locales, collections: input.collections },
+					draft: {
+						locales: input.locales ?? data.schema.locales,
+						collections: ownCollections(data, input.collections),
+					},
 					renames: input.renames,
 					adminValues: input.adminValues,
 				})

@@ -133,6 +133,18 @@ const keysInOrder = (db: Db): Promise<KeyRecord[]> =>
 		.orderBy("id")
 		.execute();
 
+/**
+ * Removes the keys of slots no plugin has any more (the plugin was taken out of the site's code, or dropped the slot): no screen shows such a
+ * key and nothing could use or remove it, and a secret is not kept for nobody. Run with the site's clean-up.
+ */
+export async function removeOrphanSlotKeys(db: Db, slots: readonly string[]): Promise<void> {
+	await db
+		.deleteFrom("api_keys")
+		.where("id", "like", `${SLOT_ID}%`)
+		.$if(slots.length > 0, (query) => query.where("id", "not in", [...slots]))
+		.execute();
+}
+
 /** The keys in the plugins' slots. */
 export const slotKeys = (db: Db): Promise<SlotKey[]> =>
 	db.selectFrom("api_keys").selectAll().where("id", "like", `${SLOT_ID}%`).execute();
@@ -274,7 +286,13 @@ function sharedRefresh(site: Site, key: KeyRecord, refresh: () => Promise<void>)
 
 /** The most characters a key's name has: the window's name field stops there. */
 export const KEY_NAME_MAX = 60;
-const Name = z.string().trim().min(1).max(KEY_NAME_MAX);
+// A plugin's slot is stored under its own id as its name (`slot:…`): no key a person names takes one of those.
+const Name = z
+	.string()
+	.trim()
+	.min(1)
+	.max(KEY_NAME_MAX)
+	.refine((name) => !name.startsWith(SLOT_ID), { message: 'A key\'s name cannot start with "slot:".' });
 
 export const keyOperations = [
 	defineOperation({

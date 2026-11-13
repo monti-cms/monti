@@ -564,10 +564,13 @@ export function EntryProperties({
 			values: Object.fromEntries(
 				Object.entries(definitions)
 					.filter(([name]) => name !== "title" && name !== "slug")
-					.map(([name, definition]) => [
-						name,
-						shared && localeModeOf(name, definition) === "same" ? shared[name] : editor.value(`values.${name}`),
-					]),
+					.map(([name, definition]) => {
+						const own = editor.value(`values.${name}`);
+						const mode = localeModeOf(name, definition);
+						// In a translation: the source's value where the field is the source's, and where an empty one follows it (doc 04).
+						const sources = shared && (mode === "same" || (mode === "fromSource" && !hasValue(own)));
+						return [name, sources ? shared[name] : own];
+					}),
 			),
 			address: schema && slug ? publicPath(schema.schema, collection, slug, currentLocale) : null,
 			labels: Object.fromEntries(
@@ -701,7 +704,7 @@ export function EntryProperties({
 					)
 				: [];
 		const input = () => {
-			// In a translation a field that is the source's is drawn above, as the source's value: nothing is typed here.
+			// The field's own input (doc 14). A media field keeps its own: it is drawn above, with its window and its picture's words.
 			if (own) return <own.Input {...ownProps()} />;
 			if (def.kind === "slug")
 				return (
