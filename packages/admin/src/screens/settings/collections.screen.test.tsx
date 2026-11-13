@@ -1,8 +1,18 @@
 import { composeStories } from "@storybook/react-vite";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { dragPath, dropDrag, middleOf, scrollsSideways } from "../../../../../testing/input";
+import {
+	dragPath,
+	dropDrag,
+	holdRequests,
+	middleOf,
+	releaseRequests,
+	scrollsSideways,
+	slowCpu,
+} from "../../../../../testing/input";
+import type { StorySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
+import { MontiAdmin } from "../../app";
 import { schema } from "../story-schema";
 import * as collections from "./collections.stories";
 
@@ -476,6 +486,23 @@ describe("settings › collections: the options of a choice in the review (docs 
 	};
 	/** The value field of the n-th option's row. */
 	const option = (index: number) => sheet().getByRole("textbox", { name: "값" }).nth(index);
+	/** A field's line in the list, by its name. */
+	const line = (name: string) =>
+		[...document.querySelectorAll<HTMLElement>("[data-slot=field-row]")].find((row) =>
+			row.textContent?.startsWith(name),
+		);
+	/**
+	 * T260: on CI the field sheet closed and its change never reached the draft, cause unknown. Each step says where it stopped: the option's
+	 * row gone after its ×, the field's line marked changed after "저장". The page runs slowed, as CI's runner does.
+	 */
+	const slowed = async () => {
+		onTestFinished(() => slowCpu(1));
+		await slowCpu(4);
+	};
+	const takenOut = (value: string) =>
+		expect.element(sheet().getByRole("button", { name: `${value} 빼기` })).not.toBeInTheDocument();
+	const marked = (name: string) =>
+		expect.poll(() => Boolean(line(name)?.querySelector("[data-slot=change-dot]"))).toBe(true);
 
 	// The review names it with the entries that chose it and the published ones.
 	it("19-8 an option's value edited in its row is a rename: the review counts its entries, asks nothing, and the site has the new word", async () => {
@@ -500,12 +527,19 @@ describe("settings › collections: the options of a choice in the review (docs 
 
 	// 바꾸기 offers the options that stay; the change is on the site too.
 	it("19-9 an option taken out is asked about: 바꾸기 or 비우기 (the red apply); changed, the entries hold the option picked", async () => {
+		await slowed();
 		const made = options();
 		await made.run();
 		await opened();
+		// No part of the sheet or the review comes on demand: with the downloads of the modules (with their `?v=` too) held, they still work (T260 asked whether a part
+		// arriving late remounted the sheet's form).
+		onTestFinished(releaseRequests);
+		await holdRequests("**/*.{ts,tsx,js,mjs}*");
 		await userEvent.click(page.getByRole("button", { name: "mood 열기" }));
 		await userEvent.click(sheet().getByRole("button", { name: "loud 빼기" }));
+		await takenOut("loud");
 		await saveSheet();
+		await marked("mood");
 		const sheetNow = await review();
 		await expect.element(sheetNow.getByText("분위기 · 시끌")).toBeVisible();
 		await expect.element(sheetNow.getByText("2편 · 공개된 글 1편")).toBeVisible();
@@ -782,12 +816,17 @@ describe("settings › collections: the options of a choice in the review (docs 
 	});
 
 	it("19-20 a removed field no entry holds a value of, moved into a field of an option: nothing is moved or deleted, so no count is said and the apply is the plain one", async () => {
+		await slowed();
 		const made = options();
 		await made.run();
 		await opened();
 		// The link's address: no post is a link, so none holds it.
 		await userEvent.click(page.getByRole("button", { name: "linkUrl 열기" }));
 		await userEvent.click(sheet().getByRole("button", { name: "지우기" }));
+		// The field goes with the sheet: an option's field leaves the list, and the draft holds the change before the review is asked for.
+		await expect.element(sheet()).not.toBeInTheDocument();
+		await expect.poll(() => line("linkUrl")).toBeUndefined();
+		await expect.element(page.getByRole("button", { name: "변경 사항", exact: true })).toHaveTextContent(/1/);
 		const sheetNow = await review();
 		await userEvent.click(sheetNow.getByRole("radio", { name: "다른 필드로 옮기기" }));
 		await userEvent.click(sheetNow.getByRole("combobox", { name: "다른 필드로 옮기기" }));
@@ -803,13 +842,16 @@ describe("settings › collections: the options of a choice in the review (docs 
 
 	// It counts again when an option taken out sends its entries there, and the apply is the red one while any are deleted.
 	it("19-20 a removed field's values moved into a field of an option: the review says how many are moved and how many deleted", async () => {
+		await slowed();
 		const made = options();
 		await made.run();
 		await opened();
 		// The video option goes, and its field with it.
 		await userEvent.click(page.getByRole("button", { name: "format 열기" }));
 		await userEvent.click(sheet().getByRole("button", { name: "video 빼기" }));
+		await takenOut("video");
 		await saveSheet();
+		await marked("format");
 		const sheetNow = await review();
 		await userEvent.click(sheetNow.getByRole("radio", { name: "다른 필드로 옮기기" }));
 		await userEvent.click(sheetNow.getByRole("combobox", { name: "다른 필드로 옮기기" }));
@@ -975,5 +1017,48 @@ describe("the collection screens follow the design rules (design audit, 2026-11-
 		await FixFirst.run();
 		const open = dialog().getByRole("button", { name: "열기" }).first().element();
 		expect(underlined(open)).toBe(true);
+	});
+});
+
+describe("settings: a save takes only what it sent", () => {
+	it("a change made while the save is on its way stays after it, still unsaved (as T230)", async () => {
+		let release = () => {};
+		const held = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		await scene(
+			{
+				loaders: collections.site(),
+				render: (_args: unknown, { loaded }: { loaded: unknown }) => {
+					const { site } = loaded as { site: StorySite };
+					return (
+						<MontiAdmin
+							transport={async (name, input, options) => {
+								if (name === "settings.save") await held;
+								return site.transport(name, input, options);
+							}}
+							streams={site.streams}
+							siteName="example.dev"
+						/>
+					);
+				},
+				play: collections.Basics.play,
+			},
+			collections.default,
+		).run();
+		const changes = () => page.getByRole("button", { name: "변경 사항", exact: true });
+		await userEvent.click(page.getByRole("textbox", { name: "표시 이름" }));
+		await userEvent.keyboard("x");
+		await userEvent.click(page.getByRole("button", { name: "저장하고 적용" }));
+		// While the name is on its way, the folders are switched.
+		const folders = () => page.getByRole("switch", { name: "폴더 사용" });
+		const before = folders().element().getAttribute("aria-checked");
+		await folders().click();
+		await expect.element(changes()).toHaveTextContent(/(^|\D)2$/);
+		release();
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		// The name went; the folders did not, and are still a change of this draft.
+		await expect.element(folders()).toHaveAttribute("aria-checked", before === "true" ? "false" : "true");
+		await expect.element(changes()).toHaveTextContent(/(^|\D)1$/);
 	});
 });
