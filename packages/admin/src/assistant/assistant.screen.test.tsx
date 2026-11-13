@@ -2045,3 +2045,74 @@ describe("the assistant from inside an editor (T164; flow 2, 05)", () => {
 		expect(button("저장하고 열기").elements()).toHaveLength(0);
 	});
 });
+
+describe("the assistant follows the design rules (design audit, 2026-11-14)", () => {
+	const ghost = (element: Element) => getComputedStyle(element).backgroundColor === "rgba(0, 0, 0, 0)";
+
+	it("the frame's ✦ is 16px, as in the editor's head", async () => {
+		await on({}).run();
+		await expect.element(button("어시스턴트 열기")).toBeVisible();
+		const icon = button("어시스턴트 열기").element().querySelector("svg");
+		expect(icon?.getBoundingClientRect().width).toBe(16);
+	});
+
+	it("a default request keeps its blue spark once sent; words typed in have none", async () => {
+		const story = on({ script: stories.scripts(stories.found, () => [{ text: "네." }]) });
+		await story.run();
+		await openPanel();
+		await userEvent.click(button("요약이 비어 있는 글 찾아 줘"));
+		await expect.element(panel().getByText("글 목록 읽음 · 3편")).toBeVisible();
+		const bubbles = () => panel().element().querySelectorAll("[data-slot=chat-message][data-author=user]");
+		expect(bubbles()[0]?.querySelector("svg")).not.toBeNull();
+		await say("고마워");
+		await expect.element(panel().getByText("네.")).toBeVisible();
+		expect(bubbles()[1]?.querySelector("svg")).toBeNull();
+	});
+
+	it("an outside link of an answer has no browser tooltip", async () => {
+		await on({ script: () => [{ text: "[문서](https://example.com/docs)에 있습니다." }] }).run();
+		await openPanel();
+		await say("어디에 있어?");
+		await expect.element(page.getByRole("link", { name: "문서" })).toBeVisible();
+		expect(page.getByRole("link", { name: "문서" }).element().hasAttribute("title")).toBe(false);
+	});
+
+	it("버리기 pressed: it says it is discarding and keeps the focus; the pill beside it is not greyed", async () => {
+		const story = open(stories.Card);
+		await story.run();
+		const release = story.loaded().net.hold("proposals.discard");
+		await new Promise((resolve) => setTimeout(resolve, 600));
+		const discard = button("버리기");
+		discard.element().focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(button("버리는 중…")).toHaveAttribute("aria-busy", "true");
+		expect(focused()).toBe(button("버리는 중…").element());
+		await expect.element(button("2건 적용")).not.toBeDisabled();
+		release();
+		await expect.element(panel().getByText("버림")).toBeVisible();
+	});
+
+	it("되돌리기 on the review page is the card's ghost button, and says it is undoing while it does", async () => {
+		const story = open(stories.ReviewApplied);
+		await story.run();
+		const undo = button("되돌리기").first();
+		expect(ghost(undo.element())).toBe(true);
+		const release = story.loaded().net.hold("proposals.revert");
+		await new Promise((resolve) => setTimeout(resolve, 600));
+		await userEvent.click(undo);
+		await expect.element(button("되돌리는 중…").first()).toHaveAttribute("aria-busy", "true");
+		release();
+	});
+
+	it("다시 만들기 shows that it is making the change again while it does", async () => {
+		const story = open({
+			loaders: stories.site({ script: stories.scripts(stories.proposed, stories.madeAgain) }),
+			play: stories.ReviewChangedMeanwhile.play,
+		});
+		await story.run();
+		const release = story.loaded().net.hold("assistant.run");
+		await userEvent.click(button("다시 만들기"));
+		await expect.element(button("다시 만드는 중…")).toHaveAttribute("aria-busy", "true");
+		release();
+	});
+});

@@ -1188,6 +1188,8 @@ describe("settings › admin", () => {
 		await withSite(stories.Admin).run();
 		await expect.element(page.getByRole("heading", { name: "계정" })).toBeVisible();
 		await expect.element(page.getByRole("button", { name: "로그아웃" })).toBeVisible();
+		// Standing alone on its row it is a ghost button, not a text one (button.md).
+		expect(page.getByRole("button", { name: "로그아웃" }).element().getAttribute("data-slot")).toBe("button");
 	});
 
 	it("12-1 the sidebar and the sign-in screen show the site name the settings hold, and 로그아웃 ends the session without asking", async () => {

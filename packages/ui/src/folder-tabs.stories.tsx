@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Add } from "./icons";
 import {
 	FieldRow,
 	FieldTree,
@@ -21,11 +20,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const add = (
-	<FolderTabsAdd aria-label="탭 추가">
-		<Add />
-	</FolderTabsAdd>
-);
+const add = <FolderTabsAdd aria-label="탭 추가" />;
 
 /** Each tab has a grip, a name and its field count; a tab a plugin placed is locked. `+` at the end adds a tab. */
 export const Pages: Story = {

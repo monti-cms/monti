@@ -198,7 +198,7 @@ async function changeFields(canvasElement: HTMLElement) {
 	await userEvent.click(body.getByRole("button", { name: "저장" }));
 
 	await userEvent.click(await page.findByRole("button", { name: "subtitle 열기" }));
-	await userEvent.click(await body.findByRole("button", { name: "필드 삭제" }));
+	await userEvent.click(await body.findByRole("button", { name: "지우기" }));
 
 	await addField(screen, "고르기");
 	fill(body.getByLabelText("표시 이름"), "글 종류");
@@ -285,7 +285,7 @@ export const EditField: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, body } = await settings(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "summary 열기" }));
-		await body.findByRole("button", { name: "필드 삭제" });
+		await body.findByRole("button", { name: "지우기" });
 	},
 };
 
