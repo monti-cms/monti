@@ -103,6 +103,7 @@ test.describe("the activity log", () => {
 });
 
 raw.describe("the site's cached pages, when refreshing them failed", () => {
+	raw.beforeEach(() => rmSync(REFRESH_DOWN, { force: true }));
 	raw.afterEach(() => rmSync(REFRESH_DOWN, { force: true }));
 
 	// The retry is due a minute after the failure, and an admin's visit starts the sends once a minute: the real times, not moved.

@@ -51,7 +51,9 @@ function withNamed(value: string, env: Record<string, string | undefined>, parse
 	const named = value.slice(last).match(/((?!(?<=\\))\${?([\w]+)(?::-([^}\\]*))?}?)/);
 	if (named == null) return value;
 	const [, whole, key, fallback] = named as unknown as [string, string, string, string | undefined];
-	return withNamed(value.replace(whole, env[key] || fallback || parsed[key] || ""), env, parsed);
+	// A name of the environment's own only: `process.env` answers `toString` and the like with what every object has.
+	const held = Object.hasOwn(env, key) ? env[key] : undefined;
+	return withNamed(value.replace(whole, held || fallback || parsed[key] || ""), env, parsed);
 }
 
 /**
@@ -91,7 +93,11 @@ export function loadEnvFiles(
 		const parsed = parseEnvFile(readFileSync(file, "utf8"));
 		try {
 			for (const key of Object.keys(parsed))
-				parsed[key] = withNamed(env[key] ?? (parsed[key] as string), env, parsed).replace(/\\\$/g, "$");
+				parsed[key] = withNamed(
+					Object.hasOwn(env, key) ? (env[key] as string) : (parsed[key] as string),
+					env,
+					parsed,
+				).replace(/\\\$/g, "$");
 		} catch (error) {
 			// A value that names itself (`A=$A`) never ends. Next skips the whole file with an error on its console; a command says which file.
 			if (error instanceof RangeError) throw new Error(`${name}: a value names itself.`);

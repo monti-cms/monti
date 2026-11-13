@@ -296,6 +296,7 @@ try {
 		})}\n`,
 	);
 	let said = "";
+	let ended = 0;
 	try {
 		said = execFileSync("npx", ["tsc", "--noEmit", "--pretty", "false", "-p", "tsconfig.monti.json"], {
 			cwd: site,
@@ -307,10 +308,17 @@ try {
 		// tsc ends with a failure on any error, another library's too: what it said decides.
 		if (typeof error.stdout !== "string") throw error;
 		said = error.stdout;
+		ended = error.status ?? 1;
 	}
 	const lines = said.split("\n").filter((line) => /\berror TS\d+/.test(line));
-	// A file's own errors start with its path; one about the settings (no file was found to check) has no path, and counts.
-	const monti = lines.filter((line) => /^node_modules[\\/]@monti-cms[\\/]/.test(line) || /^error TS/.test(line));
+	// It failed and named no error: it did not get to check (it ran out of memory, it crashed). That is no pass.
+	if (ended !== 0 && lines.length === 0)
+		throw new Error(`tsc stopped (exit ${ended}) before it checked Monti's declarations:\n${said}`);
+	// Another library's errors start with its path under node_modules. Everything else counts: Monti's own files, and an error with no
+	// file of a library to it (the settings, no file found to check).
+	const monti = lines.filter(
+		(line) => /^node_modules[\\/]@monti-cms[\\/]/.test(line) || !/^node_modules[\\/]/.test(line),
+	);
 	if (monti.length > 0)
 		throw new Error(`Monti's declaration files do not pass the site's TypeScript:\n${monti.join("\n")}`);
 	console.log(`Monti's declarations pass (${lines.length} errors in other libraries' declarations, not counted).`);

@@ -76,6 +76,13 @@ describe("the site's env files, as the monti command reads them", () => {
 		});
 	});
 
+	it("20-16 a name every object has (toString) is a name like any other: read from the file, and not found in the environment", () => {
+		const env = Object.create({ inherited: "no" }) as Record<string, string | undefined>;
+		loadEnvFiles(site({ ".env": "toString=text\nA=$inherited-$toString\n" }), env);
+		expect(env.toString).toBe("text");
+		expect(env.A).toBe("-text");
+	});
+
 	it("20-16 a value that names itself is refused with its file's name", () => {
 		expect(() => loadEnvFiles(site({ ".env": "A=${A}/more\n" }), {})).toThrow(".env: a value names itself.");
 	});
