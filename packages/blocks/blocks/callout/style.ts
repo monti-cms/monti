@@ -107,14 +107,4 @@ export const style = `/*
 	color: inherit;
 	opacity: 0.5;
 }
-.monti-block-callout-head {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-.monti-block-callout-head > svg {
-	flex: none;
-	width: 1rem;
-	height: 1rem;
-}
 `;

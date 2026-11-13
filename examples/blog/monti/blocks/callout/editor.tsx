@@ -22,7 +22,6 @@ export default function CalloutEditor() {
 	const block = useBlock();
 	const tone = toneOf(block.attrs.tone);
 	const say = (label: { ko: string; en: string }) => label[block.language];
-	const KindIcon = ICONS[tone];
 	return (
 		<BlockFrame
 			bar={
@@ -44,8 +43,7 @@ export default function CalloutEditor() {
 				{style}
 			</style>
 			<div className="monti-block-callout" data-tone={tone} role="note">
-				<div className="monti-block-callout-title monti-block-callout-head" contentEditable={false}>
-					<KindIcon aria-hidden />
+				<div className="monti-block-callout-title" contentEditable={false}>
 					<BlockTitle
 						label={say(words.title)}
 						value={typeof block.attrs.title === "string" ? block.attrs.title : ""}
