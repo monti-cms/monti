@@ -13,6 +13,8 @@ import type { BrowserCommand, BrowserCommandContext } from "vitest/node";
  * - `holdKey`: a key held down, repeating as a held key does, until `releaseKey`. `userEvent.keyboard` lets a held key go before it presses it again.
  * - `slowCpu`: the page runs `rate` times slower (Chrome's own CPU throttling), as on a busy CI runner; `1` is full speed again. A test that waits
  *   right on a fast machine and races on a slow one fails here too.
+ * - `holdRequests` and `releaseRequests`: the page's requests to addresses matching a pattern wait until the test lets them go, so a module
+ *   loaded on first use (a block's own editor view) arrives at the moment the test chooses, not whenever the machine is done.
  *
  * Tests call them through `testing/input.ts`.
  */
@@ -140,14 +142,39 @@ function stages(char: string): string[] | null {
 	return offset % 28 === 0 ? [initial, open] : [initial, open, char];
 }
 
+/** The DevTools session that slows each page: Chrome drops the throttling when the session that set it goes, so it stays open. */
+const throttles = new WeakMap<import("playwright").Page, import("playwright").CDPSession>();
+
 export const slowCpu: BrowserCommand<[rate: number]> = async (context, rate) => {
-	const page = playwright(context);
-	const session = await page.page.context().newCDPSession(page.page);
-	try {
-		await session.send("Emulation.setCPUThrottlingRate", { rate });
-	} finally {
-		await session.detach();
+	const { page } = playwright(context);
+	let session = throttles.get(page);
+	if (!session) {
+		session = await page.context().newCDPSession(page);
+		throttles.set(page, session);
 	}
+	await session.send("Emulation.setCPUThrottlingRate", { rate });
+};
+
+/** The requests held for each page, each one let go by calling it. */
+const held = new WeakMap<import("playwright").Page, { pattern: string; waiting: (() => void)[] }>();
+
+export const holdRequests: BrowserCommand<[pattern: string]> = async (context, pattern) => {
+	const { page } = playwright(context);
+	const hold = { pattern, waiting: [] as (() => void)[] };
+	held.set(page, hold);
+	await page.route(pattern, (route) => {
+		hold.waiting.push(() => void route.continue().catch(() => {}));
+	});
+};
+
+export const releaseRequests: BrowserCommand<[]> = async (context) => {
+	const { page } = playwright(context);
+	const hold = held.get(page);
+	if (!hold) return;
+	held.delete(page);
+	// Let the held ones go first: taking the route away first hands them on to the network itself.
+	for (const go of hold.waiting.splice(0)) go();
+	await page.unroute(hold.pattern);
 };
 
 /**
@@ -198,5 +225,7 @@ declare module "vitest/browser" {
 		holdKey: (key: string, options: { repeats: number; every: number }) => Promise<void>;
 		releaseKey: (key: string) => Promise<void>;
 		slowCpu: (rate: number) => Promise<void>;
+		holdRequests: (pattern: string) => Promise<void>;
+		releaseRequests: () => Promise<void>;
 	}
 }

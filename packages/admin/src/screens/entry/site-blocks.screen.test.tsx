@@ -1,8 +1,16 @@
 import type { ScriptedProvider } from "@monti-cms/ai";
 import type { Block, Doc } from "@monti-cms/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { caretAfter, dragPath, pickWords, pointerPath, slowCpu } from "../../../../../testing/input";
+import {
+	caretAfter,
+	dragPath,
+	holdRequests,
+	pickWords,
+	pointerPath,
+	releaseRequests,
+	slowCpu,
+} from "../../../../../testing/input";
 import { scene } from "../../../test/scene";
 import { assisted } from "../../assistant/assistant.stories";
 import { addFile } from "../media/media.stories";
@@ -35,6 +43,27 @@ const hover = async (type: string) => {
 };
 
 describe("the site's blocks in the editor (doc 18)", () => {
+	// First in the file: a block's own view loads once a page, so only the first callout put in waits for it.
+	it("18-4 words typed while a new callout's own view is still on its way stay in order once it arrives, on a slow machine too", async () => {
+		const made = on(null);
+		await made.run();
+		onTestFinished(releaseRequests);
+		onTestFinished(() => slowCpu(1));
+		await slowCpu(4);
+		// The callout's own view arrives only when the test lets it: the site's drawing stands in until then (CI, 2026-11-15).
+		await holdRequests("**/blocks/callout/editor.tsx*");
+		await userEvent.click(body());
+		await userEvent.keyboard("/콜아웃");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(body().getByRole("note")).toBeVisible();
+		await userEvent.keyboard("안");
+		await releaseRequests();
+		// Its own view is in: its tool row is up, the cursor being in it.
+		await expect.element(button("종류")).toBeInTheDocument();
+		await userEvent.keyboard("의 글");
+		await expect.element(body().getByText("안의 글", { exact: true })).toBeVisible();
+	});
+
 	it("18-4 '/' puts a callout in; its tool row changes its kind (✓ on the current one), its title is typed in it, and undo takes the kind back", async () => {
 		const made = on(null);
 		await made.run();
@@ -58,23 +87,6 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		const callout = (await kept(made)).find((block) => block.type === "callout");
 		expect(callout?.attrs).toEqual({ tone: "warning", title: "조심하세요" });
 		expect(callout?.children?.[0]?.content).toEqual([{ type: "text", text: "안의 글" }]);
-	});
-
-	it("18-4 words typed right after '/' puts a callout in stay in order while its own view loads, on a slow machine too", async () => {
-		const made = on(null);
-		await made.run();
-		// A busy machine: the block's own view arrives while the words are being typed (CI, 2026-11-15).
-		await slowCpu(6);
-		try {
-			await userEvent.click(body());
-			await userEvent.keyboard("/콜아웃");
-			await userEvent.keyboard("{Enter}");
-			await expect.element(body().getByRole("note")).toBeVisible();
-			await userEvent.keyboard("안의 글");
-			await expect.element(body().getByText("안의 글", { exact: true })).toBeVisible();
-		} finally {
-			await slowCpu(1);
-		}
 	});
 
 	it("18-5 tabs: the + adds a tab with its name to type, ★ makes it the one shown first, and the tool row deletes it", async () => {
