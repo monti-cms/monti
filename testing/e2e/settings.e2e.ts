@@ -29,7 +29,7 @@ test.describe("settings", () => {
 		await tab(admin, "언어").click();
 		await expect(admin.getByRole("list", { name: "콘텐츠 언어" }).getByRole("listitem")).toHaveCount(3);
 		await expect(admin.getByRole("img", { name: "운영 사이트에서는 잠김" })).toHaveCount(3);
-		for (const button of ["+ 언어 추가", "바꾸기", "English 빼기"])
+		for (const button of ["언어 추가", "바꾸기", "English 빼기"])
 			await expect(admin.getByRole("button", { name: button })).toBeHidden();
 
 		// The same door the screen saves through refuses a structure value, with the admin value sent beside it.
