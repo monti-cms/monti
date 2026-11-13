@@ -1,6 +1,6 @@
 # 18 블록 패키지
 
-상태: 설계 (2026-11-13). 화면 승인 전이다. 아래의 결정은 모두 만들며 정함(2026-11-13)이고, 화면은 "화면 승인"의 목업으로 소유자와 정한다.
+상태: 만드는 중 (2026-11-14). 화면 없는 core는 만들었다(아래 "만든 것"). 화면은 "화면 승인"의 목업으로 소유자와 정한 뒤 만든다. 아래의 결정은 모두 만들며 정함(2026-11-13 · 14)이다.
 
 ## 한 문장
 
@@ -29,51 +29,53 @@ core에 없는 블록과 서식을 `@monti-cms/blocks`로 내놓고, `monti add`
 
 | 블록 | `type` | 담는 것 | 값 | MDX 표기 |
 |---|---|---|---|---|
-| 콜아웃 | `callout` | 블록 | `tone`: `note` · `tip` · `warn` · `danger`(없으면 `note`), `title`(없어도 된다) | `:::callout{tone="warn" title="알아 두세요"}` … `:::` |
-| 탭 | `tabs` | `tab`만, 1~8개 | 없음 | `::::tabs` … `::::` |
+| 콜아웃 | `callout` | 블록 | `tone`: `note` · `tip` · `info` · `warning` · `danger`(없으면 `note`), `title`(없으면 종류 이름이 제목) | `:::callout{tone="warning" title="알아 두세요"}` … `:::` |
+| 탭 | `tabs` | `tab`만 | `defaultValue`(처음 보일 탭의 이름, 없으면 첫 탭) | `::::tabs` … `::::` |
 | 탭 하나 | `tab` | 블록 | `label` | `:::tab{label="npm"}` … `:::` |
-| 단 나누기 | `columns` | `column`만, 2~4개 | 없음 | `::::columns` … `::::` |
-| 단 하나 | `column` | 블록 | `width`(본문 폭의 %, 없으면 고르게) | `:::column{width=60}` … `:::` |
-| 접기 | `toggle` | 블록 | `title`, `open`(사이트에서 펼친 채 시작) | `:::toggle{title="자세히" open}` … `:::` |
-| 코드 탐색기 | `codeExplorer` | `codeBlock`만, 1개 이상 | `open`(처음 보일 파일의 경로, 없으면 첫 파일) | `:::codeExplorer{open="src/app.ts"}` 안에 ```` ```ts title="src/app.ts" ```` |
+| 단 나누기 | `columns` | `column`만 | `widths`(단마다 %, 쉼표로: `"60,40"`. 없거나 단 수와 맞지 않으면 고르게) | `::::columns{widths="60,40"}` … `::::` |
+| 단 하나 | `column` | 블록 | 없음 | `:::column` … `:::` |
+| 접기 | `collapsible` | 블록 | `title`(없으면 "펼치기"), `defaultOpen`(사이트에서 펼친 채 시작) | `:::collapsible{title="자세히" defaultOpen}` … `:::` |
+| 코드 탐색기 | `codeExplorer` | `codeBlock`만 | `open`(처음 보일 파일의 경로, 없으면 코드가 있는 첫 파일) | `:::codeExplorer{open="src/app.ts"}` 안에 ```` ```ts title="src/app.ts" ```` |
 | 수식 | `math` | 없음 | `source`(LaTeX) | ```` ```math ````. 읽을 때는 `$$ … $$`도 받는다 |
-| 다이어그램 | `diagram` | 없음 | `source`(Mermaid) | ```` ```mermaid ```` |
+| 다이어그램 | `mermaid` | 없음 | `source`(Mermaid) | ```` ```mermaid ```` |
 | 차트 | `chart` | `table` 하나 | `kind`: `bar` · `line` · `area` · `pie`(없으면 `bar`), `title` | `:::chart{kind="line" title="방문"}` 안에 표 |
 
 | 서식 | `type` | 값 | MDX 표기 |
 |---|---|---|---|
 | 툴팁 | `tooltip` | `text` | `:tooltip[글자]{text="설명"}` |
-| 글자 색 | `color` | `color`: `gray` · `brown` · `orange` · `yellow` · `green` · `blue` · `purple` · `pink` · `red` | `:color[글자]{color="red"}` |
+| 글자 색 | `color` | `color`, `background`(하나 이상): `gray` · `red` · `orange` · `yellow` · `green` · `blue` · `purple` · `pink` | `:color[글자]{color="red"}` |
 
-- **콜아웃의 종류는 넷이다.** GitHub의 알림은 다섯(NOTE · TIP · IMPORTANT · WARNING · CAUTION)이고 Docusaurus도 다섯이다. 블로그에서 "중요"와 "알림"은 갈리지 않아 넷으로 줄였다. 사이트는 소스에서 더한다.
-- **차트의 자료는 core의 표다.** 차트는 표 하나를 담고 그 표를 그린다. 첫 열이 가로축의 이름, 나머지 열이 계열이고, 머리 행이 계열의 이름이다. 편집기는 표를 고치는 도구(03의 표: 격자, 행 · 열 손잡이, + 띠)를 그대로 쓴다. MDX에서도 그냥 표다. 숫자가 아닌 칸은 그리지 않고 발행 할 일 "숫자가 아닌 칸"(알리기만)이 된다. 옛 코드의 차트 문법(`chart bar` …)은 버린다: 사람이 배울 문법이 하나 늘 뿐이다.
-- **수식과 다이어그램은 소스 하나다.** GitHub, GitBook, Obsidian이 같은 표기(```` ```math ````, ```` ```mermaid ````)를 쓴다. 수식은 KaTeX, 다이어그램은 Mermaid가 그린다. 둘 다 사이트의 패키지이고 `monti add`가 무엇을 설치할지 말한다.
-- **글자 색은 이름이다.** 색 값(`#dc2626`)을 저장하지 않는다. 사이트가 이름마다 밝은 화면과 어두운 화면의 색을 정한다(노션의 아홉 색과 같은 이름). 옛 코드는 밝은 · 어두운 색 값을 짝으로 저장했다: 사이트가 테마를 바꾸면 글마다 고쳐야 했다.
-- **넣지 않는 것.** 줄 안의 수식(`$x$`), 글자 바탕색, 콜아웃 아이콘 고르기. 셋 다 이 범위(T35)에 없다. 가져온 글의 `$x$`는 쓴 그대로 글자로 남고, 내보내면 그대로 나간다(잃는 것이 없다).
+- **옛 코드를 따랐다(2026-11-14).** 옛 `packages/blocks`가 잘 만든 것은 지금 모양에 맞는 한 그대로 둔다: 콜아웃의 다섯 종류(옛 이름 노트 · 팁 · 정보 · 경고 · 위험)와 제목이 없으면 종류 이름이 제목인 것, 접기의 `collapsible` · `defaultOpen`과 스크립트 없이 여는 `<details>`, 단 나누기의 `widths`(부모 하나에 쉼표로)와 그 읽기 규칙, 탭의 `defaultValue`, 다이어그램의 `mermaid`, 코드 탐색기의 파일 나무 규칙(경로로 만들고, 겹친 경로는 첫 것이 이기고 진 것은 탐색기 뒤에 그대로 그린다), 탭과 코드 탐색기가 모든 내용을 페이지 HTML에 두는 것, 툴팁의 마우스 · 키보드 · 터치 동작, 글자 색의 여덟 색과 그 밝은 · 어두운 색, 글자 바탕색, 독자에게 보이는 말의 영어 · 한국어 · 일본어. 설계 초안(2026-11-13)의 넷인 콜아웃, `toggle` · `open`, 단마다의 `width`, `diagram`, 아홉 색(갈색), "바탕색은 넣지 않는다"는 이것으로 바꿨다. 목업 1과 8도 고쳤다.
+- **차트의 자료는 core의 표다.** 차트는 표 하나를 담고 그 표를 그린다. 첫 열이 가로축의 이름, 나머지 열이 계열이고, 머리 행이 계열의 이름이다. 편집기는 표를 고치는 도구(03의 표: 격자, 행 · 열 손잡이, + 띠)를 그대로 쓴다. MDX에서도 그냥 표다. 숫자가 아닌 칸은 그리지 않고 발행 할 일 "숫자가 아닌 칸"(알리기만)이 된다. 칸의 `1,200`, `12.5%`는 숫자이고 빈 칸은 빈자리다. 사이트는 서버에서 SVG로 그리고(더 설치할 패키지가 없다) 표는 그 아래 "자료 보기"에 둔다. 옛 코드의 차트 문법(`chart bar` …)과 recharts는 버린다: 사람이 배울 문법이 하나 늘 뿐이다.
+- **수식과 다이어그램은 소스 하나다.** GitHub, GitBook, Obsidian이 같은 표기(```` ```math ````, ```` ```mermaid ````)를 쓴다. 수식은 서버에서 KaTeX가 그리고(스크립트가 필요 없다), 다이어그램은 독자의 브라우저에서 Mermaid가 그린다(그 전에는 소스). 틀린 수식은 소스와 이유 한 줄로 그린다. 둘 다 사이트의 패키지(`katex`, `mermaid`)이고 `monti add`가 무엇을 설치할지 말한다.
+- **글자 색은 이름이다.** 색 값(`#dc2626`)을 저장하지 않는다. 사이트가 이름마다 밝은 화면과 어두운 화면의 색을 `color.css`에 정한다(처음 값은 옛 코드의 것). 옛 코드는 밝은 · 어두운 색 값을 짝으로 저장했다: 사이트가 테마를 바꾸면 글마다 고쳐야 했다.
+- **독자에게 보이는 말은 글의 언어로.** `renderDocument`가 `locale`을 받아 블록과 서식의 컴포넌트에 넘긴다. 블록은 그 언어의 말(콜아웃 종류 이름, "펼치기", "파일", "자료 보기")을 고르고, 모르는 언어는 영어다. 말은 블록의 `site.tsx`에 있어 사이트가 고친다.
+- **넣지 않는 것.** 줄 안의 수식(`$x$`), 콜아웃 아이콘 고르기. 둘 다 이 범위(T35)에 없다. 가져온 글의 `$x$`는 쓴 그대로 글자로 남고, 내보내면 그대로 나간다(잃는 것이 없다).
 
 ## 정의가 더 가지는 것
 
 [03](03-body-editor.md#블록-정의)의 `defineBlock`과 `defineMark`에 셋을 더한다. 사이트가 손으로 만드는 블록도 같은 것을 쓴다.
 
 ```ts
-type Words = string | { ko: string; en: string };   // label, a field's name, an option's name
+type Label = string | Message | { ko: string; en: string };   // a name: the site's words, a message key, or both admin languages
 
 type Field =
-	| { label: Words; input: "choice"; options: Record<string, Words> } // block menu ›, a radio row each
-	| { label: Words; input: "switch" }                                  // block menu, a check row
-	| { label: Words; input: "text"; placeholder?: Words }               // an input inside the block itself
-	| { label: Words; input: "source"; language: string };               // tool row "편집" → the source card
+	| { label: Label; input: "choice"; options: Record<string, Label> } // block menu ›, a radio row each
+	| { label: Label; input: "switch" }                                  // block menu, a check row
+	| { label: Label; input: "text"; placeholder?: Label }               // an input inside the block itself
+	| { label: Label; input: "source"; language: string }                // tool row "편집" → the source card
+	| { label: Label; input: "own" };                                    // the block's own editor changes it (the columns' widths)
 
 export const callout = defineBlock({
 	type: "callout",
 	label: { ko: "콜아웃", en: "Callout" },
-	description: "A highlighted box for a note, a tip, a warning or a danger, with an optional title.",
+	description: "A highlighted box for a note, a tip, information, a warning or a danger (`tone`), with an optional `title`.",
 	menu: "insert",
-	attrs: z.object({ tone: z.enum(["note", "tip", "warn", "danger"]).optional(), title: z.string().optional() }),
+	attrs: z.object({ tone: z.enum(TONES).optional(), title: z.string().optional() }),
 	fields: {
 		tone: { label: { ko: "종류", en: "Kind" }, input: "choice",
-			options: { note: { ko: "알림", en: "Note" }, tip: { ko: "팁", en: "Tip" }, warn: { ko: "주의", en: "Warning" }, danger: { ko: "위험", en: "Danger" } } },
-		title: { label: { ko: "제목", en: "Title" }, input: "text", placeholder: { ko: "제목 없음", en: "No title" } },
+			options: { note: { ko: "노트", en: "Note" }, tip: { ko: "팁", en: "Tip" }, info: { ko: "정보", en: "Info" }, warning: { ko: "경고", en: "Warning" }, danger: { ko: "위험", en: "Danger" } } },
+		title: { label: { ko: "제목", en: "Title" }, input: "text", placeholder: { ko: "종류 이름", en: "The kind's name" } },
 	},
 	holds: "blocks",
 	translate: { attrs: ["title"] },
@@ -104,28 +106,29 @@ Added math: monti/blocks/math/
 math needs katex: pnpm add katex
 ```
 
-**넣는 파일과 자리.** `@/` 가 가리키는 사이트 소스(`src/`가 있으면 그 안)의 `monti/blocks/`다. `monti/changes/`(01)와 같은 `monti/` 폴더다.
+**넣는 파일과 자리.** 사이트 폴더(`package.json`이 있는 곳)의 `monti/blocks/`다. `monti/changes/`(01)와 같은 `monti/` 폴더다(사이트가 `src/`를 써도 같다: 가져오는 길은 모두 상대 경로라 `@/`가 어디를 가리키든 상관없다).
 
 ```text
 monti/blocks/
   index.ts          # blocks, marks: the definitions with their Site components (monti.config.ts, renderDocument)
-  admin.ts          # "use client": the same with their Editor components (the admin page)
-  blocks.css        # @import of each block's css: the site's root layouts and the admin page load it
+  admin.ts          # "use client": the same, for the admin page (their Editor components come with the screens)
+  base.css          # what the blocks' looks share: accent colours, borders, the chart's series colours
+  blocks.css        # @import of base.css and of each block's css: whatever draws the site's <html> loads it
   callout/
     callout.ts      # defineBlock: type, label, attrs, fields, holds, translate, check
-    site.tsx        # the site's component (no "use client"; a part that needs the browser is its own file)
-    editor.tsx      # "use client": the editor's view, when it differs from the site's
-    callout.css     # its look, under .monti-callout, on the site's colour variables
+    site.tsx        # the site's component (no "use client"; a part that needs the browser is its own *.client.tsx)
+    callout.css     # its look (.monti-block-callout), on base.css's variables
 ```
 
-- **정의와 화면을 나눈 까닭.** `monti.config.ts`는 CLI가 jiti로 읽는다. CSS나 `"use client"` 모듈이 정의의 길에 있으면 CLI가 읽지 못하거나 관리자 컴포넌트가 서버로 간다. 그래서 정의 파일은 CSS를 가져오지 않고, 편집기 화면은 `admin.ts`만 가져온다. 이것은 03의 "같은 정의 배열"을 둘로 나눈 것이다: 값과 사이트 컴포넌트는 같고, 관리자 쪽이 `Editor`를 더한다.
-- **처음 더할 때 잇는다.** `monti/blocks/`가 없으면 세 파일(`index.ts`, `admin.ts`, `blocks.css`)을 만들고 사이트의 파일 셋을 고친다: `monti.config.ts`에 `blocks`, `marks`(`./monti/blocks`, jiti는 `@/`를 모른다), 관리자 페이지에 `blocks={adminBlocks}`와 `blocks.css`, `<html>`을 그리는 레이아웃마다 `blocks.css`. `monti init`이 설정 파일과 관리자 페이지를 고치는 방식과 같다(14). 사이트의 `renderDocument(…)` 부르는 곳에 `blocks`, `marks`를 더한다. 찾지 못하면 무엇을 어디에 더할지 한 줄로 말한다.
-- **두 번 더하지 않는다.** 그 폴더가 이미 있으면 "callout is already in monti/blocks/callout: it is the site's own now. Remove the folder to add it again."로 아무것도 쓰지 않는다. 고친 소스를 덮지 않기 위해서다.
-- **함께 오는 것.** `tabs`는 `tab`을, `columns`는 `column`을 같은 폴더에 함께 넣는다. 차트는 core의 표를 쓰므로 더할 것이 없다.
-- **설치는 말만 한다.** KaTeX와 Mermaid는 사이트가 설치한다. `monti init`처럼 무엇을 설치할지 말하고 설치하지 않는다(사이트의 패키지 관리자로 쓴 명령을 보인다).
-- **이름 없이 부르면** 더할 수 있는 블록과 서식을 한 줄씩 보인다. 터미널이면 고르게 묻는다(`monti init`과 같은 물음).
-- **소스가 오는 곳.** `@monti-cms/blocks`가 블록의 소스와 그 목록(`registry.json`: 이름, 파일, 함께 오는 블록, 설치할 패키지)을 가진다. CLI는 사이트에 설치된 그 패키지에서 읽는다. 없으면 "Blocks come from @monti-cms/blocks: install it from the same release, then run monti add again." 패키지 안의 소스가 그대로 테스트를 받는 코드이고, 복사할 때 바뀌는 것은 가져오는 경로뿐이다.
-- **예제 앱(16)에 모두 넣는다.** `examples/blog`에 `monti add`로 모든 블록과 서식을 넣어 그 결과를 저장소에 둔다. 흐름 테스트가 그 사이트에서 돈다.
+- **정의와 모양을 나눈 까닭.** `monti.config.ts`는 CLI가 jiti로 읽는다. CSS가 정의의 길에 있으면 CLI가 읽지 못한다. 그래서 정의 파일과 `site.tsx`는 CSS를 가져오지 않고, 모양은 `blocks.css` 하나로 모아 사이트가 싣는다. 블록의 소스는 TSX라서 CLI의 jiti는 React의 automatic JSX로 읽는다(`bin/monti.mjs`). 관리자 페이지는 `"use client"`인 `admin.ts`로 받는다(16). 이것은 03의 "같은 정의 배열"을 둘로 나눈 것이다: 값과 사이트 컴포넌트는 같고, 관리자 쪽이 편집기 화면을 더한다.
+- **처음 더할 때 잇는다.** 사이트의 파일에서 블록이 없는 곳만 더해서 고친다: `monti.config.ts`에 `blocks`, `marks`(`./monti/blocks`, jiti는 `@/`를 모른다), 관리자 페이지에 `blocks={adminBlocks}`, `<html>`을 그리는 파일마다(맨 위 레이아웃, 그것들이 함께 쓰는 틀, 관리자의 레이아웃) `blocks.css`, `renderDocument(…)`를 부르는 곳에 `blocks`, `marks`. 더하기만 하고 다른 글자는 그대로다. 그 파일에 이미 `blocks`나 `marks`라는 이름이 있는 것처럼 확실하게 고칠 수 없으면 그대로 두고 더할 줄을 "Left for you: …"로 말한다. 한 번 이은 곳은 다시 잇지 않는다.
+- **글의 언어는 사이트가 넘긴다.** `renderDocument`의 `locale`은 사이트가 그 글의 언어 변수를 알 때만 넣을 수 있어 `monti add`가 넣지 않는다. 넘기지 않으면 블록의 말은 영어다. 예제 앱은 넘긴다.
+- **두 번 더하지 않는다.** 그 폴더가 이미 있으면 "callout is already in monti/blocks/callout: it is the site's own now. Remove the folder to add it again."로 그 블록은 쓰지 않는다. 고친 소스를 덮지 않기 위해서다. 함께 부른 다른 블록은 더한다.
+- **함께 오는 것.** `tabs`는 `tab`을, `columns`는 `column`을 같은 폴더에 함께 넣는다. 차트는 core의 표를 쓰므로 더할 것이 없다. 패키지의 테스트 파일은 복사하지 않는다.
+- **설치는 말만 한다.** KaTeX와 Mermaid는 사이트가 설치한다. `monti init`처럼 무엇을 설치할지 말하고 설치하지 않는다("math needs katex: pnpm add katex", 사이트의 잠금 파일로 패키지 관리자를 고른다). 이미 있으면 말하지 않는다.
+- **이름 없이 부르면** 더할 수 있는 블록과 서식을 한 줄씩 보인다. 터미널이면 "Which? (names with commas, or none)"로 묻는다(`monti init`과 같은 물음). 모르는 이름은 "There is no carousel. monti add with no name lists what there is."로 아무것도 쓰지 않는다.
+- **소스가 오는 곳.** `@monti-cms/blocks`가 블록의 소스(`blocks/`)와 그 목록(`registry.json`: 이름, 내보내는 블록과 서식, CSS, 설치할 패키지)을 가진다. 릴리스 묶음은 `src/`를 싣지 않으므로 소스 폴더 이름이 `blocks/`다. CLI는 사이트에 설치된 그 패키지에서 읽는다. 없으면 "Blocks come from @monti-cms/blocks: install it from the same release, then run monti add again." 패키지 안의 소스가 그대로 테스트를 받는 코드이고, 복사할 때 바뀌는 것은 없다. 블록이 쓰는 zod는 core가 내보내는 `z`다(사이트가 따로 설치하지 않고, core와 같은 판이다).
+- **예제 앱(16)에 모두 넣었다.** `examples/blog`에 `monti add`로 블록 여덟과 서식 둘을 넣고 그 결과를 저장소에 둔다. 사이트의 틀(`site/frame.tsx`)이 `<html>`을 그리므로 거기에 `blocks.css`가 들어갔다. CLI로 그 설정을 읽어 `blocks.catalog`가 열 개와 울타리 둘을 내놓는 것을 봤다(2026-11-14).
 
 ## MDX
 
@@ -140,7 +143,8 @@ monti/blocks/
 
 코드 블록 자체(언어, 줄 효과, 문법 색, 사이트의 코드 블록)는 [17](17-code-tools.md)의 것이다. 코드 탐색기는 그 코드 블록을 담는 블록이다.
 
-- 코드 탐색기의 파일은 core의 `codeBlock`이고, 파일의 경로는 코드 블록의 파일 이름 값(`title`)이다. 17이 코드 블록의 값을 정한다. 이 문서는 `title`을 쓴다. 두 PR 가운데 먼저 들어가는 쪽이 `codeBlock`의 `attrs`에 `title`을 더하고, MDX 울타리 줄의 `title="…"`를 그 값으로 읽는다. 이름이 다르게 정해지면 이 문서가 17을 따른다.
+- 코드 탐색기의 파일은 core의 `codeBlock`이고, 파일의 경로는 코드 블록의 파일 이름 값(`title`)이다. 17이 코드 블록의 값을 정한다. 이 PR이 먼저 `codeBlock`의 `attrs`에 `title`을 더했고, MDX 울타리 줄의 `title="…"`를 그 값으로 읽고 쓴다(줄의 나머지는 언어 값에 남는다, 2026-11-14). 17이 이름을 다르게 정하면 이 문서가 17을 따른다.
+- 옛 코드 탐색기는 코드 링크(T78)가 숨은 파일의 줄을 가리키면 그 파일을 먼저 열었다(`cms:reveal`). 코드 링크가 아직 없어 그 듣는 곳은 옮기지 않았다. 코드 링크를 만드는 17이 함께 한다(진행 기록 T78에 적었다).
 - 코드 탐색기 안의 코드는 17의 편집기와 사이트 그리기를 그대로 쓴다(언어 고르기, 줄 효과, 복사 버튼). 탐색기는 파일 나무와 "어느 파일을 보이나"만 더한다.
 - 비교와 검토에서 코드 블록의 줄 효과를 그리는 일은 17의 T196이다. 이 문서의 T197은 코드 블록이 아닌 블록의 값을 맡는다. 둘 다 `shownBlocks`를 고치므로, 나중에 들어가는 PR이 앞의 것 위에 맞춘다.
 
@@ -158,7 +162,7 @@ monti/blocks/
 | 수식 · 다이어그램 | 그린 결과 | 누르면 고르고 도구 행 "편집", 소스 카드(고정폭 입력 칸, 치는 대로 블록이 다시 그려진다). 카드는 도구 행 아래가 아니라 블록 아래에 뜬다: 치는 동안 그린 것이 보여야 한다(노션의 수식). editor-tools.md의 "카드는 도구 행에 걸린다"를 바꾸는 것이라 화면 승인에서 묻는다. "완료" 버튼은 없다: Esc나 바깥을 누르면 닫힌다 |
 | 차트 | 위에 그린 차트, 아래에 자료 표 | 표는 03의 표 도구. 블록 메뉴 "차트 종류 ›". 제목: 첫 줄의 입력 칸 |
 | 툴팁 | 점선 밑줄 | 서식 카드 ⋯ "툴팁", 링크 칸과 같은 카드 |
-| 글자 색 | 그 색의 글자 | 서식 카드 ⋯ "글자 색 ›", 색 이름 행과 "기본" |
+| 글자 색 | 그 색의 글자, 그 색 바탕의 글자 | 서식 카드 ⋯ "글자 색 ›": "글자 색" 묶음과 "바탕색" 묶음의 색 이름 행, 묶음마다 "기본" |
 
 - **"/" 메뉴의 "넣기" 묶음**에 블록마다 한 행이 더해진다(아이콘과 이름). 넣으면 처음 모양으로 들어간다: 콜아웃은 빈 문단 하나, 탭은 "탭 1" · "탭 2", 단 나누기는 두 단, 접기는 빈 제목과 빈 문단, 코드 탐색기는 `src/index.ts` 파일 하나, 차트는 2열 3행의 표, 수식과 다이어그램은 소스 카드가 열린 채.
 - **소스가 틀리면** 블록은 마지막으로 그린 것을 흐리게 두고, 소스 카드의 칸 아래에 이유 한 줄("3번째 줄을 읽지 못했습니다")이 붙는다. 처음부터 그릴 것이 없으면 블록 자리에 "수식을 그리지 못했습니다"가 선다. 수식은 서버에서도 읽어 보고 발행 할 일 "읽지 못한 수식"(알리기만)이 된다. 다이어그램은 브라우저에서만 그려지므로 편집기만 알린다.
@@ -204,6 +208,16 @@ type ShownBlock = {
 - **번역 옆 원문**(translation.tsx)도 같은 `shownBlocks`라 이름 줄이 함께 보인다.
 - 값이 바뀌었는지는 이름 줄과 글을 함께 본다. 그래서 값만 바뀐 블록도 "다른 곳"으로 세어진다.
 
+## 만든 것 (2026-11-14)
+
+화면 승인을 기다리지 않는 core를 먼저 만들었다. 화면(편집기의 블록 화면, 여러 블록 고르기, 비교와 검토에 이름 줄을 그리기)은 승인 뒤다.
+
+- **core**: `defineBlock`의 `fields` · `fence`, `defineMark`의 `fields` · `description`, 두 말 `label`(`Label`, 관리자가 자기 말로 읽는다), `own` 필드, 블록 검사의 두 말 메시지, `blocks.catalog`의 `fields` · `fence`, 코드 블록의 `title`, `renderDocument`의 `locale`, `z`와 `createBlockKit` 내보내기.
+- **`@monti-cms/mdx`**: 울타리 블록, `$$`, 글자 지시문 서식, 따옴표 · `&` · 줄바꿈이 든 값(고치기 전 쓰기로는 실패하는 테스트), 울타리 줄의 `title`. "MDX로 보기"는 사이트의 목록으로 울타리 블록을 쓴다.
+- **`@monti-cms/blocks`**: 블록 여덟과 서식 둘, 사이트 그리기, 모양, `registry.json`. 테스트는 블록마다 사이트에 그리고, core의 검사를 지나고, MDX로 쓰고 읽는다.
+- **`monti add`**: 복사, 목록, 잇기, 설치할 것 말하기, 덮지 않기. 예제 앱에 모두 넣었다.
+- **비교의 core**: `shownBlocks`가 사이트의 이름으로 이름 줄을 만들고 `compareBodies`가 바뀐 값을 낱말로 표시한다. "다른 곳"은 전부터 서버가 블록 전체를 견주어 세고 있었다(값만 바뀐 블록도 센다). 남은 것은 화면에 그리는 일이다.
+
 ## 바뀌는 곳
 
 - `@monti-cms/core`: `defineBlock` · `defineMark`의 `fields`, `fence`, 두 말 `label`. 이름 줄을 만드는 `blockValues(block, kit, language)`.
@@ -232,14 +246,14 @@ type ShownBlock = {
 
 | 빈 곳 | 물음 | 추천 |
 |---|---|---|
-| 1 | 콜아웃과 "/" 메뉴: 종류와 제목을 어디서 고치나 | 블록 메뉴 "종류 ›", 상자 첫 줄의 제목 칸 |
+| 1 | 콜아웃과 "/" 메뉴: 종류와 제목을 어디서 고치나 | 블록 메뉴 "종류 ›"(다섯), 상자 첫 줄의 제목 칸(비우면 종류 이름) |
 | 2 | 탭: 탭을 더하고, 이름을 바꾸고, 지우는 곳 | 탭 줄 끝 +, 탭 자리에서 이름, 탭의 ⋯ 메뉴 |
 | 3 | 단 나누기: 폭과 단 수 | 경계를 끌기, 블록 메뉴 "단 수 ›" |
 | 4 | 접기: 편집기에서 접히나 | 늘 펼침, "펼쳐 두기"는 블록 메뉴 체크 행 |
 | 5 | 수식 · 다이어그램: 소스를 고치는 곳과 틀린 소스 | 도구 행 "편집" → 소스 카드, 이유 한 줄 |
 | 6 | 차트: 자료를 넣는 곳 | 차트 아래의 표(03의 표 도구) |
 | 7 | 코드 탐색기: 파일을 더하고 고르는 곳 | 나무 끝 "+ 파일", 파일 줄 메뉴 |
-| 8 | 툴팁 · 글자 색: 서식 카드에서 | ⋯ "글자 색 ›"의 색 행, "툴팁"은 링크 칸 같은 카드 |
+| 8 | 툴팁 · 글자 색: 서식 카드에서 | ⋯ "글자 색 ›"의 글자 색 · 바탕색 묶음(여덟 색과 "기본"), "툴팁"은 링크 칸 같은 카드 |
 | 9 | 여러 블록 고르기: 상자와 골라진 모양, 손잡이 | 1px 상자, 선택 바탕, "블록 3개" 메뉴 |
 | 10 | 비교 · 검토: 값만 가진 블록 | 블록 위 이름 줄, 바뀐 값 표시 |
 
