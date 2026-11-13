@@ -977,7 +977,8 @@ describe("the entry editor: the assistant's proposals for the title and the fiel
 		return made;
 	}
 
-	it("10-1 a proposed title and a proposed summary are in their inputs, blue, the summary's saved words struck through under it; the bubble walks them with the body's change", async () => {
+	// The summary's saved words are struck through under its input.
+	it("10-1 a proposed title and a proposed summary are in their inputs, blue; the bubble walks them with the body's change", async () => {
 		await proposed();
 		await expect.element(title()).toHaveValue("블로그를 다시 만든 까닭");
 		expect(title().element().hasAttribute("data-proposal")).toBe(true);
@@ -1020,7 +1021,8 @@ describe("the entry editor: the assistant's proposals for the title and the fiel
 		await saveCell("저장됨");
 	});
 
-	it("10-1 a switch the assistant proposed to turn off stands off with the proposal's mark by its name; nothing is changed until it is taken, and taken and saved it is off", async () => {
+	// The proposal's mark stands by the switch's name.
+	it("10-1 a switch the assistant proposed to turn off stands off; nothing is changed until it is taken, and taken and saved it is off", async () => {
 		const made = from(entry.ProposedSwitch);
 		await made.run();
 		const featured = page.getByRole("switch", { name: /첫 화면에 올리기/ });
@@ -1157,7 +1159,8 @@ describe("the entry editor: a body proposal the text moved away from (T87)", () 
 		expect(document.querySelector("[data-sonner-toast]")).toBeNull();
 	});
 
-	it("10-1 typing in a paragraph a drawn proposal touches, in another paragraph of the same request, makes nothing stale; writing the proposal's own paragraph again by taking it does not leave a mark", async () => {
+	// The paragraph typed in is another one of the same request than the proposal's own.
+	it("10-1 typing in a paragraph a drawn proposal touches makes nothing stale; writing the proposal's own paragraph again by taking it leaves no mark", async () => {
 		await stale();
 		await userEvent.click(title());
 		await userEvent.click(body());
