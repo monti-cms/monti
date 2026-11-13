@@ -136,8 +136,8 @@
 
 ## 코드 탐색기의 파일 나무 (`FileTree`)
 
-코드 탐색기 블록(18) 안의 파일 나무다. 파일은 경로(코드 블록의 파일 이름)에서 생기고, 폴더는 그 첫 파일 자리에 선다. 행은 28px 알약이고(button.md: 쪽 바탕 위 한 줄 높이) mono 12px 이름 앞에 16px 아이콘(파일, 열린 · 닫힌 폴더)이 있다. 한 단계 들어갈 때마다 16px 들어간다. 코드가 옆에 보이는 파일은 현재 바탕이고, 가리킨 행은 선택 바탕이다. 행 끝의 자리(`more`, 그 파일의 지우기 단추)는 행을 가리키거나 포커스가 있거나 현재 파일일 때 보이고, 그 밖에는 자리만 지켜 이름이 움직이지 않는다. 나무 끝에는 "+ 파일" · "+ 폴더"가 있다(목록 아래 "+ 추가"인 `Button variant="ghost"`, button.md)(만들며 정함 2026-11-14, 화면 승인 대기).
+코드 탐색기 블록(18) 안의 파일 나무다. 파일은 경로(코드 블록의 파일 이름)에서 생기고, 폴더는 그 첫 파일 자리에 선다. 행은 28px 알약이고(button.md: 쪽 바탕 위 한 줄 높이) mono 12px 이름 앞에 16px 아이콘(파일, 열린 · 닫힌 폴더)이 있다. 한 단계 들어갈 때마다 16px 들어간다. 코드가 옆에 보이는 파일은 현재 바탕이고, 가리킨 행은 선택 바탕이다. 행 끝의 자리(`more`, 그 파일의 지우기 단추)는 행을 가리키거나 포커스가 있거나 현재 파일일 때 보이고, 그 밖에는 자리만 지켜 이름이 움직이지 않는다. 나무 끝에는 "+ 파일" · "+ 폴더"가 있다(목록 아래 "+ 추가"인 `Button variant="ghost"`, button.md)(만들며 정함 2026-11-14).
 
 ### 코드
 
-`FileTree`(`role="tree"`), `FileTreeRow`(`name`, `folder`, `open`, `depth` 0~2, `current`, `more`). 이야기: Monti/EditorTools/FileTree, 기준 화면 Screens/Reference/Blocks.
+`FileTree`(`role="tree"`), `FileTreeRow`(`name`, `folder`, `open`, `depth` 0~2, `current`, `more`). 이야기: Monti/EditorTools/FileTree, 화면 Screens/Entry/Site blocks.

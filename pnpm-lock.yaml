@@ -618,9 +618,6 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: ^5.3.0
         version: 5.3.0
-      '@monti-cms/blocks':
-        specifier: workspace:*
-        version: link:../blocks
       '@storybook/addon-themes':
         specifier: 10.6.1
         version: 10.6.1(storybook@10.6.1(@types/react@19.3.0)(react@19.2.3))
@@ -642,12 +639,6 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.3.0(@types/react@19.3.0)
-      katex:
-        specifier: ^0.16.47
-        version: 0.16.47
-      mermaid:
-        specifier: ^11.17.2
-        version: 11.17.2
       pngjs:
         specifier: 7.0.0
         version: 7.0.0

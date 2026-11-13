@@ -112,7 +112,7 @@ monti/blocks/
 - **관리자가 블록 폴더에서 읽는 것.** `<AdminPage blocks={adminBlocks}>`로 받은 정의의 `Editor`다. 관리자는 그것을 그 블록의 편집기 화면(ProseMirror node view)으로 쓰고, `Editor`가 없으면 `Site`를 고칠 수 있는 자식과 함께 쓴다(03). `Editor`는 관리자가 내놓는 블록용 부품만 가져온다(`@monti-cms/admin/blocks`): `BlockBar`(도구 행: 이미지의 도구 행과 같은 `FloatingBar`, 같은 자리 `BlockBarPlace`), `BlockBarButton`, `BlockBarMenu`(지금 값 오른쪽 ✓), `BlockSettings`(도구 행의 단추가 여는 설정 카드), `BlockTitle`(블록 안에서 바로 치는 이름 칸, 한글 조합 중에는 쓰지 않는다), `BlockContent`(고칠 수 있는 자식 자리), `SourcePanel`(그림 아래 소스 칸), `useBlock()`(값, `setValue`, 자식 더하기 · 빼기 · 옮기기, `editable`, 골라졌는지, 커서가 안에 있는지). 옛 `useBlockEditor` · `ContainerToolbar` · `BlockSettings` · `AttributeInput` · `Content`를 지금의 부품 이름으로 옮긴 것이다. 이 부품이 관리자 디자인 시스템이라서 블록을 사이트가 고쳐도 도구 행과 카드는 다른 곳과 같은 모양이다.
 - **손잡이 메뉴는 모든 블록에 같은 것만.** 블록 손잡이의 메뉴에는 위로 · 아래로 · 복제 · 삭제(글 블록에는 03의 "다른 블록으로 바꾸기" · "정렬")만 있다. 블록의 설정(콜아웃의 종류, 접기의 처음 펼침, 차트의 종류, 코드 탐색기의 처음 보일 파일)은 그 블록의 도구 행에 있다. 첫 설계의 "종류 ›", "단 수 ›", "펼쳐 두기", "차트 종류 ›" 행은 없다.
 - **`fields`는 이름만이다.** `{ label, options? }`: 비교 · 검토 · 어시스턴트가 값을 부를 이름이다. 화면을 정하지 않는다(첫 설계의 `input: choice | switch | text | source | own`은 뺐다, 2026-11-14).
-- **화면 승인 뒤 바꿀 것(이 PR).** 이미 만든 `monti add`와 패키지는 첫 설계의 파일 모양(`<이름>.ts`, `.css`, `blocks.css`)이다. 화면이 정해지면 위 모양으로 바꾸고 `Editor`와 `@monti-cms/admin/blocks`를 만든다.
+- **만들었다(2026-11-14).** 패키지와 `monti add`가 위 모양이다. `index.ts`의 `Editor`는 `lazy(() => import("./editor"))`라서 CLI(jiti)와 사이트는 편집기 코드를 읽지 않고, 관리자는 그 블록을 처음 그릴 때 읽는다(그동안은 사이트 그리기). "/" 메뉴의 처음 모양은 정의의 `starter`, 아이콘은 `Icon`이다. 서식은 `MarkDefinition.Editor`가 서식 막대 ⋯에서 여는 카드이고, 관리자 페이지는 `marks={adminMarks}`로 받는다. 편집기는 사이트의 서식을 사이트의 모양(`monti-<이름>` 클래스와 `data-<값>`)으로 그린다.
 
 ## `monti add`
 
@@ -120,32 +120,22 @@ monti/blocks/
 $ pnpm monti add callout math
 Added callout: monti/blocks/callout/
 Added math: monti/blocks/math/
+Wired monti.config.ts (blocks, marks)
+Wired app/admin/page.tsx (blocks, marks)
 math needs katex: pnpm add katex
 ```
 
-**넣는 파일과 자리.** 사이트 폴더(`package.json`이 있는 곳)의 `monti/blocks/`다. `monti/changes/`(01)와 같은 `monti/` 폴더다(사이트가 `src/`를 써도 같다: 가져오는 길은 모두 상대 경로라 `@/`가 어디를 가리키든 상관없다).
+**넣는 파일과 자리.** 사이트 폴더(`package.json`이 있는 곳)의 `monti/blocks/`다(위 "블록 폴더와 꽂는 곳"). `monti/changes/`(01)와 같은 `monti/` 폴더다. 가져오는 길은 모두 상대 경로라 `@/`가 어디를 가리키든 상관없다.
 
-```text
-monti/blocks/
-  index.ts          # blocks, marks: the definitions with their Site components (monti.config.ts, renderDocument)
-  admin.ts          # "use client": the same, for the admin page (their Editor components come with the screens)
-  base.css          # what the blocks' looks share: accent colours, borders, the chart's series colours
-  blocks.css        # @import of base.css and of each block's css: whatever draws the site's <html> loads it
-  callout/
-    callout.ts      # defineBlock: type, label, attrs, fields, holds, translate, check
-    site.tsx        # the site's component (no "use client"; a part that needs the browser is its own *.client.tsx)
-    callout.css     # its look (.monti-block-callout), on base.css's variables
-```
-
-- **정의와 모양을 나눈 까닭.** `monti.config.ts`는 CLI가 jiti로 읽는다. CSS가 정의의 길에 있으면 CLI가 읽지 못한다. 그래서 정의 파일과 `site.tsx`는 CSS를 가져오지 않고, 모양은 `blocks.css` 하나로 모아 사이트가 싣는다. 블록의 소스는 TSX라서 CLI의 jiti는 React의 automatic JSX로 읽는다(`bin/monti.mjs`). 관리자 페이지는 `"use client"`인 `admin.ts`로 받는다(16). 이것은 03의 "같은 정의 배열"을 둘로 나눈 것이다: 값과 사이트 컴포넌트는 같고, 관리자 쪽이 편집기 화면을 더한다.
-- **처음 더할 때 잇는다.** 사이트의 파일에서 블록이 없는 곳만 더해서 고친다: `monti.config.ts`에 `blocks`, `marks`(`./monti/blocks`, jiti는 `@/`를 모른다), 관리자 페이지에 `blocks={adminBlocks}`, `<html>`을 그리는 파일마다(맨 위 레이아웃, 그것들이 함께 쓰는 틀, 관리자의 레이아웃) `blocks.css`, `renderDocument(…)`를 부르는 곳에 `blocks`, `marks`. 더하기만 하고 다른 글자는 그대로다. 그 파일에 이미 `blocks`나 `marks`라는 이름이 있는 것처럼 확실하게 고칠 수 없으면 그대로 두고 더할 줄을 "Left for you: …"로 말한다. 한 번 이은 곳은 다시 잇지 않는다.
-- **글의 언어는 사이트가 넘긴다.** `renderDocument`의 `locale`은 사이트가 그 글의 언어 변수를 알 때만 넣을 수 있어 `monti add`가 넣지 않는다. 넘기지 않으면 블록의 말은 영어다. 예제 앱은 넘긴다.
-- **두 번 더하지 않는다.** 그 폴더가 이미 있으면 "callout is already in monti/blocks/callout: it is the site's own now. Remove the folder to add it again."로 그 블록은 쓰지 않는다. 고친 소스를 덮지 않기 위해서다. 함께 부른 다른 블록은 더한다.
-- **함께 오는 것.** `tabs`는 `tab`을, `columns`는 `column`을 같은 폴더에 함께 넣는다. 차트는 core의 표를 쓰므로 더할 것이 없다. 패키지의 테스트 파일은 복사하지 않는다.
-- **설치는 말만 한다.** KaTeX와 Mermaid는 사이트가 설치한다. `monti init`처럼 무엇을 설치할지 말하고 설치하지 않는다("math needs katex: pnpm add katex", 사이트의 잠금 파일로 패키지 관리자를 고른다). 이미 있으면 말하지 않는다.
-- **이름 없이 부르면** 더할 수 있는 블록과 서식을 한 줄씩 보인다. 터미널이면 "Which? (names with commas, or none)"로 묻는다(`monti init`과 같은 물음). 모르는 이름은 "There is no carousel. monti add with no name lists what there is."로 아무것도 쓰지 않는다.
-- **소스가 오는 곳.** `@monti-cms/blocks`가 블록의 소스(`blocks/`)와 그 목록(`registry.json`: 이름, 내보내는 블록과 서식, CSS, 설치할 패키지)을 가진다. 릴리스 묶음은 `src/`를 싣지 않으므로 소스 폴더 이름이 `blocks/`다. CLI는 사이트에 설치된 그 패키지에서 읽는다. 없으면 "Blocks come from @monti-cms/blocks: install it from the same release, then run monti add again." 패키지 안의 소스가 그대로 테스트를 받는 코드이고, 복사할 때 바뀌는 것은 없다. 블록이 쓰는 zod는 core가 내보내는 `z`다(사이트가 따로 설치하지 않고, core와 같은 판이다).
-- **예제 앱(16)에 모두 넣었다.** `examples/blog`에 `monti add`로 블록 여덟과 서식 둘을 넣고 그 결과를 저장소에 둔다. 사이트의 틀(`site/frame.tsx`)이 `<html>`을 그리므로 거기에 `blocks.css`가 들어갔다. CLI로 그 설정을 읽어 `blocks.catalog`가 열 개와 울타리 둘을 내놓는 것을 봤다(2026-11-14).
+- **목록 한 줄.** 블록 폴더를 복사하고 `monti/blocks/index.ts`에 가져오기 한 줄과 목록의 이름을 더한다. 처음이면 `index.ts`와 `admin.ts`(`adminBlocks`, `adminMarks`)를 만든다. 모양은 블록이 스스로 싣는다(`<style href precedence>`)라 레이아웃에 더할 것이 없다. 수식은 KaTeX의 MathML로 그려 KaTeX 스타일시트도 필요 없다(만들며 정함 2026-11-14).
+- **처음 더할 때 잇는다.** 사이트의 파일에서 블록이 없는 곳만 더해서 고친다: `monti.config.ts`에 `blocks`, `marks`(`./monti/blocks`, jiti는 `@/`를 모른다), 관리자 페이지에 `blocks={adminBlocks} marks={adminMarks}`, `renderDocument(…)`를 부르는 곳에 `blocks`, `marks`. 확실하게 고칠 수 없으면 그대로 두고 더할 줄을 "Left for you: …"로 말한다. 한 번 이은 곳은 다시 잇지 않는다.
+- **글의 언어는 사이트가 넘긴다.** `renderDocument`의 `locale`은 `monti add`가 넣지 않는다. 넘기지 않으면 블록의 말은 영어다. 예제 앱은 넘긴다.
+- **두 번 더하지 않는다.** 그 폴더가 이미 있으면 "callout is already in monti/blocks/callout: it is the site's own now. Remove the folder to add it again."로 그 블록은 쓰지 않는다. 함께 부른 다른 블록은 더한다.
+- **함께 오는 것.** `tabs`는 `tab`을, `columns`는 `column`을 같은 폴더에 함께 넣는다. 패키지의 테스트 파일은 복사하지 않는다.
+- **설치는 말만 한다.** KaTeX와 Mermaid는 사이트가 설치한다("math needs katex: pnpm add katex", 사이트의 잠금 파일로 패키지 관리자를 고른다). 이미 있으면 말하지 않는다.
+- **이름 없이 부르면** 더할 수 있는 블록과 서식을 한 줄씩 보이고, 터미널이면 "Which? (names with commas, or none)"로 묻는다. 모르는 이름은 "There is no carousel. monti add with no name lists what there is."로 아무것도 쓰지 않는다.
+- **소스가 오는 곳.** `@monti-cms/blocks`가 블록의 소스(`blocks/`)와 그 목록(`registry.json`: 이름, 내보내는 블록과 서식, 설치할 패키지)을 가진다. 없으면 "Blocks come from @monti-cms/blocks: install it from the same release, then run monti add again."
+- **예제 앱(16)에 모두 넣었다.** `examples/blog`의 `monti/blocks/`는 `monti add`로 넣은 열 개이고, 테스트가 패키지의 폴더와 같은지 본다(`add.test.ts`). 흐름 테스트(`site.e2e.ts`)가 블록이 모두 든 글을 발행해 사이트에 그려진 것을 본다.
 
 ## MDX
 
@@ -208,7 +198,7 @@ monti/blocks/
 
 ## 편집기 (2026-11-14 다시 정함)
 
-옛 블록을 바탕으로 했다(소유자: "이거 이전에 만든게 되게 잘 만들었는데 그걸 좀 반영해보는건 어때?", "다른 컴포넌트는 이전에 만든걸 좀 참조해야할 듯? 너무 못만들었다. 사용하기도 불편하고"). 옛 것의 흐름이 쉬웠던 곳은 옛 것이 이기고, 다른 제품의 흐름은 조사(`research-blocks.md`)의 "대부분이 같은 것"에서 가져왔다. 바꾼 것은 지금의 규칙과 부품이 요구하는 것뿐이다. 어느 일도 옛 블록보다 누름이 많지 않다. 그림은 `Screens/Reference/Blocks`(진짜 부품)다.
+옛 블록을 바탕으로 했다(소유자: "이거 이전에 만든게 되게 잘 만들었는데 그걸 좀 반영해보는건 어때?", "다른 컴포넌트는 이전에 만든걸 좀 참조해야할 듯? 너무 못만들었다. 사용하기도 불편하고"). 옛 것의 흐름이 쉬웠던 곳은 옛 것이 이기고, 다른 제품의 흐름은 조사(`research-blocks.md`)의 "대부분이 같은 것"에서 가져왔다. 바꾼 것은 지금의 규칙과 부품이 요구하는 것뿐이다. 어느 일도 옛 블록보다 누름이 많지 않다. 화면은 `Screens/Entry/Site blocks`(진짜 편집기)다.
 
 **한 가지 방식.** 블록마다 자기 도구 행을 갖는다. 옛 `ContainerToolbar`처럼 포인터가 블록 위에 있거나 커서가 안에 있으면 뜨고, 그 메뉴가 열린 동안 남는다. 자리와 부품은 지금 이미지의 도구 행이다: 블록 왼쪽 위 바깥(`BlockBarPlace`) · `FloatingBar` · 28px `FloatingBarButton`(이름은 툴팁). 옛 것은 블록 오른쪽 위에 걸쳐 섰다: 이미지와 한 자리로 맞췄다. 값 하나를 고르는 단추는 메뉴를 열고 지금 값 오른쪽에 ✓(menu.md), 켜고 끄는 값 하나는 눌림 단추 하나, 값이 여럿이면 설정 카드(이미지의 설정 카드와 같은 `Popover`, 도구 행에 걸린다)다.
 
@@ -269,13 +259,15 @@ type ShownBlock = {
 
 ## 만든 것 (2026-11-14)
 
-화면 승인을 기다리지 않는 core를 먼저 만들었다. 화면(편집기의 블록 화면, 여러 블록 고르기, 비교와 검토에 이름 줄을 그리기)은 승인 뒤다.
+소유자(2026-11-14): "일단 디자인 변경이 나오면 해당 디자인을 바탕으로 개발을 진행해주길 바람. 일단 기능적인 부분은 개발이 끝나서 실사용이 가능한 수준이 되어야함." 그래서 그림을 다시 승인받지 않고 소유자의 마지막 말을 반영해 바로 만들었다.
 
-- **core**: `defineBlock`의 `fields` · `fence`, `defineMark`의 `fields` · `description`, 두 말 `label`(`Label`, 관리자가 자기 말로 읽는다), `own` 필드, 블록 검사의 두 말 메시지, `blocks.catalog`의 `fields` · `fence`, 코드 블록의 `title`, `renderDocument`의 `locale`, `z`와 `createBlockKit` 내보내기.
-- **`@monti-cms/mdx`**: 울타리 블록, `$$`, 글자 지시문 서식, 따옴표 · `&` · 줄바꿈이 든 값(고치기 전 쓰기로는 실패하는 테스트), 울타리 줄의 `title`. "MDX로 보기"는 사이트의 목록으로 울타리 블록을 쓴다.
-- **`@monti-cms/blocks`**: 블록 여덟과 서식 둘, 사이트 그리기, 모양, `registry.json`. 테스트는 블록마다 사이트에 그리고, core의 검사를 지나고, MDX로 쓰고 읽는다.
-- **`monti add`**: 복사, 목록, 잇기, 설치할 것 말하기, 덮지 않기. 예제 앱에 모두 넣었다.
-- **비교의 core**: `shownBlocks`가 사이트의 이름으로 이름 줄을 만들고 `compareBodies`가 바뀐 값을 낱말로 표시한다. "다른 곳"은 전부터 서버가 블록 전체를 견주어 세고 있었다(값만 바뀐 블록도 센다). 남은 것은 화면에 그리는 일이다.
+- **core**: `defineBlock`의 `fields` · `fence` · `starter` · `Icon` · `Editor`, `defineMark`의 `fields` · `description` · `Editor`, 두 말 `label`, 블록 검사의 두 말 메시지, `blocks.catalog`의 `fields` · `fence`, 코드 블록의 `title`, `renderDocument`의 `locale`, `z`와 `createBlockKit` 내보내기.
+- **`@monti-cms/mdx`**: 울타리 블록, `$$`, 글자 지시문 서식, 따옴표 · `&` · 줄바꿈이 든 값, 울타리 줄의 `title`.
+- **`@monti-cms/blocks`**: 블록 여덟과 서식 둘, 블록마다 한 폴더. 사이트 그리기 · 검사 · MDX 왕복을 단위 테스트가, 편집기의 흐름을 화면 테스트(`site-blocks.screen.test.tsx`)가 본다.
+- **편집기(`@monti-cms/admin/blocks`)**: `useBlock`(값, 자식 더하기 · 빼기 · 옮기기 · 합치기, 커서가 있는 자식, 고른 것, 언어; 바꿈마다 실행 취소 한 걸음), `BlockFrame`(도구 행이 뜨는 틀), `BlockBar` · `BlockBarButton` · `BlockBarMenu`(✓) · `BlockBarToggle`(이름을 단 켜고 끄기), `BlockTitle`, `BlockContent`, `SourceBlock`. UI 부품 `BlockFrameBox` · `SourceBox` · `BlockTitleField` · `CompareValues`와 `FloatingBarButton named`(editor-tools.md).
+- **`monti add`**: 복사, 목록 한 줄, 잇기, 설치할 것 말하기, 덮지 않기. 빼기(폴더와 그 줄을 지우면 남는 것이 없다)도 테스트가 본다.
+- **비교와 검토(T197)**: 편집기 비교는 블록 위에 이름 줄(`CompareValues`)을 낱말로 견주어 그리고, 검토는 값만 바뀐 블록도 행으로 보이며(이름 줄의 바뀐 낱말이 표시된다), 번역 옆 원문도 이름 줄을 보인다.
+- **여러 블록 고르기(T80)와 블록 손잡이의 나 모양**은 다른 갈래가 overhaul에서 만든다(2026-11-14 오케스트레이터).
 
 ## 바뀌는 곳
 
@@ -309,42 +301,40 @@ type ShownBlock = {
 - **단 나누기의 단 수.** 소유자: "단수는 2단 3단 4단 대신 +로 단을 늘리게 하는 것도 방법인듯? 표처럼...." 표처럼 + 띠와 단 손잡이로 더하고 지운다(위 "편집기").
 - **블록의 설정은 블록이 가진다.** 소유자: "생각해봐 커스텀 컴포넌트를 만들어서 넣는데 드래그 핸들 메뉴에 넣는 것보다는 컴포넌트 자체가 버블을 가지고 거기서 설정하는게 더 맞지 않겠어?", "예전 블록이 더 말이 됐던 것 같은건 콜아웃이나 차트, collapsible 쪽인듯? … 차트는 아에 밑에 따로 에디터 입력창을 만들어줬던 기억이 있는데 버블 형태가 아니라....이전 레퍼런스들을 찾아봐봐."(위 "블록 폴더와 꽂는 곳", "편집기")
 
-## 화면 승인 (대기, 2026-11-14 다시 그림)
+## 화면 승인 (2026-11-14, 두 번째 답)
 
-그림은 저장소 밖 `mockups-18/index.html`(빈 곳마다 물음, 추천, 따른 제품, 누름 수, 노란 상자의 "옛 블록과 다른 점")이고, 기준 화면 `Screens/Reference/Blocks`를 브라우저로 찍은 것이다.
+소유자의 답(그림 전체에: "정말 실망임.....레퍼런스는 좀 찾고 그린건지 의문")과 반영한 것:
 
-| 빈 곳 | 물음 | 추천 |
-|---|---|---|
-| 1 | 콜아웃의 종류와 제목 | 도구 행의 종류 단추 → 다섯 종류(✓), 제목은 바로 친다 |
-| 2 | 탭을 더하고 이름을 바꾸고 지우기 | 탭 줄 끝 +, 그 자리 이름, 도구 행 ✎ · ★ · 지우기 |
-| 3 | 단 나누기 | 표의 + 띠 · 단 손잡이 · 경계 선, 도구 행의 폭과 "고르게" |
-| 4 | 접기 | ▾로 편집기에서도 접기, 도구 행 "처음부터 펼쳐 두기" |
-| 5 | 코드 탐색기 | 첫 목업의 나무, 도구 행 ★ "처음 보일 파일", 파일 줄 ⋯ "지우기" |
-| 6 | 수식 · 다이어그램 | 누르면 그림 아래 블록 안의 소스 칸(카드 규칙의 예외) |
-| 7 | 차트 | 가(옛 글과 그림) 추천, 나(표) |
-| 8 | 블록 손잡이 | 나(20 × 24 둥근 네모, 가리키면 바탕) |
-
-디자인 검토가 남긴 세 물음은 만들며 정했다(2026-11-14): 코드 탐색기의 나무는 종이 바탕, 탭은 도구 행에서 지우기, 단의 지금 폭은 끄는 동안만. 차트(가 · 나), 블록 손잡이(가 · 나 · 다), 소스 칸 자리의 규칙 바꿈은 소유자의 답을 기다린다: 그 전에는 화면을 만들지 않는다.
-
-여러 블록 고르기(T80)와 비교 · 검토(T197)는 블록을 다시 그린 것으로 바뀌지 않아 그대로 묻는다(첫 목업 9, 10).
+- **차트.** 소유자: "가. 이걸 위해서 언어까지 만들었음". 옛 차트 글과 그 파서(`dsl.ts`)다. 나(표)는 만들지 않았다.
+- **블록 손잡이.** 소유자: "나". 노션식 둥근 네모. 손잡이 부품(`BlockHandle`)은 다른 갈래가 바꾼다.
+- **코드 탐색기.** 소유자: "전반적으로 그나마 괜찮음....". 그 모양 그대로다.
+- **탭.** 소유자: "npm 밑에 선있음". 고른 탭은 아래 선 없이 탭 상자에 붙는다(`FolderTabs`의 고른 탭과 `FolderTabEdit`, 상자 `FolderTabsBody`).
+- **단.** 소유자: "drag handle이 이전 값을 모방한 것 같지만 거긴 아에 디자인이 달랐기 때문에 현재 디자인과는 어울리지 않음". 표의 손잡이(`TableGrip`) · 경계(`TableColumnBorder`) · + 띠(`TableAddStrip`) 그대로다.
+- **접기.** 소유자: "이런 ui가 진심인가 싶음.... padding도 없고 아이콘도 없고....이게 맞아?". "처음부터 펼치기"는 아이콘과 이름을 단 도구 행 단추(`FloatingBarButton named`: 안쪽 8px)다.
+- **수식 · 다이어그램.** 소유자: "preview와 입력 영역이 구분되어있지 않아 레이아웃 가독성이 떨어짐 심각". 그림 칸과 소스 칸을 가로 선과 흐린 바탕으로 나누고 소스 칸 위에 "원문 코드"를 단다(`SourceBox`).
+- **글자 색.** 소유자: "글자색과 바탕색은 별개인데 왜 하나에 들어간건지 잘 이해가 가지 않음. 이전에 좋았던 디자인은 왜 다 갔다버리고 갑자기 이상한 디자인으로 바뀐건지 모르겠음." 옛 색 카드다: "글자색" 줄과 "배경색" 줄, 줄마다 기본과 여덟 색, 칸은 그 색의 글자 "가", 지금 것은 ✓, 이름은 툴팁. 서식 막대 ⋯의 "글자 색"이 연다.
+- **툴팁.** 소유자: "툴팁도 이게 최선인가...? 최선이니까 이따구로 만든건가...? 이거 맞나...?" 옛 카드다: 제목 "툴팁 넣기" / "툴팁 수정", 두 줄 "설명" 칸, "취소" · "넣기"("저장"). 떼기는 서식 지우기다(앞의 결정).
+- **도구 행 하나.** 소유자가 17번에 바란 "코드 블록 컴포넌트에서 관리하는 별도의 툴바"와 이 문서 블록들의 도구 행은 같은 부품이다(editor-tools.md "사이트 블록의 도구 행과 소스 칸"). 17번 갈래가 그것을 쓴다.
+- **소스 칸 자리의 규칙 바꿈**은 editor-tools.md에 적었다(소스는 카드가 아니라 그림 아래 블록 안).
 
 ## 끝 조건
 
-- **18-1** `monti add callout`이 `monti/blocks/callout/`과 묶음 파일을 만들고 설정 파일, 관리자 페이지, 레이아웃, `renderDocument`를 잇는다. 그 뒤 콜아웃이 "/" 메뉴, 사이트 그리기, `blocks.catalog`에 나온다. 이미 있는 폴더는 덮지 않는다. `@monti-cms/blocks`가 없으면 무엇을 설치할지 말하고 아무것도 쓰지 않는다.
+- **18-1** `monti add callout`이 `monti/blocks/callout/`과 목록 파일(`index.ts`, `admin.ts`)을 만들고 설정 파일, 관리자 페이지, `renderDocument`를 잇는다. 그 뒤 콜아웃이 "/" 메뉴, 사이트 그리기, `blocks.catalog`에 나온다. 이미 있는 폴더는 덮지 않는다. `@monti-cms/blocks`가 없으면 무엇을 설치할지 말하고 아무것도 쓰지 않는다.
 - **18-2** 예제 앱에 열 개(블록 여덟, 서식 둘)가 모두 들어가 있고, 사이트가 발행본을 그린다. 탭과 코드 탐색기는 자바스크립트 없이도 모든 내용이 페이지의 HTML에 있다.
 - **18-3** 블록과 서식마다 MDX로 쓰고 다시 읽으면 같은 본문이다. `$$ … $$`는 수식으로 읽는다. 따옴표가 든 값도 같다. 사이트에 없는 블록의 표기는 지금처럼 쓴 그대로 남는다.
 - **18-4** 블록마다 자기 도구 행이 블록을 가리키거나 커서가 안에 있으면 뜨고, 그 단추와 설정(콜아웃 종류, 탭의 이름 · 처음 열 탭 · 지우기, 단 더하기 · 지우기 · 고르게, 접기의 처음 펼침, 코드 탐색기의 처음 보일 파일)이 값을 바꾸며, 실행 취소가 되돌린다. 손잡이 메뉴에는 위로 · 아래로 · 복제 · 삭제만 있다. 블록 폴더를 지우고 목록의 한 줄을 지우면 그 블록이 사이트와 편집기에서 빠지고, 남는 파일이나 줄이 없다.
-- **18-5** 탭을 더하고 이름을 바꾸고 옮기고 지울 수 있다. 단 수를 줄이면 줄인 단의 블록이 남는 단으로 간다. 코드 탐색기에 파일을 더하고 지우고 처음 보일 파일을 정할 수 있다.
+- **18-5** 탭을 더하고 이름을 바꾸고 지울 수 있다(옮기기는 옛 블록에도 없었고 이번에도 두지 않는다, 만들며 정함 2026-11-14). 단 수를 줄이면 줄인 단의 블록이 남는 단으로 간다. 코드 탐색기에 파일을 더하고 지우고 처음 보일 파일을 정할 수 있다.
 - **18-6** 틀린 수식은 편집기와 발행 할 일에, 틀린 다이어그램은 편집기에 이유 한 줄로 나온다. 차트의 숫자가 아닌 칸은 발행 할 일이 된다.
-- **18-7** 여백에서 끈 상자가 겹친 블록을 고르고, Esc로도 고른다. 고른 블록이 함께 지워지고 복사되고 옮겨지며, 실행 취소 한 번에 돌아온다.
+- **18-7** (T80, 다른 갈래) 여백에서 끈 상자가 겹친 블록을 고르고, Esc로도 고른다. 고른 블록이 함께 지워지고 복사되고 옮겨지며, 실행 취소 한 번에 돌아온다.
 - **18-8** 값만 바뀐 블록(콜아웃의 종류, 이미지의 대체 텍스트, 수식의 소스, 표의 칸)이 편집기 비교에서 "다른 곳"으로 세어지고 바뀐 값이 표시되며, 검토 화면에 그 블록의 행이 생긴다.
 - **18-9** 읽기 전용 본문에서 탭을 바꾸고, 코드 탐색기의 파일을 고르고, 소스를 읽을 수 있다. 고치는 것은 없다.
-- **18-10** 콜아웃의 제목, 접기의 제목, 탭의 이름, 차트의 제목과 표가 번역에서 옮길 글자가 된다. 수식, 다이어그램, 단 나누기는 원문을 따른다.
+- **18-10** 콜아웃의 제목, 접기의 제목, 탭의 이름이 번역에서 옮길 글자가 된다. 수식, 다이어그램, 차트(글로 쓰는 차트, 소유자가 고른 가), 단 나누기는 원문을 따른다.
 
 ## 옛 코드
 
-`34d5adcd^`의 `packages/blocks`(블록마다 `definition.ts` · `render.tsx` · `view.tsx`, 차트 문법 `chart/dsl.ts`, 글자 색 `color/colors.ts`), `34d5adcd` 이전의 `packages/admin/src/editor/drag/block-selection.ts`(여백에서 시작하는 상자, 골라진 줄을 칠하기, 손잡이로 함께 옮기기, 덮어 쓰기 막기). 이름과 생각만 가져온다. 차트 문법, 색 값 짝, 목록 항목 하나씩 고르기는 가져오지 않는다(위의 까닭).
+`34d5adcd^`의 `packages/blocks`(블록마다 `definition.ts` · `render.tsx` · `view.tsx`, 차트 문법 `chart/dsl.ts`, 글자 색 `color/colors.ts`), `34d5adcd` 이전의 `packages/admin/src/editor/drag/block-selection.ts`(여백에서 시작하는 상자, 골라진 줄을 칠하기, 손잡이로 함께 옮기기, 덮어 쓰기 막기). 차트 문법(`dsl.ts`, `types.ts`)은 그대로 가져왔다(소유자가 고른 가). 그 밖에는 이름과 생각만 가져온다. 색 값 짝, 목록 항목 하나씩 고르기는 가져오지 않는다(위의 까닭).
 
 ## 결정 기록
 
 - 2026-11-13, 만들며 정함: 위의 모든 결정. 화면 승인에서 소유자가 바꾸면 여기에 적는다.
+- 2026-11-14, 소유자: 차트는 가, 손잡이는 나, 그림의 거절한 곳(위 "화면 승인, 두 번째 답"). 그 뒤 "디자인 변경이 나오면 해당 디자인을 바탕으로 개발": 그림 승인 없이 만들었다.
