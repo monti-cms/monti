@@ -1,8 +1,10 @@
 import { ADMIN_LANGUAGES, type AdminLanguage } from "@monti-cms/core";
 import {
+	Button,
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
+	Inline,
 	MenuShortcut,
 	Option,
 	ReadValue,
@@ -14,7 +16,6 @@ import {
 	SelectValue,
 	Stack,
 	Switch,
-	TextButton,
 } from "@monti-cms/ui";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
@@ -90,14 +91,18 @@ export function AdminTab({
 			{account ? (
 				<Section title={t("settings.admin.account")} last>
 					<ReadValue label={t("settings.admin.signedInAs")}>{account.who}</ReadValue>
-					<TextButton
-						loading={signOut.pending}
-						onClick={async () => {
-							if ((await signOut.run()).ok) await session.reload();
-						}}
-					>
-						{t("settings.admin.signOut")}
-					</TextButton>
+					{/* An action standing alone on its row: a ghost button, not a text one (button.md). */}
+					<Inline gap={0}>
+						<Button
+							variant="ghost"
+							loading={signOut.pending}
+							onClick={async () => {
+								if ((await signOut.run()).ok) await session.reload();
+							}}
+						>
+							{signOut.pending ? t("settings.admin.signingOut") : t("settings.admin.signOut")}
+						</Button>
+					</Inline>
 				</Section>
 			) : null}
 		</>

@@ -20,7 +20,7 @@ export function ProposalState({
 	applying,
 	progress,
 	size,
-	busy,
+	pending,
 	onReview,
 	onDiscard,
 	onApply,
@@ -31,7 +31,8 @@ export function ProposalState({
 	progress: { done: number; total: number } | null;
 	/** `sm` in the card; the page's own size at the end of a page's head. */
 	size?: "sm";
-	busy: boolean;
+	/** The request of the row that runs: its button shows it, keeps the focus, and no button starts another until it is back (button.md, loading). */
+	pending: "discard" | "revert" | null;
 	/** On the card: the way to the review page. */
 	onReview?: () => void;
 	onDiscard: () => void;
@@ -56,6 +57,7 @@ export function ProposalState({
 	const before = MOVED.get(view.id);
 	if (before?.standing !== standing) MOVED.set(view.id, { standing, at: before ? performance.now() : 0 });
 	const settled = (press: () => void) => () => {
+		if (pending) return;
 		if (performance.now() - (MOVED.get(view.id)?.at ?? 0) >= SETTLE_MS) press();
 	};
 	// One box for every state, so the row itself stays while its buttons come and go.
@@ -91,11 +93,11 @@ export function ProposalState({
 					</Button>
 				) : null}
 				<Inline gap={12} align="center" grow justify="end">
-					<Button variant="ghost" size={size} onClick={settled(onDiscard)} disabled={busy}>
-						{t("card.discard")}
+					<Button variant="ghost" size={size} onClick={settled(onDiscard)} loading={pending === "discard"}>
+						{pending === "discard" ? t("card.discarding") : t("card.discard")}
 					</Button>
 					{/* Nothing kept in: the pill says so with its count, and there is nothing to press. */}
-					<Button variant="primary" size={size} onClick={settled(onApply)} disabled={counts.toApply === 0 || busy}>
+					<Button variant="primary" size={size} onClick={settled(onApply)} disabled={counts.toApply === 0}>
 						{t("card.apply", { count: counts.toApply })}
 					</Button>
 				</Inline>
@@ -119,13 +121,8 @@ export function ProposalState({
 						</Button>
 					) : null}
 					{counts.applied > 0 ? (
-						<Button
-							variant={size === "sm" ? "ghost" : "secondary"}
-							size={size}
-							onClick={settled(onRevert)}
-							disabled={busy}
-						>
-							{t("card.revert")}
+						<Button variant="ghost" size={size} onClick={settled(onRevert)} loading={pending === "revert"}>
+							{pending === "revert" ? t("card.reverting") : t("card.revert")}
 						</Button>
 					) : null}
 				</Inline>
