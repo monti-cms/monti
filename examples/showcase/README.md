@@ -71,8 +71,9 @@ here: the switch (`pinned`) is the core's yes/no.
 | 휴지통에 넣은 글 | in the trash | Restore it |
 
 Also: folders 안내 › 국내 and 소식 for articles; media folders 표지 › 2026, 인물, 문서 with five pictures, a PDF and a CSV, a picture used
-nowhere at the top, and in the trash a picture and the folder 지난 행사 with a file in it; five tags (English for all, Japanese for two) and one made
-from an article's field; two people (one in English); two series; the template 여행 안내서; and failed deliveries to the broken hook.
+nowhere at the top, and in the trash a picture and the folder 지난 행사 with a file in it; six tags (English for all, Japanese for two; 겨울 used by
+nothing) and one made from an article's field; two people (one in English); two series; the template 여행 안내서; and failed deliveries to the broken hook (seeded while no server ran, so they failed with `ECONNREFUSED`; sent
+again under `pnpm dev`, they fail with its 503).
 
 ## QA checklist
 
@@ -114,7 +115,7 @@ One line per feature, by feature doc (`docs/design/features`). "Admin" is where 
 - [ ] Fields per language: summary (own), subtitle (from the source), cover (from the source), topic (one for all).
 - [ ] The list's language column and filter; + Language on an entry; the site's language line.
 - [ ] Items in languages: a tag's side panel saves all its languages at once; Japanese has only 海 and 森.
-- [ ] Change the site's languages or prefix: Settings › Languages, with its review.
+- [ ] Change the site's languages or address prefix: Settings › Languages, with its review; the site's pages follow the prefix.
 
 ### 05 · Changes and proposals
 
@@ -164,7 +165,7 @@ One line per feature, by feature doc (`docs/design/features`). "Admin" is where 
 
 - [ ] Tabs: Site, Languages, Collections (Basics, Fields, Editor), Admin.
 - [ ] The editor's allowed blocks and marks per collection.
-- [ ] Admin: the screen's language (Korean, English); screen mode.
+- [ ] Admin: the screen's language (Korean, English). Screen mode (light, dark) is in the frame's menu.
 
 ### 13 · Activity and delivery
 

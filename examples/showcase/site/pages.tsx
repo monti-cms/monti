@@ -15,13 +15,30 @@ import { monti, reader } from "@/lib/monti";
 const h: CreateElement<ReactNode> = (type, props, ...children) =>
 	createElement(type as ElementType, props, ...(children as ReactNode[]));
 
-/** The language of an address, or not found when the site has no such language. A page without one is in the source language. */
+/**
+ * The language of an address, or not found when the site's addresses do not show it that way (`locales.prefix`, which Settings ›
+ * Languages changes). A page without one is in the source language.
+ */
 export function localeOf(code?: string): string {
 	const { source, list, prefix } = reader.locales();
-	if (code === undefined) return source;
-	// The source language has a prefix only when every language has one.
-	if ((code === source && prefix !== "always") || !list.some((locale) => locale.code === code)) notFound();
+	// With a prefix on every language, an address without one is none of the site's.
+	if (code === undefined) {
+		if (prefix === "always") notFound();
+		return source;
+	}
+	// With no prefix at all, every language is at the bare address; the source has one only when every language has.
+	if (prefix === "never" || (code === source && prefix !== "always")) notFound();
+	if (!list.some((locale) => locale.code === code)) notFound();
 	return code;
+}
+
+/** A slug as it is in the address: Next hands a non-ASCII segment over still encoded, and a broken escape is no slug. */
+function decoded(slug: string): string {
+	try {
+		return decodeURIComponent(slug);
+	} catch {
+		return slug;
+	}
 }
 
 const day = (date: Date | null, locale: string) =>
@@ -123,7 +140,7 @@ export async function Home({ locale }: { locale: string }) {
 
 /** The page's title and search and share values, from the SEO plugin's fields. */
 export async function articleMetadata(slug: string, locale: string): Promise<Metadata> {
-	const found = await reader.entry({ collection: "article", slug: decodeURIComponent(slug), locale });
+	const found = await reader.entry({ collection: "article", slug: decoded(slug), locale });
 	if (!found || !("entry" in found)) return {};
 	const seo = seoOf(found.entry);
 	return {

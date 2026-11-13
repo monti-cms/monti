@@ -2,7 +2,16 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
 	// Inside the Monti repo the packages are TypeScript sources; a site that installs them from npm needs none of this line.
-	transpilePackages: ["@monti-cms/core", "@monti-cms/admin", "@monti-cms/ui", "@monti-cms/next", "@monti-cms/ai"],
+	transpilePackages: [
+		"@monti-cms/core",
+		"@monti-cms/admin",
+		"@monti-cms/ui",
+		"@monti-cms/next",
+		"@monti-cms/ai",
+		"@monti-cms/seo",
+		"@monti-cms/mdx",
+		"@monti-cms/storage-s3",
+	],
 	// The database driver and the config loader run as they are on the server.
 	serverExternalPackages: ["pg", "jiti"],
 	// The dev server's pages run in the browser only for the hosts Next knows: `localhost`, and here this machine's other name. A site opened

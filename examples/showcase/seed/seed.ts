@@ -49,7 +49,8 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 loadEnvFiles(root, process.env, "development");
 const config = ((await import("../monti.config")) as { default: MontiConfig }).default;
 
-// Only the hook that fails on purpose: the dev server that answers `/hooks/ok` is not running while the seed is.
+// Only the hook that fails on purpose: the dev server that answers `/hooks/ok` is not running while the seed is. Nothing answers
+// `/hooks/broken` either, so the seeded deliveries fail as refused connections; sent again while `pnpm dev` runs, they fail with its 503.
 const monti = openMonti(
 	{ ...config, receivers: (config.receivers ?? []).filter((receiver) => receiver.destination === "webhook:broken") },
 	root,
@@ -210,6 +211,8 @@ const tags = {
 	desert: await item("tag", "사막", "desert"),
 	night: await item("tag", "밤", "night", { description: "해가 진 뒤의 풍경" }),
 	walk: await item("tag", "걷기", "walking"),
+	// Used by no entry: the tag list's "Unused" filter finds it.
+	winter: await item("tag", "겨울", "winter"),
 };
 // English for every tag, Japanese for two: the language is partly done.
 for (const [key, title, description] of [
@@ -218,6 +221,7 @@ for (const [key, title, description] of [
 	["desert", "Desert", undefined],
 	["night", "Night", "After the sun goes down"],
 	["walk", "Walking", undefined],
+	["winter", "Winter", undefined],
 ] as const)
 	await itemLocales("tag", tags[key].group, {
 		en: { title, slug: title.toLowerCase(), values: description ? { description } : {} },
@@ -618,7 +622,7 @@ await write("entries.moveToFolder", { ids: [video.id, archived.id], folder: news
 const failed = await read<number>("deliveries.counts", {});
 console.log(
 	[
-		"Seeded: 4 media folders and 8 files (2 more in the trash), 5 tags, 2 people, 2 series, 1 template,",
+		"Seeded: 4 media folders and 8 files (2 more in the trash), 6 tags, 2 people, 2 series, 1 template,",
 		"10 articles (published, changed, draft, blocked, archived, in the trash, a copy) with English and Japanese translations.",
 		`Deliveries: ${JSON.stringify(failed)} (the broken hook fails on purpose).`,
 	].join("\n"),
