@@ -105,7 +105,6 @@ export function TemplateEditor({
 							<TextButton onClick={() => void editor.loadLatest()}>{t("templates.loadLatest")}</TextButton>
 						</Banner>
 					) : null}
-					<CodeLinkBanner editor={bodyEditor} />
 					{editor.browserCopy ? (
 						<Banner ref={handOff} title={t("entry.browserCopy")}>
 							<TextButton onClick={editor.loadBrowserCopy}>{t("entry.loadCopy")}</TextButton>
@@ -114,6 +113,7 @@ export function TemplateEditor({
 							</TextButton>
 						</Banner>
 					) : null}
+					<CodeLinkBanner editor={bodyEditor} />
 				</>
 			}
 		>

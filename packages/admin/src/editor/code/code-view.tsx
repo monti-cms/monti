@@ -33,12 +33,14 @@ import {
 	Checkmark,
 	ChevronDown,
 	ChevronRight,
+	Code,
 	CollapseAll,
 	Copy,
 	Document,
 	ListNumbered,
 	Row,
 	TypePattern,
+	View,
 } from "@monti-cms/ui/icons";
 import { TextSelection } from "@tiptap/pm/state";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, useEditorState } from "@tiptap/react";
@@ -97,6 +99,7 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 	const [card, setCard] = useState<"language" | "name" | "rules" | "tip" | null>(null);
 	const [copied, setCopied] = useState(false);
 	const [foldPointed, setFoldPointed] = useState<number | null>(null);
+	const [hovered, setHovered] = useState(false);
 
 	const view = useEditorState({
 		editor,
@@ -243,7 +246,8 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 	const listed = settings?.languages ?? [];
 	const tools = settings?.tools;
 	const offeredEffects = settings?.lineEffects.filter((effect) => effect.offered) ?? [];
-	const showBar = editable && (view?.inside || view?.picked || card !== null || menu !== null);
+	// The blocks' one tool row (editor-tools.md): the pointer on the block, the caret in it, or a card or menu of it open.
+	const showBar = editable && (hovered || view?.inside || view?.picked || card !== null || menu !== null);
 	const numbersOff = !data.lineNumbers;
 	const wordsTools = view?.words && tools && (tools.tooltip || tools.fold);
 	const toggleMark = (type: "codeTip" | "codeFold", attrs: Record<string, unknown> | null) => {
@@ -254,7 +258,11 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 	};
 
 	return (
-		<NodeViewWrapper data-block="codeBlock">
+		<NodeViewWrapper
+			data-block="codeBlock"
+			onPointerEnter={() => setHovered(true)}
+			onPointerLeave={() => setHovered(false)}
+		>
 			{showBar ? (
 				<BlockBarPlace>
 					<FloatingBar ref={bar} aria-label={t("editor.code.tools")}>
@@ -351,10 +359,12 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 										</FloatingBarButton>
 										{view?.foldOn ? (
 											<FloatingBarButton
+												named
 												label={t("editor.code.openAtFirst")}
 												pressed={Boolean(view?.foldOpen)}
 												onClick={() => toggleMark("codeFold", view?.foldOpen ? {} : { open: true })}
 											>
+												<View aria-hidden />
 												{t("editor.code.openAtFirst")}
 											</FloatingBarButton>
 										) : null}
@@ -496,10 +506,12 @@ function LanguageButton({
 			}}
 		>
 			<FloatingBarButton
+				named
 				label={t("editor.code.languageIs", { name: label })}
 				pressed={open}
 				trigger={(button) => <PopoverTrigger render={button} />}
 			>
+				<Code aria-hidden />
 				{label}
 				<Caret />
 			</FloatingBarButton>

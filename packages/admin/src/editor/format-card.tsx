@@ -28,7 +28,7 @@ import { type Editor, useEditorState } from "@tiptap/react";
 import { useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import type { BodyCatalogs } from "./catalog";
-import { CodeRefButton } from "./code/code-links";
+import { CodeRefButton, pickedWords } from "./code/code-links";
 import { codeToolsKey } from "./code/code-state";
 import { clearFormats, hasClearableFormat, inTableCell } from "./commands";
 import { insertFootnote } from "./footnotes";
@@ -100,6 +100,8 @@ export function FormatCard({
 				inFootnote: selection.$from.parent.type.name === nodeName("footnote"),
 				inCode: selection.$from.parent.type.name === nodeName("codeBlock"),
 				codeBlocks: current.state.doc.content.content.some((node) => node.type.name === nodeName("codeBlock")),
+				// A code link joins words of one block to lines: over two blocks it cannot be made, so it is not offered.
+				oneBlock: pickedWords(current) !== null || current.isActive(markName("codeRef")),
 				requestable: pickedText(current.state) !== null,
 			};
 		},
@@ -124,7 +126,10 @@ export function FormatCard({
 	);
 	// A code link starts from words of the text, in a body that has a code block to point at.
 	const codeRef =
-		!state.inCode && state.codeBlocks && catalogs.offered.marks.some((mark) => mark.type === "codeRef")
+		!state.inCode &&
+		state.codeBlocks &&
+		state.oneBlock &&
+		catalogs.offered.marks.some((mark) => mark.type === "codeRef")
 			? catalogs.kit.marks.find((mark) => mark.type === "codeRef")
 			: undefined;
 	const label = (type: string) => t(catalogs.kit.marks.find((mark) => mark.type === type)?.label ?? type);

@@ -216,6 +216,17 @@ describe("the code block in the editor (doc 17)", () => {
 			.not.toContainEqual({ name: "anchor", start: 4, end: 5, attrs: { id: "l1" } });
 	});
 
+	it("words picked over two blocks have no code link button: a link joins words of one block to lines", async () => {
+		await on("code").run();
+		await opened();
+		await caretAfter(body().element(), "버튼을 누를");
+		await userEvent.keyboard("{Shift>}{ArrowDown}{ArrowDown}{/Shift}");
+		await expect.element(button("굵게")).toBeVisible();
+		await expect.element(button("코드 줄 링크")).not.toBeInTheDocument();
+		await pickWords(body().element(), "수를 하나");
+		await expect.element(button("코드 줄 링크")).toBeVisible();
+	});
+
 	it("words pointing at lines that are gone have the broken line, and the publish to-do counts them", async () => {
 		await on("codeBroken").run();
 		await opened();

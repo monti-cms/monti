@@ -7,6 +7,7 @@ import {
 	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
+	Code as CodeIcon,
 	CodeReference,
 	CollapseAll,
 	Copy,
@@ -16,6 +17,7 @@ import {
 	TrashCan,
 	TypePattern,
 	Unlink,
+	View,
 } from "../../icons";
 import {
 	Affix,
@@ -220,6 +222,8 @@ function Lines({
 				mark={look.mark}
 				tone={look.tone}
 				wavy={look.wavy}
+				// A closed fold says what it hides at the right end of its first line.
+				aside={closed ? <TextButton size="caption">접힌 4줄</TextButton> : undefined}
 				fold={
 					first ? (
 						<IconButton size="xs" label={fold === "open" ? "7번째 줄부터 접기" : "7번째 줄부터 펼치기"}>
@@ -229,13 +233,6 @@ function Lines({
 				}
 			>
 				{words[number] ?? paint(lines[index], plain)}
-				{/* A closed fold says what it hides at the end of its first line. */}
-				{closed ? (
-					<>
-						{"  "}
-						<TextButton size="caption">접힌 4줄</TextButton>
-					</>
-				) : null}
 			</CodeLine>,
 		);
 		if (closed) index = 10;
@@ -317,16 +314,22 @@ function Tools({
 		<BlockBarPlace>
 			<FloatingBar aria-label="코드 도구">
 				{languageOpen ? (
-					opened(
-						languageOpen,
-						"언어",
-						<>
+					<Popover open onOpenChange={still}>
+						<FloatingBarButton
+							named
+							label={`언어: ${language}`}
+							pressed
+							trigger={(button) => <PopoverTrigger render={button} />}
+						>
+							<CodeIcon aria-hidden />
 							{language}
 							<Caret />
-						</>,
-					)
+						</FloatingBarButton>
+						{languageOpen}
+					</Popover>
 				) : (
-					<FloatingBarButton label="언어">
+					<FloatingBarButton named label={`언어: ${language}`}>
+						<CodeIcon aria-hidden />
 						{language}
 						<Caret />
 					</FloatingBarButton>
@@ -365,7 +368,12 @@ function Tools({
 						<FloatingBarButton label="글자 접기" pressed={words === "fold"}>
 							<CollapseAll aria-hidden />
 						</FloatingBarButton>
-						{words === "fold" ? <FloatingBarButton label="처음부터 펼치기">처음부터 펼치기</FloatingBarButton> : null}
+						{words === "fold" ? (
+							<FloatingBarButton named label="처음부터 펼치기">
+								<View aria-hidden />
+								처음부터 펼치기
+							</FloatingBarButton>
+						) : null}
 					</>
 				) : null}
 				<Separator orientation="vertical" length="bar" />

@@ -95,7 +95,7 @@ function CodeAside({ row, children }: { row: number; children: React.ReactNode }
 		<div
 			data-slot="code-aside"
 			contentEditable={false}
-			className="absolute right-monti-8 flex h-[20px] select-none items-center"
+			className="absolute right-monti-8 z-1 flex h-[20px] select-none items-center"
 			// design-allow: the line's place, from its row among the lines shown (20px each)
 			style={{ top: row * 20 }}
 		>
@@ -212,11 +212,14 @@ function CodeLine({
 	folds = false,
 	readOnly = false,
 	changed,
+	aside,
 	children,
 	className,
 	...props
 }: Omit<React.ComponentProps<"div">, "children"> & {
 	number: number;
+	/** What stands at the right end of the line (a closed fold's "n lines folded"), over the lines next to it so its press area is whole. */
+	aside?: React.ReactNode;
 	fold?: React.ReactNode;
 	edge?: CodeFoldEdge;
 	mark?: "+" | "−" | "›";
@@ -248,6 +251,7 @@ function CodeLine({
 				numbersOff={numbersOff}
 				readOnly={readOnly}
 				changed={changed}
+				tone={tone}
 				className="select-none"
 			/>
 			<span className="relative flex flex-1 items-center whitespace-pre pr-monti-16 pl-monti-16 text-monti-default">
@@ -260,6 +264,7 @@ function CodeLine({
 				>
 					{children}
 				</span>
+				{aside ? <span className="relative z-1 ml-auto flex items-center pl-monti-16">{aside}</span> : null}
 			</span>
 		</div>
 	);

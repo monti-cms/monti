@@ -23,8 +23,8 @@ import { freshAnchor, linesLabel } from "./line-menu";
 
 type T = ReturnType<typeof useAdmin>["t"];
 
-/** The words of the text picked now, outside code: the text side of a link being made. */
-function pickedWords(editor: Editor) {
+/** The words of the text picked now, in one block outside code: the text side of a link being made. */
+export function pickedWords(editor: Editor) {
 	const { from, to, empty, $from } = editor.state.selection;
 	if (empty || $from.parent.type.name === nodeName("codeBlock") || !$from.parent.isTextblock) return null;
 	if (editor.state.selection.$to.parent !== $from.parent) return null;
