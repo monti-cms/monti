@@ -25,7 +25,7 @@ function usePluginPages(): (ToolPageRef & { label: string })[] {
 
 /**
  * The tools' tab row (tools.md, the tools frame): one tab is one page, and each is a link with its own address. The templates (unless they
- * are turned off), the keys, then the plugins' pages. With one tab there is no row.
+ * are turned off), the data, the keys, then the plugins' pages. There are always two at least, so the row is always there.
  *
  * A tab pressed with the keyboard opens another page, which draws this row anew: the focus the pressed tab held goes to the same tab in the
  * new row, now the open one, as on a page whose tab row stays (settings). Decided while building, 2026-11-13.

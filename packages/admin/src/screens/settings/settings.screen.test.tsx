@@ -1023,7 +1023,7 @@ describe("settings: where the focus goes when the save group leaves", () => {
 });
 
 describe("the tools with body templates off", () => {
-	it("12-2 no tab row and no templates: the sidebar's 도구 and the templates' own address both open the API keys", async () => {
+	it("12-2 no templates tab and no templates: the sidebar's 도구 and the templates' own address both open the first tab left, the data", async () => {
 		const shown = withSite({
 			...stories.Admin,
 			loaders: stories.settingsAt("admin", {
@@ -1035,14 +1035,19 @@ describe("the tools with body templates off", () => {
 		await shown.run();
 		await userEvent.click(page.getByRole("button", { name: "도구" }));
 		await expect.element(page.getByRole("heading", { name: "도구" })).toBeVisible();
-		// One tool left: its page, with no row of tabs over it.
+		// The other tools stay, in their row; the first of them is the page that opens.
 		await expect.element(page.getByRole("link", { name: "템플릿" })).not.toBeInTheDocument();
-		await expect.element(page.getByRole("link", { name: "API 키" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("link", { name: "데이터" })).toHaveAttribute("aria-current", "page");
+		await expect.element(page.getByRole("link", { name: "API 키" })).not.toHaveAttribute("aria-current");
 		await expect.element(page.getByRole("button", { name: "템플릿 추가" })).not.toBeInTheDocument();
 		expect(window.location.hash).toBe("#/tools");
-		await expect.element(page.getByText(/키/).first()).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "백업 받기" })).toBeVisible();
+		// The keys are a press away, at their own address.
+		await userEvent.click(page.getByRole("link", { name: "API 키" }));
+		await expect.poll(() => window.location.hash).toBe("#/tools/keys");
+		await expect.element(page.getByRole("link", { name: "API 키" })).toHaveAttribute("aria-current", "page");
 
-		// Turned on again, both tabs are back.
+		// Turned on again, the templates' tab is back.
 		await userEvent.click(page.getByRole("button", { name: "설정" }));
 		await userEvent.click(tab(/관리자/));
 		await userEvent.click(page.getByRole("switch", { name: "본문 템플릿" }));
@@ -1083,10 +1088,13 @@ describe("settings › admin", () => {
 		await expect.element(page.getByRole("heading", { name: "도구" })).toBeVisible();
 		await expect.element(page.getByRole("button", { name: "템플릿 추가" })).not.toBeInTheDocument();
 		await expect.element(page.getByText("회고")).not.toBeInTheDocument();
-		// The memos have no folders, so with no template to offer their new-entry pill has no menu at all.
+		// The memos' new-entry menu keeps its import (doc 14) and offers no template.
 		await userEvent.click(page.getByRole("button", { name: /메모/ }));
 		await expect.element(page.getByRole("button", { name: "+ 새 메모" })).toBeVisible();
-		await expect.element(page.getByRole("button", { name: MORE_NEW })).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: MORE_NEW }));
+		await expect.element(page.getByRole("menuitem", { name: "가져오기" })).toBeVisible();
+		await expect.element(page.getByRole("menuitem", { name: "템플릿으로 쓰기" })).not.toBeInTheDocument();
+		await userEvent.keyboard("{Escape}");
 
 		await userEvent.click(page.getByRole("button", { name: "설정" }));
 		await userEvent.click(tab(/관리자/));
