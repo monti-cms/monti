@@ -49,7 +49,7 @@ describe("a table's tools", () => {
 		expect(scrollsSideways(table().element())).toEqual([]);
 	});
 
-	it("[names] the + strips and the grips say their names in a tooltip, and a grip goes a step darker when pointed at", async () => {
+	it("the + strips and the grips say their names in a tooltip, and a grip goes a step darker when pointed at", async () => {
 		await TableGrips.run();
 		const tip = () => document.querySelector('[data-slot="tooltip-content"]')?.textContent ?? null;
 		await toRightStrip();
