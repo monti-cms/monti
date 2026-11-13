@@ -210,7 +210,7 @@ function valuesOf(block: Block, names: BlockNames | undefined): string | undefin
 				const value = attrs[key];
 				if (key === known.fence?.attr || value === undefined || value === null || value === "" || value === false)
 					return [];
-				// A value that is on is said by its name alone ("펼쳐 두기"); an option by its own name.
+				// A value that is on is said by its name alone ("Open at first"); an option by its own name.
 				if (value === true) return [[names.say(field.label), ""]];
 				const option = field.options?.[String(value)];
 				if (option) return [[names.say(field.label), names.say(option)]];
