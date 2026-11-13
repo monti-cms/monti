@@ -733,7 +733,9 @@ test.describe("a translation's cover", () => {
 		await expect(cover).toHaveText(new RegExp(name));
 		await card();
 		await expect(alt).toHaveAttribute("placeholder", "봄 표지");
+		// Following, there is nothing to take out or set back.
 		await expect(admin.getByRole("button", { name: "cover 빼기" })).toBeHidden();
+		await expect(admin.getByRole("button", { name: "cover 원문으로 되돌리기" })).toBeHidden();
 		await expect(admin.getByText("원문 따름", { exact: true })).toBeVisible();
 
 		// Alt text alone makes it this language's, and × goes back to following.
@@ -747,7 +749,8 @@ test.describe("a translation's cover", () => {
 		await expect(alt).toBeHidden();
 		await expect(cover).toHaveText(new RegExp(name));
 		await expect(admin.getByText("원문 따름", { exact: true })).toBeHidden();
-		await admin.getByRole("button", { name: "cover 빼기" }).click();
+		// Its own value: × sets it back to the source's, and its name says so (screens/editor.md).
+		await admin.getByRole("button", { name: "cover 원문으로 되돌리기" }).click();
 		await expect(cover).toHaveText(new RegExp(name));
 		await card();
 		await expect(alt).toHaveValue("");
