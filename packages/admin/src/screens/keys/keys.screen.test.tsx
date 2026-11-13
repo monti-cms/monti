@@ -881,6 +881,48 @@ describe("plugin keys (flow 10, 12)", () => {
 		expect(await page.getByRole("option", { name: "bareun" }).elements()).toHaveLength(0);
 	});
 
+	it("14-1 a slot's address changed asks for the key again; put back, the window is as it opened: the stored key closed, no hint, and saving stores nothing", async () => {
+		const story = open(keys.SlotWithAddress);
+		await story.run();
+		const address = page.getByLabelText("주소", { exact: true });
+		await expect.element(address).toHaveValue("http://localhost:7700");
+		await expect.element(dialog().getByText("··· 9c1e")).toBeVisible();
+		// A new address is checked with the key, which the server does not hand back.
+		await userEvent.fill(address, "http://localhost:7701");
+		await userEvent.click(button("저장"));
+		await expect.element(dialog().getByText("키를 다시 넣어 주세요.")).toBeVisible();
+		await expect.element(keyField()).toHaveValue("");
+		expect(called(story.loaded(), "plugins.setKey")).toBe(0);
+		// Back at the stored address nothing differs from what is stored: the key shows as stored again, and the hint is gone.
+		await userEvent.fill(address, "http://localhost:7700");
+		await expect.element(dialog().getByText("··· 9c1e")).toBeVisible();
+		await expect.element(button("바꾸기")).toBeVisible();
+		expect(await dialog().getByText("키를 다시 넣어 주세요.").elements()).toHaveLength(0);
+		await userEvent.click(button("저장"));
+		await expect.element(dialog()).not.toBeInTheDocument();
+		expect(await page.getByText("이 칸을 채워 주세요.").elements()).toHaveLength(0);
+		expect(called(story.loaded(), "plugins.setKey")).toBe(0);
+	});
+
+	it("14-1 a slot's new address with its key entered again is stored, and a key already typed is kept when the address is put back", async () => {
+		const story = open(keys.SlotWithAddress);
+		await story.run();
+		const address = page.getByLabelText("주소", { exact: true });
+		await userEvent.fill(address, "http://localhost:7701");
+		await userEvent.click(button("저장"));
+		await userEvent.type(keyField(), keys.sample.searchNew);
+		// What the person typed is theirs: putting the address back does not close the field over it.
+		await userEvent.fill(address, "http://localhost:7700");
+		await expect.element(keyField()).toHaveValue(keys.sample.searchNew);
+		await userEvent.fill(address, "http://localhost:7701");
+		await userEvent.click(button("저장"));
+		await expect.element(page.getByText("저장했습니다")).toBeVisible();
+		expect((await list(story.loaded().site)).slots[0].key).toMatchObject({
+			last4: "52ab",
+			baseUrl: "http://localhost:7701",
+		});
+	});
+
 	it("14-4 a slot's key is nowhere in the page once it is in", async () => {
 		const story = open(keys.PluginKeys);
 		await story.run();

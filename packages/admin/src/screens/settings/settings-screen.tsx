@@ -442,7 +442,13 @@ export function SettingsScreen({
 				</PageColumn>
 			</Stack>
 			{previewing && view.current ? (
-				<PreviewPanel model={model} collection={view.current} onClose={() => view.setPreview(false)} />
+				// A preview of its own for each collection: what was tried in one's inputs, and which of its tabs was open, is not the next one's.
+				<PreviewPanel
+					key={view.current}
+					model={model}
+					collection={view.current}
+					onClose={() => view.setPreview(false)}
+				/>
 			) : null}
 			<ReviewSheet
 				model={model}

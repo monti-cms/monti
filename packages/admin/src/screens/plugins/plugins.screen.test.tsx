@@ -244,6 +244,25 @@ describe("the plugin's tab in the settings' preview (collections.md, the preview
 	});
 });
 
+describe("the settings' preview from one collection to the next", () => {
+	it("14-5 what was typed into a plugin's input in one collection's preview is not in the same field of another's", async () => {
+		await open(plugins.LockedTab).run();
+		await userEvent.click(button("속성 패널 미리보기"));
+		await userEvent.click(page.getByRole("tab", { name: "SEO", exact: true }));
+		const title = () => page.getByRole("tabpanel").last().getByLabelText("SEO 제목", { exact: true });
+		await userEvent.fill(title(), "게시글에서 쳐 본 제목");
+		await userEvent.click(page.getByRole("tabpanel").last().getByRole("switch", { name: "검색에서 숨기기" }));
+		await expect.element(title()).toHaveValue("게시글에서 쳐 본 제목");
+		// The other document collection has the same plugin tab, with the same fields.
+		await userEvent.click(page.getByRole("main").getByRole("button", { name: /^memo/ }));
+		await userEvent.click(page.getByRole("tab", { name: "SEO", exact: true }));
+		await expect.element(title()).toHaveValue("");
+		await expect
+			.element(page.getByRole("tabpanel").last().getByRole("switch", { name: "검색에서 숨기기" }))
+			.not.toBeChecked();
+	});
+});
+
 describe("the plugin's list columns (T53; doc 06)", () => {
 	const main = () => page.getByRole("main");
 

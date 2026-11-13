@@ -341,7 +341,7 @@ export const algolia = (options: AlgoliaOptions) =>
 
 키가 아주 많을 때는 따로 그리지 않았다. 표는 페이지와 함께 아래로 길어진다.
 
-만든 화면의 상태는 `Screens/Tools/ApiKeys`의 이야기다(진짜 사이트 위에서 돈다): `Keys`, `NoKeys`, `LongName`, `RowMenu`, `PickService`, `AddKey`, `AddAddress`, `Checking`, `Refused`, `NoAnswer`, `NameTaken`, `MissingField`, `EditKey`, `ReplaceKey`, `RemoveKey`, `RemoveUnusedKey`, `PickModel`, `Unreadable`, `EnterAgain`, `NoSecret`, `NoSecretWithKeys`, 그리고 플러그인 키의 `PluginKeys`, `SlotAdd`, `SlotEdit`, `SlotRemove`, `PluginKeysNoKeys`, `PluginKeysUnreadable`, `PluginKeysOrphan`.
+만든 화면의 상태는 `Screens/Tools/ApiKeys`의 이야기다(진짜 사이트 위에서 돈다): `Keys`, `NoKeys`, `LongName`, `RowMenu`, `PickService`, `AddKey`, `AddAddress`, `Checking`, `Refused`, `NoAnswer`, `NameTaken`, `MissingField`, `EditKey`, `ReplaceKey`, `RemoveKey`, `RemoveUnusedKey`, `PickModel`, `Unreadable`, `EnterAgain`, `NoSecret`, `NoSecretWithKeys`, 그리고 플러그인 키의 `PluginKeys`, `SlotAdd`, `SlotEdit`, `SlotRemove`, `PluginKeysNoKeys`, `PluginKeysUnreadable`, `PluginKeysOrphan`, `SlotWithAddress`.
 
 플러그인이 그리는 자리의 상태는 `Screens/Plugins`의 이야기다(SEO 플러그인, 맞춤법 검사, 도구 페이지를 가진 사이트): `SeoTab`, `SeoWritten`, `Spelling`, `SpellingOpen`, `LockedTab`, `ListColumns`, `ToolPage`. 써 보는 장면은 `packages/admin/src/screens/plugins/plugins.screen.test.tsx`에 있다.
 

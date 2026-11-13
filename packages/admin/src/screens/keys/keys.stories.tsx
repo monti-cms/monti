@@ -156,6 +156,16 @@ export const slotPlugins = (net: () => Network): Plugin[] => [
 	{ name: "mistral", label: "Mistral", keyServices: [pluginService("mistral", "Mistral", [sample.search], net)] },
 ];
 
+/** A plugin whose slot is for a search server of the person's own: the key window asks for the server's address with the key. */
+const ownSearch = (net: () => Network): Plugin => ({
+	name: "own-search",
+	label: "자체 검색",
+	keyServices: [
+		{ ...pluginService("own-search", "Own search", [sample.search, sample.searchNew], net), address: true },
+	],
+	keys: [{ id: "key", label: "키", service: "own-search" }],
+});
+
 /** The reference screen's three keys, with what they used this month. */
 async function threeKeys(monti: Monti) {
 	const add = async (input: { service: string; name: string; secret: string }, tokens: number) => {
@@ -181,16 +191,17 @@ export const site = ({
 	keys?: "three" | "none" | "named" | "long";
 	/**
 	 * Two plugins keep keys of their own: the page has a second list, one row per slot, the search's first one filled. `"orphan"`: a third
-	 * plugin was since taken out of the site's code, and the key it had is still stored.
+	 * plugin was since taken out of the site's code, and the key it had is still stored. `"address"`: one plugin whose slot is for a service
+	 * of the person's own, which asks for its address too, with a key in it.
 	 */
-	slots?: boolean | "orphan";
+	slots?: boolean | "orphan" | "address";
 	secret?: string | null | "other";
 	reading?: boolean;
 } = {}) => [
 	async (): Promise<Loaded> => {
 		startAt("#/tools/keys");
 		const net = network();
-		const plugins = slots ? slotPlugins(() => net) : [];
+		const plugins = slots === "address" ? [ownSearch(() => net)] : slots ? slotPlugins(() => net) : [];
 		const made = await storySite({
 			schema,
 			plugins,
@@ -201,7 +212,13 @@ export const site = ({
 			setup: async (monti) => {
 				// The keys are stored by a server that has the first secret, on the same database.
 				const first = createMonti({ db: monti.db, schema, files: null, secret: siteSecret, fetch: net.fetch, plugins });
-				if (slots)
+				if (slots === "address")
+					await first.run(
+						"plugins.setKey",
+						{ plugin: "own-search", slot: "key", secret: sample.search, baseUrl: "http://localhost:7700" },
+						admin,
+					);
+				else if (slots)
 					await first.run("plugins.setKey", { plugin: "algolia", slot: "search", secret: sample.search }, admin);
 				if (slots === "orphan") {
 					// Stored while the site still had the plugin.
@@ -565,5 +582,15 @@ export const PickServiceGroups: Story = {
 		const page = await screen(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "키 추가" }, wait));
 		await page.findByRole("option", { name: "Mistral" });
+	},
+};
+
+/** A slot whose service asks for an address: the window has the address over the stored key. */
+export const SlotWithAddress: Story = {
+	loaders: site({ slots: "address" }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await more(page, "자체 검색", "편집");
+		await page.findByLabelText("주소");
 	},
 };

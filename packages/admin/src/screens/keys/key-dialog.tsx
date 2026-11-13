@@ -411,8 +411,15 @@ function KeyForm({
 						value={address}
 						onChange={(event) => {
 							setAddress(event.target.value);
-							// Back at the stored address, the key need not be entered again after all.
-							if (slot && event.target.value.trim() === (slot.key?.baseUrl ?? "")) setAgain(false);
+							// Back at the stored address, the key need not be entered again after all: the hint goes, and the key field that was
+							// opened for it closes over the stored key again, unless the person has typed a key into it (that is theirs to keep).
+							if (slot && again && event.target.value.trim() === (slot.key?.baseUrl ?? "")) {
+								setAgain(false);
+								if (secret === "" && slot.key?.readable) {
+									setReplacing(false);
+									retyped("secret");
+								}
+							}
 							retyped("address");
 							if (!editing && !named) setName(suggested(service, event.target.value).name);
 						}}
