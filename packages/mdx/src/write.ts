@@ -1,5 +1,5 @@
 import type { Block, Doc, Inline } from "@monti-cms/core";
-import { KEPT } from "./read";
+import { KEPT } from "./kept";
 
 export type WriteOptions = {
 	/** The address of a library file, for pictures and files; a body's own name for it (`media:<id>`) when left out. */

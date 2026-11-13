@@ -8,6 +8,8 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
+	ChangeLine,
+	ChangeLines,
 	DescriptionItem,
 	DescriptionList,
 	DropdownMenu,
@@ -58,6 +60,22 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 			{children}
 		</Stack>
 	);
+}
+
+/** What an import's line keeps of its result (doc 14, `data.import`'s summary): `null` for any other line. */
+function importOf(what: Message | undefined) {
+	if (what?.key !== "data.import") return null;
+	const values = what.values ?? {};
+	let renamed: { id: string; title: string; from: string; to: string }[] = [];
+	try {
+		renamed = JSON.parse(String(values.renamed ?? "[]"));
+	} catch {}
+	return {
+		collection: String(values.collection ?? ""),
+		items: Number(values.items ?? 0),
+		skipped: Number(values.skipped ?? 0),
+		renamed,
+	};
 }
 
 /** One delivery's state in words, with the lists' status mark: the panel is about this one line, so "sent" is said too. */
@@ -193,6 +211,22 @@ export function ActivityPanel({
 		);
 	};
 	const [only] = line.records;
+	const imported = importOf(line.what[0]);
+	/** An entry whose address the import changed: a link while it is there to open (the records say so; an undone import's are gone). */
+	const renamedName = (entry: { id: string; title: string }) => {
+		const record = line.records.find((each) => each.id === entry.id);
+		if (record) return name(record);
+		return line.undo.state === "done" || !imported ? (
+			entry.title
+		) : (
+			<TextButton
+				variant="underline"
+				{...linkTo({ screen: "entry", collection: imported.collection, id: entry.id }, go)}
+			>
+				{entry.title}
+			</TextButton>
+		);
+	};
 	const confirmCancel = (byKeys: boolean) => {
 		const delivery = asking;
 		canceled.current = byKeys ? (delivery?.id ?? null) : null;
@@ -291,6 +325,47 @@ export function ActivityPanel({
 										{say(write)}
 									</Text>
 								))}
+							</Stack>
+						</Group>
+					)}
+					{imported && (
+						<Group title={t("activity.import")}>
+							<Stack gap={12} align="start">
+								<Text variant="note" tone="muted">
+									{[
+										t("import.allDrafts"),
+										imported.items > 0 ? t("import.newItems", { count: imported.items }) : "",
+										imported.skipped > 0 ? t("import.skipped", { count: imported.skipped }) : "",
+									]
+										.filter(Boolean)
+										.join(" · ")}
+								</Text>
+								{imported.renamed.length > 0 && (
+									<Stack gap={8} width="full">
+										<Text variant="note" tone="subtle">
+											{t("import.renamed", { count: imported.renamed.length })}
+										</Text>
+										<ChangeLines>
+											{imported.renamed.map((entry) => (
+												<ChangeLine
+													key={entry.id}
+													what={renamedName(entry)}
+													then={
+														<Text mono variant="note">
+															{entry.from} → {entry.to}
+														</Text>
+													}
+												/>
+											))}
+										</ChangeLines>
+									</Stack>
+								)}
+								<TextButton
+									variant="underline"
+									{...linkTo({ screen: "list", collection: imported.collection, params: new URLSearchParams() }, go)}
+								>
+									{t("import.toList")}
+								</TextButton>
 							</Stack>
 						</Group>
 					)}

@@ -3,10 +3,12 @@
  * `.mdx` into it on import and writes it back as MDX (doc 03, principle 1). Its half in the browser is `@monti-cms/mdx/admin`.
  */
 import { type Block, definePlugin, type Monti, type Plugin, says } from "@monti-cms/core";
+import { KEPT } from "./kept";
 import { type MdxLanguage, mdxWords } from "./messages";
-import { KEPT, type KnownBlocks, readMarkdown } from "./read";
+import { type KnownBlocks, readMarkdown } from "./read";
 
-export { KEPT, type KnownBlocks, type ReadFile, readMarkdown } from "./read";
+export { KEPT } from "./kept";
+export { type KnownBlocks, type ReadFile, readMarkdown } from "./read";
 export { toMdx, type WriteOptions } from "./write";
 
 export type MdxOptions = {

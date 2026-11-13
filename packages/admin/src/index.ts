@@ -20,6 +20,8 @@ export {
 export { type Refusal, useOperation, useRead } from "./operations/use-operation";
 export {
 	type AdminPlugin,
+	type DocumentView,
+	type DocumentViewProps,
 	defineAdminPlugin,
 	type EntryView,
 	type FieldInput,

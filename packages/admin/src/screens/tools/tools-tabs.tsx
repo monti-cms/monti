@@ -34,7 +34,7 @@ export function ToolsTabs({
 	current,
 	go,
 }: {
-	current: "templates" | "keys" | ToolPageRef;
+	current: "templates" | "data" | "keys" | ToolPageRef;
 	go: (route: Route) => void;
 }) {
 	const { t, templates } = useAdmin();
@@ -47,7 +47,6 @@ export function ToolsTabs({
 				document.querySelector<HTMLElement>('[data-slot=tab-links] [aria-current="page"]')?.focus();
 			}),
 	);
-	if (!templates && pages.length === 0) return null;
 	return (
 		<PageToolbar inset>
 			<TabLinks ref={handOff} variant="toolbar">
@@ -56,6 +55,9 @@ export function ToolsTabs({
 						{t("tools.templates")}
 					</TabLink>
 				) : null}
+				<TabLink current={current === "data"} {...linkTo({ screen: "place", place: "tools", tab: "data" }, go)}>
+					{t("tools.data")}
+				</TabLink>
 				<TabLink current={current === "keys"} {...linkTo({ screen: "place", place: "tools", tab: "keys" }, go)}>
 					{t("tools.keys")}
 				</TabLink>

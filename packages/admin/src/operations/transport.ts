@@ -174,3 +174,9 @@ export function httpStreams(base: string): StreamTransport {
 		return { status: 200, events: lines(response.body) };
 	};
 }
+
+/** A file's bytes from the address its storage gave (a backup puts the media files beside its text files); `null` when it cannot be read. */
+export async function readBytes(url: string): Promise<Uint8Array | null> {
+	const answer = await fetch(url).catch(() => null);
+	return answer?.ok ? new Uint8Array(await answer.arrayBuffer()) : null;
+}

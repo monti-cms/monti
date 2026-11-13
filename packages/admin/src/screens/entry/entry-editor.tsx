@@ -1,3 +1,4 @@
+import type { BackupOutput } from "@monti-cms/core";
 import {
 	cleanMediaValue,
 	type EntryState,
@@ -62,7 +63,7 @@ import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AssistantButton } from "../../assistant/assistant-button";
 import { useOpenConversation, useScreenContext } from "../../assistant/use-assistant";
-import { download } from "../../download";
+import { saveBackup } from "../../download";
 import { useLeaveFiles, useLeaveGuard, useUploadsGoing } from "../../draft/leave-guard";
 import { BodyEditor } from "../../editor/body-editor";
 import { openImageCard } from "../../editor/media-context";
@@ -79,6 +80,7 @@ import { useLanguageName } from "../list/column-menu";
 import type { SchemaRead } from "../settings/schema-draft";
 import { type CompareMode, CompareView } from "./compare-view";
 import { clock, day, dayTime } from "./dates";
+import { DocumentToolRows, DocumentViewPane, useDocumentTools } from "./document-tools";
 import { EntryProperties, fieldInputId, panelLayout } from "./entry-properties";
 import {
 	decidedOnly,
@@ -175,7 +177,7 @@ export function EntryEditor({
 	const archive = useOperation("entries.archive");
 	const uploadsGoing = useUploadsGoing();
 	const unarchive = useOperation("entries.unarchive");
-	const exporter = useOperation("entries.export");
+	const exporter = useOperation<BackupOutput>("data.export");
 	const saveKeys = useShortcut(SAVE_KEYS);
 	useLeaveGuard({
 		changes: editor.draft.changes,
@@ -214,6 +216,12 @@ export function EntryEditor({
 	const compared = translation.compared;
 	const [view, setView] = useState<SourceView>("side");
 	const leaveFiles = useLeaveFiles();
+	const tools = useDocumentTools();
+	// The properties and a plugin's view share the place beside the text: opening the one closes the other.
+	const closeView = tools.setView;
+	useEffect(() => {
+		if (panel) closeView(null);
+	}, [panel, closeView]);
 	const showView = (next: SourceView) => {
 		const change = () => {
 			setView(next);
@@ -728,13 +736,15 @@ export function EntryEditor({
 								<DropdownMenuItem
 									onClick={async () => {
 										const file = await exporter.run({ ids: [id] });
-										if (file.ok) download(`${collection}-${slug || id}.json`, file.body);
+										if (file.ok) await saveBackup(file.body, { media: true });
 									}}
 								>
 									<Export aria-hidden />
 									{t("entry.export")}
 								</DropdownMenuItem>
 								<DropdownMenuSeparator />
+								{/* The document tools; a view takes the place of the properties beside the text, as a translation's source does. */}
+								<DocumentToolRows tools={tools} onView={(next) => next !== null && setPanel(false)} />
 								{/* A translation goes alone: its source stays, and the row says so (flow 3·15). */}
 								{translation.isTranslation && schema.data ? (
 									<DropdownMenuItem
@@ -776,7 +786,14 @@ export function EntryEditor({
 							</PairedView>
 						</Stack>
 					) : (
-						<Stack gap={0} grow width="full" maxWidth="reading" centered paddingBottom={48}>
+						<Stack
+							gap={0}
+							grow
+							width="full"
+							maxWidth={tools.width === "full" ? undefined : "reading"}
+							centered
+							paddingBottom={48}
+						>
 							{languages}
 							{read ? (
 								<Stack gap={0} paddingTop={16} paddingBottom={32}>
@@ -822,6 +839,8 @@ export function EntryEditor({
 						onAltCard={setAltCard}
 						changes={compared && !readOnly ? { marks: compared.fields, onConfirm: confirmField } : undefined}
 					/>
+				) : read ? (
+					<DocumentViewPane tools={tools} doc={editor.doc} title={editor.title} />
 				) : null}
 			</Inline>
 			{read ? (

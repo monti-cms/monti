@@ -9,7 +9,7 @@ import {
 } from "@monti-cms/core";
 import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { adminMessages } from "../messages";
-import type { AdminPlugin, FieldInput, FieldViewProps } from "../plugins";
+import type { AdminPlugin, DocumentView, FieldInput, FieldViewProps } from "../plugins";
 import { httpStreams, httpUploader, type StreamTransport, type Transport, type Uploader } from "./transport";
 
 export type Language = "ko" | "en";
@@ -76,6 +76,8 @@ type AdminContext = {
 	inputs: ReadonlyMap<string, FieldInput>;
 	views: ReadonlyMap<string, ComponentType<FieldViewProps>>;
 	toolPages: ReadonlyMap<string, ComponentType>;
+	/** The plugins' views of the document, in the plugins' order; `key` is `<plugin>/<view>`. */
+	documentViews: readonly (DocumentView & { key: string })[];
 	/** The admin's words in its language: a key of the admin's or the core's dictionary, with its values. */
 	t: (message: Message | string, values?: Message["values"]) => string;
 	/**
@@ -182,6 +184,9 @@ export function AdminProvider({
 				plugins.flatMap((plugin) =>
 					Object.entries(plugin.toolPages ?? {}).map(([id, screen]) => [`${plugin.name}/${id}`, screen] as const),
 				),
+			),
+			documentViews: plugins.flatMap((plugin) =>
+				(plugin.documentViews ?? []).map((view) => ({ ...view, key: `${plugin.name}/${view.id}` })),
 			),
 			t: (message, values) => wordsOf(shownLanguage, message, values),
 		}),

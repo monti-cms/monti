@@ -384,7 +384,7 @@ describe("an export imported into another site (flow 9, 04–09)", () => {
 		const log = await run<{ lines: { what: { values: Record<string, unknown> }[] }[] }>(to, "activity.list", {
 			kinds: ["import"],
 		});
-		expect(JSON.parse(String(log.lines[0].what[0].values.renamed))).toEqual([[done.renamed[0].id, "memo"]]);
+		expect(JSON.parse(String(log.lines[0].what[0].values.renamed))).toEqual(done.renamed);
 	});
 
 	it("14-1 a picture the library does not have is left out: a field stays empty, a body keeps the picture's words", async () => {
@@ -533,6 +533,33 @@ describe("files a plugin reads (flow 9, 05–07)", () => {
 		await expect(run(monti, "data.import", { collection: "post", files, has })).rejects.toMatchObject({
 			reason: { key: "data.nothingToImport" },
 		});
+	});
+
+	it("14-1 the upload's pictures become files of the library as the import's own work: in the folder named, used by the entries, and gone when the import is undone", async () => {
+		const monti = site([text]);
+		const key = "00000000-0000-4000-8000-00000000aaaa.png";
+		await storage.put(key, new Uint8Array([9, 9, 9]), { mime: "image/png" });
+		const done = await run<{ output: Imported; activityId: string }>(monti, "data.import", {
+			collection: "post",
+			name: "blog.zip",
+			files,
+			has,
+			uploaded: { "./img/a.png": { name: "a.png", original: { key, width: 4, height: 4 } } },
+			mediaFolder: "가져온 이미지",
+		});
+		expect(done.output.imported).toBe(2);
+		const media = await db.selectFrom("media").select(["id", "name", "folder_id"]).execute();
+		expect(media).toHaveLength(1);
+		const folder = await db.selectFrom("folders").select(["id", "name", "collection"]).executeTakeFirstOrThrow();
+		expect(folder).toMatchObject({ name: "가져온 이미지", collection: null });
+		expect(media[0]).toMatchObject({ name: "a.png", folder_id: folder.id });
+		const first = await db.selectFrom("entries").select("doc").where("slug", "=", "hello").executeTakeFirstOrThrow();
+		expect(JSON.stringify(first.doc)).toContain(media[0].id);
+		// One line, and undoing it takes the entries, the tags and the picture with it.
+		expect(await db.selectFrom("monti_activity").select("kind").execute()).toEqual([{ kind: "import" }]);
+		await run(monti, "activity.undo", { id: done.activityId });
+		expect(await db.selectFrom("entries").select("id").where("trashed_at", "is", null).execute()).toEqual([]);
+		expect(await db.selectFrom("media").select("id").where("trashed_at", "is", null).execute()).toEqual([]);
 	});
 
 	it("14-2 a site with no plugin for them does not read .md and .mdx, and says which plugin does; other files are just not read", async () => {

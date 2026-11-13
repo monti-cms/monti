@@ -8,12 +8,10 @@ import { directive } from "micromark-extension-directive";
 import { frontmatter } from "micromark-extension-frontmatter";
 import { gfm } from "micromark-extension-gfm";
 import { parse as parseYaml } from "yaml";
+import { KEPT } from "./kept";
 
 /** What a block type of the site holds, for a `:::directive` that names it: its words, other blocks, or nothing. */
 export type KnownBlocks = (type: string) => "text" | "blocks" | "nothing" | null;
-
-/** The language a kept-as-written component is stored under (a code block): the writer puts it back as it was, and the to-do finds it. */
-export const KEPT = "mdx";
 
 export type ReadFile = {
 	/** The front matter, as loose values. */

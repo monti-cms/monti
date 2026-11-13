@@ -17,6 +17,7 @@ import { useRead } from "./operations/use-operation";
 import type { AdminPlugin } from "./plugins";
 import { href, parseRoute, type Route, useRoute } from "./route";
 import { ActivityScreen } from "./screens/activity/activity-screen";
+import { DataScreen } from "./screens/data/data-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
 import { KeysScreen } from "./screens/keys/keys-screen";
@@ -265,6 +266,8 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 				// A plugin's page, while its browser half brings the screen; an address for one it does not bring opens the tools as usual.
 				route.page && toolPages.has(`${route.page.plugin}/${route.page.id}`) ? (
 					<ToolPageScreen page={route.page} tabs={<ToolsTabs current={route.page} go={go} />} />
+				) : route.tab === "data" ? (
+					<DataScreen tabs={<ToolsTabs current="data" go={go} />} />
 				) : route.tab === "keys" || !templates ? (
 					<KeysScreen tabs={<ToolsTabs current="keys" go={go} />} />
 				) : (

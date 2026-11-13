@@ -312,6 +312,7 @@ function namedPictures(
 	upload: Extract<Upload, { kind: "monti" | "files" }>,
 	mapping: Record<string, string | null>,
 	fields: Record<string, StoredField>,
+	leftOut: (candidate: Candidate) => boolean,
 ) {
 	const names = new Set<string>();
 	const visit = (blocks: Block[]) => {
@@ -324,6 +325,7 @@ function namedPictures(
 		}
 	};
 	for (const candidate of upload.candidates) {
+		if (leftOut(candidate)) continue;
 		visit(candidate.doc?.blocks ?? []);
 		for (const [key, raw] of Object.entries(candidate.raw)) {
 			const field = mapping[key];
@@ -361,7 +363,8 @@ export type Inspected =
 			unfit: number;
 			keys: { key: string; example: string; field: string | null; creates: number; createsIn: string | null }[];
 			/** The collection's fields a key can go to. */
-			fields: { name: string; label: string; kind: string }[];
+			/** `role` marks the two every collection has (the entry's title and its address): a screen calls them by its own words. */
+			fields: { name: string; label: string; kind: string; role?: "title" | "slug" }[];
 			/** Pictures the upload carries that the entries name: sent up first, each then given to the import by this name. */
 			pictures: { name: string; file: string }[];
 			/** Pictures named that are neither in the upload nor in the library. */
@@ -380,6 +383,12 @@ export type Imported = {
 	/** Entries whose address was taken, with the one each got. */
 	renamed: { id: string; title: string; from: string; to: string }[];
 	ids: string[];
+};
+
+/** Whether an entry is one the collection already has: the same title over the same body (with no body, the same title alone is not enough). */
+const sameAs = (bodies: ReadonlySet<string>, candidate: Candidate) => {
+	const text = docText(candidate.doc);
+	return text !== "" && bodies.has(`${candidate.title}\n${text}`);
 };
 
 async function prepare(ctx: OperationContext, input: ImportInput) {
@@ -407,8 +416,30 @@ async function prepare(ctx: OperationContext, input: ImportInput) {
 	const mapping: Record<string, string | null> = Object.fromEntries(keys.map((key) => [key.key, key.field]));
 	for (const [key, field] of Object.entries(input.mapping ?? {}))
 		if (field === null || field === "title" || field === "slug" || fields[field]) mapping[key] = field;
-	// The library's files the upload's own ids name, when it came from this site.
-	const named = namedPictures(upload, mapping, fields);
+	const existing = await ctx.db
+		.selectFrom("entries")
+		.select(["title", "slug", "doc"])
+		.where("collection", "=", input.collection)
+		.where("trashed_at", "is", null)
+		.execute();
+	const bodies = new Set(existing.map((row) => `${row.title}\n${docText(row.doc as Doc | null)}`));
+	const sourceOf = new Map(
+		upload.candidates
+			.filter((candidate) => candidate.locale === schema.locales.source)
+			.map((candidate) => [candidate.group, candidate]),
+	);
+	/**
+	 * Whether an entry of the upload stays out, and why: a translation whose source is not in the upload has nothing to be a translation of
+	 * and a body this site cannot hold is not an entry (`unfit`); one the collection already has is skipped (`same`). A translation goes
+	 * the way of its source.
+	 */
+	const outOf = (candidate: Candidate): "unfit" | "same" | null => {
+		const first = sourceOf.get(candidate.group);
+		if (!first || (first.doc && checkDoc(first.doc, ctx.site.kit, first.doc).length > 0)) return "unfit";
+		return sameAs(bodies, first) ? "same" : null;
+	};
+	// The pictures the entries that go in name; among them the library's own files, when the upload came from this site.
+	const named = namedPictures(upload, mapping, fields, (candidate) => outOf(candidate) !== null);
 	const here = new Set(
 		named.length === 0
 			? []
@@ -423,27 +454,14 @@ async function prepare(ctx: OperationContext, input: ImportInput) {
 	);
 	const given = input.media ?? {};
 	const mediaOf: MediaOf = (name) => given[name] ?? (here.has(name) ? name : null);
-	const existing = await ctx.db
-		.selectFrom("entries")
-		.select(["title", "slug", "doc"])
-		.where("collection", "=", input.collection)
-		.where("trashed_at", "is", null)
-		.execute();
-	const bodies = new Set(existing.map((row) => `${row.title}\n${docText(row.doc as Doc | null)}`));
-	return { unreadable: null, upload, fields, labels, keys, mapping, named, mediaOf, bodies, given, here } as const;
+	return { unreadable: null, upload, fields, labels, keys, mapping, named, mediaOf, outOf, given, here } as const;
 }
-
-/** Whether an entry is one the collection already has: the same title over the same body (with no body, the same title alone is not enough). */
-const sameAs = (bodies: ReadonlySet<string>, candidate: Candidate) => {
-	const text = docText(candidate.doc);
-	return text !== "" && bodies.has(`${candidate.title}\n${text}`);
-};
 
 /** What the upload holds for a collection and what importing it would do (doc 14, `data.inspect`). Nothing is written. */
 export async function inspectUpload(ctx: OperationContext, input: ImportInput): Promise<Inspected> {
 	const ready = await prepare(ctx, input);
 	if (ready.unreadable !== null) return { kind: "unreadable", reason: ready.unreadable };
-	const { upload, fields, labels, keys, mapping, named, mediaOf, bodies, given, here } = ready;
+	const { upload, fields, labels, keys, mapping, named, mediaOf, outOf, given, here } = ready;
 	const creates = new Map<string, Set<string>>();
 	const itemOf: ItemOf = async (collection, item) => {
 		const target = ctx.site.schema().collections[collection];
@@ -462,27 +480,15 @@ export async function inspectUpload(ctx: OperationContext, input: ImportInput): 
 		creates.set(collection, (creates.get(collection) ?? new Set()).add(item.title));
 		return `new:${item.title}`;
 	};
-	const sources = new Set(
-		upload.candidates
-			.filter((candidate) => candidate.locale === ctx.site.schema().locales.source)
-			.map((candidate) => candidate.group),
-	);
 	let same = 0;
 	let unfit = 0;
 	const unknown = new Map<string, number>();
 	const empty = new Map<string, number>();
 	for (const candidate of upload.candidates) {
-		if (
-			!sources.has(candidate.group) ||
-			(candidate.doc && checkDoc(candidate.doc, ctx.site.kit, candidate.doc).length > 0)
-		) {
-			unfit += 1;
-			continue;
-		}
-		if (sameAs(bodies, candidate)) {
-			same += 1;
-			continue;
-		}
+		const out = outOf(candidate);
+		if (out === "unfit") unfit += 1;
+		if (out === "same") same += 1;
+		if (out !== null) continue;
 		const fitted = await fitEntry(ctx, input.collection, upload, candidate, mapping, itemOf, mediaOf);
 		for (const name of new Set(candidate.unknown)) unknown.set(name, (unknown.get(name) ?? 0) + 1);
 		if (candidate.locale === ctx.site.schema().locales.source)
@@ -519,8 +525,8 @@ export async function inspectUpload(ctx: OperationContext, input: ImportInput): 
 			return { ...key, field, creates: to ? (creates.get(to)?.size ?? 0) : 0, createsIn: to };
 		}),
 		fields: [
-			{ name: "title", label: labels.title ?? "title", kind: "text" },
-			{ name: "slug", label: labels.slug ?? "slug", kind: "slug" },
+			{ name: "title", label: labels.title ?? "title", kind: "text", role: "title" as const },
+			{ name: "slug", label: labels.slug ?? "slug", kind: "slug", role: "slug" as const },
 			...Object.entries(fields)
 				.filter(
 					([name, definition]) =>
@@ -543,7 +549,7 @@ export async function inspectUpload(ctx: OperationContext, input: ImportInput): 
 export async function importUpload(ctx: OperationContext, input: ImportInput, create: AnyOperation): Promise<Imported> {
 	const ready = await prepare(ctx, input);
 	if (ready.unreadable !== null) throw new CheckError(ready.unreadable);
-	const { upload, mapping, mediaOf, bodies } = ready;
+	const { upload, mapping, mediaOf, outOf } = ready;
 	const schema = ctx.site.schema();
 	const source = schema.locales.source;
 	let items = 0;
@@ -612,8 +618,7 @@ export async function importUpload(ctx: OperationContext, input: ImportInput, cr
 		groups.set(candidate.group, [...(groups.get(candidate.group) ?? []), candidate]);
 	for (const members of groups.values()) {
 		const first = members.find((candidate) => candidate.locale === source);
-		// A translation whose source is not in the upload has nothing to be a translation of; a body this site cannot hold is not an entry.
-		if (!first || (first.doc && checkDoc(first.doc, ctx.site.kit, first.doc).length > 0) || sameAs(bodies, first)) {
+		if (!first || outOf(first) !== null) {
 			out.skipped += members.length;
 			continue;
 		}

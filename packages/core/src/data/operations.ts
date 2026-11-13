@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { entryOperations } from "../entries/operations";
 import { CheckError } from "../errors";
+import { folderOperations } from "../folders/operations";
+import { mediaOperations } from "../media/operations";
 import { defineOperation, type OperationContext } from "../operation";
 import { readSettings, writeSettings } from "../settings/values";
 import { type BackupManifest, readBackup } from "./backup";
@@ -12,13 +14,20 @@ export type BackupOutput = {
 	name: string;
 	manifest: BackupManifest;
 	files: Record<string, string>;
-	media: { key: string; size: number }[];
+	/** Each with the address its bytes are read from (the storage's own). */
+	media: { key: string; size: number; url: string }[];
 	/** When a backup was last taken (a whole one, from the tools); `null` when never. */
 	lastBackup: string | null;
 };
 
 /** What the assistant is told of a backup or an export: what it would hold, never the contents (they are far past what a tool result carries). */
 export type BackupSummary = Pick<BackupOutput, "name" | "manifest" | "lastBackup">;
+
+/** The media files with where the browser reads each; a site with no storage has none to read. */
+const withAddress = (ctx: OperationContext, media: { key: string; size: number }[]) => {
+	const storage = ctx.site.storage;
+	return storage ? media.map((file) => ({ ...file, url: storage.url(file.key) })) : [];
+};
 
 const day = (at: Date) => at.toISOString().slice(0, 10);
 
@@ -38,6 +47,50 @@ const UploadInput = z.object({
 	/** A picture the upload names → the id of the library file it was sent up as. */
 	media: z.record(z.string(), z.string()).optional(),
 });
+
+/** What `data.import` takes besides: the upload's pictures whose bytes went up, each to be a file of the library as the import's own work. */
+const ImportExtras = {
+	/** The upload's name, as the activity log says it. */
+	name: z.string().default(""),
+	/** A picture the upload names → what `media.upload` takes for it (its name, and the keys its bytes went up under). */
+	uploaded: z.record(z.string(), z.unknown()).default({}),
+	/** The media folder the pictures go into, made at the top level when it is missing. */
+	mediaFolder: z.string().trim().min(1).optional(),
+};
+
+/**
+ * Makes the library's files for the pictures of an upload whose bytes went up, in the media folder of that name: the import's own work, so
+ * its one line of the log undoes them with the entries. Each is made by `media.upload` itself, so it is a file like any other.
+ */
+async function takePictures(
+	ctx: OperationContext,
+	uploaded: Record<string, unknown>,
+	folderName: string | undefined,
+): Promise<Record<string, string>> {
+	const names = Object.keys(uploaded);
+	if (names.length === 0) return {};
+	const upload = mediaOperations.find((operation) => operation.name === "media.upload");
+	const makeFolder = folderOperations.find((operation) => operation.name === "folders.create");
+	if (!upload || !makeFolder) throw new Error("media.upload and folders.create are core operations");
+	let folderId: string | null = null;
+	if (folderName) {
+		const found = await ctx.db
+			.selectFrom("folders")
+			.select("id")
+			.where("collection", "is", null)
+			.where("parent_id", "is", null)
+			.where("name", "=", folderName)
+			.executeTakeFirst();
+		const made = { scope: "media", parentId: null, name: folderName };
+		folderId = found?.id ?? ((await makeFolder.run(made as never, ctx, undefined)) as { id: string }).id;
+	}
+	const ids: Record<string, string> = {};
+	for (const name of names) {
+		const input = upload.input.parse({ ...(uploaded[name] as object), folderId });
+		ids[name] = ((await upload.run(input as never, ctx, undefined)) as { id: string }).id;
+	}
+	return ids;
+}
 
 /** The operation that makes an entry: an imported entry is made by it, check and all. */
 const createEntry = () => {
@@ -62,7 +115,28 @@ export const dataOperations = [
 			};
 			// A whole site is megabytes of text: a model is told what is in it, and reads entries with the reads made for that.
 			if (ctx.actor === "assistant") return summary;
-			return { ...summary, files: backup.files, media: backup.media };
+			return { ...summary, files: backup.files, media: withAddress(ctx, backup.media) };
+		},
+	}),
+	defineOperation({
+		name: "data.status",
+		kind: "read",
+		description:
+			"What the tools' data page shows before a backup is taken: when the last one was, and how much the media files weigh (they go into a backup only when asked).",
+		input: z.object({}),
+		async run(_input, ctx) {
+			const media = await ctx.db
+				.selectFrom("media")
+				.select((eb) => [eb.fn.count<string>("id").as("files"), eb.fn.sum<string>("size").as("bytes")])
+				.where("trashed_at", "is", null)
+				.executeTakeFirstOrThrow();
+			return {
+				lastBackup: await lastBackup(ctx),
+				mediaFiles: Number(media.files),
+				mediaBytes: Number(media.bytes ?? 0),
+				// Without a storage there are no files to put in.
+				storage: ctx.site.storage !== null,
+			};
 		},
 	}),
 	defineOperation({
@@ -89,7 +163,7 @@ export const dataOperations = [
 					: `monti-export-${day(ctx.now())}.zip`;
 			const summary = { name, manifest: backup.manifest, lastBackup: await lastBackup(ctx) };
 			if (ctx.actor === "assistant") return summary;
-			return { ...summary, files: backup.files, media: backup.media };
+			return { ...summary, files: backup.files, media: withAddress(ctx, backup.media) };
 		},
 	}),
 	defineOperation({
@@ -122,9 +196,14 @@ export const dataOperations = [
 		undoable: true,
 		description:
 			"Import an upload's entries into one collection as new drafts, with the field mapping given: an entry whose body the collection already has is left out, a taken address gets -2, a relation value with no item makes one. One import is one line of the activity log, undone as a whole. Only a person does it: it needs the files.",
-		input: UploadInput.extend({ name: z.string().default("") }),
+		input: UploadInput.extend(ImportExtras),
 		async run(input, ctx) {
-			const imported = await importUpload(ctx, input as ImportInput, createEntry());
+			const taken = await takePictures(ctx, input.uploaded, input.mediaFolder);
+			const imported = await importUpload(
+				ctx,
+				{ ...(input as ImportInput), media: { ...input.media, ...taken } },
+				createEntry(),
+			);
 			if (imported.imported === 0) throw new CheckError({ key: "data.nothingToImport" });
 			ctx.emit({ type: "import.done", ids: imported.ids, collection: input.collection });
 			return { ...imported, name: input.name, collection: input.collection };
@@ -138,8 +217,8 @@ export const dataOperations = [
 				collection: output.collection,
 				skipped: output.skipped,
 				items: output.items,
-				// The entries whose address was taken, each with the address it asked for: the log's details show them from → to.
-				renamed: JSON.stringify(output.renamed.slice(0, 50).map((each) => [each.id, each.from])),
+				// The entries whose address was taken, each with the address it asked for and the one it got: the log's details show them.
+				renamed: JSON.stringify(output.renamed.slice(0, 50)),
 			},
 		}),
 		where: (input) => ({ key: "activity.where.collection", values: { collection: input.collection } }),

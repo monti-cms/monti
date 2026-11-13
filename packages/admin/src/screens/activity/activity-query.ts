@@ -9,8 +9,8 @@ import {
 /** How many lines a page of the log holds: the trash's page. */
 export const ACTIVITY_PAGE_SIZE = 50;
 
-/** The kinds the log's first column filters by. Imports come with the import itself (doc 14): until then no line is one. */
-export const ACTIVITY_KINDS_SHOWN = ACTIVITY_FILTERS.filter((kind) => kind !== "import");
+/** The kinds the log's first column filters by. */
+export const ACTIVITY_KINDS_SHOWN = ACTIVITY_FILTERS;
 
 /**
  * The activity log's place in its address (doc 13, flow 12), as every list keeps its own: what it is searched and filtered by, its order, its page
