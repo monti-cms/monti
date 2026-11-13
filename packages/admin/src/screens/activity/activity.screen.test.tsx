@@ -43,7 +43,7 @@ const undoFromMenu = async (words: string) => {
 };
 const sidebar = (name: RegExp) => page.getByRole("navigation").getByRole("button", { name });
 const sidebarLog = () => sidebar(/^활동 기록/);
-const banner = () => page.getByRole("status").filter({ hasText: /전송 \d+건 실패/ });
+const banner = () => page.getByRole("note").filter({ hasText: /전송 \d+건 실패/ });
 const panel = () => page.getByRole("complementary");
 /** What each row's delivery cell says, top to bottom. */
 const deliveryCells = () =>

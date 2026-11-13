@@ -34,6 +34,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href } from "../../route";
 import { type FolderScope, useFolders } from "../list/folders";
+import { ReadFailedBanner } from "./read-failed";
 import { SchemaBanner } from "./schema-banner";
 import { SessionEndedBanner } from "./session-ended";
 import { useScreenMode, useSidebarRail } from "./use-screen-mode";
@@ -305,6 +306,7 @@ export function AdminFrame({
 						banner={
 							<>
 								<SessionEndedBanner />
+								<ReadFailedBanner />
 								<SchemaBanner onReview={onReview} />
 							</>
 						}

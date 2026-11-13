@@ -98,7 +98,8 @@ export function useEntryEditor(
 	const read = useRead<EntryRead | TemplateRead>(
 		isEntry ? "entries.get" : "templates.get",
 		{ id: source.id ?? "" },
-		{ skip: source.id === null },
+		// The editor says this read's failure itself while it has nothing to show (its own banner, in the entry's words).
+		{ skip: source.id === null, own: true },
 	);
 	const saveOp = useOperation<{ output: { id: string; version: number } }>(isEntry ? "entries.save" : "templates.save");
 	const latestOp = useOperation<EntryRead | TemplateRead>(isEntry ? "entries.get" : "templates.get");

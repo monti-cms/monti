@@ -23,6 +23,7 @@ import { ChevronLeft } from "@monti-cms/ui/icons";
 import { useMemo } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
+import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
 import type { SchemaRead } from "../settings/schema-draft";
 import { compareBodies, type Part, wordDiff } from "./compare-entries";
@@ -96,9 +97,9 @@ export function CompareView({
 	 */
 	toText: React.RefCallback<HTMLElement>;
 }) {
-	const { t, language } = useAdmin();
+	const { t, language, reads } = useAdmin();
 	const id = (editor.loaded as EntryRead | null)?.entry.id ?? "";
-	const latest = useRead<EntryRead>("entries.get", { id });
+	const latest = useRead<EntryRead>("entries.get", { id }, { own: true });
 	const server = latest.data ? copyOf(latest.data) : null;
 	const mine = useMemo(() => {
 		if (!server) return null;
@@ -132,9 +133,10 @@ export function CompareView({
 				banner={
 					<>
 						<SessionEndedBanner />
+						<ReadFailedBanner />
 						{latest.refusal && latest.refusal.status !== 401 ? (
 							<Banner ref={toText} tone="danger" title={t("entry.loadFailed")} plainMeta>
-								<TextButton onClick={() => void latest.reload()}>{t("entry.retry")}</TextButton>
+								<TextButton onClick={() => void reads.retry()}>{t("entry.retry")}</TextButton>
 							</Banner>
 						) : null}
 					</>
@@ -241,7 +243,12 @@ export function CompareView({
 	return (
 		<StandalonePage
 			// The screen's banner stands at its very top, over the head row (common.md, banners).
-			banner={<SessionEndedBanner />}
+			banner={
+				<>
+					<SessionEndedBanner />
+					<ReadFailedBanner />
+				</>
+			}
 		>
 			<EditorHeader>
 				<Inline gap={16} minWidth={0} paddingX={12}>

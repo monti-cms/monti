@@ -131,6 +131,8 @@ function Banner({
 		<div
 			data-slot="banner"
 			data-tone={tone}
+			// A note of the page, found by its role; not a live region (above).
+			role="note"
 			ref={(node) => {
 				box.current = node;
 				if (typeof ref === "function") return ref(node);

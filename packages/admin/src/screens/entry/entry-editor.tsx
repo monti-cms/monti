@@ -73,6 +73,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { usePurge, useRestore, useTrashMove } from "../../trash/use-trash";
 import { focusText, useFocusHandOff } from "../frame/focus-hand-off";
+import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
 import { useLanguageName } from "../list/column-menu";
 import type { SchemaRead } from "../settings/schema-draft";
@@ -137,7 +138,7 @@ export function EntryEditor({
 	/** To settings › languages, from the "+ Language" menu. */
 	onLanguages: () => void;
 }) {
-	const { t, language, apiBase, templates: templatesOn } = useAdmin();
+	const { t, language, apiBase, templates: templatesOn, reads } = useAdmin();
 	const languageName = useLanguageName();
 	const source = useMemo(() => ({ kind: "entry" as const, id }), [id]);
 	const schema = useRead<SchemaRead>("schema.read");
@@ -190,7 +191,7 @@ export function EntryEditor({
 	const trashed = Boolean(read?.entry.trashedAt);
 	const readOnly = archived || trashed;
 	// In the trash (doc 11): how long it stays and what a permanent delete keeps, read with it.
-	const inTrash = useRead<TrashedEntry>("trash.get", { id }, { skip: !trashed, afterWrites: true }).data;
+	const inTrash = useRead<TrashedEntry>("trash.get", { id }, { skip: !trashed, afterWrites: true, quiet: true }).data;
 	const trash = useTrashMove();
 	const restore = useRestore();
 	const purge = usePurge();
@@ -575,9 +576,10 @@ export function EntryEditor({
 			banner={
 				<>
 					<SessionEndedBanner />
+					<ReadFailedBanner />
 					{editor.loadRefusal ? (
 						<Banner ref={handOff} tone="danger" title={t("entry.loadFailed")} plainMeta>
-							<TextButton onClick={() => void editor.reload()}>{t("entry.retry")}</TextButton>
+							<TextButton onClick={() => void reads.retry()}>{t("entry.retry")}</TextButton>
 						</Banner>
 					) : null}
 					{editor.conflict ? (

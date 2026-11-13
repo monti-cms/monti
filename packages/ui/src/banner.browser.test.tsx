@@ -101,7 +101,7 @@ describe("Banner", () => {
 		expect(live()).toBe(region);
 		expect(document.querySelectorAll("[data-slot=banner-live]").length).toBe(1);
 		const box = document.querySelector("[data-slot=banner]") as HTMLElement;
-		expect(box.hasAttribute("role")).toBe(false);
+		expect(box.getAttribute("role")).toBe("note");
 		expect(box.hasAttribute("aria-live")).toBe(false);
 		expect(box.contains(region)).toBe(false);
 		// The line leaves the region once it is handed over: the visible banner is what a reader finds in the page.
