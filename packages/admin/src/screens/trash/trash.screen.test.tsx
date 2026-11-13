@@ -448,4 +448,26 @@ describe("into the trash (doc 11, principle 2)", () => {
 		await expect.element(row("옛 소개 글")).not.toBeInTheDocument();
 		await expect.poll(() => after.contains(document.activeElement)).toBe(true);
 	});
+
+	it("복원 from the menu opened on a row with the keyboard (Shift+F10) takes its row away, and the focus goes to the row after it", async () => {
+		await Top.run();
+		await expect.element(row("옛 소개 글")).toBeVisible();
+		const lines = () => [...table().element().querySelectorAll<HTMLElement>("tbody tr")];
+		const after = lines()[lines().findIndex((line) => line.textContent?.includes("옛 소개 글")) + 1];
+		if (!after) throw new Error("no row after it");
+		const title = () => row("옛 소개 글").element().querySelector<HTMLElement>("[data-slot=row-link]") as HTMLElement;
+		for (let presses = 0; presses < 80 && document.activeElement !== title(); presses++) await userEvent.tab();
+		expect(document.activeElement).toBe(title());
+		title().dispatchEvent(
+			new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 0, clientX: 0, clientY: 0 }),
+		);
+		const restore = () => page.getByRole("menuitem", { name: "복원" }).element();
+		await expect.element(page.getByRole("menuitem", { name: "복원" })).toBeVisible();
+		for (let presses = 0; presses < 6 && document.activeElement !== restore(); presses++)
+			await userEvent.keyboard("{ArrowDown}");
+		expect(document.activeElement).toBe(restore());
+		await userEvent.keyboard("{Enter}");
+		await expect.element(row("옛 소개 글")).not.toBeInTheDocument();
+		await expect.poll(() => after.contains(document.activeElement)).toBe(true);
+	});
 });

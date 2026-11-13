@@ -1,5 +1,5 @@
-import { RowActions } from "@monti-cms/ui";
-import type { ReactNode } from "react";
+import { RowActions, RowLink } from "@monti-cms/ui";
+import type { ComponentProps, ReactNode } from "react";
 import { firstStopIn, useFocusHandOff } from "../frame/focus-hand-off";
 
 /** Where a list begins for the keyboard: its first row, or what a list with no match offers in its place, or its first column's name. */
@@ -38,6 +38,18 @@ export function HandedRowActions({
 			{children}
 		</RowActions>
 	);
+}
+
+/**
+ * A row's title in such a list. It holds the focus when the row's menu was opened on it with the keyboard (Shift+F10), and the menu gives
+ * the focus back to it: when the row then goes, that focus is handed on as the ⋯'s is.
+ */
+export function HandedRowLink({
+	listStart,
+	...props
+}: Omit<ComponentProps<typeof RowLink>, "ref"> & { listStart: () => HTMLElement | null }) {
+	const handOff = useFocusHandOff(afterRow(listStart));
+	return <RowLink ref={handOff} {...props} />;
 }
 
 /** The ⋯ of the row named `row`, while that row is in the list. */

@@ -74,6 +74,9 @@ function inPopupOf(node: HTMLElement, focused: Element) {
 	});
 }
 
+/** A menu's card: it takes the focus while it is open, and gives it back to what it was opened on. */
+const MENU = '[role="menu"]';
+
 /** What a person does next with their own hands: after it, nothing is moved under them. */
 const THEIR_OWN = ["keydown", "pointerdown", "focusin"] as const;
 
@@ -164,6 +167,9 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 		let held: Element | null = null;
 		const keep = (event: FocusEvent) => {
 			const on = event.target;
+			// A menu opened on what the keyboard held (the row's own menu, Shift+F10) takes the focus for as long as it is open and gives it
+			// back: what was held stays held meanwhile.
+			if (held && on instanceof Element && on.closest(MENU)) return;
 			held = on instanceof Element && node.contains(on) && holdsKeyboardFocus(on) ? on : null;
 		};
 		addEventListener("focusin", keep, true);
@@ -197,6 +203,9 @@ export function useFocusHandOff(to: (gone: HTMLElement) => HandedTo) {
 			const focused = document.activeElement;
 			const keyed = focused instanceof HTMLElement && holdsKeyboardFocus(focused);
 			if (keyed && (node.contains(focused) || inPopupOf(node, focused))) return hand();
+			// The thing went while the menu opened on it is still closing (its action answered at once): the menu has nothing to give the
+			// focus back to, and the focus it holds is the thing's.
+			if (keyed && held && focused.closest(MENU)) return hand();
 			// A part that takes its own node out before it lets the ref go (a menu's list, drawn outside the page): by now the focus has
 			// fallen to the page with no event. What the keyboard held in it is remembered, and is handed on the same.
 			if (held && !held.isConnected && (focused === null || focused === document.body)) hand();

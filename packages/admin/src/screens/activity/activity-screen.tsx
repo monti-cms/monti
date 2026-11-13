@@ -31,7 +31,6 @@ import {
 	PageBanner,
 	PageColumn,
 	PageHeader,
-	RowLink,
 	RowMore,
 	RowTitle,
 	SearchToggle,
@@ -43,7 +42,7 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { Renew, RightPanelOpen, Undo } from "@monti-cms/ui/icons";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
 import { useAdmin } from "../../operations/admin-context";
@@ -56,7 +55,7 @@ import { toggled, ValueRow } from "../list/filter-rows";
 import { shortDate, shortTime } from "../list/format";
 import { ListPages } from "../list/list-pages";
 import { NoMatchRow } from "../list/no-match-row";
-import { afterRow, HandedRowActions, listStartOf } from "../list/row-hand-off";
+import { HandedRowActions, HandedRowLink, listStartOf } from "../list/row-hand-off";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
 import { useSearchWords } from "../list/use-search-words";
@@ -100,28 +99,6 @@ function FacetRows<Value extends string>({
 				/>
 			))}
 		</>
-	);
-}
-
-/**
- * A row's title, the way into its details: a link with the address that opens them, as every list's title is (a middle press or a press with
- * Command opens the log there in a new tab). It holds the focus when the row's menu was opened on it with the keyboard (Shift+F10) and gives
- * it back there: when the row then goes, that focus is handed on as the ⋯'s is.
- */
-function LogRowLink({
-	href,
-	listStart,
-	children,
-}: {
-	href: string;
-	listStart: () => HTMLElement | null;
-	children: ReactNode;
-}) {
-	const handOff = useFocusHandOff(afterRow(listStart));
-	return (
-		<RowLink ref={handOff} href={href}>
-			{children}
-		</RowLink>
 	);
 }
 
@@ -441,12 +418,14 @@ export function ActivityScreen({
 										<RowTitle
 											byAssistant={line.request !== null ? t("activity.actor.assistant") : undefined}
 											title={
-												<LogRowLink
+												// A link with the address that opens the details, as every list's title is (a middle press or a press with
+												// Command opens the log there in a new tab); it hands its focus on when its row goes.
+												<HandedRowLink
 													href={href({ screen: "activity", params: writeActivityState({ ...state, open: line.id }) })}
 													listStart={listStart}
 												>
 													{title}
-												</LogRowLink>
+												</HandedRowLink>
 											}
 											address={afterOf(line) || undefined}
 										/>

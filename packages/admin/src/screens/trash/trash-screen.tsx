@@ -55,7 +55,7 @@ import { FilterRows } from "../list/filter-rows";
 import { searchScopes } from "../list/folders";
 import { ListPages } from "../list/list-pages";
 import { NoMatchRow } from "../list/no-match-row";
-import { HandedRowActions, listStartOf, rowActionsOf } from "../list/row-hand-off";
+import { HandedRowActions, HandedRowLink, listStartOf, rowActionsOf } from "../list/row-hand-off";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
 import { useSearchWords } from "../list/use-search-words";
@@ -485,11 +485,17 @@ export function TrashScreen({
 											<RowTitle
 												title={
 													link ? (
-														<RowLink href={link}>{row.title || t("list.untitled")}</RowLink>
-													) : (
-														<RowLink render={<button type="button" />} onClick={() => open(row)}>
+														<HandedRowLink href={link} listStart={listStart}>
 															{row.title || t("list.untitled")}
-														</RowLink>
+														</HandedRowLink>
+													) : (
+														<HandedRowLink
+															render={<button type="button" />}
+															onClick={() => open(row)}
+															listStart={listStart}
+														>
+															{row.title || t("list.untitled")}
+														</HandedRowLink>
 													)
 												}
 												address={addressOf(row)}

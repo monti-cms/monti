@@ -14,11 +14,29 @@ const PRESS = [
 	"contextmenu",
 ] as const;
 
+/** A little longer than a card takes to fade (`--monti-duration-fast`, 150ms). */
+const FADE_MS = 200;
+
+/** How far from the first press a press is still the same one made again: a hand that presses twice does not hold still to the pixel. */
+const SAME_SPOT = 6;
+
+/** Where the pointer last pressed, and when: the press that closes a menu is the one just before it is told to close. */
+let pressed: { x: number; y: number; at: number } | null = null;
+if (typeof window !== "undefined")
+	window.addEventListener(
+		"pointerdown",
+		(event) => {
+			pressed = { x: event.clientX, y: event.clientY, at: event.timeStamp };
+		},
+		true,
+	);
+
 /**
- * The card of a menu, which swallows a pointer's press while it closes. A menu told to close stays in the page while it fades, and no longer
- * takes a press itself: a second press on the row just pressed (a double click) would land on whatever is under the card, and open the list's
- * row beneath a row menu's "send again". While it closes, a press where the card stood does nothing (overlay.md: a surface that is closing
- * takes nothing; a modal has its backdrop for this, a menu has none).
+ * The card of a menu, which swallows the second press of a double press while it closes. A menu told to close stays in the page while it
+ * fades and no longer takes a press itself: pressed twice, a row's second press landed on whatever is under the card, and opened the list's
+ * row beneath a row menu's "send again". While the card fades, a press on the spot of the press that closed it does nothing (overlay.md: a
+ * surface that is closing takes nothing; a modal has its backdrop for this, a menu has none). Only that spot: a press anywhere else is
+ * another press, on another thing, and is that thing's. A menu closed with the keyboard was closed by no press, and swallows none.
  */
 function MenuSurface({ closing, ref, ...props }: React.ComponentProps<"div"> & { closing: boolean }) {
 	const card = React.useRef<HTMLDivElement | null>(null);
@@ -31,22 +49,27 @@ function MenuSurface({ closing, ref, ...props }: React.ComponentProps<"div"> & {
 		[ref],
 	);
 	React.useLayoutEffect(() => {
-		if (!closing || !card.current) return;
-		// Where the card stood when it was told to close: it shrinks as it fades, and the press is aimed at what it was.
+		const first = pressed;
+		if (!closing || !card.current || !first) return;
+		// Closed by that press only if it was on the card, and just now.
 		const stood = card.current.getBoundingClientRect();
+		const onCard = first.x >= stood.left && first.x <= stood.right && first.y >= stood.top && first.y <= stood.bottom;
+		if (!onCard || performance.now() - first.at > FADE_MS) return;
 		const swallow = (event: MouseEvent) => {
-			const inside =
-				event.clientX >= stood.left &&
-				event.clientX <= stood.right &&
-				event.clientY >= stood.top &&
-				event.clientY <= stood.bottom;
-			if (!inside) return;
+			if (Math.abs(event.clientX - first.x) > SAME_SPOT || Math.abs(event.clientY - first.y) > SAME_SPOT) return;
 			event.preventDefault();
 			event.stopPropagation();
 		};
-		for (const type of PRESS) window.addEventListener(type, swallow, true);
-		return () => {
+		const stop = () => {
 			for (const type of PRESS) window.removeEventListener(type, swallow, true);
+		};
+		for (const type of PRESS) window.addEventListener(type, swallow, true);
+		// For as long as the card fades, and no longer: a card the primitive keeps in the page after its fade would go on taking presses
+		// where nothing is seen.
+		const faded = setTimeout(stop, FADE_MS);
+		return () => {
+			clearTimeout(faded);
+			stop();
 		};
 	}, [closing]);
 	return <div {...props} ref={keep} />;
