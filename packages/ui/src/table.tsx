@@ -9,6 +9,12 @@ import { CutWords } from "./cut-words";
 import { IconButton } from "./icon-button";
 import { Folder, OverflowMenuHorizontal, Spark } from "./icons";
 
+/**
+ * The narrowest a column with no width of its own (the title) gets in a fixed table: it takes the room the others leave, and with many
+ * columns none would be left. A table whose columns need more than its box is that much wider, and scrolls sideways where it sits.
+ */
+export const TABLE_TITLE_MIN = 200;
+
 function Table({
 	className,
 	container = "scroll",
@@ -53,7 +59,11 @@ function Table({
 						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)] [&_thead_tr]:border-b-transparent",
 					className,
 				)}
-				style={width === undefined ? style : { ...style, width }}
+				style={{
+					...style,
+					...(width === undefined ? {} : { width }),
+					...(layout === "fixed" && columns ? { minWidth: minWidthOf(columns) } : {}),
+				}}
 				{...props}
 			>
 				{columns && (
@@ -266,6 +276,10 @@ function ListScroll({ className, ...props }: React.ComponentProps<"div">) {
 		/>
 	);
 }
+
+/** The sum of a fixed table's column widths, a column with none counted at `TABLE_TITLE_MIN`. */
+const minWidthOf = (columns: readonly (number | undefined)[]) =>
+	columns.reduce<number>((sum, size) => sum + (size ?? TABLE_TITLE_MIN), 0);
 
 /** The 40px thumb column of a media row: a file's picture (`Image size="row"`), or the icon of a folder row centered where the pictures are. */
 function RowThumb({ className, ...props }: React.ComponentProps<"span">) {
