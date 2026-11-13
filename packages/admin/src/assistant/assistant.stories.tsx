@@ -85,7 +85,13 @@ function netOf(made: StorySite): { net: Net; transport: Transport; streams: Stre
 		sent.push({ name, input, signal: options?.signal });
 		await held(name);
 		if (isLost(name)) return NO_ANSWER;
-		const answer = await made.streams(name, input, options);
+		// The server hears the page end its request only while the connection holds: once the network went, the page letting go of its
+		// request (as it does when it reads the run again) reaches nobody.
+		const server = new AbortController();
+		const ended = () => server.abort();
+		if (options?.signal?.aborted) server.abort();
+		else options?.signal?.addEventListener("abort", ended, { once: true });
+		const answer = await made.streams(name, input, { ...options, signal: server.signal });
 		if (!("events" in answer)) return answer;
 		const events = answer.events[Symbol.asyncIterator]();
 		return {
@@ -101,6 +107,7 @@ function netOf(made: StorySite): { net: Net; transport: Transport; streams: Stre
 						const next = events.next();
 						const got = await Promise.race([next, broken]);
 						if (got === "cut") {
+							options?.signal?.removeEventListener("abort", ended);
 							// Read on without the page: only the page's connection went, and the server's run is not cut.
 							void (async () => {
 								await next;
@@ -559,6 +566,17 @@ export const Applied: Story = {
 	},
 };
 
+/** A request to start from, pressed: the sent bubble keeps its blue spark, under the line of what went along ("이 목록"). */
+export const SentRequest: Story = {
+	loaders: site({ script: found }),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await openPanel(page);
+		await userEvent.click(await page.findByRole("button", { name: "요약이 비어 있는 글 찾아 줘" }, wait));
+		await page.findByText("글 목록 읽음 · 3편", {}, wait);
+	},
+};
+
 /** Being applied: how far it is, in place of the buttons. */
 export const CardApplying: Story = {
 	loaders: site({ script: proposed }),
@@ -570,6 +588,20 @@ export const CardApplying: Story = {
 		(loaded as Loaded).net.hold("proposals.apply");
 		await userEvent.click(await page.findByRole("button", { name: "2건 적용" }, wait));
 		await page.findByText("적용 중", {}, wait);
+	},
+};
+
+/** "버리기" pressed while the discard is on its way: the button says what it does and keeps the focus; nothing beside it greys. */
+export const CardDiscarding: Story = {
+	loaders: site({ script: proposed }),
+	play: async ({ canvasElement, loaded }) => {
+		const page = await screen(canvasElement);
+		await openPanel(page);
+		await say(page, "둘 다 요약 채워 줘");
+		await page.findByRole("button", { name: "2건 적용" }, wait);
+		(loaded as Loaded).net.hold("proposals.discard");
+		await userEvent.click(page.getByRole("button", { name: "버리기" }));
+		await page.findByRole("button", { name: "버리는 중…" }, wait);
 	},
 };
 
@@ -710,6 +742,20 @@ export const ReviewApplied: Story = {
 	},
 };
 
+/** "되돌리기" pressed on the review page while the undo is on its way: the ghost button says what it does. */
+export const ReviewUndoing: Story = {
+	loaders: site({ script: proposedKinds }),
+	play: async (context) => {
+		await ReviewApplied.play?.(context);
+		const page = within(context.canvasElement.ownerDocument.body);
+		(context.loaded as Loaded).net.hold("proposals.revert");
+		// A person reads that it was applied before pressing again: a press in the moment the button appears is not taken.
+		await new Promise((resolve) => setTimeout(resolve, 600));
+		await userEvent.click((await page.findAllByRole("button", { name: "되돌리기" }))[0] as HTMLElement);
+		await page.findAllByRole("button", { name: "되돌리는 중…" }, wait);
+	},
+};
+
 /** A change whose entry was edited after it was proposed: the row says so, is out of the count, and can be made again. */
 export const ReviewChangedMeanwhile: Story = {
 	loaders: site({ script: proposed }),
@@ -765,6 +811,18 @@ export const ReviewMadeAgainByKeyboard: Story = {
 		// a story's keys are made by script, and whether a browser takes a focus set after them for the keyboard's depends on what was
 		// pressed in the page before.
 		await page.findAllByText("다시 쓴 요약입니다.", {}, wait);
+	},
+};
+
+/** "다시 만들기" pressed while the change is being made again: the row's button says so. */
+export const ReviewMakingAgain: Story = {
+	loaders: site({ script: scripts(proposed, madeAgain) }),
+	play: async (context) => {
+		await ReviewChangedMeanwhile.play?.(context);
+		const page = within(context.canvasElement.ownerDocument.body);
+		(context.loaded as Loaded).net.hold("assistant.run");
+		await userEvent.click(await page.findByRole("button", { name: "다시 만들기" }, wait));
+		await page.findByRole("button", { name: "다시 만드는 중…" }, wait);
 	},
 };
 

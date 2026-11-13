@@ -34,7 +34,11 @@ export function SchemaBanner({ onReview }: { onReview?: () => void }) {
 	// Its review button opens the review in settings › collections, where the person says what the hand edit means for stored values (doc 01).
 	return state?.fileChanged && !state.locked ? (
 		<Banner key="changed" title={t("banner.fileChanged")}>
-			{onReview ? <TextButton onClick={onReview}>{t("banner.review")}</TextButton> : null}
+			{onReview ? (
+				<TextButton variant="underline" onClick={onReview}>
+					{t("banner.review")}
+				</TextButton>
+			) : null}
 		</Banner>
 	) : null;
 }

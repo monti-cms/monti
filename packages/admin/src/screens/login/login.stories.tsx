@@ -130,6 +130,10 @@ export const NoLogin: Story = {
 	loaders: site({ schema, auth: {} }),
 	play: async ({ canvasElement }) => {
 		const page = within(canvasElement);
-		await expect(await page.findByText("monti.config.ts의 auth에 로그인 방법을 넣어 주세요.")).toBeInTheDocument();
+		// The file and its key are code's words inside the sentence: the line is read whole.
+		const sentence = "monti.config.ts의 auth에 로그인 방법을 넣어 주세요.";
+		await expect(
+			await page.findByText((_, element) => element?.tagName === "P" && element.textContent === sentence),
+		).toBeInTheDocument();
 	},
 };
