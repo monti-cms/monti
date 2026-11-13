@@ -479,8 +479,9 @@ function Body({
 						</RadioGroup>
 						{current?.radio !== "move" ? (
 							<ChangeNote danger>{t("settings.review.valuesGo")}</ChangeNote>
-						) : current.move && keptOf(change)?.[current.move] !== undefined ? (
+						) : current.move && keptOf(change)?.[current.move] !== undefined && (change.count ?? 0) > 0 ? (
 							// Into a field of an option only the entries that have that option take the value: the rest lose it (doc 19).
+							// With no entry holding a value there is nothing to move or delete, and nothing is said.
 							<ChangeNote danger={clearedByMove(change, current, keptOf(change)) > 0}>
 								{/* Each side that has entries, the moved first: a side with none is not said (README principle 8). */}
 								{[
@@ -490,7 +491,7 @@ function Body({
 									...(clearedByMove(change, current, keptOf(change)) > 0
 										? [t("settings.review.clearedIn", { count: clearedByMove(change, current, keptOf(change)) })]
 										: []),
-								].join(" · ") || t("settings.review.movedIn", { count: 0 })}
+								].join(" · ")}
 							</ChangeNote>
 						) : null}
 					</ChangeGroup>

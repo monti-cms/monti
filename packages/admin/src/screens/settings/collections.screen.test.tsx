@@ -774,6 +774,26 @@ describe("settings › collections: the options of a choice in the review (docs 
 		});
 	});
 
+	it("19-20 a removed field no entry holds a value of, moved into a field of an option: nothing is moved or deleted, so no count is said and the apply is the plain one", async () => {
+		const made = options();
+		await made.run();
+		await opened();
+		// The link's address: no post is a link, so none holds it.
+		await userEvent.click(page.getByRole("button", { name: "linkUrl 열기" }));
+		await userEvent.click(sheet().getByRole("button", { name: "필드 삭제" }));
+		const sheetNow = await review();
+		await userEvent.click(sheetNow.getByRole("radio", { name: "다른 필드로 옮기기" }));
+		await userEvent.click(sheetNow.getByRole("combobox", { name: "다른 필드로 옮기기" }));
+		await userEvent.click(page.getByRole("option", { name: "동영상 주소" }));
+		await expect
+			.element(sheetNow.getByRole("combobox", { name: "다른 필드로 옮기기" }))
+			.toHaveTextContent("동영상 주소");
+		await expect.element(sheetNow.getByText(/옮김 \d+편/)).not.toBeInTheDocument();
+		await expect.element(sheetNow.getByText(/지움 \d+편/)).not.toBeInTheDocument();
+		await expect.element(sheetNow.getByRole("button", { name: "적용", exact: true })).toBeVisible();
+		await expect.element(sheetNow.getByRole("button", { name: "지우고 적용" })).not.toBeInTheDocument();
+	});
+
 	it("19-20 a removed field's values moved into a field of an option: the review says how many are moved and how many deleted, counts again when an option taken out sends its entries there, and the apply is the red one while any are deleted", async () => {
 		const made = options();
 		await made.run();
