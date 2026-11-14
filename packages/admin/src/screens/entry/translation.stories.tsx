@@ -51,7 +51,7 @@ const ENGLISH = [
  * - `fieldsChanged`: the same, its title and summary the only things changed (T111).
  * - `all`: the Korean post with a translation in every other language.
  */
-type Kind = "alone" | "new" | "changed" | "fieldsChanged" | "all";
+type Kind = "alone" | "new" | "changed" | "fieldsChanged" | "sourceDraft" | "all";
 
 async function run<Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) {
 	return (await monti.run(name, input, admin)) as Output;
@@ -125,6 +125,15 @@ async function entries(monti: Monti, kind: Kind, current: Schema): Promise<Recor
 	if (kind === "all") {
 		for (const locale of current.locales.list.map((each) => each.code).filter((code) => code !== "ko" && code !== "en"))
 			await run(monti, "translations.create", { source: korean, locale });
+		return { korean, english };
+	}
+	if (kind === "sourceDraft") {
+		// The source's title changed and saved, not published: the translation still follows the published one.
+		await run(monti, "entries.save", {
+			id: korean,
+			version: (await version(monti, korean)).version,
+			title: "고치는 중인 원문 제목",
+		});
 		return { korean, english };
 	}
 	await run(monti, "entries.save", {
@@ -312,5 +321,19 @@ export const SideBySide: Story = {
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "나란히" }, wait));
+	},
+};
+
+/**
+ * The source saved changes it has not published (TR-24 to TR-26): the banner says why nothing is marked and opens the source; the source pane
+ * says it shows the published source.
+ */
+export const SourceDraft: Story = {
+	loaders: site("sourceDraft", "english"),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByText("원문에 발행하지 않은 변경이 있습니다", undefined, wait);
+		await userEvent.click(await page.findByRole("button", { name: "옆 창" }, wait));
+		await page.findByText("한국어 원문 발행본 · 읽기 전용", undefined, wait);
 	},
 };

@@ -252,7 +252,7 @@ export function TrashedFilePanel({
 	go: (route: Route) => void;
 }) {
 	const { t } = useAdmin();
-	const read = useRead<MediaDetail>("media.get", { id }, { afterWrites: true, quiet: true });
+	const read = useRead<MediaDetail>("media.get", { id }, { quiet: true });
 	const item = read.data;
 	const uses = useUseRows(item?.useRows ?? []);
 	useCoverCorner(true);
@@ -317,7 +317,7 @@ export function MediaPanel({
 	go: (route: Route) => void;
 }) {
 	const { t } = useAdmin();
-	const read = useRead<MediaDetail>("media.get", { id }, { afterWrites: true, quiet: true });
+	const read = useRead<MediaDetail>("media.get", { id }, { quiet: true });
 	const item = read.data;
 	const update = useOperation("media.update");
 	const [replacing, setReplacing] = useState<File | null>(null);

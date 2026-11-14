@@ -346,7 +346,7 @@ export function TaxonomyScreen({
 	const { t, language } = useAdmin();
 	const languageName = useLanguageName();
 	const schema = useRead<SchemaRead>("schema.read", {});
-	const usage = useRead<UsageResult>("relations.usage", { collection, locale: language }, { afterWrites: true });
+	const usage = useRead<UsageResult>("relations.usage", { collection, locale: language });
 	const [search, setSearch] = useState("");
 	const [openGroup, setOpenGroup] = useState<string | null>(null);
 	const [filterUnused, setFilterUnused] = useState(false);

@@ -342,5 +342,19 @@ describe("the list inside folders", () => {
 		expect(await titles({ folder: series, scope: "all", search })).toEqual(["리액트 1편", "리액트 2편", "리액트 top"]);
 		// At the top level a search looks in every folder.
 		expect(await titles({ folder: null, search })).toEqual(["리액트 1편", "리액트 2편", "리액트 top"]);
+		// LT-12: a column menu's count is the rows picking it lists, so it reaches as a filter does: through the subfolders, and from the
+		// top through every folder, the status menu and the others alike.
+		const counted = async (column: string, query: Record<string, unknown>) =>
+			(
+				await read<{ values: { value: string | null; count: number }[] }>("entries.facets", {
+					collection: "post",
+					column,
+					...query,
+				})
+			).values;
+		expect((await counted("status", { folder: null })).find((each) => each.value === "draft")?.count).toBe(3);
+		expect((await counted("status", { folder: series })).find((each) => each.value === "draft")?.count).toBe(2);
+		expect(await counted("locale", { folder: null })).toEqual([{ value: "ko", count: 3 }]);
+		expect(await counted("locale", { folder: series })).toEqual([{ value: "ko", count: 2 }]);
 	});
 });

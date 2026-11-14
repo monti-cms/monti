@@ -66,6 +66,7 @@ import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
 import { RetryButton } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
 import { ALT_MAX, AltFields } from "./alt-fields";
+import { liveDom } from "./live-view";
 import { EditorMedia, fileBlock, nextBlankImage, openImageCard, useBodyFile } from "./media-context";
 import { useComposedValue } from "./use-composed-value";
 
@@ -114,7 +115,8 @@ const sameSized = (a: Sized, b: Sized) => a?.unit === b?.unit && a?.value === b?
 function uploadEnd({ editor, getPos, node }: Pick<NodeViewProps, "editor" | "getPos" | "node">) {
 	const change = (apply: (at: number) => Transaction) => {
 		const at = getPos();
-		if (typeof at === "number") editor.view.dispatch(apply(at).setMeta("addToHistory", false));
+		// An upload can end after its editor is gone (made again, or its screen left): there is no block to change then.
+		if (typeof at === "number" && !editor.isDestroyed) editor.view.dispatch(apply(at).setMeta("addToHistory", false));
 	};
 	return {
 		gone: () => change((at) => editor.state.tr.delete(at, at + node.nodeSize)),
@@ -703,7 +705,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			// From its own bar the focus goes back to the picture. With the keyboard elsewhere in the body (on the next picture), the picture is let go of
 			// all the same and the keyboard stays where it is: a bar left open behind it would be nobody's.
 			const own = box.current?.contains(document.activeElement) ?? false;
-			if (!own && !editor.view.dom.contains(document.activeElement)) return;
+			if (!own && !liveDom(editor)?.contains(document.activeElement)) return;
 			letGo.current();
 			if (own) box.current?.focus();
 		};

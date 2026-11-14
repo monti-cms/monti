@@ -42,7 +42,7 @@ export function shortDate(value: string, language: string) {
  */
 export function TemplatesScreen({ tabs, onOpen }: { tabs: ReactNode; onOpen: (template: string | null) => void }) {
 	const { t, language } = useAdmin();
-	const list = useRead<TemplateRow[]>("templates.list", {}, { afterWrites: true });
+	const list = useRead<TemplateRow[]>("templates.list");
 	const duplicate = useOperation("templates.duplicate");
 	const remove = useOperation<{ activityId?: string | null }>("templates.remove");
 	const undo = useUndo();

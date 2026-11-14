@@ -139,6 +139,14 @@ describe("flow 3, a translation", () => {
 		await expect.element(page.getByRole("button", { name: /할 일 5/ })).toBeVisible();
 	});
 
+	it("TR-16 a new translation's empty title is a to-do that says it is not translated yet: its field shows the source's as a placeholder", async () => {
+		await open(NewTranslation);
+		await expect.poll(faint).toBe(4);
+		await userEvent.click(page.getByRole("button", { name: /할 일 \d/ }));
+		await expect.element(page.getByRole("dialog").getByText("제목 · 번역 전")).toBeVisible();
+		await expect.element(page.getByRole("dialog").getByText("제목 · 비어 있음")).not.toBeInTheDocument();
+	});
+
 	it("04-1 3.04 a faint block's menu keeps it in the source's words or removes it; typing into it translates it", async () => {
 		await open(NewTranslation);
 		await expect.poll(faint).toBe(4);
@@ -482,5 +490,23 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		expect(source()).toContain("편집기도 같은 원칙으로");
 		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
 		await expect.element(page.getByText("저장됨").first()).toBeVisible();
+	});
+});
+
+describe("a source with saved changes not published (TR-24 to TR-26)", () => {
+	/** The English translation of a source published again, whose title was then changed and saved, not published. */
+	const draftSource = siteOf(stories.site("sourceDraft", "english"));
+
+	// 04-5: a translation follows the published source, so the pane shows that copy, the one its marks are counted against.
+	it("04-5 the banner says the source has changes not published; the pane shows the published source, and '원문 열기' goes to the saved one", async () => {
+		await open(draftSource);
+		await expect.element(page.getByText("원문에 발행하지 않은 변경이 있습니다")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "옆 창" }));
+		const pane = page.getByRole("complementary", { name: /원문/ });
+		await expect.element(pane.getByText("한국어 원문 발행본 · 읽기 전용")).toBeVisible();
+		await expect.element(pane.getByRole("heading", { name: "첫 번째 글" })).toBeVisible();
+		expect(pane.getByText("고치는 중인 원문 제목").elements()).toHaveLength(0);
+		await userEvent.click(page.getByRole("button", { name: "원문 열기" }));
+		await expect.element(page.getByRole("textbox", { name: "제목" })).toHaveValue("고치는 중인 원문 제목");
 	});
 });

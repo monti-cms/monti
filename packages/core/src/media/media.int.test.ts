@@ -334,6 +334,10 @@ describe("browsing", () => {
 		expect(await names({ used: ["used"] })).toEqual(["used.jpg"]);
 		expect(await names({ used: ["unused"], sort: "name" })).toEqual(["doc.pdf", "free.jpg"]);
 		expect((await query({ folder: null })).counts).toEqual({ image: 2, file: 1, used: 1, unused: 2 });
+		// MD-07: each menu counts with the search and the other menu's filter applied, as picking its value would find.
+		expect((await query({ folder: null, used: ["unused"] })).counts).toEqual({ image: 1, file: 1, used: 1, unused: 2 });
+		expect((await query({ folder: null, kinds: ["image"] })).counts).toEqual({ image: 2, file: 1, used: 1, unused: 1 });
+		expect((await query({ folder: null, search: "free" })).counts).toEqual({ image: 1, file: 0, used: 0, unused: 1 });
 	});
 
 	it("09-1 sorts by newest upload, name or size; pages hold 100", async () => {

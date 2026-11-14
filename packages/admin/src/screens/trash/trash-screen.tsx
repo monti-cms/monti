@@ -91,11 +91,8 @@ export function TrashScreen({
 	const setState = (next: TrashState, options?: { replace?: boolean }) =>
 		go({ screen: "trash", params: writeTrashState(next) }, options);
 	const schema = useRead<SchemaRead>("schema.read");
-	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
-	const read = useRead<TrashList>("trash.list", trashQueryOf(state), {
-		afterWrites: true,
-		quiet: state.folder !== null,
-	});
+	const counts = useRead<FrameCounts>("frame.counts");
+	const read = useRead<TrashList>("trash.list", trashQueryOf(state), { quiet: state.folder !== null });
 	const data = read.data;
 	const rows = data?.rows ?? [];
 	const place = state.folder ? (data?.place ?? null) : null;

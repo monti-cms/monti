@@ -3,7 +3,7 @@ import { z } from "zod";
 import { entryPlace, recordsOf, titleOf } from "../activity/words";
 import { asDoc, type Block, type Doc, newBlockId } from "../body/doc";
 import { randomUUID } from "../bytes";
-import { type EntryState, editableEntry, entryOf, saveWorking } from "../entries/operations";
+import { type EntryState, editableEntry, entryOf, saveWorking, stateOf } from "../entries/operations";
 import type { Entry } from "../entries/record";
 import { CheckError } from "../errors";
 import { defineOperation, type OperationContext, type RecordRef } from "../operation";
@@ -295,17 +295,25 @@ export const translationOperations = [
 				.select("published_at")
 				.where("entry_id", "=", source.id)
 				.executeTakeFirst();
+			// One source on every side of the translation (04-5): the title, the fields and the body the pane shows are what the marks are
+			// counted against, what the site shows of the source, or its working copy while it is not on the site.
+			const fields = await followedFields(ctx.db, source);
 			return {
 				source: {
 					id: source.id,
 					locale: source.locale,
-					title: source.title,
-					slug: source.slug,
+					title: fields?.title ?? source.title,
+					slug: fields?.slug ?? source.slug,
 					// What a translation's `same` and empty `fromSource` fields show: what the site shows (04-5).
-					values: (await publishedOf(ctx.db, source.id))?.values ?? source.values,
+					values: fields?.values ?? source.values,
 					doc: followed,
 					publishedAt: published?.published_at ?? null,
 					updatedAt: source.updatedAt,
+					/**
+					 * The source's own state: `changed` has saved changes the translation does not follow until they are published, `draft` is not on
+					 * the site, so nothing is marked yet. The editor says which (TR-24 to TR-26).
+					 */
+					state: stateOf(source),
 				},
 				translation: { id: entry.id, locale: entry.locale, version: entry.version, doc },
 				pairs: doc.blocks.map((block) => ({ block: block.id, from: block.link?.from ?? null })),

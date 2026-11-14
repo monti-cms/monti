@@ -40,6 +40,7 @@ import type { Editor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { BlockTranslation } from "../../editor/block-menu";
 import type { BodyCatalogs } from "../../editor/catalog";
+import { liveDom } from "../../editor/live-view";
 import { findBlock } from "../../editor/proposal-marks";
 import { nodeName } from "../../editor/schema";
 import { linkOf, type PairedRows, type PairedSourceBlock } from "../../editor/translation";
@@ -72,6 +73,8 @@ type Compared = {
 		doc: Doc;
 		publishedAt: string | null;
 		updatedAt: string;
+		/** The source's own state: `changed` has saved changes the translation follows only once they are published; `draft` is not on the site. */
+		state: EntryState;
 	};
 	translation: { id: string; locale: string; doc: Doc };
 	marks: TranslationMark[];
@@ -100,14 +103,10 @@ export function useTranslation(id: string, schema: Schema | undefined, editor: E
 	const status = useRead<{ groups: GroupStatus[] }>(
 		"translations.status",
 		{ ids: [id] },
-		{ skip: !multilingual, afterWrites: true, quiet: true },
+		{ skip: !multilingual, quiet: true },
 	);
 	// A refusal here is a state the editor knows: a translation whose source is gone (both in the trash) has nothing to compare with.
-	const compared = useRead<Compared>(
-		"translations.compare",
-		{ id },
-		{ skip: !isTranslation, afterWrites: true, quiet: true },
-	);
+	const compared = useRead<Compared>("translations.compare", { id }, { skip: !isTranslation, quiet: true });
 	const create = useOperation<{ output: { id: string } }>("translations.create");
 	const setBlocks = useOperation("translations.setBlocks");
 	const confirmAll = useOperation("translations.confirmAll");
@@ -344,8 +343,14 @@ export function SourcePane({
 			>
 				<Box paddingX={40} paddingTop={16} paddingBottom={48} maxWidth="reading" centered>
 					<Inline minHeight="control-md">
+						{/* Which copy of the source this is: the one the marks are counted against (doc 04, principle 5; TR-25). */}
 						<Text variant="meta" tone="subtle">
-							{t("translation.sourcePane", { language: localeName })}
+							{t(
+								compared.source.state === "draft"
+									? "translation.sourcePane.unpublished"
+									: "translation.sourcePane.published",
+								{ language: localeName },
+							)}
 						</Text>
 					</Inline>
 					<Stack gap={0} paddingTop={16} paddingBottom={32}>
@@ -537,6 +542,21 @@ export function SourceChangedBanner({
 }
 
 /**
+ * The source has saved changes that are not published (TR-24, TR-26): a translation follows the published source (doc 04, principle 5), so
+ * neither the source beside it nor its marks show them yet. Said at the top whatever the source view, with the way to the source, where they are
+ * published.
+ */
+export function SourceDraftBanner({ compared, onOpenSource }: { compared: Compared; onOpenSource: () => void }) {
+	const { t } = useAdmin();
+	if (compared.source.state !== "changed") return null;
+	return (
+		<Banner tone="neutral" title={t("translation.sourceDraft")}>
+			<TextButton onClick={onOpenSource}>{t("translation.openSource")}</TextButton>
+		</Banner>
+	);
+}
+
+/**
  * "변경" (cms-allow-korean: the mark's word) by a field whose source moved on, with the card a changed block has: its value before and after, and "Confirm". Words show what changed in them; `shown` draws any other
  * value (a picture, a pick). The translation's own value stays until someone changes it.
  */
@@ -656,8 +676,10 @@ export function TranslationMargin({
 	useLayoutEffect(() => measure(), [measure]);
 	useEffect(() => {
 		// The text's width changes with the panes beside it, and its lines with it: measure again whenever its box does.
+		const dom = liveDom(editor);
+		if (!dom) return;
 		const resized = new ResizeObserver(() => measure());
-		resized.observe(editor.view.dom);
+		resized.observe(dom);
 		editor.on("update", measure);
 		return () => {
 			resized.disconnect();

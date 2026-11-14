@@ -41,17 +41,13 @@ export function MediaPickerDialog({
 	const folders = useFolders("media", true);
 	const here = folder === null ? undefined : folders.byId.get(folder);
 	const looking = search !== "";
-	const read = useRead<MediaQueryResult>(
-		"media.query",
-		{
-			folder,
-			scope: everywhere && search.trim() !== "" ? "all" : "here",
-			search,
-			...(kind === "any" ? {} : { only: kind }),
-			pageSize: shown,
-		},
-		{ afterWrites: true },
-	);
+	const read = useRead<MediaQueryResult>("media.query", {
+		folder,
+		scope: everywhere && search.trim() !== "" ? "all" : "here",
+		search,
+		...(kind === "any" ? {} : { only: kind }),
+		pageSize: shown,
+	});
 	// A read keeps its last answer while the next one comes: the files it shows are the open folder's only once that folder's answer is in, so no tile of the
 	// folder just left can be picked, or take the keyboard.
 	const [readFolder, setReadFolder] = useState(folder);

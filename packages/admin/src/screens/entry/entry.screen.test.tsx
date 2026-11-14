@@ -137,6 +137,19 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(title()).toHaveFocus();
 	});
 
+	it("TR-16 the to-do list counts what is typed before it is saved: a title written leaves it, and emptied again it comes back", async () => {
+		await on("untitled").run();
+		await opened();
+		await expect.element(button("할 일 2")).toBeVisible();
+		await userEvent.fill(title(), "새 제목");
+		await expect.element(button("할 일 1")).toBeVisible();
+		await userEvent.click(button("할 일 1"));
+		await expect.element(button(/제목 쓰기/)).not.toBeInTheDocument();
+		await userEvent.keyboard("{Escape}");
+		await userEvent.fill(title(), "");
+		await expect.element(button("할 일 2")).toBeVisible();
+	});
+
 	/** Tab until the button has the keyboard's focus (a banner's actions are the first stops of the page). */
 	const tabTo = async (name: string) => {
 		for (let pressed = 0; pressed < 6 && document.activeElement !== button(name).element(); pressed++)

@@ -206,8 +206,8 @@ export function AdminFrame({
 	children: ReactNode;
 }) {
 	const { t, siteName } = useAdmin();
-	// Read again after every write: a saved collection's label and a new collection's row show at once (flow 4, step 06).
-	const schema = useRead<SchemaRead>("schema.read", {}, { afterWrites: true });
+	// Read again after every write, as every read is: a saved collection's label and a new collection's row show at once (flow 4, step 06).
+	const schema = useRead<SchemaRead>("schema.read");
 	const [mode, setMode] = useScreenMode();
 	const [covered, setCovered] = useState(false);
 	// Closing the assistant's panel hands the focus back to the button that opened it, which is drawn again as the panel goes.

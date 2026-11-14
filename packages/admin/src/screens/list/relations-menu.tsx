@@ -41,11 +41,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 	const { t } = useAdmin();
 	const [find, setFind] = useState("");
 	const fieldName = column.field ?? column.id;
-	const read = useRead<RelationOptionsResult>(
-		"relations.options",
-		{ collection, field: fieldName },
-		{ afterWrites: true },
-	);
+	const read = useRead<RelationOptionsResult>("relations.options", { collection, field: fieldName });
 	const editOp = useOperation<{
 		output: { updatedGroups: string[]; count: number };
 		activityId?: string;

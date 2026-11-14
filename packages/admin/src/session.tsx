@@ -32,7 +32,8 @@ const SessionContext = createContext<Session | null>(null);
  */
 export function SessionProvider({ children }: { children: ReactNode }) {
 	const { setFace } = useAdmin();
-	const { data, reload } = useRead<AuthState>("auth.state");
+	// The session is no record a write changes: it is read when the admin opens and when a sign-in says so, not after every write.
+	const { data, reload } = useRead<AuthState>("auth.state", {}, { afterWrites: false });
 	// The screens get the answer in the same step as the name and the language it carries: nothing is drawn in another language first.
 	const [state, setState] = useState<AuthState | null>(null);
 	useEffect(() => {

@@ -46,7 +46,10 @@ export type MediaQueryResult = {
 	total: number;
 	page: number;
 	pageSize: number;
-	/** The open folder's own files, for the filter menus. */
+	/**
+	 * The filter menus' counts: what picking each would find, in the open folder and those under it (everything at the top or with `scope:
+	 * "all"`), with the search and the other menu's filter applied (MD-07).
+	 */
 	counts: { image: number; file: number; used: number; unused: number };
 };
 
@@ -255,19 +258,30 @@ export const mediaOperations = [
 				.limit(input.pageSize)
 				.offset((input.page - 1) * input.pageSize)
 				.execute();
-			// A menu's count is what picking it would find from here: the open folder and those under it, or everything. Files asked for by id are
-			// counted among themselves: a body reading its pictures does not count the whole library (T110).
-			const reach =
+			// A menu's count is what picking it would find from here: the open folder and those under it, or everything, with the search and the
+			// other menu's filter applied (as the list's column menus, doc 06; MD-07). Files asked for by id are counted among themselves: a body
+			// reading its pictures does not count the whole library (T110).
+			let reach =
 				asked ??
 				(input.scope === "here" && input.folder
 					? live.where("folder_id", "in", [input.folder, ...(await subtree(ctx.db, input.folder))])
 					: live);
+			if (!asked && search !== "") reach = reach.where("name", "ilike", likePattern(search));
+			if (!asked && input.only) reach = reach.where("kind", "=", input.only);
+			const usedOnly =
+				input.used.length === 1
+					? input.used[0] === "used"
+						? sql`${usesCount} > 0`
+						: sql`${usesCount} = 0`
+					: sql`true`;
+			const kindOnly =
+				input.kinds.length > 0 ? sql`kind in (${sql.join(input.kinds.map((kind) => sql`${kind}`))})` : sql`true`;
 			const counted = await reach
 				.select([
-					sql<number>`count(*) filter (where kind = 'image')::int`.as("image"),
-					sql<number>`count(*) filter (where kind = 'file')::int`.as("file"),
-					sql<number>`count(*) filter (where ${usesCount} > 0)::int`.as("used"),
-					sql<number>`count(*) filter (where ${usesCount} = 0)::int`.as("unused"),
+					sql<number>`count(*) filter (where kind = 'image' and ${usedOnly})::int`.as("image"),
+					sql<number>`count(*) filter (where kind = 'file' and ${usedOnly})::int`.as("file"),
+					sql<number>`count(*) filter (where ${usesCount} > 0 and ${kindOnly})::int`.as("used"),
+					sql<number>`count(*) filter (where ${usesCount} = 0 and ${kindOnly})::int`.as("unused"),
 				])
 				.executeTakeFirstOrThrow();
 			const pathOf = await folderPaths(ctx.db);

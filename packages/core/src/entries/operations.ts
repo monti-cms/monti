@@ -43,7 +43,7 @@ const ref = (id: string): RecordRef => ({ kind: "entry", id });
 
 /** What the screen shows for the entry: ○ draft, ● published, ● changed, archived. */
 export type EntryState = "draft" | "published" | "changed" | "archived";
-const stateOf = (entry: Entry): EntryState =>
+export const stateOf = (entry: Entry): EntryState =>
 	entry.status === "published" ? (entry.hasUnpublishedChanges ? "changed" : "published") : entry.status;
 
 export async function entryOf(ctx: OperationContext, id: string): Promise<Entry> {

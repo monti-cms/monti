@@ -131,12 +131,15 @@ describe("the list's language column", () => {
 		const story = withSite(list.Main, "#/c/post");
 		await story.run();
 		await openLanguageMenu();
+		// The menu says how far its counts reach: the collection has folders, and from the top a pick looks through them all.
+		await expect.element(page.getByRole("menu").getByText("모든 폴더에서 센 수")).toBeVisible();
 		const { monti } = story.loaded().site;
-		// The rows the screen lists: the top level of a collection with folders (doc 07), as the menu counts them.
+		// The rows a pick would list: a filter at the top of a collection with folders looks through every folder (doc 06, LT-12), and so
+		// does the menu's count.
 		const { rows } = await list.run<{ rows: { id: string }[] }>(monti, "entries.query", {
 			collection: "post",
 			folder: null,
-			scope: "here",
+			scope: "all",
 			pageSize: 500,
 		});
 		const { groups } = await list.run<{

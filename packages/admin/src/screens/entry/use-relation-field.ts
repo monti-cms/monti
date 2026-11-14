@@ -40,11 +40,7 @@ export function useRelationField({
 	const { t } = useAdmin();
 	const [search, setSearch] = useState("");
 
-	const read = useRead<RelationOptionsResult>(
-		"relations.options",
-		{ collection, field, locale, entryGroup },
-		{ afterWrites: true },
-	);
+	const read = useRead<RelationOptionsResult>("relations.options", { collection, field, locale, entryGroup });
 
 	const allOptions = useMemo(() => read.data?.options ?? [], [read.data?.options]);
 

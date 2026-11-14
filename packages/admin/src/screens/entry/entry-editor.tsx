@@ -106,6 +106,7 @@ import {
 	PairedView,
 	SourceChangedBanner,
 	SourceChangeRows,
+	SourceDraftBanner,
 	SourcePane,
 	type SourceView,
 	SourceViewPicker,
@@ -203,7 +204,24 @@ export function EntryEditor({
 		body.current = made;
 		setBodyEditor(made);
 	}, []);
-	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true) });
+	/**
+	 * Whether the to-do list asks for a field when it is empty, as the server's publish check does (`publishTasks`): the address always; another
+	 * field when it is required and in the chosen option, and, in a translation, written per language (a field that follows the source is the
+	 * source's when empty here).
+	 */
+	const asked = (field: string) => {
+		if (field === "slug") return true;
+		const stored = storedFields(structure?.collections[collection]);
+		const definition = stored[field];
+		if (!definition?.required || !editor.loaded || !("entry" in editor.loaded)) return false;
+		const locale = editor.loaded.entry.locale;
+		if (locale !== sourceLocale && localeModeOf(field, definition) !== "perLocale") return false;
+		const values = Object.fromEntries(
+			Object.keys(stored).map((each) => [each, editor.value(each === "title" ? "title" : fieldPath(each))]),
+		);
+		return !notChosen(values, locale).has(field);
+	};
+	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true), asked });
 	// The field's alt text was for the old picture (2026-11-09, owner): the new one has only what was said while it went up.
 	const fieldUploads = useFieldUploads((field, item, said) => {
 		editor.set(`values.${field}`, cleanMediaValue({ media: item.id, ...said }));
@@ -278,7 +296,7 @@ export function EntryEditor({
 	const trashed = Boolean(read?.entry.trashedAt);
 	const readOnly = archived || trashed;
 	// In the trash (doc 11): how long it stays and what a permanent delete keeps, read with it.
-	const inTrash = useRead<TrashedEntry>("trash.get", { id }, { skip: !trashed, afterWrites: true, quiet: true }).data;
+	const inTrash = useRead<TrashedEntry>("trash.get", { id }, { skip: !trashed, quiet: true }).data;
 	const trash = useTrashMove();
 	const restore = useRestore();
 	const purge = usePurge();
@@ -849,7 +867,8 @@ export function EntryEditor({
 			: t(task.message);
 	const taskDetail = (task: PublishTask) =>
 		task.field === "title"
-			? t("entry.todo.title")
+			? // A translation's empty title shows the source's as its placeholder: it is not written yet, not missing (TR-16).
+				t(translation.isTranslation ? "entry.todo.titleUntranslated" : "entry.todo.title")
 			: taskPlace(task) === "panel"
 				? t(task.code === "required" ? "entry.todo.panelEmpty" : "entry.todo.panel")
 				: t("entry.todo.body");
@@ -1094,6 +1113,9 @@ export function EntryEditor({
 					{compared && !readOnly ? (
 						<SourceChangedBanner ref={handOff} compared={compared} onConfirmAll={() => void translation.confirmAll()} />
 					) : null}
+					{compared && !readOnly ? (
+						<SourceDraftBanner compared={compared} onOpenSource={() => onOpen(compared.source.id)} />
+					) : null}
 				</>
 			}
 		>
@@ -1187,7 +1209,7 @@ export function EntryEditor({
 													toast(t("leave.uploads.title"));
 													return;
 												}
-												if ((await archive.run({ ids: [id] })).ok) await editor.reload();
+												if ((await editor.own(() => archive.run({ ids: [id] }))).ok) await editor.reload();
 											}}
 										>
 											<Archive aria-hidden />

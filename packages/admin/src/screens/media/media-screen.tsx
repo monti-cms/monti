@@ -92,6 +92,7 @@ import { useUpload } from "../../media/use-upload";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
+import { countedWhere } from "../list/counted-where";
 import { type FilterProps, FilterRows } from "../list/filter-rows";
 import {
 	FolderMenuItems,
@@ -408,7 +409,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const setState = (next: MediaState, options?: { replace?: boolean }) =>
 		go({ screen: "media", params: writeMediaState(next) }, options);
 	const hrefOf = (next: MediaState) => href({ screen: "media", params: writeMediaState(next) });
-	const read = useRead<MediaQueryResult>("media.query", queryOf(state), { afterWrites: true });
+	const read = useRead<MediaQueryResult>("media.query", queryOf(state));
 	const folders = useFolders("media", true);
 	const upload = useUpload();
 	const move = useMoveMedia();
@@ -609,7 +610,16 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		</BulkBar>
 	);
 	const listed = state.view === "list";
+	// A menu counts what picking it would find, and a filter looks through the folders below (MD-07): said over its rows while the library has
+	// folders, since the page shows one folder's files. The list's column menus say it by the same rule.
+	const counted = countedWhere({
+		folders: folders.list.length,
+		open: state.folder,
+		everywhere: state.everywhere && state.search.trim() !== "",
+	});
+	const countedHere = counted ? t(counted) : undefined;
 	const kindFilter: FilterProps<MediaKind> = {
+		countedWhere: countedHere,
 		values: KINDS.map((kind: MediaKind) => ({
 			value: kind,
 			label: t(`library.kind.${kind}`),
@@ -619,6 +629,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		onChange: (kinds) => setState({ ...state, kinds, page: 1 }),
 	};
 	const usedFilter: FilterProps<(typeof USES)[number]> = {
+		countedWhere: countedHere,
 		values: USES.map((use) => ({ value: use, label: t(`library.used.${use}`), count: data?.counts[use] ?? 0 })),
 		chosen: state.used,
 		onChange: (used) => setState({ ...state, used, page: 1 }),
@@ -975,7 +986,14 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			<PageColumn width="list">
 				<PageHeader
 					title={here?.name ?? t("frame.media")}
-					meta={data ? t("library.count", { count: data.total }) : undefined}
+					meta={
+						data
+							? // What the page shows is counted: its folders too, when it shows them (MD-08).
+								childFolders.length > 0
+								? t("library.countWithFolders", { folders: childFolders.length, count: data.total })
+								: t("library.count", { count: data.total })
+							: undefined
+					}
 					trail={trail}
 				>
 					{/* How the library shows is no filter: it sits with the page's controls (2026-11-10, owner). */}

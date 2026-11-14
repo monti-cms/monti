@@ -91,7 +91,8 @@ describe("browsing", () => {
 		await expect.element(folder("Wallpapers")).toBeVisible();
 		await expect.element(tile("top-level-photo.jpg")).toBeVisible();
 		await expect.element(tile("desk-morning.jpg")).not.toBeInTheDocument();
-		await expect.element(main().getByText("1개")).toBeVisible();
+		// The head counts what the page shows: its two folders and its one file (MD-08).
+		await expect.element(main().getByText("폴더 2개 · 파일 1개")).toBeVisible();
 	});
 
 	it("09-1 [flow 6·08] a folder shows its subfolders and files under its path, and the path goes back up", async () => {
@@ -365,8 +366,9 @@ describe("browsing", () => {
 		await openAssets();
 		const kind = main().getByRole("button", { name: "종류" });
 		await userEvent.click(kind);
-		// What picking it would find: three here and one in the folder under it.
+		// What picking it would find: three here and one in the folder under it. The menu says so over its rows (MD-07).
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toHaveTextContent("4");
+		await expect.element(page.getByRole("menu").getByText("이 폴더와 하위 폴더에서 센 수")).toBeVisible();
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /파일/ }));
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toBeVisible();
 		await userEvent.keyboard("{Escape}");

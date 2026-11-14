@@ -12,6 +12,7 @@ import { BlockRequestContext, EntryLocaleContext } from "./block-api";
 import { type BlockTranslation, useBlockHandle } from "./block-menu";
 import type { BodyCatalogs } from "./catalog";
 import { FormatCard } from "./format-card";
+import { liveDom } from "./live-view";
 import {
 	EditorMedia,
 	type EditorMediaValue,
@@ -224,7 +225,8 @@ export function BodyEditor({
 					if (target instanceof Element && target.closest("[data-slot=editor-margin]")) return;
 					// A press under the last block puts the cursor at the end of the text. Under a block with no text of its own (a picture, a file), a new
 					// paragraph opens there, as Notion does: no need to know that Enter on the picked block makes one (2026-11-10, owner).
-					if (!editor || !event.currentTarget.contains(target) || editor.view.dom.contains(target)) return;
+					const dom = liveDom(editor);
+					if (!editor || !dom || !event.currentTarget.contains(target) || dom.contains(target)) return;
 					const last = editor.state.doc.lastChild;
 					if (editor.isEditable && last && !last.isTextblock)
 						editor.chain().insertContentAt(editor.state.doc.content.size, { type: "paragraph" }).focus("end").run();

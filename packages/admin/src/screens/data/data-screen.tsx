@@ -36,7 +36,7 @@ function when(at: string, language: string): string {
  */
 export function DataScreen({ tabs }: { tabs: ReactNode }) {
 	const { t, language } = useAdmin();
-	const status = useRead<Status>("data.status", {}, { afterWrites: true });
+	const status = useRead<Status>("data.status");
 	const backup = useOperation<BackupOutput>("data.backup");
 	const note = useOperation("data.backedUp");
 	const [media, setMedia] = useState(false);

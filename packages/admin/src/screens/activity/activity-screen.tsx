@@ -163,8 +163,8 @@ export function ActivityScreen({
 	const look = (change: Partial<ActivityState>, options?: { replace?: boolean }) =>
 		setState({ ...state, ...change, page: 1, asOf: null, from: null }, options);
 	const query = activityQueryOf(state);
-	const read = useRead<ActivityList>("activity.list", query, { afterWrites: true, own: true });
-	const counts = useRead<DeliveryCounts>("deliveries.counts", {}, { afterWrites: true });
+	const read = useRead<ActivityList>("activity.list", query, { own: true });
+	const counts = useRead<DeliveryCounts>("deliveries.counts");
 	const data = read.data;
 	/** What is shown is the answer to this address: its search, filters, order and page, not the one before, still on screen while this reads. */
 	const answered = data !== null && data.mark === activityPageMark(query, data.asOf, state.page);

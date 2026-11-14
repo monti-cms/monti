@@ -61,6 +61,7 @@ import {
 	turnInto,
 } from "./commands";
 import { blockAtLine, type Drop, dropAt, moveTo } from "./drag";
+import { liveDom } from "./live-view";
 import { useMarquee } from "./marquee";
 import { markHeld, markMenuOpen } from "./plugins";
 import { nodeName } from "./schema";
@@ -159,7 +160,9 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 	useEffect(() => {
 		if (!editor) return;
 		const move = (event: MouseEvent) => {
-			const body = editor.view.dom.getBoundingClientRect();
+			const dom = liveDom(editor);
+			if (!dom) return;
+			const body = dom.getBoundingClientRect();
 			if (event.clientX < body.left - REACH || event.clientX > body.right) return;
 			if (event.clientY < body.top || event.clientY > body.bottom) return;
 			point(event.clientX, event.clientY);
@@ -170,7 +173,9 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 
 	// The handle follows its block when the page scrolls or the block moves, and goes when the block has gone or the person types.
 	useEffect(() => {
-		if (!editor || !spot) return;
+		// The text's element is taken once: the listener is taken off that same one, even when the editor has been destroyed in between.
+		const dom = liveDom(editor);
+		if (!editor || !dom || !spot) return;
 		const follow = () => {
 			const current = element.current;
 			if (!current?.isConnected) return setSpot(null);
@@ -184,12 +189,12 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 		const changed = () => !open && !held && setSpot(null);
 		window.addEventListener("scroll", follow, true);
 		window.addEventListener("resize", follow);
-		editor.view.dom.addEventListener("keydown", typing);
+		dom.addEventListener("keydown", typing);
 		editor.on("update", changed);
 		return () => {
 			window.removeEventListener("scroll", follow, true);
 			window.removeEventListener("resize", follow);
-			editor.view.dom.removeEventListener("keydown", typing);
+			dom.removeEventListener("keydown", typing);
 			editor.off("update", changed);
 		};
 	}, [editor, spot, open, held]);
@@ -207,7 +212,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 		if (next && dragging.current) return;
 		if (next && details?.event instanceof MouseEvent && details.event.shiftKey) return;
 		setOpen(next);
-		if (editor) editor.view.dispatch(markMenuOpen(editor.state, next && spot ? spot.pos : null));
+		if (editor && !editor.isDestroyed) editor.view.dispatch(markMenuOpen(editor.state, next && spot ? spot.pos : null));
 	};
 
 	/**

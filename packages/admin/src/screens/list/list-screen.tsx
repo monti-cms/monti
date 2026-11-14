@@ -59,6 +59,7 @@ import { type Refusal, reasonOf, useOperation, useRead } from "../../operations/
 import { href, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { ColumnMenu, useLanguageName } from "./column-menu";
+import { countedWhere } from "./counted-where";
 import {
 	FolderMenuItems,
 	FolderTargets,
@@ -160,7 +161,7 @@ function DocumentListScreen({
 	const label = useColumnLabel();
 	const languageName = useLanguageName();
 	const schema = useRead<SchemaRead>("schema.read");
-	const columnsRead = useRead<Columns>("list.columns", { collection }, { afterWrites: true });
+	const columnsRead = useRead<Columns>("list.columns", { collection });
 	const columns = columnsRead.data?.columns ?? null;
 	const pageSize = columnsRead.data?.pageSize ?? 25;
 	const state = useMemo(() => readState(params, columns ?? []), [params, columns]);
@@ -172,7 +173,13 @@ function DocumentListScreen({
 		() => toQuery(collection, state, pageSize, foldersOn),
 		[collection, state, pageSize, foldersOn],
 	);
-	const page = useRead<Page>("entries.query", columns ? query : { collection, pageSize: 1 }, { afterWrites: true });
+	// What the column menus' counts count, said over them while the collection has folders (LT-12).
+	const counted = countedWhere({
+		folders: foldersOn ? folders.list.length : 0,
+		open: query.folder ?? null,
+		everywhere: query.scope === "all",
+	});
+	const page = useRead<Page>("entries.query", columns ? query : { collection, pageSize: 1 });
 	const rows = columns ? (page.data?.rows ?? null) : null;
 	const total = page.data?.total ?? 0;
 	const templates = useRead<{ id: string; name: string }[]>("templates.list");
@@ -544,6 +551,7 @@ function DocumentListScreen({
 				setFilter={setFilter}
 				setSort={(sort) => setState({ ...state, page: 1, sort })}
 				onHide={() => hide(column)}
+				countedWhere={counted ? t(counted) : undefined}
 			/>
 		),
 	}));

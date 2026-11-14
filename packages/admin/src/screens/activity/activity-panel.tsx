@@ -156,7 +156,7 @@ export function ActivityPanel({
 }) {
 	const { t, wrote } = useAdmin();
 	const openConversation = useOpenConversation();
-	const read = useRead<ActivityDetail>("activity.get", { id }, { afterWrites: true, quiet: true });
+	const read = useRead<ActivityDetail>("activity.get", { id }, { quiet: true });
 	const schema = useRead<{ adminValues: Record<string, { label?: string }> }>("schema.read");
 	const cancel = useOperation("deliveries.cancel");
 	const [asking, setAsking] = useState<ActivityDelivery | null>(null);
