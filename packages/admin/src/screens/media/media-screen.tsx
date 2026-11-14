@@ -414,8 +414,15 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	 * Another file in the panel, or none: the panel's unsaved changes are asked about first, as in every panel beside a list (doc 05). Files going up
 	 * go on: the move stays in the library.
 	 */
-	const moveFile = (next: MediaState) =>
-		state.file !== null && next.file !== state.file ? leaveChanges(() => setState(next)) : setState(next);
+	const moveFile = (next: MediaState, also?: () => void) => {
+		// What goes with the move (the ticked rows let go) waits for the answer: kept editing, nothing moved.
+		const go = () => {
+			also?.();
+			setState(next);
+		};
+		if (state.file !== null && next.file !== state.file) leaveChanges(go);
+		else go();
+	};
 	/** A link that moves in the library the same way: a plain press asks first, a press for a new tab opens one. */
 	const linkFile = (next: MediaState) =>
 		linkTo({ screen: "media", params: writeMediaState(next) }, () => moveFile(next));
@@ -463,8 +470,9 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const dense = state.file !== null;
 
 	const goFolder = (folder: string | null) => {
-		setPicked(new Set());
-		moveFile({ ...state, folder, search: "", everywhere: false, kinds: [], used: [], page: 1, file: null });
+		moveFile({ ...state, folder, search: "", everywhere: false, kinds: [], used: [], page: 1, file: null }, () =>
+			setPicked(new Set()),
+		);
 	};
 	const acceptFiles = useAcceptFiles();
 	const addFiles = (files: File[], folder = state.folder) =>
@@ -901,10 +909,8 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 														screen: "media",
 														params: writeMediaState({ ...state, folder: folder.id, page: 1, file: null }),
 													},
-													() => {
-														setPicked(new Set());
-														moveFile({ ...state, folder: folder.id, page: 1, file: null });
-													},
+													() =>
+														moveFile({ ...state, folder: folder.id, page: 1, file: null }, () => setPicked(new Set())),
 												)}
 											>
 												{folder.name}
