@@ -550,7 +550,7 @@ export function SourceDraftBanner({ compared, onOpenSource }: { compared: Compar
 	const { t } = useAdmin();
 	if (compared.source.state !== "changed") return null;
 	return (
-		<Banner tone="neutral" title={t("translation.sourceDraft")} meta={t("translation.sourceDraftMeta")}>
+		<Banner tone="neutral" title={t("translation.sourceDraft")}>
 			<TextButton onClick={onOpenSource}>{t("translation.openSource")}</TextButton>
 		</Banner>
 	);

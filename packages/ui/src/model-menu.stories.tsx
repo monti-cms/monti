@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { MenuField, ModelMenu, ModelMenuButton, Stack } from "./index";
 
 /**
@@ -89,4 +90,14 @@ export const FieldEmpty: Story = {
 			<MenuField value="sk-ant-…9f2c" meta="Anthropic" mono size="default" />
 		</Stack>
 	),
+};
+
+/** While a search filters the models, each group's count is the models it found there (ST-32): "Anthropic 개인 2", Ollama gone. */
+export const Searched: Story = {
+	tags: ["visual"],
+	args: { ...base, open: true, trigger: <ModelMenuButton model="claude-sonnet-5-5" label="모델 바꾸기" /> },
+	play: async ({ canvasElement }) => {
+		const search = await within(canvasElement.ownerDocument.body).findByRole("textbox", { name: "모델 찾기" });
+		await userEvent.type(search, "s");
+	},
 };

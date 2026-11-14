@@ -1150,8 +1150,6 @@ export const adminMessages = defineMessages({
 			"translation.sourcePane.published": "{language} source as published · read only",
 			"translation.sourcePane.unpublished": "{language} source · not published yet · read only",
 			"translation.sourceDraft": "The source has changes that are not published",
-			"translation.sourceDraftMeta":
-				"Translations follow the published source: its changes are marked here once it is published",
 			"translation.openSource": "Open the source",
 			"translation.keepSource": "Follow the source",
 			"translation.ai.translate": "Translate",
@@ -2364,7 +2362,6 @@ export const adminMessages = defineMessages({
 			"translation.sourcePane.published": "{language} 원문 발행본 · 읽기 전용",
 			"translation.sourcePane.unpublished": "{language} 원문 · 아직 발행 안 함 · 읽기 전용",
 			"translation.sourceDraft": "원문에 발행하지 않은 변경이 있습니다",
-			"translation.sourceDraftMeta": "번역은 원문의 발행본을 따릅니다. 원문을 발행하면 바뀐 곳이 여기에 표시됩니다",
 			"translation.openSource": "원문 열기",
 			"translation.keepSource": "원문 따르기",
 			"translation.ai.translate": "번역",

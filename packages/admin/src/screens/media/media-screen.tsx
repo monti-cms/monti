@@ -92,6 +92,7 @@ import { useUpload } from "../../media/use-upload";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
+import { countedWhere } from "../list/counted-where";
 import { type FilterProps, FilterRows } from "../list/filter-rows";
 import {
 	FolderMenuItems,
@@ -610,12 +611,15 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	);
 	const listed = state.view === "list";
 	// A menu counts what picking it would find, and a filter looks through the folders below (MD-07): said over its rows while the library has
-	// folders, since the page shows one folder's files.
-	const reachesAll = state.folder === null || (state.everywhere && state.search.trim() !== "");
-	const countedWhere =
-		folders.list.length === 0 ? undefined : t(reachesAll ? "list.countedEverywhere" : "list.countedBelow");
+	// folders, since the page shows one folder's files. The list's column menus say it by the same rule.
+	const counted = countedWhere({
+		folders: folders.list.length,
+		open: state.folder,
+		everywhere: state.everywhere && state.search.trim() !== "",
+	});
+	const countedHere = counted ? t(counted) : undefined;
 	const kindFilter: FilterProps<MediaKind> = {
-		countedWhere,
+		countedWhere: countedHere,
 		values: KINDS.map((kind: MediaKind) => ({
 			value: kind,
 			label: t(`library.kind.${kind}`),
@@ -625,7 +629,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		onChange: (kinds) => setState({ ...state, kinds, page: 1 }),
 	};
 	const usedFilter: FilterProps<(typeof USES)[number]> = {
-		countedWhere,
+		countedWhere: countedHere,
 		values: USES.map((use) => ({ value: use, label: t(`library.used.${use}`), count: data?.counts[use] ?? 0 })),
 		chosen: state.used,
 		onChange: (used) => setState({ ...state, used, page: 1 }),

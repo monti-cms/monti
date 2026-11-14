@@ -59,6 +59,7 @@ import { type Refusal, reasonOf, useOperation, useRead } from "../../operations/
 import { href, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { ColumnMenu, useLanguageName } from "./column-menu";
+import { countedWhere } from "./counted-where";
 import {
 	FolderMenuItems,
 	FolderTargets,
@@ -172,12 +173,12 @@ function DocumentListScreen({
 		() => toQuery(collection, state, pageSize, foldersOn),
 		[collection, state, pageSize, foldersOn],
 	);
-	// What the column menus' counts count, said over them while the collection has folders: a pick looks through the folders below the open
-	// one, or through every folder (LT-12; the media library says it the same way, MD-07).
-	const countedWhere =
-		!foldersOn || folders.list.length === 0
-			? undefined
-			: t(query.folder === null || query.scope === "all" ? "list.countedEverywhere" : "list.countedBelow");
+	// What the column menus' counts count, said over them while the collection has folders (LT-12).
+	const counted = countedWhere({
+		folders: foldersOn ? folders.list.length : 0,
+		open: query.folder ?? null,
+		everywhere: query.scope === "all",
+	});
 	const page = useRead<Page>("entries.query", columns ? query : { collection, pageSize: 1 });
 	const rows = columns ? (page.data?.rows ?? null) : null;
 	const total = page.data?.total ?? 0;
@@ -550,7 +551,7 @@ function DocumentListScreen({
 				setFilter={setFilter}
 				setSort={(sort) => setState({ ...state, page: 1, sort })}
 				onHide={() => hide(column)}
-				countedWhere={countedWhere}
+				countedWhere={counted ? t(counted) : undefined}
 			/>
 		),
 	}));
