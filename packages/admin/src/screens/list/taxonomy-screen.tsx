@@ -36,6 +36,7 @@ import {
 	RowTitle,
 	SearchToggle,
 	SidePanel,
+	SidePanelSave,
 	Table,
 	TableBody,
 	TableCell,
@@ -233,28 +234,19 @@ function TaxonomySidePanel({
 			footer={
 				// A new one is saved from its footer from the start (T112); it counts changes only once something is written in it (TG-04).
 				panel.draft.dirty || group === "__new__" ? (
-					<Inline justify="between" align="center" grow>
-						<Text variant="note" tone="subtle">
-							{panel.draft.dirty ? t("taxonomy.changesCount", { count: panel.draft.changes.length }) : null}
-						</Text>
-						<Inline gap={8}>
-							<Button
-								variant="secondary"
-								size="md"
-								onClick={() => {
-									setSaveAsked(false);
-									panel.draft.revertAll();
-									// A new one with nothing written is no form to keep open (TG-03).
-									if (group === "__new__") onDropNew();
-								}}
-							>
-								{t("common.discard")}
-							</Button>
-							<Button variant="primary" size="md" loading={panel.saving} onClick={() => void save()}>
-								{t("common.save")}
-							</Button>
-						</Inline>
-					</Inline>
+					<SidePanelSave
+						changes={panel.draft.dirty ? t("panel.changesCount", { count: panel.draft.changes.length }) : null}
+						discardLabel={t("common.discard")}
+						onDiscard={() => {
+							setSaveAsked(false);
+							panel.draft.revertAll();
+							// A new one with nothing written is no form to keep open (TG-03).
+							if (group === "__new__") onDropNew();
+						}}
+						saveLabel={t("common.save")}
+						onSave={() => void save()}
+						saving={panel.saving}
+					/>
 				) : undefined
 			}
 		>

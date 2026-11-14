@@ -10,11 +10,14 @@ import {
 	useLayoutEffect,
 	useRef,
 } from "react";
+import { Button } from "./button";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
 import { ChevronLeft, Close } from "./icons";
 import { useUiLabels } from "./labels";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
+import { Inline } from "./stack";
+import { Text } from "./text";
 
 /**
  * The look of a tool panel, shared by `SidePanel` and `Sheet`: a cream ground, a 60px head (title 16px bold at the start, icon buttons at the end, 24px
@@ -244,5 +247,43 @@ export function SidePanel({
 				</>
 			)}
 		</aside>
+	);
+}
+
+/**
+ * The foot of a panel beside a list that edits one record (a tag, a media file): how many changes wait, "Discard" and the pill "Save". The screen puts it
+ * in `footer` only while there is something to save; a record not yet saved (a new tag) has it from the start, with no count until something is
+ * written. "Save" is never greyed (principle 7): pressed with something missing, the field says why.
+ */
+export function SidePanelSave({
+	changes,
+	discardLabel,
+	onDiscard,
+	saveLabel,
+	onSave,
+	saving = false,
+}: {
+	/** "3 changes"; nothing while none are counted. */
+	changes?: ReactNode;
+	discardLabel: string;
+	onDiscard: () => void;
+	saveLabel: string;
+	onSave: () => void;
+	saving?: boolean;
+}) {
+	return (
+		<Inline justify="between" align="center" grow>
+			<Text variant="note" tone="subtle">
+				{changes}
+			</Text>
+			<Inline gap={8}>
+				<Button variant="secondary" size="md" onClick={onDiscard}>
+					{discardLabel}
+				</Button>
+				<Button variant="primary" size="md" loading={saving} onClick={onSave}>
+					{saveLabel}
+				</Button>
+			</Inline>
+		</Inline>
 	);
 }

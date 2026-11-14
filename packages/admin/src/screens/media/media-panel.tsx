@@ -33,6 +33,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 	SidePanel,
+	SidePanelSave,
 	Stack,
 	Text,
 	Tile,
@@ -429,12 +430,20 @@ export function MediaPanel({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			}
-			// Nothing to save, no pill: a dimmed one would not say why (principle 7).
+			// Nothing to save, no foot: a dimmed pill would not say why (principle 7). The same foot as every panel that edits a record.
 			footer={
 				draft.dirty ? (
-					<Button variant="primary" size="md" onClick={() => void save()}>
-						{t("settings.save")}
-					</Button>
+					<SidePanelSave
+						changes={t("panel.changesCount", { count: draft.changes.length })}
+						discardLabel={t("common.discard")}
+						onDiscard={() => {
+							setRefused(null);
+							draft.revertAll();
+						}}
+						saveLabel={t("common.save")}
+						onSave={() => void save()}
+						saving={update.pending}
+					/>
 				) : undefined
 			}
 		>
