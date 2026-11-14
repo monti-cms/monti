@@ -644,7 +644,7 @@ export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: Ap
 								<ListSectionRow
 									title="빠른 작업"
 									labelId="model-quick"
-									meta="요약 · 태그 · 대체 텍스트"
+									meta="채우기 · 요청 · 번역"
 									control={
 										keys.length === 0 || unreadable ? (
 											<MenuField aria-labelledby="model-quick" size="default" placeholder="키 없음" />
