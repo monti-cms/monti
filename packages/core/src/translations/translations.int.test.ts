@@ -234,7 +234,7 @@ describe("a new translation", () => {
 		await write("body.edit", {
 			id,
 			version: await version(id),
-			ops: [{ op: "replaceText", block: first, from: 0, to: 2, text: "One" }],
+			ops: [{ op: "setText", block: first, text: "One" }],
 		});
 		expect((await get(id)).doc.blocks[0]?.link?.state).toBe("translated");
 	});
@@ -723,7 +723,7 @@ describe("when the source changes", () => {
 		await write("body.edit", {
 			id,
 			version: await version(id),
-			ops: [{ op: "replaceText", block, from: 0, to: 2, text: "One!" }],
+			ops: [{ op: "setText", block, text: "One!" }],
 		});
 		expect(await marks(id)).toEqual([]);
 	});

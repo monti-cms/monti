@@ -134,7 +134,7 @@ export function codeProblems(block: Block): string | null {
 /**
  * Line effects after the code changed from `before` by putting `inserted` in place of `from`–`to` (doc 17, 17-2). A line keeps its effects as it moves;
  * an effect loses the lines taken out of it and spans the lines put in inside it; an effect whose lines are all gone is dropped. The editor and
- * `replaceText` both use it.
+ * `setText` both use it.
  */
 export function moveLineEffects(
 	effects: readonly LineEffect[],

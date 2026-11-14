@@ -54,6 +54,7 @@ export {
 	type TranslationLink,
 } from "./body/doc";
 export { applyOps, type BodyOp } from "./body/edit";
+export { inlineToText, textToInline } from "./body/inline-text";
 export { ENTRY_LINK, entryLink } from "./body/links";
 export { fingerprint } from "./bytes";
 export { readFence, writeFence } from "./code/notation";

@@ -3,16 +3,14 @@ import { type CodeRule, type LineEffect, moveLineEffects, moveLineRules } from "
 import { CheckError } from "../errors";
 import { sameJson } from "../json";
 import { type Block, type Doc, type Inline, type Mark, NewBlockShape, plainText, walk, withIds } from "./doc";
+import { textToInline } from "./inline-text";
 
-/** A change to a body that points at blocks by id, so a proposal shows exactly where it lands (doc 03, principle 5). */
+/**
+ * A change to a body that points at blocks by id, so a proposal shows exactly where it lands (doc 03, principle 5). `setText` gives a block's whole
+ * new text: for a text block with its marks as tags, as `body.read` shows them (`textToInline`); for a code block the code as it is.
+ */
 export const BodyOpShape = z.discriminatedUnion("op", [
-	z.object({
-		op: z.literal("replaceText"),
-		block: z.string(),
-		from: z.number().int().min(0),
-		to: z.number().int().min(0),
-		text: z.string(),
-	}),
+	z.object({ op: z.literal("setText"), block: z.string(), text: z.string() }),
 	z.object({ op: z.literal("setBlock"), block: z.string(), value: NewBlockShape }),
 	z.object({ op: z.literal("insert"), after: z.string().nullable(), blocks: z.array(NewBlockShape).min(1) }),
 	z.object({ op: z.literal("move"), block: z.string(), after: z.string().nullable() }),
@@ -64,10 +62,8 @@ function splitAt(content: Inline[], offset: number, keepLeft: boolean): [Inline[
 	return [left, right];
 }
 
-/** Replaces `from`–`to` of a block's text (in `plainText` offsets). The new text takes the marks of the text it replaces, or of the text before it. */
-export function replaceText(content: Inline[], from: number, to: number, text: string): Inline[] {
-	const length = plainText(content).length;
-	if (from > to || to > length) throw new CheckError({ key: "body.badRange", values: { from, to, length } });
+/** Puts `text` in place of `from`–`to` of a block's text (in `plainText` offsets): it takes the marks of the text it replaces, or of the text before it. */
+function splice(content: Inline[], from: number, to: number, text: string): Inline[] {
 	const [left, rest] = splitAt(content, from, true);
 	const [replaced, right] = splitAt(rest, to - from, false);
 	const firstText = (list: Inline[]) => list.find((inline) => inline.type === "text") as { marks?: Mark[] } | undefined;
@@ -84,26 +80,49 @@ export function replaceText(content: Inline[], from: number, to: number, text: s
 	}, []);
 }
 
+/** The smallest change that makes `before` into `after`: what is kept at both ends is not changed. */
+function changedRange(before: string, after: string): { from: number; to: number; text: string } {
+	let start = 0;
+	while (start < before.length && start < after.length && before[start] === after[start]) start++;
+	let end = 0;
+	while (end < before.length - start && end < after.length - start && before.at(-1 - end) === after.at(-1 - end)) end++;
+	return { from: start, to: before.length - end, text: after.slice(start, after.length - end) };
+}
+
+/**
+ * A code block's new code (doc 17, 17-2): only the part that changed is put in, so the text effects of the code around it stay where they were, and
+ * its line effects and rules move with their lines.
+ */
+function setCode(block: Block, code: string) {
+	const before = plainText(block.content);
+	const { from, to, text } = changedRange(before, code);
+	block.content = splice(block.content ?? [], from, to, text);
+	if (Array.isArray(block.attrs?.lines) || Array.isArray(block.attrs?.rules))
+		block.attrs = {
+			...block.attrs,
+			...(Array.isArray(block.attrs?.lines)
+				? { lines: moveLineEffects(block.attrs.lines as LineEffect[], before, from, to, text) }
+				: {}),
+			...(Array.isArray(block.attrs?.rules)
+				? { rules: moveLineRules(block.attrs.rules as CodeRule[], before, from, to, text) }
+				: {}),
+		};
+}
+
 /** The body after the operations, in order. Nothing is checked here but that the blocks they name exist; `checkDoc` checks the result. */
 export function applyOps(doc: Doc, ops: BodyOp[]): Doc {
 	const next = clone(doc);
 	for (const op of ops) {
 		switch (op.op) {
-			case "replaceText": {
+			case "setText": {
 				const { block } = find(next, op.block);
-				const before = plainText(block.content);
-				block.content = replaceText(block.content ?? [], op.from, op.to, op.text);
-				// A code block's line effects stay on their lines (doc 17, 17-2).
-				if (block.type === "codeBlock" && (Array.isArray(block.attrs?.lines) || Array.isArray(block.attrs?.rules)))
-					block.attrs = {
-						...block.attrs,
-						...(Array.isArray(block.attrs?.lines)
-							? { lines: moveLineEffects(block.attrs.lines as LineEffect[], before, op.from, op.to, op.text) }
-							: {}),
-						...(Array.isArray(block.attrs?.rules)
-							? { rules: moveLineRules(block.attrs.rules as CodeRule[], before, op.from, op.to, op.text) }
-							: {}),
-					};
+				if (block.children) throw new CheckError({ key: "body.noText", values: { block: op.block } });
+				if (block.type === "codeBlock") setCode(block, op.text);
+				else {
+					const content = textToInline(op.text);
+					if (content.length > 0) block.content = content;
+					else delete block.content;
+				}
 				break;
 			}
 			case "setBlock": {

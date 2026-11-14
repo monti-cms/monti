@@ -602,6 +602,15 @@ const MIGRATIONS: Record<string, Migration> = {
 			);
 		},
 	},
+	"0022_small_runs": {
+		async up(db) {
+			// A small run (doc 10: a request on picked words, "✦ Translate") gets fewer tools than the panel's; a run taken up again keeps them.
+			await db.schema
+				.alterTable("runs")
+				.addColumn("small", "boolean", (column) => column.notNull().defaultTo(false))
+				.execute();
+		},
+	},
 };
 
 /**

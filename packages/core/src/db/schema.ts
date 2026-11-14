@@ -178,6 +178,8 @@ export interface RunTable {
 	/** Why and how it ended, for the panel. */
 	ended: Json<unknown> | null;
 	stop_requested: Generated<boolean>;
+	/** A small run (a request on picked words, "✦ Translate"): it gets the small runs' tools (doc 10). */
+	small: Generated<boolean>;
 	/** While a request is running it: until when that request holds the run. */
 	leased_until: Date | null;
 	started_at: Date;

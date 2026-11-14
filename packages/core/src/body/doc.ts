@@ -98,7 +98,7 @@ export function* walk(blocks: Block[]): Generator<{ block: Block; siblings: Bloc
 export const blockMap = (doc: Doc | null) =>
 	new Map(doc ? [...walk(doc.blocks)].map(({ block }) => [block.id, block]) : []);
 
-/** A block's text as one string: the offsets `replaceText` counts in. A hard break is one `\n`; a footnote reference takes no place. */
+/** A block's words as one string, without its marks: what a proposal's `was` keeps. A hard break is one `\n`; a footnote reference takes no place. */
 export const plainText = (content: Inline[] = []) =>
 	content.map((inline) => (inline.type === "text" ? inline.text : inline.type === "hardBreak" ? "\n" : "")).join("");
 
