@@ -480,14 +480,14 @@ export const Queued: Story = {
 	},
 };
 
-/** The service refused: what it said after the key's name, and the way to send the same words with another model. */
+/** The service refused: one short line with the key's name, and the way to send the same words with another model. */
 export const Refused: Story = {
 	loaders: site({ script: () => [{ fail: new ProviderError("refused", "Your credit balance is too low.") }] }),
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
 		await openPanel(page);
 		await say(page, "요약이 비어 있는 글 찾아 줘");
-		await page.findByText("서비스가 거절했습니다", {}, wait);
+		await page.findByText("Anthropic 개인 거절", {}, wait);
 	},
 };
 
@@ -498,7 +498,7 @@ export const NoAnswer: Story = {
 		const page = await screen(canvasElement);
 		await openPanel(page);
 		await say(page, "요약이 비어 있는 글 찾아 줘");
-		await page.findByText("서비스가 답하지 않습니다", {}, wait);
+		await page.findByText("Anthropic 개인 응답 없음", {}, wait);
 	},
 };
 
@@ -835,7 +835,7 @@ export const polished: Script = (ids, version) => [
 				input: {
 					id: ids.second,
 					version: await version(ids.second),
-					ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "첫" }],
+					ops: [{ op: "setText", block: "b_1", text: "첫 문단입니다." }],
 					[GROUP]: "다듬기",
 				},
 			},

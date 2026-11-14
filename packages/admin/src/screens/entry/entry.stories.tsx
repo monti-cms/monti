@@ -1,4 +1,4 @@
-import { type Doc, defineMark, defineSchema, type Schema } from "@monti-cms/core";
+import { type Block, type Doc, defineMark, defineSchema, plainText, type Schema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
@@ -120,6 +120,12 @@ const noted = () =>
 		{ id: `b_${++count}`, type: "footnote", attrs: { id: "fn_state" }, content: text("상태는 색 대신 글자로 적었다.") },
 	);
 
+/** A block's new text: its words with `text` in place of `from`–`to` (the reference entry's paragraphs have no marks, so no tags). */
+const reword = (block: Block, from: number, to: number, text: string) => {
+	const words = plainText(block.content);
+	return { op: "setText", block: block.id, text: words.slice(0, from) + text + words.slice(to) };
+};
+
 /**
  * The assistant's body proposals on the reference entry (T32), from one request: a shorter phrase in the first paragraph, a line put in after the
  * third, and the last paragraph taken out.
@@ -130,7 +136,7 @@ async function proposeBody(monti: Monti, id: string) {
 	if (!first || !third || !last) throw new Error("the reference entry has four blocks");
 	const proposal = await monti.proposals.create("conversation-1", "더 짧게 다듬기");
 	const edit = (ops: unknown[]) => monti.proposals.add(proposal, "body.edit", { id, version: read.entry.version, ops });
-	await edit([{ op: "replaceText", block: first.id, from: 8, to: 14, text: "만든" }]);
+	await edit([reword(first, 8, 14, "만든")]);
 	await edit([
 		{ op: "insert", after: third.id, blocks: [{ type: "paragraph", content: text("상태도 색 대신 글자로 적었다.") }] },
 	]);
@@ -151,7 +157,7 @@ async function proposeFields(monti: Monti, id: string) {
 	await monti.proposals.add(proposal, "entries.save", { ...at, values: { summary: "덜어낸 것과 남긴 것." } });
 	await monti.proposals.add(proposal, "body.edit", {
 		...at,
-		ops: [{ op: "replaceText", block: first.id, from: 8, to: 14, text: "만든" }],
+		ops: [reword(first, 8, 14, "만든")],
 	});
 }
 
@@ -165,15 +171,15 @@ async function proposeThenEdit(monti: Monti, id: string, twice = false) {
 	if (!first || !last) throw new Error("the reference entry has four blocks");
 	const proposal = await monti.proposals.create("conversation-1", "더 짧게 다듬기");
 	const edit = (ops: unknown[]) => monti.proposals.add(proposal, "body.edit", { id, version: read.entry.version, ops });
-	await edit([{ op: "replaceText", block: first.id, from: 8, to: 14, text: "만든" }]);
-	await edit([{ op: "replaceText", block: last.id, from: 5, to: 17, text: "같다" }]);
+	await edit([reword(first, 8, 14, "만든")]);
+	await edit([reword(last, 5, 17, "같다")]);
 	// Another request's change of the same paragraph: two marks then hang at one block.
 	if (twice) {
 		const other = await monti.proposals.create("conversation-2", "문장 끝 다듬기");
 		await monti.proposals.add(other, "body.edit", {
 			id,
 			version: read.entry.version,
-			ops: [{ op: "replaceText", block: last.id, from: 31, to: 36, text: "글이다" }],
+			ops: [reword(last, 31, 36, "글이다")],
 		});
 	}
 	await monti.run(

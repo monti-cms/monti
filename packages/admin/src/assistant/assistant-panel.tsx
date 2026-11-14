@@ -25,6 +25,7 @@ import { Add, Copy, Edit, RecentlyViewed, Renew } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { holdsKeyboardFocus, useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { failureText, reasonText } from "./failure";
 import { History, HistoryFoot } from "./history";
 import { ProposalCardOf } from "./proposal-card";
 import { Prose } from "./prose";
@@ -284,29 +285,26 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 			if (turn.unsent || !end.error)
 				return (
 					<ErrorNote
-						title={turn.refusal ? t(turn.refusal) : t("panel.dropped")}
+						title={turn.refusal ? reasonText(t, turn.refusal) : t("panel.dropped")}
 						actions={act(t("panel.retry"), assistant.again)}
 					/>
 				);
-			if (end.error.kind === "refused")
+			// One short line for why (`failureText`); what can be done about it beside it.
+			const reason = end.error.reason;
+			const title = failureText(t, end.error);
+			if (reason === "refused" || reason === "limit" || reason === "noImages")
 				return (
 					<ErrorNote
-						title={t("panel.refused")}
+						title={title}
 						actions={act(t("panel.otherModel"), () => {
 							resend.current = true;
 							setMenuOpen(true);
 						})}
-					>
-						{[end.error.keyName, end.error.detail].filter(Boolean).join(" · ")}
-					</ErrorNote>
+					/>
 				);
-			if (end.error.kind === "unreachable")
-				return (
-					<ErrorNote title={t("panel.unreachable")} actions={act(t("panel.retry"), assistant.again)}>
-						{end.error.keyName}
-					</ErrorNote>
-				);
-			return <ErrorNote title={t("panel.noKey")} />;
+			if (reason === "unreachable" || reason === "timeout")
+				return <ErrorNote title={title} actions={act(t("panel.retry"), assistant.again)} />;
+			return <ErrorNote title={title} />;
 		}
 		if (turn.status === "interrupted" && (end.reason === "turns" || end.reason === "tokens"))
 			return <ErrorNote title={t("panel.limit")} actions={act(t("panel.goOn"), () => assistant.goOn(true))} />;

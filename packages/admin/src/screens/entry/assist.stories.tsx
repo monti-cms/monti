@@ -84,7 +84,7 @@ export const FieldFillFailed: Story = {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("textbox", { name: "부제" }, wait));
 		await userEvent.click(await page.findByRole("button", { name: "부제 채우기" }, wait));
-		await page.findByText("서비스가 거절했습니다 · Anthropic 개인", {}, wait);
+		await page.findByText("Anthropic 개인 거절", {}, wait);
 	},
 };
 
@@ -160,15 +160,7 @@ export const TranslateProposed: Story = {
 					input: {
 						id,
 						version: read.entry.version,
-						ops: [
-							{
-								op: "replaceText",
-								block: block.id,
-								from: 0,
-								to: (block.content ?? []).map((part) => ("text" in part ? part.text : "")).join("").length,
-								text: words[index],
-							},
-						],
+						ops: [{ op: "setText", block: block.id, text: words[index] }],
 						[GROUP]: "번역",
 					},
 				})),
@@ -229,7 +221,7 @@ export const RequestFailed: Story = {
 			await all.findByRole("textbox", { name: "어시스턴트에게 요청" }, wait),
 			"뒤 문장만 줄여 줘{Enter}",
 		);
-		await all.findByText(/Your credit balance is too low/, {}, wait);
+		await all.findByText("Anthropic 개인 거절", {}, wait);
 	},
 };
 
@@ -270,7 +262,7 @@ export const CaptionFillFailed: Story = {
 		const caption = await page.findByRole("textbox", { name: "캡션" }, wait);
 		await userEvent.click(caption);
 		await userEvent.click(await page.findByRole("button", { name: "채우기" }, wait));
-		await page.findByText("이 모델은 그림을 읽지 못합니다", {}, wait);
+		await page.findByText("그림을 읽지 못하는 모델", {}, wait);
 	},
 };
 

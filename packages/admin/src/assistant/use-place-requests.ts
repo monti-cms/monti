@@ -1,6 +1,8 @@
+import type { AiFailure } from "@monti-cms/ai";
 import type { Message } from "@monti-cms/core";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { failureText, reasonText } from "./failure";
 import { AssistantContext } from "./use-assistant";
 
 /** What was asked at a place and what the assistant said back. */
@@ -19,7 +21,7 @@ export type PlaceRequest = {
 	status: "writing" | "working" | "answered";
 	/** What was asked and answered here, oldest first; the last one has no answer while the assistant works. */
 	thread: Exchange[];
-	/** Why the last request did not go through, in the server's words. */
+	/** Why the last request did not go through, in one short line (`failureText`, or the server's reason). */
 	failed: string | null;
 };
 
@@ -140,7 +142,7 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 							delta?: string;
 							runId?: string;
 							conversationId?: string;
-							error?: { detail: string; keyName: string | null };
+							error?: AiFailure;
 							status?: string;
 						};
 						if (event.type === "run") {
@@ -150,14 +152,14 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 						} else if (event.type === "text") answer += event.delta ?? "";
 						else if (event.type === "proposal") proposed = true;
 						else if (event.type === "end" && event.status === "failed")
-							failed = [event.error?.keyName, event.error?.detail].filter(Boolean).join(" · ") || t("errors.noAnswer");
+							failed = event.error ? failureText(t, event.error) : t("errors.noAnswer");
 					}
 				} catch {
 					// The connection went: what the run proposed by then is read below.
 				}
 			} else if (!stop.signal.aborted) {
 				const reason = (reply as { body?: { reason?: Message } } | null)?.body?.reason;
-				failed = t(reason ?? "errors.noAnswer");
+				failed = reason ? reasonText(t, reason) : t("errors.noAnswer");
 			}
 			if (going.current.get(id) === mine) going.current.delete(id);
 			if (gone.current) return;

@@ -1,4 +1,4 @@
-import type { Doc } from "@monti-cms/core";
+import type { Doc, Inline } from "@monti-cms/core";
 import { type Node as EditorNode, Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
@@ -92,5 +92,110 @@ describe("taking a body proposal into the editor", () => {
 		);
 		expect(tr.doc.childCount).toBe(1);
 		expect(tr.doc.textContent).toBe("새 문단");
+	});
+});
+
+/** A body with marks: bold, code, a link and a code link, as the editor holds them, and a translation's link on a paragraph. */
+const marked = new Schema({
+	nodes: {
+		doc: { content: "block+" },
+		paragraph: {
+			group: "block",
+			content: "text*",
+			attrs: { blockId: { default: null }, data: { default: null }, link: { default: null } },
+		},
+		text: {},
+	},
+	marks: {
+		bold: {},
+		code: {},
+		link: { attrs: { href: {} } },
+		codeRef: { attrs: { block: {}, anchor: {} } },
+	},
+});
+
+const markedConvert: Convert = {
+	fromEditor: (node) => {
+		const blocks: Doc["blocks"] = [];
+		node.forEach((child) => {
+			const content: Inline[] = [];
+			child.forEach((text) => {
+				const marks = text.marks.map((mark) => ({ type: mark.type.name, ...mark.attrs }));
+				content.push({ type: "text", text: text.text ?? "", ...(marks.length ? { marks } : {}) });
+			});
+			blocks.push({
+				id: child.attrs.blockId,
+				type: "paragraph",
+				...(content.length ? { content } : {}),
+				...(child.attrs.link ? { link: child.attrs.link } : {}),
+			});
+		});
+		return { type: "doc", blocks };
+	},
+	toEditor: (doc) =>
+		marked.node(
+			"doc",
+			null,
+			doc.blocks.map((block) =>
+				marked.node(
+					"paragraph",
+					{ blockId: block.id, link: block.link ?? null },
+					(block.content ?? []).flatMap((inline) =>
+						inline.type === "text"
+							? [
+									marked.text(
+										inline.text,
+										(inline.marks ?? []).map(({ type, ...attrs }) => marked.mark(type, attrs)),
+									),
+								]
+							: [],
+					),
+				),
+			),
+		),
+};
+
+const inlines = (node: EditorNode) => markedConvert.fromEditor(marked.node("doc", null, [node])).blocks[0]?.content;
+
+describe("taking a block's new text into the editor", () => {
+	const link = { type: "link", href: "/guide" };
+	const before: Inline[] = [
+		{ type: "text", text: "Run " },
+		{ type: "text", text: "npm test", marks: [{ type: "code" }] },
+		{ type: "text", text: " before you " },
+		{ type: "text", text: "push", marks: [{ type: "bold" }] },
+		{ type: "text", text: ", as the " },
+		{ type: "text", text: "guide", marks: [link] },
+		{ type: "text", text: " says." },
+	];
+
+	it("05 a rewrite of a paragraph with bold, a link and code words keeps every mark where the tags put it", () => {
+		const doc = markedConvert.toEditor({ type: "doc", blocks: [{ id: "b_1", type: "paragraph", content: before }] });
+		// The caret in the words that stay ("guide").
+		const caret = doc.content.size - 8;
+		const state = EditorState.create({ doc, selection: TextSelection.create(doc, caret) });
+		const text =
+			'Always run <code>npm test</code> before you <bold>push</bold>, as the <link href="/guide">guide</link> says.';
+		const tr = takeProposal(state, { id: "item", ops: [{ op: "setText", block: "b_1", text }] }, markedConvert);
+		expect(inlines(tr.doc.child(0))).toEqual([{ type: "text", text: "Always run " }, ...before.slice(1)]);
+		expect(tr.doc.child(0).attrs.blockId).toBe("b_1");
+		// Only the changed words were put in: the caret is still on the same letter.
+		expect(tr.selection.from).toBe(caret + "Always r".length - "R".length);
+	});
+
+	it("04 a translation of an undecided block keeps its code link and leaves none of the source's words", () => {
+		const pending = { from: "s_1", seen: "h", state: "pending" };
+		// The undecided block is empty in the editor: the source's words are its placeholder.
+		const doc = marked.node("doc", null, [marked.node("paragraph", { blockId: "b_1", link: pending })]);
+		const state = EditorState.create({ doc });
+		const text = 'Set it up on <codeRef block="b_code" anchor="setup">this line</codeRef>.';
+		const tr = takeProposal(state, { id: "item", ops: [{ op: "setText", block: "b_1", text }] }, markedConvert);
+		expect(tr.doc.child(0).textContent).toBe("Set it up on this line.");
+		expect(inlines(tr.doc.child(0))).toEqual([
+			{ type: "text", text: "Set it up on " },
+			{ type: "text", text: "this line", marks: [{ type: "codeRef", block: "b_code", anchor: "setup" }] },
+			{ type: "text", text: "." },
+		]);
+		expect(tr.doc.child(0).attrs.link).toEqual(pending);
 	});
 });

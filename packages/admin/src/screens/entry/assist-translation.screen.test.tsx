@@ -56,7 +56,7 @@ const ENGLISH: Record<string, string> = {
 	목록에는: "The list keeps only the title, the address and the state.",
 	편집기도: "The editor follows the same rule.",
 };
-/** One `body_edit` per undecided block the model was asked for: its words put in the block's place. */
+/** One `body_edit` per undecided block the model was asked for: the block's whole text, translated. */
 const translating = (made: { loaded: () => Loaded }, only?: (words: string) => boolean) => async () => {
 	const read = await english(made.loaded());
 	const calls = read.doc.blocks.flatMap((block) => {
@@ -69,7 +69,7 @@ const translating = (made: { loaded: () => Loaded }, only?: (words: string) => b
 				input: {
 					id: made.loaded().ids.english,
 					version: read.version,
-					ops: [{ op: "replaceText", block: block.id, from: 0, to: words.length, text: to }],
+					ops: [{ op: "setText", block: block.id, text: to }],
 					[GROUP]: "번역",
 				},
 			},
@@ -151,7 +151,6 @@ describe("a translation: '✦ translate' (T94; doc 10, item 19)", () => {
 		await open(made);
 		const read = await english(made.loaded());
 		const first = read.doc.blocks[0];
-		const words = (first?.content ?? []).map((part) => ("text" in part ? part.text : "")).join("");
 		made.loaded().model.add(
 			{
 				calls: [
@@ -162,10 +161,8 @@ describe("a translation: '✦ translate' (T94; doc 10, item 19)", () => {
 							version: read.version,
 							ops: [
 								{
-									op: "replaceText",
+									op: "setText",
 									block: first?.id,
-									from: 0,
-									to: words.length,
 									text: "I rebuilt the blog: the tool took more time than the writing.",
 								},
 							],
@@ -180,20 +177,19 @@ describe("a translation: '✦ translate' (T94; doc 10, item 19)", () => {
 		await expect.element(button("번역 유지")).toBeVisible();
 		await userEvent.click(button("다시 번역"));
 		await expect
-			.poll(() => [...body().element().querySelectorAll("ins")].map((each) => each.textContent).join(""))
-			.toContain("the tool took more time");
+			.poll(() => [...body().element().querySelectorAll("ins")].map((each) => each.textContent).join(" "))
+			.toContain("more time");
 		await expect.poll(bubbleName).toBe("다시 번역");
 		const asked = JSON.stringify(made.loaded().model.turns[0]?.messages.at(-1));
 		expect(asked).toContain('\\"task\\":\\"retranslate\\"');
 		expect(asked).toContain(`\\"blocks\\":[\\"${first?.id}\\"]`);
 	});
 
-	it("10-1 several changes of one undecided block's words are one filling of it: drawn once, and taken as the block's whole translation", async () => {
+	it("10-1 a proposal that gives an undecided block's text twice is drawn once with its last text, and taken as the block's whole translation", async () => {
 		const made = on("new");
 		await open(made);
 		const read = await english(made.loaded());
 		const heading = read.doc.blocks[1];
-		const words = (heading?.content ?? []).map((part) => ("text" in part ? part.text : "")).join("");
 		made.loaded().model.add(
 			{
 				calls: [
@@ -203,8 +199,8 @@ describe("a translation: '✦ translate' (T94; doc 10, item 19)", () => {
 							id: made.loaded().ids.english,
 							version: read.version,
 							ops: [
-								{ op: "replaceText", block: heading?.id, from: 0, to: words.length, text: "What" },
-								{ op: "replaceText", block: heading?.id, from: 4, to: 4, text: " I took out" },
+								{ op: "setText", block: heading?.id, text: "What" },
+								{ op: "setText", block: heading?.id, text: "What I took out" },
 							],
 							[GROUP]: "번역",
 						},

@@ -54,7 +54,7 @@ describe("the entry editor: '✦ fill' for a picture (T104)", () => {
 		await made.run();
 		await expect.element(alt()).toBeVisible();
 		await userEvent.click(button("채우기"));
-		await expect.element(page.getByText("이 모델은 그림을 읽지 못합니다")).toBeVisible();
+		await expect.element(page.getByText("그림을 읽지 못하는 모델")).toBeVisible();
 		await expect.element(alt()).toHaveValue("");
 		expect(made.loaded().model.answers).toHaveLength(0);
 	});
