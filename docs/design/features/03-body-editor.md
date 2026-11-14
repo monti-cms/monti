@@ -154,10 +154,10 @@ export function PostBody({ entry }: { entry: SiteEntry }) {
 ## 에이전트
 
 - **알아내기:** `blocks.catalog(collection)`이 그 컬렉션에서 켠 블록과 서식, 블록마다 설명과 attrs 스키마를 내놓는다.
-- **읽기:** `body.read(entryId)`는 본문을 블록 id가 붙은 읽기 쉬운 글로 내놓는다. JSON 그대로보다 짧고, 모델이 자리를 정확히 가리킬 수 있다.
+- **읽기:** `body.read(entryId)`는 본문을 블록 id가 붙은 읽기 쉬운 글로 내놓는다. JSON 그대로보다 짧고, 모델이 자리를 정확히 가리킬 수 있다. 글자 블록의 서식은 서식 이름을 딴 태그다: `<bold>`, `<italic>`, `<underline>`, `<strike>`, `<code>`, `<sup>`, `<sub>`, `<link href="…">`, `<codeRef block="…" anchor="…">`. 플러그인 서식(`defineMark`)도 같은 모양이다. 서식의 attrs가 태그의 속성이다(글자 값은 `"…"`, 그 밖은 `{JSON}`). 각주 번호는 `<footnoteRef id="…"/>`, 줄바꿈은 새 줄이다. 글자 속의 `&` `<` `>`와 속성 속의 `"`는 `&amp;` `&lt;` `&gt;` `&quot;`로 쓴다. 코드 블록의 코드는 태그 없이 그대로다. 바꾸는 함수는 core의 `inlineToText` · `textToInline` 하나다.
 
 ```md
-{#b_1} 블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.
+{#b_1} 블로그를 다시 <bold>만들기로</bold> 한 건 글을 쓰는 시간보다 <link href="/tools">도구</link>를 고치는 시간이 길어졌기 때문이다.
 {#b_2} ## 무엇을 덜어냈나
 {#b_3} :::callout{tone=note}
 {#b_4} 이 글은 리액트 19 기준이다.
@@ -168,7 +168,7 @@ export function PostBody({ entry }: { entry: SiteEntry }) {
 
 ```ts
 type BodyOp =
-  | { op: "replaceText"; block: string; from: number; to: number; text: string }  // inside one block
+  | { op: "setText"; block: string; text: string }                                 // a block's whole new text, marks as tags
   | { op: "setBlock"; block: string; value: Omit<Block, "id"> }                     // replace a block's type, attrs or content
   | { op: "insert"; after: string | null; blocks: Omit<Block, "id">[] }             // new blocks get new ids
   | { op: "move"; block: string; after: string | null }
@@ -182,14 +182,15 @@ sequenceDiagram
   participant E as 편집기
 
   A->>A: body.read → 블록 id가 붙은 글
-  A->>R: body.edit([replaceText b_1 …, remove b_7])
+  A->>R: body.edit([setText b_1 …, remove b_7])
   R-->>E: 제안 (블록 id · 바뀔 글자)
   E->>E: b_1에 파란 표시 · b_7에 지울 표시
   E->>E: 받기 → 그 연산을 편집기 초안에 · 저장 전 변경사항
   E->>R: 저장(⌘S) → 고치는 본에 적용 · 받은 제안은 적용됨으로
 ```
 
-- `replaceText`는 그 블록의 글자 위치를 쓴다. 받을 때 그 블록이 그 사이 바뀌었으면 "그 사이 고쳐짐"이 된다(00번 문서).
+- `setText`는 그 블록의 새 글 전체를 `body.read`가 보인 태그 그대로 준다. 서식은 태그가 감싼 글자에 그대로 붙는다(글자 위치를 세지 않는다). 코드 블록은 코드 전체이고, 바뀐 가장 작은 범위로 줄 효과를 옮긴다(17). 태그가 읽히지 않으면 `body.badMarkup`이 이유와 함께 거절한다. 받을 때 그 블록이 그 사이 바뀌었으면 "그 사이 고쳐짐"이 된다(00번 문서).
+- 편집기는 `setText`를 지금 글과 새 글의 낱말 차이로 그린다: 빠지는 낱말은 그 자리에서 줄을 긋고, 들어가는 낱말은 그 옆에 놓는다. 받으면 core가 만든 새 내용을 편집기 내용으로 바꿔, 다른 곳만 바꿔 넣는다(블록과 그 attrs, 번역 짝은 그대로).
 - 편집기의 사람 저장은 문서 전체를 보낸다(`entries.save`의 `doc`). 블록 연산은 에이전트와 플러그인을 위한 길이다. 둘 다 같은 검사(블록 정의의 attrs 스키마, 편집기 허용)를 지난다.
 
 ## 기능 목록
@@ -222,7 +223,7 @@ sequenceDiagram
 - 2026-11-05: 서버의 검사는 문서가 전에 갖고 있던 블록을 "남은 블록"으로, 처음 보는 id나 종류가 바뀐 블록을 "새 블록"으로 본다. 사이트가 정의하지 않는 블록과 서식은 새로 넣을 수 없고, 남은 것은 그대로 둔다.
 - 2026-11-05, 소유자: 편집기 허용은 서버가 막지 않는다. `/` 메뉴, 바꾸기 메뉴, 에이전트의 `blocks.catalog`만 거른다. 그래서 편집기에서 템플릿을 넣을 때도 끈 블록이 그대로 들어가고 저장된다.
 - 2026-11-05, 소유자: 본문에서 글로 가는 링크는 글을 번역 묶음 id로 가리킨다(`monti:entry/<묶음 id>`). 글 주소가 바뀌어도 링크가 끊기지 않고, 그 글이 사이트에 있는지 바로 안다. 사이트는 읽기 API의 `linkPaths`로 지금 주소를 받아 그리고, 사이트에 없는 글로 가는 링크는 글자만 그린다. 같은 언어의 글이 발행되지 않았으면 할 일 "발행 안 된 글로 가는 링크"(알리기만)가 된다.
-- 2026-11-05: `body.read`는 블록의 서식 없는 글자를 보인다. `replaceText`의 위치가 모델이 읽은 글자와 같아야 해서다. 바꾼 글자는 바꾼 자리 첫 글자의 서식을 받는다.
+- 2026-11-05: `body.read`는 블록의 서식 없는 글자를 보인다. `replaceText`의 위치가 모델이 읽은 글자와 같아야 해서다. 바꾼 글자는 바꾼 자리 첫 글자의 서식을 받는다. (2026-11-15에 아래 결정으로 바뀌었다.)
 - 2026-11-05: `renderDocument`는 `@monti-cms/core/render`에 있지만 React를 가져오지 않는다. 사이트가 자기 `createElement`를 넘긴다. core는 어떤 프레임워크도 모른다는 규칙(`biome.json`)을 지키고, React가 아닌 사이트도 같은 함수를 쓴다. core 블록은 `Site` 컴포넌트가 없으면 평범한 HTML로 그린다.
 - 2026-11-05: 표 블록은 칸마다 서식 없는 글자다(`attrs.rows`). 칸 안의 서식이 필요해지면 표를 블록을 담는 블록으로 바꾼다.
 - 2026-11-06, 소유자: 표는 노션처럼 표 자체에서 고친다. 편집기 안의 표는 옅은 격자이고, 커서가 있는 칸의 열 위 · 행 왼쪽 손잡이가 열과 행의 메뉴(넣기, 지우기)를 열고, 포인터가 표 위에 있으면 오른쪽 · 아래 가장자리의 + 띠가 열과 행을 더한다. 머리 행은 표의 블록 메뉴에서 켜고 끈다. 편집기 엔진은 Tiptap의 표이고, 저장할 때는 `attrs.rows` · `header` · `widths`로 바꾼다(editor-tools.md "표").
@@ -231,6 +232,7 @@ sequenceDiagram
 - 2026-11-14, 만들며 정함: 여러 블록 고르기(T80)는 블록 패키지(18)가 아니라 이 편집기의 일이라 여기서 만들었다. 핸들이 있는 것이 한 블록이고, 상자는 그 가운데 가장 작은 것(목록 전체가 아니라 항목)을 고른다. 고른 블록을 옮기면 블록 id가 그대로 따라간다.
 - 2026-11-14, 소유자: 블록 핸들은 노션처럼 20 × 24 둥근 네모이고 가리키면 옅은 바탕, 메뉴가 열린 동안 눌린 바탕이다("나"). 모든 편집기에서 같다.
 - 2026-11-05: 목록은 `listItem` 블록을 담는 블록이다(`bulletList`, `orderedList`, `checklist`). 체크리스트 항목은 `checked`를 가진다.
+- 2026-11-15, 만들며 정함: `body.read`는 글자 블록의 서식을 태그로 보이고, 블록 글자 연산은 `replaceText`(위치) 대신 `setText`(블록의 새 글 전체, 태그 포함)다. 위치를 세는 연산은 다시 쓰거나 번역한 글을 서식 하나로 넣어 링크 · 코드 · 밑줄이 사라졌고, 번역은 모델이 센 끝이 짧으면 원문 끝("다.")이 남았다(AS-10, TR-21). `replaceText`는 지웠다.
 
 ## 끝 조건
 
