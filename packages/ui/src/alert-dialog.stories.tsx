@@ -60,12 +60,13 @@ export const LeaveUnsaved: Story = {
 
 /** The screen can save from outside: saving and leaving is the main button, keeping on is the side one, the risky way out stays a red text button. */
 export const LeaveUnsavedSave: Story = {
+	tags: ["visual"],
 	render: () => (
 		<AlertDialog defaultOpen>
 			<AlertDialogContent>
 				<AlertDialogHeader>
 					<AlertDialogTitle>저장하지 않은 변경 사항이 있습니다</AlertDialogTitle>
-					<AlertDialogDescription>나가면 고친 곳 2개가 사라집니다.</AlertDialogDescription>
+					<AlertDialogDescription>나가면 변경 사항 2개가 사라집니다.</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel variant="danger">저장하지 않고 나가기</AlertDialogCancel>

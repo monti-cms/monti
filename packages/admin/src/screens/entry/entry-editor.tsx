@@ -833,7 +833,14 @@ export function EntryEditor({
 		unsaved: { text: t("entry.save.unsaved"), tone: "warning", press: () => void save() },
 		// Saved, with the assistant's proposals still waiting on it: said, and pressed it goes to the first (AS-18).
 		saved: walking
-			? { text: t("entry.save.proposals", { count: walk.length }), press: () => show(walk[0] ?? walking) }
+			? {
+					text: t("entry.save.proposals", { count: walk.length }),
+					press: () => {
+						// The bubble points at the first too, not at one walked to before.
+						setLooking(0);
+						if (walk[0]) show(walk[0]);
+					},
+				}
 			: { text: t("entry.save.saved") },
 		browser: { text: t("entry.save.browser"), tone: "warning", press: () => onCompare("draft") },
 		conflict: { text: t("entry.save.conflict"), tone: "danger", press: () => onCompare("conflict") },

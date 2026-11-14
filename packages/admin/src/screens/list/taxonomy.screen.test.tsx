@@ -113,7 +113,7 @@ describe("taxonomy screen (doc 08)", () => {
 		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "저장하지 않고 나가기" }));
 		await expect.element(page.getByRole("textbox", { name: "이름" })).toHaveValue("React");
 		await expect.element(description).toHaveValue("");
-		await expect.element(page.getByText(/고친 곳/)).not.toBeInTheDocument();
+		await expect.element(page.getByText(/변경 사항/)).not.toBeInTheDocument();
 		// The changes thrown away do not come back with the item.
 		await userEvent.click(table().getByText("리액트", { exact: true }));
 		await expect.element(page.getByRole("textbox", { name: "이름" })).toHaveValue("리액트");
@@ -135,9 +135,9 @@ describe("taxonomy screen (doc 08)", () => {
 		await TaxonomyTags.run();
 		await userEvent.click(main().getByRole("button", { name: "태그 추가" }));
 		await expect.element(page.getByRole("heading", { name: "새 태그" })).toBeVisible();
-		await expect.element(page.getByText(/고친 곳/)).not.toBeInTheDocument();
+		await expect.element(page.getByText(/변경 사항/)).not.toBeInTheDocument();
 		await userEvent.fill(page.getByRole("textbox", { name: "이름" }), "새 이름");
-		await expect.element(page.getByText("고친 곳 1")).toBeVisible();
+		await expect.element(page.getByText("변경 사항 1")).toBeVisible();
 		await userEvent.click(page.getByRole("button", { name: "닫기" }));
 		await expect.element(page.getByRole("alertdialog")).toBeVisible();
 		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "저장하지 않고 나가기" }));
