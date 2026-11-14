@@ -593,7 +593,6 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																		const runs = inlineDiff(place.before, place.after);
 																		return side && place.before !== "" && place.after !== "" ? (
 																			<CompareRow
-																				// biome-ignore lint/suspicious/noArrayIndexKey: a block's values and its words are two rows of one name
 																				key={`${place.name}:${at}`}
 																				name={place.name}
 																				source={marked(runs, "before")}
@@ -601,7 +600,6 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																			/>
 																		) : (
 																			<CompareRow
-																				// biome-ignore lint/suspicious/noArrayIndexKey: a block's values and its words are two rows of one name
 																				key={`${place.name}:${at}`}
 																				single
 																				name={place.name}
