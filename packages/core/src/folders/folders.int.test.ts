@@ -6,6 +6,7 @@ import { createReader } from "../entries/reader";
 import { createMonti } from "../monti";
 import { migrateContent } from "../schema/apply";
 import { defineSchema } from "../schema/define";
+import { folderTreeSql } from "./tree";
 
 const db = await testDatabase();
 
@@ -126,6 +127,21 @@ describe("folders", () => {
 			{ name: "Wallpapers", depth: 0, count: 0, published: 0 },
 		]);
 		expect((await tree()).find((node) => node.id === loose)?.parentId).toBeNull();
+	});
+
+	it("one walk of a folder's tree: live leaves the trashed branch out, trashed keeps only it, any keeps all", async () => {
+		const top = await folder("위");
+		const kept = await folder("남는 것", top);
+		const gone = await folder("버린 것", top);
+		const under = await folder("버린 것 아래", gone);
+		await write("trash.move", { rows: [{ kind: "folder", id: gone }] });
+		const walk = async (id: string, which: "live" | "trashed" | "any") =>
+			(await sql<{ id: string }>`select id from ${folderTreeSql(id, which)} as tree`.execute(db)).rows
+				.map((row) => row.id)
+				.sort();
+		expect(await walk(top, "live")).toEqual([top, kept].sort());
+		expect(await walk(gone, "trashed")).toEqual([gone, under].sort());
+		expect(await walk(top, "any")).toEqual([top, kept, gone, under].sort());
 	});
 
 	it("folders.create names a folder that is taken among its siblings with ' 2'", async () => {

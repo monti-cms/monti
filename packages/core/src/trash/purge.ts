@@ -2,6 +2,7 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import type { Database } from "../db/schema";
 import { UNDO_DAYS } from "../engine/execute";
 import { freeName, lockFolderScope } from "../folders/operations";
+import { folderTreeSql } from "../folders/tree";
 import type { Storage } from "../media/storage";
 import { lockWithFiles } from "../media/uses";
 import { placeEvents } from "../operation";
@@ -26,23 +27,13 @@ const LOOSE_DAYS = 1;
 
 /** The folder and every folder under it, in the trash or not. */
 export async function foldersUnder(db: Db, id: string): Promise<string[]> {
-	const { rows } = await sql<{ id: string }>`
-		with recursive tree as (
-			select id from folders where id = ${id}
-			union all
-			select f.id from folders f join tree on f.parent_id = tree.id
-		) select id from tree`.execute(db);
+	const { rows } = await sql<{ id: string }>`select id from ${folderTreeSql(id, "any")} as tree`.execute(db);
 	return rows.map((row) => row.id);
 }
 
 /** The folder, if it is in the trash, and the folders under it that are: what a permanent delete of it takes. A folder that is not in the trash stays, with what is under it. */
 async function trashedUnder(db: Db, id: string): Promise<string[]> {
-	const { rows } = await sql<{ id: string }>`
-		with recursive tree as (
-			select id from folders where id = ${id} and trashed_at is not null
-			union all
-			select f.id from folders f join tree on f.parent_id = tree.id where f.trashed_at is not null
-		) select id from tree`.execute(db);
+	const { rows } = await sql<{ id: string }>`select id from ${folderTreeSql(id, "trashed")} as tree`.execute(db);
 	return rows.map((row) => row.id);
 }
 

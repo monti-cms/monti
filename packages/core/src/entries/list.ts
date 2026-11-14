@@ -1,6 +1,7 @@
 import { type RawBuilder, sql } from "kysely";
 import { z } from "zod";
 import { CheckError } from "../errors";
+import { folderReachSql } from "../folders/tree";
 import { mediaValueOf } from "../media/value";
 import { defineOperation, type OperationContext } from "../operation";
 import type { PluginTab } from "../plugins/define";
@@ -240,18 +241,13 @@ function whereSql(
 	const now = ctx.now();
 	const parts: RawBuilder<unknown>[] = [sql`true`];
 	const text = query.search?.text.trim();
-	// A folder lists what sits right in it; a search or a filter looks for entries, so inside a folder it goes through its subfolders, and at the top
-	// level through every folder (doc 07, inside a folder; T54).
-	const looking = asLooking || Boolean(text) || query.filters.length > 0;
-	if (query.folder !== undefined && query.scope === "here") {
-		if (query.folder !== null && looking)
-			parts.push(sql`rep.folder_id in (with recursive tree as (
-				select id from folders where id = ${query.folder}
-				union all select f.id from folders f join tree on f.parent_id = tree.id where f.trashed_at is null
-			) select id from tree)`);
-		else if (query.folder !== null) parts.push(sql`rep.folder_id = ${query.folder}`);
-		else if (!looking) parts.push(sql`rep.folder_id is null`);
-	}
+	// Where it reaches in the folders is the library's rule too (doc 07, inside a folder; T54).
+	const reach = folderReachSql("rep.folder_id", {
+		folder: query.folder,
+		scope: query.scope,
+		looking: asLooking || Boolean(text) || query.filters.length > 0,
+	});
+	if (reach) parts.push(reach);
 	if (text) {
 		const pattern = likePattern(text);
 		const where = query.search?.in ?? "all";

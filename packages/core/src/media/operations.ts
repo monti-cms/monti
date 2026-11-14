@@ -4,7 +4,8 @@ import { randomUUID } from "../bytes";
 import type { Database } from "../db/schema";
 import { loadEntries } from "../entries/record";
 import { CheckError } from "../errors";
-import { folderOf, subtree } from "../folders/operations";
+import { folderOf } from "../folders/operations";
+import { folderReachSql } from "../folders/tree";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
 import { likePattern } from "../query";
 import { lockRecords } from "../records";
@@ -232,13 +233,11 @@ export const mediaOperations = [
 					? ctx.db.selectFrom("media").where("id", "in", input.ids)
 					: live.where(sql<boolean>`false`));
 			let filtered = asked ?? live;
-			if (!asked && input.folder !== undefined && input.scope === "here") {
-				// A folder lists what sits right in it; a search or a filter looks for files, so it goes through the subfolders (as the entry list, doc 07).
-				if (input.folder !== null && looking)
-					filtered = filtered.where("folder_id", "in", [input.folder, ...(await subtree(ctx.db, input.folder))]);
-				else if (input.folder !== null) filtered = filtered.where("folder_id", "=", input.folder);
-				else if (!looking) filtered = filtered.where("folder_id", "is", null);
-			}
+			// Where it reaches in the folders is the entry list's rule too (doc 07).
+			const reach = (asLooking: boolean) =>
+				folderReachSql("folder_id", { folder: input.folder, scope: input.scope, looking: asLooking });
+			const listed = asked ? null : reach(looking);
+			if (listed) filtered = filtered.where(listed);
 			if (search !== "") filtered = filtered.where("name", "ilike", likePattern(search));
 			if (input.kinds.length > 0) filtered = filtered.where("kind", "in", input.kinds);
 			if (input.only) filtered = filtered.where("kind", "=", input.only);
@@ -261,13 +260,10 @@ export const mediaOperations = [
 			// A menu's count is what picking it would find from here: the open folder and those under it, or everything, with the search and the
 			// other menu's filter applied (as the list's column menus, doc 06; MD-07). Files asked for by id are counted among themselves: a body
 			// reading its pictures does not count the whole library (T110).
-			let reach =
-				asked ??
-				(input.scope === "here" && input.folder
-					? live.where("folder_id", "in", [input.folder, ...(await subtree(ctx.db, input.folder))])
-					: live);
-			if (!asked && search !== "") reach = reach.where("name", "ilike", likePattern(search));
-			if (!asked && input.only) reach = reach.where("kind", "=", input.only);
+			const countedIn = asked ? null : reach(true);
+			let counting = asked ?? (countedIn ? live.where(countedIn) : live);
+			if (!asked && search !== "") counting = counting.where("name", "ilike", likePattern(search));
+			if (!asked && input.only) counting = counting.where("kind", "=", input.only);
 			const usedOnly =
 				input.used.length === 1
 					? input.used[0] === "used"
@@ -276,7 +272,7 @@ export const mediaOperations = [
 					: sql`true`;
 			const kindOnly =
 				input.kinds.length > 0 ? sql`kind in (${sql.join(input.kinds.map((kind) => sql`${kind}`))})` : sql`true`;
-			const counted = await reach
+			const counted = await counting
 				.select([
 					sql<number>`count(*) filter (where kind = 'image' and ${usedOnly})::int`.as("image"),
 					sql<number>`count(*) filter (where kind = 'file' and ${usedOnly})::int`.as("file"),
