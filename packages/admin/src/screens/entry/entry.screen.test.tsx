@@ -1022,7 +1022,7 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 		expect(within("ins")).toHaveLength(1);
 		await saveCell("저장 전 변경사항");
 		await save();
-		await saveCell("저장됨");
+		await saveCell("제안 2건 대기");
 		expect(await proposals()).toHaveLength(2);
 	});
 
@@ -1096,7 +1096,7 @@ describe("the entry editor: the assistant's proposals for the title and the fiel
 		await expect.element(page.getByText("리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.")).toBeVisible();
 		await expect.element(page.getByText("1 / 3")).toBeVisible();
 		// Nothing is changed by being shown.
-		await saveCell("저장됨");
+		await saveCell("제안 3건 대기");
 		// The bubble's steps go to each in turn: the title, the summary's field, then the change in the text.
 		await userEvent.click(button("다음"));
 		await expect.element(page.getByText("2 / 3")).toBeVisible();
@@ -1128,7 +1128,7 @@ describe("the entry editor: the assistant's proposals for the title and the fiel
 		expect(summary().element().hasAttribute("data-proposal")).toBe(false);
 		await expect.element(page.getByText("1 / 2")).toBeVisible();
 		expect((await items(made)).map((item) => item.state)).toEqual(["pending", "discarded", "pending"]);
-		await saveCell("저장됨");
+		await saveCell("제안 2건 대기");
 	});
 
 	// The proposal's mark stands by the switch's name.
@@ -1140,7 +1140,7 @@ describe("the entry editor: the assistant's proposals for the title and the fiel
 		await expect
 			.element(page.getByRole("img", { name: "AI 제안" }).or(page.getByLabelText("AI 제안")).first())
 			.toBeVisible();
-		await saveCell("저장됨");
+		await saveCell("제안 1건 대기");
 		const stored = async () => {
 			const { site, id } = made.loaded();
 			return (
@@ -1163,7 +1163,7 @@ describe("the entry editor: the assistant's proposals for the title and the fiel
 		await expect.element(summary()).toHaveValue("덜어낸 것과 남긴 것. 그리고 고친 것.");
 		expect(summary().element().hasAttribute("data-proposal")).toBe(false);
 		await save();
-		await saveCell("저장됨");
+		await saveCell("제안 2건 대기");
 		expect((await values(made.loaded())).values.summary).toBe("덜어낸 것과 남긴 것. 그리고 고친 것.");
 		// The summary's item went with the save; the title's and the body's still wait.
 		expect((await items(made)).map((item) => item.state)).toEqual(["pending", "applied", "pending"]);
@@ -1228,7 +1228,7 @@ describe("the entry editor: a body proposal the text moved away from (T87)", () 
 			.orderBy("position")
 			.execute();
 		expect(states.map((item) => item.state)).toEqual(["pending", "discarded"]);
-		await saveCell("저장됨");
+		await saveCell("제안 1건 대기");
 	});
 
 	it("10-1 two stale proposals of one paragraph hang side by side, not one over the other; each opens its own card", async () => {
@@ -1263,7 +1263,7 @@ describe("the entry editor: a body proposal the text moved away from (T87)", () 
 		await expect.element(page.getByText("1 / 1")).toBeVisible();
 		expect(await states()).toEqual(["pending", "pending"]);
 		await save();
-		await saveCell("저장됨");
+		await saveCell("제안 1건 대기");
 		await expect.poll(states).toEqual(["pending", "discarded"]);
 		// Nobody pressed for it: nothing is said.
 		expect(document.querySelector("[data-sonner-toast]")).toBeNull();
