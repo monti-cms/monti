@@ -502,6 +502,20 @@ export const NoAnswer: Story = {
 	},
 };
 
+/** The key ran out of its allowance (rate, quota, credits): its own short line, and the way to send the same words with another model. */
+export const KeyLimit: Story = {
+	loaders: site({
+		script: () => [{ fail: new ProviderError("limit", "Rate limit exceeded: https://example.com/limits") }],
+	}),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await openPanel(page);
+		await say(page, "요약이 비어 있는 글 찾아 줘");
+		await page.findByText("Anthropic 개인 사용 한도 초과", {}, wait);
+		await page.findByRole("button", { name: "다른 모델로 보내기" }, wait);
+	},
+};
+
 /** The answer broke off after work was done: what was done stays, and the run can be gone on with. */
 export const Dropped: Story = {
 	loaders: site({

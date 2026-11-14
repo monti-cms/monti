@@ -25,7 +25,7 @@ import { Add, Copy, Edit, RecentlyViewed, Renew } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { holdsKeyboardFocus, useFocusHandOff } from "../screens/frame/focus-hand-off";
-import { failureText, reasonText } from "./failure";
+import { failureIn, failureText, reasonText } from "./failure";
 import { History, HistoryFoot } from "./history";
 import { ProposalCardOf } from "./proposal-card";
 import { Prose } from "./prose";
@@ -281,17 +281,19 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 				</Button>
 			) : undefined;
 		if (turn.status === "failed") {
-			// It never began: the server's own reason when it gave one (another request is going, the model is gone, no answer came).
-			if (turn.unsent || !end.error)
+			// An AI failure, whether the run ended with it or never began for it: one short line (`failureText`), and what can be
+			// done about it beside it, the same either way.
+			const failure = turn.unsent ? failureIn(turn.refusal) : (end.error ?? null);
+			// It never began for another reason: the server's own (another request is going, the model is gone, no answer came).
+			if (!failure)
 				return (
 					<ErrorNote
 						title={turn.refusal ? reasonText(t, turn.refusal) : t("panel.dropped")}
 						actions={act(t("panel.retry"), assistant.again)}
 					/>
 				);
-			// One short line for why (`failureText`); what can be done about it beside it.
-			const reason = end.error.reason;
-			const title = failureText(t, end.error);
+			const reason = failure.reason;
+			const title = failureText(t, failure);
 			if (reason === "refused" || reason === "limit" || reason === "noImages")
 				return (
 					<ErrorNote

@@ -88,6 +88,22 @@ export const FieldFillFailed: Story = {
 	},
 };
 
+/** The key ran out of its allowance: the same kind of line under the field, in its own words. */
+export const FieldFillLimit: Story = {
+	loaders: [
+		assisted([], () => {
+			throw new ProviderError("limit", "Rate limit exceeded.");
+		}),
+		...site("draft"),
+	],
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("textbox", { name: "부제" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "부제 채우기" }, wait));
+		await page.findByText("Anthropic 개인 사용 한도 초과", {}, wait);
+	},
+};
+
 /** Flow 2·08: a request on picked words, just opened: the words underlined, a card that is a box alone with the caret in it. */
 export const RequestOpen: Story = {
 	loaders: [assisted(), ...site("draft")],
