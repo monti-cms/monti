@@ -167,7 +167,7 @@ describe("a translation: '✦ translate' (T94; doc 10, item 19)", () => {
 			.poll(async () => (await english(made.loaded())).doc.blocks[0]?.content)
 			.toEqual([
 				{ type: "text", text: "Install it on " },
-				{ type: "text", text: "this line", marks: [stories.CODE_LINK] },
+				{ type: "text", text: "this line", marks: [stories.codeLinkMark] },
 				{ type: "text", text: "." },
 			]);
 		expect((await english(made.loaded())).doc.blocks[0]?.link?.state).toBe("translated");

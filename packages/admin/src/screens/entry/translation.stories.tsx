@@ -17,7 +17,7 @@ const code = (value: string, id = `t_${++count}`) => ({ id, type: "codeBlock", c
 const doc = (...blocks: Doc["blocks"]): Doc => ({ type: "doc", blocks });
 
 /** The code link in the first paragraph of `codeLink`: words that point at the labelled line of the code block. */
-export const CODE_LINK = { type: "codeRef", block: "s_4", anchor: "setup" };
+export const codeLinkMark = { type: "codeRef", block: "s_4", anchor: "setup" };
 
 /**
  * The reference entry (Editor › EditorTranslate), with a code block that follows the source. `linked`: the first paragraph's words link to the
@@ -31,7 +31,7 @@ const source = (linked = false) =>
 					type: "paragraph",
 					content: [
 						{ type: "text", text: "설치는 " },
-						{ type: "text", text: "이 줄", marks: [CODE_LINK] },
+						{ type: "text", text: "이 줄", marks: [codeLinkMark] },
 						{ type: "text", text: "에서 한다." },
 					],
 				}
