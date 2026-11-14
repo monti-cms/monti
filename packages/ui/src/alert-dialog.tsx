@@ -33,7 +33,7 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
 	);
 }
 
-/** `wide` (520px) is for a question that lists what it touches, with a choice per line (the review of a permanent delete). */
+/** `wide` (520px) is for a question that lists what it touches, with a choice per line (the review of a permanent delete), and for one with three answers (leaving with "save and leave"). */
 const ALERT_WIDTH = { default: "", wide: "sm:max-w-[520px]" } as const;
 
 /**

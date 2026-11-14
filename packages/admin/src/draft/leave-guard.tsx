@@ -139,19 +139,23 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 		[held],
 	);
 	// Files only: saying "unsaved changes" of them leaves the person guessing what the number is (usability, U10).
-	const onlyFiles = asking !== null && asking.changes === 0;
+	// The question as it was asked stays drawn while it fades out: read anew, it lost its third answer and narrowed as it closed.
+	const lastAsked = useRef(asking);
+	if (asking) lastAsked.current = asking;
+	const shown = asking ?? lastAsked.current;
+	const onlyFiles = shown !== null && shown.changes === 0;
 	return (
 		<Context.Provider value={value}>
 			{children}
 			<AlertDialog open={asking !== null} onOpenChange={(open) => !open && !savingToLeave && setAsking(null)}>
 				{/* Three answers do not fit the 420px question on one line: it is the wide one then. */}
-				<AlertDialogContent size={asking?.canSave ? "wide" : undefined}>
+				<AlertDialogContent size={shown?.canSave ? "wide" : undefined}>
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t(onlyFiles ? "leave.uploads.title" : "leave.title")}</AlertDialogTitle>
 						<AlertDialogDescription>
 							{[
-								asking?.changes ? t("leave.description", { count: asking.changes }) : null,
-								asking?.uploads ? t("leave.uploads.description", { count: asking.uploads }) : null,
+								shown?.changes ? t("leave.description", { count: shown.changes }) : null,
+								shown?.uploads ? t("leave.uploads.description", { count: shown.uploads }) : null,
 							]
 								.filter(Boolean)
 								.join(" ")}
@@ -167,18 +171,19 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 								setAsking(null);
 							}}
 						>
-							{t(asking?.filesOnly ? "leave.uploads.stop" : onlyFiles ? "leave.uploads.discard" : "leave.discard")}
+							{t(shown?.filesOnly ? "leave.uploads.stop" : onlyFiles ? "leave.uploads.discard" : "leave.discard")}
 						</AlertDialogCancel>
 						<AlertDialogAction
-							variant={asking?.canSave ? "secondary" : "primary"}
+							variant={shown?.canSave ? "secondary" : "primary"}
 							onClick={() => !savingToLeave && setAsking(null)}
 						>
 							{t(onlyFiles ? "leave.uploads.stay" : "leave.stay")}
 						</AlertDialogAction>
-						{asking?.canSave && (
+						{shown?.canSave && (
 							<AlertDialogAction
 								loading={savingToLeave}
 								onClick={async () => {
+									if (!asking) return;
 									const { go, uploads } = asking;
 									setSavingToLeave(true);
 									const outcome = await value
