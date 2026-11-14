@@ -140,9 +140,15 @@ export function useDraft({
 	// My changes as they are this instant. A handler may change several places in a row (the undo of one line of the changes list puts back a
 	// field's rename and its label): each step starts from what the step before left, not from the map this render captured.
 	const mineNow = useRef(mine);
+	// The toast that puts a dropped browser copy back: it goes once something new is written, which the copy would stand over (TC-09).
+	const undoDrop = useRef<string | number | null>(null);
 	const setMine = useCallback((next: Map<Path, unknown>) => {
 		mineNow.current = next;
 		setMineState(next);
+		if (next.size > 0 && undoDrop.current !== null) {
+			toast.dismiss(undoDrop.current);
+			undoDrop.current = null;
+		}
 	}, []);
 	const [quick, setQuick] = useState<Set<Path>>(new Set());
 	const [accepted, setAccepted] = useState<string[]>([]);
@@ -219,7 +225,7 @@ export function useDraft({
 	const value = useCallback((path: Path) => (mine.has(path) ? mine.get(path) : saved(path)), [mine, saved]);
 	// A place is drawn as proposed when the proposal would change what the screen shows there (`cell`).
 	const drawn = useMemo(
-		() => pending.filter(({ values }) => Object.keys(values).some((path) => !sameJson(values[path], value(path)))),
+		() => pending.filter(({ values }) => Object.keys(values).some((path) => !sameValue(values[path], value(path)))),
 		[pending, value],
 	);
 
@@ -228,7 +234,7 @@ export function useDraft({
 			if (quick.has(path)) return { kind: "quickFilled" };
 			if (mine.has(path)) return { kind: "mine", before: saved(path) };
 			// A proposal is drawn against the value the screen shows, not the saved one (doc 05, agent).
-			const proposed = pending.find(({ values }) => path in values && !sameJson(values[path], value(path)));
+			const proposed = pending.find(({ values }) => path in values && !sameValue(values[path], value(path)));
 			return proposed ? { kind: "proposed", item: proposed.item, value: proposed.values[path] } : { kind: "same" };
 		},
 		[quick, mine, pending, saved, value],
@@ -391,10 +397,11 @@ export function useDraft({
 			forget(target);
 			setOffered(null);
 			if (!dropped) return;
-			toast(t("draft.copyDropped"), {
+			undoDrop.current = toast(t("draft.copyDropped"), {
 				action: {
 					label: t("common.undo"),
 					onClick: () => {
+						undoDrop.current = null;
 						try {
 							localStorage.setItem(storageKey(target), JSON.stringify(dropped));
 						} catch {}
@@ -427,6 +434,9 @@ export function useDraft({
 					)
 				: new Map<Path, unknown>();
 			setMine(left);
+			// Nothing left: the browser's copy goes now. A new record's screen moves to the saved record in the same step, and the copy left
+			// under the new one's key came back in the next new form.
+			if (left.size === 0 && !offeredNow.current) forget(target);
 			setQuick((current) => new Set([...current].filter((path) => left.has(path))));
 			// The items that went with the save stay counted as taken until the proposals are read again: let go before, each would be
 			// pending once more for a moment, over a screen that already holds its change (a body change would hang as "changed in the

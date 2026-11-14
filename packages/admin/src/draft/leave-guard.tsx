@@ -180,7 +180,10 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 								onClick={async () => {
 									const { go, uploads } = asking;
 									setSavingToLeave(true);
-									const outcome = await value.save().finally(() => setSavingToLeave(false));
+									const outcome = await value
+										.save()
+										.catch((): SaveOutcome => "refused")
+										.finally(() => setSavingToLeave(false));
 									setAsking(null);
 									// Refused: the screen says why itself. Changed while it saved: the screen is still the place to look.
 									if (outcome !== "saved") return;
@@ -227,7 +230,7 @@ export function useUnsavedChanges() {
 
 /**
  * Saving the open screens from outside them (the assistant's "save and open": doc 10, flow 2·05). `can`: every screen with unsaved changes
- * gave a way to save it (the editors do; a panel beside a list does not). `save`: saves them as their own save does, which says a refusal
+ * gave a way to save it (the editors and the taxonomy panel do; the settings and the media panel do not). `save`: saves them as their own save does, which says a refusal
  * itself; `true` when it all went through.
  */
 export function useSaveUnsaved() {

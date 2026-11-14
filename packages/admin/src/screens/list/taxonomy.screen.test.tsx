@@ -144,6 +144,17 @@ describe("taxonomy screen (doc 08)", () => {
 		await expect.element(page.getByRole("heading", { name: "새 태그" })).not.toBeInTheDocument();
 	});
 
+	it("a new item saved leaves nothing for the next new form", async () => {
+		await TaxonomyTags.run();
+		await userEvent.click(main().getByRole("button", { name: "태그 추가" }));
+		await userEvent.fill(page.getByRole("textbox", { name: "이름" }), "새로 만든 태그");
+		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
+		await expect.element(page.getByRole("heading", { name: "새로 만든 태그" })).toBeVisible();
+		await userEvent.click(main().getByRole("button", { name: "태그 추가" }));
+		await expect.element(page.getByRole("heading", { name: "새 태그" })).toBeVisible();
+		await expect.element(page.getByRole("textbox", { name: "이름" })).toHaveValue("");
+	});
+
 	it("keeps the same table header height before and after a row is picked", async () => {
 		await TaxonomyTags.run();
 		const before = table().element().querySelector("thead")?.getBoundingClientRect().height;
