@@ -160,7 +160,7 @@ function DocumentListScreen({
 	const label = useColumnLabel();
 	const languageName = useLanguageName();
 	const schema = useRead<SchemaRead>("schema.read");
-	const columnsRead = useRead<Columns>("list.columns", { collection }, { afterWrites: true });
+	const columnsRead = useRead<Columns>("list.columns", { collection });
 	const columns = columnsRead.data?.columns ?? null;
 	const pageSize = columnsRead.data?.pageSize ?? 25;
 	const state = useMemo(() => readState(params, columns ?? []), [params, columns]);
@@ -172,7 +172,7 @@ function DocumentListScreen({
 		() => toQuery(collection, state, pageSize, foldersOn),
 		[collection, state, pageSize, foldersOn],
 	);
-	const page = useRead<Page>("entries.query", columns ? query : { collection, pageSize: 1 }, { afterWrites: true });
+	const page = useRead<Page>("entries.query", columns ? query : { collection, pageSize: 1 });
 	const rows = columns ? (page.data?.rows ?? null) : null;
 	const total = page.data?.total ?? 0;
 	const templates = useRead<{ id: string; name: string }[]>("templates.list");

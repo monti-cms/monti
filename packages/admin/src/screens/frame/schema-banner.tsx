@@ -12,7 +12,7 @@ type SchemaState = { locked: boolean; fileChanged: boolean; failedChange: string
  */
 export function SchemaBanner({ onReview }: { onReview?: () => void }) {
 	const { t } = useAdmin();
-	const schema = useRead<SchemaState>("schema.read", {}, { afterWrites: true });
+	const schema = useRead<SchemaState>("schema.read");
 	const retry = useOperation("schema.retry");
 	const state = schema.data;
 	// "Apply again" takes its line away when it works: the keyboard's focus it held goes to the page's first control, the next stop after the line.

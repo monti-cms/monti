@@ -3,6 +3,7 @@ import type { Editor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { CardMark, type CardReply, MemoThreadOf, ProposalMemo, replyOf } from "../assistant/proposal-memo";
 import type { Exchange } from "../assistant/use-place-requests";
+import { liveDom } from "./live-view";
 import { type BodyProposal, findBlock, proposedWords } from "./proposal-marks";
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
@@ -71,8 +72,10 @@ export function ProposalMargin({ editor, marks }: { editor: Editor; marks: reado
 	useLayoutEffect(() => measure(), [tops, besides]);
 	useEffect(() => {
 		// The text's lines move with its width and with what is typed: measured again whenever either changes.
+		const dom = liveDom(editor);
+		if (!dom) return;
 		const resized = new ResizeObserver(() => measure());
-		resized.observe(editor.view.dom);
+		resized.observe(dom);
 		editor.on("update", measure);
 		return () => {
 			resized.disconnect();

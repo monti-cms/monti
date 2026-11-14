@@ -7,6 +7,7 @@ import type { ProposalItem } from "../../draft/use-proposals";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { useSignInAgain } from "../frame/session-ended";
+import { afterWrite } from "./after-write";
 
 /** What the editor writes: an entry, or a template (its name stands where an entry's title does). `id` is `null` for a new template. */
 export type EditorSource = { kind: "entry"; id: string } | { kind: "template"; id: string | null };
@@ -104,15 +105,16 @@ export function useEntryEditor(
 		isEntry ? "entries.get" : "templates.get",
 		{ id: source.id ?? "" },
 		// The editor says every failure of this read itself: its own banner while it has nothing to show, and once it has, the toast
-		// that answers the press which read again (a save, "load the latest").
-		{ skip: source.id === null, own: "answered" },
+		// that answers the press which read again (a save, "load the latest"). What a write means for it is its own to decide (`afterWrite`):
+		// read again over unsaved changes, the server's copy would take their base away.
+		{ skip: source.id === null, own: "answered", afterWrites: false },
 	);
 	const saveOp = useOperation<{ output: { id: string; version: number } }>(isEntry ? "entries.save" : "templates.save");
 	const latestOp = useOperation<EntryRead | TemplateRead>(isEntry ? "entries.get" : "templates.get");
 	const filesOp = useOperation<MediaQueryResult>("media.query");
 	/** The files of a kept copy's body that the server's body does not show: its pictures hold their places too when the copy goes in. */
 	const [keptFiles, setKeptFiles] = useState<readonly MediaItem[]>([]);
-	const { session, t } = useAdmin();
+	const { session, t, onWrite } = useAdmin();
 	const signInAgain = useSignInAgain();
 	const loaded = source.id === null ? NEW_TEMPLATE : read.data;
 	const base = useMemo(() => (loaded ? basePaths(loaded) : null), [loaded]);
@@ -224,11 +226,63 @@ export function useEntryEditor(
 
 	const reload = read.reload;
 
+	/** This editor's save is under way: the write notice it sends is its own, and the save reads what it wrote. */
+	const saving = useRef(false);
+	/** What a write notice is weighed against, as the screen stands when it comes. */
+	const standing = useRef({ dirty: false, shown: null as number | null });
+	standing.current = { dirty: draft.dirty, shown: written ?? version };
+	/** The read that lands next was made for a write elsewhere: a body changed by it is drawn anew. */
+	const forElsewhere = useRef(false);
+	const peek = latestOp.run;
+	// A write anywhere in the admin (a proposal applied from the assistant's panel, a publish from the list): the screen shows the server's copy
+	// again, values and state, unless that would take unsaved changes' base away (`afterWrite`).
+	useEffect(() => {
+		const id = source.id;
+		if (id === null) return;
+		const again = async () => {
+			forElsewhere.current = true;
+			// A read that brought back what the screen holds (the write was to another record) draws nothing: the mark must not wait for the
+			// next read, which may be this editor's own save.
+			const read = await reload();
+			if (!read.ok || !read.changed) forElsewhere.current = false;
+		};
+		return onWrite(() => {
+			const first = afterWrite({ saving: saving.current, ...standing.current });
+			if (first === "reload") void again();
+			if (first !== "peek") return;
+			void (async () => {
+				const latest = await peek({ id });
+				const body = latest.ok ? latest.body : null;
+				const next = afterWrite({
+					saving: saving.current,
+					...standing.current,
+					latest: body ? ("entry" in body ? body.entry.version : body.version) : null,
+				});
+				if (next === "reload") await again();
+				else if (next === "notice" && body) {
+					const at = "entry" in body ? body.entry.updatedAt : body.updatedAt;
+					setConflict({ at: at ? new Date(at) : null });
+				}
+			})();
+		});
+	}, [onWrite, source.id, reload, peek]);
+	// The body editor holds its own text once drawn: a body another write changed is drawn again, and only then (a field changed elsewhere
+	// leaves the cursor where it is).
+	const shownDoc = useRef<string | null>(null);
+	useEffect(() => {
+		const doc = base ? JSON.stringify(base.doc ?? null) : null;
+		const was = shownDoc.current;
+		shownDoc.current = doc;
+		if (!forElsewhere.current) return;
+		forElsewhere.current = false;
+		if (was !== null && doc !== was) setBodyKey((key) => key + 1);
+	}, [base]);
+
 	/**
 	 * Sends my changes with the version they were made on (`at`: another version, when the person chose to save over a newer one). Resolves to the saved
 	 * record's id, or `null` when the save was refused: a conflict, an ended session, or a check (`refusal`).
 	 */
-	const save = useCallback(
+	const send = useCallback(
 		async (at?: number): Promise<{ id: string } | null> => {
 			if (!loaded || version === null) return null;
 			if (!draft.dirty && source.id !== null) return { id: source.id };
@@ -303,6 +357,17 @@ export function useEntryEditor(
 		},
 		[loaded, version, written, draft, source.id, isEntry, title, doc, saveOp, latestOp, reload, t, fields, notChosen],
 	);
+	/** A write of the editor's own (its save, archiving it): the notice it brings is not news from elsewhere, and the caller reads after it. */
+	const own = useCallback(async <T>(write: () => Promise<T>): Promise<T> => {
+		saving.current = true;
+		try {
+			return await write();
+		} finally {
+			saving.current = false;
+		}
+	}, []);
+	/** The save, while which the write notice it brings is counted as the editor's own (`afterWrite`'s `saving`). */
+	const save = useCallback((at?: number) => own(() => send(at)), [own, send]);
 
 	return {
 		/** The saved copy as the server gave it; `null` while it loads. */
@@ -325,6 +390,7 @@ export function useEntryEditor(
 		/** Why the last save was refused, when it was a check and not a conflict or an ended session. */
 		refusal: saveOp.refusal && saveOp.refusal.error !== "conflict" && !signedOut ? saveOp.refusal : null,
 		save,
+		own,
 		conflict,
 		/** The conflict's way out: the server's latest goes in and my changes are dropped. */
 		/** Resolves to whether the latest was read: not read (refused, no answer), nothing is dropped and the conflict stands, and a toast says so. */

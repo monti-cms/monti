@@ -7,7 +7,7 @@ import {
 	DropdownMenuSearch,
 	DropdownMenuSeparator,
 } from "@monti-cms/ui";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { DateRows } from "./date-rows";
@@ -39,6 +39,21 @@ type MenuProps = {
 	onHide: () => void;
 };
 
+/**
+ * What a menu's counts count while the list shows one folder (LT-12): picking a value is a filter, and a filter looks through the folders
+ * below (doc 07, T54), so each count is the rows the list shows once it is picked, not the rows of the folder on the screen.
+ */
+function Counted({ query, children }: { query: Query; children: ReactNode }) {
+	const { t } = useAdmin();
+	if (query.folder === undefined || query.scope !== "here") return children;
+	return (
+		<DropdownMenuGroup>
+			<DropdownMenuLabel>{t(query.folder === null ? "list.countedEverywhere" : "list.countedBelow")}</DropdownMenuLabel>
+			{children}
+		</DropdownMenuGroup>
+	);
+}
+
 const filterOf = (state: ListState, column: string) => state.filters.find((filter) => filterColumn(filter) === column);
 
 function HideRow({ onHide }: { onHide: () => void }) {
@@ -64,18 +79,20 @@ function StatusMenu({ state, query, setFilter, onHide }: MenuProps) {
 	};
 	return (
 		<>
-			{STATES.map((value) => (
-				<ValueRow
-					key={value}
-					label={names[value]}
-					counted={count(facets, value)}
-					checked={chosen.includes(value)}
-					onToggle={() => {
-						const any = toggled(chosen, value);
-						setFilter("status", any.length ? { on: "status", any } : null);
-					}}
-				/>
-			))}
+			<Counted query={query}>
+				{STATES.map((value) => (
+					<ValueRow
+						key={value}
+						label={names[value]}
+						counted={count(facets, value)}
+						checked={chosen.includes(value)}
+						onToggle={() => {
+							const any = toggled(chosen, value);
+							setFilter("status", any.length ? { on: "status", any } : null);
+						}}
+					/>
+				))}
+			</Counted>
 			<HideRow onHide={onHide} />
 		</>
 	);
@@ -97,18 +114,20 @@ function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
 	const locales = [...new Set([...(facets ?? []).map((facet) => facet.value ?? ""), ...chosen])].filter(Boolean);
 	return (
 		<>
-			{locales.map((value) => (
-				<ValueRow
-					key={value}
-					label={languageName(value)}
-					counted={count(facets, value)}
-					checked={chosen.includes(value)}
-					onToggle={() => {
-						const any = toggled(chosen, value);
-						setFilter("locale", any.length ? { on: "locale", any } : null);
-					}}
-				/>
-			))}
+			<Counted query={query}>
+				{locales.map((value) => (
+					<ValueRow
+						key={value}
+						label={languageName(value)}
+						counted={count(facets, value)}
+						checked={chosen.includes(value)}
+						onToggle={() => {
+							const any = toggled(chosen, value);
+							setFilter("locale", any.length ? { on: "locale", any } : null);
+						}}
+					/>
+				))}
+			</Counted>
 			<DropdownMenuSeparator />
 			<DropdownMenuGroup>
 				<DropdownMenuLabel>{t("list.translation")}</DropdownMenuLabel>
@@ -172,14 +191,16 @@ function ValuesMenu({ column, state, query, setFilter, onHide }: MenuProps) {
 	return (
 		<>
 			{kind === "relation" && <DropdownMenuSearch value={find} onValueChange={setFind} label={t("list.findValue")} />}
-			<ValueRow
-				label={t("list.none")}
-				counted={count(facets, null)}
-				checked={chosen.includes(null)}
-				onToggle={() => toggle(null)}
-			/>
-			<DropdownMenuSeparator />
-			{kind === "relation" && (facets?.length ?? 0) > LONG ? <DropdownMenuScroll>{rows}</DropdownMenuScroll> : rows}
+			<Counted query={query}>
+				<ValueRow
+					label={t("list.none")}
+					counted={count(facets, null)}
+					checked={chosen.includes(null)}
+					onToggle={() => toggle(null)}
+				/>
+				<DropdownMenuSeparator />
+				{kind === "relation" && (facets?.length ?? 0) > LONG ? <DropdownMenuScroll>{rows}</DropdownMenuScroll> : rows}
+			</Counted>
 			<HideRow onHide={onHide} />
 		</>
 	);
@@ -191,12 +212,14 @@ function EmptyMenu({ column, state, query, setFilter, onHide }: MenuProps) {
 	const on = filterOf(state, column.id)?.on === "empty";
 	return (
 		<>
-			<ValueRow
-				label={t("list.isEmpty")}
-				counted={count(facets, "empty")}
-				checked={on}
-				onToggle={() => setFilter(column.id, on ? null : { on: "empty", field: column.id })}
-			/>
+			<Counted query={query}>
+				<ValueRow
+					label={t("list.isEmpty")}
+					counted={count(facets, "empty")}
+					checked={on}
+					onToggle={() => setFilter(column.id, on ? null : { on: "empty", field: column.id })}
+				/>
+			</Counted>
 			<HideRow onHide={onHide} />
 		</>
 	);

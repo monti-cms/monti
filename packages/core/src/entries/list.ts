@@ -226,15 +226,23 @@ function filterSql(
 	}
 }
 
-/** The conditions of a query on its collection's representatives. `skip` leaves out the filters on one column, for that column's counts. */
-function whereSql(ctx: OperationContext, query: ListQuery, skip?: (filter: Filter) => boolean): RawBuilder<unknown> {
+/**
+ * The conditions of a query on its collection's representatives. `skip` leaves out the filters on one column, for that column's counts;
+ * `asLooking` reaches as a filter does whatever the query holds: a column's counts are what picking its value would list (LT-12).
+ */
+function whereSql(
+	ctx: OperationContext,
+	query: ListQuery,
+	skip?: (filter: Filter) => boolean,
+	asLooking = false,
+): RawBuilder<unknown> {
 	const definition = collectionOf(ctx, query.collection);
 	const now = ctx.now();
 	const parts: RawBuilder<unknown>[] = [sql`true`];
 	const text = query.search?.text.trim();
 	// A folder lists what sits right in it; a search or a filter looks for entries, so inside a folder it goes through its subfolders, and at the top
 	// level through every folder (doc 07, inside a folder; T54).
-	const looking = Boolean(text) || query.filters.length > 0;
+	const looking = asLooking || Boolean(text) || query.filters.length > 0;
 	if (query.folder !== undefined && query.scope === "here") {
 		if (query.folder !== null && looking)
 			parts.push(sql`rep.folder_id in (with recursive tree as (
@@ -431,7 +439,9 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 			count: Number(rows.find((row) => row.state === state)?.count ?? 0),
 		}));
 	}
-	const where = whereSql(ctx, query, (filter) => columnOf(filter) === column);
+	// Picking a value is a filter, and a filter looks through the folders under the open one (doc 07, T54): each count is the rows the list
+	// shows once that value is picked, the status menu's too (its every-state filter reaches as far).
+	const where = whereSql(ctx, query, (filter) => columnOf(filter) === column, true);
 	if (column === "translation") {
 		// The translation filters' menu rows: how many rows each would leave, for the languages the locale filter picked (or all).
 		const { locales } = ctx.site.schema();

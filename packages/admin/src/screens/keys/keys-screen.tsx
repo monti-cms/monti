@@ -66,8 +66,8 @@ const choice = (keyId: string, model: string) => JSON.stringify([keyId, model]);
  */
 export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 	const { t } = useAdmin();
-	const list = useRead<KeyList>("keys.list", {}, { afterWrites: true });
-	const models = useRead<ModelList>("models.list", {}, { afterWrites: true });
+	const list = useRead<KeyList>("keys.list");
+	const models = useRead<ModelList>("models.list");
 	const setQuick = useOperation("models.setQuick");
 	// Opening the model menu asks the keys' services for their lists again, not more than once in a while (doc 10: the panel's model menu
 	// does the same). The menu shows what is stored at once.

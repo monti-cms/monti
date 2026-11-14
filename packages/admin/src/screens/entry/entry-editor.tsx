@@ -106,6 +106,7 @@ import {
 	PairedView,
 	SourceChangedBanner,
 	SourceChangeRows,
+	SourceDraftBanner,
 	SourcePane,
 	type SourceView,
 	SourceViewPicker,
@@ -278,7 +279,7 @@ export function EntryEditor({
 	const trashed = Boolean(read?.entry.trashedAt);
 	const readOnly = archived || trashed;
 	// In the trash (doc 11): how long it stays and what a permanent delete keeps, read with it.
-	const inTrash = useRead<TrashedEntry>("trash.get", { id }, { skip: !trashed, afterWrites: true, quiet: true }).data;
+	const inTrash = useRead<TrashedEntry>("trash.get", { id }, { skip: !trashed, quiet: true }).data;
 	const trash = useTrashMove();
 	const restore = useRestore();
 	const purge = usePurge();
@@ -1094,6 +1095,9 @@ export function EntryEditor({
 					{compared && !readOnly ? (
 						<SourceChangedBanner ref={handOff} compared={compared} onConfirmAll={() => void translation.confirmAll()} />
 					) : null}
+					{compared && !readOnly ? (
+						<SourceDraftBanner compared={compared} onOpenSource={() => onOpen(compared.source.id)} />
+					) : null}
 				</>
 			}
 		>
@@ -1187,7 +1191,7 @@ export function EntryEditor({
 													toast(t("leave.uploads.title"));
 													return;
 												}
-												if ((await archive.run({ ids: [id] })).ok) await editor.reload();
+												if ((await editor.own(() => archive.run({ ids: [id] }))).ok) await editor.reload();
 											}}
 										>
 											<Archive aria-hidden />

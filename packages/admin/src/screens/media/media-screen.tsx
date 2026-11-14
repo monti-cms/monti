@@ -408,7 +408,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const setState = (next: MediaState, options?: { replace?: boolean }) =>
 		go({ screen: "media", params: writeMediaState(next) }, options);
 	const hrefOf = (next: MediaState) => href({ screen: "media", params: writeMediaState(next) });
-	const read = useRead<MediaQueryResult>("media.query", queryOf(state), { afterWrites: true });
+	const read = useRead<MediaQueryResult>("media.query", queryOf(state));
 	const folders = useFolders("media", true);
 	const upload = useUpload();
 	const move = useMoveMedia();
@@ -609,7 +609,15 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		</BulkBar>
 	);
 	const listed = state.view === "list";
+	// A menu counts what picking it would find, and a filter looks through the folders below (MD-07): said over its rows while the library has
+	// folders, since the page shows one folder's files.
+	const reachesAll = state.folder === null || (state.everywhere && state.search.trim() !== "");
+	const countedWhere =
+		state.folder === null && folders.children(null).length === 0
+			? undefined
+			: t(reachesAll ? "list.countedEverywhere" : "list.countedBelow");
 	const kindFilter: FilterProps<MediaKind> = {
+		countedWhere,
 		values: KINDS.map((kind: MediaKind) => ({
 			value: kind,
 			label: t(`library.kind.${kind}`),
@@ -619,6 +627,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		onChange: (kinds) => setState({ ...state, kinds, page: 1 }),
 	};
 	const usedFilter: FilterProps<(typeof USES)[number]> = {
+		countedWhere,
 		values: USES.map((use) => ({ value: use, label: t(`library.used.${use}`), count: data?.counts[use] ?? 0 })),
 		chosen: state.used,
 		onChange: (used) => setState({ ...state, used, page: 1 }),

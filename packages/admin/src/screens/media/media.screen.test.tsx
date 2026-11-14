@@ -365,8 +365,9 @@ describe("browsing", () => {
 		await openAssets();
 		const kind = main().getByRole("button", { name: "종류" });
 		await userEvent.click(kind);
-		// What picking it would find: three here and one in the folder under it.
+		// What picking it would find: three here and one in the folder under it. The menu says so over its rows (MD-07).
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toHaveTextContent("4");
+		await expect.element(page.getByRole("menu").getByText("이 폴더와 하위 폴더에서 센 수")).toBeVisible();
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /파일/ }));
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /이미지/ })).toBeVisible();
 		await userEvent.keyboard("{Escape}");

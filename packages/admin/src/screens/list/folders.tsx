@@ -34,7 +34,7 @@ export type Folders = {
 
 /** The folders of a scope, read again after every write (a move changes the counts). Off when a collection does not use folders. */
 export function useFolders(scope: FolderScope, on: boolean): Folders {
-	const read = useRead<{ folders: FolderNode[] }>("folders.tree", { scope }, { afterWrites: true, skip: !on });
+	const read = useRead<{ folders: FolderNode[] }>("folders.tree", { scope }, { skip: !on });
 	return useMemo(() => {
 		const list = on ? (read.data?.folders ?? []) : [];
 		const byId = new Map(list.map((folder) => [folder.id, folder]));

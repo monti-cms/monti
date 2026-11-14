@@ -45,7 +45,7 @@ export function TrashedItemPanel({
 }) {
 	const { t } = useAdmin();
 	const languageName = useLanguageName();
-	const read = useRead<TrashedEntry>("trash.get", { id }, { afterWrites: true, quiet: true });
+	const read = useRead<TrashedEntry>("trash.get", { id }, { quiet: true });
 	const item = read.data;
 	useCoverCorner(true);
 	// Read again after it left the trash (restored, deleted): the answer is a refusal, and the panel has nothing to show.

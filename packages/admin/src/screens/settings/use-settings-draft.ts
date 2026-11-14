@@ -143,7 +143,7 @@ function proposalPlaces(data: SettingsRead, catalog: Catalog | null, item: Propo
  */
 export function useSettingsDraft() {
 	const { t } = useAdmin();
-	const read = useRead<SettingsRead>("settings.read", {}, { afterWrites: true });
+	const read = useRead<SettingsRead>("settings.read");
 	// The editor tab lists every block of the site, whatever a collection allows.
 	const catalog = useRead<Catalog>("blocks.catalog", {});
 	const data = read.data;

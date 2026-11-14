@@ -18,8 +18,8 @@ export const reasonOf = (refusal: Refusal): Message => refusal.reason ?? { key: 
  */
 export const isLost = (refusal: Refusal) => refusal.status === NO_ANSWER.status || refusal.reason === null;
 
-/** How a read made again went (`useRead`'s `reload`). */
-type Reread = { ok: true } | { ok: false; refusal: Refusal };
+/** How a read made again went (`useRead`'s `reload`): `changed` when it brought another answer than the one the screen held. */
+type Reread = { ok: true; changed: boolean } | { ok: false; refusal: Refusal };
 
 const refusalOf = (answer: Answer): Refusal => {
 	const body = (answer.body ?? {}) as { error?: string; reason?: Message };
@@ -66,8 +66,11 @@ export function useOperation<Output = unknown>(name: string) {
 }
 
 /**
- * Reads with an operation when the screen opens, whenever `reload` is called, and with `afterWrites` after every write that goes through (the
- * sidebar's counts, doc 15). With `skip` it reads nothing (a new record has nothing to read yet).
+ * Reads with an operation when the screen opens, whenever `reload` is called, and after every write that goes through anywhere in the admin
+ * (`wrote`): what a screen shows from the server is never older than the last write this admin made, whichever screen or panel made it (an
+ * assistant's proposal applied from its panel, a publish from the list). One rule for every read, so no screen has to know which writes touch
+ * it. A read whose screen holds unsaved work over it says `afterWrites: false` and decides itself what a write means for it (the entry
+ * editor: `useEntryEditor`). With `skip` it reads nothing (a new record has nothing to read yet).
  *
  * A read that is refused or gets no answer is said at the screen's top, with "try again" (`ReadFailedBanner`): the caller does nothing for
  * that. Two kinds of read say otherwise:
@@ -92,29 +95,37 @@ export function useRead<Output>(
 	const key = JSON.stringify(input);
 	const latest = useRef(0);
 	const skip = options.skip ?? false;
+	const afterWrites = options.afterWrites ?? true;
+	/** The last answer, as text: a read again that brings the same answer keeps the one the screen holds (see `reload`). */
+	const held = useRef<string | null>(null);
 	/**
 	 * Reads again. Resolves to how the read went: a caller that goes on from the new read must not go on from the old one, and says why only when
 	 * the reason is its own to say (an ended session has its banner).
 	 */
 	const reload = useCallback(async (): Promise<Reread> => {
-		if (skip) return { ok: true };
+		if (skip) return { ok: true, changed: false };
 		const call = ++latest.current;
 		const result = await run(JSON.parse(key));
+		let changed = false;
 		if (call === latest.current) {
 			if (result.ok) {
-				setData(result.body);
+				// Every write anywhere reads again, and most bring back what was there: the answer keeps its identity then, so nothing made from
+				// it is made again (the body editor is made from the blocks' catalog: made again, it would be destroyed under the cursor).
+				const text = JSON.stringify(result.body) ?? null;
+				if (text !== held.current) {
+					changed = true;
+					held.current = text;
+					setData(result.body);
+				}
 				setRefusal(null);
 			} else setRefusal(result.refusal);
 		}
-		return result.ok ? { ok: true } : result;
+		return result.ok ? { ok: true, changed } : result;
 	}, [run, key, skip]);
 	useEffect(() => {
 		void reload();
 	}, [reload]);
-	useEffect(
-		() => (options.afterWrites ? onWrite(() => void reload()) : undefined),
-		[options.afterWrites, onWrite, reload],
-	);
+	useEffect(() => (afterWrites ? onWrite(() => void reload()) : undefined), [afterWrites, onWrite, reload]);
 	// What the screen's top says of this read. `me` is this read for its whole life; the newest `reload` is the one made again.
 	const me = useRef({}).current;
 	const again = useRef(reload);

@@ -101,6 +101,8 @@ describe("folders in the list", () => {
 		await Main.run();
 		await userEvent.click(folderLink("시리즈 원고"));
 		await userEvent.click(main().getByRole("button", { name: "상태" }));
+		// LT-12: the counts are what a pick lists, so the menu says how far they reach.
+		await expect.element(page.getByRole("menu").getByText("이 폴더와 하위 폴더에서 센 수")).toBeVisible();
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /발행됨/ }));
 		await userEvent.keyboard("{Escape}");
 		await expect.element(row("지난 글 1")).toBeVisible();

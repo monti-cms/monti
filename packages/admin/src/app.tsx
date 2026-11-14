@@ -127,7 +127,7 @@ const COUNT_LOOKS = 20;
 function Screens({ route, go }: { route: Route; go: (route: Route, options?: { replace?: boolean }) => void }) {
 	const { screen, templates, toolPages, onWrite } = useAdmin();
 	const assistant = useAssistant();
-	const counts = useRead<FrameCounts>("frame.counts", {}, { afterWrites: true });
+	const counts = useRead<FrameCounts>("frame.counts");
 	const [review, setReview] = useState(0);
 	// Every move of the frame asks first when the open screen has unsaved changes (doc 05, flow 11 step 04).
 	const leave = useLeave();

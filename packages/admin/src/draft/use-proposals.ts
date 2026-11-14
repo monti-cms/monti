@@ -30,7 +30,7 @@ export function useProposals(target: Target | null, also: Target[] = NO_OTHERS) 
 	const { data, reload } = useRead<ProposalItem[]>(
 		"proposals.forTarget",
 		{ ...(target ?? NONE), also },
-		{ afterWrites: true, skip: !target },
+		{ skip: !target },
 	);
 	return { items: target ? (data ?? []) : [], reload };
 }

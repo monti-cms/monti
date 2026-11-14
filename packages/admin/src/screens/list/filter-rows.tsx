@@ -1,4 +1,4 @@
-import { DropdownMenuCheckboxItem, MenuShortcut } from "@monti-cms/ui";
+import { DropdownMenuCheckboxItem, DropdownMenuGroup, DropdownMenuLabel, MenuShortcut } from "@monti-cms/ui";
 
 /**
  * One value of a column's filter, in every table's column menu (components/list.md): a box that is ticked or not, and at the end how many rows it would show. The
@@ -33,21 +33,27 @@ export type FilterProps<Value extends string> = {
 	values: readonly { value: Value; label: string; count: number }[];
 	chosen: readonly Value[];
 	onChange: (chosen: Value[]) => void;
+	/** Where the counts are counted, said over the rows when it is more than the screen shows (a folder's files and those below it). */
+	countedWhere?: string;
 };
 
 /** A filter's values as a column menu's rows. */
-export function FilterRows<Value extends string>({ values, chosen, onChange }: FilterProps<Value>) {
-	return (
-		<>
-			{values.map((each) => (
-				<ValueRow
-					key={each.value}
-					checked={chosen.includes(each.value)}
-					onToggle={() => onChange(toggled(chosen, each.value))}
-					label={each.label}
-					counted={each.count}
-				/>
-			))}
-		</>
+export function FilterRows<Value extends string>({ values, chosen, onChange, countedWhere }: FilterProps<Value>) {
+	const rows = values.map((each) => (
+		<ValueRow
+			key={each.value}
+			checked={chosen.includes(each.value)}
+			onToggle={() => onChange(toggled(chosen, each.value))}
+			label={each.label}
+			counted={each.count}
+		/>
+	));
+	return countedWhere ? (
+		<DropdownMenuGroup>
+			<DropdownMenuLabel>{countedWhere}</DropdownMenuLabel>
+			{rows}
+		</DropdownMenuGroup>
+	) : (
+		rows
 	);
 }

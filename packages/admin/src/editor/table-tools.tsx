@@ -51,6 +51,8 @@ function caretOf(editor: Editor): Caret | null {
 
 /** The table's own `<table>`: the editor puts it in a wrapper that scrolls a wide table. */
 function tableElement(editor: Editor, pos: number): HTMLTableElement | null {
+	// Measured while drawing: an editor made again has no view for a moment.
+	if (editor.isDestroyed) return null;
 	const dom = editor.view.nodeDOM(pos);
 	if (!(dom instanceof HTMLElement)) return null;
 	return dom instanceof HTMLTableElement ? dom : dom.querySelector("table");
