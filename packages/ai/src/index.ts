@@ -1,5 +1,6 @@
 export { aiSdkProvider } from "./ai-sdk";
 export { ScreenContext } from "./context";
+export type { AiFailure } from "./failure";
 export { type Scripted, type ScriptedProvider, type ScriptedTurn, scriptedProvider } from "./fake";
 export { assistantMessages } from "./messages";
 export {

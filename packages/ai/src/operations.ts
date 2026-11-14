@@ -17,6 +17,7 @@ import { QuickInput, type QuickOutput, quickFill } from "./quick";
 import {
 	abortRun,
 	DEFAULT_LIMITS,
+	endOf,
 	HOLD_MS,
 	historyBudget,
 	type RunEnd,
@@ -560,7 +561,7 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 										.map((message) => message.message as StoredMessage),
 								),
 								proposalId: run.proposal_id,
-								end: dead ? { status: "interrupted", reason: "connection" } : (run.ended as RunEnd | null),
+								end: dead ? { status: "interrupted", reason: "connection" } : endOf(run.ended),
 								usage: run.usage,
 							};
 						}),

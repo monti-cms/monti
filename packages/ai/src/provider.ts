@@ -74,20 +74,21 @@ export interface ModelProvider {
 export type ProviderFor = (key: OpenKey) => ModelProvider;
 
 /**
- * The service did not do what was asked. `refused`: it answered no (credits, a limit, the key, the model); the person can do something about it.
- * `unreachable`: it did not answer. `interrupted`: it began to answer and broke off, or went silent; what it said so far is no answer, and the
- * run can be gone on with. `detail` is the service's own words, shown as they are.
+ * The service did not do what was asked. `refused`: it answered no (the key, the model, the request); the person can do something about it.
+ * `limit`: it answered no for a rate limit, a quota or credits. `unreachable`: it did not answer. `interrupted`: it began to answer and broke off,
+ * or went silent; what it said so far is no answer, and the run can be gone on with. `detail` is the service's own words: kept in the server's
+ * record of a run, never sent to the browser (`AiFailure`).
  */
 export class ProviderError extends Error {
 	constructor(
-		readonly kind: "refused" | "unreachable" | "interrupted",
+		readonly kind: "refused" | "limit" | "unreachable" | "interrupted",
 		readonly detail: string,
 		readonly status?: number,
 		/** What the service counted for an answer that broke off, when it said. */
 		readonly usage?: Usage,
 	) {
 		super(
-			`The model service ${kind === "refused" ? "refused" : kind === "interrupted" ? "broke off" : "could not be reached"}: ${detail}`,
+			`The model service ${kind === "refused" ? "refused" : kind === "limit" ? "refused for a limit" : kind === "interrupted" ? "broke off" : "could not be reached"}: ${detail}`,
 		);
 	}
 }

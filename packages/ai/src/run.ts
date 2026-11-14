@@ -9,6 +9,7 @@ import {
 import { type Kysely, sql } from "kysely";
 import { z } from "zod";
 import { requestWith, ScreenContext, systemPrompt } from "./context";
+import { type AiFailure, failed, failureOf } from "./failure";
 import {
 	type ChatMessage,
 	ProviderError,
@@ -20,7 +21,16 @@ import {
 	type TurnEvent,
 	type Usage,
 } from "./provider";
-import { type AssistantTool, assistantTools, callTool, shortened, type ToolOutcome, toolError } from "./tools";
+import {
+	type AssistantTool,
+	assistantTools,
+	callTool,
+	itemRunTools,
+	shortened,
+	smallRunTools,
+	type ToolOutcome,
+	toolError,
+} from "./tools";
 
 /**
  * What a run may spend before it stops and offers to go on (doc 10, limits).
@@ -126,8 +136,8 @@ export const RunInput = z
 		context: ScreenContext.optional(),
 		model: z.object({ keyId: z.string(), model: z.string() }).optional(),
 		/**
-		 * The screen's own buttons, which have no model menu (a request on picked words, "✦ Translate"): the run uses the quick-task model picked
-		 * on the keys screen, also when the conversation began on another. `model` cannot be given with it.
+		 * The screen's own buttons, which have no model menu (a request on picked words, "✦ Translate"): a small run, on the quick-task model
+		 * picked on the keys screen (also when the conversation began on another) and with the small runs' tools. `model` cannot be given with it.
 		 */
 		quick: z.boolean().optional(),
 		thinking: z.enum(THINKING as [Thinking, ...Thinking[]]).optional(),
@@ -157,9 +167,19 @@ export type RunEnd = {
 	status: RunStatus;
 	/** Why a run that can go on stopped: a limit, or the connection. */
 	reason?: "turns" | "tokens" | "time" | "connection";
-	/** Why it failed: the service said no or did not answer (with the key's name), or there is no key or model to run on. */
-	error?: { kind: "refused" | "unreachable" | "no-key"; detail: string; keyName: string | null };
+	/** Why it failed, in the one shape every AI failure has; the service's own words are not in it. */
+	error?: AiFailure;
 };
+
+/** A run's end as it is stored: with the service's own words for a failure, kept on the server and never sent to the browser. */
+type StoredEnd = RunEnd & { detail?: string };
+
+/** A stored end as the browser is told it: without the service's words. */
+export function endOf(stored: unknown): RunEnd | null {
+	if (stored === null || stored === undefined) return null;
+	const { detail: _detail, ...end } = stored as StoredEnd;
+	return end;
+}
 
 /** What a run tells the panel as it goes (doc 10, the event stream). */
 export type RunEvent =
@@ -226,7 +246,7 @@ async function pickModel(
 ): Promise<{ keyId: string; model: string; thinking: Thinking }> {
 	const listed = await modelsOf(monti);
 	const choice = asked === "quick" ? listed.quick : (asked ?? listed.assistant);
-	if (!choice) throw new CheckError({ key: "assistant.noKey" });
+	if (!choice) throw failed({ reason: "noKey", keyName: null });
 	const model = listed.keys.find((key) => key.id === choice.keyId)?.models.find((each) => each.id === choice.model);
 	if (!model) throw new CheckError({ key: "assistant.noModel" });
 	// A model that cannot think has no thinking level; one that can starts at "medium" (doc 10, models).
@@ -396,13 +416,13 @@ export async function* runAssistant(
 	 * Ends this request's part of the run. Only the request that holds the run says how it ended: one that finds the run is no longer its own
 	 * has lost it (`lost`), ends nothing, and leaves what was said meanwhile to the request that holds the run.
 	 */
-	const finish = async (ended: RunEnd) => {
+	const finish = async (ended: RunEnd, detail?: string) => {
 		await db.transaction().execute(async (trx) => {
 			const written = await trx
 				.updateTable("runs")
 				.set({
 					status: ended.status,
-					ended: JSON.stringify(ended),
+					ended: JSON.stringify((detail === undefined ? ended : { ...ended, detail }) satisfies StoredEnd),
 					ended_at: ended.status === "waiting" ? null : now(),
 					usage: JSON.stringify(usage),
 					leased_until: null,
@@ -431,7 +451,7 @@ export async function* runAssistant(
 	try {
 		const key = run.key_id === null ? null : await monti.keys.open(run.key_id);
 		if (!key) {
-			await finish({ status: "failed", error: { kind: "no-key", detail: "", keyName: null } });
+			await finish({ status: "failed", error: { reason: "noKey", keyName: null } });
 			return;
 		}
 		const provider = settings.provider(key);
@@ -439,7 +459,8 @@ export async function* runAssistant(
 			.find((each) => each.id === key.id)
 			?.models.find((each) => each.id === run.model);
 		const thinks = model?.thinking ?? false;
-		const tools = assistantTools(monti);
+		// A small run gets the small runs' tools; a request at a proposed change has no screen to move (doc 10).
+		const tools = run.small ? smallRunTools(monti) : run.kind === "chat" ? assistantTools(monti) : itemRunTools(monti);
 		const byName = new Map(tools.map((tool) => [tool.name, tool]));
 		const system = await systemPrompt(monti);
 
@@ -817,16 +838,16 @@ export async function* runAssistant(
 					return;
 				}
 				if (!(error instanceof ProviderError)) throw error;
-				// The service said no (credits, a limit) or broke off: an answer in the conversation, with the key's name (doc 10, errors). An answer
-				// that began and broke off is no answer: nothing of it is kept, and the run can be gone on with, which asks for that turn again.
+				// The service said no (a limit, credits, the key) or broke off: an answer in the conversation, with the key's name (doc 10, errors). An
+				// answer that began and broke off is no answer: nothing of it is kept, and the run can be gone on with, which asks for that turn again.
+				// The service's own words stay with the stored run, without the key.
 				const detail = withoutKey(error.detail, key.secret);
-				await finish(
-					error.kind === "refused"
-						? { status: "failed", error: { kind: "refused", detail, keyName: key.name } }
-						: error.kind === "interrupted" || mine.some((message) => message.role === "assistant")
-							? { status: "interrupted", reason: "connection" }
-							: { status: "failed", error: { kind: "unreachable", detail, keyName: key.name } },
-				);
+				if (
+					error.kind === "interrupted" ||
+					(error.kind === "unreachable" && mine.some((message) => message.role === "assistant"))
+				)
+					await finish({ status: "interrupted", reason: "connection" });
+				else await finish({ status: "failed", error: failureOf(error, key.name) }, detail);
 				return;
 			} finally {
 				stopper.signal.removeEventListener("abort", endTurn);
@@ -888,8 +909,8 @@ export async function* runAssistant(
 }
 
 /**
- * A service's own words, safe to show and to store: a service that repeats the key it was sent in its error (some do, whole or in part) does
- * not get it into the conversation.
+ * A service's own words, safe to store: a service that repeats the key it was sent in its error (some do, whole or in part) does not get it into
+ * the run's record.
  */
 export function withoutKey(detail: string, secret: string): string {
 	// Every key, however short: a server someone runs themselves may take a token of a few letters.
@@ -971,6 +992,8 @@ type RunRow = {
 	id: string;
 	conversation_id: string;
 	kind: "chat" | "spot" | "again";
+	/** A small run: it gets the small runs' tools (`smallRunTools`). */
+	small: boolean;
 	request: string;
 	key_id: string | null;
 	model: string;
@@ -1188,6 +1211,7 @@ async function open(monti: Monti, input: RunInput, until: Date): Promise<RunRow>
 		id: randomId(),
 		conversation_id: id,
 		kind,
+		small: input.quick === true,
 		status: "running",
 		request,
 		context: JSON.stringify(input.context ?? null),

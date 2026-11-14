@@ -160,7 +160,7 @@ describe("the real provider, on the AI SDK", () => {
 		expect(JSON.stringify(net.sent[1].body)).toContain('"effort":"low"');
 	});
 
-	it("10-1 a service that says no (credits) is a refusal with its own words; one that breaks off is not reached", async () => {
+	it("10-1 a service that says no is a refusal, one that says no for credits a limit, with its own words; one that breaks off is not reached", async () => {
 		const refusing = network(
 			() =>
 				new Response(
@@ -179,9 +179,23 @@ describe("the real provider, on the AI SDK", () => {
 			request([{ role: "user", text: "안녕" }]),
 		).catch((error: unknown) => error);
 		expect(refused).toBeInstanceOf(ProviderError);
-		expect(refused).toMatchObject({ kind: "refused", status: 400 });
+		// Credits are a limit, whatever status the service gives it.
+		expect(refused).toMatchObject({ kind: "limit", status: 400 });
 		expect((refused as ProviderError).detail).toContain("credit balance is too low");
 		expect((refused as ProviderError).message).not.toContain(KEY.secret);
+
+		const badKey = network(
+			() =>
+				new Response(
+					JSON.stringify({ type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } }),
+					{ status: 401, headers: { "content-type": "application/json" } },
+				),
+		);
+		const noKey = await turn(
+			aiSdkProvider({ fetch: badKey.fetch })(KEY),
+			request([{ role: "user", text: "안녕" }]),
+		).catch((error: unknown) => error);
+		expect(noKey).toMatchObject({ kind: "refused", status: 401 });
 
 		const down: typeof globalThis.fetch = async () => {
 			throw new TypeError("fetch failed");
@@ -587,7 +601,7 @@ describe("what the first trial against a real service showed (T161)", () => {
 			{ status: 429, headers: { "content-type": "application/json" } },
 		);
 
-	it("10-1 a limit the service names is a refusal in its words, also after the SDK tried again and gave up: not a service that could not be reached", async () => {
+	it("10-1 a limit the service names is a limit in its words, also after the SDK tried again and gave up: not a service that could not be reached", async () => {
 		const net = network(limited);
 		const refused = await turn(
 			aiSdkProvider({ fetch: net.fetch })(KEY),
@@ -596,13 +610,13 @@ describe("what the first trial against a real service showed (T161)", () => {
 		// Asked, and asked once more.
 		expect(net.sent).toHaveLength(2);
 		expect(refused).toBeInstanceOf(ProviderError);
-		expect(refused).toMatchObject({ kind: "refused", status: 429 });
+		expect(refused).toMatchObject({ kind: "limit", status: 429 });
 		expect((refused as ProviderError).detail).toBe("This model is temporarily rate-limited upstream.");
 		// The quick tasks' one call is read the same way.
 		const answered = await aiSdkProvider({ fetch: network(limited).fetch })(KEY)
 			.answer({ model: "claude-haiku-5-5", system: "Fill a field.", prompt: "요약", schema: { type: "object" } })
 			.catch((error: unknown) => error);
-		expect(answered).toMatchObject({ kind: "refused", status: 429 });
+		expect(answered).toMatchObject({ kind: "limit", status: 429 });
 		expect((answered as ProviderError).detail).not.toContain("Failed after");
 	});
 

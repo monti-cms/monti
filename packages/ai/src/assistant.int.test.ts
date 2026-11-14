@@ -197,7 +197,7 @@ describe("asking from a list (flow 2, 01–05)", () => {
 		const monti = site();
 		expect(await monti.run("assistant.state", {}, admin)).toEqual({ connected: false, recent: [], keepDays: 30 });
 		await expect(ask(monti, { request: "요약이 비어 있는 글 찾아 줘" })).rejects.toMatchObject({
-			reason: { key: "assistant.noKey" },
+			reason: { key: "assistant.failed", values: { reason: "noKey" } },
 		});
 		expect(await db.selectFrom("conversations").selectAll().execute()).toEqual([]);
 
@@ -351,7 +351,7 @@ describe("changing things (flow 2, 07–13)", () => {
 						input: {
 							id,
 							version: at,
-							ops: [{ op: "replaceText", block: "b_1", from: 0, to: 6, text: "" }],
+							ops: [{ op: "setText", block: "b_1", text: "발행하고 나서" }],
 							[GROUP]: "다듬기",
 						},
 					},
@@ -360,7 +360,7 @@ describe("changing things (flow 2, 07–13)", () => {
 						input: {
 							id,
 							version: at,
-							ops: [{ op: "replaceText", block: "b_2", from: 7, to: 10, text: "" }],
+							ops: [{ op: "setText", block: "b_2", text: "바뀐 부분은 두 가지입니다." }],
 							[GROUP]: "다듬기",
 						},
 					},
@@ -437,7 +437,7 @@ describe("changing things (flow 2, 07–13)", () => {
 						input: {
 							id,
 							version: at,
-							ops: [{ op: "replaceText", block: "b_1", from: 0, to: 6, text: "" }],
+							ops: [{ op: "setText", block: "b_1", text: "발행하고 나서 만들기로 한 메모입니다." }],
 							[GROUP]: "다듬기",
 						},
 					},
@@ -452,7 +452,7 @@ describe("changing things (flow 2, 07–13)", () => {
 			(request) => {
 				// It sees the change it is asked about, and not the conversation around it.
 				expect(request.messages).toHaveLength(1);
-				expect(JSON.stringify(request.messages[0])).toContain("replaceText");
+				expect(JSON.stringify(request.messages[0])).toContain("setText");
 				return {
 					calls: [
 						{
@@ -460,7 +460,7 @@ describe("changing things (flow 2, 07–13)", () => {
 							input: {
 								id,
 								version: at,
-								ops: [{ op: "replaceText", block: "b_1", from: 14, to: 19, text: "만든" }],
+								ops: [{ op: "setText", block: "b_1", text: "발행하고 나서 만든 메모입니다." }],
 								[GROUP]: "다듬기",
 							},
 						},
@@ -612,6 +612,25 @@ describe("the model, per conversation (flow 2, 22–24)", () => {
 		).rejects.toBeTruthy();
 	});
 
+	it("10-1 a small run has no screen tool and of the writes only a body edit and an entry's save, also when it is taken up again", async () => {
+		const monti = site();
+		await withKey(monti);
+		const names = (index: number) => model.turns[index]?.tools.map((tool) => tool.name) ?? [];
+		model.add({ text: "네." }, { text: "네." });
+		await ask(monti, { request: "보여 줘" });
+		// The panel's run has the screen tools.
+		expect(names(0)).toContain("list_show");
+		const small = await ask(monti, { request: "줄여 줘", quick: true });
+		expect(names(1)).not.toContain("list_show");
+		expect(names(1)).toContain("body_edit");
+		expect(names(1)).toContain("entries_save");
+		expect(names(1)).toContain("body_read");
+		expect(names(1)).not.toContain("trash_move");
+		expect(
+			(await db.selectFrom("runs").select("small").where("id", "=", small.run).executeTakeFirstOrThrow()).small,
+		).toBe(true);
+	});
+
 	it("10-1 a model that cannot think runs with thinking off, and a model the key does not have is refused before anything starts", async () => {
 		const monti = site();
 		await withKey(monti);
@@ -631,14 +650,19 @@ describe("the model, per conversation (flow 2, 22–24)", () => {
 	it("10-1 a service that says no is an answer in the conversation with the key's name, and the same request goes to another model", async () => {
 		const monti = site();
 		const keyId = await withKey(monti);
-		model.add({ fail: new ProviderError("refused", "Your credit balance is too low.", 400) }, { text: "보냈습니다." });
+		model.add({ fail: new ProviderError("limit", "Your credit balance is too low.", 400) }, { text: "보냈습니다." });
 		const refused = await ask(monti, { request: "요약해 줘" });
-		expect(refused.end).toMatchObject({
-			status: "failed",
-			error: { kind: "refused", detail: "Your credit balance is too low.", keyName: "Anthropic 개인" },
-		});
+		expect(refused.end).toMatchObject({ status: "failed", error: { reason: "limit", keyName: "Anthropic 개인" } });
+		// The service's own words stay with the run on the server; the browser is told only the reason.
+		expect(JSON.stringify(refused.events)).not.toContain("credit balance");
 		const read = await conversation(monti, refused.conversation);
-		expect(read.runs[0]).toMatchObject({ status: "failed", end: { error: { keyName: "Anthropic 개인" } } });
+		expect(read.runs[0]).toMatchObject({
+			status: "failed",
+			end: { error: { reason: "limit", keyName: "Anthropic 개인" } },
+		});
+		expect(JSON.stringify(read)).not.toContain("credit balance");
+		const stored = await db.selectFrom("runs").select("ended").where("status", "=", "failed").executeTakeFirstOrThrow();
+		expect(stored.ended).toMatchObject({ detail: "Your credit balance is too low." });
 
 		// "다른 모델로 보내기": the same words, another model, the same conversation.
 		const sent = await ask(monti, {
@@ -660,7 +684,9 @@ describe("the model, per conversation (flow 2, 22–24)", () => {
 		const monti = site();
 		await withKey(monti);
 		const refused = await ask(monti, { request: "요약해 줘" });
-		expect(refused.end.error?.detail).toBe("Incorrect API key provided: •••. Check your key.");
+		expect(refused.end.error).toEqual({ reason: "refused", keyName: "Anthropic 개인" });
+		const stored = await db.selectFrom("runs").select("ended").executeTakeFirstOrThrow();
+		expect(stored.ended).toMatchObject({ detail: "Incorrect API key provided: •••. Check your key." });
 		expect(JSON.stringify(refused.events)).not.toContain(KEY);
 		expect(JSON.stringify(await db.selectFrom("runs").selectAll().execute())).not.toContain(KEY);
 		expect(JSON.stringify(await conversation(monti, refused.conversation))).not.toContain(KEY);
@@ -669,11 +695,9 @@ describe("the model, per conversation (flow 2, 22–24)", () => {
 			.run("assistant.fill", { task: "text", collection: "post", field: "summary", entry: { title: "글" } }, admin)
 			.catch((error: unknown) => error);
 		expect(filled).toMatchObject({
-			reason: {
-				key: "assistant.refused",
-				values: { name: "Anthropic 개인", detail: "Incorrect API key provided: •••. Check your key." },
-			},
+			reason: { key: "assistant.failed", values: { reason: "refused", keyName: "Anthropic 개인" } },
 		});
+		expect(JSON.stringify(filled)).not.toContain("Incorrect API key");
 	});
 
 	it("10-1 a quick task whose service does not answer says which key did not", async () => {
@@ -688,7 +712,9 @@ describe("the model, per conversation (flow 2, 22–24)", () => {
 				{ task: "text", collection: "post", field: "summary", entry: { title: "글" } },
 				admin,
 			),
-		).rejects.toMatchObject({ reason: { key: "assistant.unreachable", values: { name: "Anthropic 개인" } } });
+		).rejects.toMatchObject({
+			reason: { key: "assistant.failed", values: { reason: "unreachable", keyName: "Anthropic 개인" } },
+		});
 	});
 
 	it("10-1 tokens the model spent are counted against the key it ran on", async () => {
@@ -1165,7 +1191,9 @@ describe("quick tasks (doc 10, 빠른 작업)", () => {
 		await seeing.run("models.setQuick", { keyId: other, model: "gpt-3.5-turbo" }, admin);
 		await expect(
 			seeing.run("assistant.fill", { task: "alt", collection: "post", entry: {}, image: { media: file } }, admin),
-		).rejects.toMatchObject({ reason: { key: "assistant.noImages" } });
+		).rejects.toMatchObject({
+			reason: { key: "assistant.failed", values: { reason: "noImages", keyName: "OpenAI 회사" } },
+		});
 		expect(model.answers).toHaveLength(1);
 	});
 });
@@ -1594,7 +1622,8 @@ describe("what the first review of the core found (#472)", () => {
 		await monti.run("keys.add", { service: "anthropic", name: "짧은 키", secret: "abc123" }, admin);
 		model.add({ fail: new ProviderError("refused", "Invalid API key: abc123", 401) });
 		const refused = await ask(monti, { request: "안녕" });
-		expect(refused.end).toMatchObject({ status: "failed", error: { kind: "refused", detail: "Invalid API key: •••" } });
+		expect(refused.end).toMatchObject({ status: "failed", error: { reason: "refused", keyName: "짧은 키" } });
+		expect(await runs()).toMatchObject([{ ended: { detail: "Invalid API key: •••" } }]);
 		expect(JSON.stringify(refused.events)).not.toContain("abc123");
 		expect(JSON.stringify(await runs())).not.toContain("abc123");
 	});
@@ -1722,11 +1751,11 @@ describe("what the first review of the core found (#472)", () => {
 
 		// The run's key is gone: it ends as failed for want of a key, not with an error nobody can read, and the model is not asked.
 		const second = await ask(monti, { resume: first.run });
-		expect(second.end).toMatchObject({ status: "failed", error: { kind: "no-key" } });
+		expect(second.end).toMatchObject({ status: "failed", error: { reason: "noKey", keyName: null } });
 		expect(model.turns).toHaveLength(1);
 		expect((await conversation(monti, first.conversation)).runs[0]).toMatchObject({
 			status: "failed",
-			end: { status: "failed", error: { kind: "no-key" } },
+			end: { status: "failed", error: { reason: "noKey", keyName: null } },
 		});
 		// A new request in the same conversation is refused before anything starts, with a reason the admin has words for.
 		await expect(ask(monti, { conversation: first.conversation, request: "다시" })).rejects.toMatchObject({
@@ -1839,7 +1868,7 @@ describe("what the first review of the core found (#472)", () => {
 		await withKey(monti);
 		model.add({ hold: never });
 		const silent = await ask(monti, { request: "안녕" });
-		expect(silent.end).toMatchObject({ status: "failed", error: { kind: "unreachable", keyName: "Anthropic 개인" } });
+		expect(silent.end).toMatchObject({ status: "failed", error: { reason: "unreachable", keyName: "Anthropic 개인" } });
 
 		// Signs of life with nothing to show (thinking) keep the turn: each silence is shorter than the limit, though the turn is longer.
 		const pause = () => new Promise<void>((resolve) => setTimeout(resolve, 50));
@@ -1862,7 +1891,9 @@ describe("what the first review of the core found (#472)", () => {
 				{ task: "text", collection: "post", field: "summary", entry: { title: "글" } },
 				admin,
 			),
-		).rejects.toMatchObject({ reason: { key: "assistant.unreachable", values: { name: "Anthropic 개인" } } });
+		).rejects.toMatchObject({
+			reason: { key: "assistant.failed", values: { reason: "timeout", keyName: "Anthropic 개인" } },
+		});
 		expect(Date.now() - started).toBeLessThan(2000);
 		expect(model.answers[0].signal?.aborted).toBe(true);
 	});
@@ -2367,9 +2398,15 @@ describe("what the review of the run's hold found (#481)", () => {
 			.values({ id: "word", run_id: run.id, text: "발행된 글만 봐 줘", created_at: clock })
 			.execute();
 	};
+	/** An edit of the first block of "처음 글을 발행하고 나서 만들기로 한 메모입니다.": `text` in place of its first `to` letters. */
 	const edit = (id: string, at: number, to: number, text: string) => ({
 		name: "body_edit",
-		input: { id, version: at, ops: [{ op: "replaceText", block: "b_1", from: 0, to, text }], [GROUP]: "다듬기" },
+		input: {
+			id,
+			version: at,
+			ops: [{ op: "setText", block: "b_1", text: text + "처음 글을 발행하고 나서 만들기로 한 메모입니다.".slice(to) }],
+			[GROUP]: "다듬기",
+		},
 	});
 
 	it("10-4 a request that lost its run and then fails ends nothing of it: the run and what was said to it stay with the request that holds it", async () => {
