@@ -125,6 +125,11 @@ describe("taxonomy screen (doc 08)", () => {
 		await userEvent.click(table().getByText("리액트", { exact: true }));
 		await userEvent.fill(page.getByRole("textbox", { name: "설명" }), "저장할 설명");
 		await userEvent.click(table().getByText("React", { exact: true }));
+		// The three answers stand on one line.
+		const tops = ["저장하지 않고 나가기", "계속 고치기", "저장하고 나가기"].map(
+			(name) => page.getByRole("alertdialog").getByRole("button", { name }).element().getBoundingClientRect().top,
+		);
+		expect(new Set(tops).size).toBe(1);
 		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "저장하고 나가기" }));
 		await expect.element(page.getByRole("textbox", { name: "이름" })).toHaveValue("React");
 		await userEvent.click(table().getByText("리액트", { exact: true }));

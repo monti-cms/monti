@@ -144,7 +144,8 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 		<Context.Provider value={value}>
 			{children}
 			<AlertDialog open={asking !== null} onOpenChange={(open) => !open && !savingToLeave && setAsking(null)}>
-				<AlertDialogContent>
+				{/* Three answers do not fit the 420px question on one line: it is the wide one then. */}
+				<AlertDialogContent size={asking?.canSave ? "wide" : undefined}>
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t(onlyFiles ? "leave.uploads.title" : "leave.title")}</AlertDialogTitle>
 						<AlertDialogDescription>

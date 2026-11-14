@@ -63,7 +63,7 @@ export const LeaveUnsavedSave: Story = {
 	tags: ["visual"],
 	render: () => (
 		<AlertDialog defaultOpen>
-			<AlertDialogContent>
+			<AlertDialogContent size="wide">
 				<AlertDialogHeader>
 					<AlertDialogTitle>저장하지 않은 변경 사항이 있습니다</AlertDialogTitle>
 					<AlertDialogDescription>나가면 변경 사항 2개가 사라집니다.</AlertDialogDescription>
