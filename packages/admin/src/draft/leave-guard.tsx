@@ -161,8 +161,9 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 						<AlertDialogTitle>{t(onlyFiles ? "leave.uploads.title" : "leave.title")}</AlertDialogTitle>
 						<AlertDialogDescription>
 							{[
-								shown?.changes ? t("leave.description", { count: shown.changes }) : null,
-								shown?.uploads ? t("leave.uploads.description", { count: shown.uploads }) : null,
+								// What is lost, not how much: the count is nothing to act on.
+								shown?.changes ? t("leave.description") : null,
+								shown?.uploads ? t("leave.uploads.description") : null,
 							]
 								.filter(Boolean)
 								.join(" ")}
