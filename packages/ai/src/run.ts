@@ -125,6 +125,11 @@ export const RunInput = z
 		away: z.boolean().optional(),
 		context: ScreenContext.optional(),
 		model: z.object({ keyId: z.string(), model: z.string() }).optional(),
+		/**
+		 * The screen's own buttons, which have no model menu (a request on picked words, "✦ Translate"): the run uses the quick-task model picked
+		 * on the keys screen, also when the conversation began on another. `model` cannot be given with it.
+		 */
+		quick: z.boolean().optional(),
 		thinking: z.enum(THINKING as [Thinking, ...Thinking[]]).optional(),
 		/** A proposal item the request is asked of, at its place: the run changes that item and nothing else (a request at its place). */
 		item: z.string().optional(),
@@ -133,6 +138,9 @@ export const RunInput = z
 	})
 	.refine((input) => [input.request, input.resume, input.again].filter((given) => given !== undefined).length === 1, {
 		message: "Give a request, a run to resume, or an item to make again: one of them.",
+	})
+	.refine((input) => input.quick === undefined || input.model === undefined, {
+		message: "The quick-task model or a model: one of them.",
 	})
 	.refine((input) => input.item === undefined || input.request !== undefined, {
 		message: "An item is asked of with a request.",
@@ -207,19 +215,22 @@ async function modelsOf(monti: Monti): Promise<ModelList> {
 	return (await monti.run("models.list", {}, { actor: "admin" })) as ModelList;
 }
 
-/** The model a run starts on: the one asked for, the conversation's, or the site's starting model; with whether it thinks. */
+/**
+ * The model a run starts on: the one asked for, the quick-task model (`"quick"`), the conversation's, or the site's starting model; with whether it
+ * thinks.
+ */
 async function pickModel(
 	monti: Monti,
-	asked: { keyId: string; model: string } | null,
+	asked: { keyId: string; model: string } | "quick" | null,
 	thinking: Thinking | null,
 ): Promise<{ keyId: string; model: string; thinking: Thinking }> {
 	const listed = await modelsOf(monti);
-	const choice = asked ?? listed.assistant;
+	const choice = asked === "quick" ? listed.quick : (asked ?? listed.assistant);
 	if (!choice) throw new CheckError({ key: "assistant.noKey" });
 	const model = listed.keys.find((key) => key.id === choice.keyId)?.models.find((each) => each.id === choice.model);
 	if (!model) throw new CheckError({ key: "assistant.noModel" });
 	// A model that cannot think has no thinking level; one that can starts at "medium" (doc 10, models).
-	return { ...choice, thinking: model.thinking ? (thinking ?? "medium") : "off" };
+	return { keyId: choice.keyId, model: choice.model, thinking: model.thinking ? (thinking ?? "medium") : "off" };
 }
 
 /** A history a model API accepts: every call an assistant message made has its answer, also where a run stopped before its tools ran. */
@@ -1142,9 +1153,14 @@ async function open(monti: Monti, input: RunInput, until: Date): Promise<RunRow>
 
 	const picked = await pickModel(
 		monti,
-		input.model ??
-			(conversation?.key_id && conversation.model ? { keyId: conversation.key_id, model: conversation.model } : null),
-		input.thinking ?? (conversation?.thinking as Thinking | null | undefined) ?? null,
+		input.quick
+			? "quick"
+			: (input.model ??
+					(conversation?.key_id && conversation.model
+						? { keyId: conversation.key_id, model: conversation.model }
+						: null)),
+		// The quick tasks do not think: a quick run neither, like "✦ Fill".
+		input.quick ? "off" : (input.thinking ?? (conversation?.thinking as Thinking | null | undefined) ?? null),
 	);
 
 	const id = conversation?.id ?? conversationId ?? randomId();

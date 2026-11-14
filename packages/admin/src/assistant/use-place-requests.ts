@@ -122,10 +122,12 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 			const conversation = conversations.current.get(id) ?? null;
 			const mine: Going = { run: null, stop, conversation, stopWanted: false };
 			going.current.set(id, mine);
+			// A request on picked words and "✦ Translate" have no model menu: they use the quick-task model of the keys screen. A request on a
+			// proposed change goes on in the conversation that made it, with its model.
 			const input =
 				"item" in about
 					? { request: words, item: about.item }
-					: { request: words, context: about.context, ...(conversation ? { conversation } : {}) };
+					: { request: words, context: about.context, quick: true, ...(conversation ? { conversation } : {}) };
 			let answer = "";
 			let proposed = false;
 			let failed: string | null = null;

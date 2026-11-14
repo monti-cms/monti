@@ -594,6 +594,24 @@ describe("the model, per conversation (flow 2, 22–24)", () => {
 		});
 	});
 
+	it("10-1 the screen's own buttons run on the quick-task model without thinking, also when it changes between two requests in one card", async () => {
+		const monti = site();
+		await withKey(monti);
+		const other = (
+			(await monti.run("keys.add", { service: "openai", name: "OpenAI 회사", secret: OTHER_KEY }, admin)) as Written
+		).output.id;
+		model.add({ text: "네." }, { text: "네." });
+		// Nothing picked yet: the first key's service's own quick model, not the assistant's starting one.
+		const first = await ask(monti, { request: "줄여 줘", quick: true });
+		expect(model.turns[0]).toMatchObject({ model: "claude-haiku-5-5", thinking: "off" });
+		await monti.run("models.setQuick", { keyId: other, model: "gpt-4.1" }, admin);
+		await ask(monti, { conversation: first.conversation, request: "더 줄여 줘", quick: true });
+		expect(model.turns[1]).toMatchObject({ model: "gpt-4.1", thinking: "off" });
+		await expect(
+			ask(monti, { request: "줄여 줘", quick: true, model: { keyId: other, model: "gpt-4.1" } }),
+		).rejects.toBeTruthy();
+	});
+
 	it("10-1 a model that cannot think runs with thinking off, and a model the key does not have is refused before anything starts", async () => {
 		const monti = site();
 		await withKey(monti);

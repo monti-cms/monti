@@ -50,12 +50,12 @@ describe("ListSectionRow", () => {
 	it("the line under a title is words in sans, or an identifier in mono; the row is as tall either way", async () => {
 		render(
 			<ListSection title="Models">
-				<ListSectionRow title="Quick tasks" meta="Summaries · tags · alt text" />
+				<ListSectionRow title="Quick tasks" meta="Fill · requests · translation" />
 				<ListSectionRow title="Spell check" meta="bareun" metaTone="subtle" metaMono />
 			</ListSection>,
 		);
-		await expect.element(page.getByText("Summaries · tags · alt text")).toBeVisible();
-		expect(isMono(page.getByText("Summaries · tags · alt text").element())).toBe(false);
+		await expect.element(page.getByText("Fill · requests · translation")).toBeVisible();
+		expect(isMono(page.getByText("Fill · requests · translation").element())).toBe(false);
 		expect(isMono(page.getByText("bareun").element())).toBe(true);
 		const rows = page.getByRole("listitem").elements();
 		expect(rows.map((row) => row.getBoundingClientRect().height)).toEqual([74, 74]);
