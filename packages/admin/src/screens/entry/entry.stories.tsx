@@ -443,7 +443,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 }
 
 /** The site, the entry, and the admin's address on it. `kept` is input this browser kept from an earlier visit. */
-export const site = (kind: Kind, kept?: { version: number; mine: [string, unknown][] }) => [
+export const site = (kind: Kind, kept?: { version: number; mine: [string, unknown][]; accepted?: string[] }) => [
 	async (): Promise<Loaded> => {
 		let id = "";
 		const made = await storySite({
@@ -476,7 +476,7 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 		if (kept)
 			localStorage.setItem(
 				`monti.draft.entry:${id}`,
-				JSON.stringify({ ...kept, savedAt: "2026-10-26T01:12:00.000Z", accepted: [] }),
+				JSON.stringify({ accepted: [], ...kept, savedAt: "2026-10-26T01:12:00.000Z" }),
 			);
 		return { site: made, id };
 	},
@@ -755,6 +755,19 @@ export const BrowserCopy: Story = {
 		const { page } = await opened(canvasElement);
 		await page.findByText("이 브라우저에 저장하지 않은 편집이 있습니다", {}, wait);
 		await expect(page.getByRole("button", { name: "브라우저에만 임시 저장됨" })).toBeVisible();
+	},
+};
+
+/** The kept input holds the assistant's proposals taken into it: the banner says how many (AS-20). */
+export const BrowserCopyWithProposals: Story = {
+	loaders: site("draft", {
+		version: 1,
+		mine: [["title", "첫 번째 글 — 제안을 받은 제목"]],
+		accepted: ["proposal-title"],
+	}),
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await page.findByText(/AI 제안 1건 포함/, {}, wait);
 	},
 };
 

@@ -13,6 +13,7 @@ const {
 	TaxonomyTagsPicked,
 	TaxonomyMergeDialog,
 	TaxonomySidePanel,
+	TaxonomyNewItem,
 } = composeStories(list);
 
 const main = () => page.getByRole("main");
@@ -137,8 +138,7 @@ describe("taxonomy screen (doc 08)", () => {
 	});
 
 	it("TG-04 TG-07 a new form counts no change before anything is written, and closing it written in asks first", async () => {
-		await TaxonomyTags.run();
-		await userEvent.click(main().getByRole("button", { name: "태그 추가" }));
+		await TaxonomyNewItem.run();
 		await expect.element(page.getByRole("heading", { name: "새 태그" })).toBeVisible();
 		await expect.element(page.getByText(/변경 사항/)).not.toBeInTheDocument();
 		await userEvent.fill(page.getByRole("textbox", { name: "이름" }), "새 이름");

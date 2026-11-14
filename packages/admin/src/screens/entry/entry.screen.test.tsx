@@ -10,7 +10,7 @@ import * as entry from "./entry.stories";
 
 type Loaded = { site: StorySite; id: string };
 
-const { BrowserCopy } = composeStories(entry);
+const { BrowserCopy, BrowserCopyWithProposals } = composeStories(entry);
 
 /** The editor on an entry of this kind, with its site at hand. */
 const on = (...made: Parameters<typeof entry.site>) => scene<Loaded>({ loaders: entry.site(...made) }, entry.default);
@@ -160,8 +160,14 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(page.getByRole("main").getByText("저장하고 나간 제목")).toBeVisible();
 	});
 
-	it("TP-11 letters typed into the body and taken out again leave nothing unsaved", async () => {
-		await on("draft").run();
+	it.each([
+		"draft",
+		"footnotes",
+		"table",
+		"checklist",
+		"code",
+	] as const)("TP-11 letters typed into a body (%s) and taken out again leave nothing unsaved", async (kind) => {
+		await on(kind).run();
 		await opened();
 		await userEvent.click(body());
 		await userEvent.keyboard("가나");
@@ -178,6 +184,12 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(page.getByText("이 브라우저의 편집을 버렸습니다")).toBeVisible();
 		await userEvent.click(button("되돌리기"));
 		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).toBeVisible();
+	});
+
+	it("AS-20 the kept input's banner says how many of the assistant's proposals it holds", async () => {
+		await BrowserCopyWithProposals.run();
+		await opened();
+		await expect.element(page.getByText(/AI 제안 1건 포함/)).toBeVisible();
 	});
 
 	it("TR-16 the to-do list counts what is typed before it is saved: a title written leaves it, and emptied again it comes back", async () => {

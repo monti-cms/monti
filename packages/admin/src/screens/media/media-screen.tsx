@@ -79,7 +79,7 @@ import {
 } from "@monti-cms/ui/icons";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useScreenContext } from "../../assistant/use-assistant";
-import { useLeave } from "../../draft/leave-guard";
+import { useLeave, useLeaveChanges } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
 import { FileThumb, useFileDetail } from "../../media/file-shown";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
@@ -91,7 +91,7 @@ import { useMoveMedia, useTrashMedia } from "../../media/use-media-actions";
 import { useUpload } from "../../media/use-upload";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
-import { href, type Route } from "../../route";
+import { href, linkTo, type Route } from "../../route";
 import { countedWhere } from "../list/counted-where";
 import { type FilterProps, FilterRows } from "../list/filter-rows";
 import {
@@ -409,12 +409,22 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const setState = (next: MediaState, options?: { replace?: boolean }) =>
 		go({ screen: "media", params: writeMediaState(next) }, options);
 	const hrefOf = (next: MediaState) => href({ screen: "media", params: writeMediaState(next) });
+	const leaveChanges = useLeaveChanges();
+	/**
+	 * Another file in the panel, or none: the panel's unsaved changes are asked about first, as in every panel beside a list (doc 05). Files going up
+	 * go on: the move stays in the library.
+	 */
+	const moveFile = (next: MediaState) =>
+		state.file !== null && next.file !== state.file ? leaveChanges(() => setState(next)) : setState(next);
+	/** A link that moves in the library the same way: a plain press asks first, a press for a new tab opens one. */
+	const linkFile = (next: MediaState) =>
+		linkTo({ screen: "media", params: writeMediaState(next) }, () => moveFile(next));
 	const read = useRead<MediaQueryResult>("media.query", queryOf(state));
 	const folders = useFolders("media", true);
 	const upload = useUpload();
 	const move = useMoveMedia();
 	const moveFolder = useOperation("folders.move");
-	const openFile = (id: string) => setState({ ...state, file: id });
+	const openFile = (id: string) => moveFile({ ...state, file: id });
 	const trash = useTrashMedia(openFile);
 	const naming = useFolderNaming("media", state.folder);
 	const removeFolder = useRemoveFolder({
@@ -454,7 +464,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 
 	const goFolder = (folder: string | null) => {
 		setPicked(new Set());
-		setState({ ...state, folder, search: "", everywhere: false, kinds: [], used: [], page: 1, file: null });
+		moveFile({ ...state, folder, search: "", everywhere: false, kinds: [], used: [], page: 1, file: null });
 	};
 	const acceptFiles = useAcceptFiles();
 	const addFiles = (files: File[], folder = state.folder) =>
@@ -886,8 +896,16 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 										thumb={folderThumb}
 										title={
 											<RowLink
-												href={hrefOf({ ...state, folder: folder.id, page: 1, file: null })}
-												onClick={() => setPicked(new Set())}
+												{...linkTo(
+													{
+														screen: "media",
+														params: writeMediaState({ ...state, folder: folder.id, page: 1, file: null }),
+													},
+													() => {
+														setPicked(new Set());
+														moveFile({ ...state, folder: folder.id, page: 1, file: null });
+													},
+												)}
 											>
 												{folder.name}
 											</RowLink>
@@ -932,7 +950,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 														/>
 													</RowThumb>
 												}
-												title={<RowLink href={hrefOf({ ...state, file: item.id })}>{item.name}</RowLink>}
+												title={<RowLink {...linkFile({ ...state, file: item.id })}>{item.name}</RowLink>}
 											/>
 										</TableCell>
 										{!dense && (
@@ -1071,7 +1089,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 					key={state.file}
 					id={state.file}
 					folders={folders}
-					onClose={() => setState({ ...state, file: null })}
+					onClose={() => moveFile({ ...state, file: null })}
 					go={goAway}
 					onTrash={(id) => {
 						void trash([id]);
