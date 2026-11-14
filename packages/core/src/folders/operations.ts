@@ -7,6 +7,7 @@ import { CheckError } from "../errors";
 import { usedOf } from "../media/uses";
 import { defineOperation, type Message, type OperationContext, type RecordRef } from "../operation";
 import { defineRecordKind, lockRecords } from "../records";
+import { folderTreeSql } from "./tree";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -106,12 +107,7 @@ export async function folderOf(db: Db, id: string): Promise<Row> {
 
 /** The folder and every folder under it, not in the trash. */
 export async function subtree(db: Db, id: string): Promise<string[]> {
-	const { rows } = await sql<{ id: string }>`
-		with recursive tree as (
-			select id from folders where id = ${id} and trashed_at is null
-			union all
-			select f.id from folders f join tree on f.parent_id = tree.id where f.trashed_at is null
-		) select id from tree`.execute(db);
+	const { rows } = await sql<{ id: string }>`select id from ${folderTreeSql(id)} as tree`.execute(db);
 	return rows.map((row) => row.id);
 }
 
