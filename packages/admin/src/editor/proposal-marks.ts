@@ -324,7 +324,7 @@ export function filledBlocks(state: EditorState): Set<number> {
 
 /** The proposals that can be drawn on this body now, in order: the bubble walks these. */
 export const drawable = <T extends BodyProposal>(doc: EditorNode, items: T[]): T[] =>
-	items.filter((item) => draw(doc, item) !== null);
+	items.filter((item) => proposalDecorations(doc, item) !== null);
 
 /** The block a proposal names first that is still in the body: where a stale one hangs. `null`: it has no place left. */
 export function anchorBlock(doc: EditorNode, item: BodyProposal): string | null {
