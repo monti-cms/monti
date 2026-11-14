@@ -18,7 +18,7 @@
 | 거절 띠 | `PageBanner` 안의 `Banner tone="danger"`(화면 맨 위, 제목 위) + `TextButton` 하나 | 저장이 거절되면 이유 한 줄과 할 일 하나가 남는다. 다른 곳에서 바뀌었으면 "다른 곳에서 바뀌었습니다 · 다시 불러오기", 파일을 쓰지 못했으면 "monti.schema.ts를 쓰지 못했습니다 · 다시 저장", 그 밖은 이유와 "다시 저장". 다음 저장의 답이 올 때까지 남고, 탭을 옮겨도 남는다. "다시 저장" 띠는 바뀐 곳을 모두 되돌리면 함께 사라진다(저장할 것이 없다). "다시 불러오기" 띠는 남는다. 띠의 버튼을 키보드로 눌러 띠가 사라지면 포커스는 저장 묶음처럼 열린 탭의 이름으로 간다. "다시 불러오기"도 읽는 동안 일하는 중으로 보이고, 다시 눌러도 한 번만 읽는다. 다시 저장하는 동안에도 그대로 있다가 답이 오면 새 이유로 바뀌거나 사라진다(2026-11-12: 저장하는 동안 사라졌다 돌아오면 페이지가 위아래로 움직인다). 검토 안에서 거절된 저장의 이유는 검토 맨 위에 보이고, 검토를 닫으면 띠로 온다. 토스트로만 알리지 않는다(T50). |
 | 검토 | `Sheet`(`SheetTitle` "검토", `of` "· 언어, 게시글 · 변경 사항 4") | 컬렉션과 언어의 바꾸기를 한 장에서 본다. 언어 블록이 먼저, 컬렉션 블록이 다음이다. 지워지는 것이 있으면 빨간 "지우고 적용", 없으면 "적용". 검토가 열린 동안의 거절 이유는 검토 맨 위 `ErrorNote`다. 블록은 [collections.md](collections.md)와 아래 언어 표를 따른다. |
 | 제안 버블 | `ProposalBubbleDock` + `ProposalBubble` | 제안이 있으면 아래에 뜬다. ↑ ↓는 탭을 넘나들며 제안이 걸린 자리를 연다(05). |
-| 나가기 확인 | `AlertDialog`: `AlertDialogTitle` "저장하지 않은 변경 사항이 있습니다", `AlertDialogCancel variant="danger"` "저장하지 않고 나가기", `AlertDialogAction` "계속 고치기" | 바뀐 곳이 있는 채 설정 밖으로 갈 때 묻는다(흐름 11·04). |
+| 나가기 확인 | `AlertDialog`: `AlertDialogTitle` "저장하지 않은 변경 사항이 있습니다", `AlertDialogCancel variant="danger"` "저장하지 않고 나가기", `AlertDialogAction` "계속 고치기" | 바뀐 곳이 있는 채 설정 밖으로 갈 때 묻는다(흐름 11·04). 설정의 저장은 검토를 열 수 있어 밖에서 저장되지 않으므로 "저장하고 나가기"가 없다. |
 
 스토리: Monti/Change/ChangesGroup, Patterns/Frame/PageHeader, Controls/Tabs/Tabs, Controls/Status/Banner, Controls/Overlay/Sheet, Monti/Change/ChangeGroup, Monti/Proposal/Bubble, Controls/Overlay/AlertDialog. 화면 스토리: Screens/Settings/Tabs.
 

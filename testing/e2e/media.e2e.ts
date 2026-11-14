@@ -778,7 +778,7 @@ test.describe("while a file is on its way", () => {
 		const asked = admin.getByRole("alertdialog");
 		await expect(asked).toBeVisible();
 		await expect(asked.getByText("파일을 올리는 중입니다")).toBeVisible();
-		await expect(asked.getByText(/올라가지 않은 파일 1개/)).toBeVisible();
+		await expect(asked.getByText("아직 올라가지 않은 파일이 사라집니다.")).toBeVisible();
 		await asked.getByRole("button", { name: "계속 올리기" }).click();
 		await expect(main(admin).getByRole("heading", { level: 1 })).toBeVisible();
 		release();

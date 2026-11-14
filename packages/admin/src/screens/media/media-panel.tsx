@@ -33,6 +33,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 	SidePanel,
+	SidePanelSave,
 	Stack,
 	Text,
 	Tile,
@@ -337,16 +338,19 @@ export function MediaPanel({
 	// Docked at the page's edge, it stands where the frame's ✦ is: its × must not lie under it (screens/media.md).
 	useCoverCorner(true);
 	const draft = useDraft({ target, base, version: item?.version ?? null, proposalValues });
-	useLeaveGuard({ changes: draft.changes, revertAll: draft.revertAll });
 	// The version these changes were made on, whatever was read since: saving over someone else's rename is a conflict, not a success.
 	const madeOn = useRef<number | null>(null);
 	if (!draft.dirty) madeOn.current = item?.version ?? null;
 	const [proposalAt, setProposalAt] = useState(0);
+	// The panel's own save, for "save and leave" (its function is made below, once the file is read).
+	const saveNow = useRef<() => Promise<boolean>>(async () => false);
+	useLeaveGuard({ changes: draft.changes, revertAll: draft.revertAll, save: () => saveNow.current() });
 	if (!item) return null;
 
 	const name = String(draft.value("name") ?? "");
 	const folder = String(draft.value("folder") ?? TOP);
-	const save = async () => {
+	/** Saves the name and the folder; says a refusal under the name itself. `true` when it went through. */
+	const save = async (): Promise<boolean> => {
 		setRefused(null);
 		const sent = draft.sending();
 		const done = await update.run(
@@ -357,14 +361,20 @@ export function MediaPanel({
 			},
 			{ versions: { [`media:${id}`]: madeOn.current ?? item.version }, accepted: draft.accepted },
 		);
-		if (done.ok) return draft.saved(sent);
+		if (done.ok) {
+			draft.saved(sent);
+			return true;
+		}
 		if (done.refusal.status === 409) {
 			draft.revertAll();
 			void read.reload();
-			return setRefused(t("ui.savedElsewhere"));
+			setRefused(t("ui.savedElsewhere"));
+			return false;
 		}
 		setRefused(t(reasonOf(done.refusal)));
+		return false;
 	};
+	saveNow.current = save;
 	// Only what this panel draws (a proposed name): a proposed folder or a way to the trash is on the conversation's card (T108).
 	const proposals = draft.drawn;
 	const proposal = proposals[Math.min(proposalAt, Math.max(0, proposals.length - 1))];
@@ -420,12 +430,20 @@ export function MediaPanel({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			}
-			// Nothing to save, no pill: a dimmed one would not say why (principle 7).
+			// Nothing to save, no foot: a dimmed pill would not say why (principle 7). The same foot as every panel that edits a record.
 			footer={
 				draft.dirty ? (
-					<Button variant="primary" size="md" onClick={() => void save()}>
-						{t("settings.save")}
-					</Button>
+					<SidePanelSave
+						changes={t("panel.changesCount", { count: draft.changes.length })}
+						discardLabel={t("common.discard")}
+						onDiscard={() => {
+							setRefused(null);
+							draft.revertAll();
+						}}
+						saveLabel={t("common.save")}
+						onSave={() => void save()}
+						saving={update.pending}
+					/>
 				) : undefined
 			}
 		>

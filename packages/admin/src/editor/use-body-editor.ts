@@ -1,4 +1,4 @@
-import type { Doc } from "@monti-cms/core";
+import { type Doc, sameJson } from "@monti-cms/core";
 import { Dropcursor, Gapcursor, UndoRedo } from "@tiptap/extensions";
 import { GapCursor } from "@tiptap/pm/gapcursor";
 import type { Node as EditorNode } from "@tiptap/pm/model";
@@ -63,6 +63,11 @@ export function useBodyEditor({
 	const latest = useRef({ t, offered, onChange, keyDown, onSelection, onTakeProposal, onFiles });
 	latest.current = { t, offered, onChange, keyDown, onSelection, onTakeProposal, onFiles };
 	const made = useRef<Editor | null>(null);
+	/**
+	 * The body it opened with, and what the editor gives back for it untouched: the editor's copy is not written the same way (an empty `attrs`
+	 * left out, a footnote moved last), so a body typed back to what it was would not read as the same and its change would stay (TP-11).
+	 */
+	const opened = useRef<{ doc: Doc; gives: Doc } | null>(null);
 
 	const extensions = useMemo(() => {
 		const byName = new Map(kit.blocks.map((block) => [nodeName(block.type), block]));
@@ -127,13 +132,15 @@ export function useBodyEditor({
 			},
 			// A body that begins with a picture is given a selection that picks it: nothing is picked before the person picks it (T193).
 			onCreate: ({ editor: current }) => {
+				opened.current = { doc, gives: docFromEditor(current.getJSON(), kit) };
 				const { state, view } = current;
 				if (!(state.selection instanceof NodeSelection)) return;
 				const none = nothingPicked(state.doc, ($pos) => new GapCursor($pos));
 				view.dispatch(state.tr.setSelection(none).setMeta("addToHistory", false));
 			},
 			onUpdate: ({ editor: current }) => {
-				latest.current.onChange(docFromEditor(current.getJSON(), kit));
+				const next = docFromEditor(current.getJSON(), kit);
+				latest.current.onChange(opened.current && sameJson(next, opened.current.gives) ? opened.current.doc : next);
 				latest.current.onSelection?.(current);
 			},
 			onSelectionUpdate: ({ editor: current }) => latest.current.onSelection?.(current),

@@ -10,6 +10,7 @@ import {
 	IconButton,
 	Input,
 	SidePanel,
+	SidePanelSave,
 	Tabs,
 	TabsList,
 	TabsTrigger,
@@ -79,5 +80,29 @@ export const Back: Story = {
 		width: "assistant",
 		back: { label: "대화로 돌아가기", onClick: () => {} },
 		children: <Text variant="note">대화 목록</Text>,
+	},
+};
+
+/** A panel that edits a record, with changes to save: the count, "버리기" and the pill (`SidePanelSave`). The taxonomy's and the library's panels share it. */
+export const RecordSave: Story = {
+	tags: ["visual"],
+	args: {
+		title: "걷기",
+		width: "side",
+		footer: (
+			<SidePanelSave
+				changes="변경 사항 1"
+				discardLabel="버리기"
+				onDiscard={() => {}}
+				saveLabel="저장"
+				onSave={() => {}}
+			/>
+		),
+		children: (
+			<FormField>
+				<FormFieldLabel htmlFor="record-name">이름</FormFieldLabel>
+				<Input id="record-name" size="md" defaultValue="걷기" />
+			</FormField>
+		),
 	},
 };

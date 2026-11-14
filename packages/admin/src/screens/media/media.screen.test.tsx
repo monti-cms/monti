@@ -237,6 +237,28 @@ describe("browsing", () => {
 		await expect.element(main().getByRole("table").getByRole("columnheader", { name: "사용" })).toBeVisible();
 	});
 
+	it("a file's unsaved name is asked about before the panel lets it go, as every panel beside a list", async () => {
+		await ListView.run();
+		await userEvent.click(main().getByRole("link", { name: "top-level-photo.jpg" }));
+		const name = page.getByRole("complementary").getByRole("textbox", { name: "파일 이름" });
+		await userEvent.fill(name, "새 이름");
+		// The same foot as the taxonomy's panel: the count, "버리기" and "저장".
+		const panel = page.getByRole("complementary");
+		await expect.element(panel.getByText("변경 사항 1")).toBeVisible();
+		await expect.element(panel.getByRole("button", { name: "버리기" })).toBeVisible();
+		await userEvent.click(main().getByRole("link", { name: "Blog Assets" }));
+		const asked = page.getByRole("alertdialog");
+		await expect.element(asked).toBeVisible();
+		await userEvent.click(asked.getByRole("button", { name: "계속 고치기" }));
+		await expect.element(name).toHaveValue("새 이름");
+		await userEvent.click(main().getByRole("link", { name: "Blog Assets" }));
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "저장하지 않고 나가기" }));
+		await expect.element(heading()).toHaveTextContent("Blog Assets");
+		await expect
+			.element(page.getByRole("complementary").getByRole("textbox", { name: "파일 이름" }))
+			.not.toBeInTheDocument();
+	});
+
 	it("09-1 T113 with a file open beside it the list keeps a name that can be read: name and date, the panel saying the rest", async () => {
 		await ListView.run();
 		await userEvent.click(main().getByRole("link", { name: "top-level-photo.jpg" }));

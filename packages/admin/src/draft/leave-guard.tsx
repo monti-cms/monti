@@ -25,8 +25,11 @@ type Held = { changes: number; uploads: number };
 
 const Context = createContext<{
 	add: (guard: Guard) => () => void;
-	/** `filesOnly`: a step that keeps the draft but ends what goes up. It asks only about the files, and drops only them. */
-	leave: (go: () => void, filesOnly?: boolean) => void;
+	/**
+	 * `files`: a step that keeps the draft but ends what goes up; it asks only about the files, and drops only them. `changes`: a step that keeps
+	 * what goes up but lets go of a record's changes (a panel's move, `usePanelMove`); it asks only about the changes, and drops only them.
+	 */
+	leave: (go: () => void, mode?: LeaveMode) => void;
 	/** How many files are still going up on the screens that are open. */
 	uploads: () => number;
 	/** How many unsaved changes the open screens hold. */
@@ -43,6 +46,9 @@ const Context = createContext<{
 	changed: (count: number, edited: boolean) => void;
 } | null>(null);
 
+/** What a leave lets go of: everything, only the files going up, or only the unsaved changes. */
+type LeaveMode = "all" | "files" | "changes";
+
 /** How saving the open screens from outside went (`useSaveUnsaved`). */
 export type SaveOutcome = "saved" | "refused" | "edited";
 
@@ -50,13 +56,15 @@ export type SaveOutcome = "saved" | "refused" | "edited";
 const DRAWN_WITHIN = 5000;
 
 /**
- * Asks before leaving a screen with unsaved changes (doc 05, flow 11 step 04): keep editing or leave without saving. Proposals are on the server, so
+ * Asks before leaving a screen with unsaved changes (doc 05, flow 11 step 04): save and leave (when the screens can be saved from outside), keep
+ * editing, or leave without saving. Proposals are on the server, so
  * they never stop a leave. Closing the browser tab with changes gets the browser's own question.
  */
 export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 	const { t } = useAdmin();
 	const guards = useRef(new Set<Guard>());
-	const [asking, setAsking] = useState<({ go: () => void; filesOnly: boolean } & Held) | null>(null);
+	const [asking, setAsking] = useState<({ go: () => void; mode: LeaveMode; canSave: boolean } & Held) | null>(null);
+	const [savingToLeave, setSavingToLeave] = useState(false);
 	// A save from outside that is under way, and whether a screen's changes moved while it was; and what waits for the screens to draw.
 	const savingNow = useRef<{ edited: boolean } | null>(null);
 	const waiters = useRef(new Set<() => void>());
@@ -85,11 +93,20 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 					guards.current.delete(guard);
 				};
 			},
-			leave: (go: () => void, filesOnly = false) => {
+			leave: (go: () => void, mode: LeaveMode = "all") => {
 				const now = held();
-				const changes = filesOnly ? 0 : now.changes;
-				if (changes + now.uploads === 0) go();
-				else setAsking({ go, filesOnly, changes, uploads: now.uploads });
+				const changes = mode === "files" ? 0 : now.changes;
+				const uploads = mode === "changes" ? 0 : now.uploads;
+				if (changes + uploads === 0) go();
+				else
+					setAsking({
+						go,
+						mode,
+						changes,
+						uploads,
+						// Saved and then left, when every screen holding changes can save them from outside (TL-01).
+						canSave: changes > 0 && [...guards.current].every((guard) => guard.changes() === 0 || guard.canSave()),
+					});
 			},
 			uploads: () => held().uploads,
 			changes: () => held().changes,
@@ -129,18 +146,24 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 		[held],
 	);
 	// Files only: saying "unsaved changes" of them leaves the person guessing what the number is (usability, U10).
-	const onlyFiles = asking !== null && asking.changes === 0;
+	// The question as it was asked stays drawn while it fades out: read anew, it lost its third answer and narrowed as it closed.
+	const lastAsked = useRef(asking);
+	if (asking) lastAsked.current = asking;
+	const shown = asking ?? lastAsked.current;
+	const onlyFiles = shown !== null && shown.changes === 0;
 	return (
 		<Context.Provider value={value}>
 			{children}
-			<AlertDialog open={asking !== null} onOpenChange={(open) => !open && setAsking(null)}>
-				<AlertDialogContent>
+			<AlertDialog open={asking !== null} onOpenChange={(open) => !open && !savingToLeave && setAsking(null)}>
+				{/* Three answers do not fit the 420px question on one line: it is the wide one then. */}
+				<AlertDialogContent size={shown?.canSave ? "wide" : undefined}>
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t(onlyFiles ? "leave.uploads.title" : "leave.title")}</AlertDialogTitle>
 						<AlertDialogDescription>
 							{[
-								asking?.changes ? t("leave.description", { count: asking.changes }) : null,
-								asking?.uploads ? t("leave.uploads.description", { count: asking.uploads }) : null,
+								// What is lost, not how much: the count is nothing to act on.
+								shown?.changes ? t("leave.description") : null,
+								shown?.uploads ? t("leave.uploads.description") : null,
 							]
 								.filter(Boolean)
 								.join(" ")}
@@ -150,16 +173,45 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 						<AlertDialogCancel
 							variant="danger"
 							onClick={() => {
-								for (const guard of guards.current) if (!asking?.filesOnly || guard.uploads() > 0) guard.drop();
+								if (savingToLeave) return;
+								for (const guard of guards.current)
+									if (asking?.mode === "all" || (asking?.mode === "files" ? guard.uploads() > 0 : guard.changes() > 0))
+										guard.drop();
 								asking?.go();
 								setAsking(null);
 							}}
 						>
-							{t(asking?.filesOnly ? "leave.uploads.stop" : onlyFiles ? "leave.uploads.discard" : "leave.discard")}
+							{t(
+								shown?.mode === "files" ? "leave.uploads.stop" : onlyFiles ? "leave.uploads.discard" : "leave.discard",
+							)}
 						</AlertDialogCancel>
-						<AlertDialogAction onClick={() => setAsking(null)}>
+						<AlertDialogAction
+							variant={shown?.canSave ? "secondary" : "primary"}
+							onClick={() => !savingToLeave && setAsking(null)}
+						>
 							{t(onlyFiles ? "leave.uploads.stay" : "leave.stay")}
 						</AlertDialogAction>
+						{shown?.canSave && (
+							<AlertDialogAction
+								loading={savingToLeave}
+								onClick={async () => {
+									if (!asking) return;
+									const { go, uploads } = asking;
+									setSavingToLeave(true);
+									const outcome = await value
+										.save()
+										.catch((): SaveOutcome => "refused")
+										.finally(() => setSavingToLeave(false));
+									setAsking(null);
+									// Refused: the screen says why itself. Changed while it saved: the screen is still the place to look.
+									if (outcome !== "saved") return;
+									if (uploads > 0) for (const guard of guards.current) if (guard.uploads() > 0) guard.drop();
+									go();
+								}}
+							>
+								{t(savingToLeave ? "ui.saving" : "leave.save")}
+							</AlertDialogAction>
+						)}
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
@@ -176,7 +228,26 @@ export function useLeave() {
 /** Like `useLeave`, for a step inside a screen that keeps the draft but ends what goes up: a change of view, the comparison. */
 export function useLeaveFiles() {
 	const context = useContext(Context);
-	return useCallback((go: () => void) => (context ? context.leave(go, true) : go()), [context]);
+	return useCallback((go: () => void) => (context ? context.leave(go, "files") : go()), [context]);
+}
+
+/**
+ * The one rule of a panel beside a list (the taxonomy's, the library's): when it lets go of the record it holds, because another opens in it or it
+ * closes, its unsaved changes are asked about first, as any leave (doc 05; TG-01). Each record's changes are its own and none go over to the next
+ * (`useDraft` lets them go when its target changes). The move stays in the screen, so files going up go on and are not asked about.
+ *
+ * `move(next, go)`: `next` is the record the panel will hold (`null`: closed), `go` makes the move. A record that leaves for good (to the trash)
+ * closes the panel without it.
+ */
+export function usePanelMove(holding: string | null) {
+	const context = useContext(Context);
+	return useCallback(
+		(next: string | null, go: () => void) => {
+			if (holding === null || next === holding || !context) go();
+			else context.leave(go, "changes");
+		},
+		[context, holding],
+	);
 }
 
 /** How many files are still going up, asked at the moment of an action that must wait for them (archiving an entry). */
@@ -196,7 +267,7 @@ export function useUnsavedChanges() {
 
 /**
  * Saving the open screens from outside them (the assistant's "save and open": doc 10, flow 2·05). `can`: every screen with unsaved changes
- * gave a way to save it (the editors do; a panel beside a list does not). `save`: saves them as their own save does, which says a refusal
+ * gave a way to save it (the editors and the taxonomy and media panels do; the settings do not). `save`: saves them as their own save does, which says a refusal
  * itself; `true` when it all went through.
  */
 export function useSaveUnsaved() {

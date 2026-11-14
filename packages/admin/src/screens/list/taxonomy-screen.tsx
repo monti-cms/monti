@@ -36,6 +36,7 @@ import {
 	RowTitle,
 	SearchToggle,
 	SidePanel,
+	SidePanelSave,
 	Table,
 	TableBody,
 	TableCell,
@@ -50,6 +51,7 @@ import {
 } from "@monti-cms/ui";
 import { Add, Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useRef, useState } from "react";
+import { useLeaveGuard, usePanelMove } from "../../draft/leave-guard";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
@@ -83,6 +85,7 @@ function TaxonomySidePanel({
 	isMultilingual,
 	hasPublicPage,
 	onClose,
+	onDropNew,
 	onMerge,
 	onTrash,
 	onSaved,
@@ -96,6 +99,8 @@ function TaxonomySidePanel({
 	isMultilingual: boolean;
 	hasPublicPage: boolean;
 	onClose: () => void;
+	/** Closes a new one whose words were just thrown away: nothing is left to ask about. */
+	onDropNew: () => void;
 	onMerge: () => void;
 	onTrash: () => void;
 	onSaved: (savedGroup: string) => void;
@@ -129,6 +134,29 @@ function TaxonomySidePanel({
 		onSaved,
 	});
 	const nameMissing = saveAsked && !panel.named;
+
+	/** The panel's save, from its button or from the question asked before it closes; `true` when it went through. */
+	const save = async (): Promise<boolean> => {
+		if (!panel.named) {
+			setSaveAsked(true);
+			nameInput.current?.focus();
+			return false;
+		}
+		const res = await panel.save();
+		// Saved: the panel's own line says so, no toast repeats it (status.md). Refused: the field that caused it says why under
+		// itself (an address a deleted item had), anything else in a toast.
+		if (res.ok) return true;
+		const reason = res.refusal.reason;
+		// The address refused is said under the address field while it holds that address: in the language shown, or once
+		// the person turns to the language whose address it is.
+		if (reason?.key === "items.pathKept" && typeof reason.values?.slug === "string") {
+			setSlugRefused({ slug: reason.values.slug, reason: t(reason) });
+			if (shownValue(slugPath) === reason.values.slug) slugInput.current?.focus();
+			else toast.error(t(reason));
+		} else toast.error(t(reasonOf(res.refusal)));
+		return false;
+	};
+	useLeaveGuard({ changes: panel.draft.changes, revertAll: panel.draft.revertAll, save });
 
 	const title = item?.title || t("taxonomy.newItem", { label: collectionName });
 	const titlePath = `locales.${activeLocale}.title`;
@@ -204,50 +232,21 @@ function TaxonomySidePanel({
 				) : undefined
 			}
 			footer={
+				// A new one is saved from its footer from the start (T112); it counts changes only once something is written in it (TG-04).
 				panel.draft.dirty || group === "__new__" ? (
-					<Inline justify="between" align="center" grow>
-						<Text variant="note" tone="subtle">
-							{t("taxonomy.changesCount", { count: panel.draft.changes.length || 1 })}
-						</Text>
-						<Inline gap={8}>
-							<Button
-								variant="secondary"
-								size="md"
-								onClick={() => {
-									setSaveAsked(false);
-									panel.draft.revertAll();
-								}}
-							>
-								{t("common.discard")}
-							</Button>
-							<Button
-								variant="primary"
-								size="md"
-								loading={panel.saving}
-								onClick={async () => {
-									if (!panel.named) {
-										setSaveAsked(true);
-										nameInput.current?.focus();
-										return;
-									}
-									const res = await panel.save();
-									// Saved: the panel's own line says so, no toast repeats it (status.md). Refused: the field that caused it says why under
-									// itself (an address a deleted item had), anything else in a toast.
-									if (res.ok) return;
-									const reason = res.refusal.reason;
-									// The address refused is said under the address field while it holds that address: in the language shown, or once
-									// the person turns to the language whose address it is.
-									if (reason?.key === "items.pathKept" && typeof reason.values?.slug === "string") {
-										setSlugRefused({ slug: reason.values.slug, reason: t(reason) });
-										if (shownValue(slugPath) === reason.values.slug) slugInput.current?.focus();
-										else toast.error(t(reason));
-									} else toast.error(t(reasonOf(res.refusal)));
-								}}
-							>
-								{t("common.save")}
-							</Button>
-						</Inline>
-					</Inline>
+					<SidePanelSave
+						changes={panel.draft.dirty ? t("panel.changesCount", { count: panel.draft.changes.length }) : null}
+						discardLabel={t("common.discard")}
+						onDiscard={() => {
+							setSaveAsked(false);
+							panel.draft.revertAll();
+							// A new one with nothing written is no form to keep open (TG-03).
+							if (group === "__new__") onDropNew();
+						}}
+						saveLabel={t("common.save")}
+						onSave={() => void save()}
+						saving={panel.saving}
+					/>
 				) : undefined
 			}
 		>
@@ -357,6 +356,8 @@ export function TaxonomyScreen({
 
 	useCoverCorner(openGroup !== null);
 	const trash = useTrashMove();
+	const panelMove = usePanelMove(openGroup);
+	const openPanel = (group: string | null) => panelMove(group, () => setOpenGroup(group));
 
 	const collectionName = schema.data?.adminValues[collection]?.label ?? collection;
 	const path = schema.data?.schema.collections[collection]?.path;
@@ -430,7 +431,7 @@ export function TaxonomyScreen({
 		const Separator = context ? ContextMenuSeparator : DropdownMenuSeparator;
 		return (
 			<>
-				<Item onClick={() => setOpenGroup(item.group)}>
+				<Item onClick={() => openPanel(item.group)}>
 					<Edit aria-hidden />
 					{t("taxonomy.edit")}
 				</Item>
@@ -519,7 +520,7 @@ export function TaxonomyScreen({
 						placeholder={t("taxonomy.searchPlaceholder")}
 						onValueChange={setSearch}
 					/>
-					<Button variant="secondary" onClick={() => setOpenGroup("__new__")}>
+					<Button variant="secondary" onClick={() => openPanel("__new__")}>
 						<Add aria-hidden />
 						{t("taxonomy.add", { label: collectionName })}
 					</Button>
@@ -580,7 +581,7 @@ export function TaxonomyScreen({
 											/>
 											<RowTitle
 												title={
-													<RowLink render={<button type="button" />} onClick={() => setOpenGroup(item.group)}>
+													<RowLink render={<button type="button" />} onClick={() => openPanel(item.group)}>
 														{item.title || t("list.untitled")}
 													</RowLink>
 												}
@@ -652,7 +653,8 @@ export function TaxonomyScreen({
 					sourceLocale={sourceLocale}
 					isMultilingual={isMultilingual}
 					hasPublicPage={path !== undefined}
-					onClose={() => setOpenGroup(null)}
+					onClose={() => openPanel(null)}
+					onDropNew={() => setOpenGroup(null)}
 					onMerge={() => currentItem && setMergeGroups([currentItem.group])}
 					onTrash={() => currentItem && trashItems([currentItem])}
 					onSaved={(newGroup) => {

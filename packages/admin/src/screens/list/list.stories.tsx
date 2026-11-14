@@ -827,6 +827,16 @@ export const TaxonomyTags: Story = {
 	},
 };
 
+/** A new tag's form before anything is written: its save is there, and no change is counted yet (TG-04). */
+export const TaxonomyNewItem: Story = {
+	loaders: site(withDuplicateReactTag, "#/c/tag", { schema: oneLanguage }),
+	play: async ({ canvasElement }) => {
+		const page = within(canvasElement);
+		await userEvent.click(await page.findByRole("button", { name: "태그 추가" }, wait));
+		await waitFor(() => expect(within(document.body).getByRole("heading", { name: "새 태그" })).toBeTruthy(), wait);
+	},
+};
+
 /** The usage column's menu: both ways, then the filter that keeps the unused ones (every table's columns, components/list.md). */
 export const TaxonomyUsageMenu: Story = {
 	loaders: site(withDuplicateReactTag, "#/c/tag", { schema: oneLanguage }),

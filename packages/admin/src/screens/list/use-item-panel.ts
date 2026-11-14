@@ -1,6 +1,5 @@
 import type { UsageItem } from "@monti-cms/core";
 import { useCallback, useMemo } from "react";
-import { useLeaveGuard } from "../../draft/leave-guard";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
 import { useOperation } from "../../operations/use-operation";
@@ -16,7 +15,7 @@ export type UseItemPanelOptions = {
 
 /**
  * Manages side panel draft editing for an item group across all site languages (doc 08, T45).
- * Uses `useDraft` to handle dirty tracking, unsaved changes count, and agent proposals.
+ * Uses `useDraft` to handle dirty tracking, unsaved changes count, and agent proposals; the panel guards them, with its save (`useLeaveGuard`).
  * Saves all locales in a single write via `items.saveGroup`.
  */
 export function useItemPanel({ collection, group, item, locales, sourceLocale, onSaved }: UseItemPanelOptions) {
@@ -88,12 +87,10 @@ export function useItemPanel({ collection, group, item, locales, sourceLocale, o
 
 	const draft = useDraft({
 		target,
-		base: group === "__new__" ? {} : base,
+		base,
 		version: item ? (item.locales[sourceLocale]?.updatedAt ?? "1") : "1",
 		proposalValues,
 	});
-
-	useLeaveGuard({ changes: draft.changes, revertAll: draft.revertAll });
 
 	/** A name in some language: an item cannot be saved without one. */
 	const named = useMemo(

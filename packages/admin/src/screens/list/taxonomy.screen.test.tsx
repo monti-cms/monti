@@ -13,6 +13,7 @@ const {
 	TaxonomyTagsPicked,
 	TaxonomyMergeDialog,
 	TaxonomySidePanel,
+	TaxonomyNewItem,
 } = composeStories(list);
 
 const main = () => page.getByRole("main");
@@ -85,14 +86,78 @@ describe("taxonomy screen (doc 08)", () => {
 		await expect.element(page.getByText("이 칸을 채워 주세요.")).not.toBeInTheDocument();
 		await userEvent.click(save);
 		await expect.element(page.getByText("이 칸을 채워 주세요.")).toBeVisible();
-		// Dropping the changes drops the error with them.
+		// Throwing a new one away closes it, and its error with it (TG-03).
 		await userEvent.click(page.getByRole("button", { name: "버리기", exact: true }));
+		await expect.element(page.getByRole("heading", { name: "새 태그" })).not.toBeInTheDocument();
+		await userEvent.click(main().getByRole("button", { name: "태그 추가" }));
 		await expect.element(page.getByText("이 칸을 채워 주세요.")).not.toBeInTheDocument();
 		await userEvent.click(save);
 		await expect.element(page.getByText("이 칸을 채워 주세요.")).toBeVisible();
 		await userEvent.keyboard("새");
 		await expect.element(page.getByText("이 칸을 채워 주세요.")).not.toBeInTheDocument();
 		await expect.element(name).not.toHaveAttribute("aria-invalid");
+	});
+
+	it("TG-01 another item opened over unsaved changes asks first; leaving without saving takes nothing over to it", async () => {
+		await TaxonomyTags.run();
+		await userEvent.click(table().getByText("리액트", { exact: true }));
+		const description = page.getByRole("textbox", { name: "설명" });
+		await userEvent.fill(description, "고치던 설명");
+		await userEvent.click(table().getByText("React", { exact: true }));
+		const asked = page.getByRole("alertdialog");
+		await expect.element(asked).toBeVisible();
+		// Stays: the item and what was written in it are still there.
+		await userEvent.click(asked.getByRole("button", { name: "계속 고치기" }));
+		await expect.element(page.getByRole("textbox", { name: "이름" })).toHaveValue("리액트");
+		await expect.element(description).toHaveValue("고치던 설명");
+		await userEvent.click(table().getByText("React", { exact: true }));
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "저장하지 않고 나가기" }));
+		await expect.element(page.getByRole("textbox", { name: "이름" })).toHaveValue("React");
+		await expect.element(description).toHaveValue("");
+		await expect.element(page.getByText(/변경 사항/)).not.toBeInTheDocument();
+		// The changes thrown away do not come back with the item.
+		await userEvent.click(table().getByText("리액트", { exact: true }));
+		await expect.element(page.getByRole("textbox", { name: "이름" })).toHaveValue("리액트");
+		await expect.element(description).toHaveValue("");
+	});
+
+	it("TL-01 the question offers to save first: saved, the next item opens", async () => {
+		await TaxonomyTags.run();
+		await userEvent.click(table().getByText("리액트", { exact: true }));
+		await userEvent.fill(page.getByRole("textbox", { name: "설명" }), "저장할 설명");
+		await userEvent.click(table().getByText("React", { exact: true }));
+		// The three answers stand on one line.
+		const tops = ["저장하지 않고 나가기", "계속 고치기", "저장하고 나가기"].map(
+			(name) => page.getByRole("alertdialog").getByRole("button", { name }).element().getBoundingClientRect().top,
+		);
+		expect(new Set(tops).size).toBe(1);
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "저장하고 나가기" }));
+		await expect.element(page.getByRole("textbox", { name: "이름" })).toHaveValue("React");
+		await userEvent.click(table().getByText("리액트", { exact: true }));
+		await expect.element(page.getByRole("textbox", { name: "설명" })).toHaveValue("저장할 설명");
+	});
+
+	it("TG-04 TG-07 a new form counts no change before anything is written, and closing it written in asks first", async () => {
+		await TaxonomyNewItem.run();
+		await expect.element(page.getByRole("heading", { name: "새 태그" })).toBeVisible();
+		await expect.element(page.getByText(/변경 사항/)).not.toBeInTheDocument();
+		await userEvent.fill(page.getByRole("textbox", { name: "이름" }), "새 이름");
+		await expect.element(page.getByText("변경 사항 1")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "닫기" }));
+		await expect.element(page.getByRole("alertdialog")).toBeVisible();
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "저장하지 않고 나가기" }));
+		await expect.element(page.getByRole("heading", { name: "새 태그" })).not.toBeInTheDocument();
+	});
+
+	it("a new item saved leaves nothing for the next new form", async () => {
+		await TaxonomyTags.run();
+		await userEvent.click(main().getByRole("button", { name: "태그 추가" }));
+		await userEvent.fill(page.getByRole("textbox", { name: "이름" }), "새로 만든 태그");
+		await userEvent.click(page.getByRole("button", { name: "저장", exact: true }));
+		await expect.element(page.getByRole("heading", { name: "새로 만든 태그" })).toBeVisible();
+		await userEvent.click(main().getByRole("button", { name: "태그 추가" }));
+		await expect.element(page.getByRole("heading", { name: "새 태그" })).toBeVisible();
+		await expect.element(page.getByRole("textbox", { name: "이름" })).toHaveValue("");
 	});
 
 	it("keeps the same table header height before and after a row is picked", async () => {
