@@ -831,7 +831,10 @@ export function EntryEditor({
 
 	const saveCell: Record<SaveState, { text: string; tone?: "warning" | "danger"; press?: () => void }> = {
 		unsaved: { text: t("entry.save.unsaved"), tone: "warning", press: () => void save() },
-		saved: { text: t("entry.save.saved") },
+		// Saved, with the assistant's proposals still waiting on it: said, and pressed it goes to the first (AS-18).
+		saved: walking
+			? { text: t("entry.save.proposals", { count: walk.length }), press: () => show(walk[0] ?? walking) }
+			: { text: t("entry.save.saved") },
 		browser: { text: t("entry.save.browser"), tone: "warning", press: () => onCompare("draft") },
 		conflict: { text: t("entry.save.conflict"), tone: "danger", press: () => onCompare("conflict") },
 		signedOut: { text: t("entry.save.signedOut"), tone: "danger", press: editor.signIn },
@@ -1091,7 +1094,17 @@ export function EntryEditor({
 						<Banner
 							ref={handOff}
 							title={t("entry.browserCopy")}
-							meta={editor.browserCopy.savedAt ? dayTime(editor.browserCopy.savedAt, language) : undefined}
+							meta={
+								[
+									editor.browserCopy.savedAt ? dayTime(editor.browserCopy.savedAt, language) : null,
+									// Proposals taken into the kept changes are the assistant's, not the person's own typing (AS-20).
+									editor.browserCopy.proposals > 0
+										? t("entry.browserCopyProposals", { count: editor.browserCopy.proposals })
+										: null,
+								]
+									.filter(Boolean)
+									.join(" · ") || undefined
+							}
 						>
 							<TextButton variant="underline" onClick={() => onCompare("draft")}>
 								{t("entry.compare")}

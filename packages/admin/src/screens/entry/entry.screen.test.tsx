@@ -137,6 +137,49 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(title()).toHaveFocus();
 	});
 
+	it("PP-01 leaving without saving forgets the browser's copy too: the entry opens again without what was thrown away", async () => {
+		const shown = on("draft");
+		await shown.run();
+		await opened();
+		const kept = `monti.draft.entry:${shown.loaded().id}`;
+		await userEvent.fill(title(), "버릴 제목");
+		await expect.poll(() => localStorage.getItem(kept)).not.toBeNull();
+		await userEvent.click(button("게시글"));
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "저장하지 않고 나가기" }));
+		await expect.element(title()).not.toBeInTheDocument();
+		expect(localStorage.getItem(kept)).toBeNull();
+	});
+
+	it("TL-01 the question before leaving saves first when asked: saved, the editor leaves for the list", async () => {
+		await on("draft").run();
+		await opened();
+		await userEvent.fill(title(), "저장하고 나간 제목");
+		await userEvent.click(button("게시글"));
+		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "저장하고 나가기" }));
+		await expect.element(title()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("main").getByText("저장하고 나간 제목")).toBeVisible();
+	});
+
+	it("TP-11 letters typed into the body and taken out again leave nothing unsaved", async () => {
+		await on("draft").run();
+		await opened();
+		await userEvent.click(body());
+		await userEvent.keyboard("가나");
+		await expect.element(button("저장 전 변경사항")).toBeVisible();
+		await userEvent.keyboard("{Backspace}{Backspace}");
+		await expect.element(button("저장 전 변경사항")).not.toBeInTheDocument();
+	});
+
+	it("TC-09 the browser's copy thrown away comes back from the toast's undo", async () => {
+		await BrowserCopy.run();
+		await opened();
+		await userEvent.click(button("버리기"));
+		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).not.toBeInTheDocument();
+		await expect.element(page.getByText("이 브라우저의 편집을 버렸습니다")).toBeVisible();
+		await userEvent.click(button("되돌리기"));
+		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).toBeVisible();
+	});
+
 	it("TR-16 the to-do list counts what is typed before it is saved: a title written leaves it, and emptied again it comes back", async () => {
 		await on("untitled").run();
 		await opened();

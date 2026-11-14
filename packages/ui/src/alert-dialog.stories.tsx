@@ -58,6 +58,25 @@ export const LeaveUnsaved: Story = {
 	),
 };
 
+/** The screen can save from outside: saving and leaving is the main button, keeping on is the side one, the risky way out stays a red text button. */
+export const LeaveUnsavedSave: Story = {
+	render: () => (
+		<AlertDialog defaultOpen>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>저장하지 않은 변경 사항이 있습니다</AlertDialogTitle>
+					<AlertDialogDescription>나가면 고친 곳 2개가 사라집니다.</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel variant="danger">저장하지 않고 나가기</AlertDialogCancel>
+					<AlertDialogAction variant="secondary">계속 고치기</AlertDialogAction>
+					<AlertDialogAction>저장하고 나가기</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	),
+};
+
 /** `wide` (520px), for a question that lists what it touches. */
 export const Wide: Story = {
 	render: () => (

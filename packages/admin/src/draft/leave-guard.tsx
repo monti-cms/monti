@@ -50,13 +50,15 @@ export type SaveOutcome = "saved" | "refused" | "edited";
 const DRAWN_WITHIN = 5000;
 
 /**
- * Asks before leaving a screen with unsaved changes (doc 05, flow 11 step 04): keep editing or leave without saving. Proposals are on the server, so
+ * Asks before leaving a screen with unsaved changes (doc 05, flow 11 step 04): save and leave (when the screens can be saved from outside), keep
+ * editing, or leave without saving. Proposals are on the server, so
  * they never stop a leave. Closing the browser tab with changes gets the browser's own question.
  */
 export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 	const { t } = useAdmin();
 	const guards = useRef(new Set<Guard>());
-	const [asking, setAsking] = useState<({ go: () => void; filesOnly: boolean } & Held) | null>(null);
+	const [asking, setAsking] = useState<({ go: () => void; filesOnly: boolean; canSave: boolean } & Held) | null>(null);
+	const [savingToLeave, setSavingToLeave] = useState(false);
 	// A save from outside that is under way, and whether a screen's changes moved while it was; and what waits for the screens to draw.
 	const savingNow = useRef<{ edited: boolean } | null>(null);
 	const waiters = useRef(new Set<() => void>());
@@ -89,7 +91,15 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 				const now = held();
 				const changes = filesOnly ? 0 : now.changes;
 				if (changes + now.uploads === 0) go();
-				else setAsking({ go, filesOnly, changes, uploads: now.uploads });
+				else
+					setAsking({
+						go,
+						filesOnly,
+						changes,
+						uploads: now.uploads,
+						// Saved and then left, when every screen holding changes can save them from outside (TL-01).
+						canSave: changes > 0 && [...guards.current].every((guard) => guard.changes() === 0 || guard.canSave()),
+					});
 			},
 			uploads: () => held().uploads,
 			changes: () => held().changes,
@@ -133,7 +143,7 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 	return (
 		<Context.Provider value={value}>
 			{children}
-			<AlertDialog open={asking !== null} onOpenChange={(open) => !open && setAsking(null)}>
+			<AlertDialog open={asking !== null} onOpenChange={(open) => !open && !savingToLeave && setAsking(null)}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t(onlyFiles ? "leave.uploads.title" : "leave.title")}</AlertDialogTitle>
@@ -150,6 +160,7 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 						<AlertDialogCancel
 							variant="danger"
 							onClick={() => {
+								if (savingToLeave) return;
 								for (const guard of guards.current) if (!asking?.filesOnly || guard.uploads() > 0) guard.drop();
 								asking?.go();
 								setAsking(null);
@@ -157,9 +168,29 @@ export function LeaveGuardProvider({ children }: { children: ReactNode }) {
 						>
 							{t(asking?.filesOnly ? "leave.uploads.stop" : onlyFiles ? "leave.uploads.discard" : "leave.discard")}
 						</AlertDialogCancel>
-						<AlertDialogAction onClick={() => setAsking(null)}>
+						<AlertDialogAction
+							variant={asking?.canSave ? "secondary" : "primary"}
+							onClick={() => !savingToLeave && setAsking(null)}
+						>
 							{t(onlyFiles ? "leave.uploads.stay" : "leave.stay")}
 						</AlertDialogAction>
+						{asking?.canSave && (
+							<AlertDialogAction
+								loading={savingToLeave}
+								onClick={async () => {
+									const { go, uploads } = asking;
+									setSavingToLeave(true);
+									const outcome = await value.save().finally(() => setSavingToLeave(false));
+									setAsking(null);
+									// Refused: the screen says why itself. Changed while it saved: the screen is still the place to look.
+									if (outcome !== "saved") return;
+									if (uploads > 0) for (const guard of guards.current) if (guard.uploads() > 0) guard.drop();
+									go();
+								}}
+							>
+								{t(savingToLeave ? "ui.saving" : "leave.save")}
+							</AlertDialogAction>
+						)}
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

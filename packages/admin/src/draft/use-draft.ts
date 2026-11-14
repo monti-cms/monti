@@ -1,4 +1,4 @@
-import { sameJson } from "@monti-cms/core";
+import { isEmptyValue, sameJson } from "@monti-cms/core";
 import { toast } from "@monti-cms/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
@@ -30,9 +30,24 @@ type Stored = {
 };
 
 /** My changes this browser kept from an earlier visit, offered before they go in (`restore: "ask"`). */
-export type BrowserCopy = { version: number | string; savedAt: Date | null; mine: [Path, unknown][] };
+export type BrowserCopy = {
+	version: number | string;
+	savedAt: Date | null;
+	mine: [Path, unknown][];
+	/** How many of the assistant's proposals were taken into them. */
+	proposals: number;
+};
 
 const storageKey = (target: Target) => `monti.draft.${target.kind}:${target.id}`;
+
+/** Two values a place can hold that show the same: equal JSON, or both nothing written (an empty text over a field never filled). */
+export const sameValue = (a: unknown, b: unknown) => sameJson(a, b) || (isEmptyValue(a) && isEmptyValue(b));
+
+const forget = (target: Target) => {
+	try {
+		localStorage.removeItem(storageKey(target));
+	} catch {}
+};
 
 const isMine = (value: unknown): value is [Path, unknown] =>
 	Array.isArray(value) && value.length === 2 && typeof value[0] === "string";
@@ -137,6 +152,21 @@ export function useDraft({
 	const [offered, setOffered] = useState<Stored | null>(null);
 	// `ask` looks at the browser's copy once, when the screen first has the server's values: later versions are the person's own saves.
 	const asked = useRef(false);
+	// Another record in the same screen (the next tag in a panel): what was changed was the other record's, and none of it is this one's (TG-01).
+	// It is let go before anything is drawn or kept, or the other record's changes would be kept in this one's browser copy.
+	const key = storageKey(target);
+	const [heldFor, setHeldFor] = useState(key);
+	if (heldFor !== key) {
+		setHeldFor(key);
+		setMine(new Map());
+		setQuick(new Set());
+		setAccepted([]);
+		setRestoredFor(null);
+		setOffered(null);
+		asked.current = false;
+	}
+	const offeredNow = useRef(offered);
+	offeredNow.current = offered;
 
 	useEffect(() => {
 		if (version === null || restoredFor === version) return;
@@ -161,7 +191,7 @@ export function useDraft({
 		// While a kept copy waits for an answer, it stays as it is: what is typed meanwhile is not kept over it.
 		if (version === null || restoredFor !== version || offered) return;
 		try {
-			if (mine.size === 0) localStorage.removeItem(storageKey(target));
+			if (mine.size === 0) forget(target);
 			else
 				localStorage.setItem(
 					storageKey(target),
@@ -207,7 +237,7 @@ export function useDraft({
 	const put = useCallback(
 		(path: Path, next: unknown) => {
 			const copy = new Map(mineNow.current);
-			if (sameJson(next, saved(path))) {
+			if (sameValue(next, saved(path))) {
 				copy.delete(path);
 				// Typed back to the saved value is put back, as its undo would: an item taken for this place alone is no longer taken, so the
 				// next save does not send an item none of whose places it saves.
@@ -270,7 +300,10 @@ export function useDraft({
 		setMine(new Map());
 		setQuick(new Set());
 		setAccepted([]);
-	}, [setMine]);
+		// The browser's copy goes now, not when the screen draws again: leaving without saving moves away at once, and a screen gone draws nothing
+		// more, so the copy came back the next time it opened (PP-01). A copy still offered is not this one, and waits for its own answer.
+		if (!offeredNow.current) forget(target);
+	}, [setMine, target]);
 
 	const accept = useCallback(
 		(id: string) => {
@@ -342,6 +375,7 @@ export function useDraft({
 					version: offered.version,
 					savedAt: offered.savedAt ? new Date(offered.savedAt) : null,
 					mine: offered.mine,
+					proposals: offered.accepted.length,
 				} satisfies BrowserCopy)
 			: null,
 		/** The kept changes go in over what the server has now. */
@@ -351,12 +385,23 @@ export function useDraft({
 			setAccepted(offered.accepted);
 			setOffered(null);
 		},
-		/** The kept changes are thrown away. */
+		/** The kept changes are thrown away, with a toast that puts them back: nothing asks first (TC-09). */
 		dropBrowserCopy: () => {
-			try {
-				localStorage.removeItem(storageKey(target));
-			} catch {}
+			const dropped = offered;
+			forget(target);
 			setOffered(null);
+			if (!dropped) return;
+			toast(t("draft.copyDropped"), {
+				action: {
+					label: t("common.undo"),
+					onClick: () => {
+						try {
+							localStorage.setItem(storageKey(target), JSON.stringify(dropped));
+						} catch {}
+						setOffered(dropped);
+					},
+				},
+			});
 		},
 		/**
 		 * My changes as they are when a save is sent: given back to `saved`, so the save lets go of what it sent and of nothing a person did
@@ -396,7 +441,7 @@ export function useDraft({
 		savedPart: (now: Record<Path, unknown>) => {
 			// An item none of whose places is left went with the save. One that still has a place here was not written whole (its change of the
 			// schema waits): it stays taken, and goes with the next save.
-			const left = new Map([...mineNow.current].filter(([path, value]) => !sameJson(value, now[path])));
+			const left = new Map([...mineNow.current].filter(([path, value]) => !sameValue(value, now[path])));
 			setAccepted((ids) =>
 				ids.filter((id) => {
 					const item = proposals.items.find((each) => each.id === id);

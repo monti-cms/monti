@@ -340,7 +340,8 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		await userEvent.click(button("버리기"));
 		await expect.poll(async () => (await pending(made.loaded())).length).toBe(2);
 		await expect.poll(() => inBody("ins").map((each) => each.textContent)).toEqual(["상태도 색 대신 글자로 적었다."]);
-		await saveCell("저장됨");
+		// Nothing unsaved: the save cell says the two proposals still waiting (AS-18).
+		await saveCell("제안 2건 대기");
 	});
 
 	it("10-1 [flow 2·09] '이어서 요청' has that change made differently: the mark says '…' meanwhile, and the change is replaced where it stood", async () => {
