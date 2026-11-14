@@ -494,22 +494,8 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 });
 
 describe("a source with saved changes not published (TR-24 to TR-26)", () => {
-	const admin = { actor: "admin" } as const;
 	/** The English translation of a source published again, whose title was then changed and saved, not published. */
-	const draftSource = siteOf([
-		async () => {
-			const [load] = stories.site("changed", "english");
-			const made = await load();
-			const { monti } = made.site;
-			const read = (await monti.run("entries.get", { id: made.ids.korean }, admin)) as { entry: { version: number } };
-			await monti.run(
-				"entries.save",
-				{ id: made.ids.korean, version: read.entry.version, title: "고치는 중인 원문 제목" },
-				admin,
-			);
-			return made;
-		},
-	]);
+	const draftSource = siteOf(stories.site("sourceDraft", "english"));
 
 	// 04-5: a translation follows the published source, so the pane shows that copy, the one its marks are counted against.
 	it("04-5 the banner says the source has changes not published; the pane shows the published source, and '원문 열기' goes to the saved one", async () => {

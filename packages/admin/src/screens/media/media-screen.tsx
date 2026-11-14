@@ -613,9 +613,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	// folders, since the page shows one folder's files.
 	const reachesAll = state.folder === null || (state.everywhere && state.search.trim() !== "");
 	const countedWhere =
-		state.folder === null && folders.children(null).length === 0
-			? undefined
-			: t(reachesAll ? "list.countedEverywhere" : "list.countedBelow");
+		folders.list.length === 0 ? undefined : t(reachesAll ? "list.countedEverywhere" : "list.countedBelow");
 	const kindFilter: FilterProps<MediaKind> = {
 		countedWhere,
 		values: KINDS.map((kind: MediaKind) => ({

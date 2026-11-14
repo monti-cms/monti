@@ -172,6 +172,12 @@ function DocumentListScreen({
 		() => toQuery(collection, state, pageSize, foldersOn),
 		[collection, state, pageSize, foldersOn],
 	);
+	// What the column menus' counts count, said over them while the collection has folders: a pick looks through the folders below the open
+	// one, or through every folder (LT-12; the media library says it the same way, MD-07).
+	const countedWhere =
+		!foldersOn || folders.list.length === 0
+			? undefined
+			: t(query.folder === null || query.scope === "all" ? "list.countedEverywhere" : "list.countedBelow");
 	const page = useRead<Page>("entries.query", columns ? query : { collection, pageSize: 1 });
 	const rows = columns ? (page.data?.rows ?? null) : null;
 	const total = page.data?.total ?? 0;
@@ -544,6 +550,7 @@ function DocumentListScreen({
 				setFilter={setFilter}
 				setSort={(sort) => setState({ ...state, page: 1, sort })}
 				onHide={() => hide(column)}
+				countedWhere={countedWhere}
 			/>
 		),
 	}));

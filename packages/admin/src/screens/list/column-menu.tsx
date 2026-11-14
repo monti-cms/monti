@@ -37,18 +37,20 @@ type MenuProps = {
 	setFilter: (column: string, filter: ListFilter | null) => void;
 	setSort: (sort: ListState["sort"]) => void;
 	onHide: () => void;
+	/** Where the counts are counted, while the list has folders (`Counted`). */
+	countedWhere?: string;
 };
 
 /**
- * What a menu's counts count while the list shows one folder (LT-12): picking a value is a filter, and a filter looks through the folders
- * below (doc 07, T54), so each count is the rows the list shows once it is picked, not the rows of the folder on the screen.
+ * What a menu's counts count, said over them while the list has folders (LT-12): picking a value is a filter, and a filter looks through the
+ * folders below (doc 07, T54), so each count is the rows the list shows once it is picked, not the rows of the folder on the screen. `where`
+ * is left out when there are no folders: the counts are then the rows on the screen.
  */
-function Counted({ query, children }: { query: Query; children: ReactNode }) {
-	const { t } = useAdmin();
-	if (query.folder === undefined || query.scope !== "here") return children;
+function Counted({ where, children }: { where?: string; children: ReactNode }) {
+	if (!where) return children;
 	return (
 		<DropdownMenuGroup>
-			<DropdownMenuLabel>{t(query.folder === null ? "list.countedEverywhere" : "list.countedBelow")}</DropdownMenuLabel>
+			<DropdownMenuLabel>{where}</DropdownMenuLabel>
 			{children}
 		</DropdownMenuGroup>
 	);
@@ -66,7 +68,7 @@ function HideRow({ onHide }: { onHide: () => void }) {
 	);
 }
 
-function StatusMenu({ state, query, setFilter, onHide }: MenuProps) {
+function StatusMenu({ state, query, setFilter, onHide, countedWhere }: MenuProps) {
 	const { t } = useAdmin();
 	const facets = useFacets(query, "status");
 	const current = filterOf(state, "status");
@@ -79,7 +81,7 @@ function StatusMenu({ state, query, setFilter, onHide }: MenuProps) {
 	};
 	return (
 		<>
-			<Counted query={query}>
+			<Counted where={countedWhere}>
 				{STATES.map((value) => (
 					<ValueRow
 						key={value}
@@ -102,7 +104,7 @@ function StatusMenu({ state, query, setFilter, onHide }: MenuProps) {
  * The language column: the languages the groups have, each with its count | "Translation": missing, source changed, up to date (components/list.md, column
  * menu). The translation rows are checked like any column's values: several leave the groups of any of them.
  */
-function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
+function LocaleMenu({ state, query, setFilter, onHide, countedWhere }: MenuProps) {
 	const { t } = useAdmin();
 	const languageName = useLanguageName();
 	const facets = useFacets(query, "locale");
@@ -114,7 +116,7 @@ function LocaleMenu({ state, query, setFilter, onHide }: MenuProps) {
 	const locales = [...new Set([...(facets ?? []).map((facet) => facet.value ?? ""), ...chosen])].filter(Boolean);
 	return (
 		<>
-			<Counted query={query}>
+			<Counted where={countedWhere}>
 				{locales.map((value) => (
 					<ValueRow
 						key={value}
@@ -164,7 +166,7 @@ export function useLanguageName() {
 }
 
 /** A relation or select column: "None", then each value with its count; a relation searches its values on top (components/list.md, column menu). */
-function ValuesMenu({ column, state, query, setFilter, onHide }: MenuProps) {
+function ValuesMenu({ column, state, query, setFilter, onHide, countedWhere }: MenuProps) {
 	const { t } = useAdmin();
 	const facets = useFacets(query, column.id);
 	const [find, setFind] = useState("");
@@ -191,7 +193,7 @@ function ValuesMenu({ column, state, query, setFilter, onHide }: MenuProps) {
 	return (
 		<>
 			{kind === "relation" && <DropdownMenuSearch value={find} onValueChange={setFind} label={t("list.findValue")} />}
-			<Counted query={query}>
+			<Counted where={countedWhere}>
 				<ValueRow
 					label={t("list.none")}
 					counted={count(facets, null)}
@@ -206,13 +208,13 @@ function ValuesMenu({ column, state, query, setFilter, onHide }: MenuProps) {
 	);
 }
 
-function EmptyMenu({ column, state, query, setFilter, onHide }: MenuProps) {
+function EmptyMenu({ column, state, query, setFilter, onHide, countedWhere }: MenuProps) {
 	const { t } = useAdmin();
 	const facets = useFacets(query, column.id);
 	const on = filterOf(state, column.id)?.on === "empty";
 	return (
 		<>
-			<Counted query={query}>
+			<Counted where={countedWhere}>
 				<ValueRow
 					label={t("list.isEmpty")}
 					counted={count(facets, "empty")}
