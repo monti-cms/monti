@@ -79,7 +79,7 @@ import {
 } from "@monti-cms/ui/icons";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useScreenContext } from "../../assistant/use-assistant";
-import { useLeave, useLeaveChanges } from "../../draft/leave-guard";
+import { useLeave, usePanelMove } from "../../draft/leave-guard";
 import { chooseFiles } from "../../media/choose-files";
 import { FileThumb, useFileDetail } from "../../media/file-shown";
 import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
@@ -409,20 +409,13 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const setState = (next: MediaState, options?: { replace?: boolean }) =>
 		go({ screen: "media", params: writeMediaState(next) }, options);
 	const hrefOf = (next: MediaState) => href({ screen: "media", params: writeMediaState(next) });
-	const leaveChanges = useLeaveChanges();
-	/**
-	 * Another file in the panel, or none: the panel's unsaved changes are asked about first, as in every panel beside a list (doc 05). Files going up
-	 * go on: the move stays in the library.
-	 */
-	const moveFile = (next: MediaState, also?: () => void) => {
-		// What goes with the move (the ticked rows let go) waits for the answer: kept editing, nothing moved.
-		const go = () => {
+	const panelMove = usePanelMove(state.file);
+	/** A move in the library: one that changes the file in the panel goes by the panel's rule. What goes with it waits for the answer. */
+	const moveFile = (next: MediaState, also?: () => void) =>
+		panelMove(next.file, () => {
 			also?.();
 			setState(next);
-		};
-		if (state.file !== null && next.file !== state.file) leaveChanges(go);
-		else go();
-	};
+		});
 	/** A link that moves in the library the same way: a plain press asks first, a press for a new tab opens one. */
 	const linkFile = (next: MediaState) =>
 		linkTo({ screen: "media", params: writeMediaState(next) }, () => moveFile(next));

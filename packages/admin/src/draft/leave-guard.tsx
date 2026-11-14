@@ -27,7 +27,7 @@ const Context = createContext<{
 	add: (guard: Guard) => () => void;
 	/**
 	 * `files`: a step that keeps the draft but ends what goes up; it asks only about the files, and drops only them. `changes`: a step that keeps
-	 * what goes up but lets go of a record's changes (another file in the library's panel); it asks only about the changes, and drops only them.
+	 * what goes up but lets go of a record's changes (a panel's move, `usePanelMove`); it asks only about the changes, and drops only them.
 	 */
 	leave: (go: () => void, mode?: LeaveMode) => void;
 	/** How many files are still going up on the screens that are open. */
@@ -231,10 +231,23 @@ export function useLeaveFiles() {
 	return useCallback((go: () => void) => (context ? context.leave(go, "files") : go()), [context]);
 }
 
-/** Like `useLeave`, for a step inside a screen that keeps what goes up but lets go of a record's changes: another file in the library's panel. */
-export function useLeaveChanges() {
+/**
+ * The one rule of a panel beside a list (the taxonomy's, the library's): when it lets go of the record it holds, because another opens in it or it
+ * closes, its unsaved changes are asked about first, as any leave (doc 05; TG-01). Each record's changes are its own and none go over to the next
+ * (`useDraft` lets them go when its target changes). The move stays in the screen, so files going up go on and are not asked about.
+ *
+ * `move(next, go)`: `next` is the record the panel will hold (`null`: closed), `go` makes the move. A record that leaves for good (to the trash)
+ * closes the panel without it.
+ */
+export function usePanelMove(holding: string | null) {
 	const context = useContext(Context);
-	return useCallback((go: () => void) => (context ? context.leave(go, "changes") : go()), [context]);
+	return useCallback(
+		(next: string | null, go: () => void) => {
+			if (holding === null || next === holding || !context) go();
+			else context.leave(go, "changes");
+		},
+		[context, holding],
+	);
 }
 
 /** How many files are still going up, asked at the moment of an action that must wait for them (archiving an entry). */

@@ -126,6 +126,7 @@ sequenceDiagram
 
 - `useDraft({ load, save, target })`: 위의 `Draft`. `cell(path)`, `revert(path)`, `revertAll()`, `accept(id)`, `discard(id)`, `save()`, `changes`(바뀐 곳 목록)를 내놓는다.
 - `useLeaveGuard(draft)`: 나가기 확인.
+- `usePanelMove(holding)`: 목록 옆 패널(분류, 미디어)이 잡은 항목을 놓을 때(다른 항목, 닫기) 바뀐 곳만 묻는다. 패널마다 따로 만들지 않는다.
 - `ChangesGroup`, `ProposalBubble`, `MemoCard`, 칸의 `changed`와 `proposal` prop: 이미 있는 부품. 초안의 상태를 그대로 넘긴다.
 
 ## 결정 기록

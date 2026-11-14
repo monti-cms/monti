@@ -50,7 +50,7 @@ import {
 } from "@monti-cms/ui";
 import { Add, Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useRef, useState } from "react";
-import { useLeave, useLeaveGuard } from "../../draft/leave-guard";
+import { useLeaveGuard, usePanelMove } from "../../draft/leave-guard";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
@@ -364,14 +364,8 @@ export function TaxonomyScreen({
 
 	useCoverCorner(openGroup !== null);
 	const trash = useTrashMove();
-	const leave = useLeave();
-	/**
-	 * Another item in the panel, a new one, or none: the panel's unsaved changes are asked about first, as any leave (TG-01, TG-07). Each item's
-	 * changes are its own: none go over to the next.
-	 */
-	const openPanel = (group: string | null) => {
-		if (group !== openGroup) leave(() => setOpenGroup(group));
-	};
+	const panelMove = usePanelMove(openGroup);
+	const openPanel = (group: string | null) => panelMove(group, () => setOpenGroup(group));
 
 	const collectionName = schema.data?.adminValues[collection]?.label ?? collection;
 	const path = schema.data?.schema.collections[collection]?.path;
