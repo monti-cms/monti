@@ -984,7 +984,14 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			<PageColumn width="list">
 				<PageHeader
 					title={here?.name ?? t("frame.media")}
-					meta={data ? t("library.count", { count: data.total }) : undefined}
+					meta={
+						data
+							? // What the page shows is counted: its folders too, when it shows them (MD-08).
+								childFolders.length > 0
+								? t("library.countWithFolders", { folders: childFolders.length, count: data.total })
+								: t("library.count", { count: data.total })
+							: undefined
+					}
 					trail={trail}
 				>
 					{/* How the library shows is no filter: it sits with the page's controls (2026-11-10, owner). */}

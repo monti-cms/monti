@@ -111,6 +111,8 @@ describe("an open editor after a write elsewhere (AS-47)", () => {
 		await opened();
 		await userEvent.click(panel().getByRole("button", { name: "1건 적용" }));
 		await expect.element(panel().getByText("✓ 1건 적용")).toBeVisible();
+		// Applying wrote to the server at once, and one line says so (AS-48).
+		await expect.element(page.getByText("1건을 서버에 저장했습니다")).toBeVisible();
 		await expect.element(summary()).toHaveValue(SUMMARY);
 		// The value is the saved one now, not a proposal drawn over the field.
 		expect(summary().element().hasAttribute("data-proposal")).toBe(false);

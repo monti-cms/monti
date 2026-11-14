@@ -81,8 +81,12 @@ export function ModelMenu({
 }) {
 	const [query, setQuery] = useState("");
 	const needle = query.trim().toLowerCase();
+	// While a search filters the models, a group's count is the models it found there, not all the key has (ST-32).
 	const shown = groups
-		.map((group) => ({ ...group, items: group.items.filter((item) => item.model.toLowerCase().includes(needle)) }))
+		.map((group) => {
+			const items = group.items.filter((item) => item.model.toLowerCase().includes(needle));
+			return { ...group, items, count: group.count !== undefined && needle !== "" ? items.length : group.count };
+		})
 		.filter((group) => group.items.length > 0);
 	return (
 		<DropdownMenu

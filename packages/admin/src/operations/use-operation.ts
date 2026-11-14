@@ -65,6 +65,17 @@ export function useOperation<Output = unknown>(name: string) {
 	return { run, pending, refusal, clear: () => setRefusal(null) };
 }
 
+/** An answer read is held as text, with the input it answered (`useRead`). */
+type HeldAnswer = { key: string; text: string | null };
+
+/**
+ * Whether an answer is news for the screen: another text, or an answer to another input. The same input read again with the same text keeps
+ * the answer the screen holds, so nothing made from it is made again; an answer to another input is new even with the same text, since a
+ * screen marks with it which input is answered (the media picker's folder: two empty folders answer alike).
+ */
+export const isNewAnswer = (held: HeldAnswer | null, next: HeldAnswer) =>
+	held?.key !== next.key || held.text !== next.text;
+
 /**
  * Reads with an operation when the screen opens, whenever `reload` is called, and after every write that goes through anywhere in the admin
  * (`wrote`): what a screen shows from the server is never older than the last write this admin made, whichever screen or panel made it (an
@@ -96,8 +107,8 @@ export function useRead<Output>(
 	const latest = useRef(0);
 	const skip = options.skip ?? false;
 	const afterWrites = options.afterWrites ?? true;
-	/** The last answer, as text: a read again that brings the same answer keeps the one the screen holds (see `reload`). */
-	const held = useRef<string | null>(null);
+	/** The last answer, as text, with the input it answered (`isNewAnswer`). */
+	const held = useRef<HeldAnswer | null>(null);
 	/**
 	 * Reads again. Resolves to how the read went: a caller that goes on from the new read must not go on from the old one, and says why only when
 	 * the reason is its own to say (an ended session has its banner).
@@ -112,9 +123,9 @@ export function useRead<Output>(
 				// Every write anywhere reads again, and most bring back what was there: the answer keeps its identity then, so nothing made from
 				// it is made again (the body editor is made from the blocks' catalog: made again, it would be destroyed under the cursor).
 				const text = JSON.stringify(result.body) ?? null;
-				if (text !== held.current) {
+				if (isNewAnswer(held.current, { key, text })) {
 					changed = true;
-					held.current = text;
+					held.current = { key, text };
 					setData(result.body);
 				}
 				setRefusal(null);

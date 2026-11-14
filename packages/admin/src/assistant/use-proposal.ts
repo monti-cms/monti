@@ -53,14 +53,19 @@ export function useProposal(id: string) {
 			toast.error(t(reason ?? "errors.unexpected"));
 			return void reload();
 		}
+		let saved = 0;
 		try {
-			for await (const event of answer.events as AsyncIterable<ApplyEvent>)
+			for await (const event of answer.events as AsyncIterable<ApplyEvent>) {
 				if (event.type === "item") setProgress({ done: event.done, total: event.total });
+				else saved = event.results.filter((result) => result.state === "applied").length;
+			}
 		} catch {
 			// The connection went; the apply goes on by itself (doc 00), and the proposal is read until it is over.
 		}
 		setProgress(null);
 		await reload();
+		// Applying writes to the server at once, unlike taking a proposal on the screen: one line says so (AS-48).
+		if (saved > 0) toast(t("card.appliedSaved", { count: saved }));
 		// What it changed shows wherever it is listed.
 		wrote();
 		touchProposals();

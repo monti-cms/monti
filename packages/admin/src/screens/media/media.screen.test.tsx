@@ -91,7 +91,8 @@ describe("browsing", () => {
 		await expect.element(folder("Wallpapers")).toBeVisible();
 		await expect.element(tile("top-level-photo.jpg")).toBeVisible();
 		await expect.element(tile("desk-morning.jpg")).not.toBeInTheDocument();
-		await expect.element(main().getByText("1개")).toBeVisible();
+		// The head counts what the page shows: its two folders and its one file (MD-08).
+		await expect.element(main().getByText("폴더 2개 · 파일 1개")).toBeVisible();
 	});
 
 	it("09-1 [flow 6·08] a folder shows its subfolders and files under its path, and the path goes back up", async () => {

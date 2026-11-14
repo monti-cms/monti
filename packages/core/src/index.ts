@@ -117,7 +117,7 @@ export {
 	UnknownOperationError,
 } from "./errors";
 export type { FolderNode } from "./folders/operations";
-export { canonical, sameJson } from "./json";
+export { canonical, isEmptyValue, sameJson } from "./json";
 export type {
 	KeyList,
 	KeyRow,

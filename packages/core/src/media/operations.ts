@@ -46,7 +46,10 @@ export type MediaQueryResult = {
 	total: number;
 	page: number;
 	pageSize: number;
-	/** The open folder's own files, for the filter menus. */
+	/**
+	 * The filter menus' counts: what picking each would find, in the open folder and those under it (everything at the top or with `scope:
+	 * "all"`), with the search and the other menu's filter applied (MD-07).
+	 */
 	counts: { image: number; file: number; used: number; unused: number };
 };
 

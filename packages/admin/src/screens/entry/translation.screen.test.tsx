@@ -139,6 +139,14 @@ describe("flow 3, a translation", () => {
 		await expect.element(page.getByRole("button", { name: /할 일 5/ })).toBeVisible();
 	});
 
+	it("TR-16 a new translation's empty title is a to-do that says it is not translated yet: its field shows the source's as a placeholder", async () => {
+		await open(NewTranslation);
+		await expect.poll(faint).toBe(4);
+		await userEvent.click(page.getByRole("button", { name: /할 일 \d/ }));
+		await expect.element(page.getByRole("dialog").getByText("제목 · 번역 전")).toBeVisible();
+		await expect.element(page.getByRole("dialog").getByText("제목 · 비어 있음")).not.toBeInTheDocument();
+	});
+
 	it("04-1 3.04 a faint block's menu keeps it in the source's words or removes it; typing into it translates it", async () => {
 		await open(NewTranslation);
 		await expect.poll(faint).toBe(4);
