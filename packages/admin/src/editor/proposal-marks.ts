@@ -2,7 +2,10 @@ import {
 	applyOps,
 	type Block,
 	type BodyOp,
+	canonical,
 	type Doc,
+	type Inline,
+	type Mark,
 	type NewBlock,
 	plainText,
 	sameJson,
@@ -10,12 +13,13 @@ import {
 } from "@monti-cms/core";
 import { PROPOSAL_MARK_CLASSES } from "@monti-cms/ui";
 import { type Editor, Extension } from "@tiptap/core";
-import type { Node as EditorNode, Schema } from "@tiptap/pm/model";
+import type { Mark as EditorMark, Node as EditorNode, Schema } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { inlineDiff } from "../assistant/diff";
 import type { Catalog } from "./catalog";
 import { blockFromEditor, blockToEditor, docFromEditor, docToEditor } from "./convert";
+import { KEPT_MARK, markName } from "./names";
 
 /**
  * The assistant's body proposals drawn over the text (doc 03 principle 5, doc 05; T32). A proposal is a `body.edit` item: block operations that name
@@ -136,6 +140,32 @@ function newWords(op: SetText, node: EditorNode): string | null {
 	}
 }
 
+/** A mark as one comparable word: its editor name and its stored attrs (a link keeps only its address, as `docFromEditor` stores it). */
+const markKey = (name: string, attrs: Record<string, unknown>) =>
+	`${name}${JSON.stringify(canonical(name === markName("link") ? { href: attrs.href } : Object.fromEntries(Object.entries(attrs).filter(([, value]) => value !== null && value !== undefined))))}`;
+const storedKey = ({ type, ...attrs }: Mark) => markKey(markName(type), attrs);
+const editorKey = (mark: EditorMark): string =>
+	mark.type.name === KEPT_MARK ? storedKey(mark.attrs.mark as Mark) : markKey(mark.type.name, mark.attrs);
+
+/** Each letter's marks, in `blockText` offsets: a hard break is a letter with none, a footnote's number no letter. */
+function editorMarks(node: EditorNode): string[] {
+	const out: string[] = [];
+	node.forEach((child) => {
+		if (child.isText)
+			out.push(...Array<string>(child.text?.length ?? 0).fill(child.marks.map(editorKey).sort().join(" ")));
+		else if (child.type.name === "hardBreak") out.push("");
+	});
+	return out;
+}
+function storedMarks(content: Inline[]): string[] {
+	const out: string[] = [];
+	for (const inline of content)
+		if (inline.type === "text")
+			out.push(...Array<string>(inline.text.length).fill((inline.marks ?? []).map(storedKey).sort().join(" ")));
+		else if (inline.type === "hardBreak") out.push("");
+	return out;
+}
+
 /** Whether an op is the last `setText` of its block in the proposal: the block ends with that text, so only it is drawn. */
 const lastText = (item: BodyProposal, op: SetText) =>
 	item.ops.findLast((each) => each.op === "setText" && each.block === op.block) === op;
@@ -170,8 +200,18 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 					touch(found.pos, found.node);
 					break;
 				}
-				// Word by word against the words the block has now: what goes out struck through where it stands, what comes in beside it.
+				// Word by word against the words the block has now: what goes out struck through where it stands, what comes in beside it, and
+				// words that stay but change their formatting on the ground of words put in.
+				const before = editorMarks(found.node);
+				const after = found.node.type.name === "codeBlock" ? null : storedMarks(textToInline(op.text));
+				const restyled = (from: number, to: number) =>
+					decorations.push(
+						Decoration.inline(textPos(found.node, found.pos, from), textPos(found.node, found.pos, to), {
+							class: PROPOSAL_MARK_CLASSES.ins,
+						}),
+					);
 				let offset = 0;
+				let added = 0;
 				for (const [index, run] of inlineDiff(blockText(found.node), words).entries()) {
 					const at = textPos(found.node, found.pos, offset);
 					if (run.kind === "ins") {
@@ -181,13 +221,30 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 								key: `${key}:${index}`,
 							}),
 						);
+						added += run.text.length;
 						continue;
 					}
-					offset += run.text.length;
-					if (run.kind === "del")
+					if (run.kind === "del") {
 						decorations.push(
-							Decoration.inline(at, textPos(found.node, found.pos, offset), { class: PROPOSAL_MARK_CLASSES.del }),
+							Decoration.inline(at, textPos(found.node, found.pos, offset + run.text.length), {
+								class: PROPOSAL_MARK_CLASSES.del,
+							}),
 						);
+						offset += run.text.length;
+						continue;
+					}
+					let changed: number | null = null;
+					for (let letter = 0; letter < run.text.length; letter++) {
+						const differs = after !== null && before[offset + letter] !== after[added + letter];
+						if (differs && changed === null) changed = offset + letter;
+						if (!differs && changed !== null) {
+							restyled(changed, offset + letter);
+							changed = null;
+						}
+					}
+					if (changed !== null) restyled(changed, offset + run.text.length);
+					offset += run.text.length;
+					added += run.text.length;
 				}
 				touch(found.pos, found.node);
 				break;
@@ -245,6 +302,10 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 	}
 	return { decorations, blocks };
 }
+
+/** One proposal's marks over this body, or `null` when it is stale: what the editor draws for it. */
+export const proposalDecorations = (doc: EditorNode, item: BodyProposal): Decoration[] | null =>
+	draw(doc, item)?.decorations ?? null;
 
 /** The undecided blocks of a translation that a drawn proposal fills: their placeholder (the source's words) gives way to the proposal's. */
 export function filledBlocks(state: EditorState): Set<number> {

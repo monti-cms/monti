@@ -1,10 +1,11 @@
 import type { Doc, Inline } from "@monti-cms/core";
+import { PROPOSAL_MARK_CLASSES } from "@monti-cms/ui";
 import { getSchema } from "@tiptap/core";
 import { type Node as EditorNode, Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
 import type { Catalog } from "./catalog";
-import { type Convert, convertFor, takeProposal } from "./proposal-marks";
+import { type Convert, convertFor, proposalDecorations, takeProposal } from "./proposal-marks";
 import { bodyExtensions } from "./schema";
 
 /** A body of paragraphs and pictures, each with its block id: enough of the editor to take a proposal into. */
@@ -190,6 +191,22 @@ describe("taking a block's new text into the editor", () => {
 			{ type: "text", text: "." },
 		]);
 		expect(tr.doc.child(0).attrs.link).toEqual(pending);
+	});
+});
+
+describe("drawing a block's new text", () => {
+	it("05 a word made bold, with the same words, is drawn on the inserted-text ground over exactly that word", () => {
+		const state = stateOf({
+			type: "doc",
+			blocks: [{ id: "b_1", type: "paragraph", content: [{ type: "text", text: "one two three" }] }],
+		});
+		const drawn = proposalDecorations(state.doc, setText("b_1", "one <bold>two</bold> three")) ?? [];
+		const inline = drawn.map((each) => ({
+			from: each.from,
+			to: each.to,
+			class: (each as unknown as { type: { attrs?: { class?: string } } }).type.attrs?.class,
+		}));
+		expect(inline).toEqual([{ from: 1 + "one ".length, to: 1 + "one two".length, class: PROPOSAL_MARK_CLASSES.ins }]);
 	});
 });
 

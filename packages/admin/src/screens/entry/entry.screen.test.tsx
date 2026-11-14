@@ -1231,6 +1231,10 @@ describe("the entry editor: a body proposal the text moved away from (T87)", () 
 		await saveCell("제안 1건 대기");
 	});
 
+	it("05 a proposal that only makes words bold draws those words on the inserted-text ground, with nothing struck through or put in", async () => {
+		await from(entry.FormattingProposal).run();
+	});
+
 	it("10-1 two stale proposals of one paragraph hang side by side, not one over the other; each opens its own card", async () => {
 		await from(entry.StaleProposalsSideBySide).run();
 		await expect.poll(() => mark().elements().length).toBe(2);

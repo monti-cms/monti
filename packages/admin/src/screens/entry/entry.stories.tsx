@@ -143,6 +143,22 @@ async function proposeBody(monti: Monti, id: string) {
 	await edit([{ op: "remove", blocks: [last.id] }]);
 }
 
+/** A proposal that keeps the first paragraph's words and makes two of them bold. */
+async function proposeFormat(monti: Monti, id: string) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
+	const [first] = read.entry.doc.blocks;
+	if (!first) throw new Error("the reference entry has a first block");
+	const words = plainText(first.content);
+	const proposal = await monti.proposals.create("conversation-1", "중요한 말 굵게");
+	await monti.proposals.add(proposal, "body.edit", {
+		id,
+		version: read.entry.version,
+		ops: [
+			{ op: "setText", block: first.id, text: words.replace("도구를 고치는 시간", "<bold>도구를 고치는 시간</bold>") },
+		],
+	});
+}
+
 /**
  * One request's proposals for the title, a field and the body (T86): a new title, a shorter summary, and a shorter phrase in the first
  * paragraph. The title and the summary are blue in their inputs; the bubble walks all three.
@@ -241,6 +257,7 @@ type Kind =
 	| "proposedFields"
 	| "proposedStale"
 	| "proposedStaleTwice"
+	| "proposedFormat"
 	| "conditional"
 	| "nestedChoice"
 	| "strayOption";
@@ -444,6 +461,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 	if (kind === "proposed") await proposeBody(monti, id);
 	if (kind === "proposedFields") await proposeFields(monti, id);
 	if (kind === "proposedStale") await proposeThenEdit(monti, id);
+	if (kind === "proposedFormat") await proposeFormat(monti, id);
 	if (kind === "proposedStaleTwice") await proposeThenEdit(monti, id, true);
 	return id;
 }
@@ -985,6 +1003,20 @@ export const BodyProposals: Story = {
 		await expect(body.querySelector("ins")?.textContent).toBe("만든");
 		await all.findByText("더 짧게 다듬기", {}, wait);
 		await all.findByRole("button", { name: "모두 받기" }, wait);
+	},
+};
+
+/** A proposal that changes only formatting: the words that become bold stand on the pale blue ground, with nothing struck through or put in. */
+export const FormattingProposal: Story = {
+	loaders: site("proposedFormat"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await all.findByText("중요한 말 굵게", {}, wait);
+		await waitFor(
+			() => expect(body.querySelector("span.bg-monti-proposal-muted")?.textContent).toBe("도구를 고치는 시간"),
+			wait,
+		);
+		await expect(body.querySelectorAll("ins")).toHaveLength(0);
 	},
 };
 

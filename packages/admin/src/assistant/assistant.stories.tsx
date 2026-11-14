@@ -227,13 +227,16 @@ export const assisted =
 	(
 		script: Scripted[] = [],
 		answer?: Parameters<typeof scriptedProvider>[1],
-		/** `key: false`: no AI key on the site. `pictures: false`: its models do not read pictures. */
-		options: { key?: boolean; pictures?: boolean } = {},
+		/**
+		 * `key: false`: no AI key on the site. `pictures: false`: its models do not read pictures. `limits` shortens the run's and the quick
+		 * tasks' limits to bring a state about (a quick fill's deadline).
+		 */
+		options: { key?: boolean; pictures?: boolean; limits?: Partial<RunLimits> } = {},
 	) =>
 	async (): Promise<{ model: ScriptedProvider }> => {
 		const model = scriptedProvider(script, answer);
 		nextStorySite({
-			plugins: [assistant({ provider: model.for })],
+			plugins: [assistant({ provider: model.for, ...(options.limits ? { limits: options.limits } : {}) })],
 			fetch: options.pictures === false ? serviceWith(false) : network,
 			secret: "story-secret-for-the-assistant",
 			after:

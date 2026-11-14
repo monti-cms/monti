@@ -6,6 +6,7 @@ import { pickWords } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
 import { assisted } from "../../assistant/assistant.stories";
+import * as assist from "./assist.stories";
 import * as entry from "./entry.stories";
 
 /**
@@ -191,6 +192,12 @@ const pending = ({ site, id }: Loaded) =>
 	site.monti.run("proposals.forTarget", { kind: "entry", id }, entry.admin) as Promise<
 		{ id: string; request: string; input: { ops: { text?: string }[] } }[]
 	>;
+
+describe("the entry editor: '✦ fill' that gets no answer in time", () => {
+	it("10-1 the quick-task model's deadline is said under the field in its own short line", async () => {
+		await scene(assist.FieldFillTimeout, assist.default).run();
+	});
+});
 
 describe("the entry editor: '✦ request' on picked words (T64; doc 10, item 28)", () => {
 	const PICKED = "나머지는 필요할 때 꺼내 본다.";

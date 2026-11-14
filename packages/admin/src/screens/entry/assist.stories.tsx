@@ -104,6 +104,17 @@ export const FieldFillLimit: Story = {
 	},
 };
 
+/** The quick-task model gave no answer before its deadline: the same kind of line under the field. */
+export const FieldFillTimeout: Story = {
+	loaders: [assisted([], () => new Promise<never>(() => {}), { limits: { answerMs: 300 } }), ...site("draft")],
+	play: async ({ canvasElement }) => {
+		const { page } = await opened(canvasElement);
+		await userEvent.click(await page.findByRole("textbox", { name: "부제" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "부제 채우기" }, wait));
+		await page.findByText("응답 시간 초과", {}, wait);
+	},
+};
+
 /** Flow 2·08: a request on picked words, just opened: the words underlined, a card that is a box alone with the caret in it. */
 export const RequestOpen: Story = {
 	loaders: [assisted(), ...site("draft")],

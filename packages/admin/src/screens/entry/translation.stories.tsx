@@ -16,13 +16,34 @@ const h = (value: string, id = `t_${++count}`) => ({ id, type: "heading", attrs:
 const code = (value: string, id = `t_${++count}`) => ({ id, type: "codeBlock", content: text(value) });
 const doc = (...blocks: Doc["blocks"]): Doc => ({ type: "doc", blocks });
 
-/** The reference entry (Editor › EditorTranslate), with a code block that follows the source. */
-const source = () =>
+/** The code link in the first paragraph of `codeLink`: words that point at the labelled line of the code block. */
+export const CODE_LINK = { type: "codeRef", block: "s_4", anchor: "setup" };
+
+/**
+ * The reference entry (Editor › EditorTranslate), with a code block that follows the source. `linked`: the first paragraph's words link to the
+ * code block's labelled line.
+ */
+const source = (linked = false) =>
 	doc(
-		p("블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.", "s_1"),
+		linked
+			? {
+					id: "s_1",
+					type: "paragraph",
+					content: [
+						{ type: "text", text: "설치는 " },
+						{ type: "text", text: "이 줄", marks: [CODE_LINK] },
+						{ type: "text", text: "에서 한다." },
+					],
+				}
+			: p("블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.", "s_1"),
 		h("무엇을 덜어냈나", "s_2"),
 		p("목록에는 제목과 주소, 지금 상태만 남겼다. 나머지는 필요할 때 꺼내 본다.", "s_3"),
-		code("pnpm add @monti-cms/core", "s_4"),
+		linked
+			? {
+					...code("pnpm add @monti-cms/core", "s_4"),
+					attrs: { lines: [{ name: "anchor", start: 0, end: 1, attrs: { id: "setup" } }] },
+				}
+			: code("pnpm add @monti-cms/core", "s_4"),
 		p("편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.", "s_5"),
 	);
 
@@ -47,11 +68,12 @@ const ENGLISH = [
 /**
  * - `alone`: the Korean post, published, with no translation.
  * - `new`: an English translation just made: every block still in the Korean words.
+ * - `codeLink`: the same, its source's first paragraph with a code link to the code block's labelled line.
  * - `changed`: the English translation after the source was published again.
  * - `fieldsChanged`: the same, its title and summary the only things changed (T111).
  * - `all`: the Korean post with a translation in every other language.
  */
-type Kind = "alone" | "new" | "changed" | "fieldsChanged" | "sourceDraft" | "all";
+type Kind = "alone" | "new" | "codeLink" | "changed" | "fieldsChanged" | "sourceDraft" | "all";
 
 async function run<Output = { output: { id: string } }>(monti: Monti, name: string, input: unknown) {
 	return (await monti.run(name, input, admin)) as Output;
@@ -114,12 +136,12 @@ async function entries(monti: Monti, kind: Kind, current: Schema): Promise<Recor
 				subtitle: "도구보다 글",
 				category: devCat.group,
 			},
-			doc: source(),
+			doc: source(kind === "codeLink"),
 		})
 	).output.id;
 	await run(monti, "entries.publish", { ids: [korean] });
 	if (kind === "alone") return { korean };
-	if (kind === "new")
+	if (kind === "new" || kind === "codeLink")
 		return { korean, english: (await run(monti, "translations.create", { source: korean, locale: "en" })).output.id };
 	const english = await translated(monti, korean);
 	if (kind === "all") {
