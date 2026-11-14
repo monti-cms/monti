@@ -15,12 +15,20 @@ const FOOTNOTE = "footnoteRef";
 const escapeText = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const escapeAttr = (text: string) => escapeText(text).replace(/"/g, "&quot;");
 
+/** A tag's name: a mark type, as `defineMark` takes one. */
+const TAG = /[A-Za-z][\w-]*/y;
+/** An attribute's name: any key but one with a letter that ends or quotes an attribute in it. */
+const ATTR = /[^\s=/>"'<{}]+/y;
+
 const attrsOf = (mark: Mark) =>
 	Object.entries(mark)
 		.filter(([key, value]) => key !== "type" && value !== undefined)
-		.map(([key, value]) =>
-			typeof value === "string" ? ` ${key}="${escapeAttr(value)}"` : ` ${key}={${JSON.stringify(value)}}`,
-		)
+		.map(([key, value]) => {
+			// A key the tags cannot read back is not written as one that reads differently.
+			if (!new RegExp(`^${ATTR.source}$`).test(key))
+				throw new Error(`The ${mark.type} mark's attribute "${key}" cannot be written as a tag's attribute.`);
+			return typeof value === "string" ? ` ${key}="${escapeAttr(value)}"` : ` ${key}={${JSON.stringify(value)}}`;
+		})
 		.join("");
 
 const sameMark = (a: Mark, b: Mark) => sameJson(a, b);
@@ -77,8 +85,6 @@ const bad = (reason: string): never => {
 const decode = (text: string) =>
 	text.replace(/&(amp|lt|gt|quot|apos);/g, (_whole, name: string) => ENTITIES[name] as string);
 
-const NAME = /[A-Za-z][A-Za-z0-9_-]*/y;
-
 /**
  * Text with tags as a block's inline content: the other way of `inlineToText`. It takes any tags that nest properly; a tag left open, one closed
  * that was not open or closed out of order, or one that does not read, throws `body.badMarkup` with the reason in words the model can act on.
@@ -97,11 +103,11 @@ export function textToInline(text: string): Inline[] {
 			out.push({ type: "text", text: decoded, ...(marks.length ? { marks: marks.map((mark) => ({ ...mark })) } : {}) });
 		words = "";
 	};
-	const nameAt = (at: number) => {
-		NAME.lastIndex = at;
-		const found = NAME.exec(text);
-		return found ? found[0] : null;
+	const match = (pattern: RegExp, at: number) => {
+		pattern.lastIndex = at;
+		return pattern.exec(text)?.[0] ?? null;
 	};
+	const nameAt = (at: number) => match(TAG, at);
 	let at = 0;
 	while (at < text.length) {
 		const char = text[at] as string;
@@ -137,7 +143,7 @@ export function textToInline(text: string): Inline[] {
 			space.lastIndex = at;
 			at += (space.exec(text)?.[0] ?? "").length;
 			if (text.startsWith("/>", at) || text[at] === ">") break;
-			const key = nameAt(at);
+			const key = match(ATTR, at);
 			if (key === null || text[at + key.length] !== "=") bad(`An attribute of <${name}> does not read.`);
 			at += (key as string).length + 1;
 			if (text[at] === '"') {

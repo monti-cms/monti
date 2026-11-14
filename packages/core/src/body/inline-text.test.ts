@@ -62,6 +62,16 @@ describe("03-3 a block's text with its marks as tags", () => {
 		);
 	});
 
+	it("03-3 a plugin mark's attribute is read back whatever its key, and a key no tag can hold is refused when written", () => {
+		const plugin = { type: "badge", _tone: "warm", "data-x": 1, "ns:key": "v" };
+		expect(roundTrip([{ type: "text", text: "new", marks: [plugin] }])).toBe(
+			'<badge _tone="warm" data-x={1} ns:key="v">new</badge>',
+		);
+		expect(() => inlineToText([{ type: "text", text: "x", marks: [{ type: "badge", "a b": "c" }] }])).toThrow(
+			/cannot be written/,
+		);
+	});
+
 	it("03-3 a footnote reference closes itself and a hard break is a new line", () => {
 		expect(
 			roundTrip([

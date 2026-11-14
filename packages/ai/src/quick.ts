@@ -111,6 +111,8 @@ export async function quickFill(
 		const answered = await Promise.race([asked, late])
 			.finally(() => clearTimeout(timer))
 			.catch((error: unknown) => {
+				// The deadline ended the call: whatever the call failed with then (a service that stops when asked to), it is the deadline.
+				if (deadline.signal.aborted) throw failed({ reason: "timeout", keyName: key.name });
 				// The service said no or did not answer: the field's own line says which, and which key. Its words are not sent on.
 				if (error instanceof ProviderError) throw failed(failureOf(error, key.name));
 				throw error;

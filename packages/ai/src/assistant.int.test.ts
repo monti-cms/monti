@@ -1898,6 +1898,28 @@ describe("what the first review of the core found (#472)", () => {
 		expect(model.answers[0].signal?.aborted).toBe(true);
 	});
 
+	it("10-1 a quick task whose service stops when its deadline ends the call is a timeout, not a service that did not answer", async () => {
+		model = scriptedProvider([]);
+		// A service that fails at once when the call is ended: its failure comes before the deadline's own word.
+		model.provider.answer = (request) =>
+			new Promise((_resolve, reject) =>
+				request.signal?.addEventListener("abort", () =>
+					reject(new ProviderError("unreachable", "The call was ended.")),
+				),
+			);
+		const monti = site({ limits: { answerMs: 80 } });
+		await withKey(monti);
+		await expect(
+			monti.run(
+				"assistant.fill",
+				{ task: "text", collection: "post", field: "summary", entry: { title: "글" } },
+				admin,
+			),
+		).rejects.toMatchObject({
+			reason: { key: "assistant.failed", values: { reason: "timeout", keyName: "Anthropic 개인" } },
+		});
+	});
+
 	it("10-1 past conversations, and the requests of one, are read a page at a time", async () => {
 		const monti = site();
 		await withKey(monti);

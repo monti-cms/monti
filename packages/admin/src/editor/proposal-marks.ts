@@ -1,12 +1,21 @@
-import { applyOps, type BodyOp, type Doc, type NewBlock, plainText, sameJson, textToInline } from "@monti-cms/core";
+import {
+	applyOps,
+	type Block,
+	type BodyOp,
+	type Doc,
+	type NewBlock,
+	plainText,
+	sameJson,
+	textToInline,
+} from "@monti-cms/core";
 import { PROPOSAL_MARK_CLASSES } from "@monti-cms/ui";
 import { type Editor, Extension } from "@tiptap/core";
-import type { Node as EditorNode } from "@tiptap/pm/model";
+import type { Node as EditorNode, Schema } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { inlineDiff } from "../assistant/diff";
 import type { Catalog } from "./catalog";
-import { docFromEditor, docToEditor } from "./convert";
+import { blockFromEditor, blockToEditor, docFromEditor, docToEditor } from "./convert";
 
 /**
  * The assistant's body proposals drawn over the text (doc 03 principle 5, doc 05; T32). A proposal is a `body.edit` item: block operations that name
@@ -316,7 +325,21 @@ export function scrollToProposal(view: EditorView, item: BodyProposal) {
 }
 
 /** How the editor's body becomes a stored one and back: a proposal's block operations are the core's own (`applyOps`). */
-export type Convert = { toEditor: (doc: Doc) => EditorNode; fromEditor: (node: EditorNode) => Doc };
+export type Convert = {
+	toEditor: (doc: Doc) => EditorNode;
+	fromEditor: (node: EditorNode) => Doc;
+	/** One block each way, with nothing of the whole body's rules (an empty last paragraph is a body's, not a block's). */
+	blockToEditor: (block: Block) => EditorNode;
+	blockFromEditor: (node: EditorNode) => Block;
+};
+
+/** The editor's own way between its body and a stored one (`docToEditor`, `docFromEditor`). */
+export const convertFor = (schema: Schema, kit: Catalog): Convert => ({
+	toEditor: (doc) => schema.nodeFromJSON(docToEditor(doc, kit)),
+	fromEditor: (node) => docFromEditor(node.toJSON(), kit),
+	blockToEditor: (block) => schema.nodeFromJSON(blockToEditor(block, kit)),
+	blockFromEditor: (node) => blockFromEditor(node.toJSON(), kit),
+});
 
 /** Replaces only the top-level blocks of `tr.doc` that differ from `next`, in one step. */
 function replaceChanged(tr: Transaction, next: EditorNode) {
@@ -358,24 +381,52 @@ function openLine(doc: EditorNode, stored: Doc): EditorNode | null {
 function takeText(tr: Transaction, op: SetText, convert: Convert) {
 	const found = findBlock(tr.doc, op.block);
 	if (!found) return;
-	const made = findBlock(convert.toEditor(applyOps(convert.fromEditor(tr.doc), [op])), op.block);
-	if (!made) return;
+	// The block alone, not the whole body: an undecided translation block is empty in the editor, and a body's rules may drop an empty paragraph.
+	const next = applyOps({ type: "doc", blocks: [convert.blockFromEditor(found.node)] }, [op]).blocks[0];
+	if (!next) return;
+	const made = convert.blockToEditor(next);
 	const start = found.pos + 1;
-	const from = found.node.content.findDiffStart(made.node.content);
-	if (from !== null) {
-		const ends = found.node.content.findDiffEnd(made.node.content);
-		let endOld = ends?.a ?? found.node.content.size;
-		let endNew = ends?.b ?? made.node.content.size;
+	// Each changed run of words on its own, from the end: words that stay between two changes are not replaced, and a caret in them stays put.
+	const spans: { a: number; aEnd: number; b: number; bEnd: number }[] = [];
+	let a = 0;
+	let b = 0;
+	let open = false;
+	for (const run of inlineDiff(blockText(found.node), blockText(made))) {
+		if (run.kind === "same") {
+			open = false;
+			a += run.text.length;
+			b += run.text.length;
+			continue;
+		}
+		if (!open) spans.push({ a, aEnd: a, b, bEnd: b });
+		open = true;
+		const span = spans[spans.length - 1] as (typeof spans)[number];
+		if (run.kind === "del") span.aEnd = a += run.text.length;
+		else span.bEnd = b += run.text.length;
+	}
+	for (const span of spans.reverse())
+		tr.replaceWith(
+			textPos(found.node, found.pos, span.a),
+			textPos(found.node, found.pos, span.aEnd),
+			made.content.cut(textPos(made, -1, span.b), textPos(made, -1, span.bEnd)),
+		);
+	// What the words do not show (a mark put on or taken off words that stay) goes in as the one part that still differs.
+	const now = tr.doc.nodeAt(found.pos);
+	const from = now ? now.content.findDiffStart(made.content) : null;
+	if (now && from !== null) {
+		const ends = now.content.findDiffEnd(made.content);
+		let endOld = ends?.a ?? now.content.size;
+		let endNew = ends?.b ?? made.content.size;
 		// Where the two ends overlap (a repeated letter), the change starts at `from` all the same.
 		const overlap = from - Math.min(endOld, endNew);
 		if (overlap > 0) {
 			endOld += overlap;
 			endNew += overlap;
 		}
-		tr.replaceWith(start + from, start + endOld, made.node.content.cut(from, endNew));
+		tr.replaceWith(start + from, start + endOld, made.content.cut(from, endNew));
 	}
-	if ("data" in found.node.attrs && !sameJson(found.node.attrs.data, made.node.attrs.data))
-		tr.setNodeMarkup(found.pos, undefined, { ...found.node.attrs, data: made.node.attrs.data });
+	if ("data" in found.node.attrs && !sameJson(found.node.attrs.data, made.attrs.data))
+		tr.setNodeMarkup(found.pos, undefined, { ...found.node.attrs, data: made.attrs.data });
 }
 
 /** Takes a proposal into the body: a block's new text goes in where it differs, a block change replaces only the blocks it changes. All in one transaction that undo takes back. */
@@ -399,11 +450,7 @@ export function takeProposal(state: EditorState, item: BodyProposal, convert: Co
 
 /** Takes a proposal into an editor's body. */
 export function takeInEditor(editor: Editor, item: BodyProposal, kit: Catalog) {
-	const convert: Convert = {
-		toEditor: (doc) => editor.schema.nodeFromJSON(docToEditor(doc, kit)),
-		fromEditor: (node) => docFromEditor(node.toJSON(), kit),
-	};
-	editor.view.dispatch(takeProposal(editor.state, item, convert));
+	editor.view.dispatch(takeProposal(editor.state, item, convertFor(editor.schema, kit)));
 }
 
 /** The proposal whose blocks hold the caret, if any: changing such a block takes its proposal first (components/proposal.md). */
