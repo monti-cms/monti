@@ -5,8 +5,8 @@ import { page, userEvent } from "vitest/browser";
 import { holdKey, keyTwice, pressTwice, releaseKey } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
+import { tokenAmount } from "../../operations/models";
 import * as keys from "./keys.stories";
-import { tokenAmount } from "./keys-screen";
 
 type Loaded = {
 	site: StorySite;
@@ -66,7 +66,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 		story.loaded().net.hold(null);
 		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
 		await expect.element(dialog()).not.toBeInTheDocument();
-		await expect.element(page.getByRole("cell", { name: /Anthropic/ }).getByText("··· a1b2")).toBeVisible();
+		await expect.element(page.getByRole("cell", { name: /Anthropic/ }).getByText("…a1b2")).toBeVisible();
 		await expect.element(page.getByText("이번 달 사용 없음")).toBeVisible();
 	});
 
@@ -166,7 +166,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 		story.loaded().net.hold(null);
 		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
 		await expect.element(dialog()).not.toBeInTheDocument();
-		await expect.element(page.getByText("··· a1b2")).toBeVisible();
+		await expect.element(page.getByText("…a1b2")).toBeVisible();
 	});
 
 	it("14-1 a refusal leaves the window open and lets it be left again: Cancel is back on, and Esc closes it with nothing added", async () => {
@@ -197,7 +197,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 		await userEvent.keyboard("{Enter}");
 		await expect.element(keyField()).toBeVisible();
 		await userEvent.keyboard(`${keys.sample.anthropic}{Enter}`);
-		await expect.element(page.getByText("··· a1b2")).toBeVisible();
+		await expect.element(page.getByText("…a1b2")).toBeVisible();
 
 		button("키 추가").element().focus();
 		await userEvent.keyboard("{Enter}");
@@ -301,8 +301,8 @@ describe("one press does one thing", () => {
 	it("14-1 the form sent twice before the window is drawn again (two presses on a busy page) saves the new name once", async () => {
 		const story = open(keys.Keys);
 		await story.run();
-		await menu("OpenAI 회사", "편집");
-		await userEvent.fill(field(/이름/), "OpenAI 회사 2");
+		await menu("OpenRouter", "편집");
+		await userEvent.fill(field(/이름/), "OpenRouter 2");
 		// Nothing is drawn between the two: what the second one sees of the window is what the first one saw.
 		const form = field(/이름/).element().closest("form") as HTMLFormElement;
 		form.requestSubmit();
@@ -316,8 +316,8 @@ describe("one press does one thing", () => {
 	it("14-1 Enter twice 40ms apart in '이름' saves the new name once", async () => {
 		const story = open(keys.Keys);
 		await story.run();
-		await menu("OpenAI 회사", "편집");
-		await userEvent.fill(field(/이름/), "OpenAI 회사 2");
+		await menu("OpenRouter", "편집");
+		await userEvent.fill(field(/이름/), "OpenRouter 2");
 		await keyTwice("Enter", 40);
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
 		await faded();
@@ -408,10 +408,10 @@ describe("where the focus is afterwards", () => {
 
 	it("14-1 a question left with '취소' or Esc gives the focus back to the row's ⋯", async () => {
 		await open(keys.Keys).run();
-		await askByKeyboard("OpenAI 회사");
+		await askByKeyboard("OpenRouter");
 		await userEvent.keyboard("{Escape}");
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
-		await expect.poll(focused).toBe(more("OpenAI 회사").element());
+		await expect.poll(focused).toBe(more("OpenRouter").element());
 	});
 
 	it("14-1 a server that fails while the service is asked: a toast, and the caret is in the key as after a refusal", async () => {
@@ -487,7 +487,7 @@ describe("changing and removing a key (flow 10, 07–11)", () => {
 		await userEvent.type(keyField(), keys.sample.anthropicNew);
 		await userEvent.click(button("저장"));
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
-		await expect.element(page.getByText("··· 7c0e")).toBeVisible();
+		await expect.element(page.getByText("…7c0e")).toBeVisible();
 		expect(story.loaded().net.requests.length).toBeGreaterThan(0);
 	});
 
@@ -510,9 +510,11 @@ describe("changing and removing a key (flow 10, 07–11)", () => {
 		await expect.element(page.getByText("키를 지웠습니다")).toBeVisible();
 		await expect.element(page.getByText("Anthropic 개인")).not.toBeInTheDocument();
 		// The quick tasks go on with a model of a key that is left.
-		const next = (await models(story.loaded().site)).quick;
+		const left = await models(story.loaded().site);
+		const next = left.quick;
 		expect(next?.model).toBeDefined();
-		await expect.element(button(/빠른 작업/)).toHaveTextContent(next?.model ?? "");
+		const name = left.keys.flatMap((key) => key.models).find((model) => model.id === next?.model)?.label;
+		await expect.element(button(/빠른 작업/)).toHaveTextContent(name ?? "");
 	});
 
 	it("14-1 [flow 10·11b] a key nothing uses is asked about without a list", async () => {
@@ -540,30 +542,107 @@ describe("changing and removing a key (flow 10, 07–11)", () => {
 	});
 });
 
-describe("the quick tasks' model (flow 10, 13)", () => {
-	it("14-1 [flow 10·13, 13b] the menu has the models under their keys with the current one ticked; typing narrows it; a pick shows in the row with its key", async () => {
+describe("the two models (flow 10, 13)", () => {
+	/** The field of the job's row ("대화", "빠른 작업"), named by its row. */
+	const job = (name: "대화" | "빠른 작업") => button(new RegExp(`^${name}`));
+
+	it("14-1 [flow 10·13, 13b] the models by name with their prices; a search finds names and ids; a pick is tried, timed, and shown with its price and key", async () => {
 		const story = open(keys.Keys);
 		await story.run();
-		const now = (await models(story.loaded().site)).quick;
-		await userEvent.click(button(/빠른 작업/));
+		await expect.element(job("빠른 작업")).toHaveTextContent("Claude Haiku 5.5");
+		await userEvent.click(job("빠른 작업"));
 		await expect
-			.element(page.getByRole("menuitemradio", { name: new RegExp(now?.model ?? "") }))
+			.element(page.getByRole("menuitemradio", { name: /^Claude Haiku 5\.5/ }))
 			.toHaveAttribute("aria-checked", "true");
-		await expect.element(page.getByText("OpenAI 회사", { exact: true })).toBeVisible();
-		await userEvent.fill(page.getByRole("textbox", { name: "모델 찾기" }), "mini");
-		await expect.element(page.getByRole("menuitemradio", { name: /claude-opus-5-5/ })).not.toBeInTheDocument();
-		await userEvent.click(page.getByRole("menuitemradio", { name: /gpt-5\.4-mini/ }));
-		await expect.element(page.getByText("빠른 작업 모델을 바꿨습니다")).toBeVisible();
-		await expect.element(button(/빠른 작업/)).toHaveTextContent("gpt-5.4-mini");
-		await expect.element(button(/빠른 작업/)).toHaveTextContent("OpenAI 회사");
-		expect((await models(story.loaded().site)).quick).toMatchObject({ model: "gpt-5.4-mini", chosen: true });
+		await expect.element(page.getByText("OpenRouter", { exact: true })).toBeVisible();
+		// OpenRouter's by name ("Provider: Model"), each with its price at the end; an alias says what it stands for in its tooltip.
+		await expect
+			.element(page.getByRole("menuitemradio", { name: /^Anthropic: Claude Sonnet 5\.5/ }))
+			.toHaveTextContent("$3 · $15");
+		await expect
+			.element(page.getByRole("menuitemradio", { name: /^DeepSeek: DeepSeek Pro Latest/ }))
+			.toHaveAttribute(
+				"title",
+				"~deepseek/deepseek-pro-latest\n100만 토큰당 입력 $0.5, 출력 $2\n지금: DeepSeek: DeepSeek V4 Pro",
+			);
+		await userEvent.fill(page.getByRole("textbox", { name: "모델 찾기" }), ":free");
+		await expect.element(page.getByRole("menuitemradio", { name: /Claude Opus/ })).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("menuitemradio", { name: /^Meta: Llama 4 Maverick \(free\)/ }));
+		await expect.element(page.getByText(/^빠른 작업 모델을 바꿨습니다 · 응답 [\d.]+초$/)).toBeVisible();
+		await expect.element(job("빠른 작업")).toHaveTextContent("Meta: Llama 4 Maverick (free)");
+		// Free, before its key: what was cut off as ":free" is read (ST-30).
+		await expect.element(job("빠른 작업")).toHaveTextContent("무료 · OpenRouter");
+		expect((await models(story.loaded().site)).quick).toMatchObject({
+			model: "meta-llama/llama-4-maverick:free",
+			chosen: true,
+		});
 	});
 
-	it("14-1 with no key the field says so, and pressing it opens the way to add one", async () => {
+	it("14-1 [flow 10·13] the conversation's model is picked on its own row, tried and timed, and is the site's from then on (ST-29)", async () => {
+		const story = open({ loaders: keys.site({ trial: "answers" }) });
+		await story.run();
+		await expect.element(job("대화")).toHaveTextContent("Claude Sonnet 5.5");
+		await expect.element(job("대화")).toHaveTextContent("Anthropic 개인");
+		const quickBefore = (await models(story.loaded().site)).quick;
+		await userEvent.click(job("대화"));
+		await userEvent.click(page.getByRole("menuitemradio", { name: /^Anthropic: Claude Sonnet 5\.5/ }));
+		await expect.element(page.getByText(/^대화 모델을 바꿨습니다 · 응답 [\d.]+초$/)).toBeVisible();
+		await expect.element(job("대화")).toHaveTextContent("Anthropic: Claude Sonnet 5.5");
+		await expect.element(job("대화")).toHaveTextContent("$3 · $15 · OpenRouter");
+		const now = await models(story.loaded().site);
+		expect(now.assistant).toMatchObject({ model: "anthropic/claude-sonnet-5.5", chosen: true });
+		expect(now.quick).toEqual(quickBefore);
+		expect(called(story.loaded(), "models.choose")).toBe(1);
+	});
+
+	it("14-1 while the model picked is tried its field cannot be pressed and says so, with the model's name", async () => {
+		const story = open({ loaders: keys.site({ trial: "answers" }) });
+		await story.run();
+		const letGo = story.loaded().holdCall("models.choose");
+		await userEvent.click(job("빠른 작업"));
+		await userEvent.click(page.getByRole("menuitemradio", { name: /^Meta: Llama 4 Maverick/ }));
+		await expect.element(job("빠른 작업")).toBeDisabled();
+		await expect.element(job("빠른 작업")).toHaveTextContent("Meta: Llama 4 Maverick (free)확인 중…");
+		letGo();
+		await expect.element(page.getByText(/^빠른 작업 모델을 바꿨습니다/)).toBeVisible();
+		await expect.element(job("빠른 작업")).toBeEnabled();
+		await expect.element(job("빠른 작업")).toHaveTextContent("무료 · OpenRouter");
+	});
+
+	it("14-1 [flow 10·13] a model that does not answer its trial is not picked: the toast says why in the admin's words, and the field goes back", async () => {
+		const story = open({ loaders: keys.site({ trial: "refuses" }) });
+		await story.run();
+		await userEvent.click(job("빠른 작업"));
+		await userEvent.click(page.getByRole("menuitemradio", { name: /^Meta: Llama 4 Maverick/ }));
+		await expect.element(page.getByText("고르지 못했습니다 · OpenRouter 거절")).toBeVisible();
+		await expect.element(job("빠른 작업")).toHaveTextContent("Claude Haiku 5.5");
+		await expect.element(job("빠른 작업")).toHaveTextContent("Anthropic 개인");
+		await expect.element(job("빠른 작업")).toBeEnabled();
+		expect((await models(story.loaded().site)).quick).toMatchObject({ model: "claude-haiku-5-5", chosen: false });
+	});
+
+	it("14-1 with no key both fields say so, and pressing one opens the way to add one", async () => {
 		await open(keys.NoKeys).run();
-		await expect.element(button(/빠른 작업/)).toHaveTextContent("키 없음");
-		await userEvent.click(button(/빠른 작업/));
+		await expect.element(job("대화")).toHaveTextContent("키 없음");
+		await expect.element(job("빠른 작업")).toHaveTextContent("키 없음");
+		await userEvent.click(job("빠른 작업"));
 		await expect.element(page.getByRole("option", { name: "Anthropic" })).toBeVisible();
+	});
+});
+
+describe("the list of keys (UX-03, ST-28)", () => {
+	it("14-1 the keys stand under their column names; a key's row says what it used this month and, where its service says, what it spent and has left", async () => {
+		await open(keys.Keys).run();
+		const table = page.getByRole("table", { name: "AI 키" });
+		await expect.element(table.getByRole("columnheader", { name: "키" })).toBeVisible();
+		await expect.element(table.getByRole("columnheader", { name: "이번 달" })).toBeVisible();
+		await expect
+			.element(table.getByRole("row").filter({ hasText: "OpenRouter" }))
+			.toHaveTextContent("OpenRouter…8e42701K 토큰 · $2.31 · 남은 한도 $7.69");
+		await expect.element(table.getByRole("row").filter({ hasText: "Anthropic 개인" })).toHaveTextContent("1.24M 토큰");
+		await expect
+			.element(table.getByRole("row").filter({ hasText: "예전 Gemini 키" }))
+			.toHaveTextContent("이번 달 사용 없음");
 	});
 });
 
@@ -633,7 +712,7 @@ describe("a long name", () => {
 		const row = (name: string | RegExp) => page.getByRole("row", { name }).element().getBoundingClientRect();
 		const long = page.getByRole("cell", { name: /^블로그초안/ }).first();
 		const name = long.getByText(keys.longName).element();
-		const tail = () => long.getByText("··· a1b2").element().getBoundingClientRect();
+		const tail = () => long.getByText("…a1b2").element().getBoundingClientRect();
 		const dots = () => more(keys.longName).element().getBoundingClientRect();
 		// As tall as the others to half a pixel: a name with no Latin letter sits on another baseline than one with some.
 		expect(tail().right).toBeLessThanOrEqual(dots().left);
@@ -652,7 +731,7 @@ describe("a long name", () => {
 		// The model field under the list names the key too: the model keeps its room, the name gives way, and nothing leaves the field.
 		const quick = button(/빠른 작업/).element();
 		expect(quick.scrollWidth).toBeLessThanOrEqual(quick.clientWidth);
-		const model = page.getByText("claude-haiku-5-5").element();
+		const model = page.getByText("Claude Haiku 5.5").element();
 		const words = document.createRange();
 		words.selectNodeContents(model);
 		expect(model.getBoundingClientRect().width).toBeGreaterThanOrEqual(words.getBoundingClientRect().width);
@@ -696,7 +775,7 @@ describe("the tools' tabs", () => {
 		await expect.element(button("템플릿 추가")).toBeVisible();
 		expect(window.location.hash).toBe("#/tools");
 		await userEvent.click(page.getByRole("link", { name: "API 키" }));
-		await expect.element(page.getByText("이번 달 1.24M 토큰")).toBeVisible();
+		await expect.element(page.getByText("1.24M 토큰")).toBeVisible();
 		expect(window.location.hash).toBe("#/tools/keys");
 	});
 
@@ -711,7 +790,7 @@ describe("the tools' tabs", () => {
 		await expect.element(tab("템플릿")).toHaveAttribute("aria-current", "page");
 		await expect.element(tab("템플릿")).toHaveFocus();
 		await userEvent.click(tab("API 키"));
-		await expect.element(page.getByText("이번 달 1.24M 토큰")).toBeVisible();
+		await expect.element(page.getByText("1.24M 토큰")).toBeVisible();
 		expect(focused()).not.toBe(tab("API 키").element());
 	});
 
@@ -729,13 +808,15 @@ describe("plugin keys (flow 10, 12)", () => {
 		await expect.element(page.getByRole("heading", { name: "AI 키" })).toBeVisible();
 		await expect.element(page.getByRole("heading", { name: "플러그인 키" })).toBeVisible();
 		// One row per slot, in the plugins' order: the plugin's name, what the key is for when it keeps two, its code under them.
+		// Under the column's name, as the AI keys are.
 		const rows = pluginTable().getByRole("row");
-		await expect.element(rows.nth(0)).toHaveTextContent(/^바른 맞춤법bareun/);
-		await expect.element(rows.nth(1)).toHaveTextContent(/^Algolia 검색검색 키··· 9c1ealgolia/);
-		await expect.element(rows.nth(2)).toHaveTextContent(/^Algolia 검색관리 키algolia/);
+		await expect.element(rows.nth(0)).toHaveTextContent(/^키$/);
+		await expect.element(rows.nth(1)).toHaveTextContent(/^바른 맞춤법bareun/);
+		await expect.element(rows.nth(2)).toHaveTextContent(/^Algolia 검색검색 키…9c1ealgolia/);
+		await expect.element(rows.nth(3)).toHaveTextContent(/^Algolia 검색관리 키algolia/);
 
 		await open(keys.Keys).run();
-		await expect.element(page.getByText("이번 달 1.24M 토큰")).toBeVisible();
+		await expect.element(page.getByText("1.24M 토큰")).toBeVisible();
 		expect(await page.getByRole("heading", { name: "AI 키" }).elements()).toHaveLength(0);
 		expect(await page.getByRole("heading", { name: "플러그인 키" }).elements()).toHaveLength(0);
 	});
@@ -756,11 +837,11 @@ describe("plugin keys (flow 10, 12)", () => {
 		story.loaded().net.hold(null);
 		await expect.element(page.getByText("바른 맞춤법에 키를 넣었습니다")).toBeVisible();
 		await expect.element(dialog()).not.toBeInTheDocument();
-		await expect.element(pluginTable().getByRole("row").nth(0)).toHaveTextContent(/바른 맞춤법··· 4410/);
+		await expect.element(pluginTable().getByRole("row").nth(1)).toHaveTextContent(/바른 맞춤법…4410/);
 		await expect.element(more("바른 맞춤법")).toBeVisible();
 		expect(await slotButton("바른 맞춤법").elements()).toHaveLength(0);
 		const stored = await list(story.loaded().site);
-		expect(stored.keys.map((key) => key.name)).toEqual(["Anthropic 개인", "OpenAI 회사", "예전 Gemini 키"]);
+		expect(stored.keys.map((key) => key.name)).toEqual(["Anthropic 개인", "OpenRouter", "예전 Gemini 키"]);
 		expect(stored.slots[0].key).toMatchObject({ last4: "4410", readable: true });
 	});
 
@@ -808,7 +889,7 @@ describe("plugin keys (flow 10, 12)", () => {
 		expect(focused()).toBe(keyField().element());
 		await userEvent.type(keyField(), `${keys.sample.searchNew}{Enter}`);
 		await expect.element(page.getByText("저장했습니다")).toBeVisible();
-		await expect.element(pluginTable().getByRole("row").nth(1)).toHaveTextContent(/··· 52ab/);
+		await expect.element(pluginTable().getByRole("row").nth(2)).toHaveTextContent(/…52ab/);
 	});
 
 	it("14-1 a slot's key is removed after the question, which names the slot; the slot is empty again and offers '키 넣기'", async () => {
@@ -844,13 +925,14 @@ describe("plugin keys (flow 10, 12)", () => {
 	it("14-1 [flow 10·14, 15] a slot's key the server can no longer read is counted in the banner and says so in its row; without a secret a filled slot can only be removed", async () => {
 		await open(keys.PluginKeysUnreadable).run();
 		await expect.element(page.getByText("키 4개를 읽을 수 없습니다")).toBeVisible();
-		await expect.element(pluginTable().getByRole("row").nth(1)).toHaveTextContent(/읽을 수 없음/);
+		await expect.element(pluginTable().getByRole("row").nth(2)).toHaveTextContent(/읽을 수 없음/);
 
 		// Without a secret a filled slot stays, as an AI key does, with only "지우기"; an empty one has nothing to offer and is not shown.
 		const story = open({ loaders: keys.site({ slots: true, secret: null }) });
 		await story.run();
 		await expect.element(page.getByText("키를 저장할 수 없습니다")).toBeVisible();
-		await expect.poll(() => pluginTable().getByRole("row").elements().length).toBe(1);
+		// The column names' row, and the one filled slot.
+		await expect.poll(() => pluginTable().getByRole("row").elements().length).toBe(2);
 		expect(await slotButton("바른 맞춤법").elements()).toHaveLength(0);
 		await userEvent.click(more("Algolia 검색 · 검색 키"));
 		await expect.element(page.getByRole("menuitem", { name: "지우기" })).toBeVisible();
@@ -865,7 +947,7 @@ describe("plugin keys (flow 10, 12)", () => {
 		const story = open(keys.PluginKeysOrphan);
 		await story.run();
 		const orphan = pluginTable().getByRole("row").filter({ hasText: "old-search" });
-		await expect.element(orphan).toHaveTextContent(/old-searchkey··· 52ab플러그인 없음/);
+		await expect.element(orphan).toHaveTextContent(/old-searchkey…52ab플러그인 없음/);
 		await userEvent.click(more("old-search · key"));
 		expect(await page.getByRole("menuitem", { name: "편집" }).elements()).toHaveLength(0);
 		await userEvent.click(page.getByRole("menuitem", { name: "지우기" }));
@@ -873,7 +955,7 @@ describe("plugin keys (flow 10, 12)", () => {
 		await expect.element(page.getByRole("alertdialog").getByText("되돌릴 수 없습니다.", { exact: true })).toBeVisible();
 		await userEvent.click(page.getByRole("alertdialog").getByRole("button", { name: "지우기" }));
 		await expect.element(page.getByText("키를 지웠습니다")).toBeVisible();
-		await expect.poll(() => pluginTable().getByRole("row").elements().length).toBe(3);
+		await expect.poll(() => pluginTable().getByRole("row").elements().length).toBe(4);
 		expect((await list(story.loaded().site)).slots.some((slot) => slot.orphan)).toBe(false);
 	});
 
@@ -988,7 +1070,7 @@ describe("a call no answer comes back for (T163)", () => {
 	it("14-1 '지우기' with the network gone: a toast says so, the list is read again and the key is still in it", async () => {
 		const story = open(keys.Keys);
 		await story.run();
-		await expect.element(page.getByText("이번 달 1.24M 토큰")).toBeVisible();
+		await expect.element(page.getByText("1.24M 토큰")).toBeVisible();
 		story.loaded().lost.add("keys.remove");
 		const reads = called(story.loaded(), "keys.list");
 		await menu("예전 Gemini 키", "지우기");

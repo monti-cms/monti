@@ -56,6 +56,8 @@ import {
 	Table,
 	TableBody,
 	TableCell,
+	TableHead,
+	TableHeader,
 	TableRow,
 	Text,
 	Toaster,
@@ -63,11 +65,12 @@ import {
 } from "../../index";
 import { AdminFrame } from "./frame";
 
+/** A key row: its name and the key's end, and in "이번 달" what it used (and, from OpenRouter, what it spent and has left). */
 type Key = { name: string; tail?: string; meta: string; tone?: "faint" | "danger" };
 
 const KEYS: readonly Key[] = [
-	{ name: "Anthropic 개인", tail: "a1b2", meta: "이번 달 1.24M 토큰" },
-	{ name: "OpenAI 회사", tail: "77de", meta: "이번 달 312K 토큰" },
+	{ name: "Anthropic 개인", tail: "a1b2", meta: "1.24M 토큰" },
+	{ name: "OpenRouter", tail: "8e42", meta: "701K 토큰 · $2.31 · 남은 한도 $7.69" },
 	{ name: "예전 Gemini 키", tail: "9f0c", meta: "이번 달 사용 없음", tone: "faint" },
 ];
 
@@ -82,24 +85,44 @@ const SLOTS: readonly Slot[] = [
 
 const SERVICES = ["Anthropic", "OpenAI", "OpenRouter", "Google", "OpenAI 호환 주소"];
 
+/** The models of the keys by name, each with its price at the row's end (OpenRouter's), and its id and price in words in its tooltip. */
 const MODELS = [
 	{
 		key: "anthropic",
 		label: "Anthropic 개인",
 		count: 3,
 		items: [
-			{ value: "a:claude-haiku-5-5", model: "claude-haiku-5-5" },
-			{ value: "a:claude-opus-5-5", model: "claude-opus-5-5" },
-			{ value: "a:claude-sonnet-5-5", model: "claude-sonnet-5-5" },
+			{ value: "a:claude-haiku-5-5", model: "Claude Haiku 5.5", id: "claude-haiku-5-5", title: "claude-haiku-5-5" },
+			{ value: "a:claude-opus-5-5", model: "Claude Opus 5.5", id: "claude-opus-5-5", title: "claude-opus-5-5" },
+			{ value: "a:claude-sonnet-5-5", model: "Claude Sonnet 5.5", id: "claude-sonnet-5-5", title: "claude-sonnet-5-5" },
 		],
 	},
 	{
-		key: "openai",
-		label: "OpenAI 회사",
-		count: 2,
+		key: "openrouter",
+		label: "OpenRouter",
+		count: 3,
 		items: [
-			{ value: "o:gpt-5.4-mini", model: "gpt-5.4-mini" },
-			{ value: "o:gpt-5.5", model: "gpt-5.5" },
+			{
+				value: "o:~deepseek/deepseek-pro-latest",
+				model: "DeepSeek: DeepSeek Pro Latest",
+				id: "~deepseek/deepseek-pro-latest",
+				title: "~deepseek/deepseek-pro-latest\n100만 토큰당 입력 $0.5, 출력 $2\n지금: DeepSeek: DeepSeek V4 Pro",
+				hint: "$0.5 · $2",
+			},
+			{
+				value: "o:meta-llama/llama-4-maverick:free",
+				model: "Meta: Llama 4 Maverick (free)",
+				id: "meta-llama/llama-4-maverick:free",
+				title: "meta-llama/llama-4-maverick:free\n무료\n입력 한도 1.05M 토큰",
+				hint: "무료",
+			},
+			{
+				value: "o:openai/gpt-5.4-mini",
+				model: "OpenAI: GPT-5.4 Mini",
+				id: "openai/gpt-5.4-mini",
+				title: "openai/gpt-5.4-mini\n100만 토큰당 입력 $0.25, 출력 $2\n입력 한도 400K 토큰",
+				hint: "$0.25 · $2",
+			},
 		],
 	},
 ];
@@ -165,7 +188,23 @@ function KeyMenu({ edit = true, open }: { edit?: boolean; open?: boolean }) {
 	);
 }
 
-/** A key row's two lines: its name with the key's end after it, and what there is to say of it under them. */
+/** The column names over a list of keys, and an empty one over the rows' ⋯. */
+function KeysHead({ columns }: { columns: readonly string[] }) {
+	return (
+		<TableHeader>
+			<TableRow>
+				{columns.map((name) => (
+					<TableHead key={name} scope="col">
+						{name}
+					</TableHead>
+				))}
+				<TableHead aria-hidden />
+			</TableRow>
+		</TableHeader>
+	);
+}
+
+/** A key row's name with the key's end after it, and under them what there is to say of it (a slot's plugin code). */
 function KeyName({
 	name,
 	detail,
@@ -177,7 +216,8 @@ function KeyName({
 	name: string;
 	detail?: string;
 	tail?: string;
-	meta: string;
+	/** The line under the name; left out, the name stands alone (an AI key's use is in its own column). */
+	meta?: string;
 	tone?: "subtle" | "faint" | "danger";
 	mono?: boolean;
 }) {
@@ -194,14 +234,16 @@ function KeyName({
 				) : null}
 				{tail ? (
 					<Count>
-						{"··· "}
+						{"…"}
 						{tail}
 					</Count>
 				) : null}
 			</Inline>
-			<Text as="div" variant={mono ? "meta" : "note"} mono={mono} tone={tone} truncate>
-				{meta}
-			</Text>
+			{meta ? (
+				<Text as="div" variant={mono ? "meta" : "note"} mono={mono} tone={tone} truncate>
+					{meta}
+				</Text>
+			) : null}
 		</Stack>
 	);
 }
@@ -500,24 +542,30 @@ function Floating({ stage }: { stage: ApiKeysStage }) {
 		case "키 넣음":
 			return <Said>바른 맞춤법에 키를 넣었습니다</Said>;
 		case "모델 바뀜":
-			return <Said>빠른 작업 모델을 바꿨습니다</Said>;
+			return <Said>빠른 작업 모델을 바꿨습니다 · 응답 1.2초</Said>;
 		default:
 			return null;
 	}
 }
 
 /**
- * The keys as rows of the shared table, as the templates tab beside this one draws its list: the name and the key's end on one line, its use under
- * it, and a ⋯ with "편집" and "지우기".
+ * The keys as rows of the shared table, as the templates tab beside this one draws its list, under the column names "키" and "이번 달": the name and
+ * the key's end, its use this month, and a ⋯ with "편집" and "지우기".
  */
 function KeyTable({ keys, edit, menu }: { keys: readonly Key[]; edit: boolean; menu: boolean }) {
 	return (
 		<Table container="none" aria-label="AI 키">
+			<KeysHead columns={["키", "이번 달"]} />
 			<TableBody>
 				{keys.map((key, index) => (
 					<TableRow key={key.name} twoLine>
 						<TableCell truncate>
-							<KeyName name={key.name} tail={key.tail} meta={key.meta} tone={key.tone} />
+							<KeyName name={key.name} tail={key.tail} tone={key.tone} />
+						</TableCell>
+						<TableCell>
+							<Text variant="note" tone={key.tone ?? "subtle"}>
+								{key.meta}
+							</Text>
 						</TableCell>
 						<TableCell align="end">
 							<KeyMenu edit={edit} open={menu && index === 0} />
@@ -533,6 +581,7 @@ function KeyTable({ keys, edit, menu }: { keys: readonly Key[]; edit: boolean; m
 function SlotTable({ slots }: { slots: readonly Slot[] }) {
 	return (
 		<Table container="none" aria-label="플러그인 키">
+			<KeysHead columns={["키"]} />
 			<TableBody>
 				{slots.map((slot) => (
 					<TableRow key={slot.id} twoLine>
@@ -577,8 +626,9 @@ function keysOf(stage: ApiKeysStage): readonly Key[] {
 }
 
 /**
- * Tools, API keys tab. The AI services' keys are a list like the templates tab's: rows of the shared table, each with its last four after its name,
- * its use under it, and "편집 · 지우기" in its ⋯. Under it, the one model this screen picks (the quick task's): a setting, not a list. A site whose
+ * Tools, API keys tab. The AI services' keys are a list like the templates tab's: rows of the shared table under their column names, each with its
+ * last four after its name, its use this month in its own column, and "편집 · 지우기" in its ⋯. Under it, the two models this screen picks (the one
+ * a new conversation starts with, and the quick tasks'): settings, not a list. A site whose
  * plugins ask for keys has a second list, one row per slot, and then each list has its name over it. All keys go through the same key window (a
  * plugin's has its service set). `stage` draws each state of flow 10; `plugins` off is a site whose plugins ask for no key.
  */
@@ -586,10 +636,21 @@ export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: Ap
 	const keys = keysOf(stage);
 	const noSecret = stage === "비밀값 없음" || stage === "비밀값 없음 · 키 있음";
 	const unreadable = stage === "읽을 수 없음" || stage === "다시 넣기";
+	const conversation = {
+		value: "a:claude-sonnet-5-5",
+		model: "Claude Sonnet 5.5",
+		meta: "Anthropic 개인",
+		title: "claude-sonnet-5-5",
+	};
 	const quick =
 		stage === "모델 바뀜"
-			? { value: "o:gpt-5.4-mini", model: "gpt-5.4-mini", key: "OpenAI 회사" }
-			: { value: "a:claude-haiku-5-5", model: "claude-haiku-5-5", key: "Anthropic 개인" };
+			? {
+					value: "o:meta-llama/llama-4-maverick:free",
+					model: "Meta: Llama 4 Maverick (free)",
+					meta: "무료 · OpenRouter",
+					title: "meta-llama/llama-4-maverick:free\n무료\n입력 한도 1.05M 토큰",
+				}
+			: { value: "a:claude-haiku-5-5", model: "Claude Haiku 5.5", meta: "Anthropic 개인", title: "claude-haiku-5-5" };
 	const slots = SLOTS.map((slot) => (stage === "키 넣음" && slot.id === "bareun" ? { ...slot, tail: "4410" } : slot));
 	/** Two lists on the page: each says which it is. One list needs no name, the tab has said it. */
 	const named = plugins && !noSecret;
@@ -638,38 +699,56 @@ export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: Ap
 						) : (
 							list
 						)}
-						{/* The one model this screen picks; the list comes from the AI keys above. */}
+						{/* The two models this screen picks; the lists come from the AI keys above. */}
 						{!noSecret && (
 							<ListSection title="모델">
-								<ListSectionRow
-									title="빠른 작업"
-									labelId="model-quick"
-									meta="채우기 · 요청 · 번역"
-									control={
-										keys.length === 0 || unreadable ? (
-											<MenuField aria-labelledby="model-quick" size="default" placeholder="키 없음" />
-										) : (
-											<ModelMenu
-												layout="field"
-												open={stage === "모델 고르기"}
-												value={quick.value}
-												onValueChange={() => {}}
-												groups={MODELS}
-												searchLabel="모델 찾기"
-												emptyText="맞는 모델이 없습니다"
-												trigger={
-													<MenuField
-														aria-labelledby="model-quick"
-														size="default"
-														mono
-														value={quick.model}
-														meta={quick.key}
-													/>
-												}
-											/>
-										)
-									}
-								/>
+								{[
+									{
+										id: "model-assistant",
+										title: "대화",
+										meta: "새 대화가 시작하는 모델",
+										now: conversation,
+										open: false,
+									},
+									{
+										id: "model-quick",
+										title: "빠른 작업",
+										meta: "채우기 · 요청 · 번역",
+										now: quick,
+										open: stage === "모델 고르기",
+									},
+								].map((row) => (
+									<ListSectionRow
+										key={row.id}
+										title={row.title}
+										labelId={row.id}
+										meta={row.meta}
+										control={
+											keys.length === 0 || unreadable ? (
+												<MenuField aria-labelledby={row.id} size="default" placeholder="키 없음" />
+											) : (
+												<ModelMenu
+													layout="field"
+													open={row.open}
+													value={row.now.value}
+													onValueChange={() => {}}
+													groups={MODELS}
+													searchLabel="모델 찾기"
+													emptyText="맞는 모델이 없습니다"
+													trigger={
+														<MenuField
+															aria-labelledby={row.id}
+															size="default"
+															value={row.now.model}
+															meta={row.now.meta}
+															title={row.now.title}
+														/>
+													}
+												/>
+											)
+										}
+									/>
+								))}
 							</ListSection>
 						)}
 						{/* A plugin's slot is a key row like the AI keys: the same window adds and changes it, with its service already set. */}

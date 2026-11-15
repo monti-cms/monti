@@ -7,7 +7,7 @@ import { IconButton } from "./icon-button";
 import { ArrowUp, StopFilledAlt } from "./icons";
 
 /**
- * The box a conversation is typed in: a rounded box with a text area, and under it a row with `aside` at the start (the model picker) and a round send
+ * The box a conversation is typed in: a rounded box with a text area, and under it a row with `aside` at the start (the model and thinking buttons) and a round send
  * button at the end that becomes a stop button while the answer is being written (`busy`). `context` sits over the text: what the message will be about. Enter sends, Shift+Enter breaks the line (not while an input
  * method is composing). Nothing is sent while the text is blank or the box is `disabled`. The words are the app's.
  */
@@ -103,7 +103,8 @@ export function ChatInput({
 				className="field-sizing-content max-h-40 min-h-[calc(2lh+4px)] w-full resize-none border-0 bg-transparent py-monti-2 pr-0 pl-monti-6 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
 			/>
 			<div className="mt-monti-4 flex items-end justify-between gap-monti-8">
-				<div className="min-w-0">{aside}</div>
+				{/* It gives way to the send button: a long model name is cut inside it rather than run on under the button (AS-41). */}
+				<div className="flex min-w-0 items-center gap-monti-2">{aside}</div>
 				{busy ? (
 					<IconButton
 						variant="primary"

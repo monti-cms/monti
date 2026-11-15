@@ -78,9 +78,16 @@ export const Control: Story = {
 		<ListSection title="모델" count={1} countTone="warning">
 			<ListSectionRow
 				title="빠른 작업"
-				meta="필드 하나 채우기, 대체 텍스트"
+				meta="채우기 · 요청 · 번역"
 				labelId="quick-model"
-				control={<MenuField aria-labelledby="quick-model" value="claude-haiku-5-5" meta="Anthropic 개인" mono />}
+				control={
+					<MenuField
+						aria-labelledby="quick-model"
+						value="Meta: Llama 4 Maverick (free)"
+						meta="무료 · OpenRouter"
+						title="meta-llama/llama-4-maverick:free"
+					/>
+				}
 			/>
 		</ListSection>
 	),

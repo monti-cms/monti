@@ -93,11 +93,14 @@ export const Failed: Story = {
 	},
 };
 
-/** Words just selected to ask about: nothing to deal with yet, so no head; it opens with the caret in the reply row. */
+/**
+ * Words just selected to ask about: nothing to deal with yet, so no head; it opens with the caret in the reply row. The foot says which model the
+ * request runs on (AS-06).
+ */
 export const NewRequest: Story = {
 	render: function Render() {
 		const reply = useReply("어시스턴트에게 요청", { focus: true });
-		return <MemoCard reply={reply} />;
+		return <MemoCard reply={reply} foot="빠른 작업 · Claude Haiku 5.5" />;
 	},
 };
 

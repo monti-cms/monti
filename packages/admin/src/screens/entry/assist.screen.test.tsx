@@ -337,6 +337,8 @@ describe("the entry editor: '✦ request' on picked words (T64; doc 10, item 28)
 		const box = page.getByRole("textbox", { name: "어시스턴트에게 요청" });
 		await expect.element(box).toBeVisible();
 		await expect.poll(() => document.activeElement === box.element()).toBe(true);
+		// The card's foot says which model the request runs on: the quick tasks', by name (AS-06).
+		await expect.element(page.getByText("빠른 작업 · Claude Haiku 5.5", { exact: true })).toBeVisible();
 		expect(
 			underlined()
 				.map((each) => each.textContent)

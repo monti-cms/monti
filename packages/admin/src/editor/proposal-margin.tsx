@@ -267,7 +267,8 @@ export function proposalMarks({
 /**
  * The requests left on picked words (doc 10, item 28; T64): each hangs beside the block of its words. Before it is sent its card is a
  * box alone, with the caret in it; while the assistant works the mark says "…" and the answer's line stops it; an answer that proposed
- * nothing stays in the card, to be asked again or let go, and one that did not go stays with its failure line.
+ * nothing stays in the card, to be asked again or let go, and one that did not go stays with its failure line. Its foot names the model the
+ * request runs on, the quick tasks' (AS-06).
  */
 export function requestMarks({
 	t,
@@ -277,6 +278,7 @@ export function requestMarks({
 	onDismiss,
 	onAgain,
 	reply,
+	model,
 }: Shared & {
 	requests: readonly {
 		id: string;
@@ -290,6 +292,8 @@ export function requestMarks({
 	/** The failure line's button: ask the same again, or go on past the limit. */
 	onAgain: (id: string) => void;
 	reply: (id: string) => CardReply;
+	/** The quick tasks' model by name: what the requests run on. */
+	model?: string;
 }): MarginMark[] {
 	return requests.map((request) => ({
 		id: request.id,
@@ -329,6 +333,7 @@ export function requestMarks({
 								}
 							: {})}
 						reply={shown ? replyOf(t, reply(request.id), working, request.status === "writing") : undefined}
+						foot={model ? t("memo.quickModel", { model }) : undefined}
 					>
 						<MemoThreadOf
 							t={t}

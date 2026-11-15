@@ -1,3 +1,4 @@
+import { assistant, ProviderError, scriptedProvider } from "@monti-cms/ai";
 import { createMonti, type KeyService, type Plugin } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
@@ -39,6 +40,7 @@ export const sample = {
 	anthropic: "sk-ant-api03-story-key-of-anthropic-a1b2",
 	anthropicNew: "sk-ant-api03-story-key-entered-new-7c0e",
 	openai: "sk-proj-story-key-of-the-company-77de",
+	openrouter: "sk-or-v1-story-key-of-the-router-8e42",
 	gemini: "AIzaSy-story-key-of-old-gemini-9f0c",
 	refused: "sk-ant-api03-a-key-the-service-refuses",
 	/** Keys the plugins' own services take. */
@@ -61,6 +63,41 @@ export type Network = {
 	waiting: () => Promise<void>;
 };
 
+/** OpenRouter's models as its list gives them: a free one, priced ones, one that must think, and an alias of a family's latest. */
+const OPENROUTER_MODELS = [
+	{
+		id: "anthropic/claude-haiku-5.5",
+		name: "Anthropic: Claude Haiku 5.5",
+		context_length: 200_000,
+		supported_parameters: ["tools", "reasoning"],
+		reasoning: { supported_efforts: ["none", "low", "medium", "high"] },
+		pricing: { prompt: "0.000001", completion: "0.000005" },
+	},
+	{
+		id: "anthropic/claude-sonnet-5.5",
+		name: "Anthropic: Claude Sonnet 5.5",
+		context_length: 1_000_000,
+		supported_parameters: ["tools", "reasoning"],
+		reasoning: { supported_efforts: ["none", "low", "medium", "high"] },
+		pricing: { prompt: "0.000003", completion: "0.000015" },
+	},
+	{
+		id: "~deepseek/deepseek-pro-latest",
+		name: "DeepSeek: DeepSeek Pro Latest",
+		supported_parameters: ["tools", "reasoning"],
+		reasoning: { mandatory: true, supported_efforts: ["low", "high"] },
+		alias_target: { name: "DeepSeek: DeepSeek V4 Pro" },
+		pricing: { prompt: "0.0000005", completion: "0.000002" },
+	},
+	{
+		id: "meta-llama/llama-4-maverick:free",
+		name: "Meta: Llama 4 Maverick (free)",
+		context_length: 1_048_576,
+		supported_parameters: ["tools"],
+		pricing: { prompt: "0", completion: "0" },
+	},
+];
+
 /** The services as the stories' network: which keys each takes and the models it lists. No story reaches a real service. */
 export function network(): Network {
 	const requests: Network["requests"] = [];
@@ -72,7 +109,13 @@ export function network(): Network {
 		});
 	const json = (status: number, body: unknown) =>
 		new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-	const taken = new Set<string>([sample.anthropic, sample.anthropicNew, sample.openai, sample.gemini]);
+	const taken = new Set<string>([
+		sample.anthropic,
+		sample.anthropicNew,
+		sample.openai,
+		sample.openrouter,
+		sample.gemini,
+	]);
 	const fetch: typeof globalThis.fetch = async (input, init) => {
 		const url = String(input);
 		const headers = Object.fromEntries(new Headers(init?.headers).entries());
@@ -84,12 +127,24 @@ export function network(): Network {
 		if (url.startsWith("https://api.anthropic.com/"))
 			return taken.has(sent)
 				? json(200, {
-						data: ["claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"].map((id) => ({
+						data: [
+							["claude-haiku-5-5", "Claude Haiku 5.5"],
+							["claude-opus-5-5", "Claude Opus 5.5"],
+							["claude-sonnet-5-5", "Claude Sonnet 5.5"],
+						].map(([id, name]) => ({
 							id,
+							display_name: name,
 							capabilities: { thinking: { supported: true }, image_input: { supported: true } },
+							max_input_tokens: 200_000,
 						})),
 					})
 				: json(401, { type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } });
+		// What the key's account spent this month and has left, and the models with their prices (per token), thinking levels and aliases.
+		if (url === "https://openrouter.ai/api/v1/key")
+			return taken.has(sent)
+				? json(200, { data: { usage_monthly: 2.31, limit: 10, limit_remaining: 7.69, limit_reset: "monthly" } })
+				: json(401, {});
+		if (url === "https://openrouter.ai/api/v1/models") return json(200, { data: OPENROUTER_MODELS });
 		if (url.startsWith("https://api.openai.com/"))
 			return taken.has(sent) ? json(200, { data: [{ id: "gpt-5.5" }, { id: "gpt-5.4-mini" }] }) : json(401, {});
 		if (url.startsWith("https://generativelanguage.googleapis.com/"))
@@ -166,14 +221,14 @@ const ownSearch = (net: () => Network): Plugin => ({
 	keys: [{ id: "key", label: "키", service: "own-search" }],
 });
 
-/** The reference screen's three keys, with what they used this month. */
+/** The reference screen's three keys, with what they used this month: OpenRouter's also with what its account spent and has left. */
 async function threeKeys(monti: Monti) {
 	const add = async (input: { service: string; name: string; secret: string }, tokens: number) => {
 		const made = (await monti.run("keys.add", input, admin)) as { output: { id: string } };
 		if (tokens > 0) await monti.keys.addUsage(made.output.id, tokens);
 	};
 	await add({ service: "anthropic", name: "Anthropic 개인", secret: sample.anthropic }, 1_240_000);
-	await add({ service: "openai", name: "OpenAI 회사", secret: sample.openai }, 312_000);
+	await add({ service: "openrouter", name: "OpenRouter", secret: sample.openrouter }, 701_000);
 	await add({ service: "gemini", name: "예전 Gemini 키", secret: sample.gemini }, 0);
 }
 
@@ -187,6 +242,7 @@ export const site = ({
 	secret = siteSecret,
 	reading = false,
 	slots = false,
+	trial,
 }: {
 	keys?: "three" | "none" | "named" | "long";
 	/**
@@ -197,11 +253,26 @@ export const site = ({
 	slots?: boolean | "orphan" | "address";
 	secret?: string | null | "other";
 	reading?: boolean;
+	/**
+	 * The site has the assistant, and a model picked on the screen is tried once (doc 14): `"answers"`, the model answers; `"refuses"`, its service
+	 * refuses it. Without it the site has no assistant, and a pick goes through untried.
+	 */
+	trial?: "answers" | "refuses";
 } = {}) => [
 	async (): Promise<Loaded> => {
 		startAt("#/tools/keys");
 		const net = network();
-		const plugins = slots === "address" ? [ownSearch(() => net)] : slots ? slotPlugins(() => net) : [];
+		const keyPlugins = slots === "address" ? [ownSearch(() => net)] : slots ? slotPlugins(() => net) : [];
+		const model =
+			trial === "refuses"
+				? scriptedProvider([{ fail: new ProviderError("refused", "This model does not take tools", 400) }], () => {
+						throw new ProviderError("refused", "This model does not take tools", 400);
+					})
+				: scriptedProvider(
+						Array.from({ length: 10 }, () => ({ text: "OK" })),
+						() => ({ value: "OK" }),
+					);
+		const plugins = trial ? [...keyPlugins, assistant({ provider: model.for })] : keyPlugins;
 		const made = await storySite({
 			schema,
 			plugins,
@@ -211,7 +282,14 @@ export const site = ({
 			fetch: net.fetch,
 			setup: async (monti) => {
 				// The keys are stored by a server that has the first secret, on the same database.
-				const first = createMonti({ db: monti.db, schema, files: null, secret: siteSecret, fetch: net.fetch, plugins });
+				const first = createMonti({
+					db: monti.db,
+					schema,
+					files: null,
+					secret: siteSecret,
+					fetch: net.fetch,
+					plugins: keyPlugins,
+				});
 				if (slots === "address")
 					await first.run(
 						"plugins.setKey",
@@ -296,12 +374,15 @@ const more = async (page: Awaited<ReturnType<typeof screen>>, name: string, item
 	await userEvent.click(await page.findByRole("menuitem", { name: item }));
 };
 
-/** Three keys with what they used this month, and the quick tasks' model under them. */
+/**
+ * Three keys under their column names, with what they used this month (OpenRouter's also what its account spent and has left), and the two models
+ * under them: a new conversation's and the quick tasks'.
+ */
 export const Keys: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
-		await page.findByText("이번 달 1.24M 토큰", {}, wait);
+		await page.findByText("1.24M 토큰", {}, wait);
 	},
 };
 
@@ -469,13 +550,25 @@ export const RemoveUnusedKey: Story = {
 	},
 };
 
-/** The quick tasks' model: a menu to search, the models under their keys (step 13). */
+/** The quick tasks' model: a menu to search, the models under their keys by name with their prices (step 13). */
 export const PickModel: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: /빠른 작업/ }, wait));
-		await page.findByRole("menuitemradio", { name: /gpt-5\.4-mini/ });
+		await page.findByRole("menuitemradio", { name: /Llama 4 Maverick/ });
+	},
+};
+
+/** A model picked is tried once first: while it answers, its field cannot be pressed and says so (step 13). */
+export const TryingModel: Story = {
+	loaders: site({ trial: "answers" }),
+	play: async ({ canvasElement, loaded }) => {
+		const page = await screen(canvasElement);
+		(loaded as Loaded).holdCall("models.choose");
+		await userEvent.click(await page.findByRole("button", { name: /빠른 작업/ }, wait));
+		await userEvent.click(await page.findByRole("menuitemradio", { name: /Llama 4 Maverick/ }));
+		await page.findByText("확인 중…", {}, wait);
 	},
 };
 

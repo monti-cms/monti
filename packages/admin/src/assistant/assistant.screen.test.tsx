@@ -290,7 +290,7 @@ describe("a run that did not finish (flow 2, 06 · 24)", () => {
 		expect(document.body.textContent).not.toContain("credit balance");
 		expect(document.body.textContent).not.toContain("sk-ant-");
 		await userEvent.click(button("다른 모델로 보내기"));
-		await userEvent.click(page.getByRole("menuitemradio", { name: /claude-opus-5-5/ }));
+		await userEvent.click(page.getByRole("menuitemradio", { name: /^Claude Opus 5\.5/ }));
 		await expect.element(panel().getByText("이번에는 됐습니다.")).toBeVisible();
 		expect(story.loaded().model.turns[1]?.model).toBe("claude-opus-5-5");
 		expect(panel().getByText("요약이 비어 있는 글 찾아 줘").elements()).toHaveLength(2);
@@ -325,32 +325,69 @@ describe("the key and the model (flow 2, 22–23)", () => {
 		await expect.element(button("어시스턴트 열기")).not.toBeInTheDocument();
 	});
 
-	it("10-1 [flow 2·23] the model menu has the models under their key and narrows as one types; a pick is the button's name; thinking is picked for a model that thinks and is not offered for one that does not", async () => {
+	// Thinking is a button of its own beside the model (AS-40), there only for a model that thinks.
+	it("10-1 [flow 2·23] the model menu has the models by name under their key and narrows as one types; a pick is the button's name; thinking is beside it", async () => {
 		const story = on({ script: () => [{ text: "네." }] });
 		await story.run();
 		await openPanel();
-		await expect.element(button("모델 고르기")).toHaveTextContent("claude-sonnet-5-5");
-		await expect.element(button("모델 고르기")).toHaveTextContent("생각 보통");
-		await userEvent.click(button("모델 고르기"));
-		await expect.element(page.getByText("Anthropic 개인")).toBeVisible();
-		await userEvent.click(page.getByRole("menuitem", { name: /생각/ }));
+		await expect.element(button("모델 고르기")).toHaveTextContent("Claude Sonnet 5.5");
+		await expect.element(button("생각")).toHaveTextContent("생각 보통");
+		await userEvent.click(button("생각"));
 		await userEvent.click(page.getByRole("menuitemradio", { name: "높음" }));
-		await userEvent.keyboard("{Escape}");
-		await expect.element(button("모델 고르기")).toHaveTextContent("생각 높음");
+		await expect.element(button("생각")).toHaveTextContent("생각 높음");
 
 		await userEvent.click(button("모델 고르기"));
+		await expect.element(page.getByText("Anthropic 개인")).toBeVisible();
 		await userEvent.fill(page.getByRole("textbox", { name: "모델 찾기" }), "haiku");
-		await expect.element(page.getByRole("menuitemradio", { name: /claude-opus-5-5/ })).not.toBeInTheDocument();
-		await userEvent.click(page.getByRole("menuitemradio", { name: /claude-haiku-5-5/ }));
-		await expect.element(button("모델 고르기")).toHaveTextContent("claude-haiku-5-5");
-		await expect.element(button("모델 고르기")).not.toHaveTextContent("생각");
-		await userEvent.click(button("모델 고르기"));
-		await expect.element(page.getByRole("menuitem", { name: /생각/ })).not.toBeInTheDocument();
-		await userEvent.keyboard("{Escape}");
+		await expect.element(page.getByRole("menuitemradio", { name: /Claude Opus/ })).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("menuitemradio", { name: /^Claude Haiku 5\.5/ }));
+		await expect.element(button("모델 고르기")).toHaveTextContent("Claude Haiku 5.5");
+		await expect.element(button("생각")).not.toBeInTheDocument();
 		// The model picked is the one asked.
 		await say("안녕");
 		await expect.element(panel().getByText("네.")).toBeVisible();
 		expect(story.loaded().model.turns[0]).toMatchObject({ model: "claude-haiku-5-5", thinking: "off" });
+	});
+
+	it("10-1 the menu names each model and its price, free ones as '무료', the site's conversation model as '기본'; the id, the price in words and an alias's model are in its tooltip (ST-31, ST-33)", async () => {
+		await on({ router: true }).run();
+		await openPanel();
+		await userEvent.click(button("모델 고르기"));
+		await expect
+			.element(page.getByRole("menuitemradio", { name: /^Meta: Llama 4 Maverick \(free\)/ }))
+			.toHaveTextContent("Meta: Llama 4 Maverick (free)무료");
+		await expect.element(page.getByRole("menuitemradio", { name: /^Claude Sonnet 5\.5/ })).toHaveTextContent("기본");
+		const alias = page.getByRole("menuitemradio", { name: /^DeepSeek: DeepSeek Pro Latest/ });
+		await expect.element(alias).toHaveTextContent("$0.5 · $2");
+		await expect
+			.element(alias)
+			.toHaveAttribute(
+				"title",
+				"~deepseek/deepseek-pro-latest\n100만 토큰당 입력 $0.5, 출력 $2\n지금: DeepSeek: DeepSeek V4 Pro",
+			);
+		// A search finds a model by its id too.
+		await userEvent.fill(page.getByRole("textbox", { name: "모델 찾기" }), "~deepseek");
+		await expect.element(alias).toBeVisible();
+		await expect.element(page.getByRole("menuitemradio", { name: /Llama/ })).not.toBeInTheDocument();
+	});
+
+	it("10-1 the thinking button offers only the levels the model takes, and shows and asks for the nearest one when the level kept is not one of them (AS-01, AS-40)", async () => {
+		const story = on({ router: true, script: () => [{ text: "네." }] });
+		await story.run();
+		await openPanel();
+		await userEvent.click(button("모델 고르기"));
+		await userEvent.click(page.getByRole("menuitemradio", { name: /^DeepSeek: DeepSeek Pro Latest/ }));
+		// It takes "low" and "high" only: "medium", a new conversation's, is shown as the nearest harder one.
+		await expect.element(button("생각")).toHaveTextContent("생각 높음");
+		await userEvent.click(button("생각"));
+		await expect.element(page.getByRole("menuitemradio", { name: "높음" })).toHaveAttribute("aria-checked", "true");
+		await expect.element(page.getByRole("menuitemradio", { name: "낮음" })).toBeVisible();
+		for (const level of ["끔", "보통"])
+			expect(page.getByRole("menuitemradio", { name: level, exact: true }).elements()).toHaveLength(0);
+		await userEvent.keyboard("{Escape}");
+		await say("안녕");
+		await expect.element(panel().getByText("네.")).toBeVisible();
+		expect(story.loaded().model.turns[0]).toMatchObject({ model: "~deepseek/deepseek-pro-latest", thinking: "high" });
 	});
 
 	it("10-1 a conversation whose key was removed goes on with a key the site still has", async () => {
@@ -371,7 +408,7 @@ describe("the key and the model (flow 2, 22–23)", () => {
 		await userEvent.click(page.getByRole("button", { name: "닫기" }));
 		await userEvent.click(button("어시스턴트 열기"));
 		// It says so, with the model that is used from now on.
-		await expect.element(page.getByText(/^쓰던 모델이 없어졌습니다\. 지금 모델: claude-/)).toBeVisible();
+		await expect.element(page.getByText(/^쓰던 모델이 없어졌습니다\. 지금 모델: Claude /)).toBeVisible();
 		await say("다시");
 		await expect.element(panel().getByText("둘째 답.")).toBeVisible();
 		await expect.element(page.getByText("그 키에 없는 모델입니다.")).not.toBeInTheDocument();
@@ -392,7 +429,7 @@ describe("the key and the model (flow 2, 22–23)", () => {
 		);
 		await site.monti.run("keys.remove", { id: keys.keys[0]?.id }, stories.admin);
 		await say("다시");
-		await expect.element(page.getByText(/^쓰던 모델이 없어졌습니다\. 지금 모델: claude-/)).toBeVisible();
+		await expect.element(page.getByText(/^쓰던 모델이 없어졌습니다\. 지금 모델: Claude /)).toBeVisible();
 		// The turn that never began says why in the server's words, once, in the conversation: not that a connection was lost.
 		expect(panel().getByText("그 키에 없는 모델입니다.").elements()).toHaveLength(1);
 		expect(page.getByText("그 키에 없는 모델입니다.").elements()).toHaveLength(1);
@@ -402,13 +439,15 @@ describe("the key and the model (flow 2, 22–23)", () => {
 		await expect.element(panel().getByText("둘째 답.")).toBeVisible();
 	});
 
-	it("10-1 by the keyboard: Tab goes from the box to the model button to send; Esc closes the menu and the focus is back on its button; closing the panel hands the focus to ✦", async () => {
+	it("10-1 by the keyboard: Tab goes from the box to the model button, the thinking button and send; Esc closes the menu and the focus is back on its button; closing the panel hands the focus to ✦", async () => {
 		await on({}).run();
 		await openPanel();
 		await userEvent.click(box());
 		await userEvent.keyboard("안녕");
 		await userEvent.keyboard("{Tab}");
 		expect(focused()).toBe(button("모델 고르기").element());
+		await userEvent.keyboard("{Tab}");
+		expect(focused()).toBe(button("생각").element());
 		await userEvent.keyboard("{Tab}");
 		expect(focused()).toBe(button("보내기").element());
 		button("모델 고르기").element().focus();

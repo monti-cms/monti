@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { typeKorean } from "../../../testing/input";
 import { render } from "../test/render";
-import { ChatInput } from "./index";
+import { ChatInput, ModelMenuButton, ThinkingMenu } from "./index";
 
 function Box({ sent }: { sent: string[] }) {
 	const [value, setValue] = useState("");
@@ -83,5 +83,44 @@ describe("ChatInput", () => {
 		// And what is typed next goes into it, with no press on the box in between.
 		await userEvent.keyboard("and this");
 		await expect.element(box).toHaveValue("and this");
+	});
+
+	it("a model name longer than the row is cut inside its button; the thinking button stays beside it on the row, and both end left of the send button (AS-41)", async () => {
+		const name = "Nous: Hermes 4 405B Instruct Turbo Preview (extended context, free)";
+		render(
+			<div style={{ width: 300 }}>
+				<ChatInput
+					value=""
+					onValueChange={() => {}}
+					onSubmit={() => {}}
+					onStop={() => {}}
+					label="Ask"
+					sendLabel="Send"
+					stopLabel="Stop"
+					aside={
+						<>
+							<ModelMenuButton model={name} label="Model" />
+							<ThinkingMenu
+								value="medium"
+								options={[{ value: "medium", label: "Medium" }]}
+								onValueChange={() => {}}
+								label="Thinking"
+								text="Thinking medium"
+							/>
+						</>
+					}
+				/>
+			</div>,
+		);
+		const model = page.getByRole("button", { name: "Model" });
+		await expect.element(model).toHaveAttribute("title", name);
+		const words = model.element().querySelector("span");
+		expect(words && words.scrollWidth > words.clientWidth).toBe(true);
+		const send = page.getByRole("button", { name: "Send" }).element().getBoundingClientRect();
+		const thinking = page.getByRole("button", { name: "Thinking" }).element().getBoundingClientRect();
+		const box = model.element().getBoundingClientRect();
+		expect(box.right).toBeLessThanOrEqual(thinking.left);
+		expect(thinking.top).toBe(box.top);
+		expect(thinking.right).toBeLessThanOrEqual(send.left);
 	});
 });

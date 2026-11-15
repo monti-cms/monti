@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Box, ChatInput, ChatQueueItem, Chip, ModelMenuButton } from "./index";
+import { Box, ChatInput, ChatQueueItem, Chip, ModelMenuButton, ThinkingMenu } from "./index";
 
 /**
  * The assistant's box: the text area, the model button at the bottom left, the round send button at the right (a stop button while the answer is
@@ -30,7 +30,19 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const model = <ModelMenuButton model="claude-sonnet-5-5" thinking="생각 보통" label="모델 고르기" />;
+const LEVELS = [
+	{ value: "off", label: "끔" },
+	{ value: "low", label: "낮음" },
+	{ value: "medium", label: "보통" },
+	{ value: "high", label: "높음" },
+];
+
+const model = (
+	<>
+		<ModelMenuButton model="Claude Sonnet 5.5" label="모델 고르기" />
+		<ThinkingMenu value="medium" options={LEVELS} onValueChange={() => {}} label="생각" text="생각 보통" />
+	</>
+);
 
 function Live(props: Partial<React.ComponentProps<typeof ChatInput>> & { initial?: string }) {
 	const [value, setValue] = useState(props.initial ?? "");
@@ -66,6 +78,23 @@ export const WithContext: Story = {
 				<Chip onRemove={() => {}} removeLabel="빼기">
 					고른 글 2편
 				</Chip>
+			}
+		/>
+	),
+};
+
+/** A model name longer than the row is cut before the thinking button and the send button: nothing runs on under them (AS-41). */
+export const LongModel: Story = {
+	render: () => (
+		<Live
+			aside={
+				<>
+					<ModelMenuButton
+						model="Nous: Hermes 4 405B Instruct Turbo Preview (extended context, free)"
+						label="모델 고르기"
+					/>
+					<ThinkingMenu value="medium" options={LEVELS} onValueChange={() => {}} label="생각" text="생각 보통" />
+				</>
 			}
 		/>
 	),
