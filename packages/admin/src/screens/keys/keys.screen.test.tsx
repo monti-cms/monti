@@ -67,7 +67,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 		await expect.element(page.getByText("키를 추가했습니다")).toBeVisible();
 		await expect.element(dialog()).not.toBeInTheDocument();
 		await expect.element(page.getByRole("cell", { name: /Anthropic/ }).getByText("…a1b2")).toBeVisible();
-		await expect.element(page.getByText("이번 달 사용 없음")).toBeVisible();
+		await expect.element(page.getByText("사용 없음")).toBeVisible();
 	});
 
 	it("14-1 [flow 10·04] a key the service refuses: one line under the key, the window open with what was typed; corrected, it is added", async () => {
@@ -647,9 +647,7 @@ describe("the list of keys (UX-03, ST-28)", () => {
 			.element(table.getByRole("row").filter({ hasText: "OpenRouter" }))
 			.toHaveTextContent("OpenRouter…8e42701K 토큰 · $2.31 · 남은 한도 $7.69");
 		await expect.element(table.getByRole("row").filter({ hasText: "Anthropic 개인" })).toHaveTextContent("1.24M 토큰");
-		await expect
-			.element(table.getByRole("row").filter({ hasText: "예전 Gemini 키" }))
-			.toHaveTextContent("이번 달 사용 없음");
+		await expect.element(table.getByRole("row").filter({ hasText: "예전 Gemini 키" })).toHaveTextContent("사용 없음");
 	});
 });
 

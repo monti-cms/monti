@@ -113,9 +113,13 @@ describe("ChatInput", () => {
 			</div>,
 		);
 		const model = page.getByRole("button", { name: "Model" });
-		await expect.element(model).toHaveAttribute("title", name);
-		const words = model.element().querySelector("span");
+		await expect.element(model).toBeVisible();
+		// No browser `title` on a button: the cut name is said whole by the tooltip every cut line has.
+		expect(model.element().hasAttribute("title")).toBe(false);
+		const words = model.element().querySelector<HTMLElement>("[data-slot=cut-words]");
 		expect(words && words.scrollWidth > words.clientWidth).toBe(true);
+		await userEvent.hover(words as HTMLElement);
+		await expect.element(page.getByRole("tooltip")).toHaveTextContent(name);
 		const send = page.getByRole("button", { name: "Send" }).element().getBoundingClientRect();
 		const thinking = page.getByRole("button", { name: "Thinking" }).element().getBoundingClientRect();
 		const box = model.element().getBoundingClientRect();

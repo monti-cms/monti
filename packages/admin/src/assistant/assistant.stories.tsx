@@ -701,7 +701,7 @@ export const Thinking: Story = {
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
 		await openPanel(page);
-		await userEvent.click(await page.findByRole("button", { name: "생각" }));
+		await userEvent.click(await page.findByRole("button", { name: "생각 보통" }));
 		await page.findByRole("menuitemradio", { name: "보통" });
 	},
 };

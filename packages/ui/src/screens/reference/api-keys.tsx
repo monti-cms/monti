@@ -71,7 +71,7 @@ type Key = { name: string; tail?: string; meta: string; tone?: "faint" | "danger
 const KEYS: readonly Key[] = [
 	{ name: "Anthropic 개인", tail: "a1b2", meta: "1.24M 토큰" },
 	{ name: "OpenRouter", tail: "8e42", meta: "701K 토큰 · $2.31 · 남은 한도 $7.69" },
-	{ name: "예전 Gemini 키", tail: "9f0c", meta: "이번 달 사용 없음", tone: "faint" },
+	{ name: "예전 Gemini 키", tail: "9f0c", meta: "사용 없음", tone: "faint" },
 ];
 
 /** The keys plugins ask for, one row per slot; `tail` when a key is in. */
@@ -611,7 +611,7 @@ function keysOf(stage: ApiKeysStage): readonly Key[] {
 		case "비밀값 없음":
 			return [];
 		case "추가됨":
-			return [...KEYS, { name: "Anthropic 2", tail: "9d3f", meta: "이번 달 사용 없음", tone: "faint" }];
+			return [...KEYS, { name: "Anthropic 2", tail: "9d3f", meta: "사용 없음", tone: "faint" }];
 		case "편집 저장됨":
 			return KEYS.map((key, index) => (index === 0 ? { ...key, tail: "7c0e" } : key));
 		case "지움":
@@ -741,7 +741,6 @@ export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: Ap
 															size="default"
 															value={row.now.model}
 															meta={row.now.meta}
-															title={row.now.title}
 														/>
 													}
 												/>

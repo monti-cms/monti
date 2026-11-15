@@ -152,14 +152,18 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 	): { text: string; tone: "subtle" | "faint" | "danger" } => {
 		if (!key.readable) return { text: t("apiKeys.unreadable"), tone: "danger" };
 		const credit = key.credit;
+		const spent = credit !== null && credit.month > 0;
 		const text = [
-			key.usage.tokens === 0 ? t("apiKeys.unused") : t("apiKeys.usage", { amount: tokenAmount(key.usage.tokens) }),
-			...(credit ? [dollarAmount(credit.month)] : []),
+			// "Not used" only when nothing at all was: an account that spent money elsewhere says this site's tokens as a count.
+			key.usage.tokens === 0 && !spent
+				? t("apiKeys.unused")
+				: t("apiKeys.usage", { amount: tokenAmount(key.usage.tokens) }),
+			...(spent ? [dollarAmount(credit.month)] : []),
 			...(credit && credit.limit !== null && credit.remaining !== null
 				? [t("apiKeys.left", { amount: dollarAmount(credit.remaining) })]
 				: []),
 		].join(" · ");
-		return { text, tone: key.usage.tokens === 0 && !(credit && credit.month > 0) ? "faint" : "subtle" };
+		return { text, tone: key.usage.tokens === 0 && !spent ? "faint" : "subtle" };
 	};
 
 	// The plugins' slots are there only where a key can be stored: without the server's secret nothing can be put in one.
@@ -328,7 +332,6 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 									meta={
 										tried ? t("apiKeys.trying") : [model && priceWord(t, model), key.name].filter(Boolean).join(" · ")
 									}
-									title={model ? modelTitle(t, model) : shown.model}
 								/>
 							}
 						/>

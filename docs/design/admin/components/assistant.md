@@ -78,7 +78,7 @@
 
 ### 코드
 
-`ModelMenu`: 검색 행, 묶음(`groups`: 이름, 개수, 모델 행), 지금 모델의 ✓가 든 메뉴다. 모델 행(`ModelMenuItem`)은 `model`(사람이 읽는 이름), `id`, `title`(툴팁), `hint`다. 검색은 이름과 id로 거른다. 거르는 동안 묶음의 개수는 그 묶음에서 찾은 모델 수다(2026-11-14 만들며 정함, ST-32). `layout="chat"`은 입력 상자 위로 330px 너비로 열리고(목록 최대 352px), `layout="field"`는 칸 아래로 칸 너비로 열린다(목록 최대 236px). 모델 행은 sans이고, 끝의 짧은 말(`hint`: 가격, "기본", 최근 모델의 키 이름)은 메뉴의 단축 표시(`MenuShortcut`)와 같은 흐린 글자다. `ModelMenuButton`은 입력 상자의 모델 버튼이다: 모델 이름(sans, 넘치면 말줄임, `title`에 온전한 이름)과 `Caret`. 상자 아래 줄의 왼쪽 칸이 줄어들 수 있어 긴 이름이 보내기 버튼 아래로 들어가지 않는다(AS-41). `ThinkingMenu`는 그 옆의 생각 버튼이다: 같은 모양, 같은 진하기("생각 높음"), 메뉴는 넘겨받은 단계만. `Button variant="ghost" size="sm"`이다([common.md](../screens/common.md)의 메뉴 표와 같다). 쉴 때는 바탕이 없고, 메뉴가 열리면 ghost 바탕에 잉크다. 칸으로 여는 쪽은 `MenuField`(필드 페이지)다.
+`ModelMenu`: 검색 행, 묶음(`groups`: 이름, 개수, 모델 행), 지금 모델의 ✓가 든 메뉴다. 모델 행(`ModelMenuItem`)은 `model`(사람이 읽는 이름), `id`, `title`(툴팁), `hint`다. 검색은 이름과 id로 거른다. 거르는 동안 묶음의 개수는 그 묶음에서 찾은 모델 수다(2026-11-14 만들며 정함, ST-32). `layout="chat"`은 입력 상자 위로 330px 너비로 열리고(목록 최대 352px), `layout="field"`는 칸 아래로 칸 너비로 열린다(목록 최대 236px). 모델 행은 sans이고, 끝의 짧은 말(`hint`: 가격, "기본", 최근 모델의 키 이름)은 메뉴의 단축 표시(`MenuShortcut`)와 같은 흐린 글자다. `ModelMenuButton`은 입력 상자의 모델 버튼이다: 모델 이름(sans, 넘치면 말줄임. 잘린 이름은 잘린 줄마다 쓰는 툴팁 `CutWords`가 온전히 말한다. 버튼에 브라우저의 `title`을 달지 않는다)과 `Caret`. 상자 아래 줄의 왼쪽 칸이 줄어들 수 있어 긴 이름이 보내기 버튼 아래로 들어가지 않는다(AS-41). `ThinkingMenu`는 그 옆의 생각 버튼이다: 같은 모양, 같은 진하기("생각 높음"), 메뉴는 넘겨받은 단계만. `Button variant="ghost" size="sm"`이다([common.md](../screens/common.md)의 메뉴 표와 같다). 쉴 때는 바탕이 없고, 메뉴가 열리면 ghost 바탕에 잉크다. 칸으로 여는 쪽은 `MenuField`(필드 페이지)다.
 
 ## 막혔을 때
 

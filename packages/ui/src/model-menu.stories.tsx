@@ -121,7 +121,7 @@ export const Thinking: Story = {
 		</Inline>
 	),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(within(canvasElement).getByRole("button", { name: "생각" }));
+		await userEvent.click(within(canvasElement).getByRole("button", { name: "생각 보통" }));
 	},
 };
 

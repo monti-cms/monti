@@ -560,7 +560,7 @@ export const PickModel: Story = {
 	},
 };
 
-/** A model picked is tried once first: while it answers, its field cannot be pressed and says so (step 13). */
+/** A model picked is tried once first: while it answers, its field says so and takes no second pick; it stays pressable, so the focus comes back to it (step 13). */
 export const TryingModel: Story = {
 	loaders: site({ trial: "answers" }),
 	play: async ({ canvasElement, loaded }) => {

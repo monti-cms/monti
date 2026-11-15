@@ -5,6 +5,7 @@ import { Fragment, type ReactElement, type ReactNode, useState } from "react";
 import { Button } from "./button";
 import { Caret } from "./caret";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -152,12 +153,12 @@ export function ModelMenuButton({
 			variant="ghost"
 			size="sm"
 			aria-label={label}
-			title={model}
 			data-slot="model-menu-button"
 			className="-ml-monti-4 min-w-0 max-w-full shrink pr-monti-6 pl-monti-10 text-monti-subtle"
 			{...props}
 		>
-			<span className="min-w-0 truncate">{model}</span>
+			{/* A name cut short is said whole in a tooltip, as every cut line is (not the browser's `title`, which a button does not get). */}
+			<CutWords>{model}</CutWords>
 			<Caret solo />
 		</Button>
 	);
@@ -257,7 +258,7 @@ export function MenuField({
 				) : (
 					<>
 						{/* The value does not give way at all while a meta can (a part of a pixel short and its end would turn into "…"); alone, it is cut at the field's width. */}
-						<span className={cn("max-w-full shrink-0 truncate", mono && "font-mono")}>{value}</span>
+						<CutWords className={cn("max-w-full shrink-0", mono && "font-mono")}>{value}</CutWords>
 						{meta && (
 							<span
 								className={cn(
