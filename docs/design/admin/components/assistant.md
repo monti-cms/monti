@@ -24,10 +24,12 @@
 
 패널 밖의 AI 일(✦ 채우기, 자리 요청의 카드, ✦ 번역, 다시 만들기)은 모두 같은 두 줄로 제 모습을 말한다(패널의 못 한 답도 `AiFailed`다)(만들며 정함 (2026-11-15). "생성 중"과 초를 세지 않음은 소유자). 일을 시작한 버튼의 자리에 선다.
 
-- `AiWorking`: 도는 고리와 제안 파랑의 "생성 중", 그 뒤 " · "와 글자 버튼 "멈추기"(`onStop`이 없으면 없다). 초는 세지 않는다. "생성 중"만 상태 알림(`role="status"`)이다. `size`는 `micro`(필드 라벨 줄, 레이블 글자)와 `note`(그 밖) 둘이다. 라벨 줄에서도 포인터가 다른 데 있어도 보인다.
-- `AiFailed`: 빨간 한 줄로 까닭(`failureText`의 관리자 말. 서비스의 말은 보이지 않는다), 그 뒤 밑줄 글자 버튼 "다시 시도"(`onRetry`가 없으면 없다. 키나 그림이 없을 때). 한도에 닿아 멈춘 일은 `retryLabel`로 "이어서 하기"다. 까닭만 알림(`role="alert"`)이다.
+- `AiWorking`: 도는 고리와 제안 파랑의 "생성 중", 그 뒤 " · "와 글자 버튼 "멈추기"(`onStop`이 없으면 없다). 초는 세지 않는다. "생성 중"만 상태 알림(`role="status"`)이다. `size`는 `caption`(필드 라벨 줄과 칸 아래, 라벨과 같은 sans 12)과 `note`(그 밖) 둘이다. 카드에서는 답의 글 아래 제 줄에 선다(`MemoMessage status`). 라벨 줄에서도 포인터가 다른 데 있어도 보인다.
+- `AiFailed`: 빨간 한 줄로 까닭(`failureText`의 관리자 말. 서비스의 말은 보이지 않는다), 그 뒤 밑줄 글자 버튼 "다시 시도"(`onRetry`가 없으면 없다. 키나 그림이 없을 때). 한도에 닿거나 끊겨 멈춘 일은 `retryLabel`로 "이어서 하기"다. 까닭만 알림(`role="alert"`)이다. `align`은 줄이 서는 쪽(캡션은 캡션의 맞춤을 따른다).
 
-말은 `UiLabels`의 `aiWorking` · `aiStop` · `aiRetry`다. 스토리: Monti/Assistant/AiStatus.
+### 코드
+
+`AiWorking`(`onStop`, `size`)과 `AiFailed`(`onRetry`, `retryLabel`, `size`, `align`)는 `@monti-cms/ui`의 부품이다(`ai-status.tsx`). 말은 `UiLabels`의 `aiWorking` · `aiStop` · `aiRetry`이고, 관리자 사전의 `ui.*`와 같아야 한다(`ui-labels.test.ts`가 지킨다). 관리자 화면에서 채우기는 `FillAction` · `FillFailed`(`assistant/fill-action.tsx`), 카드는 `KeptCard`(`assistant/proposal-memo.tsx`)가 이 둘을 쓴다. 스토리: Monti/Assistant/AiStatus.
 
 일을 시작한 버튼은 누르면 "생성 중 · 멈추기"에 자리를 주고, 끝나면 버튼이나 실패 줄이 돌아온다. 키보드로 눌렀으면 포커스가 함께 간다: "멈추기"로, 끝나면 그 자리에 선 것으로(`useFocusHandOff`. 카드는 `KeptCard`). 포인터로 누르면 아무것도 옮기지 않는다.
 

@@ -65,9 +65,9 @@ const TAGS = ["가을", "산", "사진", "걷기"];
 
 /** The assistant's button for one field: "✦ 채우기" while empty, "↻ 다시" once there is a value, "생성 중 · 멈추기" in its place while it works. */
 function Fill({ filled = false, loading = false }: { filled?: boolean; loading?: boolean }) {
-	if (loading) return <AiWorking size="micro" onStop={() => {}} />;
+	if (loading) return <AiWorking size="caption" onStop={() => {}} />;
 	return (
-		<TextButton tone="proposal" size="micro">
+		<TextButton tone="proposal" size="caption">
 			{filled ? (
 				<>
 					<Renew aria-hidden />

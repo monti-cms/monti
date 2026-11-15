@@ -1,4 +1,4 @@
-import type { Conversation, RunEnd, RunEvent } from "@monti-cms/ai";
+import type { RunEnd, RunEvent, RunState } from "@monti-cms/ai";
 import type { Message } from "@monti-cms/core";
 import type { StreamTransport, Transport } from "../operations/transport";
 import { canRetry, failureIn, failureText, reasonText } from "./failure";
@@ -74,7 +74,8 @@ export function startTask(
 	on: { onText?: (answer: string) => void; onRun?: (run: string, conversation: string) => void } = {},
 ): Task {
 	const listening = new AbortController();
-	let run: string | null = null;
+	// Going on with a run: it is that run from the start, so a refusal of it is read as the run (another page may have it).
+	let run: string | null = typeof input.resume === "string" ? input.resume : null;
 	let conversation: string | null = null;
 	let stopAsked = false;
 	const tellStop = () => {
@@ -109,16 +110,20 @@ export function startTask(
 			if (end.reason === "turns" || end.reason === "tokens") return finish("interrupted", t("panel.limit"));
 			return finish("interrupted", t("panel.dropped"));
 		};
-		/** Reads the run until no request holds it any more, and gives its end. `null`: it could not be read. */
-		const standing = async (): Promise<RunEnd | null> => {
-			if (!conversation || !run) return null;
+		/**
+		 * Reads the run (whatever kind it is) until no request holds it any more, and gives how it stands: its end, what the assistant said
+		 * and whether it proposed, as stored. `null`: it could not be read.
+		 */
+		const standing = async (): Promise<{ end: RunEnd; answer: string; proposed: boolean } | null> => {
+			if (!run) return null;
 			for (;;) {
-				const read = await transport("conversations.get", { id: conversation }).catch(() => null);
+				const read = await transport("assistant.runState", { run }).catch(() => null);
 				if (listening.signal.aborted) return null;
-				const found =
-					read?.status === 200 ? (read.body as Conversation).runs.find((each) => each.id === run) : undefined;
-				if (!found) return null;
-				if (found.status !== "running") return found.end ?? { status: found.status };
+				if (read?.status !== 200) return null;
+				const state = read.body as RunState;
+				conversation ??= state.conversationId;
+				if (state.status !== "running")
+					return { end: state.end ?? { status: state.status }, answer: state.answer, proposed: state.proposed };
 				await new Promise<void>((resolve) => {
 					const timer = setTimeout(resolve, POLL_MS);
 					listening.signal.addEventListener("abort", () => {
@@ -128,6 +133,11 @@ export function startTask(
 				});
 				if (listening.signal.aborted) return null;
 			}
+		};
+		/** The run is over as it was stored: its stored words and what it proposed stand, whatever this page heard of them. */
+		const stored = (stands: { answer: string; proposed: boolean }) => {
+			if (stands.answer.trim() !== "") answer = stands.answer;
+			proposed ||= stands.proposed;
 		};
 
 		for (;;) {
@@ -168,19 +178,24 @@ export function startTask(
 				if (reason) {
 					const stands = await standing();
 					if (listening.signal.aborted) return null;
-					return stands ? over(stands) : finish("interrupted", t("panel.dropped"));
+					if (!stands) return finish("interrupted", t("panel.dropped"));
+					stored(stands);
+					return over(stands.end);
 				}
 			}
 			if (!end) {
 				// Cut before the run said how it ended: the words of the turn that was cut come again, and the run is read where it stands.
 				if (!run) return finish("failed", t("panel.dropped"));
-				answer = answer.slice(0, turnAt);
 				cuts += 1;
 				const stands = await standing();
 				if (listening.signal.aborted) return null;
-				const cutThere = stands === null || (stands.status === "interrupted" && stands.reason === "connection");
-				if (!cutThere) end = stands;
-				else if (goesOnAfterCut(cuts) && !stopAsked) {
+				const cutThere = stands === null || (stands.end.status === "interrupted" && stands.end.reason === "connection");
+				// The words of the turn that was cut were not stored: when the run goes on, that turn comes again from its start.
+				answer = answer.slice(0, turnAt);
+				if (!cutThere) {
+					stored(stands);
+					end = stands.end;
+				} else if (goesOnAfterCut(cuts) && !stopAsked) {
 					request = { resume: run };
 					continue;
 				} else return stopAsked ? finish("stopped") : finish("interrupted", t("panel.dropped"));

@@ -161,10 +161,10 @@ export function staleMarks({
 										onDiscard(item.id);
 									},
 								})}
-						{...(remake && !working && (!failed || failed.next)
+						{...(remake && !working && !failed
 							? {
-									acceptLabel: t(failed?.next === "goOn" ? "panel.goOn" : failed ? "ui.aiRetry" : "card.remake"),
-									acceptSpark: !failed,
+									acceptLabel: t("card.remake"),
+									acceptSpark: true,
 									onAccept: () => void remake.remake(item.id),
 								}
 							: {})}
@@ -176,7 +176,16 @@ export function staleMarks({
 						/>
 						{working || failed ? (
 							<MemoThread>
-								{working ? <AiWorking onStop={() => remake?.stop(item.id)} /> : <AiFailed>{failed?.why}</AiFailed>}
+								{working ? (
+									<AiWorking onStop={() => remake?.stop(item.id)} />
+								) : (
+									<AiFailed
+										onRetry={failed?.next ? () => void remake?.remake(item.id) : undefined}
+										retryLabel={failed?.next === "goOn" ? t("panel.goOn") : undefined}
+									>
+										{failed?.why}
+									</AiFailed>
+								)}
 							</MemoThread>
 						) : null}
 					</KeptCard>

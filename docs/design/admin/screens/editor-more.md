@@ -20,7 +20,7 @@
 | 메모 카드 (보내기 전) | `MemoCardPopover`(`reply` "어시스턴트에게 요청", `reply.focus`) | 방금 고른 글자에 대한 요청이다(서식 카드의 "✦ 요청", ⌘J). 머리와 대화 없이 입력 줄 하나만 있고 커서가 그 안에 있다. 아무것도 보내지 않고 닫으면 표시와 밑줄이 사라진다. |
 | 메모 카드 (생성 중) | `MemoCardPopover`(머리와 답장 줄 없음), `MemoThread` + `MemoMessage ai`(오는 답의 글, 그 아래 `AiWorking` "생성 중 · 멈추기") | 어시스턴트가 일하는 동안 답장 줄이 없다. "멈추기"가 일을 멈춘다. |
 | 메모 카드 (가지 못함) | `MemoThread` 끝에 `AiFailed`(실패 한 줄, "다시 시도". 한도면 "이어서 하기") | 보낸 말이 남고 머리와 답장 줄이 돌아온다. "다시 시도"는 같은 말을 다시 보낸다. |
-| 메모 카드 (말뿐인 답) | `MemoCardPopover`(`onDiscard` "버리기", `reply` "이어서 요청"), `MemoThread`(가지 못한 요청은 대화 아래, 같은 `MemoThread` 안쪽 여백의 `Text variant="note" tone="danger"` 까닭 한 줄. 이야기 `RequestFailed`) | 고른 글자의 요청에 어시스턴트가 제안 없이 말로만 답했을 때다. 그 말이 카드에 남고, 버리면 표시와 밑줄이 사라진다. |
+| 메모 카드 (말뿐인 답) | `MemoCardPopover`(`onDiscard` "버리기", `reply` "이어서 요청"), `MemoThread`(가지 못한 요청은 대화 아래 `AiFailed`: 까닭 한 줄과 "다시 시도". 이야기 `RequestFailed`) | 고른 글자의 요청에 어시스턴트가 제안 없이 말로만 답했을 때다. 그 말이 카드에 남고, 버리면 표시와 밑줄이 사라진다. |
 | 버블 | `ProposalBubbleDock` 안 `ProposalBubble`(`name` "더 짧게 다듬기", `position` 1, `total` 5, `previousLabel` · `nextLabel`, `discardAllLabel` "모두 버리기", `acceptAllLabel` "모두 받기") | 상태 표시줄 12px 위 가운데에 뜬다. 이름을 누르면 그 대화로 간다. 하나씩 받기와 버리기는 메모 카드에서 한다. |
 
 #### 속성 패널의 제안

@@ -57,7 +57,7 @@
 
 ## 필드 채우기
 
-속성 필드 하나를 AI로 채우는 글자 버튼이다(`mt-ai-action`, 코드는 `TextButton tone="proposal"`). 필드 레이블과 같은 글자(mono 11)이고 파랑인 것만 다르다. 테두리도 바탕도 없다. 손이 놓인 필드 하나에서만 레이블 행 오른쪽 끝에 뜬다.
+속성 필드 하나를 AI로 채우는 글자 버튼이다(`mt-ai-action`, 코드는 `TextButton tone="proposal"`). 필드 레이블과 같은 글자(sans 12, `size="caption"`)이고 파랑인 것만 다르다. 테두리도 바탕도 없다. 손이 놓인 필드 하나에서만 레이블 행 오른쪽 끝에 뜬다.
 
 - 빈 필드: "✦ 채우기". 채운 뒤나 값이 있는 필드: "↻ 다시".
 - 일하는 동안: 버튼 자리에 "생성 중 · 멈추기"(`AiWorking`). 초는 세지 않는다. 포인터가 다른 데 있어도 보인다. "멈추기"를 누르면 칸은 그대로다. 답이 오면 값이 들어가고 버튼은 "↻ 다시"가 된다.
@@ -70,7 +70,7 @@
 
 `Spark`는 어시스턴트의 유일한 ✦ 표시다. Carbon 아이콘 같은 아이콘이라 닫혀 있지 않다. `icon`이 들어가는 자리에 들어가고(`icon={Spark}`, 버튼이나 메뉴 항목의 아이콘), 크기는 부모가 정한다. `currentColor`로 채워지므로 곁의 글자를 따른다(제안에서는 제안 파랑, 버튼에서는 버튼의 잉크). 장식이다. 무슨 뜻인지는 곁의 말이 알린다. 무언가를 어시스턴트의 것으로 표시하는 곳은 모두 이것을 쓰며, 아이콘 세트의 sparkles 아이콘은 쓰지 않는다.
 
-관리자 화면의 `FillAction`(`assistant/fill-action.tsx`)이 그린다: `TextButton tone="proposal" size="micro"`에 `Spark`와 "채우기"(값이 있으면 `Renew`와 "다시")를 넣고, 일하는 동안은 그 자리에 `AiWorking size="micro"`를 둔다. 실패 줄은 `FillFailed`(`AiFailed`)다. 칸의 채우기, 사진의 대체 텍스트와 캡션, 미디어 필드가 모두 이 둘을 쓴다. `FormFieldLabel action`에 들어가고, `FormField` 안에서는 포인터나 키보드가 있는 필드에서만 보인다(`data-tone="proposal"`).
+관리자 화면의 `FillAction`(`assistant/fill-action.tsx`)이 그린다: `TextButton tone="proposal" size="caption"`에 `Spark`와 "채우기"(값이 있으면 `Renew`와 "다시")를 넣고, 일하는 동안은 그 자리에 `AiWorking size="caption"`를 둔다. 실패 줄은 `FillFailed`(`AiFailed`)다. 칸의 채우기, 사진의 대체 텍스트와 캡션, 미디어 필드가 모두 이 둘을 쓴다. `FormFieldLabel action`에 들어가고, `FormField` 안에서는 포인터나 키보드가 있는 필드에서만 보인다(`data-tone="proposal"`).
 
 ## AI가 만든 상태
 

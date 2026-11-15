@@ -35,7 +35,7 @@ export const InSentence: Story = {
 };
 
 /**
- * On a field's label row: the assistant's "✦ 채우기" in the label's type (`tone="proposal"`, `size="micro"`; while it works, `AiWorking` takes its
+ * On a field's label row: the assistant's "✦ 채우기" in the label's type (`tone="proposal"`, `size="caption"`, the label's type; while it works, `AiWorking` takes its
  * place), a quiet underlined "되돌리기" at `caption`, and one that is `loading`.
  */
 export const OnLabelRow: Story = {
@@ -45,7 +45,7 @@ export const OnLabelRow: Story = {
 				<FormFieldLabel
 					htmlFor="summary"
 					action={
-						<TextButton tone="proposal" size="micro">
+						<TextButton tone="proposal" size="caption">
 							<Spark aria-hidden />
 							채우기
 						</TextButton>

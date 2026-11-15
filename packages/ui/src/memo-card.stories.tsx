@@ -68,9 +68,8 @@ export const Working: Story = {
 				<MemoMessage author="나" time="10:41">
 					이 문장을 더 짧게 줄여 줘
 				</MemoMessage>
-				<MemoMessage author="어시스턴트" ai>
-					<span>“Monti는 코드 없이</span>
-					<AiWorking onStop={noop} />
+				<MemoMessage author="어시스턴트" ai status={<AiWorking onStop={noop} />}>
+					“Monti는 코드 없이
 				</MemoMessage>
 			</MemoThread>
 		</MemoCard>

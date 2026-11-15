@@ -139,17 +139,20 @@ function MemoThread({ className, ...props }: ComponentProps<"div">) {
 
 /**
  * One message of a note: the name in bold with the time faint beside it, then the text. The assistant's name (`ai`) is blue with a spark; while it works
- * the text can be "…".
+ * its answer grows in the text and `status` ("Generating · Stop") stands on its own line under it.
  */
 function MemoMessage({
 	author,
 	time,
 	ai = false,
+	status,
 	children,
 }: {
 	author: string;
 	time?: string;
 	ai?: boolean;
+	/** A line of its own under the text: the assistant at work on it (`AiWorking`). */
+	status?: ReactNode;
 	children?: ReactNode;
 }) {
 	return (
@@ -167,6 +170,7 @@ function MemoMessage({
 				{time}
 			</span>
 			{children && <span className="block text-monti-body">{children}</span>}
+			{status && <span className="block">{status}</span>}
 		</div>
 	);
 }

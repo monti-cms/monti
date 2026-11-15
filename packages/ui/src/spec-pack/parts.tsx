@@ -2339,7 +2339,7 @@ function LabelWithFill({ label, action, for: field }: { label?: string; action?:
 			htmlFor={field}
 			action={
 				action ? (
-					<TextButton tone="proposal" size="micro">
+					<TextButton tone="proposal" size="caption">
 						{action}
 					</TextButton>
 				) : undefined

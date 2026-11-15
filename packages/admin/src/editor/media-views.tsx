@@ -805,7 +805,7 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 						/>
 					) : null}
 				</Inline>
-				<FillFailed state={captionFill} onRetry={() => fill.again(captionPlace)} />
+				<FillFailed state={captionFill} onRetry={() => fill.again(captionPlace)} align={CAPTION_ALIGN[align]} />
 			</Stack>
 		) : (
 			captionInput

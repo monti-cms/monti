@@ -98,7 +98,7 @@
 | 없을 때 | `Empty`(`title` "지난 대화가 없습니다") | |
 | 발 | `SidePanel footer`에 `Text variant="note"` "안 연 대화 지우기"와 `Select`(화면의 `PickOne`, `size="sm"`): "7일 뒤" · "30일 뒤" · "90일 뒤" · "지우지 않음" | 설정은 칸 부품으로 고른다. 고르는 대로 저장된다. |
 
-스토리: Screens/Assistant(만든 화면), Controls/Overlay/SidePanel, Monti/Assistant/ChatThread, Monti/Assistant/ChatMessage, Monti/Assistant/ToolCallLine, Monti/Assistant/Suggest, Monti/Assistant/ChatInput, Controls/Menu/ModelMenu, Controls/Status/ErrorNote, Monti/Proposal/ProposalCard, Patterns/List/Table, Patterns/List/Empty, Controls/Field/Select, Controls/Menu/DropdownMenu.
+스토리: Screens/Assistant(만든 화면), Controls/Overlay/SidePanel, Monti/Assistant/ChatThread, Monti/Assistant/ChatMessage, Monti/Assistant/ToolCallLine, Monti/Assistant/AiStatus, Monti/Assistant/Suggest, Monti/Assistant/ChatInput, Controls/Menu/ModelMenu, Controls/Status/ErrorNote, Monti/Proposal/ProposalCard, Patterns/List/Table, Patterns/List/Empty, Controls/Field/Select, Controls/Menu/DropdownMenu.
 
 ### 만든 화면의 상태
 
@@ -172,7 +172,7 @@
 | "저장하고 열기" | 화면이 옮겨 간 뒤 패널의 입력란 |
 | 기다리는 말의 "지금 보내기" · "취소" | 다음 줄의 첫 버튼, 없으면 입력란 |
 | 제안의 상태 줄("버리기" · "n건 적용" · "되돌리기") | 줄에 남은 첫 버튼, 없으면 줄 다음의 첫 컨트롤 |
-| 검토 화면 줄의 "다시 만들기" | 그 줄의 체크 |
+| 검토 화면 줄의 "다시 만들기" | 그 자리의 "멈추기", 일이 끝나면 그 자리에 선 것("다시 시도"), 그 자리가 사라지면(다시 만들어짐) 그 줄의 체크 |
 | 지난 대화 ⋯의 "지우기" | 다음 줄의 ⋯, 없으면 앞 줄의 ⋯. 열린 대화를 지우면 목록이 닫히므로 입력란. 줄이 하나도 남지 않으면 보기의 첫 버튼 |
 | 검토 화면을 떠나는 것("버리기", 돌아가기 "어시스턴트") | 돌아간 화면 옆 패널의 입력란 |
 | 편집기와 설정의 제안 버블 "모두 받기" · "모두 버리기" | 버블이 덮고 있던 것: 편집기는 본문, 설정은 그 화면의 첫 컨트롤 |

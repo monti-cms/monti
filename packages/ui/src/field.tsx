@@ -67,8 +67,8 @@ function FormFieldGroup({
 }
 
 /**
- * A labeled field: the label above (mono 11), the control, then at most one line of error. The assistant's fill action sits on the label row
- * and shows only while the pointer or the keyboard is in this field.
+ * A labeled field: the label above (sans 12), the control, then at most one line of error. The assistant's fill action sits on the label row
+ * and shows only while the pointer or the keyboard is in this field; while it works, `AiWorking` stands in its place and stays shown.
  */
 function FormField({ className, ...props }: React.ComponentProps<"div">) {
 	return (
@@ -76,7 +76,7 @@ function FormField({ className, ...props }: React.ComponentProps<"div">) {
 			role="group"
 			data-slot="field"
 			className={cn(
-				"group/field flex w-full flex-col gap-monti-4 *:data-[slot=label-row]:**:data-[tone=proposal]:opacity-0 data-[invalid=true]:text-monti-danger *:data-[slot=label-row]:**:data-[tone=proposal]:data-loading:opacity-100 hover:*:data-[slot=label-row]:**:data-[tone=proposal]:opacity-100 focus-within:*:data-[slot=label-row]:**:data-[tone=proposal]:opacity-100",
+				"group/field flex w-full flex-col gap-monti-4 *:data-[slot=label-row]:**:data-[tone=proposal]:opacity-0 data-[invalid=true]:text-monti-danger hover:*:data-[slot=label-row]:**:data-[tone=proposal]:opacity-100 focus-within:*:data-[slot=label-row]:**:data-[tone=proposal]:opacity-100",
 				className,
 			)}
 			{...props}

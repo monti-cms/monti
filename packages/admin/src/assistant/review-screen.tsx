@@ -32,7 +32,7 @@ import { useRead } from "../operations/use-operation";
 import { href, type Route, reachedFromInside } from "../route";
 import { codeChanges, type ShownBlock, shownBlocks } from "../screens/entry/compare-entries";
 import { useBlockNames } from "../screens/entry/use-block-names";
-import { useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { toWhatStands, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { endsClosed } from "../screens/list/format";
 import type { SchemaRead } from "../screens/settings/schema-draft";
 import { type DiffRun, inlineDiff } from "./diff";
@@ -116,15 +116,13 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 				}),
 			),
 	);
-	// "Make again" gives way to "Generating · Stop" when it is pressed: pressed with the keyboard, its focus goes to "Stop" (or, when the
-	// row has none by then, to the row's check).
-	const toCheck = useFocusHandOff((gone) => {
-		const row = gone.closest("tr");
-		return (
-			row?.querySelector<HTMLElement>("[data-slot=ai-working] button") ??
-			row?.querySelector<HTMLElement>('[role="checkbox"], input[type="checkbox"]')
-		);
-	});
+	// "Make again", then "Generating · Stop" in its place, then the row's new value or the failure line: pressed with the keyboard, the
+	// focus goes with what stands in the spot ("Stop", "Try again"), and to the row's check once the spot is gone (the change is made again).
+	const remakeSpot = useFocusHandOff((spot) =>
+		toWhatStands(spot, ["button"], () =>
+			spot.closest("tr")?.querySelector<HTMLElement>('[role="checkbox"], input[type="checkbox"]'),
+		),
+	);
 	const proposal = useProposal(id);
 	const remake = useRemake({ settled: proposal.reload });
 	const view = proposal.view;
@@ -629,28 +627,26 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																</Text>
 															) : null}
 															{remake && item.stale && item.state !== "discarded" && !proposal.applying ? (
-																remake.working.has(item.id) ? (
-																	<AiWorking onStop={() => remake.stop(item.id)} />
-																) : remake.failed.has(item.id) ? (
-																	<AiFailed
-																		onRetry={
-																			remake.failed.get(item.id)?.next ? () => void remake.remake(item.id) : undefined
-																		}
-																		retryLabel={
-																			remake.failed.get(item.id)?.next === "goOn" ? t("panel.goOn") : undefined
-																		}
-																	>
-																		{remake.failed.get(item.id)?.why}
-																	</AiFailed>
-																) : (
-																	<TextButton
-																		ref={toCheck}
-																		variant="underline"
-																		onClick={() => void remake.remake(item.id)}
-																	>
-																		{t("card.remake")}
-																	</TextButton>
-																)
+																<span ref={remakeSpot}>
+																	{remake.working.has(item.id) ? (
+																		<AiWorking onStop={() => remake.stop(item.id)} />
+																	) : remake.failed.has(item.id) ? (
+																		<AiFailed
+																			onRetry={
+																				remake.failed.get(item.id)?.next ? () => void remake.remake(item.id) : undefined
+																			}
+																			retryLabel={
+																				remake.failed.get(item.id)?.next === "goOn" ? t("panel.goOn") : undefined
+																			}
+																		>
+																			{remake.failed.get(item.id)?.why}
+																		</AiFailed>
+																	) : (
+																		<TextButton variant="underline" onClick={() => void remake.remake(item.id)}>
+																			{t("card.remake")}
+																		</TextButton>
+																	)}
+																</span>
 															) : null}
 															{entry && entryId && open ? (
 																<TextButton

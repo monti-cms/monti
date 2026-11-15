@@ -93,7 +93,7 @@ import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { usePurge, useRestore, useTrashMove } from "../../trash/use-trash";
-import { focusText, useFocusHandOff } from "../frame/focus-hand-off";
+import { focusText, toWhatStands, useFocusHandOff } from "../frame/focus-hand-off";
 import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
 import { useLanguageName } from "../list/column-menu";
@@ -581,9 +581,7 @@ export function EntryEditor({
 				.map((block) => block.id)
 		: [];
 	const translations = waiting.filter((request) => request.id.startsWith("translate:"));
-	const translateFocus = useFocusHandOff((place) =>
-		place.isConnected ? place.querySelector<HTMLElement>("button") : null,
-	);
+	const translateFocus = useFocusHandOff((place) => toWhatStands(place));
 	const translating = translations.some((request) => request.status === "working");
 	/** The newest translation that did not go: its line stands where "✦ Translate" was, until it is asked again. */
 	const translateFailed = translating ? undefined : translations.findLast((request) => request.failed);

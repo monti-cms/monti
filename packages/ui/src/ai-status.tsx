@@ -7,13 +7,15 @@ import { Spinner } from "./spinner";
 import { TextButton } from "./text-button";
 
 const SIZE = {
-	/** The label's type, on a field's label row beside the field's name. */
-	micro: "text-monti-micro",
-	/** The note's type: in a card, beside a button over a text, under a box. */
+	/** A field label's type (sans 12): on a field's label row beside its name, under a field. */
+	caption: "text-monti-caption",
+	/** The note's type: in a card, beside a button over a text, in a table row. */
 	note: "text-monti-note",
 } as const;
 
 type Size = keyof typeof SIZE;
+
+const ALIGN = { start: "justify-start", center: "justify-center", end: "justify-end" } as const;
 
 /**
  * The assistant at work, where it works: a ring and "Generating" in the proposal blue, then "Stop" when the work can be stopped. Every AI task
@@ -38,7 +40,7 @@ function AiWorking({
 			{...props}
 		>
 			<span role="status" className="inline-flex items-center gap-monti-6 text-monti-proposal">
-				<Spinner className={size === "micro" ? "size-3" : undefined} />
+				<Spinner className={size === "caption" ? "size-3" : undefined} />
 				{labels.aiWorking}
 			</span>
 			{onStop ? (
@@ -69,21 +71,29 @@ function AiFailed({
 	onRetry,
 	retryLabel,
 	size = "note",
+	align = "start",
 	className,
 	children,
 	...props
-}: React.ComponentProps<"div"> & {
+}: React.ComponentProps<"span"> & {
 	/** Asks the same again. Left out where nothing can be asked again (no key): the line is the reason alone. */
 	onRetry?: () => void;
 	/** The button's words when asking again is something else: "Go on" for work that stopped at its limit. */
 	retryLabel?: string;
 	size?: Size;
+	/** Where the line stands in its row: a caption's failure follows the caption's own alignment. */
+	align?: "start" | "center" | "end";
 }) {
 	const labels = useUiLabels();
 	return (
-		<div
+		<span
 			data-slot="ai-failed"
-			className={cn("flex flex-wrap items-baseline gap-x-monti-8 gap-y-monti-2", SIZE[size], className)}
+			className={cn(
+				"inline-flex flex-wrap items-baseline gap-x-monti-8 gap-y-monti-2",
+				ALIGN[align],
+				SIZE[size],
+				className,
+			)}
 			{...props}
 		>
 			<span role="alert" className="min-w-0 text-monti-danger">
@@ -94,7 +104,7 @@ function AiFailed({
 					{retryLabel ?? labels.aiRetry}
 				</TextButton>
 			) : null}
-		</div>
+		</span>
 	);
 }
 

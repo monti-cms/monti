@@ -7,7 +7,10 @@ const t = (key: string, values?: Record<string, string | number>) =>
 	values ? `${key}(${Object.values(values).join(",")})` : key;
 
 /** A stream of these events, one request after another; a request with no events left is refused with no answer. */
-function server(requests: unknown[][], conversations: Record<string, unknown> = {}) {
+/** How each run stands on the server (`assistant.runState`), by its id. */
+type States = Record<string, { status: string; end: unknown; answer?: string; proposed?: boolean }>;
+
+function server(requests: unknown[][], states: States = {}) {
 	const asked: unknown[] = [];
 	const stopped: unknown[] = [];
 	const streams: StreamTransport = async (_name, input) => {
@@ -26,7 +29,12 @@ function server(requests: unknown[][], conversations: Record<string, unknown> = 
 	};
 	const transport: Transport = async (name, input) => {
 		if (name === "assistant.stop") stopped.push(input);
-		if (name === "conversations.get") return { status: 200, body: conversations[(input as { id: string }).id] };
+		if (name === "assistant.runState") {
+			const state = states[(input as { run: string }).run];
+			return state
+				? { status: 200, body: { id: "r1", conversationId: "c1", answer: "", proposed: false, ...state } }
+				: { status: 404, body: { reason: { key: "assistant.noRun" } } };
+		}
 		return { status: 200, body: {} };
 	};
 	return { deps: { streams, transport, t, language: "ko" }, asked, stopped };
@@ -64,9 +72,7 @@ describe("the runner every small AI task shares (doc 10)", () => {
 	});
 
 	it("10 a request the host cut is read where it stands and goes on once; cut again at the same place, it stops and leaves it to the person", async () => {
-		const stillThere = {
-			c1: { runs: [{ id: "r1", status: "interrupted", end: { status: "interrupted", reason: "connection" } }] },
-		};
+		const stillThere = { r1: { status: "interrupted", end: { status: "interrupted", reason: "connection" } } };
 		const once = server(
 			[
 				[opened, { type: "text", delta: "끊긴 말" }, "cut"],
@@ -91,16 +97,39 @@ describe("the runner every small AI task shares (doc 10)", () => {
 	});
 
 	it("10 a run that ended while its request was cut is read as it ended, and nothing more is asked", async () => {
-		const ended = { c1: { runs: [{ id: "r1", status: "done", end: { status: "done" } }] } };
+		const ended = { r1: { status: "done", end: { status: "done" } } };
 		const { deps, asked } = server([[opened, { type: "proposal" }, "cut"]], ended);
 		expect(await startTask(deps, { request: "번역" }).ended).toMatchObject({ status: "done", proposed: true });
 		expect(asked).toHaveLength(1);
 	});
 
-	it("10 going on refused because the server is ahead (another page has the run) reads the run and does not go on from here", async () => {
-		const elsewhere = {
-			c1: { runs: [{ id: "r1", status: "interrupted", end: { status: "interrupted", reason: "time" } }] },
+	it("10 a run that answered and ended just before its request was cut keeps the answer it stored", async () => {
+		const answered = { r1: { status: "done", end: { status: "done" }, answer: "그대로 두는 게 낫겠습니다." } };
+		const { deps } = server([[opened, { type: "text", delta: "그대로 두는" }, "cut"]], answered);
+		expect(await startTask(deps, { request: "줄여 줘" }).ended).toMatchObject({
+			status: "done",
+			answer: "그대로 두는 게 낫겠습니다.",
+		});
+	});
+
+	it("10 'go on' for a run another page has taken up already reads that run: it does not fail or start anew", async () => {
+		const done = { r1: { status: "done", end: { status: "done" }, answer: "다 했습니다.", proposed: true } };
+		const { deps, asked } = server([], done);
+		const busy: StreamTransport = async (_name, input) => {
+			asked.push(input);
+			return { status: 409, body: { reason: { key: "assistant.busy" } } };
 		};
+		expect(await startTask({ ...deps, streams: busy }, { resume: "r1", more: true }).ended).toMatchObject({
+			status: "done",
+			run: "r1",
+			answer: "다 했습니다.",
+			proposed: true,
+		});
+		expect(asked).toEqual([{ resume: "r1", more: true }]);
+	});
+
+	it("10 going on refused because the server is ahead (another page has the run) reads the run and does not go on from here", async () => {
+		const elsewhere = { r1: { status: "interrupted", end: { status: "interrupted", reason: "time" } } };
 		const { deps, asked } = server([[opened, end("interrupted", { reason: "time" })]], elsewhere);
 		const busy: StreamTransport = async (name, input, options) => {
 			if (asked.length === 0) return deps.streams(name, input, options);

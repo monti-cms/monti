@@ -493,6 +493,18 @@ describe("changing things (flow 2, 07–13)", () => {
 		]);
 		// The panel's conversation is not the place's: it still has its one run.
 		expect((await conversation(monti, asked.conversation)).runs).toHaveLength(1);
+		// The place's run is read on its own, as a page that lost its stream reads it: how it ended, what it said, that it proposed.
+		expect(await monti.run("assistant.runState", { run: spot.run }, { actor: "admin" })).toEqual({
+			id: spot.run,
+			conversationId: asked.conversation,
+			status: "done",
+			end: { status: "done" },
+			answer: "끝은 그대로 두고 ‘만들기로 한’만 ‘만든’으로 줄였어요.",
+			proposed: true,
+		});
+		await expect(monti.run("assistant.runState", { run: "nope" }, { actor: "admin" })).rejects.toMatchObject({
+			message: expect.stringContaining("assistant.noRun"),
+		});
 	});
 
 	it("10-1 a change over many entries is one proposal with its groups, and an entry changed in the meantime is made again in place", async () => {

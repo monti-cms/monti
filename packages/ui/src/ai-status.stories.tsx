@@ -26,7 +26,7 @@ export const OnLabelRow: Story = {
 		<Box maxWidth="panel">
 			<Stack gap={24}>
 				<FormField>
-					<FormFieldLabel htmlFor="subtitle" action={<AiWorking size="micro" onStop={noop} />}>
+					<FormFieldLabel htmlFor="subtitle" action={<AiWorking size="caption" onStop={noop} />}>
 						부제
 					</FormFieldLabel>
 					<Input id="subtitle" />

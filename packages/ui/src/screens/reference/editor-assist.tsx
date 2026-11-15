@@ -1,11 +1,12 @@
 import { useRef } from "react";
 import { Renew, Settings, Spark } from "../../icons";
 import {
+	AiFailed,
+	AiWorking,
 	Box,
 	FloatingBar,
 	FloatingBarButton,
 	FormField,
-	FormFieldError,
 	FormFieldLabel,
 	Image,
 	Inline,
@@ -55,10 +56,14 @@ function Summary({ state }: { state: EditorAssistState }) {
 			<FormFieldLabel
 				htmlFor="ref-summary"
 				action={
-					<TextButton tone="proposal" size="micro" loading={state === "filling"}>
-						{state === "filling" ? null : filled ? <Renew aria-hidden /> : <Spark aria-hidden />}
-						{state === "filling" ? "쓰는 중…" : filled ? "다시" : "채우기"}
-					</TextButton>
+					state === "filling" ? (
+						<AiWorking size="caption" onStop={() => {}} />
+					) : (
+						<TextButton tone="proposal" size="caption">
+							{filled ? <Renew aria-hidden /> : <Spark aria-hidden />}
+							{filled ? "다시" : "채우기"}
+						</TextButton>
+					)
 				}
 			>
 				요약
@@ -69,9 +74,12 @@ function Summary({ state }: { state: EditorAssistState }) {
 				placeholder="비어 있음"
 				defaultValue={filled ? "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것." : undefined}
 				proposal={filled}
-				aria-invalid={state === "fillFailed" || undefined}
 			/>
-			{state === "fillFailed" ? <FormFieldError>Anthropic이 거절했습니다 · Anthropic 개인</FormFieldError> : null}
+			{state === "fillFailed" ? (
+				<AiFailed size="caption" onRetry={() => {}}>
+					Anthropic 개인 거절
+				</AiFailed>
+			) : null}
 		</FormField>
 	);
 }
@@ -196,7 +204,7 @@ export function EditorAssistScreen({ state }: { state: EditorAssistState }) {
 													htmlFor="ref-alt"
 													action={
 														<Inline gap={8} align="baseline">
-															<TextButton tone="proposal" size="micro">
+															<TextButton tone="proposal" size="caption">
 																<Spark aria-hidden />
 																채우기
 															</TextButton>
@@ -225,7 +233,7 @@ export function EditorAssistScreen({ state }: { state: EditorAssistState }) {
 							<Box grow minWidth={0}>
 								<Input appearance="inline" size="sm" align="center" aria-label="캡션" placeholder="캡션" />
 							</Box>
-							<TextButton tone="proposal" size="micro">
+							<TextButton tone="proposal" size="caption">
 								<Spark aria-hidden />
 								채우기
 							</TextButton>

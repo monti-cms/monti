@@ -296,7 +296,7 @@ export function EntryProperties({
 						<FormFieldLabel
 							htmlFor="ref-summary"
 							action={
-								<TextButton tone="proposal" size="micro">
+								<TextButton tone="proposal" size="caption">
 									채우기
 								</TextButton>
 							}

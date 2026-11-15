@@ -1,6 +1,6 @@
 import { AiFailed, AiWorking, Marker, MemoCardPopover, MemoMessage, MemoThread } from "@monti-cms/ui";
 import { type ComponentProps, useRef } from "react";
-import { useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { toWhatStands, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import type { Exchange } from "./use-place-requests";
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
@@ -36,12 +36,14 @@ export function CardMark({
  * is there after. A pointer's press moves nothing (`useFocusHandOff`).
  */
 export function KeptCard(props: ComponentProps<typeof MemoCardPopover>) {
+	// What stands where the work was, first found first: "Stop", "Try again", the reply box, then any button of the card.
 	const keep = useFocusHandOff((card) =>
-		card.isConnected
-			? card.querySelector<HTMLElement>(
-					"[data-slot=ai-working] button, [data-slot=ai-failed] button, input, button:not([disabled])",
-				)
-			: null,
+		toWhatStands(card, [
+			"[data-slot=ai-working] button",
+			"[data-slot=ai-failed] button",
+			"input",
+			"button:not([disabled])",
+		]),
 	);
 	return <MemoCardPopover ref={keep} {...props} />;
 }
@@ -86,10 +88,14 @@ export function MemoThreadOf({
 						{exchange.request}
 					</MemoMessage>,
 					exchange.answer || (isLast && working) ? (
-						// biome-ignore lint/suspicious/noArrayIndexKey: a thread only grows at its end
-						<MemoMessage key={`answered:${at}`} author={t("memo.assistant")} ai>
-							{exchange.answer ? <span>{exchange.answer}</span> : null}
-							{isLast && working ? <AiWorking onStop={onStop} /> : null}
+						<MemoMessage
+							// biome-ignore lint/suspicious/noArrayIndexKey: a thread only grows at its end
+							key={`answered:${at}`}
+							author={t("memo.assistant")}
+							ai
+							status={isLast && working ? <AiWorking onStop={onStop} /> : undefined}
+						>
+							{exchange.answer || undefined}
 						</MemoMessage>
 					) : null,
 				];

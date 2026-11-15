@@ -128,14 +128,16 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 	 * Sends what was written: on picked words (`context` says which), on a proposed change (`item`), or a set request ("✦ Translate"). The
 	 * answer is a change proposed at that place; words alone stay in the card.
 	 */
-	const send = useCallback(
+	const ask = useCallback(
 		async (
 			id: string,
 			words: string,
 			/** What it is about; a request on picked words may make it when it is ready (the entry read again), or give `null` to call it off. */
 			of: Of,
 			/** What must be done first (the screen saved); `false` calls the request off. */
-			ready?: () => Promise<boolean>,
+			ready: (() => Promise<boolean>) | undefined,
+			/** It is the last exchange asked again ("Try again"): it takes that exchange's place instead of following it. */
+			again: boolean,
 		) => {
 			// A request on a proposed change is named by the change.
 			const item = typeof of === "function" ? null : "item" in of ? of.item : null;
@@ -148,7 +150,7 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 					id,
 					item,
 					status: "working",
-					thread: [...(was?.thread ?? []), { request: words, answer: "" }],
+					thread: [...(was?.thread ?? []).slice(0, again ? -1 : undefined), { request: words, answer: "" }],
 					failed: null,
 					next: null,
 				};
@@ -174,6 +176,10 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 		},
 		[follow],
 	);
+	const send = useCallback(
+		(id: string, words: string, of: Of, ready?: () => Promise<boolean>) => ask(id, words, of, ready, false),
+		[ask],
+	);
 
 	/**
 	 * The failure line's button: "Try again" sends the last words again as they were asked (the failed exchange gives way to the new one),
@@ -189,10 +195,10 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 				void follow(id, request.item, { resume: kept.run, more: true });
 				return;
 			}
-			change(id, (was) => ({ ...was, thread: was.thread.slice(0, -1) }));
-			void send(id, kept.words, kept.of, kept.ready);
+			// The failed exchange gives way to the new one; a save refused first puts the card back as it was, failure and all.
+			void ask(id, kept.words, kept.of, kept.ready, true);
 		},
-		[requests, change, follow, send],
+		[requests, change, follow, ask],
 	);
 
 	/** Stops the assistant's work on a request: what it proposed by then stays. */

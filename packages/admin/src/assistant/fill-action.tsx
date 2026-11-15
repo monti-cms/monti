@@ -1,7 +1,7 @@
 import { AiFailed, AiWorking, TextButton } from "@monti-cms/ui";
 import { Renew, Spark } from "@monti-cms/ui/icons";
 import { useAdmin } from "../operations/admin-context";
-import { useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { toWhatStands, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import type { FillState } from "./use-fill";
 
 /**
@@ -26,15 +26,15 @@ export function FillAction({
 	onStop: () => void;
 }) {
 	const { t } = useAdmin();
-	const keep = useFocusHandOff((place) => (place.isConnected ? place.querySelector<HTMLElement>("button") : null));
+	const keep = useFocusHandOff((place) => toWhatStands(place));
 	return (
 		<span ref={keep}>
 			{state.working ? (
-				<AiWorking size="micro" onStop={onStop} />
+				<AiWorking size="caption" onStop={onStop} />
 			) : (
 				<TextButton
 					tone="proposal"
-					size="micro"
+					size="caption"
 					aria-label={name ? t(held ? "fill.againName" : "fill.name", { field: name }) : undefined}
 					onMouseDown={(event) => event.preventDefault()}
 					onClick={onFill}
@@ -48,7 +48,20 @@ export function FillAction({
 }
 
 /** Why the last fill of a place gave nothing, under the place: the one failure line of AI work, with "Try again" when asking again can go. */
-export function FillFailed({ state, onRetry }: { state: FillState; onRetry: () => void }) {
+export function FillFailed({
+	state,
+	onRetry,
+	align,
+}: {
+	state: FillState;
+	onRetry: () => void;
+	/** A caption's line follows the caption's own alignment. */
+	align?: "start" | "center" | "end";
+}) {
 	if (!state.failed) return null;
-	return <AiFailed onRetry={state.retry ? onRetry : undefined}>{state.failed}</AiFailed>;
+	return (
+		<AiFailed size="caption" align={align} onRetry={state.retry ? onRetry : undefined}>
+			{state.failed}
+		</AiFailed>
+	);
 }
