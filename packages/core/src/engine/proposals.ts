@@ -570,8 +570,8 @@ export async function applyProposal(
 
 		const report = async (itemId: string, state: ProposalItemState, reason?: Message) => {
 			results.push({ itemId, state, ...(reason ? { reason } : {}) });
-			if (state === "discarded") return;
-			done += 1;
+			// One that left the apply's hands is told too, without counting as done: whoever counts by its own rows knows it ended.
+			if (state !== "discarded") done += 1;
 			// Whoever watches may be gone (the browser left, its stream broke): the apply runs to its end all the same (doc 00).
 			try {
 				await onProgress?.({ done, total, itemId, state, ...(reason ? { reason } : {}) });
