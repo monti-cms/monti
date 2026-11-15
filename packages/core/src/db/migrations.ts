@@ -634,8 +634,6 @@ const MIGRATIONS: Record<string, Migration> = {
 			await sql`alter table model_choices add constraint model_choices_role_check check (role in ('assistant', 'quick'))`.execute(
 				db,
 			);
-			// What a key's account has to spend, when its service says (OpenRouter): asked with its models.
-			await db.schema.alterTable("api_keys").addColumn("credit", "jsonb").execute();
 		},
 	},
 };

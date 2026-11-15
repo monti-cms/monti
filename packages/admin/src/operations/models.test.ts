@@ -1,46 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { byName, dollarAmount, levelFor, modelTitle, priceWord, seconds } from "./models";
+import { byName, levelFor, modelTitle, seconds } from "./models";
 
 /** The words as the Korean dictionary has them, filled in. */
 const WORDS: Record<string, string> = {
-	"models.free": "무료",
-	"models.price": "100만 토큰당 입력 {input}, 출력 {output}",
 	"models.aliasOf": "지금: {model}",
 	"models.context": "입력 한도 {amount} 토큰",
 };
 const t = (key: string, values: Record<string, string | number> = {}) =>
 	(WORDS[key] ?? key).replace(/\{(\w+)\}/g, (_, name: string) => String(values[name]));
 
-describe("a model's price and tooltip (ST-31, ST-33)", () => {
-	it("a price is a million tokens in and out, short; a free model says so; one whose service says nothing has none", () => {
-		expect(priceWord(t, { price: { input: 1, output: 5 } })).toBe("$1 · $5");
-		expect(priceWord(t, { price: { input: 0.25, output: 2.5 } })).toBe("$0.25 · $2.5");
-		expect(priceWord(t, { price: { input: 0, output: 0 } })).toBe("무료");
-		expect(priceWord(t, {})).toBeUndefined();
-		// A cheap model's price is not rounded away.
-		expect([0.001, 0.075, 0.25, 2.3099999, 3.0000000004, 0].map(dollarAmount)).toEqual([
-			"$0.001",
-			"$0.075",
-			"$0.25",
-			"$2.31",
-			"$3",
-			"$0",
-		]);
-	});
-
-	it("the tooltip has the id, the price in words, what an alias stands for now and how much it takes in, a line each", () => {
+describe("a model's tooltip and order (ST-31, ST-33)", () => {
+	it("the tooltip has the id, what an alias stands for now and how much it takes in, a line each", () => {
 		expect(
 			modelTitle(t, {
 				id: "~deepseek/deepseek-pro-latest",
 				thinking: true,
 				images: false,
-				price: { input: 0.5, output: 2 },
 				aliasOf: "DeepSeek: DeepSeek V4 Pro",
 				context: 1_048_576,
 			}),
-		).toBe(
-			"~deepseek/deepseek-pro-latest\n100만 토큰당 입력 $0.5, 출력 $2\n지금: DeepSeek: DeepSeek V4 Pro\n입력 한도 1.05M 토큰",
-		);
+		).toBe("~deepseek/deepseek-pro-latest\n지금: DeepSeek: DeepSeek V4 Pro\n입력 한도 1.05M 토큰");
 		expect(modelTitle(t, { id: "claude-haiku-5-5", thinking: true, images: true })).toBe("claude-haiku-5-5");
 	});
 

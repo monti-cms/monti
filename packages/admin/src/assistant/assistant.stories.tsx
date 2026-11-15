@@ -214,14 +214,12 @@ const ROUTER_MODELS = [
 		supported_parameters: ["tools", "reasoning"],
 		reasoning: { mandatory: true, supported_efforts: ["low", "high"] },
 		alias_target: { name: "DeepSeek: DeepSeek V4 Pro" },
-		pricing: { prompt: "0.0000005", completion: "0.000002" },
 	},
 	{
 		id: "meta-llama/llama-4-maverick:free",
 		name: "Meta: Llama 4 Maverick (free)",
 		context_length: 1_048_576,
 		supported_parameters: ["tools"],
-		pricing: { prompt: "0", completion: "0" },
 	},
 ];
 
@@ -242,7 +240,7 @@ const serviceWith =
 					capabilities: { thinking: { supported: id !== "claude-haiku-5-5" }, image_input: { supported: pictures } },
 				})),
 			});
-		if (url === "https://openrouter.ai/api/v1/key") return json(200, { data: { usage_monthly: 0 } });
+		if (url === "https://openrouter.ai/api/v1/key") return json(200, { data: {} });
 		if (url === "https://openrouter.ai/api/v1/models") return json(200, { data: ROUTER_MODELS });
 		return json(404, {});
 	};
@@ -684,7 +682,7 @@ export const Discarded: Story = {
 	},
 };
 
-/** The model menu: the models under their keys by name, each with its price ("무료") and the site's conversation model marked "기본". */
+/** The model menu: the models under their keys by name, and the site's conversation model marked "기본". */
 export const Models: Story = {
 	loaders: site({ router: true }),
 	play: async ({ canvasElement }) => {

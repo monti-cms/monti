@@ -63,7 +63,7 @@ export type Network = {
 	waiting: () => Promise<void>;
 };
 
-/** OpenRouter's models as its list gives them: a free one, priced ones, one that must think, and an alias of a family's latest. */
+/** OpenRouter's models as its list gives them: a free one by its name, ones that think, one that must think, and an alias of a family's latest. */
 const OPENROUTER_MODELS = [
 	{
 		id: "anthropic/claude-haiku-5.5",
@@ -71,7 +71,6 @@ const OPENROUTER_MODELS = [
 		context_length: 200_000,
 		supported_parameters: ["tools", "reasoning"],
 		reasoning: { supported_efforts: ["none", "low", "medium", "high"] },
-		pricing: { prompt: "0.000001", completion: "0.000005" },
 	},
 	{
 		id: "anthropic/claude-sonnet-5.5",
@@ -79,7 +78,6 @@ const OPENROUTER_MODELS = [
 		context_length: 1_000_000,
 		supported_parameters: ["tools", "reasoning"],
 		reasoning: { supported_efforts: ["none", "low", "medium", "high"] },
-		pricing: { prompt: "0.000003", completion: "0.000015" },
 	},
 	{
 		id: "~deepseek/deepseek-pro-latest",
@@ -87,14 +85,12 @@ const OPENROUTER_MODELS = [
 		supported_parameters: ["tools", "reasoning"],
 		reasoning: { mandatory: true, supported_efforts: ["low", "high"] },
 		alias_target: { name: "DeepSeek: DeepSeek V4 Pro" },
-		pricing: { prompt: "0.0000005", completion: "0.000002" },
 	},
 	{
 		id: "meta-llama/llama-4-maverick:free",
 		name: "Meta: Llama 4 Maverick (free)",
 		context_length: 1_048_576,
 		supported_parameters: ["tools"],
-		pricing: { prompt: "0", completion: "0" },
 	},
 ];
 
@@ -139,11 +135,8 @@ export function network(): Network {
 						})),
 					})
 				: json(401, { type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } });
-		// What the key's account spent this month and has left, and the models with their prices (per token), thinking levels and aliases.
-		if (url === "https://openrouter.ai/api/v1/key")
-			return taken.has(sent)
-				? json(200, { data: { usage_monthly: 2.31, limit: 10, limit_remaining: 7.69, limit_reset: "monthly" } })
-				: json(401, {});
+		// The key asked about on its own, then the models with their names, thinking levels and aliases.
+		if (url === "https://openrouter.ai/api/v1/key") return taken.has(sent) ? json(200, { data: {} }) : json(401, {});
 		if (url === "https://openrouter.ai/api/v1/models") return json(200, { data: OPENROUTER_MODELS });
 		if (url.startsWith("https://api.openai.com/"))
 			return taken.has(sent) ? json(200, { data: [{ id: "gpt-5.5" }, { id: "gpt-5.4-mini" }] }) : json(401, {});
@@ -550,7 +543,7 @@ export const RemoveUnusedKey: Story = {
 	},
 };
 
-/** The quick tasks' model: a menu to search, the models under their keys by name with their prices (step 13). */
+/** The quick tasks' model: a menu to search, the models under their keys by name (step 13). */
 export const PickModel: Story = {
 	loaders: site(),
 	play: async ({ canvasElement }) => {

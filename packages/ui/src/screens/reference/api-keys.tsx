@@ -65,12 +65,12 @@ import {
 } from "../../index";
 import { AdminFrame } from "./frame";
 
-/** A key row: its name and the key's end, and in "이번 달" what it used (and, from OpenRouter, what it spent and has left). */
+/** A key row: its name and the key's end, and in "이번 달" the tokens it used. */
 type Key = { name: string; tail?: string; meta: string; tone?: "faint" | "danger" };
 
 const KEYS: readonly Key[] = [
 	{ name: "Anthropic 개인", tail: "a1b2", meta: "1.24M 토큰" },
-	{ name: "OpenRouter", tail: "8e42", meta: "701K 토큰 · $2.31 · 남은 한도 $7.69" },
+	{ name: "OpenRouter", tail: "8e42", meta: "701K 토큰" },
 	{ name: "예전 Gemini 키", tail: "9f0c", meta: "사용 없음", tone: "faint" },
 ];
 
@@ -85,7 +85,7 @@ const SLOTS: readonly Slot[] = [
 
 const SERVICES = ["Anthropic", "OpenAI", "OpenRouter", "Google", "OpenAI 호환 주소"];
 
-/** The models of the keys by name, each with its price at the row's end (OpenRouter's), and its id and price in words in its tooltip. */
+/** The models of the keys by name, each with its id in its tooltip, and what an alias stands for. */
 const MODELS = [
 	{
 		key: "anthropic",
@@ -106,22 +106,19 @@ const MODELS = [
 				value: "o:~deepseek/deepseek-pro-latest",
 				model: "DeepSeek: DeepSeek Pro Latest",
 				id: "~deepseek/deepseek-pro-latest",
-				title: "~deepseek/deepseek-pro-latest\n100만 토큰당 입력 $0.5, 출력 $2\n지금: DeepSeek: DeepSeek V4 Pro",
-				hint: "$0.5 · $2",
+				title: "~deepseek/deepseek-pro-latest\n지금: DeepSeek: DeepSeek V4 Pro",
 			},
 			{
 				value: "o:meta-llama/llama-4-maverick:free",
 				model: "Meta: Llama 4 Maverick (free)",
 				id: "meta-llama/llama-4-maverick:free",
-				title: "meta-llama/llama-4-maverick:free\n무료\n입력 한도 1.05M 토큰",
-				hint: "무료",
+				title: "meta-llama/llama-4-maverick:free\n입력 한도 1.05M 토큰",
 			},
 			{
 				value: "o:openai/gpt-5.4-mini",
 				model: "OpenAI: GPT-5.4 Mini",
 				id: "openai/gpt-5.4-mini",
-				title: "openai/gpt-5.4-mini\n100만 토큰당 입력 $0.25, 출력 $2\n입력 한도 400K 토큰",
-				hint: "$0.25 · $2",
+				title: "openai/gpt-5.4-mini\n입력 한도 400K 토큰",
 			},
 		],
 	},
@@ -647,8 +644,8 @@ export function ApiKeysScreen({ stage = "기본", plugins = true }: { stage?: Ap
 			? {
 					value: "o:meta-llama/llama-4-maverick:free",
 					model: "Meta: Llama 4 Maverick (free)",
-					meta: "무료 · OpenRouter",
-					title: "meta-llama/llama-4-maverick:free\n무료\n입력 한도 1.05M 토큰",
+					meta: "OpenRouter",
+					title: "meta-llama/llama-4-maverick:free\n입력 한도 1.05M 토큰",
 				}
 			: { value: "a:claude-haiku-5-5", model: "Claude Haiku 5.5", meta: "Anthropic 개인", title: "claude-haiku-5-5" };
 	const slots = SLOTS.map((slot) => (stage === "키 넣음" && slot.id === "bareun" ? { ...slot, tail: "4410" } : slot));

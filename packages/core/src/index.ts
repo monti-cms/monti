@@ -136,7 +136,6 @@ export type {
 	KeyCheck,
 	KeyCheckTools,
 	KeyCredentials,
-	KeyCredit,
 	KeyService,
 	Model,
 	ThinkingLevel,

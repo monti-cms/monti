@@ -546,7 +546,7 @@ describe("the two models (flow 10, 13)", () => {
 	/** The field of the job's row ("대화", "빠른 작업"), named by its row. */
 	const job = (name: "대화" | "빠른 작업") => button(new RegExp(`^${name}`));
 
-	it("14-1 [flow 10·13, 13b] the models by name with their prices; a search finds names and ids; a pick shows its price and key, and on a site that tries no models the toast says no time", async () => {
+	it("14-1 [flow 10·13, 13b] the models by name, with no price; a search finds names and ids; a pick shows its key, and on a site that tries no models the toast says no time", async () => {
 		const story = open(keys.Keys);
 		await story.run();
 		await expect.element(job("빠른 작업")).toHaveTextContent("Claude Haiku 5.5");
@@ -555,24 +555,25 @@ describe("the two models (flow 10, 13)", () => {
 			.element(page.getByRole("menuitemradio", { name: /^Claude Haiku 5\.5/ }))
 			.toHaveAttribute("aria-checked", "true");
 		await expect.element(page.getByText("OpenRouter", { exact: true })).toBeVisible();
-		// OpenRouter's by name ("Provider: Model"), each with its price at the end; an alias says what it stands for in its tooltip.
-		await expect
-			.element(page.getByRole("menuitemradio", { name: /^Anthropic: Claude Sonnet 5\.5/ }))
-			.toHaveTextContent("$3 · $15");
+		// OpenRouter's by name ("Provider: Model"), with no money on them; an alias says what it stands for in its tooltip.
+		await expect.element(page.getByRole("menuitemradio", { name: /^Anthropic: Claude Sonnet 5\.5/ })).toBeVisible();
+		expect(
+			page
+				.getByRole("menuitemradio")
+				.elements()
+				.map((row) => row.textContent),
+		).not.toContainEqual(expect.stringContaining("$"));
 		await expect
 			.element(page.getByRole("menuitemradio", { name: /^DeepSeek: DeepSeek Pro Latest/ }))
-			.toHaveAttribute(
-				"title",
-				"~deepseek/deepseek-pro-latest\n100만 토큰당 입력 $0.5, 출력 $2\n지금: DeepSeek: DeepSeek V4 Pro",
-			);
+			.toHaveAttribute("title", "~deepseek/deepseek-pro-latest\n지금: DeepSeek: DeepSeek V4 Pro");
 		await userEvent.fill(page.getByRole("textbox", { name: "모델 찾기" }), ":free");
 		await expect.element(page.getByRole("menuitemradio", { name: /Claude Opus/ })).not.toBeInTheDocument();
 		await userEvent.click(page.getByRole("menuitemradio", { name: /^Meta: Llama 4 Maverick \(free\)/ }));
 		// Nothing on this site tries a model: there is no answer to time.
 		await expect.element(page.getByText("빠른 작업 모델을 바꿨습니다", { exact: true })).toBeVisible();
 		await expect.element(job("빠른 작업")).toHaveTextContent("Meta: Llama 4 Maverick (free)");
-		// Free, before its key: what was cut off as ":free" is read (ST-30).
-		await expect.element(job("빠른 작업")).toHaveTextContent("무료 · OpenRouter");
+		// Its name says it is free, and its key follows: what was cut off as ":free" is read (ST-30).
+		await expect.element(job("빠른 작업")).toHaveTextContent("Meta: Llama 4 Maverick (free)OpenRouter");
 		expect((await models(story.loaded().site)).quick).toMatchObject({
 			model: "meta-llama/llama-4-maverick:free",
 			chosen: true,
@@ -589,7 +590,7 @@ describe("the two models (flow 10, 13)", () => {
 		await userEvent.click(page.getByRole("menuitemradio", { name: /^Anthropic: Claude Sonnet 5\.5/ }));
 		await expect.element(page.getByText(/^대화 모델을 바꿨습니다 · 응답 [\d.]+초$/)).toBeVisible();
 		await expect.element(job("대화")).toHaveTextContent("Anthropic: Claude Sonnet 5.5");
-		await expect.element(job("대화")).toHaveTextContent("$3 · $15 · OpenRouter");
+		await expect.element(job("대화")).toHaveTextContent("Anthropic: Claude Sonnet 5.5OpenRouter");
 		const now = await models(story.loaded().site);
 		expect(now.assistant).toMatchObject({ model: "anthropic/claude-sonnet-5.5", chosen: true });
 		expect(now.quick).toEqual(quickBefore);
@@ -612,7 +613,7 @@ describe("the two models (flow 10, 13)", () => {
 		letGo();
 		await expect.element(page.getByText(/^빠른 작업 모델을 바꿨습니다/)).toBeVisible();
 		await expect.element(job("빠른 작업")).not.toHaveAttribute("aria-busy");
-		await expect.element(job("빠른 작업")).toHaveTextContent("Meta: Llama 4 Maverick (free)무료 · OpenRouter");
+		await expect.element(job("빠른 작업")).toHaveTextContent("Meta: Llama 4 Maverick (free)OpenRouter");
 		expect(story.loaded().calls.filter((name) => name === "models.choose")).toHaveLength(1);
 	});
 
@@ -637,15 +638,15 @@ describe("the two models (flow 10, 13)", () => {
 	});
 });
 
-describe("the list of keys (UX-03, ST-28)", () => {
-	it("14-1 the keys stand under their column names; a key's row says what it used this month and, where its service says, what it spent and has left", async () => {
+describe("the list of keys (UX-03)", () => {
+	it("14-1 the keys stand under their column names; a key's row says the tokens it used this month, and no money", async () => {
 		await open(keys.Keys).run();
 		const table = page.getByRole("table", { name: "AI 키" });
 		await expect.element(table.getByRole("columnheader", { name: "키" })).toBeVisible();
 		await expect.element(table.getByRole("columnheader", { name: "이번 달" })).toBeVisible();
 		await expect
 			.element(table.getByRole("row").filter({ hasText: "OpenRouter" }))
-			.toHaveTextContent("OpenRouter…8e42701K 토큰 · $2.31 · 남은 한도 $7.69");
+			.toHaveTextContent(/^OpenRouter…8e42701K 토큰$/);
 		await expect.element(table.getByRole("row").filter({ hasText: "Anthropic 개인" })).toHaveTextContent("1.24M 토큰");
 		await expect.element(table.getByRole("row").filter({ hasText: "예전 Gemini 키" })).toHaveTextContent("사용 없음");
 	});

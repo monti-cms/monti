@@ -14,8 +14,6 @@ export type Model = {
 	 * `high` alone. Left out, it takes them all. The assistant asks for the nearest one it takes (AS-01).
 	 */
 	levels?: ThinkingLevel[];
-	/** What it costs, in US dollars per million tokens taken in and given out, when its service says (OpenRouter). Both 0: it is free. */
-	price?: { input: number; output: number };
 	/** The model it stands for now, by name: an id that follows a family's latest (OpenRouter's `~…-latest`). */
 	aliasOf?: string;
 };
@@ -24,22 +22,8 @@ export type Model = {
 export type ThinkingLevel = "off" | "low" | "medium" | "high";
 const LEVELS: readonly ThinkingLevel[] = ["off", "low", "medium", "high"];
 
-/**
- * What a key's account has to spend, when its service says (OpenRouter): what it spent this month, in US dollars, and, for a key with a limit,
- * the limit, what is left of it and when it starts again.
- */
-export type KeyCredit = {
-	month: number;
-	limit: number | null;
-	remaining: number | null;
-	/** How often the limit starts again (`daily`, `weekly`, `monthly`); `null` when it never does. */
-	reset: string | null;
-};
-
 /** What a service answered when asked about a key: its models, or that it refused the key, or that it could not be reached. */
-export type KeyCheck =
-	| { ok: true; models: Model[]; credit?: KeyCredit }
-	| { ok: false; reason: "refused" | "unreachable" };
+export type KeyCheck = { ok: true; models: Model[] } | { ok: false; reason: "refused" | "unreachable" };
 
 export type KeyCredentials = { secret: string; baseUrl: string | null };
 
@@ -269,12 +253,6 @@ const openai: KeyService = {
 	},
 };
 
-/** A sum of money a service wrote: a number, or a number in a string (OpenRouter's prices). Below zero is no price (a router's own, which varies). */
-const dollars = (value: unknown): number | undefined => {
-	const number = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
-	return typeof number === "number" && Number.isFinite(number) && number >= 0 ? number : undefined;
-};
-
 /**
  * OpenRouter's efforts read into the assistant's levels: `none` is off, and `low`, `medium` and `high` are themselves. What it also has
  * (`minimal`, `xhigh`, `max`) is not asked for. A model that must think and lists no efforts takes every level but off.
@@ -284,19 +262,6 @@ function openrouterLevels(reasoning: unknown): ThinkingLevel[] | undefined {
 	const efforts = Array.isArray(reasoning.supported_efforts) ? reasoning.supported_efforts : null;
 	if (efforts === null) return reasoning.mandatory === true ? ["low", "medium", "high"] : undefined;
 	return LEVELS.filter((level) => efforts.includes(level === "off" ? "none" : level));
-}
-
-/** What an OpenRouter key's account has to spend, from its `/key` answer; nothing when the answer does not say. */
-function openrouterCredit(body: unknown): KeyCredit | undefined {
-	const data = isObject(body) && isObject(body.data) ? body.data : null;
-	const month = data ? dollars(data.usage_monthly) : undefined;
-	if (!data || month === undefined) return undefined;
-	return {
-		month,
-		limit: dollars(data.limit) ?? null,
-		remaining: dollars(data.limit_remaining) ?? null,
-		reset: text(data.limit_reset) ?? null,
-	};
 }
 
 const openrouter: KeyService = {
@@ -314,7 +279,7 @@ const openrouter: KeyService = {
 		);
 		if (!taken.ok) return taken;
 		const listed = await get(tools, `${SERVICE_URLS.openrouter}/models`, bearer(secret));
-		const checked = answer(
+		return answer(
 			listed,
 			(status) => REFUSED.has(status),
 			(body) =>
@@ -325,9 +290,6 @@ const openrouter: KeyService = {
 					// A ":batch" id is the same model answered later and cheaper: not one to talk with.
 					if (id.endsWith(":batch") || !can.includes("tools")) return undefined;
 					const reads = (row.architecture as { input_modalities?: unknown } | undefined)?.input_modalities;
-					const pricing = isObject(row.pricing) ? row.pricing : {};
-					const input = dollars(pricing.prompt);
-					const output = dollars(pricing.completion);
 					const levels = can.includes("reasoning") ? openrouterLevels(row.reasoning) : undefined;
 					const target = isObject(row.alias_target) ? text(row.alias_target.name) : undefined;
 					return {
@@ -337,16 +299,10 @@ const openrouter: KeyService = {
 						images: Array.isArray(reads) && reads.includes("image"),
 						context: tokens(row.context_length),
 						...(levels ? { levels } : {}),
-						// Per token in its answer; a million at a time on the screen.
-						...(input !== undefined && output !== undefined
-							? { price: { input: input * 1_000_000, output: output * 1_000_000 } }
-							: {}),
 						...(target ? { aliasOf: target } : {}),
 					};
 				}),
 		);
-		const credit = key ? openrouterCredit(key.body) : undefined;
-		return checked.ok && credit ? { ...checked, credit } : checked;
 	},
 };
 
@@ -415,7 +371,7 @@ const tokens = (value: unknown): number | undefined =>
 
 /**
  * A model as it is stored: the things the menu and the assistant read (its id, its name, whether it thinks and reads pictures, how much it
- * takes in) and nothing else a service put in. `null` for one that is not a model.
+ * takes in, the thinking levels it takes, the model it stands for) and nothing else a service put in. `null` for one that is not a model.
  */
 function plain(model: unknown): Model | null {
 	if (!isObject(model) || typeof model.id !== "string" || model.id === "") return null;
@@ -425,9 +381,6 @@ function plain(model: unknown): Model | null {
 	const levels = Array.isArray(model.levels)
 		? LEVELS.filter((level) => (model.levels as unknown[]).includes(level))
 		: undefined;
-	const price = isObject(model.price) ? model.price : null;
-	const input = price ? dollars(price.input) : undefined;
-	const output = price ? dollars(price.output) : undefined;
 	const aliasOf = typeof model.aliasOf === "string" && model.aliasOf !== "" ? model.aliasOf : undefined;
 	return {
 		id: model.id,
@@ -436,21 +389,7 @@ function plain(model: unknown): Model | null {
 		images: model.images,
 		...(context === undefined ? {} : { context }),
 		...(levels === undefined ? {} : { levels }),
-		...(input === undefined || output === undefined ? {} : { price: { input, output } }),
 		...(aliasOf === undefined ? {} : { aliasOf }),
-	};
-}
-
-/** A key's credit as it is stored: the four numbers and words, or nothing for an answer that is not one. */
-function plainCredit(credit: unknown): KeyCredit | undefined {
-	if (!isObject(credit)) return undefined;
-	const month = dollars(credit.month);
-	if (month === undefined) return undefined;
-	return {
-		month,
-		limit: dollars(credit.limit) ?? null,
-		remaining: dollars(credit.remaining) ?? null,
-		reset: typeof credit.reset === "string" && credit.reset !== "" ? credit.reset : null,
 	};
 }
 
@@ -500,8 +439,7 @@ export async function checkKey(
 			models.some((model) => [model.id, model.label, model.aliasOf].some((text) => text?.includes(secret)))
 		)
 			return UNREACHABLE;
-		const credit = plainCredit(checked.credit);
-		return { ok: true, models: models.sort((a, b) => a.id.localeCompare(b.id)), ...(credit ? { credit } : {}) };
+		return { ok: true, models: models.sort((a, b) => a.id.localeCompare(b.id)) };
 	} finally {
 		clearTimeout(timer);
 	}

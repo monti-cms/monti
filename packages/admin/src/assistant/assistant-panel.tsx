@@ -28,7 +28,7 @@ import {
 import { Add, Copy, Edit, RecentlyViewed, Renew } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { byName, levelsOf, modelName, modelTitle, picksThinking, priceWord } from "../operations/models";
+import { byName, levelsOf, modelName, modelTitle, picksThinking } from "../operations/models";
 import { holdsKeyboardFocus, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { failureIn, failureText, reasonText } from "./failure";
 import { History, HistoryFoot } from "./history";
@@ -153,17 +153,14 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 		assistant.models?.keys.some((k) => k.id === each.keyId && k.models.some((m) => m.id === each.model)),
 	);
 	const starting = assistant.models?.assistant;
-	/** A model's row: its name, its id to search by, its tooltip, and at its end its price and then `more` (the site's default, a recent one's key). */
-	const itemOf = (keyId: string, m: Model, more?: string): ModelMenuItem => {
-		const hint = [priceWord(t, m), more].filter(Boolean).join(" · ");
-		return {
-			value: choice(keyId, m.id),
-			model: modelName(m),
-			id: m.id,
-			title: modelTitle(t, m),
-			...(hint ? { hint } : {}),
-		};
-	};
+	/** A model's row: its name, its id to search by, its tooltip, and at its end `more` (the site's default, a recent one's key). */
+	const itemOf = (keyId: string, m: Model, more?: string): ModelMenuItem => ({
+		value: choice(keyId, m.id),
+		model: modelName(m),
+		id: m.id,
+		title: modelTitle(t, m),
+		...(more ? { hint: more } : {}),
+	});
 	const composer = (
 		<ChatInput
 			ref={box}

@@ -15,42 +15,16 @@ export function tokenAmount(tokens: number): string {
 	return `${(tokens / 1_000_000).toFixed(2)}M`;
 }
 
-/**
- * A sum of US dollars, short: from a dollar on, up to two decimals with the trailing zeros gone ("$1", "$2.31"); under a dollar, three significant
- * digits, so a cheap model's price is not rounded away ("$0.075", "$0.25", "$0.00042").
- */
-export function dollarAmount(dollars: number): string {
-	return `$${Number(dollars >= 1 || dollars === 0 ? dollars.toFixed(2) : dollars.toPrecision(3))}`;
-}
-
 /** A model as a person reads it: the name its service gives it ("Anthropic: Claude Sonnet 5.5"), else its id. */
 export const modelName = (model: Pick<Model, "id" | "label">): string => model.label ?? model.id;
 
-const isFree = (price: NonNullable<Model["price"]>) => price.input === 0 && price.output === 0;
-
 /**
- * What a model costs, in the few words a menu row or a field ends with (ST-31): "Free", or what a million tokens in and out cost ("$1 · $5").
- * Nothing for a model whose service does not say (only OpenRouter does).
- */
-export function priceWord(t: Translate, model: Pick<Model, "price">): string | undefined {
-	const price = model.price;
-	if (!price) return undefined;
-	return isFree(price) ? t("models.free") : `${dollarAmount(price.input)} · ${dollarAmount(price.output)}`;
-}
-
-/**
- * A model's tooltip, one line each: its id, its price in words, the model an alias stands for now (ST-33: "~…-latest" ids said nothing of what
- * they are), and how many tokens it takes in at once.
+ * A model's tooltip, one line each: its id, the model an alias stands for now (ST-33: "~…-latest" ids said nothing of what they are), and how
+ * many tokens it takes in at once.
  */
 export function modelTitle(t: Translate, model: Model): string {
-	const price = model.price;
 	return [
 		model.id,
-		price
-			? isFree(price)
-				? t("models.free")
-				: t("models.price", { input: dollarAmount(price.input), output: dollarAmount(price.output) })
-			: null,
 		model.aliasOf ? t("models.aliasOf", { model: model.aliasOf }) : null,
 		model.context ? t("models.context", { amount: tokenAmount(model.context) }) : null,
 	]

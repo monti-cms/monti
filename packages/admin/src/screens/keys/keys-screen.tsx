@@ -45,16 +45,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { reasonText } from "../../assistant/failure";
 import { useReloadModels } from "../../assistant/use-assistant";
 import { useAdmin } from "../../operations/admin-context";
-import {
-	byName,
-	dollarAmount,
-	MODELS_ASK_AGAIN_MS,
-	modelName,
-	modelTitle,
-	priceWord,
-	seconds,
-	tokenAmount,
-} from "../../operations/models";
+import { byName, MODELS_ASK_AGAIN_MS, modelName, modelTitle, seconds, tokenAmount } from "../../operations/models";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { holdsKeyboardFocus, nextStop } from "../frame/focus-hand-off";
 import { KeyWindow, type KeyWindowState, slotName } from "./key-dialog";
@@ -89,9 +80,9 @@ type Chosen = { output: ModelChoice & { for: ModelRole; ms: number | null } };
 
 /**
  * Tools › API keys (tools.md, doc 14). The service keys are a list as the templates tab beside it draws its own: rows of the shared table under
- * their column names (UX-03), each with the key's last four characters after its name, its use this month (and, where its service says, what it
- * spent and has left) in its own column, and edit and delete in its ⋯. Under the list, the two models this screen picks (a new conversation's and
- * the quick tasks'): settings, not a list. A model is tried once before it is picked. The key itself is on the screen only while it is typed.
+ * their column names (UX-03), each with the key's last four characters after its name, the tokens it used this month in its own column, and edit
+ * and delete in its ⋯. Under the list, the two models this screen picks (a new conversation's and the quick tasks'): settings, not a list. A model
+ * is tried once before it is picked. The key itself is on the screen only while it is typed.
  */
 export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 	const { t } = useAdmin();
@@ -146,24 +137,12 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 	const keys = list.data?.keys ?? [];
 	// Nothing that depends on the list is drawn before it is read: a site that cannot store keys never shows the way to add one.
 	const canStore = list.data?.canStore ?? false;
-	/** What a key used this month: its tokens, then what its account spent and has left of its limit, when its service says (ST-28). */
-	const usageOf = (
-		key: Pick<KeyRow, "readable" | "usage" | "credit">,
-	): { text: string; tone: "subtle" | "faint" | "danger" } => {
+	/** What a key used this month: the tokens Monti counted. */
+	const usageOf = (key: Pick<KeyRow, "readable" | "usage">): { text: string; tone: "subtle" | "faint" | "danger" } => {
 		if (!key.readable) return { text: t("apiKeys.unreadable"), tone: "danger" };
-		const credit = key.credit;
-		const spent = credit !== null && credit.month > 0;
-		const text = [
-			// "Not used" only when nothing at all was: an account that spent money elsewhere says this site's tokens as a count.
-			key.usage.tokens === 0 && !spent
-				? t("apiKeys.unused")
-				: t("apiKeys.usage", { amount: tokenAmount(key.usage.tokens) }),
-			...(spent ? [dollarAmount(credit.month)] : []),
-			...(credit && credit.limit !== null && credit.remaining !== null
-				? [t("apiKeys.left", { amount: dollarAmount(credit.remaining) })]
-				: []),
-		].join(" · ");
-		return { text, tone: key.usage.tokens === 0 && !spent ? "faint" : "subtle" };
+		return key.usage.tokens === 0
+			? { text: t("apiKeys.unused"), tone: "faint" }
+			: { text: t("apiKeys.usage", { amount: tokenAmount(key.usage.tokens) }), tone: "subtle" };
 	};
 
 	// The plugins' slots are there only where a key can be stored: without the server's secret nothing can be put in one.
@@ -315,7 +294,6 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 									model: modelName(m),
 									id: m.id,
 									title: modelTitle(t, m),
-									hint: priceWord(t, m),
 								})),
 							}))}
 							searchLabel={t("apiKeys.findModel")}
@@ -328,10 +306,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 									// button would drop it to the page.
 									aria-busy={tried !== undefined || undefined}
 									value={model ? modelName(model) : shown.model}
-									// Its price before its key: a free model says so where it is seen (ST-30).
-									meta={
-										tried ? t("apiKeys.trying") : [model && priceWord(t, model), key.name].filter(Boolean).join(" · ")
-									}
+									meta={tried ? t("apiKeys.trying") : key.name}
 								/>
 							}
 						/>

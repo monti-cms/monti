@@ -3,9 +3,9 @@ import { userEvent, within } from "storybook/test";
 import { Inline, MenuField, ModelMenu, ModelMenuButton, Stack, ThinkingMenu } from "./index";
 
 /**
- * The model menu: a search line, the models in groups (recent ones, then one group per key with its count), each by its name with its price at the
- * end, the current one ticked; the id, the price in words and what an alias stands for in the row's tooltip. Opened by `ModelMenuButton` in the
- * chat input, with `ThinkingMenu` beside it for a model that thinks, or by `MenuField` in a settings field.
+ * The model menu: a search line, the models in groups (recent ones, then one group per key with its count), each by its name, the current one
+ * ticked; the id and what an alias stands for in the row's tooltip. Opened by `ModelMenuButton` in the chat input, with `ThinkingMenu` beside it
+ * for a model that thinks, or by `MenuField` in a settings field.
  */
 const meta = {
 	title: "Controls/Menu/ModelMenu",
@@ -23,7 +23,7 @@ const GROUPS = [
 				value: "o:anthropic/claude-sonnet-5.5",
 				model: "Anthropic: Claude Sonnet 5.5",
 				id: "anthropic/claude-sonnet-5.5",
-				hint: "$3 · $15 · OpenRouter",
+				hint: "OpenRouter",
 			},
 		],
 	},
@@ -37,26 +37,23 @@ const GROUPS = [
 				model: "Anthropic: Claude Sonnet Latest",
 				id: "~anthropic/claude-sonnet-latest",
 				title: "~anthropic/claude-sonnet-latest\n지금: Anthropic: Claude Sonnet 5.5",
-				hint: "$3 · $15",
 			},
 			{
 				value: "o:anthropic/claude-sonnet-5.5",
 				model: "Anthropic: Claude Sonnet 5.5",
 				id: "anthropic/claude-sonnet-5.5",
-				title: "anthropic/claude-sonnet-5.5\n100만 토큰당 입력 $3, 출력 $15\n입력 한도 1M 토큰",
-				hint: "$3 · $15 · 기본",
+				title: "anthropic/claude-sonnet-5.5\n입력 한도 1M 토큰",
+				hint: "기본",
 			},
 			{
 				value: "o:meta-llama/llama-4-maverick:free",
 				model: "Meta: Llama 4 Maverick (free)",
 				id: "meta-llama/llama-4-maverick:free",
-				hint: "무료",
 			},
 			{
 				value: "o:openai/gpt-5.4-mini",
 				model: "OpenAI: GPT-5.4 Mini",
 				id: "openai/gpt-5.4-mini",
-				hint: "$0.25 · $2",
 			},
 		],
 	},
@@ -86,13 +83,13 @@ export const Chat: Story = {
 	},
 };
 
-/** From a settings field: opens under the field and takes its width. The field shows the model's name, then its price and key. */
+/** From a settings field: opens under the field and takes its width. The field shows the model's name, then its key. */
 export const Field: Story = {
 	args: {
 		...base,
 		open: true,
 		layout: "field",
-		trigger: <MenuField value="Meta: Llama 4 Maverick (free)" meta="무료 · OpenRouter" />,
+		trigger: <MenuField value="Meta: Llama 4 Maverick (free)" meta="OpenRouter" />,
 	},
 };
 

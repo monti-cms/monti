@@ -27,9 +27,9 @@ export interface ModelMenuItem {
 	readonly model: string;
 	/** The id its service knows it by ("anthropic/claude-sonnet-5.5"): a search finds it by this too. */
 	readonly id?: string;
-	/** The row's tooltip: what the row cannot say in a line (its id, its price in words, the model an alias stands for). */
+	/** The row's tooltip: what the row cannot say in a line (its id, the model an alias stands for). */
 	readonly title?: string;
-	/** Short words at the end: its price, "default", or the key of a recent model. */
+	/** Short words at the end: "default", or the key of a recent model. */
 	readonly hint?: ReactNode;
 }
 

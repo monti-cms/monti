@@ -349,22 +349,19 @@ describe("the key and the model (flow 2, 22–23)", () => {
 		expect(story.loaded().model.turns[0]).toMatchObject({ model: "claude-haiku-5-5", thinking: "off" });
 	});
 
-	it("10-1 the menu names each model and its price, free ones as '무료', the site's conversation model as '기본'; the id, the price in words and an alias's model are in its tooltip (ST-31, ST-33)", async () => {
+	it("10-1 the menu names each model by its service's name, free ones as their service says, with no price; the site's conversation model as '기본'; the id and an alias's model are in its tooltip (ST-31, ST-33)", async () => {
 		await on({ router: true }).run();
 		await openPanel();
 		await userEvent.click(button("모델 고르기"));
 		await expect
 			.element(page.getByRole("menuitemradio", { name: /^Meta: Llama 4 Maverick \(free\)/ }))
-			.toHaveTextContent("Meta: Llama 4 Maverick (free)무료");
+			.toHaveTextContent(/^Meta: Llama 4 Maverick \(free\)$/);
 		await expect.element(page.getByRole("menuitemradio", { name: /^Claude Sonnet 5\.5/ })).toHaveTextContent("기본");
 		const alias = page.getByRole("menuitemradio", { name: /^DeepSeek: DeepSeek Pro Latest/ });
-		await expect.element(alias).toHaveTextContent("$0.5 · $2");
+		await expect.element(alias).toHaveTextContent(/^DeepSeek: DeepSeek Pro Latest$/);
 		await expect
 			.element(alias)
-			.toHaveAttribute(
-				"title",
-				"~deepseek/deepseek-pro-latest\n100만 토큰당 입력 $0.5, 출력 $2\n지금: DeepSeek: DeepSeek V4 Pro",
-			);
+			.toHaveAttribute("title", "~deepseek/deepseek-pro-latest\n지금: DeepSeek: DeepSeek V4 Pro");
 		// A search finds a model by its id too.
 		await userEvent.fill(page.getByRole("textbox", { name: "모델 찾기" }), "~deepseek");
 		await expect.element(alias).toBeVisible();

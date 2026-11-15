@@ -118,7 +118,6 @@ describe("adding a key (flow 10, 01–06)", () => {
 				readable: true,
 				hasKey: true,
 				usage: { month: "2026-11", tokens: 0 },
-				credit: null,
 				uses: [
 					{ for: "assistant", model: "claude-sonnet-5-5" },
 					{ for: "quick", model: "claude-haiku-5-5" },
@@ -483,25 +482,6 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 			await refusedFor(monti.run("models.choose", { for: "quick", keyId: output.id, model: "claude-opus-5-5" }, admin)),
 		).toBeInstanceOf(ConflictError);
 		expect((await models(monti)).quick).toMatchObject({ model: "claude-haiku-5-5", chosen: false });
-	});
-
-	it("14-1 [ST-28] what an OpenRouter key's account spent this month and has left is on its row, as its service said with the models", async () => {
-		const monti = site();
-		let [spent, left] = [2.31, 7.69];
-		net.state.answer = (url) =>
-			url === "https://openrouter.ai/api/v1/key"
-				? net.json(200, { data: { usage_monthly: spent, limit: 10, limit_remaining: left, limit_reset: "monthly" } })
-				: url === "https://openrouter.ai/api/v1/models"
-					? net.json(200, { data: [{ id: "a/b", supported_parameters: ["tools"] }] })
-					: undefined;
-		await add(monti, { service: "openrouter", name: "OpenRouter", secret: "sk-or-v1-0123456789abcdef" });
-		expect((await list(monti)).keys[0].credit).toEqual({ month: 2.31, limit: 10, remaining: 7.69, reset: "monthly" });
-		[spent, left] = [3, 7];
-		await models(monti, { refresh: true });
-		expect((await list(monti)).keys[0].credit).toMatchObject({ month: 3, remaining: 7 });
-		// A service that says nothing of money has none.
-		await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
-		expect((await list(monti)).keys[1].credit).toBeNull();
 	});
 
 	it("when the service no longer lists a preferred model, the key's first model stands in", async () => {

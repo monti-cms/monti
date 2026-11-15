@@ -7,7 +7,7 @@ import { defineOperation, type OperationContext } from "../operation";
 import { defineRecordKind, lockRecords } from "../records";
 import type { Site } from "../site";
 import { seal, unseal } from "./seal";
-import { checkKey, KEY_LENGTH_THAT_MATTERS, type KeyCredit, type KeyService, type Model } from "./services";
+import { checkKey, KEY_LENGTH_THAT_MATTERS, type KeyService, type Model } from "./services";
 
 type Db = Kysely<Database> | Transaction<Database>;
 type KeyRecord = Selectable<ApiKeyTable>;
@@ -45,8 +45,6 @@ export type KeyRow = {
 	hasKey: boolean;
 	/** Tokens this month, as Monti counted them. */
 	usage: { month: string; tokens: number };
-	/** What the key's account spent this month and has left, as its service said when its models were last asked (OpenRouter); else `null`. */
-	credit: KeyCredit | null;
 	uses: KeyUse[];
 	/** The key's version, by `recordKey({ kind: "key", id })`: a change sent with it is refused when the key changed since it was read. */
 	version: number;
@@ -271,15 +269,10 @@ export function address(raw: string | undefined): string {
 
 /** Asks the service once whether it takes the key (doc 14: on add, and again whenever the key or its address changes). */
 export async function ask(ctx: OperationContext, service: KeyService, secret: string, baseUrl: string | null) {
-	return (await askWithCredit(ctx, service, secret, baseUrl)).models;
-}
-
-/** The same question, with what the key's account has to spend when the service says: a named key shows it on its row. */
-async function askWithCredit(ctx: OperationContext, service: KeyService, secret: string, baseUrl: string | null) {
 	if (secret === "" && !service.keyOptional) throw new CheckError({ key: "keys.needsKey" });
 	const checked = await checkKey(service, { secret, baseUrl }, ctx.site.fetch);
 	if (!checked.ok) throw new CheckError({ key: checked.reason === "refused" ? "keys.refused" : "keys.unreachable" });
-	return { models: checked.models, credit: checked.credit ?? null };
+	return checked.models;
 }
 
 async function mustBeFree(ctx: OperationContext, name: string, except?: string) {
@@ -424,7 +417,6 @@ export const keyOperations = [
 					readable: key.readable,
 					hasKey: key.hasKey,
 					usage: { month, tokens: used.get(key.id) ?? 0 },
-					credit: key.credit,
 					uses: usesOf(key.id),
 					version: key.version,
 				})),
@@ -456,7 +448,7 @@ export const keyOperations = [
 			if (!service || slotOnly(ctx, service.id)) throw new CheckError({ key: "keys.unknownService" });
 			await mustBeFree(ctx, input.name);
 			const baseUrl = service.address ? address(input.baseUrl) : null;
-			return { service: service.id, baseUrl, ...(await askWithCredit(ctx, service, input.secret, baseUrl)) };
+			return { service: service.id, baseUrl, models: await ask(ctx, service, input.secret, baseUrl) };
 		},
 		async run(input, ctx, asked) {
 			// The name was free when the service was asked; it is held and looked at again now that the key goes in.
@@ -474,7 +466,6 @@ export const keyOperations = [
 					last4: ending(input.secret),
 					models: JSON.stringify(asked.models),
 					models_at: ctx.now(),
-					credit: asked.credit && JSON.stringify(asked.credit),
 					// The list is in the order the keys were added, and this is what orders it: a key is never dated at or before the newest one,
 					// whatever this server's clock says (two servers' clocks differ, and two keys can be added within one tick of a clock).
 					created_at: sql<Date>`greatest(${ctx.now()}::timestamptz, (select max(created_at) + interval '1 millisecond' from api_keys))`,
@@ -525,7 +516,7 @@ export const keyOperations = [
 				baseUrl,
 				// The key to seal again: a new key, or the same one under its new address (a sealed key opens only at the address it was sealed for).
 				reseal: changed ? next : null,
-				checked: changed && service ? await askWithCredit(ctx, service, next, baseUrl) : null,
+				models: changed && service ? await ask(ctx, service, next, baseUrl) : null,
 			};
 		},
 		touches: (input) => [{ kind: "key", id: input.id }],
@@ -550,13 +541,8 @@ export const keyOperations = [
 					name: asked.name,
 					base_url: asked.baseUrl,
 					version: eb("version", "+", 1),
-					...(asked.checked
-						? {
-								models: JSON.stringify(asked.checked.models),
-								models_at: ctx.now(),
-								models_failed_at: null,
-								credit: asked.checked.credit && JSON.stringify(asked.checked.credit),
-							}
+					...(asked.models
+						? { models: JSON.stringify(asked.models), models_at: ctx.now(), models_failed_at: null }
 						: {}),
 					...(sealed !== null && asked.reseal !== null ? { secret: sealed, last4: ending(asked.reseal) } : {}),
 				}))
@@ -626,7 +612,6 @@ export const keyOperations = [
 											models: JSON.stringify(checked.models),
 											models_at: now,
 											models_failed_at: null,
-											credit: checked.credit ? JSON.stringify(checked.credit) : null,
 										}
 									: // A service that does not answer, or answers what cannot be read, keeps the list it gave last.
 										{ models_failed_at: now },

@@ -48,7 +48,7 @@ export const Keys: Story = {
 			<ListSectionRow
 				title="OpenAI"
 				titleCount="··· 9f2c"
-				meta="이번 달 사용 없음"
+				meta="사용 없음"
 				metaTone="faint"
 				muted
 				actions={
@@ -84,7 +84,7 @@ export const Control: Story = {
 					<MenuField
 						aria-labelledby="quick-model"
 						value="Meta: Llama 4 Maverick (free)"
-						meta="무료 · OpenRouter"
+						meta="OpenRouter"
 						title="meta-llama/llama-4-maverick:free"
 					/>
 				}
