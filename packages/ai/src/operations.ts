@@ -47,8 +47,13 @@ export type AssistantOptions = {
 	holdMs?: number;
 };
 
-/** What became of a conversation's proposals, for its row in the past conversations (doc 10). */
+/**
+ * What became of a conversation, for its row in the past conversations (doc 10): what became of its newest proposal, or, when its last request
+ * ended without one, that it failed or stopped.
+ */
 export type ConversationOutcome =
+	| { kind: "failed" }
+	| { kind: "stopped" }
 	| { kind: "waiting" }
 	| { kind: "applied"; count: number }
 	| { kind: "taken"; count: number }
@@ -209,6 +214,24 @@ async function outcomes(db: Db, conversationIds: string[]): Promise<Map<string, 
 		.where("monti_proposal.conversation_id", "in", conversationIds)
 		.orderBy("monti_proposal.created_at")
 		.execute();
+	// The last request of each conversation, asked in the panel or at a picked place: one that ended without a proposal says so, and goes
+	// before what an earlier request's proposal came to. A request asked of one item of a proposal shows its end in that item.
+	const lastRuns = await db
+		.selectFrom("runs")
+		.select(["conversation_id as conversationId", "status", "proposal_id as proposalId"])
+		.where("conversation_id", "in", conversationIds)
+		.where("kind", "=", "chat")
+		.orderBy("position", "desc")
+		.execute();
+	const cut = new Set<string>();
+	for (const run of lastRuns) {
+		if (cut.has(run.conversationId) || found.has(run.conversationId)) continue;
+		cut.add(run.conversationId);
+		if (run.proposalId !== null) continue;
+		if (run.status === "failed") found.set(run.conversationId, { kind: "failed" });
+		else if (run.status === "stopped" || run.status === "interrupted")
+			found.set(run.conversationId, { kind: "stopped" });
+	}
 	// The newest proposal of each conversation says what became of it.
 	const newest = new Map<string, typeof rows>();
 	for (const row of rows) {
@@ -217,6 +240,7 @@ async function outcomes(db: Db, conversationIds: string[]): Promise<Map<string, 
 		else last.push(row);
 	}
 	for (const [conversationId, items] of newest) {
+		if (found.has(conversationId)) continue;
 		const status = items[0].status;
 		const applied = items.filter((item) => item.state === "applied");
 		// Applied through the review, or taken in a screen and saved with the person's own changes.
