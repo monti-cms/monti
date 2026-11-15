@@ -67,7 +67,7 @@ describe("ModelMenu", () => {
 				text="생각 보통"
 			/>,
 		);
-		const button = page.getByRole("button", { name: "생각" });
+		const button = page.getByRole("button", { name: "생각 보통", exact: true });
 		await expect.element(button).toHaveTextContent("생각 보통");
 		await userEvent.click(button);
 		await expect.element(page.getByRole("menuitemradio", { name: "보통" })).toHaveAttribute("aria-checked", "true");

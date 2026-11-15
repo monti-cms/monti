@@ -40,8 +40,8 @@ describe("a model tried before it is picked (doc 14, AS-01)", () => {
 		vi.useRealTimers();
 	});
 
-	it("the quick tasks' model is asked for one answer in a fixed shape, with the least thinking it takes", async () => {
-		const scripted = scriptedProvider([], () => ({ value: "OK" }));
+	it("the quick tasks' model is asked for one answer in a fixed shape and one turn with a tool, with the least thinking it takes", async () => {
+		const scripted = scriptedProvider([{ text: "OK" }], () => ({ value: "OK" }));
 		const { spent, site } = counting();
 		await modelTrial(
 			site,
@@ -54,7 +54,10 @@ describe("a model tried before it is picked (doc 14, AS-01)", () => {
 		});
 		expect(scripted.answers).toHaveLength(1);
 		expect(scripted.answers[0]).toMatchObject({ model: "baidu/ernie", thinking: "high", thinks: true });
-		expect(spent).toEqual([60]);
+		// A request on picked words and "✦ Translate" are turns with tools on this model: a model that cannot take tools is not picked.
+		expect(scripted.turns[0]).toMatchObject({ model: "baidu/ernie", thinking: "high" });
+		expect(scripted.turns[0].tools).toHaveLength(1);
+		expect(spent).toEqual([180]);
 	});
 
 	it("a conversation's model is asked for a turn with a tool offered", async () => {

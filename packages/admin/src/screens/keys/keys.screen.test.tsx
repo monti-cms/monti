@@ -546,7 +546,7 @@ describe("the two models (flow 10, 13)", () => {
 	/** The field of the job's row ("대화", "빠른 작업"), named by its row. */
 	const job = (name: "대화" | "빠른 작업") => button(new RegExp(`^${name}`));
 
-	it("14-1 [flow 10·13, 13b] the models by name with their prices; a search finds names and ids; a pick is tried, timed, and shown with its price and key", async () => {
+	it("14-1 [flow 10·13, 13b] the models by name with their prices; a search finds names and ids; a pick shows its price and key, and on a site that tries no models the toast says no time", async () => {
 		const story = open(keys.Keys);
 		await story.run();
 		await expect.element(job("빠른 작업")).toHaveTextContent("Claude Haiku 5.5");
@@ -568,7 +568,8 @@ describe("the two models (flow 10, 13)", () => {
 		await userEvent.fill(page.getByRole("textbox", { name: "모델 찾기" }), ":free");
 		await expect.element(page.getByRole("menuitemradio", { name: /Claude Opus/ })).not.toBeInTheDocument();
 		await userEvent.click(page.getByRole("menuitemradio", { name: /^Meta: Llama 4 Maverick \(free\)/ }));
-		await expect.element(page.getByText(/^빠른 작업 모델을 바꿨습니다 · 응답 [\d.]+초$/)).toBeVisible();
+		// Nothing on this site tries a model: there is no answer to time.
+		await expect.element(page.getByText("빠른 작업 모델을 바꿨습니다", { exact: true })).toBeVisible();
 		await expect.element(job("빠른 작업")).toHaveTextContent("Meta: Llama 4 Maverick (free)");
 		// Free, before its key: what was cut off as ":free" is read (ST-30).
 		await expect.element(job("빠른 작업")).toHaveTextContent("무료 · OpenRouter");
@@ -595,18 +596,24 @@ describe("the two models (flow 10, 13)", () => {
 		expect(called(story.loaded(), "models.choose")).toBe(1);
 	});
 
-	it("14-1 while the model picked is tried its field cannot be pressed and says so, with the model's name", async () => {
+	it("14-1 while the model picked is tried its field says so with the model's name, keeps the focus, and takes no second pick", async () => {
 		const story = open({ loaders: keys.site({ trial: "answers" }) });
 		await story.run();
 		const letGo = story.loaded().holdCall("models.choose");
 		await userEvent.click(job("빠른 작업"));
 		await userEvent.click(page.getByRole("menuitemradio", { name: /^Meta: Llama 4 Maverick/ }));
-		await expect.element(job("빠른 작업")).toBeDisabled();
+		await expect.element(job("빠른 작업")).toHaveAttribute("aria-busy", "true");
 		await expect.element(job("빠른 작업")).toHaveTextContent("Meta: Llama 4 Maverick (free)확인 중…");
+		// The menu gives the focus back to the field as it closes: it is not disabled, so the focus does not fall to the page.
+		await expect.poll(() => document.activeElement).toBe(job("빠른 작업").element());
+		// A second pick while the first is tried is not taken.
+		await userEvent.click(job("빠른 작업"));
+		await userEvent.click(page.getByRole("menuitemradio", { name: /^Anthropic: Claude Sonnet 5\.5/ }));
 		letGo();
 		await expect.element(page.getByText(/^빠른 작업 모델을 바꿨습니다/)).toBeVisible();
-		await expect.element(job("빠른 작업")).toBeEnabled();
-		await expect.element(job("빠른 작업")).toHaveTextContent("무료 · OpenRouter");
+		await expect.element(job("빠른 작업")).not.toHaveAttribute("aria-busy");
+		await expect.element(job("빠른 작업")).toHaveTextContent("Meta: Llama 4 Maverick (free)무료 · OpenRouter");
+		expect(story.loaded().calls.filter((name) => name === "models.choose")).toHaveLength(1);
 	});
 
 	it("14-1 [flow 10·13] a model that does not answer its trial is not picked: the toast says why in the admin's words, and the field goes back", async () => {

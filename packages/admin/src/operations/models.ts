@@ -15,10 +15,12 @@ export function tokenAmount(tokens: number): string {
 	return `${(tokens / 1_000_000).toFixed(2)}M`;
 }
 
-/** A sum of US dollars, short: up to two decimals with the trailing zeros gone ("$1", "$0.25", "$2.31"); under a cent, "<$0.01". */
+/**
+ * A sum of US dollars, short: from a dollar on, up to two decimals with the trailing zeros gone ("$1", "$2.31"); under a dollar, three significant
+ * digits, so a cheap model's price is not rounded away ("$0.075", "$0.25", "$0.00042").
+ */
 export function dollarAmount(dollars: number): string {
-	if (dollars > 0 && dollars < 0.01) return "<$0.01";
-	return `$${Number(dollars.toFixed(2))}`;
+	return `$${Number(dollars >= 1 || dollars === 0 ? dollars.toFixed(2) : dollars.toPrecision(3))}`;
 }
 
 /** A model as a person reads it: the name its service gives it ("Anthropic: Claude Sonnet 5.5"), else its id. */

@@ -331,10 +331,10 @@ describe("the key and the model (flow 2, 22–23)", () => {
 		await story.run();
 		await openPanel();
 		await expect.element(button("모델 고르기")).toHaveTextContent("Claude Sonnet 5.5");
-		await expect.element(button("생각")).toHaveTextContent("생각 보통");
-		await userEvent.click(button("생각"));
+		await expect.element(button(/^생각 /)).toHaveTextContent("생각 보통");
+		await userEvent.click(button(/^생각 /));
 		await userEvent.click(page.getByRole("menuitemradio", { name: "높음" }));
-		await expect.element(button("생각")).toHaveTextContent("생각 높음");
+		await expect.element(button(/^생각 /)).toHaveTextContent("생각 높음");
 
 		await userEvent.click(button("모델 고르기"));
 		await expect.element(page.getByText("Anthropic 개인")).toBeVisible();
@@ -342,7 +342,7 @@ describe("the key and the model (flow 2, 22–23)", () => {
 		await expect.element(page.getByRole("menuitemradio", { name: /Claude Opus/ })).not.toBeInTheDocument();
 		await userEvent.click(page.getByRole("menuitemradio", { name: /^Claude Haiku 5\.5/ }));
 		await expect.element(button("모델 고르기")).toHaveTextContent("Claude Haiku 5.5");
-		await expect.element(button("생각")).not.toBeInTheDocument();
+		await expect.element(button(/^생각 /)).not.toBeInTheDocument();
 		// The model picked is the one asked.
 		await say("안녕");
 		await expect.element(panel().getByText("네.")).toBeVisible();
@@ -378,8 +378,8 @@ describe("the key and the model (flow 2, 22–23)", () => {
 		await userEvent.click(button("모델 고르기"));
 		await userEvent.click(page.getByRole("menuitemradio", { name: /^DeepSeek: DeepSeek Pro Latest/ }));
 		// It takes "low" and "high" only: "medium", a new conversation's, is shown as the nearest harder one.
-		await expect.element(button("생각")).toHaveTextContent("생각 높음");
-		await userEvent.click(button("생각"));
+		await expect.element(button(/^생각 /)).toHaveTextContent("생각 높음");
+		await userEvent.click(button(/^생각 /));
 		await expect.element(page.getByRole("menuitemradio", { name: "높음" })).toHaveAttribute("aria-checked", "true");
 		await expect.element(page.getByRole("menuitemradio", { name: "낮음" })).toBeVisible();
 		for (const level of ["끔", "보통"])
@@ -447,7 +447,7 @@ describe("the key and the model (flow 2, 22–23)", () => {
 		await userEvent.keyboard("{Tab}");
 		expect(focused()).toBe(button("모델 고르기").element());
 		await userEvent.keyboard("{Tab}");
-		expect(focused()).toBe(button("생각").element());
+		expect(focused()).toBe(button(/^생각 /).element());
 		await userEvent.keyboard("{Tab}");
 		expect(focused()).toBe(button("보내기").element());
 		button("모델 고르기").element().focus();

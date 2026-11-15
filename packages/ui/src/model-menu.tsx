@@ -178,7 +178,7 @@ export function ThinkingMenu({
 	/** The levels the model takes, worded. */
 	options: readonly { readonly value: string; readonly label: string }[];
 	onValueChange: (value: string) => void;
-	/** The button's name for screen readers, and the menu's head ("Thinking"). */
+	/** The menu's head ("Thinking"). The button is named by its words (`text`), which carry the level. */
 	label: string;
 	/** The button's words: the current level ("Thinking medium"). */
 	text: string;
@@ -190,7 +190,7 @@ export function ThinkingMenu({
 					<Button
 						variant="ghost"
 						size="sm"
-						aria-label={label}
+						// Its words are its name ("Thinking medium"): a screen reader hears the level, as the eye reads it.
 						data-slot="thinking-menu-button"
 						className="pr-monti-6 pl-monti-10 text-monti-subtle"
 					>

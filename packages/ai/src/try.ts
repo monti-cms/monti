@@ -17,8 +17,9 @@ const NOTHING = {
 };
 
 /**
- * Calls a model once before the keys screen picks it (doc 14), as the job will call it: the quick tasks' one answer in a fixed shape with the least
- * thinking the model takes, or a conversation's turn with a tool offered and a little thinking. The words asked for are a single "OK", so the
+ * Calls a model before the keys screen picks it (doc 14), as the job will call it: for the quick tasks, one answer in a fixed shape ("✦ Fill") and
+ * one turn with a tool offered (a request on picked words, "✦ Translate"), with the least thinking the model takes; for a conversation, a turn
+ * with a tool offered and a little thinking. The words asked for are a single "OK", so the
  * trial costs a few tokens; they are counted against the key as any call is. No answer within `answerMs` is a model too slow to use.
  */
 export function modelTrial(site: () => Monti, providerFor: ProviderFor, answerMs: number): TryModel {
@@ -34,28 +35,33 @@ export function modelTrial(site: () => Monti, providerFor: ProviderFor, answerMs
 		});
 		const thinks = asksThinking(model);
 		const asked = (async () => {
+			// A conversation's model thinks a little; the quick tasks' model as little as it takes.
+			const level = levelFor(model, job === "quick" ? "off" : "low");
+			let spent = 0;
 			if (job === "quick") {
+				// "✦ Fill" asks for one answer in a fixed shape.
 				const answered = await provider.answer({
 					model: model.id,
 					system: "Answer with the value OK.",
 					prompt: "Reply with OK.",
 					schema: OK,
-					thinking: levelFor(model, "off"),
+					thinking: level,
 					thinks,
 					signal: deadline.signal,
 				});
-				return answered.usage;
+				spent += answered.usage.input + answered.usage.output;
 			}
+			// A conversation, and the quick tasks' requests on picked words and "✦ Translate", are turns with tools.
 			for await (const event of provider.turn({
 				model: model.id,
 				system: "Reply with the word OK and nothing else.",
 				messages: [{ role: "user", text: "Reply with OK." }],
 				tools: [NOTHING],
-				thinking: levelFor(model, "low"),
+				thinking: level,
 				thinks,
 				signal: deadline.signal,
 			}))
-				if (event.type === "end") return event.usage;
+				if (event.type === "end") return spent + event.usage.input + event.usage.output;
 			// The stream closed without its end: no answer came.
 			throw new ProviderError("interrupted", "The answer ended before it was whole.");
 		})();
@@ -69,6 +75,6 @@ export function modelTrial(site: () => Monti, providerFor: ProviderFor, answerMs
 				throw error;
 			});
 		if (answered === "late") throw failed({ reason: "timeout", keyName: key.name });
-		await site().keys.addUsage(key.id, answered.input + answered.output);
+		await site().keys.addUsage(key.id, answered);
 	};
 }

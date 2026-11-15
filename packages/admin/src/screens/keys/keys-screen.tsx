@@ -84,8 +84,8 @@ function KeysHead({ columns }: { columns: readonly string[] }) {
 /** The two jobs this screen picks a model for, in the order their rows stand: a new conversation's, then the quick tasks'. */
 const ROLES: readonly ModelRole[] = ["assistant", "quick"];
 
-/** What `models.choose` answers: the model picked, and how long its trial answer took. */
-type Chosen = { output: ModelChoice & { for: ModelRole; ms: number } };
+/** What `models.choose` answers: the model picked, and how long its trial answer took (`null`: the site has nothing that tries models). */
+type Chosen = { output: ModelChoice & { for: ModelRole; ms: number | null } };
 
 /**
  * Tools › API keys (tools.md, doc 14). The service keys are a list as the templates tab beside it draws its own: rows of the shared table under
@@ -257,11 +257,21 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 		setTrying((was) => ({ ...was, [role]: picked }));
 		void choose.run({ for: role, ...picked }).then(async (result) => {
 			if (result.ok) {
-				toast(t(`apiKeys.chosen.${role}`, { seconds: seconds(result.body.output.ms) }));
+				const ms = result.body.output.ms;
+				toast(ms === null ? t(`apiKeys.changed.${role}`) : t(`apiKeys.chosen.${role}`, { seconds: seconds(ms) }));
 				reloadAssistant();
 				// The field keeps the model tried until the list says it is the one: it does not flick back to the one before.
 				await models.reload();
-			} else toast.error(t("apiKeys.notChosen", { why: reasonText(t, reasonOf(result.refusal)) }));
+			} else {
+				// The key changed while its model answered (another person changed it): the list is read again.
+				const conflict = result.refusal.error === "conflict";
+				toast.error(
+					t("apiKeys.notChosen", {
+						why: conflict ? t("errors.savedElsewhere") : reasonText(t, reasonOf(result.refusal)),
+					}),
+				);
+				if (conflict) await Promise.all([list.reload(), models.reload()]);
+			}
 			setTrying(({ [role]: _done, ...rest }) => rest);
 		});
 	};
@@ -287,6 +297,8 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 							}}
 							value={choice(shown.keyId, shown.model)}
 							onValueChange={(value) => {
+								// One trial at a time for a job: a pick while one runs is not taken.
+								if (tried) return;
 								const [keyId, id] = JSON.parse(value) as [string, string];
 								pick(role, { keyId, model: id });
 							}}
@@ -308,7 +320,9 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 								<MenuField
 									aria-labelledby={labelId}
 									size="default"
-									disabled={tried !== undefined}
+									// Not disabled while its model is tried: the menu gives the focus back to it as it closes, and a disabled
+									// button would drop it to the page.
+									aria-busy={tried !== undefined || undefined}
 									value={model ? modelName(model) : shown.model}
 									// Its price before its key: a free model says so where it is seen (ST-30).
 									meta={

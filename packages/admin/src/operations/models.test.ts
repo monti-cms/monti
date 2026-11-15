@@ -17,7 +17,15 @@ describe("a model's price and tooltip (ST-31, ST-33)", () => {
 		expect(priceWord(t, { price: { input: 0.25, output: 2.5 } })).toBe("$0.25 · $2.5");
 		expect(priceWord(t, { price: { input: 0, output: 0 } })).toBe("무료");
 		expect(priceWord(t, {})).toBeUndefined();
-		expect([0.001, 2.3099999, 3.0000000004, 0].map(dollarAmount)).toEqual(["<$0.01", "$2.31", "$3", "$0"]);
+		// A cheap model's price is not rounded away.
+		expect([0.001, 0.075, 0.25, 2.3099999, 3.0000000004, 0].map(dollarAmount)).toEqual([
+			"$0.001",
+			"$0.075",
+			"$0.25",
+			"$2.31",
+			"$3",
+			"$0",
+		]);
 	});
 
 	it("the tooltip has the id, the price in words, what an alias stands for now and how much it takes in, a line each", () => {

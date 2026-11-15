@@ -652,20 +652,21 @@ export const keyOperations = [
 		name: "models.choose",
 		kind: "write",
 		description:
-			"Pick the model a job uses, one of a key's models: `assistant`, the one a new conversation starts with, or `quick`, the one the quick tasks (fill a field, a request on picked words, translate) call. The model is called once first; one that does not answer is not picked.",
+			"Pick the model a job uses, one of a key's models: `assistant`, the one a new conversation starts with, or `quick`, the one the quick tasks (fill a field, a request on picked words, translate) call. When a person picks it, the model is called once first; one that does not answer is not picked.",
 		input: z.object({ for: z.enum(ROLES), keyId: z.string(), model: z.string() }),
 		// The model is called before the write's transaction opens: nothing of the database is held while it answers.
 		async prepare(input, ctx) {
 			const key = (await readKeys(ctx)).find((candidate) => candidate.id === input.keyId);
 			const model = key && usable(ctx, key) ? key.models.find((each) => each.id === input.model) : undefined;
 			if (!key || !model) throw new CheckError({ key: "models.unknown" });
+			// Tried when a person picks it, a proposal of the assistant's taken included; not while the assistant writes the proposal (the
+			// model would be called, and paid for, before anyone said yes). A site without a plugin that tries models picks it untried.
+			if (!ctx.site.tryModel || ctx.actor === "assistant") return { ms: null, version: key.version };
+			const open = await openKey(ctx.db, ctx.site.secret, key.id);
+			if (!open) throw new CheckError({ key: "models.unknown" });
 			const started = Date.now();
-			if (ctx.site.tryModel) {
-				const open = await openKey(ctx.db, ctx.site.secret, key.id);
-				if (!open) throw new CheckError({ key: "models.unknown" });
-				await ctx.site.tryModel({ for: input.for, key: open, model });
-			}
-			// How long the answer took: the screen says it, so a slow model is seen as one when it is picked (AS-42).
+			await ctx.site.tryModel({ for: input.for, key: open, model });
+			// How long the answer took: the screen says it, so a slow model is seen as one when it is picked (AS-42). `null`: it was not tried.
 			return { ms: Date.now() - started, version: key.version };
 		},
 		async run(input, ctx, tried) {

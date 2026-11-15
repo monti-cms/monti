@@ -398,6 +398,8 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 			for: "assistant",
 			keyId: first.output.id,
 			model: "claude-haiku-5-5",
+			// Nothing on this site tries a model.
+			ms: null,
 		});
 		expect(await models(monti)).toMatchObject({
 			assistant: { keyId: first.output.id, model: "claude-haiku-5-5", chosen: true },
@@ -434,7 +436,7 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 			{ for: "quick", keyId: output.id, model: "claude-haiku-5-5" },
 			admin,
 		)) as { output: { ms: number } };
-		expect(taken.output.ms).toBeGreaterThanOrEqual(0);
+		expect(taken.output.ms).toBeTypeOf("number");
 		expect(
 			await refusedFor(monti.run("models.choose", { for: "quick", keyId: output.id, model: "claude-opus-5-5" }, admin)),
 		).toBe("assistant.failed");
@@ -442,6 +444,14 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 			{ for: "quick", key: "Anthropic", model: "claude-haiku-5-5" },
 			{ for: "quick", key: "Anthropic", model: "claude-opus-5-5" },
 		]);
+		// The assistant proposing a model calls nothing: the model is tried when a person takes the proposal.
+		const proposal = await monti.proposals.create("c1", "대화 모델을 바꿔 줘");
+		await monti.proposals.add(proposal, "models.choose", {
+			for: "assistant",
+			keyId: output.id,
+			model: "claude-sonnet-5-5",
+		});
+		expect(tried).toHaveLength(2);
 		expect((await models(monti)).quick).toEqual({ keyId: output.id, model: "claude-haiku-5-5", chosen: true });
 		// Two plugins that try models are one too many.
 		expect(() =>
