@@ -1802,9 +1802,16 @@ describe("what the browser check of #480 found", () => {
 		await say("둘 다 요약 채워 줘");
 		await expect.element(button("2건 적용")).toBeVisible();
 		await expect.element(button("보내기")).toBeVisible();
-		// Two presses of the mouse at one spot, 40 ms apart: the second comes down where "undo" stands by then.
-		await pressTwice(button("2건 적용").element(), 40);
-		await expect.element(panel().getByText("✓ 2건 적용")).toBeVisible();
+		// Two presses of the mouse at one spot, 40 ms apart: the second comes down where "undo" stands by then. The row's clock stands still
+		// while they land: a busy runner delivers the second press hundreds of milliseconds late, and a press that late is meant to go through.
+		const still = performance.now();
+		const clock = vi.spyOn(performance, "now").mockReturnValue(still);
+		try {
+			await pressTwice(button("2건 적용").element(), 40);
+			await expect.element(panel().getByText("✓ 2건 적용")).toBeVisible();
+		} finally {
+			clock.mockRestore();
+		}
 		await beat(400);
 		expect(calls(loaded, "proposals.revert")).toHaveLength(0);
 		await expect.element(panel().getByText("✓ 2건 적용")).toBeVisible();
