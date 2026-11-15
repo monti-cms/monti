@@ -221,12 +221,12 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 					}
 					onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
 					onLanguages={() => leave(() => go({ screen: "settings", tab: "languages" }))}
+					// In a new tab, as the list's "open in new tab": the editor stays as it is, with what was typed (AS-21).
 					onActivity={() =>
-						leave(() =>
-							go({
-								screen: "activity",
-								params: new URLSearchParams({ entry: route.id, kind: "assistant" }),
-							}),
+						window.open(
+							href({ screen: "activity", params: new URLSearchParams({ entry: route.id, kind: "assistant" }) }),
+							"_blank",
+							"noopener",
 						)
 					}
 				/>

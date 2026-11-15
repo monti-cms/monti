@@ -422,6 +422,16 @@ describe("the key and the model (flow 2, 22–23)", () => {
 });
 
 describe("past conversations (flow 2, 25–26)", () => {
+	it("10-1 [AS-51] a conversation whose request failed says so in its row", async () => {
+		await on({ script: () => [{ fail: new ProviderError("refused", "Your credit balance is too low.") }] }).run();
+		await openPanel();
+		await say("요약이 비어 있는 글 찾아 줘");
+		await expect.element(panel().getByText("Anthropic 개인 거절")).toBeVisible();
+		await userEvent.click(button("지난 대화"));
+		const past = page.getByRole("complementary", { name: "지난 대화" });
+		await expect.element(past.getByText(/^\d{2}:\d{2} · 실패$/)).toBeVisible();
+	});
+
 	it("10-1 [flow 2·25, 26] past conversations say what was asked first and what came of it; one opens as it was; deleting is not asked about; the days are saved as picked", async () => {
 		const story = on({ script: stories.scripts(stories.found, stories.proposed) });
 		await story.run();

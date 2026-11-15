@@ -1280,6 +1280,46 @@ describe("past conversations (flow 2, 25–26)", () => {
 		expect(talk.conversation).not.toBe(waiting.conversation);
 	});
 
+	it("10-1 a conversation whose last request ended without a proposal says it failed or stopped, before what an earlier proposal came to", async () => {
+		const monti = site();
+		await withKey(monti);
+		const post = await newPost(monti, "하나");
+		model.add(
+			{
+				calls: [
+					{
+						name: "entries_save",
+						input: { id: post, version: 2, values: { summary: "요약" }, [GROUP]: "요약 채우기" },
+					},
+				],
+			},
+			{ text: "제안했습니다." },
+			{ fail: new ProviderError("limit", "Your credit balance is too low.", 400) },
+			{ fail: new ProviderError("limit", "Your credit balance is too low.", 400) },
+			{ text: "네." },
+		);
+		const proposed = await ask(monti, { request: "요약 채워 줘" });
+		await monti.proposals.apply(proposed.of("proposal")[0].proposalId);
+		clock = new Date(clock.getTime() + 60_000);
+		// Asked again in the same conversation, and the service said no.
+		await ask(monti, { conversation: proposed.conversation, request: "제목도" });
+		clock = new Date(clock.getTime() + 60_000);
+		const failed = await ask(monti, { request: "고른 글자 다듬어 줘" });
+		clock = new Date(clock.getTime() + 60_000);
+		const stopped = await ask(monti, { request: "목록 봐 줘" });
+		// Stopped by the person: the run's own end, as a stop leaves it.
+		await db.updateTable("runs").set({ status: "stopped" }).where("id", "=", stopped.run).execute();
+
+		const rows = ((await monti.run("conversations.list", {}, admin)) as { conversations: ConversationRow[] })
+			.conversations;
+		expect(failed.end.status).toBe("failed");
+		expect(rows.map((each) => [each.title, each.outcome])).toEqual([
+			["목록 봐 줘", { kind: "stopped" }],
+			["고른 글자 다듬어 줘", { kind: "failed" }],
+			["요약 채워 줘", { kind: "failed" }],
+		]);
+	});
+
 	it("10-1 removing a conversation takes its waiting proposal with it; what was applied stays in the activity log", async () => {
 		const monti = site();
 		await withKey(monti);

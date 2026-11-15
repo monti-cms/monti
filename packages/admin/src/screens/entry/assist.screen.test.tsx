@@ -1,6 +1,6 @@
 import { ProviderError, type ScriptedProvider } from "@monti-cms/ai";
 import { type Block, type Doc, plainText } from "@monti-cms/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { pickWords } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
@@ -261,13 +261,18 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 		await expect.element(page.getByRole("menuitem", { name: "AI가 바꾼 기록" })).not.toBeInTheDocument();
 	});
 
-	it("10-1 [AS-23] ⋯ › 'AI가 바꾼 기록' opens the activity log filtered to this entry, by its id and not its title, and to the assistant's lines", async () => {
+	it("10-1 [AS-23, AS-21] ⋯ › 'AI가 바꾼 기록' opens the activity log in a new tab, filtered to this entry by its id and to the assistant's lines; the editor stays", async () => {
 		const made = on("draft");
 		await made.run();
 		await opened();
+		const opens = vi.spyOn(window, "open").mockReturnValue(null);
+		const here = window.location.hash;
 		await userEvent.click(button("더 보기"));
 		await userEvent.click(page.getByRole("menuitem", { name: "AI가 바꾼 기록" }));
-		await expect.poll(() => window.location.hash).toBe(`#/activity?entry=${made.loaded().id}&kind=assistant`);
+		expect(opens).toHaveBeenCalledWith(`#/activity?entry=${made.loaded().id}&kind=assistant`, "_blank", "noopener");
+		expect(window.location.hash).toBe(here);
+		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+		opens.mockRestore();
 	});
 });
 
@@ -449,8 +454,12 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		await saveCell("저장 전 변경사항");
 		await userEvent.click(button("저장"));
 		await expect.poll(async () => (await pending(made.loaded())).length).toBe(2);
+		const opens = vi.spyOn(window, "open").mockReturnValue(null);
 		await userEvent.click(button("더 보기"));
 		await userEvent.click(page.getByRole("menuitem", { name: "AI가 바꾼 기록" }));
+		// The tab it opens, gone to here.
+		window.location.hash = String(opens.mock.calls[0]?.[0]);
+		opens.mockRestore();
 		const line = page.getByRole("main").getByRole("row").filter({ hasText: "더 짧게 다듬기" });
 		await expect.element(line).toBeVisible();
 		await expect.element(line).toHaveTextContent('"첫 번째 글" 저장');
