@@ -331,7 +331,7 @@ function engineOperations(
 					.returning(["id", "proposal_id"])
 					.execute();
 				for (const proposalId of new Set(items.map((item) => item.proposal_id)))
-					await settleProposal(ctx.db, proposalId);
+					await settleProposal(ctx.db, proposalId, ctx.now());
 				return { discarded: items.map((item) => item.id) };
 			},
 			// Nothing changed, so the log has no line for it (doc 00).

@@ -282,7 +282,7 @@ export async function proposeItem(
 		await trx.insertInto("monti_proposal_item").values(rows).execute();
 		await options.holder?.(trx);
 	});
-	await settleProposal(engine.db, proposalId);
+	await settleProposal(engine.db, proposalId, engine.now());
 	return { itemId: rows[0].id, itemIds: rows.map((row) => row.id), preview: whole.preview };
 }
 
@@ -345,7 +345,7 @@ export async function replaceItem(
 		return written;
 	});
 	if (!replaced) throw new CheckError({ key: "proposals.notWaiting" });
-	await settleProposal(engine.db, item.proposal_id);
+	await settleProposal(engine.db, item.proposal_id, engine.now());
 	return { itemId, preview };
 }
 
@@ -677,7 +677,7 @@ export async function applyProposal(
 			.where("id", "=", proposalId)
 			.where("applying_token", "=", token)
 			.execute();
-		await settleProposal(engine.db, proposalId);
+		await settleProposal(engine.db, proposalId, engine.now());
 	}
 	return results;
 }
@@ -709,7 +709,7 @@ export async function lockProposals(db: Db, of: { proposals?: string[]; items?: 
  * A proposal's status from its items': all still waiting, all thrown away, put back, all done, or some of each. The proposal's row is held while
  * the items are read, so two that settle at once (an apply ending, a discard beside it) do not write an older reading over a newer one.
  */
-export async function settleProposal(db: Db, proposalId: string): Promise<void> {
+export async function settleProposal(db: Db, proposalId: string, now: Date): Promise<void> {
 	const settle = async (trx: Db) => {
 		await lockProposals(trx, { proposals: [proposalId] });
 		const rows = await trx
@@ -736,7 +736,7 @@ export async function settleProposal(db: Db, proposalId: string): Promise<void> 
 				settled_at:
 					status === "pending"
 						? null
-						: eb.case().when("status", "=", status).then(eb.ref("settled_at")).else(new Date()).end(),
+						: eb.case().when("status", "=", status).then(eb.ref("settled_at")).else(now).end(),
 			}))
 			.where("id", "=", proposalId)
 			.execute();
@@ -849,7 +849,7 @@ export async function revertProposal(
 		else kept.push(item.id);
 		await setOutcome(db, item.id, outcome);
 	}
-	await settleProposal(db, proposalId);
+	await settleProposal(db, proposalId, engine.now());
 	return { reverted, kept };
 }
 
@@ -920,6 +920,7 @@ export async function proposalsOfWrites(db: Db, of: { line: string } | { proposa
 export async function markReverted(
 	db: Db,
 	put: { write: string; back: RecordRef[]; same: RecordRef[] }[],
+	now: Date,
 ): Promise<void> {
 	if (put.length === 0) return;
 	const writes = put.map((each) => each.write);
@@ -945,7 +946,7 @@ export async function markReverted(
 			.filter((ref) => !went.has(recordKey(ref)));
 		await setOutcome(db, item.id, outcomeOf(item, back, stayed, same));
 	}
-	for (const proposalId of new Set(items.map((item) => item.proposal_id))) await settleProposal(db, proposalId);
+	for (const proposalId of new Set(items.map((item) => item.proposal_id))) await settleProposal(db, proposalId, now);
 }
 
 /** A record as a person knows it: its name, and where it is (an entry's address, a file's folder). */
@@ -1181,6 +1182,7 @@ export async function markApplied(
 	trx: Transaction<Database>,
 	taken: TakenItem[],
 	activityId: string,
+	now: Date,
 ): Promise<{ conversationId: string; proposalId: string } | null> {
 	if (taken.length === 0) return null;
 	await trx
@@ -1192,7 +1194,7 @@ export async function markApplied(
 			taken.map((item) => item.id),
 		)
 		.execute();
-	for (const proposalId of new Set(taken.map((item) => item.proposalId))) await settleProposal(trx, proposalId);
+	for (const proposalId of new Set(taken.map((item) => item.proposalId))) await settleProposal(trx, proposalId, now);
 	const [first] = taken;
 	return first ? { conversationId: first.conversationId, proposalId: first.proposalId } : null;
 }
