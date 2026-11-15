@@ -2227,6 +2227,78 @@ describe("the proposal's card says what each change does (AS-46)", () => {
 		// The header and the button count the same changes: the translation's words are part of its row.
 		expect(card()?.textContent).toContain("1건");
 		await expect.element(panel().getByRole("button", { name: "1건 적용" })).toBeVisible();
+		// Applied, it is still one change, named by its source.
+		await userEvent.click(panel().getByRole("button", { name: "1건 적용" }));
+		await expect.element(panel().getByText("✓ 1건 적용")).toBeVisible();
+		await expect.element(page.getByText("1건을 서버에 저장했습니다")).toBeVisible();
+		expect(card()?.querySelector("tr")?.textContent).toContain("둘째 글");
+	});
+
+	it("10-1 a translation whose words cannot be written is one change that was not done on its card, with what the write said", async () => {
+		let made: Loaded | undefined;
+		const story = on({
+			script: async (ids) => [
+				{ calls: [{ name: "translations_create", input: { source: ids.second, locale: "en", _group: "새 글" } }] },
+				async () => {
+					const item = await made?.site.db.selectFrom("monti_proposal_item").select("id").executeTakeFirstOrThrow();
+					// A body with a block the site does not have: its words' write is refused when it is applied.
+					return {
+						calls: [
+							{
+								name: "entries_save",
+								input: {
+									id: { $item: item?.id },
+									version: 1,
+									doc: { type: "doc", blocks: [{ id: "x1", type: "noSuchBlock" }] },
+									_group: "새 글",
+								},
+							},
+						],
+					};
+				},
+				{ text: "번역을 제안했습니다." },
+			],
+		});
+		await story.run();
+		made = story.loaded();
+		await openPanel();
+		await say("둘째 글 영어로 번역해 줘");
+		await userEvent.click(panel().getByRole("button", { name: "1건 적용" }));
+		await expect.element(panel().getByText("1건 못 함")).toBeVisible();
+		const card = () => panel().element().querySelector("[data-slot=proposal-card]");
+		// The row of the change, and one row of what was not done: both named by the source.
+		const rows = [...(card()?.querySelectorAll("tr") ?? [])].map((row) => row.textContent ?? "");
+		expect(rows).toHaveLength(2);
+		expect(rows.every((row) => row.includes("둘째 글"))).toBe(true);
+	});
+
+	it("10-1 a change that went stale on a one-change card offers '검토', where it is made again", async () => {
+		let made: Loaded | undefined;
+		const story = on({
+			script: async (ids) => [
+				{ calls: [{ name: "translations_create", input: { source: ids.second, locale: "en", _group: "새 글" } }] },
+				async () => {
+					const item = await made?.site.db.selectFrom("monti_proposal_item").select("id").executeTakeFirstOrThrow();
+					// A version the translation will not have: its words find it changed meanwhile.
+					return {
+						calls: [
+							{
+								name: "entries_save",
+								input: { id: { $item: item?.id }, version: 99, title: "The second post", _group: "새 글" },
+							},
+						],
+					};
+				},
+				{ text: "번역을 제안했습니다." },
+			],
+		});
+		await story.run();
+		made = story.loaded();
+		await openPanel();
+		await say("둘째 글 영어로 번역해 줘");
+		await expect.element(panel().getByRole("button", { name: "검토" })).not.toBeInTheDocument();
+		await userEvent.click(panel().getByRole("button", { name: "1건 적용" }));
+		await expect.element(panel().getByRole("button", { name: "검토" })).toBeVisible();
 	});
 
 	it("10-1 [AS-49] '적용' pressed with the keyboard on the review page hands the focus past the row, never to '되돌리기'", async () => {

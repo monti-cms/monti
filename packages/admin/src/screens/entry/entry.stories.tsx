@@ -1019,6 +1019,19 @@ export const BodyProposals: Story = {
 	},
 };
 
+/** A line proposed at the very start of the body: drawn above the first block, its mark beside that block. */
+export const BodyProposalAtStart: Story = {
+	loaders: site("proposedAtStart"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await waitFor(
+			() => expect(body.querySelector("[data-proposal-item]")?.textContent).toContain("이 글은 다시 만든 기록이다."),
+			wait,
+		);
+		await all.findByText("첫머리에 한 줄 더해 줘", {}, wait);
+	},
+};
+
 /** A proposal that changes only formatting: the words that become bold stand on the pale blue ground, with nothing struck through or put in. */
 export const FormattingProposal: Story = {
 	loaders: site("proposedFormat"),

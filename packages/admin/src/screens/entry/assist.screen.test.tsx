@@ -471,9 +471,10 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 	});
 
 	it("10-1 [AS-12] a line put in at the very start opens its own card when pressed, as any other change", async () => {
-		const made = on("proposedAtStart");
-		await made.run();
-		await opened();
+		await scene<Loaded>(
+			{ loaders: [assisted([]), ...entry.site("proposedAtStart")], play: entry.BodyProposalAtStart.play },
+			entry.default,
+		).run();
 		const drawn = () => inBody("[data-proposal-item]")[0];
 		await expect.poll(() => drawn()?.textContent).toContain("이 글은 다시 만든 기록이다.");
 		await userEvent.click(drawn() as Element);

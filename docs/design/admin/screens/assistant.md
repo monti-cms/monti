@@ -70,7 +70,7 @@
 | 카드 | `ProposalCard`(`title` "제안", `summary` "2묶음 · 3건" 또는 "2건", 버렸으면 `muted`) | 머리에 상태는 없다. 상태는 발 한 줄이 말한다. |
 | 묶음이 여럿 | 공용 `Table container="none"`의 `TableRow`: `RowTitle`(`title` 묶음 이름, 대상이 하나면 `address`에 그 이름), 끝에 `Count` "2건" | 묶음마다 한 줄. |
 | 묶음이 하나 | `TableRow twoLine`: `RowTitle`(`title` 대상, `address` 주소), 아래 `Text variant="note" lines={2}` 안에 그 바뀜의 첫 자리: 빠지는 말 `Del`, 들어오는 말 `Ins`(검토 화면의 "한 줄"과 같은 계산, `useChangeWords`). 옛 값이 없으면 새 값만, 본문 바꿈은 블록의 글이다(AS-46, TR-20). 만들 번역은 원문 이름이 `title`이고, 그 번역에 쓰는 제목과 본문은 따로 줄이 되지 않고 그 줄의 새 값으로 보인다. 머리의 수, 묶음의 수, 발의 "n건 적용"도 그 말을 따로 세지 않는다(검토 화면과 같다) | 처음 셋. 더 있으면 `Text tone="subtle"` "외 N건" 한 줄. 검토 화면의 줄에서 체크만 뺀 같은 줄이다. |
-| 못 한 것 | 적용 뒤, `TableRow`: `RowTitle`(`title` 대상, `address` 쓰기가 말한 까닭) | |
+| 못 한 것 | 적용 뒤, `TableRow`: `RowTitle`(`title` 대상, `address` 쓰기가 말한 까닭) | 줄마다 하나. 번역에 쓰는 말이 못 들어가면 그 번역의 줄 하나로, 원문 이름에 그 말의 까닭을 단다. |
 | 발 | 아래 "제안의 상태 한 줄" | `footer`. |
 
 ### 제안의 상태 한 줄
@@ -79,8 +79,8 @@
 
 | 상태 | 보이는 것 |
 |---|---|
-| 기다림 | (카드만, 더 볼 것이 있을 때) `Button variant="ghost"` "검토", 끝에 `Button variant="ghost"` "버리기", `Button variant="primary"` "3건 적용". 넣은 줄이 없으면 "0건 적용"이고 눌리지 않는다. 버리기는 묻지 않는다. |
-| 적용 중 | `Text variant="note"` "적용 중", `Count` "2 / 3", `Progress inline` |
+| 기다림 | (카드만, 더 볼 것이 있을 때: 묶음이 여럿, 넷째 줄부터, 그새 바뀐 줄이 있을 때. 다시 만들기는 검토 화면에 있다) `Button variant="ghost"` "검토", 끝에 `Button variant="ghost"` "버리기", `Button variant="primary"` "3건 적용". 넣은 줄이 없으면 "0건 적용"이고 눌리지 않는다. 버리기는 묻지 않는다. |
+| 적용 중 | `Text variant="note"` "적용 중", `Count` "2 / 3", `Progress inline`. 수는 줄로 센다: 번역은 그 말까지 들어가야 하나다. 끝난 뒤 "n건을 서버에 저장했습니다"도 같다. |
 | 적용됨 | `Text variant="note" tone="success"` "✓ 2건 적용", 못 한 것이 있으면 `tone="danger"` "1건 못 함", 그 옆에 `TextButton variant="underline" quiet size="note"` "되돌리기", 끝에 `Button variant="ghost"` "검토"(카드). 카드와 검토 화면이 같다. 되돌리기는 묻지 않는다(AS-49: 둘이 같은 무게의 버튼이었다). |
 | 되돌림 · 버림 | `Text variant="note" tone="subtle"` "되돌림 · 10:58"(되돌린 시각, `settledAt`. AS-50) · "버림" |
 

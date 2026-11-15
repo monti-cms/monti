@@ -14,7 +14,7 @@ import {
 } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { followersOf, marked, type Place, useChangeWords } from "./change-words";
+import { followersOf, marked, type Place, rowCounts, useChangeWords } from "./change-words";
 import { inlineDiff } from "./diff";
 import { ProposalState } from "./proposal-state";
 import { useAssistant } from "./use-assistant";
@@ -66,16 +66,29 @@ export function ProposalCardOf({ id }: { id: string }) {
 	const rows = (view?.items ?? []).filter((item) => !follows(item));
 	const shown = view && view.groups.length === 1 ? rows.slice(0, SHOWN) : undefined;
 	// The entries are read for what a change takes out, which only a change still waiting has (an applied one reads as proposed already), and
-	// for the source a translation is read beside.
+	// for the source a translation is named by and read beside, whatever became of it.
+	const reading = [
+		...new Set([
+			...(shown?.some((item) => item.state === "pending" || item.state === "stale") ? shown : []),
+			...rows.filter((item) => item.operation === "translations.create"),
+		]),
+	];
 	const { entries, placesOf } = useChangeWords(
-		shown?.some((item) => item.state === "pending" || item.state === "stale")
-			? shown.flatMap((item) => [item, ...followers(item.id)])
-			: undefined,
+		reading.length > 0 ? reading.flatMap((item) => [item, ...followers(item.id)]) : undefined,
 	);
 	if (!view || rows.length === 0) return null;
 	const standing = standingOf(view, proposal.applying);
 	const items = new Map(view.items.map((item) => [item.id, item]));
-	const failed = view.items.filter((item) => item.state === "failed" || item.state === "skipped");
+	/** A row's name: a translation to make is named by its source, as on the review page (the entry it will be may not stand). */
+	const nameOf = (item: ProposalItemView) =>
+		(item.operation === "translations.create"
+			? entries[String((item.input as { source?: unknown }).source ?? "")]?.title
+			: undefined) ?? changeOf(item, view).title;
+	// What could not be applied, by row: a translation whose words went wrong is one row that failed, with what its words' write said.
+	const failed = rows.flatMap((item) => {
+		const went = [item, ...followers(item.id)].find((each) => each.state === "failed" || each.state === "skipped");
+		return went ? [{ item, went }] : [];
+	});
 	const rest = rows.length - SHOWN;
 	return (
 		<ProposalCard
@@ -93,8 +106,12 @@ export function ProposalCardOf({ id }: { id: string }) {
 					progress={proposal.progress}
 					size="sm"
 					pending={proposal.pending}
-					// Few enough to read here: there is nothing more to see on the review page.
-					onReview={view.groups.length > 1 || rest > 0 || standing !== "waiting" ? () => openReview(id) : undefined}
+					// Few enough to read here: there is nothing more to see on the review page. A change that went stale is made again there.
+					onReview={
+						view.groups.length > 1 || rest > 0 || standing !== "waiting" || rowCounts(view).stale > 0
+							? () => openReview(id)
+							: undefined
+					}
 					onDiscard={() => void proposal.discard()}
 					onApply={() => void proposal.apply()}
 					onRevert={() => void proposal.revert()}
@@ -124,18 +141,13 @@ export function ProposalCardOf({ id }: { id: string }) {
 							})
 						: (shown ?? []).map((item) => {
 								const change = changeOf(item, view);
-								// A translation to make is named by its source, as its row on the review page: the entry it will be does not stand yet.
-								const source =
-									item.operation === "translations.create"
-										? entries[String((item.input as { source?: unknown }).source ?? "")]?.title
-										: undefined;
 								const place = placesOf(item).find((each) => each.before !== "" || each.after !== "");
 								const words = place ? placeWords(place) : change.after !== null ? <Ins>{change.after}</Ins> : null;
 								return (
 									<TableRow key={item.id} twoLine={words !== null}>
 										<TableCell truncate>
 											<Stack gap={4} minWidth={0}>
-												<RowTitle title={source ?? change.title} address={change.address ?? undefined} />
+												<RowTitle title={nameOf(item)} address={change.address ?? undefined} />
 												{words !== null ? (
 													<Text as="div" variant="note" lines={2}>
 														{words}
@@ -155,13 +167,10 @@ export function ProposalCardOf({ id }: { id: string }) {
 					) : null}
 					{/* What could not be applied, each with what its write said. */}
 					{standing === "applied"
-						? failed.map((item) => (
+						? failed.map(({ item, went }) => (
 								<TableRow key={item.id}>
 									<TableCell truncate>
-										<RowTitle
-											title={changeOf(item, view).title}
-											address={item.reason ? t(item.reason) : t("card.item.failed")}
-										/>
+										<RowTitle title={nameOf(item)} address={went.reason ? t(went.reason) : t("card.item.failed")} />
 									</TableCell>
 								</TableRow>
 							))

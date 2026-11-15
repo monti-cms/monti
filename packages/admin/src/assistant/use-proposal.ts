@@ -3,6 +3,7 @@ import { toast } from "@monti-cms/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../operations/use-operation";
+import { followersOf } from "./change-words";
 import { useAssistant } from "./use-assistant";
 
 /** How often a proposal that is being applied somewhere else (another tab, an apply whose listener went away) is read again. */
@@ -42,7 +43,19 @@ export function useProposal(id: string) {
 	}, [applyingElsewhere, reload]);
 
 	const apply = useCallback(async () => {
-		const total = view?.counts.toApply ?? 0;
+		// Counted by rows, as the button that started it: a translation is done when it and the words written into it are.
+		const { follows, followers } = followersOf(view?.items ?? []);
+		const going = (item: ProposalItemView) => item.state === "pending" && item.included && !item.stale;
+		const rows = (view?.items ?? [])
+			.filter((item) => !follows(item) && going(item))
+			.map((item) => [
+				item.id,
+				...followers(item.id)
+					.filter(going)
+					.map((each) => each.id),
+			]);
+		const ended = new Set<string>();
+		const total = rows.length;
 		setProgress({ done: 0, total });
 		const answer = await streams("proposals.apply", { id });
 		if (!("events" in answer)) {
@@ -54,8 +67,15 @@ export function useProposal(id: string) {
 		let saved = 0;
 		try {
 			for await (const event of answer.events as AsyncIterable<ApplyEvent>) {
-				if (event.type === "item") setProgress({ done: event.done, total: event.total });
-				else saved = event.results.filter((result) => result.state === "applied").length;
+				if (event.type === "item") {
+					ended.add(event.itemId);
+					setProgress({ done: rows.filter((ids) => ids.every((each) => ended.has(each))).length, total });
+				} else {
+					const applied = new Set(
+						event.results.filter((result) => result.state === "applied").map((result) => result.itemId),
+					);
+					saved = rows.filter((ids) => ids.every((each) => applied.has(each))).length;
+				}
 			}
 		} catch {
 			// The connection went; the apply goes on by itself (doc 00), and the proposal is read until it is over.
@@ -67,7 +87,7 @@ export function useProposal(id: string) {
 		// What it changed shows wherever it is listed.
 		wrote();
 		touchProposals();
-	}, [streams, id, view?.counts.toApply, reload, wrote, touchProposals, t]);
+	}, [streams, id, view?.items, reload, wrote, touchProposals, t]);
 
 	/**
 	 * Discards what still waits. `true` when something was discarded; a refusal is said, and the proposal is read again as it is. When
