@@ -1206,7 +1206,10 @@ describe("quick tasks (doc 10, 빠른 작업)", () => {
 		).rejects.toMatchObject({
 			reason: { key: "assistant.failed", values: { reason: "noImages", keyName: "OpenAI 회사" } },
 		});
-		expect(model.answers).toHaveLength(1);
+		// Its one call was the trial before it was picked (doc 14); the picture was never sent to it.
+		expect(model.answers).toHaveLength(2);
+		expect(model.answers[1]).toMatchObject({ model: "gpt-3.5-turbo", prompt: "Reply with OK." });
+		expect(model.answers[1].picture).toBeUndefined();
 	});
 });
 
