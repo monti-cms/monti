@@ -49,6 +49,36 @@ describe("the entry editor: '✦ fill' for a picture (T104)", () => {
 		expect((await imageOf(made.loaded())).attrs.alt).toBeUndefined();
 	});
 
+	it("10-1 [AS-29, AS-30] filled picture words offer '버리기 · 다시': '버리기' empties the box again, and undo in the box does too", async () => {
+		const made = on(media.ImageTools, () => ({ value: "책상 위의 노트북" }));
+		await made.run();
+		await expect.element(alt()).toBeVisible();
+		await userEvent.click(button("채우기"));
+		await expect.element(alt()).toHaveValue("책상 위의 노트북");
+		await userEvent.click(button("버리기"));
+		await expect.element(alt()).toHaveValue("");
+		await expect.element(button("버리기")).not.toBeInTheDocument();
+		await userEvent.click(button("채우기"));
+		await expect.element(alt()).toHaveValue("책상 위의 노트북");
+		await userEvent.click(alt());
+		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
+		await expect.element(alt()).toHaveValue("");
+		expect(alt().element().hasAttribute("data-proposal")).toBe(false);
+	});
+
+	it("10-1 a filled caption keeps '버리기 · 다시' on its line after the caret leaves, and '버리기' empties it again", async () => {
+		const made = on(media.WithImage, () => ({ value: "책상에서 시작한 아침" }));
+		await made.run();
+		await userEvent.click(caption());
+		await userEvent.click(button("채우기"));
+		await expect.element(caption()).toHaveValue("책상에서 시작한 아침");
+		// The caret goes back to the text: the line that can take the fill back stays.
+		await userEvent.click(body().getByText("글의 첫 문단이에요."));
+		await expect.element(button("버리기")).toBeVisible();
+		await userEvent.click(button("버리기"));
+		await expect.element(caption()).toHaveValue("");
+	});
+
 	it("10-1 a model that does not read pictures is not asked to guess: the card says so under the box and the box stays empty", async () => {
 		const made = on(media.ImageTools, () => ({ value: "보지 않고 쓴 말" }), { pictures: false });
 		await made.run();

@@ -1,6 +1,21 @@
 import type { ProposalItemView, ProposalView } from "@monti-cms/core";
-import { Count, Ins, ProposalCard, RowTitle, Stack, Table, TableBody, TableCell, TableRow, Text } from "@monti-cms/ui";
+import {
+	Count,
+	Del,
+	Ins,
+	ProposalCard,
+	RowTitle,
+	Stack,
+	Table,
+	TableBody,
+	TableCell,
+	TableRow,
+	Text,
+} from "@monti-cms/ui";
+import type { ReactNode } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { marked, type Place, useChangeWords } from "./change-words";
+import { inlineDiff } from "./diff";
 import { ProposalState } from "./proposal-state";
 import { useAssistant } from "./use-assistant";
 import { standingOf, useProposal } from "./use-proposal";
@@ -28,16 +43,26 @@ export function changeOf(
 	};
 }
 
+/** A change's first place in words: what goes out struck through and what comes in on blue, as the review page's one-line view shows it. */
+function placeWords(place: Place): ReactNode {
+	if (place.before !== "" && place.after !== "") return marked(inlineDiff(place.before, place.after), "both");
+	if (place.after !== "") return <Ins>{place.after}</Ins>;
+	return <Del>{place.before}</Del>;
+}
+
 /**
  * A proposal in the conversation (doc 10; components/assistant.md): what it is and how much, its changes as the review page's rows without their
  * checks, and one row at its foot that says where it stands and holds what can be done with all of it. Several kinds of change are one row
- * each; one kind shows its first three changes.
+ * each; one kind shows its first three changes, each with its first place as it is and as proposed (AS-46, TR-20: a cut line of the new
+ * words alone, or a translation's address alone, said nothing of what changes).
  */
 export function ProposalCardOf({ id }: { id: string }) {
 	const { t } = useAdmin();
 	const { openReview } = useAssistant();
 	const proposal = useProposal(id);
 	const view = proposal.view;
+	const shown = view && view.groups.length === 1 ? view.items.slice(0, SHOWN) : undefined;
+	const { placesOf } = useChangeWords(shown);
 	if (!view || view.items.length === 0) return null;
 	const standing = standingOf(view, proposal.applying);
 	const items = new Map(view.items.map((item) => [item.id, item]));
@@ -84,16 +109,18 @@ export function ProposalCardOf({ id }: { id: string }) {
 									</TableRow>
 								);
 							})
-						: view.items.slice(0, SHOWN).map((item) => {
+						: (shown ?? []).map((item) => {
 								const change = changeOf(item, view);
+								const place = placesOf(item).find((each) => each.before !== "" || each.after !== "");
+								const words = place ? placeWords(place) : change.after !== null ? <Ins>{change.after}</Ins> : null;
 								return (
-									<TableRow key={item.id} twoLine={change.after !== null}>
+									<TableRow key={item.id} twoLine={words !== null}>
 										<TableCell truncate>
 											<Stack gap={4} minWidth={0}>
 												<RowTitle title={change.title} address={change.address ?? undefined} />
-												{change.after !== null ? (
+												{words !== null ? (
 													<Text as="div" variant="note" lines={2}>
-														<Ins>{change.after}</Ins>
+														{words}
 													</Text>
 												) : null}
 											</Stack>

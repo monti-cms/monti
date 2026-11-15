@@ -61,10 +61,11 @@ import { Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { type NodeViewProps, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { type ComponentType, useContext, useEffect, useId, useRef, useState } from "react";
 import { FillAction, FillFailed } from "../assistant/fill-action";
+import { isUndoKey } from "../assistant/use-fill";
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
 import { RetryButton } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
-import { ALT_MAX, AltFields } from "./alt-fields";
+import { AltFields } from "./alt-fields";
 import { liveDom } from "./live-view";
 import { EditorMedia, fileBlock, nextBlankImage, openImageCard, useBodyFile } from "./media-context";
 import { useComposedValue } from "./use-composed-value";
@@ -729,11 +730,20 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	 * Writes into the picture's data as it is when the answer comes, and only while it is still the picture that was asked about: the
 	 * person may have written a caption, resized it or picked another file while the model was at it.
 	 */
-	const setLater = (asked: string, next: Partial<ImageData>) => {
+	const dataNow = () => {
 		const at = getPos();
-		const now = typeof at === "number" ? (editor.state.doc.nodeAt(at)?.attrs.data as ImageData | undefined) : undefined;
-		if (!now || now.media !== asked) return;
+		return typeof at === "number" ? (editor.state.doc.nodeAt(at)?.attrs.data as ImageData | undefined) : undefined;
+	};
+	const setLater = (asked: string, next: Partial<ImageData>) => {
+		const now = dataNow();
+		if (!now || now.media !== asked) return false;
 		updateAttributes({ data: { ...now, ...next } });
+		return true;
+	};
+	/** Puts a fill's words in one of the picture's boxes, and gives how to put back what the box held: nothing when the picture changed meanwhile. */
+	const fillInto = (asked: string, box: "alt" | "caption") => (words: string) => {
+		const before = dataNow()?.[box];
+		return setLater(asked, { [box]: words }) ? () => void setLater(asked, { [box]: before }) : null;
 	};
 	/** What is typed in a box a fill may be on its way to: the late answer is the person's to ask for again, not put over it. */
 	const typed = (place: string) => media?.fill?.forget(place);
@@ -744,15 +754,14 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	const altFill = fill
 		? {
 				state: fill.of(altPlace),
-				onFill: () =>
-					fill.run(altPlace, "alt", fileId ?? "", around(), (value) =>
-						setLater(fileId ?? "", { alt: value.slice(0, ALT_MAX) }),
-					),
-				onStop: () => fill.forget(altPlace),
+				onFill: () => fill.run(altPlace, "alt", fileId ?? "", around(), fillInto(fileId ?? "", "alt")),
+				onStop: () => fill.stop(altPlace),
+				onDiscard: () => fill.discard(altPlace),
 				onRetry: () => fill.again(altPlace),
 			}
 		: undefined;
 	const captionFill = fill?.of(captionPlace);
+	const captionFilled = captionFill !== undefined && caption.value !== "" && captionFill.filled === caption.value;
 	const [inCaption, setInCaption] = useState(false);
 	const captionInput = (
 		<Input
@@ -763,11 +772,17 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 			placeholder={t("editor.image.caption")}
 			readOnly={!editable}
 			// What a fill wrote is blue until it is changed.
-			proposal={captionFill !== undefined && caption.value !== "" && captionFill.filled === caption.value}
+			proposal={captionFilled}
 			value={caption.value}
 			onChange={(event) => {
 				typed(captionPlace);
 				caption.change(event.target.value);
+			}}
+			// Undo takes a fill back as one step, as "Discard" does: the box's own undo knows nothing of words the screen put in.
+			onKeyDown={(event) => {
+				if (!captionFilled || !isUndoKey(event)) return;
+				event.preventDefault();
+				fill?.discard(captionPlace);
 			}}
 			{...caption.composition}
 		/>
@@ -792,16 +807,16 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 					</Box>
 					{/* Empty, "✦ Fill"; with words, "↻ Again", as the alt text's (screens/common.md). */}
 					{/* The button is there only while the caret is in the caption; its work shows until it ends. */}
-					{inCaption || captionFill.working ? (
+					{inCaption || captionFill.working || captionFilled ? (
 						<FillAction
 							state={captionFill}
 							held={caption.value !== ""}
+							filled={captionFilled}
 							onFill={() =>
-								fill.run(captionPlace, "caption", fileId ?? "", around(), (value) =>
-									setLater(fileId ?? "", { caption: value }),
-								)
+								fill.run(captionPlace, "caption", fileId ?? "", around(), fillInto(fileId ?? "", "caption"))
 							}
-							onStop={() => fill.forget(captionPlace)}
+							onStop={() => fill.stop(captionPlace)}
+							onDiscard={() => fill.discard(captionPlace)}
 							// The spot goes when the caret leaves the caption: a key's press that ends the work hands the focus to the caption.
 							after={(spot) => spot.parentElement?.querySelector<HTMLElement>("input")}
 						/>

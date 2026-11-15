@@ -1,9 +1,10 @@
 import type { ProposalView } from "@monti-cms/core";
-import { Button, Count, Inline, Progress, Text } from "@monti-cms/ui";
+import { Button, Count, Inline, Progress, Text, TextButton } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { nextStop, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { type ProposalStanding, standingOf } from "./use-proposal";
+import { clock } from "./words";
 
 /** How long the row's buttons take no press after the row changed: longer than a double press, shorter than a person deciding. */
 const SETTLE_MS = 400;
@@ -13,7 +14,8 @@ const MOVED = new Map<string, { standing: ProposalStanding; at: number }>();
 /**
  * Where a proposal stands and what can be done with all of it, in one row: the card's foot in the conversation and the end of the review page's
  * head are this same row, so the two never say it differently. Waiting: "Review" (on the card), "Discard" and the pill with how many it
- * applies. Being applied: how far. Applied: how many, how many could not be, and "Undo". Then only that it was undone or discarded.
+ * applies. Being applied: how far. Applied: how many, how many could not be, "Undo" as the quiet words after them, and "Review" at the end
+ * (AS-49: the two stood as buttons of one weight). Then only that it was undone, and when, or that it was discarded.
  */
 export function ProposalState({
 	view,
@@ -114,15 +116,16 @@ export function ProposalState({
 						{t("card.failed", { count: counts.failed })}
 					</Text>
 				) : null}
+				{/* Undoing belongs to what was applied: quiet words beside the count, not a button beside "Review". */}
+				{counts.applied > 0 ? (
+					<TextButton variant="underline" quiet size="note" onClick={settled(onRevert)} loading={pending === "revert"}>
+						{pending === "revert" ? t("card.reverting") : t("card.revert")}
+					</TextButton>
+				) : null}
 				<Inline gap={12} align="center" grow justify="end">
 					{onReview ? (
 						<Button variant="ghost" size={size} onClick={settled(onReview)}>
 							{t("card.review")}
-						</Button>
-					) : null}
-					{counts.applied > 0 ? (
-						<Button variant="ghost" size={size} onClick={settled(onRevert)} loading={pending === "revert"}>
-							{pending === "revert" ? t("card.reverting") : t("card.revert")}
 						</Button>
 					) : null}
 				</Inline>
@@ -130,7 +133,11 @@ export function ProposalState({
 		);
 	return row(
 		<Text variant="note" tone="subtle">
-			{t(standing === "reverted" ? "card.reverted" : "card.discarded")}
+			{standing === "reverted"
+				? view.settledAt
+					? t("card.revertedAt", { time: clock(view.settledAt) })
+					: t("card.reverted")
+				: t("card.discarded")}
 		</Text>,
 	);
 }

@@ -26,7 +26,7 @@
 |---|---|---|
 | 대화 | `ChatThread` | 패널 높이를 채우고 입력란 바로 위에서 위로 쌓인다. 간격은 24px이고, 말 아래 줄(`ChatMessageActions`)이 있는 말에서 다음 것까지는 그 줄을 품어 36px다. 보내면 맨 아래가 보이고, 사람이 올려 보는 동안은 새 글이 끌어내리지 않는다. 맨 위에 닿으면 앞의 요청을 더 읽는다(버튼 없음). |
 | 처음 | `ChatThread` 안의 `Stack gap={4}`에 `Suggest kind="request"`(이 화면의 기본 요청), `Suggest kind="recent"`(전에 물은 것 둘) | 누르면 그 말로 묻는다. 묶음 이름은 없다. 반짝이와 시계가 둘을 가른다. 기본 요청은 화면마다 정해져 있다: 목록 "요약이 비어 있는 글 찾아 줘" · "한 달 넘게 안 고친 초안 찾아 줘", 글 "요약 써 줘", 미디어 "쓰지 않는 파일 찾아 줘". |
-| 내 말 | `ChatMessage author="user"`(`context`에 함께 간 것: "이 목록", "이 글 · 고른 글자", 기본 요청으로 보낸 말은 `request`) | 오른쪽의 종이 말풍선. 기본 요청(`Suggest kind="request"`)을 눌러 보낸 말은 보낸 뒤에도 앞에 파란 반짝이가 붙는다([assistant.md](../components/assistant.md)의 "대화"). 서버는 어떻게 보냈는지 적지 않으므로, 이 페이지를 연 동안 기본 요청으로 보낸 말과 같은 말이 그렇다(만들며 정함 (2026-11-14)). |
+| 내 말 | `ChatMessage author="user"`(`context`에 함께 간 것: "이 목록", "이 글 · 고른 글자") | 오른쪽의 종이 말풍선. 기본 요청을 눌러 보냈든 쳐서 보냈든 같다: 반짝이는 시작할 요청 목록에만 있다(소유자, 2026-11-15). |
 | 말 아래 | `ChatMessageActions`(`time`) 안의 `IconButton` "복사", 마지막 말에만 "고쳐서 다시 보내기"(내 말) · "다시 하기"(답) | 시각은 오늘이면 "10:58", 그 전이면 "10. 24 10:58"(활동 기록과 같은 꼴). 다시 연 대화의 날짜 줄은 따로 없다. "고쳐서 다시 보내기"는 그 말을 입력란에 넣고 포커스를 준다. |
 | 답 하나 | `Stack gap={12}` | 도구 줄 묶음, 답의 글, 카드, 오류 답장이 이 순서로 선다. |
 | 도구 줄 | `Stack gap={0}` 안의 `ToolCallLine`(`status` running · done · failed, `details`에 "보낸 값") | 읽기는 "글 목록 읽는 중" → "글 목록 읽음 · 148편", 여럿이면 "글 읽는 중 · 62 / 148". 쓰기는 그 묶음의 이름과 이어진 호출 수("요약 채우기 · 2건"). 화면 도구는 "글 엶" · "목록 거름" · "목록에서 고름 · 2편". 관리자 화면이 말을 모르는 읽기는 "사이트 정보 읽음", 묶음 이름이 없는 쓰기는 "변경"이다(기능 이름을 보이지 않는다). 같은 말이 되는 읽기가 잇달면 한 줄이다("글 읽음"이 두 번 서지 않는다). 끊긴 실행에서 하던 줄은 빨간 ×와 "… · 여기서 멈춤". 사람이 멈춘 실행에서 하던 줄은 사라진다. 줄을 열면 보낸 값만 보인다(결과는 저장하지 않는다). |
@@ -69,7 +69,7 @@
 |---|---|---|
 | 카드 | `ProposalCard`(`title` "제안", `summary` "2묶음 · 3건" 또는 "2건", 버렸으면 `muted`) | 머리에 상태는 없다. 상태는 발 한 줄이 말한다. |
 | 묶음이 여럿 | 공용 `Table container="none"`의 `TableRow`: `RowTitle`(`title` 묶음 이름, 대상이 하나면 `address`에 그 이름), 끝에 `Count` "2건" | 묶음마다 한 줄. |
-| 묶음이 하나 | `TableRow twoLine`: `RowTitle`(`title` 대상, `address` 주소), 아래 `Text variant="note" lines={2}` 안의 `Ins` 새 값 | 처음 셋. 더 있으면 `Text tone="subtle"` "외 N건" 한 줄. 검토 화면의 줄에서 체크만 뺀 같은 줄이다. |
+| 묶음이 하나 | `TableRow twoLine`: `RowTitle`(`title` 대상, `address` 주소), 아래 `Text variant="note" lines={2}` 안에 그 바뀜의 첫 자리: 빠지는 말 `Del`, 들어오는 말 `Ins`(검토 화면의 "한 줄"과 같은 계산, `useChangeWords`). 옛 값이 없으면 새 값만, 본문 바꿈은 블록의 글이다(AS-46, TR-20) | 처음 셋. 더 있으면 `Text tone="subtle"` "외 N건" 한 줄. 검토 화면의 줄에서 체크만 뺀 같은 줄이다. |
 | 못 한 것 | 적용 뒤, `TableRow`: `RowTitle`(`title` 대상, `address` 쓰기가 말한 까닭) | |
 | 발 | 아래 "제안의 상태 한 줄" | `footer`. |
 
@@ -81,8 +81,8 @@
 |---|---|
 | 기다림 | (카드만, 더 볼 것이 있을 때) `Button variant="ghost"` "검토", 끝에 `Button variant="ghost"` "버리기", `Button variant="primary"` "3건 적용". 넣은 줄이 없으면 "0건 적용"이고 눌리지 않는다. 버리기는 묻지 않는다. |
 | 적용 중 | `Text variant="note"` "적용 중", `Count` "2 / 3", `Progress inline` |
-| 적용됨 | `Text variant="note" tone="success"` "✓ 2건 적용", 못 한 것이 있으면 `tone="danger"` "1건 못 함", 끝에 "검토"(카드)와 `Button variant="ghost"` "되돌리기"(카드와 검토 화면이 같다). 되돌리기는 묻지 않는다. |
-| 되돌림 · 버림 | `Text variant="note" tone="subtle"` "되돌림" · "버림" |
+| 적용됨 | `Text variant="note" tone="success"` "✓ 2건 적용", 못 한 것이 있으면 `tone="danger"` "1건 못 함", 그 옆에 `TextButton variant="underline" quiet size="note"` "되돌리기", 끝에 `Button variant="ghost"` "검토"(카드). 카드와 검토 화면이 같다. 되돌리기는 묻지 않는다(AS-49: 둘이 같은 무게의 버튼이었다). |
+| 되돌림 · 버림 | `Text variant="note" tone="subtle"` "되돌림 · 10:58"(되돌린 시각, `settledAt`. AS-50) · "버림" |
 
 "버리기"나 "되돌리기"를 눌렀는데 할 것이 하나도 남아 있지 않았으면(다른 탭이 방금 버렸거나 적용했거나 되돌렸다) 빨간 토스트 한 줄이 그렇게 말하고("기다리는 제안이 없습니다" · "되돌릴 것이 없습니다"), 줄은 제안이 된 대로 보인다(T166, 2026-11-13). 편집기와 패널의 말풍선에서 버릴 때도 같다.
 

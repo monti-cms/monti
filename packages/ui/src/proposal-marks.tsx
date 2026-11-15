@@ -7,7 +7,8 @@ import { cn } from "./cn";
  */
 export const PROPOSAL_MARK_CLASSES = {
 	ins: "rounded-monti-sm bg-monti-proposal-muted box-decoration-clone px-[2px] py-px text-monti-proposal no-underline",
-	del: "text-monti-proposal line-through decoration-[1.5px] opacity-75",
+	// Words put in right after words taken out stand 4px off them: struck and new words ran together as one word (AS-08).
+	del: "text-monti-proposal line-through decoration-[1.5px] opacity-75 [&+ins]:ml-monti-4",
 	current:
 		"relative before:absolute before:top-monti-4 before:bottom-monti-4 before:-left-[18px] before:w-0.5 before:rounded-[2px] before:bg-(--monti-fg-proposal)",
 	anchor: "underline decoration-monti-proposal decoration-dotted decoration-2 underline-offset-[5px]",

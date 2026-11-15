@@ -1,5 +1,6 @@
+import type { Monti } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
-import { requestWith, ScreenContext } from "./context";
+import { requestWith, ScreenContext, systemPrompt } from "./context";
 
 describe("a set request of the editor's buttons (doc 10, item 19)", () => {
 	it("10 T94 'translate' tells the model what the button means, apart from the person's words and the screen's data", () => {
@@ -18,6 +19,8 @@ describe("a set request of the editor's buttons (doc 10, item 19)", () => {
 		expect(said).toContain("`setText` of that block's whole translated text that keeps every tag");
 		// The screen's own part still comes as data, with the blocks that are meant.
 		expect(said).toContain('"blocks":["b_2"]');
+		// A translation's title is empty until it has its own (the source's shows in its place): it is translated too (TR-23).
+		expect(said).toContain("If the entry's title is empty");
 		expect(requestWith("다시 번역", { ...context, task: "retranslate" })).toContain("translate again");
 	});
 
@@ -36,5 +39,23 @@ describe("the language the assistant answers in (doc 10, TR-19)", () => {
 		expect(said.indexOf("Answer in Korean")).toBeLessThan(said.indexOf("<screen"));
 		expect(requestWith("요약 써 줘", null, "en")).toBe("요약 써 줘\n\nAnswer in English, the admin's language.");
 		expect(requestWith("요약 써 줘", null)).toBe("요약 써 줘");
+	});
+});
+
+describe("how the assistant answers (doc 10)", () => {
+	const monti = {
+		operations: new Map(),
+		run: async () => ({ schema: {}, adminValues: {}, locked: false }),
+	} as unknown as Monti;
+
+	it("10 a proposal is taken in its card under the answer: the answer does not send the person to another place to take it", async () => {
+		const rules = await systemPrompt(monti);
+		expect(rules).toContain("Your proposal shows as a card right under your answer");
+		expect(rules).toContain("do not tell the person where to go to review or take it");
+		expect(rules).not.toContain("where they review it");
+	});
+
+	it("10 AS-11 a request on picked words changes those words as asked and adds nothing of its own", async () => {
+		expect(await systemPrompt(monti)).toContain("add no words or sentences of your own");
 	});
 });

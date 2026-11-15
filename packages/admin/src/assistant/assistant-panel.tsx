@@ -136,9 +136,9 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 		put();
 		requestAnimationFrame(() => box.current?.querySelector("textarea")?.focus());
 	};
-	const send = (words: string, suggested?: boolean) => {
+	const send = (words: string) => {
 		assistant.setDraft("");
-		assistant.ask(words, suggested);
+		assistant.ask(words);
 	};
 	const copy = async (text: string) => {
 		await navigator.clipboard.writeText(text);
@@ -331,11 +331,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 			.join("\n\n");
 		return (
 			<Stack key={turn.id} gap={24} minWidth={0}>
-				<ChatMessage
-					author="user"
-					request={turn.suggested}
-					context={turn.chips.length > 0 ? turn.chips.join(" · ") : undefined}
-				>
+				<ChatMessage author="user" context={turn.chips.length > 0 ? turn.chips.join(" · ") : undefined}>
 					{turn.request}
 				</ChatMessage>
 				<ChatMessageActions author="user" time={clock(turn.at)}>
@@ -529,7 +525,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 					{assistant.loading && turns.length === 0 ? null : turns.length === 0 ? (
 						<Stack gap={4} minWidth={0}>
 							{starts.map((words) => (
-								<Suggest key={words} kind="request" onClick={() => send(t(words), true)}>
+								<Suggest key={words} kind="request" onClick={() => send(t(words))}>
 									{t(words)}
 								</Suggest>
 							))}

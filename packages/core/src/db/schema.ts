@@ -87,6 +87,8 @@ export interface ProposalTable {
 	/** Which apply holds it: an apply whose hold ran out and was taken by another finds another name here, and stops. */
 	applying_token: string | null;
 	created_at: Generated<Date>;
+	/** When it last moved to where it stands (applied, put back, thrown away): `null` while it waits. */
+	settled_at: Date | null;
 }
 
 /**

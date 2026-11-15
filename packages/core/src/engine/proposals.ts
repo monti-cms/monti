@@ -728,7 +728,18 @@ export async function settleProposal(db: Db, proposalId: string): Promise<void> 
 					: only("applied", "discarded")
 						? "applied"
 						: "partial";
-		await trx.updateTable("monti_proposal").set({ status }).where("id", "=", proposalId).execute();
+		// The moment it moves on is kept; reading it again where it already stands keeps the moment it got there.
+		await trx
+			.updateTable("monti_proposal")
+			.set((eb) => ({
+				status,
+				settled_at:
+					status === "pending"
+						? null
+						: eb.case().when("status", "=", status).then(eb.ref("settled_at")).else(new Date()).end(),
+			}))
+			.where("id", "=", proposalId)
+			.execute();
 	};
 	if (db.isTransaction) await settle(db);
 	else await db.transaction().execute(settle);
@@ -1015,6 +1026,8 @@ export type ProposalView = {
 	request: string;
 	status: Selectable<ProposalTable>["status"];
 	createdAt: Date;
+	/** When it last moved to where it stands (applied, put back, thrown away): the card says when it was put back. `null` while it waits. */
+	settledAt: Date | null;
 	/** An apply is going on it right now. */
 	applying: boolean;
 	items: ProposalItemView[];
@@ -1097,6 +1110,7 @@ export async function viewProposal(
 		request: proposal.request,
 		status: proposal.status,
 		createdAt: proposal.created_at,
+		settledAt: proposal.settled_at,
 		applying: proposal.applying_until !== null && proposal.applying_until > engine.now(),
 		items: views,
 		groups,

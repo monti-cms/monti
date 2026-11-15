@@ -76,12 +76,14 @@ import { useLeaveFiles, useLeaveGuard, useUploadsGoing } from "../../draft/leave
 import { ALT_MAX } from "../../editor/alt-fields";
 import { BodyEditor } from "../../editor/body-editor";
 import { CodeLinkBanner } from "../../editor/code/code-links";
+import { liveDom } from "../../editor/live-view";
 import { openImageCard, type PictureFill } from "../../editor/media-context";
 import { ProposalMargin, proposalMarks, requestMarks, staleMarks } from "../../editor/proposal-margin";
 import {
 	anchorBlock,
 	drawable,
 	findBlock,
+	PROPOSAL_ITEM,
 	scrollToProposal,
 	staleProposals,
 	takeInEditor,
@@ -263,13 +265,17 @@ export function EntryEditor({
 	const runFill = fills?.run;
 	const fillOf = fills?.of;
 	const forgetFill = fills?.forget;
+	const stopFill = fills?.stop;
+	const discardFill = fills?.discard;
 	const fillAgain = fills?.again;
 	const pictureFill = useMemo<PictureFill | undefined>(
 		() =>
-			runFill && fillOf && forgetFill && fillAgain
+			runFill && fillOf && forgetFill && stopFill && discardFill && fillAgain
 				? {
 						of: fillOf,
 						forget: forgetFill,
+						stop: stopFill,
+						discard: discardFill,
 						again: fillAgain,
 						run: (place, task, file, around, put) =>
 							void runFill(
@@ -282,14 +288,15 @@ export function EntryEditor({
 									image: { media: file, ...around },
 								},
 								(answer) => {
-									const words = "value" in answer ? answer.value : "";
-									put(words);
-									return task === "alt" ? words.slice(0, ALT_MAX) : words;
+									const said = "value" in answer ? answer.value : "";
+									const words = task === "alt" ? said.slice(0, ALT_MAX) : said;
+									const back = put(words);
+									return back ? { value: words, back } : null;
 								},
 							),
 					}
 				: undefined,
-		[runFill, fillOf, forgetFill, fillAgain, collection],
+		[runFill, fillOf, forgetFill, stopFill, discardFill, fillAgain, collection],
 	);
 	// What goes along with a request to the assistant from here (doc 10, context): this entry as it was read, and what is not saved yet.
 	const unsavedNow = editor.draft.changes;
@@ -507,8 +514,8 @@ export function EntryEditor({
 		// A change the text moved away from cannot go in as it is: its card has the two ways out.
 		if (walked.kind === "stale") return show(walked);
 		if (!body.current || !catalogs) return;
+		// The take is one step of the body's history, "taken" included: the editor tells the draft (`onTaken`).
 		takeInEditor(body.current, walked.item, catalogs.kit);
-		editor.takeBody(walked.id);
 	};
 	const takeAll = () => {
 		for (const walked of walk) if (walked.kind !== "stale") take(walked);
@@ -655,6 +662,22 @@ export function EntryEditor({
 				return block === null ? [] : [{ item, block }];
 			})
 		: [];
+	// Pressing a change drawn over the text opens its card, with its own "discard" and "take" (AS-12): the mark in the margin and the bar
+	// at the foot were the only ways to one change. The press still puts the caret where it landed.
+	const cardOfPress = useRef<(id: string) => void>(() => {});
+	cardOfPress.current = (id) => {
+		if (liveMarks.some(({ item }) => item.id === id) && staleOpen !== id) openCard(id);
+	};
+	useEffect(() => {
+		const dom = bodyEditor ? liveDom(bodyEditor) : null;
+		if (!dom) return;
+		const pressed = (event: MouseEvent) => {
+			const id = (event.target as Element | null)?.closest(`[${PROPOSAL_ITEM}]`)?.getAttribute(PROPOSAL_ITEM);
+			if (id) cardOfPress.current(id);
+		};
+		dom.addEventListener("click", pressed);
+		return () => dom.removeEventListener("click", pressed);
+	}, [bodyEditor]);
 	const marks = [
 		...staleMarks({
 			t,
@@ -982,7 +1005,7 @@ export function EntryEditor({
 				proposals={{
 					items: editor.bodyProposals,
 					current: walking?.kind === "body" ? walking.id : null,
-					onTaken: editor.takeBody,
+					onTaken: editor.bodyTaken,
 				}}
 				translation={
 					translation.isTranslation && !readOnly

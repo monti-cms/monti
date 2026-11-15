@@ -70,7 +70,7 @@
 
 `Spark`는 어시스턴트의 유일한 ✦ 표시다. Carbon 아이콘 같은 아이콘이라 닫혀 있지 않다. `icon`이 들어가는 자리에 들어가고(`icon={Spark}`, 버튼이나 메뉴 항목의 아이콘), 크기는 부모가 정한다. `currentColor`로 채워지므로 곁의 글자를 따른다(제안에서는 제안 파랑, 버튼에서는 버튼의 잉크). 장식이다. 무슨 뜻인지는 곁의 말이 알린다. 무언가를 어시스턴트의 것으로 표시하는 곳은 모두 이것을 쓰며, 아이콘 세트의 sparkles 아이콘은 쓰지 않는다.
 
-관리자 화면의 `FillAction`(`assistant/fill-action.tsx`)이 그린다: `TextButton tone="proposal" size="caption"`에 `Spark`와 "채우기"(값이 있으면 `Renew`와 "다시")를 넣고, 일하는 동안은 그 자리에 `AiWorking size="caption"`를 둔다. 실패 줄은 `FillFailed`(`AiFailed`)다. 칸의 채우기, 사진의 대체 텍스트와 캡션, 미디어 필드가 모두 이 둘을 쓴다. `FormFieldLabel action`에 들어가고, `FormField` 안에서는 포인터나 키보드가 있는 필드에서만 보인다(`data-tone="proposal"`).
+관리자 화면의 `FillAction`(`assistant/fill-action.tsx`)이 그린다: `TextButton tone="proposal" size="caption"`에 `Spark`와 "채우기"(값이 있으면 `Renew`와 "다시")를 넣고, 일하는 동안은 그 자리에 `AiWorking size="caption"`를 둔다. 실패 줄은 `FillFailed`(`AiFailed`)다. 칸의 채우기, 사진의 대체 텍스트와 캡션, 미디어 필드가 모두 이 둘을 쓴다. 채운 값이 칸에 있는 동안 줄은 "버리기 · ↻ 다시"다: 앞에 `TextButton variant="underline" quiet size="caption"` "버리기"(첫 채우기 전의 값으로 돌린다. 그 칸의 ⌘Z도 같다), 가운데 점. `FormFieldLabel action`에 들어가고 늘 보인다(만들며 정함 (2026-11-15), AS-27).
 
 ## AI가 만든 상태
 

@@ -10,14 +10,14 @@ import { Label } from "./label";
 import { Option } from "./option";
 import { Del } from "./proposal-marks";
 import { Spark } from "./spark";
-import { Stack } from "./stack";
+import { Inline, Stack } from "./stack";
 import { Text } from "./text";
 import { TextButton } from "./text-button";
 import { Textarea } from "./textarea";
 
 /**
  * A field is a label in mono 11 above its control and, only when something is wrong, one line of error below. The assistant's fill action
- * sits on the label row and shows while the pointer or keyboard is in the field.
+ * sits on the label row and always shows.
  */
 const meta = {
 	title: "Controls/Field/Field",
@@ -98,22 +98,44 @@ export const ReservedError: Story = {
 function WithFill({ initial, focus = false }: { initial: string; focus?: boolean }) {
 	const [value, setValue] = useState(initial);
 	const [proposal, setProposal] = useState(false);
+	const [before, setBefore] = useState(initial);
 	return (
 		<FormField>
 			<FormFieldLabel
 				htmlFor={`alt-${focus}`}
 				action={
-					<TextButton
-						tone="proposal"
-						size="caption"
-						onClick={() => {
-							setValue("책상 위의 아침 햇살");
-							setProposal(true);
-						}}
-					>
-						{value === "" ? <Spark /> : <Renew />}
-						{value === "" ? "채우기" : "다시"}
-					</TextButton>
+					<Inline as="span" gap={6} align="baseline">
+						{proposal ? (
+							<>
+								<TextButton
+									variant="underline"
+									quiet
+									size="caption"
+									onClick={() => {
+										setValue(before);
+										setProposal(false);
+									}}
+								>
+									버리기
+								</TextButton>
+								<Text as="span" variant="caption" tone="subtle" aria-hidden="true">
+									·
+								</Text>
+							</>
+						) : null}
+						<TextButton
+							tone="proposal"
+							size="caption"
+							onClick={() => {
+								if (!proposal) setBefore(value);
+								setValue("책상 위의 아침 햇살");
+								setProposal(true);
+							}}
+						>
+							{value === "" ? <Spark /> : <Renew />}
+							{value === "" ? "채우기" : "다시"}
+						</TextButton>
+					</Inline>
 				}
 			>
 				대체 텍스트
@@ -133,8 +155,8 @@ function WithFill({ initial, focus = false }: { initial: string; focus?: boolean
 }
 
 /**
- * The fill action: "✦ 채우기" while the field is empty, "↻ 다시" once it has a value. Hover or focus the field to show it. What the assistant
- * filled is a proposal (blue) until it is edited.
+ * The fill action: "✦ 채우기" while the field is empty, "↻ 다시" once it has a value. It always shows. What the assistant filled is a proposal
+ * (blue) until it is edited, and the line is "버리기 · 다시": "버리기" puts back what the field had before the fill.
  */
 export const FillAction: Story = {
 	render: () => (

@@ -202,7 +202,12 @@ export async function quickFill(
 	if (field.kind !== "text") throw new CheckError({ key: "assistant.noField" });
 	const limit = field.max ? ` At most ${field.max} characters.` : "";
 	const value = answerOf(
-		await ask(`Write ${named} of this entry.${field.multiline ? "" : " One line."}${limit}\n\n${about}`, VALUE),
+		await ask(
+			// What the field is for, as its name and description say: not a summary of the body, and nothing another field already says
+			// (a subtitle that listed the headings the summary had listed, AS-32).
+			`Write ${named} of this entry: only what this field is for, as its name and description say, and nothing the entry's other fields already say.${field.multiline ? "" : " One short line, no list."}${limit}\n\n${about}`,
+			VALUE,
+		),
 	);
 	return { value: field.max ? value.slice(0, field.max) : value };
 }

@@ -137,6 +137,7 @@ export function ProposalMemo({
 	anchor,
 	open,
 	onClose,
+	name,
 	request,
 	thread,
 	asked,
@@ -150,6 +151,11 @@ export function ProposalMemo({
 	anchor: () => Element | null;
 	open: boolean;
 	onClose: () => void;
+	/**
+	 * The name the assistant gave the change ("Smooth the sentence"), at the head's start: what the change is, with its words drawn in the
+	 * text right above (AS-15: a head with nothing at its start read as empty).
+	 */
+	name?: string;
 	/** The request the change came from. */
 	request: string;
 	/** What was asked of it at its place since, with the answers. */
@@ -170,6 +176,7 @@ export function ProposalMemo({
 			onOpenChange={(next) => {
 				if (!next) onClose();
 			}}
+			where={name || undefined}
 			{...(working
 				? {}
 				: {

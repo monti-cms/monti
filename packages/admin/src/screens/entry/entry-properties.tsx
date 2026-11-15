@@ -47,7 +47,7 @@ import {
 import { Close, Renew } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
 import { FillAction, FillFailed } from "../../assistant/fill-action";
-import type { Fills } from "../../assistant/use-fill";
+import { type Fills, isUndoKey } from "../../assistant/use-fill";
 import { ALT_MAX } from "../../editor/alt-fields";
 import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
@@ -687,8 +687,10 @@ export function EntryProperties({
 				<FillAction
 					state={fillState}
 					held={hasValue(held)}
+					filled={filledNow}
 					name={name}
-					onStop={() => fills.forget(path)}
+					onStop={() => fills.stop(path)}
+					onDiscard={() => fills.discard(path)}
 					onFill={() =>
 						void fills.run(
 							path,
@@ -707,7 +709,8 @@ export function EntryProperties({
 											? answer.values
 											: (answer.values[0] ?? null);
 								editor.set(path, next);
-								return next;
+								// What the field held the moment before, as the press found it: had it been changed by hand since, no answer is put.
+								return { value: next, back: () => editor.set(path, held ?? null) };
 							},
 						)
 					}
@@ -836,6 +839,8 @@ export function EntryProperties({
 							? {
 									state: fills.of(`alt:${path}`),
 									forget: () => fills.forget(`alt:${path}`),
+									stop: () => fills.stop(`alt:${path}`),
+									discard: () => fills.discard(`alt:${path}`),
 									again: () => fills.again(`alt:${path}`),
 									run: (file, put) =>
 										void fills.run(
@@ -848,9 +853,9 @@ export function EntryProperties({
 												image: { media: file },
 											},
 											(answer) => {
-												const words = "value" in answer ? answer.value : "";
-												put(words);
-												return words.slice(0, ALT_MAX);
+												const words = ("value" in answer ? answer.value : "").slice(0, ALT_MAX);
+												const back = put(words);
+												return back ? { value: words, back } : null;
 											},
 										),
 								}
@@ -1044,7 +1049,20 @@ export function EntryProperties({
 			return null;
 		};
 		return (
-			<FormField key={key}>
+			<FormField
+				key={key}
+				// Undo in a field a fill wrote takes the fill back as one step, as "Discard" does (AS-30): the browser's own undo knows
+				// nothing of a value put in by the screen.
+				onKeyDown={
+					filledNow && fills
+						? (event) => {
+								if (!isUndoKey(event)) return;
+								event.preventDefault();
+								fills.discard(path);
+							}
+						: undefined
+				}
+			>
 				<FormFieldLabel
 					htmlFor={id}
 					required={marksRequired && required(key)}

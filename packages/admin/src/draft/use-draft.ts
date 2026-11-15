@@ -8,11 +8,13 @@ import { type ProposalItem, type Target, useProposals } from "./use-proposals";
 /** A place in a draft: `site.previewPath`, `values.summary`, `fields.summary.label`. A screen flattens what it edits into paths. */
 export type Path = string;
 
-/** What one place shows (doc 05): as saved, changed by me (orange dot), filled by ✦ (blue until touched), or proposed by the assistant (blue pencil). */
+/**
+ * What one place shows (doc 05): as saved, changed by me (orange dot), or proposed by the assistant (blue pencil). A value a "✦ fill" put in is
+ * mine; the screen's fills draw it blue while it is the fill's (`useFills`).
+ */
 export type CellState =
 	| { kind: "same" }
 	| { kind: "mine"; before: unknown }
-	| { kind: "quickFilled" }
 	| { kind: "proposed"; item: ProposalItem; value: unknown };
 
 export type Change = { path: Path; before: unknown; after: unknown };
@@ -150,8 +152,15 @@ export function useDraft({
 			undoDrop.current = null;
 		}
 	}, []);
-	const [quick, setQuick] = useState<Set<Path>>(new Set());
-	const [accepted, setAccepted] = useState<string[]>([]);
+	// The items this draft took itself (a field's proposal), and the body proposals the body editor's own history holds as taken: an undo
+	// there takes the words and the "taken" back together (AS-19), so the body's are read from it, never kept here.
+	const [taken, setAccepted] = useState<string[]>([]);
+	const [bodyTaken, setBodyTaken] = useState<readonly string[]>([]);
+	// Only items still waiting count: once a save has applied one, the body's history may still name it.
+	const accepted = useMemo(() => {
+		const waiting = new Set(proposals.items.map((item) => item.id));
+		return [...taken, ...bodyTaken.filter((id) => waiting.has(id) && !taken.includes(id))];
+	}, [taken, bodyTaken, proposals.items]);
 	const acceptedNow = useRef(accepted);
 	acceptedNow.current = accepted;
 	const [restoredFor, setRestoredFor] = useState<number | string | null>(null);
@@ -165,8 +174,8 @@ export function useDraft({
 	if (heldFor !== key) {
 		setHeldFor(key);
 		setMine(new Map());
-		setQuick(new Set());
 		setAccepted([]);
+		setBodyTaken([]);
 		setRestoredFor(null);
 		setOffered(null);
 		asked.current = false;
@@ -231,13 +240,12 @@ export function useDraft({
 
 	const cell = useCallback(
 		(path: Path): CellState => {
-			if (quick.has(path)) return { kind: "quickFilled" };
 			if (mine.has(path)) return { kind: "mine", before: saved(path) };
 			// A proposal is drawn against the value the screen shows, not the saved one (doc 05, agent).
 			const proposed = pending.find(({ values }) => path in values && !sameValue(values[path], value(path)));
 			return proposed ? { kind: "proposed", item: proposed.item, value: proposed.values[path] } : { kind: "same" };
 		},
-		[quick, mine, pending, saved, value],
+		[mine, pending, saved, value],
 	);
 
 	const put = useCallback(
@@ -267,24 +275,9 @@ export function useDraft({
 		(path: Path, next: unknown) => {
 			const state = cell(path);
 			if (state.kind === "proposed") take(state.item);
-			setQuick((current) => {
-				if (!current.has(path)) return current;
-				const copy = new Set(current);
-				copy.delete(path);
-				return copy;
-			});
 			put(path, next);
 		},
 		[cell, take, put],
-	);
-
-	/** The ✦ fill button: the value goes straight in, blue until a person touches the place or it is saved. */
-	const quickFill = useCallback(
-		(path: Path, next: unknown) => {
-			put(path, next);
-			setQuick((current) => new Set(current).add(path));
-		},
-		[put],
 	);
 
 	const revert = useCallback(
@@ -293,18 +286,12 @@ export function useDraft({
 			nextMine.delete(path);
 			setMine(nextMine);
 			setAccepted((ids) => acceptedAfterRevert(ids, proposals.items, proposalValues, path, nextMine));
-			setQuick((current) => {
-				const copy = new Set(current);
-				copy.delete(path);
-				return copy;
-			});
 		},
 		[setMine, proposals.items, proposalValues],
 	);
 
 	const revertAll = useCallback(() => {
 		setMine(new Map());
-		setQuick(new Set());
 		setAccepted([]);
 		// The browser's copy goes now, not when the screen draws again: leaving without saving moves away at once, and a screen gone draws nothing
 		// more, so the copy came back the next time it opened (PP-01). A copy still offered is not this one, and waits for its own answer.
@@ -341,7 +328,6 @@ export function useDraft({
 		value,
 		cell,
 		set,
-		quickFill,
 		revert,
 		revertAll,
 		changes,
@@ -369,10 +355,10 @@ export function useDraft({
 		},
 		discardDrawn: () => discard(drawn.map(({ item }) => item.id)),
 		/**
-		 * Counts an item as taken whose change the screen put in itself (the body editor applies a body proposal's block operations to its own text).
-		 * The save sends it with the others.
+		 * The body proposals the body editor holds as taken, as its history has them now (a take is one step with its words, and undo takes both
+		 * back). The save sends them with the others.
 		 */
-		markTaken: (id: string) => setAccepted((current) => (current.includes(id) ? current : [...current, id])),
+		setBodyTaken,
 		/** The items taken into this draft: the save sends them (`accepted`), and the server marks them applied with it. */
 		accepted,
 		/** Changes this browser kept from an earlier visit, waiting to be loaded or dropped (`restore: "ask"`). */
@@ -437,7 +423,6 @@ export function useDraft({
 			// Nothing left: the browser's copy goes now. A new record's screen moves to the saved record in the same step, and the copy left
 			// under the new one's key came back in the next new form.
 			if (left.size === 0 && !offeredNow.current) forget(target);
-			setQuick((current) => new Set([...current].filter((path) => left.has(path))));
 			// The items that went with the save stay counted as taken until the proposals are read again: let go before, each would be
 			// pending once more for a moment, over a screen that already holds its change (a body change would hang as "changed in the
 			// meantime" beside the words it just put in).

@@ -182,6 +182,7 @@ export function useEntryEditor(
 				.map(({ item }) => ({
 					id: item.id,
 					request: item.request,
+					group: item.group,
 					conversationId: item.conversationId,
 					ops: (item.input as { ops: BodyOp[] }).ops,
 					was: item.preview?.was,
@@ -424,8 +425,8 @@ export function useEntryEditor(
 		bodyKey,
 		bodyProposals,
 		fieldProposals,
-		/** A body proposal the body editor put in: counted as taken, and sent with the next save. */
-		takeBody: draft.markTaken,
+		/** The body proposals the body editor's history holds as taken: counted as taken, and sent with the next save. */
+		bodyTaken: draft.setBodyTaken,
 		discardProposal: draft.discard,
 		discardProposals: draft.discardAll,
 	};

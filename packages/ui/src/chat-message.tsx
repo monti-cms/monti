@@ -1,7 +1,6 @@
 import { cva } from "class-variance-authority";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
-import { Spark } from "./spark";
 
 const chatMessageVariants = cva("min-w-0 text-monti-body whitespace-pre-wrap break-words", {
 	variants: {
@@ -21,13 +20,12 @@ const chatMessageVariants = cva("min-w-0 text-monti-body whitespace-pre-wrap bre
 /**
  * One message of a conversation: what the admin asked (`user`, a bubble at the right) or what the assistant answered (`assistant`, plain text, `streaming`
  * while it is still being written). Put them in a column; the bubble moves to the right edge of it. A message of the admin can say what it was about
- * (`context`, "2 picked" in mono 11 over the words) or be a default request they pressed (`request`, a blue spark before the words).
+ * (`context`, "2 picked" over the words). How the words were sent (typed, or a screen's default request pressed) is not marked: the words say it.
  */
 export function ChatMessage({
 	author = "assistant",
 	streaming,
 	context,
-	request = false,
 	className,
 	children,
 	...props
@@ -36,8 +34,6 @@ export function ChatMessage({
 	streaming?: boolean;
 	/** What the admin's message was about, over its words: the rows they had picked. */
 	context?: ReactNode;
-	/** The admin pressed a default request: a blue spark before the words. */
-	request?: boolean;
 }) {
 	return (
 		<div
@@ -52,17 +48,7 @@ export function ChatMessage({
 			{...props}
 		>
 			{context !== undefined && <span className="text-monti-micro text-monti-subtle">{context}</span>}
-			{/* The spark stays on the words' line, under the context line when there is one. */}
-			{request ? (
-				<span className="flex items-center gap-monti-6">
-					<Spark className="size-[13px] shrink-0 text-monti-proposal" />
-					<span>{children}</span>
-				</span>
-			) : context !== undefined ? (
-				<span>{children}</span>
-			) : (
-				children
-			)}
+			{context !== undefined ? <span>{children}</span> : children}
 		</div>
 	);
 }
