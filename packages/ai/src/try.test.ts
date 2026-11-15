@@ -29,8 +29,8 @@ describe("the thinking level a model is asked for (AS-01)", () => {
 		const some: Model = { id: "m", thinking: true, images: false, levels: ["off", "low", "high"] };
 		expect(levelFor(some, "medium")).toBe("high");
 		expect(levelFor({ ...some, levels: ["off", "low"] }, "medium")).toBe("low");
-		expect(levelFor({ id: "any", thinking: true, images: false }, "off")).toBe("off");
-		expect(levelFor({ id: "plain", thinking: false, images: false }, "high")).toBe("off");
+		expect(levelFor({ thinking: true }, "off")).toBe("off");
+		expect(levelFor({ thinking: false }, "high")).toBe("off");
 		expect(levelFor(undefined, "high")).toBe("off");
 	});
 });
