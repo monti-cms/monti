@@ -295,6 +295,19 @@ describe("what a check hands on", () => {
 			ok: false,
 			reason: "unreachable",
 		});
+		// The model an alias stands for goes to the browser too.
+		const alias: KeyService = {
+			id: "alias",
+			name: "Alias",
+			check: async ({ secret }) => ({
+				ok: true,
+				models: [{ id: "~m", aliasOf: `m-${secret}`, thinking: false, images: false }],
+			}),
+		};
+		expect(await checkKey(alias, { secret: KEY, baseUrl: null }, globalThis.fetch)).toEqual({
+			ok: false,
+			reason: "unreachable",
+		});
 		const shapeless: KeyService = {
 			id: "shapeless",
 			name: "Shapeless",

@@ -497,7 +497,7 @@ export async function checkKey(
 		// Only a key long enough to be one: "x" or "ollama" in front of a local server would be found in any model's name.
 		if (
 			secret.length >= KEY_LENGTH_THAT_MATTERS &&
-			models.some((model) => model.id.includes(secret) || model.label?.includes(secret))
+			models.some((model) => [model.id, model.label, model.aliasOf].some((text) => text?.includes(secret)))
 		)
 			return UNREACHABLE;
 		const credit = plainCredit(checked.credit);

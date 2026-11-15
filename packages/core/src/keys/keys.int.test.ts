@@ -6,7 +6,7 @@ import { sql, testDatabase } from "../__test__/database";
 import type { Database } from "../db/schema";
 import { runCli } from "../entry/cli";
 import { agentTools, callAgentTool } from "../entry/tools";
-import { CheckError, ForbiddenError, UnknownOperationError } from "../errors";
+import { CheckError, ConflictError, ForbiddenError, UnknownOperationError } from "../errors";
 import { createMonti, definePlugin, type MontiOptions } from "../monti";
 import { type KeyList, MODELS_RETRY_MS, type ModelList } from "./operations";
 import type { KeyService } from "./services";
@@ -449,6 +449,27 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 				],
 			}),
 		).toThrow(/Two plugins try models/);
+	});
+
+	it("14-1 a key changed while its model was being tried is not picked with that trial", async () => {
+		let during: (() => Promise<unknown>) | null = null;
+		const monti = site({
+			plugins: [
+				definePlugin({
+					name: "trier",
+					tryModel: async () => {
+						await during?.();
+					},
+				}),
+			],
+		});
+		const { output } = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		// Another person renames the key while the model answers.
+		during = () => monti.run("keys.update", { id: output.id, name: "Renamed" }, admin);
+		expect(
+			await refusedFor(monti.run("models.choose", { for: "quick", keyId: output.id, model: "claude-opus-5-5" }, admin)),
+		).toBeInstanceOf(ConflictError);
+		expect((await models(monti)).quick).toMatchObject({ model: "claude-haiku-5-5", chosen: false });
 	});
 
 	it("14-1 [ST-28] what an OpenRouter key's account spent this month and has left is on its row, as its service said with the models", async () => {

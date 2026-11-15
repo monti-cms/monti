@@ -666,12 +666,20 @@ export const keyOperations = [
 				await ctx.site.tryModel({ for: input.for, key: open, model });
 			}
 			// How long the answer took: the screen says it, so a slow model is seen as one when it is picked (AS-42).
-			return { ms: Date.now() - started };
+			return { ms: Date.now() - started, version: key.version };
 		},
 		async run(input, ctx, tried) {
-			// The key may have gone while the model answered: the choice goes with its key, so there is nothing to write it to.
-			const key = await ctx.db.selectFrom("api_keys").select("id").where("id", "=", input.keyId).executeTakeFirst();
+			// The key may have gone, or been changed (another key, another address), while the model answered: the choice goes with its key, and
+			// a trial of the old key says nothing of the new one. Held to the end of the write, so it cannot change before the choice is in.
+			const key = await ctx.db
+				.selectFrom("api_keys")
+				.select(["id", "version"])
+				.where("id", "=", input.keyId)
+				.forUpdate()
+				.executeTakeFirst();
 			if (!key) throw new CheckError({ key: "models.unknown" });
+			if (key.version !== tried.version)
+				throw new ConflictError([{ ref: { kind: "key", id: key.id }, expected: tried.version, actual: key.version }]);
 			await ctx.db
 				.insertInto("model_choices")
 				.values({ role: input.for, key_id: input.keyId, model: input.model })
