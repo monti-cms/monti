@@ -7,8 +7,8 @@ import {
 	storedFields,
 } from "@monti-cms/core";
 import { z } from "zod";
+import { failed, failureOf } from "./failure";
 import { ProviderError, type ProviderFor } from "./provider";
-import { withoutKey } from "./run";
 
 /**
  * A quick task (doc 10, quick tasks): one field filled by one call of the quick-task model, with an answer in a fixed shape. No loop, no tools, no
@@ -72,9 +72,9 @@ export async function quickFill(
 	const collection = monti.site.schema().collections[input.collection];
 	if (!collection) throw new CheckError({ key: "collections.unknown", values: { collection: input.collection } });
 	const listed = (await monti.run("models.list", {}, { actor: "admin" })) as ModelList;
-	if (!listed.quick) throw new CheckError({ key: "assistant.noKey" });
+	if (!listed.quick) throw failed({ reason: "noKey", keyName: null });
 	const key = await monti.keys.open(listed.quick.keyId);
-	if (!key) throw new CheckError({ key: "assistant.noKey" });
+	if (!key) throw failed({ reason: "noKey", keyName: null });
 	const model = listed.keys.find((each) => each.id === key.id)?.models.find((each) => each.id === listed.quick?.model);
 	const provider = providerFor(key);
 	const style = await writingStyleOf(monti);
@@ -92,10 +92,10 @@ export async function quickFill(
 		// A service that never answers does not hold the field for ever: the call is ended at the deadline, and the field says it got no answer.
 		const deadline = new AbortController();
 		let timer: ReturnType<typeof setTimeout> | undefined;
-		const late = new Promise<never>((_resolve, reject) => {
+		const late = new Promise<"late">((resolve) => {
 			timer = setTimeout(() => {
 				deadline.abort();
-				reject(new ProviderError("unreachable", `No answer in ${Math.round(answerMs / 1000)} seconds.`));
+				resolve("late");
 			}, answerMs);
 		});
 		const asked = provider.answer({
@@ -111,14 +111,13 @@ export async function quickFill(
 		const answered = await Promise.race([asked, late])
 			.finally(() => clearTimeout(timer))
 			.catch((error: unknown) => {
-				if (!(error instanceof ProviderError)) throw error;
-				// The service said no or did not answer: the field's own line says which key and, for a refusal, the service's words.
-				throw new CheckError(
-					error.kind === "refused"
-						? { key: "assistant.refused", values: { name: key.name, detail: withoutKey(error.detail, key.secret) } }
-						: { key: "assistant.unreachable", values: { name: key.name } },
-				);
+				// The deadline ended the call: whatever the call failed with then (a service that stops when asked to), it is the deadline.
+				if (deadline.signal.aborted) throw failed({ reason: "timeout", keyName: key.name });
+				// The service said no or did not answer: the field's own line says which, and which key. Its words are not sent on.
+				if (error instanceof ProviderError) throw failed(failureOf(error, key.name));
+				throw error;
 			});
+		if (answered === "late") throw failed({ reason: "timeout", keyName: key.name });
 		await monti.keys.addUsage(key.id, answered.usage.input + answered.usage.output);
 		return answered.value;
 	};
@@ -134,9 +133,9 @@ export async function quickFill(
 	}
 
 	if (input.task === "alt" || input.task === "caption") {
-		if (!input.image) throw new CheckError({ key: "assistant.noPicture" });
+		if (!input.image) throw failed({ reason: "noPicture", keyName: key.name });
 		// A model that does not read pictures does not guess at one (doc 10, models).
-		if (!model?.images) throw new CheckError({ key: "assistant.noImages" });
+		if (!model?.images) throw failed({ reason: "noImages", keyName: key.name });
 		const file = await monti.db
 			.selectFrom("media")
 			.select(["kind", "mime", "original_key", "web_key"])
@@ -144,7 +143,7 @@ export async function quickFill(
 			.where("trashed_at", "is", null)
 			.executeTakeFirst();
 		const stored = file?.kind === "image" ? await monti.site.storage?.read(file.web_key ?? file.original_key) : null;
-		if (!file || !stored) throw new CheckError({ key: "assistant.noPicture" });
+		if (!file || !stored) throw failed({ reason: "noPicture", keyName: key.name });
 		const around = [
 			input.image.before ? `Text before the picture: ${input.image.before}` : null,
 			input.image.after ? `Text after the picture: ${input.image.after}` : null,

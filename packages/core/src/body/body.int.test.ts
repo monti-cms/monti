@@ -337,7 +337,7 @@ describe("one check", () => {
 		const { preview } = await monti.proposals.add(proposalId, "body.edit", {
 			id,
 			version: await version(id),
-			ops: [{ op: "replaceText", block: "b_1", from: 6, to: 11, text: "there" }],
+			ops: [{ op: "setText", block: "b_1", text: "Hello there" }],
 		});
 		expect(preview?.changes).toEqual([{ kind: "entry", id }]);
 		// The words it was made on stay with the item: the screen that draws it reads them after the text has moved on.
@@ -375,7 +375,7 @@ describe("block ids", () => {
 					blocks: [{ type: "quote", children: [{ type: "paragraph", content: [{ type: "text", text: "Q" }] }] }],
 				},
 				{ op: "move", block: "b_1", after: "b_2" },
-				{ op: "replaceText", block: "b_2", from: 1, to: 6, text: "OLD" },
+				{ op: "setText", block: "b_2", text: "<bold>BOLD</bold>ail" },
 			],
 		});
 		const body = (await get(id)).entry.doc as Doc;
@@ -412,7 +412,7 @@ describe("block ids", () => {
 		expect(places.map((place) => place.place)).toEqual(["doc.b_1", "doc.b_4", "doc.b_3", "doc.order"]);
 	});
 
-	it("03-3 the model reads the body as tagged text whose offsets replaceText counts in", async () => {
+	it("03-3 the model reads the body as tagged text, a text block's marks as tags", async () => {
 		const id = await newPost(
 			doc(
 				{ id: "b_1", type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Why" }] },
@@ -428,7 +428,9 @@ describe("block ids", () => {
 			),
 		);
 		const { text } = await read<{ text: string }>("body.read", { id });
-		expect(text).toBe("{#b_1} ## Why\n{#b_2} a link\n{#b_3} :::callout{tone=note}\n{#b_4} Note\n:::");
+		expect(text).toBe(
+			'{#b_1} ## Why\n{#b_2} a <link href="/x">link</link>\n{#b_3} :::callout{tone=note}\n{#b_4} Note\n:::',
+		);
 		expect((await read<{ text: string }>("body.read", { id, blocks: ["b_4"] })).text).toBe("{#b_4} Note");
 	});
 });
@@ -544,7 +546,7 @@ describe("blocks that are off", () => {
 		const after = await write("body.edit", {
 			id,
 			version: await version(id),
-			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 5, text: "Hi" }],
+			ops: [{ op: "setText", block: "b_1", text: "Hi" }],
 		});
 		expect(after.output).toMatchObject({ id });
 		expect(((await get(id)).entry.doc as Doc).blocks.map((block) => block.type)).toEqual([

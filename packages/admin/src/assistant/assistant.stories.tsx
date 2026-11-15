@@ -227,13 +227,16 @@ export const assisted =
 	(
 		script: Scripted[] = [],
 		answer?: Parameters<typeof scriptedProvider>[1],
-		/** `key: false`: no AI key on the site. `pictures: false`: its models do not read pictures. */
-		options: { key?: boolean; pictures?: boolean } = {},
+		/**
+		 * `key: false`: no AI key on the site. `pictures: false`: its models do not read pictures. `limits` shortens the run's and the quick
+		 * tasks' limits to bring a state about (a quick fill's deadline).
+		 */
+		options: { key?: boolean; pictures?: boolean; limits?: Partial<RunLimits> } = {},
 	) =>
 	async (): Promise<{ model: ScriptedProvider }> => {
 		const model = scriptedProvider(script, answer);
 		nextStorySite({
-			plugins: [assistant({ provider: model.for })],
+			plugins: [assistant({ provider: model.for, ...(options.limits ? { limits: options.limits } : {}) })],
 			fetch: options.pictures === false ? serviceWith(false) : network,
 			secret: "story-secret-for-the-assistant",
 			after:
@@ -480,14 +483,14 @@ export const Queued: Story = {
 	},
 };
 
-/** The service refused: what it said after the key's name, and the way to send the same words with another model. */
+/** The service refused: one short line with the key's name, and the way to send the same words with another model. */
 export const Refused: Story = {
 	loaders: site({ script: () => [{ fail: new ProviderError("refused", "Your credit balance is too low.") }] }),
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
 		await openPanel(page);
 		await say(page, "요약이 비어 있는 글 찾아 줘");
-		await page.findByText("서비스가 거절했습니다", {}, wait);
+		await page.findByText("Anthropic 개인 거절", {}, wait);
 	},
 };
 
@@ -498,7 +501,21 @@ export const NoAnswer: Story = {
 		const page = await screen(canvasElement);
 		await openPanel(page);
 		await say(page, "요약이 비어 있는 글 찾아 줘");
-		await page.findByText("서비스가 답하지 않습니다", {}, wait);
+		await page.findByText("Anthropic 개인 응답 없음", {}, wait);
+	},
+};
+
+/** The key ran out of its allowance (rate, quota, credits): its own short line, and the way to send the same words with another model. */
+export const KeyLimit: Story = {
+	loaders: site({
+		script: () => [{ fail: new ProviderError("limit", "Rate limit exceeded: https://example.com/limits") }],
+	}),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await openPanel(page);
+		await say(page, "요약이 비어 있는 글 찾아 줘");
+		await page.findByText("Anthropic 개인 사용 한도 초과", {}, wait);
+		await page.findByRole("button", { name: "다른 모델로 보내기" }, wait);
 	},
 };
 
@@ -835,7 +852,7 @@ export const polished: Script = (ids, version) => [
 				input: {
 					id: ids.second,
 					version: await version(ids.second),
-					ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "첫" }],
+					ops: [{ op: "setText", block: "b_1", text: "첫 문단입니다." }],
 					[GROUP]: "다듬기",
 				},
 			},

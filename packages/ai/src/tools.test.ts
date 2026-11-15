@@ -2,7 +2,7 @@ import { createMonti, type Database, defineSchema } from "@monti-cms/core";
 import type { Kysely } from "kysely";
 import { describe, expect, it } from "vitest";
 import { assistant } from "./operations";
-import { assistantTools } from "./tools";
+import { assistantTools, itemRunTools, smallRunTools } from "./tools";
 
 /** What Anthropic takes as a tool's input schema: an object, with no `anyOf`, `oneOf` or `allOf` beside it at the top. */
 const isObjectAtTop = (schema: unknown) => {
@@ -73,5 +73,29 @@ describe("the assistant's tools (T161)", () => {
 		expect(
 			tools.flatMap((tool) => requiredLoops(tool.inputSchema).map((loop) => `${tool.operation}: ${loop}`)),
 		).toEqual([]);
+	});
+
+	it("10-1 a small run gets every read, of the writes only a body edit and an entry's save, and no screen tool", () => {
+		const monti = site();
+		const all = assistantTools(monti);
+		const small = smallRunTools(monti);
+		expect(all.some((tool) => tool.kind === "screen")).toBe(true);
+		expect(small.filter((tool) => tool.kind === "screen")).toEqual([]);
+		expect(
+			small
+				.filter((tool) => tool.kind === "write")
+				.map((tool) => tool.operation)
+				.sort(),
+		).toEqual(["body.edit", "entries.save"]);
+		expect(small.filter((tool) => tool.kind === "read").map((tool) => tool.operation)).toEqual(
+			all.filter((tool) => tool.kind === "read").map((tool) => tool.operation),
+		);
+	});
+
+	it("10-1 a request at a proposed change keeps every read and write, and gets no screen tool", () => {
+		const monti = site();
+		const tools = itemRunTools(monti);
+		expect(tools.filter((tool) => tool.kind === "screen")).toEqual([]);
+		expect(tools).toHaveLength(assistantTools(monti).filter((tool) => tool.kind !== "screen").length);
 	});
 });

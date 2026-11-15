@@ -14,6 +14,8 @@ describe("a set request of the editor's buttons (doc 10, item 19)", () => {
 		expect(said.startsWith("번역\n\n")).toBe(true);
 		expect(said).toContain("translate button");
 		expect(said).toContain("one `body_edit` call per block");
+		// The whole block's text with its tags, so a translation keeps its links, code words and bold.
+		expect(said).toContain("`setText` of that block's whole translated text that keeps every tag");
 		// The screen's own part still comes as data, with the blocks that are meant.
 		expect(said).toContain('"blocks":["b_2"]');
 		expect(requestWith("다시 번역", { ...context, task: "retranslate" })).toContain("translate again");

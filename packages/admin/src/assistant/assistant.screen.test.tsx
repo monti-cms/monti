@@ -276,7 +276,7 @@ describe("a run that did not finish (flow 2, 06 · 24)", () => {
 		await expect.element(button("셋째 글")).toBeVisible();
 	});
 
-	it("10-1 [flow 2·24] the service refused: what it said stands after the key's name, the key itself nowhere; another model sends the same words again", async () => {
+	it("10-1 [flow 2·24] the service refused: one short line with the key's name, not what the service said and not the key; another model sends the same words again", async () => {
 		const story = on({
 			script: () => [
 				{ fail: new ProviderError("refused", "Your credit balance is too low.") },
@@ -286,8 +286,8 @@ describe("a run that did not finish (flow 2, 06 · 24)", () => {
 		await story.run();
 		await openPanel();
 		await say("요약이 비어 있는 글 찾아 줘");
-		await expect.element(panel().getByText("서비스가 거절했습니다")).toBeVisible();
-		await expect.element(panel().getByText("Anthropic 개인 · Your credit balance is too low.")).toBeVisible();
+		await expect.element(panel().getByText("Anthropic 개인 거절")).toBeVisible();
+		expect(document.body.textContent).not.toContain("credit balance");
 		expect(document.body.textContent).not.toContain("sk-ant-");
 		await userEvent.click(button("다른 모델로 보내기"));
 		await userEvent.click(page.getByRole("menuitemradio", { name: /claude-opus-5-5/ }));
@@ -303,7 +303,7 @@ describe("a run that did not finish (flow 2, 06 · 24)", () => {
 		await story.run();
 		await openPanel();
 		await say("요약이 비어 있는 글 찾아 줘");
-		await expect.element(panel().getByText("서비스가 답하지 않습니다")).toBeVisible();
+		await expect.element(panel().getByText("Anthropic 개인 응답 없음")).toBeVisible();
 		await userEvent.click(button("다시 시도"));
 		await expect.element(panel().getByText("됐습니다.")).toBeVisible();
 	});
@@ -1347,7 +1347,7 @@ describe("what the second review of #480 found", () => {
 								input: {
 									id: ids.second,
 									version: now.entry.version,
-									ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "첫" }],
+									ops: [{ op: "setText", block: "b_1", text: "첫 문단입니다." }],
 									_group: "다듬기",
 								},
 							},
@@ -1430,7 +1430,7 @@ describe("what the second review of #480 found", () => {
 							input: {
 								id: ids.second,
 								version: await version(ids.second),
-								ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "새로" }],
+								ops: [{ op: "setText", block: "b_1", text: "새로 쓴 문단입니다." }],
 								_group: "다듬기",
 							},
 						},

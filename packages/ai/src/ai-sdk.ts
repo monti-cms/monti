@@ -176,17 +176,22 @@ function toSdk(messages: ChatMessage[], service: string): ModelMessage[] {
 	});
 }
 
-/** A service's failure as the run reports it: it said no (the person can act on that), or it could not be reached. */
+/** What services say when they refuse for a rate limit, a quota or credits, whatever status they give it (Anthropic: 400 for credits). */
+const LIMIT_WORDS =
+	/rate.?limit|quota|credit|billing|insufficient.?(funds|balance)|too many requests|resource.?exhausted/i;
+
+/** A service's failure as the run reports it: it said no (the person can act on that), it said no for a limit, or it could not be reached. */
 function failure(error: unknown): ProviderError {
 	if (error instanceof ProviderError) return error;
 	// The SDK tried again and gave up: what failed is the last answer it got, not the trying. A limit the service names (429) is the service
-	// saying no in its own words, not a service that could not be reached.
+	// saying no, not a service that could not be reached.
 	if (RetryError.isInstance(error)) return failure(error.lastError);
 	if (APICallError.isInstance(error)) {
 		const status = error.statusCode;
 		// 4xx is the service's answer: the key, the credit, a limit, the model, the request. 408 and 5xx are the service not answering.
 		const refused = status !== undefined && status >= 400 && status < 500 && status !== 408;
-		return new ProviderError(refused ? "refused" : "unreachable", error.message, status);
+		const limit = status === 429 || status === 402 || (refused && LIMIT_WORDS.test(error.message));
+		return new ProviderError(limit ? "limit" : refused ? "refused" : "unreachable", error.message, status);
 	}
 	return new ProviderError("unreachable", error instanceof Error ? error.message : String(error));
 }

@@ -1,11 +1,12 @@
 import { ProviderError, type ScriptedProvider } from "@monti-cms/ai";
-import type { Doc } from "@monti-cms/core";
+import { type Block, type Doc, plainText } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { pickWords } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
 import { assisted } from "../../assistant/assistant.stories";
+import * as assist from "./assist.stories";
 import * as entry from "./entry.stories";
 
 /**
@@ -87,12 +88,12 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 		await opened();
 		await userEvent.click(subtitle());
 		await userEvent.click(button("부제 채우기"));
-		await expect.element(page.getByText("서비스가 거절했습니다 · Anthropic 개인")).toBeVisible();
+		await expect.element(page.getByText("Anthropic 개인 거절")).toBeVisible();
 		await expect.element(subtitle()).toHaveValue("");
 		refuse = false;
 		await userEvent.click(button("부제 채우기"));
 		await expect.element(subtitle()).toHaveValue("도구보다 글");
-		await expect.element(page.getByText("서비스가 거절했습니다 · Anthropic 개인")).not.toBeInTheDocument();
+		await expect.element(page.getByText("Anthropic 개인 거절")).not.toBeInTheDocument();
 	});
 
 	it("10-1 while it is asked the button says '쓰는 중…' and a second press asks nothing more", async () => {
@@ -176,6 +177,11 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 });
 
 const GROUP = "_group";
+/** A block's words with `text` in place of `from`–`to`: its new text for `setText` (the reference entry's paragraphs have no marks). */
+const reword = (block: Block | undefined, from: number, to: number, text: string) => {
+	const words = plainText(block?.content);
+	return words.slice(0, from) + text + words.slice(to);
+};
 const inBody = (selector: string) => [...body().element().querySelectorAll<HTMLElement>(selector)];
 const underlined = () => inBody("[class*=decoration-dotted]");
 const mark = (name: string | RegExp) => page.getByRole("button", { name });
@@ -186,6 +192,12 @@ const pending = ({ site, id }: Loaded) =>
 	site.monti.run("proposals.forTarget", { kind: "entry", id }, entry.admin) as Promise<
 		{ id: string; request: string; input: { ops: { text?: string }[] } }[]
 	>;
+
+describe("the entry editor: '✦ fill' that gets no answer in time", () => {
+	it("10-1 the quick-task model's deadline is said under the field in its own short line", async () => {
+		await scene(assist.FieldFillTimeout, assist.default).run();
+	});
+});
 
 describe("the entry editor: '✦ request' on picked words (T64; doc 10, item 28)", () => {
 	const PICKED = "나머지는 필요할 때 꺼내 본다.";
@@ -203,7 +215,7 @@ describe("the entry editor: '✦ request' on picked words (T64; doc 10, item 28)
 						input: {
 							id: made.loaded().id,
 							version: read.version,
-							ops: [{ op: "replaceText", block: third?.id, from: 25, to: 42, text: "나머지는 꺼내 본다." }],
+							ops: [{ op: "setText", block: third?.id, text: reword(third, 25, 42, "나머지는 그때 꺼내 본다.") }],
 							[GROUP]: "다듬기",
 						},
 					},
@@ -245,7 +257,8 @@ describe("the entry editor: '✦ request' on picked words (T64; doc 10, item 28)
 
 		release();
 		// The change is drawn where the words were; the request's own mark and underline give way to the change's.
-		await expect.poll(() => inBody("ins").map((each) => each.textContent)).toEqual(["나머지는 꺼내 본다."]);
+		// Word by word: "필요할 때" struck through, "그때" put in beside it.
+		await expect.poll(() => inBody("ins").map((each) => each.textContent)).toEqual(["그때"]);
 		await expect.poll(underlined).toHaveLength(0);
 		await expect.element(mark("고치는 중인 요청")).not.toBeInTheDocument();
 		await expect.element(mark("제안: 뒤 문장만 줄여 줘")).toBeVisible();
@@ -360,7 +373,7 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 						input: {
 							id: made.loaded().id,
 							version: read.version,
-							ops: [{ op: "replaceText", block: read.doc.blocks[0]?.id, from: 8, to: 14, text: "고친" }],
+							ops: [{ op: "setText", block: read.doc.blocks[0]?.id, text: reword(read.doc.blocks[0], 8, 14, "고친") }],
 							[GROUP]: "다듬기",
 						},
 					},
@@ -382,7 +395,7 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		// Still three changes of that request: the one asked about was replaced where it stood, not added to.
 		const items = await pending(made.loaded());
 		expect(items).toHaveLength(3);
-		expect(items[0]?.input.ops[0]?.text).toBe("고친");
+		expect(items[0]?.input.ops[0]?.text).toBe(reword(read.doc.blocks[0], 8, 14, "고친"));
 		await expect.element(page.getByText("'만든'을 '고친'으로 바꿨습니다.")).toBeVisible();
 		await expect.element(page.getByText("'고친'으로 해 줘")).toBeVisible();
 		// Asked once at this place: the status bar still counts it, and says nothing of work while there is none.
@@ -412,6 +425,6 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		await expect.element(mark("고치는 중인 제안: 더 짧게 다듬기")).not.toBeInTheDocument();
 		const items = await pending(made.loaded());
 		expect(items).toHaveLength(3);
-		expect(items[0]?.input.ops[0]?.text).toBe("만든");
+		expect(items[0]?.input.ops[0]?.text).toContain("다시 만든 건");
 	});
 });

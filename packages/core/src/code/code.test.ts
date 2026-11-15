@@ -134,17 +134,17 @@ describe("17-2 line effects follow the lines", () => {
 });
 
 describe("17-2 the assistant's edits", () => {
-	it("17-2 replaceText in a code block moves its line effects with the lines", () => {
+	it("17-2 setText in a code block moves its line effects with the lines", () => {
 		const next = applyOps(doc(code(SIX, { lines: [{ name: "plus", start: 2, end: 3 }] })), [
-			{ op: "replaceText", block: "b_code", from: 0, to: 0, text: "x\ny\n" },
+			{ op: "setText", block: "b_code", text: `x\ny\n${SIX}` },
 		]);
 		expect(next.blocks[0].attrs?.lines).toEqual([{ name: "plus", start: 4, end: 5 }]);
 	});
 
-	it("17-2 replaceText moves a rule of one line with its line, and a rule whose line goes goes with it", () => {
+	it("17-2 setText moves a rule of one line with its line, and a rule whose line goes goes with it", () => {
 		const rule = (line: number) => ({ scope: "line", line, name: "bold", pattern: "x", flags: "g" });
 		const next = applyOps(doc(code(SIX, { rules: [rule(2), rule(0)] })), [
-			{ op: "replaceText", block: "b_code", from: 0, to: 2, text: "" },
+			{ op: "setText", block: "b_code", text: SIX.slice(2) },
 		]);
 		expect(next.blocks[0].attrs?.rules).toEqual([rule(1)]);
 	});

@@ -45,6 +45,12 @@ const inlineFromEditor = (node: JSONContent, kit: Catalog): Inline | null => {
  * template put into a body gets new ones (decisions: a template's blocks are new blocks).
  */
 export function docToEditor(doc: Doc, kit: Catalog, { fresh = false } = {}): JSONContent {
+	const blocks = footnotesLast(doc.blocks).map((block) => blockToEditor(block, kit, { fresh }));
+	return { type: "doc", content: blocks.length ? blocks : [{ type: "paragraph" }] };
+}
+
+/** One stored block as the editor holds it, with the blocks it holds (`docToEditor`). */
+export function blockToEditor(top: Block, kit: Catalog, { fresh = false } = {}): JSONContent {
 	const byType = new Map(kit.blocks.map((block) => [block.type, block]));
 	const toEditor = (block: Block): JSONContent => {
 		const id = fresh ? null : block.id;
@@ -67,8 +73,7 @@ export function docToEditor(doc: Doc, kit: Catalog, { fresh = false } = {}): JSO
 		}
 		return node;
 	};
-	const blocks = footnotesLast(doc.blocks).map(toEditor);
-	return { type: "doc", content: blocks.length ? blocks : [{ type: "paragraph" }] };
+	return toEditor(top);
 }
 
 /**
@@ -106,8 +111,8 @@ const emptyChild = (block: CatalogBlock, byType: Map<string, CatalogBlock>): JSO
 /** What is stored of the editor's blocks: a file still on its way up is not in the body until the library has it (doc 09). */
 const stored = (nodes: JSONContent[]) => nodes.filter((node) => !node.attrs?.upload);
 
-/** The editor's body as it is stored. A body that is one empty paragraph is an empty body. */
-export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
+/** One editor block as it is stored, with the blocks it holds (`docFromEditor`). */
+export function blockFromEditor(top: JSONContent, kit: Catalog): Block {
 	const byName = new Map(kit.blocks.map((block) => [nodeName(block.type), block]));
 	const fromEditor = (node: JSONContent): Block => {
 		if (node.type === UNKNOWN) return node.attrs?.block as Block;
@@ -126,7 +131,12 @@ export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
 		} else if (definition?.holds === "blocks") block.children = stored(node.content ?? []).map(fromEditor);
 		return block;
 	};
-	const blocks = stored(json.content ?? []).map(fromEditor);
+	return fromEditor(top);
+}
+
+/** The editor's body as it is stored. A body that is one empty paragraph is an empty body. */
+export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
+	const blocks = stored(json.content ?? []).map((node) => blockFromEditor(node, kit));
 	// An empty paragraph after a last block with no text of its own (a picture, a file) is only where the cursor was put under it (body-editor): nothing to
 	// keep (2026-11-10, owner). After a block with text it is the writer's.
 	const last = blocks.at(-1);
@@ -135,7 +145,7 @@ export function docFromEditor(json: JSONContent, kit: Catalog): Doc {
 	if (last?.type === "paragraph" && !last.content && !last.attrs && !last.link && before && holdsNothing(before))
 		blocks.pop();
 	const only = blocks[0];
-	if (blocks.length === 1 && only?.type === "paragraph" && !only.content && !only.attrs)
+	if (blocks.length === 1 && only?.type === "paragraph" && !only.content && !only.attrs && !only.link)
 		return { type: "doc", blocks: [] };
 	return { type: "doc", blocks };
 }

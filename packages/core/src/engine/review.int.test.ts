@@ -214,20 +214,20 @@ describe("what a proposal holds (flow 2, 11–13)", () => {
 		await monti.proposals.add(proposal, "body.edit", {
 			id,
 			version: at,
-			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 1, text: "맨 첫" }],
+			ops: [{ op: "setText", block: "b_1", text: "맨 첫 문단입니다." }],
 		});
 		await expect(
 			monti.proposals.add(proposal, "body.edit", {
 				id,
 				version: at,
-				ops: [{ op: "replaceText", block: "b_1", from: 5, to: 8, text: "." }],
+				ops: [{ op: "setText", block: "b_1", text: "첫 문단." }],
 			}),
 		).rejects.toMatchObject({ reason: { key: "proposals.samePlace" } });
 		// Another block of the same entry is another place.
 		await monti.proposals.add(proposal, "body.edit", {
 			id,
 			version: at,
-			ops: [{ op: "replaceText", block: "b_2", from: 0, to: 2, text: "두 번째" }],
+			ops: [{ op: "setText", block: "b_2", text: "두 번째 문단입니다." }],
 		});
 		await monti.proposals.add(proposal, "entries.save", { id, version: at, values: { summary: "요약" } });
 		await expect(
@@ -252,13 +252,13 @@ describe("applying (flow 2, 12–15)", () => {
 		await monti.proposals.add(
 			proposal,
 			"body.edit",
-			{ id, version: at, ops: [{ op: "replaceText", block: "b_1", from: 0, to: 6, text: "" }] },
+			{ id, version: at, ops: [{ op: "setText", block: "b_1", text: "발행하고 나서" }] },
 			"다듬기",
 		);
 		await monti.proposals.add(
 			proposal,
 			"body.edit",
-			{ id, version: at, ops: [{ op: "replaceText", block: "b_2", from: 7, to: 10, text: "" }] },
+			{ id, version: at, ops: [{ op: "setText", block: "b_2", text: "바뀐 부분은 두 가지입니다." }] },
 			"다듬기",
 		);
 
@@ -507,7 +507,7 @@ describe("an apply cut short (flow 2, 14)", () => {
 					await monti.proposals.add(proposal, "body.edit", {
 						id,
 						version: at,
-						ops: [{ op: "replaceText", block, from: 0, to: 1, text: "새" }],
+						ops: [{ op: "setText", block, text: block === "b_1" ? "새나 문단" : "새 문단" }],
 					})
 				).itemId,
 			);
@@ -660,12 +660,12 @@ describe("a person's decision while an apply runs (review 1 of #472)", () => {
 		const at = await version(id);
 		const proposal = await monti.proposals.create("c1", "고쳐 줘");
 		await monti.proposals.add(proposal, "entries.save", { id, version: at, doc: body("ZZoriginal body") });
-		// Its offsets count in the text the save replaces: applied after it, it would cut the wrong words.
+		// It was made on the text the save replaces: applied after it, it would put back what the save changed.
 		await expect(
 			monti.proposals.add(proposal, "body.edit", {
 				id,
 				version: at,
-				ops: [{ op: "replaceText", block: "b_1", from: 0, to: 8, text: "" }],
+				ops: [{ op: "setText", block: "b_1", text: " body" }],
 			}),
 		).rejects.toMatchObject({ reason: { key: "proposals.samePlace" } });
 		await monti.proposals.apply(proposal);
@@ -678,7 +678,7 @@ describe("a person's decision while an apply runs (review 1 of #472)", () => {
 		await monti.proposals.add(second, "body.edit", {
 			id: other,
 			version: version2,
-			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 8, text: "" }],
+			ops: [{ op: "setText", block: "b_1", text: " body" }],
 		});
 		await expect(
 			monti.proposals.add(second, "entries.save", { id: other, version: version2, doc: body("ZZoriginal body") }),
@@ -738,7 +738,7 @@ describe("a person's decision while an apply runs (review 1 of #472)", () => {
 		await monti.proposals.add(proposal, "body.edit", {
 			id,
 			version: at,
-			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 8, text: "" }],
+			ops: [{ op: "setText", block: "b_1", text: " body" }],
 		});
 		expect(await monti.proposals.apply(proposal)).toMatchObject([{ state: "applied" }, { state: "stale" }]);
 		expect(await textOf(id)).toEqual(["ZZoriginal body"]);
@@ -919,7 +919,7 @@ describe("one apply at a time, however long a write takes (review 1 of #472)", (
 		const edit = await monti.proposals.add(proposal, "body.edit", {
 			id,
 			version: at,
-			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "바꾼" }],
+			ops: [{ op: "setText", block: "b_1", text: "바꾼 본문" }],
 		});
 		const first = monti.proposals.apply(proposal);
 		await began;
@@ -971,7 +971,7 @@ describe("putting back more than one change of an entry (review 1 of #472)", () 
 		await monti.proposals.add(proposal, "body.edit", {
 			id,
 			version: at,
-			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "바꾼" }],
+			ops: [{ op: "setText", block: "b_1", text: "바꾼 본문" }],
 		});
 		await monti.proposals.apply(proposal);
 		expect(await row(id)).toMatchObject({ title: "바꾼 제목" });
@@ -1072,7 +1072,7 @@ describe("putting back more than one change of an entry (review 1 of #472)", () 
 		await monti.proposals.add(proposal, "body.edit", {
 			id,
 			version: await version(id),
-			ops: [{ op: "replaceText", block: "b_1", from: 0, to: 2, text: "바꾼" }],
+			ops: [{ op: "setText", block: "b_1", text: "바꾼 본문" }],
 		});
 		await monti.proposals.apply(proposal);
 

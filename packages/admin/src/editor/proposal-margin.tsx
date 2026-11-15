@@ -4,12 +4,12 @@ import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } fro
 import { CardMark, type CardReply, MemoThreadOf, ProposalMemo, replyOf } from "../assistant/proposal-memo";
 import type { Exchange } from "../assistant/use-place-requests";
 import { liveDom } from "./live-view";
-import { type BodyProposal, findBlock, proposedWords } from "./proposal-marks";
+import { type BodyProposal, findBlock } from "./proposal-marks";
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
 
-/** A proposal the text has moved away from, with the block it hangs beside (`staleProposals`). */
-export type StaleProposal = { item: BodyProposal; block: string };
+/** A proposal the text has moved away from, with the block it hangs beside and the words it would have put there (`staleProposals`). */
+export type StaleProposal = { item: BodyProposal; block: string; words: string | null };
 
 /**
  * One mark hung in the text's left margin beside a block, with the card it opens: a proposed change (T41), one the text moved away from
@@ -122,11 +122,10 @@ export function staleMarks({
 	/** The proposals the assistant is making again now: each mark says "…" meanwhile. */
 	remaking: ReadonlySet<string>;
 }): MarginMark[] {
-	return stale.map(({ item, block }) => ({
+	return stale.map(({ item, block, words }) => ({
 		id: item.id,
 		block,
 		draw: (anchor) => {
-			const words = proposedWords(item, block);
 			const was = item.was?.[block];
 			const working = remaking.has(item.id);
 			return (

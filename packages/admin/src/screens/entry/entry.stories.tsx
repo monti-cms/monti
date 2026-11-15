@@ -1,4 +1,4 @@
-import { type Doc, defineMark, defineSchema, type Schema } from "@monti-cms/core";
+import { type Block, type Doc, defineMark, defineSchema, plainText, type Schema } from "@monti-cms/core";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
@@ -120,6 +120,12 @@ const noted = () =>
 		{ id: `b_${++count}`, type: "footnote", attrs: { id: "fn_state" }, content: text("상태는 색 대신 글자로 적었다.") },
 	);
 
+/** A block's new text: its words with `text` in place of `from`–`to` (the reference entry's paragraphs have no marks, so no tags). */
+const reword = (block: Block, from: number, to: number, text: string) => {
+	const words = plainText(block.content);
+	return { op: "setText", block: block.id, text: words.slice(0, from) + text + words.slice(to) };
+};
+
 /**
  * The assistant's body proposals on the reference entry (T32), from one request: a shorter phrase in the first paragraph, a line put in after the
  * third, and the last paragraph taken out.
@@ -130,11 +136,27 @@ async function proposeBody(monti: Monti, id: string) {
 	if (!first || !third || !last) throw new Error("the reference entry has four blocks");
 	const proposal = await monti.proposals.create("conversation-1", "더 짧게 다듬기");
 	const edit = (ops: unknown[]) => monti.proposals.add(proposal, "body.edit", { id, version: read.entry.version, ops });
-	await edit([{ op: "replaceText", block: first.id, from: 8, to: 14, text: "만든" }]);
+	await edit([reword(first, 8, 14, "만든")]);
 	await edit([
 		{ op: "insert", after: third.id, blocks: [{ type: "paragraph", content: text("상태도 색 대신 글자로 적었다.") }] },
 	]);
 	await edit([{ op: "remove", blocks: [last.id] }]);
+}
+
+/** A proposal that keeps the first paragraph's words and makes two of them bold. */
+async function proposeFormat(monti: Monti, id: string) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
+	const [first] = read.entry.doc.blocks;
+	if (!first) throw new Error("the reference entry has a first block");
+	const words = plainText(first.content);
+	const proposal = await monti.proposals.create("conversation-1", "중요한 말 굵게");
+	await monti.proposals.add(proposal, "body.edit", {
+		id,
+		version: read.entry.version,
+		ops: [
+			{ op: "setText", block: first.id, text: words.replace("도구를 고치는 시간", "<bold>도구를 고치는 시간</bold>") },
+		],
+	});
 }
 
 /**
@@ -151,7 +173,7 @@ async function proposeFields(monti: Monti, id: string) {
 	await monti.proposals.add(proposal, "entries.save", { ...at, values: { summary: "덜어낸 것과 남긴 것." } });
 	await monti.proposals.add(proposal, "body.edit", {
 		...at,
-		ops: [{ op: "replaceText", block: first.id, from: 8, to: 14, text: "만든" }],
+		ops: [reword(first, 8, 14, "만든")],
 	});
 }
 
@@ -165,15 +187,15 @@ async function proposeThenEdit(monti: Monti, id: string, twice = false) {
 	if (!first || !last) throw new Error("the reference entry has four blocks");
 	const proposal = await monti.proposals.create("conversation-1", "더 짧게 다듬기");
 	const edit = (ops: unknown[]) => monti.proposals.add(proposal, "body.edit", { id, version: read.entry.version, ops });
-	await edit([{ op: "replaceText", block: first.id, from: 8, to: 14, text: "만든" }]);
-	await edit([{ op: "replaceText", block: last.id, from: 5, to: 17, text: "같다" }]);
+	await edit([reword(first, 8, 14, "만든")]);
+	await edit([reword(last, 5, 17, "같다")]);
 	// Another request's change of the same paragraph: two marks then hang at one block.
 	if (twice) {
 		const other = await monti.proposals.create("conversation-2", "문장 끝 다듬기");
 		await monti.proposals.add(other, "body.edit", {
 			id,
 			version: read.entry.version,
-			ops: [{ op: "replaceText", block: last.id, from: 31, to: 36, text: "글이다" }],
+			ops: [reword(last, 31, 36, "글이다")],
 		});
 	}
 	await monti.run(
@@ -235,6 +257,7 @@ type Kind =
 	| "proposedFields"
 	| "proposedStale"
 	| "proposedStaleTwice"
+	| "proposedFormat"
 	| "conditional"
 	| "nestedChoice"
 	| "strayOption";
@@ -438,6 +461,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 	if (kind === "proposed") await proposeBody(monti, id);
 	if (kind === "proposedFields") await proposeFields(monti, id);
 	if (kind === "proposedStale") await proposeThenEdit(monti, id);
+	if (kind === "proposedFormat") await proposeFormat(monti, id);
 	if (kind === "proposedStaleTwice") await proposeThenEdit(monti, id, true);
 	return id;
 }
@@ -979,6 +1003,20 @@ export const BodyProposals: Story = {
 		await expect(body.querySelector("ins")?.textContent).toBe("만든");
 		await all.findByText("더 짧게 다듬기", {}, wait);
 		await all.findByRole("button", { name: "모두 받기" }, wait);
+	},
+};
+
+/** A proposal that changes only formatting: the words that become bold stand on the pale blue ground, with nothing struck through or put in. */
+export const FormattingProposal: Story = {
+	loaders: site("proposedFormat"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await all.findByText("중요한 말 굵게", {}, wait);
+		await waitFor(
+			() => expect(body.querySelector("span.bg-monti-proposal-muted")?.textContent).toBe("도구를 고치는 시간"),
+			wait,
+		);
+		await expect(body.querySelectorAll("ins")).toHaveLength(0);
 	},
 };
 

@@ -16,6 +16,7 @@ import { useAdmin } from "../operations/admin-context";
 import { MODELS_ASK_AGAIN_MS } from "../operations/models";
 import { NO_ANSWER } from "../operations/transport";
 import type { Route } from "../route";
+import { reasonText } from "./failure";
 import { type ContextChip, chipsOf, contextWithout, type ToolPart } from "./words";
 
 /** One thing a turn showed, in the order it came. `stale` words are of an answer that was cut: they stay until the answer comes again. */
@@ -277,17 +278,8 @@ export function useQuickFill(): ((input: Record<string, unknown>) => Promise<Fil
 						if (answer.status === 200)
 							return { ok: true, ...(answer.body as { value: string } | { values: string[] }) };
 						const reason = ((answer.body ?? {}) as { reason?: Message }).reason;
-						const name = String(reason?.values?.name ?? "");
-						// The field's line names the key, and not what the service said: one reason, in a few words.
-						const why =
-							reason?.key === "assistant.refused"
-								? t("fill.refused", { name })
-								: reason?.key === "assistant.unreachable"
-									? t("fill.unreachable", { name })
-									: reason?.key === "assistant.noImages"
-										? t("fill.noImages")
-										: t(reason ?? "errors.noAnswer");
-						return { ok: false, why };
+						// The field's line says why in a few words, and which key: never what the service said.
+						return { ok: false, why: reason ? reasonText(t, reason) : t("errors.noAnswer") };
 					}
 				: undefined,
 		[there, transport, t],
@@ -317,7 +309,10 @@ export function useRemakeItem(): ((item: string) => Promise<void>) | undefined {
 							} catch {
 								// The connection went: the change is read again as it stands.
 							}
-						} else toast.error(t(((answer.body ?? {}) as { reason?: Message }).reason ?? "errors.unexpected"));
+						} else {
+							const reason = ((answer.body ?? {}) as { reason?: Message }).reason;
+							toast.error(reason ? reasonText(t, reason) : t("errors.unexpected"));
+						}
 						touch?.();
 					}
 				: undefined,
@@ -652,7 +647,7 @@ export function AssistantProvider({
 					// Another page has the run by now (an old tab pressed "go on" for a run the browser went on with elsewhere), it ended
 					// meanwhile, or a newer request stands after it: the server is ahead of this page. Nothing is said: the run is read as
 					// it stands and shown so (at work with its stop button, or with its end). Any other reason is the person's to hear.
-					if (reason && byPerson && !AHEAD.has(reason.key)) toast.error(t(reason));
+					if (reason && byPerson && !AHEAD.has(reason.key)) toast.error(reasonText(t, reason));
 					return later.current.watch(id, here, false);
 				}
 				setBusy(false);

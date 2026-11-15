@@ -1,8 +1,12 @@
-import type { Doc } from "@monti-cms/core";
+import type { Doc, Inline } from "@monti-cms/core";
+import { PROPOSAL_MARK_CLASSES } from "@monti-cms/ui";
+import { getSchema } from "@tiptap/core";
 import { type Node as EditorNode, Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
-import { type Convert, takeProposal } from "./proposal-marks";
+import type { Catalog } from "./catalog";
+import { type Convert, convertFor, proposalDecorations, takeProposal } from "./proposal-marks";
+import { bodyExtensions } from "./schema";
 
 /** A body of paragraphs and pictures, each with its block id: enough of the editor to take a proposal into. */
 const schema = new Schema({
@@ -47,6 +51,12 @@ const convert: Convert = {
 					: p(block.id, ((block.content ?? []) as { text?: string }[]).map((each) => each.text ?? "").join("")),
 			),
 		),
+	blockToEditor: () => {
+		throw new Error("not used: these tests change whole blocks");
+	},
+	blockFromEditor: () => {
+		throw new Error("not used: these tests change whole blocks");
+	},
 };
 
 const ids = (doc: EditorNode) => {
@@ -92,5 +102,118 @@ describe("taking a body proposal into the editor", () => {
 		);
 		expect(tr.doc.childCount).toBe(1);
 		expect(tr.doc.textContent).toBe("새 문단");
+	});
+});
+
+/** The editor's real schema and converter for a site with paragraphs, bold, code, links and code links. */
+const kit: Catalog = {
+	blocks: [
+		{
+			type: "paragraph",
+			label: "Paragraph",
+			description: "",
+			menu: "text",
+			holds: "text",
+			children: null,
+			attrs: null,
+		},
+	],
+	marks: [
+		{ type: "bold", label: "Bold", attrs: null },
+		{ type: "code", label: "Code", attrs: null },
+		{ type: "link", label: "Link", attrs: { properties: { href: {} } } },
+		{ type: "codeRef", label: "Code link", attrs: { properties: { block: {}, anchor: {} } } },
+	],
+	headings: [2, 3, 4],
+};
+const real = getSchema(bodyExtensions(kit, () => ""));
+const production = convertFor(real, kit);
+const stateOf = (doc: Doc) => EditorState.create({ schema: real, doc: production.toEditor(doc) });
+const inlines = (doc: EditorNode) => production.fromEditor(doc).blocks[0]?.content;
+const setText = (block: string, text: string) => ({ id: "item", ops: [{ op: "setText" as const, block, text }] });
+
+describe("taking a block's new text into the editor", () => {
+	const link = { type: "link", href: "/guide" };
+	const before: Inline[] = [
+		{ type: "text", text: "Run " },
+		{ type: "text", text: "npm test", marks: [{ type: "code" }] },
+		{ type: "text", text: " before you " },
+		{ type: "text", text: "push", marks: [{ type: "bold" }] },
+		{ type: "text", text: ", as the " },
+		{ type: "text", text: "guide", marks: [link] },
+		{ type: "text", text: " says." },
+	];
+
+	it("05 a rewrite of a paragraph with bold, a link and code words keeps every mark where the tags put it", () => {
+		const state = stateOf({ type: "doc", blocks: [{ id: "b_1", type: "paragraph", content: before }] });
+		const text =
+			'Always run <code>npm test</code> before you <bold>push</bold>, as the <link href="/guide">guide</link> says.';
+		const tr = takeProposal(state, setText("b_1", text), production);
+		expect(inlines(tr.doc)).toEqual([{ type: "text", text: "Always run " }, ...before.slice(1)]);
+		expect(tr.doc.child(0).attrs.blockId).toBe("b_1");
+	});
+
+	it("05 a caret in words that stay between two changes stays on its letter", () => {
+		const doc = production.toEditor({
+			type: "doc",
+			blocks: [{ id: "b_1", type: "paragraph", content: [{ type: "text", text: "Hello middle world" }] }],
+		});
+		// The caret in "mi|ddle".
+		const caret = 1 + "Hello mi".length;
+		const state = EditorState.create({ schema: real, doc, selection: TextSelection.create(doc, caret) });
+		const tr = takeProposal(state, setText("b_1", "Hi middle earth"), production);
+		expect(tr.doc.textContent).toBe("Hi middle earth");
+		expect(tr.selection.from).toBe(1 + "Hi mi".length);
+	});
+
+	it("05 a mark put on words that stay is taken too", () => {
+		const state = stateOf({
+			type: "doc",
+			blocks: [{ id: "b_1", type: "paragraph", content: [{ type: "text", text: "one two" }] }],
+		});
+		const tr = takeProposal(state, setText("b_1", "one <bold>two</bold>"), production);
+		expect(inlines(tr.doc)).toEqual([
+			{ type: "text", text: "one " },
+			{ type: "text", text: "two", marks: [{ type: "bold" }] },
+		]);
+	});
+
+	it("04 a translation whose one undecided block is the whole body goes in with its code link and none of the source's words", () => {
+		const pending = { from: "s_1", seen: "h", state: "pending" as const };
+		// The undecided block is empty in the editor: the source's words are its placeholder.
+		const state = stateOf({ type: "doc", blocks: [{ id: "b_1", type: "paragraph", link: pending }] });
+		const text = 'Set it up on <codeRef block="b_code" anchor="setup">this line</codeRef>.';
+		const tr = takeProposal(state, setText("b_1", text), production);
+		expect(tr.doc.textContent).toBe("Set it up on this line.");
+		expect(inlines(tr.doc)).toEqual([
+			{ type: "text", text: "Set it up on " },
+			{ type: "text", text: "this line", marks: [{ type: "codeRef", block: "b_code", anchor: "setup" }] },
+			{ type: "text", text: "." },
+		]);
+		expect(tr.doc.child(0).attrs.link).toEqual(pending);
+	});
+});
+
+describe("drawing a block's new text", () => {
+	it("05 a word made bold, with the same words, is drawn on the inserted-text ground over exactly that word", () => {
+		const state = stateOf({
+			type: "doc",
+			blocks: [{ id: "b_1", type: "paragraph", content: [{ type: "text", text: "one two three" }] }],
+		});
+		const drawn = proposalDecorations(state.doc, setText("b_1", "one <bold>two</bold> three")) ?? [];
+		const inline = drawn.map((each) => ({
+			from: each.from,
+			to: each.to,
+			class: (each as unknown as { type: { attrs?: { class?: string } } }).type.attrs?.class,
+		}));
+		expect(inline).toEqual([{ from: 1 + "one ".length, to: 1 + "one two".length, class: PROPOSAL_MARK_CLASSES.ins }]);
+	});
+});
+
+describe("a body's conversion keeps a translation's undecided paragraph", () => {
+	it("04 a body that is one empty paragraph paired with a source block is that paragraph, not an empty body", () => {
+		const pending = { from: "s_1", seen: "h", state: "pending" as const };
+		const doc: Doc = { type: "doc", blocks: [{ id: "b_1", type: "paragraph", link: pending }] };
+		expect(production.fromEditor(production.toEditor(doc))).toEqual(doc);
 	});
 });

@@ -52,6 +52,22 @@ export function assistantTools(monti: Monti): AssistantTool[] {
 	return tools;
 }
 
+/** The only writes a small run may propose: a block of the body, a field of the entry. */
+const SMALL_RUN_WRITES = new Set(["body.edit", "entries.save"]);
+
+/**
+ * The tools of a small run (doc 10): a request on picked words or "✦ Translate". Every read; of the writes only a body edit and an entry's save;
+ * no screen tool, since such a request has no screen of its own to move and would wait on it for ever.
+ */
+export const smallRunTools = (monti: Monti): AssistantTool[] =>
+	assistantTools(monti).filter(
+		(tool) => tool.kind === "read" || (tool.kind === "write" && SMALL_RUN_WRITES.has(tool.operation)),
+	);
+
+/** The tools of a request at one proposed change, or of making one again: every read and write, no screen tool (it has no screen to move). */
+export const itemRunTools = (monti: Monti): AssistantTool[] =>
+	assistantTools(monti).filter((tool) => tool.kind !== "screen");
+
 function describe(capability: Capability): string {
 	if (capability.kind === "write")
 		return `${capability.description} This does not change anything: it adds the change to a proposal the person reviews and takes or leaves.`;
