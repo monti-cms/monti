@@ -33,8 +33,12 @@ export type EditorMediaValue = {
  */
 export type PictureFill = {
 	of: (place: string) => FillState;
-	/** The place was changed by hand: an answer still on its way is not put over it, and what the last fill said goes. */
+	/** The place was changed by hand: an answer still on its way is not put over it, and what the last fill said and put is the person's. */
 	forget: (place: string) => void;
+	/** "Stop": an answer on its way is not put in; the place keeps what it holds. */
+	stop: (place: string) => void;
+	/** "Discard", or undo in the place: what it held before its first fill goes back. */
+	discard: (place: string) => void;
 	/** "Try again" under the box: the place's last fill, as it was asked. */
 	again: (place: string) => void;
 	run: (
@@ -42,7 +46,8 @@ export type PictureFill = {
 		task: "alt" | "caption",
 		media: string,
 		around: { before: string; after: string },
-		put: (value: string) => void,
+		/** Puts the words in and gives what was there and how to put it back, or `null` when it is no longer the picture that was asked about. */
+		put: (value: string) => { before: unknown; back: () => void } | null,
 	) => void;
 };
 

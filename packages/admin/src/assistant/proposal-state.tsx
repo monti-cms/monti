@@ -1,9 +1,11 @@
 import type { ProposalView } from "@monti-cms/core";
-import { Button, Count, Inline, Progress, Text } from "@monti-cms/ui";
-import type { ReactNode } from "react";
+import { Button, Count, Inline, Progress, Text, TextButton } from "@monti-cms/ui";
+import { type ReactNode, useRef } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { nextStop, useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { focusWhenDrawn, nextStop, useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { rowCounts } from "./change-words";
 import { type ProposalStanding, standingOf } from "./use-proposal";
+import { clock } from "./words";
 
 /** How long the row's buttons take no press after the row changed: longer than a double press, shorter than a person deciding. */
 const SETTLE_MS = 400;
@@ -13,7 +15,8 @@ const MOVED = new Map<string, { standing: ProposalStanding; at: number }>();
 /**
  * Where a proposal stands and what can be done with all of it, in one row: the card's foot in the conversation and the end of the review page's
  * head are this same row, so the two never say it differently. Waiting: "Review" (on the card), "Discard" and the pill with how many it
- * applies. Being applied: how far. Applied: how many, how many could not be, and "Undo". Then only that it was undone or discarded.
+ * applies. Being applied: how far. Applied: how many, how many could not be, "Undo" as the quiet words after them, and "Review" at the end
+ * (AS-49: the two stood as buttons of one weight). Then only that it was undone, and when, or that it was discarded.
  */
 export function ProposalState({
 	view,
@@ -41,15 +44,23 @@ export function ProposalState({
 }) {
 	const { t } = useAdmin();
 	const standing: ProposalStanding = standingOf(view, applying);
-	const { counts } = view;
+	// Counted by the rows the card and the page show: a translation's words are part of its row.
+	const counts = rowCounts(view);
 	// A button of the row pressed with the keyboard goes as the proposal moves on (applying has none, discarded has none). The focus goes to
-	// the first button the row still has, else to the first control after the row: one rule on the card and on the page.
-	const handed = useFocusHandOff((row) =>
+	// the first button the row still has, else to the first control after the row: one rule on the card and on the page. Never to "Undo",
+	// quiet words: a second Enter after "Apply" would take back what it just did. While it applies, the focus waits for what the row draws
+	// when the apply is over.
+	const standingNow = useRef(standing);
+	standingNow.current = standing;
+	const handed = useFocusHandOff((row) => {
 		// The row itself going (the page it is on was left) hands nothing on: what takes the page's place has its own first control.
-		row.contains(document.activeElement)
-			? null
-			: (row.querySelector<HTMLElement>("button:not(:disabled), a[href]") ?? nextStop(row)),
-	);
+		if (row.contains(document.activeElement)) return null;
+		const pick = (spot: HTMLElement) =>
+			spot.querySelector<HTMLElement>("button:not(:disabled):not([data-slot=text-button]), a[href]") ?? nextStop(spot);
+		if (standingNow.current === "applying")
+			return () => focusWhenDrawn(row, (spot) => (standingNow.current === "applying" ? null : pick(spot)));
+		return pick(row);
+	});
 	// A press meant for the button that was here lands on the one that took its place (a second press on "apply" came down on "undo",
 	// which stands at the same spot the moment the apply is over): for a short while after the proposal moves on, the row's buttons
 	// take no press. Kept by the proposal, not by this row: the card and the page draw the row anew as they read the proposal again,
@@ -114,15 +125,16 @@ export function ProposalState({
 						{t("card.failed", { count: counts.failed })}
 					</Text>
 				) : null}
+				{/* Undoing belongs to what was applied: quiet words beside the count, not a button beside "Review". */}
+				{counts.applied > 0 ? (
+					<TextButton variant="underline" quiet size="note" onClick={settled(onRevert)} loading={pending === "revert"}>
+						{pending === "revert" ? t("card.reverting") : t("card.revert")}
+					</TextButton>
+				) : null}
 				<Inline gap={12} align="center" grow justify="end">
 					{onReview ? (
 						<Button variant="ghost" size={size} onClick={settled(onReview)}>
 							{t("card.review")}
-						</Button>
-					) : null}
-					{counts.applied > 0 ? (
-						<Button variant="ghost" size={size} onClick={settled(onRevert)} loading={pending === "revert"}>
-							{pending === "revert" ? t("card.reverting") : t("card.revert")}
 						</Button>
 					) : null}
 				</Inline>
@@ -130,7 +142,11 @@ export function ProposalState({
 		);
 	return row(
 		<Text variant="note" tone="subtle">
-			{t(standing === "reverted" ? "card.reverted" : "card.discarded")}
+			{standing === "reverted"
+				? view.settledAt
+					? t("card.revertedAt", { time: clock(view.settledAt) })
+					: t("card.reverted")
+				: t("card.discarded")}
 		</Text>,
 	);
 }

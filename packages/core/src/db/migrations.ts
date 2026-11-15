@@ -611,6 +611,12 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0023_proposal_settled_at": {
+		async up(db) {
+			// When a proposal last moved to where it stands (applied, put back, thrown away): its card says when it was put back (AS-50).
+			await db.schema.alterTable("monti_proposal").addColumn("settled_at", "timestamptz").execute();
+		},
+	},
 };
 
 /**

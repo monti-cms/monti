@@ -583,7 +583,7 @@ export const Applied: Story = {
 	},
 };
 
-/** A request to start from, pressed: the sent bubble keeps its blue spark, under the line of what went along ("이 목록"). */
+/** A request to start from, pressed: the sent bubble is like any typed one, its words under the line of what went along ("이 목록"). */
 export const SentRequest: Story = {
 	loaders: site({ script: found }),
 	play: async ({ canvasElement }) => {
@@ -622,7 +622,7 @@ export const CardDiscarding: Story = {
 	},
 };
 
-/** Applied and undone: the card says so, with nothing left to press. */
+/** Applied and undone: the card says so and when, with nothing left to press. */
 export const CardUndone: Story = {
 	loaders: site({ script: proposed }),
 	play: async ({ canvasElement }) => {
@@ -634,7 +634,7 @@ export const CardUndone: Story = {
 		// A person reads that it was applied before pressing again: a press in the moment the button appears is not taken.
 		await new Promise((resolve) => setTimeout(resolve, 600));
 		await userEvent.click(undo);
-		await page.findByText("되돌림", {}, wait);
+		await page.findByText(/^되돌림 · \d{2}:\d{2}$/, {}, wait);
 	},
 };
 

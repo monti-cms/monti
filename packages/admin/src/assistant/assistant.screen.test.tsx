@@ -517,7 +517,8 @@ describe("a proposal in the conversation (flow 2, 11 · 16)", () => {
 		// A person reads that it was applied first: a press in the moment "undo" appears is not taken.
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await userEvent.click(button("되돌리기"));
-		await expect.element(panel().getByText("되돌림", { exact: true })).toBeVisible();
+		// When it was undone, beside it (AS-50).
+		await expect.element(panel().getByText(/^되돌림 · \d{2}:\d{2}$/)).toBeVisible();
 		expect(await summaryOf(loaded, loaded.ids.second)).toBeNull();
 		expect(await summaryOf(loaded, loaded.ids.third)).toBeNull();
 	});
@@ -2064,8 +2065,6 @@ describe("the assistant from inside an editor (T164; flow 2, 05)", () => {
 });
 
 describe("the assistant follows the design rules (design audit, 2026-11-14)", () => {
-	const ghost = (element: Element) => getComputedStyle(element).backgroundColor === "rgba(0, 0, 0, 0)";
-
 	it("the frame's ✦ is 16px, as in the editor's head", async () => {
 		await on({}).run();
 		await expect.element(button("어시스턴트 열기")).toBeVisible();
@@ -2073,19 +2072,14 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 		expect(icon?.getBoundingClientRect().width).toBe(16);
 	});
 
-	it("a default request keeps its blue spark once sent; words typed in have none", async () => {
+	it("a sent message has no spark, a default request pressed or words typed in: the words say what was asked", async () => {
 		const story = on({ script: stories.scripts(stories.found, () => [{ text: "네." }]) });
 		await story.run();
 		await openPanel();
 		await userEvent.click(button("요약이 비어 있는 글 찾아 줘"));
 		await expect.element(panel().getByText("글 목록 읽음 · 3편")).toBeVisible();
 		const bubbles = () => panel().element().querySelectorAll("[data-slot=chat-message][data-author=user]");
-		// On the words' line, under the line of what went along ("이 목록"), not on a line of its own.
-		const spark = bubbles()[0]?.querySelector("svg")?.getBoundingClientRect();
-		const words = [...(bubbles()[0]?.querySelectorAll("span") ?? [])]
-			.find((span) => span.textContent === "요약이 비어 있는 글 찾아 줘")
-			?.getBoundingClientRect();
-		expect(spark && words && Math.abs(spark.top + spark.height / 2 - (words.top + words.height / 2))).toBeLessThan(4);
+		expect(bubbles()[0]?.querySelector("svg")).toBeNull();
 		await say("고마워");
 		await expect.element(panel().getByText("네.")).toBeVisible();
 		expect(bubbles()[1]?.querySelector("svg")).toBeNull();
@@ -2114,11 +2108,11 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 		await expect.element(panel().getByText("버림")).toBeVisible();
 	});
 
-	it("되돌리기 on the review page is the card's ghost button, and says it is undoing while it does", async () => {
+	it("[AS-49] 되돌리기 on the review page is the card's: quiet words beside what was applied, not a button of 검토's weight, and says it is undoing while it does", async () => {
 		const story = open(stories.ReviewApplied);
 		await story.run();
 		const undo = button("되돌리기").first();
-		expect(ghost(undo.element())).toBe(true);
+		expect(undo.element().getAttribute("data-slot")).toBe("text-button");
 		const release = story.loaded().net.hold("proposals.revert");
 		await new Promise((resolve) => setTimeout(resolve, 600));
 		await userEvent.click(undo);
@@ -2139,7 +2133,7 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 		await open(stories.ReviewMakingAgain).run();
 	});
 
-	it("the story of a sent default request with its spark is reached", async () => {
+	it("the story of a sent default request is reached", async () => {
 		await open(stories.SentRequest).run();
 	});
 
@@ -2162,5 +2156,158 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 		await expect.element(button("멈추기")).toBeVisible();
 		await expect.element(button("다시 만들기")).not.toBeInTheDocument();
 		release();
+	});
+});
+
+describe("the proposal's card says what each change does (AS-46)", () => {
+	it("10-1 [AS-49] '적용' pressed with the keyboard hands the focus to '검토', past the quiet '되돌리기' a second Enter would press", async () => {
+		await on({ script: stories.proposed }).run();
+		await openPanel();
+		await say("둘 다 요약 채워 줘");
+		const apply = button("2건 적용");
+		await expect.element(apply).toBeVisible();
+		apply.element().focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel().getByText("✓ 2건 적용")).toBeVisible();
+		await expect.poll(() => document.activeElement?.textContent).toBe("검토");
+	});
+
+	it("10-1 a change shows its place as it is and as proposed: the words that go out struck through, the words that come in on blue", async () => {
+		const retitle: NonNullable<Parameters<typeof stories.site>[0]>["script"] = async (ids, version) => [
+			{
+				calls: [
+					{
+						name: "entries_save",
+						input: { id: ids.first, version: await version(ids.first), title: "처음 쓴 글", _group: "제목 다듬기" },
+					},
+				],
+			},
+			{ text: "제목을 다듬었습니다." },
+		];
+		await on({ script: retitle }).run();
+		await openPanel();
+		await say("첫 글 제목 다듬어 줘");
+		const card = () => panel().element().querySelector("[data-slot=proposal-card]");
+		const marked = (tag: string) => [...(card()?.querySelectorAll(tag) ?? [])].map((each) => each.textContent).join("");
+		await expect.poll(() => marked("del")).toContain("첫");
+		expect(marked("ins")).toContain("처음");
+		// The words that stay are plain, between them.
+		expect(card()?.textContent).toContain("글");
+	});
+
+	it("10-1 a translation to make is named on its card by its source, with the words proposed for it: what is written into it is part of its row", async () => {
+		let made: Loaded | undefined;
+		const story = on({
+			script: async (ids) => [
+				{ calls: [{ name: "translations_create", input: { source: ids.second, locale: "en", _group: "새 글" } }] },
+				// The words for the translation, written into what the first change makes.
+				async () => {
+					const item = await made?.site.db.selectFrom("monti_proposal_item").select("id").executeTakeFirstOrThrow();
+					return {
+						calls: [
+							{
+								name: "entries_save",
+								input: { id: { $item: item?.id }, version: 1, title: "The second post", _group: "새 글" },
+							},
+						],
+					};
+				},
+				{ text: "번역을 제안했습니다." },
+			],
+		});
+		await story.run();
+		made = story.loaded();
+		await openPanel();
+		await say("둘째 글 영어로 번역해 줘");
+		const card = () => panel().element().querySelector("[data-slot=proposal-card]");
+		await expect.poll(() => card()?.querySelector("ins")?.textContent).toBe("The second post");
+		// One row, named by the source: the translation does not stand yet.
+		expect(card()?.querySelectorAll("tr")).toHaveLength(1);
+		expect(card()?.textContent).toContain("둘째 글");
+		// The header and the button count the same changes: the translation's words are part of its row.
+		expect(card()?.textContent).toContain("1건");
+		await expect.element(panel().getByRole("button", { name: "1건 적용" })).toBeVisible();
+		// Applied, it is still one change, named by its source.
+		await userEvent.click(panel().getByRole("button", { name: "1건 적용" }));
+		await expect.element(panel().getByText("✓ 1건 적용")).toBeVisible();
+		await expect.element(page.getByText("1건을 서버에 저장했습니다")).toBeVisible();
+		expect(card()?.querySelector("tr")?.textContent).toContain("둘째 글");
+	});
+
+	it("10-1 a translation whose words cannot be written is one change that was not done on its card, with what the write said", async () => {
+		let made: Loaded | undefined;
+		const story = on({
+			script: async (ids) => [
+				{ calls: [{ name: "translations_create", input: { source: ids.second, locale: "en", _group: "새 글" } }] },
+				async () => {
+					const item = await made?.site.db.selectFrom("monti_proposal_item").select("id").executeTakeFirstOrThrow();
+					// A body with a block the site does not have: its words' write is refused when it is applied.
+					return {
+						calls: [
+							{
+								name: "entries_save",
+								input: {
+									id: { $item: item?.id },
+									version: 1,
+									doc: { type: "doc", blocks: [{ id: "x1", type: "noSuchBlock" }] },
+									_group: "새 글",
+								},
+							},
+						],
+					};
+				},
+				{ text: "번역을 제안했습니다." },
+			],
+		});
+		await story.run();
+		made = story.loaded();
+		await openPanel();
+		await say("둘째 글 영어로 번역해 줘");
+		await userEvent.click(panel().getByRole("button", { name: "1건 적용" }));
+		await expect.element(panel().getByText("1건 못 함")).toBeVisible();
+		const card = () => panel().element().querySelector("[data-slot=proposal-card]");
+		// The row of the change, and one row of what was not done: both named by the source.
+		const rows = [...(card()?.querySelectorAll("tr") ?? [])].map((row) => row.textContent ?? "");
+		expect(rows).toHaveLength(2);
+		expect(rows.every((row) => row.includes("둘째 글"))).toBe(true);
+	});
+
+	it("10-1 a change that went stale on a one-change card offers '검토', where it is made again", async () => {
+		let made: Loaded | undefined;
+		const story = on({
+			script: async (ids) => [
+				{ calls: [{ name: "translations_create", input: { source: ids.second, locale: "en", _group: "새 글" } }] },
+				async () => {
+					const item = await made?.site.db.selectFrom("monti_proposal_item").select("id").executeTakeFirstOrThrow();
+					// A version the translation will not have: its words find it changed meanwhile.
+					return {
+						calls: [
+							{
+								name: "entries_save",
+								input: { id: { $item: item?.id }, version: 99, title: "The second post", _group: "새 글" },
+							},
+						],
+					};
+				},
+				{ text: "번역을 제안했습니다." },
+			],
+		});
+		await story.run();
+		made = story.loaded();
+		await openPanel();
+		await say("둘째 글 영어로 번역해 줘");
+		await expect.element(panel().getByRole("button", { name: "검토" })).not.toBeInTheDocument();
+		await userEvent.click(panel().getByRole("button", { name: "1건 적용" }));
+		await expect.element(panel().getByRole("button", { name: "검토" })).toBeVisible();
+	});
+
+	it("10-1 [AS-49] '적용' pressed with the keyboard on the review page hands the focus past the row, never to '되돌리기'", async () => {
+		await open(stories.Review).run();
+		const apply = page.getByRole("main").getByRole("button", { name: "3건 적용" }).first();
+		apply.element().focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("main").getByText("✓ 3건 적용").first()).toBeVisible();
+		await expect.poll(() => document.activeElement !== document.body).toBe(true);
+		expect(document.activeElement?.textContent).not.toBe("되돌리기");
 	});
 });

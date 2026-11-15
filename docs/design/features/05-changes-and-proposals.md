@@ -33,17 +33,17 @@ type Draft<T> = {
   base: T;                         // server value
   baseVersion: number;
   mine: Map<Path, unknown>;        // my unsaved changes
-  quickFilled: Set<Path>;          // filled by "✦ 채우기"; blue until touched
   proposals: ProposalItem[];       // pending, from the proposal store, aimed at paths in this draft
 };
 
 type CellState =
   | { kind: "same" }
   | { kind: "mine"; before: unknown }               // orange dot, revert
-  | { kind: "quickFilled" }                         // blue text, no accept step
   | { kind: "proposed"; item: ProposalItem };       // blue pencil, accept or discard
 ```
 
+- "✦ 채우기"가 넣은 값은 `mine`이다. 사람이 고치기 전까지 파랗고 "버리기 · 다시"가 붙는 것은 화면의 채우기(`useFills`)가 그린다: 초안은 그 값이 채우기의 것인지 따로 들지 않는다(2026-11-15, 10의 원칙 1).
+- 편집기 본문에 받은 제안은 본문의 편집 기록이 든다(문서의 `taken`): 받기를 되돌리면 받음도 함께 돌아간다. 초안은 본문이 알려 주는 것을 그대로 센다(`setBodyTaken`, 10의 "만들며 정함 (2026-11-15)").
 - `Path`는 초안 안의 자리다. 설정이면 `site:name`, 글이면 `values.summary`나 `doc.b_4`, 컬렉션이면 `fields.summary`.
 - 한 칸에 제안과 내 바뀜이 함께 있으면, 내가 고친 순간 그 제안을 받은 뒤 고친 것으로 친다(components/proposal.md "AI가 만든 상태").
 
@@ -100,7 +100,7 @@ sequenceDiagram
   U->>D: 저장하고 적용 (⌘S)
   D->>S: 기능 호출 (바뀐 칸, 읽은 버전, 받은 제안 id들)
   S-->>D: 새 버전 · 받은 제안은 적용됨으로
-  D->>D: base = 새 값 · mine 비움 · quickFilled 비움
+  D->>D: base = 새 값 · mine 비움
 ```
 
 - 저장은 그 화면의 기능 하나를 부른다. 설정은 `settings.save`, 글은 `entries.save`, 컬렉션은 `schema.apply`, 분류 패널은 `entries.save`다.

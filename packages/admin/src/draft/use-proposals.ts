@@ -6,6 +6,8 @@ export type ProposalItem = {
 	proposalId: string;
 	/** The person's request it came from: the name the bubble shows. */
 	request: string;
+	/** The name the assistant gave this kind of change ("Smooth the sentence"): what its own card is headed with. */
+	group: string;
 	conversationId: string;
 	operation: string;
 	input: unknown;

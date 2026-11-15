@@ -351,7 +351,9 @@ export function bodyExtensions(
 			});
 		});
 	return [
-		Document.extend({ content: "block+" }),
+		// `taken`: the body proposals taken into it, kept in the document so a take and its undo are one step of the history (proposal-marks).
+		// Never stored: the body that is saved is the blocks.
+		Document.extend({ content: "block+", addAttributes: () => ({ taken: { default: [], rendered: false } }) }),
 		TranslationBlocks,
 		Text,
 		HardBreak,

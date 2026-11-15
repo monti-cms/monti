@@ -340,6 +340,7 @@ export async function runWrite<Output>(
 			trx,
 			taken.filter((item) => item.records.some((key) => written.has(key))),
 			activityId,
+			now,
 		);
 		if (applied && !options.conversationId)
 			await trx

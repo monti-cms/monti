@@ -213,7 +213,10 @@ export function proposalMarks({
 	reply,
 }: Shared & {
 	/** The changes drawn over the text, each with the block its mark hangs beside. */
-	items: readonly { item: BodyProposal & { request: string; thread: readonly Exchange[] }; block: string }[];
+	items: readonly {
+		item: BodyProposal & { request: string; group: string; thread: readonly Exchange[] };
+		block: string;
+	}[];
 	onDiscard: (id: string) => void;
 	onTake: (id: string) => void;
 	/** For a change the assistant is asked to change again now, or was asked last without it going: what was asked. */
@@ -246,6 +249,7 @@ export function proposalMarks({
 						anchor={anchor}
 						open={shown}
 						onClose={() => onOpen(null)}
+						name={item.group}
 						request={item.request}
 						thread={item.thread}
 						asked={asked}

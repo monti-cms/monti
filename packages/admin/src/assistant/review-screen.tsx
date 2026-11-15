@@ -1,11 +1,10 @@
-import { applyOps, type BodyOp, type Doc, type Message, type ProposalItemView, storedFields } from "@monti-cms/core";
+import type { ProposalItemView } from "@monti-cms/core";
 import {
 	AiFailed,
 	AiWorking,
 	Checkbox,
 	CompareRow,
 	CompareRows,
-	Del,
 	EntryStatus,
 	Inline,
 	Ins,
@@ -26,16 +25,12 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { ChevronLeft } from "@monti-cms/ui/icons";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { useRead } from "../operations/use-operation";
 import { href, type Route, reachedFromInside } from "../route";
-import { codeChanges, type ShownBlock, shownBlocks } from "../screens/entry/compare-entries";
-import { useBlockNames } from "../screens/entry/use-block-names";
 import { toWhatStands, useFocusHandOff } from "../screens/frame/focus-hand-off";
-import { endsClosed } from "../screens/list/format";
-import type { SchemaRead } from "../screens/settings/schema-draft";
-import { type DiffRun, inlineDiff } from "./diff";
+import { followersOf, marked, translationOf, useChangeWords } from "./change-words";
+import { inlineDiff } from "./diff";
 import { changeOf } from "./proposal-card";
 import { ProposalState } from "./proposal-state";
 import { useAssistant } from "./use-assistant";
@@ -43,66 +38,13 @@ import { standingOf, useProposal } from "./use-proposal";
 import { useRemake } from "./use-remake";
 import { clock } from "./words";
 
-/** The line effects whose names the core's messages have (doc 17). */
-const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
-
-type EntryNow = {
-	collection: string;
-	locale: string;
-	title: string;
-	slug: string;
-	values: Record<string, unknown>;
-	doc: Doc | null;
-	/** The library's files its body shows (`entries.get`'s `media`), to name a picture by its file. */
-	media?: { id: string; name: string }[];
-};
-
-/** An id a former item of the same proposal makes (`{ $item }`): the item that makes it, or `null` for a plain id. */
-const madeBy = (id: unknown): string | null =>
-	typeof id === "object" && id !== null && typeof (id as { $item?: unknown }).$item === "string"
-		? (id as { $item: string }).$item
-		: null;
-
-/** One place a change touches, as it is now and as proposed. */
-type Place = { name: string; before: string; after: string };
-
-const said = (value: unknown): string =>
-	value === null || value === undefined
-		? ""
-		: typeof value === "string"
-			? value
-			: Array.isArray(value)
-				? value.map(said).join(", ")
-				: typeof value === "object"
-					? JSON.stringify(value)
-					: String(value);
-
-/** A change's words with what goes out and what comes in marked, on one line or as one side of two. */
-function marked(runs: DiffRun[], side: "both" | "before" | "after"): ReactNode {
-	return runs
-		.filter(
-			(run) => side === "both" || run.kind === "same" || (side === "before" ? run.kind === "del" : run.kind === "ins"),
-		)
-		.map((run, index) => {
-			// A run's place among the runs names it: they are made anew from the two texts each time.
-			const key = `${index}:${run.kind}`;
-			return run.kind === "del" ? (
-				<Del key={key}>{run.text}</Del>
-			) : run.kind === "ins" ? (
-				<Ins key={key}>{run.text}</Ins>
-			) : (
-				run.text
-			);
-		});
-}
-
 /**
  * A proposal to look through before it is applied (doc 10; screens/assistant.md): the request, then each kind of change as a titled list of the
  * shared table's rows. A row is one change with the check that keeps it in; the pill at the head's end applies what is kept in, and the same
  * row of state stands at the foot of the proposal's card in the conversation.
  */
 export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => void }) {
-	const { t, transport } = useAdmin();
+	const { t } = useAdmin();
 	const assistant = useAssistant();
 	// Left with the keyboard (discard, the way back): the page goes, and the focus goes to the panel's box beside the screen that
 	// takes its place, two frames on, when that is drawn.
@@ -128,194 +70,17 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 	const view = proposal.view;
 	// The kinds of change that are looked at side by side: each kind has its own switch.
 	const [sideBySide, setSideBySide] = useState<ReadonlySet<string>>(new Set());
-	const [entries, setEntries] = useState<Record<string, EntryNow>>({});
-	const names = useBlockNames(Object.values(entries).flatMap((entry) => entry.media ?? []));
 	// The translations a proposal makes (flow 3·13) that are opened to read the source beside the translation.
 	const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
-	// What the site calls its fields, their options and its languages: a change is named as the editor names it.
-	const schema = useRead<SchemaRead>("schema.read").data;
-
-	// The entries its changes are of, as they are now: what a change takes out is read from them.
-	const entryIds = useMemo(
-		() => [
-			...new Set(
-				(view?.items ?? []).flatMap((item) => [
-					...item.targets
-						.filter((target) => target.startsWith("entry:"))
-						.map((target) => target.slice("entry:".length)),
-					// A translation to make: its source, read beside what is proposed for it.
-					...(item.operation === "translations.create"
-						? [String((item.input as { source?: unknown }).source ?? "")].filter(Boolean)
-						: []),
-				]),
-			),
-		],
-		[view?.items],
-	);
-	const wanted = entryIds.join(" ");
-	// biome-ignore lint/correctness/useExhaustiveDependencies: it follows which entries the proposal names
-	useEffect(() => {
-		let gone = false;
-		void (async () => {
-			for (const entryId of entryIds) {
-				const answer = await transport("entries.get", { id: entryId });
-				if (gone) return;
-				if (answer.status !== 200) continue;
-				const { entry, media } = answer.body as { entry: EntryNow; media?: { id: string; name: string }[] };
-				setEntries((known) => ({ ...known, [entryId]: { ...entry, media: media ?? [] } }));
-			}
-		})();
-		return () => {
-			gone = true;
-		};
-	}, [wanted, transport]);
+	const { entries, placesOf, languageName, blockedWords } = useChangeWords(view?.items);
 
 	if (!view) return null;
 	const standing = standingOf(view, proposal.applying);
 	const settled = standing !== "waiting";
 	const items = new Map(view.items.map((item) => [item.id, item]));
 
-	const fieldsOf = (collection: string | undefined) =>
-		collection ? (schema?.adminValues[collection]?.fields ?? {}) : {};
-	const fieldName = (collection: string | undefined, field: string) => fieldsOf(collection)[field]?.label ?? field;
-	/** A field's value in words: a choice by its option's label. */
-	const valueWords = (collection: string | undefined, field: string, value: unknown) => {
-		const labels = fieldsOf(collection)[field]?.optionLabels ?? {};
-		return Array.isArray(value)
-			? value.map((each) => (typeof each === "string" ? (labels[each] ?? each) : said(each))).join(", ")
-			: typeof value === "string"
-				? (labels[value] ?? value)
-				: said(value);
-	};
-	const languageName = (code: string) => schema?.schema.locales.list.find((each) => each.code === code)?.name ?? code;
-	/** Why a change cannot be put in, in the screen's words: the field it writes belongs to an option the entry has not chosen. */
-	const blockedWords = (reason: Message, collection: string | undefined) => {
-		if (reason.key !== "entries.optionNotChosen") return t(reason);
-		const field = String(reason.values?.field ?? "");
-		const option = String(reason.values?.option ?? "");
-		const definition = collection ? storedFields(schema?.schema.collections[collection])[field] : undefined;
-		const name = fieldName(collection, field);
-		// A choice made by a switch has one option: the switch is off.
-		if (definition?.kind === "select" && definition.control === "toggle")
-			return t(endsClosed(name) ? "review.switchOffFinal" : "review.switchOffOpen", { field: name });
-		const chosen = valueWords(collection, field, option);
-		return t("review.notChosen", {
-			field: t(endsClosed(name) ? "list.subjectFinal" : "list.subjectOpen", { name }),
-			option: t(endsClosed(chosen) ? "list.subjectFinal" : "list.subjectOpen", { name: chosen }),
-		});
-	};
-	/** The items that write into what another item of the proposal makes (a translation's words): they go with that item's row. */
-	const follows = (item: ProposalItemView) => {
-		const parent = madeBy((item.input as { id?: unknown } | null)?.id);
-		// Only the words of the translation, which its row shows (its title and its body): anything else written into it (a field, an
-		// address, a block edit) is a row of its own, so nothing is applied unseen.
-		const wordsOnly =
-			item.operation === "entries.save" &&
-			Object.keys((item.input ?? {}) as object).every((key) => ["id", "version", "title", "doc"].includes(key));
-		return (
-			wordsOnly &&
-			parent !== null &&
-			(view?.items ?? []).some((each) => each.id === parent && each.operation === "translations.create")
-		);
-	};
-	const followers = (parent: string) =>
-		(view?.items ?? []).filter(
-			(each) => follows(each) && madeBy((each.input as { id?: unknown } | null)?.id) === parent,
-		);
-
-	/** The places of an entry one change touches, each as it is and as proposed. A change the page has no words for has none: its row names it. */
-	const placesOf = (item: ProposalItemView): Place[] => {
-		const entryId = item.targets.find((target) => target.startsWith("entry:"))?.slice("entry:".length);
-		const now = entryId ? entries[entryId] : undefined;
-		// Once applied, the entry already reads as proposed: there is no "before" left to show against it.
-		const applied = item.state !== "pending" && item.state !== "stale";
-		if (item.operation === "entries.save") {
-			const input = item.input as { title?: string; slug?: string; values?: Record<string, unknown> };
-			const places: Place[] = [];
-			if (input.title !== undefined)
-				places.push({ name: t("review.title.field"), before: applied ? "" : (now?.title ?? ""), after: input.title });
-			if (input.slug !== undefined)
-				places.push({ name: t("review.slug.field"), before: applied ? "" : (now?.slug ?? ""), after: input.slug });
-			for (const [field, value] of Object.entries(input.values ?? {}))
-				places.push({
-					name: fieldName(now?.collection, field),
-					before: applied ? "" : valueWords(now?.collection, field, now?.values[field]),
-					after: valueWords(now?.collection, field, value),
-				});
-			// A changed choice takes the values of the option it leaves with it (doc 19): each is shown going out.
-			if (!applied)
-				for (const cleared of item.preview?.clears ?? [])
-					places.push({
-						name: fieldName(now?.collection, cleared.field),
-						before: valueWords(now?.collection, cleared.field, cleared.value),
-						after: "",
-					});
-			return places;
-		}
-		if (item.operation === "body.edit" && now && !applied) {
-			const ops = (item.input as { ops: BodyOp[] }).ops;
-			let next: Doc;
-			try {
-				next = applyOps(now.doc ?? { type: "doc", blocks: [] }, ops);
-			} catch {
-				// The body moved on so far that the edit no longer fits: the row says it changed in the meantime.
-				return [];
-			}
-			const before = shownBlocks(now.doc, names);
-			const after = shownBlocks(next, names);
-			const places: Place[] = [];
-			// A block with values is named by its kind ("Block 4 · Callout", doc 18), and a change of its values alone is a row of its own: its values
-			// before and after, apart from its words.
-			const kind = (block: ShownBlock) => block.values?.split(" · ")[0];
-			const valuesOnly = (block: ShownBlock) => block.values?.split(" · ").slice(1).join(" · ") ?? "";
-			const named = (block: ShownBlock, index: number) =>
-				[t("review.block", { number: index + 1 }), kind(block)].filter((part) => part).join(" · ");
-			after.forEach((block, index) => {
-				const was = before.find((each) => each.id === block.id);
-				if (!was) places.push({ name: t("review.newBlock"), before: "", after: block.text || (block.values ?? "") });
-				else {
-					if (valuesOnly(was) !== valuesOnly(block))
-						places.push({ name: named(block, index), before: valuesOnly(was), after: valuesOnly(block) });
-					if (was.text !== block.text) places.push({ name: named(block, index), before: was.text, after: block.text });
-					else {
-						// The same code with other effects (doc 17, T196): the lines whose effects change, with their effects on each side. A core effect
-						// says its name; a site's own effect, which has no words in the admin, says its stored name.
-						const effectName = (name: string) =>
-							CORE_EFFECTS.has(name)
-								? t({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` })
-								: name;
-						const changed = codeChanges(block, was);
-						const effects = (side: typeof block, lines: number[]) =>
-							lines
-								.map((line) => {
-									const names = side.code?.lines[line] ?? [];
-									return `${t("editor.code.line", { n: line + 1 })}: ${
-										names.length ? names.map(effectName).join(", ") : "—"
-									}`;
-								})
-								.join(" · ");
-						const head = (side: typeof block) => [side.code?.language, side.code?.title].filter(Boolean).join(" · ");
-						if (changed.lines.length || changed.language || changed.title)
-							places.push({
-								name: named(block, index),
-								before: [changed.language || changed.title ? head(was) : "", effects(was, changed.lines)]
-									.filter(Boolean)
-									.join(" · "),
-								after: [changed.language || changed.title ? head(block) : "", effects(block, changed.lines)]
-									.filter(Boolean)
-									.join(" · "),
-							});
-					}
-				}
-			});
-			before.forEach((block, index) => {
-				if (!after.some((each) => each.id === block.id))
-					places.push({ name: named(block, index), before: block.text || (block.values ?? ""), after: "" });
-			});
-			return places;
-		}
-		return [];
-	};
+	// What is written into a translation the proposal makes is read in that translation's row.
+	const { follows, followers } = followersOf(view.items);
 
 	const back = () => {
 		// Back to where the person came from, with the panel on the conversation this proposal was made in.
@@ -486,23 +251,13 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 												/>
 											);
 											if (item.operation === "translations.create") {
-												const input = item.input as { source: string; locale: string };
-												const source = entries[input.source];
 												const words = followers(item.id);
-												const proposedDoc = words
-													.map((each) => (each.input as { doc?: Doc }).doc)
-													.find((doc) => doc !== undefined);
-												const proposedTitle = words
-													.map((each) => (each.input as { title?: string }).title)
-													.find((title) => title !== undefined);
-												const blocks = shownBlocks(source?.doc ?? null);
+												const { input, source, blocks, proposedTitle, translated } = translationOf(
+													item,
+													words,
+													entries,
+												);
 												const worded = blocks.filter((block) => block.look !== "code" && block.text.trim() !== "");
-												const translated = (block: (typeof blocks)[number], index: number) => {
-													const match =
-														proposedDoc?.blocks.find((each) => each.link?.from === block.id) ??
-														proposedDoc?.blocks[index];
-													return match ? (shownBlocks({ type: "doc", blocks: [match] })[0]?.text ?? "") : null;
-												};
 												const shown = opened.has(item.id);
 												return (
 													<TableRow key={item.id} twoLine={shown}>

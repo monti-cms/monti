@@ -69,6 +69,63 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 		expect(subtitle().element().hasAttribute("data-proposal")).toBe(false);
 	});
 
+	it("10-1 [AS-29, AS-30] a fill in the field offers '버리기 · 다시': '버리기' puts back what it had before the first fill, and so does undo in the field", async () => {
+		let said = 0;
+		const made = on("draft", [], () => ({ value: `덜어낸 것과 남긴 것, ${++said}번째.` }));
+		await made.run();
+		await opened();
+		const before = (summary().element() as HTMLInputElement).value;
+		await userEvent.click(summary());
+		// No fill yet: nothing to discard.
+		await expect.element(button("요약 채운 값 버리기")).not.toBeInTheDocument();
+		await userEvent.click(button("요약 다시 채우기"));
+		await expect.element(summary()).toHaveValue("덜어낸 것과 남긴 것, 1번째.");
+		await userEvent.click(button("요약 채운 값 버리기"));
+		await expect.element(summary()).toHaveValue(before);
+		expect(summary().element().hasAttribute("data-proposal")).toBe(false);
+		await expect.element(button("요약 채운 값 버리기")).not.toBeInTheDocument();
+		// Filled twice, then undo in the field: one step back to what it had before the first fill, nothing left unsaved.
+		await userEvent.click(button("요약 다시 채우기"));
+		await expect.element(summary()).toHaveValue("덜어낸 것과 남긴 것, 2번째.");
+		await userEvent.click(button("요약 다시 채우기"));
+		await expect.element(summary()).toHaveValue("덜어낸 것과 남긴 것, 3번째.");
+		await userEvent.click(summary());
+		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
+		await expect.element(summary()).toHaveValue(before);
+		await expect.element(button("요약 채운 값 버리기")).not.toBeInTheDocument();
+		await expect.poll(cells).not.toContain("저장 전 변경사항");
+	});
+
+	it("10-1 '버리기' after a save puts back what the field had before the fill, unsaved", async () => {
+		const made = on("draft", [], () => ({ value: "도구보다 글" }));
+		await made.run();
+		await opened();
+		await userEvent.click(subtitle());
+		await userEvent.click(button("부제 채우기"));
+		await expect.element(subtitle()).toHaveValue("도구보다 글");
+		await userEvent.click(button("저장"));
+		await expect.poll(async () => (await stored(made.loaded())).values.subtitle).toBe("도구보다 글");
+		await userEvent.click(button("부제 채운 값 버리기"));
+		await expect.element(subtitle()).toHaveValue("");
+		await saveCell("저장 전 변경사항");
+	});
+
+	it("10-1 undo in a filled relation's search takes back the typing, not the fill", async () => {
+		const made = on("draft", [], async () => ({ values: [(await stored(made.loaded())).values.category] }));
+		await made.run();
+		await opened();
+		await userEvent.hover(page.getByText("카테고리", { exact: true }));
+		await userEvent.click(button("카테고리 다시 채우기"));
+		await expect.element(button("카테고리 채운 값 버리기")).toBeVisible();
+		const search = page.getByRole("combobox", { name: "카테고리" });
+		await userEvent.click(search);
+		await userEvent.keyboard("abc");
+		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
+		await expect.poll(() => (document.activeElement as HTMLInputElement).value).not.toBe("개발abc");
+		// The open list hides the rest of the screen from the roles: the line is looked for as it is drawn.
+		expect(document.querySelector('[aria-label="카테고리 채운 값 버리기"]')).not.toBeNull();
+	});
+
 	it("10-1 a field that has a value offers '다시', and the new answer takes the value's place", async () => {
 		const made = on("draft", [], () => ({ value: "덜어낸 것과 남긴 것, 다시." }));
 		await made.run();
@@ -383,6 +440,46 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		await saveCell("저장 전 변경사항");
 		await expect.poll(() => mark(MARK).elements().length).toBe(2);
 		expect(await pending(made.loaded())).toHaveLength(3);
+	});
+
+	it("10-3 [AS-19] undo right after '받기' takes back the words and the take together: the change waits, drawn again, with nothing unsaved", async () => {
+		const made = await proposed();
+		await userEvent.click(mark(MARK).first());
+		await userEvent.click(button("받기"));
+		await expect.poll(() => mark(MARK).elements().length).toBe(2);
+		await saveCell("저장 전 변경사항");
+		body().element().focus();
+		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
+		await expect.poll(() => mark(MARK).elements().length).toBe(3);
+		await expect.poll(() => inBody("ins")).toHaveLength(2);
+		// Not taken any more: nothing to save, and the server still has all three waiting.
+		await saveCell("제안 3건 대기");
+		expect(await pending(made.loaded())).toHaveLength(3);
+		// Redo takes it again, as one step.
+		await userEvent.keyboard("{ControlOrMeta>}{Shift>}z{/Shift}{/ControlOrMeta}");
+		await expect.poll(() => mark(MARK).elements().length).toBe(2);
+		await saveCell("저장 전 변경사항");
+	});
+
+	it("10-1 [AS-12] pressing a change drawn over the text opens its own card, with '버리기' and '받기'", async () => {
+		await proposed();
+		const drawn = inBody("ins[data-proposal-item]")[0];
+		if (!drawn) throw new Error("No change is drawn.");
+		await userEvent.click(drawn);
+		await expect.element(button("받기")).toBeVisible();
+		await expect.element(button("버리기")).toBeVisible();
+	});
+
+	it("10-1 [AS-12] a line put in at the very start opens its own card when pressed, as any other change", async () => {
+		await scene<Loaded>(
+			{ loaders: [assisted([]), ...entry.site("proposedAtStart")], play: entry.BodyProposalAtStart.play },
+			entry.default,
+		).run();
+		const drawn = () => inBody("[data-proposal-item]")[0];
+		await expect.poll(() => drawn()?.textContent).toContain("이 글은 다시 만든 기록이다.");
+		await userEvent.click(drawn() as Element);
+		await expect.element(button("받기")).toBeVisible();
+		await expect.element(button("버리기")).toBeVisible();
 	});
 
 	it("10-1 '버리기' on the card discards that change alone: its marks go from the text, the others stay, nothing is changed", async () => {

@@ -143,6 +143,17 @@ async function proposeBody(monti: Monti, id: string) {
 	await edit([{ op: "remove", blocks: [last.id] }]);
 }
 
+/** A line put in at the very start of the body, before its first block. */
+async function proposeAtStart(monti: Monti, id: string) {
+	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { version: number } };
+	const proposal = await monti.proposals.create("conversation-1", "첫머리에 한 줄 더해 줘");
+	await monti.proposals.add(proposal, "body.edit", {
+		id,
+		version: read.entry.version,
+		ops: [{ op: "insert", after: null, blocks: [{ type: "paragraph", content: text("이 글은 다시 만든 기록이다.") }] }],
+	});
+}
+
 /** A proposal that keeps the first paragraph's words and makes two of them bold. */
 async function proposeFormat(monti: Monti, id: string) {
 	const read = (await monti.run("entries.get", { id }, admin)) as { entry: { doc: Doc; version: number } };
@@ -258,6 +269,7 @@ type Kind =
 	| "proposedStale"
 	| "proposedStaleTwice"
 	| "proposedFormat"
+	| "proposedAtStart"
 	| "conditional"
 	| "nestedChoice"
 	| "strayOption";
@@ -462,6 +474,7 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 	if (kind === "proposedFields") await proposeFields(monti, id);
 	if (kind === "proposedStale") await proposeThenEdit(monti, id);
 	if (kind === "proposedFormat") await proposeFormat(monti, id);
+	if (kind === "proposedAtStart") await proposeAtStart(monti, id);
 	if (kind === "proposedStaleTwice") await proposeThenEdit(monti, id, true);
 	return id;
 }
@@ -1003,6 +1016,19 @@ export const BodyProposals: Story = {
 		await expect(body.querySelector("ins")?.textContent).toBe("만든");
 		await all.findByText("더 짧게 다듬기", {}, wait);
 		await all.findByRole("button", { name: "모두 받기" }, wait);
+	},
+};
+
+/** A line proposed at the very start of the body: drawn above the first block, its mark beside that block. */
+export const BodyProposalAtStart: Story = {
+	loaders: site("proposedAtStart"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await waitFor(
+			() => expect(body.querySelector("[data-proposal-item]")?.textContent).toContain("이 글은 다시 만든 기록이다."),
+			wait,
+		);
+		await all.findByText("첫머리에 한 줄 더해 줘", {}, wait);
 	},
 };
 

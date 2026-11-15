@@ -14,7 +14,7 @@ import {
 import { Settings } from "@monti-cms/ui/icons";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import type { FillState } from "../../assistant/use-fill";
-import { ALT_MAX, AltFields } from "../../editor/alt-fields";
+import { AltFields } from "../../editor/alt-fields";
 import { previewUrl } from "../../media/file-text";
 import { MediaPickerDialog } from "../../media/media-picker-dialog";
 import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
@@ -71,8 +71,12 @@ export function MediaField({
 	/** "✦ Fill" for the picture's words, in its settings card (doc 10, quick tasks); left out where there is nobody to ask. */
 	fill?: {
 		state: FillState;
-		run: (media: string, put: (alt: string) => void) => void;
+		/** `put` puts the words in and gives what was there and how to put it back, or `null` when the field holds another picture now. */
+		run: (media: string, put: (alt: string) => { before: unknown; back: () => void } | null) => void;
+		/** Typed by hand: an answer on its way is not put in, and what was filled is the person's. */
 		forget: () => void;
+		stop: () => void;
+		discard: () => void;
 		again: () => void;
 	};
 }) {
@@ -162,12 +166,21 @@ export function MediaField({
 																fill.run(shown.media, (alt) => {
 																	// As the field is when the answer comes, and only if it still holds the picture that was asked about.
 																	const now = latest.current;
-																	if (now.shown?.media !== shown.media) return;
-																	onChange(
-																		cleanMediaValue({ ...now.own, media: shown.media, alt: alt.slice(0, ALT_MAX) }),
-																	);
+																	if (now.shown?.media !== shown.media) return null;
+																	const before = now.own?.alt;
+																	onChange(cleanMediaValue({ ...now.own, media: shown.media, alt }));
+																	// Back to the words it had, on the picture as it is then (resized or made decorative since).
+																	return {
+																		before: before ?? "",
+																		back: () => {
+																			const then = latest.current;
+																			if (then.shown?.media !== shown.media) return;
+																			onChange(cleanMediaValue({ ...then.own, media: shown.media, alt: before }));
+																		},
+																	};
 																}),
-															onStop: fill.forget,
+															onStop: fill.stop,
+															onDiscard: fill.discard,
 															onRetry: fill.again,
 														}
 													: undefined

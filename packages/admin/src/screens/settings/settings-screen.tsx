@@ -485,6 +485,7 @@ export function SettingsScreen({
 									anchor={() => cardMark.current}
 									open={card === walking.item.id}
 									onClose={() => openCard(null)}
+									name={walking.item.group}
 									request={walking.item.request}
 									thread={walking.item.thread ?? []}
 									asked={asked}

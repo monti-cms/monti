@@ -86,22 +86,27 @@ function textPos(node: EditorNode, pos: number, offset: number): number {
 const newText = (block: NewBlock): string =>
 	block.content ? plainText(block.content) : (block.children ?? []).map((child) => newText(child)).join(" ");
 
-const element = (tag: string, className: string, text: string) => {
+/** The attribute that says which proposal a drawn change is of: pressing it opens that change's card (AS-12). */
+export const PROPOSAL_ITEM = "data-proposal-item";
+
+const element = (tag: string, className: string, text: string, item: string) => {
 	const node = document.createElement(tag);
 	node.className = className;
 	node.textContent = text;
+	node.setAttribute(PROPOSAL_ITEM, item);
 	return node;
 };
 
 /** A line put in: a block of its own with the inserted text on the pale blue ground. */
-const insertedBlocks = (blocks: NewBlock[], current: boolean) => () => {
+const insertedBlocks = (blocks: NewBlock[], current: boolean, item: string) => () => {
 	const box = document.createElement("div");
 	box.setAttribute("data-proposal-insert", "");
+	box.setAttribute(PROPOSAL_ITEM, item);
 	// The proposal looked at: its blue line is beside the new lines themselves.
 	if (current) box.className = PROPOSAL_MARK_CLASSES.current;
 	for (const block of blocks) {
 		const line = document.createElement("p");
-		line.append(element("ins", PROPOSAL_MARK_CLASSES.ins, newText(block)));
+		line.append(element("ins", PROPOSAL_MARK_CLASSES.ins, newText(block), item));
 		box.append(line);
 	}
 	return box;
@@ -175,6 +180,7 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 	const decorations: Decoration[] = [];
 	const blocks: Drawn["blocks"] = [];
 	const touch = (pos: number, node: EditorNode) => blocks.push({ pos, end: pos + node.nodeSize });
+	const owned = { [PROPOSAL_ITEM]: item.id };
 	// The blocks it changes hold the words it was made on: a change drawn against other words would strike the wrong ones.
 	for (const op of item.ops)
 		for (const id of op.op === "remove" ? op.blocks : op.op === "insert" ? [] : [op.block]) {
@@ -194,8 +200,8 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 				// An undecided block of a translation: the words that fill it, in blue, where its own words will stand.
 				if (emptied(doc, found)) {
 					decorations.push(
-						Decoration.widget(found.pos + 1, () => element("span", FILL, words), { side: 1, key }),
-						Decoration.node(found.pos, found.pos + found.node.nodeSize, { "data-proposal-fill": "" }),
+						Decoration.widget(found.pos + 1, () => element("span", FILL, words, item.id), { side: 1, key }),
+						Decoration.node(found.pos, found.pos + found.node.nodeSize, { "data-proposal-fill": "", ...owned }),
 					);
 					touch(found.pos, found.node);
 					break;
@@ -208,6 +214,7 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 					decorations.push(
 						Decoration.inline(textPos(found.node, found.pos, from), textPos(found.node, found.pos, to), {
 							class: PROPOSAL_MARK_CLASSES.ins,
+							...owned,
 						}),
 					);
 				let offset = 0;
@@ -216,7 +223,7 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 					const at = textPos(found.node, found.pos, offset);
 					if (run.kind === "ins") {
 						decorations.push(
-							Decoration.widget(at, () => element("ins", PROPOSAL_MARK_CLASSES.ins, run.text), {
+							Decoration.widget(at, () => element("ins", PROPOSAL_MARK_CLASSES.ins, run.text, item.id), {
 								side: 1,
 								key: `${key}:${index}`,
 							}),
@@ -228,6 +235,7 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 						decorations.push(
 							Decoration.inline(at, textPos(found.node, found.pos, offset + run.text.length), {
 								class: PROPOSAL_MARK_CLASSES.del,
+								...owned,
 							}),
 						);
 						offset += run.text.length;
@@ -254,7 +262,7 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 					const found = findBlock(doc, id);
 					if (!found) return null;
 					decorations.push(
-						Decoration.node(found.pos, found.pos + found.node.nodeSize, { class: PROPOSAL_MARK_CLASSES.del }),
+						Decoration.node(found.pos, found.pos + found.node.nodeSize, { class: PROPOSAL_MARK_CLASSES.del, ...owned }),
 					);
 					touch(found.pos, found.node);
 				}
@@ -267,16 +275,16 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 				if (op.op === "setBlock" && emptied(doc, found)) {
 					const words = newText(op.value);
 					decorations.push(
-						Decoration.widget(found.pos + 1, () => element("span", FILL, words), { side: 1, key }),
-						Decoration.node(found.pos, end, { "data-proposal-fill": "" }),
+						Decoration.widget(found.pos + 1, () => element("span", FILL, words, item.id), { side: 1, key }),
+						Decoration.node(found.pos, end, { "data-proposal-fill": "", ...owned }),
 					);
 					touch(found.pos, found.node);
 					break;
 				}
-				decorations.push(Decoration.node(found.pos, end, { class: PROPOSAL_MARK_CLASSES.del }));
+				decorations.push(Decoration.node(found.pos, end, { class: PROPOSAL_MARK_CLASSES.del, ...owned }));
 				touch(found.pos, found.node);
 				if (op.op === "setBlock") {
-					decorations.push(Decoration.widget(end, insertedBlocks([op.value], current), { side: 1, key }));
+					decorations.push(Decoration.widget(end, insertedBlocks([op.value], current, item.id), { side: 1, key }));
 					break;
 				}
 				const after = op.after === null ? null : findBlock(doc, op.after);
@@ -286,14 +294,14 @@ function draw(doc: EditorNode, item: BodyProposal, current = false): Drawn | nul
 					type: found.node.type.name,
 					content: [{ type: "text", text: found.node.textContent }],
 				};
-				decorations.push(Decoration.widget(place, insertedBlocks([moved], current), { side: 1, key }));
+				decorations.push(Decoration.widget(place, insertedBlocks([moved], current, item.id), { side: 1, key }));
 				break;
 			}
 			case "insert": {
 				const after = op.after === null ? null : findBlock(doc, op.after);
 				if (op.after !== null && !after) return null;
 				const place = after ? after.pos + after.node.nodeSize : 0;
-				decorations.push(Decoration.widget(place, insertedBlocks(op.blocks, current), { side: 1, key }));
+				decorations.push(Decoration.widget(place, insertedBlocks(op.blocks, current, item.id), { side: 1, key }));
 				// Scrolled to by the block it goes after; its blue line is on the new lines.
 				if (after) blocks.push({ pos: after.pos, end: after.pos + after.node.nodeSize, scrollOnly: true });
 				break;
@@ -338,6 +346,24 @@ export function anchorBlock(doc: EditorNode, item: BodyProposal): string | null 
 				: [op.block])
 			if (findBlock(doc, id)) return id;
 	return null;
+}
+
+/**
+ * The block a proposal drawn on the body hangs beside: the first it names, or for lines put in at the very start, the body's first block
+ * (the new lines stand above it). `null`: nothing to hang it on.
+ */
+export function drawnAnchor(doc: EditorNode, item: BodyProposal): string | null {
+	const named = anchorBlock(doc, item);
+	if (named !== null || !item.ops.some((op) => op.op === "insert" && op.after === null)) return named;
+	let first: string | null = null;
+	doc.descendants((node) => {
+		if (first !== null) return false;
+		if (node.isBlock && typeof node.attrs.blockId === "string") {
+			first = node.attrs.blockId;
+			return false;
+		}
+	});
+	return first;
 }
 
 /**
@@ -490,9 +516,18 @@ function takeText(tr: Transaction, op: SetText, convert: Convert) {
 		tr.setNodeMarkup(found.pos, undefined, { ...found.node.attrs, data: made.attrs.data });
 }
 
-/** Takes a proposal into the body: a block's new text goes in where it differs, a block change replaces only the blocks it changes. All in one transaction that undo takes back. */
+/** The body proposals a body holds as taken (the document's `taken`): a take writes it in the same step as its words. */
+export const takenIn = (doc: EditorNode): readonly string[] => (doc.attrs.taken as readonly string[] | undefined) ?? [];
+
+/**
+ * Takes a proposal into the body: a block's new text goes in where it differs, a block change replaces only the blocks it changes, and the
+ * proposal is marked taken in the document itself. All in one transaction, so one undo takes back the words and the "taken" together (AS-19):
+ * a "taken" kept beside the history stayed taken over the words the undo put back, and the save would have sent it as applied.
+ */
 export function takeProposal(state: EditorState, item: BodyProposal, convert: Convert): Transaction {
 	const tr = state.tr;
+	const taken = takenIn(state.doc);
+	if (!taken.includes(item.id)) tr.setDocAttribute("taken", [...taken, item.id]);
 	for (const op of item.ops) {
 		if (op.op === "setText") {
 			takeText(tr, op, convert);

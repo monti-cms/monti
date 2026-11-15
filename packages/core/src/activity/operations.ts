@@ -110,7 +110,7 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 					ctx.emit(event, { activity: undone }),
 				);
 				// A write an applied proposal item made is that item's: undone here, the item says what "revert all" would have said of it.
-				await markReverted(ctx.db, put);
+				await markReverted(ctx.db, put, ctx.now());
 				return done;
 			},
 			summary: (_input, output) => ({ key: "activity.undo", values: { count: output.restore.length } }),

@@ -1,4 +1,4 @@
-import type { Doc, MediaItem, MediaQueryResult } from "@monti-cms/core";
+import { type Doc, type MediaItem, type MediaQueryResult, sameJson } from "@monti-cms/core";
 import { EditorBody } from "@monti-cms/ui";
 import { type Editor, EditorContent } from "@tiptap/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -23,7 +23,7 @@ import {
 	placeLibraryFile,
 	useBodyFiles,
 } from "./media-context";
-import { type BodyProposal, showProposals, takeInEditor } from "./proposal-marks";
+import { type BodyProposal, showProposals, takeInEditor, takenIn } from "./proposal-marks";
 import { type PickedText, pickedText } from "./request-marks";
 import { nodeName } from "./schema";
 import { useSlashMenu } from "./slash-menu";
@@ -75,7 +75,17 @@ export function BodyEditor({
 	 * The assistant's body proposals drawn over the text (T32), the one looked at (`current`), and what happens when one is taken here (the person
 	 * changed a block it touches, so it went in first).
 	 */
-	proposals?: { items: BodyProposal[]; current: string | null; onTaken: (id: string) => void };
+	/**
+	 * The entry's body proposals to draw. `onTaken` hears which of them the body holds as taken, each time that changes: a take is one step of
+	 * the editor's history with its words, so undo takes both back (AS-19).
+	 */
+	proposals?: {
+		items: BodyProposal[];
+		current: string | null;
+		/** What the screen holds as taken: a body made anew (back from compare, another view of a translation) starts with it. */
+		taken: readonly string[];
+		onTaken: (ids: readonly string[]) => void;
+	};
 	/** A translation's block menu rows (doc 04). */
 	translation?: BlockTranslation;
 	/** What hangs in the text's left margin, drawn for the editor once it is made (a translation's marks). */
@@ -140,10 +150,30 @@ export function BodyEditor({
 			const item = latestProposals.current?.items.find((each) => each.id === id);
 			if (!item || !editorRef.current) return;
 			takeInEditor(editorRef.current, item, catalogs.kit);
-			latestProposals.current?.onTaken(id);
 		},
 	});
 	editorRef.current = editor;
+	// What the body holds as taken, told as it changes (a take, its undo, its redo), and once as the editor is made. A body made anew over
+	// words already taken (back from compare, the other view of a translation) takes what the screen holds, outside the history: undo
+	// there goes no further back than the body.
+	useEffect(() => {
+		if (!editor) return;
+		const held = latestProposals.current?.taken ?? [];
+		if (held.length > 0 && takenIn(editor.state.doc).length === 0)
+			editor.view.dispatch(editor.state.tr.setDocAttribute("taken", [...held]).setMeta("addToHistory", false));
+		let told: readonly string[] | null = null;
+		const tell = () => {
+			const now = takenIn(editor.state.doc);
+			if (told !== null && sameJson(told, now)) return;
+			told = now;
+			latestProposals.current?.onTaken(now);
+		};
+		tell();
+		editor.on("transaction", tell);
+		return () => {
+			editor.off("transaction", tell);
+		};
+	}, [editor]);
 	const handle = useBlockHandle(editor, catalogs, translation);
 	const tables = useTableTools(editor);
 	const [card, setCard] = useState<string | null>(null);

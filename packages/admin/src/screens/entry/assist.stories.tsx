@@ -50,7 +50,7 @@ function pick(bodyElement: HTMLElement, words: string) {
 	throw new Error(`"${words}" is not in the body`);
 }
 
-/** Flow 2·10: a field filled by "✦ fill": its words in blue, the button now "again". */
+/** Flow 2·10: a field filled by "✦ fill": its words in blue, its line "discard · again". */
 export const FieldFilled: Story = {
 	loaders: [assisted([], () => ({ value: "도구보다 글" })), ...site("draft")],
 	play: async ({ canvasElement }) => {

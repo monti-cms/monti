@@ -53,7 +53,7 @@
 
 ### 코드
 
-`Marker`와 `tone="request"`(어시스턴트에게 남긴 요청, ✦(`Spark`)와 개수. 다른 어시스턴트 표시처럼 파랗다: 옅은 파랑 바탕(`bg-proposal-muted`)에 파란 글자, 카드가 열리면 파랑으로 채운다. 전에는 회색 바탕에 말풍선 아이콘이었다, 만들며 정함 (2026-11-14). 누를 수 있는 표시는 가리키면 바탕이 제 색으로 한 단계 짙어진다. `margin`은 블록에서 12px 떨어진 왼쪽 여백에 단다. 편집기의 제안에 단 표시는 `margin="proposal"`로 20px 떨어뜨려, 보고 있는 제안의 파란 선(18px 밖)을 가리지 않는다. 카드가 열려 있으면 `active`). `MemoCard`: 세 부분이다. 머리(48px)는 메모를 처리하는 두 방법을 언제나 이 순서로 담는다. 카드는 그 글자 바로 아래에 붙으므로 머리에 문단 이름을 적지 않고, 자리로 알 수 없는 종류만 적는다(`where`, "원문 변경"). 아직 처리할 것이 없는 메모(방금 고른 글자에 대한 요청)는 머리가 없고, 입력칸에 커서가 든 채 열린다(`reply.focus`). 버리는 조용한 글자, 그다음 받는 검은 알약 하나다(받기가 어시스턴트에게 무언가를 시키면 받기 레이블 앞에 반짝이가 붙는다. "✦ Translate again"). 키 조합은 머리 버튼의 툴팁으로 보인다. 본문은 `MemoMessage`를 담은 `MemoThread`(16px 간격. 어시스턴트의 이름 `ai`는 반짝이가 붙은 파랑이고, 일하는 동안 표시가 있다)나 `MemoDiff`다. `reply`는 메모를 이어 쓰는 행을 맨 아래에 더한다("Continue"). `MemoCardPopover`는 글의 한 자리 아래에 여는 `MemoCard`다. `anchor`(표시가 달린 블록) 시작에서 8px 아래에 걸리고, 바깥을 누르거나 Esc를 누르면 `onOpenChange`로 닫힌다. 열려도 포커스는 글에 남는다.
+`Marker`와 `tone="request"`(어시스턴트에게 남긴 요청, ✦(`Spark`)와 개수. 다른 어시스턴트 표시처럼 파랗다: 옅은 파랑 바탕(`bg-proposal-muted`)에 파란 글자, 카드가 열리면 파랑으로 채운다. 전에는 회색 바탕에 말풍선 아이콘이었다, 만들며 정함 (2026-11-14). 누를 수 있는 표시는 가리키면 바탕이 제 색으로 한 단계 짙어진다. `margin`은 블록에서 12px 떨어진 왼쪽 여백에 단다. 편집기의 제안에 단 표시는 `margin="proposal"`로 20px 떨어뜨려, 보고 있는 제안의 파란 선(18px 밖)을 가리지 않는다. 카드가 열려 있으면 `active`). `MemoCard`: 세 부분이다. 머리(48px)는 메모를 처리하는 두 방법을 언제나 이 순서로 담는다. 카드는 그 글자 바로 아래에 붙으므로 머리에 문단 이름을 적지 않고, 자리로 알 수 없는 종류(`where`, "원문 변경")나 제안 하나의 카드면 그 바뀜의 이름("문장 다듬기")을 적는다(AS-15, 2026-11-15). 아직 처리할 것이 없는 메모(방금 고른 글자에 대한 요청)는 머리가 없고, 입력칸에 커서가 든 채 열린다(`reply.focus`). 버리는 조용한 글자, 그다음 받는 검은 알약 하나다(받기가 어시스턴트에게 무언가를 시키면 받기 레이블 앞에 반짝이가 붙는다. "✦ Translate again"). 키 조합은 머리 버튼의 툴팁으로 보인다. 본문은 `MemoMessage`를 담은 `MemoThread`(16px 간격. 어시스턴트의 이름 `ai`는 반짝이가 붙은 파랑이고, 일하는 동안 표시가 있다)나 `MemoDiff`다. `reply`는 메모를 이어 쓰는 행을 맨 아래에 더한다("Continue"). `MemoCardPopover`는 글의 한 자리 아래에 여는 `MemoCard`다. `anchor`(표시가 달린 블록) 시작에서 8px 아래에 걸리고, 바깥을 누르거나 Esc를 누르면 `onOpenChange`로 닫힌다. 열려도 포커스는 글에 남는다.
 
 ## 필드 채우기
 
@@ -70,7 +70,7 @@
 
 `Spark`는 어시스턴트의 유일한 ✦ 표시다. Carbon 아이콘 같은 아이콘이라 닫혀 있지 않다. `icon`이 들어가는 자리에 들어가고(`icon={Spark}`, 버튼이나 메뉴 항목의 아이콘), 크기는 부모가 정한다. `currentColor`로 채워지므로 곁의 글자를 따른다(제안에서는 제안 파랑, 버튼에서는 버튼의 잉크). 장식이다. 무슨 뜻인지는 곁의 말이 알린다. 무언가를 어시스턴트의 것으로 표시하는 곳은 모두 이것을 쓰며, 아이콘 세트의 sparkles 아이콘은 쓰지 않는다.
 
-관리자 화면의 `FillAction`(`assistant/fill-action.tsx`)이 그린다: `TextButton tone="proposal" size="caption"`에 `Spark`와 "채우기"(값이 있으면 `Renew`와 "다시")를 넣고, 일하는 동안은 그 자리에 `AiWorking size="caption"`를 둔다. 실패 줄은 `FillFailed`(`AiFailed`)다. 칸의 채우기, 사진의 대체 텍스트와 캡션, 미디어 필드가 모두 이 둘을 쓴다. `FormFieldLabel action`에 들어가고, `FormField` 안에서는 포인터나 키보드가 있는 필드에서만 보인다(`data-tone="proposal"`).
+관리자 화면의 `FillAction`(`assistant/fill-action.tsx`)이 그린다: `TextButton tone="proposal" size="caption"`에 `Spark`와 "채우기"(값이 있으면 `Renew`와 "다시")를 넣고, 일하는 동안은 그 자리에 `AiWorking size="caption"`를 둔다. 실패 줄은 `FillFailed`(`AiFailed`)다. 칸의 채우기, 사진의 대체 텍스트와 캡션, 미디어 필드가 모두 이 둘을 쓴다. 채운 값이 칸에 있는 동안 줄은 "버리기 · ↻ 다시"다: 앞에 `TextButton variant="underline" quiet size="caption"` "버리기"(첫 채우기 전의 값으로 돌린다. 그 칸의 ⌘Z도 같다), 가운데 점. `FormFieldLabel action`에 들어가고 늘 보인다(만들며 정함 (2026-11-15), AS-27).
 
 ## AI가 만든 상태
 

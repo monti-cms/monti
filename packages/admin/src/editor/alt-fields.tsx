@@ -1,7 +1,7 @@
 import { FormField, FormFieldError, FormFieldLabel, Inline, Input, Option, Switch, Text } from "@monti-cms/ui";
 import { useId } from "react";
 import { FillAction, FillFailed } from "../assistant/fill-action";
-import type { FillState } from "../assistant/use-fill";
+import { type FillState, isUndoKey } from "../assistant/use-fill";
 import { useAdmin } from "../operations/admin-context";
 import { useComposedValue } from "./use-composed-value";
 
@@ -38,11 +38,13 @@ export function AltFields({
 	 * "✦ Fill" (doc 10, quick tasks): the quick-task model looks at the picture and writes its words. On the label row before the count.
 	 * Left out where there is nothing to ask (no assistant, no key, a read-only entry).
 	 */
-	fill?: { state: FillState; onFill: () => void; onStop: () => void; onRetry: () => void };
+	fill?: { state: FillState; onFill: () => void; onStop: () => void; onDiscard: () => void; onRetry: () => void };
 }) {
 	const { t } = useAdmin();
 	const id = useId();
 	const alt = useComposedValue(value, onChange);
+	// What a fill wrote, untouched since: blue, and the line can discard it (components/proposal.md, filling a field).
+	const filled = fill !== undefined && alt.value !== "" && fill.state.filled === alt.value;
 	return (
 		<>
 			{!decorative && (
@@ -52,7 +54,14 @@ export function AltFields({
 						action={
 							<Inline gap={8} align="baseline">
 								{fill && !readOnly ? (
-									<FillAction state={fill.state} held={alt.value !== ""} onFill={fill.onFill} onStop={fill.onStop} />
+									<FillAction
+										state={fill.state}
+										held={alt.value !== ""}
+										filled={filled}
+										onFill={fill.onFill}
+										onStop={fill.onStop}
+										onDiscard={fill.onDiscard}
+									/>
 								) : null}
 								<Text variant="micro" tone="subtle">
 									{t("entry.count", { count: alt.value.length, max: ALT_MAX })}
@@ -69,12 +78,17 @@ export function AltFields({
 						readOnly={readOnly}
 						maxLength={ALT_MAX}
 						placeholder={placeholder}
-						// What a fill wrote is blue until it is changed (components/proposal.md, filling a field).
-						proposal={fill !== undefined && alt.value !== "" && fill.state.filled === alt.value}
+						proposal={filled}
 						value={alt.value}
 						onChange={(event) => alt.change(event.target.value)}
 						{...alt.composition}
 						onKeyDown={(event) => {
+							// Undo takes a fill back as one step, as "Discard" does: the box's own undo knows nothing of words the screen put in.
+							if (filled && isUndoKey(event)) {
+								event.preventDefault();
+								fill?.onDiscard();
+								return;
+							}
 							if (event.key === "Enter" && !event.nativeEvent.isComposing) {
 								event.preventDefault();
 								onEnter();
