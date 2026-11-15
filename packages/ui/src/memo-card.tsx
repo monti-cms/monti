@@ -5,7 +5,7 @@ import type { ComponentProps, KeyboardEvent, ReactElement, ReactNode } from "rea
 import { Button } from "./button";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
-import { ArrowUp, StopFilledAlt } from "./icons";
+import { ArrowUp } from "./icons";
 import { MENU_CARD, MENU_MOTION } from "./menu-parts";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
@@ -37,7 +37,7 @@ function WithShortcut({
  * to deal with it, always in this order: a quiet text to discard, then one black pill to accept, after what kind of note it is when the place does not say
  * so (`where`, "Source changed"). The card hangs right under its words, so the head does not name the paragraph. A note with nothing to deal with yet
  * (words just selected to ask about) has no head, and opens on its reply row with the caret in it (`reply.focus`). While the assistant works on what
- * was sent, the reply row's button stops it (`reply.stop`). There is no close
+ * was sent there is no reply row: the thread's "Generating · Stop" (`AiWorking`) stops it. There is no close
  * button; pressing outside, Esc, or the mark again closes it. The body is a `MemoThread` of messages or a `MemoDiff`. `reply` adds the row at the
  * bottom where the note goes on ("Continue"): its send button is the black ↑, or a ghost one when the head has the black "Accept" (one black control
  * on a surface). The key combinations show as tooltips on the head's buttons.
@@ -74,13 +74,11 @@ function MemoCard({
 		sendLabel: string;
 		/** Puts the caret in the box when the card opens: the card is there to be written in. */
 		focus?: boolean;
-		/** While the assistant works on what was sent: the send button is the stop button (a square), as in the chat. */
-		stop?: { label: string; onStop: () => void };
 	};
 	children?: ReactNode;
 }) {
 	const blank = reply ? reply.value.trim() === "" : true;
-	// One black control on a surface (button.md): with the black "Accept" in the head, the reply row's send and stop are ghost icon buttons.
+	// One black control on a surface (button.md): with the black "Accept" in the head, the reply row's send is a ghost icon button.
 	const replyVariant = acceptLabel && onAccept ? "ghost" : "primary";
 	const send = () => {
 		if (reply && !blank) reply.onSend(reply.value.trim());
@@ -125,15 +123,9 @@ function MemoCard({
 						onKeyDown={onKeyDown}
 						className="min-w-0 grow border-0 bg-transparent p-0 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
 					/>
-					{reply.stop ? (
-						<IconButton variant={replyVariant} size="sm" label={reply.stop.label} onClick={reply.stop.onStop}>
-							<StopFilledAlt aria-hidden className="size-3" />
-						</IconButton>
-					) : (
-						<IconButton variant={replyVariant} size="sm" label={reply.sendLabel} disabled={blank} onClick={send}>
-							<ArrowUp aria-hidden className="size-3.5" />
-						</IconButton>
-					)}
+					<IconButton variant={replyVariant} size="sm" label={reply.sendLabel} disabled={blank} onClick={send}>
+						<ArrowUp aria-hidden className="size-3.5" />
+					</IconButton>
 				</div>
 			)}
 		</div>

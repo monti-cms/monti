@@ -17,7 +17,7 @@ import { Spinner } from "./spinner";
  * and, for `underline`, a 1px rule under it say what it is. It acts like a link: no ground at all; under the pointer its words turn ink and a rule shows (or darkens); pressing it changes nothing more. The keyboard's ring sits close around the words: an outline 2px off them, since a ring on the words' own box would touch the letters. The outline is
  * never unset here (`outline-none` beside `outline-2` leaves a width without a style: no ring at all); a browser draws it for the keyboard only.
  * `tone="proposal"` is an action the assistant takes, in the proposal blue: "✦ Fill" on a field's label row (`size="micro"`, the label's own type), "✦ Translate"
- * over a text. While it works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, it is `aria-busy`, and it keeps the focus it had. A label row shows the
+ * over a text; while the assistant works, `AiWorking` ("Generating · Stop") takes its place. While a button works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, it is `aria-busy`, and it keeps the focus it had. A label row shows the
  * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
@@ -82,7 +82,7 @@ function TextButton({
 }: useRender.ComponentProps<"button"> &
 	VariantProps<typeof textButtonVariants> &
 	Pick<React.ComponentProps<"a">, "href" | "target" | "rel"> & {
-		/** The action is running: a ring before the words (the words say what it does: "Writing…"), and it cannot be pressed again. */
+		/** The action is running: a ring before the words (the words say what it does: "Sending…"), and it cannot be pressed again. AI work says so with `AiWorking` instead. */
 		loading?: boolean;
 	}) {
 	const labels = useUiLabels();
