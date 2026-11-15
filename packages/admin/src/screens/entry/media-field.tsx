@@ -71,8 +71,8 @@ export function MediaField({
 	/** "✦ Fill" for the picture's words, in its settings card (doc 10, quick tasks); left out where there is nobody to ask. */
 	fill?: {
 		state: FillState;
-		/** `put` puts the words in and gives how to put back what was there, or `null` when the field holds another picture now. */
-		run: (media: string, put: (alt: string) => (() => void) | null) => void;
+		/** `put` puts the words in and gives what was there and how to put it back, or `null` when the field holds another picture now. */
+		run: (media: string, put: (alt: string) => { before: unknown; back: () => void } | null) => void;
 		/** Typed by hand: an answer on its way is not put in, and what was filled is the person's. */
 		forget: () => void;
 		stop: () => void;
@@ -170,10 +170,13 @@ export function MediaField({
 																	const before = now.own?.alt;
 																	onChange(cleanMediaValue({ ...now.own, media: shown.media, alt }));
 																	// Back to the words it had, on the picture as it is then (resized or made decorative since).
-																	return () => {
-																		const then = latest.current;
-																		if (then.shown?.media !== shown.media) return;
-																		onChange(cleanMediaValue({ ...then.own, media: shown.media, alt: before }));
+																	return {
+																		before: before ?? "",
+																		back: () => {
+																			const then = latest.current;
+																			if (then.shown?.media !== shown.media) return;
+																			onChange(cleanMediaValue({ ...then.own, media: shown.media, alt: before }));
+																		},
 																	};
 																}),
 															onStop: fill.stop,

@@ -156,11 +156,15 @@ export function useDraft({
 	// there takes the words and the "taken" back together (AS-19), so the body's are read from it, never kept here.
 	const [taken, setAccepted] = useState<string[]>([]);
 	const [bodyTaken, setBodyTaken] = useState<readonly string[]>([]);
-	// Only items still waiting count: once a save has applied one, the body's history may still name it.
-	const accepted = useMemo(() => {
+	// Only items still waiting count: once a save has applied one, the body's history may still name it. The same ids keep the same list,
+	// so reading the proposals again does not count as a change (the browser's copy would be written anew, with a new time).
+	const counted = useMemo(() => {
 		const waiting = new Set(proposals.items.map((item) => item.id));
 		return [...taken, ...bodyTaken.filter((id) => waiting.has(id) && !taken.includes(id))];
 	}, [taken, bodyTaken, proposals.items]);
+	const acceptedKept = useRef(counted);
+	if (!sameJson(acceptedKept.current, counted)) acceptedKept.current = counted;
+	const accepted = acceptedKept.current;
 	const acceptedNow = useRef(accepted);
 	acceptedNow.current = accepted;
 	const [restoredFor, setRestoredFor] = useState<number | string | null>(null);
@@ -293,6 +297,7 @@ export function useDraft({
 	const revertAll = useCallback(() => {
 		setMine(new Map());
 		setAccepted([]);
+		setBodyTaken([]);
 		// The browser's copy goes now, not when the screen draws again: leaving without saving moves away at once, and a screen gone draws nothing
 		// more, so the copy came back the next time it opened (PP-01). A copy still offered is not this one, and waits for its own answer.
 		if (!offeredNow.current) forget(target);
@@ -359,6 +364,8 @@ export function useDraft({
 		 * back). The save sends them with the others.
 		 */
 		setBodyTaken,
+		/** The body proposals taken, as the body last told: a body made anew starts with them. */
+		bodyTaken,
 		/** The items taken into this draft: the save sends them (`accepted`), and the server marks them applied with it. */
 		accepted,
 		/** Changes this browser kept from an earlier visit, waiting to be loaded or dropped (`restore: "ask"`). */

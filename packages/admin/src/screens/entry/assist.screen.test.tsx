@@ -96,6 +96,36 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 		await expect.poll(cells).not.toContain("저장 전 변경사항");
 	});
 
+	it("10-1 '버리기' after a save puts back what the field had before the fill, unsaved", async () => {
+		const made = on("draft", [], () => ({ value: "도구보다 글" }));
+		await made.run();
+		await opened();
+		await userEvent.click(subtitle());
+		await userEvent.click(button("부제 채우기"));
+		await expect.element(subtitle()).toHaveValue("도구보다 글");
+		await userEvent.click(button("저장"));
+		await expect.poll(async () => (await stored(made.loaded())).values.subtitle).toBe("도구보다 글");
+		await userEvent.click(button("부제 채운 값 버리기"));
+		await expect.element(subtitle()).toHaveValue("");
+		await saveCell("저장 전 변경사항");
+	});
+
+	it("10-1 undo in a filled relation's search takes back the typing, not the fill", async () => {
+		const made = on("draft", [], async () => ({ values: [(await stored(made.loaded())).values.category] }));
+		await made.run();
+		await opened();
+		await userEvent.hover(page.getByText("카테고리", { exact: true }));
+		await userEvent.click(button("카테고리 다시 채우기"));
+		await expect.element(button("카테고리 채운 값 버리기")).toBeVisible();
+		const search = page.getByRole("combobox", { name: "카테고리" });
+		await userEvent.click(search);
+		await userEvent.keyboard("abc");
+		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
+		await expect.poll(() => (document.activeElement as HTMLInputElement).value).not.toBe("개발abc");
+		// The open list hides the rest of the screen from the roles: the line is looked for as it is drawn.
+		expect(document.querySelector('[aria-label="카테고리 채운 값 버리기"]')).not.toBeNull();
+	});
+
 	it("10-1 a field that has a value offers '다시', and the new answer takes the value's place", async () => {
 		const made = on("draft", [], () => ({ value: "덜어낸 것과 남긴 것, 다시." }));
 		await made.run();
@@ -436,6 +466,17 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		const drawn = inBody("ins[data-proposal-item]")[0];
 		if (!drawn) throw new Error("No change is drawn.");
 		await userEvent.click(drawn);
+		await expect.element(button("받기")).toBeVisible();
+		await expect.element(button("버리기")).toBeVisible();
+	});
+
+	it("10-1 [AS-12] a line put in at the very start opens its own card when pressed, as any other change", async () => {
+		const made = on("proposedAtStart");
+		await made.run();
+		await opened();
+		const drawn = () => inBody("[data-proposal-item]")[0];
+		await expect.poll(() => drawn()?.textContent).toContain("이 글은 다시 만든 기록이다.");
+		await userEvent.click(drawn() as Element);
 		await expect.element(button("받기")).toBeVisible();
 		await expect.element(button("버리기")).toBeVisible();
 	});

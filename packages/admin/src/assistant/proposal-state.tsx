@@ -1,8 +1,8 @@
 import type { ProposalView } from "@monti-cms/core";
 import { Button, Count, Inline, Progress, Text, TextButton } from "@monti-cms/ui";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { nextStop, useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { focusWhenDrawn, nextStop, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { type ProposalStanding, standingOf } from "./use-proposal";
 import { clock } from "./words";
 
@@ -45,13 +45,20 @@ export function ProposalState({
 	const standing: ProposalStanding = standingOf(view, applying);
 	const { counts } = view;
 	// A button of the row pressed with the keyboard goes as the proposal moves on (applying has none, discarded has none). The focus goes to
-	// the first button the row still has, else to the first control after the row: one rule on the card and on the page.
-	const handed = useFocusHandOff((row) =>
+	// the first button the row still has, else to the first control after the row: one rule on the card and on the page. Not to "Undo":
+	// a second Enter after "Apply" would take back what it just did, so a button that is not quiet words comes first ("Review").
+	// While it applies the row has no button: the focus waits for the ones it draws when the apply is over.
+	const standingNow = useRef(standing);
+	standingNow.current = standing;
+	const handed = useFocusHandOff((row) => {
 		// The row itself going (the page it is on was left) hands nothing on: what takes the page's place has its own first control.
-		row.contains(document.activeElement)
-			? null
-			: (row.querySelector<HTMLElement>("button:not(:disabled), a[href]") ?? nextStop(row)),
-	);
+		if (row.contains(document.activeElement)) return null;
+		const pick = (spot: HTMLElement) =>
+			spot.querySelector<HTMLElement>("button:not(:disabled):not([data-slot=text-button]), a[href]") ??
+			spot.querySelector<HTMLElement>("button:not(:disabled)");
+		if (standingNow.current === "applying") return () => focusWhenDrawn(row, pick);
+		return pick(row) ?? nextStop(row);
+	});
 	// A press meant for the button that was here lands on the one that took its place (a second press on "apply" came down on "undo",
 	// which stands at the same spot the moment the apply is over): for a short while after the proposal moves on, the row's buttons
 	// take no press. Kept by the proposal, not by this row: the card and the page draw the row anew as they read the proposal again,

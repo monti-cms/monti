@@ -82,6 +82,7 @@ import { ProposalMargin, proposalMarks, requestMarks, staleMarks } from "../../e
 import {
 	anchorBlock,
 	drawable,
+	drawnAnchor,
 	findBlock,
 	PROPOSAL_ITEM,
 	scrollToProposal,
@@ -290,8 +291,8 @@ export function EntryEditor({
 								(answer) => {
 									const said = "value" in answer ? answer.value : "";
 									const words = task === "alt" ? said.slice(0, ALT_MAX) : said;
-									const back = put(words);
-									return back ? { value: words, back } : null;
+									const done = put(words);
+									return done ? { value: words, ...done } : null;
 								},
 							),
 					}
@@ -658,7 +659,7 @@ export function EntryEditor({
 	});
 	const liveMarks = bodyNow
 		? drawn.flatMap((item) => {
-				const block = anchorBlock(bodyNow, item);
+				const block = drawnAnchor(bodyNow, item);
 				return block === null ? [] : [{ item, block }];
 			})
 		: [];
@@ -669,9 +670,12 @@ export function EntryEditor({
 		if (liveMarks.some(({ item }) => item.id === id) && staleOpen !== id) openCard(id);
 	};
 	useEffect(() => {
-		const dom = bodyEditor ? liveDom(bodyEditor) : null;
-		if (!dom) return;
+		const view = bodyEditor;
+		const dom = view ? liveDom(view) : null;
+		if (!view || !dom) return;
 		const pressed = (event: MouseEvent) => {
+			// A double press or a drag picks words (to ask about them): only a plain press opens the card.
+			if (event.detail > 1 || !view.state.selection.empty) return;
 			const id = (event.target as Element | null)?.closest(`[${PROPOSAL_ITEM}]`)?.getAttribute(PROPOSAL_ITEM);
 			if (id) cardOfPress.current(id);
 		};
@@ -1005,6 +1009,7 @@ export function EntryEditor({
 				proposals={{
 					items: editor.bodyProposals,
 					current: walking?.kind === "body" ? walking.id : null,
+					taken: editor.takenInBody,
 					onTaken: editor.bodyTaken,
 				}}
 				translation={

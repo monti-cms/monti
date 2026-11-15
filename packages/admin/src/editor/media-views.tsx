@@ -743,7 +743,9 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 	/** Puts a fill's words in one of the picture's boxes, and gives how to put back what the box held: nothing when the picture changed meanwhile. */
 	const fillInto = (asked: string, box: "alt" | "caption") => (words: string) => {
 		const before = dataNow()?.[box];
-		return setLater(asked, { [box]: words }) ? () => void setLater(asked, { [box]: before }) : null;
+		return setLater(asked, { [box]: words })
+			? { before: before ?? "", back: () => void setLater(asked, { [box]: before }) }
+			: null;
 	};
 	/** What is typed in a box a fill may be on its way to: the late answer is the person's to ask for again, not put over it. */
 	const typed = (place: string) => media?.fill?.forget(place);

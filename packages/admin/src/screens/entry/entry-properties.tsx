@@ -45,7 +45,7 @@ import {
 	useSortableItem,
 } from "@monti-cms/ui";
 import { Close, Renew } from "@monti-cms/ui/icons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FillAction, FillFailed } from "../../assistant/fill-action";
 import { type Fills, isUndoKey } from "../../assistant/use-fill";
 import { ALT_MAX } from "../../editor/alt-fields";
@@ -590,6 +590,12 @@ export function EntryProperties({
 }) {
 	const { t, inputs, views, siteName } = useAdmin();
 	const [focused, setFocused] = useState<string | null>(null);
+	// The fields as the screen holds them now: a fill's answer comes after the render that asked, and puts back what is there then, through
+	// the screen's latest setter (a save since moved what the draft compares against).
+	const editorNow = useRef(editor);
+	editorNow.current = editor;
+	// Fields filled and then typed in without changing the value (a relation's search): undo there is the typing's, not the fill's.
+	const searched = useRef(new Set<string>());
 	const top = schema?.schema.collections[collection]?.fields ?? {};
 	const theirs = pluginFieldsOf(schema, collection);
 	// A conditional field (doc 19) is its choice and, under it, the fields of the chosen option: each is stored as a field of its own.
@@ -708,9 +714,11 @@ export function EntryProperties({
 										: def.kind === "relation" && def.many
 											? answer.values
 											: (answer.values[0] ?? null);
-								editor.set(path, next);
-								// What the field held the moment before, as the press found it: had it been changed by hand since, no answer is put.
-								return { value: next, back: () => editor.set(path, held ?? null) };
+								// What the field holds the moment before, as it is when the answer comes (not when the button was pressed).
+								const before = editorNow.current.value(path);
+								editorNow.current.set(path, next);
+								searched.current.delete(path);
+								return { value: next, before, back: () => editorNow.current.set(path, before ?? null) };
 							},
 						)
 					}
@@ -854,8 +862,8 @@ export function EntryProperties({
 											},
 											(answer) => {
 												const words = ("value" in answer ? answer.value : "").slice(0, ALT_MAX);
-												const back = put(words);
-												return back ? { value: words, back } : null;
+												const done = put(words);
+												return done ? { value: words, ...done } : null;
 											},
 										),
 								}
@@ -1056,12 +1064,25 @@ export function EntryProperties({
 				onKeyDown={
 					filledNow && fills
 						? (event) => {
-								if (!isUndoKey(event)) return;
+								// The field's own input only: keys bubble here from a picker's portal too (its search box has its own undo). Not
+								// while a search typed in the field or a word being composed is the input's to undo first.
+								if (
+									!isUndoKey(event) ||
+									event.defaultPrevented ||
+									event.nativeEvent.isComposing ||
+									searched.current.has(path) ||
+									!event.currentTarget.contains(event.target as Node)
+								)
+									return;
 								event.preventDefault();
 								fills.discard(path);
 							}
 						: undefined
 				}
+				onInput={filledNow ? () => searched.current.add(path) : undefined}
+				onBlur={(event) => {
+					if (!event.currentTarget.contains(event.relatedTarget as Node | null)) searched.current.delete(path);
+				}}
 			>
 				<FormFieldLabel
 					htmlFor={id}

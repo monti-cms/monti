@@ -46,8 +46,8 @@ export type PictureFill = {
 		task: "alt" | "caption",
 		media: string,
 		around: { before: string; after: string },
-		/** Puts the words in and gives how to put back what was there, or `null` when it is no longer the picture that was asked about. */
-		put: (value: string) => (() => void) | null,
+		/** Puts the words in and gives what was there and how to put it back, or `null` when it is no longer the picture that was asked about. */
+		put: (value: string) => { before: unknown; back: () => void } | null,
 	) => void;
 };
 

@@ -1,4 +1,4 @@
-import type { Doc, ProposalItemView } from "@monti-cms/core";
+import type { ProposalItemView } from "@monti-cms/core";
 import {
 	AiFailed,
 	AiWorking,
@@ -28,9 +28,8 @@ import { ChevronLeft } from "@monti-cms/ui/icons";
 import { type ReactNode, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { href, type Route, reachedFromInside } from "../route";
-import { shownBlocks } from "../screens/entry/compare-entries";
 import { toWhatStands, useFocusHandOff } from "../screens/frame/focus-hand-off";
-import { marked, useChangeWords } from "./change-words";
+import { followersOf, marked, translationOf, useChangeWords } from "./change-words";
 import { inlineDiff } from "./diff";
 import { changeOf } from "./proposal-card";
 import { ProposalState } from "./proposal-state";
@@ -38,12 +37,6 @@ import { useAssistant } from "./use-assistant";
 import { standingOf, useProposal } from "./use-proposal";
 import { useRemake } from "./use-remake";
 import { clock } from "./words";
-
-/** An id a former item of the same proposal makes (`{ $item }`): the item that makes it, or `null` for a plain id. */
-const madeBy = (id: unknown): string | null =>
-	typeof id === "object" && id !== null && typeof (id as { $item?: unknown }).$item === "string"
-		? (id as { $item: string }).$item
-		: null;
 
 /**
  * A proposal to look through before it is applied (doc 10; screens/assistant.md): the request, then each kind of change as a titled list of the
@@ -86,24 +79,8 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 	const settled = standing !== "waiting";
 	const items = new Map(view.items.map((item) => [item.id, item]));
 
-	/** The items that write into what another item of the proposal makes (a translation's words): they go with that item's row. */
-	const follows = (item: ProposalItemView) => {
-		const parent = madeBy((item.input as { id?: unknown } | null)?.id);
-		// Only the words of the translation, which its row shows (its title and its body): anything else written into it (a field, an
-		// address, a block edit) is a row of its own, so nothing is applied unseen.
-		const wordsOnly =
-			item.operation === "entries.save" &&
-			Object.keys((item.input ?? {}) as object).every((key) => ["id", "version", "title", "doc"].includes(key));
-		return (
-			wordsOnly &&
-			parent !== null &&
-			(view?.items ?? []).some((each) => each.id === parent && each.operation === "translations.create")
-		);
-	};
-	const followers = (parent: string) =>
-		(view?.items ?? []).filter(
-			(each) => follows(each) && madeBy((each.input as { id?: unknown } | null)?.id) === parent,
-		);
+	// What is written into a translation the proposal makes is read in that translation's row.
+	const { follows, followers } = followersOf(view.items);
 
 	const back = () => {
 		// Back to where the person came from, with the panel on the conversation this proposal was made in.
@@ -274,23 +251,13 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 												/>
 											);
 											if (item.operation === "translations.create") {
-												const input = item.input as { source: string; locale: string };
-												const source = entries[input.source];
 												const words = followers(item.id);
-												const proposedDoc = words
-													.map((each) => (each.input as { doc?: Doc }).doc)
-													.find((doc) => doc !== undefined);
-												const proposedTitle = words
-													.map((each) => (each.input as { title?: string }).title)
-													.find((title) => title !== undefined);
-												const blocks = shownBlocks(source?.doc ?? null);
+												const { input, source, blocks, proposedTitle, translated } = translationOf(
+													item,
+													words,
+													entries,
+												);
 												const worded = blocks.filter((block) => block.look !== "code" && block.text.trim() !== "");
-												const translated = (block: (typeof blocks)[number], index: number) => {
-													const match =
-														proposedDoc?.blocks.find((each) => each.link?.from === block.id) ??
-														proposedDoc?.blocks[index];
-													return match ? (shownBlocks({ type: "doc", blocks: [match] })[0]?.text ?? "") : null;
-												};
 												const shown = opened.has(item.id);
 												return (
 													<TableRow key={item.id} twoLine={shown}>

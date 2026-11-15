@@ -114,6 +114,34 @@ function focusFirstStopWhenDrawn() {
 }
 
 /**
+ * Gives the focus to what `pick` finds in `spot`, now or as soon as the spot draws it: a row whose controls are away while it works
+ * ("Applying") draws the next ones when the work is over. Let go when the person does something of their own first (a key, a press, a focus
+ * elsewhere) or when the spot goes; when nothing is drawn in `DRAWN_WITHIN`, the focus goes to what stands after the spot.
+ */
+export function focusWhenDrawn(spot: HTMLElement, pick: (spot: HTMLElement) => HTMLElement | null) {
+	const found = pick(spot);
+	if (found) return found.focus();
+	const letGo = () => {
+		drawn.disconnect();
+		clearTimeout(limit);
+		for (const event of THEIR_OWN) removeEventListener(event, letGo, true);
+	};
+	const drawn = new MutationObserver(() => {
+		if (!spot.isConnected) return letGo();
+		const next = pick(spot);
+		if (!next) return;
+		letGo();
+		if (document.activeElement === document.body) next.focus();
+	});
+	drawn.observe(spot, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled"] });
+	const limit = setTimeout(() => {
+		letGo();
+		if (spot.isConnected && document.activeElement === document.body) nextStop(spot)?.focus();
+	}, DRAWN_WITHIN);
+	for (const event of THEIR_OWN) addEventListener(event, letGo, true);
+}
+
+/**
  * Gives the focus to the text being written: the body, or the field with `titleId` when the body is not there; and when neither is (the
  * editor gave way to another view: the comparison), to that view's first control, once it is drawn. Two frames on, not now: what took the
  * control away may make the body anew (this browser's copy loaded or dropped), and the focus belongs in the one that stays. If the person has

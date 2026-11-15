@@ -2160,6 +2160,18 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 });
 
 describe("the proposal's card says what each change does (AS-46)", () => {
+	it("10-1 [AS-49] '적용' pressed with the keyboard hands the focus to '검토', past the quiet '되돌리기' a second Enter would press", async () => {
+		await on({ script: stories.proposed }).run();
+		await openPanel();
+		await say("둘 다 요약 채워 줘");
+		const apply = button("2건 적용");
+		await expect.element(apply).toBeVisible();
+		apply.element().focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(panel().getByText("✓ 2건 적용")).toBeVisible();
+		await expect.poll(() => document.activeElement?.textContent).toBe("검토");
+	});
+
 	it("10-1 a change shows its place as it is and as proposed: the words that go out struck through, the words that come in on blue", async () => {
 		const retitle: NonNullable<Parameters<typeof stories.site>[0]>["script"] = async (ids, version) => [
 			{
@@ -2181,5 +2193,37 @@ describe("the proposal's card says what each change does (AS-46)", () => {
 		expect(marked("ins")).toContain("처음");
 		// The words that stay are plain, between them.
 		expect(card()?.textContent).toContain("글");
+	});
+
+	it("10-1 a translation to make is named on its card by its source, with the words proposed for it: what is written into it is part of its row", async () => {
+		let made: Loaded | undefined;
+		const story = on({
+			script: async (ids) => [
+				{ calls: [{ name: "translations_create", input: { source: ids.second, locale: "en", _group: "새 글" } }] },
+				// The words for the translation, written into what the first change makes.
+				async () => {
+					const item = await made?.site.db.selectFrom("monti_proposal_item").select("id").executeTakeFirstOrThrow();
+					return {
+						calls: [
+							{
+								name: "entries_save",
+								input: { id: { $item: item?.id }, version: 1, title: "The second post", _group: "새 글" },
+							},
+						],
+					};
+				},
+				{ text: "번역을 제안했습니다." },
+			],
+		});
+		await story.run();
+		made = story.loaded();
+		await openPanel();
+		await say("둘째 글 영어로 번역해 줘");
+		const card = () => panel().element().querySelector("[data-slot=proposal-card]");
+		await expect.poll(() => card()?.querySelector("ins")?.textContent).toBe("The second post");
+		// One row, named by the source: the translation does not stand yet.
+		expect(card()?.querySelectorAll("tr")).toHaveLength(1);
+		expect(card()?.textContent).toContain("둘째 글");
+		expect(card()?.textContent).toContain("1건");
 	});
 });

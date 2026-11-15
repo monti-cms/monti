@@ -349,6 +349,24 @@ export function anchorBlock(doc: EditorNode, item: BodyProposal): string | null 
 }
 
 /**
+ * The block a proposal drawn on the body hangs beside: the first it names, or for lines put in at the very start, the body's first block
+ * (the new lines stand above it). `null`: nothing to hang it on.
+ */
+export function drawnAnchor(doc: EditorNode, item: BodyProposal): string | null {
+	const named = anchorBlock(doc, item);
+	if (named !== null || !item.ops.some((op) => op.op === "insert" && op.after === null)) return named;
+	let first: string | null = null;
+	doc.descendants((node) => {
+		if (first !== null) return false;
+		if (node.isBlock && typeof node.attrs.blockId === "string") {
+			first = node.attrs.blockId;
+			return false;
+		}
+	});
+	return first;
+}
+
+/**
  * The proposals that cannot be drawn on this body any more and still have a block to hang beside (T87), each with that block and the words
  * it would have put there: the text moved on since they were made. One whose blocks are all gone has no place in the editor; it waits on its
  * conversation's card.

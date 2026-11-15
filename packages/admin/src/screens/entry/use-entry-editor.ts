@@ -427,6 +427,8 @@ export function useEntryEditor(
 		fieldProposals,
 		/** The body proposals the body editor's history holds as taken: counted as taken, and sent with the next save. */
 		bodyTaken: draft.setBodyTaken,
+		/** The body proposals taken now: a body editor made anew starts with them. */
+		takenInBody: draft.bodyTaken,
 		discardProposal: draft.discard,
 		discardProposals: draft.discardAll,
 	};

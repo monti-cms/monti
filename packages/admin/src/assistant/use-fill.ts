@@ -1,3 +1,4 @@
+import { sameJson } from "@monti-cms/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { type Filled, useQuickFill } from "./use-assistant";
@@ -20,10 +21,12 @@ export type FillState = {
 const IDLE: FillState = { working: false, filled: undefined, failed: null, retry: false };
 
 /**
- * Puts a fill's answer in its place, as the place is when the answer comes. It gives what it put and how to put back what the place held
- * the moment before, or `null` when the place is no longer the one asked about (another picture) and nothing was put.
+ * Puts a fill's answer in its place, as the place is when the answer comes. It gives what it put, what the place held the moment before,
+ * and how to put that back; or `null` when the place is no longer the one asked about (another picture) and nothing was put.
  */
-export type Put = (answer: Extract<Filled, { ok: true }>) => { value: unknown; back: () => void } | null;
+export type Put = (
+	answer: Extract<Filled, { ok: true }>,
+) => { value: unknown; before: unknown; back: () => void } | null;
 
 /** Undo (⌘Z, Ctrl+Z, not with Shift): in a place a fill wrote, it takes the fill back as one step, as the line's "Discard" does. */
 export const isUndoKey = (event: {
@@ -44,6 +47,8 @@ export function useFills() {
 	const fill = useQuickFill();
 	const { t } = useAdmin();
 	const [states, setStates] = useState<Record<string, FillState>>({});
+	const statesNow = useRef(states);
+	statesNow.current = states;
 	// An answer that comes after its place was filled again, was changed by hand, was stopped, or after the screen left, is nobody's.
 	const asked = useRef<Record<string, number>>({});
 	/** What each place was last asked with: what "Try again" asks again. */
@@ -77,8 +82,10 @@ export function useFills() {
 			if (nothing) return change(place, { working: false, failed: t("fill.nothing"), retry: true });
 			const done = put(answer);
 			if (!done) return change(place, { working: false });
-			// "Again" over a fill still there: what goes back is what the place held before the first one.
-			backs.current[place] ??= done.back;
+			// "Again" over a fill still there: what goes back is what the place held before the first one. A place that holds something
+			// else by now (a proposal taken into it, another picture) starts again from what it holds.
+			const was = statesNow.current[place]?.filled;
+			if (!backs.current[place] || was === undefined || !sameJson(was, done.before)) backs.current[place] = done.back;
 			change(place, { working: false, filled: done.value, failed: null });
 		},
 		[fill, change, t],

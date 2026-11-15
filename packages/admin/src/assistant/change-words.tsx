@@ -37,6 +37,55 @@ const said = (value: unknown): string =>
 					? JSON.stringify(value)
 					: String(value);
 
+/** An id a former item of the same proposal makes (`{ $item }`): the item that makes it, or `null` for a plain id. */
+export const madeBy = (id: unknown): string | null =>
+	typeof id === "object" && id !== null && typeof (id as { $item?: unknown }).$item === "string"
+		? (id as { $item: string }).$item
+		: null;
+
+/**
+ * The items that write into what another item of the proposal makes (a translation's words): they are read in that item's row, on the review
+ * page and on the card. Only the words of the translation (its title and its body): anything else written into it (a field, an address, a
+ * block edit) is a row of its own, so nothing is applied unseen.
+ */
+export function followersOf(items: readonly ProposalItemView[]) {
+	const making = new Set(items.filter((each) => each.operation === "translations.create").map((each) => each.id));
+	const parentOf = (item: ProposalItemView) => {
+		const parent = madeBy((item.input as { id?: unknown } | null)?.id);
+		const wordsOnly =
+			item.operation === "entries.save" &&
+			Object.keys((item.input ?? {}) as object).every((key) => ["id", "version", "title", "doc"].includes(key));
+		return wordsOnly && parent !== null && making.has(parent) ? parent : null;
+	};
+	return {
+		follows: (item: ProposalItemView) => parentOf(item) !== null,
+		followers: (parent: string) => items.filter((each) => parentOf(each) === parent),
+	};
+}
+
+/**
+ * A translation a proposal makes, read beside its source (flow 3·13): the source as it is now, its blocks, and the words its followers propose
+ * for the title and for each block (`null`: nothing proposed for it, it starts in the source's words).
+ */
+export function translationOf(
+	item: ProposalItemView,
+	followers: readonly ProposalItemView[],
+	entries: Record<string, EntryNow>,
+) {
+	const input = item.input as { source: string; locale: string };
+	const source = entries[input.source];
+	const proposedDoc = followers.map((each) => (each.input as { doc?: Doc }).doc).find((doc) => doc !== undefined);
+	const proposedTitle = followers
+		.map((each) => (each.input as { title?: string }).title)
+		.find((title) => title !== undefined);
+	const blocks = shownBlocks(source?.doc ?? null);
+	const translated = (block: ShownBlock, index: number) => {
+		const match = proposedDoc?.blocks.find((each) => each.link?.from === block.id) ?? proposedDoc?.blocks[index];
+		return match ? (shownBlocks({ type: "doc", blocks: [match] })[0]?.text ?? "") : null;
+	};
+	return { input, source, blocks, proposedTitle, translated };
+}
+
 /** A change's words with what goes out and what comes in marked, on one line or as one side of two. */
 export function marked(runs: DiffRun[], side: "both" | "before" | "after"): ReactNode {
 	return runs
@@ -61,7 +110,10 @@ export function marked(runs: DiffRun[], side: "both" | "before" | "after"): Reac
  * now and as proposed, named as the editor names them. `items` are the changes to read: the entries they are of are read as they are now.
  */
 export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
-	const { t, transport } = useAdmin();
+	const { t, transport, onWrite } = useAdmin();
+	// Every write in the admin reads the entries again, as `useRead` does: a save in the editor moves what a change would take out.
+	const [writes, setWrites] = useState(0);
+	useEffect(() => onWrite(() => setWrites((count) => count + 1)), [onWrite]);
 	const [entries, setEntries] = useState<Record<string, EntryNow>>({});
 	const names = useBlockNames(Object.values(entries).flatMap((entry) => entry.media ?? []));
 	// What the site calls its fields, their options and its languages: a change is named as the editor names it.
@@ -85,7 +137,7 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 		[items],
 	);
 	const wanted = entryIds.join(" ");
-	// biome-ignore lint/correctness/useExhaustiveDependencies: it follows which entries the proposal names
+	// biome-ignore lint/correctness/useExhaustiveDependencies: it follows which entries the proposal names, and every write
 	useEffect(() => {
 		let gone = false;
 		void (async () => {
@@ -100,7 +152,7 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 		return () => {
 			gone = true;
 		};
-	}, [wanted, transport]);
+	}, [wanted, transport, writes]);
 
 	const fieldsOf = (collection: string | undefined) =>
 		collection ? (schema?.adminValues[collection]?.fields ?? {}) : {};
@@ -132,6 +184,61 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 		});
 	};
 
+	const { followers } = followersOf(items ?? []);
+
+	/** The blocks of a body that change from one text to the next, each as it is and as proposed. */
+	const bodyPlaces = (was: Doc | null, next: Doc): Place[] => {
+		const before = shownBlocks(was, names);
+		const after = shownBlocks(next, names);
+		const places: Place[] = []; // A block with values is named by its kind ("Block 4 · Callout", doc 18), and a change of its values alone is a row of its own: its values
+		// before and after, apart from its words.
+		const kind = (block: ShownBlock) => block.values?.split(" · ")[0];
+		const valuesOnly = (block: ShownBlock) => block.values?.split(" · ").slice(1).join(" · ") ?? "";
+		const named = (block: ShownBlock, index: number) =>
+			[t("review.block", { number: index + 1 }), kind(block)].filter((part) => part).join(" · ");
+		after.forEach((block, index) => {
+			const was = before.find((each) => each.id === block.id);
+			if (!was) places.push({ name: t("review.newBlock"), before: "", after: block.text || (block.values ?? "") });
+			else {
+				if (valuesOnly(was) !== valuesOnly(block))
+					places.push({ name: named(block, index), before: valuesOnly(was), after: valuesOnly(block) });
+				if (was.text !== block.text) places.push({ name: named(block, index), before: was.text, after: block.text });
+				else {
+					// The same code with other effects (doc 17, T196): the lines whose effects change, with their effects on each side. A core effect
+					// says its name; a site's own effect, which has no words in the admin, says its stored name.
+					const effectName = (name: string) =>
+						CORE_EFFECTS.has(name) ? t({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` }) : name;
+					const changed = codeChanges(block, was);
+					const effects = (side: typeof block, lines: number[]) =>
+						lines
+							.map((line) => {
+								const names = side.code?.lines[line] ?? [];
+								return `${t("editor.code.line", { n: line + 1 })}: ${
+									names.length ? names.map(effectName).join(", ") : "—"
+								}`;
+							})
+							.join(" · ");
+					const head = (side: typeof block) => [side.code?.language, side.code?.title].filter(Boolean).join(" · ");
+					if (changed.lines.length || changed.language || changed.title)
+						places.push({
+							name: named(block, index),
+							before: [changed.language || changed.title ? head(was) : "", effects(was, changed.lines)]
+								.filter(Boolean)
+								.join(" · "),
+							after: [changed.language || changed.title ? head(block) : "", effects(block, changed.lines)]
+								.filter(Boolean)
+								.join(" · "),
+						});
+				}
+			}
+		});
+		before.forEach((block, index) => {
+			if (!after.some((each) => each.id === block.id))
+				places.push({ name: named(block, index), before: block.text || (block.values ?? ""), after: "" });
+		});
+		return places;
+	};
+
 	/** The places of an entry one change touches, each as it is and as proposed. A change the page has no words for has none: its row names it. */
 	const placesOf = (item: ProposalItemView): Place[] => {
 		const entryId = item.targets.find((target) => target.startsWith("entry:"))?.slice("entry:".length);
@@ -151,6 +258,9 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 					before: applied ? "" : valueWords(now?.collection, field, now?.values[field]),
 					after: valueWords(now?.collection, field, value),
 				});
+			// Its body, block by block, as a body edit's. A translation's words have no entry to read yet: they are its translation's row.
+			const doc = (item.input as { doc?: Doc }).doc;
+			if (doc !== undefined && now && !applied) places.push(...bodyPlaces(now.doc, doc));
 			// A changed choice takes the values of the option it leaves with it (doc 19): each is shown going out.
 			if (!applied)
 				for (const cleared of item.preview?.clears ?? [])
@@ -170,56 +280,18 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 				// The body moved on so far that the edit no longer fits: the row says it changed in the meantime.
 				return [];
 			}
-			const before = shownBlocks(now.doc, names);
-			const after = shownBlocks(next, names);
+			return bodyPlaces(now.doc, next);
+		}
+		// A translation to make: nothing of it stands yet, so each place is the words proposed for it alone; its row is named by its source.
+		if (item.operation === "translations.create") {
+			const made = translationOf(item, followers(item.id), entries);
 			const places: Place[] = [];
-			// A block with values is named by its kind ("Block 4 · Callout", doc 18), and a change of its values alone is a row of its own: its values
-			// before and after, apart from its words.
-			const kind = (block: ShownBlock) => block.values?.split(" · ")[0];
-			const valuesOnly = (block: ShownBlock) => block.values?.split(" · ").slice(1).join(" · ") ?? "";
-			const named = (block: ShownBlock, index: number) =>
-				[t("review.block", { number: index + 1 }), kind(block)].filter((part) => part).join(" · ");
-			after.forEach((block, index) => {
-				const was = before.find((each) => each.id === block.id);
-				if (!was) places.push({ name: t("review.newBlock"), before: "", after: block.text || (block.values ?? "") });
-				else {
-					if (valuesOnly(was) !== valuesOnly(block))
-						places.push({ name: named(block, index), before: valuesOnly(was), after: valuesOnly(block) });
-					if (was.text !== block.text) places.push({ name: named(block, index), before: was.text, after: block.text });
-					else {
-						// The same code with other effects (doc 17, T196): the lines whose effects change, with their effects on each side. A core effect
-						// says its name; a site's own effect, which has no words in the admin, says its stored name.
-						const effectName = (name: string) =>
-							CORE_EFFECTS.has(name)
-								? t({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` })
-								: name;
-						const changed = codeChanges(block, was);
-						const effects = (side: typeof block, lines: number[]) =>
-							lines
-								.map((line) => {
-									const names = side.code?.lines[line] ?? [];
-									return `${t("editor.code.line", { n: line + 1 })}: ${
-										names.length ? names.map(effectName).join(", ") : "—"
-									}`;
-								})
-								.join(" · ");
-						const head = (side: typeof block) => [side.code?.language, side.code?.title].filter(Boolean).join(" · ");
-						if (changed.lines.length || changed.language || changed.title)
-							places.push({
-								name: named(block, index),
-								before: [changed.language || changed.title ? head(was) : "", effects(was, changed.lines)]
-									.filter(Boolean)
-									.join(" · "),
-								after: [changed.language || changed.title ? head(block) : "", effects(block, changed.lines)]
-									.filter(Boolean)
-									.join(" · "),
-							});
-					}
-				}
-			});
-			before.forEach((block, index) => {
-				if (!after.some((each) => each.id === block.id))
-					places.push({ name: named(block, index), before: block.text || (block.values ?? ""), after: "" });
+			if (made.proposedTitle !== undefined)
+				places.push({ name: t("review.title.field"), before: "", after: made.proposedTitle });
+			made.blocks.forEach((block, index) => {
+				const words = made.translated(block, index);
+				if (words !== null && words !== "" && words !== block.text)
+					places.push({ name: t("review.block", { number: index + 1 }), before: "", after: words });
 			});
 			return places;
 		}

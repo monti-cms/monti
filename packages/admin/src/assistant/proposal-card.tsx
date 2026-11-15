@@ -14,7 +14,7 @@ import {
 } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { marked, type Place, useChangeWords } from "./change-words";
+import { followersOf, marked, type Place, useChangeWords } from "./change-words";
 import { inlineDiff } from "./diff";
 import { ProposalState } from "./proposal-state";
 import { useAssistant } from "./use-assistant";
@@ -61,20 +61,29 @@ export function ProposalCardOf({ id }: { id: string }) {
 	const { openReview } = useAssistant();
 	const proposal = useProposal(id);
 	const view = proposal.view;
-	const shown = view && view.groups.length === 1 ? view.items.slice(0, SHOWN) : undefined;
-	const { placesOf } = useChangeWords(shown);
-	if (!view || view.items.length === 0) return null;
+	// What is written into a translation the proposal makes is read in that translation's row, as on the review page.
+	const { follows, followers } = followersOf(view?.items ?? []);
+	const rows = (view?.items ?? []).filter((item) => !follows(item));
+	const shown = view && view.groups.length === 1 ? rows.slice(0, SHOWN) : undefined;
+	// The entries are read for what a change takes out, which only a change still waiting has (an applied one reads as proposed already), and
+	// for the source a translation is read beside.
+	const { entries, placesOf } = useChangeWords(
+		shown?.some((item) => item.state === "pending" || item.state === "stale")
+			? shown.flatMap((item) => [item, ...followers(item.id)])
+			: undefined,
+	);
+	if (!view || rows.length === 0) return null;
 	const standing = standingOf(view, proposal.applying);
 	const items = new Map(view.items.map((item) => [item.id, item]));
 	const failed = view.items.filter((item) => item.state === "failed" || item.state === "skipped");
-	const rest = view.items.length - SHOWN;
+	const rest = rows.length - SHOWN;
 	return (
 		<ProposalCard
 			title={t("card.title")}
 			summary={
 				view.groups.length > 1
-					? t("card.groups", { groups: view.groups.length, count: view.items.length })
-					: t("card.count", { count: view.items.length })
+					? t("card.groups", { groups: view.groups.length, count: rows.length })
+					: t("card.count", { count: rows.length })
 			}
 			muted={standing === "discarded"}
 			footer={
@@ -96,7 +105,11 @@ export function ProposalCardOf({ id }: { id: string }) {
 				<TableBody>
 					{view.groups.length > 1
 						? view.groups.map((group) => {
-								const records = new Set(group.itemIds.flatMap((item) => items.get(item)?.targets ?? []));
+								const of = group.itemIds.flatMap((item) => {
+									const found = items.get(item);
+									return found && !follows(found) ? [found] : [];
+								});
+								const records = new Set(of.flatMap((item) => item.targets));
 								const only = records.size === 1 ? view.records[[...records][0] ?? ""] : undefined;
 								return (
 									<TableRow key={group.label}>
@@ -104,20 +117,25 @@ export function ProposalCardOf({ id }: { id: string }) {
 											<RowTitle title={group.label} address={only?.title} />
 										</TableCell>
 										<TableCell align="end">
-											<Count>{t("card.count", { count: group.itemIds.length })}</Count>
+											<Count>{t("card.count", { count: of.length })}</Count>
 										</TableCell>
 									</TableRow>
 								);
 							})
 						: (shown ?? []).map((item) => {
 								const change = changeOf(item, view);
+								// A translation to make is named by its source, as its row on the review page: the entry it will be does not stand yet.
+								const source =
+									item.operation === "translations.create"
+										? entries[String((item.input as { source?: unknown }).source ?? "")]?.title
+										: undefined;
 								const place = placesOf(item).find((each) => each.before !== "" || each.after !== "");
 								const words = place ? placeWords(place) : change.after !== null ? <Ins>{change.after}</Ins> : null;
 								return (
 									<TableRow key={item.id} twoLine={words !== null}>
 										<TableCell truncate>
 											<Stack gap={4} minWidth={0}>
-												<RowTitle title={change.title} address={change.address ?? undefined} />
+												<RowTitle title={source ?? change.title} address={change.address ?? undefined} />
 												{words !== null ? (
 													<Text as="div" variant="note" lines={2}>
 														{words}
