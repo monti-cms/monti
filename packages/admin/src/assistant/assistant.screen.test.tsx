@@ -2161,7 +2161,7 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 
 describe("the proposal's card says what each change does (AS-46)", () => {
 	it("10-1 a change shows its place as it is and as proposed: the words that go out struck through, the words that come in on blue", async () => {
-		const retitle: Parameters<typeof stories.site>[0]["script"] = async (ids, version) => [
+		const retitle: NonNullable<Parameters<typeof stories.site>[0]>["script"] = async (ids, version) => [
 			{
 				calls: [
 					{
