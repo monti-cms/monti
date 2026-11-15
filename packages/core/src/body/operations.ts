@@ -177,8 +177,9 @@ export const bodyOperations = [
 		},
 		log: "save",
 		summary: (input, _output, records) => ({
+			// The entry's id is no word of the line: the log tells two entries of one title apart by it when it adds a line's edits up.
 			key: "body.edit.done",
-			values: { title: titleOf(records, "entry", input.id), count: input.ops.length },
+			values: { title: titleOf(records, "entry", input.id), entry: input.id, count: input.ops.length },
 		}),
 		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),

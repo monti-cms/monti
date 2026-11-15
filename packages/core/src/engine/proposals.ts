@@ -1183,7 +1183,7 @@ export async function markApplied(
 	taken: TakenItem[],
 	activityId: string,
 	now: Date,
-): Promise<{ conversationId: string; proposalId: string } | null> {
+): Promise<{ conversationId: string; proposalId: string; proposalIds: string[] } | null> {
 	if (taken.length === 0) return null;
 	await trx
 		.updateTable("monti_proposal_item")
@@ -1196,5 +1196,11 @@ export async function markApplied(
 		.execute();
 	for (const proposalId of new Set(taken.map((item) => item.proposalId))) await settleProposal(trx, proposalId, now);
 	const [first] = taken;
-	return first ? { conversationId: first.conversationId, proposalId: first.proposalId } : null;
+	return first
+		? {
+				conversationId: first.conversationId,
+				proposalId: first.proposalId,
+				proposalIds: [...new Set(taken.map((item) => item.proposalId))],
+			}
+		: null;
 }

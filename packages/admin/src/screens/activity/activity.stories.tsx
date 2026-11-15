@@ -213,6 +213,56 @@ export const KindMenu: Story = {
 /** Flow 12·01b: filtered to failed deliveries. A dot after the column's name says so. */
 export const FailedOnly: Story = { loaders: log("#/activity?delivery=failed") };
 
+/**
+ * The assistant's body edits after the first day: three lines put at the start of 첫 번째 글 for one request, a line in another post of the same
+ * title, and a line in 첫 번째 글's Japanese translation, which has no title yet.
+ */
+async function bodyEdits({ monti, db }: StorySite, ids: LogIds) {
+	const versionOf = async (id: string) =>
+		(await db.selectFrom("entries").select("version").where("id", "=", id).executeTakeFirstOrThrow()).version;
+	const edits = async (request: string, id: string, lines: string[]) => {
+		const proposal = await monti.proposals.create("conversation-1", request);
+		const version = await versionOf(id);
+		for (const words of lines)
+			await monti.proposals.add(proposal, "body.edit", {
+				id,
+				version,
+				ops: [{ op: "insert", after: null, blocks: [{ type: "paragraph", content: [{ type: "text", text: words }] }] }],
+			});
+		await monti.proposals.apply(proposal);
+	};
+	await edits("첫머리에 세 줄 더해 줘", ids.first, ["셋째 줄", "둘째 줄", "첫째 줄"]);
+	const twin = (
+		await run(monti, "entries.create", {
+			collection: "post",
+			locale: "ko",
+			title: "첫 번째 글",
+			slug: "first-post-again",
+		})
+	).output.id;
+	await edits("이름이 같은 글에도 한 줄", twin, ["다른 글의 줄"]);
+	const translation = (await run(monti, "translations.create", { source: ids.first, locale: "ja" })).output.id;
+	await edits("번역에 한 줄 더해 줘", translation, ["번역의 줄"]);
+}
+
+/**
+ * Opened from the editor's ⋯ › "AI가 바꾼 기록" on 첫 번째 글 (AS-23): the assistant's lines of that entry in any of its languages, found by the
+ * entry and not by its title, so the other post of the same title stays out. Three edits of one request read as one ("본문 3곳 고침", AT-11),
+ * and the untitled translation is called by its source and language (TR-27).
+ */
+export const EntryFilter: Story = {
+	loaders: log((ids) => `#/activity?entry=${ids.first}&kind=assistant`, { also: bodyEdits }),
+};
+
+/** The first column's menu of the log filtered to one entry: the kinds, and under them the entry, ticked, which unticked lets the filter go. */
+export const EntryFilterMenu: Story = {
+	loaders: log((ids) => `#/activity?entry=${ids.first}&kind=assistant`, { also: bodyEdits }),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "작업" }, wait));
+		await within(document.body).findByRole("menuitemcheckbox", { name: /"첫 번째 글"/ }, wait);
+	},
+};
+
 /** Flow 12·03: a row open beside the list: when and who, the entry as it was, and each receiver's delivery. */
 export const Panel: Story = { loaders: log((ids) => `#/activity?open=${ids.failed[0]?.line}`) };
 

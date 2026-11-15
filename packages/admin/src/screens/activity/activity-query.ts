@@ -20,6 +20,8 @@ export const ACTIVITY_KINDS_SHOWN = ACTIVITY_FILTERS;
 export type ActivityState = {
 	search: string;
 	kinds: ActivityFilter[];
+	/** The entry the lines are filtered by, in any of its languages (the editor's ⋯ › "what the AI changed"): its id, never its title. */
+	entry: string | null;
 	deliveries: DeliveryState[];
 	range: DateRange | null;
 	/** Newest first, as it opens, or oldest first. */
@@ -53,6 +55,7 @@ export function readActivityState(params: URLSearchParams): ActivityState {
 	return {
 		search: params.get("q") ?? "",
 		kinds: among(ACTIVITY_KINDS_SHOWN, params.get("kind")),
+		entry: params.get("entry") || null,
 		deliveries: among(DELIVERY_STATES, params.get("delivery")),
 		range:
 			date === "today" || date === "7d" || date === "30d"
@@ -83,6 +86,7 @@ export function writeActivityState(state: ActivityState): URLSearchParams {
 	const params = new URLSearchParams();
 	if (state.search) params.set("q", state.search);
 	if (state.kinds.length > 0) params.set("kind", state.kinds.join(","));
+	if (state.entry) params.set("entry", state.entry);
 	if (state.deliveries.length > 0) params.set("delivery", state.deliveries.join(","));
 	if (state.range)
 		params.set("date", typeof state.range === "string" ? state.range : `${state.range.from}..${state.range.to}`);
@@ -103,6 +107,7 @@ export function writeActivityState(state: ActivityState): URLSearchParams {
 export const activityQueryOf = (state: ActivityState) => ({
 	search: state.search,
 	kinds: state.kinds,
+	...(state.entry ? { entry: state.entry } : {}),
 	deliveries: state.deliveries,
 	...(state.range ? { range: state.range } : {}),
 	sort: state.sort,

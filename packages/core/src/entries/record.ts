@@ -140,16 +140,35 @@ const SnapshotShape: z.ZodType<Snapshot> = z.object({
 });
 
 /**
+ * What the activity log calls an entry: its title. A translation with no title yet is named by its source's title and its language ("First
+ * post (ja)"), as its editor shows the source's title in the empty title (TR-27). Empty when neither has one: the screen writes "Untitled".
+ */
+export async function entryName(
+	db: Db,
+	source: string,
+	row: Pick<Selectable<EntryTable>, "title" | "locale" | "translation_group">,
+): Promise<string> {
+	if (row.title !== "" || row.locale === source) return row.title;
+	const original = await db
+		.selectFrom("entries")
+		.select("title")
+		.where("translation_group", "=", row.translation_group)
+		.where("locale", "=", source)
+		.executeTakeFirst();
+	return original?.title ? `${original.title} (${row.locale})` : "";
+}
+
+/**
  * An entry for the engine: its working copy, what the site shows and its old paths, so undoing a publish puts the former published copy back (doc
  * 02).
  */
 export const entryRecord = defineRecordKind({
 	kind: "entry",
-	label(data, site) {
+	async label(data, site, db) {
 		const { row } = data as Snapshot;
 		const address = row.slug === "" ? null : publicPath(site.schema(), row.collection, row.slug, row.locale);
 		return {
-			title: row.title,
+			title: await entryName(db, site.schema().locales.source, row),
 			collection: row.collection,
 			locale: row.locale,
 			slug: row.slug,

@@ -2,7 +2,9 @@ import { type Kysely, sql, type Transaction } from "kysely";
 import { z } from "zod";
 import type { Database, DeliveryTable } from "../db/schema";
 import { deliveryError, type Receiver, receiverName } from "../engine/deliveries";
+import { entryName } from "../entries/record";
 import { CheckError } from "../errors";
+import { sameJson } from "../json";
 import { ACTIVITY_KINDS, type Actor, type LoggedRecord, type Message, recordKey } from "../operation";
 import { DateRange, dateRangeSql, likePattern } from "../query";
 
@@ -132,12 +134,17 @@ export type ActivityLine = {
 	actor: Actor;
 	/** The request the assistant's work came from. */
 	request: string | null;
+	/** The other requests it came from, oldest first: a save that took items of several requests in a screen quotes the first (AS-22). */
+	otherRequests: string[];
 	conversationId: string | null;
 	/** That conversation is still kept, so it can be opened: one deleted since leaves its lines. */
 	conversationKept: boolean;
-	/** What was done, newest first: one message for a write, the first few for a proposal's writes. */
+	/**
+	 * What was done, newest first: one message for a write, the first few for a proposal's writes. Writes that did the same to one record are
+	 * one message with their counts added.
+	 */
 	what: Message[];
-	/** How many more writes the line holds than `what` names. */
+	/** How many more of those messages the line holds than `what` names. */
 	more: number;
 	/** Where it happened; `null` for a proposal's several writes, whose `what` says it. */
 	where: Message | null;
@@ -192,7 +199,7 @@ export type ActivityDelivery = {
 
 /** A line with what its side panel shows: every write of it, the records it touched and each delivery. */
 export type ActivityDetail = ActivityLine & {
-	/** What each write of the line did, newest first: all of them, where the line's `what` names the first few. */
+	/** What the line's writes did, newest first: all of it, where the line's `what` names the first few (the same to one record is one message). */
 	writes: Message[];
 	records: ActivityRecord[];
 	/** How many records the line touched: more than `records` holds when there are many. */
@@ -214,6 +221,28 @@ type Row = {
 	undo_until: Date | null;
 	undone_at: Date | null;
 };
+
+/**
+ * What a line's writes did, newest first, as the log says it: writes that did the same to the same record with a count are one message, their
+ * counts added. A proposal that rewrote three blocks of one entry, one write each, reads "“First post” 3 places changed in the body", not that
+ * line three times (AT-11). The same record is the same values besides the count: a body edit's summary names its entry by id as well as by
+ * title, so two entries of one title stay apart.
+ */
+function whatOf(rows: Row[], labels: Map<string, string>): Message[] {
+	const said: Message[] = [];
+	for (const { summary } of rows) {
+		const { count, ...rest } = summary.values ?? {};
+		const same =
+			typeof count === "number" &&
+			said.find((message) => {
+				const { count: counted, ...others } = message.values ?? {};
+				return message.key === summary.key && typeof counted === "number" && sameJson(others, rest);
+			});
+		if (same && typeof count === "number") same.values = { ...same.values, count: Number(same.values?.count) + count };
+		else said.push({ ...summary, ...(summary.values ? { values: { ...summary.values } } : {}) });
+	}
+	return said.map((message) => named(message, labels));
+}
 
 /** A message with what its collection is called in the admin, for texts that name it (`{collectionLabel}`). */
 function named(message: Message, labels: Map<string, string>): Message {
@@ -293,11 +322,28 @@ async function linesOf(
 			rows.map((row) => row.id),
 		)
 		.execute();
-	const proposals = [...new Set(rows.flatMap((row) => row.proposal_id ?? []))];
+	// The proposals the writes applied, and those a save took items of in a screen: a save can take items of several requests.
+	const taken = await db
+		.selectFrom("monti_proposal_item")
+		.select(["activity_id", "proposal_id"])
+		.where(
+			"activity_id",
+			"in",
+			rows.map((row) => row.id),
+		)
+		.execute();
+	const proposals = [
+		...new Set([...rows.flatMap((row) => row.proposal_id ?? []), ...taken.map((item) => item.proposal_id)]),
+	];
 	const requests =
 		proposals.length === 0
 			? []
-			: await db.selectFrom("monti_proposal").select(["id", "request"]).where("id", "in", proposals).execute();
+			: await db
+					.selectFrom("monti_proposal")
+					.select(["id", "request"])
+					.where("id", "in", proposals)
+					.orderBy("created_at")
+					.execute();
 	const talked = [...new Set(rows.flatMap((row) => row.conversation_id ?? []))];
 	const kept = new Set(
 		talked.length === 0
@@ -312,16 +358,27 @@ async function linesOf(
 		const head = own.at(-1);
 		if (!newest || !head) return [];
 		const ids = new Set(own.map((row) => row.id));
+		const what = whatOf(own, labels);
+		const ownProposals = new Set([
+			...own.flatMap((row) => row.proposal_id ?? []),
+			...taken.flatMap((item) => (item.activity_id !== null && ids.has(item.activity_id) ? [item.proposal_id] : [])),
+		]);
 		const conversationId = own.find((row) => row.conversation_id !== null)?.conversation_id ?? null;
 		const line: ActivityLine = {
 			id: key,
 			at: head.at,
 			actor: newest.actor,
 			request: requests.find((proposal) => proposal.id === newest.proposal_id)?.request ?? null,
+			otherRequests:
+				newest.proposal_id === null
+					? []
+					: requests.flatMap((proposal) =>
+							proposal.id !== newest.proposal_id && ownProposals.has(proposal.id) ? [proposal.request] : [],
+						),
 			conversationId,
 			conversationKept: conversationId !== null && kept.has(conversationId),
-			what: own.slice(0, WHAT_SHOWN).map((row) => named(row.summary, labels)),
-			more: Math.max(0, own.length - WHAT_SHOWN),
+			what: what.slice(0, WHAT_SHOWN),
+			more: Math.max(0, what.length - WHAT_SHOWN),
 			where: own.length === 1 && newest.place ? named(newest.place, labels) : null,
 			undo: undoOf(own, now),
 			delivery: deliveryOf(deliveries.filter((delivery) => ids.has(delivery.activity_id))),
@@ -330,11 +387,14 @@ async function linesOf(
 	});
 }
 
-/** The entry the log is filtered by: every language of it, and what the chip calls it. */
-async function entryFilter(db: Db, id: string): Promise<{ ids: string[]; title: string }> {
+/**
+ * The entry the log is filtered by: every language of it, and what the filter's row in the "action" menu calls it, read only by the list that
+ * names it (`source` is the site's source language: an untitled translation is called by its source, as the log calls it).
+ */
+async function entryFilter(db: Db, id: string): Promise<{ ids: string[]; title: (source: string) => Promise<string> }> {
 	const entry = await db
 		.selectFrom("entries")
-		.select(["title", "translation_group"])
+		.select(["title", "locale", "translation_group"])
 		.where("id", "=", id)
 		.executeTakeFirst();
 	if (entry) {
@@ -343,7 +403,7 @@ async function entryFilter(db: Db, id: string): Promise<{ ids: string[]; title: 
 			.select("id")
 			.where("translation_group", "=", entry.translation_group)
 			.execute();
-		return { ids: group.map((row) => row.id), title: entry.title };
+		return { ids: group.map((row) => row.id), title: (source) => entryName(db, source, entry) };
 	}
 	// Deleted for good: the log still has its lines, and the newest of them knows what it was called.
 	const { rows } = await sql<{ targets: LoggedRecord[] }>`select targets from monti_activity
@@ -351,7 +411,7 @@ async function entryFilter(db: Db, id: string): Promise<{ ids: string[]; title: 
 		db,
 	);
 	const logged = rows[0]?.targets.find((record) => record.kind === "entry" && record.id === id);
-	return { ids: [id], title: logged?.title ?? "" };
+	return { ids: [id], title: async () => logged?.title ?? "" };
 }
 
 type Condition = ReturnType<typeof sql>;
@@ -438,6 +498,8 @@ export async function listActivity(
 	options: {
 		now: Date;
 		receivers: boolean;
+		/** The site's source language: what the entry filter's name is read in. */
+		source: string;
 		/** For tests: runs once the boundary is read and before the page is, where a write of another request can fall. */
 		afterBoundary?: () => Promise<void>;
 	},
@@ -482,7 +544,7 @@ export async function listActivity(
 		mark: activityPageMark(query, asOf, query.page),
 		asOf,
 		deliveries: options.receivers || any !== undefined,
-		entry: entry && query.entry !== undefined ? { id: query.entry, title: entry.title } : null,
+		entry: entry && query.entry !== undefined ? { id: query.entry, title: await entry.title(options.source) } : null,
 	};
 }
 
@@ -566,7 +628,7 @@ export async function getActivity(
 	const labels = await collectionLabels(db);
 	return {
 		...found.line,
-		writes: found.rows.map((row) => named(row.summary, labels)),
+		writes: whatOf(found.rows, labels),
 		records: shown.map((record) => ({
 			...record,
 			exists: here.has(recordKey(record)),
