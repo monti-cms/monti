@@ -205,18 +205,45 @@ const GROUP = "_group";
 
 const json = (status: number, body: unknown) =>
 	new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-/** The one service of the stories, asked only for its models when the key is added. */
+/** The OpenRouter key of a story that has one: its service lists a free model and one that must think, at two levels only. */
+const ROUTER_KEY = "sk-or-v1-story-key-of-the-assistant-8e42";
+const ROUTER_MODELS = [
+	{
+		id: "~deepseek/deepseek-pro-latest",
+		name: "DeepSeek: DeepSeek Pro Latest",
+		supported_parameters: ["tools", "reasoning"],
+		reasoning: { mandatory: true, supported_efforts: ["low", "high"] },
+		alias_target: { name: "DeepSeek: DeepSeek V4 Pro" },
+	},
+	{
+		id: "meta-llama/llama-4-maverick:free",
+		name: "Meta: Llama 4 Maverick (free)",
+		context_length: 1_048_576,
+		supported_parameters: ["tools"],
+	},
+];
+
+/** The services of the stories, asked only for their models when a key is added: Anthropic's, and OpenRouter's for a story with that key. */
 const serviceWith =
 	(pictures: boolean): typeof globalThis.fetch =>
-	async (input) =>
-		String(input).startsWith("https://api.anthropic.com/")
-			? json(200, {
-					data: ["claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"].map((id) => ({
-						id,
-						capabilities: { thinking: { supported: id !== "claude-haiku-5-5" }, image_input: { supported: pictures } },
-					})),
-				})
-			: json(404, {});
+	async (input) => {
+		const url = String(input);
+		if (url.startsWith("https://api.anthropic.com/"))
+			return json(200, {
+				data: [
+					["claude-haiku-5-5", "Claude Haiku 5.5"],
+					["claude-opus-5-5", "Claude Opus 5.5"],
+					["claude-sonnet-5-5", "Claude Sonnet 5.5"],
+				].map(([id, name]) => ({
+					id,
+					display_name: name,
+					capabilities: { thinking: { supported: id !== "claude-haiku-5-5" }, image_input: { supported: pictures } },
+				})),
+			});
+		if (url === "https://openrouter.ai/api/v1/key") return json(200, { data: {} });
+		if (url === "https://openrouter.ai/api/v1/models") return json(200, { data: ROUTER_MODELS });
+		return json(404, {});
+	};
 const network = serviceWith(true);
 
 /**
@@ -337,9 +364,12 @@ export const site = ({
 	plugin = true,
 	limits,
 	at = "#/c/post",
+	router = false,
 }: {
 	script?: Script;
 	key?: boolean;
+	/** A second key, OpenRouter's, with a free model and one that thinks only at the levels its service names. */
+	router?: boolean;
 	/** `false`: a site that does not have the assistant at all. */
 	plugin?: boolean;
 	limits?: Partial<RunLimits>;
@@ -367,6 +397,8 @@ export const site = ({
 				ids.second = await create("둘째 글", "second-post");
 				ids.third = await create("셋째 글", "third-post");
 				if (key) await monti.run("keys.add", { service: "anthropic", name: "Anthropic 개인", secret: KEY }, admin);
+				if (router)
+					await monti.run("keys.add", { service: "openrouter", name: "OpenRouter", secret: ROUTER_KEY }, admin);
 			},
 		});
 		const version = async (id: string) =>
@@ -650,14 +682,25 @@ export const Discarded: Story = {
 	},
 };
 
-/** The model menu: the models under their keys, and how hard the current one thinks. */
+/** The model menu: the models under their keys by name, and the site's conversation model marked "기본". */
 export const Models: Story = {
-	loaders: site(),
+	loaders: site({ router: true }),
 	play: async ({ canvasElement }) => {
 		const page = await screen(canvasElement);
 		await openPanel(page);
 		await userEvent.click(await page.findByRole("button", { name: "모델 고르기" }));
-		await page.findByRole("menuitemradio", { name: /claude-opus-5-5/ });
+		await page.findByRole("menuitemradio", { name: /Llama 4 Maverick/ });
+	},
+};
+
+/** How hard the model thinks, on its own button beside the model: only the levels the model takes. */
+export const Thinking: Story = {
+	loaders: site(),
+	play: async ({ canvasElement }) => {
+		const page = await screen(canvasElement);
+		await openPanel(page);
+		await userEvent.click(await page.findByRole("button", { name: "생각 보통" }));
+		await page.findByRole("menuitemradio", { name: "보통" });
 	},
 };
 

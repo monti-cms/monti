@@ -323,6 +323,31 @@ describe("the entry editor: '✦ request' on picked words (T64; doc 10, item 28)
 			};
 		};
 
+	it("10-1 [AS-06] a request card names the model its request ran on, not the one the page last read as the quick tasks'", async () => {
+		const made: ReturnType<typeof on> = on("draft", []);
+		await made.run();
+		const { monti } = made.loaded().site;
+		const keys = (await monti.run("keys.list", {}, { actor: "admin" })) as { keys: { id: string }[] };
+		// The quick model changes on the server after the page read it: the pick is tried first (one answer, one turn).
+		made.loaded().model.add({ text: "OK" });
+		await monti.run(
+			"models.choose",
+			{ for: "quick", keyId: keys.keys[0].id, model: "claude-sonnet-5-5" },
+			{ actor: "admin" },
+		);
+		made.loaded().model.add({ text: "말로만 답합니다." });
+		await opened();
+		await pickWords(body().element(), PICKED);
+		await userEvent.click(button("요청"));
+		// Before it is sent: the quick model as this page knows it.
+		await expect.element(page.getByText("빠른 작업 · Claude Haiku 5.5", { exact: true })).toBeVisible();
+		await userEvent.fill(page.getByRole("textbox", { name: "어시스턴트에게 요청" }), "뒤 문장만 줄여 줘");
+		await userEvent.keyboard("{Enter}");
+		// Sent: the one the server ran it on.
+		await expect.element(page.getByText("빠른 작업 · Claude Sonnet 5.5", { exact: true })).toBeVisible();
+		expect(made.loaded().model.turns.at(-1)?.model).toBe("claude-sonnet-5-5");
+	});
+
 	it("10-1 [flow 2·08] '요청' on picked words opens a box with the caret in it, the words underlined; sent, the mark says '…'; the answer is a change drawn there", async () => {
 		let release = () => {};
 		const gate = new Promise<void>((resolve) => {
@@ -337,6 +362,8 @@ describe("the entry editor: '✦ request' on picked words (T64; doc 10, item 28)
 		const box = page.getByRole("textbox", { name: "어시스턴트에게 요청" });
 		await expect.element(box).toBeVisible();
 		await expect.poll(() => document.activeElement === box.element()).toBe(true);
+		// The card's foot says which model the request runs on: the quick tasks', by name (AS-06).
+		await expect.element(page.getByText("빠른 작업 · Claude Haiku 5.5", { exact: true })).toBeVisible();
 		expect(
 			underlined()
 				.map((each) => each.textContent)

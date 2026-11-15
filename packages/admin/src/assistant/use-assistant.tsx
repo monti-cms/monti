@@ -13,7 +13,7 @@ import { toast } from "@monti-cms/ui";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useSaveUnsaved, useUnsavedChanges } from "../draft/leave-guard";
 import { useAdmin } from "../operations/admin-context";
-import { MODELS_ASK_AGAIN_MS } from "../operations/models";
+import { levelFor, MODELS_ASK_AGAIN_MS, modelName } from "../operations/models";
 import { NO_ANSWER } from "../operations/transport";
 import type { Route } from "../route";
 import { canRetry, failureIn, reasonText } from "./failure";
@@ -167,6 +167,8 @@ type AssistantValue = {
 	pickModel: (choice: ModelChoice) => void;
 	/** Asks the keys' services for their model lists again (the model menu was opened): not more than once in a while. */
 	refreshModels: () => void;
+	/** Reads the site's models again as they are stored: the keys screen picked one of the site's models. */
+	reloadModels: () => void;
 	setThinking: (level: Thinking) => void;
 	history: { rows: ConversationRow[]; more: boolean } | null;
 	loadHistory: (more?: boolean) => Promise<void>;
@@ -241,6 +243,29 @@ export function useRequest(): (() => void) | undefined {
 /** Whether the site has the assistant: a screen's row or button about it is not drawn on a site without one. */
 export function useHasAssistant(): boolean {
 	return useContext(Context)?.available === true;
+}
+
+/**
+ * The name of the model a request on picked words ran on, or, before it was sent (`null`), of the quick tasks' model it will run on: its card
+ * says it (AS-06). A card answered before the quick model changed keeps the one it ran on. Nothing on a page without the assistant.
+ */
+export function useRequestModelName(): (ran: ModelChoice | null) => string | undefined {
+	const models = useContext(Context)?.models;
+	return (ran) => {
+		const choice = ran ?? models?.quick;
+		if (!choice) return undefined;
+		const found = models?.keys.find((key) => key.id === choice.keyId)?.models.find((each) => each.id === choice.model);
+		return modelName(found ?? { id: choice.model });
+	};
+}
+
+/**
+ * Reads the site's models again in the assistant, after the keys screen picked one: a new conversation then starts on the one picked. Nothing on a
+ * page without the assistant.
+ */
+export function useReloadModels(): () => void {
+	const reload = useContext(Context)?.reloadModels;
+	return useCallback(() => reload?.(), [reload]);
 }
 
 /** What a quick task answers a field with: its value, or in the field's own line why there is none. */
@@ -465,6 +490,12 @@ export function AssistantProvider({
 		});
 	}, [call]);
 
+	const reloadModels = useCallback(() => {
+		void call<ModelList>("models.list").then((listed) => {
+			if (listed.ok && !gone.current) setModels(listed.body);
+		});
+	}, [call]);
+
 	const setOpen = useCallback(
 		(next: boolean) => {
 			setOpenState(next);
@@ -522,16 +553,24 @@ export function AssistantProvider({
 	// site's starting model takes its place, and the person is told once, where they are looking: in the open panel.
 	const model = (has(models, picked) ? picked : null) ?? models?.assistant ?? null;
 	const pickedGone = open && picked !== null && !has(models, picked);
-	const startingModel = models?.assistant?.model ?? null;
+	const starting = models?.assistant;
+	const startingModel = starting
+		? modelName(
+				models?.keys.find((key) => key.id === starting.keyId)?.models.find((each) => each.id === starting.model) ?? {
+					id: starting.model,
+				},
+			)
+		: null;
 	useEffect(() => {
 		if (!pickedGone) return;
 		setPicked(null);
 		if (startingModel) toast(t("panel.modelGone", { model: startingModel }));
 	}, [pickedGone, startingModel, t]);
-	const canThink =
-		models?.keys.find((key) => key.id === model?.keyId)?.models.find((each) => each.id === model?.model)?.thinking ??
-		false;
-	const thinking: Thinking = canThink ? (level ?? "medium") : "off";
+	// How hard it thinks: the level picked (a new conversation's is "medium"), or the nearest the model takes; none for a model that cannot think.
+	const thinking: Thinking = levelFor(
+		models?.keys.find((key) => key.id === model?.keyId)?.models.find((each) => each.id === model?.model),
+		level ?? "medium",
+	);
 	const sending = useRef({ model, thinking, screenContext, removed });
 	sending.current = { model, thinking, screenContext, removed };
 
@@ -1212,6 +1251,7 @@ export function AssistantProvider({
 		recent,
 		pickModel,
 		refreshModels,
+		reloadModels,
 		setThinking: setLevel,
 		history: history ? { rows: history.rows, more: history.earlier !== null } : null,
 		loadHistory,

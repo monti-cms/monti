@@ -28,6 +28,7 @@ import {
 	type StoredMessage,
 } from "./run";
 import { assistantTools } from "./tools";
+import { modelTrial } from "./try";
 
 type Db = Kysely<Database> | Transaction<Database>;
 
@@ -342,6 +343,7 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 		cleanUp: async (monti) => {
 			await removeUnopened(monti);
 		},
+		tryModel: modelTrial(site, provider, limits.answerMs),
 		streams: [
 			defineStream({
 				name: "assistant.run",

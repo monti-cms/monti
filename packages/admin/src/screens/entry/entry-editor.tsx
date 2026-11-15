@@ -67,7 +67,12 @@ import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AssistantButton } from "../../assistant/assistant-button";
 import { draftContext } from "../../assistant/draft-context";
-import { useHasAssistant, useOpenConversation, useScreenContext } from "../../assistant/use-assistant";
+import {
+	useHasAssistant,
+	useOpenConversation,
+	useRequestModelName,
+	useScreenContext,
+} from "../../assistant/use-assistant";
 import { useFills } from "../../assistant/use-fill";
 import { usePlaceRequests } from "../../assistant/use-place-requests";
 import { useRemake } from "../../assistant/use-remake";
@@ -248,6 +253,8 @@ export function EntryEditor({
 	// "✦ Fill" on a field, a picture's words and a caption (doc 10, quick tasks): one call each, the answer put where it was asked.
 	const fills = useFills();
 	const hasAssistant = useHasAssistant();
+	/** The model a request on picked words ran on, or will, at its card's foot (AS-06). */
+	const modelOfRequest = useRequestModelName();
 	/** The entry as the screen has it, what is not saved included: what a fill reads it by. */
 	const fillEntry = () => ({
 		title: editor.title,
@@ -715,6 +722,7 @@ export function EntryEditor({
 		}),
 		...requestMarks({
 			t,
+			modelOf: modelOfRequest,
 			open: staleOpen,
 			onOpen: openCard,
 			requests: waiting.flatMap((request) => {

@@ -430,9 +430,12 @@ export interface ApiKeyUsageTable {
 	tokens: ColumnType<number | string, number, RawBuilder<unknown>>;
 }
 
-/** A model picked for a job. The one job is the quick tasks' (doc 14); the assistant's model is picked per conversation. */
+/**
+ * A model the keys screen picked for a job (doc 14): the one a new conversation starts with (`assistant`; a conversation then keeps its own),
+ * and the quick tasks'.
+ */
 export interface ModelChoiceTable {
-	role: "quick";
+	role: "assistant" | "quick";
 	key_id: string;
 	model: string;
 }

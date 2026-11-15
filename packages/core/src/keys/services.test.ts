@@ -261,7 +261,7 @@ describe("what a check hands on", () => {
 		});
 	});
 
-	it("14-4 a plugin's models are kept by their four known parts, and one that carries the key refuses the whole answer", async () => {
+	it("14-4 a plugin's models are kept by their known parts, and one that carries the key refuses the whole answer", async () => {
 		const loose: KeyService = {
 			id: "loose",
 			name: "Loose",
@@ -292,6 +292,19 @@ describe("what a check hands on", () => {
 			}),
 		};
 		expect(await checkKey(echo, { secret: KEY, baseUrl: null }, globalThis.fetch)).toEqual({
+			ok: false,
+			reason: "unreachable",
+		});
+		// The model an alias stands for goes to the browser too.
+		const alias: KeyService = {
+			id: "alias",
+			name: "Alias",
+			check: async ({ secret }) => ({
+				ok: true,
+				models: [{ id: "~m", aliasOf: `m-${secret}`, thinking: false, images: false }],
+			}),
+		};
+		expect(await checkKey(alias, { secret: KEY, baseUrl: null }, globalThis.fetch)).toEqual({
 			ok: false,
 			reason: "unreachable",
 		});
@@ -332,6 +345,68 @@ describe("OpenAI's models, told by their names (review 11)", () => {
 			"gpt-6-astra": true,
 			"gpt-6.1-sol": true,
 			"o5-mini": true,
+		});
+	});
+});
+
+describe("what OpenRouter says of its models (AS-01, ST-31, ST-33)", () => {
+	const openrouter = (models: unknown[]) =>
+		checkKey(service("openrouter"), { secret: KEY, baseUrl: null }, async (input) =>
+			json(String(input).endsWith("/key") ? { data: { label: "key" } } : { data: models }),
+		);
+
+	it("the thinking levels a model takes and the model an alias stands for are kept; its price is not", async () => {
+		const checked = await openrouter([
+			{
+				id: "baidu/ernie-5.5-flash-preview:free",
+				name: "Baidu: ERNIE 5.5 Flash Preview (free)",
+				supported_parameters: ["tools", "reasoning"],
+				// It must think, and hard: asked to stop, its service refuses every request (AS-01).
+				reasoning: { mandatory: true, supported_efforts: ["high"], default_effort: "high" },
+			},
+			{
+				id: "anthropic/claude-haiku-5.5",
+				name: "Anthropic: Claude Haiku 5.5",
+				supported_parameters: ["tools", "reasoning"],
+				// The CMS shows no money: the price is the service's to show.
+				pricing: { prompt: "0.000001", completion: "0.000005" },
+				reasoning: { mandatory: false, supported_efforts: ["max", "xhigh", "high", "medium", "low", "none"] },
+			},
+			{
+				id: "~deepseek/deepseek-pro-latest",
+				name: "DeepSeek: DeepSeek Pro Latest",
+				supported_parameters: ["tools", "reasoning"],
+				reasoning: { mandatory: true },
+				alias_target: { name: "DeepSeek: DeepSeek V4 Pro 0813", slug: "deepseek/deepseek-v4-pro-0813" },
+			},
+		]);
+		expect(checked).toEqual({
+			ok: true,
+			// In the order of their ids, as every list.
+			models: [
+				{
+					id: "~deepseek/deepseek-pro-latest",
+					label: "DeepSeek: DeepSeek Pro Latest",
+					thinking: true,
+					images: false,
+					levels: ["low", "medium", "high"],
+					aliasOf: "DeepSeek: DeepSeek V4 Pro 0813",
+				},
+				{
+					id: "anthropic/claude-haiku-5.5",
+					label: "Anthropic: Claude Haiku 5.5",
+					thinking: true,
+					images: false,
+					levels: ["off", "low", "medium", "high"],
+				},
+				{
+					id: "baidu/ernie-5.5-flash-preview:free",
+					label: "Baidu: ERNIE 5.5 Flash Preview (free)",
+					thinking: true,
+					images: false,
+					levels: ["high"],
+				},
+			],
 		});
 	});
 });

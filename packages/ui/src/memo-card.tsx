@@ -40,7 +40,8 @@ function WithShortcut({
  * was sent there is no reply row: the thread's "Generating · Stop" (`AiWorking`) stops it. There is no close
  * button; pressing outside, Esc, or the mark again closes it. The body is a `MemoThread` of messages or a `MemoDiff`. `reply` adds the row at the
  * bottom where the note goes on ("Continue"): its send button is the black ↑, or a ghost one when the head has the black "Accept" (one black control
- * on a surface). The key combinations show as tooltips on the head's buttons.
+ * on a surface). `foot` is a quiet line under everything, one line cut with "…": what the request runs on ("Quick tasks · Claude Haiku 5.5"). The
+ * key combinations show as tooltips on the head's buttons.
  */
 function MemoCard({
 	where,
@@ -52,6 +53,7 @@ function MemoCard({
 	acceptShortcut,
 	acceptSpark = false,
 	reply,
+	foot,
 	className,
 	children,
 	...props
@@ -75,6 +77,8 @@ function MemoCard({
 		/** Puts the caret in the box when the card opens: the card is there to be written in. */
 		focus?: boolean;
 	};
+	/** A quiet line at the card's foot: the model the request runs on. */
+	foot?: ReactNode;
 	children?: ReactNode;
 }) {
 	const blank = reply ? reply.value.trim() === "" : true;
@@ -126,6 +130,14 @@ function MemoCard({
 					<IconButton variant={replyVariant} size="sm" label={reply.sendLabel} disabled={blank} onClick={send}>
 						<ArrowUp aria-hidden className="size-3.5" />
 					</IconButton>
+				</div>
+			)}
+			{foot && (
+				<div
+					data-slot="memo-card-foot"
+					className="truncate border-monti-muted border-t px-monti-16 py-monti-6 text-monti-caption text-monti-subtle"
+				>
+					{foot}
 				</div>
 			)}
 		</div>

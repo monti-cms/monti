@@ -612,13 +612,17 @@ describe("the model, per conversation (flow 2, 22–24)", () => {
 		const other = (
 			(await monti.run("keys.add", { service: "openai", name: "OpenAI 회사", secret: OTHER_KEY }, admin)) as Written
 		).output.id;
-		model.add({ text: "네." }, { text: "네." });
+		model.add({ text: "네." });
 		// Nothing picked yet: the first key's service's own quick model, not the assistant's starting one.
 		const first = await ask(monti, { request: "줄여 줘", quick: true });
 		expect(model.turns[0]).toMatchObject({ model: "claude-haiku-5-5", thinking: "off" });
-		await monti.run("models.setQuick", { keyId: other, model: "gpt-4.1" }, admin);
+		// The pick tries the model first (doc 14): one answer and one turn.
+		model.add({ text: "OK" });
+		await monti.run("models.choose", { for: "quick", keyId: other, model: "gpt-4.1" }, admin);
+		expect(model.turns[1]).toMatchObject({ model: "gpt-4.1", messages: [{ role: "user", text: "Reply with OK." }] });
+		model.add({ text: "네." });
 		await ask(monti, { conversation: first.conversation, request: "더 줄여 줘", quick: true });
-		expect(model.turns[1]).toMatchObject({ model: "gpt-4.1", thinking: "off" });
+		expect(model.turns[2]).toMatchObject({ model: "gpt-4.1", thinking: "off" });
 		await expect(
 			ask(monti, { request: "줄여 줘", quick: true, model: { keyId: other, model: "gpt-4.1" } }),
 		).rejects.toBeTruthy();
@@ -1200,13 +1204,17 @@ describe("quick tasks (doc 10, 빠른 작업)", () => {
 		const other = (
 			(await seeing.run("keys.add", { service: "openai", name: "OpenAI 회사", secret: OTHER_KEY }, admin)) as Written
 		).output.id;
-		await seeing.run("models.setQuick", { keyId: other, model: "gpt-3.5-turbo" }, admin);
+		model.add({ text: "OK" });
+		await seeing.run("models.choose", { for: "quick", keyId: other, model: "gpt-3.5-turbo" }, admin);
 		await expect(
 			seeing.run("assistant.fill", { task: "alt", collection: "post", entry: {}, image: { media: file } }, admin),
 		).rejects.toMatchObject({
 			reason: { key: "assistant.failed", values: { reason: "noImages", keyName: "OpenAI 회사" } },
 		});
-		expect(model.answers).toHaveLength(1);
+		// Its one answer was the trial before it was picked (doc 14); the picture was never sent to it.
+		expect(model.answers).toHaveLength(2);
+		expect(model.answers[1]).toMatchObject({ model: "gpt-3.5-turbo", prompt: "Reply with OK." });
+		expect(model.answers[1].picture).toBeUndefined();
 	});
 });
 
@@ -1535,7 +1543,7 @@ describe("nothing changes without a person taking it", () => {
 			"media.moveToFolder": { ids: [file], folder: null },
 			"relations.edit": { collection: "post", entryIds: [id], field: "tags", set: [] },
 			"items.saveGroup": { collection: "tag", locales: { ko: { title: "새 태그" } } },
-			"models.setQuick": { keyId: "x", model: "y" },
+			"models.choose": { for: "quick", keyId: "x", model: "y" },
 			"activity.undo": { id: "x" },
 			"deliveries.retry": { ids: ["x"] },
 			"collections.updateAdminValues": { collection: "post", values: { label: "바뀐 이름" } },
@@ -1653,7 +1661,7 @@ describe("the models the assistant offers", () => {
 		const monti = site();
 		const keyId = await withKey(monti);
 		const listed = (await monti.run("models.list", {}, admin)) as ModelList;
-		expect(listed.assistant).toEqual({ keyId, model: "claude-sonnet-5-5" });
+		expect(listed.assistant).toEqual({ keyId, model: "claude-sonnet-5-5", chosen: false });
 		expect(listed.keys[0].models.map((each) => [each.id, each.thinking])).toEqual([
 			["claude-haiku-5-5", true],
 			["claude-sonnet-5-5", true],

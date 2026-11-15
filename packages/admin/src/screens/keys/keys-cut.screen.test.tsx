@@ -40,7 +40,8 @@ describe("the key rows' cut words", () => {
 
 	it("a name that fits its row says nothing more", async () => {
 		await open(keys.Keys).run();
-		const row = page.getByRole("table", { name: "AI 키" }).getByRole("row").first();
+		// The first key's row, under the column names' row.
+		const row = page.getByRole("table", { name: "AI 키" }).getByRole("row").nth(1);
 		await expect.element(row).toBeVisible();
 		const words = row.element().querySelector("[data-cut-words]") as HTMLElement;
 		expect(words.scrollWidth).toBeLessThanOrEqual(words.clientWidth);

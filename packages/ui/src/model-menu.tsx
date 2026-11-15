@@ -5,6 +5,7 @@ import { Fragment, type ReactElement, type ReactNode, useState } from "react";
 import { Button } from "./button";
 import { Caret } from "./caret";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -14,20 +15,21 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuSearch,
 	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
-import { MENU_EMPTY, MenuShortcut, MenuValue } from "./menu-parts";
+import { MENU_EMPTY, MenuShortcut } from "./menu-parts";
 import { SELECT_TRIGGER } from "./select";
 
 /** One model of the menu. `value` is what `onValueChange` gets back (a key and a model, as the caller writes them). */
 export interface ModelMenuItem {
 	readonly value: string;
-	/** The model's name, in mono. */
+	/** The model's name as a person reads it ("Claude Sonnet 5.5"), in the menu's own text. */
 	readonly model: string;
-	/** A short word at the end: "default", or the key of a recent model. */
+	/** The id its service knows it by ("anthropic/claude-sonnet-5.5"): a search finds it by this too. */
+	readonly id?: string;
+	/** The row's tooltip: what the row cannot say in a line (its id, the model an alias stands for). */
+	readonly title?: string;
+	/** Short words at the end: "default", or the key of a recent model. */
 	readonly hint?: ReactNode;
 }
 
@@ -39,17 +41,9 @@ export interface ModelMenuGroup {
 	readonly items: readonly ModelMenuItem[];
 }
 
-export interface ModelMenuThinking {
-	/** The row's name ("Thinking"). */
-	readonly label: string;
-	readonly value: string;
-	readonly options: readonly { readonly value: string; readonly label: string }[];
-	readonly onValueChange: (value: string) => void;
-}
-
 /**
- * The model menu: a search line ("Find a model"), the models in groups (the recent ones, then one group per key with its count), each in mono with the
- * current one ticked, and, for a model that can think, a "Thinking ›" row at the foot that opens the levels at its side. Typing filters the models by name.
+ * The model menu: a search line ("Find a model"), the models in groups (the recent ones, then one group per key with its count), each by its name with
+ * the current one ticked. Typing filters the models by name or id. How hard a model thinks is not here: {@link ThinkingMenu} stands beside the button.
  * `layout="chat"` opens above the chat input's model button, 330px wide; `layout="field"` opens under a field and takes its width.
  */
 export function ModelMenu({
@@ -59,7 +53,6 @@ export function ModelMenu({
 	groups,
 	searchLabel,
 	emptyText,
-	thinking,
 	layout = "chat",
 	open,
 	onOpenChange,
@@ -73,8 +66,6 @@ export function ModelMenu({
 	searchLabel: string;
 	/** What the menu says when no model matches. */
 	emptyText: ReactNode;
-	/** The thinking levels of the current model. Leave it out for a model that cannot think: the row is not drawn. */
-	thinking?: ModelMenuThinking;
 	layout?: "chat" | "field";
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
@@ -84,7 +75,9 @@ export function ModelMenu({
 	// While a search filters the models, a group's count is the models it found there, not all the key has (ST-32).
 	const shown = groups
 		.map((group) => {
-			const items = group.items.filter((item) => item.model.toLowerCase().includes(needle));
+			const items = group.items.filter(
+				(item) => item.model.toLowerCase().includes(needle) || (item.id?.toLowerCase().includes(needle) ?? false),
+			);
 			return { ...group, items, count: group.count !== undefined && needle !== "" ? items.length : group.count };
 		})
 		.filter((group) => group.items.length > 0);
@@ -125,11 +118,7 @@ export function ModelMenu({
 										{group.count !== undefined && <span>{group.count}</span>}
 									</DropdownMenuLabel>
 									{group.items.map((item) => (
-										<DropdownMenuRadioItem
-											key={`${group.key}:${item.value}`}
-											value={item.value}
-											className="font-mono text-monti-meta"
-										>
+										<DropdownMenuRadioItem key={`${group.key}:${item.value}`} value={item.value} title={item.title}>
 											<span className="min-w-0 truncate">{item.model}</span>
 											{item.hint && <MenuShortcut>{item.hint}</MenuShortcut>}
 										</DropdownMenuRadioItem>
@@ -140,47 +129,21 @@ export function ModelMenu({
 					</DropdownMenuRadioGroup>
 					{shown.length === 0 && <p className={cn("m-0", MENU_EMPTY)}>{emptyText}</p>}
 				</div>
-				{thinking && (
-					<>
-						<DropdownMenuSeparator className="first:block last:block" />
-						<DropdownMenuSub>
-							<DropdownMenuSubTrigger className="text-monti-default">
-								{thinking.label}
-								<MenuValue>{thinking.options.find((option) => option.value === thinking.value)?.label}</MenuValue>
-							</DropdownMenuSubTrigger>
-							<DropdownMenuSubContent side="left" align="end" alignOffset={-7} className="w-40 min-w-40">
-								<DropdownMenuRadioGroup
-									value={thinking.value}
-									onValueChange={(next) => thinking.onValueChange(next as string)}
-								>
-									{thinking.options.map((option) => (
-										<DropdownMenuRadioItem key={option.value} value={option.value}>
-											{option.label}
-										</DropdownMenuRadioItem>
-									))}
-								</DropdownMenuRadioGroup>
-							</DropdownMenuSubContent>
-						</DropdownMenuSub>
-					</>
-				)}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
 }
 
 /**
- * The model button at the start of the chat input's row: the model in mono, its thinking level after a dot when it thinks ("· thinking high"), and a caret.
- * Subtle at rest; ink while its menu is open.
+ * The model button at the start of the chat input's row: the model's name and a caret. Subtle at rest; ink while its menu is open. Short of room the
+ * name is cut with "…" (its whole name in its tooltip), before anything after it in the row gives way.
  */
 export function ModelMenuButton({
 	model,
-	thinking,
 	label,
 	...props
 }: Omit<React.ComponentProps<"button">, "children" | "className" | "style"> & {
 	model: string;
-	/** The level, worded ("thinking high"). Leave it out for a model that cannot think. */
-	thinking?: string;
 	/** The button's name for screen readers ("Choose model"). */
 	label: string;
 }) {
@@ -191,13 +154,65 @@ export function ModelMenuButton({
 			size="sm"
 			aria-label={label}
 			data-slot="model-menu-button"
-			className="-ml-monti-4 min-w-0 pr-monti-6 pl-monti-10 font-mono text-monti-meta text-monti-subtle"
+			className="-ml-monti-4 min-w-0 max-w-full shrink pr-monti-6 pl-monti-10 text-monti-subtle"
 			{...props}
 		>
-			<span className="min-w-0 truncate">{model}</span>
-			{thinking && <span className="shrink-0 text-monti-faint">· {thinking}</span>}
+			{/* A name cut short is said whole in a tooltip, as every cut line is (not the browser's `title`, which a button does not get). */}
+			<CutWords>{model}</CutWords>
 			<Caret solo />
 		</Button>
+	);
+}
+
+/**
+ * How hard the model thinks, beside the model button: a small ghost button in its look with the level in words ("Thinking medium") and a caret,
+ * opening the levels the model takes above it. Drawn only for a model that thinks. It keeps its width: the model's name gives way first.
+ */
+export function ThinkingMenu({
+	value,
+	options,
+	onValueChange,
+	label,
+	text,
+}: {
+	value: string;
+	/** The levels the model takes, worded. */
+	options: readonly { readonly value: string; readonly label: string }[];
+	onValueChange: (value: string) => void;
+	/** The menu's head ("Thinking"). The button is named by its words (`text`), which carry the level. */
+	label: string;
+	/** The button's words: the current level ("Thinking medium"). */
+	text: string;
+}) {
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				render={
+					<Button
+						variant="ghost"
+						size="sm"
+						// Its words are its name ("Thinking medium"): a screen reader hears the level, as the eye reads it.
+						data-slot="thinking-menu-button"
+						className="pr-monti-6 pl-monti-10 text-monti-subtle"
+					>
+						{text}
+						<Caret solo />
+					</Button>
+				}
+			/>
+			<DropdownMenuContent side="top" align="start" sideOffset={8} className="w-40 min-w-40">
+				<DropdownMenuGroup>
+					<DropdownMenuLabel>{label}</DropdownMenuLabel>
+					<DropdownMenuRadioGroup value={value} onValueChange={(next) => onValueChange(next as string)}>
+						{options.map((option) => (
+							<DropdownMenuRadioItem key={option.value} value={option.value}>
+								{option.label}
+							</DropdownMenuRadioItem>
+						))}
+					</DropdownMenuRadioGroup>
+				</DropdownMenuGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }
 
@@ -243,7 +258,7 @@ export function MenuField({
 				) : (
 					<>
 						{/* The value does not give way at all while a meta can (a part of a pixel short and its end would turn into "…"); alone, it is cut at the field's width. */}
-						<span className={cn("max-w-full shrink-0 truncate", mono && "font-mono")}>{value}</span>
+						<CutWords className={cn("max-w-full shrink-0", mono && "font-mono")}>{value}</CutWords>
 						{meta && (
 							<span
 								className={cn(

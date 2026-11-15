@@ -1,4 +1,5 @@
 import type { Thinking } from "@monti-cms/ai";
+import type { Model } from "@monti-cms/core";
 import {
 	AiFailed,
 	Button,
@@ -15,16 +16,19 @@ import {
 	Inline,
 	ModelMenu,
 	ModelMenuButton,
+	type ModelMenuItem,
 	SidePanel,
 	Stack,
 	Suggest,
 	Text,
+	ThinkingMenu,
 	ToolCallLine,
 	toast,
 } from "@monti-cms/ui";
 import { Add, Copy, Edit, RecentlyViewed, Renew } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
+import { byName, levelsOf, modelName, modelTitle, picksThinking } from "../operations/models";
 import { holdsKeyboardFocus, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { failureIn, failureText, reasonText } from "./failure";
 import { History, HistoryFoot } from "./history";
@@ -35,9 +39,6 @@ import { clock, groupOf, sameRead, sentValue, type ToolPart, toolWords } from ".
 
 /** For how many frames after "save and open" a focus that fell to the page is put back where it belongs (the panel may be drawn anew). */
 const FOCUS_FRAMES = 30;
-
-/** How hard a model that can think is asked to: the levels of the model menu's second step. */
-const LEVELS = ["off", "low", "medium", "high"] as const satisfies readonly Thinking[];
 
 /** A model as the menu names it: its key and its id in one value. */
 const choice = (keyId: string, model: string) => JSON.stringify([keyId, model]);
@@ -100,7 +101,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 	const connected = state?.connected ?? true;
 	const model = assistant.model;
 	const key = assistant.models?.keys.find((each) => each.id === model?.keyId);
-	const canThink = key?.models.find((each) => each.id === model?.model)?.thinking ?? false;
+	const current = key?.models.find((each) => each.id === model?.model);
 	const last = turns.at(-1);
 
 	// Sending brings the conversation's end into view; while the person reads further up, new words do not pull it down.
@@ -146,19 +147,20 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 	};
 
 	const button = (
-		<ModelMenuButton
-			model={model?.model ?? ""}
-			thinking={
-				canThink && assistant.thinking !== "off"
-					? t("panel.thinkingAt", { level: t(`panel.thinking.${assistant.thinking}`) })
-					: undefined
-			}
-			label={t("panel.model")}
-		/>
+		<ModelMenuButton model={current ? modelName(current) : (model?.model ?? "")} label={t("panel.model")} />
 	);
 	const recent = assistant.recent.filter((each) =>
 		assistant.models?.keys.some((k) => k.id === each.keyId && k.models.some((m) => m.id === each.model)),
 	);
+	const starting = assistant.models?.assistant;
+	/** A model's row: its name, its id to search by, its tooltip, and at its end `more` (the site's default, a recent one's key). */
+	const itemOf = (keyId: string, m: Model, more?: string): ModelMenuItem => ({
+		value: choice(keyId, m.id),
+		model: modelName(m),
+		id: m.id,
+		title: modelTitle(t, m),
+		...(more ? { hint: more } : {}),
+	});
 	const composer = (
 		<ChatInput
 			ref={box}
@@ -209,64 +211,66 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 			}
 			aside={
 				model && assistant.models ? (
-					<ModelMenu
-						trigger={button}
-						open={menuOpen}
-						onOpenChange={(next) => {
-							setMenuOpen(next);
-							if (next) assistant.refreshModels();
-							else resend.current = false;
-						}}
-						value={choice(model.keyId, model.model)}
-						onValueChange={(value) => {
-							const [keyId, id] = JSON.parse(value) as [string, string];
-							assistant.pickModel({ keyId, model: id });
-							if (resend.current) {
-								resend.current = false;
-								// The model is the conversation's from the next render on: the same words go with it then.
-								setTimeout(assistant.again, 0);
-							}
-						}}
-						groups={[
-							...(recent.length > 0
-								? [
-										{
-											key: "recent",
-											label: t("panel.recent"),
-											items: recent.map((each) => ({
-												value: choice(each.keyId, each.model),
-												model: each.model,
-												hint: assistant.models?.keys.find((k) => k.id === each.keyId)?.name,
-											})),
-										},
-									]
-								: []),
-							...assistant.models.keys.map((each) => ({
-								key: each.id,
-								label: each.name,
-								count: each.models.length,
-								items: each.models.map((m) => ({
-									value: choice(each.id, m.id),
-									model: m.id,
-									...(assistant.models?.assistant?.keyId === each.id && assistant.models.assistant.model === m.id
-										? { hint: t("panel.default") }
-										: {}),
+					<>
+						<ModelMenu
+							trigger={button}
+							open={menuOpen}
+							onOpenChange={(next) => {
+								setMenuOpen(next);
+								if (next) assistant.refreshModels();
+								else resend.current = false;
+							}}
+							value={choice(model.keyId, model.model)}
+							onValueChange={(value) => {
+								const [keyId, id] = JSON.parse(value) as [string, string];
+								assistant.pickModel({ keyId, model: id });
+								if (resend.current) {
+									resend.current = false;
+									// The model is the conversation's from the next render on: the same words go with it then.
+									setTimeout(assistant.again, 0);
+								}
+							}}
+							groups={[
+								...(recent.length > 0
+									? [
+											{
+												key: "recent",
+												label: t("panel.recent"),
+												items: recent.flatMap((each) => {
+													const k = assistant.models?.keys.find((one) => one.id === each.keyId);
+													const m = k?.models.find((one) => one.id === each.model);
+													return k && m ? [itemOf(k.id, m, k.name)] : [];
+												}),
+											},
+										]
+									: []),
+								...assistant.models.keys.map((each) => ({
+									key: each.id,
+									label: each.name,
+									count: each.models.length,
+									items: byName(each.models).map((m) =>
+										itemOf(
+											each.id,
+											m,
+											starting?.keyId === each.id && starting.model === m.id ? t("panel.default") : undefined,
+										),
+									),
 								})),
-							})),
-						]}
-						searchLabel={t("panel.findModel")}
-						emptyText={t("panel.noModel")}
-						thinking={
-							canThink
-								? {
-										label: t("panel.thinking"),
-										value: assistant.thinking,
-										options: LEVELS.map((level) => ({ value: level, label: t(`panel.thinking.${level}`) })),
-										onValueChange: (level) => assistant.setThinking(level as Thinking),
-									}
-								: undefined
-						}
-					/>
+							]}
+							searchLabel={t("panel.findModel")}
+							emptyText={t("panel.noModel")}
+						/>
+						{/* How hard it thinks, beside the model: only for a model that thinks, with only the levels it takes (AS-40). */}
+						{current && picksThinking(current) ? (
+							<ThinkingMenu
+								value={assistant.thinking}
+								options={levelsOf(current).map((level) => ({ value: level, label: t(`panel.thinking.${level}`) }))}
+								onValueChange={(level) => assistant.setThinking(level as Thinking)}
+								label={t("panel.thinking")}
+								text={t("panel.thinkingAt", { level: t(`panel.thinking.${assistant.thinking}`) })}
+							/>
+						) : null}
+					</>
 				) : undefined
 			}
 		/>

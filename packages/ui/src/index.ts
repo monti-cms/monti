@@ -50,6 +50,7 @@ export const CompareTitle = close(open.CompareTitle);
 export const Count = close(open.Count);
 export const ModelMenu = close(open.ModelMenu);
 export const ModelMenuButton = close(open.ModelMenuButton);
+export const ThinkingMenu = close(open.ThinkingMenu);
 export const MenuField = close(open.MenuField);
 export const SavedValue = close(open.SavedValue);
 export const SecretInput = close(open.SecretInput);
@@ -92,7 +93,6 @@ export type {
 	MediaPickerFolder,
 	ModelMenuGroup,
 	ModelMenuItem,
-	ModelMenuThinking,
 	MontiIcon,
 	PatchLine,
 	ProposalsItem,

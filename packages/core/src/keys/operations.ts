@@ -43,7 +43,7 @@ export type KeyRow = {
 	readable: boolean;
 	/** Whether a key is stored at all: `false` for a service that needs none and was given none. One the server cannot read counts as there. */
 	hasKey: boolean;
-	/** Tokens this month. Money and limits are not counted (doc 10). */
+	/** Tokens this month, as Monti counted them. */
 	usage: { month: string; tokens: number };
 	uses: KeyUse[];
 	/** The key's version, by `recordKey({ kind: "key", id })`: a change sent with it is refused when the key changed since it was read. */
@@ -107,14 +107,26 @@ export type KeyList = {
 
 export type ModelChoice = { keyId: string; model: string };
 
+/** The jobs the keys screen picks a model for: the one a new conversation starts with, and the quick tasks'. */
+export type ModelRole = "assistant" | "quick";
+const ROLES = ["assistant", "quick"] as const;
+
 export type ModelList = {
 	/** The keys that can be read, each with the models it can use. */
 	keys: { id: string; name: string; service: string; models: Model[] }[];
-	/** The model a new conversation starts with: the first key's service's own default. */
-	assistant: ModelChoice | null;
-	/** The model the quick tasks call: the one picked on the keys screen, or the first key's service's own until one is. */
+	/**
+	 * The model a new conversation starts with, and the one the quick tasks call: each the one picked on the keys screen (`chosen`), or the first
+	 * key's service's own until one is.
+	 */
+	assistant: (ModelChoice & { chosen: boolean }) | null;
 	quick: (ModelChoice & { chosen: boolean }) | null;
 };
+
+/**
+ * Calls a model once, as the job it is picked for will call it, and throws the job's own refusal when no answer comes (doc 14: the keys screen
+ * tries a model before it is picked, so a model that cannot do the job is never the site's).
+ */
+export type TryModel = (trial: { for: ModelRole; key: OpenKey; model: Model }) => Promise<void>;
 
 /** `2026-11`: usage is counted per calendar month, in UTC. */
 const monthOf = (at: Date) => at.toISOString().slice(0, 7);
@@ -211,31 +223,25 @@ const preferred = (models: Model[], wanted: string[] | undefined) =>
 const usable = (ctx: OperationContext, key: KeyRecord & { readable: boolean }) =>
 	key.readable && serviceOf(ctx, key.service) !== undefined;
 
-/** The models at work before and after anyone picks (doc 10: a new conversation starts with the first key's service's default). */
+/**
+ * The models at work (doc 14): each job's model picked on the keys screen, or, until one is (or when the one picked is gone from its key's
+ * list), the first key's service's own.
+ */
 async function startingModels(
 	ctx: OperationContext,
 	keys: (KeyRecord & { readable: boolean })[],
 ): Promise<Pick<ModelList, "assistant" | "quick">> {
 	const giving = keys.filter((key) => usable(ctx, key) && key.models.length > 0);
 	const first = giving[0];
-	const own = (role: "assistant" | "quick") => {
+	const picked = await ctx.db.selectFrom("model_choices").select(["role", "key_id", "model"]).execute();
+	const modelOf = (role: ModelRole) => {
+		const mine = picked.find((choice) => choice.role === role);
+		if (mine && giving.some((key) => key.id === mine.key_id && key.models.some((model) => model.id === mine.model)))
+			return { keyId: mine.key_id, model: mine.model, chosen: true };
 		const model = first && preferred(first.models, serviceOf(ctx, first.service)?.defaults?.[role]);
-		return first && model ? { keyId: first.id, model } : null;
+		return first && model ? { keyId: first.id, model, chosen: false } : null;
 	};
-	const picked = await ctx.db
-		.selectFrom("model_choices")
-		.select(["key_id", "model"])
-		.where("role", "=", "quick")
-		.executeTakeFirst();
-	const stillThere =
-		picked && giving.some((key) => key.id === picked.key_id && key.models.some((model) => model.id === picked.model));
-	const builtIn = own("quick");
-	return {
-		assistant: own("assistant"),
-		quick: stillThere
-			? { keyId: picked.key_id, model: picked.model, chosen: true }
-			: builtIn && { ...builtIn, chosen: false },
-	};
+	return { assistant: modelOf("assistant"), quick: modelOf("quick") };
 }
 
 /**
@@ -602,7 +608,11 @@ export const keyOperations = [
 							.updateTable("api_keys")
 							.set(
 								checked.ok
-									? { models: JSON.stringify(checked.models), models_at: now, models_failed_at: null }
+									? {
+											models: JSON.stringify(checked.models),
+											models_at: now,
+											models_failed_at: null,
+										}
 									: // A service that does not answer, or answers what cannot be read, keeps the list it gave last.
 										{ models_failed_at: now },
 							)
@@ -624,27 +634,48 @@ export const keyOperations = [
 		},
 	}),
 	defineOperation({
-		name: "models.setQuick",
+		name: "models.choose",
 		kind: "write",
 		description:
-			"Pick the model the quick tasks (fill a field, suggest tags, write alt text) call: one of a key's models.",
-		input: z.object({ keyId: z.string(), model: z.string() }),
-		async check(input, ctx) {
+			"Pick the model a job uses, one of a key's models: `assistant`, the one a new conversation starts with, or `quick`, the one the quick tasks (fill a field, a request on picked words, translate) call. When a person picks it, the model is called once first; one that does not answer is not picked.",
+		input: z.object({ for: z.enum(ROLES), keyId: z.string(), model: z.string() }),
+		// The model is called before the write's transaction opens: nothing of the database is held while it answers.
+		async prepare(input, ctx) {
 			const key = (await readKeys(ctx)).find((candidate) => candidate.id === input.keyId);
-			if (!key || !usable(ctx, key) || !key.models.some((model) => model.id === input.model))
-				throw new CheckError({ key: "models.unknown" });
+			const model = key && usable(ctx, key) ? key.models.find((each) => each.id === input.model) : undefined;
+			if (!key || !model) throw new CheckError({ key: "models.unknown" });
+			// Tried when a person picks it, a proposal of the assistant's taken included; not while the assistant writes the proposal (the
+			// model would be called, and paid for, before anyone said yes). A site without a plugin that tries models picks it untried.
+			if (!ctx.site.tryModel || ctx.actor === "assistant") return { ms: null, version: key.version };
+			const open = await openKey(ctx.db, ctx.site.secret, key.id);
+			if (!open) throw new CheckError({ key: "models.unknown" });
+			const started = Date.now();
+			await ctx.site.tryModel({ for: input.for, key: open, model });
+			// How long the answer took: the screen says it, so a slow model is seen as one when it is picked (AS-42). `null`: it was not tried.
+			return { ms: Date.now() - started, version: key.version };
 		},
-		async run(input, ctx) {
+		async run(input, ctx, tried) {
+			// The key may have gone, or been changed (another key, another address), while the model answered: the choice goes with its key, and
+			// a trial of the old key says nothing of the new one. Held to the end of the write, so it cannot change before the choice is in.
+			const key = await ctx.db
+				.selectFrom("api_keys")
+				.select(["id", "version"])
+				.where("id", "=", input.keyId)
+				.forUpdate()
+				.executeTakeFirst();
+			if (!key) throw new CheckError({ key: "models.unknown" });
+			if (key.version !== tried.version)
+				throw new ConflictError([{ ref: { kind: "key", id: key.id }, expected: tried.version, actual: key.version }]);
 			await ctx.db
 				.insertInto("model_choices")
-				.values({ role: "quick", key_id: input.keyId, model: input.model })
+				.values({ role: input.for, key_id: input.keyId, model: input.model })
 				.onConflict((conflict) => conflict.column("role").doUpdateSet({ key_id: input.keyId, model: input.model }))
 				.execute();
-			return { keyId: input.keyId, model: input.model };
+			return { for: input.for, keyId: input.keyId, model: input.model, ms: tried.ms };
 		},
 		log: "settings",
 		where: () => ({ key: "activity.where.keys" }),
-		summary: (input) => ({ key: "models.setQuick", values: { model: input.model } }),
+		summary: (input) => ({ key: `models.choose.${input.for}`, values: { model: input.model } }),
 	}),
 ];
 

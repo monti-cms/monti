@@ -9,7 +9,18 @@ export type Model = {
 	images: boolean;
 	/** How many tokens it takes in at once (its context window), when its service says. The assistant sizes what it sends by it. */
 	context?: number;
+	/**
+	 * The thinking levels it takes, when its service says (OpenRouter): a model that must think has no `off`, and one that thinks only hard has
+	 * `high` alone. Left out, it takes them all. The assistant asks for the nearest one it takes (AS-01).
+	 */
+	levels?: ThinkingLevel[];
+	/** The model it stands for now, by name: an id that follows a family's latest (OpenRouter's `~…-latest`). */
+	aliasOf?: string;
 };
+
+/** How hard a model thinks: the assistant's levels, as the services' own words are read into them. */
+export type ThinkingLevel = "off" | "low" | "medium" | "high";
+const LEVELS: readonly ThinkingLevel[] = ["off", "low", "medium", "high"];
 
 /** What a service answered when asked about a key: its models, or that it refused the key, or that it could not be reached. */
 export type KeyCheck = { ok: true; models: Model[] } | { ok: false; reason: "refused" | "unreachable" };
@@ -242,6 +253,17 @@ const openai: KeyService = {
 	},
 };
 
+/**
+ * OpenRouter's efforts read into the assistant's levels: `none` is off, and `low`, `medium` and `high` are themselves. What it also has
+ * (`minimal`, `xhigh`, `max`) is not asked for. A model that must think and lists no efforts takes every level but off.
+ */
+function openrouterLevels(reasoning: unknown): ThinkingLevel[] | undefined {
+	if (!isObject(reasoning)) return undefined;
+	const efforts = Array.isArray(reasoning.supported_efforts) ? reasoning.supported_efforts : null;
+	if (efforts === null) return reasoning.mandatory === true ? ["low", "medium", "high"] : undefined;
+	return LEVELS.filter((level) => efforts.includes(level === "off" ? "none" : level));
+}
+
 const openrouter: KeyService = {
 	id: "openrouter",
 	name: "OpenRouter",
@@ -268,12 +290,16 @@ const openrouter: KeyService = {
 					// A ":batch" id is the same model answered later and cheaper: not one to talk with.
 					if (id.endsWith(":batch") || !can.includes("tools")) return undefined;
 					const reads = (row.architecture as { input_modalities?: unknown } | undefined)?.input_modalities;
+					const levels = can.includes("reasoning") ? openrouterLevels(row.reasoning) : undefined;
+					const target = isObject(row.alias_target) ? text(row.alias_target.name) : undefined;
 					return {
 						id,
 						label: text(row.name),
 						thinking: can.includes("reasoning"),
 						images: Array.isArray(reads) && reads.includes("image"),
 						context: tokens(row.context_length),
+						...(levels ? { levels } : {}),
+						...(target ? { aliasOf: target } : {}),
 					};
 				}),
 		);
@@ -345,19 +371,25 @@ const tokens = (value: unknown): number | undefined =>
 
 /**
  * A model as it is stored: the things the menu and the assistant read (its id, its name, whether it thinks and reads pictures, how much it
- * takes in) and nothing else a service put in. `null` for one that is not a model.
+ * takes in, the thinking levels it takes, the model it stands for) and nothing else a service put in. `null` for one that is not a model.
  */
 function plain(model: unknown): Model | null {
 	if (!isObject(model) || typeof model.id !== "string" || model.id === "") return null;
 	if (model.label !== undefined && typeof model.label !== "string") return null;
 	if (typeof model.thinking !== "boolean" || typeof model.images !== "boolean") return null;
 	const context = tokens(model.context);
+	const levels = Array.isArray(model.levels)
+		? LEVELS.filter((level) => (model.levels as unknown[]).includes(level))
+		: undefined;
+	const aliasOf = typeof model.aliasOf === "string" && model.aliasOf !== "" ? model.aliasOf : undefined;
 	return {
 		id: model.id,
 		...(model.label ? { label: model.label } : {}),
 		thinking: model.thinking,
 		images: model.images,
 		...(context === undefined ? {} : { context }),
+		...(levels === undefined ? {} : { levels }),
+		...(aliasOf === undefined ? {} : { aliasOf }),
 	};
 }
 
@@ -365,7 +397,7 @@ function plain(model: unknown): Model | null {
  * Asks a service about a key: the one way a check is run, the core's services and a plugin's alike. It never throws, and holds what a single check
  * cannot be trusted with:
  * - one deadline ({@link CHECK_MS}) for the whole check, after which its requests are ended;
- * - the models are kept by their four known parts only, in the order of their ids, and a list that is not one counts as unreachable;
+ * - the models are kept by their known parts only, in the order of their ids, and a list that is not one counts as unreachable;
  * - an answer that carries the key itself (a server that names a model after the key it was sent) is refused whole: model names go to the assistant
  *   and into the activity log, where a key must never be. This holds for keys of {@link KEY_LENGTH_THAT_MATTERS} characters or more.
  */
@@ -404,7 +436,7 @@ export async function checkKey(
 		// Only a key long enough to be one: "x" or "ollama" in front of a local server would be found in any model's name.
 		if (
 			secret.length >= KEY_LENGTH_THAT_MATTERS &&
-			models.some((model) => model.id.includes(secret) || model.label?.includes(secret))
+			models.some((model) => [model.id, model.label, model.aliasOf].some((text) => text?.includes(secret)))
 		)
 			return UNREACHABLE;
 		return { ok: true, models: models.sort((a, b) => a.id.localeCompare(b.id)) };

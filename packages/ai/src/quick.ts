@@ -8,7 +8,7 @@ import {
 } from "@monti-cms/core";
 import { z } from "zod";
 import { failed, failureOf } from "./failure";
-import { ProviderError, type ProviderFor } from "./provider";
+import { asksThinking, levelFor, ProviderError, type ProviderFor } from "./provider";
 
 /**
  * A quick task (doc 10, quick tasks): one field filled by one call of the quick-task model, with an answer in a fixed shape. No loop, no tools, no
@@ -104,6 +104,9 @@ export async function quickFill(
 			prompt,
 			schema,
 			...(picture ? { picture } : {}),
+			// The least thinking the model takes: one that thinks by default would otherwise think over a field (AS-42).
+			thinking: levelFor(model, "off"),
+			thinks: asksThinking(model),
 			signal: deadline.signal,
 		});
 		// What the call still gives after its deadline is nobody's.
