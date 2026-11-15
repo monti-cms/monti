@@ -97,6 +97,18 @@ export type Conversation = {
 	requests: number;
 };
 
+/** How one run stands (`assistant.runState`): what a page that lost its stream needs to go on or to show the end. */
+export type RunState = {
+	id: string;
+	conversationId: string;
+	status: RunStatus;
+	end: RunEnd | null;
+	/** What the assistant said in it, as it was stored: the words of a turn that was cut are not stored. */
+	answer: string;
+	/** A write of it went through: it proposed something. */
+	proposed: boolean;
+};
+
 /** A place in a list read a page at a time: the time of a row and its id, so rows of one moment are told apart. */
 const Place = z.object({ at: z.string().datetime(), id: z.string() });
 type Place = z.infer<typeof Place>;
@@ -337,6 +349,34 @@ export function assistant(options: AssistantOptions = {}): Plugin {
 						connected: listed.assistant !== null,
 						recent: [...new Set(recent.map((run) => run.request))].slice(0, 2),
 						keepDays: await keepDaysOf(ctx.db),
+					};
+				},
+			}),
+			defineOperation({
+				name: "assistant.runState",
+				kind: "read",
+				description:
+					"How one run stands, whatever kind it is (a conversation's request, a request at a proposed change, a change made again): whether it is going, how it ended, what the assistant said, and whether it proposed something. The browser reads it when the request it was listening to was cut.",
+				input: z.object({ run: z.string() }),
+				async run(input, ctx): Promise<RunState> {
+					const run = await ctx.db.selectFrom("runs").selectAll().where("id", "=", input.run).executeTakeFirst();
+					if (!run) throw new CheckError({ key: "assistant.noRun" });
+					const messages = await ctx.db
+						.selectFrom("run_messages")
+						.select("message")
+						.where("run_id", "=", run.id)
+						.orderBy("position")
+						.execute();
+					const parts = partsOf(messages.map((message) => message.message as StoredMessage));
+					// A run whose request died (its hold ran out) reads as cut short: it can be gone on with.
+					const dead = run.status === "running" && (run.leased_until === null || run.leased_until < ctx.now());
+					return {
+						id: run.id,
+						conversationId: run.conversation_id,
+						status: dead ? "interrupted" : run.status,
+						end: dead ? { status: "interrupted", reason: "connection" } : endOf(run.ended),
+						answer: parts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join(""),
+						proposed: parts.some((part) => part.type === "tool" && part.kind === "write" && !part.failed),
 					};
 				},
 			}),

@@ -63,7 +63,7 @@ export function EditorProposalScreen() {
 				<StatusBar>
 					<StatusBarCell tone="warning">할 일 2</StatusBarCell>
 					<StatusBarCell>
-						요청 1<Text>· 고치는 중 1</Text>
+						요청 1<Text>· 생성 중 1</Text>
 					</StatusBarCell>
 					<StatusBarSpacer />
 					<StatusBarCell end>1,212자</StatusBarCell>

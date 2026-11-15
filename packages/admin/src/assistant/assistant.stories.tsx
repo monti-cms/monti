@@ -839,7 +839,7 @@ export const ReviewMakingAgain: Story = {
 		const page = within(context.canvasElement.ownerDocument.body);
 		(context.loaded as Loaded).net.hold("assistant.run");
 		await userEvent.click(await page.findByRole("button", { name: "다시 만들기" }, wait));
-		await page.findByRole("button", { name: "다시 만드는 중…" }, wait);
+		await page.findByText("생성 중", {}, wait);
 	},
 };
 

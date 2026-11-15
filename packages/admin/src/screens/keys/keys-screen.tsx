@@ -464,7 +464,7 @@ export function KeysScreen({ tabs }: { tabs: ReactNode }) {
 									else {
 										// Only a key that changed since the list was read is "saved elsewhere"; anything else says what it was.
 										toast.error(
-											t(result.refusal.error === "conflict" ? "ui.savedElsewhere" : reasonOf(result.refusal)),
+											t(result.refusal.error === "conflict" ? "errors.savedElsewhere" : reasonOf(result.refusal)),
 										);
 										void list.reload();
 									}

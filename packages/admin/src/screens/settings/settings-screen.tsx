@@ -319,21 +319,29 @@ export function SettingsScreen({
 		setReplyDraft("");
 	}, [pointedAt]);
 	const waiting = places?.requests ?? [];
-	const asked =
-		(walking &&
-			waiting
-				.find((request) => request.id === `item:${walking.item.id}` && request.status === "working")
-				?.thread.at(-1)) ||
-		null;
-	// A request that did not go through says why, once: the card shows the proposal as it stands.
+	// The request at the change the bubble is on: while the assistant works on it, or the last one, when it did not go (its card keeps
+	// what was asked, with the failure line and "Try again").
+	const atWalked = walking
+		? waiting.find(
+				(request) => request.id === `item:${walking.item.id}` && (request.status === "working" || request.failed),
+			)
+		: undefined;
+	const asked = atWalked?.thread.at(-1) ?? null;
+	// A failed request on a change that is no longer waiting (taken or discarded since) has nothing left to be asked of: it goes.
 	const dismissRequest = places?.dismiss;
+	const waitingItems = new Set(stops.map((stop) => stop.item.id));
+	const orphans = waiting
+		.filter((request) => request.failed && request.item !== null && !waitingItems.has(request.item))
+		.map((request) => request.id)
+		.join(" ");
 	useEffect(() => {
-		for (const request of waiting)
-			if (request.status === "answered") {
-				toast.error(request.failed ?? t("errors.unexpected"));
-				dismissRequest?.(request.id);
-			}
-	}, [waiting, dismissRequest, t]);
+		if (orphans === "") return;
+		for (const request of orphans.split(" ")) dismissRequest?.(request);
+	}, [orphans, dismissRequest]);
+	const askedFailure =
+		atWalked?.failed && places
+			? { why: atWalked.failed, next: atWalked.next, onAgain: () => places.again(atWalked.id) }
+			: null;
 	const step = (by: number) => {
 		const next = (position + by + stops.length) % stops.length;
 		setPosition(next);
@@ -464,10 +472,12 @@ export function SettingsScreen({
 								<span ref={cardMark}>
 									<CardMark
 										open={card === walking.item.id}
-										aria-label={t(asked ? "memo.markWorking" : "memo.mark", { request: walking.item.request })}
+										aria-label={t(asked && !askedFailure ? "memo.markWorking" : "memo.mark", {
+											request: walking.item.request,
+										})}
 										onToggle={(next) => openCard(next ? walking.item.id : null)}
 									>
-										{asked ? "…" : 1 + (walking.item.thread?.length ?? 0)}
+										{asked && !askedFailure ? "…" : 1 + (walking.item.thread?.length ?? 0) + (asked ? 1 : 0)}
 									</CardMark>
 								</span>
 								<ProposalMemo
@@ -478,6 +488,7 @@ export function SettingsScreen({
 									request={walking.item.request}
 									thread={walking.item.thread ?? []}
 									asked={asked}
+									failure={askedFailure}
 									onDiscard={() => void draft.discard(walking.item.id)}
 									onTake={() => draft.accept(walking.item.id)}
 									reply={

@@ -1,4 +1,4 @@
-import type { ScriptedProvider } from "@monti-cms/ai";
+import { ProviderError, type ScriptedProvider } from "@monti-cms/ai";
 import type { Doc } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
@@ -16,8 +16,16 @@ import * as stories from "./translation.stories";
 type Loaded = { site: StorySite; ids: Record<string, string>; model: ScriptedProvider };
 const GROUP = "_group";
 
-const on = (kind: Parameters<typeof stories.site>[0], assistantOn = true) =>
-	scene<Loaded>({ loaders: [...(assistantOn ? [assisted()] : []), ...stories.site(kind, "english")] }, stories.default);
+const on = (kind: Parameters<typeof stories.site>[0], assistantOn = true, limits?: { ms: number }) =>
+	scene<Loaded>(
+		{
+			loaders: [
+				...(assistantOn ? [assisted([], undefined, limits ? { limits } : {})] : []),
+				...stories.site(kind, "english"),
+			],
+		},
+		stories.default,
+	);
 const body = () => page.getByRole("textbox", { name: "본문" });
 const button = (name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
 /** "✦ translate" by the language tabs: the assistant's blue text button (the bubble's name is a button of the same word). */
@@ -107,6 +115,48 @@ describe("a translation: '✦ translate' (T94; doc 10, item 19)", () => {
 		const asked = JSON.stringify(made.loaded().model.turns[0]?.messages.at(-1));
 		expect(asked).toContain("translate button");
 		expect(asked).toContain('\\"task\\":\\"translate\\"');
+	});
+
+	it("10-1 [TR-17] a translation that runs past one request's time goes on by itself until every block is proposed", async () => {
+		// Every request's time is up after one turn: the run stops after each turn, and the browser carries it on.
+		const made = on("new", true, { ms: 1 });
+		await open(made);
+		const first = (words: string) => words.startsWith("블로그를 다시");
+		made.loaded().model.add(
+			translating(made, first),
+			translating(made, (words) => !first(words)),
+			{ text: "네 문단을 번역했습니다." },
+		);
+		await expect.poll(translate).toHaveLength(1);
+		await userEvent.click(translate()[0] as HTMLElement);
+		await expect.poll(filled, { timeout: 15000 }).toHaveLength(4);
+		expect(made.loaded().model.turns).toHaveLength(3);
+		await expect.element(page.getByText("생성 중", { exact: true })).not.toBeInTheDocument();
+	});
+
+	it("10-1 while '번역' works its place says '생성 중' with '멈추기'; one that did not go says why there, and '다시 시도' asks again", async () => {
+		const made = on("new");
+		await open(made);
+		let release = () => {};
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		made.loaded().model.add(async () => {
+			await gate;
+			return { fail: new ProviderError("unreachable", "socket hang up") };
+		});
+		await expect.poll(translate).toHaveLength(1);
+		await userEvent.click(translate()[0] as HTMLElement);
+		await expect.element(page.getByText("생성 중", { exact: true })).toBeVisible();
+		await expect.element(button("멈추기")).toBeVisible();
+		release();
+		await expect.element(page.getByText("Anthropic 개인 응답 없음")).toBeVisible();
+		// The service's own words are never shown.
+		await expect.element(page.getByText("socket hang up")).not.toBeInTheDocument();
+		made.loaded().model.add(translating(made), { text: "네 문단을 번역했습니다." });
+		await userEvent.click(button("다시 시도"));
+		await expect.poll(filled).toHaveLength(4);
+		await expect.element(page.getByText("Anthropic 개인 응답 없음")).not.toBeInTheDocument();
 	});
 
 	it("10-3 [flow 3·03] taking the translations writes them into the blocks, unsaved; saved, the blocks are translated and none is in the source's words", async () => {

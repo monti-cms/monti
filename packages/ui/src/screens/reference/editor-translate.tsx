@@ -1,5 +1,6 @@
 import { Add, Spark } from "../../icons";
 import {
+	AiWorking,
 	Box,
 	CurrentProposal,
 	EditorTitleRule,
@@ -119,10 +120,14 @@ export function EditorTranslateScreen({ stage = "new" }: { stage?: "new" | "tran
 						</TabLinks>
 					</Box>
 					<Inline gap={12}>
-						<TextButton tone="proposal" loading={stage === "translating"}>
-							{stage === "translating" ? null : <Spark aria-hidden />}
-							{stage === "translating" ? "번역하는 중…" : "번역"}
-						</TextButton>
+						{stage === "translating" ? (
+							<AiWorking onStop={() => {}} />
+						) : (
+							<TextButton tone="proposal">
+								<Spark aria-hidden />
+								번역
+							</TextButton>
+						)}
 						<Separator orientation="vertical" length="control" flush />
 						<Text variant="note">원문</Text>
 						<Segmented aria-label="원문 보기" value="옆 창" onValueChange={still} options={VIEWS} size="sm" inline />

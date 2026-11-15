@@ -12,6 +12,7 @@ export {
 	type ConversationRow,
 	KEEP_CHOICES,
 	KEEP_DAYS,
+	type RunState,
 	type TranscriptPart,
 	type TranscriptRun,
 } from "./operations";

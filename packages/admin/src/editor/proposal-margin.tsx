@@ -1,8 +1,17 @@
-import { EditorMargin, MemoCardPopover, MemoDiff, MemoThread, Text } from "@monti-cms/ui";
+import { AiFailed, AiWorking, EditorMargin, MemoDiff, MemoThread } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from "react";
-import { CardMark, type CardReply, MemoThreadOf, ProposalMemo, replyOf } from "../assistant/proposal-memo";
+import {
+	type CardFailure,
+	CardMark,
+	type CardReply,
+	KeptCard,
+	MemoThreadOf,
+	ProposalMemo,
+	replyOf,
+} from "../assistant/proposal-memo";
 import type { Exchange } from "../assistant/use-place-requests";
+import type { Remake } from "../assistant/use-remake";
 import { liveDom } from "./live-view";
 import { type BodyProposal, findBlock } from "./proposal-marks";
 
@@ -105,7 +114,7 @@ type Shared = {
  * The assistant's body proposals the text has moved away from (doc 10, item 18; T87): each hangs beside its block as a mark that opens
  * its card, the one a translation's "source changed" uses. The card says "changed in the meantime", shows the block's words as they
  * were when the change was proposed and what was proposed, and has two ways out: discard it, or have the assistant make it again on
- * the text as it is (`onRemake`; left out on a site without the assistant).
+ * the text as it is (`remake`; left out on a site without the assistant).
  */
 export function staleMarks({
 	t,
@@ -113,21 +122,20 @@ export function staleMarks({
 	onOpen,
 	stale,
 	onDiscard,
-	onRemake,
-	remaking,
+	remake,
 }: Shared & {
 	stale: readonly StaleProposal[];
 	onDiscard: (id: string) => void;
-	onRemake?: (id: string) => void;
-	/** The proposals the assistant is making again now: each mark says "…" meanwhile. */
-	remaking: ReadonlySet<string>;
+	/** "Make again"; left out on a site without the assistant. While it works the mark says "…" and the card says so, with "Stop". */
+	remake?: Remake;
 }): MarginMark[] {
 	return stale.map(({ item, block, words }) => ({
 		id: item.id,
 		block,
 		draw: (anchor) => {
 			const was = item.was?.[block];
-			const working = remaking.has(item.id);
+			const working = remake?.working.has(item.id) ?? false;
+			const failed = remake?.failed.get(item.id);
 			return (
 				<>
 					<CardMark
@@ -137,26 +145,27 @@ export function staleMarks({
 					>
 						{working ? "…" : 1}
 					</CardMark>
-					<MemoCardPopover
+					<KeptCard
 						anchor={anchor}
 						open={open === item.id}
 						onOpenChange={(next) => {
 							if (!next) onOpen(null);
 						}}
 						where={t("card.item.stale")}
-						discardLabel={t("card.discard")}
-						onDiscard={() => {
-							onOpen(null);
-							onDiscard(item.id);
-						}}
-						{...(onRemake && !working
+						{...(working
+							? {}
+							: {
+									discardLabel: t("card.discard"),
+									onDiscard: () => {
+										onOpen(null);
+										onDiscard(item.id);
+									},
+								})}
+						{...(remake && !working && !failed
 							? {
 									acceptLabel: t("card.remake"),
 									acceptSpark: true,
-									onAccept: () => {
-										onOpen(null);
-										onRemake(item.id);
-									},
+									onAccept: () => void remake.remake(item.id),
 								}
 							: {})}
 					>
@@ -165,7 +174,21 @@ export function staleMarks({
 							{...(was === undefined ? {} : { beforeLabel: t("entry.stale.then"), before: was })}
 							{...(words === null ? { none: t("entry.stale.removed") } : { after: words })}
 						/>
-					</MemoCardPopover>
+						{working || failed ? (
+							<MemoThread>
+								{working ? (
+									<AiWorking onStop={() => remake?.stop(item.id)} />
+								) : (
+									<AiFailed
+										onRetry={failed?.next ? () => void remake?.remake(item.id) : undefined}
+										retryLabel={failed?.next === "goOn" ? t("panel.goOn") : undefined}
+									>
+										{failed?.why}
+									</AiFailed>
+								)}
+							</MemoThread>
+						) : null}
+					</KeptCard>
 				</>
 			);
 		},
@@ -175,7 +198,8 @@ export function staleMarks({
 /**
  * One proposed change's own card (doc 05, "one by one"; T41): the mark beside its block opens it. Its head discards or takes that
  * change alone; under it, what was asked for and what was asked at this place since; at its foot, a box to ask for it to be changed
- * again ("continue"). While the assistant works on such a request the mark says "…", the head is gone and the box's button stops it.
+ * again ("continue"). While the assistant works on such a request the mark says "…", the head and the box are gone and the answer's
+ * line stops it.
  */
 export function proposalMarks({
 	t,
@@ -185,14 +209,17 @@ export function proposalMarks({
 	onDiscard,
 	onTake,
 	working,
+	failure,
 	reply,
 }: Shared & {
 	/** The changes drawn over the text, each with the block its mark hangs beside. */
 	items: readonly { item: BodyProposal & { request: string; thread: readonly Exchange[] }; block: string }[];
 	onDiscard: (id: string) => void;
 	onTake: (id: string) => void;
-	/** For a change the assistant is asked to change again now: what was asked. */
+	/** For a change the assistant is asked to change again now, or was asked last without it going: what was asked. */
 	working: (id: string) => Exchange | null;
+	/** The last request at a change did not go: its failure line. */
+	failure?: (id: string) => CardFailure | null;
 	/** The reply row of the open card; left out on a site without the assistant. */
 	reply?: (id: string) => CardReply;
 }): MarginMark[] {
@@ -201,16 +228,18 @@ export function proposalMarks({
 		block,
 		draw: (anchor) => {
 			const asked = working(item.id);
+			const failed = failure?.(item.id) ?? null;
+			const busy = asked !== null && failed === null;
 			const asks = 1 + item.thread.length + (asked ? 1 : 0);
 			const shown = open === item.id;
 			return (
 				<>
 					<CardMark
 						open={shown}
-						aria-label={t(asked ? "memo.markWorking" : "memo.mark", { request: item.request })}
+						aria-label={t(busy ? "memo.markWorking" : "memo.mark", { request: item.request })}
 						onToggle={(next) => onOpen(next ? item.id : null)}
 					>
-						{asked ? "…" : asks}
+						{busy ? "…" : asks}
 					</CardMark>
 					<ProposalMemo
 						t={t}
@@ -220,6 +249,7 @@ export function proposalMarks({
 						request={item.request}
 						thread={item.thread}
 						asked={asked}
+						failure={failed}
 						onDiscard={() => onDiscard(item.id)}
 						onTake={() => onTake(item.id)}
 						reply={reply?.(item.id)}
@@ -232,8 +262,8 @@ export function proposalMarks({
 
 /**
  * The requests left on picked words (doc 10, item 28; T64): each hangs beside the block of its words. Before it is sent its card is a
- * box alone, with the caret in it; while the assistant works the mark says "…" and the box's button stops it; an answer that proposed
- * nothing stays in the card, to be asked again or let go.
+ * box alone, with the caret in it; while the assistant works the mark says "…" and the answer's line stops it; an answer that proposed
+ * nothing stays in the card, to be asked again or let go, and one that did not go stays with its failure line.
  */
 export function requestMarks({
 	t,
@@ -241,6 +271,7 @@ export function requestMarks({
 	onOpen,
 	requests,
 	onDismiss,
+	onAgain,
 	reply,
 }: Shared & {
 	requests: readonly {
@@ -249,8 +280,11 @@ export function requestMarks({
 		status: "writing" | "working" | "answered";
 		thread: readonly Exchange[];
 		failed: string | null;
+		next: "retry" | "goOn" | null;
 	}[];
 	onDismiss: (id: string) => void;
+	/** The failure line's button: ask the same again, or go on past the limit. */
+	onAgain: (id: string) => void;
 	reply: (id: string) => CardReply;
 }): MarginMark[] {
 	return requests.map((request) => ({
@@ -272,7 +306,7 @@ export function requestMarks({
 					>
 						{working ? "…" : Math.max(1, request.thread.length)}
 					</CardMark>
-					<MemoCardPopover
+					<KeptCard
 						anchor={anchor}
 						open={shown}
 						onOpenChange={(next) => {
@@ -292,16 +326,16 @@ export function requestMarks({
 							: {})}
 						reply={shown ? replyOf(t, reply(request.id), working, request.status === "writing") : undefined}
 					>
-						<MemoThreadOf t={t} thread={request.thread} working={working} />
-						{request.failed ? (
-							// Why the request did not go through: the screen's line, not the assistant's words.
-							<MemoThread>
-								<Text variant="note" tone="danger">
-									{request.failed}
-								</Text>
-							</MemoThread>
-						) : null}
-					</MemoCardPopover>
+						<MemoThreadOf
+							t={t}
+							thread={request.thread}
+							working={working}
+							onStop={reply(request.id).onStop}
+							failure={
+								request.failed ? { why: request.failed, next: request.next, onAgain: () => onAgain(request.id) } : null
+							}
+						/>
+					</KeptCard>
 				</>
 			);
 		},

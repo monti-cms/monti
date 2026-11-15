@@ -14,10 +14,12 @@ export interface UiLabels {
 	loading: string;
 	clear: string;
 	deselect: string;
-	aiFill: string;
-	aiAgain: string;
-	/** What the assistant's action says while its request runs. */
+	/** What AI work says while it runs ("Generating"), the same on every task. */
 	aiWorking: string;
+	/** The button that stops AI work while it runs. */
+	aiStop: string;
+	/** The button that asks failed AI work again. */
+	aiRetry: string;
 	/** What a control in the `proposal` state says besides its blue: the assistant set this value and nobody has touched it. */
 	proposal: string;
 	/** What a to-do row marked `blocking` says besides its red ring. */
@@ -54,9 +56,9 @@ export const DEFAULT_UI_LABELS: UiLabels = {
 	loading: "Loading",
 	clear: "Clear",
 	deselect: "Remove",
-	aiFill: "Fill",
-	aiAgain: "Again",
-	aiWorking: "Writing…",
+	aiWorking: "Generating",
+	aiStop: "Stop",
+	aiRetry: "Try again",
 	proposal: "AI suggestion",
 	blocking: "Blocks publishing",
 	footnoteMark: "Note¹",

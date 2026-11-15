@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import {
+	AiFailed,
+	AiWorking,
 	Box,
 	Highlight,
 	Marker,
@@ -26,7 +28,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function useReply(placeholder: string, extra: { focus?: boolean; stop?: { label: string; onStop: () => void } } = {}) {
+function useReply(placeholder: string, extra: { focus?: boolean } = {}) {
 	const [value, setValue] = useState("");
 	return { placeholder, value, onValueChange: setValue, onSend: () => setValue(""), sendLabel: "보내기", ...extra };
 }
@@ -58,19 +60,33 @@ export const Thread: Story = {
 	},
 };
 
-/** The assistant is working: its message is "…" and the reply row's button stops it. */
+/** The assistant is working: no head and no reply row; its answer grows over "생성 중 · 멈추기", which stops it. */
 export const Working: Story = {
+	render: () => (
+		<MemoCard>
+			<MemoThread>
+				<MemoMessage author="나" time="10:41">
+					이 문장을 더 짧게 줄여 줘
+				</MemoMessage>
+				<MemoMessage author="어시스턴트" ai status={<AiWorking onStop={noop} />}>
+					“Monti는 코드 없이
+				</MemoMessage>
+			</MemoThread>
+		</MemoCard>
+	),
+};
+
+/** A request that did not go: what was asked stays, with the one failure line and "다시 시도"; the reply row is back. */
+export const Failed: Story = {
 	render: function Render() {
-		const reply = useReply("이어서 쓰기", { stop: { label: "멈추기", onStop: noop } });
+		const reply = useReply("이어서 쓰기");
 		return (
 			<MemoCard discardLabel="버리기" onDiscard={noop} acceptLabel="받기" onAccept={noop} reply={reply}>
 				<MemoThread>
 					<MemoMessage author="나" time="10:41">
 						이 문장을 더 짧게 줄여 줘
 					</MemoMessage>
-					<MemoMessage author="어시스턴트" ai>
-						…
-					</MemoMessage>
+					<AiFailed onRetry={noop}>OpenRouter 응답 없음</AiFailed>
 				</MemoThread>
 			</MemoCard>
 		);

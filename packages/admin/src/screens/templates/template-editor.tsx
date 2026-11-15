@@ -101,7 +101,7 @@ export function TemplateEditor({
 						</Banner>
 					) : null}
 					{editor.conflict ? (
-						<Banner ref={handOff} tone="danger" title={t("ui.savedElsewhere")} plainMeta>
+						<Banner ref={handOff} tone="danger" title={t("errors.savedElsewhere")} plainMeta>
 							<TextButton onClick={() => void editor.loadLatest()}>{t("templates.loadLatest")}</TextButton>
 						</Banner>
 					) : null}

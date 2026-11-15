@@ -19,11 +19,10 @@ export interface ToolCallDetail {
 
 // 24px a line (16 of text, 4 above and below): lines stand one under the other with no gap, and a line that opens is pressable over its
 // whole height, which must be 24 at least.
-const LINE =
-	"flex items-center gap-monti-8 py-monti-4 text-left font-mono text-monti-meta text-monti-subtle [&_svg]:shrink-0";
+const LINE = "flex items-center gap-monti-8 py-monti-4 text-left text-monti-caption text-monti-subtle [&_svg]:shrink-0";
 
 /**
- * One call the assistant made, as a mono line: a mark for where it stands (a spinner and darker words while running, ✓ done, a red × and red words when
+ * One call the assistant made, as one line: a mark for where it stands (a spinner and darker words while running, ✓ done, a red × and red words when
  * it failed or stopped there) and what was done, in words ("Read the post list · 6 posts"). With `details` the line opens to show the input and the result (its caret shows only while it is pointed at, focused or open); without, it is a plain line. `statusLabel` is the status in words for screen
  * readers; it is not drawn.
  */

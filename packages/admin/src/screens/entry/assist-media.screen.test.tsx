@@ -92,11 +92,24 @@ describe("the entry editor: '✦ fill' for a picture (T104)", () => {
 		await made.run();
 		await userEvent.click(caption());
 		await userEvent.click(button("채우기"));
-		await expect.element(page.getByText("쓰는 중…")).toBeVisible();
+		await expect.element(page.getByText("생성 중", { exact: true })).toBeVisible();
 		await userEvent.keyboard("내가 쓴 캡션");
 		answerNow({ value: "늦게 온 캡션" });
 		await new Promise((resolve) => setTimeout(resolve, 300));
 		await expect.element(caption()).toHaveValue("내가 쓴 캡션");
+	});
+
+	it("10-1 a caption fill stopped with the keyboard hands the focus back to its button, which stays on the caption's line", async () => {
+		const made = on(media.WithImage, () => new Promise(() => {}));
+		await made.run();
+		await userEvent.click(caption());
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement?.textContent).toBe("채우기");
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => document.activeElement?.textContent).toBe("멈추기");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("생성 중", { exact: true })).not.toBeInTheDocument();
+		await expect.poll(() => document.activeElement?.textContent).toBe("채우기");
 	});
 
 	it("10-1 a media field's settings card has the same '채우기': the cover's words are filled from its picture", async () => {

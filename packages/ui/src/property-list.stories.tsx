@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useId, useState } from "react";
 import { Renew, Spark } from "./icons";
 import {
+	AiWorking,
 	Box,
 	Combobox,
 	ComboboxChip,
@@ -62,13 +63,12 @@ const TABS: Tab[] = [
 const CATEGORIES = ["여행", "기술", "일상"];
 const TAGS = ["가을", "산", "사진", "걷기"];
 
-/** The assistant's button for one field: "✦ 채우기" while empty, "↻ 다시" once there is a value, "쓰는 중…" while it works. */
+/** The assistant's button for one field: "✦ 채우기" while empty, "↻ 다시" once there is a value, "생성 중 · 멈추기" in its place while it works. */
 function Fill({ filled = false, loading = false }: { filled?: boolean; loading?: boolean }) {
+	if (loading) return <AiWorking size="caption" onStop={() => {}} />;
 	return (
-		<TextButton tone="proposal" size="micro" loading={loading}>
-			{loading ? (
-				"쓰는 중…"
-			) : filled ? (
+		<TextButton tone="proposal" size="caption">
+			{filled ? (
 				<>
 					<Renew aria-hidden />
 					다시
@@ -301,7 +301,7 @@ export const Proposals: Story = {
 	),
 };
 
-/** The assistant is writing one field: a ring and "쓰는 중…", blue, not dimmed, and it stays shown. */
+/** The assistant is writing one field: a ring and "생성 중" in blue, then "멈추기"; it stays shown while the pointer is elsewhere. */
 export const Filling: Story = {
 	render: () => (
 		<Panel>

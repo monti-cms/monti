@@ -1,5 +1,6 @@
 import type { Thinking } from "@monti-cms/ai";
 import {
+	AiFailed,
 	Button,
 	ChatInput,
 	ChatMessage,
@@ -30,7 +31,7 @@ import { History, HistoryFoot } from "./history";
 import { ProposalCardOf } from "./proposal-card";
 import { Prose } from "./prose";
 import { type Part, type Turn, useAssistant } from "./use-assistant";
-import { clock, groupOf, sentValue, type ToolPart, toolWords } from "./words";
+import { clock, groupOf, sameRead, sentValue, type ToolPart, toolWords } from "./words";
 
 /** For how many frames after "save and open" a focus that fell to the page is put back where it belongs (the panel may be drawn anew). */
 const FOCUS_FRAMES = 30;
@@ -41,7 +42,10 @@ const LEVELS = ["off", "low", "medium", "high"] as const satisfies readonly Thin
 /** A model as the menu names it: its key and its id in one value. */
 const choice = (keyId: string, model: string) => JSON.stringify([keyId, model]);
 
-/** What a turn showed, in runs: tool lines that came one after another are one group, and writes of one kind in a row are one line with their count. */
+/**
+ * What a turn showed, in runs: tool lines that came one after another are one group, writes of one kind in a row are one line with their
+ * count, and reads in a row that say the same are one line.
+ */
 type Segment =
 	| { kind: "tools"; lines: { part: ToolPart; times: number }[] }
 	| { kind: "text"; text: string; stale: boolean }
@@ -66,7 +70,8 @@ function segmentsOf(parts: Part[]): Segment[] {
 				before.part.state === part.state
 			)
 				before.times += 1;
-			else last.lines.push({ part, times: 1 });
+			// Reads one after another that a line says the same way are one line.
+			else if (!before || !sameRead(before.part, part)) last.lines.push({ part, times: 1 });
 		} else segments.push({ kind: "tools", lines: [{ part, times: 1 }] });
 	}
 	return segments;
@@ -273,46 +278,44 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 		// A run that waits on a screen while this page follows it is at work (the screen is doing its part).
 		if (!end || turn.status === "done" || turn.status === "stopped" || turn.status === "running") return null;
 		if (turn.status === "waiting" && busy) return null;
-		const act = (label: string, onClick: () => void) =>
-			// The note's own buttons (status.md): quiet and small.
-			isLast ? (
-				<Button variant="ghost" size="sm" onClick={onClick}>
-					{label}
-				</Button>
-			) : undefined;
+		// The one failure line of AI work (`AiFailed`), with what can be done about it; only the last turn's line has a button.
+		const note = (title: string, action?: { label: string; onClick: () => void }) => (
+			<AiFailed
+				onRetry={isLast && action ? action.onClick : undefined}
+				retryLabel={action?.label === t("panel.retry") ? undefined : action?.label}
+			>
+				{title}
+			</AiFailed>
+		);
 		if (turn.status === "failed") {
 			// An AI failure, whether the run ended with it or never began for it: one short line (`failureText`), and what can be
 			// done about it beside it, the same either way.
 			const failure = turn.unsent ? failureIn(turn.refusal) : (end.error ?? null);
 			// It never began for another reason: the server's own (another request is going, the model is gone, no answer came).
 			if (!failure)
-				return (
-					<ErrorNote
-						title={turn.refusal ? reasonText(t, turn.refusal) : t("panel.dropped")}
-						actions={act(t("panel.retry"), assistant.again)}
-					/>
-				);
+				return note(turn.refusal ? reasonText(t, turn.refusal) : t("panel.dropped"), {
+					label: t("panel.retry"),
+					onClick: assistant.again,
+				});
 			const reason = failure.reason;
 			const title = failureText(t, failure);
 			if (reason === "refused" || reason === "limit" || reason === "noImages")
-				return (
-					<ErrorNote
-						title={title}
-						actions={act(t("panel.otherModel"), () => {
-							resend.current = true;
-							setMenuOpen(true);
-						})}
-					/>
-				);
+				return note(title, {
+					label: t("panel.otherModel"),
+					onClick: () => {
+						resend.current = true;
+						setMenuOpen(true);
+					},
+				});
 			if (reason === "unreachable" || reason === "timeout")
-				return <ErrorNote title={title} actions={act(t("panel.retry"), assistant.again)} />;
-			return <ErrorNote title={title} />;
+				return note(title, { label: t("panel.retry"), onClick: assistant.again });
+			return note(title);
 		}
 		if (turn.status === "interrupted" && (end.reason === "turns" || end.reason === "tokens"))
-			return <ErrorNote title={t("panel.limit")} actions={act(t("panel.goOn"), () => assistant.goOn(true))} />;
+			return note(t("panel.limit"), { label: t("panel.goOn"), onClick: () => assistant.goOn(true) });
 		// Cut off, or left waiting on a screen that no page is doing it on any more: it can be gone on with.
 		if (turn.status === "interrupted" || turn.status === "waiting")
-			return <ErrorNote title={t("panel.dropped")} actions={act(t("panel.goOn"), () => assistant.goOn())} />;
+			return note(t("panel.dropped"), { label: t("panel.goOn"), onClick: () => assistant.goOn() });
 		return null;
 	};
 
@@ -434,7 +437,7 @@ export function AssistantPanel({ onOpen }: { onOpen: (address: string) => void }
 									</Button>
 								);
 								// Saved, and the screen still did not move (the entry is gone meanwhile): the note says why, with the step in
-								// it, as every reason under an answer does (noteOf).
+								// it. It is the screen's refusal, not AI work that failed (`noteOf`), so it is the screen's note.
 								return assistant.moveRefused ? (
 									<ErrorNote title={t(`panel.move.${assistant.moveRefused}`)} actions={step} />
 								) : (

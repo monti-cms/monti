@@ -23,8 +23,6 @@ export function useProposal(id: string) {
 	const including = useOperation("proposals.include");
 	/** How far an apply this page started has come. */
 	const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-	/** The item the assistant is making again on its record as it is now. */
-	const [remaking, setRemaking] = useState<string | null>(null);
 	const view = read.data;
 
 	// The run adds to it, another place changes it: it is read again.
@@ -108,35 +106,9 @@ export function useProposal(id: string) {
 		[including.run, reload, touchProposals, t],
 	);
 
-	/** Asks the assistant to make one change again on its record as it is now: a small run of its own, read to its end. */
-	const remake = useCallback(
-		async (item: string) => {
-			setRemaking(item);
-			const answer = await streams("assistant.run", { again: item });
-			if ("events" in answer) {
-				try {
-					for await (const _event of answer.events) {
-						// Nothing of it is shown but its result: the row with its new change.
-					}
-				} catch {
-					// The connection went: the row is read again as it stands.
-				}
-			} else {
-				const reason = ((answer.body ?? {}) as { reason?: Parameters<typeof t>[0] }).reason;
-				toast.error(t(reason ?? "errors.unexpected"));
-			}
-			setRemaking(null);
-			await reload();
-			touchProposals();
-		},
-		[streams, reload, touchProposals, t],
-	);
-
 	return {
 		view,
 		reload,
-		remake,
-		remaking,
 		/** While it is being applied, here or elsewhere: how far, when this page knows. */
 		applying: progress !== null || view?.applying === true,
 		progress,

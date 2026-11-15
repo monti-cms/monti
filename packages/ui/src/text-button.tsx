@@ -16,8 +16,8 @@ import { Spinner } from "./spinner";
  * `render` (`render={<Link href="…" />}`). An icon goes before the text, 14px with a 6px gap; a `Caret` after it keeps its own 12px. It has no box: its text color
  * and, for `underline`, a 1px rule under it say what it is. It acts like a link: no ground at all; under the pointer its words turn ink and a rule shows (or darkens); pressing it changes nothing more. The keyboard's ring sits close around the words: an outline 2px off them, since a ring on the words' own box would touch the letters. The outline is
  * never unset here (`outline-none` beside `outline-2` leaves a width without a style: no ring at all); a browser draws it for the keyboard only.
- * `tone="proposal"` is an action the assistant takes, in the proposal blue: "✦ Fill" on a field's label row (`size="micro"`, the label's own type), "✦ Translate"
- * over a text. While it works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, it is `aria-busy`, and it keeps the focus it had. A label row shows the
+ * `tone="proposal"` is an action the assistant takes, in the proposal blue: "✦ Fill" on a field's label row (`size="caption"`, the label's own type), "✦ Translate"
+ * over a text; while the assistant works, `AiWorking` ("Generating · Stop") takes its place. While a button works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, it is `aria-busy`, and it keeps the focus it had. A label row shows the
  * assistant's button only while the pointer or the keyboard is in that field (`FormField` keys on its `data-tone` inside the label row); elsewhere it always shows.
  */
 const textButtonVariants = cva(
@@ -46,12 +46,11 @@ const textButtonVariants = cva(
 			/** The text size of the line it stands in, when that is not the surrounding text's: the `note` of a list row, the `caption` of a label row. */
 			size: {
 				note: "text-monti-note",
-				caption: "text-monti-caption",
+				/** A field label's type (sans 12); an icon beside it is 12px, the size for 12px text. */
+				caption:
+					"text-monti-caption [&_svg:not([data-slot=caret])]:mr-monti-4 [&_svg:not([data-slot=caret])]:size-monti-icon-xs",
 				/** Mono 12, for a value that opens a menu of values (the model, rows per page). */
 				meta: "text-monti-meta",
-				/** The label's type (mono 11), for the assistant's button on a field's label row. */
-				micro:
-					"inline-flex items-center gap-monti-4 text-monti-micro [&_svg:not([data-slot=caret])]:mr-0 [&_svg:not([data-slot=caret])]:size-monti-icon-xs",
 			},
 			/** The assistant's action, in the proposal blue (its rule too). */
 			tone: {
@@ -82,7 +81,7 @@ function TextButton({
 }: useRender.ComponentProps<"button"> &
 	VariantProps<typeof textButtonVariants> &
 	Pick<React.ComponentProps<"a">, "href" | "target" | "rel"> & {
-		/** The action is running: a ring before the words (the words say what it does: "Writing…"), and it cannot be pressed again. */
+		/** The action is running: a ring before the words (the words say what it does: "Sending…"), and it cannot be pressed again. AI work says so with `AiWorking` instead. */
 		loading?: boolean;
 	}) {
 	const labels = useUiLabels();

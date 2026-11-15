@@ -105,7 +105,7 @@ function WithFill({ initial, focus = false }: { initial: string; focus?: boolean
 				action={
 					<TextButton
 						tone="proposal"
-						size="micro"
+						size="caption"
 						onClick={() => {
 							setValue("책상 위의 아침 햇살");
 							setProposal(true);

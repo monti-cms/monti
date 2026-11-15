@@ -141,6 +141,31 @@ const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGr
 type HandedTo = HTMLElement | (() => void) | null | undefined;
 
 /**
+ * Where the focus goes from a spot whose controls take turns (a button that gives way to "Generating · Stop", then to the button again or a
+ * failure line): to what stands in the spot once no key is down, the first of `controls` found, never the control that is going away. The
+ * work may be over by then (an answer that came at once): what stands is looked for then, not when the press went. When the spot itself
+ * has gone, `after` says what stands after it (looked for now, while the spot is still in the document). A focus the person moved elsewhere
+ * meanwhile is not taken from them.
+ */
+export function toWhatStands(
+	spot: HTMLElement,
+	controls: readonly string[] = ["button"],
+	after?: () => HTMLElement | null | undefined,
+): () => void {
+	const behind = after?.() ?? null;
+	return () => {
+		const on = document.activeElement;
+		if (on && on !== document.body && on.isConnected && !spot.contains(on)) return;
+		const here = spot.isConnected
+			? controls
+					.map((each) => spot.querySelector<HTMLElement>(each))
+					.find((found): found is HTMLElement => found !== null && found !== on)
+			: undefined;
+		(here ?? (behind?.isConnected ? behind : null))?.focus();
+	};
+}
+
+/**
  * The ref of a thing that goes away by an action of its own, or whose own control does: a button that undoes the change it stands for, a cell
  * that turns to words once saved, a banner whose button puts its matter right (the banner goes, or stays with that button gone). When the
  * keyboard's focus leaves the page with it, `to` is called with the thing (still in the document, so what stands after it can be found) and

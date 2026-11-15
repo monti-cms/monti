@@ -17,6 +17,13 @@ const REASONS: readonly AiFailure["reason"][] = [
 export const failureText = (t: Translate, failure: AiFailure): string =>
 	t(`failure.${failure.reason}`, { key: failure.keyName ?? "AI" });
 
+/**
+ * Whether asking the same again can go, where AI work outside the panel failed (a fill, a request at a place, a translation): every
+ * failure but a missing key or a missing picture. A quick-task model changed on the keys screen meanwhile is the one the next try uses.
+ */
+export const canRetry = (failure: AiFailure | null): boolean =>
+	failure === null || (failure.reason !== "noKey" && failure.reason !== "noPicture");
+
 /** The failure a refusal from the server holds (`assistant.failed`), or `null` for any other reason. */
 export function failureIn(reason: Message | null | undefined): AiFailure | null {
 	if (reason?.key !== "assistant.failed") return null;

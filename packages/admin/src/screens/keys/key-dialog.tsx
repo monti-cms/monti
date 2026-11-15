@@ -307,7 +307,7 @@ function KeyForm({
 		}
 		const { refusal } = result;
 		if (refusal.error === "conflict") {
-			toast.error(t("ui.savedElsewhere"));
+			toast.error(t("errors.savedElsewhere"));
 			onStale();
 			if (shown.current) onClose();
 			return;

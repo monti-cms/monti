@@ -6,6 +6,8 @@
 import { type Closed, close } from "./closed";
 import * as open from "./internal";
 
+export const AiFailed = close(open.AiFailed);
+export const AiWorking = close(open.AiWorking);
 export const Affix = close(open.Affix);
 export const AlertDialog = close(open.AlertDialog);
 export const AlertDialogAction = close(open.AlertDialogAction);

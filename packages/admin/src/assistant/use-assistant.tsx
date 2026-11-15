@@ -16,7 +16,8 @@ import { useAdmin } from "../operations/admin-context";
 import { MODELS_ASK_AGAIN_MS } from "../operations/models";
 import { NO_ANSWER } from "../operations/transport";
 import type { Route } from "../route";
-import { reasonText } from "./failure";
+import { canRetry, failureIn, reasonText } from "./failure";
+import { AHEAD, goesOnAfterCut, onwardAfter, POLL_MS } from "./run-task";
 import { type ContextChip, chipsOf, contextWithout, type ToolPart } from "./words";
 
 /** One thing a turn showed, in the order it came. `stale` words are of an answer that was cut: they stay until the answer comes again. */
@@ -97,13 +98,6 @@ const named = (text: string): Queued => ({ id: `q:${Date.now()}:${Math.random().
 type Kept = { open: boolean; conversation: string | null; recent: ModelChoice[] };
 
 const KEPT = "monti.assistant";
-/** How often a run that is going somewhere else (another tab, a request that was cut) is read again. */
-const POLL_MS = 3000;
-/** How many times in a row the browser goes on by itself with a run whose request was cut, before it says so. */
-const CUTS_BEFORE_ASKING = 2;
-
-/** Why a run could not be gone on with when the server knows more of it than this page does: it is at work elsewhere, over, or not the newest. */
-const AHEAD: ReadonlySet<string> = new Set(["assistant.busy", "assistant.ended", "assistant.notNewest"]);
 
 function kept(): Kept {
 	try {
@@ -260,7 +254,11 @@ export function useHasAssistant(): boolean {
 }
 
 /** What a quick task answers a field with: its value, or in the field's own line why there is none. */
-export type Filled = { ok: true; value: string } | { ok: true; values: string[] } | { ok: false; why: string };
+export type Filled =
+	| { ok: true; value: string }
+	| { ok: true; values: string[] }
+	/** `retry`: asking again can go (`canRetry`). */
+	| { ok: false; why: string; retry: boolean };
 
 /**
  * "✦ Fill" (doc 10, quick tasks): one call of the quick-task model for one field's value. Nothing is stored: the screen puts the
@@ -279,44 +277,12 @@ export function useQuickFill(): ((input: Record<string, unknown>) => Promise<Fil
 							return { ok: true, ...(answer.body as { value: string } | { values: string[] }) };
 						const reason = ((answer.body ?? {}) as { reason?: Message }).reason;
 						// The field's line says why in a few words, and which key: never what the service said.
-						return { ok: false, why: reason ? reasonText(t, reason) : t("errors.noAnswer") };
+						return reason
+							? { ok: false, why: reasonText(t, reason), retry: canRetry(failureIn(reason)) }
+							: { ok: false, why: t("errors.noAnswer"), retry: true };
 					}
 				: undefined,
 		[there, transport, t],
-	);
-}
-
-/**
- * Asks the assistant to make one proposed change again on its record as it is now (a small run of its own, read to its end), from a screen
- * that shows the change where it applies: the editor's "make again" on a proposal the text moved away from. A refusal is said. Nothing on
- * a page without the assistant.
- */
-export function useRemakeItem(): ((item: string) => Promise<void>) | undefined {
-	const assistant = useContext(Context);
-	const { streams, t } = useAdmin();
-	const there = assistant?.available === true;
-	const touch = assistant?.touchProposals;
-	return useMemo(
-		() =>
-			there
-				? async (item: string) => {
-						const answer = await streams("assistant.run", { again: item });
-						if ("events" in answer) {
-							try {
-								for await (const _event of answer.events) {
-									// Nothing of it is shown but its result: the change as it was made again.
-								}
-							} catch {
-								// The connection went: the change is read again as it stands.
-							}
-						} else {
-							const reason = ((answer.body ?? {}) as { reason?: Message }).reason;
-							toast.error(reason ? reasonText(t, reason) : t("errors.unexpected"));
-						}
-						touch?.();
-					}
-				: undefined,
-		[there, streams, t, touch],
 	);
 }
 
@@ -362,7 +328,7 @@ export function AssistantProvider({
 	at: string;
 	children: ReactNode;
 }) {
-	const { transport, streams, screen, t, wrote } = useAdmin();
+	const { transport, streams, screen, t, wrote, language } = useAdmin();
 	const unsaved = useUnsavedChanges();
 	const saving = useSaveUnsaved();
 	// What the assistant last asked the screen to do and the screen did not, for its unsaved changes: the step "save and open" takes. It
@@ -772,8 +738,8 @@ export function AssistantProvider({
 			}
 			const end = ended as RunEnd & { untaken: string[] };
 			// Where the request ended is a place the browser goes on from by itself, and the person had said stop: it does not go on.
-			const onward = end.status === "waiting" || (end.status === "interrupted" && end.reason === "time");
-			const halted = onward && here.stopAsked;
+			const onward = onwardAfter(end, false);
+			const halted = onward !== null && here.stopAsked;
 			// Words sent with "send now" that the run did not take were said first: they stand first among what waits. In a conversation
 			// that is not open they are kept for when it is.
 			if (end.untaken.length > 0 && !mine() && !gone.current && here.conversationId)
@@ -794,7 +760,7 @@ export function AssistantProvider({
 							: turn.parts,
 				}));
 			});
-			if (!halted && end.status === "waiting") {
+			if (!halted && onward === "screen") {
 				// Screen tools run here, in the browser, on the screen of the conversation that is open: a run left behind waits until its
 				// conversation is opened again.
 				if (!mine()) return;
@@ -810,7 +776,7 @@ export function AssistantProvider({
 				patchTurn(id, (turn) => ({ ...turn, status: "running", end: null }));
 				return listen({ resume: id, screen: answers }, id, here, false);
 			}
-			if (!halted && end.status === "interrupted" && end.reason === "time") {
+			if (!halted && onward === "goOn") {
 				// One request's time is up, not the run's: the next request goes on where this one stopped. Nobody presses anything, and it is
 				// so for a conversation left behind too.
 				show(() => patchTurn(id, (turn) => ({ ...turn, status: "running", end: null })));
@@ -929,7 +895,7 @@ export function AssistantProvider({
 						continue;
 					}
 					// It stopped where its request was cut. The browser goes on with it by itself, unless that keeps happening at the same place.
-					const cutShort = run.status === "interrupted" && here.cuts > 0 && here.cuts < CUTS_BEFORE_ASKING;
+					const cutShort = run.status === "interrupted" && goesOnAfterCut(here.cuts);
 					if (resume && (run.status === "waiting" || cutShort)) {
 						patchTurn(runId, (turn) => ({ ...turn, status: "running", end: null }));
 						return listen({ resume: runId, ...(run.status === "waiting" ? { away: true } : {}) }, runId, here, false);
@@ -987,12 +953,13 @@ export function AssistantProvider({
 					...(context ? { context } : {}),
 					...(chosen ? { model: chosen } : {}),
 					thinking: think,
+					language,
 				},
 				id,
 				here,
 			);
 		},
-		[listen, chipLabels, setBlocked],
+		[listen, chipLabels, setBlocked, language],
 	);
 
 	later.current = { ...later.current, ask, watch, runScreenTool };

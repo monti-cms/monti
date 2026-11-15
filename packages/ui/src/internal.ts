@@ -7,6 +7,7 @@
  */
 
 export { Affix } from "./affix";
+export { AiFailed, AiWorking } from "./ai-status";
 export {
 	AlertDialog,
 	AlertDialogAction,
