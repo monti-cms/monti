@@ -187,7 +187,8 @@ export function endOf(stored: unknown): RunEnd | null {
 
 /** What a run tells the panel as it goes (doc 10, the event stream). */
 export type RunEvent =
-	| { type: "run"; conversationId: string; runId: string }
+	/** The run opened: its conversation, and the model it runs on (a request at its place names it at its card's foot, AS-06). */
+	| { type: "run"; conversationId: string; runId: string; model: { keyId: string; model: string } | null }
 	| { type: "text"; delta: string }
 	/** A tool call: when it starts, and when it is done or failed. `count` is how many things a read gave. */
 	| {
@@ -382,7 +383,12 @@ export async function* runAssistant(
 			? await takeUp(monti, input.resume, lease(), input.more === true)
 			: await open(monti, input, lease());
 	const conversationId = run.conversation_id;
-	yield { type: "run", conversationId, runId: run.id };
+	yield {
+		type: "run",
+		conversationId,
+		runId: run.id,
+		model: run.key_id === null ? null : { keyId: run.key_id, model: run.model },
+	};
 
 	const stopper = new AbortController();
 	const onGone = () => stopper.abort();

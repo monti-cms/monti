@@ -1,3 +1,4 @@
+import type { ModelChoice } from "@monti-cms/core";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { nextOf, startTask, type Task } from "./run-task";
@@ -23,6 +24,8 @@ export type PlaceRequest = {
 	failed: string | null;
 	/** What the failure line offers: ask the same again, or let a run that stopped where it can go on (a limit, a lost connection) go on. */
 	next: "retry" | "goOn" | null;
+	/** The model its last request ran on, once the server opened the run: its card names it (AS-06). `null` before anything was sent. */
+	model: ModelChoice | null;
 };
 
 /** What a request on picked words sends along: the screen it is on and the words (`ScreenContext`). */
@@ -70,7 +73,7 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 	const begin = useCallback((id: string) => {
 		setRequests((all) => [
 			...all.filter((each) => each.status !== "writing"),
-			{ id, item: null, status: "writing", thread: [], failed: null, next: null },
+			{ id, item: null, status: "writing", thread: [], failed: null, next: null, model: null },
 		]);
 	}, []);
 
@@ -85,7 +88,10 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 	const follow = useCallback(
 		async (id: string, item: string | null, input: Record<string, unknown>) => {
 			const task = startTask({ streams, transport, t, language }, input, {
-				onRun: (_run, conversation) => conversations.current.set(id, conversation),
+				onRun: (_run, conversation, model) => {
+					conversations.current.set(id, conversation);
+					change(id, (request) => ({ ...request, model }));
+				},
 				// The answer grows in the card as it comes.
 				onText: (answer) =>
 					change(id, (request) => ({
@@ -151,6 +157,8 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 					item,
 					status: "working",
 					thread: [...(was?.thread ?? []).slice(0, again ? -1 : undefined), { request: words, answer: "" }],
+					// What it ran on before, until the server says what this one runs on.
+					model: was?.model ?? null,
 					failed: null,
 					next: null,
 				};

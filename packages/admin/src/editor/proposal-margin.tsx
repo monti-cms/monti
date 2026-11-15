@@ -1,3 +1,4 @@
+import type { ModelChoice } from "@monti-cms/core";
 import { AiFailed, AiWorking, EditorMargin, MemoDiff, MemoThread } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from "react";
@@ -278,7 +279,7 @@ export function requestMarks({
 	onDismiss,
 	onAgain,
 	reply,
-	model,
+	modelOf,
 }: Shared & {
 	requests: readonly {
 		id: string;
@@ -287,13 +288,14 @@ export function requestMarks({
 		thread: readonly Exchange[];
 		failed: string | null;
 		next: "retry" | "goOn" | null;
+		model: ModelChoice | null;
 	}[];
 	onDismiss: (id: string) => void;
 	/** The failure line's button: ask the same again, or go on past the limit. */
 	onAgain: (id: string) => void;
 	reply: (id: string) => CardReply;
-	/** The quick tasks' model by name: what the requests run on. */
-	model?: string;
+	/** A request's model by name: the one it ran on, or (`null`) the quick tasks' one it will run on. */
+	modelOf?: (ran: ModelChoice | null) => string | undefined;
 }): MarginMark[] {
 	return requests.map((request) => ({
 		id: request.id,
@@ -301,6 +303,8 @@ export function requestMarks({
 		draw: (anchor) => {
 			const working = request.status === "working";
 			const shown = open === request.id;
+			// The model this request ran on; before it is sent, the quick tasks' one it will run on.
+			const ranOn = modelOf?.(request.model);
 			return (
 				<>
 					<CardMark
@@ -333,7 +337,7 @@ export function requestMarks({
 								}
 							: {})}
 						reply={shown ? replyOf(t, reply(request.id), working, request.status === "writing") : undefined}
-						foot={model ? t("memo.quickModel", { model }) : undefined}
+						foot={ranOn ? t("memo.quickModel", { model: ranOn }) : undefined}
 					>
 						<MemoThreadOf
 							t={t}

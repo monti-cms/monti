@@ -1,5 +1,5 @@
 import type { RunEnd, RunEvent, RunState } from "@monti-cms/ai";
-import type { Message } from "@monti-cms/core";
+import type { Message, ModelChoice } from "@monti-cms/core";
 import type { StreamTransport, Transport } from "../operations/transport";
 import { canRetry, failureIn, failureText, reasonText } from "./failure";
 
@@ -66,12 +66,15 @@ type Deps = { streams: StreamTransport; transport: Transport; t: Translate; lang
  * Runs one small AI task to its end (doc 10, the shared runner): a request at a place, "✦ Translate", making a change again. What no person
  * needs to press happens here: one request's time is up, or the host cut the request, and the task goes on from where it was; a cut that keeps
  * coming at the same place ends as a lost connection. The end is said in the admin's words (`failureText`), never the service's.
- * `onText` gets the answer as it grows; `onRun` the run and its conversation, once the server has opened it.
+ * `onText` gets the answer as it grows; `onRun` the run, its conversation and the model it runs on, once the server has opened it.
  */
 export function startTask(
 	{ streams, transport, t, language }: Deps,
 	input: Record<string, unknown>,
-	on: { onText?: (answer: string) => void; onRun?: (run: string, conversation: string) => void } = {},
+	on: {
+		onText?: (answer: string) => void;
+		onRun?: (run: string, conversation: string, model: ModelChoice | null) => void;
+	} = {},
 ): Task {
 	const listening = new AbortController();
 	// Going on with a run: it is that run from the start, so a refusal of it is read as the run (another page may have it).
@@ -151,7 +154,7 @@ export function startTask(
 						if (event.type === "run") {
 							run = event.runId;
 							conversation = event.conversationId;
-							on.onRun?.(run, conversation);
+							on.onRun?.(run, conversation, event.model);
 							if (stopAsked) tellStop();
 						} else if (event.type === "text") {
 							answer += event.delta;

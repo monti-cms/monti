@@ -246,15 +246,17 @@ export function useHasAssistant(): boolean {
 }
 
 /**
- * The quick tasks' model by its name, as the request card on picked words says what it runs on (AS-06). Nothing on a page without the assistant,
- * or with no model for the quick tasks.
+ * The name of the model a request on picked words ran on, or, before it was sent (`null`), of the quick tasks' model it will run on: its card
+ * says it (AS-06). A card answered before the quick model changed keeps the one it ran on. Nothing on a page without the assistant.
  */
-export function useQuickModelName(): string | undefined {
+export function useRequestModelName(): (ran: ModelChoice | null) => string | undefined {
 	const models = useContext(Context)?.models;
-	const quick = models?.quick;
-	if (!quick) return undefined;
-	const found = models.keys.find((key) => key.id === quick.keyId)?.models.find((each) => each.id === quick.model);
-	return modelName(found ?? { id: quick.model });
+	return (ran) => {
+		const choice = ran ?? models?.quick;
+		if (!choice) return undefined;
+		const found = models?.keys.find((key) => key.id === choice.keyId)?.models.find((each) => each.id === choice.model);
+		return modelName(found ?? { id: choice.model });
+	};
 }
 
 /**
