@@ -370,8 +370,7 @@ export const translationOperations = [
 		log: "save",
 		summary: (input, _output, records) => ({
 			key: "translations.setBlocks",
-			// The entry's id is no word of the line: the log adds a line's counts up by it (`whatOf`).
-			values: { title: titleOf(records, "entry", input.id), entry: input.id, count: input.blocks.length },
+			values: { title: titleOf(records, "entry", input.id), count: input.blocks.length },
 		}),
 		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),
@@ -401,8 +400,7 @@ export const translationOperations = [
 		log: "save",
 		summary: (input, output, records) => ({
 			key: "translations.confirmAll",
-			// The entry's id is no word of the line: the log adds a line's counts up by it (`whatOf`).
-			values: { title: titleOf(records, "entry", input.id), entry: input.id, count: output.confirmed },
+			values: { title: titleOf(records, "entry", input.id), count: output.confirmed },
 		}),
 		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),

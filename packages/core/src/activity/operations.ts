@@ -61,7 +61,9 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			description:
 				"For one column of an activity.list query (`kind`: the assistant's work and the kinds of writes; `delivery`: the delivery states): each value with its count, the query's other conditions applied. A kind counts lines; a delivery state counts deliveries, as deliveries.counts does.",
 			input: ActivityQuery.extend({ column: z.enum(ACTIVITY_FACETS) }),
-			run: async (input, ctx) => ({ values: await activityFacets(ctx.db, input, input.column, ctx.now()) }),
+			run: async (input, ctx) => ({
+				values: await activityFacets(ctx.db, input, input.column, ctx.now(), ctx.site.schema().locales.source),
+			}),
 		}),
 		defineOperation({
 			name: "activity.get",

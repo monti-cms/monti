@@ -62,7 +62,7 @@ export const adminMessages = defineMessages({
 			"activity.undoneAt": "Undone",
 			"activity.undonePartly": "{count} changed since and stayed",
 			"activity.andMore": "{count} more",
-			"activity.otherRequests": "{count} more requests",
+			"activity.otherRequests": "More requests: {count}",
 			"activity.actor.assistant": "Assistant",
 			"activity.actor.cli": "Command line",
 			"activity.sent": "Sent",

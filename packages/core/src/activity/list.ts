@@ -169,7 +169,7 @@ export type ActivityList = {
 	asOf: string;
 	/** Whether the log shows deliveries at all: the site has a receiver, or once had one whose deliveries are still here. */
 	deliveries: boolean;
-	/** The entry the lines are filtered by, as the filter's chip names it. */
+	/** The entry the lines are filtered by, as the filter's row in the "action" menu names it. */
 	entry: { id: string; title: string } | null;
 };
 
@@ -223,26 +223,54 @@ type Row = {
 };
 
 /**
- * What a line's writes did, newest first, as the log says it: writes that did the same to the same record with a count are one message, their
- * counts added. A proposal that rewrote three blocks of one entry, one write each, reads "“First post” 3 places changed in the body", not that
- * line three times (AT-11). Only a summary that names its record by id (`entry`) is added up, and only with the same values besides the count:
- * a title alone does not tell two entries of one title apart.
+ * What a line's writes did, newest first, as the log says it: writes that did the same to the same records are one message (AT-11). Their
+ * counts are added: a proposal that rewrote three blocks of one entry, one write each, reads "“First post” 3 places changed in the body", not
+ * that line three times. Without a count the message is said once: two saves of one entry are one "“First post” saved". The same records are
+ * the ones the writes touched (`touched`, by row), so two entries of one title stay apart.
  */
-function whatOf(rows: Row[], labels: Map<string, string>): Message[] {
-	const said: Message[] = [];
-	for (const { summary } of rows) {
-		const { count, ...rest } = summary.values ?? {};
-		const same =
-			typeof count === "number" &&
-			typeof rest.entry === "string" &&
-			said.find((message) => {
-				const { count: counted, ...others } = message.values ?? {};
-				return message.key === summary.key && typeof counted === "number" && sameJson(others, rest);
+function whatOf(rows: Row[], touched: Map<string, string>, labels: Map<string, string>): Message[] {
+	const said: { message: Message; records: string }[] = [];
+	for (const row of rows) {
+		const records = touched.get(row.id) ?? "";
+		const { count, ...rest } = row.summary.values ?? {};
+		const same = said.find(({ message, records: theirs }) => {
+			const { count: counted, ...others } = message.values ?? {};
+			return (
+				theirs === records &&
+				message.key === row.summary.key &&
+				typeof counted === typeof count &&
+				sameJson(others, rest)
+			);
+		});
+		if (!same)
+			said.push({
+				message: { ...row.summary, ...(row.summary.values ? { values: { ...row.summary.values } } : {}) },
+				records,
 			});
-		if (same && typeof count === "number") same.values = { ...same.values, count: Number(same.values?.count) + count };
-		else said.push({ ...summary, ...(summary.values ? { values: { ...summary.values } } : {}) });
+		else if (typeof count === "number")
+			same.message.values = { ...same.message.values, count: Number(same.message.values?.count) + count };
 	}
-	return said.map((message) => named(message, labels));
+	return said.map(({ message }) => named(message, labels));
+}
+
+/**
+ * The records each write of a line touched, as one key a row (`whatOf`). Read only for lines of several writes, which are the ones it adds up:
+ * a bulk write is a line of its own, and a page does not carry every record of each.
+ */
+async function touchedOf(db: Db, rows: Row[]): Promise<Map<string, string>> {
+	const perLine = new Map<string, number>();
+	for (const row of rows) perLine.set(row.line, (perLine.get(row.line) ?? 0) + 1);
+	const shared = rows.filter((row) => (perLine.get(row.line) ?? 0) > 1);
+	const read = shared.filter((row) => row.targets === undefined).map((row) => row.id);
+	const found =
+		read.length === 0
+			? []
+			: await db.selectFrom("monti_activity").select(["id", "targets"]).where("id", "in", read).execute();
+	const targets = new Map<string, LoggedRecord[]>([
+		...shared.flatMap((row) => (row.targets ? [[row.id, row.targets] as const] : [])),
+		...found.map((row) => [row.id, row.targets] as const),
+	]);
+	return new Map([...targets].map(([id, records]) => [id, records.map(recordKey).sort().join(" ")]));
 }
 
 /** A message with what its collection is called in the admin, for texts that name it (`{collectionLabel}`). */
@@ -292,7 +320,7 @@ async function linesOf(
 	keys: string[],
 	now: Date,
 	{ records = false }: { records?: boolean } = {},
-): Promise<{ line: ActivityLine; rows: Row[] }[]> {
+): Promise<{ line: ActivityLine; rows: Row[]; writes: Message[] }[]> {
 	if (keys.length === 0) return [];
 	const rows: Row[] = await db
 		.selectFrom("monti_activity")
@@ -343,7 +371,9 @@ async function linesOf(
 					.selectFrom("monti_proposal")
 					.select(["id", "request"])
 					.where("id", "in", proposals)
+					// Oldest first, as a save takes them (`acceptedItems`): one order on a tie too.
 					.orderBy("created_at")
+					.orderBy("id")
 					.execute();
 	const talked = [...new Set(rows.flatMap((row) => row.conversation_id ?? []))];
 	const kept = new Set(
@@ -352,6 +382,7 @@ async function linesOf(
 			: (await db.selectFrom("conversations").select("id").where("id", "in", talked).execute()).map((row) => row.id),
 	);
 	const labels = await collectionLabels(db);
+	const touched = await touchedOf(db, rows);
 	return keys.flatMap((key) => {
 		const own = rows.filter((row) => row.line === key);
 		const [newest] = own;
@@ -359,7 +390,7 @@ async function linesOf(
 		const head = own.at(-1);
 		if (!newest || !head) return [];
 		const ids = new Set(own.map((row) => row.id));
-		const what = whatOf(own, labels);
+		const what = whatOf(own, touched, labels);
 		const ownProposals = new Set([
 			...own.flatMap((row) => row.proposal_id ?? []),
 			...taken.flatMap((item) => (item.activity_id !== null && ids.has(item.activity_id) ? [item.proposal_id] : [])),
@@ -384,18 +415,18 @@ async function linesOf(
 			undo: undoOf(own, now),
 			delivery: deliveryOf(deliveries.filter((delivery) => ids.has(delivery.activity_id))),
 		};
-		return [{ line, rows: own }];
+		return [{ line, rows: own, writes: what }];
 	});
 }
 
 /**
- * The entry the log is filtered by: every language of it, and what the filter's row in the "action" menu calls it, read only by the list that
- * names it (`source` is the site's source language: an untitled translation is called by its source, as the log calls it).
+ * The entry the log is filtered by: every language of it, and what the filter's row in the "action" menu calls it, as the log calls it (`source`
+ * is the site's source language: an untitled translation is called by its source).
  */
-async function entryFilter(db: Db, id: string): Promise<{ ids: string[]; title: (source: string) => Promise<string> }> {
+async function entryFilter(db: Db, id: string, source: string): Promise<{ ids: string[]; title: string }> {
 	const entry = await db
 		.selectFrom("entries")
-		.select(["title", "locale", "translation_group"])
+		.select(["id", "title", "locale", "translation_group"])
 		.where("id", "=", id)
 		.executeTakeFirst();
 	if (entry) {
@@ -404,7 +435,7 @@ async function entryFilter(db: Db, id: string): Promise<{ ids: string[]; title: 
 			.select("id")
 			.where("translation_group", "=", entry.translation_group)
 			.execute();
-		return { ids: group.map((row) => row.id), title: (source) => entryName(db, source, entry) };
+		return { ids: group.map((row) => row.id), title: await entryName(db, source, entry) };
 	}
 	// Deleted for good: the log still has its lines, and the newest of them knows what it was called.
 	const { rows } = await sql<{ targets: LoggedRecord[] }>`select targets from monti_activity
@@ -412,7 +443,7 @@ async function entryFilter(db: Db, id: string): Promise<{ ids: string[]; title: 
 		db,
 	);
 	const logged = rows[0]?.targets.find((record) => record.kind === "entry" && record.id === id);
-	return { ids: [id], title: async () => logged?.title ?? "" };
+	return { ids: [id], title: logged?.title ?? "" };
 }
 
 type Condition = ReturnType<typeof sql>;
@@ -505,7 +536,7 @@ export async function listActivity(
 		afterBoundary?: () => Promise<void>;
 	},
 ): Promise<ActivityList> {
-	const entry = query.entry === undefined ? null : await entryFilter(db, query.entry);
+	const entry = query.entry === undefined ? null : await entryFilter(db, query.entry, options.source);
 	// Where this browsing stands is read before its first page, and bounds that page too: a line committed between the two readings is on no
 	// page of this browsing, rather than inside the boundary and missing from page 1 (page 2 would then repeat page 1's last line).
 	const asOf =
@@ -545,7 +576,7 @@ export async function listActivity(
 		mark: activityPageMark(query, asOf, query.page),
 		asOf,
 		deliveries: options.receivers || any !== undefined,
-		entry: entry && query.entry !== undefined ? { id: query.entry, title: await entry.title(options.source) } : null,
+		entry: entry && query.entry !== undefined ? { id: query.entry, title: entry.title } : null,
 	};
 }
 
@@ -559,8 +590,9 @@ export async function activityFacets(
 	query: ActivityQuery,
 	column: ActivityFacet,
 	now: Date,
+	source: string,
 ): Promise<{ value: string; count: number }[]> {
-	const entry = query.entry === undefined ? null : await entryFilter(db, query.entry);
+	const entry = query.entry === undefined ? null : await entryFilter(db, query.entry, source);
 	const where = conditionsOf(query, entry, now, column);
 	if (column === "delivery") {
 		const counted = await sql<{ state: string; count: string }>`select d.state, count(*) as count from monti_activity h
@@ -626,10 +658,9 @@ export async function getActivity(
 		.orderBy("created_at")
 		.orderBy("destination")
 		.execute();
-	const labels = await collectionLabels(db);
 	return {
 		...found.line,
-		writes: whatOf(found.rows, labels),
+		writes: found.writes,
 		records: shown.map((record) => ({
 			...record,
 			exists: here.has(recordKey(record)),

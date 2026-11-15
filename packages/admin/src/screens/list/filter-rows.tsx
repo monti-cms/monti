@@ -13,7 +13,7 @@ export function ValueRow({
 	checked: boolean;
 	onToggle: () => void;
 	label: string;
-	/** How many rows the value holds; `null` while the counts are being read. */
+	/** How many rows the value holds; `null` while the counts are being read, and for a value that is not counted (the log's entry). */
 	counted: number | null;
 }) {
 	return (

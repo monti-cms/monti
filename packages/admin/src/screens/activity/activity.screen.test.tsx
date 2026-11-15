@@ -1443,6 +1443,10 @@ describe("the activity log of one entry (doc 13; AS-23, AT-11, TR-27)", () => {
 		await expect.element(row("이 두 편 요약 채워 줘")).toBeVisible();
 		expect(rows().some((words) => words.includes("이름이 같은 글에도 한 줄"))).toBe(false);
 		expect(rows()).toHaveLength(3);
+		// The panel's list of what was done says it the same way.
+		await userEvent.click(row("첫머리에 세 줄 더해 줘").getByRole("link"));
+		await expect.element(panel()).toHaveTextContent("한 일 · 1");
+		await expect.element(panel()).toHaveTextContent('"첫 번째 글" 본문 3곳 고침');
 	});
 
 	it("13 [AS-22] a save that took changes of two requests quotes the first, counts the other, is found by either, and its panel has both", async () => {
@@ -1487,9 +1491,17 @@ describe("the activity log of one entry (doc 13; AS-23, AT-11, TR-27)", () => {
 		await userEvent.click(columnName("작업"));
 		const entry = page.getByRole("menuitemcheckbox", { name: '"첫 번째 글"' });
 		await expect.element(entry).toBeChecked();
+		// A row opened while filtered keeps the filter in its address.
+		expect(row("첫머리에 세 줄 더해 줘").getByRole("link").element().getAttribute("href")).toContain("entry=");
 		await userEvent.click(entry);
 		await expect.poll(() => new URLSearchParams(location.hash.split("?")[1]).get("entry")).toBeNull();
-		await userEvent.keyboard("{Escape}");
 		await expect.element(row("이름이 같은 글에도 한 줄")).toBeVisible();
+		// Unticked, the row stays with the keyboard's focus, as every value of the menu does; ticked again, it filters again.
+		await expect.element(entry).not.toBeChecked();
+		expect(document.activeElement).toBe(entry.element());
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => new URLSearchParams(location.hash.split("?")[1]).get("entry")).not.toBeNull();
+		await expect.element(row("이름이 같은 글에도 한 줄")).not.toBeInTheDocument();
+		await userEvent.keyboard("{Escape}");
 	});
 });

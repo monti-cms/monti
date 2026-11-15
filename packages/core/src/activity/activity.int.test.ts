@@ -1497,6 +1497,36 @@ describe("the log", () => {
 		expect((await list({ entry: english }, monti)).entry).toEqual({ id: english, title: "첫 번째 글 (en)" });
 		await save(english, { title: "First post" }, monti);
 		expect((await list({ entry: english }, monti)).entry).toEqual({ id: english, title: "First post" });
+
+		// Without a count, the same done to one record is said once: two saves of 첫 번째 글, and the other post's save beside them.
+		const saves = await monti.proposals.create("conversation-1", "요약과 주소 다듬어 줘");
+		await monti.proposals.add(saves, "entries.save", {
+			id: first,
+			version: await versionOf(first),
+			values: { summary: "요약" },
+		});
+		await monti.proposals.add(saves, "entries.save", {
+			id: first,
+			version: await versionOf(first),
+			slug: "first-post-new",
+		});
+		await monti.proposals.add(saves, "entries.save", {
+			id: twin,
+			version: await versionOf(twin),
+			values: { summary: "요약" },
+		});
+		await monti.proposals.apply(saves);
+		const [saved] = (await list({ kinds: ["assistant"] }, monti)).lines;
+		expect(saved?.what.map(ko)).toEqual(['"첫 번째 글" 저장', '"첫 번째 글" 저장']);
+
+		// A group deleted for good in one write: its untitled translation keeps the name the log gave it, there and in the filter.
+		const second = await newPost("둘째 글", "second-post", monti);
+		const untitled = (await write("translations.create", { source: second, locale: "en" }, monti)).output.id;
+		await write("trash.move", { rows: [{ kind: "entry", id: second }] }, monti);
+		const emptied = await write("trash.empty", {}, monti);
+		const purged = await detail(emptied.activityId, monti);
+		expect(purged.records.find((record) => record.id === untitled)?.title).toBe("둘째 글 (en)");
+		expect((await list({ entry: untitled }, monti)).entry).toEqual({ id: untitled, title: "둘째 글 (en)" });
 	});
 
 	it("13-3 [AT-11] two translations of one title stay two messages: counts are added up only for one record", async () => {

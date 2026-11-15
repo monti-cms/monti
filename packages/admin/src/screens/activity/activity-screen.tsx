@@ -169,6 +169,13 @@ export function ActivityScreen({
 	/** What is shown is the answer to this address: its search, filters, order and page, not the one before, still on screen while this reads. */
 	const answered = data !== null && data.mark === activityPageMark(query, data.asOf, state.page);
 	const lines = data?.lines ?? [];
+	/**
+	 * The entry the log was opened for (the editor's ⋯ › "what the AI changed"), as the server named it. It stays in the first column's menu once
+	 * unticked, as every value of a menu does: the row under the keyboard's focus does not go, and ticked again it filters again.
+	 */
+	const entryShown = useRef<{ id: string; title: string } | null>(null);
+	if (data?.entry) entryShown.current = data.entry;
+	const offeredEntry = entryShown.current;
 	const looking =
 		state.search.trim() !== "" ||
 		state.kinds.length > 0 ||
@@ -293,14 +300,14 @@ export function ActivityScreen({
 						chosen={state.kinds}
 						onChange={(kinds) => look({ kinds })}
 					/>
-					{/* The entry the log was opened for (the editor's ⋯ › "what the AI changed"), under the kinds: unticked, the filter goes. */}
-					{state.entry !== null && data?.entry ? (
+					{/* The entry the log was opened for, under the kinds: unticked, the filter goes and the row stays. */}
+					{offeredEntry ? (
 						<>
 							<DropdownMenuSeparator />
 							<ValueRow
-								checked
-								onToggle={() => look({ entry: null })}
-								label={t("activity.ofEntry", { title: data.entry.title || t("list.untitled") })}
+								checked={state.entry === offeredEntry.id}
+								onToggle={() => look({ entry: state.entry === offeredEntry.id ? null : offeredEntry.id })}
+								label={t("activity.ofEntry", { title: offeredEntry.title || t("list.untitled") })}
 								counted={null}
 							/>
 						</>
