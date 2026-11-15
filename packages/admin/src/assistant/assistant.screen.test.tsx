@@ -2224,6 +2224,18 @@ describe("the proposal's card says what each change does (AS-46)", () => {
 		// One row, named by the source: the translation does not stand yet.
 		expect(card()?.querySelectorAll("tr")).toHaveLength(1);
 		expect(card()?.textContent).toContain("둘째 글");
+		// The header and the button count the same changes: the translation's words are part of its row.
 		expect(card()?.textContent).toContain("1건");
+		await expect.element(panel().getByRole("button", { name: "1건 적용" })).toBeVisible();
+	});
+
+	it("10-1 [AS-49] '적용' pressed with the keyboard on the review page hands the focus past the row, never to '되돌리기'", async () => {
+		await open(stories.Review).run();
+		const apply = page.getByRole("main").getByRole("button", { name: "3건 적용" }).first();
+		apply.element().focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("main").getByText("✓ 3건 적용").first()).toBeVisible();
+		await expect.poll(() => document.activeElement !== document.body).toBe(true);
+		expect(document.activeElement?.textContent).not.toBe("되돌리기");
 	});
 });

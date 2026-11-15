@@ -1,4 +1,12 @@
-import { applyOps, type BodyOp, type Doc, type Message, type ProposalItemView, storedFields } from "@monti-cms/core";
+import {
+	applyOps,
+	type BodyOp,
+	type Doc,
+	type Message,
+	type ProposalItemView,
+	type ProposalView,
+	storedFields,
+} from "@monti-cms/core";
 import { Del, Ins } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
@@ -60,6 +68,25 @@ export function followersOf(items: readonly ProposalItemView[]) {
 	return {
 		follows: (item: ProposalItemView) => parentOf(item) !== null,
 		followers: (parent: string) => items.filter((each) => parentOf(each) === parent),
+	};
+}
+
+/**
+ * A proposal's counts by its rows, as the card and the review page show them: the words written into a translation it makes are that
+ * translation's, not changes of their own. A row whose words went wrong counts as failed.
+ */
+export function rowCounts(view: ProposalView): ProposalView["counts"] {
+	const { follows, followers } = followersOf(view.items);
+	const rows = view.items.filter((item) => !follows(item));
+	const failed = (item: ProposalItemView) =>
+		[item, ...followers(item.id)].some((each) => each.state === "failed" || each.state === "skipped");
+	const count = (test: (item: ProposalItemView) => boolean) => rows.filter(test).length;
+	return {
+		toApply: count((item) => item.state === "pending" && item.included && !item.stale),
+		applied: count((item) => item.state === "applied" && !failed(item)),
+		failed: count(failed),
+		stale: count((item) => [item, ...followers(item.id)].some((each) => each.stale)),
+		reverted: count((item) => item.state === "reverted"),
 	};
 }
 
