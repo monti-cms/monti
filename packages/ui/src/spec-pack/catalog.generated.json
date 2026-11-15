@@ -2787,7 +2787,7 @@
 			"props": {
 				"size": {
 					"kind": "variant",
-					"enum": ["caption", "meta", "micro", "note"]
+					"enum": ["caption", "meta", "note"]
 				},
 				"tone": {
 					"kind": "variant",
