@@ -99,6 +99,19 @@ describe("the entry editor: '✦ fill' for a picture (T104)", () => {
 		await expect.element(caption()).toHaveValue("내가 쓴 캡션");
 	});
 
+	it("10-1 a caption fill stopped with the keyboard hands the focus back to its button, which stays on the caption's line", async () => {
+		const made = on(media.WithImage, () => new Promise(() => {}));
+		await made.run();
+		await userEvent.click(caption());
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement?.textContent).toBe("채우기");
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => document.activeElement?.textContent).toBe("멈추기");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("생성 중", { exact: true })).not.toBeInTheDocument();
+		await expect.poll(() => document.activeElement?.textContent).toBe("채우기");
+	});
+
 	it("10-1 a media field's settings card has the same '채우기': the cover's words are filled from its picture", async () => {
 		const made = on({ loaders: media.MissingAlt.loaders }, () => ({ value: "아침 책상" }));
 		await made.run();

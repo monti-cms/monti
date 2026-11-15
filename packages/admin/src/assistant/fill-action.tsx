@@ -16,6 +16,7 @@ export function FillAction({
 	name,
 	onFill,
 	onStop,
+	after,
 }: {
 	state: FillState;
 	/** The place holds something: the button fills it again. */
@@ -24,9 +25,14 @@ export function FillAction({
 	name?: string;
 	onFill: () => void;
 	onStop: () => void;
+	/**
+	 * Where the focus goes when the whole spot goes with the work (a caption's button shows only while the caret is in the caption): the
+	 * box the fill writes to. Found from the spot while it is still in the page.
+	 */
+	after?: (spot: HTMLElement) => HTMLElement | null | undefined;
 }) {
 	const { t } = useAdmin();
-	const keep = useFocusHandOff((place) => toWhatStands(place));
+	const keep = useFocusHandOff((place) => toWhatStands(place, ["button"], after && (() => after(place))));
 	return (
 		<span ref={keep}>
 			{state.working ? (

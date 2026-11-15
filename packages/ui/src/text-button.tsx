@@ -46,7 +46,9 @@ const textButtonVariants = cva(
 			/** The text size of the line it stands in, when that is not the surrounding text's: the `note` of a list row, the `caption` of a label row. */
 			size: {
 				note: "text-monti-note",
-				caption: "text-monti-caption",
+				/** A field label's type (sans 12); an icon beside it is 12px, the size for 12px text. */
+				caption:
+					"text-monti-caption [&_svg:not([data-slot=caret])]:mr-monti-4 [&_svg:not([data-slot=caret])]:size-monti-icon-xs",
 				/** Mono 12, for a value that opens a menu of values (the model, rows per page). */
 				meta: "text-monti-meta",
 			},

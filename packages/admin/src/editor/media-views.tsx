@@ -802,6 +802,8 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 								)
 							}
 							onStop={() => fill.forget(captionPlace)}
+							// The spot goes when the caret leaves the caption: a key's press that ends the work hands the focus to the caption.
+							after={(spot) => spot.parentElement?.querySelector<HTMLElement>("input")}
 						/>
 					) : null}
 				</Inline>
