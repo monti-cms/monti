@@ -225,8 +225,8 @@ type Row = {
 /**
  * What a line's writes did, newest first, as the log says it: writes that did the same to the same record with a count are one message, their
  * counts added. A proposal that rewrote three blocks of one entry, one write each, reads "“First post” 3 places changed in the body", not that
- * line three times (AT-11). The same record is the same values besides the count: a body edit's summary names its entry by id as well as by
- * title, so two entries of one title stay apart.
+ * line three times (AT-11). Only a summary that names its record by id (`entry`) is added up, and only with the same values besides the count:
+ * a title alone does not tell two entries of one title apart.
  */
 function whatOf(rows: Row[], labels: Map<string, string>): Message[] {
 	const said: Message[] = [];
@@ -234,6 +234,7 @@ function whatOf(rows: Row[], labels: Map<string, string>): Message[] {
 		const { count, ...rest } = summary.values ?? {};
 		const same =
 			typeof count === "number" &&
+			typeof rest.entry === "string" &&
 			said.find((message) => {
 				const { count: counted, ...others } = message.values ?? {};
 				return message.key === summary.key && typeof counted === "number" && sameJson(others, rest);

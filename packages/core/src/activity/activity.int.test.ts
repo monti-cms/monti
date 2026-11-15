@@ -1499,6 +1499,37 @@ describe("the log", () => {
 		expect((await list({ entry: english }, monti)).entry).toEqual({ id: english, title: "First post" });
 	});
 
+	it("13-3 [AT-11] two translations of one title stay two messages: counts are added up only for one record", async () => {
+		const monti = site();
+		const paragraph = (id: string, text: string) => ({ id, type: "paragraph", content: [{ type: "text", text }] });
+		const translations: string[] = [];
+		for (const slug of ["one", "two"]) {
+			const source = (
+				await write("entries.create", {
+					collection: "post",
+					title: "같은 제목",
+					slug,
+					doc: { type: "doc", blocks: [paragraph(`${slug}-1`, "하나")] },
+				})
+			).output.id;
+			const id = (await write("translations.create", { source, locale: "en" }, monti)).output.id;
+			await save(id, { title: "Same title" }, monti);
+			translations.push(id);
+		}
+		const proposal = await monti.proposals.create("conversation-1", "원문 그대로 둬");
+		for (const id of translations) {
+			const { entry } = await read<{ entry: { doc: { blocks: { id: string }[] } } }>("entries.get", { id }, monti);
+			await monti.proposals.add(proposal, "translations.setBlocks", {
+				id,
+				version: await versionOf(id),
+				blocks: entry.doc.blocks.map((block) => ({ block: block.id, do: "keepSource" })),
+			});
+		}
+		await monti.proposals.apply(proposal);
+		const [line] = (await list({ kinds: ["assistant"] }, monti)).lines;
+		expect(line?.what.map(ko)).toEqual(['"Same title" 번역 1곳 정함', '"Same title" 번역 1곳 정함']);
+	});
+
 	it("13-3 [AS-22] a save that took items of two requests is found by either, quotes the first and names the other", async () => {
 		const monti = site();
 		const id = await newPost("글", "post", monti);
@@ -1507,10 +1538,10 @@ describe("the log", () => {
 			return (await monti.proposals.add(proposal, "entries.save", { id, version: await versionOf(id), ...input }))
 				.itemId;
 		};
-		const accepted = [
-			await take("제목 다듬어 줘", { title: "다듬은 글" }),
-			await take("요약 써 줘", { values: { summary: "한 줄" } }),
-		];
+		const titled = await take("제목 다듬어 줘", { title: "다듬은 글" });
+		const summed = await take("요약 써 줘", { values: { summary: "한 줄" } });
+		// Named newest first: the line still quotes the request made first.
+		const accepted = [summed, titled];
 		await monti.run(
 			"entries.save",
 			{ id, version: await versionOf(id), title: "다듬은 글", values: { summary: "한 줄" } },

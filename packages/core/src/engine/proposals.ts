@@ -1158,6 +1158,10 @@ export async function acceptedItems(
 			"monti_proposal.conversation_id",
 		])
 		.where("monti_proposal_item.id", "in", accepted)
+		// Oldest request first, its items in their order: the log quotes the first taken item's request and counts the others after it.
+		.orderBy("monti_proposal.created_at")
+		.orderBy("monti_proposal.id")
+		.orderBy("monti_proposal_item.position")
 		// Held until the write ends, so two writes cannot both take the same item.
 		.forUpdate()
 		.execute();
