@@ -1539,6 +1539,8 @@ describe("the log", () => {
 				.itemId;
 		};
 		const titled = await take("제목 다듬어 줘", { title: "다듬은 글" });
+		// The second request is made a minute later: requests are told apart by when they were made.
+		later(MINUTE);
 		const summed = await take("요약 써 줘", { values: { summary: "한 줄" } });
 		// Named newest first: the line still quotes the request made first.
 		const accepted = [summed, titled];
