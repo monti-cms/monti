@@ -1653,7 +1653,7 @@ describe("the models the assistant offers", () => {
 		const monti = site();
 		const keyId = await withKey(monti);
 		const listed = (await monti.run("models.list", {}, admin)) as ModelList;
-		expect(listed.assistant).toEqual({ keyId, model: "claude-sonnet-5-5" });
+		expect(listed.assistant).toEqual({ keyId, model: "claude-sonnet-5-5", chosen: false });
 		expect(listed.keys[0].models.map((each) => [each.id, each.thinking])).toEqual([
 			["claude-haiku-5-5", true],
 			["claude-sonnet-5-5", true],

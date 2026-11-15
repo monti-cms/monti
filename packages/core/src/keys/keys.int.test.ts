@@ -118,6 +118,7 @@ describe("adding a key (flow 10, 01–06)", () => {
 				readable: true,
 				hasKey: true,
 				usage: { month: "2026-11", tokens: 0 },
+				credit: null,
 				uses: [
 					{ for: "assistant", model: "claude-sonnet-5-5" },
 					{ for: "quick", model: "claude-haiku-5-5" },
@@ -393,7 +394,11 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 			{ for: "assistant", keyId: first.output.id, model: "claude-haiku-5-5" },
 			admin,
 		);
-		expect(picked).toMatchObject({ for: "assistant", keyId: first.output.id, model: "claude-haiku-5-5" });
+		expect((picked as { output: unknown }).output).toMatchObject({
+			for: "assistant",
+			keyId: first.output.id,
+			model: "claude-haiku-5-5",
+		});
 		expect(await models(monti)).toMatchObject({
 			assistant: { keyId: first.output.id, model: "claude-haiku-5-5", chosen: true },
 			// The quick tasks' model is a choice of its own.
@@ -428,10 +433,8 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 			"models.choose",
 			{ for: "quick", keyId: output.id, model: "claude-haiku-5-5" },
 			admin,
-		)) as {
-			ms: number;
-		};
-		expect(taken.ms).toBeGreaterThanOrEqual(0);
+		)) as { output: { ms: number } };
+		expect(taken.output.ms).toBeGreaterThanOrEqual(0);
 		expect(
 			await refusedFor(monti.run("models.choose", { for: "quick", keyId: output.id, model: "claude-opus-5-5" }, admin)),
 		).toBe("assistant.failed");
@@ -868,7 +871,7 @@ describe("what a service answers is not trusted (reviews 5, 6, 7)", () => {
 		clock = new Date(clock.getTime() + 25 * 3_600_000);
 		const after = await models(monti, { refresh: true });
 		expect(after).toEqual(before);
-		expect(after.assistant).toEqual({ keyId: output.id, model: "claude-sonnet-5-5" });
+		expect(after.assistant).toEqual({ keyId: output.id, model: "claude-sonnet-5-5", chosen: false });
 		expect(after.keys[0].models).toHaveLength(3);
 	});
 
