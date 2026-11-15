@@ -311,6 +311,36 @@ export const FailedThrice: Story = {
 };
 
 /**
+ * A save in the editor that took the title of one request and the summary of another (AS-22): its line quotes the first request and counts the
+ * other before what was done ("요청 1건 더"), and its details beside the list hold both requests.
+ */
+export const TwoRequests: Story = {
+	loaders: log("#/activity", {
+		also: async ({ monti, db }, ids) => {
+			const version = async () =>
+				(await db.selectFrom("entries").select("version").where("id", "=", ids.draft).executeTakeFirstOrThrow())
+					.version;
+			const take = async (request: string, input: Record<string, unknown>) => {
+				const proposal = await monti.proposals.create("conversation-1", request);
+				return (
+					await monti.proposals.add(proposal, "entries.save", { id: ids.draft, version: await version(), ...input })
+				).itemId;
+			};
+			const accepted = [
+				await take("제목 다듬어 줘", { title: "다시 고친 글" }),
+				await take("요약 써 줘", { values: { summary: "한 줄" } }),
+			];
+			const saved = (await monti.run(
+				"entries.save",
+				{ id: ids.draft, version: await version(), title: "다시 고친 글", values: { summary: "한 줄" } },
+				{ ...admin, accepted },
+			)) as Written;
+			startAt(`#/activity?open=${saved.activityId}`);
+		},
+	}),
+};
+
+/**
  * A category that a published post points at was thrown away and restored. Undoing that restore puts it in the trash again, and the post
  * loses it on the site: the undo's question says so, in the sentence throwing it away by hand says.
  */

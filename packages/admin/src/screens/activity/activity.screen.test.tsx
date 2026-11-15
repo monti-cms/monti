@@ -1450,37 +1450,13 @@ describe("the activity log of one entry (doc 13; AS-23, AT-11, TR-27)", () => {
 	});
 
 	it("13 [AS-22] a save that took changes of two requests quotes the first, counts the other, is found by either, and its panel has both", async () => {
-		const drawn = draw(stories.Log);
-		await drawn.run();
-		const { site, ids } = drawn.loaded();
-		await expect.element(row('"고친 글" 저장')).toBeVisible();
-		// The editor took a title of one request and a summary of another, and the person saved them together.
-		const version = async () =>
-			(await site.db.selectFrom("entries").select("version").where("id", "=", ids.draft).executeTakeFirstOrThrow())
-				.version;
-		const take = async (request: string, input: Record<string, unknown>) => {
-			const proposal = await site.monti.proposals.create("conversation-1", request);
-			const { itemId } = await site.monti.proposals.add(proposal, "entries.save", {
-				id: ids.draft,
-				version: await version(),
-				...input,
-			});
-			return itemId;
-		};
-		const accepted = [
-			await take("제목 다듬어 줘", { title: "다시 고친 글" }),
-			await take("요약 써 줘", { values: { summary: "한 줄" } }),
-		];
-		await site.monti.run(
-			"entries.save",
-			{ id: ids.draft, version: await version(), title: "다시 고친 글", values: { summary: "한 줄" } },
-			{ actor: "admin", accepted },
-		);
-		location.hash = "#/activity?q=요약+써+줘";
+		await draw(stories.TwoRequests).run();
 		await expect.element(row("제목 다듬어 줘")).toHaveTextContent('요청 1건 더 · "다시 고친 글" 저장');
-		await userEvent.click(row("제목 다듬어 줘").getByRole("link"));
 		await expect.element(panel()).toHaveTextContent("제목 다듬어 줘");
 		await expect.element(panel()).toHaveTextContent("요약 써 줘");
+		// Found by the other request's words too.
+		location.hash = "#/activity?q=요약+써+줘";
+		await expect.element(row("제목 다듬어 줘")).toBeVisible();
 	});
 
 	it("13 [AS-23] the first column's menu holds the entry, ticked under the kinds; unticked, the log is every entry's again", async () => {

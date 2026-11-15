@@ -95,6 +95,7 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | "기본" | 2.17 | 어시스턴트의 줄(✦와 요청 인용), 그 줄 ⋯의 "되돌리기"와 그 물음(`AlertDialog`), 되돌린 줄 뒤의 "되돌림 10:44" | Primitives/AI mark, Controls/Overlay/AlertDialog |
+| "요청 둘" | 2.17 | 두 요청의 제안을 받아 한 번에 저장한 줄: 첫 요청 인용, 회색 글 맨 앞 "요청 1건 더", 옆 패널의 "요청"에 두 줄(AS-22). 스토리: Screens/Activity › TwoRequests | Patterns/List/Table, Controls/Overlay/SidePanel |
 | "글 하나" | 2.18 | "작업" 뒤의 점, 그 글(모든 언어)에 어시스턴트가 한 일만 남은 표, "작업" 메뉴의 종류 아래 체크된 그 글. 스토리: Screens/Activity › EntryFilter, EntryFilterMenu | Patterns/List/ListHead, Controls/Menu/DropdownMenu |
 
 ## 흐름 9 · 데이터

@@ -235,7 +235,11 @@ export function ActivityScreen({
 				? [
 						// A save that took items of several requests quotes the first; the others are counted before what was done.
 						...(line.otherRequests.length > 0
-							? [t("activity.otherRequests", { count: line.otherRequests.length })]
+							? [
+									line.otherRequests.length === 1
+										? t("activity.otherRequests.one")
+										: t("activity.otherRequests.many", { count: line.otherRequests.length }),
+								]
 							: []),
 						...line.what.map(say),
 						...(line.more > 0 ? [t("activity.andMore", { count: line.more })] : []),
