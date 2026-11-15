@@ -9,10 +9,37 @@ export type Model = {
 	images: boolean;
 	/** How many tokens it takes in at once (its context window), when its service says. The assistant sizes what it sends by it. */
 	context?: number;
+	/**
+	 * The thinking levels it takes, when its service says (OpenRouter): a model that must think has no `off`, and one that thinks only hard has
+	 * `high` alone. Left out, it takes them all. The assistant asks for the nearest one it takes (AS-01).
+	 */
+	levels?: ThinkingLevel[];
+	/** What it costs, in US dollars per million tokens taken in and given out, when its service says (OpenRouter). Both 0: it is free. */
+	price?: { input: number; output: number };
+	/** The model it stands for now, by name: an id that follows a family's latest (OpenRouter's `~…-latest`). */
+	aliasOf?: string;
+};
+
+/** How hard a model thinks: the assistant's levels, as the services' own words are read into them. */
+export type ThinkingLevel = "off" | "low" | "medium" | "high";
+const LEVELS: readonly ThinkingLevel[] = ["off", "low", "medium", "high"];
+
+/**
+ * What a key's account has to spend, when its service says (OpenRouter): what it spent this month, in US dollars, and, for a key with a limit,
+ * the limit, what is left of it and when it starts again.
+ */
+export type KeyCredit = {
+	month: number;
+	limit: number | null;
+	remaining: number | null;
+	/** How often the limit starts again (`daily`, `weekly`, `monthly`); `null` when it never does. */
+	reset: string | null;
 };
 
 /** What a service answered when asked about a key: its models, or that it refused the key, or that it could not be reached. */
-export type KeyCheck = { ok: true; models: Model[] } | { ok: false; reason: "refused" | "unreachable" };
+export type KeyCheck =
+	| { ok: true; models: Model[]; credit?: KeyCredit }
+	| { ok: false; reason: "refused" | "unreachable" };
 
 export type KeyCredentials = { secret: string; baseUrl: string | null };
 
@@ -242,6 +269,36 @@ const openai: KeyService = {
 	},
 };
 
+/** A sum of money a service wrote: a number, or a number in a string (OpenRouter's prices). Below zero is no price (a router's own, which varies). */
+const dollars = (value: unknown): number | undefined => {
+	const number = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+	return typeof number === "number" && Number.isFinite(number) && number >= 0 ? number : undefined;
+};
+
+/**
+ * OpenRouter's efforts read into the assistant's levels: `none` is off, and `low`, `medium` and `high` are themselves. What it also has
+ * (`minimal`, `xhigh`, `max`) is not asked for. A model that must think and lists no efforts takes every level but off.
+ */
+function openrouterLevels(reasoning: unknown): ThinkingLevel[] | undefined {
+	if (!isObject(reasoning)) return undefined;
+	const efforts = Array.isArray(reasoning.supported_efforts) ? reasoning.supported_efforts : null;
+	if (efforts === null) return reasoning.mandatory === true ? ["low", "medium", "high"] : undefined;
+	return LEVELS.filter((level) => efforts.includes(level === "off" ? "none" : level));
+}
+
+/** What an OpenRouter key's account has to spend, from its `/key` answer; nothing when the answer does not say. */
+function openrouterCredit(body: unknown): KeyCredit | undefined {
+	const data = isObject(body) && isObject(body.data) ? body.data : null;
+	const month = data ? dollars(data.usage_monthly) : undefined;
+	if (!data || month === undefined) return undefined;
+	return {
+		month,
+		limit: dollars(data.limit) ?? null,
+		remaining: dollars(data.limit_remaining) ?? null,
+		reset: text(data.limit_reset) ?? null,
+	};
+}
+
 const openrouter: KeyService = {
 	id: "openrouter",
 	name: "OpenRouter",
@@ -257,7 +314,7 @@ const openrouter: KeyService = {
 		);
 		if (!taken.ok) return taken;
 		const listed = await get(tools, `${SERVICE_URLS.openrouter}/models`, bearer(secret));
-		return answer(
+		const checked = answer(
 			listed,
 			(status) => REFUSED.has(status),
 			(body) =>
@@ -268,15 +325,28 @@ const openrouter: KeyService = {
 					// A ":batch" id is the same model answered later and cheaper: not one to talk with.
 					if (id.endsWith(":batch") || !can.includes("tools")) return undefined;
 					const reads = (row.architecture as { input_modalities?: unknown } | undefined)?.input_modalities;
+					const pricing = isObject(row.pricing) ? row.pricing : {};
+					const input = dollars(pricing.prompt);
+					const output = dollars(pricing.completion);
+					const levels = can.includes("reasoning") ? openrouterLevels(row.reasoning) : undefined;
+					const target = isObject(row.alias_target) ? text(row.alias_target.name) : undefined;
 					return {
 						id,
 						label: text(row.name),
 						thinking: can.includes("reasoning"),
 						images: Array.isArray(reads) && reads.includes("image"),
 						context: tokens(row.context_length),
+						...(levels ? { levels } : {}),
+						// Per token in its answer; a million at a time on the screen.
+						...(input !== undefined && output !== undefined
+							? { price: { input: input * 1_000_000, output: output * 1_000_000 } }
+							: {}),
+						...(target ? { aliasOf: target } : {}),
 					};
 				}),
 		);
+		const credit = key ? openrouterCredit(key.body) : undefined;
+		return checked.ok && credit ? { ...checked, credit } : checked;
 	},
 };
 
@@ -352,12 +422,35 @@ function plain(model: unknown): Model | null {
 	if (model.label !== undefined && typeof model.label !== "string") return null;
 	if (typeof model.thinking !== "boolean" || typeof model.images !== "boolean") return null;
 	const context = tokens(model.context);
+	const levels = Array.isArray(model.levels)
+		? LEVELS.filter((level) => (model.levels as unknown[]).includes(level))
+		: undefined;
+	const price = isObject(model.price) ? model.price : null;
+	const input = price ? dollars(price.input) : undefined;
+	const output = price ? dollars(price.output) : undefined;
+	const aliasOf = typeof model.aliasOf === "string" && model.aliasOf !== "" ? model.aliasOf : undefined;
 	return {
 		id: model.id,
 		...(model.label ? { label: model.label } : {}),
 		thinking: model.thinking,
 		images: model.images,
 		...(context === undefined ? {} : { context }),
+		...(levels === undefined ? {} : { levels }),
+		...(input === undefined || output === undefined ? {} : { price: { input, output } }),
+		...(aliasOf === undefined ? {} : { aliasOf }),
+	};
+}
+
+/** A key's credit as it is stored: the four numbers and words, or nothing for an answer that is not one. */
+function plainCredit(credit: unknown): KeyCredit | undefined {
+	if (!isObject(credit)) return undefined;
+	const month = dollars(credit.month);
+	if (month === undefined) return undefined;
+	return {
+		month,
+		limit: dollars(credit.limit) ?? null,
+		remaining: dollars(credit.remaining) ?? null,
+		reset: typeof credit.reset === "string" && credit.reset !== "" ? credit.reset : null,
 	};
 }
 
@@ -365,7 +458,7 @@ function plain(model: unknown): Model | null {
  * Asks a service about a key: the one way a check is run, the core's services and a plugin's alike. It never throws, and holds what a single check
  * cannot be trusted with:
  * - one deadline ({@link CHECK_MS}) for the whole check, after which its requests are ended;
- * - the models are kept by their four known parts only, in the order of their ids, and a list that is not one counts as unreachable;
+ * - the models are kept by their known parts only, in the order of their ids, and a list that is not one counts as unreachable;
  * - an answer that carries the key itself (a server that names a model after the key it was sent) is refused whole: model names go to the assistant
  *   and into the activity log, where a key must never be. This holds for keys of {@link KEY_LENGTH_THAT_MATTERS} characters or more.
  */
@@ -407,7 +500,8 @@ export async function checkKey(
 			models.some((model) => model.id.includes(secret) || model.label?.includes(secret))
 		)
 			return UNREACHABLE;
-		return { ok: true, models: models.sort((a, b) => a.id.localeCompare(b.id)) };
+		const credit = plainCredit(checked.credit);
+		return { ok: true, models: models.sort((a, b) => a.id.localeCompare(b.id)), ...(credit ? { credit } : {}) };
 	} finally {
 		clearTimeout(timer);
 	}

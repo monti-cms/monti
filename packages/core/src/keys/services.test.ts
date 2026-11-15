@@ -261,7 +261,7 @@ describe("what a check hands on", () => {
 		});
 	});
 
-	it("14-4 a plugin's models are kept by their four known parts, and one that carries the key refuses the whole answer", async () => {
+	it("14-4 a plugin's models are kept by their known parts, and one that carries the key refuses the whole answer", async () => {
 		const loose: KeyService = {
 			id: "loose",
 			name: "Loose",
@@ -333,5 +333,84 @@ describe("OpenAI's models, told by their names (review 11)", () => {
 			"gpt-6.1-sol": true,
 			"o5-mini": true,
 		});
+	});
+});
+
+describe("what OpenRouter says of its models and of the key (AS-01, ST-28, ST-31, ST-33)", () => {
+	const openrouter = (models: unknown[], key: unknown = { data: { label: "key" } }) =>
+		checkKey(service("openrouter"), { secret: KEY, baseUrl: null }, async (input) =>
+			json(String(input).endsWith("/key") ? key : { data: models }),
+		);
+
+	it("a model's price per million tokens, the thinking levels it takes, and the model an alias stands for are kept", async () => {
+		const checked = await openrouter([
+			{
+				id: "baidu/ernie-5.5-flash-preview:free",
+				name: "Baidu: ERNIE 5.5 Flash Preview (free)",
+				supported_parameters: ["tools", "reasoning"],
+				pricing: { prompt: "0", completion: "0" },
+				// It must think, and hard: asked to stop, its service refuses every request (AS-01).
+				reasoning: { mandatory: true, supported_efforts: ["high"], default_effort: "high" },
+			},
+			{
+				id: "anthropic/claude-haiku-5.5",
+				name: "Anthropic: Claude Haiku 5.5",
+				supported_parameters: ["tools", "reasoning"],
+				pricing: { prompt: "0.000001", completion: "0.000005" },
+				reasoning: { mandatory: false, supported_efforts: ["max", "xhigh", "high", "medium", "low", "none"] },
+			},
+			{
+				id: "~deepseek/deepseek-pro-latest",
+				name: "DeepSeek: DeepSeek Pro Latest",
+				supported_parameters: ["tools", "reasoning"],
+				// A router's price varies: below zero is no price.
+				pricing: { prompt: "-1", completion: "-1" },
+				reasoning: { mandatory: true },
+				alias_target: { name: "DeepSeek: DeepSeek V4 Pro 0813", slug: "deepseek/deepseek-v4-pro-0813" },
+			},
+		]);
+		expect(checked).toEqual({
+			ok: true,
+			// In the order of their ids, as every list.
+			models: [
+				{
+					id: "~deepseek/deepseek-pro-latest",
+					label: "DeepSeek: DeepSeek Pro Latest",
+					thinking: true,
+					images: false,
+					levels: ["low", "medium", "high"],
+					aliasOf: "DeepSeek: DeepSeek V4 Pro 0813",
+				},
+				{
+					id: "anthropic/claude-haiku-5.5",
+					label: "Anthropic: Claude Haiku 5.5",
+					thinking: true,
+					images: false,
+					levels: ["off", "low", "medium", "high"],
+					price: { input: 1, output: 5 },
+				},
+				{
+					id: "baidu/ernie-5.5-flash-preview:free",
+					label: "Baidu: ERNIE 5.5 Flash Preview (free)",
+					thinking: true,
+					images: false,
+					levels: ["high"],
+					price: { input: 0, output: 0 },
+				},
+			],
+		});
+	});
+
+	it("what the key's account spent this month and has left is kept with the models; a key answer without it keeps nothing", async () => {
+		const model = { id: "a/b", supported_parameters: ["tools"] };
+		expect(
+			await openrouter([model], {
+				data: { usage_monthly: 2.31, limit: 10, limit_remaining: 7.69, limit_reset: "monthly", is_free_tier: false },
+			}),
+		).toMatchObject({ ok: true, credit: { month: 2.31, limit: 10, remaining: 7.69, reset: "monthly" } });
+		expect(await openrouter([model], { data: { usage_monthly: 0, limit: null, limit_remaining: null } })).toMatchObject(
+			{ credit: { month: 0, limit: null, remaining: null, reset: null } },
+		);
+		expect(await openrouter([model])).not.toHaveProperty("credit");
 	});
 });

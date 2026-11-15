@@ -11,7 +11,9 @@ import { z } from "zod";
 import { requestWith, ScreenContext, systemPrompt } from "./context";
 import { type AiFailure, failed, failureOf } from "./failure";
 import {
+	asksThinking,
 	type ChatMessage,
+	levelFor,
 	ProviderError,
 	type ProviderFor,
 	THINKING,
@@ -251,8 +253,8 @@ async function pickModel(
 	if (!choice) throw failed({ reason: "noKey", keyName: null });
 	const model = listed.keys.find((key) => key.id === choice.keyId)?.models.find((each) => each.id === choice.model);
 	if (!model) throw new CheckError({ key: "assistant.noModel" });
-	// A model that cannot think has no thinking level; one that can starts at "medium" (doc 10, models).
-	return { keyId: choice.keyId, model: choice.model, thinking: model.thinking ? (thinking ?? "medium") : "off" };
+	// A model that cannot think has no thinking level; one that can starts at "medium" (doc 10, models), or the nearest level it takes.
+	return { keyId: choice.keyId, model: choice.model, thinking: levelFor(model, thinking ?? "medium") };
 }
 
 /** A history a model API accepts: every call an assistant message made has its answer, also where a run stopped before its tools ran. */
@@ -460,7 +462,7 @@ export async function* runAssistant(
 		const model = (await modelsOf(monti)).keys
 			.find((each) => each.id === key.id)
 			?.models.find((each) => each.id === run.model);
-		const thinks = model?.thinking ?? false;
+		const thinks = asksThinking(model);
 		// A small run gets the small runs' tools; a request at a proposed change has no screen to move (doc 10).
 		const tools = run.small ? smallRunTools(monti) : run.kind === "chat" ? assistantTools(monti) : itemRunTools(monti);
 		const byName = new Map(tools.map((tool) => [tool.name, tool]));
@@ -796,7 +798,8 @@ export async function* runAssistant(
 						system,
 						messages: [...history, ...whole(mine)],
 						tools,
-						thinking: run.thinking as Thinking,
+						// The level stored with the run, as near as the model takes it now (its service may have changed what it takes).
+						thinking: levelFor(model, run.thinking as Thinking),
 						thinks,
 						signal: turnStop.signal,
 					}),

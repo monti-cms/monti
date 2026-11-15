@@ -127,10 +127,20 @@ export type {
 	KeyUse,
 	ModelChoice,
 	ModelList,
+	ModelRole,
 	OpenKey,
+	TryModel,
 } from "./keys/operations";
 export { KEY_NAME_MAX } from "./keys/operations";
-export type { KeyCheck, KeyCheckTools, KeyCredentials, KeyService, Model } from "./keys/services";
+export type {
+	KeyCheck,
+	KeyCheckTools,
+	KeyCredentials,
+	KeyCredit,
+	KeyService,
+	Model,
+	ThinkingLevel,
+} from "./keys/services";
 export { SERVICE_URLS, withoutRedirects } from "./keys/services";
 export {
 	type Acceptance,

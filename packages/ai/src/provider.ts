@@ -1,9 +1,27 @@
-import type { OpenKey } from "@monti-cms/core";
+import type { Model, OpenKey } from "@monti-cms/core";
 
 /** How much a model thinks before it answers; `off` for a model that cannot, or when the person turned it off. */
 export type Thinking = "off" | "low" | "medium" | "high";
 
 export const THINKING: readonly Thinking[] = ["off", "low", "medium", "high"];
+
+/**
+ * The level a model is asked for: the one wanted when the model takes it, else the nearest it takes, harder first (AS-01: a model that must think
+ * is asked to think a little, not to stop, which its service refuses). A model that cannot think is asked for none.
+ */
+export function levelFor(model: Pick<Model, "thinking" | "levels"> | undefined, wanted: Thinking): Thinking {
+	if (!model?.thinking) return "off";
+	const levels = model.levels;
+	if (!levels || levels.length === 0 || levels.includes(wanted)) return wanted;
+	const at = THINKING.indexOf(wanted);
+	return (
+		[...THINKING.slice(at + 1), ...THINKING.slice(0, at).reverse()].find((level) => levels.includes(level)) ?? wanted
+	);
+}
+
+/** Whether a model is asked to think at all: one whose service lists no level the assistant has (only `max`, say) is left to its own default. */
+export const asksThinking = (model: Pick<Model, "thinking" | "levels"> | undefined) =>
+	(model?.thinking ?? false) && model?.levels?.length !== 0;
 
 /**
  * Tokens a call spent, as its service counted them. `input` is everything the service took in, whether it read it anew or from what it had
@@ -57,6 +75,10 @@ export type AnswerRequest = {
 	picture?: Picture;
 	/** The JSON Schema of the answer. */
 	schema: unknown;
+	/** How hard it thinks: the least the model takes (a quick task does not think when it can help it, AS-42). */
+	thinking?: Thinking;
+	/** Whether the model is asked to think at all, as for a turn. */
+	thinks?: boolean;
 	/** Ends the call: the quick task's deadline. */
 	signal?: AbortSignal;
 };

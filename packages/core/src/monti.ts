@@ -31,7 +31,7 @@ import { entryRecord } from "./entries/record";
 import type { PublishCheck } from "./entries/tasks";
 import { CheckError, InputError, UnknownOperationError } from "./errors";
 import { folderOperations, folderRecord } from "./folders/operations";
-import { addKeyUsage, keyOperations, keyRecord, openKey } from "./keys/operations";
+import { addKeyUsage, keyOperations, keyRecord, openKey, type TryModel } from "./keys/operations";
 import { aiServices, type KeyService } from "./keys/services";
 import { mediaOperations } from "./media/operations";
 import { mediaRecord } from "./media/record";
@@ -100,6 +100,8 @@ export type Plugin = {
 	importers?: Importer[];
 	/** Work it streams (doc 10: the assistant's run). */
 	streams?: AnyStream[];
+	/** Calls a model once, as the job it is picked for will (doc 14: the keys screen tries a model before it is picked). A site has one. */
+	tryModel?: TryModel;
 	/** Its own clean-up, run with the trash's (when the admin opens, and `monti trash:purge`): what it keeps for a time and then removes. */
 	cleanUp?: (monti: Monti) => Promise<void>;
 	/**
@@ -376,6 +378,9 @@ export function createMonti(options: MontiOptions) {
 			throw new Error(
 				`Two receivers are named "${receiver.destination}". Give one a name of its own: webhook(url, { name: "…" }).`,
 			);
+	const triers = plugins.filter((plugin) => plugin.tryModel);
+	if (triers.length > 1)
+		throw new Error(`Two plugins try models: ${triers.map((plugin) => plugin.name).join(", ")}. A site has one.`);
 	const storages = plugins.filter((plugin) => plugin.storage);
 	if (storages.length > 1)
 		throw new Error(
@@ -420,6 +425,7 @@ export function createMonti(options: MontiOptions) {
 		publishChecks: plugins.flatMap((plugin) => plugin.publishChecks ?? []),
 		secret: options.secret,
 		storage: storages[0]?.storage ?? null,
+		tryModel: triers[0]?.tryModel ?? null,
 		keyServices,
 		fieldSets,
 		plugins: sitePlugins,

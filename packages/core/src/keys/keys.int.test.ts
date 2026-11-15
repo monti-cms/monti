@@ -285,7 +285,7 @@ describe("changing and removing a key (flow 10, 07–11)", () => {
 		const first = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
 		clock = new Date(clock.getTime() + 1000);
 		const second = await add(monti, { service: "openai", name: "OpenAI", secret: OPENAI });
-		await monti.run("models.setQuick", { keyId: first.output.id, model: "claude-opus-5-5" }, admin);
+		await monti.run("models.choose", { for: "quick", keyId: first.output.id, model: "claude-opus-5-5" }, admin);
 		const before = await list(monti);
 		expect(before.keys.map((key) => key.uses)).toEqual([
 			[
@@ -358,7 +358,7 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 			quick: { keyId: first.output.id, model: "claude-haiku-5-5", chosen: false },
 		});
 
-		await monti.run("models.setQuick", { keyId: second.output.id, model: "gpt-5.4-mini" }, admin);
+		await monti.run("models.choose", { for: "quick", keyId: second.output.id, model: "gpt-5.4-mini" }, admin);
 		expect(await models(monti)).toMatchObject({
 			assistant: { keyId: first.output.id, model: "claude-sonnet-5-5" },
 			quick: { keyId: second.output.id, model: "gpt-5.4-mini", chosen: true },
@@ -372,12 +372,102 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 	it("14-1 the quick model is one of a key's models, nothing else", async () => {
 		const monti = site();
 		const { output } = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
-		expect(await refusedFor(monti.run("models.setQuick", { keyId: output.id, model: "gpt-5.5" }, admin))).toBe(
-			"models.unknown",
+		expect(
+			await refusedFor(monti.run("models.choose", { for: "quick", keyId: output.id, model: "gpt-5.5" }, admin)),
+		).toBe("models.unknown");
+		expect(
+			await refusedFor(monti.run("models.choose", { for: "quick", keyId: "none", model: "claude-haiku-5-5" }, admin)),
+		).toBe("models.unknown");
+	});
+
+	it("14-1 [ST-29, AS-05, AS-57] the model a new conversation starts with is the site's, picked on the keys screen as the quick one is", async () => {
+		const monti = site();
+		const first = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		expect((await models(monti)).assistant).toEqual({
+			keyId: first.output.id,
+			model: "claude-sonnet-5-5",
+			chosen: false,
+		});
+		const picked = await monti.run(
+			"models.choose",
+			{ for: "assistant", keyId: first.output.id, model: "claude-haiku-5-5" },
+			admin,
 		);
-		expect(await refusedFor(monti.run("models.setQuick", { keyId: "none", model: "claude-haiku-5-5" }, admin))).toBe(
-			"models.unknown",
-		);
+		expect(picked).toMatchObject({ for: "assistant", keyId: first.output.id, model: "claude-haiku-5-5" });
+		expect(await models(monti)).toMatchObject({
+			assistant: { keyId: first.output.id, model: "claude-haiku-5-5", chosen: true },
+			// The quick tasks' model is a choice of its own.
+			quick: { keyId: first.output.id, model: "claude-haiku-5-5", chosen: false },
+		});
+		// A model gone from its key's list leaves the job to the service's own again.
+		net.state.anthropicModels = net.state.anthropicModels.filter((model) => model.id !== "claude-haiku-5-5");
+		await models(monti, { refresh: true });
+		expect((await models(monti)).assistant).toEqual({
+			keyId: first.output.id,
+			model: "claude-sonnet-5-5",
+			chosen: false,
+		});
+	});
+
+	it("14-1 [AS-01] a model is called once before it is picked: one that does not answer is not picked, and the pick says how long the answer took", async () => {
+		const tried: { for: string; key: string; model: string }[] = [];
+		const monti = site({
+			plugins: [
+				definePlugin({
+					name: "trier",
+					tryModel: async (trial) => {
+						tried.push({ for: trial.for, key: trial.key.name, model: trial.model.id });
+						if (trial.model.id === "claude-opus-5-5")
+							throw new CheckError({ key: "assistant.failed", values: { reason: "refused", keyName: trial.key.name } });
+					},
+				}),
+			],
+		});
+		const { output } = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		const taken = (await monti.run(
+			"models.choose",
+			{ for: "quick", keyId: output.id, model: "claude-haiku-5-5" },
+			admin,
+		)) as {
+			ms: number;
+		};
+		expect(taken.ms).toBeGreaterThanOrEqual(0);
+		expect(
+			await refusedFor(monti.run("models.choose", { for: "quick", keyId: output.id, model: "claude-opus-5-5" }, admin)),
+		).toBe("assistant.failed");
+		expect(tried).toEqual([
+			{ for: "quick", key: "Anthropic", model: "claude-haiku-5-5" },
+			{ for: "quick", key: "Anthropic", model: "claude-opus-5-5" },
+		]);
+		expect((await models(monti)).quick).toEqual({ keyId: output.id, model: "claude-haiku-5-5", chosen: true });
+		// Two plugins that try models are one too many.
+		expect(() =>
+			site({
+				plugins: [
+					definePlugin({ name: "a", tryModel: async () => {} }),
+					definePlugin({ name: "b", tryModel: async () => {} }),
+				],
+			}),
+		).toThrow(/Two plugins try models/);
+	});
+
+	it("14-1 [ST-28] what an OpenRouter key's account spent this month and has left is on its row, as its service said with the models", async () => {
+		const monti = site();
+		let [spent, left] = [2.31, 7.69];
+		net.state.answer = (url) =>
+			url === "https://openrouter.ai/api/v1/key"
+				? net.json(200, { data: { usage_monthly: spent, limit: 10, limit_remaining: left, limit_reset: "monthly" } })
+				: url === "https://openrouter.ai/api/v1/models"
+					? net.json(200, { data: [{ id: "a/b", supported_parameters: ["tools"] }] })
+					: undefined;
+		await add(monti, { service: "openrouter", name: "OpenRouter", secret: "sk-or-v1-0123456789abcdef" });
+		expect((await list(monti)).keys[0].credit).toEqual({ month: 2.31, limit: 10, remaining: 7.69, reset: "monthly" });
+		[spent, left] = [3, 7];
+		await models(monti, { refresh: true });
+		expect((await list(monti)).keys[0].credit).toMatchObject({ month: 3, remaining: 7 });
+		// A service that says nothing of money has none.
+		await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		expect((await list(monti)).keys[1].credit).toBeNull();
 	});
 
 	it("when the service no longer lists a preferred model, the key's first model stands in", async () => {
@@ -415,7 +505,7 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 	it("a picked quick model its key no longer lists gives way to the built-in one until it is back", async () => {
 		const monti = site();
 		const { output } = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
-		await monti.run("models.setQuick", { keyId: output.id, model: "claude-opus-5-5" }, admin);
+		await monti.run("models.choose", { for: "quick", keyId: output.id, model: "claude-opus-5-5" }, admin);
 		const all = net.state.anthropicModels;
 		net.state.anthropicModels = all.filter((model) => model.id !== "claude-opus-5-5");
 		expect((await models(monti, { refresh: true })).quick).toEqual({
@@ -682,9 +772,9 @@ describe("what a service answers is not trusted (reviews 5, 6, 7)", () => {
 			url === "http://echo.test/v1/models" ? net.json(200, { data: [{ id: `model-${KEY}-x` }] }) : undefined;
 		const listed = await models(monti, { refresh: true });
 		expect(listed.keys[0].models).toEqual([{ id: "plain-model", thinking: false, images: false }]);
-		expect(await refusedFor(monti.run("models.setQuick", { keyId: output.id, model: `model-${KEY}-x` }, admin))).toBe(
-			"models.unknown",
-		);
+		expect(
+			await refusedFor(monti.run("models.choose", { for: "quick", keyId: output.id, model: `model-${KEY}-x` }, admin)),
+		).toBe("models.unknown");
 		expect(JSON.stringify([listed, await everythingStored()])).not.toContain(KEY);
 	});
 
@@ -1115,7 +1205,7 @@ describe("small things a key can be (reviews F, G, H, J)", () => {
 		const first = await add(withPlugin, { service: "house", name: "House", secret: "house-key-0000-9d9d" });
 		clock = new Date(clock.getTime() + 1000);
 		const second = await add(withPlugin, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
-		await withPlugin.run("models.setQuick", { keyId: first.output.id, model: "house-small" }, admin);
+		await withPlugin.run("models.choose", { for: "quick", keyId: first.output.id, model: "house-small" }, admin);
 		expect(await models(withPlugin)).toMatchObject({
 			assistant: { keyId: first.output.id, model: "house-large" },
 			quick: { keyId: first.output.id, model: "house-small", chosen: true },
@@ -1132,7 +1222,9 @@ describe("small things a key can be (reviews F, G, H, J)", () => {
 		const rows = (await list(without)).keys;
 		expect(rows[0]).toMatchObject({ name: "House", serviceName: "house", readable: true, uses: [] });
 		expect(
-			await refusedFor(without.run("models.setQuick", { keyId: first.output.id, model: "house-large" }, admin)),
+			await refusedFor(
+				without.run("models.choose", { for: "quick", keyId: first.output.id, model: "house-large" }, admin),
+			),
 		).toBe("models.unknown");
 	});
 
@@ -1259,7 +1351,7 @@ describe("the key itself goes nowhere", () => {
 		const monti = site();
 		const { output } = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
 		const tools = agentTools(monti).map((tool) => tool.name);
-		expect(tools).toEqual(expect.arrayContaining(["keys.list", "models.list", "models.setQuick"]));
+		expect(tools).toEqual(expect.arrayContaining(["keys.list", "models.list", "models.choose"]));
 		for (const name of ["keys.add", "keys.update", "keys.remove"]) {
 			expect(tools).not.toContain(name);
 			await expect(
@@ -1326,9 +1418,9 @@ describe("the key itself goes nowhere", () => {
 		expect(await db.selectFrom("monti_proposal_item").selectAll().execute()).toEqual([]);
 		expect(await everythingStored()).not.toContain(PLAIN);
 		// A write the assistant may propose still becomes an item.
-		await monti.proposals.add(proposal, "models.setQuick", { keyId: output.id, model: "claude-opus-5-5" });
+		await monti.proposals.add(proposal, "models.choose", { for: "quick", keyId: output.id, model: "claude-opus-5-5" });
 		expect(await db.selectFrom("monti_proposal_item").select("operation").execute()).toEqual([
-			{ operation: "models.setQuick" },
+			{ operation: "models.choose" },
 		]);
 	});
 

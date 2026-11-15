@@ -2,6 +2,7 @@ import type { DevProof } from "./auth/dev-bypass";
 import type { AuthSettings } from "./auth/operations";
 import { type BlockKit, createBlockKit } from "./body/blocks";
 import type { PublishCheck } from "./entries/tasks";
+import type { TryModel } from "./keys/operations";
 import type { KeyService } from "./keys/services";
 import type { Storage } from "./media/storage";
 import {
@@ -68,6 +69,8 @@ export type Site = {
 	devProof: DevProof | null;
 	/** Where media files are, from a plugin (doc 09). Without one the library says there is no storage and takes no file. */
 	storage: Storage | null;
+	/** Calls a model once before it is picked (doc 14), from a plugin (the assistant). Without one a model is picked untried. */
+	tryModel: TryModel | null;
 };
 
 export function createSite(
@@ -80,6 +83,7 @@ export function createSite(
 		auth?: AuthSettings;
 		devProof?: DevProof | null;
 		storage?: Storage | null;
+		tryModel?: TryModel | null;
 		keyServices?: readonly KeyService[];
 		fetch?: typeof globalThis.fetch;
 		fieldSets?: readonly NamedFieldSet[];
@@ -107,6 +111,7 @@ export function createSite(
 		auth: extra.auth ?? { password: false, github: null, devBypass: true },
 		devProof: extra.devProof ?? null,
 		storage: extra.storage ?? null,
+		tryModel: extra.tryModel ?? null,
 		keyServices: extra.keyServices ?? [],
 		fetch: extra.fetch ?? ((...args) => globalThis.fetch(...args)),
 	};

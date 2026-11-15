@@ -423,6 +423,7 @@ export function aiSdkProvider(options: { fetch?: Fetch } = {}): ProviderFor {
 							key.service,
 						),
 						output: Output.object({ schema: jsonSchema(request.schema as JSONSchema7) }),
+						providerOptions: thinkingOptions(key.service, request.thinking ?? "off", request.thinks ?? false),
 						...(request.signal ? { abortSignal: request.signal } : {}),
 						maxRetries: 1,
 					});

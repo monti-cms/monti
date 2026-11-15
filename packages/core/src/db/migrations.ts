@@ -627,6 +627,17 @@ const MIGRATIONS: Record<string, Migration> = {
 				.execute();
 		},
 	},
+	"0025_model_settings": {
+		async up(db) {
+			// The keys screen picks two models now (doc 14): the one a new conversation starts with, and the quick tasks'.
+			await sql`alter table model_choices drop constraint if exists model_choices_role_check`.execute(db);
+			await sql`alter table model_choices add constraint model_choices_role_check check (role in ('assistant', 'quick'))`.execute(
+				db,
+			);
+			// What a key's account has to spend, when its service says (OpenRouter): asked with its models.
+			await db.schema.alterTable("api_keys").addColumn("credit", "jsonb").execute();
+		},
+	},
 };
 
 /**
