@@ -181,8 +181,8 @@ export function EntryEditor({
 	onOpen: (id: string) => void;
 	/** To settings › languages, from the "+ Language" menu. */
 	onLanguages: () => void;
-	/** Opens the activity log on what the assistant changed in the entry of this title (⋯ › "what the AI changed"). */
-	onActivity: (title: string) => void;
+	/** Opens the activity log on what the assistant changed in this entry, in any of its languages (⋯ › "what the AI changed"). */
+	onActivity: () => void;
 }) {
 	const { t, language, apiBase, templates: templatesOn, reads, transport } = useAdmin();
 	const languageName = useLanguageName();
@@ -1272,9 +1272,9 @@ export function EntryEditor({
 								<OverflowMenuHorizontal aria-hidden />
 							</IconButton>
 							<DropdownMenuContent align="end">
-								{/* What the assistant changed in this entry: the activity log, searched by its title and filtered to the assistant's lines. */}
+								{/* What the assistant changed in this entry: the activity log, filtered to this entry and to the assistant's lines. */}
 								{hasAssistant ? (
-									<DropdownMenuItem onClick={() => onActivity(editor.title)}>
+									<DropdownMenuItem onClick={onActivity}>
 										<RecentlyViewed aria-hidden />
 										{t("entry.assistantLog")}
 									</DropdownMenuItem>

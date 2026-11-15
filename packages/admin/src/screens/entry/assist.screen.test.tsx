@@ -261,13 +261,13 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 		await expect.element(page.getByRole("menuitem", { name: "AI가 바꾼 기록" })).not.toBeInTheDocument();
 	});
 
-	it("10-1 ⋯ › 'AI가 바꾼 기록' opens the activity log searched by this entry's title and filtered to the assistant's lines", async () => {
+	it("10-1 [AS-23] ⋯ › 'AI가 바꾼 기록' opens the activity log filtered to this entry, by its id and not its title, and to the assistant's lines", async () => {
 		const made = on("draft");
 		await made.run();
 		await opened();
 		await userEvent.click(button("더 보기"));
 		await userEvent.click(page.getByRole("menuitem", { name: "AI가 바꾼 기록" }));
-		await expect.poll(() => decodeURIComponent(window.location.hash)).toBe("#/activity?q=첫+번째+글&kind=assistant");
+		await expect.poll(() => window.location.hash).toBe(`#/activity?entry=${made.loaded().id}&kind=assistant`);
 	});
 });
 
@@ -440,6 +440,20 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		await saveCell("저장 전 변경사항");
 		await expect.poll(() => mark(MARK).elements().length).toBe(2);
 		expect(await pending(made.loaded())).toHaveLength(3);
+	});
+
+	it("10-3 [AS-22] a change taken here is the assistant's in the log once saved: ⋯ › 'AI가 바꾼 기록' shows the save quoting its request", async () => {
+		const made = await proposed();
+		await userEvent.click(mark(MARK).first());
+		await userEvent.click(button("받기"));
+		await saveCell("저장 전 변경사항");
+		await userEvent.click(button("저장"));
+		await expect.poll(async () => (await pending(made.loaded())).length).toBe(2);
+		await userEvent.click(button("더 보기"));
+		await userEvent.click(page.getByRole("menuitem", { name: "AI가 바꾼 기록" }));
+		const line = page.getByRole("main").getByRole("row").filter({ hasText: "더 짧게 다듬기" });
+		await expect.element(line).toBeVisible();
+		await expect.element(line).toHaveTextContent('"첫 번째 글" 저장');
 	});
 
 	it("10-3 [AS-19] undo right after '받기' takes back the words and the take together: the change waits, drawn again, with nothing unsaved", async () => {

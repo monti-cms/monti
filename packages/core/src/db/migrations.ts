@@ -617,6 +617,16 @@ const MIGRATIONS: Record<string, Migration> = {
 			await db.schema.alterTable("monti_proposal").addColumn("settled_at", "timestamptz").execute();
 		},
 	},
+	"0024_proposal_item_activity": {
+		async up(db) {
+			// The items a write applied or took, by its row: every page of the activity log reads the requests of its lines by it (AS-22).
+			await db.schema
+				.createIndex("monti_proposal_item_activity")
+				.on("monti_proposal_item")
+				.column("activity_id")
+				.execute();
+		},
+	},
 };
 
 /**

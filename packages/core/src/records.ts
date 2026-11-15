@@ -24,8 +24,11 @@ export type RecordKind = {
 	restore?(db: Db, id: string, data: unknown | null): Promise<void>;
 	/** Whether a record in this state (`data` as `load` returned it) is in the trash. A kind that never goes there leaves it out. */
 	inTrash?(data: unknown): boolean;
-	/** What the activity log calls a record in this state (`data` as `load` returned it): its title, and for an entry where it is on this site. */
-	label?(data: unknown, site: Site): RecordLabel;
+	/**
+	 * What the activity log calls a record in this state (`data` as `load` returned it): its title, and for an entry where it is on this site. It
+	 * may read the database (`db`, the write's transaction) for what the state does not hold: an untitled translation is named by its source.
+	 */
+	label?(data: unknown, site: Site, db: Db): RecordLabel | Promise<RecordLabel>;
 };
 
 export function defineRecordKind(kind: RecordKind): RecordKind {

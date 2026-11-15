@@ -140,16 +140,42 @@ const SnapshotShape: z.ZodType<Snapshot> = z.object({
 });
 
 /**
+ * What the activity log calls an entry: its title. A translation with no title yet is called by its source's title and its language ("First
+ * post (ja)"), as its editor shows the source's title in the empty title (TR-27); the log has no language column, so the language is in the
+ * name, in the code its "ja translation started" line uses. A write that deleted the source with it (a group deleted for good) keeps the name
+ * the log last gave it. Empty when there is none: the screen writes "Untitled".
+ */
+export async function entryName(
+	db: Db,
+	source: string,
+	row: Pick<Selectable<EntryTable>, "id" | "title" | "locale" | "translation_group">,
+): Promise<string> {
+	if (row.title !== "" || row.locale === source) return row.title;
+	const original = await db
+		.selectFrom("entries")
+		.select("title")
+		.where("translation_group", "=", row.translation_group)
+		.where("locale", "=", source)
+		.executeTakeFirst();
+	if (original) return original.title ? `${original.title} (${row.locale})` : "";
+	const { rows } = await sql<{
+		targets: { kind: string; id: string; title?: string }[];
+	}>`select targets from monti_activity
+		where targets @> ${JSON.stringify([{ kind: "entry", id: row.id }])}::jsonb order by seq desc limit 1`.execute(db);
+	return rows[0]?.targets.find((record) => record.kind === "entry" && record.id === row.id)?.title ?? "";
+}
+
+/**
  * An entry for the engine: its working copy, what the site shows and its old paths, so undoing a publish puts the former published copy back (doc
  * 02).
  */
 export const entryRecord = defineRecordKind({
 	kind: "entry",
-	label(data, site) {
+	async label(data, site, db) {
 		const { row } = data as Snapshot;
 		const address = row.slug === "" ? null : publicPath(site.schema(), row.collection, row.slug, row.locale);
 		return {
-			title: row.title,
+			title: await entryName(db, site.schema().locales.source, row),
 			collection: row.collection,
 			locale: row.locale,
 			slug: row.slug,

@@ -6,7 +6,10 @@ export function recordsOf(records: LoggedRecord[], kind: string, ids?: readonly 
 	return ids ? ids.flatMap((id) => found.find((record) => record.id === id) ?? []) : found;
 }
 
-/** What one record is called in the log; an empty title stays empty, and the screen writes "Untitled" in its language. */
+/**
+ * What one record is called in the log, as its kind labels it (an untitled translation by its source's title and its language); an empty
+ * title stays empty, and the screen writes "Untitled" in its language.
+ */
 export const titleOf = (records: LoggedRecord[], kind: string, id: string): string =>
 	records.find((record) => record.kind === kind && record.id === id)?.title ?? "";
 

@@ -169,8 +169,19 @@ export function ActivityScreen({
 	/** What is shown is the answer to this address: its search, filters, order and page, not the one before, still on screen while this reads. */
 	const answered = data !== null && data.mark === activityPageMark(query, data.asOf, state.page);
 	const lines = data?.lines ?? [];
+	/**
+	 * The entry the log was opened for (the editor's ⋯ › "what the AI changed"), as the server named it. It stays in the first column's menu once
+	 * unticked, as every value of a menu does: the row under the keyboard's focus does not go, and ticked again it filters again.
+	 */
+	const entryShown = useRef<{ id: string; title: string } | null>(null);
+	if (data?.entry) entryShown.current = data.entry;
+	const offeredEntry = entryShown.current;
 	const looking =
-		state.search.trim() !== "" || state.kinds.length > 0 || state.deliveries.length > 0 || state.range !== null;
+		state.search.trim() !== "" ||
+		state.kinds.length > 0 ||
+		state.entry !== null ||
+		state.deliveries.length > 0 ||
+		state.range !== null;
 	const box = useSearchWords(state.search, (text) => look({ search: text }, { replace: true }));
 	const again = useSendAgain();
 	const undo = useUndo();
@@ -221,7 +232,18 @@ export function ActivityScreen({
 	const noteOf = (line: ActivityLine) =>
 		[
 			line.request !== null
-				? [...line.what.map(say), ...(line.more > 0 ? [t("activity.andMore", { count: line.more })] : [])].join(" · ")
+				? [
+						// A save that took items of several requests quotes the first; the others are counted before what was done.
+						...(line.otherRequests.length > 0
+							? [
+									line.otherRequests.length === 1
+										? t("activity.otherRequests.one")
+										: t("activity.otherRequests.many", { count: line.otherRequests.length }),
+								]
+							: []),
+						...line.what.map(say),
+						...(line.more > 0 ? [t("activity.andMore", { count: line.more })] : []),
+					].join(" · ")
 				: line.where && line.where.key !== "activity.where.address"
 					? say(line.where)
 					: "",
@@ -272,15 +294,29 @@ export function ActivityScreen({
 		{
 			id: "what",
 			label: t("activity.column.what"),
-			filtered: state.kinds.length > 0,
+			filtered: state.kinds.length > 0 || state.entry !== null,
 			menu: (
-				<FacetRows<ActivityFilter>
-					column="kind"
-					query={query}
-					values={ACTIVITY_KINDS_SHOWN.map((kind) => ({ value: kind, label: t(`activity.kind.${kind}`) }))}
-					chosen={state.kinds}
-					onChange={(kinds) => look({ kinds })}
-				/>
+				<>
+					<FacetRows<ActivityFilter>
+						column="kind"
+						query={query}
+						values={ACTIVITY_KINDS_SHOWN.map((kind) => ({ value: kind, label: t(`activity.kind.${kind}`) }))}
+						chosen={state.kinds}
+						onChange={(kinds) => look({ kinds })}
+					/>
+					{/* The entry the log was opened for, under the kinds: unticked, the filter goes and the row stays. */}
+					{offeredEntry ? (
+						<>
+							<DropdownMenuSeparator />
+							<ValueRow
+								checked={state.entry === offeredEntry.id}
+								onToggle={() => look({ entry: state.entry === offeredEntry.id ? null : offeredEntry.id })}
+								label={t("activity.ofEntry", { title: offeredEntry.title || t("list.untitled") })}
+								counted={null}
+							/>
+						</>
+					) : null}
+				</>
 			),
 		},
 		// A site with no receiver sends nothing: it has no delivery column (13-5).
@@ -356,7 +392,7 @@ export function ActivityScreen({
 						// Exactly what the banner counts: every failed delivery, with nothing else narrowing the list.
 						<TextButton
 							variant="underline"
-							onClick={() => look({ deliveries: ["failed"], search: "", kinds: [], range: null })}
+							onClick={() => look({ deliveries: ["failed"], search: "", kinds: [], entry: null, range: null })}
 						>
 							{t("activity.show")}
 						</TextButton>
@@ -421,7 +457,7 @@ export function ActivityScreen({
 							<NoMatchRow
 								colSpan={colSpan}
 								words={t("activity.noMatch")}
-								onClear={() => look({ search: "", kinds: [], deliveries: [], range: null })}
+								onClear={() => look({ search: "", kinds: [], entry: null, deliveries: [], range: null })}
 							/>
 						)}
 						{lines.map((line) => {

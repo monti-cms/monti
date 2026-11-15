@@ -1427,3 +1427,57 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(panel()).not.toBeInTheDocument();
 	});
 });
+
+describe("the activity log of one entry (doc 13; AS-23, AT-11, TR-27)", () => {
+	// Its lines in every language, the other post of the same title left out; three edits of one request said once; the untitled translation
+	// called by its source.
+	it("13 [AS-23, AT-11, TR-27] filtered by the entry, not its title: its lines in every language, edits of one record said once", async () => {
+		await draw(stories.EntryFilter).run();
+		await expect.element(row("첫머리에 세 줄 더해 줘")).toBeVisible();
+		// Three writes of one request, each one place: one message that adds them up.
+		await expect.element(row("첫머리에 세 줄 더해 줘")).toHaveTextContent('"첫 번째 글" 본문 3곳 고침');
+		expect(row("첫머리에 세 줄 더해 줘").element().textContent).not.toContain("외");
+		// The translation is the same entry in another language; with no title of its own it is called by its source's and its language.
+		await expect.element(row("번역에 한 줄 더해 줘")).toHaveTextContent('"첫 번째 글 (ja)" 본문 1곳 고침');
+		// The assistant's earlier work on this entry is here too; the other post of the same title is not.
+		await expect.element(row("이 두 편 요약 채워 줘")).toBeVisible();
+		expect(rows().some((words) => words.includes("이름이 같은 글에도 한 줄"))).toBe(false);
+		expect(rows()).toHaveLength(3);
+		// The panel's list of what was done says it the same way.
+		await userEvent.click(row("첫머리에 세 줄 더해 줘").getByRole("link"));
+		await expect.element(panel()).toHaveTextContent("한 일 · 1");
+		await expect.element(panel()).toHaveTextContent('"첫 번째 글" 본문 3곳 고침');
+	});
+
+	it("13 [AS-22] a save that took changes of two requests quotes the first, counts the other, is found by either, and its panel has both", async () => {
+		await draw(stories.TwoRequests).run();
+		await expect.element(row("제목 다듬어 줘")).toHaveTextContent('요청 1건 더 · "다시 고친 글" 저장');
+		await expect.element(panel()).toHaveTextContent("제목 다듬어 줘");
+		await expect.element(panel()).toHaveTextContent("요약 써 줘");
+		// Found by the other request's words too.
+		location.hash = "#/activity?q=요약+써+줘";
+		await expect.element(row("제목 다듬어 줘")).toBeVisible();
+	});
+
+	it("13 [AS-23] the first column's menu holds the entry, ticked under the kinds; unticked, the log is every entry's again", async () => {
+		await draw(stories.EntryFilter).run();
+		await expect.element(row("첫머리에 세 줄 더해 줘")).toBeVisible();
+		// Filtered: the dot after the column's name.
+		await expect.poll(() => columnName("작업").element().querySelector("[data-slot=column-dot]")).not.toBeNull();
+		await userEvent.click(columnName("작업"));
+		const entry = page.getByRole("menuitemcheckbox", { name: '"첫 번째 글"' });
+		await expect.element(entry).toBeChecked();
+		// A row opened while filtered keeps the filter in its address.
+		expect(row("첫머리에 세 줄 더해 줘").getByRole("link").element().getAttribute("href")).toContain("entry=");
+		await userEvent.click(entry);
+		await expect.poll(() => new URLSearchParams(location.hash.split("?")[1]).get("entry")).toBeNull();
+		await expect.element(row("이름이 같은 글에도 한 줄")).toBeVisible();
+		// Unticked, the row stays with the keyboard's focus, as every value of the menu does; ticked again, it filters again.
+		await expect.element(entry).not.toBeChecked();
+		expect(document.activeElement).toBe(entry.element());
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => new URLSearchParams(location.hash.split("?")[1]).get("entry")).not.toBeNull();
+		await expect.element(row("이름이 같은 글에도 한 줄")).not.toBeInTheDocument();
+		await userEvent.keyboard("{Escape}");
+	});
+});

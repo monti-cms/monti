@@ -48,7 +48,12 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			description:
 				"The activity log, newest first (or oldest first): every write as a line with what was done and where, who did it, whether it can be undone and how its deliveries went. The writes one application of the assistant's proposal made are one line. Search by the words of a title or of the assistant's request; filter by kinds (the assistant's work, saves, publishing, the trash, imports, settings, media), by delivery states, by days, or by one entry. Use it to answer what changed and when.",
 			input: ActivityQuery,
-			run: (input, ctx) => listActivity(ctx.db, input, { now: ctx.now(), receivers: engine.receivers.length > 0 }),
+			run: (input, ctx) =>
+				listActivity(ctx.db, input, {
+					now: ctx.now(),
+					receivers: engine.receivers.length > 0,
+					source: ctx.site.schema().locales.source,
+				}),
 		}),
 		defineOperation({
 			name: "activity.facets",
@@ -56,7 +61,9 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 			description:
 				"For one column of an activity.list query (`kind`: the assistant's work and the kinds of writes; `delivery`: the delivery states): each value with its count, the query's other conditions applied. A kind counts lines; a delivery state counts deliveries, as deliveries.counts does.",
 			input: ActivityQuery.extend({ column: z.enum(ACTIVITY_FACETS) }),
-			run: async (input, ctx) => ({ values: await activityFacets(ctx.db, input, input.column, ctx.now()) }),
+			run: async (input, ctx) => ({
+				values: await activityFacets(ctx.db, input, input.column, ctx.now(), ctx.site.schema().locales.source),
+			}),
 		}),
 		defineOperation({
 			name: "activity.get",

@@ -320,7 +320,13 @@ export function ActivityPanel({
 					{/* The head cuts a long request; here it is whole, with everything it did. */}
 					{line.request !== null && (
 						<Group title={t("activity.request")}>
-							<Text>{line.request}</Text>
+							{/* Every request the line came from: a save that took items of several in a screen has them all. */}
+							<Stack gap={8}>
+								{[line.request, ...line.otherRequests].map((request, index) => (
+									// biome-ignore lint/suspicious/noArrayIndexKey: two requests can say the same words, and their order never changes.
+									<Text key={index}>{request}</Text>
+								))}
+							</Stack>
 						</Group>
 					)}
 					{line.request !== null && (

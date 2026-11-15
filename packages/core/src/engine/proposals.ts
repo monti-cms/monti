@@ -1158,6 +1158,10 @@ export async function acceptedItems(
 			"monti_proposal.conversation_id",
 		])
 		.where("monti_proposal_item.id", "in", accepted)
+		// Oldest request first, its items in their order: the log quotes the first taken item's request and counts the others after it.
+		.orderBy("monti_proposal.created_at")
+		.orderBy("monti_proposal.id")
+		.orderBy("monti_proposal_item.position")
 		// Held until the write ends, so two writes cannot both take the same item.
 		.forUpdate()
 		.execute();
@@ -1183,7 +1187,7 @@ export async function markApplied(
 	taken: TakenItem[],
 	activityId: string,
 	now: Date,
-): Promise<{ conversationId: string; proposalId: string } | null> {
+): Promise<{ conversationId: string; proposalId: string; proposalIds: string[] } | null> {
 	if (taken.length === 0) return null;
 	await trx
 		.updateTable("monti_proposal_item")
@@ -1196,5 +1200,11 @@ export async function markApplied(
 		.execute();
 	for (const proposalId of new Set(taken.map((item) => item.proposalId))) await settleProposal(trx, proposalId, now);
 	const [first] = taken;
-	return first ? { conversationId: first.conversationId, proposalId: first.proposalId } : null;
+	return first
+		? {
+				conversationId: first.conversationId,
+				proposalId: first.proposalId,
+				proposalIds: [...new Set(taken.map((item) => item.proposalId))],
+			}
+		: null;
 }

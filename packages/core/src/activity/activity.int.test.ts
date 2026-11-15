@@ -1470,6 +1470,123 @@ describe("the log", () => {
 		]);
 	});
 
+	it("13-3 [AT-11, TR-27] a line says the same edit of one record once with its counts added, keeps two entries of one title apart, and calls an untitled translation by its source", async () => {
+		const monti = site();
+		const first = await newPost("첫 번째 글", "first-post", monti);
+		const twin = await newPost("첫 번째 글", "first-post-again", monti);
+		const english = (await write("translations.create", { source: first, locale: "en" }, monti)).output.id;
+		const proposal = await monti.proposals.create("conversation-1", "본문에 줄 더해 줘");
+		const insert = (words: string) => [
+			{ op: "insert", after: null, blocks: [{ type: "paragraph", content: [{ type: "text", text: words }] }] },
+		];
+		for (const [id, words] of [
+			[first, "하나"],
+			[first, "둘"],
+			[twin, "셋"],
+			[first, "넷"],
+			[english, "다섯"],
+		] as const)
+			await monti.proposals.add(proposal, "body.edit", { id, version: await versionOf(id), ops: insert(words) });
+		await monti.proposals.apply(proposal);
+		const [line] = (await list({ kinds: ["assistant"] }, monti)).lines;
+		const once = ['"첫 번째 글 (en)" 본문 1곳 고침', '"첫 번째 글" 본문 3곳 고침', '"첫 번째 글" 본문 1곳 고침'];
+		expect(line?.what.map(ko)).toEqual(once);
+		expect(line?.more).toBe(0);
+		expect((await detail(line?.id ?? "", monti)).writes.map(ko)).toEqual(once);
+		// The filter's name for the translation is the one the log gives it; a translation with a title of its own has that.
+		expect((await list({ entry: english }, monti)).entry).toEqual({ id: english, title: "첫 번째 글 (en)" });
+		await save(english, { title: "First post" }, monti);
+		expect((await list({ entry: english }, monti)).entry).toEqual({ id: english, title: "First post" });
+
+		// Without a count, the same done to one record is said once: two saves of 첫 번째 글, and the other post's save beside them.
+		const saves = await monti.proposals.create("conversation-1", "요약과 주소 다듬어 줘");
+		await monti.proposals.add(saves, "entries.save", {
+			id: first,
+			version: await versionOf(first),
+			values: { summary: "요약" },
+		});
+		await monti.proposals.add(saves, "entries.save", {
+			id: first,
+			version: await versionOf(first),
+			slug: "first-post-new",
+		});
+		await monti.proposals.add(saves, "entries.save", {
+			id: twin,
+			version: await versionOf(twin),
+			values: { summary: "요약" },
+		});
+		await monti.proposals.apply(saves);
+		const [saved] = (await list({ kinds: ["assistant"] }, monti)).lines;
+		expect(saved?.what.map(ko)).toEqual(['"첫 번째 글" 저장', '"첫 번째 글" 저장']);
+
+		// A group deleted for good in one write: its untitled translation keeps the name the log gave it, there and in the filter.
+		const second = await newPost("둘째 글", "second-post", monti);
+		const untitled = (await write("translations.create", { source: second, locale: "en" }, monti)).output.id;
+		await write("trash.move", { rows: [{ kind: "entry", id: second }] }, monti);
+		const emptied = await write("trash.empty", {}, monti);
+		const purged = await detail(emptied.activityId, monti);
+		expect(purged.records.find((record) => record.id === untitled)?.title).toBe("둘째 글 (en)");
+		expect((await list({ entry: untitled }, monti)).entry).toEqual({ id: untitled, title: "둘째 글 (en)" });
+	});
+
+	it("13-3 [AT-11] two translations of one title stay two messages: counts are added up only for one record", async () => {
+		const monti = site();
+		const paragraph = (id: string, text: string) => ({ id, type: "paragraph", content: [{ type: "text", text }] });
+		const translations: string[] = [];
+		for (const slug of ["one", "two"]) {
+			const source = (
+				await write("entries.create", {
+					collection: "post",
+					title: "같은 제목",
+					slug,
+					doc: { type: "doc", blocks: [paragraph(`${slug}-1`, "하나")] },
+				})
+			).output.id;
+			const id = (await write("translations.create", { source, locale: "en" }, monti)).output.id;
+			await save(id, { title: "Same title" }, monti);
+			translations.push(id);
+		}
+		const proposal = await monti.proposals.create("conversation-1", "원문 그대로 둬");
+		for (const id of translations) {
+			const { entry } = await read<{ entry: { doc: { blocks: { id: string }[] } } }>("entries.get", { id }, monti);
+			await monti.proposals.add(proposal, "translations.setBlocks", {
+				id,
+				version: await versionOf(id),
+				blocks: entry.doc.blocks.map((block) => ({ block: block.id, do: "keepSource" })),
+			});
+		}
+		await monti.proposals.apply(proposal);
+		const [line] = (await list({ kinds: ["assistant"] }, monti)).lines;
+		expect(line?.what.map(ko)).toEqual(['"Same title" 번역 1곳 정함', '"Same title" 번역 1곳 정함']);
+	});
+
+	it("13-3 [AS-22] a save that took items of two requests is found by either, quotes the first and names the other", async () => {
+		const monti = site();
+		const id = await newPost("글", "post", monti);
+		const take = async (request: string, input: Record<string, unknown>) => {
+			const proposal = await monti.proposals.create("conversation-1", request);
+			return (await monti.proposals.add(proposal, "entries.save", { id, version: await versionOf(id), ...input }))
+				.itemId;
+		};
+		const titled = await take("제목 다듬어 줘", { title: "다듬은 글" });
+		// The second request is made a minute later: requests are told apart by when they were made.
+		later(MINUTE);
+		const summed = await take("요약 써 줘", { values: { summary: "한 줄" } });
+		// Named newest first: the line still quotes the request made first.
+		const accepted = [summed, titled];
+		await monti.run(
+			"entries.save",
+			{ id, version: await versionOf(id), title: "다듬은 글", values: { summary: "한 줄" } },
+			{ actor: "admin", accepted },
+		);
+		for (const search of ["제목 다듬어", "요약 써"]) {
+			const found = (await list({ search }, monti)).lines;
+			expect(found).toHaveLength(1);
+			expect(found[0]).toMatchObject({ request: "제목 다듬어 줘", otherRequests: ["요약 써 줘"] });
+		}
+		expect((await list({ kinds: ["assistant"] }, monti)).lines).toHaveLength(1);
+	});
+
 	it("13-3 a browsing of the log keeps its pages while new activity arrives", async () => {
 		const monti = site();
 		for (let index = 1; index <= 5; index++) await newPost(`글 ${index}`, `post-${index}`, monti);
@@ -1567,6 +1684,7 @@ describe("the log", () => {
 		const first = await listActivity(db, ActivityQuery.parse({ pageSize: 2 }), {
 			now: clock,
 			receivers: true,
+			source: "ko",
 			afterBoundary: async () => void (await newPost("끼어든 글", "between", monti)),
 		});
 		expect(whats(first)).toEqual(['"글 4" 만듦', '"글 3" 만듦']);

@@ -281,14 +281,16 @@ export async function runWrite<Output>(
 			restorable.length > 0;
 		const now = engine.now();
 		// What each record was called, as the write left it (as it was, for one the write removed): the log names it even after it is gone.
-		const logged: LoggedRecord[] = records.map((ref) => {
-			const state = after.get(recordKey(ref)) ?? before.get(recordKey(ref)) ?? null;
-			return {
-				...ref,
-				version: after.get(recordKey(ref))?.version ?? null,
-				...(state ? engine.recordKinds.get(ref.kind)?.label?.(state.data, engine.site) : {}),
-			};
-		});
+		const logged: LoggedRecord[] = await Promise.all(
+			records.map(async (ref) => {
+				const state = after.get(recordKey(ref)) ?? before.get(recordKey(ref)) ?? null;
+				return {
+					...ref,
+					version: after.get(recordKey(ref))?.version ?? null,
+					...(state ? await engine.recordKinds.get(ref.kind)?.label?.(state.data, engine.site, trx) : {}),
+				};
+			}),
+		);
 		const log = typeof operation.log === "function" ? operation.log(input, logged) : operation.log;
 		const where = operation.where?.(input, output, logged) ?? null;
 		const listed = log !== false;
@@ -348,15 +350,19 @@ export async function runWrite<Output>(
 				.set({ conversation_id: applied.conversationId, proposal_id: applied.proposalId })
 				.where("id", "=", activityId)
 				.execute();
-		// A line is found by the words of its request too: its head keeps them. Only its own row is written: a write never touches another write's
-		// row, so an undo that holds a line's rows and a write of the same line never wait for each other.
-		const proposalId = options.proposalId ?? applied?.proposalId;
-		if (line === activityId && proposalId)
+		// A line is found by the words of its requests too: its head keeps them, every request a save took items of. Only its own row is
+		// written: a write never touches another write's row, so an undo that holds a line's rows and a write of the same line never wait for
+		// each other.
+		const proposalIds = [
+			...new Set([...(options.proposalId ? [options.proposalId] : []), ...(applied?.proposalIds ?? [])]),
+		];
+		if (line === activityId && proposalIds.length > 0)
 			await trx
 				.updateTable("monti_activity")
 				.set({
-					// The request first: a long list of titles does not push it out of the words kept.
-					words: sql`left(coalesce((select request from monti_proposal where id = ${proposalId}), '') || ' ' || words, ${WORDS_LENGTH})`,
+					// The requests first: a long list of titles does not push them out of the words kept.
+					words: sql`left(coalesce((select string_agg(request, ' ' order by created_at) from monti_proposal
+						where id in (${sql.join(proposalIds.map((id) => sql`${id}`))})), '') || ' ' || words, ${WORDS_LENGTH})`,
 				})
 				.where("id", "=", activityId)
 				.execute();
