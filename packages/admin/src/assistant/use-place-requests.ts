@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { startTask, type Task } from "./run-task";
+import { nextOf, startTask, type Task } from "./run-task";
 import { AssistantContext } from "./use-assistant";
 
 /** What was asked at a place and what the assistant said back. */
@@ -21,7 +21,7 @@ export type PlaceRequest = {
 	thread: Exchange[];
 	/** Why the last request did not go, in one short line (the one failure line of AI work). */
 	failed: string | null;
-	/** What the failure line offers: ask the same again, or let a run that reached its limit go on. */
+	/** What the failure line offers: ask the same again, or let a run that stopped where it can go on (a limit, a lost connection) go on. */
 	next: "retry" | "goOn" | null;
 };
 
@@ -104,7 +104,7 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 			await Promise.resolve(after.current(end.proposed)).catch(() => {});
 			// Asked again at this place while the screen read its proposals: the place is the newer request's now.
 			if (gone.current || going.current.has(id)) return;
-			const failed = end.status === "failed" || end.status === "limit";
+			const failed = end.status === "failed" || end.status === "interrupted";
 			change(id, (request) => {
 				// Done and it became a change: the change's own mark takes the place (a request on a proposed change ends with the change,
 				// whose card shows what was asked from its own thread).
@@ -117,7 +117,7 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 					status: "answered",
 					thread,
 					failed: end.why,
-					next: end.status === "limit" ? "goOn" : end.status === "failed" && end.retry ? "retry" : null,
+					next: nextOf(end),
 				};
 			});
 		},
@@ -177,7 +177,7 @@ export function usePlaceRequests(settled: (proposed: boolean) => Promise<unknown
 
 	/**
 	 * The failure line's button: "Try again" sends the last words again as they were asked (the failed exchange gives way to the new one),
-	 * and "Go on" lets the run that reached its limit go on, with as much again.
+	 * and "Go on" lets the run go on from where it stopped (past a limit, with as much again).
 	 */
 	const again = useCallback(
 		(id: string) => {

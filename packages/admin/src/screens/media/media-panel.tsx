@@ -368,7 +368,7 @@ export function MediaPanel({
 		if (done.refusal.status === 409) {
 			draft.revertAll();
 			void read.reload();
-			setRefused(t("ui.savedElsewhere"));
+			setRefused(t("errors.savedElsewhere"));
 			return false;
 		}
 		setRefused(t(reasonOf(done.refusal)));

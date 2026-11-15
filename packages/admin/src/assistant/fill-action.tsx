@@ -1,12 +1,14 @@
 import { AiFailed, AiWorking, TextButton } from "@monti-cms/ui";
 import { Renew, Spark } from "@monti-cms/ui/icons";
 import { useAdmin } from "../operations/admin-context";
+import { useFocusHandOff } from "../screens/frame/focus-hand-off";
 import type { FillState } from "./use-fill";
 
 /**
  * "✦ Fill" of one place, the same wherever a place has one (a field's label row, a picture's words, its caption): "✦ Fill" while it is
  * empty, "↻ Again" once it holds something, and while the model is asked, "Generating · Stop" in its place. Stopping leaves the place as
- * it was. The press leaves the caret where it was.
+ * it was. A pointer's press leaves the caret where it was; a key's press hands the focus to "Stop", and back to the button when the work
+ * ends (`useFocusHandOff`).
  */
 export function FillAction({
 	state,
@@ -24,18 +26,24 @@ export function FillAction({
 	onStop: () => void;
 }) {
 	const { t } = useAdmin();
-	if (state.working) return <AiWorking size="micro" onStop={onStop} />;
+	const keep = useFocusHandOff((place) => (place.isConnected ? place.querySelector<HTMLElement>("button") : null));
 	return (
-		<TextButton
-			tone="proposal"
-			size="micro"
-			aria-label={name ? t(held ? "fill.againName" : "fill.name", { field: name }) : undefined}
-			onMouseDown={(event) => event.preventDefault()}
-			onClick={onFill}
-		>
-			{held ? <Renew aria-hidden /> : <Spark aria-hidden />}
-			{t(held ? "fill.again" : "fill.fill")}
-		</TextButton>
+		<span ref={keep}>
+			{state.working ? (
+				<AiWorking size="micro" onStop={onStop} />
+			) : (
+				<TextButton
+					tone="proposal"
+					size="micro"
+					aria-label={name ? t(held ? "fill.againName" : "fill.name", { field: name }) : undefined}
+					onMouseDown={(event) => event.preventDefault()}
+					onClick={onFill}
+				>
+					{held ? <Renew aria-hidden /> : <Spark aria-hidden />}
+					{t(held ? "fill.again" : "fill.fill")}
+				</TextButton>
+			)}
+		</span>
 	);
 }
 

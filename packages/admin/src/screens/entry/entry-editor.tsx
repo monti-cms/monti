@@ -384,25 +384,28 @@ export function EntryEditor({
 						{/* While undecided blocks are left: the assistant proposes a translation for each (doc 10, item 19). */}
 						{canTranslate && !readOnly && (untranslated.length > 0 || translating || translateFailed) ? (
 							<>
-								{translating ? (
-									<AiWorking
-										onStop={() => {
-											for (const request of translations) if (request.status === "working") places?.stop(request.id);
-										}}
-									/>
-								) : translateFailed?.failed ? (
-									<AiFailed
-										onRetry={translateFailed.next ? () => places?.again(translateFailed.id) : undefined}
-										retryLabel={translateFailed.next === "goOn" ? t("panel.goOn") : undefined}
-									>
-										{translateFailed.failed}
-									</AiFailed>
-								) : (
-									<TextButton tone="proposal" onClick={() => void translate()}>
-										<Spark aria-hidden />
-										{t("translation.ai.translate")}
-									</TextButton>
-								)}
+								{/* What stands here comes and goes with the work: a key's press keeps the focus on what is here now. */}
+								<span ref={translateFocus}>
+									{translating ? (
+										<AiWorking
+											onStop={() => {
+												for (const request of translations) if (request.status === "working") places?.stop(request.id);
+											}}
+										/>
+									) : translateFailed?.failed ? (
+										<AiFailed
+											onRetry={translateFailed.next ? () => places?.again(translateFailed.id) : undefined}
+											retryLabel={translateFailed.next === "goOn" ? t("panel.goOn") : undefined}
+										>
+											{translateFailed.failed}
+										</AiFailed>
+									) : (
+										<TextButton tone="proposal" onClick={() => void translate()}>
+											<Spark aria-hidden />
+											{t("translation.ai.translate")}
+										</TextButton>
+									)}
+								</span>
 								<Separator orientation="vertical" length="control" />
 							</>
 						) : null}
@@ -552,14 +555,6 @@ export function EntryEditor({
 			if (view && !view.isDestroyed) view.view.dispatch(releaseRequest(view.state, request));
 		}
 	}, [waitingIds]);
-	// A translation that ended without a failure is over: what it proposed is drawn in the text, and words alone have no card to stand
-	// in. One that did not go stays, with its failure line beside "✦ Translate".
-	const dismissRequest = places?.dismiss;
-	useEffect(() => {
-		for (const request of waiting)
-			if (request.id.startsWith("translate:") && request.status === "answered" && !request.failed)
-				dismissRequest?.(request.id);
-	}, [waiting, dismissRequest]);
 	/** The assistant reads what is saved: what is on the screen is saved before it is asked. `false`: the save was refused. */
 	const savedForRequest = async () => !editor.dirty || (await editor.save()) !== null;
 	/** The entry as it is saved now, for a request's context: the version this page drew may be the one before the save just made. */
@@ -586,9 +581,38 @@ export function EntryEditor({
 				.map((block) => block.id)
 		: [];
 	const translations = waiting.filter((request) => request.id.startsWith("translate:"));
+	const translateFocus = useFocusHandOff((place) =>
+		place.isConnected ? place.querySelector<HTMLElement>("button") : null,
+	);
 	const translating = translations.some((request) => request.status === "working");
 	/** The newest translation that did not go: its line stands where "✦ Translate" was, until it is asked again. */
 	const translateFailed = translating ? undefined : translations.findLast((request) => request.failed);
+	// The blocks a translation is still for: undecided with nothing proposed, or translated from a source that changed since.
+	const stillToTranslate = new Set([
+		...untranslated,
+		...(compared?.marks ?? []).flatMap((mark) => ("block" in mark ? [mark.block] : [])),
+	]);
+	const pendingItems = new Set(editor.draft.proposals.map(({ item }) => item.id));
+	// What is over at a place lets it go. A translation that ended without a failure: what it proposed is drawn in the text, and words
+	// alone have no card to stand in. A failure whose work is gone: a request on a change that was taken or discarded since, a
+	// translation with nothing left to translate (`translate:<when>:<block or all>`). Any other failure stays, with its line.
+	const dismissRequest = places?.dismiss;
+	const overAtPlaces = waiting
+		.filter((request) => {
+			if (request.status !== "answered") return false;
+			if (request.id.startsWith("translate:")) {
+				if (!request.failed) return true;
+				const meant = request.id.split(":")[2] ?? "all";
+				return meant === "all" ? untranslated.length === 0 : !stillToTranslate.has(meant);
+			}
+			return request.item !== null && request.failed !== null && !pendingItems.has(request.item);
+		})
+		.map((request) => request.id)
+		.join(" ");
+	useEffect(() => {
+		if (overAtPlaces === "") return;
+		for (const request of overAtPlaces.split(" ")) dismissRequest?.(request);
+	}, [overAtPlaces, dismissRequest]);
 	const translate = (blocks?: string[], again = false) => {
 		// The tabs' button is for every block nothing is proposed for yet: pressed twice while its save is under way, it asks once. A
 		// block's own "translate" is its own request.

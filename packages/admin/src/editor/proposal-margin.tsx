@@ -1,10 +1,11 @@
-import { AiFailed, AiWorking, EditorMargin, MemoCardPopover, MemoDiff, MemoThread } from "@monti-cms/ui";
+import { AiFailed, AiWorking, EditorMargin, MemoDiff, MemoThread } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from "react";
 import {
 	type CardFailure,
 	CardMark,
 	type CardReply,
+	KeptCard,
 	MemoThreadOf,
 	ProposalMemo,
 	replyOf,
@@ -144,7 +145,7 @@ export function staleMarks({
 					>
 						{working ? "…" : 1}
 					</CardMark>
-					<MemoCardPopover
+					<KeptCard
 						anchor={anchor}
 						open={open === item.id}
 						onOpenChange={(next) => {
@@ -160,9 +161,9 @@ export function staleMarks({
 										onDiscard(item.id);
 									},
 								})}
-						{...(remake && !working && (!failed || failed.retry)
+						{...(remake && !working && (!failed || failed.next)
 							? {
-									acceptLabel: t(failed ? "ui.aiRetry" : "card.remake"),
+									acceptLabel: t(failed?.next === "goOn" ? "panel.goOn" : failed ? "ui.aiRetry" : "card.remake"),
 									acceptSpark: !failed,
 									onAccept: () => void remake.remake(item.id),
 								}
@@ -178,7 +179,7 @@ export function staleMarks({
 								{working ? <AiWorking onStop={() => remake?.stop(item.id)} /> : <AiFailed>{failed?.why}</AiFailed>}
 							</MemoThread>
 						) : null}
-					</MemoCardPopover>
+					</KeptCard>
 				</>
 			);
 		},
@@ -296,7 +297,7 @@ export function requestMarks({
 					>
 						{working ? "…" : Math.max(1, request.thread.length)}
 					</CardMark>
-					<MemoCardPopover
+					<KeptCard
 						anchor={anchor}
 						open={shown}
 						onOpenChange={(next) => {
@@ -325,7 +326,7 @@ export function requestMarks({
 								request.failed ? { why: request.failed, next: request.next, onAgain: () => onAgain(request.id) } : null
 							}
 						/>
-					</MemoCardPopover>
+					</KeptCard>
 				</>
 			);
 		},

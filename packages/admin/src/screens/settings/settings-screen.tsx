@@ -327,6 +327,17 @@ export function SettingsScreen({
 			)
 		: undefined;
 	const asked = atWalked?.thread.at(-1) ?? null;
+	// A failed request on a change that is no longer waiting (taken or discarded since) has nothing left to be asked of: it goes.
+	const dismissRequest = places?.dismiss;
+	const waitingItems = new Set(stops.map((stop) => stop.item.id));
+	const orphans = waiting
+		.filter((request) => request.failed && request.item !== null && !waitingItems.has(request.item))
+		.map((request) => request.id)
+		.join(" ");
+	useEffect(() => {
+		if (orphans === "") return;
+		for (const request of orphans.split(" ")) dismissRequest?.(request);
+	}, [orphans, dismissRequest]);
 	const askedFailure =
 		atWalked?.failed && places
 			? { why: atWalked.failed, next: atWalked.next, onAgain: () => places.again(atWalked.id) }

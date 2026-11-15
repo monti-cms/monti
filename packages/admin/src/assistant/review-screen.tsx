@@ -116,10 +116,15 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 				}),
 			),
 	);
-	// "Make again" goes once the change is made again; pressed with the keyboard, its focus goes to that row's check.
-	const toCheck = useFocusHandOff((gone) =>
-		gone.closest("tr")?.querySelector<HTMLElement>('[role="checkbox"], input[type="checkbox"]'),
-	);
+	// "Make again" gives way to "Generating · Stop" when it is pressed: pressed with the keyboard, its focus goes to "Stop" (or, when the
+	// row has none by then, to the row's check).
+	const toCheck = useFocusHandOff((gone) => {
+		const row = gone.closest("tr");
+		return (
+			row?.querySelector<HTMLElement>("[data-slot=ai-working] button") ??
+			row?.querySelector<HTMLElement>('[role="checkbox"], input[type="checkbox"]')
+		);
+	});
 	const proposal = useProposal(id);
 	const remake = useRemake({ settled: proposal.reload });
 	const view = proposal.view;
@@ -629,7 +634,10 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																) : remake.failed.has(item.id) ? (
 																	<AiFailed
 																		onRetry={
-																			remake.failed.get(item.id)?.retry ? () => void remake.remake(item.id) : undefined
+																			remake.failed.get(item.id)?.next ? () => void remake.remake(item.id) : undefined
+																		}
+																		retryLabel={
+																			remake.failed.get(item.id)?.next === "goOn" ? t("panel.goOn") : undefined
 																		}
 																	>
 																		{remake.failed.get(item.id)?.why}

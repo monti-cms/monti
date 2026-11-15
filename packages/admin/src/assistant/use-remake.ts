@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
-import { startTask, type Task } from "./run-task";
+import { nextOf, startTask, type Task } from "./run-task";
 import { AssistantContext } from "./use-assistant";
 
 /** A map without one item's entry. */
@@ -10,8 +10,8 @@ function without<V>(map: ReadonlyMap<string, V>, item: string): ReadonlyMap<stri
 	return next;
 }
 
-/** "Make again" of a change that did not go: its one failure line, and whether "Try again" can go. */
-export type RemakeFailure = { why: string; retry: boolean };
+/** "Make again" of a change that did not go: its one failure line, and what its button does ("Try again", or "Go on" where it stopped). */
+export type RemakeFailure = { why: string; next: "retry" | "goOn" | null; run: string | null };
 
 /**
  * "Make again" (doc 10): the assistant makes one proposed change again on its record as it is now, a small run of its own read to its end
@@ -44,13 +44,12 @@ export function useRemake({
 		};
 	}, []);
 
-	const remake = useCallback(
-		async (item: string) => {
-			if (going.current.has(item)) return;
-			if (hooks.current.ready && !(await hooks.current.ready().catch(() => false))) return;
+	/** Runs one "make again" (or its going on) to its end, and shows how it ended. */
+	const follow = useCallback(
+		async (item: string, input: Record<string, unknown>) => {
 			setFailed((now) => without(now, item));
 			setWorking((now) => new Set(now).add(item));
-			const task = startTask({ streams, transport, t, language }, { again: item });
+			const task = startTask({ streams, transport, t, language }, input);
 			going.current.set(item, task);
 			const end = await task.ended;
 			if (going.current.get(item) !== task) return;
@@ -59,9 +58,22 @@ export function useRemake({
 			touch?.();
 			await Promise.resolve(hooks.current.settled?.()).catch(() => {});
 			setWorking((now) => new Set([...now].filter((each) => each !== item)));
-			if (end.why) setFailed((now) => new Map(now).set(item, { why: end.why ?? "", retry: end.retry }));
+			const why = end.why;
+			if (why) setFailed((now) => new Map(now).set(item, { why, next: nextOf(end), run: end.run }));
 		},
 		[streams, transport, t, language, touch],
+	);
+
+	/** "Make again"; or, after one that did not go, its line's button: "Try again" asks again, "Go on" goes on from where it stopped. */
+	const remake = useCallback(
+		async (item: string) => {
+			if (going.current.has(item)) return;
+			const was = failed.get(item);
+			if (was?.next === "goOn" && was.run) return follow(item, { resume: was.run, more: true });
+			if (hooks.current.ready && !(await hooks.current.ready().catch(() => false))) return;
+			await follow(item, { again: item });
+		},
+		[failed, follow],
 	);
 
 	/** Stops making it again: the change stays as it was. */

@@ -5,20 +5,34 @@ import { canRetry, failureIn, failureText, reasonText } from "./failure";
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
 
-/** How often a run that is going without this page listening is read again. */
-const POLL_MS = 3000;
-/** How many times a task goes on by itself after its request was cut before it says the connection was lost. */
-const CUTS = 2;
-/** Refusals of a resume that mean the server is ahead of this page: the run is still held by the request that was cut, or it ended. */
-const AHEAD: ReadonlySet<string> = new Set(["assistant.busy", "assistant.ended", "assistant.notNewest"]);
+/** How often a run that is going without this page listening (another tab, a request that was cut) is read again. */
+export const POLL_MS = 3000;
+/** How many times in a row the browser goes on by itself with a run whose request was cut, before it says so and leaves it to the person. */
+export const CUTS_BEFORE_ASKING = 2;
+/** Refusals of a resume that mean the server knows more of the run than this page: it is at work elsewhere, over, or not the newest. */
+export const AHEAD: ReadonlySet<string> = new Set(["assistant.busy", "assistant.ended", "assistant.notNewest"]);
+
+/**
+ * Where a run's request ended is a place the browser goes on from by itself (doc 10, limits): one request's time is up (`goOn`), or the run
+ * waits on the screen (`screen`). `null` for every other end, and for any end once the person said stop. The panel and the runner both ask this.
+ */
+export function onwardAfter(end: RunEnd, stopAsked: boolean): "goOn" | "screen" | null {
+	if (stopAsked) return null;
+	if (end.status === "waiting") return "screen";
+	if (end.status === "interrupted" && end.reason === "time") return "goOn";
+	return null;
+}
+
+/** After the `cuts`-th cut in a row (this one counted), the browser goes on by itself; at `CUTS_BEFORE_ASKING` it stops and asks. */
+export const goesOnAfterCut = (cuts: number): boolean => cuts > 0 && cuts < CUTS_BEFORE_ASKING;
 
 /** How one AI task ended, as the place it was asked at shows it. */
 export type TaskEnd = {
 	/**
-	 * `done`: it finished. `stopped`: a person stopped it. `failed`: it did not go (`why` says why in one line). `limit`: it reached its turns or
-	 * tokens and can go on (`goOn`).
+	 * `done`: it finished. `stopped`: a person stopped it. `failed`: it did not go (`why` says why in one line). `interrupted`: it stopped
+	 * where it can go on, at its turns or tokens or a connection lost again and again (`why` says which); "Go on" resumes it.
 	 */
-	status: "done" | "stopped" | "failed" | "limit";
+	status: "done" | "stopped" | "failed" | "interrupted";
 	/** What the assistant said, as it stands at the end. */
 	answer: string;
 	/** It proposed something: the screen reads its proposals again. */
@@ -31,6 +45,10 @@ export type TaskEnd = {
 	run: string | null;
 	conversation: string | null;
 };
+
+/** What the failure line of an ended task offers: "Go on" where the run can go on, "Try again" where asking again can go, else nothing. */
+export const nextOf = (end: TaskEnd): "retry" | "goOn" | null =>
+	end.status === "interrupted" ? "goOn" : end.status === "failed" && end.retry ? "retry" : null;
 
 /** One AI task under way: what it ends with, and the ways to stop it or stop listening. */
 export type Task = {
@@ -80,24 +98,19 @@ export function startTask(
 			run,
 			conversation,
 		});
-		/** How a stored end reads at this place. */
-		const fromEnd = (end: RunEnd | null): TaskEnd | "goOn" => {
-			if (!end) return finish("failed", t("panel.dropped"));
+		/** How an end that the browser does not go on from reads at this place. */
+		const over = (end: RunEnd): TaskEnd => {
 			if (end.status === "done") return finish("done");
 			if (end.status === "stopped" || stopAsked) return finish("stopped");
 			if (end.status === "failed")
 				return end.error
 					? finish("failed", failureText(t, end.error), canRetry(end.error))
 					: finish("failed", t("errors.noAnswer"));
-			if (end.status === "interrupted" && (end.reason === "turns" || end.reason === "tokens"))
-				return finish("limit", t("panel.limit"));
-			// One request's time, a cut, or a run that waits on a screen (a small run has no screen tool): it goes on by itself.
-			if (end.reason === "time" || end.status === "waiting") return "goOn";
-			cuts += 1;
-			return cuts > CUTS ? finish("failed", t("panel.dropped")) : "goOn";
+			if (end.reason === "turns" || end.reason === "tokens") return finish("interrupted", t("panel.limit"));
+			return finish("interrupted", t("panel.dropped"));
 		};
-		/** Reads the run until no request holds it any more, and says how it stands. `null`: it could not be read. */
-		const standing = async (): Promise<RunEnd | "running" | null> => {
+		/** Reads the run until no request holds it any more, and gives its end. `null`: it could not be read. */
+		const standing = async (): Promise<RunEnd | null> => {
 			if (!conversation || !run) return null;
 			for (;;) {
 				const read = await transport("conversations.get", { id: conversation }).catch(() => null);
@@ -133,8 +146,11 @@ export function startTask(
 						} else if (event.type === "text") {
 							answer += event.delta;
 							on.onText?.(answer.trim());
-						} else if (event.type === "tool") turnAt = answer.length;
-						else if (event.type === "proposal") proposed = true;
+						} else if (event.type === "tool") {
+							turnAt = answer.length;
+							// A tool got through: the run moves, and the cuts before it no longer count as one place.
+							if (event.state !== "running") cuts = 0;
+						} else if (event.type === "proposal") proposed = true;
 						else if (event.type === "end") end = event;
 					}
 				} catch {
@@ -148,25 +164,32 @@ export function startTask(
 				if (!run) return reason ? refused(reason) : finish("failed", t("panel.dropped"));
 				// Going on was refused for a reason that is not the server being ahead: that reason is the end.
 				if (reason && !AHEAD.has(reason.key)) return refused(reason);
+				// The server is ahead (another page has the run, or it ended): it is read as it stands, and nothing goes on from here.
+				if (reason) {
+					const stands = await standing();
+					if (listening.signal.aborted) return null;
+					return stands ? over(stands) : finish("interrupted", t("panel.dropped"));
+				}
 			}
 			if (!end) {
 				// Cut before the run said how it ended: the words of the turn that was cut come again, and the run is read where it stands.
 				if (!run) return finish("failed", t("panel.dropped"));
 				answer = answer.slice(0, turnAt);
+				cuts += 1;
 				const stands = await standing();
 				if (listening.signal.aborted) return null;
-				end = stands === "running" ? null : stands;
-				if (stands === null) {
-					cuts += 1;
-					if (cuts > CUTS) return finish("failed", t("panel.dropped"));
+				const cutThere = stands === null || (stands.status === "interrupted" && stands.reason === "connection");
+				if (!cutThere) end = stands;
+				else if (goesOnAfterCut(cuts) && !stopAsked) {
 					request = { resume: run };
 					continue;
-				}
+				} else return stopAsked ? finish("stopped") : finish("interrupted", t("panel.dropped"));
 			}
-			const next = fromEnd(end);
-			if (next !== "goOn") return next;
-			if (stopAsked) return finish("stopped");
-			request = { resume: run, ...(end?.status === "waiting" ? { away: true } : {}) };
+			if (!end) return finish("interrupted", t("panel.dropped"));
+			const onward = onwardAfter(end, stopAsked);
+			if (onward === null) return over(end);
+			// A small run has no screen to move: what it waited on is answered as not done, and it goes on.
+			request = { resume: run, ...(onward === "screen" ? { away: true } : {}) };
 		}
 	})();
 

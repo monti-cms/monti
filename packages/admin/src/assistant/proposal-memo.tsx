@@ -1,5 +1,6 @@
 import { AiFailed, AiWorking, Marker, MemoCardPopover, MemoMessage, MemoThread } from "@monti-cms/ui";
 import { type ComponentProps, useRef } from "react";
+import { useFocusHandOff } from "../screens/frame/focus-hand-off";
 import type { Exchange } from "./use-place-requests";
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
@@ -27,6 +28,22 @@ export function CardMark({
 			{...props}
 		/>
 	);
+}
+
+/**
+ * A card whose controls come and go while the assistant works: its reply row gives way to "Generating · Stop" when a request is sent, and
+ * comes back, or a failure line with "Try again" does, when the work ends. The keyboard's focus goes with them: to "Stop", then to what
+ * is there after. A pointer's press moves nothing (`useFocusHandOff`).
+ */
+export function KeptCard(props: ComponentProps<typeof MemoCardPopover>) {
+	const keep = useFocusHandOff((card) =>
+		card.isConnected
+			? card.querySelector<HTMLElement>(
+					"[data-slot=ai-working] button, [data-slot=ai-failed] button, input, button:not([disabled])",
+				)
+			: null,
+	);
+	return <MemoCardPopover ref={keep} {...props} />;
 }
 
 /** What a card's reply row does, when the site has the assistant: sends what was written, and stops the work on it. */
@@ -141,7 +158,7 @@ export function ProposalMemo({
 }) {
 	const working = asked !== null && !failure;
 	return (
-		<MemoCardPopover
+		<KeptCard
 			anchor={anchor}
 			open={open}
 			onOpenChange={(next) => {
@@ -170,6 +187,6 @@ export function ProposalMemo({
 				onStop={reply?.onStop}
 				failure={failure}
 			/>
-		</MemoCardPopover>
+		</KeptCard>
 	);
 }

@@ -116,6 +116,24 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 		await expect.element(page.getByText("생성 중", { exact: true })).not.toBeInTheDocument();
 	});
 
+	it("10-1 pressed with the keyboard, the focus goes to '멈추기' while it works, and back to the button when it is done", async () => {
+		let answerNow = (_value: unknown) => {};
+		const held = new Promise((resolve) => {
+			answerNow = resolve;
+		});
+		const made = on("draft", [], () => held);
+		await made.run();
+		await opened();
+		await userEvent.click(subtitle());
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		expect(document.activeElement?.getAttribute("aria-label")).toBe("부제 채우기");
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => document.activeElement?.textContent).toBe("멈추기");
+		answerNow({ value: "도구보다 글" });
+		await expect.element(subtitle()).toHaveValue("도구보다 글");
+		await expect.poll(() => document.activeElement?.getAttribute("aria-label")).toBe("부제 다시 채우기");
+	});
+
 	it("10-1 '멈추기' leaves the field as it was: the answer that comes after is not put in", async () => {
 		let answerNow = (_value: unknown) => {};
 		const held = new Promise((resolve) => {
@@ -375,6 +393,38 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		await expect.poll(() => inBody("ins").map((each) => each.textContent)).toEqual(["상태도 색 대신 글자로 적었다."]);
 		// Nothing unsaved: the save cell says the two proposals still waiting (AS-18).
 		await saveCell("제안 2건 대기");
+	});
+
+	it("10-1 [AS-26] a request at a change that did not go keeps its words in the card with why and '다시 시도', which asks the same again", async () => {
+		const made = await proposed();
+		made.loaded().model.add({ fail: new ProviderError("unreachable", "socket hang up") });
+		await userEvent.click(mark(MARK).first());
+		await userEvent.fill(page.getByRole("textbox", { name: "이어서 요청" }), "더 짧게");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("Anthropic 개인 응답 없음")).toBeVisible();
+		// No toast, and the card still holds what was asked.
+		await expect.element(page.getByText("더 짧게", { exact: true })).toBeVisible();
+		expect(document.querySelectorAll("[data-sonner-toast]")).toHaveLength(0);
+		made.loaded().model.add({ text: "그대로 두는 게 낫겠습니다." });
+		await userEvent.click(button("다시 시도"));
+		await expect.element(page.getByText("Anthropic 개인 응답 없음")).not.toBeInTheDocument();
+		// The same words went again, once: the failed ask gave way to the new one.
+		const asked = made.loaded().model.turns.map((turn) => JSON.stringify(turn.messages.at(-1)));
+		expect(asked.at(-1)).toContain("더 짧게");
+		await expect.poll(() => page.getByText("더 짧게", { exact: true }).elements().length).toBe(1);
+	});
+
+	it("10-1 a failed request at a change goes with the change: discarded, the status bar no longer counts it", async () => {
+		const made = await proposed();
+		made.loaded().model.add({ fail: new ProviderError("unreachable", "socket hang up") });
+		await userEvent.click(mark(MARK).first());
+		await userEvent.fill(page.getByRole("textbox", { name: "이어서 요청" }), "더 짧게");
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("Anthropic 개인 응답 없음")).toBeVisible();
+		await expect.poll(cells).toContain("요청 1");
+		await userEvent.click(button("버리기"));
+		await expect.poll(async () => (await pending(made.loaded())).length).toBe(2);
+		await expect.poll(() => cells().some((cell) => cell?.startsWith("요청"))).toBe(false);
 	});
 
 	it("10-1 [flow 2·09] '이어서 요청' has that change made differently: the mark says '…' meanwhile, and the change is replaced where it stood", async () => {

@@ -17,6 +17,7 @@ import { MODELS_ASK_AGAIN_MS } from "../operations/models";
 import { NO_ANSWER } from "../operations/transport";
 import type { Route } from "../route";
 import { canRetry, failureIn, reasonText } from "./failure";
+import { AHEAD, goesOnAfterCut, onwardAfter, POLL_MS } from "./run-task";
 import { type ContextChip, chipsOf, contextWithout, type ToolPart } from "./words";
 
 /** One thing a turn showed, in the order it came. `stale` words are of an answer that was cut: they stay until the answer comes again. */
@@ -97,13 +98,6 @@ const named = (text: string): Queued => ({ id: `q:${Date.now()}:${Math.random().
 type Kept = { open: boolean; conversation: string | null; recent: ModelChoice[] };
 
 const KEPT = "monti.assistant";
-/** How often a run that is going somewhere else (another tab, a request that was cut) is read again. */
-const POLL_MS = 3000;
-/** How many times in a row the browser goes on by itself with a run whose request was cut, before it says so. */
-const CUTS_BEFORE_ASKING = 2;
-
-/** Why a run could not be gone on with when the server knows more of it than this page does: it is at work elsewhere, over, or not the newest. */
-const AHEAD: ReadonlySet<string> = new Set(["assistant.busy", "assistant.ended", "assistant.notNewest"]);
 
 function kept(): Kept {
 	try {
@@ -744,8 +738,8 @@ export function AssistantProvider({
 			}
 			const end = ended as RunEnd & { untaken: string[] };
 			// Where the request ended is a place the browser goes on from by itself, and the person had said stop: it does not go on.
-			const onward = end.status === "waiting" || (end.status === "interrupted" && end.reason === "time");
-			const halted = onward && here.stopAsked;
+			const onward = onwardAfter(end, false);
+			const halted = onward !== null && here.stopAsked;
 			// Words sent with "send now" that the run did not take were said first: they stand first among what waits. In a conversation
 			// that is not open they are kept for when it is.
 			if (end.untaken.length > 0 && !mine() && !gone.current && here.conversationId)
@@ -766,7 +760,7 @@ export function AssistantProvider({
 							: turn.parts,
 				}));
 			});
-			if (!halted && end.status === "waiting") {
+			if (!halted && onward === "screen") {
 				// Screen tools run here, in the browser, on the screen of the conversation that is open: a run left behind waits until its
 				// conversation is opened again.
 				if (!mine()) return;
@@ -782,7 +776,7 @@ export function AssistantProvider({
 				patchTurn(id, (turn) => ({ ...turn, status: "running", end: null }));
 				return listen({ resume: id, screen: answers }, id, here, false);
 			}
-			if (!halted && end.status === "interrupted" && end.reason === "time") {
+			if (!halted && onward === "goOn") {
 				// One request's time is up, not the run's: the next request goes on where this one stopped. Nobody presses anything, and it is
 				// so for a conversation left behind too.
 				show(() => patchTurn(id, (turn) => ({ ...turn, status: "running", end: null })));
@@ -901,7 +895,7 @@ export function AssistantProvider({
 						continue;
 					}
 					// It stopped where its request was cut. The browser goes on with it by itself, unless that keeps happening at the same place.
-					const cutShort = run.status === "interrupted" && here.cuts > 0 && here.cuts < CUTS_BEFORE_ASKING;
+					const cutShort = run.status === "interrupted" && goesOnAfterCut(here.cuts);
 					if (resume && (run.status === "waiting" || cutShort)) {
 						patchTurn(runId, (turn) => ({ ...turn, status: "running", end: null }));
 						return listen({ resume: runId, ...(run.status === "waiting" ? { away: true } : {}) }, runId, here, false);

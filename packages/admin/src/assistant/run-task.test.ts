@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StreamTransport, Transport } from "../operations/transport";
-import { startTask } from "./run-task";
+import { nextOf, startTask } from "./run-task";
 
 /** The admin's words, as the keys and their values: what a line would say. */
 const t = (key: string, values?: Record<string, string | number>) =>
@@ -56,13 +56,17 @@ describe("the runner every small AI task shares (doc 10)", () => {
 		expect(await startTask(failed("noKey"), { request: "줄여 줘" }).ended).toMatchObject({ retry: false });
 	});
 
-	it("10 reaching the turns or tokens is a limit to go on from, not a failure", async () => {
+	it("10 reaching the turns or tokens is a place to go on from, not a failure", async () => {
 		const { deps } = server([[opened, end("interrupted", { reason: "turns" })]]);
-		expect(await startTask(deps, { request: "번역" }).ended).toMatchObject({ status: "limit", why: "panel.limit" });
+		const ended = await startTask(deps, { request: "번역" }).ended;
+		expect(ended).toMatchObject({ status: "interrupted", why: "panel.limit" });
+		expect(ended && nextOf(ended)).toBe("goOn");
 	});
 
-	it("10 a request the host cut is read where it stands and goes on; a cut that keeps coming ends as a lost connection", async () => {
-		const stillThere = { c1: { runs: [{ id: "r1", status: "interrupted", end: null }] } };
+	it("10 a request the host cut is read where it stands and goes on once; cut again at the same place, it stops and leaves it to the person", async () => {
+		const stillThere = {
+			c1: { runs: [{ id: "r1", status: "interrupted", end: { status: "interrupted", reason: "connection" } }] },
+		};
 		const once = server(
 			[
 				[opened, { type: "text", delta: "끊긴 말" }, "cut"],
@@ -72,18 +76,41 @@ describe("the runner every small AI task shares (doc 10)", () => {
 		);
 		expect(await startTask(once.deps, { request: "번역" }).ended).toMatchObject({ status: "done", answer: "" });
 		expect(once.asked.at(-1)).toEqual({ resume: "r1" });
-		const always = server(
+		const twice = server(
 			[
 				[opened, "cut"],
 				[opened, "cut"],
-				[opened, "cut"],
+				[opened, end("done")],
 			],
 			stillThere,
 		);
-		expect(await startTask(always.deps, { request: "번역" }).ended).toMatchObject({
-			status: "failed",
-			why: "panel.dropped",
+		const ended = await startTask(twice.deps, { request: "번역" }).ended;
+		expect(ended).toMatchObject({ status: "interrupted", why: "panel.dropped" });
+		expect(twice.asked).toHaveLength(2);
+		expect(ended && nextOf(ended)).toBe("goOn");
+	});
+
+	it("10 a run that ended while its request was cut is read as it ended, and nothing more is asked", async () => {
+		const ended = { c1: { runs: [{ id: "r1", status: "done", end: { status: "done" } }] } };
+		const { deps, asked } = server([[opened, { type: "proposal" }, "cut"]], ended);
+		expect(await startTask(deps, { request: "번역" }).ended).toMatchObject({ status: "done", proposed: true });
+		expect(asked).toHaveLength(1);
+	});
+
+	it("10 going on refused because the server is ahead (another page has the run) reads the run and does not go on from here", async () => {
+		const elsewhere = {
+			c1: { runs: [{ id: "r1", status: "interrupted", end: { status: "interrupted", reason: "time" } }] },
+		};
+		const { deps, asked } = server([[opened, end("interrupted", { reason: "time" })]], elsewhere);
+		const busy: StreamTransport = async (name, input, options) => {
+			if (asked.length === 0) return deps.streams(name, input, options);
+			asked.push(input);
+			return { status: 409, body: { reason: { key: "assistant.busy" } } };
+		};
+		expect(await startTask({ ...deps, streams: busy }, { request: "번역" }).ended).toMatchObject({
+			status: "interrupted",
 		});
+		expect(asked).toEqual([{ request: "번역", language: "ko" }, { resume: "r1" }]);
 	});
 
 	it("10 a request refused before any run began says the server's reason; no answer at all is a lost connection", async () => {
