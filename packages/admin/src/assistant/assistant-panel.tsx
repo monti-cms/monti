@@ -30,7 +30,7 @@ import { History, HistoryFoot } from "./history";
 import { ProposalCardOf } from "./proposal-card";
 import { Prose } from "./prose";
 import { type Part, type Turn, useAssistant } from "./use-assistant";
-import { clock, groupOf, sentValue, type ToolPart, toolWords } from "./words";
+import { clock, groupOf, sameRead, sentValue, type ToolPart, toolWords } from "./words";
 
 /** For how many frames after "save and open" a focus that fell to the page is put back where it belongs (the panel may be drawn anew). */
 const FOCUS_FRAMES = 30;
@@ -41,7 +41,10 @@ const LEVELS = ["off", "low", "medium", "high"] as const satisfies readonly Thin
 /** A model as the menu names it: its key and its id in one value. */
 const choice = (keyId: string, model: string) => JSON.stringify([keyId, model]);
 
-/** What a turn showed, in runs: tool lines that came one after another are one group, and writes of one kind in a row are one line with their count. */
+/**
+ * What a turn showed, in runs: tool lines that came one after another are one group, writes of one kind in a row are one line with their
+ * count, and reads in a row that say the same are one line.
+ */
 type Segment =
 	| { kind: "tools"; lines: { part: ToolPart; times: number }[] }
 	| { kind: "text"; text: string; stale: boolean }
@@ -66,7 +69,8 @@ function segmentsOf(parts: Part[]): Segment[] {
 				before.part.state === part.state
 			)
 				before.times += 1;
-			else last.lines.push({ part, times: 1 });
+			// Reads one after another that a line says the same way are one line.
+			else if (!before || !sameRead(before.part, part)) last.lines.push({ part, times: 1 });
 		} else segments.push({ kind: "tools", lines: [{ part, times: 1 }] });
 	}
 	return segments;

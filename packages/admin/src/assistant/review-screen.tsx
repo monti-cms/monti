@@ -1,5 +1,7 @@
 import { applyOps, type BodyOp, type Doc, type Message, type ProposalItemView, storedFields } from "@monti-cms/core";
 import {
+	AiFailed,
+	AiWorking,
 	Checkbox,
 	CompareRow,
 	CompareRows,
@@ -38,6 +40,7 @@ import { changeOf } from "./proposal-card";
 import { ProposalState } from "./proposal-state";
 import { useAssistant } from "./use-assistant";
 import { standingOf, useProposal } from "./use-proposal";
+import { useRemake } from "./use-remake";
 import { clock } from "./words";
 
 /** The line effects whose names the core's messages have (doc 17). */
@@ -118,6 +121,7 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 		gone.closest("tr")?.querySelector<HTMLElement>('[role="checkbox"], input[type="checkbox"]'),
 	);
 	const proposal = useProposal(id);
+	const remake = useRemake({ settled: proposal.reload });
 	const view = proposal.view;
 	// The kinds of change that are looked at side by side: each kind has its own switch.
 	const [sideBySide, setSideBySide] = useState<ReadonlySet<string>>(new Set());
@@ -619,15 +623,26 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																	{blockedWords(blocked, entry?.collection)}
 																</Text>
 															) : null}
-															{item.stale && item.state !== "discarded" && !proposal.applying ? (
-																<TextButton
-																	ref={toCheck}
-																	variant="underline"
-																	loading={proposal.remaking === item.id}
-																	onClick={() => void proposal.remake(item.id)}
-																>
-																	{t(proposal.remaking === item.id ? "card.remaking" : "card.remake")}
-																</TextButton>
+															{remake && item.stale && item.state !== "discarded" && !proposal.applying ? (
+																remake.working.has(item.id) ? (
+																	<AiWorking onStop={() => remake.stop(item.id)} />
+																) : remake.failed.has(item.id) ? (
+																	<AiFailed
+																		onRetry={
+																			remake.failed.get(item.id)?.retry ? () => void remake.remake(item.id) : undefined
+																		}
+																	>
+																		{remake.failed.get(item.id)?.why}
+																	</AiFailed>
+																) : (
+																	<TextButton
+																		ref={toCheck}
+																		variant="underline"
+																		onClick={() => void remake.remake(item.id)}
+																	>
+																		{t("card.remake")}
+																	</TextButton>
+																)
 															) : null}
 															{entry && entryId && open ? (
 																<TextButton

@@ -99,8 +99,8 @@ describe("the settings: one proposal's own card (T41; doc 05, 'one by one')", ()
 		await userEvent.click(button("제안: 읽는 시간 필드 더해 줘"));
 		await userEvent.fill(page.getByRole("textbox", { name: "이어서 요청" }), "20자까지로 해 줘");
 		await userEvent.keyboard("{Enter}");
-		await expect.element(button("고치는 중인 제안: 읽는 시간 필드 더해 줘")).toBeVisible();
-		await expect.element(page.getByText("고치는 중…")).toBeVisible();
+		await expect.element(button("생성 중인 제안: 읽는 시간 필드 더해 줘")).toBeVisible();
+		await expect.element(page.getByText("생성 중", { exact: true })).toBeVisible();
 		release();
 		await expect.element(page.getByText("최대 글자 수를 20으로 바꿨습니다.")).toBeVisible();
 		const [field] = await waiting(made.loaded());

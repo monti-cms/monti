@@ -23,7 +23,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 언어 탭 | `TabLinks` + `TabLink`, 원문이 바뀐 언어는 `ChangeDot` | [editor.md](editor.md)와 같다. "+ 언어"도 같다. |
-| "✦ 번역" (탭 줄 오른쪽) | `TextButton tone="proposal"`(`Spark`, 일하는 동안 `loading`과 "번역하는 중…") 뒤에 `Separator orientation="vertical" length="control"` | 아직 번역 제안이 없는 흐린 블록이 남아 있을 때만 보인다. 그 블록을 모두 번역한다. 패널은 열리지 않는다. 번역은 블록마다 그 자리에 파란 글자로 온다(받기 전에는 블록의 글이 아니다). 어시스턴트가 없는 사이트에는 없다. |
+| "✦ 번역" (탭 줄 오른쪽) | `TextButton tone="proposal"`(`Spark`; 일하는 동안 그 자리에 `AiWorking` "생성 중 · 멈추기", 가지 못하면 `AiFailed` 실패 한 줄과 "다시 시도") 뒤에 `Separator orientation="vertical" length="control"` | 아직 번역 제안이 없는 흐린 블록이 남아 있거나, 번역이 일하는 중이거나 가지 못했을 때 보인다. 블록 메뉴의 "✦ 번역"과 카드의 "✦ 다시 번역"도 이 자리에 일하는 모습과 실패를 보인다. 요청 하나의 시간이 다 되면 스스로 잇는다(TR-17). 그 블록을 모두 번역한다. 패널은 열리지 않는다. 번역은 블록마다 그 자리에 파란 글자로 온다(받기 전에는 블록의 글이 아니다). 어시스턴트가 없는 사이트에는 없다. |
 | 원문 보기 "끔 · 옆 창 · 나란히" | 앞에 `Text variant="note"` "원문", 그 뒤 `Segmented size="sm" inline` | "나란히"는 나란히 보기(TranslatePaired)로 바꾼다. 파일이 올라가는 동안에는 먼저 묻는다(editor.md, "올리는 중에 묻기"). |
 | 제목 | [editor.md](editor.md)의 제목 칸 | 흐린 동안에는 `Untranslated` 안의 원문 글. 치면 흐림이 사라진다. |
 | 흐린 블록 | `Untranslated`(편집기 본문에서는 `EditorBody`의 `data-untranslated`와 `data-source-placeholder`) | 아직 정하지 않은 블록. 비어 있고 원문은 자리 표시 글로만 깔려 있다. 발행되지 않는다. 블록마다 보고 정한다. 글자를 치면 자리 표시가 사라지고 친 글만 남는다. |

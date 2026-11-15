@@ -2150,7 +2150,7 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 		expect(back.textContent).toBe("어시스턴트");
 	});
 
-	it("다시 만들기 shows that it is making the change again while it does", async () => {
+	it("다시 만들기 says '생성 중' with '멈추기' in its place while the change is made again", async () => {
 		const story = open({
 			loaders: stories.site({ script: stories.scripts(stories.proposed, stories.madeAgain) }),
 			play: stories.ReviewChangedMeanwhile.play,
@@ -2158,7 +2158,9 @@ describe("the assistant follows the design rules (design audit, 2026-11-14)", ()
 		await story.run();
 		const release = story.loaded().net.hold("assistant.run");
 		await userEvent.click(button("다시 만들기"));
-		await expect.element(button("다시 만드는 중…")).toHaveAttribute("aria-busy", "true");
+		await expect.element(page.getByText("생성 중", { exact: true })).toBeVisible();
+		await expect.element(button("멈추기")).toBeVisible();
+		await expect.element(button("다시 만들기")).not.toBeInTheDocument();
 		release();
 	});
 });

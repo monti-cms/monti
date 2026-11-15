@@ -92,7 +92,7 @@ describe("the entry editor: '✦ fill' for a picture (T104)", () => {
 		await made.run();
 		await userEvent.click(caption());
 		await userEvent.click(button("채우기"));
-		await expect.element(page.getByText("쓰는 중…")).toBeVisible();
+		await expect.element(page.getByText("생성 중", { exact: true })).toBeVisible();
 		await userEvent.keyboard("내가 쓴 캡션");
 		answerNow({ value: "늦게 온 캡션" });
 		await new Promise((resolve) => setTimeout(resolve, 300));

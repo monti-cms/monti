@@ -16,7 +16,7 @@ import { useAdmin } from "../operations/admin-context";
 import { MODELS_ASK_AGAIN_MS } from "../operations/models";
 import { NO_ANSWER } from "../operations/transport";
 import type { Route } from "../route";
-import { reasonText } from "./failure";
+import { canRetry, failureIn, reasonText } from "./failure";
 import { type ContextChip, chipsOf, contextWithout, type ToolPart } from "./words";
 
 /** One thing a turn showed, in the order it came. `stale` words are of an answer that was cut: they stay until the answer comes again. */
@@ -260,7 +260,11 @@ export function useHasAssistant(): boolean {
 }
 
 /** What a quick task answers a field with: its value, or in the field's own line why there is none. */
-export type Filled = { ok: true; value: string } | { ok: true; values: string[] } | { ok: false; why: string };
+export type Filled =
+	| { ok: true; value: string }
+	| { ok: true; values: string[] }
+	/** `retry`: asking again can go (`canRetry`). */
+	| { ok: false; why: string; retry: boolean };
 
 /**
  * "✦ Fill" (doc 10, quick tasks): one call of the quick-task model for one field's value. Nothing is stored: the screen puts the
@@ -279,44 +283,12 @@ export function useQuickFill(): ((input: Record<string, unknown>) => Promise<Fil
 							return { ok: true, ...(answer.body as { value: string } | { values: string[] }) };
 						const reason = ((answer.body ?? {}) as { reason?: Message }).reason;
 						// The field's line says why in a few words, and which key: never what the service said.
-						return { ok: false, why: reason ? reasonText(t, reason) : t("errors.noAnswer") };
+						return reason
+							? { ok: false, why: reasonText(t, reason), retry: canRetry(failureIn(reason)) }
+							: { ok: false, why: t("errors.noAnswer"), retry: true };
 					}
 				: undefined,
 		[there, transport, t],
-	);
-}
-
-/**
- * Asks the assistant to make one proposed change again on its record as it is now (a small run of its own, read to its end), from a screen
- * that shows the change where it applies: the editor's "make again" on a proposal the text moved away from. A refusal is said. Nothing on
- * a page without the assistant.
- */
-export function useRemakeItem(): ((item: string) => Promise<void>) | undefined {
-	const assistant = useContext(Context);
-	const { streams, t } = useAdmin();
-	const there = assistant?.available === true;
-	const touch = assistant?.touchProposals;
-	return useMemo(
-		() =>
-			there
-				? async (item: string) => {
-						const answer = await streams("assistant.run", { again: item });
-						if ("events" in answer) {
-							try {
-								for await (const _event of answer.events) {
-									// Nothing of it is shown but its result: the change as it was made again.
-								}
-							} catch {
-								// The connection went: the change is read again as it stands.
-							}
-						} else {
-							const reason = ((answer.body ?? {}) as { reason?: Message }).reason;
-							toast.error(reason ? reasonText(t, reason) : t("errors.unexpected"));
-						}
-						touch?.();
-					}
-				: undefined,
-		[there, streams, t, touch],
 	);
 }
 
@@ -362,7 +334,7 @@ export function AssistantProvider({
 	at: string;
 	children: ReactNode;
 }) {
-	const { transport, streams, screen, t, wrote } = useAdmin();
+	const { transport, streams, screen, t, wrote, language } = useAdmin();
 	const unsaved = useUnsavedChanges();
 	const saving = useSaveUnsaved();
 	// What the assistant last asked the screen to do and the screen did not, for its unsaved changes: the step "save and open" takes. It
@@ -987,12 +959,13 @@ export function AssistantProvider({
 					...(context ? { context } : {}),
 					...(chosen ? { model: chosen } : {}),
 					thinking: think,
+					language,
 				},
 				id,
 				here,
 			);
 		},
-		[listen, chipLabels, setBlocked],
+		[listen, chipLabels, setBlocked, language],
 	);
 
 	later.current = { ...later.current, ask, watch, runScreenTool };

@@ -69,7 +69,12 @@ export function MediaField({
 	onCard: (open: boolean) => void;
 	onChange: (next: MediaValue | null) => void;
 	/** "✦ Fill" for the picture's words, in its settings card (doc 10, quick tasks); left out where there is nobody to ask. */
-	fill?: { state: FillState; run: (media: string, put: (alt: string) => void) => void; forget: () => void };
+	fill?: {
+		state: FillState;
+		run: (media: string, put: (alt: string) => void) => void;
+		forget: () => void;
+		again: () => void;
+	};
 }) {
 	const { t } = useAdmin();
 	const acceptFiles = useAcceptFiles();
@@ -162,6 +167,8 @@ export function MediaField({
 																		cleanMediaValue({ ...now.own, media: shown.media, alt: alt.slice(0, ALT_MAX) }),
 																	);
 																}),
+															onStop: fill.forget,
+															onRetry: fill.again,
 														}
 													: undefined
 											}

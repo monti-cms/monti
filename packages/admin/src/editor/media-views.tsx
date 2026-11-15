@@ -48,12 +48,10 @@ import {
 import {
 	Edit,
 	Image as ImageIcon,
-	Renew,
 	Reset,
 	RotateClockwise,
 	RotateCounterclockwise,
 	Settings,
-	Spark,
 	TextAlignCenter,
 	TextAlignLeft,
 	TextAlignRight,
@@ -62,6 +60,7 @@ import { GapCursor } from "@tiptap/pm/gapcursor";
 import { Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { type NodeViewProps, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { type ComponentType, useContext, useEffect, useId, useRef, useState } from "react";
+import { FillAction, FillFailed } from "../assistant/fill-action";
 import { extensionLabel, formatBytes, previewUrl } from "../media/file-text";
 import { RetryButton } from "../media/upload-problem";
 import { useAdmin } from "../operations/admin-context";
@@ -749,6 +748,8 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 					fill.run(altPlace, "alt", fileId ?? "", around(), (value) =>
 						setLater(fileId ?? "", { alt: value.slice(0, ALT_MAX) }),
 					),
+				onStop: () => fill.forget(altPlace),
+				onRetry: () => fill.again(altPlace),
 			}
 		: undefined;
 	const captionFill = fill?.of(captionPlace);
@@ -790,29 +791,21 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 						{captionInput}
 					</Box>
 					{/* Empty, "✦ Fill"; with words, "↻ Again", as the alt text's (screens/common.md). */}
+					{/* The button is there only while the caret is in the caption; its work shows until it ends. */}
 					{inCaption || captionFill.working ? (
-						<TextButton
-							tone="proposal"
-							size="micro"
-							loading={captionFill.working}
-							// The press leaves the caret in the caption: the button is there only while the caret is.
-							onMouseDown={(event) => event.preventDefault()}
-							onClick={() =>
+						<FillAction
+							state={captionFill}
+							held={caption.value !== ""}
+							onFill={() =>
 								fill.run(captionPlace, "caption", fileId ?? "", around(), (value) =>
 									setLater(fileId ?? "", { caption: value }),
 								)
 							}
-						>
-							{captionFill.working ? null : caption.value ? <Renew aria-hidden /> : <Spark aria-hidden />}
-							{t(captionFill.working ? "fill.working" : caption.value ? "fill.again" : "fill.fill")}
-						</TextButton>
+							onStop={() => fill.forget(captionPlace)}
+						/>
 					) : null}
 				</Inline>
-				{captionFill.failed ? (
-					<Text as="div" variant="caption" tone="danger" align={CAPTION_ALIGN[align]}>
-						{captionFill.failed}
-					</Text>
-				) : null}
+				<FillFailed state={captionFill} onRetry={() => fill.again(captionPlace)} />
 			</Stack>
 		) : (
 			captionInput

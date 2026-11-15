@@ -22,7 +22,6 @@ import {
 	ComboboxList,
 	DragHandle,
 	FormField,
-	FormFieldError,
 	FormFieldLabel,
 	FormFieldWas,
 	IconButton,
@@ -45,8 +44,9 @@ import {
 	useComboboxAnchor,
 	useSortableItem,
 } from "@monti-cms/ui";
-import { Close, Renew, Spark } from "@monti-cms/ui/icons";
+import { Close, Renew } from "@monti-cms/ui/icons";
 import { useMemo, useState } from "react";
+import { FillAction, FillFailed } from "../../assistant/fill-action";
 import type { Fills } from "../../assistant/use-fill";
 import { ALT_MAX } from "../../editor/alt-fields";
 import type { FieldUploads } from "../../media/use-field-uploads";
@@ -684,16 +684,12 @@ export function EntryProperties({
 		const name = values[key]?.label ?? key;
 		const fillButton =
 			fills && fillTask && fillState ? (
-				<TextButton
-					tone="proposal"
-					size="micro"
-					loading={fillState.working}
-					aria-label={
-						fillState.working ? undefined : t(hasValue(held) ? "fill.againName" : "fill.name", { field: name })
-					}
-					// The press leaves the caret in the field: the row's button shows only while the field is pointed at or holds the focus.
-					onMouseDown={(event) => event.preventDefault()}
-					onClick={() =>
+				<FillAction
+					state={fillState}
+					held={hasValue(held)}
+					name={name}
+					onStop={() => fills.forget(path)}
+					onFill={() =>
 						void fills.run(
 							path,
 							{
@@ -715,12 +711,8 @@ export function EntryProperties({
 							},
 						)
 					}
-				>
-					{fillState.working ? null : hasValue(held) ? <Renew aria-hidden /> : <Spark aria-hidden />}
-					{t(fillState.working ? "fill.working" : hasValue(held) ? "fill.again" : "fill.fill")}
-				</TextButton>
+				/>
 			) : null;
-		const fillFailed = fillState?.failed ?? null;
 		const proposedLabel = proposed
 			? {
 					label: t("ui.proposal"),
@@ -844,6 +836,7 @@ export function EntryProperties({
 							? {
 									state: fills.of(`alt:${path}`),
 									forget: () => fills.forget(`alt:${path}`),
+									again: () => fills.again(`alt:${path}`),
 									run: (file, put) =>
 										void fills.run(
 											`alt:${path}`,
@@ -929,7 +922,6 @@ export function EntryProperties({
 						id={id}
 						size="md"
 						mono
-						aria-invalid={fillFailed !== null || undefined}
 						value={text}
 						placeholder={empty}
 						disabled={readOnly}
@@ -952,7 +944,6 @@ export function EntryProperties({
 						value={text}
 						placeholder={empty}
 						maxLength={def.max}
-						aria-invalid={fillFailed !== null || undefined}
 						disabled={readOnly}
 						proposal={proposal}
 						onChange={(event) => setField(path, event.target.value)}
@@ -965,7 +956,6 @@ export function EntryProperties({
 						value={text}
 						placeholder={empty}
 						maxLength={def.max}
-						aria-invalid={fillFailed !== null || undefined}
 						disabled={readOnly}
 						proposal={proposal}
 						onChange={(event) => setField(path, event.target.value)}
@@ -1076,7 +1066,7 @@ export function EntryProperties({
 				</FormFieldLabel>
 				{input()}
 				{was}
-				{fillFailed ? <FormFieldError>{fillFailed}</FormFieldError> : null}
+				{fills && fillState ? <FillFailed state={fillState} onRetry={() => fills.again(path)} /> : null}
 				{strays.length > 0 ? (
 					<Text variant="caption" tone="warning">
 						{t("entry.notAnOption", { option: strays.join(", ") })}

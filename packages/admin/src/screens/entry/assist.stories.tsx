@@ -61,14 +61,14 @@ export const FieldFilled: Story = {
 	},
 };
 
-/** A field being filled: the button says "writing…". */
+/** A field being filled: "생성 중 · 멈추기" in the button's place. */
 export const FieldFilling: Story = {
 	loaders: [assisted([], () => never), ...site("draft")],
 	play: async ({ canvasElement }) => {
 		const { page } = await opened(canvasElement);
 		await userEvent.click(await page.findByRole("textbox", { name: "부제" }, wait));
 		await userEvent.click(await page.findByRole("button", { name: "부제 채우기" }, wait));
-		await page.findByText("쓰는 중…", {}, wait);
+		await page.findByText("생성 중", {}, wait);
 	},
 };
 
@@ -137,7 +137,7 @@ export const RequestWorking: Story = {
 			await all.findByRole("textbox", { name: "어시스턴트에게 요청" }, wait),
 			"뒤 문장만 줄여 줘{Enter}",
 		);
-		await all.findByText("고치는 중…", {}, wait);
+		await all.findByText("생성 중", {}, wait);
 	},
 };
 

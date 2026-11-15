@@ -1,16 +1,6 @@
-import {
-	FormField,
-	FormFieldError,
-	FormFieldLabel,
-	Inline,
-	Input,
-	Option,
-	Switch,
-	Text,
-	TextButton,
-} from "@monti-cms/ui";
-import { Renew, Spark } from "@monti-cms/ui/icons";
+import { FormField, FormFieldError, FormFieldLabel, Inline, Input, Option, Switch, Text } from "@monti-cms/ui";
 import { useId } from "react";
+import { FillAction, FillFailed } from "../assistant/fill-action";
 import type { FillState } from "../assistant/use-fill";
 import { useAdmin } from "../operations/admin-context";
 import { useComposedValue } from "./use-composed-value";
@@ -48,7 +38,7 @@ export function AltFields({
 	 * "✦ Fill" (doc 10, quick tasks): the quick-task model looks at the picture and writes its words. On the label row before the count.
 	 * Left out where there is nothing to ask (no assistant, no key, a read-only entry).
 	 */
-	fill?: { state: FillState; onFill: () => void };
+	fill?: { state: FillState; onFill: () => void; onStop: () => void; onRetry: () => void };
 }) {
 	const { t } = useAdmin();
 	const id = useId();
@@ -62,17 +52,7 @@ export function AltFields({
 						action={
 							<Inline gap={8} align="baseline">
 								{fill && !readOnly ? (
-									<TextButton
-										tone="proposal"
-										size="micro"
-										loading={fill.state.working}
-										// The press leaves the caret in the box.
-										onMouseDown={(event) => event.preventDefault()}
-										onClick={fill.onFill}
-									>
-										{fill.state.working ? null : alt.value ? <Renew aria-hidden /> : <Spark aria-hidden />}
-										{t(fill.state.working ? "fill.working" : alt.value ? "fill.again" : "fill.fill")}
-									</TextButton>
+									<FillAction state={fill.state} held={alt.value !== ""} onFill={fill.onFill} onStop={fill.onStop} />
 								) : null}
 								<Text variant="micro" tone="subtle">
 									{t("entry.count", { count: alt.value.length, max: ALT_MAX })}
@@ -91,7 +71,6 @@ export function AltFields({
 						placeholder={placeholder}
 						// What a fill wrote is blue until it is changed (components/proposal.md, filling a field).
 						proposal={fill !== undefined && alt.value !== "" && fill.state.filled === alt.value}
-						aria-invalid={Boolean(fill?.state.failed) || undefined}
 						value={alt.value}
 						onChange={(event) => alt.change(event.target.value)}
 						{...alt.composition}
@@ -103,7 +82,7 @@ export function AltFields({
 						}}
 					/>
 					{fill?.state.failed ? (
-						<FormFieldError>{fill.state.failed}</FormFieldError>
+						<FillFailed state={fill.state} onRetry={fill.onRetry} />
 					) : (
 						missing && <FormFieldError>{t("editor.image.altMissing")}</FormFieldError>
 					)}

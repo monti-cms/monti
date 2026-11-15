@@ -18,7 +18,7 @@ export type ToolPart = {
 	progress?: { done: number; total: number };
 };
 
-/** What a read reads, and what its count counts. A read the admin has no word for is called by its own name. */
+/** What a read reads, and what its count counts. A read the admin has no word for reads "the site's data": never an operation's name. */
 const READS: Record<string, { what: string; unit?: "Entries" | "Files" }> = {
 	"entries.query": { what: "entries", unit: "Entries" },
 	"entries.get": { what: "entry", unit: "Entries" },
@@ -34,6 +34,28 @@ const READS: Record<string, { what: string; unit?: "Entries" | "Files" }> = {
 	"blocks.catalog": { what: "blocks" },
 };
 
+/** A read of an operation the admin has no word for (a plugin's, one added since): the person is never shown an operation's name. */
+const OTHER_READ = { what: "site" } as const;
+
+/** The read a call is, in the admin's words; `null` for a write or a screen tool. */
+const readOf = (part: ToolPart): { what: string; unit?: "Entries" | "Files" } | null =>
+	READS[part.name] ?? (part.kind === "read" || part.kind === "unknown" ? OTHER_READ : null);
+
+/** Two reads one after the other that a line says the same way ("read an entry", then the entry's body): one line is enough. */
+export function sameRead(before: ToolPart, part: ToolPart): boolean {
+	const was = readOf(before);
+	const now = readOf(part);
+	return (
+		was !== null &&
+		now !== null &&
+		was.what === now.what &&
+		before.state === part.state &&
+		before.count === part.count &&
+		before.progress === undefined &&
+		part.progress === undefined
+	);
+}
+
 const SCREEN: Record<string, string> = {
 	"screen.openEntry": "panel.screen.openEntry",
 	"list.show": "panel.screen.listShow",
@@ -48,11 +70,12 @@ export const groupOf = (input: unknown): string | null => {
 
 /**
  * What a tool line says (doc 10, item 25). A read: what it reads, and how many it read once it has. A write: the name of its kind of change, with
- * how many calls of that kind came one after another (`times`). A screen tool: what the screen did. Any other operation: its own name.
+ * how many calls of that kind came one after another (`times`). A screen tool: what the screen did. An operation the admin has no word for
+ * reads "the site's data", or is "a change" when it writes: the person never sees an operation's name.
  * `cut`: the run ended while this call was going, so the line says it stopped there.
  */
 export function toolWords(part: ToolPart, t: Translate, { times = 1, cut = false } = {}): string {
-	const read = READS[part.name];
+	const read = readOf(part);
 	if (read) {
 		const what = t(`panel.what.${read.what}`);
 		if (cut) return t("panel.stoppedAt", { what });
@@ -68,7 +91,7 @@ export function toolWords(part: ToolPart, t: Translate, { times = 1, cut = false
 		return t(screen, { count: Array.isArray(ids) ? ids.length : 0 });
 	}
 	const group = groupOf(part.input);
-	const what = group ?? part.name;
+	const what = group ?? t("panel.what.change");
 	if (cut) return t("panel.stoppedAt", { what });
 	return part.kind === "write" && group ? t("panel.wrote", { group, count: times }) : what;
 }
