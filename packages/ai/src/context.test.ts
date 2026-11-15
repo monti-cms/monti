@@ -27,3 +27,14 @@ describe("a set request of the editor's buttons (doc 10, item 19)", () => {
 		expect(ScreenContext.safeParse({ screen: "entry", task: "delete everything" }).success).toBe(false);
 	});
 });
+
+describe("the language the assistant answers in (doc 10, TR-19)", () => {
+	it("10 a request names the admin's language, whatever language the content is in", () => {
+		const said = requestWith("번역", ScreenContext.parse({ screen: "entry", task: "translate" }), "ko");
+		expect(said).toContain("Answer in Korean, the admin's language.");
+		// It comes before the screen's data, as the request's own words.
+		expect(said.indexOf("Answer in Korean")).toBeLessThan(said.indexOf("<screen"));
+		expect(requestWith("요약 써 줘", null, "en")).toBe("요약 써 줘\n\nAnswer in English, the admin's language.");
+		expect(requestWith("요약 써 줘", null)).toBe("요약 써 줘");
+	});
+});

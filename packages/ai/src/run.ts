@@ -145,6 +145,8 @@ export const RunInput = z
 		item: z.string().optional(),
 		/** A proposal item to make again on its record as it is now ("make again"). */
 		again: z.string().optional(),
+		/** The admin's language (`ko`): the assistant answers in it, whatever language the content is in. */
+		language: z.string().min(2).max(16).optional(),
 	})
 	.refine((input) => [input.request, input.resume, input.again].filter((given) => given !== undefined).length === 1, {
 		message: "Give a request, a run to resume, or an item to make again: one of them.",
@@ -1242,7 +1244,12 @@ async function open(monti: Monti, input: RunInput, until: Date): Promise<RunRow>
 			if (isGone(error)) throw new CheckError({ key: "assistant.noConversation" });
 			throw error;
 		});
-	await append(db, run.id, { role: "user", text: `${requestWith(request, input.context ?? null)}${about}` }, now);
+	await append(
+		db,
+		run.id,
+		{ role: "user", text: `${requestWith(request, input.context ?? null, input.language)}${about}` },
+		now,
+	);
 	return {
 		...run,
 		position: placed.position,
