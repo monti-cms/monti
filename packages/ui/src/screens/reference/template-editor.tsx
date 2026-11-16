@@ -48,7 +48,7 @@ export function TemplateEditorScreen() {
 						<li className="relative" data-menu-open="">
 							{/* design-allow: the handle floats in the margin beside the block, where the editor's overlay puts it (28px left of the list, 3px down: the 20 × 24 handle centred on the 30px line) */}
 							<span className="absolute" style={{ top: 3, left: -56 }}>
-								<BlockHandle gripLabel="블록 메뉴" hint="끌어 옮기기 · 눌러 메뉴" active />
+								<BlockHandle gripLabel="블록 메뉴" active />
 							</span>
 							첫 번째 요점
 						</li>

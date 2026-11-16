@@ -559,7 +559,7 @@ export function listCompose(sources, { allowed = LIST_COMPOSE_OK } = {}) {
 /**
  * `overlay-place`: what floats over the editor's text or margin stands where `Anchored` (`packages/ui/src/anchored.tsx`, with the numbers in
  * `placement.ts`) puts it (overlay.md, "자리 규칙"). Two things are refused in the code of `packages/ui/src`, `packages/admin/src` and
- * `packages/blocks`, outside the placement part and `OVERLAY_PLACE_OK`:
+ * `packages/blocks` (the blocks' editor views too), outside the placement part and `OVERLAY_PLACE_OK`:
  *
  * - `EditorOverlay`, the part `Anchored` took the place of, written in code.
  * - A file that measures with `coordsAtPos` or `getBoundingClientRect` and hands the result to a `top=` or `left=` prop, to the `top` or `left` of a

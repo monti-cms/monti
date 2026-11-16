@@ -1089,7 +1089,20 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 		await proposed();
 		const dock = () => document.querySelector("[data-slot=proposal-bubble-dock]") as HTMLElement;
 		await expect.poll(dock).not.toBeNull();
-		for (let at: HTMLElement | null = dock().parentElement; at; at = at.parentElement) at.scrollTop = at.scrollHeight;
+		const scrollers = () => {
+			const found: HTMLElement[] = [];
+			for (let at: HTMLElement | null = dock().parentElement; at; at = at.parentElement)
+				if (at.scrollHeight > at.clientHeight) found.push(at);
+			return found;
+		};
+		// Mid-scroll the bar floats at the window's foot over what scrolls under it (it is the one thing that stays and may cover words, overlay.md): it
+		// is whole in the window there.
+		for (const at of scrollers()) at.scrollTop = at.scrollHeight / 3;
+		await expect
+			.poll(() => dock().firstElementChild?.getBoundingClientRect().bottom ?? 0)
+			.toBeLessThanOrEqual(window.innerHeight);
+		// At the end of the text it stands in the room the body keeps for it and covers no words.
+		for (const at of scrollers()) at.scrollTop = at.scrollHeight;
 		await expect.poll(() => coversText(dock(), body().element())).toEqual([]);
 	});
 

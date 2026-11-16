@@ -178,29 +178,20 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 		return () => window.removeEventListener("mousemove", move);
 	}, [editor, point]);
 
-	// The handle follows its block when the page scrolls or the block moves, and goes when the block has gone or the person types.
+	// The handle goes when the person types or the body changes (`Anchored` follows its block as the page scrolls).
 	useEffect(() => {
 		// The text's element is taken once: the listener is taken off that same one, even when the editor has been destroyed in between.
 		const dom = liveDom(editor);
 		if (!editor || !dom || !spot) return;
-		const follow = () => {
-			const current = element.current;
-			if (!current?.isConnected) return setSpot(null);
-			setSpot((now) => (now ? spotOf(current, now.pos) : now));
-		};
 		// A modifier held alone is no typing: Shift is held to reach a handle and add its block to the pick.
 		const typing = (event: KeyboardEvent) =>
 			!open && !["Shift", "Meta", "Control", "Alt"].includes(event.key) && setSpot(null);
 		// A change of the body moves its blocks: the place the handle knew is another block's now, or none's. It goes, as when a key is pressed, unless its
 		// menu is open or its block is in hand (those changes are its own, and it is put away when they end).
 		const changed = () => !open && !held && setSpot(null);
-		window.addEventListener("scroll", follow, true);
-		window.addEventListener("resize", follow);
 		dom.addEventListener("keydown", typing);
 		editor.on("update", changed);
 		return () => {
-			window.removeEventListener("scroll", follow, true);
-			window.removeEventListener("resize", follow);
 			dom.removeEventListener("keydown", typing);
 			editor.off("update", changed);
 		};
@@ -324,11 +315,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 	const overlay = () => {
 		if (marquee.box)
 			return (
-				<Anchored
-					anchor={{ spot: () => marquee.box ?? { left: 0, top: 0 } }}
-					place="over-box"
-					size={{ width: marquee.box.width, height: marquee.box.height }}
-				>
+				<Anchored anchor={{ spot: () => marquee.box ?? { left: 0, top: 0 } }} place="over-box">
 					<PickBox />
 				</Anchored>
 			);
@@ -340,9 +327,15 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 					</Anchored>
 					{held.drop ? (
 						<Anchored
-							anchor={{ spot: () => ({ left: (held.drop?.line.left ?? 0) - RING_OUT, top: held.drop?.line.top ?? 0 }) }}
+							anchor={{
+								spot: () => ({
+									left: (held.drop?.line.left ?? 0) - RING_OUT,
+									top: held.drop?.line.top ?? 0,
+									width: (held.drop?.line.width ?? 0) + RING_OUT,
+									height: 2,
+								}),
+							}}
 							place="over-box"
-							size={{ width: held.drop.line.width + RING_OUT }}
 						>
 							<DropLine />
 						</Anchored>
@@ -350,6 +343,8 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 				</>
 			);
 		if (!editor || !spot || !editor.isEditable) return null;
+		// Its block may be drawn anew under the pointer: the handle goes with the old one.
+		if (!spot.element.isConnected) return null;
 		const { doc } = editor.state;
 		// The body may have changed under the pointer with no key pressed (a cut from the menu, an upload taken out): the handle's block may be gone,
 		// its place past the end of what is left. It goes with its block; the next move of the pointer finds the block there now.
@@ -388,7 +383,6 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 					<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
 						<BlockHandle
 							gripLabel={t("editor.blockMenu")}
-							hint={t("editor.blockHint")}
 							active={open}
 							onPointerDown={pressGrip}
 							trigger={(grip) => <DropdownMenuTrigger render={grip} />}
@@ -438,7 +432,6 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 					<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
 						<BlockHandle
 							gripLabel={t("editor.blockMenu")}
-							hint={t("editor.blockHint")}
 							active={open}
 							onPointerDown={pressGrip}
 							trigger={(grip) => <DropdownMenuTrigger render={grip} />}
@@ -478,7 +471,6 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 				<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
 					<BlockHandle
 						gripLabel={t("editor.blockMenu")}
-						hint={t("editor.blockHint")}
 						active={open}
 						onPointerDown={pressGrip}
 						trigger={(grip) => <DropdownMenuTrigger render={grip} />}

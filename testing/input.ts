@@ -159,29 +159,87 @@ export function rowHeights(table: Element): number[] {
 	return [...new Set(heights.filter((height) => height > 0))];
 }
 
-/**
- * The words of `body` that `floating` covers: a thing that stays while a person edits (the format card, a block's tool row, a table's grips and +
- * strips, the block handle, the review bar) covers none (docs/design/admin/components/overlay.md, "자리 규칙"). Each word's line is measured as the
- * browser lays it out (the rects of its text), so a thing over padding or a margin covers nothing. Words inside `floating` itself are not the body's.
- * Empty when nothing is covered; otherwise what was covered, with the overlap in px.
- *
- * Cannot see: a thing that covers words by its own drawing but not by its box (a shadow), and whether words that are covered are text or a
- * decoration a person does not read.
- */
-export function coversText(floating: Element, body: Element): string[] {
-	const over = floating.getBoundingClientRect();
-	const covered: string[] = [];
+type Box = { left: number; right: number; top: number; bottom: number };
+
+/** The boxes a floating thing takes the pointer in: its own, and the 24px layers (`::after`) that reach out of it and of what it holds. */
+function pressBoxes(floating: Element): Box[] {
+	const boxes: Box[] = [];
+	for (const each of [floating, ...floating.querySelectorAll("*")]) {
+		const own = each.getBoundingClientRect();
+		boxes.push(own);
+		const layer = getComputedStyle(each, "::after");
+		if (layer.position !== "absolute") continue;
+		const width = Number.parseFloat(layer.width);
+		const height = Number.parseFloat(layer.height);
+		if (!(width > 0 && height > 0)) continue;
+		// The layers are centred on what they hang off.
+		const x = own.left + own.width / 2;
+		const y = own.top + own.height / 2;
+		boxes.push({ left: x - width / 2, right: x + width / 2, top: y - height / 2, bottom: y + height / 2 });
+	}
+	return boxes;
+}
+
+/** The lines of the text a person reads in `body`, each as its line box (the line height, not the glyphs' box): words, list markers, check boxes, empty lines and their placeholders. */
+function textLines(body: Element, floating: Element): { words: string; box: Box }[] {
+	const lines: { words: string; box: Box }[] = [];
 	const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
 	for (let node = walker.nextNode(); node; node = walker.nextNode()) {
 		const words = node.textContent?.trim();
 		if (!words || floating.contains(node)) continue;
+		const parent = node.parentElement as Element;
+		const style = getComputedStyle(parent);
+		const height = Number.parseFloat(style.lineHeight) || Number.parseFloat(style.fontSize) * 1.2;
 		const range = document.createRange();
 		range.selectNodeContents(node);
 		for (const line of range.getClientRects()) {
-			const across = Math.min(line.right, over.right) - Math.max(line.left, over.left);
-			const down = Math.min(line.bottom, over.bottom) - Math.max(line.top, over.top);
-			if (across > 1 && down > 1) covered.push(`"${words.slice(0, 24)}" ${Math.round(across)}×${Math.round(down)}`);
+			const middle = (line.top + line.bottom) / 2;
+			const tall = Math.max(line.height, height);
+			lines.push({
+				words: words.slice(0, 24),
+				box: { left: line.left, right: line.right, top: middle - tall / 2, bottom: middle + tall / 2 },
+			});
 		}
 	}
+	// A list's marker stands in the list's own padding, left of its item's first line.
+	for (const item of body.querySelectorAll("li")) {
+		const text = document.createTreeWalker(item, NodeFilter.SHOW_TEXT).nextNode();
+		const first = text && !floating.contains(text) ? text.parentElement?.getBoundingClientRect() : null;
+		if (!first) continue;
+		const left = item.getBoundingClientRect().left;
+		lines.push({ words: "list marker", box: { left: left - 20, right: left, top: first.top, bottom: first.bottom } });
+	}
+	for (const box of body.querySelectorAll("[data-check]"))
+		lines.push({ words: "check box", box: box.getBoundingClientRect() });
+	// An empty line (where the caret waits) and what a placeholder says on it.
+	for (const block of body.querySelectorAll("p, h1, h2, h3, h4, li")) {
+		if (block.textContent?.trim() || block.querySelector("img, svg, [data-check]")) continue;
+		lines.push({ words: block.getAttribute("data-placeholder") ?? "empty line", box: block.getBoundingClientRect() });
+	}
+	return lines;
+}
+
+/**
+ * The words of `body` that `floating` covers: a thing that stays while a person edits (the format card, a block's tool row, a table's grips and +
+ * strips, the block handle, the review bar) covers none (docs/design/admin/components/overlay.md, "자리 규칙"). A thing covers where it takes the
+ * pointer, so its 24px layers count with its own box. What it covers is read as the line boxes of the body's lines, not the glyphs: words, list
+ * markers, check boxes, and the empty line the caret waits on with its placeholder. Words inside `floating` itself are not the body's.
+ * Empty when nothing is covered; otherwise what was covered, with the overlap in px.
+ *
+ * Cannot see: a thing that covers words by its own drawing but not by its box (a shadow), whether words that are covered are text or a decoration a
+ * person does not read, and a marker a list draws by a style this does not know.
+ */
+export function coversText(floating: Element, body: Element): string[] {
+	const boxes = pressBoxes(floating);
+	const covered: string[] = [];
+	for (const { words, box } of textLines(body, floating))
+		for (const over of boxes) {
+			const across = Math.min(box.right, over.right) - Math.max(box.left, over.left);
+			const down = Math.min(box.bottom, over.bottom) - Math.max(box.top, over.top);
+			if (across > 1 && down > 1) {
+				covered.push(`"${words}" ${Math.round(across)}×${Math.round(down)}`);
+				break;
+			}
+		}
 	return covered;
 }

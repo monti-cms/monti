@@ -1045,11 +1045,7 @@ const OFF_SCALE_SPACE = new Map([
 	["ui/src/marker.tsx", "the marker's 5px end beside its 10px letters"],
 	[
 		"ui/src/placement.ts",
-		"the room above a block for its tool row: the row's 36px and the 8px under it (TOOL_ROW_HEIGHT, TOOL_ROW_GAP)",
-	],
-	[
-		"ui/src/editor-body.tsx",
-		"the same room above a picture, a file and a code block: the tool row's 36px and the 8px under it (TOOL_ROW_ROOM)",
+		"the room above a block for its tool row: the row's 36px and the 8px under it (TOOL_ROW_ROOM)",
 	],
 	[
 		"ui/src/menu-parts.tsx",
@@ -1501,7 +1497,11 @@ function checkParts() {
 	report("required-mark", requiredMark({ ...sources, ...messages }));
 	report("mono-props", monoProps(sources, { texts }));
 	report("list-compose", listCompose(sources));
-	report("overlay-place", overlayPlace(sources));
+	// The blocks' editor views too (`packages/blocks/blocks`): they float tools over the text as the admin's own editor does.
+	const blocks = Object.fromEntries(
+		sourcesUnder(path.join(root, "packages/blocks/blocks")).map((file) => [rel(file), readFileSync(file, "utf8")]),
+	);
+	report("overlay-place", overlayPlace({ ...sources, ...blocks }));
 }
 checkParts();
 

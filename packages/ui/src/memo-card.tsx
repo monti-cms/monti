@@ -8,7 +8,7 @@ import { CutWords } from "./cut-words";
 import { IconButton } from "./icon-button";
 import { ArrowUp } from "./icons";
 import { MENU_CARD, MENU_MOTION } from "./menu-parts";
-import { usePlacementPadding } from "./placement";
+import { FIRST_PASS, FIT_HEIGHT, usePlacementPadding } from "./placement";
 import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -253,6 +253,7 @@ function MemoCardPopover({
 			<PopoverPrimitive.Portal>
 				<PopoverPrimitive.Positioner
 					collisionPadding={placement}
+					style={FIRST_PASS}
 					anchor={anchor}
 					side="bottom"
 					align="start"
@@ -260,7 +261,11 @@ function MemoCardPopover({
 					className="isolate z-50"
 				>
 					{/* The text keeps the focus: the card opens beside what is being read, and its buttons are a press away. */}
-					<PopoverPrimitive.Popup render={<MemoCard {...card} />} className={MENU_MOTION} initialFocus={false} />
+					<PopoverPrimitive.Popup
+						render={<MemoCard {...card} />}
+						className={cn(MENU_MOTION, FIT_HEIGHT, "overflow-y-auto")}
+						initialFocus={false}
+					/>
 				</PopoverPrimitive.Positioner>
 			</PopoverPrimitive.Portal>
 		</PopoverPrimitive.Root>

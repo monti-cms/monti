@@ -782,7 +782,8 @@ describe("an image in the text", () => {
 			.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: box.left, clientY: box.top }));
 		window.dispatchEvent(new PointerEvent("pointermove", { clientX: box.left - 150, clientY: box.top }));
 		await expect.poll(() => image().element().getBoundingClientRect().width).toBeLessThan(before - 100);
-		window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+		// A real Esc, from the keyboard: it reaches the window though a floating tool row stands over the picture.
+		await userEvent.keyboard("{Escape}");
 		await expect.poll(() => image().element().getBoundingClientRect().width).toBe(before);
 	});
 
@@ -1209,11 +1210,11 @@ describe("selecting, copying and cutting across a picture", () => {
 
 	it("a picture keeps the room of its tool row above it, shown or not, and the row covers no words of the text", async () => {
 		await WithImage.run();
-		const block = () => body().element().querySelector("[data-block=image]") as HTMLElement;
+		const block = () => body().element().querySelector("[data-block=image] [data-slot=block-box]") as HTMLElement;
 		const words = first().element();
 		// With no row shown, the room is already there: the row's 36px and the 8px under it.
 		const room = () => block().getBoundingClientRect().top - words.getBoundingClientRect().bottom;
-		expect(room()).toBeGreaterThanOrEqual(44);
+		await expect.poll(room).toBeGreaterThanOrEqual(44);
 		await userEvent.click(body().getByRole("img", { name: "아침 책상" }));
 		const bar = body().getByRole("toolbar");
 		await expect.element(bar).toBeVisible();

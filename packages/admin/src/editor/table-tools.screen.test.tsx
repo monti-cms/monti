@@ -91,4 +91,19 @@ describe("a table's tools", () => {
 		}
 		expect(onTopOf(column)).toBe(column);
 	});
+
+	it("the + strips follow the table's size: a cell's words wrapping make the table taller, and the right strip is as tall as it is", async () => {
+		await TableGrips.run();
+		await toRightStrip();
+		await expect.element(addColumn()).toBeVisible();
+		const strip = () => addColumn().element().getBoundingClientRect().height;
+		const height = () => table().element().getBoundingClientRect().height;
+		await expect.poll(strip).toBeCloseTo(height(), 0);
+		const before = height();
+		await userEvent.click(body().getByRole("cell", { name: "편집기 다시 만들기" }));
+		await userEvent.keyboard(" 그리고 한 칸의 글이 길어져서 여러 줄로 나뉘어 표가 더 높아지는 경우".repeat(3));
+		await expect.poll(height).toBeGreaterThan(before + 20);
+		await toRightStrip();
+		await expect.poll(() => Math.abs(strip() - height())).toBeLessThan(1.5);
+	});
 });

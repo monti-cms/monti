@@ -32,7 +32,6 @@ function PopoverContent({
 	anchor,
 	width = "md",
 	padding = "default",
-	scroll = false,
 	...props
 }: PopoverPrimitive.Popup.Props &
 	Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor"> & {
@@ -40,8 +39,6 @@ function PopoverContent({
 		width?: keyof typeof POPOVER_WIDTH;
 		/** `menu` for a list of rows (6px, as a menu card); `default` for a small form or a note (12px above, 16 at the sides and below); `none` when the content brings its own rows (a calendar) and runs to the edge. */
 		padding?: "default" | "menu" | "none";
-		/** Scrolls inside when taller than the space left on screen. */
-		scroll?: boolean;
 	}) {
 	const placement = usePlacementPadding();
 	return (
@@ -65,7 +62,8 @@ function PopoverContent({
 						POPOVER_WIDTH[width],
 						padding === "default" && "px-monti-16 pt-monti-12 pb-monti-16",
 						padding === "menu" && "gap-0 p-monti-6",
-						scroll && [FIT_HEIGHT, "overflow-y-auto"],
+						FIT_HEIGHT,
+						"overflow-y-auto",
 						className,
 					)}
 					{...props}

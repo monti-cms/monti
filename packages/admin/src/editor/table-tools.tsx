@@ -27,8 +27,9 @@ const KEY_STEP_LARGE = 10;
 /** A border being dragged: whose table, which border, where the drag started and the shares then. */
 type Drag = { tablePos: number; at: number; startX: number; x: number; width: number; shares: number[] };
 
-/** How thick the + strips are: they lie inside the table's right and bottom edge, in the cells' own padding (8px across, 6px down), over no text. */
-const STRIP = 8;
+/** How thick the + strips are: they lie inside the table's right and bottom edge, in the cells' own padding (8px at the sides, 6px above and below), no thicker, so they cover no text. */
+const STRIP_COLUMN = 8;
+const STRIP_ROW = 6;
 
 type Caret = { tablePos: number; row: number; column: number; rows: number; columns: number };
 
@@ -85,7 +86,7 @@ export function useTableTools(editor: Editor | null) {
 		const table = target.closest("table");
 		if (!table || !editor.view.dom.contains(table)) {
 			const current = hovered === null ? null : tableElement(editor, hovered)?.getBoundingClientRect();
-			const reach = STRIP;
+			const reach = STRIP_COLUMN;
 			const near =
 				current && x >= current.left && x <= current.right + reach && y >= current.top && y <= current.bottom + reach;
 			if (!near) setHovered(null);
@@ -271,7 +272,6 @@ export function useTableTools(editor: Editor | null) {
 			const x = box.left + (now.slice(0, at + 1).reduce((sum, share) => sum + share, 0) / 100) * box.width;
 			return { left: x - BORDER / 2, top: box.top, width: BORDER, height: box.height };
 		};
-		const box = table.getBoundingClientRect();
 		return shares.slice(0, -1).map((_, at) => {
 			return (
 				<Anchored
@@ -279,14 +279,20 @@ export function useTableTools(editor: Editor | null) {
 					key={at}
 					anchor={{ spot: spotAt(at), context: table }}
 					place="over-box"
-					size={{ width: BORDER, height: box.height }}
 				>
 					<TableColumnBorder
 						label={t("table.border", { left: at + 1, right: at + 2 })}
 						active={drag?.at === at}
 						onPointerDown={(event) => {
 							event.currentTarget.setPointerCapture(event.pointerId);
-							setDrag({ tablePos, at, startX: event.clientX, x: event.clientX, width: box.width, shares });
+							setDrag({
+								tablePos,
+								at,
+								startX: event.clientX,
+								x: event.clientX,
+								width: table.getBoundingClientRect().width,
+								shares,
+							});
 						}}
 						onPointerMove={(event) => {
 							if (drag?.at === at) setDrag({ ...drag, x: event.clientX });
@@ -311,26 +317,21 @@ export function useTableTools(editor: Editor | null) {
 		if (hovered === null) return null;
 		const table = tableElement(editor, hovered);
 		if (!table) return null;
-		const box = table.getBoundingClientRect();
 		// Inside the table's edge, as long as the edge (the box is read again as the page moves).
 		const column = () => {
 			const now = table.getBoundingClientRect();
-			return { left: now.right - STRIP, top: now.top, width: STRIP, height: now.height };
+			return { left: now.right - STRIP_COLUMN, top: now.top, width: STRIP_COLUMN, height: now.height };
 		};
 		const bottom = () => {
 			const now = table.getBoundingClientRect();
-			return { left: now.left, top: now.bottom - STRIP, width: now.width, height: STRIP };
+			return { left: now.left, top: now.bottom - STRIP_ROW, width: now.width, height: STRIP_ROW };
 		};
 		return (
 			<>
-				<Anchored
-					anchor={{ spot: column, context: table }}
-					place="over-box"
-					size={{ width: STRIP, height: box.height }}
-				>
+				<Anchored anchor={{ spot: column, context: table }} place="over-box">
 					<TableAddStrip label={t("table.addColumn")} onClick={() => addAtEnd(hovered, "column")} />
 				</Anchored>
-				<Anchored anchor={{ spot: bottom, context: table }} place="over-box" size={{ width: box.width, height: STRIP }}>
+				<Anchored anchor={{ spot: bottom, context: table }} place="over-box">
 					<TableAddStrip label={t("table.addRow")} onClick={() => addAtEnd(hovered, "row")} />
 				</Anchored>
 			</>

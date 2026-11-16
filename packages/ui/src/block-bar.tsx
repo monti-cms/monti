@@ -2,6 +2,7 @@
 
 import type { ComponentProps, ReactNode, Ref } from "react";
 import { cn } from "./cn";
+import { TOOL_ROW_ROOM } from "./placement";
 
 /** A corner of a block, by the compass. */
 type BlockCorner = "nw" | "ne" | "sw" | "se";
@@ -54,6 +55,7 @@ function BlockBox({
 	width,
 	selected = false,
 	pointable = false,
+	toolRow = false,
 	measure,
 	spoken,
 	ref,
@@ -64,6 +66,8 @@ function BlockBox({
 	selected?: boolean;
 	/** The block can be picked and changed here: pointed at, a thin ring (1px, the emphasis line) says so, a step under the picked line (EI-04). */
 	pointable?: boolean;
+	/** A tool row can appear on this block (the body is written, or a picked picture of a read-only body has its settings): it keeps the row's room above it, whether the row shows or not (`TOOL_ROW_ROOM`). */
+	toolRow?: boolean;
 	measure?: string;
 	spoken?: string;
 	ref?: Ref<HTMLDivElement>;
@@ -75,7 +79,7 @@ function BlockBox({
 			data-slot="block-box"
 			data-selected={selected || undefined}
 			data-pointable={pointable || undefined}
-			className="group/block-box relative w-full max-w-full outline-none"
+			className={cn("group/block-box relative w-full max-w-full outline-none", toolRow && TOOL_ROW_ROOM)}
 			// design-allow: the block's own width, chosen by the person or the picture's own.
 			style={width ? { width } : undefined}
 			{...props}
@@ -103,8 +107,8 @@ function BlockBox({
 }
 
 /**
- * Where a selected block's tool row stands: over the block's top left, outside it, in the room the block keeps for it (`TOOL_ROW_ROOM`, on the block's
- * own element: the row's height and `TOOL_ROW_GAP`), where it covers no text. Its parent is the block's picture box (position relative), so it stands on the block it
+ * Where a selected block's tool row stands: over the block's top left, outside it, in the room the block keeps for it (`TOOL_ROW_ROOM`, set by the
+ * block's `toolRow`: the row's height and the gap under it), where it covers no text. Its parent is the block's picture box (position relative), so it stands on the block it
  * belongs to by the box itself and scrolls with it.
  */
 function BlockBarPlace({ children }: { children: ReactNode }) {

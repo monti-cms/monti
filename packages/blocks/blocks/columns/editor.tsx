@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	Anchored,
 	BlockBar,
 	BlockBarButton,
 	BlockContent,
@@ -27,6 +28,9 @@ const MOST = 4;
 /** No column is narrower than this share (%) when a border is dragged; the arrow keys move a border this much. */
 const NARROWEST = 10;
 const STEP = 5;
+/** The hit area over a border (px), and how thick the + strip is: inside the frame's right edge, no thicker than the table's. */
+const BORDER = 9;
+const STRIP = 8;
 
 const fill = (text: string, values: Record<string, number>) =>
 	text.replace(/\{(\w+)\}/g, (whole, name: string) => String(values[name] ?? whole));
@@ -47,34 +51,35 @@ export default function ColumnsEditor() {
 	const [dragging, setDragging] = useState<number[] | null>(null);
 	const widths = dragging ?? saved ?? Array.from({ length: count }, () => 100 / count);
 	const grid = useRef<HTMLDivElement>(null);
-	const [edges, setEdges] = useState<{ left: number; width: number }[]>([]);
+	// Counts the drawings, so the tools that stand on the columns are asked again once they are there.
+	const [, setMade] = useState(0);
+	/** The pointer is over the block: its + strip shows. */
+	const [over, setOver] = useState(false);
 	const [menu, setMenu] = useState<number | null>(null);
 	/** The column the pointer is over: its grip shows, as the cursor's column's does. */
 	const [pointed, setPointed] = useState<number | null>(null);
 	const hold = useBarHold();
 
-	// Where each column stands in the frame, for the borders and grips over them: again after each drawing and when the frame's width changes.
-	const measure = () => {
-		const element = grid.current;
-		if (!element) return;
-		const frame = element.getBoundingClientRect();
-		const next = [...element.querySelectorAll<HTMLElement>(".node-column")]
-			.filter((each) => each.parentElement?.closest(".monti-block-columns-editor") === element)
-			.map((each) => {
-				const box = each.getBoundingClientRect();
-				return { left: Math.round(box.left - frame.left), width: Math.round(box.width) };
-			});
-		setEdges((before) => (JSON.stringify(before) === JSON.stringify(next) ? before : next));
+	// The columns as they stand now: the grips stand on them and the borders between them, read again whenever they are placed.
+	const columnsOf = () =>
+		[...(grid.current?.querySelectorAll<HTMLElement>(".node-column") ?? [])].filter(
+			(each) => each.parentElement?.closest(".monti-block-columns-editor") === grid.current,
+		);
+	// Drawn again once the columns are: their elements are what the tools stand on.
+	useLayoutEffect(() => setMade(count));
+	const columns = columnsOf();
+	const borderAt = (border: number) => () => {
+		const cols = columnsOf();
+		const frame = grid.current?.getBoundingClientRect();
+		const left = cols[border]?.getBoundingClientRect().right ?? 0;
+		const right = cols[border + 1]?.getBoundingClientRect().left ?? left;
+		return { left: (left + right) / 2 - BORDER / 2, top: frame?.top ?? 0, width: BORDER, height: frame?.height ?? 0 };
 	};
-	useLayoutEffect(measure);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: one observer for the frame's life
-	useLayoutEffect(() => {
-		const element = grid.current;
-		if (!element) return;
-		const observer = new ResizeObserver(measure);
-		observer.observe(element);
-		return () => observer.disconnect();
-	}, []);
+	// Inside the frame's right edge, as thick as the table's + strip: over no words.
+	const stripAt = () => {
+		const frame = grid.current?.getBoundingClientRect();
+		return { left: (frame?.right ?? 0) - STRIP, top: frame?.top ?? 0, width: STRIP, height: frame?.height ?? 0 };
+	};
 
 	const write = (next: number[] | null) =>
 		block.setAttrs({ widths: next ? next.map((width) => Math.round(width)).join(",") : undefined });
@@ -87,7 +92,7 @@ export default function ColumnsEditor() {
 		return next;
 	};
 	const startOf = (border: number) => widths.slice(0, border).reduce((sum, width) => sum + width, 0);
-	const column = () => ({ type: "column", children: [{ type: "paragraph" }] });
+	const newColumn = () => ({ type: "column", children: [{ type: "paragraph" }] });
 
 	return (
 		<BlockFrame
@@ -110,25 +115,29 @@ export default function ColumnsEditor() {
 			<div
 				ref={grid}
 				onPointerMove={(event) => {
-					const box = grid.current?.getBoundingClientRect();
-					if (!box) return;
-					const x = event.clientX - box.left;
-					const at = edges.findIndex((edge) => x >= edge.left && x <= edge.left + edge.width);
+					const at = columnsOf().findIndex((each) => {
+						const box = each.getBoundingClientRect();
+						return event.clientX >= box.left && event.clientX <= box.right;
+					});
 					setPointed(at < 0 ? null : at);
+					setOver(true);
 				}}
-				onPointerLeave={() => setPointed(null)}
+				onPointerLeave={() => {
+					setPointed(null);
+					setOver(false);
+				}}
 				className="monti-block-columns monti-block-columns-editor"
 				style={{ "--monti-columns": columnsGridTemplate(widths, count) } as CSSProperties}
 			>
 				<BlockContent className="monti-block-columns-content" />
 				{block.editable && (
-					<div className="monti-block-columns-tools" contentEditable={false}>
-						{edges.slice(0, -1).map((edge, border) => (
-							<div
+					<>
+						{columns.slice(0, -1).map((_, border) => (
+							<Anchored
 								// biome-ignore lint/suspicious/noArrayIndexKey: a border is its place between two columns
 								key={border}
-								className="monti-block-columns-border"
-								style={{ left: (edge.left + edge.width + (edges[border + 1]?.left ?? edge.left + edge.width)) / 2 }}
+								anchor={{ spot: borderAt(border), context: grid.current ?? undefined }}
+								place="over-box"
 							>
 								<TableColumnBorder
 									label={fill(say(words.resize), { n: border + 1, m: border + 2 })}
@@ -164,60 +173,65 @@ export default function ColumnsEditor() {
 										write(traded(border, (widths[border] ?? 0) + (event.key === "ArrowLeft" ? -STEP : STEP)));
 									}}
 								/>
-							</div>
+							</Anchored>
 						))}
-						{edges.map((edge, index) => (
-							<div
-								// biome-ignore lint/suspicious/noArrayIndexKey: a grip is its column's place
-								key={index}
-								className="monti-block-columns-grip"
-								data-shown={menu === index || block.childAt === index || pointed === index || undefined}
-								style={{ left: edge.left + edge.width / 2 }}
-							>
-								<DropdownMenu
-									onOpenChange={(open) => {
-										setMenu(open ? index : null);
-										hold(open);
-									}}
+						{columns.map((column, index) =>
+							menu === index || block.childAt === index || pointed === index ? (
+								<Anchored
+									// biome-ignore lint/suspicious/noArrayIndexKey: a grip is its column's place
+									key={index}
+									anchor={column}
+									place="table-above"
 								>
-									<TableGrip
-										along="column"
-										label={fill(say(words.columnN), { n: index + 1 })}
-										active={menu === index}
-										trigger={(grip) => <DropdownMenuTrigger render={grip} />}
-									/>
-									<DropdownMenuContent>
-										{count < MOST && (
-											<>
-												<DropdownMenuItem onClick={() => block.insertChild(column(), index, { widths: undefined })}>
-													{say(words.addLeft)}
+									<DropdownMenu
+										onOpenChange={(open) => {
+											setMenu(open ? index : null);
+											hold(open);
+										}}
+									>
+										<TableGrip
+											along="column"
+											label={fill(say(words.columnN), { n: index + 1 })}
+											active={menu === index}
+											trigger={(grip) => <DropdownMenuTrigger render={grip} />}
+										/>
+										<DropdownMenuContent>
+											{count < MOST && (
+												<>
+													<DropdownMenuItem
+														onClick={() => block.insertChild(newColumn(), index, { widths: undefined })}
+													>
+														{say(words.addLeft)}
+													</DropdownMenuItem>
+													<DropdownMenuItem
+														onClick={() => block.insertChild(newColumn(), index + 1, { widths: undefined })}
+													>
+														{say(words.addRight)}
+													</DropdownMenuItem>
+												</>
+											)}
+											{count > FEWEST && (
+												<DropdownMenuItem
+													variant="danger"
+													onClick={() => block.mergeChild(index, index === 0 ? 1 : index - 1, { widths: undefined })}
+												>
+													{say(words.remove)}
 												</DropdownMenuItem>
-												<DropdownMenuItem onClick={() => block.insertChild(column(), index + 1, { widths: undefined })}>
-													{say(words.addRight)}
-												</DropdownMenuItem>
-											</>
-										)}
-										{count > FEWEST && (
-											<DropdownMenuItem
-												variant="danger"
-												onClick={() => block.mergeChild(index, index === 0 ? 1 : index - 1, { widths: undefined })}
-											>
-												{say(words.remove)}
-											</DropdownMenuItem>
-										)}
-									</DropdownMenuContent>
-								</DropdownMenu>
-							</div>
-						))}
-						{count < MOST && (
-							<div className="monti-block-columns-add">
+											)}
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</Anchored>
+							) : null,
+						)}
+						{count < MOST && over && (
+							<Anchored anchor={{ spot: stripAt, context: grid.current ?? undefined }} place="over-box">
 								<TableAddStrip
 									label={say(words.addColumn)}
-									onClick={() => block.insertChild(column(), count, { widths: undefined })}
+									onClick={() => block.insertChild(newColumn(), count, { widths: undefined })}
 								/>
-							</div>
+							</Anchored>
 						)}
-					</div>
+					</>
 				)}
 			</div>
 		</BlockFrame>

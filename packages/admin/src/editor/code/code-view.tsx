@@ -2,6 +2,7 @@ import type { CodeBlockSettings } from "@monti-cms/core";
 import { ANCHOR, type LineEffect, languageName, lineStarts } from "@monti-cms/core/code";
 import {
 	BlockBarPlace,
+	BlockFrameBox,
 	Caret,
 	CodeArea,
 	CodeAside,
@@ -276,213 +277,215 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 
 	return (
 		<NodeViewWrapper data-block="codeBlock" onPointerEnter={enter} onPointerLeave={leave}>
-			{showBar ? (
-				<BlockBarPlace>
-					<FloatingBar ref={bar} aria-label={t("editor.code.tools")}>
-						<LanguageButton
-							open={card === "language"}
-							onOpenChange={(open) => setCard(open ? "language" : null)}
-							label={languageLabel}
-							anchor={bar}
-							current={language}
-							listed={listed}
-							onPick={(next) => {
-								set({ language: next || undefined });
-								setCard(null);
-							}}
-						/>
-						<NameButton
-							open={card === "name"}
-							onOpenChange={(open) => setCard(open ? "name" : null)}
-							anchor={bar}
-							value={data.title ?? ""}
-							onChange={(title) => set({ title: title || undefined })}
-						/>
-						<Separator orientation="vertical" length="bar" />
-						<FloatingBarButton
-							label={t("editor.code.lineNumbers")}
-							pressed={Boolean(data.lineNumbers)}
-							onClick={() => set({ lineNumbers: data.lineNumbers ? undefined : true })}
-						>
-							<ListNumbered aria-hidden />
-						</FloatingBarButton>
-						{/* Line effects go to the lines picked or the caret's: with neither in this block (the row shown by the pointer), none. */}
-						{(view?.inside || view?.picked) && (offeredEffects.length || tools?.fold || tools?.links) ? (
-							<FloatingBarButton label={t("editor.code.lineEffects")} pressed={menu !== null} onClick={openMenu}>
-								<TextHighlight aria-hidden />
-							</FloatingBarButton>
-						) : null}
-						{tools?.rules || data.rules?.length ? (
-							<Popover open={card === "rules"} onOpenChange={(open) => setCard(open ? "rules" : null)}>
-								<FloatingBarButton
-									label={t("editor.code.rules")}
-									pressed={card === "rules"}
-									trigger={(button) => <PopoverTrigger render={button} />}
-								>
-									<Rule aria-hidden />
-								</FloatingBarButton>
-								<RulesCard
-									anchor={bar}
-									rules={data.rules ?? []}
-									code={code}
-									lineCount={starts.length}
-									picked={view?.words ? code.slice(view.words.from, view.words.to) : ""}
-									tools={tools ?? { rules: true, fold: true, tooltip: true, textStyles: true, links: true }}
-									onChange={(rules) => set({ rules })}
-								/>
-							</Popover>
-						) : null}
-						{wordsTools ? (
-							<>
-								<Separator orientation="vertical" length="bar" />
-								{tools.tooltip ? (
-									<Popover open={card === "tip"} onOpenChange={(open) => setCard(open ? "tip" : null)}>
-										<FloatingBarButton
-											label={t("marks.codeTip")}
-											pressed={Boolean(view?.tipOn)}
-											trigger={(button) => <PopoverTrigger render={button} />}
-										>
-											<Chat aria-hidden />
-										</FloatingBarButton>
-										<PopoverContent anchor={bar} align="start" width="sm" initialFocus={false}>
-											<Input
-												size="md"
-												autoFocus
-												aria-label={t("editor.code.tipText")}
-												placeholder={t("editor.code.tipText")}
-												defaultValue={view?.tip ?? ""}
-												onKeyDown={(event) => {
-													if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
-													event.preventDefault();
-													const text = event.currentTarget.value.trim();
-													toggleMark("codeTip", text ? { text } : null);
-													setCard(null);
-												}}
-											/>
-										</PopoverContent>
-									</Popover>
-								) : null}
-								{tools.fold ? (
-									<>
-										<FloatingBarButton
-											label={t("editor.code.foldWords")}
-											pressed={Boolean(view?.foldOn)}
-											onClick={() => toggleMark("codeFold", view?.foldOn ? null : {})}
-										>
-											<CollapseAll aria-hidden />
-										</FloatingBarButton>
-										{view?.foldOn ? (
-											<FloatingBarButton
-												named
-												label={t("editor.code.openAtFirst")}
-												pressed={Boolean(view?.foldOpen)}
-												onClick={() => toggleMark("codeFold", view?.foldOpen ? {} : { open: true })}
-											>
-												<View aria-hidden />
-												{t("editor.code.openAtFirst")}
-											</FloatingBarButton>
-										) : null}
-									</>
-								) : null}
-							</>
-						) : null}
-						<Separator orientation="vertical" length="bar" />
-						<FloatingBarButton label={copied ? t("editor.code.copied") : t("editor.code.copy")} onClick={copy}>
-							{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
-						</FloatingBarButton>
-					</FloatingBar>
-				</BlockBarPlace>
-			) : null}
-			<CodeFrame
-				ref={frame}
-				head={
-					<>
-						<Inline gap={8} minWidth={0}>
-							<Text variant="caption" tone="muted">
-								{languageLabel}
-							</Text>
-							{data.title ? (
-								<Text variant="caption" mono truncate>
-									{data.title}
-								</Text>
-							) : null}
-						</Inline>
-						{/* Read-only has no tool row: copying stays, at the head row's end. */}
-						{editable ? null : (
-							<IconButton size="xs" label={copied ? t("editor.code.copied") : t("editor.code.copy")} onClick={copy}>
-								{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
-							</IconButton>
-						)}
-					</>
-				}
-			>
-				<CodeArea
-					picking={Boolean(view?.picked)}
-					aside={blockFolds
-						// A closed fold inside another closed fold has its first line hidden too: only the outer one says what it hides.
-						.filter(({ shown, effect }) => !shown && rows.includes(effect.start))
-						.map(({ effect }) => (
-							<CodeAside key={effect.start} row={rows.indexOf(effect.start)}>
-								<TextButton size="caption" onClick={() => toggleFold(effect.start, true)}>
-									{t("editor.code.folded", { n: effect.end - effect.start - 1 })}
-								</TextButton>
-							</CodeAside>
-						))}
-					gutter={rows.map((line) => {
-						const fold = foldOf(line);
-						const { edge, lit: foldLit } = edgeOf(line);
-						return (
-							<CodeNumber
-								key={line}
-								data-line={line}
-								number={line + 1}
-								tone={toneOf(line)}
-								mark={settings ? looksOf(settings, effects, line).mark : undefined}
-								numbersOff={numbersOff}
-								readOnly={!editable}
-								folds={blockFolds.length > 0}
-								edge={edge}
-								foldLit={foldLit}
-								onPointerDown={(event) => press(line, event)}
-								onPointerEnter={() => extend(line)}
-								onContextMenu={(event) => pressRight(line, event)}
-								fold={
-									fold ? (
-										<IconButton
-											size="xs"
-											label={t(fold.open ? "editor.code.foldFrom" : "editor.code.unfoldFrom", { n: line + 1 })}
-											aria-expanded={fold.open}
-											onPointerDown={(event) => event.stopPropagation()}
-											onPointerEnter={() => setFoldPointed(line)}
-											onPointerLeave={() => setFoldPointed(null)}
-											onClick={() => toggleFold(line, !fold.open)}
-										>
-											{fold.open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
-										</IconButton>
-									) : undefined
-								}
+			<BlockFrameBox toolRow={editable}>
+				{showBar ? (
+					<BlockBarPlace>
+						<FloatingBar ref={bar} aria-label={t("editor.code.tools")}>
+							<LanguageButton
+								open={card === "language"}
+								onOpenChange={(open) => setCard(open ? "language" : null)}
+								label={languageLabel}
+								anchor={bar}
+								current={language}
+								listed={listed}
+								onPick={(next) => {
+									set({ language: next || undefined });
+									setCard(null);
+								}}
 							/>
-						);
-					})}
-					grounds={rows.map((line) => <CodeGround key={line} tone={toneOf(line)} />)}
+							<NameButton
+								open={card === "name"}
+								onOpenChange={(open) => setCard(open ? "name" : null)}
+								anchor={bar}
+								value={data.title ?? ""}
+								onChange={(title) => set({ title: title || undefined })}
+							/>
+							<Separator orientation="vertical" length="bar" />
+							<FloatingBarButton
+								label={t("editor.code.lineNumbers")}
+								pressed={Boolean(data.lineNumbers)}
+								onClick={() => set({ lineNumbers: data.lineNumbers ? undefined : true })}
+							>
+								<ListNumbered aria-hidden />
+							</FloatingBarButton>
+							{/* Line effects go to the lines picked or the caret's: with neither in this block (the row shown by the pointer), none. */}
+							{(view?.inside || view?.picked) && (offeredEffects.length || tools?.fold || tools?.links) ? (
+								<FloatingBarButton label={t("editor.code.lineEffects")} pressed={menu !== null} onClick={openMenu}>
+									<TextHighlight aria-hidden />
+								</FloatingBarButton>
+							) : null}
+							{tools?.rules || data.rules?.length ? (
+								<Popover open={card === "rules"} onOpenChange={(open) => setCard(open ? "rules" : null)}>
+									<FloatingBarButton
+										label={t("editor.code.rules")}
+										pressed={card === "rules"}
+										trigger={(button) => <PopoverTrigger render={button} />}
+									>
+										<Rule aria-hidden />
+									</FloatingBarButton>
+									<RulesCard
+										anchor={bar}
+										rules={data.rules ?? []}
+										code={code}
+										lineCount={starts.length}
+										picked={view?.words ? code.slice(view.words.from, view.words.to) : ""}
+										tools={tools ?? { rules: true, fold: true, tooltip: true, textStyles: true, links: true }}
+										onChange={(rules) => set({ rules })}
+									/>
+								</Popover>
+							) : null}
+							{wordsTools ? (
+								<>
+									<Separator orientation="vertical" length="bar" />
+									{tools.tooltip ? (
+										<Popover open={card === "tip"} onOpenChange={(open) => setCard(open ? "tip" : null)}>
+											<FloatingBarButton
+												label={t("marks.codeTip")}
+												pressed={Boolean(view?.tipOn)}
+												trigger={(button) => <PopoverTrigger render={button} />}
+											>
+												<Chat aria-hidden />
+											</FloatingBarButton>
+											<PopoverContent anchor={bar} align="start" width="sm" initialFocus={false}>
+												<Input
+													size="md"
+													autoFocus
+													aria-label={t("editor.code.tipText")}
+													placeholder={t("editor.code.tipText")}
+													defaultValue={view?.tip ?? ""}
+													onKeyDown={(event) => {
+														if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+														event.preventDefault();
+														const text = event.currentTarget.value.trim();
+														toggleMark("codeTip", text ? { text } : null);
+														setCard(null);
+													}}
+												/>
+											</PopoverContent>
+										</Popover>
+									) : null}
+									{tools.fold ? (
+										<>
+											<FloatingBarButton
+												label={t("editor.code.foldWords")}
+												pressed={Boolean(view?.foldOn)}
+												onClick={() => toggleMark("codeFold", view?.foldOn ? null : {})}
+											>
+												<CollapseAll aria-hidden />
+											</FloatingBarButton>
+											{view?.foldOn ? (
+												<FloatingBarButton
+													named
+													label={t("editor.code.openAtFirst")}
+													pressed={Boolean(view?.foldOpen)}
+													onClick={() => toggleMark("codeFold", view?.foldOpen ? {} : { open: true })}
+												>
+													<View aria-hidden />
+													{t("editor.code.openAtFirst")}
+												</FloatingBarButton>
+											) : null}
+										</>
+									) : null}
+								</>
+							) : null}
+							<Separator orientation="vertical" length="bar" />
+							<FloatingBarButton label={copied ? t("editor.code.copied") : t("editor.code.copy")} onClick={copy}>
+								{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
+							</FloatingBarButton>
+						</FloatingBar>
+					</BlockBarPlace>
+				) : null}
+				<CodeFrame
+					ref={frame}
+					head={
+						<>
+							<Inline gap={8} minWidth={0}>
+								<Text variant="caption" tone="muted">
+									{languageLabel}
+								</Text>
+								{data.title ? (
+									<Text variant="caption" mono truncate>
+										{data.title}
+									</Text>
+								) : null}
+							</Inline>
+							{/* Read-only has no tool row: copying stays, at the head row's end. */}
+							{editable ? null : (
+								<IconButton size="xs" label={copied ? t("editor.code.copied") : t("editor.code.copy")} onClick={copy}>
+									{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
+								</IconButton>
+							)}
+						</>
+					}
 				>
-					<NodeViewContent />
-				</CodeArea>
-			</CodeFrame>
-			{menu && editable && settings ? (
-				<LineMenu
-					editor={editor}
-					frame={frame}
-					blockId={blockId}
-					getPos={getPos}
-					start={menu.start}
-					end={Math.min(menu.end, starts.length)}
-					effects={effects}
-					settings={settings}
-					onChange={(lines) => set({ lines })}
-					onClose={() => setMenu(null)}
-				/>
-			) : null}
+					<CodeArea
+						picking={Boolean(view?.picked)}
+						aside={blockFolds
+							// A closed fold inside another closed fold has its first line hidden too: only the outer one says what it hides.
+							.filter(({ shown, effect }) => !shown && rows.includes(effect.start))
+							.map(({ effect }) => (
+								<CodeAside key={effect.start} row={rows.indexOf(effect.start)}>
+									<TextButton size="caption" onClick={() => toggleFold(effect.start, true)}>
+										{t("editor.code.folded", { n: effect.end - effect.start - 1 })}
+									</TextButton>
+								</CodeAside>
+							))}
+						gutter={rows.map((line) => {
+							const fold = foldOf(line);
+							const { edge, lit: foldLit } = edgeOf(line);
+							return (
+								<CodeNumber
+									key={line}
+									data-line={line}
+									number={line + 1}
+									tone={toneOf(line)}
+									mark={settings ? looksOf(settings, effects, line).mark : undefined}
+									numbersOff={numbersOff}
+									readOnly={!editable}
+									folds={blockFolds.length > 0}
+									edge={edge}
+									foldLit={foldLit}
+									onPointerDown={(event) => press(line, event)}
+									onPointerEnter={() => extend(line)}
+									onContextMenu={(event) => pressRight(line, event)}
+									fold={
+										fold ? (
+											<IconButton
+												size="xs"
+												label={t(fold.open ? "editor.code.foldFrom" : "editor.code.unfoldFrom", { n: line + 1 })}
+												aria-expanded={fold.open}
+												onPointerDown={(event) => event.stopPropagation()}
+												onPointerEnter={() => setFoldPointed(line)}
+												onPointerLeave={() => setFoldPointed(null)}
+												onClick={() => toggleFold(line, !fold.open)}
+											>
+												{fold.open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
+											</IconButton>
+										) : undefined
+									}
+								/>
+							);
+						})}
+						grounds={rows.map((line) => <CodeGround key={line} tone={toneOf(line)} />)}
+					>
+						<NodeViewContent />
+					</CodeArea>
+				</CodeFrame>
+				{menu && editable && settings ? (
+					<LineMenu
+						editor={editor}
+						frame={frame}
+						blockId={blockId}
+						getPos={getPos}
+						start={menu.start}
+						end={Math.min(menu.end, starts.length)}
+						effects={effects}
+						settings={settings}
+						onChange={(lines) => set({ lines })}
+						onClose={() => setMenu(null)}
+					/>
+				) : null}
+			</BlockFrameBox>
 		</NodeViewWrapper>
 	);
 }

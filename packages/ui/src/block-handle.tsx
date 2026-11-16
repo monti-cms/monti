@@ -21,7 +21,6 @@ const HANDLE_BUTTON =
  */
 function BlockHandle({
 	gripLabel,
-	hint,
 	active = false,
 	trigger,
 	className,
@@ -29,8 +28,6 @@ function BlockHandle({
 }: Omit<ButtonPrimitive.Props, "aria-label" | "children"> & {
 	/** The name of the grip for screen readers. */
 	gripLabel: string;
-	/** What the grip does, in a few words, as its tooltip ("Drag to move · press for menu"). */
-	hint: string;
 	/** The block menu is open. */
 	active?: boolean;
 	trigger?: (grip: ReactElement) => ReactElement;
@@ -50,7 +47,7 @@ function BlockHandle({
 		<span data-slot="block-handle" className={cn("flex", className)}>
 			<Tooltip>
 				<TooltipTrigger render={trigger ? trigger(grip) : grip} />
-				<TooltipContent side="top">{hint}</TooltipContent>
+				<TooltipContent side="top">{gripLabel}</TooltipContent>
 			</Tooltip>
 		</span>
 	);

@@ -1,4 +1,4 @@
-import { type CSSProperties, useSyncExternalStore } from "react";
+import { type CSSProperties, useMemo, useSyncExternalStore } from "react";
 import { dockShown, watchDock } from "./bottom-dock";
 
 /**
@@ -13,13 +13,11 @@ import { dockShown, watchDock } from "./bottom-dock";
  * The numbers and the defaults are here once; no part picks its own.
  */
 
-/** The tool row over a block: 28px buttons, 3px inside and a 1px border on each side, and 8px between the row and the block. */
-export const TOOL_ROW_HEIGHT = 36;
-export const TOOL_ROW_GAP = 8;
-
 /**
  * The room a block with a tool row keeps above it, always (not only while the row shows, so nothing jumps when it comes): the row's height and
- * its gap. A block under a paragraph (20px below) then stands 44px from it, and the row never covers the paragraph's last line.
+ * its gap. The row is 28px buttons with 3px inside and a 1px border (36px), and 8px stand between the row and the block: 44px. A block under a paragraph
+ * (20px below) then stands 44px from it, and the row never covers the paragraph's last line. A block keeps it where a row can appear (the body is
+ * written, or a picked picture of a read-only body has its settings), the same whether the row shows or not, so nothing jumps.
  */
 export const TOOL_ROW_ROOM = "mt-[44px]";
 
@@ -52,29 +50,38 @@ export const FIRST_PASS = { "--available-height": `${MIN_MENU_HEIGHT}px` } as CS
 /** How far a floating thing stays from the window's edges (px). */
 export const WINDOW_PADDING = 8;
 
-/** What stands docked at the window's bottom (the review bar) is not covered by a card: the bottom padding takes its height. */
+/** What stands docked at the window's foot (the review bar) is not covered by a card: the bottom padding takes its height and the 12px it stands over the edge. */
 function dockRoom(docked: HTMLElement | null) {
 	const held = docked?.firstElementChild;
-	return held ? Math.max(0, Math.ceil(window.innerHeight - held.getBoundingClientRect().top)) : 0;
+	return held instanceof HTMLElement ? held.offsetHeight + 24 : 0;
 }
 
 /**
  * The collision padding every floating thing takes (px, per edge): the window padding, and at the bottom the review bar's room while it is shown
- * (AS-14: a card never covers the bar).
+ * (AS-14: a card never covers the bar). The same object while the numbers are the same, so the positioner does not start measuring again.
  */
 export function usePlacementPadding() {
 	const docked = useSyncExternalStore(watchDock, dockShown, () => null);
-	return {
-		top: WINDOW_PADDING,
-		left: WINDOW_PADDING,
-		right: WINDOW_PADDING,
-		bottom: Math.max(WINDOW_PADDING, dockRoom(docked) + WINDOW_PADDING),
-	};
+	const room = dockRoom(docked);
+	return useMemo(
+		() => ({
+			top: WINDOW_PADDING,
+			left: WINDOW_PADDING,
+			right: WINDOW_PADDING,
+			bottom: Math.max(WINDOW_PADDING, room + WINDOW_PADDING),
+		}),
+		[room],
+	);
 }
 
-/** How a placed thing meets an edge: a thing that stays flips to the other side and slides along; a drawn line or box stays exactly where it is told. */
+/**
+ * How a placed thing meets an edge. `stays`: flips to the other side and slides along (a thing beside the pointer). `slides`: keeps its side and slides
+ * along inside the box it folds into (the format card never leaves the body; it is not flipped onto the words). `exact`: stays where it is told (a handle,
+ * a grip, a drawn line or box): it is not flipped onto text either, and a thing whose anchor has scrolled out of view is hidden (`Anchored`).
+ */
 export const COLLISION = {
 	stays: { side: "flip", align: "shift" },
+	slides: { side: "none", align: "shift" },
 	exact: { side: "none", align: "none" },
 } as const;
 
@@ -89,13 +96,13 @@ export const PLACES: Record<
 	{ side: Side; align: Align; sideOffset: Offset; alignOffset?: number; collision: keyof typeof COLLISION }
 > = {
 	/** The block handle: in the left margin, level with the block's first line, {@link EDGE_GAP} off the text. */
-	"block-left": { side: "left", align: "start", sideOffset: EDGE_GAP, collision: "stays" },
-	/** The format card: over the selected words, 8px up. */
-	"selection-above": { side: "top", align: "center", sideOffset: 8, collision: "stays" },
+	"block-left": { side: "left", align: "start", sideOffset: EDGE_GAP, collision: "exact" },
+	/** The format card: over the first line of the selected words' block, 8px up, so it never stands over a line of its own block. */
+	"selection-above": { side: "top", align: "center", sideOffset: 8, collision: "slides" },
 	/** A table's column grip: above the top edge, {@link EDGE_GAP} off, in the middle of the column. */
-	"table-above": { side: "top", align: "center", sideOffset: EDGE_GAP, collision: "stays" },
+	"table-above": { side: "top", align: "center", sideOffset: EDGE_GAP, collision: "exact" },
 	/** A table's row grip: out of the left rule by its own width and the gap, in the middle of the row. */
-	"table-left": { side: "left", align: "center", sideOffset: EDGE_GAP, collision: "stays" },
+	"table-left": { side: "left", align: "center", sideOffset: EDGE_GAP, collision: "exact" },
 	/** A thing laid exactly over the box it stands for (a drawn box, a line, a + strip, a border): the same corner as the box's. */
 	"over-box": { side: "bottom", align: "start", sideOffset: ({ anchor }) => -anchor.height, collision: "exact" },
 	/** A thing beside the pointer (the block in hand): to its right and a little below. */

@@ -224,7 +224,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(panel()).not.toBeInTheDocument();
 	});
 
-	it("at 1024 wide with the detail panel open, no row's ⋯ is drawn over the panel: the page column clips its own table", async () => {
+	it("at 1024 wide with the detail panel open, each row's ⋯ is whole beside the panel and pressable: it sticks to the page area's edge", async () => {
 		await page.viewport(1024, 768);
 		onTestFinished(() => page.viewport(1440, 900));
 		await draw(stories.Panel).run();
@@ -233,14 +233,14 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const actions = [...table().element().querySelectorAll("[data-slot=row-actions]")];
 		expect(actions.length).toBeGreaterThan(0);
 		for (const each of actions) {
-			const at = each.getBoundingClientRect();
-			// Inside the column, or cut at its edge: what is on top where the ⋯ would be, past the panel's edge, is never the ⋯.
-			const past =
-				at.left + at.width / 2 > edge
-					? document.elementFromPoint(at.left + at.width / 2, at.top + at.height / 2)
-					: null;
-			expect(past === null || !each.contains(past)).toBe(true);
+			expect(each.getBoundingClientRect().right).toBeLessThanOrEqual(edge + 1);
+			const button = each.querySelector("button") as HTMLElement;
+			const box = button.getBoundingClientRect();
+			expect(button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))).toBe(true);
 		}
+		// The last row's ⋯ opens its menu.
+		await userEvent.click(actions[actions.length - 1]?.querySelector("button") as Element);
+		await expect.element(page.getByRole("menu")).toBeVisible();
 	});
 
 	it("the assistant's row open: its request whole, each thing it did, and what it touched", async () => {

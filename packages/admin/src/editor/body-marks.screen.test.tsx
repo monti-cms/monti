@@ -96,6 +96,52 @@ describe("what is pressed in the text answers the pointer", () => {
 		expect(coversText(card.element(), body().element())).toEqual([]);
 	});
 
+	it("on a wrapped paragraph the format card stands over the block's first line from its second and from a middle line, never over the lines above the picked words", async () => {
+		await OwnFormat.run();
+		await expect.element(body()).toBeVisible();
+		const editor = (
+			body().element() as unknown as {
+				editor: {
+					commands: {
+						setContent: (html: string) => void;
+						setTextSelection: (range: { from: number; to: number }) => void;
+						focus: () => void;
+					};
+					view: { coordsAtPos: (pos: number) => { top: number } };
+				};
+			}
+		).editor;
+		const long = Array.from({ length: 70 }, (_, at) => `낱말${at + 1}`).join(" ");
+		editor.commands.setContent(`<p>${long}</p><p>다음 문단</p>`);
+		await expect.poll(() => body().element().querySelector("p")?.textContent).toBe(long);
+		const paragraph = body().element().querySelector("p") as HTMLElement;
+		// Where each line of the paragraph begins, by position: the first position whose top is below the last line's.
+		const starts: number[] = [1];
+		let top = editor.view.coordsAtPos(1).top;
+		for (let pos = 2; pos <= long.length; pos++) {
+			const at = editor.view.coordsAtPos(pos).top;
+			if (at > top + 5) {
+				starts.push(pos);
+				top = at;
+			}
+		}
+		expect(starts.length).toBeGreaterThan(3);
+		for (const line of [1, 2]) {
+			const from = (starts[line] ?? 1) + 1;
+			editor.commands.setTextSelection({ from, to: from + 4 });
+			editor.commands.focus();
+			const card = page.getByRole("toolbar", { name: "서식" });
+			await expect.element(card).toBeVisible();
+			await expect
+				.poll(() => card.element().getBoundingClientRect().bottom)
+				.toBeLessThanOrEqual(paragraph.getBoundingClientRect().top + 1);
+			const edge = body().element().getBoundingClientRect();
+			expect(card.element().getBoundingClientRect().left).toBeGreaterThanOrEqual(edge.left - 1);
+			expect(card.element().getBoundingClientRect().right).toBeLessThanOrEqual(edge.right + 1);
+			expect(coversText(card.element(), body().element())).toEqual([]);
+		}
+	});
+
 	it("a site's own text format is a row of the format bar's ⋯, starting with an icon as every menu row does", async () => {
 		await OwnFormat.run();
 		await expect.element(body()).toBeVisible();

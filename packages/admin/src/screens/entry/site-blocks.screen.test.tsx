@@ -117,7 +117,11 @@ describe("the site's blocks in the editor (doc 18)", () => {
 	it("18-5 columns: the + strip adds a column, and a column deleted from its grip's menu leaves its words in the column beside it", async () => {
 		const made = on();
 		await made.run();
-		await hover("columns");
+		// The pointer is over the columns themselves, not over the room the block keeps above it.
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await userEvent.hover(document.querySelector(".monti-block-columns-editor") as Element, {
+			position: { x: 30, y: 12 },
+		});
 		await userEvent.click(page.getByRole("button", { name: "단 더하기" }));
 		let columns = find(await kept(made), "columns");
 		expect(columns?.children).toHaveLength(3);

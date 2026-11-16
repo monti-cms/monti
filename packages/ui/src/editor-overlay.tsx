@@ -33,13 +33,19 @@ function EditorMargin({
 		const mark = box.current;
 		const body = mark?.offsetParent;
 		if (!mark || !(body instanceof HTMLElement)) return;
+		// The box that scrolls the text: where its left edge stands is the margin's far side. Every box between it and the text is watched too, since a
+		// panel opening beside a centred column moves the column without changing the text's own size.
+		const between: HTMLElement[] = [];
+		let scroller: HTMLElement | null = null;
+		for (let at = body.parentElement; at; at = at.parentElement) {
+			between.push(at);
+			if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(at).overflowX)) {
+				scroller = at;
+				break;
+			}
+		}
 		const measure = () => {
-			let edge = 0;
-			for (let at = body.parentElement; at; at = at.parentElement)
-				if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(at).overflowX)) {
-					edge = at.getBoundingClientRect().left;
-					break;
-				}
+			const edge = scroller?.getBoundingClientRect().left ?? 0;
 			const room = body.getBoundingClientRect().left - edge - beside - mark.offsetWidth;
 			setGap(Math.max(MARGIN_GAP_LEAST, Math.min(MARGIN_GAP, Math.floor(room))));
 		};
@@ -47,7 +53,12 @@ function EditorMargin({
 		const watch = new ResizeObserver(measure);
 		watch.observe(body);
 		watch.observe(mark);
-		return () => watch.disconnect();
+		for (const each of between) watch.observe(each);
+		window.addEventListener("resize", measure);
+		return () => {
+			watch.disconnect();
+			window.removeEventListener("resize", measure);
+		};
 	}, [beside]);
 	return (
 		<div

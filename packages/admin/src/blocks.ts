@@ -2,6 +2,7 @@
 
 /** The design system's parts a block's editor view draws with, beside the ones above. */
 export {
+	Anchored,
 	Button,
 	DropdownMenu,
 	DropdownMenuContent,

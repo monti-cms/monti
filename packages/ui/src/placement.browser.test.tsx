@@ -13,6 +13,10 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
+	MemoCardPopover,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
 } from "./index";
 
 const ROWS = Array.from({ length: 40 }, (_, at) => `Row ${at + 1}`);
@@ -39,36 +43,101 @@ function menuFrom(place: { top?: number; bottom?: number; left?: number; right?:
 const menu = () => page.getByRole("menu").element() as HTMLElement;
 
 describe("where a floating thing stands (overlay.md, the place rule)", () => {
-	it("a thing over words stays inside the body's box, its edge flush with it, and covers none of the words", async () => {
-		function Body() {
+	it("a thing over words stands above the line it stands for with words around it, inside the body's box, and covers none; a panel that narrows the body keeps it inside", async () => {
+		function Page() {
 			const [box, setBox] = useState<HTMLElement | null>(null);
+			const [panel, setPanel] = useState(0);
 			return (
-				<div ref={setBox} style={{ position: "relative", marginLeft: 200, width: 300, height: 200 }} data-testid="body">
-					<p style={{ margin: 0, paddingTop: 80 }}>
-						Some words in a line of the body, long enough to wrap on a narrow box.
-					</p>
-					<Anchored
-						anchor={{
-							spot: () => ({ left: 490, top: (box?.getBoundingClientRect().top ?? 0) + 80, width: 0, height: 20 }),
-						}}
-						place="selection-above"
-						within={box}
-					>
-						<div data-testid="card" style={{ width: 180, height: 32 }}>
-							card
-						</div>
-					</Anchored>
+				<div style={{ display: "flex", width: 700 }}>
+					<div ref={setBox} style={{ position: "relative", marginLeft: 100, flex: 1, minWidth: 0 }} data-testid="body">
+						<p style={{ margin: 0 }}>Words above, in a line of their own.</p>
+						<div style={{ height: 60 }} />
+						<p data-testid="line" style={{ margin: 0 }}>
+							Words the card stands for, a line long enough to run across the whole of the box.
+						</p>
+						<p style={{ margin: 0 }}>Words below the line.</p>
+						<Anchored
+							anchor={{
+								spot: () => {
+									const edge = box?.getBoundingClientRect();
+									const line = document.querySelector("[data-testid=line]")?.getBoundingClientRect();
+									return { left: (edge?.right ?? 0) - 10, top: line?.top ?? 0, width: 0, height: 20 };
+								},
+								context: box ?? undefined,
+							}}
+							place="selection-above"
+							within={box}
+						>
+							<div data-testid="card" style={{ width: 180, height: 32 }}>
+								card
+							</div>
+						</Anchored>
+					</div>
+					<div data-testid="panel" style={{ width: panel }} />
+					<button type="button" onClick={() => setPanel(260)}>
+						open panel
+					</button>
 				</div>
 			);
 		}
-		render(<Body />);
+		render(<Page />);
 		await expect.poll(() => document.querySelector("[data-testid=card]")).not.toBeNull();
 		const body = document.querySelector("[data-testid=body]") as HTMLElement;
 		const card = document.querySelector("[data-testid=card]") as HTMLElement;
-		const edge = body.getBoundingClientRect();
-		await expect.poll(() => card.getBoundingClientRect().right).toBeLessThanOrEqual(edge.right + 1);
-		expect(card.getBoundingClientRect().left).toBeGreaterThanOrEqual(edge.left - 1);
+		const line = document.querySelector("[data-testid=line]") as HTMLElement;
+		const inside = () => {
+			const edge = body.getBoundingClientRect();
+			const at = card.getBoundingClientRect();
+			return at.left >= edge.left - 1 && at.right <= edge.right + 1;
+		};
+		await expect.poll(inside).toBe(true);
+		// Over the line it stands for, not on it, with the words above it left clear.
+		expect(card.getBoundingClientRect().bottom).toBeLessThanOrEqual(line.getBoundingClientRect().top);
 		expect(coversText(card, body)).toEqual([]);
+		const before = body.getBoundingClientRect().width;
+		await page.getByRole("button", { name: "open panel" }).click();
+		await expect.poll(() => body.getBoundingClientRect().width).toBeLessThan(before - 100);
+		await expect.poll(inside).toBe(true);
+	});
+
+	it("a card taller than the room left shrinks to scroll on its side (a popover), and so does a memo card; neither is cut by the window", async () => {
+		const tall = Array.from({ length: 40 }, (_, at) => (
+			<p key={at}>Line {at + 1} of a card that is longer than the window.</p>
+		));
+		render(
+			<>
+				<Popover defaultOpen>
+					<PopoverTrigger
+						render={<button type="button" style={{ position: "fixed", top: window.innerHeight - 300, left: 40 }} />}
+					>
+						Open
+					</PopoverTrigger>
+					<PopoverContent data-testid="popover" side="bottom">
+						{tall}
+					</PopoverContent>
+				</Popover>
+				<div
+					data-testid="memo-from"
+					style={{ position: "fixed", top: window.innerHeight - 300, left: 400, width: 10, height: 10 }}
+				/>
+				<MemoCardPopover
+					open
+					onOpenChange={() => undefined}
+					anchor={() => document.querySelector("[data-testid=memo-from]")}
+				>
+					{tall}
+				</MemoCardPopover>
+			</>,
+		);
+		await expect.poll(() => document.querySelector("[data-testid=popover]")).not.toBeNull();
+		const popover = document.querySelector("[data-testid=popover]") as HTMLElement;
+		await expect.poll(() => popover.getAttribute("data-side")).toBe("bottom");
+		await expect.poll(() => popover.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight);
+		await expect.poll(() => popover.scrollHeight > popover.clientHeight).toBe(true);
+		const memo = () => document.querySelector("[data-slot=memo-card]")?.closest("[data-side]") as HTMLElement | null;
+		await expect.poll(() => memo()?.getAttribute("data-side")).toBe("bottom");
+		await expect.poll(() => memo()?.getBoundingClientRect().bottom ?? 9999).toBeLessThanOrEqual(window.innerHeight);
+		await expect.poll(() => (memo()?.scrollHeight ?? 0) > (memo()?.clientHeight ?? 0)).toBe(true);
 	});
 
 	it("a menu with room for its minimum shrinks to scroll on its side, and flips only when there is less than that", async () => {

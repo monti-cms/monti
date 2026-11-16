@@ -286,7 +286,12 @@ export function BlockFrame({
 	return (
 		<HoldContext.Provider value={(on) => setHeld((count) => Math.max(0, count + (on ? 1 : -1)))}>
 			<FocusContext.Provider value={setFocused}>
-				<BlockFrameBox onPointerEnter={() => setOver(true)} onPointerLeave={() => setOver(false)} {...props}>
+				<BlockFrameBox
+					toolRow={editable}
+					onPointerEnter={() => setOver(true)}
+					onPointerLeave={() => setOver(false)}
+					{...props}
+				>
 					{/* Picked as a whole, it has the picked line around it, as a picture has. */}
 					<BlockBox selected={selected} measure={measure}>
 						{up && <BlockBarPlace>{bar}</BlockBarPlace>}

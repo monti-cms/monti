@@ -1,4 +1,6 @@
-import type * as React from "react";
+"use client";
+
+import * as React from "react";
 import { useAssistantSlot } from "./assistant-slot";
 import { cn } from "./cn";
 
@@ -62,17 +64,46 @@ function PageHeader({
  * `width="content"` (the default) is 880px: settings and form pages, where a label must not drift from its value and a line must not grow long.
  * `width="list"` is for a page of rows (entries, media, trash, the tables of tools): 880px until the page area leaves at least 240px on each side, then it
  * grows with the area up to 1200px (880 at 1440 wide, 1200 at 1920). The column clips what runs out of it sideways (a table wider than the room),
- * so a row's ⋯ is never drawn over a docked panel beside it (AT-01). The area is what is beside the sidebar and any docked panel, measured on the
+ * so nothing is drawn over a docked panel beside it; a row's ⋯ sticks to the page area's right edge (`TableRow`), so it stays in reach (AT-01). The area is what is beside the sidebar and any docked panel, measured on the
  * nearest `container` (the admin frame makes it), so a folded rail or an open panel runs the same rule on the room that is left.
  */
 function PageColumn({
 	width = "content",
 	className,
 	children,
+	ref,
 	...props
 }: React.ComponentProps<"div"> & { width?: "content" | "list" }) {
+	const own = React.useRef<HTMLDivElement | null>(null);
+	// How far the column's right edge stands from the right edge of the box that scrolls the page (a docked panel stands between them): `--monti-edge-gap`,
+	// which what sticks to the column's edge reads (a row's ⋯, `TableRow`). It is measured: CSS knows no such distance.
+	React.useLayoutEffect(() => {
+		const column = own.current;
+		if (!column) return;
+		let scroller = column.parentElement;
+		while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+		const measure = () => {
+			const port = scroller
+				? scroller.getBoundingClientRect().left + scroller.clientLeft + scroller.clientWidth
+				: window.innerWidth;
+			column.style.setProperty(
+				"--monti-edge-gap",
+				`${Math.max(0, Math.round(port - column.getBoundingClientRect().right))}px`,
+			);
+		};
+		measure();
+		const watch = new ResizeObserver(measure);
+		watch.observe(column);
+		if (scroller) watch.observe(scroller);
+		return () => watch.disconnect();
+	}, []);
 	return (
 		<div
+			ref={(node) => {
+				own.current = node;
+				if (typeof ref === "function") ref(node);
+				else if (ref) ref.current = node;
+			}}
 			data-slot="page-column"
 			data-width={width}
 			className={cn("flex min-w-0 flex-1 flex-col overflow-x-clip px-monti-16 pt-monti-40 md:px-monti-48", className)}
