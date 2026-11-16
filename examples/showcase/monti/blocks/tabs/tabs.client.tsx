@@ -66,7 +66,8 @@ export function TabsView({
 						aria-label={label}
 						disabled={holder}
 						aria-selected={index === active}
-						aria-controls={`${id}-panel-${index}`}
+						// The stand-in draws one panel, the shown tab's: only that tab points at a panel.
+						aria-controls={!holder || index === defaultIndex ? `${id}-panel-${index}` : undefined}
 						tabIndex={index === active ? 0 : -1}
 						onClick={() => setActive(index)}
 						onKeyDown={(event) => onKeyDown(event, index)}
@@ -82,7 +83,7 @@ export function TabsView({
 					// biome-ignore lint/suspicious/noArrayIndexKey: same position order as the tabs
 					key={index}
 					role="tabpanel"
-					id={`${id}-panel-${index}`}
+					id={`${id}-panel-${holder ? defaultIndex : index}`}
 					aria-labelledby={`${id}-tab-${holder ? defaultIndex : index}`}
 					hidden={!holder && index !== active}
 				>

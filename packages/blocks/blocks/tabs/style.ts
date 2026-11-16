@@ -97,6 +97,10 @@ export const style = `/*
 	white-space: nowrap;
 	cursor: pointer;
 }
+/* The editor's stand-in holds its tabs still until the tabs' own view loads: no hand on them. */
+.monti-block-tabs-tab:disabled {
+	cursor: default;
+}
 /* The name's cell: the name, and a hidden copy at most 4.5rem wide that is the narrowest the cell goes. A tab is never wider than its name. */
 .monti-block-tabs-name {
 	display: grid;
