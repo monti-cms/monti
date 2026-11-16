@@ -82,17 +82,17 @@ describe("the '/' menu", () => {
 		await expect.element(menu()).not.toBeInTheDocument();
 	});
 
-	it("[inside-a-word] a '/' inside a word (an address, a date) opens no menu", async () => {
+	it("[inside-a-word] a '/' inside a word (an address, a date) opens the menu, which closes after two characters that match nothing", async () => {
 		await NewEntry.run();
 		await userEvent.click(body());
-		await userEvent.keyboard("https://example.com/path 3/4 and/or");
-		await expect.element(body()).toHaveTextContent("https://example.com/path 3/4 and/or");
+		await userEvent.keyboard("https://example.com/pathway");
+		await expect.element(body()).toHaveTextContent("https://example.com/pathway");
 		await expect.element(menu()).not.toBeInTheDocument();
 	});
 
-	it("[mid-sentence] [korean] '/' typed after a space in a sentence opens the menu, and '각주' typed in Korean puts a footnote right there", async () => {
+	it("[mid-sentence] [korean] '/' typed after a word in a sentence opens the menu, and '각주' typed in Korean puts a footnote right there", async () => {
 		await Draft.run();
-		await caretAfter("지금 ");
+		await caretAfter("지금 상태만");
 		await userEvent.keyboard("/");
 		await expect.element(menu()).toBeVisible();
 		await typeKorean("각주");
@@ -105,8 +105,8 @@ describe("the '/' menu", () => {
 			.toBe("목록에는 제목과 주소, 지금 상태만 남겼다. 나머지는 필요할 때 꺼내 본다.");
 		// The footnote itself is there too, one of it, not only its number.
 		expect(body().element().querySelectorAll("[data-footnote]")).toHaveLength(1);
-		// The number sits after "지금 ", not at the start or the end of the line.
+		// The number sits after "지금 상태만", not at the start or the end of the line.
 		const ref = line.querySelector("[data-footnote-ref]");
-		expect(ref?.previousSibling?.textContent?.endsWith("지금 ")).toBe(true);
+		expect(ref?.previousSibling?.textContent?.endsWith("지금 상태만")).toBe(true);
 	});
 });

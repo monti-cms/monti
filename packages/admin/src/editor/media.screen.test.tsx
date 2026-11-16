@@ -30,11 +30,8 @@ async function caretAfter(text: string) {
 	await userEvent.keyboard("{End}");
 }
 
-/** Types "/" and the word: after a space, as the menu opens only at the start of a block or after one. */
 async function slash(word = "") {
-	const caret = getSelection();
-	const before = (caret?.anchorNode?.textContent ?? "").slice(0, caret?.anchorOffset ?? 0);
-	await userEvent.keyboard(`${before === "" || /\s$/.test(before) ? "" : " "}/${word}`);
+	await userEvent.keyboard(`/${word}`);
 }
 
 /** Pictures pasted into the focused text, as the browser hands them over (a real ⌘V is L5's). */
@@ -217,7 +214,7 @@ describe("from the library", () => {
 	it("09-3 [flow 6·37, 6·38] [korean] '/ 파일' finds through composing, shows files only, and the file block says its type and size", async () => {
 		await Draft.run();
 		await userEvent.click(paragraph("글의 첫 문단"));
-		await userEvent.keyboard("{End} /");
+		await userEvent.keyboard("{End}/");
 		await typeKorean("파일");
 		await expect.element(slashRow(/파일/)).toBeVisible();
 		await userEvent.keyboard("{Enter}");

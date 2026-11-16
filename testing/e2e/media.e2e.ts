@@ -370,7 +370,7 @@ test("09-1 a site with no storage: two lines and the way to connect, no upload, 
 	expect(post.id).toBeTruthy();
 	await body(page).getByText("글의 첫 문단이에요.").click();
 	await page.keyboard.press("End");
-	await page.keyboard.type(" /");
+	await page.keyboard.type("/");
 	await expect(page.getByRole("option").first()).toBeVisible();
 	await expect(page.getByRole("option", { name: /^이미지/ })).toBeHidden();
 	await context.close();
