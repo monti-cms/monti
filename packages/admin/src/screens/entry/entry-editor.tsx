@@ -63,7 +63,7 @@ import {
 	TrashCan,
 } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AssistantButton } from "../../assistant/assistant-button";
 import { draftContext } from "../../assistant/draft-context";
 import {
@@ -126,9 +126,11 @@ import {
 	usePairedRows,
 	useTranslation,
 } from "./translation";
+import { useArchive } from "./use-archive";
 import { type EntryRead, type SaveState, useEntryEditor } from "./use-entry-editor";
 import { usePublish } from "./use-publish";
 import { useTextChecks } from "./use-text-checks";
+import { useToday } from "./use-today";
 
 const STATUS: Record<EntryState, EntryStatusKind> = {
 	draft: "draft",
@@ -138,6 +140,20 @@ const STATUS: Record<EntryState, EntryStatusKind> = {
 };
 
 const SAVE_KEYS = ["mod", "s"] as const;
+/** The publish button, plain or the pill's main half: the one a focus is handed to when the two take each other's place. */
+const PUBLISH_ID = "monti-entry-publish";
+
+/** Whether the focus is on the publish control now: the plain button, either half of the pill, or the pill's open menu (named by its caret half). */
+function holdsPublish() {
+	const at = document.activeElement;
+	const control = document.getElementById(PUBLISH_ID);
+	if (!at || !control) return false;
+	const whole = control.closest("[data-slot=split-button]") ?? control;
+	if (whole.contains(at)) return true;
+	const namedBy = at.closest('[role="menu"]')?.getAttribute("aria-labelledby");
+	const opener = namedBy ? document.getElementById(namedBy) : null;
+	return opener !== null && whole.contains(opener);
+}
 /** The most blocks a request names (`ScreenContext.blocks`). */
 const MOST_BLOCKS_NAMED = 500;
 
@@ -237,15 +253,31 @@ export function EntryEditor({
 		return !notChosen(values, locale).has(field);
 	};
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true), asked });
+	const publishedAt = publish.publishedAt;
+	// The day it is now, also for an entry left open past midnight.
+	const today = useToday();
+	// The menu holds the other way to publish, and there is one only when today is another day than the entry's date: published today, both rows
+	// would give the same date, so the pill is the plain one, as for a first publish (button.md; TB-04).
+	const otherDate = publishedAt !== null && day(publishedAt, language) !== day(today, language);
+	// The pill and the plain button take each other's place (published again with today's date; midnight passed): the one that had the focus is
+	// gone with it, and the one that stands there now takes it, so the focus does not fall to the page. Whether it had the focus is looked at
+	// as the swap is drawn, not kept from earlier: a focus the person has since taken elsewhere, or dropped on the page, is not brought back.
+	const swapped = useRef({ otherDate, held: false });
+	if (swapped.current.otherDate !== otherDate) swapped.current = { otherDate, held: holdsPublish() };
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when one button has taken the other's place, which `otherDate` decides.
+	useLayoutEffect(() => {
+		const { held } = swapped.current;
+		swapped.current.held = false;
+		if (held && document.activeElement === document.body) document.getElementById(PUBLISH_ID)?.focus();
+	}, [otherDate]);
 	// The field's alt text was for the old picture (2026-11-09, owner): the new one has only what was said while it went up.
 	const fieldUploads = useFieldUploads((field, item, said) => {
 		editor.set(`values.${field}`, cleanMediaValue({ media: item.id, ...said }));
 	});
 	const preview = useOperation<{ token: string; path: string | null }>("entries.previewLink");
 	const duplicate = useOperation<{ output: { id: string } }>("entries.duplicate");
-	const archive = useOperation("entries.archive");
+	const archiving = useArchive();
 	const uploadsGoing = useUploadsGoing();
-	const unarchive = useOperation("entries.unarchive");
 	const exporter = useOperation<BackupOutput>("data.export");
 	useLeaveGuard({
 		changes: editor.draft.changes,
@@ -958,7 +990,6 @@ export function EntryEditor({
 	// A block new in the source is already a to-do (it stops publishing until decided): the group leaves it out, so it is listed and counted once.
 	const sourceCount =
 		compared && !readOnly ? compared.marks.filter((mark) => mark.kind !== "added").length + compared.fields.length : 0;
-	const sourceOnly = sourceCount > 0 && publish.tasks.length === 0;
 	const sourceRows =
 		compared && sourceCount > 0 ? (
 			<SourceChangeRows
@@ -1084,7 +1115,6 @@ export function EntryEditor({
 				}
 			/>
 		) : null;
-	const publishedAt = publish.publishedAt;
 
 	// What acts on the entry waits for the entry: before it is read nothing says whether it is published, archived or in the trash.
 	const head = !read ? null : readOnly ? (
@@ -1102,9 +1132,9 @@ export function EntryEditor({
 		) : archived ? (
 			<Button
 				variant="primary"
-				loading={unarchive.pending}
+				loading={archiving.unarchiving}
 				onClick={async () => {
-					if ((await unarchive.run({ ids: [id] })).ok) await editor.reload();
+					if (await archiving.unarchive([id])) await editor.reload();
 				}}
 			>
 				{t("entry.unarchive")}
@@ -1144,12 +1174,21 @@ export function EntryEditor({
 					{t("entry.preview")}
 				</Button>
 			) : null}
-			{publish.button === "first" ? (
-				<Button variant="primary" loading={publish.publishing} onClick={() => void publish.publish()}>
-					{t("entry.publish")}
+			{publish.button === "first" || !otherDate ? (
+				<Button
+					id={PUBLISH_ID}
+					variant="primary"
+					disabled={publish.button === "done"}
+					// "Published" keeps the focus the publish was pressed with: it does not fall to the page.
+					focusableWhenDisabled
+					loading={publish.publishing}
+					onClick={() => void publish.publish()}
+				>
+					{publish.button === "done" ? t("entry.publishedState") : t("entry.publish")}
 				</Button>
 			) : (
 				<SplitButton
+					id={PUBLISH_ID}
 					menuLabel={t("entry.publishMenu")}
 					disabled={publish.button === "done"}
 					loading={publish.publishing}
@@ -1164,7 +1203,7 @@ export function EntryEditor({
 							</DropdownMenuItem>
 							<DropdownMenuItem
 								onClick={() => void publish.publish("today")}
-								caption={t("entry.publishTodayDate", { date: day(new Date(), language) })}
+								caption={t("entry.publishTodayDate", { date: day(today, language) })}
 							>
 								{t("entry.publishToday")}
 							</DropdownMenuItem>
@@ -1176,6 +1215,26 @@ export function EntryEditor({
 			)}
 		</>
 	);
+
+	// What is left in the entry, a group for each kind: what stops publishing, what only tells, what changed in the source. The first group there is
+	// heads the list and the others follow, each under a rule with its own name and count (status-bar.md; TP-04).
+	const todoRows = (tasks: PublishTask[]) =>
+		tasks.map((task, index) => (
+			<TodoItem
+				key={`${task.code}:${task.field ?? ""}:${task.block ?? ""}:${index}`}
+				title={taskTitle(task)}
+				detail={taskDetail(task)}
+				blocking={task.blocking}
+				onOpen={() => goTo(task)}
+			/>
+		));
+	const stops = publish.tasks.filter((task) => task.blocking);
+	const tells = publish.tasks.filter((task) => !task.blocking);
+	const [firstGroup, ...moreGroups] = [
+		{ label: t("entry.todo.label"), count: stops.length, tone: "danger" as const, rows: todoRows(stops) },
+		{ label: t("entry.todo.check"), count: tells.length, tone: "warning" as const, rows: todoRows(tells) },
+		{ label: t("translation.changedTitle"), count: sourceCount, tone: "warning" as const, rows: sourceRows },
+	].filter((group) => group.count > 0);
 
 	return (
 		<StandalonePage
@@ -1336,7 +1395,8 @@ export function EntryEditor({
 													toast(t("leave.uploads.title"));
 													return;
 												}
-												if ((await editor.own(() => archive.run({ ids: [id] }))).ok) await editor.reload();
+												// The toast says it was done and takes it back, as the move to the trash does: unarchiving gives a draft, not what was published.
+												if (await editor.own(() => archiving.archive([id]))) await editor.reload();
 											}}
 										>
 											<Archive aria-hidden />
@@ -1473,7 +1533,7 @@ export function EntryEditor({
 							</StatusBarCell>
 						</StatusBarLive>
 					)}
-					{/* One list of what is left in the entry: what stops publishing, then what changed in the source (translation.md, 2026-11-10 owner). */}
+					{/* One list of what is left in the entry: what stops publishing, then what only tells, then what changed in the source (translation.md, 2026-11-10 owner). */}
 					<StatusBarList
 						trigger={
 							<StatusBarCell tone={publish.blocking > 0 ? "warning" : undefined}>
@@ -1482,32 +1542,19 @@ export function EntryEditor({
 									: t("entry.todo.none")}
 							</StatusBarCell>
 						}
-						label={t(sourceOnly ? "translation.changedTitle" : "entry.todo.label")}
-						count={sourceOnly ? sourceCount : publish.tasks.length}
+						label={firstGroup?.label ?? t("entry.todo.label")}
+						count={firstGroup?.count ?? 0}
+						countTone={firstGroup?.tone}
 						open={todoOpen}
 						onOpenChange={setTodoOpen}
 					>
-						{sourceOnly ? null : (
-							<>
-								{publish.tasks.map((task, index) => (
-									<TodoItem
-										key={`${task.code}:${task.field ?? ""}:${task.block ?? ""}:${index}`}
-										title={taskTitle(task)}
-										detail={taskDetail(task)}
-										blocking={task.blocking}
-										onOpen={() => goTo(task)}
-									/>
-								))}
-								{/* The list holds what is left to do, nothing done beside it (2026-11-10, owner): a row that is done goes. */}
-								{publish.tasks.length === 0 ? <TodoDone>{t("entry.todo.none")}</TodoDone> : null}
-							</>
-						)}
-						{sourceRows && sourceOnly ? sourceRows : null}
-						{sourceRows && !sourceOnly ? (
-							<StatusBarListGroup label={t("translation.changedTitle")} count={sourceCount}>
-								{sourceRows}
+						{/* The list holds what is left to do, nothing done beside it (2026-11-10, owner): a row that is done goes. */}
+						{firstGroup ? firstGroup.rows : <TodoDone>{t("entry.todo.none")}</TodoDone>}
+						{moreGroups.map((group) => (
+							<StatusBarListGroup key={group.label} label={group.label} count={group.count} countTone={group.tone}>
+								{group.rows}
 							</StatusBarListGroup>
-						) : null}
+						))}
 					</StatusBarList>
 					{askedPlaces.length > 0 && !readOnly ? (
 						<StatusBarCell

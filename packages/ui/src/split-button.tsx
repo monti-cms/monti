@@ -1,7 +1,7 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { BUSY_GUARD } from "./busy";
 import { Caret } from "./caret";
 import { cn } from "./cn";
@@ -18,6 +18,8 @@ const HALF =
  * A main action with a menu of its variants ("Publish" + "Republish with today's date") in one ink pill. The menu holds only other ways of
  * the same action; a first publish has no menu and is a plain primary `Button`. `menuLabel` names the caret half for screen readers and its
  * tooltip; `menu` is the menu's items (`DropdownMenuItem`s). `disabled` and `loading` apply to both halves; a loading pill keeps its fill, and its label says what is happening.
+ * A pill that cannot be pressed keeps the keyboard's focus: its main half is `aria-disabled`, not off, so a publish that ends in "Published"
+ * does not hand the focus to the page. The caret half of a disabled pill is off and out of the tab order; had it the focus, the main half takes it.
  */
 function SplitButton({
 	children,
@@ -45,6 +47,23 @@ function SplitButton({
 	align?: "start" | "center" | "end";
 }) {
 	const inert = disabled || loading;
+	// A pill that cannot be pressed shows no menu, whatever reaches its caret half (TR-29).
+	const [open, setOpen] = useState(false);
+	// What was open is forgotten too: a pill that can be pressed again does not come back with its menu.
+	if (inert && open) setOpen(false);
+	const main = useRef<HTMLButtonElement>(null);
+	const caret = useRef<HTMLButtonElement>(null);
+	// The caret half goes off with the pill. The focus it held (a publish started from the menu) goes to the main half, not to the page. The
+	// mark is used once, and only a focus that is still on the caret half or has fallen to the page is moved: one the person has since put
+	// elsewhere (the title they went on to write) stays where it is.
+	const caretHeld = useRef(false);
+	useLayoutEffect(() => {
+		if (!disabled) return;
+		const held = caretHeld.current;
+		caretHeld.current = false;
+		const at = document.activeElement;
+		if (held && (at === null || at === document.body || at === caret.current)) main.current?.focus();
+	}, [disabled]);
 	// The menu hangs under the whole pill, not under the caret half: its edge lines up with the pill's edge.
 	const pill = useRef<HTMLDivElement>(null);
 	return (
@@ -58,15 +77,16 @@ function SplitButton({
 			)}
 		>
 			<ButtonPrimitive
+				ref={main}
 				id={id}
 				type="button"
 				data-slot="button"
 				disabled={inert}
-				// Working: the half that was pressed keeps the focus (`aria-disabled`, not the attribute) and takes no second press.
-				focusableWhenDisabled={Boolean(loading) && !disabled}
+				// Working or off: the half keeps the focus (`aria-disabled`, not the attribute) and takes no press.
+				focusableWhenDisabled
 				aria-busy={loading || undefined}
 				onClick={onClick}
-				{...(loading && !disabled ? BUSY_GUARD : {})}
+				{...(inert ? BUSY_GUARD : {})}
 				// A leading icon ("+" of "New post") is 16px and pulled 2px into the left padding, as on a `Button`; while it works the spinner takes its place.
 				className={cn(
 					HALF,
@@ -77,16 +97,27 @@ function SplitButton({
 				{loading && <Spinner />}
 				{children}
 			</ButtonPrimitive>
-			<DropdownMenu>
+			<DropdownMenu open={open && !inert} onOpenChange={setOpen}>
 				<Tooltip>
 					<TooltipTrigger
 						render={
 							<DropdownMenuTrigger
 								render={
 									<ButtonPrimitive
+										ref={caret}
 										type="button"
 										aria-label={menuLabel}
+										onFocus={() => {
+											caretHeld.current = true;
+										}}
+										onBlur={() => {
+											// Turned off while it had the focus, the browser takes the focus from it: that is not the person leaving it.
+											if (!caret.current?.disabled) caretHeld.current = false;
+										}}
 										disabled={inert}
+										// Working: a publish started from the menu came back to this half, and it keeps the focus as the main half does.
+										focusableWhenDisabled={Boolean(loading) && !disabled}
+										{...(loading && !disabled ? BUSY_GUARD : {})}
 										className={cn(HALF, "relative rounded-r-monti-full pr-[13px] pl-monti-12")}
 									/>
 								}
@@ -98,7 +129,12 @@ function SplitButton({
 					</TooltipTrigger>
 					<TooltipContent side="bottom">{menuLabel}</TooltipContent>
 				</Tooltip>
-				<DropdownMenuContent align={align} anchor={pill}>
+				<DropdownMenuContent
+					align={align}
+					anchor={pill}
+					// A row that turned the pill off (the publish ended in "Published"): the caret half cannot take the focus back, so the main half does.
+					finalFocus={() => (caret.current?.disabled ? main.current : true)}
+				>
 					{menu}
 				</DropdownMenuContent>
 			</DropdownMenu>

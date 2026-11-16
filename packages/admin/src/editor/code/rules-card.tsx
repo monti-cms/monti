@@ -248,7 +248,7 @@ export function RulesCard({
 				</FormField>
 				<Inline>
 					<Button
-						variant="ghost-danger"
+						variant="outline-danger"
 						size="sm"
 						onClick={() => {
 							onChange(rules.filter((_, at) => at !== open.at));

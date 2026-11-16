@@ -96,7 +96,7 @@ Each feature as a person using Monti would recognise it. Tick what you have trie
 - [ ] See the unsaved changes and undo them
 - [ ] Be asked when leaving with unsaved changes
 - [ ] Compare what differs when the same entry was changed elsewhere
-- [ ] Publish: with the publish date kept, or published again with today's date
+- [ ] Publish: with the publish date kept, or published again with today's date (a post published today has one way)
 - [ ] See the to-dos before publishing and go to each (영상 주소가 빠진 초안, 주소 없는 초안)
 - [ ] An entry changed after publishing shows as changed (숲 사진첩)
 - [ ] Preview an entry on the site before publishing

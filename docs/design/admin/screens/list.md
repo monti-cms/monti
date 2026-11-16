@@ -81,7 +81,7 @@
 | 막대 | `BulkBar`(`label` "2개 선택", `selectAll`, `request`, `more`, `clearLabel` "선택 해제", `onClear`, `colSpan`) | 열 이름 행과 같은 40px 자리에 온다. 다 풀면 열 이름이 돌아온다. 모든 컬렉션에서 같은 막대다. |
 | "✦ 요청" | `BulkBar`의 `request` | 고른 글을 담아 어시스턴트에게 묻는다: 패널이 열리고 "고른 글 2편" 칩이 걸리고 커서가 입력란에 든다. 보내지는 않는다. 어시스턴트가 없는 사이트에는 없다. |
 | "발행" | `TextButton` | 고른 행 중 발행할 것(초안, 수정 중)이 있을 때만 보인다. |
-| "보관" / "보관 풀기" | `TextButton` | 모두 보관됐으면 "보관 풀기". |
+| "보관" / "보관 풀기" | `TextButton` | 모두 보관됐으면 "보관 풀기". 토스트("보관했습니다" · "보관을 풀었습니다")에 "되돌리기"가 있다(행 메뉴의 "보관"도 같다. 만들며 정함 (2026-11-16)). |
 | "폴더로 ▾" | `TextButton` + `Caret`, `DropdownMenu`(최상위와 폴더 트리, 지금 값 `MenuTick`) | 고르면 옮기고 닫힌다. |
 | "바꾸기 ▾" | `TextButton` + `Caret`, `DropdownMenu` 첫 단계는 관계 필드마다 `DropdownMenuSub` | 스키마의 관계 필드는 모두 이 메뉴 하나에 있다. 값 여럿(태그): `DropdownMenuSearch`와 `DropdownMenuCheckboxItem box`(모두 가짐은 켬, 일부는 `mixed`와 끝의 "1/2" `MenuShortcut`), 메뉴는 열려 있다. 값 하나(카테고리): `DropdownMenuRadioGroup`, 필수가 아니면 맨 위 "없음", 고르면 닫힌다. 고른 행이 모두 가진 값을 다시 누르면 아무것도 바뀌지 않는다(만들며 정함 (2026-11-14)). 바꾸지 못하면 `toast.error`가 까닭을 말한다. |
 | ⋯ | `BulkBar`의 `more` | "내보내기", 구분선, "휴지통으로"(`variant="danger"`). |

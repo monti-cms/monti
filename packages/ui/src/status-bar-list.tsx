@@ -82,7 +82,8 @@ function StatusBarList({
 
 /**
  * A second group in a `StatusBarList`, under a rule: its own name and count in a head like the list's, then its rows. The editor's to-do list keeps what
- * stops publishing first and what changed in the source after it (translation.md, 2026-11-10 owner): one list of what is left in the entry.
+ * stops publishing first, then what only tells, then what changed in the source (translation.md, 2026-11-10 owner): one list of what is left in
+ * the entry. Rows that block and rows that do not are never mixed under one head: the ring's colour alone does not tell them apart (TP-04).
  */
 function StatusBarListGroup({
 	label,

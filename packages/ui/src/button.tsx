@@ -17,7 +17,7 @@ import { Spinner } from "./spinner";
  * (2px more than from the top and bottom) and 10px at `sm`, with 7px to the words and a tighter right side (15px, 13px for `secondary`, 9px at `sm`). The caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`. It keeps the keyboard's focus while it works.
  */
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-default data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
+	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-held:pointer-events-auto data-held:cursor-default data-loading:pointer-events-auto data-loading:cursor-default data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
 	{
 		variants: {
 			variant: {
@@ -37,10 +37,10 @@ const buttonVariants = cva(
 				 */
 				ghost:
 					"bg-transparent px-monti-12 font-normal text-monti-muted not-data-loading:not-disabled:hover:bg-monti-muted not-data-loading:not-disabled:hover:text-monti-default not-data-loading:not-disabled:active:bg-monti-selected not-data-loading:not-disabled:active:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default aria-expanded:bg-monti-selected aria-expanded:text-monti-default",
-				/** A `ghost` that deletes or empties something (empty the trash, delete forever): red words, the red wash under the pointer. */
+				/** A `ghost` that deletes (a sheet foot's "delete", a question's risky way out): red words, the red wash under the pointer. Standing alone in a page head or a danger block it is `outline-danger`. */
 				"ghost-danger":
 					"bg-transparent px-monti-12 font-normal text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted not-data-loading:not-disabled:active:bg-monti-danger-muted",
-				/** The quiet version of `danger`. */
+				/** The quiet version of `danger`: a deleting button outside a dialog that stands alone (empty the trash, delete the collection). */
 				"outline-danger":
 					"border border-monti-danger px-[18px] font-semibold text-monti-danger not-data-loading:not-disabled:hover:bg-monti-danger-muted",
 			},
@@ -80,6 +80,7 @@ function Button({
 	pendingLabel,
 	width,
 	disabled,
+	focusableWhenDisabled,
 	href,
 	target,
 	rel,
@@ -96,6 +97,12 @@ function Button({
 		 * `loading` and says this instead of its words ("Signing in…"). Coming back to the page (the browser's back) wakes it.
 		 */
 		pendingLabel?: React.ReactNode;
+		/**
+		 * With `disabled`: the button stays where the keyboard stops. It is `aria-disabled`, not the attribute: it looks as any disabled button,
+		 * takes no press, and a pointer's press stops on it (it does not go through to what is under it). For a button its own press turns off,
+		 * so that the focus does not fall to the page: the editor's publish button ("Published") always has it, as the split button's main half does.
+		 */
+		focusableWhenDisabled?: boolean;
 		/** Working on it: a spinner replaces the leading icon, the button keeps its fill (it is not dimmed like a disabled one) and cannot be pressed again. Put the progress in the label. */
 		loading?: boolean;
 		/** `full` spans its container (a stacked form, a narrow panel). */
@@ -116,17 +123,20 @@ function Button({
 		};
 	}, [pendingLabel]);
 	const busy = loading || sending;
+	// Off, and still holding the focus: working, or turned off by its own press (`focusableWhenDisabled`).
+	const held = (busy && !disabled) || Boolean(disabled && focusableWhenDisabled);
 	return (
 		<ButtonPrimitive
 			ref={pendingLabel === undefined ? undefined : own}
 			type={pendingLabel === undefined ? undefined : "submit"}
 			data-slot="button"
 			data-loading={busy || undefined}
+			data-held={(held && !busy) || undefined}
 			aria-busy={busy || undefined}
 			disabled={disabled || busy}
 			// Working is not "cannot be used": the button keeps the focus it was pressed with (`aria-disabled`, not the attribute, which would hand
 			// the focus to the page) and takes no second press.
-			focusableWhenDisabled={busy && !disabled}
+			focusableWhenDisabled={held}
 			className={cn(buttonVariants({ variant, size }), width === "full" && "w-full", className)}
 			{...(href === undefined
 				? {}
@@ -137,7 +147,7 @@ function Button({
 						render: <a href={href} target={target} rel={rel} />,
 					})}
 			{...props}
-			{...(busy && !disabled ? BUSY_GUARD : {})}
+			{...(held ? BUSY_GUARD : {})}
 		>
 			{busy && <Spinner className={size === "sm" || size === "xs" ? "size-3" : "size-3.5"} />}
 			{sending ? pendingLabel : children}

@@ -388,6 +388,20 @@ describe("settings › collections: what an action does", () => {
 		await expect.poll(fieldOrder).toEqual(["title", "slug", "subtitle", "summary", "cover", "category"]);
 	});
 
+	it("[ST-18] a saved field's sheet opens with the focus on the name shown, not on the identifier; a new field's opens on the identifier", async () => {
+		await Fields.run();
+		const sheet = page.getByRole("dialog");
+		await userEvent.click(page.getByRole("button", { name: "summary 열기" }));
+		await expect.element(sheet.getByRole("textbox", { name: "표시 이름" })).toHaveFocus();
+		// A key pressed on opening goes to the name shown: the identifier the site's code reads stays as it was.
+		await userEvent.keyboard("!");
+		await expect.element(sheet.getByRole("textbox", { name: /^식별자/ })).toHaveValue("summary");
+		await userEvent.click(sheet.getByRole("button", { name: "취소" }));
+		await expect.element(sheet).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("button", { name: "필드 추가", exact: true }));
+		await expect.element(sheet.getByRole("textbox", { name: /^식별자/ })).toHaveFocus();
+	});
+
 	it("[overflow-after-add] six tabs added: the tab row still fits the page, and nothing scrolls sideways", async () => {
 		await Fields.run();
 		for (let count = 0; count < 6; count++) {

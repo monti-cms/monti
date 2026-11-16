@@ -1331,6 +1331,251 @@ describe("the entry editor: a refused publish", () => {
 	});
 });
 
+describe("the entry editor: the publish menu", () => {
+	it("[TB-04] a post published today has no publish menu: both rows would give today's date, so the pill is the plain one", async () => {
+		await on("draft").run();
+		await opened();
+		await userEvent.click(button("발행하기"));
+		await expect.element(button("발행됨")).toBeDisabled();
+		await expect.element(button("발행 방식")).not.toBeInTheDocument();
+		await titleEnd();
+		await userEvent.keyboard(" 다시");
+		await expect.element(button("발행하기")).toBeEnabled();
+		await expect.element(button("발행 방식")).not.toBeInTheDocument();
+		expect(document.querySelector("[data-slot=split-button]")).toBeNull();
+	});
+
+	it("[TB-04] a post published on an earlier day keeps the menu: two rows, each under a date of its own", async () => {
+		await from(entry.RepublishMenu).run();
+		const rows = page.getByRole("menuitem");
+		await expect.poll(() => rows.elements().length).toBe(2);
+		const [keep, today] = rows.elements().map((row) => row.textContent ?? "");
+		expect(keep).toMatch(/^발행하기발행일 .+ 그대로$/);
+		expect(today).toMatch(/^오늘 날짜로 다시 발행발행일 .+$/);
+		const date = (words: string) => words.match(/발행일 ([\d. ]+\d)/)?.[1];
+		expect(date(keep as string)).toBeTruthy();
+		expect(date(keep as string)).not.toBe(date(today as string));
+	});
+});
+
+describe("the entry editor: the focus after a publish", () => {
+	/** The greyed "발행됨" has the keyboard's focus, and still has it once the browser has taken it from anything that is off. */
+	const heldByDone = async () => {
+		const done = button("발행됨");
+		await expect.element(done).toHaveAttribute("aria-disabled", "true");
+		await expect.poll(() => document.activeElement).toBe(done.element());
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(document.activeElement).toBe(done.element());
+		expect(document.activeElement).not.toBe(document.body);
+	};
+
+	it("a first publish pressed with the keyboard: the button turns to the greyed '발행됨' and keeps the focus", async () => {
+		await on("draft").run();
+		await opened();
+		(button("발행하기").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		await heldByDone();
+		// Off as before: dimmed, and a press publishes nothing again.
+		expect(getComputedStyle(button("발행됨").element()).opacity).toBe("0.45");
+	});
+
+	it("the pill's main half pressed with the keyboard: the greyed '발행됨' keeps the focus", async () => {
+		await from(entry.RepublishMenu).run();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(page.getByRole("menuitem").first()).not.toBeInTheDocument();
+		(button("발행하기").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		await heldByDone();
+	});
+
+	it("after a publish from the pill's menu, writing in the title keeps the focus there: the pill greyed again takes none", async () => {
+		const story = wired("changed");
+		await story.run();
+		await opened();
+		await expect.element(button("발행 방식")).toBeVisible();
+		(button("발행 방식").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
+		// The first row: the date kept, so the pill stays. The publish takes a while: the menu closes and the caret half has the focus meanwhile.
+		story.wire.cut = (name) => (name === "entries.publish" ? "held" : undefined);
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => document.activeElement).toBe(button("발행 방식").element());
+		story.wire.release();
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		await heldByDone();
+		await titleEnd();
+		await expect.element(title()).toHaveFocus();
+		await userEvent.keyboard("a");
+		await expect.element(button("발행하기")).toBeVisible();
+		await userEvent.keyboard("{Backspace}");
+		await expect.element(button("발행됨")).toBeVisible();
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		await expect.element(title()).toHaveFocus();
+	});
+
+	it("a publish picked in the pill's menu with the keyboard: the caret half goes off and the main half takes the focus", async () => {
+		await from(entry.RepublishMenu).run();
+		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(page.getByRole("menuitem").first()).not.toBeInTheDocument();
+		(button("발행 방식").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		await heldByDone();
+		await expect.element(button("발행 방식")).toBeDisabled();
+	});
+});
+
+describe("the entry editor: the pill and the plain publish button take each other's place", () => {
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("published again with today's date from the keyboard: the pill gives way to the plain '발행됨', which takes the focus", async () => {
+		await from(entry.RepublishMenu).run();
+		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(page.getByRole("menuitem").first()).not.toBeInTheDocument();
+		(button("발행 방식").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		const today = page.getByRole("menuitem", { name: /오늘 날짜로 다시 발행/ });
+		await expect.element(today).toBeVisible();
+		(today.element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		// The date is today's now: no other way is left, so there is no pill.
+		await expect.poll(() => document.querySelector("[data-slot=split-button]")).toBeNull();
+		const done = button("발행됨");
+		await expect.element(done).toHaveAttribute("aria-disabled", "true");
+		await expect.poll(() => document.activeElement).toBe(done.element());
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(document.activeElement).toBe(done.element());
+	});
+
+	/** The clock alone moves on a day (the timers go on as they are), and the window takes the focus: the day is looked at again. */
+	const nextDay = () => {
+		vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + 24 * 60 * 60 * 1000 });
+		window.dispatchEvent(new Event("focus"));
+	};
+	/** Published today from the keyboard: the plain "발행됨" has the focus. */
+	const publishedByKeys = async () => {
+		await on("draft").run();
+		await opened();
+		(button("발행하기").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		await expect.poll(() => document.activeElement).toBe(button("발행됨").element());
+		expect(document.querySelector("[data-slot=split-button]")).toBeNull();
+	};
+
+	it("midnight passes with the focus on the plain '발행됨': the pill takes its place, and its main half takes the focus", async () => {
+		await publishedByKeys();
+		nextDay();
+		await expect.element(button("발행 방식")).toBeVisible();
+		const main = document.querySelector("[data-slot=split-button] [data-slot=button]");
+		expect(main?.textContent).toBe("발행됨");
+		await expect.poll(() => document.activeElement).toBe(main);
+	});
+
+	it("the focus left on the page before the swap stays there: the pill that comes at midnight takes none", async () => {
+		await publishedByKeys();
+		// A press on nothing: the focus leaves the button, and no other control takes it.
+		const blank = [...document.querySelectorAll<HTMLElement>("[data-slot=status-bar-cell]")].at(-1) as HTMLElement;
+		expect(blank.tagName).toBe("SPAN");
+		await userEvent.click(blank);
+		expect(document.activeElement).toBe(document.body);
+		nextDay();
+		await expect.element(button("발행 방식")).toBeVisible();
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(document.activeElement).toBe(document.body);
+	});
+
+	it("[TB-04] an entry published today and left open past midnight gets its menu: the day is looked at again when the window takes the focus", async () => {
+		await on("draft").run();
+		await opened();
+		await userEvent.click(button("발행하기"));
+		await expect.element(button("발행됨")).toBeVisible();
+		await titleEnd();
+		await userEvent.keyboard(" 다시");
+		await expect.element(button("발행하기")).toBeEnabled();
+		await expect.element(button("발행 방식")).not.toBeInTheDocument();
+		nextDay();
+		await expect.element(button("발행 방식")).toBeVisible();
+		await userEvent.click(button("발행 방식"));
+		const rows = page.getByRole("menuitem");
+		await expect.poll(() => rows.elements().length).toBe(2);
+		const date = (row: Element | undefined) => (row?.textContent ?? "").match(/발행일 ([\d. ]+\d)/)?.[1];
+		expect(date(rows.elements()[0])).toBeTruthy();
+		expect(date(rows.elements()[0])).not.toBe(date(rows.elements()[1]));
+	});
+});
+
+describe("the entry editor: the to-do list's groups", () => {
+	const list = () => document.querySelector("[data-slot=status-bar-list]") as HTMLElement;
+	const heads = () => [...list().querySelectorAll("[data-slot=status-bar-list-head]")].map((head) => head.textContent);
+
+	it("[TP-04] what stops publishing and what only tells stand in two groups, each with its name and count", async () => {
+		await on("toCheck").run();
+		await opened();
+		await userEvent.click(button("할 일 3"));
+		const tells = page.getByRole("group", { name: "확인할 것 1" });
+		await expect.element(tells).toBeVisible();
+		expect(heads()).toEqual(["발행 전에 고칠 것2", "확인할 것1"]);
+		// The link to a draft is in the second group alone, and every row that stops the publish is above it.
+		await expect.element(tells.getByRole("button", { name: /발행 안 된 글로 가는 링크 1개/ })).toBeVisible();
+		expect(tells.element().querySelectorAll("[data-slot=todo-item]")).toHaveLength(1);
+		expect(tells.element().querySelector("[data-blocking]")).toBeNull();
+		const stops = [...list().querySelectorAll("[data-slot=todo-item]")].filter((row) => !tells.element().contains(row));
+		expect(stops).toHaveLength(2);
+		expect(stops.every((row) => row.querySelector("[data-blocking]") !== null)).toBe(true);
+	});
+
+	it("[TP-04] with nothing that stops publishing, what only tells heads the list under its own name", async () => {
+		await on("toCheckOnly").run();
+		await opened();
+		await userEvent.click(button("할 일 1"));
+		await expect.poll(heads).toEqual(["확인할 것1"]);
+		expect(list().querySelector("[data-blocking]")).toBeNull();
+		await expect.element(page.getByRole("group", { name: /확인할 것/ })).not.toBeInTheDocument();
+	});
+});
+
+describe("the entry editor: archiving", () => {
+	const state = async ({ site, id }: Loaded) =>
+		((await site.monti.run("entries.get", { id }, entry.admin)) as { state: string }).state;
+
+	it("02-6 archiving from ⋯ says so in a toast with its way back: undone, the entry is published again", async () => {
+		const shown = on("published");
+		await shown.run();
+		await opened();
+		await expect.element(button("발행됨")).toBeVisible();
+		await userEvent.click(button("더 보기"));
+		await userEvent.click(page.getByRole("menuitem", { name: "보관", exact: true }));
+		await expect.element(page.getByText("보관했습니다")).toBeVisible();
+		await expect.element(button("보관 풀기")).toBeVisible();
+		expect(await state(shown.loaded())).toBe("archived");
+		await userEvent.click(button("되돌리기"));
+		await expect.element(button("발행됨")).toBeVisible();
+		await expect.element(button("보관 풀기")).not.toBeInTheDocument();
+		expect(await state(shown.loaded())).toBe("published");
+	});
+
+	it("02-6 '보관 풀기' says so in the same toast: undone, the entry is archived again", async () => {
+		const shown = from(entry.Archived);
+		await shown.run();
+		await userEvent.click(button("보관 풀기"));
+		await expect.element(page.getByText("보관을 풀었습니다")).toBeVisible();
+		await expect.element(button("발행하기")).toBeVisible();
+		await userEvent.click(button("되돌리기"));
+		await expect.element(button("보관 풀기")).toBeVisible();
+		expect(await state(shown.loaded())).toBe("archived");
+	});
+});
+
 describe("the entry editor: the property panel's tabs", () => {
 	it("a tab holding a field a publish to-do points at has the orange dot by its name, and loses it once open", async () => {
 		await on("addressInTab").run();

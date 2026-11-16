@@ -58,6 +58,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { type Refusal, reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
+import { useArchive } from "../entry/use-archive";
 import { ColumnMenu, useLanguageName } from "./column-menu";
 import { countedWhere } from "./counted-where";
 import {
@@ -300,13 +301,12 @@ function DocumentListScreen({
 	const run = {
 		create: useOperation<{ output: { id: string } }>("entries.create"),
 		duplicate: useOperation("entries.duplicate"),
-		archive: useOperation("entries.archive"),
-		unarchive: useOperation("entries.unarchive"),
 		publish: useOperation<{ output: { published: string[]; blocked: string[] } }>("entries.publish"),
 		exportRows: useOperation<BackupOutput>("data.export"),
 		moveToFolder: useOperation("entries.moveToFolder"),
 		moveFolder: useOperation("folders.move"),
 	};
+	const archiving = useArchive();
 	const removeFolder = useRemoveFolder();
 	const trash = useTrashMove();
 	const folderName = useFolderNaming({ collection }, state.folder);
@@ -334,17 +334,17 @@ function DocumentListScreen({
 	};
 	const entryRoute = (row: ListRow): Route => ({ screen: "entry", collection, id: row.id });
 	const ids = (list: ListRow[]) => ({ ids: list.map((row) => row.id) });
-	/** A write that did not go through says why (status.md); one that did lets go of the picked rows when it asks to. */
-	const said = (result: { ok: true } | { ok: false; refusal: Refusal }, unpick = false) => {
+	/** A write that did not go through says why (status.md). */
+	const said = (result: { ok: true } | { ok: false; refusal: Refusal }) => {
 		if (!result.ok) toast.error(t(reasonOf(result.refusal)));
-		else if (unpick) setPicked(new Map());
 	};
 	const actions: Actions = {
 		open: (row) => go(entryRoute(row)),
 		openNewTab: (row) => window.open(href(entryRoute(row)), "_blank", "noopener"),
 		duplicate: (row) => void run.duplicate.run({ id: row.id }).then((result) => said(result)),
-		archive: (list) => void run.archive.run(ids(list)).then((result) => said(result, true)),
-		unarchive: (list) => void run.unarchive.run(ids(list)).then((result) => said(result, true)),
+		// Archived rows leave the usual view: the toast says what was done and takes it back, as in the editor (`useArchive`).
+		archive: (list) => void archiving.archive(ids(list).ids).then((done) => done && setPicked(new Map())),
+		unarchive: (list) => void archiving.unarchive(ids(list).ids).then((done) => done && setPicked(new Map())),
 		publish: async (list) => {
 			const result = await run.publish.run(ids(publishable(list)));
 			if (!result.ok) return void toast.error(t(reasonOf(result.refusal)));

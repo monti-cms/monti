@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "../test/render";
@@ -228,4 +229,220 @@ describe("a button while it works", () => {
 			expect(beneath).toBe(0);
 			expect(document.activeElement).toBe(busy.element());
 		});
+});
+
+describe("a split button that cannot be pressed", () => {
+	it("[TR-29] the menu half of a greyed pill takes no focus and opens nothing: Tab passes both halves, and a press shows no menu", async () => {
+		render(
+			<>
+				<Button>앞</Button>
+				<SplitButton disabled menuLabel="발행 방식" menu={<DropdownMenuItem>오늘 날짜로 다시 발행</DropdownMenuItem>}>
+					발행됨
+				</SplitButton>
+				<Button>뒤</Button>
+			</>,
+		);
+		const menuHalf = page.getByRole("button", { name: "발행 방식" });
+		await expect.element(menuHalf).toBeDisabled();
+		// The main half says why ("발행됨") and is where the keyboard stops; the caret half is out of the tab order.
+		await expect.element(page.getByRole("button", { name: "발행됨" })).toHaveAttribute("aria-disabled", "true");
+		(page.getByRole("button", { name: "앞" }).element() as HTMLElement).focus();
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(page.getByRole("button", { name: "발행됨" }).element());
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(page.getByRole("button", { name: "뒤" }).element());
+		// Nothing a script or a pointer does gives it the focus or opens its menu.
+		(menuHalf.element() as HTMLElement).focus();
+		expect(document.activeElement).not.toBe(menuHalf.element());
+		await menuHalf.click({ force: true });
+		(menuHalf.element() as HTMLElement).click();
+		await expect.element(menuHalf).toHaveAttribute("aria-expanded", "false");
+		await expect.element(page.getByRole("menuitem", { name: "오늘 날짜로 다시 발행" })).not.toBeInTheDocument();
+	});
+
+	it("[TR-29] a publish started from the menu with the keyboard: while it works the caret half keeps the focus and opens nothing", async () => {
+		function FromMenu() {
+			const [busy, setBusy] = useState(false);
+			return (
+				<SplitButton
+					loading={busy}
+					menuLabel="발행 방식"
+					menu={<DropdownMenuItem onClick={() => setBusy(true)}>오늘 날짜로 다시 발행</DropdownMenuItem>}
+				>
+					{busy ? "발행 중" : "발행하기"}
+				</SplitButton>
+			);
+		}
+		render(<FromMenu />);
+		const menuHalf = page.getByRole("button", { name: "발행 방식" });
+		const row = page.getByRole("menuitem", { name: "오늘 날짜로 다시 발행" });
+		await expect.element(menuHalf).toBeVisible();
+		(menuHalf.element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(row).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("button", { name: "발행 중" })).toHaveAttribute("aria-busy", "true");
+		await expect.element(row).not.toBeInTheDocument();
+		// The focus came back to the half that opened the menu and did not fall to the page.
+		await expect.poll(() => document.activeElement).toBe(menuHalf.element());
+		await expect.element(menuHalf).toHaveAttribute("aria-disabled", "true");
+		await userEvent.keyboard("{Enter}");
+		await userEvent.keyboard("{ArrowDown}");
+		await menuHalf.click({ force: true });
+		await expect.element(row).not.toBeInTheDocument();
+		expect(document.activeElement).toBe(menuHalf.element());
+	});
+
+	/** A publish pressed here ends in "Published": the button is off from then on. */
+	function Publishes({ part }: { part: "button" | "split" }) {
+		const [done, setDone] = useState(false);
+		const [presses, setPresses] = useState(0);
+		const press = () => {
+			setPresses((count) => count + 1);
+			setDone(true);
+		};
+		return (
+			<>
+				{part === "button" ? (
+					<Button disabled={done} focusableWhenDisabled onClick={press}>
+						{done ? "발행됨" : "발행하기"}
+					</Button>
+				) : (
+					<SplitButton
+						disabled={done}
+						onClick={press}
+						menuLabel="발행 방식"
+						menu={<DropdownMenuItem onClick={press}>오늘 날짜로 다시 발행</DropdownMenuItem>}
+					>
+						{done ? "발행됨" : "발행하기"}
+					</SplitButton>
+				)}
+				<Button>뒤</Button>
+				<output aria-label="presses">{presses}</output>
+			</>
+		);
+	}
+
+	for (const part of ["button", "split"] as const)
+		it(`${part}: published from the keyboard, the greyed "발행됨" keeps the focus, looks off and takes no press`, async () => {
+			let beneath = 0;
+			render(
+				// biome-ignore lint/a11y/noStaticElementInteractions: what lies under the button (a row that opens on a press).
+				<div
+					onClick={() => {
+						beneath += 1;
+					}}
+				>
+					<Publishes part={part} />
+				</div>,
+			);
+			const idle = page.getByRole("button", { name: "발행하기" });
+			await expect.element(idle).toBeVisible();
+			(idle.element() as HTMLElement).focus();
+			await userEvent.keyboard("{Enter}");
+			const done = page.getByRole("button", { name: "발행됨" });
+			await expect.element(done).toHaveAttribute("aria-disabled", "true");
+			await expect.element(done).not.toHaveAttribute("disabled");
+			// The browser takes the focus from a control that is off a moment later: it is still here after that.
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			expect(document.activeElement).toBe(done.element());
+			const dimmed = part === "button" ? done.element() : (done.element().parentElement as HTMLElement);
+			expect(getComputedStyle(dimmed).opacity).toBe("0.45");
+			await userEvent.keyboard("{Enter}");
+			await userEvent.keyboard(" ");
+			// A pointer's press stops on it, plain or pill alike: it does not go through to the page, and the focus stays.
+			expect(getComputedStyle(done.element()).pointerEvents).toBe("auto");
+			expect(getComputedStyle(done.element()).cursor).toBe("default");
+			const before = beneath;
+			await done.click({ force: true });
+			await expect.element(page.getByRole("status", { name: "presses" })).toHaveTextContent("1");
+			expect(beneath).toBe(before);
+			expect(document.activeElement).toBe(done.element());
+			// Tab goes on from it.
+			await userEvent.keyboard("{Tab}");
+			expect(document.activeElement).toBe(page.getByRole("button", { name: "뒤" }).element());
+		});
+
+	it("a publish from the menu that ends in a greyed pill: the caret half goes off, and the focus it held goes to the main half", async () => {
+		render(<Publishes part="split" />);
+		const caret = page.getByRole("button", { name: "발행 방식" });
+		await expect.element(caret).toBeVisible();
+		(caret.element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "오늘 날짜로 다시 발행" })).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		const done = page.getByRole("button", { name: "발행됨" });
+		await expect.element(caret).toBeDisabled();
+		await expect.poll(() => document.activeElement).toBe(done.element());
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(document.activeElement).toBe(done.element());
+	});
+
+	it("the focus the caret half held is handed on once: a pill greyed again later takes no focus from where the person went", async () => {
+		let turn: (state: "idle" | "busy" | "done") => void = () => {};
+		function Toggled() {
+			const [state, setState] = useState<"idle" | "busy" | "done">("idle");
+			turn = setState;
+			return (
+				<>
+					<SplitButton
+						disabled={state === "done"}
+						loading={state === "busy"}
+						menuLabel="발행 방식"
+						menu={<DropdownMenuItem onClick={() => setState("busy")}>오늘 날짜로 다시 발행</DropdownMenuItem>}
+					>
+						{state === "done" ? "발행됨" : state === "busy" ? "발행 중" : "발행하기"}
+					</SplitButton>
+					<input aria-label="제목" />
+				</>
+			);
+		}
+		render(<Toggled />);
+		const caret = page.getByRole("button", { name: "발행 방식" });
+		await expect.element(caret).toBeVisible();
+		(caret.element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "오늘 날짜로 다시 발행" })).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		// Working: the focus is back on the caret half. Done: the caret half goes off, and the main half takes it.
+		await expect.poll(() => document.activeElement).toBe(caret.element());
+		flushSync(() => turn("done"));
+		await expect.poll(() => document.activeElement).toBe(page.getByRole("button", { name: "발행됨" }).element());
+		// The person goes on to the title; the pill wakes (a letter typed) and is greyed again (the letter taken back).
+		const title = page.getByRole("textbox", { name: "제목" });
+		await userEvent.click(title);
+		flushSync(() => turn("idle"));
+		await expect.element(page.getByRole("button", { name: "발행하기" })).toBeVisible();
+		flushSync(() => turn("done"));
+		await expect.element(page.getByRole("button", { name: "발행됨" })).toBeVisible();
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(document.activeElement).toBe(title.element());
+	});
+
+	it("[TR-29] a pill turned off while its menu is open forgets the menu: pressable again, it does not come back open", async () => {
+		let turn: (off: boolean) => void = () => {};
+		function Toggled() {
+			const [off, setOff] = useState(false);
+			turn = setOff;
+			return (
+				<SplitButton
+					disabled={off}
+					menuLabel="발행 방식"
+					menu={<DropdownMenuItem>오늘 날짜로 다시 발행</DropdownMenuItem>}
+				>
+					발행하기
+				</SplitButton>
+			);
+		}
+		render(<Toggled />);
+		const row = page.getByRole("menuitem", { name: "오늘 날짜로 다시 발행" });
+		await userEvent.click(page.getByRole("button", { name: "발행 방식" }));
+		await expect.element(row).toBeVisible();
+		flushSync(() => turn(true));
+		await expect.element(row).not.toBeInTheDocument();
+		flushSync(() => turn(false));
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		await expect.element(row).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "발행 방식" })).toHaveAttribute("aria-expanded", "false");
+	});
 });

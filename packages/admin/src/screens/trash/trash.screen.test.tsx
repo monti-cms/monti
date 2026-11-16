@@ -259,6 +259,16 @@ describe("the trash (doc 11, flow 5)", () => {
 		await expect.element(main().getByRole("button", { name: "검색" })).not.toBeInTheDocument();
 	});
 
+	it("[AT-23] '비우기' has a button's shape: a red line round red words, as the collection's '지우기'", async () => {
+		await Top.run();
+		const look = getComputedStyle(main().getByRole("button", { name: "비우기" }).element());
+		expect(look.borderTopWidth).toBe("1px");
+		expect(look.borderTopStyle).toBe("solid");
+		// The line is the words' red, and the pill is as wide as a filled one.
+		expect(look.borderTopColor).toBe(look.color);
+		expect(look.paddingLeft).toBe("18px");
+	});
+
 	it("11-1 [flow 5·28] a trash that never held anything says so", async () => {
 		await Empty.run();
 		await expect.element(main().getByText("휴지통이 비었습니다.")).toBeVisible();
