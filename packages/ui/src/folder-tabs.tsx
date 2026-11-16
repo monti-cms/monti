@@ -6,6 +6,7 @@ import { useDndContext } from "@dnd-kit/core";
 import type * as React from "react";
 import { cn } from "./cn";
 import { Count } from "./count";
+import { CutWords } from "./cut-words";
 import { Add, Draggable, Locked } from "./icons";
 import { HELD, SLOT } from "./sortable";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -19,7 +20,7 @@ function FolderTabs({ className, ...props }: TabsPrimitive.Root.Props) {
 }
 
 /**
- * The row of tabs: it scrolls sideways when the tabs do not fit, never up and down (its focus rings are inside the tabs, so nothing is cut). `add` is the button that adds a tab (`FolderTabsAdd`). While a tab is dragged with the keyboard, the arrow keys move it instead of
+ * The row of tabs: its tabs shrink first (their names are cut and say themselves whole), and only when even the shrunk tabs do not fit it scrolls sideways, never up and down (its focus rings are inside the tabs, so nothing is cut). `add` is the button that adds a tab (`FolderTabsAdd`). While a tab is dragged with the keyboard, the arrow keys move it instead of
  * the focus.
  */
 function FolderTabsList({
@@ -33,7 +34,10 @@ function FolderTabsList({
 	return (
 		<TabsPrimitive.List
 			data-slot="folder-tabs-list"
-			className={cn("relative z-1 -mb-px flex items-end gap-monti-4 overflow-x-auto overflow-y-hidden", className)}
+			className={cn(
+				"relative z-1 -mb-px flex items-end gap-monti-4 overflow-x-auto overflow-y-hidden [&>:not([data-slot=folder-tabs-add])]:min-w-18 [&>:not([data-slot=folder-tabs-add])]:shrink",
+				className,
+			)}
 			onKeyDown={(event) => {
 				onKeyDown?.(event);
 				if (active && event.key.startsWith("Arrow")) event.preventBaseUIHandler();
@@ -49,6 +53,14 @@ function FolderTabsList({
 /** What every tab shares: 36px, a line on three sides, rounded at the top. */
 const FOLDER_TAB =
 	"inline-flex h-monti-control-lg items-center gap-monti-8 whitespace-nowrap rounded-t-monti-lg border border-monti-default pr-monti-16 pl-monti-12 text-monti-body [&_svg]:shrink-0";
+
+/**
+ * A tab's name: the tabs of a full row shrink (to 4.5rem), so the name ends in "…" and says itself whole (`CutWords`); only when
+ * even the shrunk tabs do not fit does the row scroll.
+ */
+function TabName({ children }: { children: React.ReactNode }) {
+	return <CutWords render={<span className="min-w-[2ch] truncate" />}>{children}</CutWords>;
+}
 
 /** What moves a tab while it is dragged, or while the others make room for it. */
 export interface TabMotion {
@@ -91,7 +103,7 @@ function FolderTab({
 			style={motion}
 			className={cn(
 				FOLDER_TAB,
-				"data-active:border-b-(color:--monti-bg-page) cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
+				"data-active:border-b-(color:--monti-bg-page) max-w-full cursor-pointer overflow-hidden bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
 				dragging && SLOT,
 				dropTarget && "bg-monti-selected text-monti-default ring-[1.5px] ring-monti-contrast ring-inset",
 				className,
@@ -99,7 +111,7 @@ function FolderTab({
 			{...props}
 		>
 			{draggable && !locked && <Draggable aria-hidden className="size-3.5 text-monti-faint" />}
-			{children}
+			<TabName>{children}</TabName>
 			{count !== undefined && <Count>{count}</Count>}
 			{locked && <Locked role="img" aria-label={locked} className="size-3 text-monti-faint" />}
 		</TabsPrimitive.Tab>

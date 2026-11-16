@@ -184,7 +184,16 @@ describe.each(["light", "dark"] as const)("18-2 the tabs' look, in the %s page",
 		expect(Math.round(open.getBoundingClientRect().bottom - panel.getBoundingClientRect().top)).toBe(1);
 	});
 
-	it("18-2 tabs that do not fit scroll sideways in their row and never up and down, and not the page", () => {
+	it("18-2 the tabs of a full row shrink first, their names ending in an ellipsis, and the row does not scroll while they fit", () => {
+		const page = draw(doc(tabs(3)), { width: 320, mode });
+		const list = page.querySelector<HTMLElement>('[role="tablist"]') as HTMLElement;
+		expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth + 1);
+		const names = [...page.querySelectorAll<HTMLElement>(".monti-block-tabs-name")];
+		expect(names.some((name) => name.scrollWidth > name.clientWidth)).toBe(true);
+		expect(names.every((name) => name.title !== "")).toBe(true);
+	});
+
+	it("18-2 tabs that do not fit even shrunk scroll sideways in their row and never up and down, and not the page", () => {
 		const page = draw(doc(tabs(8)), { width: 360, mode });
 		const list = page.querySelector<HTMLElement>('[role="tablist"]') as HTMLElement;
 		expect(list.scrollWidth).toBeGreaterThan(list.clientWidth);

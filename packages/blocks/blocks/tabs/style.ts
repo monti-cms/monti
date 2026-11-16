@@ -58,8 +58,8 @@ export const style = `/*
 /*
  * The tabs' look: the owner's folder tabs (doc 18, the owner: the open tab has no line under it), the same in the editor (FolderTabs of the admin) and on the site. The open tab has the
  * page's own ground and no line under it, so it joins the box under the tabs; the others are closed and grey. The box has one frame (the tab's words are
- * not in a second box), and its top-left corner is square where the open tab joins it. The row of tabs scrolls sideways when they do not fit, and never
- * up and down. The site's own: change it as the site likes (doc 18); --monti-block-ground is the page's ground, which the open tab and its joint take.
+ * not in a second box), and its top-left corner is square where the open tab joins it. The tabs of a full row shrink first (a name ends in an ellipsis and is said whole by the title), and only when even the shrunk tabs do not fit does the row scroll
+ * sideways, and never up and down. The site's own: change it as the site likes (doc 18); --monti-block-ground is the page's ground, which the open tab and its joint take.
  */
 :where(.dark, [data-theme="dark"]) .monti-block-tabs {
 	color-scheme: dark;
@@ -84,7 +84,9 @@ export const style = `/*
 }
 .monti-block-tabs-tab {
 	display: inline-flex;
-	flex: none;
+	flex: 0 1 auto;
+	min-width: 4.5rem;
+	overflow: hidden;
 	align-items: center;
 	height: 2.25rem;
 	padding: 0 1rem 0 0.75rem;
@@ -96,6 +98,11 @@ export const style = `/*
 	font-size: 0.9375em;
 	white-space: nowrap;
 	cursor: pointer;
+}
+.monti-block-tabs-name {
+	min-width: 2ch;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 .monti-block-tabs-tab:hover {
 	color: inherit;
