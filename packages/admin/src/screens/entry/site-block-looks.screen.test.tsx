@@ -1,6 +1,7 @@
 import type { Block, Doc } from "@monti-cms/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { holdRequests, releaseRequests } from "../../../../../testing/input";
 import { scene } from "../../../test/scene";
 import * as blocks from "./site-blocks.stories";
 
@@ -10,6 +11,36 @@ const body = () => page.getByRole("textbox", { name: "본문" });
 const p = (id: string, text: string): Block => ({ id, type: "paragraph", content: [{ type: "text", text }] });
 
 describe("the looks of the site's blocks in the editor (doc 18)", () => {
+	// First in the file: a block's own view loads once a page, so only the first tabs block drawn waits for it.
+	it("18-5 while the tabs' own view is on its way, the stand-in names the tabs and shows one pane, as the site draws them", async () => {
+		const made = on({
+			type: "doc",
+			blocks: [
+				{
+					id: "tabs",
+					type: "tabs",
+					children: [
+						{ id: "t1", type: "tab", attrs: { label: "npm" }, children: [p("t1p", "npm install monti")] },
+						{ id: "t2", type: "tab", attrs: { label: "pnpm" }, children: [p("t2p", "pnpm add monti")] },
+					],
+				},
+			],
+		});
+		onTestFinished(releaseRequests);
+		await holdRequests("**/blocks/tabs/editor.tsx*");
+		await made.run();
+		await expect.element(body().getByRole("tab", { name: /^npm$/ })).toBeVisible();
+		await expect.element(body().getByRole("tab", { name: /^pnpm$/ })).toBeVisible();
+		// One pane: the first tab's words, not every tab's.
+		await expect.element(body().getByText("npm install monti")).toBeVisible();
+		await expect.element(body().getByText("pnpm add monti")).not.toBeVisible();
+		expect(body().element().querySelector('[data-slot="folder-tabs-body"]')).toBeNull();
+		await releaseRequests();
+		await expect
+			.poll(() => body().element().querySelector('[data-slot="folder-tabs-body"]'), { timeout: 15_000 })
+			.not.toBeNull();
+	});
+
 	it("18-4 a callout in the editor is the bar and the icon, its words the body's size, and the space under its words is the space over its title", async () => {
 		const made = on({
 			type: "doc",

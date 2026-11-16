@@ -147,6 +147,11 @@ export const style = `/*
 	margin-bottom: 0;
 }
 
+/* In the editor, while the tabs' own view loads, the site's drawing stands in: its one pane holds every tab, so only the first tab shows. */
+.monti-block-tabs [role="tabpanel"] [data-node-view-content-react] > :not(:first-child) {
+	display: none;
+}
+
 /* In the editor: a title typed in the block keeps the block's own letters. */
 [data-slot="block-title"] {
 	width: 100%;

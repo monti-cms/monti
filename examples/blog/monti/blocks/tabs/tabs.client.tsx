@@ -56,13 +56,15 @@ export function TabsView({
 						role="tab"
 						id={`${id}-tab-${index}`}
 						className="monti-block-tabs-tab"
+						title={label}
+						aria-label={label}
 						aria-selected={index === active}
 						aria-controls={`${id}-panel-${index}`}
 						tabIndex={index === active ? 0 : -1}
 						onClick={() => setActive(index)}
 						onKeyDown={(event) => onKeyDown(event, index)}
 					>
-						<span className="monti-block-tabs-name" data-name={label} title={label}>
+						<span className="monti-block-tabs-name" data-name={label}>
 							<span className="monti-block-tabs-text">{label}</span>
 						</span>
 					</button>

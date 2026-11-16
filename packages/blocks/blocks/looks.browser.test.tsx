@@ -216,7 +216,7 @@ describe.each(["light", "dark"] as const)("18-2 the tabs' look, in the %s page",
 		expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth + 1);
 		const names = [...page.querySelectorAll<HTMLElement>(".monti-block-tabs-text")];
 		expect(names.some((name) => name.scrollWidth > name.clientWidth)).toBe(true);
-		expect(names.every((name) => (name.parentElement as HTMLElement).title !== "")).toBe(true);
+		expect(names.every((name) => (name.closest("button") as HTMLElement).title !== "")).toBe(true);
 	});
 
 	it("18-2 tabs that do not fit even shrunk scroll sideways in their row and never up and down, and not the page", () => {
