@@ -80,8 +80,9 @@ const EDITOR_BODY = cn(
 	// A picked picture or file is drawn by its own ring: the browser's text highlight over its name says nothing (2026-11-10, owner).
 	"[&_.ProseMirror-selectednode:not(:focus-within)_[data-block=image]]:selection:bg-transparent!",
 	"[&_.ProseMirror-selectednode:not(:focus-within)_[data-block=file]]:selection:bg-transparent!",
+	// A site block's own margin (its look on the site: 1.5rem) gives way to the body's plain gap; it is unlayered, so it takes `!` to: one reading rhythm.
 	// A picture and a file stand off the next block as a paragraph does (2026-11-10, owner: 20px above them, none under, read as stuck to what follows).
-	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20 [&_[data-block=codeBlock]]:relative [&_[data-block=codeBlock]]:mb-monti-20",
+	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20 [&_[data-slot=block-box]>[class*=monti-block-]]:mt-0! [&_[data-slot=block-box]>[class*=monti-block-]]:mb-monti-20! [&_[data-block]>[class*=monti-block-]]:mt-0! [&_[data-block]>[class*=monti-block-]]:mb-monti-20! [&_[data-block=codeBlock]]:relative [&_[data-block=codeBlock]]:mb-monti-20",
 	// Doc 17: words pointing at code lines (a dotted line under them), one whose lines are gone (red), the words picked first while a link is made.
 	"[&_[data-monti-mark=codeRef]]:underline [&_[data-monti-mark=codeRef]]:decoration-(--monti-fg-subtle) [&_[data-monti-mark=codeRef]]:decoration-dotted [&_[data-monti-mark=codeRef]]:underline-offset-4",
 	"[&_[data-code-ref-broken]]:underline [&_[data-code-ref-broken]]:decoration-(--monti-fg-danger) [&_[data-code-ref-broken]]:decoration-dotted [&_[data-code-ref-broken]]:underline-offset-4 [&_[data-code-ref-picking]]:rounded-monti-sm [&_[data-code-ref-picking]]:bg-monti-selected",

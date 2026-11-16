@@ -29,10 +29,18 @@ describe("the room a block keeps for its tool row", () => {
 			await expect.poll(() => Math.round(gapAbove(block(type)))).toBe(PLAIN);
 	});
 
-	it("a read-only body keeps none for a site block either, and a written body keeps it for each kind", async () => {
+	it("a read-only body keeps none for a site block either: each stands the plain gap under what is before it", async () => {
 		await SiteBlocksArchived.run();
 		await expect.poll(() => block("callout")).not.toBeNull();
-		await expect.poll(() => gapAbove(block("callout"))).toBeLessThan(ROOM - 8);
+		// Every site block of the body stands the plain gap under what is before it: one reading rhythm.
+		const tops = [...body().element().querySelectorAll(":scope > div")];
+		expect(tops.length).toBeGreaterThan(3);
+		for (const top of tops) {
+			const before = top.previousElementSibling as Element;
+			await expect
+				.poll(() => Math.round(top.getBoundingClientRect().top - before.getBoundingClientRect().bottom))
+				.toBe(PLAIN);
+		}
 	});
 
 	it("a written body keeps it above a picture and a file, whether or not a row shows", async () => {
