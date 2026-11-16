@@ -139,7 +139,8 @@ describe("what is pressed in the text answers the pointer", () => {
 				})
 				.toBeLessThan(24);
 			// The card's first button over the words' start (when the body's edge does not hold it back).
-			expect(Math.abs(card.element().getBoundingClientRect().left - words.left)).toBeLessThan(3);
+			// Polled: the card is placed again once its new selection is measured, and a slow machine can read it between the two.
+			await expect.poll(() => Math.abs(card.element().getBoundingClientRect().left - words.left)).toBeLessThan(3);
 			const edge = body().element().getBoundingClientRect();
 			expect(card.element().getBoundingClientRect().left).toBeGreaterThanOrEqual(edge.left - 1);
 			expect(card.element().getBoundingClientRect().right).toBeLessThanOrEqual(edge.right + 1);
