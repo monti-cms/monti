@@ -41,7 +41,7 @@ export type FilterProps<Value extends string> = {
 	countedWhere?: string;
 };
 
-/** A filter's values as a column menu's rows. */
+/** A filter's values as a column menu's rows, in the order they are given: the caller sorts what comes from the content (`sortFacets`), a fixed set keeps its own. */
 export function FilterRows<Value extends string>({ values, chosen, onChange, countedWhere }: FilterProps<Value>) {
 	const rows = values.map((each) => (
 		<ValueRow

@@ -364,11 +364,20 @@ export const AiFiltered: Story = {
 	},
 };
 
-/** Filters that match nothing: not the empty collection, a line and the way back. */
+/** A search that matches nothing: not the empty collection, a line and the way back, its button named "검색어 지우기". */
 export const NoMatch: Story = {
 	loaders: site(undefined, "#/c/post?q=없는말"),
 	play: ({ canvasElement }) =>
 		waitFor(() => expect(within(canvasElement).getByText("맞는 글이 없습니다.")).toBeTruthy(), wait),
+};
+
+/** Only filters that match nothing: the same line, its button named "필터 해제". */
+export const NoMatchFilters: Story = {
+	loaders: site(undefined, "#/c/post?updatedAt=2000-01-01..2000-01-02"),
+	play: async ({ canvasElement }) => {
+		await waitFor(() => expect(within(canvasElement).getByText("맞는 글이 없습니다.")).toBeTruthy(), wait);
+		expect(within(canvasElement).getByRole("button", { name: "필터 해제" })).toBeTruthy();
+	},
 };
 
 /** Opens the list inside "시리즈 원고" (doc 07): its id is made with the site, so the address is set once it is known. */

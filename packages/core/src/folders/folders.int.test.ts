@@ -370,7 +370,13 @@ describe("the list inside folders", () => {
 			).values;
 		expect((await counted("status", { folder: null })).find((each) => each.value === "draft")?.count).toBe(3);
 		expect((await counted("status", { folder: series })).find((each) => each.value === "draft")?.count).toBe(2);
-		expect(await counted("locale", { folder: null })).toEqual([{ value: "ko", count: 3 }]);
-		expect(await counted("locale", { folder: series })).toEqual([{ value: "ko", count: 2 }]);
+		expect(await counted("locale", { folder: null })).toEqual([
+			{ value: "ko", count: 3 },
+			{ value: "en", count: 0 },
+		]);
+		expect(await counted("locale", { folder: series })).toEqual([
+			{ value: "ko", count: 2 },
+			{ value: "en", count: 0 },
+		]);
 	});
 });

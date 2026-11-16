@@ -266,7 +266,7 @@ describe("taxonomy screen (doc 08)", () => {
 		await userEvent.click(main().getByRole("button", { name: "검색" }));
 		await userEvent.fill(main().getByRole("searchbox"), "없는말");
 		await expect.element(table().getByText("맞는 항목이 없습니다.")).toBeVisible();
-		await userEvent.click(table().getByRole("button", { name: "필터 해제" }));
+		await userEvent.click(table().getByRole("button", { name: "검색어 지우기" }));
 		await expect.element(table().getByText("리액트", { exact: true })).toBeVisible();
 	});
 

@@ -85,6 +85,7 @@ export type {
 	RecordLabel,
 } from "./engine/proposals";
 export type { UndoPlan } from "./engine/undo";
+export { sortFacets } from "./entries/facet-order";
 export {
 	type ColumnKind,
 	type Facet,

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { searchScopes, useFolders } from "../screens/list/folders";
+import { NoMatchLine } from "../screens/list/no-match-row";
 import { chooseFiles } from "./choose-files";
 import { FileThumb, useFileDetail } from "./file-shown";
 import { singleClick } from "./single-click";
@@ -41,7 +42,7 @@ export function MediaPickerDialog({
 	const [shown, setShown] = useState(PAGE);
 	const folders = useFolders("media", true);
 	const here = folder === null ? undefined : folders.byId.get(folder);
-	const looking = search !== "";
+	const looking = search.trim() !== "";
 	const read = useRead<MediaQueryResult>("media.query", {
 		folder,
 		scope: everywhere && search.trim() !== "" ? "all" : "here",
@@ -118,9 +119,15 @@ export function MediaPickerDialog({
 				// Nothing here yet is the library's empty state, as on its page (components/list.md, empty); nothing found is one quiet line.
 				read.data && settled && items.length === 0 && subfolders.length === 0 ? (
 					looking ? (
-						<Text variant="note" tone="subtle">
-							{t("library.nothingFound")}
-						</Text>
+						<NoMatchLine
+							words={t("library.nothingFound")}
+							applied={{ search: true, filters: false }}
+							onClear={() => {
+								startOver();
+								setSearch("");
+								setEverywhere(false);
+							}}
+						/>
 					) : (
 						<Empty title={t("library.picker.none")} />
 					)

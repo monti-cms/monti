@@ -1,6 +1,5 @@
 import type { BackupOutput, ListColumn, ListRow } from "@monti-cms/core";
 import {
-	BulkBar,
 	Caret,
 	Chip,
 	ContextMenu,
@@ -22,9 +21,7 @@ import {
 	Inline,
 	LIST_COLUMN_SIZE,
 	ListFooter,
-	ListHead,
 	type ListHeadColumn,
-	ListScroll,
 	LocaleCodes,
 	MenuShortcut,
 	PageColumn,
@@ -41,8 +38,6 @@ import {
 	SearchToggle,
 	type SelectAll,
 	SplitButton,
-	Table,
-	TableBody,
 	TableCell,
 	TableRow,
 	Text,
@@ -63,6 +58,7 @@ import { type Refusal, reasonOf, useOperation, useRead } from "../../operations/
 import { href, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { useArchive } from "../entry/use-archive";
+import { CollectionTable } from "./collection-table";
 import { ColumnMenu } from "./column-menu";
 import { countedWhere } from "./counted-where";
 import {
@@ -77,7 +73,6 @@ import {
 import { ImportSheet } from "./import-sheet";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
-import { NoMatchRow } from "./no-match-row";
 import { RelationSubmenu } from "./relations-menu";
 import {
 	type RowActions as Actions,
@@ -90,6 +85,7 @@ import {
 } from "./row-menu";
 import { TaxonomyScreen } from "./taxonomy-screen";
 import { widthsAfter } from "./use-column-widths";
+import { useLastPage } from "./use-last-page";
 import { useSearchWords } from "./use-search-words";
 
 type Columns = { columns: ListColumn[]; pageSize: number };
@@ -192,6 +188,13 @@ function DocumentListScreen({
 
 	const setState = (next: ListState, options?: { replace?: boolean }) =>
 		go({ screen: "list", collection, params: writeState(next) }, options);
+	useLastPage({
+		none: rows?.length === 0,
+		page: state.page,
+		total,
+		pageSize,
+		go: (last) => setState({ ...state, page: last }, { replace: true }),
+	});
 
 	// Emptied, the box starts over on the open folder.
 	const box = useSearchWords(state.search.text, (text) =>
@@ -560,7 +563,6 @@ function DocumentListScreen({
 			/>
 		),
 	}));
-	const colSpan = shown.length + 1;
 	const aiChips = state.filters.filter((filter) => state.ai.includes(filterColumn(filter)));
 	const stateNames: Record<string, string> = {
 		published: t("list.state.published"),
@@ -851,176 +853,174 @@ function DocumentListScreen({
 					))}
 				</PageToolbar>
 			)}
-			<ListScroll>
-				<Table container="none" layout="fixed" columns={[...shown.map(sizeOf), LIST_COLUMN_SIZE.end]}>
-					{pickedRows.length > 0 ? (
-						<BulkBar
-							label={t("list.selected", { count: pickedRows.length })}
-							selectAll={selectAll}
-							clearLabel={t("list.clearSelection")}
-							onClear={() => setPicked(new Map())}
-							colSpan={colSpan}
-							request={request ? { label: t("list.request"), onClick: request } : undefined}
-							more={{
-								label: t("list.more"),
+			<CollectionTable
+				bulk={
+					pickedRows.length > 0
+						? {
+								label: t("list.selected", { count: pickedRows.length }),
+								selectAll,
+								clearLabel: t("list.clearSelection"),
+								onClear: () => setPicked(new Map()),
+								request: request ? { label: t("list.request"), onClick: request } : undefined,
+								more: {
+									label: t("list.more"),
+									children: (
+										<>
+											<DropdownMenuItem onClick={() => void actions.exportRows(pickedRows)}>
+												{t("list.export")}
+											</DropdownMenuItem>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem variant="danger" onClick={() => actions.trash(pickedRows)}>
+												{t("trash.toTrash")}
+												<MenuShortcut keys={DELETE_KEYS} />
+											</DropdownMenuItem>
+										</>
+									),
+								},
 								children: (
 									<>
-										<DropdownMenuItem onClick={() => void actions.exportRows(pickedRows)}>
-											{t("list.export")}
-										</DropdownMenuItem>
-										<DropdownMenuSeparator />
-										<DropdownMenuItem variant="danger" onClick={() => actions.trash(pickedRows)}>
-											{t("trash.toTrash")}
-											<MenuShortcut keys={DELETE_KEYS} />
-										</DropdownMenuItem>
-									</>
-								),
-							}}
-						>
-							{document && publishable(pickedRows).length > 0 && (
-								<TextButton onClick={() => void actions.publish(pickedRows)}>{t("list.publish")}</TextButton>
-							)}
-							{!document ? null : allArchived(pickedRows) ? (
-								<TextButton onClick={() => actions.unarchive(pickedRows)}>{t("list.unarchive")}</TextButton>
-							) : (
-								<TextButton onClick={() => actions.archive(pickedRows)}>{t("list.archive")}</TextButton>
-							)}
-							{foldersOn && (
-								<DropdownMenu>
-									<DropdownMenuTrigger render={<TextButton />}>
-										{t("folders.to")}
-										<Caret />
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="start">
-										<FolderTargets
-											context={false}
-											folders={folders}
-											current={placeOf(pickedRows)}
-											onPick={(folder) => void moveRows(pickedRows, folder)}
-										/>
-									</DropdownMenuContent>
-								</DropdownMenu>
-							)}
-							{relationColumns.length > 0 && (
-								<DropdownMenu>
-									<DropdownMenuTrigger render={<TextButton />}>
-										{t("list.changeRelation")}
-										<Caret />
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="start">
-										{relationColumns.map((col) => (
-											<RelationSubmenu
-												key={col.id}
-												collection={collection}
-												column={col}
-												rows={pickedRows}
-												context={false}
-												onDone={() => setPicked(new Map())}
-											/>
-										))}
-									</DropdownMenuContent>
-								</DropdownMenu>
-							)}
-						</BulkBar>
-					) : (
-						<ListHead
-							columns={head}
-							end={LIST_COLUMN_SIZE.end}
-							selectAll={rows && rows.length > 0 ? selectAll : undefined}
-							add={{
-								label: t("list.addColumn"),
-								columns: (columns ?? [])
-									.filter((column) => hidden.includes(column.id))
-									.map((column) => ({ id: column.id, label: label(column) })),
-								onAdd: (id) =>
-									keep(
-										allIds,
-										hidden.filter((each) => each !== id),
-									),
-							}}
-							moveLabel={t("list.moveColumn")}
-							onPlace={move}
-							onStep={step}
-							onPreview={setPreview}
-							onResize={resize}
-							resizeLabel={(column) => t("list.resizeColumn", { column })}
-						/>
-					)}
-					<TableBody>
-						{folderLines}
-						{rows?.length === 0 && folderLines.every((line) => line === null) && (
-							<NoMatchRow
-								colSpan={colSpan}
-								words={t("list.noMatch")}
-								onClear={() =>
-									setState({ ...state, filters: [], ai: [], page: 1, search: { ...state.search, text: "" } })
-								}
-							/>
-						)}
-						{(rows ?? []).map((row) => {
-							const mine = picked.get(row.id);
-							const line = (
-								<TableRow
-									key={row.id}
-									selected={mine !== undefined}
-									proposal={mine?.proposal}
-									onKeyDown={onRowKey(row)}
-								>
-									{shown.map((column, index) => cell(row, column, index === 0))}
-									<TableCell align="end">
-										<RowActions>
+										{document && publishable(pickedRows).length > 0 && (
+											<TextButton onClick={() => void actions.publish(pickedRows)}>{t("list.publish")}</TextButton>
+										)}
+										{!document ? null : allArchived(pickedRows) ? (
+											<TextButton onClick={() => actions.unarchive(pickedRows)}>{t("list.unarchive")}</TextButton>
+										) : (
+											<TextButton onClick={() => actions.archive(pickedRows)}>{t("list.archive")}</TextButton>
+										)}
+										{foldersOn && (
 											<DropdownMenu>
-												<RowMore label={t("list.more")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
-												<DropdownMenuContent align="end">
-													<RowMenuItems
-														row={row}
-														actions={actions}
+												<DropdownMenuTrigger render={<TextButton />}>
+													{t("folders.to")}
+													<Caret />
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="start">
+													<FolderTargets
 														context={false}
-														document={document}
-														toFolder={toFolder([row], false)}
-														relations={relationsFor([row], false)}
+														folders={folders}
+														current={placeOf(pickedRows)}
+														onPick={(folder) => void moveRows(pickedRows, folder)}
 													/>
 												</DropdownMenuContent>
 											</DropdownMenu>
-										</RowActions>
-									</TableCell>
-								</TableRow>
-							);
-							return (
-								<ContextMenu key={row.id}>
-									<ContextMenuTrigger render={line} />
-									<ContextMenuContent>{rowsMenuFor(row)}</ContextMenuContent>
-								</ContextMenu>
-							);
-						})}
-					</TableBody>
-				</Table>
-			</ListScroll>
-			{rows !== null && total > 0 && (
-				<ListFooter>
-					<Count>
-						{t("list.range", {
-							from: (state.page - 1) * pageSize + 1,
-							to: Math.min(state.page * pageSize, total),
-							total,
-						})}
-					</Count>
-					<PageSizeMenu
-						label={t("list.pageSize")}
-						value={pageSize}
-						options={[25, 50, 100].map((value) => ({ value, label: t("list.perPage", { count: value }) }))}
-						onValueChange={(value) => {
-							void savePrefs.run({ collection, pageSize: value });
-							setState({ ...state, page: 1 });
-						}}
-					/>
-					<ListPages
-						page={state.page}
-						pages={Math.ceil(total / pageSize)}
-						hrefOf={(next) => href({ screen: "list", collection, params: writeState({ ...state, page: next }) })}
-					/>
-				</ListFooter>
-			)}
+										)}
+										{relationColumns.length > 0 && (
+											<DropdownMenu>
+												<DropdownMenuTrigger render={<TextButton />}>
+													{t("list.changeRelation")}
+													<Caret />
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="start">
+													{relationColumns.map((col) => (
+														<RelationSubmenu
+															key={col.id}
+															collection={collection}
+															column={col}
+															rows={pickedRows}
+															context={false}
+															onDone={() => setPicked(new Map())}
+														/>
+													))}
+												</DropdownMenuContent>
+											</DropdownMenu>
+										)}
+									</>
+								),
+							}
+						: null
+				}
+				head={{
+					columns: head,
+					end: LIST_COLUMN_SIZE.end,
+					selectAll: rows && rows.length > 0 ? selectAll : undefined,
+					add: {
+						label: t("list.addColumn"),
+						columns: (columns ?? [])
+							.filter((column) => hidden.includes(column.id))
+							.map((column) => ({ id: column.id, label: label(column) })),
+						onAdd: (id) =>
+							keep(
+								allIds,
+								hidden.filter((each) => each !== id),
+							),
+					},
+					moveLabel: t("list.moveColumn"),
+					onPlace: move,
+					onStep: step,
+					onPreview: setPreview,
+					onResize: resize,
+					resizeLabel: (column) => t("list.resizeColumn", { column }),
+				}}
+				noMatch={
+					rows?.length === 0 && folderLines.every((line) => line === null) && looking
+						? {
+								words: t("list.noMatch"),
+								applied: { search: searching, filters: state.filters.length > 0 },
+								onClear: () =>
+									setState({ ...state, filters: [], ai: [], page: 1, search: { ...state.search, text: "" } }),
+							}
+						: null
+				}
+				footer={
+					rows !== null && total > 0 ? (
+						<ListFooter>
+							<Count>
+								{t("list.range", {
+									from: (state.page - 1) * pageSize + 1,
+									to: Math.min(state.page * pageSize, total),
+									total,
+								})}
+							</Count>
+							<PageSizeMenu
+								label={t("list.pageSize")}
+								value={pageSize}
+								options={[25, 50, 100].map((value) => ({ value, label: t("list.perPage", { count: value }) }))}
+								onValueChange={(value) => {
+									void savePrefs.run({ collection, pageSize: value });
+									setState({ ...state, page: 1 });
+								}}
+							/>
+							<ListPages
+								page={state.page}
+								pages={Math.ceil(total / pageSize)}
+								hrefOf={(next) => href({ screen: "list", collection, params: writeState({ ...state, page: next }) })}
+							/>
+						</ListFooter>
+					) : null
+				}
+			>
+				{folderLines}
+				{(rows ?? []).map((row) => {
+					const mine = picked.get(row.id);
+					const line = (
+						<TableRow key={row.id} selected={mine !== undefined} proposal={mine?.proposal} onKeyDown={onRowKey(row)}>
+							{shown.map((column, index) => cell(row, column, index === 0))}
+							<TableCell align="end">
+								<RowActions>
+									<DropdownMenu>
+										<RowMore label={t("list.more")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
+										<DropdownMenuContent align="end">
+											<RowMenuItems
+												row={row}
+												actions={actions}
+												context={false}
+												document={document}
+												toFolder={toFolder([row], false)}
+												relations={relationsFor([row], false)}
+											/>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</RowActions>
+							</TableCell>
+						</TableRow>
+					);
+					return (
+						<ContextMenu key={row.id}>
+							<ContextMenuTrigger render={line} />
+							<ContextMenuContent>{rowsMenuFor(row)}</ContextMenuContent>
+						</ContextMenu>
+					);
+				})}
+			</CollectionTable>
 		</PageColumn>
 	);
 }

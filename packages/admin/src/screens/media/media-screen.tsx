@@ -38,9 +38,7 @@ import {
 	Inline,
 	LIST_COLUMN_SIZE,
 	ListFooter,
-	ListHead,
 	type ListHeadColumn,
-	ListScroll,
 	MenuValue,
 	PageColumn,
 	PageHeader,
@@ -58,8 +56,6 @@ import {
 	type SelectAll,
 	SplitButton,
 	Stack,
-	Table,
-	TableBody,
 	TableCell,
 	TableRow,
 	Text,
@@ -96,6 +92,7 @@ import { useUpload } from "../../media/use-upload";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, linkTo, type Route } from "../../route";
+import { CollectionTable } from "../list/collection-table";
 import { countedWhere } from "../list/counted-where";
 import { type FilterProps, FilterRows } from "../list/filter-rows";
 import {
@@ -108,10 +105,11 @@ import {
 	useRemoveFolder,
 } from "../list/folders";
 import { ListPages } from "../list/list-pages";
-import { NoMatchRow } from "../list/no-match-row";
+import { NoMatchLine } from "../list/no-match-row";
 import { isDeleteKey } from "../list/row-menu";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
+import { useLastPage } from "../list/use-last-page";
 import { MediaPanel, useFileUses } from "./media-panel";
 import {
 	isLooking,
@@ -447,6 +445,13 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const items = data?.items ?? [];
 	const storage = data?.storage ?? true;
 	const looking = isLooking(state);
+	useLastPage({
+		none: data !== null && items.length === 0,
+		page: state.page,
+		total: data?.total ?? 0,
+		pageSize: data?.pageSize ?? 1,
+		go: (last) => setState({ ...state, page: last }, { replace: true }),
+	});
 	const here = state.folder ? folders.byId.get(state.folder) : undefined;
 	const childFolders = looking ? [] : folders.children(state.folder);
 	const pickedItems = items.filter((item) => picked.has(item.id));
@@ -583,46 +588,53 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	};
 	const inOneFolder = pickedItems.every((item) => item.folderId === pickedItems[0]?.folderId);
 
-	const bulkBar = (colSpan?: number) => (
-		<BulkBar
-			colSpan={colSpan}
-			label={t("list.selected", { count: pickedItems.length })}
-			selectAll={selectAll}
-			clearLabel={t("list.clearSelection")}
-			onClear={() => setPicked(new Set())}
-		>
-			<DropdownMenu>
-				<DropdownMenuTrigger render={<TextButton />}>
-					{t("folders.to")}
-					<Caret />
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="start">
-					<FolderTargets
-						context={false}
-						folders={folders}
-						current={inOneFolder ? pickedItems[0]?.folderId : undefined}
-						onPick={(folder) => {
-							void move(
-								pickedItems.map((item) => item.id),
-								folder,
-							).then((moved) => moved && setPicked(new Set()));
-						}}
-					/>
-					<DropdownMenuSeparator />
-					{/* A menu for several files has no icons (menu.md), this row too. */}
-					<DropdownMenuItem onClick={() => naming.start()}>{t("folders.new")}</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenu>
-			<TextButton
-				onClick={() => {
-					void trash(pickedItems.map((item) => item.id));
-					setPicked(new Set());
-				}}
-			>
-				{t("trash.toTrash")}
-			</TextButton>
-		</BulkBar>
-	);
+	// What the picked files are asked, over the list view's table and the grid's toolbar alike.
+	const bulk = {
+		label: t("list.selected", { count: pickedItems.length }),
+		selectAll,
+		clearLabel: t("list.clearSelection"),
+		onClear: () => setPicked(new Set()),
+		children: (
+			<>
+				<DropdownMenu>
+					<DropdownMenuTrigger render={<TextButton />}>
+						{t("folders.to")}
+						<Caret />
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="start">
+						<FolderTargets
+							context={false}
+							folders={folders}
+							current={inOneFolder ? pickedItems[0]?.folderId : undefined}
+							onPick={(folder) => {
+								void move(
+									pickedItems.map((item) => item.id),
+									folder,
+								).then((moved) => moved && setPicked(new Set()));
+							}}
+						/>
+						<DropdownMenuSeparator />
+						{/* A menu for several files has no icons (menu.md), this row too. */}
+						<DropdownMenuItem onClick={() => naming.start()}>{t("folders.new")}</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+				<TextButton
+					onClick={() => {
+						void trash(pickedItems.map((item) => item.id));
+						setPicked(new Set());
+					}}
+				>
+					{t("trash.toTrash")}
+				</TextButton>
+			</>
+		),
+	};
+	// What a search and filters that find no file say, in the list view's row and the grid's line alike.
+	const noMatch = {
+		words: t("library.nothingFound"),
+		applied: { search: state.search.trim() !== "", filters: state.kinds.length > 0 || state.used.length > 0 },
+		onClear: () => setState({ ...state, search: "", everywhere: false, kinds: [], used: [], page: 1 }),
+	};
 	const listed = state.view === "list";
 	// A menu counts what picking it would find, and a filter looks through the folders below (MD-07): said over its rows while the library has
 	// folders, since the page shows one folder's files. The list's column menus say it by the same rule.
@@ -693,7 +705,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	// One row under the title, as the entries' list has it (2026-11-10, owner): in the grid the filters and the order, the picks taking their place; in the list the
 	// columns' names, their menus holding the filters and the order.
 	const toolbar = listed ? null : picking ? (
-		bulkBar()
+		<BulkBar {...bulk} />
 	) : (
 		<PageToolbar inset>
 			<FilterMenu label={t("library.kind")} {...kindFilter} />
@@ -791,19 +803,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				</Grid>
 			)}
 			{/* Nothing here yet is the list's empty state; nothing found says so and takes the search and filters off, as every list does. */}
-			{nothing &&
-				(looking ? (
-					<Inline gap={12}>
-						<Text tone="subtle">{t("library.nothingFound")}</Text>
-						<TextButton
-							onClick={() => setState({ ...state, search: "", everywhere: false, kinds: [], used: [], page: 1 })}
-						>
-							{t("list.clearFilters")}
-						</TextButton>
-					</Inline>
-				) : (
-					<Empty title={t("library.empty")} />
-				))}
+			{nothing && (looking ? <NoMatchLine {...noMatch} /> : <Empty title={t("library.empty")} />)}
 		</Stack>
 	);
 	// With a file open beside the list there is room for its name and when: the panel says the rest of the open file.
@@ -864,142 +864,129 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 		</RowThumb>
 	);
 	const table = (
-		<ListScroll>
-			<Table container="none" layout="fixed" columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}>
-				{picking ? (
-					bulkBar(head.length + 1)
-				) : (
-					<ListHead
-						columns={head}
-						end={LIST_COLUMN_SIZE.end}
-						selectAll={items.length > 0 ? selectAll : undefined}
-						onResize={resize}
-						resizeLabel={(column) => t("list.resizeColumn", { column })}
-					/>
-				)}
-				<TableBody>
-					{naming.naming?.id === null && (
-						<TableRow>
-							<TableCell colSpan={head.length + 1}>
-								<RowTitle editing thumb={folderThumb} title={namingField(false)} />
-							</TableCell>
-						</TableRow>
-					)}
-					{childFolders.map((folder) => (
-						<MediaFolderRow
-							key={folder.id}
-							folder={folder}
-							onFiles={(files) => addFiles(files, folder.id)}
-							onMove={(ids) => void move(ids, folder.id)}
-							onTarget={setFolderTarget}
-							menu={folderItems(true, folder)}
-						>
-							<TableCell colSpan={head.length + 1} truncate={naming.naming?.id !== folder.id}>
-								{naming.naming?.id === folder.id ? (
-									<RowTitle editing thumb={folderThumb} title={namingField(false)} />
-								) : (
-									<RowTitle
-										thumb={folderThumb}
-										title={
-											<RowLink
-												{...linkTo(
-													{
-														screen: "media",
-														params: writeMediaState({ ...state, folder: folder.id, page: 1, file: null }),
-													},
-													() =>
-														moveFile({ ...state, folder: folder.id, page: 1, file: null }, () => setPicked(new Set())),
-												)}
-											>
-												{folder.name}
-											</RowLink>
-										}
-										address={<Count>{folder.count}</Count>}
-										addressTitle={String(folder.count)}
-									/>
-								)}
-							</TableCell>
-						</MediaFolderRow>
-					))}
-					{uploadsHere.map((each) => (
-						<UploadRow
-							key={each.id}
-							upload={each}
-							columns={head.length - 1}
-							onRemove={upload.remove}
-							onRetry={upload.retry}
-						/>
-					))}
-					{items.map((item) => (
-						<ContextMenu key={item.id}>
-							<ContextMenuTrigger
-								render={
-									<TableRow selected={state.file === item.id || picked.has(item.id)}>
-										<TableCell truncate>
-											<RowCheck
-												checked={picked.has(item.id)}
-												onCheckedChange={(on) => pick(item.id, on)}
-												label={t("list.pick", { title: item.name })}
-											/>
-											<RowTitle
-												thumb={
-													<RowThumb>
-														<Image
-															src={item.kind === "image" ? previewUrl(item) : null}
-															fallback={Document}
-															alt=""
-															size="row"
-															ratio="photo"
-															radius="sm"
-														/>
-													</RowThumb>
-												}
-												title={<RowLink {...linkFile({ ...state, file: item.id })}>{item.name}</RowLink>}
-											/>
-										</TableCell>
-										{!dense && (
-											<>
-												{/* A narrowed column cuts its value with "…", and the cell's title says it whole (components/list.md). */}
-												<TableCell tone="subtle" truncate title={usesLabel(item)}>
-													{usesLabel(item)}
-												</TableCell>
-												<MetaCell value={extensionLabel(item.name)} />
-												<MetaCell align="end" value={bytes(item.size)} />
-												<MetaCell align="end" value={sizeLabel(item)} />
-											</>
+		<CollectionTable
+			head={{
+				columns: head,
+				end: LIST_COLUMN_SIZE.end,
+				selectAll: items.length > 0 ? selectAll : undefined,
+				onResize: resize,
+				resizeLabel: (column) => t("list.resizeColumn", { column }),
+			}}
+			bulk={picking ? bulk : null}
+			noMatch={nothing && looking ? noMatch : null}
+		>
+			{naming.naming?.id === null && (
+				<TableRow>
+					<TableCell colSpan={head.length + 1}>
+						<RowTitle editing thumb={folderThumb} title={namingField(false)} />
+					</TableCell>
+				</TableRow>
+			)}
+			{childFolders.map((folder) => (
+				<MediaFolderRow
+					key={folder.id}
+					folder={folder}
+					onFiles={(files) => addFiles(files, folder.id)}
+					onMove={(ids) => void move(ids, folder.id)}
+					onTarget={setFolderTarget}
+					menu={folderItems(true, folder)}
+				>
+					<TableCell colSpan={head.length + 1} truncate={naming.naming?.id !== folder.id}>
+						{naming.naming?.id === folder.id ? (
+							<RowTitle editing thumb={folderThumb} title={namingField(false)} />
+						) : (
+							<RowTitle
+								thumb={folderThumb}
+								title={
+									<RowLink
+										{...linkTo(
+											{
+												screen: "media",
+												params: writeMediaState({ ...state, folder: folder.id, page: 1, file: null }),
+											},
+											() => moveFile({ ...state, folder: folder.id, page: 1, file: null }, () => setPicked(new Set())),
 										)}
-										<TableCell align="end" truncate short title={fullTime(item.uploadedAt, language)}>
-											<Text mono variant="caption" tone="muted">
-												{shortDate(item.uploadedAt, language)}
-											</Text>
-										</TableCell>
-										<TableCell>
-											<RowActions>
-												<DropdownMenu>
-													<RowMore
-														label={t("library.more")}
-														trigger={(button) => <DropdownMenuTrigger render={button} />}
-													/>
-													<DropdownMenuContent align="end">{fileItems(false, item)}</DropdownMenuContent>
-												</DropdownMenu>
-											</RowActions>
-										</TableCell>
-									</TableRow>
+									>
+										{folder.name}
+									</RowLink>
 								}
+								address={<Count>{folder.count}</Count>}
+								addressTitle={String(folder.count)}
 							/>
-							<ContextMenuContent>{fileItems(true, item)}</ContextMenuContent>
-						</ContextMenu>
-					))}
-					{nothing && looking && (
-						<NoMatchRow
-							colSpan={head.length + 1}
-							words={t("library.nothingFound")}
-							onClear={() => setState({ ...state, search: "", everywhere: false, kinds: [], used: [], page: 1 })}
-						/>
-					)}
-				</TableBody>
-			</Table>
-		</ListScroll>
+						)}
+					</TableCell>
+				</MediaFolderRow>
+			))}
+			{uploadsHere.map((each) => (
+				<UploadRow
+					key={each.id}
+					upload={each}
+					columns={head.length - 1}
+					onRemove={upload.remove}
+					onRetry={upload.retry}
+				/>
+			))}
+			{items.map((item) => (
+				<ContextMenu key={item.id}>
+					<ContextMenuTrigger
+						render={
+							<TableRow selected={state.file === item.id || picked.has(item.id)}>
+								<TableCell truncate>
+									<RowCheck
+										checked={picked.has(item.id)}
+										onCheckedChange={(on) => pick(item.id, on)}
+										label={t("list.pick", { title: item.name })}
+									/>
+									<RowTitle
+										thumb={
+											<RowThumb>
+												<Image
+													src={item.kind === "image" ? previewUrl(item) : null}
+													fallback={Document}
+													alt=""
+													size="row"
+													ratio="photo"
+													radius="sm"
+												/>
+											</RowThumb>
+										}
+										title={<RowLink {...linkFile({ ...state, file: item.id })}>{item.name}</RowLink>}
+									/>
+								</TableCell>
+								{!dense && (
+									<>
+										{/* A narrowed column cuts its value with "…", and the cell's title says it whole (components/list.md). */}
+										<TableCell tone="subtle" truncate title={usesLabel(item)}>
+											{usesLabel(item)}
+										</TableCell>
+										<MetaCell value={extensionLabel(item.name)} />
+										<MetaCell align="end" value={bytes(item.size)} />
+										<MetaCell align="end" value={sizeLabel(item)} />
+									</>
+								)}
+								<TableCell align="end" truncate short title={fullTime(item.uploadedAt, language)}>
+									<Text mono variant="caption" tone="muted">
+										{shortDate(item.uploadedAt, language)}
+									</Text>
+								</TableCell>
+								<TableCell>
+									<RowActions>
+										<DropdownMenu>
+											<RowMore
+												label={t("library.more")}
+												trigger={(button) => <DropdownMenuTrigger render={button} />}
+											/>
+											<DropdownMenuContent align="end">{fileItems(false, item)}</DropdownMenuContent>
+										</DropdownMenu>
+									</RowActions>
+								</TableCell>
+							</TableRow>
+						}
+					/>
+					<ContextMenuContent>{fileItems(true, item)}</ContextMenuContent>
+				</ContextMenu>
+			))}
+		</CollectionTable>
 	);
 	const pages = data ? Math.ceil(data.total / data.pageSize) : 1;
 

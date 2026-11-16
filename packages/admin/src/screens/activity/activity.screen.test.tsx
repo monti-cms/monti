@@ -386,7 +386,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await draw(stories.NoMatch).run();
 		await expect.element(table().getByText("맞는 기록이 없습니다.")).toBeVisible();
 		await expect.element(columnName("작업")).toBeVisible();
-		await userEvent.click(table().getByRole("button", { name: "필터 해제" }));
+		await userEvent.click(table().getByRole("button", { name: "모두 지우기" }));
 		await expect.poll(() => location.hash).toBe("#/activity");
 		await expect.element(row(FAILED)).toBeVisible();
 	});
@@ -438,6 +438,11 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const first = (await site.monti.run("activity.list", {}, { actor: "admin" })) as ActivityList;
 		await expect.element(main().getByText(`1–50 / ${first.total}`)).toBeVisible();
 		expect(rows()).toHaveLength(50);
+		// The footer stands right under the rows (not pushed down by the box the table is in).
+		const footer = main().element().querySelector("[data-slot=list-footer]")?.getBoundingClientRect();
+		const under = table().element().getBoundingClientRect().bottom;
+		expect(footer && footer.top - under).toBeGreaterThanOrEqual(0);
+		expect(footer && footer.top - under).toBeLessThan(8);
 		const last = rows().at(-1);
 		// New activity arrives before the next page is opened.
 		await site.monti.run(
@@ -1139,6 +1144,16 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(more()).toHaveFocus();
 	});
 
+	it("[many] a page past the last one goes to the last page; with nothing applied it is no 'nothing matches' with a button", async () => {
+		await draw(stories.Pages).run();
+		await expect.element(main().getByRole("link", { name: "2", exact: true })).toBeVisible();
+		location.hash = "#/activity?page=99";
+		await expect.poll(() => location.hash).not.toContain("page=99");
+		await expect.element(table().getByText("맞는 기록이 없습니다.")).not.toBeInTheDocument();
+		for (const name of ["필터 해제", "검색어 지우기", "모두 지우기"])
+			await expect.element(table().getByRole("button", { name })).not.toBeInTheDocument();
+	});
+
 	it("[many] a page link pressed before a new filter's answer is in carries nothing of the old answer: no place, no count, no boundary", async () => {
 		const drawn = draw(stories.Pages);
 		await drawn.run();
@@ -1315,9 +1330,9 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(table().getByRole("button", { name: "필터 해제" })).toHaveFocus();
 	});
 
-	it("필터 해제 pressed with the keyboard goes with its row once the list has rows again, and the focus goes to the list's first row", async () => {
+	it("모두 지우기 pressed with the keyboard goes with its row once the list has rows again, and the focus goes to the list's first row", async () => {
 		await draw(stories.NoMatch).run();
-		const clear = () => table().getByRole("button", { name: "필터 해제" });
+		const clear = () => table().getByRole("button", { name: "모두 지우기" });
 		await expect.element(clear()).toBeVisible();
 		await tabTo(() => clear().element());
 		await userEvent.keyboard("{Enter}");
@@ -1325,9 +1340,9 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row('"고친 글" 저장').getByRole("link")).toHaveFocus();
 	});
 
-	it("필터 해제 pressed with the pointer moves no focus", async () => {
+	it("모두 지우기 pressed with the pointer moves no focus", async () => {
 		await draw(stories.NoMatch).run();
-		await userEvent.click(table().getByRole("button", { name: "필터 해제" }));
+		await userEvent.click(table().getByRole("button", { name: "모두 지우기" }));
 		await expect.element(row(FAILED)).toBeVisible();
 		expect(row('"고친 글" 저장').getByRole("link").element()).not.toBe(document.activeElement);
 	});

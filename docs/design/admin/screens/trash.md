@@ -32,7 +32,7 @@
 | 행 동작 | `HandedRowActions`(`RowActions`에 포커스 넘김을 단 것) 안의 `RowMore`(`label` "더 보기", 모든 목록의 행 ⋯와 같은 이름, 만들며 정함 (2026-11-14)) + `DropdownMenu`: "복원" │ "영구 삭제"(`variant="danger"`), 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. 보이는 "복원" 버튼은 없다(2026-11-11 소유자). 글의 줄은 휴지통에 든 그 글의 언어 모두를 함께 복원하고 함께 지운다. 영구 삭제는 `AlertDialog`로 묻는다. |
 | 행 오른쪽 클릭 | `ContextMenu`: "복원" │ "영구 삭제"(`variant="danger"`, `MenuShortcut keys={["Delete"]}`) | ⋯와 같은 행이다. 고른 행 중 하나에서 열면 `ContextMenuLabel` "2개 항목"으로 시작하고 아이콘 없이 고른 행 모두에 한다(게시글 목록과 같다). 행에서 Delete나 Backspace를 눌러도 영구 삭제를 묻는다(글 목록, 미디어와 같은 두 키, 만들며 정함 (2026-11-14)). |
 | 빈 휴지통 | `Empty`(`title` "휴지통이 비었습니다.") | 열 이름 행과 표 대신 이 한 줄. 도구 화면의 빈 목록과 같은 부품이다. |
-| 맞는 것이 없음 | `TableRow` 한 줄: `Text tone="subtle"` "맞는 것이 없습니다."와 `TextButton` "필터 해제" | 찾거나 걸렀는데 없을 때. 게시글 목록과 같다. |
+| 맞는 것이 없음 | `TableRow` 한 줄: `Text tone="subtle"` "맞는 것이 없습니다."와 `TextButton`(이름은 걸린 것으로(검색어만 "검색어 지우기", 필터만 "필터 해제", 둘 다 "모두 지우기")) | 찾거나 걸렀는데 없을 때. 게시글 목록과 같다. |
 | 쪽 | `ListFooter`(`Count`, `ListPages`) | 50줄이 넘을 때만 있다. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Overlay/AlertDialog, Patterns/List/Table, Patterns/List/TrashRow, Patterns/List/LocaleCodes, Primitives/Text, Controls/Button/IconButton, Controls/Menu/DropdownMenu, Controls/Menu/ContextMenu, Patterns/List/ListHead, Patterns/List/BulkBar, Controls/Overlay/SidePanel, Patterns/Frame/Image, Patterns/List/FilePreview, Patterns/Frame/DescriptionList, Patterns/List/FileUseRow, Controls/Button/Button, Patterns/List/Empty.
@@ -48,7 +48,7 @@
 | 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `onResize`, `resizeLabel`). 열: "제목" · "언어" · "종류" · "남은 날" | 모든 표의 열 규칙을 따른다([list.md](../components/list.md), 2026-11-11 소유자): 열 사이를 끌어 너비를 바꾸고(이 브라우저에 남는다), 열마다 메뉴가 정렬이나 거르기를 담는다. 종류 탭은 없다. 처음에는 "남은 날"이 `sort="desc"`(최근에 버린 것부터). |
 | "제목" 메뉴 | `SortRows`("오름차순" · "내림차순") | 고르면 닫힌다. |
 | "언어" 메뉴 | 그 열 `menu`에 `DropdownMenuCheckboxItem box`와 개수 `MenuShortcut` | 여기 휴지통에 든 언어마다 한 줄, 이름으로("한국어 5"). 고르면 그 언어가 휴지통에 든 글만 남는다. 폴더와 파일은 언어가 없어 빠진다. 걸리면 `filtered`로 점. |
-| "종류" 메뉴 | `ListHead`의 그 열 `menu`에 `DropdownMenuCheckboxItem box`와 개수 `MenuShortcut` | 컬렉션마다 한 줄과 "미디어". 0개인 종류도 보인다. 여럿을 함께(OR) 고르고 메뉴는 열려 있다. 걸리면 `filtered`로 점. |
+| "종류" 메뉴 | `ListHead`의 그 열 `menu`에 `DropdownMenuCheckboxItem box`와 개수 `MenuShortcut` | 컬렉션마다 한 줄과 "미디어". 0개인 종류도 보인다(개수가 많은 순, 0개는 맨 뒤. LT-11은 걸러 낸 뒤 0개인 값을 지우지 않는 쪽으로 닫는다, 만들며 정함 (2026-11-16)). 여럿을 함께(OR) 고르고 메뉴는 열려 있다. 걸리면 `filtered`로 점. |
 | "남은 날" 메뉴 | `SortRows`(`words` "많이 남은 것부터" · "적게 남은 것부터") | 고르면 닫힌다. |
 | 일괄 막대 | `BulkBar`(`label` "2개 선택", `selectAll`, `clearLabel` "선택 해제", `onClear`, `colSpan`) | 동작은 `TextButton` "복원"과 `TextButton variant="danger"` "영구 삭제" 둘뿐이다. 요청과 ⋯는 없다. |
 
@@ -92,4 +92,4 @@
 | "빔" | 5.28 | 빈 휴지통 한 줄, 머리 동작 없음, 사이드바 개수 없음 | Empty |
 | "휴지통 폴더 안" | 5.12 | `PageHeader`의 `trail` "휴지통 /", 폴더 이름 제목과 `note`, "폴더 복원"과 ⋯, 남은 날 칸이 빈 안쪽 행 | InFolder, FolderMenu |
 | "폴더에서 하나 복원" | 5.13 | 폴더가 휴지통을 떠나 화면이 휴지통 맨 위로 돌아오고, 남은 글은 폴더 이름과 함께 한 줄이 된다. `toast` "시리즈 원고 폴더와 함께 복원했습니다"와 "열기" | |
-| "휴지통 찾기" | 5.14 | `SearchBox`, 폴더 안의 항목은 주소 자리 끝에 "시리즈 원고 폴더 안". 지운 폴더 안에서는 찾는 곳 칩. 맞는 것이 없으면 한 줄과 "필터 해제" | Searching, SearchingInFolder, NoMatch |
+| "휴지통 찾기" | 5.14 | `SearchBox`, 폴더 안의 항목은 주소 자리 끝에 "시리즈 원고 폴더 안". 지운 폴더 안에서는 찾는 곳 칩. 맞는 것이 없으면 한 줄과 걸린 것으로 이름 붙인 지우기 버튼 | Searching, SearchingInFolder, NoMatch |

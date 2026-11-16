@@ -1,6 +1,6 @@
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
@@ -12,6 +12,12 @@ import { Spark } from "./spark";
 import { TableHead, TableHeader } from "./table";
 import { TextButton } from "./text-button";
 
+/** What takes Esc for itself: a field, a menu, a dialog, a panel beside the list (an Esc there is the panel's). */
+const OWN_ESCAPE =
+	"input, textarea, select, [contenteditable], [role=menu], [role=menuitem], [role=dialog], [role=alertdialog], [role=listbox], [role=combobox], aside, [data-slot=side-panel]";
+/** What the keyboard stops on, in the head that takes the bar's place. */
+const FIRST_STOP = 'button:not([disabled]), [href], [role=checkbox], [tabindex]:not([tabindex="-1"])';
+
 /**
  * What replaces a list's head once rows or tiles are picked, in the same place, so what is below does not move. How many are picked in bold, the assistant's
  * request on them, the actions used most (as `children`, text buttons and menu buttons), a ⋯ with the rest (the dangerous one last, in red), and at the end the
@@ -20,6 +26,8 @@ import { TextButton } from "./text-button";
  * Over a table (`colSpan` given) it is a row of the table's head: the same 40px with the same line under it, spanning `colSpan` columns; the table keeps its
  * widths from its columns, not from this row. Over a grid of tiles (no `colSpan`), which has no head row, it takes the place of the filter row: a toolbar row
  * of the same 48px and the same line.
+ *
+ * Esc lets go of the pick, here once for every list: not while the focus is in a field, a menu or a dialog, which take Esc for themselves.
  */
 function BulkBar({
 	label,
@@ -48,6 +56,32 @@ function BulkBar({
 	/** The actions used most. */
 	children?: React.ReactNode;
 }) {
+	const clear = React.useRef(onClear);
+	clear.current = onClear;
+	const bar = React.useRef<HTMLDivElement>(null);
+	React.useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
+			if (event.target instanceof Element && event.target.closest(OWN_ESCAPE)) return;
+			const held = bar.current?.contains(document.activeElement) ?? false;
+			// What the bar stands in for, by its place: the table's head (its `thead`), or the grid's row of filters. It is what the box it is in
+			// draws at that place once the pick is let go.
+			const slot = bar.current?.closest("thead") ?? bar.current;
+			const box = slot?.parentElement;
+			const place = box && slot ? [...box.children].indexOf(slot) : -1;
+			clear.current();
+			// The bar goes with the pick and takes the focus it held: it goes to the first stop of the head that comes back, not to the page.
+			if (held && box && place >= 0)
+				requestAnimationFrame(() =>
+					requestAnimationFrame(() => {
+						if (document.activeElement && document.activeElement !== document.body) return;
+						box.children[place]?.querySelector<HTMLElement>(FIRST_STOP)?.focus();
+					}),
+				);
+		};
+		document.addEventListener("keydown", onKeyDown);
+		return () => document.removeEventListener("keydown", onKeyDown);
+	}, []);
 	const content = (
 		<>
 			{selectAll && (
@@ -94,6 +128,7 @@ function BulkBar({
 		return (
 			<PageToolbar
 				inset
+				ref={bar}
 				data-slot="bulk-bar"
 				role="toolbar"
 				aria-label={label}
@@ -108,6 +143,7 @@ function BulkBar({
 			<tr>
 				<TableHead colSpan={colSpan} className="relative p-0 first:pl-0 last:pr-0">
 					<div
+						ref={bar}
 						data-slot="bulk-bar"
 						role="toolbar"
 						aria-label={label}

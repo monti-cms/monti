@@ -59,7 +59,7 @@
 | 행 | `ListFooter` | 왼쪽 범위, 오른쪽 페이지 나누기. |
 | 범위 "1–25 / 148" | `Count` | |
 | "25개씩 ▾" | `PageSizeMenu`(`label`, `value`, `options` 25 · 50 · 100, `onValueChange`) | 위로 열리고 고르면 닫힌다. |
-| 맞는 글 없음 | `NoMatchRow`: 표 안의 한 행 `Text tone="subtle"` "맞는 글이 없습니다." 뒤에 `TextButton` "필터 해제" | 거르기나 찾기 때문에 행이 없을 때. 빈 컬렉션(아래 Empty)과 다르다(06번 문서, 빈 목록). "필터 해제"는 찾기와 거르기를 모두 푼다. 모든 표가 같은 말이다(만들며 정함 (2026-11-14): 이 지도는 "거르기 풀기"라 했지만 만든 표는 모두 "필터 해제"였다). |
+| 맞는 글 없음 | `NoMatchRow`: 표 안의 한 행 `Text tone="subtle"` "맞는 글이 없습니다." 뒤에 `TextButton`(걸린 것으로 이름 붙인다) | 거르기나 찾기 때문에 행이 없을 때. 빈 컬렉션(아래 Empty)과 다르다(06번 문서, 빈 목록). 버튼은 걸린 것으로 이름 붙인다(검색어만 "검색어 지우기", 필터만 "필터 해제", 둘 다 "모두 지우기", 누르면 걸린 것을 모두 푼다, LH-10, 만들며 정함 (2026-11-16)). 모든 표가 같은 말이다(만들며 정함 (2026-11-14): 이 지도는 "거르기 풀기"라 했지만 만든 표는 모두 "필터 해제"였다). |
 | 페이지 나누기 | `Pagination`(`PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`) | 늘 버튼 7개. 첫 쪽의 이전, 마지막 쪽의 다음은 흐리고 누를 수 없다. 쪽이 하나뿐이면 페이지 나누기가 없다. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Button/TextButton, Controls/Field/SearchBox, Controls/Button/Button, Patterns/List/ListHead, Controls/Menu/DropdownMenu, Controls/Field/Calendar, Patterns/List/Table, Controls/Status/EntryStatus, Primitives/Text, Controls/Button/IconButton, Controls/Menu/ContextMenu, Patterns/List/RenameField, Patterns/List/Pagination, Controls/Status/Count, Controls/Choice/Segmented, Primitives/Separator, Patterns/List/BulkBar, Controls/Field/Caret.

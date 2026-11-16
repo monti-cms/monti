@@ -1,6 +1,7 @@
 import type { Block, Doc } from "@monti-cms/core";
 import {
 	Command,
+	CommandEmpty,
 	CommandGroup,
 	CommandInput,
 	CommandItem,
@@ -41,6 +42,9 @@ type Item = {
 	/** Puts the block in on the line the "/" was typed on. */
 	run: (editor: Editor) => void | Promise<void>;
 };
+
+/** How many characters past the last match the menu stays open to say that nothing matches. */
+const NO_MATCH_GRACE = 2;
 
 type Open = { from: number; to: number; query: string; caret: { top: number; bottom: number; left: number } };
 
@@ -214,6 +218,21 @@ export function useSlashMenu({
 		);
 	}, [items, open, t]);
 
+	// Nothing matching is said for two more characters past the last words that matched (or past the "/"): then the menu closes and that "/" is let be,
+	// as it was only a slash. What is counted is the characters of the words, so a Korean syllable that is still being composed is one, not several.
+	const matched = useRef({ from: -1, length: 0 });
+	useEffect(() => {
+		if (!open) return;
+		if (matched.current.from !== open.from) matched.current = { from: open.from, length: 0 };
+		if (shownItems.length > 0) {
+			matched.current.length = open.query.length;
+			return;
+		}
+		if (open.query.length - matched.current.length <= NO_MATCH_GRACE || editorRef.current?.view.composing) return;
+		dismissed.current = open.from;
+		setOpen(null);
+	}, [open, shownItems, editorRef]);
+
 	/** Opens the menu while the text before the cursor in its line is "/" and a word; closes it otherwise. */
 	const sync = useCallback((editor: Editor) => {
 		const { selection } = editor.state;
@@ -224,7 +243,7 @@ export function useSlashMenu({
 			$from.parent.type.name !== nodeName("codeBlock") &&
 			$from.parent.type.name !== nodeName("footnote") &&
 			!inTableCell($from)
-				? // A "/" anywhere in the line, with the words typed after it (2026-11-06 owner, as Notion): Esc closes it when a "/" is only a slash.
+				? // A "/" anywhere in the line, with the words typed after it (2026-11-06 owner, as Notion): the menu closes after two characters that match nothing.
 					/\/([^\s/]*)$/.exec(text)
 				: null;
 		if (!match) {
@@ -232,7 +251,7 @@ export function useSlashMenu({
 			setOpen(null);
 			return;
 		}
-		const from = $from.pos - match[0].length;
+		const from = $from.pos - ((match[1] ?? "").length + 1);
 		if (dismissed.current === from) return;
 		const caret = editor.view.coordsAtPos($from.pos);
 		setOpen((current) => {
@@ -253,7 +272,14 @@ export function useSlashMenu({
 	/** The menu's keys, while it is open; `false` lets the text have the key. */
 	const keyDown = useCallback(
 		(event: KeyboardEvent) => {
-			if (!open || shownItems.length === 0) return false;
+			if (!open) return false;
+			if (event.key === "Escape") {
+				dismissed.current = open.from;
+				setOpen(null);
+				return true;
+			}
+			// Nothing matches: the row that says so has no key of its own, the text has them.
+			if (shownItems.length === 0) return false;
 			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
 				const step = event.key === "ArrowDown" ? 1 : -1;
 				setIndex((current) => (current + step + shownItems.length) % shownItems.length);
@@ -263,31 +289,25 @@ export function useSlashMenu({
 				choose(shownItems[index]);
 				return true;
 			}
-			if (event.key === "Escape") {
-				dismissed.current = open.from;
-				setOpen(null);
-				return true;
-			}
 			return false;
 		},
 		[open, shownItems, index, choose],
 	);
 
-	const menu =
-		open && shownItems.length > 0 ? (
-			<SlashMenu
-				items={shownItems}
-				query={open.query}
-				caret={open.caret}
-				index={index}
-				onHighlight={setIndex}
-				onChoose={choose}
-				onClose={() => {
-					dismissed.current = open.from;
-					setOpen(null);
-				}}
-			/>
-		) : null;
+	const menu = open ? (
+		<SlashMenu
+			items={shownItems}
+			query={open.query}
+			caret={open.caret}
+			index={index}
+			onHighlight={setIndex}
+			onChoose={choose}
+			onClose={() => {
+				dismissed.current = open.from;
+				setOpen(null);
+			}}
+		/>
+	) : null;
 	return { sync, keyDown, menu };
 }
 
@@ -345,6 +365,7 @@ function SlashMenu({
 				<Command shouldFilter={false} value={String(index)} onValueChange={(value) => onHighlight(Number(value))}>
 					<CommandInput value={query} readOnly placeholder={t("slash.find")} aria-label={t("slash.find")} />
 					<CommandList aria-label={listLabel}>
+						{items.length === 0 && <CommandEmpty>{t("slash.none")}</CommandEmpty>}
 						{GROUPS.map((group) => {
 							const rows = items.flatMap((item, at) => (item.group === group ? [{ item, at }] : []));
 							if (rows.length === 0) return null;

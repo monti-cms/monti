@@ -1,6 +1,5 @@
 import type { UsageItem, UsageResult } from "@monti-cms/core";
 import {
-	BulkBar,
 	Button,
 	ContextMenu,
 	ContextMenuContent,
@@ -22,9 +21,7 @@ import {
 	Inline,
 	Input,
 	LIST_COLUMN_SIZE,
-	ListHead,
 	type ListHeadColumn,
-	ListScroll,
 	PageColumn,
 	PageHeader,
 	ProposalBubble,
@@ -37,8 +34,6 @@ import {
 	SearchToggle,
 	SidePanel,
 	SidePanelSave,
-	Table,
-	TableBody,
 	TableCell,
 	TableRow,
 	Tabs,
@@ -58,9 +53,9 @@ import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
+import { CollectionTable } from "./collection-table";
 import { ValueRow } from "./filter-rows";
 import { MergeDialog } from "./merge-dialog";
-import { NoMatchRow } from "./no-match-row";
 import { SortRows } from "./sort-rows";
 import { useColumnWidths } from "./use-column-widths";
 import { useItemPanel } from "./use-item-panel";
@@ -524,124 +519,121 @@ export function TaxonomyScreen({
 						{t("taxonomy.add", { label: collectionName })}
 					</Button>
 				</PageHeader>
-				<ListScroll>
-					<Table container="none" layout="fixed" columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}>
-						{picked.size === 0 ? (
-							<ListHead
-								columns={head}
-								end={LIST_COLUMN_SIZE.end}
-								selectAll={filteredItems.length > 0 ? selectAll : undefined}
-								onResize={resize}
-								resizeLabel={(column) => t("list.resizeColumn", { column })}
-							/>
-						) : (
-							<BulkBar
-								label={t("list.selected", { count: picked.size })}
-								selectAll={selectAll}
-								clearLabel={t("list.clearSelection")}
-								onClear={() => setPicked(new Set())}
-								colSpan={3}
-							>
-								{picked.size >= 2 && (
-									<TextButton onClick={() => setMergeGroups([...picked])}>{t("taxonomy.merge")}</TextButton>
-								)}
-								<TextButton onClick={() => trashItems(allItems.filter((item) => picked.has(item.group)))}>
-									{t("trash.toTrash")}
-								</TextButton>
-							</BulkBar>
-						)}
-						<TableBody>
-							{allItems.length > 0 && filteredItems.length === 0 && (search.trim() || filterUnused) && (
-								<NoMatchRow
-									colSpan={3}
-									words={t("taxonomy.noMatch")}
-									onClear={() => {
+				<CollectionTable
+					head={{
+						columns: head,
+						end: LIST_COLUMN_SIZE.end,
+						selectAll: filteredItems.length > 0 ? selectAll : undefined,
+						onResize: resize,
+						resizeLabel: (column) => t("list.resizeColumn", { column }),
+					}}
+					bulk={
+						picked.size === 0
+							? null
+							: {
+									label: t("list.selected", { count: picked.size }),
+									selectAll,
+									clearLabel: t("list.clearSelection"),
+									onClear: () => setPicked(new Set()),
+									children: (
+										<>
+											{picked.size >= 2 && (
+												<TextButton onClick={() => setMergeGroups([...picked])}>{t("taxonomy.merge")}</TextButton>
+											)}
+											<TextButton onClick={() => trashItems(allItems.filter((item) => picked.has(item.group)))}>
+												{t("trash.toTrash")}
+											</TextButton>
+										</>
+									),
+								}
+					}
+					noMatch={
+						allItems.length > 0 && filteredItems.length === 0 && (search.trim() || filterUnused)
+							? {
+									words: t("taxonomy.noMatch"),
+									applied: { search: search.trim() !== "", filters: filterUnused },
+									onClear: () => {
 										setSearch("");
 										setFilterUnused(false);
-									}}
-								/>
-							)}
-							{filteredItems.map((item) => {
-								const missingLocale = item.missingLocales[0];
-								const hasMissing = Boolean(isMultilingual && missingLocale);
-								const slug = item.locales[language]?.slug;
-								const shownAddress = slug || undefined;
-								const missing = hasMissing
-									? t("taxonomy.missingLocale", { locale: languageName(missingLocale) })
-									: undefined;
+									},
+								}
+							: null
+					}
+				>
+					{filteredItems.map((item) => {
+						const missingLocale = item.missingLocales[0];
+						const hasMissing = Boolean(isMultilingual && missingLocale);
+						const slug = item.locales[language]?.slug;
+						const shownAddress = slug || undefined;
+						const missing = hasMissing
+							? t("taxonomy.missingLocale", { locale: languageName(missingLocale) })
+							: undefined;
 
-								const line = (
-									<TableRow selected={openGroup === item.group || picked.has(item.group)}>
-										<TableCell truncate>
-											<RowCheck
-												checked={picked.has(item.group)}
-												onCheckedChange={(checked) => togglePick(item.group, checked)}
-												label={t("taxonomy.pick", { title: titleOf(item.title, t) })}
-											/>
-											<RowTitle
-												untitled={!item.title.trim()}
-												title={
-													<RowLink render={<button type="button" />} onClick={() => openPanel(item.group)}>
-														{titleOf(item.title, t)}
-													</RowLink>
-												}
-												address={shownAddress}
-												// A language that has no name yet is said in words, in the warning's color (tokens.md: mono only for an address).
-												note={
-													missing ? (
-														<Text variant="caption" tone="warning">
-															{missing}
-														</Text>
-													) : undefined
-												}
-												addressTitle={[shownAddress, missing].filter(Boolean).join(" · ") || undefined}
-											/>
-										</TableCell>
-										<TableCell
-											align="end"
-											truncate
-											title={
-												item.usageCount > 0
-													? t("taxonomy.usageCount", { count: item.usageCount })
-													: t("taxonomy.unused")
-											}
-										>
-											{item.usageCount > 0 ? (
-												// A link, as the map has it: it opens in a new tab too, and a narrowed cell cuts its words with "…".
-												<TextButton variant="underline" size="note" {...linkTo(usageRoute(item), go)}>
-													{t("taxonomy.usageCount", { count: item.usageCount })}
-												</TextButton>
-											) : (
-												<Text variant="note" tone="faint">
-													{t("taxonomy.unused")}
+						const line = (
+							<TableRow selected={openGroup === item.group || picked.has(item.group)}>
+								<TableCell truncate>
+									<RowCheck
+										checked={picked.has(item.group)}
+										onCheckedChange={(checked) => togglePick(item.group, checked)}
+										label={t("taxonomy.pick", { title: titleOf(item.title, t) })}
+									/>
+									<RowTitle
+										untitled={!item.title.trim()}
+										title={
+											<RowLink render={<button type="button" />} onClick={() => openPanel(item.group)}>
+												{titleOf(item.title, t)}
+											</RowLink>
+										}
+										address={shownAddress}
+										// A language that has no name yet is said in words, in the warning's color (tokens.md: mono only for an address).
+										note={
+											missing ? (
+												<Text variant="caption" tone="warning">
+													{missing}
 												</Text>
-											)}
-										</TableCell>
-										<TableCell align="end">
-											<RowActions>
-												<DropdownMenu>
-													<RowMore
-														label={t("list.more")}
-														trigger={(button) => <DropdownMenuTrigger render={button} />}
-													/>
-													<DropdownMenuContent align="end">{menuItems(item, false)}</DropdownMenuContent>
-												</DropdownMenu>
-											</RowActions>
-										</TableCell>
-									</TableRow>
-								);
-								// A right click opens the row's ⋯ rows; on one of several picked rows, what the bulk bar does (menu.md, row menu).
-								const several = picked.has(item.group) && picked.size > 1;
-								return (
-									<ContextMenu key={item.group}>
-										<ContextMenuTrigger render={line} />
-										<ContextMenuContent>{several ? pickedMenuItems() : menuItems(item, true)}</ContextMenuContent>
-									</ContextMenu>
-								);
-							})}
-						</TableBody>
-					</Table>
-				</ListScroll>
+											) : undefined
+										}
+										addressTitle={[shownAddress, missing].filter(Boolean).join(" · ") || undefined}
+									/>
+								</TableCell>
+								<TableCell
+									align="end"
+									truncate
+									title={
+										item.usageCount > 0 ? t("taxonomy.usageCount", { count: item.usageCount }) : t("taxonomy.unused")
+									}
+								>
+									{item.usageCount > 0 ? (
+										// A link, as the map has it: it opens in a new tab too, and a narrowed cell cuts its words with "…".
+										<TextButton variant="underline" size="note" {...linkTo(usageRoute(item), go)}>
+											{t("taxonomy.usageCount", { count: item.usageCount })}
+										</TextButton>
+									) : (
+										<Text variant="note" tone="faint">
+											{t("taxonomy.unused")}
+										</Text>
+									)}
+								</TableCell>
+								<TableCell align="end">
+									<RowActions>
+										<DropdownMenu>
+											<RowMore label={t("list.more")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
+											<DropdownMenuContent align="end">{menuItems(item, false)}</DropdownMenuContent>
+										</DropdownMenu>
+									</RowActions>
+								</TableCell>
+							</TableRow>
+						);
+						// A right click opens the row's ⋯ rows; on one of several picked rows, what the bulk bar does (menu.md, row menu).
+						const several = picked.has(item.group) && picked.size > 1;
+						return (
+							<ContextMenu key={item.group}>
+								<ContextMenuTrigger render={line} />
+								<ContextMenuContent>{several ? pickedMenuItems() : menuItems(item, true)}</ContextMenuContent>
+							</ContextMenu>
+						);
+					})}
+				</CollectionTable>
 			</PageColumn>
 			{openGroup !== null && (
 				<TaxonomySidePanel

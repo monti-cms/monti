@@ -52,6 +52,44 @@ describe("the '/' menu", () => {
 		await expect.element(menu()).not.toBeInTheDocument();
 	});
 
+	it("words that no block answers to leave the menu open with one row that says so for two characters, then it closes", async () => {
+		await NewEntry.run();
+		await userEvent.click(body());
+		await userEvent.keyboard("/zz");
+		await expect.element(menu()).toBeVisible();
+		await expect.element(menu().getByText("맞는 블록 없음")).toBeVisible();
+		expect(menu().getByRole("option").elements()).toHaveLength(0);
+		await userEvent.keyboard("z");
+		await expect.element(menu()).not.toBeInTheDocument();
+	});
+
+	it("[esc-closes] Esc closes the row that says nothing matches", async () => {
+		await NewEntry.run();
+		await userEvent.click(body());
+		await userEvent.keyboard("/z");
+		await expect.element(menu().getByText("맞는 블록 없음")).toBeVisible();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(menu()).not.toBeInTheDocument();
+	});
+
+	it("[korean] a Korean word no block answers to closes the menu after two characters past the last match", async () => {
+		await NewEntry.run();
+		await userEvent.click(body());
+		await userEvent.keyboard("/");
+		await typeKorean("표ㅋㅋ");
+		await expect.element(menu().getByText("맞는 블록 없음")).toBeVisible();
+		await typeKorean("ㅋ");
+		await expect.element(menu()).not.toBeInTheDocument();
+	});
+
+	it("[mid-sentence] a '/' inside a word (an address, a date) opens the menu, which closes after two characters that match nothing", async () => {
+		await NewEntry.run();
+		await userEvent.click(body());
+		await userEvent.keyboard("https://example.com/pathway");
+		await expect.element(body()).toHaveTextContent("https://example.com/pathway");
+		await expect.element(menu()).not.toBeInTheDocument();
+	});
+
 	it("[mid-sentence] [korean] '/' typed after a word in a sentence opens the menu, and '각주' typed in Korean puts a footnote right there", async () => {
 		await Draft.run();
 		await caretAfter("지금 상태만");

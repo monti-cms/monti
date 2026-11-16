@@ -20,6 +20,7 @@ import {
 } from "../schema/define";
 import { adminValuesRecord, writeAdminValues } from "../schema/operations";
 import { translationSql } from "../translations/count";
+import { sortFacets } from "./facet-order";
 import type { EntryState } from "./operations";
 
 /** What a list column is, which decides its menu: how it sorts and what it filters by (doc 06, columns). */
@@ -436,6 +437,7 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 		const { rows } = await sql<{ state: EntryState; count: string }>`
 			select ${stateSql} as state, count(*) as count from ${from}
 			where ${whereSql(ctx, every, (filter) => filter.on === "status")} group by 1`.execute(ctx.db);
+		// A fixed set the system defines keeps its one order, the one of `STATES`.
 		return STATES.map((state) => ({
 			value: state,
 			count: Number(rows.find((row) => row.state === state)?.count ?? 0),
@@ -464,8 +466,11 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 			with picked as materialized (select rep.translation_group from ${from} where ${where})
 			select x.locale, count(distinct picked.translation_group) as count from picked
 			join entries x on x.translation_group = picked.translation_group and x.trashed_at is null
-			group by x.locale order by count(distinct picked.translation_group) desc, x.locale`.execute(ctx.db);
-		return rows.map((row) => ({ value: row.locale, count: Number(row.count) }));
+			group by x.locale`.execute(ctx.db);
+		// Every language of the site is a value, the ones no group has too: the menu does not lose a language when the other filters leave none of it.
+		const counts = new Map(rows.map((row) => [row.locale, Number(row.count)]));
+		const codes = new Set([...ctx.site.schema().locales.list.map((locale) => locale.code), ...counts.keys()]);
+		return sortFacets([...codes].map((code) => ({ value: code, count: counts.get(code) ?? 0 })));
 	}
 	const field = fieldOf(definition, column, ["relation", "select", "text", "media"]);
 	if (field.kind === "relation") {
@@ -478,14 +483,14 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 			select rep.translation_group, rep.title, rep.slug from ${representatives(field.to, ctx.site.schema().locales.source)} rep where rep.status <> 'archived'`.execute(
 			ctx.db,
 		);
-		const facets = targets
-			.map((target) => ({
+		const facets = sortFacets(
+			targets.map((target) => ({
 				value: target.translation_group,
 				label: target.title,
 				slug: target.slug,
 				count: counts.get(target.translation_group) ?? 0,
-			}))
-			.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+			})),
+		);
 		return [{ value: null, count: counts.get(null) ?? 0 }, ...facets];
 	}
 	if (field.kind === "select") {
@@ -502,11 +507,13 @@ export async function runFacets(ctx: OperationContext, query: ListQuery, column:
 		const labels = (await adminValues(ctx, query.collection)).fields?.[column]?.optionLabels ?? {};
 		return [
 			{ value: null, count: counts.get(null) ?? 0 },
-			...field.options.map((option) => ({
-				value: option,
-				label: labels[option] ?? option,
-				count: counts.get(option) ?? 0,
-			})),
+			...sortFacets(
+				field.options.map((option) => ({
+					value: option,
+					label: labels[option] ?? option,
+					count: counts.get(option) ?? 0,
+				})),
+			),
 		];
 	}
 	const { rows } = await sql<{

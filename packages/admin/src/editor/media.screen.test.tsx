@@ -150,6 +150,8 @@ describe("from the library", () => {
 
 		await userEvent.fill(search, "top-level");
 		await expect.element(dialog.getByText("맞는 파일이 없습니다.")).toBeVisible();
+		// The same line as the library's page, with its button named by what is applied: a search.
+		await expect.element(dialog.getByRole("button", { name: "검색어 지우기" })).toBeVisible();
 		await userEvent.click(chip);
 		await userEvent.click(page.getByRole("menuitemradio", { name: "모든 폴더" }));
 		await expect.element(dialog.getByRole("button", { name: /top-level-photo/ })).toBeVisible();

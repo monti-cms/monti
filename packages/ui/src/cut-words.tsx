@@ -214,6 +214,8 @@ function CutWords({
 		if (!open) return;
 		const key = (event: KeyboardEvent) => {
 			if (event.key !== "Escape") return;
+			// This Esc closed the words: it is spent, and nothing else (a pick, a panel) takes it too.
+			event.preventDefault();
 			dismissed.current = onWords.current;
 			setBy(null);
 		};

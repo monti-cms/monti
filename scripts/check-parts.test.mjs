@@ -5,6 +5,7 @@ import {
 	cutWords,
 	dangerSeparator,
 	koTexts,
+	listCompose,
 	monoProps,
 	ownGlyph,
 	requiredMark,
@@ -238,4 +239,40 @@ test("cut-words: an attribute CutWords does not take is named, wherever it stand
 		],
 	);
 	assert.match(found[0].message, /`data-slot` on CutWords is dropped/);
+});
+
+test("list-compose: a table drawn by hand in a screen is named, CollectionTable and a listed titled table pass, a stale entry fails", () => {
+	const found = listCompose(
+		{
+			"packages/admin/src/screens/new/new-screen.tsx": "export const A = () => <Table><ListHead /></Table>;\n",
+			"packages/admin/src/screens/list/own-screen.tsx": "export const B = () => <CollectionTable head={{}} />;\n",
+			"packages/admin/src/screens/list/mixed-screen.tsx":
+				"export const M = () => <><CollectionTable head={{}} /><Table /></>;\n",
+			"packages/admin/src/screens/list/collection-table.tsx":
+				"export const C = () => <ListScroll><Table /></ListScroll>;\n",
+			"packages/admin/src/screens/keys/keys.tsx": 'export const D = () => <Table container="none" />;\n',
+			"packages/admin/src/screens/media/said.tsx": "// A <Table is only said here.\nexport const E = 1;\n",
+			"packages/admin/src/screens/list/own.stories.tsx": "export const F = () => <Table />;\n",
+			"packages/ui/src/table.tsx": "export const G = () => <Table />;\n",
+		},
+		{
+			allowed: new Map([
+				["admin/src/screens/keys/keys.tsx", "a titled table"],
+				["admin/src/screens/list/own-screen.tsx", "composes now"],
+				["admin/src/screens/gone/gone.tsx", "was a table once"],
+			]),
+		},
+	);
+	assert.deepEqual(
+		found.map(({ file, line }) => [file, line]),
+		[
+			["packages/admin/src/screens/new/new-screen.tsx", 1],
+			["packages/admin/src/screens/list/mixed-screen.tsx", 1],
+			["packages/admin/src/screens/list/own-screen.tsx", 1],
+			["packages/admin/src/screens/gone/gone.tsx", 1],
+		],
+	);
+	assert.match(found[0].message, /use CollectionTable/);
+	assert.match(found[1].message, /use CollectionTable/);
+	assert.match(found[2].message, /no table by hand any more/);
 });

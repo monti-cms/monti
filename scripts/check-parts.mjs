@@ -1,6 +1,6 @@
 // The rules that keep the admin's screens on its fixed parts (cause 10 of the admin QA audit: buttons, menus, icons and fields drawn again on every
-// screen). `check:design` runs these as its rules `own-glyph`, `assistant-place`, `cut-words`, `menu-danger-separator`, `required-mark` and
-// `mono-props`; each takes the sources it reads (`{ "packages/ui/src/x.tsx": text }`), so a test can hand it a made-up file. What each cannot see
+// screen). `check:design` runs these as its rules `own-glyph`, `assistant-place`, `cut-words`, `menu-danger-separator`, `required-mark`,
+// `mono-props` and `list-compose`; each takes the sources it reads (`{ "packages/ui/src/x.tsx": text }`), so a test can hand it a made-up file. What each cannot see
 // is written above it. An allow list names its files with the reason and fails when an entry no longer applies, so a list is only what is true.
 let parseSync = () => {
 	throw new Error("oxc-parser is not installed (pnpm install)");
@@ -496,6 +496,62 @@ export function monoProps(sources, { texts = new Map(), allowed = MONO_PROP_VALU
 				file: `packages/${key}`,
 				line: 1,
 				message: "MONO_PROP_VALUES names a file with no mono option on values it cannot read",
+			});
+	return found;
+}
+
+/**
+ * `list-compose`: a screen that draws a list's table puts it together through `CollectionTable` (`packages/admin/src/screens/list/collection-table.tsx`),
+ * so the head, the bulk bar in its place, the one no-match answer, the rows' box and the footer come in one order in every list. A file under
+ * `packages/admin/src/screens` that writes `<Table`, `<ListHead` or `<ListScroll` is named in `LIST_COMPOSE_OK` with the reason, even if it also uses `CollectionTable`
+ * (list.md names the "titled tables": a title over rows, no column names, nothing to pick).
+ *
+ * Cannot see: a table drawn through a part of another name or a component that wraps `Table`, a screen outside `packages/admin/src/screens`, and
+ * whether `CollectionTable` is given what its list needs (a bulk bar where rows can be picked, the no-match answer): that is read in review.
+ */
+export const LIST_COMPOSE_OK = new Map([
+	[
+		"admin/src/screens/keys/keys-screen.tsx",
+		"the keys are titled tables (list.md): a title over rows, no column names, nothing to pick",
+	],
+	[
+		"admin/src/screens/templates/templates-screen.tsx",
+		"the templates are a titled table (list.md): a title over rows, no column names, nothing to pick",
+	],
+]);
+const LIST_COMPOSE_OWN = "admin/src/screens/list/collection-table.tsx";
+const LIST_PARTS = new Set(["Table", "ListHead", "ListScroll"]);
+
+export function listCompose(sources, { allowed = LIST_COMPOSE_OK } = {}) {
+	const found = [];
+	const used = new Set();
+	for (const [file, source] of Object.entries(sources)) {
+		if (!isCode(file) || !file.startsWith("packages/admin/src/screens/") || keyOf(file) === LIST_COMPOSE_OWN) continue;
+		if (!/<(?:Table|ListHead|ListScroll)\b/.test(source)) continue;
+		const { program, errors } = parseSync(file, source);
+		if (errors.length > 0) continue;
+		let drawn = null;
+		walkTree(program, (node) => {
+			if (node.type !== "JSXOpeningElement" || node.name?.type !== "JSXIdentifier") return;
+			if (LIST_PARTS.has(node.name.name)) drawn ??= node;
+		});
+		if (!drawn) continue;
+		if (allowed.has(keyOf(file))) {
+			used.add(keyOf(file));
+			continue;
+		}
+		found.push({
+			file,
+			line: lineOf(source, drawn.start),
+			message: `\`<${drawn.name.name}\` draws a list's table by hand: use CollectionTable, or name this file in LIST_COMPOSE_OK with the reason`,
+		});
+	}
+	for (const key of allowed.keys())
+		if (!used.has(key))
+			found.push({
+				file: `packages/${key}`,
+				line: 1,
+				message: "LIST_COMPOSE_OK names a file that draws no table by hand any more",
 			});
 	return found;
 }

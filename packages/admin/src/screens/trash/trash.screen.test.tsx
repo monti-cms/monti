@@ -88,6 +88,13 @@ describe("the trash (doc 11, flow 5)", () => {
 		await userEvent.click(table().getByRole("button", { name: "종류" }));
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /게시글/ })).toHaveTextContent("4");
 		await expect.element(page.getByRole("menuitemcheckbox", { name: /카테고리/ })).toHaveTextContent("0");
+		// The one order of every menu: the most rows first, a kind with none kept at the end.
+		const counts = page
+			.getByRole("menuitemcheckbox")
+			.elements()
+			.map((each) => Number(/(\d+)$/.exec(each.textContent ?? "")?.[1]));
+		expect(counts).toEqual([...counts].sort((a, b) => b - a));
+		expect(counts.at(-1)).toBe(0);
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /미디어/ }));
 		await userEvent.click(page.getByRole("menuitemcheckbox", { name: /태그/ }));
 		await expect.element(row("첫 번째 글")).not.toBeInTheDocument();
@@ -178,7 +185,7 @@ describe("the trash (doc 11, flow 5)", () => {
 	it("11-1 a search that finds nothing says so, and clears on request", async () => {
 		await NoMatch.run();
 		await expect.element(table().getByText("맞는 것이 없습니다.")).toBeVisible();
-		await userEvent.click(table().getByRole("button", { name: "필터 해제" }));
+		await userEvent.click(table().getByRole("button", { name: "검색어 지우기" }));
 		await expect.element(row("첫 번째 글")).toBeVisible();
 	});
 

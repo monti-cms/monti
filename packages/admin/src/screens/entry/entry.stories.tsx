@@ -758,6 +758,17 @@ export const SlashTemplates: Story = {
 	},
 };
 
+/** "/" and words no block answers to: the menu stays with one row that says so, for two characters past the last match. */
+export const SlashNoMatch: Story = {
+	loaders: site("new"),
+	play: async ({ canvasElement }) => {
+		const { body, all } = await opened(canvasElement);
+		await userEvent.click(body);
+		await userEvent.keyboard("/zz");
+		await all.findByText("맞는 블록 없음", {}, wait);
+	},
+};
+
 /** Typed and not saved: the save cell says so and saves when pressed (flow 1, step 03). */
 export const Unsaved: Story = {
 	loaders: site("draft"),

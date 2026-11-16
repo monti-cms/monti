@@ -1,6 +1,5 @@
-import { MEDIA_KIND, type TrashList, type TrashRef, type TrashRow } from "@monti-cms/core";
+import { MEDIA_KIND, sortFacets, type TrashList, type TrashRef, type TrashRow } from "@monti-cms/core";
 import {
-	BulkBar,
 	Button,
 	ContextMenu,
 	ContextMenuContent,
@@ -20,9 +19,7 @@ import {
 	Inline,
 	LIST_COLUMN_SIZE,
 	ListFooter,
-	ListHead,
 	type ListHeadColumn,
-	ListScroll,
 	LocaleCodes,
 	MenuShortcut,
 	PageColumn,
@@ -34,8 +31,6 @@ import {
 	RowTitle,
 	SearchToggle,
 	type SelectAll,
-	Table,
-	TableBody,
 	TableCell,
 	TableRow,
 	Text,
@@ -54,14 +49,15 @@ import { URGENT_DAYS } from "../../trash/days-left";
 import { usePurge, useRestore } from "../../trash/use-trash";
 import type { FrameCounts } from "../frame/admin-frame";
 import { firstStop } from "../frame/focus-hand-off";
+import { CollectionTable } from "../list/collection-table";
 import { FilterRows } from "../list/filter-rows";
 import { searchScopes } from "../list/folders";
 import { ListPages } from "../list/list-pages";
-import { NoMatchRow } from "../list/no-match-row";
 import { HandedRowActions, HandedRowLink, listStartOf, rowActionsOf } from "../list/row-hand-off";
 import { DELETE_KEYS, isDeleteKey } from "../list/row-menu";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
+import { useLastPage } from "../list/use-last-page";
 import { useSearchWords } from "../list/use-search-words";
 import { TrashedFilePanel } from "../media/media-panel";
 import type { SchemaRead } from "../settings/schema-draft";
@@ -249,6 +245,13 @@ export function TrashScreen({
 	};
 
 	const total = data?.total ?? 0;
+	useLastPage({
+		none: data !== null && rows.length === 0,
+		page: state.page,
+		total,
+		pageSize: TRASH_PAGE_SIZE,
+		go: (last) => setState({ ...state, page: last }, { replace: true }),
+	});
 	const kinds = [...Object.keys(collections), MEDIA_KIND];
 	const sortedBy = (by: TrashState["sort"]["by"]) => (state.sort.by === by ? state.sort.dir : null);
 	const sortBy = (by: TrashState["sort"]["by"]) => (dir: "asc" | "desc") =>
@@ -270,11 +273,13 @@ export function TrashScreen({
 						filtered: state.locales.length > 0,
 						menu: (
 							<FilterRows
-								values={languages.map((locale) => ({
-									value: locale,
-									label: languageName(locale),
-									count: data?.locales[locale] ?? 0,
-								}))}
+								values={sortFacets(
+									languages.map((locale) => ({
+										value: locale,
+										label: languageName(locale),
+										count: data?.locales[locale] ?? 0,
+									})),
+								)}
 								chosen={state.locales}
 								onChange={(locales) => setState({ ...state, page: 1, locales })}
 							/>
@@ -288,7 +293,9 @@ export function TrashScreen({
 			filtered: state.kinds.length > 0,
 			menu: (
 				<FilterRows
-					values={kinds.map((kind) => ({ value: kind, label: kindLabel(kind), count: data?.counts[kind] ?? 0 }))}
+					values={sortFacets(
+						kinds.map((kind) => ({ value: kind, label: kindLabel(kind), count: data?.counts[kind] ?? 0 })),
+					)}
 					chosen={state.kinds}
 					onChange={(next) => setState({ ...state, page: 1, kinds: next })}
 				/>
@@ -309,7 +316,6 @@ export function TrashScreen({
 			),
 		},
 	];
-	const colSpan = head.length + 1;
 
 	const inTrash = counts.data?.trash ?? 0;
 	const header = (
@@ -400,184 +406,181 @@ export function TrashScreen({
 		<Inline align="stretch" gap={0} grow minHeight={0}>
 			<PageColumn width="list">
 				{header}
-				<ListScroll>
-					<Table
-						ref={table}
-						container="none"
-						layout="fixed"
-						columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}
-					>
-						{pickedRows.length > 0 ? (
-							<BulkBar
-								label={t("list.selected", { count: pickedRows.length })}
-								selectAll={selectAll}
-								clearLabel={t("list.clearSelection")}
-								onClear={() => setPicked(new Set())}
-								colSpan={colSpan}
-							>
-								<TextButton onClick={() => void restoreRows(pickedRows)}>{t("trash.restore")}</TextButton>
-								<TextButton variant="danger" onClick={() => purgeRows(pickedRows)}>
-									{t("trash.purge")}
-								</TextButton>
-							</BulkBar>
-						) : (
-							<ListHead
-								columns={head}
-								end={LIST_COLUMN_SIZE.end}
-								selectAll={rows.length > 0 ? selectAll : undefined}
-								onResize={resize}
-								resizeLabel={(column) => t("list.resizeColumn", { column })}
-							/>
-						)}
-						<TableBody>
-							{data && rows.length === 0 && looking && (
-								<NoMatchRow
-									colSpan={colSpan}
-									words={t("trash.noMatch")}
-									onClear={() => setState({ ...state, search: "", everywhere: false, kinds: [], locales: [], page: 1 })}
+				<CollectionTable
+					tableRef={table}
+					head={{
+						columns: head,
+						end: LIST_COLUMN_SIZE.end,
+						selectAll: rows.length > 0 ? selectAll : undefined,
+						onResize: resize,
+						resizeLabel: (column) => t("list.resizeColumn", { column }),
+					}}
+					bulk={
+						pickedRows.length > 0
+							? {
+									label: t("list.selected", { count: pickedRows.length }),
+									selectAll,
+									clearLabel: t("list.clearSelection"),
+									onClear: () => setPicked(new Set()),
+									children: (
+										<>
+											<TextButton onClick={() => void restoreRows(pickedRows)}>{t("trash.restore")}</TextButton>
+											<TextButton variant="danger" onClick={() => purgeRows(pickedRows)}>
+												{t("trash.purge")}
+											</TextButton>
+										</>
+									),
+								}
+							: null
+					}
+					noMatch={
+						data && rows.length === 0 && looking
+							? {
+									words: t("trash.noMatch"),
+									applied: { search: searching, filters: state.kinds.length > 0 || state.locales.length > 0 },
+									onClear: () => setState({ ...state, search: "", everywhere: false, kinds: [], locales: [], page: 1 }),
+								}
+							: null
+					}
+					footer={
+						total > TRASH_PAGE_SIZE ? (
+							<ListFooter>
+								<Count>
+									{t("list.range", {
+										from: (state.page - 1) * TRASH_PAGE_SIZE + 1,
+										to: Math.min(state.page * TRASH_PAGE_SIZE, total),
+										total,
+									})}
+								</Count>
+								<ListPages
+									page={state.page}
+									pages={Math.ceil(total / TRASH_PAGE_SIZE)}
+									hrefOf={(page) => href({ screen: "trash", params: writeTrashState({ ...state, page }) })}
 								/>
-							)}
-							{/* The way up is the lists' first row too, beside the trail (2026-11-11, the owner). Not while it searches: those rows are from anywhere. */}
-							{place && !looking && (
-								<TableRow>
-									<TableCell truncate>
-										<RowTitle
-											folder
-											title={
-												<RowLink
+							</ListFooter>
+						) : null
+					}
+				>
+					{/* The way up is the lists' first row too, beside the trail (2026-11-11, the owner). Not while it searches: those rows are from anywhere. */}
+					{place && !looking && (
+						<TableRow>
+							<TableCell truncate>
+								<RowTitle
+									folder
+									title={
+										<RowLink
+											render={<button type="button" />}
+											onClick={() =>
+												setState({
+													...state,
+													folder: place.trail.at(-1)?.id ?? null,
+													search: "",
+													everywhere: false,
+													page: 1,
+													open: null,
+												})
+											}
+										>
+											{t("folders.up")}
+										</RowLink>
+									}
+								/>
+							</TableCell>
+							{head.slice(1).map((column) => (
+								<TableCell key={column.id} />
+							))}
+							<TableCell align="end">
+								<RowActions />
+							</TableCell>
+						</TableRow>
+					)}
+					{rows.map((row) => {
+						const key = keyOf(row);
+						const link = entryHref(row);
+						// Inside a folder a row says its days only when they are not the folder's own: the head says those.
+						const days = place && row.daysLeft === place.daysLeft && !row.byAssistant ? null : row.daysLeft;
+						const line = (
+							<TableRow
+								key={key}
+								selected={picked.has(key) || (panel !== null && keyOf(panel) === key)}
+								onKeyDown={onRowKey(row)}
+							>
+								<TableCell truncate>
+									<RowCheck
+										checked={picked.has(key)}
+										onCheckedChange={(on) => pick(row, on)}
+										label={t("list.pick", { title: titleOf(row.title, t) })}
+									/>
+									<RowTitle
+										untitled={!row.title.trim()}
+										title={
+											link ? (
+												<HandedRowLink href={link} listStart={listStart}>
+													{titleOf(row.title, t)}
+												</HandedRowLink>
+											) : (
+												<HandedRowLink
 													render={<button type="button" />}
-													onClick={() =>
-														setState({
-															...state,
-															folder: place.trail.at(-1)?.id ?? null,
-															search: "",
-															everywhere: false,
-															page: 1,
-															open: null,
-														})
-													}
+													onClick={() => open(row)}
+													listStart={listStart}
 												>
-													{t("folders.up")}
-												</RowLink>
+													{titleOf(row.title, t)}
+												</HandedRowLink>
+											)
+										}
+										address={row.address || undefined}
+										note={noteOf(row)}
+										folder={row.kind === "folder"}
+									/>
+								</TableCell>
+								{multilingual && (
+									<TableCell>
+										{row.kind === "entry" && (
+											<LocaleCodes codes={row.locales} names={row.locales.map(languageName).join(", ")} />
+										)}
+									</TableCell>
+								)}
+								<TableCell tone="subtle" truncate title={kindLabel(row.collection ?? MEDIA_KIND)}>
+									{kindLabel(row.collection ?? MEDIA_KIND)}
+								</TableCell>
+								<TableCell align="end" truncate title={days === null ? undefined : t("trash.left", { days })}>
+									{days !== null && (
+										<TrashRowDate
+											left={t("trash.left", { days })}
+											urgent={days < URGENT_DAYS}
+											byAssistant={
+												!row.byAssistant
+													? undefined
+													: // Its ✦ opens the conversation that threw it away; one deleted since leaves the mark alone.
+														row.conversationId !== null && openConversation
+														? {
+																label: t("trash.openConversation"),
+																onOpen: () => openConversation(row.conversationId as string),
+															}
+														: { label: t("trash.byAssistant") }
 											}
 										/>
-									</TableCell>
-									{head.slice(1).map((column) => (
-										<TableCell key={column.id} />
-									))}
-									<TableCell align="end">
-										<RowActions />
-									</TableCell>
-								</TableRow>
-							)}
-							{rows.map((row) => {
-								const key = keyOf(row);
-								const link = entryHref(row);
-								// Inside a folder a row says its days only when they are not the folder's own: the head says those.
-								const days = place && row.daysLeft === place.daysLeft && !row.byAssistant ? null : row.daysLeft;
-								const line = (
-									<TableRow
-										key={key}
-										selected={picked.has(key) || (panel !== null && keyOf(panel) === key)}
-										onKeyDown={onRowKey(row)}
-									>
-										<TableCell truncate>
-											<RowCheck
-												checked={picked.has(key)}
-												onCheckedChange={(on) => pick(row, on)}
-												label={t("list.pick", { title: titleOf(row.title, t) })}
-											/>
-											<RowTitle
-												untitled={!row.title.trim()}
-												title={
-													link ? (
-														<HandedRowLink href={link} listStart={listStart}>
-															{titleOf(row.title, t)}
-														</HandedRowLink>
-													) : (
-														<HandedRowLink
-															render={<button type="button" />}
-															onClick={() => open(row)}
-															listStart={listStart}
-														>
-															{titleOf(row.title, t)}
-														</HandedRowLink>
-													)
-												}
-												address={row.address || undefined}
-												note={noteOf(row)}
-												folder={row.kind === "folder"}
-											/>
-										</TableCell>
-										{multilingual && (
-											<TableCell>
-												{row.kind === "entry" && (
-													<LocaleCodes codes={row.locales} names={row.locales.map(languageName).join(", ")} />
-												)}
-											</TableCell>
-										)}
-										<TableCell tone="subtle" truncate title={kindLabel(row.collection ?? MEDIA_KIND)}>
-											{kindLabel(row.collection ?? MEDIA_KIND)}
-										</TableCell>
-										<TableCell align="end" truncate title={days === null ? undefined : t("trash.left", { days })}>
-											{days !== null && (
-												<TrashRowDate
-													left={t("trash.left", { days })}
-													urgent={days < URGENT_DAYS}
-													byAssistant={
-														!row.byAssistant
-															? undefined
-															: // Its ✦ opens the conversation that threw it away; one deleted since leaves the mark alone.
-																row.conversationId !== null && openConversation
-																? {
-																		label: t("trash.openConversation"),
-																		onOpen: () => openConversation(row.conversationId as string),
-																	}
-																: { label: t("trash.byAssistant") }
-													}
-												/>
-											)}
-										</TableCell>
-										<TableCell align="end">
-											{/* A row restored or deleted for good leaves the list: the focus its ⋯ held goes to the row after it. */}
-											<HandedRowActions row={key} listStart={listStart}>
-												<DropdownMenu>
-													<RowMore
-														label={t("list.more")}
-														trigger={(button) => <DropdownMenuTrigger render={button} />}
-													/>
-													<DropdownMenuContent align="end">{menuItems(row, false)}</DropdownMenuContent>
-												</DropdownMenu>
-											</HandedRowActions>
-										</TableCell>
-									</TableRow>
-								);
-								return (
-									<ContextMenu key={key}>
-										<ContextMenuTrigger render={line} />
-										<ContextMenuContent>{menuItems(row, true)}</ContextMenuContent>
-									</ContextMenu>
-								);
-							})}
-						</TableBody>
-					</Table>
-				</ListScroll>
-				{total > TRASH_PAGE_SIZE && (
-					<ListFooter>
-						<Count>
-							{t("list.range", {
-								from: (state.page - 1) * TRASH_PAGE_SIZE + 1,
-								to: Math.min(state.page * TRASH_PAGE_SIZE, total),
-								total,
-							})}
-						</Count>
-						<ListPages
-							page={state.page}
-							pages={Math.ceil(total / TRASH_PAGE_SIZE)}
-							hrefOf={(page) => href({ screen: "trash", params: writeTrashState({ ...state, page }) })}
-						/>
-					</ListFooter>
-				)}
+									)}
+								</TableCell>
+								<TableCell align="end">
+									{/* A row restored or deleted for good leaves the list: the focus its ⋯ held goes to the row after it. */}
+									<HandedRowActions row={key} listStart={listStart}>
+										<DropdownMenu>
+											<RowMore label={t("list.more")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
+											<DropdownMenuContent align="end">{menuItems(row, false)}</DropdownMenuContent>
+										</DropdownMenu>
+									</HandedRowActions>
+								</TableCell>
+							</TableRow>
+						);
+						return (
+							<ContextMenu key={key}>
+								<ContextMenuTrigger render={line} />
+								<ContextMenuContent>{menuItems(row, true)}</ContextMenuContent>
+							</ContextMenu>
+						);
+					})}
+				</CollectionTable>
 			</PageColumn>
 			{purge.dialog}
 			{panel?.kind === "media" && (
