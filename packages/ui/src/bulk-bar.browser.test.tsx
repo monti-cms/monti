@@ -6,6 +6,7 @@ import { BulkBar } from "./bulk-bar";
 import { CutWords } from "./cut-words";
 import { DropdownMenuItem } from "./dropdown-menu";
 import { ListHead } from "./list-head";
+import { PageToolbar } from "./page-header";
 import { Table, TableBody, TableCell, TableRow } from "./table";
 
 it("letting go of the picked rows is a quiet text button at the bar's end, not a pill (components/list.md, bulk bar)", async () => {
@@ -135,4 +136,31 @@ it("an Esc that closes the words of a cut name is spent: it does not let go of t
 	expect(cleared).toBe(0);
 	await userEvent.keyboard("{Escape}");
 	expect(cleared).toBe(1);
+});
+
+function PickingGrid() {
+	const [picked, setPicked] = React.useState(true);
+	return (
+		<div>
+			<button type="button">제목 줄</button>
+			{picked ? (
+				<BulkBar label="1개 선택" clearLabel="선택 해제" onClear={() => setPicked(false)}>
+					<button type="button">휴지통으로</button>
+				</BulkBar>
+			) : (
+				<PageToolbar inset>
+					<button type="button">종류</button>
+				</PageToolbar>
+			)}
+		</div>
+	);
+}
+
+it("over a grid, Esc hands the focus to the first control of the row of filters that comes back, not to the page header", async () => {
+	render(<PickingGrid />);
+	const action = page.getByRole("button", { name: "휴지통으로" });
+	await expect.element(action).toBeVisible();
+	(action.element() as HTMLElement).focus();
+	await userEvent.keyboard("{Escape}");
+	await expect.poll(() => document.activeElement).toBe(page.getByRole("button", { name: "종류" }).element());
 });

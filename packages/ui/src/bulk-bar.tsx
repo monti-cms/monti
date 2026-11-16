@@ -64,14 +64,18 @@ function BulkBar({
 			if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
 			if (event.target instanceof Element && event.target.closest(OWN_ESCAPE)) return;
 			const held = bar.current?.contains(document.activeElement) ?? false;
-			const home = bar.current?.closest("table") ?? bar.current?.parentElement;
+			// What the bar stands in for, by its place: the table's head (its `thead`), or the grid's row of filters. It is what the box it is in
+			// draws at that place once the pick is let go.
+			const slot = bar.current?.closest("thead") ?? bar.current;
+			const box = slot?.parentElement;
+			const place = box && slot ? [...box.children].indexOf(slot) : -1;
 			clear.current();
 			// The bar goes with the pick and takes the focus it held: it goes to the first stop of the head that comes back, not to the page.
-			if (held && home)
+			if (held && box && place >= 0)
 				requestAnimationFrame(() =>
 					requestAnimationFrame(() => {
 						if (document.activeElement && document.activeElement !== document.body) return;
-						home.querySelector<HTMLElement>(FIRST_STOP)?.focus();
+						box.children[place]?.querySelector<HTMLElement>(FIRST_STOP)?.focus();
 					}),
 				);
 		};
