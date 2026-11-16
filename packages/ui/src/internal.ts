@@ -291,7 +291,7 @@ export {
 	SheetTrigger,
 } from "./sheet";
 export { formatShortcut, Shortcut, type ShortcutKey, type ShortcutKeys, useShortcut } from "./shortcut";
-export { SidePanel, SidePanelSave } from "./side-panel";
+export { PanelSlot, SidePanel, SidePanelSave } from "./side-panel";
 export {
 	folderTree,
 	Sidebar,

@@ -122,25 +122,6 @@ export function SidePanel({
 		},
 		[given],
 	);
-	// A panel docked inside the box that scrolls the page stays at that box's right edge while the page scrolls sideways (a table wider than its column
-	// runs under it): it is moved by the scroll, so it is where the sticky cell of a row's ⋯ (`--monti-edge-gap`) expects it. A panel outside such a box
-	// (the assistant's) has nothing to follow.
-	useLayoutEffect(() => {
-		const node = panel.current;
-		let scroller = node?.parentElement ?? null;
-		while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowX)) scroller = scroller.parentElement;
-		if (!node || !scroller) return;
-		const box = scroller;
-		const follow = () => {
-			node.style.transform = box.scrollLeft ? `translateX(${box.scrollLeft}px)` : "";
-		};
-		follow();
-		box.addEventListener("scroll", follow, { passive: true });
-		return () => {
-			box.removeEventListener("scroll", follow);
-			node.style.transform = "";
-		};
-	}, []);
 	/** What opened the panel, and the first thing that did. */
 	const from = useRef<HTMLElement | null>(null);
 	const first = useRef<HTMLElement | null>(null);
@@ -306,4 +287,13 @@ export function SidePanelSave({
 			</Inline>
 		</Inline>
 	);
+}
+
+/**
+ * Where the docked panels of a page stand: beside the box that scrolls the page, never in it (the frame draws it once, before the assistant's panel). The
+ * scroller then ends at the panel's edge: a table wider than the page scrolls sideways inside it and never runs under a panel. The screens give their
+ * panel to the slot (`PagePanel` of the admin).
+ */
+export function PanelSlot({ ref }: { ref?: React.Ref<HTMLDivElement> }) {
+	return <div ref={ref} data-slot="panel-slot" className="flex min-h-0 shrink-0" />;
 }

@@ -49,6 +49,7 @@ import { URGENT_DAYS } from "../../trash/days-left";
 import { usePurge, useRestore } from "../../trash/use-trash";
 import type { FrameCounts } from "../frame/admin-frame";
 import { firstStop } from "../frame/focus-hand-off";
+import { PagePanel } from "../frame/page-panel";
 import { CollectionTable } from "../list/collection-table";
 import { FilterRows } from "../list/filter-rows";
 import { searchScopes } from "../list/folders";
@@ -594,22 +595,24 @@ export function TrashScreen({
 				/>
 			)}
 			{panel?.kind === "entry" && (
-				<TrashedItemPanel
-					key={panel.id}
-					id={panel.id}
-					collectionLabel={collectionLabel}
-					go={go}
-					onClose={() => setState({ ...state, open: null })}
-					onRestore={() => void restore.run([panel]).then((done) => done && close([panel]))}
-					onPurge={() =>
-						purge.start({
-							rows: [panel],
-							reserves: rows.find((row) => keyOf(row) === keyOf(panel))?.reserves,
-							onPurged: () => close([panel]),
-							whenGone: afterPurge([panel]),
-						})
-					}
-				/>
+				<PagePanel>
+					<TrashedItemPanel
+						key={panel.id}
+						id={panel.id}
+						collectionLabel={collectionLabel}
+						go={go}
+						onClose={() => setState({ ...state, open: null })}
+						onRestore={() => void restore.run([panel]).then((done) => done && close([panel]))}
+						onPurge={() =>
+							purge.start({
+								rows: [panel],
+								reserves: rows.find((row) => keyOf(row) === keyOf(panel))?.reserves,
+								onPurged: () => close([panel]),
+								whenGone: afterPurge([panel]),
+							})
+						}
+					/>
+				</PagePanel>
 			)}
 		</Inline>
 	);

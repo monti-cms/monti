@@ -420,10 +420,7 @@ export const StickyActions: Story = {
 	tags: ["visual"],
 	render: () => (
 		// design-allow: a column narrower than its table, which the page's column is beside a panel
-		<div
-			data-clipping=""
-			style={{ width: 420, overflowX: "clip", position: "relative", ["--monti-edge-gap" as string]: "0px" }}
-		>
+		<div data-clipping="" style={{ width: 420, overflowX: "clip", position: "relative" }}>
 			<ListScroll>
 				<Table container="none" layout="fixed" columns={[120, 240, 96, 48]}>
 					<TableHeader>

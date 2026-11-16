@@ -246,9 +246,8 @@ describe("the activity log (doc 13, flow 12)", () => {
 				.element()
 				.contains(document.elementFromPoint(edge + 10, (rowLine?.top ?? 0) + (rowLine?.height ?? 0) / 2)),
 		).toBe(true);
-		// The table runs under the ⋯ cell: it shows its edge line, and the head's last cell stands over it at the same left edge.
+		// The head's last cell stands over the ⋯ cell at the same left edge.
 		const cell = actions[0]?.closest("td") as HTMLElement;
-		expect(getComputedStyle(cell).boxShadow).not.toBe("none");
 		const head = table().element().querySelector("thead th:last-child") as HTMLElement;
 		expect(getComputedStyle(head).position).toBe("sticky");
 		expect(Math.abs(head.getBoundingClientRect().left - cell.getBoundingClientRect().left)).toBeLessThanOrEqual(1);
@@ -257,7 +256,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(page.getByRole("menu")).toBeVisible();
 	});
 
-	it("at 1024 wide with the panel open and the columns wider than the page by less than the panel, scrolling sideways brings the last column out from under the panel, which stays where it is, and each ⋯ stays left of it", async () => {
+	it("at 1024 wide with the panel open and the columns wider than the page, the page scrolls sideways to the last column, which comes out wholly left of the panel; the panel does not move and each ⋯ stays left of it", async () => {
 		await page.viewport(1024, 768);
 		onTestFinished(() => page.viewport(1440, 900));
 		await draw(stories.Panel).run();
@@ -268,18 +267,22 @@ describe("the activity log (doc 13, flow 12)", () => {
 			throw new Error("nothing scrolls sideways");
 		})();
 		const edge = () => panel().element().getBoundingClientRect().left;
-		// The table runs past the column (a panel stands there) and the page has room to scroll on by the gap.
+		// The panel stands beside the scroller, which ends at its edge: the table runs past the page and the page scrolls on to its last column.
 		await expect.poll(() => scroller.scrollWidth - scroller.clientWidth).toBeGreaterThan(0);
+		expect(scroller.getBoundingClientRect().right).toBeLessThanOrEqual(edge() + 1);
 		const before = edge();
 		scroller.scrollLeft = scroller.scrollWidth;
-		await expect.poll(() => scroller.scrollLeft).toBeGreaterThan(0);
-		// The last column's head is wholly left of the panel, and the panel did not move.
+		// Read once, right after the scroll: the panel is not moved by it, and nothing runs under it.
+		expect(Math.abs(edge() - before)).toBeLessThanOrEqual(1);
 		const heads = [...table().element().querySelectorAll("thead th")];
 		const last = heads[heads.length - 2] as HTMLElement;
-		await expect.poll(() => last.getBoundingClientRect().right - edge()).toBeLessThanOrEqual(1);
-		await expect.poll(() => Math.abs(edge() - before)).toBeLessThanOrEqual(1);
+		expect(last.getBoundingClientRect().right).toBeLessThanOrEqual(edge() + 1);
 		for (const each of table().element().querySelectorAll("[data-slot=row-actions]"))
 			expect(each.getBoundingClientRect().right).toBeLessThanOrEqual(edge() + 1);
+		// The sticky cell of a row's ⋯ shows its edge line while the cells run under it.
+		expect(
+			getComputedStyle(table().element().querySelector("td:has([data-slot=row-actions])") as Element).boxShadow,
+		).not.toBe("none");
 	});
 
 	it("the assistant's row open: its request whole, each thing it did, and what it touched", async () => {

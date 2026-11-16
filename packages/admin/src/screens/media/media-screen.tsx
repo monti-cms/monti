@@ -92,6 +92,7 @@ import { useUpload } from "../../media/use-upload";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { href, linkTo, type Route } from "../../route";
+import { PagePanel } from "../frame/page-panel";
 import { CollectionTable } from "../list/collection-table";
 import { countedWhere } from "../list/counted-where";
 import { type FilterProps, FilterRows } from "../list/filter-rows";
@@ -1076,17 +1077,19 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			</PageColumn>
 			{removeFolder.dialog}
 			{state.file && (
-				<MediaPanel
-					key={state.file}
-					id={state.file}
-					folders={folders}
-					onClose={() => moveFile({ ...state, file: null })}
-					go={goAway}
-					onTrash={(id) => {
-						void trash([id]);
-						setState({ ...state, file: null });
-					}}
-				/>
+				<PagePanel>
+					<MediaPanel
+						key={state.file}
+						id={state.file}
+						folders={folders}
+						onClose={() => moveFile({ ...state, file: null })}
+						go={goAway}
+						onTrash={(id) => {
+							void trash([id]);
+							setState({ ...state, file: null });
+						}}
+					/>
+				</PagePanel>
 			)}
 		</Inline>
 	);

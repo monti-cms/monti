@@ -63,8 +63,9 @@ function PageHeader({
  *
  * `width="content"` (the default) is 880px: settings and form pages, where a label must not drift from its value and a line must not grow long.
  * `width="list"` is for a page of rows (entries, media, trash, the tables of tools): 880px until the page area leaves at least 240px on each side, then it
- * grows with the area up to 1200px (880 at 1440 wide, 1200 at 1920). What runs out of the column sideways (a table wider than the room) is reached by scrolling the page sideways; a docked panel beside it stands above
- * the page (its own ground and z-order), so the table runs under it, not over it. A row's ⋯ sticks to the page area's right edge (`TableRow`), so it stays in reach (AT-01). The area is what is beside the sidebar and any docked panel, measured on the
+ * grows with the area up to 1200px (880 at 1440 wide, 1200 at 1920). What runs out of the column sideways (a table wider than the room) is reached by scrolling the page sideways; a docked panel stands beside the page's
+ * scroller, not in it, so the scroller ends at the panel's edge and the table never runs under it. A row's ⋯ sticks to the scroller's right edge (`TableRow`),
+ * so it stays in reach (AT-01). The area is what is beside the sidebar and any docked panel, measured on the
  * nearest `container` (the admin frame makes it), so a folded rail or an open panel runs the same rule on the room that is left.
  */
 function PageColumn({
@@ -75,40 +76,27 @@ function PageColumn({
 	...props
 }: React.ComponentProps<"div"> & { width?: "content" | "list" }) {
 	const own = React.useRef<HTMLDivElement | null>(null);
-	// How far the column's right edge stands from the right edge of the box that scrolls the page (a docked panel stands between them): `--monti-edge-gap`,
-	// which what sticks to the column's edge reads (a row's ⋯, `TableRow`). It is measured: CSS knows no such distance.
+	// Whether the table runs past the column (under the sticky cell of a row's ⋯, which stands at the page area's edge): `data-clipping`, which that cell's
+	// edge line reads.
 	React.useLayoutEffect(() => {
 		const column = own.current;
 		if (!column) return;
-		let scroller = column.parentElement;
-		while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+		const watch = new ResizeObserver(() => measure());
 		const measure = () => {
-			const port = scroller
-				? scroller.getBoundingClientRect().left + scroller.clientLeft + scroller.clientWidth
-				: window.innerWidth;
 			const right = column.getBoundingClientRect().right;
 			const tables = [...column.querySelectorAll<HTMLElement>("[data-slot=table]")];
-			// The table runs under the edge (past the column's, where a docked panel stands): what sticks to it shows a line on its near side, and the page can
-			// scroll on by the gap (`--monti-table-extent` is how wide the table is, which the end room under `TableContainer` is laid from).
 			column.toggleAttribute(
 				"data-clipping",
 				tables.length > 0
 					? tables.some((table) => table.getBoundingClientRect().right > right + 1)
 					: column.scrollWidth > column.clientWidth + 1,
 			);
-			column.style.setProperty("--monti-table-extent", `${Math.max(0, ...tables.map((table) => table.offsetWidth))}px`);
-			// From the column's edge to the scrolling box's, as it stands unscrolled: a sideways scroll moves the column, not the gap.
-			column.style.setProperty(
-				"--monti-edge-gap",
-				`${Math.max(0, Math.round(port - right - (scroller?.scrollLeft ?? 0)))}px`,
-			);
+			// A table drawn after the column is watched from then on (observing again what is watched changes nothing).
+			for (const table of tables) watch.observe(table);
 		};
 		measure();
-		const watch = new ResizeObserver(measure);
 		watch.observe(column);
 		for (const child of column.children) watch.observe(child);
-		for (const table of column.querySelectorAll("[data-slot=table]")) watch.observe(table);
-		if (scroller) watch.observe(scroller);
 		return () => watch.disconnect();
 	}, []);
 	return (

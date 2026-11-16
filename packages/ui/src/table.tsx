@@ -44,15 +44,7 @@ function Table({
 	stickyHeader?: boolean;
 }) {
 	return (
-		<div
-			data-slot="table-container"
-			// A table that runs under the edge of the page column (a docked panel stands there) has room to scroll on by the gap, so its last column can
-			// come out from under the panel: an end room as wide as the table and the gap, laid from the container's start (`--monti-table-extent`).
-			className={cn(
-				"relative w-full [[data-clipping]_&]:after:absolute [[data-clipping]_&]:after:top-0 [[data-clipping]_&]:after:left-0 [[data-clipping]_&]:after:h-px [[data-clipping]_&]:after:w-[calc(var(--monti-table-extent,0px)+var(--monti-edge-gap,0px))] [[data-clipping]_&]:after:content-['']",
-				container === "scroll" && "overflow-x-auto",
-			)}
-		>
+		<div data-slot="table-container" className={cn("relative w-full", container === "scroll" && "overflow-x-auto")}>
 			<table
 				data-slot="table"
 				className={cn(
@@ -66,7 +58,7 @@ function Table({
 					(stickyHeader ?? container === "none") &&
 						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)] [&_thead_tr]:border-b-transparent",
 					// The head of the ⋯ column sticks with the ⋯ below it, so the head's + lines up with it.
-					"[&:has([data-slot=row-actions])_thead_th:last-child]:sticky [&:has([data-slot=row-actions])_thead_th:last-child]:right-[var(--monti-edge-gap,0px)] [&:has([data-slot=row-actions])_thead_th:last-child]:z-11 [&:has([data-slot=row-actions])_thead_th:last-child]:bg-[var(--monti-ground,var(--monti-bg-page))] [[data-clipping]_&:has([data-slot=row-actions])_thead_th:last-child]:shadow-[inset_1px_0_0_var(--monti-border-muted)]",
+					"[&:has([data-slot=row-actions])_thead_th:last-child]:sticky [&:has([data-slot=row-actions])_thead_th:last-child]:right-0 [&:has([data-slot=row-actions])_thead_th:last-child]:z-11 [&:has([data-slot=row-actions])_thead_th:last-child]:bg-[var(--monti-ground,var(--monti-bg-page))] [[data-clipping]_&:has([data-slot=row-actions])_thead_th:last-child]:shadow-[inset_1px_0_0_var(--monti-border-muted)]",
 					className,
 				)}
 				style={{
@@ -159,7 +151,7 @@ function TableRow({
 				// The cell that holds the row's ⋯ sticks to the right edge of the page area, so the ⋯ stays in reach when the table runs wider than its column
 				// (a panel open beside it, columns made wide). It paints the row's ground over the surface's (`--monti-ground`: the page's, or a tool panel's), so
 				// the cells under it do not show through and no other row turns white; a line on its left says the table runs under it.
-				"[&>td:has([data-slot=row-actions])]:sticky! [&>td:has([data-slot=row-actions])]:right-[var(--monti-edge-gap,0px)] [&>td:has([data-slot=row-actions])]:z-2 [&>td:has([data-slot=row-actions])]:bg-[var(--row-ground,var(--monti-ground,var(--monti-bg-page)))] [[data-clipping]_&>td:has([data-slot=row-actions])]:shadow-[inset_1px_0_0_var(--monti-border-muted)]",
+				"[&>td:has([data-slot=row-actions])]:sticky! [&>td:has([data-slot=row-actions])]:right-0 [&>td:has([data-slot=row-actions])]:z-2 [&>td:has([data-slot=row-actions])]:bg-[var(--row-ground,var(--monti-ground,var(--monti-bg-page)))] [[data-clipping]_&>td:has([data-slot=row-actions])]:shadow-[inset_1px_0_0_var(--monti-border-muted)]",
 				twoLine && "[&>td]:py-monti-16",
 				// An outline, not a ring: a table row draws no shadow of its own, and takes no rounded corners either (2026-11-11, owner: left square).
 				dropTarget &&

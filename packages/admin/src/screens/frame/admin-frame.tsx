@@ -3,6 +3,7 @@ import {
 	Count,
 	folderTree,
 	Inline,
+	PanelSlot,
 	Sidebar,
 	SidebarContent,
 	SidebarFoot,
@@ -24,7 +25,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { Image, RecentlyViewed, SettingsAdjust, Tools, TrashCan } from "@monti-cms/ui/icons";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { collectionIcon } from "../../format/collection-icon";
 import { labelOfCollection } from "../../format/names";
 import { FolderFilesProvider, useGiveFolderFiles } from "../../media/folder-files";
@@ -34,6 +35,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href } from "../../route";
 import { type FolderScope, useFolders } from "../list/folders";
+import { PanelSlotContext } from "./page-panel";
 import { ReadFailedBanner } from "./read-failed";
 import { SchemaBanner } from "./schema-banner";
 import { SessionEndedBanner } from "./session-ended";
@@ -195,6 +197,7 @@ export function AdminFrame({
 	children: ReactNode;
 }) {
 	const { t, siteName } = useAdmin();
+	const [panelSlot, setPanelSlot] = useState<HTMLElement | null>(null);
 	// Read again after every write, as every read is: a saved collection's label and a new collection's row show at once (flow 4, step 06).
 	const schema = useRead<SchemaRead>("schema.read");
 	const [mode, setMode] = useScreenMode();
@@ -299,8 +302,10 @@ export function AdminFrame({
 							<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
 								{/* The page scrolls here, one bar at its right edge (or beside a docked panel), the header with it (2026-11-06, owner). */}
 								<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
-									{children}
+									<PanelSlotContext value={panelSlot}>{children}</PanelSlotContext>
 								</Stack>
+								{/* A page's docked panel stands here, beside the scroller, before the assistant's: both can be open, side by side. */}
+								<PanelSlot ref={setPanelSlot} />
 								{assistant?.open ? assistant.panel : null}
 							</Inline>
 						</Stack>

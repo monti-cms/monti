@@ -50,6 +50,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { nextStop, useFocusHandOff } from "../frame/focus-hand-off";
+import { PagePanel } from "../frame/page-panel";
 import { CollectionTable } from "../list/collection-table";
 import { DateRows } from "../list/date-rows";
 import { toggled, ValueRow } from "../list/filter-rows";
@@ -560,21 +561,23 @@ export function ActivityScreen({
 				</CollectionTable>
 			</PageColumn>
 			{panel && (
-				<ActivityPanel
-					key={panel}
-					id={panel}
-					go={go}
-					say={say}
-					deliveries={data.deliveries}
-					sending={again.sending}
-					busy={busy}
-					undoing={undo.pending}
-					watched={watched}
-					onClose={() => setState({ ...state, open: null })}
-					onGone={() => setState({ ...state, open: null }, { replace: true })}
-					onRetry={(ids) => void again.send(ids)}
-					onUndo={(whenGone) => void undo.ask(panel, whenGone)}
-				/>
+				<PagePanel>
+					<ActivityPanel
+						key={panel}
+						id={panel}
+						go={go}
+						say={say}
+						deliveries={data.deliveries}
+						sending={again.sending}
+						busy={busy}
+						undoing={undo.pending}
+						watched={watched}
+						onClose={() => setState({ ...state, open: null })}
+						onGone={() => setState({ ...state, open: null }, { replace: true })}
+						onRetry={(ids) => void again.send(ids)}
+						onUndo={(whenGone) => void undo.ask(panel, whenGone)}
+					/>
+				</PagePanel>
 			)}
 			{/* The undo's question, for the row's ⋯ and the panel's alike. */}
 			{undo.dialog}

@@ -87,6 +87,7 @@ export const PropertyGroup = close(open.PropertyGroup);
 export const PropertyPanel = close(open.PropertyPanel);
 export const SidePanel = close(open.SidePanel);
 export const SidePanelSave = close(open.SidePanelSave);
+export const PanelSlot = close(open.PanelSlot);
 export const ToolCallLine = close(open.ToolCallLine);
 export type {
 	ChangesItem,
