@@ -13,7 +13,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 주소 `/en/first-post` | `Text variant="caption" tone="faint"` | 번역 글의 주소. 읽기만 한다. |
+| 주소 `/en/first-post` | `Text mono variant="caption" tone="faint"` | 번역 글의 주소. 읽기만 한다. |
 | 발행 상태 | `EntryStatus` | 이 언어 글의 상태(초안 · 발행됨 · 수정 중). |
 | "저장" · "미리보기" · "발행하기 ▾" · 속성 | [editor.md](editor.md)의 머리 줄과 같다 | 발행은 흐린 블록이 남아 있으면 막힌다(할 일로 알린다). 라벨은 "저장". 단축키는 툴팁에만 있다. 보드의 "⌘S"는 [button.md](../components/button.md)를 따라 뺀다. 원문 옆 창이나 나란히 보기처럼 속성 패널이 열려 있지 않으면 속성 `IconButton`은 눌리지 않은 바탕이다. |
 | ⋯ | `IconButton` + `DropdownMenu` | 행: "AI가 바꾼 기록"(활동 기록을 새 탭에서 연다) · "내보내기" │ 문서 도구([editor.md](editor.md)의 ⋯와 같은 묶음: 플러그인의 보기 스위치 "MDX로 보기"(앞 아이콘 `DocumentView`), "본문 폭". 코드대로 적었다, 만들며 정함 (2026-11-14)) │ "이 번역 휴지통으로"(`variant="danger"`, `icon`, 아래 줄 `caption` "한국어 원문은 그대로"). 보드는 "이 번역 휴지통으로"를 보통 행으로 그렸다. 메뉴 규칙을 따라 맨 아래 위험 행으로 둔다. |

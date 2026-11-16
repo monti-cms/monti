@@ -52,7 +52,7 @@ function FileTreeRow({
 			<ButtonPrimitive
 				type="button"
 				className={cn(
-					"flex h-monti-control-sm min-w-0 grow cursor-pointer items-center gap-monti-6 rounded-monti-full border-0 bg-transparent pr-monti-4 font-mono text-inherit text-monti-code outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset",
+					"flex h-monti-control-sm min-w-0 grow cursor-pointer items-center gap-monti-6 rounded-monti-full border-0 bg-transparent pr-monti-4 font-mono text-inherit text-monti-code outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset",
 					DEPTH[depth],
 					className,
 				)}

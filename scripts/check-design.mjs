@@ -1152,12 +1152,12 @@ function checkOffSystem() {
 								`\`${word}\`: spacing takes the scale; a part that must leave it says why in OFF_SCALE_SPACE`,
 							);
 					}
-					// One focus ring (the states section of tokens.md): 2px at half ink, or the field's ink underline. Light rings on dark ground (on-emphasis) keep their own.
+					// One focus ring (the states section of tokens.md): 2px at 60% ink (`FOCUS_RING_ALPHA` in check-type-colour.mjs, 3:1 on every ground), or the field's ink underline. Light rings on dark ground (on-emphasis) keep their own.
 					if (/focus/.test(word.split(":").slice(0, -1).join(":"))) {
 						if (/^ring-(\d+|\[\d+px\])$/.test(utility) && utility !== "ring-2")
 							add(full, line, "off-system", `\`${word}\`: the focus ring is 2px (ring-2)`);
-						if (/^(ring|outline)-monti-contrast\/\d+$/.test(utility) && !utility.endsWith("/50"))
-							add(full, line, "off-system", `\`${word}\`: the focus ring is half ink (ring-monti-contrast/50)`);
+						if (/^(ring|outline)-monti-contrast\/\d+$/.test(utility) && !utility.endsWith("/60"))
+							add(full, line, "off-system", `\`${word}\`: the focus ring is 60% ink (ring-monti-contrast/60)`);
 					}
 				}
 			}

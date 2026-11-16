@@ -74,8 +74,7 @@ function TrashRowDate({
 	byAssistant?: { label: string; onOpen?: () => void };
 }) {
 	// In a column dragged narrow the words end in "…" and the mark stays: each piece may shrink to the cell.
-	const MARK =
-		"inline-flex min-w-0 max-w-full items-center gap-monti-4 font-mono text-monti-caption text-monti-proposal";
+	const MARK = "inline-flex min-w-0 max-w-full items-center gap-monti-4 text-monti-caption text-monti-proposal";
 	const assistant = (words: React.ReactNode) =>
 		!byAssistant ? null : byAssistant.onOpen ? (
 			<button
@@ -85,13 +84,18 @@ function TrashRowDate({
 				className={cn(
 					MARK,
 					HIT_LAYER,
-					"group/open relative z-10 cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
+					"group/open relative z-10 cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
 				)}
 			>
 				<Spark aria-hidden className="size-monti-icon-xs shrink-0" />
 				{/* The days keep the warning tone when the purge is near, as on the mark that opens nothing. */}
 				<span
-					className={cn("truncate group-hover/open:underline", urgent && date === undefined && "text-monti-warning")}
+					className={cn(
+						"truncate group-hover/open:underline",
+						// A date is a value and stays mono; the days left are words.
+						date !== undefined && "font-mono",
+						urgent && date === undefined && "text-monti-warning",
+					)}
 				>
 					{words}
 				</span>
@@ -100,7 +104,15 @@ function TrashRowDate({
 			<span data-slot="trash-row-left" className={MARK}>
 				<Spark role="img" aria-hidden={false} aria-label={byAssistant.label} className="size-monti-icon-xs shrink-0" />
 				{/* The mark says who; the days still say how near the purge is. */}
-				<span className={cn("truncate", urgent && date === undefined && "text-monti-warning")}>{words}</span>
+				<span
+					className={cn(
+						"truncate",
+						date !== undefined && "font-mono",
+						urgent && date === undefined && "text-monti-warning",
+					)}
+				>
+					{words}
+				</span>
 			</span>
 		);
 	return (
@@ -116,10 +128,7 @@ function TrashRowDate({
 			{(date === undefined && assistant(left)) || (
 				<span
 					data-slot="trash-row-left"
-					className={cn(
-						"max-w-full truncate font-mono text-monti-caption",
-						urgent ? "text-monti-warning" : "text-monti-faint",
-					)}
+					className={cn("max-w-full truncate text-monti-caption", urgent ? "text-monti-warning" : "text-monti-faint")}
 				>
 					{left}
 				</span>

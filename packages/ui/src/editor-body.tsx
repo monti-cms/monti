@@ -46,7 +46,7 @@ const EDITOR_BODY = cn(
 	// (`height-control-xs`, the least pressable size), and draws nothing itself; `Checkbox`'s 14px box with its corners and its ✓ is `data-check-box` inside it.
 	// While the text is written it is pressed (or Spaced) to tick and answers the pointer as `Checkbox` does (`CHECK_HOVER`); read only, it is a mark.
 	"[&_[data-check]]:absolute [&_[data-check]]:top-monti-8 [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:outline-none [&_[data-check]]:after:absolute [&_[data-check]]:after:top-1/2 [&_[data-check]]:after:left-1/2 [&_[data-check]]:after:size-(--monti-height-control-xs) [&_[data-check]]:after:-translate-x-1/2 [&_[data-check]]:after:-translate-y-1/2 [&_[data-check]]:after:content-['']",
-	"[&_[data-check-box]]:flex [&_[data-check-box]]:size-full [&_[data-check-box]]:items-center [&_[data-check-box]]:justify-center [&_[data-check-box]]:rounded-monti-sm [&_[data-check-box]]:border-[1.5px] [&_[data-check-box]]:border-monti-faint [&_[data-check-box]]:text-monti-on-emphasis [&_[data-check-box]]:transition-colors [&_[data-check]:focus-visible>[data-check-box]]:outline-2 [&_[data-check]:focus-visible>[data-check-box]]:outline-monti-contrast/50 [&_[data-check-box]_svg]:invisible",
+	"[&_[data-check-box]]:flex [&_[data-check-box]]:size-full [&_[data-check-box]]:items-center [&_[data-check-box]]:justify-center [&_[data-check-box]]:rounded-monti-sm [&_[data-check-box]]:border-[1.5px] [&_[data-check-box]]:border-monti-faint [&_[data-check-box]]:text-monti-on-emphasis [&_[data-check-box]]:transition-colors [&_[data-check]:focus-visible>[data-check-box]]:outline-2 [&_[data-check]:focus-visible>[data-check-box]]:outline-monti-contrast/60 [&_[data-check-box]_svg]:invisible",
 	"[&_li[data-checked]>[data-check]>[data-check-box]]:border-monti-contrast [&_li[data-checked]>[data-check]>[data-check-box]]:bg-monti-emphasis [&_li[data-checked]>[data-check]_svg]:visible",
 	"[&_[contenteditable=true]_[data-check]]:cursor-pointer [&_[contenteditable=true]_[data-check]:hover>[data-check-box]]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&_[contenteditable=true]_li:not([data-checked])>[data-check]:hover>[data-check-box]]:border-(color:--monti-fg-muted)",
 	// A quote, code, a table and the divider.
@@ -59,7 +59,9 @@ const EDITOR_BODY = cn(
 	"[&_hr]:mt-monti-8 [&_hr]:mb-monti-24 [&_hr]:border-0 [&_hr]:border-monti-emphasis [&_hr]:border-t",
 	// Marks.
 	"[&_a]:underline [&_a]:decoration-monti-strong [&_a]:underline-offset-4",
-	"[&_:not(pre)>code]:rounded-monti-sm [&_:not(pre)>code]:border [&_:not(pre)>code]:border-monti-emphasis [&_:not(pre)>code]:bg-monti-muted [&_:not(pre)>code]:px-monti-4 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-monti-editor-code",
+	"[&_:not(pre)>code]:rounded-monti-sm [&_:not(pre)>code]:bg-monti-muted [&_:not(pre)>code]:px-monti-4 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-monti-editor-code",
+	// Inline code in a heading or in bold words takes the size, line and weight of what it stands in: the 14px regular role is for running text.
+	"[&_:is(h2,h3,h4,strong,b)_code]:[font-size:inherit]! [&_:is(h2,h3,h4,strong,b)_code]:[font-weight:inherit]! [&_:is(h2,h3,h4,strong,b)_code]:[line-height:inherit]!",
 	// Raised and lowered marks sit the same distance from the baseline (the reset puts a raised one 0.5em up and a lowered one 0.25em down).
 	"[&_sub]:-bottom-[0.3em] [&_sup]:-top-[0.3em] [&_sub]:relative [&_sup]:relative",
 	// A footnote's number in the text (its order, `data-n`), and the footnotes together at the end under a rule, each with its number in the margin.

@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
 
 export type ScreenMode = "system" | "light" | "dark";
 
@@ -44,7 +44,9 @@ export function useScreenMode() {
  */
 export function useApplyScreenMode() {
 	const [mode] = useScreenMode();
-	useEffect(() => {
+	// A layout effect: the mode is on the page before the first paint, so a dark user does not see one light frame. (The server's HTML has no mode; the
+	// host's layout sets it before paint, as it does its own theme, if it must not flash before hydration.)
+	useLayoutEffect(() => {
 		const dark = window.matchMedia("(prefers-color-scheme: dark)");
 		const apply = () => {
 			document.documentElement.dataset.theme = mode === "system" ? (dark.matches ? "dark" : "light") : mode;

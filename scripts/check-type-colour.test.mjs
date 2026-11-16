@@ -228,3 +228,9 @@ test("screen-mode-root: a call in a function written after MontiAdmin does not c
 	assert.equal(found.length, 1);
 	assert.match(found[0].message, /MontiAdmin. must call/);
 });
+
+test("token-contrast: the focus ring at half ink fails on the open row in dark (2.9:1), at 60% it passes everywhere", () => {
+	const half = tokenContrast(tokens, { sources: own, ringAlpha: 0.5 });
+	assert.ok(half.some((each) => /the focus ring on bg-current \(dark\)/.test(each.message)));
+	assert.deepEqual(tokenContrast(tokens, { sources: own }), []);
+});

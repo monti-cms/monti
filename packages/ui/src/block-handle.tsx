@@ -10,7 +10,7 @@ import { Grip } from "./grip";
  * is the one pressable thing of a line's height on the page that is not a pill (button.md, the shape rule).
  */
 const HANDLE_BUTTON =
-	"flex h-monti-control-xs w-monti-20 cursor-pointer items-center justify-center rounded-monti-md border-0 bg-transparent p-0 text-monti-faint outline-none transition-colors hover:bg-monti-muted hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 aria-expanded:bg-monti-selected aria-expanded:text-monti-default data-active:bg-monti-selected data-active:text-monti-default";
+	"flex h-monti-control-xs w-monti-20 cursor-pointer items-center justify-center rounded-monti-md border-0 bg-transparent p-0 text-monti-faint outline-none transition-colors hover:bg-monti-muted hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 aria-expanded:bg-monti-selected aria-expanded:text-monti-default data-active:bg-monti-selected data-active:text-monti-default";
 
 /**
  * The grip in the left margin of an editor block (no + beside it: a new block starts with Enter and "/", 2026-11-06 owner). Pressing it opens the block

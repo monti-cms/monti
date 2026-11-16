@@ -320,10 +320,26 @@ export function saturation(hex) {
 	return (max - min) / (1 - Math.abs(max + min - 1));
 }
 
+/** The focus ring's share of ink (`ring-2 ring-monti-contrast/60`): the one ring everywhere, strong enough on every ground it sits on. */
+export const FOCUS_RING_ALPHA = 0.6;
+/** The grounds a focus ring is drawn on: the pages, the tool surfaces, a pill pointed at, a picked row, the open one, the block under a handle. */
+const RING_GROUNDS = ["bg-page", "bg-tool", "bg-muted", "bg-selected", "bg-current", "bg-block"];
+const mix = (colour, ground, share) => {
+	const channels = (hex) => [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16));
+	const [c, g] = [channels(colour), channels(ground)];
+	return `#${c
+		.map((value, at) =>
+			Math.round(value * share + (g[at] ?? 0) * (1 - share))
+				.toString(16)
+				.padStart(2, "0"),
+		)
+		.join("")}`;
+};
+
 /** The class a table row that is picked wears at its left edge, so it reads apart from the row under the pointer. */
 const SELECTED_BAR = "data-selected:[&>td:first-child]:before:bg-(--monti-border-contrast)";
 /** The files that draw the underline of a field. */
-export const FIELD_FILES = ["select", "textarea", "input", "affix", "combobox", "media-input"].map(
+export const FIELD_FILES = ["select", "textarea", "input", "affix", "combobox", "media-input", "chip"].map(
 	(name) => `packages/ui/src/${name}.tsx`,
 );
 
@@ -334,6 +350,7 @@ export const FIELD_FILES = ["select", "textarea", "input", "affix", "combobox", 
  * - `border-emphasis`, the line that alone divides things, is at least 1.25:1;
  * - the page and tool grounds are two grounds (1.05:1 in light, 1.1:1 in dark);
  * - the hover and the picked row differ by less than 1.15:1 in the ladder, so a picked table row must wear its left bar (`SELECTED_BAR` in `table.tsx`);
+ * - the focus ring (`border-contrast` at `FOCUS_RING_ALPHA` over each ground) is at least 3:1 on every ground it sits on;
  * - the dark pill (`bg-emphasis`) is darker than the ink (at least 1.2:1 under it), still at least 3:1 on the page, and carries its text at 4.5:1;
  * - state text in dark (`success`, `warning`, `danger`, `proposal`) is at most 66% saturated.
  * The field files must draw their underline with `border-strong`.
@@ -341,7 +358,7 @@ export const FIELD_FILES = ["select", "textarea", "input", "affix", "combobox", 
  * Cannot see: how a state looks over an image or a coloured block, perceived hierarchy between two greys, a colour written as a raw value instead of a
  * token (`arbitrary-value` stops those), or a line drawn with the wrong token in a file that is not a field.
  */
-export function tokenContrast(tokens, { sources = {} } = {}) {
+export function tokenContrast(tokens, { sources = {}, ringAlpha = FOCUS_RING_ALPHA } = {}) {
 	const problems = [];
 	const file = "packages/ui/tokens/tokens.json";
 	const byName = new Map(tokens.color.tokens.map((token) => [token.name, token.value]));
@@ -380,6 +397,11 @@ export function tokenContrast(tokens, { sources = {} } = {}) {
 		for (const [ground, hex] of grounds) {
 			need(`border-strong on ${ground}`, resolve("border-strong", mode), hex, 3, mode);
 			need(`border-emphasis on ${ground}`, resolve("border-emphasis", mode), hex, 1.25, mode);
+		}
+		// The focus ring: the ink at its share over each ground, against that ground.
+		for (const ground of RING_GROUNDS) {
+			const hex = resolve(ground, mode);
+			need(`the focus ring on ${ground}`, mix(resolve("border-contrast", mode), hex, ringAlpha), hex, 3, mode);
 		}
 		need("bg-page against bg-tool (two grounds)", grounds[0][1], grounds[1][1], mode === "dark" ? 1.1 : 1.05, mode);
 	}

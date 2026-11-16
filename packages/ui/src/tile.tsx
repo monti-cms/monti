@@ -83,7 +83,7 @@ function Tile({
 					// keeps its colour: the step is the focus, the same for every picked tile, and no state's colour is taken away.
 					selected || current
 						? "focus-visible:*:first:ring-offset-2 focus-visible:*:first:ring-offset-monti-page"
-						: "focus-visible:*:first:ring-monti-contrast/50",
+						: "focus-visible:*:first:ring-monti-contrast/60",
 				)}
 				{...props}
 			>
@@ -219,7 +219,7 @@ function FolderTile({
 		</>
 	);
 	const look = cn(
-		"flex h-13 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-monti-muted px-[14px] text-monti-body text-monti-default outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 in-data-popup-open:bg-monti-selected",
+		"flex h-13 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-monti-muted px-[14px] text-monti-body text-monti-default outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60 in-data-popup-open:bg-monti-selected",
 		selected && "bg-monti-selected",
 		dropTarget && "bg-monti-selected ring-[1.5px] ring-monti-contrast ring-inset",
 		className,

@@ -18,7 +18,7 @@ function LockMark({ label, flush = false, className }: { label: string; flush?: 
 			// A stop of the Tab key while it has something to say: its tooltip opens on the keyboard's focus as on the pointer.
 			tabIndex={named ? 0 : undefined}
 			className={cn(
-				"inline-flex size-3 shrink-0 rounded-monti-sm align-middle text-monti-faint outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
+				"inline-flex size-3 shrink-0 rounded-monti-sm align-middle text-monti-faint outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
 				!flush && "ml-monti-6",
 				className,
 			)}

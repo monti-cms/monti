@@ -333,7 +333,7 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 				className: cn(
 					// Its ring is the row's (the layer over the whole row), taller than its own words: scrolled to at the box's foot, it brings the
 					// rest of the row with it (a two-line row's second line too), so the ring's lower side is not cut.
-					"scroll-mb-8 cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none group-data-untitled/row-title:text-monti-subtle after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset",
+					"scroll-mb-8 cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none group-data-untitled/row-title:text-monti-subtle after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/60 focus-visible:after:ring-inset",
 					className,
 				),
 			},

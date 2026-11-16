@@ -91,7 +91,7 @@ function FolderTab({
 			style={motion}
 			className={cn(
 				FOLDER_TAB,
-				"data-active:border-b-(color:--monti-bg-page) cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
+				"data-active:border-b-(color:--monti-bg-page) cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
 				dragging && SLOT,
 				dropTarget && "bg-monti-selected text-monti-default ring-[1.5px] ring-monti-contrast ring-inset",
 				className,
@@ -166,7 +166,7 @@ function FolderTabsAdd({ className, ...props }: Omit<ButtonPrimitive.Props, "chi
 			data-slot="folder-tabs-add"
 			type="button"
 			className={cn(
-				"inline-flex h-monti-control-lg cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
+				"inline-flex h-monti-control-lg cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
 				className,
 			)}
 			{...props}
@@ -187,7 +187,7 @@ function FolderTabsBody({ className, ...props }: TabsPrimitive.Panel.Props) {
 			className={cn(
 				// The box is a stop of the Tab key. Its ring is inside it, on a layer over its rows: a ring on the box itself is painted under them, and a
 				// row with a ground (a group's) would cover it. The layer takes no press.
-				"relative overflow-hidden rounded-monti-lg rounded-tl-none border border-monti-default outline-none focus-visible:after:pointer-events-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:z-10 focus-visible:after:rounded-[inherit] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset focus-visible:after:content-[''] [&>ul>li:first-child]:border-t-0 [&>ul>li:last-child]:border-b-0",
+				"relative overflow-hidden rounded-monti-lg rounded-tl-none border border-monti-default outline-none focus-visible:after:pointer-events-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:z-10 focus-visible:after:rounded-[inherit] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/60 focus-visible:after:ring-inset focus-visible:after:content-[''] [&>ul>li:first-child]:border-t-0 [&>ul>li:last-child]:border-b-0",
 				className,
 			)}
 			{...props}

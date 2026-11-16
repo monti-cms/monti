@@ -163,8 +163,7 @@
 	--monti-text-editor-code-weight: 400;
 	--monti-text-editor-code-tracking: 0em;
 	--monti-font-sans: "Monti Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
-	--monti-font-mono:
-		"Monti Plex Mono", ui-monospace, Menlo, monospace, "Monti Pretendard Hangul", "Noto Sans KR", "Apple SD Gothic Neo";
+	--monti-font-mono: "Monti Plex Mono", ui-monospace, Menlo, monospace, "Monti Pretendard Hangul";
 }
 
 :where(html:is(.dark, [data-theme="dark"]):has(.monti-admin)) {

@@ -128,7 +128,7 @@ function FieldRow({
 						<button
 							type="button"
 							{...gripProps}
-							className="relative z-1 flex cursor-grab touch-none border-0 bg-transparent p-0 text-monti-faint outline-none after:absolute after:-inset-2 after:content-[''] hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/50"
+							className="relative z-1 flex cursor-grab touch-none border-0 bg-transparent p-0 text-monti-faint outline-none after:absolute after:-inset-2 after:content-[''] hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60"
 						>
 							<Grip />
 						</button>
@@ -148,7 +148,7 @@ function FieldRow({
 						type="button"
 						aria-label={openLabel}
 						onClick={onOpen}
-						className="cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-inherit outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset"
+						className="cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-inherit outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/60 focus-visible:after:ring-inset"
 					>
 						{name}
 					</button>

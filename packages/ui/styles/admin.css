@@ -27,7 +27,7 @@ html:has(.monti-admin) body {
 @layer base {
 	:where(html:has(.monti-admin)) * {
 		border-color: var(--monti-border-muted);
-		outline-color: color-mix(in srgb, var(--monti-border-contrast) 50%, transparent);
+		outline-color: color-mix(in srgb, var(--monti-border-contrast) 60%, transparent);
 	}
 }
 

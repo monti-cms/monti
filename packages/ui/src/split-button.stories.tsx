@@ -90,3 +90,21 @@ export const FocusMenu: Story = {
 		await expect(within(canvasElement).getByRole("button", { name: "발행 방식" })).toHaveFocus();
 	},
 };
+
+/** A pill whose words change keeps its width: at rest, done ("Published", off) and working (spinner, then the words) it is one width. */
+export const ReservedWidth: Story = {
+	tags: ["visual"],
+	render: (args) => (
+		<div className="flex flex-col items-start gap-monti-16">
+			<SplitButton {...args} reserve={["발행하기", "발행됨"]}>
+				발행하기
+			</SplitButton>
+			<SplitButton {...args} reserve={["발행하기", "발행됨"]} disabled>
+				발행됨
+			</SplitButton>
+			<SplitButton {...args} reserve={["발행하기", "발행됨"]} loading>
+				발행하기
+			</SplitButton>
+		</div>
+	),
+};

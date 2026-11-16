@@ -187,3 +187,29 @@ describe("picked cells (EX-09)", () => {
 		expect(plain).not.toBe("rgba(0, 0, 0, 0)");
 	});
 });
+
+describe("inline code (ET-06)", () => {
+	it("in running text it is the 14px regular role, in a heading or in bold words it takes the size and weight of what it stands in, and it has no box line", async () => {
+		render(
+			<Body>
+				<h2>
+					제목의 <code>코드</code>
+				</h2>
+				<p>
+					본문의 <code>글 코드</code> 와{" "}
+					<strong>
+						굵은 <code>굵은 코드</code>
+					</strong>
+				</p>
+			</Body>,
+		);
+		await expect.element(page.getByText("글 코드")).toBeVisible();
+		const style = (selector: string) => getComputedStyle(first(selector));
+		expect([style("p > code").fontSize, style("p > code").fontWeight]).toEqual(["14px", "400"]);
+		expect(style("h2 code").fontSize).toBe(style("h2").fontSize);
+		expect(style("h2 code").fontWeight).toBe(style("h2").fontWeight);
+		expect(style("strong code").fontWeight).toBe(style("strong").fontWeight);
+		expect(style("p > code").borderTopWidth).toBe("0px");
+		expect(style("h2 code").fontFamily).toContain("Plex Mono");
+	});
+});

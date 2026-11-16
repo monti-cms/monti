@@ -70,7 +70,7 @@ function SearchBox<T extends string = string, S extends string = string>({
 		<div
 			data-slot="search-box"
 			className={cn(
-				"flex h-monti-control-lg w-80 min-w-0 max-w-full items-center gap-monti-8 rounded-monti-full bg-monti-muted pr-monti-12 text-monti-default has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-monti-contrast/50",
+				"flex h-monti-control-lg w-80 min-w-0 max-w-full items-center gap-monti-8 rounded-monti-full bg-monti-muted pr-monti-12 text-monti-default has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-monti-contrast/60",
 				picker ? "pl-monti-4" : "pl-monti-12",
 				className,
 			)}
@@ -80,7 +80,7 @@ function SearchBox<T extends string = string, S extends string = string>({
 					<DropdownMenuTrigger
 						// The name starts with the visible text (what is now picked), then says what the picker is.
 						aria-label={targetLabel ? `${named.join(" · ")}, ${targetLabel}` : undefined}
-						className="inline-flex h-monti-control-sm min-w-0 max-w-40 shrink-0 cursor-pointer items-center rounded-monti-full border-0 bg-monti-page pr-monti-8 pl-monti-10 text-monti-default text-monti-note outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50"
+						className="inline-flex h-monti-control-sm min-w-0 max-w-40 shrink-0 cursor-pointer items-center rounded-monti-full border-0 bg-monti-page pr-monti-8 pl-monti-10 text-monti-default text-monti-note outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60"
 					>
 						<span className="min-w-0 truncate">{named.join(" · ")}</span>
 						<Caret />

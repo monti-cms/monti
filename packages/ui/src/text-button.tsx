@@ -20,7 +20,7 @@ import { Spinner } from "./spinner";
  * over a text; while the assistant works, `AiWorking` ("Generating · Stop") takes its place. While a button works (`loading`) a ring leads the words, it cannot be pressed again, it is not dimmed, it is `aria-busy`, and it keeps the focus it had.
  */
 const textButtonVariants = cva(
-	`${HIT_AREA} inline cursor-pointer border-0 decoration-1 focus-visible:rounded-monti-sm underline-offset-4 not-data-loading:not-disabled:hover:underline focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret]):not([class*='size-'])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
+	`${HIT_AREA} inline cursor-pointer border-0 decoration-1 focus-visible:rounded-monti-sm underline-offset-4 not-data-loading:not-disabled:hover:underline focus-visible:outline-2 focus-visible:outline-monti-contrast/60 focus-visible:outline-offset-2 bg-transparent p-0 text-left whitespace-nowrap aria-expanded:text-monti-default disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret]):not([class*='size-'])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]`,
 	{
 		variants: {
 			variant: {

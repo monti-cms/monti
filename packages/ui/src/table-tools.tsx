@@ -33,7 +33,7 @@ function TableGrip({
 			aria-label={label}
 			data-active={active || undefined}
 			className={cn(
-				"flex cursor-pointer items-center justify-center rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 aria-expanded:bg-monti-emphasis aria-expanded:text-monti-on-emphasis data-active:bg-monti-emphasis data-active:text-monti-on-emphasis",
+				"flex cursor-pointer items-center justify-center rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 aria-expanded:bg-monti-emphasis aria-expanded:text-monti-on-emphasis data-active:bg-monti-emphasis data-active:text-monti-on-emphasis",
 				along === "column" ? "h-monti-12 w-monti-20" : "h-monti-20 w-monti-12",
 				className,
 			)}
@@ -70,7 +70,7 @@ function TableAddStrip({
 			type="button"
 			aria-label={label}
 			className={cn(
-				"flex size-full cursor-pointer items-center justify-center rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
+				"flex size-full cursor-pointer items-center justify-center rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
 				className,
 			)}
 			onMouseDown={(event) => event.preventDefault()}

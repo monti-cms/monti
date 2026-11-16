@@ -39,13 +39,13 @@ export const Focus: Story = {
 	render: () => (
 		<Page>
 			<div inert>
-				<Group title="Focus ring · ring-2 ring-monti-contrast/50">
+				<Group title="Focus ring · ring-2 ring-monti-contrast/60">
 					<Spec name="outside" usage="a part that stands alone: a button, an icon button, a chip">
-						<Button className="ring-2 ring-monti-contrast/50">저장</Button>
+						<Button className="ring-2 ring-monti-contrast/60">저장</Button>
 					</Spec>
 					<Spec name="inside (ring-inset)" usage="a row that spans its box: sidebar, lists, status cells, table rows">
 						<Stack className="w-56 overflow-hidden">
-							<div className="rounded-monti-full ring-2 ring-monti-contrast/50 ring-inset">
+							<div className="rounded-monti-full ring-2 ring-monti-contrast/60 ring-inset">
 								<NavLink note="post">게시글</NavLink>
 							</div>
 						</Stack>
