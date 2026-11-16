@@ -1,10 +1,11 @@
 import type { FieldDefinition } from "@monti-cms/core";
-import { FormField, FormFieldLabel, MediaInput, PropertyGroup, PropertyPanel, Text } from "@monti-cms/ui";
+import { MediaInput, PropertyGroup, PropertyPanel, Text } from "@monti-cms/ui";
 import { useState } from "react";
 import { fieldName } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import type { EntryView } from "../../plugins";
-import { FieldInput, FieldToggle, SwitchRow, standsAsSwitch } from "../entry/field-input";
+import { FieldInput, FieldToggle, standsAsSwitch } from "../entry/field-input";
+import { PropertyRow } from "../entry/property-row";
 import { at, type DraftField, type Layout, shownLayout } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 
@@ -77,13 +78,14 @@ export function PreviewPanel({
 	 */
 	const fieldRow = (key: string, def: FieldDefinition, label: string, required: boolean) => {
 		const id = `preview-${key}`;
-		if (standsAsSwitch(def, false))
-			return (
-				<SwitchRow
-					key={key}
-					id={id}
-					name={label}
-					toggle={
+		return (
+			<PropertyRow
+				key={key}
+				id={id}
+				name={label}
+				required={required}
+				toggle={
+					standsAsSwitch(def, false) ? (
 						<FieldToggle
 							def={def}
 							id={id}
@@ -91,16 +93,11 @@ export function PreviewPanel({
 							onChange={(next) => setTyped((was) => ({ ...was, [key]: next }))}
 							readOnly={false}
 						/>
-					}
-				/>
-			);
-		return (
-			<FormField key={key}>
-				<FormFieldLabel htmlFor={id} required={required}>
-					{label}
-				</FormFieldLabel>
+					) : undefined
+				}
+			>
 				{input(def, id, key)}
-			</FormField>
+			</PropertyRow>
 		);
 	};
 	const row = (key: string) => {
@@ -170,13 +167,19 @@ export function PreviewPanel({
 							/>
 						);
 						// The same rule as the entry's panel: a plugin's switch is a switch row.
-						if (standsAsSwitch(definition, brought !== undefined && "Input" in brought && brought.switch === true))
-							return <SwitchRow key={field.name} id={id} name={fieldName(field.name, field.label, t)} toggle={input} />;
 						return (
-							<FormField key={field.name}>
-								<FormFieldLabel htmlFor={id}>{fieldName(field.name, field.label, t)}</FormFieldLabel>
+							<PropertyRow
+								key={field.name}
+								id={id}
+								name={fieldName(field.name, field.label, t)}
+								toggle={
+									standsAsSwitch(definition, brought !== undefined && "Input" in brought && brought.switch === true)
+										? input
+										: undefined
+								}
+							>
 								{input}
-							</FormField>
+							</PropertyRow>
 						);
 					})}
 				</PropertyGroup>

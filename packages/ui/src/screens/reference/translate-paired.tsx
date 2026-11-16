@@ -6,9 +6,6 @@ import {
 	CompareRows,
 	CompareShared,
 	CompareText,
-	DocCallout,
-	DocCode,
-	DocTable,
 	FormField,
 	FormFieldLabel,
 	Heading,
@@ -28,6 +25,7 @@ import {
 	Untranslated,
 } from "../../index";
 import { EntryHeader, still } from "./editor-notion";
+import { RefCallout, RefCode, RefTable } from "./ref-body";
 
 const CODE = "export default function Post({ title }) {\n  // 제목을 그대로 보여 준다\n  return <h1>{title}</h1>;\n}";
 
@@ -132,23 +130,19 @@ export function TranslatePairedScreen() {
 									</Text>
 								</Stack>
 							}
+							// The callout stands in for the site's own drawing, which this board cannot know: the box a body shows for a block it has no drawing for.
 							source={
-								<CompareBody>
-									<DocCallout source>
-										<p>버전 안내</p>
-										<p>이 글은 리액트 19 기준이다.</p>
-										<p>예시 코드는 저장소에 있다.</p>
-									</DocCallout>
-								</CompareBody>
+								<RefCallout
+									ground="tool"
+									title="버전 안내"
+									lines={["이 글은 리액트 19 기준이다.", "예시 코드는 저장소에 있다."]}
+								/>
 							}
 							translation={
-								<CompareBody>
-									<DocCallout>
-										<p>About versions</p>
-										<p>This post is based on React 19.</p>
-										<p>The example code is in the repository.</p>
-									</DocCallout>
-								</CompareBody>
+								<RefCallout
+									title="About versions"
+									lines={["This post is based on React 19.", "The example code is in the repository."]}
+								/>
 							}
 						/>
 						<CompareRow
@@ -188,17 +182,18 @@ export function TranslatePairedScreen() {
 									</Text>
 								</Stack>
 							}
-							source={<DocCode source>{CODE}</DocCode>}
+							source={<RefCode code={CODE} ground="tool" />}
 							translation={
 								<CompareShared action={<TextButton variant="underline">따로 고치기</TextButton>}>
-									<DocCode>{CODE}</DocCode>
+									<RefCode code={CODE} />
 								</CompareShared>
 							}
 						/>
 						<CompareRow
 							name="표"
 							source={
-								<DocTable
+								<RefTable
+									ground="tool"
 									head={["버전", "바뀐 점", "옮길 때"]}
 									rows={[
 										["18", "훅 도입 이후 안정", "그대로"],
@@ -207,7 +202,7 @@ export function TranslatePairedScreen() {
 								/>
 							}
 							translation={
-								<DocTable
+								<RefTable
 									head={["Version", "What changed", "When moving"]}
 									rows={[
 										["18", "Stable since hooks", "Keep as is"],

@@ -480,10 +480,16 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		});
 		window.location.hash = `#/ai/review/${proposal}`;
 		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
-		// The row is named by the block and its kind; its values before and after, the kind's names marked.
+		// The row is named by the block and its kind; the block is drawn as it is and as proposed, each over its name line, where the
+		// kind's name is marked: struck through before, put in after.
 		await expect.element(page.getByText("블록 2 · 콜아웃").first()).toBeVisible();
-		const line = page.getByText(/종류 /).first();
-		await expect.poll(() => line.element().textContent).toMatch(/종류 ?팁 ?경고/);
+		const lines = () => [...document.querySelectorAll("[data-slot=compare-values]")];
+		await expect
+			.poll(() => lines().map((line) => line.textContent))
+			.toEqual([expect.stringMatching(/종류 팁/), expect.stringMatching(/종류 경고/)]);
+		const [before, after] = lines();
+		expect(before?.querySelector("del")?.textContent?.trim()).toBe("팁");
+		expect(after?.querySelector("ins")?.textContent?.trim()).toBe("경고");
 	});
 
 	it("18-4 a formula's tool row ends with the assistant's ✦: it opens the request card on that block, and the request names the whole block", async () => {

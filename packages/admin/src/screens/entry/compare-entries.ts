@@ -1,4 +1,4 @@
-import { type Block, type Doc, type Field, type Label, plainText } from "@monti-cms/core";
+import { type Block, type Doc, type Field, type Label, plainText, sameJson } from "@monti-cms/core";
 
 /** A run of words, marked when the other side does not have it. */
 export type Part = { text: string; changed: boolean };
@@ -145,13 +145,12 @@ export function readableWordDiff(mine: string, server: string): { mine: Part[]; 
 }
 
 /**
- * How a block reads in the comparison: a heading, code, or text (a paragraph, a list, a quote: their text, line by line). A block with values has a
- * name line (`values`) above its words: "Callout · Kind Warning · Title Read this" (doc 18, T197). A code block also gives its language, file name
- * and each line's effects (doc 17, T196): two sides with the same code may still differ there.
+ * A block's words, said in one piece for the places that name or sum up a block in a line (a to-do's title, a change's before and after): a block
+ * with values has a name line (`values`) above its words, "Callout · Kind Warning · Title Read this" (doc 18, T197); a code block also gives its
+ * language, file name and each line's effects (doc 17, T196). The body itself is drawn by `ReadBody`, which these never replace.
  */
-export type ShownBlock = {
+export type BlockWords = {
 	id: string;
-	look: "heading" | "code" | "text";
 	values?: string;
 	text: string;
 	code?: { language: string | null; title: string | null; lines: string[][] };
@@ -204,7 +203,7 @@ const CORE_VALUES: Record<string, (attrs: Record<string, unknown>, names: BlockN
 };
 
 /** A block's name line: its name and the values it has, each by its field's name. `undefined` for a block that is only its words. */
-function valuesOf(block: Block, names: BlockNames | undefined): string | undefined {
+export function valuesOf(block: Block, names: BlockNames | undefined): string | undefined {
 	if (!names) return undefined;
 	const attrs = block.attrs ?? {};
 	const known = names.block(block.type);
@@ -228,8 +227,7 @@ function valuesOf(block: Block, names: BlockNames | undefined): string | undefin
 
 /** A block's own words: its text, a table's rows, a source (a formula, a diagram), or the lines of the blocks it holds with their name lines. */
 function wordsOf(block: Block, names: BlockNames | undefined): string {
-	if (block.type === "table" && Array.isArray(block.attrs?.rows))
-		return (block.attrs.rows as unknown[][]).map((row) => row.map(String).join(" | ")).join("\n");
+	if (block.type === "table" && Array.isArray(block.attrs?.rows)) return ownText(block, names);
 	const fence = names?.block(block.type)?.fence;
 	if (fence) return typeof block.attrs?.[fence.attr] === "string" ? String(block.attrs[fence.attr]) : "";
 	if (!block.children) return plainText(block.content);
@@ -263,13 +261,6 @@ function nestedEffects(block: Block, names: BlockNames | undefined): string | un
 }
 const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
 
-/** A block whose children are all code (a code explorer's files): it reads as code, its indentation kept. */
-const holdsOnlyCode = (block: Block) =>
-	(block.children?.length ?? 0) > 0 && (block.children ?? []).every((child) => child.type === "codeBlock");
-
-/** A block written as code of its own language (a formula, a diagram): it reads as code. */
-const isSource = (block: Block, names: BlockNames | undefined) => Boolean(names?.block(block.type)?.fence);
-
 /** Each line's effects, by name, in a stable order. A label a code link names is not something the reader sees: it is left out. */
 const lineEffects = (block: Block): string[][] => {
 	const lines: string[][] = plainText(block.content)
@@ -281,31 +272,23 @@ const lineEffects = (block: Block): string[][] => {
 	return lines.map((names) => [...new Set(names)].sort());
 };
 
-/** The body's blocks as the comparison reads them. With `names`, a block with values has its name line, and a formula or a diagram reads as code. */
-export function shownBlocks(doc: Doc | null, names?: BlockNames): ShownBlock[] {
-	return (doc?.blocks ?? []).map((block) => {
-		const values = valuesOf(block, names);
-		return {
-			id: block.id,
-			look:
-				block.type === "heading"
-					? "heading"
-					: block.type === "codeBlock" || isSource(block, names) || holdsOnlyCode(block)
-						? "code"
-						: "text",
-			...(values !== undefined ? { values } : {}),
-			text: wordsOf(block, names),
-			...(block.type === "codeBlock"
-				? {
-						code: {
-							language: typeof block.attrs?.language === "string" ? block.attrs.language : null,
-							title: typeof block.attrs?.title === "string" ? block.attrs.title : null,
-							lines: lineEffects(block),
-						},
-					}
-				: {}),
-		};
-	});
+/** One block's words as one piece (`BlockWords`): the words of the blocks it holds are in it, line by line. */
+export function blockWords(block: Block, names?: BlockNames): BlockWords {
+	const values = valuesOf(block, names);
+	return {
+		id: block.id,
+		...(values !== undefined ? { values } : {}),
+		text: wordsOf(block, names),
+		...(block.type === "codeBlock"
+			? {
+					code: {
+						language: typeof block.attrs?.language === "string" ? block.attrs.language : null,
+						title: typeof block.attrs?.title === "string" ? block.attrs.title : null,
+						lines: lineEffects(block),
+					},
+				}
+			: {}),
+	};
 }
 
 /** The lines of two codes paired by their words (the longest run of equal lines in order): a line put in on one side moves no pair. */
@@ -335,7 +318,10 @@ function pairedLines(mine: string[], theirs: string[]): Map<number, number> {
  * Where two sides of a code block differ besides their words: the lines whose effects differ (counted on this side), and whether the language or the
  * file name does. Lines are paired by their words; a line the other side does not have is the words' change, not the effects'.
  */
-export function codeChanges(block: ShownBlock, other: ShownBlock | undefined) {
+export function codeChanges(
+	block: Pick<BlockWords, "text" | "code">,
+	other: Pick<BlockWords, "text" | "code"> | undefined,
+) {
 	if (!block.code || !other?.code) return { lines: [] as number[], language: false, title: false };
 	const theirs = other.code.lines;
 	const pairs = pairedLines(block.text.split("\n"), other.text.split("\n"));
@@ -349,32 +335,178 @@ export function codeChanges(block: ShownBlock, other: ShownBlock | undefined) {
 	};
 }
 
+/** What a code block's two sides differ in besides its words (`codeChanges`). */
+export type CodeChange = ReturnType<typeof codeChanges>;
+
 /**
- * Each side's blocks with their words marked (screens.md, EditorCompare: `compareEntries`). Blocks pair by their id: a block the other side does not
- * have is marked whole, a block both have is compared word by word, and a code block's effects line by line (`changes`).
+ * What `ReadBody` paints over a body to show where it differs from another: by block id, each block's own words in parts (the changed ones marked), its
+ * name line in parts, and where a code block's effects or head differ. The words are the block's own (`ownText`): a block that holds blocks has
+ * none, the blocks it holds have theirs.
  */
-export function compareBodies(mine: Doc | null, server: Doc | null, names?: BlockNames) {
-	const ours = shownBlocks(mine, names);
-	const theirs = shownBlocks(server, names);
-	const diff = (a: string, b: string, pick: "mine" | "server") =>
-		(pick === "mine" ? wordDiff(a, b) : wordDiff(b, a))[pick];
-	const side = (blocks: ShownBlock[], other: ShownBlock[], pick: "mine" | "server") =>
-		blocks.map((block) => {
-			const match = other.find((each) => each.id === block.id);
-			if (!match)
-				return {
-					...block,
-					parts: [{ text: block.text, changed: block.text !== "" }],
-					...(block.values !== undefined ? { valueParts: [{ text: block.values, changed: true }] } : {}),
-					changes: codeChanges(block, undefined),
-				};
-			// A value is compared word by word, like the words: "Kind Note" against "Kind Warning" marks the kind's name (doc 18).
-			return {
-				...block,
-				parts: diff(block.text, match.text, pick),
-				...(block.values !== undefined ? { valueParts: diff(block.values, match.values ?? "", pick) } : {}),
-				changes: codeChanges(block, match),
-			};
-		});
-	return { mine: side(ours, theirs, "mine"), server: side(theirs, ours, "server") };
+export type ReadMarks = {
+	words: Map<string, Part[]>;
+	values: Map<string, Part[]>;
+	code: Map<string, CodeChange>;
+};
+
+/**
+ * A block's own words, the ones its text holds, and what `ReadBody` reads its marks onto: a table's cells in order (" | " between a row's cells, a line
+ * between its rows), a formula's or a diagram's source, otherwise the text of its content. The words of the blocks it holds are theirs.
+ */
+export function ownText(block: Block, names?: BlockNames): string {
+	if (block.type === "table" && Array.isArray(block.attrs?.rows)) {
+		// Every row is as wide as the widest, as the editor's table makes them (`tableToEditor`): the cells of a short row are empty.
+		const rows = (block.attrs.rows as unknown[]).map((row) => (Array.isArray(row) ? row : []));
+		const columns = Math.max(1, ...rows.map((row) => row.length));
+		return rows
+			.map((row) => Array.from({ length: columns }, (_, column) => String(row[column] ?? "")).join(" | "))
+			.join("\n");
+	}
+	const fence = names?.block(block.type)?.fence;
+	if (fence) return typeof block.attrs?.[fence.attr] === "string" ? String(block.attrs[fence.attr]) : "";
+	return plainText(block.content);
 }
+
+/** Each character of a block's text with the marks it carries, so two blocks with the same words can differ in their marks (bold, a link). */
+function markedChars(block: Block): string[] {
+	const out: string[] = [];
+	for (const inline of block.content ?? []) {
+		if (inline.type === "hardBreak") out.push("");
+		else if (inline.type === "text") {
+			const marks = JSON.stringify([...(inline.marks ?? [])].sort((a, b) => a.type.localeCompare(b.type)));
+			for (const _char of inline.text) out.push(marks);
+		}
+	}
+	return out;
+}
+
+/** The text cut where the marks over it differ between the two sides: the runs whose marks changed are the changed words. */
+function markedParts(text: string, mine: string[], theirs: string[]): Part[] | null {
+	const chars = [...text];
+	if (mine.length !== chars.length || theirs.length !== chars.length) return null;
+	const parts: Part[] = [];
+	chars.forEach((char, at) => {
+		const changed = mine[at] !== theirs[at];
+		const last = parts.at(-1);
+		if (last && last.changed === changed) last.text += char;
+		else parts.push({ text: char, changed });
+	});
+	return parts.some((part) => part.changed) ? parts : null;
+}
+
+/** The kind a block is called, for its name line when nothing in it has words to mark. */
+const kindOf = (block: Block, names: BlockNames | undefined) => {
+	const known = names?.block(block.type);
+	return known && names ? names.say(known.label) : block.type;
+};
+
+/** Every block of a body by id, the blocks inside blocks too, with the top-level block each stands in, the block that holds it and the order of its siblings. */
+function blocksById(doc: Doc | null) {
+	const found = new Map<string, { block: Block; top: string; parent: string; siblings: string[] }>();
+	const walk = (blocks: Block[], top: string | null, parent: string) => {
+		const siblings = blocks.map((block) => block.id);
+		for (const block of blocks) {
+			found.set(block.id, { block, top: top ?? block.id, parent, siblings });
+			if (block.children) walk(block.children, top ?? block.id, block.id);
+		}
+	};
+	walk(doc?.blocks ?? [], null, "");
+	return found;
+}
+
+/**
+ * The blocks of `own` that stand elsewhere than in `other`: under another block, or in another order among the siblings both have (a block put in or taken
+ * out among them moves no other). The blocks that moved are the ones read as changed.
+ */
+/** Whether `id` is held, at any depth, by the block `ancestor`. */
+function isInside(blocks: ReturnType<typeof blocksById>, id: string, ancestor: string): boolean {
+	for (let at = blocks.get(id)?.parent; at; at = blocks.get(at)?.parent) if (at === ancestor) return true;
+	return false;
+}
+
+function movedBlocks(own: ReturnType<typeof blocksById>, other: ReturnType<typeof blocksById>) {
+	const moved = new Set<string>();
+	for (const [id, here] of own) {
+		const there = other.get(id);
+		if (!there) continue;
+		const common = (siblings: string[], against: string[]) => siblings.filter((each) => against.includes(each));
+		const inOwn = common(here.siblings, there.siblings);
+		const inOther = common(there.siblings, here.siblings);
+		if (here.parent !== there.parent || inOwn.indexOf(id) !== inOther.indexOf(id)) moved.add(id);
+	}
+	return moved;
+}
+
+/**
+ * The marks of one side's body against the other's (screens.md, EditorCompare). Blocks pair by their id, at any depth: a block the other side does
+ * not have is marked whole, a block both have is compared word by word, and a code block's effects line by line. `only`: the top-level blocks to
+ * mark (the others are read as they are).
+ */
+export function sideMarks(
+	own: Doc | null,
+	other: Doc | null,
+	side: "mine" | "server",
+	names?: BlockNames,
+	only?: ReadonlySet<string>,
+): ReadMarks {
+	const ours = blocksById(own);
+	const theirs = blocksById(other);
+	const marks: ReadMarks = { words: new Map(), values: new Map(), code: new Map() };
+	// The two sides are marked by the same diff, whichever side asks: the first text is "mine" and the second the server's.
+	const pair = (here: string, there: string) => (side === "mine" ? wordDiff(here, there) : wordDiff(there, here))[side];
+	for (const [id, { block, top }] of ours) {
+		if (only && !only.has(top)) continue;
+		const match = theirs.get(id)?.block;
+		const text = ownText(block, names);
+		const matchText = match ? ownText(match, names) : "";
+		if (text !== "" || matchText !== "")
+			marks.words.set(id, match ? pair(text, matchText) : [{ text, changed: text !== "" }]);
+		// The same words with other marks (bold, a link): the words whose marks differ are the changed ones.
+		if (match && text !== "" && text === matchText) {
+			const formatted = markedParts(text, markedChars(block), markedChars(match));
+			if (formatted) marks.words.set(id, formatted);
+		}
+		const values = valuesOf(block, names);
+		if (values !== undefined)
+			marks.values.set(id, match ? pair(values, valuesOf(match, names) ?? "") : [{ text: values, changed: true }]);
+		// A block whose own values changed in a way no words say (its alignment, its kind) with nothing to mark: its name line says it, as a value does.
+		if (
+			names &&
+			match &&
+			!marks.words.get(id)?.some((part) => part.changed) &&
+			!marks.values.get(id)?.some((part) => part.changed) &&
+			(match.type !== block.type || !sameJson(match.attrs ?? {}, block.attrs ?? {}))
+		)
+			marks.values.set(id, [{ text: kindOf(block, names), changed: true }]);
+		if (block.type === "codeBlock")
+			marks.code.set(id, codeChanges(blockWords(block, names), match ? blockWords(match, names) : undefined));
+	}
+	// A block that moved, under another block or in another order, is marked as a changed one is: all its words and the words of the blocks it holds,
+	// or its name line when it has none.
+	const moved = movedBlocks(ours, theirs);
+	for (const id of moved) {
+		if (only && !only.has(ours.get(id)?.top ?? "")) continue;
+		const inside = [...ours].filter(([each]) => each === id || isInside(ours, each, id));
+		let any = false;
+		for (const [each] of inside) {
+			const parts = marks.words.get(each);
+			if (!parts?.length) continue;
+			any = true;
+			marks.words.set(each, [{ text: parts.map((part) => part.text).join(""), changed: true }]);
+		}
+		const line = marks.values.get(id);
+		if (!any && (line || names))
+			marks.values.set(id, [
+				{
+					text: line ? line.map((part) => part.text).join("") : kindOf(ours.get(id)?.block as Block, names),
+					changed: true,
+				},
+			]);
+	}
+	return marks;
+}
+
+/** Whether anything in a body is marked: a changed word, a changed name line, a code block whose lines or head differ. */
+export const hasMarks = (marks: ReadMarks) =>
+	[...marks.words.values(), ...marks.values.values()].some((parts) => parts.some((part) => part.changed)) ||
+	[...marks.code.values()].some((change) => change.lines.length > 0 || change.language || change.title);

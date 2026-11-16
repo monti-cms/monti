@@ -12,6 +12,7 @@ import {
 	moveLineRules,
 	ruleRanges,
 } from "@monti-cms/core/code";
+import type { CodeLineTone } from "@monti-cms/ui";
 import { Extension } from "@tiptap/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
@@ -112,9 +113,24 @@ export function hiddenLines(node: EditorNode, folds: ReadonlyMap<string, boolean
 	return hidden;
 }
 
+/** What a line's effects draw in the editor: its ground and its mark (doc 17). */
+export function looksOf(settings: CodeBlockSettings, effects: readonly LineEffect[], line: number) {
+	const on = effects.filter((effect) => effect.start <= line && line < effect.end);
+	let tone: CodeLineTone | undefined;
+	let mark: string | undefined;
+	for (const definition of settings.lineEffects) {
+		if (!on.some((effect) => effect.name === definition.name)) continue;
+		const look = definition.editor;
+		if (!tone && look && !look.wavy && look.tone)
+			tone = look.tone === "success" ? "plus" : look.tone === "danger" ? "minus" : "highlight";
+		mark ??= look?.marker;
+	}
+	return { tone, mark };
+}
+
 // --- Colours ---------------------------------------------------------------------------------------------------------------------------------
 
-type Piece = { from: number; to: number; light?: string; dark?: string; fontStyle?: number };
+export type Piece = { from: number; to: number; light?: string; dark?: string; fontStyle?: number };
 
 /** One highlighter per page, opened when the first code block draws, with the site's themes; languages load as blocks need them. */
 let colours: Promise<CodeColors> | null = null;
@@ -131,21 +147,33 @@ function colourKey(language: string, code: string) {
 	return `${language}\u0000${code}`;
 }
 
-function remember(key: string, pieces: Piece[]) {
-	coloured.delete(key);
-	coloured.set(key, pieces);
-	if (coloured.size > 80) {
-		const oldest = coloured.keys().next().value;
-		if (oldest !== undefined) coloured.delete(oldest);
+function remember(key: string, pieces: Piece[], cache: Map<string, Piece[]> = coloured) {
+	cache.delete(key);
+	cache.set(key, pieces);
+	if (cache.size > 80) {
+		const oldest = cache.keys().next().value;
+		if (oldest !== undefined) cache.delete(oldest);
 	}
 }
 
-function ask(view: EditorView, settings: CodeBlockSettings, language: string, code: string) {
+/** What the read views keep of the colours they asked for: a cache of their own, so reading cannot push out what the open editor's blocks are drawn with. */
+export const readColoured = new Map<string, Piece[]>();
+
+/**
+ * A code's colours: asked of the one highlighter once per page and kept, so the editor's block and a read-only view of the same code colour it from
+ * one answer (`ReadBody`). A language the highlighter does not know has none.
+ */
+export function codeColours(
+	settings: CodeBlockSettings,
+	language: string,
+	code: string,
+	cache: Map<string, Piece[]> = coloured,
+): Promise<Piece[]> {
 	const key = colourKey(language, code);
-	if (coloured.has(key) || asked.has(key)) return;
-	asked.add(key);
+	const known = cache.get(key);
+	if (known) return Promise.resolve(known);
 	colours ??= codeHighlighter({ themes: settings.themes, languages: settings.languages }, { lazy: true });
-	void colours
+	return colours
 		.then(async (highlighter) => {
 			await highlighter.load(language);
 			const pieces: Piece[] = [];
@@ -164,14 +192,64 @@ function ask(view: EditorView, settings: CodeBlockSettings, language: string, co
 					offset += token.text.length;
 				}
 			});
-			remember(key, pieces);
+			remember(key, pieces, cache);
+			return pieces;
 		})
-		.catch(() => remember(key, []))
-		.finally(() => {
-			asked.delete(key);
-			if (!view.isDestroyed)
-				view.dispatch(view.state.tr.setMeta(codeToolsKey, { coloured: true }).setMeta("addToHistory", false));
+		.catch(() => {
+			remember(key, [], cache);
+			return [];
 		});
+}
+
+function ask(view: EditorView, settings: CodeBlockSettings, language: string, code: string) {
+	const key = colourKey(language, code);
+	if (coloured.has(key) || asked.has(key)) return;
+	asked.add(key);
+	void codeColours(settings, language, code).finally(() => {
+		asked.delete(key);
+		if (!view.isDestroyed)
+			view.dispatch(view.state.tr.setMeta(codeToolsKey, { coloured: true }).setMeta("addToHistory", false));
+	});
+}
+
+/** A stretch of a code's text that is drawn in a way of its own, by the attributes its element takes (offsets in the code's text). */
+export type CodeRange = { from: number; to: number; attrs: Record<string, string> };
+
+/**
+ * How a code block's text is drawn besides its marks: each coloured piece (`data-token` with the site's two theme colours), the words a rule styles
+ * (`data-effect`) and the lines a warning or an error underlines with a wavy line (`data-wavy`). The editor lays these over its text as decorations
+ * and `ReadBody` puts them on the text it reads: one drawing, so a read code looks as the written one does.
+ */
+export function codeRanges(
+	code: string,
+	data: CodeData,
+	settings: CodeBlockSettings,
+	pieces: readonly Piece[] | undefined,
+): CodeRange[] {
+	const out: CodeRange[] = [];
+	if (data.language && code)
+		for (const piece of pieces ?? [])
+			out.push({
+				from: piece.from,
+				to: piece.to,
+				attrs: {
+					"data-token": "",
+					style: `--shiki-light:${piece.light ?? "inherit"};--shiki-dark:${piece.dark ?? piece.light ?? "inherit"}${fontStyleText(piece.fontStyle)}`,
+				},
+			});
+	const starts = lineStarts(code);
+	for (const rule of data.rules ?? [])
+		for (const range of ruleRanges(rule, code)) out.push({ ...range, attrs: { "data-effect": rule.name } });
+	for (const effect of data.lines ?? []) {
+		const wavy = settings.lineEffects.find((each) => each.name === effect.name)?.editor;
+		if (!wavy?.wavy) continue;
+		for (let line = effect.start; line < Math.min(effect.end, starts.length); line++) {
+			const from = starts[line] ?? 0;
+			const to = lineEnd(code, starts, line);
+			if (to > from) out.push({ from, to, attrs: { "data-wavy": wavy.tone === "danger" ? "error" : "warning" } });
+		}
+	}
+	return out;
 }
 
 // --- Decorations -----------------------------------------------------------------------------------------------------------------------------
@@ -201,31 +279,8 @@ function decorations(state: EditorState, settings: CodeBlockSettings, tools: Cod
 			const code = node.textContent;
 			const base = pos + 1;
 			const data = dataOf(node);
-			const language = data.language;
-			if (language && code) {
-				for (const piece of coloured.get(colourKey(language, code)) ?? [])
-					out.push(
-						Decoration.inline(base + piece.from, base + piece.to, {
-							"data-token": "",
-							// design-allow: the site's Shiki themes colour each piece at run time
-							style: `--shiki-light:${piece.light ?? "inherit"};--shiki-dark:${piece.dark ?? piece.light ?? "inherit"}${fontStyleText(piece.fontStyle)}`,
-						}),
-					);
-			}
-			const starts = lineStarts(code);
-			for (const rule of data.rules ?? [])
-				for (const range of ruleRanges(rule, code))
-					out.push(Decoration.inline(base + range.from, base + range.to, { "data-effect": rule.name }));
-			for (const effect of data.lines ?? []) {
-				const wavy = settings.lineEffects.find((each) => each.name === effect.name)?.editor;
-				if (!wavy?.wavy) continue;
-				for (let line = effect.start; line < Math.min(effect.end, starts.length); line++) {
-					const from = base + (starts[line] ?? 0);
-					const to = base + lineEnd(code, starts, line);
-					if (to > from)
-						out.push(Decoration.inline(from, to, { "data-wavy": wavy.tone === "danger" ? "error" : "warning" }));
-				}
-			}
+			for (const range of codeRanges(code, data, settings, coloured.get(colourKey(data.language ?? "", code))))
+				out.push(Decoration.inline(base + range.from, base + range.to, range.attrs));
 			for (const { shown, from, to } of foldsOf(node, tools.folds, { pos, from: caretFrom, to: caretTo }))
 				if (!shown) out.push(Decoration.inline(from, to, { "data-code-hidden": "" }));
 			return false;

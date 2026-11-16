@@ -10,6 +10,7 @@
 		"./cli": "./src/cli/main.ts",
 		"./render": "./src/render.ts",
 		"./code": "./src/code/index.ts",
+		"./markdown": "./src/markdown/index.ts",
 		"./load": "./bin/load.mjs",
 		"./render.css": "./render.css"
 	},
@@ -21,12 +22,23 @@
 	"dependencies": {
 		"jiti": "^2.7.0",
 		"kysely": "^0.29.6",
+		"mdast-util-directive": "^3.0.0",
+		"mdast-util-from-markdown": "^2.0.0",
+		"mdast-util-frontmatter": "^2.0.0",
+		"mdast-util-gfm": "^3.0.0",
+		"mdast-util-math": "^3.0.0",
+		"micromark-extension-directive": "^3.0.0",
+		"micromark-extension-frontmatter": "^2.0.0",
+		"micromark-extension-gfm": "^3.0.0",
+		"micromark-extension-math": "^3.1.0",
 		"pg": "^8.23.0",
 		"shiki": "^3.23.0",
+		"yaml": "^2.5.0",
 		"zod": "^4.2.1"
 	},
 	"devDependencies": {
 		"@next/env": "16.4.6",
+		"@types/mdast": "^4.0.0",
 		"@types/node": "^20",
 		"@types/pg": "^8.23.1",
 		"typescript": "^7.0.2",
@@ -55,6 +67,10 @@
 			"./code": {
 				"types": "./dist/code/index.d.ts",
 				"default": "./dist/code/index.js"
+			},
+			"./markdown": {
+				"types": "./dist/markdown/index.d.ts",
+				"default": "./dist/markdown/index.js"
 			},
 			"./load": "./bin/load.mjs",
 			"./render.css": "./render.css"

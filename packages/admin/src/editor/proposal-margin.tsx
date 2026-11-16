@@ -1,4 +1,4 @@
-import type { ModelChoice } from "@monti-cms/core";
+import type { Doc, ModelChoice } from "@monti-cms/core";
 import { AiFailed, AiWorking, EditorMargin, MemoDiff, MemoThread } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from "react";
@@ -15,6 +15,7 @@ import type { Exchange } from "../assistant/use-place-requests";
 import type { Remake } from "../assistant/use-remake";
 import { liveDom } from "./live-view";
 import { type BodyProposal, findBlock } from "./proposal-marks";
+import { ReadBody } from "./read-body";
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
 
@@ -104,6 +105,19 @@ export function ProposalMargin({ editor, marks }: { editor: Editor; marks: reado
 	});
 }
 
+/** The words a stale card holds (kept as text with the proposal) as a body at the card's size, as the translation's cards draw theirs. */
+function PlainWords({ words, muted = false }: { words: string; muted?: boolean }) {
+	// The words of a block kept as lines (a list's items, a table's rows): one paragraph per line, so a list reads as its lines.
+	const doc: Doc = {
+		type: "doc",
+		blocks: words
+			.split("\n")
+			.filter((line) => line !== "")
+			.map((line, at) => ({ id: `line-${at}`, type: "paragraph", content: [{ type: "text", text: line }] })),
+	};
+	return <ReadBody doc={doc} size="card" muted={muted} />;
+}
+
 type Shared = {
 	t: Translate;
 	/** The mark whose card is open (the bubble walked to it, or it was pressed). */
@@ -172,8 +186,10 @@ export function staleMarks({
 					>
 						<MemoDiff
 							afterLabel={t("entry.stale.proposed")}
-							{...(was === undefined ? {} : { beforeLabel: t("entry.stale.then"), before: was })}
-							{...(words === null ? { none: t("entry.stale.removed") } : { after: words })}
+							{...(was === undefined
+								? {}
+								: { beforeLabel: t("entry.stale.then"), before: <PlainWords words={was} muted /> })}
+							{...(words === null ? { none: t("entry.stale.removed") } : { after: <PlainWords words={words} /> })}
 						/>
 						{working || failed ? (
 							<MemoThread>

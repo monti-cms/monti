@@ -1,5 +1,5 @@
 import type { CodeBlockSettings } from "@monti-cms/core";
-import { ANCHOR, type LineEffect, languageName, lineStarts } from "@monti-cms/core/code";
+import { ANCHOR, languageName, lineStarts } from "@monti-cms/core/code";
 import {
 	BlockBarPlace,
 	BlockFrameBox,
@@ -59,25 +59,11 @@ import {
 	foldsOf,
 	hiddenLines,
 	lineAt,
+	looksOf,
 	sendCode,
 } from "./code-state";
 import { LineMenu } from "./line-menu";
 import { RulesCard } from "./rules-card";
-
-/** What a line's effects draw in the editor: its ground and its mark (doc 17). */
-function looksOf(settings: CodeBlockSettings, effects: readonly LineEffect[], line: number) {
-	const on = effects.filter((effect) => effect.start <= line && line < effect.end);
-	let tone: CodeLineTone | undefined;
-	let mark: string | undefined;
-	for (const definition of settings.lineEffects) {
-		if (!on.some((effect) => effect.name === definition.name)) continue;
-		const look = definition.editor;
-		if (!tone && look && !look.wavy && look.tone)
-			tone = look.tone === "success" ? "plus" : look.tone === "danger" ? "minus" : "highlight";
-		mark ??= look?.marker;
-	}
-	return { tone, mark };
-}
 
 /**
  * A code block in the editor (doc 17): the box with its language and file name, the line numbers that pick lines (press or drag, the menu opens on

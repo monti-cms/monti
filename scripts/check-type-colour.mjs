@@ -27,7 +27,6 @@ export const MONO_OK = new Map([
 	["ui/src/compare.tsx", "labels are words in the small sans role"],
 	["ui/src/count.tsx", "a count is a number, mono"],
 	["ui/src/description-list.tsx", "a count is mono; a quiet note after a value is words in the small sans role"],
-	["ui/src/doc-blocks.tsx", "a number cell of a table of documentation, mono"],
 	["ui/src/editor-body.tsx", "the editor's code, and the words of the small sans role in a block's label"],
 	["ui/src/error-box.tsx", "a raw error message as written"],
 	["ui/src/field-tree.tsx", "field names and their counts are identifiers; a note is a word in the small sans role"],

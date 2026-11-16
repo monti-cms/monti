@@ -4,7 +4,7 @@ import { cn } from "./cn";
 
 /**
  * The editor's text as it is written: the reading type (17 / 30), 20 under a paragraph, 32 over and 12 under a heading, list items line under line,
- * code and tables in the inner box the read-only blocks use (`DocCode`, `DocTable`). The editor engine draws plain elements (`p`, `h2`, `ul`, `pre` …)
+ * code and tables in the inner box. The editor engine draws plain elements (`p`, `h2`, `ul`, `pre` …)
  * and marks a state with a `data-` attribute; this part gives them their looks:
  *
  * - `data-align` (`center`, `right`): where a paragraph's or a heading's lines sit.
@@ -46,10 +46,12 @@ const EDITOR_BODY = cn(
 	// A checklist item's box: the `data-check` the editor puts at the item's start is what takes the press, 14px with a layer that reaches 24px around it
 	// (`height-control-xs`, the least pressable size), and draws nothing itself; `Checkbox`'s 14px box with its corners and its ✓ is `data-check-box` inside it.
 	// While the text is written it is pressed (or Spaced) to tick and answers the pointer as `Checkbox` does (`CHECK_HOVER`); read only, it is a mark.
-	"[&_[data-check]]:absolute [&_[data-check]]:top-monti-8 [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:outline-none [&_[data-check]]:after:absolute [&_[data-check]]:after:top-1/2 [&_[data-check]]:after:left-1/2 [&_[data-check]]:after:size-(--monti-height-control-xs) [&_[data-check]]:after:-translate-x-1/2 [&_[data-check]]:after:-translate-y-1/2 [&_[data-check]]:after:content-['']",
-	"[&_[data-check-box]]:flex [&_[data-check-box]]:size-full [&_[data-check-box]]:items-center [&_[data-check-box]]:justify-center [&_[data-check-box]]:rounded-monti-sm [&_[data-check-box]]:border-[1.5px] [&_[data-check-box]]:border-monti-faint [&_[data-check-box]]:text-monti-on-emphasis [&_[data-check-box]]:transition-colors [&_[data-check]:focus-visible>[data-check-box]]:outline-2 [&_[data-check]:focus-visible>[data-check-box]]:outline-monti-contrast/60 [&_[data-check-box]_svg]:invisible",
+	"[&_[data-check]]:absolute [&_[data-check]]:top-[calc((1lh-0.875rem)/2)] [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:outline-none [&_[data-check]]:after:absolute [&_[data-check]]:after:top-1/2 [&_[data-check]]:after:left-1/2 [&_[data-check]]:after:size-(--monti-height-control-xs) [&_[data-check]]:after:-translate-x-1/2 [&_[data-check]]:after:-translate-y-1/2 [&_[data-check]]:after:content-['']",
+	"[&_[data-check-box]]:flex [&_[data-check-box]]:size-full [&_[data-check-box]]:items-center [&_[data-check-box]]:justify-center [&_[data-check-box]]:rounded-monti-sm [&_[data-check-box]]:border-[1.5px] [&_[data-check-box]]:border-monti-faint [&_[data-check-box]]:text-monti-on-emphasis [&_[data-check-box]]:transition-colors [&_[data-check]:focus-visible>[data-check-box]]:outline-2 [&_[data-check]:focus-visible>[data-check-box]]:outline-monti-contrast/60 [&_[data-check-box]_svg]:size-3.5 [&_[data-check-box]_svg]:invisible",
 	"[&_li[data-checked]>[data-check]>[data-check-box]]:border-monti-contrast [&_li[data-checked]>[data-check]>[data-check-box]]:bg-monti-emphasis [&_li[data-checked]>[data-check]_svg]:visible",
-	"[&_[contenteditable=true]_[data-check]]:cursor-pointer [&_[contenteditable=true]_[data-check]:hover>[data-check-box]]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&_[contenteditable=true]_li:not([data-checked])>[data-check]:hover>[data-check-box]]:border-(color:--monti-fg-muted)",
+	// Only where the text is written: the boxes inside a body that is only read (`data-read-only`, `ReadBody`) are marks, though the writable text around it (a side-by-side translation's source cells) is `contenteditable`.
+	// The box stands at the middle of its item's first line, from the line's own height (`1lh`), whatever the size the body is read in.
+	"[&_[contenteditable=true]_[data-check]:not([data-read-only]_*)]:cursor-pointer [&_[contenteditable=true]_[data-check]:not([data-read-only]_*):hover>[data-check-box]]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&_[contenteditable=true]_li:not([data-checked])>[data-check]:not([data-read-only]_*):hover>[data-check-box]]:border-(color:--monti-fg-muted)",
 	// A quote, code, a table and the divider.
 	"[&_blockquote]:mt-0 [&_blockquote]:mb-monti-20 [&_blockquote]:border-l-2 [&_blockquote]:border-monti-strong [&_blockquote]:pl-monti-16 [&_blockquote]:text-monti-muted [&_blockquote>*:last-child]:mb-0",
 	"[&_pre]:mt-0 [&_pre]:mb-monti-20 [&_pre]:overflow-x-auto [&_pre]:rounded-monti-lg [&_pre]:bg-monti-muted [&_pre]:px-monti-16 [&_pre]:py-monti-12 [&_pre]:font-mono [&_pre]:text-monti-editor-code",
@@ -84,13 +86,14 @@ const EDITOR_BODY = cn(
 	// A site block's own margin (its look on the site: 1.5rem) gives way to the body's plain gap; it is unlayered, so it takes `!` to: one reading rhythm.
 	// A picture and a file stand off the next block as a paragraph does (2026-11-10, owner: 20px above them, none under, read as stuck to what follows).
 	"[&_[data-block=image]]:mb-monti-20 [&_[data-block=file]]:mb-monti-20 [&_[data-slot=block-box]>[class*=monti-block-]]:mt-0! [&_[data-slot=block-box]>[class*=monti-block-]]:mb-monti-20! [&_[data-block]>[class*=monti-block-]]:mt-0! [&_[data-block]>[class*=monti-block-]]:mb-monti-20! [&_[data-block=codeBlock]]:relative [&_[data-block=codeBlock]]:mb-monti-20",
-	// A container block (callout, tabs, collapsible, columns) holds its blocks one level deeper, in the editor's content holder: the first block in it has no room over it and
+	// A container block (callout, tabs, collapsible, columns) holds its blocks one level deeper, in the editor's content holder (in a body that is only read, the
+	// blocks `ReadBody` marks `data-first-in-container` / `data-last-in-container`: one rule for both): the first block in it has no room over it and
 	// the last none under it, whatever kind it is (a paragraph, or a site block whose own margin the rule above makes 0 / 20px, which is why these take `!` too).
-	"[&_[data-node-view-content-react]>:first-child]:mt-0 [&_[data-node-view-content-react]>:last-child]:mb-0",
-	"[&_[data-node-view-content-react]>:first-child>[class*=monti-block-]]:mt-0! [&_[data-node-view-content-react]>:first-child>[data-block]>[class*=monti-block-]]:mt-0! [&_[data-node-view-content-react]>:first-child>[data-whole]>[data-block]>[class*=monti-block-]]:mt-0! [&_[data-node-view-content-react]>:first-child>[data-slot=block-box]>[class*=monti-block-]]:mt-0! [&_[data-node-view-content-react]>:first-child>[data-whole]>[data-slot=block-box]>[class*=monti-block-]]:mt-0!",
-	"[&_[data-node-view-content-react]>:last-child>[class*=monti-block-]]:mb-0! [&_[data-node-view-content-react]>:last-child>[data-block]>[class*=monti-block-]]:mb-0! [&_[data-node-view-content-react]>:last-child>[data-whole]>[data-block]>[class*=monti-block-]]:mb-0! [&_[data-node-view-content-react]>:last-child>[data-slot=block-box]>[class*=monti-block-]]:mb-0! [&_[data-node-view-content-react]>:last-child>[data-whole]>[data-slot=block-box]>[class*=monti-block-]]:mb-0!",
+	"[&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])]:mt-0 [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])]:mb-0",
+	"[&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])>[class*=monti-block-]]:mt-0! [&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])>[data-block]>[class*=monti-block-]]:mt-0! [&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])>[data-whole]>[data-block]>[class*=monti-block-]]:mt-0! [&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])>[data-slot=block-box]>[class*=monti-block-]]:mt-0! [&_:is([data-node-view-content-react]>:first-child,[data-first-in-container])>[data-whole]>[data-slot=block-box]>[class*=monti-block-]]:mt-0!",
+	"[&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[class*=monti-block-]]:mb-0! [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-block]>[class*=monti-block-]]:mb-0! [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-whole]>[data-block]>[class*=monti-block-]]:mb-0! [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-slot=block-box]>[class*=monti-block-]]:mb-0! [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-whole]>[data-slot=block-box]>[class*=monti-block-]]:mb-0!",
 	// A site block whose own view is a source box (a formula, a diagram, a chart) stands the same plain gap under it as the site block's own root does, and none when it is a container's last.
-	"[&_[data-slot=block-box]>[data-slot=source-box]]:mb-monti-20 [&_[data-node-view-content-react]>:last-child>[data-block]>[data-slot=block-box]>[data-slot=source-box]]:mb-0! [&_[data-node-view-content-react]>:last-child>[data-whole]>[data-block]>[data-slot=block-box]>[data-slot=source-box]]:mb-0!",
+	"[&_[data-slot=block-box]>[data-slot=source-box]]:mb-monti-20 [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-block]>[data-slot=block-box]>[data-slot=source-box]]:mb-0! [&_:is([data-node-view-content-react]>:last-child,[data-last-in-container])>[data-whole]>[data-block]>[data-slot=block-box]>[data-slot=source-box]]:mb-0!",
 	// Doc 17: words pointing at code lines (a dotted line under them), one whose lines are gone (red), the words picked first while a link is made.
 	"[&_[data-monti-mark=codeRef]]:underline [&_[data-monti-mark=codeRef]]:decoration-(--monti-fg-subtle) [&_[data-monti-mark=codeRef]]:decoration-dotted [&_[data-monti-mark=codeRef]]:underline-offset-4",
 	"[&_[data-code-ref-broken]]:underline [&_[data-code-ref-broken]]:decoration-(--monti-fg-danger) [&_[data-code-ref-broken]]:decoration-dotted [&_[data-code-ref-broken]]:underline-offset-4 [&_[data-code-ref-picking]]:rounded-monti-sm [&_[data-code-ref-picking]]:bg-monti-selected",
@@ -110,8 +113,8 @@ const EDITOR_BODY = cn(
 /**
  * The text laid out as the rows of `CompareRows` (translation.md, side by side): the editor's blocks are the translation cells, and the editor puts
  * before each of them, as cells it does not edit, a rule across the row (`data-pair=rule`), the block's kind with its note
- * (`data-pair=kind`, the note `data-pair-note` in its tone: `warning`, `danger` or `success`) and the source block (`data-pair=source`, on the tool ground, quieter; its changed
- * words `mark`, underlined in the warning color, its code `data-pair-code`). After a last block that is one thing the editor puts an empty picture that takes no
+ * (`data-pair=kind`, the note `data-pair-note` in its tone: `warning`, `danger` or `success`) and the source block (`data-pair=source`, on the tool ground, quieter; the screen
+ * draws the block in it with `ReadBody`, its changed words underlined in the warning color). After a last block that is one thing the editor puts an empty picture that takes no
  * room (`data-pair=end`): a place a caret can take, which Chrome needs after such a block to keep it picked. The block the cursor is in, and the source cell of its row, are on the block ground (`data-pair-current`) while the text has the focus. The rows take the height of their taller side.
  */
 const PAIRED = cn(
@@ -121,10 +124,7 @@ const PAIRED = cn(
 	"[&_[data-pair=rule]]:col-span-full [&_[data-pair=rule]]:h-px [&_[data-pair=rule]]:bg-monti-muted",
 	"[&_[data-pair=end]]:col-span-full [&_[data-pair=end]]:size-0",
 	"[&_[data-pair=kind]]:flex [&_[data-pair=kind]]:flex-col [&_[data-pair=kind]]:gap-monti-2 [&_[data-pair=kind]]:py-monti-16 [&_[data-pair=kind]]:pr-monti-12 [&_[data-pair=kind]]:text-right [&_[data-pair=kind]]:text-monti-micro [&_[data-pair=kind]]:text-monti-subtle [&_[data-pair-note=warning]]:text-monti-warning [&_[data-pair-note=danger]]:text-monti-danger [&_[data-pair-note=success]]:text-monti-success",
-	"[&_[data-pair=source]]:min-w-0 [&_[data-pair=source]]:whitespace-pre-line [&_[data-pair=source]]:border-monti-default [&_[data-pair=source]]:border-r [&_[data-pair=source]]:bg-monti-tool [&_[data-pair=source]]:px-monti-24 [&_[data-pair=source]]:py-monti-16 [&_[data-pair=source]]:text-monti-muted",
-	// The source's words that changed since the translation: the warning underline of `CompareText source`.
-	"[&_[data-pair=source]_mark]:bg-transparent [&_[data-pair=source]_mark]:text-inherit [&_[data-pair=source]_mark]:underline [&_[data-pair=source]_mark]:decoration-[1.5px] [&_[data-pair=source]_mark]:decoration-monti-warning [&_[data-pair=source]_mark]:underline-offset-4",
-	"[&_[data-pair-heading]]:text-monti-heading [&_[data-pair-code]]:block [&_[data-pair-code]]:whitespace-pre-wrap [&_[data-pair-code]]:rounded-monti-lg [&_[data-pair-code]]:bg-monti-selected [&_[data-pair-code]]:px-monti-16 [&_[data-pair-code]]:py-monti-12 [&_[data-pair-code]]:font-mono [&_[data-pair-code]]:text-monti-code",
+	"[&_[data-pair=source]]:min-w-0 [&_[data-pair=source]]:border-monti-default [&_[data-pair=source]]:border-r [&_[data-pair=source]]:bg-monti-tool [&_[data-pair=source]]:px-monti-24 [&_[data-pair=source]]:py-monti-16 [&_[data-pair=source]]:text-monti-muted",
 	// Only while the text has the cursor (the editor marks its root `ProseMirror-focused` then), the row of the block the cursor is in is on the block
 	// ground on both sides (`bg-block`, the ground of the block a handle or menu is about); words picked in it take the stronger `bg-selection`: the source cell itself, and under the translation cell a ground the source cell lays to its right (the columns are equal),
 	// behind the block, so the block keeps its own looks (a code block's box) and nothing in it overflows.
@@ -134,20 +134,74 @@ const PAIRED = cn(
 );
 
 /**
- * The editor's text column: what the editor engine draws goes inside, and takes the body's looks from here. `paired` lays the text out as rows beside
- * its source (a translation side by side).
+ * A body read in the chat's column (the assistant's answers): the same elements and marks, in the conversation's text size (`text-prose`) with 8px
+ * between blocks and headings that are bold lines of that size, so an answer reads as words said, not as a page.
  */
-function EditorBody({ paired = false, className, ...props }: ComponentProps<"div"> & { paired?: boolean }) {
-	return (
-		<BodyScope>
-			<div
-				data-slot="editor-body"
-				data-paired={paired || undefined}
-				className={cn(EDITOR_BODY, paired && PAIRED, className)}
-				{...props}
-			/>
-		</BodyScope>
+const CHAT = cn(
+	"text-monti-prose",
+	"[&_p]:mb-monti-8! [&_:is(ul,ol,blockquote,table,[data-box],[data-block=codeBlock])]:mb-monti-8!",
+	"[&_:is(h2,h3,h4)]:mt-monti-12! [&_:is(h2,h3,h4)]:mb-monti-4! [&_:is(h2,h3,h4)]:text-monti-prose! [&_:is(h2,h3,h4)]:font-semibold!",
+);
+
+/**
+ * A body read in a card that hangs by the text (a translation's memo card, a proposal's): the card's own text size (`text-body`) with 8px between blocks,
+ * so the words of a card are drawn one way whichever card it is.
+ */
+const CARD = cn(
+	"text-monti-body",
+	"[&_p]:mb-monti-8! [&_:is(ul,ol,blockquote,table,[data-box],[data-block=codeBlock])]:mb-monti-8!",
+	"[&_:is(h2,h3,h4)]:mt-monti-12! [&_:is(h2,h3,h4)]:mb-monti-4! [&_:is(h2,h3,h4)]:text-monti-body! [&_:is(h2,h3,h4)]:font-semibold!",
+);
+
+/**
+ * A body that is only read: it takes the room its words need, with none above its first block and none under its last (the first and last are named twice
+ * over, so they win against the chat's 8px and the headings' margins that are `!` too). The code and the boxes in it stand on the ground the body is on:
+ * `tool` (a source beside its translation) sets them on `bg-selected`, one step darker, as the tool ground's own blocks are (translation.md).
+ */
+const READ_ONLY = "grow-0 [&>:first-child:first-child]:mt-0! [&>:last-child:last-child]:mb-0!";
+const ON_TOOL = "[&_[data-slot=code-frame]]:bg-monti-selected [&_[data-box]]:bg-monti-selected";
+
+/**
+ * The editor's text column: what the editor engine draws goes inside, and takes the body's looks from here. `paired` lays the text out as rows beside
+ * its source (a translation side by side). `readOnly` is a body that is only read (`ReadBody`: a comparison, a change, the source of a translation,
+ * an answer): it takes the room its words need and has no room above its first line or under its last. `muted` reads it in the quieter ink (a source beside its
+ * translation). `size="chat"` reads it in the conversation's column, `size="card"` in a card's. `ground="tool"`: it stands on the tool ground.
+ */
+function EditorBody({
+	paired = false,
+	readOnly = false,
+	muted = false,
+	ground = "page",
+	size = "reading",
+	className,
+	...props
+}: ComponentProps<"div"> & {
+	paired?: boolean;
+	readOnly?: boolean;
+	muted?: boolean;
+	ground?: "page" | "tool";
+	size?: "reading" | "chat" | "card";
+}) {
+	const body = (
+		<div
+			data-slot="editor-body"
+			data-paired={paired || undefined}
+			data-read-only={readOnly || undefined}
+			className={cn(
+				EDITOR_BODY,
+				paired && PAIRED,
+				readOnly && READ_ONLY,
+				ground === "tool" && ON_TOOL,
+				muted && "text-monti-muted",
+				size === "chat" && CHAT,
+				size === "card" && CARD,
+				className,
+			)}
+			{...props}
+		/>
 	);
+	// Only the editor's own body is the body that scrolls under the editor header: a body that is only read (an answer, a card, a comparison) takes the scope of where it stands.
+	return readOnly ? body : <BodyScope>{body}</BodyScope>;
 }
 
 export { EditorBody };

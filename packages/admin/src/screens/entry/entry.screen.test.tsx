@@ -395,6 +395,50 @@ describe("the entry editor: saving and coming back", () => {
 		ink.remove();
 	});
 
+	it("[TC-04] the comparison draws each side's body as the editor does: bold, a link, inline code, a heading's level, a code block's head and colours, and the changed words marked on both sides", async () => {
+		const mine: Doc = {
+			type: "doc",
+			blocks: [
+				{
+					id: "b_text",
+					type: "paragraph",
+					content: [
+						{ type: "text", text: "버튼을 누를 때마다 " },
+						{ type: "text", text: "수를 둘 올린다", marks: [{ type: "bold" }] },
+						{ type: "text", text: " " },
+						{ type: "text", text: "문서", marks: [{ type: "link", href: "https://example.dev/docs" }] },
+						{ type: "text", text: " " },
+						{ type: "text", text: "npm", marks: [{ type: "code" }] },
+					],
+				},
+				{ id: "b_head", type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "새 제목" }] },
+				{
+					id: "b_code",
+					type: "codeBlock",
+					attrs: { language: "ts", title: "src/counter.ts", lines: [{ name: "plus", start: 0, end: 1 }] },
+					content: [{ type: "text", text: "let count = 1;\nconst add = () => count++;" }],
+				},
+			],
+		};
+		await on("code", { version: 1, mine: [["doc", mine]] }).run();
+		await userEvent.click(button("비교하기"));
+		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
+		const sides = () => [...document.querySelectorAll<HTMLElement>("[data-slot=compare-side]")];
+		await expect.poll(() => sides()[0]?.querySelector("[data-slot=code-frame] [data-token]")).not.toBeNull();
+		const [ours, theirs] = sides() as [HTMLElement, HTMLElement];
+		expect(ours.querySelector("strong")?.textContent).toContain("둘");
+		expect(ours.querySelector("a")?.getAttribute("href")).toBe("https://example.dev/docs");
+		expect(ours.querySelector(":not(pre) > code")?.textContent).toBe("npm");
+		expect(ours.querySelector("h3")?.textContent).toBe("새 제목");
+		expect(ours.querySelector("[data-slot=code-frame]")?.textContent).toContain("src/counter.ts");
+		const marked = (side: HTMLElement) =>
+			[...side.querySelectorAll("[data-slot=highlight]")].map((each) => each.textContent?.trim());
+		// The same mark on both sides, over the words that differ.
+		expect(marked(ours).some((words) => words?.includes("둘"))).toBe(true);
+		expect(marked(theirs).some((words) => words?.includes("하나"))).toBe(true);
+		expect(theirs.querySelector("h3")).toBeNull();
+	});
+
 	it("15 (T39) signing in again brings back the same entry with what was typed, ready to save", async () => {
 		await from(entry.SignedOut).run();
 		await userEvent.click(button("다시 로그인"));

@@ -25,9 +25,6 @@ export const Button = close(open.Button);
 export const Caret = close(open.Caret);
 export const ChangeDot = close(open.ChangeDot);
 export const ChangesGroup = close(open.ChangesGroup);
-export const DocCallout = close(open.DocCallout);
-export const DocCode = close(open.DocCode);
-export const DocTable = close(open.DocTable);
 export const AssistantSlot = close(open.AssistantSlot);
 export const EditorHeader = close(open.EditorHeader);
 export const EditorTitleRule = close(open.EditorTitleRule);
@@ -37,9 +34,6 @@ export const Chip = close(open.Chip);
 export const Compare = close(open.Compare);
 export const CompareBlock = close(open.CompareBlock);
 export const CompareBody = close(open.CompareBody);
-export const CompareCode = close(open.CompareCode);
-export const CompareHeading = close(open.CompareHeading);
-export const CompareParagraph = close(open.CompareParagraph);
 export const CompareValues = close(open.CompareValues);
 export const CompareProperty = close(open.CompareProperty);
 export const CompareRow = close(open.CompareRow);
@@ -82,6 +76,7 @@ export const ChatInput = close(open.ChatInput);
 export const ChatMessageActions = close(open.ChatMessageActions);
 export const ChatQueueItem = close(open.ChatQueueItem);
 export const ChatMessage = close(open.ChatMessage);
+export const StreamCaret = close(open.StreamCaret);
 export const ChatThread = close(open.ChatThread);
 export const PropertyGroup = close(open.PropertyGroup);
 export const PropertyPanel = close(open.PropertyPanel);
@@ -438,6 +433,7 @@ export {
 	Toaster,
 	textVariants,
 	toast,
+	useBarScope,
 	useComboboxAnchor,
 	useIsMobile,
 	useShortcut,

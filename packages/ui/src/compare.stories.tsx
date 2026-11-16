@@ -3,9 +3,6 @@ import {
 	Box,
 	Compare,
 	CompareBody,
-	CompareCode,
-	CompareHeading,
-	CompareParagraph,
 	CompareProperty,
 	CompareRow,
 	CompareRows,
@@ -19,6 +16,7 @@ import {
 	Text,
 	TextButton,
 } from "./index";
+import { RefCode } from "./screens/reference/ref-body";
 
 /**
  * Two versions of one entry side by side: no gap, one rule between, 48px inside each side. Each side has its name in the small mono line, the
@@ -57,13 +55,13 @@ export const EditConflict: Story = {
 			>
 				<CompareTitle>처음 쓰는 Monti</CompareTitle>
 				<CompareBody>
-					<CompareParagraph>
+					<p>
 						Monti는 글을 쓰는 사람이 <CompareText changed>설정 파일을 열지 않아도</CompareText> 사이트를 고칠 수 있게
 						합니다.
-					</CompareParagraph>
-					<CompareHeading>시작하기</CompareHeading>
-					<CompareParagraph>왼쪽 목록에서 컬렉션을 고르고 새 글을 씁니다.</CompareParagraph>
-					<CompareCode>pnpm create monti</CompareCode>
+					</p>
+					<h2>시작하기</h2>
+					<p>왼쪽 목록에서 컬렉션을 고르고 새 글을 씁니다.</p>
+					<pre>pnpm create monti</pre>
 				</CompareBody>
 			</CompareSide>
 			<CompareSide
@@ -79,12 +77,12 @@ export const EditConflict: Story = {
 			>
 				<CompareTitle>처음 쓰는 Monti</CompareTitle>
 				<CompareBody>
-					<CompareParagraph>
+					<p>
 						Monti는 글을 쓰는 사람이 <CompareText changed>코드를 몰라도</CompareText> 사이트를 고칠 수 있게 합니다.
-					</CompareParagraph>
-					<CompareHeading>시작하기</CompareHeading>
-					<CompareParagraph>왼쪽 목록에서 컬렉션을 고르고 새 글을 씁니다.</CompareParagraph>
-					<CompareCode>pnpm create monti</CompareCode>
+					</p>
+					<h2>시작하기</h2>
+					<p>왼쪽 목록에서 컬렉션을 고르고 새 글을 씁니다.</p>
+					<pre>pnpm create monti</pre>
 				</CompareBody>
 			</CompareSide>
 		</Compare>
@@ -100,7 +98,7 @@ export const TextOnly: Story = {
 					<CompareText changed>가을 여행</CompareText> 기록
 				</CompareTitle>
 				<CompareBody>
-					<CompareParagraph>단풍이 시작된 산길을 걸었습니다.</CompareParagraph>
+					<p>단풍이 시작된 산길을 걸었습니다.</p>
 				</CompareBody>
 			</CompareSide>
 			<CompareSide label="서버 최신본 · v4 · 09:12 저장">
@@ -108,7 +106,7 @@ export const TextOnly: Story = {
 					<CompareText changed>10월</CompareText> 기록
 				</CompareTitle>
 				<CompareBody>
-					<CompareParagraph>단풍이 시작된 산길을 걸었습니다.</CompareParagraph>
+					<p>단풍이 시작된 산길을 걸었습니다.</p>
 				</CompareBody>
 			</CompareSide>
 		</Compare>
@@ -159,10 +157,10 @@ export const TranslationRows: Story = {
 					translation={<Text variant="reading">The list keeps only the title, the address and the status.</Text>}
 				/>
 				<CompareRow
-					source={<CompareCode>{CODE}</CompareCode>}
+					source={<RefCode code={CODE} ground="tool" />}
 					translation={
 						<CompareShared action={<TextButton variant="underline">따로 고치기</TextButton>}>
-							<CompareCode>{CODE}</CompareCode>
+							<RefCode code={CODE} />
 						</CompareShared>
 					}
 				/>

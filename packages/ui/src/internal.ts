@@ -26,6 +26,7 @@ export { AssistantSlot } from "./assistant-slot";
 export { Banner } from "./banner";
 export { BlockBarPlace, BlockBox, ResizeCorner } from "./block-bar";
 export { Block, BlockHandle, PickBox } from "./block-handle";
+export { useBarScope } from "./body-scope";
 export { Box } from "./box";
 export { BulkBar } from "./bulk-bar";
 export { Button } from "./button";
@@ -36,7 +37,7 @@ export { ChangeDot } from "./change-dot";
 export { ChangesGroup, type ChangesItem, type ProposalsItem } from "./changes-group";
 export { ChatMessageActions, ChatQueueItem } from "./chat-actions";
 export { ChatInput } from "./chat-input";
-export { ChatMessage } from "./chat-message";
+export { ChatMessage, StreamCaret } from "./chat-message";
 export { ChatThread } from "./chat-thread";
 export { CHECK_MARK_PATH, Checkbox } from "./checkbox";
 export { Chip } from "./chip";
@@ -89,9 +90,6 @@ export {
 	Compare,
 	CompareBlock,
 	CompareBody,
-	CompareCode,
-	CompareHeading,
-	CompareParagraph,
 	CompareProperty,
 	CompareRow,
 	CompareRows,
@@ -131,7 +129,6 @@ export {
 	DialogTrigger,
 } from "./dialog";
 export { DialogFormFooter } from "./dialog-form-footer";
-export { DocCallout, DocCode, DocTable } from "./doc-blocks";
 export { DragHandle } from "./drag-handle";
 export { DropArea } from "./drop-area";
 export {

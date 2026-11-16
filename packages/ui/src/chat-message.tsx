@@ -52,3 +52,17 @@ export function ChatMessage({
 		</div>
 	);
 }
+
+/**
+ * The caret of an answer still arriving: a thin blinking bar the height of the text, after the last word. It stands inside the last line of the answer's
+ * words (`ReadBody streaming`), not after the box, so it never takes a line of its own.
+ */
+export function StreamCaret() {
+	return (
+		<span
+			aria-hidden
+			data-slot="stream-caret"
+			className="ml-monti-2 inline-block h-[1.15em] w-0.5 animate-pulse rounded-[1px] bg-(--monti-fg-default) align-text-bottom motion-reduce:animate-none"
+		/>
+	);
+}

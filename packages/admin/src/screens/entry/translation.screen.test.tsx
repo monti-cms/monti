@@ -2,7 +2,7 @@ import { defineSchema } from "@monti-cms/core";
 import { composeStories, composeStory } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { pointerPath, scrollsSideways, typeKorean } from "../../../../../testing/input";
+import { caretAfter, pointerPath, scrollsSideways, typeKorean } from "../../../../../testing/input";
 import { schema } from "../story-schema";
 import * as stories from "./translation.stories";
 
@@ -484,12 +484,73 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.poll(marked).toContain("블로그를 다시 만들기로");
 	});
 
+	it("04-1 [TR-05] the source in the pane beside is read as the editor draws it: its heading level, its code in the editor's frame, and the words changed since underlined", async () => {
+		await open(SourceChanged);
+		await userEvent.click(page.getByRole("button", { name: "옆 창" }));
+		const pane = page.getByRole("complementary", { name: /원문/ });
+		await expect.element(pane).toBeVisible();
+		await expect.poll(() => pane.element().querySelector("[data-slot=code-frame]")).not.toBeNull();
+		expect(pane.element().querySelector("h2")?.textContent).toBe("무엇을 덜어냈나");
+		expect(pane.element().querySelector("[data-slot=code-frame]")?.textContent).toContain("pnpm add @monti-cms/core");
+		expect(pane.element().querySelectorAll("[data-slot=source-change]").length).toBeGreaterThan(0);
+	});
+
+	it("04-1 [TR-05] the source blocks side by side are drawn from one read of the block catalog, not one read each (or two)", async () => {
+		const [load] = stories.site("changed", "english") as unknown as [() => Promise<{ site: { transport: unknown } }>];
+		const reads = { catalog: 0 };
+		const counted = composeStory(
+			{
+				...stories.SideBySide,
+				loaders: [
+					async () => {
+						const loaded = await load();
+						const { transport } = loaded.site as { transport: (...args: unknown[]) => Promise<unknown> };
+						(loaded.site as { transport: unknown }).transport = async (name: string, ...rest: unknown[]) => {
+							if (name === "blocks.catalog") reads.catalog++;
+							return transport(name, ...rest);
+						};
+						return loaded;
+					},
+				],
+			} as typeof stories.SideBySide,
+			stories.default,
+		);
+		await counted.run();
+		await expect
+			.poll(() => body().element().querySelectorAll("[data-pair=source] [data-slot=code-frame]").length)
+			.toBe(1);
+		expect(body().element().querySelectorAll("[data-pair=source] [data-slot=editor-body]").length).toBeGreaterThan(3);
+		// The editor's own two reads and the one the bodies that are only read share: five source cells and their notes add none.
+		expect(reads.catalog).toBeLessThanOrEqual(3);
+	});
+
+	it("04-1 [TR-05] the words of a memo card are bodies at the card's size, the one before quieter, and the same size in every card", async () => {
+		await open(SourceChanged);
+		await userEvent.click(mark("변경"));
+		const card = () => document.querySelector("[data-slot=memo-diff]") as HTMLElement;
+		await expect.poll(() => card()?.querySelectorAll("[data-slot=editor-body]").length).toBe(2);
+		const [before, after] = [...card().querySelectorAll<HTMLElement>("[data-slot=editor-body]")] as [
+			HTMLElement,
+			HTMLElement,
+		];
+		const probe = document.createElement("span");
+		probe.className = "text-monti-body";
+		document.body.append(probe);
+		expect(getComputedStyle(before).fontSize).toBe(getComputedStyle(probe).fontSize);
+		expect(getComputedStyle(after).fontSize).toBe(getComputedStyle(probe).fontSize);
+		probe.remove();
+		expect(getComputedStyle(before).color).not.toBe(getComputedStyle(after).color);
+	});
+
 	it("04-1 3.05 side by side, a row's translation is written in place, and the row being written is marked on both sides", async () => {
 		await SideBySide.run();
 		const line = page.getByText("The editor follows the same rule", { exact: false });
 		await expect.element(line, { timeout: 15000 }).toBeVisible();
-		await userEvent.click(line);
-		await userEvent.keyboard("{End} Done.");
+		// The source blocks are drawn in their cells (the source's code block last): the rows stand where they will stay.
+		await expect.poll(() => body().element().querySelector("[data-pair=source] [data-slot=code-frame]")).not.toBeNull();
+		// The caret goes after the words wherever they wrap.
+		await caretAfter(body().element(), "only the writing shows.");
+		await userEvent.keyboard(" Done.");
 		await expect.element(page.getByText("only the writing shows. Done.", { exact: false })).toBeVisible();
 		const current = () => body().element().querySelector("[data-pair-current]")?.textContent ?? "";
 		expect(current()).toContain("Done.");

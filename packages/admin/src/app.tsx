@@ -13,6 +13,7 @@ import { AssistantPanel } from "./assistant/assistant-panel";
 import { ReviewScreen } from "./assistant/review-screen";
 import { AssistantProvider, useAssistant } from "./assistant/use-assistant";
 import { LeaveGuardProvider, useLeave, useLeaveFiles } from "./draft/leave-guard";
+import { ReadBodies } from "./editor/read-body";
 import { adminMessages } from "./messages";
 import {
 	type AdminBlockDefinition,
@@ -374,7 +375,12 @@ function Gate({ denied }: { denied?: string }) {
 				}}
 			/>
 		);
-	return <Signed />;
+	// The catalog the bodies that are only read are drawn with is read once for the whole admin, not once per body (`ReadBodies`).
+	return (
+		<ReadBodies>
+			<Signed />
+		</ReadBodies>
+	);
 }
 
 /**

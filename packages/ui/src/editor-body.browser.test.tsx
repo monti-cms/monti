@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { box } from "../../../testing/measure";
 import { render } from "../test/render";
+import { ModalScope, useBarScope } from "./body-scope";
 import { EditorBody } from "./index";
+
+function Scope() {
+	return <span data-scope={useBarScope()} />;
+}
 
 /**
  * The editor's text column, measured (causes 14 and 15 of the admin QA audit; docs/design/admin/components/editor-tools.md, "본문"): where a block's
@@ -211,5 +216,29 @@ describe("inline code (ET-06)", () => {
 		expect(style("strong code").fontWeight).toBe(style("strong").fontWeight);
 		expect(style("p > code").borderTopWidth).toBe("0px");
 		expect(style("h2 code").fontFamily).toContain("Plex Mono");
+	});
+
+	it("only the editor's own body is the body scope: a body that is only read takes the scope of where it stands", async () => {
+		render(
+			<>
+				<EditorBody>
+					<Scope />
+				</EditorBody>
+				<EditorBody readOnly>
+					<Scope />
+				</EditorBody>
+				<ModalScope>
+					<EditorBody readOnly>
+						<Scope />
+					</EditorBody>
+				</ModalScope>
+			</>,
+		);
+		await expect.poll(() => document.querySelectorAll("[data-scope]").length).toBe(3);
+		expect([...document.querySelectorAll("[data-scope]")].map((each) => each.getAttribute("data-scope"))).toEqual([
+			"body",
+			"page",
+			"modal",
+		]);
 	});
 });

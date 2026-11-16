@@ -1,4 +1,3 @@
-import { type Block, type Doc, type Inline, type Mark, newBlockId, readFence } from "@monti-cms/core";
 import type { Nodes, PhrasingContent, RootContent } from "mdast";
 import { directiveFromMarkdown } from "mdast-util-directive";
 import { fromMarkdown } from "mdast-util-from-markdown";
@@ -10,6 +9,8 @@ import { frontmatter } from "micromark-extension-frontmatter";
 import { gfm } from "micromark-extension-gfm";
 import { math } from "micromark-extension-math";
 import { parse as parseYaml } from "yaml";
+import { type Block, type Doc, type Inline, type Mark, newBlockId } from "../body/doc";
+import { readFence } from "../code/notation";
 import { KEPT, KEPT_HTML } from "./kept";
 
 /** What a block type of the site holds, for a `:::directive` that names it: its words, other blocks, or nothing. */

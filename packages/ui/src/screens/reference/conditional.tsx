@@ -10,7 +10,6 @@ import {
 	Checkbox,
 	Compare,
 	CompareBody,
-	CompareParagraph,
 	CompareProperty,
 	CompareRow,
 	CompareRows,
@@ -380,7 +379,7 @@ export function ConditionalCompareScreen() {
 					>
 						<CompareTitle>첫 번째 글</CompareTitle>
 						<CompareBody>
-							<CompareParagraph>블로그를 다시 만들기로 한 건 도구를 고치는 시간이 길어졌기 때문이다.</CompareParagraph>
+							<p>블로그를 다시 만들기로 한 건 도구를 고치는 시간이 길어졌기 때문이다.</p>
 						</CompareBody>
 					</CompareSide>
 					<CompareSide
@@ -398,7 +397,7 @@ export function ConditionalCompareScreen() {
 					>
 						<CompareTitle>첫 번째 글</CompareTitle>
 						<CompareBody>
-							<CompareParagraph>블로그를 다시 만들기로 한 건 도구를 고치는 시간이 길어졌기 때문이다.</CompareParagraph>
+							<p>블로그를 다시 만들기로 한 건 도구를 고치는 시간이 길어졌기 때문이다.</p>
 						</CompareBody>
 					</CompareSide>
 				</Compare>
