@@ -120,6 +120,8 @@ export function assistantPlace(sources) {
  * class that cuts (`truncate`, `text-ellipsis`, `line-clamp-N`) is written on a `<CutWords>` (its `className`, or the element it `render`s), or the
  * file is named here with the reason the words are cut some other way and said whole there.
  *
+ * An attribute `CutWords` does not take (`data-slot`, `aria-current`) is named too: it would be dropped, and it belongs on the rendered element.
+ *
  * Cannot see: a cut that a `<CutWords>` wraps from outside the class (a cell that cuts what a `CutWords` inside it holds), a box cut with no class of
  * its own (`overflow-hidden` alone), and a class built from pieces at run time. Whether a cut really shows its tooltip is the part's browser test (`menu-words.browser.test.tsx`).
  */
@@ -167,10 +169,41 @@ function cutOutside(file, source) {
 	return classes.filter((at) => !inside.some(([from, to]) => at >= from && at <= to));
 }
 
+/**
+ * The props `CutWords` takes. Any other attribute on it (`data-slot`, `aria-current`) is dropped without a word: TypeScript lets a hyphenated
+ * attribute through on any component. The attributes go on the element it `render`s.
+ */
+const CUT_WORDS_PROPS = new Set(["render", "whole", "partial", "cut", "stop", "className", "children", "key"]);
+/** The attributes on a `<CutWords ...>` opening that it does not take. */
+function droppedOnCutWords(file, source) {
+	const { program, errors } = parseSync(file, source);
+	if (errors.length > 0) return [];
+	const dropped = [];
+	walkTree(program, (node) => {
+		if (node.type !== "JSXOpeningElement" || nameOf(node.name) !== "CutWords") return;
+		for (const each of node.attributes) {
+			if (each.type !== "JSXAttribute") continue;
+			const name =
+				each.name?.type === "JSXNamespacedName"
+					? `${each.name.namespace.name}:${each.name.name.name}`
+					: each.name?.name;
+			if (!CUT_WORDS_PROPS.has(name)) dropped.push({ at: each.start, name });
+		}
+	});
+	return dropped;
+}
+
 export function cutWords(sources, { allowed = CUT_OK } = {}) {
 	const found = [];
 	const seen = new Set();
 	for (const [file, source] of Object.entries(sources)) {
+		if (isCode(file) && source.includes("<CutWords"))
+			for (const { at, name } of droppedOnCutWords(file, source))
+				found.push({
+					file,
+					line: lineOf(source, at),
+					message: `\`${name}\` on CutWords is dropped: put it on the element CutWords renders (\`render={<span ${name}=… />}\`)`,
+				});
 		if (!isCode(file) || !file.startsWith("packages/ui/src/") || /\/spec-pack\//.test(file)) continue;
 		if (!/truncate|text-ellipsis|line-clamp/.test(source)) continue;
 		const outside = cutOutside(file, source);

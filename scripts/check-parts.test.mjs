@@ -217,3 +217,25 @@ test("mono-props: a screen's children the rule cannot read need the file named w
 	assert.match(found[0].message, /MONO_PROP_VALUES/);
 	assert.match(found[1].message, /no mono option/);
 });
+
+test("cut-words: an attribute CutWords does not take is named, wherever it stands; one on the element it renders is not", () => {
+	const found = cutWords(
+		{
+			"packages/ui/src/slot.tsx":
+				'import { CutWords } from "./cut-words";\nexport const A = () => <CutWords data-slot="left" className="truncate">x</CutWords>;\n',
+			"packages/admin/src/current.tsx":
+				'import { CutWords } from "@monti-cms/ui/cut-words";\nexport const B = () => <CutWords aria-current="page">x</CutWords>;\n',
+			"packages/ui/src/rendered.tsx":
+				'import { CutWords } from "./cut-words";\nexport const C = () => <CutWords whole="x" render={<span data-slot="left" className="truncate" />}>x</CutWords>;\n',
+		},
+		{ allowed: new Map() },
+	);
+	assert.deepEqual(
+		found.map(({ file, line }) => [file, line]),
+		[
+			["packages/ui/src/slot.tsx", 2],
+			["packages/admin/src/current.tsx", 2],
+		],
+	);
+	assert.match(found[0].message, /`data-slot` on CutWords is dropped/);
+});

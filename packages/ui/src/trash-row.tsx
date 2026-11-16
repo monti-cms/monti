@@ -39,8 +39,15 @@ function TrashRowTitle({
 				{address && <CutWords className="truncate font-mono text-monti-caption text-monti-faint">{address}</CutWords>}
 			</span>
 			<CutWords
-				data-slot="trash-row-meta"
-				className={cn("truncate text-monti-note", metaTone === "warning" ? "text-monti-warning" : "text-monti-subtle")}
+				render={
+					<span
+						data-slot="trash-row-meta"
+						className={cn(
+							"truncate text-monti-note",
+							metaTone === "warning" ? "text-monti-warning" : "text-monti-subtle",
+						)}
+					/>
+				}
 			>
 				{meta || "\u00a0"}
 			</CutWords>
@@ -128,8 +135,15 @@ function TrashRowDate({
 				))}
 			{(date === undefined && assistant(left)) || (
 				<CutWords
-					data-slot="trash-row-left"
-					className={cn("max-w-full truncate text-monti-caption", urgent ? "text-monti-warning" : "text-monti-faint")}
+					render={
+						<span
+							data-slot="trash-row-left"
+							className={cn(
+								"max-w-full truncate text-monti-caption",
+								urgent ? "text-monti-warning" : "text-monti-faint",
+							)}
+						/>
+					}
 				>
 					{left}
 				</CutWords>
