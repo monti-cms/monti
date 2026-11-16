@@ -1466,7 +1466,7 @@ describe("the activity log of one entry (doc 13; AS-23, AT-11, TR-27)", () => {
 	it("13 [TR-28] the undo of a started translation names it and its language in the question", async () => {
 		toasts.dismiss();
 		await draw(stories.TranslationStarted).run();
-		await userEvent.click((await menuOf("ja 번역 시작")).getByRole("menuitem", { name: "되돌리기" }));
+		await userEvent.click((await menuOf("일본어 번역 시작")).getByRole("menuitem", { name: "되돌리기" }));
 		await expect.element(dialog()).toHaveTextContent("되돌릴까요?");
 		await expect.element(dialog()).toHaveTextContent("「첫 번째 글」 일본어 번역을 영구 삭제합니다.");
 		await userEvent.keyboard("{Escape}");

@@ -278,13 +278,17 @@ type Kind =
 	| "strayOption";
 
 /** The blog whose posts point at other posts: a relation to documents, some of them drafts. */
-const withRelated = defineSchema({
+const withRelatedMany = defineSchema({
 	...schema,
 	collections: {
 		...schema.collections,
 		post: {
 			...schema.collections.post,
-			fields: { ...schema.collections.post?.fields, related: { kind: "relation", to: "post" } },
+			fields: {
+				...schema.collections.post?.fields,
+				related: { kind: "relation", to: "post" },
+				readNext: { kind: "relation", to: "post", many: true, ordered: true },
+			},
 		},
 	},
 });
@@ -376,7 +380,9 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 					subtitle: { label: "부제" },
 					cover: { label: "대표 이미지" },
 					category: { label: "카테고리" },
-					...(kind === "related" || kind === "relatedNames" ? { related: { label: "관련 글" } } : {}),
+					...(kind === "related" || kind === "relatedNames"
+						? { related: { label: "관련 글" }, readNext: { label: "이어 읽기" } }
+						: {}),
 					...(kind === "nestedChoice"
 						? {
 								videoHost: { label: "영상 위치", optionLabels: { own: "직접 올림", embed: "퍼가기" } },
@@ -472,13 +478,22 @@ async function entry(monti: Monti, kind: Kind): Promise<string> {
 		others.push(other.output.id);
 	}
 	// Posts a relation can point at: one with no title, and two with the same title (told apart by their addresses).
-	if (kind === "relatedNames")
+	if (kind === "relatedNames") {
+		let noTitle = "";
 		for (const [title, slug] of [
 			["", "no-title"],
 			["같은 이름", "same-one"],
 			["같은 이름", "same-two"],
-		] as const)
-			await monti.run("entries.create", { collection: "post", locale: "ko", title, slug }, admin);
+		] as const) {
+			const made = (await monti.run("entries.create", { collection: "post", locale: "ko", title, slug }, admin)) as {
+				output: { id: string };
+			};
+			if (slug === "no-title") noTitle = made.output.id;
+		}
+		// The post with no title is already on the ordered field.
+		const target = (await monti.run("entries.get", { id: noTitle }, admin)) as { entry: { translationGroup: string } };
+		await monti.run("entries.save", { id, version: 1, values: { readNext: [target.entry.translationGroup] } }, admin);
+	}
 	// Words that link to a draft: a to-do that only tells and does not stop the publish (doc 02).
 	if (kind === "toCheck" || kind === "toCheckOnly") {
 		const linked = (await monti.run("entries.get", { id: others[0] }, admin)) as {
@@ -533,7 +548,7 @@ export const site = (kind: Kind, kept?: { version: number; mine: [string, unknow
 					: kind === "conditional" || kind === "strayOption"
 						? withFormat
 						: kind === "related" || kind === "relatedNames"
-							? withRelated
+							? withRelatedMany
 							: schema,
 			auth: { password: true },
 			// A site with a text format of its own: the format bar's ⋯ lists it (editor-tools.md).

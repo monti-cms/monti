@@ -101,13 +101,16 @@ export async function Home({ locale }: { locale: string }) {
 	);
 }
 
+/** What an entry with no title is called. */
+const UNTITLED = "제목 없음";
+
 function PostRows({ entries, locale }: { entries: Awaited<ReturnType<typeof reader.entries>>; locale: string }) {
 	if (entries.length === 0) return <p>아직 글이 없습니다.</p>;
 	return (
 		<ul className="rows">
 			{entries.map((entry) => (
 				<li key={entry.id}>
-					{entry.path ? <Link href={entry.path}>{entry.title}</Link> : entry.title}
+					{entry.path ? <Link href={entry.path}>{entry.title || UNTITLED}</Link> : entry.title || UNTITLED}
 					<time>{day(entry.publishedAt, locale)}</time>
 				</li>
 			))}
@@ -142,7 +145,7 @@ export async function Entry({
 	return (
 		<SitePage locale={locale} path={entry.path} translations={entry.translations}>
 			<article>
-				<h1>{entry.title}</h1>
+				<h1>{entry.title || UNTITLED}</h1>
 				<p className="meta">
 					<time>{day(entry.publishedAt, locale)}</time>
 					{category && !Array.isArray(category) ? (
@@ -150,7 +153,7 @@ export async function Entry({
 						<Link
 							href={`${category.locale === reader.locales().source ? "" : `/${category.locale}`}/categories/${category.slug}`}
 						>
-							{category.title}
+							{category.title || UNTITLED}
 						</Link>
 					) : null}
 				</p>
@@ -191,7 +194,7 @@ export async function Category({ slug, locale }: { slug: string; locale: string 
 	});
 	return (
 		<SitePage locale={locale} path={category.path} translations={category.translations}>
-			<h1>{category.title}</h1>
+			<h1>{category.title || UNTITLED}</h1>
 			<PostRows entries={posts} locale={locale} />
 		</SitePage>
 	);

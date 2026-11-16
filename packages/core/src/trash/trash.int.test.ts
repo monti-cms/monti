@@ -450,7 +450,7 @@ describe("restoring", () => {
 		await translate(source);
 
 		const error = await restore(entryRow(first)).catch((caught: unknown) => caught);
-		expect((error as CheckError).reason).toEqual({ key: "trash.localeTaken", values: { locale: "English" } });
+		expect((error as CheckError).reason).toEqual({ key: "trash.localeTaken", values: { locale: "en" } });
 	});
 
 	it("11-1 one entry out of a thrown-away folder brings the folder back to sit in; the rest stay in the trash", async () => {

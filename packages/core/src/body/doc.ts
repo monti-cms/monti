@@ -31,6 +31,11 @@ export type Block = {
 	children?: Block[];
 	/** Only on a translation's top-level blocks that are paired with a source block. */
 	link?: TranslationLink;
+	/**
+	 * Only in a body as the site gets it (`siteDoc`): the source's language, on a translation's block that keeps or follows the source's words. The
+	 * block's own root element carries it as `lang`.
+	 */
+	lang?: string;
 };
 
 /** A body: the JSON document that is always what is stored. MDX and other syntaxes are a plugin's import and export (doc 03, principle 1). */
@@ -55,6 +60,7 @@ export const BlockShape: z.ZodType<Block> = z.lazy(() =>
 		content: z.array(InlineShape).optional(),
 		children: z.array(BlockShape).optional(),
 		link: LinkShape.optional(),
+		lang: z.string().optional(),
 	}),
 );
 export const DocShape: z.ZodType<Doc> = z.object({ type: z.literal("doc"), blocks: z.array(BlockShape) });

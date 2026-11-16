@@ -1618,6 +1618,16 @@ describe("the names a relation's choices are called by", () => {
 	});
 });
 
+describe("an ordered relation's rows", () => {
+	it("[LR-15] a row is drawn once its target's name is known, and a target with no title is 'Untitled', so no row or move label has an empty name", async () => {
+		await on("relatedNames").run();
+		await opened();
+		const row = page.getByRole("button", { name: "제목 없음 옮기기" });
+		await expect.element(row).toBeVisible();
+		await expect.element(page.getByRole("button", { name: /^(「」)?\s*옮기기$/ })).not.toBeInTheDocument();
+	});
+});
+
 describe("a conditional field in the property panel (doc 19)", () => {
 	const field = (name: string) => page.getByRole("textbox", { name });
 	const stored = async ({ site, id }: Loaded) =>

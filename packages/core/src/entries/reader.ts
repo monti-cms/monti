@@ -201,7 +201,7 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 				translations,
 				title: fields.title,
 				values: onlySchemaFields(schema, entry.collection, fields.values),
-				doc: doc && siteDoc(doc, source ? asDoc(source.doc) : null),
+				doc: doc && siteDoc(doc, source ? asDoc(source.doc) : null, schema.locales.source),
 			};
 		}
 

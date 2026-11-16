@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Block, Doc } from "./body/doc";
 import { type BlockProps, type CreateElement, renderDocument, tocOf } from "./render";
+import { siteDoc } from "./translations/source";
 
 const html: CreateElement<string> = (type, props, ...children) => {
 	if (typeof type === "function")
@@ -86,55 +87,63 @@ describe("heading anchors and the table of contents", () => {
 });
 
 describe("blocks kept in the source's words", () => {
-	const paragraph = (
-		id: string,
-		words: string,
-		state?: "pending" | "translated" | "keepSource" | "followSource",
-	): Block => ({
+	const paragraph = (id: string, words: string, extra: Partial<Block> = {}): Block => ({
 		id,
 		type: "paragraph",
 		content: [{ type: "text", text: words }],
-		...(state ? { link: { from: `s_${id}`, seen: "", state } } : {}),
+		...extra,
 	});
-	const body = doc(
-		paragraph("a", "Hello", "translated"),
-		paragraph("b", "안녕", "keepSource"),
-		paragraph("c", "또", "followSource"),
-	);
+	const link = (state: "pending" | "translated" | "keepSource" | "followSource") => ({
+		link: { from: `s_${state}`, seen: "", state },
+	});
 	const drawn = (body: Doc, extra = {}) =>
-		renderDocument(body, { createElement: html, locale: "en", sourceLocale: "ko", ...extra }).join("");
+		renderDocument(body, { createElement: html, locale: "en", ...extra }).join("");
 
-	it("16-6 a block that keeps or follows its source carries the source's language on its own root element, with no element around it", () => {
-		expect(drawn(body)).toBe('<p>Hello</p><p lang="ko">안녕</p><p lang="ko">또</p>');
+	it("16-6 a translation as the reader hands it (siteDoc) draws `lang` on the blocks that keep or follow the source, and only on them", () => {
+		const translation = doc(
+			paragraph("a", "Hello", link("translated")),
+			paragraph("b", "안녕", link("keepSource")),
+			paragraph("c", "(own)", link("followSource")),
+			paragraph("d", "later", link("pending")),
+		);
+		const source = doc(paragraph("s_followSource", "또"));
+		expect(drawn(siteDoc(translation, source, "ko"))).toBe('<p>Hello</p><p lang="ko">안녕</p><p lang="ko">또</p>');
 	});
 
-	it("16-6 an entry in the source's own language, or a site that gave no source language, draws every block as it is", () => {
-		expect(drawn(body, { locale: "ko" })).not.toContain("lang=");
-		expect(drawn(body, { sourceLocale: undefined })).not.toContain("lang=");
+	it("16-6 a body with no source language given (a source-language entry) carries no lang", () => {
+		const translation = doc(paragraph("b", "안녕", link("keepSource")));
+		expect(drawn(siteDoc(translation, null))).toBe("<p>안녕</p>");
 	});
 
-	it("16-6 a file block's link and a code block's figure carry it too", () => {
-		const link = { from: "s", seen: "", state: "keepSource" } as const;
-		const files = doc(
-			{ id: "f", type: "file", attrs: { media: "m1", name: "문서.pdf" }, link },
-			{ id: "k", type: "codeBlock", attrs: {}, content: [{ type: "text", text: "x" }], link },
+	it("16-6 a file block's link, a code block's figure and a kept footnote carry it on their own root element", () => {
+		const kept = link("keepSource");
+		const files = siteDoc(
+			doc(
+				{ id: "f", type: "file", attrs: { media: "m1", name: "문서.pdf" }, ...kept },
+				{ id: "k", type: "codeBlock", attrs: {}, content: [{ type: "text", text: "x" }], ...kept },
+				{ id: "n", type: "footnote", attrs: { id: "1" }, content: [{ type: "text", text: "주" }], ...kept },
+				paragraph("p", "글", {
+					content: [
+						{ type: "text", text: "글" },
+						{ type: "footnoteRef", id: "1" },
+					],
+				}),
+			),
+			null,
+			"ko",
 		);
 		const media = { m1: { url: "/f.pdf", name: "doc.pdf" } } as never;
 		const out = drawn(files, { media });
 		expect(out).toContain('<a href="/f.pdf" download="true" lang="ko">문서.pdf</a>');
 		expect(out).toContain('<figure data-code="" data-block="k" lang="ko">');
+		expect(out).toContain('<li id="fn-1" lang="ko">');
 	});
 
 	it("16-6 a site component gets `lang` as a prop to put on its root element", () => {
 		const Note = (props: Record<string, unknown>) => `<aside lang="${props.lang ?? ""}">${props.children}</aside>`;
-		const note: Block = {
-			id: "n",
-			type: "note",
-			content: [{ type: "text", text: "글" }],
-			link: { from: "s", seen: "", state: "followSource" },
-		};
+		const note: Block = { id: "n", type: "note", content: [{ type: "text", text: "글" }], ...link("keepSource") };
 		const blocks = [{ type: "note", Site: Note }] as never;
-		expect(drawn(doc(note), { blocks })).toBe('<aside lang="ko">글</aside>');
+		expect(drawn(siteDoc(doc(note), null, "ko"), { blocks })).toBe('<aside lang="ko">글</aside>');
 		expect(drawn(doc({ ...note, link: undefined }), { blocks })).toBe('<aside lang="">글</aside>');
 	});
 });

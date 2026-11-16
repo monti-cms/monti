@@ -59,3 +59,28 @@ test("format/ itself, tests, stories and other packages are not read", () => {
 	])
 		assert.deepEqual(check(text, file), []);
 });
+
+test("Intl reached through globalThis, window or self is read like Intl", () => {
+	assert.deepEqual(
+		check(
+			'const a = new globalThis.Intl.DateTimeFormat("ko");\nconst b = window.Intl.DisplayNames;\nconst c = self.Intl["RelativeTimeFormat"];\n',
+		),
+		["1: Intl.DateTimeFormat", "2: Intl.DisplayNames", "3: Intl.RelativeTimeFormat"],
+	);
+	assert.deepEqual(check('const n = new globalThis.Intl.NumberFormat("ko");\n'), []);
+});
+
+test("a UTC part of a date in a template is a date built by hand", () => {
+	assert.deepEqual(
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: the checked source holds a template.
+		check("const day = `${date.getUTCMonth() + 1}. ${date.getUTCDate()}`;\n"),
+		["1: .getUTCMonth() in a template", "1: .getUTCDate() in a template"],
+	);
+	assert.deepEqual(check("const hour = date.getUTCHours();\n"), []);
+});
+
+test("a file that cannot be parsed fails, it is not skipped", () => {
+	const found = problems({ "packages/admin/src/screens/broken.tsx": "const = ;\n" });
+	assert.equal(found.length, 1);
+	assert.match(found[0].message, /cannot be parsed/);
+});

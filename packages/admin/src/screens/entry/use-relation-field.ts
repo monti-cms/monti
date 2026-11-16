@@ -23,6 +23,8 @@ export type RelationFieldModel = {
 	canCreate: boolean;
 	createToken: string | null;
 	createLabel: string | null;
+	/** The options are known (or there are none to read): a name is final then. Until then the chips and rows are not drawn, so none shows with no name. */
+	ready: boolean;
 	labelOf: (groupOrToken: string) => string;
 	/** The address of an option that shares its name with another: what tells the two apart. Nothing for a name that stands alone. */
 	addressOf: (group: string) => string | null;
@@ -69,6 +71,8 @@ export function useRelationField({
 	const createToken = canCreate ? `new:${q}` : null;
 	const createLabel = canCreate ? t("relations.createNew", { name: q }) : null;
 
+	const ready = skip || Boolean(read.data) || read.refusal !== null;
+
 	const labelOf = useCallback(
 		(groupOrToken: string): string => {
 			if (!groupOrToken) return "";
@@ -82,10 +86,10 @@ export function useRelationField({
 			// A target in the trash is no choice, but the field still points at it: it is named, and says where it is (doc 08).
 			const trashed = read.data?.trashed.find((each) => each.group === groupOrToken);
 			if (trashed) return t("relations.inTrash", { title: titleOf(trashed.title, t) });
-			// Not read yet, or gone for good: an id is not a name, so it says nothing.
-			return "";
+			// Read, and not there: gone for good. An id is not a name; it is called what every untitled thing is.
+			return ready ? titleOf("", t) : "";
 		},
-		[allOptions, read.data?.trashed, t],
+		[allOptions, read.data?.trashed, ready, t],
 	);
 
 	const addressOf = useCallback(
@@ -107,6 +111,7 @@ export function useRelationField({
 		createToken,
 		createLabel,
 		labelOf,
+		ready,
 		targetCollection: read.data?.targetCollection,
 		targetKind: read.data?.targetKind,
 	};

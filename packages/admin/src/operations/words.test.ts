@@ -13,3 +13,16 @@ describe("whose words a message is read in", () => {
 		expect(wordsOf("en", { key: "errors.conflict" })).toBe("Changed in the meantime.");
 	});
 });
+
+describe("a language in an operation's message", () => {
+	it("a code in a message's values is said by its name in the admin's language, never as the code", () => {
+		expect(wordsOf("ko", { key: "translations.create", values: { locale: "ja" } })).toBe("일본어 번역 시작");
+		expect(wordsOf("en", { key: "translations.create", values: { locale: "ja" } })).toBe(
+			"Translation into Japanese started",
+		);
+		expect(wordsOf("ko", { key: "entries.notSourceLocale", values: { locale: "en", source: "ko" } })).toBe(
+			"새 글은 한국어로 씁니다. 영어 글은 번역으로 만듭니다.",
+		);
+		expect(wordsOf("ko", { key: "trash.localeTaken", values: { locale: "en" } })).toBe("영어 번역이 이미 있습니다.");
+	});
+});

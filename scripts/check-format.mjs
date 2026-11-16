@@ -3,10 +3,10 @@
 // this as its `format-only` rule over the admin's sources outside that folder (tests and stories are not read).
 //
 // What fails:
-// - `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat`, `Intl.DisplayNames`: a date or a language's name built in a screen.
+// - `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat`, `Intl.DisplayNames` (also as `globalThis.Intl`): a date or a language's name built in a screen.
 // - `.toLocaleDateString(…)`, `.toLocaleTimeString(…)`: the same, by the browser's own words.
 // - `.padStart(…)`: a date or a time put together by hand ("0" before a month).
-// - a date's part read inside a template (`${date.getMonth() + 1}. ${date.getDate()}`).
+// - a date's part read inside a template (`${date.getMonth() + 1}. ${date.getDate()}`, or the `getUTC…` parts).
 // - `.toUpperCase()`: a code shown in capitals in place of a name ("EN" for English, "PDF" from a file's name is `extensionLabel`).
 //
 // What it cannot see:
@@ -39,6 +39,15 @@ export const checked = (file) =>
 const INTL = new Set(["DateTimeFormat", "RelativeTimeFormat", "DisplayNames"]);
 const LOCALE_CALLS = new Set(["toLocaleDateString", "toLocaleTimeString"]);
 const DATE_PARTS = new Set(["getFullYear", "getMonth", "getDate", "getHours", "getMinutes", "getSeconds"]);
+const UTC_PARTS = /^getUTC(FullYear|Month|Date|Hours|Minutes|Seconds)$/;
+const GLOBALS = new Set(["globalThis", "window", "self"]);
+/** `Intl`, or `globalThis.Intl` and its kin. */
+const isIntl = (node) =>
+	(node?.type === "Identifier" && node.name === "Intl") ||
+	(/MemberExpression$/.test(node?.type ?? "") &&
+		memberName(node) === "Intl" &&
+		node.object?.type === "Identifier" &&
+		GLOBALS.has(node.object.name));
 
 const lineOf = (text, offset) => text.slice(0, offset).split("\n").length;
 /** The name a member is read by: `a.name` or `a["name"]`. */
@@ -55,7 +64,15 @@ export function problems(sources) {
 	for (const [file, text] of Object.entries(sources)) {
 		if (!checked(file)) continue;
 		const { program, errors } = parseSync(file, text);
-		if (errors.length > 0) continue;
+		// A file that cannot be read is not passed over: what is in it was not checked.
+		if (errors.length > 0) {
+			found.push({
+				file,
+				line: 1,
+				message: `cannot be parsed (${errors[0]?.message ?? "syntax error"}): the rule could not read it.`,
+			});
+			continue;
+		}
 		const add = (node, message) => found.push({ file, line: lineOf(text, node.start), message });
 		const walk = (node, inTemplate) => {
 			if (!node || typeof node !== "object") return;
@@ -67,7 +84,7 @@ export function problems(sources) {
 			const member = node.type === "MemberExpression" || node.type === "StaticMemberExpression";
 			if (member || node.type === "ComputedMemberExpression") {
 				const name = memberName(node);
-				if (node.object?.type === "Identifier" && node.object.name === "Intl" && INTL.has(name))
+				if (isIntl(node.object) && INTL.has(name))
 					add(node, `Intl.${name}: dates and language names are written by ${FORMAT_DIR} (date.ts, language.ts).`);
 			}
 			if (node.type === "CallExpression" && /MemberExpression$/.test(node.callee?.type ?? "")) {
@@ -83,7 +100,7 @@ export function problems(sources) {
 						node,
 						`.toUpperCase(): a code in capitals is not a name; use ${FORMAT_DIR}language.ts (useLanguageName) or names.ts (extensionLabel).`,
 					);
-				if (inTemplate && DATE_PARTS.has(name))
+				if (inTemplate && (DATE_PARTS.has(name) || UTC_PARTS.test(name)))
 					add(node, `.${name}() in a template: a date built by hand; use ${FORMAT_DIR}date.ts.`);
 			}
 			const inside = inTemplate || node.type === "TemplateLiteral";

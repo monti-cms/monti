@@ -280,7 +280,7 @@ function RelationManyInput({
 			readOnly={readOnly}
 		>
 			<ComboboxChips ref={anchor} size="md" proposal={proposal}>
-				{value.map((item) => (
+				{(rel.ready ? value : []).map((item) => (
 					// A field that cannot be changed offers no way to take a value out.
 					<ComboboxChip key={item} showRemove={!readOnly}>
 						{rel.labelOf(item)}
@@ -415,7 +415,7 @@ function RelationOrderedManyInput({
 				</Combobox>
 			)}
 			{/* Only read: the items in their order, with nothing that moves or removes one (no grip, no ×, no word on how to move). */}
-			{value.length > 0 && readOnly && (
+			{value.length > 0 && readOnly && rel.ready && (
 				<List marker="none" id={id} aria-labelledby={labelledBy}>
 					{value.map((item) => (
 						<OrderedRow key={item}>
@@ -424,7 +424,7 @@ function RelationOrderedManyInput({
 					))}
 				</List>
 			)}
-			{value.length > 0 && !readOnly && (
+			{value.length > 0 && !readOnly && rel.ready && (
 				<Sortable
 					nameOf={(item) => rel.labelOf(String(item))}
 					onDrop={({ active, over }) => {

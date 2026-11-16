@@ -11,6 +11,7 @@ import {
 	type MessageBundle,
 } from "@monti-cms/core";
 import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import { languageName } from "../format/language";
 import { adminMessages } from "../messages";
 import type { AdminPlugin, DocumentView, FieldInput, FieldViewProps } from "../plugins";
 import { createFailedReads, type FailedReads } from "./failed-reads";
@@ -128,7 +129,24 @@ export function wordsOf(language: Language, message: Label, values?: Message["va
 	const said = labelIn(message, language);
 	return typeof said === "string"
 		? formatMessage(BUNDLES, language, { key: said, values })
-		: formatMessage(SERVER_BUNDLES, language, said);
+		: formatMessage(SERVER_BUNDLES, language, withLanguageNames(language, said));
+}
+
+/** The values of an operation's message that are language codes, by message: said by their name in the admin's language ("Japanese"), never as `ja`. */
+const LANGUAGE_VALUES: Record<string, readonly string[]> = {
+	"translations.create": ["locale"],
+	"translations.exists": ["locale"],
+	"translations.unknownLocale": ["locale"],
+	"entries.notSourceLocale": ["locale", "source"],
+	"trash.localeTaken": ["locale"],
+};
+
+function withLanguageNames(language: Language, message: Message): Message {
+	const names = LANGUAGE_VALUES[message.key];
+	if (!names || !message.values) return message;
+	const values = { ...message.values };
+	for (const name of names) if (typeof values[name] === "string") values[name] = languageName(values[name], language);
+	return { ...message, values };
 }
 
 /** One list for "none": a new one on each render would make every screen read again whenever this one changes, as when the session ends. */

@@ -85,11 +85,18 @@ function Picture({ image, className, width }: { image: SiteImage; className?: st
 }
 
 /** The links of a relation field, or `null` for one with no target, so its row is left out. */
-const links = (value: ResolvedRelation | ResolvedRelation[] | null | undefined) =>
-	many(value).length > 0 ? <RelationLinks value={value} /> : null;
+const links = (value: ResolvedRelation | ResolvedRelation[] | null | undefined, locale: string) =>
+	many(value).length > 0 ? <RelationLinks value={value} locale={locale} /> : null;
 
-function RelationLinks({ value }: { value: ResolvedRelation | ResolvedRelation[] | null | undefined }) {
+function RelationLinks({
+	value,
+	locale,
+}: {
+	value: ResolvedRelation | ResolvedRelation[] | null | undefined;
+	locale: string;
+}) {
 	const list = many(value);
+	const untitled = wordsIn(locale).untitled;
 	if (list.length === 0) return null;
 	return (
 		<>
@@ -98,9 +105,10 @@ function RelationLinks({ value }: { value: ResolvedRelation | ResolvedRelation[]
 				return (
 					<span key={relation.id}>
 						{index > 0 ? ", " : null}
-						{path ? <Link href={path}>{relation.title}</Link> : relation.title}
-						{/* Shown from the source language: this one has no page in the page's language. */}
-						{relation.fallback ? <small> ({relation.locale})</small> : null}
+						{/* Shown from the source language when it has no page in the page's language: said by `lang`, not by a code. */}
+						<span lang={relation.fallback ? relation.locale : undefined}>
+							{path ? <Link href={path}>{text(relation.title) ?? untitled}</Link> : (text(relation.title) ?? untitled)}
+						</span>
 					</span>
 				);
 			})}
@@ -110,11 +118,16 @@ function RelationLinks({ value }: { value: ResolvedRelation | ResolvedRelation[]
 
 /** A list of entries, each with its name; a date only where it says something (an article's), never a tag's or a person's. */
 function EntryRows({ entries, locale, dates = false }: { entries: SiteEntry[]; locale: string; dates?: boolean }) {
+	const untitled = wordsIn(locale).untitled;
 	return (
 		<ul className="rows">
 			{entries.map((entry) => (
 				<li key={entry.id}>
-					{entry.path ? <Link href={entry.path}>{entry.title}</Link> : entry.title}
+					{entry.path ? (
+						<Link href={entry.path}>{text(entry.title) ?? untitled}</Link>
+					) : (
+						(text(entry.title) ?? untitled)
+					)}
 					{dates ? <time>{day(entry.publishedAt, locale)}</time> : null}
 				</li>
 			))}
@@ -264,7 +277,7 @@ function Format({ entry, locale }: { entry: PageEntry; locale: string }) {
 				values.linkKind === "external" && linkUrl ? (
 					<a href={linkUrl}>{linkUrl}</a>
 				) : values.linkKind === "internal" ? (
-					links(target)
+					links(target, locale)
 				) : null,
 		});
 	return <Fields rows={rows} />;
@@ -295,7 +308,6 @@ async function Body({ entry }: { entry: PageEntry }) {
 					entryPath: entry.entryPath,
 					code: await code,
 					locale: entry.locale,
-					sourceLocale: reader.locales().source,
 				})}
 			</div>
 		</>
@@ -325,9 +337,9 @@ function ArticleView({ entry, locale }: { entry: PageEntry; locale: string }) {
 			{text(values.summary) ? <p className="summary">{text(values.summary)}</p> : null}
 			<Fields
 				rows={[
-					{ name: words.fields.series, value: links(relations?.series) },
-					{ name: words.fields.authors, value: links(relations?.authors) },
-					{ name: words.fields.tags, value: links(relations?.tags) },
+					{ name: words.fields.series, value: links(relations?.series, locale) },
+					{ name: words.fields.authors, value: links(relations?.authors, locale) },
+					{ name: words.fields.tags, value: links(relations?.tags, locale) },
 					{ name: words.fields.attachment, value: file ? <a href={file.url}>{file.name}</a> : null },
 				]}
 			/>
@@ -336,7 +348,7 @@ function ArticleView({ entry, locale }: { entry: PageEntry; locale: string }) {
 			{many(relations?.related).length > 0 ? (
 				<aside>
 					<h2>{words.related}</h2>
-					<RelationLinks value={relations?.related} />
+					<RelationLinks value={relations?.related} locale={locale} />
 				</aside>
 			) : null}
 		</article>
