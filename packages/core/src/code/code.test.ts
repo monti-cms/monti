@@ -214,6 +214,15 @@ describe("17-4 Monti's code colours", () => {
 		}
 	});
 
+	it("17-4 a shell sample is coloured by the shell's own grammar, not JavaScript's", async () => {
+		const colors = await codeHighlighter({ languages: ["bash", "ts"] });
+		const sample = "pnpm add katex # install";
+		const shell = colors.lines(sample, "bash")[0];
+		const script = colors.lines(sample, "ts")[0];
+		expect(colors.has("bash")).toBe(true);
+		expect(shell.map((token) => token.text)).not.toEqual(script.map((token) => token.text));
+	});
+
 	it("17-4 the default colours are Monti's pair, and a site can still name another Shiki theme", async () => {
 		expect((await codeHighlighter({ languages: ["ts"] })).themes).toEqual({ light: "monti-light", dark: "monti-dark" });
 		const named = await codeHighlighter({ languages: ["ts"], themes: { light: "min-light", dark: "min-dark" } });

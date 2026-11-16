@@ -2,11 +2,16 @@
 // Reads the site's env files the way Next does, loads the site's monti.config.ts (TypeScript, through jiti) and runs the command.
 // `monti init` writes the config, and `monti doctor` runs without one that loads: that it is missing or broken is what it reports.
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createJiti } from "jiti";
 
 const root = process.cwd();
 // The site's blocks are TSX (doc 18: `monti add` copies them in, and the config imports them): React's automatic runtime, as Next uses.
-const jiti = createJiti(import.meta.url, { jsx: { runtime: "automatic" } });
+// The formula block imports KaTeX's stylesheet for the site's bundler; the CLI has no page to put it in, so it reads as an empty module.
+const jiti = createJiti(import.meta.url, {
+	jsx: { runtime: "automatic" },
+	alias: { "katex/dist/katex.min.css": fileURLToPath(new URL("./no-style.mjs", import.meta.url)) },
+});
 const cli = await jiti.import("@monti-cms/core/cli");
 
 // `--env-file <path>` (or `--env-file=<path>`) names one more env file, read before the site's own.

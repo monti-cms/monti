@@ -71,6 +71,10 @@ export const style = `/*
 	height: auto;
 	max-width: 100%;
 }
+/* A schedule's dates are Mermaid's smallest letters (10px of its own): never under 12px. */
+.monti-block-mermaid-diagram svg .grid .tick text {
+	font-size: 12px !important;
+}
 .monti-block-mermaid-source {
 	width: 100%;
 	margin: 0;

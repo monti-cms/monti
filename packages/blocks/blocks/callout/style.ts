@@ -108,6 +108,13 @@ export const style = `/*
 .monti-block-callout-body > :last-child {
 	margin-bottom: 0;
 }
+/* In the editor the blocks sit one level deeper (the editor's content holder): the first and the last have no space outside the box either. */
+.monti-block-callout-body [data-node-view-content-react] > :first-child {
+	margin-top: 0;
+}
+.monti-block-callout-body [data-node-view-content-react] > :last-child {
+	margin-bottom: 0;
+}
 /* A code box inside is the callout's ground with no frame of its own: one box, not boxes in boxes. */
 .monti-block-callout-body figure[data-code] {
 	border-color: transparent;

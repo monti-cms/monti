@@ -1,7 +1,7 @@
 "use client";
 
 import { SourceBlock, useBlock } from "@monti-cms/admin/blocks";
-import { drawFormula, KatexStyle } from "./site";
+import { drawFormula } from "./site";
 import { style } from "./style";
 import { words } from "./words";
 
@@ -19,7 +19,6 @@ export default function MathEditor() {
 			<style href="monti-block-math" precedence="monti-blocks">
 				{style}
 			</style>
-			<KatexStyle />
 			<SourceBlock
 				label={say(words.source)}
 				tools={say(words.tools)}

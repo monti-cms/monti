@@ -59,6 +59,9 @@ export const style = `/*
 	overflow-x: auto;
 	overflow-y: hidden;
 }
+.monti-block-math .katex-display {
+	margin: 0;
+}
 .monti-block-math .katex {
 	color: inherit;
 	font-size: 1.1em;

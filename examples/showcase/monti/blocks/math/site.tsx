@@ -1,5 +1,7 @@
 import type { BlockProps } from "@monti-cms/core/render";
 import katex from "katex";
+// KaTeX's own stylesheet (the letters' fonts and the layout of its boxes), from the installed package: the site's bundler serves it and its fonts.
+import "katex/dist/katex.min.css";
 import { style } from "./style";
 
 /** A formula drawn by KaTeX, or the reason it is not one. */
@@ -9,18 +11,6 @@ export function drawFormula(source: string): { html: string } | { error: string 
 	} catch (error) {
 		return { error: error instanceof Error ? error.message.replace(/^KaTeX parse error: /, "") : String(error) };
 	}
-}
-
-/** KaTeX's own stylesheet (the letters' fonts and the layout of its boxes), by the version of the `katex` the site installed. */
-export function KatexStyle() {
-	const version = (katex as unknown as { version?: string }).version ?? "0.16";
-	return (
-		<link
-			rel="stylesheet"
-			href={`https://cdn.jsdelivr.net/npm/katex@${version}/dist/katex.min.css`}
-			precedence="monti-blocks"
-		/>
-	);
 }
 
 /**
@@ -50,7 +40,6 @@ export function MathBlock(props: Parameters<typeof MathBlockDrawing>[0]) {
 			<style href="monti-block-math" precedence="monti-blocks">
 				{style}
 			</style>
-			<KatexStyle />
 			<MathBlockDrawing {...props} />
 		</>
 	);

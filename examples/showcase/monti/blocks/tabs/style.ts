@@ -107,6 +107,12 @@ export const style = `/*
 .monti-block-tabs-panel > :last-child {
 	margin-bottom: 0;
 }
+.monti-block-tabs-panel [data-node-view-content-react] > :first-child {
+	margin-top: 0;
+}
+.monti-block-tabs-panel [data-node-view-content-react] > :last-child {
+	margin-bottom: 0;
+}
 
 /* In the editor: a title typed in the block keeps the block's own letters. */
 [data-slot="block-title"] {

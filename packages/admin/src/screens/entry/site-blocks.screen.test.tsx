@@ -479,7 +479,8 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		const formula = element("math");
 		if (!formula) throw new Error("no formula");
 		await userEvent.click(formula);
-		await userEvent.click(page.getByRole("button", { name: "요청" }));
+		// The formula's own tool row: another block's row that the pointer has only just left may still be in its leaving time.
+		await userEvent.click(page.getByRole("toolbar", { name: "수식 도구" }).getByRole("button", { name: "요청" }));
 		const box = page.getByRole("textbox", { name: "어시스턴트에게 요청" });
 		await expect.element(box).toBeVisible();
 		await userEvent.fill(box, "피타고라스 정리로 바꿔 줘");

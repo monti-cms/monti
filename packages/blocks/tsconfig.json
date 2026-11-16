@@ -13,5 +13,5 @@
 		"jsx": "react-jsx",
 		"types": ["node"]
 	},
-	"include": ["blocks", "vitest.config.ts"]
+	"include": ["blocks", "css.d.ts", "vitest.config.ts"]
 }
