@@ -107,9 +107,13 @@ export function ProposalMargin({ editor, marks }: { editor: Editor; marks: reado
 
 /** The words a stale card holds (kept as text with the proposal) as a body at the card's size, as the translation's cards draw theirs. */
 function PlainWords({ words, muted = false }: { words: string; muted?: boolean }) {
+	// The words of a block kept as lines (a list's items, a table's rows): one paragraph per line, so a list reads as its lines.
 	const doc: Doc = {
 		type: "doc",
-		blocks: [{ id: "words", type: "paragraph", content: [{ type: "text", text: words }] }],
+		blocks: words
+			.split("\n")
+			.filter((line) => line !== "")
+			.map((line, at) => ({ id: `line-${at}`, type: "paragraph", content: [{ type: "text", text: line }] })),
 	};
 	return <ReadBody doc={doc} size="card" muted={muted} />;
 }

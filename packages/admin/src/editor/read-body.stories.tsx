@@ -1,6 +1,6 @@
 import { blocks, marks } from "@monti-cms/blocks";
 import type { Doc } from "@monti-cms/core";
-import { Compare, CompareSide } from "@monti-cms/ui";
+import { Compare, CompareSide, EditorBody } from "@monti-cms/ui";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { StorySite } from "../../.storybook/pglite-site";
 import { type AdminBlockDefinition, type AdminMarkDefinition, AdminProvider } from "../operations/admin-context";
@@ -17,7 +17,7 @@ type Options = {
 	size?: "reading" | "chat" | "card";
 	muted?: boolean;
 	ground?: "page" | "tool";
-	/** The body stands inside text that is written (`contenteditable`), as a source cell does in a side-by-side translation. */
+	/** The body stands inside the editor's written text (an `EditorBody` with `contenteditable` in it), as a source cell does in a side-by-side translation. */
 	inEditable?: boolean;
 	/** A site block whose drawing throws when it is drawn (its type). */
 	breakSite?: string;
@@ -84,10 +84,13 @@ function Both({
 			</CompareSide>
 		</Compare>
 	);
+	// The real case: the editor's own body, its text written (`contenteditable`), with the read bodies standing in it (a side-by-side translation's source cells).
 	return options.inEditable ? (
-		<div contentEditable suppressContentEditableWarning>
-			{body}
-		</div>
+		<EditorBody>
+			<div contentEditable suppressContentEditableWarning>
+				{body}
+			</div>
+		</EditorBody>
 	) : (
 		body
 	);

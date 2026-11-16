@@ -1,3 +1,4 @@
+import { Callout } from "@monti-cms/blocks/callout/site";
 import { CodeArea, CodeFrame, CodeGround, CodeNumber, CompareBody, Text } from "../../index";
 
 /**
@@ -70,8 +71,8 @@ export function RefTable({
 }
 
 /**
- * A callout of a reference board: the site's block, whose own look the site brings (`packages/blocks`), so here it is its markup, a `data-block` holding
- * its title and its words as paragraphs.
+ * A callout of a reference board: the site's block itself (`@monti-cms/blocks`, which loads its own style the way the admin does), its title over its words
+ * as paragraphs, in a body that gives it the body's spacing.
  */
 export function RefCallout({
 	title,
@@ -82,15 +83,15 @@ export function RefCallout({
 	lines: readonly string[];
 	ground?: "page" | "tool";
 }) {
+	const attrs = { tone: "note", title };
 	return (
 		<CompareBody ground={ground}>
 			<div data-block="callout">
-				<p>
-					<strong>{title}</strong>
-				</p>
-				{lines.map((line) => (
-					<p key={line}>{line}</p>
-				))}
+				<Callout block={{ id: "callout", type: "callout", attrs }} attrs={attrs}>
+					{lines.map((line) => (
+						<p key={line}>{line}</p>
+					))}
+				</Callout>
 			</div>
 		</CompareBody>
 	);

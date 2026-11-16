@@ -227,6 +227,7 @@ function ReadCode({
 	kind,
 	streaming = false,
 	chat = false,
+	caret = false,
 }: {
 	code: string;
 	data: CodeData;
@@ -241,6 +242,8 @@ function ReadCode({
 	streaming?: boolean;
 	/** In an answer: words wrap, at most half the window high, with no numbers, effects or folds (the answer's code is its words). */
 	chat?: boolean;
+	/** The caret of an answer still arriving, after the code's last character. */
+	caret?: boolean;
 }) {
 	const { t } = useAdmin();
 	const [folds, setFolds] = useState<ReadonlyMap<string, boolean>>(new Map());
@@ -352,6 +355,7 @@ function ReadCode({
 							stretch.wrap ? stretch.wrap(marked) : marked,
 						);
 					})}
+					{caret ? <StreamCaret /> : null}
 				</CodeArea>
 			</CodeFrame>
 		</div>
@@ -645,6 +649,7 @@ function drawBlock(
 				kind={context.kind}
 				streaming={context.streaming}
 				chat={context.chat}
+				caret={context.caretAt === node}
 			/>
 		);
 	}
@@ -832,7 +837,13 @@ export function ReadBody({
 	const drawn = useMemo(() => {
 		if (doc.blocks.length === 0) return null;
 		// Without the catalog (still being read, or it failed) the body is its words, so nothing is left blank.
-		if (!kit) return doc.blocks.map((block) => <p key={block.id}>{blockWords(block).text}</p>);
+		if (!kit)
+			return doc.blocks.map((block, at) => (
+				<p key={block.id}>
+					{blockWords(block).text}
+					{streaming && at === doc.blocks.length - 1 ? <StreamCaret /> : null}
+				</p>
+			));
 		const schema = schemaOf(kit, definitions);
 		const from = (blocks: Block[]) => docToEditor({ ...doc, blocks }, kit);
 		// The whole body, or, where one block cannot be made into the editor's nodes, each block by itself: the others are drawn and that one is a box.
@@ -874,8 +885,13 @@ export function ReadBody({
 			footnotes: 0,
 			streaming,
 			chat: size === "chat",
-			// An answer that ends in code has its caret after the code (below), not in the words above it.
-			caretAt: streaming && body && body.lastChild?.type.name !== nodeName("codeBlock") ? lastWords(body) : null,
+			// The caret of an answer still arriving: after the last character of its last words, in the code when it ends in code.
+			caretAt:
+				streaming && body
+					? body.lastChild?.type.name === nodeName("codeBlock")
+						? body.lastChild
+						: lastWords(body)
+					: null,
 		};
 		const top: ReactNode[] = [];
 		const parent = body ?? ({ type: { name: "doc" } } as NodeOf);
@@ -889,14 +905,6 @@ export function ReadBody({
 				// biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one body, in order
 				block = <Box key={index} type={type} id={id} label={unknownLabel(t, type)} context={context} />;
 			}
-			// An answer that ends in code has its caret after the code: the words it has stand above.
-			if (streaming && index === made.length - 1 && node?.type.name === nodeName("codeBlock"))
-				block = (
-					<Fragment key={id || "last"}>
-						{block}
-						<StreamCaret />
-					</Fragment>
-				);
 			top.push(
 				current === undefined ? (
 					block

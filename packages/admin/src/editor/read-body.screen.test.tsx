@@ -50,6 +50,22 @@ const StreamingChat = scene<read.Loaded>(
 	{ loaders: read.read({ type: "doc", blocks: MINE.blocks.slice(0, 2) }, null, { size: "chat", streaming: true }) },
 	read.default,
 );
+const TodoChat = scene<read.Loaded>({ loaders: read.read(TODO, null, { size: "chat" }) }, read.default);
+const TodoCard = scene<read.Loaded>({ loaders: read.read(TODO, null, { size: "card" }) }, read.default);
+const StreamingCode = scene<read.Loaded>(
+	{ loaders: read.read(MINE, null, { size: "chat", streaming: true }) },
+	read.default,
+);
+const StreamingPlain = scene<read.Loaded>(
+	{
+		loaders: read.read({ type: "doc", blocks: MINE.blocks.slice(0, 2) }, null, {
+			size: "chat",
+			streaming: true,
+			failCatalog: true,
+		}),
+	},
+	read.default,
+);
 const TodoInEditable = scene<read.Loaded>({ loaders: read.read(TODO, null, { inEditable: true }) }, read.default);
 const Thrown = scene<read.Loaded>(
 	{
@@ -293,5 +309,29 @@ describe("a body read without being written draws as the editor draws it", () =>
 	it("[reach] pictures are named by their file when the body is not given its files", async () => {
 		await Named.run();
 		await expect.poll(() => sides()[0]?.querySelector("[data-box]")?.textContent).toContain("build.png");
+	});
+
+	it("[reach] a to-do's box stands at the middle of its item's first line, in the body's three sizes", async () => {
+		for (const run of [Todo, TodoChat, TodoCard]) {
+			await run.run();
+			await expect.poll(() => sides()[0]?.querySelector("[role=checkbox]")).not.toBeNull();
+			const item = sides()[0]?.querySelector("li") as HTMLElement;
+			const box = item.querySelector("[data-check-box]") as HTMLElement;
+			const line = Number.parseFloat(getComputedStyle(item).lineHeight);
+			const middle =
+				box.getBoundingClientRect().top + box.getBoundingClientRect().height / 2 - item.getBoundingClientRect().top;
+			expect(Math.abs(middle - line / 2)).toBeLessThan(0.6);
+		}
+	});
+
+	it("[reach] the caret of an answer that ends in code stands in the code, after its last character, and in the plain words while the catalog loads", async () => {
+		await StreamingCode.run();
+		await expect.poll(() => sides()[0]?.querySelector("[data-slot=stream-caret]")).not.toBeNull();
+		const caret = sides()[0]?.querySelector("[data-slot=stream-caret]") as HTMLElement;
+		expect(caret.closest("[data-slot=code-text]")).not.toBeNull();
+		expect(caret.parentElement?.lastElementChild).toBe(caret);
+		expect(caret.parentElement?.textContent?.endsWith("count++;")).toBe(true);
+		await StreamingPlain.run();
+		await expect.poll(() => sides()[0]?.querySelector("p [data-slot=stream-caret]")).not.toBeNull();
 	});
 });
