@@ -85,6 +85,7 @@ export type {
 	RecordLabel,
 } from "./engine/proposals";
 export type { UndoPlan } from "./engine/undo";
+export { sortFacets } from "./entries/facet-order";
 export {
 	type ColumnKind,
 	type Facet,
@@ -93,7 +94,6 @@ export {
 	type ListQuery,
 	type ListRow,
 	PAGE_SIZES,
-	sortFacets,
 } from "./entries/list";
 export type { EntryState } from "./entries/operations";
 export { publicPath, slugify } from "./entries/paths";
