@@ -39,6 +39,8 @@ export const style = `/*
 	--monti-block-accent: oklch(0.6 0.14 250);
 	--monti-block-tooltip-bg: oklch(0.21 0.03 265);
 	--monti-block-tooltip-fg: oklch(0.98 0.005 265);
+	/* The page's own ground, which a block that joins it takes (the open tab); a site names its own. */
+	--monti-block-ground: var(--monti-bg-page, Canvas);
 }
 :where(.dark, [data-theme="dark"]) {
 	--monti-block-tooltip-bg: oklch(0.96 0.005 265);

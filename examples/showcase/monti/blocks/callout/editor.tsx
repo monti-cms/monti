@@ -42,7 +42,7 @@ export default function CalloutEditor() {
 			<style href="monti-block-callout" precedence="monti-blocks">
 				{style}
 			</style>
-			<div className="monti-block-callout" data-tone={tone} role="note">
+			<div className="monti-block-callout" data-tone={tone} role="note" aria-label={wordsIn(block.locale)[tone]}>
 				<div className="monti-block-callout-title" contentEditable={false}>
 					<BlockTitle
 						label={say(words.title)}

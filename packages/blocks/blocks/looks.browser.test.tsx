@@ -1,10 +1,12 @@
 import type { Block, Doc } from "@monti-cms/core";
 import { renderDocument } from "@monti-cms/core/render";
+import "@monti-cms/core/render.css";
 import { createElement, type ElementType, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import { blocks, marks } from "./index";
+import { contrastOf, type Rgb } from "./mermaid/look";
 
 // The blocks' looks as a reader sees them (doc 18): the site's drawing in a real browser, measured, in light and in dark.
 
@@ -12,6 +14,13 @@ const doc = (...list: Block[]): Doc => ({ type: "doc", blocks: list });
 const p = (id: string, text: string): Block => ({ id, type: "paragraph", content: [{ type: "text", text }] });
 const h = (type: unknown, props: Record<string, unknown> | null, ...children: unknown[]) =>
 	createElement(type as ElementType, props, ...(children as ReactNode[]));
+
+/** The two looks of a page: the text colour and the ground a site gives each. */
+const PAGES = {
+	light: { ink: "rgb(28 27 24)", ground: "rgb(250 249 245)" },
+	dark: { ink: "rgb(236 235 230)", ground: "rgb(26 25 23)" },
+} as const;
+type Mode = keyof typeof PAGES;
 
 let host: HTMLElement | null = null;
 let root: Root | null = null;
@@ -24,10 +33,11 @@ afterEach(() => {
 	document.documentElement.style.cssText = "";
 });
 
-/** The page's body drawn the way a site draws it, in a box `width` wide. */
-function draw(body: Doc, width = 640): HTMLElement {
+/** The page's body drawn the way a site draws it, in a box `width` wide, in the light or the dark look. */
+function draw(body: Doc, { width = 640, mode = "light" }: { width?: number; mode?: Mode } = {}): HTMLElement {
+	if (mode === "dark") document.documentElement.classList.add("dark");
 	host = document.createElement("div");
-	host.style.cssText = `width:${width}px;font:17px/1.6 system-ui, sans-serif;color:rgb(28 27 24);`;
+	host.style.cssText = `width:${width}px;font:17px/1.6 system-ui, sans-serif;color:${PAGES[mode].ink};background:${PAGES[mode].ground};--monti-block-ground:${PAGES[mode].ground};`;
 	document.body.append(host);
 	root = createRoot(host);
 	flushSync(() =>
@@ -40,14 +50,20 @@ function draw(body: Doc, width = 640): HTMLElement {
 
 const style = (element: Element, pseudo?: string) => getComputedStyle(element, pseudo);
 const px = (value: string) => Number.parseFloat(value);
-const luminance = (color: string) => {
-	const [r, g, b] = (color.match(/[\d.]+/g) ?? []).slice(0, 3).map((value) => {
-		const channel = Number(value) / 255;
-		return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-	});
-	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+const canvas = document.createElement("canvas");
+canvas.width = canvas.height = 1;
+const paint = canvas.getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D;
+/** What the eye sees of colours laid one over another (any CSS colour, translucent ones too), as red, green, blue. */
+const flat = (...layers: string[]): Rgb => {
+	paint.clearRect(0, 0, 1, 1);
+	for (const layer of layers) {
+		paint.fillStyle = layer;
+		paint.fillRect(0, 0, 1, 1);
+	}
+	const [r, g, b] = paint.getImageData(0, 0, 1, 1).data;
+	return [r, g, b];
 };
-const opaque = (color: string) => color.startsWith("rgb(") || color.startsWith("#");
+const rgbOf = (color: string) => flat(color);
 
 const callout = (tone: string, title: string): Block => ({
 	id: `c_${tone}`,
@@ -56,40 +72,52 @@ const callout = (tone: string, title: string): Block => ({
 	children: [p(`p_${tone}`, "Body words of the callout.")],
 });
 
-describe("18-2 the callout's look", () => {
-	it("18-2 the kind is the bar down the left and an icon, never colour alone; the title and the words are the page's own colour and size", () => {
+describe.each(["light", "dark"] as const)("18-2 the callout's look, in the %s page", (mode) => {
+	it("18-2 the kind is the bar and an icon in the text colour, never colour alone; the title and the words are the page's own colour and size", () => {
 		const page = draw(
 			doc(
 				p("o", "A paragraph outside."),
 				...["note", "tip", "info", "warning", "danger"].map((tone) => callout(tone, `Title ${tone}`)),
 			),
+			{ mode },
 		);
 		const boxes = [...page.querySelectorAll<HTMLElement>(".monti-block-callout")];
 		expect(boxes).toHaveLength(5);
 		const outside = page.querySelector("p") as HTMLElement;
 		for (const box of boxes) {
-			const box_ = style(box);
-			expect(box_.borderLeftWidth).toBe("4px");
-			for (const side of ["Top", "Right", "Bottom"] as const) expect(box_[`border${side}Width`]).toBe("0px");
-			expect(box_.borderTopLeftRadius).toBe("0px");
+			const frame = style(box);
+			expect(frame.borderInlineStartWidth).toBe("4px");
+			for (const side of ["Top", "Right", "Bottom"] as const) expect(frame[`border${side}Width`]).toBe("0px");
+			expect(frame.borderTopLeftRadius).toBe("0px");
+			// The kind is named for a screen reader too, whatever the title says.
+			expect(box.getAttribute("aria-label")).toBe(
+				box.getAttribute("data-tone")?.replace(/^./, (letter) => letter.toUpperCase()),
+			);
 			const title = box.querySelector<HTMLElement>(".monti-block-callout-title") as HTMLElement;
 			const icon = style(title, "::before");
 			expect(icon.maskImage || icon.webkitMaskImage).toContain("svg");
 			expect(px(icon.width)).toBeGreaterThan(14);
-			// The title and the words are the page's own text colour, size and nothing smaller.
+			// The icon is drawn in the text colour: it reads on the box as the words do (3:1 for a picture, and the words 4.5:1).
+			expect(icon.backgroundColor).toBe(style(title).color);
+			const ground = flat(PAGES[mode].ground, frame.backgroundColor);
+			expect(contrastOf(rgbOf(icon.backgroundColor), ground)).toBeGreaterThanOrEqual(4.5);
+			expect(contrastOf(rgbOf(style(title).color), ground)).toBeGreaterThanOrEqual(4.5);
+			// The title and the words are the page's own text colour and size.
 			expect(style(title).color).toBe(style(outside).color);
 			expect(style(title).fontSize).toBe(style(outside).fontSize);
 			expect(style(box.querySelector("p") as Element).fontSize).toBe(style(outside).fontSize);
 		}
 		// Five kinds, five bars and five icons.
-		expect(new Set(boxes.map((box) => style(box).borderLeftColor)).size).toBe(5);
+		expect(new Set(boxes.map((box) => style(box).borderInlineStartColor)).size).toBe(5);
 		expect(
 			new Set(
 				boxes.map((box) => style(box.querySelector(".monti-block-callout-title") as Element, "::before").maskImage),
 			).size,
 		).toBe(5);
 	});
+});
 
+describe("18-2 the callout's room", () => {
 	it("18-2 the space under the words is the space over the title, and a title alone draws no body", () => {
 		const page = draw(
 			doc(callout("tip", "Title"), { id: "alone", type: "callout", attrs: { tone: "info", title: "Only a title" } }),
@@ -118,7 +146,7 @@ describe("18-2 the callout's look", () => {
 	});
 });
 
-describe("18-2 the tabs' look", () => {
+describe.each(["light", "dark"] as const)("18-2 the tabs' look, in the %s page", (mode) => {
 	const tabs = (count: number): Block => ({
 		id: "tabs",
 		type: "tabs",
@@ -130,27 +158,69 @@ describe("18-2 the tabs' look", () => {
 		})),
 	});
 
-	it("18-2 the open tab is the one with a line under it and no fill, and the panel has no box of its own", () => {
-		const page = draw(doc(tabs(3)));
+	it("18-2 the open tab joins the box under it (no line between them) and the others are closed and grey; the box has one frame, square where the open tab joins it", () => {
+		const page = draw(doc(tabs(3)), { mode });
 		const [open, other] = [...page.querySelectorAll<HTMLElement>('[role="tab"]')];
 		expect(open.getAttribute("aria-selected")).toBe("true");
-		expect(style(open).borderBottomWidth).toBe("2px");
-		expect(style(open).backgroundColor).toBe("rgba(0, 0, 0, 0)");
-		expect(style(other).borderBottomColor).toBe("rgba(0, 0, 0, 0)");
-		expect(style(open).opacity).toBe("1");
-		expect(px(style(other).opacity)).toBeLessThan(1);
-		const panel = page.querySelector<HTMLElement>('[role="tabpanel"]:not([hidden])') as HTMLElement;
+		// No line under the open tab: its bottom edge is its own ground, which covers the box's top line; the closed tab keeps its line.
+		expect(style(open).borderBottomColor).toBe(style(open).backgroundColor);
+		expect(style(other).borderBottomColor).not.toBe(style(other).backgroundColor);
+		expect(style(open).borderBottomWidth).toBe("1px");
+		expect(style(open).borderTopLeftRadius).toBe("8px");
+		expect(style(open).borderBottomLeftRadius).toBe("0px");
+		const panel = page.querySelector<HTMLElement>(
+			'[role="tabpanel"]:not([hidden]) > .monti-block-tabs-panel',
+		) as HTMLElement;
 		const box = style(panel);
-		expect(box.backgroundColor).toBe("rgba(0, 0, 0, 0)");
-		for (const side of ["Top", "Right", "Bottom", "Left"] as const) expect(box[`border${side}Width`]).toBe("0px");
+		for (const side of ["Top", "Right", "Bottom", "Left"] as const) expect(box[`border${side}Width`]).toBe("1px");
+		expect(box.borderTopLeftRadius).toBe("0px");
+		expect(box.borderBottomRightRadius).toBe("8px");
+		// One frame: nothing inside is a box with a ground or a line of its own.
+		for (const inside of panel.querySelectorAll("*")) {
+			expect(style(inside).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+			expect(style(inside).borderTopWidth).toBe("0px");
+		}
+		// The open tab sits over the box's top line by exactly that line.
+		expect(Math.round(open.getBoundingClientRect().bottom - panel.getBoundingClientRect().top)).toBe(1);
 	});
 
-	it("18-2 tabs that do not fit scroll sideways in their row, not the page", () => {
-		const page = draw(doc(tabs(8)), 360);
+	it("18-2 tabs that do not fit scroll sideways in their row and never up and down, and not the page", () => {
+		const page = draw(doc(tabs(8)), { width: 360, mode });
 		const list = page.querySelector<HTMLElement>('[role="tablist"]') as HTMLElement;
 		expect(list.scrollWidth).toBeGreaterThan(list.clientWidth);
 		expect(style(list).overflowX).toBe("auto");
+		expect(style(list).overflowY).toBe("hidden");
+		expect(list.scrollHeight).toBeLessThanOrEqual(list.clientHeight);
+		const open = page.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') as HTMLElement;
+		expect(open.getBoundingClientRect().bottom).toBeLessThanOrEqual(list.getBoundingClientRect().bottom + 0.5);
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(document.documentElement.clientWidth);
+	});
+});
+
+describe("18-2 the footnote and the file link", () => {
+	it("18-2 a footnote's number sits against its word and is pressable over 24px; a file link adds its kind and size", () => {
+		const page = draw(
+			doc(
+				{
+					id: "para",
+					type: "paragraph",
+					content: [
+						{ type: "text", text: "A word" },
+						{ type: "footnoteRef", id: "1" },
+					],
+				},
+				{ id: "note", type: "footnote", attrs: { id: "1" }, content: [{ type: "text", text: "The note." }] },
+			),
+		);
+		const link = page.querySelector<HTMLElement>('sup > a[href^="#fn-"]') as HTMLElement;
+		const target = link.getBoundingClientRect();
+		expect(target.width).toBeGreaterThanOrEqual(24);
+		expect(target.height).toBeGreaterThanOrEqual(24);
+		const digit = document.createRange();
+		digit.selectNodeContents(link);
+		const word = document.createRange();
+		word.selectNodeContents(link.parentElement?.previousSibling as Node);
+		expect(digit.getBoundingClientRect().left - word.getBoundingClientRect().right).toBeLessThanOrEqual(2);
 	});
 });
 
@@ -189,6 +259,7 @@ describe("18-2 the diagram's look", () => {
 			.toBe("ready");
 		return page.querySelector("svg") as SVGSVGElement;
 	};
+	const fill = (element: Element) => rgbOf(style(element).fill);
 
 	it("18-2 a diagram takes the page's colours and font, not Mermaid's lilac, and its box is as high as the drawing and its padding", async () => {
 		const page = draw(doc(diagram("flowchart LR\n  A[Start] --> B[Finish]")));
@@ -204,28 +275,81 @@ describe("18-2 the diagram's look", () => {
 		expect(slack).toBeGreaterThanOrEqual(30);
 	});
 
-	it("18-2 in the dark theme the same diagram is drawn dark, its words the page's light colour", async () => {
-		document.documentElement.classList.add("dark");
-		document.documentElement.style.cssText = "background:rgb(20 20 20);color:rgb(236 235 230);";
-		const page = draw(doc(diagram("flowchart LR\n  A[Start] --> B[Finish]")));
-		page.style.color = "rgb(236 235 230)";
+	it("18-2 in the dark page the same diagram is drawn dark, its words the page's light colour", async () => {
+		const page = draw(doc(diagram("flowchart LR\n  A[Start] --> B[Finish]")), { mode: "dark" });
 		const svg = await drawn(page);
 		const node = svg.querySelector(".node rect, .node polygon") as SVGElement;
-		expect(opaque(style(node).fill)).toBe(true);
-		expect(luminance(style(node).fill)).toBeLessThan(0.2);
+		expect(contrastOf(fill(node), rgbOf(PAGES.dark.ground))).toBeLessThan(2);
+		const words = svg.querySelector(".nodeLabel, text") as Element;
+		const wordColour = rgbOf(style(words).color);
+		expect(contrastOf(wordColour, rgbOf(PAGES.dark.ground))).toBeGreaterThanOrEqual(4.5);
+		expect(contrastOf(wordColour, fill(node))).toBeGreaterThanOrEqual(4.5);
 	});
 
-	it("18-2 a schedule's letters are never smaller than 11px, the dates under it too", async () => {
+	it("18-2 a diagram is drawn again when the site changes its own theme", async () => {
+		const page = draw(doc(diagram("flowchart LR\n  A[Start] --> B[Finish]")));
+		const svg = await drawn(page);
+		const before = style(svg.querySelector(".node rect, .node polygon") as Element).fill;
+		page.style.cssText += `;color:${PAGES.dark.ink};background:${PAGES.dark.ground};`;
+		document.documentElement.classList.add("dark");
+		await expect
+			.poll(() => style(page.querySelector(".node rect, .node polygon") as Element).fill, { timeout: 20_000 })
+			.not.toBe(before);
+	});
+
+	it("18-2 diagrams drawn together are all drawn (one at a time through Mermaid)", async () => {
+		const page = draw(
+			doc(
+				diagram("flowchart LR\n  A --> B"),
+				{ ...diagram("flowchart TD\n  C --> D"), id: "d2" },
+				{ ...diagram('pie title P\n  "A": 3\n  "B": 2'), id: "d3" },
+			),
+		);
+		await expect.poll(() => page.querySelectorAll("figure[data-state=ready] svg").length, { timeout: 30_000 }).toBe(3);
+	});
+
+	it.each([
+		"light",
+		"dark",
+	] as const)("18-2 a schedule's letters are never under 12px and the open task and its words read on each other (%s)", async (mode) => {
 		const page = draw(
 			doc(
 				diagram(
-					"gantt\n  title Plan\n  dateFormat YYYY-MM-DD\n  section Build\n  Design :a1, 2026-11-01, 5d\n  Code :after a1, 7d",
+					"gantt\n  title Plan\n  dateFormat YYYY-MM-DD\n  section Build\n  Design :done, a1, 2026-11-01, 5d\n  Code :active, a2, after a1, 7d\n  Ship :crit, a3, after a2, 3d",
 				),
 			),
+			{ mode },
 		);
 		const svg = await drawn(page);
 		const sizes = [...svg.querySelectorAll("text")].map((text) => px(style(text).fontSize));
 		expect(sizes.length).toBeGreaterThan(0);
-		expect(Math.min(...sizes)).toBeGreaterThanOrEqual(11);
+		expect(Math.min(...sizes)).toBeGreaterThanOrEqual(12);
+		const ground = rgbOf(PAGES[mode].ground);
+		for (const kind of ["active", "done", "crit"]) {
+			const bar = svg.querySelector(`rect[class*="${kind}"]`) as SVGElement;
+			const words = svg.querySelector(`[class*="${kind}Text"]`) as Element;
+			expect(bar, kind).not.toBeNull();
+			expect(contrastOf(rgbOf(style(words).fill), fill(bar)), `${kind} words on the bar`).toBeGreaterThanOrEqual(4.5);
+			expect(contrastOf(rgbOf(style(bar).stroke), ground), `${kind} edge on the page`).toBeGreaterThanOrEqual(3);
+		}
+	});
+
+	it.each([
+		"light",
+		"dark",
+	] as const)("18-2 a pie's labels read on their slices and the slices stand against the page (%s)", async (mode) => {
+		const page = draw(doc(diagram('pie title Share\n  "Alpha": 40\n  "Beta": 30\n  "Gamma": 20\n  "Delta": 10')), {
+			mode,
+		});
+		const svg = await drawn(page);
+		const ground = rgbOf(PAGES[mode].ground);
+		const slices = [...svg.querySelectorAll<SVGElement>(".pieCircle")];
+		const labels = [...svg.querySelectorAll<SVGElement>(".slice")];
+		expect(slices.length).toBe(4);
+		expect(labels.length).toBe(4);
+		slices.forEach((slice, at) => {
+			expect(contrastOf(rgbOf(style(labels[at]).fill), fill(slice)), `label ${at}`).toBeGreaterThanOrEqual(4.5);
+			expect(contrastOf(fill(slice), ground), `slice ${at}`).toBeGreaterThanOrEqual(3);
+		});
 	});
 });

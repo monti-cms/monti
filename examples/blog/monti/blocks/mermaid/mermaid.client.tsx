@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { drawMermaid } from "./draw";
-import { mermaidLook } from "./look";
+import { lookKey, mermaidLook } from "./look";
 
 /** Whether the document is in the dark theme (the `dark` class or `data-theme="dark"` on `html`, else the system setting). */
 const isDarkDocument = () => {
@@ -12,18 +12,36 @@ const isDarkDocument = () => {
 	return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
 };
 
-/** Whether the document uses the dark theme. Re-read when the theme changes. */
-function useDarkTheme() {
-	const [dark, setDark] = useState(false);
+/**
+ * What the diagram is drawn from, as one word that changes when it does: the document's theme, the page's text colour, ground and font. Read again when the
+ * `class`, `data-theme` or `style` of `html` or `body` change (a site's own theme switch) and when the system's colour setting does.
+ */
+function useLook(figure: React.RefObject<HTMLElement | null>) {
+	const [key, setKey] = useState("");
 	useEffect(() => {
-		const read = () => setDark(isDarkDocument());
+		const read = () => setKey(figure.current ? lookKey(figure.current, isDarkDocument()) : "");
 		read();
 		const observer = new MutationObserver(read);
-		observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme"] });
-		return () => observer.disconnect();
-	}, []);
-	return dark;
+		const options = { attributes: true, attributeFilter: ["class", "data-theme", "style"] };
+		observer.observe(document.documentElement, options);
+		observer.observe(document.body, options);
+		const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+		media?.addEventListener("change", read);
+		return () => {
+			observer.disconnect();
+			media?.removeEventListener("change", read);
+		};
+	}, [figure]);
+	return key;
 }
+
+/** One diagram at a time: Mermaid keeps one configuration, so `initialize`, `parse` and `render` of a diagram are not shared with another's. */
+let queue: Promise<unknown> = Promise.resolve();
+const alone = <T,>(job: () => Promise<T>): Promise<T> => {
+	const run = queue.then(job, job);
+	queue = run.catch(() => undefined);
+	return run;
+};
 
 type State = { readonly svg: string | null; readonly error: string | null } | null;
 
@@ -46,22 +64,25 @@ export function MermaidView({
 	const baseId = useId().replace(/[^\w-]/g, "");
 	const counter = useRef(0);
 	const figure = useRef<HTMLElement>(null);
-	const dark = useDarkTheme();
+	const look = useLook(figure);
 	const [state, setState] = useState<State>(null);
 
 	useEffect(() => {
-		if (!source.trim()) return;
+		// Drawn once the page's look has been read (the first effect of this component sets it).
+		if (!source.trim() || look === "") return;
 		let disposed = false;
 		(async () => {
 			try {
 				const { default: mermaid } = await import("mermaid");
-				mermaid.initialize({
-					startOnLoad: false,
-					securityLevel: "strict",
-					...(figure.current ? mermaidLook(figure.current, dark) : { theme: "base" as const }),
+				const svg = await alone(async () => {
+					mermaid.initialize({
+						startOnLoad: false,
+						securityLevel: "strict",
+						...(figure.current ? mermaidLook(figure.current, isDarkDocument()) : { theme: "base" as const }),
+					});
+					counter.current += 1;
+					return drawMermaid(mermaid, `cms-mermaid-${baseId}-${counter.current}`, source);
 				});
-				counter.current += 1;
-				const svg = await drawMermaid(mermaid, `cms-mermaid-${baseId}-${counter.current}`, source);
 				if (!disposed) {
 					setState({ svg, error: null });
 					onError?.(null);
@@ -77,7 +98,7 @@ export function MermaidView({
 		return () => {
 			disposed = true;
 		};
-	}, [source, dark, baseId, onError]);
+	}, [source, look, baseId, onError]);
 
 	const svg = state?.svg ?? null;
 	const error = state?.error ?? null;

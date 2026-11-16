@@ -39,6 +39,8 @@ export const style = `/*
 	--monti-block-accent: oklch(0.6 0.14 250);
 	--monti-block-tooltip-bg: oklch(0.21 0.03 265);
 	--monti-block-tooltip-fg: oklch(0.98 0.005 265);
+	/* The page's own ground, which a block that joins it takes (the open tab); a site names its own. */
+	--monti-block-ground: var(--monti-bg-page, Canvas);
 }
 :where(.dark, [data-theme="dark"]) {
 	--monti-block-tooltip-bg: oklch(0.96 0.005 265);
@@ -54,41 +56,55 @@ export const style = `/*
 }
 
 /*
- * The tabs' look. The site's own: change it as the site likes (doc 18). The open tab is the one with the accent line under it and the full text colour; the
- * row of tabs scrolls sideways when they do not fit, and the panel is the page's own ground: no box in a box.
+ * The tabs' look: the owner's folder tabs (doc 18, the owner: the open tab has no line under it), the same in the editor (FolderTabs of the admin) and on the site. The open tab has the
+ * page's own ground and no line under it, so it joins the box under the tabs; the others are closed and grey. The box has one frame (the tab's words are
+ * not in a second box), and its top-left corner is square where the open tab joins it. The row of tabs scrolls sideways when they do not fit, and never
+ * up and down. The site's own: change it as the site likes (doc 18); --monti-block-ground is the page's ground, which the open tab and its joint take.
  */
+:where(.dark, [data-theme="dark"]) .monti-block-tabs {
+	color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+	:where(:root:not(.light, [data-theme="light"])) .monti-block-tabs {
+		color-scheme: dark;
+	}
+}
 .monti-block-tabs {
 	margin: 1.5rem 0;
 }
 .monti-block-tabs-list {
+	position: relative;
+	z-index: 1;
 	display: flex;
+	align-items: flex-end;
 	gap: 0.25rem;
+	margin-bottom: -1px;
 	overflow-x: auto;
-	border-bottom: 1px solid var(--monti-block-border);
+	overflow-y: hidden;
 }
 .monti-block-tabs-tab {
+	display: inline-flex;
 	flex: none;
-	margin-bottom: -1px;
-	padding: 0.5rem 0.875rem;
-	border: 0;
-	border-bottom: 2px solid transparent;
-	border-radius: 0;
-	background: none;
-	color: inherit;
+	align-items: center;
+	height: 2.25rem;
+	padding: 0 1rem 0 0.75rem;
+	border: 1px solid var(--monti-block-border);
+	border-radius: 0.5rem 0.5rem 0 0;
+	background-color: var(--monti-block-muted);
+	color: color-mix(in srgb, currentColor 75%, transparent);
 	font: inherit;
 	font-size: 0.9375em;
-	font-weight: 500;
 	white-space: nowrap;
-	opacity: 0.7;
 	cursor: pointer;
 }
 .monti-block-tabs-tab:hover {
-	opacity: 1;
+	color: inherit;
 }
 .monti-block-tabs-tab[aria-selected="true"] {
-	border-bottom-color: var(--monti-block-accent);
+	border-bottom-color: var(--monti-block-ground);
+	background-color: var(--monti-block-ground);
+	color: inherit;
 	font-weight: 600;
-	opacity: 1;
 }
 .monti-block-tabs-tab:focus-visible,
 .monti-block-tabs-panel:focus-visible {
@@ -96,21 +112,21 @@ export const style = `/*
 	outline-offset: -2px;
 }
 .monti-block-tabs-panel {
-	padding: 1rem 0 0;
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--monti-block-border);
+	border-radius: 0 0.5rem 0.5rem 0.5rem;
 }
 .monti-block-tabs-panel[hidden] {
 	display: none;
 }
-.monti-block-tabs-panel > :first-child {
+.monti-block-tabs-panel > :first-child,
+.monti-block-tabs-pane > :first-child,
+.monti-block-tabs-pane [data-node-view-content-react] > :first-child {
 	margin-top: 0;
 }
-.monti-block-tabs-panel > :last-child {
-	margin-bottom: 0;
-}
-.monti-block-tabs-panel [data-node-view-content-react] > :first-child {
-	margin-top: 0;
-}
-.monti-block-tabs-panel [data-node-view-content-react] > :last-child {
+.monti-block-tabs-panel > :last-child,
+.monti-block-tabs-pane > :last-child,
+.monti-block-tabs-pane [data-node-view-content-react] > :last-child {
 	margin-bottom: 0;
 }
 
@@ -131,6 +147,6 @@ export const style = `/*
 	opacity: 0.5;
 }
 .monti-block-tabs-content {
-	padding: 1rem 0 0;
+	padding: 0.75rem 1rem;
 }
 `;
