@@ -123,7 +123,11 @@ function FieldRow({
 			onClick={(event) => {
 				onClick?.(event);
 				// The marks stand over the line's button: a press on one still opens the line, as a press anywhere else on it does.
-				if (onOpen && (event.target as Element).closest("[data-slot=change-dot], [data-slot=lock-mark]")) onOpen();
+				if (
+					onOpen &&
+					(event.target as Element).closest("[data-slot=change-dot], [data-slot=lock-mark], [data-cut-words]")
+				)
+					onOpen();
 			}}
 			{...props}
 		>
@@ -165,7 +169,7 @@ function FieldRow({
 				{changed && <ChangeDot label={changedLabel} className="relative z-1" />}
 				{problems && <ChangeDot tone="danger" label={problems} className="relative z-1" />}
 			</span>
-			<CutWords className="text-monti-note text-monti-subtle">
+			<CutWords className="relative z-1 text-monti-note text-monti-subtle">
 				{label}
 				{description && <span className="ml-monti-12 text-monti-faint">{description}</span>}
 				{note && <span className="ml-monti-8 text-monti-faint text-monti-micro">{note}</span>}

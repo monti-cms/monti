@@ -307,14 +307,17 @@ function ComboboxChipsField({
 				"has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/60 has-[input[readonly]]:focus-within:border-monti-strong has-[input[readonly]]:**:data-[slot=combobox-chip-remove]:hidden",
 				// The proposal's line keeps its color under the pointer and with the focus, as a proposed `Input`'s does.
 				"data-proposal:border-monti-proposal! data-proposal:border-b-[1.5px] data-proposal:**:data-[slot=combobox-chip]:bg-monti-proposal-muted data-proposal:**:data-[slot=combobox-chip-remove]:text-monti-proposal data-proposal:**:data-[slot=combobox-chip]:text-monti-proposal",
-				"group/chips",
+				// The open button stands at the first line's end whatever the chips do: the room for it is the field's own padding.
+				"group/chips relative pr-monti-32",
 				className,
 			)}
 			{...props}
 		>
 			{children}
 			{/* The open button of every combobox, a field of one value or of many: at the end of the first line. Nothing opens a list that is only read. */}
-			<ComboboxTrigger className="ml-auto size-monti-control-xs disabled:opacity-100 group-has-[input[readonly]]/chips:hidden" />
+			<span className="pointer-events-none absolute top-0 right-monti-4 flex h-monti-control-lg items-center group-has-[input[readonly]]/chips:hidden group-data-[size=md]/chips:h-monti-control-md group-data-[size=sm]/chips:h-monti-control-sm">
+				<ComboboxTrigger className="pointer-events-auto size-monti-control-xs disabled:opacity-100" />
+			</span>
 		</ComboboxPrimitive.Chips>
 	);
 }

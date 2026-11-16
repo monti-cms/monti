@@ -50,7 +50,7 @@ function ChangeGroup({
 				{tag}
 			</span>
 			<span className="flex min-w-0 items-baseline gap-monti-12 text-monti-body">
-				<CutWords render={<b className="font-semibold" />}>{title}</CutWords>
+				<CutWords render={<b className="min-w-0 truncate font-semibold" />}>{title}</CutWords>
 				{identifier && (
 					<span className="ml-auto whitespace-nowrap font-mono text-monti-caption text-monti-subtle">{identifier}</span>
 				)}

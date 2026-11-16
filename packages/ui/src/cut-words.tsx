@@ -5,10 +5,10 @@ import { cn } from "./cn";
 import { Tooltip, TooltipContent } from "./tooltip";
 
 /**
- * Whether a box shows less than it holds: its words run past its room (a fraction of a pixel short already ends them in "…"), or a piece inside
- * it ends in its own "…" (a text button or a status in a cut cell).
+ * What a box shows less of than it holds: the box itself when its words run past its room (a fraction of a pixel short already ends them in "…"),
+ * or the piece inside it that ends in its own "…" (a name in a row that also holds a count); `null` when nothing is cut.
  */
-function cutIn(box: HTMLElement) {
+function cutPart(box: HTMLElement): HTMLElement | null {
 	// The words' own width: every piece in the box's flow, from the first one's left to the last one's right. A piece that stands out of the
 	// flow is not the box's words (a row's check hangs in the margin outside its cell).
 	let left = Number.POSITIVE_INFINITY;
@@ -25,13 +25,62 @@ function cutIn(box: HTMLElement) {
 	const style = getComputedStyle(box);
 	const sides = ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"] as const;
 	const room = box.getBoundingClientRect().width - sides.reduce((sum, side) => sum + Number.parseFloat(style[side]), 0);
-	if (right - left > room + 0.01) return true;
-	// Cut by lines (`line-clamp`): what holds more than its height shows.
-	if (style.overflow !== "visible" && box.scrollHeight > box.clientHeight + 1) return true;
-	for (const piece of box.querySelectorAll<HTMLElement>("*")) {
-		if (piece.scrollWidth > piece.clientWidth && getComputedStyle(piece).textOverflow === "ellipsis") return true;
+	// A piece that ends in its own "…" is what is cut, and what the row says: not the box with the count beside it.
+	for (const part of box.querySelectorAll<HTMLElement>("*")) {
+		if (part.scrollWidth > part.clientWidth && getComputedStyle(part).textOverflow === "ellipsis") return part;
 	}
-	return false;
+	if (right - left > room + 0.01) return box;
+	// Cut by lines (`line-clamp`): what holds more than its height shows.
+	if (style.overflow !== "visible" && box.scrollHeight > box.clientHeight + 1) return box;
+	return null;
+}
+
+/** The words of a holder (a row, a button) that are cut and come first: the one that speaks for it, so a holder of several says one thing. */
+function firstCut(holder: Element): HTMLElement | null {
+	for (const words of holder.querySelectorAll<HTMLElement>("[data-cut-words]"))
+		if (words.hasAttribute("data-cut-partial") || cutPart(words)) return words;
+	return null;
+}
+
+/**
+ * The words that hear the keyboard's highlight of a row. In a menu, a select, a combobox and a command list the focus stays on the list or on the
+ * input and the row is only highlighted (`data-highlighted`, cmdk's `data-selected`), so the words cannot hear a focus. One listener for the page
+ * follows the highlight while the last thing a person did was press a key, and tells the first cut words of the highlighted row to speak.
+ */
+const speakers = new WeakMap<HTMLElement, (on: boolean) => void>();
+const HIGHLIGHTED =
+	'[role="menuitem"][data-highlighted], [role="menuitemradio"][data-highlighted], [role="menuitemcheckbox"][data-highlighted], [role="option"][data-highlighted], [role="option"][data-selected="true"]';
+let following = false;
+let byKeys = false;
+let speaking: HTMLElement | null = null;
+function followHighlight() {
+	const row = byKeys ? document.querySelector(HIGHLIGHTED) : null;
+	const next = row ? firstCut(row) : null;
+	if (next === speaking) return;
+	if (speaking) speakers.get(speaking)?.(false);
+	speaking = next;
+	if (next) speakers.get(next)?.(true);
+}
+function followKeys() {
+	if (following || typeof document === "undefined") return;
+	following = true;
+	document.addEventListener(
+		"keydown",
+		() => {
+			byKeys = true;
+			requestAnimationFrame(followHighlight);
+		},
+		true,
+	);
+	document.addEventListener(
+		"pointermove",
+		() => {
+			if (!byKeys) return;
+			byKeys = false;
+			followHighlight();
+		},
+		true,
+	);
 }
 
 /**
@@ -50,6 +99,7 @@ function CutWords({
 	render,
 	whole,
 	partial = false,
+	cut = true,
 	stop = false,
 	className,
 	children,
@@ -60,6 +110,8 @@ function CutWords({
 	whole?: string;
 	/** It shows less than `whole` though nothing is cut with "…" (languages only counted): it says `whole` all the same. */
 	partial?: boolean;
+	/** `false` where the words are not cut to a line after all (a title that wraps when it has no tag): a plain span, saying nothing. */
+	cut?: boolean;
 	/**
 	 * While they are cut the words are a stop of the Tab key, so the keyboard alone can read them whole. For words that hold nothing the keyboard
 	 * comes to and stand once on a screen (a banner's sentence); not for a table's cells, where it would add a stop to every cut cell of every row.
@@ -85,10 +137,18 @@ function CutWords({
 		dismissed.current = onWords.current;
 		setBy(null);
 	};
+	/** What the box showed less of when the pointer came on it: measured once there, not on every move. */
+	const measured = React.useRef<HTMLElement | null | undefined>(undefined);
 	const say = (how: "pointer" | "keys") => {
 		const words = box.current;
-		if (!words || !(partial || cutIn(words))) return;
-		const said = whole ?? words.textContent ?? "";
+		if (!words || !cut) return;
+		const part = partial
+			? words
+			: how === "pointer" && measured.current !== undefined
+				? measured.current
+				: cutPart(words);
+		if (!part) return;
+		const said = whole ?? part.textContent ?? "";
 		if (said === "") return;
 		setWords(said);
 		setBy(how);
@@ -97,17 +157,18 @@ function CutWords({
 	const left = () => {
 		onWords.current = false;
 		dismissed.current = false;
+		measured.current = undefined;
 		if (by === "pointer") setBy(null);
 	};
 
 	React.useLayoutEffect(() => {
 		if (!stop || !node) return;
-		const measure = () => setStops(partial || cutIn(node));
+		const measure = () => setStops(cut && (partial || cutPart(node) !== null));
 		measure();
 		const observer = new ResizeObserver(measure);
 		observer.observe(node);
 		return () => observer.disconnect();
-	}, [stop, partial, node]);
+	}, [stop, partial, cut, node]);
 
 	// Words inside a button or a link (a file's use row, the proposal bubble's name): the keyboard comes to that control, not into the words,
 	// so the words listen to it. Words that hold the control themselves (a row's title and its link) hear the focus as it bubbles, below.
@@ -118,8 +179,9 @@ function CutWords({
 	React.useEffect(() => {
 		const holder = box.current?.parentElement?.closest<HTMLElement>("a[href], button");
 		if (!holder) return;
+		// A holder of several cut words has one thing to say: the first of them says it.
 		const come = () => {
-			if (holder.matches(":focus-visible")) sayRef.current("keys");
+			if (holder.matches(":focus-visible") && firstCut(holder) === box.current) sayRef.current("keys");
 		};
 		const gone = () => {
 			if (byRef.current === "keys") setBy(null);
@@ -131,6 +193,20 @@ function CutWords({
 			holder.removeEventListener("blur", gone);
 		};
 	}, []);
+
+	// The row this is in, when the keyboard only highlights it (a menu, a select, a combobox).
+	React.useEffect(() => {
+		const words = box.current;
+		if (!words) return;
+		followKeys();
+		speakers.set(words, (on) => {
+			if (on) sayRef.current("keys");
+			else if (byRef.current === "keys") setBy(null);
+		});
+		return () => {
+			speakers.delete(words);
+		};
+	});
 
 	// Escape closes it wherever the focus is: the pointer's tooltip has no focus of its own.
 	const open = by !== null;
@@ -159,9 +235,10 @@ function CutWords({
 			},
 			"data-slot": (own as { "data-slot"?: string })["data-slot"] ?? "cut-words",
 			"data-cut-words": whole ?? "",
+			"data-cut-partial": partial ? "" : undefined,
 			tabIndex: stop && stops ? 0 : own.tabIndex,
 			className: cn(
-				!render && "min-w-0 truncate",
+				!render && cut && "min-w-0 truncate",
 				// While it is a stop it draws the keyboard's ring, inside its box: the box cuts what runs past it, a ring outside too.
 				stop &&
 					stops &&
@@ -180,7 +257,10 @@ function CutWords({
 					event.clientY >= edge.top &&
 					event.clientY <= edge.bottom;
 				if (!on) return left();
-				onWords.current = true;
+				if (!onWords.current) {
+					onWords.current = true;
+					measured.current = partial || !cut ? null : cutPart(event.currentTarget);
+				}
 				if (by === null && !dismissed.current) say("pointer");
 			},
 			onPointerLeave: (event: React.PointerEvent<HTMLElement>) => {

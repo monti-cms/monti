@@ -138,7 +138,7 @@ function DropdownMenuItem({
 						</span>
 					)}
 					<span className="flex min-w-0 flex-col items-start gap-monti-2">
-						<span className="min-w-0">{menuWords(children)}</span>
+						<span className="flex min-w-0 max-w-full">{menuWords(children)}</span>
 						<span data-slot="menu-caption" className="text-monti-caption text-monti-subtle">
 							{caption}
 						</span>

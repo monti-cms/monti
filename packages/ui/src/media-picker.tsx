@@ -165,7 +165,7 @@ function MediaPicker({
 								</span>
 							</React.Fragment>
 						))}
-						<CutWords aria-current="page" className="min-w-0 truncate text-monti-default">
+						<CutWords render={<span aria-current="page" className="min-w-0 truncate text-monti-default" />}>
 							{folder === null ? topLabel : openFolder?.name}
 						</CutWords>
 					</nav>

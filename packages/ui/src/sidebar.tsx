@@ -518,8 +518,7 @@ function SidebarMenuButton({
 		},
 	});
 	// A name that runs past the row says itself whole when pointed at, as every cut word does; folded, the row's tooltip says it.
-	if (!rail || !tooltip)
-		return <CutWords render={cutBox(row)} whole={typeof tooltip === "string" ? tooltip : undefined} />;
+	if (!rail || !tooltip) return <CutWords render={cutBox(row)} />;
 	return (
 		<Tooltip>
 			<TooltipTrigger render={row} />

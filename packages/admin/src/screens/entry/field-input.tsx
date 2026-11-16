@@ -1,5 +1,6 @@
 import type { FieldDefinition, StoredField } from "@monti-cms/core";
 import {
+	ChangeDot,
 	Combobox,
 	ComboboxChip,
 	ComboboxChips,
@@ -11,10 +12,14 @@ import {
 	ComboboxItem,
 	ComboboxList,
 	DragHandle,
+	FormField,
 	IconButton,
+	Inline,
 	Input,
+	Label,
 	List,
 	MenuValue,
+	Option,
 	OrderedRow,
 	Sortable,
 	SortableList,
@@ -22,6 +27,7 @@ import {
 	Switch,
 	Text,
 	Textarea,
+	TextButton,
 	useComboboxAnchor,
 	useSortableItem,
 } from "@monti-cms/ui";
@@ -426,6 +432,70 @@ type Definition = FieldDefinition | StoredField;
 /** A choice made by a switch (doc 19): one option, on or off. */
 export const isToggle = (def: Definition) =>
 	(def.kind === "select" || def.kind === "conditional") && "control" in def && def.control === "toggle";
+
+/**
+ * Whether a field stands as a switch row: a choice made by a switch, or a choice of one option that a plugin brought its own input for (SEO's
+ * "hide from search"). The one rule, for the entry's panel and the settings' preview of it.
+ */
+export const standsAsSwitch = (def: Definition, hasOwnInput: boolean) =>
+	isToggle(def) || (hasOwnInput && def.kind === "select" && def.options.length === 1 && !def.many);
+
+/**
+ * A switch's row, the way every switch stands (PP-55): its name at the start and the switch at the end, on one line. A switch the assistant proposed
+ * has the proposal's dot by its name and "discard" before the switch. The one place that draws it: the entry's panel and the settings' preview.
+ */
+export function SwitchRow({
+	id,
+	name,
+	toggle,
+	proposed,
+	after,
+}: {
+	id: string;
+	name: string;
+	/** The switch itself: the field's own, or the plugin's input. */
+	toggle: ReactNode;
+	proposed?: { undoLabel: string; undoName: string; onUndo: () => void };
+	/** Under the row (what saving drops, the saved value). */
+	after?: ReactNode;
+}) {
+	const { t } = useAdmin();
+	return (
+		<FormField>
+			{proposed ? (
+				// A switch the assistant proposed, on or off, looks the same everywhere (the collection's, a plugin's): the
+				// proposal's dot by its name and "discard" before the switch, which stands as proposed. The bubble takes or
+				// discards it too, and pressing it takes it first.
+				<Inline minHeight="control-md" align="center" justify="between" gap={12}>
+					<Inline gap={8} align="center">
+						<Label htmlFor={id} size="body" tone="default">
+							{name}
+						</Label>
+						<ChangeDot tone="proposal" label={t("ui.proposal")} />
+					</Inline>
+					<Inline gap={12} align="center">
+						<TextButton
+							variant="underline"
+							quiet
+							size="caption"
+							aria-label={proposed.undoName}
+							onClick={proposed.onUndo}
+						>
+							{proposed.undoLabel}
+						</TextButton>
+						{toggle}
+					</Inline>
+				</Inline>
+			) : (
+				<Option spread height="md">
+					{name}
+					{toggle}
+				</Option>
+			)}
+			{after}
+		</FormField>
+	);
+}
 
 /** The switch of a choice with one option: on holds the option, off holds nothing. */
 export function FieldToggle({

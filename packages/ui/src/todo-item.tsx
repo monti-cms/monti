@@ -46,8 +46,11 @@ function TodoItem({
 	const labels = useUiLabels();
 	const text = (
 		<>
-			<CutWords className={cn(tag !== undefined && "truncate")}>{title}</CutWords>
-			{detail && <CutWords className="truncate text-monti-caption text-monti-subtle">{detail}</CutWords>}
+			{/* Above the button's cover layer, so the pointer finds the words; a press on them is still the button's. A title with no tag wraps. */}
+			<CutWords cut={tag !== undefined} className="relative z-1">
+				{title}
+			</CutWords>
+			{detail && <CutWords className="relative z-1 text-monti-caption text-monti-subtle">{detail}</CutWords>}
 		</>
 	);
 	return (

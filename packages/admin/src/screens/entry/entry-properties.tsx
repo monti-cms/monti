@@ -10,18 +10,14 @@ import {
 	storedFields,
 } from "@monti-cms/core";
 import {
-	ChangeDot,
 	FormField,
 	FormFieldLabel,
 	FormFieldWas,
 	IconButton,
 	Inline,
-	Label,
-	Option,
 	PropertyGroup,
 	PropertyPanel,
 	Text,
-	TextButton,
 } from "@monti-cms/ui";
 import { Renew } from "@monti-cms/ui/icons";
 import { useRef, useState } from "react";
@@ -33,7 +29,7 @@ import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import type { EntryView } from "../../plugins";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
-import { FieldInput, FieldToggle, isToggle } from "./field-input";
+import { FieldInput, FieldToggle, SwitchRow, standsAsSwitch } from "./field-input";
 import { MediaField, SharedMediaValue } from "./media-field";
 import { FieldChange } from "./translation";
 import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
@@ -460,11 +456,10 @@ export function EntryProperties({
 					}
 				/>
 			);
-		// A choice with one option, on or off (doc 19): a switch at the end of the field's row, the way every switch stands. A field that
-		// names an input of its own puts that one in the switch's place.
+		// A choice with one option, on or off (doc 19): a switch row. A field that names an input of its own puts that one in the switch's place.
 		// A plugin's input for a choice of one option is that choice's switch (seo's "hide from search"), whatever the field says of its control.
-		if (isToggle(def) || (own && def.kind === "select" && def.options.length === 1 && !def.many)) {
-			// A plugin's own switch stands in the same place: label at the start, the switch at the end (PP-55).
+		if (standsAsSwitch(def, own !== null)) {
+			// A plugin's own switch stands in the same place as a built-in one (PP-55).
 			const toggle = own ? (
 				<own.Input {...ownProps()} />
 			) : (
@@ -478,39 +473,14 @@ export function EntryProperties({
 				/>
 			);
 			return (
-				<FormField key={key}>
-					{proposedLabel ? (
-						// A switch the assistant proposed, on or off, looks the same everywhere (the collection's, a plugin's): the
-						// proposal's dot by its name and "discard" before the switch, which stands as proposed. The bubble takes or
-						// discards it too, and pressing it takes it first.
-						<Inline minHeight="control-md" align="center" justify="between" gap={12}>
-							<Inline gap={8} align="center">
-								<Label htmlFor={id} size="body" tone="default">
-									{fieldName(key, values[key]?.label, t)}
-								</Label>
-								<ChangeDot tone="proposal" label={t("ui.proposal")} />
-							</Inline>
-							<Inline gap={12} align="center">
-								<TextButton
-									variant="underline"
-									quiet
-									size="caption"
-									aria-label={proposedLabel.undoName}
-									onClick={proposedLabel.onUndo}
-								>
-									{proposedLabel.undoLabel}
-								</TextButton>
-								{toggle}
-							</Inline>
-						</Inline>
-					) : (
-						<Option spread height="md">
-							{fieldName(key, values[key]?.label, t)}
-							{toggle}
-						</Option>
-					)}
-					{after}
-				</FormField>
+				<SwitchRow
+					key={key}
+					id={id}
+					name={fieldName(key, values[key]?.label, t)}
+					toggle={toggle}
+					proposed={proposedLabel}
+					after={after}
+				/>
 			);
 		}
 		const strays =

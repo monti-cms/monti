@@ -5,7 +5,7 @@ import { cn } from "./cn";
 import { CutWords } from "./cut-words";
 import { FIELD_ACTION, FIELD_ACTION_BUTTON, FIELD_HOVER, FIELD_INSET } from "./hover";
 import { IconButton, IconButtonContext } from "./icon-button";
-import { Close, Image as ImageIcon } from "./icons";
+import { Attachment, Close, Image as ImageIcon } from "./icons";
 import { Image } from "./image";
 import { useProposalDescription } from "./proposal-cue";
 
@@ -26,7 +26,7 @@ function MediaInput({
 	size = "default",
 	value,
 	placeholder,
-	icon,
+	accept = "image",
 	onOpen,
 	onClear,
 	clearLabel,
@@ -43,8 +43,8 @@ function MediaInput({
 	/** The chosen file: its name, and a thumbnail when it is an image. */
 	value?: { name: string; thumbnail?: string | null } | null;
 	placeholder?: string;
-	/** The mark of an empty field: a picture's by default; a field that takes any file (an attachment) passes a file's. */
-	icon?: React.ReactNode;
+	/** What the field takes: a picture (its mark is a picture's) or any file (an attachment's mark). Decided here, once. */
+	accept?: "image" | "any";
 	onOpen?: () => void;
 	onClear?: () => void;
 	/** The name of the × that takes the file out. */
@@ -116,7 +116,7 @@ function MediaInput({
 					</IconButton>
 				) : action ? null : (
 					<span aria-hidden className="mr-monti-6 flex text-monti-faint [&>svg]:size-4">
-						{icon ?? <ImageIcon />}
+						{accept === "any" ? <Attachment /> : <ImageIcon />}
 					</span>
 				)}
 			</span>
