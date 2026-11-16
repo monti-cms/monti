@@ -53,13 +53,13 @@ const EDITOR_BODY = cn(
 	"[&_blockquote]:mt-0 [&_blockquote]:mb-monti-20 [&_blockquote]:border-l-2 [&_blockquote]:border-monti-strong [&_blockquote]:pl-monti-16 [&_blockquote]:text-monti-muted [&_blockquote>*:last-child]:mb-0",
 	"[&_pre]:mt-0 [&_pre]:mb-monti-20 [&_pre]:overflow-x-auto [&_pre]:rounded-monti-lg [&_pre]:bg-monti-muted [&_pre]:px-monti-16 [&_pre]:py-monti-12 [&_pre]:font-mono [&_pre]:text-monti-editor-code",
 	// A table is a light grid while it is written (every cell is a place to type), its head row only bolder (editor-tools.md, the table).
-	"[&_table]:mb-monti-20 [&_table]:w-full [&_table]:table-fixed [&_table]:border-collapse [&_table]:text-monti-body [&_td]:relative [&_td]:border [&_td]:border-monti-muted [&_td]:px-monti-8 [&_td]:py-monti-6 [&_td]:align-top [&_th]:relative [&_th]:border [&_th]:border-monti-muted [&_th]:px-monti-8 [&_th]:py-monti-6 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold",
+	"[&_table]:mb-monti-20 [&_table]:w-full [&_table]:table-fixed [&_table]:border-collapse [&_table]:text-monti-body [&_td]:relative [&_td]:border [&_td]:border-monti-emphasis [&_td]:px-monti-8 [&_td]:py-monti-6 [&_td]:align-top [&_th]:relative [&_th]:border [&_th]:border-monti-emphasis [&_th]:px-monti-8 [&_th]:py-monti-6 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold",
 	// Cells picked by dragging across them.
 	"[&_.selectedCell]:bg-monti-selected",
-	"[&_hr]:mt-monti-8 [&_hr]:mb-monti-24 [&_hr]:border-0 [&_hr]:border-monti-default [&_hr]:border-t",
+	"[&_hr]:mt-monti-8 [&_hr]:mb-monti-24 [&_hr]:border-0 [&_hr]:border-monti-emphasis [&_hr]:border-t",
 	// Marks.
 	"[&_a]:underline [&_a]:decoration-monti-strong [&_a]:underline-offset-4",
-	"[&_:not(pre)>code]:rounded-monti-sm [&_:not(pre)>code]:bg-monti-muted [&_:not(pre)>code]:px-monti-4 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-monti-editor-code",
+	"[&_:not(pre)>code]:rounded-monti-sm [&_:not(pre)>code]:border [&_:not(pre)>code]:border-monti-emphasis [&_:not(pre)>code]:bg-monti-muted [&_:not(pre)>code]:px-monti-4 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-monti-editor-code",
 	// Raised and lowered marks sit the same distance from the baseline (the reset puts a raised one 0.5em up and a lowered one 0.25em down).
 	"[&_sub]:-bottom-[0.3em] [&_sup]:-top-[0.3em] [&_sub]:relative [&_sup]:relative",
 	// A footnote's number in the text (its order, `data-n`), and the footnotes together at the end under a rule, each with its number in the margin.

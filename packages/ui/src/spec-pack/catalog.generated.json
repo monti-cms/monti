@@ -2304,7 +2304,7 @@
 			"props": {
 				"tone": {
 					"kind": "variant",
-					"enum": ["default", "warning"]
+					"enum": ["danger", "default"]
 				}
 			},
 			"events": []

@@ -214,3 +214,178 @@ export function tabular(adminCss, sources = {}) {
 	}
 	return problems;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------
+// Screen mode and colour.
+
+/**
+ * `screen-mode-root`: the screen mode (`data-theme` on the page) is put on the page by one hook at the app root, so every screen has it, the ones drawn
+ * outside the frame too (a reloaded editor, the login). `use-screen-mode.ts` is the only file that writes `data-theme` (or the `dark` class), and
+ * `useApplyScreenMode` is called by `app.tsx` alone, inside `MontiAdmin`. Reading the mode (`useScreenMode`, for the switch) is free.
+ *
+ * Cannot see: a second entry point that does not go through `MontiAdmin` (a new standalone page mounted by itself), or a theme set by a library the
+ * admin does not call by name.
+ */
+export const SCREEN_MODE_FILE = "packages/admin/src/screens/frame/use-screen-mode.ts";
+export const APP_ROOT_FILE = "packages/admin/src/app.tsx";
+
+export function screenModeRoot(sources) {
+	const problems = [];
+	for (const [file, source] of Object.entries(sources)) {
+		if (/\.(test|stories)\.tsx?$/.test(file)) continue;
+		for (const found of source.matchAll(
+			/dataset\.theme\s*=|setAttribute\(\s*["']data-theme["']|classList\.(?:add|toggle|remove)\(\s*["']dark["']/g,
+		))
+			if (file !== SCREEN_MODE_FILE)
+				problems.push({
+					file,
+					line: lineOf(source, found.index),
+					message: "the screen mode is put on the page by `use-screen-mode.ts` alone",
+				});
+		for (const found of source.matchAll(/\buseApplyScreenMode\(/g))
+			if (file !== APP_ROOT_FILE && file !== SCREEN_MODE_FILE)
+				problems.push({
+					file,
+					line: lineOf(source, found.index),
+					message: "`useApplyScreenMode` is called once, by `MontiAdmin` in app.tsx, so every screen has the mode",
+				});
+	}
+	const root = sources[APP_ROOT_FILE];
+	if (root !== undefined) {
+		const start = root.indexOf("export function MontiAdmin");
+		if (start < 0 || !root.slice(start).includes("useApplyScreenMode()"))
+			problems.push({
+				file: APP_ROOT_FILE,
+				line: 1,
+				message: "`MontiAdmin` must call `useApplyScreenMode()`: the screen mode is applied at the app root",
+			});
+	}
+	if (sources[SCREEN_MODE_FILE] !== undefined && !/export function useApplyScreenMode/.test(sources[SCREEN_MODE_FILE]))
+		problems.push({
+			file: SCREEN_MODE_FILE,
+			line: 1,
+			message: "`use-screen-mode.ts` must export `useApplyScreenMode`",
+		});
+	return problems;
+}
+
+const channel = (hex, at) => {
+	const v = Number.parseInt(hex.slice(at, at + 2), 16) / 255;
+	return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+};
+const luminance = (hex) => 0.2126 * channel(hex, 1) + 0.7152 * channel(hex, 3) + 0.0722 * channel(hex, 5);
+/** The WCAG contrast ratio of two `#rrggbb` colours. */
+export function ratio(a, b) {
+	const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+	return (hi + 0.05) / (lo + 0.05);
+}
+/** The HSL saturation (0 to 1) of a `#rrggbb` colour. */
+export function saturation(hex) {
+	const [r, g, b] = [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16) / 255);
+	const [max, min] = [Math.max(r, g, b), Math.min(r, g, b)];
+	if (max === min) return 0;
+	return (max - min) / (1 - Math.abs(max + min - 1));
+}
+
+/** The class a table row that is picked wears at its left edge, so it reads apart from the row under the pointer. */
+const SELECTED_BAR = "data-selected:[&>td:first-child]:before:bg-(--monti-border-contrast)";
+/** The files that draw the underline of a field. */
+export const FIELD_FILES = ["select", "textarea", "input", "affix", "combobox", "media-input"].map(
+	(name) => `packages/ui/src/${name}.tsx`,
+);
+
+/**
+ * `token-contrast`: the colour tokens keep the contrast the design system promises, in both modes, read from `tokens.json`:
+ * - text roles (`fg-*`, the pill's text on the pill) are at least 4.5:1 on the page and tool grounds;
+ * - `border-strong`, the underline of a field and every boundary that must be seen, is at least 3:1 on both grounds (non-text contrast);
+ * - `border-emphasis`, the line that alone divides things, is at least 1.25:1;
+ * - the page and tool grounds are two grounds (1.05:1 in light, 1.1:1 in dark);
+ * - the hover and the picked row differ by less than 1.15:1 in the ladder, so a picked table row must wear its left bar (`SELECTED_BAR` in `table.tsx`);
+ * - the dark pill (`bg-emphasis`) is darker than the ink (at least 1.2:1 under it), still at least 3:1 on the page, and carries its text at 4.5:1;
+ * - state text in dark (`success`, `warning`, `danger`, `proposal`) is at most 66% saturated.
+ * The field files must draw their underline with `border-strong`.
+ *
+ * Cannot see: how a state looks over an image or a coloured block, perceived hierarchy between two greys, a colour written as a raw value instead of a
+ * token (`arbitrary-value` stops those), or a line drawn with the wrong token in a file that is not a field.
+ */
+export function tokenContrast(tokens, { sources = {} } = {}) {
+	const problems = [];
+	const file = "packages/ui/tokens/tokens.json";
+	const byName = new Map(tokens.color.tokens.map((token) => [token.name, token.value]));
+	const resolve = (name, mode) => {
+		const value = byName.get(name)?.[mode];
+		if (value === undefined) throw new Error(`token-contrast: no color token ${name}`);
+		const reference = /^\{([\w-]+)\}$/.exec(value);
+		return reference ? resolve(reference[1], mode) : value;
+	};
+	const need = (label, a, b, atLeast, mode) => {
+		const got = ratio(a, b);
+		if (got < atLeast)
+			problems.push({
+				file,
+				line: 1,
+				message: `${label} (${mode}): ${a} on ${b} is ${got.toFixed(2)}:1, under ${atLeast}:1`,
+			});
+	};
+	for (const mode of ["light", "dark"]) {
+		const grounds = [
+			["bg-page", resolve("bg-page", mode)],
+			["bg-tool", resolve("bg-tool", mode)],
+		];
+		for (const name of [
+			"fg-default",
+			"fg-muted",
+			"fg-subtle",
+			"fg-faint",
+			"fg-success",
+			"fg-warning",
+			"fg-danger",
+			"fg-proposal",
+		])
+			for (const [ground, hex] of grounds) need(`${name} on ${ground}`, resolve(name, mode), hex, 4.5, mode);
+		need("fg-on-emphasis on bg-emphasis", resolve("fg-on-emphasis", mode), resolve("bg-emphasis", mode), 4.5, mode);
+		for (const [ground, hex] of grounds) {
+			need(`border-strong on ${ground}`, resolve("border-strong", mode), hex, 3, mode);
+			need(`border-emphasis on ${ground}`, resolve("border-emphasis", mode), hex, 1.25, mode);
+		}
+		need("bg-page against bg-tool (two grounds)", grounds[0][1], grounds[1][1], mode === "dark" ? 1.1 : 1.05, mode);
+	}
+	if (
+		ratio(resolve("bg-muted", "light"), resolve("bg-selected", "light")) < 1.15 &&
+		!(sources["packages/ui/src/table.tsx"] ?? SELECTED_BAR).includes(SELECTED_BAR)
+	)
+		problems.push({
+			file: "packages/ui/src/table.tsx",
+			line: 1,
+			message: `the hover and the picked row are under 1.15:1 apart in the ladder, so a picked row must wear its left bar (\`${SELECTED_BAR}\`)`,
+		});
+	const pill = resolve("bg-emphasis", "dark");
+	const ink = resolve("fg-default", "dark");
+	if (!(luminance(pill) < luminance(ink)) || ratio(ink, pill) < 1.2)
+		problems.push({
+			file,
+			line: 1,
+			message: `the dark pill ${pill} is not at least 1.2:1 darker than the ink ${ink}: it must not be the brightest block`,
+		});
+	need("the dark pill on bg-page", pill, resolve("bg-page", "dark"), 3, "dark");
+	for (const name of ["success-11", "warning-11", "danger-11", "proposal-11"]) {
+		const hex = resolve(name, "dark");
+		if (saturation(hex) > 0.66)
+			problems.push({
+				file,
+				line: 1,
+				message: `${name} (dark) ${hex} is ${(saturation(hex) * 100).toFixed(0)}% saturated, over 66%: it jumps out of the dark ground`,
+			});
+	}
+	for (const name of FIELD_FILES) {
+		const source = sources[name];
+		if (source === undefined) continue;
+		if (/border-monti-(?:default|muted)\s+border-b/.test(source) || !source.includes("border-monti-strong border-b"))
+			problems.push({
+				file: name,
+				line: 1,
+				message: "the underline of a field is `border-strong` (3:1), not a quieter line",
+			});
+	}
+	return problems;
+}

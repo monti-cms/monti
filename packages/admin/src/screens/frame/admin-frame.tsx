@@ -86,7 +86,7 @@ function Row({
 	name: string;
 	/** Only a number above zero shows: a new site has no counts (doc 15). */
 	count?: number;
-	tone?: "warning";
+	tone?: "danger";
 	/** Folded, a count cannot show: a dot on the icon says there is something to look at, and these words name it. */
 	railDot?: string;
 	onOpen: (place: Place) => void;
@@ -272,14 +272,14 @@ export function AdminFrame({
 									count={counts?.trash}
 									onOpen={onOpen}
 								/>
-								{/* Failed deliveries are counted on the log that shows them, in the warning tone (doc 13, 2026-11-12). */}
+								{/* Failed deliveries are counted on the log that shows them, in the danger tone: what failed is danger, not a warning (tokens.md, tone; doc 13). */}
 								<Row
 									place="activity"
 									open={open}
 									icon={<RecentlyViewed />}
 									name={t("frame.activity")}
 									count={counts?.failedDeliveries}
-									tone="warning"
+									tone="danger"
 									railDot={t("frame.failedDeliveries")}
 									onOpen={onOpen}
 								/>

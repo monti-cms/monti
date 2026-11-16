@@ -42,12 +42,12 @@ function Separator({
 			orientation={orientation}
 			className={cn(
 				"monti-horizontal:h-px monti-horizontal:w-full monti-vertical:w-px shrink-0",
-				// A line between rows is the quiet row line; the rule between two controls is the design system's `border-default`, 1 by 14.
+				// A line between rows is the quiet row line; the rule between two controls is the design system's `border-emphasis`, 1 by 14: a line that is seen.
 				length === "full"
 					? "monti-vertical:self-stretch bg-monti-divider"
 					: length === "bar"
-						? "monti-vertical:mx-[3px] monti-vertical:h-4 monti-vertical:self-center bg-(--monti-border-default)"
-						: "monti-vertical:mx-monti-4 monti-vertical:h-3.5 monti-vertical:self-center bg-(--monti-border-default)",
+						? "monti-vertical:mx-[3px] monti-vertical:h-4 monti-vertical:self-center bg-(--monti-border-emphasis)"
+						: "monti-vertical:mx-monti-4 monti-vertical:h-3.5 monti-vertical:self-center bg-(--monti-border-emphasis)",
 				flush && "monti-vertical:mx-0",
 				className,
 			)}

@@ -64,6 +64,9 @@
  *                       `MONO_OK` of `check-type-colour.mjs` with its reason. `check-type-colour.mjs` says what it cannot see.
  *   type-order          The heading roles step down, and the editor body's h2, h3, h4 are not smaller than its text (h4, the text's size, is semibold).
  *   tabular             `admin.css` sets tabular digits on `.monti-admin` and the body, and no source takes them back.
+ *   screen-mode-root    `data-theme` is written by `use-screen-mode.ts` alone, and `useApplyScreenMode` is called once, by `MontiAdmin` in `app.tsx`.
+ *   token-contrast      `tokens.json` keeps its contrast: text 4.5:1, `border-strong` (the field underline) 3:1, `border-emphasis` 1.25:1, the dark pill darker
+ *                       than the ink, dark state text at most 66% saturated, and a picked table row wearing its left bar. `check-type-colour.mjs` says what it cannot see.
  *   design-allow        A `design-allow` marker without a reason.
  *
  * A value that is measured or computed at runtime (a position under the pointer, a width the user dragged) ends its line with
@@ -75,7 +78,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { problems as bannerPlaces } from "./check-banner-place.mjs";
 import { checked as formatChecked, problems as formatProblems } from "./check-format.mjs";
-import { monoWords, tabular, typeOrder } from "./check-type-colour.mjs";
+import { FIELD_FILES, monoWords, screenModeRoot, tabular, tokenContrast, typeOrder } from "./check-type-colour.mjs";
 import { problems as typedMarks } from "./check-typed-marks.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1414,6 +1417,9 @@ function checkTypeColour() {
 		typeOrder(JSON.parse(text("packages/ui/tokens/tokens.json")), text("packages/ui/src/editor-body.tsx")),
 	);
 	report("tabular", tabular(text(ADMIN_CSS_FILE), sources));
+	report("screen-mode-root", screenModeRoot(sources));
+	const read = Object.fromEntries([...FIELD_FILES, "packages/ui/src/table.tsx"].map((file) => [file, text(file)]));
+	report("token-contrast", tokenContrast(JSON.parse(text("packages/ui/tokens/tokens.json")), { sources: read }));
 }
 checkTypeColour();
 

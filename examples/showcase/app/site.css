@@ -2,6 +2,34 @@
  * The showcase site's looks: enough to read every block. Every rule sits under `.site`: a bare `main { … }` would reach the admin's page
  * too, which is a page of this same app. The admin brings its own stylesheet, which touches nothing outside the admin.
  */
+/*
+ * The site's colours are variables on the page, light by default and dark when the system asks for it (`prefers-color-scheme`), so the page, its
+ * text, its lines and its boxes change together. The blocks' own styles follow the same signal (`.dark`, `[data-theme="dark"]` or the system's).
+ */
+html:has(.site) {
+	color-scheme: light dark;
+	--site-bg: #faf9f5;
+	--site-ink: #1c1b19;
+	--site-quiet: #6f6b62;
+	--site-muted: #4a4741;
+	--site-line: #eae7e0;
+	--site-rule: #dcd8cf;
+	--site-box: #f6f4ee;
+}
+@media (prefers-color-scheme: dark) {
+	html:has(.site) {
+		--site-bg: #1a1917;
+		--site-ink: #ece9e1;
+		--site-quiet: #a29e95;
+		--site-muted: #c9c6bd;
+		--site-line: #2b2925;
+		--site-rule: #3a3833;
+		--site-box: #232120;
+	}
+}
+body:has(.site) {
+	background: var(--site-bg);
+}
 .site {
 	max-width: 720px;
 	margin: 0 auto;
@@ -9,7 +37,7 @@
 	font:
 		17px / 1.75 system-ui,
 		sans-serif;
-	color: #1c1b19;
+	color: var(--site-ink);
 }
 .site a {
 	color: inherit;
@@ -37,7 +65,7 @@
 .site .quiet,
 .site .rows time,
 .site .subtitle {
-	color: #6f6b62;
+	color: var(--site-quiet);
 	font-size: 14px;
 }
 .site .rows {
@@ -49,7 +77,7 @@
 	justify-content: space-between;
 	gap: 16px;
 	padding: 6px 0;
-	border-bottom: 1px solid #eae7e0;
+	border-bottom: 1px solid var(--site-line);
 }
 .site .fields {
 	display: grid;
@@ -58,7 +86,7 @@
 	font-size: 15px;
 }
 .site .fields dt {
-	color: #6f6b62;
+	color: var(--site-quiet);
 }
 .site .fields dd {
 	margin: 0;
@@ -85,7 +113,7 @@
 .site .pin,
 .site .toc ol {
 	padding: 8px 16px;
-	background: #f6f4ee;
+	background: var(--site-box);
 	font-size: 15px;
 }
 .site .toc ol {
@@ -100,8 +128,8 @@
 .site blockquote {
 	margin: 16px 0;
 	padding-left: 16px;
-	border-left: 3px solid #dcd8cf;
-	color: #4a4741;
+	border-left: 3px solid var(--site-rule);
+	color: var(--site-muted);
 }
 .site table {
 	border-collapse: collapse;
@@ -109,7 +137,7 @@
 }
 .site th,
 .site td {
-	border: 1px solid #dcd8cf;
+	border: 1px solid var(--site-rule);
 	padding: 6px 10px;
 	text-align: left;
 }
@@ -125,6 +153,6 @@
 }
 .site figcaption,
 .site [data-footnotes] {
-	color: #6f6b62;
+	color: var(--site-quiet);
 	font-size: 14px;
 }

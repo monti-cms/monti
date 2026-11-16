@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { monoWords, tabular, typeOrder } from "./check-type-colour.mjs";
+import {
+	APP_ROOT_FILE,
+	FIELD_FILES,
+	monoWords,
+	SCREEN_MODE_FILE,
+	saturation,
+	screenModeRoot,
+	tabular,
+	tokenContrast,
+	typeOrder,
+} from "./check-type-colour.mjs";
 
 const tokens = JSON.parse(readFileSync(new URL("../packages/ui/tokens/tokens.json", import.meta.url), "utf8"));
 const editorBody = readFileSync(new URL("../packages/ui/src/editor-body.tsx", import.meta.url), "utf8");
@@ -92,4 +102,111 @@ test("tabular: a source that takes the digits back is caught", () => {
 	const found = tabular(adminCss, { "packages/ui/src/a.tsx": '<span className="normal-nums">9</span>' });
 	assert.equal(found.length, 1);
 	assert.match(found[0].message, /takes back/);
+});
+
+const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+const own = Object.fromEntries([...FIELD_FILES, "packages/ui/src/table.tsx"].map((file) => [file, read(file)]));
+const modeFiles = { [SCREEN_MODE_FILE]: read(SCREEN_MODE_FILE), [APP_ROOT_FILE]: read(APP_ROOT_FILE) };
+
+test("screen-mode-root: the repository's hook and root pass", () => {
+	assert.deepEqual(screenModeRoot(modeFiles), []);
+});
+
+test("screen-mode-root: a screen that writes data-theme or applies the mode itself is caught (TT-01)", () => {
+	const found = screenModeRoot({
+		...modeFiles,
+		"packages/admin/src/screens/frame/admin-frame.tsx":
+			'import { useApplyScreenMode } from "./use-screen-mode";\nexport function F() { useApplyScreenMode(); document.documentElement.dataset.theme = "dark"; }',
+	});
+	assert.equal(found.length, 2);
+	assert.match(found[0].message, /use-screen-mode\.ts. alone/);
+	assert.match(found[1].message, /called once/);
+});
+
+test("screen-mode-root: a root that does not apply the mode is caught", () => {
+	const found = screenModeRoot({
+		...modeFiles,
+		[APP_ROOT_FILE]: modeFiles[APP_ROOT_FILE].replace("useApplyScreenMode();", ""),
+	});
+	assert.equal(found.length, 1);
+	assert.match(found[0].message, /MontiAdmin. must call/);
+});
+
+test("screen-mode-root: reading the mode in the switch is free", () => {
+	assert.deepEqual(
+		screenModeRoot({
+			...modeFiles,
+			"packages/admin/src/screens/frame/admin-frame.tsx": "const [mode, setMode] = useScreenMode();",
+		}),
+		[],
+	);
+});
+
+test("token-contrast: the repository's tokens, field files and table pass", () => {
+	assert.deepEqual(tokenContrast(tokens, { sources: own }), []);
+});
+
+const withToken = (name, mode, value) => {
+	const copy = structuredClone(tokens);
+	copy.color.tokens.find((token) => token.name === name).value[mode] = value;
+	return copy;
+};
+
+test("token-contrast: a field underline back at the quiet stroke (1.7:1) is caught (PP-62)", () => {
+	const found = tokenContrast(withToken("border-strong", "dark", "{gray-7}"), { sources: own });
+	assert.match(found[0].message, /border-strong on bg-page \(dark\).* under 3:1/);
+});
+
+test("token-contrast: a dark pill as bright as the ink is caught (LD-02)", () => {
+	const found = tokenContrast(withToken("bg-emphasis", "dark", "{gray-12}"), { sources: own });
+	assert.ok(found.some((each) => /dark pill .* not at least 1.2:1 darker than the ink/.test(each.message)));
+});
+
+test("token-contrast: text under 4.5:1 and a loud dark state colour are caught", () => {
+	assert.match(
+		tokenContrast(withToken("fg-subtle", "light", "{gray-8}"), { sources: own })[0].message,
+		/fg-subtle on bg-page \(light\)/,
+	);
+	const loud = tokenContrast(withToken("proposal-11", "dark", "#93adf5"), { sources: own });
+	assert.match(loud[0].message, /proposal-11 \(dark\) #93adf5 is 83% saturated/);
+	assert.ok(saturation("#a6b7ea") <= 0.66);
+});
+
+test("token-contrast: the sidebar and the page drawn as one ground in dark are caught (LD-05)", () => {
+	const found = tokenContrast(withToken("gray-1", "dark", "#151412"), { sources: own });
+	assert.match(found[0].message, /two grounds/);
+});
+
+test("token-contrast: a picked row with no left bar is caught, where hover and picked are 1.05:1 apart (AT-22)", () => {
+	const found = tokenContrast(tokens, {
+		sources: {
+			...own,
+			"packages/ui/src/table.tsx": own["packages/ui/src/table.tsx"].replaceAll(
+				"data-selected:[&>td:first-child]:before:bg-(--monti-border-contrast)",
+				"",
+			),
+		},
+	});
+	assert.equal(found.length, 1);
+	assert.match(found[0].message, /left bar/);
+});
+
+test("token-contrast: a field that draws its underline with a quiet line is caught", () => {
+	const input = FIELD_FILES.find((file) => file.endsWith("input.tsx"));
+	const found = tokenContrast(tokens, {
+		sources: {
+			...own,
+			[input]: own[input].replaceAll("border-monti-strong border-b", "border-monti-default border-b"),
+		},
+	});
+	assert.equal(found.length, 1);
+	assert.equal(found[0].file, input);
+});
+
+test("the showcase site has a dark theme: a prefers-color-scheme rule, and its rules take colours from the variables (WS-01)", () => {
+	const css = read("examples/showcase/app/site.css");
+	assert.match(css, /@media \(prefers-color-scheme: dark\)/);
+	const rules = css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/html:has\(\.site\) \{[^}]*\}/g, "");
+	assert.deepEqual(rules.match(/#[0-9a-f]{3,8}\b/gi) ?? [], []);
+	assert.match(css, /body:has\(\.site\) \{\s*background: var\(--site-bg\);/);
 });

@@ -45,7 +45,7 @@
 	--monti-border-muted: var(--monti-gray-4);
 	--monti-border-default: var(--monti-gray-5);
 	--monti-border-emphasis: var(--monti-gray-6);
-	--monti-border-strong: var(--monti-gray-7);
+	--monti-border-strong: var(--monti-gray-9);
 	--monti-border-contrast: var(--monti-gray-12);
 	--monti-fg-success: var(--monti-success-11);
 	--monti-fg-warning: var(--monti-warning-11);
@@ -173,7 +173,7 @@
 
 :where(html:is(.dark, [data-theme="dark"]):has(.monti-admin)) {
 	color-scheme: dark;
-	--monti-gray-1: #151412;
+	--monti-gray-1: #0e0d0b;
 	--monti-gray-2: #1a1917;
 	--monti-gray-3: #26241f;
 	--monti-gray-4: #2b2925;
@@ -193,15 +193,17 @@
 	--monti-danger-3: #2b1618;
 	--monti-danger-11: #e3918f;
 	--monti-proposal-3: #252b3c;
-	--monti-proposal-11: #93adf5;
+	--monti-proposal-11: #a6b7ea;
 	--monti-bg-page: var(--monti-gray-2);
 	--monti-bg-tool: var(--monti-gray-1);
 	--monti-bg-highlight: #3a352a;
 	--monti-bg-selection: #4a4232;
 	--monti-bg-block: #2a2722;
+	--monti-bg-emphasis: var(--monti-gray-11);
 	--monti-fg-on-emphasis: var(--monti-gray-2);
+	--monti-border-contrast: var(--monti-gray-11);
 	--monti-bg-backdrop: rgba(10, 9, 8, 0.55);
-	--monti-shadow-floating: 0 12px 32px rgba(0, 0, 0, 0.5);
+	--monti-shadow-floating: none;
 	--monti-shadow-overlay: 0 24px 60px rgba(0, 0, 0, 0.6);
 	--monti-shadow-sheet: -20px 0 50px rgba(0, 0, 0, 0.5);
 }

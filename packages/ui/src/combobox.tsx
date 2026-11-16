@@ -94,7 +94,7 @@ function ComboboxInput({
 			className={cn(
 				cn(
 					FIELD_HOVER,
-					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/50 has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45 has-[input[readonly]]:focus-within:border-monti-default",
+					"group/combobox-input flex w-full min-w-0 items-center gap-monti-4 border-monti-strong border-b transition-colors focus-within:border-monti-contrast has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/50 has-[input:disabled]:pointer-events-none has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px] has-[input:disabled]:opacity-45 has-[input[readonly]]:focus-within:border-monti-default",
 					FIELD_INSET,
 				),
 				size === "sm" ? "h-monti-control-sm" : size === "md" ? "h-monti-control-md" : "h-monti-control-lg",

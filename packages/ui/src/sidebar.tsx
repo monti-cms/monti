@@ -193,7 +193,7 @@ function Sidebar({
 			data-rail={rail ? "" : undefined}
 			className={cn(
 				RAIL,
-				"group/rail relative shrink-0 self-stretch border-monti-default border-r",
+				"group/rail relative shrink-0 self-stretch border-monti-emphasis border-r",
 				rail ? "w-monti-rail" : "w-(--sidebar-width)",
 				className,
 			)}
@@ -413,7 +413,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="sidebar-footer"
 			data-sidebar="footer"
-			className={cn("mt-auto flex flex-col gap-monti-2 border-monti-default border-t pt-monti-12", className)}
+			className={cn("mt-auto flex flex-col gap-monti-2 border-monti-emphasis border-t pt-monti-12", className)}
 			{...props}
 		/>
 	);
@@ -508,7 +508,9 @@ function SidebarMenuButton({
 				children: (
 					<>
 						{children}
-						{rail && railDot && <ChangeDot label={railDot} className="absolute top-[7px] right-[7px] m-0" />}
+						{rail && railDot && (
+							<ChangeDot tone="danger" label={railDot} className="absolute top-[7px] right-[7px] m-0" />
+						)}
 					</>
 				),
 			},
@@ -536,14 +538,14 @@ function SidebarMenuBadge({
 	className,
 	...props
 }: React.ComponentProps<"span"> & {
-	/** `warning` for a count that needs attention (failed deliveries). */
-	tone?: "default" | "warning";
+	/** `danger` for a count of what failed (failed deliveries). */
+	tone?: "default" | "danger";
 }) {
 	return (
 		<span
 			data-slot="sidebar-menu-badge"
 			data-sidebar="menu-badge"
-			className={cn(NAV_ROW_END, tone === "warning" && "text-monti-warning", className)}
+			className={cn(NAV_ROW_END, tone === "danger" && "text-monti-danger", className)}
 			{...props}
 		/>
 	);

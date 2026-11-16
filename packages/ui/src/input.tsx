@@ -86,7 +86,7 @@ function Input({
 							!action && !props.readOnly && FIELD_HOVER,
 							// Read-only, the line stays as it is under the focus too: nothing is being written (field.md).
 							!props.readOnly && "focus-visible:border-monti-contrast",
-							"border-0 border-monti-default border-b text-monti-default text-monti-reading aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal md:text-monti-body",
+							"border-0 border-monti-strong border-b text-monti-default text-monti-reading aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal md:text-monti-body",
 							!action && FIELD_INSET,
 						),
 				inline ? INLINE_SIZE[size] : size === "sm" && "md:text-monti-note",
@@ -113,7 +113,7 @@ function Input({
 				cn(
 					!props.readOnly && FIELD_HOVER,
 					!props.readOnly && "focus-within:border-monti-contrast",
-					"flex w-full min-w-0 border-monti-default border-b transition-colors has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+					"flex w-full min-w-0 border-monti-strong border-b transition-colors has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
 					FIELD_INSET,
 				),
 				"items-center",

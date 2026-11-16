@@ -1,7 +1,7 @@
 # 활동 기록 (Events)
 
 - 기준 화면: `Screens/Reference/Lists` › Events…. 실제 화면의 상태는 `Screens/Activity`. 상태와 흐름 단계: [screens.md › Events](../screens.md#events), [흐름 12](../flows/12-activity-log.md).
-- 공통 틀: [common.md](common.md)의 왼쪽 내비게이션(`Sidebar`, 실패한 전송 수는 "활동 기록" 행의 `SidebarMenuBadge tone="warning"`), 페이지 단(`PageColumn width="list"`), 화면의 알림 띠(`PageBanner`), ✦ 어시스턴트 열기, 확인 질문, 사이드 패널, 토스트, 행 오른쪽 클릭.
+- 공통 틀: [common.md](common.md)의 왼쪽 내비게이션(`Sidebar`, 실패한 전송 수는 "활동 기록" 행의 `SidebarMenuBadge tone="danger"`), 페이지 단(`PageColumn width="list"`), 화면의 알림 띠(`PageBanner`), ✦ 어시스턴트 열기, 확인 질문, 사이드 패널, 토스트, 행 오른쪽 클릭.
 - 표와 열 이름 행의 쓰임은 [list.md](list.md)의 게시글 목록, [trash.md](trash.md)의 휴지통과 같다. 이 절은 활동 기록이 다른 것만 적는다.
 - 무엇을 하는 화면인지는 [기능 설계 13](../../features/13-activity-and-delivery.md)에 있다. 이 화면의 큰 틀 열 가지는 코드를 쓰기 전에 시안을 보고 소유자가 정했고(2026-11-12. 그 문서 "화면 승인"의 "소유자가 정한 것"), 나머지 자리와 동작은 만들며 정했다(같은 절의 "만들며 정함").
 - 활동 기록은 사이드바에 제 행이 있는 화면이다. 도구의 탭이 아니다(2026-11-12 소유자: "사이드바로 빼는게 더 좋아보이네 승인할게.").

@@ -266,8 +266,11 @@ export const FolderNaming: Story = {
 	),
 };
 
-/** Picked rows: the selected ground, the rule between them a step darker. */
-export const Picked: Story = { render: () => <Frame>{rows((id) => ({ selected: id !== "3" }))}</Frame> };
+/** Picked rows: the selected ground, the rule between them a step darker, and a 3px ink bar at the left edge so a picked row reads apart from one under the pointer. */
+export const Picked: Story = {
+	tags: ["visual"],
+	render: () => <Frame>{rows((id) => ({ selected: id !== "3" }))}</Frame>,
+};
 
 /** Rows the assistant picked: the proposal tint. */
 export const ProposalPicked: Story = {

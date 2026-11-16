@@ -68,7 +68,7 @@ function Row({
 	icon: React.ReactNode;
 	name: string;
 	count?: string;
-	tone?: "warning";
+	tone?: "danger";
 	/** Folded, the count cannot show: a dot on the icon stands for it, named by these words. */
 	railDot?: string;
 	children?: React.ReactNode;
@@ -159,7 +159,7 @@ export function AdminFrame({
 				))}
 			</SidebarMenuSub>
 		) : null;
-	const row = (place: FramePlace, icon: React.ReactNode, name: string, tone?: "warning", railDot?: string) => (
+	const row = (place: FramePlace, icon: React.ReactNode, name: string, tone?: "danger", railDot?: string) => (
 		<Row place={place} open={open} icon={icon} name={name} count={count[place]} tone={tone} railDot={railDot}>
 			{place === open ? sub : null}
 		</Row>
@@ -193,7 +193,7 @@ export function AdminFrame({
 						<SidebarMenu aria-label="관리">
 							{row("trash", <TrashCan />, "휴지통")}
 							{/* Failed deliveries are counted on the log that shows them (doc 13, 2026-11-12). */}
-							{row("activity", <RecentlyViewed />, "활동 기록", "warning", "실패한 전송")}
+							{row("activity", <RecentlyViewed />, "활동 기록", "danger", "실패한 전송")}
 							{row("tools", <Tools />, "도구")}
 							{row("settings", <SettingsAdjust />, "설정")}
 						</SidebarMenu>

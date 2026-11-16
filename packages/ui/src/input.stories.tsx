@@ -22,8 +22,9 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-/** Placeholder, filled, disabled, read-only, invalid (the underline turns red), proposal (the assistant wrote it: blue), and the other input types. */
+/** Placeholder, filled, disabled, read-only, invalid (the underline turns red), proposal (the assistant wrote it: blue), and the other input types. The underline is the strong line (3:1 on its ground, in light and dark), so an empty field is still a field. */
 export const States: Story = {
+	tags: ["visual"],
 	render: () => (
 		<Stack gap={16}>
 			<Stack gap={4}>

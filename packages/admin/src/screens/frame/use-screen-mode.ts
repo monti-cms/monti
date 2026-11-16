@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 export type ScreenMode = "system" | "light" | "dark";
 
@@ -13,22 +13,46 @@ const stored = (): ScreenMode => {
 	}
 };
 
-/** The screen mode, kept in this browser (doc 15), put on the page as `data-theme` (`system` follows the system's own). */
+/** The screen mode is one thing for the whole page: read from this browser once, then shared by whoever asks (the switch in the sidebar) and applied by the root. */
+let current: ScreenMode | null = null;
+const listeners = new Set<() => void>();
+const read = () => {
+	current ??= stored();
+	return current;
+};
+const subscribe = (listener: () => void) => {
+	listeners.add(listener);
+	return () => listeners.delete(listener);
+};
+export const setScreenMode = (mode: ScreenMode) => {
+	current = mode;
+	try {
+		localStorage.setItem(KEY, mode);
+	} catch {}
+	for (const listener of listeners) listener();
+};
+
+/** The screen mode, kept in this browser (doc 15), and how to change it. Reading it puts nothing on the page: {@link useApplyScreenMode} does, once, at the app root. */
 export function useScreenMode() {
-	const [mode, setMode] = useState<ScreenMode>(stored);
+	const mode = useSyncExternalStore(subscribe, read, () => "system" as ScreenMode);
+	return [mode, setScreenMode] as const;
+}
+
+/**
+ * Puts the screen mode on the page as `data-theme` (`system` follows the system's own). It is called once, by the app root, so every screen has it, the
+ * frame's and those drawn outside it (the editor, the login): a screen that is opened by its address or reloaded keeps its dark mode (TT-01).
+ */
+export function useApplyScreenMode() {
+	const [mode] = useScreenMode();
 	useEffect(() => {
 		const dark = window.matchMedia("(prefers-color-scheme: dark)");
 		const apply = () => {
 			document.documentElement.dataset.theme = mode === "system" ? (dark.matches ? "dark" : "light") : mode;
 		};
 		apply();
-		try {
-			localStorage.setItem(KEY, mode);
-		} catch {}
 		dark.addEventListener("change", apply);
 		return () => dark.removeEventListener("change", apply);
 	}, [mode]);
-	return [mode, setMode] as const;
 }
 
 const RAIL = "monti.sidebarRail";
