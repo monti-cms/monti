@@ -2,6 +2,8 @@
 
 import type { ComponentProps, ReactNode, Ref } from "react";
 import { BlockBox } from "./block-bar";
+import { cn } from "./cn";
+import { TOOL_ROW_ROOM, TOOL_ROW_ROOM_LANE } from "./placement";
 
 /**
  * A site block written in a language of its own in the editor (a formula, a diagram, a chart; editor-tools.md, the source block): its drawing in a box
@@ -43,8 +45,23 @@ function SourceBox({
 }
 
 /** A site block's frame in the editor: what its tool row (`BlockBarPlace`) hangs off. The editor reads the pointer over it. */
-function BlockFrameBox({ ref, ...props }: ComponentProps<"div"> & { ref?: Ref<HTMLDivElement> }) {
-	return <div ref={ref} data-slot="block-frame" className="relative" {...props} />;
+function BlockFrameBox({
+	ref,
+	toolRow = false,
+	...props
+}: ComponentProps<"div"> & {
+	ref?: Ref<HTMLDivElement>;
+	/** A tool row can appear on this block (the body is written): it keeps the row's room above it, whether the row shows or not (`TOOL_ROW_ROOM`); `"lane"` when the block has tools of its own on its top edge, which the row stands above. */
+	toolRow?: boolean | "lane";
+}) {
+	return (
+		<div
+			ref={ref}
+			data-slot="block-frame"
+			className={cn("relative", toolRow === "lane" ? TOOL_ROW_ROOM_LANE : toolRow && TOOL_ROW_ROOM)}
+			{...props}
+		/>
+	);
 }
 
 /**

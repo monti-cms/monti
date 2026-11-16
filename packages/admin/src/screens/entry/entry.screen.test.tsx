@@ -3,7 +3,7 @@ import { toast } from "@monti-cms/ui";
 import { composeStories } from "@storybook/react-vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { caretAfter, dragPath, dropDrag, middleOf, pickWords } from "../../../../../testing/input";
+import { caretAfter, coversText, dragPath, dropDrag, middleOf, pickWords } from "../../../../../testing/input";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
 import { MontiAdmin } from "../../app";
@@ -1083,6 +1083,35 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 		await save();
 		await saveCell("제안 2건 대기");
 		expect(await proposals()).toHaveLength(2);
+	});
+
+	it("a bar fixed to the window's edge lets every word scroll clear of it: at the end the last words are above the review bar, and the end room is the bar's height and gap", async () => {
+		await proposed();
+		const dock = () => document.querySelector("[data-slot=proposal-bubble-dock]") as HTMLElement;
+		await expect.poll(dock).not.toBeNull();
+		const scrollers = () => {
+			const found: HTMLElement[] = [];
+			for (let at: HTMLElement | null = dock().parentElement; at; at = at.parentElement)
+				if (at.scrollHeight > at.clientHeight) found.push(at);
+			return found;
+		};
+		// Mid-scroll the bar is whole at the window's foot, and the words scroll under it.
+		for (const at of scrollers()) at.scrollTop = at.scrollHeight / 3;
+		await expect
+			.poll(() => dock().firstElementChild?.getBoundingClientRect().bottom ?? 0)
+			.toBeLessThanOrEqual(window.innerHeight);
+		// At the end the last words are clear of it.
+		for (const at of scrollers()) at.scrollTop = at.scrollHeight;
+		await expect.poll(() => coversText(dock(), body().element())).toEqual([]);
+		// The room the body keeps at its end: from the last words down to the foot of the scrolling box, the bar's height and the gap over the edge.
+		const bar = dock().firstElementChild as HTMLElement;
+		const text = [...body().element().querySelectorAll("p, li, h2, h3, h4")]
+			.filter((each) => each.textContent?.trim())
+			.at(-1) as Element;
+		const foot = (scrollers()[0] ?? document.documentElement).getBoundingClientRect().bottom;
+		await expect
+			.poll(() => foot - text.getBoundingClientRect().bottom)
+			.toBeGreaterThanOrEqual(bar.getBoundingClientRect().height + 12 - 1);
 	});
 
 	it("'모두 받기' puts every proposal into the text at once, unsaved", async () => {

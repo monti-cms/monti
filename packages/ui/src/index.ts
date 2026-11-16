@@ -87,6 +87,7 @@ export const PropertyGroup = close(open.PropertyGroup);
 export const PropertyPanel = close(open.PropertyPanel);
 export const SidePanel = close(open.SidePanel);
 export const SidePanelSave = close(open.SidePanelSave);
+export const PanelSlot = close(open.PanelSlot);
 export const ToolCallLine = close(open.ToolCallLine);
 export type {
 	ChangesItem,
@@ -314,7 +315,8 @@ export const TableColumnBorder = close(open.TableColumnBorder);
 export const EditorBody = close(open.EditorBody);
 export const EditorMargin = close(open.EditorMargin);
 export const EditorMarginLine = close(open.EditorMarginLine);
-export const EditorOverlay = close(open.EditorOverlay);
+export const Anchored = close(open.Anchored);
+export type { Anchor, Spot } from "./anchored";
 export const HeldBlock = close(open.HeldBlock);
 export const DropLine = close(open.DropLine);
 export const ChangeActions = close(open.ChangeActions);

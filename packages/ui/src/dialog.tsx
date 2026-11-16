@@ -2,6 +2,7 @@
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import * as React from "react";
+import { ModalScope } from "./body-scope";
 import { Button } from "./button";
 import { cn } from "./cn";
 import { CutWords } from "./cut-words";
@@ -47,7 +48,7 @@ export function useModalFocus() {
  * key and no focus reach it. A key still held when it is told to close does nothing more either ({@link letHeldKeyGo}): its repeats would
  * press whatever the focus goes back to.
  */
-function ModalSurface({ closing, onKeyDown, ...props }: React.ComponentProps<"div"> & { closing: boolean }) {
+function ModalSurface({ closing, onKeyDown, children, ...props }: React.ComponentProps<"div"> & { closing: boolean }) {
 	React.useLayoutEffect(() => {
 		if (closing) letHeldKeyGo();
 	}, [closing]);
@@ -60,7 +61,10 @@ function ModalSurface({ closing, onKeyDown, ...props }: React.ComponentProps<"di
 				onKeyDown?.(event);
 				keepTabInside(event);
 			}}
-		/>
+		>
+			{/* A modal opened from the editor's body covers its header: what opens in it keeps the plain window limit. */}
+			<ModalScope>{children}</ModalScope>
+		</div>
 	);
 }
 

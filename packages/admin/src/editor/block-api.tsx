@@ -21,7 +21,7 @@ import {
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import type { Node as EditorNode, Schema } from "@tiptap/pm/model";
-import { NodeSelection, TextSelection } from "@tiptap/pm/state";
+import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state";
 import { NodeViewContent, useEditorState } from "@tiptap/react";
 import {
 	type ComponentProps,
@@ -205,6 +205,19 @@ export function useBlock() {
 				});
 				editor.view.focus();
 			},
+			/**
+			 * Moves the selection to just after the block, at whatever depth it stands, as the arrow keys would: into the text of what follows (its start), or onto
+			 * it whole when it has no text (a picture, a divider). `false` when nothing follows in the body.
+			 */
+			moveAfter: () => {
+				const own = editor.state.doc.nodeAt(pos());
+				if (!own) return false;
+				const next = Selection.findFrom(editor.state.doc.resolve(pos() + own.nodeSize), 1);
+				if (!next) return false;
+				editor.view.dispatch(editor.state.tr.setSelection(next).scrollIntoView());
+				editor.view.focus();
+				return true;
+			},
 			/** Takes child `from` out and puts it back before what is now child `to`. */
 			moveChild: (from: number, to: number) =>
 				dispatch((tr) => {
@@ -270,10 +283,13 @@ export function useBlock() {
 export function BlockFrame({
 	bar,
 	measure,
+	lane = false,
 	children,
 	...props
 }: {
 	bar?: ReactNode;
+	/** The block has tools of its own on its top edge (columns' grips): the tool row stands above them. */
+	lane?: boolean;
 	/** What a drag makes of the block, shown at its top right while it lasts ("60 : 40"). */
 	measure?: string;
 	children: ReactNode;
@@ -286,10 +302,15 @@ export function BlockFrame({
 	return (
 		<HoldContext.Provider value={(on) => setHeld((count) => Math.max(0, count + (on ? 1 : -1)))}>
 			<FocusContext.Provider value={setFocused}>
-				<BlockFrameBox onPointerEnter={() => setOver(true)} onPointerLeave={() => setOver(false)} {...props}>
+				<BlockFrameBox
+					toolRow={editable && (lane ? "lane" : true)}
+					onPointerEnter={() => setOver(true)}
+					onPointerLeave={() => setOver(false)}
+					{...props}
+				>
 					{/* Picked as a whole, it has the picked line around it, as a picture has. */}
 					<BlockBox selected={selected} measure={measure}>
-						{up && <BlockBarPlace>{bar}</BlockBarPlace>}
+						{up && <BlockBarPlace lifted={lane}>{bar}</BlockBarPlace>}
 						{children}
 					</BlockBox>
 				</BlockFrameBox>

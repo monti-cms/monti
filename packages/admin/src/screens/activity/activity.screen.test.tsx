@@ -1,6 +1,6 @@
 import type { ActivityList } from "@monti-cms/core";
 import { toast as toasts } from "@monti-cms/ui";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { dragPath, dropDrag, middleOf, rowHeights, spillingCells } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
@@ -222,6 +222,114 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await userEvent.click(panel().getByRole("button", { name: "닫기" }));
 		await expect.poll(() => location.hash).toBe("#/activity");
 		await expect.element(panel()).not.toBeInTheDocument();
+	});
+
+	it("at 1024 wide with the detail panel open, each row's ⋯ is whole beside the panel and pressable: it sticks to the page area's edge", async () => {
+		await page.viewport(1024, 768);
+		onTestFinished(() => page.viewport(1440, 900));
+		await draw(stories.Panel).run();
+		await expect.element(panel()).toBeVisible();
+		const edge = panel().element().getBoundingClientRect().left;
+		const actions = [...table().element().querySelectorAll("[data-slot=row-actions]")];
+		expect(actions.length).toBeGreaterThan(0);
+		// The column's edge is measured once the panel stands: poll.
+		await expect.poll(() => actions.every((each) => each.getBoundingClientRect().right <= edge + 1)).toBe(true);
+		for (const each of actions) {
+			const button = each.querySelector("button") as HTMLElement;
+			const box = button.getBoundingClientRect();
+			expect(button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))).toBe(true);
+		}
+		// The table runs under the panel, not over it: what is at the panel's edge, on a row's line, is the panel's.
+		const rowLine = table().element().querySelector("tbody tr")?.getBoundingClientRect();
+		expect(
+			panel()
+				.element()
+				.contains(document.elementFromPoint(edge + 10, (rowLine?.top ?? 0) + (rowLine?.height ?? 0) / 2)),
+		).toBe(true);
+		// The head's last cell stands over the ⋯ cell at the same left edge.
+		const cell = actions[0]?.closest("td") as HTMLElement;
+		const head = table().element().querySelector("thead th:last-child") as HTMLElement;
+		expect(getComputedStyle(head).position).toBe("sticky");
+		expect(Math.abs(head.getBoundingClientRect().left - cell.getBoundingClientRect().left)).toBeLessThanOrEqual(1);
+		// The last row's ⋯ opens its menu.
+		await userEvent.click(actions[actions.length - 1]?.querySelector("button") as Element);
+		await expect.element(page.getByRole("menu")).toBeVisible();
+	});
+
+	// The panel does not move on the sideways scroll, and each ⋯ stays left of it.
+	it("at 1024 wide with the panel open and the columns wider than the page, the page scrolls sideways to the last column, which comes out wholly left of the panel", async () => {
+		await page.viewport(1024, 768);
+		onTestFinished(() => page.viewport(1440, 900));
+		await draw(stories.Panel).run();
+		await expect.element(panel()).toBeVisible();
+		const scroller = (() => {
+			for (let at = table().element().parentElement; at; at = at.parentElement)
+				if (/(auto|scroll)/.test(getComputedStyle(at).overflowX)) return at;
+			throw new Error("nothing scrolls sideways");
+		})();
+		const edge = () => panel().element().getBoundingClientRect().left;
+		// The panel stands beside the scroller, which ends at its edge: the table runs past the page and the page scrolls on to its last column.
+		await expect.poll(() => scroller.scrollWidth - scroller.clientWidth).toBeGreaterThan(0);
+		expect(scroller.getBoundingClientRect().right).toBeLessThanOrEqual(edge() + 1);
+		const before = edge();
+		scroller.scrollLeft = scroller.scrollWidth;
+		// Read once, right after the scroll: the panel is not moved by it, and nothing runs under it.
+		expect(Math.abs(edge() - before)).toBeLessThanOrEqual(1);
+		const heads = [...table().element().querySelectorAll("thead th")];
+		const last = heads[heads.length - 2] as HTMLElement;
+		expect(last.getBoundingClientRect().right).toBeLessThanOrEqual(edge() + 1);
+		for (const each of table().element().querySelectorAll("[data-slot=row-actions]"))
+			expect(each.getBoundingClientRect().right).toBeLessThanOrEqual(edge() + 1);
+		// The sticky cell of a row's ⋯ shows its edge line while the cells run under it.
+		await expect
+			.poll(
+				() => getComputedStyle(table().element().querySelector("td:has([data-slot=row-actions])") as Element).boxShadow,
+			)
+			.not.toBe("none");
+	});
+
+	/** The page's scroller: the nearest box around the table that scrolls the page. */
+	const scrollerOf = () => {
+		for (let at = table().element().parentElement; at; at = at.parentElement)
+			if (/(auto|scroll)/.test(getComputedStyle(at).overflowY)) return at;
+		throw new Error("no scroller");
+	};
+
+	// The assistant's × is whole in the window, and the page keeps some room.
+	it("at 1280 wide with the page's panel stored at its widest and the assistant opened, the page's panel gives up what was dragged but not its start", async () => {
+		await page.viewport(1280, 768);
+		localStorage.setItem("monti-ui:width:panel:side", "720");
+		onTestFinished(() => {
+			localStorage.removeItem("monti-ui:width:panel:side");
+			return page.viewport(1440, 900);
+		});
+		await draw(stories.Panel).run();
+		await expect.element(panel()).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "어시스턴트 열기" }));
+		const assistant = page.getByRole("complementary").last();
+		await expect.element(assistant.getByRole("button", { name: "닫기" })).toBeVisible();
+		const close = assistant.getByRole("button", { name: "닫기" }).element().getBoundingClientRect();
+		expect(close.right).toBeLessThanOrEqual(window.innerWidth);
+		expect(close.left).toBeGreaterThanOrEqual(0);
+		await expect
+			.poll(() => page.getByRole("complementary").first().element().getBoundingClientRect().width)
+			.toBeGreaterThanOrEqual(360 - 1);
+		expect(scrollerOf().getBoundingClientRect().width).toBeGreaterThan(0);
+	});
+
+	it("at 1280 wide with both panels at their start widths the page keeps at least its floor, and neither panel is narrower than its start", async () => {
+		await page.viewport(1280, 768);
+		onTestFinished(() => page.viewport(1440, 900));
+		await draw(stories.Panel).run();
+		await expect.element(panel()).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "어시스턴트 열기" }));
+		const assistant = page.getByRole("complementary").last();
+		await expect.element(assistant.getByRole("button", { name: "닫기" })).toBeVisible();
+		await expect.poll(() => scrollerOf().getBoundingClientRect().width).toBeGreaterThanOrEqual(240 - 1);
+		expect(page.getByRole("complementary").first().element().getBoundingClientRect().width).toBeGreaterThanOrEqual(
+			360 - 1,
+		);
+		expect(assistant.element().getBoundingClientRect().width).toBeGreaterThanOrEqual(380 - 1);
 	});
 
 	it("the assistant's row open: its request whole, each thing it did, and what it touched", async () => {

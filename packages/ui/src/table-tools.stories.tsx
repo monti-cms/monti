@@ -3,7 +3,7 @@ import { Box, EditorBody, Stack, TableAddStrip, TableColumnBorder, TableGrip } f
 
 /**
  * A table's tools in the editor: the grips on the caret's column and row, the borders between columns, and the + strips along its right and bottom edges. The editor places them
- * over the table with `EditorOverlay`; here they stand on their own.
+ * over the table with `Anchored`; here they stand on their own.
  */
 const meta = {
 	title: "Monti/EditorTools/TableTools",
@@ -33,15 +33,16 @@ export const GripActive: Story = {
 	),
 };
 
-/** The + strips fill the box they are put in: a tall one for a column, a wide one for a row. */
+/** The + strips fill the box they are put in: 16px thick, a tall one for a column, a wide one for a row (outside the table's edge, 4px off: the owner's, 2026-11-14). */
 export const AddStrips: Story = {
+	tags: ["visual"],
 	render: () => (
 		<Stack direction="row" gap={16} align="start">
-			{/* design-allow: the size the editor gives the strip, the table's edge */}
+			{/* design-allow: the size the editor gives the strip: 16px thick, as long as the table's edge */}
 			<div style={{ width: 16, height: 96 }}>
 				<TableAddStrip label="열 더하기" />
 			</div>
-			{/* design-allow: the size the editor gives the strip, the table's edge */}
+			{/* design-allow: the size the editor gives the strip: 16px thick, as long as the table's edge */}
 			<div style={{ width: 320, height: 16 }}>
 				<TableAddStrip label="행 더하기" />
 			</div>

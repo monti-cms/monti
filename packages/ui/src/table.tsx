@@ -57,6 +57,8 @@ function Table({
 					// own room over its words. (The scroll box's own 8px only clears its edge, which the header covers.)
 					(stickyHeader ?? container === "none") &&
 						"[&_tbody_:is(a,button,input,[tabindex])]:scroll-mt-14 [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page [&_thead_th]:shadow-[inset_0_-1px_0_var(--monti-border-muted)] [&_thead_tr]:border-b-transparent",
+					// The head of the ⋯ column sticks with the ⋯ below it, so the head's + lines up with it.
+					"[&:has([data-slot=row-actions])_thead_th:last-child]:sticky [&:has([data-slot=row-actions])_thead_th:last-child]:right-0 [&:has([data-slot=row-actions])_thead_th:last-child]:z-11 [&:has([data-slot=row-actions])_thead_th:last-child]:bg-[var(--monti-ground,var(--monti-bg-page))] [[data-clipping]_&:has([data-slot=row-actions])_thead_th:last-child]:shadow-[inset_1px_0_0_var(--monti-border-muted)]",
 					className,
 				)}
 				style={{
@@ -136,14 +138,24 @@ function TableRow({
 			aria-selected={selected || undefined}
 			data-drop-target={dropTarget || undefined}
 			className={cn(
-				props.onClick && "cursor-pointer not-data-selected:hover:bg-monti-muted",
+				// One list of the row's grounds, read by the row and by the cell that holds its ⋯ (which sticks and so needs a ground of its own): each state
+				// sets `--row-ground`, the row paints it, and that cell paints it over the surface's ground.
+				props.onClick && "cursor-pointer not-data-selected:hover:[--row-ground:var(--monti-bg-muted)]",
 				// Cut words in a row whose link covers it stand over the link, so the pointer finds them and they say themselves whole (a row's
 				// second line under its title). Not the words that hold the link (their layer is the row's), and not a cell, which stays static.
 				"[&:has([data-slot=row-link])_:not(td)[data-cut-words]:not(:has([data-slot=row-link]))]:relative [&:has([data-slot=row-link])_:not(td)[data-cut-words]:not(:has([data-slot=row-link]))]:z-1",
-				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted not-data-selected:has-[[data-slot=row-link]:focus-visible]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static data-selected:[&>td:first-child]:before:absolute data-selected:[&>td:first-child]:before:inset-y-0 data-selected:[&>td:first-child]:before:left-0 data-selected:[&>td:first-child]:before:w-[3px] data-selected:[&>td:first-child]:before:bg-(--monti-border-contrast) data-selected:[&>td:first-child]:before:content-['']",
+				"group/row relative border-monti-muted border-b bg-(--row-ground) has-data-[slot=row-link]:cursor-pointer",
+				"not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:[--row-ground:var(--monti-bg-muted)] not-data-selected:has-[[data-slot=row-link]:focus-visible]:[--row-ground:var(--monti-bg-muted)] has-data-[slot=row-link]:not-data-selected:hover:[--row-ground:var(--monti-bg-muted)] not-data-selected:data-popup-open:[--row-ground:var(--monti-bg-muted)]",
+				"data-selected:data-proposal:[--row-ground:var(--monti-bg-proposal-muted)] data-selected:[--row-ground:var(--monti-bg-selected)]",
+				"aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:border-monti-default [&:has([data-slot=row-link])>td]:static data-selected:[&>td:first-child]:before:absolute data-selected:[&>td:first-child]:before:inset-y-0 data-selected:[&>td:first-child]:before:left-0 data-selected:[&>td:first-child]:before:w-[3px] data-selected:[&>td:first-child]:before:bg-(--monti-border-contrast) data-selected:[&>td:first-child]:before:content-['']",
+				// The cell that holds the row's ⋯ sticks to the right edge of the page area, so the ⋯ stays in reach when the table runs wider than its column
+				// (a panel open beside it, columns made wide). It paints the row's ground over the surface's (`--monti-ground`: the page's, or a tool panel's), so
+				// the cells under it do not show through and no other row turns white; a line on its left says the table runs under it.
+				"[&>td:has([data-slot=row-actions])]:sticky! [&>td:has([data-slot=row-actions])]:right-0 [&>td:has([data-slot=row-actions])]:z-2 [&>td:has([data-slot=row-actions])]:bg-[var(--row-ground,var(--monti-ground,var(--monti-bg-page)))] [[data-clipping]_&>td:has([data-slot=row-actions])]:shadow-[inset_1px_0_0_var(--monti-border-muted)]",
 				twoLine && "[&>td]:py-monti-16",
 				// An outline, not a ring: a table row draws no shadow of its own, and takes no rounded corners either (2026-11-11, owner: left square).
-				dropTarget && "bg-monti-selected! outline-[1.5px] outline-monti-contrast -outline-offset-[1.5px]",
+				dropTarget &&
+					"outline-[1.5px] outline-monti-contrast -outline-offset-[1.5px] [--row-ground:var(--monti-bg-selected)]!",
 				className,
 			)}
 			{...props}

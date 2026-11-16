@@ -28,6 +28,7 @@ import { linkTo, SETTINGS_TABS, type SettingsTab } from "../../route";
 import { useSession } from "../../session";
 import type { Place as FramePlace } from "../frame/admin-frame";
 import { firstStopIn, useFocusHandOff } from "../frame/focus-hand-off";
+import { PagePanel } from "../frame/page-panel";
 import { AdminTab, type PreferenceFailure } from "./admin-tab";
 import { CollectionsTab, useCollectionsView } from "./collections-tab";
 import { LocalesTab } from "./locales-tab";
@@ -526,12 +527,14 @@ export function SettingsScreen({
 			</Stack>
 			{previewing && view.current ? (
 				// A preview of its own for each collection: what was tried in one's inputs, and which of its tabs was open, is not the next one's.
-				<PreviewPanel
-					key={view.current}
-					model={model}
-					collection={view.current}
-					onClose={() => view.setPreview(false)}
-				/>
+				<PagePanel>
+					<PreviewPanel
+						key={view.current}
+						model={model}
+						collection={view.current}
+						onClose={() => view.setPreview(false)}
+					/>
+				</PagePanel>
 			) : null}
 			<ReviewSheet
 				model={model}

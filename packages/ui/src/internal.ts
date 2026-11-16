@@ -21,6 +21,7 @@ export {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "./alert-dialog";
+export { type Anchor, Anchored, type Spot } from "./anchored";
 export { AssistantSlot } from "./assistant-slot";
 export { Banner } from "./banner";
 export { BlockBarPlace, BlockBox, ResizeCorner } from "./block-bar";
@@ -153,7 +154,7 @@ export {
 } from "./dropdown-menu";
 export { EditorBody } from "./editor-body";
 export { EditorHeader, EditorTitleRule } from "./editor-header";
-export { DropLine, EditorMargin, EditorMarginLine, EditorOverlay, HeldBlock } from "./editor-overlay";
+export { DropLine, EditorMargin, EditorMarginLine, HeldBlock } from "./editor-overlay";
 export { Empty, EmptyStep } from "./empty";
 export { EntryStatus, type EntryStatusKind } from "./entry-status";
 export { ErrorBox } from "./error-box";
@@ -290,7 +291,7 @@ export {
 	SheetTrigger,
 } from "./sheet";
 export { formatShortcut, Shortcut, type ShortcutKey, type ShortcutKeys, useShortcut } from "./shortcut";
-export { SidePanel, SidePanelSave } from "./side-panel";
+export { PanelSlot, SidePanel, SidePanelSave } from "./side-panel";
 export {
 	folderTree,
 	Sidebar,

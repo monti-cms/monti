@@ -1,5 +1,5 @@
 import { composeStories } from "@storybook/react-vite";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import {
 	dragPath,
@@ -366,6 +366,27 @@ describe("the trash (doc 11, flow 5)", () => {
 		await userEvent.click(page.getByRole("menuitem", { name: "영구 삭제" }));
 		await userEvent.click(dialog().getByRole("button", { name: "영구 삭제" }));
 		await expect.element(row("winter-01.jpg")).not.toBeInTheDocument();
+	});
+
+	it("at 1024 wide with a trashed file's panel open, every row's ⋯ is left of the panel: the panel stands beside the page's scroller", async () => {
+		await page.viewport(1024, 768);
+		onTestFinished(() => page.viewport(1440, 900));
+		await FilePanel.run();
+		const panel = page.getByRole("complementary", { name: "winter-01.jpg" });
+		await expect.element(panel).toBeVisible();
+		const table = page.getByRole("table").element();
+		const scroller = (() => {
+			for (let at = table.parentElement; at; at = at.parentElement)
+				if (/(auto|scroll)/.test(getComputedStyle(at).overflowX)) return at;
+			throw new Error("nothing scrolls sideways");
+		})();
+		const edge = () => panel.element().getBoundingClientRect().left;
+		// The scroller ends at the panel's edge, and scrolled to its end every ⋯ is left of it.
+		expect(scroller.getBoundingClientRect().right).toBeLessThanOrEqual(edge() + 1);
+		scroller.scrollLeft = scroller.scrollWidth;
+		const actions = [...table.querySelectorAll("[data-slot=row-actions]")];
+		expect(actions.length).toBeGreaterThan(0);
+		for (const each of actions) expect(each.getBoundingClientRect().right).toBeLessThanOrEqual(edge() + 1);
 	});
 
 	it("11-1 [flow 5·15] what the assistant threw away has its mark before the days", async () => {

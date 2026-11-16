@@ -1,4 +1,6 @@
-import type * as React from "react";
+"use client";
+
+import * as React from "react";
 import { useAssistantSlot } from "./assistant-slot";
 import { cn } from "./cn";
 
@@ -61,25 +63,56 @@ function PageHeader({
  *
  * `width="content"` (the default) is 880px: settings and form pages, where a label must not drift from its value and a line must not grow long.
  * `width="list"` is for a page of rows (entries, media, trash, the tables of tools): 880px until the page area leaves at least 240px on each side, then it
- * grows with the area up to 1200px (880 at 1440 wide, 1200 at 1920). The area is what is beside the sidebar and any docked panel, measured on the
+ * grows with the area up to 1200px (880 at 1440 wide, 1200 at 1920). What runs out of the column sideways (a table wider than the room) is reached by scrolling the page sideways; a docked panel stands beside the page's
+ * scroller, not in it, so the scroller ends at the panel's edge and the table never runs under it. A row's ⋯ sticks to the scroller's right edge (`TableRow`),
+ * so it stays in reach (AT-01). The area is what is beside the sidebar and any docked panel, measured on the
  * nearest `container` (the admin frame makes it), so a folded rail or an open panel runs the same rule on the room that is left.
  */
 function PageColumn({
 	width = "content",
 	className,
 	children,
+	ref,
 	...props
 }: React.ComponentProps<"div"> & { width?: "content" | "list" }) {
+	const own = React.useRef<HTMLDivElement | null>(null);
+	// Whether the table runs past the column (under the sticky cell of a row's ⋯, which stands at the page area's edge): `data-clipping`, which that cell's
+	// edge line reads.
+	React.useLayoutEffect(() => {
+		const column = own.current;
+		if (!column) return;
+		const watch = new ResizeObserver(() => measure());
+		const measure = () => {
+			const right = column.getBoundingClientRect().right;
+			const tables = [...column.querySelectorAll<HTMLElement>("[data-slot=table]")];
+			column.toggleAttribute(
+				"data-clipping",
+				tables.length > 0
+					? tables.some((table) => table.getBoundingClientRect().right > right + 1)
+					: column.scrollWidth > column.clientWidth + 1,
+			);
+			// A table drawn after the column is watched from then on (observing again what is watched changes nothing).
+			for (const table of tables) watch.observe(table);
+		};
+		measure();
+		watch.observe(column);
+		for (const child of column.children) watch.observe(child);
+		return () => watch.disconnect();
+	}, []);
 	return (
 		<div
+			ref={(node) => {
+				own.current = node;
+				if (typeof ref === "function") ref(node);
+				else if (ref) ref.current = node;
+			}}
 			data-slot="page-column"
 			data-width={width}
 			className={cn("flex min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 md:px-monti-48", className)}
 			{...props}
 		>
-			{/* The room below the page is this box's own, not the column's: beside a docked panel the column is held to the page's height and what
-			    it holds runs out under it, and room that was the column's then ended above the last row, with the page's last control at the very
-			    edge of the scroll (its focus ring cut). */}
+			{/* The room below the page is this box's own, not the column's: the column is held to the page's height, and room that was the column's ended above
+			    the last row, with the page's last control at the very edge of the scroll (its focus ring cut). */}
 			<div
 				className={cn(
 					"mx-auto flex w-full flex-1 flex-col pb-monti-40",

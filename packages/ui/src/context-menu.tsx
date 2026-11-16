@@ -16,6 +16,7 @@ import {
 } from "./menu-parts";
 import { menuSurface } from "./menu-surface";
 import { menuWords } from "./menu-words";
+import { FIRST_PASS, FIT_HEIGHT, usePlacementPadding } from "./placement";
 
 function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props) {
 	return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
@@ -44,9 +45,12 @@ function ContextMenuContent({
 	...props
 }: ContextMenuPrimitive.Popup.Props &
 	Pick<ContextMenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
+	const placement = usePlacementPadding();
 	return (
 		<ContextMenuPrimitive.Portal>
 			<ContextMenuPrimitive.Positioner
+				collisionPadding={placement}
+				style={FIRST_PASS}
 				className="isolate z-50 outline-none"
 				align={align}
 				alignOffset={alignOffset}
@@ -60,7 +64,9 @@ function ContextMenuContent({
 						MENU_CARD,
 						"p-monti-6",
 						MENU_MOTION,
-						"z-50 max-h-(--available-height) w-58 overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
+						"z-50",
+						FIT_HEIGHT,
+						"w-58 overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
 						className,
 					)}
 					{...props}

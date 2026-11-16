@@ -69,7 +69,9 @@
  *   required-mark       The red star of a required field is `RequiredMark`: no typed " !" or "*", no legend that starts with "!".
  *   mono-props          `mono`, `metaMono`, `ofMono` set on Korean words fail; children the check cannot read are named in `MONO_PROP_VALUES`.
  *   list-compose        A screen that draws a list table (`Table`, `ListHead`, `ListScroll`) does it through `CollectionTable`, or is named in `LIST_COMPOSE_OK`.
- *                       All seven are in `check-parts.mjs`, which says what each cannot see.
+ *   overlay-place       Nothing floats over the editor through `EditorOverlay` or by a `top` / `left` built from a measurement: `Anchored` stands it, or the file is named in `OVERLAY_PLACE_OK`.
+ *   panel-place         A docked panel of a page is drawn through `PagePanel` (beside the page's scroller), or named in `PANEL_PLACE_OK`.
+ *                       All nine are in `check-parts.mjs`, which says what each cannot see.
  *   type-order          The heading roles step down, and the editor body's h2, h3, h4 are not smaller than its text (h4, the text's size, is semibold).
  *   type-merge          Every type role of `tokens.json` is in the font-size group of `cn.ts`, and that group names no other.
  *   tabular             `admin.css` sets tabular digits on `.monti-admin` and the body, and no source takes them back.
@@ -94,7 +96,9 @@ import {
 	koTexts,
 	listCompose,
 	monoProps,
+	overlayPlace,
 	ownGlyph,
+	panelPlace,
 	requiredMark,
 } from "./check-parts.mjs";
 import {
@@ -1042,6 +1046,10 @@ const OFF_SCALE_SPACE = new Map([
 	["ui/src/label.tsx", "a 2px gap that makes the required mark read as part of its word"],
 	["ui/src/marker.tsx", "the marker's 5px end beside its 10px letters"],
 	[
+		"ui/src/placement.ts",
+		"the room above a block for its tool row: the row's 36px and the 8px under it (TOOL_ROW_ROOM)",
+	],
+	[
 		"ui/src/menu-parts.tsx",
 		"menu rows' 9px sides line the words up with the menu's 12px corner and 1px border; separators sit 5px clear",
 	],
@@ -1491,6 +1499,12 @@ function checkParts() {
 	report("required-mark", requiredMark({ ...sources, ...messages }));
 	report("mono-props", monoProps(sources, { texts }));
 	report("list-compose", listCompose(sources));
+	// The blocks' editor views too (`packages/blocks/blocks`): they float tools over the text as the admin's own editor does.
+	const blocks = Object.fromEntries(
+		sourcesUnder(path.join(root, "packages/blocks/blocks")).map((file) => [rel(file), readFileSync(file, "utf8")]),
+	);
+	report("overlay-place", overlayPlace({ ...sources, ...blocks }));
+	report("panel-place", panelPlace(sources));
 }
 checkParts();
 
@@ -1543,6 +1557,10 @@ const HINTS = {
 	"required-mark": 'A required field\'s star is RequiredMark; no typed " !" or "*" (field.md).',
 	"list-compose":
 		"A list's table is put together by CollectionTable (screens/list/collection-table.tsx): head, bulk bar, no-match answer, rows, footer. A titled table is named in LIST_COMPOSE_OK (check-parts.mjs).",
+	"overlay-place":
+		"A thing that floats over the editor is stood by Anchored with a place of placement.ts (overlay.md, 자리 규칙); a file that places one by hand from a measurement is named in OVERLAY_PLACE_OK (check-parts.mjs).",
+	"panel-place":
+		"A docked panel of a page stands beside the page's scroller: draw it through PagePanel (screens/frame/page-panel.tsx); a panel that stands elsewhere is named in PANEL_PLACE_OK (check-parts.mjs).",
 	"mono-props":
 		"Words are sans: `mono`, `metaMono` and `ofMono` are for values; a file that sets them on words it cannot read is named in MONO_PROP_VALUES (check-parts.mjs).",
 	"design-allow": "A marker states why the value cannot be a token.",

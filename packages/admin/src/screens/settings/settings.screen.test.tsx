@@ -1,6 +1,6 @@
 import { toast } from "@monti-cms/ui";
 import { composeStories } from "@storybook/react-vite";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { dragPath, dropDrag, middleOf } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
@@ -637,6 +637,30 @@ describe("settings: the assistant's proposals", () => {
 		await expect.element(nameField()).toHaveValue("example.dev");
 		await expect.element(nameField()).not.toHaveAttribute("data-proposal");
 		await expect.element(page.getByRole("button", { name: "모두 받기" })).not.toBeInTheDocument();
+	});
+
+	it("a menu opened near the foot of settings with the review bar up does not cover the bar", async () => {
+		await SiteProposal.run();
+		await expect.element(page.getByRole("button", { name: "모두 받기" })).toBeVisible();
+		const bar = document.querySelector("[data-slot=proposal-bubble-dock]")?.firstElementChild as HTMLElement;
+		// A short window, so a field is near the bar.
+		await page.viewport(1280, 480);
+		onTestFinished(() => page.viewport(1440, 900));
+		const trigger = [...document.querySelectorAll<HTMLElement>("main [role=combobox]")].find(
+			(each) => each.getBoundingClientRect().height > 0,
+		);
+		if (!trigger) throw new Error("no select on the page");
+		trigger.scrollIntoView({ block: "end" });
+		await userEvent.click(trigger);
+		const list = () => document.querySelector("[role=listbox]") as HTMLElement | null;
+		await expect.poll(list).not.toBeNull();
+		await expect
+			.poll(
+				() =>
+					(list()?.getBoundingClientRect().bottom ?? 0) <= bar.getBoundingClientRect().top + 1 ||
+					(list()?.getBoundingClientRect().top ?? 0) >= bar.getBoundingClientRect().bottom,
+			)
+			.toBe(true);
 	});
 
 	it("12-1 typing in a proposed field takes the proposal first: it becomes my unsaved change, and nothing is saved until the save", async () => {

@@ -1,5 +1,6 @@
 import { CODE_TOOL_MARKS } from "@monti-cms/core";
 import {
+	Anchored,
 	Command,
 	CommandEmpty,
 	CommandGroup,
@@ -7,7 +8,6 @@ import {
 	CommandItem,
 	CommandList,
 	CommandSeparator,
-	EditorOverlay,
 	FloatingBar,
 	FormatBarRequest,
 	FormatButton,
@@ -20,6 +20,7 @@ import {
 	PopoverTrigger,
 	Separator,
 	type ShortcutKeys,
+	type Spot,
 	Text,
 } from "@monti-cms/ui";
 import { Document, Link, Pen, Unlink } from "@monti-cms/ui/icons";
@@ -53,8 +54,23 @@ const GROUPS: { type: string; mark: FormatMark; keys?: ShortcutKeys }[][] = [
 	],
 ];
 
-/** Where the bar floats: 8px over the middle of the selected words. */
-const GAP = 8;
+/**
+ * Where the card stands, as `Anchored` reads it: the first line of the selected words, from their start (across them when they are on one line).
+ * The card is a thing opened, like a menu: it stands over the words while they are picked, flipped below where there is no room above, folded inside
+ * the body (`selection-above`, EB-02), and may cover the line above while the selection lasts.
+ */
+function wordsSpot(editor: Editor, from: number, to: number): Spot {
+	if (editor.isDestroyed) return { left: 0, top: 0 };
+	const start = editor.view.coordsAtPos(from);
+	const end = editor.view.coordsAtPos(to);
+	const sameLine = Math.abs(start.top - end.top) < 4;
+	return {
+		left: start.left,
+		top: Math.min(start.top, end.top),
+		width: sameLine ? end.right - start.left : 0,
+		height: start.bottom - start.top,
+	};
+}
 
 /**
  * The format card (doc 03, editor-tools.md): over selected words, the formats the collection's editor offers, each pressed when the words have it. The
@@ -93,12 +109,9 @@ export function FormatCard({
 				!pickedBlocks(current.state) &&
 				(current.isFocused || linking || more || codeLink || editing !== null);
 			if (!shown) return null;
-			const start = current.view.coordsAtPos(selection.from);
-			const end = current.view.coordsAtPos(selection.to);
-			const sameLine = Math.abs(start.top - end.top) < 4;
 			return {
-				top: Math.min(start.top, end.top) - GAP,
-				left: sameLine ? (start.left + end.right) / 2 : start.left,
+				from: selection.from,
+				to: selection.to,
 				active: Object.fromEntries(catalogs.kit.marks.map(({ type }) => [type, current.isActive(markName(type))])),
 				href: String(current.getAttributes("link").href ?? ""),
 				clearable: hasClearableFormat(current.state),
@@ -150,7 +163,11 @@ export function FormatCard({
 	const toggle = (type: string) => editor.chain().focus().toggleMark(markName(type)).run();
 
 	return (
-		<EditorOverlay top={state.top} left={state.left} place="above">
+		<Anchored
+			anchor={{ spot: () => wordsSpot(editor, state.from, state.to), context: editor.view.dom }}
+			place="selection-above"
+			within={editor.view.dom}
+		>
 			<FloatingBar ref={bar} aria-label={t("format.label")}>
 				{groups.map((group, at) => (
 					<Inline key={group[0]?.type} gap={2}>
@@ -276,7 +293,7 @@ export function FormatCard({
 					</>
 				) : null}
 			</FloatingBar>
-		</EditorOverlay>
+		</Anchored>
 	);
 }
 

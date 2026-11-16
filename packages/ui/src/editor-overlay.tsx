@@ -1,46 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "./cn";
 import { CutWords } from "./cut-words";
 import { HELD } from "./sortable";
 
-/**
- * Something the editor floats at a point of the screen it measured: the block handle in a block's margin, the format bar over selected words. The
- * point is in viewport pixels; `place` says which corner or edge of the thing sits on it: `start` its top left, `above` the middle of its bottom edge,
- * `center` its middle (a table's grip on the table's edge). It draws no surface of its own; what it holds does (`BlockHandle`, `FloatingBar`).
- */
-function EditorOverlay({
-	top,
-	left,
-	width,
-	height,
-	place = "start",
-	children,
-}: {
-	top: number;
-	left: number;
-	/** As wide as what it stands for (a held block, a drop line, a table's edge). */
-	width?: number;
-	/** As tall as what it stands for (a table's right edge). */
-	height?: number;
-	place?: "start" | "above" | "center";
-	children: ReactNode;
-}) {
-	if (typeof document === "undefined") return null;
-	return createPortal(
-		<div
-			data-slot="editor-overlay"
-			className="pointer-events-auto fixed z-40 flex items-center data-[place=above]:-translate-x-1/2 data-[place=center]:-translate-x-1/2 data-[place=above]:-translate-y-full data-[place=center]:-translate-y-1/2"
-			data-place={place}
-			style={{ top, left, width, height }}
-		>
-			{children}
-		</div>,
-		document.body,
-	);
-}
+/** How far left of the text a mark in the margin stands (px), and the least it comes to where the margin is narrow. */
+const MARGIN_GAP = 32;
+const MARGIN_GAP_LEAST = 4;
 
 /**
  * Something hung in the text's left margin, level with a block: a translation's marks ("Changed", "New", "Source"). It sits in `EditorBody`, `top`
@@ -58,12 +25,48 @@ function EditorMargin({
 	beside?: number;
 	children: ReactNode;
 }) {
+	const box = useRef<HTMLDivElement>(null);
+	const [gap, setGap] = useState(MARGIN_GAP);
+	// Where the margin is narrow (the assistant's panel open beside the editor) the gap to the text shrinks, down to 4px, so the mark stays inside
+	// the margin and is not cut at the column's edge (AS-13).
+	useLayoutEffect(() => {
+		const mark = box.current;
+		const body = mark?.offsetParent;
+		if (!mark || !(body instanceof HTMLElement)) return;
+		// The box that scrolls the text: where its left edge stands is the margin's far side. Every box between it and the text is watched too, since a
+		// panel opening beside a centred column moves the column without changing the text's own size.
+		const between: HTMLElement[] = [];
+		let scroller: HTMLElement | null = null;
+		for (let at = body.parentElement; at; at = at.parentElement) {
+			between.push(at);
+			if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(at).overflowX)) {
+				scroller = at;
+				break;
+			}
+		}
+		const measure = () => {
+			const edge = scroller?.getBoundingClientRect().left ?? 0;
+			const room = body.getBoundingClientRect().left - edge - beside - mark.offsetWidth;
+			setGap(Math.max(MARGIN_GAP_LEAST, Math.min(MARGIN_GAP, Math.floor(room))));
+		};
+		measure();
+		const watch = new ResizeObserver(measure);
+		watch.observe(body);
+		watch.observe(mark);
+		for (const each of between) watch.observe(each);
+		window.addEventListener("resize", measure);
+		return () => {
+			watch.disconnect();
+			window.removeEventListener("resize", measure);
+		};
+	}, [beside]);
 	return (
 		<div
+			ref={box}
 			data-slot="editor-margin"
-			className="absolute right-[calc(100%+32px)] flex items-center gap-monti-4"
-			// design-allow: the block's top and the mark beside it, measured in the editor
-			style={{ top, marginRight: beside }}
+			className="absolute flex items-center gap-monti-4"
+			// design-allow: the block's top, the mark beside it and the gap the margin leaves, measured in the editor
+			style={{ top, right: `calc(100% + ${gap}px)`, marginRight: beside }}
 		>
 			{children}
 		</div>
@@ -121,4 +124,4 @@ function DropLine() {
 	);
 }
 
-export { DropLine, EditorMargin, EditorMarginLine, EditorOverlay, HeldBlock };
+export { DropLine, EditorMargin, EditorMarginLine, HeldBlock };

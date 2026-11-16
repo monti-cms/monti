@@ -1,6 +1,6 @@
 // The rules that keep the admin's screens on its fixed parts (cause 10 of the admin QA audit: buttons, menus, icons and fields drawn again on every
 // screen). `check:design` runs these as its rules `own-glyph`, `assistant-place`, `cut-words`, `menu-danger-separator`, `required-mark`,
-// `mono-props` and `list-compose`; each takes the sources it reads (`{ "packages/ui/src/x.tsx": text }`), so a test can hand it a made-up file. What each cannot see
+// `mono-props`, `list-compose`, `overlay-place` and `panel-place`; each takes the sources it reads (`{ "packages/ui/src/x.tsx": text }`), so a test can hand it a made-up file. What each cannot see
 // is written above it. An allow list names its files with the reason and fails when an entry no longer applies, so a list is only what is true.
 let parseSync = () => {
 	throw new Error("oxc-parser is not installed (pnpm install)");
@@ -552,6 +552,161 @@ export function listCompose(sources, { allowed = LIST_COMPOSE_OK } = {}) {
 				file: `packages/${key}`,
 				line: 1,
 				message: "LIST_COMPOSE_OK names a file that draws no table by hand any more",
+			});
+	return found;
+}
+
+/**
+ * `overlay-place`: what floats over the editor's text or margin stands where `Anchored` (`packages/ui/src/anchored.tsx`, with the numbers in
+ * `placement.ts`) puts it (overlay.md, "자리 규칙"). Two things are refused in the code of `packages/ui/src`, `packages/admin/src` and
+ * `packages/blocks` (the blocks' editor views too), outside the placement part and `OVERLAY_PLACE_OK`:
+ *
+ * - `EditorOverlay`, the part `Anchored` took the place of, written in code.
+ * - A file that measures with `coordsAtPos` or `getBoundingClientRect` and hands the result to a `top=` or `left=` prop, to the `top` or `left` of a
+ *   `style`, or to `style.top` / `style.left`: a floating thing placed by hand, with no rule for the edges of the body and the window, the review
+ *   bar's room, or what it stands on.
+ *
+ * The one thing not floated through `Anchored` is what lives inside a block's node view (a block's tool row): it is placed by CSS on its block, with
+ * its room reserved above (`TOOL_ROW_ROOM`), because a portal would take it out of the node view's pointer and focus (overlay.md, "자리 규칙").
+ *
+ * Cannot see: a position built from a measurement and handed over under another name (`const { x, y } = box`, a spread, a `Spot` that is read
+ * wrongly), a placement that goes through a function in another file, a thing placed with `position: fixed` whose coordinates come from the CSS, and
+ * whether `Anchored` is given the right `place` and `within` for what it holds: that is read in review and tried by `coversText` in the screen tests.
+ * An allow list names its files with the reason and fails when an entry no longer applies, so a list is only what is true.
+ */
+export const OVERLAY_PLACE_OK = new Map([
+	[
+		"ui/src/editor-overlay.tsx",
+		"EditorMargin: a mark absolute inside the body, its top the block's offset in the body (it scrolls with the text); the rect only measures how much margin is left",
+	],
+	[
+		"admin/src/editor/proposal-margin.tsx",
+		"hands EditorMargin the block's offset inside the body, measured; the mark is in the body, not floating over it",
+	],
+	[
+		"admin/src/screens/entry/translation.tsx",
+		"hands EditorMargin the block's offset inside the body, measured; the mark is in the body, not floating over it",
+	],
+]);
+const OVERLAY_PLACE_OWN = new Set(["ui/src/anchored.tsx", "ui/src/placement.ts"]);
+const OVERLAY_MEASURE = /\b(?:coordsAtPos|getBoundingClientRect)\b/;
+const OVERLAY_BY_HAND =
+	/(?:\b(?:top|left)=\{|style=\{\{[^}]*\b(?:top|left)\b|\.style\.(?:top|left)\s*=|style\.setProperty\(\s*["'](?:top|left)["'])/;
+
+export function overlayPlace(sources, { allowed = OVERLAY_PLACE_OK } = {}) {
+	const found = [];
+	const used = new Set();
+	for (const [file, source] of Object.entries(sources)) {
+		if (!isCode(file) || !/^packages\/(ui|admin|blocks)\//.test(file) || OVERLAY_PLACE_OWN.has(keyOf(file))) continue;
+		// Code, not what a comment says.
+		const code = source.replace(/\/\*[\s\S]*?\*\/|(?<![:"'`])\/\/[^\n]*/g, (comment) => comment.replace(/[^\n]/g, " "));
+		const overlay = /\bEditorOverlay\b/.exec(code);
+		if (overlay)
+			found.push({
+				file,
+				line: lineOf(source, overlay.index),
+				message: "`EditorOverlay` is gone: float it with `Anchored` and a `place` of placement.ts",
+			});
+		if (!OVERLAY_MEASURE.test(code)) continue;
+		const byHand = OVERLAY_BY_HAND.exec(code);
+		if (!byHand) continue;
+		if (allowed.has(keyOf(file))) {
+			used.add(keyOf(file));
+			continue;
+		}
+		found.push({
+			file,
+			line: lineOf(source, byHand.index),
+			message:
+				"a floating thing placed by hand from a measurement: stand it with `Anchored` (placement.ts), or name this file in OVERLAY_PLACE_OK with the reason",
+		});
+	}
+	for (const key of allowed.keys())
+		if (!used.has(key))
+			found.push({
+				file: `packages/${key}`,
+				line: 1,
+				message: "OVERLAY_PLACE_OK names a file that places nothing by hand from a measurement any more",
+			});
+	return found;
+}
+
+/**
+ * `panel-place`: a docked panel of a page stands beside the box that scrolls the page, never in it: the screen that opens one draws it through `PagePanel`
+ * (`packages/admin/src/screens/frame/page-panel.tsx`), which gives it to the frame's slot. A component of `packages/admin/src` that exports a panel (it draws a
+ * `SidePanel` or a `PropertyPanel`) is a panel; where a file of `packages/admin/src` draws one, `<PagePanel>` stands around it, or the panel is named in
+ * `PANEL_PLACE_OK` with the reason. A listed panel no longer drawn bare fails.
+ *
+ * Cannot see: a panel drawn through a component that wraps another panel under a new name, a panel handed to the frame by a prop, a `PagePanel` that stands
+ * around something else than the panel in the same element, and whether the frame's slot stands beside the scroller (the activity test at 1024px measures that).
+ */
+export const PANEL_PLACE_OK = new Map([
+	["AssistantPanel", "the assistant's panel is the frame's own, drawn after the slot by the app"],
+	[
+		"EntryProperties",
+		"the entry editor scrolls in its own box with the properties beside it, outside the frame's page scroller",
+	],
+]);
+const PANEL_PARTS = new Set(["SidePanel", "PropertyPanel"]);
+
+function visitWithAncestors(node, visit, ancestors = []) {
+	if (!node || typeof node !== "object") return;
+	if (Array.isArray(node)) {
+		for (const each of node) visitWithAncestors(each, visit, ancestors);
+		return;
+	}
+	if (typeof node.type !== "string") return;
+	visit(node, ancestors);
+	const next = [...ancestors, node];
+	for (const [key, value] of Object.entries(node)) if (key !== "parent") visitWithAncestors(value, visit, next);
+}
+
+export function panelPlace(sources, { allowed = PANEL_PLACE_OK } = {}) {
+	const found = [];
+	const parsed = [];
+	for (const [file, source] of Object.entries(sources)) {
+		if (!isCode(file) || !file.startsWith("packages/admin/src/")) continue;
+		const { program, errors } = parseSync(file, source);
+		if (errors.length > 0) continue;
+		parsed.push({ file, source, program });
+	}
+	// The panels: exported components that draw a SidePanel or a PropertyPanel.
+	const panels = new Set();
+	for (const { program } of parsed)
+		walkTree(program, (node) => {
+			if (node.type !== "ExportNamedDeclaration" || node.declaration?.type !== "FunctionDeclaration") return;
+			let draws = false;
+			walkTree(node.declaration, (inner) => {
+				if (inner.type === "JSXOpeningElement" && PANEL_PARTS.has(nameOf(inner.name))) draws = true;
+			});
+			if (draws && node.declaration.id) panels.add(node.declaration.id.name);
+		});
+	const bare = new Set();
+	for (const { file, source, program } of parsed)
+		visitWithAncestors(program, (node, ancestors) => {
+			if (node.type !== "JSXOpeningElement") return;
+			const name = nameOf(node.name);
+			if (!name || !panels.has(name)) return;
+			const inSlot = ancestors.some(
+				(each) => each.type === "JSXElement" && nameOf(each.openingElement?.name) === "PagePanel",
+			);
+			if (inSlot) return;
+			if (allowed.has(name)) {
+				bare.add(name);
+				return;
+			}
+			found.push({
+				file,
+				line: lineOf(source, node.start),
+				message: `\`<${name}\` is a docked panel drawn in the page's scroller: draw it through \`PagePanel\` (screens/frame/page-panel.tsx), or name it in PANEL_PLACE_OK with the reason`,
+			});
+		});
+	for (const name of allowed.keys())
+		if (!bare.has(name))
+			found.push({
+				file: "packages/admin/src/screens/frame/page-panel.tsx",
+				line: 1,
+				message: `PANEL_PLACE_OK names ${name}, which is not drawn bare any more`,
 			});
 	return found;
 }

@@ -22,6 +22,7 @@ import {
 } from "./menu-parts";
 import { menuSurface } from "./menu-surface";
 import { menuWords } from "./menu-words";
+import { FIRST_PASS, FIT_HEIGHT, usePlacementPadding } from "./placement";
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
 	return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -54,9 +55,12 @@ function DropdownMenuContent({
 		/** `menu` (240px, growing for a longer row) or `panel` (300px, for a menu of whole lines such as the list of unsaved changes). */
 		width?: "menu" | "panel";
 	}) {
+	const placement = usePlacementPadding();
 	return (
 		<MenuPrimitive.Portal>
 			<MenuPrimitive.Positioner
+				collisionPadding={placement}
+				style={FIRST_PASS}
 				className="isolate z-50 outline-none"
 				align={align}
 				alignOffset={alignOffset}
@@ -71,7 +75,9 @@ function DropdownMenuContent({
 						MENU_CARD,
 						"p-monti-6",
 						MENU_MOTION,
-						"z-50 max-h-(--available-height) overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
+						"z-50",
+						FIT_HEIGHT,
+						"overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
 						width === "panel"
 							? "w-monti-panel max-w-(--available-width)"
 							: "w-max min-w-monti-menu max-w-[min(20rem,var(--available-width))]",

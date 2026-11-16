@@ -986,6 +986,8 @@ function ImageBlockView({ node, updateAttributes, getPos, selected, editor }: No
 						width={width}
 						// Picked reads as picked whether the body is written or only read: with pictures one over the other, the line says whose bar it is (T133).
 						selected={picked}
+						pointable={editable}
+						toolRow={editable}
 						measure={dragged ? sizeLabel(dragged.to) : undefined}
 						spoken={spoken}
 						{...stop}
@@ -1165,7 +1167,7 @@ function FileBlockView({ node, updateAttributes, getPos, selected, editor }: Nod
 	const { item } = file;
 	return (
 		<NodeViewWrapper data-block="file">
-			<BlockBox selected={selected}>
+			<BlockBox selected={selected} toolRow={media ? !media.readOnly : editor.isEditable}>
 				{selected && (media ? !media.readOnly : editor.isEditable) && (
 					<BlockBarPlace>
 						<FloatingBar ref={bar} aria-label={t("editor.file.tools")}>

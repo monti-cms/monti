@@ -188,6 +188,18 @@ export const ManyInBody: Story = {
 	}),
 };
 
+/** An archived entry's picture, file and code, one after the other: read-only, so no block keeps the room a tool row would need above it. */
+export const ArchivedBlocks: Story = {
+	loaders: entry({
+		body: ({ desk, notes }) => [
+			{ id: "i_1", type: "image", attrs: { media: desk, alt: "아침 책상" } },
+			{ id: "f_1", type: "file", attrs: { media: notes } },
+			{ id: "c_1", type: "codeBlock", attrs: { language: "ts" }, content: [{ type: "text", text: "let count = 0;" }] },
+		],
+		archived: true,
+	}),
+};
+
 /** A range picked from the text with Shift+↓ takes in the pictures and the file after it: each stands on the selection's ground (T194). */
 export const RangeOverPictures: Story = {
 	loaders: ManyInBody.loaders,

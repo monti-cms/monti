@@ -1,5 +1,6 @@
-import type * as React from "react";
+import * as React from "react";
 import { useAssistantSlot } from "./assistant-slot";
+import { dockTop } from "./bottom-dock";
 import { cn } from "./cn";
 
 /**
@@ -9,8 +10,12 @@ import { cn } from "./cn";
  */
 function EditorHeader({ className, children, ...props }: React.ComponentProps<"header">) {
 	const assistant = useAssistantSlot();
+	// Known to what opens in the body, which leaves the header clear (`usePlacementPadding`).
+	const [node, setNode] = React.useState<HTMLElement | null>(null);
+	React.useEffect(() => (node ? dockTop(node) : undefined), [node]);
 	return (
 		<header
+			ref={setNode}
 			data-slot="editor-header"
 			className={cn(
 				// The second group, or the ✦ when there is only the start, stands at the end.

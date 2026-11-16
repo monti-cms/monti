@@ -117,7 +117,11 @@ describe("the site's blocks in the editor (doc 18)", () => {
 	it("18-5 columns: the + strip adds a column, and a column deleted from its grip's menu leaves its words in the column beside it", async () => {
 		const made = on();
 		await made.run();
-		await hover("columns");
+		// The pointer is over the columns themselves, not over the room the block keeps above it.
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await userEvent.hover(document.querySelector(".monti-block-columns-editor") as Element, {
+			position: { x: 30, y: 12 },
+		});
 		await userEvent.click(page.getByRole("button", { name: "단 더하기" }));
 		let columns = find(await kept(made), "columns");
 		expect(columns?.children).toHaveLength(3);
@@ -127,6 +131,221 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		columns = find(await kept(made), "columns");
 		expect(columns?.children).toHaveLength(2);
 		expect(JSON.stringify(columns)).toContain("오른쪽 단");
+	});
+
+	/** A body of one paragraph and a columns block of two columns sized `widths` (so its tool row, "even widths", is there). */
+	const sized = (widths: string): Doc => ({
+		type: "doc",
+		blocks: [
+			{ id: "s1", type: "paragraph", content: [{ type: "text", text: "단 위의 글." }] },
+			{
+				id: "columns",
+				type: "columns",
+				attrs: { widths },
+				children: [
+					{
+						id: "k1",
+						type: "column",
+						children: [{ id: "k1p", type: "paragraph", content: [{ type: "text", text: "왼쪽 단" }] }],
+					},
+					{
+						id: "k2",
+						type: "column",
+						children: [{ id: "k2p", type: "paragraph", content: [{ type: "text", text: "오른쪽 단" }] }],
+					},
+				],
+			},
+		] as Block[],
+	});
+	const meets = (a: DOMRect, b: DOMRect) =>
+		a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+	it("18-5 columns: a narrow first column keeps its grip beside the tool row: with the row shown (25/75) the grip shows and the two do not overlap", async () => {
+		const narrow = on(sized("25,75"));
+		await narrow.run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		const bar = page.getByRole("toolbar");
+		await expect.element(bar).toBeVisible();
+		const grip = page.getByRole("button", { name: "단 1", exact: true });
+		await expect.element(grip).toBeVisible();
+		expect(meets(grip.element().getBoundingClientRect(), bar.element().getBoundingClientRect())).toBe(false);
+		// The row stands above the grips' lane, whatever the columns' widths.
+		expect(bar.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
+			grip.element().getBoundingClientRect().top,
+		);
+	});
+
+	it("18-5 columns: with even widths the first column's grip is beside the tool row, not over it", async () => {
+		const even = on(sized("50,50"));
+		await even.run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		const bar = page.getByRole("toolbar");
+		await expect.element(bar).toBeVisible();
+		const grip = page.getByRole("button", { name: "단 1", exact: true });
+		await expect.element(grip).toBeVisible();
+		expect(meets(grip.element().getBoundingClientRect(), bar.element().getBoundingClientRect())).toBe(false);
+	});
+
+	it("18-5 columns: Tab from inside the block reaches its + strip next, after the block's own tool row, not after the rest of the page", async () => {
+		const made = on(sized("50,50"));
+		await made.run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => document.activeElement?.textContent).toBe("고르게");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => document.activeElement?.getAttribute("aria-label")).toBe("단 더하기");
+	});
+
+	it("18-5 columns: with no tool row (even columns) Tab from the text goes straight to the + strip", async () => {
+		await on().run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => document.activeElement?.getAttribute("aria-label")).toBe("단 더하기");
+	});
+
+	/** The columns block, with a paragraph after it, its first column holding a paragraph and a table when `table` (so a key in a cell is the table's). */
+	const around = (widths: string | undefined, table = false): Doc => ({
+		type: "doc",
+		blocks: [
+			{ id: "s1", type: "paragraph", content: [{ type: "text", text: "단 위의 글." }] },
+			{
+				id: "columns",
+				type: "columns",
+				...(widths ? { attrs: { widths } } : {}),
+				children: [
+					{
+						id: "k1",
+						type: "column",
+						children: [
+							{ id: "k1p", type: "paragraph", content: [{ type: "text", text: "왼쪽 단" }] },
+							...(table
+								? [
+										{
+											id: "tb",
+											type: "table",
+											attrs: {
+												header: true,
+												rows: [
+													["가", "나"],
+													["다", "라"],
+												],
+											},
+										},
+									]
+								: []),
+						],
+					},
+					{
+						id: "k2",
+						type: "column",
+						children: [{ id: "k2p", type: "paragraph", content: [{ type: "text", text: "오른쪽 단" }] }],
+					},
+				],
+			},
+			{ id: "s2", type: "paragraph", content: [{ type: "text", text: "단 아래 글." }] },
+		] as Block[],
+	});
+	const caretIn = () => window.getSelection()?.anchorNode?.parentElement?.closest("p, td, th");
+	const strip = () => document.activeElement?.getAttribute("aria-label") === "단 더하기";
+
+	it("18-5 columns: Tab in a table's cell inside the block is the table's, not the + strip's: it moves to the next cell, and in the last cell adds a row as it does outside columns", async () => {
+		await on(around("50,50", true)).run();
+		await expect.poll(() => body().element().querySelector(".monti-block-columns-editor td")).not.toBeNull();
+		await userEvent.click(body().getByText("가", { exact: true }));
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => caretIn()?.textContent).toBe("나");
+		expect(strip()).toBe(false);
+		await userEvent.click(body().getByText("라", { exact: true }));
+		const rows = () => body().element().querySelectorAll("table tr").length;
+		const before = rows();
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(rows).toBe(before + 1);
+		expect(strip()).toBe(false);
+	});
+
+	it("18-5 columns: from the + strip Tab goes on to the caret at the start of the block after, and Shift+Tab back to the tool row's last button", async () => {
+		await on(around("50,50")).run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}{Tab}");
+		await expect.poll(strip).toBe(true);
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		await expect.poll(() => document.activeElement?.textContent).toBe("고르게");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(strip).toBe(true);
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => caretIn()?.textContent).toBe("단 아래 글.");
+		expect(window.getSelection()?.anchorOffset).toBe(0);
+	});
+
+	/** Columns of `widths` with two one-paragraph columns, inside `wrap` when given (a block that holds blocks), then `after`. */
+	const nested = (wrap: "callout" | null, after: Block[]): Doc => {
+		const columns = {
+			id: "columns",
+			type: "columns",
+			children: [
+				{
+					id: "k1",
+					type: "column",
+					children: [{ id: "k1p", type: "paragraph", content: [{ type: "text", text: "왼쪽 단" }] }],
+				},
+				{
+					id: "k2",
+					type: "column",
+					children: [{ id: "k2p", type: "paragraph", content: [{ type: "text", text: "오른쪽 단" }] }],
+				},
+			],
+		} as Block;
+		return {
+			type: "doc",
+			blocks: [
+				{ id: "s1", type: "paragraph", content: [{ type: "text", text: "처음 글." }] },
+				...(wrap
+					? [{ id: "wrap", type: wrap, attrs: { tone: "tip", title: "겉" }, children: [columns, ...after] } as Block]
+					: [columns, ...after]),
+				{ id: "s9", type: "paragraph", content: [{ type: "text", text: "맨 끝 글." }] },
+			],
+		};
+	};
+	const selectionOf = () =>
+		(body().element() as unknown as { editor: { state: { selection: { node?: { type: { name: string } } } } } }).editor
+			.state.selection;
+
+	it("18-5 columns: from the + strip Tab goes to just after the columns at their depth: the paragraph after them inside the same callout, not past the callout", async () => {
+		await on(
+			nested("callout", [{ id: "in", type: "paragraph", content: [{ type: "text", text: "겉 안의 글." }] } as Block]),
+		).run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(strip).toBe(true);
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => caretIn()?.textContent).toBe("겉 안의 글.");
+	});
+
+	it("18-5 columns: from the + strip Tab onto a block without text after the columns (a divider, as a picture) picks it whole, as the arrow keys do", async () => {
+		await on(nested(null, [{ id: "rule", type: "divider" } as Block])).run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(strip).toBe(true);
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => selectionOf().node?.type.name).toBe("divider");
+	});
+
+	it("18-5 columns: with no tool row Shift+Tab from the + strip goes back to the caret at the end of the block's last text", async () => {
+		await on(around(undefined)).run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(strip).toBe(true);
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		await expect.poll(() => caretIn()?.textContent).toBe("오른쪽 단");
+		expect(window.getSelection()?.anchorOffset).toBe("오른쪽 단".length);
 	});
 
 	it("18-4 a collapsible folds in the editor too, and its tool row's labelled toggle sets it to start open", async () => {

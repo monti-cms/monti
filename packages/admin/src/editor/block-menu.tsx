@@ -1,5 +1,6 @@
 import { imageAlignOf } from "@monti-cms/core";
 import {
+	Anchored,
 	BlockHandle,
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -15,7 +16,6 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 	DropLine,
-	EditorOverlay,
 	HeldBlock,
 	MenuShortcut,
 	PickBox,
@@ -68,22 +68,45 @@ import { nodeName } from "./schema";
 import { hasHeaderRow, toggleHeaderRow } from "./table";
 import { linkOf } from "./translation";
 
-/** Where the handle floats: 24px left of the block (the 20px grip, then 4 to the text: its glyph sits mid-grip, so it reads about 10px off), centred on the block's first line. */
-type Spot = { pos: number; top: number; left: number };
+/**
+ * Where the handle floats: in the left margin, level with the block's first line, 4px off the text (the 20px grip, its glyph mid-grip, so it reads
+ * about 10px off). `Anchored` stands it there (`block-left`); `element` is the block it stands for, measured again as the page scrolls.
+ */
+type Spot = { pos: number; element: HTMLElement; top: number; left: number };
 
 const HANDLE = 24;
-const LEFT = 24;
 /** How far left of the text the pointer still counts as on a block's line: the margin the handle sits in, and some room to reach it. */
 const REACH = 64;
 
-/** The handle's place beside a block's element. A list item's handle sits left of its list, so the bullet stays in view. */
-function spotOf(element: HTMLElement, pos: number): Spot {
+/**
+ * A table's row grip stands 4px out of the table's left rule, 12px wide, with a 24px box to press: the block handle of a table stands left of that lane
+ * (its own 4px off the lane's far side), so the two never meet.
+ */
+const TABLE_LANE = 22;
+
+/** The box the handle stands for: a zero-wide line at the block's text edge, one grip high. A list item's handle sits left of its list, so the bullet stays in view. */
+function handleBox(element: HTMLElement) {
 	const rect = element.getBoundingClientRect();
 	const inList = element.tagName === "LI" ? element.parentElement : null;
 	const left = (inList ?? element).getBoundingClientRect().left;
 	const line = Number.parseFloat(getComputedStyle(element).lineHeight) || HANDLE;
-	return { pos, top: rect.top + Math.max(0, (line - HANDLE) / 2), left: left - LEFT };
+	const table = element.tagName === "TABLE" || element.firstElementChild?.tagName === "TABLE";
+	return {
+		left: left - (table ? TABLE_LANE : 0),
+		top: rect.top + Math.max(0, (line - HANDLE) / 2),
+		width: 0,
+		height: HANDLE,
+	};
 }
+
+/** The handle's place beside a block's element. */
+function spotOf(element: HTMLElement, pos: number): Spot {
+	const { left, top } = handleBox(element);
+	return { pos, element, top, left };
+}
+
+/** What `Anchored` stands the handle on. */
+const handleAnchor = (spot: Spot) => ({ spot: () => handleBox(spot.element), context: spot.element });
 
 /**
  * A drag in progress: the block in hand (its kind and text for the card), the pointer, and where it would land. `with` are the other picked blocks
@@ -93,10 +116,6 @@ type Held = { from: number; with: number[]; kind: string; text: string; x: numbe
 
 /** The pointer moves this far (px) before a press on the grip becomes a drag, so a press still opens the menu (list.md, `Sortable`). */
 const DRAG_AFTER = 4;
-
-/** Where the card in hand sits from the pointer (px): beside it, so it never covers the line where the block lands. */
-const CARD_RIGHT = 16;
-const CARD_BELOW = 8;
 
 /** The drop line's ring sticks out this far (px) left of the block it lands beside. */
 const RING_OUT = 4;
@@ -171,29 +190,20 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 		return () => window.removeEventListener("mousemove", move);
 	}, [editor, point]);
 
-	// The handle follows its block when the page scrolls or the block moves, and goes when the block has gone or the person types.
+	// The handle goes when the person types or the body changes (`Anchored` follows its block as the page scrolls).
 	useEffect(() => {
 		// The text's element is taken once: the listener is taken off that same one, even when the editor has been destroyed in between.
 		const dom = liveDom(editor);
 		if (!editor || !dom || !spot) return;
-		const follow = () => {
-			const current = element.current;
-			if (!current?.isConnected) return setSpot(null);
-			setSpot((now) => (now ? spotOf(current, now.pos) : now));
-		};
 		// A modifier held alone is no typing: Shift is held to reach a handle and add its block to the pick.
 		const typing = (event: KeyboardEvent) =>
 			!open && !["Shift", "Meta", "Control", "Alt"].includes(event.key) && setSpot(null);
 		// A change of the body moves its blocks: the place the handle knew is another block's now, or none's. It goes, as when a key is pressed, unless its
 		// menu is open or its block is in hand (those changes are its own, and it is put away when they end).
 		const changed = () => !open && !held && setSpot(null);
-		window.addEventListener("scroll", follow, true);
-		window.addEventListener("resize", follow);
 		dom.addEventListener("keydown", typing);
 		editor.on("update", changed);
 		return () => {
-			window.removeEventListener("scroll", follow, true);
-			window.removeEventListener("resize", follow);
 			dom.removeEventListener("keydown", typing);
 			editor.off("update", changed);
 		};
@@ -317,33 +327,36 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 	const overlay = () => {
 		if (marquee.box)
 			return (
-				<EditorOverlay
-					top={marquee.box.top}
-					left={marquee.box.left}
-					width={marquee.box.width}
-					height={marquee.box.height}
-				>
+				<Anchored anchor={{ spot: () => marquee.box ?? { left: 0, top: 0 } }} place="over-box">
 					<PickBox />
-				</EditorOverlay>
+				</Anchored>
 			);
 		if (held)
 			return (
 				<>
-					<EditorOverlay top={held.y + CARD_BELOW} left={held.x + CARD_RIGHT}>
+					<Anchored anchor={{ spot: () => ({ left: held.x, top: held.y }) }} place="beside-point">
 						<HeldBlock kind={held.kind} text={held.text} />
-					</EditorOverlay>
+					</Anchored>
 					{held.drop ? (
-						<EditorOverlay
-							top={held.drop.line.top}
-							left={held.drop.line.left - RING_OUT}
-							width={held.drop.line.width + RING_OUT}
+						<Anchored
+							anchor={{
+								spot: () => ({
+									left: (held.drop?.line.left ?? 0) - RING_OUT,
+									top: held.drop?.line.top ?? 0,
+									width: (held.drop?.line.width ?? 0) + RING_OUT,
+									height: 2,
+								}),
+							}}
+							place="over-box"
 						>
 							<DropLine />
-						</EditorOverlay>
+						</Anchored>
 					) : null}
 				</>
 			);
 		if (!editor || !spot || !editor.isEditable) return null;
+		// Its block may be drawn anew under the pointer: the handle goes with the old one.
+		if (!spot.element.isConnected) return null;
 		const { doc } = editor.state;
 		// The body may have changed under the pointer with no key pressed (a cut from the menu, an upload taken out): the handle's block may be gone,
 		// its place past the end of what is left. It goes with its block; the next move of the pointer finds the block there now.
@@ -378,7 +391,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 				editor.commands.focus();
 			};
 			return (
-				<EditorOverlay top={spot.top} left={spot.left}>
+				<Anchored anchor={handleAnchor(spot)} place="block-left">
 					<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
 						<BlockHandle
 							gripLabel={t("editor.blockMenu")}
@@ -420,14 +433,14 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
-				</EditorOverlay>
+				</Anchored>
 			);
 		}
 
 		// A block still in the source's words: decide what it becomes, block by block (translation.md: the dimmed block's menu).
 		if (link?.state === "pending" && translation)
 			return (
-				<EditorOverlay top={spot.top} left={spot.left}>
+				<Anchored anchor={handleAnchor(spot)} place="block-left">
 					<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
 						<BlockHandle
 							gripLabel={t("editor.blockMenu")}
@@ -462,11 +475,11 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
-				</EditorOverlay>
+				</Anchored>
 			);
 
 		return (
-			<EditorOverlay top={spot.top} left={spot.left}>
+			<Anchored anchor={handleAnchor(spot)} place="block-left">
 				<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
 					<BlockHandle
 						gripLabel={t("editor.blockMenu")}
@@ -580,7 +593,7 @@ export function useBlockHandle(editor: Editor | null, catalogs: BodyCatalogs, tr
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
-			</EditorOverlay>
+			</Anchored>
 		);
 	};
 	return { overlay: overlay() };

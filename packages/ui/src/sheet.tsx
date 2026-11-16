@@ -48,7 +48,7 @@ function SheetContent({ className, children, ...props }: SheetPrimitive.Popup.Pr
 				render={modalSurface}
 				data-slot="sheet-content"
 				className={cn(
-					"fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-full flex-col border-monti-emphasis border-l bg-monti-tool text-monti-body text-monti-default shadow-monti-sheet outline-none transition duration-(--monti-duration-slow) ease-monti-standard data-ending-style:translate-x-10 data-starting-style:translate-x-10 data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:duration-(--monti-duration-normal) data-ending-style:ease-monti-exit",
+					"fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-full flex-col border-monti-emphasis border-l bg-monti-tool text-monti-body text-monti-default shadow-monti-sheet outline-none transition duration-(--monti-duration-slow) ease-monti-standard [--monti-ground:var(--monti-bg-tool)] data-ending-style:translate-x-10 data-starting-style:translate-x-10 data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:duration-(--monti-duration-normal) data-ending-style:ease-monti-exit",
 					"sm:w-monti-sheet",
 					className,
 				)}

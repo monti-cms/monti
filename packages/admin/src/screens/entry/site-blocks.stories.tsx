@@ -71,7 +71,7 @@ const everyBlock = (): Doc => ({
 });
 
 /** The editor on that post, on a site with the package's blocks and marks. */
-export const site = (doc: Doc | null = everyBlock()) => [
+export const site = (doc: Doc | null = everyBlock(), options: { archived?: true } = {}) => [
 	async (): Promise<Loaded> => {
 		let id = "";
 		const made = await storySite({
@@ -87,6 +87,7 @@ export const site = (doc: Doc | null = everyBlock()) => [
 					admin,
 				)) as { output: { id: string } };
 				id = created.output.id;
+				if (options.archived) await monti.run("entries.archive", { ids: [id] }, admin);
 			},
 		});
 		startAt(`#/c/post/${id}`);

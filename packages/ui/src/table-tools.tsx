@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import type { ReactElement } from "react";
 import { cn } from "./cn";
+import { HIT_AREA_BOX } from "./hit-area";
 import { Add, Draggable } from "./icons";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
@@ -33,6 +34,7 @@ function TableGrip({
 			aria-label={label}
 			data-active={active || undefined}
 			className={cn(
+				HIT_AREA_BOX,
 				"flex cursor-pointer items-center justify-center rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 aria-expanded:bg-monti-emphasis aria-expanded:text-monti-on-emphasis data-active:bg-monti-emphasis data-active:text-monti-on-emphasis",
 				along === "column" ? "h-monti-12 w-monti-20" : "h-monti-20 w-monti-12",
 				className,
@@ -53,16 +55,19 @@ function TableGrip({
 }
 
 /**
- * The + strip along a table's right edge (a column) or bottom edge (a row), shown while the pointer is over the table, its name in a tooltip. It fills the box it is put in
- * (`EditorOverlay` with the table's height or width).
+ * The + strip along a table's right edge (a column) or bottom edge (a row), 4px outside it and 16px thick, shown while the pointer is over the table, its name in a tooltip. It fills the box it is put in
+ * (`Anchored` with the table's height or width). Where it is drawn before the pointer comes (the columns block) `shown={false}` keeps it clear until the pointer or the keyboard is on it.
  */
 function TableAddStrip({
 	label,
+	shown = true,
 	className,
 	...props
 }: Omit<ButtonPrimitive.Props, "aria-label" | "children"> & {
 	/** What it adds, for screen readers and the tooltip ("Add a column"). */
 	label: string;
+	/** Drawn: with `false` it is there for the keyboard and the pointer, and clear until one is on it. */
+	shown?: boolean;
 }) {
 	const strip = (
 		<ButtonPrimitive
@@ -71,6 +76,7 @@ function TableAddStrip({
 			aria-label={label}
 			className={cn(
 				"flex size-full cursor-pointer items-center justify-center rounded-monti-full border-0 bg-monti-muted p-0 text-monti-subtle outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
+				!shown && "opacity-0 hover:opacity-100 focus-visible:opacity-100",
 				className,
 			)}
 			onMouseDown={(event) => event.preventDefault()}
@@ -90,7 +96,7 @@ function TableAddStrip({
 /**
  * The border between two columns of a table in the editor, to drag wider or narrower: a thin hit area over the border that shows a 2px ink line
  * while it is pointed at, focused or dragged (`active`). The two columns beside it trade width; the table stays as wide as the body. It fills the box
- * it is put in (`EditorOverlay` with the table's height). The arrow keys move it too.
+ * it is put in (`Anchored` with the table's height). The arrow keys move it too.
  */
 function TableColumnBorder({
 	label,

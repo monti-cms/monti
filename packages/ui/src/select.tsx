@@ -9,6 +9,7 @@ import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ChevronDown, ChevronUp } from "./icons";
 import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 import { menuWords } from "./menu-words";
+import { FIRST_PASS, FIT_HEIGHT, usePlacementPadding } from "./placement";
 import { useProposalDescription } from "./proposal-cue";
 
 /**
@@ -120,9 +121,12 @@ function SelectContent({
 	...props
 }: SelectPrimitive.Popup.Props &
 	Pick<SelectPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger">) {
+	const placement = usePlacementPadding();
 	return (
 		<SelectPrimitive.Portal>
 			<SelectPrimitive.Positioner
+				collisionPadding={placement}
+				style={FIRST_PASS}
 				side={side}
 				sideOffset={sideOffset}
 				align={align}
@@ -136,7 +140,9 @@ function SelectContent({
 					className={cn(
 						MENU_CARD,
 						MENU_MOTION,
-						"relative isolate z-50 max-h-(--available-height) w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-6 data-[align-trigger=true]:animate-none",
+						"relative isolate z-50",
+						FIT_HEIGHT,
+						"w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-6 data-[align-trigger=true]:animate-none",
 						className,
 					)}
 					{...props}

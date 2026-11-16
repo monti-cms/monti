@@ -45,12 +45,18 @@ const SIDE_PANEL_WIDTH = {
 	panel: 300,
 	assistant: 380,
 } as const;
+/** The same start widths as a floor: short of room a panel gives way to them, never below (the tokens themselves). */
+const MIN_WIDTH = {
+	side: "sm:min-w-monti-side-panel",
+	panel: "sm:min-w-monti-panel",
+	assistant: "sm:min-w-monti-assistant",
+} as const;
 
 /**
  * A panel beside a screen, for what is looked at together with it (a media file, an activity, an entry's properties, the assistant): it does not
  * cover the screen. A width by `width` that the writer can drag wider from its left edge (remembered in this browser under `resizeKey`), a cream ground, a line down its left edge, and a 60px head with the title (16px bold), the panel's
  * icon buttons and the close button. Under the body an optional foot holds the one pill, or the box to type in. Docked at the window's right edge,
- * it covers the ✦ button of the page's corner. The panel is named by its title. Put it in a row beside the screen; on a narrow screen it takes the whole width. With `onSubmit` the body and the foot are one form, so Enter
+ * beside the box that scrolls the page (the frame's `PanelSlot`), it leaves the ✦ in the page's head row uncovered. The panel is named by its title. Put it in a row beside the screen; short of room what was dragged beyond its start goes first, then the page, never the start width, and on a narrow screen it takes the whole width. With `onSubmit` the body and the foot are one form, so Enter
  * in a field and the foot's submit button save it.
  *
  * Closed with the keyboard while focus is in it (its ×, a shortcut), the panel gives focus back to what opened it: the row. A pointer press
@@ -192,7 +198,9 @@ export function SidePanel({
 			data-slot="side-panel"
 			aria-labelledby={title ? titleId : undefined}
 			className={cn(
-				"relative flex min-h-0 w-full min-w-0 shrink-0 flex-col bg-monti-tool shadow-[inset_1px_0_0_var(--monti-border-default)] sm:w-(--side-panel-width)",
+				"relative z-20 flex min-h-0 w-full min-w-0 shrink flex-col bg-monti-tool shadow-[inset_1px_0_0_var(--monti-border-default)] [--monti-ground:var(--monti-bg-tool)] sm:w-(--side-panel-width)",
+				// Never narrower than its start: what was dragged wider gives way first, then the page, and the panel does not go under its start.
+				MIN_WIDTH[width],
 				className,
 			)}
 			style={{ "--side-panel-width": `${resize.width}px`, ...style } as CSSProperties}
@@ -287,4 +295,14 @@ export function SidePanelSave({
 			</Inline>
 		</Inline>
 	);
+}
+
+/**
+ * Where the docked panels of a page stand: beside the box that scrolls the page, never in it (the frame draws it once, before the assistant's panel; it takes no box of its own, so a panel in it is a flex item of the frame's row). The
+ * scroller then ends at the panel's edge: a table wider than the page scrolls sideways inside it and never runs under a panel. The screens give their
+ * panel to the slot (`PagePanel` of the admin). When the room is short the width a panel was dragged beyond its start gives way first, then the page (below
+ * its 480px, to a floor), and a panel never goes under its start width.
+ */
+export function PanelSlot({ ref }: { ref?: React.Ref<HTMLDivElement> }) {
+	return <div ref={ref} data-slot="panel-slot" className="contents" />;
 }

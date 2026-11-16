@@ -53,6 +53,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
+import { PagePanel } from "../frame/page-panel";
 import { CollectionTable } from "./collection-table";
 import { ValueRow } from "./filter-rows";
 import { MergeDialog } from "./merge-dialog";
@@ -636,23 +637,25 @@ export function TaxonomyScreen({
 				</CollectionTable>
 			</PageColumn>
 			{openGroup !== null && (
-				<TaxonomySidePanel
-					collection={collection}
-					collectionName={collectionName}
-					group={openGroup}
-					item={currentItem}
-					locales={locales}
-					sourceLocale={sourceLocale}
-					isMultilingual={isMultilingual}
-					hasPublicPage={path !== undefined}
-					onClose={() => openPanel(null)}
-					onDropNew={() => setOpenGroup(null)}
-					onMerge={() => currentItem && setMergeGroups([currentItem.group])}
-					onTrash={() => currentItem && trashItems([currentItem])}
-					onSaved={(newGroup) => {
-						if (openGroup === "__new__") setOpenGroup(newGroup);
-					}}
-				/>
+				<PagePanel>
+					<TaxonomySidePanel
+						collection={collection}
+						collectionName={collectionName}
+						group={openGroup}
+						item={currentItem}
+						locales={locales}
+						sourceLocale={sourceLocale}
+						isMultilingual={isMultilingual}
+						hasPublicPage={path !== undefined}
+						onClose={() => openPanel(null)}
+						onDropNew={() => setOpenGroup(null)}
+						onMerge={() => currentItem && setMergeGroups([currentItem.group])}
+						onTrash={() => currentItem && trashItems([currentItem])}
+						onSaved={(newGroup) => {
+							if (openGroup === "__new__") setOpenGroup(newGroup);
+						}}
+					/>
+				</PagePanel>
 			)}
 			{mergeGroups !== null && (
 				<MergeDialog
