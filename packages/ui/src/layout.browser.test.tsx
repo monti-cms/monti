@@ -237,7 +237,9 @@ describe("a control whose words change keeps its width (TB-02)", () => {
 		for (const size of SIZES) {
 			const own = document.querySelector(`[data-case="${size}"] [data-slot=spinner]`) as Element;
 			const plain = document.querySelector(`[data-case="plain ${size}"] [data-slot=spinner]`) as Element;
-			expect([box(own).width, box(own).height], `${size} spinner`).toEqual([box(plain).width, box(plain).height]);
+			// Its laid-out size, not its box on screen: the spinner turns, and a turned square's box changes with the angle.
+			const drawn = (spinner: Element) => [getComputedStyle(spinner).width, getComputedStyle(spinner).height];
+			expect(drawn(own), `${size} spinner`).toEqual(drawn(plain));
 			const words = box(document.querySelector(`[data-case="${size}"]`) as Element);
 			expect(box(own).left).toBeGreaterThanOrEqual(words.left);
 		}

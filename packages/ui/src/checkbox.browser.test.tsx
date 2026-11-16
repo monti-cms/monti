@@ -73,7 +73,7 @@ it("a check's focus is one line around it, 2px of ink at 60% at the box's edge, 
 	await expect.element(check).toHaveFocus();
 	const style = getComputedStyle(check.element());
 	expect([style.outlineStyle, style.outlineWidth, style.outlineOffset]).toEqual(["solid", "2px", "0px"]);
-	expect(style.outlineColor).toMatch(/\/ 0\.5\)$/);
+	expect(style.outlineColor).toMatch(/\/ 0\.6\)$/);
 	(check.element() as HTMLElement).blur();
 	await userEvent.click(check);
 	await expect.element(check).toBeChecked();
