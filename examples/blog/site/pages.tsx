@@ -50,8 +50,10 @@ function listPage(locale: string, under: "" | "/posts"): { path: string; transla
 		under && homePath(locales, code) === "/" ? under : `${homePath(locales, code)}${under}`;
 	return {
 		path: at(locale),
+		// The same page in the other languages, where it has an address of its own: with no language in any address (`prefix: "never"`)
+		// every language's page is this one address, and there is no other to name or to switch to.
 		translations: locales.list
-			.filter(({ code }) => code !== locale)
+			.filter(({ code }) => code !== locale && at(code) !== at(locale))
 			.map(({ code }) => ({ locale: code, path: at(code) })),
 	};
 }

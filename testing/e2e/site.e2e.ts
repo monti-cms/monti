@@ -168,12 +168,18 @@ test.describe("the site", () => {
 		expect((await visit(admin, `/ko/posts/${moved}`)).status).toBe(404);
 		expect((await visit(admin, `/xx/posts/${moved}`)).status).toBe(404);
 		// Each of them on the site's own page, with its top line: a post with no translation, a language the site does not have, an address
-		// no route takes.
-		for (const path of [`/en/posts/${moved}`, `/posts/${unique("nothing")}`, `/xx/posts/${moved}`, "/no/such/page"]) {
-			const missing = await visit(admin, path);
-			expect([path, missing.status]).toEqual([path, 404]);
-			expect(missing.text).toContain("페이지를 찾을 수 없습니다");
-			expect(missing.text).toContain('<nav class="top"');
+		// no route takes (its first part is no language's code, "no" is one: an underscore is in none).
+		for (const path of [
+			`/en/posts/${moved}`,
+			`/posts/${unique("nothing")}`,
+			`/xx/posts/${moved}`,
+			"/nothing_here/such/page",
+		]) {
+			expect([path, (await visit(admin, path)).status]).toEqual([path, 404]);
+			// Next sends a page that calls `notFound()` as a shell the browser draws, so this is read as a visitor sees it.
+			await admin.goto(path);
+			await expect(admin.getByRole("heading", { name: "페이지를 찾을 수 없습니다" })).toBeVisible();
+			await expect(admin.getByRole("navigation", { name: "사이트" })).toBeVisible();
 		}
 		// In the language of the address, with the way to the others.
 		await admin.goto(`/en/posts/${moved}`);
