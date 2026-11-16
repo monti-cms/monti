@@ -216,6 +216,21 @@ export const FilePanelProposedName: Story = {
 	},
 };
 
+/** A file used by an entry with no title: the menu of where it is used calls it "제목 없음", never by its address. */
+export const FileUsedByUntitled: Story = {
+	loaders: library("#/media", {
+		also: async (monti, { desk }) => {
+			await run(monti, "entries.create", {
+				collection: "post",
+				locale: "ko",
+				title: "",
+				slug: "no-title",
+				values: { cover: { media: desk, alt: "책상" } },
+			});
+		},
+	}),
+};
+
 /** Flow 6·16: a file used in many places. The list grows with them, and a long title is cut before its places. */
 export const FilePanelManyUses: Story = {
 	loaders: library("#/media", {

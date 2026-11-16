@@ -96,6 +96,9 @@ import {
 import { anchorRequest, type PickedText, releaseRequest, requestWords } from "../../editor/request-marks";
 import { type PairedRows, pairedSource } from "../../editor/translation";
 import { docLength, useBodyCatalogs } from "../../editor/use-body-editor";
+import { clock, fullDate, shortTime } from "../../format/date";
+import { useLanguageName } from "../../format/language";
+import { fieldName, labelOfCollection } from "../../format/names";
 import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
@@ -104,10 +107,8 @@ import { EditorBack } from "../frame/editor-back";
 import { focusText, toWhatStands, useFocusHandOff } from "../frame/focus-hand-off";
 import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
-import { useLanguageName } from "../list/column-menu";
 import type { SchemaRead } from "../settings/schema-draft";
 import { type CompareMode, CompareView } from "./compare-view";
-import { clock, day, dayTime } from "./dates";
 import { DocumentToolRows, DocumentViewPane, useDocumentTools } from "./document-tools";
 import { EntryProperties, fieldInputId, fieldPath, panelFields, panelLayout } from "./entry-properties";
 import {
@@ -258,7 +259,7 @@ export function EntryEditor({
 	const today = useToday();
 	// The menu holds the other way to publish, and there is one only when today is another day than the entry's date: published today, both rows
 	// would give the same date, so the pill is the plain one, as for a first publish (button.md; TB-04).
-	const otherDate = publishedAt !== null && day(publishedAt, language) !== day(today, language);
+	const otherDate = publishedAt !== null && fullDate(publishedAt, language) !== fullDate(today, language);
 	// The pill and the plain button take each other's place (published again with today's date; midnight passed): the one that had the focus is
 	// gone with it, and the one that stands there now takes it, so the focus does not fall to the page. Whether it had the focus is looked at
 	// as the swap is drawn, not kept from earlier: a focus the person has since taken elsewhere, or dropped on the page, is not brought back.
@@ -370,7 +371,7 @@ export function EntryEditor({
 		off: readOnly,
 	});
 	const fieldLabels = schema.data?.adminValues[collection]?.fields ?? {};
-	const fieldLabel = (field: string) => fieldLabels[field]?.label ?? field;
+	const fieldLabel = (field: string) => fieldName(field, fieldLabels[field]?.label, t);
 	const slug = String(editor.value("slug") ?? "");
 	const address = schema.data && slug ? publicPath(schema.data.schema, collection, slug, read?.entry.locale) : null;
 
@@ -410,11 +411,9 @@ export function EntryEditor({
 			for (const event of events) bodyEditor.off(event, sync);
 		};
 	}, [bodyEditor, translation.isTranslation]);
-	const sourceName = (code: string) =>
-		schema.data?.schema.locales.list.find((locale) => locale.code === code)?.name ?? code;
 	const beside =
 		compared && view === "side" ? (
-			<SourcePane compared={compared} localeName={sourceName(compared.source.locale)} current={pair} />
+			<SourcePane compared={compared} localeName={languageName(compared.source.locale)} current={pair} />
 		) : null;
 	const paired = Boolean(compared) && view === "paired";
 	const pairedRows = usePairedRows(paired ? compared : null, catalogs);
@@ -440,7 +439,6 @@ export function EntryEditor({
 		read && translation.multilingual && schema.data ? (
 			<Inline minHeight="control-md" justify="between" gap={12}>
 				<LocaleTabs
-					schema={schema.data.schema}
 					group={trashed ? trashedGroup : translation.group}
 					current={id}
 					onOpen={onOpen}
@@ -1048,7 +1046,8 @@ export function EntryEditor({
 					// A title the assistant proposed is in the title, blue, until it is taken, changed or discarded (T86).
 					value={titleProposed ? String(titleProposed.value ?? "") : editor.title}
 					proposal={titleProposed !== null}
-					placeholder={compared?.source.title || t("entry.title")}
+					// An empty title reads what every list calls such an entry (EH-03).
+					placeholder={compared?.source.title || t("list.untitled")}
 					size={size}
 					appearance="inline"
 					// An entry that cannot be changed is still read: the title stands in full ink like the body, with nothing to type (AT-29).
@@ -1197,13 +1196,13 @@ export function EntryEditor({
 						<>
 							<DropdownMenuItem
 								onClick={() => void publish.publish("keep")}
-								caption={publishedAt ? t("entry.publishKeep", { date: day(publishedAt, language) }) : undefined}
+								caption={publishedAt ? t("entry.publishKeep", { date: fullDate(publishedAt, language) }) : undefined}
 							>
 								{t("entry.publish")}
 							</DropdownMenuItem>
 							<DropdownMenuItem
 								onClick={() => void publish.publish("today")}
-								caption={t("entry.publishTodayDate", { date: day(today, language) })}
+								caption={t("entry.publishTodayDate", { date: fullDate(today, language) })}
 							>
 								{t("entry.publishToday")}
 							</DropdownMenuItem>
@@ -1270,7 +1269,7 @@ export function EntryEditor({
 							title={t("entry.browserCopy")}
 							meta={
 								[
-									editor.browserCopy.savedAt ? dayTime(editor.browserCopy.savedAt, language) : null,
+									editor.browserCopy.savedAt ? shortTime(editor.browserCopy.savedAt, language) : null,
 									// Proposals taken into the kept changes are the assistant's, not the person's own typing (AS-20).
 									editor.browserCopy.proposals > 0
 										? t("entry.browserCopyProposals", { count: editor.browserCopy.proposals })
@@ -1311,7 +1310,7 @@ export function EntryEditor({
 			<EditorHeader>
 				<Inline gap={12} minWidth={0} paddingX={12}>
 					<EditorBack onBack={trashed ? onTrash : onBack}>
-						{trashed ? t("frame.trash") : (schema.data?.adminValues[collection]?.label ?? collection)}
+						{trashed ? t("frame.trash") : labelOfCollection(schema.data?.adminValues, collection)}
 					</EditorBack>
 					{address ? (
 						<Text variant="meta" tone="faint" truncate>

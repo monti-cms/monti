@@ -1,4 +1,5 @@
 import type { ListColumn, ListFilter } from "@monti-cms/core";
+import { timeZone } from "../../format/date";
 
 /**
  * The list's query in its address (doc 06: filters, search and sort live in the address only). One key per filter, values comma-joined:
@@ -142,7 +143,7 @@ export const toQuery = (collection: string, state: ListState, pageSize: number, 
 	sort: state.sort,
 	page: state.page,
 	pageSize,
-	timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+	timeZone: timeZone(),
 });
 
 /** The state with one column's filter replaced (or removed with `null`): back to the first page, and no longer the assistant's. */

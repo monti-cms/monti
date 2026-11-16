@@ -1,5 +1,6 @@
 import type { RelationOption, RelationOptionsResult } from "@monti-cms/core";
 import { useCallback, useMemo, useState } from "react";
+import { addressIfShared, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 
@@ -22,7 +23,11 @@ export type RelationFieldModel = {
 	canCreate: boolean;
 	createToken: string | null;
 	createLabel: string | null;
+	/** The options are known (or there are none to read): a name is final then. Until then the chips and rows are not drawn, so none shows with no name. */
+	ready: boolean;
 	labelOf: (groupOrToken: string) => string;
+	/** The address of an option that shares its name with another: what tells the two apart. Nothing for a name that stands alone. */
+	addressOf: (group: string) => string | null;
 	targetCollection?: string;
 	targetKind?: "document" | "item";
 };
@@ -66,6 +71,8 @@ export function useRelationField({
 	const createToken = canCreate ? `new:${q}` : null;
 	const createLabel = canCreate ? t("relations.createNew", { name: q }) : null;
 
+	const ready = skip || Boolean(read.data) || read.refusal !== null;
+
 	const labelOf = useCallback(
 		(groupOrToken: string): string => {
 			if (!groupOrToken) return "";
@@ -74,26 +81,37 @@ export function useRelationField({
 			}
 			const found = allOptions.find((opt) => opt.group === groupOrToken);
 			if (found) {
-				return found.title || found.slug || groupOrToken;
+				return titleOf(found.title, t);
 			}
 			// A target in the trash is no choice, but the field still points at it: it is named, and says where it is (doc 08).
 			const trashed = read.data?.trashed.find((each) => each.group === groupOrToken);
-			if (trashed) return t("relations.inTrash", { title: trashed.title });
-			return groupOrToken;
+			if (trashed) return t("relations.inTrash", { title: titleOf(trashed.title, t) });
+			// Read, and not there: gone for good. An id is not a name; it is called what every untitled thing is.
+			return ready ? titleOf("", t) : "";
 		},
-		[allOptions, read.data?.trashed, t],
+		[allOptions, read.data?.trashed, ready, t],
+	);
+
+	const addressOf = useCallback(
+		(group: string): string | null => {
+			const found = allOptions.find((opt) => opt.group === group);
+			return found ? addressIfShared(found, options, t) : null;
+		},
+		[allOptions, options, t],
 	);
 
 	return {
 		read,
 		options,
 		allOptions,
+		addressOf,
 		search,
 		setSearch,
 		canCreate,
 		createToken,
 		createLabel,
 		labelOf,
+		ready,
 		targetCollection: read.data?.targetCollection,
 		targetKind: read.data?.targetKind,
 	};

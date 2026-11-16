@@ -17,11 +17,11 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { useId, useRef } from "react";
+import { recentTime } from "../format/date";
 import { useAdmin } from "../operations/admin-context";
 import { holdsKeyboardFocus } from "../screens/frame/focus-hand-off";
 import { PickOne } from "../screens/settings/pick-one";
 import { useAssistant } from "./use-assistant";
-import { clock } from "./words";
 
 /** For how many days a conversation nobody opens is kept; `never` keeps it. */
 const KEEP = ["7", "30", "90", "never"] as const;
@@ -32,7 +32,7 @@ const KEEP = ["7", "30", "90", "never"] as const;
  * time on each row says it.
  */
 export function History() {
-	const { t } = useAdmin();
+	const { t, language } = useAdmin();
 	const { history, conversationId, openConversation, removeConversation, loadHistory } = useAssistant();
 	// A conversation deleted with the keyboard (its menu closes first, then its row goes): the focus goes to the "more" of the row after it,
 	// else of the row before, as the menu closes; with no row left, to the panel's box or its first control once the row is gone. A
@@ -115,7 +115,7 @@ export function History() {
 											<Text truncate>{row.title}</Text>
 										</RowLink>
 										<Text as="div" variant="note" tone="subtle" truncate>
-											{outcome ? `${clock(row.at)} · ${outcome}` : clock(row.at)}
+											{outcome ? `${recentTime(row.at, language)} · ${outcome}` : recentTime(row.at, language)}
 										</Text>
 									</Stack>
 								</TableCell>

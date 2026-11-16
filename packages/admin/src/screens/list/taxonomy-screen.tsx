@@ -52,12 +52,13 @@ import {
 import { Add, Edit, List, Merge, OverflowMenuHorizontal, TrashCan } from "@monti-cms/ui/icons";
 import { useMemo, useRef, useState } from "react";
 import { useLeaveGuard, usePanelMove } from "../../draft/leave-guard";
+import { useLanguageName } from "../../format/language";
+import { labelOfCollection, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { useCoverCorner } from "../frame/admin-frame";
-import { useLanguageName } from "./column-menu";
 import { ValueRow } from "./filter-rows";
 import { MergeDialog } from "./merge-dialog";
 import { NoMatchRow } from "./no-match-row";
@@ -359,7 +360,7 @@ export function TaxonomyScreen({
 	const panelMove = usePanelMove(openGroup);
 	const openPanel = (group: string | null) => panelMove(group, () => setOpenGroup(group));
 
-	const collectionName = schema.data?.adminValues[collection]?.label ?? collection;
+	const collectionName = labelOfCollection(schema.data?.adminValues, collection);
 	const path = schema.data?.schema.collections[collection]?.path;
 	const locales = useMemo(
 		() => schema.data?.schema.locales.list.map((l) => l.code) ?? ["ko"],
@@ -577,12 +578,13 @@ export function TaxonomyScreen({
 											<RowCheck
 												checked={picked.has(item.group)}
 												onCheckedChange={(checked) => togglePick(item.group, checked)}
-												label={t("taxonomy.pick", { title: item.title })}
+												label={t("taxonomy.pick", { title: titleOf(item.title, t) })}
 											/>
 											<RowTitle
+												untitled={!item.title.trim()}
 												title={
 													<RowLink render={<button type="button" />} onClick={() => openPanel(item.group)}>
-														{item.title || t("list.untitled")}
+														{titleOf(item.title, t)}
 													</RowLink>
 												}
 												address={shownAddress}

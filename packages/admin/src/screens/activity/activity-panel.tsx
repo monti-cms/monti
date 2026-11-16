@@ -8,8 +8,12 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
+	Caret,
 	ChangeLine,
 	ChangeLines,
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
 	DescriptionItem,
 	DescriptionList,
 	DropdownMenu,
@@ -29,12 +33,14 @@ import {
 import { Chat, OverflowMenuHorizontal, Renew, Undo } from "@monti-cms/ui/icons";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useOpenConversation } from "../../assistant/use-assistant";
+import { shortTime } from "../../format/date";
+import { titleInLanguage, useLanguageName } from "../../format/language";
+import { labelOfCollection, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
 import { useCoverCorner } from "../frame/admin-frame";
 import { holdsKeyboardFocus, nextStop, useFocusHandOff } from "../frame/focus-hand-off";
-import { shortTime } from "../list/format";
 
 /**
  * One receiver's delivery in the panel: its facts, and what can be done about it under them. Its buttons go once it is canceled or has
@@ -154,7 +160,8 @@ export function ActivityPanel({
 	onUndo: (whenGone: () => HTMLElement | null) => void;
 	go: (route: Route) => void;
 }) {
-	const { t, wrote } = useAdmin();
+	const { t, language, wrote } = useAdmin();
+	const languageName = useLanguageName();
 	const openConversation = useOpenConversation();
 	const read = useRead<ActivityDetail>("activity.get", { id }, { quiet: true });
 	const schema = useRead<{ adminValues: Record<string, { label?: string }> }>("schema.read");
@@ -168,6 +175,8 @@ export function ActivityPanel({
 	const canceled = useRef<string | null>(null);
 	// The head's ⋯ goes when nothing is left to do with the line (sent again, undone): its focus goes to the next control of the head, the ×.
 	const moreHandOff = useFocusHandOff((more) => nextStop(more));
+	/** The deliveries that were not sent while this line was open: one that goes through after "send again" stays where it was, not folded away. */
+	const unsent = useRef<{ id: string; ids: Set<string> }>({ id, ids: new Set() });
 	const line = read.data;
 	// The corner's ✦ is covered only while a panel is there to cover it: not while it loads, not for a line that is gone.
 	useCoverCorner(line !== null);
@@ -181,6 +190,8 @@ export function ActivityPanel({
 		if (gone) onGone();
 	}, [gone]);
 	if (!line) return null;
+	if (unsent.current.id !== id) unsent.current = { id, ids: new Set() };
+	for (const delivery of line.deliveries) if (delivery.state !== "sent") unsent.current.ids.add(delivery.id);
 	const isSending = (delivery: ActivityDelivery) =>
 		sending === "all" || (busy && sending === null)
 			? delivery.state === "failed"
@@ -202,9 +213,62 @@ export function ActivityPanel({
 				: record.kind === "template"
 					? { screen: "template", id: record.id }
 					: null;
+	const deliveryBlock = (delivery: ActivityDelivery) => (
+		<DeliveryBlock key={delivery.id} id={delivery.id}>
+			<DescriptionList>
+				<DescriptionItem label={t("activity.destination")}>{receiverOf(delivery)}</DescriptionItem>
+				<DescriptionItem label={t("activity.eventName")} mono>
+					{delivery.event}
+				</DescriptionItem>
+				<DescriptionItem label={t("activity.state")}>
+					<DeliveryState delivery={delivery} sending={isSending(delivery)} />
+				</DescriptionItem>
+				{delivery.lastError && delivery.state !== "sent" && (
+					<DescriptionItem label={t("activity.lastError")}>{say(delivery.lastError)}</DescriptionItem>
+				)}
+				{delivery.nextAttemptAt && !isSending(delivery) && (
+					<DescriptionItem label={t("activity.nextAttempt")} mono>
+						{shortTime(delivery.nextAttemptAt, language)}
+					</DescriptionItem>
+				)}
+				{/* The id the receiver got the event under (`Monti-Event-Id`, and `id` in the body): to find it in the receiver's own log. */}
+				<DescriptionItem label={t("activity.eventId")} mono>
+					{delivery.eventId}
+				</DescriptionItem>
+			</DescriptionList>
+			{/* "Send again" stays while it is on its way: at work, with its focus, not to be pressed. When it arrives the buttons
+										    go and the delivery takes the focus; when it fails, or its answer is lost, the button is as it was. */}
+			{(delivery.state === "failed" || delivery.state === "pending") && (
+				<Inline gap={16}>
+					{delivery.state === "failed" && (
+						<TextButton variant="underline" loading={busy} onClick={() => onRetry([delivery.id])}>
+							{t("activity.retry")}
+						</TextButton>
+					)}
+					{/* While its cancel is on its way it works, keeps its focus and cannot be pressed again: a second cancel
+												    would only be refused. Not offered for a delivery that is being sent. */}
+					{!isSending(delivery) && (
+						<TextButton
+							variant="quiet"
+							loading={canceling.includes(delivery.id)}
+							onClick={() => {
+								canceled.current = null;
+								setAsking(delivery);
+							}}
+						>
+							{t("activity.cancel")}
+						</TextButton>
+					)}
+				</Inline>
+			)}
+		</DeliveryBlock>
+	);
+	const sentDeliveries = line.deliveries.filter((delivery) => !unsent.current.ids.has(delivery.id));
 	const name = (record: ActivityRecord) => {
 		const route = routeOf(record);
-		const words = record.title || t("list.untitled");
+		const words = record.titleLocale
+			? titleInLanguage(titleOf(record.title, t), record.titleLocale, language)
+			: titleOf(record.title, t);
 		return route ? (
 			<TextButton variant="underline" {...linkTo(route, go)}>
 				{words}
@@ -309,11 +373,11 @@ export function ActivityPanel({
 					{/* The first group has no heading, as in the other panels: the head names the line. */}
 					<DescriptionList>
 						<DescriptionItem label={t("activity.column.at")} mono>
-							{shortTime(line.at)}
+							{shortTime(line.at, language)}
 						</DescriptionItem>
 						{line.undo.state === "done" && (
 							<DescriptionItem label={t("activity.undoneAt")} mono>
-								{shortTime(line.undo.at)}
+								{shortTime(line.undo.at, language)}
 							</DescriptionItem>
 						)}
 					</DescriptionList>
@@ -389,12 +453,12 @@ export function ActivityPanel({
 								<DescriptionItem label={t(`activity.record.${only.kind}`)}>{name(only)}</DescriptionItem>
 								{only.collection && (
 									<DescriptionItem label={t("activity.collection")}>
-										{schema.data?.adminValues[only.collection]?.label ?? only.collection}
+										{labelOfCollection(schema.data?.adminValues, only.collection)}
 									</DescriptionItem>
 								)}
 								{only.locale && (
-									<DescriptionItem label={t("activity.locale")} mono>
-										{`${only.locale.toUpperCase()}${only.version === null ? "" : ` · v${only.version}`}`}
+									<DescriptionItem label={t("activity.locale")}>
+										{`${languageName(only.locale)}${only.version === null ? "" : ` · v${only.version}`}`}
 									</DescriptionItem>
 								)}
 								{only.address && (
@@ -423,56 +487,18 @@ export function ActivityPanel({
 					{deliveries && line.deliveries.length > 0 && (
 						<Group title={t("activity.deliveriesCount", { count: line.deliveries.length })}>
 							<Stack gap={20}>
-								{line.deliveries.map((delivery) => (
-									<DeliveryBlock key={delivery.id} id={delivery.id}>
-										<DescriptionList>
-											<DescriptionItem label={t("activity.destination")}>{receiverOf(delivery)}</DescriptionItem>
-											<DescriptionItem label={t("activity.eventName")} mono>
-												{delivery.event}
-											</DescriptionItem>
-											<DescriptionItem label={t("activity.state")}>
-												<DeliveryState delivery={delivery} sending={isSending(delivery)} />
-											</DescriptionItem>
-											{delivery.lastError && delivery.state !== "sent" && (
-												<DescriptionItem label={t("activity.lastError")}>{say(delivery.lastError)}</DescriptionItem>
-											)}
-											{delivery.nextAttemptAt && !isSending(delivery) && (
-												<DescriptionItem label={t("activity.nextAttempt")} mono>
-													{shortTime(delivery.nextAttemptAt)}
-												</DescriptionItem>
-											)}
-											{/* The id the receiver got the event under (`Monti-Event-Id`, and `id` in the body): to find it in the receiver's own log. */}
-											<DescriptionItem label={t("activity.eventId")} mono>
-												{delivery.eventId}
-											</DescriptionItem>
-										</DescriptionList>
-										{/* "Send again" stays while it is on its way: at work, with its focus, not to be pressed. When it arrives the buttons
-										    go and the delivery takes the focus; when it fails, or its answer is lost, the button is as it was. */}
-										{(delivery.state === "failed" || delivery.state === "pending") && (
-											<Inline gap={16}>
-												{delivery.state === "failed" && (
-													<TextButton variant="underline" loading={busy} onClick={() => onRetry([delivery.id])}>
-														{t("activity.retry")}
-													</TextButton>
-												)}
-												{/* While its cancel is on its way it works, keeps its focus and cannot be pressed again: a second cancel
-												    would only be refused. Not offered for a delivery that is being sent. */}
-												{!isSending(delivery) && (
-													<TextButton
-														variant="quiet"
-														loading={canceling.includes(delivery.id)}
-														onClick={() => {
-															canceled.current = null;
-															setAsking(delivery);
-														}}
-													>
-														{t("activity.cancel")}
-													</TextButton>
-												)}
-											</Inline>
-										)}
-									</DeliveryBlock>
-								))}
+								{line.deliveries.filter((delivery) => unsent.current.ids.has(delivery.id)).map(deliveryBlock)}
+								{/* What arrived is folded: failed ones and ones still on their way are what a person acts on. */}
+								{sentDeliveries.length > 0 && (
+									<Collapsible>
+										<CollapsibleTrigger>
+											{t("activity.sentFold", { count: sentDeliveries.length })} <Caret />
+										</CollapsibleTrigger>
+										<CollapsibleContent>
+											<Stack gap={20}>{sentDeliveries.map(deliveryBlock)}</Stack>
+										</CollapsibleContent>
+									</Collapsible>
+								)}
 							</Stack>
 						</Group>
 					)}

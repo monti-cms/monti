@@ -419,7 +419,7 @@ function EntryHeaderBar() {
 			</Inline>
 			<Inline gap={16}>
 				<Text variant="note" tone="subtle">
-					다른 곳 1
+					차이 1곳
 				</Text>
 				<Separator orientation="vertical" length="control" flush />
 				<TextButton>서버 최신본 불러오기</TextButton>

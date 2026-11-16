@@ -1,11 +1,11 @@
 import type { ProposalView } from "@monti-cms/core";
 import { Button, Count, Inline, Progress, Text, TextButton } from "@monti-cms/ui";
 import { type ReactNode, useRef } from "react";
+import { recentTime } from "../format/date";
 import { useAdmin } from "../operations/admin-context";
 import { focusWhenDrawn, nextStop, useFocusHandOff } from "../screens/frame/focus-hand-off";
 import { rowCounts } from "./change-words";
 import { type ProposalStanding, standingOf } from "./use-proposal";
-import { clock } from "./words";
 
 /** How long the row's buttons take no press after the row changed: longer than a double press, shorter than a person deciding. */
 const SETTLE_MS = 400;
@@ -42,7 +42,7 @@ export function ProposalState({
 	onApply: () => void;
 	onRevert: () => void;
 }) {
-	const { t } = useAdmin();
+	const { t, language } = useAdmin();
 	const standing: ProposalStanding = standingOf(view, applying);
 	// Counted by the rows the card and the page show: a translation's words are part of its row.
 	const counts = rowCounts(view);
@@ -144,7 +144,7 @@ export function ProposalState({
 		<Text variant="note" tone="subtle">
 			{standing === "reverted"
 				? view.settledAt
-					? t("card.revertedAt", { time: clock(view.settledAt) })
+					? t("card.revertedAt", { time: recentTime(view.settledAt, language) })
 					: t("card.reverted")
 				: t("card.discarded")}
 		</Text>,

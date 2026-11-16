@@ -80,11 +80,11 @@ describe("the entry editor: saving and coming back", () => {
 		expect(getComputedStyle(live.nextElementSibling as HTMLElement).paddingLeft).toBe("16px");
 		await titleEnd();
 		await userEvent.keyboard(" 다시");
-		await expect.element(button("저장 전 변경사항")).toBeVisible();
+		await expect.element(button("저장 전 변경 사항")).toBeVisible();
 		// The same region holds the new words (a cell that states became one that is pressed inside it), once.
 		expect(bar().querySelector("[aria-live]")).toBe(live);
-		expect(live.textContent).toBe("저장 전 변경사항");
-		expect(times("저장 전 변경사항")).toBe(1);
+		expect(live.textContent).toBe("저장 전 변경 사항");
+		expect(times("저장 전 변경 사항")).toBe(1);
 	});
 
 	it("[TP-10] an entry that cannot be changed has no save cell, and nothing says a save state for it", async () => {
@@ -101,7 +101,7 @@ describe("the entry editor: saving and coming back", () => {
 	it("the save cell pressed with the keyboard goes away saved, and the focus goes to the text, not to the page; a pointer's press moves none", async () => {
 		await on("draft").run();
 		await opened();
-		const unsaved = page.getByRole("button", { name: "저장 전 변경사항" });
+		const unsaved = page.getByRole("button", { name: "저장 전 변경 사항" });
 		await titleEnd();
 		await userEvent.keyboard(" 다시");
 		await expect.element(unsaved).toBeVisible();
@@ -208,9 +208,9 @@ describe("the entry editor: saving and coming back", () => {
 		await opened();
 		await userEvent.click(body());
 		await userEvent.keyboard("가나");
-		await expect.element(button("저장 전 변경사항")).toBeVisible();
+		await expect.element(button("저장 전 변경 사항")).toBeVisible();
 		await userEvent.keyboard("{Backspace}{Backspace}");
-		await expect.element(button("저장 전 변경사항")).not.toBeInTheDocument();
+		await expect.element(button("저장 전 변경 사항")).not.toBeInTheDocument();
 	});
 
 	it("TC-09 the browser's copy thrown away comes back from the toast's undo", async () => {
@@ -289,7 +289,7 @@ describe("the entry editor: saving and coming back", () => {
 		await userEvent.keyboard("{/Enter}");
 		await expect.element(body()).toHaveFocus();
 		expect(within("p, h1, h2, h3")).toHaveLength(blocks);
-		await expect.element(button("저장 전 변경사항")).not.toBeInTheDocument();
+		await expect.element(button("저장 전 변경 사항")).not.toBeInTheDocument();
 	});
 
 	it("\"compare\" pressed with the keyboard gives the editor's place to the comparison, and the focus to the comparison's first control", async () => {
@@ -350,7 +350,7 @@ describe("the entry editor: saving and coming back", () => {
 		await userEvent.keyboard(" 다시 쓰기");
 		const { site, id } = story.loaded();
 		await site.monti.run("entries.save", { id, version: 1, title: "첫 번째 글 (다른 탭)" }, entry.admin);
-		const cell = button("저장 전 변경사항");
+		const cell = button("저장 전 변경 사항");
 		(cell.element() as HTMLElement).focus();
 		expect(cell.element().matches(":focus-visible")).toBe(true);
 		await userEvent.keyboard("{Enter}");
@@ -371,12 +371,12 @@ describe("the entry editor: saving and coming back", () => {
 		await BrowserCopy.run();
 		await userEvent.click(button("비교하기"));
 		await expect.element(page.getByText("임시 저장본과 비교")).toBeVisible();
-		await expect.element(page.getByText(/다른 곳 \d/)).toBeVisible();
+		await expect.element(page.getByText(/차이 \d곳/)).toBeVisible();
 		// The count is in the ink of plain words (screens/editor-more.md: \`Text variant="note"\`), not a quiet label's.
 		const ink = document.createElement("span");
 		ink.className = "text-monti-default";
 		document.body.append(ink);
-		expect(getComputedStyle(page.getByText(/다른 곳 \d/).element()).color).toBe(getComputedStyle(ink).color);
+		expect(getComputedStyle(page.getByText(/차이 \d곳/).element()).color).toBe(getComputedStyle(ink).color);
 		ink.remove();
 	});
 
@@ -389,7 +389,7 @@ describe("the entry editor: saving and coming back", () => {
 		await expect.element(title()).toHaveValue("첫 번째 글 다시 쓰기");
 		await expect.element(page.getByText("로그인이 풀렸습니다")).not.toBeInTheDocument();
 		await expect.element(page.getByText("이 브라우저에 저장하지 않은 편집이 있습니다")).not.toBeInTheDocument();
-		await userEvent.click(button("저장 전 변경사항"));
+		await userEvent.click(button("저장 전 변경 사항"));
 		await saveCell("저장됨");
 	});
 
@@ -488,7 +488,7 @@ describe("the entry editor: before the entry is there", () => {
 		await expect.element(property("요약")).toHaveValue("리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것.");
 		await expect.element(property("대표 이미지")).toBeVisible();
 		await saveCell("저장됨");
-		await expect.element(button("저장 전 변경사항")).not.toBeInTheDocument();
+		await expect.element(button("저장 전 변경 사항")).not.toBeInTheDocument();
 		const { site, id } = story.loaded();
 		const read = (await site.monti.run("entries.get", { id }, entry.admin)) as {
 			entry: { title: string; version: number };
@@ -498,7 +498,7 @@ describe("the entry editor: before the entry is there", () => {
 		await titleEnd();
 		await userEvent.keyboard(" 다시");
 		await expect.element(title()).toHaveValue("첫 번째 글 다시");
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 	});
 });
 
@@ -608,7 +608,7 @@ describe("the entry editor: an answer that does not come", () => {
 		expect(await savedTitle(story)).toBe("첫 번째 글 저장한 말");
 		// The screen still has the copy from before the save: my words stay over it, not the old title in their place.
 		await expect.element(title()).toHaveValue("첫 번째 글 저장한 말");
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 	});
 
 	it("02 T230 letters typed while a save is under way stay: the save lets go of what it sent, and what came after is still unsaved", async () => {
@@ -624,7 +624,7 @@ describe("the entry editor: an answer that does not come", () => {
 		await expect.poll(() => savedTitle(story)).toBe("첫 번째 글 저장한 말");
 		await expect.poll(() => story.wire.calls.filter((name) => name === "entries.get").length).toBeGreaterThan(1);
 		// The save is over: what it sent is saved, and the letters typed meanwhile are on the screen, counted as unsaved.
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 		await expect.element(title()).toHaveValue("첫 번째 글 저장한 말 그 뒤에 친 말");
 		await save();
 		await saveCell("저장됨");
@@ -1057,7 +1057,7 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 		await userEvent.keyboard("{Meta>}{Enter}{/Meta}");
 		await expect.poll(() => body().element().textContent).toContain("블로그를 다시 만든 건");
 		expect(within("ins")).toHaveLength(1);
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 		await save();
 		await saveCell("제안 2건 대기");
 		expect(await proposals()).toHaveLength(2);
@@ -1071,7 +1071,7 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 		expect(text).toContain("블로그를 다시 만든 건");
 		expect(text).not.toContain("편집기도 같은 원칙으로");
 		expect(within("ins, del")).toHaveLength(0);
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 	});
 
 	it("typing in a block a proposal touches takes that proposal first, then the typing goes over it", async () => {
@@ -1146,7 +1146,7 @@ describe("the entry editor: the assistant's proposals for the title and the fiel
 		const made = await proposed();
 		await userEvent.click(button("모두 받기"));
 		await expect.element(button("모두 받기")).not.toBeInTheDocument();
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 		expect(summary().element().hasAttribute("data-proposal")).toBe(false);
 		expect((await values(made.loaded())).title).toBe("첫 번째 글");
 		await save();
@@ -1187,7 +1187,7 @@ describe("the entry editor: the assistant's proposals for the title and the fiel
 		};
 		expect(await stored()).toBe("on");
 		await userEvent.click(button("모두 받기"));
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 		await save();
 		await saveCell("저장됨");
 		expect(await stored()).toBeNull();
@@ -1599,6 +1599,35 @@ describe("the entry editor: the property panel's tabs", () => {
 	});
 });
 
+describe("the names a relation's choices are called by", () => {
+	it("[LR-15] a post with no title is 'Untitled' in the list and once chosen, and two posts of one name each show their address", async () => {
+		await on("relatedNames").run();
+		await opened();
+		await userEvent.click(page.getByRole("combobox", { name: "관련 글" }));
+		await expect.element(page.getByRole("option", { name: /제목 없음/ })).toBeVisible();
+		const same = page.getByRole("option", { name: /같은 이름/ }).elements();
+		expect(same).toHaveLength(2);
+		expect(same.map((each) => each.textContent).sort()).toEqual([
+			"같은 이름same-one · 초안",
+			"같은 이름same-two · 초안",
+		]);
+		// A name that stands alone has no address beside it.
+		expect(page.getByRole("option", { name: /제목 없음/ }).element().textContent).not.toContain("no-title");
+		await userEvent.click(page.getByRole("option", { name: /제목 없음/ }));
+		await expect.element(page.getByRole("combobox", { name: "관련 글" })).toHaveValue("제목 없음");
+	});
+});
+
+describe("an ordered relation's rows", () => {
+	it("[LR-15] a row is drawn once its target's name is known, and a target with no title is 'Untitled', so no row or move label has an empty name", async () => {
+		await on("relatedNames").run();
+		await opened();
+		const row = page.getByRole("button", { name: "제목 없음 옮기기" });
+		await expect.element(row).toBeVisible();
+		await expect.element(page.getByRole("button", { name: /^(「」)?\s*옮기기$/ })).not.toBeInTheDocument();
+	});
+});
+
 describe("a conditional field in the property panel (doc 19)", () => {
 	const field = (name: string) => page.getByRole("textbox", { name });
 	const stored = async ({ site, id }: Loaded) =>
@@ -1731,7 +1760,7 @@ describe("a conditional field in the property panel (doc 19)", () => {
 	it("19-5 the comparison of two sides that chose different options: each shows its choice by its label and the fields of its own option, and the choice is the one place counted", async () => {
 		const { ConditionalCompare } = composeStories(entry);
 		await ConditionalCompare.run();
-		await expect.element(page.getByText("다른 곳 1")).toBeVisible();
+		await expect.element(page.getByText("차이 1곳")).toBeVisible();
 		const sides = [...document.querySelectorAll<HTMLElement>("[data-slot=compare-side]")];
 		expect(sides).toHaveLength(2);
 		const [mine, server] = sides.map((side) => side.textContent ?? "");
@@ -1771,7 +1800,7 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 			},
 		},
 	});
-	const archived = (how: "archived" | "trashed" = "archived") =>
+	const archived = (how: "archived" | "trashed" = "archived", filled = true) =>
 		scene<Loaded>(
 			{
 				loaders: [
@@ -1803,13 +1832,17 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 										values: {
 											summary: "한 문장 요약",
 											note: "여러 줄 메모",
-											mood: "calm",
-											moods: ["calm", "loud"],
 											pinned: "on",
-											category: groups[0],
-											// One of the two: the other is left to pick once the entry can be changed.
-											topics: [groups[0]],
-											series: groups,
+											...(filled
+												? {
+														mood: "calm",
+														moods: ["calm", "loud"],
+														category: groups[0],
+														// One of the two: the other is left to pick once the entry can be changed.
+														topics: [groups[0]],
+														series: groups,
+													}
+												: {}),
 										},
 									},
 									entry.admin,
@@ -1838,6 +1871,21 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 			if (getComputedStyle(at).opacity !== "1") return true;
 		return false;
 	};
+
+	it("[AT-29] a choice or relation with no value, on an entry nobody can change, says it is empty and does not ask to be chosen", async () => {
+		const drawn = archived("archived", false);
+		await drawn.run();
+		await expect.element(button("보관 풀기")).toBeVisible();
+		if ((await panel().elements()).length === 0) await userEvent.click(button("속성"));
+		await expect.element(panel().getByText("비어 있음").first()).toBeVisible();
+		await expect.element(panel().getByText("고르기…")).not.toBeInTheDocument();
+		for (const name of ["mood", "topics", "series", "category"]) {
+			const inputs = field(name)?.matches("input")
+				? [field(name)]
+				: [...(field(name)?.querySelectorAll("input") ?? [])];
+			for (const input of inputs) expect((input as HTMLInputElement).placeholder).not.toBe("고르기…");
+		}
+	});
 
 	it("[AT-29] every kind of field is read, not off: full ink, nothing in the panel is disabled, and the keyboard stops on each", async () => {
 		const drawn = archived();
@@ -1914,7 +1962,7 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 		await userEvent.keyboard(" {Enter}");
 		await expect.element(pinned).toBeChecked();
 		// Nothing became a change: no save is offered, and the entry holds what it held.
-		await expect.element(button("저장 전 변경사항")).not.toBeInTheDocument();
+		await expect.element(button("저장 전 변경 사항")).not.toBeInTheDocument();
 		expect(JSON.stringify(await held())).toBe(before);
 	});
 	/** The options of a list that is open now. */
@@ -1963,5 +2011,15 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 		await expect.element(button("보관 풀기")).toBeVisible();
 		await expect.poll(() => field("mood").getAttribute("aria-readonly")).toBe("true");
 		for (const name of lists) await staysShut(name);
+	});
+});
+
+describe("an entry with no title", () => {
+	it("[EH-03] the empty title reads the list's word for it, '제목 없음', faint and in the regular weight", async () => {
+		await from(entry.NewEntry).run();
+		await expect.element(title()).toHaveAttribute("placeholder", "제목 없음");
+		const shown = getComputedStyle(title().element(), "::placeholder");
+		expect(Number(shown.fontWeight)).toBeLessThan(500);
+		expect(shown.color).not.toBe(getComputedStyle(title().element()).color);
 	});
 });

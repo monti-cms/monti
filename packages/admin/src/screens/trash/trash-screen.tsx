@@ -45,6 +45,8 @@ import {
 import { OverflowMenuHorizontal, TrashCan, Undo } from "@monti-cms/ui/icons";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useOpenConversation } from "../../assistant/use-assistant";
+import { useLanguageName } from "../../format/language";
+import { labelOfCollection, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
@@ -52,7 +54,6 @@ import { URGENT_DAYS } from "../../trash/days-left";
 import { usePurge, useRestore } from "../../trash/use-trash";
 import type { FrameCounts } from "../frame/admin-frame";
 import { firstStop } from "../frame/focus-hand-off";
-import { useLanguageName } from "../list/column-menu";
 import { FilterRows } from "../list/filter-rows";
 import { searchScopes } from "../list/folders";
 import { ListPages } from "../list/list-pages";
@@ -140,7 +141,7 @@ export function TrashScreen({
 	// The language menu lists the languages that are in the trash here, in the site's order, and the ones it is filtered by.
 	const languages = siteLocales.filter((code) => (data?.locales[code] ?? 0) > 0 || state.locales.includes(code));
 	const { sized, resize } = useColumnWidths("trash");
-	const collectionLabel = (collection: string) => schema.data?.adminValues[collection]?.label ?? collection;
+	const collectionLabel = (collection: string) => labelOfCollection(schema.data?.adminValues, collection);
 	const kindLabel = (kind: string) => (kind === MEDIA_KIND ? t("trash.kind.media") : collectionLabel(kind));
 	const isDocument = (row: TrashRow) => row.collection !== null && collections[row.collection]?.kind === "document";
 
@@ -486,13 +487,14 @@ export function TrashScreen({
 											<RowCheck
 												checked={picked.has(key)}
 												onCheckedChange={(on) => pick(row, on)}
-												label={t("list.pick", { title: row.title })}
+												label={t("list.pick", { title: titleOf(row.title, t) })}
 											/>
 											<RowTitle
+												untitled={!row.title.trim()}
 												title={
 													link ? (
 														<HandedRowLink href={link} listStart={listStart}>
-															{row.title || t("list.untitled")}
+															{titleOf(row.title, t)}
 														</HandedRowLink>
 													) : (
 														<HandedRowLink
@@ -500,7 +502,7 @@ export function TrashScreen({
 															onClick={() => open(row)}
 															listStart={listStart}
 														>
-															{row.title || t("list.untitled")}
+															{titleOf(row.title, t)}
 														</HandedRowLink>
 													)
 												}

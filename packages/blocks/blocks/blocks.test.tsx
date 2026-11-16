@@ -291,3 +291,18 @@ describe("the blocks as MDX (doc 18)", () => {
 		expect(bare(readMarkdown(written, site).doc.blocks)).toEqual(bare(body.blocks));
 	});
 });
+
+describe("a block that keeps its source's words", () => {
+	it("18-1 a callout and a collapsible put the source's language on their own root element", () => {
+		const kept = (block: Block): Block => ({ ...block, lang: "ko" });
+		const body = doc(
+			kept({ id: id(), type: "callout", attrs: { tone: "tip" }, children: [p("글")] }),
+			kept({ id: id(), type: "collapsible", attrs: { title: "더 보기" }, children: [p("글")] }),
+		);
+		const out = renderToStaticMarkup(
+			createElement("div", null, ...renderDocument(body, { createElement: h, blocks, marks, locale: "en" })),
+		).replace(/<style[^>]*>[\s\S]*?<\/style>/g, "");
+		expect(out).toContain('class="monti-block-callout" data-tone="tip" role="note" lang="ko"');
+		expect(out).toContain('<details class="monti-block-collapsible" lang="ko">');
+	});
+});

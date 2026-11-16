@@ -1,7 +1,9 @@
 import type { MediaItem } from "@monti-cms/core";
 import { FilePreview, Image } from "@monti-cms/ui";
+import { bytes } from "../format/bytes";
+import { extensionLabel } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
-import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "./file-text";
+import { previewUrl, sizeLabel } from "./file-text";
 
 /**
  * What a tile's mono line says: its size or kind and how much it is used, and in a search, where it sits under the open folder. A file right in the open folder keeps its
@@ -12,7 +14,7 @@ export function useFileDetail(searching: boolean, open: readonly string[]) {
 	return (item: MediaItem) => {
 		const under = searching ? item.path.slice(open.length) : [];
 		const place = under.length > 0 ? `${under.join(" / ")} · ` : "";
-		const measure = item.kind === "image" ? sizeLabel(item) : formatBytes(item.size);
+		const measure = item.kind === "image" ? sizeLabel(item) : bytes(item.size);
 		const use = item.uses > 0 ? t("library.usedBy", { count: item.uses }) : t("library.notUsed");
 		return `${place}${measure ? `${measure} · ` : ""}${use}`;
 	};

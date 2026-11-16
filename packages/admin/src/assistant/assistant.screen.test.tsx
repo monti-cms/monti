@@ -501,8 +501,8 @@ describe("past conversations (flow 2, 25–26)", () => {
 		// Its waiting proposal went with it.
 		await expect.poll(async () => (await proposalsOf(story.loaded())).length).toBe(0);
 
-		await userEvent.click(past.getByRole("combobox", { name: "안 연 대화 지우기" }));
-		await userEvent.click(page.getByRole("option", { name: "90일 뒤" }));
+		await userEvent.click(past.getByRole("combobox", { name: "안 연 대화" }));
+		await userEvent.click(page.getByRole("option", { name: "90일 뒤 지움" }));
 		await expect
 			.poll(
 				async () =>
@@ -512,7 +512,7 @@ describe("past conversations (flow 2, 25–26)", () => {
 			.toBe(90);
 		await userEvent.click(button("대화로 돌아가기"));
 		await userEvent.click(button("지난 대화"));
-		await expect.element(past.getByRole("combobox", { name: "안 연 대화 지우기" })).toHaveTextContent("90일 뒤");
+		await expect.element(past.getByRole("combobox", { name: "안 연 대화" })).toHaveTextContent("90일 뒤 지움");
 	});
 
 	it("10-1 no past conversations: one line says so", async () => {

@@ -4,10 +4,10 @@ import { style } from "./style";
 import { wordsIn } from "./words";
 
 /** A collapsible: a `<details>`, so it opens without a script. It starts open when `defaultOpen` says so. */
-function CollapsibleDrawing({ attrs, locale, children }: BlockProps & { children?: ReactNode }) {
+function CollapsibleDrawing({ attrs, locale, lang, children }: BlockProps & { children?: ReactNode }) {
 	const title = typeof attrs.title === "string" && attrs.title.trim() !== "" ? attrs.title.trim() : wordsIn(locale);
 	return (
-		<details className="monti-block-collapsible" open={attrs.defaultOpen === true || undefined}>
+		<details className="monti-block-collapsible" open={attrs.defaultOpen === true || undefined} lang={lang}>
 			<summary className="monti-block-collapsible-summary">{title}</summary>
 			<div className="monti-block-collapsible-body">{children}</div>
 		</details>

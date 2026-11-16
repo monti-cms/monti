@@ -165,6 +165,14 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(sidebarLog()).toHaveTextContent("1");
 	});
 
+	it("[AT-25] the panel says the entry's language by its name, not by its code in capitals", async () => {
+		await draw(stories.Log).run();
+		await userEvent.click(row(FAILED).getByText("post/react-19"));
+		await expect.element(panel().getByRole("heading", { name: FAILED })).toBeVisible();
+		await expect.element(panel()).toHaveTextContent(/언어한국어 · v\d+/);
+		await expect.element(panel()).not.toHaveTextContent("KO · v");
+	});
+
 	it("[flow 12·03] a press on a row opens its details beside the list: when, the entry as it was, each receiver's delivery by its name; the row is picked, and × closes it", async () => {
 		await draw(stories.Log).run();
 		await userEvent.click(row(FAILED).getByText("post/react-19"));
@@ -184,6 +192,9 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(panel()).toHaveTextContent("전송 · 2");
 		// A receiver is named as a person reads it, never by what it is stored under.
 		await expect.element(panel()).toHaveTextContent("받는 곳사이트 캐시");
+		// The one that went is folded into "보냄 1"; the failed one stays open above it.
+		await expect.element(panel()).not.toHaveTextContent("받는 곳search.example.dev");
+		await userEvent.click(panel().getByRole("button", { name: "보냄 1" }));
 		await expect.element(panel()).toHaveTextContent("받는 곳search.example.dev");
 		await expect.element(panel()).not.toHaveTextContent("plugin:next");
 		await expect.element(panel()).not.toHaveTextContent("webhook:");
@@ -647,12 +658,12 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(banner()).toHaveTextContent("전송 3건 실패");
 	});
 
-	it("a time's cell says the same day and hour when pointed at, in the lists' own form", async () => {
+	it("[TC-03] a time's cell says the same moment whole when pointed at: the year with the day and hour", async () => {
 		await draw(stories.Log).run();
 		await expect.element(row(FAILED)).toBeVisible();
 		const cell = row(FAILED).element().querySelectorAll("td")[2];
 		expect(cell?.textContent).toMatch(/^\d\d\. \d\d \d\d:\d\d$/);
-		expect(cell?.getAttribute("data-cut-words")).toBe(cell?.textContent);
+		expect(cell?.getAttribute("data-cut-words")).toBe(`${new Date().getFullYear()}. ${cell?.textContent}`);
 	});
 	it("[flow 12·03] the details closed with the keyboard give focus back to the row that opened them", async () => {
 		await draw(stories.Log).run();
@@ -690,6 +701,9 @@ describe("the activity log (doc 13, flow 12)", () => {
 		expect(cellOf("템플릿 기본 틀 저장").textContent).toBe("");
 		// The side panel says the same word for a delivery that went.
 		await userEvent.click(row(FAILED).getByText("post/react-19"));
+		// The ones that went are folded into one line; the failed one is open.
+		await expect.element(panel()).not.toHaveTextContent("상태보냄");
+		await userEvent.click(panel().getByRole("button", { name: "보냄 1" }));
 		await expect.element(panel()).toHaveTextContent("상태보냄");
 	});
 	it("the log's 되돌리기 asks once, with what the row cannot show: only that it cannot be redone, that what the line made is deleted for good, or that published posts lose an item", async () => {
@@ -1438,7 +1452,7 @@ describe("the activity log of one entry (doc 13; AS-23, AT-11, TR-27)", () => {
 		await expect.element(row("첫머리에 세 줄 더해 줘")).toHaveTextContent('"첫 번째 글" 본문 3곳 고침');
 		expect(row("첫머리에 세 줄 더해 줘").element().textContent).not.toContain("외");
 		// The translation is the same entry in another language; with no title of its own it is called by its source's and its language.
-		await expect.element(row("번역에 한 줄 더해 줘")).toHaveTextContent('"첫 번째 글 (ja)" 본문 1곳 고침');
+		await expect.element(row("번역에 한 줄 더해 줘")).toHaveTextContent('"첫 번째 글 (일본어)" 본문 1곳 고침');
 		// The assistant's earlier work on this entry is here too; the other post of the same title is not.
 		await expect.element(row("이 두 편 요약 채워 줘")).toBeVisible();
 		expect(rows().some((words) => words.includes("이름이 같은 글에도 한 줄"))).toBe(false);
@@ -1447,6 +1461,15 @@ describe("the activity log of one entry (doc 13; AS-23, AT-11, TR-27)", () => {
 		await userEvent.click(row("첫머리에 세 줄 더해 줘").getByRole("link"));
 		await expect.element(panel()).toHaveTextContent("한 일 · 1");
 		await expect.element(panel()).toHaveTextContent('"첫 번째 글" 본문 3곳 고침');
+	});
+
+	it("13 [TR-28] the undo of a started translation names it and its language in the question", async () => {
+		toasts.dismiss();
+		await draw(stories.TranslationStarted).run();
+		await userEvent.click((await menuOf("일본어 번역 시작")).getByRole("menuitem", { name: "되돌리기" }));
+		await expect.element(dialog()).toHaveTextContent("되돌릴까요?");
+		await expect.element(dialog()).toHaveTextContent('"첫 번째 글" 일본어 번역을 영구 삭제합니다.');
+		await userEvent.keyboard("{Escape}");
 	});
 
 	it("13 [AS-22] a save that took changes of two requests quotes the first, counts the other, is found by either, and its panel has both", async () => {

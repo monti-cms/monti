@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { entryPlace, recordsOf, titleOf } from "../activity/words";
+import { entryPlace, recordsOf, titled, titleOf } from "../activity/words";
 import { randomUUID } from "../bytes";
 import { editableEntry, entryOf, saveWorking } from "../entries/operations";
 import { CheckError, ConflictError } from "../errors";
@@ -178,7 +178,7 @@ export const bodyOperations = [
 		log: "save",
 		summary: (input, _output, records) => ({
 			key: "body.edit.done",
-			values: { title: titleOf(records, "entry", input.id), count: input.ops.length },
+			values: { ...titled(records, "entry", input.id), count: input.ops.length },
 		}),
 		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),

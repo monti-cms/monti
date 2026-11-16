@@ -607,8 +607,7 @@ export const trashOperations = [
 					.where("trashed_at", "is", null)
 					.executeTakeFirst();
 				if (taken && !coming.has(taken.id)) {
-					const name = ctx.site.schema().locales.list.find((each) => each.code === entry.locale)?.name ?? entry.locale;
-					throw new CheckError({ key: "trash.localeTaken", values: { locale: name } });
+					throw new CheckError({ key: "trash.localeTaken", values: { locale: entry.locale } });
 				}
 			}
 		},

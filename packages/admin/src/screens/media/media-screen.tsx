@@ -80,9 +80,12 @@ import {
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useScreenContext } from "../../assistant/use-assistant";
 import { useLeave, usePanelMove } from "../../draft/leave-guard";
+import { bytes } from "../../format/bytes";
+import { fullTime, shortDate } from "../../format/date";
+import { extensionLabel } from "../../format/names";
 import { chooseFiles } from "../../media/choose-files";
 import { FileThumb, useFileDetail } from "../../media/file-shown";
-import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
+import { previewUrl, sizeLabel } from "../../media/file-text";
 import { useTakeFolderFiles } from "../../media/folder-files";
 import { singleClick } from "../../media/single-click";
 import { RetryButton, useAcceptFiles } from "../../media/upload-problem";
@@ -104,7 +107,6 @@ import {
 	useFolders,
 	useRemoveFolder,
 } from "../list/folders";
-import { shortDate } from "../list/format";
 import { ListPages } from "../list/list-pages";
 import { NoMatchRow } from "../list/no-match-row";
 import { isDeleteKey } from "../list/row-menu";
@@ -405,7 +407,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 	const leave = useLeave();
 	// A move out of the library: files on their way would stop, so it asks. Moves inside it go on `go` itself.
 	const goAway: Go = (route, options) => leave(() => go(route, options));
-	const { t } = useAdmin();
+	const { t, language } = useAdmin();
 	const state = useMemo(() => readMediaState(params), [params]);
 	const setState = (next: MediaState, options?: { replace?: boolean }) =>
 		go({ screen: "media", params: writeMediaState(next) }, options);
@@ -961,13 +963,13 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 													{usesLabel(item)}
 												</TableCell>
 												<MetaCell value={extensionLabel(item.name)} />
-												<MetaCell value={formatBytes(item.size)} />
+												<MetaCell value={bytes(item.size)} />
 												<MetaCell value={sizeLabel(item)} />
 											</>
 										)}
-										<TableCell align="end" truncate title={shortDate(item.uploadedAt)}>
+										<TableCell align="end" truncate short title={fullTime(item.uploadedAt, language)}>
 											<Text mono variant="meta" tone="muted">
-												{shortDate(item.uploadedAt)}
+												{shortDate(item.uploadedAt, language)}
 											</Text>
 										</TableCell>
 										<TableCell>

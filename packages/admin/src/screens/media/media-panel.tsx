@@ -44,8 +44,11 @@ import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../../draft/leave-guard";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
+import { bytes } from "../../format/bytes";
+import { fullDate } from "../../format/date";
+import { extensionLabel, fieldName, titleOf } from "../../format/names";
 import { chooseFiles } from "../../media/choose-files";
-import { extensionLabel, formatBytes, previewUrl, sizeLabel } from "../../media/file-text";
+import { previewUrl, sizeLabel } from "../../media/file-text";
 import { putFile } from "../../media/put-file";
 import { useAcceptFiles } from "../../media/upload-problem";
 import { useAdmin } from "../../operations/admin-context";
@@ -54,7 +57,6 @@ import { linkTo, type Route } from "../../route";
 import { DaysLeftFact } from "../../trash/days-left";
 import { useCoverCorner } from "../frame/admin-frame";
 import type { Folders } from "../list/folders";
-import { shortDate } from "../list/format";
 import type { SchemaRead } from "../settings/schema-draft";
 
 const TOP = "~top";
@@ -69,7 +71,7 @@ function useUseRows(rows: readonly MediaUseRow[]) {
 			const { field } = use.place;
 			const label =
 				use.owner === "entry" ? schema.data?.adminValues[use.collection]?.fields?.[field]?.label : undefined;
-			return label ?? field;
+			return fieldName(field, label, t);
 		},
 		[schema.data, t],
 	);
@@ -82,7 +84,7 @@ function useUseRows(rows: readonly MediaUseRow[]) {
 				(use.owner === "entry"
 					? {
 							key,
-							title: use.title,
+							title: titleOf(use.title, t),
 							route: { screen: "entry" as const, collection: use.collection, id: use.id },
 							places: new Set<string>(),
 						}
@@ -192,24 +194,26 @@ function ReplaceDialog({ item, file, onClose }: { item: MediaDetail; file: File;
 
 /** What a file is: its type, its sizes and the day it came (flow 6·16). `children` are rows before them: what the trash only reads, its name and its folder. */
 function FileFacts({ item, children }: { item: MediaDetail; children?: ReactNode }) {
-	const { t } = useAdmin();
+	const { t, language } = useAdmin();
 	return (
 		<DescriptionList>
 			{children}
 			<DescriptionItem label={t("library.type")}>{item.mime}</DescriptionItem>
-			<DescriptionItem label={t("library.size")}>
-				<Stack gap={2}>
-					{item.web && <span>{t("library.sizeWeb", { size: sizeLabel(item) })}</span>}
-					<span>
-						{item.web
-							? t("library.sizeOriginal", {
-									size: `${item.original.width}×${item.original.height} · ${formatBytes(item.size)}`,
-								})
-							: [sizeLabel(item), formatBytes(item.size)].filter(Boolean).join(" · ")}
-					</span>
-				</Stack>
-			</DescriptionItem>
-			<DescriptionItem label={t("library.uploadedAt")}>{shortDate(item.uploadedAt)}</DescriptionItem>
+			{/* The dimensions and the bytes are two rows, named as the list's two columns are (MD-45). */}
+			{sizeLabel(item) && (
+				<DescriptionItem label={t("library.column.measure")}>
+					<Stack gap={2}>
+						{item.web && <span>{t("library.sizeWeb", { size: sizeLabel(item) })}</span>}
+						<span>
+							{item.web
+								? t("library.sizeOriginal", { size: `${item.original.width}×${item.original.height}` })
+								: sizeLabel(item)}
+						</span>
+					</Stack>
+				</DescriptionItem>
+			)}
+			<DescriptionItem label={t("library.size")}>{bytes(item.size)}</DescriptionItem>
+			<DescriptionItem label={t("library.uploadedAt")}>{fullDate(item.uploadedAt, language)}</DescriptionItem>
 		</DescriptionList>
 	);
 }
@@ -219,7 +223,10 @@ function FileUses({ uses, go }: { uses: ReturnType<typeof useUseRows>; go: (rout
 	const { t } = useAdmin();
 	return (
 		<FormField>
-			<FormFieldLabel>{t("library.usesCount", { count: uses.length })}</FormFieldLabel>
+			{/* The count only when there is something to count: a zero says nothing the empty list does not (MD-46). */}
+			<FormFieldLabel>
+				{uses.length > 0 ? t("library.usesCount", { count: uses.length }) : t("library.uses")}
+			</FormFieldLabel>
 			<FileUseList empty={t("library.usesNone")}>
 				{uses.map((use) => (
 					<FileUseRow

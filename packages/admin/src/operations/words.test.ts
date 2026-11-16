@@ -13,3 +13,50 @@ describe("whose words a message is read in", () => {
 		expect(wordsOf("en", { key: "errors.conflict" })).toBe("Changed in the meantime.");
 	});
 });
+
+describe("a language in an operation's message", () => {
+	it("a code in a message's values is said by its name in the admin's language, never as the code", () => {
+		expect(wordsOf("ko", { key: "translations.create", values: { locale: "ja" } })).toBe("일본어 번역 시작");
+		expect(wordsOf("en", { key: "translations.create", values: { locale: "ja" } })).toBe(
+			"Translation into Japanese started",
+		);
+		expect(wordsOf("ko", { key: "entries.notSourceLocale", values: { locale: "en", source: "ko" } })).toBe(
+			"새 글은 한국어로 씁니다. 영어 글은 번역으로 만듭니다.",
+		);
+		expect(wordsOf("ko", { key: "trash.localeTaken", values: { locale: "en" } })).toBe("영어 번역이 이미 있습니다.");
+	});
+});
+
+describe("English numbers", () => {
+	it("a count says its noun in the singular for one, and the plural otherwise", () => {
+		expect(wordsOf("en", { key: "library.usedBy", values: { count: 1 } })).toBe("1 place");
+		expect(wordsOf("en", { key: "library.usedBy", values: { count: 3 } })).toBe("3 places");
+		expect(wordsOf("en", { key: "settings.review.sourceDrafts", values: { count: 1 } })).toBe(
+			"1 entry without one gets a draft in it.",
+		);
+		expect(wordsOf("ko", { key: "library.usedBy", values: { count: 1 } })).toBe("1곳");
+	});
+});
+
+describe("every English plural", () => {
+	it("reads whole for one and for two: no plural pattern is left in the words", async () => {
+		const { formatMessage } = await import("@monti-cms/core");
+		const { adminMessages } = await import("../messages");
+		const { coreMessages } = await import("@monti-cms/core");
+		for (const bundle of [adminMessages, coreMessages])
+			for (const [key, text] of Object.entries(bundle.messages.en)) {
+				if (!text.includes("plural")) continue;
+				const names = [...text.matchAll(/\{(\w+), plural/g)].map((match) => match[1] as string);
+				for (const count of [1, 2]) {
+					const values = Object.fromEntries(
+						[...text.matchAll(/\{(\w+)[,}]/g)].map((match) => [
+							match[1] as string,
+							names.includes(match[1] as string) ? count : "x",
+						]),
+					);
+					const said = formatMessage([bundle], "en", { key, values });
+					expect(said, key).not.toMatch(/plural|[{}]/);
+				}
+			}
+	});
+});

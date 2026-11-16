@@ -61,8 +61,8 @@ export function SettingsProposalScreen() {
 							>
 								주소에 언어 표시
 							</FormFieldLabel>
-							<ShownSelect id="locale-path" value="항상" proposal />
-							<FormFieldWas>원문 언어만 빼고</FormFieldWas>
+							<ShownSelect id="locale-path" value="모든 언어" proposal />
+							<FormFieldWas>번역만</FormFieldWas>
 						</FormField>
 					</Section>
 				</PageBody>

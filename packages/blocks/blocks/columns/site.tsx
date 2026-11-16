@@ -4,21 +4,25 @@ import { columnsGridTemplate, parseColumnWidths } from "./layout";
 import { style } from "./style";
 
 /** Columns: side by side by `widths` (equal when it is not there or does not fit), stacked on a narrow screen. */
-function ColumnsDrawing({ block, attrs, children }: BlockProps & { children?: ReactNode }) {
+function ColumnsDrawing({ block, attrs, lang, children }: BlockProps & { children?: ReactNode }) {
 	const count = (block.children ?? []).filter((child) => child.type === "column").length;
 	const style = {
 		"--monti-columns": columnsGridTemplate(parseColumnWidths(attrs.widths, count), count),
 	} as CSSProperties;
 	return (
-		<div className="monti-block-columns" style={style}>
+		<div className="monti-block-columns" style={style} lang={lang}>
 			{children}
 		</div>
 	);
 }
 
 /** One column: one element, so each block in it is not a cell of its own. */
-function ColumnDrawing({ children }: BlockProps & { children?: ReactNode }) {
-	return <div className="monti-block-column">{children}</div>;
+function ColumnDrawing({ lang, children }: BlockProps & { children?: ReactNode }) {
+	return (
+		<div className="monti-block-column" lang={lang}>
+			{children}
+		</div>
+	);
 }
 
 /** Columns with its look (`style.ts`): React puts it into the page once, however many of the block there are. */

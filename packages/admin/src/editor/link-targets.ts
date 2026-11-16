@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { labelOfCollection, titleOf } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
 import { useOperation, useRead } from "../operations/use-operation";
 import type { SchemaRead } from "../screens/settings/schema-draft";
@@ -42,7 +43,7 @@ export function useLinkTargets({ open, text, href }: { open: boolean; text: stri
 		() =>
 			Object.entries(schema.data?.schema.collections ?? {})
 				.filter(([, definition]) => definition.kind === "document")
-				.map(([name]) => ({ name, label: schema.data?.adminValues[name]?.label ?? name })),
+				.map(([name]) => ({ name, label: labelOfCollection(schema.data?.adminValues, name) })),
 		[schema.data],
 	);
 	const group = href.startsWith(ENTRY_LINK) ? href.slice(ENTRY_LINK.length) : null;
@@ -62,7 +63,7 @@ export function useLinkTargets({ open, text, href }: { open: boolean; text: stri
 									row,
 									target: {
 										group: row.translationGroup,
-										title: row.title || t("list.untitled"),
+										title: titleOf(row.title, t),
 										collection: label,
 										draft: row.state === "draft",
 									},

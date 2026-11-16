@@ -130,7 +130,7 @@ describe("folders in the list", () => {
 		await Main.run();
 		await moveToFolder("첫 번째 글", "시리즈 원고");
 		const menu = await rowMenu("시리즈 원고");
-		await userEvent.click(menu.getByRole("menuitem", { name: "폴더 지우기" }));
+		await userEvent.click(menu.getByRole("menuitem", { name: "휴지통으로" }));
 		const dialog = page.getByRole("alertdialog");
 		await expect.element(dialog).toHaveTextContent("글 3편");
 		await expect.element(dialog).toHaveTextContent("발행된 글 1편의 공개가 끝납니다");
@@ -144,7 +144,7 @@ describe("folders in the list", () => {
 		await newFolder("임시");
 		await moveToFolder("가을 사진 정리", "임시");
 		const menu = await rowMenu("임시");
-		await userEvent.click(menu.getByRole("menuitem", { name: "폴더 지우기" }));
+		await userEvent.click(menu.getByRole("menuitem", { name: "휴지통으로" }));
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
 		await expect.element(folderLink("임시")).not.toBeInTheDocument();
 		// This removal's toast: the newest is first (an earlier test's may still be on the page, and they all say the same).

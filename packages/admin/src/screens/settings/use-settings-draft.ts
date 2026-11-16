@@ -2,6 +2,7 @@ import { type AdminValuesPatch, diffAdminValues, type SchemaProblem, sameJson } 
 import { useCallback, useMemo } from "react";
 import { type Path, useDraft } from "../../draft/use-draft";
 import type { ProposalItem } from "../../draft/use-proposals";
+import { languageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import {
@@ -142,7 +143,7 @@ function proposalPlaces(data: SettingsRead, catalog: Catalog | null, item: Propo
  * changes list.
  */
 export function useSettingsDraft() {
-	const { t } = useAdmin();
+	const { t, language } = useAdmin();
 	const read = useRead<SettingsRead>("settings.read");
 	// The editor tab lists every block of the site, whatever a collection allows.
 	const catalog = useRead<Catalog>("blocks.catalog", {});
@@ -240,8 +241,8 @@ export function useSettingsDraft() {
 					add(
 						path,
 						row.state === "gone"
-							? { tab: "languages", name: row.name, tag: t("changes.removed"), tone: "danger" }
-							: { tab: "languages", name: row.name, tag: t("changes.new"), tone: "success" },
+							? { tab: "languages", name: languageName(row.code, language), tag: t("changes.removed"), tone: "danger" }
+							: { tab: "languages", name: languageName(row.code, language), tag: t("changes.new"), tone: "success" },
 						path,
 					);
 				continue;
@@ -314,7 +315,7 @@ export function useSettingsDraft() {
 			}
 		}
 		return [...out.values()];
-	}, [data, changed, draft, label, fieldLabel, catalog.data, t]);
+	}, [data, changed, draft, label, fieldLabel, catalog.data, t, language]);
 
 	/** The languages as the draft and the pending proposals have them: the language tab's rows. */
 	const locales = useMemo(() => (data ? localeRows(data, listed, shown) : []), [data, listed, shown]);

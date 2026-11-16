@@ -63,7 +63,7 @@ const STYLE_TAGS: Record<string, string> = { bold: "strong", italic: "em", strik
 export function drawCodeBlock<Node>(
 	h: H<Node>,
 	block: Block,
-	options: { colors?: CodeColors; locale?: string; lineClasses?: Readonly<Record<string, string>> },
+	options: { colors?: CodeColors; locale?: string; lang?: string; lineClasses?: Readonly<Record<string, string>> },
 ): Node {
 	const attrs = block.attrs ?? {};
 	const language = typeof attrs.language === "string" ? attrs.language : undefined;
@@ -239,5 +239,9 @@ export function drawCodeBlock<Node>(
 				...notes.map((note) => h("li", { key: note.number, "data-note": note.number }, note.text)),
 			),
 		);
-	return h("figure", { key: block.id, "data-code": "", "data-block": block.id }, ...children);
+	return h(
+		"figure",
+		{ key: block.id, "data-code": "", "data-block": block.id, ...(options.lang ? { lang: options.lang } : {}) },
+		...children,
+	);
 }

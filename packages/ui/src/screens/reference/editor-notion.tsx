@@ -413,7 +413,7 @@ function FormatBar() {
 export function NotionStatusBar() {
 	return (
 		<StatusBar>
-			<StatusBarCell tone="warning">저장 전 변경사항</StatusBarCell>
+			<StatusBarCell tone="warning">저장 전 변경 사항</StatusBarCell>
 			<StatusBarList
 				trigger={<StatusBarCell tone="warning">할 일 2</StatusBarCell>}
 				label="발행 전에 고칠 것"

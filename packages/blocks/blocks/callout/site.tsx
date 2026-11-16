@@ -11,12 +11,12 @@ export type Tone = (typeof TONES)[number];
 export const toneOf = (value: unknown): Tone => TONES.find((tone) => tone === value) ?? "note";
 
 /** A callout: its title (or its kind's name) over the blocks it holds, in its kind's colour. One with only a title draws no empty body. */
-function CalloutDrawing({ attrs, locale, children }: BlockProps & { children?: ReactNode }) {
+function CalloutDrawing({ attrs, locale, lang, children }: BlockProps & { children?: ReactNode }) {
 	const tone = toneOf(attrs.tone);
 	const title =
 		typeof attrs.title === "string" && attrs.title.trim() !== "" ? attrs.title.trim() : wordsIn(locale)[tone];
 	return (
-		<div className="monti-block-callout" data-tone={tone} role="note">
+		<div className="monti-block-callout" data-tone={tone} role="note" lang={lang}>
 			<div className="monti-block-callout-title">{title}</div>
 			{Children.count(children) > 0 ? <div className="monti-block-callout-body">{children}</div> : null}
 		</div>

@@ -347,7 +347,9 @@ describe("the trash (doc 11, flow 5)", () => {
 		const panel = page.getByRole("complementary", { name: "winter-01.jpg" });
 		await expect.element(panel).toHaveTextContent("남은 날28일 남음");
 		await expect.element(panel).toHaveTextContent("Blog Assets");
-		await expect.element(panel).toHaveTextContent("쓰는 곳 · 0");
+		await expect.element(panel).toHaveTextContent("쓰는 곳");
+		// Nothing to count: no "· 0" after the label (MD-46).
+		await expect.element(panel).not.toHaveTextContent("쓰는 곳 · 0");
 		expect(panel.element().textContent).not.toContain("대체 텍스트");
 		// [MD-15] The whole picture, not a 4:3 cut of it.
 		const shown = panel.getByRole("img", { name: "winter-01.jpg" });

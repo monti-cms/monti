@@ -154,10 +154,10 @@ export async function bodyAsRead(db: Db, source: Entry | null, doc: unknown): Pr
 
 /**
  * A translation's body as the site draws it (doc 04): pending blocks left out, a `followSource` block replaced by its source block as published.
- * Links are the admin's; the site gets none. A code link copied from the source names the source's code block: it is pointed at the block this
+ * Links are the admin's; the site gets none, only `lang` (`sourceLang`, the source's language) on a block that keeps or follows the source. A code link copied from the source names the source's code block: it is pointed at the block this
  * translation draws in its place (doc 17).
  */
-export function siteDoc(doc: Doc, source: Doc | null): Doc {
+export function siteDoc(doc: Doc, source: Doc | null, sourceLang?: string): Doc {
 	const sourceBlocks = new Map((source?.blocks ?? []).map((block) => [block.id, block]));
 	const drawnFor = new Map(
 		doc.blocks.flatMap((block) =>
@@ -166,14 +166,17 @@ export function siteDoc(doc: Doc, source: Doc | null): Doc {
 	);
 	const blocks = doc.blocks.flatMap(({ link, ...block }): Block[] => {
 		if (link?.state === "pending") return [];
+		// A block that keeps or follows the source is the source's words: the site is told their language.
+		const kept = sourceLang !== undefined && (link?.state === "keepSource" || link?.state === "followSource");
+		const said = kept ? { lang: sourceLang } : {};
 		if (link?.state === "followSource") {
 			const followed = sourceBlocks.get(link.from);
 			if (followed) {
 				const { link: _link, ...rest } = followed;
-				return [{ ...rest, id: block.id }];
+				return [{ ...rest, id: block.id, ...said }];
 			}
 		}
-		return [block];
+		return [{ ...block, ...said }];
 	});
 	return { ...doc, blocks: drawnFor.size > 0 ? blocks.map((block) => pointCodeRefs(block, drawnFor)) : blocks };
 }

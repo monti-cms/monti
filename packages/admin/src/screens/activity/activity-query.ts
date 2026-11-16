@@ -5,6 +5,7 @@ import {
 	DELIVERY_STATES,
 	type DeliveryState,
 } from "@monti-cms/core";
+import { timeZone } from "../../format/date";
 
 /** How many lines a page of the log holds: the trash's page. */
 export const ACTIVITY_PAGE_SIZE = 50;
@@ -115,5 +116,5 @@ export const activityQueryOf = (state: ActivityState) => ({
 	pageSize: ACTIVITY_PAGE_SIZE,
 	...(state.asOf ? { asOf: state.asOf } : {}),
 	...(state.from ? { from: state.from } : {}),
-	timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+	timeZone: timeZone(),
 });

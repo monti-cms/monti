@@ -11,14 +11,15 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	MenuShortcut,
+	MenuValue,
 	toast,
 } from "@monti-cms/ui";
 import { Tag } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { useUndo } from "../../activity/use-undo";
+import { addressIfShared, endsClosed, fieldName as fieldNameOf, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
-import { endsClosed } from "./format";
 
 /** The radio values of "none" and of rows that hold different values: no group id looks like these. */
 const NONE = "\u0000none";
@@ -53,7 +54,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 		? options.filter((o) => o.title.toLowerCase().includes(find.trim().toLowerCase()))
 		: options;
 	const entryIds = rows.map((r) => r.id);
-	const fieldLabel = column.label ?? fieldName;
+	const fieldLabel = fieldNameOf(fieldName, column.label, t);
 	const fieldObject = t(endsClosed(fieldLabel) ? "list.objectFinal" : "list.objectOpen", { name: fieldLabel });
 
 	const hasGroup = (r: ListRow, group: string) => {
@@ -122,7 +123,8 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 						closeOnClick={false}
 						onCheckedChange={() => void handleToggle(opt.group, all)}
 					>
-						{opt.title}
+						{titleOf(opt.title, t)}
+						<SharedAddress option={opt} shown={filteredOptions} />
 						{some && <MenuShortcut>{`${matching}/${rows.length}`}</MenuShortcut>}
 					</DropdownMenuCheckboxItem>
 				);
@@ -139,7 +141,8 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 			{!column.required && <DropdownMenuRadioItem value={NONE}>{t("list.relationNone")}</DropdownMenuRadioItem>}
 			{options.map((opt) => (
 				<DropdownMenuRadioItem key={opt.group} value={opt.group}>
-					{opt.title}
+					{titleOf(opt.title, t)}
+					<SharedAddress option={opt} shown={options} />
 				</DropdownMenuRadioItem>
 			))}
 		</DropdownMenuRadioGroup>
@@ -166,4 +169,17 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 			<DropdownMenuSubContent>{menuItems}</DropdownMenuSubContent>
 		</DropdownMenuSub>
 	);
+}
+
+/** The address of an option that shares its name with another one shown: what tells two rows of one name apart. */
+function SharedAddress({
+	option,
+	shown,
+}: {
+	option: { group: string; title: string; slug: string };
+	shown: readonly { group: string; title: string; slug: string }[];
+}) {
+	const { t } = useAdmin();
+	const address = addressIfShared(option, shown, t);
+	return address ? <MenuValue address={address} /> : null;
 }

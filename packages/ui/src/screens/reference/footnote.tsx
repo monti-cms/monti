@@ -36,7 +36,7 @@ export function FootnoteScreen({ state }: { state: FootnoteState }) {
 			}
 			statusBar={
 				<StatusBar>
-					<StatusBarCell tone="warning">저장 전 변경사항</StatusBarCell>
+					<StatusBarCell tone="warning">저장 전 변경 사항</StatusBarCell>
 					<StatusBarSpacer />
 					<StatusBarCell end render={<span />}>
 						1,262자

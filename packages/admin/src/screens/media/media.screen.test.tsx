@@ -14,6 +14,7 @@ const {
 	ListViewNarrowColumns,
 	FilePanel,
 	FilePanelManyUses,
+	FileUsedByUntitled,
 	SearchingInFolder,
 	KindChosenInFolder,
 } = composeStories(media);
@@ -99,7 +100,7 @@ describe("browsing", () => {
 		await openAssets();
 		await expect.element(folder("covers")).toBeVisible();
 		await expect.element(tile("desk-morning.jpg")).toBeVisible();
-		await expect.element(main().getByText("2400×1600 · 글 1")).toBeVisible();
+		await expect.element(main().getByText("2400×1600 · 1곳")).toBeVisible();
 		await expect.element(main().getByText("2.1 MB · 사용 안 함")).toBeVisible();
 		await userEvent.click(main().getByRole("navigation", { name: "경로" }).getByRole("button", { name: "미디어" }));
 		await expect.element(folder("Blog Assets")).toBeVisible();
@@ -154,7 +155,7 @@ describe("browsing", () => {
 		await ListView.run();
 		await userEvent.click(folder("Blog Assets").or(main().getByRole("link", { name: "Blog Assets" })));
 		const row = main().getByRole("row").filter({ hasText: "desk-morning.jpg" });
-		await expect.element(row).toHaveTextContent("글 1");
+		await expect.element(row).toHaveTextContent("1곳");
 		await expect.element(row).toHaveTextContent("JPG");
 		await expect.element(row).toHaveTextContent("2400×1600");
 	});
@@ -283,9 +284,10 @@ describe("browsing", () => {
 		// Use, type, size, dimensions and the day: each clips at its own edge, whatever it holds, and the pointer finds what it says.
 		const cells = [...row.element().querySelectorAll("td")].slice(1, 6);
 		expect(cells.map((cell) => getComputedStyle(cell).overflowX)).toEqual(cells.map(() => "hidden"));
-		expect(cells.map((cell) => wholeUnderPointer(cell.firstElementChild ?? cell))).toEqual(
-			cells.map((cell) => cell.textContent),
-		);
+		const said = cells.map((cell) => wholeUnderPointer(cell.firstElementChild ?? cell));
+		expect(said.slice(0, 4)).toEqual(cells.slice(0, 4).map((cell) => cell.textContent));
+		// The day says its whole moment, the year and the time with it (TC-03).
+		expect(said[4]).toMatch(/^\d{4}\. \d{2}\. \d{2} \d{2}:\d{2}$/);
 		expect(spillingCells(main().getByRole("table").element())).toEqual([]);
 	});
 
@@ -577,7 +579,7 @@ describe("uploading", () => {
 			new File([new TextEncoder().encode("%PDF-1.7")], "price-list.pdf"),
 		]);
 		await expect.element(tile("price-list.pdf")).toBeVisible();
-		await expect.element(main().getByText(/8 B · 사용 안 함/)).toBeVisible();
+		await expect.element(main().getByText(/1 KB · 사용 안 함/)).toBeVisible();
 	});
 });
 
@@ -812,7 +814,7 @@ describe("the trash", () => {
 	it("09-4 [flow 6·11] a folder nobody's files are used from goes with no question, and the toast takes it back", async () => {
 		await Top.run();
 		await userEvent.click(folder("Wallpapers"), { button: "right" });
-		await userEvent.click(page.getByRole("menuitem", { name: "폴더 지우기" }));
+		await userEvent.click(page.getByRole("menuitem", { name: "휴지통으로" }));
 		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
 		await expect.element(folder("Wallpapers")).not.toBeInTheDocument();
 		await userEvent.click(toast("휴지통으로 옮겼습니다").getByRole("button", { name: "되돌리기" }));
@@ -822,7 +824,7 @@ describe("the trash", () => {
 	it("09-4 [flow 6·12] a folder with a file in use stays, with that file, and the toast opens it", async () => {
 		await Top.run();
 		await userEvent.click(folder("Blog Assets"), { button: "right" });
-		await userEvent.click(page.getByRole("menuitem", { name: "폴더 지우기" }));
+		await userEvent.click(page.getByRole("menuitem", { name: "휴지통으로" }));
 		const said = toast("쓰는 곳이 있어 폴더와 함께 남겼습니다");
 		await expect.element(said).toBeVisible();
 		await userEvent.click(said.getByRole("button", { name: "보기" }));
@@ -1041,6 +1043,51 @@ describe("the library's states (components/list.md)", () => {
 		await expect.element(going).toHaveAttribute("aria-busy", "true");
 		letGo();
 		await expect.element(question).not.toBeInTheDocument();
+	});
+});
+
+describe("a file's facts", () => {
+	it("[MD-44] the panel says the day a file went up with its year", async () => {
+		await FilePanel.run();
+		await expect.element(page.getByRole("complementary").getByText(/^\d{4}\. \d{2}\. \d{2}$/)).toBeVisible();
+	});
+});
+
+describe("the library's words", () => {
+	it("[MD-29] a file's use is counted in places, '1곳', not in entries: a template uses files too", async () => {
+		await openAssets();
+		await expect.element(main().getByText("2400×1600 · 1곳")).toBeVisible();
+		await expect.element(main().getByText(/· 글 \d/)).not.toBeInTheDocument();
+	});
+
+	it("[MD-04] where a file is used calls an entry with no title 'Untitled', as every list does, never by its address", async () => {
+		await FileUsedByUntitled.run();
+		await userEvent.click(folder("Blog Assets"));
+		await userEvent.click(tile("desk-morning.jpg"), { button: "right" });
+		await userEvent.click(page.getByRole("menuitem", { name: "쓰는 곳" }));
+		await expect.element(page.getByRole("menuitem", { name: /제목 없음/ })).toHaveTextContent("대표 이미지");
+		await expect.element(page.getByRole("menuitem", { name: /no-title/ })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("menuitem", { name: /아침 책상/ })).toBeVisible();
+	});
+
+	it("[MD-40] a folder goes to the trash under the words every other move to the trash has, '휴지통으로'", async () => {
+		await Top.run();
+		await userEvent.click(folder("Wallpapers"), { button: "right" });
+		await expect.element(page.getByRole("menuitem", { name: "휴지통으로" })).toBeVisible();
+		await expect.element(page.getByRole("menuitem", { name: "폴더 지우기" })).not.toBeInTheDocument();
+	});
+
+	it("[MD-46] a file used nowhere: the panel's label is '쓰는 곳' with no count", async () => {
+		await openAssets();
+		await userEvent.click(
+			tile("desk-evening.jpg")
+				.or(main().getByRole("button", { name: /사용 안 함/ }))
+				.first(),
+		);
+		const panel = page.getByRole("complementary");
+		await expect.element(panel.getByText("쓰는 곳", { exact: true })).toBeVisible();
+		await expect.element(panel.getByText(/쓰는 곳 · \d/)).not.toBeInTheDocument();
+		await expect.element(panel.getByText("없음")).toBeVisible();
 	});
 });
 

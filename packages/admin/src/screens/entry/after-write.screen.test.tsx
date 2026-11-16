@@ -161,7 +161,7 @@ describe("an open editor after a write elsewhere (AS-47)", () => {
 	it("02-2 over unsaved typing the applied change does not take the typing away: the conflict banner says it was saved elsewhere, and loading the latest brings it", async () => {
 		await opened();
 		await userEvent.fill(title(), "고치는 중인 제목");
-		await expect.poll(cells).toContain("저장 전 변경사항");
+		await expect.poll(cells).toContain("저장 전 변경 사항");
 		await userEvent.click(panel().getByRole("button", { name: "1건 적용" }));
 		await expect.element(panel().getByText("✓ 1건 적용")).toBeVisible();
 		await expect.element(page.getByText(/다른 곳에서 .*먼저 저장했습니다/)).toBeVisible();

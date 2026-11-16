@@ -102,7 +102,7 @@ function MenuShortcut({
 			data-slot="menu-shortcut"
 			data-typed={typed || undefined}
 			className={cn(
-				"ml-auto shrink-0 whitespace-nowrap text-monti-micro text-monti-subtle data-typed:text-monti-faint data-typed:text-monti-note",
+				"ml-auto shrink-0 whitespace-nowrap text-monti-micro text-monti-subtle data-typed:text-monti-faint data-typed:text-monti-note [[data-slot=menu-value]+&]:ml-monti-8",
 				className,
 			)}
 			{...props}
@@ -112,14 +112,33 @@ function MenuShortcut({
 	);
 }
 
-/** The current value of a row that opens a second level ("Modified · newest first"), faint, before the ›. */
-function MenuValue({ className, ...props }: React.ComponentProps<"span">) {
+/**
+ * The current value of a row that opens a second level ("Modified · newest first"), faint, before the ›. A row that shares its name with another
+ * row says its `address` here, in mono and subtle (faint fails contrast on a highlighted row), before any words (" · " between them).
+ */
+function MenuValue({
+	className,
+	address,
+	children,
+	...props
+}: React.ComponentProps<"span"> & {
+	/** What tells this row from another of the same name: typed or copied as it stands (`first-post`). */
+	address?: string;
+}) {
 	return (
 		<span
 			data-slot="menu-value"
 			className={cn("ml-auto shrink-0 whitespace-nowrap text-monti-caption text-monti-subtle", className)}
 			{...props}
-		/>
+		>
+			{address ? (
+				<span data-slot="menu-value-address" className="font-mono text-monti-meta text-monti-subtle">
+					{address}
+				</span>
+			) : null}
+			{address && children ? " · " : null}
+			{children}
+		</span>
 	);
 }
 

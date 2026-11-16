@@ -3,9 +3,9 @@ import { MermaidView } from "./mermaid.client";
 import { style } from "./style";
 
 /** A Mermaid diagram (` ```mermaid `): its source until the browser has drawn it (`MermaidView`). */
-function MermaidDrawing({ attrs }: BlockProps) {
+function MermaidDrawing({ attrs, lang }: BlockProps) {
 	const source = typeof attrs.source === "string" ? attrs.source : "";
-	return source.trim() === "" ? null : <MermaidView source={source} />;
+	return source.trim() === "" ? null : <MermaidView source={source} lang={lang} />;
 }
 
 /** Mermaid with its look (`style.ts`): React puts it into the page once, however many of the block there are. */

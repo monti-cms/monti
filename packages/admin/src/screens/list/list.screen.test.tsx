@@ -245,3 +245,17 @@ describe("the row's menu (menu.md)", () => {
 		await expect.element(main().getByText("가을 사진 정리")).not.toBeInTheDocument();
 	});
 });
+
+describe("the list's dates", () => {
+	it("[TC-03] a date cell shows the short date, and its tooltip is the whole moment with the year and the time", async () => {
+		await Main.run();
+		await rowsShown();
+		const row = main().getByRole("row").filter({ hasText: "발행 후 고친 글" });
+		const cell = [...row.element().querySelectorAll("td")].find((each) =>
+			/^(\d{2}\. )?\d{2}\. \d{2}$/.test(each.textContent ?? ""),
+		);
+		// Pointed at, it says the whole moment though nothing of it is cut.
+		await userEvent.hover(cell as HTMLElement);
+		await expect.element(page.getByRole("tooltip")).toHaveTextContent(/^\d{4}\. \d{2}\. \d{2} \d{2}:\d{2}$/);
+	});
+});

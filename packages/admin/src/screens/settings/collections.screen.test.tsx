@@ -1157,9 +1157,9 @@ describe("settings › collections: the property panel preview draws each field 
 		await expect.element(pinned).not.toBeChecked();
 		expect(input("relatedOne").closest("[data-slot=combobox-chips]")).toBeNull();
 		expect(input("relatedOne").getAttribute("role")).toBe("combobox");
-		// An empty field says the same word whatever its kind, the editor's.
-		expect((input("relatedOne") as HTMLInputElement).placeholder).toBe("비어 있음");
-		expect((input("relatedMany") as HTMLInputElement).placeholder).toBe("비어 있음");
+		// An empty field says the editor's word: a relation one can pick in asks for a pick.
+		expect((input("relatedOne") as HTMLInputElement).placeholder).toBe("고르기…");
+		expect((input("relatedMany") as HTMLInputElement).placeholder).toBe("고르기…");
 		expect(input("relatedMany").closest("[data-slot=combobox-chips]")).not.toBeNull();
 		// The switch stands at the end of its row, its name before it, as in the editor: no label over it.
 		expect(pinned.element().closest("[data-slot=option]")?.textContent).toContain("pinned");

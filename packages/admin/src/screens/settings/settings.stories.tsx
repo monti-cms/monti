@@ -137,7 +137,7 @@ export const SaveRefused: Story = {
 		await userEvent.clear(name);
 		await userEvent.type(name, "example.blog");
 		await userEvent.click(page.getByRole("combobox", { name: "주소에 언어 표시" }));
-		await userEvent.click(await body.findByRole("option", { name: "항상" }, wait));
+		await userEvent.click(await body.findByRole("option", { name: "모든 언어" }, wait));
 		await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }, wait));
 		await userEvent.click(await body.findByRole("button", { name: "적용" }, wait));
 		await page.findByRole("button", { name: "다시 저장" }, wait);
@@ -189,8 +189,8 @@ async function addLanguage(canvasElement: HTMLElement, query: string, option: Re
 export const LanguageAdded: Story = {
 	loaders: settingsAt("languages"),
 	play: async ({ canvasElement }) => {
-		await addLanguage(canvasElement, "de", /^Deutsch/);
-		await screen(canvasElement).page.findByRole("button", { name: "Deutsch 빼기" }, wait);
+		await addLanguage(canvasElement, "de", /^독일어\s*Deutsch/);
+		await screen(canvasElement).page.findByRole("button", { name: "독일어 빼기" }, wait);
 	},
 };
 
@@ -200,7 +200,7 @@ export const SourceMenu: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, body } = screen(canvasElement);
 		await userEvent.click(await page.findByRole("button", { name: "바꾸기" }, wait));
-		await body.findByRole("menuitemradio", { name: /English/ }, wait);
+		await body.findByRole("menuitemradio", { name: /영어/ }, wait);
 	},
 };
 
@@ -216,7 +216,7 @@ async function changeSource(canvasElement: HTMLElement, name: RegExp) {
 export const SourceChanged: Story = {
 	loaders: settingsAt("languages"),
 	play: async ({ canvasElement }) => {
-		await changeSource(canvasElement, /English/);
+		await changeSource(canvasElement, /영어/);
 	},
 };
 
@@ -228,7 +228,7 @@ export const LanguageProblem: Story = {
 	loaders: settingsAt("languages"),
 	play: async ({ canvasElement }) => {
 		const { page, body } = screen(canvasElement);
-		await changeSource(canvasElement, /English/);
+		await changeSource(canvasElement, /영어/);
 		await userEvent.click(page.getByRole("button", { name: "한국어 빼기" }));
 		await userEvent.click(await page.findByRole("button", { name: /변경 사항/ }, wait));
 		const line = await body.findByRole("menuitem", { name: /원문 변경/ }, wait);
@@ -256,7 +256,7 @@ export const LanguageRemoved: Story = {
 	loaders: settingsAt("languages"),
 	play: async ({ canvasElement }) => {
 		const { page } = screen(canvasElement);
-		await userEvent.click(await page.findByRole("button", { name: "English 빼기" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "영어 빼기" }, wait));
 		await page.findByRole("button", { name: "되돌리기" }, wait);
 	},
 };
@@ -266,7 +266,7 @@ export const LanguageRemoveReview: Story = {
 	loaders: settingsAt("languages"),
 	play: async ({ canvasElement }) => {
 		const { page, body } = screen(canvasElement);
-		await userEvent.click(await page.findByRole("button", { name: "English 빼기" }, wait));
+		await userEvent.click(await page.findByRole("button", { name: "영어 빼기" }, wait));
 		await userEvent.click(await page.findByRole("button", { name: "저장하고 적용" }, wait));
 		await body.findByRole("button", { name: "지우고 적용" }, wait);
 	},
@@ -280,11 +280,11 @@ export const OneReview: Story = {
 	loaders: settingsAt("languages"),
 	play: async ({ canvasElement }) => {
 		const { page, body } = screen(canvasElement);
-		await addLanguage(canvasElement, "de", /^Deutsch/);
-		await changeSource(canvasElement, /English/);
+		await addLanguage(canvasElement, "de", /^독일어\s*Deutsch/);
+		await changeSource(canvasElement, /영어/);
 		await userEvent.click(page.getByRole("link", { name: /사이트/ }));
 		await userEvent.click(await page.findByRole("combobox", { name: "주소에 언어 표시" }, wait));
-		await userEvent.click(await body.findByRole("option", { name: "항상" }, wait));
+		await userEvent.click(await body.findByRole("option", { name: "모든 언어" }, wait));
 		await userEvent.click(page.getByRole("link", { name: /컬렉션/ }));
 		await userEvent.click(await page.findByRole("button", { name: "필드 추가" }, wait));
 		await userEvent.click(await body.findByRole("option", { name: /^글자/ }, wait));

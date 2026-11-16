@@ -53,13 +53,16 @@ import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useStat
 import { useRequest, useScreenContext } from "../../assistant/use-assistant";
 import { useImport } from "../../data/use-import";
 import { saveBackup } from "../../download";
+import { fullTime, shortDate } from "../../format/date";
+import { useLanguageName } from "../../format/language";
+import { endsClosed, fieldCell, fieldName, labelOfCollection, titleOf } from "../../format/names";
 import { chooseFiles } from "../../media/choose-files";
 import { useAdmin } from "../../operations/admin-context";
 import { type Refusal, reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { useTrashMove } from "../../trash/use-trash";
 import { useArchive } from "../entry/use-archive";
-import { ColumnMenu, useLanguageName } from "./column-menu";
+import { ColumnMenu } from "./column-menu";
 import { countedWhere } from "./counted-where";
 import {
 	FolderMenuItems,
@@ -70,7 +73,6 @@ import {
 	useFolders,
 	useRemoveFolder,
 } from "./folders";
-import { endsClosed, fieldCell, shortDate, widthsAfter } from "./format";
 import { ImportSheet } from "./import-sheet";
 import { ListPages } from "./list-pages";
 import { filterColumn, headOf, type ListState, readState, toQuery, withFilter, writeState } from "./list-query";
@@ -85,6 +87,7 @@ import {
 	RowsMenuItems,
 } from "./row-menu";
 import { TaxonomyScreen } from "./taxonomy-screen";
+import { widthsAfter } from "./use-column-widths";
 import { useSearchWords } from "./use-search-words";
 
 type Columns = { columns: ListColumn[]; pageSize: number };
@@ -125,7 +128,7 @@ function useColumnLabel() {
 		publishedAt: t("list.column.publishedAt"),
 		createdAt: t("list.column.createdAt"),
 	};
-	return (column: ListColumn) => names[column.id] ?? column.label ?? column.id;
+	return (column: ListColumn) => names[column.id] ?? fieldName(column.id, column.label, t);
 }
 
 /**
@@ -386,7 +389,7 @@ function DocumentListScreen({
 		go({ screen: "entry", collection, id });
 	};
 
-	const collectionName = schema.data?.adminValues[collection]?.label ?? collection;
+	const collectionName = labelOfCollection(schema.data?.adminValues, collection);
 	const name = openFolder?.name ?? collectionName;
 	// Items (tags, categories) are live on save: no publishing, no archive (doc 02; components/list.md, bulk bar).
 	const document = schema.data?.schema.collections[collection]?.kind !== "item";
@@ -416,7 +419,7 @@ function DocumentListScreen({
 	const importSheet = (
 		<ImportSheet
 			collection={collection}
-			labelOf={(name) => schema.data?.adminValues[name]?.label ?? name}
+			labelOf={(name) => labelOfCollection(schema.data?.adminValues, name)}
 			go={go}
 			importing={importing}
 		/>
@@ -600,8 +603,8 @@ function DocumentListScreen({
 							: filter.range === "30d"
 								? t("list.last30")
 								: filter.range.from === filter.range.to
-									? shortDate(`${filter.range.from}T00:00`)
-									: `${shortDate(`${filter.range.from}T00:00`)} – ${shortDate(`${filter.range.to}T00:00`)}`,
+									? shortDate(`${filter.range.from}T00:00`, language)
+									: `${shortDate(`${filter.range.from}T00:00`, language)} – ${shortDate(`${filter.range.to}T00:00`, language)}`,
 				]);
 			case "relation":
 				return named;
@@ -613,7 +616,7 @@ function DocumentListScreen({
 			<RowCheck
 				checked={picked.has(row.id)}
 				onCheckedChange={(on) => pick(row, on)}
-				label={picked.get(row.id)?.proposal ? t("list.aiPicked") : t("list.pick", { title: row.title })}
+				label={picked.get(row.id)?.proposal ? t("list.aiPicked") : t("list.pick", { title: titleOf(row.title, t) })}
 				proposal={picked.get(row.id)?.proposal}
 			/>
 		) : null;
@@ -632,7 +635,8 @@ function DocumentListScreen({
 					<TableCell key={column.id} truncate>
 						{check}
 						<RowTitle
-							title={<RowLink href={href(entryRoute(row))}>{row.title || t("list.untitled")}</RowLink>}
+							untitled={!row.title.trim()}
+							title={<RowLink href={href(entryRoute(row))}>{titleOf(row.title, t)}</RowLink>}
 							address={row.slug ? `/${row.slug}` : undefined}
 						/>
 					</TableCell>
@@ -645,20 +649,19 @@ function DocumentListScreen({
 					</TableCell>
 				);
 			case "date": {
-				const day = shortDate(
-					column.id === "publishedAt" ? row.publishedAt : column.id === "createdAt" ? row.createdAt : row.updatedAt,
-				);
+				const at =
+					column.id === "publishedAt" ? row.publishedAt : column.id === "createdAt" ? row.createdAt : row.updatedAt;
 				return (
-					<TableCell key={column.id} align="end" truncate title={day || undefined}>
+					<TableCell key={column.id} align="end" truncate short title={at ? fullTime(at, language) : undefined}>
 						{check}
 						<Text mono variant="meta" tone="muted">
-							{day}
+							{shortDate(at, language)}
 						</Text>
 					</TableCell>
 				);
 			}
 			case "media": {
-				// The picture, or a file's name; an empty cell for an empty field (T59).
+				// The picture, or a file's name; "—" for an empty field, as every field cell says it (T59, LT-20).
 				const file = row.media[column.id];
 				return (
 					<TableCell key={column.id} tone="subtle" truncate title={file?.name}>
@@ -668,17 +671,18 @@ function DocumentListScreen({
 								<Image src={file.thumbnail} alt="" size="row" ratio="photo" radius="sm" />
 							</RowThumb>
 						) : (
-							file?.name
+							(file?.name ?? "—")
 						)}
 					</TableCell>
 				);
 			}
 			default: {
-				const text = fieldCell(row, column);
+				const text = fieldCell(row, column, t);
 				return (
 					<TableCell key={column.id} tone="subtle" truncate title={text || undefined}>
 						{check}
-						{text}
+						{/* A field with no value says so, so an empty cell is not a cell that has not been read (LT-20). */}
+						{text || "—"}
 					</TableCell>
 				);
 			}

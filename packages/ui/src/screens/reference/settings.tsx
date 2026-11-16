@@ -128,7 +128,7 @@ export function SettingsScreen() {
 					<Section title="공개 주소" last>
 						<FormField>
 							<FormFieldLabel>주소에 언어 표시</FormFieldLabel>
-							<ShownSelect value="원문 언어만 빼고" />
+							<ShownSelect value="번역만" />
 						</FormField>
 					</Section>
 				</PageBody>

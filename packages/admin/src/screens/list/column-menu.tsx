@@ -8,6 +8,8 @@ import {
 	DropdownMenuSeparator,
 } from "@monti-cms/ui";
 import { type ReactNode, useState } from "react";
+import { useLanguageName } from "../../format/language";
+import { addressIfShared, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { DateRows } from "./date-rows";
@@ -152,19 +154,6 @@ function LocaleMenu({ state, query, setFilter, onHide, countedWhere }: MenuProps
 	);
 }
 
-/** A language's name in the admin's language ("en" reads "English" in English and its Korean name in Korean), its code when the browser has no name for it. */
-export function useLanguageName() {
-	const { language } = useAdmin();
-	const names = new Intl.DisplayNames([language], { type: "language" });
-	return (code: string) => {
-		try {
-			return names.of(code) ?? code.toUpperCase();
-		} catch {
-			return code.toUpperCase();
-		}
-	};
-}
-
 /** A relation or select column: "None", then each value with its count; a relation searches its values on top (components/list.md, column menu). */
 function ValuesMenu({ column, state, query, setFilter, onHide, countedWhere }: MenuProps) {
 	const { t } = useAdmin();
@@ -177,14 +166,23 @@ function ValuesMenu({ column, state, query, setFilter, onHide, countedWhere }: M
 		const any = toggled(chosen, value);
 		setFilter(column.id, any.length ? { on: kind, field: column.id, any } : null);
 	};
+	// A relation's value is another entry: one with no title is called what the lists call it, never by its id. An option is its label.
+	const labelOf = (facet: Facet & { value: string }) =>
+		kind === "relation" ? titleOf(facet.label, t) : (facet.label ?? facet.value);
 	const values = (facets ?? []).filter(
 		(facet): facet is Facet & { value: string } =>
-			facet.value !== null && (facet.label ?? facet.value).toLowerCase().includes(find.trim().toLowerCase()),
+			facet.value !== null &&
+			labelOf(facet as Facet & { value: string })
+				.toLowerCase()
+				.includes(find.trim().toLowerCase()),
 	);
-	const rows = values.map((facet) => (
+	// Two values of one name on screen are told apart by their address, as a list row's is.
+	const shown = values.map((facet) => ({ group: facet.value, title: facet.label ?? "", slug: facet.slug ?? "" }));
+	const rows = values.map((facet, index) => (
 		<ValueRow
 			key={facet.value}
-			label={facet.label ?? facet.value}
+			address={kind === "relation" && shown[index] ? addressIfShared(shown[index], shown, t) : null}
+			label={labelOf(facet)}
 			counted={facet.count}
 			checked={chosen.includes(facet.value)}
 			onToggle={() => toggle(facet.value)}

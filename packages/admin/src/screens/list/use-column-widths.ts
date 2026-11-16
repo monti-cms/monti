@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { widthsAfter } from "./format";
 
 function kept(key: string): Record<string, number> {
 	try {
@@ -12,6 +11,12 @@ function kept(key: string): Record<string, number> {
 		return {};
 	}
 }
+
+/** A list's column widths after `ListHead` changes some; `null` takes one back to its kind's. */
+export const widthsAfter = (current: Record<string, number>, changes: Record<string, number | null>) =>
+	Object.fromEntries(
+		Object.entries({ ...current, ...changes }).filter((entry): entry is [string, number] => entry[1] !== null),
+	);
 
 /**
  * The widths of a table's columns, as `ListHead` drags them, for a table that has no collection for `list.savePrefs` to keep them under (the media list, the trash,

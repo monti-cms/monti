@@ -22,7 +22,11 @@ export type DeliveryCounts = { failed: number; since: Date | null; sending: numb
 export type DeliveriesRetried = { ids: string[]; sent: number; failed: number; remaining: number; run: string };
 
 /** What `activity.undoPlan` answers: the undo's plan, and the collections of the entries it would put in the trash (to call them by name). */
-export type UndoPlanned = UndoPlan & { trashedCollections: string[] };
+export type UndoPlanned = UndoPlan & {
+	trashedCollections: string[];
+	/** The translations among the records it deletes for good, each by its title and language: the question names them. */
+	removedTranslations: { title: string; locale: string }[];
+};
 
 /**
  * What the undo takes back: a line of the log (`id`), or every write applied from a proposal (`proposal`), one of them. One object and not a
@@ -88,7 +92,36 @@ export function activityOperations(engine: Engine): AnyOperation[] {
 					entries.length === 0
 						? []
 						: await ctx.db.selectFrom("entries").select("collection").distinct().where("id", "in", entries).execute();
-				return { ...plan, trashedCollections: rows.map((row) => row.collection) };
+				const created = plan.removes.filter((ref) => ref.kind === "entry").map((ref) => ref.id);
+				const source = ctx.site.schema().locales.source;
+				const translations =
+					created.length === 0
+						? []
+						: await ctx.db
+								.selectFrom("entries")
+								.select(["title", "locale", "translation_group"])
+								.where("id", "in", created)
+								.where("locale", "!=", source)
+								.execute();
+				// A translation with no title of its own is called by its source's, as the log's lines call it.
+				const groups = translations.filter((row) => row.title.trim() === "").map((row) => row.translation_group);
+				const sources =
+					groups.length === 0
+						? []
+						: await ctx.db
+								.selectFrom("entries")
+								.select(["title", "translation_group"])
+								.where("translation_group", "in", groups)
+								.where("locale", "=", source)
+								.execute();
+				const removedTranslations = translations.map((row) => ({
+					title:
+						row.title.trim() === ""
+							? (sources.find((one) => one.translation_group === row.translation_group)?.title ?? "")
+							: row.title,
+					locale: row.locale,
+				}));
+				return { ...plan, trashedCollections: rows.map((row) => row.collection), removedTranslations };
 			},
 		}),
 		defineOperation({

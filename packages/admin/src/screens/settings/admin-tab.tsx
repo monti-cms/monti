@@ -17,10 +17,10 @@ import {
 	Stack,
 	Switch,
 } from "@monti-cms/ui";
+import { languageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { useSession } from "../../session";
-import { languageName } from "./language-catalog";
 
 /** A preference that was not saved: which control it was picked on, and why. */
 export type PreferenceFailure = { what: "language" | "templates"; reason: string };

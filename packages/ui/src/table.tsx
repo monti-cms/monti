@@ -333,7 +333,7 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 				className: cn(
 					// Its ring is the row's (the layer over the whole row), taller than its own words: scrolled to at the box's foot, it brings the
 					// rest of the row with it (a two-line row's second line too), so the ring's lower side is not cut.
-					"scroll-mb-8 cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset",
+					"scroll-mb-8 cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none group-data-untitled/row-title:text-monti-subtle after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset",
 					className,
 				),
 			},
@@ -360,10 +360,13 @@ function RowTitle({
 	byAssistant,
 	thumb,
 	editing = false,
+	untitled = false,
 	className,
 	...props
 }: Omit<React.ComponentProps<"span">, "title"> & {
 	title: React.ReactNode;
+	/** The row has no title of its own and `title` is the word for that ("Untitled"): it is drawn subtle (`fg-subtle`, which reads on every row background: the selected and hovered ones too), not in ink. */
+	untitled?: boolean;
 	/** After the title, in mono: what is typed or copied as it stands (`/first-post`, `post/first-post`). */
 	address?: React.ReactNode;
 	/** After the address, in sans: words a person reads ("글 2", "명령줄 · 되돌림 10:44"), set off from the address by " · ". (cms-allow-korean: quotes the words) */
@@ -383,13 +386,16 @@ function RowTitle({
 		<span className="min-w-0 text-monti-body text-monti-default">{title}</span>
 	) : (
 		// Cut to the line with "…": while they are cut, the pointer on the words or the keyboard on the title's link says them whole.
-		<CutWords className="text-monti-body text-monti-default">{title}</CutWords>
+		<CutWords className={cn("text-monti-body", untitled ? "text-monti-subtle" : "text-monti-default")}>
+			{title}
+		</CutWords>
 	);
 	return (
 		// Beside a picture the words stand at its middle, as the row's other cells do.
 		<span
 			data-slot="row-title"
-			className={cn("flex min-w-0 gap-monti-8", thumb ? "items-center" : "items-baseline", className)}
+			data-untitled={untitled || undefined}
+			className={cn("group/row-title flex min-w-0 gap-monti-8", thumb ? "items-center" : "items-baseline", className)}
 			{...props}
 		>
 			{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
@@ -516,12 +522,15 @@ function TableCell({
 	filler,
 	style,
 	title,
+	short,
 	children,
 	...props
 }: Omit<React.ComponentProps<"td">, "align" | "title"> &
 	CellOptions & {
 		/** What the cell says whole while it is cut (`CutWords`): its value in words. Not the HTML attribute. */
 		title?: string;
+		/** The cell writes a short form of `title` (a date without its year and time): it says `title` whenever it is pointed at, cut or not. */
+		short?: boolean;
 	}) {
 	const cell = (
 		<td
@@ -566,7 +575,7 @@ function TableCell({
 					)}
 		</td>
 	);
-	return title === undefined ? cell : <CutWords render={cell} whole={title} />;
+	return title === undefined ? cell : <CutWords render={cell} whole={title} partial={short} />;
 }
 
 export {

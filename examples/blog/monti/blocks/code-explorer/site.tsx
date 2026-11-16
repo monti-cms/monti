@@ -25,11 +25,12 @@ function fileOf(block: Block): { path: string; code: boolean } | undefined {
  *   path taken already (the first wins) or both a file and a folder, and a folder entry with code. One with no code holds nothing and is dropped.
  * - With no code block that has a path, the children are drawn as they are.
  */
-function CodeExplorerDrawing({ block, attrs, locale, children }: BlockProps & { children?: ReactNode }) {
+function CodeExplorerDrawing({ block, attrs, locale, lang, children }: BlockProps & { children?: ReactNode }) {
 	const items = Children.toArray(children);
 	const files = (block.children ?? []).map(fileOf);
 	const entries = files.flatMap((file, index) => (file ? [{ item: index, ...file }] : []));
-	if (entries.length === 0) return <>{children}</>;
+	// One element holds all of it, so `lang` covers the explorer and the blocks drawn after it.
+	if (entries.length === 0) return <div lang={lang}>{children}</div>;
 	const { nodes, rejected } = buildTree(entries);
 	// A rejected block with code is kept as content; one with no code holds nothing to lose.
 	const kept = new Set(rejected.flatMap((index) => (entries[index]?.code ? [entries[index]?.item] : [])));
@@ -41,10 +42,10 @@ function CodeExplorerDrawing({ block, attrs, locale, children }: BlockProps & { 
 	const initial = (selectable.find((file) => file.path === wanted) ?? selectable[0])?.index ?? null;
 	const rest = items.filter((_, index) => !files[index] || kept.has(index));
 	return (
-		<>
+		<div lang={lang}>
 			<CodeExplorerView tree={nodes} panels={panels} initial={initial} labels={wordsIn(locale)} />
 			{rest}
-		</>
+		</div>
 	);
 }
 

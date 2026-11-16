@@ -23,18 +23,11 @@ import {
 import { Add, Copy, TrashCan } from "@monti-cms/ui/icons";
 import type { ReactNode } from "react";
 import { useUndo } from "../../activity/use-undo";
+import { shortDate } from "../../format/date";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 
 type TemplateRow = { id: string; name: string; sections: string[]; updatedAt: string };
-
-/** A day as the lists write it: "10. 20" in Korean, "Oct 20" in English. */
-export function shortDate(value: string, language: string) {
-	const date = new Date(value);
-	if (language === "ko")
-		return `${String(date.getMonth() + 1).padStart(2, "0")}. ${String(date.getDate()).padStart(2, "0")}`;
-	return new Intl.DateTimeFormat(language, { month: "short", day: "numeric" }).format(date);
-}
 
 /**
  * Tools › Templates (tools.md): each body template with its sections under its name, the day it was last changed, and its ⋯ (duplicate, delete).

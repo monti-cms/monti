@@ -46,14 +46,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSendAgain } from "../../activity/use-send-again";
 import { useUndo } from "../../activity/use-undo";
 import { useOpenConversation } from "../../assistant/use-assistant";
+import { clock, fullTime, shortDate, shortTime } from "../../format/date";
+import { titleInLanguage } from "../../format/language";
+import { titleOf as shownTitle } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
-import { clock } from "../entry/dates";
 import { nextStop, useFocusHandOff } from "../frame/focus-hand-off";
 import { DateRows } from "../list/date-rows";
 import { toggled, ValueRow } from "../list/filter-rows";
-import { shortDate, shortTime } from "../list/format";
 import { ListPages } from "../list/list-pages";
 import { NoMatchRow } from "../list/no-match-row";
 import { HandedRowActions, HandedRowLink, listStartOf } from "../list/row-hand-off";
@@ -155,7 +156,7 @@ export function ActivityScreen({
 	/** Reads the sidebar's counts again: a delivery can fail after its write answered, when nothing else tells the frame. */
 	recount: () => void;
 }) {
-	const { t, reads } = useAdmin();
+	const { t, language, reads } = useAdmin();
 	const state = useMemo(() => readActivityState(params), [params]);
 	const setState = (next: ActivityState, options?: { replace?: boolean }) =>
 		go({ screen: "activity", params: writeActivityState(next) }, options);
@@ -173,7 +174,7 @@ export function ActivityScreen({
 	 * The entry the log was opened for (the editor's ⋯ › "what the AI changed"), as the server named it. It stays in the first column's menu once
 	 * unticked, as every value of a menu does: the row under the keyboard's focus does not go, and ticked again it filters again.
 	 */
-	const entryShown = useRef<{ id: string; title: string } | null>(null);
+	const entryShown = useRef<{ id: string; title: string; titleLocale?: string } | null>(null);
 	if (data?.entry) entryShown.current = data.entry;
 	const offeredEntry = entryShown.current;
 	const looking =
@@ -210,9 +211,7 @@ export function ActivityScreen({
 	const { sized, resize } = useColumnWidths("activity");
 	/** A message of the log in the admin's language; an entry with no title yet is called what the lists call it. */
 	const say = (message: Message) =>
-		t(
-			message.values?.title === "" ? { ...message, values: { ...message.values, title: t("list.untitled") } } : message,
-		);
+		t(message.values?.title === "" ? { ...message, values: { ...message.values, title: shownTitle("", t) } } : message);
 	// A send that runs somewhere else: in another tab, or started here before the page was loaded again.
 	const elsewhere = again.sending === null && (counts.data?.sending ?? 0) > 0;
 	/** While any send runs, every send control says so and none can be pressed: one runs at a time. */
@@ -311,7 +310,11 @@ export function ActivityScreen({
 							<ValueRow
 								checked={state.entry === offeredEntry.id}
 								onToggle={() => look({ entry: state.entry === offeredEntry.id ? null : offeredEntry.id })}
-								label={t("activity.ofEntry", { title: offeredEntry.title || t("list.untitled") })}
+								label={t("activity.ofEntry", {
+									title: offeredEntry.titleLocale
+										? titleInLanguage(shownTitle(offeredEntry.title, t), offeredEntry.titleLocale, language)
+										: shownTitle(offeredEntry.title, t),
+								})}
 								counted={null}
 							/>
 						</>
@@ -385,8 +388,10 @@ export function ActivityScreen({
 				<Banner
 					ref={bannerHandOff}
 					tone="danger"
-					title={t(failed === 1 ? "activity.failedBannerOne" : "activity.failedBanner", { count: failed })}
-					meta={counts.data?.since ? t("activity.since", { date: shortDate(counts.data.since) }) : undefined}
+					// A date with words after it is a sentence: sans, not the mono of an address (AT-06).
+					plainMeta
+					title={t("activity.failedBanner", { count: failed })}
+					meta={counts.data?.since ? t("activity.since", { date: shortDate(counts.data.since, language) }) : undefined}
 				>
 					{!failedOnly && (
 						// Exactly what the banner counts: every failed delivery, with nothing else narrowing the list.
@@ -486,9 +491,9 @@ export function ActivityScreen({
 											<DeliveryMark delivery={line.delivery} sending={isSending(line)} />
 										</TableCell>
 									)}
-									<TableCell align="end" truncate title={shortTime(line.at)}>
+									<TableCell align="end" truncate short title={fullTime(line.at, language)}>
 										<Text mono variant="meta" tone="muted">
-											{shortTime(line.at)}
+											{shortTime(line.at, language)}
 										</Text>
 									</TableCell>
 									<TableCell align="end">

@@ -340,6 +340,15 @@ export const TwoRequests: Story = {
 	}),
 };
 
+/** A Japanese translation of the first post was started and not touched since: undoing it deletes it for good, and the question names it. */
+export const TranslationStarted: Story = {
+	loaders: log("#/activity", {
+		also: async ({ monti }, ids) => {
+			await run(monti, "translations.create", { source: ids.first, locale: "ja" });
+		},
+	}),
+};
+
 /**
  * A category that a published post points at was thrown away and restored. Undoing that restore puts it in the trash again, and the post
  * loses it on the site: the undo's question says so, in the sentence throwing it away by hand says.

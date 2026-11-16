@@ -1,5 +1,4 @@
 import type { ScreenContext } from "@monti-cms/ai";
-import { shortDate } from "../screens/list/format";
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
 
@@ -145,11 +144,4 @@ export function contextWithout(
 	if (!removed.has("selection")) return context;
 	const { selection: _selection, ...rest } = context;
 	return rest;
-}
-
-/** When something was said, as the activity log writes a time: the hour today ("10:58"), the day and the hour before ("10. 24 10:58"). */
-export function clock(at: Date | string, now = new Date()): string {
-	const when = new Date(at);
-	const time = `${String(when.getHours()).padStart(2, "0")}:${String(when.getMinutes()).padStart(2, "0")}`;
-	return when.toDateString() === now.toDateString() ? time : `${shortDate(when, now)} ${time}`;
 }

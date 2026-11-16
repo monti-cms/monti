@@ -964,7 +964,7 @@ describe("an image in the text", () => {
 		await userEvent.click(sheet.getByRole("button", { name: "적용" }));
 		await expect.element(sheet).not.toBeInTheDocument();
 		await userEvent.keyboard("{Meta>}s{/Meta}");
-		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "저장 전 변경 사항" })).not.toBeInTheDocument();
 	});
 
 	it("09-1 when the crop dialog closes the keys are the text's again, even from the caption: ⌘Z takes the turn back at once", async () => {
@@ -1274,7 +1274,7 @@ describe("selecting, copying and cutting across a picture", () => {
 		expect(new Set(sources()).size).toBe(1);
 		// Each is a block of its own: the copy did not bring the first one's id.
 		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}s{/Meta}" : "{Control>}s{/Control}");
-		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "저장 전 변경 사항" })).not.toBeInTheDocument();
 
 		// Another entry of the same site.
 		const made = (await held.site?.monti.run(
@@ -2039,5 +2039,21 @@ describe("a picture or file that is gone, or picked", () => {
 		// One line: the block's own border steps aside under the box's.
 		const own = file().querySelector("[data-slot=file-block]") as HTMLElement;
 		expect(getComputedStyle(own).borderTopColor).toBe("rgba(0, 0, 0, 0)");
+	});
+});
+
+describe("a picture's empty caption", () => {
+	it("[EI-03] says '캡션' only while the picture is picked or the caret is in the caption", async () => {
+		await Draft.run();
+		await caretAfter("글의 첫 문단");
+		await paste(await canvasFile("pasted.png"));
+		const caption = body().getByRole("textbox", { name: "캡션" });
+		await expect.element(caption).toBeVisible();
+		await expect.element(body().getByRole("progressbar")).not.toBeInTheDocument();
+		// The caret goes on in the words after the picture: the caption says nothing.
+		await userEvent.keyboard("이어 쓴 글");
+		await expect.element(caption).not.toHaveAttribute("placeholder");
+		await userEvent.click(caption);
+		await expect.element(caption).toHaveAttribute("placeholder", "캡션");
 	});
 });

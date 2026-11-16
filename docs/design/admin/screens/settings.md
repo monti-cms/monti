@@ -35,7 +35,7 @@
 | 글 쓰는 방식 절 | `Section`("글 쓰는 방식") | |
 | 말투와 규칙 | `FormField` + `Textarea`(3줄) | 관리자 값이라 운영 사이트에서도 고친다. 바뀌면 `FormFieldLabel changed`. |
 | 공개 주소 절 | `Section`("공개 주소", `last`) | |
-| 주소에 언어 표시 | `FormField` + `Select`(`SelectTrigger width="full"`): "항상" · "원문 언어만 빼고" · "안 함" | 구조 값이다. 바꾸면 저장할 때 검토에 "주소 변경" 블록으로 나온다. |
+| 주소에 언어 표시 | `FormField` + `Select`(`SelectTrigger width="full"`): "모든 언어" · "번역만" · "안 함"(2026-11-16 소유자, ST-07. 풀이 줄은 없다) | 구조 값이다. 바꾸면 저장할 때 검토에 "주소 변경" 블록으로 나온다. |
 | 잠긴 주소에 언어 표시 (운영 사이트) | `ReadValue`(값 글 뒤 `LockMark`) | 값은 글로 보이고 자물쇠는 그 줄에 붙는다(원칙 9). 흐린 선택 칸은 두지 않는다(원칙 7). |
 
 스토리: Patterns/Frame/Section, Controls/Field/Field, Controls/Field/Input, Controls/Field/Textarea, Controls/Field/Select, Primitives/LockMark.
@@ -66,18 +66,18 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 절 | `Section`("콘텐츠 언어", `last`) | 탭에는 이 절 하나다. 시간대 칸은 없다(12 화면 승인). |
-| 언어 행 | `LanguageRow`(`name` 원어 이름, `code`, `label` 화면 언어로 쓴 이름) | 이름은 언어 코드에서 오는 글이다(`Intl.DisplayNames`). 저장하는 표시 이름은 없다. 바뀐 행은 `dot`("추가" · "삭제" · "원문 변경"), 제안으로 바뀐 행은 `dotTone="proposal"`. |
+| 언어 행 | `LanguageRow`(`name` 화면 언어로 쓴 이름, `code`, `label` 원어 이름) | 화면 언어로 쓴 이름이 앞이고 원어 이름은 다를 때만 뒤에 붙는다("영어 en · English". 2026-11-16 소유자: "어디서나 한국어 이름", TR-01. 전에는 원어 이름이 앞이었다). 이름은 언어 코드에서 오는 글이다(`Intl.DisplayNames`, `format/language.ts`). 저장하는 표시 이름은 없다. 바뀐 행은 `dot`("추가" · "삭제" · "원문 변경"), 제안으로 바뀐 행은 `dotTone="proposal"`. |
 | 원문 행의 "원문 │ 바꾸기" | `LanguageSource` + `Button variant="ghost" size="sm"` "바꾸기" | 원문 행은 늘 맨 위고 손잡이 자리를 비운다. "바꾸기"는 `DropdownMenu`(`DropdownMenuRadioGroup`, 지금 원문에 ✓, 행 끝에 코드 `MenuShortcut`)를 연다. 고르면 그 언어가 맨 위로 가고 두 행에 점이 붙는다. |
 | 다른 행의 손잡이 | `DragHandle`(`aria-label` "… 옮기기") + `Sortable` · `SortableList` | 끌거나 키보드(Space, ↑↓, Space)로 순서를 바꾼다. 원문 행은 움직이지 않는다. 저장된 순서로 돌려놓으면 바뀐 곳이 아니다. |
 | 다른 행의 × | `IconButton`(`Close`, `label` "… 빼기") | 누르면 행에 취소선(`gone`)을 긋고 변경 사항에 더한다. 이 초안에서 더한 언어는 그냥 사라진다. 뺀 행의 끝에는 × 대신 `TextButton variant="underline" quiet` "되돌리기"가 있다. |
-| "+ 언어 추가" | `Button variant="ghost" size="sm"` + `Popover`(`PopoverContent padding="menu"`) 안의 `Command`(`shouldFilter={false}`, `CommandInput` "언어나 코드 찾기", `CommandList`, `CommandItem`: 원어 이름 · 화면 언어로 쓴 이름 · 끝에 코드 `MenuShortcut`, `CommandEmpty` "맞는 언어가 없습니다.") | 코드 찾기만 있다. 고르면 그 자리에서 행이 생긴다. 사이트에 이미 있는 언어는 나오지 않는다. "직접 입력"은 없다: 목록에 없는 코드는 개발자가 `monti.schema.ts`에 적는다. |
+| "+ 언어 추가" | `Button variant="ghost" size="sm"` + `Popover`(`PopoverContent padding="menu"`) 안의 `Command`(`shouldFilter={false}`, `CommandInput` "언어나 코드 찾기", `CommandList`, `CommandItem`: 화면 언어로 쓴 이름 · 원어 이름 · 끝에 코드(2026-11-16 소유자, TR-01) `MenuShortcut`, `CommandEmpty` "맞는 언어가 없습니다.") | 코드 찾기만 있다. 고르면 그 자리에서 행이 생긴다. 사이트에 이미 있는 언어는 나오지 않는다. "직접 입력"은 없다: 목록에 없는 코드는 개발자가 `monti.schema.ts`에 적는다. |
 | 잠긴 목록 (운영 사이트) | `LanguageRow locked`(이름 뒤 `LockMark`), 원문 행은 `LanguageSource`의 굵은 "원문"만 | 손잡이, ×, "바꾸기", "+ 언어 추가"가 없다. |
 
 ### 검토의 언어 블록
 
 | 바꾸기 | 블록 |
 |---|---|
-| 언어 추가 | `ChangeGroup kind="new"`(`tag` "추가", `title` 원어 이름, `identifier` 코드) + `ChangeNote` "저장된 데이터는 바뀌지 않습니다." |
+| 언어 추가 | `ChangeGroup kind="new"`(`tag` "추가", `title` 화면 언어로 쓴 이름, `identifier` 코드) + `ChangeNote` "저장된 데이터는 바뀌지 않습니다." |
 | 언어 빼기 | `ChangeGroup kind="drop"`(`tag` "삭제") + `ChangeNote danger` "번역이 함께 지워집니다." 고를 것은 없고 발의 알약이 빨간 "지우고 적용"이 된다. |
 | 원문 바꾸기 | `ChangeGroup kind="edit"`(`tag` "원문 변경", `title` 새 원문) + `ChangeLines`(전 · 후), 새 원문 글이 없는 묶음이 있으면 `ChangeNote` "이 언어 글이 없는 n편에 초안이 생깁니다." |
 | 주소에 언어 표시 바꾸기 | `ChangeGroup kind="edit"`(`tag` "주소 변경", `title` "주소에 언어 표시") + `ChangeLines`(전 · 후) + `ChangeNote` "옛 주소는 404가 됩니다." |
@@ -97,8 +97,8 @@
 | "언어 찾기" | 11.05 | "+ 언어 추가"의 `Command` 팝오버, 검색어 "zh" | LanguageSearch, LanguageSearchEmpty |
 | "언어 추가됨" | 11.06 | Deutsch 행이 `dot`("추가")과 함께 생김, 저장 묶음 | LanguageAdded |
 | "원문 메뉴" | 11.07 | "바꾸기"의 `DropdownMenu`(지금 원문 ✓) | SourceMenu |
-| "원문 바꿈" | 11.07b | English가 맨 위의 원문, 두 행에 `dot`("원문 변경"), 옛 원문 행에 손잡이와 × | SourceChanged |
-| 뺀 행 | 11.08 | English 행 `gone`과 "되돌리기" | LanguageRemoved |
+| "원문 바꿈" | 11.07b | "영어"가 맨 위의 원문, 두 행에 `dot`("원문 변경"), 옛 원문 행에 손잡이와 × | SourceChanged |
+| 뺀 행 | 11.08 | "영어" 행 `gone`과 "되돌리기" | LanguageRemoved |
 | "빼기 검토" | 11.08 | 검토 `Sheet`, 빨간 "지우고 적용" | LanguageRemoveReview |
 | 한 장 검토 | (12) | 언어 추가, 원문 바꾸기, 주소 변경, 필드 추가가 한 시트에 | OneReview |
 | "읽기 전용" | 11.16 | 언어 행마다 `LockMark`. 손잡이, ×, "바꾸기", "+ 언어 추가"가 빠지고 원문 행의 굵은 "원문"은 남는다 | LanguagesLive |
@@ -114,7 +114,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 언어 절 | `Section`("언어") | |
-| 화면 언어 | `FormField` + `FormFieldLabel` "화면 언어" + `Select`(`SelectTrigger width="full"`, 항목은 언어 이름 뒤 코드 `MenuShortcut`) | 고르면 관리자 화면의 말이 바로 바뀐다. 로그인 화면도 이 언어로 뜬다. |
+| 화면 언어 | `FormField` + `FormFieldLabel` "화면 언어" + `Select`(`SelectTrigger width="full"`, 항목은 언어 이름 뒤 코드 `MenuShortcut`) | 고르면 관리자 화면의 말이 바로 바뀐다. 로그인 화면도 이 언어로 뜬다. 여기만 언어마다 제 말로 적는다("한국어", "English": 그 말을 읽는 사람이 고르는 칸이다. 2026-11-16 소유자). |
 | 기능 절 | `Section`("기능") | |
 | 본문 템플릿 | `Option spread height="lg"` + `Switch`, 묶음은 `Stack gap={4}` | 바로 적용되는 켜기/끄기. 끄면 `/` 메뉴의 템플릿 묶음, 새 글 메뉴의 "템플릿으로 쓰기", 도구의 템플릿이 사라진다. 템플릿은 지워지지 않는다(03). |
 | 계정 절 | `Section`("계정", `last`) | 2026-11-05 소유자 결정으로 더해졌다. 보드에는 없다. 개발 서버가 로그인 없이 들여보낸 세션(`session.bypass`)에서는 이 절을 통째로 그리지 않고, 기능 절이 마지막 절이 된다(2026-11-12, 소유자에게 알림: 계정이 없고, 로그아웃해도 곧바로 다시 들어와진다). 스토리 AdminDevBypass. |
@@ -150,3 +150,5 @@
 | 상태 | 단계 | 더해지는 것 | 스토리 |
 |---|---|---|---|
 | (상태 없음) | 2.21 | 말투와 규칙 바뀜 1, 제안 1(사이트 이름, 주소에 언어 표시): "변경 사항 1 · 제안 1" | SiteProposal |
+
+- 필드 목록의 제목 · 주소 줄은 라벨을 `fieldName`의 차례로 적는다: 고정 낱말("제목" · "주소")이 스키마의 라벨보다 먼저다(ST-11, 만들며 정함 (2026-11-16): [collections.md](collections.md)의 "필드 한 줄").

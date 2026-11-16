@@ -202,3 +202,11 @@ describe("a template editor that cannot be drawn (ST-01)", () => {
 		await expect.element(page.getByRole("button", { name: "기본 글" })).toBeVisible();
 	});
 });
+
+describe("the list of templates", () => {
+	it("[TC-03] a template's date is said with the list's word, '수정'", async () => {
+		await scene(templates.Templates, templates.default).run();
+		await expect.element(page.getByText(/^\d{2}\. \d{2} 수정$/).first()).toBeVisible();
+		await expect.element(page.getByText(/고침$/)).not.toBeInTheDocument();
+	});
+});

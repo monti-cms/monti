@@ -9,11 +9,12 @@ import {
 } from "@monti-cms/core";
 import { Del, Ins } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useLanguageName } from "../format/language";
+import { endsClosed, fieldName as nameOfField } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { codeChanges, type ShownBlock, shownBlocks } from "../screens/entry/compare-entries";
 import { useBlockNames } from "../screens/entry/use-block-names";
-import { endsClosed } from "../screens/list/format";
 import type { SchemaRead } from "../screens/settings/schema-draft";
 import type { DiffRun } from "./diff";
 
@@ -138,6 +139,7 @@ export function marked(runs: DiffRun[], side: "both" | "before" | "after"): Reac
  */
 export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 	const { t, transport, onWrite } = useAdmin();
+	const languageName = useLanguageName();
 	// Every write in the admin reads the entries again, as `useRead` does: a save in the editor moves what a change would take out.
 	const [writes, setWrites] = useState(0);
 	useEffect(() => onWrite(() => setWrites((count) => count + 1)), [onWrite]);
@@ -183,7 +185,8 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 
 	const fieldsOf = (collection: string | undefined) =>
 		collection ? (schema?.adminValues[collection]?.fields ?? {}) : {};
-	const fieldName = (collection: string | undefined, field: string) => fieldsOf(collection)[field]?.label ?? field;
+	const fieldName = (collection: string | undefined, field: string) =>
+		nameOfField(field, fieldsOf(collection)[field]?.label, t);
 	/** A field's value in words: a choice by its option's label. */
 	const valueWords = (collection: string | undefined, field: string, value: unknown) => {
 		const labels = fieldsOf(collection)[field]?.optionLabels ?? {};
@@ -193,7 +196,6 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 				? (labels[value] ?? value)
 				: said(value);
 	};
-	const languageName = (code: string) => schema?.schema.locales.list.find((each) => each.code === code)?.name ?? code;
 	/** Why a change cannot be put in, in the screen's words: the field it writes belongs to an option the entry has not chosen. */
 	const blockedWords = (reason: Message, collection: string | undefined) => {
 		if (reason.key !== "entries.optionNotChosen") return t(reason);

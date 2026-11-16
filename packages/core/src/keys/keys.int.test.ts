@@ -497,6 +497,25 @@ describe("models (flow 10, 13; flow 2, 23)", () => {
 		]);
 	});
 
+	it("[AT-08] the log says a picked model by the name its service gives it, not by its id", async () => {
+		const monti = site();
+		net.state.anthropicModels = [{ id: "claude-next-1", display_name: "Claude Next", capabilities: {} as never }];
+		const { output } = await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });
+		const chosen = (await monti.run(
+			"models.choose",
+			{ for: "quick", keyId: output.id, model: "claude-next-1" },
+			admin,
+		)) as {
+			activityId: string;
+		};
+		const row = await db
+			.selectFrom("monti_activity")
+			.select(["summary"])
+			.where("id", "=", chosen.activityId)
+			.executeTakeFirstOrThrow();
+		expect(row.summary).toEqual({ key: "models.choose.quick", values: { model: "Claude Next" } });
+	});
+
 	it("a key's list is asked of its service again after a day, or at once on refresh; a service that is down keeps its last list", async () => {
 		const monti = site();
 		await add(monti, { service: "anthropic", name: "Anthropic", secret: ANTHROPIC });

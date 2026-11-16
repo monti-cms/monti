@@ -285,7 +285,7 @@ describe("the review page: states not tried before (T165)", () => {
 		await expect.element(page.getByText("Opening the admin for the first time.")).not.toBeInTheDocument();
 		await userEvent.click(section.getByRole("button", { name: "펼치기" }).first());
 		await expect.element(section.getByText("원문 · 한국어")).toBeVisible();
-		await expect.element(section.getByText("번역 · English")).toBeVisible();
+		await expect.element(section.getByText("번역 · 영어")).toBeVisible();
 		await expect.element(section.getByText("Opening the admin for the first time.")).toBeVisible();
 		await expect.element(section.getByText("The second post")).toBeVisible();
 		await userEvent.click(button("모두 펼치기"));

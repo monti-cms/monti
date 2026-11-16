@@ -13,8 +13,17 @@ export function defineMessages<Bundle extends MessageBundle>(bundle: Bundle): Bu
 export function formatMessage(bundles: MessageBundle[], language: "en" | "ko", message: Message): string {
 	const text = bundles.map((bundle) => bundle.messages[language][message.key]).find((found) => found !== undefined);
 	if (text === undefined) return message.key;
-	return text.replace(/\{(\w+)\}/g, (whole, name: string) => String(message.values?.[name] ?? whole));
+	return text
+		.replace(PLURAL, (_whole, name: string, one: string, other: string) => {
+			const count = Number(message.values?.[name]);
+			const chosen = new Intl.PluralRules(language).select(count) === "one" ? one : other;
+			return chosen.replaceAll("#", String(message.values?.[name] ?? ""));
+		})
+		.replace(/\{(\w+)\}/g, (whole, name: string) => String(message.values?.[name] ?? whole));
 }
+
+/** `{count, plural, one {# place} other {# places}}`: the ICU plural, for the words that change with a number (`#` is the number). */
+const PLURAL = /\{(\w+), plural, one \{([^{}]*)\} other \{([^{}]*)\}\}/g;
 
 /** The core's words: what its operations, checks and errors say (doc 15, T8). */
 export const coreMessages = defineMessages({
@@ -24,7 +33,7 @@ export const coreMessages = defineMessages({
 			"data.unreadable": "Could not be read.",
 			"data.needsMdx": "Reading it needs the MDX plugin.",
 			"data.nothingToImport": "Nothing to import.",
-			"data.import": "Imported {count} entries from {name}",
+			"data.import": "Imported {count, plural, one {# entry} other {# entries}} from {name}",
 			"data.backedUp": "Took a backup",
 			"plugins.says": "{text}",
 			"plugins.unknownSlot": "There is no such key slot.",
@@ -42,12 +51,12 @@ export const coreMessages = defineMessages({
 			"trash.restore.one": 'Restored "{title}"',
 			"trash.move.many": "Put {count} in the trash",
 			"trash.move.one": 'Put "{title}" in the trash',
-			"body.edit.done": 'Changed {count} places in the body of "{title}"',
-			"entries.unarchive.many": "Unarchived {count} entries",
+			"body.edit.done": 'Changed {count, plural, one {# place} other {# places}} in the body of "{title}"',
+			"entries.unarchive.many": "Unarchived {count, plural, one {# entry} other {# entries}}",
 			"entries.unarchive.one": 'Unarchived "{title}"',
-			"entries.archive.many": "Archived {count} entries",
+			"entries.archive.many": "Archived {count, plural, one {# entry} other {# entries}}",
 			"entries.archive.one": 'Archived "{title}"',
-			"entries.publish.many": "Published {count} entries",
+			"entries.publish.many": "Published {count, plural, one {# entry} other {# entries}}",
 			"entries.publish.one": 'Published "{title}"',
 			"deliveries.sending": "Being sent now.",
 			"deliveries.notHere": "Only the running site can send this.",
@@ -61,7 +70,7 @@ export const coreMessages = defineMessages({
 			"deliveries.error.failed": "Could not be sent",
 			"deliveries.error.gone": "No receiver",
 			"deliveries.receiver.site": "Site cache",
-			"deliveries.retry": "Sent {count} deliveries again",
+			"deliveries.retry": "Sent {count, plural, one {# delivery} other {# deliveries}} again",
 			"activity.where.trash": "Trash",
 			"activity.where.settings": "Settings",
 			"activity.where.schema": "Settings · monti.schema.ts",
@@ -111,12 +120,12 @@ export const coreMessages = defineMessages({
 			"code.effect.minus": "Removed",
 			"code.effect.warning": "Warning",
 			"code.effect.error": "Error",
-			"entries.task.brokenCodeLink": "{count} broken code links",
+			"entries.task.brokenCodeLink": "{count, plural, one {# broken code link} other {# broken code links}}",
 			"body.badChild": "This block can't hold that block.",
 			"body.badMark": "A text style's settings are not valid.",
 			"body.badMarkup": "The block's tags do not read: {reason}",
 			"body.duplicateId": "Two blocks share an id.",
-			"body.edit": "Body · {count} changes",
+			"body.edit": "Body · {count, plural, one {# change} other {# changes}}",
 			"body.moveIntoItself": "A block can't move into itself.",
 			"body.noBlock": "No such block.",
 			"body.noChildren": "This block holds no blocks.",
@@ -128,14 +137,14 @@ export const coreMessages = defineMessages({
 			"collections.updateAdminValues": "Saved the settings of {collectionLabel}",
 			"media.tooBig": "This file is over the 10 MB limit.",
 			"media.badType": "The library takes images, PDF, ZIP and text only.",
-			"entries.task.missingAlt": "Write alt text for {count} images",
+			"entries.task.missingAlt": "Write alt text for {count, plural, one {# image} other {# images}}",
 			"media.upload": "Uploaded {name}",
 			"media.update": "Renamed a file to {name}",
 			"media.replace": "Replaced the file {name}",
-			"media.replacePreview": "Replace {name}: {uses} places use it",
-			"media.moveToFolder": "Moved {count} files to {name}",
-			"media.moveToTop": "Moved {count} files to the top level",
-			"media.inUse": "{uses} places use it",
+			"media.replacePreview": "Replace {name}: {uses, plural, one {# place uses} other {# places use}} it",
+			"media.moveToFolder": "Moved {count, plural, one {# file} other {# files}} to {name}",
+			"media.moveToTop": "Moved {count, plural, one {# file} other {# files}} to the top level",
+			"media.inUse": "{uses, plural, one {# place uses} other {# places use}} it",
 			"media.unknown": "There is no such file.",
 			"media.noStorage": "This site has no media storage.",
 			"media.unknownKey": "That upload is not there. Try uploading again.",
@@ -147,8 +156,10 @@ export const coreMessages = defineMessages({
 			"folders.create": "Made the folder {name}",
 			"folders.rename": "Renamed a folder to {name}",
 			"folders.move": "Moved the folder {name}",
-			"trash.move": "Put {count} in the trash, {kept} files in use stayed",
-			"trash.movePreview": "{count} go to the trash; {unpublished} published go off the site; {kept} files in use stay",
+			"trash.move":
+				"Put {count} in the trash, {kept, plural, one {# file in use stayed} other {# files in use stayed}}",
+			"trash.movePreview":
+				"{count} go to the trash; {unpublished} published go off the site; {kept, plural, one {# file in use stays} other {# files in use stay}}",
 			"trash.restorePreview": "{count} come back from the trash",
 			"trash.purge": "Deleted {count} for good",
 			"trash.empty": "Emptied the trash: {count} deleted for good",
@@ -199,8 +210,9 @@ export const coreMessages = defineMessages({
 			"entries.sameField": "{field} is the same in every language: change it in the source.",
 			"entries.duplicateTranslation": "A translation is not copied. Copy its source.",
 			"translations.create": "Translation into {locale} started",
-			"translations.setBlocks": 'Decided {count} places of "{title}"',
-			"translations.confirmAll": 'Kept {count} translations of "{title}" past source changes',
+			"translations.setBlocks": 'Decided {count, plural, one {# place} other {# places}} of "{title}"',
+			"translations.confirmAll":
+				'Kept {count, plural, one {# translation} other {# translations}} of "{title}" past source changes',
 			"translations.notSource": "A translation is made from the source.",
 			"translations.unknownLocale": "The site has no language to translate into: {locale}",
 			"translations.exists": "This entry already has a translation in {locale}.",
@@ -213,7 +225,7 @@ export const coreMessages = defineMessages({
 			"translations.notFollowing": "This block does not follow the source: {block}",
 			"translations.notMarked": "The source of this field has not changed: {field}",
 			"entries.task.slugTaken": "Another entry is published at {slug}",
-			"entries.task.unpublishedLink": "{count} links to unpublished entries",
+			"entries.task.unpublishedLink": "{count, plural, one {# link} other {# links}} to unpublished entries",
 			"entries.trashed": "This entry is in the trash.",
 			"entries.unknown": "There is no such entry.",
 			"entries.unknownField": "There is no field {field}.",
@@ -252,9 +264,10 @@ export const coreMessages = defineMessages({
 			"proposals.oneRecord": "A proposal item changes one record: name one.",
 			"proposals.applying": "This proposal is being applied.",
 			"proposals.unknown": "There is no such proposal.",
-			"proposals.include": "{count} proposal items kept in or left out",
-			"proposals.revert": "Reverted {count} proposed changes, {kept} changed since stayed",
-			"proposals.discard": "Discarded {count} proposals",
+			"proposals.include": "{count, plural, one {# proposal item} other {# proposal items}} kept in or left out",
+			"proposals.revert":
+				"Reverted {count, plural, one {# proposed change} other {# proposed changes}}, {kept} changed since stayed",
+			"proposals.discard": "Discarded {count, plural, one {# proposal} other {# proposals}}",
 			"proposals.dependsOnSkipped": "Skipped: an item it needs was left out",
 			"proposals.unknownAccepted": "One of the accepted proposal items does not exist",
 			"proposals.wrongTarget": "An accepted proposal item belongs to another record",
@@ -455,7 +468,7 @@ export const coreMessages = defineMessages({
 			"entries.publishBlocked": "할 일 {count}개를 먼저 해 주세요.",
 			"entries.save": '"{title}" 저장',
 			"entries.task.required": "{field} 채우기",
-			"entries.task.pending": "흐린 블록",
+			"entries.task.pending": "정하지 않은 블록",
 			"entries.task.added": "원문 추가 블록",
 			"entries.notSourceLocale": "새 글은 {source}로 씁니다. {locale} 글은 번역으로 만듭니다.",
 			"entries.sameField": "{field}은 모든 언어에서 같습니다. 원문에서 고쳐 주세요.",

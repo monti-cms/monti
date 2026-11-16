@@ -96,7 +96,7 @@
 | 한 줄 | 첫 줄 `RowLink`(버튼) 안의 `Text truncate` 처음 물은 말, 둘째 줄 `Text variant="note" tone="subtle"` "10:58 · 검토 대기" | 한 일은 "검토 대기" · "적용 16건" · "받음 5곳" · "되돌림" · "버림". 마지막 요청이 제안 없이 끝났으면 "실패" · "멈춤"이다(AS-51). 줄을 누르면 그 대화가 그때 그대로 열린다. 지금 열린 대화는 `TableRow selected`. |
 | 줄의 ⋯ | `RowActions` 안 `RowMore`(`label` "(말) 더 보기") + `DropdownMenu` "지우기" `variant="danger"` | 늘 보인다. 묻지 않고 줄이 사라진다. 그 대화의 대기 제안도 지워진다. 키보드로 지우면 포커스는 메뉴가 닫히며 다음 줄의 ⋯로, 없으면 앞 줄의 ⋯로 간다(`DropdownMenuContent finalFocus`). 줄이 하나도 남지 않으면 패널의 입력란(없으면 첫 컨트롤)으로 간다. |
 | 없을 때 | `Empty`(`title` "지난 대화가 없습니다") | |
-| 발 | `SidePanel footer`에 `Text variant="note"` "안 연 대화 지우기"와 `Select`(화면의 `PickOne`, `size="sm"`): "7일 뒤" · "30일 뒤" · "90일 뒤" · "지우지 않음" | 설정은 칸 부품으로 고른다. 고르는 대로 저장된다. |
+| 발 | `SidePanel footer`에 `Text variant="note"` "안 연 대화"(열지 않은 대화를 얼마 뒤에 지우는지: 무슨 설정인지 이름이 말한다. 만들며 정함 (2026-11-16), AS-53)와 `Select`(화면의 `PickOne`, `size="sm"`): "7일 뒤 지움" · "30일 뒤 지움" · "90일 뒤 지움" · "지우지 않음" | 설정은 칸 부품으로 고른다. 고르는 대로 저장된다. |
 
 스토리: Screens/Assistant(만든 화면), Controls/Overlay/SidePanel, Monti/Assistant/ChatThread, Monti/Assistant/ChatMessage, Monti/Assistant/ToolCallLine, Monti/Assistant/AiStatus, Monti/Assistant/Suggest, Monti/Assistant/ChatInput, Controls/Menu/ModelMenu, Controls/Status/ErrorNote, Monti/Proposal/ProposalCard, Patterns/List/Table, Patterns/List/Empty, Controls/Field/Select, Controls/Menu/DropdownMenu.
 

@@ -1,6 +1,6 @@
 import { sql } from "kysely";
 import { z } from "zod";
-import { entryPlace, recordsOf, titleOf } from "../activity/words";
+import { entryPlace, recordsOf, titled } from "../activity/words";
 import { asDoc, type Block, type Doc, newBlockId } from "../body/doc";
 import { randomUUID } from "../bytes";
 import { type EntryState, editableEntry, entryOf, saveWorking, stateOf } from "../entries/operations";
@@ -370,7 +370,7 @@ export const translationOperations = [
 		log: "save",
 		summary: (input, _output, records) => ({
 			key: "translations.setBlocks",
-			values: { title: titleOf(records, "entry", input.id), count: input.blocks.length },
+			values: { ...titled(records, "entry", input.id), count: input.blocks.length },
 		}),
 		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),
@@ -400,7 +400,7 @@ export const translationOperations = [
 		log: "save",
 		summary: (input, output, records) => ({
 			key: "translations.confirmAll",
-			values: { title: titleOf(records, "entry", input.id), count: output.confirmed },
+			values: { ...titled(records, "entry", input.id), count: output.confirmed },
 		}),
 		where: (input, _output, records) => entryPlace(recordsOf(records, "entry", [input.id])),
 	}),

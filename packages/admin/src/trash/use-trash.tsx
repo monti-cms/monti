@@ -12,11 +12,11 @@ import {
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { useUndo } from "../activity/use-undo";
+import { useLanguageName } from "../format/language";
+import { endsClosed } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
 import { reasonOf, useOperation } from "../operations/use-operation";
 import { holdsKeyboardFocus } from "../screens/frame/focus-hand-off";
-import { useLanguageName } from "../screens/list/column-menu";
-import { endsClosed } from "../screens/list/format";
 
 /** What goes to the trash, and what the question and the toast call it. */
 export type TrashAsk = {

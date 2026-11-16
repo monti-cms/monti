@@ -205,11 +205,16 @@ function RelationSingleInput({
 						}
 						const opt = rel.allOptions.find((o) => o.group === group);
 						const unpublished = rel.targetKind === "document" && opt && !opt.published;
+						const address = rel.addressOf(group);
 						return (
 							<ComboboxItem key={group} value={group}>
 								{rel.labelOf(group)}
-								{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
-								{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
+								{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
+								{(unpublished || address) && (
+									<MenuValue address={address ?? undefined}>
+										{unpublished ? t("relations.unpublished") : null}
+									</MenuValue>
+								)}
 							</ComboboxItem>
 						);
 					}}
@@ -275,7 +280,7 @@ function RelationManyInput({
 			readOnly={readOnly}
 		>
 			<ComboboxChips ref={anchor} size="md" proposal={proposal}>
-				{value.map((item) => (
+				{(rel.ready ? value : []).map((item) => (
 					// A field that cannot be changed offers no way to take a value out.
 					<ComboboxChip key={item} showRemove={!readOnly}>
 						{rel.labelOf(item)}
@@ -297,11 +302,16 @@ function RelationManyInput({
 						}
 						const opt = rel.allOptions.find((o) => o.group === group);
 						const unpublished = rel.targetKind === "document" && opt && !opt.published;
+						const address = rel.addressOf(group);
 						return (
 							<ComboboxItem key={group} value={group}>
 								{rel.labelOf(group)}
-								{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
-								{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
+								{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
+								{(unpublished || address) && (
+									<MenuValue address={address ?? undefined}>
+										{unpublished ? t("relations.unpublished") : null}
+									</MenuValue>
+								)}
 							</ComboboxItem>
 						);
 					}}
@@ -387,11 +397,16 @@ function RelationOrderedManyInput({
 								}
 								const opt = rel.allOptions.find((o) => o.group === group);
 								const unpublished = rel.targetKind === "document" && opt && !opt.published;
+								const address = rel.addressOf(group);
 								return (
 									<ComboboxItem key={group} value={group}>
 										{rel.labelOf(group)}
-										{/* A draft says so at the row's end, as the link card's rows do (menu.md). */}
-										{unpublished && <MenuValue>{t("relations.unpublished")}</MenuValue>}
+										{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
+										{(unpublished || address) && (
+											<MenuValue address={address ?? undefined}>
+												{unpublished ? t("relations.unpublished") : null}
+											</MenuValue>
+										)}
 									</ComboboxItem>
 								);
 							}}
@@ -400,7 +415,7 @@ function RelationOrderedManyInput({
 				</Combobox>
 			)}
 			{/* Only read: the items in their order, with nothing that moves or removes one (no grip, no ×, no word on how to move). */}
-			{value.length > 0 && readOnly && (
+			{value.length > 0 && readOnly && rel.ready && (
 				<List marker="none" id={id} aria-labelledby={labelledBy}>
 					{value.map((item) => (
 						<OrderedRow key={item}>
@@ -409,7 +424,7 @@ function RelationOrderedManyInput({
 					))}
 				</List>
 			)}
-			{value.length > 0 && !readOnly && (
+			{value.length > 0 && !readOnly && rel.ready && (
 				<Sortable
 					nameOf={(item) => rel.labelOf(String(item))}
 					onDrop={({ active, over }) => {
@@ -529,6 +544,10 @@ export function FieldInput({
 	/** What the panel adds to a text's input (its focus, for the count). */
 	textProps?: Pick<ComponentProps<"input">, "onFocus" | "onBlur">;
 }) {
+	const { t } = useAdmin();
+	// A choice says what it asks for, not that it is empty: an input and a picker are told apart before they are touched.
+	// A field nobody can change asks for nothing: it keeps the word for an empty value.
+	const choosing = readOnly ? placeholder : t("entry.choose");
 	const text = typeof value === "string" ? value : "";
 	if (def.kind === "slug")
 		return (
@@ -583,7 +602,7 @@ export function FieldInput({
 				items={items}
 				value={Array.isArray(value) ? (value as string[]) : []}
 				onChange={onChange}
-				placeholder={placeholder}
+				placeholder={choosing}
 				readOnly={readOnly}
 				proposal={proposal}
 			/>
@@ -594,7 +613,7 @@ export function FieldInput({
 				items={items}
 				value={typeof value === "string" ? value : null}
 				onChange={onChange}
-				placeholder={placeholder}
+				placeholder={choosing}
 				readOnly={readOnly}
 				proposal={proposal}
 			/>
@@ -609,7 +628,7 @@ export function FieldInput({
 			entryGroup: relation?.entryGroup,
 			offline: relation === null,
 			createMissing: def.createMissing,
-			placeholder,
+			placeholder: choosing,
 			readOnly,
 			proposal,
 		};
