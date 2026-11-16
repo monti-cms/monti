@@ -15,6 +15,7 @@
 		"check:screens": "node scripts/check-screens.mjs",
 		"check:scenes": "node scripts/check-scenes.mjs",
 		"check:titles": "node scripts/check-test-titles.mjs",
+		"check:exports": "node scripts/check-exports.mjs",
 		"check:messages": "node scripts/check-messages.mjs",
 		"check:packages": "node scripts/check-packages.mjs",
 		"try:release": "node scripts/try-release.mjs",

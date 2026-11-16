@@ -56,10 +56,7 @@
 				"types": "./dist/code/index.d.ts",
 				"default": "./dist/code/index.js"
 			},
-			"./load": {
-				"types": "./bin/load.d.mts",
-				"default": "./bin/load.mjs"
-			},
+			"./load": "./bin/load.mjs",
 			"./render.css": "./render.css"
 		}
 	},

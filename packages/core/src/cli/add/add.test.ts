@@ -68,10 +68,12 @@ describe("monti add (doc 18)", () => {
 		expect(readdirSync(path.join(root, "monti/blocks")).sort()).toEqual(
 			["admin.ts", "callout", "color", "index.ts", "math"].sort(),
 		);
-		// One folder holds the whole block: its definition, its site drawing, its editor view, its words and its look.
+		// One folder holds the whole block: its definition, its site drawing, its editor view, its words and its look (a callout's kind icons with it).
 		expect(readdirSync(path.join(root, "monti/blocks/callout")).sort()).toEqual([
 			"editor.tsx",
+			"icon-masks.generated.ts",
 			"index.ts",
+			"kind-icons.ts",
 			"site.tsx",
 			"style.ts",
 			"words.ts",
