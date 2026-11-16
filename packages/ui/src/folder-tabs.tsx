@@ -3,7 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 import { useDndContext } from "@dnd-kit/core";
-import type * as React from "react";
+import * as React from "react";
 import { cn } from "./cn";
 import { Count } from "./count";
 import { CutWords } from "./cut-words";
@@ -35,7 +35,7 @@ function FolderTabsList({
 		<TabsPrimitive.List
 			data-slot="folder-tabs-list"
 			className={cn(
-				"relative z-1 -mb-px flex items-end gap-monti-4 overflow-x-auto overflow-y-hidden [&>:has([data-slot=count])]:min-w-21 [&>:not([data-slot=folder-tabs-add])]:shrink",
+				"relative z-1 -mb-px flex items-end gap-monti-4 overflow-x-auto overflow-y-hidden [--folder-tab-floor:calc(var(--folder-tab-grip)+var(--folder-tab-gap)*2+1.4*var(--monti-text-body-size)+0.6*var(--monti-text-caption-size)+1.75rem+2px)] [--folder-tab-gap:0.5rem] [--folder-tab-grip:0.875rem] [&>:has([data-slot=count])]:min-w-(--folder-tab-floor) [&>:not([data-slot=folder-tabs-add])]:shrink",
 				className,
 			)}
 			onKeyDown={(event) => {
@@ -57,19 +57,23 @@ const FOLDER_TAB =
 /**
  * A tab's name. A tab is never wider than its name, and a full row shrinks its tabs only down to the least of their own width and 4.5rem: the cell holds the
  * name (cut by `CutWords`, saying itself whole) and a hidden copy of it that is at most 4.5rem wide, which is the narrowest the cell's column goes. Only when
- * even the shrunk tabs do not fit does the row scroll. A locked tab has one speaker: its tooltip (the name whole, then why it is locked), so the name does not speak twice (`speaks`). A tab with a count has its own floor (the row's) and no copy of the name.
+ * even the shrunk tabs do not fit does the row scroll. A locked tab has one speaker: its tooltip, which gives the reason always and the name whole only when the name is cut, as `CutWords` does, so the name does not speak twice (`speaks`). A tab with a count has its own floor (the row's) and no copy of the name.
  */
 function TabName({
 	children,
 	speaks = true,
 	floor = true,
+	cell,
 }: {
 	children: React.ReactNode;
 	speaks?: boolean;
 	floor?: boolean;
+	/** The cell's element, for a tab that speaks through its own tooltip and asks whether its name is cut. */
+	cell?: React.Ref<HTMLSpanElement>;
 }) {
 	return (
 		<span
+			ref={cell}
 			data-name={floor && typeof children === "string" ? children : undefined}
 			className="grid after:invisible after:col-start-1 after:row-start-1 after:block after:h-0 after:max-w-18 after:overflow-clip after:whitespace-nowrap after:content-[attr(data-name)] [&>*]:col-start-1 [&>*]:row-start-1"
 		>
@@ -113,6 +117,9 @@ function FolderTab({
 	/** A field or group is held over this tab. */
 	dropTarget?: boolean;
 }) {
+	// A locked tab speaks once, through its tooltip: the reason always, and the name only when the name is cut (as `CutWords` does everywhere).
+	const nameCell = React.useRef<HTMLSpanElement>(null);
+	const [nameCut, setNameCut] = React.useState(false);
 	const tab = (
 		<TabsPrimitive.Tab
 			data-slot="folder-tab"
@@ -132,7 +139,7 @@ function FolderTab({
 			{...props}
 		>
 			{draggable && !locked && <Draggable aria-hidden className="size-3.5 text-monti-faint" />}
-			<TabName speaks={!locked} floor={count === undefined}>
+			<TabName speaks={!locked} floor={count === undefined} cell={nameCell}>
 				{children}
 			</TabName>
 			{count !== undefined && <Count>{count}</Count>}
@@ -141,10 +148,15 @@ function FolderTab({
 	);
 	if (!locked) return tab;
 	return (
-		<Tooltip>
+		<Tooltip
+			onOpenChange={(open) => {
+				const name = nameCell.current?.querySelector<HTMLElement>(".truncate");
+				if (open) setNameCut(name ? name.scrollWidth > name.clientWidth : false);
+			}}
+		>
 			<TooltipTrigger render={tab} />
 			<TooltipContent>
-				{typeof children === "string" ? <span className="block">{children}</span> : null}
+				{nameCut && typeof children === "string" ? <span className="block">{children}</span> : null}
 				{locked}
 			</TooltipContent>
 		</Tooltip>

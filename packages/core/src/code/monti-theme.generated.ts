@@ -46,7 +46,7 @@ export const MONTI_CODE_THEMES = {
 			{
 				scope: ["constant", "constant.numeric", "constant.language", "support.constant", "variable.other.constant"],
 				settings: {
-					foreground: "#9c4608",
+					foreground: "#913f82",
 				},
 			},
 			{
@@ -59,13 +59,13 @@ export const MONTI_CODE_THEMES = {
 			{
 				scope: ["entity.name.type", "entity.name.class", "support.class", "support.type"],
 				settings: {
-					foreground: "#9c2663",
+					foreground: "#5c6413",
 				},
 			},
 			{
 				scope: ["entity.name.tag", "markup.deleted"],
 				settings: {
-					foreground: "#9c2663",
+					foreground: "#5c6413",
 				},
 			},
 			{
@@ -104,7 +104,7 @@ export const MONTI_CODE_THEMES = {
 			{
 				scope: ["invalid"],
 				settings: {
-					foreground: "#9c2663",
+					foreground: "#5c6413",
 				},
 			},
 		],
@@ -153,7 +153,7 @@ export const MONTI_CODE_THEMES = {
 			{
 				scope: ["constant", "constant.numeric", "constant.language", "support.constant", "variable.other.constant"],
 				settings: {
-					foreground: "#f0a870",
+					foreground: "#cc8dbe",
 				},
 			},
 			{
@@ -166,13 +166,13 @@ export const MONTI_CODE_THEMES = {
 			{
 				scope: ["entity.name.type", "entity.name.class", "support.class", "support.type"],
 				settings: {
-					foreground: "#f09ac0",
+					foreground: "#9eaa33",
 				},
 			},
 			{
 				scope: ["entity.name.tag", "markup.deleted"],
 				settings: {
-					foreground: "#f09ac0",
+					foreground: "#9eaa33",
 				},
 			},
 			{
@@ -211,7 +211,7 @@ export const MONTI_CODE_THEMES = {
 			{
 				scope: ["invalid"],
 				settings: {
-					foreground: "#f09ac0",
+					foreground: "#9eaa33",
 				},
 			},
 		],

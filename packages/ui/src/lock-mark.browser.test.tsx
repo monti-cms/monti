@@ -120,7 +120,7 @@ it("a field row's lock and dots stand over the row's button: the pointer finds t
 	await expect.poll(tip, { timeout: 5000 }).toBe("SEO 플러그인이 둔 필드");
 });
 
-it("a locked folder tab names its lock and says why to a pointer on the tab and to the keyboard on it", async () => {
+it("a locked folder tab names its lock and says why to a pointer on the tab and to the keyboard on it, and does not say its name again when the name is not cut", async () => {
 	render(
 		<FolderTabs value="basic">
 			<FolderTabsList>
@@ -137,13 +137,13 @@ it("a locked folder tab names its lock and says why to a pointer on the tab and 
 	await expect.element(tab).toBeVisible();
 	await expect.element(tab.getByRole("img", { name: "SEO 플러그인이 둔 탭" })).toBeVisible();
 	await userEvent.hover(tab);
-	await expect.poll(tip, { timeout: 5000 }).toContain("SEO 플러그인이 둔 탭");
+	await expect.poll(tip, { timeout: 5000 }).toBe("SEO 플러그인이 둔 탭");
 	await userEvent.unhover(tab);
 	await expect.poll(tip).toBe(null);
 	// The keyboard: the tab row is one stop, the arrow keys move in it.
 	await userEvent.keyboard("{Tab}{ArrowRight}");
 	await expect.element(tab).toHaveFocus();
-	await expect.poll(tip, { timeout: 5000 }).toContain("SEO 플러그인이 둔 탭");
+	await expect.poll(tip, { timeout: 5000 }).toBe("SEO 플러그인이 둔 탭");
 });
 
 it("a locked folder tab whose name is cut has one speaker: one tooltip with the whole name and why it is locked", async () => {
@@ -165,6 +165,7 @@ it("a locked folder tab whose name is cut has one speaker: one tooltip with the 
 	await expect.element(tab).toBeVisible();
 	await userEvent.hover(tab);
 	await expect.poll(tip, { timeout: 5000 }).toContain("검색 엔진에 보이는 아주 긴 이름");
+	expect(tip()).toContain("SEO 플러그인이 둔 탭");
 	expect(document.querySelectorAll("[role=tooltip]").length).toBe(1);
 	// The lock and its count stay whole beside the cut name.
 	const box = tab.element().getBoundingClientRect();

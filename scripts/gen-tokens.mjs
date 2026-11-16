@@ -405,18 +405,18 @@ const CODE_ROLES = [
 	["string", "code-teal", ["string", "string.regexp", "punctuation.definition.string"]],
 	[
 		"constant",
-		"code-orange",
+		"code-magenta",
 		["constant", "constant.numeric", "constant.language", "support.constant", "variable.other.constant"],
 	],
 	["function", "gray-12", ["entity.name.function", "support.function"], "bold"],
-	["type", "code-rose", ["entity.name.type", "entity.name.class", "support.class", "support.type"]],
-	["tag", "code-rose", ["entity.name.tag", "markup.deleted"]],
+	["type", "code-olive", ["entity.name.type", "entity.name.class", "support.class", "support.type"]],
+	["tag", "code-olive", ["entity.name.tag", "markup.deleted"]],
 	["attribute", "code-teal", ["entity.other.attribute-name"]],
 	["inserted", "code-teal", ["markup.inserted"]],
 	["heading", "code-violet", ["markup.heading", "entity.name.section"], "bold"],
 	["emphasis", "gray-12", ["markup.italic"], "italic"],
 	["strong", "gray-12", ["markup.bold"], "bold"],
-	["invalid", "code-rose", ["invalid"]],
+	["invalid", "code-olive", ["invalid"]],
 ];
 
 /** Where the code's colors are read: text on the code box's ground (`bg-muted`, 4.5:1 or more, checked here and by the unit test of the theme). */
@@ -425,6 +425,21 @@ const CODE_TEXT = "fg-default";
 /** The other surfaces code sits on: the diff lines' tints, the highlighted line and the lit block; a callout's tint (10% of its kind's colour) comes over the code box. */
 const CODE_GROUNDS = [CODE_GROUND, "bg-success-muted", "bg-danger-muted", "bg-highlight", "bg-block"];
 const CALLOUT_STAND_INS = ["fg-success", "fg-danger", "fg-warning", "fg-proposal", "fg-muted"];
+
+/** The oklch hue (0 to 360) of a `#rrggbb` colour. */
+function oklchHue(hex) {
+	const [r, g, b] = [1, 3, 5].map((at) => {
+		const v = Number.parseInt(hex.slice(at, at + 2), 16) / 255;
+		return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+	});
+	const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+	const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+	const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+	const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+	const c = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+	return ((Math.atan2(c, a) * 180) / Math.PI + 360) % 360;
+}
+const hueGap = (a, b) => Math.min(Math.abs(a - b) % 360, 360 - (Math.abs(a - b) % 360));
 
 /** `amount` of `top` over `ground`, both `#rrggbb`. */
 function mixColors(top, ground, amount) {
@@ -531,6 +546,21 @@ export function tokenProblems(json, tokens) {
 			for (const [name, ground] of grounds)
 				if (contrast(color, ground) < 4.5)
 					problems.push(`code ${role} (${mode}): ${token} ${color} on ${name} ${ground} is under 4.5:1`);
+		}
+	}
+
+	// A code hue is its own: at least 25 degrees of oklch hue from the status colours, in each mode, so a type or a number never reads as an error, a
+	// warning or a pass.
+	for (const mode of ["light", "dark"]) {
+		for (const { name } of json.color.tokens.filter((token) => token.name.startsWith("code-"))) {
+			const hue = oklchHue(resolve(name, mode));
+			for (const status of ["fg-danger", "fg-warning", "fg-success"]) {
+				const gap = hueGap(hue, oklchHue(resolve(status, mode)));
+				if (gap < 25)
+					problems.push(
+						`${name} (${mode}): hue ${hue.toFixed(0)} is ${gap.toFixed(0)} degrees from ${status}, under 25`,
+					);
+			}
 		}
 	}
 

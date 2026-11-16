@@ -93,10 +93,10 @@ function At({ top, left, right, children }: { top: number; left?: number; right?
 /** The default code colours (monti-light and monti-dark are made from these tokens), as the highlighter gives them: the token itself, so dark follows. */
 const KEYWORD = "var(--monti-code-violet)";
 const STRING = "var(--monti-code-teal)";
-const NUMBER = "var(--monti-code-orange)";
+const NUMBER = "var(--monti-code-magenta)";
 const NAME = "var(--monti-fg-default)";
 const VARIABLE = "var(--monti-fg-default)";
-const TAG = "var(--monti-code-rose)";
+const TAG = "var(--monti-code-olive)";
 
 type Piece = string | [string, string];
 const CODE: Piece[][] = [

@@ -428,6 +428,16 @@ describe("settings › collections: what an action does", () => {
 			return name ? name.scrollWidth > name.clientWidth : false;
 		});
 		expect(cut.length).toBeGreaterThan(0);
+		// Every shrunk name shows a letter before its ellipsis: the floor leaves room for one, not only "…".
+		for (const each of cut) {
+			const name = each.querySelector<HTMLElement>(".truncate") as HTMLElement;
+			const letter = document.createRange();
+			letter.setStart(name.firstChild as Text, 0);
+			letter.setEnd(name.firstChild as Text, 1);
+			expect(letter.getBoundingClientRect().right, each.textContent ?? "").toBeLessThanOrEqual(
+				name.getBoundingClientRect().right - 4,
+			);
+		}
 		for (const each of tabs) {
 			const count = each.querySelector("[data-slot=count]");
 			// The count is whole: inside its tab, with its own width.
