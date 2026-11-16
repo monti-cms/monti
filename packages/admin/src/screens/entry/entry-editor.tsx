@@ -63,7 +63,7 @@ import {
 	TrashCan,
 } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AssistantButton } from "../../assistant/assistant-button";
 import { draftContext } from "../../assistant/draft-context";
 import {
@@ -130,6 +130,7 @@ import { useArchive } from "./use-archive";
 import { type EntryRead, type SaveState, useEntryEditor } from "./use-entry-editor";
 import { usePublish } from "./use-publish";
 import { useTextChecks } from "./use-text-checks";
+import { useToday } from "./use-today";
 
 const STATUS: Record<EntryState, EntryStatusKind> = {
 	draft: "draft",
@@ -139,6 +140,8 @@ const STATUS: Record<EntryState, EntryStatusKind> = {
 };
 
 const SAVE_KEYS = ["mod", "s"] as const;
+/** The publish button, plain or the pill's main half: the one a focus is handed to when the two take each other's place. */
+const PUBLISH_ID = "monti-entry-publish";
 /** The most blocks a request names (`ScreenContext.blocks`). */
 const MOST_BLOCKS_NAMED = 500;
 
@@ -238,6 +241,28 @@ export function EntryEditor({
 		return !notChosen(values, locale).has(field);
 	};
 	const publish = usePublish(editor, { onBlocked: () => setTodoOpen(true), asked });
+	const publishedAt = publish.publishedAt;
+	// The day it is now, also for an entry left open past midnight.
+	const today = useToday();
+	// The menu holds the other way to publish, and there is one only when today is another day than the entry's date: published today, both rows
+	// would give the same date, so the pill is the plain one, as for a first publish (button.md; TB-04).
+	const otherDate = publishedAt !== null && day(publishedAt, language) !== day(today, language);
+	// The pill and the plain button take each other's place (published again with today's date; midnight passed): the one that had the focus is
+	// gone with it, and the one that stands there now takes it, so the focus does not fall to the page.
+	const publishHeld = useRef(false);
+	useEffect(() => {
+		const seen = (event: FocusEvent) => {
+			const at = event.target as Element;
+			publishHeld.current =
+				at.id === PUBLISH_ID || Boolean(at.closest("[data-slot=split-button]")?.querySelector(`#${PUBLISH_ID}`));
+		};
+		document.addEventListener("focusin", seen);
+		return () => document.removeEventListener("focusin", seen);
+	}, []);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when one button has taken the other's place, which `otherDate` decides.
+	useLayoutEffect(() => {
+		if (publishHeld.current && document.activeElement === document.body) document.getElementById(PUBLISH_ID)?.focus();
+	}, [otherDate]);
 	// The field's alt text was for the old picture (2026-11-09, owner): the new one has only what was said while it went up.
 	const fieldUploads = useFieldUploads((field, item, said) => {
 		editor.set(`values.${field}`, cleanMediaValue({ media: item.id, ...said }));
@@ -1083,10 +1108,6 @@ export function EntryEditor({
 				}
 			/>
 		) : null;
-	const publishedAt = publish.publishedAt;
-	// The menu holds the other way to publish, and there is one only when today is another day than the entry's date: published today, both rows
-	// would give the same date, so the pill is the plain one, as for a first publish (button.md; TB-04).
-	const otherDate = publishedAt !== null && day(publishedAt, language) !== day(new Date(), language);
 
 	// What acts on the entry waits for the entry: before it is read nothing says whether it is published, archived or in the trash.
 	const head = !read ? null : readOnly ? (
@@ -1148,6 +1169,7 @@ export function EntryEditor({
 			) : null}
 			{publish.button === "first" || !otherDate ? (
 				<Button
+					id={PUBLISH_ID}
 					variant="primary"
 					disabled={publish.button === "done"}
 					// "Published" keeps the focus the publish was pressed with: it does not fall to the page.
@@ -1159,6 +1181,7 @@ export function EntryEditor({
 				</Button>
 			) : (
 				<SplitButton
+					id={PUBLISH_ID}
 					menuLabel={t("entry.publishMenu")}
 					disabled={publish.button === "done"}
 					loading={publish.publishing}
@@ -1172,8 +1195,12 @@ export function EntryEditor({
 								{t("entry.publish")}
 							</DropdownMenuItem>
 							<DropdownMenuItem
-								onClick={() => void publish.publish("today")}
-								caption={t("entry.publishTodayDate", { date: day(new Date(), language) })}
+								onClick={() => {
+									// The focus is in the menu, which closes with the pill when the date becomes today's: it is the pill's own.
+									publishHeld.current = true;
+									void publish.publish("today");
+								}}
+								caption={t("entry.publishTodayDate", { date: day(today, language) })}
 							>
 								{t("entry.publishToday")}
 							</DropdownMenuItem>

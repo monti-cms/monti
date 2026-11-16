@@ -1405,6 +1405,54 @@ describe("the entry editor: the focus after a publish", () => {
 	});
 });
 
+describe("the entry editor: the pill and the plain publish button take each other's place", () => {
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("published again with today's date from the keyboard: the pill gives way to the plain '발행됨', which takes the focus", async () => {
+		await from(entry.RepublishMenu).run();
+		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(page.getByRole("menuitem").first()).not.toBeInTheDocument();
+		(button("발행 방식").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		const today = page.getByRole("menuitem", { name: /오늘 날짜로 다시 발행/ });
+		await expect.element(today).toBeVisible();
+		(today.element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		// The date is today's now: no other way is left, so there is no pill.
+		await expect.poll(() => document.querySelector("[data-slot=split-button]")).toBeNull();
+		const done = button("발행됨");
+		await expect.element(done).toHaveAttribute("aria-disabled", "true");
+		await expect.poll(() => document.activeElement).toBe(done.element());
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(document.activeElement).toBe(done.element());
+	});
+
+	it("[TB-04] an entry published today and left open past midnight gets its menu: the day is looked at again when the window takes the focus", async () => {
+		await on("draft").run();
+		await opened();
+		await userEvent.click(button("발행하기"));
+		await expect.element(button("발행됨")).toBeVisible();
+		await titleEnd();
+		await userEvent.keyboard(" 다시");
+		await expect.element(button("발행하기")).toBeEnabled();
+		await expect.element(button("발행 방식")).not.toBeInTheDocument();
+		// The clock alone moves on a day: the timers go on as they are.
+		vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + 24 * 60 * 60 * 1000 });
+		window.dispatchEvent(new Event("focus"));
+		await expect.element(button("발행 방식")).toBeVisible();
+		await userEvent.click(button("발행 방식"));
+		const rows = page.getByRole("menuitem");
+		await expect.poll(() => rows.elements().length).toBe(2);
+		const date = (row: Element | undefined) => (row?.textContent ?? "").match(/발행일 ([\d. ]+\d)/)?.[1];
+		expect(date(rows.elements()[0])).toBeTruthy();
+		expect(date(rows.elements()[0])).not.toBe(date(rows.elements()[1]));
+	});
+});
+
 describe("the entry editor: the to-do list's groups", () => {
 	const list = () => document.querySelector("[data-slot=status-bar-list]") as HTMLElement;
 	const heads = () => [...list().querySelectorAll("[data-slot=status-bar-list-head]")].map((head) => head.textContent);
