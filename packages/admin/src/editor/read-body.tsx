@@ -716,11 +716,14 @@ function mediaOf(blocks: readonly Block[], found: string[] = []): string[] {
 	return found;
 }
 
-/** The last words of a body outside its code: where the caret of an answer still arriving stands. */
+/**
+ * Where the caret of an answer still arriving stands: its last text run at any depth, code included. A run in code puts the caret in that code block, after
+ * its last character; any other, after the run.
+ */
 function lastWords(body: NodeOf) {
 	let last: NodeOf | null = null;
 	body.descendants((node, _at, parent) => {
-		if (node.isText && parent?.type.name !== nodeName("codeBlock")) last = node;
+		if (node.isText) last = parent?.type.name === nodeName("codeBlock") ? parent : node;
 		return true;
 	});
 	return last;
@@ -886,12 +889,7 @@ export function ReadBody({
 			streaming,
 			chat: size === "chat",
 			// The caret of an answer still arriving: after the last character of its last words, in the code when it ends in code.
-			caretAt:
-				streaming && body
-					? body.lastChild?.type.name === nodeName("codeBlock")
-						? body.lastChild
-						: lastWords(body)
-					: null,
+			caretAt: streaming && body ? lastWords(body) : null,
 		};
 		const top: ReactNode[] = [];
 		const parent = body ?? ({ type: { name: "doc" } } as NodeOf);

@@ -70,8 +70,9 @@ export function RefTable({
 }
 
 /**
- * A callout of a reference board: the design system does not know the site's blocks, so it is drawn as a body draws a block it has no drawing for, the
- * box (`data-box`) with the block's name, its title and its words inside.
+ * A callout of a reference board. It is a stand-in for the site's own drawing (the callout of `@monti-cms/blocks`), which the design system cannot
+ * know: it is drawn as a body draws a block it has no drawing for, the box (`data-box`) with one line, the block's name and its fields by name ("콜아웃 ·
+ * 제목 버전 안내 · …"), then its words.
  */
 export function RefCallout({
 	title,
@@ -85,7 +86,7 @@ export function RefCallout({
 	return (
 		<CompareBody ground={ground}>
 			<div data-whole="" data-box="" data-block="callout">
-				콜아웃 · {title} · {lines.join(" ")}
+				콜아웃 · 제목 {title} · {lines.join(" ")}
 			</div>
 		</CompareBody>
 	);

@@ -6,6 +6,7 @@ import * as read from "./read-body.stories";
 import {
 	BLOCKS,
 	BROKEN,
+	code,
 	FOLDED,
 	IMAGES,
 	MINE,
@@ -54,6 +55,26 @@ const TodoChat = scene<read.Loaded>({ loaders: read.read(TODO, null, { size: "ch
 const TodoCard = scene<read.Loaded>({ loaders: read.read(TODO, null, { size: "card" }) }, read.default);
 const StreamingCode = scene<read.Loaded>(
 	{ loaders: read.read(MINE, null, { size: "chat", streaming: true }) },
+	read.default,
+);
+const StreamingInCallout = scene<read.Loaded>(
+	{
+		loaders: read.read(
+			{
+				type: "doc",
+				blocks: [
+					{
+						id: "note",
+						type: "callout",
+						attrs: { tone: "note" },
+						children: [paragraph("w", text("위의 낱말")), code("c", "const last = 1;")],
+					},
+				],
+			},
+			null,
+			{ size: "chat", streaming: true },
+		),
+	},
 	read.default,
 );
 const StreamingPlain = scene<read.Loaded>(
@@ -333,5 +354,15 @@ describe("a body read without being written draws as the editor draws it", () =>
 		expect(caret.parentElement?.textContent?.endsWith("count++;")).toBe(true);
 		await StreamingPlain.run();
 		await expect.poll(() => sides()[0]?.querySelector("p [data-slot=stream-caret]")).not.toBeNull();
+	});
+
+	it("[reach] the caret of an answer whose last block is a container ending in code stands in that code, not after the words above it", async () => {
+		await StreamingInCallout.run();
+		await expect.poll(() => sides()[0]?.querySelector("[data-slot=stream-caret]")).not.toBeNull();
+		const carets = sides()[0]?.querySelectorAll("[data-slot=stream-caret]") ?? [];
+		expect(carets).toHaveLength(1);
+		const caret = carets[0] as HTMLElement;
+		expect(caret.closest("[data-slot=code-text]")).not.toBeNull();
+		expect(caret.parentElement?.textContent).toContain("const last = 1;");
 	});
 });

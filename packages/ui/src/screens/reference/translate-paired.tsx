@@ -130,6 +130,7 @@ export function TranslatePairedScreen() {
 									</Text>
 								</Stack>
 							}
+							// The callout stands in for the site's own drawing, which this board cannot know: the box a body shows for a block it has no drawing for.
 							source={
 								<RefCallout
 									ground="tool"
