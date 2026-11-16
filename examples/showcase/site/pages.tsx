@@ -5,10 +5,11 @@ import { type SeoFollows, seoOf } from "@monti-cms/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createElement, type ElementType, type ReactNode } from "react";
+import { createElement, type ElementType, Fragment, type ReactNode } from "react";
 import { code, monti, reader } from "@/lib/monti";
 import { blocks, marks } from "../monti/blocks/index";
 import { SitePage } from "./frame";
+import { optionName, wordsIn } from "./messages";
 
 // The pages of the site, each for one language. The routes under `app/(site)` hand them no language (the source language, Korean); those
 // under `app/[locale]` hand them the one in their address.
@@ -63,7 +64,7 @@ const many = (value: ResolvedRelation | ResolvedRelation[] | null | undefined) =
 	Array.isArray(value) ? value : value ? [value] : [];
 
 const text = (value: unknown) => (typeof value === "string" && value.trim() !== "" ? value : null);
-const words = (value: unknown) => (Array.isArray(value) ? value.filter((item) => typeof item === "string") : []);
+const strings = (value: unknown) => (Array.isArray(value) ? value.filter((item) => typeof item === "string") : []);
 
 /**
  * A picture of a media field, at its own size or the width given (its height follows). A plain `<img>`: the file's address is the
@@ -83,9 +84,13 @@ function Picture({ image, className, width }: { image: SiteImage; className?: st
 	);
 }
 
+/** The links of a relation field, or `null` for one with no target, so its row is left out. */
+const links = (value: ResolvedRelation | ResolvedRelation[] | null | undefined) =>
+	many(value).length > 0 ? <RelationLinks value={value} /> : null;
+
 function RelationLinks({ value }: { value: ResolvedRelation | ResolvedRelation[] | null | undefined }) {
 	const list = many(value);
-	if (list.length === 0) return <>—</>;
+	if (list.length === 0) return null;
 	return (
 		<>
 			{list.map((relation, index) => {
@@ -103,14 +108,14 @@ function RelationLinks({ value }: { value: ResolvedRelation | ResolvedRelation[]
 	);
 }
 
-function EntryRows({ entries, locale }: { entries: SiteEntry[]; locale: string }) {
-	if (entries.length === 0) return <p className="quiet">Nothing published here yet.</p>;
+/** A list of entries, each with its name; a date only where it says something (an article's), never a tag's or a person's. */
+function EntryRows({ entries, locale, dates = false }: { entries: SiteEntry[]; locale: string; dates?: boolean }) {
 	return (
 		<ul className="rows">
 			{entries.map((entry) => (
 				<li key={entry.id}>
 					{entry.path ? <Link href={entry.path}>{entry.title}</Link> : entry.title}
-					<time>{day(entry.publishedAt, locale)}</time>
+					{dates ? <time>{day(entry.publishedAt, locale)}</time> : null}
 				</li>
 			))}
 		</ul>
@@ -125,26 +130,44 @@ export async function Home({ locale }: { locale: string }) {
 		reader.entries({ collection: "person", locale }),
 		reader.entries({ collection: "series", locale }),
 	]);
+	const words = wordsIn(locale);
+	// A section with nothing in it is left out, not drawn as a heading over an apology.
 	return (
 		<SitePage locale={locale}>
-			<h1>Monti showcase</h1>
-			<h2>Articles</h2>
-			<EntryRows entries={articles} locale={locale} />
-			{next ? <p className="quiet">More than twenty: the reader pages them.</p> : null}
-			<h2>Tags</h2>
-			<EntryRows entries={tags} locale={locale} />
-			<h2>People</h2>
-			<EntryRows entries={people} locale={locale} />
-			<h2>Series</h2>
-			{/* Items with no page: only their names and values are read. */}
-			<ul className="rows">
-				{series.map((item) => (
-					<li key={item.id}>
-						{item.title}
-						<span className="quiet">{text(item.values.note) ?? ""}</span>
-					</li>
-				))}
-			</ul>
+			<h1>{words.site.name}</h1>
+			{articles.length > 0 ? (
+				<>
+					<h2>{words.sections.articles}</h2>
+					<EntryRows entries={articles} locale={locale} dates />
+				</>
+			) : null}
+			{next ? <p className="quiet">{words.more}</p> : null}
+			{tags.length > 0 ? (
+				<>
+					<h2>{words.sections.tags}</h2>
+					<EntryRows entries={tags} locale={locale} />
+				</>
+			) : null}
+			{people.length > 0 ? (
+				<>
+					<h2>{words.sections.people}</h2>
+					<EntryRows entries={people} locale={locale} />
+				</>
+			) : null}
+			{series.length > 0 ? (
+				<>
+					<h2>{words.sections.series}</h2>
+					{/* Items with no page: only their names and values are read. */}
+					<ul className="rows">
+						{series.map((item) => (
+							<li key={item.id}>
+								{item.title}
+								{text(item.values.note) ? <span className="quiet">{text(item.values.note)}</span> : null}
+							</li>
+						))}
+					</ul>
+				</>
+			) : null}
 		</SitePage>
 	);
 }
@@ -156,13 +179,13 @@ export function homeMetadata(locale: string): Metadata {
 	const others = locales.prefix === "never" ? [] : locales.list.filter(({ code }) => code !== locale);
 	return {
 		...pageMetadata({
-			title: "Monti showcase",
+			title: wordsIn(locale).site.name,
 			locale,
 			path: homePath(locales, locale),
 			translations: others.map(({ code }) => ({ locale: code, path: homePath(locales, code) })),
 		}),
 		// The site's name alone, not "name · name" (the layout's title template).
-		title: { absolute: "Monti showcase" },
+		title: { absolute: wordsIn(locale).site.name },
 	};
 }
 
@@ -188,52 +211,63 @@ export const tagMetadata = (slug: string, locale: string) =>
 export const personMetadata = (slug: string, locale: string) =>
 	entryMetadata("person", slug, locale, { description: "bio", image: "photo" });
 
+/** A row of a field list: its name and what it holds. A row with nothing to show is left out, not drawn as a dash. */
+type Row = { name: string; value: ReactNode };
+
+/** The `<dl>` of the rows that have a value; nothing at all when none has. */
+function Fields({ rows }: { rows: Row[] }) {
+	const shown = rows.filter((row) => row.value !== null && row.value !== false);
+	if (shown.length === 0) return null;
+	return (
+		<dl className="fields">
+			{shown.map((row) => (
+				<Fragment key={row.name}>
+					<dt>{row.name}</dt>
+					<dd>{row.value}</dd>
+				</Fragment>
+			))}
+		</dl>
+	);
+}
+
 /** The fields of the option an article's conditional field has chosen (the reader gives only those). */
-function Format({ entry }: { entry: PageEntry }) {
+function Format({ entry, locale }: { entry: PageEntry; locale: string }) {
 	const { values } = entry;
+	const words = wordsIn(locale);
 	const format = text(values.format);
 	if (!format) return null;
 	const poster = siteImage(values.galleryPoster, entry.media);
 	const target = entry.relations?.linkTarget;
-	return (
-		<dl className="fields">
-			<dt>Format</dt>
-			<dd>{format}</dd>
-			{format === "video" ? (
+	const layout = text(values.galleryLayout);
+	const videoUrl = text(values.videoUrl);
+	const linkUrl = text(values.linkUrl);
+	const rows: Row[] = [{ name: words.fields.format, value: optionName(locale, format) }];
+	if (format === "video")
+		rows.push({
+			name: words.fields.video,
+			value: videoUrl ? (
 				<>
-					<dt>Video</dt>
-					<dd>
-						<a href={text(values.videoUrl) ?? "#"}>{text(values.videoUrl)}</a>
-						{text(values.videoLength) ? ` (${values.videoLength})` : null}
-					</dd>
+					<a href={videoUrl}>{videoUrl}</a>
+					{text(values.videoLength) ? ` (${values.videoLength})` : null}
 				</>
-			) : null}
-			{format === "gallery" ? (
-				<>
-					<dt>Layout</dt>
-					<dd>{text(values.galleryLayout) ?? "—"}</dd>
-					{poster ? (
-						<>
-							<dt>Poster</dt>
-							<dd>
-								<Picture image={poster} width={poster.width / 4} />
-							</dd>
-						</>
-					) : null}
-				</>
-			) : null}
-			{format === "link" ? (
-				<>
-					<dt>Link</dt>
-					<dd>
-						{values.linkKind === "external" ? <a href={text(values.linkUrl) ?? "#"}>{text(values.linkUrl)}</a> : null}
-						{values.linkKind === "internal" ? <RelationLinks value={target} /> : null}
-						{values.linkKind ? null : "—"}
-					</dd>
-				</>
-			) : null}
-		</dl>
-	);
+			) : null,
+		});
+	if (format === "gallery")
+		rows.push(
+			{ name: words.fields.layout, value: layout ? optionName(locale, layout) : null },
+			{ name: words.fields.poster, value: poster ? <Picture image={poster} width={poster.width / 4} /> : null },
+		);
+	if (format === "link")
+		rows.push({
+			name: words.fields.link,
+			value:
+				values.linkKind === "external" && linkUrl ? (
+					<a href={linkUrl}>{linkUrl}</a>
+				) : values.linkKind === "internal" ? (
+					links(target)
+				) : null,
+		});
+	return <Fields rows={rows} />;
 }
 
 async function Body({ entry }: { entry: PageEntry }) {
@@ -242,7 +276,7 @@ async function Body({ entry }: { entry: PageEntry }) {
 	return (
 		<>
 			{toc.length > 0 ? (
-				<nav aria-label="Contents" className="toc">
+				<nav aria-label={wordsIn(entry.locale).contents} className="toc">
 					<ol>
 						{toc.map((item) => (
 							<li key={item.id} data-depth={item.depth}>
@@ -261,6 +295,7 @@ async function Body({ entry }: { entry: PageEntry }) {
 					entryPath: entry.entryPath,
 					code: await code,
 					locale: entry.locale,
+					sourceLocale: reader.locales().source,
 				})}
 			</div>
 		</>
@@ -273,39 +308,34 @@ function ArticleView({ entry, locale }: { entry: PageEntry; locale: string }) {
 	const cover = siteImage(values.cover, entry.media);
 	const attachment = values.attachment as { media?: string } | undefined;
 	const file = attachment?.media ? entry.media?.[attachment.media] : undefined;
+	const words = wordsIn(locale);
+	const topic = text(values.topic);
+	const seasons = strings(values.seasons).map((season) => optionName(locale, season));
 	return (
 		<article>
-			{values.pinned === "pinned" ? <p className="pin">📌 {text(values.pinNote) ?? "Pinned"}</p> : null}
-			<h1>{entry.title}</h1>
+			{values.pinned === "pinned" ? <p className="pin">📌 {text(values.pinNote) ?? words.pinned}</p> : null}
+			<h1>{text(entry.title) ?? words.untitled}</h1>
 			{text(values.subtitle) ? <p className="subtitle">{text(values.subtitle)}</p> : null}
 			<p className="meta">
-				<time>{entry.preview ? "Preview" : day(entry.publishedAt, locale)}</time>
-				<span>{text(values.topic)}</span>
-				{words(values.seasons).length > 0 ? <span>{words(values.seasons).join(" · ")}</span> : null}
+				<time>{entry.preview ? words.preview : day(entry.publishedAt, locale)}</time>
+				{topic ? <span>{optionName(locale, topic)}</span> : null}
+				{seasons.length > 0 ? <span>{seasons.join(" · ")}</span> : null}
 			</p>
 			{cover ? <Picture image={cover} className="cover" /> : null}
 			{text(values.summary) ? <p className="summary">{text(values.summary)}</p> : null}
-			<dl className="fields">
-				<dt>Series</dt>
-				<dd>
-					<RelationLinks value={relations?.series} />
-				</dd>
-				<dt>Authors</dt>
-				<dd>
-					<RelationLinks value={relations?.authors} />
-				</dd>
-				<dt>Tags</dt>
-				<dd>
-					<RelationLinks value={relations?.tags} />
-				</dd>
-				<dt>Attachment</dt>
-				<dd>{file ? <a href={file.url}>{file.name}</a> : "—"}</dd>
-			</dl>
-			<Format entry={entry} />
+			<Fields
+				rows={[
+					{ name: words.fields.series, value: links(relations?.series) },
+					{ name: words.fields.authors, value: links(relations?.authors) },
+					{ name: words.fields.tags, value: links(relations?.tags) },
+					{ name: words.fields.attachment, value: file ? <a href={file.url}>{file.name}</a> : null },
+				]}
+			/>
+			<Format entry={entry} locale={locale} />
 			<Body entry={entry} />
 			{many(relations?.related).length > 0 ? (
 				<aside>
-					<h2>Related</h2>
+					<h2>{words.related}</h2>
 					<RelationLinks value={relations?.related} />
 				</aside>
 			) : null}
@@ -346,9 +376,9 @@ export async function Tag({ slug, locale }: { slug: string; locale: string }) {
 	);
 	return (
 		<SitePage locale={locale} path={tag.path} translations={tag.translations}>
-			<h1># {tag.title}</h1>
+			<h1># {text(tag.title) ?? wordsIn(locale).untitled}</h1>
 			{text(tag.values.description) ? <p>{text(tag.values.description)}</p> : null}
-			<EntryRows entries={articles} locale={locale} />
+			<EntryRows entries={articles} locale={locale} dates />
 		</SitePage>
 	);
 }
@@ -360,13 +390,14 @@ export async function Person({ slug, locale }: { slug: string; locale: string })
 	const articles = (await reader.entries({ collection: "article", locale })).filter((article) =>
 		pointsAt(article.relations?.authors, person),
 	);
+	const roles = strings(person.values.roles).map((role) => optionName(locale, role));
 	return (
 		<SitePage locale={locale} path={person.path} translations={person.translations}>
 			{photo ? <Picture image={photo} className="photo" width={120} /> : null}
-			<h1>{person.title}</h1>
-			<p className="meta">{words(person.values.roles).join(" · ")}</p>
+			<h1>{text(person.title) ?? wordsIn(locale).untitled}</h1>
+			{roles.length > 0 ? <p className="meta">{roles.join(" · ")}</p> : null}
 			{text(person.values.bio) ? <p>{text(person.values.bio)}</p> : null}
-			<EntryRows entries={articles} locale={locale} />
+			<EntryRows entries={articles} locale={locale} dates />
 		</SitePage>
 	);
 }

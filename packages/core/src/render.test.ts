@@ -84,3 +84,33 @@ describe("heading anchors and the table of contents", () => {
 		expect(drawn).toBe('<h2 class="mine" id="mine">Mine</h2>');
 	});
 });
+
+describe("blocks kept in the source's words", () => {
+	const paragraph = (
+		id: string,
+		words: string,
+		state?: "pending" | "translated" | "keepSource" | "followSource",
+	): Block => ({
+		id,
+		type: "paragraph",
+		content: [{ type: "text", text: words }],
+		...(state ? { link: { from: `s_${id}`, seen: "", state } } : {}),
+	});
+	const body = doc(
+		paragraph("a", "Hello", "translated"),
+		paragraph("b", "안녕", "keepSource"),
+		paragraph("c", "또", "followSource"),
+	);
+
+	it("16-6 a block that keeps or follows its source says the source's language, in an element of no box of its own", () => {
+		const drawn = renderDocument(body, { createElement: html, locale: "en", sourceLocale: "ko" }).join("");
+		expect(drawn).toBe('<p>Hello</p><div lang="ko"><p>안녕</p></div><div lang="ko"><p>또</p></div>');
+	});
+
+	it("16-6 an entry in the source's own language, or a site that gave no source language, draws every block as it is", () => {
+		expect(renderDocument(body, { createElement: html, locale: "ko", sourceLocale: "ko" }).join("")).not.toContain(
+			"lang=",
+		);
+		expect(renderDocument(body, { createElement: html, locale: "en" }).join("")).not.toContain("lang=");
+	});
+});

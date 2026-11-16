@@ -112,6 +112,12 @@ await write("collections.updateAdminValues", {
 			summary: { label: "요약", description: "목록과 검색 결과에 보이는 한두 문장" },
 			topic: { label: "주제", optionLabels: { guide: "안내", news: "소식", opinion: "생각" } },
 			format: { label: "형식", optionLabels: { text: "글", video: "영상", gallery: "사진첩", link: "링크" } },
+			seasons: {
+				label: "계절",
+				optionLabels: { spring: "봄", summer: "여름", autumn: "가을", winter: "겨울" },
+			},
+			galleryLayout: { label: "배치", optionLabels: { grid: "격자", carousel: "넘겨 보기" } },
+			linkKind: { label: "링크 종류", optionLabels: { external: "바깥 주소", internal: "사이트 안의 글" } },
 			pinned: { label: "맨 위에 고정" },
 		},
 		layout: [
@@ -137,7 +143,13 @@ await write("collections.updateAdminValues", {
 });
 await write("collections.updateAdminValues", {
 	collection: "person",
-	values: { label: "사람", fields: labels({ bio: "소개", photo: "사진", roles: "역할", articles: "쓴 글" }) },
+	values: {
+		label: "사람",
+		fields: {
+			...labels({ bio: "소개", photo: "사진", articles: "쓴 글" }),
+			roles: { label: "역할", optionLabels: { writer: "글쓴이", photographer: "사진가", editor: "편집자" } },
+		},
+	},
 });
 await write("collections.updateAdminValues", {
 	collection: "series",

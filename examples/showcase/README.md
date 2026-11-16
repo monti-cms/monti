@@ -44,7 +44,8 @@ What to connect yourself:
 | `app/admin/…` | The admin, with the SEO and MDX plugins' browser halves |
 | `app/(site)/…`, `app/[locale]/…` | The site's pages: Korean without a prefix, `/en/…` and `/ja/…` |
 | `app/(site)/not-found.tsx`, `app/[locale]/not-found.tsx`, `app/[locale]/[...rest]/page.tsx` | The page of an address with nothing at it, inside the site's frame |
-| `site/pages.tsx` | What those pages draw: every field of an entry, then its body; and their search and share values (`generateMetadata`) |
+| `site/pages.tsx` | What those pages draw: every field of an entry that has a value, then its body; and their search and share values (`generateMetadata`) |
+| `site/messages.ts` | The words the site draws of its own, in Korean, English and Japanese: section titles, field names, the names of choices, the not-found page |
 | `site/frame.tsx` | The document, and the top line each page draws: the site's name and its languages, each going to the same entry in that language |
 | `app/site.css` | The site's looks, all under `.site` |
 

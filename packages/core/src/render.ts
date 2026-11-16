@@ -51,6 +51,12 @@ export type RenderOptions<Node> = {
 	code?: CodeColors;
 	/** The entry's language: handed to the site's block and mark components for the words they draw of their own, and the words the core draws itself (the code block's copy button). */
 	locale?: string;
+	/**
+	 * The site's source language. A translation's block that keeps or follows its source (`link.state` `keepSource`, `followSource`) is the
+	 * source's words in an entry of another language: it is drawn in an element that says so with `lang`, so a screen reader reads it in that
+	 * language and the browser picks its fonts and hyphens by it.
+	 */
+	sourceLocale?: string;
 };
 
 const text = (value: unknown) => (typeof value === "string" ? value : undefined);
@@ -281,7 +287,21 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 		return undefined;
 	};
 
+	const source = options.sourceLocale;
+	const inSource = (block: Block) =>
+		source !== undefined &&
+		options.locale !== undefined &&
+		source !== options.locale &&
+		block.type !== "footnote" &&
+		(block.link?.state === "keepSource" || block.link?.state === "followSource");
+	// An element of no box of its own around the block: the block's layout, its parent's and its neighbours' stay as they are.
 	const draw = (block: Block): Node | null => {
+		const drawn = drawBlock(block);
+		return drawn !== null && inSource(block)
+			? h("div", { key: block.id, lang: source, style: { display: "contents" } }, drawn)
+			: drawn;
+	};
+	const drawBlock = (block: Block): Node | null => {
 		const inner = block.children
 			? block.children.map(draw).filter((node) => node !== null)
 			: (block.content ?? []).map(inline);

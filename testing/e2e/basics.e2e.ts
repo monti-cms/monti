@@ -27,7 +27,7 @@ test("an entry written in the editor is on the server after a reload", async ({ 
 	await admin.keyboard.press("End");
 	await admin.keyboard.type(" 다시");
 	await admin.keyboard.press("ControlOrMeta+S");
-	await expect(admin.getByRole("button", { name: "저장 전 변경사항" })).toBeHidden();
+	await expect(admin.getByRole("button", { name: "저장 전 변경 사항" })).toBeHidden();
 	await admin.reload();
 	await expect(title).toHaveValue("처음 쓰는 글 다시");
 });

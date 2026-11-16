@@ -52,7 +52,7 @@ const coverSettings = (page: Page) => page.getByRole("button", { name: "cover �
 
 const saveKeys = async (page: Page) => {
 	await page.keyboard.press("ControlOrMeta+S");
-	await expect(page.getByRole("button", { name: "저장 전 변경사항" })).toBeHidden();
+	await expect(page.getByRole("button", { name: "저장 전 변경 사항" })).toBeHidden();
 };
 
 test.describe("the library", () => {
