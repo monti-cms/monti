@@ -17,7 +17,7 @@ import { Spinner } from "./spinner";
  * (2px more than from the top and bottom) and 10px at `sm`, with 7px to the words and a tighter right side (15px, 13px for `secondary`, 9px at `sm`). The caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`. It keeps the keyboard's focus while it works.
  */
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-default data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
+	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 cursor-pointer disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-held:pointer-events-auto data-held:cursor-default data-loading:pointer-events-auto data-loading:cursor-default data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
 	{
 		variants: {
 			variant: {
@@ -98,8 +98,9 @@ function Button({
 		 */
 		pendingLabel?: React.ReactNode;
 		/**
-		 * With `disabled`: the button a press has just turned off ("Published" after a publish) keeps the keyboard's focus. It is `aria-disabled`,
-		 * not the attribute, looks as any disabled button and takes no press.
+		 * With `disabled`: the button stays where the keyboard stops. It is `aria-disabled`, not the attribute: it looks as any disabled button,
+		 * takes no press, and a pointer's press stops on it (it does not go through to what is under it). For a button its own press turns off,
+		 * so that the focus does not fall to the page: the editor's publish button ("Published") always has it, as the split button's main half does.
 		 */
 		focusableWhenDisabled?: boolean;
 		/** Working on it: a spinner replaces the leading icon, the button keeps its fill (it is not dimmed like a disabled one) and cannot be pressed again. Put the progress in the label. */
@@ -130,6 +131,7 @@ function Button({
 			type={pendingLabel === undefined ? undefined : "submit"}
 			data-slot="button"
 			data-loading={busy || undefined}
+			data-held={(held && !busy) || undefined}
 			aria-busy={busy || undefined}
 			disabled={disabled || busy}
 			// Working is not "cannot be used": the button keeps the focus it was pressed with (`aria-disabled`, not the attribute, which would hand

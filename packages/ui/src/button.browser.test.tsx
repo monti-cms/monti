@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "../test/render";
@@ -324,7 +325,17 @@ describe("a split button that cannot be pressed", () => {
 
 	for (const part of ["button", "split"] as const)
 		it(`${part}: published from the keyboard, the greyed "발행됨" keeps the focus, looks off and takes no press`, async () => {
-			render(<Publishes part={part} />);
+			let beneath = 0;
+			render(
+				// biome-ignore lint/a11y/noStaticElementInteractions: what lies under the button (a row that opens on a press).
+				<div
+					onClick={() => {
+						beneath += 1;
+					}}
+				>
+					<Publishes part={part} />
+				</div>,
+			);
 			const idle = page.getByRole("button", { name: "발행하기" });
 			await expect.element(idle).toBeVisible();
 			(idle.element() as HTMLElement).focus();
@@ -339,10 +350,15 @@ describe("a split button that cannot be pressed", () => {
 			expect(getComputedStyle(dimmed).opacity).toBe("0.45");
 			await userEvent.keyboard("{Enter}");
 			await userEvent.keyboard(" ");
+			// A pointer's press stops on it, plain or pill alike: it does not go through to the page, and the focus stays.
+			expect(getComputedStyle(done.element()).pointerEvents).toBe("auto");
+			expect(getComputedStyle(done.element()).cursor).toBe("default");
+			const before = beneath;
 			await done.click({ force: true });
 			await expect.element(page.getByRole("status", { name: "presses" })).toHaveTextContent("1");
+			expect(beneath).toBe(before);
+			expect(document.activeElement).toBe(done.element());
 			// Tab goes on from it.
-			(done.element() as HTMLElement).focus();
 			await userEvent.keyboard("{Tab}");
 			expect(document.activeElement).toBe(page.getByRole("button", { name: "뒤" }).element());
 		});
@@ -360,5 +376,73 @@ describe("a split button that cannot be pressed", () => {
 		await expect.poll(() => document.activeElement).toBe(done.element());
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		expect(document.activeElement).toBe(done.element());
+	});
+
+	it("the focus the caret half held is handed on once: a pill greyed again later takes no focus from where the person went", async () => {
+		let turn: (state: "idle" | "busy" | "done") => void = () => {};
+		function Toggled() {
+			const [state, setState] = useState<"idle" | "busy" | "done">("idle");
+			turn = setState;
+			return (
+				<>
+					<SplitButton
+						disabled={state === "done"}
+						loading={state === "busy"}
+						menuLabel="발행 방식"
+						menu={<DropdownMenuItem onClick={() => setState("busy")}>오늘 날짜로 다시 발행</DropdownMenuItem>}
+					>
+						{state === "done" ? "발행됨" : state === "busy" ? "발행 중" : "발행하기"}
+					</SplitButton>
+					<input aria-label="제목" />
+				</>
+			);
+		}
+		render(<Toggled />);
+		const caret = page.getByRole("button", { name: "발행 방식" });
+		await expect.element(caret).toBeVisible();
+		(caret.element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "오늘 날짜로 다시 발행" })).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		// Working: the focus is back on the caret half. Done: the caret half goes off, and the main half takes it.
+		await expect.poll(() => document.activeElement).toBe(caret.element());
+		flushSync(() => turn("done"));
+		await expect.poll(() => document.activeElement).toBe(page.getByRole("button", { name: "발행됨" }).element());
+		// The person goes on to the title; the pill wakes (a letter typed) and is greyed again (the letter taken back).
+		const title = page.getByRole("textbox", { name: "제목" });
+		await userEvent.click(title);
+		flushSync(() => turn("idle"));
+		await expect.element(page.getByRole("button", { name: "발행하기" })).toBeVisible();
+		flushSync(() => turn("done"));
+		await expect.element(page.getByRole("button", { name: "발행됨" })).toBeVisible();
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(document.activeElement).toBe(title.element());
+	});
+
+	it("[TR-29] a pill turned off while its menu is open forgets the menu: pressable again, it does not come back open", async () => {
+		let turn: (off: boolean) => void = () => {};
+		function Toggled() {
+			const [off, setOff] = useState(false);
+			turn = setOff;
+			return (
+				<SplitButton
+					disabled={off}
+					menuLabel="발행 방식"
+					menu={<DropdownMenuItem>오늘 날짜로 다시 발행</DropdownMenuItem>}
+				>
+					발행하기
+				</SplitButton>
+			);
+		}
+		render(<Toggled />);
+		const row = page.getByRole("menuitem", { name: "오늘 날짜로 다시 발행" });
+		await userEvent.click(page.getByRole("button", { name: "발행 방식" }));
+		await expect.element(row).toBeVisible();
+		flushSync(() => turn(true));
+		await expect.element(row).not.toBeInTheDocument();
+		flushSync(() => turn(false));
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		await expect.element(row).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "발행 방식" })).toHaveAttribute("aria-expanded", "false");
 	});
 });

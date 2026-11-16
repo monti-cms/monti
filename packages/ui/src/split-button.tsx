@@ -49,12 +49,20 @@ function SplitButton({
 	const inert = disabled || loading;
 	// A pill that cannot be pressed shows no menu, whatever reaches its caret half (TR-29).
 	const [open, setOpen] = useState(false);
+	// What was open is forgotten too: a pill that can be pressed again does not come back with its menu.
+	if (inert && open) setOpen(false);
 	const main = useRef<HTMLButtonElement>(null);
 	const caret = useRef<HTMLButtonElement>(null);
-	// The caret half goes off with the pill. The focus it held (a publish started from the menu) goes to the main half, not to the page.
+	// The caret half goes off with the pill. The focus it held (a publish started from the menu) goes to the main half, not to the page. The
+	// mark is used once, and only a focus that is still on the caret half or has fallen to the page is moved: one the person has since put
+	// elsewhere (the title they went on to write) stays where it is.
 	const caretHeld = useRef(false);
 	useLayoutEffect(() => {
-		if (disabled && caretHeld.current) main.current?.focus();
+		if (!disabled) return;
+		const held = caretHeld.current;
+		caretHeld.current = false;
+		const at = document.activeElement;
+		if (held && (at === null || at === document.body || at === caret.current)) main.current?.focus();
 	}, [disabled]);
 	// The menu hangs under the whole pill, not under the caret half: its edge lines up with the pill's edge.
 	const pill = useRef<HTMLDivElement>(null);

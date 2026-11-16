@@ -142,6 +142,18 @@ const STATUS: Record<EntryState, EntryStatusKind> = {
 const SAVE_KEYS = ["mod", "s"] as const;
 /** The publish button, plain or the pill's main half: the one a focus is handed to when the two take each other's place. */
 const PUBLISH_ID = "monti-entry-publish";
+
+/** Whether the focus is on the publish control now: the plain button, either half of the pill, or the pill's open menu (named by its caret half). */
+function holdsPublish() {
+	const at = document.activeElement;
+	const control = document.getElementById(PUBLISH_ID);
+	if (!at || !control) return false;
+	const whole = control.closest("[data-slot=split-button]") ?? control;
+	if (whole.contains(at)) return true;
+	const namedBy = at.closest('[role="menu"]')?.getAttribute("aria-labelledby");
+	const opener = namedBy ? document.getElementById(namedBy) : null;
+	return opener !== null && whole.contains(opener);
+}
 /** The most blocks a request names (`ScreenContext.blocks`). */
 const MOST_BLOCKS_NAMED = 500;
 
@@ -248,20 +260,15 @@ export function EntryEditor({
 	// would give the same date, so the pill is the plain one, as for a first publish (button.md; TB-04).
 	const otherDate = publishedAt !== null && day(publishedAt, language) !== day(today, language);
 	// The pill and the plain button take each other's place (published again with today's date; midnight passed): the one that had the focus is
-	// gone with it, and the one that stands there now takes it, so the focus does not fall to the page.
-	const publishHeld = useRef(false);
-	useEffect(() => {
-		const seen = (event: FocusEvent) => {
-			const at = event.target as Element;
-			publishHeld.current =
-				at.id === PUBLISH_ID || Boolean(at.closest("[data-slot=split-button]")?.querySelector(`#${PUBLISH_ID}`));
-		};
-		document.addEventListener("focusin", seen);
-		return () => document.removeEventListener("focusin", seen);
-	}, []);
+	// gone with it, and the one that stands there now takes it, so the focus does not fall to the page. Whether it had the focus is looked at
+	// as the swap is drawn, not kept from earlier: a focus the person has since taken elsewhere, or dropped on the page, is not brought back.
+	const swapped = useRef({ otherDate, held: false });
+	if (swapped.current.otherDate !== otherDate) swapped.current = { otherDate, held: holdsPublish() };
 	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when one button has taken the other's place, which `otherDate` decides.
 	useLayoutEffect(() => {
-		if (publishHeld.current && document.activeElement === document.body) document.getElementById(PUBLISH_ID)?.focus();
+		const { held } = swapped.current;
+		swapped.current.held = false;
+		if (held && document.activeElement === document.body) document.getElementById(PUBLISH_ID)?.focus();
 	}, [otherDate]);
 	// The field's alt text was for the old picture (2026-11-09, owner): the new one has only what was said while it went up.
 	const fieldUploads = useFieldUploads((field, item, said) => {
@@ -1195,11 +1202,7 @@ export function EntryEditor({
 								{t("entry.publish")}
 							</DropdownMenuItem>
 							<DropdownMenuItem
-								onClick={() => {
-									// The focus is in the menu, which closes with the pill when the date becomes today's: it is the pill's own.
-									publishHeld.current = true;
-									void publish.publish("today");
-								}}
+								onClick={() => void publish.publish("today")}
 								caption={t("entry.publishTodayDate", { date: day(today, language) })}
 							>
 								{t("entry.publishToday")}

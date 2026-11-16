@@ -192,6 +192,41 @@ describe("the row's menu (menu.md)", () => {
 		await expect.element(main().getByText("가을 사진 정리")).toBeVisible();
 	});
 
+	/** The toast that says this, and its "되돌리기". */
+	const undoOf = (words: string) =>
+		page.getByText(words).element().closest("[data-sonner-toast]")?.querySelector("button") as HTMLElement;
+
+	it("02-6 the bar's '보관' archives the picked rows, lets go of the pick and says so in a toast: undone, both rows are back", async () => {
+		await listAt().run();
+		await rowsShown();
+		await userEvent.click(page.getByRole("checkbox", { name: "발행 후 고친 글 고르기" }));
+		await userEvent.click(page.getByRole("checkbox", { name: "가을 사진 정리 고르기" }));
+		await expect.element(page.getByText("2개 선택")).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "보관", exact: true }));
+		await expect.element(page.getByText("보관했습니다")).toBeVisible();
+		await expect.element(page.getByText("2개 선택")).not.toBeInTheDocument();
+		await expect.element(main().getByText("가을 사진 정리")).not.toBeInTheDocument();
+		await expect.element(main().getByText("발행 후 고친 글")).not.toBeInTheDocument();
+		await userEvent.click(undoOf("보관했습니다"));
+		await expect.element(main().getByText("가을 사진 정리")).toBeVisible();
+		await expect.element(main().getByText("발행 후 고친 글")).toBeVisible();
+	});
+
+	it("02-6 '보관 풀기' on an archived row says so in a toast with its way back: undone, the row is archived again", async () => {
+		await listAt().run();
+		await rowsShown();
+		await userEvent.click((await rowMenu("가을 사진 정리")).getByRole("menuitem", { name: "보관", exact: true }));
+		await expect.element(page.getByText("보관했습니다")).toBeVisible();
+		// The archived rows alone: the list's usual view leaves them out.
+		location.hash = "#/c/post?status=archived";
+		await expect.element(main().getByText("가을 사진 정리")).toBeVisible();
+		await userEvent.click((await rowMenu("가을 사진 정리")).getByRole("menuitem", { name: "보관 풀기" }));
+		await expect.element(page.getByText("보관을 풀었습니다")).toBeVisible();
+		await expect.element(main().getByText("가을 사진 정리")).not.toBeInTheDocument();
+		await userEvent.click(undoOf("보관을 풀었습니다"));
+		await expect.element(main().getByText("가을 사진 정리")).toBeVisible();
+	});
+
 	it("Backspace on a row puts it in the trash, as Delete does; the menu writes the key as a key, not typed", async () => {
 		await listAt().run();
 		await rowsShown();

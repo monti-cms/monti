@@ -1390,6 +1390,31 @@ describe("the entry editor: the focus after a publish", () => {
 		await heldByDone();
 	});
 
+	it("after a publish from the pill's menu, writing in the title keeps the focus there: the pill greyed again takes none", async () => {
+		const story = wired("changed");
+		await story.run();
+		await opened();
+		await expect.element(button("발행 방식")).toBeVisible();
+		(button("발행 방식").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
+		// The first row: the date kept, so the pill stays. The publish takes a while: the menu closes and the caret half has the focus meanwhile.
+		story.wire.cut = (name) => (name === "entries.publish" ? "held" : undefined);
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(() => document.activeElement).toBe(button("발행 방식").element());
+		story.wire.release();
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		await heldByDone();
+		await titleEnd();
+		await expect.element(title()).toHaveFocus();
+		await userEvent.keyboard("a");
+		await expect.element(button("발행하기")).toBeVisible();
+		await userEvent.keyboard("{Backspace}");
+		await expect.element(button("발행됨")).toBeVisible();
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		await expect.element(title()).toHaveFocus();
+	});
+
 	it("a publish picked in the pill's menu with the keyboard: the caret half goes off and the main half takes the focus", async () => {
 		await from(entry.RepublishMenu).run();
 		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
@@ -1431,6 +1456,44 @@ describe("the entry editor: the pill and the plain publish button take each othe
 		expect(document.activeElement).toBe(done.element());
 	});
 
+	/** The clock alone moves on a day (the timers go on as they are), and the window takes the focus: the day is looked at again. */
+	const nextDay = () => {
+		vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + 24 * 60 * 60 * 1000 });
+		window.dispatchEvent(new Event("focus"));
+	};
+	/** Published today from the keyboard: the plain "발행됨" has the focus. */
+	const publishedByKeys = async () => {
+		await on("draft").run();
+		await opened();
+		(button("발행하기").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		await expect.poll(() => document.activeElement).toBe(button("발행됨").element());
+		expect(document.querySelector("[data-slot=split-button]")).toBeNull();
+	};
+
+	it("midnight passes with the focus on the plain '발행됨': the pill takes its place, and its main half takes the focus", async () => {
+		await publishedByKeys();
+		nextDay();
+		await expect.element(button("발행 방식")).toBeVisible();
+		const main = document.querySelector("[data-slot=split-button] [data-slot=button]");
+		expect(main?.textContent).toBe("발행됨");
+		await expect.poll(() => document.activeElement).toBe(main);
+	});
+
+	it("the focus left on the page before the swap stays there: the pill that comes at midnight takes none", async () => {
+		await publishedByKeys();
+		// A press on nothing: the focus leaves the button, and no other control takes it.
+		const blank = [...document.querySelectorAll<HTMLElement>("[data-slot=status-bar-cell]")].at(-1) as HTMLElement;
+		expect(blank.tagName).toBe("SPAN");
+		await userEvent.click(blank);
+		expect(document.activeElement).toBe(document.body);
+		nextDay();
+		await expect.element(button("발행 방식")).toBeVisible();
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(document.activeElement).toBe(document.body);
+	});
+
 	it("[TB-04] an entry published today and left open past midnight gets its menu: the day is looked at again when the window takes the focus", async () => {
 		await on("draft").run();
 		await opened();
@@ -1440,9 +1503,7 @@ describe("the entry editor: the pill and the plain publish button take each othe
 		await userEvent.keyboard(" 다시");
 		await expect.element(button("발행하기")).toBeEnabled();
 		await expect.element(button("발행 방식")).not.toBeInTheDocument();
-		// The clock alone moves on a day: the timers go on as they are.
-		vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + 24 * 60 * 60 * 1000 });
-		window.dispatchEvent(new Event("focus"));
+		nextDay();
 		await expect.element(button("발행 방식")).toBeVisible();
 		await userEvent.click(button("발행 방식"));
 		const rows = page.getByRole("menuitem");
