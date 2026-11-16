@@ -2,7 +2,7 @@
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import * as React from "react";
-import { OutsideBody } from "./body-scope";
+import { ModalScope } from "./body-scope";
 import { Button } from "./button";
 import { cn } from "./cn";
 import { CutWords } from "./cut-words";
@@ -63,7 +63,7 @@ function ModalSurface({ closing, onKeyDown, children, ...props }: React.Componen
 			}}
 		>
 			{/* A modal opened from the editor's body covers its header: what opens in it keeps the plain window limit. */}
-			<OutsideBody>{children}</OutsideBody>
+			<ModalScope>{children}</ModalScope>
 		</div>
 	);
 }

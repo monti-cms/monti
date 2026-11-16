@@ -2,7 +2,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, onTestFinished } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "../test/render";
-import { BodyScope, useInBody } from "./body-scope";
+import { BodyScope, useBarScope } from "./body-scope";
 import { dock, dockTop } from "./bottom-dock";
 import {
 	AlertDialog,
@@ -262,8 +262,8 @@ describe("where a floating thing stands (overlay.md, the place rule)", () => {
 		await expect.poll(() => menu().getBoundingClientRect().top).toBeGreaterThanOrEqual(68);
 	});
 
-	it("a modal opened from the body is not in the body: the shared surface of a dialog and of a question resets the scope", async () => {
-		const Probe = ({ id }: { id: string }) => <span data-testid={id}>{String(useInBody())}</span>;
+	it("a modal opened from the body is in its own scope: the shared surface of a dialog and of a question sets it", async () => {
+		const Probe = ({ id }: { id: string }) => <span data-testid={id}>{useBarScope()}</span>;
 		render(
 			<BodyScope>
 				<Probe id="body" />
@@ -284,8 +284,8 @@ describe("where a floating thing stands (overlay.md, the place rule)", () => {
 			</BodyScope>,
 		);
 		const text = (id: string) => document.querySelector(`[data-testid=${id}]`)?.textContent;
-		await expect.poll(() => text("dialog")).toBe("false");
-		expect(text("question")).toBe("false");
-		expect(text("body")).toBe("true");
+		await expect.poll(() => text("dialog")).toBe("modal");
+		expect(text("question")).toBe("modal");
+		expect(text("body")).toBe("body");
 	});
 });
