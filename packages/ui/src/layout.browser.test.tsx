@@ -313,6 +313,29 @@ describe("a status and a row of a table (LR-04, LR-01, LR-02, LR-14, LT-03)", ()
 		expect((document.querySelector("tbody tr") as HTMLElement).getBoundingClientRect().height).toBe(41);
 	});
 
+	it("a folder's count follows its name at one distance, whatever the name's length: it is not a column (LF-05)", async () => {
+		render(
+			<Table container="none" layout="fixed" columns={[480]}>
+				<TableBody>
+					{["짧은", "이름이 꽤 길게 이어지는 폴더"].map((name) => (
+						<TableRow key={name}>
+							<TableCell truncate>
+								<RowTitle folder title={<RowLink href="#">{name}</RowLink>} note="글 2" />
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>,
+		);
+		await expect.element(page.getByText("짧은")).toBeVisible();
+		const gaps = [...document.querySelectorAll("[data-slot=row-title]")].map((title) => {
+			const name = box(title.querySelector("a") as Element);
+			const count = box(title.querySelector("[data-slot=row-title-note]") as Element);
+			return Math.round(count.left - name.right);
+		});
+		expect(gaps).toEqual([12, 12]);
+	});
+
 	it("a row is a whole number of pixels high, the head too (LT-03)", async () => {
 		render(<Rows />);
 		await expect.element(page.getByText("첫 번째 글 0")).toBeVisible();

@@ -221,6 +221,40 @@ export function tabular(adminCss, sources = {}) {
  * Cannot see: a second entry point that does not go through `MontiAdmin` (a new standalone page mounted by itself), or a theme set by a library the
  * admin does not call by name.
  */
+export const CN_FILE = "packages/ui/src/cn.ts";
+
+/**
+ * `type-merge`: `cn` knows every type role as a font size. A role it does not know reads to tailwind-merge as a colour (`text-…`), so
+ * `cn("text-monti-editor-code text-monti-danger")` would drop the role. From `tokens.json`: each `text-<role>` is `monti-<role>` in the
+ * `font-size` group of `cn.ts`, and that group names no role the tokens do not have.
+ *
+ * Cannot see: a role class merged by something other than `cn`.
+ */
+export function typeMerge(tokens, cnSource) {
+	const group = /"font-size":\s*\[\s*\{\s*text:\s*\[([^\]]*)\]/.exec(cnSource);
+	const at = group ? lineOf(cnSource, group.index) : 1;
+	const listed = new Set([...(group?.[1] ?? "").matchAll(/"monti-([a-z-]+)"/g)].map((match) => match[1]));
+	const roles = new Set(
+		tokens.type.groups.flatMap((each) => each.styles.map((style) => style.name.replace(/^text-/, ""))),
+	);
+	const problems = [];
+	for (const role of roles)
+		if (!listed.has(role))
+			problems.push({
+				file: CN_FILE,
+				line: at,
+				message: `the type role text-monti-${role} is not in cn's font-size group: tailwind-merge takes it for a colour and drops one of the two`,
+			});
+	for (const name of listed)
+		if (!roles.has(name))
+			problems.push({
+				file: CN_FILE,
+				line: at,
+				message: `cn's font-size group names monti-${name}, which is not a type role`,
+			});
+	return problems;
+}
+
 export const SCREEN_MODE_FILE = "packages/admin/src/screens/frame/use-screen-mode.ts";
 export const APP_ROOT_FILE = "packages/admin/src/app.tsx";
 

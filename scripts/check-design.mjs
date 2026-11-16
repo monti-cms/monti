@@ -63,6 +63,7 @@
  *   mono-words          `font-mono` and `text-monti-micro` (the small role is sans; mono is for values) only in a file named in
  *                       `MONO_OK` of `check-type-colour.mjs` with its reason. `check-type-colour.mjs` says what it cannot see.
  *   type-order          The heading roles step down, and the editor body's h2, h3, h4 are not smaller than its text (h4, the text's size, is semibold).
+ *   type-merge          Every type role of `tokens.json` is in the font-size group of `cn.ts`, and that group names no other.
  *   tabular             `admin.css` sets tabular digits on `.monti-admin` and the body, and no source takes them back.
  *   screen-mode-root    `data-theme` is written by `use-screen-mode.ts` alone, and `useApplyScreenMode` is called once, by `MontiAdmin` in `app.tsx`.
  *   token-contrast      `tokens.json` keeps its contrast: text 4.5:1, `border-strong` (the field underline) 3:1, `border-emphasis` 1.25:1, the dark pill darker
@@ -78,7 +79,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { problems as bannerPlaces } from "./check-banner-place.mjs";
 import { checked as formatChecked, problems as formatProblems } from "./check-format.mjs";
-import { FIELD_FILES, monoWords, screenModeRoot, tabular, tokenContrast, typeOrder } from "./check-type-colour.mjs";
+import {
+	CN_FILE,
+	FIELD_FILES,
+	monoWords,
+	screenModeRoot,
+	tabular,
+	tokenContrast,
+	typeMerge,
+	typeOrder,
+} from "./check-type-colour.mjs";
 import { problems as typedMarks } from "./check-typed-marks.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1416,6 +1426,7 @@ function checkTypeColour() {
 		"type-order",
 		typeOrder(JSON.parse(text("packages/ui/tokens/tokens.json")), text("packages/ui/src/editor-body.tsx")),
 	);
+	report("type-merge", typeMerge(JSON.parse(text("packages/ui/tokens/tokens.json")), text(CN_FILE)));
 	report("tabular", tabular(text(ADMIN_CSS_FILE), sources));
 	report("screen-mode-root", screenModeRoot(sources));
 	const read = Object.fromEntries([...FIELD_FILES, "packages/ui/src/table.tsx"].map((file) => [file, text(file)]));
@@ -1455,6 +1466,8 @@ const HINTS = {
 		"Mono is for values (an address, an id, code, a count); words are sans. A file that draws mono or the small roles is named in MONO_OK (check-type-colour.mjs) with the reason.",
 	"type-order":
 		"The heading roles step down (display, page, heading, subheading) and the editor's h2, h3, h4 are not smaller than the text.",
+	"type-merge":
+		"Add the role to the font-size group in packages/ui/src/cn.ts, or tailwind-merge takes text-monti-<role> for a colour.",
 	tabular:
 		"Digits are tabular: admin.css says font-variant-numeric: tabular-nums on .monti-admin and the body, and nothing takes it back.",
 	"design-allow": "A marker states why the value cannot be a token.",

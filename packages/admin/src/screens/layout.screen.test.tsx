@@ -284,7 +284,6 @@ describe("the list's left edges (LT-02, LF-05)", () => {
 		await Main.run();
 		const main = page.getByRole("main");
 		await expect.element(main.getByRole("heading", { level: 1 })).toBeVisible();
-		const title = box(main.element().querySelector("h1") as Element).left;
 		/** The left of the first words in an element (not a check that hangs in the margin). */
 		const inkLeft = (element: Element) => {
 			const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
@@ -306,19 +305,5 @@ describe("the list's left edges (LT-02, LF-05)", () => {
 		// The column's name and its words stand at one x: the head does not step away from what is under it.
 		expect(Math.round(inkLeft(heads[at] as Element) - inkLeft(cell))).toBeLessThanOrEqual(0);
 		expect(Math.round(inkLeft(cell) - inkLeft(heads[at] as Element))).toBeLessThanOrEqual(24);
-		void title;
-	});
-
-	it("a folder's count follows its name at one distance, whatever the name's length: it is not a column", async () => {
-		await Main.run();
-		const main = page.getByRole("main").element();
-		await expect.element(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
-		const gaps = [...main.querySelectorAll("tbody tr")].flatMap((row) => {
-			const count = row.querySelector("[data-slot=count]");
-			const name = count?.previousElementSibling ?? count?.parentElement?.querySelector("span");
-			if (!count || !name || !row.querySelector("svg") || name === count) return [];
-			return [Math.round(box(count).left - box(name).right)];
-		});
-		if (gaps.length > 1) expect(new Set(gaps).size, `gaps ${gaps.join(", ")}`).toBe(1);
 	});
 });

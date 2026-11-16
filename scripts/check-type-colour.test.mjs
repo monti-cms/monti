@@ -10,6 +10,7 @@ import {
 	screenModeRoot,
 	tabular,
 	tokenContrast,
+	typeMerge,
 	typeOrder,
 } from "./check-type-colour.mjs";
 
@@ -208,4 +209,13 @@ test("the showcase site has a dark theme: a prefers-color-scheme rule, and its r
 	const rules = css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/html:has\(\.site\) \{[^}]*\}/g, "");
 	assert.deepEqual(rules.match(/#[0-9a-f]{3,8}\b/gi) ?? [], []);
 	assert.match(css, /body:has\(\.site\) \{\s*background: var\(--site-bg\);/);
+});
+
+test("type-merge: cn knows every type role as a font size; a missing role and a stale name are caught", () => {
+	const cnSource = readFileSync(new URL("../packages/ui/src/cn.ts", import.meta.url), "utf8");
+	assert.deepEqual(typeMerge(tokens, cnSource), []);
+	const missing = typeMerge(tokens, cnSource.replace('"monti-editor-code",', ""));
+	assert.match(missing.at(0).message, /text-monti-editor-code is not in cn's font-size group/);
+	const stale = typeMerge(tokens, cnSource.replace('"monti-code",', '"monti-code",\n"monti-meta",'));
+	assert.match(stale.at(0).message, /names monti-meta, which is not a type role/);
 });
