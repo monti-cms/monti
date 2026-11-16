@@ -375,6 +375,8 @@ describe("the trash (doc 11, flow 5)", () => {
 		await userEvent.click(page.getByRole("button", { name: "복원" }));
 		await expect.element(page.getByText("휴지통에 있는 글입니다")).not.toBeInTheDocument();
 		await expect.element(title).not.toHaveAttribute("readonly");
+		// Restored, it is an entry of its collection: the address does not say it came from the trash.
+		expect(window.location.hash).not.toContain("from=trash");
 		await expect.element(languages.getByRole("button", { name: "언어", exact: true })).toBeVisible();
 		await expect.element(page.getByRole("button", { name: "발행하기" })).toBeVisible();
 		// The tag it points at is still in the trash: the field names it and says so (doc 08).

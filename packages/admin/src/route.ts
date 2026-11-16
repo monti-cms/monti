@@ -6,8 +6,11 @@ import { type MouseEvent, useCallback, useEffect, useState } from "react";
  */
 export type Route =
 	| { screen: "list"; collection: string; params: URLSearchParams }
-	/** An entry in the editor; `compare` shows the comparison over it (`?compare=conflict` or `?compare=draft`, screens.md EditorCompare). */
-	| { screen: "entry"; collection: string; id: string; compare?: "conflict" | "draft" }
+	/**
+	 * An entry in the editor; `compare` shows the comparison over it (`?compare=conflict` or `?compare=draft`, screens.md EditorCompare).
+	 * `from` says it was opened from the trash (`?from=trash`): the way back is the trash, known before the entry is read.
+	 */
+	| { screen: "entry"; collection: string; id: string; compare?: "conflict" | "draft"; from?: "trash" }
 	/** Settings (doc 12): its four tabs share one draft, so moving between them is a move inside one screen. */
 	| { screen: "settings"; tab: SettingsTab }
 	/** The media library (doc 09): its folder, filters and the open file are in the address. */
@@ -36,12 +39,14 @@ export function parseRoute(hash: string): Route {
 	const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
 	if (parts[0] === "c" && parts[1]) {
 		if (parts[2]) {
-			const compare = new URLSearchParams(search).get("compare");
+			const params = new URLSearchParams(search);
+			const compare = params.get("compare");
 			return {
 				screen: "entry",
 				collection: parts[1],
 				id: parts[2],
 				...(compare === "conflict" || compare === "draft" ? { compare } : {}),
+				...(params.get("from") === "trash" ? { from: "trash" as const } : {}),
 			};
 		}
 		return { screen: "list", collection: parts[1], params: new URLSearchParams(search) };
@@ -92,8 +97,13 @@ export function href(route: Route): string {
 			const search = route.params.toString();
 			return `#/c/${encodeURIComponent(route.collection)}${search ? `?${search}` : ""}`;
 		}
-		case "entry":
-			return `#/c/${encodeURIComponent(route.collection)}/${encodeURIComponent(route.id)}${route.compare ? `?compare=${route.compare}` : ""}`;
+		case "entry": {
+			const search = new URLSearchParams({
+				...(route.compare ? { compare: route.compare } : {}),
+				...(route.from ? { from: route.from } : {}),
+			}).toString();
+			return `#/c/${encodeURIComponent(route.collection)}/${encodeURIComponent(route.id)}${search ? `?${search}` : ""}`;
+		}
 		case "settings":
 			return `#/settings/${route.tab}`;
 		case "media": {

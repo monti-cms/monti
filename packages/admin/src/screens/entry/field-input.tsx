@@ -324,6 +324,7 @@ function RelationOrderedManyInput({
 	placeholder,
 	readOnly,
 	proposal,
+	labelledBy,
 }: {
 	id: string;
 	collection: string;
@@ -339,6 +340,8 @@ function RelationOrderedManyInput({
 	readOnly: boolean;
 	/** The value shown is one the assistant proposed and nobody has taken or changed yet. */
 	proposal?: boolean;
+	/** The label's id: it names the list a read-only field is. */
+	labelledBy?: string;
 }) {
 	const { t } = useAdmin();
 	const rel = useRelationField({ collection, field, locale, entryGroup, createMissing, skip: offline });
@@ -398,7 +401,7 @@ function RelationOrderedManyInput({
 			)}
 			{/* Only read: the items in their order, with nothing that moves or removes one (no grip, no ×, no word on how to move). */}
 			{value.length > 0 && readOnly && (
-				<List marker="none" id={id}>
+				<List marker="none" id={id} aria-labelledby={labelledBy}>
 					{value.map((item) => (
 						<OrderedRow key={item}>
 							<Text>{rel.labelOf(item)}</Text>
@@ -502,6 +505,7 @@ export function FieldInput({
 	strays = [],
 	relation,
 	slugAction,
+	labelledBy,
 	textProps,
 }: {
 	def: Definition;
@@ -520,6 +524,8 @@ export function FieldInput({
 	relation: RelationSource | null;
 	/** The button at the end of the address input. */
 	slugAction?: ReactNode;
+	/** The id of the field's label, for a value drawn as something a label cannot point at (a read-only list of ordered items). */
+	labelledBy?: string;
 	/** What the panel adds to a text's input (its focus, for the count). */
 	textProps?: Pick<ComponentProps<"input">, "onFocus" | "onBlur">;
 }) {
@@ -608,7 +614,8 @@ export function FieldInput({
 			proposal,
 		};
 		const many = Array.isArray(value) ? (value as string[]) : [];
-		if (def.many && def.ordered) return <RelationOrderedManyInput {...shared} value={many} onChange={onChange} />;
+		if (def.many && def.ordered)
+			return <RelationOrderedManyInput {...shared} labelledBy={labelledBy} value={many} onChange={onChange} />;
 		if (def.many) return <RelationManyInput {...shared} value={many} onChange={onChange} />;
 		return (
 			<RelationSingleInput

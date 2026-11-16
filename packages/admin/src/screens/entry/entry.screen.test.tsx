@@ -1603,6 +1603,9 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 		const names = ["slug", "summary", "note", "mood", "moods", "category", "topics"];
 		// The ordered items are a list to read, in their order.
 		expect(field("series").textContent).toBe("개발일상");
+		// A list is nothing a label points at: it is named by the field's label instead.
+		await expect.element(panel().getByRole("list", { name: "series" })).toBeVisible();
+		expect(panel().element().querySelector("label[for=monti-entry-series]")).toBeNull();
 		expect(dimmed(field("series"))).toBe(false);
 		for (const name of names) {
 			expect(field(name), name).not.toBeNull();

@@ -348,7 +348,11 @@ export function EntryProperties({
 			proposal,
 			entry: entryView(),
 		});
-		const note = own?.Note ? <own.Note {...ownProps()} /> : count;
+		// A field that is only read has nothing beside its name that is about writing it: no count of its own, and none a plugin's input
+		// brings (the host's rule, so every plugin's field follows it).
+		const note = readOnly ? undefined : own?.Note ? <own.Note {...ownProps()} /> : count;
+		// Only read, an ordered relation with items is a list, which no label can point at with `htmlFor`: the list is named by the label.
+		const listOnly = !own && readOnly && def.kind === "relation" && def.many && def.ordered && hasValue(value);
 		const changeMark = changes?.marks.find((mark) => mark.field === key);
 		const shownInCard = (shownValue: unknown) =>
 			def.kind === "media" ? (
@@ -526,6 +530,7 @@ export function EntryProperties({
 					optionLabels={values[key]?.optionLabels}
 					strays={strays}
 					relation={{ collection, field: key, locale: currentLocale, entryGroup }}
+					labelledBy={listOnly ? `${id}-label` : undefined}
 					slugAction={
 						readOnly || editor.title.trim() === "" ? undefined : (
 							<IconButton label={t("entry.slugAgain")} onClick={() => setField(path, slugify(editor.title))}>
@@ -566,7 +571,7 @@ export function EntryProperties({
 				}}
 			>
 				<FormFieldLabel
-					htmlFor={id}
+					{...(listOnly ? { id: `${id}-label` } : { htmlFor: id })}
 					required={marksRequired && required(key)}
 					changed={proposedLabel}
 					// While a proposal waits the row is the proposal's alone: no count, no mark of the source's change beside "discard".

@@ -170,6 +170,7 @@ export function EntryEditor({
 	compare,
 	onBack,
 	onTrash,
+	onLive,
 	onCompare,
 	onOpen,
 	onLanguages,
@@ -182,6 +183,8 @@ export function EntryEditor({
 	onBack: () => void;
 	/** To the trash's screen: where an entry in the trash goes back to, and where one deleted for good leaves for. */
 	onTrash: () => void;
+	/** The entry was opened from the trash and is not in it (restored, here or elsewhere): the address stops saying it is. */
+	onLive?: () => void;
 	onCompare: (mode: CompareMode | null) => void;
 	/** Another entry (a copy just made). */
 	onOpen: (id: string) => void;
@@ -315,6 +318,11 @@ export function EntryEditor({
 	);
 	const archived = read?.state === "archived";
 	const trashed = Boolean(read?.entry.trashedAt);
+	const live = read !== null && !trashed;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `onLive` is made anew on every draw; only the entry leaving the trash calls it.
+	useEffect(() => {
+		if (live) onLive?.();
+	}, [live]);
 	const readOnly = archived || trashed;
 	// In the trash (doc 11): how long it stays and what a permanent delete keeps, read with it.
 	const inTrash = useRead<TrashedEntry>("trash.get", { id }, { skip: !trashed, quiet: true }).data;

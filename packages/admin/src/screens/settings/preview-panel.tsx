@@ -118,7 +118,7 @@ export function PreviewPanel({
 				id={id}
 				value={typed[key] ?? null}
 				onChange={(next) => setTyped((was) => ({ ...was, [key]: next }))}
-				placeholder={t(def.kind === "relation" ? "settings.preview.none" : "settings.preview.empty")}
+				placeholder={t("settings.preview.empty")}
 				readOnly={false}
 				optionLabels={(model.shown(at.fieldValue(c, key, "optionLabels")) ?? {}) as Record<string, string>}
 				relation={null}

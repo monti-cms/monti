@@ -21,7 +21,7 @@ import { ActivityScreen } from "./screens/activity/activity-screen";
 import { DataScreen } from "./screens/data/data-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
-import { CollectionBack, TemplatesBack } from "./screens/frame/editor-back";
+import { CollectionBack, TemplatesBack, TrashBack } from "./screens/frame/editor-back";
 import { ReadFailedBanner } from "./screens/frame/read-failed";
 import { ScreenBoundary } from "./screens/frame/screen-boundary";
 import { KeysScreen } from "./screens/keys/keys-screen";
@@ -208,23 +208,48 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 	if (route.screen === "entry") {
 		const toList = () =>
 			leave(() => go({ screen: "list", collection: route.collection, params: new URLSearchParams() }));
+		const toTrash = () => leave(() => go({ screen: "trash", params: new URLSearchParams() }));
+		// Where the entry was opened from stays with it while it is that entry in the trash: its other languages, its comparison.
+		const from = route.from ? { from: route.from } : {};
 		return (
 			<BesideAssistant panel={panel}>
-				<ScreenBoundary at={at} back={<CollectionBack collection={route.collection} onBack={toList} />}>
+				<ScreenBoundary
+					at={at}
+					// The same way back the editor's head has: the trash for an entry opened from it, its collection's list otherwise.
+					back={
+						route.from === "trash" ? (
+							<TrashBack onBack={toTrash} />
+						) : (
+							<CollectionBack collection={route.collection} onBack={toList} />
+						)
+					}
+				>
 					<EntryEditor
 						key={route.id}
 						collection={route.collection}
 						id={route.id}
 						compare={route.compare ?? null}
 						onBack={toList}
-						onTrash={() => leave(() => go({ screen: "trash", params: new URLSearchParams() }))}
+						onTrash={toTrash}
+						// Restored, it is no entry of the trash any more: the address says so, and so does the way back.
+						onLive={
+							route.from
+								? () => go({ screen: "entry", collection: route.collection, id: route.id }, { replace: true })
+								: undefined
+						}
 						// The comparison is a step inside the editor: back returns to the editor as it was, with what was typed.
 						onCompare={(compare) =>
 							leaveFiles(() =>
-								go({ screen: "entry", collection: route.collection, id: route.id, ...(compare ? { compare } : {}) }),
+								go({
+									screen: "entry",
+									collection: route.collection,
+									id: route.id,
+									...(compare ? { compare } : {}),
+									...from,
+								}),
 							)
 						}
-						onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id }))}
+						onOpen={(id) => leave(() => go({ screen: "entry", collection: route.collection, id, ...from }))}
 						onLanguages={() => leave(() => go({ screen: "settings", tab: "languages" }))}
 						// In a new tab, as the list's "open in new tab": the editor stays as it is, with what was typed (AS-21).
 						onActivity={() =>
@@ -243,7 +268,7 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 		const toTemplates = () => leave(() => go({ screen: "place", place: "tools" }));
 		return (
 			<BesideAssistant panel={panel}>
-				<ScreenBoundary at={at} back={<TemplatesBack onBack={toTemplates} />}>
+				<ScreenBoundary at={at} back={<TemplatesBack onBack={toTemplates} />} backGap={16}>
 					<TemplateEditor
 						key={route.id ?? "new"}
 						id={route.id}

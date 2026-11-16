@@ -26,3 +26,9 @@ export function TemplatesBack({ onBack }: { onBack: () => void }) {
 	const { t } = useAdmin();
 	return <EditorBack onBack={onBack}>{t("templates.back")}</EditorBack>;
 }
+
+/** The way back to the trash: an entry opened from it. */
+export function TrashBack({ onBack }: { onBack: () => void }) {
+	const { t } = useAdmin();
+	return <EditorBack onBack={onBack}>{t("frame.trash")}</EditorBack>;
+}

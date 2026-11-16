@@ -149,12 +149,17 @@ describe("the SEO tab in the editor (T84, T75; flow 1·08)", () => {
 	it("14-5 [AT-29] in an entry that cannot be changed the plugin's inputs are read, not off: full ink, the keyboard stops on them, and nothing changes what they hold", async () => {
 		const story = open({ loaders: plugins.site({ seoValues: { seoTitle: "검색 제목", seoNoindex: "noindex" } }) });
 		await story.run();
+		// While it can be written, the plugin's count stands at the end of the label row.
+		await userEvent.click(tab(/SEO/));
+		await expect.element(page.getByText("5/60")).toBeVisible();
 		await userEvent.click(button("더 보기"));
 		await userEvent.click(page.getByRole("menuitem", { name: "보관", exact: true }));
 		await expect.element(button("보관 풀기")).toBeVisible();
 		await userEvent.click(tab(/SEO/));
 		const title = field("SEO 제목");
 		await expect.element(title).toHaveValue("검색 제목");
+		// Only read: no count beside the name, the host's rule for every plugin's field.
+		await expect.element(page.getByText("5/60")).not.toBeInTheDocument();
 		await expect.element(title).toBeEnabled();
 		await expect.element(title).toHaveAttribute("readonly");
 		expect(getComputedStyle(title.element()).opacity).toBe("1");
