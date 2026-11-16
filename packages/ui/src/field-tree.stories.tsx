@@ -14,7 +14,7 @@ export const Outline: Story = {
 	render: () => (
 		<FieldTree>
 			<FieldRow name="slug !" label="주소" kind="slug" grip={false} />
-			<FieldRow name="title !" label="제목" description="목록과 검색 결과에 보여요" kind="text" />
+			<FieldRow name="title" required label="제목" description="목록과 검색 결과에 보입니다" kind="text" />
 			<FieldRow name="seo" label="검색 노출" group />
 			<FieldRow name="seo.title" label="검색 제목" kind="text" depth={1} />
 			<FieldRow name="seo.image" label="공유 이미지" kind="image" depth={1} locked="seo 플러그인이 둔 필드" />
@@ -56,7 +56,7 @@ export const Changes: Story = {
 export const Openable: Story = {
 	render: () => (
 		<FieldTree>
-			<FieldRow name="title !" label="제목" kind="text" onOpen={() => {}} openLabel="제목 필드 열기" />
+			<FieldRow name="title" required label="제목" kind="text" onOpen={() => {}} openLabel="제목 필드 열기" />
 			<FieldRow name="summary" label="요약" kind="textarea" onOpen={() => {}} openLabel="요약 필드 열기" />
 		</FieldTree>
 	),
@@ -66,7 +66,7 @@ export const Openable: Story = {
 export const Group: Story = {
 	render: () => (
 		<FieldTree>
-			<FieldRow name="title !" label="제목" kind="text" />
+			<FieldRow name="title" required label="제목" kind="text" />
 			<FieldGroup name="검색 노출">
 				<FieldRow name="seoTitle" label="검색 제목" kind="text" depth={1} />
 				<FieldRow name="seoImage" label="공유 이미지" kind="image" depth={1} />
@@ -83,7 +83,7 @@ export const Group: Story = {
 export const Branch: Story = {
 	render: () => (
 		<FieldTree>
-			<FieldRow name="title !" label="제목" kind="text" />
+			<FieldRow name="title" required label="제목" kind="text" />
 			<FieldGroup head={<FieldRow name="format !" label="글 종류" kind="conditional · 2" />}>
 				<FieldRow group grip={false} depth={1} name="글" note="article · 필드 없음" />
 				<FieldRow group grip={false} depth={1} name="동영상" note="video" />
@@ -109,7 +109,7 @@ export const Held: Story = {
 		<div className="flex w-[640px] flex-col gap-monti-32">
 			<div className="relative">
 				<FieldTree>
-					<FieldRow name="title !" label="제목" kind="text" />
+					<FieldRow name="title" required label="제목" kind="text" />
 					<FieldRow
 						name="summary"
 						label="요약"
@@ -126,7 +126,7 @@ export const Held: Story = {
 			</div>
 			<div className="relative">
 				<FieldTree>
-					<FieldRow name="title !" label="제목" kind="text" />
+					<FieldRow name="title" required label="제목" kind="text" />
 					<FieldGroup name="검색 노출" dragging>
 						<FieldRow name="seoTitle" label="검색 제목" kind="text" depth={1} />
 						<FieldRow name="seoImage" label="공유 이미지" kind="image" depth={1} />

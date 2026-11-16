@@ -8,7 +8,7 @@ const lineOf = (source, index) => source.slice(0, index).split("\n").length;
  * mono, so every word in them was). A file may use them only if it is named here with the reason, and the reason says which values stay mono. A name whose
  * file no longer uses any of them fails too, so the list is only what is true. The small role `micro` is sans now; `font-mono` on a span says "this is a value".
  *
- * Cannot see: mono set through props (`<Text mono>`, `metaMono`, `ofMono`, `Input mono`): they are not these words, so a word set that way is missed.
+ * Cannot see: mono set through props (`<Text mono>`, `metaMono`, `ofMono`, `Input mono`): they are not these words; `mono-props` (`check-parts.mjs`) reads those.
  * Nor whether a given child of a listed file is a number or a word. The reason carries that, and a person reading the diff of this list sees a new
  * place. A mono face set by another word (a `style` or `font-family` of its own) is the `off-system` rule's.
  */

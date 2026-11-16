@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Book, Tag, UserMultiple } from "./icons";
 import {
 	Select,
 	SelectContent,
@@ -144,4 +145,43 @@ export const Open: Story = {
 			</Select>
 		</Stack>
 	),
+};
+
+/** The collection icon picker of the settings: rows with their icons, and the picked one in the field too (a 36px field, as the name above it). */
+export const WithIcons: Story = {
+	tags: ["visual"],
+	render: () => {
+		const icons = [
+			{ value: "tag", label: "태그", Icon: Tag },
+			{ value: "user-multiple", label: "여러 사람", Icon: UserMultiple },
+			{ value: "book", label: "책", Icon: Book },
+		];
+		return (
+			<Stack className="min-h-72 max-w-sm">
+				<Select items={icons} defaultOpen defaultValue="book">
+					<SelectTrigger width="full">
+						<SelectValue>
+							{(value: string) => {
+								const picked = icons.find((each) => each.value === value);
+								return picked ? (
+									<span className="inline-flex items-center gap-monti-8">
+										<picked.Icon aria-hidden />
+										{picked.label}
+									</span>
+								) : null;
+							}}
+						</SelectValue>
+					</SelectTrigger>
+					<SelectContent>
+						{icons.map((each) => (
+							<SelectItem key={each.value} value={each.value}>
+								<each.Icon aria-hidden />
+								{each.label}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</Stack>
+		);
+	},
 };

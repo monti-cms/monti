@@ -32,7 +32,7 @@ export const Note: Story = {
 			<PopoverContent>
 				<PopoverHeader>
 					<PopoverTitle>예약 발행</PopoverTitle>
-					<PopoverDescription>11월 4일 오전 9:00에 사이트에 올라가요.</PopoverDescription>
+					<PopoverDescription>11월 4일 오전 9:00에 사이트에 올라갑니다.</PopoverDescription>
 				</PopoverHeader>
 				<Button size="sm">예약 취소</Button>
 			</PopoverContent>
@@ -52,7 +52,7 @@ export const Small: Story = {
 				}
 			/>
 			<PopoverContent width="sm">
-				<Text variant="note">메뉴 폭의 카드예요.</Text>
+				<Text variant="note">메뉴 폭의 카드입니다.</Text>
 			</PopoverContent>
 		</Popover>
 	),
@@ -69,7 +69,7 @@ export const Large: Story = {
 				}
 			/>
 			<PopoverContent width="lg">
-				<Text variant="note">어시스턴트 폭의 카드예요.</Text>
+				<Text variant="note">어시스턴트 폭의 카드입니다.</Text>
 			</PopoverContent>
 		</Popover>
 	),

@@ -177,6 +177,49 @@ describe("the SEO tab in the editor (T84, T75; flow 1·08)", () => {
 		expect((await entry(story.loaded())).values).toMatchObject({ seoTitle: "검색 제목", seoNoindex: "noindex" });
 	});
 
+	/** A switch's row must be the part's own `Option` row, and the switch one line with its name at that row's end (not a stand-in for it). */
+	const expectSwitchRow = (hide: ReturnType<typeof page.getByRole>) => {
+		const box = (element: Element) => element.getBoundingClientRect();
+		const row = hide.element().closest("[data-slot=option]");
+		expect(row, "the switch is in an Option row").not.toBeNull();
+		// Its name is a text of the row: its box is the text's own.
+		const walker = document.createTreeWalker(row as Element, NodeFilter.SHOW_TEXT);
+		let text: Node | null = walker.nextNode();
+		while (text && !text.textContent?.includes("검색에서 숨기기")) text = walker.nextNode();
+		expect(text, "the row holds its name").not.toBeNull();
+		const range = document.createRange();
+		range.selectNodeContents(text as Node);
+		const name = { getBoundingClientRect: () => range.getBoundingClientRect() };
+		// One line: the switch's middle is the name's middle, the switch is after the name's start and at the row's end.
+		expect(
+			Math.abs(
+				box(hide.element()).top +
+					box(hide.element()).height / 2 -
+					(box(name as unknown as Element).top + box(name as unknown as Element).height / 2),
+			),
+		).toBeLessThan(4);
+		expect(box(hide.element()).left).toBeGreaterThan(box(name as unknown as Element).left);
+		expect(box(row as Element).right - box(hide.element()).right).toBeLessThan(4);
+		// The row is a line of the control height, not a label with the switch under it.
+		expect(box(row as Element).height).toBeLessThan(44);
+	};
+
+	it("[PP-55] a plugin's switch stands as a built-in one does: its name at the start of the row and the switch at the end, on one line", async () => {
+		await open(plugins.SeoTab).run();
+		const hide = page.getByRole("switch", { name: "검색에서 숨기기" });
+		await expect.element(hide).toBeVisible();
+		expectSwitchRow(hide);
+	});
+
+	it("[PP-55] the settings' preview draws the plugin's switch the same way, from the same row", async () => {
+		await open(plugins.LockedTab).run();
+		await userEvent.click(button("속성 패널 미리보기"));
+		await userEvent.click(page.getByRole("tab", { name: "SEO", exact: true }));
+		const hide = page.getByRole("tabpanel").last().getByRole("switch", { name: "검색에서 숨기기" });
+		await expect.element(hide).toBeVisible();
+		expectSwitchRow(hide);
+	});
+
 	it("14-5 'hide from search' is a switch: on, the preview says so and the value is noindex; off, the value is gone", async () => {
 		const story = open(plugins.SeoTab);
 		await story.run();

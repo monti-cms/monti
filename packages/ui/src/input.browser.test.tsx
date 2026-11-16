@@ -37,3 +37,21 @@ it("a read-only input keeps its line as it is under the pointer and the focus, w
 		expect({ color: now.borderBottomColor, ground: now.backgroundColor }).toEqual(before);
 	}
 });
+
+it("[T276] a `mono` input types its value in mono and keeps its placeholder, which is words, in the sans face", async () => {
+	render(
+		<>
+			<Input aria-label="주소" mono placeholder="공개 주소에서" defaultValue="first-post" />
+			<Input aria-label="비어 있는 주소" mono placeholder="공개 주소에서" />
+		</>,
+	);
+	const typed = page.getByRole("textbox", { name: "주소", exact: true });
+	const empty = page.getByRole("textbox", { name: "비어 있는 주소" });
+	await expect.element(typed).toBeVisible();
+	const mono = getComputedStyle(typed.element()).fontFamily;
+	// The value is in the mono face; the placeholder is the page's own sans face.
+	expect(mono).toMatch(/mono|Mono|monospace/i);
+	const holder = getComputedStyle(empty.element(), "::placeholder").fontFamily;
+	expect(holder).not.toBe(mono);
+	expect(holder).not.toMatch(/mono|Mono|monospace/i);
+});

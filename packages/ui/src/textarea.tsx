@@ -54,7 +54,8 @@ function Textarea({
 					: size === "md"
 						? "min-h-monti-control-md py-monti-4 text-monti-reading md:text-monti-prose"
 						: "min-h-monti-control-lg py-monti-6 text-monti-reading md:text-monti-prose",
-				mono && "font-mono",
+				// What is typed is a value, in mono; the placeholder is words, and stays in the sans face (tokens.md).
+				mono && "font-mono placeholder:font-sans",
 				tall && "min-h-[52px]",
 				// With an action the line around it draws the rule, so the box keeps the height less that 1px.
 				action &&

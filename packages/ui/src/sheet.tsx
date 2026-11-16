@@ -3,6 +3,7 @@
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import * as React from "react";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { BACKDROP, modalSurface, useModalFocus } from "./dialog";
 import { IconButton } from "./icon-button";
 import { Close } from "./icons";
@@ -171,14 +172,18 @@ function SheetTitle({
 	...props
 }: SheetPrimitive.Title.Props & { of?: React.ReactNode; ofMono?: boolean }) {
 	return (
-		<SheetPrimitive.Title data-slot="sheet-title" className={cn(PANEL_TITLE, className)} {...props}>
+		<CutWords
+			render={
+				<SheetPrimitive.Title data-slot="sheet-title" className={cn(PANEL_TITLE, "truncate", className)} {...props} />
+			}
+		>
 			{children}
 			{of && (
 				<span className={cn("ml-monti-4 font-normal text-monti-caption text-monti-subtle", ofMono && "font-mono")}>
 					{of}
 				</span>
 			)}
-		</SheetPrimitive.Title>
+		</CutWords>
 	);
 }
 

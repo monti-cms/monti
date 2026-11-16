@@ -24,7 +24,7 @@ export const InSentence: Story = {
 	render: () => (
 		<Box maxWidth="panel">
 			<Text variant="body">
-				글이 아직 저장되지 않았어요. <TextButton variant="underline">목록에서 보기 →</TextButton> 또는{" "}
+				글이 아직 저장되지 않았습니다. <TextButton variant="underline">목록에서 보기 →</TextButton> 또는{" "}
 				<TextButton variant="underline" mono href="#top">
 					/first-post
 				</TextButton>

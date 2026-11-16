@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { IconButton, IconButtonContext } from "./icon-button";
 import { ArrowUp, Pen, TrashCan } from "./icons";
 
@@ -73,7 +74,7 @@ export function ChatQueueItem({
 }) {
 	return (
 		<li data-slot="chat-queue-item" className={cn("flex min-w-0 items-center gap-monti-2", className)} {...props}>
-			<span className="min-w-0 flex-1 truncate text-monti-default text-monti-note">{children}</span>
+			<CutWords className="min-w-0 flex-1 truncate text-monti-default text-monti-note">{children}</CutWords>
 			<IconButton size="xs" tone="quiet" label={sendNowLabel} onClick={onSendNow}>
 				{sendNowIcon}
 			</IconButton>

@@ -44,7 +44,7 @@ const CATEGORIES = [
  */
 export function TaxonomyScreen() {
 	return (
-		<AdminFrame open="categories" corner={false}>
+		<AdminFrame open="categories">
 			<Inline align="stretch" gap={0} grow minHeight={0}>
 				<PageColumn>
 					{/* The board's list is 720px: the column's 48px sides and 20px more on each. */}

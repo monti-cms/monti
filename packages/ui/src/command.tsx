@@ -14,6 +14,7 @@ import {
 	MENU_SEPARATOR,
 	MenuTick,
 } from "./menu-parts";
+import { menuWords } from "./menu-words";
 
 /**
  * A menu you can search: a search line on top, the rows under it, and the keyboard never leaves the line. It is the content of a card (a
@@ -106,7 +107,7 @@ function CommandItem({
 			className={cn(COMMAND_ITEM, className)}
 			{...props}
 		>
-			{children}
+			{menuWords(children)}
 			{checked && <MenuTick />}
 		</CommandPrimitive.Item>
 	);

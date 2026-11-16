@@ -1,6 +1,7 @@
 import type * as React from "react";
 import { cn } from "./cn";
 import { MENU_LABEL, MENU_ROW, MENU_SEPARATOR } from "./menu-parts";
+import { menuWords } from "./menu-words";
 
 /**
  * A short list of kinds to pick one from, drawn as menu rows without the floating card (the kind of a new field: text, choice, media, link).
@@ -39,7 +40,7 @@ function PickListItem({
 			)}
 			{...props}
 		>
-			{children}
+			{menuWords(children)}
 			{mark && <span className="ml-auto shrink-0 font-mono text-monti-micro text-monti-subtle">{mark}</span>}
 		</button>
 	);

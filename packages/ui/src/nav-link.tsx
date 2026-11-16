@@ -1,6 +1,7 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { HELD } from "./sortable";
 
 /**
@@ -65,7 +66,7 @@ function NavLink({
 					"cursor-pointer text-monti-muted not-disabled:hover:bg-monti-muted aria-[current=page]:bg-monti-selected data-active:bg-monti-selected",
 				)}
 			>
-				<span className="min-w-0 truncate">{children}</span>
+				<CutWords className="min-w-0 truncate">{children}</CutWords>
 				{dot && <ChangeDot label={dot} className="-ml-monti-4" />}
 				{note && <span className={NAV_ROW_END}>{note}</span>}
 			</button>

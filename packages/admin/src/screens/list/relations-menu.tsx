@@ -14,16 +14,23 @@ import {
 	MenuValue,
 	toast,
 } from "@monti-cms/ui";
-import { Tag } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { useUndo } from "../../activity/use-undo";
+import { useCollectionIcon } from "../../format/collection-icon";
 import { addressIfShared, endsClosed, fieldName as fieldNameOf, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
+import type { SchemaRead } from "../settings/schema-draft";
 
 /** The radio values of "none" and of rows that hold different values: no group id looks like these. */
 const NONE = "\u0000none";
 const MIXED = "\u0000mixed";
+
+/** The collection a relation field of a collection points at, from the schema the admin holds. */
+const targetOf = (schema: SchemaRead | null | undefined, collection: string, field: string) => {
+	const def = schema?.schema.collections[collection]?.fields[field];
+	return def?.kind === "relation" ? def.to : undefined;
+};
 
 export type RelationSubmenuProps = {
 	collection: string;
@@ -40,6 +47,8 @@ export type RelationSubmenuProps = {
  */
 export function RelationSubmenu({ collection, column, rows, context, icon = false, onDone }: RelationSubmenuProps) {
 	const { t } = useAdmin();
+	const iconOf = useCollectionIcon();
+	const schema = useRead<SchemaRead>("schema.read");
 	const [find, setFind] = useState("");
 	const fieldName = column.field ?? column.id;
 	const read = useRead<RelationOptionsResult>("relations.options", { collection, field: fieldName });
@@ -152,7 +161,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 		return (
 			<ContextMenuSub>
 				<ContextMenuSubTrigger>
-					{icon && <Tag aria-hidden />}
+					{icon && iconOf(targetOf(schema.data, collection, fieldName))}
 					{fieldLabel}
 				</ContextMenuSubTrigger>
 				<ContextMenuSubContent>{menuItems}</ContextMenuSubContent>
@@ -163,7 +172,7 @@ export function RelationSubmenu({ collection, column, rows, context, icon = fals
 	return (
 		<DropdownMenuSub>
 			<DropdownMenuSubTrigger>
-				{icon && <Tag aria-hidden />}
+				{icon && iconOf(targetOf(schema.data, collection, fieldName))}
 				{fieldLabel}
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent>{menuItems}</DropdownMenuSubContent>

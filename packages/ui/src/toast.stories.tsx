@@ -36,7 +36,7 @@ export const Stacked: Story = {
 /** A message with one action. */
 export const Undo: Story = {
 	render: () => (
-		<Show fire={() => toast("휴지통으로 옮겼어요", { action: { label: "되돌리기", onClick: () => {} } })} />
+		<Show fire={() => toast("휴지통으로 옮겼습니다", { action: { label: "되돌리기", onClick: () => {} } })} />
 	),
 };
 
@@ -48,7 +48,7 @@ export const Message: Story = {
 /** A failure. */
 export const Failure: Story = {
 	render: () => (
-		<Show fire={() => toast.error("저장하지 못했어요", { action: { label: "다시", onClick: () => {} } })} />
+		<Show fire={() => toast.error("저장하지 못했습니다", { action: { label: "다시", onClick: () => {} } })} />
 	),
 };
 
@@ -59,7 +59,7 @@ export const DropHint: Story = {
 			fire={() =>
 				toast.dropHint(
 					<>
-						<b>covers</b>에 놓아요
+						<b>covers</b>에 올리기
 					</>,
 				)
 			}

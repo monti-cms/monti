@@ -418,7 +418,7 @@ describe("settings › collections: what an action does", () => {
 const { SaveRefused } = composeStories(collections);
 
 describe("settings › collections: a refused save", () => {
-	it("says why in a banner at the very top of the screen: over the title, from edge to edge of the page area, the corner under it", async () => {
+	it("says why in a banner at the very top of the screen: over the title, from edge to edge of the page area, the head row under it", async () => {
 		await SaveRefused.run();
 		const box = (element: Element | null) => (element as Element).getBoundingClientRect();
 		const banner = box(page.getByText("저장하지 못했습니다").element().closest("[data-slot=banner]"));
@@ -426,8 +426,8 @@ describe("settings › collections: a refused save", () => {
 		expect(banner.top).toBe(inset.top);
 		expect([banner.left, banner.right]).toEqual([inset.left, inset.right]);
 		expect(banner.bottom).toBeLessThan(box(page.getByRole("heading", { name: "설정" }).element()).top);
-		// The assistant's corner keeps its 12px, measured from under the banner.
-		expect(box(page.getByRole("button", { name: "어시스턴트 열기" }).element()).top).toBe(banner.bottom + 12);
+		// The assistant's ✦ ends the head row, which is under the banner.
+		expect(box(page.getByRole("button", { name: "어시스턴트 열기" }).element()).top).toBeGreaterThan(banner.bottom);
 	});
 });
 

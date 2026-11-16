@@ -4,6 +4,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { ComponentProps, KeyboardEvent, ReactElement, ReactNode } from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { IconButton } from "./icon-button";
 import { ArrowUp } from "./icons";
 import { MENU_CARD, MENU_MOTION } from "./menu-parts";
@@ -135,9 +136,9 @@ function MemoCard({
 			{foot && (
 				<div
 					data-slot="memo-card-foot"
-					className="truncate border-monti-muted border-t px-monti-16 py-monti-6 text-monti-caption text-monti-subtle"
+					className="border-monti-muted border-t px-monti-16 py-monti-6 text-monti-caption text-monti-subtle"
 				>
-					{foot}
+					<CutWords className="block">{foot}</CutWords>
 				</div>
 			)}
 		</div>

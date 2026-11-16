@@ -39,7 +39,6 @@ import { labelOfCollection, titleOf } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import { reasonOf, useOperation, useRead } from "../../operations/use-operation";
 import { linkTo, type Route } from "../../route";
-import { useCoverCorner } from "../frame/admin-frame";
 import { holdsKeyboardFocus, nextStop, useFocusHandOff } from "../frame/focus-hand-off";
 
 /**
@@ -178,8 +177,6 @@ export function ActivityPanel({
 	/** The deliveries that were not sent while this line was open: one that goes through after "send again" stays where it was, not folded away. */
 	const unsent = useRef<{ id: string; ids: Set<string> }>({ id, ids: new Set() });
 	const line = read.data;
-	// The corner's ✦ is covered only while a panel is there to cover it: not while it loads, not for a line that is gone.
-	useCoverCorner(line !== null);
 	const reload = read.reload;
 	useEffect(() => {
 		if (watched > 0) void reload();

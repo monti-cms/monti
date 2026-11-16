@@ -50,7 +50,12 @@ export type FieldInputProps = {
  */
 export type FieldInput =
 	| ComponentType<FieldInputProps>
-	| { Input: ComponentType<FieldInputProps>; Note?: ComponentType<FieldInputProps> };
+	| {
+			Input: ComponentType<FieldInputProps>;
+			Note?: ComponentType<FieldInputProps>;
+			/** The input is a switch: a choice of one option with it stands as a switch row, its name at the start and the switch at the end. */
+			switch?: true;
+	  };
 
 /** What a view field's component is given: it shows something of the entry and holds no value. */
 export type FieldViewProps = {

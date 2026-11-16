@@ -7,6 +7,7 @@ import {
 	ComboboxChips,
 	ComboboxChipsInput,
 	ComboboxContent,
+	ComboboxCreate,
 	ComboboxEmpty,
 	ComboboxInput,
 	ComboboxItem,
@@ -28,7 +29,7 @@ const TAGS = ["공지사항", "개발 노트", "일상", "리뷰", "튜토리얼
 function Popup() {
 	return (
 		<ComboboxContent>
-			<ComboboxEmpty>맞는 태그가 없어요</ComboboxEmpty>
+			<ComboboxEmpty>맞는 태그 없음</ComboboxEmpty>
 			<ComboboxList>
 				{(tag: string) => (
 					<ComboboxItem key={tag} value={tag}>
@@ -145,7 +146,7 @@ function ChipsExample({
 				<ComboboxChipsInput aria-invalid={invalid} placeholder="태그 추가" />
 			</ComboboxChips>
 			<ComboboxContent anchor={anchor}>
-				<ComboboxEmpty>맞는 태그가 없어요</ComboboxEmpty>
+				<ComboboxEmpty>맞는 태그 없음</ComboboxEmpty>
 				<ComboboxList>
 					{(tag: string) => (
 						<ComboboxItem key={tag} value={tag}>
@@ -197,6 +198,44 @@ export const ChipsOpen: Story = {
 	render: () => (
 		<Stack className="min-h-72 max-w-sm">
 			<ChipsExample open />
+		</Stack>
+	),
+};
+
+/** The row that creates a value: after the values, with its Add mark and the rule above it; alone (nothing matched) it has no rule and no gap. */
+export const CreateRow: Story = {
+	tags: ["visual"],
+	render: () => (
+		<Stack className="min-h-72 max-w-sm">
+			<Combobox items={["리액트", "성능", "new:사"]} defaultOpen>
+				<ComboboxInput placeholder="태그 고르기" />
+				<ComboboxContent>
+					<ComboboxEmpty>맞는 태그 없음</ComboboxEmpty>
+					<ComboboxList>
+						{(item: string) =>
+							item.startsWith("new:") ? (
+								<ComboboxCreate value={item}>새로 만들기: 사</ComboboxCreate>
+							) : (
+								<ComboboxItem value={item}>{item}</ComboboxItem>
+							)
+						}
+					</ComboboxList>
+				</ComboboxContent>
+			</Combobox>
+		</Stack>
+	),
+};
+
+export const CreateRowAlone: Story = {
+	tags: ["visual"],
+	render: () => (
+		<Stack className="min-h-40 max-w-sm">
+			<Combobox items={["new:사"]} defaultOpen>
+				<ComboboxInput placeholder="태그 고르기" />
+				<ComboboxContent>
+					<ComboboxList>{(item: string) => <ComboboxCreate value={item}>새로 만들기: 사</ComboboxCreate>}</ComboboxList>
+				</ComboboxContent>
+			</Combobox>
 		</Stack>
 	),
 };

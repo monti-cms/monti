@@ -422,7 +422,8 @@ export function FieldsTab({
 							: { tone: "default" as const, note: undefined };
 		return {
 			fieldName: name,
-			name: def.required ? `${name} !` : name,
+			name,
+			required: Boolean(def.required),
 			// The fixed fields are called what the list and the editor call them, as `fieldName` does everywhere (ST-11).
 			label: (() => {
 				const given = (model.shown(at.fieldValue(c, key, "label")) as string | undefined) || undefined;

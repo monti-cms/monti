@@ -2,6 +2,7 @@
 
 import type * as React from "react";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { IconButtonContext } from "./icon-button";
 import { Document } from "./icons";
 
@@ -46,7 +47,7 @@ function FileBlock({
 			{...props}
 		>
 			<span className="flex flex-none text-monti-subtle [&_svg]:size-4">{icon ?? <Document aria-hidden />}</span>
-			<span className="min-w-0 flex-1 truncate text-monti-body">{name}</span>
+			<CutWords className="min-w-0 flex-1 truncate text-monti-body">{name}</CutWords>
 			<span
 				className={cn(
 					"flex-none font-mono text-monti-caption",

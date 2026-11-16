@@ -52,7 +52,7 @@ export const Thread: Story = {
 						이 문장을 더 짧게 줄여 줘
 					</MemoMessage>
 					<MemoMessage author="어시스턴트" time="10:41" ai>
-						“Monti는 코드 없이 사이트를 고치게 합니다.”로 줄였어요.
+						“Monti는 코드 없이 사이트를 고치게 합니다.”로 줄였습니다.
 					</MemoMessage>
 				</MemoThread>
 			</MemoCard>
@@ -173,7 +173,7 @@ export const UnderText: Story = {
 							이 말을 더 쉽게 바꿔 줘
 						</MemoMessage>
 						<MemoMessage author="어시스턴트" time="10:42" ai>
-							“코드를 몰라도”로 바꿨어요.
+							“코드를 몰라도”로 바꿨습니다.
 						</MemoMessage>
 					</MemoThread>
 				</MemoCardPopover>

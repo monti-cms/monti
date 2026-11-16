@@ -108,7 +108,7 @@ export const HEADINGS = [2, 3, 4] as const;
  *
  * - `col:<c>` the collection (`{ kind }`, `null` once deleted) · `path:<c>` its public address · `preview:<c>` its preview page's (doc 16)
  * - `field:<c>:<key>` a field (`DraftField`, `null` once removed)
- * - `ca:<c>:label|folders|layout` the collection's admin values · `fa:<c>:<key>:<value>` a field's
+ * - `ca:<c>:label|icon|folders|layout` the collection's admin values · `fa:<c>:<key>:<value>` a field's
  * - `ed:<c>:block:<type>`, `ed:<c>:mark:<type>`, `ed:<c>:heading:<level>` what its editor allows
  *
  * The site and language tabs share the draft (doc 12):
@@ -127,7 +127,7 @@ export const at = {
 	path: (c: string) => `path:${c}`,
 	preview: (c: string) => `preview:${c}`,
 	field: (c: string, key: string) => `field:${c}:${key}`,
-	collectionValue: (c: string, value: "label" | "folders" | "layout") => `ca:${c}:${value}`,
+	collectionValue: (c: string, value: "label" | "icon" | "folders" | "layout") => `ca:${c}:${value}`,
 	fieldValue: (c: string, key: string, value: FieldValue) => `fa:${c}:${key}:${value}`,
 	editor: (c: string, what: "block" | "mark" | "heading", name: string | number) => `ed:${c}:${what}:${name}`,
 };
@@ -138,7 +138,7 @@ export type Place =
 	| { kind: "path"; collection: string }
 	| { kind: "preview"; collection: string }
 	| { kind: "field"; collection: string; key: string }
-	| { kind: "collectionValue"; collection: string; value: "label" | "folders" | "layout" }
+	| { kind: "collectionValue"; collection: string; value: "label" | "icon" | "folders" | "layout" }
 	| { kind: "fieldValue"; collection: string; key: string; value: FieldValue }
 	| { kind: "editor"; collection: string; what: "block" | "mark" | "heading"; name: string };
 
@@ -265,6 +265,7 @@ function adminPlaces(
 ): Record<Path, unknown> {
 	const places: Record<Path, unknown> = {};
 	places[at.collectionValue(c, "label")] = values?.label;
+	places[at.collectionValue(c, "icon")] = values?.icon;
 	places[at.collectionValue(c, "folders")] = values?.folders ?? false;
 	places[at.collectionValue(c, "layout")] = values?.layout;
 	for (const name of Object.keys(draftFields(collection)))
@@ -504,6 +505,8 @@ function collectionValues(
 	const out: AdminValues = {};
 	const label = value(at.collectionValue(c, "label")) as string | undefined;
 	if (label) out.label = label;
+	const icon = value(at.collectionValue(c, "icon")) as AdminValues["icon"];
+	if (icon) out.icon = icon;
 	const folders = value(at.collectionValue(c, "folders")) as boolean | undefined;
 	if (folders || saved?.folders !== undefined) out.folders = Boolean(folders);
 	const fields: NonNullable<AdminValues["fields"]> = {};
@@ -628,6 +631,8 @@ export function proposalPaths(
 			out[at.preview(c)] = previewOf(collection);
 			const label = input.adminValues?.[c]?.label;
 			if (label) out[at.collectionValue(c, "label")] = label;
+			const icon = input.adminValues?.[c]?.icon;
+			if (icon) out[at.collectionValue(c, "icon")] = icon;
 			for (const [name, field] of Object.entries(draftFields(collection))) {
 				out[at.field(c, name)] = field;
 				labels(c, name, name);

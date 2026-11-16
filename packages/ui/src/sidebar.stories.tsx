@@ -1,12 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Document, Image as ImageIcon, RecentlyViewed, Settings, Spark, Tools, TrashCan } from "./icons";
+import { Document, Image as ImageIcon, RecentlyViewed, Settings, Tools, TrashCan } from "./icons";
 import {
 	Banner,
 	Box,
 	Count,
 	folderTree,
-	IconButton,
 	Sidebar,
 	SidebarContent,
 	SidebarFoot,
@@ -155,15 +154,7 @@ function Nav({
 					</SidebarFoot>
 				</SidebarFooter>
 			</Sidebar>
-			<SidebarInset
-				fixed
-				banner={banner}
-				corner={
-					<IconButton label="어시스턴트 열기">
-						<Spark className="size-monti-icon-lg" />
-					</IconButton>
-				}
-			>
+			<SidebarInset fixed banner={banner}>
 				<Box padding={24}>
 					<Text variant="note">페이지</Text>
 				</Box>

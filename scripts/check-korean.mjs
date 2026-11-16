@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Runtime code Hangul check. Korean strings in package runtime code (`packages/*\/src`) live only in the message dictionary files
- * (`messages.ts`, `*.messages.ts`). Comments are English too (a UI label is named in English there); tests (`__test__`, `*.test.*`), test helpers (`src/test`), Storybook stories (`*.stories.*`, sample screens) and the reference screens (`packages/ui/src/screens/reference`) are not checked.
+ * (`messages.ts`, `*.messages.ts`). Comments are English too (a UI label is named in English there); tests (`__test__`, `*.test.*`), test helpers (`src/test`), Storybook stories (`*.stories.*`, sample screens) and the reference screens (`packages/ui/src/screens/reference`) are not checked for where Korean is written, but their words follow the dictionaries' tone (no polite "-eoyo" ending).
  *
  *   node scripts/check-korean.mjs            # list what remains; fails if any
  *   node scripts/check-korean.mjs packages/admin/src/screens/media   # only part of the tree
@@ -39,13 +39,18 @@ const isSample = (dir) => dir.endsWith(`${path.sep}screens${path.sep}reference`)
 
 const files = [];
 const dictionaries = [];
-const walk = (dir) => {
+/** Stories and the reference screens: their Korean is not checked for place, but its tone is (the polite-ending check reads them as it reads a dictionary). */
+const samples = [];
+const walk = (dir, inSample = false) => {
 	for (const name of readdirSync(dir)) {
 		const full = path.join(dir, name);
 		if (statSync(full).isDirectory()) {
-			if (!SKIP_DIRS.has(name) && !isSample(full)) walk(full);
-		} else if (/\.tsx?$/.test(name) && !name.endsWith(".d.ts") && !isTest(name)) {
-			(isMessages(full) ? dictionaries : files).push(full);
+			if (SKIP_DIRS.has(name)) continue;
+			if (isSample(full)) walk(full, true);
+			else walk(full, inSample);
+		} else if (/\.tsx?$/.test(name) && !name.endsWith(".d.ts")) {
+			if (inSample || /\.stories\.tsx?$/.test(name)) samples.push(full);
+			else if (!isTest(name)) (isMessages(full) ? dictionaries : files).push(full);
 		}
 	}
 };
@@ -167,12 +172,13 @@ for (const file of files) {
 const POLITE = /([가-힣])요(?![가-힣])/g; // cms-allow-korean: the syllable the rule is about
 const NOT_POLITE = new Set(["세", "까", "필", "중", "주", "개"]); // cms-allow-korean: requests, questions, and words ending in it
 const polite = [];
-for (const file of dictionaries) {
+for (const file of [...dictionaries, ...samples]) {
 	readFileSync(file, "utf8")
 		.split("\n")
 		.forEach((line, index) => {
 			const ends = [...line.matchAll(POLITE)].filter((match) => !NOT_POLITE.has(match[1]));
-			if (ends.length > 0) polite.push(`${path.relative(root, file)}:${index + 1}: ${line.trim()}`);
+			if (ends.length > 0 && !line.includes("cms-allow-korean"))
+				polite.push(`${path.relative(root, file)}:${index + 1}: ${line.trim()}`);
 		});
 }
 if (polite.length > 0) {

@@ -7,7 +7,7 @@ import * as media from "../screens/entry/media.stories";
 const { ManyInBody, OnlyWholeBlocks } = composeStories(media);
 
 const body = () => page.getByRole("textbox", { name: "본문" });
-const FIRST = "글의 첫 문단이에요.";
+const FIRST = "글의 첫 문단입니다.";
 const paragraph = () => body().getByText(FIRST);
 const picked = () => body().element().querySelector(".ProseMirror-selectednode");
 const tools = () => body().element().querySelector("[role=toolbar]");

@@ -64,7 +64,6 @@ import {
 } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { AssistantButton } from "../../assistant/assistant-button";
 import { draftContext } from "../../assistant/draft-context";
 import {
 	useHasAssistant,
@@ -1144,9 +1143,9 @@ export function EntryEditor({
 			<Tooltip>
 				<TooltipTrigger
 					render={
-						<TextButton loading={editor.saving} onClick={() => void save()}>
+						<Button variant="ghost" loading={editor.saving} onClick={() => void save()}>
 							{t("entry.saveAction")}
-						</TextButton>
+						</Button>
 					}
 				/>
 				{/* Its name with its keys after it, as every tooltip with a shortcut (overlay.md). */}
@@ -1420,6 +1419,7 @@ export function EntryEditor({
 								<DropdownMenuSeparator />
 								{/* The document tools; a view takes the place of the properties beside the text, as a translation's source does. */}
 								<DocumentToolRows tools={tools} onView={(next) => next !== null && setPanel(false)} />
+								<DropdownMenuSeparator />
 								{/* A translation goes alone: its source stays, and the row says so (flow 3·15). */}
 								{translation.isTranslation && schema.data ? (
 									<DropdownMenuItem
@@ -1442,7 +1442,6 @@ export function EntryEditor({
 							</DropdownMenuContent>
 						</DropdownMenu>
 					)}
-					<AssistantButton />
 				</Inline>
 			</EditorHeader>
 			<Inline align="stretch" gap={beside ? 40 : 0} grow minHeight={0} overflow="hidden">

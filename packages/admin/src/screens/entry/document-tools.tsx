@@ -4,7 +4,6 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
-	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
@@ -87,7 +86,6 @@ export function DocumentToolRows({ tools, onView }: { tools: Tools; onView?: (vi
 					</DropdownMenuRadioGroup>
 				</DropdownMenuSubContent>
 			</DropdownMenuSub>
-			<DropdownMenuSeparator />
 		</>
 	);
 }

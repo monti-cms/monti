@@ -5,8 +5,8 @@ import { useAdmin } from "../operations/admin-context";
 import { useAssistant } from "./use-assistant";
 
 /**
- * The ✦ at the end of a page's own head (the entry editor, the template editor: common.md, the assistant's button): it opens the
- * assistant's panel beside the page. As in the frame's corner, a site without the assistant has no button, the button is not there while
+ * The ✦ at the end of the head row of every screen (common.md, the assistant's button): the app gives it to `AssistantSlot` once, and `PageHeader` and
+ * `EditorHeader` draw it. It opens the assistant's panel beside the page. A site without the assistant has no button, the button is not there while
  * the panel is open, and closing the panel hands the focus back to it.
  */
 export function AssistantButton() {

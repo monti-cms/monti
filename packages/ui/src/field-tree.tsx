@@ -1,7 +1,9 @@
 import type { ComponentProps, ReactNode } from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { Grip } from "./grip";
+import { RequiredMark } from "./label";
 import { LockMark } from "./lock-mark";
 import { HELD, SLOT } from "./sortable";
 
@@ -28,7 +30,7 @@ const NAME_TONE = {
 const REMOVED = "text-monti-faint line-through decoration-1";
 
 /**
- * One field. `name` is the key as written in the schema (a required field ends it with " !"), `label` what the admin sees, with the field's help text
+ * One field. `name` is the key as written in the schema (a required field ends it with the red `*`, `required`), `label` what the admin sees, with the field's help text
  * after it in the faint ink (`description`) and a short note of what is special about it (`note`: "renamed from", "new", "not in the panel"); `kind` at the end
  * (mono; it can carry a mark such as "→ Tag"). `tone` colors the name for a change. `depth` indents a field that sits in a group (1), in a branch of one (2), or in a branch inside a group (3); a conditional field in an option of another has its own branches one and two steps further (4, 5), and nothing is drawn deeper.
  * `group` makes the line a group's: a grey band with its name in sans, bold. A field that cannot be moved has no `grip`; its place stays empty so the names
@@ -51,6 +53,7 @@ function FieldRow({
 	gripProps,
 	tone = "default",
 	removed = false,
+	required = false,
 	locked,
 	changed = false,
 	changedLabel,
@@ -77,6 +80,8 @@ function FieldRow({
 	tone?: keyof typeof NAME_TONE;
 	/** A field that goes when the draft is saved: it stays in the list, its name struck through and faint, and it cannot be opened. */
 	removed?: boolean;
+	/** The field must be filled in: its name ends with the admin's one required mark. */
+	required?: boolean;
 	locked?: string;
 	changed?: boolean;
 	/** The name of the change dot for screen readers. */
@@ -118,7 +123,11 @@ function FieldRow({
 			onClick={(event) => {
 				onClick?.(event);
 				// The marks stand over the line's button: a press on one still opens the line, as a press anywhere else on it does.
-				if (onOpen && (event.target as Element).closest("[data-slot=change-dot], [data-slot=lock-mark]")) onOpen();
+				if (
+					onOpen &&
+					(event.target as Element).closest("[data-slot=change-dot], [data-slot=lock-mark], [data-cut-words]")
+				)
+					onOpen();
 			}}
 			{...props}
 		>
@@ -155,15 +164,16 @@ function FieldRow({
 				) : (
 					name
 				)}
+				{required && <RequiredMark />}
 				{/* The row's button covers the row: its marks stand over that layer, where a pointer finds them. */}
 				{changed && <ChangeDot label={changedLabel} className="relative z-1" />}
 				{problems && <ChangeDot tone="danger" label={problems} className="relative z-1" />}
 			</span>
-			<span className="min-w-0 truncate text-monti-note text-monti-subtle">
+			<CutWords className="relative z-1 text-monti-note text-monti-subtle">
 				{label}
 				{description && <span className="ml-monti-12 text-monti-faint">{description}</span>}
 				{note && <span className="ml-monti-8 text-monti-faint text-monti-micro">{note}</span>}
-			</span>
+			</CutWords>
 			<span className="flex items-center justify-end gap-monti-6 font-mono text-monti-caption text-monti-muted">
 				{kind}
 				{/* Over the row's button, so the pointer finds the lock and its tooltip says why; the keyboard stops on it after the row's name. */}

@@ -2,6 +2,7 @@ import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { Count } from "./count";
+import { CutWords } from "./cut-words";
 import { Folder } from "./icons";
 
 /**
@@ -110,18 +111,22 @@ function Tile({
 					)}
 				</span>
 				<span className="flex min-w-0 flex-col gap-monti-2">
-					<span className={cn("truncate text-monti-body", (uploading || failed) && "text-monti-subtle")}>{title}</span>
+					<CutWords className={cn("truncate text-monti-body", (uploading || failed) && "text-monti-subtle")}>
+						{title}
+					</CutWords>
 					{proposal ? (
-						<span className="truncate text-monti-body">
+						<CutWords className="truncate text-monti-body">
 							<span className="rounded-monti-sm bg-monti-proposal-muted px-[2px] py-px text-monti-proposal">
 								{proposal}
 							</span>
-						</span>
+						</CutWords>
 					) : (
 						detail && (
-							<span className={cn("truncate text-monti-caption", failed ? "text-monti-danger" : "text-monti-subtle")}>
+							<CutWords
+								className={cn("truncate text-monti-caption", failed ? "text-monti-danger" : "text-monti-subtle")}
+							>
 								{detail}
-							</span>
+							</CutWords>
 						)
 					)}
 				</span>
@@ -202,7 +207,7 @@ function FolderTile({
 			<span className="flex shrink-0 text-monti-subtle [&_svg]:size-4">{icon}</span>
 			{children ?? (
 				<>
-					<span className="min-w-0 grow truncate text-left">{name}</span>
+					<CutWords className="min-w-0 grow truncate text-left">{name}</CutWords>
 					{count !== undefined && (
 						<Count
 							className={cn(

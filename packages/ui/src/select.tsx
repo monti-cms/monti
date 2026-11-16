@@ -4,9 +4,11 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import type * as React from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ChevronDown, ChevronUp } from "./icons";
 import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import { menuWords } from "./menu-words";
 import { useProposalDescription } from "./proposal-cue";
 
 /**
@@ -40,8 +42,17 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
 }
 
 function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+	// The value that runs past the field is cut to a line, and says itself whole (`CutWords`).
 	return (
-		<SelectPrimitive.Value data-slot="select-value" className={cn("flex flex-1 text-left", className)} {...props} />
+		<CutWords
+			render={
+				<SelectPrimitive.Value
+					data-slot="select-value"
+					className={cn("block min-w-0 flex-1 truncate text-left", className)}
+					{...props}
+				/>
+			}
+		/>
 	);
 }
 
@@ -84,7 +95,7 @@ function SelectTrigger({
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
 				SELECT_TRIGGER,
-				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal data-proposal:focus-visible:ring-2 data-proposal:focus-visible:ring-monti-contrast/60 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-monti-6",
+				"data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-placeholder:text-monti-faint data-proposal:text-monti-proposal data-proposal:focus-visible:ring-2 data-proposal:focus-visible:ring-monti-contrast/60",
 				width === "full" ? "w-full" : "w-fit",
 				className,
 			)}
@@ -146,8 +157,8 @@ function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) 
 function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Props) {
 	return (
 		<SelectPrimitive.Item data-slot="select-item" className={cn(MENU_ITEM, "w-full", className)} {...props}>
-			<SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-monti-8 whitespace-nowrap">
-				{children}
+			<SelectPrimitive.ItemText className="flex min-w-0 flex-1 gap-monti-8 whitespace-nowrap">
+				{menuWords(children)}
 			</SelectPrimitive.ItemText>
 			<SelectPrimitive.ItemIndicator render={<MenuTick />} />
 		</SelectPrimitive.Item>

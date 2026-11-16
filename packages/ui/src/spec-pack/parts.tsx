@@ -614,17 +614,6 @@ function RowButtonsCell({ children }: { children?: React.ReactNode }) {
 	);
 }
 
-/** The app frame's ✦ in the page's top-right corner, 12px from both edges, as `SidebarInset` places its `corner`. It opens the assistant. */
-function AssistantCorner({ label }: { label?: string }) {
-	return (
-		<div className="fixed top-monti-12 right-monti-12 z-10">
-			<IconButton label={label ?? ""}>
-				<Icon name="spark" />
-			</IconButton>
-		</div>
-	);
-}
-
 /** A ⋯: the round icon button of a head or a panel, or (`letter`) the row's letter, as the board draws it. */
 function MoreButton({ label, letter }: { label?: string; letter?: boolean }) {
 	if (letter) return <RowMore label={label ?? ""} />;
@@ -2632,7 +2621,6 @@ export const parts = {
 	TrashDateCell,
 	RowButtonsCell,
 	MoreButton,
-	AssistantCorner,
 	PageToolbar,
 	PageToolbarEnd,
 	TabLinks,
@@ -2988,7 +2976,6 @@ export const CATALOG = {
 	TrashDateCell: { kind: "part", props: { date: "text", left: "text", urgent: "flag" } },
 	RowButtonsCell: { kind: "part", props: {} },
 	MoreButton: { kind: "part", props: { label: "text", letter: "flag" } },
-	AssistantCorner: { kind: "overlay", props: { label: "text" } },
 	PageToolbar: { kind: "part", props: { inset: "flag" } },
 	PageToolbarEnd: { kind: "part", props: {} },
 	TabLinks: { kind: "part", props: { variant: "variant" } },

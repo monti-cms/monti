@@ -37,7 +37,7 @@ export const allArchived = (rows: ListRow[]) => rows.length > 0 && rows.every((r
 
 /**
  * One row's menu, the same from its ⋯ and from a right click: open, open in a new tab, duplicate | to a folder, relations | archive | to the trash
- * (flow 5·07). A right click shows the key that does the same on the row.
+ * (flow 5·07). The trash row shows the key that does the same on the row, from the right click and from the ⋯.
  */
 export function RowMenuItems({
 	row,
@@ -90,12 +90,12 @@ export function RowMenuItems({
 					{t("list.archive")}
 				</Item>
 			)}
-			{/* With "Archive" where there is one: what takes a row out of the list (screens/list.md, right click). */}
-			{!document && <Separator />}
+			{/* The row that puts it away stands after a rule, alone or after "Archive" (menu.md). */}
+			<Separator />
 			<Item variant="danger" onClick={() => actions.trash([row])}>
 				<TrashCan aria-hidden />
 				{t("trash.toTrash")}
-				{context && <MenuShortcut keys={DELETE_KEYS} />}
+				<MenuShortcut keys={DELETE_KEYS} />
 			</Item>
 		</>
 	);

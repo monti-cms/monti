@@ -1,19 +1,25 @@
 import type { FieldDefinition, StoredField } from "@monti-cms/core";
 import {
+	ChangeDot,
 	Combobox,
 	ComboboxChip,
 	ComboboxChips,
 	ComboboxChipsInput,
 	ComboboxContent,
+	ComboboxCreate,
 	ComboboxEmpty,
 	ComboboxInput,
 	ComboboxItem,
 	ComboboxList,
 	DragHandle,
+	FormField,
 	IconButton,
+	Inline,
 	Input,
+	Label,
 	List,
 	MenuValue,
+	Option,
 	OrderedRow,
 	Sortable,
 	SortableList,
@@ -21,6 +27,7 @@ import {
 	Switch,
 	Text,
 	Textarea,
+	TextButton,
 	useComboboxAnchor,
 	useSortableItem,
 } from "@monti-cms/ui";
@@ -28,7 +35,7 @@ import { Close } from "@monti-cms/ui/icons";
 import { type ComponentProps, type ReactNode, useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "../settings/pick-one";
-import { useRelationField } from "./use-relation-field";
+import { type RelationFieldModel, useRelationField } from "./use-relation-field";
 
 /** A select that holds many values: the picked ones as chips, the input after them to add more. */
 function PickMany({
@@ -82,6 +89,33 @@ function PickMany({
 			</ComboboxContent>
 		</Combobox>
 	);
+}
+
+/**
+ * The rows of a relation field's list, the same in a field of one value, of many and of an ordered many: a value's name, a draft's or a shared
+ * name's mark at the row's end, and the row that creates a new one.
+ */
+function relationRows(rel: RelationFieldModel, t: ReturnType<typeof useAdmin>["t"]) {
+	return (group: string) => {
+		if (group === rel.createToken)
+			return (
+				<ComboboxCreate key={group} value={group}>
+					{rel.createLabel}
+				</ComboboxCreate>
+			);
+		const opt = rel.allOptions.find((o) => o.group === group);
+		const unpublished = rel.targetKind === "document" && opt && !opt.published;
+		const address = rel.addressOf(group);
+		return (
+			<ComboboxItem key={group} value={group}>
+				{rel.labelOf(group)}
+				{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
+				{(unpublished || address) && (
+					<MenuValue address={address ?? undefined}>{unpublished ? t("relations.unpublished") : null}</MenuValue>
+				)}
+			</ComboboxItem>
+		);
+	};
 }
 
 function SortableOrderedRow({
@@ -193,32 +227,7 @@ function RelationSingleInput({
 			/>
 			<ComboboxContent>
 				<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
-				<ComboboxList>
-					{(group: string) => {
-						const isCreate = group === rel.createToken;
-						if (isCreate) {
-							return (
-								<ComboboxItem key={group} value={group}>
-									{rel.createLabel}
-								</ComboboxItem>
-							);
-						}
-						const opt = rel.allOptions.find((o) => o.group === group);
-						const unpublished = rel.targetKind === "document" && opt && !opt.published;
-						const address = rel.addressOf(group);
-						return (
-							<ComboboxItem key={group} value={group}>
-								{rel.labelOf(group)}
-								{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
-								{(unpublished || address) && (
-									<MenuValue address={address ?? undefined}>
-										{unpublished ? t("relations.unpublished") : null}
-									</MenuValue>
-								)}
-							</ComboboxItem>
-						);
-					}}
-				</ComboboxList>
+				<ComboboxList>{relationRows(rel, t)}</ComboboxList>
 			</ComboboxContent>
 		</Combobox>
 	);
@@ -290,32 +299,7 @@ function RelationManyInput({
 			</ComboboxChips>
 			<ComboboxContent anchor={anchor}>
 				<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
-				<ComboboxList>
-					{(group: string) => {
-						const isCreate = group === rel.createToken;
-						if (isCreate) {
-							return (
-								<ComboboxItem key={group} value={group}>
-									{rel.createLabel}
-								</ComboboxItem>
-							);
-						}
-						const opt = rel.allOptions.find((o) => o.group === group);
-						const unpublished = rel.targetKind === "document" && opt && !opt.published;
-						const address = rel.addressOf(group);
-						return (
-							<ComboboxItem key={group} value={group}>
-								{rel.labelOf(group)}
-								{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
-								{(unpublished || address) && (
-									<MenuValue address={address ?? undefined}>
-										{unpublished ? t("relations.unpublished") : null}
-									</MenuValue>
-								)}
-							</ComboboxItem>
-						);
-					}}
-				</ComboboxList>
+				<ComboboxList>{relationRows(rel, t)}</ComboboxList>
 			</ComboboxContent>
 		</Combobox>
 	);
@@ -385,32 +369,7 @@ function RelationOrderedManyInput({
 					<ComboboxInput id={id} size="md" placeholder={placeholder} showClear={false} proposal={proposal} />
 					<ComboboxContent>
 						<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
-						<ComboboxList>
-							{(group: string) => {
-								const isCreate = group === rel.createToken;
-								if (isCreate) {
-									return (
-										<ComboboxItem key={group} value={group}>
-											{rel.createLabel}
-										</ComboboxItem>
-									);
-								}
-								const opt = rel.allOptions.find((o) => o.group === group);
-								const unpublished = rel.targetKind === "document" && opt && !opt.published;
-								const address = rel.addressOf(group);
-								return (
-									<ComboboxItem key={group} value={group}>
-										{rel.labelOf(group)}
-										{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
-										{(unpublished || address) && (
-											<MenuValue address={address ?? undefined}>
-												{unpublished ? t("relations.unpublished") : null}
-											</MenuValue>
-										)}
-									</ComboboxItem>
-								);
-							}}
-						</ComboboxList>
+						<ComboboxList>{relationRows(rel, t)}</ComboboxList>
 					</ComboboxContent>
 				</Combobox>
 			)}
@@ -473,6 +432,70 @@ type Definition = FieldDefinition | StoredField;
 /** A choice made by a switch (doc 19): one option, on or off. */
 export const isToggle = (def: Definition) =>
 	(def.kind === "select" || def.kind === "conditional") && "control" in def && def.control === "toggle";
+
+/**
+ * Whether a field stands as a switch row: a choice made by a switch, or a choice of one option whose plugin input says it is a switch (SEO's
+ * "hide from search": `switch: true`). The one rule, for the entry's panel and the settings' preview of it.
+ */
+export const standsAsSwitch = (def: Definition, ownIsSwitch: boolean) =>
+	isToggle(def) || (ownIsSwitch && def.kind === "select" && def.options.length === 1 && !def.many);
+
+/**
+ * A switch's row, the way every switch stands (PP-55): its name at the start and the switch at the end, on one line. A switch the assistant proposed
+ * has the proposal's dot by its name and "discard" before the switch. The one place that draws it: the entry's panel and the settings' preview.
+ */
+export function SwitchRow({
+	id,
+	name,
+	toggle,
+	proposed,
+	after,
+}: {
+	id: string;
+	name: string;
+	/** The switch itself: the field's own, or the plugin's input. */
+	toggle: ReactNode;
+	proposed?: { undoLabel: string; undoName: string; onUndo: () => void };
+	/** Under the row (what saving drops, the saved value). */
+	after?: ReactNode;
+}) {
+	const { t } = useAdmin();
+	return (
+		<FormField>
+			{proposed ? (
+				// A switch the assistant proposed, on or off, looks the same everywhere (the collection's, a plugin's): the
+				// proposal's dot by its name and "discard" before the switch, which stands as proposed. The bubble takes or
+				// discards it too, and pressing it takes it first.
+				<Inline minHeight="control-md" align="center" justify="between" gap={12}>
+					<Inline gap={8} align="center">
+						<Label htmlFor={id} size="body" tone="default">
+							{name}
+						</Label>
+						<ChangeDot tone="proposal" label={t("ui.proposal")} />
+					</Inline>
+					<Inline gap={12} align="center">
+						<TextButton
+							variant="underline"
+							quiet
+							size="caption"
+							aria-label={proposed.undoName}
+							onClick={proposed.onUndo}
+						>
+							{proposed.undoLabel}
+						</TextButton>
+						{toggle}
+					</Inline>
+				</Inline>
+			) : (
+				<Option spread height="md">
+					{name}
+					{toggle}
+				</Option>
+			)}
+			{after}
+		</FormField>
+	);
+}
 
 /** The switch of a choice with one option: on holds the option, off holds nothing. */
 export function FieldToggle({

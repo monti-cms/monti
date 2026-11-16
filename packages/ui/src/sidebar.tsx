@@ -7,6 +7,7 @@ import { useRender } from "@base-ui/react/use-render";
 import * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { BACKDROP } from "./dialog";
 import {
 	DropdownMenu,
@@ -242,14 +243,12 @@ function SidebarTrigger({
 }
 
 /**
- * The page beside the rail. `corner` is what sits in its top-right corner, 12px from both edges (the assistant's button); the page's own header keeps
- * clear of it, and a panel docked at the right edge covers it. On a narrow screen, where the rail is a drawer, a bar above the page holds the button that opens it, with the corner at its end.
- * `banner` is an alert about the whole site (a schema change saved but not applied): it spans the page edge to edge above everything, and the page,
- * its corner included, moves down under it. A page's own banner stands in the same place, under the site's: the page gives it with `PageBanner`.
+ * The page beside the rail. On a narrow screen, where the rail is a drawer, a bar above the page holds the button that opens it.
+ * `banner` is an alert about the whole site (a schema change saved but not applied): it spans the page edge to edge above everything, and the page
+ * moves down under it. A page's own banner stands in the same place, under the site's: the page gives it with `PageBanner`.
  */
 function SidebarInset({
 	fixed = false,
-	corner,
 	banner,
 	className,
 	children,
@@ -257,8 +256,7 @@ function SidebarInset({
 }: React.ComponentProps<"main"> & {
 	/** Inside a `fixed` frame: the main area clips to the window, so its own panes scroll. */
 	fixed?: boolean;
-	corner?: React.ReactNode;
-	/** A `Banner` about the whole site, above the page and its corner (and above what the page gives with `PageBanner`). */
+	/** A `Banner` about the whole site, above the page (and above what the page gives with `PageBanner`). */
 	banner?: React.ReactNode;
 }) {
 	const { isMobile } = useSidebar();
@@ -269,15 +267,11 @@ function SidebarInset({
 			{...props}
 		>
 			<PageBannerPlace data-slot="sidebar-inset-banner" banner={banner}>
-				{/* The page under the banners: the corner is measured from here, so it moves down with the page. */}
 				<div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-					{isMobile ? (
+					{isMobile && (
 						<div className="flex h-monti-header shrink-0 items-center justify-between px-monti-12">
 							<SidebarTrigger />
-							{corner}
 						</div>
-					) : (
-						corner && <div className="absolute top-monti-12 right-monti-12 z-10">{corner}</div>
 					)}
 					{children}
 				</div>
@@ -523,7 +517,8 @@ function SidebarMenuButton({
 			active: isActive,
 		},
 	});
-	if (!rail || !tooltip) return row;
+	// A name that runs past the row says itself whole when pointed at, as every cut word does; folded, the row's tooltip says it.
+	if (!rail || !tooltip) return <CutWords render={cutBox(row)} />;
 	return (
 		<Tooltip>
 			<TooltipTrigger render={row} />
@@ -531,6 +526,9 @@ function SidebarMenuButton({
 		</Tooltip>
 	);
 }
+
+/** A row as `CutWords` takes its box: the element `useRender` made, typed as an element with the usual attributes. */
+const cutBox = (row: React.ReactElement) => row as React.ReactElement<React.HTMLAttributes<HTMLElement>>;
 
 /** The count at the end of a row: mono, small and quiet, in the flow of the row, so a long name is cut before it. */
 function SidebarMenuBadge({
@@ -633,7 +631,7 @@ function SidebarMenuSubButton({
 			style={{ left }} // design-allow: the rule sits under the icon of its depth, from SUB_LINE_LEFT
 		/>
 	));
-	return useRender({
+	const row = useRender({
 		defaultTagName: "a",
 		props: mergeProps<"a">(
 			{
@@ -664,6 +662,7 @@ function SidebarMenuSubButton({
 		render,
 		state: { slot: "sidebar-menu-sub-button", sidebar: "menu-sub-button", active: isActive, dropTarget },
 	});
+	return <CutWords render={cutBox(row)} />;
 }
 
 export {

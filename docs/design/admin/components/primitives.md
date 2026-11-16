@@ -49,7 +49,7 @@
 
 ### 코드
 
-`Label`: `size`, `tone`, `hidden`, `required`. 라벨이 붙은 필드에는 `FormField`와 `FormFieldLabel`을 쓴다(필드 참고).
+`Label`: `size`, `tone`, `hidden`, `required`. 별표는 `RequiredMark`다(필수 필드 참고). 라벨이 붙은 필드에는 `FormField`와 `FormFieldLabel`을 쓴다(필드 참고).
 
 ## 구분선 (`.mt-line`, `.mt-vr`)
 

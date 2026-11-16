@@ -208,8 +208,13 @@ describe("the activity log (doc 13, flow 12)", () => {
 		// The other receiver got it: the panel, which is about this one line, says so.
 		await expect.element(panel()).toHaveTextContent("보냄");
 		expect(row(FAILED).element().getAttribute("data-selected")).not.toBeNull();
-		// The panel covers the corner's ✦.
-		await expect.element(page.getByRole("button", { name: "어시스턴트 열기" })).not.toBeInTheDocument();
+		// The ✦ ends the head row, in the page beside the panel: the panel does not cover it, and it stands left of the panel's edge.
+		const spark = page.getByRole("button", { name: "어시스턴트 열기" });
+		await expect.element(spark).toBeVisible();
+		const sparkBox = spark.element().getBoundingClientRect();
+		const panelBox = panel().element().getBoundingClientRect();
+		expect(sparkBox.right).toBeLessThanOrEqual(panelBox.left);
+		expect(spark.element().closest("[data-slot=page-header]")).not.toBeNull();
 		// The entry's name opens the entry.
 		expect(panel().getByRole("link", { name: "리액트 19 마이그레이션" }).element().getAttribute("href")).toMatch(
 			/^#\/c\/post\//,
@@ -498,6 +503,8 @@ describe("the activity log (doc 13, flow 12)", () => {
 		}
 		// The column names in their order (each column's edge, which the keyboard can move, is between them), then the first row and its ⋯.
 		expect(reached.filter((name) => !name.endsWith("열 너비 조절"))).toEqual([
+			// The head row ends with the ✦, the first stop after the search.
+			"어시스턴트 열기",
 			"작업",
 			"전송",
 			"시각",
@@ -625,7 +632,7 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(row(FAILED)).toHaveTextContent("취소됨");
 	});
 
-	it("an address that opens a line that is not there: the line leaves the address, nothing is beside the list, and the corner's ✦ stays", async () => {
+	it("an address that opens a line that is not there: the line leaves the address, nothing is beside the list, and the head row's ✦ stays", async () => {
 		await draw({ ...stories.Log, loaders: stories.log("#/activity?open=no-such-line") }).run();
 		await expect.poll(() => location.hash).toBe("#/activity");
 		await expect.element(panel()).not.toBeInTheDocument();

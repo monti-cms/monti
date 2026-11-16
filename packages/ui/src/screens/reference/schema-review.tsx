@@ -20,7 +20,7 @@ import { ShownSelect } from "./settings";
 /** Settings, Collections tab, with the review sheet open over three changes to the post collection; removing a field deletes its values. */
 export function SchemaReviewScreen() {
 	return (
-		<AdminFrame open="settings" corner={false}>
+		<AdminFrame open="settings">
 			<SchemaPage
 				fields={CHANGED_FIELDS}
 				changed

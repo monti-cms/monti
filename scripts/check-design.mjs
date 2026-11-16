@@ -62,6 +62,13 @@
  *                       the admin's other sources. `check-format.mjs` says what it cannot see. A `design-allow` marker does not skip it.
  *   mono-words          `font-mono` and `text-monti-micro` (the small role is sans; mono is for values) only in a file named in
  *                       `MONO_OK` of `check-type-colour.mjs` with its reason. `check-type-colour.mjs` says what it cannot see.
+ *   own-glyph           No hand-drawn `<svg>` in the admin UI outside `OWN_GLYPH_OK` of `check-parts.mjs` (the caret, the ✦, the grip, the check marks).
+ *   assistant-place     The ✦ button is one `AssistantButton` (its name read in one file) and `SidebarInset` has no corner for it.
+ *   cut-words           A part of the design system that writes `truncate`, `text-ellipsis` or `line-clamp-N` in a class imports `CutWords`, or is in `CUT_OK`.
+ *   menu-danger-separator  A `variant="danger"` menu row is the first row or follows a separator.
+ *   required-mark       The red star of a required field is `RequiredMark`: no typed " !" or "*", no legend that starts with "!".
+ *   mono-props          `mono`, `metaMono`, `ofMono` set on Korean words fail; children the check cannot read are named in `MONO_PROP_VALUES`.
+ *                       All six are in `check-parts.mjs`, which says what each cannot see.
  *   type-order          The heading roles step down, and the editor body's h2, h3, h4 are not smaller than its text (h4, the text's size, is semibold).
  *   type-merge          Every type role of `tokens.json` is in the font-size group of `cn.ts`, and that group names no other.
  *   tabular             `admin.css` sets tabular digits on `.monti-admin` and the body, and no source takes them back.
@@ -79,6 +86,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { problems as bannerPlaces } from "./check-banner-place.mjs";
 import { checked as formatChecked, problems as formatProblems } from "./check-format.mjs";
+import {
+	assistantPlace,
+	cutWords,
+	dangerSeparator,
+	koTexts,
+	monoProps,
+	ownGlyph,
+	requiredMark,
+} from "./check-parts.mjs";
 import {
 	CN_FILE,
 	FIELD_FILES,
@@ -102,9 +118,9 @@ const targets = process.argv.slice(2).map((target) => path.resolve(target));
 const SOURCES = [
 	{ dir: "packages/ui/src", ext: /\.tsx?$/, kind: "ui" },
 	{ dir: "packages/admin/src", ext: /\.tsx?$/, kind: "screen" },
-	{ dir: "packages/ai/src", ext: /\.tsx$/, kind: "screen" },
-	{ dir: "packages/seo/src", ext: /\.tsx$/, kind: "screen" },
-	{ dir: "packages/mdx/src/admin", ext: /\.tsx$/, kind: "screen" },
+	{ dir: "packages/ai/src", ext: /\.tsx?$/, kind: "screen" },
+	{ dir: "packages/seo/src", ext: /\.tsx?$/, kind: "screen" },
+	{ dir: "packages/mdx/src/admin", ext: /\.tsx?$/, kind: "screen" },
 ];
 const SKIP_DIRS = new Set(["__test__", "node_modules", "dist", "test", "foundations"]);
 const isSkippedFile = (name) =>
@@ -1437,6 +1453,44 @@ function checkTypeColour() {
 }
 checkTypeColour();
 
+/**
+ * The fixed parts (`check-parts.mjs`): hand-drawn marks, the one ✦ button, cut words with their tooltip, a menu's danger row after a rule, the one
+ * required mark, mono set through part options. Every file is read whatever the command line names, as the allow lists name whole files.
+ */
+function checkParts() {
+	const sources = Object.fromEntries(files.map(({ file }) => [rel(file), readFileSync(file, "utf8")]));
+	const texts = koTexts(
+		MESSAGE_FILES.filter((file) => existsSync(path.join(root, file))).map((file) =>
+			readFileSync(path.join(root, file), "utf8"),
+		),
+	);
+	const messages = Object.fromEntries(
+		MESSAGE_FILES.filter((file) => existsSync(path.join(root, file))).map((file) => [
+			file,
+			readFileSync(path.join(root, file), "utf8"),
+		]),
+	);
+	const report = (rule, found) => {
+		for (const { file, line, message } of found)
+			if (inTargets(path.join(root, file))) add(path.join(root, file), line, rule, message);
+	};
+	report("own-glyph", ownGlyph(sources));
+	report("assistant-place", assistantPlace(sources));
+	report("cut-words", cutWords(sources));
+	// The menus of the stories too: they are what the docs show.
+	const stories = Object.fromEntries(
+		["packages/ui/src", "packages/admin/src"].flatMap((dir) =>
+			sourcesUnder(path.join(root, dir))
+				.filter((file) => /\.stories\.tsx$/.test(file))
+				.map((file) => [rel(file), readFileSync(file, "utf8")]),
+		),
+	);
+	report("menu-danger-separator", dangerSeparator({ ...sources, ...stories }));
+	report("required-mark", requiredMark({ ...sources, ...messages }));
+	report("mono-props", monoProps(sources, { texts }));
+}
+checkParts();
+
 const HINTS = {
 	"css-file": "Admin UI is styled with token utilities, not stylesheets.",
 	"admin-css-rule": "admin.css holds document-wide base rules only; style the element with token utilities.",
@@ -1477,6 +1531,15 @@ const HINTS = {
 		"Text 4.5:1, border-strong and the field underline 3:1, the dark pill not the brightest block, the picked row's bar: read from tokens.json (check-type-colour.mjs).",
 	tabular:
 		"Digits are tabular: admin.css says font-variant-numeric: tabular-nums on .monti-admin and the body, and nothing takes it back.",
+	"own-glyph":
+		"An icon is taken from packages/ui/src/icons.ts; a mark drawn by hand is named in OWN_GLYPH_OK (check-parts.mjs) with the reason.",
+	"assistant-place":
+		"The ✦ is one AssistantButton, given once to AssistantSlot and drawn at the end of the head row (common.md).",
+	"cut-words": 'Words cut with "…" are in CutWords, which says them whole to the pointer and the keyboard.',
+	"menu-danger-separator": "A menu's danger row stands after a separator unless it is the first row (menu.md).",
+	"required-mark": 'A required field\'s star is RequiredMark; no typed " !" or "*" (field.md).',
+	"mono-props":
+		"Words are sans: `mono`, `metaMono` and `ofMono` are for values; a file that sets them on words it cannot read is named in MONO_PROP_VALUES (check-parts.mjs).",
 	"design-allow": "A marker states why the value cannot be a token.",
 };
 

@@ -13,6 +13,7 @@ import {
 	TrashCan,
 } from "../../icons";
 import {
+	AssistantSlot,
 	Count,
 	folderTree,
 	IconButton,
@@ -103,13 +104,27 @@ export interface FrameFolder {
 	readonly active?: boolean;
 }
 
+/** The ✦ at the end of the head row, as the app gives it (`AssistantSlot`): every reference screen with a head shows it there. */
+export function ReferenceAssistant({ children }: { children: React.ReactNode }) {
+	return (
+		<AssistantSlot
+			button={
+				<IconButton label="어시스턴트 열기" side="bottom">
+					<Spark aria-hidden />
+				</IconButton>
+			}
+		>
+			{children}
+		</AssistantSlot>
+	);
+}
+
 export function AdminFrame({
 	open = "posts",
 	rail: railStart = false,
 	modeOpen,
 	folders = [],
 	counts = {},
-	corner = true,
 	mode: modeStart = "system",
 	fixed = true,
 	panel,
@@ -125,8 +140,6 @@ export function AdminFrame({
 	folders?: readonly FrameFolder[];
 	/** The rows' counts, as the board draws them (posts 148, trash 3, one failed delivery on the activity log by default). */
 	counts?: Partial<Record<FramePlace, string>>;
-	/** The assistant's ✦ button in the page's top-right corner; off where a panel covers it. */
-	corner?: boolean;
 	/** A panel docked at the page's right edge (the assistant, the properties), beside the page as the app's frame puts it. */
 	panel?: React.ReactNode;
 	/** A `Banner` about the whole site, edge to edge above the page (a schema change, an ended session). */
@@ -207,24 +220,16 @@ export function AdminFrame({
 						</SidebarFoot>
 					</SidebarFooter>
 				</Sidebar>
-				<SidebarInset
-					fixed
-					banner={banner}
-					corner={
-						corner ? (
-							<IconButton label="어시스턴트 열기">
-								<Spark className="size-monti-icon-lg" />
-							</IconButton>
-						) : undefined
-					}
-				>
+				<SidebarInset fixed banner={banner}>
 					{/* As the app's frame: the page is the container its column measures, and a docked panel sits beside it. */}
-					<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
-						<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
-							{children}
-						</Stack>
-						{panel}
-					</Inline>
+					<ReferenceAssistant>
+						<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+							<Stack gap={0} grow minWidth={0} minHeight={0} container overflow="y">
+								{children}
+							</Stack>
+							{panel}
+						</Inline>
+					</ReferenceAssistant>
 				</SidebarInset>
 			</SidebarProvider>
 		</Text>

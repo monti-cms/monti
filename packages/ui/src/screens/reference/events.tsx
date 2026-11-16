@@ -641,7 +641,6 @@ export function EventsScreen({ stage = "default" }: { stage?: EventsStage }) {
 		<AdminFrame
 			open="activity"
 			counts={{ activity: failed > 0 ? String(failed) : undefined }}
-			corner={open === undefined}
 			panel={open ? <Details stage={stage} line={open} /> : undefined}
 		>
 			{/* The page says it where its state lives; it stands at the very top of the screen, under the frame's own banners. */}

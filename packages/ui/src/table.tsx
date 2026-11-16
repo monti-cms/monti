@@ -532,6 +532,8 @@ function TableCell({
 		/** The cell writes a short form of `title` (a date without its year and time): it says `title` whenever it is pointed at, cut or not. */
 		short?: boolean;
 	}) {
+	// A cell that cuts its words says them whole: its `title` when it has one, its own words when it has none.
+	const says = truncate || title !== undefined;
 	const cell = (
 		<td
 			data-slot="table-cell"
@@ -564,20 +566,20 @@ function TableCell({
 			style={size === undefined ? style : { ...style, width: size }}
 			{...props}
 		>
-			{title === undefined
+			{!says
 				? children
 				: // Bare words cannot stand over anything: they get a box of their own.
 					React.Children.map(children, (child) =>
 						// The box keeps the words where bare words stand, on the line's baseline: the row stays as tall as one without a `title`.
 						typeof child === "string" || typeof child === "number" ? (
-							<span className="align-baseline!">{child}</span>
+							<span className="relative z-1 align-baseline!">{child}</span>
 						) : (
 							child
 						),
 					)}
 		</td>
 	);
-	return title === undefined ? cell : <CutWords render={cell} whole={title} partial={short} />;
+	return says ? <CutWords render={cell} whole={title} partial={short} /> : cell;
 }
 
 export {

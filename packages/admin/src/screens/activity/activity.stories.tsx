@@ -144,7 +144,7 @@ export const log = (
 			auth: { password: true },
 			signedIn: true,
 			receivers: receivers ? receiversOf(hooks) : [],
-			// The site has the assistant, so the frame's corner holds its ✦ (a site without it draws none): the scenes look at the corner
+			// The site has the assistant, so the page's head row ends with its ✦ (a site without it draws none): the scenes look at it
 			// with a panel beside the list and without one.
 			plugins: [assistant({ provider: scriptedProvider().for })],
 		});

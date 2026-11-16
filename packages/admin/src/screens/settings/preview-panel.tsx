@@ -1,10 +1,10 @@
 import type { FieldDefinition } from "@monti-cms/core";
-import { FormField, FormFieldLabel, MediaInput, Option, PropertyGroup, PropertyPanel, Text } from "@monti-cms/ui";
+import { FormField, FormFieldLabel, MediaInput, PropertyGroup, PropertyPanel, Text } from "@monti-cms/ui";
 import { useState } from "react";
 import { fieldName } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
 import type { EntryView } from "../../plugins";
-import { FieldInput, FieldToggle, isToggle } from "../entry/field-input";
+import { FieldInput, FieldToggle, SwitchRow, standsAsSwitch } from "../entry/field-input";
 import { at, type DraftField, type Layout, shownLayout } from "./schema-draft";
 import type { SettingsDraft } from "./use-settings-draft";
 
@@ -77,11 +77,13 @@ export function PreviewPanel({
 	 */
 	const fieldRow = (key: string, def: FieldDefinition, label: string, required: boolean) => {
 		const id = `preview-${key}`;
-		if (isToggle(def))
+		if (standsAsSwitch(def, false))
 			return (
-				<FormField key={key}>
-					<Option spread height="md">
-						{label}
+				<SwitchRow
+					key={key}
+					id={id}
+					name={label}
+					toggle={
 						<FieldToggle
 							def={def}
 							id={id}
@@ -89,8 +91,8 @@ export function PreviewPanel({
 							onChange={(next) => setTyped((was) => ({ ...was, [key]: next }))}
 							readOnly={false}
 						/>
-					</Option>
-				</FormField>
+					}
+				/>
 			);
 		return (
 			<FormField key={key}>
@@ -112,7 +114,7 @@ export function PreviewPanel({
 	// preview is open and kept nowhere; a related item has no candidates, since a field that is not saved has none to read.
 	const input = (def: FieldDefinition, id: string, key: string) =>
 		def.kind === "media" ? (
-			<MediaInput id={id} size="md" placeholder={t("settings.preview.empty")} />
+			<MediaInput id={id} size="md" placeholder={t("settings.preview.empty")} accept={def.accept} />
 		) : (
 			<FieldInput
 				def={def}
@@ -154,20 +156,26 @@ export function PreviewPanel({
 						const brought = definition.input ? inputs.get(definition.input) : undefined;
 						const Own = brought === undefined ? null : "Input" in brought ? brought.Input : brought;
 						if (!Own) return fieldRow(field.name, definition, fieldName(field.name, field.label, t), false);
+						const input = (
+							<Own
+								id={id}
+								field={field.name}
+								definition={definition}
+								options={definition.inputOptions ?? {}}
+								value={typed[field.name]}
+								onChange={(next) => setTyped((was) => ({ ...was, [field.name]: next }))}
+								readOnly={false}
+								proposal={false}
+								entry={emptyEntry}
+							/>
+						);
+						// The same rule as the entry's panel: a plugin's switch is a switch row.
+						if (standsAsSwitch(definition, brought !== undefined && "Input" in brought && brought.switch === true))
+							return <SwitchRow key={field.name} id={id} name={fieldName(field.name, field.label, t)} toggle={input} />;
 						return (
 							<FormField key={field.name}>
 								<FormFieldLabel htmlFor={id}>{fieldName(field.name, field.label, t)}</FormFieldLabel>
-								<Own
-									id={id}
-									field={field.name}
-									definition={definition}
-									options={definition.inputOptions ?? {}}
-									value={typed[field.name]}
-									onChange={(next) => setTyped((was) => ({ ...was, [field.name]: next }))}
-									readOnly={false}
-									proposal={false}
-									entry={emptyEntry}
-								/>
+								{input}
 							</FormField>
 						);
 					})}

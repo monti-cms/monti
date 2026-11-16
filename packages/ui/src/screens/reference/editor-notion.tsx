@@ -10,7 +10,6 @@ import {
 	Repeat,
 	RightPanelOpen,
 	Settings,
-	Spark,
 	TextAlignLeft,
 	TrashCan,
 } from "../../icons";
@@ -65,6 +64,7 @@ import {
 	TextButton,
 	TodoItem,
 } from "../../index";
+import { ReferenceAssistant } from "./frame";
 
 /** Nothing happens when a control of a reference screen is pressed: its looks only. */
 export const still = () => {};
@@ -94,48 +94,47 @@ export function EntryHeader({
 	wide?: boolean;
 }) {
 	return (
-		<EditorHeader>
-			<Inline gap={wide ? 16 : 12} minWidth={0} paddingX={12}>
-				<TextButton variant="quiet">
-					<ChevronLeft aria-hidden />
-					{back}
-				</TextButton>
-				{address ? (
-					<Text mono variant="caption" tone="faint" truncate>
-						{address}
-					</Text>
-				) : null}
-				<EntryStatus status={status}>{statusLabel}</EntryStatus>
-			</Inline>
-			<Inline gap={wide ? 16 : 12} justify="end">
-				{publish ? (
-					<>
-						{/* A button shows no shortcut (button.md); ⌘S is in its tooltip. */}
-						<Button variant="ghost">저장</Button>
-						<Button variant="secondary">미리보기</Button>
-						<SplitButton menuLabel="발행 방식" menu={null}>
-							발행하기
-						</SplitButton>
-					</>
-				) : (
-					// A button shows no shortcut (button.md); ⌘S is in its tooltip.
-					<Button>저장</Button>
-				)}
-				{/* The pill stands alone: the line sets it apart from the screen's tools (the panes, ⋯, ✦). */}
-				<Separator orientation="vertical" length="control" flush />
-				{panel ? (
-					<IconButton label="속성" side="bottom" pressed={panelOpen}>
-						<RightPanelOpen aria-hidden />
+		<ReferenceAssistant>
+			<EditorHeader>
+				<Inline gap={wide ? 16 : 12} minWidth={0} paddingX={12}>
+					<TextButton variant="quiet">
+						<ChevronLeft aria-hidden />
+						{back}
+					</TextButton>
+					{address ? (
+						<Text mono variant="caption" tone="faint" truncate>
+							{address}
+						</Text>
+					) : null}
+					<EntryStatus status={status}>{statusLabel}</EntryStatus>
+				</Inline>
+				<Inline gap={wide ? 16 : 12} justify="end">
+					{publish ? (
+						<>
+							{/* A button shows no shortcut (button.md); ⌘S is in its tooltip. */}
+							<Button variant="ghost">저장</Button>
+							<Button variant="secondary">미리보기</Button>
+							<SplitButton menuLabel="발행 방식" menu={null}>
+								발행하기
+							</SplitButton>
+						</>
+					) : (
+						// A button shows no shortcut (button.md); ⌘S is in its tooltip.
+						<Button>저장</Button>
+					)}
+					{/* The pill stands alone: the line sets it apart from the screen's tools (the panes, ⋯, ✦). */}
+					<Separator orientation="vertical" length="control" flush />
+					{panel ? (
+						<IconButton label="속성" side="bottom" pressed={panelOpen}>
+							<RightPanelOpen aria-hidden />
+						</IconButton>
+					) : null}
+					<IconButton label="더 보기" side="bottom">
+						<OverflowMenuHorizontal aria-hidden />
 					</IconButton>
-				) : null}
-				<IconButton label="더 보기" side="bottom">
-					<OverflowMenuHorizontal aria-hidden />
-				</IconButton>
-				<IconButton label="어시스턴트 열기" side="bottom">
-					<Spark aria-hidden />
-				</IconButton>
-			</Inline>
-		</EditorHeader>
+				</Inline>
+			</EditorHeader>
+		</ReferenceAssistant>
 	);
 }
 

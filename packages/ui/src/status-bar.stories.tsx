@@ -49,7 +49,7 @@ export const Plugin: Story = {
 				label="맞춤법"
 				defaultOpen
 				findings={[
-					{ id: "1", title: "됬어요 → 됐어요", detail: "둘째 문단", actionLabel: "고치기", onAction: () => {} },
+					{ id: "1", title: "됬어요 → 됐어요", detail: "둘째 문단", actionLabel: "고치기", onAction: () => {} }, // cms-allow-korean: a spelling check's sample mistake, kept as the mistake it is
 					{ id: "2", title: "몇일 → 며칠", detail: "제목", actionLabel: "고치기", onAction: () => {} },
 				]}
 				settings={{ label: "설정", onClick: () => {} }}

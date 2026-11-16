@@ -49,7 +49,7 @@ function Thread() {
 			<ChatMessageActions author="user" time="오후 3:12">
 				{userActions}
 			</ChatMessageActions>
-			<ChatMessage author="assistant">요약이 빈 글은 두 편이에요.</ChatMessage>
+			<ChatMessage author="assistant">요약이 빈 글은 두 편입니다.</ChatMessage>
 			<ChatMessageActions author="assistant" time="오후 3:12">
 				{assistantActions}
 			</ChatMessageActions>

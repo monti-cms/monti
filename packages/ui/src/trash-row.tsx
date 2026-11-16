@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { HIT_LAYER } from "./hit-area";
 import { Folder } from "./icons";
 import { Spark } from "./spark";
@@ -32,17 +33,24 @@ function TrashRowTitle({
 		<span data-slot="trash-row-title" className={cn("flex min-w-0 flex-col gap-monti-4", className)} {...props}>
 			<span className="flex min-w-0 items-baseline gap-monti-12">
 				{folder && <Folder aria-hidden size={16} className="shrink-0 self-center text-monti-subtle" />}
-				<span className="min-w-0 truncate text-monti-body text-monti-muted [&_[data-slot=row-link]]:text-inherit">
+				<CutWords className="min-w-0 truncate text-monti-body text-monti-muted [&_[data-slot=row-link]]:text-inherit">
 					{title}
-				</span>
-				{address && <span className="truncate font-mono text-monti-caption text-monti-faint">{address}</span>}
+				</CutWords>
+				{address && <CutWords className="truncate font-mono text-monti-caption text-monti-faint">{address}</CutWords>}
 			</span>
-			<span
-				data-slot="trash-row-meta"
-				className={cn("truncate text-monti-note", metaTone === "warning" ? "text-monti-warning" : "text-monti-subtle")}
+			<CutWords
+				render={
+					<span
+						data-slot="trash-row-meta"
+						className={cn(
+							"truncate text-monti-note",
+							metaTone === "warning" ? "text-monti-warning" : "text-monti-subtle",
+						)}
+					/>
+				}
 			>
 				{meta || "\u00a0"}
-			</span>
+			</CutWords>
 		</span>
 	);
 }
@@ -89,7 +97,7 @@ function TrashRowDate({
 			>
 				<Spark aria-hidden className="size-monti-icon-xs shrink-0" />
 				{/* The days keep the warning tone when the purge is near, as on the mark that opens nothing. */}
-				<span
+				<CutWords
 					className={cn(
 						"truncate group-hover/open:underline",
 						// A date is a value and stays mono; the days left are words.
@@ -98,13 +106,13 @@ function TrashRowDate({
 					)}
 				>
 					{words}
-				</span>
+				</CutWords>
 			</button>
 		) : (
 			<span data-slot="trash-row-left" className={MARK}>
 				<Spark role="img" aria-hidden={false} aria-label={byAssistant.label} className="size-monti-icon-xs shrink-0" />
 				{/* The mark says who; the days still say how near the purge is. */}
-				<span
+				<CutWords
 					className={cn(
 						"truncate",
 						date !== undefined && "font-mono",
@@ -112,7 +120,7 @@ function TrashRowDate({
 					)}
 				>
 					{words}
-				</span>
+				</CutWords>
 			</span>
 		);
 	return (
@@ -123,15 +131,22 @@ function TrashRowDate({
 		>
 			{date !== undefined &&
 				(assistant(date) ?? (
-					<span className="max-w-full truncate font-mono text-monti-caption text-monti-subtle">{date}</span>
+					<CutWords className="max-w-full truncate font-mono text-monti-caption text-monti-subtle">{date}</CutWords>
 				))}
 			{(date === undefined && assistant(left)) || (
-				<span
-					data-slot="trash-row-left"
-					className={cn("max-w-full truncate text-monti-caption", urgent ? "text-monti-warning" : "text-monti-faint")}
+				<CutWords
+					render={
+						<span
+							data-slot="trash-row-left"
+							className={cn(
+								"max-w-full truncate text-monti-caption",
+								urgent ? "text-monti-warning" : "text-monti-faint",
+							)}
+						/>
+					}
 				>
 					{left}
-				</span>
+				</CutWords>
 			)}
 		</span>
 	);

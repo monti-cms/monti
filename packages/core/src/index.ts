@@ -234,6 +234,8 @@ export {
 export {
 	type AdminValues,
 	type AdminValuesPatch,
+	COLLECTION_ICONS,
+	type CollectionIcon,
 	diffAdminValues,
 	inOptionOrder,
 	mergeAdminValues,

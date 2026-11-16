@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
 import { HIT_AREA } from "./hit-area";
 import { Add, ArrowDown, ArrowUp } from "./icons";
@@ -301,7 +302,7 @@ function ListHead({
 					const isOpen = open?.id === column.id;
 					const name = (
 						<>
-							<span className="truncate">{column.label}</span>
+							<CutWords className="truncate">{column.label}</CutWords>
 							{column.filtered && (
 								<span
 									aria-hidden

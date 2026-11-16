@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { ArrowRight } from "./icons";
 
 /**
@@ -31,17 +32,17 @@ function MapRow({
 			data-off={off || undefined}
 			className="grid grid-cols-[120px_14px_minmax(0,1fr)] items-center gap-x-monti-12 gap-y-monti-2 border-monti-muted border-b py-monti-8"
 		>
-			<span className={cn("truncate font-mono text-monti-default text-monti-note", off && "text-monti-faint")}>
+			<CutWords className={cn("truncate font-mono text-monti-default text-monti-note", off && "text-monti-faint")}>
 				{name}
-			</span>
+			</CutWords>
 			<ArrowRight aria-hidden className="size-3 justify-self-center text-monti-faint" />
 			{children}
 			{(warning ?? example) && (
-				<span
+				<CutWords
 					className={cn("col-start-3 truncate text-monti-caption", warning ? "text-monti-warning" : "text-monti-faint")}
 				>
 					{warning ?? example}
-				</span>
+				</CutWords>
 			)}
 		</div>
 	);

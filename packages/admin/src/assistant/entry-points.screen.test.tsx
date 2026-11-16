@@ -299,3 +299,46 @@ describe("the review page: states not tried before (T165)", () => {
 		expect(items.map((item) => item.included)).toEqual([false, true, false]);
 	});
 });
+
+describe("the ✦ stands in one place (common.md, the assistant's button)", () => {
+	const box = (element: Element | null) => (element as Element).getBoundingClientRect();
+
+	it("on a list it ends the head row, inside the content width, level with the title row and not above it", async () => {
+		const story = on({});
+		await story.run();
+		await listed();
+		const spark = button("어시스턴트 열기").element();
+		const head = spark.closest("[data-slot=page-header]") as HTMLElement;
+		expect(head).not.toBeNull();
+		const column = head.closest("[data-slot=page-column]")?.firstElementChild as HTMLElement;
+		const title = page.getByRole("heading", { name: "post" }).element();
+		// Inside the content width: the column's own box, not the page's corner.
+		expect(box(spark).right).toBeLessThanOrEqual(box(column).right);
+		expect(box(spark).left).toBeGreaterThanOrEqual(box(column).left);
+		// In the title's row: its centre is within the row of the title, not 30px above the buttons as the corner was.
+		const row = box(title);
+		expect(box(spark).top).toBeGreaterThanOrEqual(row.top - 8);
+		expect(box(spark).bottom).toBeLessThanOrEqual(box(head).bottom);
+		// The last thing of the row.
+		const others = [...head.querySelectorAll("button")].filter((each) => each !== spark);
+		for (const other of others) expect(box(other).right).toBeLessThanOrEqual(box(spark).left + 1);
+	});
+
+	it("in an editor it ends the head row, inside the page's width, with the editor's own tools before it", async () => {
+		const story = on({});
+		await story.run();
+		await listed();
+		window.location.hash = `#/c/post/${story.loaded().ids.second}`;
+		await expect.element(page.getByRole("textbox", { name: "제목" })).toBeVisible();
+		const spark = button("어시스턴트 열기").element();
+		const head = spark.closest("[data-slot=editor-header]") as HTMLElement;
+		expect(head).not.toBeNull();
+		expect(box(spark).right).toBeLessThanOrEqual(box(head).right);
+		expect(box(spark).top).toBeGreaterThanOrEqual(box(head).top);
+		expect(box(spark).bottom).toBeLessThanOrEqual(box(head).bottom);
+		const others = [...head.querySelectorAll("button")].filter((each) => each !== spark);
+		for (const other of others) expect(box(other).right).toBeLessThanOrEqual(box(spark).left + 1);
+		// One button, on every screen: not a second one in a corner.
+		expect(button("어시스턴트 열기").elements()).toHaveLength(1);
+	});
+});

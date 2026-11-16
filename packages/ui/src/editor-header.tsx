@@ -1,20 +1,27 @@
 import type * as React from "react";
+import { useAssistantSlot } from "./assistant-slot";
 import { cn } from "./cn";
 
 /**
  * The head of an editor: the way back, where the entry lives and its state at the start; saving, publishing and the editor's tools at the end. As tall as
- * the sidebar's head, on the page ground with a line under it; on a narrow screen its two ends wrap.
+ * the sidebar's head, on the page ground with a line under it; on a narrow screen its two ends wrap. The assistant's ✦ ends the row (`AssistantSlot`), after
+ * the editor's own tools.
  */
-function EditorHeader({ className, ...props }: React.ComponentProps<"header">) {
+function EditorHeader({ className, children, ...props }: React.ComponentProps<"header">) {
+	const assistant = useAssistantSlot();
 	return (
 		<header
 			data-slot="editor-header"
 			className={cn(
-				"flex min-h-monti-header shrink-0 flex-wrap items-center justify-between gap-monti-12 border-monti-default border-b bg-monti-page px-monti-12",
+				// The second group, or the ✦ when there is only the start, stands at the end.
+				"flex min-h-monti-header shrink-0 flex-wrap items-center gap-monti-12 border-monti-default border-b bg-monti-page px-monti-12 [&>:nth-child(2)]:ml-auto",
 				className,
 			)}
 			{...props}
-		/>
+		>
+			{children}
+			{assistant}
+		</header>
 	);
 }
 

@@ -42,6 +42,7 @@ const SITE_VALUE: Record<string, string> = {
 /** The words of a collection's own admin values, as the changes list names them. */
 const COLLECTION_VALUE = {
 	label: "settings.collection.label",
+	icon: "settings.collection.icon",
 	folders: "settings.collection.folders",
 	layout: "settings.collection.layout",
 } as const;

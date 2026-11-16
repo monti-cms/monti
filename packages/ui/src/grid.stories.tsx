@@ -37,7 +37,7 @@ export const SpanAll: Story = {
 			<Cell>이름</Cell>
 			<Cell>주소</Cell>
 			<Box span="all" background="selected" radius="md" padding={8}>
-				<Text variant="caption">span all: 모든 칸을 차지해요</Text>
+				<Text variant="caption">span all: 모든 칸을 차지합니다</Text>
 			</Box>
 			<Cell>메모</Cell>
 			<Cell>태그</Cell>

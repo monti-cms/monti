@@ -37,7 +37,7 @@ export const States: Story = {
 			</Stack>
 			<Stack gap={4}>
 				<StoryCaption>disabled</StoryCaption>
-				<Input disabled defaultValue="슬러그는 잠겨 있어요" />
+				<Input disabled defaultValue="슬러그는 잠겨 있습니다" />
 			</Stack>
 			<Stack gap={4}>
 				<StoryCaption>disabled, empty</StoryCaption>

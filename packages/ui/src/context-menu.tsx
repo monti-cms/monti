@@ -15,6 +15,7 @@ import {
 	SUB_SIDE_OFFSET,
 } from "./menu-parts";
 import { menuSurface } from "./menu-surface";
+import { menuWords } from "./menu-words";
 
 function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props) {
 	return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
@@ -83,6 +84,7 @@ function ContextMenuLabel({ className, ...props }: ContextMenuPrimitive.GroupLab
 function ContextMenuItem({
 	className,
 	variant = "default",
+	children,
 	...props
 }: ContextMenuPrimitive.Item.Props & {
 	variant?: "default" | "danger";
@@ -93,7 +95,9 @@ function ContextMenuItem({
 			data-variant={variant}
 			className={cn(MENU_ITEM, className)}
 			{...props}
-		/>
+		>
+			{menuWords(children)}
+		</ContextMenuPrimitive.Item>
 	);
 }
 
@@ -109,7 +113,7 @@ function ContextMenuSubTrigger({ className, children, ...props }: ContextMenuPri
 			className={cn(MENU_ITEM, className)}
 			{...props}
 		>
-			{children}
+			{menuWords(children)}
 			<ChevronRight aria-hidden className={MENU_SUB_MARK} />
 		</ContextMenuPrimitive.SubmenuTrigger>
 	);

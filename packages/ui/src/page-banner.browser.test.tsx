@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "../test/render";
 import {
+	AssistantSlot,
 	Banner,
 	Button,
 	EditorHeader,
@@ -35,19 +36,17 @@ function Frame({ site = false, own = true }: { site?: boolean; own?: boolean }) 
 			<Sidebar label="관리자 메뉴">
 				<Text>몬티 블로그</Text>
 			</Sidebar>
-			<SidebarInset
-				fixed
-				banner={siteShown ? <Banner tone="danger" title="스키마를 적용하지 못했습니다" /> : null}
-				corner={<IconButton label="어시스턴트 열기">✦</IconButton>}
-			>
-				<PageColumn>
-					<PageHeader title="설정" />
-					<PageBody>
-						<Button onClick={() => setOwnShown(true)}>저장</Button>
-						<Button onClick={() => setSiteShown(true)}>스키마 바꾸기</Button>
-						<PageBanner>{ownShown ? <Banner tone="danger" title="저장하지 못했습니다" /> : null}</PageBanner>
-					</PageBody>
-				</PageColumn>
+			<SidebarInset fixed banner={siteShown ? <Banner tone="danger" title="스키마를 적용하지 못했습니다" /> : null}>
+				<AssistantSlot button={<IconButton label="어시스턴트 열기">✦</IconButton>}>
+					<PageColumn>
+						<PageHeader title="설정" />
+						<PageBody>
+							<Button onClick={() => setOwnShown(true)}>저장</Button>
+							<Button onClick={() => setSiteShown(true)}>스키마 바꾸기</Button>
+							<PageBanner>{ownShown ? <Banner tone="danger" title="저장하지 못했습니다" /> : null}</PageBanner>
+						</PageBody>
+					</PageColumn>
+				</AssistantSlot>
 			</SidebarInset>
 		</SidebarProvider>
 	);
@@ -180,7 +179,7 @@ describe("several PageBanners", () => {
 });
 
 describe("PageBanner", () => {
-	it("stands at the very top of the frame's page, edge to edge, with the page and the corner under it", async () => {
+	it("stands at the very top of the frame's page, edge to edge, with the page and its ✦ under it", async () => {
 		render(<Frame />);
 		await expect.element(page.getByText("저장하지 못했습니다")).toBeVisible();
 		const own = box(banner("저장하지 못했습니다"));
@@ -188,8 +187,8 @@ describe("PageBanner", () => {
 		expect(own.left).toBe(box(inset()).left);
 		expect(own.right).toBe(box(inset()).right);
 		expect(box(page.getByRole("heading", { name: "설정" }).element()).top).toBeGreaterThan(own.bottom);
-		// The corner keeps its 12px, measured from under the banner.
-		expect(box(page.getByRole("button", { name: "어시스턴트 열기" }).element()).top).toBe(own.bottom + 12);
+		// The ✦ stands in the head row, which is under the banner.
+		expect(box(page.getByRole("button", { name: "어시스턴트 열기" }).element()).top).toBeGreaterThan(own.bottom);
 	});
 
 	it("is read before the page, as the frame's banners are, and is announced as they are", async () => {
@@ -224,11 +223,14 @@ describe("PageBanner", () => {
 		expect(box(place()).height).toBe(0);
 		expect(document.querySelector("[data-slot=banner]")).toBeNull();
 		const corner = page.getByRole("button", { name: "어시스턴트 열기" }).element();
-		expect(box(corner).top).toBe(box(inset()).top + 12);
+		const headRow = page.getByRole("heading", { name: "설정" }).element();
+		const before = box(corner).top - box(headRow).top;
 		await page.getByRole("button", { name: "저장" }).click();
 		await expect.element(page.getByText("저장하지 못했습니다")).toBeVisible();
 		expect(box(banner("저장하지 못했습니다")).top).toBe(box(inset()).top);
-		expect(box(corner).top).toBe(box(banner("저장하지 못했습니다")).bottom + 12);
+		// The ✦ moved down with the head row, which stands as far from the title as before.
+		expect(box(corner).top - box(headRow).top).toBe(before);
+		expect(box(corner).top).toBeGreaterThan(box(banner("저장하지 못했습니다")).bottom);
 	});
 
 	it("outside the frame, stands over the head row of a standalone page, under the page's own banners", async () => {

@@ -1,5 +1,5 @@
 import type * as React from "react";
-import { FormField, FormFieldLabel, Input, Option, ReadValue, Stack, Switch, Text, Textarea } from "../../index";
+import { FormField, FormFieldLabel, Input, Option, ReadValue, Stack, Switch, Textarea } from "../../index";
 import { ShownSelect } from "./settings";
 
 /** A rule row of the field sheet: its name on the left, its control at the end, at the sheet's height (32px). */
@@ -30,15 +30,8 @@ export function PickRule({ label, value }: { label: React.ReactNode; value: stri
 	);
 }
 
-/** "필수 !": the mark the field list shows for a required field, faint after the word. */
-export const REQUIRED = (
-	<span>
-		필수{" "}
-		<Text tone="faint" mono>
-			!
-		</Text>
-	</span>
-);
+/** The words of the "required" rule of a field sheet: what the field list marks with the red `*` (`RequiredMark`) after the name. */
+export const REQUIRED = "필수";
 
 /**
  * The top of the field sheet: (a saved field's kind), the identifier it must have, the label over it (the identifier while empty), and what the

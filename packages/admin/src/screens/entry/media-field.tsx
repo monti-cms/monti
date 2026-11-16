@@ -126,6 +126,7 @@ export function MediaField({
 					proposal={proposed !== undefined && !going}
 					value={going ? { name: going.name, thumbnail: going.preview } : shownFile(file)}
 					placeholder={t("entry.empty")}
+					accept={accept}
 					readOnly={readOnly}
 					aria-labelledby={readOnly ? `${id}-label` : undefined}
 					onOpen={() => setPicking(true)}

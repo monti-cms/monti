@@ -233,7 +233,7 @@ export function useOpenConversation(): ((id: string) => void) | undefined {
 
 /**
  * A screen's "✦ request" (the list's bulk bar): opens the panel with what is picked as its chip, ready to be typed in. Nothing on a page
- * without the assistant. A site with no key gets the panel's "add an API key", as from the ✦ in the corner.
+ * without the assistant. A site with no key gets the panel's "add an API key", as from the ✦ in the head row.
  */
 export function useRequest(): (() => void) | undefined {
 	const assistant = useContext(Context);

@@ -50,7 +50,7 @@ export const Focused: Story = {
 			<FormField data-invalid="true">
 				<FormFieldLabel htmlFor="f-2">공개 주소 (오류)</FormFieldLabel>
 				<Affix id="f-2" prefix="/" suffix="/:slug" aria-invalid defaultValue="내 글" />
-				<FormFieldError>영문 소문자와 -만 쓸 수 있어요.</FormFieldError>
+				<FormFieldError>영문 소문자와 -만 쓸 수 있습니다.</FormFieldError>
 			</FormField>
 			<FormField>
 				<FormFieldLabel htmlFor="f-3">공개 주소 (제안)</FormFieldLabel>
@@ -73,7 +73,7 @@ export const States: Story = {
 			<FormField data-invalid="true">
 				<FormFieldLabel htmlFor="a-2">공개 주소 (오류)</FormFieldLabel>
 				<Affix id="a-2" prefix="/" suffix="/:slug" aria-invalid defaultValue="내 글" />
-				<FormFieldError>영문 소문자와 -만 쓸 수 있어요.</FormFieldError>
+				<FormFieldError>영문 소문자와 -만 쓸 수 있습니다.</FormFieldError>
 			</FormField>
 			<FormField>
 				<FormFieldLabel htmlFor="a-3">주소 끝 (다시 만들기 단추)</FormFieldLabel>
@@ -119,7 +119,7 @@ export const SlugOnly: Story = {
 			<FormField>
 				<FormFieldLabel htmlFor="s-3">주소 (오류)</FormFieldLabel>
 				<Affix id="s-3" aria-invalid defaultValue="가을 산길" />
-				<FormFieldError>영문 소문자, 숫자, -만 쓸 수 있어요.</FormFieldError>
+				<FormFieldError>영문 소문자, 숫자, -만 쓸 수 있습니다.</FormFieldError>
 			</FormField>
 		</Stack>
 	),

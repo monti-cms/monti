@@ -48,7 +48,7 @@ export const Rows: Story = {
 			<MapRow name="title" example="봄에 쓴 첫 글">
 				{pick("title")}
 			</MapRow>
-			<MapRow name="date" warning="날짜 3개를 읽을 수 없어요">
+			<MapRow name="date" warning="날짜 3개를 읽을 수 없음">
 				{pick("publishedAt")}
 			</MapRow>
 			<MapRow name="labels" example="회고, 에디터">
@@ -66,10 +66,10 @@ export const Issues: Story = {
 	render: () => (
 		<Box width="sheet">
 			<Stack gap={16}>
-				<Text>문제가 2개 있어서 복원하지 않아요.</Text>
+				<Text>문제가 2개 있어서 복원하지 않습니다.</Text>
 				<div>
-					<IssueRow name="이 사이트에 없는 필드" code="series" warning="글 14편이 이 값을 가지고 있어요" />
-					<IssueRow name="겹치는 주소" code="/about" warning="두 글이 같은 주소를 써요" />
+					<IssueRow name="이 사이트에 없는 필드" code="series" warning="글 14편이 이 값을 가지고 있습니다" />
+					<IssueRow name="겹치는 주소" code="/about" warning="두 글이 같은 주소를 씁니다" />
 				</div>
 			</Stack>
 		</Box>

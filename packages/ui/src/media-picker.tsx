@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { DIALOG_ACTIONS, Dialog, DialogClose, DialogContent, DialogTitle } from "./dialog";
 import { Upload } from "./icons";
 import { useUiLabels } from "./labels";
@@ -129,7 +130,9 @@ function MediaPicker({
 			<DialogContent size="xl" className="gap-monti-20 pb-monti-20">
 				{/* The search sits on the title's line, as on the library's page: no line of its own over the tiles. */}
 				<div className="flex items-center gap-monti-16 border-monti-contrast border-b pb-monti-12">
-					<DialogTitle className="min-w-0 flex-1 truncate border-0 pb-0">{title}</DialogTitle>
+					<DialogTitle className="min-w-0 flex-1 border-0 pb-0">
+						<CutWords className="block">{title}</CutWords>
+					</DialogTitle>
 					<SearchBox
 						aria-label={searchLabel}
 						placeholder={searchLabel}
@@ -155,16 +158,16 @@ function MediaPicker({
 									className="min-w-0 max-w-40 shrink"
 									onClick={() => onFolderChange(up.id)}
 								>
-									<span className="block truncate">{up.name}</span>
+									<CutWords className="block truncate">{up.name}</CutWords>
 								</TextButton>
 								<span aria-hidden="true" className="text-monti-faint">
 									/
 								</span>
 							</React.Fragment>
 						))}
-						<span aria-current="page" className="min-w-0 truncate text-monti-default">
+						<CutWords render={<span aria-current="page" className="min-w-0 truncate text-monti-default" />}>
 							{folder === null ? topLabel : openFolder?.name}
-						</span>
+						</CutWords>
 					</nav>
 					{/* 4px of room around the tiles so the ring of a picked one is not cut by the scrolling area. */}
 					<div

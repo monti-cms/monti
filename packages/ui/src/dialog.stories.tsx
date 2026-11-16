@@ -51,7 +51,7 @@ export const Of: Story = {
 			<DialogContent form>
 				<DialogHeader>
 					<DialogTitle of="Anthropic 개인">값 바꾸기</DialogTitle>
-					<DialogDescription>새 키를 넣으면 이전 키는 바로 지워져요.</DialogDescription>
+					<DialogDescription>새 키를 넣으면 이전 키는 바로 지워집니다.</DialogDescription>
 				</DialogHeader>
 				<FormField>
 					<FormFieldLabel htmlFor="key">API 키</FormFieldLabel>

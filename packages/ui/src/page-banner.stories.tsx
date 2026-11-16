@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Document, Spark } from "./icons";
 import {
+	AssistantSlot,
 	Banner,
 	Box,
 	Button,
@@ -27,7 +28,7 @@ import {
 
 /**
  * A page's own banner: the page renders `PageBanner` where its state lives, and the banner stands at the very top of the screen, edge to edge, under
- * the frame's own banners. The page and its ✦ corner move down under it.
+ * the frame's own banners. The page and its ✦ move down under it.
  */
 const meta = {
 	title: "Patterns/Frame/PageBanner",
@@ -64,24 +65,24 @@ function Frame({ site, children = refused }: { site?: React.ReactNode; children?
 					</SidebarGroup>
 				</SidebarContent>
 			</Sidebar>
-			<SidebarInset
-				fixed
-				banner={site}
-				corner={
-					<IconButton label="어시스턴트 열기">
-						<Spark className="size-monti-icon-lg" />
-					</IconButton>
-				}
-			>
-				<PageColumn width="list">
-					<PageHeader title="설정">
-						<Button>저장</Button>
-					</PageHeader>
-					<PageBody>
-						<Text variant="note">컬렉션</Text>
-						<PageBanner>{children}</PageBanner>
-					</PageBody>
-				</PageColumn>
+			<SidebarInset fixed banner={site}>
+				<AssistantSlot
+					button={
+						<IconButton label="어시스턴트 열기">
+							<Spark aria-hidden />
+						</IconButton>
+					}
+				>
+					<PageColumn width="list">
+						<PageHeader title="설정">
+							<Button>저장</Button>
+						</PageHeader>
+						<PageBody>
+							<Text variant="note">컬렉션</Text>
+							<PageBanner>{children}</PageBanner>
+						</PageBody>
+					</PageColumn>
+				</AssistantSlot>
 			</SidebarInset>
 		</SidebarProvider>
 	);
@@ -103,7 +104,7 @@ export const UnderSiteBanner: Story = {
 	),
 };
 
-/** A page with nothing to say: the place takes no room, and the page and the corner stand at the top. */
+/** A page with nothing to say: the place takes no room, and the page and its ✦ stand at the top. */
 export const None: Story = { render: () => <Frame>{null}</Frame> };
 
 /** A screen outside the frame (an editor): its banners stand over the head row, the screen's own first, a deeper part's under them. */

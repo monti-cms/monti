@@ -17,6 +17,7 @@ import {
 	Text,
 	TextButton,
 } from "../../index";
+import { ReferenceAssistant } from "./frame";
 
 /**
  * An edit conflict: what was typed here beside the server's latest version, the words that differ marked on both sides. No status bar: the
@@ -25,26 +26,28 @@ import {
 export function EditorCompareScreen() {
 	return (
 		<StandalonePage>
-			<EditorHeader>
-				<Inline gap={16} minWidth={0} paddingX={12}>
-					<TextButton variant="quiet">
-						<ChevronLeft aria-hidden />
-						편집기로
-					</TextButton>
-					<Text variant="title">서버 최신본과 비교</Text>
-					<Text mono variant="caption" tone="faint" truncate>
-						/posts/first-post
-					</Text>
-				</Inline>
-				<Inline gap={16} justify="end" paddingX={12}>
-					<Text variant="note" tone="subtle">
-						차이 3곳
-					</Text>
-					<Separator orientation="vertical" length="control" flush />
-					<TextButton>서버 최신본 불러오기</TextButton>
-					<Button>내 입력으로 저장</Button>
-				</Inline>
-			</EditorHeader>
+			<ReferenceAssistant>
+				<EditorHeader>
+					<Inline gap={16} minWidth={0} paddingX={12}>
+						<TextButton variant="quiet">
+							<ChevronLeft aria-hidden />
+							편집기로
+						</TextButton>
+						<Text variant="title">서버 최신본과 비교</Text>
+						<Text mono variant="caption" tone="faint" truncate>
+							/posts/first-post
+						</Text>
+					</Inline>
+					<Inline gap={16} justify="end">
+						<Text variant="note" tone="subtle">
+							차이 3곳
+						</Text>
+						<Separator orientation="vertical" length="control" flush />
+						<Button variant="ghost">서버 최신본 불러오기</Button>
+						<Button>내 입력으로 저장</Button>
+					</Inline>
+				</EditorHeader>
+			</ReferenceAssistant>
 			<Stack gap={0} grow minHeight={0} overflow="y">
 				<Compare>
 					<CompareSide

@@ -26,7 +26,7 @@ export const Warning: Story = {
 export const Danger: Story = {
 	args: {
 		tone: "danger",
-		title: "전달하지 못했어요",
+		title: "전달하지 못했습니다",
 		meta: "webhook · 503",
 		children: <TextButton variant="underline">다시 보내기</TextButton>,
 	},
@@ -37,14 +37,14 @@ export const Neutral: Story = {
 	args: {
 		tone: "neutral",
 		title: "휴지통에 있는 글입니다",
-		meta: "복원하면 초안으로 돌아와요",
+		meta: "복원하면 초안으로 돌아옵니다",
 		children: <TextButton variant="underline">복원</TextButton>,
 	},
 };
 
 /** `plainMeta` makes the detail a sentence on any tone. */
 export const PlainMeta: Story = {
-	args: { title: "이 글은 저장할 수 없습니다", meta: "필수 필드 2개가 비어 있어요", plainMeta: true },
+	args: { title: "이 글은 저장할 수 없습니다", meta: "필수 필드 2개가 비어 있습니다", plainMeta: true },
 };
 
 /**

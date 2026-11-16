@@ -1,5 +1,14 @@
-import { Inline, Stack, StandalonePage, Toaster, TooltipProvider, UiLabelsProvider } from "@monti-cms/ui";
+import {
+	AssistantSlot,
+	Inline,
+	Stack,
+	StandalonePage,
+	Toaster,
+	TooltipProvider,
+	UiLabelsProvider,
+} from "@monti-cms/ui";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { AssistantButton } from "./assistant/assistant-button";
 import { AssistantPanel } from "./assistant/assistant-panel";
 import { ReviewScreen } from "./assistant/review-screen";
 import { AssistantProvider, useAssistant } from "./assistant/use-assistant";
@@ -98,7 +107,10 @@ function Signed() {
 	const leave = useLeave();
 	return (
 		<AssistantProvider go={go} leave={leave} at={href(route)}>
-			<Screens route={route} go={go} />
+			{/* The ✦ that opens the assistant: one button, drawn at the end of the head row of every screen (`PageHeader`, `EditorHeader`). */}
+			<AssistantSlot button={<AssistantButton />}>
+				<Screens route={route} go={go} />
+			</AssistantSlot>
 		</AssistantProvider>
 	);
 }
@@ -128,7 +140,7 @@ const COUNT_AGAIN_MS = 3000;
 const COUNT_LOOKS = 20;
 
 function Screens({ route, go }: { route: Route; go: (route: Route, options?: { replace?: boolean }) => void }) {
-	const { screen, templates, toolPages, onWrite } = useAdmin();
+	const { t, screen, templates, toolPages, onWrite } = useAdmin();
 	const assistant = useAssistant();
 	const counts = useRead<FrameCounts>("frame.counts");
 	const [review, setReview] = useState(0);
@@ -269,7 +281,7 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 		const toTemplates = () => leave(() => go({ screen: "place", place: "tools" }));
 		return (
 			<BesideAssistant panel={panel}>
-				<ScreenBoundary at={at} back={<TemplatesBack onBack={toTemplates} />} backGap={16}>
+				<ScreenBoundary at={at} back={<TemplatesBack onBack={toTemplates} />} backGap={12}>
 					<TemplateEditor
 						key={route.id ?? "new"}
 						id={route.id}
@@ -295,10 +307,10 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 				else leave(review);
 			}}
 			counts={counts.data}
-			assistant={assistant.available ? { open: assistant.open, onOpen: () => assistant.setOpen(true), panel } : null}
+			assistant={assistant.available ? { open: assistant.open, panel } : null}
 		>
 			{/* A screen that throws while it is drawn takes only itself down: the frame around it stays (common.md, banners). */}
-			<ScreenBoundary at={at}>
+			<ScreenBoundary at={at} place={placeOf(route)} title={route.screen === "review" ? t("review.title") : undefined}>
 				{route.screen === "review" ? (
 					<ReviewScreen key={route.id} id={route.id} go={go} />
 				) : route.screen === "settings" ? (

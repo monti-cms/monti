@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { HELD } from "./sortable";
 
 /**
@@ -101,7 +102,7 @@ function HeldBlock({ kind, text }: { kind: string; text: string }) {
 			)}
 		>
 			<span className="shrink-0 text-monti-caption text-monti-subtle">{kind}</span>
-			{text ? <span className="min-w-0 truncate">{text}</span> : null}
+			{text ? <CutWords className="min-w-0 truncate">{text}</CutWords> : null}
 		</div>
 	);
 }

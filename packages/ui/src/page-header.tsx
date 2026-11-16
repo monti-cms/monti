@@ -1,10 +1,11 @@
 import type * as React from "react";
+import { useAssistantSlot } from "./assistant-slot";
 import { cn } from "./cn";
 
 /**
  * The head of a content page: the title (26px bold) with the ink rule under it, the only heavy line of a page. Two slots stand beside the title, one font each as `RowTitle`'s do: `address` is a list's address rule, a typed value, in mono; `note` is
  * words (a count, the days left, a time), in sans. A header takes the one it needs, or both, address first. `children` are the page's actions on the right, the secondary pill first and the one primary pill last. The title row is as tall
- * as a pill (36px) with or without one, so the rule sits at the same height on every page. `trail` is the way back above the title (a folder path).
+ * as a pill (36px) with or without one, so the rule sits at the same height on every page. The assistant's ✦ ends the row, after the actions (`AssistantSlot`). `trail` is the way back above the title (a folder path).
  */
 function PageHeader({
 	title,
@@ -22,6 +23,7 @@ function PageHeader({
 	note?: React.ReactNode;
 	trail?: React.ReactNode;
 }) {
+	const assistant = useAssistantSlot();
 	return (
 		<header
 			data-slot="page-header"
@@ -41,7 +43,12 @@ function PageHeader({
 						{note}
 					</span>
 				)}
-				{children && <span className="ml-auto flex items-center gap-monti-16">{children}</span>}
+				{(children || assistant) && (
+					<span className="ml-auto flex items-center gap-monti-16">
+						{children}
+						{assistant}
+					</span>
+				)}
 			</div>
 		</header>
 	);

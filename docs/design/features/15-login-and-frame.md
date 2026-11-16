@@ -58,7 +58,7 @@ flowchart LR
     TH["화면 모드 시스템 · 밝게 · 어둡게"]
   end
   MAIN["화면"]
-  SPARK["오른쪽 위 ✦ 어시스턴트 (10)"]
+  SPARK["머리 줄 끝 ✦ 어시스턴트 (10)"]
   TOAST["알림 · 되돌리기"]
   SIDEBAR --- MAIN
   MAIN --- SPARK

@@ -26,6 +26,7 @@ import {
 	type ListHeadColumn,
 	ListScroll,
 	LocaleCodes,
+	MenuShortcut,
 	PageColumn,
 	PageHeader,
 	PageSizeMenu,
@@ -81,6 +82,7 @@ import { RelationSubmenu } from "./relations-menu";
 import {
 	type RowActions as Actions,
 	allArchived,
+	DELETE_KEYS,
 	isDeleteKey,
 	publishable,
 	RowMenuItems,
@@ -869,6 +871,7 @@ function DocumentListScreen({
 										<DropdownMenuSeparator />
 										<DropdownMenuItem variant="danger" onClick={() => actions.trash(pickedRows)}>
 											{t("trash.toTrash")}
+											<MenuShortcut keys={DELETE_KEYS} />
 										</DropdownMenuItem>
 									</>
 								),

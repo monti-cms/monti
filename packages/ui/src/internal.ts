@@ -21,6 +21,7 @@ export {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "./alert-dialog";
+export { AssistantSlot } from "./assistant-slot";
 export { Banner } from "./banner";
 export { BlockBarPlace, BlockBox, ResizeCorner } from "./block-bar";
 export { Block, BlockHandle, PickBox } from "./block-handle";
@@ -61,6 +62,7 @@ export {
 	ComboboxChipsInput,
 	ComboboxCollection,
 	ComboboxContent,
+	ComboboxCreate,
 	ComboboxEmpty,
 	ComboboxGroup,
 	ComboboxInput,
@@ -195,7 +197,7 @@ export { Icon } from "./icon";
 export { IconButton } from "./icon-button";
 export { Image } from "./image";
 export { Input } from "./input";
-export { Label } from "./label";
+export { Label, RequiredMark } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
 export { LanguageRow, LanguageSource } from "./language-row";
 export { type LayoutProps, layoutVariants } from "./layout";
