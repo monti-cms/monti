@@ -1,6 +1,6 @@
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
@@ -12,6 +12,10 @@ import { Spark } from "./spark";
 import { TableHead, TableHeader } from "./table";
 import { TextButton } from "./text-button";
 
+/** What takes Esc for itself: a field, a menu, a dialog. */
+const OWN_ESCAPE =
+	"input, textarea, select, [contenteditable], [role=menu], [role=menuitem], [role=dialog], [role=alertdialog], [role=listbox], [role=combobox]";
+
 /**
  * What replaces a list's head once rows or tiles are picked, in the same place, so what is below does not move. How many are picked in bold, the assistant's
  * request on them, the actions used most (as `children`, text buttons and menu buttons), a ⋯ with the rest (the dangerous one last, in red), and at the end the
@@ -20,6 +24,8 @@ import { TextButton } from "./text-button";
  * Over a table (`colSpan` given) it is a row of the table's head: the same 40px with the same line under it, spanning `colSpan` columns; the table keeps its
  * widths from its columns, not from this row. Over a grid of tiles (no `colSpan`), which has no head row, it takes the place of the filter row: a toolbar row
  * of the same 48px and the same line.
+ *
+ * Esc lets go of the pick, here once for every list: not while the focus is in a field, a menu or a dialog, which take Esc for themselves.
  */
 function BulkBar({
 	label,
@@ -48,6 +54,17 @@ function BulkBar({
 	/** The actions used most. */
 	children?: React.ReactNode;
 }) {
+	const clear = React.useRef(onClear);
+	clear.current = onClear;
+	React.useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
+			if (event.target instanceof Element && event.target.closest(OWN_ESCAPE)) return;
+			clear.current();
+		};
+		document.addEventListener("keydown", onKeyDown);
+		return () => document.removeEventListener("keydown", onKeyDown);
+	}, []);
 	const content = (
 		<>
 			{selectAll && (

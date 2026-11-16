@@ -319,7 +319,9 @@ function ListHead({
 						"inline-flex max-w-full items-center gap-monti-4 border-0 bg-transparent p-0 font-normal text-inherit outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60 [&_svg]:size-3 [&_svg]:shrink-0",
 						column.menu && "hover:text-monti-default",
 						(column.sort || isOpen) && "text-monti-default",
-						onPlace && "cursor-grab",
+						// A name opens its menu on a press and moves on a drag: the hand of a press, and a grabbing one only while it is moved.
+						column.menu && "cursor-pointer",
+						onPlace && !column.menu && "cursor-grab",
 						held && "cursor-grabbing",
 					);
 					const onKeyDown = (event: React.KeyboardEvent) => {
