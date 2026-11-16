@@ -86,17 +86,28 @@ function PageColumn({
 			const port = scroller
 				? scroller.getBoundingClientRect().left + scroller.clientLeft + scroller.clientWidth
 				: window.innerWidth;
-			// The table runs under the edge: what sticks to it shows a line on its near side.
-			column.toggleAttribute("data-clipping", column.scrollWidth > column.clientWidth + 1);
+			const right = column.getBoundingClientRect().right;
+			const tables = [...column.querySelectorAll<HTMLElement>("[data-slot=table]")];
+			// The table runs under the edge (past the column's, where a docked panel stands): what sticks to it shows a line on its near side, and the page can
+			// scroll on by the gap (`--monti-table-extent` is how wide the table is, which the end room under `TableContainer` is laid from).
+			column.toggleAttribute(
+				"data-clipping",
+				tables.length > 0
+					? tables.some((table) => table.getBoundingClientRect().right > right + 1)
+					: column.scrollWidth > column.clientWidth + 1,
+			);
+			column.style.setProperty("--monti-table-extent", `${Math.max(0, ...tables.map((table) => table.offsetWidth))}px`);
+			// From the column's edge to the scrolling box's, as it stands unscrolled: a sideways scroll moves the column, not the gap.
 			column.style.setProperty(
 				"--monti-edge-gap",
-				`${Math.max(0, Math.round(port - column.getBoundingClientRect().right))}px`,
+				`${Math.max(0, Math.round(port - right - (scroller?.scrollLeft ?? 0)))}px`,
 			);
 		};
 		measure();
 		const watch = new ResizeObserver(measure);
 		watch.observe(column);
 		for (const child of column.children) watch.observe(child);
+		for (const table of column.querySelectorAll("[data-slot=table]")) watch.observe(table);
 		if (scroller) watch.observe(scroller);
 		return () => watch.disconnect();
 	}, []);

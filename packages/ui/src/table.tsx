@@ -44,7 +44,15 @@ function Table({
 	stickyHeader?: boolean;
 }) {
 	return (
-		<div data-slot="table-container" className={cn("relative w-full", container === "scroll" && "overflow-x-auto")}>
+		<div
+			data-slot="table-container"
+			// A table that runs under the edge of the page column (a docked panel stands there) has room to scroll on by the gap, so its last column can
+			// come out from under the panel: an end room as wide as the table and the gap, laid from the container's start (`--monti-table-extent`).
+			className={cn(
+				"relative w-full [[data-clipping]_&]:after:absolute [[data-clipping]_&]:after:top-0 [[data-clipping]_&]:after:left-0 [[data-clipping]_&]:after:h-px [[data-clipping]_&]:after:w-[calc(var(--monti-table-extent,0px)+var(--monti-edge-gap,0px))] [[data-clipping]_&]:after:content-['']",
+				container === "scroll" && "overflow-x-auto",
+			)}
+		>
 			<table
 				data-slot="table"
 				className={cn(

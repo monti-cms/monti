@@ -257,6 +257,31 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(page.getByRole("menu")).toBeVisible();
 	});
 
+	it("at 1024 wide with the panel open and the columns wider than the page by less than the panel, scrolling sideways brings the last column out from under the panel, which stays where it is, and each ⋯ stays left of it", async () => {
+		await page.viewport(1024, 768);
+		onTestFinished(() => page.viewport(1440, 900));
+		await draw(stories.Panel).run();
+		await expect.element(panel()).toBeVisible();
+		const scroller = (() => {
+			for (let at = table().element().parentElement; at; at = at.parentElement)
+				if (/(auto|scroll)/.test(getComputedStyle(at).overflowX)) return at;
+			throw new Error("nothing scrolls sideways");
+		})();
+		const edge = () => panel().element().getBoundingClientRect().left;
+		// The table runs past the column (a panel stands there) and the page has room to scroll on by the gap.
+		await expect.poll(() => scroller.scrollWidth - scroller.clientWidth).toBeGreaterThan(0);
+		const before = edge();
+		scroller.scrollLeft = scroller.scrollWidth;
+		await expect.poll(() => scroller.scrollLeft).toBeGreaterThan(0);
+		// The last column's head is wholly left of the panel, and the panel did not move.
+		const heads = [...table().element().querySelectorAll("thead th")];
+		const last = heads[heads.length - 2] as HTMLElement;
+		await expect.poll(() => last.getBoundingClientRect().right - edge()).toBeLessThanOrEqual(1);
+		await expect.poll(() => Math.abs(edge() - before)).toBeLessThanOrEqual(1);
+		for (const each of table().element().querySelectorAll("[data-slot=row-actions]"))
+			expect(each.getBoundingClientRect().right).toBeLessThanOrEqual(edge() + 1);
+	});
+
 	it("the assistant's row open: its request whole, each thing it did, and what it touched", async () => {
 		await draw(stories.AssistantPanel).run();
 		await expect.element(panel()).toHaveTextContent("요청이 두 편 요약 채워 줘. 말투는 그대로.");
