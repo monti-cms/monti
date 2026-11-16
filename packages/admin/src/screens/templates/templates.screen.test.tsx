@@ -4,6 +4,7 @@ import { page, userEvent } from "vitest/browser";
 import { caretAfter, pickWords } from "../../../../../testing/input";
 import type { StorySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
+import { MontiAdmin } from "../../app";
 import * as templates from "./templates.stories";
 
 /** "기본 글" open in the template editor, with its site at hand. */
@@ -164,5 +165,40 @@ describe("tools › templates (tools.md)", () => {
 		await story.loaded().site.db.deleteFrom("templates").where("name", "=", "기본 글").execute();
 		await userEvent.click((await rowMenu("기본 글")).getByRole("menuitem", { name: "지우기" }));
 		await expect.poll(() => document.querySelector("[data-sonner-toast] .bg-monti-danger-emphasis")).not.toBeNull();
+	});
+});
+
+describe("a template editor that cannot be drawn (ST-01)", () => {
+	it("[ST-01] says so at the top, and its way back, '템플릿', goes to the list of templates", async () => {
+		// A plugin's view of the document that throws once it is switched on.
+		const View = () => {
+			throw new Error("a view that throws");
+		};
+		await scene<{ site: StorySite }>(
+			{
+				...templates.TemplateEditor,
+				render: (_args: unknown, { loaded }: { loaded: unknown }) => (
+					<MontiAdmin
+						transport={(loaded as { site: StorySite }).site.transport}
+						siteName="example.dev"
+						plugins={[
+							{ name: "site", documentViews: [{ id: "broken", label: { ko: "깨진 보기", en: "Broken view" }, View }] },
+						]}
+					/>
+				),
+			},
+			templates.default,
+		).run();
+		await userEvent.click(page.getByRole("button", { name: "더 보기" }));
+		await userEvent.click(page.getByRole("menuitemcheckbox", { name: "깨진 보기" }));
+		const failed = () => page.getByRole("note").filter({ hasText: "불러오지 못했습니다" });
+		await expect.element(failed()).toBeVisible();
+		// No sidebar and no editor: the head with the editor's own back is what is left.
+		await expect.element(page.getByRole("textbox", { name: "템플릿 이름" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("navigation", { name: "관리 메뉴" })).not.toBeInTheDocument();
+		await userEvent.click(page.getByRole("banner").getByRole("button", { name: "템플릿" }));
+		await expect.element(failed()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("navigation", { name: "관리 메뉴" })).toBeVisible();
+		await expect.element(page.getByRole("button", { name: "기본 글" })).toBeVisible();
 	});
 });
