@@ -1496,7 +1496,7 @@ export const adminMessages = defineMessages({
 			"collection.icon.user-multiple": "여러 사람",
 			"collection.icon.book": "책",
 			"collection.icon.folder": "폴더",
-			"collection.icon.document": "글",
+			"collection.icon.document": "페이지",
 			"collection.icon.bookmark": "책갈피",
 			"collection.icon.favorite": "하트",
 			"collection.icon.calendar": "달력",

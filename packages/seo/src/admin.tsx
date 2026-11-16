@@ -158,7 +158,7 @@ export const seoAdmin = defineAdminPlugin({
 			SEO_LIMITS.description,
 			true,
 		),
-		[SEO_INPUTS.noindex]: NoindexSwitch,
+		[SEO_INPUTS.noindex]: { Input: NoindexSwitch, switch: true },
 	},
 	views: { [SEO_PREVIEW]: SeoPreview },
 });

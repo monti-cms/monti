@@ -418,3 +418,24 @@ describe("a combobox that matches nothing", () => {
 		expect(page.getByRole("option").elements()).toHaveLength(0);
 	});
 });
+
+describe("the row that creates, alone", () => {
+	it("[design review] has no rule and no gap above it when it is the only row", async () => {
+		render(
+			<div style={{ width: 240 }}>
+				<Combobox items={["new:가"]} defaultOpen>
+					<ComboboxInput aria-label="태그" />
+					<ComboboxContent>
+						<ComboboxList>
+							{(item: string) => <ComboboxCreate value={item}>새로 만들기: 가</ComboboxCreate>}
+						</ComboboxList>
+					</ComboboxContent>
+				</Combobox>
+			</div>,
+		);
+		const create = page.getByRole("option", { name: "새로 만들기: 가" });
+		await expect.element(create).toBeVisible();
+		expect(getComputedStyle(create.element()).marginTop).toBe("0px");
+		expect(getComputedStyle(create.element(), "::before").display).toBe("none");
+	});
+});

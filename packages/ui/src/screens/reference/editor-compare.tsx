@@ -38,7 +38,7 @@ export function EditorCompareScreen() {
 							/posts/first-post
 						</Text>
 					</Inline>
-					<Inline gap={16} justify="end" paddingX={12}>
+					<Inline gap={16} justify="end">
 						<Text variant="note" tone="subtle">
 							차이 3곳
 						</Text>

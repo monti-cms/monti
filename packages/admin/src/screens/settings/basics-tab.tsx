@@ -182,10 +182,10 @@ export function BasicsTab({
 						value={String(icon.value ?? DEFAULT_ICON)}
 						onValueChange={(next) => draft.set(iconPlace, next === null || next === DEFAULT_ICON ? undefined : next)}
 					>
-						<SelectTrigger id="collection-icon" width="full" size="md" proposal={icon.proposal}>
+						<SelectTrigger id="collection-icon" width="full" proposal={icon.proposal}>
 							<SelectValue>
 								{(value: string) => (
-									<Inline gap={8} align="center">
+									<Inline as="span" gap={8} align="center">
 										{value === DEFAULT_ICON
 											? collectionIcon(undefined, kind)
 											: collectionIcon(value as CollectionIcon, kind)}

@@ -69,7 +69,7 @@ function Frame({ site, children = refused }: { site?: React.ReactNode; children?
 				<AssistantSlot
 					button={
 						<IconButton label="어시스턴트 열기">
-							<Spark className="size-monti-icon-lg" />
+							<Spark aria-hidden />
 						</IconButton>
 					}
 				>

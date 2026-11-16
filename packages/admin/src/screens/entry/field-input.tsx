@@ -434,11 +434,11 @@ export const isToggle = (def: Definition) =>
 	(def.kind === "select" || def.kind === "conditional") && "control" in def && def.control === "toggle";
 
 /**
- * Whether a field stands as a switch row: a choice made by a switch, or a choice of one option that a plugin brought its own input for (SEO's
- * "hide from search"). The one rule, for the entry's panel and the settings' preview of it.
+ * Whether a field stands as a switch row: a choice made by a switch, or a choice of one option whose plugin input says it is a switch (SEO's
+ * "hide from search": `switch: true`). The one rule, for the entry's panel and the settings' preview of it.
  */
-export const standsAsSwitch = (def: Definition, hasOwnInput: boolean) =>
-	isToggle(def) || (hasOwnInput && def.kind === "select" && def.options.length === 1 && !def.many);
+export const standsAsSwitch = (def: Definition, ownIsSwitch: boolean) =>
+	isToggle(def) || (ownIsSwitch && def.kind === "select" && def.options.length === 1 && !def.many);
 
 /**
  * A switch's row, the way every switch stands (PP-55): its name at the start and the switch at the end, on one line. A switch the assistant proposed

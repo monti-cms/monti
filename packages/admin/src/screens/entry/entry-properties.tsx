@@ -458,7 +458,7 @@ export function EntryProperties({
 			);
 		// A choice with one option, on or off (doc 19): a switch row. A field that names an input of its own puts that one in the switch's place.
 		// A plugin's input for a choice of one option is that choice's switch (seo's "hide from search"), whatever the field says of its control.
-		if (standsAsSwitch(def, own !== null)) {
+		if (standsAsSwitch(def, own !== null && "switch" in own && own.switch === true)) {
 			// A plugin's own switch stands in the same place as a built-in one (PP-55).
 			const toggle = own ? (
 				<own.Input {...ownProps()} />

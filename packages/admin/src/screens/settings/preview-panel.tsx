@@ -170,7 +170,7 @@ export function PreviewPanel({
 							/>
 						);
 						// The same rule as the entry's panel: a plugin's switch is a switch row.
-						if (standsAsSwitch(definition, true))
+						if (standsAsSwitch(definition, brought !== undefined && "Input" in brought && brought.switch === true))
 							return <SwitchRow key={field.name} id={id} name={fieldName(field.name, field.label, t)} toggle={input} />;
 						return (
 							<FormField key={field.name}>

@@ -118,11 +118,11 @@ export function TemplateEditor({
 			}
 		>
 			<EditorHeader>
-				<Inline gap={16} minWidth={0} paddingX={12}>
+				<Inline gap={12} minWidth={0} paddingX={12}>
 					<TemplatesBack onBack={onBack} />
 					{editor.dirty ? <EntryStatus status="editing">{t("templates.unsaved")}</EntryStatus> : null}
 				</Inline>
-				<Inline gap={16} justify="end">
+				<Inline gap={12} justify="end">
 					{/* What acts on the template waits for the template (T153): before it is read its name is not there, and "save" would ask for one. */}
 					{editor.loaded ? (
 						<>

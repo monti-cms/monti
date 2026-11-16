@@ -49,6 +49,8 @@ type Props = {
 	backGap?: 12 | 16;
 	/** A screen of the frame: the sidebar row it belongs to, whose name heads the page that stands in its place (null where it has no row). */
 	place?: Place | null;
+	/** The name of a screen that has no sidebar row (the proposal's review): it heads the page that stands in its place. */
+	title?: ReactNode;
 	children: ReactNode;
 };
 
@@ -89,7 +91,7 @@ export class ScreenBoundary extends Component<Props, State> {
 					<ScreenFailed onAgain={again} />
 				</PageBanner>
 				<PageColumn>
-					<PageHeader title={<ScreenName place={this.props.place ?? null} />} />
+					<PageHeader title={this.props.title ?? <ScreenName place={this.props.place ?? null} />} />
 				</PageColumn>
 			</>
 		);

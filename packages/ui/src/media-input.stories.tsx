@@ -93,3 +93,19 @@ export const States: Story = {
 		</Stack>
 	),
 };
+
+/** A field that takes any file (an attachment): the empty field wears the attachment's mark, not the picture's. */
+export const AnyFile: Story = {
+	render: () => (
+		<Stack gap={16} width="panel">
+			<FormField>
+				<FormFieldLabel htmlFor="cover-pic">대표 이미지</FormFieldLabel>
+				<MediaInput id="cover-pic" size="sm" placeholder="비어 있음" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="attachment">첨부 파일</FormFieldLabel>
+				<MediaInput id="attachment" size="sm" accept="any" placeholder="비어 있음" />
+			</FormField>
+		</Stack>
+	),
+};

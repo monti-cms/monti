@@ -140,7 +140,7 @@ const COUNT_AGAIN_MS = 3000;
 const COUNT_LOOKS = 20;
 
 function Screens({ route, go }: { route: Route; go: (route: Route, options?: { replace?: boolean }) => void }) {
-	const { screen, templates, toolPages, onWrite } = useAdmin();
+	const { t, screen, templates, toolPages, onWrite } = useAdmin();
 	const assistant = useAssistant();
 	const counts = useRead<FrameCounts>("frame.counts");
 	const [review, setReview] = useState(0);
@@ -281,7 +281,7 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 		const toTemplates = () => leave(() => go({ screen: "place", place: "tools" }));
 		return (
 			<BesideAssistant panel={panel}>
-				<ScreenBoundary at={at} back={<TemplatesBack onBack={toTemplates} />} backGap={16}>
+				<ScreenBoundary at={at} back={<TemplatesBack onBack={toTemplates} />} backGap={12}>
 					<TemplateEditor
 						key={route.id ?? "new"}
 						id={route.id}
@@ -310,7 +310,7 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 			assistant={assistant.available ? { open: assistant.open, panel } : null}
 		>
 			{/* A screen that throws while it is drawn takes only itself down: the frame around it stays (common.md, banners). */}
-			<ScreenBoundary at={at} place={placeOf(route)}>
+			<ScreenBoundary at={at} place={placeOf(route)} title={route.screen === "review" ? t("review.title") : undefined}>
 				{route.screen === "review" ? (
 					<ReviewScreen key={route.id} id={route.id} go={go} />
 				) : route.screen === "settings" ? (

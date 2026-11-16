@@ -74,7 +74,13 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 	const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
 	const { entries, placesOf, languageName, blockedWords } = useChangeWords(view?.items);
 
-	if (!view) return null;
+	// While it is read the page has its head row (its name, and the ✦ at its end): what is not read yet is not a reason for a bare page.
+	if (!view)
+		return (
+			<PageColumn width="content">
+				<PageHeader title={t("review.title")} />
+			</PageColumn>
+		);
 	const standing = standingOf(view, proposal.applying);
 	const settled = standing !== "waiting";
 	const items = new Map(view.items.map((item) => [item.id, item]));
