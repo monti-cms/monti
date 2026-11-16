@@ -107,7 +107,12 @@ test("tabular: a source that takes the digits back is caught", () => {
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 const own = Object.fromEntries([...FIELD_FILES, "packages/ui/src/table.tsx"].map((file) => [file, read(file)]));
-const modeFiles = { [SCREEN_MODE_FILE]: read(SCREEN_MODE_FILE), [APP_ROOT_FILE]: read(APP_ROOT_FILE) };
+const modeFiles = {
+	"packages/admin/src/screen-mode.ts": read("packages/admin/src/screen-mode.ts"),
+	"packages/next/src/admin.tsx": read("packages/next/src/admin.tsx"),
+	[SCREEN_MODE_FILE]: read(SCREEN_MODE_FILE),
+	[APP_ROOT_FILE]: read(APP_ROOT_FILE),
+};
 
 test("screen-mode-root: the repository's hook and root pass", () => {
 	assert.deepEqual(screenModeRoot(modeFiles), []);
@@ -120,7 +125,7 @@ test("screen-mode-root: a screen that writes data-theme or applies the mode itse
 			'import { useApplyScreenMode } from "./use-screen-mode";\nexport function F() { useApplyScreenMode(); document.documentElement.dataset.theme = "dark"; }',
 	});
 	assert.equal(found.length, 2);
-	assert.match(found[0].message, /use-screen-mode\.ts. alone/);
+	assert.match(found[0].message, /screen-mode\.ts. \(through/);
 	assert.match(found[1].message, /called once/);
 });
 
@@ -247,4 +252,17 @@ test("the generated token files are as biome leaves them, so the pre-commit hook
 	// `biome check` (no write) fails on a file it would change.
 	execFileSync(`${root}node_modules/.bin/biome`, ["check", ...files], { cwd: root, stdio: "pipe" });
 	execFileSync("node", ["scripts/gen-tokens.mjs", "--check"], { cwd: root, stdio: "pipe" });
+});
+
+test("screen-mode-root: an admin page without the mode's script, and a hook with its own copy of the apply, are caught", () => {
+	const noScript = screenModeRoot({
+		...modeFiles,
+		"packages/next/src/admin.tsx": modeFiles["packages/next/src/admin.tsx"].replace("screenModeScript()", "''"),
+	});
+	assert.match(noScript[0].message, /screenModeScript/);
+	const copy = screenModeRoot({
+		...modeFiles,
+		[SCREEN_MODE_FILE]: modeFiles[SCREEN_MODE_FILE].replaceAll("applyScreenMode", "applyIt"),
+	});
+	assert.ok(copy.some((each) => /not a copy/.test(each.message)));
 });

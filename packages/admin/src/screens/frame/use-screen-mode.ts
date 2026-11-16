@@ -1,23 +1,13 @@
 import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
+import { applyScreenMode, SCREEN_MODE_KEY, type ScreenMode, storedScreenMode } from "../../screen-mode";
 
-export type ScreenMode = "system" | "light" | "dark";
-
-const KEY = "monti.screenMode";
-
-const stored = (): ScreenMode => {
-	try {
-		const value = localStorage.getItem(KEY);
-		return value === "light" || value === "dark" ? value : "system";
-	} catch {
-		return "system";
-	}
-};
+export type { ScreenMode };
 
 /** The screen mode is one thing for the whole page: read from this browser once, then shared by whoever asks (the switch in the sidebar) and applied by the root. */
 let current: ScreenMode | null = null;
 const listeners = new Set<() => void>();
 const read = () => {
-	current ??= stored();
+	current ??= storedScreenMode(SCREEN_MODE_KEY);
 	return current;
 };
 const subscribe = (listener: () => void) => {
@@ -27,7 +17,7 @@ const subscribe = (listener: () => void) => {
 export const setScreenMode = (mode: ScreenMode) => {
 	current = mode;
 	try {
-		localStorage.setItem(KEY, mode);
+		localStorage.setItem(SCREEN_MODE_KEY, mode);
 	} catch {}
 	for (const listener of listeners) listener();
 };
@@ -44,13 +34,11 @@ export function useScreenMode() {
  */
 export function useApplyScreenMode() {
 	const [mode] = useScreenMode();
-	// A layout effect: the mode is on the page before the first paint, so a dark user does not see one light frame. (The server's HTML has no mode; the
-	// host's layout sets it before paint, as it does its own theme, if it must not flash before hydration.)
+	// A layout effect, after the script the page put in front of it (`screenModeScript`): the mode is on the page before the first paint, so a dark
+	// user does not see one light frame, and it follows a change of the mode and of the system's.
 	useLayoutEffect(() => {
 		const dark = window.matchMedia("(prefers-color-scheme: dark)");
-		const apply = () => {
-			document.documentElement.dataset.theme = mode === "system" ? (dark.matches ? "dark" : "light") : mode;
-		};
+		const apply = () => applyScreenMode(mode);
 		apply();
 		dark.addEventListener("change", apply);
 		return () => dark.removeEventListener("change", apply);

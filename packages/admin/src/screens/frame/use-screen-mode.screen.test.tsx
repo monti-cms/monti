@@ -2,6 +2,7 @@ import { composeStory } from "@storybook/react-vite";
 import { useLayoutEffect, useState } from "react";
 import { expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { SCREEN_MODE_KEY, screenModeScript } from "../../screen-mode";
 import { setScreenMode, useApplyScreenMode } from "./use-screen-mode";
 
 function Applied() {
@@ -64,6 +65,45 @@ it("the mode is on the page right after the first render, before the first paint
 		expect(seen.theme).toBe("dark");
 	} finally {
 		setScreenMode("system");
+		delete document.documentElement.dataset.theme;
+	}
+});
+
+it("the script the admin's page carries sets the mode before any paint: the stored one, or the system's, under the key the hook keeps", () => {
+	const run = () => new Function(screenModeScript())();
+	const system = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+	try {
+		expect(screenModeScript()).toContain(JSON.stringify(SCREEN_MODE_KEY));
+		for (const [stored, expected] of [
+			["dark", "dark"],
+			["light", "light"],
+			["system", system],
+			["junk", system],
+		] as const) {
+			delete document.documentElement.dataset.theme;
+			localStorage.setItem(SCREEN_MODE_KEY, stored);
+			run();
+			expect(document.documentElement.dataset.theme, `stored ${stored}`).toBe(expected);
+		}
+		delete document.documentElement.dataset.theme;
+		localStorage.removeItem(SCREEN_MODE_KEY);
+		run();
+		expect(document.documentElement.dataset.theme).toBe(system);
+	} finally {
+		localStorage.removeItem(SCREEN_MODE_KEY);
+		delete document.documentElement.dataset.theme;
+	}
+});
+
+it("the hook and the script agree: what the hook stores, the script reads back", () => {
+	try {
+		setScreenMode("dark");
+		delete document.documentElement.dataset.theme;
+		new Function(screenModeScript())();
+		expect(document.documentElement.dataset.theme).toBe("dark");
+	} finally {
+		setScreenMode("system");
+		localStorage.removeItem(SCREEN_MODE_KEY);
 		delete document.documentElement.dataset.theme;
 	}
 });

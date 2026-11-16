@@ -1428,7 +1428,10 @@ function checkTypeColour() {
 	);
 	report("type-merge", typeMerge(JSON.parse(text("packages/ui/tokens/tokens.json")), text(CN_FILE)));
 	report("tabular", tabular(text(ADMIN_CSS_FILE), sources));
-	report("screen-mode-root", screenModeRoot(sources));
+	const modeSources = { ...sources };
+	for (const file of ["packages/admin/src/screen-mode.ts", "packages/next/src/admin.tsx"])
+		if (existsSync(path.join(root, file))) modeSources[file] = text(file);
+	report("screen-mode-root", screenModeRoot(modeSources));
 	const read = Object.fromEntries([...FIELD_FILES, "packages/ui/src/table.tsx"].map((file) => [file, text(file)]));
 	report("token-contrast", tokenContrast(JSON.parse(text("packages/ui/tokens/tokens.json")), { sources: read }));
 }

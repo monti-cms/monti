@@ -257,6 +257,10 @@ export function typeMerge(tokens, cnSource) {
 }
 
 export const SCREEN_MODE_FILE = "packages/admin/src/screens/frame/use-screen-mode.ts";
+/** The one source of the mode's key and of how it becomes `data-theme` (no React, so the server page imports it for the script before first paint). */
+export const SCREEN_MODE_SOURCE = "packages/admin/src/screen-mode.ts";
+/** The admin's page: it puts the mode's script before its content, so the first frame has the right mode. */
+export const ADMIN_PAGE_FILE = "packages/next/src/admin.tsx";
 export const APP_ROOT_FILE = "packages/admin/src/app.tsx";
 
 export function screenModeRoot(sources) {
@@ -266,11 +270,11 @@ export function screenModeRoot(sources) {
 		for (const found of source.matchAll(
 			/dataset\.theme\s*=|setAttribute\(\s*["']data-theme["']|classList\.(?:add|toggle|remove)\(\s*["']dark["']/g,
 		))
-			if (file !== SCREEN_MODE_FILE)
+			if (file !== SCREEN_MODE_FILE && file !== SCREEN_MODE_SOURCE)
 				problems.push({
 					file,
 					line: lineOf(source, found.index),
-					message: "the screen mode is put on the page by `use-screen-mode.ts` alone",
+					message: "the screen mode is put on the page by `screen-mode.ts` (through `use-screen-mode.ts`) alone",
 				});
 		for (const found of source.matchAll(/\buseApplyScreenMode\(/g))
 			if (file !== APP_ROOT_FILE && file !== SCREEN_MODE_FILE)
@@ -293,6 +297,26 @@ export function screenModeRoot(sources) {
 				message: "`MontiAdmin` must call `useApplyScreenMode()`: the screen mode is applied at the app root",
 			});
 	}
+	// The page's first frame: the admin's page carries the script made from the same source, and the hook does not keep a copy of it.
+	const page = sources[ADMIN_PAGE_FILE];
+	if (page !== undefined && !/screenModeScript\(\)/.test(page))
+		problems.push({
+			file: ADMIN_PAGE_FILE,
+			line: 1,
+			message:
+				"the admin's page must put `screenModeScript()` before its content, so the first frame has the screen mode",
+		});
+	if (
+		sources[SCREEN_MODE_SOURCE] !== undefined &&
+		!/export function screenModeScript/.test(sources[SCREEN_MODE_SOURCE])
+	)
+		problems.push({ file: SCREEN_MODE_SOURCE, line: 1, message: "`screen-mode.ts` must export `screenModeScript`" });
+	if (sources[SCREEN_MODE_FILE] !== undefined && !/applyScreenMode/.test(sources[SCREEN_MODE_FILE]))
+		problems.push({
+			file: SCREEN_MODE_FILE,
+			line: 1,
+			message: "`use-screen-mode.ts` must apply the mode with `applyScreenMode` of `screen-mode.ts`, not a copy of it",
+		});
 	if (sources[SCREEN_MODE_FILE] !== undefined && !/export function useApplyScreenMode/.test(sources[SCREEN_MODE_FILE]))
 		problems.push({
 			file: SCREEN_MODE_FILE,

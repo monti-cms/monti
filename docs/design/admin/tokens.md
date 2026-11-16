@@ -358,6 +358,7 @@
 - 글자 역할마다 CSS 변수 네 개도 생긴다. `--monti-text-<role>-size`, `-line`, `-weight`, `-tracking`이고, 여기에 `--monti-font-sans`와 `--monti-font-mono`가 더해진다.
 - 사이트는 `:root`, `.dark`, `[data-theme="dark"]`에서 어떤 `--monti-*` 변수든 덮어쓸 수 있다. 기본값은 명시도가 0이라, 스타일시트 순서와 상관없이 사이트의 덮어쓰기가 이긴다.
 - 어두운 모드는 감싸는 요소에 붙는 `dark` 클래스(또는 `data-theme="dark"`)다. 그 안에서는 모든 역할 색과 그림자가 바뀐다.
+- 화면 모드는 브라우저에 `monti.screenMode`(`light` · `dark` · 없으면 시스템)로 남고, 페이지의 `data-theme`는 한 곳에서만 쓴다: `packages/admin/src/screen-mode.ts`(`storedScreenMode` · `applyScreenMode`. React가 없어 서버 페이지도 가져온다). 관리자 페이지(`@monti-cms/next`의 `AdminPage`)는 내용 앞에 `screenModeScript()`가 만든 짧은 인라인 스크립트를 둔다. 같은 두 함수의 글이라서, 첫 화면부터 고른 모드(없으면 시스템의 것)이고 어두운 모드 사용자가 밝은 한 프레임을 보지 않는다. 앱 뿌리(`MontiAdmin`의 `useApplyScreenMode`)는 이어서 모드가 바뀔 때와 시스템이 바뀔 때 같은 `applyScreenMode`로 맞추고, 관리자가 떠나면 속성을 지운다(만들며 정함 (2026-11-16)). 서버는 브라우저에 남은 선택을 알 수 없어서 서버 렌더가 아니라 스크립트로 한다. `check:design`의 `screen-mode-root`가 이 짝(스크립트를 두는 페이지, 한 곳에서만 쓰는 `data-theme`)을 본다.
 - Storybook은 모든 묶음을 Foundations 페이지에서 보여 준다: `packages/ui/src/foundations/`.
 
 ## 측정으로 정한 자리
