@@ -2,6 +2,7 @@
 
 import type * as React from "react";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { FIELD_ACTION, FIELD_ACTION_BUTTON, FIELD_HOVER, FIELD_INSET } from "./hover";
 import { IconButton, IconButtonContext } from "./icon-button";
 import { Close, Image as ImageIcon } from "./icons";
@@ -25,6 +26,7 @@ function MediaInput({
 	size = "default",
 	value,
 	placeholder,
+	icon,
 	onOpen,
 	onClear,
 	clearLabel,
@@ -41,6 +43,8 @@ function MediaInput({
 	/** The chosen file: its name, and a thumbnail when it is an image. */
 	value?: { name: string; thumbnail?: string | null } | null;
 	placeholder?: string;
+	/** The mark of an empty field: a picture's by default; a field that takes any file (an attachment) passes a file's. */
+	icon?: React.ReactNode;
 	onOpen?: () => void;
 	onClear?: () => void;
 	/** The name of the × that takes the file out. */
@@ -65,10 +69,10 @@ function MediaInput({
 		<>
 			{/* The frame that waits for its picture; with no picture (a file) it is the same empty square, so names line up. */}
 			<Image src={value.thumbnail} alt="" size="thumb-sm" radius="sm" />
-			<span className="truncate">{value.name}</span>
+			<CutWords className="truncate">{value.name}</CutWords>
 		</>
 	) : (
-		<span className="truncate">{placeholder}</span>
+		<CutWords className="truncate">{placeholder}</CutWords>
 	);
 	return (
 		<div
@@ -111,7 +115,9 @@ function MediaInput({
 						<Close />
 					</IconButton>
 				) : action ? null : (
-					<ImageIcon aria-hidden className="mr-monti-6 size-4 text-monti-faint" />
+					<span aria-hidden className="mr-monti-6 flex text-monti-faint [&>svg]:size-4">
+						{icon ?? <ImageIcon />}
+					</span>
 				)}
 			</span>
 		</div>

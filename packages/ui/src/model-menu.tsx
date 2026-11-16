@@ -119,7 +119,7 @@ export function ModelMenu({
 									</DropdownMenuLabel>
 									{group.items.map((item) => (
 										<DropdownMenuRadioItem key={`${group.key}:${item.value}`} value={item.value} title={item.title}>
-											<span className="min-w-0 truncate">{item.model}</span>
+											<CutWords className="min-w-0 truncate">{item.model}</CutWords>
 											{item.hint && <MenuShortcut>{item.hint}</MenuShortcut>}
 										</DropdownMenuRadioItem>
 									))}
@@ -260,14 +260,14 @@ export function MenuField({
 						{/* The value does not give way at all while a meta can (a part of a pixel short and its end would turn into "…"); alone, it is cut at the field's width. */}
 						<CutWords className={cn("max-w-full shrink-0", mono && "font-mono")}>{value}</CutWords>
 						{meta && (
-							<span
+							<CutWords
 								className={cn(
 									"min-w-0 truncate text-monti-subtle",
 									metaMono ? "font-mono text-monti-caption" : "text-monti-caption",
 								)}
 							>
 								{meta}
-							</span>
+							</CutWords>
 						)}
 					</>
 				)}

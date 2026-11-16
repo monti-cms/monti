@@ -7,6 +7,7 @@ import { cn } from "./cn";
 import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ChevronDown, ChevronUp } from "./icons";
 import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import { menuWords } from "./menu-words";
 import { useProposalDescription } from "./proposal-cue";
 
 /**
@@ -146,8 +147,8 @@ function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) 
 function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Props) {
 	return (
 		<SelectPrimitive.Item data-slot="select-item" className={cn(MENU_ITEM, "w-full", className)} {...props}>
-			<SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-monti-8 whitespace-nowrap">
-				{children}
+			<SelectPrimitive.ItemText className="flex min-w-0 flex-1 gap-monti-8 whitespace-nowrap">
+				{menuWords(children)}
 			</SelectPrimitive.ItemText>
 			<SelectPrimitive.ItemIndicator render={<MenuTick />} />
 		</SelectPrimitive.Item>

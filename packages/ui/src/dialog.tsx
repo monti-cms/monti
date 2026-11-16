@@ -229,7 +229,7 @@ function DialogTitle({ className, of, children, ...props }: DialogPrimitive.Titl
 			{...props}
 		>
 			{/* Its own words give way only when they alone are wider than the window. */}
-			{of ? <span className="max-w-full shrink-0 truncate">{children}</span> : children}
+			{of ? <CutWords className="max-w-full shrink-0">{children}</CutWords> : children}
 			{of && (
 				<CutWords whole={typeof of === "string" ? of : undefined} className="font-normal text-monti-subtle">
 					{" · "}

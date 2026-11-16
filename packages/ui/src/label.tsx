@@ -10,6 +10,18 @@ const SIZE = {
 } as const;
 
 /**
+ * The red `*` that says a field must be filled in: the one required mark of the admin (a label, a field's line in the schema outline). It is
+ * decorative: the control carries `required` itself.
+ */
+function RequiredMark({ className }: { className?: string }) {
+	return (
+		<span data-slot="required-mark" aria-hidden="true" className={cn("ml-[2px] text-monti-danger", className)}>
+			*
+		</span>
+	);
+}
+
+/**
  * A form label, by default the design system's: sans 12 in the subtle ink (`caption` and `subtle`), the label above a field. `size` and `tone` pick another
  * role for a label that reads as text (a checkbox's); `hidden` keeps it for screen readers only. `required` ends the label with a red `*` 2px after the
  * text, for a form that also has optional fields (a form whose every field is required, and a select that always holds a value, get no mark). The star
@@ -48,9 +60,7 @@ function Label({
 			{required ? (
 				<span>
 					{children}
-					<span aria-hidden="true" className="ml-[2px] text-monti-danger">
-						*
-					</span>
+					<RequiredMark />
 				</span>
 			) : (
 				children
@@ -59,4 +69,4 @@ function Label({
 	);
 }
 
-export { Label };
+export { Label, RequiredMark };

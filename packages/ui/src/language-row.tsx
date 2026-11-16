@@ -1,6 +1,7 @@
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { LockMark } from "./lock-mark";
 import { HELD } from "./sortable";
 
@@ -60,13 +61,13 @@ function LanguageRow({
 			{...props}
 		>
 			{handled && <span className="flex items-center justify-center">{handle}</span>}
-			<span className={cn("min-w-0 truncate whitespace-nowrap", gone && "text-monti-faint line-through")}>
+			<CutWords className={cn("min-w-0 truncate whitespace-nowrap", gone && "text-monti-faint line-through")}>
 				<span className={cn("text-monti-body", !gone && "text-monti-default")}>{name}</span>{" "}
 				<span className="font-mono text-monti-caption text-monti-faint">{code}</span>
 				{label && label !== name && <span className="text-monti-note text-monti-subtle"> · {label}</span>}
 				{locked && <LockMark label={locked} />}
 				{dot && <ChangeDot tone={dotTone} label={dot} className="ml-monti-6 align-middle" />}
-			</span>
+			</CutWords>
 			<span className="flex items-center justify-end">{children}</span>
 		</li>
 	);

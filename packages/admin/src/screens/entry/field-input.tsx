@@ -5,6 +5,7 @@ import {
 	ComboboxChips,
 	ComboboxChipsInput,
 	ComboboxContent,
+	ComboboxCreate,
 	ComboboxEmpty,
 	ComboboxInput,
 	ComboboxItem,
@@ -28,7 +29,7 @@ import { Close } from "@monti-cms/ui/icons";
 import { type ComponentProps, type ReactNode, useMemo, useState } from "react";
 import { useAdmin } from "../../operations/admin-context";
 import { PickOne } from "../settings/pick-one";
-import { useRelationField } from "./use-relation-field";
+import { type RelationFieldModel, useRelationField } from "./use-relation-field";
 
 /** A select that holds many values: the picked ones as chips, the input after them to add more. */
 function PickMany({
@@ -82,6 +83,33 @@ function PickMany({
 			</ComboboxContent>
 		</Combobox>
 	);
+}
+
+/**
+ * The rows of a relation field's list, the same in a field of one value, of many and of an ordered many: a value's name, a draft's or a shared
+ * name's mark at the row's end, and the row that creates a new one.
+ */
+function relationRows(rel: RelationFieldModel, t: ReturnType<typeof useAdmin>["t"]) {
+	return (group: string) => {
+		if (group === rel.createToken)
+			return (
+				<ComboboxCreate key={group} value={group}>
+					{rel.createLabel}
+				</ComboboxCreate>
+			);
+		const opt = rel.allOptions.find((o) => o.group === group);
+		const unpublished = rel.targetKind === "document" && opt && !opt.published;
+		const address = rel.addressOf(group);
+		return (
+			<ComboboxItem key={group} value={group}>
+				{rel.labelOf(group)}
+				{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
+				{(unpublished || address) && (
+					<MenuValue address={address ?? undefined}>{unpublished ? t("relations.unpublished") : null}</MenuValue>
+				)}
+			</ComboboxItem>
+		);
+	};
 }
 
 function SortableOrderedRow({
@@ -193,32 +221,7 @@ function RelationSingleInput({
 			/>
 			<ComboboxContent>
 				<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
-				<ComboboxList>
-					{(group: string) => {
-						const isCreate = group === rel.createToken;
-						if (isCreate) {
-							return (
-								<ComboboxItem key={group} value={group}>
-									{rel.createLabel}
-								</ComboboxItem>
-							);
-						}
-						const opt = rel.allOptions.find((o) => o.group === group);
-						const unpublished = rel.targetKind === "document" && opt && !opt.published;
-						const address = rel.addressOf(group);
-						return (
-							<ComboboxItem key={group} value={group}>
-								{rel.labelOf(group)}
-								{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
-								{(unpublished || address) && (
-									<MenuValue address={address ?? undefined}>
-										{unpublished ? t("relations.unpublished") : null}
-									</MenuValue>
-								)}
-							</ComboboxItem>
-						);
-					}}
-				</ComboboxList>
+				<ComboboxList>{relationRows(rel, t)}</ComboboxList>
 			</ComboboxContent>
 		</Combobox>
 	);
@@ -290,32 +293,7 @@ function RelationManyInput({
 			</ComboboxChips>
 			<ComboboxContent anchor={anchor}>
 				<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
-				<ComboboxList>
-					{(group: string) => {
-						const isCreate = group === rel.createToken;
-						if (isCreate) {
-							return (
-								<ComboboxItem key={group} value={group}>
-									{rel.createLabel}
-								</ComboboxItem>
-							);
-						}
-						const opt = rel.allOptions.find((o) => o.group === group);
-						const unpublished = rel.targetKind === "document" && opt && !opt.published;
-						const address = rel.addressOf(group);
-						return (
-							<ComboboxItem key={group} value={group}>
-								{rel.labelOf(group)}
-								{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
-								{(unpublished || address) && (
-									<MenuValue address={address ?? undefined}>
-										{unpublished ? t("relations.unpublished") : null}
-									</MenuValue>
-								)}
-							</ComboboxItem>
-						);
-					}}
-				</ComboboxList>
+				<ComboboxList>{relationRows(rel, t)}</ComboboxList>
 			</ComboboxContent>
 		</Combobox>
 	);
@@ -385,32 +363,7 @@ function RelationOrderedManyInput({
 					<ComboboxInput id={id} size="md" placeholder={placeholder} showClear={false} proposal={proposal} />
 					<ComboboxContent>
 						<ComboboxEmpty>{t("entry.noOption")}</ComboboxEmpty>
-						<ComboboxList>
-							{(group: string) => {
-								const isCreate = group === rel.createToken;
-								if (isCreate) {
-									return (
-										<ComboboxItem key={group} value={group}>
-											{rel.createLabel}
-										</ComboboxItem>
-									);
-								}
-								const opt = rel.allOptions.find((o) => o.group === group);
-								const unpublished = rel.targetKind === "document" && opt && !opt.published;
-								const address = rel.addressOf(group);
-								return (
-									<ComboboxItem key={group} value={group}>
-										{rel.labelOf(group)}
-										{/* A draft says so at the row's end, as the link card's rows do; a name two options share has its address there (menu.md). */}
-										{(unpublished || address) && (
-											<MenuValue address={address ?? undefined}>
-												{unpublished ? t("relations.unpublished") : null}
-											</MenuValue>
-										)}
-									</ComboboxItem>
-								);
-							}}
-						</ComboboxList>
+						<ComboboxList>{relationRows(rel, t)}</ComboboxList>
 					</ComboboxContent>
 				</Combobox>
 			)}

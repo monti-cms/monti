@@ -2,6 +2,7 @@ import type * as React from "react";
 import { useId } from "react";
 import { cn } from "./cn";
 import { Count } from "./count";
+import { CutWords } from "./cut-words";
 
 /**
  * A titled list of rows: the title in label type, bold, with a count after it, a line under it, then its rows: {@link ListSectionRow}s on a tools page
@@ -112,16 +113,16 @@ function ListSectionRow({
 			{...props}
 		>
 			<span className="flex min-w-0 flex-col gap-monti-4">
-				<span
-					id={labelId}
+				<CutWords
+					render={<span id={labelId} />}
 					className={cn("truncate text-monti-body", muted ? "text-monti-muted" : "text-monti-default")}
 				>
 					{title}
 					{detail && <span className="text-monti-muted"> · {detail}</span>}
 					{titleCount !== undefined && <Count className="ml-monti-4">{titleCount}</Count>}
-				</span>
+				</CutWords>
 				{meta !== undefined && (
-					<span
+					<CutWords
 						className={cn(
 							"mt-monti-2 truncate",
 							metaMono ? "font-mono text-monti-caption" : "text-monti-note",
@@ -132,7 +133,7 @@ function ListSectionRow({
 						)}
 					>
 						{meta}
-					</span>
+					</CutWords>
 				)}
 			</span>
 			{control ?? actions}

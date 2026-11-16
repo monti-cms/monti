@@ -38,8 +38,8 @@ import {
 	Copy,
 	Document,
 	ListNumbered,
-	Row,
-	TypePattern,
+	Rule,
+	TextHighlight,
 	View,
 } from "@monti-cms/ui/icons";
 import { TextSelection } from "@tiptap/pm/state";
@@ -309,7 +309,7 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 						{/* Line effects go to the lines picked or the caret's: with neither in this block (the row shown by the pointer), none. */}
 						{(view?.inside || view?.picked) && (offeredEffects.length || tools?.fold || tools?.links) ? (
 							<FloatingBarButton label={t("editor.code.lineEffects")} pressed={menu !== null} onClick={openMenu}>
-								<Row aria-hidden />
+								<TextHighlight aria-hidden />
 							</FloatingBarButton>
 						) : null}
 						{tools?.rules || data.rules?.length ? (
@@ -319,7 +319,7 @@ export function CodeBlockView({ node, editor, getPos, updateAttributes }: NodeVi
 									pressed={card === "rules"}
 									trigger={(button) => <PopoverTrigger render={button} />}
 								>
-									<TypePattern aria-hidden />
+									<Rule aria-hidden />
 								</FloatingBarButton>
 								<RulesCard
 									anchor={bar}

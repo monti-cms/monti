@@ -6,6 +6,7 @@ import { Button } from "./button";
 import { Caret } from "./caret";
 import { CHIP_REMOVE } from "./chip";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -82,7 +83,7 @@ function SearchBox<T extends string = string, S extends string = string>({
 						aria-label={targetLabel ? `${named.join(" · ")}, ${targetLabel}` : undefined}
 						className="inline-flex h-monti-control-sm min-w-0 max-w-40 shrink-0 cursor-pointer items-center rounded-monti-full border-0 bg-monti-page pr-monti-8 pl-monti-10 text-monti-default text-monti-note outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60"
 					>
-						<span className="min-w-0 truncate">{named.join(" · ")}</span>
+						<CutWords className="min-w-0 truncate">{named.join(" · ")}</CutWords>
 						<Caret />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="start">

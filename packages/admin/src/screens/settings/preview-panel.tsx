@@ -1,5 +1,6 @@
 import type { FieldDefinition } from "@monti-cms/core";
 import { FormField, FormFieldLabel, MediaInput, Option, PropertyGroup, PropertyPanel, Text } from "@monti-cms/ui";
+import { Attachment } from "@monti-cms/ui/icons";
 import { useState } from "react";
 import { fieldName } from "../../format/names";
 import { useAdmin } from "../../operations/admin-context";
@@ -112,7 +113,12 @@ export function PreviewPanel({
 	// preview is open and kept nowhere; a related item has no candidates, since a field that is not saved has none to read.
 	const input = (def: FieldDefinition, id: string, key: string) =>
 		def.kind === "media" ? (
-			<MediaInput id={id} size="md" placeholder={t("settings.preview.empty")} />
+			<MediaInput
+				id={id}
+				size="md"
+				placeholder={t("settings.preview.empty")}
+				icon={def.accept === "any" ? <Attachment /> : undefined}
+			/>
 		) : (
 			<FieldInput
 				def={def}

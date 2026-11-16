@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { DocumentBlank, Folder, FolderOpen } from "./icons";
 
 /**
@@ -59,7 +60,7 @@ function FileTreeRow({
 				{...props}
 			>
 				<Icon aria-hidden className="size-monti-icon-md shrink-0" />
-				<span className="truncate">{name}</span>
+				<CutWords className="truncate">{name}</CutWords>
 			</ButtonPrimitive>
 			{more ? (
 				<span className="flex shrink-0 pr-monti-2 opacity-0 transition-opacity group-focus-within/file-row:opacity-100 group-hover/file-row:opacity-100 has-aria-expanded:opacity-100 group-data-current/file-row:opacity-100">

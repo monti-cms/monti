@@ -21,6 +21,7 @@ import {
 	SUB_SIDE_OFFSET,
 } from "./menu-parts";
 import { menuSurface } from "./menu-surface";
+import { menuWords } from "./menu-words";
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
 	return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -137,14 +138,14 @@ function DropdownMenuItem({
 						</span>
 					)}
 					<span className="flex min-w-0 flex-col items-start gap-monti-2">
-						<span>{children}</span>
+						<span className="min-w-0">{menuWords(children)}</span>
 						<span data-slot="menu-caption" className="text-monti-caption text-monti-subtle">
 							{caption}
 						</span>
 					</span>
 				</>
 			) : (
-				children
+				menuWords(children)
 			)}
 		</MenuPrimitive.Item>
 	);
@@ -161,7 +162,7 @@ function DropdownMenuSub({ ...props }: MenuPrimitive.SubmenuRoot.Props) {
 function DropdownMenuSubTrigger({ className, children, ...props }: MenuPrimitive.SubmenuTrigger.Props) {
 	return (
 		<MenuPrimitive.SubmenuTrigger data-slot="dropdown-menu-sub-trigger" className={cn(MENU_ITEM, className)} {...props}>
-			{children}
+			{menuWords(children)}
 			<ChevronRight aria-hidden className={MENU_SUB_MARK} />
 		</MenuPrimitive.SubmenuTrigger>
 	);
@@ -236,7 +237,7 @@ function DropdownMenuCheckboxItem({
 					{mixed && <span aria-hidden className="h-[1.5px] w-1.5 bg-current" />}
 				</span>
 			)}
-			{children}
+			{menuWords(children)}
 			{!box && <MenuPrimitive.CheckboxItemIndicator render={<MenuTick />} />}
 		</MenuPrimitive.CheckboxItem>
 	);
@@ -296,7 +297,7 @@ function DropdownMenuRadioItem({ className, children, closeOnClick = true, ...pr
 			className={cn(MENU_ITEM, className)}
 			{...props}
 		>
-			{children}
+			{menuWords(children)}
 			<MenuPrimitive.RadioItemIndicator render={<MenuTick />} />
 		</MenuPrimitive.RadioItem>
 	);

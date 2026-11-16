@@ -7,6 +7,7 @@ import { useRender } from "@base-ui/react/use-render";
 import * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { BACKDROP } from "./dialog";
 import {
 	DropdownMenu,
@@ -523,7 +524,9 @@ function SidebarMenuButton({
 			active: isActive,
 		},
 	});
-	if (!rail || !tooltip) return row;
+	// A name that runs past the row says itself whole when pointed at, as every cut word does; folded, the row's tooltip says it.
+	if (!rail || !tooltip)
+		return <CutWords render={cutBox(row)} whole={typeof tooltip === "string" ? tooltip : undefined} />;
 	return (
 		<Tooltip>
 			<TooltipTrigger render={row} />
@@ -531,6 +534,9 @@ function SidebarMenuButton({
 		</Tooltip>
 	);
 }
+
+/** A row as `CutWords` takes its box: the element `useRender` made, typed as an element with the usual attributes. */
+const cutBox = (row: React.ReactElement) => row as React.ReactElement<React.HTMLAttributes<HTMLElement>>;
 
 /** The count at the end of a row: mono, small and quiet, in the flow of the row, so a long name is cut before it. */
 function SidebarMenuBadge({
@@ -633,7 +639,7 @@ function SidebarMenuSubButton({
 			style={{ left }} // design-allow: the rule sits under the icon of its depth, from SUB_LINE_LEFT
 		/>
 	));
-	return useRender({
+	const row = useRender({
 		defaultTagName: "a",
 		props: mergeProps<"a">(
 			{
@@ -664,6 +670,7 @@ function SidebarMenuSubButton({
 		render,
 		state: { slot: "sidebar-menu-sub-button", sidebar: "menu-sub-button", active: isActive, dropTarget },
 	});
+	return <CutWords render={cutBox(row)} />;
 }
 
 export {

@@ -12,6 +12,7 @@ import {
 } from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { IconButton } from "./icon-button";
 import { ChevronLeft, Close } from "./icons";
 import { useUiLabels } from "./labels";
@@ -224,7 +225,7 @@ export function SidePanel({
 						</IconButton>
 					)}
 					<h2 id={titleId} className={PANEL_TITLE}>
-						{title}
+						<CutWords className="block">{title}</CutWords>
 					</h2>
 					{actions}
 					{(onClose || closable) && (

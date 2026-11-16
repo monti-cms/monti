@@ -11,7 +11,7 @@ import {
 	Stack,
 	Text,
 } from "@monti-cms/ui";
-import { Settings } from "@monti-cms/ui/icons";
+import { Attachment, Settings } from "@monti-cms/ui/icons";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import type { FillState } from "../../assistant/use-fill";
 import { AltFields } from "../../editor/alt-fields";
@@ -126,6 +126,7 @@ export function MediaField({
 					proposal={proposed !== undefined && !going}
 					value={going ? { name: going.name, thumbnail: going.preview } : shownFile(file)}
 					placeholder={t("entry.empty")}
+					icon={accept === "any" ? <Attachment /> : undefined}
 					readOnly={readOnly}
 					aria-labelledby={readOnly ? `${id}-label` : undefined}
 					onOpen={() => setPicking(true)}

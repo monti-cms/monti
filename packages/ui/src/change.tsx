@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { OptionContext } from "./option";
 
 const changeVariants = cva(
@@ -49,7 +50,7 @@ function ChangeGroup({
 				{tag}
 			</span>
 			<span className="flex min-w-0 items-baseline gap-monti-12 text-monti-body">
-				<b className="truncate font-semibold">{title}</b>
+				<CutWords render={<b className="font-semibold" />}>{title}</CutWords>
 				{identifier && (
 					<span className="ml-auto whitespace-nowrap font-mono text-monti-caption text-monti-subtle">{identifier}</span>
 				)}

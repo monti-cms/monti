@@ -61,6 +61,7 @@ export {
 	ComboboxChipsInput,
 	ComboboxCollection,
 	ComboboxContent,
+	ComboboxCreate,
 	ComboboxEmpty,
 	ComboboxGroup,
 	ComboboxInput,
@@ -195,7 +196,7 @@ export { Icon } from "./icon";
 export { IconButton } from "./icon-button";
 export { Image } from "./image";
 export { Input } from "./input";
-export { Label } from "./label";
+export { Label, RequiredMark } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
 export { LanguageRow, LanguageSource } from "./language-row";
 export { type LayoutProps, layoutVariants } from "./layout";

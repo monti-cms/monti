@@ -7,10 +7,11 @@ import { CHIP, CHIP_REMOVABLE, CHIP_REMOVE, CHIP_SM, CHIPS_FIELD, CHIPS_INPUT } 
 import { cn } from "./cn";
 import { FIELD_HOVER, FIELD_INSET } from "./hover";
 import { ICON_BUTTON } from "./icon-button";
-import { Close } from "./icons";
+import { Add, Close } from "./icons";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
 import { MENU_CARD, MENU_EMPTY, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import { menuWords } from "./menu-words";
 
 /**
  * The combobox. `readOnly` is a value to read, the same in a field of one and of many: full ink, the keyboard stops on it and its words can be
@@ -191,8 +192,29 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
 function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
 	return (
 		<ComboboxPrimitive.Item data-slot="combobox-item" className={cn(MENU_ITEM, className)} {...props}>
-			{children}
+			{menuWords(children)}
 			<ComboboxPrimitive.ItemIndicator render={<MenuTick />} />
+		</ComboboxPrimitive.Item>
+	);
+}
+
+/**
+ * The row that makes a new value of the typed words ("New tag: Spring"), the last row of the list. It is not a value of the list: an Add icon
+ * and a rule above it say so, and it stands apart from a value of the same name.
+ */
+function ComboboxCreate({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
+	return (
+		<ComboboxPrimitive.Item
+			data-slot="combobox-create"
+			className={cn(
+				MENU_ITEM,
+				"relative mt-monti-8 before:pointer-events-none before:absolute before:inset-x-monti-2 before:-top-monti-5 before:h-px before:bg-monti-divider",
+				className,
+			)}
+			{...props}
+		>
+			<Add aria-hidden />
+			{menuWords(children)}
 		</ComboboxPrimitive.Item>
 	);
 }
@@ -268,6 +290,7 @@ function ComboboxChipsField({
 	size,
 	proposal,
 	className,
+	children,
 	...props
 }: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
 	ComboboxPrimitive.Chips.Props & { size: "sm" | "md" | "default"; proposal: boolean }) {
@@ -284,10 +307,15 @@ function ComboboxChipsField({
 				"has-[input[readonly]]:has-focus-visible:ring-2 has-[input[readonly]]:has-focus-visible:ring-monti-contrast/60 has-[input[readonly]]:focus-within:border-monti-strong has-[input[readonly]]:**:data-[slot=combobox-chip-remove]:hidden",
 				// The proposal's line keeps its color under the pointer and with the focus, as a proposed `Input`'s does.
 				"data-proposal:border-monti-proposal! data-proposal:border-b-[1.5px] data-proposal:**:data-[slot=combobox-chip]:bg-monti-proposal-muted data-proposal:**:data-[slot=combobox-chip-remove]:text-monti-proposal data-proposal:**:data-[slot=combobox-chip]:text-monti-proposal",
+				"group/chips",
 				className,
 			)}
 			{...props}
-		/>
+		>
+			{children}
+			{/* The open button of every combobox, a field of one value or of many: at the end of the first line. Nothing opens a list that is only read. */}
+			<ComboboxTrigger className="ml-auto size-monti-control-xs disabled:opacity-100 group-has-[input[readonly]]/chips:hidden" />
+		</ComboboxPrimitive.Chips>
 	);
 }
 
@@ -362,6 +390,7 @@ export {
 	ComboboxInput,
 	ComboboxContent,
 	ComboboxList,
+	ComboboxCreate,
 	ComboboxItem,
 	ComboboxGroup,
 	ComboboxLabel,

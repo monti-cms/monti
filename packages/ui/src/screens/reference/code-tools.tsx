@@ -13,9 +13,9 @@ import {
 	Copy,
 	Document,
 	ListNumbered,
-	Row,
+	Rule,
+	TextHighlight,
 	TrashCan,
-	TypePattern,
 	Unlink,
 	View,
 } from "../../icons";
@@ -346,13 +346,13 @@ function Tools({
 					<ListNumbered aria-hidden />
 				</FloatingBarButton>
 				<FloatingBarButton label="줄 효과" pressed={effectsOpen}>
-					<Row aria-hidden />
+					<TextHighlight aria-hidden />
 				</FloatingBarButton>
 				{rulesOpen ? (
-					opened(rulesOpen, "정규식 규칙", <TypePattern aria-hidden />)
+					opened(rulesOpen, "정규식 규칙", <Rule aria-hidden />)
 				) : (
 					<FloatingBarButton label="정규식 규칙">
-						<TypePattern aria-hidden />
+						<Rule aria-hidden />
 					</FloatingBarButton>
 				)}
 				{words ? (

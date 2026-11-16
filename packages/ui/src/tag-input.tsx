@@ -3,6 +3,7 @@
 import { type KeyboardEvent, useState } from "react";
 import { CHIPS_FIELD, CHIPS_INPUT, Chip } from "./chip";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 
 /**
  * A list of short values in one underline field: each value is a `Chip`, and a text entry at the end adds the next one on Enter or a comma
@@ -68,7 +69,7 @@ function TagInput({
 					onRemove={disabled ? undefined : () => remove(index)}
 					removeLabel={removeLabel(item)}
 				>
-					<span className="max-w-40 truncate">{item}</span>
+					<CutWords className="max-w-40 truncate">{item}</CutWords>
 				</Chip>
 			))}
 			{!disabled && (

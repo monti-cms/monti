@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 import { HIT_LAYER } from "./hit-area";
 import { Checkmark } from "./icons";
 import { useUiLabels } from "./labels";
@@ -45,8 +46,8 @@ function TodoItem({
 	const labels = useUiLabels();
 	const text = (
 		<>
-			<span className={cn(tag !== undefined && "truncate")}>{title}</span>
-			{detail && <span className="truncate text-monti-caption text-monti-subtle">{detail}</span>}
+			<CutWords className={cn(tag !== undefined && "truncate")}>{title}</CutWords>
+			{detail && <CutWords className="truncate text-monti-caption text-monti-subtle">{detail}</CutWords>}
 		</>
 	);
 	return (

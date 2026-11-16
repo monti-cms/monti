@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { CutWords } from "./cut-words";
 
 /** One line of a patch: kept (`same`), taken out (`remove`) or put in (`add`). */
 export interface PatchLine {
@@ -35,7 +36,7 @@ function Patch({
 			{...props}
 		>
 			<div className="flex h-10 items-center gap-monti-12 border-monti-muted border-b pr-monti-6 pl-monti-12 text-monti-note">
-				<span className="min-w-0 grow truncate font-mono text-monti-caption text-monti-muted">{file}</span>
+				<CutWords className="min-w-0 grow truncate font-mono text-monti-caption text-monti-muted">{file}</CutWords>
 				{added > 0 && <span className="font-mono text-monti-caption text-monti-success">+{added}</span>}
 				{removed > 0 && <span className="font-mono text-monti-caption text-monti-danger">−{removed}</span>}
 				{actionLabel && (
