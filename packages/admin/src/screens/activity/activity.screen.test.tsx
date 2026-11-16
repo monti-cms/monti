@@ -256,7 +256,8 @@ describe("the activity log (doc 13, flow 12)", () => {
 		await expect.element(page.getByRole("menu")).toBeVisible();
 	});
 
-	it("at 1024 wide with the panel open and the columns wider than the page, the page scrolls sideways to the last column, which comes out wholly left of the panel; the panel does not move and each ⋯ stays left of it", async () => {
+	// The panel does not move on the sideways scroll, and each ⋯ stays left of it.
+	it("at 1024 wide with the panel open and the columns wider than the page, the page scrolls sideways to the last column, which comes out wholly left of the panel", async () => {
 		await page.viewport(1024, 768);
 		onTestFinished(() => page.viewport(1440, 900));
 		await draw(stories.Panel).run();
@@ -294,7 +295,8 @@ describe("the activity log (doc 13, flow 12)", () => {
 		throw new Error("no scroller");
 	};
 
-	it("at 1280 wide with the page's panel stored at its widest and the assistant opened, the page's panel gives up what was dragged but not its start, the assistant's × is whole in the window, and the page keeps some room", async () => {
+	// The assistant's × is whole in the window, and the page keeps some room.
+	it("at 1280 wide with the page's panel stored at its widest and the assistant opened, the page's panel gives up what was dragged but not its start", async () => {
 		await page.viewport(1280, 768);
 		localStorage.setItem("monti-ui:width:panel:side", "720");
 		onTestFinished(() => {
