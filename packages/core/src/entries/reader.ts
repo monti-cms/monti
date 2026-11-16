@@ -126,35 +126,53 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 		};
 	}
 
-	/** Where an entry is on the site in the other languages (`SiteEntry.translations`). */
-	async function translationsOf(entry: StoredEntry): Promise<SiteTranslation[]> {
-		if (!schema.collections[entry.collection]?.path) return [];
-		const rows = await db
-			.selectFrom("entries as e")
-			.innerJoin("entries as t", (join) =>
-				join.onRef("t.translation_group", "=", "e.translation_group").on("t.trashed_at", "is", null),
-			)
-			.innerJoin("entry_published as p", "p.entry_id", "t.id")
-			.select(["p.locale", "p.slug"])
-			.where("e.id", "=", entry.id)
-			.where("p.locale", "<>", entry.locale)
-			.execute();
-		// Only the languages the site has now, in its own order.
-		return schema.locales.list.flatMap(({ code }) => {
-			const row = rows.find((found) => found.locale === code);
-			const path = row && publicPath(schema, entry.collection, row.slug, code);
-			return path ? [{ locale: code, path }] : [];
-		});
+	/**
+	 * Where entries are on the site in their other languages (`SiteEntry.translations`), by entry id. One query for all of them: a list reads
+	 * its page's translations together, not entry by entry.
+	 */
+	async function translationsOf(
+		entries: Pick<StoredEntry, "id" | "collection" | "locale">[],
+	): Promise<Map<string, SiteTranslation[]>> {
+		const paged = entries.filter((entry) => schema.collections[entry.collection]?.path);
+		const rows =
+			paged.length === 0
+				? []
+				: await db
+						.selectFrom("entries as e")
+						.innerJoin("entries as t", (join) =>
+							join.onRef("t.translation_group", "=", "e.translation_group").on("t.trashed_at", "is", null),
+						)
+						.innerJoin("entry_published as p", "p.entry_id", "t.id")
+						.select(["e.id", "p.locale", "p.slug"])
+						.where(
+							"e.id",
+							"in",
+							paged.map((entry) => entry.id),
+						)
+						.whereRef("p.locale", "<>", "e.locale")
+						.execute();
+		return new Map(
+			entries.map((entry) => [
+				entry.id,
+				// Only the languages the site has now, in its own order.
+				schema.locales.list.flatMap(({ code }) => {
+					const row = rows.find((found) => found.id === entry.id && found.locale === code);
+					const path = row && publicPath(schema, entry.collection, row.slug, code);
+					return path ? [{ locale: code, path }] : [];
+				}),
+			]),
+		);
 	}
 
 	/**
 	 * An entry as the site gets it (doc 04): no pending block, and in a translation the source's published blocks for `followSource` ones and the
 	 * source's values for `same` fields and empty `fromSource` ones. While the source is not on the site, a translation keeps its own values.
 	 */
-	async function forSite(entry: StoredEntry): Promise<SiteEntry> {
+	async function forSite(entry: StoredEntry, known?: Map<string, SiteTranslation[]>): Promise<SiteEntry> {
 		const doc = entry.doc === null || entry.doc === undefined ? null : asDoc(entry.doc);
 		const path = publicPath(schema, entry.collection, entry.slug, entry.locale);
-		const translations = await translationsOf(entry);
+		// A list hands over what it read for its whole page; one entry reads its own.
+		const translations = (known ?? (await translationsOf([entry]))).get(entry.id) ?? [];
 		let base: SiteEntry;
 		if (entry.locale === schema.locales.source) {
 			base = { ...entry, path, translations, doc: doc && siteDoc(doc, null) };
@@ -284,17 +302,27 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 		}
 	};
 	type PublishedRow = Awaited<ReturnType<ReturnType<typeof published>["execute"]>>[number];
-	const asSite = (copy: PublishedRow) =>
-		forSite({
-			id: copy.entry_id,
-			collection: copy.collection,
-			locale: copy.locale,
-			title: copy.title,
-			slug: copy.slug,
-			values: onlySchemaFields(schema, copy.collection, copy.values),
-			doc: copy.doc,
-			publishedAt: copy.published_at,
-		});
+	const asSite = (copy: PublishedRow, known?: Map<string, SiteTranslation[]>) =>
+		forSite(
+			{
+				id: copy.entry_id,
+				collection: copy.collection,
+				locale: copy.locale,
+				title: copy.title,
+				slug: copy.slug,
+				values: onlySchemaFields(schema, copy.collection, copy.values),
+				doc: copy.doc,
+				publishedAt: copy.published_at,
+			},
+			known,
+		);
+	/** The published copies of a list as the site gets them, their translations read together. */
+	const allAsSite = async (copies: PublishedRow[]) => {
+		const known = await translationsOf(
+			copies.map((copy) => ({ id: copy.entry_id, collection: copy.collection, locale: copy.locale })),
+		);
+		return Promise.all(copies.map((copy) => asSite(copy, known)));
+	};
 
 	return {
 		/** The site's languages: which one a page without a language in its address is in (`source`), and how an address shows the others. */
@@ -405,7 +433,7 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 			const given = rows.slice(0, limit);
 			const end = given.at(-1);
 			return {
-				entries: await Promise.all(given.map(asSite)),
+				entries: await allAsSite(given),
 				next:
 					rows.length > limit && end
 						? base64url(
@@ -419,7 +447,7 @@ function readerOf(options: ReaderOptions & { schema: Schema }) {
 
 		/** Every published entry of a collection and language: documents newest first, items in their own order. */
 		async entries(where: { collection: string; locale: string }): Promise<SiteEntry[]> {
-			return Promise.all((await published(where).execute()).map(asSite));
+			return allAsSite(await published(where).execute());
 		},
 	};
 }

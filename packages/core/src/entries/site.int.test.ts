@@ -329,6 +329,13 @@ describe("what the site reads", () => {
 		expect((await reader().entries({ collection: "post", locale: "en" })).map((entry) => entry.translations)).toEqual([
 			[{ locale: "ko", path: "/posts/hello" }],
 		]);
+		// A list reads its entries' translations together: each entry gets its own, and one with no translation gets none of another's.
+		await post("혼자", "alone");
+		const listed = (entries: { slug: string; translations: unknown }[]) =>
+			Object.fromEntries(entries.map((entry) => [entry.slug, entry.translations]));
+		const both = { hello: [{ locale: "en", path: "/en/posts/hello" }], alone: [] };
+		expect(listed(await reader().entries({ collection: "post", locale: "ko" }))).toEqual(both);
+		expect(listed((await reader().page({ collection: "post", locale: "ko", limit: 10 })).entries)).toEqual(both);
 		// Taken off the site, or thrown away, it is named no more.
 		await write("entries.archive", { ids: [translation.id] });
 		expect(await ko()).toEqual([]);
