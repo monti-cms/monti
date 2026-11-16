@@ -30,7 +30,7 @@
 | 행 동작 | `HandedRowActions`(`RowActions`에 포커스 넘김을 단 것) 안의 `RowMore`(`label` "더 보기", 만들며 정함 (2026-11-14)) + `DropdownMenu`: "자세히" · "대화"(어시스턴트의 줄, 그 대화가 남아 있을 때. 누르면 패널이 그 대화로 열린다) · "다시 보내기" · "되돌리기", 행마다 앞에 아이콘 | 행의 동작은 모두 ⋯ 안에 있다. "다시 보내기"는 실패한 전송이 있는 줄에만, "되돌리기"는 되돌릴 수 있는 줄에만 있다. 다른 보내기가 도는 동안 "다시 보내기"는 메뉴에 없다. 되돌리는 동안에는 "되돌리기"가 메뉴에 없다(되돌리면 무엇이 되는지 읽는 동안에는 그대로 있다). 할 수 없는 것은 흐리게 두지 않고 숨긴다([menu.md](../components/menu.md). 만들며 정함 (2026-11-14): 이 줄은 흐리게 둔다고 했지만 소유자의 말이 붙어 있지 않아 메뉴의 규칙을 따른다). 패널 머리의 ⋯와 같다. 사람이 한 줄도 되돌릴 수 있다(문서 13의 소유자 결정 6). "되돌리기"는 한 번 묻는다(아래 "되돌리기 확인"). 되돌린 줄 뒤에 "되돌림 10:44"가 붙고, 토스트는 그 사이 고쳐져 그대로 둔 것이 있을 때만 말한다(동작이 ⋯ 안에 있는 것과 토스트의 규칙은 2026-11-12 만들며 정함). 보내는 동안에는 "다시 보내기"가 없다. |
 | 행 오른쪽 클릭 | `ContextMenu` | ⋯와 같은 행이다. |
 | 빈 기록 | `Empty`(`title` "아직 기록이 없습니다.") | 열 이름 행과 표 대신 이 한 줄. 휴지통의 빈 목록과 같은 부품이다. |
-| 맞는 기록이 없음 | `TableRow` 한 줄: `Text tone="subtle"` "맞는 기록이 없습니다."와 `TextButton` "필터 해제" | 찾거나 걸렀는데 없을 때. 게시글 목록, 휴지통과 같다. |
+| 맞는 기록이 없음 | `TableRow` 한 줄: `Text tone="subtle"` "맞는 기록이 없습니다."와 `TextButton`(이름은 걸린 것으로: "검색어 지우기", "필터 해제", "모두 지우기") | 찾거나 걸렀는데 없을 때. 게시글 목록, 휴지통과 같다. |
 | 쪽 | `ListFooter`(`Count`, `ListPages`) | 50줄이 넘을 때만 있다. 쪽을 넘기는 동안 새로 생긴 줄 때문에 줄이 밀리지 않는다. |
 
 스토리: Patterns/Frame/PageHeader, Controls/Field/SearchBox, Patterns/List/Table, Patterns/List/ListHead, Primitives/AI mark, Primitives/Icon, Controls/Status/EntryStatus, Primitives/Text, Controls/Menu/DropdownMenu, Controls/Menu/ContextMenu, Patterns/List/Empty, Patterns/List/Pagination, Patterns/Frame/Banner, Patterns/Frame/PageBanner, Controls/Button/TextButton, Controls/Overlay/SidePanel, Patterns/Frame/DescriptionList, Controls/Overlay/AlertDialog, Controls/Status/Toast.

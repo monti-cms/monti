@@ -48,7 +48,7 @@
 | 열 이름 행 | `ListHead`(`columns`, `end`, `selectAll`, `onResize`, `resizeLabel`). 열: "제목" · "언어" · "종류" · "남은 날" | 모든 표의 열 규칙을 따른다([list.md](../components/list.md), 2026-11-11 소유자): 열 사이를 끌어 너비를 바꾸고(이 브라우저에 남는다), 열마다 메뉴가 정렬이나 거르기를 담는다. 종류 탭은 없다. 처음에는 "남은 날"이 `sort="desc"`(최근에 버린 것부터). |
 | "제목" 메뉴 | `SortRows`("오름차순" · "내림차순") | 고르면 닫힌다. |
 | "언어" 메뉴 | 그 열 `menu`에 `DropdownMenuCheckboxItem box`와 개수 `MenuShortcut` | 여기 휴지통에 든 언어마다 한 줄, 이름으로("한국어 5"). 고르면 그 언어가 휴지통에 든 글만 남는다. 폴더와 파일은 언어가 없어 빠진다. 걸리면 `filtered`로 점. |
-| "종류" 메뉴 | `ListHead`의 그 열 `menu`에 `DropdownMenuCheckboxItem box`와 개수 `MenuShortcut` | 컬렉션마다 한 줄과 "미디어". 0개인 종류도 보인다. 여럿을 함께(OR) 고르고 메뉴는 열려 있다. 걸리면 `filtered`로 점. |
+| "종류" 메뉴 | `ListHead`의 그 열 `menu`에 `DropdownMenuCheckboxItem box`와 개수 `MenuShortcut` | 컬렉션마다 한 줄과 "미디어". 0개인 종류도 보인다(개수가 많은 순, 0개는 맨 뒤. LT-11은 걸러 낸 뒤 0개인 값을 지우지 않는 쪽으로 닫는다, 만들며 정함 (2026-11-16)). 여럿을 함께(OR) 고르고 메뉴는 열려 있다. 걸리면 `filtered`로 점. |
 | "남은 날" 메뉴 | `SortRows`(`words` "많이 남은 것부터" · "적게 남은 것부터") | 고르면 닫힌다. |
 | 일괄 막대 | `BulkBar`(`label` "2개 선택", `selectAll`, `clearLabel` "선택 해제", `onClear`, `colSpan`) | 동작은 `TextButton` "복원"과 `TextButton variant="danger"` "영구 삭제" 둘뿐이다. 요청과 ⋯는 없다. |
 
