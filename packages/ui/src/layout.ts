@@ -46,10 +46,11 @@ export const LAYOUT = {
 	width: { full: "w-full", auto: "w-auto", fit: "w-fit", ...WIDTH },
 	maxWidth: { full: "max-w-full", ...MAX_WIDTH },
 	/**
-	 * `0` lets a flex child shrink below its content (long text truncates instead of pushing the row wider). `page` 480px: the box that scrolls the page keeps
-	 * that much beside the docked panels, which give way first (overlay.md, the side panel).
+	 * `0` lets a flex child shrink below its content (long text truncates instead of pushing the row wider). `page`: the box that scrolls the page beside
+	 * docked panels: it starts at 480px and gives way only after what a panel was dragged wider than its start (the panels never go under their start), down to
+	 * the floor of `width-menu` (240px) so its own column still draws (overlay.md, the side panel). Its shrink is nearly nothing, so the panels give way first.
 	 */
-	minWidth: { 0: "min-w-0", page: "min-w-[480px]" },
+	minWidth: { 0: "min-w-0", page: "min-w-monti-menu basis-[480px] shrink-[0.001]" },
 	/** `full`, `auto` and `screen` are sizes of their own; the rest are the height tokens. */
 	height: { full: "h-full", auto: "h-auto", screen: "h-svh", ...HEIGHT },
 	/** A scrolling area's limit: `list` 384px (a list in a card or dialog), `half` half the window, `menu` 320px. Pair with `overflow="y"`. */

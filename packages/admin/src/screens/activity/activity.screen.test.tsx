@@ -287,7 +287,14 @@ describe("the activity log (doc 13, flow 12)", () => {
 			.not.toBe("none");
 	});
 
-	it("at 1280 wide with the page's panel dragged to its widest, opening the assistant leaves the assistant whole in the window: the page's panel narrows first, and the page keeps 480px", async () => {
+	/** The page's scroller: the nearest box around the table that scrolls the page. */
+	const scrollerOf = () => {
+		for (let at = table().element().parentElement; at; at = at.parentElement)
+			if (/(auto|scroll)/.test(getComputedStyle(at).overflowY)) return at;
+		throw new Error("no scroller");
+	};
+
+	it("at 1280 wide with the page's panel stored at its widest and the assistant opened, the page's panel gives up what was dragged but not its start, the assistant's × is whole in the window, and the page keeps some room", async () => {
 		await page.viewport(1280, 768);
 		localStorage.setItem("monti-ui:width:panel:side", "720");
 		onTestFinished(() => {
@@ -302,12 +309,25 @@ describe("the activity log (doc 13, flow 12)", () => {
 		const close = assistant.getByRole("button", { name: "닫기" }).element().getBoundingClientRect();
 		expect(close.right).toBeLessThanOrEqual(window.innerWidth);
 		expect(close.left).toBeGreaterThanOrEqual(0);
-		const scroller = (() => {
-			for (let at = table().element().parentElement; at; at = at.parentElement)
-				if (/(auto|scroll)/.test(getComputedStyle(at).overflowY)) return at;
-			throw new Error("no scroller");
-		})();
-		expect(scroller.getBoundingClientRect().width).toBeGreaterThanOrEqual(480 - 1);
+		await expect
+			.poll(() => page.getByRole("complementary").first().element().getBoundingClientRect().width)
+			.toBeGreaterThanOrEqual(360 - 1);
+		expect(scrollerOf().getBoundingClientRect().width).toBeGreaterThan(0);
+	});
+
+	it("at 1280 wide with both panels at their start widths the page keeps at least its floor, and neither panel is narrower than its start", async () => {
+		await page.viewport(1280, 768);
+		onTestFinished(() => page.viewport(1440, 900));
+		await draw(stories.Panel).run();
+		await expect.element(panel()).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "어시스턴트 열기" }));
+		const assistant = page.getByRole("complementary").last();
+		await expect.element(assistant.getByRole("button", { name: "닫기" })).toBeVisible();
+		await expect.poll(() => scrollerOf().getBoundingClientRect().width).toBeGreaterThanOrEqual(240 - 1);
+		expect(page.getByRole("complementary").first().element().getBoundingClientRect().width).toBeGreaterThanOrEqual(
+			360 - 1,
+		);
+		expect(assistant.element().getBoundingClientRect().width).toBeGreaterThanOrEqual(380 - 1);
 	});
 
 	it("the assistant's row open: its request whole, each thing it did, and what it touched", async () => {

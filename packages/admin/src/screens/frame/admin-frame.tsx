@@ -299,7 +299,7 @@ export function AdminFrame({
 						}
 					>
 						<Stack gap={0} grow minWidth={0} minHeight={0} container>
-							<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+							<Inline align="stretch" gap={0} grow minHeight={0} overflow="x">
 								{/* The page scrolls here, one bar at its right edge (or beside a docked panel), the header with it (2026-11-06, owner). */}
 								<Stack gap={0} grow minWidth="page" minHeight={0} container overflow="y">
 									<PanelSlotContext value={panelSlot}>{children}</PanelSlotContext>
