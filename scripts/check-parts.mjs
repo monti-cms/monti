@@ -566,6 +566,9 @@ export function listCompose(sources, { allowed = LIST_COMPOSE_OK } = {}) {
  *   `style`, or to `style.top` / `style.left`: a floating thing placed by hand, with no rule for the edges of the body and the window, the review
  *   bar's room, or what it stands on.
  *
+ * The one thing not floated through `Anchored` is what lives inside a block's node view (a block's tool row): it is placed by CSS on its block, with
+ * its room reserved above (`TOOL_ROW_ROOM`), because a portal would take it out of the node view's pointer and focus (overlay.md, "자리 규칙").
+ *
  * Cannot see: a position built from a measurement and handed over under another name (`const { x, y } = box`, a spread, a `Spot` that is read
  * wrongly), a placement that goes through a function in another file, a thing placed with `position: fixed` whose coordinates come from the CSS, and
  * whether `Anchored` is given the right `place` and `within` for what it holds: that is read in review and tried by `coversText` in the screen tests.

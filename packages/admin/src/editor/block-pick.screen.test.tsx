@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { caretAfter, dragPath, dropDrag, middleOf, onTopOf, pickWords, pointerPath } from "../../../../testing/input";
+import {
+	caretAfter,
+	coversText,
+	dragPath,
+	dropDrag,
+	middleOf,
+	onTopOf,
+	pickWords,
+	pointerPath,
+} from "../../../../testing/input";
 import { scene } from "../../test/scene";
 import * as entry from "../screens/entry/entry.stories";
 
@@ -51,6 +60,12 @@ async function handleOf(words: string, which: "first" | "last" = "first") {
 }
 
 describe("T80 picking several blocks whole", () => {
+	it("the block handle stands in the left margin and covers no words of the text", async () => {
+		await opened();
+		const grip = await handleOf(HEADING);
+		expect(coversText(grip.element(), body().element())).toEqual([]);
+	});
+
 	it("[dragging] a box dragged from the margin draws a thin line and picks every block it touches; Backspace takes them out and undo brings them back", async () => {
 		await opened();
 		const start = marginBeside(HEADING, "top");

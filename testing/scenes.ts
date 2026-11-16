@@ -131,7 +131,7 @@ export const KINDS = {
 	},
 	floating: {
 		what: "things that show over the page while the pointer is near: the block handle, a table's grips and + strips, borders to drag",
-		parts: ["EditorOverlay", "BlockHandle", "TableAddStrip", "TableGrip", "TableColumnBorder"],
+		parts: ["Anchored", "BlockHandle", "TableAddStrip", "TableGrip", "TableColumnBorder"],
 		ui: [],
 		admin: ["reach", "leave"],
 	},

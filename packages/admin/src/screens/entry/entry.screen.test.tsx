@@ -3,7 +3,7 @@ import { toast } from "@monti-cms/ui";
 import { composeStories } from "@storybook/react-vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { caretAfter, dragPath, dropDrag, middleOf, pickWords } from "../../../../../testing/input";
+import { caretAfter, coversText, dragPath, dropDrag, middleOf, pickWords } from "../../../../../testing/input";
 import { type StorySite, startAt, storySite } from "../../../.storybook/pglite-site";
 import { scene } from "../../../test/scene";
 import { MontiAdmin } from "../../app";
@@ -1083,6 +1083,14 @@ describe("the entry editor: the assistant's proposals in the body (T32)", () => 
 		await save();
 		await saveCell("제안 2건 대기");
 		expect(await proposals()).toHaveLength(2);
+	});
+
+	it("at the end of the text the review bar stands in the room the body keeps for it and covers no words", async () => {
+		await proposed();
+		const dock = () => document.querySelector("[data-slot=proposal-bubble-dock]") as HTMLElement;
+		await expect.poll(dock).not.toBeNull();
+		for (let at: HTMLElement | null = dock().parentElement; at; at = at.parentElement) at.scrollTop = at.scrollHeight;
+		await expect.poll(() => coversText(dock(), body().element())).toEqual([]);
 	});
 
 	it("'모두 받기' puts every proposal into the text at once, unsaved", async () => {
