@@ -1,4 +1,5 @@
 import { type CSSProperties, useMemo, useSyncExternalStore } from "react";
+import { useInBody } from "./body-scope";
 import { dockShown, dockTopShown, watchDock } from "./bottom-dock";
 
 /**
@@ -71,14 +72,16 @@ function barRoom(bar: HTMLElement | null, edge: "top" | "bottom") {
 
 /**
  * The collision padding every floating thing takes (px, per edge): the window padding, and over the bars fixed to the window's edges their room
- * (AS-14: a card never covers the review bar, and nothing opened in the body covers the editor header). The same object while the numbers are the
- * same, so the positioner does not start measuring again.
+ * (AS-14: a card never covers the review bar, and nothing opened in the body covers the editor header). Only what is in the editor's body
+ * (`BodyScope`) leaves them clear: the sidebar's and a panel's menus, whose tops sit level with the header, keep the plain window limit. The same object
+ * while the numbers are the same, so the positioner does not start measuring again.
  */
 export function usePlacementPadding() {
 	const docked = useSyncExternalStore(watchDock, dockShown, () => null);
 	const header = useSyncExternalStore(watchDock, dockTopShown, () => null);
-	const bottom = barRoom(docked, "bottom");
-	const top = barRoom(header, "top");
+	const inBody = useInBody();
+	const bottom = inBody ? barRoom(docked, "bottom") : 0;
+	const top = inBody ? barRoom(header, "top") : 0;
 	return useMemo(
 		() => ({
 			top: Math.max(WINDOW_PADDING, top + (top ? WINDOW_PADDING : 0)),

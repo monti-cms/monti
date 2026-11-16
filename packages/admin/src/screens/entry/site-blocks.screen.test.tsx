@@ -207,6 +207,92 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		await expect.poll(() => document.activeElement?.getAttribute("aria-label")).toBe("단 더하기");
 	});
 
+	/** The columns block, with a paragraph after it, its first column holding a paragraph and a table when `table` (so a key in a cell is the table's). */
+	const around = (widths: string | undefined, table = false): Doc => ({
+		type: "doc",
+		blocks: [
+			{ id: "s1", type: "paragraph", content: [{ type: "text", text: "단 위의 글." }] },
+			{
+				id: "columns",
+				type: "columns",
+				...(widths ? { attrs: { widths } } : {}),
+				children: [
+					{
+						id: "k1",
+						type: "column",
+						children: [
+							{ id: "k1p", type: "paragraph", content: [{ type: "text", text: "왼쪽 단" }] },
+							...(table
+								? [
+										{
+											id: "tb",
+											type: "table",
+											attrs: {
+												header: true,
+												rows: [
+													["가", "나"],
+													["다", "라"],
+												],
+											},
+										},
+									]
+								: []),
+						],
+					},
+					{
+						id: "k2",
+						type: "column",
+						children: [{ id: "k2p", type: "paragraph", content: [{ type: "text", text: "오른쪽 단" }] }],
+					},
+				],
+			},
+			{ id: "s2", type: "paragraph", content: [{ type: "text", text: "단 아래 글." }] },
+		] as Block[],
+	});
+	const caretIn = () => window.getSelection()?.anchorNode?.parentElement?.closest("p, td, th");
+	const strip = () => document.activeElement?.getAttribute("aria-label") === "단 더하기";
+
+	it("18-5 columns: Tab in a table's cell inside the block is the table's, not the + strip's: it moves to the next cell, and in the last cell adds a row as it does outside columns", async () => {
+		await on(around("50,50", true)).run();
+		await expect.poll(() => body().element().querySelector(".monti-block-columns-editor td")).not.toBeNull();
+		await userEvent.click(body().getByText("가", { exact: true }));
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => caretIn()?.textContent).toBe("나");
+		expect(strip()).toBe(false);
+		await userEvent.click(body().getByText("라", { exact: true }));
+		const rows = () => body().element().querySelectorAll("table tr").length;
+		const before = rows();
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(rows).toBe(before + 1);
+		expect(strip()).toBe(false);
+	});
+
+	it("18-5 columns: from the + strip Tab goes on to the caret at the start of the block after, and Shift+Tab back to the tool row's last button", async () => {
+		await on(around("50,50")).run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}{Tab}");
+		await expect.poll(strip).toBe(true);
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		await expect.poll(() => document.activeElement?.textContent).toBe("고르게");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(strip).toBe(true);
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(() => caretIn()?.textContent).toBe("단 아래 글.");
+		expect(window.getSelection()?.anchorOffset).toBe(0);
+	});
+
+	it("18-5 columns: with no tool row Shift+Tab from the + strip goes back to the caret at the end of the block's last text", async () => {
+		await on(around(undefined)).run();
+		await expect.poll(() => document.querySelector(".monti-block-columns-editor")).not.toBeNull();
+		await caretAfter(body().element(), "왼쪽 단");
+		await userEvent.keyboard("{Tab}");
+		await expect.poll(strip).toBe(true);
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		await expect.poll(() => caretIn()?.textContent).toBe("오른쪽 단");
+		expect(window.getSelection()?.anchorOffset).toBe("오른쪽 단".length);
+	});
+
 	it("18-4 a collapsible folds in the editor too, and its tool row's labelled toggle sets it to start open", async () => {
 		const made = on();
 		await made.run();

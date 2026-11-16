@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { BodyScope } from "./body-scope";
 import { cn } from "./cn";
 
 /**
@@ -131,12 +132,14 @@ const PAIRED = cn(
  */
 function EditorBody({ paired = false, className, ...props }: ComponentProps<"div"> & { paired?: boolean }) {
 	return (
-		<div
-			data-slot="editor-body"
-			data-paired={paired || undefined}
-			className={cn(EDITOR_BODY, paired && PAIRED, className)}
-			{...props}
-		/>
+		<BodyScope>
+			<div
+				data-slot="editor-body"
+				data-paired={paired || undefined}
+				className={cn(EDITOR_BODY, paired && PAIRED, className)}
+				{...props}
+			/>
+		</BodyScope>
 	);
 }
 

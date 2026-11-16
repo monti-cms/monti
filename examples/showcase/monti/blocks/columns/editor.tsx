@@ -83,23 +83,66 @@ export default function ColumnsEditor() {
 		return { left: (frame?.right ?? 0) + STRIP_GAP, top: frame?.top ?? 0, width: STRIP, height: frame?.height ?? 0 };
 	};
 
-	// The + strip floats away from the block (a layer at the end of the page), so the keyboard would reach it only after the whole page. Tab goes to it
-	// right after the block's own tab stops: from the text when the block has no tool row, else from the row's last button.
+	// The + strip floats away from the block (a layer at the end of the page), so the keyboard would reach it only after the whole page. It is given its
+	// place in the block's tab order here: after the block's own stops, and back from it.
+	const frame = () => grid.current?.closest("[data-slot=block-frame]") ?? null;
+	const barStops = () => [
+		...(frame()?.querySelectorAll<HTMLElement>("[data-slot=block-bar-place] button:not([disabled])") ?? []),
+	];
+	/** The editor's own text element, which holds the focus while a caret is in the body. */
+	const root = () => grid.current?.closest<HTMLElement>(".ProseMirror") ?? null;
+	/** The caret into the text at `edge` of `from`, the focus on the editor. */
+	const caretAt = (from: Element, edge: "start" | "end") => {
+		const walker = document.createTreeWalker(from, NodeFilter.SHOW_TEXT);
+		let text: Node | null = walker.nextNode();
+		for (let next = text; edge === "end" && next; next = walker.nextNode()) text = next;
+		root()?.focus();
+		const selection = window.getSelection();
+		if (text) selection?.collapse(text, edge === "start" ? 0 : (text.textContent?.length ?? 0));
+		else selection?.collapse(from, 0);
+	};
+	/** From the strip on: the caret at the start of the block after this one, or the next stop after the editor. */
+	const afterBlock = () => {
+		const node = grid.current?.closest(".ProseMirror > *");
+		const next = node?.nextElementSibling;
+		if (next) return caretAt(next, "start");
+		const editor = root();
+		if (!editor) return;
+		const stops = [
+			...document.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), input, select, textarea, [tabindex]"),
+		].filter(
+			(each) =>
+				each.tabIndex >= 0 &&
+				each !== strip.current &&
+				!editor.contains(each) &&
+				editor.compareDocumentPosition(each) & Node.DOCUMENT_POSITION_FOLLOWING,
+		);
+		stops[0]?.focus();
+	};
+	/** Back from the strip: the tool row's last button, else the caret at the end of the block's last text. */
+	const beforeStrip = () => {
+		const stops = barStops();
+		if (stops.length > 0) return stops.at(-1)?.focus();
+		if (grid.current) caretAt(grid.current, "end");
+	};
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the helpers read the refs when the key is pressed
 	useEffect(() => {
+		// After the editor's own keys (the listener is on the window, the editor's on its text): a key the editor handled (Tab in a table's cell, in a
+		// list, in code) has been prevented, and is left to it.
 		const onKey = (event: KeyboardEvent) => {
-			if (event.key !== "Tab" || event.shiftKey || event.isComposing || !strip.current) return;
+			if (event.key !== "Tab" || event.shiftKey || event.isComposing || event.defaultPrevented || !strip.current)
+				return;
 			const target = event.target as Element;
-			const bar = grid.current?.closest("[data-slot=block-frame]")?.querySelector("[data-slot=block-bar-place]");
-			const stops = [...(bar?.querySelectorAll<HTMLElement>("button:not([disabled])") ?? [])];
-			const toStrip = bar?.contains(target)
+			const stops = barStops();
+			const toStrip = frame()?.querySelector("[data-slot=block-bar-place]")?.contains(target)
 				? target === stops.at(-1)
 				: block.inside && target.matches(".ProseMirror") && stops.length === 0;
 			if (!toStrip) return;
 			event.preventDefault();
 			strip.current.focus();
 		};
-		window.addEventListener("keydown", onKey, true);
-		return () => window.removeEventListener("keydown", onKey, true);
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
 	}, [block.inside]);
 
 	const write = (next: number[] | null) =>
@@ -252,6 +295,12 @@ export default function ColumnsEditor() {
 									ref={strip}
 									label={say(words.addColumn)}
 									shown={over}
+									onKeyDown={(event) => {
+										if (event.key !== "Tab") return;
+										event.preventDefault();
+										if (event.shiftKey) beforeStrip();
+										else afterBlock();
+									}}
 									onClick={() => block.insertChild(newColumn(), count, { widths: undefined })}
 								/>
 							</Anchored>

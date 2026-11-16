@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "../test/render";
-import { dock } from "./bottom-dock";
+import { BodyScope } from "./body-scope";
+import { dock, dockTop } from "./bottom-dock";
 import {
 	Anchored,
 	DropdownMenu,
@@ -16,6 +17,11 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
 } from "./index";
 
 const ROWS = Array.from({ length: 40 }, (_, at) => `Row ${at + 1}`);
@@ -194,7 +200,8 @@ describe("where a floating thing stands (overlay.md, the place rule)", () => {
 				off();
 				bar.remove();
 			};
-			render(menuFrom({ top: window.innerHeight - 300, left: 40 }));
+			// Opened from the editor's body: the bar's room is kept clear there.
+			render(<BodyScope>{menuFrom({ top: window.innerHeight - 300, left: 40 })}</BodyScope>);
 			await expect.poll(() => document.querySelector("[role=menu]")).not.toBeNull();
 			const top = held.getBoundingClientRect().top;
 			await expect
@@ -202,5 +209,48 @@ describe("where a floating thing stands (overlay.md, the place rule)", () => {
 				.toBe(true);
 			await expect.poll(() => menu().getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
 		});
+	});
+
+	it("an editor header mounted does not move what opens outside the body: a Select near the window's top opens right under its button", async () => {
+		const header = document.createElement("header");
+		header.style.cssText = "position:fixed;top:0;left:0;right:0;height:68px";
+		document.body.append(header);
+		const off = dockTop(header);
+		onTestFinished(() => {
+			off();
+			header.remove();
+		});
+		render(
+			<Select items={[{ value: "a", label: "공지사항" }]} defaultValue="a" defaultOpen>
+				<SelectTrigger aria-label="종류">
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value="a">공지사항</SelectItem>
+				</SelectContent>
+			</Select>,
+		);
+		await expect.poll(() => document.querySelector("[role=listbox]")).not.toBeNull();
+		const trigger = document.querySelector("[aria-label=종류]") as Element;
+		// It opens right under its button (a few px), not pushed down to a room kept for a header that is not over it.
+		const gap = () =>
+			(document.querySelector("[role=listbox]") as Element).getBoundingClientRect().top -
+			trigger.getBoundingClientRect().bottom;
+		await expect.poll(gap).toBeGreaterThanOrEqual(0);
+		await expect.poll(gap).toBeLessThanOrEqual(12);
+	});
+
+	it("what opens in the body keeps clear of the header: a menu from a button under it opens below the header's edge", async () => {
+		const header = document.createElement("header");
+		header.style.cssText = "position:fixed;top:0;left:0;right:0;height:68px";
+		document.body.append(header);
+		const off = dockTop(header);
+		onTestFinished(() => {
+			off();
+			header.remove();
+		});
+		render(<BodyScope>{menuFrom({ top: 70, left: 40 })}</BodyScope>);
+		await expect.poll(() => document.querySelector("[role=menu]")).not.toBeNull();
+		await expect.poll(() => menu().getBoundingClientRect().top).toBeGreaterThanOrEqual(68);
 	});
 });
