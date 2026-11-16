@@ -68,7 +68,8 @@
  *   menu-danger-separator  A `variant="danger"` menu row is the first row or follows a separator.
  *   required-mark       The red star of a required field is `RequiredMark`: no typed " !" or "*", no legend that starts with "!".
  *   mono-props          `mono`, `metaMono`, `ofMono` set on Korean words fail; children the check cannot read are named in `MONO_PROP_VALUES`.
- *                       All six are in `check-parts.mjs`, which says what each cannot see.
+ *   list-compose        A screen that draws a list table (`Table`, `ListHead`, `ListScroll`) does it through `CollectionTable`, or is named in `LIST_COMPOSE_OK`.
+ *                       All seven are in `check-parts.mjs`, which says what each cannot see.
  *   type-order          The heading roles step down, and the editor body's h2, h3, h4 are not smaller than its text (h4, the text's size, is semibold).
  *   type-merge          Every type role of `tokens.json` is in the font-size group of `cn.ts`, and that group names no other.
  *   tabular             `admin.css` sets tabular digits on `.monti-admin` and the body, and no source takes them back.
@@ -91,6 +92,7 @@ import {
 	cutWords,
 	dangerSeparator,
 	koTexts,
+	listCompose,
 	monoProps,
 	ownGlyph,
 	requiredMark,
@@ -1488,6 +1490,7 @@ function checkParts() {
 	report("menu-danger-separator", dangerSeparator({ ...sources, ...stories }));
 	report("required-mark", requiredMark({ ...sources, ...messages }));
 	report("mono-props", monoProps(sources, { texts }));
+	report("list-compose", listCompose(sources));
 }
 checkParts();
 
@@ -1538,6 +1541,8 @@ const HINTS = {
 	"cut-words": 'Words cut with "…" are in CutWords, which says them whole to the pointer and the keyboard.',
 	"menu-danger-separator": "A menu's danger row stands after a separator unless it is the first row (menu.md).",
 	"required-mark": 'A required field\'s star is RequiredMark; no typed " !" or "*" (field.md).',
+	"list-compose":
+		"A list's table is put together by CollectionTable (screens/list/collection-table.tsx): head, bulk bar, no-match answer, rows, footer. A titled table is named in LIST_COMPOSE_OK (check-parts.mjs).",
 	"mono-props":
 		"Words are sans: `mono`, `metaMono` and `ofMono` are for values; a file that sets them on words it cannot read is named in MONO_PROP_VALUES (check-parts.mjs).",
 	"design-allow": "A marker states why the value cannot be a token.",

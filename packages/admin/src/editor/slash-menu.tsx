@@ -1,6 +1,7 @@
 import type { Block, Doc } from "@monti-cms/core";
 import {
 	Command,
+	CommandEmpty,
 	CommandGroup,
 	CommandInput,
 	CommandItem,
@@ -253,7 +254,14 @@ export function useSlashMenu({
 	/** The menu's keys, while it is open; `false` lets the text have the key. */
 	const keyDown = useCallback(
 		(event: KeyboardEvent) => {
-			if (!open || shownItems.length === 0) return false;
+			if (!open) return false;
+			if (event.key === "Escape") {
+				dismissed.current = open.from;
+				setOpen(null);
+				return true;
+			}
+			// Nothing matches: the row that says so has no key of its own, the text has them.
+			if (shownItems.length === 0) return false;
 			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
 				const step = event.key === "ArrowDown" ? 1 : -1;
 				setIndex((current) => (current + step + shownItems.length) % shownItems.length);
@@ -263,31 +271,25 @@ export function useSlashMenu({
 				choose(shownItems[index]);
 				return true;
 			}
-			if (event.key === "Escape") {
-				dismissed.current = open.from;
-				setOpen(null);
-				return true;
-			}
 			return false;
 		},
 		[open, shownItems, index, choose],
 	);
 
-	const menu =
-		open && shownItems.length > 0 ? (
-			<SlashMenu
-				items={shownItems}
-				query={open.query}
-				caret={open.caret}
-				index={index}
-				onHighlight={setIndex}
-				onChoose={choose}
-				onClose={() => {
-					dismissed.current = open.from;
-					setOpen(null);
-				}}
-			/>
-		) : null;
+	const menu = open ? (
+		<SlashMenu
+			items={shownItems}
+			query={open.query}
+			caret={open.caret}
+			index={index}
+			onHighlight={setIndex}
+			onChoose={choose}
+			onClose={() => {
+				dismissed.current = open.from;
+				setOpen(null);
+			}}
+		/>
+	) : null;
 	return { sync, keyDown, menu };
 }
 
@@ -345,6 +347,7 @@ function SlashMenu({
 				<Command shouldFilter={false} value={String(index)} onValueChange={(value) => onHighlight(Number(value))}>
 					<CommandInput value={query} readOnly placeholder={t("slash.find")} aria-label={t("slash.find")} />
 					<CommandList aria-label={listLabel}>
+						{items.length === 0 && <CommandEmpty>{t("slash.none")}</CommandEmpty>}
 						{GROUPS.map((group) => {
 							const rows = items.flatMap((item, at) => (item.group === group ? [{ item, at }] : []));
 							if (rows.length === 0) return null;

@@ -26,7 +26,6 @@ import {
 	Inline,
 	LIST_COLUMN_SIZE,
 	ListFooter,
-	ListHead,
 	type ListHeadColumn,
 	PageBanner,
 	PageColumn,
@@ -34,8 +33,6 @@ import {
 	RowMore,
 	RowTitle,
 	SearchToggle,
-	Table,
-	TableBody,
 	TableCell,
 	TableRow,
 	Text,
@@ -53,10 +50,10 @@ import { useAdmin } from "../../operations/admin-context";
 import { useRead } from "../../operations/use-operation";
 import { href, type Route } from "../../route";
 import { nextStop, useFocusHandOff } from "../frame/focus-hand-off";
+import { CollectionTable } from "../list/collection-table";
 import { DateRows } from "../list/date-rows";
 import { toggled, ValueRow } from "../list/filter-rows";
 import { ListPages } from "../list/list-pages";
-import { NoMatchRow } from "../list/no-match-row";
 import { HandedRowActions, HandedRowLink, listStartOf } from "../list/row-hand-off";
 import { SortRows } from "../list/sort-rows";
 import { useColumnWidths } from "../list/use-column-widths";
@@ -356,7 +353,7 @@ export function ActivityScreen({
 			),
 		},
 	];
-	const colSpan = head.length + 1;
+	const _colSpan = head.length + 1;
 	const failed = counts.data?.failed ?? 0;
 	const failedOnly = state.deliveries.length === 1 && state.deliveries[0] === "failed";
 	const table = useRef<HTMLTableElement>(null);
@@ -445,109 +442,115 @@ export function ActivityScreen({
 			<PageColumn width="list">
 				{banners}
 				{header}
-				<Table
-					ref={table}
-					container="none"
-					layout="fixed"
-					columns={[...head.map((column) => column.size), LIST_COLUMN_SIZE.end]}
+				<CollectionTable
+					tableRef={table}
+					head={{
+						columns: head,
+						end: LIST_COLUMN_SIZE.end,
+						onResize: resize,
+						resizeLabel: (column) => t("list.resizeColumn", { column }),
+					}}
+					noMatch={
+						lines.length === 0
+							? {
+									words: t("activity.noMatch"),
+									applied: {
+										search: state.search.trim() !== "",
+										filters:
+											state.kinds.length > 0 ||
+											state.entry !== null ||
+											state.deliveries.length > 0 ||
+											state.range !== null,
+									},
+									onClear: () => look({ search: "", kinds: [], entry: null, deliveries: [], range: null }),
+								}
+							: null
+					}
+					footer={
+						total > ACTIVITY_PAGE_SIZE ? (
+							<ListFooter>
+								<Count>
+									{t("list.range", {
+										from: (state.page - 1) * ACTIVITY_PAGE_SIZE + 1,
+										to: Math.min(state.page * ACTIVITY_PAGE_SIZE, total),
+										total,
+									})}
+								</Count>
+								<ListPages
+									page={state.page}
+									pages={Math.ceil(total / ACTIVITY_PAGE_SIZE)}
+									// The other pages of this browsing are read from this one's edges, inside the boundary it was read in: neither new activity
+									// nor a line committed late shifts them, and the count stays. Only while what is shown is this address's own answer: after
+									// a new filter or page is asked for and before it answers, the rows are still the old answer's, and its places and count
+									// belong to that one. A link pressed then starts from the top.
+									hrefOf={(page) =>
+										href({
+											screen: "activity",
+											params: writeActivityState({
+												...state,
+												page,
+												asOf: answered ? data.asOf : null,
+												from:
+													answered && data.first !== null && data.last !== null
+														? { page: state.page, first: data.first, last: data.last, total, mark: data.mark }
+														: null,
+											}),
+										})
+									}
+								/>
+							</ListFooter>
+						) : null
+					}
 				>
-					<ListHead
-						columns={head}
-						end={LIST_COLUMN_SIZE.end}
-						onResize={resize}
-						resizeLabel={(column) => t("list.resizeColumn", { column })}
-					/>
-					<TableBody>
-						{lines.length === 0 && (
-							<NoMatchRow
-								colSpan={colSpan}
-								words={t("activity.noMatch")}
-								onClear={() => look({ search: "", kinds: [], entry: null, deliveries: [], range: null })}
-							/>
-						)}
-						{lines.map((line) => {
-							const title = titleOf(line);
-							const row = (
-								<TableRow key={line.id} selected={panel === line.id}>
+					{lines.map((line) => {
+						const title = titleOf(line);
+						const row = (
+							<TableRow key={line.id} selected={panel === line.id}>
+								<TableCell truncate>
+									<RowTitle
+										byAssistant={line.request !== null ? t("activity.actor.assistant") : undefined}
+										title={
+											// A link with the address that opens the details, as every list's title is (a middle press or a press with
+											// Command opens the log there in a new tab); it hands its focus on when its row goes.
+											<HandedRowLink
+												href={href({ screen: "activity", params: writeActivityState({ ...state, open: line.id }) })}
+												listStart={listStart}
+											>
+												{title}
+											</HandedRowLink>
+										}
+										address={addressOf(line)}
+										note={noteOf(line)}
+									/>
+								</TableCell>
+								{data.deliveries && (
 									<TableCell truncate>
-										<RowTitle
-											byAssistant={line.request !== null ? t("activity.actor.assistant") : undefined}
-											title={
-												// A link with the address that opens the details, as every list's title is (a middle press or a press with
-												// Command opens the log there in a new tab); it hands its focus on when its row goes.
-												<HandedRowLink
-													href={href({ screen: "activity", params: writeActivityState({ ...state, open: line.id }) })}
-													listStart={listStart}
-												>
-													{title}
-												</HandedRowLink>
-											}
-											address={addressOf(line)}
-											note={noteOf(line)}
-										/>
+										<DeliveryMark delivery={line.delivery} sending={isSending(line)} />
 									</TableCell>
-									{data.deliveries && (
-										<TableCell truncate>
-											<DeliveryMark delivery={line.delivery} sending={isSending(line)} />
-										</TableCell>
-									)}
-									<TableCell align="end" truncate short title={fullTime(line.at, language)}>
-										<Text mono variant="caption" tone="muted">
-											{shortTime(line.at, language)}
-										</Text>
-									</TableCell>
-									<TableCell align="end">
-										<HandedRowActions listStart={listStart}>
-											<DropdownMenu>
-												<RowMore label={t("list.more")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
-												<DropdownMenuContent align="end">{menuItems(line, false)}</DropdownMenuContent>
-											</DropdownMenu>
-										</HandedRowActions>
-									</TableCell>
-								</TableRow>
-							);
-							return (
-								<ContextMenu key={line.id}>
-									<ContextMenuTrigger render={row} />
-									<ContextMenuContent>{menuItems(line, true)}</ContextMenuContent>
-								</ContextMenu>
-							);
-						})}
-					</TableBody>
-				</Table>
-				{total > ACTIVITY_PAGE_SIZE && (
-					<ListFooter>
-						<Count>
-							{t("list.range", {
-								from: (state.page - 1) * ACTIVITY_PAGE_SIZE + 1,
-								to: Math.min(state.page * ACTIVITY_PAGE_SIZE, total),
-								total,
-							})}
-						</Count>
-						<ListPages
-							page={state.page}
-							pages={Math.ceil(total / ACTIVITY_PAGE_SIZE)}
-							// The other pages of this browsing are read from this one's edges, inside the boundary it was read in: neither new activity
-							// nor a line committed late shifts them, and the count stays. Only while what is shown is this address's own answer: after
-							// a new filter or page is asked for and before it answers, the rows are still the old answer's, and its places and count
-							// belong to that one. A link pressed then starts from the top.
-							hrefOf={(page) =>
-								href({
-									screen: "activity",
-									params: writeActivityState({
-										...state,
-										page,
-										asOf: answered ? data.asOf : null,
-										from:
-											answered && data.first !== null && data.last !== null
-												? { page: state.page, first: data.first, last: data.last, total, mark: data.mark }
-												: null,
-									}),
-								})
-							}
-						/>
-					</ListFooter>
-				)}
+								)}
+								<TableCell align="end" truncate short title={fullTime(line.at, language)}>
+									<Text mono variant="caption" tone="muted">
+										{shortTime(line.at, language)}
+									</Text>
+								</TableCell>
+								<TableCell align="end">
+									<HandedRowActions listStart={listStart}>
+										<DropdownMenu>
+											<RowMore label={t("list.more")} trigger={(button) => <DropdownMenuTrigger render={button} />} />
+											<DropdownMenuContent align="end">{menuItems(line, false)}</DropdownMenuContent>
+										</DropdownMenu>
+									</HandedRowActions>
+								</TableCell>
+							</TableRow>
+						);
+						return (
+							<ContextMenu key={line.id}>
+								<ContextMenuTrigger render={row} />
+								<ContextMenuContent>{menuItems(line, true)}</ContextMenuContent>
+							</ContextMenu>
+						);
+					})}
+				</CollectionTable>
 			</PageColumn>
 			{panel && (
 				<ActivityPanel

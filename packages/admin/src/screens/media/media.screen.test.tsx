@@ -987,8 +987,17 @@ describe("the library's states (components/list.md)", () => {
 	it("a search that finds nothing in the list says so in the table, and its button takes the search off", async () => {
 		await at("#/media?view=list&q=없는파일", async () => {});
 		await expect.element(main().getByText("맞는 파일이 없습니다.")).toBeVisible();
-		await userEvent.click(main().getByRole("button", { name: "필터 해제" }));
+		await userEvent.click(main().getByRole("button", { name: "검색어 지우기" }));
 		await expect.element(main().getByText("맞는 파일이 없습니다.")).not.toBeInTheDocument();
+	});
+
+	it("the grid's one line says the table row's words, and its button is named by what is applied", async () => {
+		await at("#/media?q=없는파일", async () => {});
+		await expect.element(main().getByText("맞는 파일이 없습니다.")).toBeVisible();
+		await userEvent.click(main().getByRole("button", { name: "검색어 지우기" }));
+		await expect.element(main().getByText("맞는 파일이 없습니다.")).not.toBeInTheDocument();
+		await at("#/media?q=없는파일&kind=file", async () => {});
+		await expect.element(main().getByRole("button", { name: "모두 지우기" })).toBeVisible();
 	});
 
 	it("more files than a page: under them the range shown and the pages, as under every table", async () => {

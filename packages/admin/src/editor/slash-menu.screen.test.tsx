@@ -52,6 +52,17 @@ describe("the '/' menu", () => {
 		await expect.element(menu()).not.toBeInTheDocument();
 	});
 
+	it("[no-match] words that no block answers to leave the menu open with one row that says so, and Esc closes it", async () => {
+		await NewEntry.run();
+		await userEvent.click(body());
+		await userEvent.keyboard("/zzzz");
+		await expect.element(menu()).toBeVisible();
+		await expect.element(menu().getByText("맞는 블록 없음")).toBeVisible();
+		expect(menu().getByRole("option").elements()).toHaveLength(0);
+		await userEvent.keyboard("{Escape}");
+		await expect.element(menu()).not.toBeInTheDocument();
+	});
+
 	it("[mid-sentence] [korean] '/' typed after a word in a sentence opens the menu, and '각주' typed in Korean puts a footnote right there", async () => {
 		await Draft.run();
 		await caretAfter("지금 상태만");

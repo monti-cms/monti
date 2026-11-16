@@ -136,9 +136,9 @@ describe("the list: what is kept, and what comes back", () => {
 		await expect.element(page.getByRole("button", { name: "다시 로그인" })).toBeVisible();
 	});
 
-	it("필터 해제 pressed with the keyboard goes with its row once the list has rows again, and the focus goes to the list's first row, not to the page", async () => {
+	it("검색어 지우기 pressed with the keyboard goes with its row once the list has rows again, and the focus goes to the list's first row, not to the page", async () => {
 		await listAt("#/c/post?q=없는말").run();
-		const clear = () => main().getByRole("button", { name: "필터 해제" });
+		const clear = () => main().getByRole("button", { name: "검색어 지우기" });
 		await expect.element(clear()).toBeVisible();
 		for (let presses = 0; presses < 80 && document.activeElement !== clear().element(); presses++)
 			await userEvent.tab();

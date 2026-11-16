@@ -178,7 +178,7 @@ describe("the trash (doc 11, flow 5)", () => {
 	it("11-1 a search that finds nothing says so, and clears on request", async () => {
 		await NoMatch.run();
 		await expect.element(table().getByText("맞는 것이 없습니다.")).toBeVisible();
-		await userEvent.click(table().getByRole("button", { name: "필터 해제" }));
+		await userEvent.click(table().getByRole("button", { name: "검색어 지우기" }));
 		await expect.element(row("첫 번째 글")).toBeVisible();
 	});
 
