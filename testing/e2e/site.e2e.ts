@@ -306,7 +306,9 @@ test.describe("the site", () => {
 		});
 		await page.goto(post.path);
 		const figure = page.locator("figure[data-code]");
-		await expect(figure.locator("figcaption")).toHaveText("src/count.ts");
+		// The head says the language, then the file name, as the editor's head does (WS-16).
+		await expect(figure.locator("figcaption [data-code-language]")).toHaveText("TypeScript");
+		await expect(figure.locator("figcaption [data-code-name]")).toHaveText("src/count.ts");
 		// Coloured with the site's two themes.
 		await expect(figure.locator("code span[style*='--shiki-dark']").first()).toBeVisible();
 		await expect(figure.locator('.line[data-effect~="plus"]')).toContainText("count += 1;");
