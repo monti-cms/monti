@@ -59,7 +59,7 @@ export const DropHint: Story = {
 			fire={() =>
 				toast.dropHint(
 					<>
-						<b>covers</b>에 놓습니다
+						<b>covers</b>에 올리기
 					</>,
 				)
 			}

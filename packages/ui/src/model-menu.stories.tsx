@@ -71,7 +71,7 @@ const base = {
 	onValueChange: () => {},
 	groups: GROUPS,
 	searchLabel: "모델 찾기",
-	emptyText: "맞는 모델 없음",
+	emptyText: "맞는 모델이 없습니다",
 };
 
 /** From the chat input's model button: opens above it, 330px. */
@@ -128,7 +128,7 @@ export const FieldEmpty: Story = {
 	render: () => (
 		<Stack gap={16} width="panel">
 			<MenuField placeholder="모델 고르기" />
-			<MenuField placeholder="키 필요" warning />
+			<MenuField placeholder="키 없음" warning />
 			<MenuField value="sk-ant-…9f2c" meta="Anthropic" mono size="default" />
 		</Stack>
 	),
