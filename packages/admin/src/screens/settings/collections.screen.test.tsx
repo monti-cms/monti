@@ -1110,8 +1110,26 @@ describe("settings › collections: the property panel preview draws each field 
 	});
 
 	it("[ST-13] a choice of many is a chips field, a choice by a switch is a switch, a relation of many is a chips field; of one, a single input", async () => {
+		const asked: string[] = [];
 		await scene(
-			{ loaders: collections.site({ schema: kinds }), play: collections.Preview.play },
+			{
+				loaders: collections.site({ schema: kinds }),
+				// Every operation the admin asks for, by name.
+				render: (_args: unknown, { loaded }: { loaded: unknown }) => {
+					const { site } = loaded as { site: StorySite };
+					return (
+						<MontiAdmin
+							transport={(name, input, options) => {
+								asked.push(name);
+								return site.transport(name, input, options);
+							}}
+							streams={site.streams}
+							siteName="example.dev"
+						/>
+					);
+				},
+				play: collections.Preview.play,
+			},
 			collections.default,
 		).run();
 		const panel = page.getByRole("complementary", { name: "미리보기" });
@@ -1129,13 +1147,36 @@ describe("settings › collections: the property panel preview draws each field 
 		// The switch stands at the end of its row, its name before it, as in the editor: no label over it.
 		expect(pinned.element().closest("[data-slot=option]")?.textContent).toContain("pinned");
 		expect(panel.element().querySelector("label[for=preview-pinned][data-slot=form-field-label]")).toBeNull();
-		// A field that is not saved has no candidates to read: nothing is asked of the server, and no read fails.
+		// The preview reads no candidates (a field that is not saved has none to read): the relation fields ask the server for nothing, opened
+		// or not, and no read fails.
+		await userEvent.click(page.elementLocator(input("relatedOne")));
+		await userEvent.click(page.elementLocator(input("relatedMany")));
+		expect(asked.length).toBeGreaterThan(0);
+		expect(asked.filter((name) => name.startsWith("relations."))).toEqual([]);
 		await expect.element(page.getByText("불러오지 못했습니다")).not.toBeInTheDocument();
 	});
 
 	it("[ST-13] what is typed or switched in the preview stays there while it is open", async () => {
+		const asked: string[] = [];
 		await scene(
-			{ loaders: collections.site({ schema: kinds }), play: collections.Preview.play },
+			{
+				loaders: collections.site({ schema: kinds }),
+				// Every operation the admin asks for, by name.
+				render: (_args: unknown, { loaded }: { loaded: unknown }) => {
+					const { site } = loaded as { site: StorySite };
+					return (
+						<MontiAdmin
+							transport={(name, input, options) => {
+								asked.push(name);
+								return site.transport(name, input, options);
+							}}
+							streams={site.streams}
+							siteName="example.dev"
+						/>
+					);
+				},
+				play: collections.Preview.play,
+			},
 			collections.default,
 		).run();
 		const panel = page.getByRole("complementary", { name: "미리보기" });

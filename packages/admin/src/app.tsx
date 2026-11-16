@@ -21,6 +21,7 @@ import { ActivityScreen } from "./screens/activity/activity-screen";
 import { DataScreen } from "./screens/data/data-screen";
 import { EntryEditor } from "./screens/entry/entry-editor";
 import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-frame";
+import { CollectionBack, TemplatesBack } from "./screens/frame/editor-back";
 import { ReadFailedBanner } from "./screens/frame/read-failed";
 import { ScreenBoundary } from "./screens/frame/screen-boundary";
 import { KeysScreen } from "./screens/keys/keys-screen";
@@ -204,18 +205,18 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 	const panel = <AssistantPanel onOpen={(address) => leave(() => go(parseRoute(address)))} />;
 	// A screen that could not be drawn is kept away at its own address only: any move draws what the new address opens.
 	const at = href(route);
-	if (route.screen === "entry")
+	if (route.screen === "entry") {
+		const toList = () =>
+			leave(() => go({ screen: "list", collection: route.collection, params: new URLSearchParams() }));
 		return (
 			<BesideAssistant panel={panel}>
-				<ScreenBoundary at={at} standalone>
+				<ScreenBoundary at={at} back={<CollectionBack collection={route.collection} onBack={toList} />}>
 					<EntryEditor
 						key={route.id}
 						collection={route.collection}
 						id={route.id}
 						compare={route.compare ?? null}
-						onBack={() =>
-							leave(() => go({ screen: "list", collection: route.collection, params: new URLSearchParams() }))
-						}
+						onBack={toList}
 						onTrash={() => leave(() => go({ screen: "trash", params: new URLSearchParams() }))}
 						// The comparison is a step inside the editor: back returns to the editor as it was, with what was typed.
 						onCompare={(compare) =>
@@ -237,19 +238,22 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 				</ScreenBoundary>
 			</BesideAssistant>
 		);
-	if (route.screen === "template")
+	}
+	if (route.screen === "template") {
+		const toTemplates = () => leave(() => go({ screen: "place", place: "tools" }));
 		return (
 			<BesideAssistant panel={panel}>
-				<ScreenBoundary at={at} standalone>
+				<ScreenBoundary at={at} back={<TemplatesBack onBack={toTemplates} />}>
 					<TemplateEditor
 						key={route.id ?? "new"}
 						id={route.id}
-						onBack={() => leave(() => go({ screen: "place", place: "tools" }))}
+						onBack={toTemplates}
 						onSaved={(id) => go({ screen: "template", id }, { replace: true })}
 					/>
 				</ScreenBoundary>
 			</BesideAssistant>
 		);
+	}
 	return (
 		<AdminFrame
 			open={placeOf(route)}

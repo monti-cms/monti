@@ -156,7 +156,9 @@ export function useTranslation(id: string, schema: Schema | undefined, editor: E
 
 /**
  * The entry's languages over its title (editor.md: language tabs and "+ Language"): a tab per language the group has, a dot where the source changed since
- * it was translated, and "+ Language" with the languages it lacks. Picking one makes its translation and opens it.
+ * it was translated, and "+ Language" with the languages it lacks. Picking one makes its translation and opens it. An entry that cannot be
+ * changed (archived, in the trash) is given no `onCreate` and has no "+ Language"; one in the trash is given the languages of it that are in the
+ * trash with it as its group. With no tab and nothing to add, nothing is drawn.
  */
 export function LocaleTabs({
 	schema,

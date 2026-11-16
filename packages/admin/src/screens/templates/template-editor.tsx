@@ -23,7 +23,7 @@ import {
 	StatusBarSpacer,
 	TextButton,
 } from "@monti-cms/ui";
-import { ChevronLeft, OverflowMenuHorizontal } from "@monti-cms/ui/icons";
+import { OverflowMenuHorizontal } from "@monti-cms/ui/icons";
 import type { Editor } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { AssistantButton } from "../../assistant/assistant-button";
@@ -35,6 +35,7 @@ import { useAdmin } from "../../operations/admin-context";
 import { useOperation } from "../../operations/use-operation";
 import { DocumentToolRows, DocumentViewPane, useDocumentTools } from "../entry/document-tools";
 import { useEntryEditor } from "../entry/use-entry-editor";
+import { TemplatesBack } from "../frame/editor-back";
 import { focusText, useFocusHandOff } from "../frame/focus-hand-off";
 import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
@@ -119,10 +120,7 @@ export function TemplateEditor({
 		>
 			<EditorHeader>
 				<Inline gap={16} minWidth={0} paddingX={12}>
-					<TextButton variant="quiet" onClick={onBack}>
-						<ChevronLeft aria-hidden />
-						{t("templates.back")}
-					</TextButton>
+					<TemplatesBack onBack={onBack} />
 					{editor.dirty ? <EntryStatus status="editing">{t("templates.unsaved")}</EntryStatus> : null}
 				</Inline>
 				<Inline gap={16} justify="end">

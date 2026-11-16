@@ -1526,7 +1526,7 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 			},
 		},
 	});
-	const archived = () =>
+	const archived = (how: "archived" | "trashed" = "archived") =>
 		scene<Loaded>(
 			{
 				loaders: [
@@ -1562,14 +1562,16 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 											moods: ["calm", "loud"],
 											pinned: "on",
 											category: groups[0],
-											topics: groups,
+											// One of the two: the other is left to pick once the entry can be changed.
+											topics: [groups[0]],
 											series: groups,
 										},
 									},
 									entry.admin,
 								)) as { output: { id: string } };
 								id = post.output.id;
-								await monti.run("entries.archive", { ids: [id] }, entry.admin);
+								if (how === "archived") await monti.run("entries.archive", { ids: [id] }, entry.admin);
+								else await monti.run("trash.move", { rows: [{ kind: "entry", id }] }, entry.admin);
 							},
 						});
 						startAt(`#/c/post/${id}`);
@@ -1666,5 +1668,52 @@ describe("the property panel of an entry that cannot be changed (AT-29)", () => 
 		// Nothing became a change: no save is offered, and the entry holds what it held.
 		await expect.element(button("저장 전 변경사항")).not.toBeInTheDocument();
 		expect(JSON.stringify(await held())).toBe(before);
+	});
+	/** The options of a list that is open now. */
+	const options = () => page.getByRole("option").elements().length;
+	/** A press on the field opens its list, and Escape shuts it. */
+	const opens = async (name: string) => {
+		await userEvent.click(page.elementLocator(field(name)));
+		await expect.poll(options, { message: name }).toBeGreaterThan(0);
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(options, { message: name }).toBe(0);
+	};
+	/** Neither a press nor the arrow opens the field's list. */
+	const staysShut = async (name: string) => {
+		await userEvent.click(page.elementLocator(field(name)));
+		field(name).focus();
+		await userEvent.keyboard("{ArrowDown}");
+		expect(options(), name).toBe(0);
+	};
+	const lists = ["mood", "moods", "category", "topics"];
+
+	for (const [how, back] of [
+		["archived", "보관 풀기"],
+		["trashed", "복원"],
+	] as const)
+		it(`[AT-29] an entry first drawn ${how} and then brought back with '${back}' opens its lists again, in the same panel`, async () => {
+			await archived(how).run();
+			await expect.element(button(back)).toBeVisible();
+			if ((await panel().elements()).length === 0) await userEvent.click(button("속성"));
+			await expect.element(panel().getByText("개발").first()).toBeVisible();
+			for (const name of lists) await staysShut(name);
+			await userEvent.click(button(back));
+			await expect.element(button("발행하기")).toBeVisible();
+			await expect.poll(() => field("mood").getAttribute("aria-readonly")).toBeNull();
+			for (const name of lists) await opens(name);
+		});
+
+	it("[AT-29] an entry archived while its panel is open stops opening its lists", async () => {
+		await archived().run();
+		if ((await panel().elements()).length === 0) await userEvent.click(button("속성"));
+		await userEvent.click(button("보관 풀기"));
+		await expect.element(button("발행하기")).toBeVisible();
+		await expect.poll(() => field("mood").getAttribute("aria-readonly")).toBeNull();
+		// The panel was drawn with lists that open; archived from the head's menu, they are the same parts, now only read.
+		await userEvent.click(button("더 보기"));
+		await userEvent.click(page.getByRole("menuitem", { name: "보관", exact: true }));
+		await expect.element(button("보관 풀기")).toBeVisible();
+		await expect.poll(() => field("mood").getAttribute("aria-readonly")).toBe("true");
+		for (const name of lists) await staysShut(name);
 	});
 });

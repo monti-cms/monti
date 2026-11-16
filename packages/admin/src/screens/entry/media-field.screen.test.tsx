@@ -285,3 +285,33 @@ describe("in a translation", () => {
 		await expect.element(cover()).toHaveTextContent("seoul-night.jpg");
 	});
 });
+
+describe("the file window and a double click (MD-03)", () => {
+	/** The second click of a double click, as the browser sends it to what is under the pointer by then. */
+	const secondClick = (on: Element) =>
+		on.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 2 }));
+
+	it("[MD-03] a folder opened by a double click picks no file in it, and a double click on a file leaves it picked", async () => {
+		await Draft.run();
+		await properties();
+		await userEvent.click(cover());
+		const dialog = page.getByRole("dialog");
+		const folder = () => document.querySelector<HTMLElement>("[role=dialog] button[data-slot=folder-tile]");
+		await expect.poll(folder).not.toBeNull();
+		// The second click of the pair that opens nothing by itself: the window stays at the top.
+		secondClick(folder() as HTMLElement);
+		await expect.element(dialog.getByRole("button", { name: /desk-morning/ })).not.toBeInTheDocument();
+		await openAssets();
+		const file = dialog.getByRole("button", { name: /desk-morning/ });
+		await expect.element(file).toBeVisible();
+		// The folder is open: the second click lands on the file now under the pointer, and picks nothing.
+		secondClick(file.element());
+		await expect.element(dialog.getByRole("button", { name: "고르기" })).not.toBeInTheDocument();
+		// A double click on a file: the first click picks it, the second does not take the pick back.
+		await userEvent.click(file);
+		secondClick(file.element());
+		await expect.element(dialog.getByRole("button", { name: "고르기" })).toBeVisible();
+		await userEvent.click(dialog.getByRole("button", { name: "고르기" }));
+		await expect.element(cover()).toHaveTextContent("desk-morning.jpg");
+	});
+});

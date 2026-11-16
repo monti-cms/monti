@@ -1,9 +1,11 @@
+import { defineSchema } from "@monti-cms/core";
 import { composeStories } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { scene } from "../../../test/scene";
 import { MontiAdmin } from "../../app";
 import type { Transport } from "../../operations/transport";
+import { schema } from "../story-schema";
 import * as frame from "./frame.stories";
 
 const menu = () => page.getByRole("navigation", { name: "관리 메뉴" });
@@ -157,5 +159,60 @@ describe("a screen that cannot be drawn", () => {
 		await userEvent.click(failed().getByRole("button", { name: "다시 시도" }));
 		await expect.element(page.getByText("색인 화면")).toBeVisible();
 		await expect.element(failed()).not.toBeInTheDocument();
+	});
+	it("[ST-01] an editor that throws stands outside the frame, so its place keeps the editor's way back: the banner at the top, and the collection's name goes to its list", async () => {
+		const broken = { now: true };
+		const Field = () => {
+			if (broken.now) throw new Error("a field that throws");
+			return <p>부제 입력</p>;
+		};
+		let id = "";
+		await scene(
+			{
+				loaders: frame.signedIn(
+					async (monti) => {
+						const made = (await monti.run(
+							"entries.create",
+							{ collection: "post", locale: "ko", title: "열리지 않는 글", values: {} },
+							{ actor: "admin" },
+						)) as { output: { id: string } };
+						id = made.output.id;
+					},
+					{
+						schema: defineSchema({
+							...schema,
+							collections: {
+								...schema.collections,
+								post: {
+									...schema.collections.post,
+									fields: { ...schema.collections.post.fields, subtitle: { kind: "text", input: "site.broken" } },
+								},
+							},
+						}),
+					},
+				),
+				render: (_args: unknown, { loaded }: { loaded: unknown }) => (
+					<MontiAdmin
+						transport={(loaded as { site: { transport: Transport } }).site.transport}
+						siteName="example.dev"
+						plugins={[{ name: "site", inputs: { "site.broken": Field } }]}
+					/>
+				),
+			},
+			frame.default,
+		).run();
+		await expect.element(menu()).toBeVisible();
+		window.location.hash = `#/c/post/${id}`;
+		const failed = () => page.getByRole("note").filter({ hasText: "불러오지 못했습니다" });
+		await expect.element(failed()).toBeVisible();
+		// No sidebar here: the editor's own back, under the collection's name, is the way out.
+		await expect.element(menu()).not.toBeInTheDocument();
+		const back = page.getByRole("banner").getByRole("button", { name: "게시글" });
+		await expect.element(back).toBeVisible();
+		await userEvent.click(back);
+		await expect.element(failed()).not.toBeInTheDocument();
+		await expect.element(menu()).toBeVisible();
+		expect(window.location.hash).toBe("#/c/post");
+		await expect.element(page.getByRole("link", { name: "열리지 않는 글" })).toBeVisible();
 	});
 });

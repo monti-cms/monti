@@ -54,7 +54,6 @@ import {
 } from "@monti-cms/ui";
 import {
 	Archive,
-	ChevronLeft,
 	Copy,
 	Export,
 	OverflowMenuHorizontal,
@@ -101,6 +100,7 @@ import { useFieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
 import { usePurge, useRestore, useTrashMove } from "../../trash/use-trash";
+import { EditorBack } from "../frame/editor-back";
 import { focusText, toWhatStands, useFocusHandOff } from "../frame/focus-hand-off";
 import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
@@ -1243,10 +1243,9 @@ export function EntryEditor({
 			{purge.dialog}
 			<EditorHeader>
 				<Inline gap={12} minWidth={0} paddingX={12}>
-					<TextButton variant="quiet" onClick={trashed ? onTrash : onBack}>
-						<ChevronLeft aria-hidden />
+					<EditorBack onBack={trashed ? onTrash : onBack}>
 						{trashed ? t("frame.trash") : (schema.data?.adminValues[collection]?.label ?? collection)}
-					</TextButton>
+					</EditorBack>
 					{address ? (
 						<Text variant="meta" tone="faint" truncate>
 							{address}
