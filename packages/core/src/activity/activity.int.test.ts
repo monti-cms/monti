@@ -2241,6 +2241,7 @@ describe("undo from the log", () => {
 			removes: [entry],
 			trashes: [],
 			trashedCollections: [],
+			removedTranslations: [],
 		});
 		// A save: back to what it held, nothing deleted, nothing thrown away.
 		later(MINUTE);

@@ -964,7 +964,7 @@ describe("an image in the text", () => {
 		await userEvent.click(sheet.getByRole("button", { name: "적용" }));
 		await expect.element(sheet).not.toBeInTheDocument();
 		await userEvent.keyboard("{Meta>}s{/Meta}");
-		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "저장 전 변경 사항" })).not.toBeInTheDocument();
 	});
 
 	it("09-1 when the crop dialog closes the keys are the text's again, even from the caption: ⌘Z takes the turn back at once", async () => {
@@ -1274,7 +1274,7 @@ describe("selecting, copying and cutting across a picture", () => {
 		expect(new Set(sources()).size).toBe(1);
 		// Each is a block of its own: the copy did not bring the first one's id.
 		await userEvent.keyboard(navigator.userAgent.includes("Mac") ? "{Meta>}s{/Meta}" : "{Control>}s{/Control}");
-		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "저장 전 변경 사항" })).not.toBeInTheDocument();
 
 		// Another entry of the same site.
 		const made = (await held.site?.monti.run(

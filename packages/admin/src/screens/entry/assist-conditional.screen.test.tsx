@@ -61,7 +61,7 @@ describe("proposals and conditional fields in the editor (doc 19; T187, T195)", 
 		await expect.element(page.getByText("1 / 1")).toBeVisible();
 		await expect.element(button("퍼가기 코드 제안 버리기")).toBeVisible();
 		await userEvent.click(button("모두 받기"));
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 		expect(field("퍼가기 코드").element().hasAttribute("data-proposal")).toBe(false);
 		await userEvent.keyboard("{Meta>}s{/Meta}");
 		await expect

@@ -55,7 +55,7 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 		await expect.element(subtitle()).toHaveValue("도구보다 글");
 		expect(subtitle().element().hasAttribute("data-proposal")).toBe(true);
 		// It is in the field as if typed: unsaved, and nothing is stored until the person saves.
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 		expect((await stored(made.loaded())).values.subtitle).toBeUndefined();
 		const { model } = made.loaded();
 		expect(model.answers).toHaveLength(1);
@@ -93,7 +93,7 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
 		await expect.element(summary()).toHaveValue(before);
 		await expect.element(button("요약 채운 값 버리기")).not.toBeInTheDocument();
-		await expect.poll(cells).not.toContain("저장 전 변경사항");
+		await expect.poll(cells).not.toContain("저장 전 변경 사항");
 	});
 
 	it("10-1 '버리기' after a save puts back what the field had before the fill, unsaved", async () => {
@@ -107,7 +107,7 @@ describe("the entry editor: '✦ fill' on a field (T69; doc 10, quick tasks)", (
 		await expect.poll(async () => (await stored(made.loaded())).values.subtitle).toBe("도구보다 글");
 		await userEvent.click(button("부제 채운 값 버리기"));
 		await expect.element(subtitle()).toHaveValue("");
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 	});
 
 	it("10-1 undo in a filled relation's search takes back the typing, not the fill", async () => {
@@ -469,7 +469,7 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		await userEvent.click(button("받기"));
 		await expect.poll(() => body().element().textContent).toContain("블로그를 다시 만든 건");
 		await expect.poll(() => inBody("ins")).toHaveLength(1);
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 		await expect.poll(() => mark(MARK).elements().length).toBe(2);
 		expect(await pending(made.loaded())).toHaveLength(3);
 	});
@@ -478,7 +478,7 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		const made = await proposed();
 		await userEvent.click(mark(MARK).first());
 		await userEvent.click(button("받기"));
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 		await userEvent.click(button("저장"));
 		await expect.poll(async () => (await pending(made.loaded())).length).toBe(2);
 		const opens = vi.spyOn(window, "open").mockReturnValue(null);
@@ -497,7 +497,7 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		await userEvent.click(mark(MARK).first());
 		await userEvent.click(button("받기"));
 		await expect.poll(() => mark(MARK).elements().length).toBe(2);
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 		body().element().focus();
 		await userEvent.keyboard("{ControlOrMeta>}z{/ControlOrMeta}");
 		await expect.poll(() => mark(MARK).elements().length).toBe(3);
@@ -508,7 +508,7 @@ describe("the entry editor: one proposed change's own card (T41; doc 05, 'one by
 		// Redo takes it again, as one step.
 		await userEvent.keyboard("{ControlOrMeta>}{Shift>}z{/Shift}{/ControlOrMeta}");
 		await expect.poll(() => mark(MARK).elements().length).toBe(2);
-		await saveCell("저장 전 변경사항");
+		await saveCell("저장 전 변경 사항");
 	});
 
 	it("10-1 [AS-12] pressing a change drawn over the text opens its own card, with '버리기' and '받기'", async () => {

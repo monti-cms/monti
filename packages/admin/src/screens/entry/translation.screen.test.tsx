@@ -200,7 +200,7 @@ describe("flow 3, a translation", () => {
 	it("04-1 3.06 publishing with a faint block left is refused, and the to-do row moves to that block", async () => {
 		await open(NewTranslation);
 		await userEvent.click(page.getByRole("button", { name: "발행하기" }));
-		const pending = page.getByRole("button", { name: /흐린 블록/ }).first();
+		const pending = page.getByRole("button", { name: /정하지 않은 블록/ }).first();
 		await expect.element(pending).toBeVisible();
 		await userEvent.click(pending);
 		const at = window.getSelection()?.anchorNode;

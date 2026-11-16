@@ -11,6 +11,8 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
+import { useLanguageName } from "../format/language";
+import { titleOf } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
 import { type Refusal, reasonOf, useOperation } from "../operations/use-operation";
 import { holdsKeyboardFocus } from "../screens/frame/focus-hand-off";
@@ -37,6 +39,7 @@ const TRASH_KINDS = ["entry", "media", "folder"];
  */
 export function useUndo() {
 	const { t, wrote } = useAdmin();
+	const languageName = useLanguageName();
 	const undo = useOperation<{ output: UndoPlan }>("activity.undo");
 	const plan = useOperation<UndoPlanned>("activity.undoPlan");
 	const effects = useOperation<TrashEffects>("trash.checkMove");
@@ -71,9 +74,14 @@ export function useUndo() {
 		try {
 			const planned = await plan.run({ id });
 			if (!planned.ok) return refused(planned.refusal);
-			const { removes, trashes, trashedCollections } = planned.body;
+			const { removes, trashes, trashedCollections, removedTranslations } = planned.body;
 			const words: string[] = [];
-			if (removes.length > 0) words.push(t("activity.undoRemoves"));
+			// A translation is named by its title and language; whatever else the write made is said as before.
+			for (const each of removedTranslations)
+				words.push(
+					t("activity.undoRemovesTranslation", { title: titleOf(each.title, t), language: languageName(each.locale) }),
+				);
+			if (removes.length > removedTranslations.length) words.push(t("activity.undoRemoves"));
 			const rows = trashes.filter((ref) => TRASH_KINDS.includes(ref.kind)) as TrashRef[];
 			if (rows.length > 0) {
 				const moved = await effects.run({ rows });

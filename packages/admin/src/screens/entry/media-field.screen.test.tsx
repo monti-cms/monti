@@ -61,7 +61,7 @@ describe("a read-only entry", () => {
 			expect(open()).toHaveLength(0);
 			expect(field.value ?? field.textContent).toBe(held);
 		}
-		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "저장 전 변경 사항" })).not.toBeInTheDocument();
 	});
 });
 
@@ -116,7 +116,7 @@ describe("a cover in the property panel", () => {
 		await userEvent.fill(alt(), "아침의 책상 위");
 		await userEvent.keyboard("{Meta>}s{/Meta}");
 		await expect.element(alt()).toHaveValue("아침의 책상 위");
-		await expect.element(page.getByRole("button", { name: "저장 전 변경사항" })).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "저장 전 변경 사항" })).not.toBeInTheDocument();
 		await userEvent.keyboard("{Enter}");
 		await expect.element(alt()).not.toBeInTheDocument();
 		await expect.element(settings()).toHaveFocus();

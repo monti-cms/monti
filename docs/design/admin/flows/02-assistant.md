@@ -192,7 +192,7 @@
 ### 단계 05: "예외 · 저장 안 한 편집이 있으면 옮기지 않음"
 
 - 보드: `Flow2Step05.dc.html`
-- 화면: `EditorNotion` (todo-open off; panel off; state "아무것도 안 할 때"; pub "수정 중"; save "저장 전 변경사항") + `AssistantPanel` (view "이동 막힘")
+- 화면: `EditorNotion` (todo-open off; panel off; state "아무것도 안 할 때"; pub "수정 중"; save "저장 전 변경 사항") + `AssistantPanel` (view "이동 막힘")
 - 예외: 지금 글에 저장 안 한 편집이 있는데 사용자가 다른 글을 열어 달라고 한다. 어시스턴트는 화면을 옮기지 않고 그렇다고 말하며, "저장하고 열기"를 보여 준다.
 
 ### 단계 06: "예외 · 하다가 끊김 → 어디까지 했는지 · 이어서 하기"

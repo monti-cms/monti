@@ -730,7 +730,7 @@ export const Unsaved: Story = {
 	play: async ({ canvasElement }) => {
 		const { page, title } = await opened(canvasElement);
 		await userEvent.type(title, " 다시 쓰기");
-		await expect(await page.findByRole("button", { name: "저장 전 변경사항" })).toBeVisible();
+		await expect(await page.findByRole("button", { name: "저장 전 변경 사항" })).toBeVisible();
 	},
 };
 

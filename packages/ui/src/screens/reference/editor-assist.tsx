@@ -96,7 +96,7 @@ export function EditorAssistScreen({ state }: { state: EditorAssistState }) {
 			side={<EntryProperties summary={<Summary state={body ? "filled" : state} />} />}
 			statusBar={
 				<StatusBar>
-					<StatusBarCell tone="warning">저장 전 변경사항</StatusBarCell>
+					<StatusBarCell tone="warning">저장 전 변경 사항</StatusBarCell>
 					<StatusBarSpacer />
 					<StatusBarCell end>1,240자</StatusBarCell>
 				</StatusBar>
