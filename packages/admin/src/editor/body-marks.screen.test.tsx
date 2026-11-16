@@ -138,10 +138,17 @@ describe("what is pressed in the text answers the pointer", () => {
 					return Math.min(Math.abs(words.top - at.bottom), Math.abs(at.top - words.bottom));
 				})
 				.toBeLessThan(24);
-			// The card's first button over the words' start (when the body's edge does not hold it back).
-			// Polled: the card is placed again once its new selection is measured, and a slow machine can read it between the two.
-			await expect.poll(() => Math.abs(card.element().getBoundingClientRect().left - words.left)).toBeLessThan(3);
+			// The card's first button over the words' start, unless the body's right edge holds it back: where a line breaks
+			// depends on the machine's font, and the picked words can stand at a line's end. Polled: the card is placed again once
+			// its new selection is measured, and a slow machine can read it between the two.
 			const edge = body().element().getBoundingClientRect();
+			await expect
+				.poll(() => {
+					const at = card.element().getBoundingClientRect();
+					// Held back means it stands at the edge, less the 8px every floating thing keeps from its boundary.
+					return at.right >= edge.right - 10 ? at.left <= words.left : Math.abs(at.left - words.left) < 3;
+				})
+				.toBe(true);
 			expect(card.element().getBoundingClientRect().left).toBeGreaterThanOrEqual(edge.left - 1);
 			expect(card.element().getBoundingClientRect().right).toBeLessThanOrEqual(edge.right + 1);
 		}
