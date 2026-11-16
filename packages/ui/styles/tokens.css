@@ -28,6 +28,10 @@
 	--monti-danger-11: #a8353c;
 	--monti-proposal-3: #e4eaf8;
 	--monti-proposal-11: #2f56c8;
+	--monti-code-violet: #6b3fa0;
+	--monti-code-teal: #14625c;
+	--monti-code-magenta: #913f82;
+	--monti-code-olive: #5c6413;
 	--monti-bg-page: var(--monti-gray-1);
 	--monti-bg-tool: var(--monti-gray-2);
 	--monti-bg-muted: var(--monti-gray-3);
@@ -190,6 +194,10 @@
 	--monti-danger-11: #e3918f;
 	--monti-proposal-3: #252b3c;
 	--monti-proposal-11: #a6b7ea;
+	--monti-code-violet: #c4a5ef;
+	--monti-code-teal: #7ad6cd;
+	--monti-code-magenta: #cc8dbe;
+	--monti-code-olive: #9eaa33;
 	--monti-bg-page: var(--monti-gray-2);
 	--monti-bg-tool: var(--monti-gray-1);
 	--monti-bg-highlight: #3a352a;

@@ -16,7 +16,7 @@
 			"entry": ["styles/index.css"]
 		},
 		"packages/core": {
-			"entry": ["src/**/*.test.ts", "src/__test__/**"]
+			"entry": ["src/**/*.test.ts", "src/__test__/**", "bin/load.d.mts"]
 		},
 		"packages/ai": {
 			"entry": ["src/**/*.test.ts"]

@@ -16,7 +16,13 @@ function CalloutDrawing({ attrs, locale, lang, children }: BlockProps & { childr
 	const title =
 		typeof attrs.title === "string" && attrs.title.trim() !== "" ? attrs.title.trim() : wordsIn(locale)[tone];
 	return (
-		<div className="monti-block-callout" data-tone={tone} role="note" lang={lang}>
+		<div
+			className="monti-block-callout"
+			data-tone={tone}
+			role="note"
+			aria-label={title === wordsIn(locale)[tone] ? undefined : wordsIn(locale)[tone]}
+			lang={lang}
+		>
 			<div className="monti-block-callout-title">{title}</div>
 			{Children.count(children) > 0 ? <div className="monti-block-callout-body">{children}</div> : null}
 		</div>

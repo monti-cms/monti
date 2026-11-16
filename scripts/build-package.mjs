@@ -1,8 +1,9 @@
 // Package build: emits TypeScript sources as `dist` (ESM JS + type declarations). Run from a package folder:
-// `node ../../scripts/build-package.mjs [--write-exports] [src subfolders to copy…]`.
+// `node ../../scripts/build-package.mjs [--write-exports | --check-exports] [src subfolders to copy…]`.
 //
 // - Inside the repo, `exports` points at the source (`src/*.ts`); the release bundle (`pnpm pack`) uses `publishConfig.exports` (dist).
-//   `publishConfig.exports` is derived from `exports`. If they differ the build stops (fix with `--write-exports`).
+//   `publishConfig.exports` is derived from `exports`. If they differ the build stops (fix with `--write-exports`). `--check-exports` stops after
+//   that check, with no build, so a push finds it (`pnpm check:exports`) before CI's release proof does.
 // - `tsc` runs per file, so "use client" directives are preserved.
 // - Other workspace packages (@monti-cms/*) resolve to that package's `dist` type declarations (build it first).
 // - Sources import without extensions, so `.js` and `/index.js` are appended to relative paths in the output (a folder named by dots alone, `from ".."`,
@@ -15,6 +16,7 @@ const root = process.cwd();
 const dist = path.join(root, "dist");
 const args = process.argv.slice(2);
 const writeExports = args.includes("--write-exports");
+const checkExports = args.includes("--check-exports");
 const copies = args.filter((arg) => !arg.startsWith("--"));
 const readJson = (file) => JSON.parse(readFileSync(file, "utf8"));
 const pkg = readJson(path.join(root, "package.json"));
@@ -59,6 +61,7 @@ if (current !== JSON.stringify(publishExports)) {
 	pkg.publishConfig = { ...pkg.publishConfig, exports: publishExports };
 	writeFileSync(path.join(root, "package.json"), `${JSON.stringify(pkg, null, "\t")}\n`);
 }
+if (checkExports) process.exit(0);
 
 // Links the dist type declarations of workspace dependencies through `paths`.
 const rel = (file) => {

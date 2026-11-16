@@ -1,19 +1,21 @@
 import type { BlockProps } from "@monti-cms/core/render";
 import katex from "katex";
+// KaTeX's own stylesheet (the letters' fonts and the layout of its boxes), from the installed package: the site's bundler serves it and its fonts.
+import "katex/dist/katex.min.css";
 import { style } from "./style";
 
 /** A formula drawn by KaTeX, or the reason it is not one. */
 export function drawFormula(source: string): { html: string } | { error: string } {
 	try {
-		return { html: katex.renderToString(source, { displayMode: true, throwOnError: true, output: "mathml" }) };
+		return { html: katex.renderToString(source, { displayMode: true, throwOnError: true, output: "htmlAndMathml" }) };
 	} catch (error) {
 		return { error: error instanceof Error ? error.message.replace(/^KaTeX parse error: /, "") : String(error) };
 	}
 }
 
 /**
- * A formula (` ```math `): drawn on the server by KaTeX, so the page needs no script for it. One that does not read stays its source, with the reason
- * under it. KaTeX's own stylesheet comes with `math.css`.
+ * A formula (` ```math `): drawn on the server by KaTeX, so the page needs no script for it. One that does not read stays its source: the reason is
+ * for the person writing it and shows in the editor only, never to a reader (`drawFormula`).
  */
 function MathBlockDrawing({ attrs, lang }: BlockProps) {
 	const source = typeof attrs.source === "string" ? attrs.source : "";
@@ -27,7 +29,6 @@ function MathBlockDrawing({ attrs, lang }: BlockProps) {
 			<pre className="monti-block-math-source">
 				<code>{source}</code>
 			</pre>
-			<figcaption className="monti-block-math-error">{drawn.error}</figcaption>
 		</figure>
 	);
 }

@@ -172,7 +172,7 @@ describe("the blocks on the site (doc 18)", () => {
 				],
 			}),
 		);
-		expect(second).toMatch(/aria-selected="true"[^>]*>pnpm</);
+		expect(second).toMatch(/aria-selected="true"[^>]*>.*?>pnpm</);
 	});
 
 	it("18-2 columns are as wide as widths say, and equal when widths does not fit their number", () => {
@@ -221,6 +221,11 @@ describe("the blocks on the site (doc 18)", () => {
 		expect(html(sample())).toContain('<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">');
 		const bad = html(doc({ id: "m", type: "math", attrs: { source: "\\frac{1}{" } }));
 		expect(bad).toContain('data-state="error"');
+		// The reason is the writer's: a reader of the page sees the source and no KaTeX message.
+		expect(bad).not.toContain("figcaption");
+		expect(bad).not.toContain("Expected");
+		// Both drawings: KaTeX's own boxes (its stylesheet lays them out) and the MathML for readers of the text.
+		expect(html(sample())).toContain('class="katex-html"');
 		expect(bad).toContain("\\frac{1}{");
 	});
 

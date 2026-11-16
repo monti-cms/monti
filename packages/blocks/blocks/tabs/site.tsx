@@ -23,13 +23,22 @@ function TabsDrawing({ block, attrs, lang, children }: BlockProps & { children?:
 			? [{ label: typeof tab.attrs?.label === "string" ? tab.attrs.label : "", panel: panels[index] }]
 			: [],
 	);
-	if (tabs.length === 0) return <>{children}</>;
+	// The tabs of a block that holds no tab to name (the editor's stand-in while the block's own view loads, or a read-only body): the box all the same, so the
+	// block has its own root, which takes the body's gap like any site block's, whatever its last tab does.
+	if (tabs.length === 0)
+		return (
+			<div className="monti-block-tabs" lang={lang}>
+				{children}
+			</div>
+		);
 	const labels = tabs.map((tab) => tab.label);
 	return (
 		<TabsView
 			lang={lang}
 			labels={labels}
 			panels={tabs.map((tab) => tab.panel)}
+			// One holder with every tab in it (the editor's stand-in), not a panel for each tab.
+			holder={panels.length === 1 && tabs.length > 1}
 			defaultIndex={Math.max(0, labels.indexOf(typeof attrs.defaultValue === "string" ? attrs.defaultValue : ""))}
 		/>
 	);

@@ -7,6 +7,7 @@ import { type CreateElement, renderDocument } from "../render";
 import { siteDoc } from "../translations/source";
 import { codeHighlighter } from "./highlight";
 import { brokenCodeRefs } from "./links";
+import { MONTI_CODE_THEMES } from "./monti-theme.generated";
 import { readFence, writeFence } from "./notation";
 import { codeBlockSettings } from "./settings";
 import { type LineEffect, moveLineEffects } from "./shape";
@@ -190,6 +191,90 @@ describe("17-4 colours", () => {
 	});
 });
 
+describe("17-4 Monti's code colours", () => {
+	const luminance = (hex: string) => {
+		const [r, g, b] = [1, 3, 5].map((i) => {
+			const v = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
+			return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+		});
+		return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+	};
+	const ratio = (a: string, b: string) => {
+		const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+		return (hi + 0.05) / (lo + 0.05);
+	};
+
+	it("17-4 every colour of the default theme pair reads on the code box's ground at 4.5:1 or more, in light and dark", () => {
+		for (const theme of Object.values(MONTI_CODE_THEMES)) {
+			expect(ratio(theme.fg, theme.bg)).toBeGreaterThanOrEqual(4.5);
+			for (const { settings } of theme.settings)
+				expect(ratio(settings.foreground, theme.bg), `${theme.name} ${settings.foreground}`).toBeGreaterThanOrEqual(
+					4.5,
+				);
+		}
+	});
+
+	it("17-4 the theme's font style reaches the site's drawing: a comment is italic and a function's name bold, and a call's arguments are not", async () => {
+		const colors = await codeHighlighter({ languages: ["ts", "python"] });
+		const italic = colors.lines("// a note", "ts")[0].find((token) => token.text.includes("a note"));
+		expect(italic?.fontStyle).toBe(1);
+		const [def, call] = colors.lines("def add(a):\n    print(a, 1)", "python");
+		expect(def.find((token) => token.text === "add")?.fontStyle).toBe(2);
+		// The arguments of a call are not part of its name.
+		expect(call.filter((token) => token.text === "1" || token.text === "a").every((token) => !token.fontStyle)).toBe(
+			true,
+		);
+		const out = renderDocument(doc(code("// a note\nfunction add() {}")), { createElement: html, code: colors }).join(
+			"",
+		);
+		expect(out).toContain("fontStyle:italic");
+		expect(out).toContain("fontWeight:700");
+	});
+
+	it("17-4 the operators that are words are keywords and parameters and keys are not strings", async () => {
+		const colors = await codeHighlighter({ languages: ["ts"] });
+		const [line] = colors.lines("const o = { key: new Foo(a), p: typeof a }", "ts");
+		const colour = (text: string) => line.find((token) => token.text.trim() === text)?.light;
+		const keyword = colour("const");
+		expect(colour("new")).toBe(keyword);
+		expect(colour("typeof")).toBe(keyword);
+		const string = colors.lines('"s"', "ts")[0][1]?.light;
+		expect(colour("key")).not.toBe(string);
+	});
+
+	it("17-4 a shell sample is coloured by the shell's own grammar, not JavaScript's", async () => {
+		const colors = await codeHighlighter({ languages: ["bash", "ts"] });
+		const sample = "pnpm add katex # install";
+		const shell = colors.lines(sample, "bash")[0];
+		const script = colors.lines(sample, "ts")[0];
+		expect(colors.has("bash")).toBe(true);
+		expect(shell.map((token) => token.text)).not.toEqual(script.map((token) => token.text));
+	});
+
+	it("17-4 the default colours are Monti's pair, and a site can still name another Shiki theme", async () => {
+		expect((await codeHighlighter({ languages: ["ts"] })).themes).toEqual({ light: "monti-light", dark: "monti-dark" });
+		const named = await codeHighlighter({ languages: ["ts"], themes: { light: "min-light", dark: "min-dark" } });
+		expect(named.themes).toEqual({ light: "min-light", dark: "min-dark" });
+	});
+});
+
+describe("17-9 the head of the site's code block", () => {
+	it("17-9 the head names the language, then the file; a block with no language says Plain text, as the editor's head does", async () => {
+		const colors = await codeHighlighter({ languages: ["ts"] });
+		const drawn = (attrs: Record<string, unknown>) =>
+			renderDocument(doc(code("a", attrs)), { createElement: html, code: colors }).join("");
+		expect(drawn({ language: "ts", title: "a.ts" })).toContain(
+			'<figcaption><span data-code-language="">TypeScript</span><span data-code-name="">a.ts</span></figcaption>',
+		);
+		expect(drawn({ language: "ts" })).toContain(
+			'<figcaption><span data-code-language="">TypeScript</span></figcaption>',
+		);
+		expect(drawn({ language: undefined })).toContain(
+			'<figcaption><span data-code-language="">Plain text</span></figcaption>',
+		);
+	});
+});
+
 describe("17-9 the site's code block", () => {
 	it("17-9 a code block draws its file name, copy button, lines, effects, labels and folds", () => {
 		const out = renderDocument(
@@ -206,7 +291,9 @@ describe("17-9 the site's code block", () => {
 			),
 			{ createElement: html, locale: "ko" },
 		).join("");
-		expect(out).toContain("<figcaption>src/app.ts</figcaption>");
+		expect(out).toContain(
+			`<figcaption><span data-code-language="">TypeScript</span><span data-code-name="">src/app.ts</span></figcaption>`,
+		);
 		expect(out).toContain('<button type="button" data-code-copy="" data-copied="복사함">복사</button>');
 		expect(out).toContain('data-line-numbers=""');
 		expect(out).toContain('<span className="line" data-line="1" data-effect="plus">a</span>');

@@ -141,5 +141,5 @@ export default function TabsEditor() {
 
 /** One tab in the editor: its blocks. Which tab shows is the tabs' to say. */
 export function TabEditor() {
-	return <BlockContent className="monti-block-tabs-panel" />;
+	return <BlockContent className="monti-block-tabs-pane" />;
 }

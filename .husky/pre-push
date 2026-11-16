@@ -10,5 +10,6 @@ pnpm gen:tokens --check
 pnpm check:messages
 pnpm check:scenes
 pnpm check:titles
+pnpm check:exports
 pnpm typecheck
 pnpm knip

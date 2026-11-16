@@ -17,6 +17,7 @@ import { type ComponentType, createElement, Suspense, useLayoutEffect } from "re
 import type { AdminBlockComponent, AdminBlockDefinition } from "../operations/admin-context";
 import { BlockPlaceProvider } from "./block-api";
 import type { Catalog, CatalogBlock } from "./catalog";
+import { blockFromEditor } from "./convert";
 import { ENTRY_LINK } from "./link-targets";
 import { CORE_MARKS, KEPT_MARK, markName, nodeName, UNKNOWN } from "./names";
 import { tableExtensions } from "./table";
@@ -214,10 +215,22 @@ export function bodyExtensions(
 					? () =>
 							ReactNodeViewRenderer((props: ReactNodeViewProps) => {
 								const attrs = (props.node.attrs.data as Record<string, unknown> | null) ?? {};
-								const drawn = (Drawn: AdminBlockComponent) =>
+								// The stand-in is the site's drawing, so it gets the block as the site gets it: with the blocks it holds (a tabs block names its
+								// tabs from them), not just its values.
+								const drawn = (Drawn: AdminBlockComponent, standIn = false) =>
 									createElement(
 										Drawn,
-										{ block: { id: String(props.node.attrs.blockId ?? ""), type: block.type, attrs }, attrs },
+										{
+											block: {
+												id: String(props.node.attrs.blockId ?? ""),
+												type: block.type,
+												attrs,
+												...(standIn && block.holds === "blocks"
+													? { children: blockFromEditor(props.node.toJSON(), kit).children }
+													: {}),
+											},
+											attrs,
+										},
 										block.holds === "nothing" ? undefined : createElement(NodeViewContent),
 									);
 								// A block's own editor view reads and changes its block through `useBlock` (doc 18); it may load later (its
@@ -232,7 +245,7 @@ export function bodyExtensions(
 										},
 										createElement(
 											Suspense,
-											{ fallback: definition?.Site ? drawn(definition.Site) : null },
+											{ fallback: definition?.Site ? drawn(definition.Site, true) : null },
 											drawn(Component),
 											// Mounted with the block's own view, after the site's drawing stood in for it.
 											createElement(CaretBack, { editor: props.editor }),

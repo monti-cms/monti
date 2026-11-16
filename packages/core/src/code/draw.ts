@@ -1,12 +1,14 @@
 import type { Block } from "../body/doc";
 import { coreMessages, formatMessage } from "../messages";
 import type { CodeColors, CodeToken } from "./highlight";
+import { languageName } from "./highlight";
 import {
 	ANCHOR,
 	COLLAPSE,
 	type CodeRule,
 	codeOf,
 	effectsOf,
+	fontStyleCss,
 	type LineEffect,
 	lineStarts,
 	ruleRanges,
@@ -15,12 +17,13 @@ import {
 
 type H<Node> = (type: unknown, props: Record<string, unknown> | null, ...children: unknown[]) => Node;
 
-/** The words of the copy button, in the entry's language (doc 17): Korean for a Korean entry, English otherwise. */
+/** The words of the copy button and of a block with no language, in the entry's language (doc 17): Korean for a Korean entry, English otherwise. */
 const copyWords = (locale: string | undefined) => {
 	const language = locale?.startsWith("ko") ? "ko" : "en";
 	return [
 		formatMessage([coreMessages], language, { key: "code.copy" }),
 		formatMessage([coreMessages], language, { key: "code.copied" }),
+		formatMessage([coreMessages], language, { key: "code.plain" }),
 	];
 };
 
@@ -73,7 +76,7 @@ export function drawCodeBlock<Node>(
 	const effects = effectsOf(block);
 	const text = textEffects(block, code);
 	const notes: { text: string; number: number }[] = [];
-	const [copy, copied] = copyWords(options.locale);
+	const [copy, copied, plainText] = copyWords(options.locale);
 
 	const lineNode = (index: number): Node => {
 		const tokens: CodeToken[] = lines[index] ?? [];
@@ -114,8 +117,12 @@ export function drawCodeBlock<Node>(
 		}
 		const colored = (piece: Piece, key: number) => {
 			const style =
-				piece.token?.light || piece.token?.dark
-					? { "--shiki-light": piece.token.light, "--shiki-dark": piece.token.dark }
+				piece.token?.light || piece.token?.dark || piece.token?.fontStyle
+					? {
+							"--shiki-light": piece.token.light,
+							"--shiki-dark": piece.token.dark,
+							...fontStyleCss(piece.token.fontStyle),
+						}
 					: undefined;
 			let node: unknown = style ? h("span", { key, style }, piece.text) : piece.text;
 			for (const effect of piece.on) {
@@ -218,7 +225,17 @@ export function drawCodeBlock<Node>(
 		return out;
 	};
 	const children: unknown[] = [];
-	if (typeof attrs.title === "string" && attrs.title) children.push(h("figcaption", { key: "title" }, attrs.title));
+	// The head: the language (or "Plain text" for a block with none), then the file name: the words of the editor's head (doc 17).
+	const title = typeof attrs.title === "string" && attrs.title ? attrs.title : undefined;
+	const named = language ? languageName(language) : plainText;
+	children.push(
+		h(
+			"figcaption",
+			{ key: "title" },
+			h("span", { key: "language", "data-code-language": "" }, named),
+			title ? h("span", { key: "name", "data-code-name": "" }, title) : null,
+		),
+	);
 	children.push(
 		h("button", { key: "copy", type: "button", "data-code-copy": "", "data-copied": copied }, copy),
 		h(

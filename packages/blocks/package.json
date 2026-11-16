@@ -20,7 +20,8 @@
 	],
 	"scripts": {
 		"typecheck": "tsc --noEmit -p .",
-		"test": "vitest run"
+		"test": "vitest run --project blocks",
+		"test:browser": "vitest run --project 'blocks (browser)'"
 	},
 	"peerDependencies": {
 		"@monti-cms/core": "workspace:*",

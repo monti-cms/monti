@@ -370,9 +370,10 @@ describe("on the site", () => {
 				createElement: h,
 				media: { m1: { ...picture, kind: "file", name: "가격표.pdf" } },
 			}) as { children: unknown[] }[];
-		expect(draw({ name: "   " })[0]?.children).toEqual(["가격표.pdf"]);
-		expect(draw({})[0]?.children).toEqual(["가격표.pdf"]);
-		expect(draw({ name: "올해 가격" })[0]?.children).toEqual(["올해 가격"]);
+		// The link's words come first; its kind and size follow them (WS-31).
+		expect(draw({ name: "   " })[0]?.children[0]).toBe("가격표.pdf");
+		expect(draw({})[0]?.children[0]).toBe("가격표.pdf");
+		expect(draw({ name: "올해 가격" })[0]?.children[0]).toBe("올해 가격");
 	});
 
 	it("09-1 a decorative picture has an empty alt on the site, whatever it once said", () => {

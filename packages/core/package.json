@@ -10,6 +10,7 @@
 		"./cli": "./src/cli/main.ts",
 		"./render": "./src/render.ts",
 		"./code": "./src/code/index.ts",
+		"./load": "./bin/load.mjs",
 		"./render.css": "./render.css"
 	},
 	"scripts": {
@@ -55,6 +56,7 @@
 				"types": "./dist/code/index.d.ts",
 				"default": "./dist/code/index.js"
 			},
+			"./load": "./bin/load.mjs",
 			"./render.css": "./render.css"
 		}
 	},

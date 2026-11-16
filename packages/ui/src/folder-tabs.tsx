@@ -3,9 +3,10 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 import { useDndContext } from "@dnd-kit/core";
-import type * as React from "react";
+import * as React from "react";
 import { cn } from "./cn";
 import { Count } from "./count";
+import { CutWords } from "./cut-words";
 import { Add, Draggable, Locked } from "./icons";
 import { HELD, SLOT } from "./sortable";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -19,7 +20,7 @@ function FolderTabs({ className, ...props }: TabsPrimitive.Root.Props) {
 }
 
 /**
- * The row of tabs. `add` is the button that adds a tab (`FolderTabsAdd`). While a tab is dragged with the keyboard, the arrow keys move it instead of
+ * The row of tabs: its tabs shrink first (their names are cut and say themselves whole), and only when even the shrunk tabs do not fit it scrolls sideways, never up and down (its focus rings are inside the tabs, so nothing is cut). `add` is the button that adds a tab (`FolderTabsAdd`). While a tab is dragged with the keyboard, the arrow keys move it instead of
  * the focus.
  */
 function FolderTabsList({
@@ -33,7 +34,10 @@ function FolderTabsList({
 	return (
 		<TabsPrimitive.List
 			data-slot="folder-tabs-list"
-			className={cn("relative z-1 -mb-px flex items-end gap-monti-4", className)}
+			className={cn(
+				"relative z-1 -mb-px flex items-end gap-monti-4 overflow-x-auto overflow-y-hidden [&>:has([data-digits='2'])]:[--folder-tab-digits:2] [&>:has([data-digits='3'])]:[--folder-tab-digits:3] [&>:has([data-slot=count])]:min-w-[calc(0.875rem_+_1rem_+_1.4*var(--monti-text-body-size)_+_0.6*var(--monti-text-caption-size)*var(--folder-tab-digits,1)_+_1.75rem_+_2px)] [&>:not([data-slot=folder-tabs-add])]:shrink",
+				className,
+			)}
 			onKeyDown={(event) => {
 				onKeyDown?.(event);
 				if (active && event.key.startsWith("Arrow")) event.preventBaseUIHandler();
@@ -48,7 +52,37 @@ function FolderTabsList({
 
 /** What every tab shares: 36px, a line on three sides, rounded at the top. */
 const FOLDER_TAB =
-	"inline-flex h-monti-control-lg items-center gap-monti-8 whitespace-nowrap rounded-t-monti-lg border border-monti-default pr-monti-16 pl-monti-12 text-monti-body [&_svg]:shrink-0";
+	"inline-flex h-monti-control-lg items-center gap-monti-8 whitespace-nowrap rounded-t-monti-lg border border-monti-default pr-monti-16 pl-monti-12 text-monti-body [&_svg]:shrink-0 [&_[data-slot=count]]:shrink-0";
+
+/**
+ * A tab's name. A tab is never wider than its name, and a full row shrinks its tabs only down to the least of their own width and 4.5rem: the cell holds the
+ * name (cut by `CutWords`, saying itself whole) and a hidden copy of it that is at most 4.5rem wide, which is the narrowest the cell's column goes. Only when
+ * even the shrunk tabs do not fit does the row scroll. A locked tab has one speaker: its tooltip, which gives the reason always and the name whole only when the name is cut, as `CutWords` does, so the name does not speak twice (`speaks`). A tab with a count has its own floor (the row's) and no copy of the name.
+ */
+function TabName({
+	children,
+	speaks = true,
+	floor = true,
+	cell,
+}: {
+	children: React.ReactNode;
+	speaks?: boolean;
+	floor?: boolean;
+	/** The cell's element, for a tab that speaks through its own tooltip and asks whether its name is cut. */
+	cell?: React.Ref<HTMLSpanElement>;
+}) {
+	return (
+		<span
+			ref={cell}
+			data-name={floor && typeof children === "string" ? children : undefined}
+			className="grid after:invisible after:col-start-1 after:row-start-1 after:block after:h-0 after:max-w-18 after:overflow-clip after:whitespace-nowrap after:content-[attr(data-name)] [&>*]:col-start-1 [&>*]:row-start-1"
+		>
+			<CutWords cut={speaks} render={<span className="min-w-0 truncate" />}>
+				{children}
+			</CutWords>
+		</span>
+	);
+}
 
 /** What moves a tab while it is dragged, or while the others make room for it. */
 export interface TabMotion {
@@ -83,6 +117,9 @@ function FolderTab({
 	/** A field or group is held over this tab. */
 	dropTarget?: boolean;
 }) {
+	// A locked tab speaks once, through its tooltip: the reason always, and the name only when the name is cut (as `CutWords` does everywhere).
+	const nameCell = React.useRef<HTMLSpanElement>(null);
+	const [nameCut, setNameCut] = React.useState(false);
 	const tab = (
 		<TabsPrimitive.Tab
 			data-slot="folder-tab"
@@ -91,7 +128,10 @@ function FolderTab({
 			style={motion}
 			className={cn(
 				FOLDER_TAB,
-				"data-active:border-b-(color:--monti-bg-page) cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
+				"data-active:border-b-(color:--monti-bg-page) max-w-full cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
+				// A tab that holds a count (and holds its grip and lock) is clipped by its own box, which the row gives 5.25rem at the least (its grip and its count stay whole); one with its name only goes
+				// down to its name's own floor (`TabName`).
+				count !== undefined && "overflow-hidden",
 				dragging && SLOT,
 				dropTarget && "bg-monti-selected text-monti-default ring-[1.5px] ring-monti-contrast ring-inset",
 				className,
@@ -99,16 +139,26 @@ function FolderTab({
 			{...props}
 		>
 			{draggable && !locked && <Draggable aria-hidden className="size-3.5 text-monti-faint" />}
-			{children}
-			{count !== undefined && <Count>{count}</Count>}
+			<TabName speaks={!locked} floor={count === undefined} cell={nameCell}>
+				{children}
+			</TabName>
+			{count !== undefined && <Count data-digits={String(count).length}>{count}</Count>}
 			{locked && <Locked role="img" aria-label={locked} className="size-3 text-monti-faint" />}
 		</TabsPrimitive.Tab>
 	);
 	if (!locked) return tab;
 	return (
-		<Tooltip>
+		<Tooltip
+			onOpenChange={(open) => {
+				const name = nameCell.current?.querySelector<HTMLElement>(".truncate");
+				if (open) setNameCut(name ? name.scrollWidth > name.clientWidth : false);
+			}}
+		>
 			<TooltipTrigger render={tab} />
-			<TooltipContent>{locked}</TooltipContent>
+			<TooltipContent>
+				{nameCut && typeof children === "string" ? <span className="block">{children}</span> : null}
+				{locked}
+			</TooltipContent>
 		</Tooltip>
 	);
 }
@@ -166,7 +216,7 @@ function FolderTabsAdd({ className, ...props }: Omit<ButtonPrimitive.Props, "chi
 			data-slot="folder-tabs-add"
 			type="button"
 			className={cn(
-				"inline-flex h-monti-control-lg cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
+				"inline-flex h-monti-control-lg cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset",
 				className,
 			)}
 			{...props}

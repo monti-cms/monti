@@ -1,8 +1,43 @@
 /*
- * @monti-cms/core/render.css: the default look of what `renderDocument` draws for code blocks (doc 17). Plain CSS: import it, or copy and change it.
+ * @monti-cms/core/render.css: the default look of what `renderDocument` draws for code blocks, footnotes and file links (docs 03, 17). Plain CSS: import it, or copy and change it.
  * Code colours come from the site's two Shiki themes as `--shiki-light` and `--shiki-dark` on each piece; the dark one is used under `.dark`,
  * `[data-theme="dark"]` or, with neither, a dark system setting. `CodeTools` of `@monti-cms/next` does the pressing (copy, code links).
  */
+
+/*
+ * The only colours of this file that are not the reader's own text colour. They are Monti's design tokens (`--monti-fg-success` and the rest, which
+ * the admin's page defines) with the tokens' own values as the fallback for a site that does not load them, in light and in dark; a site changes
+ * them here.
+ */
+:where(:root) {
+	--monti-code-plus: var(--monti-fg-success, #336a4f);
+	--monti-code-minus: var(--monti-fg-danger, #a8353c);
+	--monti-code-warning: var(--monti-fg-warning, #9a6200);
+	--monti-code-lit: var(--monti-fg-warning, #9a6200);
+	--monti-code-tip-bg: var(--monti-bg-emphasis, #1c1b18);
+	--monti-code-tip-fg: var(--monti-fg-on-emphasis, #faf9f5);
+	--monti-code-shadow: rgb(0 0 0 / 0.12);
+}
+:where(.dark, [data-theme="dark"]) {
+	--monti-code-plus: var(--monti-fg-success, #86c09c);
+	--monti-code-minus: var(--monti-fg-danger, #e3918f);
+	--monti-code-warning: var(--monti-fg-warning, #d9aa66);
+	--monti-code-lit: var(--monti-fg-warning, #d9aa66);
+	--monti-code-tip-bg: var(--monti-bg-emphasis, #c9c6bd);
+	--monti-code-tip-fg: var(--monti-fg-on-emphasis, #1a1917);
+	--monti-code-shadow: rgb(0 0 0 / 0.5);
+}
+@media (prefers-color-scheme: dark) {
+	:where(:root:not(.light, [data-theme="light"])) {
+		--monti-code-plus: var(--monti-fg-success, #86c09c);
+		--monti-code-minus: var(--monti-fg-danger, #e3918f);
+		--monti-code-warning: var(--monti-fg-warning, #d9aa66);
+		--monti-code-lit: var(--monti-fg-warning, #d9aa66);
+		--monti-code-tip-bg: var(--monti-bg-emphasis, #c9c6bd);
+		--monti-code-tip-fg: var(--monti-fg-on-emphasis, #1a1917);
+		--monti-code-shadow: rgb(0 0 0 / 0.5);
+	}
+}
 
 figure[data-code] {
 	--monti-code-border: color-mix(in srgb, currentColor 15%, transparent);
@@ -20,6 +55,12 @@ figure[data-code] > figcaption {
 	font-size: 0.8125rem;
 	font-weight: 600;
 	opacity: 0.8;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 0.75rem;
+}
+figure[data-code] > figcaption [data-code-language] {
+	font-weight: 400;
 }
 figure[data-code] > pre {
 	margin: 0;
@@ -60,17 +101,17 @@ figure[data-code] pre[data-line-numbers] .line::before {
 	width: 2ch;
 	margin-right: 1rem;
 	text-align: right;
-	opacity: 0.45;
+	opacity: 0.65;
 	user-select: none;
 }
 figure[data-code] .line[data-effect~="highlight"] {
 	background: var(--monti-code-tint);
 }
 figure[data-code] .line[data-effect~="plus"] {
-	background: color-mix(in srgb, #2da44e 14%, transparent);
+	background: color-mix(in srgb, var(--monti-code-plus) 14%, transparent);
 }
 figure[data-code] .line[data-effect~="minus"] {
-	background: color-mix(in srgb, #cf222e 12%, transparent);
+	background: color-mix(in srgb, var(--monti-code-minus) 12%, transparent);
 }
 figure[data-code] .line[data-effect~="plus"]::after,
 figure[data-code] .line[data-effect~="minus"]::after {
@@ -92,10 +133,10 @@ figure[data-code] .line[data-effect~="error"] > * {
 	text-underline-offset: 3px;
 }
 figure[data-code] .line[data-effect~="warning"] > * {
-	text-decoration-color: #bf8700;
+	text-decoration-color: var(--monti-code-warning);
 }
 figure[data-code] .line[data-effect~="error"] > * {
-	text-decoration-color: #cf222e;
+	text-decoration-color: var(--monti-code-minus);
 }
 
 /* Focus: the other lines are dim until the reader points at or into the code. */
@@ -116,7 +157,7 @@ figure[data-code][data-lit] .line {
 }
 figure[data-code][data-lit] .line[data-lit] {
 	opacity: 1;
-	background: color-mix(in srgb, #f2cc60 35%, transparent);
+	background: color-mix(in srgb, var(--monti-code-lit) 35%, transparent);
 }
 a[data-code-ref] {
 	color: inherit;
@@ -124,7 +165,7 @@ a[data-code-ref] {
 	text-underline-offset: 0.25em;
 }
 a[data-code-ref][data-lit] {
-	background: color-mix(in srgb, #f2cc60 35%, transparent);
+	background: color-mix(in srgb, var(--monti-code-lit) 35%, transparent);
 }
 [data-code-back] {
 	position: absolute;
@@ -141,14 +182,14 @@ a[data-code-ref][data-lit] {
 	z-index: 10;
 	max-width: 32rem;
 	padding: 0.5rem 0.75rem;
-	border: 1px solid var(--monti-code-border, #ddd);
+	border: 1px solid var(--monti-code-border);
 	border-radius: 0.375rem;
 	background: Canvas;
 	color: CanvasText;
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-size: 0.8125rem;
 	white-space: pre;
-	box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+	box-shadow: 0 8px 24px var(--monti-code-shadow);
 }
 
 /* The copy button: shown while the pointer or the keyboard is on the code. */
@@ -222,8 +263,8 @@ figure[data-code] details[data-code-collapse]:not([open]) > summary .line::after
 	max-width: 24rem;
 	padding: 0.375rem 0.5rem;
 	border-radius: 0.25rem;
-	background: #1c1b18;
-	color: #faf9f5;
+	background: var(--monti-code-tip-bg);
+	color: var(--monti-code-tip-fg);
 	font-size: 0.75rem;
 	white-space: normal;
 }
@@ -249,4 +290,23 @@ figure[data-code] > [data-code-notes] {
 	figure[data-code] .line {
 		transition: none;
 	}
+}
+
+/*
+ * Footnotes and file links: the number and the "↩" are pressable over 24px, the target grown with padding and taken back with a negative margin so
+ * the number stays against its word; a file's kind and size are quieter than its name.
+ */
+sup > a[href^="#fn-"],
+[data-footnotes] a[href^="#fnref-"] {
+	display: inline-block;
+	padding: 0.375rem 0.5625rem;
+	margin: -0.375rem -0.5625rem;
+}
+[data-footnotes] a[href^="#fnref-"] {
+	font-size: 1.125em;
+	text-decoration: none;
+}
+a > [data-file-meta] {
+	font-size: 0.875em;
+	opacity: 0.65;
 }

@@ -4,6 +4,7 @@ import { linkedGroup } from "./body/links";
 import { codeLineId, drawCodeBlock } from "./code/draw";
 import type { CodeColors } from "./code/highlight";
 import { codeBlocksByRef, resolveCodeRef } from "./code/links";
+import { fileMeta } from "./media/file-words";
 import { imageAlignOf } from "./media/frame";
 import { imageFrameStyle, type SiteImage, type SiteMedia, siteImage } from "./media/site-image";
 
@@ -283,7 +284,13 @@ export function renderDocument<Node>(doc: Doc, options: RenderOptions<Node>): (N
 			case "file": {
 				const file = options.media?.[String(attrs.media)];
 				if (!file) return null;
-				return h("a", { key, href: file.url, download: true }, text(attrs.name)?.trim() || file.name);
+				const meta = fileMeta(file);
+				return h(
+					"a",
+					{ key, href: file.url, download: true },
+					text(attrs.name)?.trim() || file.name,
+					...(meta ? [" ", h("span", { key: "meta", "data-file-meta": "" }, meta)] : []),
+				);
 			}
 		}
 		return undefined;

@@ -197,16 +197,18 @@ export function Picture({ image }: { image: SiteImage }) {
 접기(`codeFold`), 툴팁(`codeTip`)은 코드 안의 서식이다. 본문의 코드 링크는 서식 `codeRef { block, anchor }`이고, 가리키던 줄이 없으면
 발행을 막는다.
 
-`monti.config.ts`의 `codeBlock`이 Shiki 테마 둘, 편집기가 내놓는 언어, 편집기의 도구, 줄 효과를 정한다:
+`monti.config.ts`의 `codeBlock`이 편집기가 내놓는 언어, 편집기의 도구, 줄 효과를 정한다:
 
 ```ts
 codeBlock: {
-	themes: { light: "github-light", dark: "github-dark" },
 	languages: ["ts", "tsx", "bash", "json"],
 	tools: { rules: false }, // rules, fold, tooltip, textStyles, links: false가 아니면 켜져 있다
 	lineEffects: [{ name: "info", label: "정보", class: "line-info", editor: { tone: "neutral", marker: "i" } }],
 },
 ```
+
+코드의 색은 디자인 토큰으로 만든 Monti의 한 쌍, `monti-light`와 `monti-dark`다. 다른 색을 쓰려면 Shiki 테마 둘의 이름을
+적는다: `themes: { light: "min-light", dark: "min-dark" }`.
 
 사이트는 같은 색을 한 번 열어 `renderDocument`에 넘긴다. `@monti-cms/core/render.css`가 기본 모양(일반 CSS)이고, `@monti-cms/next`의
 `<CodeTools />`가 누르는 일(복사, 코드 링크)을 한다:

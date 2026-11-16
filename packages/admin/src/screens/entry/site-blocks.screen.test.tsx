@@ -382,6 +382,22 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		expect(explorer?.attrs).toEqual({ open: "src/db.ts" });
 	});
 
+	it("18-5 a code explorer keeps one height whichever file is picked: no file keeps room under it", async () => {
+		await on().run();
+		await expect.element(page.getByRole("treeitem", { name: /app\.ts/ })).toBeVisible();
+		// The room under the file that shows: the body gives every block 20px below, and in the explorer no file keeps it.
+		const roomUnder = (words: string) =>
+			getComputedStyle(body().getByText(words).element().closest('[data-block="codeBlock"]') as Element).marginBottom;
+		for (const [file, words] of [
+			["app.ts", "export const app = 1;"],
+			["db.ts", "export const db = 2;"],
+		]) {
+			await userEvent.click(page.getByRole("button", { name: file, exact: true }));
+			await expect.element(body().getByText(words)).toBeVisible();
+			expect(roomUnder(words)).toBe("0px");
+		}
+	});
+
 	it("18-6 a formula opens its source in an area of its own under the drawing; what does not read is said under the field, and the drawing stays apart", async () => {
 		const made = on();
 		await made.run();
@@ -479,7 +495,8 @@ describe("the site's blocks in the editor (doc 18)", () => {
 		const formula = element("math");
 		if (!formula) throw new Error("no formula");
 		await userEvent.click(formula);
-		await userEvent.click(page.getByRole("button", { name: "요청" }));
+		// The formula's own tool row: another block's row that the pointer has only just left may still be in its leaving time.
+		await userEvent.click(page.getByRole("toolbar", { name: "수식 도구" }).getByRole("button", { name: "요청" }));
 		const box = page.getByRole("textbox", { name: "어시스턴트에게 요청" });
 		await expect.element(box).toBeVisible();
 		await userEvent.fill(box, "피타고라스 정리로 바꿔 줘");

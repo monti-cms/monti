@@ -38,9 +38,12 @@ jobs:
       - run: node --test scripts/check-banner-place.test.mjs
       - run: node --test scripts/check-format.test.mjs
       - run: node --test scripts/check-type-colour.test.mjs
+      - run: node --test scripts/check-theme.test.mjs scripts/check-parts.test.mjs scripts/gen-tokens.test.mjs
       # The token files are what scripts/gen-tokens.mjs writes from tokens.json, and the tokens keep the design system's rules (text contrast, one
       # declaration per role).
       - run: pnpm gen:tokens --check
+      # The callout's title icons are the Carbon glyphs of its kind button (kind-icons.ts), as scripts/gen-callout-icons.mjs makes them.
+      - run: pnpm gen:callout-icons --check
       # Screen specs: the catalog is what scripts/gen-screen-catalog.mjs reads from the parts' prop types, and every *.screen.json stays inside it.
       - run: pnpm gen:screen-catalog --check
       - run: node --test scripts/check-screens.test.mjs
@@ -143,6 +146,7 @@ jobs:
           cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt/ 2>/dev/null || true
       # L3: one part of @monti-cms/ui; L4: admin screens on a site in the browser (PGlite), driven with real input (docs/testing.md).
       - run: pnpm --filter @monti-cms/ui test:browser --shard=${{ matrix.shard }}/8
+      - run: pnpm --filter @monti-cms/blocks test:browser --shard=${{ matrix.shard }}/8 --passWithNoTests
       - run: pnpm --filter @monti-cms/admin test:screen --shard=${{ matrix.shard }}/8
       # The pictures of the page that failing tests left (git ignores them): without this they go with the runner.
       - uses: actions/upload-artifact@v4

@@ -115,6 +115,14 @@ describe("blocks kept in the source's words", () => {
 		expect(drawn(siteDoc(translation, null))).toBe("<p>안녕</p>");
 	});
 
+	it("16-6 a file link adds the file's kind and size to its name", () => {
+		const files = doc({ id: "f", type: "file", attrs: { media: "m1", name: "Rates" } });
+		const media = { m1: { url: "/f.pdf", name: "rates.pdf", mime: "application/pdf", size: 123_456 } } as never;
+		expect(drawn(files, { media })).toBe(
+			'<a href="/f.pdf" download="true">Rates <span data-file-meta="">PDF · 121 KB</span></a>',
+		);
+	});
+
 	it("16-6 a file block's link, a code block's figure and a kept footnote carry it on their own root element", () => {
 		const kept = link("keepSource");
 		const files = siteDoc(
@@ -134,7 +142,7 @@ describe("blocks kept in the source's words", () => {
 		);
 		const media = { m1: { url: "/f.pdf", name: "doc.pdf" } } as never;
 		const out = drawn(files, { media });
-		expect(out).toContain('<a href="/f.pdf" download="true" lang="ko">문서.pdf</a>');
+		expect(out).toContain('<a href="/f.pdf" download="true" lang="ko">문서.pdf <span data-file-meta="">PDF</span></a>');
 		expect(out).toContain('<figure data-code="" data-block="k" lang="ko">');
 		expect(out).toContain('<li id="fn-1" lang="ko">');
 	});

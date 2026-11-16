@@ -90,13 +90,13 @@ function At({ top, left, right, children }: { top: number; left?: number; right?
 
 // --- The code -------------------------------------------------------------------------------------------------------------------------------
 
-/** The site's light theme (github-light), as the highlighter colours the code at run time. */
-const KEYWORD = "#d73a49";
-const STRING = "#032f62";
-const NUMBER = "#005cc5";
-const NAME = "#6f42c1";
-const VARIABLE = "#e36209";
-const TAG = "#22863a";
+/** The default code colours (monti-light and monti-dark are made from these tokens), as the highlighter gives them: the token itself, so dark follows. */
+const KEYWORD = "var(--monti-code-violet)";
+const STRING = "var(--monti-code-teal)";
+const NUMBER = "var(--monti-code-magenta)";
+const NAME = "var(--monti-fg-default)";
+const VARIABLE = "var(--monti-fg-default)";
+const TAG = "var(--monti-code-olive)";
 
 type Piece = string | [string, string];
 const CODE: Piece[][] = [

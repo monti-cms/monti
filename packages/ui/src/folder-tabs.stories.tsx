@@ -24,6 +24,7 @@ const add = <FolderTabsAdd aria-label="탭 추가" />;
 
 /** Each tab has a grip, a name and its field count; a tab a plugin placed is locked. `+` at the end adds a tab. */
 export const Pages: Story = {
+	tags: ["visual"],
 	render: () => (
 		<FolderTabs defaultValue="content">
 			<FolderTabsList add={add}>
@@ -52,6 +53,7 @@ export const Pages: Story = {
 /** The picked tab while its name is edited in place. */
 /** A tab a plugin placed, come to with the keyboard: the tab says why it is locked in its tooltip. */
 export const LockedFocused: Story = {
+	tags: ["visual"],
 	render: Pages.render,
 	play: async () => {
 		const { userEvent, within } = await import("storybook/test");
@@ -62,6 +64,7 @@ export const LockedFocused: Story = {
 };
 
 export const Rename: Story = {
+	tags: ["visual"],
 	render: () => (
 		<FolderTabs defaultValue="meta">
 			<FolderTabsList add={add}>
@@ -86,6 +89,7 @@ export const Rename: Story = {
  * a field held over the "분류" header marks it as where it goes (`dropTarget`).
  */
 export const Held: Story = {
+	tags: ["visual"],
 	render: () => (
 		<div className="relative">
 			<FolderTabs defaultValue="content">
@@ -110,6 +114,42 @@ export const Held: Story = {
 			<div className="absolute top-[-6px] left-[230px]">
 				<FolderTabLifted count={2}>검색 노출</FolderTabLifted>
 			</div>
+		</div>
+	),
+};
+
+/**
+ * A full row: the tabs shrink first, their names ending in "…" (and saying themselves whole to the pointer and the keyboard) while the grip, the count and the lock stay
+ * whole; a short name keeps its own width. Only when even the shrunk tabs do not fit does the row scroll sideways.
+ */
+export const Shrunk: Story = {
+	tags: ["visual"],
+	render: () => (
+		<div className="max-w-xl">
+			<FolderTabs defaultValue="a">
+				<FolderTabsList add={add}>
+					<FolderTab value="a" count={4}>
+						아주 긴 이름의 첫 번째 탭
+					</FolderTab>
+					<FolderTab value="b" count={3}>
+						분류
+					</FolderTab>
+					<FolderTab value="c" count={12}>
+						아주 긴 이름의 세 번째 탭
+					</FolderTab>
+					<FolderTab value="d" count={2} locked="SEO 플러그인이 둔 탭" draggable={false}>
+						검색 엔진에 보이는 내용
+					</FolderTab>
+					<FolderTab value="e" count={1}>
+						아주 긴 이름의 다섯 번째 탭
+					</FolderTab>
+				</FolderTabsList>
+				<FolderTabsBody value="a">
+					<FieldTree>
+						<FieldRow name="title" required label="제목" kind="text" />
+					</FieldTree>
+				</FolderTabsBody>
+			</FolderTabs>
 		</div>
 	),
 };

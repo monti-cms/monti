@@ -4,7 +4,7 @@ export const style = `/*
  * The dark theme is '.dark' or '[data-theme="dark"]' on 'html', or the system's when the page says neither.
  */
 :where(:root) {
-	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground));
+	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground, oklch(0.55 0.02 265)));
 	--monti-callout-tip: oklch(0.6 0.15 155);
 	--monti-callout-info: oklch(0.6 0.14 240);
 	--monti-callout-warning: var(--monti-fg-warning, var(--warning, oklch(0.7 0.16 70)));
@@ -39,6 +39,8 @@ export const style = `/*
 	--monti-block-accent: oklch(0.6 0.14 250);
 	--monti-block-tooltip-bg: oklch(0.21 0.03 265);
 	--monti-block-tooltip-fg: oklch(0.98 0.005 265);
+	/* The page's own ground, which a block that joins it takes (the open tab); a site names its own. */
+	--monti-block-ground: var(--monti-bg-page, Canvas);
 }
 :where(.dark, [data-theme="dark"]) {
 	--monti-block-tooltip-bg: oklch(0.96 0.005 265);
@@ -59,6 +61,13 @@ export const style = `/*
 	overflow-x: auto;
 	overflow-y: hidden;
 }
+.monti-block-math .katex-display {
+	margin: 0;
+}
+.monti-block-math .katex {
+	color: inherit;
+	font-size: 1.1em;
+}
 .monti-block-math-source {
 	margin: 0;
 	padding: 0.75rem 1rem;
@@ -68,10 +77,5 @@ export const style = `/*
 	background-color: var(--monti-block-muted);
 	font-size: 0.8125rem;
 	line-height: 1.5;
-}
-.monti-block-math-error {
-	margin-top: 0.5rem;
-	font-size: 0.875rem;
-	color: var(--monti-callout-danger, oklch(0.58 0.22 27));
 }
 `;

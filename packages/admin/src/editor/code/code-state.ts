@@ -5,6 +5,7 @@ import {
 	type CodeColors,
 	type CodeRule,
 	codeHighlighter,
+	fontStyleCss,
 	type LineEffect,
 	lineStarts,
 	moveLineEffects,
@@ -113,12 +114,18 @@ export function hiddenLines(node: EditorNode, folds: ReadonlyMap<string, boolean
 
 // --- Colours ---------------------------------------------------------------------------------------------------------------------------------
 
-type Piece = { from: number; to: number; light?: string; dark?: string };
+type Piece = { from: number; to: number; light?: string; dark?: string; fontStyle?: number };
 
 /** One highlighter per page, opened when the first code block draws, with the site's themes; languages load as blocks need them. */
 let colours: Promise<CodeColors> | null = null;
 const coloured = new Map<string, Piece[]>();
 const asked = new Set<string>();
+
+/** A piece's font style as the end of a `style` attribute (`;font-style:italic;font-weight:700`). */
+const fontStyleText = (fontStyle: number | undefined) =>
+	Object.entries(fontStyleCss(fontStyle))
+		.map(([name, value]) => `;${name === "fontStyle" ? "font-style" : "font-weight"}:${value}`)
+		.join("");
 
 function colourKey(language: string, code: string) {
 	return `${language}\u0000${code}`;
@@ -146,8 +153,14 @@ function ask(view: EditorView, settings: CodeBlockSettings, language: string, co
 			highlighter.lines(code, language).forEach((line, at) => {
 				let offset = starts[at] ?? 0;
 				for (const token of line) {
-					if (token.light || token.dark)
-						pieces.push({ from: offset, to: offset + token.text.length, light: token.light, dark: token.dark });
+					if (token.light || token.dark || token.fontStyle)
+						pieces.push({
+							from: offset,
+							to: offset + token.text.length,
+							light: token.light,
+							dark: token.dark,
+							fontStyle: token.fontStyle,
+						});
 					offset += token.text.length;
 				}
 			});
@@ -195,7 +208,7 @@ function decorations(state: EditorState, settings: CodeBlockSettings, tools: Cod
 						Decoration.inline(base + piece.from, base + piece.to, {
 							"data-token": "",
 							// design-allow: the site's Shiki themes colour each piece at run time
-							style: `--shiki-light:${piece.light ?? "inherit"};--shiki-dark:${piece.dark ?? piece.light ?? "inherit"}`,
+							style: `--shiki-light:${piece.light ?? "inherit"};--shiki-dark:${piece.dark ?? piece.light ?? "inherit"}${fontStyleText(piece.fontStyle)}`,
 						}),
 					);
 			}

@@ -4,7 +4,7 @@ export const style = `/*
  * The dark theme is '.dark' or '[data-theme="dark"]' on 'html', or the system's when the page says neither.
  */
 :where(:root) {
-	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground));
+	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground, oklch(0.55 0.02 265)));
 	--monti-callout-tip: oklch(0.6 0.15 155);
 	--monti-callout-info: oklch(0.6 0.14 240);
 	--monti-callout-warning: var(--monti-fg-warning, var(--warning, oklch(0.7 0.16 70)));
@@ -39,6 +39,8 @@ export const style = `/*
 	--monti-block-accent: oklch(0.6 0.14 250);
 	--monti-block-tooltip-bg: oklch(0.21 0.03 265);
 	--monti-block-tooltip-fg: oklch(0.98 0.005 265);
+	/* The page's own ground, which a block that joins it takes (the open tab); a site names its own. */
+	--monti-block-ground: var(--monti-bg-page, Canvas);
 }
 :where(.dark, [data-theme="dark"]) {
 	--monti-block-tooltip-bg: oklch(0.96 0.005 265);
@@ -246,7 +248,10 @@ export const style = `/*
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-size: 0.8125rem;
 }
-.monti-block-code-explorer-files > [data-node-view-content] > div > * {
+/* Every file stands with no room above or below it, so the box keeps one height whichever file is picked (only the picked one shows; the body
+   gives a code block 20px below it, the last block of a container none). */
+.monti-block-code-explorer-files [data-block="codeBlock"] {
 	margin-top: 0;
+	margin-bottom: 0;
 }
 `;

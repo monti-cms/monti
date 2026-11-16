@@ -40,11 +40,8 @@ export const labelOfCollection = (
 	id: string,
 ): string => adminValues?.[id]?.label || id;
 
-/** "PDF": what a file's preview says it is, from its name. */
-export const extensionLabel = (name: string) => {
-	const dot = name.lastIndexOf(".");
-	return dot > 0 ? name.slice(dot + 1).toUpperCase() : "";
-};
+/** "PDF": what a file's preview says it is, from its name: the core's one rule, which the site's file link words too. */
+export { fileKind as extensionLabel } from "@monti-cms/core";
 
 /** What a field's cell reads: relation titles or option labels joined, or the text. */
 export function fieldCell(row: ListRow, column: ListColumn, t: Translate): string {

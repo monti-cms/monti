@@ -70,7 +70,8 @@ export const DEFAULT_CODE_LANGUAGES = [
 	"diff",
 ];
 
-export const DEFAULT_CODE_THEMES = { light: "github-light", dark: "github-dark" };
+/** Monti's own pair, made from the design tokens (`monti-theme.generated.ts`); a site names any other Shiki theme in `codeBlock.themes`. */
+export const DEFAULT_CODE_THEMES = { light: "monti-light", dark: "monti-dark" };
 
 const effect = (name: string, editor: CodeLineEffectDefinition["editor"], icon: string): CodeLineEffectDefinition => ({
 	name,
