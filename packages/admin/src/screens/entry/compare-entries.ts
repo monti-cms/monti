@@ -145,13 +145,12 @@ export function readableWordDiff(mine: string, server: string): { mine: Part[]; 
 }
 
 /**
- * How a block reads in the comparison: a heading, code, or text (a paragraph, a list, a quote: their text, line by line). A block with values has a
- * name line (`values`) above its words: "Callout · Kind Warning · Title Read this" (doc 18, T197). A code block also gives its language, file name
- * and each line's effects (doc 17, T196): two sides with the same code may still differ there.
+ * A block's words, said in one piece for the places that name or sum up a block in a line (a to-do's title, a change's before and after): a block
+ * with values has a name line (`values`) above its words, "Callout · Kind Warning · Title Read this" (doc 18, T197); a code block also gives its
+ * language, file name and each line's effects (doc 17, T196). The body itself is drawn by `ReadBody`, which these never replace.
  */
-export type ShownBlock = {
+export type BlockWords = {
 	id: string;
-	look: "heading" | "code" | "text";
 	values?: string;
 	text: string;
 	code?: { language: string | null; title: string | null; lines: string[][] };
@@ -204,7 +203,7 @@ const CORE_VALUES: Record<string, (attrs: Record<string, unknown>, names: BlockN
 };
 
 /** A block's name line: its name and the values it has, each by its field's name. `undefined` for a block that is only its words. */
-function valuesOf(block: Block, names: BlockNames | undefined): string | undefined {
+export function valuesOf(block: Block, names: BlockNames | undefined): string | undefined {
 	if (!names) return undefined;
 	const attrs = block.attrs ?? {};
 	const known = names.block(block.type);
@@ -263,13 +262,6 @@ function nestedEffects(block: Block, names: BlockNames | undefined): string | un
 }
 const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
 
-/** A block whose children are all code (a code explorer's files): it reads as code, its indentation kept. */
-const holdsOnlyCode = (block: Block) =>
-	(block.children?.length ?? 0) > 0 && (block.children ?? []).every((child) => child.type === "codeBlock");
-
-/** A block written as code of its own language (a formula, a diagram): it reads as code. */
-const isSource = (block: Block, names: BlockNames | undefined) => Boolean(names?.block(block.type)?.fence);
-
 /** Each line's effects, by name, in a stable order. A label a code link names is not something the reader sees: it is left out. */
 const lineEffects = (block: Block): string[][] => {
 	const lines: string[][] = plainText(block.content)
@@ -281,31 +273,23 @@ const lineEffects = (block: Block): string[][] => {
 	return lines.map((names) => [...new Set(names)].sort());
 };
 
-/** The body's blocks as the comparison reads them. With `names`, a block with values has its name line, and a formula or a diagram reads as code. */
-export function shownBlocks(doc: Doc | null, names?: BlockNames): ShownBlock[] {
-	return (doc?.blocks ?? []).map((block) => {
-		const values = valuesOf(block, names);
-		return {
-			id: block.id,
-			look:
-				block.type === "heading"
-					? "heading"
-					: block.type === "codeBlock" || isSource(block, names) || holdsOnlyCode(block)
-						? "code"
-						: "text",
-			...(values !== undefined ? { values } : {}),
-			text: wordsOf(block, names),
-			...(block.type === "codeBlock"
-				? {
-						code: {
-							language: typeof block.attrs?.language === "string" ? block.attrs.language : null,
-							title: typeof block.attrs?.title === "string" ? block.attrs.title : null,
-							lines: lineEffects(block),
-						},
-					}
-				: {}),
-		};
-	});
+/** One block's words as one piece (`BlockWords`): the words of the blocks it holds are in it, line by line. */
+export function blockWords(block: Block, names?: BlockNames): BlockWords {
+	const values = valuesOf(block, names);
+	return {
+		id: block.id,
+		...(values !== undefined ? { values } : {}),
+		text: wordsOf(block, names),
+		...(block.type === "codeBlock"
+			? {
+					code: {
+						language: typeof block.attrs?.language === "string" ? block.attrs.language : null,
+						title: typeof block.attrs?.title === "string" ? block.attrs.title : null,
+						lines: lineEffects(block),
+					},
+				}
+			: {}),
+	};
 }
 
 /** The lines of two codes paired by their words (the longest run of equal lines in order): a line put in on one side moves no pair. */
@@ -335,7 +319,10 @@ function pairedLines(mine: string[], theirs: string[]): Map<number, number> {
  * Where two sides of a code block differ besides their words: the lines whose effects differ (counted on this side), and whether the language or the
  * file name does. Lines are paired by their words; a line the other side does not have is the words' change, not the effects'.
  */
-export function codeChanges(block: ShownBlock, other: ShownBlock | undefined) {
+export function codeChanges(
+	block: Pick<BlockWords, "text" | "code">,
+	other: Pick<BlockWords, "text" | "code"> | undefined,
+) {
 	if (!block.code || !other?.code) return { lines: [] as number[], language: false, title: false };
 	const theirs = other.code.lines;
 	const pairs = pairedLines(block.text.split("\n"), other.text.split("\n"));
@@ -349,32 +336,73 @@ export function codeChanges(block: ShownBlock, other: ShownBlock | undefined) {
 	};
 }
 
+/** What a code block's two sides differ in besides its words (`codeChanges`). */
+export type CodeChange = ReturnType<typeof codeChanges>;
+
 /**
- * Each side's blocks with their words marked (screens.md, EditorCompare: `compareEntries`). Blocks pair by their id: a block the other side does not
- * have is marked whole, a block both have is compared word by word, and a code block's effects line by line (`changes`).
+ * What `ReadBody` paints over a body to show where it differs from another: by block id, each block's own words in parts (the changed ones marked), its
+ * name line in parts, and where a code block's effects or head differ. The words are the block's own (`ownText`): a block that holds blocks has
+ * none, the blocks it holds have theirs.
  */
-export function compareBodies(mine: Doc | null, server: Doc | null, names?: BlockNames) {
-	const ours = shownBlocks(mine, names);
-	const theirs = shownBlocks(server, names);
-	const diff = (a: string, b: string, pick: "mine" | "server") =>
-		(pick === "mine" ? wordDiff(a, b) : wordDiff(b, a))[pick];
-	const side = (blocks: ShownBlock[], other: ShownBlock[], pick: "mine" | "server") =>
-		blocks.map((block) => {
-			const match = other.find((each) => each.id === block.id);
-			if (!match)
-				return {
-					...block,
-					parts: [{ text: block.text, changed: block.text !== "" }],
-					...(block.values !== undefined ? { valueParts: [{ text: block.values, changed: true }] } : {}),
-					changes: codeChanges(block, undefined),
-				};
-			// A value is compared word by word, like the words: "Kind Note" against "Kind Warning" marks the kind's name (doc 18).
-			return {
-				...block,
-				parts: diff(block.text, match.text, pick),
-				...(block.values !== undefined ? { valueParts: diff(block.values, match.values ?? "", pick) } : {}),
-				changes: codeChanges(block, match),
-			};
-		});
-	return { mine: side(ours, theirs, "mine"), server: side(theirs, ours, "server") };
+export type ReadMarks = {
+	words: Map<string, Part[]>;
+	values: Map<string, Part[]>;
+	code: Map<string, CodeChange>;
+};
+
+/**
+ * A block's own words, the ones its text holds, and what `ReadBody` reads its marks onto: a table's cells in order (" | " between a row's cells, a line
+ * between its rows), a formula's or a diagram's source, otherwise the text of its content. The words of the blocks it holds are theirs.
+ */
+export function ownText(block: Block, names?: BlockNames): string {
+	if (block.type === "table" && Array.isArray(block.attrs?.rows))
+		return (block.attrs.rows as unknown[][]).map((row) => row.map(String).join(" | ")).join("\n");
+	const fence = names?.block(block.type)?.fence;
+	if (fence) return typeof block.attrs?.[fence.attr] === "string" ? String(block.attrs[fence.attr]) : "";
+	return plainText(block.content);
+}
+
+/** Every block of a body by id, the blocks inside blocks too, with the top-level block each stands in. */
+function blocksById(doc: Doc | null) {
+	const found = new Map<string, { block: Block; top: string }>();
+	const walk = (blocks: Block[], top: string | null) => {
+		for (const block of blocks) {
+			found.set(block.id, { block, top: top ?? block.id });
+			if (block.children) walk(block.children, top ?? block.id);
+		}
+	};
+	walk(doc?.blocks ?? [], null);
+	return found;
+}
+
+/**
+ * The marks of one side's body against the other's (screens.md, EditorCompare). Blocks pair by their id, at any depth: a block the other side does
+ * not have is marked whole, a block both have is compared word by word, and a code block's effects line by line. `only`: the top-level blocks to
+ * mark (the others are read as they are).
+ */
+export function sideMarks(
+	own: Doc | null,
+	other: Doc | null,
+	side: "mine" | "server",
+	names?: BlockNames,
+	only?: ReadonlySet<string>,
+): ReadMarks {
+	const theirs = blocksById(other);
+	const marks: ReadMarks = { words: new Map(), values: new Map(), code: new Map() };
+	// The two sides are marked by the same diff, whichever side asks: the first text is "mine" and the second the server's.
+	const pair = (here: string, there: string) => (side === "mine" ? wordDiff(here, there) : wordDiff(there, here))[side];
+	for (const [id, { block, top }] of blocksById(own)) {
+		if (only && !only.has(top)) continue;
+		const match = theirs.get(id)?.block;
+		const text = ownText(block, names);
+		const matchText = match ? ownText(match, names) : "";
+		if (text !== "" || matchText !== "")
+			marks.words.set(id, match ? pair(text, matchText) : [{ text, changed: text !== "" }]);
+		const values = valuesOf(block, names);
+		if (values !== undefined)
+			marks.values.set(id, match ? pair(values, valuesOf(match, names) ?? "") : [{ text: values, changed: true }]);
+		if (block.type === "codeBlock")
+			marks.code.set(id, codeChanges(blockWords(block, names), match ? blockWords(match, names) : undefined));
+	}
+	return marks;
 }

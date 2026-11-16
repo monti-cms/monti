@@ -28,6 +28,7 @@
 	"dependencies": {
 		"@monti-cms/ai": "workspace:*",
 		"@monti-cms/core": "workspace:*",
+		"@monti-cms/mdx": "workspace:*",
 		"@monti-cms/ui": "workspace:*",
 		"@tiptap/core": "3.31.3",
 		"@tiptap/extension-bold": "3.31.3",
@@ -54,7 +55,6 @@
 		"@electric-sql/pglite": "0.5.15",
 		"@fontsource/ibm-plex-mono": "^5.3.0",
 		"@monti-cms/blocks": "workspace:*",
-		"@monti-cms/mdx": "workspace:*",
 		"@monti-cms/seo": "workspace:*",
 		"@storybook/addon-themes": "10.6.1",
 		"@storybook/react-vite": "10.6.1",

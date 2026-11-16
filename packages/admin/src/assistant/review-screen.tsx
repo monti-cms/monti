@@ -1,4 +1,4 @@
-import type { ProposalItemView } from "@monti-cms/core";
+import type { Doc, ProposalItemView } from "@monti-cms/core";
 import {
 	AiFailed,
 	AiWorking,
@@ -26,10 +26,13 @@ import {
 } from "@monti-cms/ui";
 import { ChevronLeft } from "@monti-cms/ui/icons";
 import { type ReactNode, useState } from "react";
+import { ReadBody } from "../editor/read-body";
 import { recentTime } from "../format/date";
 import { useAdmin } from "../operations/admin-context";
 import { href, type Route, reachedFromInside } from "../route";
+import { blockWords } from "../screens/entry/compare-entries";
 import { toWhatStands, useFocusHandOff } from "../screens/frame/focus-hand-off";
+import { BodySide } from "./body-side";
 import { followersOf, marked, translationOf, useChangeWords } from "./change-words";
 import { inlineDiff } from "./diff";
 import { changeOf } from "./proposal-card";
@@ -263,7 +266,9 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 													words,
 													entries,
 												);
-												const worded = blocks.filter((block) => block.look !== "code" && block.text.trim() !== "");
+												const worded = blocks.filter(
+													(block) => block.type !== "codeBlock" && blockWords(block).text.trim() !== "",
+												);
 												const shown = opened.has(item.id);
 												return (
 													<TableRow key={item.id} twoLine={shown}>
@@ -290,18 +295,19 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 																			}
 																		/>
 																		{blocks.map((block, index) => {
-																			const words = translated(block, index);
+																			const proposed = translated(block, index);
+																			const read: Doc = { type: "doc", blocks: [block] };
 																			return (
 																				<CompareRow
 																					key={block.id}
 																					name={t("review.block", { number: index + 1 })}
-																					source={block.text}
+																					source={<ReadBody doc={read} />}
 																					translation={
-																						words !== null && words !== block.text ? (
-																							<Ins>{words}</Ins>
+																						proposed && blockWords(proposed).text !== blockWords(block).text ? (
+																							<BodySide block={proposed} other={null} side="after" />
 																						) : (
 																							// Nothing proposed for it: it starts in the source's words, to be decided in the editor.
-																							<Text tone="faint">{block.text}</Text>
+																							<ReadBody doc={read} muted />
 																						)
 																					}
 																				/>
@@ -358,17 +364,45 @@ export function ReviewScreen({ id, go }: { id: string; go: (route: Route) => voi
 															{places.length > 0 ? (
 																<CompareRows>
 																	{places.map((place, at) => {
+																		const key = `${place.name}:${at}`;
+																		const { body } = place;
+																		// A place in the body is read as the editor draws it: the block as it is and as proposed.
+																		if (body)
+																			return side && body.before && body.after ? (
+																				<CompareRow
+																					key={key}
+																					name={place.name}
+																					source={<BodySide block={body.before} other={body.after} side="before" />}
+																					translation={<BodySide block={body.after} other={body.before} side="after" />}
+																				/>
+																			) : (
+																				<CompareRow
+																					key={key}
+																					single
+																					name={place.name}
+																					translation={
+																						<>
+																							{body.before ? (
+																								<BodySide block={body.before} other={body.after} side="before" />
+																							) : null}
+																							{body.after ? (
+																								<BodySide block={body.after} other={body.before} side="after" />
+																							) : null}
+																						</>
+																					}
+																				/>
+																			);
 																		const runs = inlineDiff(place.before, place.after);
 																		return side && place.before !== "" && place.after !== "" ? (
 																			<CompareRow
-																				key={`${place.name}:${at}`}
+																				key={key}
 																				name={place.name}
 																				source={marked(runs, "before")}
 																				translation={marked(runs, "after")}
 																			/>
 																		) : (
 																			<CompareRow
-																				key={`${place.name}:${at}`}
+																				key={key}
 																				single
 																				name={place.name}
 																				translation={marked(runs, "both")}

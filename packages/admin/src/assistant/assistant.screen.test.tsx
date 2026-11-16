@@ -13,6 +13,8 @@ const open = (story: Parameters<typeof scene>[0]) => scene<Loaded>(story, storie
 const on = (options: Parameters<typeof stories.site>[0]) => open({ loaders: stories.site(options) });
 
 const button = (name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
+/** A link in the conversation (the screen beside it has its own). */
+const link = (name: string | RegExp) => panel().getByRole("link", { name, exact: typeof name === "string" });
 const panel = () => page.getByRole("complementary", { name: "어시스턴트" });
 const box = () => page.getByRole("textbox", { name: "어시스턴트에게 묻기" });
 const focused = () => document.activeElement;
@@ -43,7 +45,7 @@ describe("asking (flow 2, 01–03)", () => {
 		await expect.element(button("한 달 넘게 안 고친 초안 찾아 줘")).toBeVisible();
 		await userEvent.click(button("요약이 비어 있는 글 찾아 줘"));
 		await expect.element(panel().getByText("글 목록 읽음 · 3편")).toBeVisible();
-		await expect.element(button("셋째 글")).toBeVisible();
+		await expect.element(link("셋째 글")).toBeVisible();
 		// What went along is on the bubble: this list.
 		await expect.element(panel().getByText("이 목록").first()).toBeVisible();
 		await userEvent.click(button("새 대화"));
@@ -97,7 +99,7 @@ describe("asking (flow 2, 01–03)", () => {
 		await story.run();
 		await openPanel();
 		await say("요약이 비어 있는 글 찾아 줘");
-		await userEvent.click(button("둘째 글"));
+		await userEvent.click(link("둘째 글"));
 		await expect.poll(() => window.location.hash).toBe(`#/c/post/${story.loaded().ids.second}`);
 		await expect.element(panel().getByText("글 목록 읽음 · 3편")).toBeVisible();
 		await expect.element(panel().getByText("이 글", { exact: true })).toBeVisible();
@@ -118,7 +120,7 @@ describe("asking (flow 2, 01–03)", () => {
 		expect(answered).toContain("첫 번째 글");
 	});
 
-	it("10-1 the model's text loads nothing: a picture is its words and address as text, and a link elsewhere is a link that asks for nothing until pressed", async () => {
+	it("10-1 the model's text loads nothing: a picture is its words, and a link elsewhere is a link that asks for nothing until pressed", async () => {
 		const story = on({
 			script: () => [
 				{
@@ -129,14 +131,34 @@ describe("asking (flow 2, 01–03)", () => {
 		await story.run();
 		await openPanel();
 		await say("보여 줘");
-		await expect.element(panel().getByText(/고양이 \(https:\/\/evil\.example\/cat\.png\?c=secret\)/)).toBeVisible();
+		await expect.element(panel().getByText(/그림: 고양이/)).toBeVisible();
 		expect(panel().element().querySelectorAll("img")).toHaveLength(0);
+		expect(panel().element().textContent).not.toContain("evil.example");
 		const outside = panel().getByRole("link", { name: "바깥 글" }).element() as HTMLAnchorElement;
 		expect(outside.target).toBe("_blank");
 		expect(outside.rel).toContain("noreferrer");
 		// What only looks like a link stays as it was written.
 		expect(panel().element().querySelector('a[href^="javascript"]')).toBeNull();
-		await expect.element(panel().getByText(/\[이상한 것\]\(javascript:alert\(1\)/)).toBeVisible();
+		await expect.element(panel().getByText(/이상한 것/)).toBeVisible();
+		await expect.element(link("이상한 것")).not.toBeInTheDocument();
+	});
+});
+
+describe("the answer's Markdown", () => {
+	it("10-1 [AS-44] an answer is read as a body: bold, inline code, a heading, a list, and a fenced code block in the editor's frame with the site's colours", async () => {
+		const story = on({
+			script: () => [{ text: "## 결과\n\n**굵은 말**과 `code`.\n\n- 하나\n- 둘\n\n```ts\nconst a = 1;\n```" }],
+		});
+		await story.run();
+		await openPanel();
+		await say("보여 줘");
+		await expect.element(panel().getByText("굵은 말")).toBeVisible();
+		const root = panel().element();
+		expect(root.querySelector("strong")?.textContent).toBe("굵은 말");
+		expect(root.querySelector("[data-slot=editor-body] h2")?.textContent).toBe("결과");
+		expect(root.querySelectorAll("li")).toHaveLength(2);
+		expect(root.querySelector(":not(pre) > code")?.textContent).toBe("code");
+		await expect.poll(() => root.querySelector("[data-slot=code-frame] [data-slot=code-token]")).not.toBeNull();
 	});
 });
 
@@ -146,7 +168,7 @@ describe("the conversation's spacing", () => {
 		await story.run();
 		await openPanel();
 		await say("요약이 비어 있는 글 찾아 줘");
-		await expect.element(button("셋째 글")).toBeVisible();
+		await expect.element(link("셋째 글")).toBeVisible();
 		await say("고마워");
 		await expect.element(panel().getByText("네.")).toBeVisible();
 		const all = (selector: string) => [...panel().element().querySelectorAll<HTMLElement>(selector)];
@@ -259,7 +281,7 @@ describe("a run that did not finish (flow 2, 06 · 24)", () => {
 		await story.run();
 		await openPanel();
 		await say("요약이 비어 있는 글 찾아 줘");
-		await expect.element(button("셋째 글")).toBeVisible();
+		await expect.element(link("셋째 글")).toBeVisible();
 		await expect.element(button("이어서 하기")).not.toBeInTheDocument();
 		// It took more than one request to get there.
 		const run = await story.loaded().site.db.selectFrom("runs").select("status").executeTakeFirstOrThrow();
@@ -273,7 +295,7 @@ describe("a run that did not finish (flow 2, 06 · 24)", () => {
 		await say("요약이 비어 있는 글 찾아 줘");
 		await expect.element(panel().getByText("한도에 닿아 멈췄습니다")).toBeVisible();
 		await userEvent.click(button("이어서 하기"));
-		await expect.element(button("셋째 글")).toBeVisible();
+		await expect.element(link("셋째 글")).toBeVisible();
 	});
 
 	it("10-1 [flow 2·24] the service refused: one short line with the key's name, not what the service said and not the key; another model sends the same words again", async () => {
@@ -473,7 +495,7 @@ describe("past conversations (flow 2, 25–26)", () => {
 		await story.run();
 		await openPanel();
 		await say("요약이 비어 있는 글 찾아 줘");
-		await expect.element(button("셋째 글")).toBeVisible();
+		await expect.element(link("셋째 글")).toBeVisible();
 		await userEvent.click(button("새 대화"));
 		await say("둘 다 요약 채워 줘");
 		await expect.element(button("2건 적용")).toBeVisible();
@@ -491,7 +513,7 @@ describe("past conversations (flow 2, 25–26)", () => {
 		).not.toBeNull();
 		await userEvent.click(past.getByRole("button", { name: "요약이 비어 있는 글 찾아 줘", exact: true }));
 		await expect.element(panel().getByText("글 목록 읽음 · 3편")).toBeVisible();
-		await expect.element(button("셋째 글")).toBeVisible();
+		await expect.element(link("셋째 글")).toBeVisible();
 
 		await userEvent.click(button("지난 대화"));
 		await userEvent.click(button("둘 다 요약 채워 줘 더 보기"));
@@ -525,10 +547,10 @@ describe("past conversations (flow 2, 25–26)", () => {
 		await story.run();
 		await openPanel();
 		await say("요약이 비어 있는 글 찾아 줘");
-		await expect.element(button("셋째 글")).toBeVisible();
+		await expect.element(link("셋째 글")).toBeVisible();
 		await userEvent.click(page.getByRole("navigation").getByText("memo"));
 		await expect.element(page.getByRole("heading", { name: "memo" })).toBeVisible();
-		await expect.element(button("셋째 글")).toBeVisible();
+		await expect.element(link("셋째 글")).toBeVisible();
 		// And the browser keeps that it was open, and on which conversation, for the next visit.
 		const kept = JSON.parse(localStorage.getItem("monti.assistant") ?? "{}") as { open: boolean; conversation: string };
 		expect(kept.open).toBe(true);
@@ -659,6 +681,58 @@ describe("the review page (flow 2, 12–15)", () => {
 		expect(
 			[...main.element().querySelectorAll("[data-slot=compare-row]")].every((row) => row.children.length === 2),
 		).toBe(true);
+	});
+
+	it("10-1 [AS-09] a change to the body is read as the editor draws it: a heading's level, bold words and a code block in its frame, with the words put in in the blue pencil", async () => {
+		const story = on({
+			script: (ids, version) => [
+				async () => ({
+					calls: [
+						{
+							name: "body_edit",
+							input: {
+								id: ids.second,
+								version: await version(ids.second),
+								ops: [
+									{
+										op: "insert",
+										after: "b_1",
+										blocks: [
+											{ type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "새 소제목" }] },
+											{ type: "paragraph", content: [{ type: "text", text: "굵게 쓴 말", marks: [{ type: "bold" }] }] },
+											{
+												type: "codeBlock",
+												attrs: { language: "ts", title: "a.ts" },
+												content: [{ type: "text", text: "const a = 1;" }],
+											},
+										],
+									},
+								],
+								_group: "다듬기",
+							},
+						},
+					],
+				}),
+				{ text: "넣었습니다." },
+			],
+		});
+		await story.run();
+		await stories.writeSecond(story.loaded());
+		await openPanel();
+		await say("둘째 글 다듬어 줘");
+		await expect.element(button("1건 적용")).toBeVisible();
+		const [proposal] = await proposalsOf(story.loaded());
+		window.location.hash = `#/ai/review/${proposal?.id}`;
+		await expect.element(page.getByRole("heading", { name: "제안 검토" })).toBeVisible();
+		const main = page.getByRole("main");
+		await expect.poll(() => main.element().querySelector("[data-slot=compare-row] h3")?.textContent).toBe("새 소제목");
+		const row = main.element().querySelector("[data-slot=compare-row] strong") as HTMLElement;
+		expect(row.textContent).toBe("굵게 쓴 말");
+		// The words put in are in the blue pencil, over the formatting.
+		expect(row.querySelector("ins")?.textContent).toBe("굵게 쓴 말");
+		expect(main.element().querySelector("[data-slot=compare-row] [data-slot=code-frame]")?.textContent).toContain(
+			"a.ts",
+		);
 	});
 
 	it("10-1 [flow 2·14, 15] applying from the page shows each change's result and what was not kept in is not applied; undoing puts everything back", async () => {

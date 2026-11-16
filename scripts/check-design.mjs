@@ -76,6 +76,9 @@
  *                       property, `var()` elsewhere), Mermaid is `base` with `mermaidLook`, KaTeX is `htmlAndMathml`, Shiki's default is Monti's pair.
  *   blocks-sync         `examples/*\/monti/blocks/<block>/` is a copy of `packages/blocks/blocks/<block>/` (not the block lists). Both are in
  *                       `check-theme.mjs`, which says what each cannot see.
+ *   one-body            The old read-only parts (`shownBlocks`, `ReadBlock`, `CompareParagraph`, `CompareHeading`, `CompareCode`, `DocCallout`, `DocCode`,
+ *                       `DocTable`) are named nowhere in the packages and the examples, with no list of files that may: every view that only reads a body
+ *                       draws it with `ReadBody`. `check-read-body.mjs` says what it cannot see.
  *   type-order          The heading roles step down, and the editor body's h2, h3, h4 are not smaller than its text (h4, the text's size, is semibold).
  *   type-merge          Every type role of `tokens.json` is in the font-size group of `cn.ts`, and that group names no other.
  *   tabular             `admin.css` sets tabular digits on `.monti-admin` and the body, and no source takes them back.
@@ -105,6 +108,7 @@ import {
 	panelPlace,
 	requiredMark,
 } from "./check-parts.mjs";
+import { oneBody } from "./check-read-body.mjs";
 import { blocksSync, themeToken } from "./check-theme.mjs";
 import {
 	CN_FILE,
@@ -1548,6 +1552,24 @@ function checkLooks() {
 }
 checkLooks();
 
+/** The views that only read a body draw it with `ReadBody` (`check-read-body.mjs`). Every file is read whatever the command line names. */
+function checkReadBody() {
+	const read = (dir) => {
+		const full = path.join(root, dir);
+		if (!existsSync(full)) return [];
+		return readdirSync(full, { withFileTypes: true }).flatMap((entry) => {
+			const next = `${dir}/${entry.name}`;
+			if (entry.isDirectory())
+				return ["node_modules", "dist", "storybook-static", "__screenshots__"].includes(entry.name) ? [] : read(next);
+			return /\.tsx?$/.test(entry.name) ? [[next, readFileSync(path.join(root, next), "utf8")]] : [];
+		});
+	};
+	const sources = Object.fromEntries([...read("packages"), ...read("examples")]);
+	for (const { file, line, message } of oneBody(sources))
+		if (inTargets(path.join(root, file))) add(path.join(root, file), line, "one-body", message);
+}
+checkReadBody();
+
 const HINTS = {
 	"css-file": "Admin UI is styled with token utilities, not stylesheets.",
 	"admin-css-rule": "admin.css holds document-wide base rules only; style the element with token utilities.",
@@ -1603,6 +1625,8 @@ const HINTS = {
 		"A docked panel of a page stands beside the page's scroller: draw it through PagePanel (screens/frame/page-panel.tsx); a panel that stands elsewhere is named in PANEL_PLACE_OK (check-parts.mjs).",
 	"mono-props":
 		"Words are sans: `mono`, `metaMono` and `ofMono` are for values; a file that sets them on words it cannot read is named in MONO_PROP_VALUES (check-parts.mjs).",
+	"one-body":
+		"A view that only reads a body draws it with ReadBody (packages/admin/src/editor/read-body.tsx); the old read-only parts have no list of files that may use them (check-read-body.mjs).",
 	"theme-token":
 		"Colours of code, formulas, diagrams and blocks come from tokens: one literal on a custom property, `var()` in the rules; Mermaid is `base` with mermaidLook, KaTeX htmlAndMathml, Shiki's default monti-light/monti-dark (check-theme.mjs).",
 	"blocks-sync":

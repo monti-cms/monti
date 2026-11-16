@@ -1,10 +1,12 @@
 import {
 	applyOps,
+	type Block,
 	type BodyOp,
 	type Doc,
 	type Message,
 	type ProposalItemView,
 	type ProposalView,
+	sameJson,
 	storedFields,
 } from "@monti-cms/core";
 import { Del, Ins } from "@monti-cms/ui";
@@ -13,13 +15,10 @@ import { useLanguageName } from "../format/language";
 import { endsClosed, fieldName as nameOfField } from "../format/names";
 import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
-import { codeChanges, type ShownBlock, shownBlocks } from "../screens/entry/compare-entries";
+import { type BlockWords, blockWords } from "../screens/entry/compare-entries";
 import { useBlockNames } from "../screens/entry/use-block-names";
 import type { SchemaRead } from "../screens/settings/schema-draft";
 import type { DiffRun } from "./diff";
-
-/** The line effects whose names the core's messages have (doc 17). */
-const CORE_EFFECTS = new Set(["highlight", "focus", "plus", "minus", "warning", "error", "collapse"]);
 
 export type EntryNow = {
 	collection: string;
@@ -32,8 +31,17 @@ export type EntryNow = {
 	media?: { id: string; name: string }[];
 };
 
-/** One place a change touches, as it is now and as proposed. */
-export type Place = { name: string; before: string; after: string };
+/**
+ * One place a change touches, as it is now and as proposed. A place in the body also has its block on each side (`body`, `null` where it has none: a
+ * block put in, a block taken out): the review page reads it as the editor draws it (`ReadBody`), and says the words alone where one line is all
+ * there is room for.
+ */
+export type Place = {
+	name: string;
+	before: string;
+	after: string;
+	body?: { before: Block | null; after: Block | null };
+};
 
 const said = (value: unknown): string =>
 	value === null || value === undefined
@@ -106,11 +114,10 @@ export function translationOf(
 	const proposedTitle = followers
 		.map((each) => (each.input as { title?: string }).title)
 		.find((title) => title !== undefined);
-	const blocks = shownBlocks(source?.doc ?? null);
-	const translated = (block: ShownBlock, index: number) => {
-		const match = proposedDoc?.blocks.find((each) => each.link?.from === block.id) ?? proposedDoc?.blocks[index];
-		return match ? (shownBlocks({ type: "doc", blocks: [match] })[0]?.text ?? "") : null;
-	};
+	const blocks = source?.doc?.blocks ?? [];
+	// What is proposed for a source block: the block proposed for it (by its link, or by its place), or `null` when nothing is.
+	const translated = (block: Block, index: number): Block | null =>
+		proposedDoc?.blocks.find((each) => each.link?.from === block.id) ?? proposedDoc?.blocks[index] ?? null;
 	return { input, source, blocks, proposedTitle, translated };
 }
 
@@ -217,53 +224,32 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 
 	/** The blocks of a body that change from one text to the next, each as it is and as proposed. */
 	const bodyPlaces = (was: Doc | null, next: Doc): Place[] => {
-		const before = shownBlocks(was, names);
-		const after = shownBlocks(next, names);
-		const places: Place[] = []; // A block with values is named by its kind ("Block 4 · Callout", doc 18), and a change of its values alone is a row of its own: its values
-		// before and after, apart from its words.
-		const kind = (block: ShownBlock) => block.values?.split(" · ")[0];
-		const valuesOnly = (block: ShownBlock) => block.values?.split(" · ").slice(1).join(" · ") ?? "";
-		const named = (block: ShownBlock, index: number) =>
-			[t("review.block", { number: index + 1 }), kind(block)].filter((part) => part).join(" · ");
-		after.forEach((block, index) => {
-			const was = before.find((each) => each.id === block.id);
-			if (!was) places.push({ name: t("review.newBlock"), before: "", after: block.text || (block.values ?? "") });
-			else {
-				if (valuesOnly(was) !== valuesOnly(block))
-					places.push({ name: named(block, index), before: valuesOnly(was), after: valuesOnly(block) });
-				if (was.text !== block.text) places.push({ name: named(block, index), before: was.text, after: block.text });
-				else {
-					// The same code with other effects (doc 17, T196): the lines whose effects change, with their effects on each side. A core effect
-					// says its name; a site's own effect, which has no words in the admin, says its stored name.
-					const effectName = (name: string) =>
-						CORE_EFFECTS.has(name) ? t({ key: name === "collapse" ? "marks.codeFold" : `code.effect.${name}` }) : name;
-					const changed = codeChanges(block, was);
-					const effects = (side: typeof block, lines: number[]) =>
-						lines
-							.map((line) => {
-								const names = side.code?.lines[line] ?? [];
-								return `${t("editor.code.line", { n: line + 1 })}: ${
-									names.length ? names.map(effectName).join(", ") : "—"
-								}`;
-							})
-							.join(" · ");
-					const head = (side: typeof block) => [side.code?.language, side.code?.title].filter(Boolean).join(" · ");
-					if (changed.lines.length || changed.language || changed.title)
-						places.push({
-							name: named(block, index),
-							before: [changed.language || changed.title ? head(was) : "", effects(was, changed.lines)]
-								.filter(Boolean)
-								.join(" · "),
-							after: [changed.language || changed.title ? head(block) : "", effects(block, changed.lines)]
-								.filter(Boolean)
-								.join(" · "),
-						});
-				}
-			}
+		const places: Place[] = [];
+		const said = (words: BlockWords) => words.text || (words.values ?? "");
+		// A block with values is named by its kind ("Block 4 · Callout", doc 18).
+		const named = (words: BlockWords, index: number) =>
+			[t("review.block", { number: index + 1 }), words.values?.split(" · ")[0]].filter((part) => part).join(" · ");
+		next.blocks.forEach((block, index) => {
+			const now = blockWords(block, names);
+			const old = was?.blocks.find((each) => each.id === block.id);
+			if (!old)
+				places.push({ name: t("review.newBlock"), before: "", after: said(now), body: { before: null, after: block } });
+			else if (!sameJson(old, block))
+				places.push({
+					name: named(now, index),
+					before: said(blockWords(old, names)),
+					after: said(now),
+					body: { before: old, after: block },
+				});
 		});
-		before.forEach((block, index) => {
-			if (!after.some((each) => each.id === block.id))
-				places.push({ name: named(block, index), before: block.text || (block.values ?? ""), after: "" });
+		(was?.blocks ?? []).forEach((block, index) => {
+			if (!next.blocks.some((each) => each.id === block.id))
+				places.push({
+					name: named(blockWords(block, names), index),
+					before: said(blockWords(block, names)),
+					after: "",
+					body: { before: block, after: null },
+				});
 		});
 		return places;
 	};
@@ -318,9 +304,15 @@ export function useChangeWords(items: readonly ProposalItemView[] | undefined) {
 			if (made.proposedTitle !== undefined)
 				places.push({ name: t("review.title.field"), before: "", after: made.proposedTitle });
 			made.blocks.forEach((block, index) => {
-				const words = made.translated(block, index);
-				if (words !== null && words !== "" && words !== block.text)
-					places.push({ name: t("review.block", { number: index + 1 }), before: "", after: words });
+				const proposed = made.translated(block, index);
+				const words = proposed ? blockWords(proposed).text : "";
+				if (proposed && words !== "" && words !== blockWords(block).text)
+					places.push({
+						name: t("review.block", { number: index + 1 }),
+						before: "",
+						after: words,
+						body: { before: null, after: proposed },
+					});
 			});
 			return places;
 		}

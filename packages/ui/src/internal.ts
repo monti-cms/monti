@@ -89,9 +89,6 @@ export {
 	Compare,
 	CompareBlock,
 	CompareBody,
-	CompareCode,
-	CompareHeading,
-	CompareParagraph,
 	CompareProperty,
 	CompareRow,
 	CompareRows,
@@ -131,7 +128,6 @@ export {
 	DialogTrigger,
 } from "./dialog";
 export { DialogFormFooter } from "./dialog-form-footer";
-export { DocCallout, DocCode, DocTable } from "./doc-blocks";
 export { DragHandle } from "./drag-handle";
 export { DropArea } from "./drop-area";
 export {

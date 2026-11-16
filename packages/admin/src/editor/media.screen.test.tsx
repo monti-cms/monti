@@ -1138,7 +1138,7 @@ function recorded({ refuse = false, bare = false }: { refuse?: boolean; bare?: b
 const frames = () => [...body().element().querySelectorAll<HTMLElement>("[data-block=image] [data-slot=image]")];
 
 /** The body's blocks as the page shows them: a paragraph's words, "picture" for a picture that is drawn. */
-const shownBlocks = () =>
+const drawnBlocks = () =>
 	[...body().element().children]
 		.filter((block) => !block.hasAttribute("data-pair"))
 		.map((block) => (block.querySelector("[data-block=image] img") ? "picture" : (block.textContent ?? "")));
@@ -1183,7 +1183,7 @@ describe("selecting, copying and cutting across a picture", () => {
 		await WithImage.run();
 		await userEvent.click(body().getByRole("img", { name: "아침 책상" }));
 		await userEvent.keyboard("{Enter}그림 뒤의 문단.");
-		await expect.poll(shownBlocks).toEqual(THREE);
+		await expect.poll(drawnBlocks).toEqual(THREE);
 	}
 	const first = () => paragraph("글의 첫 문단입니다.");
 
@@ -1202,9 +1202,9 @@ describe("selecting, copying and cutting across a picture", () => {
 		expect(copied.text).toContain("그림 뒤의 문단.");
 		expect(copied.html).toContain('data-block="image"');
 		clip("cut");
-		await expect.poll(shownBlocks).toEqual([""]);
+		await expect.poll(drawnBlocks).toEqual([""]);
 		pasteClip(copied);
-		await expect.poll(shownBlocks).toEqual(THREE);
+		await expect.poll(drawnBlocks).toEqual(THREE);
 		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
 	});
 
@@ -1228,9 +1228,9 @@ describe("selecting, copying and cutting across a picture", () => {
 		await selectAll();
 		expect(selectedBlocks()).toEqual(THREE);
 		const cut = clip("cut");
-		await expect.poll(shownBlocks).toEqual([""]);
+		await expect.poll(drawnBlocks).toEqual([""]);
 		pasteClip(cut);
-		await expect.poll(shownBlocks).toEqual(THREE);
+		await expect.poll(drawnBlocks).toEqual(THREE);
 	});
 
 	it("09-1 T134 [dragging] [dropped] the pointer dragged from the words before a picture to the words after it picks the picture with them: copied, cut and pasted", async () => {
@@ -1255,9 +1255,9 @@ describe("selecting, copying and cutting across a picture", () => {
 		clip("cut");
 		// What was not picked is left, joined in one line.
 		const left = `${THREE[0]?.slice(0, -(picked[0] ?? "").length)}${THREE[2]?.slice((picked[2] ?? "").length)}`;
-		await expect.poll(shownBlocks).toEqual([left]);
+		await expect.poll(drawnBlocks).toEqual([left]);
 		pasteClip(copied);
-		await expect.poll(shownBlocks).toEqual(THREE);
+		await expect.poll(drawnBlocks).toEqual(THREE);
 	});
 
 	it("09-1 a picture copied is pasted as that picture: in the same body, and in another entry's body", async () => {
@@ -1285,7 +1285,7 @@ describe("selecting, copying and cutting across a picture", () => {
 		await userEvent.click(paragraph("글의 첫 문단입니다."));
 		await userEvent.keyboard("{End}");
 		pasteClip(copied);
-		await expect.poll(shownBlocks).toEqual(["글의 첫 문단입니다.", "picture", "picture"]);
+		await expect.poll(drawnBlocks).toEqual(["글의 첫 문단입니다.", "picture", "picture"]);
 		const sources = () =>
 			[...body().element().querySelectorAll("[data-block=image] img")].map((img) => img.getAttribute("src"));
 		expect(new Set(sources()).size).toBe(1);
@@ -1313,7 +1313,7 @@ describe("selecting, copying and cutting across a picture", () => {
 		await userEvent.click(paragraph("다른 글의 문단."));
 		await userEvent.keyboard("{End}");
 		pasteClip(copied);
-		await expect.poll(shownBlocks).toEqual(["다른 글의 문단.", "picture"]);
+		await expect.poll(drawnBlocks).toEqual(["다른 글의 문단.", "picture"]);
 		await expect.element(body().getByRole("img", { name: "아침 책상" })).toBeVisible();
 	});
 });

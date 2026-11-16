@@ -1,6 +1,8 @@
 import type { Block, Doc, Field, Label } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
-import { type BlockNames, compareBodies, readableWordDiff, shownBlocks } from "./compare-entries";
+import { type BlockNames, blockWords, readableWordDiff, sideMarks } from "./compare-entries";
+
+const bodyWords = (doc: Doc, names?: BlockNames) => doc.blocks.map((block) => blockWords(block, names));
 
 const marked = (parts: { text: string; changed: boolean }[]) =>
 	parts.filter((part) => part.changed).map((part) => part.text.trim());
@@ -79,9 +81,9 @@ describe("blocks that hold values, in the comparison (doc 18, T197)", () => {
 	const p = (id: string, text: string): Block => ({ id, type: "paragraph", content: [{ type: "text", text }] });
 	const doc = (...blocks: Block[]): Doc => ({ type: "doc", blocks });
 
-	it("18-8 a block with values has a name line; a paragraph has none; a formula reads as code; a table as its rows", () => {
+	it("18-8 a block with values has a name line; a paragraph has none; a formula's words are its source; a table's its rows", () => {
 		expect(
-			shownBlocks(
+			bodyWords(
 				doc(
 					p("a", "첫 문단"),
 					{ id: "b", type: "callout", attrs: { tone: "warning", title: "알아 두세요" }, children: [p("c", "본문")] },
@@ -108,13 +110,13 @@ describe("blocks that hold values, in the comparison (doc 18, T197)", () => {
 				names,
 			),
 		).toEqual([
-			{ id: "a", look: "text", text: "첫 문단" },
-			{ id: "b", look: "text", values: "콜아웃 · 종류 경고 · 제목 알아 두세요", text: "본문" },
-			{ id: "d", look: "text", values: "이미지 · 파일 build.png · 대체 텍스트 빌드 시간 · 폭 420px", text: "" },
-			{ id: "e", look: "code", values: "수식", text: "a^2 + b^2" },
-			{ id: "f", look: "text", values: "표", text: "월 | 방문\n1월 | 1200" },
-			{ id: "g", look: "text", values: "접기 · 펼쳐 두기", text: "안" },
-			{ id: "i", look: "text", values: "탭", text: "탭 하나 · 탭 이름 npm\nnpm i monti" },
+			{ id: "a", text: "첫 문단" },
+			{ id: "b", values: "콜아웃 · 종류 경고 · 제목 알아 두세요", text: "본문" },
+			{ id: "d", values: "이미지 · 파일 build.png · 대체 텍스트 빌드 시간 · 폭 420px", text: "" },
+			{ id: "e", values: "수식", text: "a^2 + b^2" },
+			{ id: "f", values: "표", text: "월 | 방문\n1월 | 1200" },
+			{ id: "g", values: "접기 · 펼쳐 두기", text: "안" },
+			{ id: "i", values: "탭", text: "탭 하나 · 탭 이름 npm\nnpm i monti" },
 		]);
 	});
 
@@ -127,15 +129,58 @@ describe("blocks that hold values, in the comparison (doc 18, T197)", () => {
 			{ id: "b", type: "callout", attrs: { tone: "note", title: "알아 두세요" }, children: [p("c", "본문")] },
 			{ id: "d", type: "image", attrs: { media: "m1", alt: "빌드 시간" } },
 		);
-		const { mine: ours, server: theirs } = compareBodies(mine, server, names);
-		expect(ours.map((block) => marked(block.valueParts ?? []))).toEqual([["경고"], ["speed.png"]]);
-		expect(theirs.map((block) => marked(block.valueParts ?? []))).toEqual([["노트"], ["build.png"]]);
-		expect(ours.map((block) => marked(block.parts))).toEqual([[], []]);
-		// Without the site's names (the translation's side view), the blocks read as their words, as they did.
-		expect(compareBodies(mine, server).mine.map((block) => [block.text, "valueParts" in block])).toEqual([
-			["본문", false],
-			["", false],
+		const ours = sideMarks(mine, server, "mine", names);
+		const theirs = sideMarks(server, mine, "server", names);
+		expect([ours.values.get("b"), ours.values.get("d")].map((parts) => marked(parts ?? []))).toEqual([
+			["경고"],
+			["speed.png"],
 		]);
+		expect([theirs.values.get("b"), theirs.values.get("d")].map((parts) => marked(parts ?? []))).toEqual([
+			["노트"],
+			["build.png"],
+		]);
+		// The words of the block inside the callout are its own, found by its id.
+		expect(marked(ours.words.get("c") ?? [])).toEqual([]);
+		// Without the site's names (the translation's side view), no block has a name line.
+		expect(sideMarks(mine, server, "mine").values.size).toBe(0);
+	});
+
+	it("18-8 a block the other side lacks is marked whole, at any depth; the blocks around it are read as they are", () => {
+		const mine = doc(p("a", "같은 문단"), {
+			id: "b",
+			type: "callout",
+			attrs: { tone: "note" },
+			children: [p("c", "안에 새로 넣은 문단")],
+		});
+		const server = doc(p("a", "같은 문단"), { id: "b", type: "callout", attrs: { tone: "note" }, children: [] });
+		const marks = sideMarks(mine, server, "mine", names);
+		expect(marks.words.get("a")?.some((part) => part.changed)).toBe(false);
+		expect(marked(marks.words.get("c") ?? [])).toEqual(["안에 새로 넣은 문단"]);
+		// `only` marks the top-level blocks it names: the others are not in the marks.
+		expect([...sideMarks(mine, server, "mine", names, new Set(["b"])).words.keys()]).toEqual(["c"]);
+	});
+
+	it("04-2 a table's words are its cells in order, so the marks can be laid back on its cells", () => {
+		const table = (cell: string): Doc =>
+			doc({
+				id: "t",
+				type: "table",
+				attrs: {
+					header: true,
+					rows: [
+						["월", "방문"],
+						["1월", cell],
+					],
+				},
+			});
+		const marks = sideMarks(table("1200"), table("1300"), "mine", names);
+		expect(
+			marks.words
+				.get("t")
+				?.map((part) => part.text)
+				.join(""),
+		).toBe("월 | 방문\n1월 | 1200");
+		expect(marked(marks.words.get("t") ?? [])).toEqual(["1200"]);
 	});
 });
 
@@ -152,38 +197,39 @@ describe("a code block whose effects changed", () => {
 		],
 	});
 	it("17-11 the same code with other line effects is a change on the lines whose effects differ, and no word is marked", () => {
-		const { mine, server } = compareBodies(
-			code({ lines: [{ name: "plus", start: 1, end: 3 }] }),
-			code({
-				lines: [
-					{ name: "plus", start: 2, end: 3 },
-					{ name: "anchor", start: 0, end: 1, attrs: { id: "c1" } },
-				],
-			}),
-		);
-		expect(mine[0].parts.some((part) => part.changed)).toBe(false);
-		expect(mine[0].changes).toEqual({ lines: [1], language: false, title: false });
-		expect(server[0].changes.lines).toEqual([1]);
-		expect(mine[0].code?.lines).toEqual([[], ["plus"], ["plus"]]);
+		const a = code({ lines: [{ name: "plus", start: 1, end: 3 }] });
+		const b = code({
+			lines: [
+				{ name: "plus", start: 2, end: 3 },
+				{ name: "anchor", start: 0, end: 1, attrs: { id: "c1" } },
+			],
+		});
+		const mine = sideMarks(a, b, "mine");
+		const server = sideMarks(b, a, "server");
+		expect(mine.words.get("b1")?.some((part) => part.changed)).toBe(false);
+		expect(mine.code.get("b1")).toEqual({ lines: [1], language: false, title: false });
+		expect(server.code.get("b1")?.lines).toEqual([1]);
+		expect(blockWords(a.blocks[0] as Block).code?.lines).toEqual([[], ["plus"], ["plus"]]);
 	});
 	it("17-11 a language or a file name changed alone is a change too; the same block is none", () => {
-		expect(compareBodies(code({ title: "a.ts" }), code({ language: "js" })).mine[0].changes).toEqual({
+		expect(sideMarks(code({ title: "a.ts" }), code({ language: "js" }), "mine").code.get("b1")).toEqual({
 			lines: [],
 			language: true,
 			title: true,
 		});
-		expect(compareBodies(code({}), code({})).mine[0].changes).toEqual({ lines: [], language: false, title: false });
+		expect(sideMarks(code({}), code({}), "mine").code.get("b1")).toEqual({ lines: [], language: false, title: false });
 	});
 	it("17-11 a line put in on one side pairs the rest by their words: only a line whose own effects differ is a change", () => {
 		const withLine = (text: string, lines: unknown[]): Doc => ({
 			type: "doc",
 			blocks: [{ id: "b1", type: "codeBlock", attrs: { lines }, content: [{ type: "text", text }] } as Block],
 		});
-		const { mine } = compareBodies(
+		const mine = sideMarks(
 			withLine("new\na\nb\nc", [{ name: "plus", start: 2, end: 3 }]),
 			withLine("a\nb\nc", [{ name: "plus", start: 1, end: 2 }]),
+			"mine",
 		);
-		expect(mine[0].changes.lines).toEqual([]);
+		expect(mine.code.get("b1")?.lines).toEqual([]);
 	});
 });
 
@@ -211,16 +257,12 @@ describe("a code explorer's files in the comparison (doc 18 with doc 17)", () =>
 			} as Block,
 		],
 	});
-	it("18-8 a file says its path over its code, and a change of its line effects alone is a changed word", () => {
-		const { mine, server } = compareBodies(
-			explorer([{ name: "plus", start: 1, end: 2 }]),
-			explorer([{ name: "highlight", start: 0, end: 2 }]),
-			names,
-		);
-		expect(mine[0]?.text).toBe("src/app.ts\na\nb\n더함 2");
-		// Its files are code: it reads as code, its indentation kept.
-		expect(mine[0]?.look).toBe("code");
-		expect(server[0]?.text).toBe("src/app.ts\na\nb\n강조 1–2");
-		expect(mine[0]?.parts.filter((part) => part.changed).map((part) => part.text.trim())).toEqual(["더함 2"]);
+	it("18-8 a file says its path over its code in a line, and a change of its line effects alone is a change of its lines", () => {
+		const a = explorer([{ name: "plus", start: 1, end: 2 }]);
+		const b = explorer([{ name: "highlight", start: 0, end: 2 }]);
+		expect(bodyWords(a, names)[0]?.text).toBe("src/app.ts\na\nb\n더함 2");
+		expect(bodyWords(b, names)[0]?.text).toBe("src/app.ts\na\nb\n강조 1–2");
+		// The file's frame is drawn by `ReadBody`: the lines whose effects differ are what it marks.
+		expect(sideMarks(a, b, "mine", names).code.get("f")?.lines).toEqual([0, 1]);
 	});
 });

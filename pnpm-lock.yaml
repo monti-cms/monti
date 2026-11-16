@@ -236,6 +236,9 @@ importers:
       '@monti-cms/core':
         specifier: workspace:*
         version: link:../core
+      '@monti-cms/mdx':
+        specifier: workspace:*
+        version: link:../mdx
       '@monti-cms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -297,9 +300,6 @@ importers:
       '@monti-cms/blocks':
         specifier: workspace:*
         version: link:../blocks
-      '@monti-cms/mdx':
-        specifier: workspace:*
-        version: link:../mdx
       '@monti-cms/seo':
         specifier: workspace:*
         version: link:../seo

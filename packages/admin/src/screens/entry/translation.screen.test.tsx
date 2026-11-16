@@ -2,7 +2,7 @@ import { defineSchema } from "@monti-cms/core";
 import { composeStories, composeStory } from "@storybook/react-vite";
 import { describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { pointerPath, scrollsSideways, typeKorean } from "../../../../../testing/input";
+import { caretAfter, pointerPath, scrollsSideways, typeKorean } from "../../../../../testing/input";
 import { schema } from "../story-schema";
 import * as stories from "./translation.stories";
 
@@ -484,12 +484,26 @@ describe("writing a translation (owner review, 2026-11-06)", () => {
 		await expect.poll(marked).toContain("블로그를 다시 만들기로");
 	});
 
+	it("04-1 [TR-05] the source in the pane beside is read as the editor draws it: its heading level, its code in the editor's frame, and the words changed since underlined", async () => {
+		await open(SourceChanged);
+		await userEvent.click(page.getByRole("button", { name: "옆 창" }));
+		const pane = page.getByRole("complementary", { name: /원문/ });
+		await expect.element(pane).toBeVisible();
+		await expect.poll(() => pane.element().querySelector("[data-slot=code-frame]")).not.toBeNull();
+		expect(pane.element().querySelector("h2")?.textContent).toBe("무엇을 덜어냈나");
+		expect(pane.element().querySelector("[data-slot=code-frame]")?.textContent).toContain("pnpm add @monti-cms/core");
+		expect(pane.element().querySelectorAll("[data-slot=source-change]").length).toBeGreaterThan(0);
+	});
+
 	it("04-1 3.05 side by side, a row's translation is written in place, and the row being written is marked on both sides", async () => {
 		await SideBySide.run();
 		const line = page.getByText("The editor follows the same rule", { exact: false });
 		await expect.element(line, { timeout: 15000 }).toBeVisible();
-		await userEvent.click(line);
-		await userEvent.keyboard("{End} Done.");
+		// The source blocks are drawn in their cells (the source's code block last): the rows stand where they will stay.
+		await expect.poll(() => body().element().querySelector("[data-pair=source] [data-slot=code-frame]")).not.toBeNull();
+		// The caret goes after the words wherever they wrap.
+		await caretAfter(body().element(), "only the writing shows.");
+		await userEvent.keyboard(" Done.");
 		await expect.element(page.getByText("only the writing shows. Done.", { exact: false })).toBeVisible();
 		const current = () => body().element().querySelector("[data-pair-current]")?.textContent ?? "";
 		expect(current()).toContain("Done.");

@@ -18,8 +18,6 @@ import { cn } from "../cn";
 import {
 	Compare,
 	CompareBody,
-	CompareHeading,
-	CompareParagraph,
 	CompareProperty,
 	CompareRow,
 	CompareRows,
@@ -30,7 +28,6 @@ import {
 } from "../compare";
 import { Count } from "../count";
 import { DangerBlock, DangerRow } from "../danger-block";
-import { DocCallout, DocCode, DocTable } from "../doc-blocks";
 import { DragHandle } from "../drag-handle";
 import { DropArea } from "../drop-area";
 import { EditorHeader, EditorTitleRule } from "../editor-header";
@@ -1595,8 +1592,7 @@ function EditorBody({
 /** One block of the body in the editor's own spacing (as a side-by-side view draws it), not the reading defaults. */
 function blockOf(block: BodyBlock, text: React.ReactNode) {
 	// A heading takes the body's ink (muted in a read-only source), not the reading defaults' own.
-	if (block.kind === "h2" || block.kind === "h3")
-		return <CompareHeading className="text-inherit first:mt-0">{text}</CompareHeading>;
+	if (block.kind === "h2" || block.kind === "h3") return <h2 className="text-inherit first:mt-0">{text}</h2>;
 	// A quote as the editor draws it: plain text after a rule, not the reading defaults' italic.
 	if (block.kind === "quote")
 		return (
@@ -1620,9 +1616,8 @@ function blockOf(block: BodyBlock, text: React.ReactNode) {
 			</figure>
 		);
 	// The line that asks for the first block: faint, with nothing under it.
-	if (block.kind === "placeholder")
-		return <CompareParagraph className="mt-0 mb-0 text-monti-faint">{text}</CompareParagraph>;
-	return <CompareParagraph className="mt-0">{text}</CompareParagraph>;
+	if (block.kind === "placeholder") return <p className="mt-0 mb-0 text-monti-faint">{text}</p>;
+	return <p className="mt-0">{text}</p>;
 }
 
 /** Nothing happens when a tool drawn from a board is pressed: its looks only. */
@@ -1944,9 +1939,9 @@ type Pieces = readonly {
 
 /**
  * A side's blocks drawn with the design system's body parts: paragraphs and list items with their changed words, a callout, code, a table, and an image
- * with its fields. `source` draws the callout and code one step darker, as on the source's ground.
+ * with its fields.
  */
-function docBlocks(pieces: Pieces | undefined, source: boolean) {
+function docBlocks(pieces: Pieces | undefined) {
 	const out: React.ReactNode[] = [];
 	const list = [...(pieces ?? [])];
 	let at = 0;
@@ -1974,30 +1969,41 @@ function docBlocks(pieces: Pieces | undefined, source: boolean) {
 		const key = at;
 		if (kind === "callout" || kind === "line") {
 			out.push(
-				<DocCallout key={key} source={source}>
+				<div key={key} data-box className="flex flex-col gap-monti-8 *:first:font-semibold">
 					{lines(take(["callout", "line"])).map((line, index) => (
 						<p key={index} className="m-0">
 							{runOf(line)}
 						</p>
 					))}
-				</DocCallout>,
+				</div>,
 			);
 		} else if (kind === "code") {
 			const code = take(["code"])[0];
-			out.push(
-				<DocCode key={key} source={source}>
-					{code?.faint ? <Untranslated>{code.text}</Untranslated> : code?.text}
-				</DocCode>,
-			);
+			out.push(<pre key={key}>{code?.faint ? <Untranslated>{code.text}</Untranslated> : code?.text}</pre>);
 		} else if (kind === "th" || kind === "tr") {
 			const rows = take(["th", "tr"]);
 			const head = rows.find((row) => row.kind === "th")?.text.split("\t") ?? [];
 			out.push(
-				<DocTable
-					key={key}
-					head={head}
-					rows={rows.filter((row) => row.kind === "tr").map((row) => row.text.split("\t"))}
-				/>,
+				<table key={key}>
+					<thead>
+						<tr>
+							{head.map((name) => (
+								<th key={name}>{name}</th>
+							))}
+						</tr>
+					</thead>
+					<tbody>
+						{rows
+							.filter((row) => row.kind === "tr")
+							.map((row, index) => (
+								<tr key={index}>
+									{row.text.split("\t").map((value, cell) => (
+										<td key={cell}>{value}</td>
+									))}
+								</tr>
+							))}
+					</tbody>
+				</table>,
 			);
 		} else if (kind === "li") {
 			out.push(
@@ -2034,11 +2040,7 @@ function docBlocks(pieces: Pieces | undefined, source: boolean) {
 			);
 		} else {
 			const block = lines(take(["p"]))[0] ?? [];
-			out.push(
-				<CompareParagraph key={key}>
-					{block[0]?.faint ? <Untranslated>{runOf(block)}</Untranslated> : runOf(block)}
-				</CompareParagraph>,
-			);
+			out.push(<p key={key}>{block[0]?.faint ? <Untranslated>{runOf(block)}</Untranslated> : runOf(block)}</p>);
 		}
 	}
 	return out;
@@ -2097,14 +2099,14 @@ function PairRow({
 	shared?: boolean;
 	sharedAction?: string;
 }) {
-	const side = (pieces: Pieces | undefined, source: boolean) =>
+	const side = (pieces: Pieces | undefined) =>
 		kind === "title" ? (
 			<Heading as="h2" variant="page">
 				{pieces?.map((piece) => piece.text).join("")}
 			</Heading>
 		) : (
 			// A row's side holds one block: nothing below its last line but the row's own padding.
-			<CompareBody className="*:last:mb-0">{docBlocks(pieces, source)}</CompareBody>
+			<CompareBody className="*:last:mb-0">{docBlocks(pieces)}</CompareBody>
 		);
 	return (
 		<CompareRow
@@ -2122,16 +2124,16 @@ function PairRow({
 				)
 			}
 			note={note}
-			source={kind === "head" ? sourceLabel : side(source, true)}
+			source={kind === "head" ? sourceLabel : side(source)}
 			translation={
 				kind === "head" ? (
 					translationLabel
 				) : shared ? (
 					<CompareShared action={<TextButton variant="underline">{sharedAction}</TextButton>}>
-						{side(translation, false)}
+						{side(translation)}
 					</CompareShared>
 				) : (
-					side(translation, false)
+					side(translation)
 				)
 			}
 		/>
@@ -2182,9 +2184,9 @@ function CompareColumn({
 			<CompareBody>
 				{blocksOf(doc).map((block, index) =>
 					block.kind === "h2" || block.kind === "h3" ? (
-						<CompareHeading key={index}>{runOf(block.pieces)}</CompareHeading>
+						<h2 key={index}>{runOf(block.pieces)}</h2>
 					) : (
-						<CompareParagraph key={index}>{runOf(block.pieces)}</CompareParagraph>
+						<p key={index}>{runOf(block.pieces)}</p>
 					),
 				)}
 			</CompareBody>

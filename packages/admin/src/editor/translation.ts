@@ -3,6 +3,7 @@ import { Extension } from "@tiptap/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import type { ReadMarks } from "../screens/entry/compare-entries";
 import type { Catalog } from "./catalog";
 import { filledBlocks } from "./proposal-marks";
 
@@ -78,8 +79,11 @@ export const restorePending = (doc: Doc, originals: Map<string, Block | null>): 
 				}),
 			};
 
-/** A source block as a side-by-side row shows it: its look, and its words with the ones that changed since the translation marked. */
-export type PairedSourceBlock = { look: "heading" | "code" | "text"; parts: { text: string; changed: boolean }[] };
+/**
+ * A source block as a side-by-side row shows it: the block, and the marks of the words that changed since the translation. `key` names what is drawn, so a
+ * cell is made anew when it changes.
+ */
+export type PairedSourceBlock = { key: string; doc: Doc; marks: ReadMarks };
 
 /**
  * What the side-by-side rows show beside the translation's blocks (translation.md, side by side): the source blocks by id, each translation block's
@@ -93,10 +97,16 @@ export type PairedRows = {
 	notes: Map<string, { text: string; tone: "warning" | "danger" | "success" }>;
 };
 
-const pairedKey = new PluginKey<PairedRows | null>("montiTranslationPaired");
+/**
+ * The rows as the editor lays them out: the screen's `PairedRows`, and how the editor tells it where each source cell is (`mount`: `on` when the cell is
+ * made, off when it goes), so the screen can draw the source block in it.
+ */
+export type PairedShown = PairedRows & { mount: (element: HTMLElement, source: string, on: boolean) => void };
+
+const pairedKey = new PluginKey<PairedShown | null>("montiTranslationPaired");
 
 /** Lays the text out as rows beside the source (`null`: the text alone). */
-export const showPaired = (state: EditorState, rows: PairedRows | null) =>
+export const showPaired = (state: EditorState, rows: PairedShown | null) =>
 	state.tr.setMeta(pairedKey, rows).setMeta("addToHistory", false);
 
 /** A cell of a side-by-side row the editor does not edit. */
@@ -120,19 +130,6 @@ function endOfRows() {
 	return element;
 }
 
-function sourceWords(element: HTMLElement, block: PairedSourceBlock | undefined) {
-	if (!block) return;
-	const holder = document.createElement("div");
-	if (block.look === "heading") holder.setAttribute("data-pair-heading", "");
-	if (block.look === "code") holder.setAttribute("data-pair-code", "");
-	for (const part of block.parts) {
-		const run = document.createElement(part.changed ? "mark" : "span");
-		run.textContent = part.text;
-		holder.append(run);
-	}
-	element.append(holder);
-}
-
 function kindCell(kind: string, note: { text: string; tone: string } | undefined) {
 	return cell("kind", (element) => {
 		element.append(kind);
@@ -145,16 +142,13 @@ function kindCell(kind: string, note: { text: string; tone: string } | undefined
 	});
 }
 
-const wordsKey = (block: PairedSourceBlock | undefined) =>
-	block ? `${block.look}:${block.parts.map((part) => `${part.changed ? "+" : ""}${part.text}`).join("|")}` : "";
-
 /** The rows beside the blocks: before each block its rule, kind and source. */
-const PairedRowsPlugin = new Plugin<PairedRows | null>({
+const PairedRowsPlugin = new Plugin<PairedShown | null>({
 	key: pairedKey,
 	state: {
 		init: () => null,
 		apply: (tr, rows) => {
-			const meta = tr.getMeta(pairedKey) as PairedRows | null | undefined;
+			const meta = tr.getMeta(pairedKey) as PairedShown | null | undefined;
 			return meta === undefined ? rows : meta;
 		},
 	},
@@ -163,8 +157,10 @@ const PairedRowsPlugin = new Plugin<PairedRows | null>({
 			const rows = pairedKey.getState(state);
 			if (!rows) return null;
 			const shown: Decoration[] = [];
-			const widget = (at: number, side: number, key: string, make: () => HTMLElement) =>
-				shown.push(Decoration.widget(at, make, { side, key, ignoreSelection: true, stopEvent: () => true }));
+			const widget = (at: number, side: number, key: string, make: () => HTMLElement, gone?: (element: Node) => void) =>
+				shown.push(
+					Decoration.widget(at, make, { side, key, ignoreSelection: true, stopEvent: () => true, destroy: gone }),
+				);
 			const { $from } = state.selection;
 			const current = $from.depth >= 1 ? $from.before(1) : null;
 			state.doc.forEach((node, pos) => {
@@ -175,8 +171,18 @@ const PairedRowsPlugin = new Plugin<PairedRows | null>({
 				const note = rows.notes.get(id) ?? (from ? rows.notes.get(from) : undefined);
 				widget(pos, -3, `rule:${id}`, () => cell("rule"));
 				widget(pos, -2, `kind:${id}:${kind}:${note ? `${note.tone}:${note.text}` : ""}`, () => kindCell(kind, note));
-				widget(pos, -1, `source:${id}:${wordsKey(source)}`, () =>
-					cell("source", (element) => sourceWords(element, source)),
+				// The source block is drawn in its cell by the screen (`ReadBody`): the cell is told to it as it is made and as it goes.
+				widget(
+					pos,
+					-1,
+					`source:${id}:${source?.key ?? ""}`,
+					() =>
+						cell("source", (element) => {
+							if (from && source) rows.mount(element, from, true);
+						}),
+					(element) => {
+						if (from) rows.mount(element as HTMLElement, from, false);
+					},
 				);
 				if (pos === current) shown.push(Decoration.node(pos, pos + node.nodeSize, { "data-pair-current": "" }));
 			});

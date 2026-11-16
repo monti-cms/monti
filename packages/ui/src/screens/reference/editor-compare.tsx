@@ -3,8 +3,6 @@ import {
 	Button,
 	Compare,
 	CompareBody,
-	CompareHeading,
-	CompareParagraph,
 	CompareProperty,
 	CompareSide,
 	CompareText,
@@ -60,15 +58,13 @@ export function EditorCompareScreen() {
 					>
 						<CompareTitle>첫 번째 글</CompareTitle>
 						<CompareBody>
-							<CompareParagraph>
-								블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.
-							</CompareParagraph>
-							<CompareHeading>무엇을 덜어냈나</CompareHeading>
-							<CompareParagraph>
+							<p>블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.</p>
+							<h2>무엇을 덜어냈나</h2>
+							<p>
 								목록에는 제목과 주소, 지금 상태만 남겼다.{" "}
 								<CompareText changed>나머지는 필요할 때 꺼내 본다.</CompareText>
-							</CompareParagraph>
-							<CompareParagraph>편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.</CompareParagraph>
+							</p>
+							<p>편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.</p>
 						</CompareBody>
 					</CompareSide>
 					<CompareSide
@@ -77,20 +73,18 @@ export function EditorCompareScreen() {
 					>
 						<CompareTitle>첫 번째 글</CompareTitle>
 						<CompareBody>
-							<CompareParagraph>
-								블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.
-							</CompareParagraph>
-							<CompareHeading>무엇을 덜어냈나</CompareHeading>
-							<CompareParagraph>
+							<p>블로그를 다시 만들기로 한 건 글을 쓰는 시간보다 도구를 고치는 시간이 길어졌기 때문이다.</p>
+							<h2>무엇을 덜어냈나</h2>
+							<p>
 								목록에는 제목과 주소, 지금 상태만 남겼다. <CompareText changed>설정 화면은 그대로 두었다.</CompareText>
-							</CompareParagraph>
-							<CompareParagraph>편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.</CompareParagraph>
-							<CompareHeading>
+							</p>
+							<p>편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다.</p>
+							<h2>
 								<CompareText changed>남긴 것</CompareText>
-							</CompareHeading>
-							<CompareParagraph>
+							</h2>
+							<p>
 								<CompareText changed>편집기의 블록 손잡이와 / 넣기는 그대로 두었다.</CompareText>
-							</CompareParagraph>
+							</p>
 						</CompareBody>
 					</CompareSide>
 				</Compare>

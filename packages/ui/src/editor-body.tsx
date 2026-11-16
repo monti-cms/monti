@@ -4,7 +4,7 @@ import { cn } from "./cn";
 
 /**
  * The editor's text as it is written: the reading type (17 / 30), 20 under a paragraph, 32 over and 12 under a heading, list items line under line,
- * code and tables in the inner box the read-only blocks use (`DocCode`, `DocTable`). The editor engine draws plain elements (`p`, `h2`, `ul`, `pre` …)
+ * code and tables in the inner box. The editor engine draws plain elements (`p`, `h2`, `ul`, `pre` …)
  * and marks a state with a `data-` attribute; this part gives them their looks:
  *
  * - `data-align` (`center`, `right`): where a paragraph's or a heading's lines sit.
@@ -47,7 +47,7 @@ const EDITOR_BODY = cn(
 	// (`height-control-xs`, the least pressable size), and draws nothing itself; `Checkbox`'s 14px box with its corners and its ✓ is `data-check-box` inside it.
 	// While the text is written it is pressed (or Spaced) to tick and answers the pointer as `Checkbox` does (`CHECK_HOVER`); read only, it is a mark.
 	"[&_[data-check]]:absolute [&_[data-check]]:top-monti-8 [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:outline-none [&_[data-check]]:after:absolute [&_[data-check]]:after:top-1/2 [&_[data-check]]:after:left-1/2 [&_[data-check]]:after:size-(--monti-height-control-xs) [&_[data-check]]:after:-translate-x-1/2 [&_[data-check]]:after:-translate-y-1/2 [&_[data-check]]:after:content-['']",
-	"[&_[data-check-box]]:flex [&_[data-check-box]]:size-full [&_[data-check-box]]:items-center [&_[data-check-box]]:justify-center [&_[data-check-box]]:rounded-monti-sm [&_[data-check-box]]:border-[1.5px] [&_[data-check-box]]:border-monti-faint [&_[data-check-box]]:text-monti-on-emphasis [&_[data-check-box]]:transition-colors [&_[data-check]:focus-visible>[data-check-box]]:outline-2 [&_[data-check]:focus-visible>[data-check-box]]:outline-monti-contrast/60 [&_[data-check-box]_svg]:invisible",
+	"[&_[data-check-box]]:flex [&_[data-check-box]]:size-full [&_[data-check-box]]:items-center [&_[data-check-box]]:justify-center [&_[data-check-box]]:rounded-monti-sm [&_[data-check-box]]:border-[1.5px] [&_[data-check-box]]:border-monti-faint [&_[data-check-box]]:text-monti-on-emphasis [&_[data-check-box]]:transition-colors [&_[data-check]:focus-visible>[data-check-box]]:outline-2 [&_[data-check]:focus-visible>[data-check-box]]:outline-monti-contrast/60 [&_[data-check-box]_svg]:size-3.5 [&_[data-check-box]_svg]:invisible",
 	"[&_li[data-checked]>[data-check]>[data-check-box]]:border-monti-contrast [&_li[data-checked]>[data-check]>[data-check-box]]:bg-monti-emphasis [&_li[data-checked]>[data-check]_svg]:visible",
 	"[&_[contenteditable=true]_[data-check]]:cursor-pointer [&_[contenteditable=true]_[data-check]:hover>[data-check-box]]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&_[contenteditable=true]_li:not([data-checked])>[data-check]:hover>[data-check-box]]:border-(color:--monti-fg-muted)",
 	// A quote, code, a table and the divider.
@@ -110,8 +110,8 @@ const EDITOR_BODY = cn(
 /**
  * The text laid out as the rows of `CompareRows` (translation.md, side by side): the editor's blocks are the translation cells, and the editor puts
  * before each of them, as cells it does not edit, a rule across the row (`data-pair=rule`), the block's kind with its note
- * (`data-pair=kind`, the note `data-pair-note` in its tone: `warning`, `danger` or `success`) and the source block (`data-pair=source`, on the tool ground, quieter; its changed
- * words `mark`, underlined in the warning color, its code `data-pair-code`). After a last block that is one thing the editor puts an empty picture that takes no
+ * (`data-pair=kind`, the note `data-pair-note` in its tone: `warning`, `danger` or `success`) and the source block (`data-pair=source`, on the tool ground, quieter; the screen
+ * draws the block in it with `ReadBody`, its changed words underlined in the warning color). After a last block that is one thing the editor puts an empty picture that takes no
  * room (`data-pair=end`): a place a caret can take, which Chrome needs after such a block to keep it picked. The block the cursor is in, and the source cell of its row, are on the block ground (`data-pair-current`) while the text has the focus. The rows take the height of their taller side.
  */
 const PAIRED = cn(
@@ -121,10 +121,7 @@ const PAIRED = cn(
 	"[&_[data-pair=rule]]:col-span-full [&_[data-pair=rule]]:h-px [&_[data-pair=rule]]:bg-monti-muted",
 	"[&_[data-pair=end]]:col-span-full [&_[data-pair=end]]:size-0",
 	"[&_[data-pair=kind]]:flex [&_[data-pair=kind]]:flex-col [&_[data-pair=kind]]:gap-monti-2 [&_[data-pair=kind]]:py-monti-16 [&_[data-pair=kind]]:pr-monti-12 [&_[data-pair=kind]]:text-right [&_[data-pair=kind]]:text-monti-micro [&_[data-pair=kind]]:text-monti-subtle [&_[data-pair-note=warning]]:text-monti-warning [&_[data-pair-note=danger]]:text-monti-danger [&_[data-pair-note=success]]:text-monti-success",
-	"[&_[data-pair=source]]:min-w-0 [&_[data-pair=source]]:whitespace-pre-line [&_[data-pair=source]]:border-monti-default [&_[data-pair=source]]:border-r [&_[data-pair=source]]:bg-monti-tool [&_[data-pair=source]]:px-monti-24 [&_[data-pair=source]]:py-monti-16 [&_[data-pair=source]]:text-monti-muted",
-	// The source's words that changed since the translation: the warning underline of `CompareText source`.
-	"[&_[data-pair=source]_mark]:bg-transparent [&_[data-pair=source]_mark]:text-inherit [&_[data-pair=source]_mark]:underline [&_[data-pair=source]_mark]:decoration-[1.5px] [&_[data-pair=source]_mark]:decoration-monti-warning [&_[data-pair=source]_mark]:underline-offset-4",
-	"[&_[data-pair-heading]]:text-monti-heading [&_[data-pair-code]]:block [&_[data-pair-code]]:whitespace-pre-wrap [&_[data-pair-code]]:rounded-monti-lg [&_[data-pair-code]]:bg-monti-selected [&_[data-pair-code]]:px-monti-16 [&_[data-pair-code]]:py-monti-12 [&_[data-pair-code]]:font-mono [&_[data-pair-code]]:text-monti-code",
+	"[&_[data-pair=source]]:min-w-0 [&_[data-pair=source]]:border-monti-default [&_[data-pair=source]]:border-r [&_[data-pair=source]]:bg-monti-tool [&_[data-pair=source]]:px-monti-24 [&_[data-pair=source]]:py-monti-16 [&_[data-pair=source]]:text-monti-muted",
 	// Only while the text has the cursor (the editor marks its root `ProseMirror-focused` then), the row of the block the cursor is in is on the block
 	// ground on both sides (`bg-block`, the ground of the block a handle or menu is about); words picked in it take the stronger `bg-selection`: the source cell itself, and under the translation cell a ground the source cell lays to its right (the columns are equal),
 	// behind the block, so the block keeps its own looks (a code block's box) and nothing in it overflows.
@@ -134,16 +131,43 @@ const PAIRED = cn(
 );
 
 /**
- * The editor's text column: what the editor engine draws goes inside, and takes the body's looks from here. `paired` lays the text out as rows beside
- * its source (a translation side by side).
+ * A body read in the chat's column (the assistant's answers): the same elements and marks, in the conversation's text size (`text-prose`) with 8px
+ * between blocks and headings that are bold lines of that size, so an answer reads as words said, not as a page.
  */
-function EditorBody({ paired = false, className, ...props }: ComponentProps<"div"> & { paired?: boolean }) {
+const CHAT = cn(
+	"text-monti-prose",
+	"[&_p]:mb-monti-8! [&_:is(ul,ol,blockquote,table,[data-box],[data-block=codeBlock])]:mb-monti-8!",
+	"[&_:is(h2,h3,h4)]:mt-monti-12! [&_:is(h2,h3,h4)]:mb-monti-4! [&_:is(h2,h3,h4)]:text-monti-prose! [&_:is(h2,h3,h4)]:font-semibold!",
+);
+
+/**
+ * The editor's text column: what the editor engine draws goes inside, and takes the body's looks from here. `paired` lays the text out as rows beside
+ * its source (a translation side by side). `readOnly` is a body that is only read (`ReadBody`: a comparison, a change, the source of a translation,
+ * an answer): it takes the room its words need and has no room above its first line or under its last. `muted` reads it in the quieter ink (a source beside its
+ * translation). `size="chat"` reads it in the conversation's column.
+ */
+function EditorBody({
+	paired = false,
+	readOnly = false,
+	muted = false,
+	size = "reading",
+	className,
+	...props
+}: ComponentProps<"div"> & { paired?: boolean; readOnly?: boolean; muted?: boolean; size?: "reading" | "chat" }) {
 	return (
 		<BodyScope>
 			<div
 				data-slot="editor-body"
 				data-paired={paired || undefined}
-				className={cn(EDITOR_BODY, paired && PAIRED, className)}
+				data-read-only={readOnly || undefined}
+				className={cn(
+					EDITOR_BODY,
+					paired && PAIRED,
+					readOnly && "grow-0 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+					muted && "text-monti-muted",
+					size === "chat" && CHAT,
+					className,
+				)}
 				{...props}
 			/>
 		</BodyScope>

@@ -2,15 +2,9 @@ import { type Block, type Doc, type EntryState, type FieldMark, type Schema, tra
 import {
 	Banner,
 	Box,
-	CompareBlock,
-	CompareBody,
-	CompareCode,
-	CompareHeading,
-	CompareParagraph,
 	CompareRow,
 	CompareRows,
 	CompareText,
-	CompareValues,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
@@ -42,13 +36,14 @@ import type { BlockTranslation } from "../../editor/block-menu";
 import type { BodyCatalogs } from "../../editor/catalog";
 import { liveDom } from "../../editor/live-view";
 import { findBlock } from "../../editor/proposal-marks";
+import { ReadBody } from "../../editor/read-body";
 import { nodeName } from "../../editor/schema";
 import { linkOf, type PairedRows, type PairedSourceBlock } from "../../editor/translation";
 import { shortDate } from "../../format/date";
 import { useLanguageName } from "../../format/language";
 import { useAdmin } from "../../operations/admin-context";
 import { useOperation, useRead } from "../../operations/use-operation";
-import { type BlockNames, type Part, readableWordDiff, shownBlocks } from "./compare-entries";
+import { type BlockNames, blockWords, type Part, type ReadMarks, readableWordDiff, sideMarks } from "./compare-entries";
 import { useBlockNames } from "./use-block-names";
 import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
 
@@ -254,7 +249,7 @@ export function SourceViewPicker({ value, onChange }: { value: SourceView; onCha
 }
 
 /** The source's words with the ones changed since the translation underlined in the warning color (`CompareText source`); `removed`: the words
- * before the change, the ones gone faint and struck through. */
+ * before the change, the ones gone faint and struck through. A field's value is read this way; a block is read by `ReadBody`. */
 const Words = ({ parts, removed = false }: { parts: Part[]; removed?: boolean }) =>
 	parts.map((part, index) => (
 		// biome-ignore lint/suspicious/noArrayIndexKey: the parts of one text, in order
@@ -263,53 +258,14 @@ const Words = ({ parts, removed = false }: { parts: Part[]; removed?: boolean })
 		</CompareText>
 	));
 
-/** The source's changed blocks with the words that changed on the highlight: what the translation saw before, against the source now. */
-function changedWords(compared: Compared, names?: BlockNames): Map<string, Part[]> {
-	return new Map(
-		compared.marks.flatMap((mark) =>
-			mark.kind === "changed"
-				? [[mark.from, readableWordDiff(textOf(mark.before, names), textOf(mark.after, names)).server] as const]
-				: [],
-		),
-	);
-}
-
-/** A block read only, in the looks of the comparison, its changed words marked when `parts` are given. */
-function ReadBlock({ block, parts }: { block: Block; parts?: Part[] }) {
-	const names = useBlockNames();
-	const shown = shownBlocks({ type: "doc", blocks: [block] }, names)[0];
-	const words = parts ? <Words parts={parts} /> : shown?.text;
-	// A block with values says them in its name line over its words (doc 18).
-	const values = shown?.values ? <CompareValues>{shown.values}</CompareValues> : null;
-	const drawn =
-		shown?.look === "heading" ? (
-			<CompareHeading>{words}</CompareHeading>
-		) : shown?.look === "code" ? (
-			<CompareCode>{words}</CompareCode>
-		) : (
-			<CompareParagraph>{words}</CompareParagraph>
-		);
-	return values ? (
-		<>
-			{values}
-			{drawn}
-		</>
-	) : (
-		drawn
-	);
-}
-
-/** A body read only, block by block, in the looks of the comparison; `current` is the block on the block ground. */
-function ReadBody({ doc, changed, current }: { doc: Doc; changed: Map<string, Part[]>; current: string | null }) {
-	return (
-		<CompareBody>
-			{doc.blocks.map((block) => (
-				<CompareBlock key={block.id} data-block={block.id} current={block.id === current}>
-					<ReadBlock block={block} parts={changed.get(block.id)} />
-				</CompareBlock>
-			))}
-		</CompareBody>
-	);
+/**
+ * The source's changed blocks with the words that changed marked: what the translation saw before, against the source now. Only the top-level blocks a
+ * mark is on are marked; the others are read as they are.
+ */
+function changedMarks(compared: Compared, names?: BlockNames): ReadMarks {
+	const changed = compared.marks.flatMap((mark) => (mark.kind === "changed" && mark.before ? [mark.before] : []));
+	const before: Doc = { type: "doc", blocks: changed };
+	return sideMarks(compared.source.doc, before, "server", names, new Set(changed.map((block) => block.id)));
 }
 
 /**
@@ -366,18 +322,22 @@ export function SourcePane({
 						</Heading>
 						<EditorTitleRule />
 					</Stack>
-					<Text tone="muted">
-						<ReadBody doc={compared.source.doc} changed={changedWords(compared, names)} current={current} />
-					</Text>
+					<ReadBody
+						doc={compared.source.doc}
+						marks={changedMarks(compared, names)}
+						mark="source"
+						muted
+						current={current}
+					/>
 				</Box>
 			</Box>
 		</ResizablePane>
 	);
 }
 
-/** A block's words as the comparison reads them: with the site's names, a block with values leads with its name line, and a formula is its source. */
+/** A block's words in a line: with the site's names, a block with values leads with its name line, and a formula is its source. */
 function textOf(block: Block | null | undefined, names?: BlockNames) {
-	const shown = block ? shownBlocks({ type: "doc", blocks: [block] }, names)[0] : undefined;
+	const shown = block ? blockWords(block, names) : undefined;
 	return shown ? [shown.values, shown.text].filter((line) => line).join("\n") : "";
 }
 
@@ -452,13 +412,14 @@ export function usePairedRows(compared: Compared | null, catalogs: BodyCatalogs 
 	const names = useBlockNames();
 	return useMemo(() => {
 		if (!compared) return null;
-		const changed = changedWords(compared, names);
+		const marks = changedMarks(compared, names);
 		const shown = (block: Block): PairedSourceBlock => {
-			const look = shownBlocks({ type: "doc", blocks: [block] }, names)[0]?.look;
-			return {
-				look: look === "heading" ? "heading" : look === "code" ? "code" : "text",
-				parts: changed.get(block.id) ?? [{ text: textOf(block, names), changed: false }],
+			const own: ReadMarks = {
+				words: new Map([...marks.words].filter(([id]) => inBlock(block, id))),
+				values: new Map([...marks.values].filter(([id]) => inBlock(block, id))),
+				code: new Map([...marks.code].filter(([id]) => inBlock(block, id))),
 			};
+			return { key: JSON.stringify([block, [...own.words]]), doc: { type: "doc", blocks: [block] }, marks: own };
 		};
 		return {
 			source: new Map(compared.source.doc.blocks.map((block) => [block.id, shown(block)])),
@@ -472,6 +433,10 @@ export function usePairedRows(compared: Compared | null, catalogs: BodyCatalogs 
 		};
 	}, [compared, catalogs, t, names]);
 }
+
+/** Whether a block, or one it holds, has this id. */
+const inBlock = (block: Block, id: string): boolean =>
+	block.id === id || (block.children ?? []).some((child) => inBlock(child, id));
 
 /**
  * The source and the translation side by side (TranslatePaired): the head with each side's last edit, the titles, the translation's written in
@@ -717,10 +682,15 @@ export function TranslationMargin({
 					discardLabel={t("translation.skip")}
 					onDiscard={() => decide({ do: "skip", from: mark.from })}
 				>
-					<MemoDiff afterLabel={t("translation.source")} after={textOf(mark.source, names)} />
+					<MemoDiff
+						afterLabel={t("translation.source")}
+						after={mark.source ? <ReadBody doc={{ type: "doc", blocks: [mark.source] }} /> : null}
+					/>
 				</MemoCardPopover>
 			);
-		const diff = readableWordDiff(textOf(mark.before, names), textOf(mark.after, names));
+		// The block as it was and as it is, each read as the editor draws it, the words that differ marked.
+		const was: Doc = { type: "doc", blocks: mark.before ? [mark.before] : [] };
+		const now: Doc = { type: "doc", blocks: mark.after ? [mark.after] : [] };
 		return (
 			<MemoCardPopover
 				{...shared}
@@ -744,10 +714,10 @@ export function TranslationMargin({
 				<MemoDiff
 					beforeLabel={t("translation.before")}
 					afterLabel={t("translation.after")}
-					before={<Words parts={diff.mine} removed />}
+					before={<ReadBody doc={was} marks={sideMarks(was, now, "mine", names)} mark="was" />}
 					{...(mark.kind === "removed"
 						? { none: t("translation.mark.gone") }
-						: { after: <Words parts={diff.server} /> })}
+						: { after: <ReadBody doc={now} marks={sideMarks(now, was, "server", names)} mark="source" /> })}
 				/>
 			</MemoCardPopover>
 		);

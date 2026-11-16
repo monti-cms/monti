@@ -12,6 +12,7 @@ import {
 	moveLineRules,
 	ruleRanges,
 } from "@monti-cms/core/code";
+import type { CodeLineTone } from "@monti-cms/ui";
 import { Extension } from "@tiptap/core";
 import type { Node as EditorNode } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
@@ -112,9 +113,24 @@ export function hiddenLines(node: EditorNode, folds: ReadonlyMap<string, boolean
 	return hidden;
 }
 
+/** What a line's effects draw in the editor: its ground and its mark (doc 17). */
+export function looksOf(settings: CodeBlockSettings, effects: readonly LineEffect[], line: number) {
+	const on = effects.filter((effect) => effect.start <= line && line < effect.end);
+	let tone: CodeLineTone | undefined;
+	let mark: string | undefined;
+	for (const definition of settings.lineEffects) {
+		if (!on.some((effect) => effect.name === definition.name)) continue;
+		const look = definition.editor;
+		if (!tone && look && !look.wavy && look.tone)
+			tone = look.tone === "success" ? "plus" : look.tone === "danger" ? "minus" : "highlight";
+		mark ??= look?.marker;
+	}
+	return { tone, mark };
+}
+
 // --- Colours ---------------------------------------------------------------------------------------------------------------------------------
 
-type Piece = { from: number; to: number; light?: string; dark?: string; fontStyle?: number };
+export type Piece = { from: number; to: number; light?: string; dark?: string; fontStyle?: number };
 
 /** One highlighter per page, opened when the first code block draws, with the site's themes; languages load as blocks need them. */
 let colours: Promise<CodeColors> | null = null;
@@ -140,12 +156,16 @@ function remember(key: string, pieces: Piece[]) {
 	}
 }
 
-function ask(view: EditorView, settings: CodeBlockSettings, language: string, code: string) {
+/**
+ * A code's colours: asked of the one highlighter once per page and kept, so the editor's block and a read-only view of the same code colour it from
+ * one answer (`ReadBody`). A language the highlighter does not know has none.
+ */
+export function codeColours(settings: CodeBlockSettings, language: string, code: string): Promise<Piece[]> {
 	const key = colourKey(language, code);
-	if (coloured.has(key) || asked.has(key)) return;
-	asked.add(key);
+	const known = coloured.get(key);
+	if (known) return Promise.resolve(known);
 	colours ??= codeHighlighter({ themes: settings.themes, languages: settings.languages }, { lazy: true });
-	void colours
+	return colours
 		.then(async (highlighter) => {
 			await highlighter.load(language);
 			const pieces: Piece[] = [];
@@ -165,13 +185,23 @@ function ask(view: EditorView, settings: CodeBlockSettings, language: string, co
 				}
 			});
 			remember(key, pieces);
+			return pieces;
 		})
-		.catch(() => remember(key, []))
-		.finally(() => {
-			asked.delete(key);
-			if (!view.isDestroyed)
-				view.dispatch(view.state.tr.setMeta(codeToolsKey, { coloured: true }).setMeta("addToHistory", false));
+		.catch(() => {
+			remember(key, []);
+			return [];
 		});
+}
+
+function ask(view: EditorView, settings: CodeBlockSettings, language: string, code: string) {
+	const key = colourKey(language, code);
+	if (coloured.has(key) || asked.has(key)) return;
+	asked.add(key);
+	void codeColours(settings, language, code).finally(() => {
+		asked.delete(key);
+		if (!view.isDestroyed)
+			view.dispatch(view.state.tr.setMeta(codeToolsKey, { coloured: true }).setMeta("addToHistory", false));
+	});
 }
 
 // --- Decorations -----------------------------------------------------------------------------------------------------------------------------

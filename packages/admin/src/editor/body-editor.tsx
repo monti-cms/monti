@@ -1,18 +1,19 @@
 import { type Doc, type MediaItem, type MediaQueryResult, sameJson } from "@monti-cms/core";
 import { EditorBody } from "@monti-cms/ui";
 import { type Editor, EditorContent } from "@tiptap/react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MediaPickerDialog } from "../media/media-picker-dialog";
 import { useAcceptFiles } from "../media/upload-problem";
 import { useKeepFilesInPage } from "../media/use-file-drop";
 import { useUpload } from "../media/use-upload";
-import { useAdmin } from "../operations/admin-context";
 import { useRead } from "../operations/use-operation";
 import { BlockRequestContext, EntryLocaleContext } from "./block-api";
 import { type BlockTranslation, useBlockHandle } from "./block-menu";
 import type { BodyCatalogs } from "./catalog";
 import { FormatCard } from "./format-card";
 import { liveDom } from "./live-view";
+import { MarkLooks } from "./mark-looks";
 import {
 	EditorMedia,
 	type EditorMediaValue,
@@ -24,6 +25,7 @@ import {
 	useBodyFiles,
 } from "./media-context";
 import { type BodyProposal, showProposals, takeInEditor, takenIn } from "./proposal-marks";
+import { ReadBody } from "./read-body";
 import { type PickedText, pickedText } from "./request-marks";
 import { nodeName } from "./schema";
 import { useSlashMenu } from "./slash-menu";
@@ -230,9 +232,20 @@ export function BodyEditor({
 			editor.view.dispatch(showPlaceholders(editor.state, placeholders.texts));
 	}, [editor, placeholders]);
 
+	// The cells the editor makes for the source blocks of a side-by-side view, as they come and go: each has its block drawn in it (`ReadBody`).
+	const [cells, setCells] = useState<ReadonlyMap<HTMLElement, string>>(new Map());
+	const mount = useCallback((element: HTMLElement, source: string, on: boolean) => {
+		setCells((was) => {
+			const next = new Map(was);
+			if (on) next.set(element, source);
+			else next.delete(element);
+			return next;
+		});
+	}, []);
 	useEffect(() => {
-		if (editor && !editor.isDestroyed) editor.view.dispatch(showPaired(editor.state, paired));
-	}, [editor, paired]);
+		if (editor && !editor.isDestroyed)
+			editor.view.dispatch(showPaired(editor.state, paired ? { ...paired, mount } : null));
+	}, [editor, paired, mount]);
 
 	const items = proposals?.items;
 	const current = proposals?.current ?? null;
@@ -269,6 +282,14 @@ export function BodyEditor({
 					</BlockRequestContext.Provider>
 				</EntryLocaleContext.Provider>
 				<MarkLooks />
+				{paired
+					? [...cells].flatMap(([element, source]) => {
+							const block = paired.source.get(source);
+							return block
+								? [createPortal(<ReadBody doc={block.doc} marks={block.marks} mark="source" muted />, element, source)]
+								: [];
+						})
+					: null}
 				{editor && margin ? margin(editor) : null}
 				{handle.overlay}
 				{tables.overlay}
@@ -296,16 +317,5 @@ export function BodyEditor({
 				)}
 			</EditorBody>
 		</EditorMedia.Provider>
-	);
-}
-
-/**
- * The site's marks' looks (doc 18): each mark's site component loads its own stylesheet (`<style href precedence>`, once), so the editor draws a colour
- * or a tooltip's words as the site does. They are drawn here once, out of sight, for that.
- */
-function MarkLooks() {
-	const { marks } = useAdmin();
-	return (
-		<div hidden>{[...marks.values()].map(({ type, Site }) => (Site ? <Site key={type} mark={{ type }} /> : null))}</div>
 	);
 }

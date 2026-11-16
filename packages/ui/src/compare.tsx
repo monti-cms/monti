@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "./cn";
+import { EditorBody } from "./editor-body";
 import { Highlight } from "./proposal-marks";
 
 /**
@@ -86,25 +87,12 @@ function CompareTitle({ className, ...props }: React.ComponentProps<"h2">) {
 	return <h2 data-slot="compare-title" className={cn("mb-monti-20 text-monti-page", className)} {...props} />;
 }
 
-/** The blocks of the entry, in the reading size. */
+/**
+ * The blocks of the entry as they read: the editor's own text looks (`EditorBody` read only), so the plain elements put in (`p`, `h2`, `ul`, `pre`,
+ * `table`) are drawn as the editor draws them. The app reads a body with `ReadBody`; this is for what is drawn by hand (a story, a spec).
+ */
 function CompareBody({ className, ...props }: React.ComponentProps<"div">) {
-	return <div data-slot="compare-body" className={cn("text-monti-reading", className)} {...props} />;
-}
-
-/** A heading block of the entry (a level-3 heading here, whatever its own level). */
-function CompareHeading({ className, ...props }: React.ComponentProps<"h3">) {
-	return (
-		<h3
-			data-slot="compare-heading"
-			className={cn("mt-monti-32 mb-monti-12 text-monti-heading", className)}
-			{...props}
-		/>
-	);
-}
-
-/** A paragraph, or a list, quote or any block that reads as text. Line breaks inside it are kept. */
-function CompareParagraph({ className, ...props }: React.ComponentProps<"p">) {
-	return <p data-slot="compare-paragraph" className={cn("mb-monti-20 whitespace-pre-line", className)} {...props} />;
+	return <EditorBody readOnly data-slot="compare-body" className={className} {...props} />;
 }
 
 /**
@@ -116,20 +104,6 @@ function CompareValues({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="compare-values"
 			className={cn("mb-monti-4 text-monti-caption text-monti-subtle", className)}
-			{...props}
-		/>
-	);
-}
-
-/** A block that is code, or text the screen has no look for: fixed-width, in the inner box. */
-function CompareCode({ className, ...props }: React.ComponentProps<"pre">) {
-	return (
-		<pre
-			data-slot="compare-code"
-			className={cn(
-				"mb-monti-20 overflow-x-auto whitespace-pre-wrap break-words rounded-monti-lg bg-monti-muted px-monti-16 py-monti-12 text-monti-code",
-				className,
-			)}
 			{...props}
 		/>
 	);
@@ -216,19 +190,12 @@ function CompareRow({
 				{note && <span className="text-monti-warning">{note}</span>}
 			</span>
 			{!single && (
-				<div
-					className={cn(
-						"min-w-0 bg-monti-tool px-monti-24 py-monti-16 **:data-[slot=compare-code]:mb-0 **:data-[slot=compare-code]:bg-monti-selected",
-						!head && "text-monti-muted",
-					)}
-				>
-					{source}
-				</div>
+				<div className={cn("min-w-0 bg-monti-tool px-monti-24 py-monti-16", !head && "text-monti-muted")}>{source}</div>
 			)}
 			<div
 				className={cn(
 					// 40px before the words: the block handle of the translation written here (24px, 4px off the words) stays inside the cell.
-					"min-w-0 border-monti-default border-l py-monti-16 pr-monti-24 pl-monti-40 **:data-[slot=compare-code]:mb-0",
+					"min-w-0 border-monti-default border-l py-monti-16 pr-monti-24 pl-monti-40",
 					single && "border-l-0 pl-monti-24",
 					current && "bg-monti-block",
 				)}
@@ -303,9 +270,6 @@ export {
 	Compare,
 	CompareBlock,
 	CompareBody,
-	CompareCode,
-	CompareHeading,
-	CompareParagraph,
 	CompareProperty,
 	CompareRow,
 	CompareRows,

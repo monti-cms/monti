@@ -373,9 +373,9 @@ export function requiredMark(sources) {
  * and a dictionary text built with a plural or a select (only the literal parts of it are read).
  */
 export const MONO_PROP_VALUES = new Map([
-	["admin/src/assistant/prose.tsx", "the code of a fenced block in an answer"],
 	["admin/src/editor/block-api.tsx", "the source of a block, typed text"],
 	["admin/src/editor/code/code-view.tsx", "a code block's file name and its id"],
+	["admin/src/editor/read-body.tsx", "a code block's file name"],
 	["admin/src/editor/code/rules-card.tsx", "a rule's pattern, and the text it is typed as"],
 	["admin/src/editor/media-views.tsx", "a picture's address"],
 	["admin/src/screens/activity/activity-panel.tsx", "a field's old and new value, as stored"],

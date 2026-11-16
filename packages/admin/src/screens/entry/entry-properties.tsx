@@ -29,8 +29,9 @@ import type { FieldUploads } from "../../media/use-field-uploads";
 import { useAdmin } from "../../operations/admin-context";
 import type { EntryView } from "../../plugins";
 import { type Layout, type SchemaRead, shownLayout } from "../settings/schema-draft";
-import { FieldInput, FieldToggle, SwitchRow, standsAsSwitch } from "./field-input";
+import { FieldInput, FieldToggle, standsAsSwitch } from "./field-input";
 import { MediaField, SharedMediaValue } from "./media-field";
+import { PropertyRow } from "./property-row";
 import { FieldChange } from "./translation";
 import type { EntryEditorModel, EntryRead } from "./use-entry-editor";
 import { useRelationField } from "./use-relation-field";
@@ -473,7 +474,7 @@ export function EntryProperties({
 				/>
 			);
 			return (
-				<SwitchRow
+				<PropertyRow
 					key={key}
 					id={id}
 					name={fieldName(key, values[key]?.label, t)}
@@ -518,52 +519,51 @@ export function EntryProperties({
 			);
 		};
 		return (
-			<FormField
+			<PropertyRow
 				key={key}
-				// Undo in a field a fill wrote takes the fill back as one step, as "Discard" does (AS-30): the browser's own undo knows
-				// nothing of a value put in by the screen.
-				onKeyDown={
-					filledNow && fills
-						? (event) => {
-								// The field's own input only: keys bubble here from a picker's portal too (its search box has its own undo). Not
-								// while a search typed in the field or a word being composed is the input's to undo first.
-								if (
-									!isUndoKey(event) ||
-									event.defaultPrevented ||
-									event.nativeEvent.isComposing ||
-									searched.current.has(path) ||
-									!event.currentTarget.contains(event.target as Node)
-								)
-									return;
-								event.preventDefault();
-								fills.discard(path);
-							}
-						: undefined
-				}
-				onInput={filledNow ? () => searched.current.add(path) : undefined}
-				onBlur={(event) => {
-					if (!event.currentTarget.contains(event.relatedTarget as Node | null)) searched.current.delete(path);
+				id={id}
+				name={fieldName(key, values[key]?.label, t)}
+				required={marksRequired && required(key)}
+				label={{
+					...(listOnly ? { id: `${id}-label` } : {}),
+					changed: proposedLabel,
+					// While a proposal waits the row is the proposal's alone: no count, no mark of the source's change beside "discard".
+					action: proposedLabel ? undefined : [fillButton, note, change].filter(Boolean).length > 1 ? (
+						<Inline gap={8} align="baseline">
+							{fillButton}
+							{note}
+							{change}
+						</Inline>
+					) : (
+						(fillButton ?? change ?? note)
+					),
+				}}
+				field={{
+					// Undo in a field a fill wrote takes the fill back as one step, as "Discard" does (AS-30): the browser's own undo knows
+					// nothing of a value put in by the screen.
+					onKeyDown:
+						filledNow && fills
+							? (event) => {
+									// The field's own input only: keys bubble here from a picker's portal too (its search box has its own undo). Not
+									// while a search typed in the field or a word being composed is the input's to undo first.
+									if (
+										!isUndoKey(event) ||
+										event.defaultPrevented ||
+										event.nativeEvent.isComposing ||
+										searched.current.has(path) ||
+										!event.currentTarget.contains(event.target as Node)
+									)
+										return;
+									event.preventDefault();
+									fills.discard(path);
+								}
+							: undefined,
+					onInput: filledNow ? () => searched.current.add(path) : undefined,
+					onBlur: (event) => {
+						if (!event.currentTarget.contains(event.relatedTarget as Node | null)) searched.current.delete(path);
+					},
 				}}
 			>
-				<FormFieldLabel
-					{...(listOnly ? { id: `${id}-label` } : { htmlFor: id })}
-					required={marksRequired && required(key)}
-					changed={proposedLabel}
-					// While a proposal waits the row is the proposal's alone: no count, no mark of the source's change beside "discard".
-					action={
-						proposedLabel ? undefined : [fillButton, note, change].filter(Boolean).length > 1 ? (
-							<Inline gap={8} align="baseline">
-								{fillButton}
-								{note}
-								{change}
-							</Inline>
-						) : (
-							(fillButton ?? change ?? note)
-						)
-					}
-				>
-					{fieldName(key, values[key]?.label, t)}
-				</FormFieldLabel>
 				{input()}
 				{was}
 				{fills && fillState ? <FillFailed state={fillState} onRetry={() => fills.again(path)} /> : null}
@@ -573,7 +573,7 @@ export function EntryProperties({
 					</Text>
 				) : null}
 				{after}
-			</FormField>
+			</PropertyRow>
 		);
 	};
 
