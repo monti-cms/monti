@@ -177,7 +177,7 @@
 | 찾는 곳 칩 "Blog Assets ▾" | `MediaPicker`의 `scopes` · `scope` · `onScopeChange` · `scopeLabel` "찾는 곳" | 폴더 안에서 검색 칸 앞에 있다. 메뉴에서 "모든 폴더"로 넓힌다. 라이브러리 화면과 같다. |
 | 경로 "미디어 / Blog Assets / covers" | `MediaPicker`가 `folders`(`depth`), `folder`, `topLabel` "미디어"로 그린다(`pathLabel` "경로"). 위 폴더마다 `TextButton variant="underline" quiet`, 연 곳은 글자 | 늘 타일 위에 있다. 최상위에서는 "미디어" 글자 하나라 폴더를 드나들어도 타일이 뛰지 않는다. 누르면 그 폴더로 간다. 키보드는 새 곳의 첫 카드나 파일에서 이어진다. 라이브러리 화면의 경로와 같이 위로 가는 길이다. "상위 폴더로" 타일은 두지 않는다(2026-11-10 소유자). |
 | 폴더 카드 | `MediaPicker`의 `subfolders`에 `FolderTile`(`name`) | 연 곳의 폴더가 파일 위에 네 열로 온다. 누르면 들어간다. 찾는 동안에는 없다. |
-| 빈 곳 | `MediaPicker`의 `notice` | 폴더도 파일도 없으면 `Empty`(`title` "여기에는 파일이 없습니다."): 보관함의 빈 상태는 보관함 화면과 같다(만들며 정함 (2026-11-14)). 찾은 것이 없으면 `Text variant="note" tone="subtle"` "맞는 파일이 없습니다." 한 줄. |
+| 빈 곳 | `MediaPicker`의 `notice` | 폴더도 파일도 없으면 `Empty`(`title` "여기에는 파일이 없습니다."): 보관함의 빈 상태는 보관함 화면과 같다(만들며 정함 (2026-11-14)). 찾은 것이 없으면 목록과 같은 `NoMatchLine` 한 줄: "맞는 파일이 없습니다."와 `TextButton` "검색어 지우기"(걸린 것이 검색어뿐이다. 누르면 검색과 "모든 폴더"를 푼다). 이 줄의 버튼도 눌러 줄이 사라지면 포커스를 창 안에 둔다. |
 | 타일 | `MediaPicker`의 `children`에 `Tile`(파일은 `preview`에 `FilePreview`) | 연 곳에 바로 든 파일이다. 이미지 자리에서는 이미지만, 파일 자리에서는 파일만 있다. 찾는 동안 세부 줄이 하위 폴더 경로부터 말한다("covers · 2000×1333 · 사용 안 함"). 하나를 고르면 고름 테가 생긴다. 고른 채 알약을 누르면 바로 들어간다. 대체 텍스트와 캡션은 넣은 뒤 편집기에서 쓴다. |
 | "더 보기" | `MediaPicker`의 `children` 끝에 `TextButton` | 100개를 넘을 때만 있다. 눌러 100개를 더 읽는다(2026-11-09). 1000개까지 읽고, 그보다 많으면 `Text variant="note" tone="subtle"` "더 있습니다. 검색으로 찾아 주세요."가 대신한다. |
 | "올리기" | `MediaPicker`의 `uploadLabel`, `onUpload` | 왼쪽 아래, 올리기 아이콘이 붙은 ghost 버튼이다(`button.md`). 고른 파일은 붙여넣기처럼 페이지에 넘기고, 연 폴더로 올라간다. |
