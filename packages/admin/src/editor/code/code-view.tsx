@@ -506,6 +506,8 @@ function LanguageButton({
 }) {
 	const { t } = useAdmin();
 	const [typed, setTyped] = useState("");
+	// The row the keyboard stands on: the current language when the list opens (so the ✓ and the mark are one row), the first match once something is typed.
+	const [lit, setLit] = useState<string | undefined>(undefined);
 	const query = typed.trim().toLowerCase();
 	const rows = listed.filter(
 		(id) => !query || id.toLowerCase().includes(query) || languageName(id).toLowerCase().includes(query),
@@ -516,6 +518,7 @@ function LanguageButton({
 			open={open}
 			onOpenChange={(next) => {
 				onOpenChange(next);
+				setLit(undefined);
 				if (!next) setTyped("");
 			}}
 		>
@@ -530,12 +533,15 @@ function LanguageButton({
 				<Caret />
 			</FloatingBarButton>
 			<PopoverContent anchor={anchor} align="start" padding="menu" width="md">
-				<Command shouldFilter={false}>
+				<Command shouldFilter={false} value={lit ?? (query ? undefined : current || "plain")} onValueChange={setLit}>
 					<CommandInput
 						placeholder={t("editor.code.findLanguage")}
 						aria-label={t("editor.code.findLanguage")}
 						value={typed}
-						onValueChange={setTyped}
+						onValueChange={(next) => {
+							setTyped(next);
+							setLit(undefined);
+						}}
 					/>
 					<CommandList>
 						{rows.length === 0 ? <CommandEmpty>{t("editor.code.noLanguage")}</CommandEmpty> : null}

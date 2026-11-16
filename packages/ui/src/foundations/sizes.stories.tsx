@@ -30,7 +30,7 @@ export const Widths: Story = {
 				{tokens.width.tokens.map(({ name, value, usage }) => (
 					<Stack key={name} gap={2}>
 						<div className="h-3 rounded-monti-sm bg-monti-muted" style={{ width: px(name) }} />
-						<Text variant="meta">
+						<Text variant="caption">
 							{classOf(name)} · {value}
 						</Text>
 						<Text variant="note" tone="muted">

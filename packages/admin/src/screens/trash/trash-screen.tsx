@@ -315,11 +315,9 @@ export function TrashScreen({
 	const header = (
 		<PageHeader
 			title={place?.name ?? t("frame.trash")}
-			meta={
+			note={
 				!place ? undefined : place.daysLeft < URGENT_DAYS ? (
-					<Text mono tone="warning">
-						{t("trash.left", { days: place.daysLeft })}
-					</Text>
+					<Text tone="warning">{t("trash.left", { days: place.daysLeft })}</Text>
 				) : (
 					t("trash.left", { days: place.daysLeft })
 				)

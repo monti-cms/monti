@@ -49,7 +49,7 @@ function FileBlock({
 			<span className="min-w-0 flex-1 truncate text-monti-body">{name}</span>
 			<span
 				className={cn(
-					"flex-none font-mono text-monti-meta",
+					"flex-none font-mono text-monti-caption",
 					tone === "danger" ? "text-monti-danger" : "text-monti-subtle",
 				)}
 			>

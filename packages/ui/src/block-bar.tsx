@@ -28,7 +28,7 @@ function ResizeCorner({
 			aria-hidden={top || undefined}
 			tabIndex={top ? -1 : undefined}
 			className={cn(
-				"absolute z-1 size-[11px] rounded-monti-sm border border-monti-strong bg-monti-page p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50",
+				"absolute z-1 size-[11px] rounded-monti-sm border border-monti-strong bg-monti-page p-0 outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60",
 				top ? "-top-[5px]" : "-bottom-[5px]",
 				corner === "nw" || corner === "sw" ? "-left-[5px]" : "-right-[5px]",
 				corner === "nw" || corner === "se" ? "cursor-nwse-resize" : "cursor-nesw-resize",
@@ -92,7 +92,7 @@ function BlockBox({
 				aria-hidden="true"
 				// Its own box's state only (the parent): a picture or a file inside a picked block draws no line of its own.
 				data-slot="block-line"
-				className="pointer-events-none absolute inset-0 hidden rounded-monti-md outline-offset-0 [:focus-visible>&]:block [:focus-visible>&]:ring-2 [:focus-visible>&]:ring-monti-contrast/50 [[data-selected]>&]:block [[data-selected]>&]:outline-2 [[data-selected]>&]:outline-monti-contrast"
+				className="pointer-events-none absolute inset-0 hidden rounded-monti-md outline-offset-0 [:focus-visible>&]:block [:focus-visible>&]:ring-2 [:focus-visible>&]:ring-monti-contrast/60 [[data-selected]>&]:block [[data-selected]>&]:outline-2 [[data-selected]>&]:outline-monti-contrast"
 			/>
 		</div>
 	);

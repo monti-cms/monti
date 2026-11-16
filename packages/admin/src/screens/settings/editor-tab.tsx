@@ -45,7 +45,7 @@ export function EditorTab({ model, collection: c }: { model: SettingsDraft; coll
 						item.label
 					)}
 					{model.changed.includes(item.path) ? (
-						<Text variant="meta" tone="warning">
+						<Text variant="caption" tone="warning">
 							{t("settings.editor.changed")}
 						</Text>
 					) : null}

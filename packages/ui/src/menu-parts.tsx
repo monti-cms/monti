@@ -55,9 +55,9 @@ export const MENU_TICK =
 /** The mark on a row that opens a second level. After a value it sits 4px from it. */
 export const MENU_SUB_MARK = "ml-auto [[data-slot=menu-value]+&]:ml-monti-4";
 
-/** The search row on top of a list card (a searchable list, a long menu): a magnifier and the words, then a rule, 4px above the first row. */
+/** The search row on top of a list card (a searchable list, a long menu): a magnifier and the words, then a rule, 4px above the first row. It is one medium control high (32px, rule included) like the rows under it, whatever menu it is in. */
 export const MENU_SEARCH_ROW =
-	"mb-monti-4 flex items-center gap-monti-8 border-monti-muted border-b px-[9px] pt-monti-6 pb-[9px] text-monti-default";
+	"mb-monti-4 flex min-h-monti-control-md items-center gap-monti-8 border-monti-muted border-b px-[9px] text-monti-default";
 
 /** The magnifier of a {@link MENU_SEARCH_ROW}. */
 export const MENU_SEARCH_ICON = "size-3.5 shrink-0 text-monti-subtle";
@@ -132,7 +132,7 @@ function MenuValue({
 			{...props}
 		>
 			{address ? (
-				<span data-slot="menu-value-address" className="font-mono text-monti-meta text-monti-subtle">
+				<span data-slot="menu-value-address" className="font-mono text-monti-caption text-monti-subtle">
 					{address}
 				</span>
 			) : null}

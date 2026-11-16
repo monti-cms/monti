@@ -127,3 +127,19 @@ export const FullWidth: Story = {
 		</Stack>
 	),
 };
+
+/** A button whose words change (publish, published) takes the room of the widest, so what stands beside it does not move. The pills, resting, done and working, are one width. */
+export const ReservedWidth: Story = {
+	tags: ["visual"],
+	render: () => (
+		<Stack direction="row" gap={16} align="center">
+			<Button reserve={["발행하기", "발행됨"]}>발행하기</Button>
+			<Button reserve={["발행하기", "발행됨"]} disabled>
+				발행됨
+			</Button>
+			<Button reserve={["발행하기", "발행됨"]} loading>
+				발행하기
+			</Button>
+		</Stack>
+	),
+};

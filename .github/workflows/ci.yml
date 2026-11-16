@@ -37,6 +37,7 @@ jobs:
       - run: pnpm check:design
       - run: node --test scripts/check-banner-place.test.mjs
       - run: node --test scripts/check-format.test.mjs
+      - run: node --test scripts/check-type-colour.test.mjs
       # The token files are what scripts/gen-tokens.mjs writes from tokens.json, and the tokens keep the design system's rules (text contrast, one
       # declaration per role).
       - run: pnpm gen:tokens --check

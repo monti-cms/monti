@@ -58,7 +58,7 @@ function ChangeRow({
 			{children}
 			<TextButton
 				variant="quiet"
-				size="meta"
+				size="caption"
 				className="ml-auto"
 				tabIndex={-1}
 				onClick={(event) => {
@@ -236,7 +236,7 @@ function ChangesGroup({
 						<ChangeRow key={item.id} onOpen={item.onOpen} action={undoLabel} onAction={item.onUndo}>
 							<span className="inline-flex items-baseline gap-monti-4">
 								{item.name}{" "}
-								<Text variant="meta" tone={item.tone}>
+								<Text variant="caption" tone={item.tone}>
 									{item.tag}
 								</Text>
 							</span>
@@ -249,7 +249,7 @@ function ChangesGroup({
 								<ChangeRow key={item.id} onOpen={item.onOpen} action={proposals.discardLabel} onAction={item.onDiscard}>
 									<span className="inline-flex items-baseline gap-monti-4">
 										{item.name}{" "}
-										<Text variant="meta" tone="proposal">
+										<Text variant="caption" tone="proposal">
 											{proposals.label}
 										</Text>
 									</span>

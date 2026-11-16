@@ -262,7 +262,7 @@ export function MainScreen({ rowMenu = false, banner }: { rowMenu?: boolean; ban
 	return (
 		<AdminFrame open="posts" folders={[{ name: "시리즈 원고", count: "2" }]} counts={{ trash: "6" }} banner={banner}>
 			<PageColumn width="list">
-				<PageHeader title="게시글" meta="/posts/:slug">
+				<PageHeader title="게시글" address="/posts/:slug">
 					<PostSearch />
 					<NewPostButton />
 				</PageHeader>
@@ -305,12 +305,12 @@ export function MainScreen({ rowMenu = false, banner }: { rowMenu?: boolean; ban
 											{post.tags}
 										</TableCell>
 										<TableCell>
-											<Text mono variant="meta">
+											<Text mono variant="caption">
 												{post.language}
 											</Text>
 										</TableCell>
 										<TableCell align="end">
-											<Text mono variant="meta" tone="muted">
+											<Text mono variant="caption" tone="muted">
 												{post.date}
 											</Text>
 										</TableCell>

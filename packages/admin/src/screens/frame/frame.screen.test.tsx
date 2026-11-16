@@ -7,6 +7,7 @@ import { MontiAdmin } from "../../app";
 import type { Transport } from "../../operations/transport";
 import { schema } from "../story-schema";
 import * as frame from "./frame.stories";
+import { setScreenMode } from "./use-screen-mode";
 
 const menu = () => page.getByRole("navigation", { name: "관리 메뉴" });
 
@@ -94,6 +95,24 @@ describe("getting in on the dev server", () => {
 				dev.restore();
 			}
 		});
+});
+
+describe("the screen mode (TT-01)", () => {
+	it("a screen drawn outside the frame has the stored dark mode: the login at its address, and the page reloaded", async () => {
+		setScreenMode("dark");
+		try {
+			// No session: the login screen, which stands outside the sidebar's frame.
+			const story = scene({ loaders: frame.signedIn(undefined, { signedIn: false }) }, frame.default);
+			await story.run();
+			await expect.element(page.getByLabelText("이메일")).toBeVisible();
+			await expect.element(menu()).not.toBeInTheDocument();
+			expect(document.documentElement.dataset.theme).toBe("dark");
+			setScreenMode("light");
+			await expect.poll(() => document.documentElement.dataset.theme).toBe("light");
+		} finally {
+			setScreenMode("system");
+		}
+	});
 });
 
 describe("the frame's banner", () => {

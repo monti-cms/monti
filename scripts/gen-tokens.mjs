@@ -15,6 +15,7 @@
 //
 // It writes nothing, and names the role, when the tokens break a rule of the design system (see `tokenProblems`): a text role people must read under
 // 4.5:1 on its ground, or a value declared twice, so overriding a scale step would not restyle every role on it.
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -35,7 +36,11 @@ const LIGHT = ":where(html:has(.monti-admin))";
 const DARK = ':where(html:is(.dark, [data-theme="dark"]):has(.monti-admin))';
 
 /** The admin bundle ships its fonts under these names (`fontFaces` in `packages/ui/.storybook/fonts.ts`), so they never collide with a site's own copy. */
-const BUNDLED_FACES = { Pretendard: '"Monti Pretendard"', '"IBM Plex Mono"': '"Monti Plex Mono"' };
+const BUNDLED_FACES = {
+	Pretendard: '"Monti Pretendard"',
+	'"IBM Plex Mono"': '"Monti Plex Mono"',
+	'"Pretendard Hangul"': '"Monti Pretendard Hangul"',
+};
 
 /**
  * A height class carries its token's name whole (`height-control-md` is `h-monti-control-md`), so a 32px button size (`size-monti-control-md`) can never
@@ -495,12 +500,22 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
 		console.error(`gen:tokens: ${error.message}`);
 		process.exit(1);
 	}
+	// Each file is written as the repository's biome writes it (`biome check --write`, what the pre-commit hook runs), so a long value that biome wraps is
+	// wrapped here too and the check does not depend on the hook having run.
+	const biome = path.join(ROOT, "node_modules/.bin/biome");
+	const formatted = (file, text) =>
+		execFileSync(biome, ["check", "--write", `--stdin-file-path=${path.relative(ROOT, file)}`], {
+			cwd: ROOT,
+			input: text,
+			encoding: "utf8",
+			stdio: ["pipe", "pipe", "pipe"],
+		});
 	const files = [
 		[TOKENS_CSS, generated.tokens],
 		[THEME_CSS, generated.theme],
 		[TOKENS_TS, generated.layout],
 		[MANAGER_THEME_TS, generated.managerTheme],
-	];
+	].map(([file, text]) => [file, formatted(file, text)]);
 	const relative = (file) => path.relative(ROOT, file);
 	if (process.argv.includes("--check")) {
 		const stale = files.filter(([file, text]) => !existsSync(file) || readFileSync(file, "utf8") !== text);

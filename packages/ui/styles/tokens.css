@@ -45,7 +45,7 @@
 	--monti-border-muted: var(--monti-gray-4);
 	--monti-border-default: var(--monti-gray-5);
 	--monti-border-emphasis: var(--monti-gray-6);
-	--monti-border-strong: var(--monti-gray-7);
+	--monti-border-strong: var(--monti-gray-9);
 	--monti-border-contrast: var(--monti-gray-12);
 	--monti-fg-success: var(--monti-success-11);
 	--monti-fg-warning: var(--monti-warning-11);
@@ -118,6 +118,10 @@
 	--monti-text-heading-line: 30px;
 	--monti-text-heading-weight: 700;
 	--monti-text-heading-tracking: 0em;
+	--monti-text-subheading-size: 19px;
+	--monti-text-subheading-line: 28px;
+	--monti-text-subheading-weight: 600;
+	--monti-text-subheading-tracking: 0em;
 	--monti-text-reading-size: 17px;
 	--monti-text-reading-line: 30px;
 	--monti-text-reading-weight: 400;
@@ -146,25 +150,26 @@
 	--monti-text-caption-line: 16px;
 	--monti-text-caption-weight: 400;
 	--monti-text-caption-tracking: 0em;
-	--monti-text-meta-size: 12px;
-	--monti-text-meta-line: 16px;
-	--monti-text-meta-weight: 400;
-	--monti-text-meta-tracking: 0em;
-	--monti-text-code-size: 12px;
-	--monti-text-code-line: 20px;
-	--monti-text-code-weight: 400;
-	--monti-text-code-tracking: 0em;
 	--monti-text-micro-size: 11px;
 	--monti-text-micro-line: 14px;
 	--monti-text-micro-weight: 400;
 	--monti-text-micro-tracking: 0em;
+	--monti-text-code-size: 12px;
+	--monti-text-code-line: 20px;
+	--monti-text-code-weight: 400;
+	--monti-text-code-tracking: 0em;
+	--monti-text-editor-code-size: 14px;
+	--monti-text-editor-code-line: 24px;
+	--monti-text-editor-code-weight: 400;
+	--monti-text-editor-code-tracking: 0em;
 	--monti-font-sans: "Monti Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
-	--monti-font-mono: "Monti Plex Mono", ui-monospace, Menlo, monospace;
+	--monti-font-mono:
+		"Monti Plex Mono", ui-monospace, Menlo, monospace, "Monti Pretendard Hangul", "Noto Sans KR", "Apple SD Gothic Neo";
 }
 
 :where(html:is(.dark, [data-theme="dark"]):has(.monti-admin)) {
 	color-scheme: dark;
-	--monti-gray-1: #151412;
+	--monti-gray-1: #0e0d0b;
 	--monti-gray-2: #1a1917;
 	--monti-gray-3: #26241f;
 	--monti-gray-4: #2b2925;
@@ -184,15 +189,17 @@
 	--monti-danger-3: #2b1618;
 	--monti-danger-11: #e3918f;
 	--monti-proposal-3: #252b3c;
-	--monti-proposal-11: #93adf5;
+	--monti-proposal-11: #a6b7ea;
 	--monti-bg-page: var(--monti-gray-2);
 	--monti-bg-tool: var(--monti-gray-1);
 	--monti-bg-highlight: #3a352a;
 	--monti-bg-selection: #4a4232;
 	--monti-bg-block: #2a2722;
+	--monti-bg-emphasis: var(--monti-gray-11);
 	--monti-fg-on-emphasis: var(--monti-gray-2);
+	--monti-border-contrast: var(--monti-gray-11);
 	--monti-bg-backdrop: rgba(10, 9, 8, 0.55);
-	--monti-shadow-floating: 0 12px 32px rgba(0, 0, 0, 0.5);
+	--monti-shadow-floating: 0 0 #0000;
 	--monti-shadow-overlay: 0 24px 60px rgba(0, 0, 0, 0.6);
 	--monti-shadow-sheet: -20px 0 50px rgba(0, 0, 0, 0.5);
 }

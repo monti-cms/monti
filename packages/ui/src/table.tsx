@@ -140,7 +140,7 @@ function TableRow({
 				// Cut words in a row whose link covers it stand over the link, so the pointer finds them and they say themselves whole (a row's
 				// second line under its title). Not the words that hold the link (their layer is the row's), and not a cell, which stays static.
 				"[&:has([data-slot=row-link])_:not(td)[data-cut-words]:not(:has([data-slot=row-link]))]:relative [&:has([data-slot=row-link])_:not(td)[data-cut-words]:not(:has([data-slot=row-link]))]:z-1",
-				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted not-data-selected:has-[[data-slot=row-link]:focus-visible]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
+				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted not-data-selected:has-[[data-slot=row-link]:focus-visible]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted aria-disabled:pointer-events-none aria-disabled:opacity-45 data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static data-selected:[&>td:first-child]:before:absolute data-selected:[&>td:first-child]:before:inset-y-0 data-selected:[&>td:first-child]:before:left-0 data-selected:[&>td:first-child]:before:w-[3px] data-selected:[&>td:first-child]:before:bg-(--monti-border-contrast) data-selected:[&>td:first-child]:before:content-['']",
 				twoLine && "[&>td]:py-monti-16",
 				// An outline, not a ring: a table row draws no shadow of its own, and takes no rounded corners either (2026-11-11, owner: left square).
 				dropTarget && "bg-monti-selected! outline-[1.5px] outline-monti-contrast -outline-offset-[1.5px]",
@@ -333,7 +333,7 @@ function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> 
 				className: cn(
 					// Its ring is the row's (the layer over the whole row), taller than its own words: scrolled to at the box's foot, it brings the
 					// rest of the row with it (a two-line row's second line too), so the ring's lower side is not cut.
-					"scroll-mb-8 cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none group-data-untitled/row-title:text-monti-subtle after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50 focus-visible:after:ring-inset",
+					"scroll-mb-8 cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none group-data-untitled/row-title:text-monti-subtle after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/60 focus-visible:after:ring-inset",
 					className,
 				),
 			},
@@ -430,13 +430,13 @@ function RowTitle({
 						whole={addressTitle}
 						className={cn(
 							"relative z-1 max-w-max grow basis-[3ch] text-monti-faint",
-							note ? "text-monti-caption" : "text-monti-meta",
+							note ? "text-monti-caption" : "font-mono text-monti-caption",
 						)}
 					>
 						{note ? (
 							<>
 								{address ? (
-									<span data-slot="row-title-address" className="text-monti-meta">
+									<span data-slot="row-title-address" className="font-mono text-monti-caption">
 										{address}
 									</span>
 								) : null}
@@ -538,8 +538,10 @@ function TableCell({
 			data-truncate={truncate || undefined}
 			className={cn(
 				// Its pieces sit on the middle of the line, not on their letters' baselines: pieces of two sizes on one baseline (a chip, a title) would
-				// make the line taller than either, and the row 2px taller than the design system's 42.
-				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
+				// make the line taller than either. The middle still leaves a line a fraction taller than the 20px one (a 42.28px row), so a cell is 41px
+				// high by its own height, not by its padding and its line: the row is 41px with its rule, whatever the pieces are (measured in
+				// `layout.browser.test.tsx`). A cell that holds a picture or wraps over lines takes its height from them and keeps the 10px above and below.
+				"relative h-[41px] whitespace-nowrap px-monti-10 py-0 align-middle *:align-middle first:pl-monti-12 last:pr-monti-12 has-[[data-slot=row-thumb]]:h-auto has-[[data-slot=row-thumb]]:py-monti-10 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				// The row's check hangs in the left margin, so its cell does not clip. In a row with a link the cells are static and the check stands on the row
 				// itself: there the cell clips as any other, and a first column dragged narrow keeps its words in.
@@ -553,7 +555,7 @@ function TableCell({
 				title !== undefined && "[&>:not([data-slot=row-check])]:relative [&>:not([data-slot=row-check])]:z-1",
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top *:align-top",
-				wrap && "whitespace-normal break-words",
+				wrap && "h-auto whitespace-normal break-words py-monti-10",
 				tone === "muted" && "text-monti-muted",
 				tone === "subtle" && "text-monti-note text-monti-subtle",
 				filler && "p-0",

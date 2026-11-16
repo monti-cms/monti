@@ -174,7 +174,7 @@ function SheetTitle({
 		<SheetPrimitive.Title data-slot="sheet-title" className={cn(PANEL_TITLE, className)} {...props}>
 			{children}
 			{of && (
-				<span className={cn("ml-monti-4 font-normal text-monti-meta text-monti-subtle", ofMono && "font-mono")}>
+				<span className={cn("ml-monti-4 font-normal text-monti-caption text-monti-subtle", ofMono && "font-mono")}>
 					{of}
 				</span>
 			)}

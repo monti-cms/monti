@@ -55,7 +55,7 @@ export const Bands: Story = {
 						{steps.map((step) => (
 							<Stack key={step} gap={4} align="center">
 								<div className="w-4 rounded-monti-sm bg-monti-emphasis" style={{ height: px(`space-${step}`) }} />
-								<Text variant="meta">{step}</Text>
+								<Text variant="caption">{step}</Text>
 							</Stack>
 						))}
 					</Stack>

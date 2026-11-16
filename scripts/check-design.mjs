@@ -60,6 +60,14 @@
  *   format-only         Dates, times, file sizes and the names of languages are written by `packages/admin/src/format/` alone: no
  *                       `Intl.DateTimeFormat` or `Intl.DisplayNames`, no `padStart`, no date part in a template and no `toUpperCase()` in
  *                       the admin's other sources. `check-format.mjs` says what it cannot see. A `design-allow` marker does not skip it.
+ *   mono-words          `font-mono` and `text-monti-micro` (the small role is sans; mono is for values) only in a file named in
+ *                       `MONO_OK` of `check-type-colour.mjs` with its reason. `check-type-colour.mjs` says what it cannot see.
+ *   type-order          The heading roles step down, and the editor body's h2, h3, h4 are not smaller than its text (h4, the text's size, is semibold).
+ *   type-merge          Every type role of `tokens.json` is in the font-size group of `cn.ts`, and that group names no other.
+ *   tabular             `admin.css` sets tabular digits on `.monti-admin` and the body, and no source takes them back.
+ *   screen-mode-root    `data-theme` is written by `use-screen-mode.ts` alone, and `useApplyScreenMode` is called once, by `MontiAdmin` in `app.tsx`.
+ *   token-contrast      `tokens.json` keeps its contrast: text 4.5:1, `border-strong` (the field underline) 3:1, `border-emphasis` 1.25:1, the dark pill darker
+ *                       than the ink, dark state text at most 66% saturated, and a picked table row wearing its left bar. `check-type-colour.mjs` says what it cannot see.
  *   design-allow        A `design-allow` marker without a reason.
  *
  * A value that is measured or computed at runtime (a position under the pointer, a width the user dragged) ends its line with
@@ -71,6 +79,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { problems as bannerPlaces } from "./check-banner-place.mjs";
 import { checked as formatChecked, problems as formatProblems } from "./check-format.mjs";
+import {
+	CN_FILE,
+	FIELD_FILES,
+	monoWords,
+	screenModeRoot,
+	tabular,
+	tokenContrast,
+	typeMerge,
+	typeOrder,
+} from "./check-type-colour.mjs";
 import { problems as typedMarks } from "./check-typed-marks.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1000,7 +1018,6 @@ const OFF_SCALE_SPACE = new Map([
 	["ui/src/chat-message.tsx", "the bubble's sides follow its 14px corner; 3px lines its first line with the avatar"],
 	["ui/src/command.tsx", "menu rows' 9px sides line the words up with the menu's 12px corner and 1px border"],
 	["ui/src/dropdown-menu.tsx", "a caption row 7px tall above and below, measured in the menu board"],
-	["ui/src/entry-status.tsx", "the status dot's 7px gap, measured with the dot's own 1px ring"],
 	["ui/src/field-tree.tsx", "a field nested in a group stands one grip (28px) or grip and name column (44px) in"],
 	["ui/src/floating-bar.tsx", "the bar's 3px ring around its 28px buttons"],
 	["ui/src/heading-icon.tsx", "the level number's 2px pull into the glyph"],
@@ -1135,12 +1152,12 @@ function checkOffSystem() {
 								`\`${word}\`: spacing takes the scale; a part that must leave it says why in OFF_SCALE_SPACE`,
 							);
 					}
-					// One focus ring (the states section of tokens.md): 2px at half ink, or the field's ink underline. Light rings on dark ground (on-emphasis) keep their own.
+					// One focus ring (the states section of tokens.md): 2px at 60% ink (`FOCUS_RING_ALPHA` in check-type-colour.mjs, 3:1 on every ground), or the field's ink underline. Light rings on dark ground (on-emphasis) keep their own.
 					if (/focus/.test(word.split(":").slice(0, -1).join(":"))) {
 						if (/^ring-(\d+|\[\d+px\])$/.test(utility) && utility !== "ring-2")
 							add(full, line, "off-system", `\`${word}\`: the focus ring is 2px (ring-2)`);
-						if (/^(ring|outline)-monti-contrast\/\d+$/.test(utility) && !utility.endsWith("/50"))
-							add(full, line, "off-system", `\`${word}\`: the focus ring is half ink (ring-monti-contrast/50)`);
+						if (/^(ring|outline)-monti-contrast\/\d+$/.test(utility) && !utility.endsWith("/60"))
+							add(full, line, "off-system", `\`${word}\`: the focus ring is 60% ink (ring-monti-contrast/60)`);
 					}
 				}
 			}
@@ -1179,10 +1196,29 @@ const FIXED_HEIGHTS = new Map([
 		]),
 	],
 	[
+		"ui/src/code-frame.tsx",
+		new Map([
+			[
+				"h-[24px]",
+				"a code line of the editor, one `text-editor-code` line (24px), so the grounds of lines meet with no gap",
+			],
+			["size-[24px]", "the fold mark's square, one code line high"],
+		]),
+	],
+	[
 		"ui/src/patch.tsx",
 		new Map([["h-10", "the file name row heading a code change, a row of the card, not a control"]]),
 	],
-	["ui/src/table.tsx", new Map([["h-10", "the table's head row, measured in the list board"]])],
+	[
+		"ui/src/table.tsx",
+		new Map([
+			["h-10", "the table's head row, measured in the list board"],
+			[
+				"h-[41px]",
+				"the cells of a row: 40px of line and padding and the 1px rule, so a row is 41px whatever its pieces are",
+			],
+		]),
+	],
 	[
 		"ui/src/proposal-bubble.tsx",
 		new Map([["h-11", "the floating bar that holds the proposal's buttons (32px each), a bar, not a control"]]),
@@ -1374,6 +1410,33 @@ function checkFormat() {
 }
 checkFormat();
 
+/**
+ * The type and colour rules (`check-type-colour.mjs`): where mono is used, the order of the heading roles, tabular digits. Every file is read
+ * whatever the command line names, as each rule reads a whole file's or the token file's meaning.
+ */
+function checkTypeColour() {
+	const text = (file) => readFileSync(path.join(root, file), "utf8");
+	const sources = Object.fromEntries(files.map(({ file }) => [rel(file), readFileSync(file, "utf8")]));
+	const report = (rule, found) => {
+		for (const { file, line, message } of found)
+			if (inTargets(path.join(root, file))) add(path.join(root, file), line, rule, message);
+	};
+	report("mono-words", monoWords(sources, { themeCss: text(THEME_FILE) }));
+	report(
+		"type-order",
+		typeOrder(JSON.parse(text("packages/ui/tokens/tokens.json")), text("packages/ui/src/editor-body.tsx")),
+	);
+	report("type-merge", typeMerge(JSON.parse(text("packages/ui/tokens/tokens.json")), text(CN_FILE)));
+	report("tabular", tabular(text(ADMIN_CSS_FILE), sources));
+	const modeSources = { ...sources };
+	for (const file of ["packages/admin/src/screen-mode.ts", "packages/next/src/admin.tsx"])
+		if (existsSync(path.join(root, file))) modeSources[file] = text(file);
+	report("screen-mode-root", screenModeRoot(modeSources));
+	const read = Object.fromEntries([...FIELD_FILES, "packages/ui/src/table.tsx"].map((file) => [file, text(file)]));
+	report("token-contrast", tokenContrast(JSON.parse(text("packages/ui/tokens/tokens.json")), { sources: read }));
+}
+checkTypeColour();
+
 const HINTS = {
 	"css-file": "Admin UI is styled with token utilities, not stylesheets.",
 	"admin-css-rule": "admin.css holds document-wide base rules only; style the element with token utilities.",
@@ -1402,16 +1465,30 @@ const HINTS = {
 		"What is off takes no pointer (`pointer-events-none`); a button at work shows the plain cursor (`cursor-default`).",
 	"format-only":
 		"A screen asks packages/admin/src/format/ for a date, a time, a file's size or a language's name; it builds none itself.",
+	"mono-words":
+		"Mono is for values (an address, an id, code, a count); words are sans. A file that draws mono or the small roles is named in MONO_OK (check-type-colour.mjs) with the reason.",
+	"type-order":
+		"The heading roles step down (display, page, heading, subheading) and the editor's h2, h3, h4 are not smaller than the text.",
+	"type-merge":
+		"Add the role to the font-size group in packages/ui/src/cn.ts, or tailwind-merge takes text-monti-<role> for a colour.",
+	"screen-mode-root":
+		"The screen mode is put on the page by use-screen-mode.ts, applied once by MontiAdmin in app.tsx, so every screen has it (the editor and the login outside the frame too).",
+	"token-contrast":
+		"Text 4.5:1, border-strong and the field underline 3:1, the dark pill not the brightest block, the picked row's bar: read from tokens.json (check-type-colour.mjs).",
+	tabular:
+		"Digits are tabular: admin.css says font-variant-numeric: tabular-nums on .monti-admin and the body, and nothing takes it back.",
 	"design-allow": "A marker states why the value cannot be a token.",
 };
 
 if (findings.length > 0) {
 	findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 	console.error(`check-design: ${findings.length} finding(s) that break the admin design system.\n`);
-	for (const [rule, hint] of Object.entries(HINTS)) {
+	// Every rule that found something is listed, with its hint when it has one: a rule added without a hint is still told.
+	const rules = [...new Set([...Object.keys(HINTS), ...findings.map((finding) => finding.rule)])];
+	for (const rule of rules) {
 		const group = findings.filter((finding) => finding.rule === rule);
 		if (group.length === 0) continue;
-		console.error(`${rule} (${group.length}): ${hint}`);
+		console.error(`${rule} (${group.length}): ${HINTS[rule] ?? "(no hint written for this rule)"}`);
 		for (const { file, line, message } of group) console.error(`  ${file}:${line}: [${rule}] ${message}`);
 		console.error("");
 	}

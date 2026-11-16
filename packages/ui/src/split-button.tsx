@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { BUSY_GUARD } from "./busy";
+import { ReservedLabel } from "./button";
 import { Caret } from "./caret";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
@@ -29,6 +30,7 @@ function SplitButton({
 	loading,
 	menuLabel,
 	menu,
+	reserve,
 	align = "end",
 }: {
 	/** The main action's label, with its leading icon first if it has one (`<Add aria-hidden />`). */
@@ -43,6 +45,8 @@ function SplitButton({
 	menuLabel: string;
 	/** The menu's items. */
 	menu: ReactNode;
+	/** The other labels the main half takes: it is as wide as the widest, so its neighbours do not move when the words change. */
+	reserve?: string[];
 	/** Which edge of the control the menu lines up with. */
 	align?: "start" | "center" | "end";
 }) {
@@ -72,7 +76,7 @@ function SplitButton({
 			role="group"
 			data-slot="split-button"
 			className={cn(
-				"inline-flex h-monti-control-lg shrink-0 items-stretch overflow-hidden rounded-monti-full bg-monti-emphasis text-monti-body text-monti-on-emphasis has-focus-visible:ring-2 has-focus-visible:ring-monti-contrast/50",
+				"inline-flex h-monti-control-lg shrink-0 items-stretch overflow-hidden rounded-monti-full bg-monti-emphasis text-monti-body text-monti-on-emphasis has-focus-visible:ring-2 has-focus-visible:ring-monti-contrast/60",
 				disabled && "opacity-45",
 			)}
 		>
@@ -91,11 +95,18 @@ function SplitButton({
 				className={cn(
 					HALF,
 					"gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px] [&>svg:first-child]:-ml-[2px] [&_svg]:size-4 [&_svg]:shrink-0",
-					loading && "gap-[7px] pl-[13px] [&>[data-slot=spinner]+svg]:hidden",
+					// A pill with `reserve` keeps its padding and gap while it works: the room is the stack's, and the spinner stands in its row.
+					loading && !(reserve && reserve.length > 0) && "gap-[7px] pl-[13px] [&>[data-slot=spinner]+svg]:hidden",
 				)}
 			>
-				{loading && <Spinner />}
-				{children}
+				{loading && !(reserve && reserve.length > 0) && <Spinner />}
+				<ReservedLabel
+					reserve={reserve}
+					spinnerSize="size-3.5"
+					spinner={loading && reserve && reserve.length > 0 ? <Spinner /> : undefined}
+				>
+					{children}
+				</ReservedLabel>
 			</ButtonPrimitive>
 			<DropdownMenu open={open && !inert} onOpenChange={setOpen}>
 				<Tooltip>

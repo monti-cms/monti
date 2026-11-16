@@ -14,7 +14,7 @@
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
 | 경로 "미디어 / Blog Assets /" | `PageHeader`의 `trail`에 `TextButton variant="underline"`(지나온 폴더마다 하나) | 누르면 그 폴더로 간다. 폴더 안에서만 보인다(최상위와 "저장소 없음"에는 없다). 위로 가는 길은 이것 하나다. 격자 첫 칸의 "상위 폴더로" 타일은 두지 않는다(2026-11-05 소유자, 원칙 8). |
-| 제목 "Blog Assets" · 개수 | `PageHeader`(`title`은 연 폴더 이름, `meta`는 개수 "14개") | 필터가 걸려도 `meta`는 개수만 쓴다. 화면에 폴더가 보이면 폴더도 센다: "폴더 3개 · 파일 6개"(2026-11-14 만들며 정함, MD-08). 찾는 동안에는 폴더가 보이지 않으므로 파일 수만 쓴다. |
+| 제목 "Blog Assets" · 개수 | `PageHeader`(`title`은 연 폴더 이름, `note`는 개수 "14개") | 필터가 걸려도 `note`는 개수만 쓴다. 화면에 폴더가 보이면 폴더도 센다: "폴더 3개 · 파일 6개"(2026-11-14 만들며 정함, MD-08). 찾는 동안에는 폴더가 보이지 않으므로 파일 수만 쓴다. |
 | "올리기 ▾" | `SplitButton`(앞에 `Upload`, `menuLabel` "더 만들기", `menu`에 `DropdownMenuItem` "새 폴더"(`FolderAdd`)) | 왼쪽은 파일 고르기를 연다. 저장소가 없으면 흐리게 남기지 않고 숨는다. 그때 화면의 알약은 "연결 방법"이다(2026-11-05 소유자, 원칙 7). "새 폴더"는 폴더 타일 행 끝에 새 폴더를 만들고 이름 칸을 연다. 검색, 고르기, 저장소 없음 동안에는 "새 폴더"가 없다. (2026-11-05 소유자: 드물게 쓰는 일이라 버튼 대신 검은 알약의 메뉴에 둔다.) |
 | 보기 "격자 │ 목록" | `Segmented size="sm" inline` | 검색 앞에 둔다. 필터가 아니라 보는 방식이라 머리에 있다(2026-11-10 소유자). |
 | "검색" | `SearchToggle` → `SearchBox` | 누르면 그 자리에서 검색 칸이 열리고 포커스가 간다. 검색어가 있는 동안 남는다. 미디어는 찾을 곳(`targets`)이 없다. 검색어는 검색 칸에만 있다. 폴더 안에서는 칸 앞에 찾는 곳 칩 "Blog Assets ▾"(`scopes`: 연 폴더 · "모든 폴더")가 있다. 기본은 지금 폴더와 그 하위이고, "모든 폴더"는 검색어가 있을 때만 쓰인다. 검색어를 비우면 연 폴더로 돌아간다(2026-11-10 소유자: 도구 행의 찾는 곳 전환을 없앴다). |
@@ -71,7 +71,7 @@
 | 고르기 | `RowCheck`, `ListHead selectAll`, 고른 동안 머리 자리에 `BulkBar colSpan` | 체크는 포인터가 행에 오면 왼쪽 여백에 보인다. 고르는 동안 열 이름 행이 막대가 된다. 그 위에 다른 행은 없다. |
 | 그림 | `RowTitle`의 `thumb`에 `RowThumb` | 이름 열 안에 있다. 파일은 40×30 그림, 폴더 행은 16px 아이콘. |
 | 이름 | `RowTitle`(`TableCell truncate`)과 `RowLink` | 행 어디를 눌러도 열린다(`RowLink`가 행을 덮는다). 옆 패널에 열린 파일의 행은 고른 행과 같다(`selected`). 새 폴더는 표 맨 위 행, `RenameField`(200px)로 이름을 쓴다. 폴더 행은 이름 뒤에 개수(`Count`, `addressTitle`로 그 수). 긴 이름은 …으로 끝나고 다른 열을 밀어내지 않는다. 폴더 행도 폴더 카드처럼 밖에서 끌어 온 파일을 받는다: 파일이 위에 있는 동안 `TableRow dropTarget`이고, 놓으면 연 폴더가 아니라 그 폴더에 올린다. |
-| 사용 · 종류 · 크기 · 치수 · 올린 날 | 모두 `TableCell truncate`(`title`). 사용은 `tone="subtle"`, 종류 · 크기 · 치수는 안에 `Text variant="meta" tone="subtle"`, 날짜는 `align="end"`에 `Text mono variant="meta" tone="muted"` | 글 목록처럼 이름 말고는 회색이고 날짜는 끝에 맞춘다. 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12"이고 올해가 아니면 "25. 10. 12", `title`은 온전한 때다([list.md](list.md)). 좁힌 칸은 "…"로 잘리고 가리키면 `title`이 온전히 말한다. |
+| 사용 · 종류 · 크기 · 치수 · 올린 날 | 모두 `TableCell truncate`(`title`). 사용은 `tone="subtle"`, 종류 · 크기 · 치수는 값이라 안에 `Text mono variant="caption" tone="subtle"`(크기와 치수는 숫자라 `align="end"`이고 열 이름도 같다), 날짜는 `align="end"`에 `Text mono variant="caption" tone="muted"` | 글 목록처럼 이름 말고는 회색이고 날짜는 끝에 맞춘다. 치수가 없는 파일은 칸을 비운다. 날짜는 "10. 12"이고 올해가 아니면 "25. 10. 12", `title`은 온전한 때다([list.md](list.md)). 좁힌 칸은 "…"로 잘리고 가리키면 `title`이 온전히 말한다. |
 | ⋯ | `RowActions` | 파일 행에만 있다. 폴더로 할 일은 오른쪽 클릭 메뉴에 있다. |
 | 올리는 중 · 끊긴 파일 | `TableRow`: `RowTitle thumb`, 칸 다섯을 합친 `Text variant="note"`, ⋯ 자리 | 파일 행 맨 위에 온다. "올리는 중 · 64%" · "대기". 끊긴 파일은 빨간 "올리기 실패" 옆에 `IconButton` `Renew` "다시 올리기"(`size="xs"`), ⋯ 자리에 `TrashCan` "지우기"(`tone="danger"`). 표 밖에 타일로 두지 않는다(2026-11-09 소유자). |
 
@@ -106,7 +106,7 @@
 | 미리보기 | `Image ratio="photo" fit="contain"`(이미지), `FilePreview framed`(파일) | 그림 전체가 4:3 틀 안에 보인다: 세로로 긴 그림은 잘리지 않고 양옆에 틀의 회색 바탕이 남는다. 격자의 타일은 그대로 4:3으로 채워 자른다(MD-14, 만들며 정함 (2026-11-16)). |
 | 파일 이름 | `FormField` + `FormFieldLabel` + `Affix size="md" suffix=".jpg"` | 늘 입력 칸이다. 확장자는 고칠 수 없는 흐린 글자다. |
 | 폴더 | `FormField` + `Select`(`SelectTrigger size="md" width="full"`) | 고른 폴더로 옮긴다(저장으로 적용). |
-| (빠짐, 2026-11-05) 기본 대체 텍스트 | `FormField` + `FormFieldLabel action`(`TextButton tone="proposal" size="micro"` "✦ 채우기") + `Textarea size="md"` | 늘 입력 칸이다. 이미지에만 있다. |
+| (빠짐, 2026-11-05) 기본 대체 텍스트 | `FormField` + `FormFieldLabel action`(`TextButton tone="proposal" size="caption"` "✦ 채우기") + `Textarea size="md"` | 늘 입력 칸이다. 이미지에만 있다. |
 | (빠짐, 2026-11-05) 기본 캡션 | `FormField` + `Input size="md"`(플레이스홀더 "비어 있음") | 늘 입력 칸이다. 이미지에만 있다. |
 | 종류 · 치수 · 크기 · 올린 날 | `DescriptionList` + `DescriptionItem` | 치수와 크기는 목록의 두 열처럼 줄이 둘이다(MD-45, 만들며 정함 (2026-11-16)): "치수"는 웹용과 원본 두 줄("웹 2400×1600" · "원본 …"), "크기"는 "340 KB". 올린 날은 해까지 적는다("2026. 11. 14", MD-44, 만들며 정함 (2026-11-16)). 크기는 "340 KB" · "2.1 MB"로 적고 1 KB가 안 되는 파일은 "1 KB"다(바이트로 적지 않는다, MD-18, 만들며 정함 (2026-11-16)). |
 | 어시스턴트의 이름 제안 | 파일 이름 `Affix`의 `proposal`, 패널 안 `ProposalBubbleDock` + `ProposalBubble` | 분류 패널과 같다. 받거나 버린다. 말풍선은 이 패널이 그리는 제안(이름)만 센다: 폴더로 옮기기와 휴지통 보내기 제안은 대화의 카드와 검토 화면에 있다(T108, 2026-11-13). 이야기: `FilePanelProposedName`. |

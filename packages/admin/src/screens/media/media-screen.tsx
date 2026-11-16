@@ -388,11 +388,11 @@ function FilterMenu<Value extends string>({ label, ...filter }: FilterProps<Valu
 	);
 }
 
-/** A cell of the list that holds a short mono value (a type, a size). */
-function MetaCell({ value }: { value: string }) {
+/** A cell of the list that holds a short mono value (a type, a size). A number or a measure stands at the cell's right edge (`align="end"`), as its column name does. */
+function MetaCell({ value, align }: { value: string; align?: "end" }) {
 	return (
-		<TableCell truncate title={value}>
-			<Text variant="meta" tone="subtle">
+		<TableCell align={align} truncate title={value}>
+			<Text mono variant="caption" tone="subtle">
 				{value}
 			</Text>
 		</TableCell>
@@ -851,10 +851,11 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 				{
 					...sized("size", LIST_COLUMN_SIZE.status),
 					label: t("library.column.size"),
+					align: "end",
 					sort: state.sort === "size" ? state.dir : undefined,
 					menu: sortRows("size"),
 				},
-				{ ...sized("measure", LIST_COLUMN_SIZE.measure), label: t("library.column.measure") },
+				{ ...sized("measure", LIST_COLUMN_SIZE.measure), label: t("library.column.measure"), align: "end" },
 				dateColumn,
 			];
 	const folderThumb = (
@@ -963,12 +964,12 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 													{usesLabel(item)}
 												</TableCell>
 												<MetaCell value={extensionLabel(item.name)} />
-												<MetaCell value={bytes(item.size)} />
-												<MetaCell value={sizeLabel(item)} />
+												<MetaCell align="end" value={bytes(item.size)} />
+												<MetaCell align="end" value={sizeLabel(item)} />
 											</>
 										)}
 										<TableCell align="end" truncate short title={fullTime(item.uploadedAt, language)}>
-											<Text mono variant="meta" tone="muted">
+											<Text mono variant="caption" tone="muted">
 												{shortDate(item.uploadedAt, language)}
 											</Text>
 										</TableCell>
@@ -1007,7 +1008,7 @@ export function MediaScreen({ params, go }: { params: URLSearchParams; go: Go })
 			<PageColumn width="list">
 				<PageHeader
 					title={here?.name ?? t("frame.media")}
-					meta={
+					note={
 						data
 							? // What the page shows is counted: its folders too, when it shows them (MD-08).
 								childFolders.length > 0

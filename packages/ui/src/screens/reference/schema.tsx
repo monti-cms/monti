@@ -149,7 +149,7 @@ export function SchemaPage({
 										묶음 추가
 									</Button>
 								</Inline>
-								<Text as="p" variant="meta" tone="subtle">
+								<Text as="p" variant="caption" tone="subtle">
 									! 필수 · → 관계 · [] 여러 개
 								</Text>
 							</Stack>

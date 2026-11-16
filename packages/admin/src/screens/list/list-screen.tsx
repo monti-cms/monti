@@ -453,7 +453,7 @@ function DocumentListScreen({
 	const header = (
 		<PageHeader
 			title={name}
-			meta={openFolder ? undefined : path}
+			address={openFolder ? undefined : path}
 			trail={
 				openFolder ? (
 					<Inline gap={4}>
@@ -654,7 +654,7 @@ function DocumentListScreen({
 				return (
 					<TableCell key={column.id} align="end" truncate short title={at ? fullTime(at, language) : undefined}>
 						{check}
-						<Text mono variant="meta" tone="muted">
+						<Text mono variant="caption" tone="muted">
 							{shortDate(at, language)}
 						</Text>
 					</TableCell>

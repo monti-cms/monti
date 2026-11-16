@@ -1250,12 +1250,17 @@ describe("the activity log (doc 13, flow 12)", () => {
 				box = box.parentElement;
 			if (!box) return null;
 			box.scrollTop = box.scrollHeight;
-			return Math.round(box.getBoundingClientRect().bottom - link().getBoundingClientRect().bottom);
+			// Not rounded: the table's collapsed last rule leaves half a pixel on the page's own 40px (40.5 is 40).
+			return box.getBoundingClientRect().bottom - link().getBoundingClientRect().bottom;
 		};
-		expect(under()).toBe(40);
+		const kept = (distance: number | null) => {
+			expect(distance).toBeGreaterThanOrEqual(40);
+			expect(distance).toBeLessThanOrEqual(40.5);
+		};
+		kept(under());
 		await userEvent.click(row('"고친 글" 저장').getByText("post/edited-post"));
 		await expect.element(panel()).toBeVisible();
-		expect(under()).toBe(40);
+		kept(under());
 	});
 
 	it("a row's title is a link with the address that opens its details, as every list's title is", async () => {

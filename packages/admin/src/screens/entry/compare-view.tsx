@@ -127,6 +127,7 @@ function CodeCompared({ block }: { block: ReturnType<typeof compareBodies>["mine
 							key={line}
 							number={line + 1}
 							readOnly
+							compact
 							changed={changedLines.size ? (changedLines.has(line) ? t("compare.codeEffects") : "") : undefined}
 							tone={look.tone}
 							mark={look.mark}
@@ -215,7 +216,7 @@ export function CompareView({
 			</TextButton>
 			<Text variant="title">{t(mode === "conflict" ? "compare.conflictTitle" : "compare.draftTitle")}</Text>
 			{address ? (
-				<Text variant="meta" tone="faint" truncate>
+				<Text mono variant="caption" tone="faint" truncate>
 					{address}
 				</Text>
 			) : null}

@@ -24,7 +24,7 @@ function Switch({
 			data-proposal={proposal || undefined}
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
-				"peer group/switch relative inline-flex h-5 w-[34px] shrink-0 items-center rounded-monti-full bg-(--monti-border-default) outline-none transition-colors after:absolute after:-inset-y-2 after:right-0 after:-left-3 hover:not-data-checked:not-data-disabled:not-data-readonly:bg-(--monti-border-strong) focus-visible:ring-2 focus-visible:ring-monti-contrast/50 data-checked:data-proposal:bg-(--monti-fg-proposal) data-checked:data-readonly:bg-(--monti-fg-faint) data-disabled:cursor-default data-readonly:cursor-default data-checked:bg-monti-emphasis data-disabled:opacity-45",
+				"peer group/switch relative inline-flex h-5 w-[34px] shrink-0 items-center rounded-monti-full bg-(--monti-border-default) outline-none transition-colors after:absolute after:-inset-y-2 after:right-0 after:-left-3 hover:not-data-checked:not-data-disabled:not-data-readonly:bg-(--monti-border-strong) focus-visible:ring-2 focus-visible:ring-monti-contrast/60 data-checked:data-proposal:bg-(--monti-fg-proposal) data-checked:data-readonly:bg-(--monti-fg-faint) data-disabled:cursor-default data-readonly:cursor-default data-checked:bg-monti-emphasis data-disabled:opacity-45",
 				className,
 			)}
 			{...props}

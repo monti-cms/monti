@@ -1,5 +1,6 @@
 import "@monti-cms/admin/styles.css";
 import type { AdminBlockDefinition, AdminMarkDefinition, AdminPlugin } from "@monti-cms/admin";
+import { screenModeScript } from "@monti-cms/admin/screen-mode";
 import { AdminApp } from "./admin-app";
 
 /**
@@ -26,6 +27,9 @@ export function AdminPage({
 	return (
 		<>
 			<meta name="robots" content="noindex, nofollow" />
+			{/* The mode before the first paint: the stored one, or the system's (the admin keeps it in the browser, which a server cannot read). */}
+			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: the admin's own script text, with no input in it */}
+			<script dangerouslySetInnerHTML={{ __html: screenModeScript() }} />
 			<AdminApp siteName={siteName} blocks={blocks} marks={marks} plugins={plugins} />
 		</>
 	);

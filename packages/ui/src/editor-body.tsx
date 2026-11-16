@@ -35,7 +35,7 @@ const EDITOR_BODY = cn(
 	"[&_p]:mt-0 [&_p]:mb-monti-20",
 	"[&_[data-align=center]]:text-center [&_[data-align=right]]:text-right",
 	"[&_h2]:mt-monti-32 [&_h2]:mb-monti-12 [&_h2]:text-monti-heading",
-	"[&_h3]:mt-monti-32 [&_h3]:mb-monti-12 [&_h3]:text-monti-title",
+	"[&_h3]:mt-monti-32 [&_h3]:mb-monti-12 [&_h3]:text-monti-subheading",
 	"[&_h4]:mt-monti-32 [&_h4]:mb-monti-12 [&_h4]:text-monti-reading [&_h4]:font-semibold",
 	// Lists: their items line under line, the marker in the margin.
 	"[&_ul]:mt-0 [&_ul]:mb-monti-20 [&_ul]:list-disc [&_ul]:pl-monti-24 [&_ol]:mt-0 [&_ol]:mb-monti-20 [&_ol]:list-decimal [&_ol]:pl-monti-24",
@@ -46,20 +46,24 @@ const EDITOR_BODY = cn(
 	// (`height-control-xs`, the least pressable size), and draws nothing itself; `Checkbox`'s 14px box with its corners and its ✓ is `data-check-box` inside it.
 	// While the text is written it is pressed (or Spaced) to tick and answers the pointer as `Checkbox` does (`CHECK_HOVER`); read only, it is a mark.
 	"[&_[data-check]]:absolute [&_[data-check]]:top-monti-8 [&_[data-check]]:left-0 [&_[data-check]]:flex [&_[data-check]]:size-3.5 [&_[data-check]]:outline-none [&_[data-check]]:after:absolute [&_[data-check]]:after:top-1/2 [&_[data-check]]:after:left-1/2 [&_[data-check]]:after:size-(--monti-height-control-xs) [&_[data-check]]:after:-translate-x-1/2 [&_[data-check]]:after:-translate-y-1/2 [&_[data-check]]:after:content-['']",
-	"[&_[data-check-box]]:flex [&_[data-check-box]]:size-full [&_[data-check-box]]:items-center [&_[data-check-box]]:justify-center [&_[data-check-box]]:rounded-monti-sm [&_[data-check-box]]:border-[1.5px] [&_[data-check-box]]:border-monti-faint [&_[data-check-box]]:text-monti-on-emphasis [&_[data-check-box]]:transition-colors [&_[data-check]:focus-visible>[data-check-box]]:outline-2 [&_[data-check]:focus-visible>[data-check-box]]:outline-monti-contrast/50 [&_[data-check-box]_svg]:invisible",
+	"[&_[data-check-box]]:flex [&_[data-check-box]]:size-full [&_[data-check-box]]:items-center [&_[data-check-box]]:justify-center [&_[data-check-box]]:rounded-monti-sm [&_[data-check-box]]:border-[1.5px] [&_[data-check-box]]:border-monti-faint [&_[data-check-box]]:text-monti-on-emphasis [&_[data-check-box]]:transition-colors [&_[data-check]:focus-visible>[data-check-box]]:outline-2 [&_[data-check]:focus-visible>[data-check-box]]:outline-monti-contrast/60 [&_[data-check-box]_svg]:invisible",
 	"[&_li[data-checked]>[data-check]>[data-check-box]]:border-monti-contrast [&_li[data-checked]>[data-check]>[data-check-box]]:bg-monti-emphasis [&_li[data-checked]>[data-check]_svg]:visible",
 	"[&_[contenteditable=true]_[data-check]]:cursor-pointer [&_[contenteditable=true]_[data-check]:hover>[data-check-box]]:shadow-[0_0_0_5px_var(--monti-bg-selected)] [&_[contenteditable=true]_li:not([data-checked])>[data-check]:hover>[data-check-box]]:border-(color:--monti-fg-muted)",
 	// A quote, code, a table and the divider.
 	"[&_blockquote]:mt-0 [&_blockquote]:mb-monti-20 [&_blockquote]:border-l-2 [&_blockquote]:border-monti-strong [&_blockquote]:pl-monti-16 [&_blockquote]:text-monti-muted [&_blockquote>*:last-child]:mb-0",
-	"[&_pre]:mt-0 [&_pre]:mb-monti-20 [&_pre]:overflow-x-auto [&_pre]:rounded-monti-lg [&_pre]:bg-monti-muted [&_pre]:px-monti-16 [&_pre]:py-monti-12 [&_pre]:font-mono [&_pre]:text-monti-code",
+	"[&_pre]:mt-0 [&_pre]:mb-monti-20 [&_pre]:overflow-x-auto [&_pre]:rounded-monti-lg [&_pre]:bg-monti-muted [&_pre]:px-monti-16 [&_pre]:py-monti-12 [&_pre]:font-mono [&_pre]:text-monti-editor-code",
 	// A table is a light grid while it is written (every cell is a place to type), its head row only bolder (editor-tools.md, the table).
-	"[&_table]:mb-monti-20 [&_table]:w-full [&_table]:table-fixed [&_table]:border-collapse [&_table]:text-monti-body [&_td]:relative [&_td]:border [&_td]:border-monti-muted [&_td]:px-monti-8 [&_td]:py-monti-6 [&_td]:align-top [&_th]:relative [&_th]:border [&_th]:border-monti-muted [&_th]:px-monti-8 [&_th]:py-monti-6 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold",
+	"[&_table]:mb-monti-20 [&_table]:w-full [&_table]:table-fixed [&_table]:border-collapse [&_table]:text-monti-body [&_td]:relative [&_td]:border [&_td]:border-monti-emphasis [&_td]:px-monti-8 [&_td]:py-monti-6 [&_td]:align-top [&_th]:relative [&_th]:border [&_th]:border-monti-emphasis [&_th]:px-monti-8 [&_th]:py-monti-6 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold",
 	// Cells picked by dragging across them.
-	"[&_.selectedCell]:bg-monti-selected",
-	"[&_hr]:mt-monti-8 [&_hr]:mb-monti-24 [&_hr]:border-0 [&_hr]:border-monti-default [&_hr]:border-t",
+	"[&_.selectedCell]:bg-monti-selected [&_.selectedCell]:selection:bg-transparent! [&_.selectedCell_*]:selection:bg-transparent!",
+	"[&_hr]:mt-monti-8 [&_hr]:mb-monti-24 [&_hr]:border-0 [&_hr]:border-monti-emphasis [&_hr]:border-t",
 	// Marks.
 	"[&_a]:underline [&_a]:decoration-monti-strong [&_a]:underline-offset-4",
-	"[&_:not(pre)>code]:rounded-monti-sm [&_:not(pre)>code]:bg-monti-muted [&_:not(pre)>code]:px-monti-4 [&_:not(pre)>code]:font-mono",
+	"[&_:not(pre)>code]:rounded-monti-sm [&_:not(pre)>code]:bg-monti-muted [&_:not(pre)>code]:px-monti-4 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-monti-editor-code",
+	// Inline code in a heading or in bold words takes the size, line and weight of what it stands in: the 14px regular role is for running text.
+	"[&_:is(h2,h3,h4,strong,b)_code]:[font-size:inherit]! [&_:is(h2,h3,h4,strong,b)_code]:[font-weight:inherit]! [&_:is(h2,h3,h4,strong,b)_code]:[line-height:inherit]!",
+	// Raised and lowered marks sit the same distance from the baseline (the reset puts a raised one 0.5em up and a lowered one 0.25em down).
+	"[&_sub]:-bottom-[0.3em] [&_sup]:-top-[0.3em] [&_sub]:relative [&_sup]:relative",
 	// A footnote's number in the text (its order, `data-n`), and the footnotes together at the end under a rule, each with its number in the margin.
 	"[&_[data-footnote-ref]]:cursor-pointer [&_[data-footnote-ref]]:px-px [&_[data-footnote-ref]]:align-super [&_[data-footnote-ref]]:text-monti-caption [&_[data-footnote-ref]]:text-monti-muted [&_[data-footnote-ref]]:after:content-[attr(data-n)] [&_[data-footnote-ref]:hover]:text-monti-default [&_[data-footnote-ref]:hover]:underline [&_[data-footnote-ref]:hover]:underline-offset-2",
 	"[&_[data-footnote]]:relative [&_[data-footnote]]:mb-monti-4 [&_[data-footnote]]:pl-monti-24 [&_[data-footnote]]:text-monti-body [&_[data-footnote]]:text-monti-muted [&_[data-footnote]]:before:absolute [&_[data-footnote]]:before:left-0 [&_[data-footnote]]:before:cursor-pointer [&_[data-footnote]]:before:content-[attr(data-n)_'.']",
@@ -90,7 +94,7 @@ const EDITOR_BODY = cn(
 	"[&_[data-picking]]:selection:bg-transparent",
 	"[&_[data-held]]:opacity-40",
 	"[&_[data-untranslated]]:text-monti-faint",
-	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-meta [&_[data-off]]:after:content-[attr(data-off-label)]",
+	"[&_[data-off]]:text-monti-faint [&_[data-off]]:after:ml-monti-8 [&_[data-off]]:after:text-monti-caption [&_[data-off]]:after:content-[attr(data-off-label)]",
 	"[&_[data-box]]:mb-monti-20 [&_[data-box]]:rounded-monti-lg [&_[data-box]]:bg-monti-muted [&_[data-box]]:px-monti-16 [&_[data-box]]:py-monti-12 [&_[data-box]]:text-monti-note [&_[data-box]]:text-monti-subtle [&_[data-box]]:before:content-[attr(data-box-label)]",
 );
 
@@ -107,7 +111,7 @@ const PAIRED = cn(
 	"[&_.ProseMirror>:not([data-pair])]:mr-monti-24 [&_.ProseMirror>:not([data-pair])]:ml-monti-40 [&_.ProseMirror>:not([data-pair])]:my-monti-16 [&_.ProseMirror>:not([data-pair])]:min-w-0",
 	"[&_[data-pair=rule]]:col-span-full [&_[data-pair=rule]]:h-px [&_[data-pair=rule]]:bg-monti-muted",
 	"[&_[data-pair=end]]:col-span-full [&_[data-pair=end]]:size-0",
-	"[&_[data-pair=kind]]:flex [&_[data-pair=kind]]:flex-col [&_[data-pair=kind]]:gap-monti-2 [&_[data-pair=kind]]:py-monti-16 [&_[data-pair=kind]]:pr-monti-12 [&_[data-pair=kind]]:text-right [&_[data-pair=kind]]:font-mono [&_[data-pair=kind]]:text-monti-micro [&_[data-pair=kind]]:text-monti-subtle [&_[data-pair-note=warning]]:text-monti-warning [&_[data-pair-note=danger]]:text-monti-danger [&_[data-pair-note=success]]:text-monti-success",
+	"[&_[data-pair=kind]]:flex [&_[data-pair=kind]]:flex-col [&_[data-pair=kind]]:gap-monti-2 [&_[data-pair=kind]]:py-monti-16 [&_[data-pair=kind]]:pr-monti-12 [&_[data-pair=kind]]:text-right [&_[data-pair=kind]]:text-monti-micro [&_[data-pair=kind]]:text-monti-subtle [&_[data-pair-note=warning]]:text-monti-warning [&_[data-pair-note=danger]]:text-monti-danger [&_[data-pair-note=success]]:text-monti-success",
 	"[&_[data-pair=source]]:min-w-0 [&_[data-pair=source]]:whitespace-pre-line [&_[data-pair=source]]:border-monti-default [&_[data-pair=source]]:border-r [&_[data-pair=source]]:bg-monti-tool [&_[data-pair=source]]:px-monti-24 [&_[data-pair=source]]:py-monti-16 [&_[data-pair=source]]:text-monti-muted",
 	// The source's words that changed since the translation: the warning underline of `CompareText source`.
 	"[&_[data-pair=source]_mark]:bg-transparent [&_[data-pair=source]_mark]:text-inherit [&_[data-pair=source]_mark]:underline [&_[data-pair=source]_mark]:decoration-[1.5px] [&_[data-pair=source]_mark]:decoration-monti-warning [&_[data-pair=source]_mark]:underline-offset-4",

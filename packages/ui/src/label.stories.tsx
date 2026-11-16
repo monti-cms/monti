@@ -7,7 +7,7 @@ import { StoryCaption } from "./story-caption";
 const meta = {
 	title: "Primitives/Label",
 	component: Label,
-	args: { children: "글 제목", size: "micro", tone: "subtle", hidden: false, required: false },
+	args: { children: "글 제목", size: "caption", tone: "subtle", hidden: false, required: false },
 } satisfies Meta<typeof Label>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -17,7 +17,7 @@ export const Playground: Story = {};
 export const Sizes: Story = {
 	render: () => (
 		<Stack gap={12}>
-			{(["micro", "label", "caption", "body"] as const).map((size) => (
+			{(["label", "caption", "body"] as const).map((size) => (
 				<Stack key={size} gap={4}>
 					<StoryCaption>size {size}</StoryCaption>
 					<Label size={size}>글 제목</Label>

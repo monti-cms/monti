@@ -35,16 +35,16 @@ function Patch({
 			{...props}
 		>
 			<div className="flex h-10 items-center gap-monti-12 border-monti-muted border-b pr-monti-6 pl-monti-12 text-monti-note">
-				<span className="min-w-0 grow truncate text-monti-meta text-monti-muted">{file}</span>
-				{added > 0 && <span className="text-monti-meta text-monti-success">+{added}</span>}
-				{removed > 0 && <span className="text-monti-danger text-monti-meta">−{removed}</span>}
+				<span className="min-w-0 grow truncate font-mono text-monti-caption text-monti-muted">{file}</span>
+				{added > 0 && <span className="font-mono text-monti-caption text-monti-success">+{added}</span>}
+				{removed > 0 && <span className="font-mono text-monti-caption text-monti-danger">−{removed}</span>}
 				{actionLabel && (
 					<Button type="button" variant="ghost" size="sm" onClick={onAction}>
 						{actionLabel}
 					</Button>
 				)}
 			</div>
-			<pre className="m-0 overflow-auto py-monti-6 text-monti-meta">
+			<pre className="m-0 overflow-auto py-monti-6 font-mono text-monti-caption">
 				{lines.map((line, index) => (
 					<span
 						key={index}

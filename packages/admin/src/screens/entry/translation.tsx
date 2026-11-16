@@ -351,7 +351,7 @@ export function SourcePane({
 				<Box paddingX={40} paddingTop={16} paddingBottom={48} maxWidth="reading" centered>
 					<Inline minHeight="control-md">
 						{/* Which copy of the source this is: the one the marks are counted against (doc 04, principle 5; TR-25). */}
-						<Text variant="meta" tone="subtle">
+						<Text variant="caption" tone="subtle">
 							{t(
 								compared.source.state === "draft"
 									? "translation.sourcePane.unpublished"

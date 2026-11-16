@@ -237,7 +237,7 @@ function KeyName({
 				) : null}
 			</Inline>
 			{meta ? (
-				<Text as="div" variant={mono ? "meta" : "note"} mono={mono} tone={tone} truncate>
+				<Text as="div" variant={mono ? "caption" : "note"} mono={mono} tone={tone} truncate>
 					{meta}
 				</Text>
 			) : null}

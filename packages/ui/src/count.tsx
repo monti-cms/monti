@@ -14,7 +14,7 @@ function Count({
 		<span
 			data-slot="count"
 			className={cn(
-				"font-mono text-monti-meta",
+				"font-mono text-monti-caption",
 				tone === "default" && "text-monti-subtle",
 				tone === "warning" && "text-monti-warning",
 				tone === "danger" && "text-monti-danger",

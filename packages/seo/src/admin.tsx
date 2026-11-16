@@ -107,10 +107,10 @@ function SeoPreview({ entry, options }: FieldViewProps) {
 		// Two pictures in the panel's own column, set apart by space and a name each: a border is for what floats (README, principle 3).
 		<Stack gap={16}>
 			<Stack as="section" aria-label={words.searchPreview} gap={4}>
-				<Text variant="micro" tone="faint">
+				<Text variant="caption" tone="subtle">
 					{words.searchPreview}
 				</Text>
-				<Text variant="micro" tone="subtle" truncate>
+				<Text variant="caption" tone="subtle" truncate>
 					{place.join(" › ")}
 				</Text>
 				<Text weight="semibold" lines={2} tone={title ? "default" : "faint"}>
@@ -120,18 +120,18 @@ function SeoPreview({ entry, options }: FieldViewProps) {
 					{description || words.noDescription}
 				</Text>
 				{entry.values[SEO_FIELDS.noindex] === "noindex" ? (
-					<Text variant="micro" tone="warning">
+					<Text variant="caption" tone="warning">
 						{words.hiddenFromSearch}
 					</Text>
 				) : null}
 			</Stack>
 			<Stack as="section" aria-label={words.sharePreview} gap={8}>
-				<Text variant="micro" tone="faint">
+				<Text variant="caption" tone="subtle">
 					{words.sharePreview}
 				</Text>
 				{image ? <Image src={image} alt="" ratio="share" /> : null}
 				<Stack gap={4}>
-					<Text variant="micro" tone="subtle" truncate>
+					<Text variant="caption" tone="subtle" truncate>
 						{entry.siteName}
 					</Text>
 					<Text weight="semibold" lines={2} tone={title ? "default" : "faint"}>

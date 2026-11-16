@@ -12,7 +12,7 @@
 
 | 자리 | 부품 | 이렇게 쓴다 |
 |---|---|---|
-| 제목 "카테고리" · "태그" | `PageHeader`(`title`, 공개 경로가 있으면 `meta`) | 공개 페이지가 없는 항목 컬렉션은 `meta`를 비운다. |
+| 제목 "카테고리" · "태그" | `PageHeader`(`title`, 공개 경로가 있으면 `address`) | 공개 페이지가 없는 항목 컬렉션은 `address`를 비운다. |
 | 검색 | `SearchToggle` → `SearchBox` | 그 자리에서 열린다. 보드는 돋보기만 있는 알약이지만 [field.md](../components/field.md)를 따라 돋보기와 "검색" 글자가 있는 `SearchToggle`이다. |
 | "+ 카테고리 추가" · "+ 태그 추가" | `Button variant="secondary"` | 새 항목을 옆 패널에 빈 채로 연다. |
 

@@ -44,7 +44,7 @@ function Textarea({
 					!action && !props.readOnly && FIELD_HOVER,
 					// A read-only one is a value to read, as `Input readOnly`: nothing to type, so no tint and the rule stays as it is with the focus.
 					!props.readOnly && "focus-visible:border-monti-contrast",
-					"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-default border-b bg-transparent text-monti-default outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-default disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
+					"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-strong border-b bg-transparent text-monti-default outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-default disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
 					!action && FIELD_INSET,
 				),
 				// The design system's textarea sets lines 1.6 times its size; the type role's own line height comes first, so the rule follows it.
@@ -88,7 +88,7 @@ function Textarea({
 			className={cn(
 				cn(
 					FIELD_HOVER,
-					"flex w-full min-w-0 border-monti-default border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
+					"flex w-full min-w-0 border-monti-strong border-b transition-colors focus-within:border-monti-contrast has-[[aria-invalid=true]]:border-monti-danger has-data-proposal:border-monti-proposal has-data-proposal:border-b-[1.5px]",
 					FIELD_INSET,
 				),
 				"items-start",

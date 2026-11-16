@@ -8,6 +8,7 @@
  * The admin's base text, on its root and on the body, because popups (menus, dialogs, tooltips) are portaled to the body: the sans stack, smooth glyphs, and Korean broken between words, not inside them (`keep-all`), except a long
  * token (an address, an identifier) that has no space and breaks where it must (`anywhere`).
  * The body also keeps the app's background from showing through at the admin edges.
+ * Digits are tabular everywhere (equal widths), so a count that grows from 9 to 10, a column of sizes or a clock does not shift what is beside it (F9, 2026-11-16).
  */
 html:has(.monti-admin) body {
 	background-color: var(--monti-bg-page);
@@ -16,6 +17,7 @@ html:has(.monti-admin) body {
 	-moz-osx-font-smoothing: grayscale;
 	word-break: keep-all;
 	overflow-wrap: anywhere;
+	font-variant-numeric: tabular-nums;
 }
 
 /*
@@ -25,7 +27,7 @@ html:has(.monti-admin) body {
 @layer base {
 	:where(html:has(.monti-admin)) * {
 		border-color: var(--monti-border-muted);
-		outline-color: color-mix(in srgb, var(--monti-border-contrast) 50%, transparent);
+		outline-color: color-mix(in srgb, var(--monti-border-contrast) 60%, transparent);
 	}
 }
 
@@ -36,6 +38,7 @@ html:has(.monti-admin) body {
 	-moz-osx-font-smoothing: grayscale;
 	word-break: keep-all;
 	overflow-wrap: anywhere;
+	font-variant-numeric: tabular-nums;
 }
 
 /*

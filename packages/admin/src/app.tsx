@@ -24,6 +24,7 @@ import { AdminFrame, type FrameCounts, type Place } from "./screens/frame/admin-
 import { CollectionBack, TemplatesBack, TrashBack } from "./screens/frame/editor-back";
 import { ReadFailedBanner } from "./screens/frame/read-failed";
 import { ScreenBoundary } from "./screens/frame/screen-boundary";
+import { useApplyScreenMode } from "./screens/frame/use-screen-mode";
 import { KeysScreen } from "./screens/keys/keys-screen";
 import { filterColumn, type ListState, writeState } from "./screens/list/list-query";
 import { ListScreen } from "./screens/list/list-screen";
@@ -399,6 +400,8 @@ export function MontiAdmin({
 	/** The plugins' browser halves (`defineAdminPlugin`): their inputs, views and tool pages (doc 14). */
 	plugins?: AdminPlugin[];
 }) {
+	// The screen mode goes on the page here, once, so every screen has it: the editor and the login stand outside the frame (TT-01).
+	useApplyScreenMode();
 	return (
 		<AdminProvider
 			transport={transport}

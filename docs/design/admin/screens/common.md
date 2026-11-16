@@ -8,7 +8,7 @@
 |---|---|---|
 | 왼쪽 내비게이션 | `Sidebar`와 그 가족(`SidebarProvider`, `SidebarHeader`, `SidebarContent`, `SidebarGroup`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuSub`, `SidebarMenuSubButton`, `SidebarMenuBadge`, `SidebarFooter`, `SidebarScreenMode`, `SidebarRailToggle`) | 자리마다의 쓰임은 [sidebar.md](sidebar.md). 현재 위치는 `SidebarMenuButton`의 활성 상태다. |
 | 페이지 단 | `PageColumn` | 목록 화면(글, 미디어, 휴지통, 활동 기록, 도구의 표)은 `width="list"`, 설정과 입력 화면은 `width="content"`. 페이지 전체가 하나로 스크롤한다. 틀의 페이지 자리(사이드바 옆, 붙은 패널이 있으면 그 옆)가 스크롤하고, 스크롤바는 그 오른쪽 끝에 위에서 아래까지 하나뿐이다. 머리(제목, 검색, 새 글)는 위로 같이 올라가고, 표의 열 이름 줄만 위에 붙어 남는다. 페이지 번호는 목록 끝에 온다. 단 안의 상자(`PageBody`, `ListScroll`)는 스크롤하지 않는다(2026-11-06 소유자: 단 가운데에 선 표의 스크롤바는 이상하다. GitHub 이슈 목록, WordPress 관리자 목록과 같은 방식). |
-| 제목 행 | `PageHeader` | `title`은 화면 이름, `meta`는 목록의 주소 규칙(`/posts/:slug`, mono), `trail`은 폴더 경로(밑줄 `TextButton`)나 검토 화면의 "어시스턴트"(`TextButton variant="quiet"`, 앞에 `ChevronLeft` 아이콘) 같은 돌아가는 길, `children`은 오른쪽 동작(보조 알약 먼저, 검은 알약 하나 마지막). |
+| 제목 행 | `PageHeader` | `title`은 화면 이름, `address`는 목록의 주소 규칙(`/posts/:slug`, mono), `trail`은 폴더 경로(밑줄 `TextButton`)나 검토 화면의 "어시스턴트"(`TextButton variant="quiet"`, 앞에 `ChevronLeft` 아이콘) 같은 돌아가는 길, `children`은 오른쪽 동작(보조 알약 먼저, 검은 알약 하나 마지막). |
 | 제목 아래 탭 (설정, 도구) | `PageToolbar` 안의 `TabLinks`와 `TabLink` | 탭 하나가 페이지 하나다(주소가 바뀐다). 고른 탭은 굵기만 다르다(밑줄 없음). 저장하지 않은 것이 있는 다른 탭은 이름 뒤에 `ChangeDot`. 열린 탭에는 점을 붙이지 않는다. 그 바뀐 곳은 페이지와 저장 묶음이 이미 보인다(원칙 8). |
 | 설정 한 절 | `Section` | 왼쪽에 제목, 오른쪽에 필드. 절마다 위아래 24px과 아래 가는 선, 마지막 절은 `last`로 선이 없다. `stacked`·`dense` 절은 선 없이 여백만으로 나뉜다(원칙 10). 절 이름은 사람이 하는 일이다(원칙 9). 잠긴 값은 절 제목이 아니라 그 줄에 `LockMark`를 붙인다(라벨 뒤, 또는 식별자처럼 값 뒤). 잠긴 스위치는 스위치 대신 글 "켜짐" · "꺼짐"으로 읽히고 그 줄에 자물쇠가 있다. |
 | 저장 묶음 (설정) | `ChangesGroup` | "변경 사항 N ▾" · "모두 되돌리기" · "저장하고 적용". 바뀐 것이 없으면 나타나지 않는다. 저장이 가는 동안 알약은 흐려지지 않고 돌아가는 표시와 "저장 중…"을 보인다(`saving`). 포커스는 알약에 그대로 있고, 다시 눌러도 아무 일도 없다. 막는 것(칸의 오류)이 있어도 알약은 흐리지 않고 누를 수 있다. 누르면 무엇을 고칠지 보인다: 설정 › 컬렉션처럼 검토 맨 위의 "고칠 곳"이, 시트가 없는 탭에서는 그 칸으로 포커스가 가고 칸 아래 오류 줄이 보인다(원칙 7). |
@@ -38,7 +38,7 @@
 |---|---|---|
 | 창 | `Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle` "고른 글 2개 내보내기") | 입력은 두 가지 고르기뿐이라 시트가 아니라 창이다. |
 | "보관 파일의 용도" | `FormFieldSet` + `FormFieldLegend variant="field"`, `RadioGroup` + `RadioItem`(`label` "백업용" · "공개용", `description` "초안 포함" · "발행본만") | 하나를 고른다. 처음에는 백업용. |
-| "담을 파일" | `FormFieldSet` + `FormFieldLegend variant="field"`, 줄마다 `Option` + `Checkbox` | "JSON 문서"는 늘 담기므로 `Checkbox checked disabled`와 `Text variant="note" tone="subtle"` "항상 담겨요". 플러그인 형식은 이름 뒤 확장자 `Text variant="meta" tone="subtle"` ".mdx". |
+| "담을 파일" | `FormFieldSet` + `FormFieldLegend variant="field"`, 줄마다 `Option` + `Checkbox` | "JSON 문서"는 늘 담기므로 `Checkbox checked disabled`와 `Text variant="note" tone="subtle"` "항상 담겨요". 플러그인 형식은 이름 뒤 확장자 `Text variant="caption" tone="subtle"` ".mdx". |
 | "담기는 것" | `Label`, 그 아래 종류마다 `CountRow`(`label` 왼쪽 이름, `count` 오른쪽 mono 개수) | 종류마다 한 줄이다: "글 1", "분류 1", "번역 1", "폴더 1", "주소 3", "미디어 정보(파일 제외) 4". 두 종류를 한 줄에 더하지 않는다(보드의 "글과 분류 2" 대신, 2026-11-04 소유자 결정). |
 | "취소" · "내보내기" | `DialogFooter`: `DialogClose`(`TextButton`) "취소", `Button variant="primary"` "내보내기"(만드는 동안 `loading`) | 만들면 파일을 받고 창이 닫힌다. |
 
@@ -48,7 +48,7 @@
 |---|---|---|
 | ⋯ 메뉴, 글자 버튼이 여는 메뉴 | `DropdownMenu`(`DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator`, `DropdownMenuSub`, `DropdownMenuSubTrigger`, `DropdownMenuSubContent`, `DropdownMenuRadioGroup`, `DropdownMenuRadioItem`, `DropdownMenuCheckboxItem`, `DropdownMenuLabel`, `DropdownMenuSearch`, `DropdownMenuScroll`), 끝의 표시는 `MenuShortcut`·`MenuTick`·`MenuValue` | 할 수 있는 것만 둔다. 위험한 것은 맨 아래 `variant="danger"`. 둘째 단계까지만. 할 수 없는 행은 숨긴다. |
 | 행 오른쪽 클릭 | `ContextMenu`(`ContextMenuTrigger`, `ContextMenuContent`, `ContextMenuItem`, `ContextMenuSeparator`, `ContextMenuSub`, `ContextMenuSubTrigger`, `ContextMenuSubContent`, `ContextMenuLabel`) | 같은 항목이 행의 ⋯에도 있다. 메뉴가 열린 동안 그 행은 호버 바탕을 유지한다. |
-| 값을 여는 버튼 (모델, 쪽마다) | `ModelMenuButton`(`Button variant="ghost" size="sm"`, 입력 상자 안쪽 여백으로 6px 당기고, 글자 쪽 10px · 꺾쇠 쪽 6px 여백, 꺾쇠는 글자에서 6px), `PageSizeMenu`(`TextButton variant="quiet" size="meta"`) + `Caret` | mono 12. 메뉴가 열린 동안 잉크(모델 버튼은 ghost 바탕). |
+| 값을 여는 버튼 (모델, 쪽마다) | `ModelMenuButton`(`Button variant="ghost" size="sm"`, 입력 상자 안쪽 여백으로 6px 당기고, 글자 쪽 10px · 꺾쇠 쪽 6px 여백, 꺾쇠는 글자에서 6px), `PageSizeMenu`(`TextButton variant="quiet" size="caption"`) + `Caret` | 12px. 모델 이름은 적힌 그대로의 값이라 mono, 쪽마다("25개씩")는 말이라 sans다(만들며 정함 (2026-11-16)). 메뉴가 열린 동안 잉크(모델 버튼은 ghost 바탕). |
 | 검색이 있는 고르기 | `Popover`의 `PopoverContent padding="menu"` 안에 `Command`(`CommandInput`, `CommandList`, `CommandGroup`, `CommandItem`, `CommandEmpty`, `CommandFooter`) | 값이 많은 고르기(언어 코드, 태그, 링크할 글). |
 
 ## AI 버튼

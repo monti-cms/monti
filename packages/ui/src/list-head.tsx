@@ -315,7 +315,7 @@ function ListHead({
 					);
 					const buttonClass = cn(
 						HIT_AREA,
-						"inline-flex max-w-full items-center gap-monti-4 border-0 bg-transparent p-0 font-normal text-inherit outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/50 [&_svg]:size-3 [&_svg]:shrink-0",
+						"inline-flex max-w-full items-center gap-monti-4 border-0 bg-transparent p-0 font-normal text-inherit outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/60 [&_svg]:size-3 [&_svg]:shrink-0",
 						column.menu && "hover:text-monti-default",
 						(column.sort || isOpen) && "text-monti-default",
 						onPlace && "cursor-grab",
@@ -337,7 +337,7 @@ function ListHead({
 							aria-sort={column.sort === "asc" ? "ascending" : column.sort === "desc" ? "descending" : undefined}
 							// The select-all inside the first name would be read as part of it.
 							aria-label={index === 0 && selectAll ? column.label : undefined}
-							className="relative touch-none select-none font-normal data-held:z-20 data-held:bg-monti-selected data-held:shadow-monti-floating"
+							className="relative touch-none select-none font-normal data-held:z-20 data-held:bg-monti-selected data-held:shadow-monti-floating data-held:outline data-held:outline-1 data-held:outline-monti-emphasis data-held:-outline-offset-1"
 							style={held ? { transform: `translateX(${drag.offset}px)` } : undefined}
 							// A right click on a name opens its menu, as a right click on a row opens the row's.
 							onContextMenu={(event) => {
@@ -445,7 +445,7 @@ function ListHead({
 						<DropdownMenu>
 							<DropdownMenuTrigger
 								aria-label={add.label}
-								className="mr-monti-4 ml-auto flex size-monti-control-xs cursor-pointer items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-subtle outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/50 data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&_svg]:size-3.5"
+								className="mr-monti-4 ml-auto flex size-monti-control-xs cursor-pointer items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-subtle outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/60 data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&_svg]:size-3.5"
 							>
 								<Add aria-hidden />
 							</DropdownMenuTrigger>

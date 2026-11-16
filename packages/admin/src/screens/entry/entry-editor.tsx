@@ -1178,6 +1178,8 @@ export function EntryEditor({
 					id={PUBLISH_ID}
 					variant="primary"
 					disabled={publish.button === "done"}
+					// Both words take the room of the wider, so the buttons beside it stay where they are when it says "Published".
+					reserve={[t("entry.publish"), t("entry.publishedState")]}
 					// "Published" keeps the focus the publish was pressed with: it does not fall to the page.
 					focusableWhenDisabled
 					loading={publish.publishing}
@@ -1189,6 +1191,7 @@ export function EntryEditor({
 				<SplitButton
 					id={PUBLISH_ID}
 					menuLabel={t("entry.publishMenu")}
+					reserve={[t("entry.publish"), t("entry.publishedState")]}
 					disabled={publish.button === "done"}
 					loading={publish.publishing}
 					onClick={() => void publish.publish("keep")}
@@ -1313,7 +1316,7 @@ export function EntryEditor({
 						{trashed ? t("frame.trash") : labelOfCollection(schema.data?.adminValues, collection)}
 					</EditorBack>
 					{address ? (
-						<Text variant="meta" tone="faint" truncate>
+						<Text mono variant="caption" tone="faint" truncate>
 							{address}
 						</Text>
 					) : null}

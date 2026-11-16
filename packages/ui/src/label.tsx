@@ -4,21 +4,20 @@ import type * as React from "react";
 import { cn } from "./cn";
 
 const SIZE = {
-	micro: "text-monti-micro",
 	label: "text-monti-label",
 	caption: "text-monti-caption",
 	body: "text-monti-body",
 } as const;
 
 /**
- * A form label, by default the design system's: mono 11 in the subtle ink (`micro` and `subtle`), the label above a field. `size` and `tone` pick another
+ * A form label, by default the design system's: sans 12 in the subtle ink (`caption` and `subtle`), the label above a field. `size` and `tone` pick another
  * role for a label that reads as text (a checkbox's); `hidden` keeps it for screen readers only. `required` ends the label with a red `*` 2px after the
  * text, for a form that also has optional fields (a form whose every field is required, and a select that always holds a value, get no mark). The star
  * is decorative: the control itself carries `required`, so a screen reader does not depend on it.
  */
 function Label({
 	className,
-	size = "micro",
+	size = "caption",
 	tone = "subtle",
 	hidden = false,
 	required = false,

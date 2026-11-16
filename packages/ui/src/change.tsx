@@ -45,13 +45,13 @@ function ChangeGroup({
 	}) {
 	return (
 		<section data-slot="change-group" data-kind={kind} className={cn(changeVariants({ kind }), className)} {...props}>
-			<span data-slot="change-tag" className="whitespace-nowrap font-sans text-monti-micro">
+			<span data-slot="change-tag" className="whitespace-nowrap text-monti-micro">
 				{tag}
 			</span>
 			<span className="flex min-w-0 items-baseline gap-monti-12 text-monti-body">
 				<b className="truncate font-semibold">{title}</b>
 				{identifier && (
-					<span className="ml-auto whitespace-nowrap font-mono text-monti-meta text-monti-subtle">{identifier}</span>
+					<span className="ml-auto whitespace-nowrap font-mono text-monti-caption text-monti-subtle">{identifier}</span>
 				)}
 			</span>
 			<div data-slot="change-body" className="flex min-w-0 flex-col gap-monti-10">
@@ -72,12 +72,12 @@ function ChangeNote({ danger = false, className, ...props }: ComponentProps<"p">
 	);
 }
 
-/** The name of a part of a change ("what goes", "keep a copy"), over the `ChangeLines` it labels: mono, small, in the subtle ink. */
+/** The name of a part of a change ("what goes", "keep a copy"), over the `ChangeLines` it labels: small, in the subtle ink. */
 function ChangeLabel({ className, ...props }: ComponentProps<"span">) {
 	return (
 		<span
 			data-slot="change-label"
-			className={cn("not-first:mt-monti-6 font-mono text-monti-micro text-monti-subtle first:mt-0", className)}
+			className={cn("not-first:mt-monti-6 text-monti-micro text-monti-subtle first:mt-0", className)}
 			{...props}
 		/>
 	);

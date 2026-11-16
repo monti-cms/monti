@@ -6,10 +6,11 @@ import { Button } from "./button";
 import { cn } from "./cn";
 import { CutWords } from "./cut-words";
 import { HIT_AREA } from "./hit-area";
+import { Separator } from "./separator";
 import { Spark } from "./spark";
 import { TextButton } from "./text-button";
 
-const STEP = `${HIT_AREA} cursor-pointer border-0 bg-transparent p-0 text-monti-muted outline-none hover:text-monti-default focus-visible:rounded-monti-full focus-visible:ring-2 focus-visible:ring-monti-contrast/50 disabled:cursor-default disabled:opacity-45`;
+const STEP = `${HIT_AREA} cursor-pointer border-0 bg-transparent p-0 text-monti-muted outline-none hover:text-monti-default focus-visible:rounded-monti-full focus-visible:ring-2 focus-visible:ring-monti-contrast/60 disabled:cursor-default disabled:opacity-45`;
 
 /**
  * The pill that floats over the status bar while proposals are waiting: the name of the request (a spark and the words, cut with … when long, so the source is clear even
@@ -73,8 +74,8 @@ function ProposalBubble({
 			) : (
 				<span className="inline-flex min-w-0 items-center gap-[7px] font-semibold text-monti-proposal">{who}</span>
 			)}
-			<span aria-hidden className="h-3.5 border-monti-default border-l" />
-			<span className="inline-flex items-center gap-monti-6 font-mono text-monti-meta text-monti-muted">
+			<Separator orientation="vertical" length="control" flush />
+			<span className="inline-flex items-center gap-monti-6 font-mono text-monti-caption text-monti-muted">
 				<button type="button" aria-label={previousLabel} className={STEP} disabled={total < 2} onClick={onPrevious}>
 					↑
 				</button>

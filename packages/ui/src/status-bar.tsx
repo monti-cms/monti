@@ -18,7 +18,7 @@ function StatusBar({ className, ...props }: React.ComponentProps<"section">) {
 		<section
 			data-slot="status-bar"
 			className={cn(
-				"hidden h-monti-statusbar items-stretch overflow-hidden border-monti-default border-t bg-monti-tool font-mono text-monti-meta text-monti-subtle has-[[data-slot=status-bar-cell]]:flex",
+				"hidden h-monti-statusbar items-stretch overflow-hidden border-monti-default border-t bg-monti-tool text-monti-caption text-monti-subtle has-[[data-slot=status-bar-cell]]:flex",
 				className,
 			)}
 			{...props}
@@ -31,7 +31,7 @@ const RULE =
 	"bg-[linear-gradient(var(--monti-border-default),var(--monti-border-default))] bg-size-[1px_14px] bg-no-repeat";
 
 const cellVariants = cva(
-	"flex items-center gap-monti-6 whitespace-nowrap border-0 bg-transparent px-monti-16 font-[inherit] text-[length:inherit] text-inherit [&:not(:is([data-slot=status-bar-cell],[data-slot=status-bar-live])~*):not(:is([data-slot=status-bar-cell],[data-slot=status-bar-live])~[data-slot=status-bar-live]>*)]:pl-monti-24 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/50 [&:is(a,button):hover]:bg-monti-selected data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&:is(a,button):hover]:text-monti-default [&:is(a,button)]:cursor-pointer",
+	"flex items-center gap-monti-6 whitespace-nowrap border-0 bg-transparent px-monti-16 font-[inherit] text-[length:inherit] text-inherit [&:not(:is([data-slot=status-bar-cell],[data-slot=status-bar-live])~*):not(:is([data-slot=status-bar-cell],[data-slot=status-bar-live])~[data-slot=status-bar-live]>*)]:pl-monti-24 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-monti-contrast/60 [&:is(a,button):hover]:bg-monti-selected data-popup-open:bg-monti-selected data-popup-open:text-monti-default [&:is(a,button):hover]:text-monti-default [&:is(a,button)]:cursor-pointer",
 	{
 		variants: {
 			/** `end` cells sit after the spacer: the rule is on their left, the last one has room at the right edge (the cells are counted, not their neighbors: an open list leaves focus guards beside its trigger), and they hide first on a narrow screen. */

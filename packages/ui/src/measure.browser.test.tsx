@@ -15,7 +15,7 @@ describe("the measuring itself", () => {
 		await userEvent.keyboard("{Shift}");
 		return measure().filter((line) => line.includes(`"${name}"`));
 	};
-	const RING = "outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50";
+	const RING = "outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60";
 
 	it("a control at a height, pressable over 24px, a pill, its ring whole: nothing to say", async () => {
 		render(
@@ -90,7 +90,7 @@ describe("the measuring itself", () => {
 				<div className="h-4 overflow-hidden">
 					<button
 						type="button"
-						className="relative block h-4 border-0 bg-transparent p-0 text-monti-caption leading-4 outline-none after:absolute after:inset-x-0 after:top-1/2 after:h-6 after:-translate-y-1/2 after:content-[''] focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset"
+						className="relative block h-4 border-0 bg-transparent p-0 text-monti-caption leading-4 outline-none after:absolute after:inset-x-0 after:top-1/2 after:h-6 after:-translate-y-1/2 after:content-[''] focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset"
 					>
 						잘린 층
 					</button>
@@ -103,7 +103,7 @@ describe("the measuring itself", () => {
 				<div className="relative overflow-hidden p-monti-4">
 					<button
 						type="button"
-						className="h-monti-control-sm border-0 bg-transparent outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/50"
+						className="h-monti-control-sm border-0 bg-transparent outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/60"
 					>
 						층의 고리
 					</button>
@@ -143,7 +143,7 @@ describe("the measuring itself", () => {
 				{/* The text button's mistake: with Tailwind 4 `outline-none` sets the style to none, and `outline-2` only the width. */}
 				<button
 					type="button"
-					className={`${BOX} outline-none focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2`}
+					className={`${BOX} outline-none focus-visible:outline-2 focus-visible:outline-monti-contrast/60 focus-visible:outline-offset-2`}
 				>
 					두께만
 				</button>
@@ -177,7 +177,7 @@ describe("the measuring itself", () => {
 		/** Puts a ringed span of no size into itself when focused: the page changes, and nothing is drawn. */
 		const ring = (button: HTMLButtonElement) => {
 			const span = document.createElement("span");
-			span.className = "ring-2 ring-monti-contrast/50";
+			span.className = "ring-2 ring-monti-contrast/60";
 			button.append(span);
 		};
 		const Appends = () => (
@@ -195,12 +195,12 @@ describe("the measuring itself", () => {
 				<button type="button" className={`${BOX} focus-visible:shadow-[0_0_0_2px_transparent]`}>
 					맑은 그림자
 				</button>
-				<button type="button" className={`${BOX} focus-visible:ring-0 focus-visible:ring-monti-contrast/50`}>
+				<button type="button" className={`${BOX} focus-visible:ring-0 focus-visible:ring-monti-contrast/60`}>
 					두께 없는 고리
 				</button>
 				<button type="button" className={`${BOX} group`}>
 					안 그린 것
-					<span className="hidden size-2 group-focus-visible:ring-2 group-focus-visible:ring-monti-contrast/50" />
+					<span className="hidden size-2 group-focus-visible:ring-2 group-focus-visible:ring-monti-contrast/60" />
 				</button>
 				<Appends />
 			</div>,
@@ -213,7 +213,7 @@ describe("the measuring itself", () => {
 	});
 
 	it("a line around that only steps off under the focus is a mark, and one that steps off past a clipping box is cut", async () => {
-		const LINE = "h-monti-control-sm rounded-monti-full border-0 bg-monti-selected outline-2 outline-monti-contrast/50";
+		const LINE = "h-monti-control-sm rounded-monti-full border-0 bg-monti-selected outline-2 outline-monti-contrast/60";
 		render(
 			<div className="flex flex-col items-start gap-monti-16 p-monti-8">
 				<button type="button" className={`${LINE} focus-visible:outline-offset-2`}>
@@ -256,7 +256,7 @@ describe("the measuring itself", () => {
 			<div className="flex flex-col items-start gap-monti-16 p-monti-8">
 				<button
 					type="button"
-					className={`${BOX} focus-visible:outline-2 focus-visible:outline-monti-contrast/50 focus-visible:outline-offset-2`}
+					className={`${BOX} focus-visible:outline-2 focus-visible:outline-monti-contrast/60 focus-visible:outline-offset-2`}
 				>
 					둘레 선
 				</button>
@@ -266,14 +266,14 @@ describe("the measuring itself", () => {
 				>
 					밑줄
 				</button>
-				<div className="rounded-monti-full has-focus-visible:ring-2 has-focus-visible:ring-monti-contrast/50">
+				<div className="rounded-monti-full has-focus-visible:ring-2 has-focus-visible:ring-monti-contrast/60">
 					<button type="button" className={`${BOX} outline-none`}>
 						감싼 상자의 고리
 					</button>
 				</div>
 				<button
 					type="button"
-					className="flex h-monti-control-sm border-0 bg-transparent p-0 outline-none focus-visible:*:first:ring-2 focus-visible:*:first:ring-monti-contrast/50"
+					className="flex h-monti-control-sm border-0 bg-transparent p-0 outline-none focus-visible:*:first:ring-2 focus-visible:*:first:ring-monti-contrast/60"
 				>
 					<span className="rounded-monti-full bg-monti-selected">안쪽의 고리</span>
 				</button>

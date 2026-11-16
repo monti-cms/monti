@@ -16,6 +16,53 @@ export const fontDirs = {
 	plex: path.join(plexDir, "files"),
 };
 
+/** Hangul Syllables, Hangul Jamo and Hangul Compatibility Jamo: what the mono stack takes from Pretendard (`Monti Pretendard Hangul`). */
+const HANGUL: readonly (readonly [number, number])[] = [
+	[0xac00, 0xd7af],
+	[0x1100, 0x11ff],
+	[0x3130, 0x318f],
+];
+
+/** The ranges of a `unicode-range` value, as `[from, to]` pairs (`U+AC00-D7AF, U+3131` and wildcards such as `U+4??` are read). */
+function rangesOf(value: string): [number, number][] {
+	return value
+		.split(",")
+		.map((part) => part.trim().replace(/^U\+/i, ""))
+		.filter(Boolean)
+		.map((part): [number, number] => {
+			if (part.includes("?"))
+				return [Number.parseInt(part.replace(/\?/g, "0"), 16), Number.parseInt(part.replace(/\?/g, "f"), 16)];
+			const [from, to] = part.split("-");
+			return [Number.parseInt(from ?? "", 16), Number.parseInt(to ?? from ?? "", 16)];
+		});
+}
+
+/**
+ * Pretendard's faces again under `Monti Pretendard Hangul`, each limited to the Hangul inside its own slice. The mono stack lists this name after
+ * the monospace fonts, so Korean in a mono place has one font that is the same everywhere, while Latin letters, Cyrillic, Greek and symbols stay with
+ * Plex Mono and the system's monospace, never proportional Pretendard.
+ */
+function hangulFaces(pretendard: string): string {
+	return (pretendard.match(/@font-face\s*\{[^}]*\}/g) ?? [])
+		.flatMap((face) => {
+			const range = /unicode-range:\s*([^;}]*)/.exec(face)?.[1];
+			if (!range) return [];
+			const kept = rangesOf(range).flatMap(([from, to]) =>
+				HANGUL.flatMap(([low, high]) => {
+					const [start, end] = [Math.max(from, low), Math.min(to, high)];
+					return start <= end ? [`U+${start.toString(16).toUpperCase()}-${end.toString(16).toUpperCase()}`] : [];
+				}),
+			);
+			if (kept.length === 0) return [];
+			return [
+				face
+					.replace('"Monti Pretendard"', '"Monti Pretendard Hangul"')
+					.replace(/unicode-range:\s*[^;}]*/, `unicode-range: ${kept.join(", ")}`),
+			];
+		})
+		.join("\n");
+}
+
 /**
  * The admin's fonts as `@font-face` rules, under the names the font tokens read (`Monti Pretendard`, `Monti Plex Mono`), so they never collide with a
  * site's own copy. Pretendard is the variable font in its dynamic subsets (a page downloads only the slices it shows); IBM Plex Mono is the latin
@@ -50,5 +97,5 @@ export function fontFaces(): string {
 				`src:url(./fonts/ibm-plex-mono/ibm-plex-mono-latin-${weight}-normal.woff2) format("woff2");unicode-range:${latin}}`,
 		)
 		.join("\n");
-	return `${pretendard}\n${plex}\n`;
+	return `${pretendard}\n${hangulFaces(pretendard)}\n${plex}\n`;
 }

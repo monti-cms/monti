@@ -1812,7 +1812,7 @@ describe("a read-only body with the keyboard (T133)", () => {
 		const style = layer(block);
 		return Boolean(style && style.outlineStyle === "solid" && style.outlineWidth === "2px");
 	};
-	/** Whether a block shows the keyboard's ordinary focus mark: a 2px ring at half ink, as every focused thing has. */
+	/** Whether a block shows the keyboard's ordinary focus mark: a 2px ring of ink at 60%, as every focused thing has. */
 	const drawnFocused = (block: HTMLElement | undefined) => {
 		const style = layer(block);
 		return Boolean(style && /0px 0px 0px 2px/.test(style.boxShadow) && block?.matches(":focus-visible"));

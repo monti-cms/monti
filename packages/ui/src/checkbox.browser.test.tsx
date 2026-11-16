@@ -61,7 +61,7 @@ it("a wrong check stays red under the pointer and the keyboard at once, and the 
 	expect(drawn()).toEqual({ line: red, redRing: true, around: "none" });
 });
 
-it("a check's focus is one line around it, 2px at half ink at the box's edge, and a pointer's press draws none", async () => {
+it("a check's focus is one line around it, 2px of ink at 60% at the box's edge, and a pointer's press draws none", async () => {
 	render(
 		<Option>
 			<Checkbox />
@@ -73,7 +73,7 @@ it("a check's focus is one line around it, 2px at half ink at the box's edge, an
 	await expect.element(check).toHaveFocus();
 	const style = getComputedStyle(check.element());
 	expect([style.outlineStyle, style.outlineWidth, style.outlineOffset]).toEqual(["solid", "2px", "0px"]);
-	expect(style.outlineColor).toMatch(/\/ 0\.5\)$/);
+	expect(style.outlineColor).toMatch(/\/ 0\.6\)$/);
 	(check.element() as HTMLElement).blur();
 	await userEvent.click(check);
 	await expect.element(check).toBeChecked();

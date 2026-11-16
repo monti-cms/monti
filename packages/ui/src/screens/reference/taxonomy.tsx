@@ -49,7 +49,7 @@ export function TaxonomyScreen() {
 				<PageColumn>
 					{/* The board's list is 720px: the column's 48px sides and 20px more on each. */}
 					<Stack gap={0} grow minHeight={0} paddingX={20}>
-						<PageHeader title="카테고리" meta="/category/:slug">
+						<PageHeader title="카테고리" address="/category/:slug">
 							<SearchToggle label="검색" value="" aria-label="검색" placeholder="이름·주소 검색" />
 							<Button variant="secondary">
 								<Add aria-hidden />

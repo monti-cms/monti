@@ -33,20 +33,20 @@ export const Summary: Story = {
 			<DescriptionList variant="summary">
 				<DescriptionItem label="글">
 					148{" "}
-					<Text variant="meta" tone="subtle">
+					<Text variant="caption" tone="subtle">
 						초안 12 · 발행 130 · 보관 6 · 번역 21
 					</Text>
 				</DescriptionItem>
 				<DescriptionItem label="폴더">3</DescriptionItem>
 				<DescriptionItem label="미디어">
 					24{" "}
-					<Text variant="meta" tone="subtle">
+					<Text variant="caption" tone="subtle">
 						파일 포함
 					</Text>
 				</DescriptionItem>
 				<DescriptionItem label="주소">
 					160{" "}
-					<Text variant="meta" tone="subtle">
+					<Text variant="caption" tone="subtle">
 						이전 주소 12
 					</Text>
 				</DescriptionItem>

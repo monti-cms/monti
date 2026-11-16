@@ -100,7 +100,7 @@ function HeldBlock({ kind, text }: { kind: string; text: string }) {
 				"pointer-events-none flex max-w-[280px] items-baseline gap-monti-8 rounded-monti-md px-monti-12 py-monti-6 text-monti-body",
 			)}
 		>
-			<span className="shrink-0 text-monti-meta text-monti-subtle">{kind}</span>
+			<span className="shrink-0 text-monti-caption text-monti-subtle">{kind}</span>
 			{text ? <span className="min-w-0 truncate">{text}</span> : null}
 		</div>
 	);

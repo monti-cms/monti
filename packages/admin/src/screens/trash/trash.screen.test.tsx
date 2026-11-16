@@ -307,13 +307,13 @@ describe("the trash (doc 11, flow 5)", () => {
 		await userEvent.keyboard("{Escape}");
 	});
 
-	it("11-1 days under a week change their color only: mono in a folder's head, the values' size in a panel", async () => {
+	it("11-1 days under a week change their color only: sans words in a folder's head, the values' size in a panel", async () => {
 		await InUrgentFolder.run();
 		const heading = main().getByRole("heading", { name: "시리즈 원고" });
 		await expect.element(heading).toBeVisible();
 		const days = main().getByText("3일 남음").first().element();
 		expect(getComputedStyle(days).fontFamily).toBe(getComputedStyle(days.parentElement as HTMLElement).fontFamily);
-		expect(getComputedStyle(days).fontFamily).toMatch(/mono/i);
+		expect(getComputedStyle(days).fontFamily).not.toMatch(/mono/i);
 
 		await ItemPanel.run();
 		const panel = page.getByRole("complementary", { name: "임시" });

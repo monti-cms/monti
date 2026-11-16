@@ -2304,7 +2304,7 @@
 			"props": {
 				"tone": {
 					"kind": "variant",
-					"enum": ["default", "warning"]
+					"enum": ["danger", "default"]
 				}
 			},
 			"events": []
@@ -2491,19 +2491,7 @@
 				},
 				"variant": {
 					"kind": "variant",
-					"enum": [
-						"body",
-						"caption",
-						"display",
-						"heading",
-						"label",
-						"meta",
-						"micro",
-						"note",
-						"page",
-						"reading",
-						"title"
-					]
+					"enum": ["body", "caption", "display", "heading", "label", "micro", "note", "page", "reading", "title"]
 				},
 				"weight": {
 					"kind": "variant",
@@ -2775,7 +2763,7 @@
 			"kind": "part",
 			"bind": false,
 			"children": true,
-			"slots": ["meta", "title", "trail"],
+			"slots": ["address", "note", "title", "trail"],
 			"props": {},
 			"events": []
 		},
@@ -2787,7 +2775,7 @@
 			"props": {
 				"size": {
 					"kind": "variant",
-					"enum": ["caption", "meta", "note"]
+					"enum": ["caption", "note"]
 				},
 				"tone": {
 					"kind": "variant",

@@ -163,7 +163,7 @@ function CutWords({
 				// While it is a stop it draws the keyboard's ring, inside its box: the box cuts what runs past it, a ring outside too.
 				stop &&
 					stops &&
-					"rounded-monti-sm outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset",
+					"rounded-monti-sm outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset",
 				own.className,
 				className,
 			),

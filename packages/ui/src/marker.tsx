@@ -16,7 +16,7 @@ function Untranslated({ className, ...props }: ComponentProps<"span">) {
 }
 
 const markerVariants = cva(
-	"inline-flex h-[18px] items-center gap-monti-2 whitespace-nowrap rounded-monti-full border-0 font-mono text-[10px] leading-none outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/50 focus-visible:ring-inset",
+	"inline-flex h-[18px] items-center gap-monti-2 whitespace-nowrap rounded-monti-full border-0 text-[10px] leading-none outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/60 focus-visible:ring-inset",
 	{
 		variants: {
 			/**

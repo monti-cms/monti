@@ -9,6 +9,7 @@
 		".": "./src/index.ts",
 		"./blocks": "./src/blocks.ts",
 		"./icons": "./src/icons.ts",
+		"./screen-mode": "./src/screen-mode.ts",
 		"./styles.css": "./dist/styles.css"
 	},
 	"files": [
@@ -83,6 +84,10 @@
 			"./icons": {
 				"types": "./dist/icons.d.ts",
 				"default": "./dist/icons.js"
+			},
+			"./screen-mode": {
+				"types": "./dist/screen-mode.d.ts",
+				"default": "./dist/screen-mode.js"
 			},
 			"./styles.css": "./dist/styles.css"
 		}
