@@ -70,7 +70,8 @@
  *   mono-props          `mono`, `metaMono`, `ofMono` set on Korean words fail; children the check cannot read are named in `MONO_PROP_VALUES`.
  *   list-compose        A screen that draws a list table (`Table`, `ListHead`, `ListScroll`) does it through `CollectionTable`, or is named in `LIST_COMPOSE_OK`.
  *   overlay-place       Nothing floats over the editor through `EditorOverlay` or by a `top` / `left` built from a measurement: `Anchored` stands it, or the file is named in `OVERLAY_PLACE_OK`.
- *                       All eight are in `check-parts.mjs`, which says what each cannot see.
+ *   panel-place         A docked panel of a page is drawn through `PagePanel` (beside the page's scroller), or named in `PANEL_PLACE_OK`.
+ *                       All nine are in `check-parts.mjs`, which says what each cannot see.
  *   type-order          The heading roles step down, and the editor body's h2, h3, h4 are not smaller than its text (h4, the text's size, is semibold).
  *   type-merge          Every type role of `tokens.json` is in the font-size group of `cn.ts`, and that group names no other.
  *   tabular             `admin.css` sets tabular digits on `.monti-admin` and the body, and no source takes them back.
@@ -97,6 +98,7 @@ import {
 	monoProps,
 	overlayPlace,
 	ownGlyph,
+	panelPlace,
 	requiredMark,
 } from "./check-parts.mjs";
 import {
@@ -1502,6 +1504,7 @@ function checkParts() {
 		sourcesUnder(path.join(root, "packages/blocks/blocks")).map((file) => [rel(file), readFileSync(file, "utf8")]),
 	);
 	report("overlay-place", overlayPlace({ ...sources, ...blocks }));
+	report("panel-place", panelPlace(sources));
 }
 checkParts();
 
@@ -1556,6 +1559,8 @@ const HINTS = {
 		"A list's table is put together by CollectionTable (screens/list/collection-table.tsx): head, bulk bar, no-match answer, rows, footer. A titled table is named in LIST_COMPOSE_OK (check-parts.mjs).",
 	"overlay-place":
 		"A thing that floats over the editor is stood by Anchored with a place of placement.ts (overlay.md, 자리 규칙); a file that places one by hand from a measurement is named in OVERLAY_PLACE_OK (check-parts.mjs).",
+	"panel-place":
+		"A docked panel of a page stands beside the page's scroller: draw it through PagePanel (screens/frame/page-panel.tsx); a panel that stands elsewhere is named in PANEL_PLACE_OK (check-parts.mjs).",
 	"mono-props":
 		"Words are sans: `mono`, `metaMono` and `ofMono` are for values; a file that sets them on words it cannot read is named in MONO_PROP_VALUES (check-parts.mjs).",
 	"design-allow": "A marker states why the value cannot be a token.",

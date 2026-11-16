@@ -9,6 +9,7 @@ import {
 	monoProps,
 	overlayPlace,
 	ownGlyph,
+	panelPlace,
 	requiredMark,
 } from "./check-parts.mjs";
 
@@ -315,4 +316,38 @@ test("overlay-place: EditorOverlay and a top or left built from a measurement ar
 	);
 	assert.match(found[0].message, /use Anchored|float it with `Anchored`/);
 	assert.match(found[1].message, /OVERLAY_PLACE_OK/);
+});
+
+test("panel-place: a panel drawn outside PagePanel is named, one inside passes, a listed one passes, a stale entry and a comment are told apart", () => {
+	const found = panelPlace(
+		{
+			"packages/admin/src/screens/a/a-panel.tsx": 'export function APanel() { return <SidePanel title="a" />; }\n',
+			"packages/admin/src/screens/b/b-panel.tsx": "export function BPanel() { return <PropertyPanel />; }\n",
+			"packages/admin/src/screens/a/a-screen.tsx":
+				"export const S = () => <><PagePanel><APanel /></PagePanel><BPanel /></>;\n",
+			"packages/admin/src/screens/c/c-screen.tsx":
+				"export const C = () => <PagePanel><div><APanel /></div></PagePanel>;\n",
+			"packages/admin/src/screens/d/d-screen.tsx":
+				"// <APanel /> is only said here.\nexport const D = () => <Other />;\n",
+			"packages/admin/src/screens/e/e.stories.tsx": "export const E = () => <APanel />;\n",
+			"packages/admin/src/assistant/assistant-panel.tsx":
+				"export function AssistantPanel() { return <SidePanel />; }\n",
+			"packages/admin/src/app.tsx": "export const App = () => <AssistantPanel />;\n",
+		},
+		{
+			allowed: new Map([
+				["AssistantPanel", "the frame's own"],
+				["GonePanel", "was bare once"],
+			]),
+		},
+	);
+	assert.deepEqual(
+		found.map(({ file, line }) => [file, line]),
+		[
+			["packages/admin/src/screens/a/a-screen.tsx", 1],
+			["packages/admin/src/screens/frame/page-panel.tsx", 1],
+		],
+	);
+	assert.match(found[0].message, /PagePanel/);
+	assert.match(found[1].message, /GonePanel/);
 });

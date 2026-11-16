@@ -585,14 +585,18 @@ export function TrashScreen({
 			</PageColumn>
 			{purge.dialog}
 			{panel?.kind === "media" && (
-				<TrashedFilePanel
-					key={panel.id}
-					id={panel.id}
-					go={go}
-					onClose={() => setState({ ...state, open: null })}
-					onRestore={() => void restore.run([panel]).then((done) => done && close([panel]))}
-					onPurge={() => purge.start({ rows: [panel], onPurged: () => close([panel]), whenGone: afterPurge([panel]) })}
-				/>
+				<PagePanel>
+					<TrashedFilePanel
+						key={panel.id}
+						id={panel.id}
+						go={go}
+						onClose={() => setState({ ...state, open: null })}
+						onRestore={() => void restore.run([panel]).then((done) => done && close([panel]))}
+						onPurge={() =>
+							purge.start({ rows: [panel], onPurged: () => close([panel]), whenGone: afterPurge([panel]) })
+						}
+					/>
+				</PagePanel>
 			)}
 			{panel?.kind === "entry" && (
 				<PagePanel>

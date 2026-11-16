@@ -280,9 +280,34 @@ describe("the activity log (doc 13, flow 12)", () => {
 		for (const each of table().element().querySelectorAll("[data-slot=row-actions]"))
 			expect(each.getBoundingClientRect().right).toBeLessThanOrEqual(edge() + 1);
 		// The sticky cell of a row's ⋯ shows its edge line while the cells run under it.
-		expect(
-			getComputedStyle(table().element().querySelector("td:has([data-slot=row-actions])") as Element).boxShadow,
-		).not.toBe("none");
+		await expect
+			.poll(
+				() => getComputedStyle(table().element().querySelector("td:has([data-slot=row-actions])") as Element).boxShadow,
+			)
+			.not.toBe("none");
+	});
+
+	it("at 1280 wide with the page's panel dragged to its widest, opening the assistant leaves the assistant whole in the window: the page's panel narrows first, and the page keeps 480px", async () => {
+		await page.viewport(1280, 768);
+		localStorage.setItem("monti-ui:width:panel:side", "720");
+		onTestFinished(() => {
+			localStorage.removeItem("monti-ui:width:panel:side");
+			return page.viewport(1440, 900);
+		});
+		await draw(stories.Panel).run();
+		await expect.element(panel()).toBeVisible();
+		await userEvent.click(page.getByRole("button", { name: "어시스턴트 열기" }));
+		const assistant = page.getByRole("complementary").last();
+		await expect.element(assistant.getByRole("button", { name: "닫기" })).toBeVisible();
+		const close = assistant.getByRole("button", { name: "닫기" }).element().getBoundingClientRect();
+		expect(close.right).toBeLessThanOrEqual(window.innerWidth);
+		expect(close.left).toBeGreaterThanOrEqual(0);
+		const scroller = (() => {
+			for (let at = table().element().parentElement; at; at = at.parentElement)
+				if (/(auto|scroll)/.test(getComputedStyle(at).overflowY)) return at;
+			throw new Error("no scroller");
+		})();
+		expect(scroller.getBoundingClientRect().width).toBeGreaterThanOrEqual(480 - 1);
 	});
 
 	it("the assistant's row open: its request whole, each thing it did, and what it touched", async () => {

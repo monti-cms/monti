@@ -45,8 +45,11 @@ export const LAYOUT = {
 	/** `full`, `auto` and `fit` are sizes of their own; the rest are the width tokens. */
 	width: { full: "w-full", auto: "w-auto", fit: "w-fit", ...WIDTH },
 	maxWidth: { full: "max-w-full", ...MAX_WIDTH },
-	/** `0` lets a flex child shrink below its content (long text truncates instead of pushing the row wider). */
-	minWidth: { 0: "min-w-0" },
+	/**
+	 * `0` lets a flex child shrink below its content (long text truncates instead of pushing the row wider). `page` 480px: the box that scrolls the page keeps
+	 * that much beside the docked panels, which give way first (overlay.md, the side panel).
+	 */
+	minWidth: { 0: "min-w-0", page: "min-w-[480px]" },
 	/** `full`, `auto` and `screen` are sizes of their own; the rest are the height tokens. */
 	height: { full: "h-full", auto: "h-auto", screen: "h-svh", ...HEIGHT },
 	/** A scrolling area's limit: `list` 384px (a list in a card or dialog), `half` half the window, `menu` 320px. Pair with `overflow="y"`. */

@@ -1,6 +1,6 @@
 // The rules that keep the admin's screens on its fixed parts (cause 10 of the admin QA audit: buttons, menus, icons and fields drawn again on every
 // screen). `check:design` runs these as its rules `own-glyph`, `assistant-place`, `cut-words`, `menu-danger-separator`, `required-mark`,
-// `mono-props`, `list-compose` and `overlay-place`; each takes the sources it reads (`{ "packages/ui/src/x.tsx": text }`), so a test can hand it a made-up file. What each cannot see
+// `mono-props`, `list-compose`, `overlay-place` and `panel-place`; each takes the sources it reads (`{ "packages/ui/src/x.tsx": text }`), so a test can hand it a made-up file. What each cannot see
 // is written above it. An allow list names its files with the reason and fails when an entry no longer applies, so a list is only what is true.
 let parseSync = () => {
 	throw new Error("oxc-parser is not installed (pnpm install)");
@@ -627,6 +627,86 @@ export function overlayPlace(sources, { allowed = OVERLAY_PLACE_OK } = {}) {
 				file: `packages/${key}`,
 				line: 1,
 				message: "OVERLAY_PLACE_OK names a file that places nothing by hand from a measurement any more",
+			});
+	return found;
+}
+
+/**
+ * `panel-place`: a docked panel of a page stands beside the box that scrolls the page, never in it: the screen that opens one draws it through `PagePanel`
+ * (`packages/admin/src/screens/frame/page-panel.tsx`), which gives it to the frame's slot. A component of `packages/admin/src` that exports a panel (it draws a
+ * `SidePanel` or a `PropertyPanel`) is a panel; where a file of `packages/admin/src` draws one, `<PagePanel>` stands around it, or the panel is named in
+ * `PANEL_PLACE_OK` with the reason. A listed panel no longer drawn bare fails.
+ *
+ * Cannot see: a panel drawn through a component that wraps another panel under a new name, a panel handed to the frame by a prop, a `PagePanel` that stands
+ * around something else than the panel in the same element, and whether the frame's slot stands beside the scroller (the activity test at 1024px measures that).
+ */
+export const PANEL_PLACE_OK = new Map([
+	["AssistantPanel", "the assistant's panel is the frame's own, drawn after the slot by the app"],
+	[
+		"EntryProperties",
+		"the entry editor scrolls in its own box with the properties beside it, outside the frame's page scroller",
+	],
+]);
+const PANEL_PARTS = new Set(["SidePanel", "PropertyPanel"]);
+
+function visitWithAncestors(node, visit, ancestors = []) {
+	if (!node || typeof node !== "object") return;
+	if (Array.isArray(node)) {
+		for (const each of node) visitWithAncestors(each, visit, ancestors);
+		return;
+	}
+	if (typeof node.type !== "string") return;
+	visit(node, ancestors);
+	const next = [...ancestors, node];
+	for (const [key, value] of Object.entries(node)) if (key !== "parent") visitWithAncestors(value, visit, next);
+}
+
+export function panelPlace(sources, { allowed = PANEL_PLACE_OK } = {}) {
+	const found = [];
+	const parsed = [];
+	for (const [file, source] of Object.entries(sources)) {
+		if (!isCode(file) || !file.startsWith("packages/admin/src/")) continue;
+		const { program, errors } = parseSync(file, source);
+		if (errors.length > 0) continue;
+		parsed.push({ file, source, program });
+	}
+	// The panels: exported components that draw a SidePanel or a PropertyPanel.
+	const panels = new Set();
+	for (const { program } of parsed)
+		walkTree(program, (node) => {
+			if (node.type !== "ExportNamedDeclaration" || node.declaration?.type !== "FunctionDeclaration") return;
+			let draws = false;
+			walkTree(node.declaration, (inner) => {
+				if (inner.type === "JSXOpeningElement" && PANEL_PARTS.has(nameOf(inner.name))) draws = true;
+			});
+			if (draws && node.declaration.id) panels.add(node.declaration.id.name);
+		});
+	const bare = new Set();
+	for (const { file, source, program } of parsed)
+		visitWithAncestors(program, (node, ancestors) => {
+			if (node.type !== "JSXOpeningElement") return;
+			const name = nameOf(node.name);
+			if (!name || !panels.has(name)) return;
+			const inSlot = ancestors.some(
+				(each) => each.type === "JSXElement" && nameOf(each.openingElement?.name) === "PagePanel",
+			);
+			if (inSlot) return;
+			if (allowed.has(name)) {
+				bare.add(name);
+				return;
+			}
+			found.push({
+				file,
+				line: lineOf(source, node.start),
+				message: `\`<${name}\` is a docked panel drawn in the page's scroller: draw it through \`PagePanel\` (screens/frame/page-panel.tsx), or name it in PANEL_PLACE_OK with the reason`,
+			});
+		});
+	for (const name of allowed.keys())
+		if (!bare.has(name))
+			found.push({
+				file: "packages/admin/src/screens/frame/page-panel.tsx",
+				line: 1,
+				message: `PANEL_PLACE_OK names ${name}, which is not drawn bare any more`,
 			});
 	return found;
 }

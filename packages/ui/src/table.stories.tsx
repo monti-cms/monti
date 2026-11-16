@@ -412,14 +412,14 @@ export const CutTitle: Story = {
 };
 
 /**
- * A table wider than its column (a panel open beside it, columns made wide): the cell with the ⋯ sticks to the column's edge in the row's own ground, so the
+ * A table wider than the box that scrolls the page (columns made wide; a docked panel stands beside that box and ends it): the cell with the ⋯ sticks to the box's right edge in the row's own ground, so the
  * ⋯ stays in reach and the cells under it do not show through; a line on its left says the table runs under it. The row under the pointer and the picked
  * row keep their grounds under it.
  */
 export const StickyActions: Story = {
 	tags: ["visual"],
 	render: () => (
-		// design-allow: a column narrower than its table, which the page's column is beside a panel
+		// design-allow: a scrolling box narrower than its table, as the page's is beside a docked panel
 		<div data-clipping="" style={{ width: 420, overflowX: "clip", position: "relative" }}>
 			<ListScroll>
 				<Table container="none" layout="fixed" columns={[120, 240, 96, 48]}>

@@ -104,7 +104,6 @@ import { useOperation, useRead } from "../../operations/use-operation";
 import { usePurge, useRestore, useTrashMove } from "../../trash/use-trash";
 import { EditorBack } from "../frame/editor-back";
 import { focusText, toWhatStands, useFocusHandOff } from "../frame/focus-hand-off";
-import { PagePanel } from "../frame/page-panel";
 import { ReadFailedBanner } from "../frame/read-failed";
 import { SessionEndedBanner } from "../frame/session-ended";
 import type { SchemaRead } from "../settings/schema-draft";
@@ -1501,23 +1500,21 @@ export function EntryEditor({
 				{/* The properties wait for the entry as the title and the body do (T153): drawn from the schema alone, every field stood empty and took input
 				    for an entry that was not read yet, and a file chosen or sent up then was written over the saved value when it landed. */}
 				{panel && read ? (
-					<PagePanel>
-						<EntryProperties
-							editor={editor}
-							schema={schema.data}
-							collection={collection}
-							tab={tab}
-							onTab={setTab}
-							readOnly={readOnly}
-							shared={translation.isTranslation ? (compared?.source.values ?? null) : null}
-							uploads={fieldUploads}
-							altCard={altCard}
-							onAltCard={setAltCard}
-							changes={compared && !readOnly ? { marks: compared.fields, onConfirm: confirmField } : undefined}
-							fills={fills}
-							fillEntry={fillEntry}
-						/>
-					</PagePanel>
+					<EntryProperties
+						editor={editor}
+						schema={schema.data}
+						collection={collection}
+						tab={tab}
+						onTab={setTab}
+						readOnly={readOnly}
+						shared={translation.isTranslation ? (compared?.source.values ?? null) : null}
+						uploads={fieldUploads}
+						altCard={altCard}
+						onAltCard={setAltCard}
+						changes={compared && !readOnly ? { marks: compared.fields, onConfirm: confirmField } : undefined}
+						fills={fills}
+						fillEntry={fillEntry}
+					/>
 				) : read ? (
 					<DocumentViewPane tools={tools} doc={editor.doc} title={editor.title} />
 				) : null}
