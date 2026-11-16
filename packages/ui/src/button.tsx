@@ -80,6 +80,7 @@ function Button({
 	pendingLabel,
 	width,
 	disabled,
+	focusableWhenDisabled,
 	href,
 	target,
 	rel,
@@ -96,6 +97,11 @@ function Button({
 		 * `loading` and says this instead of its words ("Signing in…"). Coming back to the page (the browser's back) wakes it.
 		 */
 		pendingLabel?: React.ReactNode;
+		/**
+		 * With `disabled`: the button a press has just turned off ("Published" after a publish) keeps the keyboard's focus. It is `aria-disabled`,
+		 * not the attribute, looks as any disabled button and takes no press.
+		 */
+		focusableWhenDisabled?: boolean;
 		/** Working on it: a spinner replaces the leading icon, the button keeps its fill (it is not dimmed like a disabled one) and cannot be pressed again. Put the progress in the label. */
 		loading?: boolean;
 		/** `full` spans its container (a stacked form, a narrow panel). */
@@ -116,6 +122,8 @@ function Button({
 		};
 	}, [pendingLabel]);
 	const busy = loading || sending;
+	// Off, and still holding the focus: working, or turned off by its own press (`focusableWhenDisabled`).
+	const held = (busy && !disabled) || Boolean(disabled && focusableWhenDisabled);
 	return (
 		<ButtonPrimitive
 			ref={pendingLabel === undefined ? undefined : own}
@@ -126,7 +134,7 @@ function Button({
 			disabled={disabled || busy}
 			// Working is not "cannot be used": the button keeps the focus it was pressed with (`aria-disabled`, not the attribute, which would hand
 			// the focus to the page) and takes no second press.
-			focusableWhenDisabled={busy && !disabled}
+			focusableWhenDisabled={held}
 			className={cn(buttonVariants({ variant, size }), width === "full" && "w-full", className)}
 			{...(href === undefined
 				? {}
@@ -137,7 +145,7 @@ function Button({
 						render: <a href={href} target={target} rel={rel} />,
 					})}
 			{...props}
-			{...(busy && !disabled ? BUSY_GUARD : {})}
+			{...(held ? BUSY_GUARD : {})}
 		>
 			{busy && <Spinner className={size === "sm" || size === "xs" ? "size-3" : "size-3.5"} />}
 			{sending ? pendingLabel : children}

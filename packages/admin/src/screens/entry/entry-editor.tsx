@@ -1150,6 +1150,8 @@ export function EntryEditor({
 				<Button
 					variant="primary"
 					disabled={publish.button === "done"}
+					// "Published" keeps the focus the publish was pressed with: it does not fall to the page.
+					focusableWhenDisabled
 					loading={publish.publishing}
 					onClick={() => void publish.publish()}
 				>

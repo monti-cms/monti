@@ -1358,6 +1358,53 @@ describe("the entry editor: the publish menu", () => {
 	});
 });
 
+describe("the entry editor: the focus after a publish", () => {
+	/** The greyed "발행됨" has the keyboard's focus, and still has it once the browser has taken it from anything that is off. */
+	const heldByDone = async () => {
+		const done = button("발행됨");
+		await expect.element(done).toHaveAttribute("aria-disabled", "true");
+		await expect.poll(() => document.activeElement).toBe(done.element());
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(document.activeElement).toBe(done.element());
+		expect(document.activeElement).not.toBe(document.body);
+	};
+
+	it("a first publish pressed with the keyboard: the button turns to the greyed '발행됨' and keeps the focus", async () => {
+		await on("draft").run();
+		await opened();
+		(button("발행하기").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		await heldByDone();
+		// Off as before: dimmed, and a press publishes nothing again.
+		expect(getComputedStyle(button("발행됨").element()).opacity).toBe("0.45");
+	});
+
+	it("the pill's main half pressed with the keyboard: the greyed '발행됨' keeps the focus", async () => {
+		await from(entry.RepublishMenu).run();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(page.getByRole("menuitem").first()).not.toBeInTheDocument();
+		(button("발행하기").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		await heldByDone();
+	});
+
+	it("a publish picked in the pill's menu with the keyboard: the caret half goes off and the main half takes the focus", async () => {
+		await from(entry.RepublishMenu).run();
+		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
+		await userEvent.keyboard("{Escape}");
+		await expect.element(page.getByRole("menuitem").first()).not.toBeInTheDocument();
+		(button("발행 방식").element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem").first()).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByText("발행되었습니다")).toBeVisible();
+		await heldByDone();
+		await expect.element(button("발행 방식")).toBeDisabled();
+	});
+});
+
 describe("the entry editor: the to-do list's groups", () => {
 	const list = () => document.querySelector("[data-slot=status-bar-list]") as HTMLElement;
 	const heads = () => [...list().querySelectorAll("[data-slot=status-bar-list-head]")].map((head) => head.textContent);

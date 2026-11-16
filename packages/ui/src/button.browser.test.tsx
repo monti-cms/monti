@@ -243,8 +243,11 @@ describe("a split button that cannot be pressed", () => {
 		);
 		const menuHalf = page.getByRole("button", { name: "발행 방식" });
 		await expect.element(menuHalf).toBeDisabled();
-		await expect.element(page.getByRole("button", { name: "발행됨" })).toBeDisabled();
+		// The main half says why ("발행됨") and is where the keyboard stops; the caret half is out of the tab order.
+		await expect.element(page.getByRole("button", { name: "발행됨" })).toHaveAttribute("aria-disabled", "true");
 		(page.getByRole("button", { name: "앞" }).element() as HTMLElement).focus();
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(page.getByRole("button", { name: "발행됨" }).element());
 		await userEvent.keyboard("{Tab}");
 		expect(document.activeElement).toBe(page.getByRole("button", { name: "뒤" }).element());
 		// Nothing a script or a pointer does gives it the focus or opens its menu.
@@ -287,5 +290,75 @@ describe("a split button that cannot be pressed", () => {
 		await menuHalf.click({ force: true });
 		await expect.element(row).not.toBeInTheDocument();
 		expect(document.activeElement).toBe(menuHalf.element());
+	});
+
+	/** A publish pressed here ends in "Published": the button is off from then on. */
+	function Publishes({ part }: { part: "button" | "split" }) {
+		const [done, setDone] = useState(false);
+		const [presses, setPresses] = useState(0);
+		const press = () => {
+			setPresses((count) => count + 1);
+			setDone(true);
+		};
+		return (
+			<>
+				{part === "button" ? (
+					<Button disabled={done} focusableWhenDisabled onClick={press}>
+						{done ? "발행됨" : "발행하기"}
+					</Button>
+				) : (
+					<SplitButton
+						disabled={done}
+						onClick={press}
+						menuLabel="발행 방식"
+						menu={<DropdownMenuItem onClick={press}>오늘 날짜로 다시 발행</DropdownMenuItem>}
+					>
+						{done ? "발행됨" : "발행하기"}
+					</SplitButton>
+				)}
+				<Button>뒤</Button>
+				<output aria-label="presses">{presses}</output>
+			</>
+		);
+	}
+
+	for (const part of ["button", "split"] as const)
+		it(`${part}: published from the keyboard, the greyed "발행됨" keeps the focus, looks off and takes no press`, async () => {
+			render(<Publishes part={part} />);
+			const idle = page.getByRole("button", { name: "발행하기" });
+			await expect.element(idle).toBeVisible();
+			(idle.element() as HTMLElement).focus();
+			await userEvent.keyboard("{Enter}");
+			const done = page.getByRole("button", { name: "발행됨" });
+			await expect.element(done).toHaveAttribute("aria-disabled", "true");
+			await expect.element(done).not.toHaveAttribute("disabled");
+			// The browser takes the focus from a control that is off a moment later: it is still here after that.
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			expect(document.activeElement).toBe(done.element());
+			const dimmed = part === "button" ? done.element() : (done.element().parentElement as HTMLElement);
+			expect(getComputedStyle(dimmed).opacity).toBe("0.45");
+			await userEvent.keyboard("{Enter}");
+			await userEvent.keyboard(" ");
+			await done.click({ force: true });
+			await expect.element(page.getByRole("status", { name: "presses" })).toHaveTextContent("1");
+			// Tab goes on from it.
+			(done.element() as HTMLElement).focus();
+			await userEvent.keyboard("{Tab}");
+			expect(document.activeElement).toBe(page.getByRole("button", { name: "뒤" }).element());
+		});
+
+	it("a publish from the menu that ends in a greyed pill: the caret half goes off, and the focus it held goes to the main half", async () => {
+		render(<Publishes part="split" />);
+		const caret = page.getByRole("button", { name: "발행 방식" });
+		await expect.element(caret).toBeVisible();
+		(caret.element() as HTMLElement).focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(page.getByRole("menuitem", { name: "오늘 날짜로 다시 발행" })).toBeVisible();
+		await userEvent.keyboard("{Enter}");
+		const done = page.getByRole("button", { name: "발행됨" });
+		await expect.element(caret).toBeDisabled();
+		await expect.poll(() => document.activeElement).toBe(done.element());
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(document.activeElement).toBe(done.element());
 	});
 });

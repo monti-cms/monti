@@ -762,7 +762,10 @@ export const Published: Story = {
 		const { page, all } = await opened(canvasElement);
 		await userEvent.click(page.getByRole("button", { name: "발행하기" }));
 		await all.findByText("발행되었습니다", {}, wait);
-		await waitFor(() => expect(page.getByRole("button", { name: "발행됨" })).toBeDisabled(), wait);
+		await waitFor(
+			() => expect(page.getByRole("button", { name: "발행됨" })).toHaveAttribute("aria-disabled", "true"),
+			wait,
+		);
 	},
 };
 
