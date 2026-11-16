@@ -261,6 +261,20 @@ describe("the bulk bar's menu", () => {
 	});
 });
 
+describe("a row's own ⋯ menu", () => {
+	it("[LC-02] its trash row shows the Delete key, as the right-click menu and the bulk bar do, and a rule stands before it", async () => {
+		await listAt().run();
+		await rowsShown();
+		await userEvent.click(
+			page.getByRole("row").filter({ hasText: "가을 사진 정리" }).getByRole("button", { name: "더 보기" }),
+		);
+		const trash = page.getByRole("menuitem", { name: /휴지통으로/ });
+		await expect.element(trash).toBeVisible();
+		expect(trash.element().querySelector("[data-slot=menu-shortcut]")?.textContent).toMatch(/^(Delete|⌫)$/);
+		expect(trash.element().previousElementSibling?.getAttribute("role")).toBe("separator");
+	});
+});
+
 describe("the list's dates", () => {
 	it("[TC-03] a date cell shows the short date, and its tooltip is the whole moment with the year and the time", async () => {
 		await Main.run();

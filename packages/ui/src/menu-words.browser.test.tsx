@@ -9,6 +9,7 @@ import {
 	ComboboxChipsInput,
 	ComboboxContent,
 	ComboboxCreate,
+	ComboboxEmpty,
 	ComboboxInput,
 	ComboboxItem,
 	ComboboxList,
@@ -375,5 +376,45 @@ describe("the sidebar's rows", () => {
 		await expect.element(row).toBeVisible();
 		await userEvent.hover(row.element().querySelector("span") as HTMLElement, { position: { x: 12, y: 6 } });
 		await expect.poll(tip).toBe(LONG);
+	});
+});
+
+describe("a combobox that matches nothing", () => {
+	/** The field's rule (field.md): words that match nothing show one row: the empty one, or, where the field makes new values, the row that creates. Never both. */
+	const field = (items: string[]) => (
+		<div style={{ width: 240 }}>
+			<Combobox items={items} defaultOpen>
+				<ComboboxInput aria-label="태그" />
+				<ComboboxContent>
+					<ComboboxEmpty>맞는 값 없음</ComboboxEmpty>
+					<ComboboxList>
+						{(item: string) =>
+							item.startsWith("new:") ? (
+								<ComboboxCreate value={item}>새로 만들기: 가</ComboboxCreate>
+							) : (
+								<ComboboxItem value={item}>{item}</ComboboxItem>
+							)
+						}
+					</ComboboxList>
+				</ComboboxContent>
+			</Combobox>
+		</div>
+	);
+
+	it("[PP-04] a field that makes new values shows the row that creates and not the empty row", async () => {
+		render(field(["new:가"]));
+		await expect.element(page.getByRole("option", { name: "새로 만들기: 가" })).toBeVisible();
+		expect(
+			page
+				.getByText("맞는 값 없음")
+				.elements()
+				.filter((each) => getComputedStyle(each).display !== "none"),
+		).toHaveLength(0);
+	});
+
+	it("[PP-04] a field that makes none shows the empty row and no row that creates", async () => {
+		render(field([]));
+		await expect.element(page.getByText("맞는 값 없음")).toBeVisible();
+		expect(page.getByRole("option").elements()).toHaveLength(0);
 	});
 });

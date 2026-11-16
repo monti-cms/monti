@@ -1,4 +1,4 @@
-import { COLLECTION_ICONS, type CollectionIcon } from "@monti-cms/core";
+import type { CollectionIcon } from "@monti-cms/core";
 import {
 	Book,
 	Bookmark,
@@ -49,11 +49,8 @@ const DRAWN: Record<CollectionIcon, ComponentType<{ "aria-hidden"?: boolean; "da
 	hashtag: Hashtag,
 };
 
-/** The names of the list, in the order the settings offer them. */
-export const COLLECTION_ICON_NAMES = COLLECTION_ICONS;
-
 /** What a collection wears until one is picked: the mark of its kind (an entry's page, an item's tag). */
-export const iconOfKind = (kind: "document" | "item"): CollectionIcon => (kind === "item" ? "tag" : "document");
+const iconOfKind = (kind: "document" | "item"): CollectionIcon => (kind === "item" ? "tag" : "document");
 
 /** The icon a collection shows: the one picked in its settings, or the one of its kind. The one function every place that names a collection draws it by. */
 export function collectionIcon(icon: CollectionIcon | undefined, kind: "document" | "item"): ReactNode {
@@ -62,20 +59,15 @@ export function collectionIcon(icon: CollectionIcon | undefined, kind: "document
 	return <Drawn aria-hidden data-collection-icon={name} />;
 }
 
-/** The mark of a name of the list, for the picker. */
-export const iconNamed = (name: CollectionIcon): ReactNode => collectionIcon(name, "document");
-
 /**
- * `collectionIcon` for a collection by its identifier, read from the schema's admin values: the sidebar's row, a relation's submenu, the menus that
- * name another collection. `kind` is the one of the schema when the collection is not known yet (a relation's target read before the schema).
+ * `collectionIcon` for a collection by its identifier, read from the schema the admin already holds: a relation's submenu names the collection its
+ * field points at. Nothing is waited for: the schema is read once for the whole admin.
  */
-export function useCollectionIcon(): (collection: string | undefined, kind?: "document" | "item") => ReactNode {
+export function useCollectionIcon(): (collection: string | undefined) => ReactNode {
 	const schema = useRead<SchemaRead>("schema.read");
-	return (collection, kind) => {
-		const known = collection === undefined ? undefined : schema.data?.schema.collections[collection];
-		return collectionIcon(
+	return (collection) =>
+		collectionIcon(
 			collection === undefined ? undefined : schema.data?.adminValues[collection]?.icon,
-			known?.kind ?? kind ?? "document",
+			(collection === undefined ? undefined : schema.data?.schema.collections[collection]?.kind) ?? "document",
 		);
-	};
 }

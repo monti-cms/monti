@@ -166,6 +166,10 @@ describe("a screen that cannot be drawn", () => {
 		};
 		open();
 		await expect.element(failed()).toBeVisible();
+		// A head row stands in its place with the screen's name (the one a page has, so the assistant's ✦ stays at its end).
+		const head = page.getByRole("heading", { name: "도구" });
+		await expect.element(head).toBeVisible();
+		expect(head.element().closest("[data-slot=page-header]")).not.toBeNull();
 		// The frame stands: the sidebar opens another screen, and the banner goes with the screen it was about.
 		await expect.element(menu()).toBeVisible();
 		await userEvent.click(menu().getByRole("button", { name: /^휴지통/ }));

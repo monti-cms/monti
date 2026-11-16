@@ -461,6 +461,13 @@ describe("the entry editor: a field that points at one item", () => {
 		await userEvent.type(category, "일");
 		await expect.element(page.getByRole("option", { name: "일상" })).toBeVisible();
 		await expect.element(page.getByRole("option", { name: "회고" })).not.toBeInTheDocument();
+		// [PP-04] Words that match nothing in a field that makes no new values: the one empty row, and no row that creates.
+		await userEvent.clear(category);
+		await userEvent.type(category, "없는이름");
+		await expect.element(page.getByText("맞는 값 없음")).toBeVisible();
+		expect(page.getByRole("option").elements()).toHaveLength(0);
+		await userEvent.clear(category);
+		await userEvent.type(category, "일");
 		await userEvent.click(page.getByRole("option", { name: "일상" }));
 		await expect.element(category).toHaveValue("일상");
 		await save();

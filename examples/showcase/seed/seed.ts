@@ -139,12 +139,13 @@ await write("collections.updateAdminValues", {
 });
 await write("collections.updateAdminValues", {
 	collection: "tag",
-	values: { label: "태그", fields: labels({ description: "설명" }) },
+	values: { label: "태그", icon: "tag", fields: labels({ description: "설명" }) },
 });
 await write("collections.updateAdminValues", {
 	collection: "person",
 	values: {
 		label: "사람",
+		icon: "user",
 		fields: {
 			...labels({ bio: "소개", photo: "사진", articles: "쓴 글" }),
 			roles: { label: "역할", optionLabels: { writer: "글쓴이", photographer: "사진가", editor: "편집자" } },
@@ -153,7 +154,7 @@ await write("collections.updateAdminValues", {
 });
 await write("collections.updateAdminValues", {
 	collection: "series",
-	values: { label: "연재", fields: labels({ note: "메모" }) },
+	values: { label: "연재", icon: "book", fields: labels({ note: "메모" }) },
 });
 
 // ── Media: folders, pictures and files ──────────────────────────────────────────────────────────────────────────────────────────────

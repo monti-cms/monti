@@ -371,7 +371,7 @@ export function CompareView({
 		>
 			<EditorHeader>
 				{start}
-				<Inline ref={toText} gap={16} justify="end" paddingX={12}>
+				<Inline ref={toText} gap={16} justify="end">
 					{places.data ? (
 						// The count of what differs is the screen's news: plain words, not a quiet label (screens/editor-more.md).
 						<Text variant="note">{t("compare.places", { count: differing.length })}</Text>

@@ -341,12 +341,4 @@ describe("the ✦ stands in one place (common.md, the assistant's button)", () =
 		// One button, on every screen: not a second one in a corner.
 		expect(button("어시스턴트 열기").elements()).toHaveLength(1);
 	});
-
-	it("a list has the one button and none in a corner", async () => {
-		const story = on({});
-		await story.run();
-		await listed();
-		expect(button("어시스턴트 열기").elements()).toHaveLength(1);
-		expect(document.querySelector(".absolute.top-monti-12.right-monti-12")).toBeNull();
-	});
 });

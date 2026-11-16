@@ -310,7 +310,7 @@ function Screens({ route, go }: { route: Route; go: (route: Route, options?: { r
 			assistant={assistant.available ? { open: assistant.open, panel } : null}
 		>
 			{/* A screen that throws while it is drawn takes only itself down: the frame around it stays (common.md, banners). */}
-			<ScreenBoundary at={at}>
+			<ScreenBoundary at={at} place={placeOf(route)}>
 				{route.screen === "review" ? (
 					<ReviewScreen key={route.id} id={route.id} go={go} />
 				) : route.screen === "settings" ? (

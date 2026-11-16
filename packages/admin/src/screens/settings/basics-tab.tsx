@@ -1,4 +1,4 @@
-import type { CollectionIcon, SchemaProblem } from "@monti-cms/core";
+import { COLLECTION_ICONS, type CollectionIcon, type SchemaProblem } from "@monti-cms/core";
 import {
 	Affix,
 	Button,
@@ -24,7 +24,7 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { useEffect, useRef } from "react";
-import { COLLECTION_ICON_NAMES, collectionIcon, iconNamed } from "../../format/collection-icon";
+import { collectionIcon } from "../../format/collection-icon";
 import { useAdmin } from "../../operations/admin-context";
 import { useFocusHandOff } from "../frame/focus-hand-off";
 import { at } from "./schema-draft";
@@ -177,7 +177,7 @@ export function BasicsTab({
 					<Select
 						items={[
 							{ value: DEFAULT_ICON, label: t("settings.basics.iconDefault") },
-							...COLLECTION_ICON_NAMES.map((name) => ({ value: name, label: t(`collection.icon.${name}`) })),
+							...COLLECTION_ICONS.map((name) => ({ value: name, label: t(`collection.icon.${name}`) })),
 						]}
 						value={String(icon.value ?? DEFAULT_ICON)}
 						onValueChange={(next) => draft.set(iconPlace, next === null || next === DEFAULT_ICON ? undefined : next)}
@@ -186,7 +186,9 @@ export function BasicsTab({
 							<SelectValue>
 								{(value: string) => (
 									<Inline gap={8} align="center">
-										{value === DEFAULT_ICON ? collectionIcon(undefined, kind) : iconNamed(value as CollectionIcon)}
+										{value === DEFAULT_ICON
+											? collectionIcon(undefined, kind)
+											: collectionIcon(value as CollectionIcon, kind)}
 										{value === DEFAULT_ICON ? t("settings.basics.iconDefault") : t(`collection.icon.${value}`)}
 									</Inline>
 								)}
@@ -197,9 +199,9 @@ export function BasicsTab({
 								{collectionIcon(undefined, kind)}
 								{t("settings.basics.iconDefault")}
 							</SelectItem>
-							{COLLECTION_ICON_NAMES.map((name) => (
+							{COLLECTION_ICONS.map((name) => (
 								<SelectItem key={name} value={name}>
-									{iconNamed(name)}
+									{collectionIcon(name, kind)}
 									{t(`collection.icon.${name}`)}
 								</SelectItem>
 							))}
