@@ -246,6 +246,8 @@ test("list-compose: a table drawn by hand in a screen is named, CollectionTable 
 		{
 			"packages/admin/src/screens/new/new-screen.tsx": "export const A = () => <Table><ListHead /></Table>;\n",
 			"packages/admin/src/screens/list/own-screen.tsx": "export const B = () => <CollectionTable head={{}} />;\n",
+			"packages/admin/src/screens/list/mixed-screen.tsx":
+				"export const M = () => <><CollectionTable head={{}} /><Table /></>;\n",
 			"packages/admin/src/screens/list/collection-table.tsx":
 				"export const C = () => <ListScroll><Table /></ListScroll>;\n",
 			"packages/admin/src/screens/keys/keys.tsx": 'export const D = () => <Table container="none" />;\n',
@@ -265,10 +267,12 @@ test("list-compose: a table drawn by hand in a screen is named, CollectionTable 
 		found.map(({ file, line }) => [file, line]),
 		[
 			["packages/admin/src/screens/new/new-screen.tsx", 1],
+			["packages/admin/src/screens/list/mixed-screen.tsx", 1],
 			["packages/admin/src/screens/list/own-screen.tsx", 1],
 			["packages/admin/src/screens/gone/gone.tsx", 1],
 		],
 	);
 	assert.match(found[0].message, /use CollectionTable/);
-	assert.match(found[1].message, /no table by hand any more/);
+	assert.match(found[1].message, /use CollectionTable/);
+	assert.match(found[2].message, /no table by hand any more/);
 });

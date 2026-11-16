@@ -503,8 +503,8 @@ export function monoProps(sources, { texts = new Map(), allowed = MONO_PROP_VALU
 /**
  * `list-compose`: a screen that draws a list's table puts it together through `CollectionTable` (`packages/admin/src/screens/list/collection-table.tsx`),
  * so the head, the bulk bar in its place, the one no-match answer, the rows' box and the footer come in one order in every list. A file under
- * `packages/admin/src/screens` that writes `<Table`, `<ListHead` or `<ListScroll` writes `<CollectionTable` too, or is named in `LIST_COMPOSE_OK`
- * with the reason (list.md names the "titled tables": a title over rows, no column names, nothing to pick).
+ * `packages/admin/src/screens` that writes `<Table`, `<ListHead` or `<ListScroll` is named in `LIST_COMPOSE_OK` with the reason, even if it also uses `CollectionTable`
+ * (list.md names the "titled tables": a title over rows, no column names, nothing to pick).
  *
  * Cannot see: a table drawn through a part of another name or a component that wraps `Table`, a screen outside `packages/admin/src/screens`, and
  * whether `CollectionTable` is given what its list needs (a bulk bar where rows can be picked, the no-match answer): that is read in review.
@@ -527,17 +527,15 @@ export function listCompose(sources, { allowed = LIST_COMPOSE_OK } = {}) {
 	const used = new Set();
 	for (const [file, source] of Object.entries(sources)) {
 		if (!isCode(file) || !file.startsWith("packages/admin/src/screens/") || keyOf(file) === LIST_COMPOSE_OWN) continue;
-		if (!/<(?:Table|ListHead|ListScroll|CollectionTable)\b/.test(source)) continue;
+		if (!/<(?:Table|ListHead|ListScroll)\b/.test(source)) continue;
 		const { program, errors } = parseSync(file, source);
 		if (errors.length > 0) continue;
 		let drawn = null;
-		let composed = false;
 		walkTree(program, (node) => {
 			if (node.type !== "JSXOpeningElement" || node.name?.type !== "JSXIdentifier") return;
-			if (node.name.name === "CollectionTable") composed = true;
-			else if (LIST_PARTS.has(node.name.name)) drawn ??= node;
+			if (LIST_PARTS.has(node.name.name)) drawn ??= node;
 		});
-		if (!drawn || composed) continue;
+		if (!drawn) continue;
 		if (allowed.has(keyOf(file))) {
 			used.add(keyOf(file));
 			continue;
